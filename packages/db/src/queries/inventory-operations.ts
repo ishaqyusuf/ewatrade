@@ -1,4 +1,4 @@
-import { createHash } from "node:crypto"
+import { createHash, randomUUID } from "node:crypto"
 
 import {
   EXACT_CANONICAL_MAX_SCALE,
@@ -33,6 +33,7 @@ import {
 } from "@ewatrade/utils/inventory-categories"
 import {
   resolveStockCategories,
+  resolvePurchaseStockCategoryGroups,
   serializeStockCategories,
   stockOperationCategoryGraph,
 } from "./inventory-categories"
@@ -622,6 +623,7 @@ export async function preparePurchaseStockReceiptsInTransaction(
     select: { id: true, name: true },
   })
   const itemById = new Map(items.map((item) => [item.id, item]))
+  const loaded = new Map<string, PreparedPurchaseStockSource>()
   const stock = new Map<
     string,
     ReturnType<typeof prepareLoadedPurchaseStockReceipt>
@@ -671,12 +673,72 @@ export async function preparePurchaseStockReceiptsInTransaction(
           .map((canonical) => canonical.name),
       },
     )
+    loaded.set(balance.id, { input, balance, unit })
     stock.set(
       balance.id,
       prepareLoadedPurchaseStockReceipt(tx, input, balance, unit, preview),
     )
   }
-  return stock
+  let execution:
+    | Promise<Map<string, ReturnType<typeof serializeOperation>>>
+    | undefined
+  let confirmedHash: string | undefined
+  return {
+    sources: stock,
+    execute(commands: SingleBalanceInput[]) {
+      if (
+        commands.length !== loaded.size ||
+        new Set(commands.map((command) => command.balanceSourceId)).size !==
+          loaded.size ||
+        new Set(commands.map((command) => command.clientOperationId)).size !==
+          loaded.size
+      )
+        throw new CatalogError(
+          "INVALID_STOCK_OPERATION",
+          "Confirm every original receipt source exactly once.",
+        )
+      const entries = commands
+        .map((command) => {
+          const source = loaded.get(command.balanceSourceId)
+          if (!source)
+            throw new CatalogError(
+              "INVALID_STOCK_OPERATION",
+              "The prepared purchase receipt source changed.",
+            )
+          return {
+            ...source,
+            ...preparePurchaseStockReceiptPosting(
+              source.input,
+              source.balance,
+              command,
+            ),
+          }
+        })
+        .sort((a, b) => a.balance.id.localeCompare(b.balance.id))
+      const first = entries[0]!.posting
+      if (
+        !first.effectiveAt ||
+        !Number.isFinite(first.effectiveAt.getTime()) ||
+        entries.some(
+          ({ posting }) =>
+            posting.actorUserId !== first.actorUserId ||
+            posting.effectiveAt?.getTime() !== first.effectiveAt!.getTime(),
+        )
+      )
+        throw new CatalogError(
+          "INVALID_STOCK_OPERATION",
+          "Purchase receipt actor and date must agree on every goods line.",
+        )
+      const payloadHash = hash(entries.map((entry) => entry.payloadHash))
+      if (confirmedHash !== undefined && confirmedHash !== payloadHash)
+        throw new CatalogError(
+          "IDEMPOTENCY_MISMATCH",
+          "The prepared stock receipt command changed.",
+        )
+      confirmedHash = payloadHash
+      return (execution ??= postPreparedPurchaseStockBatch(tx, entries))
+    },
+  }
 }
 
 function prepareLoadedPurchaseStockReceipt(
@@ -691,32 +753,11 @@ function prepareLoadedPurchaseStockReceipt(
   return {
     preview,
     execute(command: SingleBalanceInput) {
-      if (
-        command.tenantId !== input.tenantId ||
-        command.storeId !== input.storeId ||
-        command.balanceSourceId !== input.balanceSourceId ||
-        command.enteredInventoryUnitId !== input.enteredInventoryUnitId ||
-        command.enteredQuantity !== input.enteredQuantity ||
-        command.expectedConfigurationVersionId !==
-          input.expectedConfigurationVersionId ||
-        command.expectedBalanceRevision !== balance.revision ||
-        command.source !== "finance_purchase" ||
-        command.direction !== "increase" ||
-        command.type !== "receipt" ||
-        command.unitCostMinor !== undefined
+      const { posting, payloadHash } = preparePurchaseStockReceiptPosting(
+        input,
+        balance,
+        command,
       )
-        throw new CatalogError(
-          "INVALID_STOCK_OPERATION",
-          "The prepared purchase receipt source changed.",
-        )
-      const posting = {
-        ...command,
-        effectiveAt: command.effectiveAt
-          ? new Date(command.effectiveAt)
-          : undefined,
-        categories: command.categories?.map((category) => ({ ...category })),
-      }
-      const payloadHash = prepareSingleBalanceStockOperation(posting)
       if (confirmedHash !== undefined && confirmedHash !== payloadHash)
         throw new CatalogError(
           "IDEMPOTENCY_MISMATCH",
@@ -732,6 +773,242 @@ function prepareLoadedPurchaseStockReceipt(
       ))
     },
   }
+}
+
+function preparePurchaseStockReceiptPosting(
+  input: PurchaseStockReceiptInput,
+  balance: BalanceGraph,
+  command: SingleBalanceInput,
+) {
+  if (
+    command.tenantId !== input.tenantId ||
+    command.storeId !== input.storeId ||
+    command.balanceSourceId !== input.balanceSourceId ||
+    command.enteredInventoryUnitId !== input.enteredInventoryUnitId ||
+    command.enteredQuantity !== input.enteredQuantity ||
+    command.expectedConfigurationVersionId !==
+      input.expectedConfigurationVersionId ||
+    command.expectedBalanceRevision !== balance.revision ||
+    command.source !== "finance_purchase" ||
+    command.direction !== "increase" ||
+    command.type !== "receipt" ||
+    command.unitCostMinor !== undefined
+  )
+    throw new CatalogError(
+      "INVALID_STOCK_OPERATION",
+      "The prepared purchase receipt source changed.",
+    )
+  const posting = {
+    ...command,
+    effectiveAt: command.effectiveAt
+      ? new Date(command.effectiveAt)
+      : undefined,
+    categories: command.categories?.map((category) => ({ ...category })),
+  }
+  const payloadHash = prepareSingleBalanceStockOperation(posting)
+  return { posting, payloadHash }
+}
+
+type PreparedPurchaseStockSource = {
+  input: PurchaseStockReceiptInput
+  balance: BalanceGraph
+  unit: EnteredUnitGraph
+}
+
+async function postPreparedPurchaseStockBatch(
+  tx: Prisma.TransactionClient,
+  entries: Array<
+    PreparedPurchaseStockSource &
+      ReturnType<typeof preparePurchaseStockReceiptPosting>
+  >,
+) {
+  const first = entries[0]!.posting
+  if (
+    await tx.stockOperation.count({
+      where: {
+        tenantId: first.tenantId,
+        clientOperationId: {
+          in: entries.map((entry) => entry.posting.clientOperationId),
+        },
+      },
+    })
+  )
+    throw new CatalogError(
+      "IDEMPOTENCY_MISMATCH",
+      "This receipt stock identity already exists outside its command.",
+    )
+  const categoryGroups = await resolvePurchaseStockCategoryGroups(
+    tx,
+    first.tenantId,
+    entries.map((entry) => entry.posting.categories ?? []),
+  )
+  const prepared = entries.map(
+    ({ balance, unit, posting, payloadHash }, index) => {
+      const enteredQuantity = parseExactDecimal(posting.enteredQuantity, {
+        allowZero: false,
+        maxScale: unit.transactionScale,
+      })
+      const canonicalQuantity = multiplyExactDecimals(
+        enteredQuantity,
+        unit.factor.toFixed(),
+        EXACT_CANONICAL_MAX_SCALE,
+      )
+      const resultingOnHand = addExactDecimals(
+        balance.onHandQuantity.toFixed(),
+        balance.kind === StockBalanceKind.SHARED_POOL
+          ? canonicalQuantity
+          : enteredQuantity,
+      )
+      if (
+        compareExactDecimals(
+          resultingOnHand,
+          balance.reservedQuantity.toFixed(),
+        ) < 0
+      )
+        throw new CatalogError(
+          "INSUFFICIENT_STOCK",
+          "The operation would reduce on-hand below reserved stock.",
+        )
+      return {
+        balance,
+        unit,
+        posting,
+        payloadHash,
+        enteredQuantity,
+        canonicalQuantity,
+        resultingOnHand,
+        operationId: randomUUID(),
+        movementId: randomUUID(),
+        categories: categoryGroups[index]!,
+      }
+    },
+  )
+  const updated = await tx.$queryRaw<Array<{ id: string }>>(Prisma.sql`
+    UPDATE "StockBalanceSource" b SET "onHandQuantity" = v.after::numeric, revision = b.revision + 1, "updatedAt" = NOW()
+    FROM (VALUES ${Prisma.join(prepared.map(({ balance, resultingOnHand }) => Prisma.sql`(${balance.id}, ${balance.revision}::integer, ${balance.onHandQuantity.toFixed()}, ${balance.reservedQuantity.toFixed()}, ${balance.inventoryUnitId}, ${balance.productId}, ${balance.kind}, ${resultingOnHand})`))})
+      AS v(id, revision, before, reserved, unit, product, kind, after)
+    WHERE b.id = v.id AND b."tenantId" = ${first.tenantId} AND b."storeId" = ${first.storeId}
+      AND b.revision = v.revision AND b."onHandQuantity" = v.before::numeric AND b."reservedQuantity" = v.reserved::numeric
+      AND b."inventoryUnitId" = v.unit AND b."productId" = v.product AND b.kind::text = v.kind AND b."custodyType"::text = 'STORE'
+    RETURNING b.id
+  `)
+  if (
+    updated.length !== prepared.length ||
+    new Set(updated.map((row) => row.id)).size !== prepared.length ||
+    updated.some(
+      (row) => !prepared.some(({ balance }) => balance.id === row.id),
+    )
+  )
+    throw new CatalogError(
+      "REVISION_CONFLICT",
+      "The Balance Source changed while posting this operation.",
+    )
+  await tx.stockOperation.createMany({
+    data: prepared.map(({ posting, payloadHash, operationId }) => ({
+      id: operationId,
+      tenantId: posting.tenantId,
+      storeId: posting.storeId,
+      actorUserId: posting.actorUserId,
+      clientOperationId: posting.clientOperationId,
+      effectiveAt: posting.effectiveAt!,
+      payloadHash,
+      linkedOperationId: posting.linkedOperationId,
+      reason: posting.reason?.trim(),
+      source: posting.source,
+      type: "RECEIPT",
+    })),
+  })
+  const categories = prepared.flatMap(({ categories, operationId }) =>
+    categories.map((category) => ({
+      ...category,
+      stockOperationId: operationId,
+    })),
+  )
+  if (categories.length)
+    await tx.stockOperationCategory.createMany({ data: categories })
+  await tx.stockMovement.createMany({
+    data: prepared.map(
+      ({
+        balance,
+        unit,
+        operationId,
+        movementId,
+        enteredQuantity,
+        canonicalQuantity,
+        resultingOnHand,
+      }) => ({
+        id: movementId,
+        operationId,
+        balanceSourceId: balance.id,
+        configurationVersionId: unit.configurationVersionId,
+        enteredInventoryUnitId: unit.id,
+        enteredQuantity,
+        transactionScaleSnapshot: unit.transactionScale,
+        unitFactorSnapshot: unit.factor,
+        signedCanonicalEffect: canonicalQuantity,
+        previousOnHandQuantity: balance.onHandQuantity,
+        resultingOnHandQuantity: resultingOnHand,
+      }),
+    ),
+  })
+  const saved = await tx.stockOperation.findMany({
+    where: {
+      tenantId: first.tenantId,
+      storeId: first.storeId,
+      id: { in: prepared.map((entry) => entry.operationId) },
+    },
+    include: { movements: true, categories: stockOperationCategoryGraph },
+  })
+  if (saved.length !== prepared.length)
+    throw new CatalogError(
+      "INVALID_STOCK_OPERATION",
+      "The complete purchase stock movements are unavailable.",
+    )
+  const operations = new Map<string, ReturnType<typeof serializeOperation>>()
+  for (const entry of prepared) {
+    const operation = saved.find(
+      (operation) => operation.id === entry.operationId,
+    )
+    const movement = operation?.movements[0]
+    if (
+      !operation ||
+      operation.payloadHash !== entry.payloadHash ||
+      operation.clientOperationId !== entry.posting.clientOperationId ||
+      operation.actorUserId !== entry.posting.actorUserId ||
+      operation.source !== "finance_purchase" ||
+      operation.type !== "RECEIPT" ||
+      operation.effectiveAt.getTime() !==
+        entry.posting.effectiveAt!.getTime() ||
+      operation.movements.length !== 1 ||
+      !movement ||
+      movement.id !== entry.movementId ||
+      movement.balanceSourceId !== entry.balance.id ||
+      movement.enteredInventoryUnitId !== entry.unit.id ||
+      movement.configurationVersionId !== entry.unit.configurationVersionId ||
+      movement.transactionScaleSnapshot !== entry.unit.transactionScale ||
+      movement.unitFactorSnapshot.toFixed() !== entry.unit.factor.toFixed() ||
+      movement.unitCostMinorSnapshot != null ||
+      movement.totalCostMinorSnapshot != null ||
+      movement.currencyCodeSnapshot != null ||
+      operation.categories.length !== entry.categories.length ||
+      operation.categories.some(
+        (category, index) =>
+          category.categoryNameId !== entry.categories[index]!.categoryNameId ||
+          category.position !== index,
+      ) ||
+      movement.enteredQuantity.toFixed() !== entry.enteredQuantity ||
+      movement.signedCanonicalEffect.toFixed() !== entry.canonicalQuantity ||
+      movement.previousOnHandQuantity.toFixed() !==
+        entry.balance.onHandQuantity.toFixed() ||
+      movement.resultingOnHandQuantity.toFixed() !== entry.resultingOnHand
+    )
+      throw new CatalogError(
+        "INVALID_STOCK_OPERATION",
+        "The saved purchase stock movement changed.",
+      )
+    operations.set(entry.balance.id, serializeOperation(operation))
+  }
+  return operations
 }
 
 async function postSingleBalanceStockOperationInTransactionCore(

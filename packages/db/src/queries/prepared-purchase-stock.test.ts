@@ -298,7 +298,7 @@ test("one and ten mixed goods sources use six preparation database calls with so
   for (const count of [1, 10]) {
     const f = batchFixture(count)
     const stock = await preparePurchaseStockReceiptsInTransaction(f.tx, f.scope)
-    expect(stock.size).toBe(count)
+    expect(stock.sources.size).toBe(count)
     expect(f.queries.map((query) => query.kind)).toEqual([
       "balance-lock",
       "unit-lock",
@@ -324,7 +324,7 @@ test("one and ten mixed goods sources use six preparation database calls with so
     })
     expect(f.queries[5]!.args).toMatchObject({ where: { tenantId: "tenant" } })
     for (let index = 0; index < count; index++) {
-      const preview = stock.get(`balance-${index}`)!.preview
+      const preview = stock.sources.get(`balance-${index}`)!.preview
       expect(preview.productName).toBe(`Goods ${index}`)
       expect(preview.after).toBe(
         parseExactDecimal(index % 2 ? "4.125" : "2.125"),
@@ -430,7 +430,7 @@ test("batch execution retains payload binding, single execution and compare-and-
   const f = batchFixture(1)
   const source = f.scope.lines[0]!
   const stock = await preparePurchaseStockReceiptsInTransaction(f.tx, f.scope)
-  const prepared = stock.get(source.balanceSourceId)!
+  const prepared = stock.sources.get(source.balanceSourceId)!
   const command = { ...f.command, ...source }
   // Caller mutations after preparation cannot change the bound source.
   source.enteredQuantity = "9"
@@ -452,10 +452,177 @@ test("batch execution retains payload binding, single execution and compare-and-
   const stale = batchFixture(1)
   const preparedStale = (
     await preparePurchaseStockReceiptsInTransaction(stale.tx, stale.scope)
-  ).get("balance-0")!
+  ).sources.get("balance-0")!
   stale.state.revision++
   await expect(
     preparedStale.execute({ ...stale.command, ...stale.scope.lines[0]! }),
   ).rejects.toMatchObject({ code: "REVISION_CONFLICT" })
   expect(stale.state.writes).toHaveLength(0)
+})
+
+function postingFixture(count = 10) {
+  const f = batchFixture(count)
+  const state = {
+    prior: false,
+    stale: false,
+    partial: false,
+    incomplete: false,
+    changedMovement: false,
+    queries: [] as string[],
+    operations: [] as Record<string, any>[],
+    movements: [] as Record<string, any>[],
+  }
+  const originalRaw = f.tx.$queryRaw
+  const tx = {
+    ...f.tx,
+    $queryRaw: async (sql: any, ...values: unknown[]) => {
+      if (Array.isArray(sql)) return (originalRaw as any)(sql, ...values)
+      state.queries.push("balances-CAS")
+      return state.stale
+        ? []
+        : f.batch.balances
+            .slice(0, state.partial ? -1 : undefined)
+            .map(({ id }) => ({ id }))
+    },
+    stockOperation: {
+      ...f.tx.stockOperation,
+      count: async () => {
+        state.queries.push("identities")
+        return Number(state.prior)
+      },
+      createMany: async ({ data }: { data: Record<string, any>[] }) => {
+        state.queries.push("operations")
+        state.operations = data
+        return { count: data.length }
+      },
+      findMany: async () => {
+        state.queries.push("saved")
+        const saved = state.operations.map((operation) => ({
+          ...operation,
+          categories: [],
+          movements: state.movements.filter(
+            (movement) => movement.operationId === operation.id,
+          ),
+        }))
+        if (state.incomplete) saved.pop()
+        if (state.changedMovement)
+          saved[0]!.movements[0]!.resultingOnHandQuantity = new Prisma.Decimal(
+            "999",
+          )
+        return saved
+      },
+    },
+    stockMovement: {
+      ...f.tx.stockMovement,
+      createMany: async ({ data }: { data: Record<string, any>[] }) => {
+        state.queries.push("movements")
+        state.movements = data.map((movement) => ({
+          ...movement,
+          enteredQuantity: new Prisma.Decimal(movement.enteredQuantity),
+          signedCanonicalEffect: new Prisma.Decimal(
+            movement.signedCanonicalEffect,
+          ),
+          resultingOnHandQuantity: new Prisma.Decimal(
+            movement.resultingOnHandQuantity,
+          ),
+        }))
+        return { count: data.length }
+      },
+    },
+  } as unknown as Prisma.TransactionClient
+  const commands = f.lines.map((source, index) => ({
+    ...f.command,
+    ...source,
+    clientOperationId: `receipt-${index}`,
+  }))
+  return { ...f, tx, posting: state, commands }
+}
+
+test("ten goods post in one bounded batch with exact persisted readback and one concurrent execution", async () => {
+  const f = postingFixture()
+  const prepared = await preparePurchaseStockReceiptsInTransaction(
+    f.tx,
+    f.scope,
+  )
+  // Displayed preview is not write authority.
+  prepared.sources.get("balance-0")!.preview.after = parseExactDecimal("999")
+  const [first, second] = await Promise.all([
+    prepared.execute(f.commands),
+    prepared.execute([...f.commands].reverse()),
+  ])
+  expect(first).toEqual(second)
+  expect(first.size).toBe(10)
+  expect(f.posting.queries).toEqual([
+    "identities",
+    "balances-CAS",
+    "operations",
+    "movements",
+    "saved",
+  ])
+  for (let index = 0; index < 10; index++) {
+    const operation = first.get(`balance-${index}`)!
+    expect(operation.clientOperationId).toBe(`receipt-${index}`)
+    expect(operation.movements[0]!.resultingOnHandQuantity).toBe(
+      index % 2 ? "4.125" : "2.125",
+    )
+    expect(operation.movements[0]!.signedCanonicalEffect).toBe(
+      index % 2 ? "25.5" : "2.125",
+    )
+    expect(operation.movements[0]!.unitCostMinorSnapshot).toBeUndefined()
+  }
+  expect(() =>
+    prepared.execute(
+      f.commands.map((command, index) =>
+        index ? command : { ...command, reason: "Changed" },
+      ),
+    ),
+  ).toThrow("prepared stock receipt command changed")
+})
+
+test("whole stock batch refuses omitted, repeated, substituted, mixed actor/date and changed source commands before writes", async () => {
+  const f = postingFixture()
+  const prepared = await preparePurchaseStockReceiptsInTransaction(
+    f.tx,
+    f.scope,
+  )
+  const replaceFirst = (patch: Partial<SingleBalanceInput>) =>
+    f.commands.map((command, index) =>
+      index ? command : { ...command, ...patch },
+    )
+  const invalid = [
+    f.commands.slice(1),
+    [f.commands[0]!, ...f.commands.slice(0, 9)],
+    replaceFirst({ balanceSourceId: "foreign" }),
+    replaceFirst({ enteredQuantity: "3" }),
+    replaceFirst({ expectedBalanceRevision: 4 }),
+    replaceFirst({ actorUserId: "other" }),
+    replaceFirst({ effectiveAt: undefined }),
+    replaceFirst({ effectiveAt: new Date("2026-10-05") }),
+    replaceFirst({ clientOperationId: f.commands[1]!.clientOperationId }),
+    replaceFirst({ unitCostMinor: 100 }),
+  ]
+  for (const commands of invalid)
+    expect(() => prepared.execute(commands)).toThrow()
+  expect(f.posting.queries).toHaveLength(0)
+})
+
+test("batch refuses preexisting identity, stale CAS and incomplete or changed saved movements", async () => {
+  for (const flag of [
+    "prior",
+    "stale",
+    "partial",
+    "incomplete",
+    "changedMovement",
+  ] as const) {
+    const f = postingFixture()
+    f.posting[flag] = true
+    const prepared = await preparePurchaseStockReceiptsInTransaction(
+      f.tx,
+      f.scope,
+    )
+    await expect(prepared.execute(f.commands)).rejects.toThrow()
+    if (flag === "prior") expect(f.posting.queries).toEqual(["identities"])
+    if (flag === "stale" || flag === "partial")
+      expect(f.posting.queries).toEqual(["identities", "balances-CAS"])
+  }
 })

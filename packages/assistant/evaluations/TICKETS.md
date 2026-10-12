@@ -75,8 +75,11 @@ canonical Book, 12 real read checks pass and saved statement/invoice overlays re
 the assistant. Supplier creation and agreement registration are now source-available
 and pass actual Edit/re-review/Confirm/Open/Close with exact saved effects and
 completed recovery. Fresh stock preparation now batches 1–10 original goods; ten mixed sources prepare
-in3.11s with saved financial/stock facts unchanged. Full ten-line posting/valuation
-and signed stale-source/operational acceptance remain open. Evidence:
+in3.11s with saved financial/stock facts unchanged. Ten-line posting/valuation now passes canonical19.50s and signed assistant completion
+rollback23.15s with100 category links; signed stale-stock refusal preserves all facts.
+Advisory draft29.51s needs batching; maximum browser confirmation/recovery and broader
+stale-source/operational acceptance remain open. Evidence:
+[ten-line receipt batch report](runs/2026-10-12-ten-line-receipt-batch.md),
 [stock preparation bounds report](runs/2026-10-12-stock-bounds-preparation.md),
 [supplier creation/registration web report](runs/2026-10-12-supplier-registration-web.md),
 [supplier discovery report](runs/2026-10-12-supplier-discovery.md),

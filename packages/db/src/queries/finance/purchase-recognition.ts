@@ -19,7 +19,6 @@ import type {
 import type { FinancePurchaseRecognitionStage } from "../../../generated/prisma/enums"
 import {
   postSingleBalanceStockOperationInTransaction,
-  preparePurchaseStockReceiptInTransaction,
   preparePurchaseStockReceiptsInTransaction,
   type SingleBalanceInput,
 } from "../inventory-operations"
@@ -246,7 +245,7 @@ export async function prepareReviewedFinancePurchaseReceiptInTransaction(
     command,
     header,
     async (_tx, input) => {
-      const preparedStock = stock.get(input.balanceSourceId)
+      const preparedStock = stock.sources.get(input.balanceSourceId)
       if (!preparedStock)
         throw new FinanceError(
           "CONFLICT",
@@ -315,10 +314,7 @@ async function postPurchaseRecognition(
   book: FinanceBook,
   source: Awaited<ReturnType<typeof resolvePurchaseRecognitionSource>>,
   receiptsInput = input.receipts,
-  stock?: Map<
-    string,
-    Awaited<ReturnType<typeof preparePurchaseStockReceiptInTransaction>>
-  >,
+  stock?: Awaited<ReturnType<typeof preparePurchaseStockReceiptsInTransaction>>,
 ) {
   const { document, posting } = source
   const { reference } = normalizePurchaseRecognition(input)
@@ -435,13 +431,10 @@ async function postPurchaseRecognition(
         "INVALID_JOURNAL",
         "Confirm every original goods line exactly once.",
       )
-    const valuations: Array<{
-      receiptId: string
-      expectedStockRevision: number
-    }> = []
-    for (const line of [...document.lines].sort((a, b) =>
+    const lines = [...document.lines].sort((a, b) =>
       a.balanceSourceId.localeCompare(b.balanceSourceId),
-    )) {
+    )
+    const commands: SingleBalanceInput[] = lines.map((line) => {
       const confirmation = receipts.find(
         (receipt) => receipt.lineId === line.id,
       )
@@ -455,31 +448,15 @@ async function postPurchaseRecognition(
           "INVALID_JOURNAL",
           "Refresh the receipt's stock revisions.",
         )
-      const clientOperationId = financePostingCommandId(
-        input.clientCommandId,
-        `recognition-stock:${line.id}`,
-      )
-      if (
-        await tx.stockOperation.findUnique({
-          where: {
-            tenantId_clientOperationId: {
-              tenantId: input.tenantId,
-              clientOperationId,
-            },
-          },
-          select: { id: true },
-        })
-      )
-        throw new FinanceError(
-          "CONFLICT",
-          "This receipt stock identity already exists outside its command.",
-        )
-      const stockCommand: SingleBalanceInput = {
+      return {
         actorUserId: input.actorUserId,
         tenantId: input.tenantId,
         storeId: document.storeId,
         balanceSourceId: line.balanceSourceId,
-        clientOperationId,
+        clientOperationId: financePostingCommandId(
+          input.clientCommandId,
+          `recognition-stock:${line.id}`,
+        ),
         direction: "increase",
         effectiveAt: input.effectiveAt,
         enteredInventoryUnitId: line.enteredInventoryUnitId,
@@ -492,35 +469,59 @@ async function postPurchaseRecognition(
         source: "finance_purchase",
         type: "receipt",
       }
-      const preparedStock = stock?.get(line.balanceSourceId)
-      if (stock && !preparedStock)
-        throw new FinanceError(
-          "CONFLICT",
-          "Original receipt stock preparation is incomplete.",
+    })
+    const operations = new Map<
+      string,
+      Awaited<ReturnType<typeof postSingleBalanceStockOperationInTransaction>>
+    >()
+    if (stock) {
+      for (const [id, operation] of await stock.execute(commands))
+        operations.set(id, operation)
+    } else {
+      for (const command of commands) {
+        if (
+          await tx.stockOperation.findUnique({
+            where: {
+              tenantId_clientOperationId: {
+                tenantId: input.tenantId,
+                clientOperationId: command.clientOperationId,
+              },
+            },
+            select: { id: true },
+          })
         )
-      const operation = preparedStock
-        ? await preparedStock.execute(stockCommand)
-        : await postSingleBalanceStockOperationInTransaction(tx, stockCommand)
-      const movement = operation.movements[0]
-      if (!movement || operation.movements.length !== 1)
+          throw new FinanceError(
+            "CONFLICT",
+            "This receipt stock identity already exists outside its command.",
+          )
+        operations.set(
+          command.balanceSourceId,
+          await postSingleBalanceStockOperationInTransaction(tx, command),
+        )
+      }
+    }
+    const receiptRows = lines.map((line) => {
+      const operation = operations.get(line.balanceSourceId)
+      const movement = operation?.movements[0]
+      if (!operation || !movement || operation.movements.length !== 1)
         throw new FinanceError(
           "CONFLICT",
           "The goods receipt did not produce one exact movement.",
         )
-      const receipt = await tx.financePurchaseReceiptLine.create({
-        data: {
-          tenantId: input.tenantId,
-          bookId: book.id,
-          billLineId: line.costBillLineId,
-          stockOperationId: operation.id,
-          stockMovementId: movement.id,
-        },
-      })
-      valuations.push({
-        receiptId: receipt.id,
-        expectedStockRevision: confirmation.expectedBalanceRevision + 1,
-      })
-    }
+      return {
+        id: randomUUID(),
+        tenantId: input.tenantId,
+        bookId: book.id,
+        billLineId: line.costBillLineId,
+        stockOperationId: operation.id,
+        stockMovementId: movement.id,
+      }
+    })
+    await tx.financePurchaseReceiptLine.createMany({ data: receiptRows })
+    const valuations = receiptRows.map((receipt, index) => ({
+      receiptId: receipt.id,
+      expectedStockRevision: commands[index]!.expectedBalanceRevision + 1,
+    }))
     await recordRecognitionReceiptValuations(
       tx,
       {
