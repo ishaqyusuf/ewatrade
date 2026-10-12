@@ -1218,7 +1218,11 @@ function ReturnForm({
     order.totalMinor,
     chosen.reduce((sum, row) => sum + row.value, 0),
   )
-  const moneyOn = moneyBack && Boolean(credit?.allowed)
+  // The server refuses a credit of ₦0: the total is already ₦0 (say, after a
+  // full "Overcharged" refund) or the chosen items carry no value.
+  const nothingToCredit =
+    order.totalMinor <= 0 || (chosen.length > 0 && value <= 0)
+  const moneyOn = moneyBack && Boolean(credit?.allowed) && !nothingToCredit
   const totalAfter = order.totalMinor - value
   const refund = Math.max(0, order.amountPaidMinor - totalAfter)
   const dueAfter = Math.max(0, totalAfter - (order.amountPaidMinor - refund))
@@ -1326,20 +1330,24 @@ function ReturnForm({
       ))}
       <View className="rounded-[18px] bg-card px-3.5 shadow-sm">
         <ToggleRow
-          disabled={!credit?.allowed}
+          disabled={!credit?.allowed || nothingToCredit}
           icon={{ name: "Undo2", tint: "rose" }}
           onValueChange={setMoneyBack}
           sub={
             !credit?.allowed
               ? (credit?.reason ?? "Not available")
-              : !chosen.length
-                ? "Choose what came back first"
-                : refund > 0
-                  ? `${money(refund)} back to the customer`
-                  : `Takes ${money(value)} off what they owe`
+              : nothingToCredit
+                ? order.totalMinor <= 0
+                  ? `Nothing left to credit: the total is already ${money(0)}`
+                  : "These items have no value to credit"
+                : !chosen.length
+                  ? "Choose what came back first"
+                  : refund > 0
+                    ? `${money(refund)} back to the customer`
+                    : `Takes ${money(value)} off what they owe`
           }
           title={
-            refund > 0 || !chosen.length
+            refund > 0 || !chosen.length || nothingToCredit
               ? "Give money back now"
               : "Take it off what they owe"
           }
