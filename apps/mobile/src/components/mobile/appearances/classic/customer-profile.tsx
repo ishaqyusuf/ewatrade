@@ -17,7 +17,7 @@ import { HeroCard } from "../../green-till/hero-card"
 import { RecordRow, StatusPill } from "../../green-till/kit"
 import {
   ledgerItemsLabel,
-  ledgerPayment,
+  ledgerOrderPayment,
 } from "../../orders/orders-ledger-model"
 import { customerLastSeen } from "./customer-book-screen"
 
@@ -227,7 +227,7 @@ export function ClassicCustomerOrderRow({
         label: order.status === "REFUNDED" ? "Refunded" : "Cancelled",
         tone: "muted" as const,
       }
-    : ledgerPayment(order.paymentStatus)
+    : ledgerOrderPayment(order)
   return (
     <RecordRow
       avatar={{ icon: "ReceiptText", tint: "mint" }}

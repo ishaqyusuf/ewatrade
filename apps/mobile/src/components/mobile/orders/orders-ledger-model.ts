@@ -1,3 +1,4 @@
+import { isCommerceOrderCreditedUnpaid } from "@/components/mobile/commerce/commerce-model"
 import { formatMinorMoney } from "@ewatrade/utils"
 
 type LedgerOrder = {
@@ -124,6 +125,14 @@ export function ledgerPayment(status: string) {
   if (status === "AUTHORIZED")
     return { label: "Authorized", tone: "info" as const }
   return { label: "Unpaid", tone: "danger" as const }
+}
+/** The payment pill for an order, "Credited" when credits took it all. */
+export function ledgerOrderPayment(
+  order: Parameters<typeof isCommerceOrderCreditedUnpaid>[0],
+) {
+  if (isCommerceOrderCreditedUnpaid(order))
+    return { label: "Credited", tone: "muted" as const }
+  return ledgerPayment(order.paymentStatus)
 }
 export function ledgerFulfillment(status: string) {
   const labels: Record<string, string> = {

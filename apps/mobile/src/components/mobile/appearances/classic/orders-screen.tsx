@@ -14,7 +14,7 @@ import {
   ledgerFulfillmentLine,
   ledgerItemsLabel,
   ledgerMoney,
-  ledgerPayment,
+  ledgerOrderPayment,
 } from "@/components/mobile/orders/orders-ledger-model"
 import type {
   OrdersFilterProps,
@@ -380,7 +380,7 @@ export function ClassicOrdersRow({
         label: order.status === "REFUNDED" ? "Refunded" : "Cancelled",
         tone: "muted" as const,
       }
-    : ledgerPayment(order.paymentStatus)
+    : ledgerOrderPayment(order)
   const avatar = recordAvatar(order.customerName ?? "", index)
   const fulfilment = cancelled ? null : ledgerFulfillmentLine(order.status)
   return (

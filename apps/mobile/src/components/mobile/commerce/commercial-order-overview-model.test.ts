@@ -4,6 +4,7 @@ import {
   buildCommercialOrderActivity,
   canFulfillCommercialOrderLine,
   commercialOrderLineReturnState,
+  commercialOrderReturnLabel,
   getCommercialOrderOverviewSummary,
 } from "./commercial-order-overview-model"
 
@@ -177,6 +178,46 @@ describe("commercial order overview model", () => {
     ).toEqual({ all: true, label: "Returned" })
   })
 
+  test("reads Returned or Part returned once handed-over lines come back", () => {
+    const order = makeOrder()
+    const [line] = order.lines
+    if (!line) throw new Error("fixture line missing")
+    const withLine = (
+      productFulfillments: string[],
+      productReturns: string[],
+    ) =>
+      getCommercialOrderOverviewSummary({
+        ...order,
+        lines: [
+          {
+            ...line,
+            productFulfillments: productFulfillments.map((quantity, index) => ({
+              id: `f-${index}`,
+              quantity,
+              stockOperationId: "op-f",
+            })),
+            productReturns: productReturns.map((quantity, index) => ({
+              disposition: "RESTOCK" as const,
+              id: `r-${index}`,
+              quantity,
+              stockOperationId: "op-r",
+            })),
+          },
+        ],
+      })
+    expect(commercialOrderReturnLabel(withLine([], []))).toBeNull()
+    expect(commercialOrderReturnLabel(withLine(["2"], []))).toBeNull()
+    expect(commercialOrderReturnLabel(withLine(["2"], ["1"]))).toBe(
+      "Part returned",
+    )
+    const all = withLine(["2"], ["1", "1"])
+    expect(commercialOrderReturnLabel(all)).toBe("Returned")
+    expect(all).toMatchObject({
+      partReturnedLineCount: 0,
+      returnedLineCount: 1,
+    })
+  })
+
   test("derives summary counts without blending product and service work", () => {
     const order = makeOrder()
     const [productLine, serviceLine] = order.lines
@@ -189,7 +230,9 @@ describe("commercial order overview model", () => {
       fulfillableProductLineCount: 1,
       itemCount: 3,
       lineCount: 2,
+      partReturnedLineCount: 0,
       productLineCount: 1,
+      returnedLineCount: 0,
       serviceLineCount: 1,
     })
     expect(canFulfillCommercialOrderLine(productLine)).toBe(true)

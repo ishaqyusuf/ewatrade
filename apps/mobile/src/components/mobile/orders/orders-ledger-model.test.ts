@@ -6,6 +6,7 @@ import {
   ledgerFulfillmentLine,
   ledgerItemsLabel,
   ledgerMoney,
+  ledgerOrderPayment,
   ledgerPayment,
 } from "./orders-ledger-model"
 const order = {
@@ -41,6 +42,34 @@ test("unpaid is red and part-paid amber", () => {
     label: "Part paid",
     tone: "warn",
   })
+})
+test("a never-paid order credited to zero reads Credited, not Paid", () => {
+  const credited = {
+    amountPaidMinor: 0,
+    creditMinor: 9_080,
+    paymentStatus: "PAID",
+    totalMinor: 0,
+  }
+  expect(ledgerOrderPayment(credited)).toEqual({
+    label: "Credited",
+    tone: "muted",
+  })
+  // Paid then refunded in full keeps its Refunded pill.
+  expect(
+    ledgerOrderPayment({
+      ...credited,
+      amountPaidMinor: 0,
+      paymentStatus: "REFUNDED",
+    }).label,
+  ).toBe("Refunded")
+  // Paid and still owed nothing after a part credit stays Paid.
+  expect(
+    ledgerOrderPayment({
+      ...credited,
+      amountPaidMinor: 5_000,
+      totalMinor: 5_000,
+    }).label,
+  ).toBe("Paid")
 })
 test("days read Today and Yesterday, then dates", () => {
   const now = new Date(2026, 9, 9, 15)

@@ -13,6 +13,7 @@ import {
   type CommercialOrderActivity,
   canFulfillCommercialOrderLine,
   commercialOrderLineReturnState,
+  commercialOrderReturnLabel,
   getCommercialOrderOverviewSummary,
 } from "@/components/mobile/commerce/commercial-order-overview-model"
 import { recordAvatar } from "@/components/mobile/dashboard/green-till-home-model"
@@ -26,7 +27,7 @@ import { OrderNotesAndPhotos } from "@/components/mobile/order-detail/order-note
 import { useOrderDetailPresentation } from "@/components/mobile/order-detail/use-order-detail-presentation"
 import {
   ledgerDayLabel,
-  ledgerPayment,
+  ledgerOrderPayment,
   ledgerWhen,
 } from "@/components/mobile/orders/orders-ledger-model"
 import { StatusBanner } from "@/components/mobile/status-banner"
@@ -66,6 +67,7 @@ export function ClassicOrderDetailContent({
   order,
 }: OrderDetailContentProps) {
   const summary = getCommercialOrderOverviewSummary(order)
+  const returnLabel = commercialOrderReturnLabel(summary)
   const closed = isClosedOrder(order.status)
   const { fulfillmentScheduledForFuture } = useOrderDetailPresentation(order)
 
@@ -89,11 +91,11 @@ export function ClassicOrderDetailContent({
             label:
               summary.fulfillableProductLineCount > 0
                 ? `Fulfil ${summary.fulfillableProductLineCount}`
-                : summary.productLineCount > 0 &&
-                    summary.fulfilledProductLineCount ===
-                      summary.productLineCount
-                  ? "Fulfilled"
-                  : "Fulfil",
+                : (returnLabel ??
+                  (summary.productLineCount > 0 &&
+                  summary.fulfilledProductLineCount === summary.productLineCount
+                    ? "Fulfilled"
+                    : "Fulfil")),
             icon: "Package",
             onPress: onFulfillAll,
             disabled:
@@ -438,7 +440,8 @@ function OrderOverviewSummary({
   const due = order.balanceDueMinor > 0
   // Everything came back: lead with the credit, not a ₦0 total.
   const credited = !due && order.totalMinor === 0 && order.creditMinor > 0
-  const payment = ledgerPayment(order.paymentStatus)
+  const payment = ledgerOrderPayment(order)
+  const returnLabel = commercialOrderReturnLabel(summary)
   return (
     <View className="gap-3">
       <HeroCard
@@ -461,12 +464,17 @@ function OrderOverviewSummary({
         }
         stats={[
           { label: "Items", value: formatCommerceQuantity(summary.itemCount) },
-          {
-            label: "Fulfilled",
-            value: summary.productLineCount
-              ? `${summary.fulfilledProductLineCount} of ${summary.productLineCount}`
-              : "Service order",
-          },
+          returnLabel
+            ? {
+                label: returnLabel,
+                value: `${summary.returnedLineCount + summary.partReturnedLineCount} of ${summary.productLineCount}`,
+              }
+            : {
+                label: "Fulfilled",
+                value: summary.productLineCount
+                  ? `${summary.fulfilledProductLineCount} of ${summary.productLineCount}`
+                  : "Service order",
+              },
           {
             label: "Delivery",
             value: order.deliveryDueAt
@@ -1032,13 +1040,20 @@ function fulfilmentDetail(
   summary: ReturnType<typeof getCommercialOrderOverviewSummary>,
 ) {
   const parts: string[] = []
+  const allReturned = commercialOrderReturnLabel(summary) === "Returned"
   if (summary.productLineCount > 0) {
     parts.push(
-      summary.fulfilledProductLineCount === summary.productLineCount
-        ? "All lines fulfilled"
-        : `${summary.fulfilledProductLineCount} of ${summary.productLineCount} lines fulfilled`,
+      allReturned
+        ? "All lines returned"
+        : summary.fulfilledProductLineCount === summary.productLineCount
+          ? "All lines fulfilled"
+          : `${summary.fulfilledProductLineCount} of ${summary.productLineCount} lines fulfilled`,
     )
   }
+  if (summary.returnedLineCount && !allReturned)
+    parts.push(`${summary.returnedLineCount} returned`)
+  if (summary.partReturnedLineCount)
+    parts.push(`${summary.partReturnedLineCount} part returned`)
   if (summary.fulfillableProductLineCount > 0) {
     parts.push(
       `${summary.fulfillableProductLineCount} ready for stock fulfilment`,

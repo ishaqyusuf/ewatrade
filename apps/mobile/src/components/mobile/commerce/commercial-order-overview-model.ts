@@ -79,6 +79,10 @@ export function getCommercialOrderOverviewSummary(order: CommercialOrder) {
   const fulfilledCatalogFreeLines = catalogFreeLines.filter(
     (line) => line.serviceFulfillment,
   )
+  const returns = productLines.flatMap(
+    (line) => commercialOrderLineReturnState(line) ?? [],
+  )
+  const returnedLineCount = returns.filter((state) => state.all).length
 
   return {
     fulfilledProductLineCount:
@@ -90,8 +94,28 @@ export function getCommercialOrderOverviewSummary(order: CommercialOrder) {
     itemCount,
     lineCount: order.lines.length,
     productLineCount: productLines.length + catalogFreeLines.length,
+    /** Lines whose handed-over quantity all came back. */
+    returnedLineCount,
+    /** Lines where only part came back. */
+    partReturnedLineCount: returns.length - returnedLineCount,
     serviceLineCount: serviceLines.length,
   }
+}
+
+/**
+ * "Returned" once every handed-over line came back, "Part returned" when some
+ * did, as the dashboard's fulfilment pill says; null while lines are still to
+ * fulfil or nothing came back.
+ */
+export function commercialOrderReturnLabel(
+  summary: ReturnType<typeof getCommercialOrderOverviewSummary>,
+) {
+  const total = summary.productLineCount
+  if (!total || summary.fulfilledProductLineCount < total) return null
+  if (summary.returnedLineCount === total) return "Returned"
+  return summary.returnedLineCount + summary.partReturnedLineCount > 0
+    ? "Part returned"
+    : null
 }
 
 export function buildCommercialOrderActivity(

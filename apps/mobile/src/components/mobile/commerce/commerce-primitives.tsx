@@ -15,6 +15,7 @@ import {
   commerceStatusLabel,
   formatCommerceDate,
   formatCommerceQuantity,
+  isCommerceOrderCreditedUnpaid,
 } from "./commerce-model"
 
 export function CommercePageHeader({
@@ -68,6 +69,7 @@ export function CommerceOrderRow({
   order: CommercialOrder
 }) {
   const itemCount = commerceOrderItemCount(order)
+  const credited = isCommerceOrderCreditedUnpaid(order)
 
   return (
     <Pressable
@@ -102,8 +104,12 @@ export function CommerceOrderRow({
           <View className="flex-row flex-wrap justify-end gap-1.5">
             <StatusBadge
               className="min-h-7 px-2.5 py-0"
-              label={commerceStatusLabel(order.paymentStatus)}
-              tone={commercePaymentTone(order.paymentStatus)}
+              label={
+                credited ? "Credited" : commerceStatusLabel(order.paymentStatus)
+              }
+              tone={
+                credited ? "muted" : commercePaymentTone(order.paymentStatus)
+              }
             />
             <StatusBadge
               className="min-h-7 px-2.5 py-0"

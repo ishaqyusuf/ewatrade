@@ -64,6 +64,24 @@ export function commercePaymentTone(status: string): CommerceStatusTone {
   return "warning"
 }
 
+/**
+ * Never paid, and credits took the whole total (items came back). The server
+ * settles that as PAID; it reads "Credited", as on the dashboard.
+ */
+export function isCommerceOrderCreditedUnpaid(order: {
+  amountPaidMinor: number
+  creditMinor: number
+  paymentStatus: string
+  totalMinor: number
+}) {
+  return (
+    order.paymentStatus !== "REFUNDED" &&
+    order.totalMinor === 0 &&
+    order.creditMinor > 0 &&
+    order.amountPaidMinor <= 0
+  )
+}
+
 export function formatCommerceDate(value: Date | string) {
   return new Intl.DateTimeFormat(undefined, {
     day: "numeric",
