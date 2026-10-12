@@ -16,6 +16,7 @@ export const MOBILE_ACCOUNT_AVATAR_TOKENS = {
 
 export const MOBILE_OPERATIONAL_BOTTOM_TAB_TOKENS = {
   activeForeground: "#FFFFFF",
+  activeIndicator: "rgba(255, 255, 255, 0.09)",
   centerAccent: "#F2A51A",
   centerForeground: "#1E1E1C",
   centerSurface: "#FCFCFA",
