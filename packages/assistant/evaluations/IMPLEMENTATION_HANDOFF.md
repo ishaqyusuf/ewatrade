@@ -15,7 +15,7 @@ remain unstarted. Avoid duplicate ownership.
 | ID | Deliverable |
 |---|---|
 | A04 | Started, owner retained: native inventory and six catalog/order editors under review. Continue missing native review/editor/receipt-object flows and review repairs. Preserve Setup/product workflows; prepare keyboard, large text, loading, expiry, offline, reload, business-switch and role journeys for acceptance. |
-| S05 | Started, owner retained: daily staff operational history from actual actor-attributed order, payment, stock, service and authorized finance sources. Show canonical record, outcome, time and Store; separate performed/assigned/approved work. Preserve unknown historical attribution and exact full-result counts. |
+| S05 | Started, owner retained: original three display repairs and exact adjustment filter revalidated. Repair long-label identity and finance-exclusion copy; complete authorized Book-scoped finance, global per-event original objects, connected/privacy/reversal/timezone/role and performance evidence. Preserve unknown attribution and full-result counts. |
 | F01 | Started, owner retained: original source/amount/expiry repairs revalidated. Repair source-currency validation and held-money source binding; complete persisted canonical intent commands and atomic manual/online receipt protection. |
 | F02 | Reviewed payment link and separately confirmed sharing; signed settlement/reconciliation, expiry and duplicate/out-of-order/partial outcomes. Build deterministic provider support before any authorized sandbox run. |
 | F03 | Started, owner retained: payout research and proposed domain reviewed. Correct documented same-reference retry behavior and missing approval-URL statuses; reconcile country/currency/funding/verification/fees/limits/account requirements and unresolved decisions. Existing checkout credentials do not establish transfer authority. |
@@ -29,6 +29,11 @@ remain unstarted. Avoid duplicate ownership.
 
 The current owner continues A04/H02/S05/F01/F03/F04/H05 and their review repairs. For
 unclaimed work, use another ready dependency; retain F02/F04/F05 prerequisites.
+
+The newly committed structured purchase presentation also has a [category
+visibility repair](runs/2026-10-12-purchase-category-review-visibility.md): 100
+category changes produce only 30 reachable names and a static `+70 more`. Keep
+bounded contracts and provide access to every exact category change before review.
 Record missing mobile support for the existing web
 capabilities and deliver the native implementations in reviewable packets rather
 than assuming web support implies parity. Then work through canonical

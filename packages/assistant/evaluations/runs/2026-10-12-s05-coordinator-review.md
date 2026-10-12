@@ -51,3 +51,51 @@ Canonical S05 also requires work beyond this first packet:
 The implementation agent owns repairs and subsequent packets. The coordinator
 owns independent review and acceptance. S05 stays partial, planned and without
 an accepted bookmark; 13/45 web acceptance is unchanged.
+
+## Repair revalidation and remaining display gaps — 12 October 2026
+
+The three failures above describe the earlier source. The coordinator reran
+those probes against the reported repairs: ten short-label records now render
+ten lines, `10 of 14 shown` is honest, all labels remain; long outcomes produce
+991 characters while preserving the count and exclusions; the unknown actor is
+shown without the contradictory person-attribution claim. Valid controls pass.
+Existing owner repository, schema and compiler results are reused.
+
+Source review verifies `stockOperationType` reaches the common `where` used by
+both stock-operation rows and counts, participates in cursor filter identity,
+and is refused unless `stream` is `STOCK_OPERATION`. The original exact
+adjustment-filter gap is repaired within this source packet.
+
+A versioned diagnostic extends the controls. Run against the current S05
+implementation packet in the shared working tree; its formatter/schema exports
+are not integrated to main yet. This is not a clean-main/default-suite test:
+
+```sh
+EWATRADE_DATABASE_URL='postgresql://probe:probe@127.0.0.1:1/unreachable' \
+bun --env-file=/dev/null packages/assistant/evaluations/fixtures/staff-activity-review.fixture.ts
+```
+
+Remaining reproduced issues:
+
+1. Ten PRICE_CHANGE records with distinct Product labels within the canonical
+   120-character name limit lose **all ten distinguishing suffixes**. Each
+   rendered line is clipped in its entirety after reserving notes. It remains
+   bounded at 991 characters, but the record label is not always retained as
+   the function comment claims. Keep every event individually identifiable and
+   reachable through its exact canonical original; shorten a display label only
+   with a usable original-object target or detail continuation. A row count and
+   identical truncated prefixes do not prove all records can be identified.
+2. `coverage.notIncluded` explicitly lists `finance_actions`, but the saved
+   answer discloses only sign-ins/attendance/payroll. The tool description
+   acknowledges Finance, while the independently rendered card does not. Show
+   the finance exclusion until authorized Book-scoped histories exist; do not
+   imply the current aggregate covers all required operational activity.
+
+All inputs are synthetic canonical-shaped data; the exported formatter is real.
+No connected database, saved chat, model, provider or native acceptance occurred.
+The full finance, global per-event original object, privacy/reversal/timezone/
+role comparison and performance requirements above remain open. Implementation
+repairs stay with the owner. S05 stays partial/planned/unbookmarked, with no
+change to the 13/45 accepted web total.
+
+Reviewed formatter SHA-256: `6e0c7bd6247d5f22389c50d20aea8976a56b8a709f719472e5516351d044b493`.

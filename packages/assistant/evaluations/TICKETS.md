@@ -50,7 +50,7 @@ accepted milestone is recorded; it does not assert that no related source exists
 | S02 | Staff invitations and lifecycle | ◐ Partial | Pending |
 | S03 | Suspend/reactivate staff | ◐ Partial | Pending |
 | S04 | Roles, Store assignments and handover | ◐ Partial | Pending |
-| S05 | Daily staff activity history | ◐ Partial — packet 1 reviewed; display repairs and remaining canonical scope pending | Pending |
+| S05 | Daily staff activity history | ◐ Partial — original repairs revalidated; label identity, finance copy and remaining canonical scope pending | Pending |
 | F01 | Collection source contract | ◐ Partial — original repairs revalidated; currency/held binding and persisted integration pending | Pending |
 | F02 | Payment link and settlement | ○ Pending | Pending |
 | F03 | Payout feasibility and domain | ◐ Partial — research reviewed; provider-reference/state corrections and policy decisions pending | Pending |

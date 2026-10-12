@@ -2,13 +2,15 @@
 
 [Quick-chat object continuity](runs/2026-10-12-quick-chat-object-continuity.md): actual saved chat and original object retain the unsent draft through Close and Minimize/Reopen; screenshots captured. No additional ticket acceptance.
 
+[Saved purchase category visibility](runs/2026-10-12-purchase-category-review-visibility.md): ten stock/value rows visible, unknown opening costs preserved; only 30 of 100 category names are reachable, with a static remainder chip. Repair required; screenshot captured, no business write.
+
 [Native payment-route review](runs/2026-10-12-native-payment-route-review.md): the payment-without-Order fallback is repaired and the original probe is revalidated; native exact-object acceptance remains open.
 
 [Staff Job handoff review](runs/2026-10-12-staff-job-handoff-review.md): revoked-access return repair, focused regressions and scoped compilation pass; source committed on main. Actual saved purchase-object screenshots show same-chat and unsent-draft continuity, separately from the unaccepted S04 flow.
 
 [H02 coordinator review](runs/2026-10-12-h02-coordinator-review.md): both source repairs independently revalidated; final handoff and hosted CI acceptance remain open. Earlier passing evidence is reused.
 
-[S05 coordinator review](runs/2026-10-12-s05-coordinator-review.md): display-count, truncation and unknown-actor copy failures reproduced; finance, original-object links and exact adjustment filtering remain required.
+[S05 coordinator review](runs/2026-10-12-s05-coordinator-review.md): original three display repairs and exact adjustment filter revalidated; long-label identity and finance-exclusion copy need repair. Finance, original-object links and connected/mobile acceptance remain open.
 
 [F01 coordinator review](runs/2026-10-12-f01-coordinator-review.md): original source/amount/expiry repairs revalidated with valid controls; source-currency and held-money binding repairs plus persisted integration remain open.
 
