@@ -548,7 +548,6 @@ export function ReturnItemsDialog({
   )
   const [conditions, setConditions] = useState<Record<string, Condition>>({})
   const [moneyChoice, setMoneyChoice] = useState<boolean | null>(null)
-  const giveMoney = credit.allowed && (moneyChoice ?? true)
   const original = originalReceipt(order.payments)
   const [method, setMethod] = useState<OrderPaymentMethod>(
     original.method ?? "cash",
@@ -598,6 +597,11 @@ export function ReturnItemsDialog({
     order.totalMinor,
     chosen.reduce((sum, row) => sum + row.value, 0),
   )
+  // The server refuses a credit of ₦0: the total is already ₦0 (say, after a
+  // full "Overcharged" refund) or the chosen items carry no value.
+  const nothingToCredit =
+    order.totalMinor <= 0 || (chosen.length > 0 && value <= 0)
+  const giveMoney = credit.allowed && !nothingToCredit && (moneyChoice ?? true)
   const totalAfter = order.totalMinor - value
   const refundNow = Math.max(0, order.amountPaidMinor - totalAfter)
   const stillDue = Math.max(0, totalAfter - (order.amountPaidMinor - refundNow))
@@ -724,7 +728,7 @@ export function ReturnItemsDialog({
       <label
         className={cn(
           "flex items-center justify-between gap-3 rounded-lg border border-border p-3",
-          !credit.allowed && "opacity-70",
+          (!credit.allowed || nothingToCredit) && "opacity-70",
         )}
       >
         <span className="min-w-0">
@@ -734,6 +738,12 @@ export function ReturnItemsDialog({
           <span className="block text-xs text-muted-foreground">
             {!credit.allowed && credit.reason ? (
               <LockedReason reason={credit.reason} wrap />
+            ) : nothingToCredit ? (
+              order.totalMinor <= 0 ? (
+                `Nothing left to credit: the total is already ${money(0)}`
+              ) : (
+                "These items have no value to credit"
+              )
             ) : !giveMoney ? (
               "Stock only, no money"
             ) : !chosen.length ? (
@@ -751,7 +761,7 @@ export function ReturnItemsDialog({
           aria-checked={giveMoney}
           className="size-5 accent-[var(--primary)]"
           checked={giveMoney}
-          disabled={!credit.allowed || save.isPending}
+          disabled={!credit.allowed || nothingToCredit || save.isPending}
           onChange={(event) => setMoneyChoice(event.target.checked)}
         />
       </label>
