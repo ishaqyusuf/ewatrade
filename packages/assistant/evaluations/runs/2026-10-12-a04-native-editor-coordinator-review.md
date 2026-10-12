@@ -93,3 +93,35 @@ Running infrastructure is not native acceptance. Obtain the visible running
 device/app surface before executing the outstanding journeys.
 
 ![Current Device Manager running state; not a native assistant test](/Users/M1PRO/Documents/code/ewatrade/artifacts/assistant-operations-parallel/A04/device-manager-running-v1.jpg)
+
+## Standalone window and dashboard baseline revalidation
+
+The human identifies the running Android screen as a **standalone emulator
+window**. Computer use's current app inventory still omits that window; selecting
+the display name `Emulator` returns `Invalid app: Emulator`. No native app/build
+or journey has been observed. The coordinator requested foregrounding the
+existing window to make another attachment attempt possible. This access boundary
+does not establish that the running device stopped. No launch, stop, wipe,
+settings or permission change was performed.
+
+The current signed-in QA dashboard was deliberately reloaded at the existing
+saved chat `/assistant/c/cmv4i45w70000eb9kl7jkfa3e`, after verifying an empty
+composer. It progressed through loading to the same Sweet Crumbs Bakery (Demo QA)
+chat, showing the saved Done receipt and two expired purchase drafts. The allowance
+remains 99 of 100. No message, edit, confirmation or business write was submitted.
+
+Current source enables saved-history queries only after assistant availability
+succeeds. Baseline availability checks the signing key length, followed by scope
+authorization in the protected router; per-capability availability separately
+excludes `planned` rollout. This fresh read observation establishes a usable
+current QA assistant read path, not the deployed source version, new action
+availability or H05 rollback acceptance. Do not describe the whole assistant as
+requiring activation/restart on the basis of the earlier E05 rejection. The
+specific E05 planned-capability promotion and QA API restart remain unapproved.
+G01 remains paused and D04's conditional connected suite remains unscheduled.
+
+![Freshly reloaded saved QA chat; read-path evidence only](/Users/M1PRO/Documents/code/ewatrade/artifacts/assistant-operations-parallel/A04/refreshed-dashboard-baseline-v1.jpg)
+
+No new accepted bookmark. Board remains 13 web accepted, 27 partial and 5
+unstarted; A04 remains partial with actual native acceptance outstanding. Existing
+source checks are reused; no broad test/type-check rerun.
