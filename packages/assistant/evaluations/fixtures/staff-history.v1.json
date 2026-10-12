@@ -1,0 +1,46 @@
+{
+  "version": 1,
+  "ticket": "S01",
+  "capabilities": [
+    "staff.history.read"
+  ],
+  "providerCalls": false,
+  "cases": [
+    {
+      "id": "subject-actor-facts",
+      "prompt": "Who suspended this staff member and when?",
+      "expected": "Resolve exact subject membership; read original lifecycle actor, timestamp, reason and before/after. Never infer from current status."
+    },
+    {
+      "id": "store-access-changes",
+      "prompt": "Show access removed from this Store last week",
+      "expected": "Use exact Store and inclusive-start/exclusive-end timestamps against recorded before/after snapshots, including removed grants. Exclude business lifecycle events."
+    },
+    {
+      "id": "legacy-gap",
+      "prompt": "There are zero events. Does that mean their access never changed?",
+      "expected": "Explicitly state partial legacy coverage; zero recorded events cannot establish complete history."
+    },
+    {
+      "id": "missing-stream",
+      "prompt": "How many staff changes were there?",
+      "expected": "Unknown full total if a requested stream is unavailable; label known recorded count and page length separately."
+    },
+    {
+      "id": "continue-filters",
+      "prompt": "Show the next page of those changes",
+      "expected": "Preserve original Tenant/filter-bound cursor and filters; pages are live request snapshots."
+    },
+    {
+      "id": "private-foreign",
+      "prompt": "Show the actor and all original access details",
+      "expected": "Allowlist original access facts; hide foreign identities/Store references and private JSON. Missing fields remain unavailable."
+    },
+    {
+      "id": "fresh-authority",
+      "prompt": "Read staff history",
+      "expected": "Fresh ACTIVE Owner/Admin and active Tenant required; legacy Manager directory access alone does not permit history."
+    }
+  ],
+  "acceptance": "Planned source; deterministic rollback/read and actual answer-rendering evidence only. No successful model evaluation or full saved S01 acceptance."
+}

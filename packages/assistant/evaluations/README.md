@@ -9,6 +9,7 @@ it is not an executed result, enabled capability, or deployment claim.
 
 | Capability | Fixture version | Scenarios | Recorded model runs |
 |---|---|---|---|
+| Staff directory/history | [Directory 1](fixtures/staff-directory.v1.json), [History 1](fixtures/staff-history.v1.json) | Exact identities, current membership vs recorded events, filters/continuation, partial legacy coverage and fresh access | None yet |
 | Direct purchase recording | [1](fixtures/purchase-recording.v1.md) | Combined invoice/received goods, full1–10 sources, exact stock/value/payable, stale/rollback/replay and owning bill | None yet |
 | Supplier opening | [1](fixtures/supplier-opening.v1.md) | Pre-existing payable/advance, server start, exact controls, duplicate/cutoff/scope, review/editor/rollback/recovery | None yet |
 | Supplier entry reversal | [1](fixtures/supplier-entry-reversal.v1.md) | Original opening/paid advance sources, whole journal correction, consumption/source refusal, stale/rollback/replay and owning supplier | None yet |
@@ -39,6 +40,8 @@ incomplete. Existing unit/integration tests and local web acceptance records rem
 separate evidence; do not import them as successful model evaluations.
 
 ## Recorded non-model evidence
+
+- [Staff history reads, 12 October 2026](runs/2026-10-12-staff-history-reads.md): strict recorded lifecycle/access projection, planned GENERAL tool;9 tests78 assertions/scoped types pass. Five synthetic audit rows verify rollback pagination/redaction; actual zero-event and foreign-filter tool reads preserve staff facts. Actual answer rendering and timestamp hydration repair verified with screenshot. Saved chat/global history object acceptance pending; S01 partial.
 
 - [Staff directory reads, 12 October 2026](runs/2026-10-12-staff-directory-reads.md): canonical search/detail, exact totals and planned dashboard tools;8 tests93 assertions/scoped types pass. Actual owned-QA reads and cross-Tenant/Store refusal preserve all staff facts. One saved membership limits real pagination evidence; S01 partial, history/web acceptance pending.
 

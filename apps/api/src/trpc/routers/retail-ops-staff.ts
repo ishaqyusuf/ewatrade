@@ -12,6 +12,7 @@ import {
   inviteRetailOpsStaff,
   listRetailOpsStaff,
   listStaffDirectoryPage,
+  listStaffHistoryPage,
   getStaffDirectoryMember,
   StaffDirectoryError,
   resolveRetailOpsStaffInviteToken,
@@ -37,6 +38,7 @@ import {
 import {
   retailOpsStaffDirectoryPageSchema,
   retailOpsStaffDirectoryMemberSchema,
+  retailOpsStaffHistoryPageSchema,
 } from "../../schemas/retail-ops-staff-reads"
 
 async function staffRead<T>(operation: () => Promise<T>) {
@@ -166,6 +168,17 @@ function resolveStore(
 }
 
 export const retailOpsStaffRouter = createTRPCRouter({
+  staffHistoryPage: protectedProcedure
+    .input(retailOpsStaffHistoryPageSchema)
+    .query(({ ctx, input }) =>
+      staffRead(() =>
+        listStaffHistoryPage(ctx.db, {
+          ...input,
+          tenantId: ctx.tenantContext.tenant.id,
+          actorUserId: ctx.session.user.id,
+        }),
+      ),
+    ),
   staffDirectoryPage: protectedProcedure
     .input(retailOpsStaffDirectoryPageSchema)
     .query(({ ctx, input }) =>

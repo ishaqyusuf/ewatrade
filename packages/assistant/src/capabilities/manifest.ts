@@ -28,6 +28,13 @@ const proposalTests = [
  */
 export const capabilityManifest = [
   {
+    id: "staff.history.read", version: 1, mode: "read", title: "Read recorded staff history",
+    domain: "staff", tool: "readStaffHistory", policy: { roles: ["OWNER", "ADMIN"] }, scope: "tenant",
+    clients: ["dashboard"], rollout: "planned", procedures: ["retailOps.staffHistoryPage"],
+    examples: ["Who changed this staff member's Store access?", "Show staff suspensions last week"],
+    tests: ["packages/db/src/queries/staff-history.test.ts", "apps/api/src/assistant/general-staff-history.test.ts"], brain,
+  },
+  {
     id: "staff.directory.read", version: 1, mode: "read", title: "Search staff directory",
     domain: "staff", tool: "readStaffDirectory", policy: { roles: managers }, scope: "tenant",
     clients: ["dashboard"], rollout: "planned", procedures: ["retailOps.staffDirectoryPage"],

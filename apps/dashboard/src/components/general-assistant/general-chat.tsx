@@ -36,6 +36,7 @@ import { Streamdown } from "streamdown"
 import { StickToBottom } from "use-stick-to-bottom"
 import { AssistantComposer } from "./assistant-composer"
 import { GeneralAttachComposer } from "./general-attachment-tray"
+import { GeneralAnswerCard } from "./general-answer-card"
 import { GeneralSentFile } from "./general-chat-photo"
 import { GeneralProposalCard } from "./general-proposal-card"
 import { GeneralProposalEditor } from "./general-proposal-editor"
@@ -330,22 +331,7 @@ export function GeneralThread({
                     </Streamdown>
                   ) : null}
                   {answers.map((answer) => (
-                    <div
-                      key={answer.id}
-                      className="rounded-lg border px-4 py-3"
-                    >
-                      <p className="text-xs text-muted-foreground">
-                        {answer.title}
-                      </p>
-                      <p className="text-xl font-semibold tabular-nums">
-                        {answer.value}
-                      </p>
-                      <p className="mt-1 text-xs text-muted-foreground">
-                        {answer.scope} · as of{" "}
-                        {new Date(answer.asOf).toLocaleString()}
-                      </p>
-                      <p className="mt-2 text-sm">{answer.detail}</p>
-                    </div>
+                    <GeneralAnswerCard key={answer.id} answer={answer} />
                   ))}
                 </div>
               </div>
