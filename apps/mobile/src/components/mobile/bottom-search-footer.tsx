@@ -1,4 +1,4 @@
-import { FormField } from "@/components/mobile/form-field"
+import { FloatingSearchField } from "@/components/mobile/floating-search-field"
 import { useColors } from "@/hooks/use-color"
 import {
   DOCK_OPACITY_INPUT,
@@ -8,7 +8,7 @@ import {
 import { shouldShowListSearch } from "@/lib/list-pagination"
 import { useOperationalModeStore } from "@/store/operationalModeStore"
 import type { ReactNode } from "react"
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { View } from "react-native"
 import { KeyboardStickyView } from "react-native-keyboard-controller"
 import Animated, {
@@ -24,6 +24,9 @@ type BottomSearchFooterProps = {
   alwaysShowSearch?: boolean
   autoFocus?: boolean
   bottomOffset?: number
+  /** Floating search only: a small note above the search row (a sale total).
+   * It hides while the search is focused. */
+  caption?: ReactNode
   children?: ReactNode
   /** Slides the footer down out of view (see useBottomSearchScroll). It stays
    * visible while the search is focused or has text. */
@@ -34,21 +37,29 @@ type BottomSearchFooterProps = {
   maxLength?: number
   localSearch?: boolean
   onChangeText: (value: string) => void
+  /** Reports search focus, e.g. to fold the screen's top card (useSearchFold). */
+  onFocusChange?: (focused: boolean) => void
   onHeightChange?: (height: number) => void
   placeholder: string
   showDisabledOfflineSearch?: boolean
   searchVisible?: boolean
   totalCount: number
   value: string
-  /** action-bar: Green Till card bar with a rounded top for step actions. */
+  /** action-bar: Green Till card bar with a rounded top for step actions.
+   * Applies only when the footer shows no search; a visible search always
+   * floats as a pill with no bar behind it. */
   variant?: "default" | "action-bar"
 }
+
+/** Space between the floating search and the safe-area bottom edge. */
+const FLOATING_GAP = 10
 
 export function BottomSearchFooter({
   accessibilityLabel,
   alwaysShowSearch = false,
   autoFocus = false,
   bottomOffset = 0,
+  caption,
   children,
   hidden = false,
   includeSafeArea = true,
@@ -57,6 +68,7 @@ export function BottomSearchFooter({
   maxLength,
   localSearch = false,
   onChangeText,
+  onFocusChange,
   onHeightChange,
   placeholder,
   searchVisible = true,
@@ -72,8 +84,18 @@ export function BottomSearchFooter({
   const reduceMotion = useReducedMotion()
   const [focused, setFocused] = useState(false)
   const [height, setHeight] = useState(0)
-  const shouldHide = hidden && !focused && !value
+
+  const effectiveSearchVisible =
+    (!isOffline || localSearch || showDisabledOfflineSearch) &&
+    searchVisible &&
+    (alwaysShowSearch || shouldShowListSearch(totalCount))
+  // A field that unmounts while focused never blurs, so only count focus
+  // while the search is on screen.
+  const searchFocused = focused && effectiveSearchVisible
+  const shouldHide = hidden && !searchFocused && !value
   const hiddenProgress = useSharedValue(shouldHide ? 1 : 0)
+  const onFocusChangeRef = useRef(onFocusChange)
+  onFocusChangeRef.current = onFocusChange
 
   useEffect(() => {
     hiddenProgress.value = animateDock(
@@ -82,6 +104,11 @@ export function BottomSearchFooter({
       reduceMotion,
     )
   }, [hiddenProgress, reduceMotion, shouldHide])
+
+  useEffect(() => {
+    onFocusChangeRef.current?.(searchFocused)
+  }, [searchFocused])
+  useEffect(() => () => onFocusChangeRef.current?.(false), [])
 
   const slideStyle = useAnimatedStyle(() => ({
     opacity: interpolate(
@@ -92,17 +119,19 @@ export function BottomSearchFooter({
     transform: [{ translateY: hiddenProgress.value * (height + 12) }],
   }))
 
-  const effectiveSearchVisible =
-    (!isOffline || localSearch || showDisabledOfflineSearch) &&
-    searchVisible &&
-    (alwaysShowSearch || shouldShowListSearch(totalCount))
-
   useEffect(() => {
     if (!localSearch && !showDisabledOfflineSearch && isOffline && value)
       onChangeText("")
   }, [isOffline, localSearch, onChangeText, value, showDisabledOfflineSearch])
 
   if (!children && !effectiveSearchVisible) return null
+
+  const onLayout = (event: {
+    nativeEvent: { layout: { height: number } }
+  }) => {
+    setHeight(event.nativeEvent.layout.height)
+    onHeightChange?.(event.nativeEvent.layout.height)
+  }
 
   return (
     <KeyboardStickyView
@@ -117,64 +146,84 @@ export function BottomSearchFooter({
       }}
       testID="bottom-search-footer"
     >
-      <Animated.View
-        pointerEvents={shouldHide ? "none" : "auto"}
-        onLayout={(event) => {
-          setHeight(event.nativeEvent.layout.height)
-          onHeightChange?.(event.nativeEvent.layout.height)
-        }}
-        style={[
-          variant === "action-bar"
-            ? {
-                backgroundColor: colors.card,
-                borderTopLeftRadius: 24,
-                borderTopRightRadius: 24,
-                boxShadow: "0 -10px 30px rgba(24, 36, 32, 0.10)",
-              }
-            : { backgroundColor: colors.background },
-          slideStyle,
-        ]}
-      >
-        <View style={{ paddingBottom }}>
+      {effectiveSearchVisible ? (
+        // Floating search: the pill and any step action float over the list
+        // with no bar behind them, so touches around them reach the list.
+        <Animated.View
+          onLayout={onLayout}
+          pointerEvents={shouldHide ? "none" : "box-none"}
+          style={[
+            {
+              gap: 10,
+              paddingBottom: paddingBottom + FLOATING_GAP,
+              paddingHorizontal: 24,
+            },
+            slideStyle,
+          ]}
+        >
+          {caption && !searchFocused ? (
+            <View className="items-end" pointerEvents="none">
+              {caption}
+            </View>
+          ) : null}
           <View
             className={
-              variant === "action-bar"
-                ? "gap-3 px-4 pb-2 pt-3"
-                : "gap-3 px-4 pb-2 pt-2"
+              layout === "inline" ? "flex-row items-center gap-2.5" : "gap-2.5"
             }
+            pointerEvents="box-none"
           >
+            <View className={layout === "inline" ? "min-w-0 flex-1" : ""}>
+              <FloatingSearchField
+                accessibilityLabel={accessibilityLabel || label}
+                autoFocus={autoFocus}
+                editable={!isOffline || localSearch}
+                focused={searchFocused}
+                maxLength={maxLength}
+                onBlur={() => setFocused(false)}
+                onChangeText={onChangeText}
+                onFocus={() => setFocused(true)}
+                placeholder={placeholder}
+                value={value}
+              />
+            </View>
+            {children}
+          </View>
+        </Animated.View>
+      ) : (
+        <Animated.View
+          pointerEvents={shouldHide ? "none" : "auto"}
+          onLayout={onLayout}
+          style={[
+            variant === "action-bar"
+              ? {
+                  backgroundColor: colors.card,
+                  borderTopLeftRadius: 24,
+                  borderTopRightRadius: 24,
+                  boxShadow: "0 -10px 30px rgba(24, 36, 32, 0.10)",
+                }
+              : { backgroundColor: colors.background },
+            slideStyle,
+          ]}
+        >
+          <View style={{ paddingBottom }}>
             <View
               className={
-                layout === "inline" ? "flex-row items-center gap-3" : "gap-3"
+                variant === "action-bar"
+                  ? "gap-3 px-4 pb-2 pt-3"
+                  : "gap-3 px-4 pb-2 pt-2"
               }
             >
-              {effectiveSearchVisible ? (
-                <FormField
-                  accessibilityLabel={accessibilityLabel}
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                  autoFocus={autoFocus}
-                  editable={!isOffline || localSearch}
-                  containerClassName={
-                    layout === "inline" ? "min-w-0 flex-1" : undefined
-                  }
-                  label={label}
-                  leadingIcon="Search"
-                  maxLength={maxLength}
-                  onBlur={() => setFocused(false)}
-                  onChangeText={onChangeText}
-                  onFocus={() => setFocused(true)}
-                  placeholder={placeholder}
-                  returnKeyType="search"
-                  value={value}
-                  variant="search"
-                />
-              ) : null}
-              {children}
+              <View
+                className={
+                  layout === "inline" ? "flex-row items-center gap-3" : "gap-3"
+                }
+              >
+                {children}
+              </View>
             </View>
           </View>
-        </View>
-      </Animated.View>
+        </Animated.View>
+      )}
     </KeyboardStickyView>
   )
 }
