@@ -1,4 +1,5 @@
 "use client"
+import { GeneralServiceIntakeEditor } from "./general-service-intake-editor"
 import {
   type GeneralAction,
   type GeneralProposal,
@@ -63,6 +64,7 @@ export function GeneralProposalEditor(props: {
   onSave: (payload: GeneralAction) => void
   onCancel: () => void
 }) {
+  if (props.proposal.payload.action === "service_intake") return <GeneralServiceIntakeEditor initial={props.proposal.payload} currencyCode={props.currencyCode} disabled={props.disabled} onSave={props.onSave} onCancel={props.onCancel} />
   if (props.proposal.payload.action === "staff_invitation")
     return (
       <GeneralStaffInvitationEditor

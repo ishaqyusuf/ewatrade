@@ -27,6 +27,7 @@ import {
   assertCanManageSalesOperations,
   assertCanOperateOrders,
 } from "../trpc/routers/orders"
+import { assertServiceManager } from "../trpc/routers/service-permissions"
 import { assertServiceOperator } from "../trpc/routers/service-permissions"
 import { staffProcedureAction } from "../utils/staff-procedure-policy"
 import { generalCapabilityEnabled } from "./general-rollout"
@@ -88,6 +89,14 @@ export function requireGeneralScope(
  * transaction commands directly, so these must stay in step with the routers.
  */
 const domainAccess: Record<CapabilityId, (tenant: TenantContext) => void> = {
+  "sales.items.report": (tenant) =>
+    assertCanOperateOrders(tenant.membership.role),
+  "sales.collections.report": (tenant) =>
+    assertCanOperateOrders(tenant.membership.role),
+  "customers.debt.report": (tenant) => assertFinanceAccess(tenant),
+  "inventory.stock.report": (tenant) => assertCanManageInventory(tenant),
+  "finance.supplier_aging.report": (tenant) => assertFinanceAccess(tenant),
+  "finance.posted_profit.report": (tenant) => assertFinanceAccess(tenant),
   "finance.cash_count.record": (tenant) => assertFinanceAccess(tenant),
   "finance.cash_accounts.read": (tenant) => assertFinanceAccess(tenant),
   "finance.cash_counts.read": (tenant) => assertFinanceAccess(tenant),
@@ -213,6 +222,10 @@ const domainAccess: Record<CapabilityId, (tenant: TenantContext) => void> = {
     assertCanOperateOrders(tenant.membership.role),
   "sales.order.read": (tenant) =>
     assertCanOperateOrders(tenant.membership.role),
+  "services.intake.options.read": (tenant) =>
+    assertServiceManager(tenant.membership.role),
+  "services.intake.create": (tenant) =>
+    assertServiceManager(tenant.membership.role),
   "services.queue.read": (tenant) =>
     assertServiceOperator(tenant.membership.role),
   "customers.receivables.read": (tenant) => assertFinanceAccess(tenant),

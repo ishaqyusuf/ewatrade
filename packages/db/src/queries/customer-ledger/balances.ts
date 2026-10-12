@@ -1,3 +1,4 @@
+import { customerLedgerTotalsFromAggregates } from "./totals-projection"
 import type { Prisma } from "../../../generated/prisma/client"
 
 /** Caller authorizes the account and fixes the sequence in one repeatable-read transaction. */
@@ -28,17 +29,10 @@ export async function getCustomerLedgerTotalsInTransaction(
       _sum: { amountMinor: true },
     }),
   ])
-  const debit = debits._sum.amountMinor ?? BigInt(0)
-  const credit = credits._sum.amountMinor ?? BigInt(0)
-  const allocated =
-    (allocations._sum.amountMinor ?? BigInt(0)) -
-    (releases._sum.amountMinor ?? BigInt(0))
-  return {
-    debitMinor: debit.toString(),
-    creditMinor: credit.toString(),
-    allocatedMinor: allocated.toString(),
-    outstandingDebtMinor: (debit - allocated).toString(),
-    availableCreditMinor: (credit - allocated).toString(),
-    netBalanceMinor: (debit - credit).toString(),
-  }
+  return customerLedgerTotalsFromAggregates({
+    debit: debits._sum.amountMinor ?? BigInt(0),
+    credit: credits._sum.amountMinor ?? BigInt(0),
+    allocations: allocations._sum.amountMinor ?? BigInt(0),
+    releases: releases._sum.amountMinor ?? BigInt(0),
+  })
 }

@@ -94,6 +94,10 @@ export default async function ShellLayout({
         />
         <GlobalSheetsProvider
           access={{
+            serviceIntake:
+              ["OWNER", "ADMIN"].includes(ctx.membership.role) ||
+              (ctx.membership.role === "MANAGER" &&
+                ctx.membership.staffAccessMode === "LEGACY"),
             staffHistory: ["OWNER", "ADMIN"].includes(ctx.membership.role),
             staffDirectory:
               ["OWNER", "ADMIN"].includes(ctx.membership.role) ||

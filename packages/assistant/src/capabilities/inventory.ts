@@ -122,10 +122,7 @@ formOnly(
   ["inventory.offeringAvailability"],
 )
 
-
-planned("inventory", "C05", [
-  "inventory.reconciliationReport",
-])
+planned("inventory", "C05", ["inventory.reconciliationReport"])
 planned("inventory", "G04", [
   "inventory.moveCustody",
   "inventory.transformPackagedStock",
@@ -160,10 +157,7 @@ formOnly("finance", "Opening the Book is a guided setup with fiscal choices.", [
   "finance.setup",
 ])
 planned("finance", "E03", ["finance.*Money*", "finance.moneyMovement"])
-planned("finance", "E04", [
-  "finance.*Expense*",
-  "finance.*Bill*",
-])
+planned("finance", "E04", ["finance.*Expense*", "finance.*Bill*"])
 planned("finance", "H04", ["finance.expenseReceipts.*"])
 planned("finance", "E05", [
   "finance.*Supplier*",
@@ -290,3 +284,7 @@ planned("sales", "D03", [
   "orders.refund",
   "orders.returnItems",
 ])
+
+planned("services", "D04", ["serviceAssistantIntake.receipt"])
+
+planned("sales", "G01", ["businessReporting.read"])

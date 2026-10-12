@@ -1,0 +1,21 @@
+{
+  "version": 1,
+  "ticket": "D04",
+  "scope": "dashboard source, fixed-price services",
+  "status": "partial_unaccepted",
+  "cases": [
+    {"id":"exact-review","expected":"canonical quantity, express surcharge, payment and tracked-vs-charge-only facts"},
+    {"id":"natural-lookup","expected":"original Offering/Customer/assignee identities, ambiguity clarified, no merchant internal-ID request","status":"source_only"},
+    {"id":"freshness","expected":"price/policy/settings/customer changes require review"},
+    {"id":"authority","expected":"revoked/reps/wrong-Store/invalid scoped grant refuse"},
+    {"id":"precision","expected":"offering quantity scale, whole-minor totals and stale fixed price enforced"},
+    {"id":"payment-prerequisite","expected":"unsupported Finance receiving-account payment refuses before writes","full_acceptance":"pending"},
+    {"id":"message-prerequisite","expected":"automatic customer reminder refuses before writes","full_acceptance":"pending"},
+    {"id":"canonical-replay","expected":"original Intake/Order/Job set returned once"},
+    {"id":"receipt-failure","expected":"domain and proposal receipt roll back together","status":"guarded_runner_not_executed"},
+    {"id":"signed-confirmation","expected":"exact signature/revision/fresh auth checked, model has no write","status":"guarded_runner_not_executed"},
+    {"id":"original-receipt","expected":"later names/prices do not replace saved Intake or snapshot facts","status":"guarded_runner_not_executed"},
+    {"id":"editor","expected":"UTC timestamp precision retained, unavailable choices disable save","evidence":"synthetic_component_preview"},
+    {"id":"global-continuity","expected":"original objects open/close with saved assistant/chat retained","status":"saved_runtime_pending"}
+  ]
+}

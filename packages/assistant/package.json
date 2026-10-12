@@ -27,7 +27,9 @@
     "./general/snapshot": "./src/general/snapshot.ts",
     "./capabilities/manifest": "./src/capabilities/manifest.ts",
     "./capabilities/coverage": "./src/capabilities/coverage.ts",
-    "./capabilities/types": "./src/capabilities/types.ts"
+    "./capabilities/types": "./src/capabilities/types.ts",
+    "./general/service-intake": "./src/general/service-intake.ts",
+    "./general/business-report-target": "./src/general/business-report-target.ts"
   },
   "scripts": {
     "lint": "biome check .",

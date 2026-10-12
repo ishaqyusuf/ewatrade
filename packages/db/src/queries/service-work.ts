@@ -56,6 +56,7 @@ import {
   buildScopedListCursorWhere,
   buildScopedListPageWhere,
 } from "./list-sort"
+import { runInOwnTransaction } from "./own-transaction"
 import { calculateServiceChargeMinor } from "./service-settings"
 import {
   DEFAULT_SERVICE_WORK_QUEUE_ID_DIRECTION,
@@ -73,6 +74,7 @@ export type CreateServiceIntakeInput = {
   actorUserId: string
   clientIntakeId: string
   conditionNote?: string
+  customerId?: string
   customerEmail?: string
   customerName?: string
   customerPhone?: string
@@ -108,6 +110,11 @@ function stableJson(value: unknown): string {
 
 function hash(value: unknown) {
   return createHash("sha256").update(stableJson(value)).digest("hex")
+}
+
+/** Stable review freshness uses the same canonical serialization as Intake replay. */
+export function serviceIntakeReviewRevision(value: unknown) {
+  return hash(value)
 }
 
 function json(value: unknown): Prisma.InputJsonValue {
@@ -475,8 +482,207 @@ function serviceNotificationChannel(value?: "sms" | "whatsapp") {
   return null
 }
 
-export async function createServiceIntakeDraft(
-  db: PrismaClient,
+/** Canonical read-only preparation shared by Intake review and persistence. */
+export async function prepareServiceIntakeInTransaction(
+  tx: Prisma.TransactionClient,
+  input: CreateServiceIntakeInput,
+) {
+  assertSchemaVersion(input.schemaVersion)
+  if (!input.lines.length || input.lines.length > 100)
+    throw new CatalogError(
+      "INVALID_ORDER",
+      "Choose between 1 and 100 Service lines.",
+    )
+  const store = await tx.store.findFirst({
+    where: { id: input.storeId, tenantId: input.tenantId },
+  })
+  if (!store) throw new CatalogError("STORE_NOT_FOUND", "Store not found.")
+  const offerings = await tx.sellableOffering.findMany({
+    include: {
+      serviceOffering: true,
+      catalogItem: true,
+      variant: true,
+      storeAvailability: { where: { storeId: input.storeId } },
+    },
+    where: {
+      id: { in: input.lines.map((line) => line.offeringId) },
+      kind: SellableOfferingKind.SERVICE,
+      catalogItem: { systemRole: null, status: CatalogRecordStatus.ACTIVE },
+      variant: { status: CatalogRecordStatus.ACTIVE },
+      status: CatalogRecordStatus.ACTIVE,
+      tenantId: input.tenantId,
+    },
+  })
+  if (
+    offerings.length !==
+      new Set(input.lines.map((line) => line.offeringId)).size ||
+    offerings.some(
+      (offering) =>
+        !offering.serviceOffering ||
+        !offering.storeAvailability[0]?.isAvailable,
+    )
+  ) {
+    throw new CatalogError(
+      "OFFERING_UNAVAILABLE",
+      "Service Intake contains an unavailable Offering.",
+    )
+  }
+  const scaleByOffering = new Map(
+    offerings.map((offering) => [
+      offering.id,
+      offering.serviceOffering?.quantityScale ?? 0,
+    ]),
+  )
+  const offeringById = new Map(
+    offerings.map((offering) => [offering.id, offering]),
+  )
+  let subtotalMinor = 0
+  const resolvedLines = []
+  for (const line of input.lines) {
+    const quantity = parseExactDecimal(line.quantity, {
+      allowZero: false,
+      maxScale: scaleByOffering.get(line.offeringId) ?? 0,
+    })
+    const offering = offeringById.get(line.offeringId)
+    if (!offering?.serviceOffering) {
+      throw new CatalogError(
+        "OFFERING_UNAVAILABLE",
+        "Service Intake contains an unavailable Offering.",
+      )
+    }
+    const unitPriceMinor =
+      offering.pricingPolicy === OfferingPricingPolicy.FIXED
+        ? offering.fixedPriceMinor
+        : line.approvedQuotePriceMinor
+    if (unitPriceMinor === null || unitPriceMinor === undefined) {
+      throw new CatalogError(
+        "INVALID_ORDER",
+        "Every Service Intake line needs a fixed or approved quote price.",
+      )
+    }
+    if (
+      line.expectedFixedPriceMinor !== undefined &&
+      line.expectedFixedPriceMinor !== offering.fixedPriceMinor
+    ) {
+      throw new CatalogError(
+        "OFFERING_UNAVAILABLE",
+        "A Service price changed before Intake confirmation.",
+      )
+    }
+    const lineTotal = multiplyExactDecimals(String(unitPriceMinor), quantity)
+    if (!/^\d+$/.test(lineTotal)) {
+      throw new CatalogError(
+        "INVALID_ORDER",
+        "Service line total must be a whole minor currency amount.",
+      )
+    }
+    subtotalMinor += Number(lineTotal)
+    if (!Number.isSafeInteger(subtotalMinor))
+      throw new CatalogError("INVALID_ORDER", "Service total is too large.")
+    resolvedLines.push({
+      offeringId: offering.id,
+      offeringName: offering.name,
+      itemName: offering.catalogItem.name,
+      variantName: offering.variant.name,
+      quantity,
+      unitPriceMinor,
+      totalMinor: Number(lineTotal),
+      workPolicy: offering.serviceOffering.workPolicy,
+      authorizationPolicy: offering.serviceOffering.authorizationPolicy,
+    })
+  }
+  const settings = await tx.serviceStoreSettings.findUnique({
+    where: { storeId: store.id },
+  })
+  const isExpress = input.serviceLevel === "express"
+  if (isExpress && !settings?.expressEnabled) {
+    throw new CatalogError(
+      "INVALID_SERVICE_TRANSITION",
+      "Express service is not enabled for this Store.",
+    )
+  }
+  let serviceChargeMinor = 0
+  let serviceLevelSnapshot: Prisma.InputJsonValue | undefined
+  if (isExpress) {
+    if (!settings) {
+      throw new CatalogError(
+        "INVALID_SERVICE_TRANSITION",
+        "Express service is not configured for this Store.",
+      )
+    }
+    serviceChargeMinor = calculateServiceChargeMinor({
+      subtotalMinor,
+      surchargeType:
+        settings.expressSurchargeType === ServiceSurchargeType.FIXED
+          ? "fixed"
+          : "percentage",
+      surchargeValue: settings.expressSurchargeValue,
+    })
+    serviceLevelSnapshot = json({
+      label: settings.expressLabel,
+      surchargeType:
+        settings.expressSurchargeType === ServiceSurchargeType.FIXED
+          ? "fixed"
+          : "percentage",
+      surchargeValue: settings.expressSurchargeValue,
+      turnaroundMinutes: settings.expressTurnaroundMinutes,
+    })
+  }
+  const totalMinor = subtotalMinor + serviceChargeMinor
+  if (!Number.isSafeInteger(totalMinor))
+    throw new CatalogError("INVALID_ORDER", "Service total is too large.")
+  const initialPaymentMinor = input.initialPaymentMinor ?? 0
+  if (
+    !Number.isSafeInteger(initialPaymentMinor) ||
+    initialPaymentMinor < 0 ||
+    initialPaymentMinor > totalMinor
+  ) {
+    throw new CatalogError(
+      "INVALID_ORDER",
+      "Initial payment cannot exceed the Service Order total.",
+    )
+  }
+  if (initialPaymentMinor > 0 && !input.initialPaymentMethod) {
+    throw new CatalogError(
+      "INVALID_ORDER",
+      "Choose a method for the initial payment.",
+    )
+  }
+  if (input.notificationChannel && !input.customerPhone?.trim()) {
+    throw new CatalogError(
+      "INVALID_SERVICE_TRANSITION",
+      "SMS or WhatsApp updates require a customer phone number.",
+    )
+  }
+  const dueCommitmentAt =
+    input.dueCommitmentAt ??
+    (isExpress && settings?.expressTurnaroundMinutes
+      ? new Date(Date.now() + settings.expressTurnaroundMinutes * 60_000)
+      : undefined)
+  if (input.requestedAssigneeId) {
+    await assertActiveAssignee(tx, {
+      tenantId: input.tenantId,
+      userId: input.requestedAssigneeId,
+    })
+  }
+  return {
+    store,
+    offerings,
+    settings,
+    resolvedLines,
+    scaleByOffering,
+    isExpress,
+    subtotalMinor,
+    serviceChargeMinor,
+    serviceLevelSnapshot,
+    totalMinor,
+    initialPaymentMinor,
+    dueCommitmentAt,
+  }
+}
+
+export async function createServiceIntakeDraftInTransaction(
+  tx: Prisma.TransactionClient,
   input: CreateServiceIntakeInput,
 ) {
   assertSchemaVersion(input.schemaVersion)
@@ -487,473 +693,352 @@ export async function createServiceIntakeDraft(
     )
   }
   const payloadHash = hash(input)
-  return db.$transaction(async (tx) => {
-    const previous = await tx.serviceIntake.findUnique({
-      include: { lines: true },
-      where: {
-        tenantId_clientIntakeId: {
-          clientIntakeId: input.clientIntakeId,
-          tenantId: input.tenantId,
-        },
-      },
-    })
-    if (previous) {
-      if (previous.payloadHash !== payloadHash) {
-        throw new CatalogError(
-          "IDEMPOTENCY_MISMATCH",
-          "This Service Intake identity was already used with different input.",
-        )
-      }
-      return previous
-    }
-    const store = await tx.store.findFirst({
-      where: { id: input.storeId, tenantId: input.tenantId },
-    })
-    if (!store) throw new CatalogError("STORE_NOT_FOUND", "Store not found.")
-    const offerings = await tx.sellableOffering.findMany({
-      include: {
-        serviceOffering: true,
-        storeAvailability: { where: { storeId: input.storeId } },
-      },
-      where: {
-        id: { in: input.lines.map((line) => line.offeringId) },
-        kind: SellableOfferingKind.SERVICE,
-        catalogItem: { systemRole: null },
-        status: CatalogRecordStatus.ACTIVE,
+
+  const previous = await tx.serviceIntake.findUnique({
+    include: { lines: true },
+    where: {
+      tenantId_clientIntakeId: {
+        clientIntakeId: input.clientIntakeId,
         tenantId: input.tenantId,
       },
-    })
-    if (
-      offerings.length !==
-        new Set(input.lines.map((line) => line.offeringId)).size ||
-      offerings.some(
-        (offering) =>
-          !offering.serviceOffering ||
-          !offering.storeAvailability[0]?.isAvailable,
-      )
-    ) {
+    },
+  })
+  if (previous) {
+    if (previous.payloadHash !== payloadHash) {
       throw new CatalogError(
-        "OFFERING_UNAVAILABLE",
-        "Service Intake contains an unavailable Offering.",
+        "IDEMPOTENCY_MISMATCH",
+        "This Service Intake identity was already used with different input.",
       )
     }
-    const scaleByOffering = new Map(
-      offerings.map((offering) => [
-        offering.id,
-        offering.serviceOffering?.quantityScale ?? 0,
-      ]),
-    )
-    const offeringById = new Map(
-      offerings.map((offering) => [offering.id, offering]),
-    )
-    let subtotalMinor = 0
-    for (const line of input.lines) {
-      const quantity = parseExactDecimal(line.quantity, {
+    return previous
+  }
+  const {
+    scaleByOffering,
+    isExpress,
+    serviceChargeMinor,
+    serviceLevelSnapshot,
+    initialPaymentMinor,
+    dueCommitmentAt,
+  } = await prepareServiceIntakeInTransaction(tx, input)
+  const intake = await tx.serviceIntake.create({
+    data: {
+      clientIntakeId: input.clientIntakeId,
+      conditionNote: input.conditionNote?.trim() || null,
+      createdByUserId: input.actorUserId,
+      customerEmail: input.customerEmail?.trim() || null,
+      customerName: input.customerName?.trim() || null,
+      customerPhone: input.customerPhone?.trim() || null,
+      dueCommitmentAt,
+      initialPaymentMethod: commercialPaymentMethod(input.initialPaymentMethod),
+      initialPaymentMinor,
+      initialPaymentReference: input.initialPaymentReference?.trim() || null,
+      instructions: input.instructions?.trim() || null,
+      payloadHash,
+      priority:
+        input.priority === "urgent" || isExpress
+          ? ServicePriority.URGENT
+          : ServicePriority.NORMAL,
+      notificationChannel: serviceNotificationChannel(
+        input.notificationChannel,
+      ),
+      requestedAssigneeId: input.requestedAssigneeId,
+      requestedAt: input.requestedAt,
+      schemaVersion: input.schemaVersion,
+      serviceChargeMinor,
+      serviceLevel: isExpress ? ServiceLevel.EXPRESS : ServiceLevel.STANDARD,
+      serviceLevelSnapshot,
+      storeId: input.storeId,
+      tenantId: input.tenantId,
+    },
+  })
+  await tx.serviceIntakeLine.createMany({
+    data: input.lines.map((line) => ({
+      approvedQuotePriceMinor: line.approvedQuotePriceMinor,
+      expectedFixedPriceMinor: line.expectedFixedPriceMinor,
+      intakeId: intake.id,
+      offeringId: line.offeringId,
+      quantity: parseExactDecimal(line.quantity, {
         allowZero: false,
         maxScale: scaleByOffering.get(line.offeringId) ?? 0,
-      })
-      const offering = offeringById.get(line.offeringId)
-      if (!offering) {
-        throw new CatalogError(
-          "OFFERING_UNAVAILABLE",
-          "Service Intake contains an unavailable Offering.",
-        )
-      }
-      const unitPriceMinor =
-        offering.pricingPolicy === OfferingPricingPolicy.FIXED
-          ? offering.fixedPriceMinor
-          : line.approvedQuotePriceMinor
-      if (unitPriceMinor === null || unitPriceMinor === undefined) {
-        throw new CatalogError(
-          "INVALID_ORDER",
-          "Every Service Intake line needs a fixed or approved quote price.",
-        )
-      }
-      if (
-        line.expectedFixedPriceMinor !== undefined &&
-        line.expectedFixedPriceMinor !== offering.fixedPriceMinor
-      ) {
-        throw new CatalogError(
-          "OFFERING_UNAVAILABLE",
-          "A Service price changed before Intake confirmation.",
-        )
-      }
-      const lineTotal = multiplyExactDecimals(String(unitPriceMinor), quantity)
-      if (!/^\d+$/.test(lineTotal)) {
-        throw new CatalogError(
-          "INVALID_ORDER",
-          "Service line total must be a whole minor currency amount.",
-        )
-      }
-      subtotalMinor += Number(lineTotal)
-    }
-    const settings = await tx.serviceStoreSettings.findUnique({
-      where: { storeId: store.id },
-    })
-    const isExpress = input.serviceLevel === "express"
-    if (isExpress && !settings?.expressEnabled) {
-      throw new CatalogError(
-        "INVALID_SERVICE_TRANSITION",
-        "Express service is not enabled for this Store.",
-      )
-    }
-    let serviceChargeMinor = 0
-    let serviceLevelSnapshot: Prisma.InputJsonValue | undefined
-    if (isExpress) {
-      if (!settings) {
-        throw new CatalogError(
-          "INVALID_SERVICE_TRANSITION",
-          "Express service is not configured for this Store.",
-        )
-      }
-      serviceChargeMinor = calculateServiceChargeMinor({
-        subtotalMinor,
-        surchargeType:
-          settings.expressSurchargeType === ServiceSurchargeType.FIXED
-            ? "fixed"
-            : "percentage",
-        surchargeValue: settings.expressSurchargeValue,
-      })
-      serviceLevelSnapshot = json({
-        label: settings.expressLabel,
-        surchargeType:
-          settings.expressSurchargeType === ServiceSurchargeType.FIXED
-            ? "fixed"
-            : "percentage",
-        surchargeValue: settings.expressSurchargeValue,
-        turnaroundMinutes: settings.expressTurnaroundMinutes,
-      })
-    }
-    const totalMinor = subtotalMinor + serviceChargeMinor
-    const initialPaymentMinor = input.initialPaymentMinor ?? 0
-    if (
-      !Number.isSafeInteger(initialPaymentMinor) ||
-      initialPaymentMinor < 0 ||
-      initialPaymentMinor > totalMinor
-    ) {
-      throw new CatalogError(
-        "INVALID_ORDER",
-        "Initial payment cannot exceed the Service Order total.",
-      )
-    }
-    if (initialPaymentMinor > 0 && !input.initialPaymentMethod) {
-      throw new CatalogError(
-        "INVALID_ORDER",
-        "Choose a method for the initial payment.",
-      )
-    }
-    if (input.notificationChannel && !input.customerPhone?.trim()) {
-      throw new CatalogError(
-        "INVALID_SERVICE_TRANSITION",
-        "SMS or WhatsApp updates require a customer phone number.",
-      )
-    }
-    const dueCommitmentAt =
-      input.dueCommitmentAt ??
-      (isExpress && settings?.expressTurnaroundMinutes
-        ? new Date(Date.now() + settings.expressTurnaroundMinutes * 60_000)
-        : undefined)
-    if (input.requestedAssigneeId) {
-      await assertActiveAssignee(tx, {
-        tenantId: input.tenantId,
-        userId: input.requestedAssigneeId,
-      })
-    }
-    const intake = await tx.serviceIntake.create({
-      data: {
-        clientIntakeId: input.clientIntakeId,
-        conditionNote: input.conditionNote?.trim() || null,
-        createdByUserId: input.actorUserId,
-        customerEmail: input.customerEmail?.trim() || null,
-        customerName: input.customerName?.trim() || null,
-        customerPhone: input.customerPhone?.trim() || null,
-        dueCommitmentAt,
-        initialPaymentMethod: commercialPaymentMethod(
-          input.initialPaymentMethod,
-        ),
-        initialPaymentMinor,
-        initialPaymentReference: input.initialPaymentReference?.trim() || null,
-        instructions: input.instructions?.trim() || null,
-        payloadHash,
-        priority:
-          input.priority === "urgent" || isExpress
-            ? ServicePriority.URGENT
-            : ServicePriority.NORMAL,
-        notificationChannel: serviceNotificationChannel(
-          input.notificationChannel,
-        ),
-        requestedAssigneeId: input.requestedAssigneeId,
-        requestedAt: input.requestedAt,
-        schemaVersion: input.schemaVersion,
-        serviceChargeMinor,
-        serviceLevel: isExpress ? ServiceLevel.EXPRESS : ServiceLevel.STANDARD,
-        serviceLevelSnapshot,
-        storeId: input.storeId,
-        tenantId: input.tenantId,
-      },
-    })
-    await tx.serviceIntakeLine.createMany({
-      data: input.lines.map((line) => ({
-        approvedQuotePriceMinor: line.approvedQuotePriceMinor,
-        expectedFixedPriceMinor: line.expectedFixedPriceMinor,
-        intakeId: intake.id,
-        offeringId: line.offeringId,
-        quantity: parseExactDecimal(line.quantity, {
-          allowZero: false,
-          maxScale: scaleByOffering.get(line.offeringId) ?? 0,
-        }),
-      })),
-    })
-    return tx.serviceIntake.findUniqueOrThrow({
-      include: { lines: true },
-      where: { id: intake.id },
-    })
+      }),
+    })),
+  })
+  return tx.serviceIntake.findUniqueOrThrow({
+    include: { lines: true },
+    where: { id: intake.id },
   })
 }
 
-export async function confirmServiceIntake(
-  db: PrismaClient,
+export async function confirmServiceIntakeInTransaction(
+  tx: Prisma.TransactionClient,
   input: {
     actorUserId: string
     intakeId: string
+    customerId?: string
     schemaVersion: number
     tenantId: string
   },
 ) {
   assertSchemaVersion(input.schemaVersion)
-  return db.$transaction(async (tx) => {
-    const intake = await tx.serviceIntake.findFirst({
-      include: { lines: true },
-      where: { id: input.intakeId, tenantId: input.tenantId },
-    })
-    if (!intake) {
-      throw new CatalogError(
-        "SERVICE_INTAKE_NOT_FOUND",
-        "Service Intake not found.",
-      )
-    }
-    if (intake.status === ServiceIntakeStatus.CONFIRMED) {
-      if (!intake.commercialOrderId) {
-        throw new CatalogError(
-          "INVALID_SERVICE_TRANSITION",
-          "Confirmed Service Intake is missing its Commercial Order.",
-        )
-      }
-      const jobs = await tx.serviceJob.findMany({
-        include: jobGraph,
-        where: { intakeId: intake.id },
-      })
-      const notificationIntents = await tx.serviceNotificationIntent.findMany({
-        select: { id: true },
-        where: { serviceJob: { intakeId: intake.id } },
-      })
-      return {
-        intakeId: intake.id,
-        jobs: jobs.map(serializeJob),
-        notificationIntentIds: notificationIntents.map((intent) => intent.id),
-        orderId: intake.commercialOrderId,
-      }
-    }
-    if (intake.status !== ServiceIntakeStatus.DRAFT) {
+
+  const intake = await tx.serviceIntake.findFirst({
+    include: { lines: true },
+    where: { id: input.intakeId, tenantId: input.tenantId },
+  })
+  if (!intake) {
+    throw new CatalogError(
+      "SERVICE_INTAKE_NOT_FOUND",
+      "Service Intake not found.",
+    )
+  }
+  if (intake.status === ServiceIntakeStatus.CONFIRMED) {
+    if (!intake.commercialOrderId) {
       throw new CatalogError(
         "INVALID_SERVICE_TRANSITION",
-        "Only a Draft Service Intake can be confirmed.",
+        "Confirmed Service Intake is missing its Commercial Order.",
       )
     }
-    const order = await createCommercialOrderInTransaction(tx, {
-      actorUserId: input.actorUserId,
-      clientOrderId: `${intake.clientIntakeId}:order`,
-      customerEmail: intake.customerEmail ?? undefined,
-      customerName: intake.customerName ?? undefined,
-      customerPhone: intake.customerPhone ?? undefined,
-      createTrackedServiceWork: false,
-      lines: intake.lines.map((line) => ({
-        approvedQuotePriceMinor: line.approvedQuotePriceMinor ?? undefined,
-        expectedFixedPriceMinor: line.expectedFixedPriceMinor ?? undefined,
-        offeringId: line.offeringId,
-        quantity: line.quantity.toString(),
-      })),
-      notes: intake.instructions ?? undefined,
-      schemaVersion: 1,
-      serviceChargeMinor: intake.serviceChargeMinor,
-      storeId: intake.storeId,
-      tenantId: input.tenantId,
+    const jobs = await tx.serviceJob.findMany({
+      include: jobGraph,
+      where: { intakeId: intake.id },
     })
-    if (intake.initialPaymentMinor > 0 && intake.initialPaymentMethod) {
-      await recordCommercialOrderPaymentInTransaction(tx, {
-        actorUserId: input.actorUserId,
-        amountMinor: intake.initialPaymentMinor,
-        clientPaymentId: `${intake.clientIntakeId}:initial-payment`,
-        method:
-          intake.initialPaymentMethod === CommercialPaymentMethod.BANK_TRANSFER
-            ? "bank_transfer"
-            : intake.initialPaymentMethod === CommercialPaymentMethod.CARD
-              ? "card"
-              : intake.initialPaymentMethod === CommercialPaymentMethod.POS
-                ? "pos"
-                : intake.initialPaymentMethod === CommercialPaymentMethod.OTHER
-                  ? "other"
-                  : "cash",
-        orderId: order.id,
-        reference: intake.initialPaymentReference ?? undefined,
-        tenantId: input.tenantId,
-      })
-    }
-    const trackedOrderLines = await tx.commercialOrderLine.findMany({
-      include: {
-        offering: { include: { serviceOffering: true } },
-        snapshot: true,
-      },
-      where: {
-        orderId: order.id,
-        snapshot: { serviceWorkPolicy: ServiceWorkPolicy.TRACKED },
-      },
-    })
-    const jobs: JobGraph[] = []
-    const notificationIntentIds: string[] = []
-    if (trackedOrderLines.length > 0) {
-      const job = await tx.serviceJob.create({
-        data: {
-          clientJobId: `${intake.clientIntakeId}:job:1`,
-          commercialOrderId: order.id,
-          createdByUserId: input.actorUserId,
-          currentAssigneeUserId: intake.requestedAssigneeId,
-          intakeId: intake.id,
-          priority: intake.priority,
-          storeId: intake.storeId,
-          tenantId: input.tenantId,
-        },
-      })
-      for (const orderLine of trackedOrderLines) {
-        const policy = orderLine.snapshot?.serviceAuthorizationPolicy
-        if (!policy) {
-          throw new CatalogError(
-            "INVALID_SERVICE_TRANSITION",
-            "Tracked work is missing its Service Offering policy.",
-          )
-        }
-        const authorizedByPayment =
-          policy === WorkAuthorizationPolicy.AFTER_REQUIRED_PAYMENT &&
-          intake.initialPaymentMinor >= order.totalMinor
-        const status =
-          policy === WorkAuthorizationPolicy.ON_ORDER_CONFIRMATION ||
-          authorizedByPayment
-            ? WorkAuthorizationStatus.AUTHORIZED
-            : policy === WorkAuthorizationPolicy.AFTER_REQUIRED_PAYMENT
-              ? WorkAuthorizationStatus.PENDING_PAYMENT
-              : WorkAuthorizationStatus.PENDING_RELEASE
-        const line = await tx.serviceJobLine.create({
-          data: {
-            allocatedQuantity: orderLine.quantity,
-            allocationSnapshot: json(orderLine.snapshot),
-            authorizationPolicy: policy,
-            authorizationSource:
-              status === WorkAuthorizationStatus.AUTHORIZED
-                ? authorizedByPayment
-                  ? "payment"
-                  : "order_confirmation"
-                : null,
-            authorizationStatus: status,
-            authorizedAt:
-              status === WorkAuthorizationStatus.AUTHORIZED ? new Date() : null,
-            commercialOrderLineId: orderLine.id,
-            serviceJobId: job.id,
-          },
-        })
-        await tx.serviceWorkEvent.create({
-          data: {
-            actorUserId: input.actorUserId,
-            payload: json({
-              allocatedQuantity: line.allocatedQuantity.toString(),
-            }),
-            serviceJobId: job.id,
-            serviceJobLineId: line.id,
-            source: "service_intake",
-            tenantId: input.tenantId,
-            type: ServiceWorkEventType.CREATED,
-          },
-        })
-        if (status === WorkAuthorizationStatus.AUTHORIZED) {
-          await tx.serviceWorkEvent.create({
-            data: {
-              actorUserId: input.actorUserId,
-              reason: authorizedByPayment
-                ? "Commercial Order payment completed"
-                : undefined,
-              serviceJobId: job.id,
-              serviceJobLineId: line.id,
-              source: authorizedByPayment
-                ? "commercial_payment"
-                : "service_intake",
-              tenantId: input.tenantId,
-              type: ServiceWorkEventType.AUTHORIZED,
-            },
-          })
-        }
-      }
-      if (intake.requestedAssigneeId) {
-        await tx.serviceWorkAssignment.create({
-          data: {
-            assignedByUserId: input.actorUserId,
-            assignedUserId: intake.requestedAssigneeId,
-            reason: "Assigned during Intake",
-            serviceJobId: job.id,
-          },
-        })
-      }
-      if (intake.dueCommitmentAt) {
-        await tx.serviceDueCommitment.create({
-          data: {
-            createdByUserId: input.actorUserId,
-            promisedAt: intake.dueCommitmentAt,
-            reason: "Committed during Intake",
-            serviceJobId: job.id,
-          },
-        })
-      }
-      if (intake.dueCommitmentAt) {
-        const intent = await replaceDueReminder(tx, {
-          actorUserId: input.actorUserId,
-          channel: intake.notificationChannel,
-          customerPhone: intake.customerPhone,
-          orderNumber: order.orderNumber,
-          promisedAt: intake.dueCommitmentAt,
-          serviceJobId: job.id,
-          storeId: intake.storeId,
-          tenantId: input.tenantId,
-        })
-        if (intent) notificationIntentIds.push(intent.id)
-      }
-      jobs.push(await loadJob(tx, { jobId: job.id, tenantId: input.tenantId }))
-    }
-    await tx.serviceIntake.update({
-      data: {
-        commercialOrderId: order.id,
-        confirmedAt: new Date(),
-        status: ServiceIntakeStatus.CONFIRMED,
-      },
-      where: { id: intake.id },
+    const notificationIntents = await tx.serviceNotificationIntent.findMany({
+      select: { id: true },
+      where: { serviceJob: { intakeId: intake.id } },
     })
     return {
       intakeId: intake.id,
       jobs: jobs.map(serializeJob),
-      notificationIntentIds,
-      orderId: order.id,
+      notificationIntentIds: notificationIntents.map((intent) => intent.id),
+      orderId: intake.commercialOrderId,
     }
+  }
+  if (intake.status !== ServiceIntakeStatus.DRAFT) {
+    throw new CatalogError(
+      "INVALID_SERVICE_TRANSITION",
+      "Only a Draft Service Intake can be confirmed.",
+    )
+  }
+  const order = await createCommercialOrderInTransaction(tx, {
+    actorUserId: input.actorUserId,
+    clientOrderId: `${intake.clientIntakeId}:order`,
+    customerId: input.customerId,
+    customerEmail: intake.customerEmail ?? undefined,
+    customerName: intake.customerName ?? undefined,
+    customerPhone: intake.customerPhone ?? undefined,
+    createTrackedServiceWork: false,
+    lines: intake.lines.map((line) => ({
+      approvedQuotePriceMinor: line.approvedQuotePriceMinor ?? undefined,
+      expectedFixedPriceMinor: line.expectedFixedPriceMinor ?? undefined,
+      offeringId: line.offeringId,
+      quantity: line.quantity.toString(),
+    })),
+    notes: intake.instructions ?? undefined,
+    schemaVersion: 1,
+    serviceChargeMinor: intake.serviceChargeMinor,
+    storeId: intake.storeId,
+    tenantId: input.tenantId,
   })
+  if (intake.initialPaymentMinor > 0 && intake.initialPaymentMethod) {
+    await recordCommercialOrderPaymentInTransaction(tx, {
+      actorUserId: input.actorUserId,
+      amountMinor: intake.initialPaymentMinor,
+      clientPaymentId: `${intake.clientIntakeId}:initial-payment`,
+      method:
+        intake.initialPaymentMethod === CommercialPaymentMethod.BANK_TRANSFER
+          ? "bank_transfer"
+          : intake.initialPaymentMethod === CommercialPaymentMethod.CARD
+            ? "card"
+            : intake.initialPaymentMethod === CommercialPaymentMethod.POS
+              ? "pos"
+              : intake.initialPaymentMethod === CommercialPaymentMethod.OTHER
+                ? "other"
+                : "cash",
+      orderId: order.id,
+      reference: intake.initialPaymentReference ?? undefined,
+      tenantId: input.tenantId,
+    })
+  }
+  const trackedOrderLines = await tx.commercialOrderLine.findMany({
+    include: {
+      offering: { include: { serviceOffering: true } },
+      snapshot: true,
+    },
+    where: {
+      orderId: order.id,
+      snapshot: { serviceWorkPolicy: ServiceWorkPolicy.TRACKED },
+    },
+  })
+  const jobs: JobGraph[] = []
+  const notificationIntentIds: string[] = []
+  if (trackedOrderLines.length > 0) {
+    const job = await tx.serviceJob.create({
+      data: {
+        clientJobId: `${intake.clientIntakeId}:job:1`,
+        commercialOrderId: order.id,
+        createdByUserId: input.actorUserId,
+        currentAssigneeUserId: intake.requestedAssigneeId,
+        intakeId: intake.id,
+        priority: intake.priority,
+        storeId: intake.storeId,
+        tenantId: input.tenantId,
+      },
+    })
+    for (const orderLine of trackedOrderLines) {
+      const policy = orderLine.snapshot?.serviceAuthorizationPolicy
+      if (!policy) {
+        throw new CatalogError(
+          "INVALID_SERVICE_TRANSITION",
+          "Tracked work is missing its Service Offering policy.",
+        )
+      }
+      const authorizedByPayment =
+        policy === WorkAuthorizationPolicy.AFTER_REQUIRED_PAYMENT &&
+        intake.initialPaymentMinor >= order.totalMinor
+      const status =
+        policy === WorkAuthorizationPolicy.ON_ORDER_CONFIRMATION ||
+        authorizedByPayment
+          ? WorkAuthorizationStatus.AUTHORIZED
+          : policy === WorkAuthorizationPolicy.AFTER_REQUIRED_PAYMENT
+            ? WorkAuthorizationStatus.PENDING_PAYMENT
+            : WorkAuthorizationStatus.PENDING_RELEASE
+      const line = await tx.serviceJobLine.create({
+        data: {
+          allocatedQuantity: orderLine.quantity,
+          allocationSnapshot: json(orderLine.snapshot),
+          authorizationPolicy: policy,
+          authorizationSource:
+            status === WorkAuthorizationStatus.AUTHORIZED
+              ? authorizedByPayment
+                ? "payment"
+                : "order_confirmation"
+              : null,
+          authorizationStatus: status,
+          authorizedAt:
+            status === WorkAuthorizationStatus.AUTHORIZED ? new Date() : null,
+          commercialOrderLineId: orderLine.id,
+          serviceJobId: job.id,
+        },
+      })
+      await tx.serviceWorkEvent.create({
+        data: {
+          actorUserId: input.actorUserId,
+          payload: json({
+            allocatedQuantity: line.allocatedQuantity.toString(),
+          }),
+          serviceJobId: job.id,
+          serviceJobLineId: line.id,
+          source: "service_intake",
+          tenantId: input.tenantId,
+          type: ServiceWorkEventType.CREATED,
+        },
+      })
+      if (status === WorkAuthorizationStatus.AUTHORIZED) {
+        await tx.serviceWorkEvent.create({
+          data: {
+            actorUserId: input.actorUserId,
+            reason: authorizedByPayment
+              ? "Commercial Order payment completed"
+              : undefined,
+            serviceJobId: job.id,
+            serviceJobLineId: line.id,
+            source: authorizedByPayment
+              ? "commercial_payment"
+              : "service_intake",
+            tenantId: input.tenantId,
+            type: ServiceWorkEventType.AUTHORIZED,
+          },
+        })
+      }
+    }
+    if (intake.requestedAssigneeId) {
+      await tx.serviceWorkAssignment.create({
+        data: {
+          assignedByUserId: input.actorUserId,
+          assignedUserId: intake.requestedAssigneeId,
+          reason: "Assigned during Intake",
+          serviceJobId: job.id,
+        },
+      })
+    }
+    if (intake.dueCommitmentAt) {
+      await tx.serviceDueCommitment.create({
+        data: {
+          createdByUserId: input.actorUserId,
+          promisedAt: intake.dueCommitmentAt,
+          reason: "Committed during Intake",
+          serviceJobId: job.id,
+        },
+      })
+    }
+    if (intake.dueCommitmentAt) {
+      const intent = await replaceDueReminder(tx, {
+        actorUserId: input.actorUserId,
+        channel: intake.notificationChannel,
+        customerPhone: intake.customerPhone,
+        orderNumber: order.orderNumber,
+        promisedAt: intake.dueCommitmentAt,
+        serviceJobId: job.id,
+        storeId: intake.storeId,
+        tenantId: input.tenantId,
+      })
+      if (intent) notificationIntentIds.push(intent.id)
+    }
+    jobs.push(await loadJob(tx, { jobId: job.id, tenantId: input.tenantId }))
+  }
+  await tx.serviceIntake.update({
+    data: {
+      commercialOrderId: order.id,
+      confirmedAt: new Date(),
+      status: ServiceIntakeStatus.CONFIRMED,
+    },
+    where: { id: intake.id },
+  })
+  return {
+    intakeId: intake.id,
+    jobs: jobs.map(serializeJob),
+    notificationIntentIds,
+    orderId: order.id,
+  }
 }
 
-export async function createAndConfirmServiceIntake(
+/** Root entry points always open exactly one bounded transaction. */
+export function createServiceIntakeDraft(
   db: PrismaClient,
   input: CreateServiceIntakeInput,
 ) {
-  const draft = await createServiceIntakeDraft(db, input)
-  return confirmServiceIntake(db, {
+  return runInOwnTransaction(db, (tx) =>
+    createServiceIntakeDraftInTransaction(tx, input),
+  )
+}
+export function confirmServiceIntake(
+  db: PrismaClient,
+  input: Parameters<typeof confirmServiceIntakeInTransaction>[1],
+) {
+  return runInOwnTransaction(db, (tx) =>
+    confirmServiceIntakeInTransaction(tx, input),
+  )
+}
+export async function createAndConfirmServiceIntakeInTransaction(
+  tx: Prisma.TransactionClient,
+  input: CreateServiceIntakeInput,
+) {
+  const draft = await createServiceIntakeDraftInTransaction(tx, input)
+  return confirmServiceIntakeInTransaction(tx, {
     actorUserId: input.actorUserId,
     intakeId: draft.id,
+    customerId: input.customerId,
     schemaVersion: input.schemaVersion,
     tenantId: input.tenantId,
   })
+}
+export function createAndConfirmServiceIntake(
+  db: PrismaClient,
+  input: CreateServiceIntakeInput,
+) {
+  return runInOwnTransaction(db, (tx) =>
+    createAndConfirmServiceIntakeInTransaction(tx, input),
+  )
 }
 
 const allowedTransitions = new Map<
@@ -2165,17 +2250,49 @@ export async function listServiceWorkQueuePage(
   }
 }
 
+/** Shared Store eligibility for service choices and fresh Intake confirmation. */
+export function serviceAssigneeWhere(input: {
+  tenantId: string
+  storeId: string
+  userId?: string
+}): Prisma.MembershipWhereInput {
+  return {
+    tenantId: input.tenantId,
+    userId: input.userId,
+    status: "ACTIVE",
+    role: { in: ["OWNER", "ADMIN", "MANAGER", "CASHIER", "OPERATOR"] },
+    OR: [
+      { role: { in: ["OWNER", "ADMIN"] } },
+      { staffAccessMode: "LEGACY" },
+      {
+        staffStoreAssignments: {
+          some: {
+            tenantId: input.tenantId,
+            storeId: input.storeId,
+            status: "ACTIVE",
+          },
+        },
+      },
+    ],
+  }
+}
+
 export async function listServiceAssignees(
   db: PrismaClient,
-  input: { tenantId: string },
+  input: { tenantId: string; storeId?: string },
 ) {
   const memberships = await db.membership.findMany({
     include: { user: true },
     orderBy: { createdAt: "asc" },
-    where: {
-      status: MembershipStatus.ACTIVE,
-      tenantId: input.tenantId,
-    },
+    where: input.storeId
+      ? serviceAssigneeWhere({
+          tenantId: input.tenantId,
+          storeId: input.storeId,
+        })
+      : {
+          status: MembershipStatus.ACTIVE,
+          tenantId: input.tenantId,
+        },
   })
   return memberships.map((membership) => ({
     email: membership.user.email,

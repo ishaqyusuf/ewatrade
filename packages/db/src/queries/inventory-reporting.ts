@@ -5,6 +5,8 @@ import {
   subtractExactDecimals,
 } from "@ewatrade/utils/exact-decimal"
 
+import type { DbClient } from "./types"
+
 import type { Prisma, PrismaClient } from "../../generated/prisma/client"
 import {
   OfflineCommandStatus,
@@ -109,7 +111,7 @@ export async function listInventoryBalancePage(
 }
 
 export async function listInventoryBalanceReport(
-  db: PrismaClient,
+  db: DbClient,
   input: {
     includeCompatibleTotals?: boolean
     catalogItemId?: string

@@ -19,10 +19,19 @@ import {
   type GeneralAnswer,
   generalDateRange,
 } from "@ewatrade/assistant/general/contracts"
+import { serviceIntakeDraftInstructions } from "@ewatrade/assistant/general/service-intake"
 import { canStaffPerform } from "@ewatrade/auth/store-access"
 import { TRPCError } from "@trpc/server"
 import { type Tool, type ToolSet, jsonSchema, tool, zodSchema } from "ai"
 import { z } from "zod"
+import {
+  customerDebtReportInput,
+  itemSalesReportInput,
+  paymentCollectionsReportInput,
+  postedProfitReportInput,
+  stockReportInput,
+  supplierAgingReportInput,
+} from "../schemas/business-reporting"
 import { catalogCountSchema } from "../schemas/catalog"
 import { customerLedgerAccountDetailSchema } from "../schemas/customer-ledger"
 import { customerCountSchema } from "../schemas/customers"
@@ -34,6 +43,7 @@ import { inventoryLowStockPageSchema } from "../schemas/inventory"
 import { commercialOrderStatusSchema } from "../schemas/orders"
 import { resolveProtectedTenantContext } from "../trpc/init"
 import { orderScope } from "../trpc/order-scope"
+import { createBusinessReportingCaller } from "../trpc/routers/business-reporting"
 import { catalogRouter } from "../trpc/routers/catalog"
 import { customerLedgerRouter } from "../trpc/routers/customer-ledger"
 import { customersRouter } from "../trpc/routers/customers"
@@ -50,6 +60,7 @@ import {
   generalBillsAnswer,
   generalBillsInput,
 } from "./general-bill-reads"
+import { generalBusinessReportAnswer } from "./general-business-reporting"
 import {
   generalCatalogHistoryInput,
   readGeneralCatalogHistory,
@@ -119,6 +130,10 @@ import {
   generalReceivablesInput,
 } from "./general-receivables"
 import { generalSalesAnswer } from "./general-sales-answer"
+import {
+  generalServiceIntakeOptionsInput,
+  readGeneralServiceIntakeOptions,
+} from "./general-service-intake-options"
 import {
   generalStaffHistoryAnswer,
   generalStaffHistoryInput,
@@ -403,6 +418,131 @@ export function createGeneralTools(
             .staffHistoryPage({ ...input, limit: 10 })
           onAnswer(generalStaffHistoryAnswer(page, input))
           return page
+        }),
+    }),
+    readItemSalesReport: tool({
+      description:
+        "Read complete original booked item groups in the current permitted Store. Resolve item names using catalog lookup first; preserve ambiguous choices. Explicit offset start/end and IANA timezone/currency required. End exclusive. Original units/configurations separate. Not fulfilled/net-returned sales or profit. Complete server aggregate precedes bounded detail pages. Never sum a page.",
+      inputSchema: itemSalesReportInput,
+      execute: (input) =>
+        wrap("readItemSalesReport", async (fresh) => {
+          const report =
+            await createBusinessReportingCaller(fresh).itemSales(input)
+          onAnswer(
+            generalBusinessReportAnswer(report, {
+              kind: "business_report",
+              origin: {
+                tenantId: fresh.tenantContext.tenant.id,
+                storeId: fresh.tenantContext.activeStore?.id ?? null,
+              },
+              request: { report: "item_sales", filters: input },
+            }),
+          )
+          return report
+        }),
+    }),
+    readPaymentCollectionsReport: tool({
+      description:
+        "Read complete Commercial Order payment/refund collections by payment recording time, not order creation. Explicit offset start/end and IANA timezone/currency required. End exclusive. Customer credit separate from money; excludes unallocated ledger receipts, expenses and transfers. No bank settlement or cash count inferred.",
+      inputSchema: paymentCollectionsReportInput,
+      execute: (input) =>
+        wrap("readPaymentCollectionsReport", async (fresh) => {
+          const report =
+            await createBusinessReportingCaller(fresh).paymentCollections(input)
+          onAnswer(
+            generalBusinessReportAnswer(report, {
+              kind: "business_report",
+              origin: {
+                tenantId: fresh.tenantContext.tenant.id,
+                storeId: fresh.tenantContext.activeStore?.id ?? null,
+              },
+              request: { report: "payment_collections", filters: input },
+            }),
+          )
+          return report
+        }),
+    }),
+    readCustomerDebtReport: tool({
+      description:
+        "Read complete current posted customer ledger debt/available credit in one currency, business-wide all Stores. Optional literal customer name/phone/email filter. No date or Store filter allowed. Unintegrated orders excluded. Complete canonical aggregate precedes bounded account detail pages; no unpaid-order or all-business debt claim.",
+      inputSchema: customerDebtReportInput,
+      execute: (input) =>
+        wrap("readCustomerDebtReport", async (fresh) => {
+          const report =
+            await createBusinessReportingCaller(fresh).customerDebt(input)
+          onAnswer(
+            generalBusinessReportAnswer(report, {
+              kind: "business_report",
+              origin: {
+                tenantId: fresh.tenantContext.tenant.id,
+                storeId: null,
+              },
+              request: { report: "customer_debt", filters: input },
+            }),
+          )
+          return report
+        }),
+    }),
+    readSupplierAgingReport: tool({
+      description:
+        "Read canonical posted supplier payable aging for an exact Book and supplier at UTC as-of date and optional posting sequence. Resolve identities through native finance reads first; no guessed identity or aggregate across suppliers. Advance remains separate, all Stores; canonical source bounds refuse incomplete totals.",
+      inputSchema: supplierAgingReportInput,
+      execute: (input) =>
+        wrap("readSupplierAgingReport", async (fresh) => {
+          const report =
+            await createBusinessReportingCaller(fresh).supplierAging(input)
+          onAnswer(
+            generalBusinessReportAnswer(report, {
+              kind: "business_report",
+              origin: {
+                tenantId: fresh.tenantContext.tenant.id,
+                storeId: null,
+              },
+              request: { report: "supplier_aging", filters: input },
+            }),
+          )
+          return report
+        }),
+    }),
+    readPostedProfitReport: tool({
+      description:
+        "Read canonical posted Book profit coverage at inclusive effectiveAt UTC boundaries and optional posting sequence. Resolve exact Book identity through finance reads first. All Stores. Whole-business profit and actual cost completeness are unknown; posted zero is not zero actual cost. Retain canonical missing source coverage.",
+      inputSchema: postedProfitReportInput,
+      execute: (input) =>
+        wrap("readPostedProfitReport", async (fresh) => {
+          const report =
+            await createBusinessReportingCaller(fresh).postedProfit(input)
+          onAnswer(
+            generalBusinessReportAnswer(report, {
+              kind: "business_report",
+              origin: {
+                tenantId: fresh.tenantContext.tenant.id,
+                storeId: null,
+              },
+              request: { report: "posted_profit", filters: input },
+            }),
+          )
+          return report
+        }),
+    }),
+    readStockReport: tool({
+      description:
+        "Read bounded complete current source stock in this Store. Resolve natural-language item names with catalog lookup first. Original units/configurations/custody remain separate. No date/currency filter. Missing sources unknown; transit not sellable. Overflow withholds totals. Not stock valuation or offering availability.",
+      inputSchema: stockReportInput,
+      execute: (input) =>
+        wrap("readStockReport", async (fresh) => {
+          const report = await createBusinessReportingCaller(fresh).stock(input)
+          onAnswer(
+            generalBusinessReportAnswer(report, {
+              kind: "business_report",
+              origin: {
+                tenantId: fresh.tenantContext.tenant.id,
+                storeId: fresh.tenantContext.activeStore?.id ?? null,
+              },
+              request: { report: "stock", filters: input },
+            }),
+          )
+          return report
         }),
     }),
     readStaffDirectory: tool({
@@ -1038,6 +1178,15 @@ export function createGeneralTools(
           return order
         }),
     }),
+    readServiceIntakeOptions: tool({
+      description:
+        "Resolve fixed-price services, variants, work policies, Store service settings and real assignee names. Narrow query when truncated; never merge same-name offerings or ask merchants for internal IDs. This read creates no work or payment.",
+      inputSchema: generalServiceIntakeOptionsInput,
+      execute: (input) =>
+        wrap("readServiceIntakeOptions", (fresh) =>
+          readGeneralServiceIntakeOptions(fresh, input),
+        ),
+    }),
     readServices: tool({
       description:
         "Read a limited Service work page in the current Store. Not a total or financial balance.",
@@ -1353,6 +1502,7 @@ export function createGeneralTools(
         cashCountDraftInstructions,
         supplierSettlementDraftInstructions,
         staffInvitationDraftInstructions,
+        serviceIntakeDraftInstructions,
       ].join("\n\n"),
       inputSchema: objectToolSchema(actionSchema),
       execute: (input) =>

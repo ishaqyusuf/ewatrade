@@ -2,6 +2,7 @@
 
 import { OpenAssistantFinanceReview } from "@/components/open-assistant-finance-review"
 import { OpenStaffDirectorySheet } from "@/components/open-staff-directory-sheet"
+import { OpenBusinessReportSheet } from "@/components/open-business-report-sheet"
 import { OpenStaffHistorySheet } from "@/components/open-staff-history-sheet"
 import { OpenStaffInvitationSheet } from "@/components/open-staff-invitation-sheet"
 import { OpenStaffMemberSheet } from "@/components/open-staff-member-sheet"
@@ -32,7 +33,9 @@ export function GeneralAnswerCard({ answer }: { answer: GeneralAnswer }) {
       <p className="mt-2 text-sm">{answer.detail}</p>
       {answer.target ? (
         <div className="mt-3">
-          {answer.target.kind === "finance_cash_count" ||
+          {answer.target.kind === "business_report" ? (
+            <OpenBusinessReportSheet target={answer.target} />
+          ) : answer.target.kind === "finance_cash_count" ||
           answer.target.kind === "finance_day_close" ? (
             <OpenAssistantFinanceReview target={answer.target} />
           ) : answer.target.kind === "staff_history" ? (

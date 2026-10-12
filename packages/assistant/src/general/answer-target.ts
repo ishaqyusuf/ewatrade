@@ -1,4 +1,5 @@
 import { z } from "zod"
+import { businessReportTargetSchema } from "./business-report-target"
 import {
   cashCountTargetSchema,
   dayCloseTargetSchema,
@@ -22,6 +23,7 @@ export const staffInvitationTargetSchema = z
   .strict()
 
 export const generalAnswerTargetSchema = z.discriminatedUnion("kind", [
+  businessReportTargetSchema,
   cashCountTargetSchema,
   dayCloseTargetSchema,
   staffInvitationTargetSchema,

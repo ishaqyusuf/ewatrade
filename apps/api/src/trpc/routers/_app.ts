@@ -4,6 +4,7 @@ import { createTRPCRouter } from "../init"
 import { accountPrivacyRouter } from "./account-privacy"
 import { assistantRouter } from "./assistant"
 import { authRouter } from "./auth"
+import { businessReportingRouter } from "./business-reporting"
 import { catalogRouter } from "./catalog"
 import { customerLedgerRouter } from "./customer-ledger"
 import { customersRouter } from "./customers"
@@ -22,6 +23,7 @@ import { qaToolsRouter } from "./qa-tools"
 import { retailOpsRouter } from "./retail-ops"
 import { searchRouter } from "./search"
 import { serviceAccessRouter } from "./service-access"
+import { serviceAssistantIntakeRouter } from "./service-assistant-intake"
 import { serviceCommerceRouter } from "./service-commerce"
 import { serviceCommunicationsRouter } from "./service-communications"
 import { serviceReportingRouter } from "./service-reporting"
@@ -37,6 +39,7 @@ const qaAccessRegistration: { qaAccess: typeof qaAccessRouter } =
     : ({} as { qaAccess: typeof qaAccessRouter })
 
 export const appRouter = createTRPCRouter({
+  businessReporting: businessReportingRouter,
   auth: authRouter,
   storeSubscriptions: storeSubscriptionsRouter,
   accountPrivacy: accountPrivacyRouter,
@@ -58,6 +61,7 @@ export const appRouter = createTRPCRouter({
   serviceCommerce: serviceCommerceRouter,
   serviceCommunications: serviceCommunicationsRouter,
   services: servicesRouter,
+  serviceAssistantIntake: serviceAssistantIntakeRouter,
   serviceReporting: serviceReportingRouter,
   retailOps: retailOpsRouter,
   search: searchRouter,

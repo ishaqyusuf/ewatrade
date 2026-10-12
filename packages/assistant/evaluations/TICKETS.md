@@ -3,7 +3,7 @@
 Snapshot of the canonical 45-ticket roadmap. Web/dashboard acceptance only.
 
 **Accepted: 13/45 (28.9%). Pending acceptance: 32/45 (71.1%).**
-Of the 32 not yet accepted: 15 are partial, 16 are pending implementation, and
+Of the 32 not yet accepted: 17 are partial, 14 are pending implementation, and
 1 is deferred (A04, mobile, at the owner's request).
 No mobile implementation/testing or hosted rollout is certified here.
 
@@ -32,7 +32,7 @@ accepted milestone is recorded; it does not assert that no related source exists
 | D01 | Order amendment and cancellation | ◐ Partial | Pending |
 | D02 | Fulfilment and status | ◐ Partial | Pending |
 | D03 | Returns and payment corrections | ◐ Partial | Pending |
-| D04 | Simple service work order | ○ Pending | Pending |
+| D04 | Simple service work order | ◐ Partial | Pending |
 | D05 | Work lifecycle | ○ Pending | Pending |
 | E01 | Accounts and money reads | ◐ Partial | Pending |
 | E02 | Customer funds | ◐ Partial | Pending |
@@ -49,7 +49,7 @@ accepted milestone is recorded; it does not assert that no related source exists
 | F03 | Payout feasibility and domain | ○ Pending | Pending |
 | F04 | Payout approval and dispatch | ○ Pending | Pending |
 | F05 | Settlement and recovery | ○ Pending | Pending |
-| G01 | Business reporting | ○ Pending | Pending |
+| G01 | Business reporting | ◐ Partial | Pending |
 | G02 | Cash count and close day | ◐ Partial | Pending |
 | G03 | Quotes, bookings and delivery | ○ Pending | Pending |
 | G04 | Advanced inventory and catalog | ○ Pending | Pending |
@@ -153,3 +153,5 @@ S03 canonical foundation: locked fresh status authority preserves native LEGACY 
 G02 source checkpoint: strict physical cash count, canonical original basis/read/replay, planned read/write registrations, global original count/day-close objects and freshness/invalid-target handling integrated. 27 tests176assertions and one exact-owned canonical rollback pass; synthetic desktop screenshots recorded. Signed confirmation/recovery and saved web remain open; privileged complete financial closing remains unavailable. G02 partial/unbookmarked;13/45accepted28.9%,32awaiting71.1%(15partial16pending1mobiledeferred). [Evidence](runs/2026-10-12-g02-cash-count-day-close-v1.md).
 
 S03 prepared source checkpoint: one locked administrative assistant/native writer, strict unregistered draft and original-event reader with current identity/state separation.13canonical/prepared cases80assertions,5parser/reader cases35assertions and scoped types pass. Signed/global/saved-web gates remain open. S03partial/unbookmarked;13/45accepted28.9%. [Evidence](runs/2026-10-12-staff-status-prepared-source.md).
+
+G01 and D04 integrated source checkpoint: both now partial, planned and unbookmarked. G01 full item/debt totals precede bounded detail pages; current currency presentation and original-scope global report are implemented. Its connected QA scope was empty, so nonempty pagination/finance proof remains open. D04 strict fixed-price intake, native transaction composition, editor and owning receipt are registered; the four-case canonical attempt still timed out in its first case, with the full covered saved state preserved. Signed and saved web acceptance, Finance receiving-account payment and automatic-reminder support remain open. The 45-ticket catalog remains 13 accepted (28.9%), 32 awaiting acceptance (71.1%): 17 partial, 14 pending and one mobile-deferred. [Integration evidence](runs/2026-10-12-reporting-intake-integration.md).

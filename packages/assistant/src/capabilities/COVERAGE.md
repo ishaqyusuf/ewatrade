@@ -6,17 +6,25 @@ Tickets refer to the Brain plan `.brain/plans/2026-10-09-assistant-business-oper
 
 ## Summary
 
-- Router procedures: 553 (412 merchant, 141 public/account/internal)
-- Merchant supported by a capability: 112
-- Merchant planned: 134
+- Router procedures: 561 (420 merchant, 141 public/account/internal)
+- Merchant supported by a capability: 121
+- Merchant planned: 133
 - Merchant form-only: 121
 - Merchant excluded: 45
-- Capabilities: 107 (54 read, 53 write)
+- Capabilities: 115 (61 read, 54 write)
 
 ## Capabilities
 
 | ID | v | Mode | Tool | Roles | Scoped staff | Clients | Rollout | Procedures |
 |---|---|---|---|---|---|---|---|---|
+| `sales.items.report` | 1 | read | `readItemSalesReport` | OWNER, ADMIN, MANAGER, CASHIER, OPERATOR | read | dashboard | planned | `businessReporting.itemSales` |
+| `sales.collections.report` | 1 | read | `readPaymentCollectionsReport` | OWNER, ADMIN, MANAGER, CASHIER, OPERATOR | read | dashboard | planned | `businessReporting.paymentCollections` |
+| `customers.debt.report` | 1 | read | `readCustomerDebtReport` | OWNER, ADMIN | Owner/Admin only | dashboard | planned | `businessReporting.customerDebt` |
+| `finance.supplier_aging.report` | 1 | read | `readSupplierAgingReport` | OWNER, ADMIN | Owner/Admin only | dashboard | planned | `businessReporting.supplierAging` |
+| `finance.posted_profit.report` | 1 | read | `readPostedProfitReport` | OWNER, ADMIN | Owner/Admin only | dashboard | planned | `businessReporting.postedProfit` |
+| `inventory.stock.report` | 1 | read | `readStockReport` | OWNER, ADMIN, MANAGER | stock | dashboard | planned | `businessReporting.stock` |
+| `services.intake.options.read` | 1 | read | `readServiceIntakeOptions` | OWNER, ADMIN, MANAGER | read, read, read | dashboard | planned | `catalog.listItemsPage`, `services.getSettings`, `services.assignees` |
+| `services.intake.create` | 1 | write (`service_intake`) | `draftAction` | OWNER, ADMIN, MANAGER | Owner/Admin only | dashboard | planned | `services.createAndConfirmIntake` |
 | `finance.cash_count.record` | 1 | write (`cash_count_record`) | `draftAction` | OWNER, ADMIN | Owner/Admin only | dashboard | planned | `finance.recordCashCount` |
 | `finance.cash_accounts.read` | 1 | read | `readCashAccounts` | OWNER, ADMIN | Owner/Admin only | dashboard | planned | `finance.moneyAccounts` |
 | `finance.cash_counts.read` | 1 | read | `readCashCounts` | OWNER, ADMIN | Owner/Admin only | dashboard | planned | `finance.cashCounts` |
@@ -48,8 +56,8 @@ Tickets refer to the Brain plan `.brain/plans/2026-10-09-assistant-business-oper
 | `finance.expense.void` | 1 | write (`expense_void`) | `draftAction` | OWNER, ADMIN | Owner/Admin only | dashboard | planned | `finance.voidExpense` |
 | `finance.bill_payment.reverse` | 1 | write (`bill_payment_reverse`) | `draftAction` | OWNER, ADMIN | Owner/Admin only | dashboard | planned | `finance.reverseBillPayment` |
 | `finance.bill.pay` | 1 | write (`bill_payment`) | `draftAction` | OWNER, ADMIN | Owner/Admin only | dashboard | planned | `finance.payBill` |
-| `finance.expense.record` | 2 | write (`expense_record`) | `draftAction` | OWNER, ADMIN | Owner/Admin only | dashboard | enabled | `finance.recordExpense` |
-| `finance.money_movement.record` | 2 | write (`money_movement`) | `draftAction` | OWNER, ADMIN | Owner/Admin only | dashboard | enabled | `finance.recordMoney` |
+| `finance.expense.record` | 1 | write (`expense_record`) | `draftAction` | OWNER, ADMIN | Owner/Admin only | dashboard | enabled | `finance.recordExpense` |
+| `finance.money_movement.record` | 1 | write (`money_movement`) | `draftAction` | OWNER, ADMIN | Owner/Admin only | dashboard | enabled | `finance.recordMoney` |
 | `customers.entry.read` | 1 | read | `readCustomerEntry` | OWNER, ADMIN | Owner/Admin only | dashboard | planned | `customerLedger.entryDetail` |
 | `customers.allocation_history.read` | 1 | read | `readCustomerAllocationHistory` | OWNER, ADMIN | Owner/Admin only | dashboard | planned | `customerLedger.allocationHistory` |
 | `customers.credit.apply` | 1 | write (`customer_credit_apply`) | `draftAction` | OWNER, ADMIN | Owner/Admin only | dashboard | planned | `customerLedger.applyCredit` |
@@ -138,6 +146,14 @@ track conversational evaluation separately from these source test links.
 
 | Capability | Example requests | Registered regression tests |
 |---|---|---|
+| `sales.items.report` | How many crates of eggs did we sell last week? | [packages/db/src/queries/business-reporting/reporting.test.ts](../../../../packages/db/src/queries/business-reporting/reporting.test.ts)<br>[packages/assistant/src/general/business-report-target.test.ts](../../../../packages/assistant/src/general/business-report-target.test.ts) |
+| `sales.collections.report` | How much money did we record today? | [packages/db/src/queries/business-reporting/reporting.test.ts](../../../../packages/db/src/queries/business-reporting/reporting.test.ts)<br>[packages/assistant/src/general/business-report-target.test.ts](../../../../packages/assistant/src/general/business-report-target.test.ts) |
+| `customers.debt.report` | Show current posted customer debt in NGN | [packages/db/src/queries/business-reporting/reporting.test.ts](../../../../packages/db/src/queries/business-reporting/reporting.test.ts)<br>[packages/assistant/src/general/business-report-target.test.ts](../../../../packages/assistant/src/general/business-report-target.test.ts) |
+| `finance.supplier_aging.report` | Show posted supplier aging as of a UTC date | [packages/db/src/queries/business-reporting/reporting.test.ts](../../../../packages/db/src/queries/business-reporting/reporting.test.ts)<br>[packages/assistant/src/general/business-report-target.test.ts](../../../../packages/assistant/src/general/business-report-target.test.ts) |
+| `finance.posted_profit.report` | Show posted Book profit and missing cost coverage | [packages/db/src/queries/business-reporting/reporting.test.ts](../../../../packages/db/src/queries/business-reporting/reporting.test.ts)<br>[packages/assistant/src/general/business-report-target.test.ts](../../../../packages/assistant/src/general/business-report-target.test.ts) |
+| `inventory.stock.report` | Show current stock for eggs | [packages/db/src/queries/business-reporting/reporting.test.ts](../../../../packages/db/src/queries/business-reporting/reporting.test.ts)<br>[packages/assistant/src/general/business-report-target.test.ts](../../../../packages/assistant/src/general/business-report-target.test.ts) |
+| `services.intake.options.read` | Find shirt washing services and assignees | [packages/db/src/queries/service-intake-review.test.ts](../../../../packages/db/src/queries/service-intake-review.test.ts) |
+| `services.intake.create` | Take two shirts for Amina and promise Thursday morning | [packages/assistant/src/general/service-intake.test.ts](../../../../packages/assistant/src/general/service-intake.test.ts)<br>[packages/db/src/queries/service-intake-review.test.ts](../../../../packages/db/src/queries/service-intake-review.test.ts)<br>[apps/api/src/assistant/general-service-intake-rollback.integration-check.ts](../../../../apps/api/src/assistant/general-service-intake-rollback.integration-check.ts) |
 | `finance.cash_count.record` | I counted zero cash in the front till at this time | [packages/assistant/src/general/cash-count.test.ts](../../../../packages/assistant/src/general/cash-count.test.ts)<br>[packages/db/src/queries/finance/cash-count-review.test.ts](../../../../packages/db/src/queries/finance/cash-count-review.test.ts) |
 | `finance.cash_accounts.read` | Find the front till | [packages/db/src/queries/finance/assistant-cash-count-reads.test.ts](../../../../packages/db/src/queries/finance/assistant-cash-count-reads.test.ts) |
 | `finance.cash_counts.read` | Find Saturday's front till count | [packages/db/src/queries/finance/cash-count-review.test.ts](../../../../packages/db/src/queries/finance/cash-count-review.test.ts) |
@@ -258,16 +274,16 @@ track conversational evaluation separately from these source test links.
 | D02 | 1 |
 | D03 | 3 |
 | D04 | 3 |
-| D05 | 11 |
+| D05 | 10 |
 | E01 | 6 |
 | E02 | 3 |
 | E03 | 3 |
 | E04 | 1 |
-| G01 | 5 |
+| G01 | 6 |
 | G02 | 4 |
 | G03 | 29 |
 | G04 | 7 |
-| G05 | 31 |
+| G05 | 30 |
 | H04 | 10 |
 | S01 | 1 |
 | S02 | 1 |
@@ -285,6 +301,13 @@ track conversational evaluation separately from these source test links.
 | `assistant.editProposal` | mutation | read | assistant | excluded | Assistant transport or a dedicated assistant flow. |
 | `assistant.pendingProposals` | query | Owner/Admin only | assistant | excluded | Assistant transport or a dedicated assistant flow. |
 | `assistant.start` | mutation | read | assistant | excluded | Assistant transport or a dedicated assistant flow. |
+| `businessReporting.customerDebt` | query | Owner/Admin only | customers | supported | customers.debt.report |
+| `businessReporting.itemSales` | query | read | sales | supported | sales.items.report |
+| `businessReporting.paymentCollections` | query | read | sales | supported | sales.collections.report |
+| `businessReporting.postedProfit` | query | Owner/Admin only | finance | supported | finance.posted_profit.report |
+| `businessReporting.read` | query | read | sales | planned | G01 |
+| `businessReporting.stock` | query | stock | inventory | supported | inventory.stock.report |
+| `businessReporting.supplierAging` | query | Owner/Admin only | finance | supported | finance.supplier_aging.report |
 | `catalog.archiveOffering` | mutation | catalog | catalog | planned | G04 |
 | `catalog.archiveVariant` | mutation | catalog | catalog | planned | G04 |
 | `catalog.categories.list` | query | read | catalog | planned | B02 |
@@ -299,7 +322,7 @@ track conversational evaluation separately from these source test links.
 | `catalog.detail.overview` | query | read | catalog | supported | catalog.item.read |
 | `catalog.getItem` | query | read | catalog | form_only | Generic item editor payload; assistant uses active-Store detail.overview with stock permission filtering. |
 | `catalog.listItems` | query | read | catalog | excluded | Unbounded legacy list; assistant uses stable listItemsPage continuation. |
-| `catalog.listItemsPage` | query | read | catalog | supported | catalog.page |
+| `catalog.listItemsPage` | query | read | services | supported | services.intake.options.read, catalog.page |
 | `catalog.listUnitConfigurations` | query | read | catalog | planned | B03 |
 | `catalog.listUnitDefinitions` | query | read | catalog | planned | B03 |
 | `catalog.photos.createIntent` | mutation | catalog | catalog | form_only | Photo capture and upload belong to the product form. |
@@ -557,6 +580,7 @@ track conversational evaluation separately from these source test links.
 | `serviceAccess.requests` | query | Owner/Admin only | commerce | planned | G03 |
 | `serviceAccess.revokeTracking` | mutation | Owner/Admin only | commerce | planned | G03 |
 | `serviceAccess.updateRequest` | mutation | Owner/Admin only | commerce | planned | G03 |
+| `serviceAssistantIntake.receipt` | query | read | services | planned | D04 |
 | `serviceCommerce.acknowledgeStoreConversationStaffRead` | mutation | Owner/Admin only | commerce | form_only | Customer conversations are answered by staff in the inbox, not by the assistant. |
 | `serviceCommerce.approveQuoteVersion` | mutation | Owner/Admin only | commerce | planned | G03 |
 | `serviceCommerce.assignChannelAttendant` | mutation | Owner/Admin only | commerce | form_only | Messaging channel connection uses provider sign-up and credentials. |
@@ -639,17 +663,17 @@ track conversational evaluation separately from these source test links.
 | `serviceReporting.auditExport` | query | Owner/Admin only | inventory | form_only | Bulk file export; download it from the page. |
 | `serviceReporting.summary` | query | Owner/Admin only | finance | planned | G01 |
 | `services.addNote` | mutation | Owner/Admin only | services | planned | D05 |
-| `services.assignees` | query | Owner/Admin only | services | planned | D05 |
+| `services.assignees` | query | read | services | supported | services.intake.options.read |
 | `services.assignJob` | mutation | Owner/Admin only | services | planned | D05 |
 | `services.authorizeLine` | mutation | Owner/Admin only | services | planned | D05 |
 | `services.batchUpdate` | mutation | Owner/Admin only | services | form_only | Bulk queue updates stay in the queue view. |
 | `services.captureEvidence` | mutation | Owner/Admin only | services | planned | H04 |
 | `services.confirmIntake` | mutation | Owner/Admin only | services | planned | D04 |
-| `services.createAndConfirmIntake` | mutation | Owner/Admin only | services | planned | D04 |
+| `services.createAndConfirmIntake` | mutation | Owner/Admin only | services | supported | services.intake.create |
 | `services.createIntakeDraft` | mutation | Owner/Admin only | services | planned | D04 |
 | `services.createRework` | mutation | Owner/Admin only | services | planned | D05 |
 | `services.getJob` | query | Owner/Admin only | services | planned | D05 |
-| `services.getSettings` | query | Owner/Admin only | services | planned | G05 |
+| `services.getSettings` | query | read | services | supported | services.intake.options.read |
 | `services.handoff` | mutation | Owner/Admin only | services | planned | D05 |
 | `services.publishEvidence` | mutation | Owner/Admin only | services | planned | H04 |
 | `services.queue` | query | Owner/Admin only | sales | excluded | Unbounded legacy list; the assistant reads bounded pages. |

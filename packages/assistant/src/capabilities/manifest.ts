@@ -28,6 +28,51 @@ const proposalTests = [
  */
 export const capabilityManifest = [
   {
+    id: "sales.items.report", version: 1, mode: "read", title: "Read item sales report",
+    domain: "sales", tool: "readItemSalesReport", policy: { roles: everyone }, scope: "store",
+    clients: ["dashboard"], rollout: "planned", procedures: ["businessReporting.itemSales"],
+    examples: ["How many crates of eggs did we sell last week?"], tests: ["packages/db/src/queries/business-reporting/reporting.test.ts", "packages/assistant/src/general/business-report-target.test.ts"],
+    brain: ".brain/features/assistant-business-reporting-g01.md",
+  },
+  {
+    id: "sales.collections.report", version: 1, mode: "read", title: "Read payment collections report",
+    domain: "sales", tool: "readPaymentCollectionsReport", policy: { roles: everyone }, scope: "store",
+    clients: ["dashboard"], rollout: "planned", procedures: ["businessReporting.paymentCollections"],
+    examples: ["How much money did we record today?"], tests: ["packages/db/src/queries/business-reporting/reporting.test.ts", "packages/assistant/src/general/business-report-target.test.ts"],
+    brain: ".brain/features/assistant-business-reporting-g01.md",
+  },
+  {
+    id: "customers.debt.report", version: 1, mode: "read", title: "Read customer debt report",
+    domain: "customers", tool: "readCustomerDebtReport", policy: { roles: ["OWNER", "ADMIN"] }, scope: "tenant",
+    clients: ["dashboard"], rollout: "planned", procedures: ["businessReporting.customerDebt"],
+    examples: ["Show current posted customer debt in NGN"], tests: ["packages/db/src/queries/business-reporting/reporting.test.ts", "packages/assistant/src/general/business-report-target.test.ts"],
+    brain: ".brain/features/assistant-business-reporting-g01.md",
+  },
+  {
+    id: "finance.supplier_aging.report", version: 1, mode: "read", title: "Read supplier payable aging",
+    domain: "finance", tool: "readSupplierAgingReport", policy: { roles: ["OWNER", "ADMIN"] }, scope: "tenant",
+    clients: ["dashboard"], rollout: "planned", procedures: ["businessReporting.supplierAging"],
+    examples: ["Show posted supplier aging as of a UTC date"], tests: ["packages/db/src/queries/business-reporting/reporting.test.ts", "packages/assistant/src/general/business-report-target.test.ts"],
+    brain: ".brain/features/assistant-business-reporting-g01.md",
+  },
+  {
+    id: "finance.posted_profit.report", version: 1, mode: "read", title: "Read posted profit coverage",
+    domain: "finance", tool: "readPostedProfitReport", policy: { roles: ["OWNER", "ADMIN"] }, scope: "tenant",
+    clients: ["dashboard"], rollout: "planned", procedures: ["businessReporting.postedProfit"],
+    examples: ["Show posted Book profit and missing cost coverage"], tests: ["packages/db/src/queries/business-reporting/reporting.test.ts", "packages/assistant/src/general/business-report-target.test.ts"],
+    brain: ".brain/features/assistant-business-reporting-g01.md",
+  },
+  {
+    id: "inventory.stock.report", version: 1, mode: "read", title: "Read bounded complete stock report",
+    domain: "inventory", tool: "readStockReport", policy: { roles: managers }, scope: "store",
+    clients: ["dashboard"], rollout: "planned", procedures: ["businessReporting.stock"],
+    examples: ["Show current stock for eggs"], tests: ["packages/db/src/queries/business-reporting/reporting.test.ts", "packages/assistant/src/general/business-report-target.test.ts"],
+    brain: ".brain/features/assistant-business-reporting-g01.md",
+  },
+
+  { id: "services.intake.options.read", version: 1, mode: "read", title: "Find simple Service intake choices", domain: "services", tool: "readServiceIntakeOptions", policy: { roles: managers }, scope: "store", clients: ["dashboard"], rollout: "planned", procedures: ["catalog.listItemsPage", "services.getSettings", "services.assignees"], examples: ["Find shirt washing services and assignees"], tests: ["packages/db/src/queries/service-intake-review.test.ts"], brain: ".brain/features/assistant-service-intake.md" },
+  { id: "services.intake.create", version: 1, mode: "write", title: "Create and confirm a simple Service intake", domain: "services", tool: "draftAction", action: "service_intake", schema: actionSchema("service_intake"), policy: { roles: managers }, scope: "store", clients: ["dashboard"], rollout: "planned", procedures: ["services.createAndConfirmIntake"], effect: "record", receipt: "service_intake", examples: ["Take two shirts for Amina and promise Thursday morning"], tests: ["packages/assistant/src/general/service-intake.test.ts", "packages/db/src/queries/service-intake-review.test.ts", "apps/api/src/assistant/general-service-intake-rollback.integration-check.ts"], brain: ".brain/features/assistant-service-intake.md" },
+  {
     id: "finance.cash_count.record",
     version: 1,
     mode: "write",

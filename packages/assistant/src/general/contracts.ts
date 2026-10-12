@@ -1,3 +1,5 @@
+import { serviceIntakeAction } from "./service-intake"
+export { serviceIntakeDraftInstructions } from "./service-intake"
 import { cashCountAction } from "./cash-count"
 export {
   cashCountAction,
@@ -350,6 +352,7 @@ export const generalActionSchema = z.discriminatedUnion("action", [
   closeoutCreateAction,
   closeoutFinalizeAction,
   staffInvitationAction,
+  serviceIntakeAction,
   cashCountAction,
 ])
 export const generalOrderActionSchema = generalActionSchema.options[2]
@@ -360,6 +363,7 @@ export const generalReceiptSchema = z
     kind: z.enum([
       "finance_purchase_bill",
       "staff_invitation",
+      "service_intake",
       "finance_purchase_registration",
       "finance_supplier",
       "finance_bill",
@@ -395,6 +399,13 @@ export const generalReceiptSchema = z
     {
       message: "A finance receipt requires its Finance Book.",
       path: ["bookId"],
+    },
+  )
+  .refine(
+    (value) => value.kind !== "service_intake" || Boolean(value.orderId),
+    {
+      message: "A Service intake receipt requires its original Order.",
+      path: ["orderId"],
     },
   )
 export type GeneralReceipt = z.infer<typeof generalReceiptSchema>
@@ -525,6 +536,8 @@ export function generalActionSummary(
 ) {
   const amount = (minor: number) => generalMoney(minor, currencyCode)
   switch (action.action) {
+    case "service_intake":
+      return `Service intake · ${action.lines.length} service line(s)`
     case "staff_invitation":
       return action.intent.kind === "INVITE"
         ? `Invite ${action.intent.invite.email} · ${action.intent.invite.assignments.length} Store assignment(s)`

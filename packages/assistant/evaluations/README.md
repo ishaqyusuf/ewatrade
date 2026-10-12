@@ -302,3 +302,5 @@ S03 canonical status foundation:18focused tests83assertions/scoped types and act
 - [G02 cash count/day-close source and canonical rollback, 12 October 2026](runs/2026-10-12-g02-cash-count-day-close-v1.md):27tests176assertions, focused types and exclusive forced canonical rollback pass. Strict observation, original receipt, planned global object and unresolved closing coverage preserved; saved signed/web acceptance remains open.
 
 - [Staff status prepared writer/original receipt source,12October](runs/2026-10-12-staff-status-prepared-source.md):13canonical/prepared cases80assertions plus5parser/reader cases35assertions and scoped source types pass. Original lifecycle/current directory separated; full assistant/saved web registration/acceptance unfinished.
+
+- [Reporting/intake integrated source checkpoint](runs/2026-10-12-reporting-intake-integration.md): global objects and eight planned capabilities registered; source checks pass. G01 nonempty QA and D04 timeout/signed/web gates remain open. Both partial, accepted 13/45 unchanged.

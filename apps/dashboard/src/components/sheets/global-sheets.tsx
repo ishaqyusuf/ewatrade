@@ -6,9 +6,12 @@ import { useCatalogItemParams } from "@/hooks/use-catalog-item-params"
 import { Button } from "@ewatrade/ui"
 import { usePathname } from "next/navigation"
 import { useState } from "react"
+import { ServiceIntakeReceiptSheet } from "./service-intake-receipt-sheet"
+import { ServiceJobSheet } from "./service-job-sheet"
 
 import { AssistantCashCountSheet } from "./assistant-cash-count-sheet"
 import { AssistantDayCloseSheet } from "./assistant-day-close-sheet"
+import { BusinessReportSheet } from "./business-report-sheet"
 import { CloseoutSheet } from "./closeout-sheet"
 import { CustomerDetailsSheet } from "./customer-details-sheet"
 import { CustomerLedgerSheet } from "./customer-ledger-sheet"
@@ -31,6 +34,7 @@ import { StockTransferDetailsSheet } from "./stock-transfer-details-sheet"
 import { StoreConversationSheet } from "./store-conversation-sheet"
 
 export type GlobalSheetAccess = {
+  serviceIntake?: boolean
   /** Website & domain launch gate and role; the sheet mounts only when true. */
   domains?: boolean
   staffHistory?: boolean
@@ -66,6 +70,7 @@ export function GlobalSheets({
   tenantId: string
   timeZone: string
 }) {
+  const objectScope = JSON.stringify([actorUserId, tenantId, store.id])
   const pathname = usePathname()
   const { setCatalogItemMode } = useCatalogItemParams()
   const [notice, setNotice] = useState<string | null>(null)
@@ -106,6 +111,18 @@ export function GlobalSheets({
           <CustomerDetailsSheet />
         </>
       ) : null}
+      {access.serviceIntake ? (
+        <ServiceIntakeReceiptSheet
+          key={`service-intake:${objectScope}`}
+          timeZone={timeZone}
+        />
+      ) : null}
+      {access.serviceIntake && pathname !== "/services" ? (
+        <ServiceJobSheet canManage storeId={store.id} />
+      ) : null}
+      {access.sales ? (
+        <BusinessReportSheet key={`business-report:${objectScope}`} />
+      ) : null}
       {access.staffHistory ? <StaffHistorySheet /> : null}
       {access.staffHistory ? <StaffInvitationSheet /> : null}
       {access.staffDirectory ? (
@@ -122,8 +139,12 @@ export function GlobalSheets({
       {access.finance ? (
         <CustomerLedgerSheet actorUserId={actorUserId} tenantId={tenantId} />
       ) : null}
-      {access.finance ? <AssistantCashCountSheet /> : null}
-      {access.finance ? <AssistantDayCloseSheet /> : null}
+      {access.finance ? (
+        <AssistantCashCountSheet key={`cash-count:${objectScope}`} />
+      ) : null}
+      {access.finance ? (
+        <AssistantDayCloseSheet key={`day-close:${objectScope}`} />
+      ) : null}
       {access.finance ? <FinanceMovementDetailsSheet /> : null}
       {access.finance ? <PurchaseRegistrationDetailsSheet /> : null}
       {access.finance ? <PurchaseBillDetailsSheet /> : null}
