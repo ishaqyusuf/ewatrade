@@ -1,6 +1,18 @@
 import { expect, test } from "bun:test"
 import { staffProcedureAction } from "./staff-procedure-policy"
 
+test("assistant booking detail admits only the exact protected query", () => {
+  expect(
+    staffProcedureAction("serviceCommerce.assistantBookingDetail", "query"),
+  ).toBe("read")
+  expect(
+    staffProcedureAction("serviceCommerce.assistantBookingDetail", "mutation"),
+  ).toBeNull()
+  expect(
+    staffProcedureAction("serviceCommerce.assistantBookingConfirm", "mutation"),
+  ).toBeNull()
+})
+
 test("assistant quotation endpoints permit only audited reads and retain unknown-path refusal", () => {
   for (const path of [
     "serviceCommerce.assistantQuoteApprovalDetail",

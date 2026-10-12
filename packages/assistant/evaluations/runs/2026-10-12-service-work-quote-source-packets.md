@@ -56,3 +56,8 @@ refused. One new policy regression passes5assertions. Existing9/46 source eviden
 reused; no connected or browser check. Tool/global original triple integration next.
 
 Protected-route scoped compiler reports0diagnostics. No baseline or connected suite repeated.
+
+
+Notes/exceptions and exact booking follow-up: root ran18newfocusedtests124assertions once (10 work-record,8 booking cases), all pass. Notes actual-source scoped compiler0diagnostics. Original note/exception caller-owned seams and strict owning receipts preserve IDs/times; changed-payload note replay refuses. Exception duplicate prevention remains dependent on atomic GENERAL completion. Exact booking pure projection preserves saved capacity/time/payment snapshots separately from current state and refuses foreign original links/public capabilities. Protected assistantBookingDetail uses fresh auth scope and generic policy refusal; new exact query-only policy case passes3assertions. Test literal corrected before affected booking integration compile. Workers now finish action editors, saved booking object and original work-record readers; central/shared integration and signed/saved acceptance remain open. No new browser UI milestone or screenshot for these backend sources. No DB/provider/mobile/activation/restart;13/45accepted unchanged. Brain impact: service-work-lifecycle, booking-read, API endpoints/contracts/permissions, delivery plan.
+
+Booking affected-source compile now passes with zero diagnostics, including actual protected router, adapter, strict schema, repository/schema tests and scoped procedure map. No broad typecheck or unchanged baseline rerun.

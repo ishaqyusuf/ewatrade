@@ -15,6 +15,8 @@ import {
 } from "@ewatrade/db/queries"
 import { enqueueServiceCommerceBookingNotificationDispatch } from "@ewatrade/jobs"
 import { TRPCError } from "@trpc/server"
+import { readGeneralBooking } from "../../../assistant/general-booking-read"
+import { generalBookingReadInput } from "../../../schemas/assistant-booking-read"
 
 import {
   serviceCommerceBookingCapabilityCreateSchema,
@@ -100,6 +102,20 @@ async function enqueueBookingNotifications<
 }
 
 export const serviceCommerceBookingsRouter = createTRPCRouter({
+  assistantBookingDetail: protectedProcedure
+    .input(generalBookingReadInput)
+    .query(async ({ ctx, input }) => {
+      try {
+        return await readGeneralBooking(ctx, input)
+      } catch (error) {
+        if (error instanceof ServiceCommercePolicyError)
+          throw new TRPCError({
+            code: "FORBIDDEN",
+            message: "This booking is unavailable under current policy.",
+          })
+        mapBookingError(error)
+      }
+    }),
   bookingConfiguration: protectedProcedure
     .input(serviceCommerceBookingConfigurationReadSchema)
     .query(async ({ ctx, input }) => {

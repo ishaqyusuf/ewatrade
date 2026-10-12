@@ -2,6 +2,7 @@ import type { StaffAction } from "@ewatrade/auth/store-access"
 
 // Scoped staff use explicitly audited procedures. New procedures fail closed.
 const reads = new Set([
+  "serviceCommerce.assistantBookingDetail",
   "serviceCommerce.assistantQuoteApprovalDetail",
   "serviceCommerce.assistantPendingQuoteApprovals",
   "businessReporting.read",

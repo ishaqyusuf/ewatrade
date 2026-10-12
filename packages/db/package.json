@@ -53,7 +53,9 @@
     "./staff-status-receipt": "./src/queries/staff-status-receipt.ts",
     "./staff-access-update": "./src/queries/staff-access-update.ts",
     "./staff-access-receipt": "./src/queries/staff-access-receipt.ts",
-    "./service-work-review": "./src/queries/service-work-review.ts"
+    "./service-work-review": "./src/queries/service-work-review.ts",
+    "./service-work-record-review": "./src/queries/service-work-record-review.ts",
+    "./service-booking-read": "./src/queries/service-booking-read.ts"
   },
   "scripts": {
     "seed:category-suggestion-config": "bun scripts/seed-category-suggestion-config.ts",

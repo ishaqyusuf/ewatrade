@@ -1581,59 +1581,65 @@ export async function rescheduleServiceJob(
   )
 }
 
-export async function addServiceInternalNote(
-  db: PrismaClient,
-  input: {
-    actorUserId: string
-    body: string
-    clientCommandId: string
-    jobId: string
-    lineId?: string
-    tenantId: string
-  },
-) {
-  return db.$transaction(async (tx) => {
-    const job = await tx.serviceJob.findFirst({
-      where: { id: input.jobId, tenantId: input.tenantId },
-    })
-    if (!job) throw new CatalogError("SERVICE_JOB_NOT_FOUND", "Job not found.")
-    const note = await tx.serviceInternalNote.upsert({
-      create: {
-        actorUserId: input.actorUserId,
-        body: input.body.trim(),
-        clientCommandId: input.clientCommandId,
-        serviceJobId: job.id,
-        serviceJobLineId: input.lineId,
-      },
-      update: {},
-      where: {
-        serviceJobId_clientCommandId: {
-          clientCommandId: input.clientCommandId,
-          serviceJobId: job.id,
-        },
-      },
-    })
-    return note
-  })
+export type AddServiceInternalNoteInput = {
+  actorUserId: string
+  body: string
+  clientCommandId: string
+  jobId: string
+  lineId?: string
+  tenantId: string
 }
 
-export async function recordServiceException(
-  db: PrismaClient,
-  input: {
-    actorUserId: string
-    description: string
-    jobId: string
-    lineId?: string
-    tenantId: string
-    type:
-      | "customer_rejection"
-      | "delay"
-      | "failed_attempt"
-      | "other"
-      | "quality"
-  },
+export async function addServiceInternalNoteInTransaction(
+  tx: Prisma.TransactionClient,
+  input: AddServiceInternalNoteInput,
 ) {
-  const job = await loadJob(db, {
+  const job = await tx.serviceJob.findFirst({
+    where: { id: input.jobId, tenantId: input.tenantId },
+  })
+  if (!job) throw new CatalogError("SERVICE_JOB_NOT_FOUND", "Job not found.")
+  const note = await tx.serviceInternalNote.upsert({
+    create: {
+      actorUserId: input.actorUserId,
+      body: input.body.trim(),
+      clientCommandId: input.clientCommandId,
+      serviceJobId: job.id,
+      serviceJobLineId: input.lineId,
+    },
+    update: {},
+    where: {
+      serviceJobId_clientCommandId: {
+        clientCommandId: input.clientCommandId,
+        serviceJobId: job.id,
+      },
+    },
+  })
+  return note
+}
+
+export async function addServiceInternalNote(
+  db: PrismaClient,
+  input: AddServiceInternalNoteInput,
+) {
+  return runInOwnTransaction(db, (tx) =>
+    addServiceInternalNoteInTransaction(tx, input),
+  )
+}
+
+export type RecordServiceExceptionInput = {
+  actorUserId: string
+  description: string
+  jobId: string
+  lineId?: string
+  tenantId: string
+  type: "customer_rejection" | "delay" | "failed_attempt" | "other" | "quality"
+}
+
+export async function recordServiceExceptionInTransaction(
+  tx: Prisma.TransactionClient,
+  input: RecordServiceExceptionInput,
+) {
+  const job = await loadJob(tx, {
     jobId: input.jobId,
     tenantId: input.tenantId,
   })
@@ -1647,7 +1653,7 @@ export async function recordServiceException(
           : input.type === "customer_rejection"
             ? ServiceExceptionType.CUSTOMER_REJECTION
             : ServiceExceptionType.OTHER
-  return db.serviceException.create({
+  return tx.serviceException.create({
     data: {
       actorUserId: input.actorUserId,
       description: input.description.trim(),
@@ -1657,6 +1663,15 @@ export async function recordServiceException(
       type,
     },
   })
+}
+
+export async function recordServiceException(
+  db: PrismaClient,
+  input: RecordServiceExceptionInput,
+) {
+  return runInOwnTransaction(db, (tx) =>
+    recordServiceExceptionInTransaction(tx, input),
+  )
 }
 
 export async function createServiceRework(

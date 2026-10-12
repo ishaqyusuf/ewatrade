@@ -33,7 +33,9 @@
     "./general/staff-status": "./src/general/staff-status.ts",
     "./general/staff-access": "./src/general/staff-access.ts",
     "./general/quote-reads": "./src/general/quote-reads.ts",
-    "./general/service-work": "./src/general/service-work.ts"
+    "./general/service-work": "./src/general/service-work.ts",
+    "./general/service-work-records": "./src/general/service-work-records.ts",
+    "./general/booking-read": "./src/general/booking-read.ts"
   },
   "scripts": {
     "lint": "biome check .",
