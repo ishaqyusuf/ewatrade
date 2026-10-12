@@ -3,6 +3,7 @@ import { BottomSearchFooter } from "@/components/mobile/bottom-search-footer"
 import { EmptyState } from "@/components/mobile/empty-state"
 import { ListCreateFab } from "@/components/mobile/list-create-fab"
 import { ListSkeleton } from "@/components/mobile/loading-skeletons"
+import { SearchFold, useSearchFold } from "@/components/mobile/search-fold"
 import { StatusBanner } from "@/components/mobile/status-banner"
 import { Modal } from "@/components/ui/modal"
 import { Text } from "@/components/ui/text"
@@ -47,6 +48,7 @@ export function StaffInviteContent({ onComplete }: StaffInviteProps) {
   )
   const [footerHeight, setFooterHeight] = useState(88)
   const scrollHide = useBottomSearchScroll()
+  const searchFold = useSearchFold(vm.search)
   const discoveredSearch = useRef(false)
   if (shouldShowListSearch(rows.length) || vm.search)
     discoveredSearch.current = true
@@ -152,23 +154,25 @@ export function StaffInviteContent({ onComplete }: StaffInviteProps) {
             scrollEventThrottle={16}
             ListHeaderComponent={
               <View className="gap-4 pb-4">
-                <ClassicStaffHeader
-                  activeCount={
-                    rows.filter((row) => row.statusLabel === "Active").length
-                  }
-                  pendingCount={
-                    rows.filter((row) => row.statusLabel === "Pending").length
-                  }
-                  onSeePlans={() => router.push("/subscription-modal")}
-                  used={vm.entitlement?.used}
-                  limit={vm.entitlement?.limit}
-                  planName={vm.planName}
-                  loading={vm.quotaLoading}
-                  offline={vm.isOffline}
-                  updatedAt={vm.quotaUpdatedAt}
-                  onInvite={invitation.present}
-                  inviteDisabled={!vm.canOpenInvite}
-                />
+                <SearchFold folded={searchFold.folded}>
+                  <ClassicStaffHeader
+                    activeCount={
+                      rows.filter((row) => row.statusLabel === "Active").length
+                    }
+                    pendingCount={
+                      rows.filter((row) => row.statusLabel === "Pending").length
+                    }
+                    onSeePlans={() => router.push("/subscription-modal")}
+                    used={vm.entitlement?.used}
+                    limit={vm.entitlement?.limit}
+                    planName={vm.planName}
+                    loading={vm.quotaLoading}
+                    offline={vm.isOffline}
+                    updatedAt={vm.quotaUpdatedAt}
+                    onInvite={invitation.present}
+                    inviteDisabled={!vm.canOpenInvite}
+                  />
+                </SearchFold>
                 {vm.entitlement?.isAtLimit ? (
                   <NudgeCard
                     icon="UserPlus"
@@ -306,6 +310,7 @@ export function StaffInviteContent({ onComplete }: StaffInviteProps) {
               alwaysShowSearch
               hidden={scrollHide.hidden}
               maxLength={STAFF_SEARCH_LIMIT}
+              onFocusChange={searchFold.onFocusChange}
               onHeightChange={setFooterHeight}
               onChangeText={vm.setSearch}
               value={vm.search}
@@ -313,7 +318,11 @@ export function StaffInviteContent({ onComplete }: StaffInviteProps) {
               placeholder="Name or email"
             >
               {recovery ? (
-                <ActionButton icon="Search" onPress={invitation.checkDirectory}>
+                <ActionButton
+                  className="rounded-full"
+                  icon="Search"
+                  onPress={invitation.checkDirectory}
+                >
                   Check directory
                 </ActionButton>
               ) : null}
