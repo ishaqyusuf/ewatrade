@@ -189,3 +189,12 @@ tests230assertions and actual-source types pass; unchanged evidence reused.
 Prepared nonempty rollback comparisons are not executed: connected QA remains
 explicitly paused. No positive-data or saved web acceptance inferred.
 [Seam source evidence](runs/2026-10-12-g01-transaction-seams-source.v1.md).
+
+
+12 October saved-chat/signed checkpoint: corrected G02 conversation-only GET200
+exact saved ID/all72 fingerprints matched; earlier Finance GETs reused. D04 signed
+source committed `2ec07d31`; one13-case attempt passed edit-confirm then stopped
+after completion/replay rollback on an unexplained QaClientAuthorization hash
+change (64rows unchanged);11cases unrun, no retry or acceptance. S03 four-case
+signed verifier source committed `5b1b90f7`, compiled but not executed.
+[Evidence](runs/2026-10-12-saved-chat-and-signed-intake-checkpoint.md).
