@@ -24,6 +24,13 @@ import {
   reviewSupplierAdvanceSource,
 } from "./supplier-advance-review"
 
+import {
+  normalizeSupplierOpening,
+  reviewSupplierOpeningSource,
+  loadSupplierOpeningReview,
+  type FinanceSupplierOpeningReviewInput,
+} from "./supplier-opening-review"
+
 const SUPPLIER_REVERSAL_SOURCE = "SUPPLIER_ENTRY_REVERSAL"
 
 export type CreateFinanceSupplierInput = FinanceActor & {
@@ -73,23 +80,6 @@ function getJournalEntryId(result: unknown) {
     )
   }
   return (result as { entryId: string }).entryId
-}
-
-async function getSupplier(
-  tx: Prisma.TransactionClient,
-  bookId: string,
-  supplierId: string,
-) {
-  const supplier = await tx.financeSupplierAccount.findFirst({
-    where: { id: supplierId, bookId },
-    select: { id: true },
-  })
-  if (!supplier)
-    throw new FinanceError(
-      "NOT_FOUND",
-      "Supplier not found in this financial book.",
-    )
-  return supplier
 }
 
 async function getControlAccount(
@@ -153,12 +143,12 @@ export async function createFinanceSupplier(
   )
 }
 
-export async function recordFinanceSupplierOpeningInTransaction(
+async function executeSupplierOpening(
   tx: Prisma.TransactionClient,
   input: FinanceSupplierOpeningInput,
+  preparedSource?: Awaited<ReturnType<typeof reviewSupplierOpeningSource>>,
 ) {
-  const amount = financeAmount(input.amountMinor)
-  const description = normalizeFinanceSupplierDescription(input.description)
+  const { amount, description } = normalizeSupplierOpening(input)
   requireEffectiveDate(input.effectiveAt)
   const { actorUserId: _actor, tenantId: _tenant, ...payload } = input
   return financeDocumentCommand(
@@ -167,91 +157,9 @@ export async function recordFinanceSupplierOpeningInTransaction(
     "RECORD_SUPPLIER_OPENING",
     { ...payload, description },
     async (book) => {
-      await getSupplier(tx, book.id, input.supplierId)
-      if (input.effectiveAt.getTime() !== book.startsAt.getTime()) {
-        throw new FinanceError(
-          "INVALID_JOURNAL",
-          "A supplier opening must use the bookkeeping start date.",
-        )
-      }
-      const kind =
-        input.kind === "PAYABLE"
-          ? "OPENING_PAYABLE"
-          : input.kind === "ADVANCE"
-            ? "OPENING_ADVANCE"
-            : null
-      if (!kind)
-        throw new FinanceError(
-          "INVALID_JOURNAL",
-          "Choose a payable or advance opening.",
-        )
-      const prior = await tx.financeSupplierEntry.findFirst({
-        where: { bookId: book.id, supplierId: input.supplierId, kind },
-        select: { id: true },
-      })
-      if (prior)
-        throw new FinanceError(
-          "CONFLICT",
-          "This supplier already has an opening of that kind.",
-        )
-
-      const payable =
-        kind === "OPENING_PAYABLE"
-          ? await getControlAccount(tx, book.id, "2000", "LIABILITY", "PAYABLE")
-          : null
-      const advance =
-        kind === "OPENING_ADVANCE"
-          ? await getControlAccount(
-              tx,
-              book.id,
-              "1250",
-              "ASSET",
-              "SUPPLIER_ADVANCE",
-            )
-          : null
-      const equity = await getControlAccount(
-        tx,
-        book.id,
-        "3900",
-        "EQUITY",
-        "OPENING_EQUITY",
-      )
+      const { kind, lines } =
+        preparedSource ?? (await reviewSupplierOpeningSource(tx, input, book))
       const supplierEntryId = randomUUID()
-      const lines =
-        kind === "OPENING_PAYABLE"
-          ? payable
-            ? [
-                {
-                  accountId: equity.id,
-                  side: "DEBIT" as const,
-                  amountMinor: amount.toString(),
-                },
-                {
-                  accountId: payable.id,
-                  side: "CREDIT" as const,
-                  amountMinor: amount.toString(),
-                },
-              ]
-            : []
-          : advance
-            ? [
-                {
-                  accountId: advance.id,
-                  side: "DEBIT" as const,
-                  amountMinor: amount.toString(),
-                },
-                {
-                  accountId: equity.id,
-                  side: "CREDIT" as const,
-                  amountMinor: amount.toString(),
-                },
-              ]
-            : []
-      if (!lines.length)
-        throw new FinanceError(
-          "CONFLICT",
-          "The supplier opening control account is unavailable.",
-        )
       const journalResult = await postFinanceJournalInTransaction(tx, {
         ...input,
         clientCommandId: financePostingCommandId(
@@ -285,6 +193,47 @@ export async function recordFinanceSupplierOpeningInTransaction(
       return { id: entry.id }
     },
   )
+}
+
+export async function recordFinanceSupplierOpeningInTransaction(
+  tx: Prisma.TransactionClient,
+  input: FinanceSupplierOpeningInput,
+) {
+  return executeSupplierOpening(tx, input)
+}
+/** Start date and fresh proof stay private to the locked transaction and one command. */
+export async function prepareReviewedFinanceSupplierOpeningInTransaction(
+  tx: Prisma.TransactionClient,
+  input: FinanceSupplierOpeningReviewInput,
+) {
+  const owned = {
+    tenantId: input.tenantId,
+    actorUserId: input.actorUserId,
+    bookId: input.bookId,
+    supplierId: input.supplierId,
+    kind: input.kind,
+    amountMinor: input.amountMinor,
+    description: input.description,
+  }
+  const value = await loadSupplierOpeningReview(tx, owned, true)
+  let commandId: string | undefined
+  let execution: ReturnType<typeof executeSupplierOpening> | undefined
+  return {
+    review: value.review,
+    execute: (clientCommandId: string) => {
+      if (commandId !== undefined && commandId !== clientCommandId)
+        throw new FinanceError(
+          "CONFLICT",
+          "Prepared supplier opening is bound to one command.",
+        )
+      commandId = clientCommandId
+      return (execution ??= executeSupplierOpening(
+        tx,
+        { ...value.input, clientCommandId },
+        value.source,
+      ))
+    },
+  }
 }
 
 export async function recordFinanceSupplierOpening(

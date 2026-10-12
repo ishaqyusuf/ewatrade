@@ -9,6 +9,7 @@ it is not an executed result, enabled capability, or deployment claim.
 
 | Capability | Fixture version | Scenarios | Recorded model runs |
 |---|---|---|---|
+| Supplier opening | [1](fixtures/supplier-opening.v1.md) | Pre-existing payable/advance, server start, exact controls, duplicate/cutoff/scope, review/editor/rollback/recovery | None yet |
 | Supplier entry reversal | [1](fixtures/supplier-entry-reversal.v1.md) | Original opening/paid advance sources, whole journal correction, consumption/source refusal, stale/rollback/replay and owning supplier | None yet |
 | Purchase fact reversal | [1](fixtures/purchase-recognition-reversal.v1.md) | Exact original invoice/ownership fact, whole journal correction, settlement/dependency/receipt refusal, stale/rollback/replay and owning agreement | None yet |
 | Purchase payment reversal | [1](fixtures/purchase-payment-reversal.v1.md) | Exact original payment/accounts, whole-payment correction, no-money boundary, stale/chronology/rollback/replay and owning invoice | None yet |
@@ -37,6 +38,8 @@ incomplete. Existing unit/integration tests and local web acceptance records rem
 separate evidence; do not import them as successful model evaluations.
 
 ## Recorded non-model evidence
+
+- [Supplier opening source and editor, 12 October 2026](runs/2026-10-12-supplier-opening-source.md): strict pre-existing balance/server Book-start review and private canonical preparation; nine tests453 assertions/scoped types pass. Both exact native opening/replay/duplicate/input-snapshot transactions roll back in14.594–14.702s with every saved fact unchanged. PAYABLE/ADVANCE editor acknowledgement/exact amount/Cancel and screenshots pass. Planned; full signed/saved chat acceptance pending, E05 partial.
 
 - [Supplier entry reversal signed checks, 12 October 2026](runs/2026-10-12-supplier-entry-reversal-signed.md): all three original source kinds reach signed completion rollback in11.027–11.330s; valid stale approvals refuse in10.554–10.847s with saved facts unchanged. One original proof read per transaction; affected types pass. Persistent action remains planned; saved web acceptance and approval for source visibility/API restart remain pending. E05 partial.
 

@@ -107,6 +107,7 @@ const domainAccess: Record<CapabilityId, (tenant: TenantContext) => void> = {
   "customers.statement.read": tenant => assertFinanceAccess(tenant),
   "finance.expense.void": tenant => assertFinanceAccess(tenant),
   "finance.purchase.fact.reverse": tenant => assertFinanceAccess(tenant),
+  "finance.supplier.opening": tenant => assertFinanceAccess(tenant),
   "finance.supplier.entry.reverse": tenant => assertFinanceAccess(tenant),
   "finance.purchase.payment.reverse": tenant => assertFinanceAccess(tenant),
   "finance.bill_payment.reverse": tenant => assertFinanceAccess(tenant),

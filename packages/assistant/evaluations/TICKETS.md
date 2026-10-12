@@ -101,7 +101,7 @@ remain open; E03/E04 full browser confirmation remains open.
 Canonical procedure checklist within E05 (the parent remains partial):
 
 - [ ] `finance.recordPurchase` — direct purchase recording.
-- [ ] `finance.recordSupplierOpening` — supplier opening balances.
+- [ ] `finance.recordSupplierOpening` — strict opening source/server Book-start review, both canonical rollback/replay/duplicate guards and dashboard editor verified; authentic signed/saved chat confirmation/recovery pending. [Evidence](runs/2026-10-12-supplier-opening-source.md).
 - [x] `finance.releaseSupplierAllocation` — signed completion rollback/stale refusal, actual dashboard Edit/re-review/Confirm/Open/Close/reload and saved concurrent recovery verified. [Evidence](runs/2026-10-12-allocation-release-web.md).
 - [x] `finance.reversePurchasePayment` — exact original-payment correction, signed rollback/stale refusal, actual dashboard Edit/re-review/Confirm/Open/Close/reload and saved concurrent recovery verified. [Evidence](runs/2026-10-12-purchase-payment-reversal-web.md).
 - [x] `finance.reversePurchaseRecognition` — signed invoice/ownership completion rollback/stale refusal, actual dashboard Edit/re-review/Confirm/Open/Close/reload, exact saved original/correction history and concurrent completed recovery verified. Physical receipt correction remains refused. [Evidence](runs/2026-10-12-purchase-fact-reversal-web.md).

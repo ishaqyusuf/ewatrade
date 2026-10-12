@@ -1,3 +1,4 @@
+import { supplierOpening } from "./general-supplier-opening"
 import { supplierEntryReverse } from "./general-supplier-entry-reversal"
 import { generalMoney } from "@ewatrade/assistant/general/contracts"
 import type {
@@ -597,6 +598,7 @@ const adapters: {
   supplier_create: supplierCreate,
   purchase_recognition_reverse: purchaseRecognitionReverse,
   supplier_entry_reverse: supplierEntryReverse,
+  supplier_opening: supplierOpening,
   purchase_payment_reverse: purchasePaymentReverse,
   supplier_allocation_release: supplierAllocationRelease,
   supplier_advance: supplierAdvance,
