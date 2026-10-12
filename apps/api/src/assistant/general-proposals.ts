@@ -30,6 +30,7 @@ import {
   assertGeneralAction,
   requireGeneralScope,
 } from "./general-context"
+import { currentGeneralReceipt } from "./general-legacy-receipt"
 import {
   isProposalApprovalValid,
   proposalApprovalToken,
@@ -53,7 +54,7 @@ export function generalProposalForApp(
     status: row.status === "PENDING" && !pending ? "EXPIRED" : row.status,
     expiresAt: row.expiresAt.toISOString(),
     receipt: row.executedResult
-      ? generalReceiptSchema.parse(row.executedResult)
+      ? currentGeneralReceipt(generalReceiptSchema.parse(row.executedResult))
       : null,
     ...(token && proposalDigest(token) === row.approvalTokenHash
       ? { approvalToken: token }
