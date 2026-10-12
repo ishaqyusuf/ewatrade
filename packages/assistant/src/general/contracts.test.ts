@@ -34,7 +34,7 @@ test("price drafts require exact offering and reason, permit zero and reject cli
     input: {
       action: "product_price_update",
       offeringId: "big-piece",
-      priceMinor: 25000,
+      price: "250",
       reason: "Supplier adjustment",
     },
   })

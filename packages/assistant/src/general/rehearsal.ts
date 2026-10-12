@@ -1,5 +1,6 @@
 import type { RehearsalTurn } from "@ewatrade/ai/rehearsal-model"
 import { generalActionSchema } from "./contracts"
+import { statedMoneyFromCanonical } from "./stated-money"
 type PromptMessage = {
   role: string
   content: string | Array<{ type: string; text?: string }>
@@ -8,6 +9,14 @@ type PromptMessage = {
 export function respondGeneralRehearsal(
   prompt: readonly PromptMessage[],
 ): RehearsalTurn {
+  const turn = rehearsalTurn(prompt)
+  // Drafts are built in stored minor units; the model writes stated money in
+  // major units, so send them the way draftAction expects.
+  return turn.kind === "tool" && turn.toolName === "draftAction"
+    ? { ...turn, input: statedMoneyFromCanonical(turn.input) }
+    : turn
+}
+function rehearsalTurn(prompt: readonly PromptMessage[]): RehearsalTurn {
   const last = prompt.at(-1)
   if (last?.role === "tool")
     return {
@@ -91,14 +100,14 @@ export function respondGeneralRehearsal(
         lines: [
           {
             custom: "quick_sale",
-            amount: typedSale[2],
+            amountMinor: minor(typedSale[2]),
             description: typedSale[1],
           },
         ],
         ...(typedSale[3]
           ? {
               initialPayment: {
-                amount: typedSale[2],
+                amountMinor: minor(typedSale[2]),
                 method: typedSale[3].toLowerCase(),
               },
             }
@@ -386,7 +395,7 @@ export function respondGeneralRehearsal(
           {
             offeringId: itemTotalSale[2],
             quantity: itemTotalSale[1],
-            enteredTotal: itemTotalSale[3],
+            enteredTotalMinor: minor(itemTotalSale[3]),
           },
         ],
       },
@@ -405,7 +414,7 @@ export function respondGeneralRehearsal(
         ...(sale[4] && sale[5]
           ? {
               initialPayment: {
-                amount: sale[4],
+                amountMinor: minor(sale[4]),
                 method: sale[5].toLowerCase(),
               },
             }
@@ -430,7 +439,7 @@ export function respondGeneralRehearsal(
       input: {
         action: "payment_record",
         orderId: payment[1],
-        amount: payment[2],
+        amountMinor: minor(payment[2]),
         method: payment[3].toLowerCase(),
       },
     }

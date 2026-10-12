@@ -82,12 +82,23 @@ test("draftAction takes stated sale and payment money in major units", async () 
     quantity: "2",
     expectedFixedPriceMinor: 240000,
   }
-  const stated = await schema.validate?.({
+  const sale = {
     action: "order_create",
     lines: [line],
     initialPayment: { amount: "3,000", method: "cash" },
+  }
+  const stated = await schema.validate?.(sale)
+  // The SDK puts this value back into the model's history; a minor-unit copy
+  // there was imitated on the model's next call (live check, 12 Oct 2026).
+  expect(stated?.success && stated.value).toEqual(sale)
+  const tooLarge = await schema.validate?.({
+    ...sale,
+    initialPayment: { amount: "2,000,000", method: "cash" },
   })
-  expect(stated?.success).toBe(true)
+  expect(tooLarge?.success).toBe(false)
+  const message = String(!tooLarge?.success && tooLarge?.error.message)
+  expect(message).toContain('"amount"')
+  expect(message).toContain("at most 1000000 in major units")
   const minor = await schema.validate?.({
     action: "order_create",
     lines: [line],

@@ -39,7 +39,8 @@ import { reviewGeneralQuoteDecision } from "./general-quote-decision"
 import { serviceWorkOriginalTargetSchema } from "@ewatrade/assistant/general/service-work-original"
 import {
   canonicalStatedMoneyDraft,
-  statedMoneyDraftSchemas,
+  statedMoneyIssue,
+  statedMoneyJsonSchema,
 } from "@ewatrade/assistant/general/stated-money"
 import { canStaffPerform } from "@ewatrade/auth/store-access"
 import { TRPCError } from "@trpc/server"
@@ -214,6 +215,44 @@ function objectToolSchema<T>(schema: z.ZodType<T>) {
   )
 }
 
+/**
+ * draftAction as the model sees it: money the merchant states is written in
+ * major units and checked in the stored minor form. The input stays as the
+ * model wrote it, because the SDK puts the validated value back into the
+ * model's history and a minor-unit copy there gets imitated on the next call;
+ * `execute` converts it with canonicalStatedMoneyDraft.
+ */
+function draftToolSchema<T>(schema: z.ZodType<T>) {
+  const base = objectToolSchema(schema)
+  return jsonSchema<unknown>(
+    async () => statedMoneyJsonSchema(await base.jsonSchema),
+    {
+      validate: async (value) => {
+        let canonical: unknown
+        try {
+          canonical = canonicalStatedMoneyDraft(value)
+        } catch (error) {
+          return { success: false, error: error as Error }
+        }
+        const result = await base.validate?.(canonical)
+        if (!result || result.success) return { success: true, value }
+        const zod = [result.error, result.error.cause].find(
+          (error) => error instanceof z.ZodError,
+        )
+        if (!zod) return result
+        // Name fields the way the model wrote them, without the converted value.
+        const action = (canonical as { action?: unknown } | null)?.action
+        return {
+          success: false,
+          error: new z.ZodError(
+            zod.issues.map((issue) => statedMoneyIssue(action, issue)),
+          ),
+        }
+      },
+    },
+  )
+}
+
 export function createGeneralTools(
   ctx: GeneralContext,
   conversationId: string,
@@ -292,10 +331,7 @@ export function createGeneralTools(
     canUseCapability(ctx, capability),
   )
   const allowedActions = availableWriteCapabilities.map(
-    (capability) =>
-      statedMoneyDraftSchemas[
-        capability.action as keyof typeof statedMoneyDraftSchemas
-      ] ?? capability.schema,
+    (capability) => capability.schema,
   )
   const availableWriteActions = new Set<string>(
     availableWriteCapabilities.map((capability) => capability.action),
@@ -1808,7 +1844,7 @@ export function createGeneralTools(
         ...serviceWorkInstructions,
         ...quoteDecisionInstructions,
       ].join("\n\n"),
-      inputSchema: objectToolSchema(actionSchema),
+      inputSchema: draftToolSchema(actionSchema),
       execute: (input) =>
         wrap("draftAction", async (fresh) => {
           const result = await draftGeneralProposal(
