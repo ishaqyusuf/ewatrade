@@ -63,7 +63,7 @@ import { useOrderRefresh } from "./use-order-refresh"
 type OpenDialog =
   | { kind: "customer" | "details" | "items" | "cancel" }
   | { kind: "payment" | "refund" }
-  | { kind: "return"; lineId?: string; money?: boolean }
+  | { kind: "return"; lineId?: string }
   | { kind: "fulfil"; lineId?: string }
 
 type ChangeKey =
@@ -476,7 +476,7 @@ export function OrderOverview({
           order={order}
           credit={creditOption}
           canReturn={Boolean(options?.returnLine.allowed)}
-          onOpenReturn={() => setDialog({ kind: "return", money: true })}
+          onOpenReturn={() => setDialog({ kind: "return" })}
           onClose={close}
           onDone={done}
         />
@@ -495,7 +495,6 @@ export function OrderOverview({
           returnable={returnable}
           credit={creditOption}
           initialLineId={dialog.lineId}
-          moneyFirst={dialog.money}
           onClose={close}
           onDone={done}
         />

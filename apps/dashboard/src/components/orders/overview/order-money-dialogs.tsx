@@ -520,14 +520,14 @@ const QUANTITY = /^\d{1,12}(\.\d{1,6})?$/
 
 /**
  * Items back, several lines at once, with one switch to give the returned
- * value back (design 02 "All lines + money").
+ * value back (design 02 "All lines + money"). The switch starts on whenever
+ * a credit is allowed, as on mobile.
  */
 export function ReturnItemsDialog({
   order,
   returnable,
   credit,
   initialLineId,
-  moneyFirst = false,
   onClose,
   onDone,
 }: DialogProps & {
@@ -535,7 +535,6 @@ export function ReturnItemsDialog({
   /** Whether money may go back with the return (an order credit). */
   credit: Option
   initialLineId?: string
-  moneyFirst?: boolean
 }) {
   const trpc = useTRPC()
   const money = (value: number) => orderMoney(value, order.currencyCode)
@@ -548,7 +547,8 @@ export function ReturnItemsDialog({
     ),
   )
   const [conditions, setConditions] = useState<Record<string, Condition>>({})
-  const [giveMoney, setGiveMoney] = useState(moneyFirst && credit.allowed)
+  const [moneyChoice, setMoneyChoice] = useState<boolean | null>(null)
+  const giveMoney = credit.allowed && (moneyChoice ?? true)
   const original = originalReceipt(order.payments)
   const [method, setMethod] = useState<OrderPaymentMethod>(
     original.method ?? "cash",
@@ -601,11 +601,12 @@ export function ReturnItemsDialog({
   const totalAfter = order.totalMinor - value
   const refundNow = Math.max(0, order.amountPaidMinor - totalAfter)
   const stillDue = Math.max(0, totalAfter - (order.amountPaidMinor - refundNow))
+  // Nothing paid comes back: the credit only lowers what they still owe.
+  const takeOff = giveMoney && chosen.length > 0 && refundNow === 0
   const stockBack = chosen
     .filter((row) => row.condition === "restock")
     .map(
-      (row) =>
-        `${formatQuantity(String(row.count))} ${row.line.snapshot?.inventoryUnitName ?? lineTitle(row.line)}`,
+      (row) => `${formatQuantity(String(row.count))} × ${lineTitle(row.line)}`,
     )
   const setCount = (orderLineId: string, next: string) =>
     setCounts((current) => ({ ...current, [orderLineId]: next }))
@@ -727,14 +728,20 @@ export function ReturnItemsDialog({
         )}
       >
         <span className="min-w-0">
-          <span className="block text-sm font-medium">Give money back now</span>
+          <span className="block text-sm font-medium">
+            {takeOff ? "Take it off what they owe" : "Give money back now"}
+          </span>
           <span className="block text-xs text-muted-foreground">
             {!credit.allowed && credit.reason ? (
               <LockedReason reason={credit.reason} wrap />
-            ) : giveMoney ? (
-              `The total drops by ${money(value)}`
-            ) : (
+            ) : !giveMoney ? (
               "Stock only, no money"
+            ) : !chosen.length ? (
+              "Choose what came back first"
+            ) : takeOff ? (
+              `Takes ${money(value)} off what they owe`
+            ) : (
+              `${money(refundNow)} back to the customer`
             )}
           </span>
         </span>
@@ -745,10 +752,10 @@ export function ReturnItemsDialog({
           className="size-5 accent-[var(--primary)]"
           checked={giveMoney}
           disabled={!credit.allowed || save.isPending}
-          onChange={(event) => setGiveMoney(event.target.checked)}
+          onChange={(event) => setMoneyChoice(event.target.checked)}
         />
       </label>
-      {giveMoney ? (
+      {giveMoney && refundNow > 0 ? (
         <>
           <Choice
             label="Paid back by"
@@ -757,13 +764,11 @@ export function ReturnItemsDialog({
             onChange={setMethod}
             disabled={save.isPending}
           />
-          {refundNow > 0 ? (
-            <OrderPaymentAccount
-              label="Paid back from"
-              choice={account}
-              disabled={save.isPending}
-            />
-          ) : null}
+          <OrderPaymentAccount
+            label="Paid back from"
+            choice={account}
+            disabled={save.isPending}
+          />
           {method !== "cash" ? (
             <DialogField
               label="Reference (optional)"
@@ -779,26 +784,28 @@ export function ReturnItemsDialog({
               />
             </DialogField>
           ) : null}
-          {chosen.length ? (
-            <Outcome
-              tone="mint"
-              rows={[
-                { label: "Returned value", after: money(value) },
-                {
-                  label: "Total",
-                  before: money(order.totalMinor),
-                  after: money(totalAfter),
-                },
-                { label: "Refund now", after: money(refundNow) },
-                {
-                  label: "Still to collect",
-                  after: money(stillDue),
-                  big: true,
-                },
-              ]}
-            />
-          ) : null}
         </>
+      ) : null}
+      {giveMoney && chosen.length ? (
+        <Outcome
+          tone="mint"
+          rows={[
+            { label: "Returned value", after: money(value) },
+            {
+              label: "Total",
+              before: money(order.totalMinor),
+              after: money(totalAfter),
+            },
+            ...(takeOff
+              ? []
+              : [{ label: "Refund now", after: money(refundNow) }]),
+            {
+              label: "Still to collect",
+              after: money(stillDue),
+              big: true,
+            },
+          ]}
+        />
       ) : null}
       <ReasonField
         value={reason}
@@ -855,7 +862,8 @@ export function ReturnItemsDialog({
                     method,
                     moneyAccountId:
                       refundNow > 0 ? account.payloadAccountId : undefined,
-                    reference: reference.trim() || undefined,
+                    reference:
+                      refundNow > 0 ? reference.trim() || undefined : undefined,
                   }
                 : null,
             })
@@ -863,11 +871,11 @@ export function ReturnItemsDialog({
         >
           {save.isPending
             ? "Saving…"
-            : giveMoney
-              ? refundNow > 0
-                ? `Return and refund ${money(refundNow)}`
-                : "Return and lower the total"
-              : "Record return"}
+            : !giveMoney || !chosen.length
+              ? "Record return"
+              : takeOff
+                ? `Return and take off ${money(value)}`
+                : `Return and refund ${money(refundNow)}`}
         </Button>
       </div>
     </OrderDialog>
