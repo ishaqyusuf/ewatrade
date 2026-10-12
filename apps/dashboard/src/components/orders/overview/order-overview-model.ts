@@ -106,6 +106,9 @@ export function orderPills(order: OverviewOrder) {
     pills.push({ label: "Cancelled", tone: "red" })
   else if (order.status === "REFUNDED")
     pills.push({ label: "Refunded", tone: "red" })
+  // Every payment went back (refunds or credits), as mobile's pill says.
+  else if (order.paymentStatus === "REFUNDED")
+    pills.push({ label: "Refunded", tone: "muted" })
   else if (order.amountPaidMinor <= 0 && order.totalMinor > 0)
     pills.push({
       label: `Unpaid · ${money(order.balanceDueMinor)} due`,

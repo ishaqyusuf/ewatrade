@@ -382,6 +382,7 @@ export function OrderOverview({
             )
           })}
         </ol>
+        <OrderTotals order={order} />
       </OverviewCard>
       <div className="grid gap-4 @container md:grid-cols-2">
         <OverviewCard
@@ -747,6 +748,11 @@ function SummaryStrip({
   fulfilled: { done: number; total: number }
 }) {
   const money = (value: number) => orderMoney(value, order.currencyCode)
+  // Everything came back: lead with the credit, not a ₦0 total (as on mobile).
+  const credited =
+    order.totalMinor === 0 &&
+    order.creditMinor > 0 &&
+    order.balanceDueMinor === 0
   const paidShare =
     order.totalMinor > 0
       ? Math.min(100, (order.amountPaidMinor / order.totalMinor) * 100)
@@ -756,32 +762,51 @@ function SummaryStrip({
     "text-[11px] font-semibold tracking-wide text-muted-foreground uppercase"
   return (
     <dl className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-      <div className={tile}>
-        <dt className={label}>Total</dt>
-        <dd className="text-xl font-semibold tabular-nums">
-          {money(order.totalMinor)}
-        </dd>
-        {order.creditMinor > 0 ? (
-          <dd className="text-xs text-muted-foreground">
-            Lowered by {money(order.creditMinor)}
+      {credited ? (
+        <div
+          className={cn(
+            tile,
+            "border-violet-500/40 bg-violet-500/10 text-violet-800 dark:text-violet-200",
+          )}
+        >
+          <dt className={cn(label, "text-violet-700 dark:text-violet-300")}>
+            Credited in full
+          </dt>
+          <dd className="text-xl font-semibold tabular-nums">
+            {money(order.creditMinor)}
           </dd>
-        ) : null}
-      </div>
+          <dd className="text-xs">Total now {money(0)}</dd>
+        </div>
+      ) : (
+        <div className={tile}>
+          <dt className={label}>Total</dt>
+          <dd className="text-xl font-semibold tabular-nums">
+            {money(order.totalMinor)}
+          </dd>
+          {order.creditMinor > 0 ? (
+            <dd className="text-xs text-muted-foreground">
+              Credit after sale −{money(order.creditMinor)}
+            </dd>
+          ) : null}
+        </div>
+      )}
       <div className={tile}>
         <dt className={label}>Paid</dt>
         <dd className="grid gap-2">
           <span className="text-xl font-semibold tabular-nums">
             {money(order.amountPaidMinor)}
           </span>
-          <span
-            aria-hidden="true"
-            className="block h-1.5 overflow-hidden rounded-full bg-muted"
-          >
+          {credited ? null : (
             <span
-              className="block h-full rounded-full bg-primary"
-              style={{ width: `${paidShare}%` }}
-            />
-          </span>
+              aria-hidden="true"
+              className="block h-1.5 overflow-hidden rounded-full bg-muted"
+            >
+              <span
+                className="block h-full rounded-full bg-primary"
+                style={{ width: `${paidShare}%` }}
+              />
+            </span>
+          )}
         </dd>
       </div>
       <div className={tile}>
@@ -801,6 +826,62 @@ function SummaryStrip({
         <dt className={label}>Fulfilled</dt>
         <dd className="text-xl font-semibold tabular-nums">
           {fulfilled.done} of {fulfilled.total}
+        </dd>
+      </div>
+    </dl>
+  )
+}
+
+/** Same rows and words as the receipt and mobile, credit after sale included. */
+function OrderTotals({ order }: { order: OverviewOrder }) {
+  const money = (value: number) => orderMoney(value, order.currencyCode)
+  const rows: Array<{ label: string; value: string; className?: string }> = [
+    { label: "Subtotal", value: money(order.subtotalMinor) },
+    ...(order.serviceChargeMinor > 0
+      ? [{ label: "Service charge", value: money(order.serviceChargeMinor) }]
+      : []),
+    ...(order.discountMinor > 0
+      ? [{ label: "Discount", value: `−${money(order.discountMinor)}` }]
+      : []),
+    ...(order.taxMinor > 0
+      ? [{ label: "Tax", value: money(order.taxMinor) }]
+      : []),
+    ...(order.creditMinor > 0
+      ? [
+          {
+            label: "Credit after sale",
+            value: `−${money(order.creditMinor)}`,
+            className: "font-medium text-violet-700 dark:text-violet-300",
+          },
+        ]
+      : []),
+  ]
+  const due = order.balanceDueMinor > 0 && !isClosedOrder(order.status)
+  return (
+    <dl className="grid gap-1.5 border-t border-border px-4 py-3 text-sm">
+      {rows.map((row) => (
+        <div key={row.label} className="flex justify-between gap-3">
+          <dt className="text-muted-foreground">{row.label}</dt>
+          <dd className={cn("tabular-nums", row.className)}>{row.value}</dd>
+        </div>
+      ))}
+      <div className="mt-1 flex justify-between gap-3 border-t border-border pt-2 font-semibold">
+        <dt>Total</dt>
+        <dd className="tabular-nums">{money(order.totalMinor)}</dd>
+      </div>
+      <div className="flex justify-between gap-3">
+        <dt className="text-muted-foreground">Paid</dt>
+        <dd className="tabular-nums">{money(order.amountPaidMinor)}</dd>
+      </div>
+      <div className="flex justify-between gap-3">
+        <dt className="text-muted-foreground">Balance due</dt>
+        <dd
+          className={cn(
+            "tabular-nums",
+            due && "font-semibold text-amber-600 dark:text-amber-400",
+          )}
+        >
+          {money(order.balanceDueMinor)}
         </dd>
       </div>
     </dl>
