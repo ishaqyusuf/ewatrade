@@ -119,7 +119,9 @@ async function replyChunks(turns: Array<RehearsalTurn>) {
       ),
   })
   const chunks: Array<{ type: string; delta?: string }> = []
-  for await (const chunk of stream) chunks.push(chunk)
+  const reader = stream.getReader()
+  for (let next = await reader.read(); !next.done; next = await reader.read())
+    chunks.push(next.value)
   return { chunks, prompts }
 }
 const count = (chunks: Array<{ type: string }>, type: string) =>

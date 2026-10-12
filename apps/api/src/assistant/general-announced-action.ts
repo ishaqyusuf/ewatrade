@@ -1,6 +1,7 @@
 import type {
   ModelMessage,
   ToolLoopAgent,
+  ToolSet,
   UIMessage,
   UIMessageStreamWriter,
 } from "ai"
@@ -37,8 +38,11 @@ export const ANNOUNCED_ACTION_NUDGE =
  * Streams one GENERAL reply into `writer`, giving an announce-only reply one
  * more pass that continues the same message (one start, one finish).
  */
-export async function streamGeneralReply<M extends UIMessage>(
-  agent: Pick<ToolLoopAgent, "stream">,
+export async function streamGeneralReply<
+  M extends UIMessage,
+  TOOLS extends ToolSet,
+>(
+  agent: Pick<ToolLoopAgent<never, TOOLS>, "stream">,
   messages: ModelMessage[],
   writer: UIMessageStreamWriter<M>,
   abortSignal: AbortSignal,
