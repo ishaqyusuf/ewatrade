@@ -5,9 +5,10 @@ and mobile. Existing accepted bookmarks record web acceptance; mobile parity is
 not certified by those bookmarks.
 
 **Accepted for web: 13/45 (28.9%). Pending web acceptance: 32/45 (71.1%).**
-Of those32:20 are partial and12 pending implementation. A04 is reopened after
-the owner's latest instruction to include mobile; no ticket is currently deferred
-by the former web-only restriction. Mobile acceptance must be recorded separately.
+Of those32:22 are partial and10 have not started implementation. A04 now has
+native implementation packets under review; H02's impact-gate packet needs the
+recorded review repairs. Neither has an accepted bookmark. No ticket is deferred
+by the former web-only restriction. Mobile acceptance is recorded separately.
 No native acceptance or hosted rollout is newly certified by this scope change.
 
 Legend: ✓ complete for the current web scope; ◐ partially implemented/verified;
@@ -20,7 +21,7 @@ accepted milestone is recorded; it does not assert that no related source exists
 | A01 | Capability inventory and manifest | ✓ Complete | 🔖 Accepted |
 | A02 | Execution adapter boundary | ✓ Complete | 🔖 Accepted |
 | A03 | Dashboard GENERAL chat | ✓ Complete | 🔖 Accepted |
-| A04 | Native acceptance and parity | ○ Pending — reopened | Pending |
+| A04 | Native acceptance and parity | ◐ Partial — native inventory and six catalog/order editors under review; device proof pending | Pending |
 | A05 | Controlled availability and read baseline | ✓ Complete | 🔖 Accepted |
 | B01 | Customer create/update | ✓ Complete | 🔖 Accepted |
 | B02 | Product editing | ✓ Complete | 🔖 Accepted |
@@ -58,7 +59,7 @@ accepted milestone is recorded; it does not assert that no related source exists
 | G04 | Advanced inventory and catalog | ○ Pending | Pending |
 | G05 | Settings and communications | ○ Pending | Pending |
 | H01 | Coverage CI gate | ◐ Partial | Pending |
-| H02 | Brain and feature change gate | ○ Pending | Pending |
+| H02 | Brain and feature change gate | ◐ Partial — source gate under review; two reproduced gaps require repair | Pending |
 | H03 | Evaluation and observability | ◐ Partial | Pending |
 | H04 | Media and controlled multi-step use | ○ Pending | Pending |
 | H05 | Operational acceptance and rollout | ○ Pending | Pending |

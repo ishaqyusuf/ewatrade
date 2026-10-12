@@ -22,3 +22,12 @@ This uses the actual strict receipt parser and route helper with a synthetic val
 no database, credentials, business record, provider, native UI, auth, runtime,
 push or deployment change occurred. The source issue predates the current default
 fallback removal; A04's reopened exact-object acceptance must still cover it.
+
+## Source repair revalidation
+
+The implementation owner repaired the missing-link branch in the subsequent
+[native catalog/order packet](2026-10-12-a04-native-catalog-order-changes.md).
+The coordinator reran only the original failing probe against the current source:
+the same schema-valid payment now returns `route: null`. This resolves the source
+finding without inventing an Order link. Existing passing tests are reused.
+Device navigation and the rest of A04 remain unaccepted.

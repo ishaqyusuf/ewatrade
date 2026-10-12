@@ -1,4 +1,8 @@
 "use client"
+import {
+  AssistantDraftJobHandoffProvider,
+  useAssistantDraftJobHandoff,
+} from "@/hooks/use-assistant-draft-job-handoff"
 import { useAssistantReceipt } from "@/hooks/use-assistant-receipt"
 import { useQuickChatParam } from "@/hooks/use-quick-chat-param"
 import { useTRPC } from "@/trpc/client"
@@ -172,6 +176,11 @@ export function GeneralThread({
 }) {
   const openReceipt = useAssistantReceipt()
   const [editing, setEditing] = useState<GeneralProposal | null>(null)
+  const jobHandoff = useAssistantDraftJobHandoff(
+    editing?.payload.action === "staff_access"
+      ? JSON.stringify([vm.conversationId, editing.id, editing.revision])
+      : null,
+  )
   const [highlight, setHighlight] = useState<string | null>(null)
   const { enabled, disabled, exhausted, currencyCode } = generalChatFlags(vm)
   const last = vm.chat.messages.at(-1)
@@ -414,35 +423,42 @@ export function GeneralThread({
           ) : null}
         </StickToBottom.Content>
       </StickToBottom>
-      <Dialog
-        open={!!editing}
-        onOpenChange={(open) => {
-          if (!open && !vm.pending) setEditing(null)
-        }}
-      >
-        {editing ? (
-          <DialogContent className={GENERAL_DIALOG}>
-            <DialogHeader className="pr-8">
-              <DialogTitle className="text-lg leading-none font-semibold">
-                Edit draft
-              </DialogTitle>
-              <DialogDescription className="text-sm text-muted-foreground">
-                Save changes, then review the updated card before confirming.
-              </DialogDescription>
-            </DialogHeader>
-            <GeneralProposalEditor
-              key={`${editing.id}:${editing.revision}`}
-              proposal={editing}
-              currencyCode={currencyCode}
-              disabled={disabled}
-              onCancel={() => setEditing(null)}
-              onSave={async (payload) => {
-                if (await vm.save(editing, payload)) setEditing(null)
-              }}
-            />
-          </DialogContent>
-        ) : null}
-      </Dialog>
+      <AssistantDraftJobHandoffProvider value={jobHandoff.api}>
+        <Dialog
+          open={Boolean(editing) && !jobHandoff.covering}
+          disablePointerDismissal={jobHandoff.covering}
+          onOpenChange={(open) => {
+            if (!open && !vm.pending && !jobHandoff.covering) setEditing(null)
+          }}
+        >
+          {editing ? (
+            <DialogContent
+              className={GENERAL_DIALOG}
+              keepMounted={editing.payload.action === "staff_access"}
+              finalFocus={jobHandoff.covering ? false : undefined}
+            >
+              <DialogHeader className="pr-8">
+                <DialogTitle className="text-lg leading-none font-semibold">
+                  Edit draft
+                </DialogTitle>
+                <DialogDescription className="text-sm text-muted-foreground">
+                  Save changes, then review the updated card before confirming.
+                </DialogDescription>
+              </DialogHeader>
+              <GeneralProposalEditor
+                key={`${editing.id}:${editing.revision}`}
+                proposal={editing}
+                currencyCode={currencyCode}
+                disabled={disabled}
+                onCancel={() => setEditing(null)}
+                onSave={async (payload) => {
+                  if (await vm.save(editing, payload)) setEditing(null)
+                }}
+              />
+            </DialogContent>
+          ) : null}
+        </Dialog>
+      </AssistantDraftJobHandoffProvider>
     </>
   )
 }

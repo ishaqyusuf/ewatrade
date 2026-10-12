@@ -22,10 +22,19 @@ export function StaffAccessWorkloadView({
   workload,
   membershipId,
   disabled = false,
+  onOpenJob,
+  jobPending = false,
+  jobError,
 }: {
   workload: StaffAccessWorkload
   membershipId: string
   disabled?: boolean
+  onOpenJob?: (
+    job: StaffAccessWorkload["jobs"][number],
+    opener: HTMLElement,
+  ) => void | Promise<void>
+  jobPending?: boolean
+  jobError?: string | null
 }) {
   const [selectedId, setSelectedId] = useState<string | null>(null)
   if (staffAccessWorkloadState(workload, membershipId) !== "ready")
@@ -94,6 +103,20 @@ export function StaffAccessWorkloadView({
               {selected?.jobId === job.jobId ? (
                 <StaffAccessWorkloadDetail job={selected} />
               ) : null}
+              {onOpenJob ? (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  className="justify-self-start"
+                  disabled={disabled || jobPending}
+                  onClick={(event) => void onOpenJob(job, event.currentTarget)}
+                >
+                  {jobPending
+                    ? "Checking current Job access…"
+                    : "Open full Job"}
+                </Button>
+              ) : null}
             </li>
           ))}
         </ul>
@@ -109,10 +132,15 @@ export function StaffAccessWorkloadView({
         Changing Store access does not transfer or reassign these Jobs.
       </p>
       <p className="text-xs text-muted-foreground">
-        Job review stays inline to keep your unsaved access draft. Opening the
-        full Job over this draft is not available here yet. Save and review your
-        draft before using the full Job view.
+        {onOpenJob
+          ? "Open full Job checks current access and assignment. Your unsaved access draft stays mounted while you view the Job and returns when you close it. No Store switch or access change is performed."
+          : "Full Job viewing is available from the assistant's access Edit draft."}
       </p>
+      {jobError ? (
+        <p role="alert" className="text-destructive">
+          {jobError}
+        </p>
+      ) : null}
     </section>
   )
 }

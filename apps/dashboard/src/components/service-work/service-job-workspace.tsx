@@ -17,7 +17,12 @@ import {
   formatMoney,
   label,
 } from "@/components/service-work/service-utils"
-import { useTRPC } from "@/trpc/client"
+import { useTRPC, useTRPCClient } from "@/trpc/client"
+import {
+  draftJobNativeReadState,
+  type DraftJobHandoff,
+  type DraftJobScope,
+} from "@/components/general-assistant/assistant-draft-job-handoff-state"
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useState } from "react"
@@ -25,15 +30,34 @@ import { useState } from "react"
 export function ServiceJobWorkspace({
   canManage,
   jobId,
+  draftJobHandoff,
+  draftJobScope,
 }: {
   canManage: boolean
   jobId: string
+  draftJobHandoff?: DraftJobHandoff
+  draftJobScope?: DraftJobScope
 }) {
   const trpc = useTRPC()
+  const client = useTRPCClient()
   const queryClient = useQueryClient()
-  const jobQuery = useQuery(
-    trpc.services.getJob.queryOptions({ jobId }, { retry: false }),
-  )
+  const jobKey = draftJobHandoff
+    ? [
+        "assistant-draft-native-job",
+        draftJobScope,
+        draftJobHandoff.token,
+        jobId,
+      ]
+    : trpc.services.getJob.queryKey({ jobId })
+  const jobQuery = useQuery({
+    queryKey: jobKey,
+    queryFn: ({ signal }) =>
+      client.services.getJob.query({ jobId }, { signal }),
+    retry: false,
+    ...(draftJobHandoff
+      ? { staleTime: 0, refetchOnMount: "always" as const }
+      : {}),
+  })
   const assigneesQuery = useQuery(
     trpc.services.assignees.queryOptions(undefined, {
       enabled: canManage,
@@ -69,7 +93,7 @@ export function ServiceJobWorkspace({
     setError(null)
     await Promise.all([
       queryClient.invalidateQueries({
-        queryKey: trpc.services.getJob.queryKey({ jobId }),
+        queryKey: jobKey,
       }),
       queryClient.invalidateQueries({
         queryKey: trpc.services.queue.queryKey(),
@@ -190,6 +214,20 @@ export function ServiceJobWorkspace({
     }),
   )
 
+  if (draftJobHandoff) {
+    const state = draftJobScope
+      ? draftJobNativeReadState(draftJobHandoff, draftJobScope, jobQuery)
+      : "unavailable"
+    if (state === "loading")
+      return <output aria-live="polite">Checking current Job access…</output>
+    if (state !== "ready")
+      return (
+        <p role="alert">
+          This Job or your access changed. Close it and review the workload
+          again.
+        </p>
+      )
+  }
   if (jobQuery.isLoading) {
     return (
       <div className="grid gap-2">

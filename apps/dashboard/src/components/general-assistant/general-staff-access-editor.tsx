@@ -14,6 +14,7 @@ import { useEffect, useRef, useState } from "react"
 import { Controller, useFieldArray } from "react-hook-form"
 import type { z } from "zod"
 import { StaffAccessWorkloadView } from "./staff-access-workload-view"
+import { useAssistantDraftJobOpener } from "@/hooks/use-assistant-draft-job-handoff"
 
 type Review = RouterOutputs["retailOps"]["staffStoreAccessReview"]
 type Fields = z.infer<typeof staffAccessReviewInput>
@@ -131,6 +132,7 @@ export function GeneralStaffAccessEditorView({
   const form = useZodForm<Fields>(staffAccessReviewInput, {
     defaultValues: fieldsFrom(initial),
   })
+  const jobHandoff = useAssistantDraftJobOpener()
   const { fields, append, remove } = useFieldArray({
     control: form.control,
     name: "assignments",
@@ -201,6 +203,14 @@ export function GeneralStaffAccessEditorView({
             workload={review.outstandingServiceWork}
             membershipId={initial.membershipId}
             disabled={blocked}
+            jobPending={jobHandoff?.pending}
+            jobError={jobHandoff?.error}
+            onOpenJob={
+              jobHandoff
+                ? (job, opener) =>
+                    jobHandoff.open({ fields: form.getValues(), job, opener })
+                : undefined
+            }
           />
         </div>
       )}

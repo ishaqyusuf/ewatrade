@@ -15,13 +15,15 @@ function DialogContent({
   className,
   children,
   hideClose = false,
+  keepMounted = false,
   ...props
 }: Omit<DialogPrimitive.Popup.Props, "className"> & {
   className?: string
   hideClose?: boolean
+  keepMounted?: boolean
 }) {
   return (
-    <DialogPortal>
+    <DialogPortal keepMounted={keepMounted}>
       <DialogPrimitive.Backdrop className="fixed inset-0 z-50 bg-[#f6f6f3]/60 transition-opacity duration-100 data-[starting-style]:opacity-0 data-[ending-style]:opacity-0 dark:bg-[#0C0C0C]/80" />
       <DialogPrimitive.Popup
         {...props}

@@ -9,6 +9,8 @@ import { useState } from "react"
 import { ServiceIntakeReceiptSheet } from "./service-intake-receipt-sheet"
 import { ServiceJobSheet } from "./service-job-sheet"
 import { ServiceWorkOriginalSheet } from "./service-work-original-sheet"
+import { useAssistantDraftJobOverlay } from "@/hooks/use-assistant-draft-job-handoff"
+import { useServiceWorkParams } from "@/hooks/use-service-work-params"
 
 import { AssistantCashCountSheet } from "./assistant-cash-count-sheet"
 import { AssistantQuoteApprovalSheet } from "./assistant-quote-approval-sheet"
@@ -77,6 +79,11 @@ export function GlobalSheets({
 }) {
   const objectScope = JSON.stringify([actorUserId, tenantId, store.id])
   const pathname = usePathname()
+  const ownedJob = useAssistantDraftJobOverlay()
+  const jobParams = useServiceWorkParams()
+  const ownedJobOpen = Boolean(
+    ownedJob && jobParams.sheet === "job" && jobParams.jobId === ownedJob.jobId,
+  )
   const { setCatalogItemMode } = useCatalogItemParams()
   const [notice, setNotice] = useState<string | null>(null)
   return (
@@ -122,8 +129,13 @@ export function GlobalSheets({
           timeZone={timeZone}
         />
       ) : null}
-      {access.serviceIntake && pathname !== "/services" ? (
-        <ServiceJobSheet canManage storeId={store.id} />
+      {(access.serviceIntake || ownedJobOpen) && pathname !== "/services" ? (
+        <ServiceJobSheet
+          canManage
+          storeId={store.id}
+          scope={{ actorUserId, tenantId, storeId: store.id }}
+          nativeAccessAvailable={Boolean(access.serviceIntake)}
+        />
       ) : null}
       {/* Exact original reads authorize independently of the intake-editor role. */}
       <AssistantQuoteApprovalSheet

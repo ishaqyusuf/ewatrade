@@ -111,9 +111,11 @@ test("authoritative zero is distinct from unavailable or merely a missing bounde
 
 test("inline selection requires exact current membership and row with no fallback or input mutation", () => {
   const workload = fixture()
+  const expectedJob = workload.jobs[3]
+  if (!expectedJob) throw new Error("Fixture must contain exact-job-3")
   const before = JSON.stringify(workload)
   expect(staffAccessWorkloadJob(workload, "staff", "exact-job-3")).toEqual(
-    workload.jobs[3],
+    expectedJob,
   )
   expect(staffAccessWorkloadJob(workload, "staff", null)).toBeNull()
   expect(staffAccessWorkloadJob(workload, "staff", "invented-job")).toBeNull()
@@ -158,15 +160,13 @@ test("a selected-Store snapshot cannot display a Job from another Store", () => 
   ).toBe("unavailable")
 })
 
-test("inline controls cannot submit the surrounding access form and disclose navigation limitation", () => {
+test("inline controls outside the draft cannot submit the access form and disclose full Job entry point", () => {
   const markup = render(fixture())
   expect(markup.match(/type="button"/g)?.length).toBe(10)
   expect(markup).not.toContain('type="submit"')
   expect(markup).not.toContain("<a ")
-  expect(markup).toContain("keep your unsaved access draft")
-  expect(markup).toContain(
-    "Opening the full Job over this draft is not available here yet",
-  )
+  expect(markup).toContain("Full Job viewing is available from the assistant")
+  expect(markup).toContain("access Edit draft.")
   expect(markup).toContain("does not transfer or reassign")
   expect(markup).toContain("does not show performed work or historical sales")
 })

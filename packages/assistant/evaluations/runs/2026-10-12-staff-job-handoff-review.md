@@ -19,7 +19,36 @@ Source review found a revoked-access return trap: GlobalSheets unmounted the Job
 sheet when service access became false while the handoff token and Job URL remained.
 That could leave the retained Edit draft hidden without a Close action. The worker
 is repairing the bounded factory/return behavior and its affected regression.
-No acceptance or main commit of that packet is claimed at this checkpoint.
+No acceptance or main commit of that packet was claimed at that checkpoint.
+
+## Frozen repair review
+
+The worker froze 13 exact source/test paths. All final SHA-256 hashes match.
+GlobalSheets retains the existing owned Job sheet after access revocation only
+when the live handoff matches its open Job URL. Revoked access disables context
+reads and prevents native Workspace mounting even with warm cached data; only
+the generic unavailable message and Close remain. Ordinary/mismatched Jobs gain
+no access, and the services page retains its single sheet owner.
+
+Successful Close awaits removal of only `jobId`/`serviceSheet`, invalidates the
+current staff review and releases the exact token. Failed URL cleanup retains
+the unavailable sheet, token and Close. The retained editor identity and form
+callbacks are unchanged; no Save/cancel/business operation occurs on object Close.
+
+The new isolated wrapper passed, executing three logical production factory/sheet
+regressions. It models URL/query/overlay/dismissal/visual boundaries and therefore
+does not establish actual mounted form, modal-stack, keyboard or focus continuity.
+The single previously failing workload-copy case now passes (7 assertions), while
+seven earlier handoff cases (58 assertions) and earlier workload evidence are
+reused for unchanged runtime behavior without repeats.
+
+One actual-dashboard compiler with the 13 frozen roots and their real imports
+failed only TS2769 in the existing workload fixture's possibly undefined expected
+row. The worker added an explicit existence guard for `workload.jobs[3]`; equality
+and production code are unchanged. Only that failed compiler reran; session83921
+exited0 with an empty log. The first failure and correction are retained. Logs:
+`artifacts/assistant-operations-parallel/S04/full-job-review-typecheck.log` and
+`full-job-review-typecheck-fixed.log`. No broad/mobile compiler was launched.
 
 ## Actual saved-object continuity observation
 
