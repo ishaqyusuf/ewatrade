@@ -2,7 +2,7 @@
 
 Work in `/Users/M1PRO/Documents/code/ewatrade` on the assistant-operation tickets
 listed below. You own implementation and repairs. The acceptance coordinator owns
-independent review, necessary acceptance test execution, dashboard screenshots,
+independent review, necessary web and mobile acceptance tests and screenshots,
 acceptance bookmarks and serialized commits to `main`.
 
 ## Read before editing
@@ -16,14 +16,17 @@ in `.brain/plans/2026-10-09-assistant-business-operations.md`.
 Use `packages/assistant/evaluations/TICKETS.md` and `README.md` for current status
 and existing evidence. These summaries do not replace the canonical definitions.
 
-Snapshot on 12 October 2026: 45 tickets; 13 accepted, 20 partial, 11 pending
-implementation and A04 mobile deferred. Pending does not prove no related source
-exists. Inspect and reuse canonical code before building anything new.
+Latest owner instruction on 12 October 2026 explicitly includes mobile and
+supersedes the earlier web-only restriction. Snapshot: 45 tickets; 13 accepted
+for web, 20 partial and 12 pending implementation, including reopened A04.
+Existing web bookmarks do not certify mobile acceptance. Pending does not prove
+no related source exists. Inspect and reuse canonical code before building anything new.
 
-## Your backlog: the eleven pending implementation tickets
+## Your backlog: the twelve pending implementation tickets
 
 | ID | Deliverable |
 |---|---|
+| A04 | Reopened native acceptance and parity: integrate shared capabilities into the existing mobile Ask UI and implement any missing native review/editor/receipt-object flows. Preserve Setup/product workflows. Prepare keyboard, large text, loading, expiry, offline, reload, business-switch, receipt navigation and Owner/Manager/restricted-staff journeys for coordinator acceptance. |
 | S05 | Daily staff operational history from actual actor-attributed order, payment, stock, service and authorized finance sources. Show canonical record, outcome, time and Store; separate performed/assigned/approved work. Preserve unknown historical attribution and exact full-result counts. |
 | F01 | Canonical collection intent/source contract: allowed source, amount, currency, expiry, provider reference and actor scope; prevent duplicate manual/online receipt posting. Audit existing checkout reuse first. |
 | F02 | Reviewed payment link and separately confirmed sharing; signed settlement/reconciliation, expiry and duplicate/out-of-order/partial outcomes. Build deterministic provider support before any authorized sandbox run. |
@@ -36,7 +39,10 @@ exists. Inspect and reuse canonical code before building anything new.
 | H04 | Reuse the existing voice/file workstream with typed proposals, source citations, uncertain-field review and bounded multi-step plans/receipts. Keep transcription confidence separate from authority; offline execution remains unavailable without approved canonical support. |
 | H05 | Implement readiness/rollout documentation and controls: explicit capability/version/exclusion inventory, canary and rollback readiness, preserved saved receipts. Actual acceptance, enabling, canary execution and deployment belong to the acceptance coordinator and applicable approval gates. |
 
-Start with H02 and S05 as small independent packets, then work through canonical
+Start with H02 and A04's existing native/shared-source inventory, then S05 as
+small independent packets. Record missing mobile support for the existing web
+capabilities and deliver the native implementations in reviewable packets rather
+than assuming web support implies parity. Then work through canonical
 dependencies. F01 precedes F02; F03 feasibility and agreed policy precede F04;
 F04 precedes F05. Work on G04/G05/H04 when their source prerequisites are ready.
 Prepare H05 readiness throughout; do not manufacture a completed rollout.
@@ -45,8 +51,13 @@ document the missing decision, then continue an independent ticket.
 
 ## Work boundaries and coordination
 
-- Web/dashboard only. No mobile source, builds, devices, emulators, viewports or
-  mobile tests. Leave A04 deferred and unrelated mobile working-tree files alone.
+- Web/dashboard and mobile implementation are in scope. A04 is reopened. Declare
+  each capability's actual clients and implement the necessary native rendering,
+  editing and object navigation. Preserve unrelated mobile/Play Store work in the
+  shared checkout; including mobile does not transfer those files to you.
+- The coordinator owns targeted mobile/device/emulator acceptance, screenshots
+  and necessary build verification. A responsive desktop viewport alone does not
+  prove native behavior. No redundant broad mobile checks or unrelated store release.
 - The existing D05, S04 and G03 workers are finishing their current packets and
   will then be archived. Do not take their tickets or overwrite their paths.
 - Before each packet, inspect `git status` and declare exact ticket/path ownership
@@ -59,8 +70,9 @@ document the missing decision, then continue an independent ticket.
   integration where applicable. The coordinator will review them rather than
   finishing implementation. Repair review findings in your own packet.
 - Use natural merchant language and resolution/clarification. Do not require users
-  to enter IDs or JSON. Use the shared modal/sheet factory: Open must show the exact
-  object over the assistant, and Close must retain the chat and unsaved draft.
+  to enter IDs or JSON. On web use the shared modal/sheet factory; on mobile reuse
+  the native object/navigation patterns. Open must show the exact object and
+  return/Close must retain the assistant chat and any unsaved draft.
 - Preserve fresh Tenant/Store/Book/actor/session/role/plan/legal authority, canonical
   domain restrictions, bounded transactions and atomic receipt completion. Keep
   original recorded facts separate from current eligibility. Completed recovery
@@ -108,10 +120,10 @@ Provide a bounded manifest and report containing:
 2. Canonical command/source reused and any remaining dependency or policy decision.
 3. New regression/fixture cases, exact commands for the coordinator, prior reusable
    evidence and all checks actually run with their results.
-4. Dashboard route and realistic web acceptance steps, including Edit/re-review,
+4. Dashboard and native routes plus realistic acceptance steps, including Edit/re-review,
    Confirm when authorized, original receipt Open/Close and saved recovery. The
-   coordinator captures screenshots; do not claim synthetic previews prove saved
-   runtime acceptance.
+   coordinator captures web and native screenshots. State platform-specific gaps;
+   do not claim synthetic previews or web-only results prove saved native acceptance.
 5. API/permission/schema/runtime impacts, explicit unavailable capabilities, and
    Brain files updated. Preserve ignored Brain/artifact files without force-add.
 6. A clear ready-for-review status. Do not mark accepted or add an acceptance
@@ -125,4 +137,4 @@ acceptance chat `01a12317-a3f7-7e83-8dcc-fb78949b8e22` on host `local`.
 Do not spawn additional chats or agents unless the human explicitly authorizes it.
 Continue implementing the pending backlog and fixing your review findings while
 the coordinator handles acceptance. Report real blockers precisely; do not stop
-at a plan or claim all eleven tickets complete from source-only evidence.
+at a plan or claim all twelve tickets complete from source-only evidence.

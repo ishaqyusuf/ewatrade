@@ -1,11 +1,14 @@
 # Assistant ticket status — 12 October 2026
 
-Snapshot of the canonical 45-ticket roadmap. Web/dashboard acceptance only.
+Snapshot of the canonical 45-ticket roadmap. The owner now includes web/dashboard
+and mobile. Existing accepted bookmarks record web acceptance; mobile parity is
+not certified by those bookmarks.
 
-**Accepted: 13/45 (28.9%). Pending acceptance: 32/45 (71.1%).**
-Of the 32 not yet accepted: 20 are partial, 11 are pending implementation, and
-1 is deferred (A04, mobile, at the owner's request).
-No mobile implementation/testing or hosted rollout is certified here.
+**Accepted for web: 13/45 (28.9%). Pending web acceptance: 32/45 (71.1%).**
+Of those32:20 are partial and12 pending implementation. A04 is reopened after
+the owner's latest instruction to include mobile; no ticket is currently deferred
+by the former web-only restriction. Mobile acceptance must be recorded separately.
+No native acceptance or hosted rollout is newly certified by this scope change.
 
 Legend: ✓ complete for the current web scope; ◐ partially implemented/verified;
 ○ pending; ⏸ deferred; 🔖 accepted milestone. A partial pass does not complete
@@ -17,7 +20,7 @@ accepted milestone is recorded; it does not assert that no related source exists
 | A01 | Capability inventory and manifest | ✓ Complete | 🔖 Accepted |
 | A02 | Execution adapter boundary | ✓ Complete | 🔖 Accepted |
 | A03 | Dashboard GENERAL chat | ✓ Complete | 🔖 Accepted |
-| A04 | Native acceptance and parity | ⏸ Deferred | Deferred |
+| A04 | Native acceptance and parity | ○ Pending — reopened | Pending |
 | A05 | Controlled availability and read baseline | ✓ Complete | 🔖 Accepted |
 | B01 | Customer create/update | ✓ Complete | 🔖 Accepted |
 | B02 | Product editing | ✓ Complete | 🔖 Accepted |
@@ -60,7 +63,7 @@ accepted milestone is recorded; it does not assert that no related source exists
 | H04 | Media and controlled multi-step use | ○ Pending | Pending |
 | H05 | Operational acceptance and rollout | ○ Pending | Pending |
 
-Current delivery split: root owns acceptance review, necessary targeted checks, web screenshots, acceptance bookmarks and serialized main commits. Existing D05/S04/G03 workers finish their current implementation packets, including G03's unfinished central integration, then hand off for review and archive. The next implementation agent receives the eleven pending tickets through [the implementation instruction prompt](IMPLEMENTATION_HANDOFF.md). No new agent has been dispatched by this document. S01/S02 saved web acceptance and E05 activation/API restart approval remain pending.
+Current delivery split: root owns acceptance review, necessary targeted web/mobile checks and screenshots, acceptance bookmarks and serialized main commits. Existing D05/S04/G03 workers finish their current implementation packets, including G03's unfinished central integration, then hand off for review and archive. The next implementation agent receives the twelve pending tickets including reopened A04 through [the implementation instruction prompt](IMPLEMENTATION_HANDOFF.md). No new agent has been dispatched by this document. S01/S02 saved web acceptance and E05 activation/API restart approval remain pending. Historical web-only/deferred snapshots below remain evidence of their original scope.
 
 Latest source checkpoint: [integrated work editors, original global objects and exact assigned workload](runs/2026-10-12-service-work-dashboard-integration.md). Focused checks and affected-source compilation pass; authenticated web/signed acceptance remains pending. No additional ticket accepted.
 
