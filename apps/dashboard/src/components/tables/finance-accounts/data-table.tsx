@@ -10,8 +10,13 @@ import {
   useLoadedRowSelection,
 } from "@/components/tables/core"
 import type { DirectoryView } from "@/utils/directory-view-settings"
-import { Button } from "@ewatrade/ui"
+import { Badge, Button } from "@ewatrade/ui"
 import { formatFinanceMoney } from "@ewatrade/utils/finance-money"
+import {
+  type MoneyAccountPurpose,
+  ORDER_PAYMENT_METHOD_LABELS,
+  moneyAccountPaymentMethods,
+} from "@ewatrade/utils/finance-payment-methods"
 import {
   type ColumnDef,
   getCoreRowModel,
@@ -24,6 +29,30 @@ export type MoneyAccountRow = {
   name: string
   purpose: string
   balanceMinor: string
+  paymentMethods: string[]
+  paymentsPausedAt: Date | string | null
+}
+
+function PaymentMethodsTaken({ account }: { account: MoneyAccountRow }) {
+  const methods = moneyAccountPaymentMethods({
+    purpose: account.purpose as MoneyAccountPurpose,
+    paymentMethods: account.paymentMethods,
+  })
+  return (
+    <div className="flex flex-wrap gap-1">
+      {methods.map((method) => (
+        <Badge key={method} variant="outline">
+          {ORDER_PAYMENT_METHOD_LABELS[method]}
+        </Badge>
+      ))}
+    </div>
+  )
+}
+
+function PausedBadge({ account }: { account: MoneyAccountRow }) {
+  return account.paymentsPausedAt ? (
+    <Badge variant="secondary">Paused</Badge>
+  ) : null
 }
 
 const getAccountId = (account: MoneyAccountRow) => account.id
@@ -36,22 +65,34 @@ export function moneyAccountPurposeLabel(purpose: string) {
       : "Bank"
 }
 
-function StatementButton({
+function AccountActions({
   account,
   onOpen,
+  onOpenPaymentSettings,
 }: {
   account: MoneyAccountRow
   onOpen: (accountId: string) => void
+  onOpenPaymentSettings: (accountId: string) => void
 }) {
   return (
-    <Button
-      appearance="form"
-      variant="outline"
-      aria-label={`View ${account.name} statement`}
-      onClick={() => onOpen(account.id)}
-    >
-      View statement
-    </Button>
+    <div className="flex flex-wrap gap-2">
+      <Button
+        appearance="form"
+        variant="outline"
+        aria-label={`View ${account.name} statement`}
+        onClick={() => onOpen(account.id)}
+      >
+        View statement
+      </Button>
+      <Button
+        appearance="form"
+        variant="outline"
+        aria-label={`${account.name} payment settings`}
+        onClick={() => onOpenPaymentSettings(account.id)}
+      >
+        Payment settings
+      </Button>
+    </div>
   )
 }
 
@@ -61,12 +102,14 @@ export function MoneyAccountsDataTable({
   bookId,
   view,
   onOpenStatement,
+  onOpenPaymentSettings,
 }: {
   accounts: MoneyAccountRow[]
   currencyCode: string
   bookId: string
   view: DirectoryView
   onOpenStatement: (accountId: string) => void
+  onOpenPaymentSettings: (accountId: string) => void
 }) {
   const columns = useMemo<ColumnDef<MoneyAccountRow>[]>(
     () => [
@@ -76,12 +119,20 @@ export function MoneyAccountsDataTable({
         header: "Account",
         cell: ({ row }) => (
           <div className="min-w-40">
-            <p className="font-medium">{row.original.name}</p>
+            <p className="flex items-center gap-2 font-medium">
+              {row.original.name}
+              <PausedBadge account={row.original} />
+            </p>
             <p className="text-xs text-muted-foreground">
               {moneyAccountPurposeLabel(row.original.purpose)}
             </p>
           </div>
         ),
+      },
+      {
+        id: "takes",
+        header: "Takes",
+        cell: ({ row }) => <PaymentMethodsTaken account={row.original} />,
       },
       {
         id: "balance",
@@ -94,13 +145,17 @@ export function MoneyAccountsDataTable({
       },
       {
         id: "actions",
-        header: "Statement",
+        header: "Actions",
         cell: ({ row }) => (
-          <StatementButton account={row.original} onOpen={onOpenStatement} />
+          <AccountActions
+            account={row.original}
+            onOpen={onOpenStatement}
+            onOpenPaymentSettings={onOpenPaymentSettings}
+          />
         ),
       },
     ],
-    [currencyCode, onOpenStatement],
+    [currencyCode, onOpenStatement, onOpenPaymentSettings],
   )
   const [rowSelection, setRowSelection] = useLoadedRowSelection({
     rows: accounts,
@@ -135,7 +190,13 @@ export function MoneyAccountsDataTable({
               selectLabel={`Select ${row.original.name}`}
               title={row.original.name}
               onOpen={() => onOpenStatement(row.original.id)}
-              description={moneyAccountPurposeLabel(row.original.purpose)}
+              description={
+                <span className="grid gap-2">
+                  {moneyAccountPurposeLabel(row.original.purpose)}
+                  <PaymentMethodsTaken account={row.original} />
+                </span>
+              }
+              badges={<PausedBadge account={row.original} />}
               highlight={{
                 label: "Balance",
                 value: formatFinanceMoney(
@@ -144,9 +205,10 @@ export function MoneyAccountsDataTable({
                 ),
               }}
               actions={
-                <StatementButton
+                <AccountActions
                   account={row.original}
                   onOpen={onOpenStatement}
+                  onOpenPaymentSettings={onOpenPaymentSettings}
                 />
               }
             />

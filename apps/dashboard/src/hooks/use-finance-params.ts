@@ -19,6 +19,7 @@ export const financeSheetModes = [
   "money",
   "money-reversal",
   "account",
+  "account-payments",
   "category",
   "cash-count",
   "cash-count-detail",
@@ -40,6 +41,7 @@ export function useFinanceParams() {
     countId: parseAsString,
     supplierId: parseAsString,
     financeAccountId: parseAsString,
+    paymentAccountId: parseAsString,
     reportAccountId: parseAsString,
     reportFrom: parseAsString,
     reportThrough: parseAsString,
@@ -59,6 +61,7 @@ export function useFinanceParams() {
         countId: null,
         moneyEntryId: null,
         supplierId: null,
+        paymentAccountId: null,
       }),
     [setParams],
   )

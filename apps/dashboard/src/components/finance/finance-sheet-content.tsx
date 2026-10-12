@@ -68,6 +68,7 @@ export function FinanceSheetContent({
     countId,
     moneyEntryId,
     supplierId,
+    paymentAccountId,
   } = useFinanceParams()
   const {
     actorUserId,
@@ -341,7 +342,7 @@ export function FinanceSheetContent({
             </div>
           ) : null}
           <FinanceContent
-            key={`${book.data?.id ?? "new"}:${financeSheet}:${statementId}:${bankSourceAccountId}:${bankSourceEntryId}:${billId}:${countId}:${moneyEntryId}:${supplierId}`}
+            key={`${book.data?.id ?? "new"}:${financeSheet}:${statementId}:${bankSourceAccountId}:${bankSourceEntryId}:${billId}:${countId}:${moneyEntryId}:${supplierId}:${paymentAccountId}`}
             mode={financeSheet}
             book={book.data}
             statementId={statementId}
@@ -351,6 +352,7 @@ export function FinanceSheetContent({
             countId={countId}
             moneyEntryId={moneyEntryId}
             supplierId={supplierId}
+            paymentAccountId={paymentAccountId}
             storeId={storeId}
           />
         </>

@@ -11,6 +11,7 @@ export const financeSheetTitles: Record<FinanceSheetMode, string> = {
   money: "Record money movement",
   "money-reversal": "Reverse money movement",
   account: "New money account",
+  "account-payments": "Payment settings",
   category: "New expense category",
   "cash-count": "Count physical cash",
   "cash-count-detail": "Cash count details",

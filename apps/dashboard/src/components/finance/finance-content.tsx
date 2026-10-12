@@ -1,6 +1,7 @@
 "use client"
 import type { FinanceSheetMode } from "@/hooks/use-finance-params"
 import { FinanceAccountForm } from "./account-form"
+import { FinanceAccountPaymentSettingsForm } from "./account-payment-settings-form"
 import { FinanceBankImportForm } from "./bank-import-form"
 import { FinanceBankSourceDetail } from "./bank-source-detail"
 import { FinanceBankStatementDetail } from "./bank-statement-detail"
@@ -27,6 +28,7 @@ export function FinanceContent({
   countId,
   moneyEntryId,
   supplierId,
+  paymentAccountId,
   storeId,
 }: {
   mode: FinanceSheetMode
@@ -38,6 +40,7 @@ export function FinanceContent({
   countId: string | null
   moneyEntryId: string | null
   supplierId: string | null
+  paymentAccountId: string | null
   storeId: string
 }) {
   if (!book)
@@ -95,6 +98,13 @@ export function FinanceContent({
   if (mode === "cash-count") return <FinanceCashCountForm book={book} />
   if (mode === "cash-count-detail" && countId)
     return <FinanceCashCountDetail book={book} countId={countId} />
+  if (mode === "account-payments" && paymentAccountId)
+    return (
+      <FinanceAccountPaymentSettingsForm
+        book={book}
+        accountId={paymentAccountId}
+      />
+    )
   if (mode === "account" || mode === "category")
     return (
       <FinanceAccountForm bookId={book.id} category={mode === "category"} />
