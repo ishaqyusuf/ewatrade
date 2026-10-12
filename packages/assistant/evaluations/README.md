@@ -25,12 +25,12 @@ it is not an executed result, enabled capability, or deployment claim.
 | Supplier creation | [1](fixtures/supplier-create.v1.md) | Identity normalization, ambiguity, duplicate/scope refusal, rollback/recovery and receipt | None yet |
 | Expense/payment corrections | [1](fixtures/bill-correction.v1.md) | Exact original targets, no-transfer boundaries, void/payment guards, stale/retry and rollback | None yet |
 | Supplier search/statements | [1](fixtures/supplier-reads.v1.md) | Exact identities, separate balances, snapshot continuation and scope refusal | None yet |
-| `finance.money_movement.record` v1 | [1](fixtures/money-movement.v1.md) | Completed transfers/owner funds, ambiguity, posting guards, retry, editor/receipt | None yet |
-| `finance.expense.record` v1 | [1](fixtures/expense.v1.md) | Unpaid/partial/owner-funded expense, ambiguity, posting guards, atomic retry, receipt | None yet |
+| `finance.money_movement.record` v2 | [1](fixtures/money-movement.v1.md) | Completed transfers/owner funds, ambiguity, posting guards, retry, editor/receipt | None yet |
+| `finance.expense.record` v2 | [1](fixtures/expense.v1.md) | Unpaid/partial/owner-funded expense, ambiguity, posting guards, atomic retry, receipt | None yet |
 | `finance.bill.pay` v1 | [1](fixtures/bill-payment.v1.md) | Existing bill resolution, partial/owner payment, stale/void/closed guards, retry, editor | None yet |
 | Apply/release customer credit | [1](fixtures/customer-credit.v1.md) | Source resolution, partial amounts, ambiguity, no-cash boundaries, stale/authority, retry, Order provenance | None yet |
 | `customers.receipt.record` v1 | [1](fixtures/customer-receipt.v1.md) | New deposit, existing order payment, ambiguity, stale/closed targets, authority, atomic retry, receipt | None yet |
-| `finance.money_accounts.read` v1 | [1](fixtures/money-accounts.v1.md) | Book scope, account ambiguity, continuation, balance boundary, access refusal | None yet |
+| `finance.money_accounts.read` v2 | [1](fixtures/money-accounts.v1.md) | Book scope, account ambiguity, continuation, balance boundary, access refusal | None yet |
 | Customer funds reads | [1](fixtures/customer-funds.v1.md) | Account resolution, deposit provenance, source revision, statement snapshot, access refusal | None yet |
 | `customers.credit.refund` v1 | [1](fixtures/held-credit-refund.v1.md) | Completed payout, ambiguity, unused-credit limits, stale review, authority, injection, retry, provenance, receipt | None yet |
 | `sales.product.return` v1 | [1](fixtures/product-return.v1.md) | Partial restock, ambiguity, dispositions, over-return, stale evidence, authority, injection, replay/recovery | None yet |
@@ -275,3 +275,11 @@ and browser assertions. Mobile evaluations are excluded from the current work.
 - [Global staff directory sheet source, 12 October 2026](runs/2026-10-12-staff-directory-sheet-source.md):7tests74assertions/scoped types and two actual protected read-tool targets7.435s, saved staff/chat/budget unchanged. Original rollback page content/pagination/member handoff and actual global unavailable/filters/cursor-reset/Close/invalid-link desktop screenshots. Live directory/saved chat success unverified; S01partial/planned.
 
 - [Durable invitation source, 12 October 2026](runs/2026-10-12-staff-invitation-durable-source.md):40focused tests191assertions/scoped types; four real QA rollback command/outbox cases preserve saved facts. Additive migration/root push pass. No provider or new web acceptance; S02partial.
+
+12 October 2026: `finance.money_accounts.read`, `finance.expense_categories.read`,
+`finance.money_movement.record` and `finance.expense.record` are v2 and enabled for
+dashboard Owners/Admins. The reads find the business Book when `bookId` is
+omitted, and money accounts list `paymentMethods`/`availableForPayments`. Order
+payments (`payment_record`, `order_create.initialPayment`) need a `moneyAccountId`
+that takes the payment's method once Finance is set up. Fixture versions are
+unchanged, and there is no new model-run evidence yet.
