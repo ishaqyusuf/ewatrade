@@ -83,6 +83,7 @@
     "assistant:voice:local": "bun run dev --f wapi",
     "assistant:usage-report": "node scripts/with-workspace-env.mjs bun scripts/assistant-usage-report.ts",
     "assistant:runtime": "node scripts/with-workspace-env.mjs bun scripts/assistant-runtime-switch.ts",
+    "assistant:impact": "bun scripts/assistant-impact.ts",
     "qa:tar-override": "node --test scripts/giget-tar-override.test.mjs",
     "mobile:android:connect": "node apps/mobile/scripts/prepare-android-dev.mjs",
     "mobile:android:open": "node apps/mobile/scripts/open-android-app-url.mjs",

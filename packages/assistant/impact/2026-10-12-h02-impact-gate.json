@@ -1,0 +1,28 @@
+{
+  "version": 1,
+  "id": "2026-10-12-h02-impact-gate",
+  "tickets": ["H02"],
+  "summary": "Adds the feature impact gate: versioned impact records, a PR checklist and a CI job that runs the capability tests, coverage freshness and this record check. No capability, procedure, schema or permission changes.",
+  "noAssistantImpact": "Tooling only; no merchant operation, capability or rollout changed.",
+  "docs": [
+    {
+      "topic": "feature",
+      "path": ".brain/plans/2026-10-09-assistant-business-operations.md",
+      "status": "local_only",
+      "note": "H02 checkpoint section records the gate and its CI limits."
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "test",
+      "path": "packages/assistant/src/capabilities/impact.test.ts",
+      "executed": true,
+      "result": "bun test src/capabilities/impact.test.ts: 10 pass, 0 fail, 19 assertions (12 Oct 2026, uncommitted source)."
+    },
+    {
+      "kind": "review",
+      "path": ".github/workflows/assistant-gate.yml",
+      "executed": false
+    }
+  ]
+}

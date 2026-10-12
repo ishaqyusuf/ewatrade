@@ -12,6 +12,12 @@
 
 [F01 coordinator review](runs/2026-10-12-f01-coordinator-review.md): exact-source, amount and expiry failures reproduced in the new pure contract; persisted canonical integration remains open.
 
+[A04 native editor review](runs/2026-10-12-a04-native-editor-coordinator-review.md): six-action editor/caller source checked; existing tests reused, device launch unavailable and native acceptance open.
+
+[F03 research review](runs/2026-10-12-f03-coordinator-review.md): current official documentation corrects the retry-reference claim and missing approval-URL statuses; merchant/policy/domain acceptance remains open.
+
+[H05 readiness review](runs/2026-10-12-h05-coordinator-review.md): authority/rollout split and paused projection reviewed; actual replay/cancel/revocation, UI, canary and release evidence remain open.
+
 [Quotation decision integration review](runs/2026-10-12-quotation-decision-integration-review.md): nine new logical cases, scoped compilation and structural coverage pass; authenticated synthetic screenshots; signed/runtime/native acceptance remains open.
 
 [D05 completion verifier source review](runs/2026-10-12-service-work-completion-verifier-review.md): eight provider-free cases/50 assertions and scoped compilation pass;13 connected cases remain unscheduled, with no parent acceptance.

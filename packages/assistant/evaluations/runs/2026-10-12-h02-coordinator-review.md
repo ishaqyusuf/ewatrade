@@ -52,3 +52,15 @@ clean-runner install and hosted workflow execution remain unverified, so H02
 stays partial and unbookmarked. The PR template and source-handoff introduction
 still describe the earlier narrower router/schema gate; align those descriptions
 with the repaired domain/client behavior before the final source handoff.
+
+## Frozen source checkpoint — 12 October 2026
+
+The implementation agent aligned both the PR checklist and handoff introduction
+with domain/client gating. The gate implementation hash matches the source on
+which the coordinator's repaired probes passed. Nine owned paths (including the
+single `assistant:impact` package script and the owner handoff) are frozen in
+`artifacts/assistant-operations-parallel/H02/reviewed-source-hashes.json` for exact
+serialized main integration. Other workers' manifest, API, native and payments
+changes are excluded. No repeated test/type run is needed for unchanged code.
+Hosted CI/clean-runner acceptance remains open; source preservation does not add
+an accepted bookmark.
