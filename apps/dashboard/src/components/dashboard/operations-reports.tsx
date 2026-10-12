@@ -85,9 +85,9 @@ function CommerceHeadlines({ store }: { store: Store }) {
         {
           label: "Service quantity",
           value: countFormat.format(
-            service.commercial.immutableServiceQuantity,
+            Number(service.commercial.immutableServiceQuantity),
           ),
-          muted: service.commercial.immutableServiceQuantity === 0,
+          muted: Number(service.commercial.immutableServiceQuantity) === 0,
         },
       ]}
     />

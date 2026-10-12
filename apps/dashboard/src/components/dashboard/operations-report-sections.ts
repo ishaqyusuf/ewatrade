@@ -5,7 +5,7 @@ import {
 
 /** The `serviceReporting.summary` fields this page presents. */
 export type OperationsServiceSummary = {
-  commercial: { immutableServiceQuantity: number; serviceRevenueMinor: number }
+  commercial: { immutableServiceQuantity: string; serviceRevenueMinor: number }
   communications: { intents: number }
   work: {
     blocked: number

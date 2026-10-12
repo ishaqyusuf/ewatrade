@@ -7,7 +7,7 @@ import {
 } from "./operations-report-sections"
 
 const service = {
-  commercial: { immutableServiceQuantity: 3, serviceRevenueMinor: 150_000 },
+  commercial: { immutableServiceQuantity: "3", serviceRevenueMinor: 150_000 },
   communications: { intents: 2 },
   work: {
     blocked: 0,
