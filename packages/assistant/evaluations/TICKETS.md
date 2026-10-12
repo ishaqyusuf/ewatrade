@@ -3,7 +3,7 @@
 Snapshot of the canonical 45-ticket roadmap. Web/dashboard acceptance only.
 
 **Accepted: 13/45 (28.9%). Pending acceptance: 32/45 (71.1%).**
-Of the 32 not yet accepted: 17 are partial, 14 are pending implementation, and
+Of the 32 not yet accepted: 18 are partial, 13 are pending implementation, and
 1 is deferred (A04, mobile, at the owner's request).
 No mobile implementation/testing or hosted rollout is certified here.
 
@@ -42,7 +42,7 @@ accepted milestone is recorded; it does not assert that no related source exists
 | S01 | Staff directory and history | ◐ Partial | Pending |
 | S02 | Staff invitations and lifecycle | ◐ Partial | Pending |
 | S03 | Suspend/reactivate staff | ◐ Partial | Pending |
-| S04 | Roles, Store assignments and handover | ○ Pending | Pending |
+| S04 | Roles, Store assignments and handover | ◐ Partial | Pending |
 | S05 | Daily staff activity history | ○ Pending | Pending |
 | F01 | Collection source contract | ○ Pending | Pending |
 | F02 | Payment link and settlement | ○ Pending | Pending |
@@ -60,7 +60,7 @@ accepted milestone is recorded; it does not assert that no related source exists
 | H04 | Media and controlled multi-step use | ○ Pending | Pending |
 | H05 | Operational acceptance and rollout | ○ Pending | Pending |
 
-Current implementation focus: S03 staff status and coordinated D04 service intake, G01 reporting and G02 financial cash/day close. S01/S02 saved web acceptance and E05 activation/API restart approval remain pending.
+Current implementation focus: coordinated D05 service work, S04 Store access and G03 quote reads; root owns testing, integration and web review. S01/S02 saved web acceptance and E05 activation/API restart approval remain pending.
 
 E05 purchase fact reversal now passes signed rollback/stale refusal,
 full saved web confirmation/history/reload and concurrent recovery for invoice and ownership;
@@ -219,3 +219,9 @@ no connected suite repeated. D04 one read-only20s-gap observation preserves134
 fingerprints; no change in this window is not historical resolution, so remaining
 12signed cases stay unscheduled. No accepted count/bookmark change.
 [Backward source evidence](runs/2026-10-12-g02-cash-history-backward-source-v1.md).
+
+S04 Store access is now source-integrated with a bounded editor and original audit
+sheet. New focused tests and labeled source-preview screenshots are recorded in
+[the S04 checkpoint](runs/2026-10-12-staff-access-source-web.md). Signed and saved
+acceptance, business-role mutation and service handover remain open. No bookmark
+or accepted-percentage change.

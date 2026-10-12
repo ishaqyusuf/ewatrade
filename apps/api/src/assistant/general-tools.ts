@@ -21,6 +21,9 @@ import {
   staffStatusDraftInstructions,
   staffStatusReadInput,
   staffStatusReviewInput,
+  staffAccessDraftInstructions,
+  staffAccessReadInput,
+  staffAccessReviewInput,
 } from "@ewatrade/assistant/general/contracts"
 import { serviceIntakeDraftInstructions } from "@ewatrade/assistant/general/service-intake"
 import { canStaffPerform } from "@ewatrade/auth/store-access"
@@ -348,6 +351,28 @@ export function createGeneralTools(
         }),
     }),
 
+    reviewStaffAccess: tool({
+      description: "Read the current Store grant change for an exact member resolved from the staff directory. Resolve Store names from current same-business Stores; never invent IDs or revisions. Show changed roles, removed Stores, starting Store, separate catalog grant and business-wide legacy impact. This review changes nothing. Explicit legacy acknowledgment and signed app confirmation are required to apply it. No membership status, business role or service handover changes.",
+      inputSchema: staffAccessReviewInput,
+      execute: (input) => wrap("reviewStaffAccess", async (fresh) => retailOpsRouter.createCaller(fresh).staffStoreAccessReview(input)),
+    }),
+    readStaffAccessReceipt: tool({
+      description: "Read the exact original saved StaffAccessAuditEvent selected from a completed receipt or staff history. Original grant snapshots, access revision and actor reference are separate from current names and membership. Reason and service handover were not recorded. Never infer their contents or restored access.",
+      inputSchema: staffAccessReadInput,
+      execute: (input) => wrap("readStaffAccessReceipt", async (fresh) => {
+        const receipt = await retailOpsRouter.createCaller(fresh).staffAccessReceipt(input)
+        onAnswer({
+          id: `staff-access_${crypto.randomUUID()}`,
+          title: "Original staff Store access",
+          value: `Access revision ${receipt.revision}`,
+          scope: "Current business · original Store access event",
+          asOf: receipt.asOf,
+          detail: `Recorded ${receipt.happenedAt}. Current directory name: ${receipt.subject.name ?? "Unavailable"}. ${receipt.detail}`.slice(0, 1000),
+          target: { kind: "staff_access", eventId: receipt.eventId },
+        })
+        return receipt
+      }),
+    }),
     reviewStaffStatus: tool({
       description:
         "Review suspending or reactivating an exact saved business membership selected by name/email directory search. Ask for a reason and clarify ambiguous people. The server supplies current access revision and whole-business impact/current grants. This read reserves no access and changes no status. Never restore removed grants or activate an unaccepted invitation.",
@@ -1543,6 +1568,7 @@ export function createGeneralTools(
         supplierSettlementDraftInstructions,
         staffInvitationDraftInstructions,
         staffStatusDraftInstructions,
+        staffAccessDraftInstructions,
         serviceIntakeDraftInstructions,
       ].join("\n\n"),
       inputSchema: objectToolSchema(actionSchema),

@@ -80,6 +80,7 @@ import { serviceLineAction } from "./general-service-fulfillment"
 import { serviceIntake } from "./general-service-intake"
 import { staffInvitation } from "./general-staff-invitation"
 import { staffStatus } from "./general-staff-status"
+import { staffAccess } from "./general-staff-store-access"
 import { stockAdjust, stockCorrect } from "./general-stock-adjustment"
 import { stockCountCreate, stockCountFinalize } from "./general-stock-count"
 import { stockReceive } from "./general-stock-receipt"
@@ -676,6 +677,7 @@ const adapters: {
   purchase_recognition_reverse: purchaseRecognitionReverse,
   staff_invitation: staffInvitation,
   staff_status: staffStatus,
+  staff_access: staffAccess,
   service_intake: serviceIntake,
   supplier_entry_reverse: supplierEntryReverse,
   supplier_opening: supplierOpening,

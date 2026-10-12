@@ -104,6 +104,9 @@ const domainAccess: Record<CapabilityId, (tenant: TenantContext) => void> = {
   "finance.day_close.read": (tenant) => assertFinanceAccess(tenant),
 
   "staff.invitation.manage": assertStaffInvitationAccess,
+  "staff.access.change": assertStaffInvitationAccess,
+  "staff.access.review": assertStaffInvitationAccess,
+  "staff.access.receipt.read": assertStaffInvitationAccess,
   "staff.status.change": assertStaffInvitationAccess,
   "staff.status.review": assertStaffInvitationAccess,
   "staff.status.receipt.read": assertStaffInvitationAccess,

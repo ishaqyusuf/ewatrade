@@ -7,6 +7,7 @@ import { OpenStaffHistorySheet } from "@/components/open-staff-history-sheet"
 import { OpenStaffInvitationSheet } from "@/components/open-staff-invitation-sheet"
 import { OpenStaffMemberSheet } from "@/components/open-staff-member-sheet"
 import { OpenStaffStatusSheet } from "@/components/open-staff-status-sheet"
+import { OpenStaffAccessSheet } from "@/components/open-staff-access-sheet"
 import type { GeneralAnswer } from "@ewatrade/assistant/general/contracts"
 import { useSyncExternalStore } from "react"
 
@@ -34,7 +35,9 @@ export function GeneralAnswerCard({ answer }: { answer: GeneralAnswer }) {
       <p className="mt-2 text-sm">{answer.detail}</p>
       {answer.target ? (
         <div className="mt-3">
-          {answer.target.kind === "staff_status" ? (
+          {answer.target.kind === "staff_access" ? (
+            <OpenStaffAccessSheet eventId={answer.target.eventId} />
+          ) : answer.target.kind === "staff_status" ? (
             <OpenStaffStatusSheet eventId={answer.target.eventId} />
           ) : answer.target.kind === "business_report" ? (
             <OpenBusinessReportSheet target={answer.target} />

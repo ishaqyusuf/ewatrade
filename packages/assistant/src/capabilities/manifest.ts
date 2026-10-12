@@ -28,6 +28,31 @@ const proposalTests = [
  */
 export const capabilityManifest = [
   {
+    id: "staff.access.change", version: 1, mode: "write", title: "Change staff Store access",
+    domain: "staff", tool: "draftAction", action: "staff_access", schema: actionSchema("staff_access"),
+    effect: "record", receipt: "staff_access", policy: { roles: ["OWNER", "ADMIN"] },
+    scope: "tenant", clients: ["dashboard"], rollout: "planned", procedures: ["retailOps.staffStoreAccessReview"],
+    examples: ["Make Amina a cashier at the Bakery Store and remove her Warehouse access"],
+    tests: ["packages/db/src/queries/staff-access-update.test.ts", "packages/assistant/src/general/staff-access.test.ts"],
+    brain: ".brain/features/assistant-staff-access-s04.md",
+  },
+  {
+    id: "staff.access.review", version: 1, mode: "read", title: "Review staff Store access changes",
+    domain: "staff", tool: "reviewStaffAccess", policy: { roles: ["OWNER", "ADMIN"] },
+    scope: "tenant", clients: ["dashboard"], rollout: "planned", procedures: ["retailOps.staffStoreAccessReview"],
+    examples: ["Review Amina's Store permissions before changing them"],
+    tests: ["packages/db/src/queries/staff-access-update.test.ts"],
+    brain: ".brain/features/assistant-staff-access-s04.md",
+  },
+  {
+    id: "staff.access.receipt.read", version: 1, mode: "read", title: "Read original staff Store access",
+    domain: "staff", tool: "readStaffAccessReceipt", policy: { roles: ["OWNER", "ADMIN"] },
+    scope: "tenant", clients: ["dashboard"], rollout: "planned", procedures: ["retailOps.staffAccessReceipt"],
+    examples: ["Open the original saved Store access change"],
+    tests: ["packages/db/src/queries/staff-access-update.test.ts"],
+    brain: ".brain/features/assistant-staff-access-s04.md",
+  },
+  {
     id: "staff.status.change",
     version: 1,
     mode: "write",

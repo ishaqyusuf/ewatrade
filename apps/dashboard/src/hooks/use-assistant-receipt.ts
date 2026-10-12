@@ -3,6 +3,7 @@ import type { GeneralReceipt } from "@ewatrade/assistant/general/contracts"
 import { parseAsString, useQueryStates } from "nuqs"
 
 export const assistantObjectParams = {
+  staffAccessEvent: parseAsString,
   staffStatusEvent: parseAsString,
   businessReport: parseAsString,
   assistantCashCount: parseAsString,
@@ -38,6 +39,7 @@ export const assistantObjectParams = {
 }
 
 export const closedAssistantObjectParams = {
+  staffAccessEvent: null,
   staffStatusEvent: null,
   businessReport: null,
   assistantCashCount: null,
@@ -81,6 +83,8 @@ export function useAssistantReceipt() {
   return (receipt: GeneralReceipt) => {
     const closed = closedAssistantObjectParams
     switch (receipt.kind) {
+      case "staff_access":
+        return setParams({ ...closed, staffAccessEvent: receipt.recordId })
       case "staff_status":
         return setParams({ ...closed, staffStatusEvent: receipt.recordId })
       case "service_intake":

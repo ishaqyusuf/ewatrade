@@ -40,6 +40,7 @@ import { GeneralPurchaseRegistrationEditor } from "./general-purchase-registrati
 import { GeneralSaleCustomer } from "./general-sale-customer"
 import { GeneralStaffInvitationEditor } from "./general-staff-invitation-editor"
 import { GeneralStaffStatusEditor } from "./general-staff-status-editor"
+import { GeneralStaffAccessEditor } from "./general-staff-access-editor"
 import { GeneralStockAdjustmentEditor } from "./general-stock-adjustment-editor"
 import { GeneralStockCountEditor } from "./general-stock-count-editor"
 import { GeneralStockReceiptEditor } from "./general-stock-receipt-editor"
@@ -65,6 +66,8 @@ export function GeneralProposalEditor(props: {
   onSave: (payload: GeneralAction) => void
   onCancel: () => void
 }) {
+  if (props.proposal.payload.action === "staff_access")
+    return <GeneralStaffAccessEditor initial={props.proposal.payload} disabled={props.disabled} onSave={props.onSave} onCancel={props.onCancel} />
   if (props.proposal.payload.action === "staff_status")
     return (
       <GeneralStaffStatusEditor

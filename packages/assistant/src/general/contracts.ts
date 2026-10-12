@@ -1,5 +1,8 @@
 import { serviceIntakeAction } from "./service-intake"
 import { staffStatusAction } from "./staff-status"
+import { staffAccessAction } from "./staff-access"
+export { staffAccessAction, staffAccessDraftInstructions, staffAccessReviewInput, staffAccessReadInput, staffAccessTargetSchema } from "./staff-access"
+export type { GeneralStaffAccessAction } from "./staff-access"
 export {
   staffStatusAction,
   staffStatusDraftInstructions,
@@ -363,6 +366,7 @@ export const generalActionSchema = z.discriminatedUnion("action", [
   staffInvitationAction,
   staffStatusAction,
   serviceIntakeAction,
+  staffAccessAction,
   cashCountAction,
 ])
 export const generalOrderActionSchema = generalActionSchema.options[2]
@@ -374,6 +378,7 @@ export const generalReceiptSchema = z
       "finance_purchase_bill",
       "staff_invitation",
       "staff_status",
+      "staff_access",
       "service_intake",
       "finance_purchase_registration",
       "finance_supplier",
@@ -547,6 +552,8 @@ export function generalActionSummary(
 ) {
   const amount = (minor: number) => generalMoney(minor, currencyCode)
   switch (action.action) {
+    case "staff_access":
+      return `Update staff Store access · ${action.assignments.length} Store assignment(s)`
     case "staff_status":
       return `${action.status === "suspended" ? "Suspend" : "Reactivate"} staff membership`
     case "service_intake":

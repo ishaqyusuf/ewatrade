@@ -31,6 +31,8 @@ import {
 } from "@ewatrade/db/queries"
 import type { InvitedRetailOpsStaff } from "@ewatrade/db/queries"
 import { getStaffStatusReceipt } from "@ewatrade/db/staff-status-receipt"
+import { reviewStaffAccessUpdate } from "@ewatrade/db/staff-access-update"
+import { getStaffAccessReceipt } from "@ewatrade/db/staff-access-receipt"
 import { enqueueRetailOpsStaffInviteNotification } from "@ewatrade/jobs"
 import { buildStaffInvitationLinks } from "@ewatrade/utils/staff-invitation-links"
 import { TRPCError } from "@trpc/server"
@@ -56,6 +58,10 @@ import {
   staffStatusReadInput,
   staffStatusReviewInput,
 } from "../../schemas/staff-status"
+import {
+  staffAccessReadInput,
+  staffAccessReviewInput,
+} from "../../schemas/staff-access"
 import {
   authenticatedProcedure,
   createTRPCRouter,
@@ -205,6 +211,34 @@ function resolveStore(
 }
 
 export const retailOpsStaffRouter = createTRPCRouter({
+  staffAccessReceipt: protectedProcedure
+    .input(staffAccessReadInput)
+    .query(({ ctx, input }) =>
+      staffInvitationCommand(() =>
+        getStaffAccessReceipt(ctx.db, {
+          ...input,
+          tenantId: ctx.tenantContext.tenant.id,
+          actorUserId: ctx.session.user.id,
+        }),
+      ),
+    ),
+  staffStoreAccessReview: protectedProcedure
+    .input(staffAccessReviewInput)
+    .query(({ ctx, input }) => {
+      const store = resolveStore(
+        ctx.tenantContext.stores,
+        ctx.tenantContext.activeStore,
+        {},
+      )
+      return staffInvitationCommand(() =>
+        reviewStaffAccessUpdate(ctx.db, {
+          ...input,
+          tenantId: ctx.tenantContext.tenant.id,
+          actorUserId: ctx.session.user.id,
+          storeId: store.id,
+        }),
+      )
+    }),
   staffStatusReview: protectedProcedure
     .input(staffStatusReviewInput)
     .query(({ ctx, input }) =>

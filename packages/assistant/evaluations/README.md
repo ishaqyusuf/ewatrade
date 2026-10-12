@@ -368,3 +368,5 @@ no connected suite repeated. D04 one read-only20s-gap observation preserves134
 fingerprints; no change in this window is not historical resolution, so remaining
 12signed cases stay unscheduled. No accepted count/bookmark change.
 [Backward source evidence](runs/2026-10-12-g02-cash-history-backward-source-v1.md).
+
+S04 source integration and labeled web preview: [staff access checkpoint](runs/2026-10-12-staff-access-source-web.md). Source proof does not accept the ticket.
