@@ -1,3 +1,5 @@
+import { reviewGeneralQuoteDecision } from "../../../assistant/general-quote-decision"
+import { quoteDecisionAction } from "@ewatrade/assistant/general/quote-decision"
 import { canManageTenant, normalizeRole } from "@ewatrade/auth/roles"
 import {
   createEmbeddedSignupState,
@@ -182,6 +184,9 @@ function storeId(
 }
 
 export const serviceCommerceChannelsRouter = createTRPCRouter({
+  assistantQuoteDecisionReview: protectedProcedure
+    .input(quoteDecisionAction)
+    .query(({ctx,input}) => reviewGeneralQuoteDecision(ctx,input)),
   assistantQuoteApprovalDetail: protectedProcedure
     .input(generalQuoteApprovalReadInput)
     .query(async ({ ctx, input }) => {

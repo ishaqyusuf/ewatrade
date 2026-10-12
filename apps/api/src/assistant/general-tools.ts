@@ -34,6 +34,8 @@ import {
   serviceWorkCompletionDraftInstructions,
 } from "@ewatrade/assistant/general/contracts"
 import { serviceIntakeDraftInstructions } from "@ewatrade/assistant/general/service-intake"
+import { quoteDecisionAction } from "@ewatrade/assistant/general/quote-decision"
+import { reviewGeneralQuoteDecision } from "./general-quote-decision"
 import { serviceWorkOriginalTargetSchema } from "@ewatrade/assistant/general/service-work-original"
 import { canStaffPerform } from "@ewatrade/auth/store-access"
 import { TRPCError } from "@trpc/server"
@@ -288,6 +290,14 @@ export function createGeneralTools(
   const availableWriteActions = new Set<string>(
     availableWriteCapabilities.map((capability) => capability.action),
   )
+  const quoteDecisionInstructions =
+    ["commerce_quote_approve", "commerce_quote_reject"].some(action => availableWriteActions.has(action)) &&
+    ["readPendingQuoteApprovals", "readQuoteApproval", "reviewQuoteDecision"].every(name => {
+      const capability = readCapabilities.get(name)
+      return capability && canUseCapability(ctx, capability)
+    })
+      ? ["Resolve the exact saved original approval/Quote/Version with readPendingQuoteApprovals and readQuoteApproval; clarify matching quotations naturally, never ask for internal IDs or JSON. Use reviewQuoteDecision for the stated reason and fresh native selected-approver/policy/source rules before draftAction. Approval commercially releases the complete original version, creates its public acceptance capability and canonical linked messages/invitation/unread intents. It is not customer acceptance, an Order, payment or clinical release. Terms and native text screening remain mandatory; pure review does not screen or report provider success. Reject stays private. Wait for separate app confirmation; completed recovery returns the original saved receipt without native replay/token rotation."]
+      : []
   const serviceWorkActionAvailable = [
     "service_job_assign",
     "service_job_reschedule",
@@ -362,6 +372,11 @@ export function createGeneralTools(
     ? z.discriminatedUnion("action", [firstAction, ...otherActions])
     : z.never()
   const tools: Record<string, Tool> = {
+    reviewQuoteDecision: tool({
+      description: "Pure-review an exact original quotation decision and stated reason. Approval includes complete commercial release effects and native Terms/screening requirements; rejection stays private. This never confirms, screens or executes the decision.",
+      inputSchema: objectToolSchema(quoteDecisionAction),
+      execute: input => wrap("reviewQuoteDecision", fresh => reviewGeneralQuoteDecision(fresh, input)),
+    }),
     readCashAccounts: tool({
       description:
         "Resolve active CASH account identities by literal name/code. Omit bookId initially to discover the current native Finance Book; retain it and search for continuation. Cash identity is not a balance or physical count. Clarify ambiguous matches.",
@@ -1781,6 +1796,7 @@ export function createGeneralTools(
         staffAccessDraftInstructions,
         serviceIntakeDraftInstructions,
         ...serviceWorkInstructions,
+        ...quoteDecisionInstructions,
       ].join("\n\n"),
       inputSchema: objectToolSchema(actionSchema),
       execute: (input) =>

@@ -1,6 +1,7 @@
 import { serviceWorkEditorActionSchema } from "./service-work-editor"
 import { serviceWorkLifecycleReceipt } from "./service-work"
 import { serviceWorkCompletionReceipt } from "./service-work-completion"
+import { quoteDecisionAction, quoteDecisionReceipt } from "./quote-decision"
 import { serviceWorkRecordReceipt } from "./service-work-records"
 export {
   serviceWorkEditorActionSchema,
@@ -389,6 +390,7 @@ export const generalActionSchema = z.discriminatedUnion("action", [
   staffStatusAction,
   serviceIntakeAction,
   ...serviceWorkEditorActionSchema.options,
+  ...quoteDecisionAction.options,
   staffAccessAction,
   cashCountAction,
 ])
@@ -451,6 +453,7 @@ export const generalReceiptSchema = z.union([
   generalRecordReceiptSchema,
   serviceWorkLifecycleReceipt,
   serviceWorkCompletionReceipt,
+  quoteDecisionReceipt,
   serviceWorkRecordReceipt,
 ])
 export type GeneralReceipt = z.infer<typeof generalReceiptSchema>
@@ -591,6 +594,10 @@ export function generalActionSummary(
       return `Revise Service promise · ${action.promisedAt} · ${action.reason}`
     case "service_job_line_transition":
       return `Update saved work · ${action.toStatus.replaceAll("_", " ")}${action.reason ? ` · ${action.reason}` : ""}`
+    case "commerce_quote_approve":
+      return "Approve and commercially release original quotation"
+    case "commerce_quote_reject":
+      return "Reject original quotation; keep version private"
     case "service_work_rework":
       return `Create linked rework · ${action.quantity} · ${action.reason}`
     case "service_work_handoff":

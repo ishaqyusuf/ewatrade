@@ -1,5 +1,7 @@
 # Assistant conversation evaluations
 
+[Quotation decision integration review](runs/2026-10-12-quotation-decision-integration-review.md): nine new logical cases, scoped compilation and structural coverage pass; authenticated synthetic screenshots; signed/runtime/native acceptance remains open.
+
 [D05 completion verifier source review](runs/2026-10-12-service-work-completion-verifier-review.md): eight provider-free cases/50 assertions and scoped compilation pass;13 connected cases remain unscheduled, with no parent acceptance.
 
 [Bookmarked 45-ticket status board](TICKETS.md): implementation versus acceptance,
@@ -11,6 +13,7 @@ it is not an executed result, enabled capability, or deployment claim.
 
 | Capability | Fixture version | Scenarios | Recorded model runs |
 |---|---|---|---|
+| Original quotation approve/reject and pure decision review | [1](fixtures/quote-decisions.v1.json) |12definitions/3capabilities; common seven-category matrix, exact original receipts, commercial/clinical and Terms boundaries | None yet |
 | Service work actions, context/review and original records | [1](fixtures/service-work.v1.json) | Natural intentions and exact targets; common seven-category matrix; private text, clinical/refusal, ready/reminder boundary, original receipts and global continuity | None yet |
 | Original quotation and booking reads | [1](fixtures/quote-booking-reads.v1.json) | Original tuples, bounded page totals, native authority, stored/current separation, pure replay, injection, outage and global continuity | None yet |
 | Staff Store access and assigned-work review | [1](fixtures/staff-access.v1.json) | Natural exact privilege review, seven-category matrix, complete count/bounded rows, stale workload, separate reassignment and preserved draft | None yet |

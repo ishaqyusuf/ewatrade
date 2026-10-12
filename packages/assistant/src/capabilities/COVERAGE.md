@@ -6,12 +6,12 @@ Tickets refer to the Brain plan `.brain/plans/2026-10-09-assistant-business-oper
 
 ## Summary
 
-- Router procedures: 572 (431 merchant, 141 public/account/internal)
-- Merchant supported by a capability: 140
-- Merchant planned: 125
+- Router procedures: 573 (432 merchant, 141 public/account/internal)
+- Merchant supported by a capability: 143
+- Merchant planned: 123
 - Merchant form-only: 121
 - Merchant excluded: 45
-- Capabilities: 134 (71 read, 63 write)
+- Capabilities: 137 (72 read, 65 write)
 
 ## Capabilities
 
@@ -27,6 +27,9 @@ Tickets refer to the Brain plan `.brain/plans/2026-10-09-assistant-business-oper
 | `services.work.exception` | 1 | write (`service_work_exception`) | `draftAction` | OWNER, ADMIN, MANAGER | Owner/Admin only | dashboard | planned | `services.recordException` |
 | `services.work.context.read` | 1 | read | `readServiceWorkContext` | OWNER, ADMIN, MANAGER | read | dashboard | planned | `serviceAssistantWork.editorContext` |
 | `services.work.review` | 1 | read | `reviewServiceWork` | OWNER, ADMIN, MANAGER | read | dashboard | planned | `serviceAssistantWork.review` |
+| `services.quote.approve` | 1 | write (`commerce_quote_approve`) | `draftAction` | OWNER, ADMIN, MANAGER, CASHIER, OPERATOR | Owner/Admin only | dashboard | planned | `serviceCommerce.approveQuoteVersion` |
+| `services.quote.reject` | 1 | write (`commerce_quote_reject`) | `draftAction` | OWNER, ADMIN, MANAGER, CASHIER, OPERATOR | Owner/Admin only | dashboard | planned | `serviceCommerce.rejectQuoteVersion` |
+| `services.quote.review` | 1 | read | `reviewQuoteDecision` | OWNER, ADMIN, MANAGER, CASHIER, OPERATOR | read | dashboard | planned | `serviceCommerce.assistantQuoteDecisionReview` |
 | `services.quote_approval.read` | 1 | read | `readQuoteApproval` | OWNER, ADMIN, MANAGER, CASHIER, OPERATOR | read | dashboard | planned | `serviceCommerce.assistantQuoteApprovalDetail` |
 | `services.quote_approvals.read` | 1 | read | `readPendingQuoteApprovals` | OWNER, ADMIN, MANAGER, CASHIER, OPERATOR | read | dashboard | planned | `serviceCommerce.assistantPendingQuoteApprovals` |
 | `services.booking.read` | 1 | read | `readBooking` | OWNER, ADMIN, MANAGER, CASHIER, OPERATOR | read | dashboard | planned | `serviceCommerce.assistantBookingDetail` |
@@ -175,6 +178,9 @@ track conversational evaluation separately from these source test links.
 | `services.work.exception` | Record the stated delay on Amina's exact washing line | [packages/assistant/src/general/service-work-records.test.ts](../../../../packages/assistant/src/general/service-work-records.test.ts)<br>[packages/db/src/queries/service-work-record-review.test.ts](../../../../packages/db/src/queries/service-work-record-review.test.ts) |
 | `services.work.context.read` | Show the current washing line and eligible staff for Amina's saved job | [packages/db/src/queries/service-work-editor-context.test.ts](../../../../packages/db/src/queries/service-work-editor-context.test.ts) |
 | `services.work.review` | Review the stated promised-time change before preparing its card | [packages/db/src/queries/service-work-review.test.ts](../../../../packages/db/src/queries/service-work-review.test.ts)<br>[packages/db/src/queries/service-work-record-review.test.ts](../../../../packages/db/src/queries/service-work-record-review.test.ts) |
+| `services.quote.approve` | Approve and release original quotation with the stated reason | [packages/assistant/src/general/quote-decision.test.ts](../../../../packages/assistant/src/general/quote-decision.test.ts)<br>[packages/db/src/queries/commerce-quote-decision-review.test.ts](../../../../packages/db/src/queries/commerce-quote-decision-review.test.ts)<br>[packages/db/src/queries/commerce-quote-decision-seam.test.ts](../../../../packages/db/src/queries/commerce-quote-decision-seam.test.ts)<br>[packages/assistant/src/general/quote-decision-integration.test.ts](../../../../packages/assistant/src/general/quote-decision-integration.test.ts)<br>[apps/dashboard/src/components/general-assistant/quote-decision-editor-state.test.ts](../../../../apps/dashboard/src/components/general-assistant/quote-decision-editor-state.test.ts)<br>[apps/dashboard/src/components/general-assistant/quote-decision-editor-ui.test.ts](../../../../apps/dashboard/src/components/general-assistant/quote-decision-editor-ui.test.ts) |
+| `services.quote.reject` | Reject original quotation with the stated reason | [packages/assistant/src/general/quote-decision.test.ts](../../../../packages/assistant/src/general/quote-decision.test.ts)<br>[packages/db/src/queries/commerce-quote-decision-review.test.ts](../../../../packages/db/src/queries/commerce-quote-decision-review.test.ts)<br>[packages/db/src/queries/commerce-quote-decision-seam.test.ts](../../../../packages/db/src/queries/commerce-quote-decision-seam.test.ts)<br>[packages/assistant/src/general/quote-decision-integration.test.ts](../../../../packages/assistant/src/general/quote-decision-integration.test.ts)<br>[apps/dashboard/src/components/general-assistant/quote-decision-editor-state.test.ts](../../../../apps/dashboard/src/components/general-assistant/quote-decision-editor-state.test.ts)<br>[apps/dashboard/src/components/general-assistant/quote-decision-editor-ui.test.ts](../../../../apps/dashboard/src/components/general-assistant/quote-decision-editor-ui.test.ts) |
+| `services.quote.review` | Review the exact quotation approval and commercial release before confirmation | [packages/db/src/queries/commerce-quote-decision-review.test.ts](../../../../packages/db/src/queries/commerce-quote-decision-review.test.ts) |
 | `services.quote_approval.read` | Open this saved quotation version and its review status | [packages/db/src/queries/commerce-quote-reads.test.ts](../../../../packages/db/src/queries/commerce-quote-reads.test.ts)<br>[packages/assistant/src/general/quote-reads.test.ts](../../../../packages/assistant/src/general/quote-reads.test.ts)<br>[packages/assistant/src/general/service-read-answer-target.test.ts](../../../../packages/assistant/src/general/service-read-answer-target.test.ts)<br>[apps/dashboard/src/components/assistant-quote-approval-state.test.ts](../../../../apps/dashboard/src/components/assistant-quote-approval-state.test.ts) |
 | `services.quote_approvals.read` | Show quotations waiting for review in this Store | [packages/db/src/queries/commerce-quote-reads.test.ts](../../../../packages/db/src/queries/commerce-quote-reads.test.ts)<br>[packages/assistant/src/general/quote-reads.test.ts](../../../../packages/assistant/src/general/quote-reads.test.ts) |
 | `services.booking.read` | Open this saved service booking and its payment policy | [packages/db/src/queries/service-booking-read.test.ts](../../../../packages/db/src/queries/service-booking-read.test.ts)<br>[packages/assistant/src/general/booking-read.test.ts](../../../../packages/assistant/src/general/booking-read.test.ts)<br>[packages/assistant/src/general/service-read-answer-target.test.ts](../../../../packages/assistant/src/general/service-read-answer-target.test.ts)<br>[apps/dashboard/src/components/assistant-booking-state.test.ts](../../../../apps/dashboard/src/components/assistant-booking-state.test.ts) |
@@ -319,7 +325,7 @@ track conversational evaluation separately from these source test links.
 | E04 | 1 |
 | G01 | 6 |
 | G02 | 4 |
-| G03 | 29 |
+| G03 | 27 |
 | G04 | 7 |
 | G05 | 30 |
 | H04 | 10 |
@@ -627,11 +633,12 @@ track conversational evaluation separately from these source test links.
 | `serviceAssistantWork.original` | query | read | services | supported | services.work.original.read |
 | `serviceAssistantWork.review` | query | read | services | supported | services.work.review |
 | `serviceCommerce.acknowledgeStoreConversationStaffRead` | mutation | Owner/Admin only | commerce | form_only | Customer conversations are answered by staff in the inbox, not by the assistant. |
-| `serviceCommerce.approveQuoteVersion` | mutation | Owner/Admin only | commerce | planned | G03 |
+| `serviceCommerce.approveQuoteVersion` | mutation | Owner/Admin only | services | supported | services.quote.approve |
 | `serviceCommerce.assignChannelAttendant` | mutation | Owner/Admin only | commerce | form_only | Messaging channel connection uses provider sign-up and credentials. |
 | `serviceCommerce.assistantBookingDetail` | query | read | services | supported | services.booking.read |
 | `serviceCommerce.assistantPendingQuoteApprovals` | query | read | services | supported | services.quote_approvals.read |
 | `serviceCommerce.assistantQuoteApprovalDetail` | query | read | services | supported | services.quote_approval.read |
+| `serviceCommerce.assistantQuoteDecisionReview` | query | read | services | supported | services.quote.review |
 | `serviceCommerce.attestCatalogAvailability` | mutation | Owner/Admin only | commerce | planned | G03 |
 | `serviceCommerce.bookingConfiguration` | query | Owner/Admin only | commerce | planned | G05 |
 | `serviceCommerce.catalogGraduationReadiness` | query | Owner/Admin only | commerce | planned | G03 |
@@ -669,7 +676,7 @@ track conversational evaluation separately from these source test links.
 | `serviceCommerce.quoteApprovalDetail` | query | Owner/Admin only | commerce | planned | G03 |
 | `serviceCommerce.quoteReleaseSettings` | query | Owner/Admin only | commerce | planned | G05 |
 | `serviceCommerce.reassignStoreConversation` | mutation | Owner/Admin only | commerce | form_only | Customer conversations are answered by staff in the inbox, not by the assistant. |
-| `serviceCommerce.rejectQuoteVersion` | mutation | Owner/Admin only | commerce | planned | G03 |
+| `serviceCommerce.rejectQuoteVersion` | mutation | Owner/Admin only | services | supported | services.quote.reject |
 | `serviceCommerce.releaseStoreConversation` | mutation | Owner/Admin only | commerce | form_only | Customer conversations are answered by staff in the inbox, not by the assistant. |
 | `serviceCommerce.replyToStoreConversation` | mutation | Owner/Admin only | commerce | form_only | Customer conversations are answered by staff in the inbox, not by the assistant. |
 | `serviceCommerce.report` | query | Owner/Admin only | finance | planned | G01 |

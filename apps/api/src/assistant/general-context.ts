@@ -254,10 +254,12 @@ const domainAccess: Record<CapabilityId, (tenant: TenantContext) => void> = {
     assertServiceManager(tenant.membership.role),
   "services.queue.read": (tenant) =>
     assertServiceOperator(tenant.membership.role),
-  "services.quote_approval.read": (tenant) =>
-    assertServiceOperator(tenant.membership.role),
-  "services.quote_approvals.read": (tenant) =>
-    assertServiceOperator(tenant.membership.role),
+  // Quote reads/decisions enforce native active Store/team and selected approver rules in the DB.
+  "services.quote_approval.read": () => {},
+  "services.quote_approvals.read": () => {},
+  "services.quote.approve": () => {},
+  "services.quote.reject": () => {},
+  "services.quote.review": () => {},
   "services.booking.read": (tenant) =>
     assertServiceOperator(tenant.membership.role),
   "customers.receivables.read": (tenant) => assertFinanceAccess(tenant),

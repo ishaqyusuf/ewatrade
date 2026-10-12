@@ -54,7 +54,8 @@
     "./service-work-editor-context": "./src/queries/service-work-editor-context.ts",
     "./service-work-original": "./src/queries/service-work-original.ts",
     "./staff-assigned-service-work": "./src/queries/staff-assigned-service-work.ts",
-    "./service-work-completion-review": "./src/queries/service-work-completion-review.ts"
+    "./service-work-completion-review": "./src/queries/service-work-completion-review.ts",
+    "./commerce-quote-decision-review": "./src/queries/commerce-quote-decision-review.ts"
   },
   "scripts": {
     "seed:category-suggestion-config": "bun scripts/seed-category-suggestion-config.ts",

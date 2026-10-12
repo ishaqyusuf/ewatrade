@@ -44,6 +44,34 @@ export function AssistantQuoteApprovalContent({
             </dd>
           </div>
           <div className="col-span-2">
+            <dt className="text-muted-foreground">
+              Recorded decision at (UTC)
+            </dt>
+            <dd>
+              {approval.decidedAt ? (
+                <time dateTime={new Date(approval.decidedAt).toISOString()}>
+                  {new Date(approval.decidedAt).toISOString()}
+                </time>
+              ) : (
+                "No decision time recorded"
+              )}
+            </dd>
+          </div>
+          <div className="col-span-2">
+            <dt className="text-muted-foreground">
+              Recorded decision actor (membership)
+            </dt>
+            <dd className="break-words">
+              {approval.decidedByMembershipId ?? "No decision actor recorded"}
+            </dd>
+          </div>
+          <div className="col-span-2">
+            <dt className="text-muted-foreground">Recorded reason</dt>
+            <dd className="whitespace-pre-wrap break-words">
+              {approval.reason ?? "No reason recorded"}
+            </dd>
+          </div>
+          <div className="col-span-2">
             <dt className="text-muted-foreground">Expiry (UTC)</dt>
             <dd>
               {approval.expiresAt ? (

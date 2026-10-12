@@ -1,5 +1,6 @@
 "use client"
 import type { GeneralReceipt } from "@ewatrade/assistant/general/contracts"
+import { quoteDecisionReceiptTarget } from "@ewatrade/assistant/general/quote-decision"
 import { serviceWorkOriginalTargetSchema } from "@ewatrade/assistant/general/service-work-original"
 import { parseAsString, useQueryStates } from "nuqs"
 
@@ -90,6 +91,11 @@ export function useAssistantReceipt() {
   return (receipt: GeneralReceipt) => {
     const closed = closedAssistantObjectParams
     switch (receipt.kind) {
+      case "commerce_quote_decision": {
+        const target = quoteDecisionReceiptTarget(receipt)
+        if (!target) return
+        return setParams({...closedAssistantObjectParams,assistantQuoteApproval:JSON.stringify(target)})
+      }
       case "service_work":
       case "service_work_note":
       case "service_work_exception": {

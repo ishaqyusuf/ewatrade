@@ -81,6 +81,7 @@ import { serviceIntake } from "./general-service-intake"
 import { serviceWorkLifecycle } from "./general-service-work"
 import { serviceWorkRecords } from "./general-service-work-records"
 import { serviceWorkCompletion } from "./general-service-work-completion"
+import { quoteApprovalDecision } from "./general-quote-decision"
 import { staffInvitation } from "./general-staff-invitation"
 import { staffStatus } from "./general-staff-status"
 import { staffAccess } from "./general-staff-store-access"
@@ -685,6 +686,8 @@ const adapters: {
   service_job_assign: serviceWorkLifecycle,
   service_job_reschedule: serviceWorkLifecycle,
   service_job_line_transition: serviceWorkLifecycle,
+  commerce_quote_approve: quoteApprovalDecision,
+  commerce_quote_reject: quoteApprovalDecision,
   service_work_rework: serviceWorkCompletion,
   service_work_handoff: serviceWorkCompletion,
   service_work_note: serviceWorkRecords,

@@ -1,4 +1,6 @@
 "use client"
+
+import { GeneralQuoteDecisionEditor } from "./general-quote-decision-editor"
 import { GeneralServiceIntakeEditor } from "./general-service-intake-editor"
 import { GeneralServiceWorkEditor } from "./general-service-work-editor"
 import {
@@ -67,6 +69,8 @@ export function GeneralProposalEditor(props: {
   onSave: (payload: GeneralAction) => void
   onCancel: () => void
 }) {
+  if (props.proposal.payload.action === "commerce_quote_approve" || props.proposal.payload.action === "commerce_quote_reject")
+    return <GeneralQuoteDecisionEditor key={`${props.proposal.id}:${props.proposal.revision}`} initial={props.proposal.payload} disabled={props.disabled} onSave={props.onSave} onCancel={props.onCancel} />
   if (
     props.proposal.payload.action === "service_job_assign" ||
     props.proposal.payload.action === "service_job_reschedule" ||

@@ -7,6 +7,7 @@ const reads = new Set([
   "serviceAssistantWork.original",
   "serviceCommerce.assistantBookingDetail",
   "serviceCommerce.assistantQuoteApprovalDetail",
+  "serviceCommerce.assistantQuoteDecisionReview",
   "serviceCommerce.assistantPendingQuoteApprovals",
   "businessReporting.read",
   "businessReporting.itemSales",

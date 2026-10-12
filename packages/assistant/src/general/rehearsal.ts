@@ -42,6 +42,8 @@ export function respondGeneralRehearsal(
     )
   )
     return { kind: "tool", toolName: "readServices", input: {} }
+  if (/^(?:approve|reject) (?:this|the) (?:original )?(?:quotation|quote)\b/i.test(command))
+    return {kind:"tool",toolName:"readPendingQuoteApprovals",input:{}}
   const minor = (value: string) => Math.round(Number(value) * 100)
   // Receipt flows: owner text outside attachment blocks, plus the sent file id.
   const attachmentId = /attachmentId="([^"]{1,128})"/.exec(text)?.[1]
