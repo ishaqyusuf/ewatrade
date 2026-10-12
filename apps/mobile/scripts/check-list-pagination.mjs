@@ -22,31 +22,42 @@ const contracts = [
     ],
   },
   {
-    file: "components/mobile/admin-tabs/admin-orders-screen.tsx",
+    file: "components/mobile/orders/orders-screen.tsx",
     markers: [
       "trpc.orders.listPage.infiniteQueryOptions",
       "orders.fetchNextPage()",
       "shouldShowListSearch",
+      "orders.data?.pages[0]?.totalCount",
     ],
   },
   {
-    file: "components/mobile/customer-book-sheet.tsx",
+    file: "components/mobile/customer-book/use-customer-book.ts",
     markers: [
       "trpc.orders.listPage.infiniteQueryOptions",
-      "trpc.orders.customerCount.queryOptions",
+      "trpc.customers.listPage.infiniteQueryOptions",
       "orders.fetchNextPage()",
     ],
   },
   {
-    file: "components/mobile/catalog-items-sheet.tsx",
+    file: "components/mobile/customer-book/customer-book-screen.tsx",
+    markers: [
+      "orders.fetchNextPage()",
+      "directory.fetchNextPage()",
+      "alwaysShowSearch",
+      "hasMore={hasMoreCustomers}",
+    ],
+  },
+  {
+    file: "components/mobile/catalog/catalog-screen.tsx",
     markers: [
       "trpc.catalog.listItemsPage.infiniteQueryOptions",
       "itemsQuery.fetchNextPage()",
       "shouldShowListSearch",
+      "visibleQuery.data?.pages[0]?.totalCount",
     ],
   },
   {
-    file: "components/mobile/create-sale-sheet.tsx",
+    file: "components/mobile/create-sale/use-create-sale.ts",
     markers: [
       "trpc.catalog.listItemsPage.infiniteQueryOptions",
       "trpc.orders.listPage.infiniteQueryOptions",
@@ -55,12 +66,23 @@ const contracts = [
     ],
   },
   {
-    file: "components/mobile/service-jobs-sheet.tsx",
+    file: "components/mobile/appearances/classic/create-sale-items.tsx",
+    markers: ["onEndReached={fetchNextChoices}"],
+  },
+  {
+    file: "components/mobile/create-sale/create-sale-customer.tsx",
+    markers: ["recentOrders.fetchNextPage()"],
+  },
+  {
+    file: "components/mobile/service-jobs/use-service-jobs.ts",
     markers: [
       "trpc.services.queuePage.infiniteQueryOptions",
-      "jobsQuery.fetchNextPage()",
       "shouldShowListSearch",
     ],
+  },
+  {
+    file: "components/mobile/service-jobs/service-jobs-queue.tsx",
+    markers: ["jobsQuery.fetchNextPage()"],
   },
 ]
 
