@@ -12,6 +12,7 @@ import { BottomSearchFooter } from "@/components/mobile/bottom-search-footer"
 import { EmptyState } from "@/components/mobile/empty-state"
 import { FormField } from "@/components/mobile/form-field"
 import { ListCreateFab } from "@/components/mobile/list-create-fab"
+import { getListCreateFabFooterOffset } from "@/components/mobile/list-create-fab-model"
 import { ListSkeleton } from "@/components/mobile/loading-skeletons"
 import { QueryRefreshControl } from "@/components/mobile/query-refresh-control"
 import { StatusBanner } from "@/components/mobile/status-banner"
@@ -521,7 +522,10 @@ export function CatalogItemsContent({
           accessibilityLabel="Add catalog item"
           bottomOffset={
             showBottomSearch && !(scrollHide.hidden && !query)
-              ? footerHeight
+              ? getListCreateFabFooterOffset({
+                  bottomInset: insets.bottom,
+                  footerHeight,
+                })
               : 0
           }
           dockHidden={dockHidden}
