@@ -13,7 +13,10 @@ import {
 } from "../../generated/prisma/enums"
 import { CatalogError } from "./catalog"
 import { lockCustomerLedgerAccount } from "./customer-ledger/accounts"
-import { lockCommerceFinancialOrder } from "./customer-ledger/commerce-locks"
+import {
+  assertHeldCommerceFinancialOrder,
+  lockCommerceFinancialOrder,
+} from "./customer-ledger/commerce-locks"
 import { lockFinanceBook } from "./finance/access"
 import { assertOrderPaymentAccountInTransaction } from "./finance/order-payment-accounts"
 import { postOrderCollectionInTransaction } from "./finance/posting"
@@ -147,9 +150,14 @@ async function recordCommercialOrderPaymentCore(
     type?: "payment" | "refund"
   },
   creditSource?: { allocationId?: string; releaseId?: string },
+  heldOrder?: NonNullable<
+    Awaited<ReturnType<typeof lockCommerceFinancialOrder>>
+  >,
 ) {
   assertPaymentAmount(input.amountMinor)
-  const financialOrder = await lockCommerceFinancialOrder(tx, input)
+  if (heldOrder) assertHeldCommerceFinancialOrder(tx, heldOrder, input)
+  const financialOrder =
+    heldOrder ?? (await lockCommerceFinancialOrder(tx, input))
   if (!financialOrder) {
     throw new CatalogError("ORDER_NOT_FOUND", "Order not found.")
   }
@@ -404,11 +412,13 @@ async function recordCommercialOrderPaymentCore(
   }
 }
 
+/** A caller already holding this Order's lock passes it to skip re-locking. */
 export async function recordCommercialOrderPaymentInTransaction(
   tx: Prisma.TransactionClient,
   input: Parameters<typeof recordCommercialOrderPaymentCore>[1],
+  heldOrder?: Parameters<typeof recordCommercialOrderPaymentCore>[3],
 ) {
-  return recordCommercialOrderPaymentCore(tx, input)
+  return recordCommercialOrderPaymentCore(tx, input, undefined, heldOrder)
 }
 
 /** Consumes a posted allocation under book -> customer -> Order lock ordering. */

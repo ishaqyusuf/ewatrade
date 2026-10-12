@@ -213,18 +213,22 @@ export async function refundCommercialOrderInTransaction(
         payloadHash,
       })
     : null
-  const payment = await recordCommercialOrderPaymentInTransaction(tx, {
-    actorUserId: input.actorUserId,
-    amountMinor: input.amountMinor,
-    clientPaymentId: `${input.clientOperationId}:refund`,
-    method: input.method,
-    moneyAccountId: input.moneyAccountId,
-    note: input.reason,
-    orderId: input.orderId,
-    reference: input.reference,
-    tenantId: input.tenantId,
-    type: "refund",
-  })
+  const payment = await recordCommercialOrderPaymentInTransaction(
+    tx,
+    {
+      actorUserId: input.actorUserId,
+      amountMinor: input.amountMinor,
+      clientPaymentId: `${input.clientOperationId}:refund`,
+      method: input.method,
+      moneyAccountId: input.moneyAccountId,
+      note: input.reason,
+      orderId: input.orderId,
+      reference: input.reference,
+      tenantId: input.tenantId,
+      type: "refund",
+    },
+    order.locked,
+  )
   if (credit) {
     await tx.commercialOrderCredit.update({
       where: { id: credit.id },
@@ -367,18 +371,22 @@ export async function returnCommercialOrderItemsInTransaction(
   const refundMinor = Math.max(0, order.paid - (order.totalMinor - value))
   let refundPaymentId: string | null = null
   if (refundMinor > 0) {
-    const payment = await recordCommercialOrderPaymentInTransaction(tx, {
-      actorUserId: input.actorUserId,
-      amountMinor: refundMinor,
-      clientPaymentId: `${input.clientOperationId}:refund`,
-      method: input.money.method,
-      moneyAccountId: input.money.moneyAccountId,
-      note: input.reason,
-      orderId: input.orderId,
-      reference: input.money.reference,
-      tenantId: input.tenantId,
-      type: "refund",
-    })
+    const payment = await recordCommercialOrderPaymentInTransaction(
+      tx,
+      {
+        actorUserId: input.actorUserId,
+        amountMinor: refundMinor,
+        clientPaymentId: `${input.clientOperationId}:refund`,
+        method: input.money.method,
+        moneyAccountId: input.money.moneyAccountId,
+        note: input.reason,
+        orderId: input.orderId,
+        reference: input.money.reference,
+        tenantId: input.tenantId,
+        type: "refund",
+      },
+      order.locked,
+    )
     refundPaymentId = payment.id
     await tx.commercialOrderCredit.update({
       where: { id: credit.id },
