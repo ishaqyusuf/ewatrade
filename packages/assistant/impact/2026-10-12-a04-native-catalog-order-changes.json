@@ -1,0 +1,90 @@
+{
+  "version": 1,
+  "id": "2026-10-12-a04-native-catalog-order-changes",
+  "tickets": [
+    "A04"
+  ],
+  "summary": "Declares the mobile client for six existing reviewed catalog and order-change capabilities after adding their native editor and exact native receipt objects. Server policy, procedures, roles and rollout are unchanged. Also preserves unavailable saved actions in shared snapshots/native notices and refuses guessed receipt routes, including payments lacking their original Order link. Source integration does not certify device acceptance.",
+  "capabilities": [
+    {
+      "id": "sales.order.cancel",
+      "change": "changed",
+      "rollout": "source",
+      "note": "Native editor edits the reason; receipt opens the exact native Order. Cancellation stays non-refund."
+    },
+    {
+      "id": "sales.order.metadata.update",
+      "change": "changed",
+      "rollout": "source",
+      "note": "Native keep/clear/set for customer (drafted only), delivery date (native picker) and notes; receipt opens the exact native Order."
+    },
+    {
+      "id": "catalog.price.update",
+      "change": "changed",
+      "rollout": "source",
+      "note": "Native price + reason editor; receipt opens the exact native Product."
+    },
+    {
+      "id": "catalog.details.update",
+      "change": "changed",
+      "rollout": "source",
+      "note": "Native name/description/category editor preserving omitted vs cleared; receipt opens the exact native Product."
+    },
+    {
+      "id": "catalog.identifiers.update",
+      "change": "changed",
+      "rollout": "source",
+      "note": "Native SKU/barcode editor preserving omitted vs cleared; receipt opens the exact native Product."
+    },
+    {
+      "id": "catalog.availability.update",
+      "change": "changed",
+      "rollout": "source",
+      "note": "Native available/unavailable choice for the current Store; receipt opens the exact native Product."
+    }
+  ],
+  "docs": [
+    {
+      "topic": "feature",
+      "path": ".brain/features/assistant-business-operations.md",
+      "status": "local_only",
+      "note": "A04 native checkpoint."
+    },
+    {
+      "topic": "capability",
+      "path": "packages/assistant/src/capabilities/COVERAGE.md",
+      "status": "updated"
+    },
+    {
+      "topic": "api",
+      "path": ".brain/api/contracts.md",
+      "status": "local_only",
+      "note": "Additive saved-snapshot notices and credential-free cache projection; six mobile declarations keep existing server authority."
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "test",
+      "path": "apps/mobile/src/components/mobile/assistant/native-change-values.test.ts",
+      "executed": true,
+      "result": "4 pass, 15 assertions (12 Oct 2026, uncommitted source)."
+    },
+    {
+      "kind": "test",
+      "path": "apps/mobile/src/components/mobile/assistant/native-parity.test.ts",
+      "executed": true,
+      "result": "4 pass; declared mobile writes equal the native editor set (12 Oct 2026, uncommitted source)."
+    },
+    {
+      "kind": "review",
+      "path": "packages/assistant/evaluations/runs/2026-10-12-a04-native-catalog-order-changes.md",
+      "executed": false
+    },
+    {
+      "kind": "review",
+      "path": "packages/assistant/evaluations/runs/2026-10-12-a04-native-editor-coordinator-review.md",
+      "executed": true,
+      "result": "Coordinator source review and current registry inventory; existing 13-case/68-assertion results reused. Exact six client/coverage changes isolated from S05/privacy; device acceptance remains open."
+    }
+  ]
+}

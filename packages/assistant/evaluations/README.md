@@ -16,7 +16,7 @@
 
 [F04 coordinator review](runs/2026-10-12-f04-coordinator-review.md): payout packet starts implementation; derived-money precision and empty resolved-name failures reproduced with valid controls. No live dispatch or acceptance.
 
-[A04 native editor review](runs/2026-10-12-a04-native-editor-coordinator-review.md): six-action editor/caller source checked; existing tests reused, device launch unavailable and native acceptance open.
+[A04 native editor review](runs/2026-10-12-a04-native-editor-coordinator-review.md): six editors plus routing/unavailable-cache safety source reviewed for integration; existing tests reused. Registry covers 12 mobile writes, with 53 wider write gaps; read targets and device acceptance remain open.
 
 [F03 research review](runs/2026-10-12-f03-coordinator-review.md): current official documentation corrects the retry-reference claim and missing approval-URL statuses; merchant/policy/domain acceptance remains open.
 

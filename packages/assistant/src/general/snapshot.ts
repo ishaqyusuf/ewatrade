@@ -22,6 +22,25 @@ export const generalSnapshotSchema = z.object({
     )
     .max(40),
   proposals: z.array(generalProposalSchema).max(60),
+  /**
+   * Saved actions this client cannot show (another client's action, retired
+   * version or receipt format). Kept visible so a draft never silently vanishes.
+   */
+  unavailableProposals: z
+    .array(
+      z.object({
+        id: z.string(),
+        status: z.string(),
+        reason: z.enum([
+          "payload_unavailable",
+          "version_unavailable",
+          "receipt_unavailable",
+          "client_unavailable",
+        ]),
+      }),
+    )
+    .max(60)
+    .default([]),
   activeRunId: z.string().nullable(),
   allowance: z.object({
     remainingRequests: z.number(),

@@ -100,8 +100,8 @@ Tickets refer to the Brain plan `.brain/plans/2026-10-09-assistant-business-oper
 | `sales.product.fulfill` | 1 | write (`product_line_fulfill`) | `draftAction` | OWNER, ADMIN, MANAGER, CASHIER, OPERATOR | orders | dashboard | source | `orders.fulfillProductLine` |
 | `sales.service.authorize` | 1 | write (`service_line_authorize`) | `draftAction` | OWNER, ADMIN, MANAGER | reconciliation | dashboard | source | `orders.authorizeChargeOnlyServiceLine` |
 | `sales.service.fulfill` | 1 | write (`service_line_fulfill`) | `draftAction` | OWNER, ADMIN, MANAGER, CASHIER, OPERATOR | orders | dashboard | source | `orders.fulfillChargeOnlyServiceLine` |
-| `sales.order.cancel` | 1 | write (`order_cancel`) | `draftAction` | OWNER, ADMIN, MANAGER | reconciliation, reconciliation | dashboard | source | `orders.cancel`, `orders.cancellationReview` |
-| `sales.order.metadata.update` | 1 | write (`order_metadata_update`) | `draftAction` | OWNER, ADMIN, MANAGER | reconciliation, reconciliation | dashboard | source | `orders.amendMetadata`, `orders.metadataReview` |
+| `sales.order.cancel` | 1 | write (`order_cancel`) | `draftAction` | OWNER, ADMIN, MANAGER | reconciliation, reconciliation | dashboard, mobile | source | `orders.cancel`, `orders.cancellationReview` |
+| `sales.order.metadata.update` | 1 | write (`order_metadata_update`) | `draftAction` | OWNER, ADMIN, MANAGER | reconciliation, reconciliation | dashboard, mobile | source | `orders.amendMetadata`, `orders.metadataReview` |
 | `sales.order.replace` | 1 | write (`order_replace`) | `draftAction` | OWNER, ADMIN, MANAGER | reconciliation, reconciliation | dashboard | source | `orders.replace`, `orders.replacementReview` |
 | `sales.order.attachment.add` | 1 | write (`order_attachment_add`) | `draftAction` | OWNER, ADMIN, MANAGER, CASHIER, OPERATOR | orders | dashboard, mobile | source | `orders.activity.add` |
 | `search.records` | 1 | read | `searchRecords` | OWNER, ADMIN, MANAGER, CASHIER, OPERATOR | read | dashboard, mobile | source | `search.global` |
@@ -122,10 +122,10 @@ Tickets refer to the Brain plan `.brain/plans/2026-10-09-assistant-business-oper
 | `sales.order.create` | 1 | write (`order_create`) | `draftAction` | OWNER, ADMIN, MANAGER, CASHIER, OPERATOR | orders | dashboard, mobile | source | `orders.create` |
 | `sales.payment.record` | 1 | write (`payment_record`) | `draftAction` | OWNER, ADMIN, MANAGER | orders | dashboard, mobile | source | `orders.recordPayment` |
 | `customers.update` | 1 | write (`customer_update`) | `draftAction` | OWNER, ADMIN, MANAGER | Owner/Admin only | dashboard, mobile | source | `customers.update` |
-| `catalog.price.update` | 1 | write (`product_price_update`) | `draftAction` | OWNER, ADMIN, MANAGER | catalog | dashboard | source | `catalog.updatePrice` |
-| `catalog.details.update` | 1 | write (`product_details_update`) | `draftAction` | OWNER, ADMIN, MANAGER | catalog | dashboard | source | `catalog.updateProductDetails` |
-| `catalog.identifiers.update` | 1 | write (`product_identifiers_update`) | `draftAction` | OWNER, ADMIN, MANAGER | catalog | dashboard | source | `catalog.updateProductIdentifiers` |
-| `catalog.availability.update` | 1 | write (`product_availability_update`) | `draftAction` | OWNER, ADMIN, MANAGER | catalog | dashboard | source | `catalog.setOfferingAvailability` |
+| `catalog.price.update` | 1 | write (`product_price_update`) | `draftAction` | OWNER, ADMIN, MANAGER | catalog | dashboard, mobile | source | `catalog.updatePrice` |
+| `catalog.details.update` | 1 | write (`product_details_update`) | `draftAction` | OWNER, ADMIN, MANAGER | catalog | dashboard, mobile | source | `catalog.updateProductDetails` |
+| `catalog.identifiers.update` | 1 | write (`product_identifiers_update`) | `draftAction` | OWNER, ADMIN, MANAGER | catalog | dashboard, mobile | source | `catalog.updateProductIdentifiers` |
+| `catalog.availability.update` | 1 | write (`product_availability_update`) | `draftAction` | OWNER, ADMIN, MANAGER | catalog | dashboard, mobile | source | `catalog.setOfferingAvailability` |
 | `catalog.units.draft` | 1 | write (`product_unit_configuration_draft`) | `draftAction` | OWNER, ADMIN, MANAGER | catalog, catalog | dashboard | source | `catalog.createUnitConfigurationDraft`, `catalog.updateUnitConfigurationDraft` |
 | `catalog.units.publish` | 1 | write (`product_unit_configuration_publish`) | `draftAction` | OWNER, ADMIN, MANAGER | catalog | dashboard | source | `catalog.publishUnitConfiguration` |
 | `sales.orders.summary` | 1 | read | `readOrderSummary` | OWNER, ADMIN, MANAGER, CASHIER, OPERATOR | read | dashboard | source | `orders.operationalSummary` |

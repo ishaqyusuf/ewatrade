@@ -20,12 +20,33 @@ import { ActionButton } from "../action-button"
 import { CountrySelect } from "../country-select"
 import { FormField } from "../form-field"
 import { QaQuickFillButton } from "../qa-quick-fill-button"
+import { GeneralChangeEditor } from "./general-change-editor"
 import { GeneralProductCreateRows } from "./general-product-create-rows"
 import {
   GeneralProductPictureField,
   useProductPicture,
 } from "./general-product-picture"
-export function GeneralProposalEditor({
+import { isNativeChange } from "./native-change-values"
+import { nativeEditorActions } from "./native-parity"
+export function GeneralProposalEditor(props: {
+  proposal: GeneralProposal
+  currencyCode: string
+  disabled: boolean
+  onSave: (payload: GeneralAction) => void
+}) {
+  const initial = props.proposal.payload
+  return isNativeChange(initial) ? (
+    <GeneralChangeEditor
+      initial={initial}
+      currencyCode={props.currencyCode}
+      disabled={props.disabled}
+      onSave={props.onSave}
+    />
+  ) : (
+    <GeneralRecordEditor {...props} />
+  )
+}
+function GeneralRecordEditor({
   proposal,
   disabled,
   onSave,
@@ -37,9 +58,9 @@ export function GeneralProposalEditor({
   const initial = proposal.payload
   const [payload, setPayload] = useState(initial)
   const [price, setPrice] = useState(
-    "priceMinor" in initial
+    initial.action === "product_create" && "priceMinor" in initial
       ? minorToMajorInput(initial.priceMinor)
-      : "amountMinor" in initial
+      : initial.action === "payment_record"
         ? minorToMajorInput(initial.amountMinor)
         : "",
   )
@@ -59,8 +80,9 @@ export function GeneralProposalEditor({
   const patch = (value: Record<string, unknown>) =>
     setPayload((current) => ({ ...current, ...value }) as GeneralAction)
   const picture = useProductPicture(initial, disabled)
+  const native = nativeEditorActions.has(initial.action)
   const save = async () => {
-    if (disabled || picture.uploading) return
+    if (disabled || picture.uploading || !native) return
     const amount = majorToMinor(price)
     if (
       ((payload.action === "product_create" &&
@@ -109,6 +131,12 @@ export function GeneralProposalEditor({
           paddingBottom: 32,
         }}
       >
+        {native ? null : (
+          <Text className="text-sm text-foreground">
+            Edit this draft on the dashboard. Nothing changes until it is
+            reviewed and confirmed there.
+          </Text>
+        )}
         <Text className="text-sm text-muted-foreground">
           Save changes, then review the updated card before confirming.
         </Text>
@@ -313,7 +341,7 @@ export function GeneralProposalEditor({
           </Text>
         ) : null}
         <ActionButton
-          disabled={disabled || picture.uploading}
+          disabled={disabled || picture.uploading || !native}
           onPress={() => void save()}
         >
           Save draft

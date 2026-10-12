@@ -14,7 +14,7 @@ remain unstarted. Avoid duplicate ownership.
 
 | ID | Deliverable |
 |---|---|
-| A04 | Started, owner retained: native inventory and six catalog/order editors under review. Continue missing native review/editor/receipt-object flows and review repairs. Preserve Setup/product workflows; prepare keyboard, large text, loading, expiry, offline, reload, business-switch and role journeys for acceptance. |
+| A04 | Started, owner retained: native safety and six catalog/order editors reviewed for main integration. Continue missing native review/editor/receipt-object flows and review repairs. Preserve Setup/product workflows; prepare keyboard, large text, loading, expiry, offline, reload, business-switch and role journeys for acceptance. |
 | S05 | Started, owner retained: original three display repairs and exact adjustment filter revalidated. Repair long-label identity and finance-exclusion copy; complete authorized Book-scoped finance, global per-event original objects, connected/privacy/reversal/timezone/role and performance evidence. Preserve unknown attribution and full-result counts. |
 | F01 | Started, owner retained: original source/amount/expiry repairs revalidated. Repair source-currency validation and held-money source binding; complete persisted canonical intent commands and atomic manual/online receipt protection. |
 | F02 | Reviewed payment link and separately confirmed sharing; signed settlement/reconciliation, expiry and duplicate/out-of-order/partial outcomes. Build deterministic provider support before any authorized sandbox run. |

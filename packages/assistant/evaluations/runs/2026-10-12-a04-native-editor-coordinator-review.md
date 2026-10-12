@@ -37,3 +37,42 @@ journeys, exact original objects and same-chat return, fresh edited/expired revi
 offline and scope-switch fences, keyboard and large text, persisted confirmation
 and recovery. The parent A04 also needs native coverage beyond these six actions.
 No additional accepted bookmark; the full 45-ticket objective remains open.
+
+
+## Native safety and integration checkpoint — 12 October 2026
+
+Both ready source packets are reviewed for integration. Shared snapshot parsing
+preserves unavailable proposal IDs/status/reasons and defaults older caches to
+an empty list. Saved projection still strips approval credentials. Native notices
+expose no Edit/Confirm; unsupported receipt kinds return no guessed route. Payment
+Open needs the stored Order link. Existing server authority/edit/re-review remain
+the effect boundary.
+
+Current working-tree inventory:138capabilities(73reads,65writes);10reads and12writes
+declare mobile. One read is the separate unintegrated S05 addition. A04-only
+integration retains main137capabilities(72reads,65writes), with9mobile reads and
+12mobile writes. Six declarations change clients only for four catalog changes
+and order cancellation/metadata; version/procedures/roles/scope/source rollout
+are unchanged. S05 and privacy router/coverage changes are excluded.
+
+Actual nativeParityGaps returns no registry gaps among declared mobile writes;
+53of65writes still lack an editor and/or native receipt kind. The helper skips
+reads and checks write registry membership, not mounted UI or saved object load.
+It cannot certify read targets, Book binding, keyboard/large text, current-role/
+scope behavior or same-chat return. Native answer cards currently render facts/
+text without consuming answer.target; read declarations need explicit object
+support whenever a target is required.
+
+Existing13native assistant cases/68assertions and affected compiler/lint evidence
+are reused, no broad rerun. Frozen source matches the ready packets. Only six
+reviewed manifest client changes and their six matching coverage rows are eligible
+to stage; live S05 capability and privacy summary remain outside the index. Root
+integrates the owner's implementation and continues acceptance; no new assignment
+or runtime activation. Actual native journeys and wider A04 scope remain open.
+A04partial/unbookmarked;13/45webaccepted28.9%,27partial,5unstarted.
+
+The exact 19 staged paths pass H02 impact review with zero errors: client and
+capability areas, six capability-row changes and zero procedure changes.
+All 13 frozen whole-file source/handoff hashes match the index; S05/privacy
+rows and router-summary changes are absent. Staged whitespace checks pass.
+This isolated index review does not claim whole-worktree or hosted CI success.

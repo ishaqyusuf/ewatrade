@@ -37,19 +37,38 @@ export function readGeneralCache(
     return null
   }
 }
+/**
+ * The exact native object for a receipt, or null when this app has no screen
+ * for it. Never fall back to another record type: an Order screen opened with a
+ * stock count or bill ID shows the wrong object or a false "not found".
+ */
 export function generalReceiptRoute(receipt: GeneralReceipt) {
-  if (receipt.kind === "customer")
-    return {
-      pathname: "/customer-ledger/[customerId]" as const,
-      params: { customerId: receipt.recordId },
-    }
-  if (receipt.kind === "product")
-    return {
-      pathname: "/catalog-item/[catalogItemId]" as const,
-      params: { catalogItemId: receipt.recordId },
-    }
-  return {
-    pathname: "/order/[orderId]" as const,
-    params: { orderId: receipt.orderId ?? receipt.recordId },
+  switch (receipt.kind) {
+    case "customer":
+      return {
+        pathname: "/customer-ledger/[customerId]" as const,
+        params: { customerId: receipt.recordId },
+      }
+    case "product":
+      return {
+        pathname: "/catalog-item/[catalogItemId]" as const,
+        params: { catalogItemId: receipt.recordId },
+      }
+    case "order":
+      return {
+        pathname: "/order/[orderId]" as const,
+        params: { orderId: receipt.orderId ?? receipt.recordId },
+      }
+    case "payment":
+      // A payment opens its Order only through the stored link; a payment ID
+      // is never an Order ID.
+      return receipt.orderId
+        ? {
+            pathname: "/order/[orderId]" as const,
+            params: { orderId: receipt.orderId },
+          }
+        : null
+    default:
+      return null
   }
 }

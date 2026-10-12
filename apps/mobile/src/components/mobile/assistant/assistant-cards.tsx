@@ -134,12 +134,15 @@ export function ResultCard({
   title,
   detail,
   media,
+  unavailable,
   onOpen,
 }: {
   title: string
   detail: string
   /** A photo of what was saved, beside the text. */
   media?: ReactNode
+  /** Why the saved record has no native screen; replaces Open. */
+  unavailable?: string
   onOpen?: () => void
 }) {
   return (
@@ -153,11 +156,48 @@ export function ResultCard({
           <Text className="text-xs text-tint-mint-foreground">{detail}</Text>
         </View>
       </View>
-      {onOpen ? (
+      {unavailable ? (
+        <Text className="text-xs text-tint-mint-foreground">{unavailable}</Text>
+      ) : onOpen ? (
         <ActionButton variant="outline" onPress={onOpen}>
           Open record
         </ActionButton>
       ) : null}
+    </View>
+  )
+}
+/** A saved action this app cannot show; its record is kept, never dropped. */
+export function UnavailableProposalCard({
+  row,
+}: {
+  row: {
+    status: string
+    reason:
+      | "payload_unavailable"
+      | "version_unavailable"
+      | "receipt_unavailable"
+      | "client_unavailable"
+  }
+}) {
+  return (
+    <View
+      accessibilityRole="summary"
+      className="gap-1 rounded-[18px] border border-border bg-card p-3"
+    >
+      <Text className="text-sm font-bold text-foreground">
+        Saved action unavailable here
+      </Text>
+      <Text className="text-xs text-muted-foreground">
+        Saved status: {row.status.toLowerCase()}
+      </Text>
+      <Text className="text-sm text-foreground">
+        {row.reason === "client_unavailable"
+          ? "Review, edit or confirm this action on the dashboard."
+          : row.reason === "receipt_unavailable"
+            ? "Its saved receipt can't be shown in this app version."
+            : "It uses a format this app version can't show."}{" "}
+        Its record has been kept.
+      </Text>
     </View>
   )
 }

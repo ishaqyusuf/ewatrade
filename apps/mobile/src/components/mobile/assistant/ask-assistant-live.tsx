@@ -21,6 +21,7 @@ import {
   AssistantAnswerCard,
   ProposalCard,
   ResultCard,
+  UnavailableProposalCard,
 } from "./assistant-cards"
 import { AssistantChatBox } from "./assistant-chat-box"
 import { AssistantChatRow, AssistantHome } from "./assistant-home"
@@ -312,6 +313,9 @@ export function AskAssistantLive() {
           ListFooterComponent={
             <View className="gap-4 pt-3">
               {vm.busy ? <AssistantThinking /> : null}
+              {vm.data?.unavailableProposals.map((row) => (
+                <UnavailableProposalCard key={row.id} row={row} />
+              ))}
               {vm.data?.proposals.map((proposal) => (
                 <View key={proposal.id} className="gap-3">
                   {proposal.receipt ? (
@@ -325,9 +329,16 @@ export function AskAssistantLive() {
                           />
                         ) : undefined
                       }
+                      unavailable={
+                        generalReceiptRoute(proposal.receipt)
+                          ? undefined
+                          : "Saved. Open this record on the dashboard."
+                      }
                       onOpen={() => {
-                        if (!proposal.receipt) return
-                        router.push(generalReceiptRoute(proposal.receipt))
+                        const route =
+                          proposal.receipt &&
+                          generalReceiptRoute(proposal.receipt)
+                        if (route) router.push(route)
                       }}
                     />
                   ) : (
@@ -461,6 +472,7 @@ export function AskAssistantLive() {
             <GeneralProposalEditor
               key={`${editing.id}:${editing.revision}`}
               proposal={editing}
+              currencyCode={vm.data?.currencyCode ?? "NGN"}
               disabled={disabled || !!noAccess}
               onSave={async (payload) => {
                 if (await vm.save(editing, payload)) {

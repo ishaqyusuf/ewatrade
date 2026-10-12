@@ -24,7 +24,7 @@ accepted milestone is recorded; it does not assert that no related source exists
 | A01 | Capability inventory and manifest | ✓ Complete | 🔖 Accepted |
 | A02 | Execution adapter boundary | ✓ Complete | 🔖 Accepted |
 | A03 | Dashboard GENERAL chat | ✓ Complete | 🔖 Accepted |
-| A04 | Native acceptance and parity | ◐ Partial — native inventory and six catalog/order editors under review; device proof pending | Pending |
+| A04 | Native acceptance and parity | ◐ Partial — native safety and six editors source reviewed; wider parity/device acceptance pending | Pending |
 | A05 | Controlled availability and read baseline | ✓ Complete | 🔖 Accepted |
 | B01 | Customer create/update | ✓ Complete | 🔖 Accepted |
 | B02 | Product editing | ✓ Complete | 🔖 Accepted |
