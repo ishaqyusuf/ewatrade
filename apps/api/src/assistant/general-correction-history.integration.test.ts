@@ -2,6 +2,7 @@ import { expect, test } from "bun:test"
 import { prisma as db } from "@ewatrade/db"
 import { getActiveTenantForUser } from "@ewatrade/db/queries"
 import { startGeneralConversation } from "@ewatrade/db/assistant-general"
+import type { TRPCContext } from "../trpc/init"
 import { assistantRouter } from "../trpc/routers/assistant"
 
 const enabled =
@@ -11,10 +12,10 @@ const enabled =
 test.skipIf(!enabled)(
   "protected correction history reads completed DTOs without approval tokens",
   async () => {
-    const [{ database }] = await db.$queryRaw<
+    const [row] = await db.$queryRaw<
       Array<{ database: string }>
     >`SELECT current_database() AS database`
-    if (database !== "ewatrade_qa_v1") throw Error("Local QA only")
+    if (row?.database !== "ewatrade_qa_v1") throw Error("Local QA only")
     const user = await db.user.findUniqueOrThrow({
       where: { email: "video.20261008-video-v1.web.bakery@ishaq.qa.test" },
     })
@@ -75,17 +76,25 @@ test.skipIf(!enabled)(
           },
         })
       }
-      const ctx = {
+      const ctx: TRPCContext = {
         db,
         tenantContext,
         session: { session, user },
         requestHeaders: new Headers({ "x-assistant-client": "dashboard" }),
         requestId: crypto.randomUUID(),
         isInternalRequest: false,
+        tenantSlug: null,
+        tenantId: null,
+        cfRay: null,
+        forcePrimary: false,
+        origin: null,
+        clientIp: null,
+        privacyClientIp: null,
+        userAgent: null,
+        activeStoreId: null,
+        qaSessionScope: null,
       }
-      const caller = assistantRouter.createCaller(
-        ctx as Parameters<typeof assistantRouter.createCaller>[0],
-      )
+      const caller = assistantRouter.createCaller(ctx)
       const result = await caller.conversation({
         conversationId: conversation.id,
       })

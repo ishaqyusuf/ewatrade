@@ -7,7 +7,7 @@ test("purchase lookup requires Book and refuses caller authority or pagination o
   expect(generalPurchaseInput.safeParse({ billId: "bill" }).success).toBe(false)
 })
 test("purchase projection bounds histories while preserving exact settlement and source evidence", () => {
-  const history = Array.from({ length: 11 }, (_, i) => ({ id: `row-${i}`, reversedAt: i === 0 ? "2026-10-01" : null }))
+  const history = Array.from({ length: 11 }, (_, i) => ({ id: `row-${i}`, reversedAt: i === 0 ? new Date("2026-10-01") : null }))
   const bill = { id: "bill", cashPaidMinor: "100", activeAllocatedMinor: "300", releasedAllocationMinor: "50", paidMinor: "400", outstandingMinor: "600", recognitionId: "recognition", coverage: { receipts: "SEPARATE_RECOGNITION_SOURCE" }, lines: [{ receipt: null }], payments: history, paymentsHasMore: false, supplierEntries: history, supplierEntriesHasMore: false, allocations: [{ id: "allocation", releases: history, releasesHasMore: false }], allocationsHasMore: true } as unknown as Parameters<typeof generalPurchaseData>[0]
   const data = generalPurchaseData(bill)
   expect(data.payments).toHaveLength(10)
@@ -15,7 +15,7 @@ test("purchase projection bounds histories while preserving exact settlement and
   expect(data.allocations[0]!.releases).toHaveLength(10)
   expect(data.allocations[0]!.releasesHasMore).toBe(true)
   expect(data).toMatchObject({ cashPaidMinor: "100", activeAllocatedMinor: "300", releasedAllocationMinor: "50", paidMinor: "400", outstandingMinor: "600", paymentsHasMore: true, supplierEntriesHasMore: true, allocationsHasMore: true, recognitionId: "recognition", coverage: bill.coverage, lines: bill.lines })
-  expect(data.payments[0]!.reversedAt).toBe("2026-10-01")
+  expect(data.payments[0]!.reversedAt).toEqual(new Date("2026-10-01"))
   const empty = generalPurchaseData({ ...bill, payments: [], supplierEntries: [], allocations: [], allocationsHasMore: false })
   expect([empty.paymentsHasMore,empty.supplierEntriesHasMore,empty.allocationsHasMore]).toEqual([false,false,false])
 })

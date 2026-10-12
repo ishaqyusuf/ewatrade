@@ -62,7 +62,7 @@ test("history answer transports exact filters and stays within saved answer boun
       eventType: "SUSPENDED" as const, source: "RetailOpsStaffLifecycleEvent" as const,
       subject: {coverage:"available" as const,membershipId:"member",userId:"user",name:"Long QA name ".repeat(100),email:"staff@example.test"},
       actor: {coverage:"unavailable" as const,membershipId:null,userId:null,name:null,email:null},
-      reason:"Large original reason ".repeat(100),before:{role:null,status:"ACTIVE"},after:{role:null,status:"SUSPENDED"},
+      reason:"Large original reason ".repeat(100),before:{role:null,status:"ACTIVE" as const},after:{role:null,status:"SUSPENDED" as const},
     })), total: 100, knownMatchingEvents: 100, nextCursor: "continuation",
     asOf: "2026-10-12T00:00:00Z", scope: "tenant_staff_history" as const,
     coverage: { history: "partial" as const, lifecycle: "available" as const,
