@@ -11,18 +11,28 @@ import {
   Button,
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuGroup,
   DropdownMenuItem,
+  DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
   cn,
 } from "@ewatrade/ui"
 import {
   ArrowDown01Icon,
+  ArrowRight01Icon,
+  ArrowTurnBackwardIcon,
+  ArrowUp01Icon,
+  Calendar03Icon,
+  Cancel02Icon,
   CreditCardIcon,
   Invoice01Icon,
   PackageIcon,
+  PackageReceiveIcon,
   PencilEdit02Icon,
   SparklesIcon,
+  SquareLock01Icon,
+  UserIcon,
 } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { useQuery } from "@tanstack/react-query"
@@ -44,6 +54,7 @@ import {
   ReturnItemsDialog,
 } from "./order-money-dialogs"
 import {
+  type OrderChangeOptions,
   type OverviewOrder,
   canFulfilLine,
   formatOrderDateTime,
@@ -242,7 +253,10 @@ export function OrderOverview({
         </Button>
       ) : null}
       <ChangeMenu
+        order={order}
+        options={options}
         option={option}
+        timeZone={timeZone}
         onSelect={(key) =>
           setDialog(
             key === "returnLine"
@@ -531,25 +545,96 @@ export function OrderOverview({
   )
 }
 
-const MENU: Array<{ key: ChangeKey; label: string; separated?: boolean }> = [
-  { key: "customer", label: "Customer" },
-  { key: "details", label: "Delivery and note" },
-  { key: "items", label: "Items and prices" },
-  { key: "refund", label: "Refund", separated: true },
-  { key: "returnLine", label: "Return an item" },
-  { key: "cancel", label: "Cancel order", separated: true },
-]
+const TINT = {
+  amber: "bg-amber-500/15 text-amber-700 dark:text-amber-300",
+  rose: "bg-red-500/15 text-red-700 dark:text-red-300",
+  sky: "bg-sky-500/15 text-sky-700 dark:text-sky-300",
+  violet: "bg-violet-500/15 text-violet-700 dark:text-violet-300",
+}
 
-/** Every change stays listed; locked ones say why in plain words. */
+/**
+ * Design 03 "Can do now" (as on mobile): what works now comes first with a
+ * short hint, and locked changes fold under "Locked" with their reasons.
+ * Once money or stock has moved, Return and Refund lead.
+ */
 function ChangeMenu({
+  order,
+  options,
   option,
+  timeZone,
   onSelect,
 }: {
+  order: OverviewOrder
+  options: OrderChangeOptions | undefined
   option: (key: ChangeKey) => { allowed: boolean; reason: string | null }
+  timeZone?: string
   onSelect: (key: ChangeKey) => void
 }) {
+  const [showLocked, setShowLocked] = useState(false)
+  const money = (value: number) => orderMoney(value, order.currencyCode)
+  const moved =
+    order.amountPaidMinor > 0 ||
+    order.lines.some(
+      (line) => line.productFulfillments.length > 0 || line.serviceFulfillment,
+    )
+  const rows: Array<{
+    key: ChangeKey
+    label: string
+    meta: string
+    icon: typeof PackageIcon
+    tint: keyof typeof TINT
+  }> = [
+    {
+      key: "returnLine",
+      label: "Return items",
+      meta: "Stock back, and money if you want",
+      icon: PackageReceiveIcon,
+      tint: "amber",
+    },
+    {
+      key: "refund",
+      label: "Refund",
+      meta: `Up to ${money(options?.refund.refundableMinor ?? order.amountPaidMinor)}`,
+      icon: ArrowTurnBackwardIcon,
+      tint: "rose",
+    },
+    {
+      key: "details",
+      label: "Delivery and note",
+      meta: order.deliveryDueAt
+        ? formatOrderDateTime(order.deliveryDueAt, timeZone)
+        : "No delivery time",
+      icon: Calendar03Icon,
+      tint: "sky",
+    },
+    {
+      key: "customer",
+      label: "Customer",
+      meta: order.customerName || "Walk-in customer",
+      icon: UserIcon,
+      tint: "violet",
+    },
+    {
+      key: "items",
+      label: "Items and prices",
+      meta: "Change quantity or price",
+      icon: PencilEdit02Icon,
+      tint: "amber",
+    },
+    {
+      key: "cancel",
+      label: "Cancel order",
+      meta: "Releases reserved stock",
+      icon: Cancel02Icon,
+      tint: "rose",
+    },
+  ]
+  // Before money or stock moves, editing the order comes first.
+  const ordered = moved ? rows : [...rows.slice(2), ...rows.slice(0, 2)]
+  const open = ordered.filter((row) => option(row.key).allowed)
+  const locked = ordered.filter((row) => !option(row.key).allowed)
   return (
-    <DropdownMenu>
+    <DropdownMenu onOpenChange={(next) => !next && setShowLocked(false)}>
       <DropdownMenuTrigger
         render={
           <Button variant="outline">
@@ -559,44 +644,98 @@ function ChangeMenu({
           </Button>
         }
       />
-      <DropdownMenuContent appearance="dashboard" align="end" className="w-72">
-        {MENU.map((item) => {
-          const state = option(item.key)
-          return (
-            <MenuRow key={item.key} separated={item.separated}>
-              <DropdownMenuItem
-                disabled={!state.allowed}
-                className={cn(
-                  "flex-col items-start gap-0.5 py-2",
-                  item.key === "cancel" && state.allowed && "text-destructive",
-                )}
-                onClick={() => state.allowed && onSelect(item.key)}
-              >
-                <span className="text-sm">{item.label}</span>
-                {!state.allowed && state.reason ? (
-                  <LockedReason reason={state.reason} wrap />
-                ) : null}
-              </DropdownMenuItem>
-            </MenuRow>
-          )
-        })}
+      <DropdownMenuContent
+        appearance="dashboard"
+        align="end"
+        className="w-80 max-w-[calc(100vw-2rem)]"
+      >
+        {!options ? (
+          <DropdownMenuItem disabled className="py-2">
+            <LockedReason reason={option("details").reason ?? "Checking…"} />
+          </DropdownMenuItem>
+        ) : (
+          <>
+            <DropdownMenuGroup>
+              <DropdownMenuLabel className="text-[11px] font-semibold tracking-wide uppercase">
+                Can do now
+              </DropdownMenuLabel>
+              {open.length ? (
+                open.map((row) => (
+                  <DropdownMenuItem
+                    key={row.key}
+                    variant={row.key === "cancel" ? "destructive" : "default"}
+                    className="items-center gap-3 py-2"
+                    onClick={() => onSelect(row.key)}
+                  >
+                    <span
+                      className={cn(
+                        "grid size-7 shrink-0 place-items-center rounded-md",
+                        TINT[row.tint],
+                      )}
+                    >
+                      <HugeiconsIcon icon={row.icon} className="size-4" />
+                    </span>
+                    <span className="grid min-w-0 flex-1">
+                      <span className="text-sm">{row.label}</span>
+                      <span className="truncate text-xs text-muted-foreground">
+                        {row.meta}
+                      </span>
+                    </span>
+                    <HugeiconsIcon
+                      icon={ArrowRight01Icon}
+                      className="size-4 text-muted-foreground"
+                    />
+                  </DropdownMenuItem>
+                ))
+              ) : (
+                <DropdownMenuItem disabled className="py-2 text-xs">
+                  Nothing can change right now.
+                </DropdownMenuItem>
+              )}
+            </DropdownMenuGroup>
+            {locked.length ? (
+              <>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  closeOnClick={false}
+                  aria-expanded={showLocked}
+                  className="justify-between py-2 text-xs text-muted-foreground"
+                  onClick={() => setShowLocked((current) => !current)}
+                >
+                  Locked ({locked.length})
+                  <HugeiconsIcon
+                    icon={showLocked ? ArrowUp01Icon : ArrowDown01Icon}
+                    className="size-4"
+                  />
+                </DropdownMenuItem>
+                {showLocked
+                  ? locked.map((row) => (
+                      <DropdownMenuItem
+                        key={row.key}
+                        disabled
+                        className="items-start gap-3 py-2 data-disabled:opacity-75"
+                      >
+                        <span className="grid size-7 shrink-0 place-items-center rounded-md bg-muted text-muted-foreground">
+                          <HugeiconsIcon
+                            icon={SquareLock01Icon}
+                            className="size-4"
+                          />
+                        </span>
+                        <span className="grid min-w-0 flex-1">
+                          <span className="text-sm">{row.label}</span>
+                          <span className="text-xs whitespace-normal text-muted-foreground">
+                            {option(row.key).reason ?? "Not available"}
+                          </span>
+                        </span>
+                      </DropdownMenuItem>
+                    ))
+                  : null}
+              </>
+            ) : null}
+          </>
+        )}
       </DropdownMenuContent>
     </DropdownMenu>
-  )
-}
-
-function MenuRow({
-  separated,
-  children,
-}: {
-  separated?: boolean
-  children: ReactNode
-}) {
-  return (
-    <>
-      {separated ? <DropdownMenuSeparator /> : null}
-      {children}
-    </>
   )
 }
 
