@@ -42,7 +42,7 @@ test("allocation release requires an exact original source, positive exact amoun
   expect(generalActionSummary(payload, "NGN")).toContain(payload.reason)
   expect(capabilityForAction(payload.action)).toMatchObject({
     id: "finance.supplier.allocation.release",
-    rollout: "planned",
+    rollout: "source",
     scope: "book",
     clients: ["dashboard"],
     policy: { roles: ["OWNER", "ADMIN"] },

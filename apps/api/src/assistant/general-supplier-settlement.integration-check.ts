@@ -33,11 +33,25 @@ export async function verifySupplierSettlementProposalRollback(
   if (
     app.payload.action !== "supplier_advance" &&
     app.payload.action !== "supplier_advance_allocate" &&
-    app.payload.action !== "purchase_payment"
+    app.payload.action !== "purchase_payment" &&
+    app.payload.action !== "supplier_allocation_release"
   )
     throw Error("An exact pending supplier settlement proposal is required")
   const bookId = app.payload.bookId
-  const billId = "billId" in app.payload ? app.payload.billId : null
+  const billId =
+    "billId" in app.payload
+      ? app.payload.billId
+      : app.payload.action === "supplier_allocation_release"
+        ? (
+            await db.financeSupplierAllocation.findFirstOrThrow({
+              where: {
+                id: app.payload.allocationId,
+                bookId: app.payload.bookId,
+              },
+              select: { billId: true },
+            })
+          ).billId
+        : null
   await db.financeBook.findFirstOrThrow({
     where: { id: bookId, tenantId },
     select: { id: true },
@@ -56,6 +70,9 @@ export async function verifySupplierSettlementProposalRollback(
     supplierEntries: await db.financeSupplierEntry.count({ where: { bookId } }),
     payments: await db.financeBillPayment.count({ where: { bookId } }),
     allocations: await db.financeSupplierAllocation.count({
+      where: { bookId },
+    }),
+    releases: await db.financeSupplierAllocationRelease.count({
       where: { bookId },
     }),
     paid: billId
@@ -203,6 +220,56 @@ export async function verifySupplierSettlementProposalRollback(
   expect(failure?.message).toBe("SUPPLIER_PROPOSAL_ROLLBACK")
   expect(after).toEqual(before)
   expect(pending).toBe(true)
+  let staleProof: { elapsedMs: number; savedFactsUnchanged: boolean } | null =
+    null
+  if (app.payload.action === "supplier_allocation_release" && billId) {
+    const changedDb = new Proxy(db, {
+      get(target, key) {
+        if (key === "$transaction")
+          return <T>(
+            run: (tx: Prisma.TransactionClient) => Promise<T>,
+            options?: Parameters<typeof db.$transaction>[1],
+          ) =>
+            target.$transaction(async (tx) => {
+              const changed = await tx.financeBill.updateMany({
+                where: { id: billId, bookId, paidMinor: { gt: 0n } },
+                data: { paidMinor: { decrement: 1n } },
+              })
+              expect(changed.count).toBe(1)
+              await run(tx)
+              throw Error("STALE_RELEASE_DID_NOT_REFUSE")
+            }, options)
+        const value = Reflect.get(target, key)
+        return typeof value === "function" ? value.bind(target) : value
+      },
+    })
+    const staleStarted = performance.now()
+    let staleFailure: unknown
+    try {
+      await decideGeneralProposal(
+        { ...ctx, db: changedDb },
+        {
+          proposalId,
+          revision: app.revision,
+          decision: "confirm",
+          approvalToken: app.approvalToken,
+        },
+      )
+    } catch (error) {
+      staleFailure = error
+    }
+    expect(staleFailure).toMatchObject({ code: "CONFLICT" })
+    expect(
+      staleFailure instanceof Error
+        ? staleFailure.message
+        : String(staleFailure),
+    ).toContain("Review again")
+    expect(await facts()).toEqual(before)
+    staleProof = {
+      elapsedMs: performance.now() - staleStarted,
+      savedFactsUnchanged: true,
+    }
+  }
   const operations: Record<string, { calls: number; ms: number }> = {}
   for (const call of calls) {
     const group = (operations[call.operation] ??= { calls: 0, ms: 0 })
@@ -220,5 +287,6 @@ export async function verifySupplierSettlementProposalRollback(
       Object.entries(operations).sort((a, b) => b[1].ms - a[1].ms),
     ),
     rollbackVerified: true,
+    staleProof,
   }
 }

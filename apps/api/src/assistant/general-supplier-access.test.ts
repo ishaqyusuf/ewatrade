@@ -11,6 +11,7 @@ afterAll(() => {
   process.env.ASSISTANT_APPROVAL_SIGNING_KEY = previousKey
 })
 const ids = [
+  "finance.supplier.allocation.release",
   "finance.supplier.create",
   "finance.suppliers.read",
   "finance.supplier_statement.read",
@@ -52,7 +53,7 @@ function actor(role: string, plan = "pro", scoped = false) {
   } as unknown as GeneralContext
 }
 test("all supplier/purchase tools keep Owner/Admin finance authority across roles and scoped staff", () => {
-  expect(capabilities).toHaveLength(12)
+  expect(capabilities).toHaveLength(13)
   for (const role of ["OWNER", "ADMIN", "MANAGER", "CASHIER", "OPERATOR"]) {
     const ctx = actor(role)
     const allowed = role === "OWNER" || role === "ADMIN"

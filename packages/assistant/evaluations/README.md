@@ -35,6 +35,8 @@ separate evidence; do not import them as successful model evaluations.
 
 ## Recorded non-model evidence
 
+- [Supplier allocation release full proposal and web, 12 October 2026](runs/2026-10-12-allocation-release-web.md): private locked preparation removes duplicate proof reads; signed completion rollback19.90s and stale refusal preserve facts. Actual Edit/re-review/Confirm/Open/Close/reload, exact original allocation/release/journal/payable/advance and concurrent recovery pass. Source-available; E05 partial, five other canonical procedures pending.
+
 - [Supplier allocation release source, 12 October 2026](runs/2026-10-12-allocation-release-source.md): strict proposal, shared canonical original-proof review and web editor;10 tests/445 assertions/scoped types pass. Exact QA review, command/journal/paid readback and replay roll back with facts unchanged. Component screenshot retained; full signed proposal/chat acceptance pending, capability planned, E05 partial.
 
 - [Supplier acceptance audit and signed receipt guards, 12 October 2026](runs/2026-10-12-supplier-acceptance-audit.md): nine real signed refusal probes preserve saved facts; focused role/plan/security/legal tests pass. Six distinct canonical procedures still need assistant implementation and acceptance. E05 remains partial and unbookmarked.

@@ -5,7 +5,7 @@ import {
 } from "@ewatrade/assistant/general/contracts"
 import {
   getFinanceSupplierAllocationReleaseReview,
-  releaseFinanceSupplierAllocationInTransaction,
+  prepareReviewedFinanceSupplierAllocationReleaseInTransaction,
 } from "@ewatrade/db/queries"
 import type {
   GeneralActionAdapter,
@@ -15,14 +15,10 @@ import { requireGeneralScope } from "./general-context"
 import { assertFinanceAccess } from "../trpc/finance-procedure"
 
 type Action = Extract<GeneralAction, { action: "supplier_allocation_release" }>
-async function current(
-  ctx: GeneralTransactionContext,
-  payload: Action,
-  lockBook = false,
-) {
+function inputFor(ctx: GeneralTransactionContext, payload: Action) {
   const scope = requireGeneralScope(ctx)
   assertFinanceAccess(ctx.tenantContext)
-  const input = {
+  return {
     tenantId: scope.tenantId,
     actorUserId: scope.userId,
     bookId: payload.bookId,
@@ -31,21 +27,26 @@ async function current(
     effectiveAt: new Date(payload.effectiveAt),
     reason: payload.reason,
   }
-  const review = await getFinanceSupplierAllocationReleaseReview(
-    ctx.db,
-    input,
-    lockBook,
-  )
+}
+function target(
+  review: Awaited<ReturnType<typeof getFinanceSupplierAllocationReleaseReview>>,
+) {
   return {
-    input,
-    review,
-    target: {
-      id: review.allocationId,
-      revision: createHash("sha256")
-        .update(JSON.stringify(review))
-        .digest("hex"),
-    },
+    id: review.allocationId,
+    revision: createHash("sha256").update(JSON.stringify(review)).digest("hex"),
   }
+}
+async function current(ctx: GeneralTransactionContext, payload: Action) {
+  const input = inputFor(ctx, payload)
+  const review = await getFinanceSupplierAllocationReleaseReview(ctx.db, input)
+  return { review, target: target(review) }
+}
+async function prepared(ctx: GeneralTransactionContext, payload: Action) {
+  const p = await prepareReviewedFinanceSupplierAllocationReleaseInTransaction(
+    ctx.db,
+    inputFor(ctx, payload),
+  )
+  return { ...p, target: target(p.review) }
 }
 export function supplierAllocationReleaseReviewLines(
   r: Awaited<ReturnType<typeof getFinanceSupplierAllocationReleaseReview>>,
@@ -64,13 +65,11 @@ async function execute(
   ctx: GeneralTransactionContext,
   payload: Action,
   key: string,
-  prepared?: Awaited<ReturnType<typeof current>>,
+  preparation?: Awaited<ReturnType<typeof prepared>>,
 ) {
-  const { input, review } = prepared ?? (await current(ctx, payload, true))
-  await releaseFinanceSupplierAllocationInTransaction(ctx.db, {
-    ...input,
-    clientCommandId: key,
-  })
+  const p = preparation ?? (await prepared(ctx, payload))
+  const { review } = p
+  await p.execute(key)
   return {
     kind: "finance_purchase_bill" as const,
     recordId: review.billId,
@@ -94,7 +93,7 @@ export const supplierAllocationRelease = {
     }
   },
   async prepareExecution(ctx, payload) {
-    const p = await current(ctx, payload, true)
+    const p = await prepared(ctx, payload)
     return { target: p.target, execute: (key) => execute(ctx, payload, key, p) }
   },
   execute,

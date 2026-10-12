@@ -830,9 +830,12 @@ async function reviewSupplierAllocationReleaseSource(
   return { allocation, bill, payable, advanceEntry, advance, unreleased }
 }
 
-export async function releaseFinanceSupplierAllocationInTransaction(
+async function executeFinanceSupplierAllocationRelease(
   tx: Transaction,
   input: ReleaseFinanceSupplierAllocationInput,
+  preparedSource?: Awaited<
+    ReturnType<typeof reviewSupplierAllocationReleaseSource>
+  >,
 ) {
   const amount = financeAmount(input.amountMinor)
   requirePurchaseDate(input.effectiveAt)
@@ -845,7 +848,8 @@ export async function releaseFinanceSupplierAllocationInTransaction(
     { ...payload, reason },
     async (book) => {
       const { allocation, bill, payable, advance } =
-        await reviewSupplierAllocationReleaseSource(tx, input, book.id)
+        preparedSource ??
+        (await reviewSupplierAllocationReleaseSource(tx, input, book.id))
       const releaseId = randomUUID()
       const posted = await postFinanceJournalInTransaction(tx, {
         ...input,
@@ -1196,7 +1200,7 @@ export async function getFinanceSupplierAllocationReview(
   }
 }
 
-export async function getFinanceSupplierAllocationReleaseReview(
+async function loadFinanceSupplierAllocationReleaseReview(
   tx: Transaction,
   input: Omit<ReleaseFinanceSupplierAllocationInput, "clientCommandId">,
   lockBook = false,
@@ -1204,8 +1208,9 @@ export async function getFinanceSupplierAllocationReleaseReview(
   const amount = financeAmount(input.amountMinor)
   const reason = text(input.reason, "release reason")
   const book = await settlementReviewBook(tx, input, lockBook)
+  const source = await reviewSupplierAllocationReleaseSource(tx, input, book.id)
   const { allocation, bill, payable, advanceEntry, advance, unreleased } =
-    await reviewSupplierAllocationReleaseSource(tx, input, book.id)
+    source
   const [supplier, allocated, released] = await Promise.all([
     tx.financeSupplierAccount.findFirstOrThrow({
       where: { id: allocation.supplierId, bookId: book.id },
@@ -1227,7 +1232,7 @@ export async function getFinanceSupplierAllocationReleaseReview(
     advanceEntry.amountMinor -
     (allocated._sum.amountMinor ?? 0n) +
     (released._sum.amountMinor ?? 0n)
-  return {
+  const review = {
     bookId: book.id,
     currencyCode: book.currencyCode,
     startsAt: book.startsAt.toISOString(),
@@ -1266,5 +1271,63 @@ export async function getFinanceSupplierAllocationReleaseReview(
     reason,
     effect: "RELEASE_EXISTING_SUPPLIER_ALLOCATION" as const,
     moneyTransfer: "NOT_PERFORMED" as const,
+  }
+  return { review, source }
+}
+
+export async function getFinanceSupplierAllocationReleaseReview(
+  tx: Transaction,
+  input: Omit<ReleaseFinanceSupplierAllocationInput, "clientCommandId">,
+  lockBook = false,
+) {
+  return (await loadFinanceSupplierAllocationReleaseReview(tx, input, lockBook))
+    .review
+}
+
+export async function releaseFinanceSupplierAllocationInTransaction(
+  tx: Transaction,
+  input: ReleaseFinanceSupplierAllocationInput,
+) {
+  return executeFinanceSupplierAllocationRelease(tx, input)
+}
+
+/** Private source proof is loaded under the Book lock and remains in this transaction's closure. */
+export async function prepareReviewedFinanceSupplierAllocationReleaseInTransaction(
+  tx: Transaction,
+  input: Omit<ReleaseFinanceSupplierAllocationInput, "clientCommandId">,
+) {
+  const owned = {
+    tenantId: input.tenantId,
+    actorUserId: input.actorUserId,
+    bookId: input.bookId,
+    allocationId: input.allocationId,
+    amountMinor: input.amountMinor,
+    effectiveAt: new Date(input.effectiveAt),
+    reason: input.reason,
+  }
+  const { review, source } = await loadFinanceSupplierAllocationReleaseReview(
+    tx,
+    owned,
+    true,
+  )
+  let commandId: string | undefined
+  let execution:
+    | ReturnType<typeof executeFinanceSupplierAllocationRelease>
+    | undefined
+  return {
+    review,
+    execute: (clientCommandId: string) => {
+      if (commandId !== undefined && commandId !== clientCommandId)
+        throw new FinanceError(
+          "CONFLICT",
+          "Prepared release is bound to one command.",
+        )
+      commandId = clientCommandId
+      return (execution ??= executeFinanceSupplierAllocationRelease(
+        tx,
+        { ...owned, clientCommandId },
+        source,
+      ))
+    },
   }
 }

@@ -95,16 +95,16 @@ category label and changed valuation pool. Evidence:
 D02/D03 financial source performance and E02 credit-release web acceptance also
 remain open; E03/E04 full browser confirmation remains open.
 
-E05's remaining canonical procedures have **no accepted assistant milestone**:
+Canonical procedure checklist within E05 (the parent remains partial):
 
 - [ ] `finance.recordPurchase` — direct purchase recording.
 - [ ] `finance.recordSupplierOpening` — supplier opening balances.
-- [ ] `finance.releaseSupplierAllocation` — source, canonical rollback/replay and web editor verified; full signed proposal/chat acceptance next. [Evidence](runs/2026-10-12-allocation-release-source.md).
-- [ ] `finance.reversePurchasePayment` — purchase payment reversal.
+- [x] `finance.releaseSupplierAllocation` — signed completion rollback/stale refusal, actual dashboard Edit/re-review/Confirm/Open/Close/reload and saved concurrent recovery verified. [Evidence](runs/2026-10-12-allocation-release-web.md).
+- [ ] `finance.reversePurchasePayment` — purchase payment reversal; next implementation.
 - [ ] `finance.reversePurchaseRecognition` — purchase fact reversal.
 - [ ] `finance.reverseSupplierEntry` — supplier entry reversal.
 
-These require assistant review/confirmation, owning receipts and relevant refusal,
+The five pending procedures require assistant review/confirmation, owning receipts and relevant refusal,
 rollback/recovery and web evidence. Existing registered-purchase flows do not accept
 these separate procedures. E05 keeps its ◐ mark and has no 🔖 bookmark.
 
