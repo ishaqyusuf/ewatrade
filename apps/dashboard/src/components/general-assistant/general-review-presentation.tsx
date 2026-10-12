@@ -29,10 +29,30 @@ export function GeneralReviewPresentationBody({
   return (
     <div className="flex min-w-0 flex-col gap-3">
       <div className="min-w-0">
-        <p className="text-xs text-muted-foreground">
-          {p.summary.party}
-          {p.summary.context ? ` · ${p.summary.context}` : null}
-        </p>
+        {/* With an amount, the amount leads; without one, the subject does. */}
+        {p.summary.amount ? (
+          <p className="text-xs text-muted-foreground">
+            {p.summary.party}
+            {p.summary.context ? ` · ${p.summary.context}` : null}
+          </p>
+        ) : (
+          <>
+            <p className="text-base leading-tight font-semibold">
+              {p.summary.party}
+              {p.summary.amountLabel ? (
+                <span className="text-sm font-normal text-muted-foreground">
+                  {" "}
+                  {p.summary.amountLabel}
+                </span>
+              ) : null}
+            </p>
+            {p.summary.context ? (
+              <p className="mt-0.5 text-xs text-muted-foreground">
+                {p.summary.context}
+              </p>
+            ) : null}
+          </>
+        )}
         {p.summary.amount ? (
           <p className="text-xl leading-tight font-semibold tabular-nums">
             {p.summary.amount}{" "}

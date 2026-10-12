@@ -179,7 +179,25 @@ export function GeneralProposalCard({
         )}
       </div>
       {proposal.presentation ? (
-        <GeneralReviewPresentationBody presentation={proposal.presentation} />
+        product || filed ? (
+          <div className="flex min-w-0 gap-3">
+            {product ? (
+              <GeneralProductPicture
+                payload={product}
+                onAdd={pending || renewable ? onEdit : undefined}
+              />
+            ) : filed ? (
+              <GeneralChatPhotoThumb attachmentId={filed} />
+            ) : null}
+            <div className="min-w-0 flex-1">
+              <GeneralReviewPresentationBody
+                presentation={proposal.presentation}
+              />
+            </div>
+          </div>
+        ) : (
+          <GeneralReviewPresentationBody presentation={proposal.presentation} />
+        )
       ) : (
         <>
           <div className="flex min-w-0 gap-3">

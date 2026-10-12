@@ -221,3 +221,17 @@ test("a draft with a structured review reads as an invoice summary", () => {
   expect(html).not.toContain("Fallback sentence")
   expect(html).toContain(">Confirm<")
 })
+
+test("without an amount, the subject leads the card", () => {
+  const html = card(
+    proposal("customer", "customer_create", {
+      presentation: {
+        summary: { party: "Amina Bello", amountLabel: "new customer" },
+        facts: [{ label: "Phone", value: "0803 555 0101" }],
+      },
+    }),
+  )
+  expect(html).toContain(
+    '<p class="text-base leading-tight font-semibold">Amina Bello<span class="text-sm font-normal text-muted-foreground"> new customer</span></p>',
+  )
+})

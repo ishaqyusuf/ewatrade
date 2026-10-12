@@ -8,6 +8,7 @@ import type {
   GeneralActionAdapter,
   GeneralTransactionContext,
 } from "./general-actions"
+import { productAvailabilityPresentation } from "./catalog-review-presentations"
 import { requireGeneralScope } from "./general-context"
 import { proposalDigest } from "./proposal-security"
 
@@ -69,6 +70,16 @@ export const productAvailabilityUpdate: GeneralActionAdapter<Action> = {
     const { offering, current, target } = await availabilityTarget(ctx, payload)
     return {
       target,
+      presentation: productAvailabilityPresentation({
+        offering: {
+          itemName: offering.catalogItem.name,
+          variantName: offering.variant.name,
+          name: offering.name,
+        },
+        before: current?.isAvailable,
+        after: payload.isAvailable,
+        storeName: ctx.tenantContext.activeStore?.name ?? "the current Store",
+      }),
       lines: [
         `${offering.catalogItem.name} · ${offering.variant.name} · ${offering.name}`,
         `Selling: ${current?.isAvailable ? "Available" : "Unavailable"} → ${payload.isAvailable ? "Available" : "Unavailable"}`,

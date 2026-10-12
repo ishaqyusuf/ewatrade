@@ -1,4 +1,7 @@
-import { generalMoney } from "@ewatrade/assistant/general/contracts"
+import {
+  generalActionSummary,
+  generalMoney,
+} from "@ewatrade/assistant/general/contracts"
 import type {
   GeneralAction,
   GeneralReviewPresentation,
@@ -49,6 +52,11 @@ import {
 } from "./general-context"
 import { customerAllocationRelease } from "./general-customer-allocation-release"
 import { customerCreditApply } from "./general-customer-credit-apply"
+import {
+  customerCreatePresentation,
+  customerUpdatePresentation,
+  productCreatePresentation,
+} from "./catalog-review-presentations"
 import { customerReceipt } from "./general-customer-receipt"
 import { saleReviewPresentation } from "./review-presentations"
 import { expenseRecord } from "./general-expense"
@@ -332,6 +340,14 @@ const customerUpdate: GeneralActionAdapter<Action<"customer_update">> = {
     )
     return {
       target,
+      presentation: customerUpdatePresentation(
+        customer.name,
+        changes.map((change) => ({
+          label: fieldLabel[change.field],
+          before: change.before,
+          after: change.after,
+        })),
+      ),
       lines: [
         customer.name,
         ...changes.map(
@@ -368,6 +384,13 @@ const customerUpdate: GeneralActionAdapter<Action<"customer_update">> = {
 
 const customerCreate: GeneralActionAdapter<Action<"customer_create">> = {
   validate: async () => null,
+  async review(ctx, payload) {
+    return {
+      target: null,
+      lines: generalActionSummary(payload, currency(ctx)).split("\n"),
+      presentation: customerCreatePresentation(payload),
+    }
+  },
   stale: "This draft changed. Review it again.",
   unavailable: "This customer draft is unavailable.",
   async execute(ctx, payload) {
@@ -414,6 +437,13 @@ const productCreate: GeneralActionAdapter<Action<"product_create">> = {
         message: "This photo is no longer available. Add it again.",
       })
     return null
+  },
+  async review(ctx, payload) {
+    return {
+      target: null,
+      lines: generalActionSummary(payload, currency(ctx)).split("\n"),
+      presentation: productCreatePresentation(payload, currency(ctx)),
+    }
   },
   stale: "This draft changed. Review it again.",
   unavailable: "This product draft is unavailable.",

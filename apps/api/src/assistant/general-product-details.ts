@@ -13,6 +13,11 @@ import type {
   GeneralActionAdapter,
   GeneralTransactionContext,
 } from "./general-actions"
+import {
+  type FieldChange,
+  productDetailsPresentation,
+  productIdentifiersPresentation,
+} from "./catalog-review-presentations"
 import { requireGeneralScope } from "./general-context"
 import { proposalDigest } from "./proposal-security"
 
@@ -23,21 +28,40 @@ type Identifiers = Extract<
 >
 const display = (value: string | null | undefined) =>
   value ? JSON.stringify(value) : "Not set"
+const fieldLabel: Record<string, string> = {
+  name: "Name",
+  description: "Description",
+  category: "Category",
+  sku: "SKU",
+  barcode: "Barcode",
+}
+/** The fields that change, as card rows and as review lines. */
 function diff(
   current: Record<string, string | null>,
   patch: Record<string, string | null | undefined>,
 ) {
-  const lines = Object.entries(patch).flatMap(([key, value]) =>
+  const changed = Object.entries(patch).flatMap(([key, value]) =>
     value !== undefined && value !== current[key]
-      ? [`${key}: ${display(current[key])} → ${display(value)}`]
+      ? [{ key, before: current[key] ?? null, after: value ?? null }]
       : [],
   )
-  if (!lines.length)
+  if (!changed.length)
     throw new TRPCError({
       code: "CONFLICT",
       message: "These details are already saved.",
     })
-  return lines
+  return {
+    lines: changed.map(
+      (c) => `${c.key}: ${display(c.before)} → ${display(c.after)}`,
+    ),
+    changes: changed.map(
+      (c): FieldChange => ({
+        label: fieldLabel[c.key] ?? c.key,
+        before: c.before,
+        after: c.after,
+      }),
+    ),
+  }
 }
 async function detailsTarget(ctx: GeneralTransactionContext, payload: Details) {
   const { tenantId } = requireGeneralScope(ctx)
@@ -70,13 +94,14 @@ async function detailsTarget(ctx: GeneralTransactionContext, payload: Details) {
       tenantId,
       patch.category,
     )
-  const lines = diff(
+  const { lines, changes } = diff(
     { name: item.name, description: item.description, category: item.category },
     patch,
   )
   return {
     item,
     lines,
+    changes,
     target: {
       id: item.id,
       revision: proposalDigest(
@@ -93,9 +118,10 @@ function commandError(error: unknown): never {
 export const productDetailsUpdate: GeneralActionAdapter<Details> = {
   validate: async (ctx, payload) => (await detailsTarget(ctx, payload)).target,
   async review(ctx, payload) {
-    const { item, lines, target } = await detailsTarget(ctx, payload)
+    const { item, lines, changes, target } = await detailsTarget(ctx, payload)
     return {
       target,
+      presentation: productDetailsPresentation(item.name, changes),
       lines: [
         item.name,
         ...lines,
@@ -162,7 +188,7 @@ async function identifiersTarget(
   const unit = offering.productUnitOffering
   return {
     offering,
-    lines: diff(
+    ...diff(
       { sku: unit.sku, barcode: unit.barcode },
       productIdentifiersPatch(payload),
     ),
@@ -176,9 +202,20 @@ export const productIdentifiersUpdate: GeneralActionAdapter<Identifiers> = {
   validate: async (ctx, payload) =>
     (await identifiersTarget(ctx, payload)).target,
   async review(ctx, payload) {
-    const { offering, lines, target } = await identifiersTarget(ctx, payload)
+    const { offering, lines, changes, target } = await identifiersTarget(
+      ctx,
+      payload,
+    )
     return {
       target,
+      presentation: productIdentifiersPresentation(
+        {
+          itemName: offering.catalogItem.name,
+          variantName: offering.variant.name,
+          name: offering.name,
+        },
+        changes,
+      ),
       lines: [
         `${offering.catalogItem.name} · ${offering.variant.name} · ${offering.name}`,
         ...lines,

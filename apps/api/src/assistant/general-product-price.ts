@@ -9,6 +9,7 @@ import type {
   GeneralActionAdapter,
   GeneralTransactionContext,
 } from "./general-actions"
+import { productPricePresentation } from "./catalog-review-presentations"
 import { requireGeneralScope } from "./general-context"
 import { proposalDigest } from "./proposal-security"
 
@@ -69,6 +70,17 @@ export const productPriceUpdate: GeneralActionAdapter<PriceAction> = {
     const amount = (minor: number) => generalMoney(minor, offering.currencyCode)
     return {
       target,
+      presentation: productPricePresentation({
+        offering: {
+          itemName: offering.catalogItem.name,
+          variantName: offering.variant.name,
+          name: offering.name,
+        },
+        currencyCode: offering.currencyCode,
+        beforeMinor: offering.fixedPriceMinor,
+        afterMinor: payload.priceMinor,
+        reason: payload.reason,
+      }),
       lines: [
         `${offering.catalogItem.name} · ${offering.variant.name} · ${offering.name}`,
         `Price: ${amount(offering.fixedPriceMinor)} → ${amount(payload.priceMinor)}`,

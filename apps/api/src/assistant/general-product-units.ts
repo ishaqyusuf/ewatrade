@@ -9,6 +9,7 @@ import type {
   GeneralActionAdapter,
   GeneralTransactionContext,
 } from "./general-actions"
+import { unitConfigurationPresentation } from "./catalog-review-presentations"
 import { conflict } from "./general-actions"
 import { requireGeneralScope } from "./general-context"
 import { proposalDigest } from "./proposal-security"
@@ -150,7 +151,46 @@ async function reviewUnits(
     lines.push(
       `Existing Stock Transition: ${payload.stockTransitionOperationId}. No new transition is created by this proposal.`,
     )
-  return { target, lines }
+  return {
+    target,
+    lines,
+    presentation: unitConfigurationPresentation({
+      productName: product.catalogItem.name,
+      publish: payload.action === "product_unit_configuration_publish",
+      draftVersion: draft?.version,
+      currentVersion: current.version,
+      currentScale: current.canonicalBalanceScale,
+      proposedScale: next.canonicalBalanceScale,
+      current: current.units,
+      proposed: next.units,
+      replaces:
+        payload.action === "product_unit_configuration_draft" && draft
+          ? { version: draft.version, units: draft.units }
+          : undefined,
+      offerings: affected.map((offering) => ({
+        variantName: offering.variant.name,
+        name: offering.name,
+        price:
+          offering.fixedPriceMinor === null
+            ? "No fixed price"
+            : generalMoney(offering.fixedPriceMinor, offering.currencyCode),
+        unitKey:
+          offering.productUnitOffering?.inventoryUnit.key ?? "unconfigured",
+      })),
+      balances: product.stockBalanceSources.map((balance) => ({
+        storeName: balance.store.name,
+        variantName: balance.variant.name,
+        unitName: balance.inventoryUnit.name,
+        onHand: String(balance.onHandQuantity),
+        reserved: String(balance.reservedQuantity),
+        custodyType: balance.custodyType,
+      })),
+      stockTransitionOperationId:
+        payload.action === "product_unit_configuration_publish"
+          ? payload.stockTransitionOperationId
+          : undefined,
+    }),
+  }
 }
 export const productUnitConfigurationDraft: GeneralActionAdapter<Draft> = {
   validate: async (ctx, payload) => (await unitTarget(ctx, payload)).target,
