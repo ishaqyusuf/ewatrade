@@ -142,6 +142,7 @@ export default async function DashboardHomePage() {
               <OverviewRecentOrders
                 storeId={store.id}
                 tenantId={tenant?.id ?? ""}
+                timeZone={tenant?.timezone ?? "Africa/Lagos"}
                 createdByUserId={scope?.createdByUserId}
               />
             </Suspense>

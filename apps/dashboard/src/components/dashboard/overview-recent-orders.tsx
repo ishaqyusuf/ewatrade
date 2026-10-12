@@ -13,7 +13,13 @@ export async function OverviewRecentOrders({
   storeId,
   tenantId,
   createdByUserId,
-}: { storeId: string; tenantId: string; createdByUserId?: string }) {
+  timeZone,
+}: {
+  storeId: string
+  tenantId: string
+  createdByUserId?: string
+  timeZone: string
+}) {
   const recentOrders = await getDashboardRecentOrders(prisma, {
     storeId,
     tenantId,
@@ -38,6 +44,7 @@ export async function OverviewRecentOrders({
                 <p className="truncate text-xs text-muted-foreground">
                   {order.customerName || "Walk-in customer"} ·{" "}
                   {order.createdAt.toLocaleString("en-NG", {
+                    timeZone,
                     dateStyle: "medium",
                     timeStyle: "short",
                   })}
