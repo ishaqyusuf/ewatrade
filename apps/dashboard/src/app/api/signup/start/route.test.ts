@@ -35,6 +35,7 @@ type Lead = {
 }
 const sessions = new Map<string, Session>()
 const leads: Lead[] = []
+const locks = new Map<string, Promise<void>>()
 let existingUser = false
 let legalEffective = true
 const db = {
@@ -72,6 +73,17 @@ const db = {
     },
   },
   onboardingSession: {
+    count: async ({
+      where,
+    }: {
+      where: { AND: Array<{ formData: { path: string[]; equals: string } }> }
+    }) =>
+      [...sessions.values()].filter((session) =>
+        where.AND.every(
+          ({ formData }) =>
+            session.formData[formData.path[0] ?? ""] === formData.equals,
+        ),
+      ).length,
     create: async ({ data }: { data: Omit<Session, "id" | "completed"> }) => {
       const value = {
         ...data,
@@ -86,7 +98,39 @@ const db = {
 mock.module("@ewatrade/db", () => ({
   prisma: {
     ...db,
-    $transaction: async (run: (tx: typeof db) => Promise<unknown>) => run(db),
+    $transaction: async (
+      run: (
+        tx: typeof db & {
+          $executeRaw: (
+            parts: TemplateStringsArray,
+            identity: string,
+          ) => Promise<number>
+        },
+      ) => Promise<unknown>,
+    ) => {
+      const releases: Array<() => void> = []
+      try {
+        return await run({
+          ...db,
+          $executeRaw: async (_parts, identity) => {
+            const previous = locks.get(identity) ?? Promise.resolve()
+            let release!: () => void
+            const next = new Promise<void>((resolve) => {
+              release = resolve
+            })
+            locks.set(
+              identity,
+              previous.then(() => next),
+            )
+            await previous
+            releases.push(release)
+            return 1
+          },
+        })
+      } finally {
+        for (const release of releases.reverse()) release()
+      }
+    },
   },
 }))
 const realLegal = await import("@ewatrade/utils/legal-approval")
@@ -108,6 +152,7 @@ const previous = Object.fromEntries(keys.map((key) => [key, process.env[key]]))
 beforeEach(() => {
   sessions.clear()
   leads.length = 0
+  locks.clear()
   existingUser = false
   legalEffective = true
   mock.clearAllMocks()
