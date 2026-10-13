@@ -59,17 +59,21 @@ export async function resolveOrderCollectionPosting(
   })
   // Financially billed orders retain the existing receivable/customer-ledger path.
   if (billing) return { billed: true as const }
-  const control = await tx.financeAccount.upsert({
-    where: { bookId_code: { bookId: book.id, code: "2200" } },
-    create: {
-      bookId: book.id,
-      code: "2200",
-      name: "Order collections awaiting reconciliation",
-      kind: "LIABILITY",
-      purpose: "OTHER",
-    },
-    update: {},
-  })
+  // The Book is locked, so read-then-create matches the empty-update upsert
+  // in one round trip instead of three.
+  const control =
+    (await tx.financeAccount.findUnique({
+      where: { bookId_code: { bookId: book.id, code: "2200" } },
+    })) ??
+    (await tx.financeAccount.create({
+      data: {
+        bookId: book.id,
+        code: "2200",
+        name: "Order collections awaiting reconciliation",
+        kind: "LIABILITY",
+        purpose: "OTHER",
+      },
+    }))
   if (
     control.archivedAt ||
     control.kind !== "LIABILITY" ||
