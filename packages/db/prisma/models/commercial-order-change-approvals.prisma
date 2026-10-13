@@ -1,0 +1,75 @@
+/// How a Store handles Return items or Refund.
+enum CommercialOrderChangeMode {
+  OFF
+  OPEN
+  APPROVAL_REQUIRED
+}
+
+/// Per-Store rule for returns and refunds. Stores without a row are OPEN.
+model CommercialOrderChangePolicy {
+  id              String                    @id @default(cuid())
+  tenantId        String
+  storeId         String                    @unique
+  /// Return items, including its credit; cash back also follows refundsMode.
+  returnsMode     CommercialOrderChangeMode @default(OPEN)
+  refundsMode     CommercialOrderChangeMode @default(OPEN)
+  updatedByUserId String?
+  createdAt       DateTime                  @default(now())
+  updatedAt       DateTime                  @updatedAt
+  tenant          Tenant                    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  store           Store                     @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+}
+
+enum CommercialOrderChangeApprovalKind {
+  RETURN
+  REFUND
+}
+
+/// Expiry is read from expiresAt; PENDING/APPROVED rows past it are lapsed.
+enum CommercialOrderChangeApprovalStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  USED
+  CANCELLED
+}
+
+/// A staff member's request to return or refund on one order. An Owner/Admin
+/// decides; the requester then records exactly the stored command.
+model CommercialOrderChangeApproval {
+  id                    String                              @id @default(cuid())
+  tenantId              String
+  storeId               String
+  orderId               String
+  clientRequestId       String
+  kind                  CommercialOrderChangeApprovalKind
+  status                CommercialOrderChangeApprovalStatus @default(PENDING)
+  /// The return or refund command without its command identity.
+  payload               Json
+  payloadHash           String
+  /// Money and stock state the approver saw; recording refuses once it moves.
+  orderStateHash        String
+  /// Server-built line, e.g. "1 × Eggs · back on shelf · ₦150 back".
+  summary               String
+  /// Money that leaves or comes off the total; 0 for stock only.
+  amountMinor           Int
+  reason                String
+  requestedByUserId     String
+  requestedAt           DateTime                            @default(now())
+  /// End of the business day the request was made.
+  expiresAt             DateTime
+  decidedByUserId       String?
+  decidedAt             DateTime?
+  decisionNote          String?
+  usedAt                DateTime?
+  usedClientOperationId String?
+  createdAt             DateTime                            @default(now())
+  updatedAt             DateTime                            @updatedAt
+  order                 CommercialOrder                     @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, clientRequestId])
+  @@index([tenantId, storeId, status, expiresAt])
+  @@index([orderId, createdAt])
+}

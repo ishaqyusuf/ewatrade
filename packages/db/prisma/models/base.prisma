@@ -192,6 +192,7 @@ model Tenant {
   commercialOrderPayments                           CommercialOrderPayment[]
   commercialOrderFulfillmentCommands                CommercialOrderFulfillmentCommand[]
   commercialOrderReminderSettings                   CommercialOrderReminderSettings[]
+  commercialOrderChangePolicies                     CommercialOrderChangePolicy[]
   commercialOrderReminderDeliveries                 CommercialOrderReminderDelivery[]
   commercialOrderReminderDigests                    CommercialOrderReminderDigest[]
   customers                                         Customer[]

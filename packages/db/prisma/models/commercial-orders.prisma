@@ -53,6 +53,7 @@ model CommercialOrder {
   activities                     CommercialOrderActivity[]
   attachments                    CommercialOrderAttachment[]
   credits                        CommercialOrderCredit[]
+  changeApprovals                CommercialOrderChangeApproval[]
 
   @@unique([tenantId, id])
   @@unique([tenantId, clientOrderId])

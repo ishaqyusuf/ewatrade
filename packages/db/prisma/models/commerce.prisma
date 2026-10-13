@@ -171,6 +171,7 @@ model Store {
   commercialOrders                                  CommercialOrder[]
   commercialOrderPayments                           CommercialOrderPayment[]
   commercialOrderReminderSettings                   CommercialOrderReminderSettings?
+  commercialOrderChangePolicy                       CommercialOrderChangePolicy?
   commercialOrderReminderDeliveries                 CommercialOrderReminderDelivery[]
   productReturns                                    ProductReturn[]
   domainQuotes                                      DomainQuote[]
