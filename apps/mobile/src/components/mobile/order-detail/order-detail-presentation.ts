@@ -1,10 +1,14 @@
 import type { CommercialOrder } from "@/components/mobile/commerce/commerce-model"
 import type { CommercialOrderActivity } from "@/components/mobile/commerce/commercial-order-overview-model"
+import type { ApprovalBanner } from "@/components/mobile/order-detail/order-change-approval-model"
 import type { ReactNode } from "react"
 import type { NativeScrollEvent, NativeSyntheticEvent } from "react-native"
 
 export type OrderDetailContentProps = {
   activity: CommercialOrderActivity[]
+  /** Return/refund requests waiting on this order, for approver or requester. */
+  approvalBanners?: ApprovalBanner[]
+  onApprovalBanner?: (banner: ApprovalBanner) => void
   businessName: string
   cachedAt?: string
   onReceipt?: () => void

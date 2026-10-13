@@ -30,6 +30,11 @@ import DateTimePicker from "@react-native-community/datetimepicker"
 import { useInfiniteQuery } from "@tanstack/react-query"
 import { type ReactNode, useDeferredValue, useState } from "react"
 import { Platform } from "react-native"
+import {
+  type OrderChangeApproval,
+  approvalMenuMeta,
+  returnNeedsApproval,
+} from "./order-change-approval-model"
 import type { OrderChangeSheet, OrderChanges } from "./use-order-changes"
 
 // Stable arrays: a new snap-point array on every render can interrupt the
@@ -45,6 +50,8 @@ const TITLES: Record<OrderChangeSheet, string> = {
   cancel: "Cancel order",
   refund: "Refund",
   return: "Return items",
+  approval: "Your request",
+  review: "Review request",
 }
 
 /** One bottom sheet: the Change menu and each change form inside it. */
@@ -66,7 +73,15 @@ export function OrderChangeSheetModal({
       key={changes.instance}
       ref={changes.modalRef}
       snapPoints={largeText ? SNAP_POINTS_LARGE_TEXT : SNAP_POINTS}
-      title={sheet === "menu" ? `Change ${order.orderNumber}` : TITLES[sheet]}
+      title={
+        sheet === "menu"
+          ? `Change ${order.orderNumber}`
+          : sheet === "approval"
+            ? changes.approvalKind === "return"
+              ? "Return request"
+              : "Refund request"
+            : TITLES[sheet]
+      }
     >
       <View className="flex-1" key={sheet}>
         {sheet === "menu" ? (
@@ -86,6 +101,10 @@ export function OrderChangeSheetModal({
           <CancelForm changes={changes} order={order} />
         ) : sheet === "refund" ? (
           <RefundForm changes={changes} order={order} />
+        ) : sheet === "approval" ? (
+          <ApprovalForm changes={changes} order={order} />
+        ) : sheet === "review" ? (
+          <ReviewForm changes={changes} order={order} />
         ) : (
           <ReturnForm changes={changes} order={order} />
         )}
@@ -119,6 +138,11 @@ function ChangeMenu({
 }) {
   const [showLocked, setShowLocked] = useState(false)
   const options = changes.options
+  const mine = {
+    return: options?.approvals.return ?? null,
+    refund: options?.approvals.refund ?? null,
+  }
+  const waitingForMe = options?.approvals.pending ?? []
   const money = (value: number) => formatMinorMoney(value, order.currencyCode)
   const moved =
     order.amountPaidMinor > 0 ||
@@ -148,16 +172,26 @@ function ChangeMenu({
       icon: "Package",
       tint: "amber",
       title: "Return items",
-      meta: "Stock back, and money if you want",
-      onPress: () => changes.go("return"),
+      meta: approvalMenuMeta(
+        mine.return,
+        options?.returnLine.ask
+          ? "Needs owner approval · stock back, and money"
+          : "Stock back, and money if you want",
+      ),
+      onPress: () =>
+        mine.return ? changes.goApproval("return") : changes.go("return"),
     },
     {
       key: "refund",
       icon: "Undo2",
       tint: "rose",
       title: "Refund",
-      meta: `Up to ${money(options?.refund.refundableMinor ?? order.amountPaidMinor)}`,
-      onPress: () => changes.go("refund"),
+      meta: approvalMenuMeta(
+        mine.refund,
+        `${options?.refund.ask ? "Needs owner approval · up to" : "Up to"} ${money(options?.refund.refundableMinor ?? order.amountPaidMinor)}`,
+      ),
+      onPress: () =>
+        mine.refund ? changes.goApproval("refund") : changes.go("refund"),
     },
     ...(hasBalance
       ? [
@@ -243,6 +277,30 @@ function ChangeMenu({
           · {paidLabel}
           {moved && order.status !== "CANCELLED" ? ", handed over" : ""}
         </Text>
+        {waitingForMe.length ? (
+          <>
+            <GroupLabel>Waiting for you</GroupLabel>
+            <ListCard>
+              {waitingForMe.map((approval) => (
+                <RecordRow
+                  accessibilityLabel={`Review ${approval.requestedBy ?? "a team member"}'s ${approval.kind}`}
+                  amount={
+                    approval.amountMinor > 0
+                      ? money(approval.amountMinor)
+                      : undefined
+                  }
+                  avatar={{ icon: "Hourglass", tint: "amber" }}
+                  key={approval.id}
+                  meta={approval.summary}
+                  onPress={() => changes.goReview(approval.id)}
+                  stackDetails
+                  testID={`order-change-review-${approval.id}`}
+                  title={`${approval.requestedBy ?? "A team member"} asks to ${approval.kind === "return" ? "return items" : "refund"}`}
+                />
+              ))}
+            </ListCard>
+          </>
+        ) : null}
         {open.length ? (
           <>
             <GroupLabel>You can do now</GroupLabel>
@@ -368,6 +426,7 @@ function FormShell({
   confirmDisabled,
   destructive,
   onConfirm,
+  secondary,
 }: {
   changes: OrderChanges
   children: ReactNode
@@ -375,6 +434,8 @@ function FormShell({
   confirmDisabled?: boolean
   destructive?: boolean
   onConfirm: () => void
+  /** Replaces Back, e.g. "Not approved" beside "Approve". */
+  secondary?: { label: string; onPress: () => void; testID?: string }
 }) {
   const largeText = useLargeTextLayout()
   return (
@@ -405,10 +466,11 @@ function FormShell({
         <ActionButton
           className={largeText ? "w-full" : "w-auto flex-1"}
           disabled={changes.busy}
-          onPress={() => changes.go("menu")}
+          onPress={secondary?.onPress ?? (() => changes.go("menu"))}
+          testID={secondary?.testID}
           variant="outline"
         >
-          Back
+          {secondary?.label ?? "Back"}
         </ActionButton>
         <ActionButton
           className={largeText ? "w-full" : "w-auto flex-[1.5]"}
@@ -1063,22 +1125,38 @@ function RefundForm({
   const paidAfter = paid - amount
   const totalAfter = lowerTotal ? order.totalMinor - amount : order.totalMinor
   const dueAfter = Math.max(0, totalAfter - paidAfter)
+  const ask = Boolean(changes.options?.refund.ask)
+  const rejected =
+    changes.options?.approvals.refund?.status === "rejected"
+      ? changes.options.approvals.refund
+      : null
   return (
     <FormShell
       changes={changes}
       confirmDisabled={!valid || !reason.value}
-      confirmLabel={valid ? `Refund ${money(amount)}` : "Refund"}
+      confirmLabel={
+        ask ? "Ask for approval" : valid ? `Refund ${money(amount)}` : "Refund"
+      }
       onConfirm={() =>
         valid &&
-        void changes.recordRefund({
-          amountMinor: amount,
-          lowerTotal,
-          method,
-          reason: reason.value,
-          reference,
-        })
+        void (ask
+          ? changes.askRefund({
+              amountMinor: amount,
+              lowerTotal,
+              method,
+              reason: reason.value,
+            })
+          : changes.recordRefund({
+              amountMinor: amount,
+              lowerTotal,
+              method,
+              reason: reason.value,
+              reference,
+            }))
       }
     >
+      {rejected ? <RejectedNote approval={rejected} /> : null}
+      {ask ? <AskNote /> : null}
       <Text className="text-sm text-muted-foreground">
         Paid so far {money(paid)} · total {money(order.totalMinor)}
       </Text>
@@ -1157,11 +1235,222 @@ function RefundForm({
           tone="destructive"
         />
       ) : null}
+      {ask ? null : (
+        <FormField
+          label="Reference"
+          onChangeText={setReference}
+          placeholder="Optional"
+          value={reference}
+        />
+      )}
+    </FormShell>
+  )
+}
+
+/* ---------- approvals ---------- */
+
+function AskNote() {
+  return (
+    <StatusBanner
+      icon="ShieldCheck"
+      message="An owner or admin approves it first. Once approved, you record it from this order before the end of today."
+      title="Needs approval"
+      tone="primary"
+    />
+  )
+}
+
+function RejectedNote({ approval }: { approval: OrderChangeApproval }) {
+  return (
+    <StatusBanner
+      icon="XCircle"
+      message={
+        approval.decisionNote
+          ? `“${approval.decisionNote}” · You asked: ${approval.summary}`
+          : `You asked: ${approval.summary}`
+      }
+      title={`Not approved by ${approval.decidedBy ?? "an owner"}`}
+      tone="destructive"
+    />
+  )
+}
+
+function ApprovalFacts({
+  approval,
+  order,
+}: {
+  approval: OrderChangeApproval
+  order: CommercialOrder
+}) {
+  const money = (value: number) => formatMinorMoney(value, order.currencyCode)
+  const rows: Array<[string, string]> = [
+    ["What", approval.summary],
+    ...(approval.amountMinor > 0
+      ? [["Money", money(approval.amountMinor)] as [string, string]]
+      : []),
+    ["Reason", approval.reason],
+    [
+      "Asked",
+      `${approval.requestedBy ?? "A team member"} · ${formatCommerceDateTime(approval.requestedAt)}`,
+    ],
+    ...(approval.decidedAt
+      ? [
+          [
+            approval.status === "rejected" ? "Not approved" : "Approved",
+            `${approval.decidedBy ?? "An owner"} · ${formatCommerceDateTime(approval.decidedAt)}`,
+          ] as [string, string],
+        ]
+      : []),
+    ...(approval.decisionNote
+      ? [["Note", approval.decisionNote] as [string, string]]
+      : []),
+    ...(["pending", "approved"].includes(approval.status)
+      ? [["Good until", "The end of today"] as [string, string]]
+      : []),
+  ]
+  return (
+    <View className="gap-2.5 rounded-[18px] bg-muted p-3.5">
+      {rows.map(([label, value]) => (
+        <View className="gap-0.5" key={label}>
+          <Text className="text-[11.5px] font-extrabold uppercase tracking-wider text-muted-foreground">
+            {label}
+          </Text>
+          <Text className="text-sm text-foreground">{value}</Text>
+        </View>
+      ))}
+    </View>
+  )
+}
+
+/** The requester's own request: wait, record once approved, or ask again. */
+function ApprovalForm({
+  changes,
+  order,
+}: {
+  changes: OrderChanges
+  order: CommercialOrder
+}) {
+  const kind = changes.approvalKind
+  const approval = changes.options?.approvals[kind] ?? null
+  const [reference, setReference] = useState("")
+  if (!approval)
+    return (
+      <FormShell
+        changes={changes}
+        confirmLabel={kind === "return" ? "Return items" : "Refund"}
+        onConfirm={() => changes.go(kind)}
+      >
+        <Text className="text-sm text-muted-foreground">
+          This request is no longer open. Start a new one.
+        </Text>
+      </FormShell>
+    )
+  const takesMoney =
+    approval.kind === "refund" ||
+    ("money" in approval.payload && Boolean(approval.payload.money))
+  if (approval.status === "approved")
+    return (
+      <FormShell
+        changes={changes}
+        confirmLabel={kind === "return" ? "Record return" : "Record refund"}
+        onConfirm={() => void changes.recordApproved(approval.id, reference)}
+      >
+        <StatusBanner
+          icon="CheckCircle2"
+          message="Record exactly this now. It stops working at the end of today or if the order changes."
+          title={`Approved by ${approval.decidedBy ?? "an owner"}`}
+          tone="success"
+        />
+        <ApprovalFacts approval={approval} order={order} />
+        {takesMoney ? (
+          <FormField
+            label="Reference"
+            onChangeText={setReference}
+            placeholder="Optional"
+            value={reference}
+          />
+        ) : null}
+      </FormShell>
+    )
+  if (approval.status === "rejected")
+    return (
+      <FormShell
+        changes={changes}
+        confirmLabel="Ask again"
+        onConfirm={() => changes.go(kind)}
+      >
+        <RejectedNote approval={approval} />
+        <ApprovalFacts approval={approval} order={order} />
+      </FormShell>
+    )
+  return (
+    <FormShell
+      changes={changes}
+      confirmLabel="Withdraw request"
+      destructive
+      onConfirm={() => void changes.withdraw(approval.id)}
+    >
+      <StatusBanner
+        icon="Hourglass"
+        message="An owner or admin sees it on their Home and on this order. This screen updates when they decide."
+        title="Waiting for approval"
+        tone="primary"
+      />
+      <ApprovalFacts approval={approval} order={order} />
+    </FormShell>
+  )
+}
+
+/** An Owner/Admin approves or turns down someone's request. */
+function ReviewForm({
+  changes,
+  order,
+}: {
+  changes: OrderChanges
+  order: CommercialOrder
+}) {
+  const approval =
+    changes.options?.approvals.pending.find(
+      (row) => row.id === changes.reviewId,
+    ) ?? null
+  const [note, setNote] = useState("")
+  if (!approval)
+    return (
+      <FormShell
+        changes={changes}
+        confirmLabel="Back to changes"
+        onConfirm={() => changes.go("menu")}
+      >
+        <Text className="text-sm text-muted-foreground">
+          This request was already decided, withdrawn or ran out.
+        </Text>
+      </FormShell>
+    )
+  const who = approval.requestedBy ?? "They"
+  return (
+    <FormShell
+      changes={changes}
+      confirmLabel="Approve"
+      onConfirm={() => void changes.decide(approval.id, "approve", note)}
+      secondary={{
+        label: "Not approve",
+        onPress: () => void changes.decide(approval.id, "reject", note),
+        testID: "order-change-review-reject",
+      }}
+    >
+      <Text className="text-sm text-muted-foreground">
+        {who} asks to{" "}
+        {approval.kind === "return" ? "record this return" : "give this refund"}{" "}
+        on {order.orderNumber}. Once you approve, they record exactly this
+        before the end of today.
+      </Text>
+      <ApprovalFacts approval={approval} order={order} />
       <FormField
-        label="Reference"
-        onChangeText={setReference}
+        label={`Note to ${approval.requestedBy ?? "them"}`}
+        maxLength={500}
+        onChangeText={setNote}
         placeholder="Optional"
-        value={reference}
+        value={note}
       />
     </FormShell>
   )
@@ -1222,10 +1511,29 @@ function ReturnForm({
   // full "Overcharged" refund) or the chosen items carry no value.
   const nothingToCredit =
     order.totalMinor <= 0 || (chosen.length > 0 && value <= 0)
-  const moneyOn = moneyBack && Boolean(credit?.allowed) && !nothingToCredit
   const totalAfter = order.totalMinor - value
   const refund = Math.max(0, order.amountPaidMinor - totalAfter)
+  // Refunds Off: a return may lower what they owe but never pay money back.
+  const cashBackLocked =
+    refund > 0
+      ? (changes.options?.returnLine.cashBack.lockedReason ?? null)
+      : null
+  const moneyOn =
+    moneyBack && Boolean(credit?.allowed) && !nothingToCredit && !cashBackLocked
   const dueAfter = Math.max(0, totalAfter - (order.amountPaidMinor - refund))
+  const ask = returnNeedsApproval(changes.options, {
+    cashBack: refund > 0,
+    withMoney: moneyOn,
+  })
+  const rejected =
+    changes.options?.approvals.return?.status === "rejected"
+      ? changes.options.approvals.return
+      : null
+  const lines = chosen.map((row) => ({
+    disposition: conditions[row.line.id] ?? "restock",
+    orderLineId: row.line.id,
+    quantity: String(row.quantity),
+  }))
   const step = (id: string, max: number, by: number) =>
     setQuantities((current) => {
       const next = Math.max(0, Math.min(max, (current[id] ?? 0) + by))
@@ -1239,24 +1547,24 @@ function ReturnForm({
       changes={changes}
       confirmDisabled={!chosen.length || !reason.value}
       confirmLabel={
-        !moneyOn || !chosen.length
-          ? "Record return"
-          : refund > 0
-            ? `Refund ${money(refund)}`
-            : `Take off ${money(value)}`
+        ask
+          ? "Ask for approval"
+          : !moneyOn || !chosen.length
+            ? "Record return"
+            : refund > 0
+              ? `Refund ${money(refund)}`
+              : `Take off ${money(value)}`
       }
       onConfirm={() =>
-        void changes.returnItems({
-          lines: chosen.map((row) => ({
-            disposition: conditions[row.line.id] ?? "restock",
-            orderLineId: row.line.id,
-            quantity: String(row.quantity),
-          })),
+        void (ask ? changes.askReturn : changes.returnItems)({
+          lines,
           money: moneyOn ? { method } : null,
           reason: reason.value,
         })
       }
     >
+      {rejected ? <RejectedNote approval={rejected} /> : null}
+      {ask ? <AskNote /> : null}
       <Text className="text-sm text-muted-foreground">
         Set how many of each came back.
       </Text>
@@ -1330,21 +1638,25 @@ function ReturnForm({
       ))}
       <View className="rounded-[18px] bg-card px-3.5 shadow-sm">
         <ToggleRow
-          disabled={!credit?.allowed || nothingToCredit}
+          disabled={
+            !credit?.allowed || nothingToCredit || Boolean(cashBackLocked)
+          }
           icon={{ name: "Undo2", tint: "rose" }}
           onValueChange={setMoneyBack}
           sub={
             !credit?.allowed
               ? (credit?.reason ?? "Not available")
-              : nothingToCredit
-                ? order.totalMinor <= 0
-                  ? `Nothing left to credit: the total is already ${money(0)}`
-                  : "These items have no value to credit"
-                : !chosen.length
-                  ? "Choose what came back first"
-                  : refund > 0
-                    ? `${money(refund)} back to the customer`
-                    : `Takes ${money(value)} off what they owe`
+              : cashBackLocked
+                ? cashBackLocked
+                : nothingToCredit
+                  ? order.totalMinor <= 0
+                    ? `Nothing left to credit: the total is already ${money(0)}`
+                    : "These items have no value to credit"
+                  : !chosen.length
+                    ? "Choose what came back first"
+                    : refund > 0
+                      ? `${money(refund)} back to the customer`
+                      : `Takes ${money(value)} off what they owe`
           }
           title={
             refund > 0 || !chosen.length || nothingToCredit

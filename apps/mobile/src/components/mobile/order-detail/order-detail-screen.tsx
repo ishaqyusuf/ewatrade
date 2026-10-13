@@ -42,6 +42,7 @@ import {
   type OrderPaymentMethod,
   OrderPaymentSheet,
 } from "./order-action-sheets"
+import { orderApprovalBanners } from "./order-change-approval-model"
 import { OrderChangeSheetModal } from "./order-change-sheet"
 import { timelineActivity } from "./order-timeline-model"
 import { useOrderChanges } from "./use-order-changes"
@@ -387,6 +388,12 @@ export function OrderDetailScreen({ orderId }: { orderId: string }) {
       >
         <ClassicOrderDetailContent
           activity={activity}
+          approvalBanners={orderApprovalBanners(changes.options)}
+          onApprovalBanner={(banner) =>
+            banner.target.view === "review"
+              ? changes.openReview(banner.target.approvalId)
+              : changes.openApproval(banner.target.kind)
+          }
           onChange={() => changes.open("menu")}
           assistant={
             assistant.enabled

@@ -6,6 +6,10 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import * as Crypto from "expo-crypto"
 import { useRouter } from "expo-router"
 import { useState } from "react"
+import {
+  type OrderChangeApprovalKind,
+  hasOpenApproval,
+} from "./order-change-approval-model"
 
 export type OrderChangeSheet =
   | "menu"
@@ -15,6 +19,10 @@ export type OrderChangeSheet =
   | "cancel"
   | "refund"
   | "return"
+  /** The person's own request (waiting, approved or not approved). */
+  | "approval"
+  /** An Owner/Admin deciding someone's request. */
+  | "review"
 
 type MetadataPatch = RouterInputs["orders"]["amendMetadata"]["patch"]
 type ReplacementChanges = RouterInputs["orders"]["replace"]["changes"]
@@ -23,6 +31,8 @@ type ReturnDisposition =
   RouterInputs["orders"]["returnItems"]["lines"][number]["disposition"]
 
 const SHEET_CLOSE_MS = 400
+// While someone waits on a decision, the order checks back this often.
+const APPROVAL_POLL_MS = 15_000
 const operationId = (prefix: string) => `${prefix}-${Crypto.randomUUID()}`
 const blocked = (blockers: { reason: string }[]) =>
   new Error(
@@ -50,6 +60,9 @@ export function useOrderChanges({
   const router = useRouter()
   const modal = useModal()
   const [sheet, setSheet] = useState<OrderChangeSheet>("menu")
+  const [approvalKind, setApprovalKind] =
+    useState<OrderChangeApprovalKind>("return")
+  const [reviewId, setReviewId] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   // A sheet closed from code can keep a stale handle and refuse to present
   // again; once it has closed, a fresh instance takes its place.
@@ -57,10 +70,15 @@ export function useOrderChanges({
   // Covers the review read as well as the write, so Save shows progress at once.
   const [working, setWorking] = useState(false)
   const orderId = order?.id ?? ""
-  const options = useQuery(
+  const optionsQuery = useQuery(
     trpc.orders.changeOptions.queryOptions(
       { orderId },
-      { enabled: Boolean(order) && !isOffline, retry: false },
+      {
+        enabled: Boolean(order) && !isOffline,
+        refetchInterval: (query) =>
+          hasOpenApproval(query.state.data) ? APPROVAL_POLL_MS : false,
+        retry: false,
+      },
     ),
   )
   const cancelReview = useQuery(
@@ -96,13 +114,43 @@ export function useOrderChanges({
   const cancel = useMutation(trpc.orders.cancel.mutationOptions())
   const refund = useMutation(trpc.orders.refund.mutationOptions())
   const returnItems = useMutation(trpc.orders.returnItems.mutationOptions())
+  const requestApproval = useMutation(
+    trpc.orders.requestChangeApproval.mutationOptions(),
+  )
+  const withdrawApproval = useMutation(
+    trpc.orders.withdrawChangeApproval.mutationOptions(),
+  )
+  const recordApproved = useMutation(
+    trpc.orders.recordApprovedChange.mutationOptions(),
+  )
+  const decideApproval = useMutation(
+    trpc.orders.decideChangeApproval.mutationOptions(),
+  )
   const busy =
     working ||
     amendMetadata.isPending ||
     replace.isPending ||
     cancel.isPending ||
     refund.isPending ||
-    returnItems.isPending
+    returnItems.isPending ||
+    requestApproval.isPending ||
+    withdrawApproval.isPending ||
+    recordApproved.isPending ||
+    decideApproval.isPending
+  // Runs one write, then closes the sheet with a notice and refreshes.
+  async function run(write: () => Promise<string>) {
+    if (!order || busy) return
+    setError(null)
+    setWorking(true)
+    try {
+      await finish(await write())
+    } catch (failure) {
+      fail(failure)
+    } finally {
+      setWorking(false)
+    }
+  }
+  const options = optionsQuery
 
   return {
     sheet,
@@ -110,6 +158,106 @@ export function useOrderChanges({
     busy,
     options: options.data ?? null,
     optionsLoading: options.isPending && !isOffline,
+    approvalKind,
+    reviewId,
+    /** The person's own request of this kind, or an Owner/Admin review. */
+    openApproval(kind: OrderChangeApprovalKind) {
+      setApprovalKind(kind)
+      setError(null)
+      setSheet("approval")
+      modal.present()
+    },
+    goApproval(kind: OrderChangeApprovalKind) {
+      setApprovalKind(kind)
+      setError(null)
+      setSheet("approval")
+    },
+    openReview(approvalId: string) {
+      setReviewId(approvalId)
+      setError(null)
+      setSheet("review")
+      modal.present()
+    },
+    goReview(approvalId: string) {
+      setReviewId(approvalId)
+      setError(null)
+      setSheet("review")
+    },
+    askReturn(input: {
+      lines: Array<{
+        disposition: ReturnDisposition
+        orderLineId: string
+        quantity: string
+      }>
+      money: { method: PaymentMethod } | null
+      reason: string
+    }) {
+      return run(async () => {
+        if (!order) return ""
+        await requestApproval.mutateAsync({
+          clientRequestId: operationId("ask-return"),
+          kind: "return",
+          lines: input.lines,
+          money: input.money,
+          orderId: order.id,
+          reason: input.reason,
+        })
+        return "Sent for approval. Record it here once an owner or admin approves."
+      })
+    },
+    askRefund(input: {
+      amountMinor: number
+      lowerTotal: boolean
+      method: PaymentMethod
+      reason: string
+    }) {
+      return run(async () => {
+        if (!order) return ""
+        await requestApproval.mutateAsync({
+          ...input,
+          clientRequestId: operationId("ask-refund"),
+          kind: "refund",
+          orderId: order.id,
+        })
+        return "Sent for approval. Record it here once an owner or admin approves."
+      })
+    },
+    withdraw(approvalId: string) {
+      return run(async () => {
+        await withdrawApproval.mutateAsync({ approvalId })
+        return "Request withdrawn."
+      })
+    },
+    recordApproved(approvalId: string, reference: string) {
+      return run(async () => {
+        const result = await recordApproved.mutateAsync({
+          approvalId,
+          clientOperationId: operationId("approved"),
+          reference: reference.trim() || undefined,
+        })
+        if (result?.kind === "refund")
+          return result.creditId
+            ? "Refund recorded and the total lowered."
+            : "Refund recorded."
+        return result && "refundPaymentId" in result && result.refundPaymentId
+          ? "Return and refund recorded."
+          : result?.creditId
+            ? "Return recorded and taken off what they owe."
+            : "Return recorded."
+      })
+    },
+    decide(approvalId: string, decision: "approve" | "reject", note: string) {
+      return run(async () => {
+        await decideApproval.mutateAsync({
+          approvalId,
+          decision,
+          note: note.trim() || undefined,
+        })
+        return decision === "approve"
+          ? "Approved. They can record it now."
+          : "Not approved. They'll see your note."
+      })
+    },
     cancelReview: cancelReview.data ?? null,
     cancelReviewLoading: cancelReview.isFetching,
     modalRef: modal.ref,

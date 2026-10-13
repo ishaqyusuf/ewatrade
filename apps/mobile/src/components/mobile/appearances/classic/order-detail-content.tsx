@@ -54,6 +54,8 @@ import { useSafeAreaInsets } from "react-native-safe-area-context"
 
 export function ClassicOrderDetailContent({
   activity,
+  approvalBanners,
+  onApprovalBanner,
   assistant,
   cachedAt,
   onReceipt,
@@ -159,6 +161,19 @@ export function ClassicOrderDetailContent({
       {notice ? (
         <StatusBanner icon="CircleCheck" message={notice} tone="success" />
       ) : null}
+      {!isOffline
+        ? approvalBanners?.map((banner) => (
+            <StatusBanner
+              actionLabel={banner.actionLabel}
+              icon={banner.icon}
+              key={banner.key}
+              message={banner.message}
+              onActionPress={() => onApprovalBanner?.(banner)}
+              title={banner.title}
+              tone={banner.tone}
+            />
+          ))
+        : null}
       {fulfillmentScheduledForFuture && !closed ? (
         <StatusBanner
           icon="Calendar"
