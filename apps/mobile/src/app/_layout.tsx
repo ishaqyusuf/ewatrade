@@ -256,6 +256,7 @@ const InitialLayout = ({
             name="return-refund-settings-modal"
             options={modalOptions}
           />
+          <Stack.Screen name="change-approvals-modal" options={modalOptions} />
         </Stack.Protected>
         <Stack.Protected
           guard={isAuthenticated && !isInvitedStaff && isSalesRep}

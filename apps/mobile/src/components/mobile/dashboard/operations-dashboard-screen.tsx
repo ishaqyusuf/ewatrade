@@ -160,6 +160,16 @@ export function OperationsDashboardSurface({
       { enabled: salesQueryEnabled, retry: false },
     ),
   )
+  // Owners and Admins decide staff return/refund requests (in-app only).
+  const changeApprovals = useQuery(
+    trpc.orders.pendingChangeApprovals.queryOptions(undefined, {
+      enabled:
+        salesQueryEnabled &&
+        ["OWNER", "ADMIN"].includes(normalizeMobileRole(profile?.role)),
+      refetchInterval: 60_000,
+      retry: false,
+    }),
+  )
   const repSalesQueryEnabled = isAttendant && !isOffline
   const repTodaySales = useQuery(
     trpc.orders.reportSummary.queryOptions(
@@ -491,6 +501,19 @@ export function OperationsDashboardSurface({
       {isClassicOwner ? (
         <GreenTillOwnerHome
           attention={[
+            ...((changeApprovals.data?.length ?? 0) > 0
+              ? [
+                  {
+                    icon: "ShieldCheck" as const,
+                    key: "change-approvals",
+                    onPress: () =>
+                      router.push("/change-approvals-modal" as never),
+                    sub: "Returns and refunds to decide",
+                    tint: "rose" as const,
+                    title: `${changeApprovals.data?.length} ${changeApprovals.data?.length === 1 ? "approval" : "approvals"} waiting`,
+                  },
+                ]
+              : []),
             ...((recentUnpaid.data?.outstandingCount ?? 0) > 0
               ? [
                   {
