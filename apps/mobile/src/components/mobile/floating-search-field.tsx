@@ -22,12 +22,7 @@ type FloatingSearchFieldProps = {
   value: string
 }
 
-/**
- * The floating search pill used by BottomSearchFooter: our search icon,
- * placeholder and a clear button, on a raised rounded surface with a hairline
- * border and a soft shadow. It sits over the list with no bar behind it.
- */
-/** The raised surface shared by the search pill and its caption. */
+/** The raised surface shared by the search pill, its caption and button. */
 function useFloatingSurface(focused = false) {
   const colors = useColors()
   const { colorScheme } = useColorScheme()
@@ -76,6 +71,41 @@ export function FloatingSearchCaption({
   )
 }
 
+/**
+ * The round search button for tab screens: the same raised surface as the
+ * pill, shown at rest and opened into the pill on press.
+ */
+export function FloatingSearchButton({
+  accessibilityLabel,
+  onPress,
+  testID,
+}: {
+  accessibilityLabel: string
+  onPress: () => void
+  testID?: string
+}) {
+  const surface = useFloatingSurface()
+  return (
+    <View style={{ ...surface, height: 52, width: 52 }}>
+      <Pressable
+        accessibilityLabel={accessibilityLabel}
+        accessibilityRole="button"
+        className="size-full items-center justify-center rounded-full"
+        haptic
+        onPress={onPress}
+        testID={testID}
+      >
+        <Icon className="size-[21px] text-foreground" name="Search" />
+      </Pressable>
+    </View>
+  )
+}
+
+/**
+ * The floating search pill used by BottomSearchFooter: our search icon,
+ * placeholder and a clear button, on a raised rounded surface with a hairline
+ * border and a soft shadow. It sits over the list with no bar behind it.
+ */
 export function FloatingSearchField({
   accessibilityLabel,
   autoFocus,

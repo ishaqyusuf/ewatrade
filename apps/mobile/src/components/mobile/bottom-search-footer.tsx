@@ -52,7 +52,7 @@ type BottomSearchFooterProps = {
 }
 
 /** Space between the floating search and the safe-area bottom edge. */
-const FLOATING_GAP = 10
+export const FLOATING_SEARCH_GAP = 10
 
 export function BottomSearchFooter({
   accessibilityLabel,
@@ -155,7 +155,7 @@ export function BottomSearchFooter({
           style={[
             {
               gap: 10,
-              paddingBottom: paddingBottom + FLOATING_GAP,
+              paddingBottom: paddingBottom + FLOATING_SEARCH_GAP,
               paddingHorizontal: 24,
             },
             slideStyle,
