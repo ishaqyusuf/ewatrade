@@ -263,6 +263,8 @@ export type ReturnCommercialOrderItemsInput = Scope & {
   }>
   /** Credit the returned value; any overpayment that leaves goes back by this method. */
   money?: Money | null
+  /** Set when the Store's refund rules forbid paying money back here. */
+  cashBackBlockedReason?: string | null
 }
 
 /** What the returned quantities were sold for, from each line's own total. */
@@ -294,7 +296,8 @@ export async function returnCommercialOrderItemsInTransaction(
     input.lines.length
   )
     throw new CatalogError("INVALID_ORDER", "Each item can appear once.")
-  const { storeId: _store, ...payload } = input
+  // The Store's cash-back guard is a rule, not part of the command identity.
+  const { storeId: _store, cashBackBlockedReason: _guard, ...payload } = input
   const payloadHash = digest({ ...payload, reason: input.reason.trim() })
   if (input.money) {
     const previous = await replayCredit(tx, { ...input, payloadHash })
@@ -369,6 +372,8 @@ export async function returnCommercialOrderItemsInTransaction(
     productReturnIds: returns.map((row) => row.id),
   })
   const refundMinor = Math.max(0, order.paid - (order.totalMinor - value))
+  if (refundMinor > 0 && input.cashBackBlockedReason)
+    throw new CatalogError("INVALID_ORDER", input.cashBackBlockedReason)
   let refundPaymentId: string | null = null
   if (refundMinor > 0) {
     const payment = await recordCommercialOrderPaymentInTransaction(
