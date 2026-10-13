@@ -25,6 +25,7 @@ export type AdminMoreItemId =
   | "finance"
   | "order-reminders"
   | "receipt-settings"
+  | "returns-refunds"
   | "team"
   | "customers"
   | "service-work"
@@ -225,6 +226,15 @@ export function buildAdminMoreSections({
       icon: "ReceiptText",
       id: "receipt-settings",
       label: "Receipt settings",
+    })
+    storeItems.push({
+      action: {
+        href: "/return-refund-settings-modal" as LinkProps["href"],
+        kind: "route",
+      },
+      icon: "Undo2",
+      id: "returns-refunds",
+      label: "Returns and refunds",
     })
     if (websiteDomainsEnabled)
       storefrontItems.push({

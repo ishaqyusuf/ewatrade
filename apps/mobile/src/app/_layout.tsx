@@ -252,6 +252,10 @@ const InitialLayout = ({
             options={modalOptions}
           />
           <Stack.Screen name="receipt-settings-modal" options={modalOptions} />
+          <Stack.Screen
+            name="return-refund-settings-modal"
+            options={modalOptions}
+          />
         </Stack.Protected>
         <Stack.Protected
           guard={isAuthenticated && !isInvitedStaff && isSalesRep}

@@ -91,6 +91,7 @@ describe("admin mobile navigation", () => {
       "finance",
       "order-reminders",
       "receipt-settings",
+      "returns-refunds",
       "website-domain",
       "plan-billing",
       "sync-offline",
