@@ -182,14 +182,19 @@ export const MoreSignOutSheet = forwardRef<
     [largeText, onCancel, onConfirm],
   )
   return (
-    <VariableContextProvider value={{ "--more-signout-footer": footerHeight }}>
-      <Modal
-        ref={ref}
-        title="Sign out?"
-        snapPoints={[]}
-        enableDynamicSizing
-        maxDynamicContentSize={height * 0.44}
-        footerComponent={footer}
+    <Modal
+      ref={ref}
+      title="Sign out?"
+      snapPoints={[]}
+      enableDynamicSizing
+      maxDynamicContentSize={height * 0.44}
+      footerComponent={footer}
+    >
+      {/* Sheet content renders in a portal: the footer-height variable must be
+          provided inside the Modal, or the spacer collapses and the footer
+          is cut off. */}
+      <VariableContextProvider
+        value={{ "--more-signout-footer": footerHeight }}
       >
         <BottomSheetScrollView>
           <View className="px-5 pt-2">
@@ -201,7 +206,7 @@ export const MoreSignOutSheet = forwardRef<
             <View className="h-[var(--more-signout-footer)]" />
           </View>
         </BottomSheetScrollView>
-      </Modal>
-    </VariableContextProvider>
+      </VariableContextProvider>
+    </Modal>
   )
 })
