@@ -5,11 +5,12 @@ import {
 } from "@/components/mobile/admin-tabs/admin-tabs-context"
 import { commercialOrderHref } from "@/components/mobile/commerce"
 import { EmptyState } from "@/components/mobile/empty-state"
-import { FormField } from "@/components/mobile/form-field"
 import { ListCreateFab } from "@/components/mobile/list-create-fab"
 import { QueryRefreshControl } from "@/components/mobile/query-refresh-control"
 import { toggleReceiptSelection } from "@/components/mobile/receipts/receipt-selection"
+import { SearchFold, useSearchFold } from "@/components/mobile/search-fold"
 import { StatusBanner } from "@/components/mobile/status-banner"
+import { TabSearchBubble } from "@/components/mobile/tab-search-bubble"
 import { RevealItem, useFirstReveal } from "@/components/ui/motion"
 import { Text } from "@/components/ui/text"
 import { View } from "@/components/ui/view"
@@ -107,6 +108,7 @@ export function OrdersScreen() {
   const [filter, setFilter] = useState<OrderFilter>("all")
   const [mastheadHeight, setMastheadHeight] = useState(0)
   const [query, setQuery] = useState("")
+  const searchFold = useSearchFold(query)
   const [selectingReceipts, setSelectingReceipts] = useState(false)
   const [receiptIds, setReceiptIds] = useState<string[]>([])
   // biome-ignore lint/correctness/useExhaustiveDependencies: These values define the selection scope.
@@ -373,39 +375,41 @@ export function OrdersScreen() {
               </View>
             ) : null}
             {!showFirstOrderGate ? (
-              <ClassicOrdersSummary
-                report={
-                  salesReport.data
-                    ? {
-                        currencyCode: salesReport.data.currencyCode,
-                        orderCount: salesReport.data.orderCount,
-                        orderValueMinor: salesReport.data.orderValueMinor,
-                        outstandingMinor:
-                          "outstandingMinor" in salesReport.data
-                            ? salesReport.data.outstandingMinor
-                            : undefined,
-                        partial:
-                          "partial" in salesReport.data
-                            ? salesReport.data.partial
-                            : undefined,
-                      }
-                    : null
-                }
-                dateFilter={dateFilter}
-                orders={visibleOrders}
-                totalCount={isOffline ? visibleOrders.length : totalCount}
-                onDateChange={setDateFilter}
-                isOffline={isOffline}
-                savedAt={
-                  orders.dataUpdatedAt
-                    ? new Date(orders.dataUpdatedAt).toLocaleTimeString(
-                        undefined,
-                        { hour: "2-digit", minute: "2-digit" },
-                      )
-                    : undefined
-                }
-                loading={orders.isPending && !isOffline}
-              />
+              <SearchFold folded={searchFold.folded}>
+                <ClassicOrdersSummary
+                  report={
+                    salesReport.data
+                      ? {
+                          currencyCode: salesReport.data.currencyCode,
+                          orderCount: salesReport.data.orderCount,
+                          orderValueMinor: salesReport.data.orderValueMinor,
+                          outstandingMinor:
+                            "outstandingMinor" in salesReport.data
+                              ? salesReport.data.outstandingMinor
+                              : undefined,
+                          partial:
+                            "partial" in salesReport.data
+                              ? salesReport.data.partial
+                              : undefined,
+                        }
+                      : null
+                  }
+                  dateFilter={dateFilter}
+                  orders={visibleOrders}
+                  totalCount={isOffline ? visibleOrders.length : totalCount}
+                  onDateChange={setDateFilter}
+                  isOffline={isOffline}
+                  savedAt={
+                    orders.dataUpdatedAt
+                      ? new Date(orders.dataUpdatedAt).toLocaleTimeString(
+                          undefined,
+                          { hour: "2-digit", minute: "2-digit" },
+                        )
+                      : undefined
+                  }
+                  loading={orders.isPending && !isOffline}
+                />
+              </SearchFold>
             ) : null}
             <ClassicOrdersSection>
               {provisionalOrders.length > 0 ? (
@@ -454,18 +458,6 @@ export function OrdersScreen() {
                     onChange={setFilter}
                     values={["all", "open", "completed", "cancelled"]}
                   />
-                  {showSearch ? (
-                    <FormField
-                      accessibilityLabel="Search orders"
-                      autoCapitalize="none"
-                      label="Search orders"
-                      leadingIcon="Search"
-                      onChangeText={setQuery}
-                      placeholder="Search order, customer or item"
-                      value={query}
-                      variant="till-search"
-                    />
-                  ) : null}
                   {loadedOrders.length > 0 ? (
                     <ActionButton
                       variant="outline"
@@ -584,6 +576,19 @@ export function OrdersScreen() {
             </ActionButton>
           </View>
         </VariableContextProvider>
+      ) : null}
+      {showSearch && !showFirstOrderGate && !selectingReceipts ? (
+        <TabSearchBubble
+          accessibilityLabel="Search orders"
+          dockHidden={isDockHidden}
+          onChangeText={setQuery}
+          onFocusChange={searchFold.onFocusChange}
+          placeholder="Search order, customer or item"
+          // Add order shows while the tab bar is hidden; sit beside it.
+          rightInset={isDockHidden ? 68 : 0}
+          testID="orders-search-button"
+          value={query}
+        />
       ) : null}
       {isDockHidden && !showFirstOrderGate && !selectingReceipts ? (
         <ListCreateFab
