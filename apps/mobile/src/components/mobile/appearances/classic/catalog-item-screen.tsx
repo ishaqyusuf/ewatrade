@@ -7,11 +7,18 @@ import type {
   CatalogItemOverviewProps,
   CatalogItemScreenProps,
 } from "@/components/mobile/catalog-item/catalog-item-presentation"
-import { CatalogSavedPhotos } from "@/components/mobile/catalog-item/catalog-saved-photos"
+import {
+  CatalogItemThumb,
+  CatalogSavedPhotos,
+} from "@/components/mobile/catalog-item/catalog-saved-photos"
 import { flattenSaleOfferings } from "@/components/mobile/create-sale/create-sale-model"
 import { EmptyState } from "@/components/mobile/empty-state"
-import { HeroCard } from "@/components/mobile/green-till/hero-card"
-import { SectionHeader, StatusPill } from "@/components/mobile/green-till/kit"
+import {
+  QuickActionRow,
+  RowDivider,
+  SectionHeader,
+  StatusPill,
+} from "@/components/mobile/green-till/kit"
 import { QueryRefreshControl } from "@/components/mobile/query-refresh-control"
 import { MobileScreen } from "@/components/mobile/screen"
 import { StatusBanner } from "@/components/mobile/status-banner"
@@ -21,24 +28,40 @@ import { Pressable } from "@/components/ui/pressable"
 import { Skeleton, SkeletonGroup } from "@/components/ui/skeleton"
 import { Text } from "@/components/ui/text"
 import { View } from "@/components/ui/view"
+import { useAuthContext } from "@/hooks/use-auth"
 import { useColorScheme } from "@/hooks/use-color"
 import { useLargeTextLayout } from "@/hooks/use-large-text-layout"
 import { GREEN_TILL_THEME, type GreenTillTint } from "@/lib/green-till-theme"
+import { canEditMobileCatalog } from "@/lib/mobile-roles"
 import { cn } from "@/lib/utils"
+import { useOperationalModeStore } from "@/store/operationalModeStore"
 import { StatusBar } from "expo-status-bar"
 import { useState } from "react"
-import { Text as NativeText, Share } from "react-native"
+import { Text as NativeText, ScrollView, Share } from "react-native"
 
+type OfferingEntry = ReturnType<typeof catalogItemOfferings>[number]
+type StockBalance = NonNullable<
+  CatalogItemOverviewProps["item"]["product"]
+>["stockBalances"][number]
+
+// 03 Price List: compact header, quick actions, variant filter and a price
+// table with stock per option. Photos and the description sit at the bottom.
 export function ClassicCatalogItemOverview({
   item,
   onBack,
   onCreateOrder,
   onCreateSelectedOrder,
+  onOpenServiceJobs,
+  onStockIn,
   storeId,
   cachedAt,
 }: CatalogItemOverviewProps) {
-  const [selectedId, setSelectedId] = useState<string>()
+  const [variantFilter, setVariantFilter] = useState<string>()
+  const [editingImages, setEditingImages] = useState(false)
   const largeText = useLargeTextLayout()
+  const { profile } = useAuthContext()
+  const offline = useOperationalModeStore((state) => state.isOfflineMode)
+  const canEditImages = canEditMobileCatalog(profile) && !offline && !cachedAt
   const offerings = catalogItemOfferings(item).filter(
     ({ offering, variant }) =>
       offering.status === "active" &&
@@ -61,57 +84,57 @@ export function ClassicCatalogItemOverview({
           storeId,
         )
       : []
-  const selected =
-    offerings.find((entry) => entry.offering.id === selectedId) ??
-    offerings.find((entry) =>
-      sellable.some((choice) => choice.id === entry.offering.id),
-    ) ??
-    offerings[0]
-  const canSell = Boolean(
-    selected && sellable.some((choice) => choice.id === selected.offering.id),
+  const isSellable = (entry: OfferingEntry) =>
+    sellable.some((choice) => choice.id === entry.offering.id)
+  const sellableOfferings = offerings.filter(isSellable)
+  const product = item.kind === "product"
+  const variants = item.variants.filter((variant) =>
+    offerings.some((entry) => entry.variant.id === variant.id),
   )
-  const selectedUnit = item.product?.currentUnitConfiguration?.units.find(
-    (unit) => unit.id === selected?.offering.productUnit?.inventoryUnitId,
+  const activeFilter = variants.some((variant) => variant.id === variantFilter)
+    ? variantFilter
+    : undefined
+  const rows = offerings.filter(
+    (entry) => !activeFilter || entry.variant.id === activeFilter,
   )
-  const stock = item.product?.stockBalances.find(
-    (balance) =>
-      balance.storeId === storeId &&
-      balance.variantId === selected?.variant.id &&
-      (selectedUnit?.stockBehavior === "packaged_stock"
-        ? balance.kind === "packaged_stock" &&
-          balance.inventoryUnitId === selectedUnit.id
-        : balance.kind === "shared_pool"),
-  )
-  const reason = canSell
-    ? undefined
-    : selected?.offering.pricingPolicy === "quote_required"
-      ? "This option needs a quote before it can be sold."
+  const stockFor = (entry: OfferingEntry) => {
+    const unit = item.product?.currentUnitConfiguration?.units.find(
+      (candidate) =>
+        candidate.id === entry.offering.productUnit?.inventoryUnitId,
+    )
+    return item.product?.stockBalances.find(
+      (balance) =>
+        balance.storeId === storeId &&
+        balance.variantId === entry.variant.id &&
+        (unit?.stockBehavior === "packaged_stock"
+          ? balance.kind === "packaged_stock" &&
+            balance.inventoryUnitId === unit.id
+          : balance.kind === "shared_pool"),
+    )
+  }
+  const reason = !offerings.length
+    ? "Add an active option with a price before this item can be ordered."
+    : offerings.every(
+          (entry) => entry.offering.pricingPolicy === "quote_required",
+        )
+      ? "Every option needs a quote before it can be sold."
       : "Add an active option with a price and available stock to sell this item."
-  const pricedOptions = offerings.filter(
-    (entry) => entry.offering.pricingPolicy !== "quote_required",
-  )
-  const priceValues = pricedOptions
-    .map((entry) => entry.offering.fixedPriceMinor)
-    .filter((value): value is number => typeof value === "number")
-  const lowest = pricedOptions.find(
-    (entry) => entry.offering.fixedPriceMinor === Math.min(...priceValues),
-  )
-  const highest = pricedOptions.find(
-    (entry) => entry.offering.fixedPriceMinor === Math.max(...priceValues),
-  )
-  const priceSummary =
-    priceValues.length > 1 && lowest && highest && lowest !== highest
-      ? `Options from ${wholeMoney(lowest.price)} to ${wholeMoney(highest.price)}`
-      : offerings.some(
-            (entry) => entry.offering.pricingPolicy === "quote_required",
-          )
-        ? "Some options are priced by quote"
-        : "One price"
-  const kindLabel = item.kind === "service" ? "Service" : "Product"
+  const newOrder = () => {
+    const [only] = sellableOfferings
+    if (!only) return
+    if (sellableOfferings.length === 1 && onCreateSelectedOrder)
+      onCreateSelectedOrder(only.offering.id)
+    else onCreateOrder()
+  }
   const share = () => {
     void Share.share({
-      message: selected
-        ? `${item.name} · ${selected.offering.name}: ${wholeMoney(selected.price)}`
+      message: offerings.length
+        ? [
+            item.name,
+            ...offerings.map(
+              (entry) => `${entry.offering.name}: ${wholeMoney(entry.price)}`,
+            ),
+          ].join("\n")
         : item.name,
     })
   }
@@ -127,35 +150,53 @@ export function ClassicCatalogItemOverview({
         <Pressable
           accessibilityLabel="Back to catalog"
           accessibilityRole="button"
-          className="size-11 items-center justify-center rounded-full bg-card shadow-sm active:bg-accent"
+          className="size-11 items-center justify-center rounded-full bg-card shadow-sm"
           haptic
           onPress={onBack}
         >
           <Icon className="size-[20px] text-foreground" name="ArrowLeft" />
         </Pressable>
-        <View className="min-w-0 flex-1">
-          <Text
-            numberOfLines={1}
-            className="text-xs font-bold text-muted-foreground"
-          >
-            {item.category ? `Catalog · ${item.category}` : "Catalog"}
-          </Text>
-          <Text
-            numberOfLines={1}
-            className="text-[17px] font-extrabold tracking-tight text-foreground"
-          >
-            {kindLabel}
-          </Text>
-        </View>
-        <Pressable
-          accessibilityLabel="Share price"
-          accessibilityRole="button"
-          className="size-11 items-center justify-center rounded-full bg-card shadow-sm active:bg-accent"
-          haptic
-          onPress={share}
+        <Text
+          numberOfLines={1}
+          className="min-w-0 flex-1 text-xs font-bold text-muted-foreground"
         >
-          <Icon className="size-[20px] text-foreground" name="Share" />
-        </Pressable>
+          {item.category ? `Catalog · ${item.category}` : "Catalog"}
+        </Text>
+        {canEditImages ? (
+          <Pressable
+            accessibilityLabel="Edit images"
+            accessibilityRole="button"
+            className="size-11 items-center justify-center rounded-full bg-card shadow-sm"
+            haptic
+            onPress={() => setEditingImages(true)}
+          >
+            <Icon className="size-[20px] text-foreground" name="Camera" />
+          </Pressable>
+        ) : null}
+      </View>
+      <View className="flex-row items-center gap-3">
+        <CatalogItemThumb item={item} />
+        <View className="min-w-0 flex-1 gap-1">
+          <Text
+            accessibilityRole="header"
+            className="text-[21px] font-extrabold leading-[25px] tracking-tight text-foreground"
+          >
+            {item.name}
+          </Text>
+          <View className="flex-row flex-wrap items-center gap-1.5">
+            <KindPill service={!product} />
+            <StatusPill
+              tone={item.status === "active" ? "ok" : "muted"}
+              label={
+                item.status === "active"
+                  ? "Active"
+                  : item.status === "draft"
+                    ? "Draft"
+                    : "Archived"
+              }
+            />
+          </View>
+        </View>
       </View>
       {cachedAt ? (
         <StatusBanner
@@ -165,201 +206,110 @@ export function ClassicCatalogItemOverview({
           message={`As of ${cachedAt}. Stock and prices may have changed.`}
         />
       ) : null}
-      <CatalogSavedPhotos item={item} />
-      <View className="gap-1.5">
-        <Text
-          accessibilityRole="header"
-          className="text-[23px] font-extrabold tracking-tight text-foreground"
-        >
-          {item.name}
-        </Text>
-        <View className="flex-row flex-wrap items-center gap-1.5">
-          <StatusPill
-            tone={item.status === "active" ? "ok" : "muted"}
-            label={
-              item.status === "active"
-                ? "Active"
-                : item.status === "draft"
-                  ? "Draft"
-                  : "Archived"
-            }
-          />
-          {item.category ? (
-            <Text className="text-xs text-muted-foreground">
-              {item.category}
-            </Text>
-          ) : null}
-          {item.kind === "service" ? (
-            <Text className="text-xs text-muted-foreground">
-              · Runs in Service jobs
-            </Text>
-          ) : null}
-        </View>
-      </View>
-      <HeroCard
-        label={
-          selected
-            ? `${selected.variant.name} · ${selected.offering.name}`
-            : "Price"
-        }
-        amount={selected ? wholeMoney(selected.price) : "No price set"}
-        pill={{
-          label: offerings.length
-            ? `${offerings.length} option${offerings.length === 1 ? "" : "s"}`
-            : "Not for sale yet",
-          tone: cachedAt ? "offline" : "synced",
-        }}
-        sub={reason ?? priceSummary}
-        stats={
-          item.kind === "product"
-            ? [
-                {
-                  label: "On hand",
-                  value: stock ? stock.onHandQuantity : "—",
-                },
-                {
-                  label: "Reserved",
-                  value: stock ? stock.reservedQuantity : "—",
-                },
-              ]
-            : [
-                { label: "Options", value: String(offerings.length) },
-                {
-                  label: "By quote",
-                  value: String(
-                    offerings.filter(
-                      (entry) =>
-                        entry.offering.pricingPolicy === "quote_required",
-                    ).length,
-                  ),
-                },
-              ]
-        }
-      >
-        <View className="mt-4">
-          <ActionButton
-            tone="cream"
-            icon="Plus"
-            disabled={!canSell}
-            onPress={() => {
-              if (!canSell || !selected) return
-              if (onCreateSelectedOrder)
-                onCreateSelectedOrder(selected.offering.id)
-              else onCreateOrder()
-            }}
-          >
-            {selected ? (
-              <>
-                Create order
-                <NativeText
-                  style={{ fontSize: 13, fontWeight: "700", opacity: 0.75 }}
-                >
-                  {` · ${selected.offering.name}`}
-                </NativeText>
-              </>
-            ) : (
-              "Create order"
-            )}
-          </ActionButton>
-        </View>
-      </HeroCard>
-      <View>
-        <SectionHeader
-          title="Sellable options"
-          trailing={
-            offerings.length ? (
-              <Text className="text-xs font-semibold text-muted-foreground">
-                Tap to choose
-              </Text>
-            ) : undefined
-          }
+      {editingImages ? (
+        <CatalogSavedPhotos
+          item={item}
+          editing
+          onEditingChange={setEditingImages}
         />
-        {offerings.length ? (
-          <View className="overflow-hidden rounded-[20px] bg-card px-3.5 shadow-sm">
-            {item.variants.map((variant) => {
-              const options = offerings.filter(
-                (entry) => entry.variant.id === variant.id,
-              )
-              if (!options.length) return null
-              const variantStock = item.product?.stockBalances.find(
-                (balance) =>
-                  balance.storeId === storeId &&
-                  balance.variantId === variant.id &&
-                  balance.kind === "shared_pool",
-              )
-              const showHeader = item.variants.length > 1 || variantStock
-              return (
-                <View key={variant.id}>
-                  {showHeader ? (
-                    <View className="flex-row flex-wrap justify-between gap-x-3 pt-3 pb-0.5">
-                      <Text className="text-[11px] font-extrabold uppercase tracking-[1.1px] text-muted-foreground">
-                        {variant.name}
-                      </Text>
-                      {variantStock ? (
-                        <Text className="text-[11px] font-extrabold uppercase tracking-[1.1px] tabular-nums text-muted-foreground">
-                          {`${variantStock.onHandQuantity} ${variantStock.inventoryUnitName} · ${variantStock.reservedQuantity} reserved`}
-                        </Text>
-                      ) : null}
-                    </View>
-                  ) : null}
-                  {options.map(({ offering, price }, index) => {
-                    const isSelected = selected?.offering.id === offering.id
-                    return (
-                      <Pressable
-                        key={offering.id}
-                        accessibilityRole="radio"
-                        accessibilityLabel={`${offering.name}, ${price}`}
-                        accessibilityState={{ selected: isSelected }}
-                        onPress={() => setSelectedId(offering.id)}
-                        className={cn(
-                          "-mx-3.5 min-h-[62px] gap-3 px-3.5 py-3",
-                          !largeText && "flex-row items-center",
-                          isSelected && "bg-accent",
-                          index > 0 && !isSelected && "border-t border-border",
-                        )}
-                      >
-                        <View
-                          className={cn(
-                            "size-[22px] items-center justify-center rounded-full border-2",
-                            isSelected ? "border-primary" : "border-border",
-                            offering.pricingPolicy === "quote_required" &&
-                              "border-dashed",
-                          )}
-                        >
-                          {isSelected ? (
-                            <View className="size-2.5 rounded-full bg-primary" />
-                          ) : null}
-                        </View>
-                        <View className="min-w-0 flex-1">
-                          <Text className="text-sm font-bold text-foreground">
-                            {offering.name}
-                          </Text>
-                          <Text className="text-xs text-muted-foreground">
-                            {offering.productUnit?.sku
-                              ? `SKU ${offering.productUnit.sku}`
-                              : item.kind === "service"
-                                ? "Opens a Service job"
-                                : variant.name}
-                          </Text>
-                        </View>
-                        <Text className="text-sm font-bold tabular-nums text-foreground">
-                          {wholeMoney(price)}
-                        </Text>
-                      </Pressable>
-                    )
-                  })}
+      ) : null}
+      <QuickActionRow
+        actions={[
+          {
+            disabled: !sellableOfferings.length,
+            gold: true,
+            icon: "Plus",
+            label: "New order",
+            onPress: newOrder,
+          },
+          product
+            ? {
+                disabled: !onStockIn || Boolean(cachedAt),
+                icon: "Download",
+                label: "Stock in",
+                onPress: () => onStockIn?.(),
+              }
+            : {
+                disabled: !onOpenServiceJobs,
+                icon: "Wrench",
+                label: "Jobs",
+                onPress: () => onOpenServiceJobs?.(),
+              },
+          {
+            disabled: !canEditImages,
+            icon: "Image",
+            label: "Images",
+            onPress: () => setEditingImages(true),
+          },
+          { icon: "Share", label: "Share", onPress: share },
+        ]}
+      />
+      {!sellableOfferings.length ? (
+        <StatusBanner
+          tone="warning"
+          icon="Tag"
+          title="No sellable options"
+          message={reason}
+        />
+      ) : null}
+      {offerings.length ? (
+        <View className="gap-2.5">
+          {variants.length > 1 ? (
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerClassName="gap-2 py-1"
+            >
+              <FilterChip
+                count={offerings.length}
+                label="All"
+                selected={!activeFilter}
+                onPress={() => setVariantFilter(undefined)}
+              />
+              {variants.map((variant) => (
+                <FilterChip
+                  key={variant.id}
+                  count={
+                    offerings.filter((entry) => entry.variant.id === variant.id)
+                      .length
+                  }
+                  label={variant.name}
+                  selected={activeFilter === variant.id}
+                  onPress={() => setVariantFilter(variant.id)}
+                />
+              ))}
+            </ScrollView>
+          ) : null}
+          <View className="rounded-[20px] bg-card shadow-sm">
+            <View className="overflow-hidden rounded-[20px]">
+              {largeText ? null : (
+                <View className="h-[34px] flex-row items-center gap-2 bg-muted px-3.5">
+                  <TableHead className="flex-1">Option</TableHead>
+                  <TableHead className="w-16 text-right">
+                    {product ? "Stock" : "Work"}
+                  </TableHead>
+                  <TableHead className="w-[84px] text-right">Price</TableHead>
                 </View>
-              )
-            })}
+              )}
+              {rows.map((entry, index) => (
+                <PriceRow
+                  key={entry.offering.id}
+                  entry={entry}
+                  first={index === 0}
+                  largeText={largeText}
+                  product={product}
+                  stock={product ? stockFor(entry) : undefined}
+                  onPress={
+                    isSellable(entry) && onCreateSelectedOrder
+                      ? () => onCreateSelectedOrder(entry.offering.id)
+                      : undefined
+                  }
+                />
+              ))}
+            </View>
           </View>
-        ) : (
-          <EmptyState
-            title="No sellable options"
-            icon="Tag"
-            message="This item has no active option with a price, so it cannot be added to an order yet."
-          />
-        )}
-      </View>
+        </View>
+      ) : null}
       <View>
         <SectionHeader title="About" />
         <View className="rounded-[20px] bg-card px-3.5 shadow-sm">
@@ -379,20 +329,243 @@ export function ClassicCatalogItemOverview({
           ) : null}
           <AboutRow
             border={Boolean(item.description || item.category)}
-            icon={item.kind === "service" ? "Wrench" : "Package"}
-            tint={item.kind === "service" ? "lilac" : "sky"}
-            title={
-              item.kind === "service" ? "Service" : "Stock-tracked product"
-            }
+            icon={product ? "Package" : "Wrench"}
+            tint={product ? "sky" : "lilac"}
+            title={product ? "Stock-tracked product" : "Service"}
             sub={
-              item.kind === "service"
-                ? "Work is tracked in Service jobs"
-                : "Stock moves when orders are fulfilled"
+              product
+                ? "Stock moves when orders are fulfilled"
+                : "Work is tracked in Service jobs"
             }
           />
         </View>
       </View>
+      {editingImages ? null : (
+        <CatalogSavedPhotos
+          item={item}
+          editing={false}
+          onEditingChange={setEditingImages}
+        />
+      )}
     </MobileScreen>
+  )
+}
+
+function TableHead({
+  children,
+  className,
+}: { children: string; className: string }) {
+  return (
+    <Text
+      className={cn(
+        "text-[10.5px] font-extrabold uppercase tracking-[0.8px] text-muted-foreground",
+        className,
+      )}
+    >
+      {children}
+    </Text>
+  )
+}
+
+function PriceRow({
+  entry,
+  first,
+  largeText,
+  onPress,
+  product,
+  stock,
+}: {
+  entry: OfferingEntry
+  first: boolean
+  largeText: boolean
+  onPress?: () => void
+  product: boolean
+  stock?: StockBalance
+}) {
+  const { offering, variant, price } = entry
+  const quote = offering.pricingPolicy === "quote_required"
+  const priceLabel = quote
+    ? "Quote"
+    : offering.fixedPriceMinor === null
+      ? "Not set"
+      : wholeMoney(price)
+  const sub = [variant.name, offering.productUnit?.sku]
+    .filter(Boolean)
+    .join(" · ")
+  const priceText = (
+    <Text
+      className={cn(
+        "text-right tabular-nums",
+        quote || offering.fixedPriceMinor === null
+          ? "text-[13px] font-bold text-muted-foreground"
+          : "text-sm font-extrabold text-foreground",
+        !largeText && "w-[84px]",
+      )}
+    >
+      {priceLabel}
+    </Text>
+  )
+  const stockText = product ? (
+    stock ? (
+      <View className={largeText ? "flex-row items-baseline gap-1.5" : "w-16"}>
+        <Text className="text-right text-[13px] font-bold tabular-nums text-foreground">
+          {largeText ? `${stock.onHandQuantity} on hand` : stock.onHandQuantity}
+        </Text>
+        <Text className="text-right text-[11px] font-semibold tabular-nums text-muted-foreground">
+          {`${stock.reservedQuantity} res.`}
+        </Text>
+      </View>
+    ) : (
+      <Text
+        className={cn(
+          "text-right text-[13px] font-bold text-muted-foreground",
+          !largeText && "w-16",
+        )}
+      >
+        —
+      </Text>
+    )
+  ) : (
+    <Text
+      className={cn(
+        "text-right text-[11px] font-semibold text-muted-foreground",
+        !largeText && "w-16",
+      )}
+    >
+      Job
+    </Text>
+  )
+  const content = (
+    <>
+      {first ? null : <RowDivider position="top" />}
+      <View className="min-w-0 flex-1">
+        <Text className="text-[13.5px] font-bold text-foreground">
+          {offering.name}
+        </Text>
+        {sub ? (
+          <Text className="text-xs text-muted-foreground">{sub}</Text>
+        ) : null}
+      </View>
+      {largeText ? (
+        <View className="flex-row items-center justify-between gap-3">
+          {stockText}
+          {priceText}
+        </View>
+      ) : (
+        <>
+          {stockText}
+          {priceText}
+        </>
+      )}
+    </>
+  )
+  const className = cn(
+    "min-h-14 gap-2 px-3.5 py-2",
+    !largeText && "flex-row items-center",
+  )
+  const label = `${offering.name}, ${variant.name}, ${quote ? "quote required" : priceLabel === "Not set" ? "price not set" : priceLabel}${
+    stock ? `, ${stock.onHandQuantity} on hand` : ""
+  }`
+  return onPress ? (
+    <Pressable
+      accessibilityHint="Starts an order with this option"
+      accessibilityLabel={label}
+      accessibilityRole="button"
+      className={className}
+      haptic
+      onPress={onPress}
+    >
+      {content}
+    </Pressable>
+  ) : (
+    <View accessible accessibilityLabel={label} className={className}>
+      {content}
+    </View>
+  )
+}
+
+function FilterChip({
+  count,
+  label,
+  onPress,
+  selected,
+}: {
+  count: number
+  label: string
+  onPress: () => void
+  selected: boolean
+}) {
+  // Border width stays the same in both states (Android drops the label of a
+  // chip whose border disappears on selection).
+  return (
+    <Pressable
+      accessibilityLabel={`${label}, ${count} option${count === 1 ? "" : "s"}`}
+      accessibilityRole="button"
+      accessibilityState={{ selected }}
+      className={cn(
+        "min-h-[34px] flex-row items-center gap-1.5 rounded-full border px-3.5",
+        selected ? "border-foreground bg-foreground" : "border-border bg-card",
+      )}
+      haptic
+      onPress={onPress}
+    >
+      <Text
+        className={cn(
+          "text-[12.5px] font-bold",
+          selected ? "text-background" : "text-muted-foreground",
+        )}
+      >
+        {label}
+      </Text>
+      <Text
+        className={cn(
+          "text-[11px] font-bold opacity-70 tabular-nums",
+          selected ? "text-background" : "text-muted-foreground",
+        )}
+      >
+        {count}
+      </Text>
+    </Pressable>
+  )
+}
+
+function KindPill({ service }: { service: boolean }) {
+  const { colorScheme } = useColorScheme()
+  const palette = GREEN_TILL_THEME[colorScheme]
+  const fg = service ? palette.lilacForeground : palette.skyForeground
+  return (
+    <View
+      style={{
+        alignItems: "center",
+        backgroundColor: service ? palette.lilac : palette.sky,
+        borderRadius: 999,
+        flexDirection: "row",
+        gap: 4,
+        height: 20,
+        justifyContent: "center",
+        marginTop: 3,
+        paddingHorizontal: 8,
+      }}
+    >
+      <Icon
+        className="size-[11px]"
+        color={fg}
+        name={service ? "Wrench" : "Package"}
+      />
+      <NativeText
+        maxFontSizeMultiplier={1.4}
+        style={{
+          color: fg,
+          fontSize: 10.5,
+          fontWeight: "700",
+          includeFontPadding: false,
+          lineHeight: 13,
+          textAlignVertical: "center",
+        }}
+      >
+        {service ? "Service" : "Product"}
+      </NativeText>
+    </View>
   )
 }
 

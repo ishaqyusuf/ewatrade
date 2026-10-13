@@ -1,4 +1,6 @@
 import { ClassicCatalogItemScreen } from "@/components/mobile/appearances/classic/catalog-item-screen"
+import { useAuthContext } from "@/hooks/use-auth"
+import { canAccessAdminTabs } from "@/lib/admin-navigation"
 import { LIST_PAGE_SIZE } from "@/lib/list-pagination"
 import { useOperationalModeStore } from "@/store/operationalModeStore"
 import { useTRPC } from "@/trpc/client"
@@ -10,6 +12,7 @@ export function CatalogItemScreen({
 }: { catalogItemId: string }) {
   const router = useRouter()
   const trpc = useTRPC()
+  const { profile } = useAuthContext()
   const isOffline = useOperationalModeStore((state) => state.isOfflineMode)
   const itemQuery = useQuery(
     trpc.catalog.getItem.queryOptions(
@@ -63,6 +66,12 @@ export function CatalogItemScreen({
           : undefined
       }
       onCreateSelectedOrder={createOrder}
+      onStockIn={
+        canAccessAdminTabs(profile?.role)
+          ? () => router.push("/stock-intake-modal" as never)
+          : undefined
+      }
+      onOpenServiceJobs={() => router.push("/service-jobs-modal" as never)}
       isOffline={isOffline}
       isPending={
         Boolean(catalogItemId) &&

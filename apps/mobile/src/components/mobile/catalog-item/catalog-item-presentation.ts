@@ -6,6 +6,9 @@ export type CatalogItemOverviewProps = {
   onBack: () => void
   onCreateOrder: () => void
   onCreateSelectedOrder?: (offeringId: string) => void
+  /** Absent when this role cannot record stock. */
+  onStockIn?: () => void
+  onOpenServiceJobs?: () => void
   storeId?: string
   cachedAt?: string
 }
@@ -17,6 +20,8 @@ export type CatalogItemScreenProps = {
   onBack: () => void
   onCreateOrder: () => void
   onCreateSelectedOrder?: (offeringId: string) => void
+  onStockIn?: () => void
+  onOpenServiceJobs?: () => void
   storeId?: string
   cachedAt?: string
   onRetry?: () => void

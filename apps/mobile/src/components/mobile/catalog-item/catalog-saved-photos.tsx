@@ -26,7 +26,19 @@ import {
 import { useCatalogImageDraft } from "../catalog-setup/use-catalog-image-draft"
 import type { CatalogItem } from "./catalog-item-presentation"
 
-export function CatalogSavedPhotos({ item }: { item: CatalogItem }) {
+/**
+ * Saved photos card and its editor. Pass `editing` and `onEditingChange` when
+ * the screen opens the editor from elsewhere (a top-bar or quick action).
+ */
+export function CatalogSavedPhotos({
+  item,
+  editing: controlledEditing,
+  onEditingChange,
+}: {
+  item: CatalogItem
+  editing?: boolean
+  onEditingChange?: (editing: boolean) => void
+}) {
   const trpc = useTRPC()
   const { profile } = useAuthContext()
   const offline = useOperationalModeStore((state) => state.isOfflineMode)
@@ -38,7 +50,9 @@ export function CatalogSavedPhotos({ item }: { item: CatalogItem }) {
     }),
   )
   const storeId = availability.data?.storeId
-  const [editing, setEditing] = useState(false)
+  const [localEditing, setLocalEditing] = useState(false)
+  const editing = controlledEditing ?? localEditing
+  const setEditing = onEditingChange ?? setLocalEditing
   const { colorScheme } = useColorScheme()
   const colors = useColors()
   const palette = GREEN_TILL_THEME[colorScheme]
@@ -233,6 +247,68 @@ export function CatalogSavedPhotos({ item }: { item: CatalogItem }) {
           </NativeText>
         </Pressable>
       ) : null}
+    </View>
+  )
+}
+
+/** Square thumbnail: first saved photo, else illustration, else a kind icon. */
+export function CatalogItemThumb({
+  item,
+  size = 62,
+}: { item: CatalogItem; size?: number }) {
+  const trpc = useTRPC()
+  const offline = useOperationalModeStore((state) => state.isOfflineMode)
+  const availability = useQuery(
+    trpc.tenant.featureAvailability.queryOptions(undefined, {
+      enabled: !offline,
+      retry: false,
+    }),
+  )
+  const { colorScheme } = useColorScheme()
+  const colors = useColors()
+  const palette = GREEN_TILL_THEME[colorScheme]
+  const storeId = offline ? undefined : availability.data?.storeId
+  const photo = storeId
+    ? item.photos.find((entry) => entry.storeId === storeId)
+    : undefined
+  const illustration = storeId
+    ? item.illustrations.find((entry) => entry.storeId === storeId)
+    : undefined
+  const service = item.kind === "service"
+  return (
+    <View
+      style={{
+        alignItems: "center",
+        backgroundColor: photo
+          ? colors.muted
+          : illustration || !service
+            ? palette.amber
+            : palette.lilac,
+        borderRadius: Math.round(size * 0.29),
+        height: size,
+        justifyContent: "center",
+        overflow: "hidden",
+        width: size,
+      }}
+    >
+      {photo && storeId ? (
+        <SavedPhotoPreview
+          assetId={photo.assetId}
+          storeId={storeId}
+          name={item.name}
+        />
+      ) : illustration ? (
+        <CatalogIllustrationPreview
+          id={illustration.illustrationId}
+          size={size}
+        />
+      ) : (
+        <Icon
+          className="size-[26px]"
+          color={service ? palette.lilacForeground : palette.amberForeground}
+          name={service ? "Wrench" : "Package"}
+        />
+      )}
     </View>
   )
 }
