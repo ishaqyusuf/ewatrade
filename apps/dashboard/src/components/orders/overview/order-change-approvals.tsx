@@ -14,13 +14,16 @@ type Approval = NonNullable<ChangeOptions["approvals"]["return"]>
 type Pending = RouterOutputs["orders"]["pendingChangeApprovals"][number]
 type Mode = "OFF" | "OPEN" | "APPROVAL_REQUIRED"
 
-/** Keep checking while someone waits on a decision for this order. */
+/**
+ * Keep checking while a request is waiting, or approved but not yet recorded
+ * (it may be used from another device or lapse at midnight).
+ */
 export function hasOpenOrderApproval(options: ChangeOptions | undefined) {
   if (!options) return false
   return (
     (options.approvals?.pending.length ?? 0) > 0 ||
-    options.approvals?.return?.status === "pending" ||
-    options.approvals?.refund?.status === "pending"
+    ["pending", "approved"].includes(options.approvals?.return?.status ?? "") ||
+    ["pending", "approved"].includes(options.approvals?.refund?.status ?? "")
   )
 }
 
@@ -197,6 +200,7 @@ function MineBanner({
         title={`Approved by ${approval.decidedBy ?? "an owner"} · record it before the end of today`}
         testId="order-approval-approved"
       >
+        {approval.decisionNote ? <p>“{approval.decisionNote}”</p> : null}
         {facts}
         {approval.amountMinor > 0 ? (
           <Input

@@ -94,7 +94,7 @@ export function orderApprovalBanners(
         tone: "success",
         icon: "CheckCircle2",
         title: `Approved by ${approval.decidedBy ?? "an owner"}`,
-        message: `${approval.summary}. Record it before the end of today.`,
+        message: `${approval.decisionNote ? `“${approval.decisionNote}” · ` : ""}${approval.summary}. Record it before the end of today.`,
         actionLabel:
           approval.kind === "return" ? "Record return" : "Record refund",
         target: { view: "approval", kind: approval.kind },
@@ -115,14 +115,17 @@ export function orderApprovalBanners(
   return banners
 }
 
-/** Keep polling while a decision is outstanding on this order. */
+/**
+ * Keep polling while a request is waiting, or approved but not yet recorded
+ * (it may be used from another device or lapse at midnight).
+ */
 export function hasOpenApproval(
   options: Pick<OrderChangeOptionsData, "approvals"> | null | undefined,
 ) {
   if (!options) return false
   return (
     (options.approvals?.pending.length ?? 0) > 0 ||
-    options.approvals?.return?.status === "pending" ||
-    options.approvals?.refund?.status === "pending"
+    ["pending", "approved"].includes(options.approvals?.return?.status ?? "") ||
+    ["pending", "approved"].includes(options.approvals?.refund?.status ?? "")
   )
 }

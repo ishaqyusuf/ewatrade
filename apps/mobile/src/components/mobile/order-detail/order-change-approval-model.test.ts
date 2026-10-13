@@ -115,6 +115,15 @@ describe("order change approvals", () => {
           return: approval({ status: "approved" }),
         },
       }),
+    ).toBe(true)
+    expect(
+      hasOpenApproval({
+        approvals: {
+          pending: [],
+          refund: null,
+          return: approval({ status: "rejected" }),
+        },
+      }),
     ).toBe(false)
   })
 })
