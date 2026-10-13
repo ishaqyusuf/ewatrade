@@ -5,6 +5,7 @@ import {
   multiplyExactDecimals,
 } from "@ewatrade/utils/exact-decimal"
 import type { Prisma } from "../../../generated/prisma/client"
+import { readHeldCommerceFinanceBook } from "../customer-ledger/commerce-locks"
 import { FinanceError, assertFinancePostingDate } from "./rules"
 import { productReturnValuationInclude } from "./product-return-evidence"
 import { productReturnDestinationImpact } from "./product-return-destination-impact"
@@ -45,7 +46,7 @@ export { allocateOriginalIssueReturnCost } from "./product-return-cost-plan"
 
 async function loadReturnEvidence(tx: Prisma.TransactionClient, input: {
   tenantId: string; productReturnId: string; costSourceToken?: object
-}) {
+}, heldOrder?: HeldOrder) {
   if (input.costSourceToken) {
     const current = await tx.productReturn.findFirst({
       where: { id: input.productReturnId, tenantId: input.tenantId },
@@ -60,18 +61,26 @@ async function loadReturnEvidence(tx: Prisma.TransactionClient, input: {
     include: productReturnValuationInclude,
   })
   if (!productReturn) throw new FinanceError("NOT_FOUND", "Product return not found.")
-  return { productReturn, sourceBook: null }
+  const sourceBook = heldOrder
+    ? await readHeldCommerceFinanceBook(tx, heldOrder, { tenantId: input.tenantId, orderId: productReturn.orderId })
+    : null
+  return { productReturn, sourceBook }
 }
+
+type HeldOrder = Parameters<typeof readHeldCommerceFinanceBook>[1]
 
 /**
  * Private Product return adapter. The owning Commerce transaction already
  * holds the FinanceBook, Order and destination-balance locks before calling.
+ * Passing that held Order lock reuses its Book and hands this evidence to the
+ * immediately following journal (`recordedValuation`).
  */
 export async function recordProductReturnValuationInTransaction(
   tx: Prisma.TransactionClient,
   input: { tenantId: string; productReturnId: string; costSourceToken?: object },
+  heldOrder?: HeldOrder,
 ) {
-  const { productReturn, sourceBook } = await loadReturnEvidence(tx, input)
+  const { productReturn, sourceBook } = await loadReturnEvidence(tx, input, heldOrder)
   const result = await recordLoadedProductReturnValuation(tx, input, productReturn, sourceBook)
   // Valuation only writes cost/allocation/pool/event rows. Its Order, sold snapshot
   // and current movement remain unchanged until the immediately following journal.

@@ -1,4 +1,4 @@
-import type { Prisma } from "../../../generated/prisma/client"
+import type { FinanceBook, Prisma } from "../../../generated/prisma/client"
 import { CatalogError } from "../catalog"
 
 // Lock evidence is valid only for the transaction and scope that acquired it.
@@ -12,6 +12,28 @@ export function assertHeldCommerceFinancialOrder(
   const held = heldOrderLocks.get(lock)
   if (!held || held.tx !== tx || held.tenantId !== input.tenantId || held.orderId !== input.orderId)
     throw new CatalogError("REVISION_CONFLICT", "Order lock does not belong to this transaction and scope.")
+}
+
+const heldBooks = new WeakMap<object, FinanceBook>()
+
+/**
+ * The Book row a held Order lock locked, read once per lock. Its lastSequence
+ * can lag journals posted since; posting takes sequences from its own increment.
+ */
+export async function readHeldCommerceFinanceBook(
+  tx: Prisma.TransactionClient,
+  lock: { context: { bookId: string } | null },
+  input: { tenantId: string; orderId: string },
+) {
+  assertHeldCommerceFinancialOrder(tx, lock, input)
+  if (!lock.context) return null
+  const cached = heldBooks.get(lock)
+  if (cached) return cached
+  const book = await tx.financeBook.findUniqueOrThrow({
+    where: { id: lock.context.bookId },
+  })
+  heldBooks.set(lock, book)
+  return book
 }
 
 /** Coordination only; callers retain the existing commerce authorization boundary. */

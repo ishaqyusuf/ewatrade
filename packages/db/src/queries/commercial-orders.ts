@@ -2160,15 +2160,20 @@ export async function returnCommercialOrderProductLineInTransaction(
     },
   })
   if (lockedOrder.context) {
-    const valuation = await recordProductReturnValuationInTransaction(tx, {
-      tenantId: input.tenantId,
-      productReturnId: productReturn.id,
-      costSourceToken,
-    })
+    // Under the held lock, valuation reuses its Book and hands its evidence to the journal.
+    const valuation = await recordProductReturnValuationInTransaction(
+      tx,
+      {
+        tenantId: input.tenantId,
+        productReturnId: productReturn.id,
+        costSourceToken,
+      },
+      lockedOrder,
+    )
     await postProductReturnFinanceJournalInTransaction(tx, {
       tenantId: input.tenantId,
       productReturnId: productReturn.id,
-      recordedValuation: costSourceToken && valuation ? valuation : undefined,
+      recordedValuation: valuation ?? undefined,
       journalReviewToken,
     })
   }

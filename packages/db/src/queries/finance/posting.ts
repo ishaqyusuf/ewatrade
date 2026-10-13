@@ -230,8 +230,9 @@ export async function postCommerceFinanceJournalInTransaction(
 export async function postOrderCollectionInTransaction(
   tx: Prisma.TransactionClient,
   source: { tenantId: string; orderId: string; paymentId: string },
+  heldOrder?: Parameters<typeof resolveOrderCollectionPosting>[2],
 ) {
-  const resolved = await resolveOrderCollectionPosting(tx, source)
+  const resolved = await resolveOrderCollectionPosting(tx, source, heldOrder)
   if (resolved.billed)
     return postCommerceFinanceJournalInTransaction(tx, {
       ...source,

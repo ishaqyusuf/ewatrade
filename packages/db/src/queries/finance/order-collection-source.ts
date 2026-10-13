@@ -1,15 +1,26 @@
 import type { Prisma } from "../../../generated/prisma/client"
-import { lockCommerceFinancialOrder } from "../customer-ledger/commerce-locks"
+import {
+  assertHeldCommerceFinancialOrder,
+  lockCommerceFinancialOrder,
+  readHeldCommerceFinanceBook,
+} from "../customer-ledger/commerce-locks"
 import { financePostingCommandId } from "./commands"
 import type { FinancePostingInput } from "./posting"
 import { FinanceError } from "./rules"
 
-/** A selected payment account records cash custody without inventing historic billing. */
+/**
+ * A selected payment account records cash custody without inventing historic billing.
+ * A payment command already holding this Order's lock passes it to skip re-locking.
+ */
 export async function resolveOrderCollectionPosting(
   tx: Prisma.TransactionClient,
   source: { tenantId: string; orderId: string; paymentId: string },
+  heldOrder?: NonNullable<
+    Awaited<ReturnType<typeof lockCommerceFinancialOrder>>
+  >,
 ) {
-  const locked = await lockCommerceFinancialOrder(tx, source)
+  if (heldOrder) assertHeldCommerceFinancialOrder(tx, heldOrder, source)
+  const locked = heldOrder ?? (await lockCommerceFinancialOrder(tx, source))
   const payment = await tx.commercialOrderPayment.findFirst({
     where: {
       id: source.paymentId,
@@ -17,14 +28,12 @@ export async function resolveOrderCollectionPosting(
       orderId: source.orderId,
     },
   })
-  if (!locked?.context || !payment?.moneyAccountId)
+  const book = locked && (await readHeldCommerceFinanceBook(tx, locked, source))
+  if (!locked || !book || !payment?.moneyAccountId)
     throw new FinanceError(
       "CONFLICT",
       "Choose a receiving account from this business's finance setup.",
     )
-  const book = await tx.financeBook.findUniqueOrThrow({
-    where: { id: locked.context.bookId },
-  })
   const money = await tx.financeAccount.findFirst({
     where: {
       id: payment.moneyAccountId,

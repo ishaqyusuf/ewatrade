@@ -5,7 +5,7 @@ import { FinanceError } from "./rules"
 type Evidence = { book: FinanceBook; productReturn: ProductReturnValuationEvidence }
 const recorded = new WeakMap<object, Evidence & { tx: Prisma.TransactionClient }>()
 
-/** Only valuation of a consumed locked-source token may register this handoff. */
+/** Only valuation under a consumed locked-source token or a held Order lock may register this handoff. */
 export function rememberRecordedProductReturn(result: object, tx: Prisma.TransactionClient, evidence: Evidence) {
   recorded.set(result, { tx, ...evidence })
 }

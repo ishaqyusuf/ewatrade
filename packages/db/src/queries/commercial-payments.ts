@@ -344,11 +344,15 @@ async function recordCommercialOrderPaymentCore(
     },
   })
   if (moneyAccountId) {
-    await postOrderCollectionInTransaction(tx, {
-      tenantId: input.tenantId,
-      orderId: order.id,
-      paymentId: payment.id,
-    })
+    await postOrderCollectionInTransaction(
+      tx,
+      {
+        tenantId: input.tenantId,
+        orderId: order.id,
+        paymentId: payment.id,
+      },
+      financialOrder,
+    )
   }
   await tx.commercialOrder.update({
     data: {
