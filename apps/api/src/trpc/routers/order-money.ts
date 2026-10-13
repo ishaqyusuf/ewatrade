@@ -1,6 +1,8 @@
 import {
   CatalogError,
   FinanceError,
+  getCommercialOrderChangePolicy,
+  orderChangeRequirement,
   refundCommercialOrder,
   returnCommercialOrderItems,
 } from "@ewatrade/db/queries"
@@ -10,10 +12,10 @@ import { exactOrderQuantitySchema } from "../../schemas/orders"
 import { protectedProcedure } from "../init"
 import { orderScope } from "../order-scope"
 import {
-  assertCanManageSalesOperations,
-  assertCanOperateOrders,
-  orderError,
-} from "./orders"
+  assertDirectOrderChange,
+  orderChangeActor,
+} from "./order-change-approvals"
+import { assertCanOperateOrders, orderError } from "./orders"
 
 const method = z.enum(["bank_transfer", "card", "cash", "other", "pos"])
 const command = {
@@ -102,8 +104,20 @@ export const orderMoneyProcedures = {
   refund: protectedProcedure
     .input(orderRefundSchema)
     .mutation(async ({ ctx, input }) => {
-      assertCanManageSalesOperations(ctx.tenantContext.membership.role)
+      assertCanOperateOrders(ctx.tenantContext.membership.role)
       const storeId = await orderInActiveStore(ctx, input.orderId)
+      const policy = await getCommercialOrderChangePolicy(ctx.db, {
+        storeId,
+        tenantId: ctx.tenantContext.tenant.id,
+      })
+      // Open: Owner/Admin/Manager; Needs approval: Owner/Admin; Off: nobody.
+      assertDirectOrderChange(
+        orderChangeRequirement(policy, {
+          action: "refund",
+          ...orderChangeActor(ctx.tenantContext.membership.role),
+        }),
+        "refund",
+      )
       try {
         return await refundCommercialOrder(ctx.db, {
           ...input,
@@ -120,13 +134,37 @@ export const orderMoneyProcedures = {
     .input(orderReturnItemsSchema)
     .mutation(async ({ ctx, input }) => {
       assertCanOperateOrders(ctx.tenantContext.membership.role)
-      // Giving money back is an owner or manager decision.
-      if (input.money)
-        assertCanManageSalesOperations(ctx.tenantContext.membership.role)
       const storeId = await orderInActiveStore(ctx, input.orderId)
+      const policy = await getCommercialOrderChangePolicy(ctx.db, {
+        storeId,
+        tenantId: ctx.tenantContext.tenant.id,
+      })
+      const actor = orderChangeActor(ctx.tenantContext.membership.role)
+      // Giving money back is an owner or manager decision when the Store is open.
+      assertDirectOrderChange(
+        orderChangeRequirement(policy, {
+          action: "return",
+          withMoney: Boolean(input.money),
+          ...actor,
+        }),
+        "return",
+      )
+      // Whether money may also go back is known once the refund is worked out.
+      const cashBack = orderChangeRequirement(policy, {
+        action: "return",
+        cashBack: true,
+        withMoney: true,
+        ...actor,
+      })
       try {
         return await returnCommercialOrderItems(ctx.db, {
           ...input,
+          cashBackBlockedReason:
+            cashBack.kind === "blocked"
+              ? cashBack.reason
+              : cashBack.kind === "ask"
+                ? "Giving money back needs an owner or admin's approval. Ask for approval instead"
+                : null,
           money: input.money ?? null,
           actorUserId: ctx.session.user.id,
           storeId,

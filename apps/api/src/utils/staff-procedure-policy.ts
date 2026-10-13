@@ -43,6 +43,7 @@ const reads = new Set([
   // Order history, Change menu options and notes; each applies orderScope.
   "orders.timeline",
   "orders.changeOptions",
+  "orders.changePolicy",
   "orders.activity.list",
   "orders.lookupOpen",
   "orders.lookupOpenPage",
@@ -65,6 +66,10 @@ const orders = new Set([
   "orders.activity.add",
   // Money back is checked again inside: owners and managers only.
   "orders.returnItems",
+  // Asking for, withdrawing and recording an Owner/Admin-approved change.
+  "orders.requestChangeApproval",
+  "orders.withdrawChangeApproval",
+  "orders.recordApprovedChange",
   "inventory.reserveOffering",
   "inventory.releaseReservation",
   "inventory.commitReservation",

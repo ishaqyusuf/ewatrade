@@ -6,11 +6,11 @@ Tickets refer to the Brain plan `.brain/plans/2026-10-09-assistant-business-oper
 
 ## Summary
 
-- Router procedures: 573 (432 merchant, 141 public/account/internal)
+- Router procedures: 580 (439 merchant, 141 public/account/internal)
 - Merchant supported by a capability: 143
-- Merchant planned: 123
+- Merchant planned: 129
 - Merchant form-only: 121
-- Merchant excluded: 45
+- Merchant excluded: 46
 - Capabilities: 137 (72 read, 65 write)
 
 ## Capabilities
@@ -316,7 +316,7 @@ track conversational evaluation separately from these source test links.
 | C05 | 1 |
 | D01 | 1 |
 | D02 | 1 |
-| D03 | 3 |
+| D03 | 8 |
 | D04 | 3 |
 | D05 | 3 |
 | E01 | 6 |
@@ -327,7 +327,7 @@ track conversational evaluation separately from these source test links.
 | G02 | 4 |
 | G03 | 27 |
 | G04 | 7 |
-| G05 | 30 |
+| G05 | 31 |
 | H04 | 10 |
 | S01 | 1 |
 | S02 | 1 |
@@ -515,8 +515,10 @@ track conversational evaluation separately from these source test links.
 | `orders.cancel` | mutation | reconciliation | sales | supported | sales.order.cancel |
 | `orders.cancellationReview` | query | reconciliation | sales | supported | sales.order.cancel |
 | `orders.changeOptions` | query | read | sales | planned | D01 |
+| `orders.changePolicy` | query | read | sales | planned | D03 |
 | `orders.create` | mutation | orders | sales | supported | sales.order.create |
 | `orders.customerCount` | query | read | sales | supported | sales.order_contacts.count |
+| `orders.decideChangeApproval` | mutation | Owner/Admin only | sales | excluded | Approving a staff return or refund is the Owner/Admin's own decision. |
 | `orders.fulfillChargeOnlyServiceLine` | mutation | orders | sales | supported | sales.service.fulfill |
 | `orders.fulfillProductLine` | mutation | orders | sales | supported | sales.product.fulfill |
 | `orders.fulfillProducts` | mutation | orders | sales | supported | sales.products.fulfill |
@@ -529,19 +531,24 @@ track conversational evaluation separately from these source test links.
 | `orders.operationalSummary` | query | read | sales | supported | sales.orders.summary |
 | `orders.paymentAccounts` | query | Owner/Admin only | sales | planned | D03 |
 | `orders.payments` | query | read | sales | planned | B05 |
+| `orders.pendingChangeApprovals` | query | Owner/Admin only | sales | planned | D03 |
 | `orders.prepareReceipts` | query | read | sales | planned | B05 |
 | `orders.receiptSettings` | query | read | sales | planned | G05 |
+| `orders.recordApprovedChange` | mutation | orders | sales | planned | D03 |
 | `orders.recordPayment` | mutation | orders | sales | supported | sales.payment.record |
 | `orders.refund` | mutation | reconciliation | sales | planned | D03 |
 | `orders.reminderSettings` | query | Owner/Admin only | sales | planned | G05 |
 | `orders.replace` | mutation | reconciliation | sales | supported | sales.order.replace |
 | `orders.replacementReview` | query | reconciliation | sales | supported | sales.order.replace |
 | `orders.reportSummary` | query | read | sales | supported | sales.summary.read |
+| `orders.requestChangeApproval` | mutation | orders | sales | planned | D03 |
 | `orders.returnItems` | mutation | orders | sales | planned | D03 |
 | `orders.returnProductLine` | mutation | orders | sales | supported | sales.product.return |
 | `orders.saveReceiptSettings` | mutation | Owner/Admin only | sales | planned | G05 |
 | `orders.timeline` | query | read | sales | planned | D02 |
+| `orders.updateChangePolicy` | mutation | Owner/Admin only | sales | planned | G05 |
 | `orders.updateReminderSettings` | mutation | Owner/Admin only | sales | planned | G05 |
+| `orders.withdrawChangeApproval` | mutation | orders | sales | planned | D03 |
 | `prescriptions.activateIncident` | mutation | Owner/Admin only | commerce | form_only | Regulated pharmacy workflow with its own role gates and compliance audit. |
 | `prescriptions.approveManualDeliveryFee` | mutation | Owner/Admin only | commerce | form_only | Regulated pharmacy workflow with its own role gates and compliance audit. |
 | `prescriptions.assignDelivery` | mutation | Owner/Admin only | commerce | form_only | Regulated pharmacy workflow with its own role gates and compliance audit. |

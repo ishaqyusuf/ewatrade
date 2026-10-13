@@ -286,7 +286,20 @@ planned("sales", "D03", [
   "orders.paymentAccounts",
   "orders.refund",
   "orders.returnItems",
+  // Store returns/refunds approval flow (13 Oct 2026); the assistant must
+  // respect the Store setting before it can draft either change.
+  "orders.changePolicy",
+  "orders.pendingChangeApprovals",
+  "orders.requestChangeApproval",
+  "orders.withdrawChangeApproval",
+  "orders.recordApprovedChange",
 ])
+planned("sales", "G05", ["orders.updateChangePolicy"])
+excluded(
+  "sales",
+  "Approving a staff return or refund is the Owner/Admin's own decision.",
+  ["orders.decideChangeApproval"],
+)
 
 planned("services", "D04", ["serviceAssistantIntake.receipt"])
 

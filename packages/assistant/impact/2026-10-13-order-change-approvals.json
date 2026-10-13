@@ -1,0 +1,99 @@
+{
+  "version": 1,
+  "id": "2026-10-13-order-change-approvals",
+  "tickets": ["D03", "G05"],
+  "summary": "Per-Store returns/refunds policy (Open / Needs approval / Off) and Owner/Admin approval requests. orders.refund and orders.returnItems now enforce the Store setting (Off locks everyone; Needs approval makes everyone below Owner/Admin ask; a Return paying money back also follows Refunds). Staff ask with the exact command, an Owner/Admin approves or rejects, and the requester records exactly that via orders.recordApprovedChange before the end of the business day. No assistant capability is added: any future assistant return/refund draft (D03) must apply the same Store rules, and approving staff requests stays a human Owner/Admin decision.",
+  "capabilities": [],
+  "procedures": [
+    {
+      "path": "orders.changePolicy",
+      "status": "planned",
+      "reason": "Read of the Store rule the D03 return/refund drafts must apply."
+    },
+    {
+      "path": "orders.pendingChangeApprovals",
+      "status": "planned",
+      "reason": "Owner/Admin read of waiting requests; a D03 read candidate."
+    },
+    {
+      "path": "orders.requestChangeApproval",
+      "status": "planned",
+      "reason": "Staff ask for a return/refund; joins the D03 return/refund packet."
+    },
+    {
+      "path": "orders.withdrawChangeApproval",
+      "status": "planned",
+      "reason": "Requester withdraws their own request; joins D03."
+    },
+    {
+      "path": "orders.recordApprovedChange",
+      "status": "planned",
+      "reason": "Records an approved return/refund; joins D03 with orders.refund/returnItems."
+    },
+    {
+      "path": "orders.updateChangePolicy",
+      "status": "planned",
+      "reason": "Owner/Admin Store setting; candidate section for settings.store.change (G05)."
+    },
+    {
+      "path": "orders.decideChangeApproval",
+      "status": "excluded",
+      "reason": "Approving a staff return or refund is the Owner/Admin's own decision, never drafted by the assistant."
+    },
+    {
+      "path": "orders.refund",
+      "status": "planned",
+      "reason": "Unchanged D03 plan; now refuses when the Store's Refunds setting is Off or the caller must ask first."
+    },
+    {
+      "path": "orders.returnItems",
+      "status": "planned",
+      "reason": "Unchanged D03 plan; now refuses when Returns is Off, the caller must ask, or cash back is not allowed."
+    }
+  ],
+  "docs": [
+    {
+      "topic": "feature",
+      "path": ".brain/plans/2026-10-13-return-refund-approvals.md",
+      "status": "local_only",
+      "note": "Rules, flow and build checklist."
+    },
+    {
+      "topic": "capability",
+      "path": "packages/assistant/src/capabilities/COVERAGE.md",
+      "status": "updated"
+    },
+    {
+      "topic": "schema",
+      "path": ".brain/database/migrations.md",
+      "status": "local_only",
+      "note": "Migration 20261013071507_commercial_order_change_approvals."
+    },
+    {
+      "topic": "api",
+      "path": ".brain/api/endpoints.md",
+      "status": "local_only",
+      "note": "Seven orders.* procedures; refund/returnItems enforcement."
+    },
+    {
+      "topic": "permissions",
+      "path": ".brain/api/permissions.md",
+      "status": "local_only",
+      "note": "Owner/Admin approve and edit the setting; scoped staff may ask, withdraw and record."
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "test",
+      "path": "packages/db/src/queries/commercial-order-change-rules.test.ts",
+      "executed": true,
+      "result": "6 pass, 19 assertions (13 Oct 2026)."
+    },
+    {
+      "kind": "test",
+      "path": "apps/api/src/utils/staff-procedure-policy.test.ts",
+      "executed": true,
+      "result": "Passes with order-amendments and order-visibility: 38 pass (13 Oct 2026)."
+    }
+  ]
+}

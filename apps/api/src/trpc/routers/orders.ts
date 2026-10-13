@@ -47,6 +47,7 @@ import {
 } from "../../schemas/order-receipts"
 import { orderActivityRouter } from "./order-activity"
 import { orderAmendmentProcedures } from "./order-amendments"
+import { orderChangeApprovalProcedures } from "./order-change-approvals"
 import { orderMoneyProcedures } from "./order-money"
 import { orderTimelineProcedures } from "./order-timeline"
 
@@ -211,6 +212,7 @@ export const ordersRouter = createTRPCRouter({
   ...orderAmendmentProcedures,
   ...orderTimelineProcedures,
   ...orderMoneyProcedures,
+  ...orderChangeApprovalProcedures,
   activity: orderActivityRouter,
   receiptSettings: protectedProcedure
     .input(orderReceiptSettingsGetSchema)

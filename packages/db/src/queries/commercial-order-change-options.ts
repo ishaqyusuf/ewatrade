@@ -10,6 +10,13 @@ import {
   assessOrderCreditEligibility,
 } from "./commercial-order-amendment-policy"
 import { getCommercialOrderAmendmentEligibility } from "./commercial-order-amendment-review"
+import {
+  OPEN_ORDER_CHANGE_POLICY,
+  ORDER_CHANGE_MANAGERS_ONLY,
+  type OrderChangePolicyModes,
+  type OrderChangeRequirement,
+  orderChangeRequirement,
+} from "./commercial-order-change-rules"
 import type { OrderScope } from "./order-visibility"
 
 export type CommercialOrderChangeOption = {
@@ -17,7 +24,7 @@ export type CommercialOrderChangeOption = {
   reason: string | null
 }
 
-const MANAGERS_ONLY = "Owners and managers only"
+const MANAGERS_ONLY = ORDER_CHANGE_MANAGERS_ONLY
 const INSTEAD = " · refund or return instead"
 
 const allow = (): CommercialOrderChangeOption => ({
@@ -64,8 +71,29 @@ export async function getCommercialOrderChangeOptions(
     orderId: string
     activeStoreId: string | null
     canAmend: boolean
+    /** The Store's returns/refunds settings; Open when omitted. */
+    policy?: OrderChangePolicyModes
+    /** Owner or Admin: never asks, decides requests. */
+    isApprover?: boolean
   },
 ) {
+  const policy = input.policy ?? OPEN_ORDER_CHANGE_POLICY
+  const actor = {
+    canManageMoney: input.canAmend,
+    isApprover: Boolean(input.isApprover),
+  }
+  const rule = (
+    action: "return" | "refund",
+    extra?: { withMoney?: boolean; cashBack?: boolean },
+  ) => orderChangeRequirement(policy, { action, ...actor, ...extra })
+  const returnRule = rule("return")
+  const returnMoneyRule = rule("return", { withMoney: true })
+  const cashBackRule = rule("return", { withMoney: true, cashBack: true })
+  const refundRule = rule("refund")
+  const asks = (requirement: OrderChangeRequirement) =>
+    requirement.kind === "ask"
+  const lockedBy = (requirement: OrderChangeRequirement) =>
+    requirement.kind === "blocked" ? requirement.reason : null
   const order = await db.commercialOrder.findFirst({
     where: { ...input.scope, id: input.orderId, tenantId: input.tenantId },
     select: {
@@ -109,23 +137,38 @@ export async function getCommercialOrderChangeOptions(
             ? "Order is refunded"
             : "Order is cancelled",
         )
-      : returnable.length
-        ? allow()
-        : order.lines.some((line) => line.productFulfillments.length)
-          ? lock("Everything handed over is already returned")
-          : order.lines.some((line) => line.serviceFulfillment)
-            ? lock("Typed-price items have no stock to return")
-            : lock("Nothing handed over yet")),
+      : returnRule.kind === "blocked"
+        ? lock(returnRule.reason)
+        : returnable.length
+          ? allow()
+          : order.lines.some((line) => line.productFulfillments.length)
+            ? lock("Everything handed over is already returned")
+            : order.lines.some((line) => line.serviceFulfillment)
+              ? lock("Typed-price items have no stock to return")
+              : lock("Nothing handed over yet")),
     lines: closed ? [] : returnable,
+    /** This person asks an Owner/Admin before recording a return. */
+    ask: asks(returnRule),
+    /** Lowering the total with the return: asks, or why it is locked. */
+    money: {
+      ask: asks(returnMoneyRule),
+      lockedReason: lockedBy(returnMoneyRule),
+    },
+    /** Paying money back with the return (Refunds setting). */
+    cashBack: { ask: asks(cashBackRule), lockedReason: lockedBy(cashBackRule) },
   }
   const refund = {
-    ...(!input.canAmend
-      ? lock(MANAGERS_ONLY)
+    ...(refundRule.kind === "blocked"
+      ? lock(refundRule.reason)
       : order.amountPaidMinor <= 0
         ? lock("Nothing paid yet")
         : allow()),
     refundableMinor: Math.max(0, order.amountPaidMinor),
+    ask: asks(refundRule),
   }
+  // Someone who asks first still needs to know whether the total may drop.
+  const checkCredit =
+    input.canAmend || asks(returnMoneyRule) || asks(refundRule)
   const base = {
     orderId: order.id,
     orderNumber: order.orderNumber,
@@ -133,6 +176,7 @@ export async function getCommercialOrderChangeOptions(
     returnLine,
     // Whether a refund or return may also lower the total (an order credit).
     credit: lock("Checking…") as CommercialOrderChangeOption,
+    policy: { ...policy, isApprover: actor.isApprover },
   }
 
   if (!input.canAmend) {
@@ -141,7 +185,14 @@ export async function getCommercialOrderChangeOptions(
     )
     return {
       ...base,
-      credit: managers,
+      credit: checkCredit
+        ? await creditOption(
+            db,
+            { ...input, storeId: order.storeId },
+            closed,
+            order.status,
+          )
+        : managers,
       customer: managers,
       details: managers,
       items: managers,
@@ -189,6 +240,21 @@ export async function getCommercialOrderChangeOptions(
     items: insteadOf(ordinary),
     cancel: insteadOf(ordinary),
   }
+}
+
+/** Whether a refund or return may also lower the order's total. */
+async function creditOption(
+  db: PrismaClient,
+  input: { tenantId: string; storeId: string; orderId: string },
+  closed: boolean,
+  status: string,
+) {
+  if (closed) return lock(blockerReason([], status))
+  const review = await getCommercialOrderAmendmentEligibility(db, input)
+  const credit = assessOrderCreditEligibility(review.evidence)
+  return credit.eligible
+    ? allow()
+    : lock(blockerReason(credit.blockers, status))
 }
 
 export type CommercialOrderChangeOptions = Awaited<
