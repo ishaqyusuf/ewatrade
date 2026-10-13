@@ -139,10 +139,10 @@ function ChangeMenu({
   const [showLocked, setShowLocked] = useState(false)
   const options = changes.options
   const mine = {
-    return: options?.approvals.return ?? null,
-    refund: options?.approvals.refund ?? null,
+    return: options?.approvals?.return ?? null,
+    refund: options?.approvals?.refund ?? null,
   }
-  const waitingForMe = options?.approvals.pending ?? []
+  const waitingForMe = options?.approvals?.pending ?? []
   const money = (value: number) => formatMinorMoney(value, order.currencyCode)
   const moved =
     order.amountPaidMinor > 0 ||
@@ -1127,8 +1127,8 @@ function RefundForm({
   const dueAfter = Math.max(0, totalAfter - paidAfter)
   const ask = Boolean(changes.options?.refund.ask)
   const rejected =
-    changes.options?.approvals.refund?.status === "rejected"
-      ? changes.options.approvals.refund
+    changes.options?.approvals?.refund?.status === "rejected"
+      ? changes.options.approvals?.refund
       : null
   return (
     <FormShell
@@ -1331,7 +1331,7 @@ function ApprovalForm({
   order: CommercialOrder
 }) {
   const kind = changes.approvalKind
-  const approval = changes.options?.approvals[kind] ?? null
+  const approval = changes.options?.approvals?.[kind] ?? null
   const [reference, setReference] = useState("")
   if (!approval)
     return (
@@ -1410,7 +1410,7 @@ function ReviewForm({
   order: CommercialOrder
 }) {
   const approval =
-    changes.options?.approvals.pending.find(
+    changes.options?.approvals?.pending?.find(
       (row) => row.id === changes.reviewId,
     ) ?? null
   const [note, setNote] = useState("")
@@ -1516,7 +1516,7 @@ function ReturnForm({
   // Refunds Off: a return may lower what they owe but never pay money back.
   const cashBackLocked =
     refund > 0
-      ? (changes.options?.returnLine.cashBack.lockedReason ?? null)
+      ? (changes.options?.returnLine.cashBack?.lockedReason ?? null)
       : null
   const moneyOn =
     moneyBack && Boolean(credit?.allowed) && !nothingToCredit && !cashBackLocked
@@ -1526,8 +1526,8 @@ function ReturnForm({
     withMoney: moneyOn,
   })
   const rejected =
-    changes.options?.approvals.return?.status === "rejected"
-      ? changes.options.approvals.return
+    changes.options?.approvals?.return?.status === "rejected"
+      ? changes.options.approvals?.return
       : null
   const lines = chosen.map((row) => ({
     disposition: conditions[row.line.id] ?? "restock",

@@ -18,9 +18,9 @@ type Mode = "OFF" | "OPEN" | "APPROVAL_REQUIRED"
 export function hasOpenOrderApproval(options: ChangeOptions | undefined) {
   if (!options) return false
   return (
-    options.approvals.pending.length > 0 ||
-    options.approvals.return?.status === "pending" ||
-    options.approvals.refund?.status === "pending"
+    (options.approvals?.pending.length ?? 0) > 0 ||
+    options.approvals?.return?.status === "pending" ||
+    options.approvals?.refund?.status === "pending"
   )
 }
 
@@ -297,13 +297,13 @@ export function OrderApprovalBanners({
   onAskAgain: (kind: Approval["kind"]) => void
 }) {
   if (!options) return null
-  const mine = [options.approvals.return, options.approvals.refund].filter(
+  const mine = [options.approvals?.return, options.approvals?.refund].filter(
     (row): row is Approval => Boolean(row),
   )
-  if (!options.approvals.pending.length && !mine.length) return null
+  if (!options.approvals?.pending.length && !mine.length) return null
   return (
     <div className="grid gap-3">
-      {options.approvals.pending.map((approval) => (
+      {(options.approvals?.pending ?? []).map((approval) => (
         <Banner
           key={approval.id}
           tone="amber"

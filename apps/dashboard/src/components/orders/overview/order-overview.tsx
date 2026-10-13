@@ -567,10 +567,10 @@ export function OrderOverview({
             options
               ? {
                   ask: options.returnLine.ask,
-                  moneyAsk: options.returnLine.money.ask,
-                  cashBackAsk: options.returnLine.cashBack.ask,
+                  moneyAsk: options.returnLine.money?.ask,
+                  cashBackAsk: options.returnLine.cashBack?.ask,
                   cashBackLockedReason:
-                    options.returnLine.cashBack.lockedReason,
+                    options.returnLine.cashBack?.lockedReason,
                 }
               : undefined
           }

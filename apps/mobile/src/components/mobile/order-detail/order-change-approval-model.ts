@@ -21,8 +21,8 @@ export function returnNeedsApproval(
   const line = options.returnLine
   return (
     line.ask ||
-    (input.withMoney && line.money.ask) ||
-    (input.withMoney && input.cashBack && line.cashBack.ask)
+    (input.withMoney && line.money?.ask) ||
+    (input.withMoney && input.cashBack && line.cashBack?.ask)
   )
 }
 
@@ -62,7 +62,7 @@ export function orderApprovalBanners(
   options: Pick<OrderChangeOptionsData, "approvals"> | null,
 ): ApprovalBanner[] {
   if (!options) return []
-  const banners: ApprovalBanner[] = options.approvals.pending.map(
+  const banners: ApprovalBanner[] = (options.approvals?.pending ?? []).map(
     (approval) => ({
       key: `review:${approval.id}`,
       tone: "warning",
@@ -73,7 +73,10 @@ export function orderApprovalBanners(
       target: { view: "review", approvalId: approval.id },
     }),
   )
-  for (const approval of [options.approvals.return, options.approvals.refund]) {
+  for (const approval of [
+    options.approvals?.return,
+    options.approvals?.refund,
+  ]) {
     if (!approval) continue
     const base = { key: `mine:${approval.id}`, message: approval.summary }
     if (approval.status === "pending")
@@ -118,8 +121,8 @@ export function hasOpenApproval(
 ) {
   if (!options) return false
   return (
-    options.approvals.pending.length > 0 ||
-    options.approvals.return?.status === "pending" ||
-    options.approvals.refund?.status === "pending"
+    (options.approvals?.pending.length ?? 0) > 0 ||
+    options.approvals?.return?.status === "pending" ||
+    options.approvals?.refund?.status === "pending"
   )
 }
