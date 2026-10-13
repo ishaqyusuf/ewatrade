@@ -10,12 +10,12 @@ import {
 } from "@/components/mobile/appearances/classic/catalog-screen"
 import { BottomSearchFooter } from "@/components/mobile/bottom-search-footer"
 import { EmptyState } from "@/components/mobile/empty-state"
-import { FormField } from "@/components/mobile/form-field"
 import { ListCreateFab } from "@/components/mobile/list-create-fab"
 import { getListCreateFabFooterOffset } from "@/components/mobile/list-create-fab-model"
 import { ListSkeleton } from "@/components/mobile/loading-skeletons"
 import { QueryRefreshControl } from "@/components/mobile/query-refresh-control"
 import { StatusBanner } from "@/components/mobile/status-banner"
+import { TabSearchBubble } from "@/components/mobile/tab-search-bubble"
 import { Icon } from "@/components/ui/icon"
 import { Modal, useModal } from "@/components/ui/modal"
 import { RevealItem, useFirstReveal } from "@/components/ui/motion"
@@ -265,22 +265,6 @@ export function CatalogItemsContent({
                   tone="destructive"
                 />
               ) : null}
-              {presentation === "tab" && showSearch ? (
-                <FormField
-                  accessibilityLabel="Search catalog"
-                  autoCapitalize="words"
-                  label="Search catalog"
-                  leadingIcon="Search"
-                  onChangeText={setQuery}
-                  placeholder={
-                    isOffline
-                      ? "Search saved items"
-                      : "Search name, type or unit"
-                  }
-                  value={query}
-                  variant="till-search"
-                />
-              ) : null}
               {availabilityQuery.data?.hasCatalogItems && mixedCatalog ? (
                 <View className="flex-row rounded-[13px] border border-border bg-muted p-[3px]">
                   <ClassicCatalogFilter
@@ -516,7 +500,21 @@ export function CatalogItemsContent({
           value={query}
         />
       ) : null}
-      {canEdit && !showFirstItemGate ? (
+      {presentation === "tab" && showSearch && !showFirstItemGate ? (
+        <TabSearchBubble
+          accessibilityLabel="Search catalog"
+          dockHidden={dockHidden}
+          onChangeText={setQuery}
+          placeholder={
+            isOffline ? "Search saved items" : "Search name, type or unit"
+          }
+          testID="catalog-search-button"
+          value={query}
+        />
+      ) : null}
+      {/* The tab bar's + already adds items, so only full-screen Catalog
+          (no tab bar) shows the Add button. */}
+      {presentation === "modal" && canEdit && !showFirstItemGate ? (
         <ListCreateFab
           tone="gold"
           accessibilityLabel="Add catalog item"
@@ -528,10 +526,8 @@ export function CatalogItemsContent({
                 })
               : 0
           }
-          dockHidden={dockHidden}
           disabled={isOffline || !canEdit}
           onPress={openAdd}
-          sitsAboveDock={presentation === "tab"}
           testID="catalog-add-fab"
         />
       ) : null}
