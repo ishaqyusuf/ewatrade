@@ -287,11 +287,14 @@ export function RefundDialog({
   onOpenReturn,
   onClose,
   onDone,
+  ask = false,
 }: DialogProps & {
   /** Whether the total may drop with the refund (an order credit). */
   credit: Option
   canReturn: boolean
   onOpenReturn: () => void
+  /** The store needs an Owner/Admin's approval first: send a request. */
+  ask?: boolean
 }) {
   const trpc = useTRPC()
   const paid = order.amountPaidMinor
@@ -311,7 +314,7 @@ export function RefundDialog({
   const [why, setWhy] = useState<RefundReason | null>(null)
   const [ownReason, setOwnReason] = useState("")
   const clientOperationId = useRef(`refund-${crypto.randomUUID()}`).current
-  const refund = useMutation(
+  const refundMutation = useMutation(
     trpc.orders.refund.mutationOptions({
       onSuccess: async () => {
         await onDone()
@@ -319,6 +322,16 @@ export function RefundDialog({
       },
     }),
   )
+  const request = useMutation(
+    trpc.orders.requestChangeApproval.mutationOptions({
+      onSuccess: async () => {
+        await onDone()
+        onClose()
+      },
+    }),
+  )
+  // Recording and asking share the dialog's busy and error states.
+  const refund = ask ? request : refundMutation
   const amountMinor =
     share === "all"
       ? paid
@@ -378,6 +391,7 @@ export function RefundDialog({
           />
         </DialogField>
       ) : null}
+      {ask ? <AskNotice /> : null}
       <Choice
         label="Paid back by"
         value={method}
@@ -385,12 +399,14 @@ export function RefundDialog({
         onChange={setMethod}
         disabled={refund.isPending}
       />
-      <OrderPaymentAccount
-        label="Paid back from"
-        choice={account}
-        disabled={refund.isPending}
-      />
-      {method !== "cash" ? (
+      {ask ? null : (
+        <OrderPaymentAccount
+          label="Paid back from"
+          choice={account}
+          disabled={refund.isPending}
+        />
+      )}
+      {method !== "cash" && !ask ? (
         <DialogField
           label="Reference (optional)"
           htmlFor="order-refund-reference"
@@ -484,23 +500,39 @@ export function RefundDialog({
         <Button
           type="button"
           variant="destructive"
-          disabled={Boolean(problem) || !reason || refund.isPending}
+          disabled={
+            Boolean(ask ? amountProblem : problem) ||
+            !reason ||
+            refund.isPending
+          }
           onClick={() =>
-            refund.mutate({
-              orderId: order.id,
-              clientOperationId,
-              amountMinor,
-              method,
-              moneyAccountId: account.payloadAccountId,
-              reference: reference.trim() || undefined,
-              reason,
-              lowerTotal,
-            })
+            ask
+              ? request.mutate({
+                  kind: "refund",
+                  orderId: order.id,
+                  clientRequestId: clientOperationId,
+                  amountMinor,
+                  method,
+                  reason,
+                  lowerTotal,
+                })
+              : refundMutation.mutate({
+                  orderId: order.id,
+                  clientOperationId,
+                  amountMinor,
+                  method,
+                  moneyAccountId: account.payloadAccountId,
+                  reference: reference.trim() || undefined,
+                  reason,
+                  lowerTotal,
+                })
           }
         >
           {refund.isPending
             ? "Saving…"
-            : `Refund ${money(Math.max(0, amountMinor))}`}
+            : ask
+              ? "Ask for approval"
+              : `Refund ${money(Math.max(0, amountMinor))}`}
         </Button>
       </div>
     </OrderDialog>
@@ -530,11 +562,19 @@ export function ReturnItemsDialog({
   initialLineId,
   onClose,
   onDone,
+  rules,
 }: DialogProps & {
   returnable: Array<{ orderLineId: string; quantity: string }>
   /** Whether money may go back with the return (an order credit). */
   credit: Option
   initialLineId?: string
+  /** Store rules: when this person must ask first, and cash-back locks. */
+  rules?: {
+    ask: boolean
+    moneyAsk: boolean
+    cashBackAsk: boolean
+    cashBackLockedReason: string | null
+  }
 }) {
   const trpc = useTRPC()
   const money = (value: number) => orderMoney(value, order.currencyCode)
@@ -560,8 +600,16 @@ export function ReturnItemsDialog({
   })
   const [reason, setReason] = useState("")
   const clientOperationId = useRef(`return-${crypto.randomUUID()}`).current
-  const save = useMutation(
+  const record = useMutation(
     trpc.orders.returnItems.mutationOptions({
+      onSuccess: async () => {
+        await onDone()
+        onClose()
+      },
+    }),
+  )
+  const request = useMutation(
+    trpc.orders.requestChangeApproval.mutationOptions({
       onSuccess: async () => {
         await onDone()
         onClose()
@@ -601,9 +649,24 @@ export function ReturnItemsDialog({
   // full "Overcharged" refund) or the chosen items carry no value.
   const nothingToCredit =
     order.totalMinor <= 0 || (chosen.length > 0 && value <= 0)
-  const giveMoney = credit.allowed && !nothingToCredit && (moneyChoice ?? true)
   const totalAfter = order.totalMinor - value
   const refundNow = Math.max(0, order.amountPaidMinor - totalAfter)
+  // Refunds Off: a return may lower what they owe but never pay money back.
+  const cashBackLocked =
+    refundNow > 0 ? (rules?.cashBackLockedReason ?? null) : null
+  const giveMoney =
+    credit.allowed &&
+    !nothingToCredit &&
+    !cashBackLocked &&
+    (moneyChoice ?? true)
+  const ask = Boolean(
+    rules &&
+      (rules.ask ||
+        (giveMoney && rules.moneyAsk) ||
+        (giveMoney && refundNow > 0 && rules.cashBackAsk)),
+  )
+  // Recording and asking share the dialog's busy and error states.
+  const save = ask ? request : record
   const stillDue = Math.max(0, totalAfter - (order.amountPaidMinor - refundNow))
   // Nothing paid comes back: the credit only lowers what they still owe.
   const takeOff = giveMoney && chosen.length > 0 && refundNow === 0
@@ -761,10 +824,16 @@ export function ReturnItemsDialog({
           aria-checked={giveMoney}
           className="size-5 accent-[var(--primary)]"
           checked={giveMoney}
-          disabled={!credit.allowed || nothingToCredit || save.isPending}
+          disabled={
+            !credit.allowed ||
+            nothingToCredit ||
+            Boolean(cashBackLocked) ||
+            save.isPending
+          }
           onChange={(event) => setMoneyChoice(event.target.checked)}
         />
       </label>
+      {ask ? <AskNotice /> : null}
       {giveMoney && refundNow > 0 ? (
         <>
           <Choice
@@ -774,12 +843,14 @@ export function ReturnItemsDialog({
             onChange={setMethod}
             disabled={save.isPending}
           />
-          <OrderPaymentAccount
-            label="Paid back from"
-            choice={account}
-            disabled={save.isPending}
-          />
-          {method !== "cash" ? (
+          {ask ? null : (
+            <OrderPaymentAccount
+              label="Paid back from"
+              choice={account}
+              disabled={save.isPending}
+            />
+          )}
+          {method !== "cash" && !ask ? (
             <DialogField
               label="Reference (optional)"
               htmlFor="order-return-reference"
@@ -854,41 +925,68 @@ export function ReturnItemsDialog({
             !chosen.length ||
             invalid ||
             !reason.trim() ||
-            (giveMoney && refundNow > 0 && Boolean(account.problem)) ||
+            (!ask && giveMoney && refundNow > 0 && Boolean(account.problem)) ||
             save.isPending
           }
           onClick={() =>
-            save.mutate({
-              orderId: order.id,
-              clientOperationId,
-              reason: reason.trim(),
-              lines: chosen.map((row) => ({
-                orderLineId: row.line.id,
-                quantity: row.text.trim(),
-                disposition: row.condition,
-              })),
-              money: giveMoney
-                ? {
-                    method,
-                    moneyAccountId:
-                      refundNow > 0 ? account.payloadAccountId : undefined,
-                    reference:
-                      refundNow > 0 ? reference.trim() || undefined : undefined,
-                  }
-                : null,
-            })
+            ask
+              ? request.mutate({
+                  kind: "return",
+                  orderId: order.id,
+                  clientRequestId: clientOperationId,
+                  reason: reason.trim(),
+                  lines: chosen.map((row) => ({
+                    orderLineId: row.line.id,
+                    quantity: row.text.trim(),
+                    disposition: row.condition,
+                  })),
+                  money: giveMoney ? { method } : null,
+                })
+              : record.mutate({
+                  orderId: order.id,
+                  clientOperationId,
+                  reason: reason.trim(),
+                  lines: chosen.map((row) => ({
+                    orderLineId: row.line.id,
+                    quantity: row.text.trim(),
+                    disposition: row.condition,
+                  })),
+                  money: giveMoney
+                    ? {
+                        method,
+                        moneyAccountId:
+                          refundNow > 0 ? account.payloadAccountId : undefined,
+                        reference:
+                          refundNow > 0
+                            ? reference.trim() || undefined
+                            : undefined,
+                      }
+                    : null,
+                })
           }
         >
           {save.isPending
             ? "Saving…"
-            : !giveMoney || !chosen.length
-              ? "Record return"
-              : takeOff
-                ? `Return and take off ${money(value)}`
-                : `Return and refund ${money(refundNow)}`}
+            : ask
+              ? "Ask for approval"
+              : !giveMoney || !chosen.length
+                ? "Record return"
+                : takeOff
+                  ? `Return and take off ${money(value)}`
+                  : `Return and refund ${money(refundNow)}`}
         </Button>
       </div>
     </OrderDialog>
+  )
+}
+
+/** Shown when the store needs an Owner/Admin's approval first. */
+function AskNotice() {
+  return (
+    <Notice tone="sky" title="Needs approval">
+      An owner or admin approves it first. Once approved, you record it from
+      this order before the end of today.
+    </Notice>
   )
 }
 

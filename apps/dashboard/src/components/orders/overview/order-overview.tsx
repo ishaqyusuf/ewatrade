@@ -51,6 +51,10 @@ import {
   ItemsChangeDialog,
 } from "./order-amend-dialogs"
 import {
+  OrderApprovalBanners,
+  hasOpenOrderApproval,
+} from "./order-change-approvals"
+import {
   FulfilDialog,
   PaymentDialog,
   RefundDialog,
@@ -150,7 +154,15 @@ export function OrderOverview({
     trpc.orders.get.queryOptions({ orderId }, { retry: false }),
   )
   const changes = useQuery(
-    trpc.orders.changeOptions.queryOptions({ orderId }, { retry: false }),
+    trpc.orders.changeOptions.queryOptions(
+      { orderId },
+      {
+        // Someone waits on a return/refund decision: check back often.
+        refetchInterval: (query) =>
+          hasOpenOrderApproval(query.state.data) ? 15_000 : false,
+        retry: false,
+      },
+    ),
   )
   // Shown only where the shell offers the quick assistant (not to cashiers).
   const launcher = useQuickAssistantLauncher()
@@ -499,6 +511,15 @@ export function OrderOverview({
         actions
       )}
       <ReplacementBanner order={order} onOpenOrder={onOpenOrder} />
+      <OrderApprovalBanners
+        options={options}
+        currencyCode={order.currencyCode}
+        timeZone={timeZone}
+        onDone={done}
+        onAskAgain={(kind) =>
+          setDialog(kind === "return" ? { kind: "return" } : { kind: "refund" })
+        }
+      />
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(300px,360px)] lg:items-start">
         {details}
         <OrderActivityColumn
@@ -523,6 +544,7 @@ export function OrderOverview({
           credit={creditOption}
           canReturn={Boolean(options?.returnLine.allowed)}
           onOpenReturn={() => setDialog({ kind: "return" })}
+          ask={Boolean(options?.refund.ask)}
           onClose={close}
           onDone={done}
         />
@@ -541,6 +563,17 @@ export function OrderOverview({
           returnable={returnable}
           credit={creditOption}
           initialLineId={dialog.lineId}
+          rules={
+            options
+              ? {
+                  ask: options.returnLine.ask,
+                  moneyAsk: options.returnLine.money.ask,
+                  cashBackAsk: options.returnLine.cashBack.ask,
+                  cashBackLockedReason:
+                    options.returnLine.cashBack.lockedReason,
+                }
+              : undefined
+          }
           onClose={close}
           onDone={done}
         />

@@ -144,6 +144,7 @@ describe("dashboard navigation policy", () => {
       "/settings",
       "/settings/stores",
       "/settings/receipts",
+      "/settings/returns",
       "/settings/domains",
       "/settings/channels",
       "/settings/service-commerce",

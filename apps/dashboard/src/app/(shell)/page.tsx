@@ -8,6 +8,7 @@ import {
 } from "@/components/dashboard/overview-metrics"
 import { OverviewRecentOrders } from "@/components/dashboard/overview-recent-orders"
 import { WorkspaceError } from "@/components/dashboard/workspace-error"
+import { ChangeApprovalsCard } from "@/components/orders/overview/order-change-approvals"
 import { PageHeader } from "@/components/page-header"
 import { AssistantProductEntry } from "@/components/product-assistant/assistant-home"
 import { SetupAssistant } from "@/components/setup-assistant/setup-assistant"
@@ -91,7 +92,14 @@ export default async function DashboardHomePage() {
         ) : null}
       </div>
       {store && ["OWNER", "ADMIN"].includes(ctx?.membership.role ?? "") ? (
-        <OrderVisibilityCard storeId={store.id} storeName={store.name} review />
+        <>
+          <ChangeApprovalsCard timeZone={tenant?.timezone ?? "Africa/Lagos"} />
+          <OrderVisibilityCard
+            storeId={store.id}
+            storeName={store.name}
+            review
+          />
+        </>
       ) : null}
       {store ? (
         <SetupAssistant

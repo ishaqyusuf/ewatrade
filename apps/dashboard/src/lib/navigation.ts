@@ -328,6 +328,14 @@ const DASHBOARD_NAV: DashboardNavDefinition[] = [
         requiresPlanFeature: "invoices",
       },
       {
+        description:
+          "Whether staff return and refund, ask first, or not at all",
+        href: "/settings/returns",
+        icon: "settings",
+        label: "Returns and refunds",
+        canAccess: canManageTenantRole,
+      },
+      {
         description: "Business domain settings",
         href: "/settings/domains",
         icon: "settings",
