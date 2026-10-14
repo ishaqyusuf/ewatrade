@@ -1,4 +1,4 @@
-import type { PrismaClient } from "../../generated/prisma/client"
+import type { DbClient } from "./types"
 
 export const defaultCommercialOrderReminderSettings = {
   dayBeforeEnabled: true,
@@ -7,7 +7,7 @@ export const defaultCommercialOrderReminderSettings = {
 } as const
 
 export async function getCommercialOrderReminderSettings(
-  db: PrismaClient,
+  db: DbClient,
   input: { storeId: string; tenantId: string },
 ) {
   const store = await db.store.findFirst({
@@ -35,7 +35,7 @@ export async function getCommercialOrderReminderSettings(
 }
 
 export async function updateCommercialOrderReminderSettings(
-  db: PrismaClient,
+  db: DbClient,
   input: {
     actorUserId: string
     dayBeforeEnabled: boolean

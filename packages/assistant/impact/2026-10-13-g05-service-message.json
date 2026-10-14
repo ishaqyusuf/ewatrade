@@ -1,0 +1,76 @@
+{
+  "version": 1,
+  "id": "2026-10-13-g05-service-message",
+  "tickets": ["G05"],
+  "summary": "Adds planned dashboard capabilities services.message.share (action service_message_share) and services.messages.read (readServiceMessages). A staff member records a message they ALREADY shared themselves with a saved Service Job's Order customer; ewatrade sends nothing. The canonical command creates one MANUAL/COMPLETED ServiceNotificationIntent plus one ServiceManualShare atomically in the caller's transaction, after locking Order then Job and re-reviewing. The recipient is always the Order snapshot. The provider dispatcher never selects it; customer tracking shows it. New native serviceCommunications.recordManualMessage and serviceCommunications.listMessages call the same canonical functions. No schema, provider, worker or mobile change.",
+  "capabilities": [
+    {
+      "id": "services.message.share",
+      "change": "added",
+      "rollout": "planned",
+      "note": "Owner/Admin/legacy Manager. Scoped Managers refused in the canonical command and centrally (no procedure grant). Exact active Store = Job Store, tenant and non-clinical guards. Dashboard only. Receipt uses the existing order kind (record = intent id, opens the Order)."
+    },
+    {
+      "id": "services.messages.read",
+      "change": "added",
+      "rollout": "planned",
+      "note": "Bounded newest-first history (20 intents, 3 shares and 3 attempts each), safe fields only, classified staff_reported_share/provider_* without inferring delivery or consent. Same authority as the write. Dashboard only."
+    }
+  ],
+  "procedures": [
+    {
+      "path": "serviceCommunications.recordManualMessage",
+      "status": "supported",
+      "reason": "New thin native mutation calling recordServiceManualMessageInTransaction, the same canonical command used by services.message.share."
+    },
+    {
+      "path": "serviceCommunications.listMessages",
+      "status": "supported",
+      "reason": "New thin native query calling listServiceJobMessagesInTransaction, the same bounded projection used by services.messages.read."
+    }
+  ],
+  "docs": [
+    {
+      "topic": "feature",
+      "path": ".brain/features/assistant-service-messages.md",
+      "status": "local_only",
+      "note": "New G05 manual-share feature, API and permission notes."
+    },
+    {
+      "topic": "capability",
+      "path": "packages/assistant/src/capabilities/COVERAGE.md",
+      "status": "updated"
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "test",
+      "path": "packages/db/src/queries/service-manual-message.test.ts",
+      "executed": true,
+      "result": "8 pass offline with an in-memory transaction: review binding and revision drift; refusals (no phone for SMS/WhatsApp, not shared, bad text, scoped Manager, cashier, clinical, other Store, other tenant); Order-then-Job lock order and MANUAL/COMPLETED fact with share; replay and changed-payload/actor/recipient-drift refusal leaving facts unchanged; stale revision refused before write; dispatcher predicate excludes MANUAL and COMPLETED; bounded safe classified history; revoked/scoped completed replay refused unchanged. Concurrency is not exercised (unique index plus Job FOR UPDATE by source review only)."
+    },
+    {
+      "kind": "test",
+      "path": "apps/api/src/assistant/general-service-message.test.ts",
+      "executed": true,
+      "result": "5 pass offline: review disclosure lines; server-owned recipient/Store/tenant (smuggled fields refused before any command); lock then review then record with the reviewed revision and proposal key; exact order receipt; canonical FORBIDDEN/CONFLICT mapping; central authority matrix for write and read (scoped Managers, cashier, operator, suspended and mobile refused; planned rollout refused). Canonical commands stood in."
+    },
+    {
+      "kind": "test",
+      "path": "packages/assistant/src/general/service-message.test.ts",
+      "executed": true,
+      "result": "Strict contract; within packages/assistant/src 238 pass, 22 skip."
+    },
+    {
+      "kind": "test",
+      "path": "apps/dashboard/src/components/general-assistant/general-service-message-editor.test.tsx",
+      "executed": true,
+      "result": "2 pass: static render and save validation (fresh acknowledgement required); not browser acceptance."
+    },
+    {
+      "kind": "review",
+      "path": "packages/assistant/evaluations/runs/2026-10-13-g05-service-message.md",
+      "executed": false
+    }
+  ]
+}

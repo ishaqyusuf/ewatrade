@@ -1,16 +1,17 @@
 import { z } from "zod"
 import { serviceBookingTargetSchema } from "./booking-read"
-import { quoteApprovalTargetSchema } from "./quote-reads"
-import { serviceWorkOriginalTargetSchema } from "./service-work-original"
 import { businessReportTargetSchema } from "./business-report-target"
 import {
   cashCountTargetSchema,
   dayCloseTargetSchema,
 } from "./cash-count-target"
+import { quoteApprovalTargetSchema } from "./quote-reads"
+import { serviceWorkOriginalTargetSchema } from "./service-work-original"
+import { staffAccessTargetSchema } from "./staff-access"
+import { staffActivityTargetSchema } from "./staff-activity-target"
 import { staffDirectoryTargetSchema } from "./staff-directory-target"
 import { staffHistoryTargetSchema } from "./staff-history-target"
 import { staffStatusTargetSchema } from "./staff-status"
-import { staffAccessTargetSchema } from "./staff-access"
 
 /** Navigation identity only; the native query derives Tenant/actor and checks access. */
 export const staffMemberTargetSchema = z
@@ -40,4 +41,5 @@ export const generalAnswerTargetSchema = z.discriminatedUnion("kind", [
   staffHistoryTargetSchema,
   staffMemberTargetSchema,
   staffDirectoryTargetSchema,
+  staffActivityTargetSchema,
 ])

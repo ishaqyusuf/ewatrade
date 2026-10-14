@@ -1,8 +1,16 @@
 import type { PrismaClient } from "../../generated/prisma/client"
 
-type CommercialInventoryClient = Pick<
+export type CommercialInventoryClient = Pick<
   PrismaClient,
   | "commercialOrder"
+  | "commercialServiceFulfillment"
+  | "commercialServiceAuthorization"
+  | "commercialOrderAmendment"
+  | "commercialOrderActivity"
+  | "commercialOrderCredit"
+  | "commercialOrderReminderSettings"
+  | "commercialOrderReminderDelivery"
+  | "commercialOrderReminderDigest"
   | "commercialOrderPayment"
   | "commercialOrderFulfillmentCommand"
   | "productReturn"
@@ -36,6 +44,24 @@ export async function getAccountPrivacyCommercialInventory(
   verifiedEmail?: string | null,
 ) {
   // Sequential reads also work inside the final serializable transaction.
+  const serviceFulfillments = await db.commercialServiceFulfillment.count({
+    where: { actorUserId: verifiedSubjectUserId },
+  })
+  const serviceAuthorizations = await db.commercialServiceAuthorization.count({
+    where: { actorUserId: verifiedSubjectUserId },
+  })
+  const orderAmendments = await db.commercialOrderAmendment.count({
+    where: { actorUserId: verifiedSubjectUserId },
+  })
+  const orderActivities = await db.commercialOrderActivity.count({
+    where: { actorUserId: verifiedSubjectUserId },
+  })
+  const orderCredits = await db.commercialOrderCredit.count({
+    where: { actorUserId: verifiedSubjectUserId },
+  })
+  const reminderSettings = await db.commercialOrderReminderSettings.count({
+    where: { updatedByUserId: verifiedSubjectUserId },
+  })
   const createdOrders = await db.commercialOrder.count({
     where: { createdByUserId: verifiedSubjectUserId },
   })
@@ -158,7 +184,25 @@ export async function getAccountPrivacyCommercialInventory(
         where: { customerEmail: { equals: email, mode: "insensitive" } },
       })
     : 0
+  const reminderDeliveries = email
+    ? await db.commercialOrderReminderDelivery.count({
+        where: { recipientEmail: { equals: email, mode: "insensitive" } },
+      })
+    : 0
+  const reminderDigests = email
+    ? await db.commercialOrderReminderDigest.count({
+        where: { recipientEmail: { equals: email, mode: "insensitive" } },
+      })
+    : 0
   return {
+    serviceFulfillments,
+    serviceAuthorizations,
+    orderAmendments,
+    orderActivities,
+    orderCredits,
+    reminderSettings,
+    reminderDeliveries,
+    reminderDigests,
     createdOrders,
     recordedPayments,
     fulfillmentCommands,

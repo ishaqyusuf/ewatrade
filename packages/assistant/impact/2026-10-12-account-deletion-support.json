@@ -1,0 +1,59 @@
+{
+  "version": 1,
+  "id": "2026-10-12-account-deletion-support",
+  "tickets": ["H02"],
+  "summary": "Implements guarded private assistant/media cleanup, controller-reviewed customer minimization and record-level accounting/shared retention with independent lifecycle ledger. Development accepted; Production/provider/delivery activation pending.",
+  "noAssistantImpact": "Privacy commands remain independent platform-admin operations and are excluded from merchant assistant access. Existing assistant background writes and uploads gain deletion fences and original storage pinning; no assistant deletion tool, merchant write permission, entitlement or rollout is added.",
+  "docs": [
+    {
+      "topic": "feature",
+      "path": ".brain/features/account-privacy.md",
+      "status": "local_only",
+      "note": "Supported private/customer/record scope, blocked domains and source-only rollout."
+    },
+    {
+      "topic": "api",
+      "path": ".brain/api/account-privacy.md",
+      "status": "local_only",
+      "note": "Strict controller evidence, source/revision binding, operator schemas and projections."
+    },
+    {
+      "topic": "schema",
+      "path": ".brain/database/account-privacy.md",
+      "status": "local_only",
+      "note": "Independent record-retention ledger; Prisma-generated Development migration; Production absent."
+    },
+    {
+      "topic": "capability",
+      "path": "packages/assistant/src/capabilities/COVERAGE.md",
+      "status": "updated",
+      "note": "Privacy routes remain non-merchant/platform/excluded; background assistant privacy fences."
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "test",
+      "path": "packages/db/src/queries/account-privacy-workflow.integration.test.ts",
+      "executed": true,
+      "result": "Verified Development: 1 pass/64 assertions, owned fixtures cleaned, unrelated user preserved. Synthetic media/provider receipts; stops at unproven delivery."
+    },
+    {
+      "kind": "test",
+      "path": "packages/db/src/queries/account-privacy-record-retention.integration.test.ts",
+      "executed": true,
+      "result": "Verified Development: 1 pass/46 assertions. Customer optional fields/replay, duplicated-contact refusal, original expiry/holds/shared redaction, money and other actors preserved; request-ledger expiry does not cascade. All owned fixtures cleaned. Synthetic controller receipts."
+    },
+    {
+      "kind": "test",
+      "path": "packages/private-media/src/vercel-blob.test.ts",
+      "executed": true,
+      "result": "Final scoped regression: 391 pass, 11 integration skips, 0 fail, 1248 assertions across43files. Conditional304 refuses absence; SDKnull absence accepted. No live provider."
+    },
+    {
+      "kind": "review",
+      "path": ".brain/launch/account-deletion-implementation-2026-10-12.md",
+      "executed": true,
+      "result": "Owner-approved policy, supported and unhandled domains, Development migration, read-only Production gaps and separate operating/security/provider/Play actions documented."
+    }
+  ]
+}

@@ -2,6 +2,10 @@ import { isIP } from "node:net"
 
 const TRUSTED_CLIENT_IP_HEADERS = new Set(["cf-connecting-ip", "x-real-ip"])
 
+export function isTrustedClientIpHeaderConfigured(value: string | undefined) {
+  return TRUSTED_CLIENT_IP_HEADERS.has(value?.trim().toLowerCase() ?? "")
+}
+
 function isPlausibleIpAddress(value: string) {
   const hasControlCharacter = [...value].some((character) => {
     const code = character.charCodeAt(0)
@@ -41,7 +45,7 @@ function getTrustedClientIp(
   getHeader: (name: string) => string | null | undefined,
 ) {
   const headerName = configuredHeader?.trim().toLowerCase()
-  if (!headerName || !TRUSTED_CLIENT_IP_HEADERS.has(headerName)) return null
+  if (!headerName || !isTrustedClientIpHeaderConfigured(headerName)) return null
 
   const value = getHeader(headerName)?.trim()
   return value && isPlausibleIpAddress(value) ? value : null

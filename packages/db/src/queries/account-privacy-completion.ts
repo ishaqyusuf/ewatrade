@@ -1,13 +1,16 @@
 import type { PrismaClient } from "../../generated/prisma/client"
 import { getAccountPrivacyAdditionalInventory } from "./account-privacy-additional-inventory"
 import { getAccountPrivacyCommercialInventory } from "./account-privacy-commercial-inventory"
+import { accountPrivacyCommercialRetentionIsConfirmed } from "./account-privacy-commercial-retention"
 import { getAccountPrivacyConversationInventory } from "./account-privacy-conversation-inventory"
+import { accountPrivacyExternalReviewIsConfirmed } from "./account-privacy-external-policy"
 import { getAccountPrivacyPrescriptionInventory } from "./account-privacy-prescription-inventory"
 import { getAccountPrivacyProfileInventory } from "./account-privacy-profile-inventory"
 import {
   getApprovedAccountPrivacyProfilePolicy,
   isAccountPrivacyProfileMinimizationConfirmed,
 } from "./account-privacy-profile-policy"
+import { accountPrivacyAdditionalScopeIsResolved } from "./account-privacy-record-scope"
 import {
   accountPrivacyRetentionDeadlines,
   getApprovedAccountPrivacyRetentionPolicy,
@@ -101,6 +104,7 @@ export async function assessAccountPrivacyCompletion(
     PrismaClient,
     | "assistantActionProposal"
     | "accountPrivacyRequest"
+    | "accountPrivacyRecordRetention"
     | "legalAcceptance"
     | "assistantConversation"
     | "assistantRun"
@@ -149,6 +153,14 @@ export async function assessAccountPrivacyCompletion(
     | "billingCheckoutSession"
     | "playRefundReviewResponse"
     | "commercialOrder"
+    | "commercialServiceFulfillment"
+    | "commercialServiceAuthorization"
+    | "commercialOrderAmendment"
+    | "commercialOrderActivity"
+    | "commercialOrderCredit"
+    | "commercialOrderReminderSettings"
+    | "commercialOrderReminderDelivery"
+    | "commercialOrderReminderDigest"
     | "commercialOrderPayment"
     | "commercialOrderFulfillmentCommand"
     | "productReturn"
@@ -225,6 +237,7 @@ export async function assessAccountPrivacyCompletion(
           deliveredAt: true,
         },
       },
+      outcome: true,
       domainOutcomes: {
         select: {
           userId: true,
@@ -332,7 +345,14 @@ export async function assessAccountPrivacyCompletion(
       subjectId,
       verifiedEmail,
     )
-    if (Object.values(additional).some((count) => count > 0))
+    if (
+      !(await accountPrivacyAdditionalScopeIsResolved(db, {
+        requestId: request.id,
+        subjectId,
+        inventory: additional,
+        now,
+      }))
+    )
       blockers.push("ADDITIONAL_PERSONAL_DATA_REVIEW_REQUIRED")
     if (
       (!verifiedEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(verifiedEmail)) &&
@@ -608,6 +628,17 @@ export async function assessAccountPrivacyCompletion(
       )
         blockers.push("CONVERSATION_REVIEW_REQUIRED")
     }
+    if (
+      commercialOutcome &&
+      !(await accountPrivacyCommercialRetentionIsConfirmed(db, {
+        requestId: request.id,
+        subjectId,
+        contactEmail: request.contactEmail,
+        outcome: commercialOutcome,
+        now,
+      }))
+    )
+      blockers.push("COMMERCIAL_RECORDS_REVIEW_REQUIRED")
     if (commercialOutcome?.disposition === "NOT_APPLICABLE") {
       // Merchant transaction/actor facts survive User removal. Even a former
       // staff member's attribution needs a reviewed disposition, not a claim
@@ -667,6 +698,28 @@ export async function assessAccountPrivacyCompletion(
   const outcomes = new Map(
     request.domainOutcomes.map((outcome) => [outcome.domain, outcome]),
   )
+  const externalOutcome = outcomes.get("EXTERNAL_PROCESSORS")
+  if (externalOutcome?.processor === "account-privacy-external-review-v1") {
+    const recorded =
+      request.outcome &&
+      typeof request.outcome === "object" &&
+      !Array.isArray(request.outcome)
+        ? request.outcome.externalProcessorReview
+        : null
+    if (
+      !request.verifiedSubjectUserId ||
+      !request.verifiedAt ||
+      !accountPrivacyExternalReviewIsConfirmed({
+        requestId: request.id,
+        subjectId: request.verifiedSubjectUserId,
+        verifiedAt: request.verifiedAt,
+        outcome: externalOutcome,
+        recorded,
+        now,
+      })
+    )
+      blockers.push("EXTERNAL_PROCESSOR_REVIEW_UNCONFIRMED")
+  }
   const latestDomainOutcomeAt = request.domainOutcomes.reduce<Date | null>(
     (latest, outcome) =>
       outcome.domain !== "OUTCOME_NOTICE" &&

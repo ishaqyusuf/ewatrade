@@ -6,6 +6,7 @@ import {
   Input,
   MoneyInput,
 } from "@ewatrade/ui"
+import { financePostingDayStart } from "@ewatrade/utils/finance-posting-date"
 
 import {
   FormDateControl,
@@ -74,7 +75,16 @@ export function FinanceMoneyForm({ book }: { book: FinanceBook }) {
       !account.archivedAt,
   )
   const [review, setReview] = useState<Values | null>(null)
-  const form = useZodForm<Values>(schema, {
+  const startDay = new Date(book.startsAt).toISOString().slice(0, 10)
+  const datedSchema = schema.superRefine((value, ctx) => {
+    if (value.kind !== "OPENING_BALANCE" && value.date < startDay)
+      ctx.addIssue({
+        code: "custom",
+        path: ["date"],
+        message: `Bookkeeping starts on ${new Date(book.startsAt).toLocaleDateString([], { day: "numeric", month: "short", year: "numeric" })}.`,
+      })
+  })
+  const form = useZodForm<Values>(datedSchema, {
     defaultValues: {
       kind: "TRANSFER",
       accountId: accounts[0]?.id ?? "",
@@ -94,7 +104,7 @@ export function FinanceMoneyForm({ book }: { book: FinanceBook }) {
       effectiveAt:
         values.kind === "OPENING_BALANCE"
           ? new Date(book.startsAt)
-          : new Date(`${values.date}T00:00:00.000Z`),
+          : financePostingDayStart(values.date, book.startsAt),
     }
     const payload =
       values.kind === "TRANSFER"
@@ -206,8 +216,16 @@ export function FinanceMoneyForm({ book }: { book: FinanceBook }) {
             per account; later funds are a separate movement.
           </p>
         ) : (
-          <FinanceField label="Date">
-            <FormDateControl type="date" control={form.control} name={"date"} />
+          <FinanceField
+            label="Date"
+            error={form.formState.errors.date?.message}
+          >
+            <FormDateControl
+              type="date"
+              min={startDay}
+              control={form.control}
+              name={"date"}
+            />
           </FinanceField>
         )}
         <FormActions>

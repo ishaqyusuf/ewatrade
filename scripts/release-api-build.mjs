@@ -37,7 +37,7 @@ export const PRISMA_SCHEMA_ENGINE = Object.freeze({
   sha256: "c24765c3d6edc8715cee7ca773565100859ba70b0fa2fb8931513dd810060ac3",
 })
 export const API_BUILD_RECIPE = Object.freeze({
-  version: 3,
+  version: 5,
   runtime: PIN,
   install: [
     "--frozen-lockfile",
@@ -60,8 +60,8 @@ export const API_BUILD_RECIPE = Object.freeze({
   ],
   bundle: [
     "--target=bun",
+    "--production",
     "--packages=bundle",
-    "--external=@ewatrade/order-receipts",
     "--env=disable",
     ...apiBundleExternalArgs(),
     "--outfile=apps/api/src/bundle.js",
@@ -346,10 +346,11 @@ export function bundleCommittedApiEntry(context) {
       `--config=${context.configPath}`,
       "--no-install",
       "--target=bun",
+      // Production React omits jsxDEV; compile email JSX for its live runtime.
+      "--production",
       "--packages=bundle",
-      // Keep the workspace package boundary so its canvas addon and PDF worker
-      // resolve from its own dependencies on the deployment platform.
-      "--external=@ewatrade/order-receipts",
+      // Inline workspace receipt exports; keep only native packages external
+      // so provider tracing cannot omit a static workspace dependency.
       "--env=disable",
       ...apiBundleExternalArgs(),
       `--outfile=${path.join(context.stage, "apps/api/src/bundle.js")}`,

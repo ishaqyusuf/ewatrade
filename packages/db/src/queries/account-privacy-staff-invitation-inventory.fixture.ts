@@ -1,6 +1,7 @@
 /** In-memory privacy verifier rows only; never exported in the query barrel. */
 export function staffInvitationPrivacyInventoryFixture(field?: string) {
   const counts = {
+    customerMessageTemplates: 0,
     staffInvitationCommands: 0,
     staffInvitationNotifications: 0,
     staffInvitationAttempts: 0,

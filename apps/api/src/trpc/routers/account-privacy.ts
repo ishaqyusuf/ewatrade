@@ -1,16 +1,23 @@
 import {
   AccountPrivacyAccessError,
+  AccountPrivacyActivityError,
   AccountPrivacyCommercialOutcomeError,
   AccountPrivacyCompletionError,
   AccountPrivacyConversationAccessError,
   AccountPrivacyConversationOutcomeError,
+  AccountPrivacyExternalReviewError,
   AccountPrivacyIdentityOutcomeError,
   AccountPrivacyMembershipError,
   AccountPrivacyNoticePreparationError,
   AccountPrivacyPrescriptionOutcomeError,
+  AccountPrivacyPrivateAssistantError,
   AccountPrivacyProfileError,
+  AccountPrivacyRecordRetentionError,
   AccountPrivacyRetentionError,
   AccountPrivacySubscriptionError,
+  AccountPrivacyWorkflowError,
+  accountPrivacyRecordInspectionSchema,
+  advanceAccountPrivacyWorkflow,
   beginAccountPrivacyReview,
   completeAccountPrivacyRequest,
   confirmAccountPrivacyIdentityAccessRevoked,
@@ -23,11 +30,23 @@ import {
   getAccountDeletionRequest,
   getAccountLegalStatus,
   getAccountPrivacyReview,
+  getAccountPrivacyWorkflow,
+  inspectAccountPrivacyRetainedRecord,
+  inspectAccountPrivacyRetentionRecord,
   listAccountPrivacyRequests,
+  listAccountPrivacyRetainedRecordReviews,
   listAccountPrivacyRetentionReviews,
+  minimizeAccountPrivacyCustomers,
+  minimizeAccountPrivacyCustomersSchema,
   processAccountPrivacyProfile,
+  recordAccountPrivacyExternalReview,
+  recordAccountPrivacyExternalReviewSchema,
   recordLegalAcceptance,
   requestAccountDeletion,
+  retainAccountPrivacyRecord,
+  retainAccountPrivacyRecordSchema,
+  reviewAccountPrivacyRetainedRecord,
+  reviewAccountPrivacyRetainedRecordSchema,
   reviewAccountPrivacyRetention,
   revokeAccountPrivacyAccess,
   revokeAccountPrivacyConversationAccess,
@@ -45,6 +64,7 @@ import { canAcceptLegalVersion } from "@ewatrade/utils/legal-approval"
 import { TRPCError } from "@trpc/server"
 import { z } from "zod"
 import { sendAccountPrivacyOutcomeNotice } from "../../account-privacy/notice-sender"
+import { removeAccountPrivacyPrivateAttachment } from "../../account-privacy/private-assistant-media"
 import {
   revokeAppleAccessToken,
   revokeAppleAuthorization,
@@ -52,6 +72,7 @@ import {
 import { revokeGoogleAuthorization } from "../../auth/google-credentials"
 import {
   acceptLegalDocumentsSchema,
+  advanceAccountPrivacyWorkflowSchema,
   externalDeletionEmailSchema,
   externalDeletionVerifySchema,
   requestAccountDeletionSchema,
@@ -77,7 +98,170 @@ function assertExternalIntakeReady() {
   }
 }
 
+function recordRetentionError(error: unknown): never {
+  if (error instanceof AccountPrivacyRecordRetentionError)
+    throw new TRPCError({
+      code:
+        error.code === "OPERATOR_REQUIRED"
+          ? "FORBIDDEN"
+          : "PRECONDITION_FAILED",
+      message: error.code,
+    })
+  throw error
+}
+
 export const accountPrivacyRouter = createTRPCRouter({
+  inspectRetentionRecord: platformAdminProcedure
+    .input(accountPrivacyRecordInspectionSchema)
+    .query(async ({ ctx, input }) => {
+      try {
+        return await inspectAccountPrivacyRetentionRecord(ctx.db, {
+          ...input,
+          operatorUserId: ctx.session.user.id,
+        })
+      } catch (error) {
+        return recordRetentionError(error)
+      }
+    }),
+  inspectRetainedRecord: platformAdminProcedure
+    .input(z.object({ retentionId: z.string().min(1) }).strict())
+    .query(async ({ ctx, input }) => {
+      try {
+        return await inspectAccountPrivacyRetainedRecord(ctx.db, {
+          ...input,
+          operatorUserId: ctx.session.user.id,
+        })
+      } catch (error) {
+        return recordRetentionError(error)
+      }
+    }),
+  retainRecord: platformAdminProcedure
+    .input(retainAccountPrivacyRecordSchema)
+    .mutation(async ({ ctx, input }) => {
+      try {
+        return await retainAccountPrivacyRecord(ctx.db, {
+          ...input,
+          operatorUserId: ctx.session.user.id,
+        })
+      } catch (error) {
+        return recordRetentionError(error)
+      }
+    }),
+  retainedRecordReviews: platformAdminProcedure.query(async ({ ctx }) => {
+    try {
+      return await listAccountPrivacyRetainedRecordReviews(ctx.db, {
+        operatorUserId: ctx.session.user.id,
+      })
+    } catch (error) {
+      return recordRetentionError(error)
+    }
+  }),
+  reviewRetainedRecord: platformAdminProcedure
+    .input(reviewAccountPrivacyRetainedRecordSchema)
+    .mutation(async ({ ctx, input }) => {
+      try {
+        return await reviewAccountPrivacyRetainedRecord(ctx.db, {
+          ...input,
+          operatorUserId: ctx.session.user.id,
+        })
+      } catch (error) {
+        return recordRetentionError(error)
+      }
+    }),
+  minimizeCustomers: platformAdminProcedure
+    .input(minimizeAccountPrivacyCustomersSchema)
+    .mutation(async ({ ctx, input }) => {
+      try {
+        return await minimizeAccountPrivacyCustomers(ctx.db, {
+          ...input,
+          operatorUserId: ctx.session.user.id,
+        })
+      } catch (error) {
+        return recordRetentionError(error)
+      }
+    }),
+
+  recordExternalReview: platformAdminProcedure
+    .input(recordAccountPrivacyExternalReviewSchema)
+    .mutation(async ({ ctx, input }) => {
+      try {
+        return await recordAccountPrivacyExternalReview(ctx.db, {
+          ...input,
+          operatorUserId: ctx.session.user.id,
+        })
+      } catch (error) {
+        if (error instanceof AccountPrivacyExternalReviewError)
+          throw new TRPCError({
+            code:
+              error.code === "OPERATOR_REQUIRED"
+                ? "FORBIDDEN"
+                : "PRECONDITION_FAILED",
+            message: error.message,
+          })
+        throw error
+      }
+    }),
+  workflow: platformAdminProcedure
+    .input(z.object({ requestId: z.string().min(1) }).strict())
+    .query(async ({ ctx, input }) => {
+      try {
+        return await getAccountPrivacyWorkflow(ctx.db, {
+          ...input,
+          operatorUserId: ctx.session.user.id,
+        })
+      } catch (error) {
+        if (error instanceof AccountPrivacyWorkflowError)
+          throw new TRPCError({
+            code:
+              error.code === "OPERATOR_REQUIRED"
+                ? "FORBIDDEN"
+                : "PRECONDITION_FAILED",
+            message: error.message,
+          })
+        throw error
+      }
+    }),
+  advanceWorkflow: platformAdminProcedure
+    .input(advanceAccountPrivacyWorkflowSchema)
+    .mutation(async ({ ctx, input }) => {
+      try {
+        return await advanceAccountPrivacyWorkflow(
+          ctx.db,
+          { ...input, operatorUserId: ctx.session.user.id },
+          {
+            removePrivateAttachment: removeAccountPrivacyPrivateAttachment,
+            revokeApple: revokeAppleAuthorization,
+            revokeAppleAccess: revokeAppleAccessToken,
+            revokeGoogle: revokeGoogleAuthorization,
+          },
+        )
+      } catch (error) {
+        if (
+          error instanceof AccountPrivacyRecordRetentionError ||
+          error instanceof AccountPrivacyWorkflowError ||
+          error instanceof AccountPrivacyActivityError ||
+          error instanceof AccountPrivacyAccessError ||
+          error instanceof AccountPrivacyCommercialOutcomeError ||
+          error instanceof AccountPrivacyCompletionError ||
+          error instanceof AccountPrivacyConversationAccessError ||
+          error instanceof AccountPrivacyConversationOutcomeError ||
+          error instanceof AccountPrivacyIdentityOutcomeError ||
+          error instanceof AccountPrivacyMembershipError ||
+          error instanceof AccountPrivacyPrescriptionOutcomeError ||
+          error instanceof AccountPrivacyPrivateAssistantError ||
+          error instanceof AccountPrivacyProfileError ||
+          error instanceof AccountPrivacySubscriptionError
+        )
+          throw new TRPCError({
+            code:
+              error.code === "OPERATOR_REQUIRED"
+                ? "FORBIDDEN"
+                : "PRECONDITION_FAILED",
+            message: error.message,
+          })
+        throw error
+      }
+    }),
   retentionReviews: platformAdminProcedure.query(({ ctx }) =>
     listAccountPrivacyRetentionReviews(ctx.db),
   ),

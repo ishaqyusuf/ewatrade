@@ -15,9 +15,12 @@ import { cn } from "@/lib/utils"
 import { Children, Fragment, type ReactNode } from "react"
 import { Text as NativeText, ScrollView } from "react-native"
 
-function useTint(tint: GreenTillTint) {
+function useTint(tint: GreenTillTint | "muted") {
   const { colorScheme } = useColorScheme()
   const palette = GREEN_TILL_THEME[colorScheme]
+  const colors = useColors()
+  // "muted": a neutral grey avatar for rows that aren't set up yet.
+  if (tint === "muted") return { bg: colors.muted, fg: colors.mutedForeground }
   return { bg: palette[tint], fg: palette[`${tint}Foreground`] }
 }
 
@@ -301,7 +304,7 @@ export function RecordRow({
 }: {
   accessibilityLabel?: string
   amount?: string
-  avatar: { icon?: IconKeys; initials?: string; tint: GreenTillTint }
+  avatar: { icon?: IconKeys; initials?: string; tint: GreenTillTint | "muted" }
   /** Destructive action, such as "Turn off app lock": the title turns red. */
   danger?: boolean
   /** One line, or several stacked lines (contact, then activity). */

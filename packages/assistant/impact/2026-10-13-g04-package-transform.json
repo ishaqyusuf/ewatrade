@@ -1,0 +1,65 @@
+{
+  "version": 1,
+  "id": "2026-10-13-g04-package-transform",
+  "tickets": ["G04"],
+  "summary": "Adds the planned dashboard capability inventory.package.transform (action stock_package_transform): a signed, reviewed repack between two existing PACKAGED_STOCK balances of the same Store/Product/variant. Only the source quantity is drafted; the target quantity is derived exactly (source \u00d7 sourceFactor \u00f7 targetFactor at the target scale, no rounding) and refused when not representable. Review binds both balance identities/revisions, units/factors/scales, the configuration version and quantities. Confirmation locks the Store then both sorted balances and calls the extracted canonical transformPackagedStockInTransaction; the native wrapper is unchanged.",
+  "capabilities": [
+    {
+      "id": "inventory.package.transform",
+      "change": "added",
+      "rollout": "planned",
+      "note": "Owner/Admin/Manager per manifest policy; local and central access mirror assertCanManageInventory including scoped staff with the Store stock action. Dashboard only; no mobile, no linked loss adjustment."
+    }
+  ],
+  "procedures": [
+    {
+      "path": "inventory.transformPackagedStock",
+      "status": "supported",
+      "reason": "Canonical packaged-stock transformation used by inventory.package.transform through the extracted in-transaction seam."
+    }
+  ],
+  "docs": [
+    {
+      "topic": "feature",
+      "path": ".brain/features/assistant-business-operations.md",
+      "status": "local_only",
+      "note": "G04 packet 2b source checkpoint."
+    },
+    {
+      "topic": "capability",
+      "path": "packages/assistant/src/capabilities/COVERAGE.md",
+      "status": "updated"
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "test",
+      "path": "apps/api/src/assistant/general-stock-transform.test.ts",
+      "executed": true,
+      "result": "7 pass offline: exact derivation and refusals, review lines, endpoint refusals, local and central authority matrices (central matrix with revoked inputs; completed-replay ordering confirmed by source review only, not executed), digest drift, exact command input; canonical command and lock helper stood in."
+    },
+    {
+      "kind": "test",
+      "path": "packages/assistant/src/general/stock-transform.test.ts",
+      "executed": true,
+      "result": "Within packages/assistant/src: 237 pass."
+    },
+    {
+      "kind": "test",
+      "path": "apps/dashboard/src/components/general-assistant/general-stock-transform-editor.test.tsx",
+      "executed": true,
+      "result": "2 pass: static render (quantity/reason only, endpoints hidden) and save validation; not browser acceptance."
+    },
+    {
+      "kind": "test",
+      "path": "packages/db/src/queries/inventory-remaining-coordination.test.ts",
+      "executed": true,
+      "result": "20 pass after the seam extraction (native transformPackagedStock wrapper); API inventory-finance-errors 5 pass."
+    },
+    {
+      "kind": "review",
+      "path": "packages/assistant/evaluations/runs/2026-10-13-g04-package-transform.md",
+      "executed": false
+    }
+  ]
+}

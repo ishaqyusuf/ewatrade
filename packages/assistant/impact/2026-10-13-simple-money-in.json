@@ -1,0 +1,83 @@
+{
+  "version": 1,
+  "id": "2026-10-13-simple-money-in",
+  "tickets": ["E01", "E03", "H04"],
+  "summary": "Simple non-sale owner funding, staged account creation and explicit chat Proceed, plus compact structured account read results.",
+  "capabilities": [
+    {
+      "id": "finance.money_in.record_simple",
+      "change": "added",
+      "rollout": "source",
+      "note": "Dashboard Owner/Admin; canonical owner contribution and account creation. No sale, provider transfer, schema or hosted rollout."
+    },
+    {
+      "id": "finance.money_accounts.read",
+      "change": "changed",
+      "rollout": "enabled",
+      "note": "Bounded structured dashboard account rows and plain legacy-client fallback; read scope unchanged."
+    }
+  ],
+  "procedures": [
+    {
+      "path": "finance.recordMoney",
+      "status": "supported",
+      "reason": "Canonical contribution reused; no generic unbalanced journal write."
+    },
+    {
+      "path": "finance.createMoneyAccount",
+      "status": "supported",
+      "reason": "Missing named account created in the same confirmed Finance transaction."
+    },
+    {
+      "path": "finance.moneyAccounts",
+      "status": "supported",
+      "reason": "Same read/roles; bounded structured result displayed compactly."
+    }
+  ],
+  "docs": [
+    {
+      "topic": "feature",
+      "path": ".brain/features/assistant-simple-money-in.md",
+      "status": "local_only",
+      "note": "Behavior, source ownership, evidence and remaining acceptance."
+    },
+    {
+      "topic": "api",
+      "path": ".brain/api/contracts.md",
+      "status": "local_only",
+      "note": "Default/review/Proceed and image scope."
+    },
+    {
+      "topic": "permissions",
+      "path": ".brain/api/permissions.md",
+      "status": "local_only",
+      "note": "Owner/Admin Finance authority unchanged."
+    },
+    {
+      "topic": "capability",
+      "path": "packages/assistant/src/capabilities/COVERAGE.md",
+      "status": "updated",
+      "note": "Composite funding/account command and read coverage."
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "test",
+      "path": "packages/assistant/src/general/simple-money-in.test.ts",
+      "executed": true,
+      "result": "Final focused44pass201assertions, including date boundary and existing sale/answer/card regressions."
+    },
+    {
+      "kind": "test",
+      "path": "apps/api/src/assistant/general-simple-money-in.integration.test.ts",
+      "executed": true,
+      "result": "Final guarded Development1pass14assertions40.03s, no Orders, atomic new account/contribution, image ID retained, normalized reuse and Proceed replay; owned fixtures cleaned."
+    },
+    {
+      "kind": "test",
+      "path": "apps/dashboard/src/components/general-assistant/general-money-accounts-answer.test.ts",
+      "executed": true,
+      "result": "Isolated UI checks and live concise account-card acceptance pass; first-day statement/manual contribution boundary repaired and accepted live."
+    }
+  ]
+}

@@ -9,9 +9,10 @@ import {
 } from "@ewatrade/order-receipts"
 import { Prisma, type PrismaClient } from "../../generated/prisma/client"
 import { CatalogError } from "./catalog"
+import type { DbClient } from "./types"
 
 export async function getOrderReceiptSettings(
-  db: PrismaClient,
+  db: DbClient,
   input: { tenantId: string; storeId: string },
 ) {
   const store = await db.store.findFirst({
@@ -46,7 +47,7 @@ export async function getOrderReceiptSettings(
 }
 
 export async function saveOrderReceiptSettings(
-  db: PrismaClient,
+  db: DbClient,
   input: {
     tenantId: string
     storeId: string

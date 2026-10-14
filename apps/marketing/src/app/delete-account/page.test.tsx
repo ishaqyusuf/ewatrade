@@ -1,5 +1,6 @@
 import { expect, test } from "bun:test"
 import { ExternalDeletionRequestForm } from "@/components/legal/external-deletion-request-form"
+import { TRPCReactProvider } from "@/trpc/client"
 import { renderToStaticMarkup } from "react-dom/server"
 import Page from "./page"
 
@@ -19,10 +20,12 @@ test("public deletion page offers an email request path until verified intake is
   const intake = async () =>
     (await Page({ searchParams: Promise.resolve({}) })).props.afterSections
   const expectEmailRequest = async () => {
-    const html = renderToStaticMarkup(await intake())
+    const content = await intake()
+    expect(content?.type).not.toBe(ExternalDeletionRequestForm)
+    const html = renderToStaticMarkup(content)
     expect(html).toContain("Request account deletion")
     expect(html).toContain(
-      "mailto:founders@ewatrade.com?subject=EwaTrade%20account%20deletion%20request",
+      "mailto:support@ewatrade.com?subject=EwaTrade%20account%20deletion%20request",
     )
     expect(html).toContain(
       "Sending the request does not mean deletion is complete",
@@ -35,11 +38,20 @@ test("public deletion page offers an email request path until verified intake is
     process.env.EMAIL_FROM = "privacy@example.com"
     process.env.EMAIL_DELIVERY_MODE = "live"
     Reflect.deleteProperty(process.env, "EMAIL_CAPTURE_FILE")
-    process.env.ACCOUNT_PRIVACY_TRUSTED_CLIENT_IP_HEADER = "x-client-ip"
+    process.env.ACCOUNT_PRIVACY_TRUSTED_CLIENT_IP_HEADER = "x-real-ip"
     await expectEmailRequest()
 
     process.env.ACCOUNT_PRIVACY_OTP_SECRET = "a".repeat(32)
     expect((await intake())?.type).toBe(ExternalDeletionRequestForm)
+    const formHtml = renderToStaticMarkup(
+      <TRPCReactProvider>{await intake()}</TRPCReactProvider>,
+    )
+    expect(formHtml).toContain("<form")
+    expect(formHtml).toContain('id="deletion-email"')
+    expect(formHtml).toContain('type="email"')
+    expect(formHtml).toContain("Email verification code")
+    expect(formHtml).toContain("Submitting a request does not mean deletion is")
+    expect(formHtml).not.toContain("mail-key")
 
     process.env.EMAIL_DELIVERY_MODE = "console"
     await expectEmailRequest()
@@ -50,6 +62,12 @@ test("public deletion page offers an email request path until verified intake is
 
     process.env.ACCOUNT_PRIVACY_TRUSTED_CLIENT_IP_HEADER = " "
     await expectEmailRequest()
+    for (const header of ["x-client-ip", "x-forwarded-for", "authorization"]) {
+      process.env.ACCOUNT_PRIVACY_TRUSTED_CLIENT_IP_HEADER = header
+      await expectEmailRequest()
+    }
+    process.env.ACCOUNT_PRIVACY_TRUSTED_CLIENT_IP_HEADER = " CF-Connecting-IP "
+    expect((await intake())?.type).toBe(ExternalDeletionRequestForm)
   } finally {
     for (const key of keys) {
       const value = previous[key]

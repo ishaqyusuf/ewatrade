@@ -8,6 +8,7 @@ import { Text } from "@/components/ui/text"
 import { useColorScheme, useColors } from "@/hooks/use-color"
 import { useLargeTextLayout } from "@/hooks/use-large-text-layout"
 import { GREEN_TILL_THEME } from "@/lib/green-till-theme"
+import { nativeStackStatusBarStyle } from "@/lib/native-stack-status-bar"
 import { type Href, Stack } from "expo-router"
 import { StatusBar } from "expo-status-bar"
 import { type ReactNode, useId } from "react"
@@ -70,7 +71,7 @@ export function GreenTillAuthScreen({
   const iconTone = colorScheme === "dark" ? "light" : "dark"
   return (
     <View className="flex-1 bg-background">
-      <Stack.Screen options={{ statusBarStyle: iconTone }} />
+      <Stack.Screen options={nativeStackStatusBarStyle(iconTone)} />
       <StatusBar style={iconTone} />
       <MobileScreen
         safeAreaColor={palette.stageCenter}

@@ -233,13 +233,16 @@ export function SalesExampleStage() {
   )
 }
 
-export function VerifyStage({ email }: { email?: string }) {
+export function VerifyStage({
+  email,
+  channel = "email",
+}: { email?: string; channel?: "email" | "whatsapp" }) {
   const { width } = useWindowDimensions()
   return (
     <StageCard
       icon="ShieldCheck"
       tint="mint"
-      title="Check your email"
+      title={channel === "whatsapp" ? "Check WhatsApp" : "Check your email"}
       subtitle={email || "We sent your code"}
       centered
       left={Math.max(16, (width - 220) / 2)}

@@ -196,7 +196,12 @@ export async function refundCommercialOrderInTransaction(
   const previous = input.lowerTotal
     ? await replayCredit(tx, { ...input, payloadHash })
     : null
-  if (previous) return { creditId: previous.id, replayed: true as const }
+  if (previous)
+    return {
+      creditId: previous.id,
+      paymentId: previous.refundPaymentId,
+      replayed: true as const,
+    }
   const order = await lockedOrderInStore(tx, input)
   if (input.lowerTotal) {
     await assertCreditAllowed(tx, input)

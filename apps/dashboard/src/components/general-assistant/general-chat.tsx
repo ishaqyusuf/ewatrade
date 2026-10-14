@@ -6,7 +6,13 @@ import {
 import { useAssistantReceipt } from "@/hooks/use-assistant-receipt"
 import { useQuickChatParam } from "@/hooks/use-quick-chat-param"
 import { useTRPC } from "@/trpc/client"
-import type { GeneralProposal } from "@ewatrade/assistant/general/contracts"
+import { simpleTransferStep } from "@ewatrade/assistant/general/contracts"
+import { simpleExpenseStep } from "@ewatrade/assistant/general/contracts"
+import { simpleMoneyInStep } from "@ewatrade/assistant/general/contracts"
+import {
+  type GeneralProposal,
+  simpleSaleStep,
+} from "@ewatrade/assistant/general/contracts"
 import {
   generalAnswers,
   generalPlainText,
@@ -196,7 +202,25 @@ export function GeneralThread({
   const placed = placeProposals(
     vm.chat.messages,
     times,
-    vm.data?.proposals ?? [],
+    (vm.data?.proposals ?? []).filter(
+      (p) =>
+        (p.payload.action !== "sale_record" &&
+          p.payload.action !== "money_in_record" &&
+          p.payload.action !== "expense_record_simple" &&
+          p.payload.action !== "money_transfer_simple") ||
+        p.status !== "PENDING",
+    ),
+  )
+  // A sale gathers details across turns; its latest choices/review belong at the end.
+  placed.rest.push(
+    ...(vm.data?.proposals ?? []).filter(
+      (p) =>
+        (p.payload.action === "sale_record" ||
+          p.payload.action === "money_in_record" ||
+          p.payload.action === "expense_record_simple" ||
+          p.payload.action === "money_transfer_simple") &&
+        p.status === "PENDING",
+    ),
   )
   const proposalGroup = (
     proposals: GeneralProposal[] | undefined,
@@ -226,14 +250,45 @@ export function GeneralThread({
               highlight === proposal.id && "ring-4 ring-primary/30",
             )}
           >
-            <GeneralProposalCard
-              proposal={proposal}
-              currencyCode={currencyCode}
-              disabled={disabled}
-              onConfirm={() => void vm.confirm(proposal)}
-              onCancel={() => void vm.cancel(proposal)}
-              onEdit={() => setEditing(proposal)}
-            />
+            {proposal.status === "PENDING" &&
+            ((proposal.payload.action === "sale_record" &&
+              simpleSaleStep(proposal.payload) !== "review") ||
+              (proposal.payload.action === "money_in_record" &&
+                simpleMoneyInStep(proposal.payload) !== "review") ||
+              (proposal.payload.action === "expense_record_simple" &&
+                simpleExpenseStep(proposal.payload) !== "review") ||
+              (proposal.payload.action === "money_transfer_simple" &&
+                simpleTransferStep(proposal.payload) !== "review")) ? (
+              <div className="flex flex-wrap gap-2">
+                {proposal.choices?.map((choice) => (
+                  <Button
+                    key={choice.text}
+                    variant="outline"
+                    size="sm"
+                    disabled={disabled}
+                    onClick={() =>
+                      void vm.send(choice.label, {
+                        proposalId: proposal.id,
+                        revision: proposal.revision,
+                        text: choice.text,
+                      })
+                    }
+                  >
+                    {choice.label}
+                  </Button>
+                ))}
+              </div>
+            ) : (
+              <GeneralProposalCard
+                proposal={proposal}
+                currencyCode={currencyCode}
+                disabled={disabled}
+                onConfirm={() => void vm.confirm(proposal)}
+                onCancel={() => void vm.cancel(proposal)}
+                onEdit={() => setEditing(proposal)}
+                onReply={(text, choice) => void vm.send(text, choice)}
+              />
+            )}
           </div>
         ))}
       </div>
@@ -531,10 +586,26 @@ export function GeneralComposer({
       conversationId={vm.conversationId}
       photos={media.photos}
       onReadyChange={vm.setReadyAttachments}
+      initialFiles={vm.initialFiles}
+      onInitialFilesConsumed={vm.consumeInitialFiles}
       {...props}
     />
   ) : (
-    <AssistantComposer {...props} />
+    <AssistantComposer
+      {...props}
+      attach={
+        vm.blank && enabled && media?.files
+          ? {
+              accept: media.photos
+                ? "image/jpeg,image/png,image/webp,image/heic,image/heif,application/pdf"
+                : "application/pdf",
+              disabled,
+              onFiles: (files) => void vm.beginWithFiles(files),
+              chips: null,
+            }
+          : undefined
+      }
+    />
   )
 }
 

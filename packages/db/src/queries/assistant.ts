@@ -6,12 +6,18 @@ import {
   type SetupDraftEntityKind,
   type SetupDraftEntityState,
 } from "../../generated/prisma/client"
+import { accountPrivacyPrivateWritesAllowed } from "./account-privacy-private-write"
+export { accountPrivacyPrivateWritesAllowed } from "./account-privacy-private-write"
 import { claimAssistantAttachmentsForMessage } from "./assistant-attachments"
 import {
   type CreateCatalogItemInput,
   createCatalogItemInTransaction,
 } from "./catalog"
-import { type ArgsAfterClient, runInOwnTransaction } from "./own-transaction"
+import {
+  type ArgsAfterClient,
+  runInOwnSerializableTransaction,
+  runInOwnTransaction,
+} from "./own-transaction"
 import type { DbClient } from "./types"
 
 export type AssistantScope = {
@@ -436,10 +442,27 @@ export async function completeAssistantRunInTransaction(
       where: { id: input.runId },
       select: {
         conversationId: true,
-        conversation: { select: { purpose: true } },
+        actorUserId: true,
+        conversation: { select: { purpose: true, tenantId: true } },
       },
     })
-    if (!candidate) return
+    if (
+      !candidate ||
+      candidate.actorUserId !== input.actorUserId ||
+      candidate.conversation.tenantId !== input.tenantId
+    )
+      return
+    if (!(await accountPrivacyPrivateWritesAllowed(tx, input.actorUserId))) {
+      await tx.assistantRun.updateMany({
+        where: { id: input.runId, status: "RUNNING" },
+        data: {
+          status: "FAILED",
+          errorCode: "ACCOUNT_DELETION",
+          completedAt: new Date(),
+        },
+      })
+      return
+    }
     if (candidate.conversation.purpose === "PRODUCT_CREATE")
       await tx.$queryRaw(
         Prisma.sql`SELECT "id" FROM "AssistantConversation" WHERE "id" = ${candidate.conversationId} FOR UPDATE`,
@@ -961,6 +984,8 @@ export async function recordAssistantAttachmentUsageInTransaction(
   },
 ) {
   const record = async (tx: Prisma.TransactionClient) => {
+    if (!(await accountPrivacyPrivateWritesAllowed(tx, input.actorUserId)))
+      return
     await tx.assistantUsageEvent.create({
       data: {
         attachmentId: input.attachmentId,
@@ -1124,14 +1149,14 @@ export async function readLastAssistantMessage(
 }
 
 /** Usage for a model call that is not a chat turn or attachment (opening, welcome). */
-export async function recordAssistantMessageUsage(
-  db: DbClient,
+export async function recordAssistantMessageUsageInTransaction(
+  db: Prisma.TransactionClient,
   input: {
     tenantId: string
     actorUserId: string
     provider: string
     model: string
-    requestClass: "opening" | "welcome"
+    requestClass: "opening" | "welcome" | "customer_message"
     outcome: "success" | "failed" | "fallback"
     inputTokens?: number
     outputTokens?: number
@@ -1140,6 +1165,7 @@ export async function recordAssistantMessageUsage(
     budgetScopeKey?: string
   },
 ) {
+  if (!(await accountPrivacyPrivateWritesAllowed(db, input.actorUserId))) return
   await db.assistantUsageEvent.create({
     data: {
       tenantId: input.tenantId,
@@ -1159,6 +1185,16 @@ export async function recordAssistantMessageUsage(
       where: { scopeKey: input.budgetScopeKey },
       data: { tokens: { increment: input.totalTokens } },
     })
+}
+
+/** Root-client wrapper; callers already in a transaction use the InTransaction form. */
+export function recordAssistantMessageUsage(
+  db: PrismaClient,
+  ...args: ArgsAfterClient<typeof recordAssistantMessageUsageInTransaction>
+) {
+  return runInOwnSerializableTransaction(db, (tx) =>
+    recordAssistantMessageUsageInTransaction(tx, ...args),
+  )
 }
 
 /** Model and owner edits both reopen confirmation; committed records are immutable. */

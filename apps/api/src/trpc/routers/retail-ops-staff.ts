@@ -8,6 +8,7 @@ import {
   canManageSalesOperations,
   normalizeRole,
 } from "@ewatrade/auth/roles"
+import { canStaffAccessStore } from "@ewatrade/auth/store-access"
 import {
   RetailOpsStaffError,
   RetailOpsSubscriptionError,
@@ -19,9 +20,11 @@ import {
   getStaffInvitationCommand,
   inviteRetailOpsStaff,
   listRetailOpsStaff,
+  listStaffActivityPage,
   listStaffDirectoryPage,
   listStaffHistoryPage,
   listStaffInvitations,
+  readStaffActivityShown,
   resolveRetailOpsStaffInviteToken,
   reviewStaffInvitation,
   reviewStaffInvitationCommand,
@@ -30,9 +33,9 @@ import {
   updateRetailOpsStaffStatus,
 } from "@ewatrade/db/queries"
 import type { InvitedRetailOpsStaff } from "@ewatrade/db/queries"
-import { getStaffStatusReceipt } from "@ewatrade/db/staff-status-receipt"
-import { reviewStaffAccessUpdate } from "@ewatrade/db/staff-access-update"
 import { getStaffAccessReceipt } from "@ewatrade/db/staff-access-receipt"
+import { reviewStaffAccessUpdate } from "@ewatrade/db/staff-access-update"
+import { getStaffStatusReceipt } from "@ewatrade/db/staff-status-receipt"
 import { enqueueRetailOpsStaffInviteNotification } from "@ewatrade/jobs"
 import { buildStaffInvitationLinks } from "@ewatrade/utils/staff-invitation-links"
 import { TRPCError } from "@trpc/server"
@@ -50,19 +53,23 @@ import {
   staffInvitationsReadSchema,
 } from "../../schemas/retail-ops-staff-invitations"
 import {
+  retailOpsStaffActivityPageSchema,
+  retailOpsStaffActivityShownSchema,
   retailOpsStaffDirectoryMemberSchema,
   retailOpsStaffDirectoryPageSchema,
   retailOpsStaffHistoryPageSchema,
 } from "../../schemas/retail-ops-staff-reads"
 import {
-  staffStatusReadInput,
-  staffStatusReviewInput,
-} from "../../schemas/staff-status"
-import {
   staffAccessReadInput,
   staffAccessReviewInput,
 } from "../../schemas/staff-access"
 import {
+  staffStatusReadInput,
+  staffStatusReviewInput,
+} from "../../schemas/staff-status"
+import { assertFinanceAccess } from "../finance-procedure"
+import {
+  type TRPCContext,
   authenticatedProcedure,
   createTRPCRouter,
   protectedProcedure,
@@ -210,6 +217,47 @@ function resolveStore(
   return store
 }
 
+/**
+ * The current Store and finance scope for staff activity reads; every read,
+ * including re-reading an answer's shown events, resolves it fresh.
+ */
+async function staffActivityScope(ctx: {
+  db: TRPCContext["db"]
+  tenantContext: NonNullable<TRPCContext["tenantContext"]>
+}) {
+  const tenant = ctx.tenantContext
+  const store = tenant.activeStore
+  const role = normalizeRole(tenant.membership.role)
+  const businessWide = role === "OWNER" || role === "ADMIN"
+  // Finance postings follow the canonical finance entitlement and Books.
+  let financeBookIds: string[] | null = null
+  try {
+    assertFinanceAccess(tenant)
+    financeBookIds = (
+      await ctx.db.financeBook.findMany({
+        where: { tenantId: tenant.tenant.id },
+        select: { id: true },
+      })
+    ).map((book) => book.id)
+  } catch (error) {
+    if (!(error instanceof TRPCError)) throw error
+  }
+  if (
+    !businessWide &&
+    (!store ||
+      !tenant.staffAccess ||
+      !canStaffAccessStore(tenant.staffAccess, store.id))
+  )
+    throw new TRPCError({
+      code: "FORBIDDEN",
+      message: "Choose a Store you manage to read staff activity.",
+    })
+  return {
+    storeIds: businessWide || !store ? null : [store.id],
+    financeBookIds,
+  }
+}
+
 export const retailOpsStaffRouter = createTRPCRouter({
   staffAccessReceipt: protectedProcedure
     .input(staffAccessReadInput)
@@ -340,6 +388,37 @@ export const retailOpsStaffRouter = createTRPCRouter({
         }),
       ),
     ),
+  /**
+   * S05 daily operational activity. Owner/Admin read every Store; anyone else
+   * reads only the active Store they can currently access.
+   */
+  staffActivityPage: protectedProcedure
+    .input(retailOpsStaffActivityPageSchema)
+    .query(async ({ ctx, input }) => {
+      const scope = await staffActivityScope(ctx)
+      return staffRead(() =>
+        listStaffActivityPage(ctx.db, {
+          ...input,
+          tenantId: ctx.tenantContext.tenant.id,
+          viewerUserId: ctx.session.user.id,
+          ...scope,
+        }),
+      )
+    }),
+  /** Re-reads exactly the events an answer showed, under current authority. */
+  staffActivityShown: protectedProcedure
+    .input(retailOpsStaffActivityShownSchema)
+    .query(async ({ ctx, input }) => {
+      const scope = await staffActivityScope(ctx)
+      return staffRead(() =>
+        readStaffActivityShown(ctx.db, {
+          ...input,
+          tenantId: ctx.tenantContext.tenant.id,
+          viewerUserId: ctx.session.user.id,
+          ...scope,
+        }),
+      )
+    }),
   staffDirectoryPage: protectedProcedure
     .input(retailOpsStaffDirectoryPageSchema)
     .query(({ ctx, input }) =>

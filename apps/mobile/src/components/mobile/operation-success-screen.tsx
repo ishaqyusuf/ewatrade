@@ -12,6 +12,7 @@ import type { OperationSuccessParams } from "@/lib/operation-success-navigation"
 import { useRouter } from "expo-router"
 import { View } from "react-native"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
+import { WhatsAppFollowUp } from "./customer-messages/whatsapp-action"
 
 function paymentLabel(paymentState: OperationSuccessParams["paymentState"]) {
   if (paymentState === "paid") return "Paid in full"
@@ -148,6 +149,15 @@ function SaleSuccess({ params }: { params: OperationSuccessParams }) {
           <SuccessDetailRow label="Balance due" value={params.balance} />
         ) : null}
       </View>
+      {/* Only a recorded Order; a queued sale has no server Order yet. The
+          server hides it when the Order has no customer phone. */}
+      {!queued && params.orderId ? (
+        <WhatsAppFollowUp
+          done="Sale recorded."
+          hasPhone
+          target={{ orderId: params.orderId, eventKey: "order.recorded" }}
+        />
+      ) : null}
       <ActionButton
         tone="gold"
         icon="Plus"

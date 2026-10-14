@@ -1,4 +1,9 @@
 model Tenant {
+  customerMessageTemplates CustomerMessageTemplate[]
+  businessActivityEvents BusinessActivityEvent[]
+  businessNotificationPolicies BusinessNotificationPolicy[]
+  businessNotificationSubscriptions BusinessNotificationSubscription[]
+  businessNotificationPreferences BusinessNotificationPreference[]
   collectionIntents CollectionIntent[]
   payoutBeneficiaries PayoutBeneficiary[]
   payoutIntents PayoutIntent[]
@@ -358,6 +363,7 @@ model LeadCapture {
 }
 
 model User {
+  updatedCustomerMessageTemplates CustomerMessageTemplate[]
   productAnalyticsEvents ProductAnalyticsEvent[]
   accountPrivacyRequests                         AccountPrivacyRequest[]
   legalAcceptances                               LegalAcceptance[]
@@ -464,6 +470,9 @@ model Verification {
 }
 
 model Membership {
+  businessNotificationSubscriptions BusinessNotificationSubscription[]
+  businessNotificationPreferences BusinessNotificationPreference[]
+  businessNotificationReceipts BusinessNotificationReceipt[]
   staffAccessMode StaffAccessMode @default(LEGACY)
   catalogEditor Boolean @default(false)
   staffAccessRevision Int @default(1)

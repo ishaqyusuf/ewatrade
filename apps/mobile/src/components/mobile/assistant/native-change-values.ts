@@ -12,6 +12,8 @@ export const nativeChangeActions = [
   "product_availability_update",
   "order_cancel",
   "order_metadata_update",
+  "store_settings_update",
+  "catalog_archive",
 ] as const
 export type NativeChangeAction = Extract<
   GeneralAction,

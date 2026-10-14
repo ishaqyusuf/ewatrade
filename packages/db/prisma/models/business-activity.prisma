@@ -1,0 +1,178 @@
+enum BusinessActivityOutboxStatus {
+  PENDING
+  CLAIMED
+  COMPLETED
+  FAILED
+}
+
+enum BusinessNotificationReceiptState {
+  UNREAD
+  READ
+  ARCHIVED
+}
+
+model BusinessActivityEvent {
+  id                    String   @id @default(cuid())
+  tenantId              String
+  storeId               String?
+  financeBookId         String?
+  type                  String
+  category              String
+  schemaVersion         Int      @default(1)
+  businessEventKey       String
+  payloadHash           String
+  sourceKind            String
+  sourceId              String
+  sourceAction          String
+  actorKind             String
+  originChannel         String   @default("unknown")
+  actorUserId           String?
+  actorMembershipId     String?
+  subjectUserId         String?
+  subjectMembershipId   String?
+  occurredAt            DateTime
+  recordedAt            DateTime @default(now())
+  recordingOrigin       String   @default("snapshot")
+  payload               Json
+  amountMinor           BigInt?
+  currencyCode          String?
+  correlationKey        String?
+  correctionOfEventKey  String?
+  tenant                Tenant   @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  store                 Store?   @relation(fields: [storeId, tenantId], references: [id, tenantId], onDelete: Restrict)
+  financeBook           FinanceBook? @relation(fields: [tenantId, financeBookId], references: [tenantId, id], onDelete: Restrict)
+  storeScopes           BusinessActivityStoreScope[]
+  outbox                BusinessActivityOutbox[]
+  receipts              BusinessNotificationReceipt[]
+
+  // Actor/subject identifiers are retained/redacted by the commercial privacy
+  // policy, independently of deleting a user's authentication Membership.
+  @@unique([tenantId, id])
+  @@unique([tenantId, businessEventKey])
+  @@index([tenantId, occurredAt, id])
+  @@index([tenantId, recordedAt, id])
+  @@index([tenantId, type, occurredAt, id])
+  @@index([tenantId, category, occurredAt, id])
+  @@index([tenantId, actorMembershipId, occurredAt, id])
+  @@index([tenantId, actorUserId])
+  @@index([tenantId, subjectMembershipId, occurredAt, id])
+  @@index([tenantId, subjectUserId])
+  @@index([tenantId, storeId, occurredAt, id])
+  @@index([tenantId, sourceKind, sourceId])
+}
+
+model BusinessActivityStoreScope {
+  tenantId String
+  eventId  String
+  storeId  String
+  event    BusinessActivityEvent @relation(fields: [tenantId, eventId], references: [tenantId, id], onDelete: Cascade)
+  store    Store @relation(fields: [tenantId, storeId], references: [tenantId, id], onDelete: Restrict)
+
+  @@id([tenantId, eventId, storeId])
+  @@index([tenantId, storeId, eventId])
+}
+
+model BusinessActivityOutbox {
+  id             String @id @default(cuid())
+  tenantId       String
+  eventId        String
+  consumer       String @default("in_app")
+  status         BusinessActivityOutboxStatus @default(PENDING)
+  attemptCount   Int @default(0)
+  claimId        String?
+  claimExpiresAt DateTime?
+  nextAttemptAt  DateTime @default(now())
+  completedAt    DateTime?
+  failureCode    String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  event          BusinessActivityEvent @relation(fields: [tenantId, eventId], references: [tenantId, id], onDelete: Cascade)
+
+  @@unique([tenantId, eventId, consumer])
+  @@index([status, nextAttemptAt])
+  @@index([status, claimExpiresAt])
+}
+
+model BusinessNotificationPolicy {
+  id                   String @id @default(cuid())
+  tenantId             String
+  type                 String
+  inAppAllowed         Boolean @default(false)
+  emailAllowed         Boolean @default(false)
+  inAppDefault         Boolean @default(false)
+  emailDefault         Boolean @default(false)
+  recipientRoles       Json @default("[]")
+  revision             Int @default(1)
+  updatedByUserId      String
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+  tenant               Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, type])
+}
+
+model BusinessNotificationSubscription {
+  id                 String @id @default(cuid())
+  tenantId           String
+  membershipId       String
+  type               String
+  enabled            Boolean @default(true)
+  scopeKind          String
+  inAppAllowed       Boolean @default(false)
+  emailAllowed       Boolean @default(false)
+  revision           Int @default(1)
+  updatedByUserId    String
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+  tenant             Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  membership         Membership @relation(fields: [membershipId, tenantId], references: [id, tenantId], onDelete: Cascade)
+  stores             BusinessNotificationSubscriptionStore[]
+
+  @@unique([tenantId, id])
+  @@unique([tenantId, membershipId, type])
+  @@index([tenantId, type, enabled])
+}
+
+model BusinessNotificationSubscriptionStore {
+  tenantId       String
+  subscriptionId String
+  storeId        String
+  subscription   BusinessNotificationSubscription @relation(fields: [tenantId, subscriptionId], references: [tenantId, id], onDelete: Cascade)
+  store          Store @relation(fields: [tenantId, storeId], references: [tenantId, id], onDelete: Cascade)
+
+  @@id([tenantId, subscriptionId, storeId])
+  @@index([tenantId, storeId])
+}
+
+model BusinessNotificationPreference {
+  id            String @id @default(cuid())
+  tenantId      String
+  membershipId  String
+  type          String
+  inApp         String @default("inherit")
+  email         String @default("inherit")
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  tenant        Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  membership    Membership @relation(fields: [membershipId, tenantId], references: [id, tenantId], onDelete: Cascade)
+
+  @@unique([tenantId, membershipId, type])
+}
+
+model BusinessNotificationReceipt {
+  id             String @id @default(cuid())
+  tenantId       String
+  eventId        String
+  membershipId   String
+  state          BusinessNotificationReceiptState @default(UNREAD)
+  occurredAt     DateTime
+  createdAt      DateTime @default(now())
+  readAt         DateTime?
+  archivedAt     DateTime?
+  event          BusinessActivityEvent @relation(fields: [tenantId, eventId], references: [tenantId, id], onDelete: Cascade)
+  membership     Membership @relation(fields: [membershipId, tenantId], references: [id, tenantId], onDelete: Cascade)
+
+  @@unique([tenantId, eventId, membershipId])
+  @@index([tenantId, membershipId, state, occurredAt, id])
+  @@index([tenantId, membershipId, createdAt])
+}

@@ -135,3 +135,51 @@ test("draftAction takes draft times as local business time", async () => {
   expect(utc?.success).toBe(false)
   expect(String(!utc?.success && utc?.error.message)).toContain("never add Z")
 })
+
+test("dashboard Owner gets recorded account balances; mobile and sales reps do not", async () => {
+  const dashboard = {
+    ...owner,
+    requestHeaders: new Headers({ "x-assistant-client": "dashboard" }),
+  }
+  const listed = createGeneralTools(
+    dashboard,
+    "conversation",
+    () => {},
+    () => {},
+  )
+  expect(Object.keys(listed)).toContain("readMoneyAccountBalances")
+  const schema = await asSchema(listed.readMoneyAccountBalances?.inputSchema)
+    .jsonSchema
+  expect(schema.type).toBe("object")
+  expect(
+    Object.keys(
+      createGeneralTools(
+        owner,
+        "conversation",
+        () => {},
+        () => {},
+      ),
+    ),
+  ).not.toContain("readMoneyAccountBalances")
+  const cashier = {
+    ...dashboard,
+    tenantContext: {
+      ...owner.tenantContext,
+      membership: { ...owner.tenantContext.membership, role: "CASHIER" },
+      staffAccess: {
+        ...owner.tenantContext.staffAccess,
+        businessRole: "CASHIER",
+      },
+    },
+  } as GeneralContext
+  expect(
+    Object.keys(
+      createGeneralTools(
+        cashier,
+        "conversation",
+        () => {},
+        () => {},
+      ),
+    ),
+  ).not.toContain("readMoneyAccountBalances")
+})

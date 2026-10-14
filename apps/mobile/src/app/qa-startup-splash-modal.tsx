@@ -1,6 +1,7 @@
 import { ClassicStartupSplash } from "@/components/mobile/appearances/classic/startup-splash"
 import { applyThemeOverride } from "@/hooks/use-color"
 import { isDevelopmentAppVariant } from "@/lib/app-variant"
+import { nativeStackStatusBarStyle } from "@/lib/native-stack-status-bar"
 import { appThemeRuntime } from "@/lib/theme-runtime"
 import { Redirect, Stack, useLocalSearchParams } from "expo-router"
 import { useEffect, useState } from "react"
@@ -19,7 +20,7 @@ export default function StartupSplashQaRoute() {
         options={{
           headerShown: false,
           animation: "none",
-          statusBarStyle: "light",
+          ...nativeStackStatusBarStyle("light"),
         }}
       />
       <StartupSplashQa key={`${state}-${theme}`} />

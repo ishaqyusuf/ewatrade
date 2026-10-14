@@ -26,6 +26,7 @@ enum FinanceAccountPurpose {
 }
 
 model FinanceBook {
+  businessActivityEvents BusinessActivityEvent[]
   payoutBeneficiaries PayoutBeneficiary[]
   payoutIntents PayoutIntent[]
   bankAccountStates FinanceBankAccountState[]

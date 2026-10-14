@@ -23,11 +23,14 @@ import {
 /** Native editor for reviewed catalog and order changes; mirrors the dashboard. */
 export function GeneralChangeEditor({
   initial,
+  review,
   currencyCode,
   disabled,
   onSave,
 }: {
   initial: NativeChangeAction
+  /** Server review lines; for an archive, line i + 1 names target i. */
+  review?: string[]
   currencyCode: string
   disabled: boolean
   onSave: (payload: GeneralAction) => void
@@ -310,10 +313,82 @@ export function GeneralChangeEditor({
             refund.
           </Text>
         ) : null}
-        {"reason" in payload ? (
+        {payload.action === "catalog_archive" &&
+        initial.action === "catalog_archive" ? (
+          <View className="gap-2">
+            <Text className="text-sm text-muted-foreground">
+              Remove anything you want to keep selling. Saved orders, prices and
+              stock stay unchanged.
+            </Text>
+            {initial.targets.map((target, index) => {
+              const key = JSON.stringify(target)
+              const included = payload.targets.some(
+                (row) => JSON.stringify(row) === key,
+              )
+              const line = review?.[index + 1]
+              return (
+                <View
+                  key={key}
+                  className="flex-row items-center justify-between gap-3"
+                >
+                  <Text
+                    className={cn(
+                      "flex-1 text-sm",
+                      included
+                        ? "text-foreground"
+                        : "text-muted-foreground line-through",
+                    )}
+                  >
+                    {line?.startsWith("Archive ")
+                      ? line.replace(/^Archive /, "")
+                      : target.kind === "variant"
+                        ? "Variant"
+                        : "Selling unit"}
+                  </Text>
+                  <ActionButton
+                    variant="outline"
+                    className="w-auto px-4"
+                    disabled={disabled}
+                    onPress={() =>
+                      patch({
+                        targets: included
+                          ? payload.targets.filter(
+                              (row) => JSON.stringify(row) !== key,
+                            )
+                          : initial.targets.filter(
+                              (row) =>
+                                JSON.stringify(row) === key ||
+                                payload.targets.some(
+                                  (kept) =>
+                                    JSON.stringify(kept) ===
+                                    JSON.stringify(row),
+                                ),
+                            ),
+                      })
+                    }
+                  >
+                    {included ? "Keep selling" : "Archive"}
+                  </ActionButton>
+                </View>
+              )
+            })}
+          </View>
+        ) : null}
+        {payload.action === "store_settings_update" ? (
+          <StoreSettingsFields
+            change={payload.change}
+            disabled={disabled}
+            onChange={(change) => patch({ change })}
+          />
+        ) : null}
+        {"reason" in payload || payload.action === "store_settings_update" ? (
           <FormField
-            label="Reason"
-            value={payload.reason}
+            label={
+              payload.action === "store_settings_update"
+                ? "Reason (optional)"
+                : "Reason"
+            }
+            value={payload.reason ?? ""}
             editable={!disabled}
             multiline
             maxLength={500}
@@ -382,5 +457,145 @@ function Choices<T extends FieldChoice | string>({
         ))}
       </View>
     </View>
+  )
+}
+
+type StoreSettingsChange = Extract<
+  NativeChangeAction,
+  { action: "store_settings_update" }
+>["change"]
+const fallbackReceipt = {
+  showCustomerName: true,
+  showPaymentBreakdown: true,
+  thankYouNote: "",
+}
+/** Native fields for one reviewed Store setting; the server re-reviews. */
+function StoreSettingsFields({
+  change,
+  disabled,
+  onChange,
+}: {
+  change: StoreSettingsChange
+  disabled: boolean
+  onChange: (change: StoreSettingsChange) => void
+}) {
+  const yesNo = (
+    label: string,
+    value: boolean,
+    set: (value: boolean) => void,
+  ) => (
+    <Choices
+      label={label}
+      value={value ? "yes" : "no"}
+      disabled={disabled}
+      options={[
+        ["yes", "Yes"],
+        ["no", "No"],
+      ]}
+      onChange={(choice) => set(choice === "yes")}
+    />
+  )
+  if (change.section === "receipts")
+    return (
+      <>
+        <Choices
+          label="Applies to"
+          value={change.scope}
+          disabled={disabled}
+          options={[
+            ["store", "This Store only"],
+            ["business", "Business defaults"],
+          ]}
+          onChange={(scope) =>
+            onChange({
+              ...change,
+              scope,
+              settings: change.settings ?? fallbackReceipt,
+            })
+          }
+        />
+        {change.scope === "store"
+          ? yesNo(
+              "Use the business defaults instead",
+              change.settings === null,
+              (remove) =>
+                onChange({
+                  ...change,
+                  settings: remove ? null : fallbackReceipt,
+                }),
+            )
+          : null}
+        {change.settings ? (
+          <>
+            {yesNo(
+              "Show the customer's name",
+              change.settings.showCustomerName,
+              (showCustomerName) =>
+                change.settings &&
+                onChange({
+                  ...change,
+                  settings: { ...change.settings, showCustomerName },
+                }),
+            )}
+            {yesNo(
+              "Show the payment breakdown",
+              change.settings.showPaymentBreakdown,
+              (showPaymentBreakdown) =>
+                change.settings &&
+                onChange({
+                  ...change,
+                  settings: { ...change.settings, showPaymentBreakdown },
+                }),
+            )}
+            <FormField
+              label="Thank-you note"
+              value={change.settings.thankYouNote}
+              editable={!disabled}
+              multiline
+              maxLength={300}
+              onChangeText={(thankYouNote) =>
+                change.settings &&
+                onChange({
+                  ...change,
+                  settings: { ...change.settings, thankYouNote },
+                })
+              }
+            />
+          </>
+        ) : null}
+      </>
+    )
+  if (change.section === "reminders")
+    return (
+      <>
+        {yesNo("Send order reminder emails", change.enabled, (enabled) =>
+          onChange({ ...change, enabled }),
+        )}
+        {yesNo(
+          "The day before delivery",
+          change.dayBeforeEnabled,
+          (dayBeforeEnabled) => onChange({ ...change, dayBeforeEnabled }),
+        )}
+        {yesNo("On the delivery day", change.sameDayEnabled, (sameDayEnabled) =>
+          onChange({ ...change, sameDayEnabled }),
+        )}
+      </>
+    )
+  return (
+    <>
+      <Choices
+        label="Sales reps see"
+        value={change.visibility}
+        disabled={disabled}
+        options={[
+          ["OWN_SALES", "Only their orders"],
+          ["ALL_STORE_ORDERS", "All Store orders"],
+        ]}
+        onChange={(visibility) => onChange({ ...change, visibility })}
+      />
+      <Text className="text-xs text-muted-foreground">
+        Applies to Cashiers and Operators in this Store.
+      </Text>
+    </>
   )
 }

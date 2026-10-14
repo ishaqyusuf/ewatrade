@@ -21,6 +21,7 @@ import {
   TableRow,
 } from "@ewatrade/ui"
 import { formatFinanceMoney } from "@ewatrade/utils/finance-money"
+import { financePostingDayStart } from "@ewatrade/utils/finance-posting-date"
 import { useQuery } from "@tanstack/react-query"
 import { useEffect, useMemo, useState } from "react"
 import { FinanceStatementExport } from "./statement-export"
@@ -93,7 +94,7 @@ function StatementPages({
       {
         bookId: book.id,
         accountId,
-        from: new Date(`${from}T00:00:00.000Z`),
+        from: financePostingDayStart(from, book.startsAt),
         through: new Date(`${through}T23:59:59.999Z`),
         snapshotSequence: snapshot,
         cursor: cursors.at(-1),

@@ -73,3 +73,20 @@ describe("expired attachments", () => {
     expect(withExpiredAttachments(sent, new Set())).toBe(sent)
   })
 })
+
+test("general images never replay earlier extraction to the model", () => {
+  const image = {
+    ...row,
+    kind: "IMAGE" as const,
+    extraction: {
+      type: "text",
+      text: "secret receipt amount 999999",
+      truncated: false,
+    },
+  }
+  const readable = withAttachmentText(sent, [image], {
+    attachmentOnlyImages: true,
+  })
+  expect(JSON.stringify(readable)).not.toContain("999999")
+  expect(JSON.stringify(readable)).toContain("not analysed")
+})

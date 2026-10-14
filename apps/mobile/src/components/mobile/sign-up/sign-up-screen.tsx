@@ -104,6 +104,13 @@ export function SignUpScreen({
   )
   const fullPhone = toInternationalPhone(dialCode, phone)
   const [email, setEmail] = useState(continuation?.email ?? "")
+  const [useWhatsApp, setUseWhatsApp] = useState(false)
+  const phoneAvailability = useQuery(
+    trpc.auth.phoneOtpAvailability.queryOptions(undefined, {
+      enabled: !continuation,
+      retry: false,
+    }),
+  )
   const [currencyCode, setCurrencyCode] = useState<OperatingCurrencyCode>(
     normalizeOperatingCurrencyCode(continuation?.draft.currencyCode),
   )
@@ -360,7 +367,77 @@ export function SignUpScreen({
     }),
   )
 
+  const requestPhoneMutation = useMutation(
+    trpc.auth.requestPhoneOtp.mutationOptions({
+      onError(error) {
+        setError(error.message || "We could not send the WhatsApp code.")
+      },
+      onSuccess() {
+        setError(null)
+        router.push({
+          pathname: "/verify-email",
+          params: {
+            channel: "whatsapp",
+            phone: fullPhone,
+            mode: "sign-up",
+            ageBand,
+            name: name.trim(),
+            businessName: normalizedBusinessName,
+            addressLine1: addressLine1.trim(),
+            city: city.trim(),
+            countryCode,
+            currencyCode,
+            region: region.trim() || undefined,
+            businessProfileKey,
+            businessProfileVersion: String(BUSINESS_PROFILE_SCHEMA_VERSION),
+            operatingModel,
+            orderChannels: orderChannels.join(","),
+            otherBusinessDescription:
+              otherBusinessDescription.trim() || undefined,
+            teamSize,
+            ...(legalVersion
+              ? {
+                  legalVersion,
+                  acceptedTerms: "true",
+                  acknowledgedPrivacyNotice: "true",
+                }
+              : {}),
+          },
+        })
+      },
+    }),
+  )
+  const canContinueWithWhatsApp =
+    !continuation &&
+    !!name.trim() &&
+    !!normalizedBusinessName &&
+    hasBusinessContact &&
+    hasBusinessProfile &&
+    legalReady
   const continueWithEmail = () => {
+    if (useWhatsApp) {
+      if (!canContinueWithWhatsApp) return
+      requestPhoneMutation.mutate({
+        phone: fullPhone,
+        mode: "sign_up",
+        ageBand,
+        ...legalSignupInput,
+        name: name.trim(),
+        businessName: normalizedBusinessName,
+        addressLine1: addressLine1.trim(),
+        city: city.trim(),
+        countryCode,
+        currencyCode,
+        region: region.trim() || undefined,
+        businessProfileKey,
+        businessProfileVersion: BUSINESS_PROFILE_SCHEMA_VERSION,
+        operatingModel,
+        orderChannels,
+        otherBusinessDescription: otherBusinessDescription.trim() || undefined,
+        teamSize,
+      })
+      return
+    }
     if (!canContinueWithEmail) return
 
     requestOtpMutation.mutate({
@@ -795,17 +872,36 @@ export function SignUpScreen({
             value={name}
             variant="green-gate"
           />
-          <FormField
-            autoCapitalize="none"
-            keyboardType="email-address"
-            label="Email"
-            onChangeText={setEmail}
-            placeholder="Enter your email address"
-            textContentType="emailAddress"
-            editable={!continuation}
-            value={email}
-            variant="green-gate"
-          />
+          {useWhatsApp ? (
+            <Text className="text-sm text-muted-foreground">
+              Your account will use {fullPhone} for WhatsApp sign-in.
+            </Text>
+          ) : (
+            <FormField
+              autoCapitalize="none"
+              keyboardType="email-address"
+              label="Email"
+              onChangeText={setEmail}
+              placeholder="Enter your email address"
+              textContentType="emailAddress"
+              editable={!continuation}
+              value={email}
+              variant="green-gate"
+            />
+          )}
+          {!continuation && phoneAvailability.data?.enabled ? (
+            <AuthMethodButton
+              icon="MessageCircle"
+              label={useWhatsApp ? "Use email instead" : "Use WhatsApp instead"}
+              onPress={() => {
+                setUseWhatsApp(!useWhatsApp)
+                setError(null)
+              }}
+              disabled={
+                requestPhoneMutation.isPending || requestOtpMutation.isPending
+              }
+            />
+          ) : null}
           {legalPublication.isSuccess ? (
             legalPublication.data.acceptanceRequired ? (
               <SignupLegalChoices
@@ -880,13 +976,17 @@ export function SignUpScreen({
           </AuthActionButton>
         ) : step === "account" ? (
           <AuthActionButton
-            disabled={!canContinueWithEmail}
-            isLoading={requestOtpMutation.isPending}
+            disabled={
+              useWhatsApp ? !canContinueWithWhatsApp : !canContinueWithEmail
+            }
+            isLoading={
+              requestOtpMutation.isPending || requestPhoneMutation.isPending
+            }
             loadingLabel="Sending code"
             onPress={continueWithEmail}
             trailingIcon="ArrowRight"
           >
-            Send verification code
+            {useWhatsApp ? "Send WhatsApp code" : "Send verification code"}
           </AuthActionButton>
         ) : null}
         {error ? (

@@ -6,6 +6,7 @@ import { capabilityForAction } from "@ewatrade/assistant/capabilities/manifest"
 import {
   type GeneralProposal,
   generalActionSummary,
+  simpleSaleStep,
 } from "@ewatrade/assistant/general/contracts"
 import { productCreatePicture } from "@ewatrade/assistant/general/product-create"
 import { BottomSheetScrollView } from "@gorhom/bottom-sheet"
@@ -34,6 +35,7 @@ import {
 } from "./assistant-ui"
 import { ChatPhotoThumb, ChatSentFile } from "./chat-photo"
 import {
+  generalAnswerRoute,
   generalAnswers,
   generalPlainText,
   generalReceiptRoute,
@@ -294,19 +296,30 @@ export function AskAssistantLive() {
                 {text ? (
                   <AssistantBubble text={text} user={item.role === "user"} />
                 ) : null}
-                {answers.map((answer) => (
-                  <AssistantAnswerCard
-                    key={answer.id}
-                    title={answer.title}
-                    value={answer.value}
-                    scope={answer.scope}
-                    asOf={assistantAsOf(answer.asOf)}
-                  >
-                    <Text className="text-sm text-muted-foreground">
-                      {answer.detail}
-                    </Text>
-                  </AssistantAnswerCard>
-                ))}
+                {answers.map((answer) => {
+                  const route = generalAnswerRoute(answer.target)
+                  return (
+                    <AssistantAnswerCard
+                      key={answer.id}
+                      title={answer.title}
+                      value={answer.value}
+                      scope={answer.scope}
+                      asOf={assistantAsOf(answer.asOf)}
+                    >
+                      <Text className="text-sm text-muted-foreground">
+                        {answer.detail}
+                      </Text>
+                      {route ? (
+                        <ActionButton
+                          variant="outline"
+                          onPress={() => router.push(route)}
+                        >
+                          Open activity
+                        </ActionButton>
+                      ) : null}
+                    </AssistantAnswerCard>
+                  )
+                })}
               </View>
             )
           }}
@@ -330,77 +343,118 @@ export function AskAssistantLive() {
                         ) : undefined
                       }
                       unavailable={
-                        generalReceiptRoute(proposal.receipt)
+                        generalReceiptRoute(
+                          proposal.receipt,
+                          vm.profile?.storeId,
+                        )
                           ? undefined
                           : "Saved. Open this record on the dashboard."
                       }
                       onOpen={() => {
                         const route =
                           proposal.receipt &&
-                          generalReceiptRoute(proposal.receipt)
+                          generalReceiptRoute(
+                            proposal.receipt,
+                            vm.profile?.storeId,
+                          )
                         if (route) router.push(route)
                       }}
                     />
                   ) : (
-                    <ProposalCard
-                      title={capabilityForAction(proposal.payload.action).title}
-                      media={
-                        proposal.payload.action === "product_create" ? (
-                          <GeneralProductThumb payload={proposal.payload} />
-                        ) : proposal.payload.action ===
-                          "order_attachment_add" ? (
-                          <ChatPhotoThumb
-                            attachmentId={proposal.payload.attachmentId}
-                          />
-                        ) : undefined
-                      }
-                      summary={(
-                        proposal.review?.join("\n") ??
-                        generalActionSummary(
-                          proposal.payload,
-                          vm.data?.currencyCode ?? "NGN",
-                        )
-                      )
-                        .split("\n")
-                        // The picture shows beside the text, so its line is not repeated.
-                        .filter(
-                          (line) =>
-                            proposal.payload.action !== "product_create" ||
-                            !proposal.payload.illustrationId ||
-                            line !== productCreatePicture(proposal.payload),
-                        )
-                        .join("\n")}
-                      state={
-                        proposal.status === "COMPLETED"
-                          ? "confirmed"
-                          : (proposal.status.toLowerCase() as
-                              | "pending"
-                              | "cancelled"
-                              | "expired"
-                              | "failed"
-                              | "executing")
-                      }
-                      disabled={disabled || !!noAccess}
-                      confirmDisabled={
-                        !proposal.approvalToken ||
-                        new Date(proposal.expiresAt).getTime() <= Date.now()
-                      }
-                      reason={
-                        proposal.status === "PENDING"
-                          ? vm.offline
-                            ? "Reconnect to review and confirm this draft."
-                            : `Check every field. Expires ${new Date(proposal.expiresAt).toLocaleTimeString()}.`
-                          : proposal.status === "EXPIRED"
-                            ? "Approval expired. Edit and review a fresh draft."
-                            : proposal.status.toLowerCase()
-                      }
-                      onConfirm={() => void vm.confirm(proposal)}
-                      onCancel={() => void vm.cancel(proposal)}
-                      onEdit={() => {
-                        setEditing(proposal)
-                        editor.present()
-                      }}
-                    />
+                    <View className="gap-2">
+                      {proposal.payload.action === "sale_record" &&
+                      proposal.status === "PENDING" &&
+                      simpleSaleStep(proposal.payload) !== "review" ? null : (
+                        <ProposalCard
+                          title={
+                            capabilityForAction(proposal.payload.action).title
+                          }
+                          media={
+                            proposal.payload.action === "product_create" ? (
+                              <GeneralProductThumb payload={proposal.payload} />
+                            ) : proposal.payload.action ===
+                              "order_attachment_add" ? (
+                              <ChatPhotoThumb
+                                attachmentId={proposal.payload.attachmentId}
+                              />
+                            ) : proposal.payload.action === "sale_record" &&
+                              proposal.payload.attachmentIds[0] ? (
+                              <ChatPhotoThumb
+                                attachmentId={proposal.payload.attachmentIds[0]}
+                              />
+                            ) : undefined
+                          }
+                          summary={(
+                            proposal.review?.join("\n") ??
+                            generalActionSummary(
+                              proposal.payload,
+                              vm.data?.currencyCode ?? "NGN",
+                            )
+                          )
+                            .split("\n")
+                            // The picture shows beside the text, so its line is not repeated.
+                            .filter(
+                              (line) =>
+                                proposal.payload.action !== "product_create" ||
+                                !proposal.payload.illustrationId ||
+                                line !== productCreatePicture(proposal.payload),
+                            )
+                            .join("\n")}
+                          state={
+                            proposal.status === "COMPLETED"
+                              ? "confirmed"
+                              : (proposal.status.toLowerCase() as
+                                  | "pending"
+                                  | "cancelled"
+                                  | "expired"
+                                  | "failed"
+                                  | "executing")
+                          }
+                          disabled={disabled || !!noAccess}
+                          confirmDisabled={
+                            !proposal.approvalToken ||
+                            new Date(proposal.expiresAt).getTime() <= Date.now()
+                          }
+                          reason={
+                            proposal.status === "PENDING"
+                              ? vm.offline
+                                ? "Reconnect to review and confirm this draft."
+                                : `Check every field. Expires ${new Date(proposal.expiresAt).toLocaleTimeString()}.`
+                              : proposal.status === "EXPIRED"
+                                ? "Approval expired. Edit and review a fresh draft."
+                                : proposal.status.toLowerCase()
+                          }
+                          onConfirm={() => void vm.confirm(proposal)}
+                          onCancel={() => void vm.cancel(proposal)}
+                          onEdit={() => {
+                            setEditing(proposal)
+                            editor.present()
+                          }}
+                        />
+                      )}
+                      {proposal.status === "PENDING" && proposal.question ? (
+                        <View className="gap-2">
+                          <Text>{proposal.question}</Text>
+                          <View className="flex-row flex-wrap gap-2">
+                            {proposal.choices?.map((choice) => (
+                              <ActionButton
+                                key={choice.text}
+                                disabled={disabled || !!noAccess}
+                                onPress={() =>
+                                  void vm.ask(choice.label, {
+                                    proposalId: proposal.id,
+                                    revision: proposal.revision,
+                                    text: choice.text,
+                                  })
+                                }
+                              >
+                                {choice.label}
+                              </ActionButton>
+                            ))}
+                          </View>
+                        </View>
+                      ) : null}
+                    </View>
                   )}
                   {proposal.status === "EXPIRED" ? (
                     <ActionButton

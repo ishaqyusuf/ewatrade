@@ -6,12 +6,12 @@ Tickets refer to the Brain plan `.brain/plans/2026-10-09-assistant-business-oper
 
 ## Summary
 
-- Router procedures: 580 (439 merchant, 141 public/account/internal)
-- Merchant supported by a capability: 143
-- Merchant planned: 129
-- Merchant form-only: 121
-- Merchant excluded: 46
-- Capabilities: 137 (72 read, 65 write)
+- Router procedures: 624 (471 merchant, 153 public/account/internal)
+- Merchant supported by a capability: 160
+- Merchant planned: 125
+- Merchant form-only: 138
+- Merchant excluded: 48
+- Capabilities: 150 (76 read, 74 write)
 
 ## Capabilities
 
@@ -46,6 +46,8 @@ Tickets refer to the Brain plan `.brain/plans/2026-10-09-assistant-business-oper
 | `finance.posted_profit.report` | 1 | read | `readPostedProfitReport` | OWNER, ADMIN | Owner/Admin only | dashboard | planned | `businessReporting.postedProfit` |
 | `inventory.stock.report` | 1 | read | `readStockReport` | OWNER, ADMIN, MANAGER | stock | dashboard | planned | `businessReporting.stock` |
 | `services.intake.options.read` | 1 | read | `readServiceIntakeOptions` | OWNER, ADMIN, MANAGER | read, read, read, Owner/Admin only | dashboard | planned | `catalog.listItemsPage`, `services.getSettings`, `services.assignees`, `serviceAssistantIntake.options` |
+| `services.message.share` | 1 | write (`service_message_share`) | `draftAction` | OWNER, ADMIN, MANAGER | Owner/Admin only | dashboard | planned | `serviceCommunications.recordManualMessage` |
+| `services.messages.read` | 1 | read | `readServiceMessages` | OWNER, ADMIN, MANAGER | Owner/Admin only | dashboard | planned | `serviceCommunications.listMessages` |
 | `services.intake.create` | 1 | write (`service_intake`) | `draftAction` | OWNER, ADMIN, MANAGER | Owner/Admin only | dashboard | planned | `services.createAndConfirmIntake` |
 | `finance.cash_count.record` | 1 | write (`cash_count_record`) | `draftAction` | OWNER, ADMIN | Owner/Admin only | dashboard | planned | `finance.recordCashCount` |
 | `finance.cash_accounts.read` | 1 | read | `readCashAccounts` | OWNER, ADMIN | Owner/Admin only | dashboard | planned | `finance.moneyAccounts` |
@@ -57,6 +59,9 @@ Tickets refer to the Brain plan `.brain/plans/2026-10-09-assistant-business-oper
 | `staff.invitation.command.read` | 1 | read | `readStaffInvitationCommand` | OWNER, ADMIN | Owner/Admin only | dashboard | planned | `retailOps.staffInvitationCommand` |
 | `staff.invitation.review` | 1 | read | `reviewStaffInvitation` | OWNER, ADMIN | Owner/Admin only | dashboard | planned | `retailOps.staffInvitationReview` |
 | `staff.history.read` | 1 | read | `readStaffHistory` | OWNER, ADMIN | Owner/Admin only | dashboard | planned | `retailOps.staffHistoryPage` |
+| `settings.store.change` | 1 | write (`store_settings_update`) | `draftAction` | OWNER, ADMIN | Owner/Admin only, Owner/Admin only, Owner/Admin only | dashboard, mobile | planned | `orders.saveReceiptSettings`, `orders.updateReminderSettings`, `stores.updateOrderVisibility` |
+| `settings.store.read` | 1 | read | `readStoreSettings` | OWNER, ADMIN, MANAGER | read, Owner/Admin only, read | dashboard, mobile | planned | `orders.receiptSettings`, `orders.reminderSettings`, `stores.orderVisibility` |
+| `staff.activity.read` | 1 | read | `readStaffActivity` | OWNER, ADMIN, MANAGER | Owner/Admin only, Owner/Admin only | dashboard, mobile | planned | `retailOps.staffActivityPage`, `retailOps.staffActivityShown` |
 | `staff.directory.read` | 1 | read | `readStaffDirectory` | OWNER, ADMIN, MANAGER | Owner/Admin only | dashboard | planned | `retailOps.staffDirectoryPage` |
 | `staff.member.read` | 1 | read | `readStaffMember` | OWNER, ADMIN, MANAGER | Owner/Admin only | dashboard | planned | `retailOps.staffDirectoryMember` |
 | `finance.purchase.record` | 1 | write (`purchase_record`) | `draftAction` | OWNER, ADMIN | Owner/Admin only | dashboard | planned | `finance.recordPurchase` |
@@ -70,15 +75,18 @@ Tickets refer to the Brain plan `.brain/plans/2026-10-09-assistant-business-oper
 | `finance.purchase.pay` | 1 | write (`purchase_payment`) | `draftAction` | OWNER, ADMIN | Owner/Admin only | dashboard | source | `finance.payPurchase` |
 | `finance.purchase.recognize` | 1 | write (`purchase_recognize`) | `draftAction` | OWNER, ADMIN | Owner/Admin only | dashboard | source | `finance.recognizePurchase` |
 | `finance.purchase.register` | 1 | write (`purchase_register`) | `draftAction` | OWNER, ADMIN | Owner/Admin only | dashboard | source | `finance.registerPurchase` |
-| `finance.purchase_registrations.read` | 1 | read | `readPurchaseRegistrations` | OWNER, ADMIN | Owner/Admin only | dashboard | source | `finance.purchaseRecognitions` |
-| `finance.purchase_recognition.read` | 1 | read | `readPurchaseRecognition` | OWNER, ADMIN | Owner/Admin only | dashboard | source | `finance.purchaseRecognition` |
-| `finance.purchases.read` | 1 | read | `readPurchaseBills` | OWNER, ADMIN | Owner/Admin only | dashboard | source | `finance.purchases` |
-| `finance.purchase.read` | 1 | read | `readPurchaseBill` | OWNER, ADMIN | Owner/Admin only | dashboard | source | `finance.purchase` |
+| `finance.purchase_registrations.read` | 1 | read | `readPurchaseRegistrations` | OWNER, ADMIN | Owner/Admin only | dashboard, mobile | source | `finance.purchaseRecognitions` |
+| `finance.purchase_recognition.read` | 1 | read | `readPurchaseRecognition` | OWNER, ADMIN | Owner/Admin only | dashboard, mobile | source | `finance.purchaseRecognition` |
+| `finance.purchases.read` | 1 | read | `readPurchaseBills` | OWNER, ADMIN | Owner/Admin only | dashboard, mobile | source | `finance.purchases` |
+| `finance.purchase.read` | 1 | read | `readPurchaseBill` | OWNER, ADMIN | Owner/Admin only | dashboard, mobile | source | `finance.purchase` |
 | `finance.supplier.create` | 1 | write (`supplier_create`) | `draftAction` | OWNER, ADMIN | Owner/Admin only | dashboard | source | `finance.createSupplier` |
 | `finance.expense.void` | 1 | write (`expense_void`) | `draftAction` | OWNER, ADMIN | Owner/Admin only | dashboard | planned | `finance.voidExpense` |
 | `finance.bill_payment.reverse` | 1 | write (`bill_payment_reverse`) | `draftAction` | OWNER, ADMIN | Owner/Admin only | dashboard | planned | `finance.reverseBillPayment` |
 | `finance.bill.pay` | 1 | write (`bill_payment`) | `draftAction` | OWNER, ADMIN | Owner/Admin only | dashboard | planned | `finance.payBill` |
 | `finance.expense.record` | 1 | write (`expense_record`) | `draftAction` | OWNER, ADMIN | Owner/Admin only | dashboard | enabled | `finance.recordExpense` |
+| `finance.expense.record_simple` | 1 | write (`expense_record_simple`) | `draftAction` | OWNER, ADMIN | Owner/Admin only | dashboard | source | `finance.recordExpense` |
+| `finance.money_in.record_simple` | 1 | write (`money_in_record`) | `draftAction` | OWNER, ADMIN | Owner/Admin only, Owner/Admin only | dashboard | source | `finance.recordMoney`, `finance.createMoneyAccount` |
+| `finance.transfer.record_simple` | 1 | write (`money_transfer_simple`) | `draftAction` | OWNER, ADMIN | Owner/Admin only, Owner/Admin only | dashboard | source | `finance.recordMoney`, `finance.createMoneyAccount` |
 | `finance.money_movement.record` | 1 | write (`money_movement`) | `draftAction` | OWNER, ADMIN | Owner/Admin only | dashboard | enabled | `finance.recordMoney` |
 | `customers.entry.read` | 1 | read | `readCustomerEntry` | OWNER, ADMIN | Owner/Admin only | dashboard | planned | `customerLedger.entryDetail` |
 | `customers.allocation_history.read` | 1 | read | `readCustomerAllocationHistory` | OWNER, ADMIN | Owner/Admin only | dashboard | planned | `customerLedger.allocationHistory` |
@@ -86,11 +94,12 @@ Tickets refer to the Brain plan `.brain/plans/2026-10-09-assistant-business-oper
 | `customers.allocation.release` | 1 | write (`customer_allocation_release`) | `draftAction` | OWNER, ADMIN | Owner/Admin only | dashboard | planned | `customerLedger.releaseAllocation` |
 | `customers.receipt.record` | 1 | write (`customer_receipt`) | `draftAction` | OWNER, ADMIN | Owner/Admin only | dashboard | planned | `customerLedger.recordReceipt` |
 | `finance.bills.read` | 1 | read | `readExpenseBills` | OWNER, ADMIN | Owner/Admin only | dashboard | planned | `finance.bills` |
-| `finance.suppliers.read` | 2 | read | `readSuppliers` | OWNER, ADMIN | Owner/Admin only | dashboard | source | `finance.suppliers` |
-| `finance.supplier_statement.read` | 1 | read | `readSupplierStatement` | OWNER, ADMIN | Owner/Admin only | dashboard | source | `finance.supplierStatement` |
+| `finance.suppliers.read` | 2 | read | `readSuppliers` | OWNER, ADMIN | Owner/Admin only | dashboard, mobile | source | `finance.suppliers` |
+| `finance.supplier_statement.read` | 1 | read | `readSupplierStatement` | OWNER, ADMIN | Owner/Admin only | dashboard, mobile | source | `finance.supplierStatement` |
 | `finance.bill.read` | 1 | read | `readExpenseBill` | OWNER, ADMIN | Owner/Admin only | dashboard | planned | `finance.bill` |
-| `finance.expense_categories.read` | 2 | read | `readExpenseCategories` | OWNER, ADMIN | Owner/Admin only | dashboard | enabled | `finance.expenseCategories` |
-| `finance.money_accounts.read` | 2 | read | `readMoneyAccounts` | OWNER, ADMIN | Owner/Admin only | dashboard | enabled | `finance.moneyAccounts` |
+| `finance.expense_categories.read` | 2 | read | `readExpenseCategories` | OWNER, ADMIN | Owner/Admin only | dashboard, mobile | enabled | `finance.expenseCategories` |
+| `finance.money_account_balances.read` | 1 | read | `readMoneyAccountBalances` | OWNER, ADMIN | Owner/Admin only | dashboard | source | `finance.balances` |
+| `finance.money_accounts.read` | 2 | read | `readMoneyAccounts` | OWNER, ADMIN | Owner/Admin only | dashboard, mobile | enabled | `finance.moneyAccounts` |
 | `customers.account.read` | 1 | read | `readCustomerAccount` | OWNER, ADMIN | Owner/Admin only | dashboard | planned | `customerLedger.accountDetail` |
 | `customers.sources.read` | 1 | read | `readCustomerLedgerSources` | OWNER, ADMIN | Owner/Admin only | dashboard | planned | `customerLedger.sources` |
 | `customers.statement.read` | 1 | read | `readCustomerStatement` | OWNER, ADMIN | Owner/Admin only | dashboard | planned | `customerLedger.statement` |
@@ -105,20 +114,21 @@ Tickets refer to the Brain plan `.brain/plans/2026-10-09-assistant-business-oper
 | `sales.order.replace` | 1 | write (`order_replace`) | `draftAction` | OWNER, ADMIN, MANAGER | reconciliation, reconciliation | dashboard | source | `orders.replace`, `orders.replacementReview` |
 | `sales.order.attachment.add` | 1 | write (`order_attachment_add`) | `draftAction` | OWNER, ADMIN, MANAGER, CASHIER, OPERATOR | orders | dashboard, mobile | source | `orders.activity.add` |
 | `search.records` | 1 | read | `searchRecords` | OWNER, ADMIN, MANAGER, CASHIER, OPERATOR | read | dashboard, mobile | source | `search.global` |
-| `catalog.history.read` | 1 | read | `readCatalogHistory` | OWNER, ADMIN, MANAGER, CASHIER, OPERATOR | read, read | dashboard | source | `catalog.detail.orders`, `catalog.detail.activity` |
+| `catalog.history.read` | 1 | read | `readCatalogHistory` | OWNER, ADMIN, MANAGER, CASHIER, OPERATOR | read, read | dashboard, mobile | source | `catalog.detail.orders`, `catalog.detail.activity` |
 | `catalog.item.read` | 1 | read | `readCatalogItem` | OWNER, ADMIN, MANAGER, CASHIER, OPERATOR | read | dashboard, mobile | source | `catalog.detail.overview` |
-| `inventory.totals.read` | 1 | read | `readInventoryTotals` | OWNER, ADMIN, MANAGER | stock | dashboard | source | `inventory.compatibleTotalsPage` |
-| `inventory.balances.read` | 1 | read | `readInventoryBalances` | OWNER, ADMIN, MANAGER | stock | dashboard | source | `inventory.balancePage` |
+| `inventory.totals.read` | 1 | read | `readInventoryTotals` | OWNER, ADMIN, MANAGER | stock | dashboard, mobile | source | `inventory.compatibleTotalsPage` |
+| `inventory.balances.read` | 1 | read | `readInventoryBalances` | OWNER, ADMIN, MANAGER | stock | dashboard, mobile | source | `inventory.balancePage` |
 | `inventory.offering_stock.read` | 1 | read | `readOfferingStock` | OWNER, ADMIN, MANAGER | read | dashboard, mobile | source | `inventory.configuredOfferingAvailability` |
 | `sales.orders.read` | 1 | read | `readOrders` | OWNER, ADMIN, MANAGER, CASHIER, OPERATOR | read | dashboard, mobile | source | `orders.listPage` |
 | `sales.summary.read` | 1 | read | `readSalesSummary` | OWNER, ADMIN, MANAGER, CASHIER, OPERATOR | read | dashboard, mobile | source | `orders.reportSummary` |
 | `sales.order.read` | 1 | read | `readOrder` | OWNER, ADMIN, MANAGER, CASHIER, OPERATOR | read | dashboard, mobile | source | `orders.get` |
 | `services.queue.read` | 1 | read | `readServices` | OWNER, ADMIN, MANAGER | Owner/Admin only | dashboard, mobile | source | `services.queuePage` |
-| `customers.receivables.read` | 1 | read | `readReceivables` | OWNER, ADMIN | Owner/Admin only | dashboard | source | `customerLedger.receivables` |
+| `customers.receivables.read` | 1 | read | `readReceivables` | OWNER, ADMIN | Owner/Admin only | dashboard, mobile | source | `customerLedger.receivables` |
 | `customers.accounts.read` | 2 | read | `readCustomerAccounts` | OWNER, ADMIN | Owner/Admin only | dashboard, mobile | source | `customerLedger.accounts` |
 | `customers.read` | 1 | read | `readCustomer` | OWNER, ADMIN, MANAGER | read | dashboard, mobile | source | `customers.getById` |
 | `customers.create` | 1 | write (`customer_create`) | `draftAction` | OWNER, ADMIN, MANAGER | Owner/Admin only | dashboard, mobile | source | `customers.create` |
 | `catalog.product.create` | 1 | write (`product_create`) | `draftAction` | OWNER, ADMIN, MANAGER | catalog | dashboard, mobile | source | `catalog.createSimpleItem` |
+| `sales.order.record_simple` | 1 | write (`sale_record`) | `draftAction` | OWNER, ADMIN, MANAGER | orders, orders, orders, Owner/Admin only | dashboard, mobile | source | `orders.create`, `orders.recordPayment`, `orders.activity.add`, `assistant.saleOptions` |
 | `sales.order.create` | 1 | write (`order_create`) | `draftAction` | OWNER, ADMIN, MANAGER, CASHIER, OPERATOR | orders | dashboard, mobile | source | `orders.create` |
 | `sales.payment.record` | 1 | write (`payment_record`) | `draftAction` | OWNER, ADMIN, MANAGER | orders | dashboard, mobile | source | `orders.recordPayment` |
 | `customers.update` | 1 | write (`customer_update`) | `draftAction` | OWNER, ADMIN, MANAGER | Owner/Admin only | dashboard, mobile | source | `customers.update` |
@@ -126,34 +136,37 @@ Tickets refer to the Brain plan `.brain/plans/2026-10-09-assistant-business-oper
 | `catalog.details.update` | 1 | write (`product_details_update`) | `draftAction` | OWNER, ADMIN, MANAGER | catalog | dashboard, mobile | source | `catalog.updateProductDetails` |
 | `catalog.identifiers.update` | 1 | write (`product_identifiers_update`) | `draftAction` | OWNER, ADMIN, MANAGER | catalog | dashboard, mobile | source | `catalog.updateProductIdentifiers` |
 | `catalog.availability.update` | 1 | write (`product_availability_update`) | `draftAction` | OWNER, ADMIN, MANAGER | catalog | dashboard, mobile | source | `catalog.setOfferingAvailability` |
+| `catalog.archive` | 1 | write (`catalog_archive`) | `draftAction` | OWNER, ADMIN, MANAGER | catalog, catalog | dashboard, mobile | planned | `catalog.archiveOffering`, `catalog.archiveVariant` |
 | `catalog.units.draft` | 1 | write (`product_unit_configuration_draft`) | `draftAction` | OWNER, ADMIN, MANAGER | catalog, catalog | dashboard | source | `catalog.createUnitConfigurationDraft`, `catalog.updateUnitConfigurationDraft` |
 | `catalog.units.publish` | 1 | write (`product_unit_configuration_publish`) | `draftAction` | OWNER, ADMIN, MANAGER | catalog | dashboard | source | `catalog.publishUnitConfiguration` |
-| `sales.orders.summary` | 1 | read | `readOrderSummary` | OWNER, ADMIN, MANAGER, CASHIER, OPERATOR | read | dashboard | source | `orders.operationalSummary` |
-| `inventory.low_stock.read` | 1 | read | `readLowStock` | OWNER, ADMIN, MANAGER | stock | dashboard | source | `inventory.lowStockPage` |
-| `catalog.count` | 1 | read | `readCatalogCount` | OWNER, ADMIN, MANAGER, CASHIER, OPERATOR | read | dashboard | source | `catalog.count` |
-| `sales.order_contacts.count` | 1 | read | `readOrderContactCount` | OWNER, ADMIN, MANAGER, CASHIER, OPERATOR | read | dashboard | source | `orders.customerCount` |
-| `customers.count` | 1 | read | `readCustomerCount` | OWNER, ADMIN, MANAGER | Owner/Admin only | dashboard | source | `customers.count` |
-| `stores.count` | 1 | read | `readStoreCount` | OWNER, ADMIN, MANAGER, CASHIER, OPERATOR | read | dashboard | source | `tenant.stores` |
-| `customers.page` | 1 | read | `readCustomers` | OWNER, ADMIN, MANAGER | Owner/Admin only | dashboard | source | `customers.listPage` |
-| `catalog.page` | 1 | read | `readCatalogPage` | OWNER, ADMIN, MANAGER, CASHIER, OPERATOR | read | dashboard | source | `catalog.listItemsPage` |
-| `sales.orders.lookup` | 1 | read | `lookupOpenOrders` | OWNER, ADMIN, MANAGER, CASHIER, OPERATOR | read | dashboard | source | `orders.lookupOpenPage` |
+| `sales.orders.summary` | 1 | read | `readOrderSummary` | OWNER, ADMIN, MANAGER, CASHIER, OPERATOR | read | dashboard, mobile | source | `orders.operationalSummary` |
+| `inventory.low_stock.read` | 1 | read | `readLowStock` | OWNER, ADMIN, MANAGER | stock | dashboard, mobile | source | `inventory.lowStockPage` |
+| `catalog.count` | 1 | read | `readCatalogCount` | OWNER, ADMIN, MANAGER, CASHIER, OPERATOR | read | dashboard, mobile | source | `catalog.count` |
+| `sales.order_contacts.count` | 1 | read | `readOrderContactCount` | OWNER, ADMIN, MANAGER, CASHIER, OPERATOR | read | dashboard, mobile | source | `orders.customerCount` |
+| `customers.count` | 1 | read | `readCustomerCount` | OWNER, ADMIN, MANAGER | Owner/Admin only | dashboard, mobile | source | `customers.count` |
+| `stores.count` | 1 | read | `readStoreCount` | OWNER, ADMIN, MANAGER, CASHIER, OPERATOR | read | dashboard, mobile | source | `tenant.stores` |
+| `customers.page` | 1 | read | `readCustomers` | OWNER, ADMIN, MANAGER | Owner/Admin only | dashboard, mobile | source | `customers.listPage` |
+| `catalog.page` | 1 | read | `readCatalogPage` | OWNER, ADMIN, MANAGER, CASHIER, OPERATOR | read | dashboard, mobile | source | `catalog.listItemsPage` |
+| `sales.orders.lookup` | 1 | read | `lookupOpenOrders` | OWNER, ADMIN, MANAGER, CASHIER, OPERATOR | read | dashboard, mobile | source | `orders.lookupOpenPage` |
 | `inventory.stock.receive` | 1 | write (`stock_receive`) | `draftAction` | OWNER, ADMIN, MANAGER | stock, stock | dashboard | source | `inventory.postBalanceOperation`, `inventory.categorySuggestions` |
 | `inventory.stock.adjust` | 1 | write (`stock_adjust`) | `draftAction` | OWNER, ADMIN, MANAGER | stock | dashboard | source | `inventory.postBalanceOperation` |
 | `inventory.stock.correct` | 1 | write (`stock_correct`) | `draftAction` | OWNER, ADMIN, MANAGER | stock | dashboard | source | `inventory.correctOperation` |
 | `inventory.count.create` | 1 | write (`stock_count_create`) | `draftAction` | OWNER, ADMIN, MANAGER | stock | dashboard | source | `inventory.createStockCount` |
 | `inventory.count.finalize` | 1 | write (`stock_count_finalize`) | `draftAction` | OWNER, ADMIN, MANAGER | stock | dashboard | source | `inventory.finalizeStockCount` |
-| `inventory.count.read` | 1 | read | `readStockCount` | OWNER, ADMIN, MANAGER | stock | dashboard | source | `inventory.stockCountReview` |
-| `inventory.operations.history` | 1 | read | `readStockOperations` | OWNER, ADMIN, MANAGER | stock | dashboard | source | `inventory.operationHistory` |
-| `inventory.operations.read` | 1 | read | `readStockOperation` | OWNER, ADMIN, MANAGER | stock | dashboard | source | `inventory.operationAudit` |
+| `inventory.count.read` | 1 | read | `readStockCount` | OWNER, ADMIN, MANAGER | stock | dashboard, mobile | source | `inventory.stockCountReview` |
+| `inventory.operations.history` | 1 | read | `readStockOperations` | OWNER, ADMIN, MANAGER | stock | dashboard, mobile | source | `inventory.operationHistory` |
+| `inventory.operations.read` | 1 | read | `readStockOperation` | OWNER, ADMIN, MANAGER | stock | dashboard, mobile | source | `inventory.operationAudit` |
 | `inventory.closeout.create` | 1 | write (`inventory_closeout_create`) | `draftAction` | OWNER, ADMIN, MANAGER | reconciliation | dashboard | source | `inventory.createCloseout` |
 | `inventory.closeout.finalize` | 1 | write (`inventory_closeout_finalize`) | `draftAction` | OWNER, ADMIN, MANAGER | reconciliation | dashboard | source | `inventory.finalizeCloseout` |
-| `inventory.closeout.list` | 1 | read | `readInventoryCloseouts` | OWNER, ADMIN, MANAGER | reconciliation | dashboard | source | `inventory.closeouts` |
-| `inventory.closeout.read` | 1 | read | `readInventoryCloseout` | OWNER, ADMIN, MANAGER | reconciliation | dashboard | source | `inventory.closeoutReview` |
-| `inventory.transfer.list` | 1 | read | `readStockTransfers` | OWNER, ADMIN, MANAGER | stock | dashboard | source | `inventory.transfers` |
-| `inventory.transfer.read` | 1 | read | `readStockTransfer` | OWNER, ADMIN, MANAGER | stock | dashboard | source | `inventory.transferReview` |
+| `inventory.closeout.list` | 1 | read | `readInventoryCloseouts` | OWNER, ADMIN, MANAGER | reconciliation | dashboard, mobile | source | `inventory.closeouts` |
+| `inventory.closeout.read` | 1 | read | `readInventoryCloseout` | OWNER, ADMIN, MANAGER | reconciliation | dashboard, mobile | source | `inventory.closeoutReview` |
+| `inventory.transfer.list` | 1 | read | `readStockTransfers` | OWNER, ADMIN, MANAGER | stock | dashboard, mobile | source | `inventory.transfers` |
+| `inventory.transfer.read` | 1 | read | `readStockTransfer` | OWNER, ADMIN, MANAGER | stock | dashboard, mobile | source | `inventory.transferReview` |
 | `inventory.transfer.dispatch` | 1 | write (`stock_transfer_dispatch`) | `draftAction` | OWNER, ADMIN, MANAGER | stock | dashboard | source | `inventory.dispatchTransfer` |
 | `inventory.transfer.receive` | 1 | write (`stock_transfer_receive`) | `draftAction` | OWNER, ADMIN, MANAGER | stock | dashboard | source | `inventory.transitionTransfer` |
 | `inventory.transfer.cancel` | 1 | write (`stock_transfer_cancel`) | `draftAction` | OWNER, ADMIN, MANAGER | stock | dashboard | source | `inventory.transitionTransfer` |
+| `inventory.custody.move` | 1 | write (`stock_custody_move`) | `draftAction` | OWNER, ADMIN, MANAGER | stock | dashboard | planned | `inventory.moveCustody` |
+| `inventory.package.transform` | 1 | write (`stock_package_transform`) | `draftAction` | OWNER, ADMIN, MANAGER | stock | dashboard | planned | `inventory.transformPackagedStock` |
 
 ## Chat examples and regression tests
 
@@ -197,6 +210,8 @@ track conversational evaluation separately from these source test links.
 | `finance.posted_profit.report` | Show posted Book profit and missing cost coverage | [packages/db/src/queries/business-reporting/reporting.test.ts](../../../../packages/db/src/queries/business-reporting/reporting.test.ts)<br>[packages/assistant/src/general/business-report-target.test.ts](../../../../packages/assistant/src/general/business-report-target.test.ts) |
 | `inventory.stock.report` | Show current stock for eggs | [packages/db/src/queries/business-reporting/reporting.test.ts](../../../../packages/db/src/queries/business-reporting/reporting.test.ts)<br>[packages/assistant/src/general/business-report-target.test.ts](../../../../packages/assistant/src/general/business-report-target.test.ts) |
 | `services.intake.options.read` | Find shirt washing services and assignees | [packages/db/src/queries/service-intake-review.test.ts](../../../../packages/db/src/queries/service-intake-review.test.ts)<br>[apps/dashboard/src/components/general-assistant/service-intake-editor-options.test.ts](../../../../apps/dashboard/src/components/general-assistant/service-intake-editor-options.test.ts)<br>[apps/dashboard/src/components/general-assistant/service-intake-editor-options-ui.test.ts](../../../../apps/dashboard/src/components/general-assistant/service-intake-editor-options-ui.test.ts) |
+| `services.message.share` | Record that I told Amina on WhatsApp her shoes are ready | [packages/assistant/src/general/service-message.test.ts](../../../../packages/assistant/src/general/service-message.test.ts)<br>[packages/db/src/queries/service-manual-message.test.ts](../../../../packages/db/src/queries/service-manual-message.test.ts)<br>[apps/api/src/assistant/general-service-message.test.ts](../../../../apps/api/src/assistant/general-service-message.test.ts) |
+| `services.messages.read` | What have we told Amina about her shoes? | [packages/db/src/queries/service-manual-message.test.ts](../../../../packages/db/src/queries/service-manual-message.test.ts) |
 | `services.intake.create` | Take two shirts for Amina and promise Thursday morning | [packages/assistant/src/general/service-intake.test.ts](../../../../packages/assistant/src/general/service-intake.test.ts)<br>[packages/db/src/queries/service-intake-review.test.ts](../../../../packages/db/src/queries/service-intake-review.test.ts)<br>[apps/api/src/assistant/general-service-intake-rollback.integration-check.ts](../../../../apps/api/src/assistant/general-service-intake-rollback.integration-check.ts) |
 | `finance.cash_count.record` | I counted zero cash in the front till at this time | [packages/assistant/src/general/cash-count.test.ts](../../../../packages/assistant/src/general/cash-count.test.ts)<br>[packages/db/src/queries/finance/cash-count-review.test.ts](../../../../packages/db/src/queries/finance/cash-count-review.test.ts) |
 | `finance.cash_accounts.read` | Find the front till | [packages/db/src/queries/finance/assistant-cash-count-reads.test.ts](../../../../packages/db/src/queries/finance/assistant-cash-count-reads.test.ts) |
@@ -208,6 +223,9 @@ track conversational evaluation separately from these source test links.
 | `staff.invitation.command.read` | Show the saved invitation and current delivery status | [packages/db/src/queries/staff-invitation-commands.test.ts](../../../../packages/db/src/queries/staff-invitation-commands.test.ts) |
 | `staff.invitation.review` | Review inviting Amina as Cashier in this Store | [packages/db/src/queries/staff-invitation-review.test.ts](../../../../packages/db/src/queries/staff-invitation-review.test.ts)<br>[apps/api/src/assistant/general-staff-invitation-review.test.ts](../../../../apps/api/src/assistant/general-staff-invitation-review.test.ts) |
 | `staff.history.read` | Who changed this staff member's Store access?<br>Show staff suspensions last week | [packages/db/src/queries/staff-history.test.ts](../../../../packages/db/src/queries/staff-history.test.ts)<br>[apps/api/src/assistant/general-staff-history.test.ts](../../../../apps/api/src/assistant/general-staff-history.test.ts) |
+| `settings.store.change` | Stop showing customer names on this Store's receipts<br>Turn off same-day order reminders<br>Let sales reps see all orders in this Store | [packages/assistant/src/general/store-settings-change.test.ts](../../../../packages/assistant/src/general/store-settings-change.test.ts)<br>[apps/api/src/assistant/general-store-settings-change.test.ts](../../../../apps/api/src/assistant/general-store-settings-change.test.ts) |
+| `settings.store.read` | What does our receipt show?<br>Are order reminders on?<br>Can sales reps see each other's orders? | [apps/api/src/assistant/general-store-settings.test.ts](../../../../apps/api/src/assistant/general-store-settings.test.ts) |
+| `staff.activity.read` | What did Amina do today?<br>Who changed the price of Rice 50kg?<br>Show stock adjustments by staff this week | [packages/db/src/queries/staff-activity.test.ts](../../../../packages/db/src/queries/staff-activity.test.ts)<br>[apps/api/src/assistant/general-staff-activity.test.ts](../../../../apps/api/src/assistant/general-staff-activity.test.ts) |
 | `staff.directory.read` | Find staff named Amina<br>How many active staff memberships do we have? | [packages/db/src/queries/staff-directory.test.ts](../../../../packages/db/src/queries/staff-directory.test.ts)<br>[apps/api/src/assistant/general-staff-reads.test.ts](../../../../apps/api/src/assistant/general-staff-reads.test.ts) |
 | `staff.member.read` | Show the staff membership we selected | [packages/db/src/queries/staff-directory.test.ts](../../../../packages/db/src/queries/staff-directory.test.ts)<br>[apps/api/src/assistant/general-staff-reads.test.ts](../../../../apps/api/src/assistant/general-staff-reads.test.ts) |
 | `finance.purchase.record` | Record the supplier invoice for goods we received and own | [packages/assistant/src/general/purchase-recording.test.ts](../../../../packages/assistant/src/general/purchase-recording.test.ts)<br>[packages/db/src/queries/finance/purchase-recording-review.test.ts](../../../../packages/db/src/queries/finance/purchase-recording-review.test.ts) |
@@ -230,6 +248,9 @@ track conversational evaluation separately from these source test links.
 | `finance.bill_payment.reverse` | Correct this duplicate bill payment record | [packages/assistant/src/general/bill-correction.test.ts](../../../../packages/assistant/src/general/bill-correction.test.ts)<br>[packages/db/src/queries/finance/bill-correction-review.test.ts](../../../../packages/db/src/queries/finance/bill-correction-review.test.ts) |
 | `finance.bill.pay` | Record the remaining rent payment I already made | [packages/assistant/src/general/bill-payment.test.ts](../../../../packages/assistant/src/general/bill-payment.test.ts)<br>[packages/db/src/queries/finance/bill-payment-review.test.ts](../../../../packages/db/src/queries/finance/bill-payment-review.test.ts) |
 | `finance.expense.record` | Record rent already incurred, with the amount still owed | [packages/assistant/src/general/expense.test.ts](../../../../packages/assistant/src/general/expense.test.ts)<br>[packages/db/src/queries/finance/expense-review.test.ts](../../../../packages/db/src/queries/finance/expense-review.test.ts) |
+| `finance.expense.record_simple` | Spent 5k on feed from Shop cash | [packages/assistant/src/general/simple-expense.test.ts](../../../../packages/assistant/src/general/simple-expense.test.ts)<br>[apps/api/src/assistant/general-simple-expense.test.ts](../../../../apps/api/src/assistant/general-simple-expense.test.ts) |
+| `finance.money_in.record_simple` | Put 20k into Shop cash | [packages/assistant/src/general/simple-money-in.test.ts](../../../../packages/assistant/src/general/simple-money-in.test.ts)<br>[apps/api/src/assistant/general-simple-money-in.test.ts](../../../../apps/api/src/assistant/general-simple-money-in.test.ts) |
+| `finance.transfer.record_simple` | Move 5k from Shop cash to Ishaq PalmPay | [packages/assistant/src/general/simple-transfer.test.ts](../../../../packages/assistant/src/general/simple-transfer.test.ts)<br>[apps/api/src/assistant/general-simple-transfer.test.ts](../../../../apps/api/src/assistant/general-simple-transfer.test.ts) |
 | `finance.money_movement.record` | Record cash I already deposited into the bank | [packages/assistant/src/general/money-movement.test.ts](../../../../packages/assistant/src/general/money-movement.test.ts)<br>[packages/db/src/queries/finance/money-review.test.ts](../../../../packages/db/src/queries/finance/money-review.test.ts) |
 | `customers.entry.read` | Read customer entry allocations | [apps/api/src/assistant/general-customer-allocations.test.ts](../../../../apps/api/src/assistant/general-customer-allocations.test.ts) |
 | `customers.allocation_history.read` | Read customer allocation releases | [apps/api/src/assistant/general-customer-allocations.test.ts](../../../../apps/api/src/assistant/general-customer-allocations.test.ts) |
@@ -241,6 +262,7 @@ track conversational evaluation separately from these source test links.
 | `finance.supplier_statement.read` | Read supplier statement in this Finance Book | [apps/api/src/assistant/general-supplier-reads.test.ts](../../../../apps/api/src/assistant/general-supplier-reads.test.ts) |
 | `finance.bill.read` | What remains owed on this rent bill? | [apps/api/src/assistant/general-bill-reads.test.ts](../../../../apps/api/src/assistant/general-bill-reads.test.ts) |
 | `finance.expense_categories.read` | Which expense category should rent use? | [packages/db/src/queries/finance/expense-category-reads.test.ts](../../../../packages/db/src/queries/finance/expense-category-reads.test.ts) |
+| `finance.money_account_balances.read` | Show how much in each account | [packages/assistant/src/general/money-account-balances-answer.test.ts](../../../../packages/assistant/src/general/money-account-balances-answer.test.ts) |
 | `finance.money_accounts.read` | Which bank account did I return the deposit from? | [packages/db/src/queries/finance/money-account-reads.test.ts](../../../../packages/db/src/queries/finance/money-account-reads.test.ts) |
 | `customers.account.read` | Read customer funds and matching Book | [apps/api/src/assistant/general-customer-funds.test.ts](../../../../apps/api/src/assistant/general-customer-funds.test.ts) |
 | `customers.sources.read` | Read current customer ledger sources | [apps/api/src/assistant/general-customer-funds.test.ts](../../../../apps/api/src/assistant/general-customer-funds.test.ts) |
@@ -254,7 +276,7 @@ track conversational evaluation separately from these source test links.
 | `sales.order.cancel` | Cancel an unpaid order | [apps/api/src/assistant/general-order-amendment.integration-check.ts](../../../../apps/api/src/assistant/general-order-amendment.integration-check.ts) |
 | `sales.order.metadata.update` | Update order details | [apps/api/src/assistant/general-order-amendment.integration-check.ts](../../../../apps/api/src/assistant/general-order-amendment.integration-check.ts) |
 | `sales.order.replace` | Replace reviewed order quantities and prices | [apps/api/src/assistant/general-order-amendment.integration-check.ts](../../../../apps/api/src/assistant/general-order-amendment.integration-check.ts) |
-| `sales.order.attachment.add` | Attach this receipt to order 1042 | [packages/db/src/queries/commercial-order-activity.integration.test.ts](../../../../packages/db/src/queries/commercial-order-activity.integration.test.ts) |
+| `sales.order.attachment.add` | Attach this receipt to order 1042<br>Note on order 1042: customer collects at 5pm | [packages/db/src/queries/commercial-order-activity.integration.test.ts](../../../../packages/db/src/queries/commercial-order-activity.integration.test.ts) |
 | `search.records` | Find Amina<br>Do we have eggs? | [apps/api/src/assistant/general-availability.test.ts](../../../../apps/api/src/assistant/general-availability.test.ts) |
 | `catalog.history.read` | Show this item's history | [apps/api/src/assistant/general-catalog-history.test.ts](../../../../apps/api/src/assistant/general-catalog-history.test.ts)<br>[apps/api/src/assistant/general-proposals.integration.test.ts](../../../../apps/api/src/assistant/general-proposals.integration.test.ts)<br>[packages/assistant/src/general/contracts.test.ts](../../../../packages/assistant/src/general/contracts.test.ts) |
 | `catalog.item.read` | How much is a crate of eggs? | None registered |
@@ -270,6 +292,7 @@ track conversational evaluation separately from these source test links.
 | `customers.read` | What is Amina's phone number? | [apps/api/src/assistant/general-access.test.ts](../../../../apps/api/src/assistant/general-access.test.ts) |
 | `customers.create` | Add Amina, 0803 000 0000 | [apps/api/src/assistant/general-proposals.integration.test.ts](../../../../apps/api/src/assistant/general-proposals.integration.test.ts)<br>[packages/assistant/src/general/contracts.test.ts](../../../../packages/assistant/src/general/contracts.test.ts) |
 | `catalog.product.create` | Add Eggs at ₦200 per piece | [apps/api/src/assistant/general-proposals.integration.test.ts](../../../../apps/api/src/assistant/general-proposals.integration.test.ts)<br>[packages/assistant/src/general/contracts.test.ts](../../../../packages/assistant/src/general/contracts.test.ts) |
+| `sales.order.record_simple` | Sales Receipt<br>Part paid by Salman | [packages/assistant/src/general/simple-sale.test.ts](../../../../packages/assistant/src/general/simple-sale.test.ts)<br>[apps/api/src/assistant/general-simple-sale.test.ts](../../../../apps/api/src/assistant/general-simple-sale.test.ts) |
 | `sales.order.create` | Sell two crates of eggs to Amina | [apps/api/src/assistant/general-proposals.integration.test.ts](../../../../apps/api/src/assistant/general-proposals.integration.test.ts)<br>[packages/assistant/src/general/contracts.test.ts](../../../../packages/assistant/src/general/contracts.test.ts) |
 | `sales.payment.record` | Amina paid ₦300 cash for order 1042 | [apps/api/src/assistant/general-proposals.integration.test.ts](../../../../apps/api/src/assistant/general-proposals.integration.test.ts)<br>[packages/assistant/src/general/contracts.test.ts](../../../../packages/assistant/src/general/contracts.test.ts) |
 | `customers.update` | Change Amina's phone to 0803 111 2222 | [apps/api/src/assistant/general-proposals.integration.test.ts](../../../../apps/api/src/assistant/general-proposals.integration.test.ts)<br>[packages/assistant/src/general/contracts.test.ts](../../../../packages/assistant/src/general/contracts.test.ts) |
@@ -277,6 +300,7 @@ track conversational evaluation separately from these source test links.
 | `catalog.details.update` | None registered | [packages/db/src/queries/catalog-product-update.test.ts](../../../../packages/db/src/queries/catalog-product-update.test.ts)<br>[apps/api/src/assistant/general-proposals.integration.test.ts](../../../../apps/api/src/assistant/general-proposals.integration.test.ts)<br>[packages/assistant/src/general/contracts.test.ts](../../../../packages/assistant/src/general/contracts.test.ts) |
 | `catalog.identifiers.update` | None registered | [packages/db/src/queries/catalog-product-update.test.ts](../../../../packages/db/src/queries/catalog-product-update.test.ts)<br>[apps/api/src/assistant/general-proposals.integration.test.ts](../../../../apps/api/src/assistant/general-proposals.integration.test.ts)<br>[packages/assistant/src/general/contracts.test.ts](../../../../packages/assistant/src/general/contracts.test.ts) |
 | `catalog.availability.update` | None registered | [packages/db/src/queries/catalog-availability.test.ts](../../../../packages/db/src/queries/catalog-availability.test.ts)<br>[apps/api/src/assistant/general-proposals.integration.test.ts](../../../../apps/api/src/assistant/general-proposals.integration.test.ts)<br>[packages/assistant/src/general/contracts.test.ts](../../../../packages/assistant/src/general/contracts.test.ts) |
+| `catalog.archive` | Stop selling the 1kg bag of rice<br>Archive the blue variant of the school bag | [packages/assistant/src/general/catalog-archive.test.ts](../../../../packages/assistant/src/general/catalog-archive.test.ts)<br>[apps/api/src/assistant/general-catalog-archive.test.ts](../../../../apps/api/src/assistant/general-catalog-archive.test.ts) |
 | `catalog.units.draft` | None registered | [packages/db/src/queries/catalog-unit-configuration-safety.test.ts](../../../../packages/db/src/queries/catalog-unit-configuration-safety.test.ts)<br>[apps/api/src/assistant/general-proposals.integration.test.ts](../../../../apps/api/src/assistant/general-proposals.integration.test.ts)<br>[packages/assistant/src/general/contracts.test.ts](../../../../packages/assistant/src/general/contracts.test.ts) |
 | `catalog.units.publish` | None registered | [packages/db/src/queries/catalog-unit-configuration-safety.test.ts](../../../../packages/db/src/queries/catalog-unit-configuration-safety.test.ts)<br>[apps/api/src/assistant/general-proposals.integration.test.ts](../../../../apps/api/src/assistant/general-proposals.integration.test.ts)<br>[packages/assistant/src/general/contracts.test.ts](../../../../packages/assistant/src/general/contracts.test.ts) |
 | `sales.orders.summary` | How much does this customer owe on orders? | [packages/db/src/queries/commercial-order-operational-summary.test.ts](../../../../packages/db/src/queries/commercial-order-operational-summary.test.ts)<br>[apps/api/src/assistant/general-operational-summary-contract.test.ts](../../../../apps/api/src/assistant/general-operational-summary-contract.test.ts)<br>[apps/api/src/assistant/general-proposals.integration.test.ts](../../../../apps/api/src/assistant/general-proposals.integration.test.ts)<br>[packages/assistant/src/general/contracts.test.ts](../../../../packages/assistant/src/general/contracts.test.ts) |
@@ -305,6 +329,8 @@ track conversational evaluation separately from these source test links.
 | `inventory.transfer.dispatch` | Dispatch stock to another Store | [packages/assistant/src/general/stock-transfer.test.ts](../../../../packages/assistant/src/general/stock-transfer.test.ts) |
 | `inventory.transfer.receive` | Acknowledge stock received at this Store | [packages/assistant/src/general/stock-transfer.test.ts](../../../../packages/assistant/src/general/stock-transfer.test.ts) |
 | `inventory.transfer.cancel` | Cancel and return remaining transit stock | [packages/assistant/src/general/stock-transfer.test.ts](../../../../packages/assistant/src/general/stock-transfer.test.ts) |
+| `inventory.custody.move` | Give Amina 2 crates of eggs for the delivery round<br>Return Amina's remaining eggs to the Store | [packages/assistant/src/general/stock-custody.test.ts](../../../../packages/assistant/src/general/stock-custody.test.ts)<br>[apps/api/src/assistant/general-stock-custody.test.ts](../../../../apps/api/src/assistant/general-stock-custody.test.ts) |
+| `inventory.package.transform` | Open 2 crates of eggs into single eggs for sale | [packages/assistant/src/general/stock-transform.test.ts](../../../../packages/assistant/src/general/stock-transform.test.ts)<br>[apps/api/src/assistant/general-stock-transform.test.ts](../../../../apps/api/src/assistant/general-stock-transform.test.ts) |
 
 ## Planned merchant procedures by ticket
 
@@ -319,23 +345,27 @@ track conversational evaluation separately from these source test links.
 | D03 | 8 |
 | D04 | 3 |
 | D05 | 3 |
-| E01 | 6 |
+| E01 | 4 |
 | E02 | 3 |
 | E03 | 3 |
 | E04 | 1 |
 | G01 | 6 |
 | G02 | 4 |
 | G03 | 27 |
-| G04 | 7 |
-| G05 | 31 |
+| G04 | 3 |
+| G05 | 28 |
 | H04 | 10 |
 | S01 | 1 |
 | S02 | 1 |
+| S05 | 5 |
 
 ## Merchant procedures
 
 | Procedure | Type | Scoped staff | Owner | Status | Capability, ticket or reason |
 |---|---|---|---|---|---|
+| `activity.filters` | query | read | platform | planned | S05 |
+| `activity.get` | query | read | platform | planned | S05 |
+| `activity.listPage` | query | read | platform | planned | S05 |
 | `assistant.allowance` | query | read | assistant | excluded | Assistant transport or a dedicated assistant flow. |
 | `assistant.availability` | query | read | assistant | excluded | Assistant transport or a dedicated assistant flow. |
 | `assistant.conversation` | query | read | assistant | excluded | Assistant transport or a dedicated assistant flow. |
@@ -343,7 +373,21 @@ track conversational evaluation separately from these source test links.
 | `assistant.decideProposal` | mutation | read | assistant | excluded | Assistant transport or a dedicated assistant flow. |
 | `assistant.editProposal` | mutation | read | assistant | excluded | Assistant transport or a dedicated assistant flow. |
 | `assistant.pendingProposals` | query | Owner/Admin only | assistant | excluded | Assistant transport or a dedicated assistant flow. |
+| `assistant.saleOptions` | query | Owner/Admin only | sales | supported | sales.order.record_simple |
+| `assistant.simpleExpenseOptions` | query | Owner/Admin only | assistant | excluded | Assistant transport or a dedicated assistant flow. |
+| `assistant.simpleTransferOptions` | query | Owner/Admin only | assistant | excluded | Assistant transport or a dedicated assistant flow. |
 | `assistant.start` | mutation | read | assistant | excluded | Assistant transport or a dedicated assistant flow. |
+| `businessNotifications.archive` | mutation | read | platform | form_only | Own alert preferences and receipt state stay in the personal inbox until a dedicated confirmed assistant flow is built. |
+| `businessNotifications.listMine` | query | read | platform | planned | S05 |
+| `businessNotifications.markAllRead` | mutation | read | platform | form_only | Own alert preferences and receipt state stay in the personal inbox until a dedicated confirmed assistant flow is built. |
+| `businessNotifications.markRead` | mutation | read | platform | form_only | Own alert preferences and receipt state stay in the personal inbox until a dedicated confirmed assistant flow is built. |
+| `businessNotifications.myPreferences` | query | read | platform | form_only | Own alert preferences and receipt state stay in the personal inbox until a dedicated confirmed assistant flow is built. |
+| `businessNotifications.policy` | query | Owner/Admin only | platform | form_only | Owner/Admin notification policy and recipient assignments require explicit settings review; no assistant configuration mutation is activated. |
+| `businessNotifications.subscriptions` | query | Owner/Admin only | platform | form_only | Owner/Admin notification policy and recipient assignments require explicit settings review; no assistant configuration mutation is activated. |
+| `businessNotifications.unreadCount` | query | read | platform | planned | S05 |
+| `businessNotifications.updateMyPreferences` | mutation | read | platform | form_only | Own alert preferences and receipt state stay in the personal inbox until a dedicated confirmed assistant flow is built. |
+| `businessNotifications.updatePolicy` | mutation | Owner/Admin only | platform | form_only | Owner/Admin notification policy and recipient assignments require explicit settings review; no assistant configuration mutation is activated. |
+| `businessNotifications.updateSubscription` | mutation | Owner/Admin only | platform | form_only | Owner/Admin notification policy and recipient assignments require explicit settings review; no assistant configuration mutation is activated. |
 | `businessReporting.customerDebt` | query | Owner/Admin only | customers | supported | customers.debt.report |
 | `businessReporting.itemSales` | query | read | sales | supported | sales.items.report |
 | `businessReporting.paymentCollections` | query | read | sales | supported | sales.collections.report |
@@ -351,8 +395,8 @@ track conversational evaluation separately from these source test links.
 | `businessReporting.read` | query | read | sales | planned | G01 |
 | `businessReporting.stock` | query | stock | inventory | supported | inventory.stock.report |
 | `businessReporting.supplierAging` | query | Owner/Admin only | finance | supported | finance.supplier_aging.report |
-| `catalog.archiveOffering` | mutation | catalog | catalog | planned | G04 |
-| `catalog.archiveVariant` | mutation | catalog | catalog | planned | G04 |
+| `catalog.archiveOffering` | mutation | catalog | catalog | supported | catalog.archive |
+| `catalog.archiveVariant` | mutation | catalog | catalog | supported | catalog.archive |
 | `catalog.categories.list` | query | read | catalog | planned | B02 |
 | `catalog.categories.suggest` | mutation | Owner/Admin only | catalog | planned | B02 |
 | `catalog.count` | query | read | catalog | supported | catalog.count |
@@ -394,6 +438,15 @@ track conversational evaluation separately from these source test links.
 | `customerLedger.reverseEntry` | mutation | Owner/Admin only | customers | planned | E02 |
 | `customerLedger.sources` | query | Owner/Admin only | finance | supported | customers.sources.read |
 | `customerLedger.statement` | query | Owner/Admin only | finance | supported | customers.statement.read |
+| `customerMessages.catalog` | query | read | platform | planned | G05 |
+| `customerMessages.draftWithAi` | mutation | Owner/Admin only | platform | form_only | Manual WhatsApp composition/settings and reviewed AI drafts; no assistant provider-send or template-write authority. |
+| `customerMessages.prepareOpen` | mutation | orders | platform | form_only | Manual WhatsApp composition/settings and reviewed AI drafts; no assistant provider-send or template-write authority. |
+| `customerMessages.preview` | query | read | platform | planned | G05 |
+| `customerMessages.templates.list` | query | Owner/Admin only | platform | form_only | Manual WhatsApp composition/settings and reviewed AI drafts; no assistant provider-send or template-write authority. |
+| `customerMessages.templates.reset` | mutation | Owner/Admin only | platform | form_only | Manual WhatsApp composition/settings and reviewed AI drafts; no assistant provider-send or template-write authority. |
+| `customerMessages.templates.save` | mutation | Owner/Admin only | platform | form_only | Manual WhatsApp composition/settings and reviewed AI drafts; no assistant provider-send or template-write authority. |
+| `customerMessages.templates.setEnabled` | mutation | Owner/Admin only | platform | form_only | Manual WhatsApp composition/settings and reviewed AI drafts; no assistant provider-send or template-write authority. |
+| `customerMessages.templateStatus` | query | read | platform | planned | G05 |
 | `customers.count` | query | Owner/Admin only | customers | supported | customers.count |
 | `customers.create` | mutation | Owner/Admin only | customers | supported | customers.create |
 | `customers.getById` | query | read | customers | supported | customers.read |
@@ -412,7 +465,7 @@ track conversational evaluation separately from these source test links.
 | `finance.accountLedger` | query | Owner/Admin only | finance | planned | E01 |
 | `finance.adjustCashCount` | mutation | Owner/Admin only | finance | planned | G02 |
 | `finance.allocateSupplierAdvance` | mutation | Owner/Admin only | finance | supported | finance.supplier.advance.allocate |
-| `finance.balances` | query | Owner/Admin only | finance | planned | E01 |
+| `finance.balances` | query | Owner/Admin only | finance | supported | finance.money_account_balances.read |
 | `finance.bankStatements.get` | query | Owner/Admin only | finance | form_only | Bank statement import and matching are file-driven reconciliation. |
 | `finance.bankStatements.history` | query | Owner/Admin only | finance | form_only | Bank statement import and matching are file-driven reconciliation. |
 | `finance.bankStatements.import` | mutation | Owner/Admin only | finance | form_only | Bank statement import and matching are file-driven reconciliation. |
@@ -429,7 +482,7 @@ track conversational evaluation separately from these source test links.
 | `finance.commandStatus` | query | Owner/Admin only | finance | planned | E01 |
 | `finance.configureFiscalCalendar` | mutation | Owner/Admin only | finance | form_only | Period close, reopen and fiscal calendar changes are privileged Finance actions. |
 | `finance.createExpenseCategory` | mutation | Owner/Admin only | finance | planned | E04 |
-| `finance.createMoneyAccount` | mutation | Owner/Admin only | finance | planned | E01 |
+| `finance.createMoneyAccount` | mutation | Owner/Admin only | finance | supported | finance.money_in.record_simple, finance.transfer.record_simple |
 | `finance.createSupplier` | mutation | Owner/Admin only | finance | supported | finance.supplier.create |
 | `finance.expenseCategories` | query | Owner/Admin only | finance | supported | finance.expense_categories.read |
 | `finance.expenseReceipts.attach` | mutation | Owner/Admin only | finance | planned | H04 |
@@ -452,8 +505,8 @@ track conversational evaluation separately from these source test links.
 | `finance.purchases` | query | Owner/Admin only | finance | supported | finance.purchases.read |
 | `finance.recognizePurchase` | mutation | Owner/Admin only | finance | supported | finance.purchase.recognize |
 | `finance.recordCashCount` | mutation | Owner/Admin only | finance | supported | finance.cash_count.record |
-| `finance.recordExpense` | mutation | Owner/Admin only | finance | supported | finance.expense.record |
-| `finance.recordMoney` | mutation | Owner/Admin only | finance | supported | finance.money_movement.record |
+| `finance.recordExpense` | mutation | Owner/Admin only | finance | supported | finance.expense.record, finance.expense.record_simple |
+| `finance.recordMoney` | mutation | Owner/Admin only | finance | supported | finance.money_in.record_simple, finance.transfer.record_simple, finance.money_movement.record |
 | `finance.recordPurchase` | mutation | Owner/Admin only | finance | supported | finance.purchase.record |
 | `finance.recordSupplierAdvance` | mutation | Owner/Admin only | finance | supported | finance.supplier.advance |
 | `finance.recordSupplierOpening` | mutation | Owner/Admin only | finance | supported | finance.supplier.opening |
@@ -489,7 +542,7 @@ track conversational evaluation separately from these source test links.
 | `inventory.finalizeCloseout` | mutation | reconciliation | inventory | supported | inventory.closeout.finalize |
 | `inventory.finalizeStockCount` | mutation | stock | inventory | supported | inventory.count.finalize |
 | `inventory.lowStockPage` | query | stock | inventory | supported | inventory.low_stock.read |
-| `inventory.moveCustody` | mutation | stock | inventory | planned | G04 |
+| `inventory.moveCustody` | mutation | stock | inventory | supported | inventory.custody.move |
 | `inventory.offeringAvailability` | query | read | inventory | form_only | Legacy availability may initialize a zero source; assistant uses configuredOfferingAvailability, which never creates missing stock. |
 | `inventory.operationAudit` | query | stock | inventory | supported | inventory.operations.read |
 | `inventory.operationHistory` | query | stock | inventory | supported | inventory.operations.history |
@@ -500,7 +553,7 @@ track conversational evaluation separately from these source test links.
 | `inventory.stockCountReview` | query | stock | inventory | supported | inventory.count.read |
 | `inventory.transferReview` | query | stock | inventory | supported | inventory.transfer.read |
 | `inventory.transfers` | query | stock | inventory | supported | inventory.transfer.list |
-| `inventory.transformPackagedStock` | mutation | stock | inventory | planned | G04 |
+| `inventory.transformPackagedStock` | mutation | stock | inventory | supported | inventory.package.transform |
 | `inventory.transitionTransfer` | mutation | stock | inventory | supported | inventory.transfer.receive, inventory.transfer.cancel |
 | `offline.conflicts` | query | Owner/Admin only | platform | excluded | Device sync; assistant writes stay online-only until replay supports them. |
 | `offline.registerDevice` | mutation | Owner/Admin only | platform | excluded | Device sync; assistant writes stay online-only until replay supports them. |
@@ -508,15 +561,17 @@ track conversational evaluation separately from these source test links.
 | `offline.review` | mutation | Owner/Admin only | platform | excluded | Device sync; assistant writes stay online-only until replay supports them. |
 | `offline.settings` | query | Owner/Admin only | platform | excluded | Device sync; assistant writes stay online-only until replay supports them. |
 | `offline.updateSettings` | mutation | Owner/Admin only | platform | excluded | Device sync; assistant writes stay online-only until replay supports them. |
-| `orders.activity.add` | mutation | orders | sales | supported | sales.order.attachment.add |
+| `orders.activity.add` | mutation | orders | sales | supported | sales.order.attachment.add, sales.order.record_simple |
+| `orders.activity.confirmUpload` | mutation | Owner/Admin only | sales | form_only | Video capture and upload belong to the order screen. |
 | `orders.activity.list` | query | read | sales | planned | H04 |
+| `orders.activity.uploadTarget` | mutation | Owner/Admin only | sales | form_only | Video capture and upload belong to the order screen. |
 | `orders.amendMetadata` | mutation | reconciliation | sales | supported | sales.order.metadata.update |
 | `orders.authorizeChargeOnlyServiceLine` | mutation | reconciliation | sales | supported | sales.service.authorize |
 | `orders.cancel` | mutation | reconciliation | sales | supported | sales.order.cancel |
 | `orders.cancellationReview` | query | reconciliation | sales | supported | sales.order.cancel |
 | `orders.changeOptions` | query | read | sales | planned | D01 |
 | `orders.changePolicy` | query | read | sales | planned | D03 |
-| `orders.create` | mutation | orders | sales | supported | sales.order.create |
+| `orders.create` | mutation | orders | sales | supported | sales.order.record_simple, sales.order.create |
 | `orders.customerCount` | query | read | sales | supported | sales.order_contacts.count |
 | `orders.decideChangeApproval` | mutation | Owner/Admin only | sales | excluded | Approving a staff return or refund is the Owner/Admin's own decision. |
 | `orders.fulfillChargeOnlyServiceLine` | mutation | orders | sales | supported | sales.service.fulfill |
@@ -533,21 +588,21 @@ track conversational evaluation separately from these source test links.
 | `orders.payments` | query | read | sales | planned | B05 |
 | `orders.pendingChangeApprovals` | query | Owner/Admin only | sales | planned | D03 |
 | `orders.prepareReceipts` | query | read | sales | planned | B05 |
-| `orders.receiptSettings` | query | read | sales | planned | G05 |
+| `orders.receiptSettings` | query | read | sales | supported | settings.store.read |
 | `orders.recordApprovedChange` | mutation | orders | sales | planned | D03 |
-| `orders.recordPayment` | mutation | orders | sales | supported | sales.payment.record |
+| `orders.recordPayment` | mutation | orders | sales | supported | sales.order.record_simple, sales.payment.record |
 | `orders.refund` | mutation | reconciliation | sales | planned | D03 |
-| `orders.reminderSettings` | query | Owner/Admin only | sales | planned | G05 |
+| `orders.reminderSettings` | query | Owner/Admin only | sales | supported | settings.store.read |
 | `orders.replace` | mutation | reconciliation | sales | supported | sales.order.replace |
 | `orders.replacementReview` | query | reconciliation | sales | supported | sales.order.replace |
 | `orders.reportSummary` | query | read | sales | supported | sales.summary.read |
 | `orders.requestChangeApproval` | mutation | orders | sales | planned | D03 |
 | `orders.returnItems` | mutation | orders | sales | planned | D03 |
 | `orders.returnProductLine` | mutation | orders | sales | supported | sales.product.return |
-| `orders.saveReceiptSettings` | mutation | Owner/Admin only | sales | planned | G05 |
+| `orders.saveReceiptSettings` | mutation | Owner/Admin only | sales | supported | settings.store.change |
 | `orders.timeline` | query | read | sales | planned | D02 |
 | `orders.updateChangePolicy` | mutation | Owner/Admin only | sales | planned | G05 |
-| `orders.updateReminderSettings` | mutation | Owner/Admin only | sales | planned | G05 |
+| `orders.updateReminderSettings` | mutation | Owner/Admin only | sales | supported | settings.store.change |
 | `orders.withdrawChangeApproval` | mutation | orders | sales | planned | D03 |
 | `prescriptions.activateIncident` | mutation | Owner/Admin only | commerce | form_only | Regulated pharmacy workflow with its own role gates and compliance audit. |
 | `prescriptions.approveManualDeliveryFee` | mutation | Owner/Admin only | commerce | form_only | Regulated pharmacy workflow with its own role gates and compliance audit. |
@@ -613,6 +668,8 @@ track conversational evaluation separately from these source test links.
 | `retailOps.inviteStaff` | mutation | Owner/Admin only | staff | planned | S02 |
 | `retailOps.staff` | query | Owner/Admin only | staff | planned | S01 |
 | `retailOps.staffAccessReceipt` | query | Owner/Admin only | staff | supported | staff.access.receipt.read |
+| `retailOps.staffActivityPage` | query | Owner/Admin only | staff | supported | staff.activity.read |
+| `retailOps.staffActivityShown` | query | Owner/Admin only | staff | supported | staff.activity.read |
 | `retailOps.staffDirectoryMember` | query | Owner/Admin only | staff | supported | staff.member.read |
 | `retailOps.staffDirectoryPage` | query | Owner/Admin only | staff | supported | staff.directory.read |
 | `retailOps.staffHistoryPage` | query | Owner/Admin only | staff | supported | staff.history.read |
@@ -719,8 +776,10 @@ track conversational evaluation separately from these source test links.
 | `serviceCommerce.workspaceAccess` | query | Owner/Admin only | commerce | planned | G05 |
 | `serviceCommunications.createBatchIntents` | mutation | Owner/Admin only | commerce | planned | G05 |
 | `serviceCommunications.createIntent` | mutation | Owner/Admin only | commerce | planned | G05 |
+| `serviceCommunications.listMessages` | query | Owner/Admin only | services | supported | services.messages.read |
 | `serviceCommunications.providerStatus` | query | Owner/Admin only | commerce | planned | G05 |
 | `serviceCommunications.recordDeliveryAttempt` | mutation | Owner/Admin only | commerce | planned | G05 |
+| `serviceCommunications.recordManualMessage` | mutation | Owner/Admin only | services | supported | services.message.share |
 | `serviceCommunications.recordManualShare` | mutation | Owner/Admin only | commerce | planned | G05 |
 | `serviceReporting.auditExport` | query | Owner/Admin only | inventory | form_only | Bulk file export; download it from the page. |
 | `serviceReporting.summary` | query | Owner/Admin only | finance | planned | G01 |
@@ -764,8 +823,8 @@ track conversational evaluation separately from these source test links.
 | `setupAssistant.state` | query | Owner/Admin only | assistant | excluded | Assistant transport or a dedicated assistant flow. |
 | `setupAssistant.updateEntity` | mutation | Owner/Admin only | assistant | excluded | Assistant transport or a dedicated assistant flow. |
 | `setupAssistant.visit` | mutation | Owner/Admin only | assistant | excluded | Assistant transport or a dedicated assistant flow. |
-| `stores.orderVisibility` | query | read | sales | planned | G05 |
-| `stores.updateOrderVisibility` | mutation | Owner/Admin only | sales | planned | G05 |
+| `stores.orderVisibility` | query | read | sales | supported | settings.store.read |
+| `stores.updateOrderVisibility` | mutation | Owner/Admin only | sales | supported | settings.store.change |
 | `storeSubscriptions.catalog` | query | Owner/Admin only | platform | form_only | Subscription purchase and verification use the billing checkout. |
 | `storeSubscriptions.verifyPurchase` | mutation | Owner/Admin only | platform | form_only | Subscription purchase and verification use the billing checkout. |
 | `tenant.analyticsContext` | query | Owner/Admin only | platform | excluded | Client session context; the server supplies assistant scope. |

@@ -1,6 +1,12 @@
 "use client"
 
 import { useCanCreateCatalogItems } from "@/components/catalog-item/catalog-create-access"
+import {
+  MessageFollowUp,
+  type MessageFollowUpTarget,
+} from "@/components/customer-messages/message-follow-up"
+import { useOrderMessageAction } from "@/components/customer-messages/use-order-message-action"
+import { WhatsAppNotifyButton } from "@/components/customer-messages/whatsapp-notify-button"
 import { FormFeedback } from "@/components/forms/form-feedback"
 import {
   requestQuickAssistant,
@@ -41,7 +47,7 @@ import { HugeiconsIcon } from "@hugeicons/react"
 import { useQuery } from "@tanstack/react-query"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { type ReactNode, useState } from "react"
+import { type ReactNode, useEffect, useRef, useState } from "react"
 import { orderMoney } from "../order-draft"
 import { OrderActivityColumn } from "./order-activity-column"
 import {
@@ -57,6 +63,7 @@ import {
 import {
   FulfilDialog,
   PaymentDialog,
+  type RecordedMoney,
   RefundDialog,
   ReturnItemsDialog,
 } from "./order-money-dialogs"
@@ -150,6 +157,7 @@ export function OrderOverview({
   const { setParams: setCatalogParams } = useCatalogItemParams()
   const canSaveToCatalog = useCanCreateCatalogItems()
   const [dialog, setDialog] = useState<OpenDialog | null>(null)
+  const [followUp, setFollowUp] = useState<MessageFollowUpTarget | null>(null)
   const query = useQuery(
     trpc.orders.get.queryOptions({ orderId }, { retry: false }),
   )
@@ -172,6 +180,19 @@ export function OrderOverview({
       staleTime: 60_000,
     }),
   )
+  // A change seen to complete the Order (fulfilment or otherwise) offers its
+  // message, from the refreshed server status rather than a guess.
+  const status = query.data?.status
+  const lastStatus = useRef(status)
+  useEffect(() => {
+    if (
+      status === "COMPLETED" &&
+      lastStatus.current &&
+      lastStatus.current !== "COMPLETED"
+    )
+      setFollowUp({ eventKey: "order.completed", done: "Order completed." })
+    lastStatus.current = status
+  }, [status])
   if (query.isPending) return <output aria-live="polite">Loading order…</output>
   if (query.isError)
     return (
@@ -218,6 +239,14 @@ export function OrderOverview({
     await refresh()
   }
   const close = () => setDialog(null)
+  const recorded = (record: RecordedMoney) =>
+    setFollowUp({
+      ...record,
+      done:
+        record.eventKey === "payment.recorded"
+          ? "Payment recorded."
+          : "Refund recorded.",
+    })
 
   async function leaveThen(action: () => unknown) {
     if (onLeave) {
@@ -251,6 +280,11 @@ export function OrderOverview({
         <HugeiconsIcon icon={Invoice01Icon} className="size-4" />
         Receipt
       </Button>
+      <OrderMessageButton
+        orderId={order.id}
+        hasPhone={Boolean(order.customerPhone)}
+        onOpen={(open) => void leaveThen(open)}
+      />
       {launcher && assistant.data?.enabled ? (
         <Button
           className="bg-amber-400 text-amber-950 hover:bg-amber-400/85 dark:bg-amber-400 dark:text-amber-950"
@@ -511,6 +545,15 @@ export function OrderOverview({
         actions
       )}
       <ReplacementBanner order={order} onOpenOrder={onOpenOrder} />
+      {followUp && order.customerPhone ? (
+        <MessageFollowUp
+          key={`${followUp.eventKey}:${followUp.sourceId ?? ""}`}
+          orderId={order.id}
+          target={followUp}
+          onOpen={(open) => void leaveThen(open)}
+          onDismiss={() => setFollowUp(null)}
+        />
+      ) : null}
       <OrderApprovalBanners
         options={options}
         currencyCode={order.currencyCode}
@@ -536,7 +579,12 @@ export function OrderOverview({
         />
       </div>
       {dialog?.kind === "payment" ? (
-        <PaymentDialog order={order} onClose={close} onDone={done} />
+        <PaymentDialog
+          order={order}
+          onClose={close}
+          onDone={done}
+          onRecorded={recorded}
+        />
       ) : null}
       {dialog?.kind === "refund" ? (
         <RefundDialog
@@ -547,6 +595,7 @@ export function OrderOverview({
           ask={Boolean(options?.refund.ask)}
           onClose={close}
           onDone={done}
+          onRecorded={recorded}
         />
       ) : null}
       {dialog?.kind === "fulfil" ? (
@@ -576,6 +625,7 @@ export function OrderOverview({
           }
           onClose={close}
           onDone={done}
+          onRecorded={recorded}
         />
       ) : null}
       {dialog?.kind === "customer" ? (
@@ -604,9 +654,40 @@ export function OrderOverview({
         />
       ) : null}
       {dialog?.kind === "cancel" ? (
-        <CancelOrderDialog order={order} onClose={close} onDone={done} />
+        <CancelOrderDialog
+          order={order}
+          onClose={close}
+          onDone={async () => {
+            await done()
+            setFollowUp({
+              eventKey: "order.cancelled",
+              done: "Order cancelled.",
+            })
+          }}
+        />
       ) : null}
     </div>
+  )
+}
+
+/** One WhatsApp action per Order surface; hidden without a phone. */
+function OrderMessageButton({
+  orderId,
+  hasPhone,
+  onOpen,
+}: {
+  orderId: string
+  hasPhone: boolean
+  onOpen: (open: () => void) => void
+}) {
+  const action = useOrderMessageAction({ orderId, enabled: hasPhone })
+  if (!hasPhone) return null
+  return (
+    <WhatsAppNotifyButton
+      state={action.state}
+      onOpen={() => onOpen(action.open)}
+      onRetry={action.retry}
+    />
   )
 }
 

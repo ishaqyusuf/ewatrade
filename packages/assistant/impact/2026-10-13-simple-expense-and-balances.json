@@ -1,0 +1,89 @@
+{
+  "version": 1,
+  "id": "2026-10-13-simple-expense-and-balances",
+  "tickets": ["E01", "E04", "H04"],
+  "summary": "Simple paid/unpaid expense confirmation with optional chat receipt and canonical per-account recorded balance reads.",
+  "capabilities": [
+    {
+      "id": "finance.expense.record_simple",
+      "change": "added",
+      "rollout": "source",
+      "note": "Dashboard Owner/Admin, canonical expense plus initial payment; no order/inventory or provider effect."
+    },
+    {
+      "id": "finance.money_account_balances.read",
+      "change": "added",
+      "rollout": "source",
+      "note": "Dashboard Owner/Admin, canonical finance.balances filtered to active money accounts, exact signed values."
+    }
+  ],
+  "procedures": [
+    {
+      "path": "finance.recordExpense",
+      "status": "supported",
+      "reason": "Reused canonical expense and initial payment owner."
+    },
+    {
+      "path": "finance.balances",
+      "status": "supported",
+      "reason": "New scoped read exposes exact recorded account balances."
+    },
+    {
+      "path": "assistant.simpleExpenseOptions",
+      "status": "excluded",
+      "reason": "Protected assistant editor option helper; canonical business expense effect remains finance.recordExpense."
+    }
+  ],
+  "docs": [
+    {
+      "topic": "feature",
+      "path": ".brain/features/assistant-simple-expenses.md",
+      "status": "local_only",
+      "note": "Short expense behavior and accepted scope."
+    },
+    {
+      "topic": "api",
+      "path": ".brain/api/contracts.md",
+      "status": "local_only",
+      "note": "Quick expense, protected options and balance answer fields."
+    },
+    {
+      "topic": "permissions",
+      "path": ".brain/api/permissions.md",
+      "status": "local_only",
+      "note": "Existing Finance Owner/Admin authority unchanged."
+    },
+    {
+      "topic": "capability",
+      "path": "packages/assistant/src/capabilities/COVERAGE.md",
+      "status": "updated",
+      "note": "New expense and balance capabilities; finance.balances classification supported."
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "test",
+      "path": "packages/assistant/src/general/simple-expense.test.ts",
+      "executed": true,
+      "result": "Exact captions, paid/unpaid/incomplete steps and semantic exclusions pass."
+    },
+    {
+      "kind": "test",
+      "path": "apps/api/src/assistant/general-simple-expense.integration.test.ts",
+      "executed": true,
+      "result": "Development1pass23assertions56.59s, paid/unpaid/correction/photo/replay/noOrder; owned rows/bytes cleaned."
+    },
+    {
+      "kind": "test",
+      "path": "packages/assistant/src/general/money-account-balances-answer.test.ts",
+      "executed": true,
+      "result": "Exact signed values, active-account filtering, real zero, bounded cursor, currency and no placeholders pass."
+    },
+    {
+      "kind": "test",
+      "path": "packages/assistant/src/general/money-account-balances-answer.test.ts",
+      "executed": true,
+      "result": "Final focused59pass332assertions/21files; plain balance request routing excludes writes and filtered questions. Live original refusal chat now shows Shop cash13000 after7000 expenses; scoped source only."
+    }
+  ]
+}

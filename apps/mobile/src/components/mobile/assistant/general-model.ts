@@ -1,8 +1,12 @@
-import type { GeneralReceipt } from "@ewatrade/assistant/general/contracts"
+import type {
+  GeneralAnswer,
+  GeneralReceipt,
+} from "@ewatrade/assistant/general/contracts"
 import {
   generalSavedSnapshot,
   generalSnapshotSchema,
 } from "@ewatrade/assistant/general/snapshot"
+import type { StaffActivityRecordRef } from "@ewatrade/assistant/general/staff-activity-target"
 import { z } from "zod"
 export {
   type GeneralSnapshot,
@@ -42,8 +46,25 @@ export function readGeneralCache(
  * for it. Never fall back to another record type: an Order screen opened with a
  * stock count or bill ID shows the wrong object or a false "not found".
  */
-export function generalReceiptRoute(receipt: GeneralReceipt) {
+export function generalReceiptRoute(
+  receipt: GeneralReceipt,
+  activeStoreId?: string | null,
+) {
   switch (receipt.kind) {
+    // Native settings screens show the current Store; another Store's
+    // receipt has no exact native object here.
+    case "store_receipt_settings":
+      return receipt.recordId === activeStoreId
+        ? { pathname: "/receipt-settings-modal" as const, params: {} }
+        : null
+    case "store_reminder_settings":
+      return receipt.recordId === activeStoreId
+        ? { pathname: "/order-reminder-settings-modal" as const, params: {} }
+        : null
+    case "store_order_visibility":
+      return receipt.recordId === activeStoreId
+        ? { pathname: "/staff-invite-modal" as const, params: {} }
+        : null
     case "customer":
       return {
         pathname: "/customer-ledger/[customerId]" as const,
@@ -71,4 +92,61 @@ export function generalReceiptRoute(receipt: GeneralReceipt) {
     default:
       return null
   }
+}
+
+/** Where an answer card's Open goes natively, or null when it has none. */
+export function generalAnswerRoute(target: GeneralAnswer["target"]) {
+  if (target?.kind !== "staff_activity") return null
+  return {
+    pathname: "/staff-activity-modal" as const,
+    params: { target: JSON.stringify(target) },
+  }
+}
+
+/** The exact native object for one shown activity event, or null. */
+export function staffActivityRecordRoute(record: StaffActivityRecordRef) {
+  switch (record.kind) {
+    case "order":
+      return {
+        pathname: "/order/[orderId]" as const,
+        params: { orderId: record.id },
+      }
+    case "payment":
+      return {
+        pathname: "/order/[orderId]" as const,
+        params: { orderId: record.orderId },
+      }
+    case "product":
+      return {
+        pathname: "/catalog-item/[catalogItemId]" as const,
+        params: { catalogItemId: record.id },
+      }
+    // Stock, service and finance originals have no native screen yet.
+    default:
+      return null
+  }
+}
+
+/**
+ * Whether one freshly authorized event opens natively here. Orders open only
+ * in their own Store (the active Store is never switched for them).
+ */
+export function staffActivityOpen(
+  event: {
+    record: StaffActivityRecordRef
+    store: { id: string; name: string | null } | null
+  },
+  activeStoreId: string | null | undefined,
+) {
+  const route = staffActivityRecordRoute(event.record)
+  if (!route) return { unavailable: "Open this record on the dashboard." }
+  if (
+    event.record.kind !== "product" &&
+    event.store &&
+    event.store.id !== activeStoreId
+  )
+    return {
+      unavailable: `Switch to ${event.store.name ?? "its Store"} to open.`,
+    }
+  return { route }
 }

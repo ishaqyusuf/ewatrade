@@ -84,6 +84,23 @@ function fixture(
       ],
     },
     commercialOrder: { count: countFactory("createdOrders") },
+    commercialServiceFulfillment: {
+      count: countFactory("serviceFulfillments"),
+    },
+    commercialServiceAuthorization: {
+      count: countFactory("serviceAuthorizations"),
+    },
+    commercialOrderAmendment: { count: countFactory("orderAmendments") },
+    commercialOrderActivity: { count: countFactory("orderActivities") },
+    commercialOrderCredit: { count: countFactory("orderCredits") },
+    commercialOrderReminderSettings: {
+      count: countFactory("reminderSettings"),
+    },
+    commercialOrderReminderDelivery: {
+      count: countFactory("reminderDeliveries"),
+    },
+    commercialOrderReminderDigest: { count: countFactory("reminderDigests") },
+
     commercialOrderPayment: { count: countFactory("recordedPayments") },
     commercialOrderFulfillmentCommand: {
       count: countFactory("fulfillmentCommands"),
@@ -244,4 +261,93 @@ describe("account privacy no-commercial outcome", () => {
       confirmNoAccountPrivacyCommercialRecords(db, command),
     ).rejects.toMatchObject({ code })
   })
+})
+
+test("no-commercial result refuses residual serviceFulfillments", async () => {
+  enable()
+  const { db, outcomes } = fixture({ commercial: { serviceFulfillments: 1 } })
+  await expect(
+    confirmNoAccountPrivacyCommercialRecords(db, {
+      requestId: "request-1",
+      operatorUserId: "operator-1",
+    }),
+  ).rejects.toMatchObject({ code: "COMMERCIAL_RECORDS_REVIEW_REQUIRED" })
+  expect(Object.keys(outcomes)).toHaveLength(0)
+})
+test("no-commercial result refuses residual serviceAuthorizations", async () => {
+  enable()
+  const { db, outcomes } = fixture({ commercial: { serviceAuthorizations: 1 } })
+  await expect(
+    confirmNoAccountPrivacyCommercialRecords(db, {
+      requestId: "request-1",
+      operatorUserId: "operator-1",
+    }),
+  ).rejects.toMatchObject({ code: "COMMERCIAL_RECORDS_REVIEW_REQUIRED" })
+  expect(Object.keys(outcomes)).toHaveLength(0)
+})
+test("no-commercial result refuses residual orderAmendments", async () => {
+  enable()
+  const { db, outcomes } = fixture({ commercial: { orderAmendments: 1 } })
+  await expect(
+    confirmNoAccountPrivacyCommercialRecords(db, {
+      requestId: "request-1",
+      operatorUserId: "operator-1",
+    }),
+  ).rejects.toMatchObject({ code: "COMMERCIAL_RECORDS_REVIEW_REQUIRED" })
+  expect(Object.keys(outcomes)).toHaveLength(0)
+})
+test("no-commercial result refuses residual orderActivities", async () => {
+  enable()
+  const { db, outcomes } = fixture({ commercial: { orderActivities: 1 } })
+  await expect(
+    confirmNoAccountPrivacyCommercialRecords(db, {
+      requestId: "request-1",
+      operatorUserId: "operator-1",
+    }),
+  ).rejects.toMatchObject({ code: "COMMERCIAL_RECORDS_REVIEW_REQUIRED" })
+  expect(Object.keys(outcomes)).toHaveLength(0)
+})
+test("no-commercial result refuses residual orderCredits", async () => {
+  enable()
+  const { db, outcomes } = fixture({ commercial: { orderCredits: 1 } })
+  await expect(
+    confirmNoAccountPrivacyCommercialRecords(db, {
+      requestId: "request-1",
+      operatorUserId: "operator-1",
+    }),
+  ).rejects.toMatchObject({ code: "COMMERCIAL_RECORDS_REVIEW_REQUIRED" })
+  expect(Object.keys(outcomes)).toHaveLength(0)
+})
+test("no-commercial result refuses residual reminderSettings", async () => {
+  enable()
+  const { db, outcomes } = fixture({ commercial: { reminderSettings: 1 } })
+  await expect(
+    confirmNoAccountPrivacyCommercialRecords(db, {
+      requestId: "request-1",
+      operatorUserId: "operator-1",
+    }),
+  ).rejects.toMatchObject({ code: "COMMERCIAL_RECORDS_REVIEW_REQUIRED" })
+  expect(Object.keys(outcomes)).toHaveLength(0)
+})
+test("no-commercial result refuses residual reminderDeliveries", async () => {
+  enable()
+  const { db, outcomes } = fixture({ commercial: { reminderDeliveries: 1 } })
+  await expect(
+    confirmNoAccountPrivacyCommercialRecords(db, {
+      requestId: "request-1",
+      operatorUserId: "operator-1",
+    }),
+  ).rejects.toMatchObject({ code: "COMMERCIAL_RECORDS_REVIEW_REQUIRED" })
+  expect(Object.keys(outcomes)).toHaveLength(0)
+})
+test("no-commercial result refuses residual reminderDigests", async () => {
+  enable()
+  const { db, outcomes } = fixture({ commercial: { reminderDigests: 1 } })
+  await expect(
+    confirmNoAccountPrivacyCommercialRecords(db, {
+      requestId: "request-1",
+      operatorUserId: "operator-1",
+    }),
+  ).rejects.toMatchObject({ code: "COMMERCIAL_RECORDS_REVIEW_REQUIRED" })
+  expect(Object.keys(outcomes)).toHaveLength(0)
 })

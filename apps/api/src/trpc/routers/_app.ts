@@ -2,11 +2,14 @@ import { isQaAcceleratorClientMode } from "@ewatrade/utils/qa-accelerator"
 import type { inferRouterInputs, inferRouterOutputs } from "@trpc/server"
 import { createTRPCRouter } from "../init"
 import { accountPrivacyRouter } from "./account-privacy"
+import { activityRouter } from "./activity"
 import { assistantRouter } from "./assistant"
 import { authRouter } from "./auth"
+import { businessNotificationsRouter } from "./business-notifications"
 import { businessReportingRouter } from "./business-reporting"
 import { catalogRouter } from "./catalog"
 import { customerLedgerRouter } from "./customer-ledger"
+import { customerMessagesRouter } from "./customer-messages"
 import { customersRouter } from "./customers"
 import { domainsRouter } from "./domains"
 import { financeRouter } from "./finance"
@@ -40,12 +43,15 @@ const qaAccessRegistration: { qaAccess: typeof qaAccessRouter } =
     : ({} as { qaAccess: typeof qaAccessRouter })
 
 export const appRouter = createTRPCRouter({
+  activity: activityRouter,
+  businessNotifications: businessNotificationsRouter,
   businessReporting: businessReportingRouter,
   auth: authRouter,
   storeSubscriptions: storeSubscriptionsRouter,
   accountPrivacy: accountPrivacyRouter,
   catalog: catalogRouter,
   customers: customersRouter,
+  customerMessages: customerMessagesRouter,
   inventory: inventoryRouter,
   location: locationRouter,
   finance: financeRouter,

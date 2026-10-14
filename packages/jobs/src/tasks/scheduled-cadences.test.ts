@@ -39,6 +39,7 @@ describe("scheduled cadences", () => {
       "analytics.dashboard.recovery": "*/15 * * * * task",
       "assistant.attachment.process-recovery": "*/5 * * * * task",
       "assistant.maintenance": "0 * * * * task",
+      "auth.phone-otp-expiry": "*/5 * * * * sweep",
       "catalog.photo.cleanup": "0 * * * * task",
       "catalog.photo.review-recovery": "*/15 * * * * task",
       "domains.reconcile": "0 * * * * task",

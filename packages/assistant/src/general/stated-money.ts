@@ -18,6 +18,13 @@ type ActionName = GeneralAction["action"]
  * bookkeeping amounts). The model writes it without `Minor`, or as `as`.
  */
 export const statedMoneyFields = {
+  expense_record_simple: { amountMinor: { kind: "number" } },
+  money_transfer_simple: { amountMinor: { kind: "number" } },
+  money_in_record: { amountMinor: { kind: "number" } },
+  sale_record: {
+    receivedMinor: { kind: "number" },
+    totalMinor: { kind: "number" },
+  },
   order_create: {
     "initialPayment.amountMinor": { kind: "number" },
     "lines[].amountMinor": { kind: "number" },

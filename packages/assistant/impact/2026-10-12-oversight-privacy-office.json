@@ -1,0 +1,47 @@
+{
+  "version": 1,
+  "id": "2026-10-12-oversight-privacy-office",
+  "tickets": ["H02"],
+  "summary": "Adds an internal signed Oversight employee privacy queue boundary; default-off source, guarded Development acceptance only.",
+  "noAssistantImpact": "Company-office privacy operations remain excluded from the merchant assistant. No new merchant capability, tenant grant, assistant tool, automatic provider attestation or live rollout.",
+  "docs": [
+    {
+      "topic": "feature",
+      "path": ".brain/features/internal-office.md",
+      "status": "local_only",
+      "note": "Company versus merchant staff and role/queue source scope."
+    },
+    {
+      "topic": "api",
+      "path": ".brain/api/contracts.md",
+      "status": "local_only",
+      "note": "Signed bounded envelope, projected queue and one-stage commands."
+    },
+    {
+      "topic": "permissions",
+      "path": ".brain/api/permissions.md",
+      "status": "local_only",
+      "note": "Explicit office/product operator mappings and default-off guards."
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "test",
+      "path": "apps/api/src/account-privacy/office-auth.test.ts",
+      "executed": true,
+      "result": "4 pass/17 assertions; spoofed, expired, insufficiently scoped and unmapped envelopes refused."
+    },
+    {
+      "kind": "test",
+      "path": "packages/db/src/queries/account-privacy-workflow.integration.test.ts",
+      "executed": true,
+      "result": "Final connected guarded Development workflow 1 pass/102 assertions; actual office SQL/bridge/domain steps, dropped-result reconciliation and owned fixture cleanup. Provider/media receipts synthetic; genuine result delivery remains pending."
+    },
+    {
+      "kind": "review",
+      "path": ".brain/launch/oversight-employee-privacy-implementation-2026-10-12.md",
+      "executed": true,
+      "result": "Office source/test scope, hosted target read-only observation and separate production/operator/provider/disclosure requirements documented."
+    }
+  ]
+}

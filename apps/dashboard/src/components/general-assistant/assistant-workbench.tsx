@@ -72,6 +72,7 @@ export function AssistantWorkbench() {
   const shown = useRef<string | null>(routeId)
   useEffect(() => {
     const id = vm.conversationId
+    if (id && id === vm.uploadStartedConversation) return
     if (id === shown.current) return
     shown.current = id
     if (!id || id === routeId) return
@@ -80,7 +81,14 @@ export function AssistantWorkbench() {
     if (!routeId && (id === vm.startedConversationId || legacy))
       router.replace(href, { scroll: false })
     else router.push(href, { scroll: false })
-  }, [vm.conversationId, vm.startedConversationId, routeId, legacy, router])
+  }, [
+    vm.conversationId,
+    vm.startedConversationId,
+    vm.uploadStartedConversation,
+    routeId,
+    legacy,
+    router,
+  ])
   const routeSeen = useRef<string | null | undefined>(undefined)
   const routeWanted = useRef<{ id: string | null } | null>(null)
   useEffect(() => {
@@ -113,7 +121,9 @@ export function AssistantWorkbench() {
   // A loaded chat with nothing in it yet opens on the welcome, composer first.
   const fresh =
     enabled &&
-    (vm.blank || (!!vm.conversationId && !!vm.data)) &&
+    (vm.blank ||
+      !!vm.uploadStartedConversation ||
+      (!!vm.conversationId && !!vm.data)) &&
     !vm.chat.messages.length &&
     !vm.busy
   const links = <AssistantLinks pending={pending} onReview={review} />

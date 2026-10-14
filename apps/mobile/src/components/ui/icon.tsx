@@ -113,6 +113,8 @@ const LogOut = hugeIcon("Logout01Icon")
 const Mail = hugeIcon("Mail")
 const MapPin = hugeIcon("MapPin")
 const MessageCircle = hugeIcon("Message01Icon")
+const WhatsApp = hugeIcon("WhatsappIcon")
+const Copy = hugeIcon("Copy01Icon")
 const Minus = hugeIcon("Minus")
 const MoreHorizontal = hugeIcon("MoreHorizontal")
 const Undo2 = hugeIcon("Undo02Icon")
@@ -390,6 +392,8 @@ const appIcons = {
   Warehouse,
   Wallet,
   WandSparkles,
+  WhatsApp,
+  Copy,
   Sparkles,
   ArrowUp,
   ArrowDown,

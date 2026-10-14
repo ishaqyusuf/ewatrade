@@ -32,6 +32,7 @@ export type ClaimedSetupAttachment = {
   sizeBytes: number
   durationMs: number | null
   processingAttempts: number
+  attachmentOnly?: boolean
 }
 
 export type SetupAttachmentProcessingDeps = {
@@ -216,6 +217,22 @@ export async function processSetupAttachment(
   if (!attachment) return { status: "skipped" }
   const startedAt = now()
   try {
+    if (attachment.attachmentOnly && attachment.kind === "IMAGE") {
+      const completed = await deps.complete({
+        attachmentId: attachment.id,
+        generation: attachment.processingAttempts,
+        transcript: null,
+        extraction: {
+          type: "text",
+          text: "Photo attached; not analysed.",
+          truncated: false,
+        },
+        durationMs: null,
+      })
+      return completed
+        ? { status: "ready", kind: attachment.kind }
+        : { status: "skipped" }
+    }
     const bytes = await deps.readBytes(attachment)
     const result = await extract(attachment, bytes, deps)
     await deps

@@ -11,6 +11,8 @@ export type StaffRequestContext = {
   tenantContext: TenantContext | null
 }
 import {
+  businessNotificationSelfMutations,
+  businessNotificationSelfQueries,
   staffProcedureAction,
   staffProcedureStoreInput,
 } from "./staff-procedure-policy"
@@ -38,6 +40,13 @@ export async function scopeStaffRequest(
     })
   }
   if (!action) return deny()
+  // Self-only receipts/preferences resolve active membership and every event's
+  // domain scope in their transaction; they remain readable with no active Store.
+  if (
+    (type === "query" && businessNotificationSelfQueries.has(path)) ||
+    (type === "mutation" && businessNotificationSelfMutations.has(path))
+  )
+    return raw
   const input =
     raw && typeof raw === "object" && !Array.isArray(raw)
       ? ({ ...raw } as Record<string, unknown>)

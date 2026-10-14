@@ -2,24 +2,27 @@
 import { CatalogAppearance } from "@/components/catalog-item/catalog-appearance"
 import { CatalogItemDetailModal } from "@/components/catalog-item/catalog-item-detail-modal"
 import { CatalogItemSheet } from "@/components/catalog-item/catalog-item-sheet"
+import { useAssistantDraftJobOverlay } from "@/hooks/use-assistant-draft-job-handoff"
 import { useCatalogItemParams } from "@/hooks/use-catalog-item-params"
+import { useServiceWorkParams } from "@/hooks/use-service-work-params"
 import { Button } from "@ewatrade/ui"
 import { usePathname } from "next/navigation"
 import { useState } from "react"
 import { ServiceIntakeReceiptSheet } from "./service-intake-receipt-sheet"
 import { ServiceJobSheet } from "./service-job-sheet"
 import { ServiceWorkOriginalSheet } from "./service-work-original-sheet"
-import { useAssistantDraftJobOverlay } from "@/hooks/use-assistant-draft-job-handoff"
-import { useServiceWorkParams } from "@/hooks/use-service-work-params"
 
-import { AssistantCashCountSheet } from "./assistant-cash-count-sheet"
-import { AssistantQuoteApprovalSheet } from "./assistant-quote-approval-sheet"
+import { BusinessNotificationPreferencesSheet } from "@/components/notification-center/business-notification-settings"
+import { ActivitySheet } from "./activity-sheet"
 import { AssistantBookingSheet } from "./assistant-booking-sheet"
+import { AssistantCashCountSheet } from "./assistant-cash-count-sheet"
 import { AssistantDayCloseSheet } from "./assistant-day-close-sheet"
+import { AssistantQuoteApprovalSheet } from "./assistant-quote-approval-sheet"
 import { BusinessReportSheet } from "./business-report-sheet"
 import { CloseoutSheet } from "./closeout-sheet"
 import { CustomerDetailsSheet } from "./customer-details-sheet"
 import { CustomerLedgerSheet } from "./customer-ledger-sheet"
+import { CustomerMessageSheet } from "./customer-message-sheet"
 import { DomainSheet } from "./domain-sheet"
 import { FinanceMovementDetailsSheet } from "./finance-movement-details-sheet"
 import { FinanceSheet } from "./finance-sheet"
@@ -30,15 +33,17 @@ import { PurchaseBillDetailsSheet } from "./purchase-bill-details-sheet"
 import { PurchaseRegistrationDetailsSheet } from "./purchase-registration-details-sheet"
 import { ReceiptSheet } from "./receipt-sheet"
 import { ServiceCommerceSheet } from "./service-commerce-sheet"
+import { StaffAccessSheet } from "./staff-access-sheet"
+import { StaffActivitySheet } from "./staff-activity-sheet"
 import { StaffDirectorySheet } from "./staff-directory-sheet"
 import { StaffHistorySheet } from "./staff-history-sheet"
 import { StaffInvitationSheet } from "./staff-invitation-sheet"
 import { StaffMemberSheet } from "./staff-member-sheet"
 import { StaffStatusSheet } from "./staff-status-sheet"
-import { StaffAccessSheet } from "./staff-access-sheet"
 import { StockCountSheet } from "./stock-count-sheet"
 import { StockTransferDetailsSheet } from "./stock-transfer-details-sheet"
 import { StoreConversationSheet } from "./store-conversation-sheet"
+import { StoreSettingsSheet } from "./store-settings-sheet"
 
 export type GlobalSheetAccess = {
   serviceIntake?: boolean
@@ -121,6 +126,8 @@ export function GlobalSheets({
             timeZone={timeZone}
           />
           <CustomerDetailsSheet />
+          {/* WhatsApp messages; drafts reset with user, business or Store. */}
+          <CustomerMessageSheet key={`customer-message:${objectScope}`} />
         </>
       ) : null}
       {access.serviceIntake ? (
@@ -154,6 +161,42 @@ export function GlobalSheets({
       {access.sales ? (
         <BusinessReportSheet key={`business-report:${objectScope}`} />
       ) : null}
+      {/* The protected activity query re-checks Owner/Admin/Manager access. */}
+      <StaffActivitySheet
+        timeZone={timeZone}
+        context={{
+          scopeKey: objectScope,
+          activeStoreId: store.id,
+          opens: {
+            order: Boolean(access.sales),
+            product: Boolean(access.catalog),
+            serviceJob:
+              Boolean(access.serviceIntake) && pathname !== "/services",
+          },
+        }}
+      />
+      {/* Business Activity detail; the server re-reads under current access. */}
+      <ActivitySheet
+        key={`activity:${objectScope}`}
+        timeZone={timeZone}
+        context={{
+          scopeKey: objectScope,
+          activeStoreId: store.id,
+          access: {
+            sales: Boolean(access.sales),
+            catalog: Boolean(access.catalog),
+            staffDirectory: Boolean(access.staffDirectory),
+            staffHistory: Boolean(access.staffHistory),
+            finance: Boolean(access.finance),
+            serviceJobs:
+              Boolean(access.serviceIntake) && pathname !== "/services",
+          },
+        }}
+      />
+      <BusinessNotificationPreferencesSheet
+        key={`alert-preferences:${objectScope}`}
+        scopeKey={objectScope}
+      />
       {access.staffHistory ? <StaffHistorySheet /> : null}
       {access.staffHistory ? (
         <StaffAccessSheet
@@ -174,6 +217,8 @@ export function GlobalSheets({
           <StaffMemberSheet historyAllowed={Boolean(access.staffHistory)} />
         </>
       ) : null}
+      {/* Server procedures enforce Owner/Admin and plan per section. */}
+      <StoreSettingsSheet />
       <StockTransferDetailsSheet storeId={store.id} />
       <InventoryOperationDetailsSheet storeId={store.id} />
       <ReceiptSheet storeId={store.id} />

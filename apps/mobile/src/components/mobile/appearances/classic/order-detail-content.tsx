@@ -62,6 +62,8 @@ export function ClassicOrderDetailContent({
   onCall,
   onChange,
   onMessage,
+  whatsApp,
+  messageFollowUp,
   error,
   fulfillingOrderLineId,
   isFulfillingAll,
@@ -161,6 +163,7 @@ export function ClassicOrderDetailContent({
       {notice ? (
         <StatusBanner icon="CircleCheck" message={notice} tone="success" />
       ) : null}
+      {!isOffline ? messageFollowUp : null}
       {!isOffline
         ? approvalBanners?.map((banner) => (
             <StatusBanner
@@ -188,6 +191,7 @@ export function ClassicOrderDetailContent({
       <OrderCustomerRow
         onCall={!order.customerPhone ? undefined : onCall}
         onMessage={!order.customerPhone ? undefined : onMessage}
+        whatsApp={!order.customerPhone || isOffline ? undefined : whatsApp}
         onPress={onOpenCustomer}
         order={order}
       />
@@ -538,9 +542,11 @@ function OrderCustomerRow({
   onMessage,
   onPress,
   order,
+  whatsApp,
 }: {
   onCall?: () => void
   onMessage?: () => void
+  whatsApp?: ReactNode
   onPress: () => void
   order: CommercialOrder
 }) {
@@ -614,6 +620,7 @@ function OrderCustomerRow({
               .join(" · ") || "No contact details"}
           </Text>
         </View>
+        {whatsApp}
         {onMessage ? (
           <Pressable
             accessibilityLabel={`Message ${name}`}

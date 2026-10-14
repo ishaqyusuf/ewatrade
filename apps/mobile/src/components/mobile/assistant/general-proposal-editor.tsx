@@ -26,6 +26,7 @@ import {
   GeneralProductPictureField,
   useProductPicture,
 } from "./general-product-picture"
+import { GeneralSimpleSaleEditor } from "./general-simple-sale-editor"
 import { isNativeChange } from "./native-change-values"
 import { nativeEditorActions } from "./native-parity"
 export function GeneralProposalEditor(props: {
@@ -35,9 +36,19 @@ export function GeneralProposalEditor(props: {
   onSave: (payload: GeneralAction) => void
 }) {
   const initial = props.proposal.payload
+  if (initial.action === "sale_record")
+    return (
+      <GeneralSimpleSaleEditor
+        key={`${props.proposal.id}:${props.proposal.revision}`}
+        initial={initial}
+        disabled={props.disabled}
+        onSave={props.onSave}
+      />
+    )
   return isNativeChange(initial) ? (
     <GeneralChangeEditor
       initial={initial}
+      review={props.proposal.review}
       currencyCode={props.currencyCode}
       disabled={props.disabled}
       onSave={props.onSave}

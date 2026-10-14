@@ -58,6 +58,7 @@ describe("dashboard navigation policy", () => {
     const ownerItems = getDashboardNavigation("OWNER", context())
 
     expect(ownerItems.map((item) => item.href)).toEqual([
+      "/assistant",
       "/",
       "/conversations",
       "/catalog",
@@ -65,6 +66,7 @@ describe("dashboard navigation policy", () => {
       "/sales",
       "/services",
       "/customers",
+      "/activity",
       "/staff",
       "/finance",
       "/analytics",
@@ -84,6 +86,7 @@ describe("dashboard navigation policy", () => {
     const adminItems = getDashboardNavigation("ADMIN", fullBusiness)
 
     expect(ownerItems.map((item) => item.href)).toEqual([
+      "/assistant",
       "/",
       "/conversations",
       "/catalog",
@@ -92,13 +95,14 @@ describe("dashboard navigation policy", () => {
       "/services",
       "/prescriptions",
       "/customers",
+      "/activity",
       "/staff",
       "/finance",
       "/analytics",
       "/settings",
     ])
     expect(adminItems).toEqual(ownerItems)
-    expect(new Set(flatten(ownerItems).map((item) => item.href)).size).toBe(28)
+    expect(new Set(flatten(ownerItems).map((item) => item.href)).size).toBe(33)
   })
 
   test("hides and redirects Website & domain until launch approval", () => {
@@ -143,8 +147,10 @@ describe("dashboard navigation policy", () => {
     expect(settings?.children?.map((item) => item.href)).toEqual([
       "/settings",
       "/settings/stores",
+      "/settings/notifications",
       "/settings/receipts",
       "/settings/returns",
+      "/settings/whatsapp-messages",
       "/settings/domains",
       "/settings/channels",
       "/settings/service-commerce",
@@ -279,6 +285,7 @@ describe("dashboard navigation policy", () => {
       "/sales",
       "/services",
       "/customers",
+      "/activity",
     ])
     expect(getDashboardNavigation("OPERATOR").map((item) => item.href)).toEqual(
       getDashboardNavigation("CASHIER").map((item) => item.href),

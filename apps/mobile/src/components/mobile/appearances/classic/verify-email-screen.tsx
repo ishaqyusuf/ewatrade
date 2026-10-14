@@ -8,6 +8,7 @@ import { View } from "@/components/ui/view"
 export function ClassicVerifyEmailScreen({
   authEntryHref,
   email,
+  channel = "email",
   mode,
   otp,
   resend,
@@ -15,7 +16,13 @@ export function ClassicVerifyEmailScreen({
 }: VerifyEmailPresentationProps) {
   return (
     <GreenTillAuthScreen
-      eyebrow={mode === "login" ? "Login code" : "Email verification"}
+      eyebrow={
+        channel === "whatsapp"
+          ? "WhatsApp verification"
+          : mode === "login"
+            ? "Login code"
+            : "Email verification"
+      }
       title="Enter the code we sent"
       subtitle={
         <>
@@ -23,8 +30,10 @@ export function ClassicVerifyEmailScreen({
         </>
       }
       backHref={authEntryHref}
-      backLabel="Use another email"
-      stage={<VerifyStage email={email} />}
+      backLabel={
+        channel === "whatsapp" ? "Use another number" : "Use another email"
+      }
+      stage={<VerifyStage email={email} channel={channel} />}
       testID="green-gate-verify"
     >
       <View className="-mb-1 gap-2.5">
@@ -38,7 +47,7 @@ export function ClassicVerifyEmailScreen({
         href={authEntryHref}
       >
         <Text className="text-[13px] font-extrabold [-rn-line-height:18] text-primary">
-          Use another email
+          {channel === "whatsapp" ? "Use another number" : "Use another email"}
         </Text>
       </Pressable>
     </GreenTillAuthScreen>

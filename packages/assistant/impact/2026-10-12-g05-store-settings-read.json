@@ -1,0 +1,57 @@
+{
+  "version": 1,
+  "id": "2026-10-12-g05-store-settings-read",
+  "tickets": ["G05"],
+  "summary": "Adds the planned read capability settings.store.read (tool readStoreSettings): the current Store's receipt settings (business default vs Store override), order reminder settings and sales-rep order visibility, read through the three canonical procedures so each keeps its own role and plan gate; refused sections are reported as Owner/Admin only or not in the plan, never as defaults. Setting changes remain planned.",
+  "capabilities": [
+    {
+      "id": "settings.store.read",
+      "change": "added",
+      "rollout": "planned",
+      "note": "Owner/Admin/Manager ceiling; each section re-checked by its procedure (reminders Owner/Admin + plan, receipts plan invoices). Plain card on dashboard and mobile."
+    }
+  ],
+  "procedures": [
+    {
+      "path": "orders.receiptSettings",
+      "status": "supported",
+      "reason": "Receipt section of settings.store.read; unchanged procedure."
+    },
+    {
+      "path": "orders.reminderSettings",
+      "status": "supported",
+      "reason": "Reminder section of settings.store.read; Owner/Admin and plan gate kept."
+    },
+    {
+      "path": "stores.orderVisibility",
+      "status": "supported",
+      "reason": "Sales-rep visibility section of settings.store.read."
+    }
+  ],
+  "docs": [
+    {
+      "topic": "feature",
+      "path": ".brain/plans/2026-10-09-assistant-business-operations.md",
+      "status": "local_only",
+      "note": "G05 packet 1."
+    },
+    {
+      "topic": "capability",
+      "path": "packages/assistant/src/capabilities/COVERAGE.md",
+      "status": "updated"
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "test",
+      "path": "apps/api/src/assistant/general-store-settings.test.ts",
+      "executed": true,
+      "result": "4 pass with an unreachable placeholder database URL; tool schema test 2 pass (12 Oct 2026, uncommitted source)."
+    },
+    {
+      "kind": "review",
+      "path": "packages/assistant/evaluations/runs/2026-10-12-g05-store-settings-read.md",
+      "executed": false
+    }
+  ]
+}

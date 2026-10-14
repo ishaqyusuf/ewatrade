@@ -1,5 +1,6 @@
 import type { PrismaClient } from "../../generated/prisma/client"
 import { getAccountPrivacyStaffInvitationInventory } from "./account-privacy-staff-invitation-inventory"
+import { customerMessageTemplatePrivacyInventory } from "./customer-messages/privacy"
 
 export type AccountPrivacyAdditionalInventoryClient = Pick<
   PrismaClient,
@@ -10,6 +11,7 @@ export type AccountPrivacyAdditionalInventoryClient = Pick<
   | "message"
   | "automationEvent"
   | "productAnalyticsEvent"
+  | "retailOpsStaffProfile"
   | "$queryRaw"
 >
 
@@ -42,10 +44,19 @@ export async function getAccountPrivacyAdditionalInventory(
   const analyticsEvents = await db.productAnalyticsEvent.count({
     where: { userId: subjectId },
   })
+  // Removed staff access is not erasure of its optional directory/profile fields.
+  // Staff records require a separate controller disposition; ordinary-chat clocks do not apply.
+  const staffProfiles = await db.retailOpsStaffProfile.count({
+    where: { userId: subjectId },
+  })
   const staffInvitations = await getAccountPrivacyStaffInvitationInventory(
     db,
     subjectId,
     verifiedContactEmail,
+  )
+  const customerMessages = await customerMessageTemplatePrivacyInventory(
+    db,
+    subjectId,
   )
   return {
     assistantConversations,
@@ -55,6 +66,8 @@ export async function getAccountPrivacyAdditionalInventory(
     legacyMessages,
     automationEvents,
     analyticsEvents,
+    staffProfiles,
     ...staffInvitations,
+    ...customerMessages,
   }
 }

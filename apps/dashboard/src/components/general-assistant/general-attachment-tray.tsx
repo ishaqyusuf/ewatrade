@@ -13,16 +13,20 @@ export type GeneralReadyAttachment = { attachmentId: string; fileName: string }
 
 /**
  * The business chat box with + for receipt photos and PDFs. Files upload and
- * are read before they can be sent; ready ones go with the next message.
+ * are prepared before they can be sent; ready ones go with the next message.
  */
 export function GeneralAttachComposer({
   conversationId,
   photos,
   onReadyChange,
+  initialFiles = [],
+  onInitialFilesConsumed,
   ...composer
 }: Omit<ComponentProps<typeof AssistantComposer>, "attach"> & {
   conversationId: string
-  /** Photos can be read right now; otherwise only PDFs are offered. */
+  initialFiles?: File[]
+  onInitialFilesConsumed?: () => void
+  /** Photos can be stored right now; otherwise only PDFs are offered. */
   photos: boolean
   onReadyChange: (ready: GeneralReadyAttachment[]) => void
 }) {
@@ -30,6 +34,13 @@ export function GeneralAttachComposer({
     conversationId,
     onTranscript: () => undefined,
   })
+  const seeded = useRef(false)
+  useEffect(() => {
+    if (!initialFiles.length || seeded.current) return
+    seeded.current = true
+    for (const file of initialFiles.slice(0, 4)) void attachments.add(file)
+    onInitialFilesConsumed?.()
+  }, [initialFiles, onInitialFilesConsumed, attachments.add])
   // Voice notes belong to the composer's mic; these are files only.
   const files = attachments.items.filter((item) => item.kind !== "AUDIO")
   const readyKey = files
@@ -52,6 +63,7 @@ export function GeneralAttachComposer({
   return (
     <AssistantComposer
       {...composer}
+      blocked={composer.blocked || attachments.busy}
       attach={{
         accept: photos ? `${PHOTOS},${FILES}` : FILES,
         disabled: files.length >= 4,
@@ -80,7 +92,7 @@ export function GeneralAttachComposer({
                     : item.phase === "failed"
                       ? "failed"
                       : item.phase === "reading"
-                        ? "reading…"
+                        ? "preparing…"
                         : "uploading…"}
                 </span>
                 <button

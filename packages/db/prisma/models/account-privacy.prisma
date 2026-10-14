@@ -225,3 +225,41 @@ model LegalAcceptance {
 
   @@unique([userId, version])
 }
+
+// Controller-approved record-level retention. Independent of the 24-month
+// deletion request ledger: a six-year accounting duty cannot expire with it.
+// Identifiers/digests only; never store names, contacts, record bodies or tokens.
+model AccountPrivacyRecordRetention {
+  id                       String    @id @default(cuid())
+  requestId                String
+  subjectUserId            String
+  tenantId                 String
+  recordFamily             String
+  recordId                 String
+  actorField               String
+  category                 String
+  policyVersion            String
+  policyDigest             String
+  controllerEvidenceDigest String
+  sourceEvidenceDigest     String
+  decisionDigest           String
+  sourceCreatedAt          DateTime
+  assessmentYear           Int?
+  closedAt                 DateTime?
+  earlierExpiresAt         DateTime?
+  expiresAt                DateTime
+  reviewDueAt              DateTime
+  operatorUserId           String
+  reviewedAt               DateTime?
+  holdReason               String?
+  holdOwnerUserId          String?
+  holdReviewAt             DateTime?
+  createdAt                DateTime  @default(now())
+  updatedAt                DateTime  @updatedAt
+
+  @@unique([subjectUserId, recordFamily, recordId, actorField])
+  @@index([requestId])
+  @@index([expiresAt])
+  @@index([reviewedAt, reviewDueAt])
+  @@index([tenantId, category])
+}

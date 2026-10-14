@@ -44,15 +44,23 @@ const blocked = (blockers: { reason: string }[]) =>
  * The Change sheet and its forms: every amendment is reviewed first and then
  * confirmed with that review, so a stale screen cannot overwrite newer work.
  */
+/** A committed change the customer can be told about, by exact record. */
+export type OrderChangeRecorded = {
+  eventKey: "order.cancelled" | "payment.refund_recorded"
+  sourceId?: string
+}
+
 export function useOrderChanges({
   isOffline,
   onChanged,
   onNotice,
+  onRecorded,
   order,
 }: {
   isOffline: boolean
   onChanged: () => Promise<void>
   onNotice: (message: string) => void
+  onRecorded?: (record: OrderChangeRecorded) => void
   order: CommercialOrder | null
 }) {
   const trpc = useTRPC()
@@ -235,6 +243,17 @@ export function useOrderChanges({
           clientOperationId: operationId("approved"),
           reference: reference.trim() || undefined,
         })
+        const refundId =
+          result && "paymentId" in result && result.paymentId
+            ? result.paymentId
+            : result && "refundPaymentId" in result && result.refundPaymentId
+              ? result.refundPaymentId
+              : null
+        if (refundId)
+          onRecorded?.({
+            eventKey: "payment.refund_recorded",
+            sourceId: refundId,
+          })
         if (result?.kind === "refund")
           return result.creditId
             ? "Refund recorded and the total lowered."
@@ -355,6 +374,7 @@ export function useOrderChanges({
           orderId: order.id,
           reason,
         })
+        onRecorded?.({ eventKey: "order.cancelled" })
         await finish("Order cancelled. Reserved stock is back on the shelf.")
       } catch (failure) {
         fail(failure)
@@ -373,7 +393,7 @@ export function useOrderChanges({
       setError(null)
       setWorking(true)
       try {
-        await refund.mutateAsync({
+        const result = await refund.mutateAsync({
           amountMinor: input.amountMinor,
           clientOperationId: operationId("refund"),
           lowerTotal: input.lowerTotal,
@@ -382,6 +402,12 @@ export function useOrderChanges({
           reason: input.reason,
           reference: input.reference.trim() || undefined,
         })
+        // A replayed refund without a record id offers nothing; never guess.
+        if ("paymentId" in result && result.paymentId)
+          onRecorded?.({
+            eventKey: "payment.refund_recorded",
+            sourceId: result.paymentId,
+          })
         await finish(
           input.lowerTotal
             ? "Refund recorded and the total lowered."
@@ -413,6 +439,11 @@ export function useOrderChanges({
           orderId: order.id,
           reason: input.reason,
         })
+        if (result?.refundPaymentId)
+          onRecorded?.({
+            eventKey: "payment.refund_recorded",
+            sourceId: result.refundPaymentId,
+          })
         await finish(
           result?.refundPaymentId
             ? "Return and refund recorded."

@@ -25,7 +25,15 @@ export const { TRPCProvider, useTRPC } = createTRPCContext<AppRouter>()
 
 let browserQueryClient: QueryClient
 
+// Bumped on every clear (sign-out, account, business or Store switch): async
+// work started before it must not touch the cache afterwards.
+let dataCacheGeneration = 0
+export function getDataCacheGeneration() {
+  return dataCacheGeneration
+}
+
 export function clearMobileDataCache() {
+  dataCacheGeneration += 1
   if (!browserQueryClient) return
   browserQueryClient.clear()
 }

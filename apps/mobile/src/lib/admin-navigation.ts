@@ -26,6 +26,7 @@ export type AdminMoreItemId =
   | "order-reminders"
   | "receipt-settings"
   | "returns-refunds"
+  | "whatsapp-messages"
   | "team"
   | "customers"
   | "service-work"
@@ -235,6 +236,15 @@ export function buildAdminMoreSections({
       icon: "Undo2",
       id: "returns-refunds",
       label: "Returns and refunds",
+    })
+    storeItems.push({
+      action: {
+        href: "/whatsapp-messages-settings-modal" as LinkProps["href"],
+        kind: "route",
+      },
+      icon: "WhatsApp",
+      id: "whatsapp-messages",
+      label: "WhatsApp messages",
     })
     if (websiteDomainsEnabled)
       storefrontItems.push({

@@ -1,0 +1,72 @@
+{
+  "version": 1,
+  "id": "2026-10-12-s05-original-open",
+  "tickets": ["S05"],
+  "summary": "Activity answers carry a staff_activity target (exact filters, cursor, limit and shown event identities). The dashboard sheet and the mobile screen render nothing from it until the protected exact-ID read retailOps.staffActivityShown completes on the current mount under current authority; each mount owns its cache entry (the generated tRPC fetch keeps the canonical key) and aborts its requests on close. Withheld identities stay hidden. Store originals open only in their own active Store (otherwise 'Switch to <Store> to open'). Products open anywhere; finance stays 'Open from Finance'. The opt-in current re-read resets per target and scope.",
+  "capabilities": [
+    {
+      "id": "staff.activity.read",
+      "change": "added",
+      "rollout": "planned",
+      "note": "Answer target and Open only; policy, clients and rollout unchanged. Cross-Store Open is disclosed partial, not navigation."
+    }
+  ],
+  "procedures": [
+    {
+      "path": "retailOps.staffActivityShown",
+      "status": "supported",
+      "reason": "Read-only exact-ID re-read of an answer's shown events; same authority as retailOps.staffActivityPage. Listed in staff.activity.read procedures (manifest release f9346f01); COVERAGE.md regeneration is blocked by unrelated unclassified orders.activity procedures."
+    }
+  ],
+  "docs": [
+    {
+      "topic": "feature",
+      "path": ".brain/features/assistant-business-operations.md",
+      "status": "local_only",
+      "note": "S05 Open section."
+    },
+    {
+      "topic": "api",
+      "path": ".brain/api/endpoints.md",
+      "status": "local_only",
+      "note": "retailOps.staffActivityShown query."
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "test",
+      "path": "packages/db/src/queries/staff-activity.test.ts",
+      "executed": true,
+      "result": "11 pass (12 Oct 2026, uncommitted source, in-memory transaction fake; includes exact-ID re-read, Manager Store narrowing, subject filter, foreign/missing withheld)."
+    },
+    {
+      "kind": "test",
+      "path": "packages/assistant/src/general/staff-activity-target.test.ts",
+      "executed": true,
+      "result": "Within packages/assistant/src: 227 pass (target bounds, fresh-read gate)."
+    },
+    {
+      "kind": "test",
+      "path": "apps/api/src/assistant/general-staff-activity.test.ts",
+      "executed": true,
+      "result": "With general-tool-schemas.test.ts: 9 pass, placeholder unreachable database URL; manifest expectation includes staffActivityShown."
+    },
+    {
+      "kind": "test",
+      "path": "apps/dashboard/src/components/sheets/staff-activity-sheet.test.ts",
+      "executed": true,
+      "result": "4 pass: original params; cross-Store and access gating; pending close/reopen with the real query library; transport control through actual createTRPCOptionsProxy + createTRPCClient with a local mock link (exact procedure/input, abort on close, own reread on reopen)."
+    },
+    {
+      "kind": "test",
+      "path": "apps/mobile/src/components/mobile/assistant/general-model.test.ts",
+      "executed": true,
+      "result": "Mobile assistant folder: 16 pass (routes, same-Store Open)."
+    },
+    {
+      "kind": "review",
+      "path": "packages/assistant/evaluations/runs/2026-10-12-s05-staff-activity-source.md",
+      "executed": false
+    }
+  ]
+}

@@ -1,0 +1,40 @@
+{
+  "version": 1,
+  "id": "2026-10-12-f01-collection-commands",
+  "tickets": ["F01"],
+  "summary": "Canonical collection commands on the applied Development schema, not registered with any router, tool or job: open a link (partial up to the balance, one open link per order, exact-retry replay, order lock), cancel a link, record a provider event in its own transaction (replay by provider+event id, unknown references kept as rejected evidence), and apply it under the order lock (settle once via the canonical payment command, mark failure, ignore duplicates, or hold received money for review). Manual payments are refused while a link for the order can still be paid; only that link's own settlement passes. Shared rules moved to @ewatrade/utils/collection-intent and re-exported by @ewatrade/payments.",
+  "noAssistantImpact": "No capability, procedure, tool or rollout change; commands stay unregistered until privacy inventory and acceptance.",
+  "docs": [
+    {
+      "topic": "feature",
+      "path": ".brain/plans/2026-10-09-assistant-business-operations.md",
+      "status": "local_only",
+      "note": "F01 packet 2."
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "test",
+      "path": "packages/db/src/queries/collection-intents.test.ts",
+      "executed": true,
+      "result": "1 pass (12 Oct 2026, uncommitted)."
+    },
+    {
+      "kind": "test",
+      "path": "packages/db/src/queries/collection-intents.integration.test.ts",
+      "executed": true,
+      "result": "node scripts/qa-collection-intents.mjs: 2 pass, 13 assertions, 37.4s on the verified .env.local Development profile; single transaction always rolled back (12 Oct 2026)."
+    },
+    {
+      "kind": "test",
+      "path": "packages/db/src/queries/prescription-payments.test.ts",
+      "executed": true,
+      "result": "12 pass, 1 pre-existing failure (same as HEAD) after adding the collectionIntent fake (12 Oct 2026)."
+    },
+    {
+      "kind": "review",
+      "path": "packages/assistant/evaluations/runs/2026-10-12-f01-collection-commands.md",
+      "executed": false
+    }
+  ]
+}

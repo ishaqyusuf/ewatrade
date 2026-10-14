@@ -2,6 +2,16 @@ import type { StaffAction } from "@ewatrade/auth/store-access"
 
 // Scoped staff use explicitly audited procedures. New procedures fail closed.
 const reads = new Set([
+  "customerMessages.catalog",
+  "customerMessages.templateStatus",
+  "customerMessages.preview",
+  "businessNotifications.listMine",
+  "businessNotifications.unreadCount",
+  "businessNotifications.myPreferences",
+  // Activity applies fresh domain/Store/creator scope before rows and counts.
+  "activity.listPage",
+  "activity.get",
+  "activity.filters",
   "serviceAssistantWork.editorContext",
   "serviceAssistantWork.review",
   "serviceAssistantWork.original",
@@ -57,6 +67,7 @@ const reads = new Set([
   "inventory.configuredOfferingAvailability",
 ])
 const orders = new Set([
+  "customerMessages.prepareOpen",
   "orders.create",
   "orders.fulfillProductLine",
   "orders.fulfillChargeOnlyServiceLine",
@@ -133,6 +144,8 @@ export function staffProcedureAction(
   path: string,
   type: string,
 ): StaffAction | "read" | null {
+  if (type === "mutation" && businessNotificationSelfMutations.has(path))
+    return "read"
   // These stage or decide scoped proposals; each action is checked separately.
   if (
     type === "mutation" &&
@@ -151,6 +164,17 @@ export function staffProcedureAction(
   if (type === "mutation" && catalog.has(path)) return "catalog"
   return null
 }
+export const businessNotificationSelfMutations = new Set([
+  "businessNotifications.markRead",
+  "businessNotifications.archive",
+  "businessNotifications.markAllRead",
+  "businessNotifications.updateMyPreferences",
+])
+export const businessNotificationSelfQueries = new Set([
+  "businessNotifications.listMine",
+  "businessNotifications.unreadCount",
+  "businessNotifications.myPreferences",
+])
 export const staffProcedureStoreInput = new Set([
   "orders.receiptSettings",
   "orders.prepareReceipts",

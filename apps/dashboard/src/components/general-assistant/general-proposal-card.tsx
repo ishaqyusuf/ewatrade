@@ -16,8 +16,12 @@ import {
 import { HugeiconsIcon } from "@hugeicons/react"
 import { useState } from "react"
 import { GeneralChatPhotoThumb } from "./general-chat-photo"
+import { GeneralMoneyInReview } from "./general-money-in-review"
 import { GeneralProductPicture } from "./general-product-picture"
 import { GeneralReviewPresentationBody } from "./general-review-presentation"
+import { GeneralSaleReview } from "./general-sale-review"
+import { GeneralSimpleExpenseReview } from "./general-simple-expense-review"
+import { GeneralSimpleTransferReview } from "./general-simple-transfer-review"
 
 const statusLabel: Record<GeneralProposal["status"], string> = {
   PENDING: "Needs your review",
@@ -67,6 +71,8 @@ const PREVIEW_LINES = 6
 
 /** A file going onto an order shows as the photo itself. */
 function filedAttachment(proposal: GeneralProposal) {
+  if (proposal.payload.action === "sale_record")
+    return proposal.payload.attachmentIds[0] ?? null
   return proposal.payload.action === "order_attachment_add"
     ? proposal.payload.attachmentId
     : null
@@ -134,6 +140,7 @@ export function GeneralProposalCard({
   onConfirm,
   onCancel,
   onEdit,
+  onReply,
 }: {
   proposal: GeneralProposal
   currencyCode: string
@@ -141,11 +148,35 @@ export function GeneralProposalCard({
   onConfirm: () => void
   onCancel: () => void
   onEdit: () => void
+  onReply?: (
+    text: string,
+    saleChoice: { proposalId: string; revision: number; text: string },
+  ) => void
 }) {
   const title = capabilityForAction(proposal.payload.action).title
   const filed = filedAttachment(proposal)
   const product =
     proposal.payload.action === "product_create" ? proposal.payload : null
+  const sale =
+    proposal.payload.action === "sale_record" ? proposal.payload : null
+  const moneyIn =
+    proposal.payload.action === "money_in_record" ? proposal.payload : null
+  const expense =
+    proposal.payload.action === "expense_record_simple"
+      ? proposal.payload
+      : null
+  const transfer =
+    proposal.payload.action === "money_transfer_simple"
+      ? proposal.payload
+      : null
+  // Quick chat records: compact review, plain buttons, no status badge.
+  const quick = !!sale || !!moneyIn || !!expense || !!transfer
+  const reply = (choice: { label: string; text: string }) =>
+    onReply?.(choice.label, {
+      proposalId: proposal.id,
+      revision: proposal.revision,
+      text: choice.text,
+    })
   const lines = reviewLines(proposal, currencyCode)
   const [showAll, setShowAll] = useState(false)
   const long = lines.length > COLLAPSE_AFTER
@@ -172,13 +203,46 @@ export function GeneralProposalCard({
             <HugeiconsIcon icon={Clock01Icon} />
             {statusLabel.EXPIRED}
           </Badge>
-        ) : (
+        ) : quick && pending ? null : (
+          // An open quick record is plainly a review; only other states need a badge.
           <Badge variant={pending ? "default" : "secondary"}>
             {statusLabel[proposal.status]}
           </Badge>
         )}
       </div>
-      {proposal.presentation ? (
+      {sale ? (
+        <GeneralSaleReview
+          sale={sale}
+          currencyCode={currencyCode}
+          choices={pending ? proposal.choices : undefined}
+          disabled={disabled}
+          onChoice={reply}
+        />
+      ) : moneyIn ? (
+        <GeneralMoneyInReview
+          money={moneyIn}
+          currencyCode={currencyCode}
+          choices={pending ? proposal.choices : undefined}
+          disabled={disabled}
+          onChoice={reply}
+        />
+      ) : expense ? (
+        <GeneralSimpleExpenseReview
+          expense={expense}
+          currencyCode={currencyCode}
+          choices={pending ? proposal.choices : undefined}
+          disabled={disabled}
+          onChoice={reply}
+        />
+      ) : transfer ? (
+        <GeneralSimpleTransferReview
+          transfer={transfer}
+          currencyCode={currencyCode}
+          choices={pending ? proposal.choices : undefined}
+          disabled={disabled}
+          onChoice={reply}
+        />
+      ) : proposal.presentation ? (
         product || filed ? (
           <div className="flex min-w-0 gap-3">
             {product ? (
@@ -234,6 +298,25 @@ export function GeneralProposalCard({
           ) : null}
         </>
       )}
+      {/* Quick records show choices in place; the chat already asked the question. */}
+      {pending && proposal.question && !quick ? (
+        <div className="grid gap-2">
+          <p className="text-sm">{proposal.question}</p>
+          <div className="flex flex-wrap gap-2">
+            {proposal.choices?.map((choice) => (
+              <Button
+                key={choice.text}
+                size="sm"
+                variant="outline"
+                disabled={disabled}
+                onClick={() => reply(choice)}
+              >
+                {choice.label}
+              </Button>
+            ))}
+          </div>
+        </div>
+      ) : null}
       {pending || renewable ? (
         <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
           <div className="flex flex-wrap gap-2">
@@ -243,7 +326,11 @@ export function GeneralProposalCard({
                 disabled={disabled || !proposal.approvalToken}
                 onClick={onConfirm}
               >
-                Confirm
+                {sale
+                  ? "Save sale"
+                  : moneyIn || expense || transfer
+                    ? "Proceed"
+                    : "Confirm"}
               </Button>
             ) : null}
             <Button
@@ -261,13 +348,13 @@ export function GeneralProposalCard({
                 disabled={disabled}
                 onClick={onCancel}
               >
-                Cancel draft
+                {quick ? "Cancel" : "Cancel draft"}
               </Button>
             ) : null}
           </div>
           <p className="text-xs text-muted-foreground">
             {pending
-              ? `Nothing changes until you confirm · expires ${new Date(
+              ? `${quick ? "Not saved yet" : "Nothing changes until you confirm"} · expires ${new Date(
                   proposal.expiresAt,
                 ).toLocaleTimeString([], {
                   hour: "2-digit",

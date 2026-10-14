@@ -1,8 +1,6 @@
 "use client"
+import { GeneralSimpleTransferEditor } from "./general-simple-transfer-editor"
 
-import { GeneralQuoteDecisionEditor } from "./general-quote-decision-editor"
-import { GeneralServiceIntakeEditor } from "./general-service-intake-editor"
-import { GeneralServiceWorkEditor } from "./general-service-work-editor"
 import {
   type GeneralAction,
   type GeneralProposal,
@@ -28,6 +26,7 @@ import {
 import { GeneralBillCorrectionEditor } from "./general-bill-correction-editor"
 import { GeneralBillPaymentEditor } from "./general-bill-payment-editor"
 import { GeneralCashCountEditor } from "./general-cash-count-editor"
+import { GeneralCatalogArchiveEditor } from "./general-catalog-archive-editor"
 import { GeneralCloseoutEditor } from "./general-closeout-editor"
 import { GeneralCustomerCreditEditor } from "./general-customer-credit-editor"
 import { GeneralCustomerReceiptEditor } from "./general-customer-receipt-editor"
@@ -40,14 +39,24 @@ import { GeneralProductReturnEditor } from "./general-product-return-editor"
 import { GeneralPurchaseRecognitionEditor } from "./general-purchase-recognition-editor"
 import { GeneralPurchaseRecordingEditor } from "./general-purchase-recording-editor"
 import { GeneralPurchaseRegistrationEditor } from "./general-purchase-registration-editor"
+import { GeneralQuoteDecisionEditor } from "./general-quote-decision-editor"
 import { GeneralSaleCustomer } from "./general-sale-customer"
+import { GeneralServiceIntakeEditor } from "./general-service-intake-editor"
+import { GeneralServiceMessageEditor } from "./general-service-message-editor"
+import { GeneralServiceWorkEditor } from "./general-service-work-editor"
+import { GeneralSimpleExpenseEditor } from "./general-simple-expense-editor"
+import { GeneralSimpleMoneyInEditor } from "./general-simple-money-in-editor"
+import { GeneralSimpleSaleEditor } from "./general-simple-sale-editor"
+import { GeneralStaffAccessEditor } from "./general-staff-access-editor"
 import { GeneralStaffInvitationEditor } from "./general-staff-invitation-editor"
 import { GeneralStaffStatusEditor } from "./general-staff-status-editor"
-import { GeneralStaffAccessEditor } from "./general-staff-access-editor"
 import { GeneralStockAdjustmentEditor } from "./general-stock-adjustment-editor"
 import { GeneralStockCountEditor } from "./general-stock-count-editor"
+import { GeneralStockCustodyEditor } from "./general-stock-custody-editor"
 import { GeneralStockReceiptEditor } from "./general-stock-receipt-editor"
 import { GeneralStockTransferEditor } from "./general-stock-transfer-editor"
+import { GeneralStockTransformEditor } from "./general-stock-transform-editor"
+import { GeneralStoreSettingsEditor } from "./general-store-settings-editor"
 import { GeneralSupplierAllocationReleaseEditor } from "./general-supplier-allocation-release-editor"
 import { GeneralSupplierEditor } from "./general-supplier-editor"
 import { GeneralSupplierOpeningEditor } from "./general-supplier-opening-editor"
@@ -69,8 +78,59 @@ export function GeneralProposalEditor(props: {
   onSave: (payload: GeneralAction) => void
   onCancel: () => void
 }) {
-  if (props.proposal.payload.action === "commerce_quote_approve" || props.proposal.payload.action === "commerce_quote_reject")
-    return <GeneralQuoteDecisionEditor key={`${props.proposal.id}:${props.proposal.revision}`} initial={props.proposal.payload} disabled={props.disabled} onSave={props.onSave} onCancel={props.onCancel} />
+  if (props.proposal.payload.action === "money_transfer_simple")
+    return (
+      <GeneralSimpleTransferEditor
+        key={`${props.proposal.id}:${props.proposal.revision}`}
+        initial={props.proposal.payload}
+        disabled={props.disabled}
+        onSave={props.onSave}
+        onCancel={props.onCancel}
+      />
+    )
+  if (props.proposal.payload.action === "expense_record_simple")
+    return (
+      <GeneralSimpleExpenseEditor
+        key={`${props.proposal.id}:${props.proposal.revision}`}
+        initial={props.proposal.payload}
+        disabled={props.disabled}
+        onSave={props.onSave}
+        onCancel={props.onCancel}
+      />
+    )
+  if (props.proposal.payload.action === "money_in_record")
+    return (
+      <GeneralSimpleMoneyInEditor
+        key={`${props.proposal.id}:${props.proposal.revision}`}
+        initial={props.proposal.payload}
+        disabled={props.disabled}
+        onSave={props.onSave}
+        onCancel={props.onCancel}
+      />
+    )
+  if (props.proposal.payload.action === "sale_record")
+    return (
+      <GeneralSimpleSaleEditor
+        key={`${props.proposal.id}:${props.proposal.revision}`}
+        initial={props.proposal.payload}
+        disabled={props.disabled}
+        onSave={props.onSave}
+        onCancel={props.onCancel}
+      />
+    )
+  if (
+    props.proposal.payload.action === "commerce_quote_approve" ||
+    props.proposal.payload.action === "commerce_quote_reject"
+  )
+    return (
+      <GeneralQuoteDecisionEditor
+        key={`${props.proposal.id}:${props.proposal.revision}`}
+        initial={props.proposal.payload}
+        disabled={props.disabled}
+        onSave={props.onSave}
+        onCancel={props.onCancel}
+      />
+    )
   if (
     props.proposal.payload.action === "service_job_assign" ||
     props.proposal.payload.action === "service_job_reschedule" ||
@@ -285,6 +345,25 @@ export function GeneralProposalEditor(props: {
         onCancel={props.onCancel}
       />
     )
+  if (props.proposal.payload.action === "catalog_archive")
+    return (
+      <GeneralCatalogArchiveEditor
+        initial={props.proposal.payload}
+        review={props.proposal.review}
+        disabled={props.disabled}
+        onSave={props.onSave}
+        onCancel={props.onCancel}
+      />
+    )
+  if (props.proposal.payload.action === "store_settings_update")
+    return (
+      <GeneralStoreSettingsEditor
+        initial={props.proposal.payload}
+        disabled={props.disabled}
+        onSave={props.onSave}
+        onCancel={props.onCancel}
+      />
+    )
   if (props.proposal.payload.action === "product_create")
     return (
       <GeneralProductCreateEditor
@@ -328,6 +407,33 @@ export function GeneralProposalEditor(props: {
   )
     return (
       <GeneralStockTransferEditor
+        initial={props.proposal.payload}
+        disabled={props.disabled}
+        onSave={props.onSave}
+        onCancel={props.onCancel}
+      />
+    )
+  if (props.proposal.payload.action === "service_message_share")
+    return (
+      <GeneralServiceMessageEditor
+        initial={props.proposal.payload}
+        disabled={props.disabled}
+        onSave={props.onSave}
+        onCancel={props.onCancel}
+      />
+    )
+  if (props.proposal.payload.action === "stock_package_transform")
+    return (
+      <GeneralStockTransformEditor
+        initial={props.proposal.payload}
+        disabled={props.disabled}
+        onSave={props.onSave}
+        onCancel={props.onCancel}
+      />
+    )
+  if (props.proposal.payload.action === "stock_custody_move")
+    return (
+      <GeneralStockCustodyEditor
         initial={props.proposal.payload}
         disabled={props.disabled}
         onSave={props.onSave}

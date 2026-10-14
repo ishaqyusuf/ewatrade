@@ -73,6 +73,7 @@
     "@ewatrade/api": "workspace:*",
     "@ewatrade/assistant": "workspace:*",
     "@ewatrade/catalog": "workspace:*",
+    "@ewatrade/customer-messages": "workspace:*",
     "@ewatrade/errors": "workspace:*",
     "@ewatrade/events": "workspace:*",
     "@ewatrade/observability": "workspace:*",

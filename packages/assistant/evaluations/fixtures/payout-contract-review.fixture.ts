@@ -21,11 +21,10 @@ const input = {
   },
   amountMinor: 1000,
   feeMinor: 50,
-  feeBearer: "business" as const,
   currencyCode: "NGN",
-  purpose: "supplier_bill",
-  allowedPurposes: ["supplier_bill"],
-  actor: { canApprovePayouts: true },
+  source: { purpose: "supplier_bill", id: "review-bill" },
+  actor: { role: "OWNER" },
+  payoutsStopped: false,
 }
 const control = decidePayoutReview(input)
 if (!control.ok || control.review.totalDebitMinor !== 1050)

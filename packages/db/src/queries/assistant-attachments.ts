@@ -4,6 +4,7 @@ import type {
   Prisma,
   PrismaClient,
 } from "../../generated/prisma/client"
+import { accountPrivacyPrivateWritesAllowed } from "./account-privacy-private-write"
 import type { AssistantScope } from "./assistant"
 import { type ArgsAfterClient, runInOwnTransaction } from "./own-transaction"
 import type { DbClient } from "./types"
@@ -84,6 +85,11 @@ export async function createAssistantAttachmentIntentInTransaction(
 ) {
   const now = input.now ?? new Date()
   const create = async (tx: Prisma.TransactionClient) => {
+    if (!(await accountPrivacyPrivateWritesAllowed(tx, scope.userId)))
+      throw new AssistantAttachmentError(
+        "ATTACHMENT_NOT_READY",
+        "This account is being deleted.",
+      )
     if (input.clientRequestId) {
       const existing = await tx.assistantAttachment.findFirst({
         where: {
@@ -200,6 +206,51 @@ export async function listAssistantAttachments(
   })
 }
 
+/** Pin original object ownership before any provider write, including failed uploads. */
+export async function pinAssistantAttachmentStorage(
+  db: PrismaClient,
+  scope: AssistantScope,
+  input: {
+    attachmentId: string
+    storageProvider: string
+    storageStoreId: string
+    storagePath: string
+  },
+) {
+  return runInOwnTransaction(db, async (tx) => {
+    if (!(await accountPrivacyPrivateWritesAllowed(tx, scope.userId)))
+      return false
+    const row = await tx.assistantAttachment.findFirst({
+      where: {
+        ...ownedWhere(scope, input.attachmentId),
+        status: "PENDING_UPLOAD",
+        uploadExpiresAt: { gt: new Date() },
+      },
+      select: {
+        storageProvider: true,
+        storageStoreId: true,
+        storagePath: true,
+      },
+    })
+    if (!row) return false
+    if (row.storageProvider || row.storageStoreId || row.storagePath)
+      return (
+        row.storageProvider === input.storageProvider &&
+        row.storageStoreId === input.storageStoreId &&
+        row.storagePath === input.storagePath
+      )
+    await tx.assistantAttachment.update({
+      where: { id: input.attachmentId },
+      data: {
+        storageProvider: input.storageProvider,
+        storageStoreId: input.storageStoreId,
+        storagePath: input.storagePath,
+      },
+    })
+    return true
+  })
+}
+
 /** PENDING_UPLOAD → UPLOADED once; a replay of the same bytes is a no-op. */
 export async function markAssistantAttachmentUploaded(
   db: DbClient,
@@ -216,6 +267,16 @@ export async function markAssistantAttachmentUploaded(
   const result = await db.assistantAttachment.updateMany({
     where: {
       id: input.attachmentId,
+      conversation: {
+        owner: {
+          accountPrivacyRequests: {
+            none: { status: { in: ["PROCESSING", "COMPLETED"] } },
+          },
+        },
+      },
+      storageProvider: input.storageProvider,
+      storageStoreId: input.storageStoreId,
+      storagePath: input.storagePath,
       status: "PENDING_UPLOAD",
       uploadExpiresAt: { gt: now },
     },
@@ -247,6 +308,13 @@ export async function claimAssistantAttachmentProcessing(
   const result = await db.assistantAttachment.updateMany({
     where: {
       id: input.attachmentId,
+      conversation: {
+        owner: {
+          accountPrivacyRequests: {
+            none: { status: { in: ["PROCESSING", "COMPLETED"] } },
+          },
+        },
+      },
       processingAttempts: { lt: input.maxAttempts },
       OR: [
         { status: "UPLOADED" },
@@ -280,6 +348,13 @@ export async function completeAssistantAttachmentProcessing(
   const result = await db.assistantAttachment.updateMany({
     where: {
       id: input.attachmentId,
+      conversation: {
+        owner: {
+          accountPrivacyRequests: {
+            none: { status: { in: ["PROCESSING", "COMPLETED"] } },
+          },
+        },
+      },
       status: "PROCESSING",
       processingAttempts: input.generation,
     },
@@ -293,6 +368,27 @@ export async function completeAssistantAttachmentProcessing(
       processedAt: input.now ?? new Date(),
     },
   })
+  if (!result.count)
+    await db.assistantAttachment.updateMany({
+      where: {
+        id: input.attachmentId,
+        status: "PROCESSING",
+        processingAttempts: input.generation,
+        conversation: {
+          owner: {
+            accountPrivacyRequests: {
+              some: { status: { in: ["PROCESSING", "COMPLETED"] } },
+            },
+          },
+        },
+      },
+      data: {
+        status: "FAILED",
+        errorCode: "ACCOUNT_DELETION",
+        leaseUntil: null,
+        processedAt: input.now ?? new Date(),
+      },
+    })
   return result.count === 1
 }
 

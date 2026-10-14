@@ -86,6 +86,8 @@ export function useGeneralAssistant({
   const [readyAttachments, setReadyAttachments] = useState<
     GeneralReadyAttachment[]
   >([])
+  const fileStartedConversation = useRef<string | null>(null)
+  const [initialFiles, setInitialFiles] = useState<File[]>([])
   const [attachmentTrayKey, setAttachmentTrayKey] = useState(0)
   const [notice, setNotice] = useState<string | null>(null)
   const [pending, setPending] = useState(false)
@@ -134,7 +136,7 @@ export function useGeneralAssistant({
         api: "/api/assistant/general/chat",
         credentials: "same-origin",
         headers: { "x-assistant-client": "dashboard" },
-        prepareSendMessagesRequest: ({ messages }) => {
+        prepareSendMessagesRequest: ({ messages, body }) => {
           if (!conversationId) throw Error("Conversation unavailable")
           const last = [...messages].reverse().find((m) => m.role === "user")
           if (!last) throw Error("Message unavailable")
@@ -142,6 +144,7 @@ export function useGeneralAssistant({
             body: {
               conversationId,
               requestId: `req_${last.id}`,
+              ...(body?.saleChoice ? { saleChoice: body.saleChoice } : {}),
               message: {
                 id: last.id,
                 role: "user",
@@ -376,7 +379,11 @@ export function useGeneralAssistant({
     newThread,
   ])
   /** Streams one message into the open conversation. */
-  const deliver = async (text: string, files: GeneralReadyAttachment[]) => {
+  const deliver = async (
+    text: string,
+    files: GeneralReadyAttachment[],
+    saleChoice?: { proposalId: string; revision: number; text: string },
+  ) => {
     typed.current = false
     messageSettled.current = false
     workflow.track("assistant_message", "started", {
@@ -385,20 +392,23 @@ export function useGeneralAssistant({
     })
     attemptedText.current = text
     try {
-      await chat.sendMessage({
-        parts: [
-          ...(text ? [{ type: "text" as const, text }] : []),
-          ...files.map((file) => ({
-            type: "data-setup-attachment" as const,
-            data: {
-              attachmentId: file.attachmentId,
-              kind: "IMAGE",
-              fileName: file.fileName,
-              summary: "",
-            },
-          })),
-        ],
-      })
+      await chat.sendMessage(
+        {
+          parts: [
+            ...(text ? [{ type: "text" as const, text }] : []),
+            ...files.map((file) => ({
+              type: "data-setup-attachment" as const,
+              data: {
+                attachmentId: file.attachmentId,
+                kind: "IMAGE",
+                fileName: file.fileName,
+                summary: "",
+              },
+            })),
+          ],
+        },
+        saleChoice ? { body: { saleChoice } } : undefined,
+      )
     } catch (error) {
       settleMessage("failed")
       if (mounted.current) {
@@ -417,9 +427,12 @@ export function useGeneralAssistant({
     appliedAt.current = Date.now()
     void deliver(queued.text, queued.files)
   })
-  const send = async () => {
-    const text = draft.trim()
-    const files = readyAttachments
+  const send = async (
+    reply?: string,
+    saleChoice?: { proposalId: string; revision: number; text: string },
+  ) => {
+    const text = reply?.trim() ?? draft.trim()
+    const files = reply ? [] : readyAttachments
     const blank = blankStart && !conversationId
     if (
       (!text && !files.length) ||
@@ -431,11 +444,24 @@ export function useGeneralAssistant({
       actionLock.current
     )
       return
-    setDraft("")
+    if (!reply) {
+      setDraft("")
+      setReadyAttachments([])
+      setAttachmentTrayKey((key) => key + 1)
+    }
     setNotice(null)
-    setReadyAttachments([])
-    setAttachmentTrayKey((key) => key + 1)
-    if (!blank) return deliver(text, files)
+    if (!blank) {
+      await deliver(text, files, saleChoice)
+      if (
+        mounted.current &&
+        conversationId &&
+        fileStartedConversation.current === conversationId
+      ) {
+        fileStartedConversation.current = null
+        setStartedConversationId(conversationId)
+      }
+      return
+    }
     actionLock.current = true
     setPending(true)
     try {
@@ -484,6 +510,36 @@ export function useGeneralAssistant({
         payload,
       }),
     )
+  const beginWithFiles = async (files: File[]) => {
+    if (
+      !files.length ||
+      !blankStart ||
+      conversationId ||
+      busy ||
+      runId ||
+      pending ||
+      actionLock.current
+    )
+      return
+    actionLock.current = true
+    setPending(true)
+    setNotice(null)
+    try {
+      const created = await start.mutateAsync()
+      if (!mounted.current) return
+      setInitialFiles(files.slice(0, 4))
+      // Keep this composer mounted while its selected files upload.
+      fileStartedConversation.current = created.id
+      chat.setMessages([])
+      setConversationId(created.id)
+      void conversations.refetch()
+    } catch (error) {
+      if (mounted.current) setNotice(errorMessage(error))
+    } finally {
+      actionLock.current = false
+      if (mounted.current) setPending(false)
+    }
+  }
   /** Back to a blank chat; the first message creates its conversation. */
   const clearThread = () => {
     if (busy || runId || pending) return
@@ -502,6 +558,10 @@ export function useGeneralAssistant({
     setNotice(null)
   }
   return {
+    uploadStartedConversation: fileStartedConversation.current,
+    initialFiles,
+    consumeInitialFiles: () => setInitialFiles([]),
+    beginWithFiles,
     readyAttachments,
     setReadyAttachments,
     attachmentTrayKey,

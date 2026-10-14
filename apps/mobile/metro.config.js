@@ -1,6 +1,7 @@
 const { withNativewind } = require("nativewind/metro")
 const { sep } = require("node:path")
 const { getSentryExpoConfig } = require("@sentry/react-native/metro")
+const { createBlobBrowserResolver } = require("./blob-browser-aliases.cjs")
 const {
   createProductionQaAliases,
   isInternalQaBuild,
@@ -16,6 +17,7 @@ const nativewindConfig = withNativewind(config, {
 const internalQaBuild = isInternalQaBuild()
 const productionQaAliases = createProductionQaAliases(__dirname)
 const nativewindResolveRequest = nativewindConfig.resolver.resolveRequest
+const resolveBlobBrowser = createBlobBrowserResolver()
 const singletonPackages = [
   "@expo/vector-icons",
   "expo",
@@ -59,6 +61,8 @@ function resolveAppSingleton(moduleName) {
 
 nativewindConfig.resolver.resolveRequest = (context, moduleName, platform) => {
   const originModulePath = context.originModulePath
+  const blobBrowser = resolveBlobBrowser(moduleName, originModulePath)
+  if (blobBrowser) return blobBrowser
   const singletonPackage = getSingletonPackage(moduleName)
   const shouldUseAppSingleton =
     singletonPackage && isNodeModulesOrigin(originModulePath)

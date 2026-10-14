@@ -1,0 +1,28 @@
+{
+  "version": 1,
+  "id": "2026-10-12-f01-collection-contract",
+  "tickets": ["F01"],
+  "summary": "Pure canonical collection contract with owner policy (12 Oct): partial staff links up to the balance, customer links in full, 10 min\u201372 h lifetime, link creation by anyone who can accept payment for the order, one open link per order, exact tenant/source binding for provider settlement, strict amount/time validation, manual receipts wait for open links, held provider money resolved by reviewed refund or customer credit. Not yet wired to persistence, routers or the assistant.",
+  "noAssistantImpact": "No capability, procedure or rollout change: the contract is not wired to a command yet. Payment-link capabilities arrive with F02.",
+  "docs": [
+    {
+      "topic": "feature",
+      "path": ".brain/plans/2026-10-09-assistant-business-operations.md",
+      "status": "local_only",
+      "note": "F01 audit and contract checkpoint."
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "test",
+      "path": "packages/payments/src/collection-intent.test.ts",
+      "executed": true,
+      "result": "6 pass; payments package 30 pass (12 Oct 2026, uncommitted source)."
+    },
+    {
+      "kind": "review",
+      "path": "packages/assistant/evaluations/runs/2026-10-12-f01-collection-source-audit.md",
+      "executed": false
+    }
+  ]
+}

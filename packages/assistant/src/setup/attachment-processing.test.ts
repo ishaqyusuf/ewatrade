@@ -240,3 +240,34 @@ describe("setup attachment processing", () => {
     )
   })
 })
+
+test("business-chat images become ready without reading bytes, providers or media budgets", async () => {
+  const forbidden = async (): Promise<never> => {
+    throw Error("Image analysis must not run")
+  }
+  const { deps, log } = harness(
+    attachment({
+      kind: "IMAGE",
+      contentType: "image/jpeg",
+      attachmentOnly: true,
+    }),
+    new Uint8Array(),
+    {
+      readBytes: forbidden,
+      media: forbidden,
+      prepareImage: forbidden,
+      reserveMedia: forbidden,
+      recordUsage: forbidden,
+    },
+  )
+  expect(await processSetupAttachment("att_1", deps)).toEqual({
+    status: "ready",
+    kind: "IMAGE",
+  })
+  expect(log.failed).toEqual([])
+  expect(log.completed).toHaveLength(1)
+  expect(log.completed[0]).toMatchObject({
+    transcript: null,
+    extraction: { type: "text", text: "Photo attached; not analysed." },
+  })
+})

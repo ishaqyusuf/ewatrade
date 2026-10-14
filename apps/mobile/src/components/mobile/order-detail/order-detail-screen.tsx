@@ -9,6 +9,11 @@ import {
   useAskAssistant,
 } from "@/components/mobile/assistant/use-ask-assistant"
 import { buildCommercialOrderActivity } from "@/components/mobile/commerce/commercial-order-overview-model"
+import type { MessageFollowUpTarget } from "@/components/mobile/customer-messages/use-order-message"
+import {
+  OrderWhatsAppButton,
+  WhatsAppFollowUp,
+} from "@/components/mobile/customer-messages/whatsapp-action"
 import { EmptyState } from "@/components/mobile/empty-state"
 import { QaQuickFillButton } from "@/components/mobile/qa-quick-fill-button"
 import { QueryRefreshControl } from "@/components/mobile/query-refresh-control"
@@ -34,7 +39,7 @@ import { createQaPaymentFixture } from "@ewatrade/utils/qa-quick-fill"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import * as Crypto from "expo-crypto"
 import { useRouter } from "expo-router"
-import { useMemo, useRef, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import { Linking } from "react-native"
 import type { NativeScrollEvent, NativeSyntheticEvent } from "react-native"
 import {
@@ -97,6 +102,7 @@ export function OrderDetailScreen({ orderId }: { orderId: string }) {
     orderQuery.data ??
     cachedOrders.data?.find((candidate) => candidate.id === orderId) ??
     null
+  const [followUp, setFollowUp] = useState<MessageFollowUpTarget | null>(null)
   const changes = useOrderChanges({
     isOffline,
     onChanged: refreshOrderQueries,
@@ -104,8 +110,29 @@ export function OrderDetailScreen({ orderId }: { orderId: string }) {
       setError(null)
       setNotice(message)
     },
+    onRecorded: (record) =>
+      setFollowUp({
+        ...record,
+        done:
+          record.eventKey === "order.cancelled"
+            ? "Order cancelled."
+            : "Refund recorded.",
+      }),
     order,
   })
+  // A change seen to complete the Order offers its message, from the
+  // refreshed server status rather than a guess.
+  const status = orderQuery.data?.status
+  const lastStatus = useRef(status)
+  useEffect(() => {
+    if (
+      status === "COMPLETED" &&
+      lastStatus.current &&
+      lastStatus.current !== "COMPLETED"
+    )
+      setFollowUp({ eventKey: "order.completed", done: "Order completed." })
+    lastStatus.current = status
+  }, [status])
   // Fade the overview in only when it replaces the loading state; a cached
   // Order rides the native push without an extra fade.
   const [orderReadyOnOpen] = useState(() => Boolean(order))
@@ -114,6 +141,8 @@ export function OrderDetailScreen({ orderId }: { orderId: string }) {
     await Promise.all([
       queryClient.invalidateQueries(trpc.orders.get.queryFilter()),
       queryClient.invalidateQueries(trpc.orders.timeline.queryFilter()),
+      // WhatsApp previews quote balances and statuses: never reuse a stale one.
+      queryClient.invalidateQueries(trpc.customerMessages.preview.pathFilter()),
       queryClient.invalidateQueries(trpc.orders.changeOptions.queryFilter()),
       queryClient.invalidateQueries(trpc.orders.list.queryFilter()),
       queryClient.invalidateQueries(trpc.orders.listPage.pathFilter()),
@@ -130,10 +159,15 @@ export function OrderDetailScreen({ orderId }: { orderId: string }) {
         setNotice(null)
         setError(failure.message)
       },
-      onSuccess: async () => {
+      onSuccess: async (result) => {
         setAmountPaid("")
         setError(null)
         setNotice("Payment recorded.")
+        setFollowUp({
+          eventKey: "payment.recorded",
+          sourceId: result.id,
+          done: "Payment recorded.",
+        })
         setPaymentReference("")
         paymentQuickFillSnapshot.current = null
         setCanUndoPaymentQuickFill(false)
@@ -450,6 +484,28 @@ export function OrderDetailScreen({ orderId }: { orderId: string }) {
                 setError("Messaging is unavailable on this device."),
               )
           }}
+          whatsApp={
+            <OrderWhatsAppButton
+              hasPhone={Boolean(order.customerPhone)}
+              name={order.customerName || "customer"}
+              target={{ orderId: order.id }}
+            />
+          }
+          messageFollowUp={
+            followUp ? (
+              <WhatsAppFollowUp
+                key={`${followUp.eventKey}:${followUp.sourceId ?? ""}`}
+                done={followUp.done}
+                hasPhone={Boolean(order.customerPhone)}
+                target={{
+                  orderId: order.id,
+                  eventKey: followUp.eventKey,
+                  sourceId: followUp.sourceId,
+                }}
+                onDismiss={() => setFollowUp(null)}
+              />
+            ) : null
+          }
           order={order}
         />
       </ClassicOrderDetailScreen>

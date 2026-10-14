@@ -7,6 +7,7 @@ import {
   AuthMethodButton,
 } from "@/components/mobile/auth-header"
 import { FormField } from "@/components/mobile/form-field"
+import { PhoneField } from "@/components/mobile/phone-field"
 import { StatusBanner } from "@/components/mobile/status-banner"
 import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
@@ -17,7 +18,8 @@ import { useMobileGoogleAuth } from "@/hooks/use-mobile-google-auth"
 import { SESSION_ENDED_NOTICE } from "@/lib/session-expiry"
 import { useOnboardingStore } from "@/store/onboardingStore"
 import { useTRPC } from "@/trpc/client"
-import { useMutation } from "@tanstack/react-query"
+import { getCountry, toInternationalPhone } from "@ewatrade/utils/countries"
+import { useMutation, useQuery } from "@tanstack/react-query"
 import { useLocalSearchParams, useRouter } from "expo-router"
 import { useState } from "react"
 
@@ -39,6 +41,35 @@ export function LoginScreen() {
   const [error, setError] = useState<string | null>(null)
   const [password, setPassword] = useState("")
   const [usePassword, setUsePassword] = useState(false)
+  const [useWhatsApp, setUseWhatsApp] = useState(false)
+  const [phone, setPhone] = useState("")
+  const [phoneCountry, setPhoneCountry] = useState("NG")
+  const fullPhone = toInternationalPhone(
+    getCountry(phoneCountry).dialCode,
+    phone,
+  )
+  const phoneAvailability = useQuery(
+    trpc.auth.phoneOtpAvailability.queryOptions(undefined, { retry: false }),
+  )
+  const requestPhoneMutation = useMutation(
+    trpc.auth.requestPhoneOtp.mutationOptions({
+      onError(error) {
+        setError(error.message)
+      },
+      onSuccess() {
+        setError(null)
+        router.push({
+          pathname: "/verify-email",
+          params: {
+            channel: "whatsapp",
+            phone: fullPhone,
+            mode: "login",
+            returnTo,
+          },
+        })
+      },
+    }),
+  )
   const normalizedEmail = email.trim().toLowerCase()
   const returnTo =
     typeof params.returnTo === "string" &&
@@ -113,6 +144,10 @@ export function LoginScreen() {
   )
 
   const continueWithEmail = () => {
+    if (useWhatsApp) {
+      requestPhoneMutation.mutate({ phone: fullPhone, mode: "login" })
+      return
+    }
     if (!normalizedEmail) return
 
     if (usePassword) {
@@ -149,17 +184,28 @@ export function LoginScreen() {
             tone="warning"
           />
         ) : null}
-        <FormField
-          autoCapitalize="none"
-          keyboardType="email-address"
-          label="Email address"
-          onChangeText={setEmail}
-          placeholder="Enter your email address"
-          textContentType="emailAddress"
-          value={email}
-          variant="green-gate"
-        />
-        {usePassword ? (
+        {useWhatsApp ? (
+          <PhoneField
+            countryCode={phoneCountry}
+            onCountryChange={setPhoneCountry}
+            onChangeText={setPhone}
+            value={phone}
+            label="WhatsApp number"
+            variant="green-gate"
+          />
+        ) : (
+          <FormField
+            autoCapitalize="none"
+            keyboardType="email-address"
+            label="Email address"
+            onChangeText={setEmail}
+            placeholder="Enter your email address"
+            textContentType="emailAddress"
+            value={email}
+            variant="green-gate"
+          />
+        )}
+        {usePassword && !useWhatsApp ? (
           <FormField
             autoCapitalize="none"
             autoComplete="current-password"
@@ -174,28 +220,58 @@ export function LoginScreen() {
           />
         ) : null}
         <AuthActionButton
-          disabled={!normalizedEmail || (usePassword && !password)}
-          isLoading={requestOtpMutation.isPending || passwordMutation.isPending}
+          disabled={
+            useWhatsApp
+              ? phone.length < 7
+              : !normalizedEmail || (usePassword && !password)
+          }
+          isLoading={
+            requestOtpMutation.isPending ||
+            passwordMutation.isPending ||
+            requestPhoneMutation.isPending
+          }
           loadingLabel={usePassword ? "Signing in" : "Sending code"}
           onPress={continueWithEmail}
           trailingIcon="ArrowRight"
         >
-          {usePassword ? "Sign in with password" : "Send login code"}
+          {useWhatsApp
+            ? "Send WhatsApp code"
+            : usePassword
+              ? "Sign in with password"
+              : "Send login code"}
         </AuthActionButton>
-        <Pressable
-          accessibilityRole="button"
-          className="-my-3 min-h-11 items-center justify-center"
-          onPress={() => {
-            setUsePassword((current) => !current)
-            setError(null)
-          }}
-        >
-          <Text className="text-[13px] font-extrabold [-rn-line-height:18] text-primary">
-            {usePassword
-              ? "Use a login code instead"
-              : "Use a password instead"}
-          </Text>
-        </Pressable>
+        {phoneAvailability.data?.enabled ? (
+          <AuthMethodButton
+            icon="MessageCircle"
+            label={useWhatsApp ? "Use email instead" : "Use WhatsApp instead"}
+            onPress={() => {
+              setUseWhatsApp(!useWhatsApp)
+              setUsePassword(false)
+              setError(null)
+            }}
+            disabled={
+              requestPhoneMutation.isPending ||
+              requestOtpMutation.isPending ||
+              passwordMutation.isPending
+            }
+          />
+        ) : null}
+        {!useWhatsApp ? (
+          <Pressable
+            accessibilityRole="button"
+            className="-my-3 min-h-11 items-center justify-center"
+            onPress={() => {
+              setUsePassword((current) => !current)
+              setError(null)
+            }}
+          >
+            <Text className="text-[13px] font-extrabold [-rn-line-height:18] text-primary">
+              {usePassword
+                ? "Use a login code instead"
+                : "Use a password instead"}
+            </Text>
+          </Pressable>
+        ) : null}
         {error ? (
           <StatusBanner
             icon="TriangleAlert"

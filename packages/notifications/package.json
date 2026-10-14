@@ -5,6 +5,7 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
+    "./business-events": "./src/business-events/index.ts",
     "./contacts": "./src/contacts.ts",
     "./core-types": "./src/core-types.ts",
     "./delivery": "./src/delivery.ts",

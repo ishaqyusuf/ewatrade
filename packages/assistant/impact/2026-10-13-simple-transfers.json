@@ -1,0 +1,77 @@
+{
+  "version": 1,
+  "id": "2026-10-13-simple-transfers",
+  "tickets": ["E04", "H04"],
+  "summary": "Concise completed transfer drafts with optional chat images and staged destination creation.",
+  "capabilities": [
+    {
+      "id": "finance.transfer.record_simple",
+      "change": "added",
+      "rollout": "source",
+      "note": "Dashboard Finance Owner/Admin, existing source, atomic destination+canonical ledger transfer; no bank execution."
+    }
+  ],
+  "procedures": [
+    {
+      "path": "finance.recordMoney",
+      "status": "supported",
+      "reason": "Reuses canonical TRANSFER posting."
+    },
+    {
+      "path": "finance.createMoneyAccount",
+      "status": "supported",
+      "reason": "Destination creation on signed transfer confirmation only."
+    },
+    {
+      "path": "assistant.simpleTransferOptions",
+      "status": "excluded",
+      "reason": "Protected editor identities helper; canonical business effects remain finance.recordMoney/createMoneyAccount."
+    }
+  ],
+  "docs": [
+    {
+      "topic": "feature",
+      "path": ".brain/features/assistant-simple-transfers.md",
+      "status": "local_only",
+      "note": "Behavior and scoped acceptance."
+    },
+    {
+      "topic": "api",
+      "path": ".brain/api/contracts.md",
+      "status": "local_only",
+      "note": "Draft and options contract."
+    },
+    {
+      "topic": "permissions",
+      "path": ".brain/api/permissions.md",
+      "status": "local_only",
+      "note": "Existing Finance authority unchanged."
+    },
+    {
+      "topic": "capability",
+      "path": "packages/assistant/src/capabilities/COVERAGE.md",
+      "status": "updated",
+      "note": "Transfer capability and domain coverage."
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "test",
+      "path": "packages/assistant/src/general/simple-transfer.test.ts",
+      "executed": true,
+      "result": "Focused68pass414assertions across27files; exact captions, incomplete steps and exclusions."
+    },
+    {
+      "kind": "test",
+      "path": "apps/api/src/assistant/general-simple-transfer.integration.test.ts",
+      "executed": true,
+      "result": "Guarded Development1pass23assertions67s; balanced posting, staged destination, image retention, replay, reuse/noOrder; owned rows/bytes cleaned."
+    },
+    {
+      "kind": "test",
+      "path": "apps/dashboard/src/components/general-assistant/general-simple-transfer.test.ts",
+      "executed": true,
+      "result": "Isolated Claude review/editor fixture wrapper passes; live review/edit/photo append accepted, demo commit unclaimed."
+    }
+  ]
+}

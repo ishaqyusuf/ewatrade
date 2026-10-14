@@ -1,7 +1,47 @@
-import { serviceWorkEditorActionSchema } from "./service-work-editor"
+export {
+  generalMoneyAccountBalancesPage,
+  isPlainAccountBalanceRequest,
+} from "./money-account-balances-answer"
+import { simpleTransferAction } from "./simple-transfer"
+export {
+  simpleTransferAction,
+  simpleTransferStep,
+  isSimpleTransferIntent,
+  transferFactsFromText,
+} from "./simple-transfer"
+export type { SimpleTransfer } from "./simple-transfer"
+import { simpleExpenseAction } from "./simple-expense"
+export {
+  simpleExpenseAction,
+  simpleExpenseStep,
+  isSimpleExpenseIntent,
+  expenseFactsFromText,
+} from "./simple-expense"
+export type { SimpleExpense } from "./simple-expense"
+import { simpleMoneyInAction } from "./simple-money-in"
+export {
+  simpleMoneyInAction,
+  simpleMoneyInStep,
+  isSimpleMoneyInIntent,
+  moneyInFactsFromText,
+} from "./simple-money-in"
+export type { SimpleMoneyIn } from "./simple-money-in"
+import { simpleSaleAction } from "./simple-sale"
+export {
+  simpleSaleAction,
+  simpleSaleStep,
+  simpleSaleQuestions,
+  normalizedSaleName,
+  similarSaleNames,
+  isSimpleSaleIntent,
+  isNonSaleMoneyIntent,
+  saleFactsFromText,
+} from "./simple-sale"
+export type { SimpleSale } from "./simple-sale"
+import { quoteDecisionAction, quoteDecisionReceipt } from "./quote-decision"
 import { serviceWorkLifecycleReceipt } from "./service-work"
 import { serviceWorkCompletionReceipt } from "./service-work-completion"
-import { quoteDecisionAction, quoteDecisionReceipt } from "./quote-decision"
+import { serviceWorkEditorActionSchema } from "./service-work-editor"
 import { serviceWorkRecordReceipt } from "./service-work-records"
 export {
   serviceWorkEditorActionSchema,
@@ -16,8 +56,9 @@ export { serviceWorkLifecycleDraftInstructions } from "./service-work"
 export { serviceWorkRecordDraftInstructions } from "./service-work-records"
 export { serviceWorkCompletionDraftInstructions } from "./service-work-completion"
 import { serviceIntakeAction } from "./service-intake"
-import { staffStatusAction } from "./staff-status"
+import { serviceMessageShareAction } from "./service-message"
 import { staffAccessAction } from "./staff-access"
+import { staffStatusAction } from "./staff-status"
 export {
   staffAccessAction,
   staffAccessDraftInstructions,
@@ -36,6 +77,24 @@ export {
 export type { GeneralStaffStatusAction } from "./staff-status"
 export { serviceIntakeDraftInstructions } from "./service-intake"
 import { cashCountAction } from "./cash-count"
+import { catalogArchiveAction, catalogArchiveSummary } from "./catalog-archive"
+export {
+  catalogArchiveAction,
+  catalogArchiveSummary,
+} from "./catalog-archive"
+export type { CatalogArchiveAction } from "./catalog-archive"
+import {
+  storeSettingsReceiptKinds,
+  storeSettingsSummary,
+  storeSettingsUpdateAction,
+} from "./store-settings-change"
+export {
+  storeSettingsReceiptKind,
+  storeSettingsReceiptKinds,
+  storeSettingsSummary,
+  storeSettingsUpdateAction,
+} from "./store-settings-change"
+export type { StoreSettingsUpdateAction } from "./store-settings-change"
 export {
   cashCountAction,
   cashCountDraftInstructions,
@@ -60,10 +119,16 @@ export {
 } from "./answer-target"
 export { staffDirectoryTargetSchema } from "./staff-directory-target"
 export { staffHistoryTargetSchema } from "./staff-history-target"
+import { generalMoneyAccountsSchema } from "./money-accounts-answer"
 import { purchasePaymentReverseAction } from "./purchase-payment-reversal"
 import { purchaseRecognitionReverseAction } from "./purchase-recognition-reversal"
 import { purchaseRecordAction } from "./purchase-recording"
 import { generalReviewPresentationSchema } from "./review-presentation"
+export {
+  type GeneralMoneyAccounts,
+  generalMoneyAccountsAnswer,
+  generalMoneyAccountsSchema,
+} from "./money-accounts-answer"
 export {
   type GeneralReviewPresentation,
   generalReviewPresentationSchema,
@@ -120,11 +185,13 @@ import {
   stockAdjustmentAction,
   stockCorrectionAction,
 } from "./stock-adjustment"
+import { stockCustodyMoveAction } from "./stock-custody"
 import {
   stockTransferCancelAction,
   stockTransferDispatchAction,
   stockTransferReceiveAction,
 } from "./stock-transfer"
+import { stockPackageTransformAction } from "./stock-transform"
 import {
   unitConfigurationDraftAction,
   unitConfigurationPublishAction,
@@ -359,6 +426,9 @@ export const generalActionSchema = z.discriminatedUnion("action", [
   stockTransferDispatchAction,
   stockTransferReceiveAction,
   stockTransferCancelAction,
+  stockCustodyMoveAction,
+  stockPackageTransformAction,
+  serviceMessageShareAction,
   customerReceiptAction,
   moneyMovementAction,
   expenseAction,
@@ -398,6 +468,12 @@ export const generalActionSchema = z.discriminatedUnion("action", [
   ...quoteDecisionAction.options,
   staffAccessAction,
   cashCountAction,
+  storeSettingsUpdateAction,
+  catalogArchiveAction,
+  simpleSaleAction,
+  simpleMoneyInAction,
+  simpleExpenseAction,
+  simpleTransferAction,
 ])
 export const generalOrderActionSchema = generalActionSchema.options[2]
 export type GeneralAction = z.infer<typeof generalActionSchema>
@@ -423,6 +499,7 @@ const generalRecordReceiptSchema = z
       "stock_count",
       "stock_transfer",
       "inventory_closeout",
+      ...storeSettingsReceiptKinds,
     ]),
     recordId: id,
     bookId: id.optional(),
@@ -480,6 +557,11 @@ export const generalProposalSchema = z
     createdAt: z.string().datetime().optional(),
     receipt: generalReceiptSchema.nullable(),
     review: z.array(z.string()).optional(),
+    question: z.string().optional(),
+    choices: z
+      .array(z.object({ label: z.string(), text: z.string() }).strict())
+      .max(10)
+      .optional(),
     /**
      * Structured review for the card; clients fall back to `review`. Display
      * data only: an invalid one is dropped instead of failing the whole chat.
@@ -498,6 +580,8 @@ export const generalAnswerSchema = z
     asOf: z.string().datetime(),
     detail: z.string().max(1000),
     target: generalAnswerTargetSchema.optional(),
+    /** Structured rows for a money accounts read; `detail` stays the fallback. */
+    accounts: generalMoneyAccountsSchema.optional(),
   })
   .strict()
 export type GeneralAnswer = z.infer<typeof generalAnswerSchema>
@@ -690,6 +774,12 @@ export function generalActionSummary(
       return `Receive ${action.quantity} from transfer ${action.transferId} · ${action.reason}`
     case "stock_transfer_cancel":
       return `Return remaining transfer stock · ${action.reason}`
+    case "stock_package_transform":
+      return `Repack ${action.sourceQuantity} into another pack size · ${action.reason}`
+    case "service_message_share":
+      return `Record a ${action.channel === "manual" ? "manual" : action.channel === "sms" ? "SMS" : "WhatsApp"} message you already shared${action.reason ? ` · ${action.reason}` : ""}`
+    case "stock_custody_move":
+      return `${action.target.type === "staff" ? "Assign stock to staff" : "Return staff stock to the Store"} · ${action.quantity} · ${action.reason}`
     case "stock_adjust":
       return `${action.purpose === "waste" ? "Record waste" : "Adjust stock"} · ${action.direction} ${action.enteredQuantity} · ${action.reason}`
     case "stock_correct":
@@ -722,6 +812,14 @@ export function generalActionSummary(
         .join(" · ")
     case "product_create":
       return productCreateSummary(action, amount)
+    case "expense_record_simple":
+      return `${action.amountMinor === undefined ? "Amount pending" : generalMoney(action.amountMinor, currencyCode)} on ${action.description ?? "an expense"}`
+    case "money_transfer_simple":
+      return `${action.amountMinor === undefined ? "Amount pending" : amount(action.amountMinor)} from ${action.fromAccountName ?? "an account"} to ${action.toAccountName ?? "an account"}`
+    case "money_in_record":
+      return `Money in · ${action.accountName ?? "Choose account"} · ${action.amountMinor === undefined ? "Amount pending" : amount(action.amountMinor)}`
+    case "sale_record":
+      return `Productless sale draft\nAccount: ${action.accountName ?? "Pending"}\nCustomer: ${action.customerChoice === "walk_in" ? "Walk-in" : (action.customerName ?? "Pending")}\nReceived: ${action.receivedMinor === undefined ? "Pending" : amount(action.receivedMinor)}`
     case "order_create":
       return `${action.lines.length} line${action.lines.length === 1 ? "" : "s"} on the order\n${action.customerId ? "Saved customer" : "Walk-in customer"}${action.notes ? `\n${action.notes}` : ""}${action.initialPayment ? `\nRecord received: ${amount(action.initialPayment.amountMinor)} · ${action.initialPayment.method.replaceAll("_", " ")}` : "\nNo initial payment"}`
     case "customer_update":
@@ -741,5 +839,9 @@ export function generalActionSummary(
       return `${amount(action.amountMinor)} · ${action.method.replaceAll("_", " ")} · order ${action.orderId}${action.note ? `\n${action.note}` : ""}`
     case "order_attachment_add":
       return `${action.attachmentId ? `Attach file ${action.attachmentId} to` : "Note on"} order ${action.orderId}${action.note ? `\n${action.note}` : ""}`
+    case "store_settings_update":
+      return storeSettingsSummary(action)
+    case "catalog_archive":
+      return catalogArchiveSummary(action)
   }
 }

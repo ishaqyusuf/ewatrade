@@ -12,11 +12,13 @@ export function assistantMediaAvailability(
   dataClassification: "LIVE" | "QA",
   env: Environment = process.env,
   storageAvailable = isSetupAttachmentStorageAvailable,
+  attachmentOnlyPhotos = false,
 ) {
   if (!storageAvailable(dataClassification))
     return { photos: false, files: false }
   return {
     photos:
+      attachmentOnlyPhotos ||
       dataClassification === "QA" ||
       Boolean(assistantProviderApiKey("OPENAI", env)),
     files: true,

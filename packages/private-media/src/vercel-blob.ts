@@ -64,6 +64,11 @@ export function createVercelPrivateObjectPort<ContentType extends string>(
     BLOB_READ_WRITE_TOKEN: process.env.BLOB_READ_WRITE_TOKEN,
     VERCEL_OIDC_TOKEN: process.env.VERCEL_OIDC_TOKEN,
   },
+  transport: { get: typeof get; put: typeof put; del: typeof del } = {
+    get,
+    put,
+    del,
+  },
 ): {
   port: PrivateObjectPort<ContentType>
   configured: () => boolean
@@ -80,7 +85,7 @@ export function createVercelPrivateObjectPort<ContentType extends string>(
   const port: PrivateObjectPort<ContentType> = {
     async delete(path, options) {
       try {
-        await del(path, { ...options, ...ready() })
+        await transport.del(path, { ...options, ...ready() })
       } catch (error) {
         safeFailure(error)
       }
@@ -88,7 +93,7 @@ export function createVercelPrivateObjectPort<ContentType extends string>(
     async put(path, bytes, options) {
       try {
         const config = ready()
-        const result = await put(path, Buffer.from(bytes), {
+        const result = await transport.put(path, Buffer.from(bytes), {
           ...options,
           ...config,
         })
@@ -105,8 +110,12 @@ export function createVercelPrivateObjectPort<ContentType extends string>(
     async get(path, options) {
       try {
         const config = ready()
-        const result = await get(path, { ...options, ...config })
-        if (!result || result.statusCode !== 200 || !result.stream) return null
+        const result = await transport.get(path, { ...options, ...config })
+        if (!result) return null
+        // Only the SDK's actual 404/null result establishes absence. A 304 or
+        // incomplete response must never certify account-deletion byte removal.
+        if (result.statusCode !== 200 || !result.stream)
+          throw new PrivateObjectStorageError("STORAGE_UNAVAILABLE")
         if (
           result.blob.pathname !== path ||
           !isPrivateBlobUrl(result.blob.url, config.storeId)

@@ -23,6 +23,7 @@
         "@ewatrade/auth": "workspace:*",
         "@ewatrade/catalog": "workspace:*",
         "@ewatrade/communications": "workspace:*",
+        "@ewatrade/customer-messages": "workspace:*",
         "@ewatrade/db": "workspace:*",
         "@ewatrade/domains": "workspace:*",
         "@ewatrade/email": "workspace:*",
@@ -71,11 +72,13 @@
         "@ewatrade/assistant": "workspace:*",
         "@ewatrade/auth": "workspace:*",
         "@ewatrade/catalog": "workspace:*",
+        "@ewatrade/customer-messages": "workspace:*",
         "@ewatrade/db": "workspace:*",
         "@ewatrade/email": "workspace:*",
         "@ewatrade/errors": "workspace:*",
         "@ewatrade/events": "workspace:*",
         "@ewatrade/jobs": "workspace:*",
+        "@ewatrade/notifications": "workspace:*",
         "@ewatrade/observability": "workspace:*",
         "@ewatrade/onboarding": "workspace:*",
         "@ewatrade/order-receipts": "workspace:*",
@@ -180,6 +183,7 @@
         "@ewatrade/api": "workspace:*",
         "@ewatrade/assistant": "workspace:*",
         "@ewatrade/catalog": "workspace:*",
+        "@ewatrade/customer-messages": "workspace:*",
         "@ewatrade/errors": "workspace:*",
         "@ewatrade/events": "workspace:*",
         "@ewatrade/observability": "workspace:*",
@@ -448,11 +452,26 @@
         "typescript": "catalog:",
       },
     },
+    "packages/customer-messages": {
+      "name": "@ewatrade/customer-messages",
+      "version": "1.0.0",
+      "dependencies": {
+        "libphonenumber-js": "^1.13.15",
+        "zod": "catalog:",
+      },
+      "devDependencies": {
+        "@ewatrade/tsconfig": "workspace:*",
+        "@types/bun": "latest",
+        "typescript": "catalog:",
+      },
+    },
     "packages/db": {
       "name": "@ewatrade/db",
       "version": "1.0.0",
       "dependencies": {
         "@ewatrade/catalog": "workspace:*",
+        "@ewatrade/customer-messages": "workspace:*",
+        "@ewatrade/notifications": "workspace:*",
         "@ewatrade/order-receipts": "workspace:*",
         "@ewatrade/prescriptions": "workspace:*",
         "@ewatrade/service-commerce": "workspace:*",
@@ -1194,6 +1213,8 @@
     "@ewatrade/catalog": ["@ewatrade/catalog@workspace:packages/catalog"],
 
     "@ewatrade/communications": ["@ewatrade/communications@workspace:packages/communications"],
+
+    "@ewatrade/customer-messages": ["@ewatrade/customer-messages@workspace:packages/customer-messages"],
 
     "@ewatrade/dashboard": ["@ewatrade/dashboard@workspace:apps/dashboard"],
 

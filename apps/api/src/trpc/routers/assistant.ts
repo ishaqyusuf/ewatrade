@@ -1,4 +1,5 @@
 import { capabilityForAction } from "@ewatrade/assistant/capabilities/manifest"
+import { simpleSaleAction } from "@ewatrade/assistant/general/contracts"
 import {
   generalActionSchema,
   generalActionSummary,
@@ -14,25 +15,70 @@ import {
 } from "@ewatrade/db/assistant-general"
 import { TRPCError } from "@trpc/server"
 import { z } from "zod"
-import { projectGeneralProposalHistory } from "../../assistant/general-proposal-history"
 import { readGeneralAllowance } from "../../assistant/general-allowance"
 import { generalAssistantAvailability } from "../../assistant/general-availability"
-import { assistantMediaAvailability } from "../../assistant/media-availability"
+import { assertGeneralAction } from "../../assistant/general-context"
 import {
   requireGeneralScope,
   supportsGeneralCapability,
 } from "../../assistant/general-context"
+import { projectGeneralProposalHistory } from "../../assistant/general-proposal-history"
 import {
   decideGeneralProposal,
   editGeneralProposal,
   generalProposalWithReview,
 } from "../../assistant/general-proposals"
+import { simpleExpenseOptions } from "../../assistant/general-simple-expense"
+import { simpleSaleOptions } from "../../assistant/general-simple-sale"
+import { simpleTransferOptions } from "../../assistant/general-simple-transfer"
+import { assistantMediaAvailability } from "../../assistant/media-availability"
 import { createTRPCRouter, protectedProcedure } from "../init"
 const id = z.string().min(1).max(128)
 export const assistantRouter = createTRPCRouter({
+  simpleTransferOptions: protectedProcedure
+    .input(z.object({}).strict())
+    .query(async ({ ctx }) => {
+      assertGeneralAction(ctx, "money_transfer_simple")
+      return simpleTransferOptions(ctx)
+    }),
+  simpleExpenseOptions: protectedProcedure
+    .input(z.object({}).strict())
+    .query(async ({ ctx }) => {
+      assertGeneralAction(ctx, "expense_record_simple")
+      return simpleExpenseOptions(ctx)
+    }),
+  saleOptions: protectedProcedure
+    .input(
+      z
+        .object({ customerName: z.string().trim().max(160).optional() })
+        .strict(),
+    )
+    .query(async ({ ctx, input }) => {
+      assertGeneralAction(ctx, "sale_record")
+      const options = await simpleSaleOptions(
+        ctx,
+        simpleSaleAction.parse({
+          action: "sale_record",
+          customerName: input.customerName || undefined,
+        }),
+      )
+      return {
+        accounts: options.accounts.filter(
+          (account) =>
+            !account.paused &&
+            account.paymentMethods.some(
+              (method) => method === "cash" || method === "bank_transfer",
+            ),
+        ),
+        customers: options.customers,
+      }
+    }),
   availability: protectedProcedure.query(({ ctx }) => {
     const media = assistantMediaAvailability(
       ctx.tenantContext.tenant.dataClassification,
+      process.env,
+      undefined,
+      true,
     )
     // Installed apps read mediaEnabled and offer photos with it.
     const availability = {

@@ -277,10 +277,35 @@ test.skipIf(process.platform !== "darwin")(
     )
     writeFileSync(
       path.join(receipts, "images.js"),
-      "import addon from './host.node'; export const native = addon;",
+      "export const native = () => import('@napi-rs/canvas');",
     )
     writeFileSync(path.join(receipts, "host.node"), "FAKE_HOST_ONLY_ADDON")
-    const entrySource = `import {ReceiptRenderError} from '@ewatrade/order-receipts';import {writeFileSync} from 'node:fs';writeFileSync(${JSON.stringify(executed)},'FAKE_EXECUTED');export const value=process.env.API_BUILD_FAKE_SECRET;export {ReceiptRenderError};export const images=()=>import('@ewatrade/order-receipts/images');`
+    const react = path.join(ctx.stage, "node_modules/react")
+    mkdirSync(react, { recursive: true })
+    writeFileSync(
+      path.join(react, "package.json"),
+      JSON.stringify({
+        name: "react",
+        type: "module",
+        exports: {
+          "./jsx-runtime": "./jsx.js",
+          "./jsx-dev-runtime": "./dev.js",
+        },
+      }),
+    )
+    writeFileSync(
+      path.join(react, "jsx.js"),
+      "export const jsx = (type, props) => ({type, props}); export const jsxs = jsx;",
+    )
+    writeFileSync(
+      path.join(react, "dev.js"),
+      "export const jsxDEV = process.env.NODE_ENV === 'production' ? undefined : (type, props) => ({type, props});",
+    )
+    writeFileSync(
+      path.join(source, "email.tsx"),
+      "export const email = () => <div>Verification receipt</div>;",
+    )
+    const entrySource = `export {email} from "./email";import {ReceiptRenderError} from '@ewatrade/order-receipts';import {writeFileSync} from 'node:fs';writeFileSync(${JSON.stringify(executed)},'FAKE_EXECUTED');export const value=process.env.API_BUILD_FAKE_SECRET;export {ReceiptRenderError};export const images=()=>import('@ewatrade/order-receipts/images');`
     writeFileSync(entryPath, entrySource)
     writeFileSync(outside, 'export default "FAKE_HOST_CONTENT";')
     writeFileSync(
@@ -312,9 +337,29 @@ test.skipIf(process.platform !== "darwin")(
       outsideDenied: true,
     })
     const bundle = readFileSync(outputPath, "utf8")
-    expect(bundle).toContain('from "@ewatrade/order-receipts"')
-    expect(bundle).toContain('import("@ewatrade/order-receipts/images")')
+    expect(bundle).not.toContain('from "@ewatrade/order-receipts"')
+    expect(bundle).toContain("ReceiptRenderError")
+    expect(bundle).not.toContain('import("@ewatrade/order-receipts/images")')
+    expect(bundle).toContain('import("@napi-rs/canvas")')
     expect(bundle).not.toContain("FAKE_HOST_ONLY_ADDON")
+    // A detached runtime has no receipt workspace installed. Its ordinary
+    // exports must still load; the native canvas import remains lazy.
+    const detached = path.join(ctx.home, "detached-receipts.js")
+    writeFileSync(detached, bundle)
+    const runtime = spawnSync(
+      ctx.bunBinary,
+      [
+        "--no-env-file",
+        "--eval",
+        `const module = await import(${JSON.stringify(detached)}); if (typeof module.ReceiptRenderError !== 'function') process.exit(13); if (module.email().props.children !== 'Verification receipt') process.exit(14);`,
+      ],
+      {
+        cwd: ctx.home,
+        env: { ...ctx.environment, NODE_ENV: "production" },
+        encoding: "utf8",
+      },
+    )
+    expect(runtime.status).toBe(0)
   },
 )
 

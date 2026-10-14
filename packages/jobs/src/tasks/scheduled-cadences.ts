@@ -7,6 +7,7 @@ import { pendingProductAnalyticsEvents } from "@ewatrade/db/product-analytics"
 import {
   isWebsiteDomainsLaunchApproved,
   purgeExpiredAccountPrivacyVerification,
+  purgeExpiredPhoneOtpChallenges,
 } from "@ewatrade/db/queries"
 import { idempotencyKeys, logger, schedules } from "@trigger.dev/sdk/v3"
 import { isCommercialOrderDigestWindow } from "../handlers/commercial-order-reminder-digest"
@@ -90,6 +91,9 @@ export const SCHEDULED_CADENCES = {
   "schedules.every-5-minutes": {
     cron: "*/5 * * * *",
     steps: [
+      sweep("auth.phone-otp-expiry", () =>
+        purgeExpiredPhoneOtpChallenges(prisma),
+      ),
       start(
         assistantAttachmentProcessRecovery,
         async () =>

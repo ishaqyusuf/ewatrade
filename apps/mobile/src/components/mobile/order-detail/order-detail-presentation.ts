@@ -14,6 +14,10 @@ export type OrderDetailContentProps = {
   onReceipt?: () => void
   onCall?: () => void
   onMessage?: () => void
+  /** WhatsApp action beside Call and Message: readiness, never "sent". */
+  whatsApp?: ReactNode
+  /** After a committed payment, refund or cancellation: tell the customer. */
+  messageFollowUp?: ReactNode
   /** Opens the Change sheet; absent while the order cannot load its options. */
   onChange?: () => void
   /** Ask AI about this order; absent when the business has no assistant. */

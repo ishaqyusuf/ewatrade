@@ -5,6 +5,7 @@
   "type": "module",
   "files": ["src", "generated", "prisma", "prisma.config.ts"],
   "exports": {
+    "./customer-messages": "./src/queries/customer-messages/index.ts",
     "./performance-tracing": "./src/performance-tracing.ts",
     "./onboarding-continuation": "./src/queries/onboarding-continuation.ts",
     "./subscription-plans": "./src/queries/retail-ops-subscription-plans.ts",
@@ -77,10 +78,12 @@
     "db:studio": "prisma studio"
   },
   "dependencies": {
+    "@ewatrade/customer-messages": "workspace:*",
     "@ewatrade/catalog": "workspace:*",
     "@ewatrade/prescriptions": "workspace:*",
     "@ewatrade/service-commerce": "workspace:*",
     "@ewatrade/utils": "workspace:*",
+    "@ewatrade/notifications": "workspace:*",
     "@prisma/adapter-pg": "7.6.0",
     "@prisma/client": "7.6.0",
     "pg": "^8.16.3",

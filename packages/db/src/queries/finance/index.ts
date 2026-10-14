@@ -7,7 +7,9 @@ export { listFinanceExpenseCategories } from "./expense-category-reads"
 export { listFinanceMoneyAccounts } from "./money-account-reads"
 export {
   createFinanceBook,
+  createFinanceBookInTransaction,
   createFinanceMoneyAccount,
+  createFinanceMoneyAccountInTransaction,
   getFinanceBook,
   updateFinanceMoneyAccountPayments,
 } from "./accounts"
@@ -36,7 +38,7 @@ export {
   getFinanceCommandStatus,
   listFinanceJournal,
 } from "./reads"
-export { FinanceError } from "./rules"
+export { FinanceError, assertFinancePostingDate } from "./rules"
 export { createFinanceExpenseCategory } from "./accounts"
 export {
   recordFinanceExpense,

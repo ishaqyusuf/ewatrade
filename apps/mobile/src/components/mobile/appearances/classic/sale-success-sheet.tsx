@@ -1,6 +1,8 @@
 import { ActionButton } from "@/components/mobile/action-button"
 import { BrandMark } from "@/components/mobile/brand"
 import { commercialOrderHref } from "@/components/mobile/commerce/commerce-model"
+import { whatsAppActionHint } from "@/components/mobile/customer-messages/message-model"
+import { useOrderMessageAction } from "@/components/mobile/customer-messages/use-order-message"
 import { Icon } from "@/components/ui/icon"
 import { Pressable } from "@/components/ui/pressable"
 import { useColorScheme } from "@/hooks/use-color"
@@ -251,6 +253,9 @@ export function ClassicSaleSuccessSheet({
               {queued ? "Sync status" : "View order"}
             </NativeText>
           </Pressable>
+          {!queued && params.orderId ? (
+            <WhatsAppPill orderId={params.orderId} />
+          ) : null}
         </View>
         <Pressable
           accessibilityLabel="Go to home"
@@ -265,6 +270,42 @@ export function ClassicSaleSuccessSheet({
         </Pressable>
       </Animated.View>
     </View>
+  )
+}
+
+/**
+ * Tell the customer: only for a recorded Order (never a queued sale). The
+ * server hides it without a phone; bright icon means wording is ready.
+ */
+function WhatsAppPill({ orderId }: { orderId: string }) {
+  const { colorScheme } = useColorScheme()
+  const palette = GREEN_TILL_THEME[colorScheme]
+  const fg = palette.heroForeground
+  const action = useOrderMessageAction({
+    target: { orderId, eventKey: "order.recorded" },
+    hasPhone: true,
+  })
+  if (action.state.kind === "hidden") return null
+  const ready = action.state.kind === "ready"
+  return (
+    <Pressable
+      accessibilityLabel={`WhatsApp: ${whatsAppActionHint(action.state)}`}
+      accessibilityRole="button"
+      accessibilityState={{ disabled: action.state.kind === "loading" }}
+      disabled={action.state.kind === "loading"}
+      haptic
+      onPress={action.state.kind === "error" ? action.retry : action.open}
+      style={[styles.ghost, { backgroundColor: palette.heroChip }]}
+    >
+      <Icon
+        className="size-[17px]"
+        color={ready ? palette.heroUp : palette.heroMuted}
+        name="WhatsApp"
+      />
+      <NativeText style={[styles.ghostLabel, { color: fg }]}>
+        WhatsApp
+      </NativeText>
+    </Pressable>
   )
 }
 

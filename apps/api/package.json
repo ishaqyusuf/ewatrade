@@ -16,6 +16,7 @@
     "./trpc/routers/_app": "./src/trpc/routers/_app.ts"
   },
   "dependencies": {
+    "@ewatrade/customer-messages": "workspace:*",
     "@ai-sdk/deepseek": "2.0.26",
     "@ai-sdk/openai": "3.0.48",
     "@apple/app-store-server-library": "^3.1.0",

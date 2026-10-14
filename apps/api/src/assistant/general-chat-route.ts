@@ -1,3 +1,4 @@
+import { isPlainAccountBalanceRequest } from "@ewatrade/assistant/general/contracts"
 import {
   type GeneralDataParts,
   generalStoredPartSchema,
@@ -7,6 +8,7 @@ import {
   generalInstructions,
   generalLocalNow,
 } from "@ewatrade/assistant/general/prompt"
+import { SETUP_ATTACHMENT_PART } from "@ewatrade/assistant/setup/attachments"
 import {
   type AssistantStoredMessage,
   beginAssistantRunInTransaction,
@@ -24,7 +26,6 @@ import {
   readGeneralConversation,
   readGeneralRun,
 } from "@ewatrade/db/assistant-general"
-import { SETUP_ATTACHMENT_PART } from "@ewatrade/assistant/setup/attachments"
 import type { OpenAPIHono } from "@hono/zod-openapi"
 import { TRPCError } from "@trpc/server"
 import { getHTTPStatusCodeFromError } from "@trpc/server/http"
@@ -54,12 +55,24 @@ import {
 import { streamGeneralReply } from "./general-announced-action"
 import { requireGeneralScope } from "./general-context"
 import { generalPersistentParts } from "./general-persistence"
+import { handleSimpleExpenseChat } from "./general-simple-expense-chat"
+import { handleSimpleMoneyInChat } from "./general-simple-money-in-chat"
+import { handleSimpleSaleChat } from "./general-simple-sale-chat"
+import { handleSimpleTransferChat } from "./general-simple-transfer-chat"
 import { createGeneralTools } from "./general-tools"
 export type GeneralUIMessage = UIMessage<never, GeneralDataParts>
 const requestSchema = z
   .object({
     conversationId: z.string().min(1).max(128),
     requestId: z.string().min(8).max(120),
+    saleChoice: z
+      .object({
+        proposalId: z.string().min(1).max(128),
+        revision: z.number().int().positive(),
+        text: z.string().min(1).max(300),
+      })
+      .strict()
+      .optional(),
     message: z
       .object({
         id: z.string().min(1).max(80),
@@ -180,7 +193,7 @@ export function registerGeneralAssistantChatRoutes(app: OpenAPIHono) {
           409,
           refusal,
           refusal === "ATTACHMENT_NOT_READY"
-            ? "Wait until every file has been read, then send again."
+            ? "Wait until every file has finished uploading, then send again."
             : "One of these files is not available. Attach it again.",
         )
       const begun = await ctx.db.$transaction(async (tx) => {
@@ -259,6 +272,7 @@ export function registerGeneralAssistantChatRoutes(app: OpenAPIHono) {
       const readable = withAttachmentText(
         stored as unknown as Parameters<typeof withAttachmentText>[0],
         sentAttachments,
+        { attachmentOnlyImages: true },
       ) as unknown as typeof stored
       const history: GeneralUIMessage[] = readable.flatMap((message) => {
         const parsed = savedMessageSchema.safeParse({
@@ -301,6 +315,105 @@ export function registerGeneralAssistantChatRoutes(app: OpenAPIHono) {
             },
             transient: true,
           })
+          const tools = createGeneralTools(
+            ctx,
+            conversation.id,
+            (proposalId) =>
+              writer.write({
+                type: "data-general-proposal",
+                data: { proposalId },
+                transient: true,
+              }),
+            (answer) =>
+              writer.write({ type: "data-general-answer", data: answer }),
+          )
+          const balanceRead = tools.readMoneyAccountBalances
+          if (
+            !body.saleChoice &&
+            !attachments.length &&
+            isPlainAccountBalanceRequest(
+              textParts.map((part) => part.text).join("\n"),
+            ) &&
+            balanceRead?.execute
+          ) {
+            // Reuse the gated tool and its fresh authority checks, not a second balance reader.
+            const result = await balanceRead.execute(
+              {},
+              { toolCallId: `balance_${begun.run.id}`, messages: [] },
+            )
+            const available =
+              result &&
+              typeof result === "object" &&
+              "status" in result &&
+              result.status === "available"
+            writer.write({ type: "text-start", id: "balance-reply" })
+            writer.write({
+              type: "text-delta",
+              id: "balance-reply",
+              delta: available
+                ? "Here are your recorded balances."
+                : "Account balances are unavailable for your current access or setup.",
+            })
+            writer.write({ type: "text-end", id: "balance-reply" })
+            return
+          }
+          const saleReply =
+            (await handleSimpleTransferChat(ctx, {
+              conversationId: conversation.id,
+              messageId: body.message.id,
+              text: textParts.map((part) => part.text).join("\n"),
+              choice: body.saleChoice,
+              imageIds: attachments
+                .filter((file) => file.kind === "IMAGE")
+                .map((file) => file.id),
+              history: stored,
+            })) ??
+            (await handleSimpleExpenseChat(ctx, {
+              conversationId: conversation.id,
+              messageId: body.message.id,
+              text: textParts.map((part) => part.text).join("\n"),
+              choice: body.saleChoice,
+              imageIds: attachments
+                .filter((file) => file.kind === "IMAGE")
+                .map((file) => file.id),
+              history: stored,
+            })) ??
+            (await handleSimpleMoneyInChat(ctx, {
+              conversationId: conversation.id,
+              messageId: body.message.id,
+              text: textParts.map((part) => part.text).join("\n"),
+              choice: body.saleChoice,
+              imageIds: attachments
+                .filter((file) => file.kind === "IMAGE")
+                .map((file) => file.id),
+              history: stored,
+            })) ??
+            (await handleSimpleSaleChat(ctx, {
+              conversationId: conversation.id,
+              messageId: body.message.id,
+              text: textParts.map((part) => part.text).join("\n"),
+              choice: body.saleChoice,
+              imageIds: attachments
+                .filter((file) => file.kind === "IMAGE")
+                .map((file) => file.id),
+              history: stored,
+            }))
+          if (saleReply) {
+            if (saleReply.proposalId)
+              writer.write({
+                type: "data-general-proposal",
+                data: { proposalId: saleReply.proposalId },
+                transient: true,
+              })
+            writer.write({ type: "text-start", id: "sale-reply" })
+            writer.write({
+              type: "text-delta",
+              id: "sale-reply",
+              delta: saleReply.text,
+            })
+            writer.write({ type: "text-end", id: "sale-reply" })
+            return
+          }
           const agent = new ToolLoopAgent({
             model: model.model,
             instructions: generalInstructions({
@@ -314,18 +427,7 @@ export function registerGeneralAssistantChatRoutes(app: OpenAPIHono) {
                 ctx.tenantContext.tenant.timezone ?? "Africa/Lagos",
               ),
             }),
-            tools: createGeneralTools(
-              ctx,
-              conversation.id,
-              (proposalId) =>
-                writer.write({
-                  type: "data-general-proposal",
-                  data: { proposalId },
-                  transient: true,
-                }),
-              (answer) =>
-                writer.write({ type: "data-general-answer", data: answer }),
-            ),
+            tools,
             stopWhen: stepCountIs(6),
             maxOutputTokens: 2000,
             maxRetries: 1,

@@ -1,5 +1,9 @@
 import { randomUUID } from "node:crypto"
 import { capabilityForAction } from "@ewatrade/assistant/capabilities/manifest"
+import { simpleExpenseStep } from "@ewatrade/assistant/general/contracts"
+import { simpleMoneyInStep } from "@ewatrade/assistant/general/contracts"
+import { simpleTransferStep } from "@ewatrade/assistant/general/contracts"
+import { simpleSaleStep } from "@ewatrade/assistant/general/contracts"
 import {
   type GeneralAction,
   type GeneralProposal,
@@ -34,6 +38,10 @@ import {
 } from "./general-context"
 import { currentGeneralReceipt } from "./general-legacy-receipt"
 import { generalCapabilityEnabled } from "./general-rollout"
+import { validateExpenseAttachmentConversation } from "./general-simple-expense"
+import { validateMoneyInAttachmentConversation } from "./general-simple-money-in"
+import { validateSaleAttachmentConversation } from "./general-simple-sale"
+import { validateTransferAttachmentConversation } from "./general-simple-transfer"
 import {
   isProposalApprovalValid,
   proposalApprovalToken,
@@ -49,7 +57,17 @@ export function generalProposalForApp(
 ): GeneralProposal {
   const payload = generalActionSchema.parse(row.payload)
   const pending = row.status === "PENDING" && row.expiresAt > new Date()
-  const token = pending ? proposalApprovalToken(row, signingKey()) : undefined
+  const ready =
+    payload.action === "money_transfer_simple"
+      ? simpleTransferStep(payload) === "review"
+      : payload.action === "expense_record_simple"
+        ? simpleExpenseStep(payload) === "review"
+        : payload.action === "money_in_record"
+          ? simpleMoneyInStep(payload) === "review"
+          : payload.action !== "sale_record" ||
+            simpleSaleStep(payload) === "review"
+  const token =
+    pending && ready ? proposalApprovalToken(row, signingKey()) : undefined
   return {
     id: row.id,
     revision: row.revision,
@@ -168,6 +186,26 @@ export async function draftGeneralProposal(
   return inFreshGeneralTransaction(ctx, async (fresh) => {
     const scope = assertGeneralAction(fresh, parsed.action)
     const payload = await prepareDraft(fresh, parsed)
+    if (payload.action === "expense_record_simple")
+      await validateExpenseAttachmentConversation(
+        fresh,
+        payload,
+        conversationId,
+      )
+    if (payload.action === "money_transfer_simple")
+      await validateTransferAttachmentConversation(
+        fresh,
+        payload,
+        conversationId,
+      )
+    if (payload.action === "money_in_record")
+      await validateMoneyInAttachmentConversation(
+        fresh,
+        payload,
+        conversationId,
+      )
+    if (payload.action === "sale_record")
+      await validateSaleAttachmentConversation(fresh, payload, conversationId)
     if (!(await readGeneralConversation(fresh.db, scope, conversationId)))
       throw new TRPCError({
         code: "NOT_FOUND",
@@ -321,6 +359,30 @@ export async function editGeneralProposal(
     )
       throw conflict("Draft changed. Refresh before editing.")
     const payload = await prepareDraft(fresh, input.payload)
+    if (payload.action === "expense_record_simple")
+      await validateExpenseAttachmentConversation(
+        fresh,
+        payload,
+        row.conversationId,
+      )
+    if (payload.action === "money_transfer_simple")
+      await validateTransferAttachmentConversation(
+        fresh,
+        payload,
+        row.conversationId,
+      )
+    if (payload.action === "money_in_record")
+      await validateMoneyInAttachmentConversation(
+        fresh,
+        payload,
+        row.conversationId,
+      )
+    if (payload.action === "sale_record")
+      await validateSaleAttachmentConversation(
+        fresh,
+        payload,
+        row.conversationId,
+      )
     const target = await validateDraft(fresh, payload)
     const binding = {
       ...row,
@@ -394,14 +456,14 @@ export async function generalProposalWithReview(
   }
   if (proposal.status !== "PENDING") return proposal
   try {
-    const { lines, target, presentation } = await adapter.review(
-      ctx,
-      proposal.payload,
-    )
+    const { lines, target, presentation, question, choices } =
+      await adapter.review(ctx, proposal.payload)
     return sameTarget(target, row)
       ? {
           ...proposal,
           review: lines,
+          ...(question ? { question } : {}),
+          ...(choices ? { choices } : {}),
           ...(presentation ? { presentation } : {}),
         }
       : { ...proposal, approvalToken: undefined, review: [adapter.stale] }

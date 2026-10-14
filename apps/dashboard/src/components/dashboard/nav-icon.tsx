@@ -1,5 +1,6 @@
 import type { DashboardNavItem } from "@/lib/navigation"
 import {
+  Activity01Icon,
   Analytics01Icon,
   Archive01Icon,
   BubbleChatIcon,
@@ -14,6 +15,7 @@ import {
 import { HugeiconsIcon } from "@hugeicons/react"
 
 const NAV_ICONS = {
+  activity: Activity01Icon,
   assistant: SparklesIcon,
   analytics: Analytics01Icon,
   customers: UserCircle02Icon,

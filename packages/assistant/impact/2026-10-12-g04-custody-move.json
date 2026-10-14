@@ -1,0 +1,77 @@
+{
+  "version": 1,
+  "id": "2026-10-12-g04-custody-move",
+  "tickets": ["G04"],
+  "summary": "Adds the planned dashboard capability inventory.custody.move (action stock_custody_move): a signed, reviewed custody move that only assigns current-Store stock from Store custody to a currently eligible staff member (canonical service-assignee rule) or returns a staff member's stock to the same Store. Review binds exact Product/variant/unit, source custody and revision, and the target balance as absent (pinned at revision 0 at confirmation) or present at its revision. Quantity is limited to on hand minus reserved. Confirmation locks the Store and the sorted source/target rows, then calls the extracted canonical moveInventoryCustodyInTransaction; the native wrapper is unchanged.",
+  "capabilities": [
+    {
+      "id": "inventory.custody.move",
+      "change": "added",
+      "rollout": "planned",
+      "note": "Owner/Admin/Manager with current inventory access to the active Store (scoped staff need a stock-capable Store assignment). Dashboard only; mobile parity and session/transit/staff-to-staff custody are not included."
+    }
+  ],
+  "procedures": [
+    {
+      "path": "inventory.moveCustody",
+      "status": "supported",
+      "reason": "Canonical custody move used by inventory.custody.move through the extracted in-transaction seam."
+    }
+  ],
+  "docs": [
+    {
+      "topic": "feature",
+      "path": ".brain/features/assistant-business-operations.md",
+      "status": "local_only",
+      "note": "G04 packet 2a source checkpoint."
+    },
+    {
+      "topic": "capability",
+      "path": "packages/assistant/src/capabilities/COVERAGE.md",
+      "status": "updated"
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "test",
+      "path": "apps/api/src/assistant/general-stock-custody.test.ts",
+      "executed": true,
+      "result": "10 pass, 55 assertions (12 Oct 2026, uncommitted source; includes real central assertGeneralActionAuthority checks; canonical command and lock helper stood in)."
+    },
+    {
+      "kind": "test",
+      "path": "apps/dashboard/src/components/general-assistant/general-stock-custody-editor.test.tsx",
+      "executed": true,
+      "result": "10 pass: static-render choices/save gating plus real tRPC options proxy + client with a local link and QueryObservers (pending close/reopen across revocation aborted and re-read; open-editor staff change; cached context refetching). Source/unit evidence, not browser acceptance."
+    },
+    {
+      "kind": "test",
+      "path": "packages/assistant/src/general/stock-custody.test.ts",
+      "executed": true,
+      "result": "Within packages/assistant/src: 234 pass."
+    },
+    {
+      "kind": "test",
+      "path": "packages/db/src/queries/inventory-remaining-coordination.test.ts",
+      "executed": true,
+      "result": "With the closeout finalization/review tests: 40 pass after the seam extraction (native moveInventoryCustody wrapper path)."
+    },
+    {
+      "kind": "fixture",
+      "path": "apps/api/src/assistant/general-stock-custody.integration-check.ts",
+      "executed": false,
+      "result": "Signed rollback verifier authored; UNRUN until separately reviewed and scheduled on the guarded QA target."
+    },
+    {
+      "kind": "review",
+      "path": "packages/assistant/evaluations/runs/2026-10-12-g04-custody-move.md",
+      "executed": false
+    },
+    {
+      "kind": "test",
+      "path": "apps/api/src/assistant/general-stock-custody-runner-tools.test.ts",
+      "executed": true,
+      "result": "27 pass offline: savepoint/mutex/nested/injected failure, rollout restore, deadlines, strict args, effective-driver target, PG env drop, exact-shape plan reader, bounded audit with separate cleanup status, active whole-run cancellation and backstop wiring, sequenced UNRUN reporting."
+    }
+  ]
+}

@@ -1,0 +1,162 @@
+{
+  "version": 1,
+  "id": "2026-10-14-business-activity-notifications",
+  "tickets": ["S05"],
+  "summary": "Adds the local immutable Activity/outbox/receipt foundation and Development-only Activity and personal notification/configuration routers. Core scoped reads and disabled delivery controls are checked; canonical producer/privacy integration, enabled fanout and real UI acceptance remain pending. Future email unavailable.",
+  "noAssistantImpact": "No assistant tool or capability rollout is activated. Canonical Activity/inbox reads are classified planned; personal receipt/preferences and Owner/Admin policy assignments stay form-only pending dedicated confirmed adapters. Existing S05 acceptance and all earlier capability counts remain unchanged.",
+  "capabilities": [],
+  "procedures": [
+    {
+      "path": "activity.listPage",
+      "status": "planned",
+      "reason": "Canonical scoped unified Activity read; future assistant adapter, Development source only."
+    },
+    {
+      "path": "activity.get",
+      "status": "planned",
+      "reason": "Fresh authorized safe event detail; no arbitrary JSON or GENERAL tool yet."
+    },
+    {
+      "path": "activity.filters",
+      "status": "planned",
+      "reason": "Actor choices come only from permitted events; no whole-directory grant."
+    },
+    {
+      "path": "businessNotifications.listMine",
+      "status": "planned",
+      "reason": "Own inbox may later be read through a bounded assistant adapter; delivery allowlist currently empty."
+    },
+    {
+      "path": "businessNotifications.unreadCount",
+      "status": "planned",
+      "reason": "Own authorized count, no current assistant tool."
+    },
+    {
+      "path": "businessNotifications.myPreferences",
+      "status": "form_only",
+      "reason": "Personal preferences reviewed in own settings."
+    },
+    {
+      "path": "businessNotifications.updateMyPreferences",
+      "status": "form_only",
+      "reason": "No dedicated confirmed assistant preference command; cap intersection is server-owned."
+    },
+    {
+      "path": "businessNotifications.markRead",
+      "status": "form_only",
+      "reason": "Personal receipt state is direct inbox interaction."
+    },
+    {
+      "path": "businessNotifications.archive",
+      "status": "form_only",
+      "reason": "Personal inbox action, no Business event deletion."
+    },
+    {
+      "path": "businessNotifications.markAllRead",
+      "status": "form_only",
+      "reason": "Own displayed snapshot cutoff; no assistant bulk-state command."
+    },
+    {
+      "path": "businessNotifications.policy",
+      "status": "form_only",
+      "reason": "Current Owner/Admin configuration review."
+    },
+    {
+      "path": "businessNotifications.updatePolicy",
+      "status": "form_only",
+      "reason": "Explicit settings/revision review, no assistant admin policy writes."
+    },
+    {
+      "path": "businessNotifications.subscriptions",
+      "status": "form_only",
+      "reason": "Admin recipient settings, not ordinary staff inbox."
+    },
+    {
+      "path": "businessNotifications.updateSubscription",
+      "status": "form_only",
+      "reason": "Explicit bounded recipient assignments never grant domain permissions."
+    }
+  ],
+  "docs": [
+    {
+      "topic": "feature",
+      "path": ".brain/features/business-activity-notifications.md",
+      "status": "local_only"
+    },
+    {
+      "topic": "api",
+      "path": ".brain/api/contracts.md",
+      "status": "local_only"
+    },
+    {
+      "topic": "permissions",
+      "path": ".brain/api/permissions.md",
+      "status": "local_only"
+    },
+    {
+      "topic": "schema",
+      "path": ".brain/database/schema.md",
+      "status": "local_only"
+    },
+    {
+      "topic": "capability",
+      "path": "packages/assistant/src/capabilities/COVERAGE.md",
+      "status": "updated"
+    },
+    {
+      "topic": "decision",
+      "path": ".brain/decisions/2026-10-14-business-activity-event-notification-separation.md",
+      "status": "local_only"
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "test",
+      "path": "packages/db/src/queries/business-activity/record.integration.test.ts",
+      "executed": true,
+      "result": "Guarded Development6tests115assertions, forced rollback and exact planned fixture absence; no canonical producer/concurrent-source acceptance."
+    },
+    {
+      "kind": "test",
+      "path": "apps/api/src/utils/business-notification-access.test.ts",
+      "executed": true,
+      "result": "Exact Activity/self-notification plus existing middleware11tests64assertions pass."
+    },
+    {
+      "kind": "test",
+      "path": "packages/db/src/queries/business-notifications/fanout.test.ts",
+      "executed": true,
+      "result": "Unreleased fanout1test6assertions: no database connection, outbox consumption or channel support. Enabled fanout SQL unrun."
+    },
+    {
+      "kind": "test",
+      "path": "apps/dashboard/src/hooks/use-activity-filter-params.test.ts",
+      "executed": true,
+      "result": "Independent scoped UI20tests52assertions pass. Runtime now serves routers per peer browser report; independent data acceptance pending stalled IAB navigation and fresh UI freeze."
+    },
+    {
+      "kind": "test",
+      "path": "apps/api/src/trpc/business-activity-availability.test.ts",
+      "executed": true,
+      "result": "Profile gate4tests31assertions pass:20 refused pairs and four explicit local/dev pairs (NODE_ENV unset/development). Standard Bun launcher supported; no Codex API restart. Independent authenticated browser acceptance still open."
+    },
+    {
+      "kind": "test",
+      "path": "packages/notifications/src/business-events/contracts.test.ts",
+      "executed": true,
+      "result": "Forward pagination metadata regression reproduced before fix; contracts plus registry11tests79assertions pass after fix. Unknown authority fields and backward paging refused."
+    },
+    {
+      "kind": "test",
+      "path": "packages/notifications/src/business-events/registry.test.ts",
+      "executed": true,
+      "result": "Payment/refund presentation regression reproduced, fixed with exact negative refunds/readable methods and immutable payload; contracts/registry/legacy/record units19tests143assertions pass. Connected signed-refund/browser acceptance remains open."
+    },
+    {
+      "kind": "test",
+      "path": "packages/db/src/queries/business-activity/record.integration.test.ts",
+      "executed": true,
+      "result": "Fresh guarded Development legacy-only1test25assertions passes after signed-refund repair; exact ewatrade_qa_v1, forced rollback and exact fixture absence. Shared HTTP500/runtime recovery unproven; broader tests not rerun."
+    }
+  ]
+}

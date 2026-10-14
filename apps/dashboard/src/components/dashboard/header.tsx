@@ -4,7 +4,9 @@ import { DashboardCommandSearch } from "@/components/dashboard/command-search"
 import { MobileMenu } from "@/components/dashboard/mobile-menu"
 import { UserMenu } from "@/components/dashboard/user-menu"
 import { WorkspaceDropdown } from "@/components/dashboard/workspace-dropdown"
+import { BusinessNotificationCenter } from "@/components/notification-center/business-notification-center"
 import { type DashboardNavItem, getDashboardRoleLabel } from "@/lib/navigation"
+import { canUseSalesOperations } from "@/lib/sales-operations"
 import type { SessionUser } from "@/lib/session"
 import type { TenantContext } from "@/lib/tenant"
 
@@ -32,6 +34,19 @@ export function DashboardHeader({ commandPaths, ctx, navItems, user }: Props) {
           <div className="hidden max-w-64 md:block">
             <WorkspaceDropdown ctx={ctx} selection="store" isExpanded />
           </div>
+        ) : null}
+        {canUseSalesOperations(ctx.membership.role) ? (
+          // Keyed so no count or alert from an earlier user, Business or
+          // Store can render after a switch.
+          <BusinessNotificationCenter
+            key={JSON.stringify([
+              user.id,
+              ctx.tenant.id,
+              ctx.activeStore?.id ?? null,
+            ])}
+            timeZone={ctx.tenant.timezone}
+            viewerMembershipId={ctx.membership.id}
+          />
         ) : null}
         <UserMenu
           placement="header"

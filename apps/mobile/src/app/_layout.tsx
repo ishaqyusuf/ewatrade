@@ -32,6 +32,7 @@ import {
   isInvitedStaffProfile,
   isSalesRepRole,
 } from "@/lib/mobile-roles"
+import { nativeStackStatusBarStyle } from "@/lib/native-stack-status-bar"
 import { nativewindThemeVars } from "@/lib/nativewind-theme-vars"
 import { stackTransitions } from "@/lib/screen-transitions"
 import { NAV_THEME } from "@/lib/theme"
@@ -129,8 +130,9 @@ const InitialLayout = ({
       <Stack
         screenOptions={{
           ...transitions.push,
-          statusBarStyle:
+          ...nativeStackStatusBarStyle(
             startupVisible || colorScheme === "dark" ? "light" : "dark",
+          ),
           headerShadowVisible: false,
           headerStyle: {
             backgroundColor: navigationTheme.colors.background,
@@ -257,6 +259,10 @@ const InitialLayout = ({
             options={modalOptions}
           />
           <Stack.Screen name="change-approvals-modal" options={modalOptions} />
+          <Stack.Screen
+            name="whatsapp-messages-settings-modal"
+            options={modalOptions}
+          />
         </Stack.Protected>
         <Stack.Protected
           guard={isAuthenticated && !isInvitedStaff && isSalesRep}
@@ -267,6 +273,7 @@ const InitialLayout = ({
         <Stack.Protected guard={isAuthenticated && !isInvitedStaff}>
           <Stack.Screen name="business-switch-modal" options={modalOptions} />
           <Stack.Screen name="order-receipts-modal" options={modalOptions} />
+          <Stack.Screen name="customer-message-modal" options={modalOptions} />
           <Stack.Screen name="app-lock-modal" options={modalOptions} />
           <Stack.Screen name="updates" options={{ headerShown: false }} />
           <Stack.Screen name="create-sale-modal" options={modalOptions} />

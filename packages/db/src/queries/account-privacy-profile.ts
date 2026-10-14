@@ -1,5 +1,7 @@
 import { Prisma, type PrismaClient } from "../../generated/prisma/client"
 import { getAccountPrivacyAdditionalInventory } from "./account-privacy-additional-inventory"
+import { accountPrivacyCommercialRetentionIsConfirmed } from "./account-privacy-commercial-retention"
+import { accountPrivacyExternalReviewIsConfirmed } from "./account-privacy-external-policy"
 import { getAccountPrivacyProfileInventory } from "./account-privacy-profile-inventory"
 import {
   accountPrivacyProfileEvidence,
@@ -7,6 +9,7 @@ import {
   getApprovedAccountPrivacyProfilePolicy,
 } from "./account-privacy-profile-policy"
 import { assessAccountPrivacyProfilePrerequisites } from "./account-privacy-profile-prerequisites"
+import { accountPrivacyAdditionalScopeIsResolved } from "./account-privacy-record-scope"
 import { mobileOtpIdentifiersForEmail } from "./mobile-otp-identifier"
 import { runInOwnSerializableTransaction } from "./own-transaction"
 
@@ -57,6 +60,7 @@ export async function processAccountPrivacyProfile(
         status: true,
         user: { select: { email: true, emailVerified: true } },
         accessRevocation: { select: { status: true, userId: true } },
+        outcome: true,
         domainOutcomes: {
           select: {
             domain: true,
@@ -83,6 +87,28 @@ export async function processAccountPrivacyProfile(
       !request.contactEmail
     )
       throw new AccountPrivacyProfileError("NOT_READY")
+    const externalOutcome = request.domainOutcomes.find(
+      (row) => row.domain === "EXTERNAL_PROCESSORS",
+    )
+    if (externalOutcome?.processor === "account-privacy-external-review-v1") {
+      const recorded =
+        request.outcome &&
+        typeof request.outcome === "object" &&
+        !Array.isArray(request.outcome)
+          ? request.outcome.externalProcessorReview
+          : null
+      if (
+        !accountPrivacyExternalReviewIsConfirmed({
+          requestId: request.id,
+          subjectId,
+          verifiedAt: request.verifiedAt,
+          outcome: externalOutcome,
+          recorded,
+          now,
+        })
+      )
+        throw new AccountPrivacyProfileError("NOT_READY")
+    }
     const email = request.contactEmail.trim().toLowerCase()
     const inventory = await getAccountPrivacyProfileInventory(
       tx,
@@ -97,7 +123,30 @@ export async function processAccountPrivacyProfile(
       subjectId,
       email,
     )
-    if (Object.values(additional).some((count) => count > 0))
+    if (
+      !(await accountPrivacyAdditionalScopeIsResolved(tx, {
+        requestId: request.id,
+        subjectId,
+        inventory: additional,
+        now,
+      }))
+    )
+      throw new AccountPrivacyProfileError(
+        existing ? "CLAIM_CONFLICT" : "NOT_READY",
+      )
+    const commercial = request.domainOutcomes.find(
+      (row) => row.domain === "COMMERCIAL_RECORDS",
+    )
+    if (
+      commercial &&
+      !(await accountPrivacyCommercialRetentionIsConfirmed(tx, {
+        requestId: request.id,
+        subjectId,
+        contactEmail: request.contactEmail,
+        outcome: commercial,
+        now,
+      }))
+    )
       throw new AccountPrivacyProfileError(
         existing ? "CLAIM_CONFLICT" : "NOT_READY",
       )

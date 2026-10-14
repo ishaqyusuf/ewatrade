@@ -116,6 +116,7 @@ function fixture(
         "message",
         "automationEvent",
         "productAnalyticsEvent",
+        "retailOpsStaffProfile",
       ].map((model) => [
         model,
         { count: async () => (options.additional === model ? 1 : 0) },
@@ -294,6 +295,7 @@ test.each([
   { additional: "message" },
   { additional: "automationEvent" },
   { additional: "productAnalyticsEvent" },
+  { additional: "retailOpsStaffProfile" },
   { additional: "staffInvitationCommands" },
   { additional: "staffInvitationNotifications" },
   { additional: "staffInvitationAttempts" },

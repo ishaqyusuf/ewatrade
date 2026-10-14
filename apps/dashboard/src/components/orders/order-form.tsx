@@ -37,6 +37,7 @@ import { FormFeedback } from "@/components/forms/form-feedback"
 
 import { createOrderFixture } from "@/components/qa/fixture-recipes"
 import { QaDashboardQuickFill } from "@/components/qa/qa-quick-fill"
+import { useCustomerMessageParams } from "@/hooks/use-customer-message-params"
 import { useOrderParams } from "@/hooks/use-order-params"
 import { useTRPC } from "@/trpc/client"
 
@@ -87,6 +88,7 @@ export function OrderForm({
   const trpc = useTRPC()
   const queryClient = useQueryClient()
   const { setParams } = useOrderParams()
+  const { setParams: setMessage } = useCustomerMessageParams()
   const { data: items } = useSuspenseQuery(
     trpc.catalog.listItems.queryOptions({}, { retry: false }),
   )
@@ -135,7 +137,7 @@ export function OrderForm({
   const createMutation = useMutation(
     trpc.orders.create.mutationOptions({
       onError: (failure) => setError(failure.message),
-      onSuccess: async () => {
+      onSuccess: async (created) => {
         await Promise.all([
           queryClient.invalidateQueries({
             refetchType: "none",
@@ -167,6 +169,8 @@ export function OrderForm({
           }),
         ])
         setParams({ orderSheet: null })
+        // Offer, never open: the server decides which messages apply.
+        if (customerPhone.trim()) void setMessage({ messageOffer: created.id })
         router.refresh()
       },
     }),

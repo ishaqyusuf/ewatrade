@@ -16,6 +16,7 @@ import {
 import { canOperateInventory } from "./inventory-operations"
 
 export type DashboardNavIcon =
+  | "activity"
   | "assistant"
   | "analytics"
   | "customers"
@@ -206,6 +207,13 @@ const DASHBOARD_NAV: DashboardNavDefinition[] = [
     canAccess: canUseRetailOps,
   },
   {
+    description: "What happened in your Business",
+    href: "/activity",
+    icon: "activity",
+    label: "Activity",
+    canAccess: canUseRetailOps,
+  },
+  {
     description: "Staff invitations and role administration",
     href: "/staff",
     icon: "staff",
@@ -320,6 +328,13 @@ const DASHBOARD_NAV: DashboardNavDefinition[] = [
         canAccess: canManageTenantRole,
       },
       {
+        description: "Alert types and who gets them",
+        href: "/settings/notifications",
+        icon: "settings",
+        label: "Notifications",
+        canAccess: canManageTenantRole,
+      },
+      {
         description: "Order receipt defaults and Store overrides",
         href: "/settings/receipts",
         icon: "settings",
@@ -333,6 +348,13 @@ const DASHBOARD_NAV: DashboardNavDefinition[] = [
         href: "/settings/returns",
         icon: "settings",
         label: "Returns and refunds",
+        canAccess: canManageTenantRole,
+      },
+      {
+        description: "Saved wording staff send from WhatsApp",
+        href: "/settings/whatsapp-messages",
+        icon: "settings",
+        label: "WhatsApp messages",
         canAccess: canManageTenantRole,
       },
       {
@@ -423,6 +445,8 @@ function scopedPageAllowed(
   if (href.startsWith("/sales/orders/")) return true
   return [
     "/",
+    // Server reads re-derive each person's own Store/record scope.
+    "/activity",
     "/sales",
     "/customers",
     "/inventory",

@@ -1,5 +1,6 @@
 import "./shared-env"
 import "./instrument"
+import { createOfficePrivacyRoutes } from "./account-privacy/office-routes"
 import { appUpdateDependencies } from "./app-update/context"
 import { registerAppUpdateRoutes } from "./app-update/routes"
 import { oversightRoutes } from "./oversight/routes"
@@ -18,9 +19,7 @@ import { cors } from "hono/cors"
 import { HTTPException } from "hono/http-exception"
 import { secureHeaders } from "hono/secure-headers"
 import { registerAccountPrivacyResendWebhook } from "./account-privacy/resend-webhook"
-import { registerStaffInvitationResendWebhook } from "./staff/resend-webhook"
 import { registerAssistantAttachmentRoutes } from "./assistant/attachment-upload"
-import { registerOrderAttachmentRoutes } from "./orders/order-attachment-routes"
 import { registerAssistantChatRoutes } from "./assistant/chat-route"
 import { registerGeneralAssistantChatRoutes } from "./assistant/general-chat-route"
 import { registerVoiceGatewayRoutes } from "./assistant/voice-gateway"
@@ -39,6 +38,7 @@ import {
 } from "./finance/expense-receipt-delivery-context"
 import { registerFinanceExpenseReceiptUploadRoutes } from "./finance/expense-receipt-upload"
 import { captureApiError } from "./observability/sentry"
+import { registerOrderAttachmentRoutes } from "./orders/order-attachment-routes"
 import { registerPrescriptionMediaDeliveryRoutes } from "./prescriptions/media-delivery"
 import { registerPrescriptionPaystackWebhook } from "./prescriptions/paystack-webhook"
 import { isPrescriptionTrpcRoute } from "./prescriptions/trpc-launch-route"
@@ -46,6 +46,7 @@ import { registerSelfServiceStoreDetectionRoutes } from "./self-service/store-de
 import { registerStoreConversationAttachmentRoutes } from "./service-commerce/conversation-attachments-routes"
 import { registerServiceCommerceMediaDeliveryRoutes } from "./service-commerce/media-delivery"
 import { registerServiceCommerceMediaUploadRoutes } from "./service-commerce/media-upload"
+import { registerStaffInvitationResendWebhook } from "./staff/resend-webhook"
 import { createTRPCContext } from "./trpc/init"
 import { appRouter } from "./trpc/routers/_app"
 import { getRequestTrace } from "./utils/request-trace"
@@ -120,6 +121,10 @@ app.use(
 )
 
 app.route("/api/oversight/v1", oversightRoutes)
+app.route(
+  "/api/office/privacy",
+  createOfficePrivacyRoutes(() => prisma),
+)
 
 const debugPerf = process.env.DEBUG_PERF === "true"
 
@@ -144,7 +149,10 @@ app.use("/api/trpc/*", async (c, next) => {
     .split(",")
     .filter(Boolean)
 
-  if (procedures.includes("search.global")) {
+  if (
+    procedures.includes("search.global") ||
+    procedures.some((path) => path.startsWith("customerMessages."))
+  ) {
     c.header("Cache-Control", "private, no-store")
   }
 

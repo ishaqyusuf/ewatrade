@@ -128,6 +128,19 @@ const domainAccess: Record<CapabilityId, (tenant: TenantContext) => void> = {
   },
   "staff.directory.read": (tenant) =>
     assertCanManageSalesOperations(tenant.membership.role),
+  "staff.activity.read": (tenant) =>
+    assertCanManageSalesOperations(tenant.membership.role),
+  "settings.store.read": (tenant) =>
+    assertCanManageSalesOperations(tenant.membership.role),
+  // Settings procedures allow Owners and Admins; each section adds its plan.
+  "settings.store.change": (tenant) => {
+    const role = normalizeRole(tenant.membership.role)
+    if (role !== "OWNER" && role !== "ADMIN")
+      throw new TRPCError({
+        code: "FORBIDDEN",
+        message: "Only Owners and Admins can change Store settings.",
+      })
+  },
   "staff.member.read": (tenant) =>
     assertCanManageSalesOperations(tenant.membership.role),
   "finance.supplier.allocation.release": (tenant) =>
@@ -149,6 +162,8 @@ const domainAccess: Record<CapabilityId, (tenant: TenantContext) => void> = {
   "finance.supplier_statement.read": (tenant) => assertFinanceAccess(tenant),
   "finance.bill.read": (tenant) => assertFinanceAccess(tenant),
   "finance.expense_categories.read": (tenant) => assertFinanceAccess(tenant),
+  "finance.money_account_balances.read": (tenant) =>
+    assertFinanceAccess(tenant),
   "finance.money_accounts.read": (tenant) => assertFinanceAccess(tenant),
   "customers.account.read": (tenant) => assertFinanceAccess(tenant),
   "customers.sources.read": (tenant) => assertFinanceAccess(tenant),
@@ -161,6 +176,9 @@ const domainAccess: Record<CapabilityId, (tenant: TenantContext) => void> = {
   "finance.bill_payment.reverse": (tenant) => assertFinanceAccess(tenant),
   "finance.bill.pay": (tenant) => assertFinanceAccess(tenant),
   "finance.expense.record": (tenant) => assertFinanceAccess(tenant),
+  "finance.expense.record_simple": (tenant) => assertFinanceAccess(tenant),
+  "finance.money_in.record_simple": (tenant) => assertFinanceAccess(tenant),
+  "finance.transfer.record_simple": (tenant) => assertFinanceAccess(tenant),
   "finance.money_movement.record": (tenant) => assertFinanceAccess(tenant),
   "customers.entry.read": (tenant) => assertFinanceAccess(tenant),
   "customers.allocation_history.read": (tenant) => assertFinanceAccess(tenant),
@@ -211,6 +229,8 @@ const domainAccess: Record<CapabilityId, (tenant: TenantContext) => void> = {
   "inventory.transfer.dispatch": (tenant) => assertCanManageInventory(tenant),
   "inventory.transfer.receive": (tenant) => assertCanManageInventory(tenant),
   "inventory.transfer.cancel": (tenant) => assertCanManageInventory(tenant),
+  "inventory.custody.move": (tenant) => assertCanManageInventory(tenant),
+  "inventory.package.transform": (tenant) => assertCanManageInventory(tenant),
   "inventory.stock.adjust": (tenant) => assertCanManageInventory(tenant),
   "inventory.stock.correct": (tenant) => assertCanManageInventory(tenant),
   "inventory.stock.receive": (tenant) => assertCanManageInventory(tenant),
@@ -254,6 +274,11 @@ const domainAccess: Record<CapabilityId, (tenant: TenantContext) => void> = {
     assertServiceManager(tenant.membership.role),
   "services.queue.read": (tenant) =>
     assertServiceOperator(tenant.membership.role),
+  // Manual messages also refuse scoped Managers in the canonical command.
+  "services.message.share": (tenant) =>
+    assertServiceManager(tenant.membership.role),
+  "services.messages.read": (tenant) =>
+    assertServiceManager(tenant.membership.role),
   // Quote reads/decisions enforce native active Store/team and selected approver rules in the DB.
   "services.quote_approval.read": () => {},
   "services.quote_approvals.read": () => {},
@@ -271,9 +296,12 @@ const domainAccess: Record<CapabilityId, (tenant: TenantContext) => void> = {
   "catalog.units.draft": (tenant) => assertCanManageCatalog(tenant),
   "catalog.units.publish": (tenant) => assertCanManageCatalog(tenant),
   "catalog.availability.update": (tenant) => assertCanManageCatalog(tenant),
+  "catalog.archive": (tenant) => assertCanManageCatalog(tenant),
   "catalog.price.update": (tenant) => assertCanManageCatalog(tenant),
   "catalog.details.update": (tenant) => assertCanManageCatalog(tenant),
   "catalog.identifiers.update": (tenant) => assertCanManageCatalog(tenant),
+  "sales.order.record_simple": (tenant) =>
+    assertCanOperateOrders(tenant.membership.role),
   "sales.order.create": (tenant) =>
     assertCanOperateOrders(tenant.membership.role),
   "sales.payment.record": (tenant) =>

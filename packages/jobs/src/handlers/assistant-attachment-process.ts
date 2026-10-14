@@ -117,8 +117,16 @@ export function defaultAssistantAttachmentDeps(
           return null
         }
       }
+      const conversation =
+        row?.kind === "IMAGE"
+          ? await prisma.assistantConversation.findUnique({
+              where: { id: row.conversationId },
+              select: { purpose: true },
+            })
+          : null
       return row
         ? {
+            attachmentOnly: conversation?.purpose === "GENERAL",
             id: row.id,
             tenantId: row.tenantId,
             conversationId: row.conversationId,

@@ -122,3 +122,106 @@ test("only validated server answer cards survive saved history", () => {
     }),
   ).toBeNull()
 })
+
+test("activity answers open natively; each event opens only its exact object", async () => {
+  const { generalAnswerRoute, staffActivityRecordRoute } = await import(
+    "./general-model"
+  )
+  const target = {
+    kind: "staff_activity" as const,
+    filters: {
+      from: "2026-10-12T00:00:00+01:00",
+      to: "2026-10-13T00:00:00+01:00",
+    },
+    cursor: null,
+    limit: 1,
+    shown: [
+      {
+        stream: "PAYMENT" as const,
+        id: "p-1",
+        at: "2026-10-12T13:05:00.000Z",
+        summary: "Amina did: Payment recorded",
+        record: {
+          kind: "payment" as const,
+          id: "p-1",
+          orderId: "o-1",
+          label: "ORD-1042",
+        },
+      },
+    ],
+  }
+  expect(generalAnswerRoute(target)).toEqual({
+    pathname: "/staff-activity-modal",
+    params: { target: JSON.stringify(target) },
+  })
+  expect(generalAnswerRoute(undefined)).toBeNull()
+  // A payment opens its Order through the stored link, never by payment ID.
+  expect(
+    staffActivityRecordRoute({
+      kind: "payment",
+      id: "p-1",
+      orderId: "o-1",
+      label: "x",
+    }),
+  ).toEqual({ pathname: "/order/[orderId]", params: { orderId: "o-1" } })
+  expect(
+    staffActivityRecordRoute({
+      kind: "product",
+      id: "item-1",
+      offeringId: "off-1",
+      label: "x",
+    }),
+  ).toEqual({
+    pathname: "/catalog-item/[catalogItemId]",
+    params: { catalogItemId: "item-1" },
+  })
+  for (const record of [
+    { kind: "stock_operation" as const, id: "s-1", label: "x" },
+    { kind: "stock_count" as const, id: "c-1", label: "x" },
+    { kind: "service_job" as const, id: "j-1", orderId: "o-1", label: "x" },
+    { kind: "finance_entry" as const, id: "f-1", bookId: "b-1", label: "x" },
+  ])
+    expect(staffActivityRecordRoute(record)).toBeNull()
+})
+
+test("activity Opens stay in the event's own Store", async () => {
+  const { staffActivityOpen } = await import("./general-model")
+  const order = { kind: "order" as const, id: "o-1", label: "ORD-1" }
+  expect(
+    staffActivityOpen(
+      { record: order, store: { id: "store-b", name: "Garki" } },
+      "store-a",
+    ),
+  ).toEqual({ unavailable: "Switch to Garki to open." })
+  expect(
+    staffActivityOpen(
+      { record: order, store: { id: "store-a", name: "Wuse" } },
+      "store-a",
+    ),
+  ).toEqual({
+    route: { pathname: "/order/[orderId]", params: { orderId: "o-1" } },
+  })
+  expect(
+    staffActivityOpen(
+      {
+        record: { kind: "product", id: "i-1", offeringId: "f-1", label: "x" },
+        store: null,
+      },
+      "store-a",
+    ),
+  ).toEqual({
+    route: {
+      pathname: "/catalog-item/[catalogItemId]",
+      params: { catalogItemId: "i-1" },
+    },
+  })
+  expect(
+    staffActivityOpen(
+      {
+        record: { kind: "stock_count", id: "c-1", label: "x" },
+        store: { id: "store-a", name: "Wuse" },
+      },
+      "store-a",
+    ),
+  ).toEqual({ unavailable: "Open this record on the dashboard." })
+})

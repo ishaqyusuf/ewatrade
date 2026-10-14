@@ -18,9 +18,9 @@ import {
 import { CatalogError } from "./catalog"
 import { recordInventoryCloseoutFinanceInTransaction } from "./finance/posting"
 import { recordInventoryRelocationValuationInTransaction } from "./finance/valuation-relocations"
+import { previewInventoryCloseoutCreation } from "./inventory-closeout-review"
 import { lockInventoryFinancialStores } from "./inventory-finance-locks"
 import { planStockTransferTransition } from "./inventory-transfer-quantity"
-import { previewInventoryCloseoutCreation } from "./inventory-closeout-review"
 
 const TRANSACTION_OPTIONS = { maxWait: 10_000, timeout: 30_000 } as const
 
@@ -300,147 +300,158 @@ async function postCustodyMovement(
   return operation
 }
 
+export type MoveInventoryCustodyInput = {
+  actorUserId: string
+  clientOperationId: string
+  expectedSourceRevision: number
+  expectedTargetRevision?: number
+  quantity: string
+  reason: string
+  schemaVersion: 1
+  source: string
+  sourceBalanceSourceId: string
+  targetCustodyReferenceId: string
+  targetCustodyType: "session" | "staff" | "store"
+  tenantId: string
+}
+
 export async function moveInventoryCustody(
   db: PrismaClient,
-  input: {
-    actorUserId: string
-    clientOperationId: string
-    expectedSourceRevision: number
-    expectedTargetRevision?: number
-    quantity: string
-    reason: string
-    schemaVersion: 1
-    source: string
-    sourceBalanceSourceId: string
-    targetCustodyReferenceId: string
-    targetCustodyType: "session" | "staff" | "store"
-    tenantId: string
-  },
+  input: MoveInventoryCustodyInput,
+) {
+  return db.$transaction(
+    (tx) => moveInventoryCustodyInTransaction(tx, input),
+    TRANSACTION_OPTIONS,
+  )
+}
+
+/** Caller owns the transaction; same locks, checks and idempotency. */
+export async function moveInventoryCustodyInTransaction(
+  tx: Prisma.TransactionClient,
+  input: MoveInventoryCustodyInput,
 ) {
   const payloadHash = hash(input)
-  return db.$transaction(async (tx) => {
-    const sourceIdentity = await tx.stockBalanceSource.findFirst({
-      where: { id: input.sourceBalanceSourceId, tenantId: input.tenantId },
-      select: { id: true, storeId: true },
-    })
-    if (!sourceIdentity) {
-      throw new CatalogError(
-        "INVALID_STOCK_OPERATION",
-        "Balance Source not found for this business.",
-      )
-    }
-    await lockInventoryFinancialStores(tx, {
-      tenantId: input.tenantId,
-      storeIds: [sourceIdentity.storeId],
-    })
+  const sourceIdentity = await tx.stockBalanceSource.findFirst({
+    where: { id: input.sourceBalanceSourceId, tenantId: input.tenantId },
+    select: { id: true, storeId: true },
+  })
+  if (!sourceIdentity) {
+    throw new CatalogError(
+      "INVALID_STOCK_OPERATION",
+      "Balance Source not found for this business.",
+    )
+  }
+  await lockInventoryFinancialStores(tx, {
+    tenantId: input.tenantId,
+    storeIds: [sourceIdentity.storeId],
+  })
 
-    const previous = await tx.stockOperation.findUnique({
-      where: {
-        tenantId_clientOperationId: {
-          clientOperationId: input.clientOperationId,
-          tenantId: input.tenantId,
-        },
+  const previous = await tx.stockOperation.findUnique({
+    where: {
+      tenantId_clientOperationId: {
+        clientOperationId: input.clientOperationId,
+        tenantId: input.tenantId,
       },
-    })
-    if (previous) {
-      if (previous.payloadHash !== payloadHash) {
-        throw new CatalogError(
-          "IDEMPOTENCY_MISMATCH",
-          "This custody operation identity was already used with different input.",
-        )
-      }
-      return previous
-    }
-
-    let sourceBalance = await balance(tx, {
-      balanceSourceId: input.sourceBalanceSourceId,
-      storeId: sourceIdentity.storeId,
-      tenantId: input.tenantId,
-    })
-    assertRevision(sourceBalance.revision, input.expectedSourceRevision)
-    const targetType = custodyType(input.targetCustodyType)
-    const targetReference =
-      targetType === StockCustodyType.STORE
-        ? ""
-        : input.targetCustodyReferenceId.trim()
-    if (targetType !== StockCustodyType.STORE && !targetReference) {
+    },
+  })
+  if (previous) {
+    if (previous.payloadHash !== payloadHash) {
       throw new CatalogError(
-        "INVALID_STOCK_OPERATION",
-        "Staff or session custody requires a stable reference identity.",
+        "IDEMPOTENCY_MISMATCH",
+        "This custody operation identity was already used with different input.",
       )
     }
-    const target = await tx.stockBalanceSource.upsert({
-      create: {
+    return previous
+  }
+
+  let sourceBalance = await balance(tx, {
+    balanceSourceId: input.sourceBalanceSourceId,
+    storeId: sourceIdentity.storeId,
+    tenantId: input.tenantId,
+  })
+  assertRevision(sourceBalance.revision, input.expectedSourceRevision)
+  const targetType = custodyType(input.targetCustodyType)
+  const targetReference =
+    targetType === StockCustodyType.STORE
+      ? ""
+      : input.targetCustodyReferenceId.trim()
+  if (targetType !== StockCustodyType.STORE && !targetReference) {
+    throw new CatalogError(
+      "INVALID_STOCK_OPERATION",
+      "Staff or session custody requires a stable reference identity.",
+    )
+  }
+  const target = await tx.stockBalanceSource.upsert({
+    create: {
+      custodyReferenceId: targetReference,
+      custodyType: targetType,
+      inventoryUnitId: sourceBalance.inventoryUnitId,
+      kind: sourceBalance.kind,
+      parentBalanceSourceId:
+        sourceBalance.custodyType === StockCustodyType.STORE
+          ? sourceBalance.id
+          : sourceBalance.parentBalanceSourceId,
+      productId: sourceBalance.productId,
+      storeId: sourceBalance.storeId,
+      tenantId: input.tenantId,
+      variantId: sourceBalance.variantId,
+    },
+    update: {},
+    where: {
+      storeId_variantId_inventoryUnitId_custodyType_custodyReferenceId: {
         custodyReferenceId: targetReference,
         custodyType: targetType,
         inventoryUnitId: sourceBalance.inventoryUnitId,
-        kind: sourceBalance.kind,
-        parentBalanceSourceId:
-          sourceBalance.custodyType === StockCustodyType.STORE
-            ? sourceBalance.id
-            : sourceBalance.parentBalanceSourceId,
-        productId: sourceBalance.productId,
         storeId: sourceBalance.storeId,
-        tenantId: input.tenantId,
         variantId: sourceBalance.variantId,
       },
-      update: {},
-      where: {
-        storeId_variantId_inventoryUnitId_custodyType_custodyReferenceId: {
-          custodyReferenceId: targetReference,
-          custodyType: targetType,
-          inventoryUnitId: sourceBalance.inventoryUnitId,
-          storeId: sourceBalance.storeId,
-          variantId: sourceBalance.variantId,
-        },
-      },
-    })
-    await lockRelocationBalances(tx, input.tenantId, [
-      sourceBalance.id,
-      target.id,
-    ])
-    sourceBalance = await balance(tx, {
-      balanceSourceId: sourceBalance.id,
-      storeId: sourceIdentity.storeId,
-      tenantId: input.tenantId,
-    })
-    assertRevision(sourceBalance.revision, input.expectedSourceRevision)
-    const targetBalance = await balance(tx, {
-      balanceSourceId: target.id,
-      tenantId: input.tenantId,
-    })
-    if (
-      input.expectedTargetRevision !== undefined &&
-      targetBalance.revision !== input.expectedTargetRevision
-    ) {
-      throw new CatalogError(
-        "REVISION_CONFLICT",
-        "The target custody balance changed before confirmation.",
-      )
-    }
-    const isReturn =
-      sourceBalance.custodyType !== StockCustodyType.STORE &&
-      targetType === StockCustodyType.STORE
-    const operation = await postCustodyMovement(tx, {
-      actorUserId: input.actorUserId,
-      clientOperationId: input.clientOperationId,
-      payloadHash,
-      quantity: input.quantity,
-      reason: input.reason,
-      source: input.source,
-      sourceBalance,
-      targetBalance,
-      tenantId: input.tenantId,
-      type: isReturn ? "return" : "assignment",
-    })
-    await recordInventoryRelocationValuationInTransaction(tx, {
-      tenantId: input.tenantId,
-      stockOperationId: operation.id,
-      expectedSourceStockRevision: sourceBalance.revision + 1,
-      expectedTargetStockRevision: targetBalance.revision + 1,
-    })
-    return operation
-  }, TRANSACTION_OPTIONS)
+    },
+  })
+  await lockRelocationBalances(tx, input.tenantId, [
+    sourceBalance.id,
+    target.id,
+  ])
+  sourceBalance = await balance(tx, {
+    balanceSourceId: sourceBalance.id,
+    storeId: sourceIdentity.storeId,
+    tenantId: input.tenantId,
+  })
+  assertRevision(sourceBalance.revision, input.expectedSourceRevision)
+  const targetBalance = await balance(tx, {
+    balanceSourceId: target.id,
+    tenantId: input.tenantId,
+  })
+  if (
+    input.expectedTargetRevision !== undefined &&
+    targetBalance.revision !== input.expectedTargetRevision
+  ) {
+    throw new CatalogError(
+      "REVISION_CONFLICT",
+      "The target custody balance changed before confirmation.",
+    )
+  }
+  const isReturn =
+    sourceBalance.custodyType !== StockCustodyType.STORE &&
+    targetType === StockCustodyType.STORE
+  const operation = await postCustodyMovement(tx, {
+    actorUserId: input.actorUserId,
+    clientOperationId: input.clientOperationId,
+    payloadHash,
+    quantity: input.quantity,
+    reason: input.reason,
+    source: input.source,
+    sourceBalance,
+    targetBalance,
+    tenantId: input.tenantId,
+    type: isReturn ? "return" : "assignment",
+  })
+  await recordInventoryRelocationValuationInTransaction(tx, {
+    tenantId: input.tenantId,
+    stockOperationId: operation.id,
+    expectedSourceStockRevision: sourceBalance.revision + 1,
+    expectedTargetStockRevision: targetBalance.revision + 1,
+  })
+  return operation
 }
 
 export type DispatchStockTransferInput = {
@@ -744,7 +755,9 @@ export async function receiveOrCancelStockTransferInTransaction(
     sourceStoreId: transfer.sourceStoreId,
     targetId: targetBalanceId,
     targetStoreId:
-      input.transition === "receive" ? transfer.targetStoreId : transfer.sourceStoreId,
+      input.transition === "receive"
+        ? transfer.targetStoreId
+        : transfer.sourceStoreId,
   })
   assertRevision(transitBalance.revision, input.expectedTransitRevision)
   const quantityPlan = planStockTransferTransition({
@@ -860,7 +873,11 @@ export async function createInventoryCloseoutInTransaction(
   const declarations = await previewInventoryCloseoutCreation(tx, input)
   for (const [index, declaration] of declarations.entries()) {
     const requested = input.declarations[index]
-    if (!requested) throw new CatalogError("INVALID_STOCK_OPERATION", "Closeout declaration missing.")
+    if (!requested)
+      throw new CatalogError(
+        "INVALID_STOCK_OPERATION",
+        "Closeout declaration missing.",
+      )
     assertRevision(declaration.expectedRevision, requested.expectedRevision)
   }
   const type = custodyType(input.custodyType)
@@ -994,8 +1011,7 @@ export async function finalizeInventoryCloseoutInTransaction(
     `
     if (
       lockedBalances.length !== balanceIds.length ||
-      new Set(lockedBalances.map((row) => row.id)).size !==
-        balanceIds.length ||
+      new Set(lockedBalances.map((row) => row.id)).size !== balanceIds.length ||
       lockedBalances.some((row) => !balanceIds.includes(row.id))
     ) {
       throw new CatalogError(
@@ -1187,7 +1203,8 @@ export async function listStockTransfers(
     inventoryUnitName: transfer.inventoryUnit.name,
     productName: transfer.sourceBalanceSource.product.catalogItem.name,
     quantity: transfer.enteredQuantity.toString(),
-    remainingQuantity: transfer.transitBalanceSource?.onHandQuantity.toString() ?? "0",
+    remainingQuantity:
+      transfer.transitBalanceSource?.onHandQuantity.toString() ?? "0",
     sourceStore: {
       id: transfer.sourceStore.id,
       name: transfer.sourceStore.name,

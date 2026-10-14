@@ -21,3 +21,14 @@ test("nothing is offered without storage", () => {
     files: false,
   })
 })
+
+test("business-chat photo attachments need storage but no vision key", () => {
+  expect(assistantMediaAvailability("LIVE", {}, () => true, true)).toEqual({
+    photos: true,
+    files: true,
+  })
+  expect(assistantMediaAvailability("LIVE", {}, () => false, true)).toEqual({
+    photos: false,
+    files: false,
+  })
+})

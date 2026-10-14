@@ -1,0 +1,208 @@
+{
+  "version": 1,
+  "id": "2026-10-12-a04-native-shipped-reads",
+  "tickets": ["A04"],
+  "summary": "Declares the mobile client for all 28 shipped (source/enabled) read capabilities that were dashboard-only. Their answers are plain cards with no dashboard-only Open target, which the native thread already renders. Server roles, domain checks, procedures and rollout are unchanged; finance reads keep finance entitlement. Also corrects the order-amendment test for the native cancel/details editors.",
+  "capabilities": [
+    {
+      "id": "catalog.history.read",
+      "change": "changed",
+      "rollout": "source",
+      "note": "Native plain answer card; same server authority."
+    },
+    {
+      "id": "inventory.totals.read",
+      "change": "changed",
+      "rollout": "source",
+      "note": "Native plain answer card; same server authority."
+    },
+    {
+      "id": "inventory.balances.read",
+      "change": "changed",
+      "rollout": "source",
+      "note": "Native plain answer card; same server authority."
+    },
+    {
+      "id": "customers.receivables.read",
+      "change": "changed",
+      "rollout": "source",
+      "note": "Native plain answer card; same server authority."
+    },
+    {
+      "id": "sales.orders.summary",
+      "change": "changed",
+      "rollout": "source",
+      "note": "Native plain answer card; same server authority."
+    },
+    {
+      "id": "inventory.low_stock.read",
+      "change": "changed",
+      "rollout": "source",
+      "note": "Native plain answer card; same server authority."
+    },
+    {
+      "id": "catalog.count",
+      "change": "changed",
+      "rollout": "source",
+      "note": "Native plain answer card; same server authority."
+    },
+    {
+      "id": "sales.order_contacts.count",
+      "change": "changed",
+      "rollout": "source",
+      "note": "Native plain answer card; same server authority."
+    },
+    {
+      "id": "customers.count",
+      "change": "changed",
+      "rollout": "source",
+      "note": "Native plain answer card; same server authority."
+    },
+    {
+      "id": "stores.count",
+      "change": "changed",
+      "rollout": "source",
+      "note": "Native plain answer card; same server authority."
+    },
+    {
+      "id": "customers.page",
+      "change": "changed",
+      "rollout": "source",
+      "note": "Native plain answer card; same server authority."
+    },
+    {
+      "id": "catalog.page",
+      "change": "changed",
+      "rollout": "source",
+      "note": "Native plain answer card; same server authority."
+    },
+    {
+      "id": "sales.orders.lookup",
+      "change": "changed",
+      "rollout": "source",
+      "note": "Native plain answer card; same server authority."
+    },
+    {
+      "id": "inventory.count.read",
+      "change": "changed",
+      "rollout": "source",
+      "note": "Native plain answer card; same server authority."
+    },
+    {
+      "id": "inventory.operations.history",
+      "change": "changed",
+      "rollout": "source",
+      "note": "Native plain answer card; same server authority."
+    },
+    {
+      "id": "inventory.operations.read",
+      "change": "changed",
+      "rollout": "source",
+      "note": "Native plain answer card; same server authority."
+    },
+    {
+      "id": "inventory.closeout.list",
+      "change": "changed",
+      "rollout": "source",
+      "note": "Native plain answer card; same server authority."
+    },
+    {
+      "id": "inventory.closeout.read",
+      "change": "changed",
+      "rollout": "source",
+      "note": "Native plain answer card; same server authority."
+    },
+    {
+      "id": "inventory.transfer.list",
+      "change": "changed",
+      "rollout": "source",
+      "note": "Native plain answer card; same server authority."
+    },
+    {
+      "id": "inventory.transfer.read",
+      "change": "changed",
+      "rollout": "source",
+      "note": "Native plain answer card; same server authority."
+    },
+    {
+      "id": "finance.purchase_registrations.read",
+      "change": "changed",
+      "rollout": "source",
+      "note": "Native plain answer card; same server authority."
+    },
+    {
+      "id": "finance.purchase_recognition.read",
+      "change": "changed",
+      "rollout": "source",
+      "note": "Native plain answer card; same server authority."
+    },
+    {
+      "id": "finance.purchases.read",
+      "change": "changed",
+      "rollout": "source",
+      "note": "Native plain answer card; same server authority."
+    },
+    {
+      "id": "finance.purchase.read",
+      "change": "changed",
+      "rollout": "source",
+      "note": "Native plain answer card; same server authority."
+    },
+    {
+      "id": "finance.suppliers.read",
+      "change": "changed",
+      "rollout": "source",
+      "note": "Native plain answer card; same server authority."
+    },
+    {
+      "id": "finance.supplier_statement.read",
+      "change": "changed",
+      "rollout": "source",
+      "note": "Native plain answer card; same server authority."
+    },
+    {
+      "id": "finance.expense_categories.read",
+      "change": "changed",
+      "rollout": "enabled",
+      "note": "Native plain answer card; same server authority."
+    },
+    {
+      "id": "finance.money_accounts.read",
+      "change": "changed",
+      "rollout": "enabled",
+      "note": "Native plain answer card; same server authority."
+    }
+  ],
+  "docs": [
+    {
+      "topic": "feature",
+      "path": ".brain/features/assistant-business-operations.md",
+      "status": "local_only",
+      "note": "A04 native read checkpoint."
+    },
+    {
+      "topic": "capability",
+      "path": "packages/assistant/src/capabilities/COVERAGE.md",
+      "status": "updated"
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "test",
+      "path": "apps/mobile/src/components/mobile/assistant/native-parity.test.ts",
+      "executed": true,
+      "result": "Shipped-read guard and parity tests pass (12 Oct 2026, uncommitted source)."
+    },
+    {
+      "kind": "test",
+      "path": "packages/assistant/src/general/order-amendment.test.ts",
+      "executed": true,
+      "result": "Passes after declaring cancel/details as dashboard+mobile (12 Oct 2026)."
+    },
+    {
+      "kind": "review",
+      "path": "packages/assistant/evaluations/runs/2026-10-12-a04-native-shipped-reads.md",
+      "executed": false
+    }
+  ]
+}

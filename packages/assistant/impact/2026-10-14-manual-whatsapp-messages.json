@@ -1,0 +1,76 @@
+{
+  "version": 1,
+  "id": "2026-10-14-manual-whatsapp-messages",
+  "tickets": ["G05"],
+  "summary": "Manual customer WhatsApp template settings, scoped Order/payment/refund preview, fresh open validation and reviewed single/batch AI drafting on dashboard/mobile. Opening never sends or records delivery. Connected provider messaging, automation and replies remain deferred.",
+  "noAssistantImpact": "No GENERAL capability or provider send authority is activated. Preview/catalog/status are planned for a future read-only human-review handoff; direct template/settings/open/AI drafting remain form-only with current business and Store permissions.",
+  "procedures": [
+    {
+      "path": "customerMessages.catalog",
+      "status": "planned",
+      "reason": "Read-only supported customer message catalog; no active GENERAL tool."
+    },
+    {
+      "path": "customerMessages.templateStatus",
+      "status": "planned",
+      "reason": "Scoped composition status, not delivery state; future bounded read adapter."
+    },
+    {
+      "path": "customerMessages.preview",
+      "status": "planned",
+      "reason": "Current Order/Store/creator scope and exact payment/refund source; future human-reviewed preview."
+    },
+    {
+      "path": "customerMessages.prepareOpen",
+      "status": "form_only",
+      "reason": "Direct operator navigation review only; no send/delivery business effect."
+    },
+    {
+      "path": "customerMessages.draftWithAi",
+      "status": "form_only",
+      "reason": "Owner/Admin reviewed template proposals use existing GENERAL allowance; no automatic save."
+    },
+    {
+      "path": "customerMessages.templates.list",
+      "status": "form_only",
+      "reason": "Owner/Admin settings review."
+    },
+    {
+      "path": "customerMessages.templates.save",
+      "status": "form_only",
+      "reason": "Explicit settings save bound to row identity and revision."
+    },
+    {
+      "path": "customerMessages.templates.reset",
+      "status": "form_only",
+      "reason": "Explicit scope-aware reset; no assistant setting-write authority."
+    },
+    {
+      "path": "customerMessages.templates.setEnabled",
+      "status": "form_only",
+      "reason": "Owner/Admin explicit enable/disable; disabled Store override suppresses inheritance."
+    }
+  ],
+  "docs": [
+    {
+      "topic": "feature",
+      "path": ".brain/features/whatsapp-customer-messages.md",
+      "status": "local_only"
+    },
+    {
+      "topic": "api",
+      "path": ".brain/api/contracts.md",
+      "status": "local_only"
+    },
+    {
+      "topic": "permissions",
+      "path": ".brain/api/permissions.md",
+      "status": "local_only"
+    },
+    {
+      "topic": "schema",
+      "path": ".brain/database/schema.md",
+      "status": "local_only"
+    }
+  ]
+}

@@ -3,6 +3,7 @@ import { LegalDocumentPage } from "@/components/legal/legal-document-page"
 import { isAccountPrivacyEmailIntakeConfigured } from "@ewatrade/utils/account-privacy-intake"
 import { isApprovedLegalPublication } from "@ewatrade/utils/legal-approval"
 import { LEGAL_DOCUMENTS } from "@ewatrade/utils/legal-documents"
+import { isTrustedClientIpHeaderConfigured } from "@ewatrade/utils/qa-network-source"
 import type { Metadata } from "next"
 
 export const dynamic = "force-dynamic"
@@ -55,7 +56,9 @@ export default async function Page({
     (await searchParams).qaDeletionForm === "1"
   const intakeReady =
     isAccountPrivacyEmailIntakeConfigured(process.env) &&
-    Boolean(process.env.ACCOUNT_PRIVACY_TRUSTED_CLIENT_IP_HEADER?.trim())
+    isTrustedClientIpHeaderConfigured(
+      process.env.ACCOUNT_PRIVACY_TRUSTED_CLIENT_IP_HEADER,
+    )
   return (
     <LegalDocumentPage
       documentKey="delete-account"

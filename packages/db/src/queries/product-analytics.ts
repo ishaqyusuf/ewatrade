@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto"
 import type { Prisma, PrismaClient } from "../../generated/prisma/client"
+import { runInOwnSerializableTransaction } from "./own-transaction"
 
 export async function persistProductAnalyticsEvent(
   db: PrismaClient,
@@ -11,14 +12,22 @@ export async function persistProductAnalyticsEvent(
   },
   now = new Date(),
 ) {
-  return db.productAnalyticsEvent.upsert({
-    where: { id: input.id },
-    create: {
-      ...input,
-      expiresAt: new Date(now.getTime() + 7 * 86400000),
-      availableAt: now,
-    },
-    update: {},
+  return runInOwnSerializableTransaction(db, async (tx) => {
+    const request = await tx.accountPrivacyRequest.findUnique({
+      where: { requestKey: `account-deletion:${input.userId}` },
+      select: { status: true },
+    })
+    if (request?.status === "PROCESSING" || request?.status === "COMPLETED")
+      return null
+    return tx.productAnalyticsEvent.upsert({
+      where: { id: input.id },
+      create: {
+        ...input,
+        expiresAt: new Date(now.getTime() + 7 * 86400000),
+        availableAt: now,
+      },
+      update: {},
+    })
   })
 }
 export async function claimProductAnalyticsEvent(
@@ -30,6 +39,11 @@ export async function claimProductAnalyticsEvent(
   const updated = await db.productAnalyticsEvent.updateMany({
     where: {
       id,
+      user: {
+        accountPrivacyRequests: {
+          none: { status: { in: ["PROCESSING", "COMPLETED"] } },
+        },
+      },
       deliveredAt: null,
       expiresAt: { gt: now },
       availableAt: { lte: now },

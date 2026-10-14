@@ -44,14 +44,15 @@ test("order replacement takes exact source line changes and no payment or actor 
     }).success,
   ).toBe(false)
 })
-test("amendment capabilities are dashboard source entries and summaries remain explicit", () => {
-  for (const action of [
-    "order_cancel",
-    "order_metadata_update",
-    "order_replace",
+test("amendment capabilities are source entries with declared clients and explicit summaries", () => {
+  // Cancel and details have native editors (A04); replacement stays dashboard-only.
+  for (const [action, clients] of [
+    ["order_cancel", ["dashboard", "mobile"]],
+    ["order_metadata_update", ["dashboard", "mobile"]],
+    ["order_replace", ["dashboard"]],
   ] as const) {
     const capability = capabilityForAction(action)
-    expect(capability.clients).toEqual(["dashboard"])
+    expect(capability.clients).toEqual([...clients])
     expect(capability.rollout).toBe("source")
     expect(capability.policy.roles).not.toContain("CASHIER")
   }

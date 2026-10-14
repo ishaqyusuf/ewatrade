@@ -245,18 +245,18 @@ test("unit draft contracts preserve exact factors and reject authority or invali
     key: "piece",
     name: "Piece",
     factor: "1.000",
-    stockBehavior: "canonical_shared",
+    stockBehavior: "canonical_shared" as const,
     transactionScale: 0,
   }
   const crate = {
     key: "crate",
     name: "Crate",
     factor: "12.000000000001",
-    stockBehavior: "alternate_transaction",
+    stockBehavior: "alternate_transaction" as const,
     transactionScale: 0,
   }
   const payload = {
-    action: "product_unit_configuration_draft",
+    action: "product_unit_configuration_draft" as const,
     catalogItemId: "product",
     canonicalBalanceScale: 12,
     units: [main, crate],
@@ -340,7 +340,9 @@ test("rehearsal drafts typed-price sales and receipt attachments", () => {
     input: {
       action: "order_create",
       initialPayment: { amount: "2500", method: "cash" },
-      lines: [{ amount: "2500", custom: "quick_sale", description: "Fresh fish" }],
+      lines: [
+        { amount: "2500", custom: "quick_sale", description: "Fresh fish" },
+      ],
     },
   })
   const attach = respondGeneralRehearsal([
@@ -357,7 +359,13 @@ test("rehearsal drafts typed-price sales and receipt attachments", () => {
   ])
   expect(attach).toMatchObject({
     kind: "tool",
-    input: { action: "order_attachment_add", attachmentId: "att_9", orderId: "ord_1" },
+    input: {
+      action: "order_attachment_add",
+      attachmentId: "att_9",
+      orderId: "ord_1",
+    },
   })
-  expect(generalActionSchema.safeParse((attach as { input: unknown }).input).success).toBe(true)
+  expect(
+    generalActionSchema.safeParse((attach as { input: unknown }).input).success,
+  ).toBe(true)
 })

@@ -1,0 +1,74 @@
+{
+  "version": 1,
+  "id": "2026-10-12-g05-store-settings-change",
+  "tickets": ["G05"],
+  "summary": "Adds the planned reviewed write settings.store.change (action store_settings_update): one section per draft \u2014 receipt settings for the business defaults or this Store (removing a Store override allowed), order reminders, or sales-rep order visibility. Owner/Admin only, each section keeps its plan gate, review shows before \u2192 after and Store-wide effect, digest goes stale on concurrent change, no-op refused. Executes through the canonical setters (widened to accept the proposal transaction). Receipts name the section; dashboard Open shows the Store's current values in a new sheet over the chat, native Open goes to the existing settings screens for the current Store only.",
+  "capabilities": [
+    {
+      "id": "settings.store.change",
+      "change": "added",
+      "rollout": "planned",
+      "note": "Owner/Admin; plans: invoices (receipts), orderReminders (reminders); dashboard editor + native editor; receipt family store_settings."
+    }
+  ],
+  "procedures": [
+    {
+      "path": "orders.saveReceiptSettings",
+      "status": "supported",
+      "reason": "Receipt section of settings.store.change; same canonical setter."
+    },
+    {
+      "path": "orders.updateReminderSettings",
+      "status": "supported",
+      "reason": "Reminder section of settings.store.change; same canonical setter."
+    },
+    {
+      "path": "stores.updateOrderVisibility",
+      "status": "supported",
+      "reason": "Visibility section of settings.store.change; same canonical setter."
+    }
+  ],
+  "docs": [
+    {
+      "topic": "feature",
+      "path": ".brain/plans/2026-10-09-assistant-business-operations.md",
+      "status": "local_only",
+      "note": "G05 packet 2."
+    },
+    {
+      "topic": "capability",
+      "path": "packages/assistant/src/capabilities/COVERAGE.md",
+      "status": "updated"
+    },
+    {
+      "topic": "api",
+      "status": "not_applicable",
+      "note": "No new endpoint; existing setters gained transaction-client typing only."
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "test",
+      "path": "packages/assistant/src/general/store-settings-change.test.ts",
+      "executed": true,
+      "result": "3 pass; packages/assistant/src 267 pass with mobile/payments/staff-activity (12 Oct 2026, uncommitted)."
+    },
+    {
+      "kind": "test",
+      "path": "apps/api/src/assistant/general-store-settings-change.test.ts",
+      "executed": true,
+      "result": "5 pass with an unreachable placeholder database URL; affected API set 21 pass (12 Oct 2026)."
+    },
+    {
+      "kind": "test",
+      "path": "apps/mobile/src/components/mobile/assistant/native-parity.test.ts",
+      "executed": true,
+      "result": "Native parity incl. settings receipt family and current-Store routing pass (12 Oct 2026)."
+    },
+    {
+      "kind": "review",
+      "path": "packages/assistant/evaluations/runs/2026-10-12-g05-store-settings-change.md",
+      "executed": false
+    }
+  ]
+}

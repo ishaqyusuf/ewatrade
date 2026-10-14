@@ -1,5 +1,9 @@
 import { auth } from "@ewatrade/auth"
 import {
+  createWhatsAppOtpSender,
+  readWhatsAppOtpConfig,
+} from "@ewatrade/communications"
+import {
   OnboardingContinuationError,
   onboardingDraftSchema,
   readApprovedOnboarding,
@@ -17,10 +21,13 @@ import {
   consumeMobilePasswordAttempt,
   createMobileOwnerOtp,
   createMobileSessionForVerifiedUser,
+  createPhoneOtp,
   getCustomerAccountAgeStatus,
   getMobileAccessProfile,
+  isLocalPhoneAuth,
   verifyMobileGoogleIdentity,
   verifyMobileOwnerOtp,
+  verifyPhoneOtp,
 } from "@ewatrade/db/queries"
 import {
   type EmailRoutingEnv,
@@ -232,6 +239,29 @@ export const verifyMobileOwnerOtpSchema = z
   .strict()
   .superRefine(requireMobileSignupProfile)
 
+export const requestPhoneOtpSchema = z
+  .object({ ...mobileOwnerAuthShape, ...mobileSignupLegalShape })
+  .omit({ email: true, accessToken: true })
+  .extend({
+    phone: z
+      .string()
+      .trim()
+      .regex(/^\+[1-9]\d{7,14}$/),
+  })
+  .strict()
+  .superRefine(requireMobileSignupProfile)
+
+export const verifyPhoneOtpSchema = z
+  .object({
+    phone: z
+      .string()
+      .trim()
+      .regex(/^\+[1-9]\d{7,14}$/),
+    mode: mobileAuthModeSchema,
+    code: z.string().regex(/^\d{6}$/),
+  })
+  .strict()
+
 export const verifyMobileGoogleSchema = z
   .object({
     accessToken: onboardingTokenSchema.optional(),
@@ -323,6 +353,76 @@ export function shouldDispatchMobileOwnerOtpEmail(
 }
 
 export const authRouter = createTRPCRouter({
+  phoneOtpAvailability: publicProcedure.query(() => ({
+    enabled: isLocalPhoneAuth() || Boolean(readWhatsAppOtpConfig()),
+  })),
+  requestPhoneOtp: publicProcedure
+    .input(requestPhoneOtpSchema)
+    .mutation(async ({ ctx, input }) => {
+      requireMobileLegalChoice(input)
+      const local = isLocalPhoneAuth()
+      const config = local ? null : readWhatsAppOtpConfig()
+      if (!local && !config)
+        throw new TRPCError({
+          code: "PRECONDITION_FAILED",
+          message:
+            "WhatsApp sign-in is not available yet. Use another sign-in method.",
+        })
+      const network =
+        ctx.privacyClientIp ?? ctx.clientIp ?? (local ? "local" : null)
+      if (!network)
+        throw new TRPCError({
+          code: "PRECONDITION_FAILED",
+          message: "Phone verification is temporarily unavailable.",
+        })
+      try {
+        const otp = await createPhoneOtp(ctx.db, input, network)
+        if (config)
+          await createWhatsAppOtpSender(config)({
+            phone: otp.phone,
+            code: otp.code,
+          })
+        return {
+          phone: otp.phone,
+          expiresAt: otp.expiresAt,
+          devCode: local ? otp.code : null,
+        }
+      } catch (error) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message:
+            error instanceof Error &&
+            /^(Too many codes|Wait one minute|Choose an eligible|The Terms|Review the current)/.test(
+              error.message,
+            )
+              ? error.message
+              : "We could not send the WhatsApp code. Try again later.",
+        })
+      }
+    }),
+  verifyPhoneOtp: publicProcedure
+    .input(verifyPhoneOtpSchema)
+    .mutation(async ({ ctx, input }) => {
+      if (!isLocalPhoneAuth() && !readWhatsAppOtpConfig())
+        throw new TRPCError({
+          code: "PRECONDITION_FAILED",
+          message: "WhatsApp sign-in is not available yet.",
+        })
+      try {
+        return await verifyPhoneOtp(ctx.db, input)
+      } catch (error) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message:
+            error instanceof Error &&
+            /^(The code expired|Request a new verification|Too many incorrect|The verification code|Use your existing|The Terms changed|This code has already|Choose an eligible)/.test(
+              error.message,
+            )
+              ? error.message
+              : "We could not verify this code. Try again.",
+        })
+      }
+    }),
   verifyMobileOnboardingEmail: publicProcedure
     .input(
       z.object({ token: z.string().regex(/^ear_[A-Za-z0-9_-]{43}$/) }).strict(),

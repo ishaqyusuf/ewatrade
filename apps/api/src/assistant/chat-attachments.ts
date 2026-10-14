@@ -95,7 +95,11 @@ export function storedUserParts(
 export function withAttachmentText<M extends StoredMessage>(
   messages: M[],
   rows: ChatAttachmentRow[],
-  options: { fullAttachments?: number; maxCharsEach?: number } = {},
+  options: {
+    fullAttachments?: number
+    maxCharsEach?: number
+    attachmentOnlyImages?: boolean
+  } = {},
 ): M[] {
   const byId = new Map(rows.map((row) => [row.id, row]))
   const full = new Set(
@@ -120,6 +124,11 @@ export function withAttachmentText<M extends StoredMessage>(
         return {
           type: "text",
           text: `(attachment ${row.fileName} has expired: its content was deleted and is no longer available)`,
+        }
+      if (options.attachmentOnlyImages && row.kind === "IMAGE")
+        return {
+          type: "text",
+          text: `(photo attached, id ${row.id}; attachment only, not analysed. Use only the user caption/chat for facts. Ask what it is for if the caption is absent.)`,
         }
       if (!full.has(row.id))
         return {

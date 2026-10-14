@@ -2,10 +2,14 @@ import { SETUP_ATTACHMENT_LIMITS } from "@ewatrade/assistant/setup/attachments"
 import {
   AssistantAttachmentError,
   markAssistantAttachmentUploaded,
+  pinAssistantAttachmentStorage,
   readAssistantAttachment,
 } from "@ewatrade/db/assistant-attachments"
 import { enqueueAssistantAttachmentProcessing } from "@ewatrade/jobs/assistant-attachments"
-import { acceptsAssistantAttachmentBytes } from "@ewatrade/private-media/assistant-attachments"
+import {
+  acceptsAssistantAttachmentBytes,
+  assistantAttachmentStoragePath,
+} from "@ewatrade/private-media/assistant-attachments"
 import { PrivateObjectStorageError } from "@ewatrade/private-media/object-storage"
 import {
   VerifiedUploadError,
@@ -138,6 +142,23 @@ export function registerAssistantAttachmentRoutes(
           }
         }
         const storage = setupAttachmentStorage(scope.dataClassification)
+        if (
+          !storage.storeId ||
+          !(await pinAssistantAttachmentStorage(db, scope, {
+            attachmentId: row.id,
+            storageProvider: storage.provider,
+            storageStoreId: storage.storeId,
+            storagePath: assistantAttachmentStoragePath(
+              setupAttachmentTarget(row),
+            ),
+          }))
+        )
+          return refuse(
+            context,
+            409,
+            "UPLOAD_EXPIRED",
+            "This upload is no longer available.",
+          )
         const { storagePath } = await storage.stage({
           target: setupAttachmentTarget(row),
           bytes,

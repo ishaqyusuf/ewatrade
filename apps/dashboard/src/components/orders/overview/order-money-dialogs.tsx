@@ -40,6 +40,13 @@ type DialogProps = {
   order: OverviewOrder
   onClose: () => void
   onDone: () => Promise<void>
+  /** The exact committed record, so a customer message can describe it. */
+  onRecorded?: (record: RecordedMoney) => void
+}
+
+export type RecordedMoney = {
+  eventKey: "payment.recorded" | "payment.refund_recorded"
+  sourceId: string
 }
 
 type Option = { allowed: boolean; reason: string | null }
@@ -162,7 +169,12 @@ function Notice({
 }
 
 /** Record a payment against the balance due. */
-export function PaymentDialog({ order, onClose, onDone }: DialogProps) {
+export function PaymentDialog({
+  order,
+  onClose,
+  onDone,
+  onRecorded,
+}: DialogProps) {
   const trpc = useTRPC()
   const limit = order.balanceDueMinor
   const [amount, setAmount] = useState(minorToMajorInput(limit))
@@ -172,7 +184,8 @@ export function PaymentDialog({ order, onClose, onDone }: DialogProps) {
   const clientPaymentId = useRef(`payment-${crypto.randomUUID()}`).current
   const record = useMutation(
     trpc.orders.recordPayment.mutationOptions({
-      onSuccess: async () => {
+      onSuccess: async (result) => {
+        onRecorded?.({ eventKey: "payment.recorded", sourceId: result.id })
         await onDone()
         onClose()
       },
@@ -287,6 +300,7 @@ export function RefundDialog({
   onOpenReturn,
   onClose,
   onDone,
+  onRecorded,
   ask = false,
 }: DialogProps & {
   /** Whether the total may drop with the refund (an order credit). */
@@ -316,7 +330,13 @@ export function RefundDialog({
   const clientOperationId = useRef(`refund-${crypto.randomUUID()}`).current
   const refundMutation = useMutation(
     trpc.orders.refund.mutationOptions({
-      onSuccess: async () => {
+      onSuccess: async (result) => {
+        // A replayed refund has no new record id; never guess the latest.
+        if ("paymentId" in result && result.paymentId)
+          onRecorded?.({
+            eventKey: "payment.refund_recorded",
+            sourceId: result.paymentId,
+          })
         await onDone()
         onClose()
       },
@@ -562,6 +582,7 @@ export function ReturnItemsDialog({
   initialLineId,
   onClose,
   onDone,
+  onRecorded,
   rules,
 }: DialogProps & {
   returnable: Array<{ orderLineId: string; quantity: string }>
@@ -602,7 +623,12 @@ export function ReturnItemsDialog({
   const clientOperationId = useRef(`return-${crypto.randomUUID()}`).current
   const record = useMutation(
     trpc.orders.returnItems.mutationOptions({
-      onSuccess: async () => {
+      onSuccess: async (result) => {
+        if (result.refundPaymentId)
+          onRecorded?.({
+            eventKey: "payment.refund_recorded",
+            sourceId: result.refundPaymentId,
+          })
         await onDone()
         onClose()
       },

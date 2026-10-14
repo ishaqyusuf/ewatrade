@@ -5,6 +5,32 @@ import { shouldLogMobileTrpcOperation } from "./log-operation"
 
 describe("mobile tRPC operation logging", () => {
   test.each(["development", "production"])(
+    "customer message text and recipients stay out of request/error logs in %s",
+    async (environment) => {
+      const logged: unknown[] = []
+      const client = createTRPCUntypedClient({
+        links: [
+          loggerLink({
+            enabled: (options) =>
+              shouldLogMobileTrpcOperation(options, environment),
+            logger: (options) => logged.push(options),
+          }),
+          () => () =>
+            observable((observer) =>
+              observer.error(new Error("Request failed")),
+            ),
+        ],
+      })
+      await expect(
+        client.mutation("customerMessages.prepareOpen", {
+          body: "Synthetic private wording",
+          orderId: "qa-order",
+        }),
+      ).rejects.toThrow()
+      expect(logged).toHaveLength(0)
+    },
+  )
+  test.each(["development", "production"])(
     "auth requests and errors travel without logging in %s",
     async (environment) => {
       const logged: unknown[] = []

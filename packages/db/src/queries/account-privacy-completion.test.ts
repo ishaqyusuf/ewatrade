@@ -364,6 +364,14 @@ function fixture(
         return live.refundReviewActions ?? 0
       },
     },
+    commercialServiceFulfillment: { count: async () => 0 },
+    commercialServiceAuthorization: { count: async () => 0 },
+    commercialOrderAmendment: { count: async () => 0 },
+    commercialOrderActivity: { count: async () => 0 },
+    commercialOrderCredit: { count: async () => 0 },
+    commercialOrderReminderSettings: { count: async () => 0 },
+    commercialOrderReminderDelivery: { count: async () => 0 },
+    commercialOrderReminderDigest: { count: async () => 0 },
     commercialOrder: {
       count: async (query: unknown) => {
         commercialQueries.orders?.push(query)

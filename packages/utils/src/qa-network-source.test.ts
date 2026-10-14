@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test"
 import {
   getTrustedPrivacyNetworkSource,
   getTrustedQaNetworkSource,
+  isTrustedClientIpHeaderConfigured,
 } from "./qa-network-source"
 
 describe("trusted QA network source", () => {
@@ -41,6 +42,20 @@ describe("trusted QA network source", () => {
       }),
     ).toBeNull()
   })
+})
+
+test("page configuration and request source use the same trusted header allowlist", () => {
+  for (const header of [
+    undefined,
+    "",
+    " ",
+    "x-client-ip",
+    "x-forwarded-for",
+    "authorization",
+  ])
+    expect(isTrustedClientIpHeaderConfigured(header)).toBe(false)
+  for (const header of ["x-real-ip", "cf-connecting-ip", " CF-Connecting-IP "])
+    expect(isTrustedClientIpHeaderConfigured(header)).toBe(true)
 })
 
 test("privacy intake requires its own configured proxy-sanitized IP header", () => {

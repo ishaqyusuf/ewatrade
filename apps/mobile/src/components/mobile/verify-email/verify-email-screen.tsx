@@ -5,6 +5,7 @@ import { useAuthContext } from "@/hooks/use-auth"
 import { clearPendingOnboarding } from "@/lib/onboarding-continuation-store"
 import { useOnboardingStore } from "@/store/onboardingStore"
 import { useTRPC } from "@/trpc/client"
+import type { RouterOutputs } from "@ewatrade/api/trpc/routers/_app"
 import {
   BUSINESS_OPERATING_MODEL_KEYS,
   BUSINESS_ORDER_CHANNEL_KEYS,
@@ -47,6 +48,7 @@ export function VerifyEmailScreen() {
     city?: string
     currencyCode?: string
     email?: string
+    channel?: string
     legalVersion?: string
     mode?: "login" | "sign-up"
     name?: string
@@ -70,7 +72,10 @@ export function VerifyEmailScreen() {
       ? ageBandValue
       : undefined
   const legalVersion = firstParam(params.legalVersion)
-  const emailDeliveryLabel = email || "your email address"
+  const useWhatsApp = firstParam(params.channel) === "whatsapp"
+  const emailDeliveryLabel = useWhatsApp
+    ? firstParam(params.phone) || "your WhatsApp number"
+    : email || "your email address"
   const name = firstParam(params.name) ?? "Store Owner"
   const addressLine1 = firstParam(params.addressLine1)
   const businessProfileKey = firstParam(params.businessProfileKey)
@@ -127,6 +132,59 @@ export function VerifyEmailScreen() {
       },
     }),
   )
+  const finishAuth = (
+    session: RouterOutputs["auth"]["verifyMobileOwnerOtp"],
+  ) => {
+    if (accessToken)
+      void clearPendingOnboarding(accessToken).catch(() => undefined)
+    completeOnboarding(true)
+    auth.applyAuthenticatedSession(
+      {
+        accessProfile: session.accessProfile,
+        expiresAt: session.expiresAt.toISOString(),
+        profile: {
+          businessId: session.profile.businessId ?? undefined,
+          businessName: session.profile.businessName ?? undefined,
+          businessSlug: session.tenant?.slug ?? undefined,
+          storeId: session.tenant?.storeId ?? undefined,
+          storeName: session.tenant?.storeName ?? undefined,
+          currencyCode: session.profile.currencyCode,
+          email: session.profile.email,
+          id: session.profile.id,
+          name: session.profile.name,
+          role: session.profile.role ?? undefined,
+          staffAccessMode: session.profile.staffAccessMode,
+          catalogEditor: session.profile.catalogEditor,
+          status: session.profile.status ?? undefined,
+        },
+        token: session.token,
+      },
+      returnTo?.startsWith("/(customer)/") ? returnTo : "/",
+    )
+  }
+  const requestPhoneMutation = useMutation(
+    trpc.auth.requestPhoneOtp.mutationOptions({
+      onError(error) {
+        setStatus("error")
+        setMessage(error.message || "We could not resend the code.")
+      },
+      onSuccess() {
+        setStatus("resent")
+        setMessage("Code sent again")
+        setCooldown(RESEND_COOLDOWN_SECONDS)
+      },
+    }),
+  )
+  const verifyPhoneMutation = useMutation(
+    trpc.auth.verifyPhoneOtp.mutationOptions({
+      onError(error) {
+        setStatus("error")
+        setCode("")
+        setMessage(error.message || "We could not verify that code.")
+      },
+      onSuccess: finishAuth,
+    }),
+  )
   const verifyOtpMutation = useMutation(
     trpc.auth.verifyMobileOwnerOtp.mutationOptions({
       onError(error) {
@@ -134,42 +192,23 @@ export function VerifyEmailScreen() {
         setCode("")
         setMessage(error.message || "We could not verify that code.")
       },
-      onSuccess(session) {
-        if (accessToken)
-          void clearPendingOnboarding(accessToken).catch(() => undefined)
-        completeOnboarding(true)
-        auth.applyAuthenticatedSession(
-          {
-            accessProfile: session.accessProfile,
-            expiresAt: session.expiresAt.toISOString(),
-            profile: {
-              businessId: session.profile.businessId ?? undefined,
-              businessName: session.profile.businessName ?? undefined,
-              businessSlug: session.tenant?.slug ?? undefined,
-              storeId: session.tenant?.storeId ?? undefined,
-              storeName: session.tenant?.storeName ?? undefined,
-              currencyCode: session.profile.currencyCode,
-              email: session.profile.email,
-              id: session.profile.id,
-              name: session.profile.name,
-              role: session.profile.role ?? undefined,
-              staffAccessMode: session.profile.staffAccessMode,
-              catalogEditor: session.profile.catalogEditor,
-              status: session.profile.status ?? undefined,
-            },
-            token: session.token,
-          },
-          returnTo?.startsWith("/(customer)/") ? returnTo : "/",
-        )
-      },
+      onSuccess: finishAuth,
     }),
   )
-  const isVerifying = status === "verifying" || verifyOtpMutation.isPending
+  const isVerifying =
+    status === "verifying" ||
+    verifyOtpMutation.isPending ||
+    verifyPhoneMutation.isPending
 
   const verifyCode = useCallback(() => {
     if (code.length !== OTP_LENGTH || status === "verifying") return
 
     setStatus("verifying")
+
+    if (useWhatsApp) {
+      verifyPhoneMutation.mutate({ phone: phone ?? "", mode: apiMode, code })
+      return
+    }
 
     verifyOtpMutation.mutate({
       accessToken,
@@ -210,6 +249,8 @@ export function VerifyEmailScreen() {
     status,
     teamSize,
     verifyOtpMutation,
+    useWhatsApp,
+    verifyPhoneMutation,
   ])
 
   useEffect(() => {
@@ -262,7 +303,42 @@ export function VerifyEmailScreen() {
   }, [])
 
   const resendCode = useCallback(() => {
-    if (requestOtpMutation.isPending || isVerifying) return
+    if (
+      requestOtpMutation.isPending ||
+      requestPhoneMutation.isPending ||
+      isVerifying ||
+      cooldown > 0
+    )
+      return
+
+    if (useWhatsApp) {
+      requestPhoneMutation.mutate({
+        phone: phone ?? "",
+        mode: apiMode,
+        ageBand,
+        ...(legalVersion &&
+        firstParam(params.acceptedTerms) === "true" &&
+        firstParam(params.acknowledgedPrivacyNotice) === "true"
+          ? {
+              legalVersion,
+              acceptedTerms: true,
+              acknowledgedPrivacyNotice: true,
+            }
+          : {}),
+        addressLine1,
+        businessProfileKey,
+        businessProfileVersion,
+        businessName,
+        city,
+        currencyCode,
+        name,
+        operatingModel,
+        orderChannels,
+        otherBusinessDescription,
+        teamSize,
+      })
+      return
+    }
 
     requestOtpMutation.mutate({
       accessToken,
@@ -313,12 +389,16 @@ export function VerifyEmailScreen() {
     params.acceptedTerms,
     params.acknowledgedPrivacyNotice,
     teamSize,
+    cooldown,
+    useWhatsApp,
+    requestPhoneMutation,
   ])
 
   return (
     <ClassicVerifyEmailScreen
       authEntryHref={authEntryHref}
       email={emailDeliveryLabel}
+      channel={useWhatsApp ? "whatsapp" : "email"}
       mode={mode}
       otp={
         <OtpInput
@@ -332,9 +412,15 @@ export function VerifyEmailScreen() {
       }
       resend={
         <VerificationResendLine
-          disabled={requestOtpMutation.isPending || isVerifying}
+          disabled={
+            requestOtpMutation.isPending ||
+            requestPhoneMutation.isPending ||
+            isVerifying
+          }
           isError={status === "error"}
-          isSending={requestOtpMutation.isPending}
+          isSending={
+            requestOtpMutation.isPending || requestPhoneMutation.isPending
+          }
           isVerifying={isVerifying}
           message={message}
           onPress={resendCode}

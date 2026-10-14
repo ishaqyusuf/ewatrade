@@ -193,7 +193,7 @@ export function useGeneralAssistant() {
       new DefaultChatTransport<Message>({
         api: `${getBaseUrl()}/api/assistant/general/chat`,
         fetch: guardedFetch as unknown as typeof fetch,
-        prepareSendMessagesRequest: ({ messages }) => {
+        prepareSendMessagesRequest: ({ messages, body }) => {
           if (!canWork() || !conversationId)
             throw Error("Conversation unavailable")
           const last = [...messages].reverse().find((m) => m.role === "user")
@@ -202,6 +202,7 @@ export function useGeneralAssistant() {
             body: {
               conversationId,
               requestId: `req_${last.id}`,
+              ...(body?.saleChoice ? { saleChoice: body.saleChoice } : {}),
               message: {
                 id: last.id,
                 role: "user",
@@ -387,24 +388,31 @@ export function useGeneralAssistant() {
         void conversations.refetch()
       }
     })
-  const sendText = async (text: string, files: AssistantReadyFile[] = []) => {
+  const sendText = async (
+    text: string,
+    files: AssistantReadyFile[] = [],
+    saleChoice?: { proposalId: string; revision: number; text: string },
+  ) => {
     attemptedText.current = text
     setNotice(null)
     try {
-      await chat.sendMessage({
-        parts: [
-          ...(text ? [{ type: "text" as const, text }] : []),
-          ...files.map((file) => ({
-            type: "data-setup-attachment" as const,
-            data: {
-              attachmentId: file.attachmentId,
-              kind: "IMAGE",
-              fileName: file.fileName,
-              summary: "",
-            },
-          })),
-        ],
-      })
+      await chat.sendMessage(
+        {
+          parts: [
+            ...(text ? [{ type: "text" as const, text }] : []),
+            ...files.map((file) => ({
+              type: "data-setup-attachment" as const,
+              data: {
+                attachmentId: file.attachmentId,
+                kind: "IMAGE",
+                fileName: file.fileName,
+                summary: "",
+              },
+            })),
+          ],
+        },
+        saleChoice ? { body: { saleChoice } } : undefined,
+      )
     } catch (error) {
       if (canWork()) {
         setDraft((current) => current || text)
@@ -413,10 +421,13 @@ export function useGeneralAssistant() {
     }
   }
   /** Asks in the open thread, or starts one first and sends once it's ready. */
-  const ask = async (value: string) => {
+  const ask = async (
+    value: string,
+    saleChoice?: { proposalId: string; revision: number; text: string },
+  ) => {
     const text = value.trim()
     // Ready receipts only exist in an open chat, so they never queue.
-    const files = conversationId ? readyFiles : []
+    const files = conversationId && !saleChoice ? readyFiles : []
     if (
       !canWork() ||
       (!text && !files.length) ||
@@ -427,11 +438,13 @@ export function useGeneralAssistant() {
     )
       return
     if (conversationId && state.isError) return
-    setDraft("")
+    if (!saleChoice) setDraft("")
     if (conversationId) {
-      setReadyFiles([])
-      setTrayKey((key) => key + 1)
-      return sendText(text, files)
+      if (!saleChoice) {
+        setReadyFiles([])
+        setTrayKey((key) => key + 1)
+      }
+      return sendText(text, files, saleChoice)
     }
     setQueued(text)
     if (!(await newThread())) {

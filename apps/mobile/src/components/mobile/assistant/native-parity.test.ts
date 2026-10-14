@@ -35,7 +35,14 @@ test("every capability declaring mobile has a native editor and exact receipt ob
 
 test("receipt routes open only the exact native object", () => {
   for (const kind of nativeReceiptKinds)
-    expect(generalReceiptRoute(receipt(kind))).not.toBeNull()
+    expect(generalReceiptRoute(receipt(kind), "record-real")).not.toBeNull()
+  // A settings receipt for another Store has no exact native screen here.
+  expect(
+    generalReceiptRoute(receipt("store_reminder_settings"), "other-store"),
+  ).toBeNull()
+  expect(
+    generalReceiptRoute(receipt("store_receipt_settings"), "record-real"),
+  ).toEqual({ pathname: "/receipt-settings-modal", params: {} })
   expect(generalReceiptRoute(receipt("customer"))).toEqual({
     pathname: "/customer-ledger/[customerId]",
     params: { customerId: "record-real" },
@@ -113,4 +120,20 @@ test("saved actions another client owns stay visible after a reload", () => {
       ],
     }),
   ).toBeNull()
+})
+
+test("shipped reads declare mobile support or a reviewed dashboard-only gap", () => {
+  // Shipped reads answer without dashboard-only Open targets, so the native
+  // card renders them; a new one must declare mobile or give a reason here.
+  expect(
+    capabilityManifest
+      .filter(
+        (entry) =>
+          entry.mode === "read" &&
+          entry.rollout !== "planned" &&
+          !entry.clients.includes("mobile"),
+      )
+      .map((entry) => entry.id),
+    // Recorded Finance balances currently have dashboard-only acceptance.
+  ).toEqual(["finance.money_account_balances.read"])
 })

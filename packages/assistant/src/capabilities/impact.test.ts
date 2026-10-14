@@ -424,3 +424,27 @@ test("draft lists machine-known rows and required documentation topics", () => {
     "capability",
   ])
 })
+
+test("a decision record may accompany the required documentation", () => {
+  const result = evaluateImpactGate(
+    input({
+      records: new Map([
+        [
+          recordPath,
+          {
+            ...record,
+            docs: [
+              ...record.docs,
+              {
+                topic: "decision",
+                path: ".brain/decisions/2026-10-12-example.md",
+                status: "local_only",
+              },
+            ],
+          },
+        ],
+      ]),
+    }),
+  )
+  expect(result.errors).toEqual([])
+})

@@ -139,12 +139,14 @@ export const impactRecordSchema = z
     docs: z
       .array(
         z.object({
+          // `decision` records an ADR alongside; it is never required.
           topic: z.enum([
             "feature",
             "api",
             "schema",
             "permissions",
             "capability",
+            "decision",
           ]),
           path: trimmed.optional(),
           status: z.enum(["updated", "local_only", "not_applicable"]),

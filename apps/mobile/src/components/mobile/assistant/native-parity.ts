@@ -17,6 +17,7 @@ export const nativeEditorActions: ReadonlySet<GeneralActionName> = new Set([
   "product_create",
   "payment_record",
   "order_create",
+  "sale_record",
   "order_attachment_add",
   ...nativeChangeActions,
 ])
@@ -27,7 +28,19 @@ export const nativeReceiptKinds: ReadonlySet<GeneralReceipt["kind"]> = new Set([
   "product",
   "order",
   "payment",
+  "store_receipt_settings",
+  "store_reminder_settings",
+  "store_order_visibility",
 ])
+
+/** Manifest receipt labels whose capability saves one of several kinds. */
+const receiptFamilies: Record<string, readonly string[]> = {
+  store_settings: [
+    "store_receipt_settings",
+    "store_reminder_settings",
+    "store_order_visibility",
+  ],
+}
 
 export type NativeParityGap = {
   id: string
@@ -42,7 +55,12 @@ export function nativeParityGaps(manifest: readonly Capability[]) {
     const missing: NativeParityGap["missing"] = []
     if (!nativeEditorActions.has(capability.action as GeneralActionName))
       missing.push("editor")
-    if (!nativeReceiptKinds.has(capability.receipt as GeneralReceipt["kind"]))
+    const kinds = receiptFamilies[capability.receipt] ?? [capability.receipt]
+    if (
+      !kinds.every((kind) =>
+        nativeReceiptKinds.has(kind as GeneralReceipt["kind"]),
+      )
+    )
       missing.push("receipt")
     return missing.length
       ? [{ id: capability.id, mode: capability.mode, missing }]

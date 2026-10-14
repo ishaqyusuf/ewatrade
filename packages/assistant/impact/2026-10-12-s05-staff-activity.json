@@ -1,0 +1,65 @@
+{
+  "version": 1,
+  "id": "2026-10-12-s05-staff-activity",
+  "tickets": ["S05"],
+  "summary": "Adds a read-only daily staff activity projection over actor-attributed orders, payments, stock operations, stock counts, order amendments, returns, service fulfilment, service approvals, service work events, service assignments and price changes, with exact per-stream counts and a filter-bound cursor; exposed as retailOps.staffActivityPage and the planned GENERAL read tool readStaffActivity. Packet 2 adds authorized finance postings (allow-listed finance-originated journal entries, Book-scoped via the canonical finance entitlement).",
+  "capabilities": [
+    {
+      "id": "staff.activity.read",
+      "change": "added",
+      "rollout": "planned",
+      "note": "Owner/Admin read every Store; Managers only their current accessible Store; scoped staff fail closed at the procedure policy. Declared dashboard and mobile: the answer is a generic card with no Open target. Finance actions are not included yet."
+    }
+  ],
+  "procedures": [
+    {
+      "path": "retailOps.staffActivityPage",
+      "status": "supported",
+      "reason": "Canonical read used by staff.activity.read; no write."
+    }
+  ],
+  "docs": [
+    {
+      "topic": "feature",
+      "path": ".brain/features/assistant-business-operations.md",
+      "status": "local_only",
+      "note": "S05 source checkpoint."
+    },
+    {
+      "topic": "api",
+      "path": ".brain/api/endpoints.md",
+      "status": "local_only",
+      "note": "retailOps.staffActivityPage query."
+    },
+    {
+      "topic": "capability",
+      "path": "packages/assistant/src/capabilities/COVERAGE.md",
+      "status": "updated"
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "test",
+      "path": "packages/db/src/queries/staff-activity.test.ts",
+      "executed": true,
+      "result": "10 pass (12 Oct 2026, uncommitted source, in-memory transaction fake)."
+    },
+    {
+      "kind": "test",
+      "path": "apps/api/src/assistant/general-staff-activity.test.ts",
+      "executed": true,
+      "result": "5 pass with an unreachable placeholder database URL (12 Oct 2026, uncommitted source)."
+    },
+    {
+      "kind": "test",
+      "path": "apps/api/src/assistant/general-tool-schemas.test.ts",
+      "executed": true,
+      "result": "2 pass, 13 assertions with an unreachable placeholder database URL (12 Oct 2026)."
+    },
+    {
+      "kind": "review",
+      "path": "packages/assistant/evaluations/runs/2026-10-12-s05-staff-activity-source.md",
+      "executed": false
+    }
+  ]
+}

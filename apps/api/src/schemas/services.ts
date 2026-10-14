@@ -492,6 +492,25 @@ export const serviceBatchNotificationIntentSchema = z
   })
   .strict()
 
+/** G05: a staff-reported share; the recipient always comes from the Order. */
+export const serviceManualMessageSchema = z
+  .object({
+    jobId: z.string().trim().min(1).max(128),
+    channel: z.enum(["manual", "sms", "whatsapp"]),
+    message: z.string().trim().min(1).max(1_000),
+    reason: z.string().trim().max(500).optional(),
+    alreadyShared: z.literal(true),
+    clientCommandId: z.string().trim().min(8).max(160),
+  })
+  .strict()
+
+export const serviceJobMessagesSchema = z
+  .object({
+    jobId: z.string().trim().min(1).max(128),
+    limit: z.number().int().min(1).max(20).optional(),
+  })
+  .strict()
+
 export const serviceManualShareSchema = z
   .object({
     channel: z.enum(["email", "manual", "sms", "whatsapp"]).optional(),

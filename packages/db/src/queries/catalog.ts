@@ -1769,7 +1769,7 @@ export async function setCatalogOfferingStoreAvailabilityInTransaction(
 }
 
 export async function archiveCatalogOffering(
-  db: PrismaClient,
+  db: PrismaClient | Prisma.TransactionClient,
   input: { offeringId: string; tenantId: string },
 ) {
   const offering = await db.sellableOffering.findFirst({
@@ -1797,33 +1797,39 @@ export async function archiveCatalogVariant(
   db: PrismaClient,
   input: { tenantId: string; variantId: string },
 ) {
-  return db.$transaction(async (tx) => {
-    const variant = await tx.sellableVariant.findFirst({
-      where: {
-        catalogItem: { systemRole: null, tenantId: input.tenantId },
-        id: input.variantId,
-      },
-      select: { id: true },
-    })
-    if (!variant) {
-      throw new CatalogError(
-        "CATALOG_VARIANT_NOT_FOUND",
-        "Sellable Variant not found.",
-      )
-    }
+  return db.$transaction((tx) => archiveCatalogVariantInTransaction(tx, input))
+}
 
-    const archivedAt = new Date()
-    await tx.sellableOffering.updateMany({
-      data: { archivedAt, status: CatalogRecordStatus.ARCHIVED },
-      where: { variantId: variant.id },
-    })
-    return tx.sellableVariant.update({
-      data: {
-        archivedAt,
-        isDefault: false,
-        status: CatalogRecordStatus.ARCHIVED,
-      },
-      where: { id: variant.id },
-    })
+/** Caller owns the transaction; archives the variant and all its offerings. */
+export async function archiveCatalogVariantInTransaction(
+  tx: Prisma.TransactionClient,
+  input: { tenantId: string; variantId: string },
+) {
+  const variant = await tx.sellableVariant.findFirst({
+    where: {
+      catalogItem: { systemRole: null, tenantId: input.tenantId },
+      id: input.variantId,
+    },
+    select: { id: true },
+  })
+  if (!variant) {
+    throw new CatalogError(
+      "CATALOG_VARIANT_NOT_FOUND",
+      "Sellable Variant not found.",
+    )
+  }
+
+  const archivedAt = new Date()
+  await tx.sellableOffering.updateMany({
+    data: { archivedAt, status: CatalogRecordStatus.ARCHIVED },
+    where: { variantId: variant.id },
+  })
+  return tx.sellableVariant.update({
+    data: {
+      archivedAt,
+      isDefault: false,
+      status: CatalogRecordStatus.ARCHIVED,
+    },
+    where: { id: variant.id },
   })
 }

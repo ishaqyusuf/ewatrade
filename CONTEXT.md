@@ -3,6 +3,65 @@
 EwaTrade models the commercial and inventory language shared by merchants,
 stores, sales surfaces, and stock operations.
 
+## Business Import Language
+
+**Source Evidence**:
+The original business file or photographed page and its location/context, kept
+separately from any interpretation or correction of its contents.
+_Avoid_: AI summary, verified business record
+
+**Preserved Record**:
+Business information retained for inspection and later use, including extra
+details on a supported record or a whole record that cannot yet be activated.
+Preservation alone does not change stock, money or operational totals.
+_Avoid_: Imported transaction, active business record
+
+**Extracted Candidate**:
+A proposed reading or organization of source evidence that the business can
+review and correct. It may contain unresolved facts; extraction alone does not
+establish a verified or active business record.
+_Avoid_: Imported record, confirmed fact
+
+**Candidate Correction**:
+A business-provided clarification of a proposed reading that retains its original
+evidence and correction history. It changes the interpretation under review,
+not an already committed transaction.
+_Avoid_: Replacing the original source, editing posted history
+
+**Opening Position**:
+A verified starting stock quantity, money-account balance or Customer debt/credit
+at its supported as-of boundary, reconciled against existing active records.
+Historical transactions explaining it remain separate preserved evidence, so they
+do not create a second stock or money effect.
+_Avoid_: Replaying historical transactions, cumulative purchases, complete historical valuation
+
+**Import Plan**:
+The business-reviewable proposal describing where extracted candidates will go,
+which will become active, their effects and which information stays preserved.
+Review and correction alone do not authorize saving active business records.
+_Avoid_: Import receipt, automatic import, extracted data alone
+
+**Import Receipt**:
+The recorded outcome of an import confirmation, distinguishing saved business
+records from pending, failed, preserved-only and unverified information.
+_Avoid_: Upload success, extraction success, proof of complete migration
+
+**Import Run**:
+One business-owned import whose evidence, candidates, approved work and recorded
+outcomes remain available when the business returns through chat or Import history.
+_Avoid_: One chat message, one file, one all-or-nothing workbook transaction
+
+**Unknown Import Result**:
+A save attempt whose committed or rejected outcome has not yet been established.
+It must be reconciled before a replacement attempt can be approved.
+_Avoid_: Failed import, safe to start over, cancelled transaction
+
+**Preserved Record Conversion**:
+The business-confirmed use of preserved information in a compatible available
+feature, retaining source history and linking the resulting supported records.
+Finding eligible information alone does not activate it or grant permission.
+_Avoid_: Automatic future import, deleting originals, replaying historical effects
+
 ## QA Tooling Language
 
 **QA Domain**:

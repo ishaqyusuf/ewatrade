@@ -398,12 +398,23 @@ async function createMobileSession(
 export async function createMobileSessionForVerifiedUser(
   db: DbClient,
   userId: string,
+  proof: "email" | "phone" = "email",
 ): Promise<MobileAuthSessionResult> {
   const user = await db.user.findUnique({
     where: { id: userId },
-    select: { id: true, email: true, emailVerified: true, name: true },
+    select: {
+      id: true,
+      email: true,
+      emailVerified: true,
+      phoneVerifiedAt: true,
+      name: true,
+    },
   })
-  if (!user?.emailVerified) throw new Error("A verified account is required.")
+  if (
+    !user ||
+    (proof === "phone" ? !user.phoneVerifiedAt : !user.emailVerified)
+  )
+    throw new Error("A verified account is required.")
   const age = await getCustomerAccountAgeStatus(db, user.id)
   const tenant = age.eligible
     ? await getFirstActiveTenantForUser(db, { userId: user.id })
@@ -419,7 +430,7 @@ export async function createMobileSessionForVerifiedUser(
       businessId: tenant?.id ?? null,
       businessName: tenant?.name ?? null,
       currencyCode: tenant?.currencyCode ?? "NGN",
-      email: user.email,
+      email: user.email.endsWith("@phone.ewatrade.invalid") ? "" : user.email,
       id: user.id,
       name: user.name,
       role: tenant?.role ?? "NONE",

@@ -1,0 +1,54 @@
+{
+  "date": "2026-10-12",
+  "package": "com.ewatrade.app",
+  "versionCode": 32,
+  "sourceCommit": "203f4657a7be5a78c69911b71f595d665f0d767e",
+  "capture": "ADB raw PNG; Pixel_10a; 16 KB pages; 1080x1920 viewport",
+  "signer": "local bundletool debug certificate; not Play-signed installation",
+  "content": "Owner-confirmed synthetic account; unsaved product/sale drafts; no credentials captured",
+  "playStatus": "Six phone screenshots saved; listing Ready to send for review; not submitted",
+  "screenshots": [
+    {
+      "file": "01-business-home.png",
+      "width": 1080,
+      "height": 1920,
+      "bytes": 263317,
+      "sha256": "16c43fbb192de01e915a406f36da283c57900cc013c0146a52557b321492bd39"
+    },
+    {
+      "file": "02-product-setup.png",
+      "width": 1080,
+      "height": 1920,
+      "bytes": 209546,
+      "sha256": "9d8227e97de5ba19932f8dfd1cb367a97e5f55179869ffed3ff09b44c2a8c5d0"
+    },
+    {
+      "file": "03-product-details.png",
+      "width": 1080,
+      "height": 1920,
+      "bytes": 211597,
+      "sha256": "83dd6c781d42899498d44e0bc9a57d10d028ec977223184bdffb69dedcbbf89e"
+    },
+    {
+      "file": "04-quick-sale.png",
+      "width": 1080,
+      "height": 1920,
+      "bytes": 125957,
+      "sha256": "56786eea6fbe039dd90e544cf186af92e1339f7931a59bb12b7bce76d2112ca8"
+    },
+    {
+      "file": "05-sale-customer.png",
+      "width": 1080,
+      "height": 1920,
+      "bytes": 196007,
+      "sha256": "f2c6a41372fa73906a0de76ca382a741642458c356d92211170a9322b2669497"
+    },
+    {
+      "file": "06-business-tools.png",
+      "width": 1080,
+      "height": 1920,
+      "bytes": 210733,
+      "sha256": "6f860a9900d9aefad77b1ee4dd7c7a437930479034e3a571c81cd58f77254745"
+    }
+  ]
+}

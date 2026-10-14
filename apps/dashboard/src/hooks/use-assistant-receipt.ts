@@ -41,6 +41,9 @@ export const assistantObjectParams = {
   staffMember: parseAsString,
   staffHistory: parseAsString,
   staffDirectory: parseAsString,
+  storeSettings: parseAsString,
+  storeSettingsSection: parseAsString,
+  staffActivity: parseAsString,
 }
 
 export const closedAssistantObjectParams = {
@@ -80,6 +83,9 @@ export const closedAssistantObjectParams = {
   staffMember: null,
   staffHistory: null,
   staffDirectory: null,
+  storeSettings: null,
+  storeSettingsSection: null,
+  staffActivity: null,
 }
 
 /** Open registered record overlays without leaving the current workspace/chat. */
@@ -94,7 +100,10 @@ export function useAssistantReceipt() {
       case "commerce_quote_decision": {
         const target = quoteDecisionReceiptTarget(receipt)
         if (!target) return
-        return setParams({...closedAssistantObjectParams,assistantQuoteApproval:JSON.stringify(target)})
+        return setParams({
+          ...closedAssistantObjectParams,
+          assistantQuoteApproval: JSON.stringify(target),
+        })
       }
       case "service_work":
       case "service_work_note":
@@ -175,6 +184,14 @@ export function useAssistantReceipt() {
         return setParams({ ...closed, inventoryCloseout: receipt.recordId })
       case "stock_transfer":
         return setParams({ ...closed, stockTransfer: receipt.recordId })
+      case "store_receipt_settings":
+      case "store_reminder_settings":
+      case "store_order_visibility":
+        return setParams({
+          ...closed,
+          storeSettings: receipt.recordId,
+          storeSettingsSection: receipt.kind,
+        })
       case "order":
       case "payment":
         return setParams({

@@ -6,6 +6,7 @@ import { OpenAssistantQuoteApprovalSheet } from "@/components/open-assistant-quo
 import { OpenBusinessReportSheet } from "@/components/open-business-report-sheet"
 import { OpenServiceWorkOriginalSheet } from "@/components/open-service-work-original-sheet"
 import { OpenStaffAccessSheet } from "@/components/open-staff-access-sheet"
+import { OpenStaffActivitySheet } from "@/components/open-staff-activity-sheet"
 import { OpenStaffDirectorySheet } from "@/components/open-staff-directory-sheet"
 import { OpenStaffHistorySheet } from "@/components/open-staff-history-sheet"
 import { OpenStaffInvitationSheet } from "@/components/open-staff-invitation-sheet"
@@ -13,6 +14,7 @@ import { OpenStaffMemberSheet } from "@/components/open-staff-member-sheet"
 import { OpenStaffStatusSheet } from "@/components/open-staff-status-sheet"
 import type { GeneralAnswer } from "@ewatrade/assistant/general/contracts"
 import { useSyncExternalStore } from "react"
+import { GeneralMoneyAccountsAnswer } from "./general-money-accounts-answer"
 
 const subscribe = () => () => {}
 const clientSnapshot = () => true
@@ -25,6 +27,14 @@ export function GeneralAnswerCard({ answer }: { answer: GeneralAnswer }) {
     serverSnapshot,
   )
   const asOf = new Date(answer.asOf)
+  if (answer.accounts)
+    return (
+      <GeneralMoneyAccountsAnswer
+        answer={answer}
+        accounts={answer.accounts}
+        asOf={hydrated ? asOf.toLocaleString() : asOf.toISOString()}
+      />
+    )
   // Value and meaning first; where it came from in a small line; the original
   // record opens from the right (below on narrow chats).
   return (
@@ -61,6 +71,8 @@ export function GeneralAnswerCard({ answer }: { answer: GeneralAnswer }) {
           ) : answer.target.kind === "finance_cash_count" ||
             answer.target.kind === "finance_day_close" ? (
             <OpenAssistantFinanceReview target={answer.target} />
+          ) : answer.target.kind === "staff_activity" ? (
+            <OpenStaffActivitySheet target={answer.target} />
           ) : answer.target.kind === "staff_history" ? (
             <OpenStaffHistorySheet target={answer.target} />
           ) : answer.target.kind === "staff_directory" ? (

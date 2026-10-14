@@ -9,9 +9,11 @@ import { createTRPCContext } from "@trpc/tanstack-react-query"
 import { useState } from "react"
 import superjson from "superjson"
 import { dashboardAnalyticsLink } from "./analytics-link"
+import { shouldLogDashboardTrpcOperation } from "./log-operation"
 import { makeQueryClient } from "./query-client"
 
-export const { TRPCProvider, useTRPC, useTRPCClient } = createTRPCContext<AppRouter>()
+export const { TRPCProvider, useTRPC, useTRPCClient } =
+  createTRPCContext<AppRouter>()
 
 let browserQueryClient: ReturnType<typeof makeQueryClient> | undefined
 
@@ -24,7 +26,15 @@ function getQueryClient() {
   return browserQueryClient
 }
 
+// Bumped on every clear (sign-out, account, business or Store switch): async
+// work started before it must not touch the cache afterwards.
+let dataCacheGeneration = 0
+export function getDataCacheGeneration() {
+  return dataCacheGeneration
+}
+
 export function clearDashboardDataCache() {
+  dataCacheGeneration += 1
   browserQueryClient?.clear()
 }
 
@@ -67,8 +77,7 @@ export function TRPCReactProvider({
         }),
         loggerLink({
           enabled: (opts) =>
-            process.env.NODE_ENV === "development" ||
-            (opts.direction === "down" && opts.result instanceof Error),
+            shouldLogDashboardTrpcOperation(opts, process.env.NODE_ENV),
         }),
       ],
     }),

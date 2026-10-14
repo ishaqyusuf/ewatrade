@@ -1,0 +1,58 @@
+{
+  "version": 1,
+  "id": "2026-10-12-g04-catalog-archive",
+  "tickets": ["G04"],
+  "summary": "Adds the planned reviewed write catalog.archive (action catalog_archive): archive 1\u201320 selling units or variants of one Product. Review names each target, refuses already archived, foreign or still-reserved targets with reasons, says what stays for sale (or that the Product stops appearing for sale), and binds a digest over offering/variant state and reservations. Executes through the canonical archive commands (variant archive gained a transaction seam). Receipt opens the exact Product on both clients; dashboard and native editors let the user drop targets and change the reason. Larger or cross-Product batches and deletion stay on the forms.",
+  "capabilities": [
+    {
+      "id": "catalog.archive",
+      "change": "added",
+      "rollout": "planned",
+      "note": "Catalog managers (assertCanManageCatalog, Owner/Admin/Manager ceiling); tenant-wide effect; receipt product."
+    }
+  ],
+  "procedures": [
+    {
+      "path": "catalog.archiveOffering",
+      "status": "supported",
+      "reason": "Selling-unit target of catalog.archive; same canonical command."
+    },
+    {
+      "path": "catalog.archiveVariant",
+      "status": "supported",
+      "reason": "Variant target of catalog.archive; transaction seam, same behavior."
+    }
+  ],
+  "docs": [
+    {
+      "topic": "feature",
+      "path": ".brain/plans/2026-10-09-assistant-business-operations.md",
+      "status": "local_only",
+      "note": "G04 packet 1."
+    },
+    {
+      "topic": "capability",
+      "path": "packages/assistant/src/capabilities/COVERAGE.md",
+      "status": "updated"
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "test",
+      "path": "packages/assistant/src/general/catalog-archive.test.ts",
+      "executed": true,
+      "result": "3 pass with capability tests, 20 total (12 Oct 2026, uncommitted)."
+    },
+    {
+      "kind": "test",
+      "path": "apps/api/src/assistant/general-catalog-archive.test.ts",
+      "executed": true,
+      "result": "4 pass with an unreachable placeholder database URL; tool schemas 2 pass (12 Oct 2026)."
+    },
+    {
+      "kind": "review",
+      "path": "packages/assistant/evaluations/runs/2026-10-12-g04-catalog-archive.md",
+      "executed": false
+    }
+  ]
+}

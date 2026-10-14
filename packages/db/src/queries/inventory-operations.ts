@@ -20,10 +20,10 @@ import {
 import { CatalogError } from "./catalog"
 import { findInventoryOpeningOwnerInTransaction } from "./finance/inventory-opening-owner"
 import { postStockCountFinanceJournalsInTransaction } from "./finance/posting"
+import { previewOrdinaryCorrectionCost } from "./finance/preview-ordinary-correction-cost"
 import { FinanceError } from "./finance/rules"
 import { recordStockCountValuationInTransaction } from "./finance/valuation-counts"
 import { recordOrdinaryStockValuationInTransaction } from "./finance/valuation-ordinary"
-import { previewOrdinaryCorrectionCost } from "./finance/preview-ordinary-correction-cost"
 import { recordOrdinaryStockCorrectionValuationInTransaction } from "./finance/valuation-ordinary-corrections"
 import { recordPackagedTransformationValuationInTransaction } from "./finance/valuation-transformations"
 
@@ -32,8 +32,8 @@ import {
   normalizeStockCategorySelectors,
 } from "@ewatrade/utils/inventory-categories"
 import {
-  resolveStockCategories,
   resolvePurchaseStockCategoryGroups,
+  resolveStockCategories,
   serializeStockCategories,
   stockOperationCategoryGraph,
 } from "./inventory-categories"
@@ -249,9 +249,10 @@ async function previewLoadedOrdinaryStockAdjustment(
       ? canonicalQuantity
       : enteredQuantity
   const before = balance.onHandQuantity.toFixed()
-  const after = input.direction === "increase"
-    ? addExactDecimals(before, sourceIncrease)
-    : subtractExactDecimals(before, sourceIncrease)
+  const after =
+    input.direction === "increase"
+      ? addExactDecimals(before, sourceIncrease)
+      : subtractExactDecimals(before, sourceIncrease)
   const reserved = balance.reservedQuantity.toFixed()
   if (compareExactDecimals(after, reserved) < 0)
     throw new CatalogError(
@@ -297,7 +298,10 @@ async function previewLoadedOrdinaryStockAdjustment(
     reserved,
     availableAfter: subtractExactDecimals(after, reserved),
     sourceIncrease,
-    canonicalBefore: balance.kind === StockBalanceKind.SHARED_POOL ? before : multiplyExactDecimals(before, unit.factor.toFixed()),
+    canonicalBefore:
+      balance.kind === StockBalanceKind.SHARED_POOL
+        ? before
+        : multiplyExactDecimals(before, unit.factor.toFixed()),
     currencyCode: balance.store.currencyCode,
   }
 }
@@ -457,19 +461,35 @@ export async function preparePurchaseStockReceiptInTransaction(
   },
 ) {
   const input = { ...sourceInput }
-  const lockedBalance = await tx.$queryRaw<Array<{ id: string }>>`SELECT id FROM "StockBalanceSource" WHERE id = ${input.balanceSourceId}
+  const lockedBalance = await tx.$queryRaw<
+    Array<{ id: string }>
+  >`SELECT id FROM "StockBalanceSource" WHERE id = ${input.balanceSourceId}
     AND "tenantId" = ${input.tenantId} AND "storeId" = ${input.storeId} FOR UPDATE`
-  if (lockedBalance.length !== 1 || lockedBalance[0]?.id !== input.balanceSourceId)
-    throw new CatalogError("INVALID_STOCK_OPERATION", "The original purchase stock source is unavailable.")
+  if (
+    lockedBalance.length !== 1 ||
+    lockedBalance[0]?.id !== input.balanceSourceId
+  )
+    throw new CatalogError(
+      "INVALID_STOCK_OPERATION",
+      "The original purchase stock source is unavailable.",
+    )
   // Hold both the entered unit and its status/factor owner through execution.
-  const lockedUnit = await tx.$queryRaw<Array<{ id: string }>>`SELECT u.id FROM "InventoryUnit" u
+  const lockedUnit = await tx.$queryRaw<
+    Array<{ id: string }>
+  >`SELECT u.id FROM "InventoryUnit" u
     JOIN "UnitConfigurationVersion" c ON c.id = u."configurationVersionId"
     JOIN "CatalogProduct" p ON p.id = c."productId"
     JOIN "CatalogItem" i ON i.id = p."catalogItemId" AND i."tenantId" = ${input.tenantId}
     WHERE u.id = ${input.enteredInventoryUnitId} AND c.id = ${input.expectedConfigurationVersionId}
     FOR SHARE OF u, c`
-  if (lockedUnit.length !== 1 || lockedUnit[0]?.id !== input.enteredInventoryUnitId)
-    throw new CatalogError("STALE_CONFIGURATION", "The original purchase unit is unavailable in this business.")
+  if (
+    lockedUnit.length !== 1 ||
+    lockedUnit[0]?.id !== input.enteredInventoryUnitId
+  )
+    throw new CatalogError(
+      "STALE_CONFIGURATION",
+      "The original purchase unit is unavailable in this business.",
+    )
   const balance = await loadBalance(tx, input)
   if (balance.custodyType !== "STORE")
     throw new CatalogError(
@@ -1058,7 +1078,10 @@ async function postSingleBalanceStockOperationInTransactionCore(
   input: SingleBalanceInput,
   payloadHash: string,
   registerOrdinaryValuation: boolean,
-  prepared?: { balance: BalanceGraph; unit: Awaited<ReturnType<typeof loadCompatibleEnteredUnit>> },
+  prepared?: {
+    balance: BalanceGraph
+    unit: Awaited<ReturnType<typeof loadCompatibleEnteredUnit>>
+  },
 ) {
   const previous = await previousOperation(tx, {
     clientOperationId: input.clientOperationId,
@@ -1070,18 +1093,16 @@ async function postSingleBalanceStockOperationInTransactionCore(
   const categoryLinks = input.categories
     ? await resolveStockCategories(tx, input.tenantId, input.categories)
     : []
-  const balance = prepared?.balance ?? await loadBalance(tx, input)
+  const balance = prepared?.balance ?? (await loadBalance(tx, input))
   if (balance.revision !== input.expectedBalanceRevision) {
     throw new CatalogError(
       "REVISION_CONFLICT",
       "The Balance Source changed before this operation.",
     )
   }
-  const unit = prepared?.unit ?? await loadCompatibleEnteredUnit(
-    tx,
-    balance,
-    input.enteredInventoryUnitId,
-  )
+  const unit =
+    prepared?.unit ??
+    (await loadCompatibleEnteredUnit(tx, balance, input.enteredInventoryUnitId))
   if (unit.configurationVersionId !== input.expectedConfigurationVersionId) {
     throw new CatalogError(
       "STALE_CONFIGURATION",
@@ -1201,207 +1222,213 @@ async function postSingleBalanceStockOperationInTransactionCore(
   return serializeOperation(result)
 }
 
+export type TransformPackagedStockInput = {
+  actorUserId: string
+  clientOperationId: string
+  expectedConfigurationVersionId: string
+  reason: string
+  schemaVersion: number
+  source: string
+  sourceBalanceRevision: number
+  sourceBalanceSourceId: string
+  sourceQuantity: string
+  storeId: string
+  targetBalanceRevision: number
+  targetBalanceSourceId: string
+  targetQuantity: string
+  tenantId: string
+}
+
 export async function transformPackagedStock(
   db: PrismaClient,
-  input: {
-    actorUserId: string
-    clientOperationId: string
-    expectedConfigurationVersionId: string
-    reason: string
-    schemaVersion: number
-    source: string
-    sourceBalanceRevision: number
-    sourceBalanceSourceId: string
-    sourceQuantity: string
-    storeId: string
-    targetBalanceRevision: number
-    targetBalanceSourceId: string
-    targetQuantity: string
-    tenantId: string
-  },
+  input: TransformPackagedStockInput,
+) {
+  assertSchemaVersion(input.schemaVersion)
+  return db.$transaction(
+    (tx) => transformPackagedStockInTransaction(tx, input),
+    { maxWait: 10_000, timeout: 30_000 },
+  )
+}
+
+/** Caller owns the transaction; same locks, checks, idempotency and valuation. */
+export async function transformPackagedStockInTransaction(
+  tx: Prisma.TransactionClient,
+  input: TransformPackagedStockInput,
 ) {
   assertSchemaVersion(input.schemaVersion)
   const payloadHash = hash(input)
+  await lockInventoryFinancialStore(tx, input)
+  const previous = await previousOperation(tx, {
+    clientOperationId: input.clientOperationId,
+    payloadHash,
+    tenantId: input.tenantId,
+  })
+  if (previous) return serializeOperation(previous)
 
-  return db.$transaction(
-    async (tx) => {
-      await lockInventoryFinancialStore(tx, input)
-      const previous = await previousOperation(tx, {
-        clientOperationId: input.clientOperationId,
-        payloadHash,
-        tenantId: input.tenantId,
-      })
-      if (previous) return serializeOperation(previous)
+  const balanceIds = [
+    input.sourceBalanceSourceId,
+    input.targetBalanceSourceId,
+  ].sort()
+  await tx.$queryRaw<Array<{ id: string }>>`
+  SELECT "id" FROM "StockBalanceSource"
+  WHERE "id" IN (${Prisma.join(balanceIds)})
+    AND "tenantId" = ${input.tenantId}
+    AND "storeId" = ${input.storeId}
+  ORDER BY "id"
+  FOR UPDATE
+`
 
-      const balanceIds = [
-        input.sourceBalanceSourceId,
-        input.targetBalanceSourceId,
-      ].sort()
-      await tx.$queryRaw<Array<{ id: string }>>`
-      SELECT "id" FROM "StockBalanceSource"
-      WHERE "id" IN (${Prisma.join(balanceIds)})
-        AND "tenantId" = ${input.tenantId}
-        AND "storeId" = ${input.storeId}
-      ORDER BY "id"
-      FOR UPDATE
-    `
+  const sourceBalance = await loadBalance(tx, {
+    balanceSourceId: input.sourceBalanceSourceId,
+    storeId: input.storeId,
+    tenantId: input.tenantId,
+  })
+  const targetBalance = await loadBalance(tx, {
+    balanceSourceId: input.targetBalanceSourceId,
+    storeId: input.storeId,
+    tenantId: input.tenantId,
+  })
+  if (
+    sourceBalance.id === targetBalance.id ||
+    sourceBalance.kind !== StockBalanceKind.PACKAGED_STOCK ||
+    targetBalance.kind !== StockBalanceKind.PACKAGED_STOCK ||
+    sourceBalance.productId !== targetBalance.productId ||
+    sourceBalance.variantId !== targetBalance.variantId
+  ) {
+    throw new CatalogError(
+      "INVALID_STOCK_OPERATION",
+      "Transformation endpoints must be different Packaged Stock balances for the same Store, Product, and variant.",
+    )
+  }
+  if (
+    sourceBalance.revision !== input.sourceBalanceRevision ||
+    targetBalance.revision !== input.targetBalanceRevision
+  ) {
+    throw new CatalogError(
+      "REVISION_CONFLICT",
+      "A transformation Balance Source changed before confirmation.",
+    )
+  }
+  if (
+    sourceBalance.inventoryUnit.configurationVersionId !==
+      input.expectedConfigurationVersionId ||
+    targetBalance.inventoryUnit.configurationVersionId !==
+      input.expectedConfigurationVersionId
+  ) {
+    throw new CatalogError(
+      "STALE_CONFIGURATION",
+      "Transformation endpoints must use the expected Current configuration.",
+    )
+  }
 
-      const sourceBalance = await loadBalance(tx, {
-        balanceSourceId: input.sourceBalanceSourceId,
-        storeId: input.storeId,
-        tenantId: input.tenantId,
-      })
-      const targetBalance = await loadBalance(tx, {
-        balanceSourceId: input.targetBalanceSourceId,
-        storeId: input.storeId,
-        tenantId: input.tenantId,
-      })
-      if (
-        sourceBalance.id === targetBalance.id ||
-        sourceBalance.kind !== StockBalanceKind.PACKAGED_STOCK ||
-        targetBalance.kind !== StockBalanceKind.PACKAGED_STOCK ||
-        sourceBalance.productId !== targetBalance.productId ||
-        sourceBalance.variantId !== targetBalance.variantId
-      ) {
-        throw new CatalogError(
-          "INVALID_STOCK_OPERATION",
-          "Transformation endpoints must be different Packaged Stock balances for the same Store, Product, and variant.",
-        )
-      }
-      if (
-        sourceBalance.revision !== input.sourceBalanceRevision ||
-        targetBalance.revision !== input.targetBalanceRevision
-      ) {
-        throw new CatalogError(
-          "REVISION_CONFLICT",
-          "A transformation Balance Source changed before confirmation.",
-        )
-      }
-      if (
-        sourceBalance.inventoryUnit.configurationVersionId !==
-          input.expectedConfigurationVersionId ||
-        targetBalance.inventoryUnit.configurationVersionId !==
-          input.expectedConfigurationVersionId
-      ) {
-        throw new CatalogError(
-          "STALE_CONFIGURATION",
-          "Transformation endpoints must use the expected Current configuration.",
-        )
-      }
-
-      const sourceQuantity = parseExactDecimal(input.sourceQuantity, {
-        allowZero: false,
-        maxScale: sourceBalance.inventoryUnit.transactionScale,
-      })
-      const targetQuantity = parseExactDecimal(input.targetQuantity, {
-        allowZero: false,
-        maxScale: targetBalance.inventoryUnit.transactionScale,
-      })
-      const sourceCanonical = multiplyExactDecimals(
-        sourceQuantity,
-        sourceBalance.inventoryUnit.factor.toString(),
-      )
-      const targetCanonical = multiplyExactDecimals(
-        targetQuantity,
-        targetBalance.inventoryUnit.factor.toString(),
-      )
-      if (compareExactDecimals(sourceCanonical, targetCanonical) !== 0) {
-        throw new CatalogError(
-          "INVALID_STOCK_OPERATION",
-          "Transformation source and target must conserve exact canonical quantity. Record any loss as a separate linked Adjustment.",
-        )
-      }
-
-      const sourceResult = subtractExactDecimals(
-        sourceBalance.onHandQuantity.toString(),
-        sourceQuantity,
-      )
-      if (
-        compareExactDecimals(
-          sourceResult,
-          sourceBalance.reservedQuantity.toString(),
-        ) < 0
-      ) {
-        throw new CatalogError(
-          "INSUFFICIENT_STOCK",
-          "The source Packaged Stock balance has insufficient available stock.",
-        )
-      }
-      const targetResult = addExactDecimals(
-        targetBalance.onHandQuantity.toString(),
-        targetQuantity,
-      )
-
-      const sourceUpdate = await tx.stockBalanceSource.updateMany({
-        data: { onHandQuantity: sourceResult, revision: { increment: 1 } },
-        where: { id: sourceBalance.id, revision: sourceBalance.revision },
-      })
-      const targetUpdate = await tx.stockBalanceSource.updateMany({
-        data: { onHandQuantity: targetResult, revision: { increment: 1 } },
-        where: { id: targetBalance.id, revision: targetBalance.revision },
-      })
-      if (sourceUpdate.count !== 1 || targetUpdate.count !== 1) {
-        throw new CatalogError(
-          "REVISION_CONFLICT",
-          "A transformation Balance Source changed while posting.",
-        )
-      }
-
-      const operation = await tx.stockOperation.create({
-        data: {
-          actorUserId: input.actorUserId,
-          clientOperationId: input.clientOperationId,
-          effectiveAt: new Date(),
-          payloadHash,
-          reason: input.reason.trim(),
-          source: input.source,
-          storeId: input.storeId,
-          tenantId: input.tenantId,
-          type: StockOperationType.TRANSFORMATION,
-        },
-      })
-      await tx.stockMovement.createMany({
-        data: [
-          {
-            balanceSourceId: sourceBalance.id,
-            configurationVersionId: input.expectedConfigurationVersionId,
-            enteredInventoryUnitId: sourceBalance.inventoryUnitId,
-            enteredQuantity: sourceQuantity,
-            operationId: operation.id,
-            previousOnHandQuantity: sourceBalance.onHandQuantity,
-            resultingOnHandQuantity: sourceResult,
-            signedCanonicalEffect: subtractExactDecimals("0", sourceCanonical),
-            transactionScaleSnapshot:
-              sourceBalance.inventoryUnit.transactionScale,
-            unitFactorSnapshot: sourceBalance.inventoryUnit.factor,
-          },
-          {
-            balanceSourceId: targetBalance.id,
-            configurationVersionId: input.expectedConfigurationVersionId,
-            enteredInventoryUnitId: targetBalance.inventoryUnitId,
-            enteredQuantity: targetQuantity,
-            operationId: operation.id,
-            previousOnHandQuantity: targetBalance.onHandQuantity,
-            resultingOnHandQuantity: targetResult,
-            signedCanonicalEffect: targetCanonical,
-            transactionScaleSnapshot:
-              targetBalance.inventoryUnit.transactionScale,
-            unitFactorSnapshot: targetBalance.inventoryUnit.factor,
-          },
-        ],
-      })
-      const result = await tx.stockOperation.findUniqueOrThrow({
-        include: { movements: true, categories: stockOperationCategoryGraph },
-        where: { id: operation.id },
-      })
-      await recordPackagedTransformationValuationInTransaction(tx, {
-        tenantId: input.tenantId,
-        stockOperationId: operation.id,
-      })
-      return serializeOperation(result)
-    },
-    { maxWait: 10_000, timeout: 30_000 },
+  const sourceQuantity = parseExactDecimal(input.sourceQuantity, {
+    allowZero: false,
+    maxScale: sourceBalance.inventoryUnit.transactionScale,
+  })
+  const targetQuantity = parseExactDecimal(input.targetQuantity, {
+    allowZero: false,
+    maxScale: targetBalance.inventoryUnit.transactionScale,
+  })
+  const sourceCanonical = multiplyExactDecimals(
+    sourceQuantity,
+    sourceBalance.inventoryUnit.factor.toString(),
   )
+  const targetCanonical = multiplyExactDecimals(
+    targetQuantity,
+    targetBalance.inventoryUnit.factor.toString(),
+  )
+  if (compareExactDecimals(sourceCanonical, targetCanonical) !== 0) {
+    throw new CatalogError(
+      "INVALID_STOCK_OPERATION",
+      "Transformation source and target must conserve exact canonical quantity. Record any loss as a separate linked Adjustment.",
+    )
+  }
+
+  const sourceResult = subtractExactDecimals(
+    sourceBalance.onHandQuantity.toString(),
+    sourceQuantity,
+  )
+  if (
+    compareExactDecimals(
+      sourceResult,
+      sourceBalance.reservedQuantity.toString(),
+    ) < 0
+  ) {
+    throw new CatalogError(
+      "INSUFFICIENT_STOCK",
+      "The source Packaged Stock balance has insufficient available stock.",
+    )
+  }
+  const targetResult = addExactDecimals(
+    targetBalance.onHandQuantity.toString(),
+    targetQuantity,
+  )
+
+  const sourceUpdate = await tx.stockBalanceSource.updateMany({
+    data: { onHandQuantity: sourceResult, revision: { increment: 1 } },
+    where: { id: sourceBalance.id, revision: sourceBalance.revision },
+  })
+  const targetUpdate = await tx.stockBalanceSource.updateMany({
+    data: { onHandQuantity: targetResult, revision: { increment: 1 } },
+    where: { id: targetBalance.id, revision: targetBalance.revision },
+  })
+  if (sourceUpdate.count !== 1 || targetUpdate.count !== 1) {
+    throw new CatalogError(
+      "REVISION_CONFLICT",
+      "A transformation Balance Source changed while posting.",
+    )
+  }
+
+  const operation = await tx.stockOperation.create({
+    data: {
+      actorUserId: input.actorUserId,
+      clientOperationId: input.clientOperationId,
+      effectiveAt: new Date(),
+      payloadHash,
+      reason: input.reason.trim(),
+      source: input.source,
+      storeId: input.storeId,
+      tenantId: input.tenantId,
+      type: StockOperationType.TRANSFORMATION,
+    },
+  })
+  await tx.stockMovement.createMany({
+    data: [
+      {
+        balanceSourceId: sourceBalance.id,
+        configurationVersionId: input.expectedConfigurationVersionId,
+        enteredInventoryUnitId: sourceBalance.inventoryUnitId,
+        enteredQuantity: sourceQuantity,
+        operationId: operation.id,
+        previousOnHandQuantity: sourceBalance.onHandQuantity,
+        resultingOnHandQuantity: sourceResult,
+        signedCanonicalEffect: subtractExactDecimals("0", sourceCanonical),
+        transactionScaleSnapshot: sourceBalance.inventoryUnit.transactionScale,
+        unitFactorSnapshot: sourceBalance.inventoryUnit.factor,
+      },
+      {
+        balanceSourceId: targetBalance.id,
+        configurationVersionId: input.expectedConfigurationVersionId,
+        enteredInventoryUnitId: targetBalance.inventoryUnitId,
+        enteredQuantity: targetQuantity,
+        operationId: operation.id,
+        previousOnHandQuantity: targetBalance.onHandQuantity,
+        resultingOnHandQuantity: targetResult,
+        signedCanonicalEffect: targetCanonical,
+        transactionScaleSnapshot: targetBalance.inventoryUnit.transactionScale,
+        unitFactorSnapshot: targetBalance.inventoryUnit.factor,
+      },
+    ],
+  })
+  const result = await tx.stockOperation.findUniqueOrThrow({
+    include: { movements: true, categories: stockOperationCategoryGraph },
+    where: { id: operation.id },
+  })
+  await recordPackagedTransformationValuationInTransaction(tx, {
+    tenantId: input.tenantId,
+    stockOperationId: operation.id,
+  })
+  return serializeOperation(result)
 }
 
 async function resolveStockCountObservation(
@@ -1876,9 +1903,7 @@ export async function correctStockOperationInTransaction(
   await lockInventoryFinancialStores(tx, {
     storeIds: [
       identity.storeId,
-      ...movementIdentities.map(
-        (movement) => movement.balanceSource.storeId,
-      ),
+      ...movementIdentities.map((movement) => movement.balanceSource.storeId),
     ],
     tenantId: input.tenantId,
   })
@@ -1898,9 +1923,7 @@ export async function correctStockOperationInTransaction(
 `
 
   const balanceIds = [
-    ...new Set(
-      movementIdentities.map((movement) => movement.balanceSourceId),
-    ),
+    ...new Set(movementIdentities.map((movement) => movement.balanceSourceId)),
   ].sort()
   if (balanceIds.length) {
     await tx.$queryRaw<Array<{ id: string }>>`
@@ -1926,7 +1949,11 @@ export async function correctStockOperationInTransaction(
       "The Stock Operation to correct was not found.",
     )
   }
-  const ordinaryTarget = await assertCorrectionTargetOwnership(tx, target, input.tenantId)
+  const ordinaryTarget = await assertCorrectionTargetOwnership(
+    tx,
+    target,
+    input.tenantId,
+  )
   if (input.corrections.length !== target.movements.length) {
     throw new CatalogError(
       "INVALID_STOCK_OPERATION",
@@ -1934,10 +1961,7 @@ export async function correctStockOperationInTransaction(
     )
   }
   const correctionByMovement = new Map(
-    input.corrections.map((correction) => [
-      correction.movementId,
-      correction,
-    ]),
+    input.corrections.map((correction) => [correction.movementId, correction]),
   )
 
   const operation = await tx.stockOperation.create({
@@ -1981,8 +2005,16 @@ export async function correctStockOperationInTransaction(
       )
     }
 
-    const { correctedQuantity, correctedCanonical, originalWasIncrease, afterReversal, afterReplacement } =
-      calculateCorrectionQuantities(movement, correction.correctedEnteredQuantity)
+    const {
+      correctedQuantity,
+      correctedCanonical,
+      originalWasIncrease,
+      afterReversal,
+      afterReplacement,
+    } = calculateCorrectionQuantities(
+      movement,
+      correction.correctedEnteredQuantity,
+    )
 
     const updated = await tx.stockBalanceSource.updateMany({
       data: {
@@ -2059,50 +2091,54 @@ export async function correctStockOperationInTransaction(
 }
 
 const correctionTargetGraph = {
-      committedReservation: { select: { id: true } },
-      _count: {
+  committedReservation: { select: { id: true } },
+  _count: {
+    select: {
+      purchaseReceipts: true,
+      productFulfillments: true,
+      productReturns: true,
+      finalizedCounts: true,
+      dispatchedTransfers: true,
+      receivedTransfers: true,
+      cancelledTransfers: true,
+      finalizedCloseouts: true,
+    },
+  },
+  categories: stockOperationCategoryGraph,
+  corrections: { select: { id: true } },
+  movements: {
+    include: {
+      balanceSource: { include: balanceGraph },
+      enteredInventoryUnit: true,
+      purchaseReceipt: { select: { id: true } },
+      valuationEvent: {
         select: {
-          purchaseReceipts: true,
-          productFulfillments: true,
-          productReturns: true,
-          finalizedCounts: true,
-          dispatchedTransfers: true,
-          receivedTransfers: true,
-          cancelledTransfers: true,
-          finalizedCloseouts: true,
+          id: true,
+          sourceKind: true,
+          sourceId: true,
+          stockOperationId: true,
+          stockMovementId: true,
+          purchaseReceiptId: true,
+          productReturnCostId: true,
         },
       },
-      categories: stockOperationCategoryGraph,
-      corrections: { select: { id: true } },
-      movements: {
-        include: {
-          balanceSource: { include: balanceGraph },
-          enteredInventoryUnit: true,
-          purchaseReceipt: { select: { id: true } },
-          valuationEvent: {
-            select: {
-              id: true,
-              sourceKind: true,
-              sourceId: true,
-              stockOperationId: true,
-              stockMovementId: true,
-              purchaseReceiptId: true,
-              productReturnCostId: true,
-            },
-          },
-        },
-      },
-    } satisfies Prisma.StockOperationInclude
+    },
+  },
+} satisfies Prisma.StockOperationInclude
 
-type CorrectionTarget = Prisma.StockOperationGetPayload<{ include: typeof correctionTargetGraph }>
+type CorrectionTarget = Prisma.StockOperationGetPayload<{
+  include: typeof correctionTargetGraph
+}>
 
 function isOrdinaryCorrectionTarget(target: CorrectionTarget) {
-  return     (target.type === StockOperationType.RECEIPT ||
+  return (
+    (target.type === StockOperationType.RECEIPT ||
       target.type === StockOperationType.RETURN ||
       target.type === StockOperationType.ADJUSTMENT) &&
     target.movements.length === 1 &&
     target.correctionOfOperationId === null &&
     Object.values(target._count).every((count) => count === 0)
+  )
 }
 
 async function assertCorrectionTargetOwnership(
@@ -2152,8 +2188,7 @@ async function assertCorrectionTargetOwnership(
         movement.purchaseReceipt != null ||
         (movement.valuationEvent != null &&
           (!ordinaryTarget ||
-            movement.valuationEvent.sourceKind !==
-              "ORDINARY_STOCK_OPERATION" ||
+            movement.valuationEvent.sourceKind !== "ORDINARY_STOCK_OPERATION" ||
             movement.valuationEvent.sourceId !== target.id ||
             movement.valuationEvent.stockOperationId !== target.id ||
             movement.valuationEvent.stockMovementId !== movement.id ||
@@ -2181,12 +2216,29 @@ export async function readStockCorrectionTarget(
   input: { tenantId: string; storeId: string; targetOperationId: string },
 ) {
   const target = await tx.stockOperation.findFirst({
-    where: { id: input.targetOperationId, tenantId: input.tenantId, storeId: input.storeId },
+    where: {
+      id: input.targetOperationId,
+      tenantId: input.tenantId,
+      storeId: input.storeId,
+    },
     include: correctionTargetGraph,
   })
-  if (!target) throw new CatalogError("INVALID_STOCK_OPERATION", "The Stock Operation to correct was not found.")
-  if (target.movements.some(({ balanceSource }) => balanceSource.tenantId !== input.tenantId || balanceSource.storeId !== input.storeId))
-    throw new CatalogError("INVALID_STOCK_OPERATION", "Correction movements must belong to the current business and Store.")
+  if (!target)
+    throw new CatalogError(
+      "INVALID_STOCK_OPERATION",
+      "The Stock Operation to correct was not found.",
+    )
+  if (
+    target.movements.some(
+      ({ balanceSource }) =>
+        balanceSource.tenantId !== input.tenantId ||
+        balanceSource.storeId !== input.storeId,
+    )
+  )
+    throw new CatalogError(
+      "INVALID_STOCK_OPERATION",
+      "Correction movements must belong to the current business and Store.",
+    )
   await assertCorrectionTargetOwnership(tx, target, input.tenantId)
   return target
 }
@@ -2195,16 +2247,12 @@ function calculateCorrectionQuantities(
   movement: CorrectionTarget["movements"][number],
   correctedEnteredQuantity: string,
 ) {
-  const correctedQuantity = parseExactDecimal(
-    correctedEnteredQuantity,
-    {
-      allowZero: false,
-      maxScale: movement.transactionScaleSnapshot,
-    },
-  )
+  const correctedQuantity = parseExactDecimal(correctedEnteredQuantity, {
+    allowZero: false,
+    maxScale: movement.transactionScaleSnapshot,
+  })
   const originalWasIncrease =
-    compareExactDecimals(movement.signedCanonicalEffect.toFixed(), "0") >
-    0
+    compareExactDecimals(movement.signedCanonicalEffect.toFixed(), "0") > 0
   const originalBalanceQuantity =
     movement.balanceSource.kind === StockBalanceKind.SHARED_POOL
       ? movement.signedCanonicalEffect.abs().toFixed()
@@ -2240,54 +2288,113 @@ function calculateCorrectionQuantities(
       "The corrected operation would reduce on-hand below reserved stock.",
     )
   }
-  return { correctedQuantity, correctedCanonical, originalWasIncrease, afterReversal, afterReplacement }
+  return {
+    correctedQuantity,
+    correctedCanonical,
+    originalWasIncrease,
+    afterReversal,
+    afterReplacement,
+  }
 }
 
 /** Retains original unit factors; never rebases the original movement onto a new unit. */
 export async function previewStockCorrection(
   tx: Prisma.TransactionClient,
-  input: { tenantId: string; storeId: string; targetOperationId: string;
-    corrections: Array<{ movementId: string; correctedEnteredQuantity: string }> },
+  input: {
+    tenantId: string
+    storeId: string
+    targetOperationId: string
+    corrections: Array<{ movementId: string; correctedEnteredQuantity: string }>
+  },
 ) {
   const target = await readStockCorrectionTarget(tx, input)
-  const entries = new Map(input.corrections.map((entry) => [entry.movementId, entry]))
-  if (entries.size !== input.corrections.length || entries.size !== target.movements.length)
-    throw new CatalogError("INVALID_STOCK_OPERATION", "A correction must replace every original movement exactly once.")
-  const lines = await Promise.all(target.movements.map(async (movement) => {
-    const entry = entries.get(movement.id)
-    if (!entry) throw new CatalogError("INVALID_STOCK_OPERATION", "An original movement is missing from the correction.")
-    const quantities = calculateCorrectionQuantities(movement, entry.correctedEnteredQuantity)
-    const product = await tx.catalogItem.findUniqueOrThrow({ where: { id: movement.balanceSource.product.catalogItemId }, select: { name: true } })
-    const canonical = (quantity: string) => movement.balanceSource.kind === StockBalanceKind.SHARED_POOL
-      ? quantity : multiplyExactDecimals(quantity, movement.unitFactorSnapshot.toFixed())
-    const cost = isOrdinaryCorrectionTarget(target) ? await previewOrdinaryCorrectionCost(tx, {
-      tenantId: input.tenantId, storeId: input.storeId,
-      currencyCode: movement.balanceSource.store.currencyCode,
-      operationId: target.id, movementId: movement.id,
-      balanceSourceId: movement.balanceSourceId, stockRevision: movement.balanceSource.revision,
-      originalEffectNegative: !quantities.originalWasIncrease,
-      inverseCanonicalBefore: canonical(movement.balanceSource.onHandQuantity.toFixed()),
-      originalCanonical: movement.signedCanonicalEffect.abs().toFixed(),
-      replacementEffect: quantities.originalWasIncrease ? quantities.correctedCanonical : subtractExactDecimals("0", quantities.correctedCanonical),
-      inverseAfterCanonical: canonical(quantities.afterReversal),
-      replacementCanonical: quantities.correctedCanonical,
-    }) : { status: "SOURCE_OWNED" as const, currencyCode: movement.balanceSource.store.currencyCode, valueBeforeMinor: null, valueAfterMinor: null, valueDeltaMinor: null, unknownReason: null }
-    return {
-      cost,
-      movementId: movement.id,
-      balanceSourceId: movement.balanceSourceId,
-      revision: movement.balanceSource.revision,
-      catalogItemId: movement.balanceSource.product.catalogItemId,
-      productName: product.name,
-      variantName: movement.balanceSource.variant.name,
-      enteredUnitName: movement.enteredInventoryUnit.name,
-      originalEnteredQuantity: movement.enteredQuantity.toFixed(),
-      factor: movement.unitFactorSnapshot.toFixed(),
-      before: movement.balanceSource.onHandQuantity.toFixed(),
-      reserved: movement.balanceSource.reservedQuantity.toFixed(),
-      ...quantities,
-      availableAfter: subtractExactDecimals(quantities.afterReplacement, movement.balanceSource.reservedQuantity.toFixed()),
-    }
-  }))
-  return { targetOperationId: target.id, originalType: target.type, originalReason: target.reason, lines }
+  const entries = new Map(
+    input.corrections.map((entry) => [entry.movementId, entry]),
+  )
+  if (
+    entries.size !== input.corrections.length ||
+    entries.size !== target.movements.length
+  )
+    throw new CatalogError(
+      "INVALID_STOCK_OPERATION",
+      "A correction must replace every original movement exactly once.",
+    )
+  const lines = await Promise.all(
+    target.movements.map(async (movement) => {
+      const entry = entries.get(movement.id)
+      if (!entry)
+        throw new CatalogError(
+          "INVALID_STOCK_OPERATION",
+          "An original movement is missing from the correction.",
+        )
+      const quantities = calculateCorrectionQuantities(
+        movement,
+        entry.correctedEnteredQuantity,
+      )
+      const product = await tx.catalogItem.findUniqueOrThrow({
+        where: { id: movement.balanceSource.product.catalogItemId },
+        select: { name: true },
+      })
+      const canonical = (quantity: string) =>
+        movement.balanceSource.kind === StockBalanceKind.SHARED_POOL
+          ? quantity
+          : multiplyExactDecimals(
+              quantity,
+              movement.unitFactorSnapshot.toFixed(),
+            )
+      const cost = isOrdinaryCorrectionTarget(target)
+        ? await previewOrdinaryCorrectionCost(tx, {
+            tenantId: input.tenantId,
+            storeId: input.storeId,
+            currencyCode: movement.balanceSource.store.currencyCode,
+            operationId: target.id,
+            movementId: movement.id,
+            balanceSourceId: movement.balanceSourceId,
+            stockRevision: movement.balanceSource.revision,
+            originalEffectNegative: !quantities.originalWasIncrease,
+            inverseCanonicalBefore: canonical(
+              movement.balanceSource.onHandQuantity.toFixed(),
+            ),
+            originalCanonical: movement.signedCanonicalEffect.abs().toFixed(),
+            replacementEffect: quantities.originalWasIncrease
+              ? quantities.correctedCanonical
+              : subtractExactDecimals("0", quantities.correctedCanonical),
+            inverseAfterCanonical: canonical(quantities.afterReversal),
+            replacementCanonical: quantities.correctedCanonical,
+          })
+        : {
+            status: "SOURCE_OWNED" as const,
+            currencyCode: movement.balanceSource.store.currencyCode,
+            valueBeforeMinor: null,
+            valueAfterMinor: null,
+            valueDeltaMinor: null,
+            unknownReason: null,
+          }
+      return {
+        cost,
+        movementId: movement.id,
+        balanceSourceId: movement.balanceSourceId,
+        revision: movement.balanceSource.revision,
+        catalogItemId: movement.balanceSource.product.catalogItemId,
+        productName: product.name,
+        variantName: movement.balanceSource.variant.name,
+        enteredUnitName: movement.enteredInventoryUnit.name,
+        originalEnteredQuantity: movement.enteredQuantity.toFixed(),
+        factor: movement.unitFactorSnapshot.toFixed(),
+        before: movement.balanceSource.onHandQuantity.toFixed(),
+        reserved: movement.balanceSource.reservedQuantity.toFixed(),
+        ...quantities,
+        availableAfter: subtractExactDecimals(
+          quantities.afterReplacement,
+          movement.balanceSource.reservedQuantity.toFixed(),
+        ),
+      }
+    }),
+  )
+  return {
+    targetOperationId: target.id,
+    originalType: target.type,
+    originalReason: target.reason,
+    lines,
+  }
 }

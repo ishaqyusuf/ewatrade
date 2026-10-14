@@ -1,4 +1,8 @@
 model Store {
+  customerMessageTemplates CustomerMessageTemplate[]
+  businessActivityEvents BusinessActivityEvent[]
+  businessActivityScopes BusinessActivityStoreScope[]
+  businessNotificationSubscriptionStores BusinessNotificationSubscriptionStore[]
   collectionIntents CollectionIntent[]
   staffStoreAssignments StaffStoreAssignment[]
   assistantConversations AssistantConversation[]

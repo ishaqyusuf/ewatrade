@@ -63,6 +63,50 @@ formOnly(
 )
 
 // Catalog
+planned("platform", "G05", [
+  "customerMessages.preview",
+  "customerMessages.catalog",
+  "customerMessages.templateStatus",
+])
+formOnly(
+  "platform",
+  "Manual WhatsApp composition/settings and reviewed AI drafts; no assistant provider-send or template-write authority.",
+  [
+    "customerMessages.prepareOpen",
+    "customerMessages.draftWithAi",
+    "customerMessages.templates.*",
+  ],
+)
+// Unified Activity/alerts source exists locally; no GENERAL tool is activated.
+planned("platform", "S05", [
+  "activity.listPage",
+  "activity.get",
+  "activity.filters",
+  "businessNotifications.listMine",
+  "businessNotifications.unreadCount",
+])
+formOnly(
+  "platform",
+  "Own alert preferences and receipt state stay in the personal inbox until a dedicated confirmed assistant flow is built.",
+  [
+    "businessNotifications.myPreferences",
+    "businessNotifications.updateMyPreferences",
+    "businessNotifications.markRead",
+    "businessNotifications.archive",
+    "businessNotifications.markAllRead",
+  ],
+)
+formOnly(
+  "platform",
+  "Owner/Admin notification policy and recipient assignments require explicit settings review; no assistant configuration mutation is activated.",
+  [
+    "businessNotifications.policy",
+    "businessNotifications.updatePolicy",
+    "businessNotifications.subscriptions",
+    "businessNotifications.updateSubscription",
+  ],
+)
+
 formOnly(
   "catalog",
   "Generic item editor payload; assistant uses active-Store detail.overview with stock permission filtering.",
@@ -80,7 +124,7 @@ planned("catalog", "B03", [
   "catalog.*UnitConfiguration*",
   "catalog.*UnitDefinition*",
 ])
-planned("catalog", "G04", ["catalog.archiveOffering", "catalog.archiveVariant"])
+// catalog.archiveOffering/archiveVariant are supported by catalog.archive.
 formOnly("catalog", "Photo capture and upload belong to the product form.", [
   "catalog.photos.*",
 ])
@@ -100,11 +144,8 @@ formOnly(
   ["orders.lookupOpen"],
 )
 planned("sales", "B05", ["orders.payments", "orders.prepareReceipts"])
-planned("sales", "G05", [
-  "orders.*Settings",
-  "stores.orderVisibility",
-  "stores.updateOrderVisibility",
-])
+// Receipt/reminder settings and sales-rep visibility are supported by
+// settings.store.read and settings.store.change.
 excluded("sales", "Unbounded legacy list; the assistant reads bounded pages.", [
   "orders.list",
   "services.queue",
@@ -124,8 +165,6 @@ formOnly(
 
 planned("inventory", "C05", ["inventory.reconciliationReport"])
 planned("inventory", "G04", [
-  "inventory.moveCustody",
-  "inventory.transformPackagedStock",
   "inventory.*Reservation",
   "inventory.reserveOffering",
 ])
@@ -152,8 +191,6 @@ formOnly("services", "Bulk queue updates stay in the queue view.", [
 // Finance
 planned("finance", "E01", [
   "finance.book",
-  "finance.createMoneyAccount",
-  "finance.balances",
   "finance.account*",
   "finance.commandStatus",
 ])

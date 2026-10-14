@@ -1,3 +1,4 @@
+import { ACCOUNT_PRIVACY_WORKFLOW_STEPS } from "@ewatrade/db/queries"
 import { z } from "zod"
 
 export const requestAccountDeletionSchema = z
@@ -24,5 +25,12 @@ export const acceptLegalDocumentsSchema = z
     surface: z.enum(["mobile", "web"]),
     acceptedTerms: z.literal(true),
     acknowledgedPrivacyNotice: z.literal(true),
+  })
+  .strict()
+
+export const advanceAccountPrivacyWorkflowSchema = z
+  .object({
+    requestId: z.string().min(1),
+    expectedStep: z.enum(ACCOUNT_PRIVACY_WORKFLOW_STEPS),
   })
   .strict()

@@ -22,6 +22,9 @@ export function useOrderRefresh(orderId: string) {
         trpc.orders.timeline.queryKey(order),
         trpc.orders.changeOptions.queryKey(order),
         trpc.orders.activity.list.queryKey(order),
+        // WhatsApp previews quote balances and statuses: never reuse one
+        // read before this change.
+        trpc.customerMessages.preview.queryKey(),
       ].map((queryKey) => client.invalidateQueries({ queryKey })),
     )
     // After, so the list does not ride in the same request batch.

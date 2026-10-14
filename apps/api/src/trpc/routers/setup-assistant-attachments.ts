@@ -180,7 +180,12 @@ export const setupAssistantAttachmentsRouter = createTRPCRouter({
       // Refused here too, so older apps can't send a photo nobody can read.
       if (
         checked.kind === "IMAGE" &&
-        !assistantMediaAvailability(scope.dataClassification).photos
+        !assistantMediaAvailability(
+          scope.dataClassification,
+          process.env,
+          undefined,
+          conversation.purpose === "GENERAL",
+        ).photos
       )
         return { ok: false as const, reason: "PHOTOS_UNAVAILABLE" as const }
       try {

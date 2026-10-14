@@ -1,0 +1,28 @@
+{
+  "version": 1,
+  "id": "2026-10-12-f04-payout-contract",
+  "tickets": ["F04"],
+  "summary": "Pure payout contract with owner policy (12 Oct): supplier bills only; business pays the fee under 'Bank & transfer charges'; only recipient code, bank, name and last 4 kept; one Owner payouts stop blocking new approvals/submissions but not lookups; Owner/Admin approve, Managers draft; in-app step-up bound to the exact digest; no app amount limit with safe-integer totals; payee verified by exact resolution and a non-empty confirmed name; one reference per payout with same-reference resubmission only after a definitive not-found; provider approval statuses mapped. Not wired to persistence, providers or the assistant.",
+  "noAssistantImpact": "No capability, procedure or rollout change; payout capabilities stay unregistered until persistence, policy and acceptance exist.",
+  "docs": [
+    {
+      "topic": "feature",
+      "path": ".brain/decisions/2026-10-12-collection-payout-and-canary-policy.md",
+      "status": "local_only",
+      "note": "Owner payout decisions and open items."
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "test",
+      "path": "packages/payments/src/payout-intent.test.ts",
+      "executed": true,
+      "result": "8 pass; payments package 30 pass (12 Oct 2026, uncommitted source)."
+    },
+    {
+      "kind": "review",
+      "path": "packages/assistant/evaluations/runs/2026-10-12-f04-payout-contract.md",
+      "executed": false
+    }
+  ]
+}

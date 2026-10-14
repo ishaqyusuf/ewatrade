@@ -40,7 +40,8 @@
     "./general/booking-read": "./src/general/booking-read.ts",
     "./general/service-work-original": "./src/general/service-work-original.ts",
     "./general/service-work-completion": "./src/general/service-work-completion.ts",
-    "./general/quote-decision": "./src/general/quote-decision.ts"
+    "./general/quote-decision": "./src/general/quote-decision.ts",
+    "./general/staff-activity-target": "./src/general/staff-activity-target.ts"
   },
   "scripts": {
     "lint": "biome check .",

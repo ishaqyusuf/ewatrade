@@ -153,6 +153,7 @@ async function recordCommercialOrderPaymentCore(
   heldOrder?: NonNullable<
     Awaited<ReturnType<typeof lockCommerceFinancialOrder>>
   >,
+  options: PaymentOptions = {},
 ) {
   assertPaymentAmount(input.amountMinor)
   if (heldOrder) assertHeldCommerceFinancialOrder(tx, heldOrder, input)
@@ -248,6 +249,27 @@ async function recordCommercialOrderPaymentCore(
   })
   if (concurrentPrevious) {
     return serializePrevious(concurrentPrevious)
+  }
+  // F01: while an online payment link can still be paid, a manual receipt
+  // could settle the same balance twice. Only that link's own settlement passes.
+  if (input.type !== "refund" && !creditSource) {
+    const openLink = await tx.collectionIntent.findFirst({
+      where: {
+        tenantId: input.tenantId,
+        orderId: input.orderId,
+        status: { in: ["CREATED", "PENDING"] },
+        expiresAt: { gt: new Date() },
+        ...(options.collectionSettlementIntentId
+          ? { id: { not: options.collectionSettlementIntentId } }
+          : {}),
+      },
+      select: { id: true },
+    })
+    if (openLink)
+      throw new CatalogError(
+        "INVALID_ORDER",
+        "An online payment link for this order is still open. Cancel it or wait for it to expire before recording a manual payment.",
+      )
   }
   // Checked only for new payments: an exact retry still succeeds after the
   // account is paused or its methods change.
@@ -416,13 +438,24 @@ async function recordCommercialOrderPaymentCore(
   }
 }
 
+type PaymentOptions = {
+  /** Set only by collection settlement for the link being settled. */
+  collectionSettlementIntentId?: string
+}
 /** A caller already holding this Order's lock passes it to skip re-locking. */
 export async function recordCommercialOrderPaymentInTransaction(
   tx: Prisma.TransactionClient,
   input: Parameters<typeof recordCommercialOrderPaymentCore>[1],
   heldOrder?: Parameters<typeof recordCommercialOrderPaymentCore>[3],
+  options: PaymentOptions = {},
 ) {
-  return recordCommercialOrderPaymentCore(tx, input, undefined, heldOrder)
+  return recordCommercialOrderPaymentCore(
+    tx,
+    input,
+    undefined,
+    heldOrder,
+    options,
+  )
 }
 
 /** Consumes a posted allocation under book -> customer -> Order lock ordering. */

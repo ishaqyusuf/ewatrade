@@ -1,0 +1,104 @@
+{
+  "version": 1,
+  "id": "2026-10-13-simple-sales",
+  "tickets": ["D01", "D02"],
+  "summary": "Simple money-first sale chat: amount first, implicit Walk-in, optional attachment-only image, account matching/staged creation, deferred review and shared form, canonical atomic confirmation and exactly-once replay.",
+  "capabilities": [
+    {
+      "id": "sales.order.record_simple",
+      "change": "added",
+      "rollout": "source",
+      "note": "Dashboard/native source; scoped canonical sale/payment commands plus optional customer/account/activity image. Image never analysed. Development database and dashboard QA; no hosted rollout or native runtime acceptance."
+    }
+  ],
+  "procedures": [
+    {
+      "path": "assistant.saleOptions",
+      "status": "supported",
+      "reason": "Bounded same-business account/customer choices for the simple-sale draft; existing permissions remain enforced."
+    },
+    {
+      "path": "orders.create",
+      "status": "supported",
+      "reason": "Existing canonical productless order and initial-payment command is composed by sale_record; added coverage mapping, no duplicate order model."
+    },
+    {
+      "path": "orders.recordPayment",
+      "status": "supported",
+      "reason": "The simple sale uses the canonical initial-payment path through order_create and its account/role guards; coverage adds this composite capability."
+    },
+    {
+      "path": "orders.activity.add",
+      "status": "supported",
+      "reason": "READY user-provided photo is copied and attached via the existing canonical order-attachment action in the same confirmation transaction."
+    },
+    {
+      "path": "orders.activity.uploadTarget",
+      "status": "form_only",
+      "reason": "Private byte upload negotiation remains UI-only; the assistant uses the already-uploaded scoped attachment ID, not an upload tool."
+    },
+    {
+      "path": "orders.activity.confirmUpload",
+      "status": "form_only",
+      "reason": "UI/private-storage byte integrity confirmation is not a model action; simple-sale confirmation attaches an existing READY image with scope and retention checks."
+    }
+  ],
+  "docs": [
+    {
+      "topic": "feature",
+      "path": ".brain/features/assistant-simple-sales.md",
+      "status": "local_only",
+      "note": "Flow, canonical commands, verification and limits."
+    },
+    {
+      "topic": "api",
+      "path": ".brain/api/contracts.md",
+      "status": "local_only",
+      "note": "Incomplete sale draft, choices and approval contract."
+    },
+    {
+      "topic": "api",
+      "path": ".brain/api/endpoints.md",
+      "status": "local_only",
+      "note": "Protected options endpoint and scoped chat choice metadata."
+    },
+    {
+      "topic": "permissions",
+      "path": ".brain/api/permissions.md",
+      "status": "local_only",
+      "note": "Existing authority and first-account/book guard; no expansion."
+    },
+    {
+      "topic": "capability",
+      "path": "packages/assistant/src/capabilities/COVERAGE.md",
+      "status": "updated",
+      "note": "Regenerated source capability coverage."
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "test",
+      "path": "packages/assistant/src/general/simple-sale.test.ts",
+      "executed": true,
+      "result": "Final focused run:43pass,172assertions across12files, including money/wording, authority, readiness, no-analysis and card regression. Broad repository typecheck is not green; see local QA report."
+    },
+    {
+      "kind": "test",
+      "path": "apps/api/src/assistant/general-simple-sale.integration.test.ts",
+      "executed": true,
+      "result": "Guarded Neon Development:1pass,25assertions; image bytes copied, partial balance, chat/form continuity, no-image sale, normalized account reuse and exactly-once confirmation; fixtures cleaned."
+    },
+    {
+      "kind": "test",
+      "path": "packages/assistant/src/setup/attachment-processing.test.ts",
+      "executed": true,
+      "result": "GENERAL photo becomes READY without byte read, provider call, media reservation or extraction; setup readers retain behavior."
+    },
+    {
+      "kind": "test",
+      "path": "apps/dashboard/src/components/general-assistant/general-sale-review.test.ts",
+      "executed": true,
+      "result": "Isolated review fixtures pass with shared card regression; live delayed review/form/no-image save also verified."
+    }
+  ]
+}

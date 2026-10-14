@@ -182,6 +182,8 @@ describe("prescription payment provider failures", () => {
     )
     const transaction = {
       $queryRaw: async () => [{ id: "order-1" }],
+      // No open payment link blocks this provider-settled payment.
+      collectionIntent: { findFirst: async () => null },
       commercialOrder: {
         findFirst: async () => financeOrder(),
         findUnique: async () => ({ customerPhone: "+2348000000000" }),
@@ -584,6 +586,7 @@ describe("prescription refund provider result", () => {
           paymentCreates.push(input)
           return { id: "refund-ledger-1" }
         },
+        findMany: async () => [{ moneyAccountId: null }],
         findUnique: async () => null,
       },
       prescriptionPaymentIntent: {

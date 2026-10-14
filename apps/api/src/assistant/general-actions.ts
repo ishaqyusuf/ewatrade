@@ -4,9 +4,9 @@ import {
 } from "@ewatrade/assistant/general/contracts"
 import type {
   GeneralAction,
-  GeneralReviewPresentation,
   GeneralActionName,
   GeneralReceipt,
+  GeneralReviewPresentation,
 } from "@ewatrade/assistant/general/contracts"
 import {
   isSimpleProductCreate,
@@ -41,9 +41,15 @@ import {
   commercialOrderCreateSchema,
   commercialOrderPaymentSchema,
 } from "../schemas/orders"
+import {
+  customerCreatePresentation,
+  customerUpdatePresentation,
+  productCreatePresentation,
+} from "./catalog-review-presentations"
 import { billCorrection } from "./general-bill-correction"
 import { billPayment } from "./general-bill-payment"
 import { cashCountRecord } from "./general-cash-count"
+import { catalogArchive } from "./general-catalog-archive"
 import { closeoutCreate, closeoutFinalize } from "./general-closeout"
 import {
   type GeneralContext,
@@ -52,13 +58,7 @@ import {
 } from "./general-context"
 import { customerAllocationRelease } from "./general-customer-allocation-release"
 import { customerCreditApply } from "./general-customer-credit-apply"
-import {
-  customerCreatePresentation,
-  customerUpdatePresentation,
-  productCreatePresentation,
-} from "./catalog-review-presentations"
 import { customerReceipt } from "./general-customer-receipt"
-import { saleReviewPresentation } from "./review-presentations"
 import { expenseRecord } from "./general-expense"
 import { heldCreditRefund } from "./general-held-credit-refund"
 import { moneyMovement } from "./general-money-movement"
@@ -86,23 +86,31 @@ import { purchaseRecognize } from "./general-purchase-recognition"
 import { purchaseRecognitionReverse } from "./general-purchase-recognition-reversal"
 import { purchaseRecord } from "./general-purchase-recording"
 import { purchaseRegister } from "./general-purchase-registration"
+import { quoteApprovalDecision } from "./general-quote-decision"
 import { serviceLineAction } from "./general-service-fulfillment"
 import { serviceIntake } from "./general-service-intake"
+import { serviceMessageShare } from "./general-service-message"
 import { serviceWorkLifecycle } from "./general-service-work"
-import { serviceWorkRecords } from "./general-service-work-records"
 import { serviceWorkCompletion } from "./general-service-work-completion"
-import { quoteApprovalDecision } from "./general-quote-decision"
+import { serviceWorkRecords } from "./general-service-work-records"
+import { simpleExpenseRecord } from "./general-simple-expense"
+import { simpleMoneyInRecord } from "./general-simple-money-in"
+import { simpleSaleRecord } from "./general-simple-sale"
+import { simpleTransferRecord } from "./general-simple-transfer"
 import { staffInvitation } from "./general-staff-invitation"
 import { staffStatus } from "./general-staff-status"
 import { staffAccess } from "./general-staff-store-access"
 import { stockAdjust, stockCorrect } from "./general-stock-adjustment"
 import { stockCountCreate, stockCountFinalize } from "./general-stock-count"
+import { stockCustodyMove } from "./general-stock-custody"
 import { stockReceive } from "./general-stock-receipt"
 import {
   stockTransferCancel,
   stockTransferDispatch,
   stockTransferReceive,
 } from "./general-stock-transfer"
+import { stockPackageTransform } from "./general-stock-transform"
+import { storeSettingsUpdate } from "./general-store-settings-change"
 import { supplierAllocationRelease } from "./general-supplier-allocation-release"
 import { supplierCreate } from "./general-supplier-create"
 import { supplierEntryReverse } from "./general-supplier-entry-reversal"
@@ -113,6 +121,7 @@ import {
   supplierAdvanceAllocate,
 } from "./general-supplier-settlement"
 import { proposalDigest } from "./proposal-security"
+import { saleReviewPresentation } from "./review-presentations"
 import { catalogCommandForSetupEntity } from "./setup-commit"
 
 export type GeneralTransactionContext = Omit<GeneralContext, "db"> & {
@@ -147,6 +156,8 @@ export type GeneralActionAdapter<A extends GeneralAction> = {
     target: ProposalTarget | null
     /** Structured card review; drafts without one show `lines`. */
     presentation?: GeneralReviewPresentation
+    question?: string
+    choices?: Array<{ label: string; text: string }>
   }>
   /** A locked review and its transaction-local command; never retained across confirmations. */
   prepareExecution?(
@@ -490,7 +501,7 @@ const productCreate: GeneralActionAdapter<Action<"product_create">> = {
   },
 }
 
-const orderCreate: GeneralActionAdapter<Action<"order_create">> = {
+export const orderCreate: GeneralActionAdapter<Action<"order_create">> = {
   // Bind each product unit's current configuration version, so a conversion
   // change after review still rejects Confirm. Catalog reads do not expose it.
   async prepare(ctx, payload) {
@@ -726,6 +737,9 @@ const adapters: {
 } = {
   customer_receipt: customerReceipt,
   money_movement: moneyMovement,
+  money_transfer_simple: simpleTransferRecord,
+  expense_record_simple: simpleExpenseRecord,
+  money_in_record: simpleMoneyInRecord,
   cash_count_record: cashCountRecord,
   expense_record: expenseRecord,
   bill_payment: billPayment,
@@ -747,6 +761,7 @@ const adapters: {
   service_work_handoff: serviceWorkCompletion,
   service_work_note: serviceWorkRecords,
   service_work_exception: serviceWorkRecords,
+  service_message_share: serviceMessageShare,
   supplier_entry_reverse: supplierEntryReverse,
   supplier_opening: supplierOpening,
   purchase_payment_reverse: purchasePaymentReverse,
@@ -769,11 +784,14 @@ const adapters: {
   order_metadata_update: orderMetadataUpdate,
   order_replace: orderReplace,
   order_attachment_add: orderAttachmentAdd,
+  sale_record: simpleSaleRecord,
   inventory_closeout_create: closeoutCreate,
   inventory_closeout_finalize: closeoutFinalize,
   stock_transfer_dispatch: stockTransferDispatch,
   stock_transfer_receive: stockTransferReceive,
   stock_transfer_cancel: stockTransferCancel,
+  stock_custody_move: stockCustodyMove,
+  stock_package_transform: stockPackageTransform,
   stock_adjust: stockAdjust,
   stock_correct: stockCorrect,
   stock_count_create: stockCountCreate,
@@ -786,6 +804,8 @@ const adapters: {
   product_unit_configuration_draft: productUnitConfigurationDraft,
   product_unit_configuration_publish: productUnitConfigurationPublish,
   product_availability_update: productAvailabilityUpdate,
+  store_settings_update: storeSettingsUpdate,
+  catalog_archive: catalogArchive,
   product_price_update: productPriceUpdate,
   product_details_update: productDetailsUpdate,
   product_identifiers_update: productIdentifiersUpdate,

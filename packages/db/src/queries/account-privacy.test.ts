@@ -712,6 +712,14 @@ test("operator review identifies an unmatched email and a sole owner without exp
         return 3
       },
     },
+    commercialServiceFulfillment: { count: async () => 0 },
+    commercialServiceAuthorization: { count: async () => 0 },
+    commercialOrderAmendment: { count: async () => 0 },
+    commercialOrderActivity: { count: async () => 0 },
+    commercialOrderCredit: { count: async () => 0 },
+    commercialOrderReminderSettings: { count: async () => 0 },
+    commercialOrderReminderDelivery: { count: async () => 0 },
+    commercialOrderReminderDigest: { count: async () => 0 },
     commercialOrder: {
       count: async (query: unknown) => {
         commercialQueries.push(query)
@@ -1118,6 +1126,14 @@ test("commercial and clinical review use the verified subject after User removal
     session: { count },
     legalAcceptance: { count },
     verification: { count },
+    commercialServiceFulfillment: { count: async () => 0 },
+    commercialServiceAuthorization: { count: async () => 0 },
+    commercialOrderAmendment: { count: async () => 0 },
+    commercialOrderActivity: { count: async () => 0 },
+    commercialOrderCredit: { count: async () => 0 },
+    commercialOrderReminderSettings: { count: async () => 0 },
+    commercialOrderReminderDelivery: { count: async () => 0 },
+    commercialOrderReminderDigest: { count: async () => 0 },
     commercialOrder: { count },
     commercialOrderPayment: { count },
     commercialOrderFulfillmentCommand: { count },
@@ -1146,6 +1162,14 @@ test("commercial and clinical review use the verified subject after User removal
     { where: { accountUserId: "verified-user" } },
   ])
   expect(removed?.commercialReviewInventory).toEqual({
+    serviceFulfillments: 0,
+    serviceAuthorizations: 0,
+    orderAmendments: 0,
+    orderActivities: 0,
+    orderCredits: 0,
+    reminderSettings: 0,
+    reminderDeliveries: 0,
+    reminderDigests: 0,
     createdOrders: 1,
     recordedPayments: 1,
     fulfillmentCommands: 1,
