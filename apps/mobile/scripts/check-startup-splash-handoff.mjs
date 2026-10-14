@@ -26,8 +26,8 @@ if (!existsSync(gatePath)) {
 } else {
   const gate = readFileSync(gatePath, "utf8")
   const requiredGateMarkers = [
-    "STARTUP_SPLASH_MINIMUM_MS = 1400",
-    "DEVELOPMENT_STARTUP_SPLASH_MINIMUM_MS = 4000",
+    "STARTUP_SPLASH_MINIMUM_MS = 500",
+    "DEVELOPMENT_STARTUP_SPLASH_MINIMUM_MS = 2000",
     "isDevelopmentAppVariant()",
     "SplashScreen.hideAsync()",
     "onLayout={handleSplashLayout}",

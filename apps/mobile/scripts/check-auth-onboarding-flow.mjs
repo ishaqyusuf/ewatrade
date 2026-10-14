@@ -110,7 +110,7 @@ const CONTRACTS = [
   {
     file: FILES.splashGate,
     markers: [
-      "STARTUP_SPLASH_MINIMUM_MS = 1400",
+      "STARTUP_SPLASH_MINIMUM_MS = 500",
       "SplashScreen.hideAsync",
       "onLayout={handleSplashLayout}",
       "StartupSplash",

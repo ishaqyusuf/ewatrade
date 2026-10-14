@@ -49,7 +49,7 @@ const requiredMarkers = [
   {
     file: "components/mobile/startup-splash-gate.tsx",
     markers: [
-      "STARTUP_SPLASH_MINIMUM_MS = 1400",
+      "STARTUP_SPLASH_MINIMUM_MS = 500",
       "isDevelopmentAppVariant()",
       "SplashScreen.hideAsync()",
       "onLayout={handleSplashLayout}",

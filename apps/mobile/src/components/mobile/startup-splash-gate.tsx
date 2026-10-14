@@ -4,8 +4,8 @@ import * as SplashScreen from "expo-splash-screen"
 import { useCallback, useEffect, useRef, useState } from "react"
 import { StyleSheet, View } from "react-native"
 
-export const STARTUP_SPLASH_MINIMUM_MS = 1400
-export const DEVELOPMENT_STARTUP_SPLASH_MINIMUM_MS = 4000
+export const STARTUP_SPLASH_MINIMUM_MS = 500
+export const DEVELOPMENT_STARTUP_SPLASH_MINIMUM_MS = 2000
 
 type StartupSplashGateProps = {
   onComplete: () => void
