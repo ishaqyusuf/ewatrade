@@ -68,6 +68,37 @@ const productionSecrets = new Set([
   "PLAY_REFUND_REVIEW_DECRYPTION_KEYS",
 ])
 
+export function readProductionApiSharedEnvironmentInventory(
+  readPage,
+  projectId,
+) {
+  const unavailable = () =>
+    new Error("API_DEPLOY_SHARED_ENV_INVENTORY_UNAVAILABLE")
+  if (!projectId) throw unavailable()
+  const data = []
+  const seen = new Set()
+  let cursor
+  for (let page = 0; page < 100; page++) {
+    const query = new URLSearchParams({ projectId })
+    if (cursor !== undefined) query.set("until", String(cursor))
+    const response = readPage(`/v1/env?${query}`)
+    if (!Array.isArray(response?.data)) throw unavailable()
+    data.push(...response.data)
+    const next = response.pagination?.next
+    if (next == null) return { data, pagination: { next: null } }
+    if (
+      !Number.isSafeInteger(next) ||
+      next <= 0 ||
+      seen.has(next) ||
+      (cursor !== undefined && next >= cursor)
+    )
+      throw unavailable()
+    seen.add(next)
+    cursor = next
+  }
+  throw unavailable()
+}
+
 export function assertProductionApiProjectEnvironment(
   response,
   sharedInventory,

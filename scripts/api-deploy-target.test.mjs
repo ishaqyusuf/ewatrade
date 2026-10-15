@@ -7,9 +7,41 @@ import {
   assertApiDeployTarget,
   assertProductionApiDeployMode,
   assertProductionApiProjectEnvironment,
+  readProductionApiSharedEnvironmentInventory,
 } from "./api-deploy-target.mjs"
 
 const tempDirs = []
+
+test("shared inventory reads every project-scoped page before environment validation", () => {
+  const paths = []
+  const result = readProductionApiSharedEnvironmentInventory((url) => {
+    paths.push(url)
+    return paths.length === 1
+      ? { data: [{ id: "first" }], pagination: { next: 123 } }
+      : { data: [{ id: "second" }], pagination: { next: null } }
+  }, "api")
+  expect(paths).toEqual([
+    "/v1/env?projectId=api",
+    "/v1/env?projectId=api&until=123",
+  ])
+  expect(result).toEqual({
+    data: [{ id: "first" }, { id: "second" }],
+    pagination: { next: null },
+  })
+})
+
+test("shared inventory refuses malformed or repeating pagination", () => {
+  for (const page of [
+    null,
+    { data: null },
+    { data: [], pagination: { next: "bad" } },
+    { data: [], pagination: { next: 123 } },
+  ]) {
+    expect(() =>
+      readProductionApiSharedEnvironmentInventory(() => page, "api"),
+    ).toThrow("API_DEPLOY_SHARED_ENV_INVENTORY_UNAVAILABLE")
+  }
+})
 
 afterEach(async () => {
   await Promise.all(
