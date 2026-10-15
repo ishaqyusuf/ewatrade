@@ -17,6 +17,7 @@ import {
 } from "./account-privacy-profile-policy"
 import { assessAccountPrivacyProfilePrerequisites } from "./account-privacy-profile-prerequisites"
 import { getAccountPrivacyStaffInvitationInventory } from "./account-privacy-staff-invitation-inventory"
+import { isLocalPhoneAuth } from "./phone-auth-profile"
 import type { DbClient } from "./types"
 
 const requestProjection = {
@@ -28,7 +29,7 @@ const requestProjection = {
 } as const
 
 export async function requestAccountDeletion(
-  db: PrismaClient,
+  db: Pick<PrismaClient, "accountPrivacyRequest">,
   userId: string,
   contactEmail?: string,
 ) {
@@ -72,18 +73,40 @@ export function normalizePrivacyEmail(email: string) {
   return email.trim().toLowerCase()
 }
 
+/** Server-only scope keeps authenticated phone contacts separate from public email identity. */
+type PhoneDeletionChallengeScope = {
+  authenticatedPhoneSubjectId: string
+  useLocalCode?: true
+}
+
+function deletionEmailDigest(email: string, subjectId?: string) {
+  return subjectId
+    ? privacyDigest(
+        "phone-account-deletion-contact",
+        JSON.stringify([subjectId, email]),
+      )
+    : privacyDigest("account-deletion-email", email)
+}
+
 export async function createExternalDeletionChallenge(
   db: PrismaClient,
   rawEmail: string,
   sourceIp: string,
+  phoneScope?: PhoneDeletionChallengeScope,
 ) {
   if (!sourceIp.trim()) throw new Error("A trusted request source is required.")
   const email = normalizePrivacyEmail(rawEmail)
-  const emailDigest = privacyDigest("account-deletion-email", email)
+  const emailDigest = deletionEmailDigest(
+    email,
+    phoneScope?.authenticatedPhoneSubjectId,
+  )
   const sourceDigest = privacyDigest("account-deletion-ip", sourceIp)
   const globalDigest = privacyDigest("account-deletion-global", "all")
   const now = new Date()
-  const code = randomInt(0, 1_000_000).toString().padStart(6, "0")
+  const code =
+    phoneScope?.useLocalCode && isLocalPhoneAuth()
+      ? "123456"
+      : randomInt(0, 1_000_000).toString().padStart(6, "0")
   const codeDigest = privacyDigest(
     "account-deletion-code",
     `${emailDigest}:${code}`,
@@ -103,6 +126,11 @@ export async function createExternalDeletionChallenge(
         now.getTime() - existing.windowStartedAt.getTime() < dailyWindowMs
       if (sameWindow && existing.sentCount >= maxDailySends) return false
       const limits = [
+        {
+          digest: privacyDigest("account-deletion-contact-limit", email),
+          windowMs: dailyWindowMs,
+          maximum: 5,
+        },
         { digest: sourceDigest, windowMs: 60 * 60_000, maximum: 10 },
         { digest: globalDigest, windowMs: dailyWindowMs, maximum: 500 },
       ]
@@ -177,6 +205,7 @@ export async function createExternalDeletionChallenge(
         email,
         sentAt: now,
         expiresAt: new Date(now.getTime() + challengeLifetimeMs),
+        authenticatedPhoneSubjectId: phoneScope?.authenticatedPhoneSubjectId,
       }
     : null
 }
@@ -184,9 +213,17 @@ export async function createExternalDeletionChallenge(
 /** Discards only the exact code issue whose delivery failed. A later resend survives. */
 export async function discardUndeliveredExternalDeletionChallenge(
   db: PrismaClient,
-  issued: { email: string; code: string; sentAt: Date },
+  issued: {
+    email: string
+    code: string
+    sentAt: Date
+    authenticatedPhoneSubjectId?: string
+  },
 ) {
-  const emailDigest = privacyDigest("account-deletion-email", issued.email)
+  const emailDigest = deletionEmailDigest(
+    issued.email,
+    issued.authenticatedPhoneSubjectId,
+  )
   const codeDigest = privacyDigest(
     "account-deletion-code",
     `${emailDigest}:${issued.code}`,
@@ -200,9 +237,10 @@ export async function submitExternalDeletionRequest(
   db: PrismaClient,
   rawEmail: string,
   code: string,
+  authenticatedPhoneSubjectId?: string,
 ) {
   const email = normalizePrivacyEmail(rawEmail)
-  const emailDigest = privacyDigest("account-deletion-email", email)
+  const emailDigest = deletionEmailDigest(email, authenticatedPhoneSubjectId)
   const candidate = privacyDigest(
     "account-deletion-code",
     `${emailDigest}:${code}`,
@@ -238,6 +276,16 @@ export async function submitExternalDeletionRequest(
         },
       })
       if (consumed.count !== 1) return null
+      if (authenticatedPhoneSubjectId) {
+        const subject = await tx.user.findUnique({
+          where: { id: authenticatedPhoneSubjectId },
+          select: { id: true, phone: true, phoneVerifiedAt: true },
+        })
+        if (!subject?.phoneVerifiedAt || !subject.phone) return null
+        // The session proves the account; this challenge proves only the contact.
+        // Never resolve the deletion subject from the contact email.
+        return requestAccountDeletion(tx, subject.id, email)
+      }
       const user = await tx.user.findUnique({
         where: { email },
         select: { id: true, emailVerified: true },

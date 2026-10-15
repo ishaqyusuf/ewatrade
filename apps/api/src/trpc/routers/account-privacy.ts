@@ -64,6 +64,11 @@ import { canAcceptLegalVersion } from "@ewatrade/utils/legal-approval"
 import { TRPCError } from "@trpc/server"
 import { z } from "zod"
 import { sendAccountPrivacyOutcomeNotice } from "../../account-privacy/notice-sender"
+import {
+  requestPhoneAccountDeletion,
+  requestPhoneDeletionContactCode,
+  requireFreshDeletionSession,
+} from "../../account-privacy/phone-deletion"
 import { removeAccountPrivacyPrivateAttachment } from "../../account-privacy/private-assistant-media"
 import {
   revokeAppleAccessToken,
@@ -635,30 +640,21 @@ export const accountPrivacyRouter = createTRPCRouter({
   deletionRequest: authenticatedProcedure.query(({ ctx }) =>
     getAccountDeletionRequest(ctx.db, ctx.session.user.id),
   ),
-  deletionIntakeAvailability: authenticatedProcedure.query(() => ({
+  deletionIntakeAvailability: authenticatedProcedure.query(({ ctx }) => ({
     available: true,
+    requiresContactVerification: !ctx.session.user.emailVerified,
   })),
+  requestDeletionContactCode: authenticatedProcedure
+    .input(externalDeletionEmailSchema)
+    .mutation(({ ctx, input }) =>
+      requestPhoneDeletionContactCode(ctx, input.email),
+    ),
   requestDeletion: authenticatedProcedure
     .input(requestAccountDeletionSchema)
-    .mutation(({ ctx }) => {
-      const authenticatedAt = new Date(ctx.session.session.createdAt).getTime()
-      if (
-        !ctx.session.user.emailVerified ||
-        !Number.isFinite(authenticatedAt) ||
-        Date.now() - authenticatedAt > 15 * 60_000
-      ) {
-        throw new TRPCError({
-          code: "UNAUTHORIZED",
-          message:
-            "Sign in again to verify your account before requesting deletion.",
-        })
-      }
-      if (ctx.qaSessionScope || ctx.session.session.token.startsWith("qas_")) {
-        throw new TRPCError({
-          code: "FORBIDDEN",
-          message: "Use your own account session to request deletion.",
-        })
-      }
+    .mutation(({ ctx, input }) => {
+      requireFreshDeletionSession(ctx)
+      if (!ctx.session.user.emailVerified)
+        return requestPhoneAccountDeletion(ctx, input)
       return requestAccountDeletion(
         ctx.db,
         ctx.session.user.id,

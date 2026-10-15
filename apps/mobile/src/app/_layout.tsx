@@ -174,6 +174,14 @@ const InitialLayout = ({
             name="account-privacy"
             options={{ headerShown: false }}
           />
+          <Stack.Screen
+            name="account-privacy-terms"
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen
+            name="account-privacy-delete"
+            options={{ headerShown: false }}
+          />
         </Stack.Protected>
         <Stack.Protected
           guard={

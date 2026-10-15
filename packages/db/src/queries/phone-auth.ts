@@ -12,6 +12,7 @@ import {
   createMobileSessionForVerifiedUser,
 } from "./mobile-auth"
 import { createOwnerSignupBusiness } from "./owner-businesses"
+import { isLocalPhoneAuth } from "./phone-auth-profile"
 import {
   phoneAuthDigest as digest,
   buildPhoneOtpIdentifier as identifier,
@@ -34,15 +35,7 @@ const transactionOptions = {
   timeout: 30_000,
 }
 
-export function isLocalPhoneAuth(
-  env: Record<string, string | undefined> = process.env,
-) {
-  return (
-    env.DEV_PROFILE === "local" &&
-    (!env.APP_ENV || env.APP_ENV === "local") &&
-    env.NODE_ENV !== "production"
-  )
-}
+export { isLocalPhoneAuth } from "./phone-auth-profile"
 
 export function normalizeAuthPhone(phone: string) {
   const value = phone.trim()
