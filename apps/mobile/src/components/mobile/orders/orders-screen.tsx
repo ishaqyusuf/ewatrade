@@ -559,8 +559,13 @@ export function OrdersScreen() {
       />
       <ScrollToTopButton
         dockHidden={isDockHidden}
-        // Selection, a typed search and the first-order gate own the bottom edge.
-        hidden={selectingReceipts || query.length > 0 || showFirstOrderGate}
+        // Selection, an open search and the first-order gate own the bottom edge.
+        hidden={
+          selectingReceipts ||
+          searchFold.folded ||
+          query.length > 0 ||
+          showFirstOrderGate
+        }
         onPress={scrollToTop.scrollToTop}
         testID="orders-scroll-to-top"
         visible={scrollToTop.visible}

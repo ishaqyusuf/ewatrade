@@ -86,6 +86,7 @@ export function CatalogItemsContent({
   const greenTill = GREEN_TILL_THEME[useColorScheme().colorScheme]
   const [kindFilter, setKindFilter] = useState<CatalogKindFilter>("all")
   const [query, setQuery] = useState("")
+  const [searchFocused, setSearchFocused] = useState(false)
   const [attention, setAttention] = useState<CatalogAttention | null>(null)
   const [mastheadHeight, setMastheadHeight] = useState(0)
   const [showCanvasStatusBar, setShowCanvasStatusBar] = useState(false)
@@ -511,6 +512,7 @@ export function CatalogItemsContent({
           accessibilityLabel="Search catalog"
           dockHidden={dockHidden}
           onChangeText={setQuery}
+          onFocusChange={setSearchFocused}
           placeholder={
             isOffline ? "Search saved items" : "Search name, type or unit"
           }
@@ -522,7 +524,7 @@ export function CatalogItemsContent({
       {presentation === "tab" ? (
         <ScrollToTopButton
           dockHidden={dockHidden}
-          hidden={query.length > 0 || showFirstItemGate}
+          hidden={searchFocused || query.length > 0 || showFirstItemGate}
           onPress={scrollToTop.scrollToTop}
           testID="catalog-scroll-to-top"
           visible={scrollToTop.visible}
