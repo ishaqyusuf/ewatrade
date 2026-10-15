@@ -8,6 +8,7 @@ import { EmptyState } from "@/components/mobile/empty-state"
 import { ListCreateFab } from "@/components/mobile/list-create-fab"
 import { QueryRefreshControl } from "@/components/mobile/query-refresh-control"
 import { toggleReceiptSelection } from "@/components/mobile/receipts/receipt-selection"
+import { ScrollToTopButton } from "@/components/mobile/scroll-to-top-button"
 import { SearchFold, useSearchFold } from "@/components/mobile/search-fold"
 import { StatusBanner } from "@/components/mobile/status-banner"
 import { TabSearchBubble } from "@/components/mobile/tab-search-bubble"
@@ -17,6 +18,7 @@ import { View } from "@/components/ui/view"
 import { useAuthContext } from "@/hooks/use-auth"
 import { useOrderVisibility } from "@/hooks/use-order-visibility"
 import { useScrollEdgeFeedback } from "@/hooks/use-scroll-edge-feedback"
+import { useScrollToTop } from "@/hooks/use-scroll-to-top"
 import {
   LIST_PAGE_SIZE,
   shouldFetchNextListPage,
@@ -104,6 +106,7 @@ export function OrdersScreen() {
   } = useAdminTabs()
   const edgeFeedback = useScrollEdgeFeedback()
   const handleDockScroll = useAdminDockScroll()
+  const scrollToTop = useScrollToTop()
   const [dateFilter, setDateFilter] = useState<DateFilter>("30_days")
   const [filter, setFilter] = useState<OrderFilter>("all")
   const [mastheadHeight, setMastheadHeight] = useState(0)
@@ -276,6 +279,7 @@ export function OrdersScreen() {
   const handleScroll = useCallback(
     (event: NativeSyntheticEvent<NativeScrollEvent>) => {
       handleDockScroll(event)
+      scrollToTop.onScroll(event)
       const scrollY = Math.max(0, event.nativeEvent.contentOffset.y)
       const shouldUseCanvas =
         mastheadHeight > 0 && scrollY + 0.5 >= mastheadHeight - insets.top
@@ -283,7 +287,7 @@ export function OrdersScreen() {
         current === shouldUseCanvas ? current : shouldUseCanvas,
       )
     },
-    [handleDockScroll, insets.top, mastheadHeight],
+    [handleDockScroll, insets.top, mastheadHeight, scrollToTop.onScroll],
   )
 
   return (
@@ -484,7 +488,9 @@ export function OrdersScreen() {
             </ClassicOrdersSection>
           </View>
         }
+        onContentSizeChange={scrollToTop.onContentSizeChange}
         onScroll={handleScroll}
+        ref={scrollToTop.ref}
         onEndReached={() => {
           if (
             !isOffline &&
@@ -550,6 +556,14 @@ export function OrdersScreen() {
         )}
         scrollEventThrottle={16}
         showsVerticalScrollIndicator={false}
+      />
+      <ScrollToTopButton
+        dockHidden={isDockHidden}
+        // Selection, a typed search and the first-order gate own the bottom edge.
+        hidden={selectingReceipts || query.length > 0 || showFirstOrderGate}
+        onPress={scrollToTop.scrollToTop}
+        testID="orders-scroll-to-top"
+        visible={scrollToTop.visible}
       />
       {selectingReceipts ? (
         <VariableContextProvider

@@ -20,7 +20,13 @@ import { ActionButton } from "../../action-button"
 import { HeroCard } from "../../green-till/hero-card"
 import { ListCard, RecordRow, SectionHeader } from "../../green-till/kit"
 
-export function ClassicMoreFrame({ children, onScroll }: MoreFrameProps) {
+export function ClassicMoreFrame({
+  children,
+  onContentSizeChange,
+  onScroll,
+  overlay,
+  scrollRef,
+}: MoreFrameProps) {
   const edgeFeedback = useScrollEdgeFeedback()
   const insets = useSafeAreaInsets()
   const { colorScheme } = useColorScheme()
@@ -42,12 +48,15 @@ export function ClassicMoreFrame({ children, onScroll }: MoreFrameProps) {
           {...edgeFeedback}
           className="flex-1"
           contentContainerClassName="gap-4 px-[18px] pt-[var(--more-list-top)] pb-[var(--more-list-bottom)]"
+          onContentSizeChange={onContentSizeChange}
           onScroll={onScroll}
+          ref={scrollRef}
           scrollEventThrottle={16}
           showsVerticalScrollIndicator={false}
         >
           {children}
         </ScrollView>
+        {overlay}
       </View>
     </VariableContextProvider>
   )

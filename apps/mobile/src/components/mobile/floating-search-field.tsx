@@ -23,7 +23,7 @@ type FloatingSearchFieldProps = {
 }
 
 /** The raised surface shared by the search pill, its caption and button. */
-function useFloatingSurface(focused = false) {
+export function useFloatingSurface(focused = false) {
   const colors = useColors()
   const { colorScheme } = useColorScheme()
   const dark = colorScheme === "dark"

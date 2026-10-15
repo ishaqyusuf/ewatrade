@@ -14,6 +14,7 @@ import { ListCreateFab } from "@/components/mobile/list-create-fab"
 import { getListCreateFabFooterOffset } from "@/components/mobile/list-create-fab-model"
 import { ListSkeleton } from "@/components/mobile/loading-skeletons"
 import { QueryRefreshControl } from "@/components/mobile/query-refresh-control"
+import { ScrollToTopButton } from "@/components/mobile/scroll-to-top-button"
 import { StatusBanner } from "@/components/mobile/status-banner"
 import { TabSearchBubble } from "@/components/mobile/tab-search-bubble"
 import { Icon } from "@/components/ui/icon"
@@ -26,6 +27,7 @@ import { useAuthContext } from "@/hooks/use-auth"
 import { useBottomSearchScroll } from "@/hooks/use-bottom-search-scroll"
 import { useColorScheme } from "@/hooks/use-color"
 import { useScrollEdgeFeedback } from "@/hooks/use-scroll-edge-feedback"
+import { useScrollToTop } from "@/hooks/use-scroll-to-top"
 import { GREEN_TILL_THEME } from "@/lib/green-till-theme"
 import {
   LIST_PAGE_SIZE,
@@ -89,6 +91,7 @@ export function CatalogItemsContent({
   const [showCanvasStatusBar, setShowCanvasStatusBar] = useState(false)
   const [footerHeight, setFooterHeight] = useState(100)
   const scrollHide = useBottomSearchScroll()
+  const scrollToTop = useScrollToTop()
   const deferredQuery = useDeferredValue(query)
   const addSheet = useModal()
   const pendingAdd = useRef<"product" | "service" | null>(null)
@@ -206,6 +209,7 @@ export function CatalogItemsContent({
   const handleScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
     onScroll?.(event)
     scrollHide.onScroll(event)
+    scrollToTop.onScroll(event)
     const canvas =
       mastheadHeight > 0 &&
       Math.max(0, event.nativeEvent.contentOffset.y) >=
@@ -226,7 +230,9 @@ export function CatalogItemsContent({
         keyExtractor={(item) => item.id}
         keyboardDismissMode="interactive"
         keyboardShouldPersistTaps="handled"
+        onContentSizeChange={scrollToTop.onContentSizeChange}
         onScroll={handleScroll}
+        ref={scrollToTop.ref}
         scrollEventThrottle={16}
         showsVerticalScrollIndicator={false}
         ListHeaderComponent={
@@ -510,6 +516,16 @@ export function CatalogItemsContent({
           }
           testID="catalog-search-button"
           value={query}
+        />
+      ) : null}
+      {/* Only the Products tab is a main screen; full-screen Catalog is not. */}
+      {presentation === "tab" ? (
+        <ScrollToTopButton
+          dockHidden={dockHidden}
+          hidden={query.length > 0 || showFirstItemGate}
+          onPress={scrollToTop.scrollToTop}
+          testID="catalog-scroll-to-top"
+          visible={scrollToTop.visible}
         />
       ) : null}
       {/* The tab bar's + already adds items, so only full-screen Catalog
