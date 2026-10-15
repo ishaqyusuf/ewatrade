@@ -27,12 +27,3 @@ export const DOCK_OPACITY_OUTPUT = [1, 1, 0]
 
 /** The operational dock shrinks a little as it sinks away. */
 export const DOCK_HIDDEN_SCALE = 0.94
-
-/**
- * The active-tab highlight glides to the pressed tab with a small settle.
- * Reduce Motion places it directly.
- */
-export function animateDockIndicator(toValue: number, reduceMotion: boolean) {
-  if (reduceMotion) return toValue
-  return withSpring(toValue, { damping: 18, mass: 0.7, stiffness: 220 })
-}

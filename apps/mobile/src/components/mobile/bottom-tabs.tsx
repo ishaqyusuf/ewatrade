@@ -5,9 +5,8 @@ import {
   DOCK_OPACITY_INPUT,
   DOCK_OPACITY_OUTPUT,
   animateDock,
-  animateDockIndicator,
 } from "@/lib/dock-motion"
-import { useEffect, useLayoutEffect, useRef, useState } from "react"
+import { useEffect } from "react"
 import { View as RNView } from "react-native"
 import Animated, {
   interpolate,
@@ -85,43 +84,9 @@ export function MobileBottomTabs({
     tab,
   }))
 
-  // Operational dock: a soft highlight sits behind the active tab and glides
-  // to the next one, so a tab press reads as one movement.
+  // Operational dock: the active tab is marked by its filled icon alone
+  // (workshop 28, pick 02); there is no highlight behind it.
   const rowPadding = isOperationalDetail ? 10 : 12
-  const [rowWidth, setRowWidth] = useState(0)
-  const slotWidth = rowWidth > 0 ? (rowWidth - rowPadding * 2) / tabs.length : 0
-  const activeNavigationIndex =
-    tabStates.find(({ isActive, tab }) => isActive && tab.kind !== "action")
-      ?.index ?? -1
-  const indicatorX = useSharedValue(0)
-  const indicatorPlaced = useRef(false)
-  const showIndicator =
-    isOperationalDetail && slotWidth > 0 && activeNavigationIndex >= 0
-
-  // Layout effect: the first placement lands before paint, so the highlight
-  // never flashes at the row's start.
-  useLayoutEffect(() => {
-    if (!showIndicator) {
-      indicatorPlaced.current = false
-      return
-    }
-    const x = rowPadding + activeNavigationIndex * slotWidth
-    indicatorX.value = indicatorPlaced.current
-      ? animateDockIndicator(x, reduceMotion)
-      : x
-    indicatorPlaced.current = true
-  }, [
-    activeNavigationIndex,
-    indicatorX,
-    reduceMotion,
-    rowPadding,
-    showIndicator,
-    slotWidth,
-  ])
-
-  const indicatorStyle = useAnimatedStyle(() => ({
-    transform: [{ translateX: indicatorX.value }],
-  }))
 
   return (
     <Animated.View
@@ -194,11 +159,6 @@ export function MobileBottomTabs({
         }}
       >
         <RNView
-          onLayout={
-            isOperationalDetail
-              ? (event) => setRowWidth(event.nativeEvent.layout.width)
-              : undefined
-          }
           style={{
             alignItems: "center",
             flexDirection: "row",
@@ -208,25 +168,6 @@ export function MobileBottomTabs({
             paddingVertical: isOperationalDetail ? 0 : 6,
           }}
         >
-          {showIndicator ? (
-            <Animated.View
-              pointerEvents="none"
-              style={[
-                {
-                  backgroundColor:
-                    MOBILE_OPERATIONAL_BOTTOM_TAB_TOKENS.activeIndicator,
-                  borderRadius: 22,
-                  bottom: 10,
-                  left: 6,
-                  position: "absolute",
-                  top: 10,
-                  width: slotWidth - 12,
-                },
-                indicatorStyle,
-              ]}
-              testID="operational-bottom-tab-indicator"
-            />
-          ) : null}
           {tabStates.map(({ index, isActive, tab }) => (
             <RNView
               key={tab.label}

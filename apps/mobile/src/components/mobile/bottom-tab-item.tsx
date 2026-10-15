@@ -7,6 +7,7 @@ import { MOBILE_OPERATIONAL_BOTTOM_TAB_TOKENS } from "@/lib/design-foundation"
 import { DISPLAY_TEXT_FONT_SCALE_CAP } from "@/lib/mobile-accessibility-layout"
 import { cn } from "@/lib/utils"
 import { Text as RNText, View as RNView } from "react-native"
+import { FilledTabIcon, hasFilledTabIcon } from "./filled-tab-icon"
 import type {
   MobileBottomTab,
   MobileBottomTabsProps,
@@ -132,15 +133,24 @@ export function MobileBottomTabItem({
           }}
           testID={`operational-bottom-tab-${tab.label.toLowerCase().replaceAll(" ", "-")}`}
         >
-          <Icon
-            className="size-[20px]"
-            color={
-              isActive
-                ? MOBILE_OPERATIONAL_BOTTOM_TAB_TOKENS.activeForeground
-                : MOBILE_OPERATIONAL_BOTTOM_TAB_TOKENS.inactiveForeground
-            }
-            name={tab.icon}
-          />
+          {/* Fill mode: the active tab's icon turns solid; idle tabs stay outlines. */}
+          {isActive && hasFilledTabIcon(tab.icon) ? (
+            <FilledTabIcon
+              color={MOBILE_OPERATIONAL_BOTTOM_TAB_TOKENS.activeForeground}
+              cutoutColor={MOBILE_OPERATIONAL_BOTTOM_TAB_TOKENS.surface}
+              name={tab.icon}
+            />
+          ) : (
+            <Icon
+              className="size-[20px]"
+              color={
+                isActive
+                  ? MOBILE_OPERATIONAL_BOTTOM_TAB_TOKENS.activeForeground
+                  : MOBILE_OPERATIONAL_BOTTOM_TAB_TOKENS.inactiveForeground
+              }
+              name={tab.icon}
+            />
+          )}
           <RNText
             adjustsFontSizeToFit={!largeTextLayout}
             maxFontSizeMultiplier={DISPLAY_TEXT_FONT_SCALE_CAP}
