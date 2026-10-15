@@ -1,5 +1,6 @@
 // Green Till workshop contract: shared roles for branded surfaces.
-// Values mirror artifacts/mobile-quality-workshop/DESIGN-SYSTEM.md.
+// Values mirror workshop/work/ewatrade/archive/mobile-quality-workshop/DESIGN-SYSTEM.md
+// (in the sibling Workshop project).
 export const GREEN_TILL_THEME = {
   light: {
     heroFrom: "#17684F",

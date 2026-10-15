@@ -7,7 +7,7 @@ export default async function SignupWorkshop() {
   const html = await readFile(
     path.resolve(
       process.cwd(),
-      "../../artifacts/signup-onboarding-workshop/index.html",
+      "../../../workshop/work/ewatrade/archive/signup-onboarding-workshop/index.html",
     ),
     "utf8",
   )
