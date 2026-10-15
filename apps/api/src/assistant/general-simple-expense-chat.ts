@@ -232,6 +232,6 @@ export async function handleSimpleExpenseChat(
               : next === "category"
                 ? "Which category?"
                 : `Record ${generalMoney(prepared.amountMinor ?? 0, ctx.tenantContext.tenant.currencyCode)} for ${prepared.description}${prepared.paid ? ` from ${prepared.accountName}` : " as not paid yet"}. Proceed or change anything?`,
-    proposalId: result.proposalId,
+    proposalId: "proposalId" in result ? result.proposalId : result.id,
   }
 }

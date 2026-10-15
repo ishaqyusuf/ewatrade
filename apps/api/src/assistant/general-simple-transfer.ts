@@ -14,6 +14,7 @@ import {
   recordFinanceMoneyMovementInTransaction,
 } from "@ewatrade/db/queries"
 import { TRPCError } from "@trpc/server"
+import { z } from "zod"
 import { assertFinanceAccess } from "../trpc/finance-procedure"
 import type {
   GeneralActionAdapter,
@@ -21,7 +22,7 @@ import type {
 } from "./general-actions"
 import { requireGeneralScope } from "./general-context"
 import { proposalDigest } from "./proposal-security"
-const refuse = (message: string): never => {
+function refuse(message: string): never {
   throw new TRPCError({ code: "BAD_REQUEST", message })
 }
 export async function simpleTransferOptions(ctx: GeneralTransactionContext) {
@@ -292,9 +293,10 @@ export const simpleTransferRecord = {
       ...movement(ctx, input, toId),
       clientCommandId: key,
     })
+    const receipt = z.object({ entryId: z.string().min(1) }).parse(result)
     return {
       kind: "finance_movement" as const,
-      recordId: result.entryId,
+      recordId: receipt.entryId,
       bookId: info.options.bookId,
       title: "Transfer recorded",
       detail: `${generalMoney(input.amountMinor ?? 0, info.options.currencyCode)} from ${input.fromAccountName} to ${input.toAccountName}.`,

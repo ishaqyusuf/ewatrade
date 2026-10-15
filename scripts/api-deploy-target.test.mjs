@@ -34,6 +34,7 @@ test("shared inventory refuses malformed or repeating pagination", () => {
   for (const page of [
     null,
     { data: null },
+    { data: [] },
     { data: [], pagination: { next: "bad" } },
     { data: [], pagination: { next: 123 } },
   ]) {

@@ -82,7 +82,12 @@ export function readProductionApiSharedEnvironmentInventory(
     const query = new URLSearchParams({ projectId })
     if (cursor !== undefined) query.set("until", String(cursor))
     const response = readPage(`/v1/env?${query}`)
-    if (!Array.isArray(response?.data)) throw unavailable()
+    if (
+      !Array.isArray(response?.data) ||
+      !response.pagination ||
+      !Object.hasOwn(response.pagination, "next")
+    )
+      throw unavailable()
     data.push(...response.data)
     const next = response.pagination?.next
     if (next == null) return { data, pagination: { next: null } }

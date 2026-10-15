@@ -193,6 +193,6 @@ export async function handleSimpleMoneyInChat(
         : next === "account"
           ? "Which account?"
           : `Record ${generalMoney(prepared.amountMinor ?? 0, ctx.tenantContext.tenant.currencyCode)} into ${prepared.accountName}${prepared.createAccount ? " (new account)" : ""}. Proceed or change anything?`,
-    proposalId: result.proposalId,
+    proposalId: "proposalId" in result ? result.proposalId : result.id,
   }
 }
