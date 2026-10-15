@@ -26,8 +26,9 @@ type ScrollToTopButtonProps = {
 }
 
 const SIZE = 40
+const TARGET = 44
 // Centred on the 52 search bubble's line, so the two read as one row.
-const LINE_OFFSET = (52 - SIZE) / 2
+const LINE_OFFSET = (52 - TARGET) / 2
 
 /**
  * Workshop 01 Messages circle (owner pick, 15 Oct 2026): a small round up
@@ -103,20 +104,32 @@ export function ScrollToTopButton({
         pointerEvents={shown ? "auto" : "none"}
         style={faceStyle}
       >
-        <View style={{ ...surface, height: SIZE, width: SIZE }}>
-          <Pressable
-            accessibilityLabel="Scroll to top"
-            accessibilityRole="button"
-            className="size-full items-center justify-center rounded-full"
-            haptic
-            // 44 point touch target around the 40 point circle.
-            hitSlop={2}
-            onPress={onPress}
-            testID={testID}
+        {/* A real 44 point touch target (hitSlop cannot reach past a parent's
+            bounds) around the 40 point circle; overflow stays visible for
+            the circle's shadow. */}
+        <Pressable
+          accessibilityLabel="Scroll to top"
+          accessibilityRole="button"
+          allowOverflow
+          className="size-11 items-center justify-center"
+          haptic
+          noRipple
+          onPress={onPress}
+          testID={testID}
+          transition
+        >
+          <View
+            style={{
+              ...surface,
+              alignItems: "center",
+              height: SIZE,
+              justifyContent: "center",
+              width: SIZE,
+            }}
           >
             <Icon className="size-[19px] text-foreground" name="ArrowUp" />
-          </Pressable>
-        </View>
+          </View>
+        </Pressable>
       </Animated.View>
     </Animated.View>
   )
