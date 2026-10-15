@@ -85,7 +85,6 @@ test("maximum escaped outcome content reaches the disabled notice gate without d
 
 test("public external intake availability requires configuration and a trusted client source", async () => {
   const keys = [
-    "ACCOUNT_PRIVACY_REQUESTS_ENABLED",
     "ACCOUNT_PRIVACY_OTP_SECRET",
     "RESEND_API_KEY",
     "EMAIL_FROM",
@@ -102,7 +101,6 @@ test("public external intake availability requires configuration and a trusted c
       session: null,
     } as never)
   try {
-    process.env.ACCOUNT_PRIVACY_REQUESTS_ENABLED = "true"
     process.env.ACCOUNT_PRIVACY_OTP_SECRET = "a".repeat(32)
     process.env.RESEND_API_KEY = "test-mail-key"
     process.env.EMAIL_FROM = "test@example.invalid"
@@ -152,10 +150,6 @@ test("public external intake availability requires configuration and a trusted c
       available: false,
     })
     Reflect.deleteProperty(process.env, "EMAIL_CAPTURE_FILE")
-    process.env.ACCOUNT_PRIVACY_REQUESTS_ENABLED = "false"
-    expect(await caller("192.0.2.10").externalIntakeAvailability()).toEqual({
-      available: false,
-    })
   } finally {
     for (const key of keys) {
       const value = previous[key]
@@ -167,7 +161,6 @@ test("public external intake availability requires configuration and a trusted c
 
 test("external deletion never issues a challenge to an email routed into a QA inbox", async () => {
   const keys = [
-    "ACCOUNT_PRIVACY_REQUESTS_ENABLED",
     "ACCOUNT_PRIVACY_OTP_SECRET",
     "RESEND_API_KEY",
     "EMAIL_FROM",
@@ -192,7 +185,6 @@ test("external deletion never issues a challenge to an email routed into a QA in
     session: null,
   } as never)
   try {
-    process.env.ACCOUNT_PRIVACY_REQUESTS_ENABLED = "true"
     process.env.ACCOUNT_PRIVACY_OTP_SECRET = "a".repeat(32)
     process.env.RESEND_API_KEY = "test-mail-key"
     process.env.EMAIL_FROM = "privacy@example.com"

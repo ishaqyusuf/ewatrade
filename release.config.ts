@@ -53,7 +53,6 @@ const loglyMarketing = [
 // the full URL set from .env.preview (owner decision, 6 Oct 2026). Production
 // still checks every name here.
 const previewOnly = [
-  "ACCOUNT_PRIVACY_REQUESTS_ENABLED",
   "ACCOUNT_PRIVACY_PROCESSING_ENABLED",
   "ACCOUNT_PRIVACY_COMPLETION_ENABLED",
   "ACCOUNT_PRIVACY_MEMBERSHIP_PROCESSING_ENABLED",

@@ -6,7 +6,6 @@ import Page from "./page"
 
 test("public deletion page offers an email request path until verified intake is ready", async () => {
   const keys = [
-    "ACCOUNT_PRIVACY_REQUESTS_ENABLED",
     "ACCOUNT_PRIVACY_OTP_SECRET",
     "RESEND_API_KEY",
     "EMAIL_FROM",
@@ -32,7 +31,6 @@ test("public deletion page offers an email request path until verified intake is
     )
   }
   try {
-    process.env.ACCOUNT_PRIVACY_REQUESTS_ENABLED = "true"
     process.env.ACCOUNT_PRIVACY_OTP_SECRET = "short-secret"
     process.env.RESEND_API_KEY = "mail-key"
     process.env.EMAIL_FROM = "privacy@example.com"

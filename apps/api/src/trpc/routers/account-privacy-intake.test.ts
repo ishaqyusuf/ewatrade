@@ -6,7 +6,6 @@ import { accountPrivacyRouter } from "./account-privacy"
 
 const router = createTRPCRouter({ accountPrivacy: accountPrivacyRouter })
 const keys = [
-  "ACCOUNT_PRIVACY_REQUESTS_ENABLED",
   "ACCOUNT_PRIVACY_OTP_SECRET",
   "RESEND_API_KEY",
   "EMAIL_FROM",
@@ -30,7 +29,6 @@ beforeEach(() => {
   deliveryFails = false
   for (const key of keys) Reflect.deleteProperty(process.env, key)
   Object.assign(process.env, {
-    ACCOUNT_PRIVACY_REQUESTS_ENABLED: "true",
     ACCOUNT_PRIVACY_OTP_SECRET: "synthetic-intake-secret-with-32-characters",
     RESEND_API_KEY: "synthetic-provider-key",
     EMAIL_FROM: "privacy@example.invalid",
@@ -218,8 +216,8 @@ test("HTTP intake sends a private code, verifies it once and records pending req
 test("HTTP intake refuses disabled/captured mail and missing trusted source before database or provider calls", async () => {
   for (const setting of ["disabled", "capture", "source"] as const) {
     const state = fixture()
-    process.env.ACCOUNT_PRIVACY_REQUESTS_ENABLED =
-      setting === "disabled" ? "false" : "true"
+    process.env.EMAIL_DELIVERY_MODE =
+      setting === "disabled" ? "console" : "live"
     if (setting === "capture")
       process.env.EMAIL_CAPTURE_FILE = "/private/fixture-only.json"
     else Reflect.deleteProperty(process.env, "EMAIL_CAPTURE_FILE")

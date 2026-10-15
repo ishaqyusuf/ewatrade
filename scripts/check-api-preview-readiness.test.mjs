@@ -43,7 +43,6 @@ function fixture(previewDatabase = preview) {
       "QA_ACCELERATOR_SECRET=preview-qa-signing-secret-at-least-32-characters",
       "QA_ACCELERATOR_ALLOWED_ORIGINS=https://preview.example.test",
       'EMAIL_QA_DOMAIN_ROUTES={"example.qa.test":"tester@example.com"}',
-      "ACCOUNT_PRIVACY_REQUESTS_ENABLED=false",
       "ACCOUNT_PRIVACY_PROCESSING_ENABLED=false",
       "ACCOUNT_PRIVACY_MEMBERSHIP_PROCESSING_ENABLED=false",
       "ACCOUNT_PRIVACY_CONVERSATION_ACCESS_PROCESSING_ENABLED=false",
@@ -137,7 +136,7 @@ test("fails closed when the profile is missing", () => {
   expect(inspectApiPreviewReadiness(root)).toContain("PREVIEW_PROFILE_MISSING")
 })
 
-test("rejects enabled account-deletion intake and a wrong project link", () => {
+test("rejects enabled account-deletion processing and a wrong project link", () => {
   const root = fixture()
   writeFileSync(
     path.join(root, ".env.preview"),
@@ -152,8 +151,7 @@ test("rejects enabled account-deletion intake and a wrong project link", () => {
       "QA_ACCELERATOR_SECRET=preview-qa-signing-secret-at-least-32-characters",
       "QA_ACCELERATOR_ALLOWED_ORIGINS=https://preview.example.test",
       'EMAIL_QA_DOMAIN_ROUTES={"example.qa.test":"tester@example.com"}',
-      "ACCOUNT_PRIVACY_REQUESTS_ENABLED=true",
-      "ACCOUNT_PRIVACY_PROCESSING_ENABLED=false",
+      "ACCOUNT_PRIVACY_PROCESSING_ENABLED=true",
       "ACCOUNT_PRIVACY_MEMBERSHIP_PROCESSING_ENABLED=false",
       "ACCOUNT_PRIVACY_CONVERSATION_ACCESS_PROCESSING_ENABLED=false",
       "ACCOUNT_PRIVACY_CONVERSATION_OUTCOME_PROCESSING_ENABLED=false",
@@ -176,7 +174,7 @@ test("rejects enabled account-deletion intake and a wrong project link", () => {
     }),
   )
   expect(inspectApiPreviewReadiness(root)).toEqual([
-    "ACCOUNT_PRIVACY_REQUESTS_ENABLED_NOT_DISABLED",
+    "ACCOUNT_PRIVACY_PROCESSING_ENABLED_NOT_DISABLED",
     "API_PROJECT_LINK_MISMATCH",
   ])
 })

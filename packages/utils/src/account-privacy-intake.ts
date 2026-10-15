@@ -13,8 +13,6 @@ export function accountPrivacyEmailIntakeFailures(
   env: Record<string, string | undefined>,
 ) {
   const failures: string[] = []
-  if (env.ACCOUNT_PRIVACY_REQUESTS_ENABLED !== "true")
-    failures.push("ACCOUNT_PRIVACY_REQUESTS_ENABLED must be true.")
   if (!isAccountPrivacyOtpSecretConfigured(env.ACCOUNT_PRIVACY_OTP_SECRET))
     failures.push(
       "ACCOUNT_PRIVACY_OTP_SECRET must contain at least 32 characters after trimming.",

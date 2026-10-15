@@ -368,7 +368,6 @@ describe("deploy wrapper boundary", () => {
         "QA_ACCELERATOR_ALLOWED_ORIGINS=https://preview.example.test",
         'EMAIL_QA_DOMAIN_ROUTES={"example.qa.test":"tester@example.com"}',
         ...[
-          "ACCOUNT_PRIVACY_REQUESTS_ENABLED",
           "ACCOUNT_PRIVACY_PROCESSING_ENABLED",
           "ACCOUNT_PRIVACY_MEMBERSHIP_PROCESSING_ENABLED",
           "ACCOUNT_PRIVACY_CONVERSATION_ACCESS_PROCESSING_ENABLED",

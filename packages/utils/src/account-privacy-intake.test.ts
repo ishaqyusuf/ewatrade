@@ -7,7 +7,6 @@ import {
 
 test("account deletion intake requires a usable OTP secret and mail settings", () => {
   const ready = {
-    ACCOUNT_PRIVACY_REQUESTS_ENABLED: "true",
     ACCOUNT_PRIVACY_OTP_SECRET: "a".repeat(32),
     RESEND_API_KEY: "mail-key",
     EMAIL_FROM: "privacy@example.com",
@@ -48,25 +47,18 @@ test("account deletion intake requires a usable OTP secret and mail settings", (
       EMAIL_CAPTURE_FILE: "/tmp/captured-mail.jsonl",
     }),
   ).toBe(false)
-  expect(
-    isAccountPrivacyEmailIntakeConfigured({
-      ...ready,
-      ACCOUNT_PRIVACY_REQUESTS_ENABLED: "false",
-    }),
-  ).toBe(false)
 })
 
 test("operator diagnostics report every missing setting without printing secrets", () => {
-  expect(accountPrivacyEmailIntakeFailures({})).toHaveLength(5)
+  expect(accountPrivacyEmailIntakeFailures({})).toHaveLength(4)
   const failures = accountPrivacyEmailIntakeFailures({
-    ACCOUNT_PRIVACY_REQUESTS_ENABLED: "false",
     ACCOUNT_PRIVACY_OTP_SECRET: "private-short-secret",
     RESEND_API_KEY: "private-provider-key",
     EMAIL_FROM: "privacy@example.com",
     EMAIL_DELIVERY_MODE: "console",
     EMAIL_CAPTURE_FILE: "/private/not-for-output.json",
   })
-  expect(failures).toHaveLength(4)
+  expect(failures).toHaveLength(3)
   expect(failures.join(" ")).not.toContain("private-short-secret")
   expect(failures.join(" ")).not.toContain("private-provider-key")
   expect(failures.join(" ")).not.toContain("/private/not-for-output.json")

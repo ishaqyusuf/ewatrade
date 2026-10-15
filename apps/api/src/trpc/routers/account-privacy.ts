@@ -636,18 +636,11 @@ export const accountPrivacyRouter = createTRPCRouter({
     getAccountDeletionRequest(ctx.db, ctx.session.user.id),
   ),
   deletionIntakeAvailability: authenticatedProcedure.query(() => ({
-    available: process.env.ACCOUNT_PRIVACY_REQUESTS_ENABLED === "true",
+    available: true,
   })),
   requestDeletion: authenticatedProcedure
     .input(requestAccountDeletionSchema)
     .mutation(({ ctx }) => {
-      if (process.env.ACCOUNT_PRIVACY_REQUESTS_ENABLED !== "true") {
-        throw new TRPCError({
-          code: "PRECONDITION_FAILED",
-          message:
-            "Account deletion requests are not yet available. Please use the published support channel.",
-        })
-      }
       const authenticatedAt = new Date(ctx.session.session.createdAt).getTime()
       if (
         !ctx.session.user.emailVerified ||
