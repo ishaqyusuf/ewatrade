@@ -4,7 +4,6 @@ import { Text } from "@/components/ui/text"
 import { useBottomDockScroll } from "@/hooks/use-bottom-dock-scroll"
 import { useColorScheme, useColors } from "@/hooks/use-color"
 import { useScrollEdgeFeedback } from "@/hooks/use-scroll-edge-feedback"
-import { useScrollToTop } from "@/hooks/use-scroll-to-top"
 import { cn } from "@/lib/utils"
 import { StatusBar } from "expo-status-bar"
 import { VariableContextProvider } from "nativewind"
@@ -22,7 +21,6 @@ import { KeyboardAwareScrollView } from "react-native-keyboard-controller"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 import { AssistantEntry } from "./assistant/assistant-entry"
 import { type MobileBottomTab, MobileBottomTabs } from "./bottom-tabs"
-import { ScrollToTopButton } from "./scroll-to-top-button"
 import { SetupAssistantEntry } from "./setup-assistant/setup-assistant-entry"
 
 export type MobileAppShellRole = "attendant" | "owner"
@@ -107,7 +105,6 @@ export function MobileAppShell({
     [onBottomTabVisibilityChange],
   )
   const handleDockScroll = useBottomDockScroll(handleDockVisibility)
-  const scrollToTop = useScrollToTop()
   const visibleNavItems = navItems.filter(
     (item) => role === "owner" || !item.ownerOnly,
   )
@@ -162,9 +159,8 @@ export function MobileAppShell({
       )
 
       handleDockScroll(event)
-      scrollToTop.onScroll(event)
     },
-    [effectiveStatusBarSwitchOffset, handleDockScroll, scrollToTop.onScroll],
+    [effectiveStatusBarSwitchOffset, handleDockScroll],
   )
 
   return (
@@ -216,9 +212,7 @@ export function MobileAppShell({
         disableScrollOnKeyboardHide
         keyboardDismissMode="interactive"
         keyboardShouldPersistTaps="handled"
-        onContentSizeChange={scrollToTop.onContentSizeChange}
         onScroll={handleScroll}
-        ref={scrollToTop.ref}
         refreshControl={refreshControl}
         scrollEventThrottle={16}
         style={{ backgroundColor: shellBackgroundColor, flex: 1 }}
@@ -307,13 +301,6 @@ export function MobileAppShell({
           </RNView>
         </VariableContextProvider>
       </KeyboardAwareScrollView>
-
-      <ScrollToTopButton
-        dockHidden={isBottomTabHidden}
-        onPress={scrollToTop.scrollToTop}
-        testID="home-scroll-to-top"
-        visible={scrollToTop.visible}
-      />
 
       {showBottomTabs ? (
         <View pointerEvents="box-none" testID="mobile-shell-floating-nav">

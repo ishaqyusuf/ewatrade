@@ -1,4 +1,3 @@
-import type { ScrollToTopTarget } from "@/hooks/use-scroll-to-top"
 import type { AdminMoreItem } from "@/lib/admin-navigation"
 import type { ReactNode } from "react"
 import type {
@@ -23,11 +22,7 @@ export type MoreRowProps = {
 }
 export type MoreFrameProps = {
   children: ReactNode
-  onContentSizeChange?: (width: number, height: number) => void
   onScroll: (event: NativeSyntheticEvent<NativeScrollEvent>) => void
-  /** Floating controls drawn over the list, e.g. the scroll-to-top arrow. */
-  overlay?: ReactNode
-  scrollRef?: (node: ScrollToTopTarget | null) => void
   showCanvasStatusBar: boolean
 }
 export function businessInitials(value: string) {

@@ -11,7 +11,6 @@ import {
   ClassicMoreSection,
   ClassicMoreWorkspace,
 } from "@/components/mobile/appearances/classic/more-screen"
-import { ScrollToTopButton } from "@/components/mobile/scroll-to-top-button"
 import { StatusBanner } from "@/components/mobile/status-banner"
 import { Icon } from "@/components/ui/icon"
 import { useModal } from "@/components/ui/modal"
@@ -20,7 +19,6 @@ import { Text } from "@/components/ui/text"
 import { View } from "@/components/ui/view"
 import { useAuthContext } from "@/hooks/use-auth"
 import { useColorScheme, useColors } from "@/hooks/use-color"
-import { useScrollToTop } from "@/hooks/use-scroll-to-top"
 import {
   type AdminManagementRole,
   type AdminMoreItem,
@@ -93,7 +91,6 @@ function MoreContent({
   const colors = useColors()
   const [headerHeight, setHeaderHeight] = useState(0)
   const [showCanvasStatusBar, setShowCanvasStatusBar] = useState(false)
-  const scrollToTop = useScrollToTop()
 
   const router = useRouter()
   const auth = useAuthContext()
@@ -246,24 +243,7 @@ function MoreContent({
     <>
       <ClassicMoreFrame
         showCanvasStatusBar={showCanvasStatusBar}
-        // Only the More tab is a main screen; the pushed Account screen is not.
-        {...(account
-          ? {}
-          : {
-              onContentSizeChange: scrollToTop.onContentSizeChange,
-              // More keeps its tab bar fixed, so the arrow stays above it.
-              overlay: (
-                <ScrollToTopButton
-                  dockHidden={false}
-                  onPress={scrollToTop.scrollToTop}
-                  testID="more-scroll-to-top"
-                  visible={scrollToTop.visible}
-                />
-              ),
-              scrollRef: scrollToTop.ref,
-            })}
         onScroll={(event) => {
-          scrollToTop.onScroll(event)
           const next =
             headerHeight > 0 &&
             Math.max(0, event.nativeEvent.contentOffset.y) >=
