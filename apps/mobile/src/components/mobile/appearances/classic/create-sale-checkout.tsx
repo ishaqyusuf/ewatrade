@@ -97,6 +97,22 @@ export function ClassicSaleCheckout({
 
   return (
     <View className="flex-1">
+      {/* The balance stays put while payment and order details scroll. */}
+      <View className="px-4 pb-2">
+        <HeroCard
+          label={balance > 0 ? "Balance due" : "Total · paid in full"}
+          amount={money(balance > 0 ? balance : totalMinor, currencyCode)}
+          pill={{
+            label: isOffline ? "Will queue" : itemCount,
+            tone: isOffline ? "offline" : "synced",
+          }}
+          sub={
+            balance > 0
+              ? `Total ${money(totalMinor, currencyCode)} · received ${money(paymentSummary.receivedMinor, currencyCode)}`
+              : `${methodLabel} · nothing left to collect`
+          }
+        />
+      </View>
       <KeyboardAwareScrollView
         className="flex-1"
         bottomOffset={actionsHeight + 12}
@@ -122,20 +138,6 @@ export function ClassicSaleCheckout({
               tone="warning"
             />
           ) : null}
-          <HeroCard
-            label={balance > 0 ? "Balance due" : "Total · paid in full"}
-            amount={money(balance > 0 ? balance : totalMinor, currencyCode)}
-            pill={{
-              label: isOffline ? "Will queue" : itemCount,
-              tone: isOffline ? "offline" : "synced",
-            }}
-            sub={
-              balance > 0
-                ? `Total ${money(totalMinor, currencyCode)} · received ${money(paymentSummary.receivedMinor, currencyCode)}`
-                : `${methodLabel} · nothing left to collect`
-            }
-          />
-
           <SectionLabel>HOW ARE THEY PAYING?</SectionLabel>
           <View className="gap-2.5">
             {PAYMENT_CHOICES.map(([choice, label, icon, tint]) => {
