@@ -78,7 +78,11 @@ assertFile("src/lib/nativewind-theme-vars.ts")
 
 const layout = read("src/app/_layout.tsx")
 const metroConfig = read("metro.config.js")
-const themeVars = read("src/lib/nativewind-theme-vars.ts")
+// nativewindThemeVars spreads the semantic tokens from themeColorVars().
+const themeVars = [
+  read("src/lib/nativewind-theme-vars.ts"),
+  read("src/lib/theme-palette.ts"),
+].join("\n")
 const tailwindConfig = read("tailwind.config.ts")
 const globalCss = read("src/styles/global.css")
 

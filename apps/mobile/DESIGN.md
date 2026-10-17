@@ -8,7 +8,10 @@
 
 - App: `apps/mobile`
 - Router: Expo Router under `src/app`
-- Tokens: `src/lib/theme.ts` and `src/styles/global.css`
+- Tokens: edit `src/lib/brand-theme.ts`, `src/lib/theme-palette.ts` and
+  `src/lib/green-till-theme.ts`; `themeColorVars()` feeds them to every className
+  token at runtime. `src/styles/global.css` holds matching fallbacks, and
+  `src/lib/theme-palette.test.ts` fails if the two drift.
 - Styling: NativeWind class names with React Native styles only when needed
 - Icons: `@hugeicons/react-native` through `src/components/ui/icon.tsx`
 - Common primitives: `Pressable`, `Button`, `Text`, `View`, inputs, switches, tabs, alerts
@@ -37,7 +40,7 @@ The visual system chosen from the mobile quality workshop. Source of truth:
 `workshop/work/ewatrade/archive/mobile-quality-workshop/DESIGN-SYSTEM.md` (local, in the sibling Workshop project) and the Brain batch
 board (`.brain/tasks/green-till-batch-board.md`).
 
-- **Tokens** (`src/styles/global.css`, `src/lib/green-till-theme.ts`): hero gradient,
+- **Tokens** (`src/lib/green-till-theme.ts`, mirrored in `src/styles/global.css`): hero gradient,
   `gold` (same value as the dock's centre accent), `ink`, and five tint pairs
   (`tint-mint`, `tint-amber`, `tint-sky`, `tint-lilac`, `tint-rose`, each with
   `-foreground`). Mint means paid/done, amber owed/offline, rose risk/low stock, sky

@@ -11,6 +11,9 @@ export const GREEN_TILL_THEME = {
     heroLine: "rgba(255,249,237,0.16)",
     gold: "#F2A51A",
     goldForeground: "#1E1E1C",
+    // Ink CTA and cream text on brand green.
+    ink: "#1E1E1C",
+    cream: "#FFF9ED",
     brandMark: "#FFFFFF",
     // 03 Market Preview stage behind auth and onboarding forms.
     stageCenter: "#EFF7F2",
@@ -70,6 +73,8 @@ export const GREEN_TILL_THEME = {
     heroLine: "rgba(243,251,246,0.14)",
     gold: "#F5B12E",
     goldForeground: "#1E1E1C",
+    ink: "#F0F3F1",
+    cream: "#F3FBF6",
     brandMark: "#FFFFFF",
     stageCenter: "#192B26",
     stageEdge: "#17302A",

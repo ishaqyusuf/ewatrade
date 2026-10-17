@@ -1,4 +1,4 @@
-import { THEME } from "@/lib/theme"
+import { themeColorVars } from "@/lib/theme-palette"
 import { StyleSheet } from "react-native"
 
 type ColorScheme = "dark" | "light"
@@ -252,34 +252,9 @@ const TAILWIND_COLOR_VARIABLES = {
 } as const satisfies ThemeVariables
 
 export function nativewindThemeVars(colorScheme: ColorScheme) {
-  const colors = colorScheme === "dark" ? THEME.dark : THEME.light
-
   return {
     ...TAILWIND_COLOR_VARIABLES,
     "--native-hairline": `${StyleSheet.hairlineWidth}px`,
-    "--accent": colors.accent,
-    "--accent-foreground": colors.accentForeground,
-    "--background": colors.background,
-    "--border": colors.border,
-    "--card": colors.card,
-    "--card-foreground": colors.cardForeground,
-    "--destructive": colors.destructive,
-    "--destructive-foreground": colors.destructiveForeground,
-    "--foreground": colors.foreground,
-    "--input": colors.input,
-    "--muted": colors.muted,
-    "--muted-foreground": colors.mutedForeground,
-    "--overlay": colors.overlay,
-    "--popover": colors.popover,
-    "--popover-foreground": colors.popoverForeground,
-    "--primary": colors.primary,
-    "--primary-foreground": colors.primaryForeground,
-    "--ring": colors.ring,
-    "--secondary": colors.secondary,
-    "--secondary-foreground": colors.secondaryForeground,
-    "--success": colors.success,
-    "--success-foreground": colors.successForeground,
-    "--warn": colors.warn,
-    "--warn-foreground": colors.warnForeground,
+    ...themeColorVars(colorScheme),
   } satisfies ThemeVariables
 }

@@ -3,7 +3,7 @@ import { join, relative, resolve } from "node:path"
 
 const MOBILE_DIR = resolve(new URL("..", import.meta.url).pathname)
 const SOURCE_DIR = join(MOBILE_DIR, "src")
-const THEME_FILE = join(SOURCE_DIR, "lib/theme.ts")
+const THEME_FILE = join(SOURCE_DIR, "lib/theme-palette.ts")
 const GLOBAL_CSS_FILE = join(SOURCE_DIR, "styles/global.css")
 const SCAN_TARGETS = [
   "app",
