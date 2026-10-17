@@ -38,19 +38,60 @@ export function stackTransitions(os: string): StackTransitions {
   }
 }
 
-const easeOutCubic = (t: number) => 1 - (1 - t) ** 3
+const easeInOutQuad = (t: number) =>
+  t < 0.5 ? 2 * t * t : 1 - (-2 * t + 2) ** 2 / 2
+
+type TabSceneInterpolator = NonNullable<
+  BottomTabNavigationOptions["sceneStyleInterpolator"]
+>
+
+// A tab's progress is -1 when it sits before the active tab, 0 when active and
+// 1 when after it, so following tab order reverses the direction going back.
+// The tab being left slides 240dp away and is gone by 70% of the way.
+const forLeavingTab: TabSceneInterpolator = ({ current }) => ({
+  sceneStyle: {
+    opacity: current.progress.interpolate({
+      inputRange: [-1, -0.7, 0, 0.7, 1],
+      outputRange: [0, 0, 1, 0, 0],
+    }),
+    transform: [
+      {
+        translateX: current.progress.interpolate({
+          inputRange: [-1, 0, 1],
+          outputRange: [-240, 0, 240],
+        }),
+      },
+    ],
+  },
+})
+
+// The tab being opened fades in where it is.
+const forEnteringTab: TabSceneInterpolator = ({ current }) => ({
+  sceneStyle: {
+    opacity: current.progress.interpolate({
+      inputRange: [-1, 0, 1],
+      outputRange: [0, 1, 0],
+    }),
+  },
+})
 
 export function tabTransitions(
   reduceMotion: boolean,
-): Pick<BottomTabNavigationOptions, "animation" | "transitionSpec"> {
+  focused: boolean,
+): Pick<
+  BottomTabNavigationOptions,
+  "animation" | "transitionSpec" | "sceneStyleInterpolator"
+> {
   // Bottom tabs animate in JS and ignore the OS reduce-motion setting, so the
-  // caller passes it in.
+  // caller passes it in. The interpolator only sees progress, so the caller
+  // also says whether this tab is the focused (entering) one.
   if (reduceMotion) return { animation: "none" }
   return {
-    animation: "fade",
+    animation: "shift",
     transitionSpec: {
       animation: "timing",
-      config: { duration: 180, easing: easeOutCubic },
+      config: { duration: 230, easing: easeInOutQuad },
     },
+    sceneStyleInterpolator: focused ? forEnteringTab : forLeavingTab,
   }
 }

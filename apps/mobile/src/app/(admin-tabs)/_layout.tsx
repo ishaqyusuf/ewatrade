@@ -101,7 +101,10 @@ export default function AdminTabsLayout() {
       <Tabs
         backBehavior="initialRoute"
         initialRouteName="admin-home"
-        screenOptions={{ headerShown: false, ...tabTransitions(reduceMotion) }}
+        screenOptions={({ navigation }) => ({
+          headerShown: false,
+          ...tabTransitions(reduceMotion, navigation.isFocused()),
+        })}
         tabBar={(props) => (
           <AdminTabBar
             {...props}

@@ -75,7 +75,7 @@ Screen changes and content motion follow T3 Code's mobile app (`pingdotgg/t3code
   - `push` (stack default): iOS-style slide on Android; iOS keeps its native push and swipe-back.
   - `modal`: `presentation: "modal"`, sliding up from the bottom on Android; iOS keeps its native modal sheet.
   - `gate`: cross-fade for entry, auth and shell routes reached by `Redirect`, `router.replace` or a `Stack.Protected` guard flip (index, login, sign-up, verify-email, onboarding, staff onboarding, no-access, dashboard, admin tabs, customer shell, sales-rep home).
-- Admin bottom tabs cross-fade (180ms ease-out) and switch instantly when Reduce Motion is on.
+- Admin bottom tabs (Home, Orders, Catalog, More) switch through `tabTransitions` (230ms ease-in-out, modelled on the owner's reference recording of 17 October 2026): the tab being left slides 240dp away in tab order and fades out by 70% of the way, while the tab being opened fades in where it is. Moving back reverses the direction. The dock stays still, and tabs switch instantly when Reduce Motion is on. Other screens do not use it yet.
 - The bottom dock (Glide, chosen 12 October 2026 from `workshop/work/ewatrade/archive/mobile-bottom-dock-workshop/`): a soft highlight springs to the pressed tab, and on scroll down the dock sinks, shrinks slightly and fades. It returns only on scroll up, never on reaching the bottom. Motion lives in `src/lib/dock-motion.ts`; Reduce Motion places both instantly.
 - Content motion lives in `src/components/ui/motion.tsx` with timing in `src/lib/content-motion.ts`:
   - `RevealItem` + `useFirstReveal(ready)`: a list's first page drifts up and fades in with a capped stagger. Rows mounted later by scrolling or pagination appear without motion.
