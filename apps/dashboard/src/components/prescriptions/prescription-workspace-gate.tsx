@@ -70,7 +70,7 @@ export function PrescriptionWorkspaceGate({
           title="Pharmacy compliance setup"
           description="Complete the pharmacy policy and professional role checks before opening the private prescription queue."
         />
-        <section className="max-w-2xl rounded-none border border-amber-200 bg-amber-50 p-6 text-amber-950">
+        <section className="max-w-2xl rounded-none border border-warning-border bg-warning p-6 text-warning-foreground">
           <h2 className="font-semibold">Professional access is not ready</h2>
           <p className="mt-2 text-sm leading-6">
             Assign a verified pharmacist and an attendant, configure pickup or

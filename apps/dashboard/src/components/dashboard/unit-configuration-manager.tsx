@@ -226,7 +226,7 @@ export function UnitConfigurationManager({
         </p>
       ) : null}
       {notice ? (
-        <p className="rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
+        <p className="rounded-lg bg-success px-3 py-2 text-sm text-success-foreground">
           {notice}
         </p>
       ) : null}

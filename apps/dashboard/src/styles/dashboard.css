@@ -22,11 +22,22 @@
   --border: oklch(0.923 0.003 48.717);
   --input: oklch(0.923 0.003 48.717);
   --ring: oklch(0.508 0.118 165.612);
-  --chart-1: oklch(0.845 0.143 164.978);
-  --chart-2: oklch(0.696 0.17 162.48);
-  --chart-3: oklch(0.596 0.145 163.225);
-  --chart-4: oklch(0.508 0.118 165.612);
-  --chart-5: oklch(0.432 0.095 166.913);
+  /* Soft status tones: bg-{tone}, text-{tone}-foreground, border-{tone}-border. */
+  --success: oklch(97.9% 0.021 166.113);
+  --success-foreground: oklch(43.2% 0.095 166.913);
+  --success-border: oklch(90.5% 0.093 164.15);
+  --warning: oklch(98.7% 0.022 95.277);
+  --warning-foreground: oklch(47.3% 0.137 46.201);
+  --warning-border: oklch(92.4% 0.12 95.746);
+  --info: oklch(97% 0.014 254.604);
+  --info-foreground: oklch(42.4% 0.199 265.638);
+  --info-border: oklch(88.2% 0.059 254.128);
+  --danger: oklch(97.1% 0.013 17.38);
+  --danger-foreground: oklch(44.4% 0.177 26.899);
+  --danger-border: oklch(88.5% 0.062 18.334);
+  --highlight: oklch(96.9% 0.016 293.756);
+  --highlight-foreground: oklch(43.2% 0.232 292.759);
+  --highlight-border: oklch(89.4% 0.057 293.283);
   --radius: 0.45rem;
   --sidebar: var(--background);
   --sidebar-foreground: var(--foreground);
@@ -64,6 +75,22 @@
   --border: oklch(1 0 0 / 12%);
   --input: oklch(1 0 0 / 16%);
   --ring: oklch(0.596 0.145 163.225);
+  /* Soft status tones sit as tinted glass over dark surfaces. */
+  --success: oklch(26.2% 0.051 172.552 / 45%);
+  --success-foreground: oklch(84.5% 0.143 164.978);
+  --success-border: oklch(43.2% 0.095 166.913 / 60%);
+  --warning: oklch(27.9% 0.077 45.635 / 45%);
+  --warning-foreground: oklch(87.9% 0.169 91.605);
+  --warning-border: oklch(47.3% 0.137 46.201 / 60%);
+  --info: oklch(28.2% 0.091 267.935 / 45%);
+  --info-foreground: oklch(80.9% 0.105 251.813);
+  --info-border: oklch(42.4% 0.199 265.638 / 60%);
+  --danger: oklch(25.8% 0.092 26.042 / 45%);
+  --danger-foreground: oklch(80.8% 0.114 19.571);
+  --danger-border: oklch(44.4% 0.177 26.899 / 60%);
+  --highlight: oklch(28.3% 0.141 291.089 / 45%);
+  --highlight-foreground: oklch(81.1% 0.111 293.571);
+  --highlight-border: oklch(43.2% 0.232 292.759 / 60%);
 }
 
 .ewatrade-dashboard .scrollbar-hide {

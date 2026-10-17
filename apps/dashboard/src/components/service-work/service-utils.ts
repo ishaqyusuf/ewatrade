@@ -29,11 +29,11 @@ export function label(value: string) {
 }
 
 export function tone(summary: WorkJob["summary"]) {
-  if (summary === "blocked") return "bg-amber-50 text-amber-700"
+  if (summary === "blocked") return "bg-warning text-warning-foreground"
   if (summary === "ready_for_handoff" || summary === "partially_ready") {
-    return "bg-violet-50 text-violet-700"
+    return "bg-highlight text-highlight-foreground"
   }
-  if (summary === "in_progress") return "bg-blue-50 text-blue-700"
+  if (summary === "in_progress") return "bg-info text-info-foreground"
   return "bg-muted text-muted-foreground"
 }
 

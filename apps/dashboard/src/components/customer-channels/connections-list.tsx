@@ -12,10 +12,10 @@ import type { CustomerChannelConnection } from "./types"
 
 const readinessTone = {
   blocked: "bg-destructive/10 text-destructive",
-  configuration_required: "bg-amber-100 text-amber-900",
-  ready: "bg-emerald-100 text-emerald-900",
+  configuration_required: "bg-warning text-warning-foreground",
+  ready: "bg-success text-success-foreground",
   setup_required: "bg-muted text-muted-foreground",
-  test_required: "bg-blue-100 text-blue-900",
+  test_required: "bg-info text-info-foreground",
 } as const
 
 function label(value: string) {

@@ -23,7 +23,7 @@ export function StoreConversationHeader({
         </Badge>
       </div>
       {escalationOpen ? (
-        <div className="rounded-none border border-amber-300 bg-amber-50 p-3 text-sm text-amber-950">
+        <div className="rounded-none border border-warning-border bg-warning p-3 text-sm text-warning-foreground">
           This conversation needs operational attention. A successful reply
           records the recovery automatically.
         </div>

@@ -200,7 +200,7 @@ export function ServiceSettingsForm({
           />
         </ControlField>
         {!channelConfigured ? (
-          <p className="rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-700">
+          <p className="rounded-lg bg-warning px-3 py-2 text-sm text-warning-foreground">
             This provider is not configured. Add its webhook URL and, when
             required, its token before enabling automatic delivery.
           </p>

@@ -265,7 +265,7 @@ export function StaffPage({
         ) : null}
 
         {notice ? (
-          <div className="border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+          <div className="border border-success-border bg-success px-4 py-3 text-sm text-success-foreground">
             {notice}
           </div>
         ) : null}

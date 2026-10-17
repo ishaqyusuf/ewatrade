@@ -215,8 +215,8 @@ export function PharmacyComplianceSetup({
               <span
                 className={`rounded-full px-3 py-1 text-xs font-medium ${
                   active
-                    ? "bg-emerald-100 text-emerald-800"
-                    : "bg-amber-100 text-amber-800"
+                    ? "bg-success text-success-foreground"
+                    : "bg-warning text-warning-foreground"
                 }`}
               >
                 {active ? "Active" : "Disabled"}
@@ -249,7 +249,7 @@ export function PharmacyComplianceSetup({
       ) : null}
 
       {!setup.readiness.ready ? (
-        <section className="rounded-none border border-amber-200 bg-amber-50 p-5 text-amber-950">
+        <section className="rounded-none border border-warning-border bg-warning p-5 text-warning-foreground">
           <h2 className="font-medium">Activation requirements</h2>
           <ul className="mt-2 grid gap-1 text-sm">
             {setup.readiness.missing.map((requirement) => (

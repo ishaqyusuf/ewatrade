@@ -16,16 +16,16 @@ export function prescriptionLabel(value: string) {
 }
 
 const statusTone: Record<string, string> = {
-  attendant_verification: "bg-amber-100 text-amber-950",
-  converted: "bg-emerald-100 text-emerald-950",
-  declined: "bg-red-100 text-red-950",
-  media_review: "bg-blue-100 text-blue-950",
-  needs_clarification: "bg-amber-100 text-amber-950",
-  needs_clearer_media: "bg-amber-100 text-amber-950",
-  pharmacist_review: "bg-violet-100 text-violet-950",
+  attendant_verification: "bg-warning text-warning-foreground",
+  converted: "bg-success text-success-foreground",
+  declined: "bg-danger text-danger-foreground",
+  media_review: "bg-info text-info-foreground",
+  needs_clarification: "bg-warning text-warning-foreground",
+  needs_clearer_media: "bg-warning text-warning-foreground",
+  pharmacist_review: "bg-highlight text-highlight-foreground",
   quoted: "bg-cyan-100 text-cyan-950",
-  ready_to_quote: "bg-emerald-100 text-emerald-950",
-  transcribing: "bg-blue-100 text-blue-950",
+  ready_to_quote: "bg-success text-success-foreground",
+  transcribing: "bg-info text-info-foreground",
 }
 
 export function PrescriptionStatusBadge({ status }: { status: string }) {

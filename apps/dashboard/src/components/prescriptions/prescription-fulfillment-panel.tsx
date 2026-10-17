@@ -113,7 +113,7 @@ export function PrescriptionFulfillmentPanel({ storeId }: { storeId: string }) {
         <section className="grid content-start gap-3">
           <h2 className="font-semibold">Paid pickup preparation</h2>
           {pickupCode ? (
-            <p className="border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800">
+            <p className="border border-success-border bg-success p-3 text-sm text-success-foreground">
               One-time pickup code: <strong>{pickupCode}</strong>. Give it only
               through the secure customer process.
             </p>

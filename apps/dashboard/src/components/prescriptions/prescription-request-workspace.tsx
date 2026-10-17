@@ -613,7 +613,7 @@ export function PrescriptionRequestWorkspace({
           </div>
           {pendingDecision ? (
             <div
-              className="grid gap-3 rounded-none border border-amber-300 bg-amber-50 p-4 text-amber-950"
+              className="grid gap-3 rounded-none border border-warning-border bg-warning p-4 text-warning-foreground"
               role="alertdialog"
               aria-labelledby="pharmacist-decision-title"
             >

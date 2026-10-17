@@ -71,7 +71,7 @@ export function PrescriptionSheetContent({
     content = <div aria-busy="true" className="h-32 animate-pulse bg-muted" />
   } else if (accessState === "setup_required") {
     content = (
-      <section className="grid gap-3 rounded-none border border-amber-200 bg-amber-50 p-5 text-amber-950">
+      <section className="grid gap-3 rounded-none border border-warning-border bg-warning p-5 text-warning-foreground">
         <h2 className="font-semibold">Professional access is not ready</h2>
         <p className="text-sm leading-6">
           Complete the pharmacy policy and professional role checks before

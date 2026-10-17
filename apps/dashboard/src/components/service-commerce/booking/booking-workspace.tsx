@@ -207,7 +207,7 @@ function BookingWorkspaceContent({ storeId }: { storeId: string }) {
         </div>
         {configuration.isLoading ? <BookingSkeleton /> : null}
         {configuration.isError ? (
-          <div className="grid gap-3 border border-amber-300 bg-amber-50 p-4 text-sm text-amber-950">
+          <div className="grid gap-3 border border-warning-border bg-warning p-4 text-sm text-warning-foreground">
             <p>
               No active booking configuration is available for this offering.
               Create a resource below, then save the configuration.

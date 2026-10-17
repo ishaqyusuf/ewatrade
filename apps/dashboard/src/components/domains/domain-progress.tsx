@@ -57,12 +57,12 @@ export function DomainProgress() {
         </div>
       </div>
       {uncertain ? (
-        <p className="border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+        <p className="border border-warning-border bg-warning p-4 text-sm text-warning-foreground">
           We could not confirm the registrar result. Your order is held for
           review and will not be charged again automatically.
         </p>
       ) : failed ? (
-        <p className="border border-red-200 bg-red-50 p-4 text-sm text-red-900">
+        <p className="border border-danger-border bg-danger p-4 text-sm text-danger-foreground">
           Registration failed
           {data?.paymentStatus === "REFUNDED"
             ? " and your payment was refunded."

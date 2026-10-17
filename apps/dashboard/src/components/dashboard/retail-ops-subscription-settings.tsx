@@ -110,9 +110,9 @@ function statusLabel(status: SubscriptionSnapshot["subscription"]["status"]) {
 }
 
 function statusTone(status: SubscriptionSnapshot["subscription"]["status"]) {
-  if (status === "active") return "bg-emerald-50 text-emerald-700"
-  if (status === "past_due") return "bg-amber-50 text-amber-700"
-  if (status === "cancelled") return "bg-red-50 text-red-700"
+  if (status === "active") return "bg-success text-success-foreground"
+  if (status === "past_due") return "bg-warning text-warning-foreground"
+  if (status === "cancelled") return "bg-danger text-danger-foreground"
 
   return "bg-primary/10 text-primary"
 }
@@ -252,8 +252,8 @@ function EntitlementRow({ entitlement }: { entitlement: Entitlement }) {
         className={cn(
           "shrink-0 rounded-full px-2.5 py-1 text-xs font-medium",
           entitlement.isAtLimit
-            ? "bg-amber-50 text-amber-700"
-            : "bg-emerald-50 text-emerald-700",
+            ? "bg-warning text-warning-foreground"
+            : "bg-success text-success-foreground",
         )}
       >
         {entitlement.isAtLimit ? "At limit" : "Available"}
