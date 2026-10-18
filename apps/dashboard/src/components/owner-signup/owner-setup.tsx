@@ -10,7 +10,7 @@ import {
 } from "@ewatrade/utils/owner-signup"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { useRouter } from "next/navigation"
-import { useEffect, useRef, useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 import { OwnerGroupStep } from "./group-step"
 import {
   OWNER_PLAN_LIMITS,
@@ -72,6 +72,7 @@ function OwnerSetupForm({ setup }: { setup: OwnerSetup }) {
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState("")
   const [conflictBusinessId, setConflictBusinessId] = useState<string>()
+  const clearConflict = useCallback(() => setConflictBusinessId(undefined), [])
   const storage = useOwnerDraft(draft)
   const trpc = useTRPC()
   const queryClient = useQueryClient()
@@ -218,6 +219,7 @@ function OwnerSetupForm({ setup }: { setup: OwnerSetup }) {
               draft={draft}
               emailDomain={setup.emailDomain}
               forceEditBusinessId={conflictBusinessId}
+              onForcedEditOpened={clearConflict}
               onChange={setDraft}
               onBack={() => setDraft({ ...draft, step: "type" })}
               disabled={submitting}

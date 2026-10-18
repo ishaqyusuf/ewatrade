@@ -46,8 +46,12 @@ export function initialOwnerDraft(setup: OwnerSetup): OwnerSetupDraft {
     id: "business-0",
   }
   const businesses = [first, ...(draft?.businesses.slice(1) ?? [])]
+  const planId = syncOwnerSignupPlan(
+    draft?.planId ?? "starter",
+    businesses.length,
+  )
   return {
-    planId: draft?.planId ?? "starter",
+    planId,
     businesses,
     selectedTypeKeys:
       draft?.selectedTypeKeys ?? businesses.flatMap((b) => b.typeKeys),
@@ -61,7 +65,7 @@ export function initialOwnerDraft(setup: OwnerSetup): OwnerSetupDraft {
       Math.min(
         draft?.storeIndex ?? 0,
         businesses.length - 1,
-        OWNER_PLAN_LIMITS[draft?.planId ?? "starter"] - 1,
+        OWNER_PLAN_LIMITS[planId] - 1,
       ),
     ),
     groupedFor: draft?.groupedFor ?? "",

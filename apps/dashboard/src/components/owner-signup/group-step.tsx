@@ -27,6 +27,7 @@ export function OwnerGroupStep({
   disabled,
   emailDomain,
   forceEditBusinessId,
+  onForcedEditOpened,
 }: {
   draft: OwnerSetupDraft
   onChange: (draft: OwnerSetupDraft) => void
@@ -35,6 +36,7 @@ export function OwnerGroupStep({
   disabled: boolean
   emailDomain?: string
   forceEditBusinessId?: string
+  onForcedEditOpened?: () => void
 }) {
   useEffect(() => {
     if (forceEditBusinessId)
@@ -223,6 +225,7 @@ export function OwnerGroupStep({
                 id={business.id ?? ""}
                 emailDomain={emailDomain}
                 forceEdit={business.id === forceEditBusinessId}
+                onForcedEditOpened={onForcedEditOpened}
                 onAvailable={onAvailable}
                 onChange={(slug) => {
                   setEdited((current) =>
@@ -397,6 +400,7 @@ function BusinessLink({
   onAvailable,
   emailDomain,
   forceEdit,
+  onForcedEditOpened,
 }: {
   value: string
   id: string
@@ -404,6 +408,7 @@ function BusinessLink({
   onAvailable: (id: string, requested: string, canonical: string) => void
   emailDomain?: string
   forceEdit?: boolean
+  onForcedEditOpened?: () => void
 }) {
   const check = useCallback(
     (result: StoreLinkCheck | null) =>
@@ -415,6 +420,7 @@ function BusinessLink({
       value={value}
       emailDomain={emailDomain}
       forceEdit={forceEdit}
+      onForcedEditOpened={onForcedEditOpened}
       onChange={onChange}
       onCheck={check}
     />

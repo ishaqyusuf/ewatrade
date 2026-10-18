@@ -24,6 +24,7 @@ export function StoreLinkField({
   disabled = false,
   label = "Store link",
   forceEdit = false,
+  onForcedEditOpened,
 }: {
   value: string
   onChange: (value: string) => void
@@ -32,6 +33,7 @@ export function StoreLinkField({
   disabled?: boolean
   label?: string
   forceEdit?: boolean
+  onForcedEditOpened?: () => void
 }) {
   const id = useId()
   const [editing, setEditing] = useState(false)
@@ -40,8 +42,11 @@ export function StoreLinkField({
     if (forceEdit) setEditing(true)
   }, [forceEdit])
   useEffect(() => {
-    if (editing) field.current?.focus()
-  }, [editing])
+    if (editing && field.current) {
+      field.current.focus()
+      if (forceEdit) onForcedEditOpened?.()
+    }
+  }, [editing, forceEdit, onForcedEditOpened])
   useEffect(() => {
     if (!value) setEditing(false)
   }, [value])
