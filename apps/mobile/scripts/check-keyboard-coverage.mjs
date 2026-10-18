@@ -144,7 +144,7 @@ const contracts = [
   },
   {
     file: "components/mobile/green-till/auth-screen.tsx",
-    markers: ["<MobileScreen", "keyboardBottomOffset={24}"],
+    markers: ["<MobileScreen", "keyboardBottomOffset={Math.max(24, footerHeight + 12)}"],
     reason: "auth forms must render inside the keyboard-aware route screen",
   },
   {
@@ -177,9 +177,9 @@ const contracts = [
     reason: "the age check must hand off to the registration form",
   },
   {
-    file: "components/mobile/sign-up/sign-up-screen.tsx",
+    file: "components/mobile/sign-up/owner-account-screen.tsx",
     markers: [
-      "<ClassicSignUpScreen",
+      "<GreenTillAuthScreen",
       'keyboardType="email-address"',
       "<PhoneField",
     ],

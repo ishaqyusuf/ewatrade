@@ -28,6 +28,8 @@ type BottomSearchFooterProps = {
    * It hides while the search is focused. */
   caption?: ReactNode
   children?: ReactNode
+  /** Optional step action card above the unchanged search pill. */
+  actionsAboveSearch?: boolean
   /** Slides the footer down out of view (see useBottomSearchScroll). It stays
    * visible while the search is focused or has text. */
   hidden?: boolean
@@ -61,6 +63,7 @@ export function BottomSearchFooter({
   bottomOffset = 0,
   caption,
   children,
+  actionsAboveSearch = false,
   hidden = false,
   includeSafeArea = true,
   label = "Search",
@@ -172,6 +175,7 @@ export function BottomSearchFooter({
             }
             pointerEvents="box-none"
           >
+            {actionsAboveSearch ? children : null}
             <View className={layout === "inline" ? "min-w-0 flex-1" : ""}>
               <FloatingSearchField
                 accessibilityLabel={accessibilityLabel || label}
@@ -186,7 +190,7 @@ export function BottomSearchFooter({
                 value={value}
               />
             </View>
-            {children}
+            {actionsAboveSearch ? null : children}
           </View>
         </Animated.View>
       ) : (

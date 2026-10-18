@@ -1,10 +1,12 @@
 export type MobileAccessProfile = {
+  setupPending?: boolean
   hasBusinessAccess: boolean
   hasCustomerHistory: boolean
 }
 
 export type MobileEntryDestination =
   | { kind: "business" }
+  | { kind: "owner-setup" }
   | { kind: "customer" }
   | { kind: "login" }
   | { kind: "no-access" }
@@ -15,6 +17,8 @@ export function resolveMobileEntryDestination(input: {
   hasSession: boolean
   lastShell: "business" | "customer" | null
 }): MobileEntryDestination {
+  if (input.hasSession && input.accessProfile?.setupPending)
+    return { kind: "owner-setup" }
   if (input.hasGuestCapability) return { kind: "customer" }
   if (!input.hasSession || !input.accessProfile) return { kind: "login" }
 

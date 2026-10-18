@@ -12,7 +12,8 @@ const requiredMarkers = [
       "isGreenGate",
       "leadingIcon",
       "trailingIcon",
-      "minHeight: isMultiline ? 92 : largeTextLayout ? 64 : 50",
+      "minHeight: isMultiline ? 92 : singleLineHeight",
+      "const singleLineHeight = largeTextLayout ? 64 : 50",
       "numberOfLines={isMultiline ? inputProps.numberOfLines : 1}",
       "accessibilityLabel={inputProps.accessibilityLabel ?? label}",
     ],
@@ -94,26 +95,26 @@ const requiredMarkers = [
   },
   {
     file: "components/mobile/sign-up/account-age-entry.tsx",
+    markers: ["SignUpScreen", "continuation={continuation}"],
+  },
+  {
+    file: "components/mobile/sign-up/owner-account-screen.tsx",
     markers: [
-      "SignUpScreen",
-      "AccountAgePresentation",
-      "onContinue={setAgeBand}",
-      "continuation={continuation}",
+      "AuthMethodButton",
+      "StatusBanner",
+      'label="Continue with Google"',
+      "Send code",
+      'label="Business name"',
+      'label="Your name"',
+      'label="Email"',
+      "StoreLinkField",
+      "SignupLegalChoices",
+      'label: "Under 13"',
     ],
   },
   {
     file: "components/mobile/sign-up/sign-up-screen.tsx",
-    markers: [
-      "AuthMethodButton",
-      "StatusBanner",
-      '"Continue with Google"',
-      "Send verification code",
-      'placeholder="Enter your business name"',
-      'placeholder="Enter your full name"',
-      'placeholder="Enter your email address"',
-      "Your business details",
-      "Create your owner account",
-    ],
+    markers: ["OwnerAccountScreen as SignUpScreen"],
   },
   {
     file: "app/verify-email.tsx",
@@ -142,7 +143,7 @@ const requiredMarkers = [
 
 const forbiddenMarkers = [
   {
-    file: "components/mobile/sign-up/sign-up-screen.tsx",
+    file: "components/mobile/sign-up/owner-account-screen.tsx",
     markers: ["owner@business.com", "john@example.com"],
   },
   {

@@ -149,6 +149,7 @@ const InitialLayout = ({
         <Stack.Screen name="continue-onboarding" options={gateOptions} />
         <Stack.Screen name="login" options={gateOptions} />
         <Stack.Screen name="sign-up" options={gateOptions} />
+        <Stack.Screen name="owner-setup" options={gateOptions} />
         <Stack.Screen name="verify-email" options={gateOptions} />
         <Stack.Screen name="staff-onboarding" options={gateOptions} />
         <Stack.Protected

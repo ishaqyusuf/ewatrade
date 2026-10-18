@@ -37,6 +37,7 @@ export default function StartRoute() {
   useEffect(() => {
     if (!accessProfile.data) return
     if (
+      auth.accessProfile?.setupPending === accessProfile.data.setupPending &&
       auth.accessProfile?.hasBusinessAccess ===
         accessProfile.data.hasBusinessAccess &&
       auth.accessProfile?.hasCustomerHistory ===
@@ -49,7 +50,8 @@ export default function StartRoute() {
   }, [accessProfile.data, auth])
 
   if (pendingSetup === null) return <StartupSplash />
-  if (pendingSetup) return <Redirect href="/continue-onboarding" />
+  if (pendingSetup && !auth.isAuthenticated)
+    return <Redirect href="/continue-onboarding" />
 
   if (
     !lastShell ||
@@ -69,6 +71,9 @@ export default function StartRoute() {
     )
   }
 
+  if (pendingSetup && !accessProfile.data?.setupPending)
+    return <Redirect href="/continue-onboarding" />
+
   const guestSession = getCustomerConversationSession()
   const destination = resolveMobileEntryDestination({
     accessProfile: accessProfile.data ?? null,
@@ -76,6 +81,9 @@ export default function StartRoute() {
     hasSession: auth.isAuthenticated,
     lastShell,
   })
+
+  if (destination.kind === "owner-setup")
+    return <Redirect href="/owner-setup" />
 
   if (destination.kind === "customer") {
     const last = guestSession?.lastConversation
