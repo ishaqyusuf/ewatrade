@@ -1,10 +1,12 @@
 import { createHash } from "node:crypto"
+import { withQaWorkspaceSuffix } from "@ewatrade/utils"
 import {
   isValidStoreLink,
   normalizeStoreLink,
   storeLinkSuggestions,
 } from "@ewatrade/utils/store-link"
 import type { PrismaClient } from "../../generated/prisma/client"
+import { configuredQaDomainForEmail } from "./qa-maintenance"
 
 export class StoreLinkConflictError extends Error {
   constructor() {
@@ -13,49 +15,87 @@ export class StoreLinkConflictError extends Error {
   }
 }
 
-/** One durable budget per trusted network; no client-supplied identity. */
+export class StoreLinkRateLimitError extends Error {
+  constructor() {
+    super("Too many link checks. Try again in a minute.")
+    this.name = "StoreLinkRateLimitError"
+  }
+}
+export function storeLinkHostnames(slugs: string[]) {
+  const domains = new Set(
+    [
+      process.env.NEXT_PUBLIC_PLATFORM_DOMAIN,
+      process.env.PLATFORM_DOMAIN,
+      "ewatrade.com",
+    ]
+      .filter((v): v is string => Boolean(v))
+      .map(
+        (v) =>
+          v
+            .replace(/^https?:\/\//, "")
+            .split("/")[0]
+            ?.split(":")[0],
+      )
+      .filter(Boolean),
+  )
+  return slugs.flatMap((slug) =>
+    [...domains].map((domain) => `${slug}.${domain}`),
+  )
+}
+/** One atomic budget per trusted network/minute; public checks never write draft data. */
 export async function checkStoreLinkAvailability(
   db: PrismaClient,
   value: string,
   network: string | null,
+  email?: string,
 ) {
-  const slug = normalizeStoreLink(value)
+  const slug = withQaWorkspaceSuffix(
+    normalizeStoreLink(value),
+    Boolean(email && configuredQaDomainForEmail(email)),
+    40,
+  )
   const now = new Date()
   const bucketDigest = createHash("sha256")
-    .update(`store-link:${network ?? "unknown"}`)
+    .update(
+      `store-link:${network ?? "unknown"}:${Math.floor(now.getTime() / 60_000)}`,
+    )
     .digest("hex")
-  await db.$transaction(
-    async (tx) => {
-      const bucket = await tx.accountPrivacyRateBucket.findUnique({
-        where: { bucketDigest },
-      })
-      const active =
-        bucket && now.getTime() - bucket.windowStartedAt.getTime() < 60_000
-      if (active && bucket.sentCount >= 120)
-        throw new Error("Too many link checks. Try again in a minute.")
-      await tx.accountPrivacyRateBucket.upsert({
-        where: { bucketDigest },
-        create: { bucketDigest, windowStartedAt: now, sentCount: 1 },
-        update: {
-          windowStartedAt: active ? undefined : now,
-          sentCount: active ? { increment: 1 } : 1,
-        },
-      })
-    },
-    { isolationLevel: "Serializable", maxWait: 10_000, timeout: 30_000 },
-  )
-  const candidates = [slug, ...storeLinkSuggestions(slug)]
-  const taken = await db.tenant.findMany({
-    where: { slug: { in: candidates } },
-    select: { slug: true },
+  const bucket = await db.accountPrivacyRateBucket.upsert({
+    where: { bucketDigest },
+    create: { bucketDigest, windowStartedAt: now, sentCount: 1 },
+    update: { sentCount: { increment: 1 } },
+    select: { sentCount: true },
   })
+  if (bucket.sentCount > 600) throw new StoreLinkRateLimitError()
+  const candidates = [
+    slug,
+    ...storeLinkSuggestions(slug).map((s) =>
+      withQaWorkspaceSuffix(
+        s,
+        Boolean(email && configuredQaDomainForEmail(email)),
+        40,
+      ),
+    ),
+  ]
+  const [taken, hosts] = await Promise.all([
+    db.tenant.findMany({
+      where: { slug: { in: candidates } },
+      select: { slug: true },
+    }),
+    db.tenantHostname.findMany({
+      where: { hostname: { in: storeLinkHostnames(candidates) } },
+      select: { hostname: true },
+    }),
+  ])
   const unavailable = new Set(taken.map((t) => t.slug))
+  const unavailableHosts = new Set(hosts.map((h) => h.hostname))
+  const available = (s: string) =>
+    isValidStoreLink(s) &&
+    !unavailable.has(s) &&
+    !storeLinkHostnames([s]).some((host) => unavailableHosts.has(host))
   return {
     slug,
-    available: isValidStoreLink(slug) && !unavailable.has(slug),
-    suggestions: candidates
-      .slice(1)
-      .filter((s) => isValidStoreLink(s) && !unavailable.has(s))
-      .slice(0, 3),
+    available: available(slug),
+    suggestions: candidates.slice(1).filter(available).slice(0, 3),
   }
 }

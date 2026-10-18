@@ -18,6 +18,7 @@ import {
 import { AppError } from "@ewatrade/errors"
 import { issueAnalyticsContext } from "@ewatrade/events/identity-server"
 import { isQaAnalyticsPrincipal } from "@ewatrade/events/qa-policy-server"
+import { readOwnerSignupDraft } from "@ewatrade/utils/owner-signup"
 import { TRPCError } from "@trpc/server"
 import { z } from "zod"
 import { ownerSignupDraftSchema } from "../../schemas/owner-signup"
@@ -78,7 +79,34 @@ export const tenantRouter = createTRPCRouter({
       orderBy: { createdAt: "desc" },
       select: { formData: true },
     })
-    return session?.formData ?? null
+    const formData =
+      session?.formData &&
+      typeof session.formData === "object" &&
+      !Array.isArray(session.formData)
+        ? session.formData
+        : null
+    const draft = readOwnerSignupDraft(formData?.ownerSignup)
+    if (!draft) return null
+    const memberships = await ctx.db.membership.findMany({
+      where: {
+        userId: ctx.session.user.id,
+        role: "OWNER",
+        status: "ACTIVE",
+        tenant: {
+          isActive: true,
+          slug: { in: draft.businesses.map((b) => b.slug) },
+        },
+      },
+      select: { tenant: { select: { id: true, name: true, slug: true } } },
+    })
+    const ready = memberships.map((m) => m.tenant)
+    return {
+      planId: draft.planId,
+      readyBusinesses: ready,
+      pendingBusinesses: draft.businesses.filter(
+        (b) => !ready.some((r) => r.slug === b.slug),
+      ),
+    }
   }),
   createBusiness: authenticatedProcedure
     .input(createBusinessSchema)

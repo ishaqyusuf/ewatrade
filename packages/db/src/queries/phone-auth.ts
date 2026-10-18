@@ -214,6 +214,7 @@ export async function verifyPhoneOtp(
         })
         await createOwnerSignupBusiness(tx, {
           ...draft,
+          requestedSlug: draft.requestedSlug,
           userId: user.id,
           businessName: draft.businessName?.trim() || "My Business",
           currencyCode: normalizeOperatingCurrencyCode(draft.currencyCode),

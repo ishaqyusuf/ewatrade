@@ -2,7 +2,7 @@ import {
   BUSINESS_OPERATING_MODEL_KEYS,
   type BusinessOperatingModel,
 } from "./business-profiles"
-import { isBusinessTypeKey } from "./business-types"
+import { defaultBusinessOffer, isBusinessTypeKey } from "./business-types"
 import { type OperatingCurrencyCode, isOperatingCurrencyCode } from "./currency"
 import { isValidStoreLink } from "./store-link"
 
@@ -106,5 +106,7 @@ export function moveOwnerBusinessType(
       description: "",
     })
   else if (next[target]) next[target].typeKeys.push(key)
-  return next.filter((b, i) => i === 0 || b.typeKeys.length > 0)
+  return next
+    .filter((b, i) => i === 0 || b.typeKeys.length > 0)
+    .map((b) => ({ ...b, operatingModel: defaultBusinessOffer(b.typeKeys) }))
 }

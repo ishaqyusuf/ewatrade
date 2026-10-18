@@ -7,7 +7,10 @@ import { isValidStoreLink } from "@ewatrade/utils/store-link"
 import { Prisma } from "../../generated/prisma/client"
 import { AccountAgeBand } from "../../generated/prisma/enums"
 import { configuredQaDomainForEmail } from "./qa-maintenance"
-import { StoreLinkConflictError } from "./store-link-availability"
+import {
+  StoreLinkConflictError,
+  storeLinkHostnames,
+} from "./store-link-availability"
 import { createTenantStore } from "./stores"
 import type { DbClient } from "./types"
 
@@ -83,20 +86,32 @@ async function createUniqueTenant(
   },
 ) {
   if (input.requestedSlug !== undefined) {
-    if (!isValidStoreLink(input.requestedSlug))
+    const requestedSlug = withQaWorkspaceSuffix(
+      input.requestedSlug,
+      Boolean(input.qaSourceDomain),
+      40,
+    )
+    if (!isValidStoreLink(requestedSlug))
       throw new Error("Choose a valid store link.")
     if (
       await db.tenant.findUnique({
-        where: { slug: input.requestedSlug },
+        where: { slug: requestedSlug },
+        select: { id: true },
+      })
+    )
+      throw new StoreLinkConflictError()
+    if (
+      await db.tenantHostname.findFirst({
+        where: { hostname: { in: storeLinkHostnames([requestedSlug]) } },
         select: { id: true },
       })
     )
       throw new StoreLinkConflictError()
     try {
-      return await db.tenant.create({
+      const tenant = await db.tenant.create({
         data: {
           name: input.businessName,
-          slug: input.requestedSlug,
+          slug: requestedSlug,
           currencyCode: input.currencyCode,
           enabledModes: ["STORE", "MERCHANT"],
           type: "MERCHANT",
@@ -106,6 +121,16 @@ async function createUniqueTenant(
         },
         select: { currencyCode: true, id: true, name: true, slug: true },
       })
+      await db.tenantHostname.create({
+        data: {
+          tenantId: tenant.id,
+          hostname: `${requestedSlug}.${process.env.NEXT_PUBLIC_PLATFORM_DOMAIN ?? "ewatrade.com"}`,
+          surface: "STOREFRONT",
+          isPrimary: true,
+          isCustom: false,
+        },
+      })
+      return tenant
     } catch (error) {
       if (
         error instanceof Prisma.PrismaClientKnownRequestError &&

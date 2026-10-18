@@ -46,7 +46,7 @@ const SURFACE_PREFIX_BY_KIND: Record<
   dashboard: "dash",
 }
 
-const SURFACE_SUFFIX_BY_KIND: Record<
+export const SURFACE_SUFFIX_BY_KIND: Record<
   Exclude<TenantSurface, "storefront">,
   string
 > = {

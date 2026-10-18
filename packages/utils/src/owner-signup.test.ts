@@ -19,6 +19,8 @@ describe("owner signup shared contracts", () => {
   test("normalizes links identically and excludes platform names", () => {
     expect(normalizeStoreLink("  Ẹwá & Sons  ")).toBe("ewa-sons")
     for (const value of [
+      "mama-pos",
+      "mama-dashboard",
       "www",
       "api",
       "admin",
@@ -71,4 +73,58 @@ describe("owner signup shared contracts", () => {
       })?.otherBusinessType,
     ).toBeNull()
   })
+})
+
+test("saved drafts and moving types preserve first-business identity and recompute offers", async () => {
+  const { readOwnerSignupDraft, moveOwnerBusinessType } = await import(
+    "./owner-signup"
+  )
+  const draft = readOwnerSignupDraft({
+    planId: "growth",
+    businesses: [
+      {
+        name: "Tolu",
+        slug: "tolu",
+        typeKeys: ["phones"],
+        operatingModel: "products",
+        countryCode: "NG",
+        currencyCode: "NGN",
+      },
+      {
+        name: "Repairs",
+        slug: "repairs",
+        typeKeys: ["phone-repair"],
+        operatingModel: "services",
+        countryCode: "NG",
+        currencyCode: "NGN",
+      },
+    ],
+  })
+  expect(draft).not.toBeNull()
+  const moved = moveOwnerBusinessType(
+    draft?.businesses ?? [],
+    "phone-repair",
+    0,
+  )
+  expect(moved).toHaveLength(1)
+  expect(moved[0]?.slug).toBe("tolu")
+  expect(moved[0]?.operatingModel).toBe("products_and_services")
+  const separate = moveOwnerBusinessType(moved, "phones", "new")
+  expect(separate[0]?.slug).toBe("tolu")
+  expect(separate[1]?.name).toBe("")
+  expect(
+    readOwnerSignupDraft({
+      planId: "growth",
+      businesses: [
+        {
+          name: "Tolu",
+          slug: "api",
+          typeKeys: ["phones"],
+          operatingModel: "products",
+          countryCode: "NG",
+          currencyCode: "NGN",
+        },
+      ],
+    }),
+  ).toBeNull()
 })

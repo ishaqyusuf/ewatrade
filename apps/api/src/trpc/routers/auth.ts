@@ -12,6 +12,7 @@ import {
 } from "@ewatrade/db/onboarding-continuation"
 import {
   StoreLinkConflictError,
+  StoreLinkRateLimitError,
   checkStoreLinkAvailability,
 } from "@ewatrade/db/queries"
 import {
@@ -351,17 +352,27 @@ export function shouldDispatchMobileOwnerOtpEmail(
 
 export const authRouter = createTRPCRouter({
   storeLinkAvailability: publicProcedure
-    .input(z.object({ slug: z.string().max(120) }).strict())
+    .input(
+      z
+        .object({ slug: z.string().max(120), email: emailSchema.optional() })
+        .strict(),
+    )
     .query(async ({ ctx, input }) => {
       try {
         return await checkStoreLinkAvailability(
           ctx.db,
           input.slug,
           ctx.privacyClientIp,
+          input.email,
         )
-      } catch {
+      } catch (error) {
+        if (error instanceof StoreLinkRateLimitError)
+          throw new TRPCError({
+            code: "TOO_MANY_REQUESTS",
+            message: error.message,
+          })
         throw new TRPCError({
-          code: "TOO_MANY_REQUESTS",
+          code: "INTERNAL_SERVER_ERROR",
           message:
             "Store-link checks are temporarily unavailable. Try again shortly.",
         })

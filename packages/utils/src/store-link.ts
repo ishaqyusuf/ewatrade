@@ -1,3 +1,4 @@
+import { SURFACE_SUFFIX_BY_KIND } from "./domain"
 /** Platform hostnames are never available as merchant links. */
 export const RESERVED_STORE_LINKS = new Set([
   "www",
@@ -47,6 +48,9 @@ export function isValidStoreLink(value: string): boolean {
     value.length >= 2 &&
     value.length <= 40 &&
     /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(value) &&
+    !Object.values(SURFACE_SUFFIX_BY_KIND).some((suffix) =>
+      value.endsWith(suffix),
+    ) &&
     !RESERVED_STORE_LINKS.has(value)
   )
 }
