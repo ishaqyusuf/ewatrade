@@ -453,15 +453,19 @@ export const authRouter = createTRPCRouter({
       } catch (error) {
         if (error instanceof StoreLinkConflictError)
           throw new TRPCError({ code: "CONFLICT", message: error.message })
+        // ruleRejectedError keeps the message public; a bare BAD_REQUEST shows generic text.
         throw new TRPCError({
           code: "BAD_REQUEST",
-          message:
-            error instanceof Error &&
-            /^(The code expired|Request a new verification|Too many incorrect|The verification code|Use your existing|The Terms changed|This code has already|Choose an eligible)/.test(
-              error.message,
-            )
-              ? error.message
-              : "We could not verify this code. Try again.",
+          cause: ruleRejectedError(
+            new Error(
+              error instanceof Error &&
+                /^(The code expired|Request a new verification|Too many incorrect|The verification code|Use your existing|The Terms changed|This code has already|Choose an eligible)/.test(
+                  error.message,
+                )
+                ? error.message
+                : "We could not verify this code. Try again.",
+            ),
+          ),
         })
       }
     }),
