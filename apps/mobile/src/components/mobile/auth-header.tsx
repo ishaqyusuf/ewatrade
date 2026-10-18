@@ -10,6 +10,7 @@ import { View } from "react-native"
 import Svg, { Path } from "react-native-svg"
 import { ActionButton } from "./action-button"
 import { BrandMark, BrandWordmark } from "./brand"
+import { WhatsAppMark } from "./whatsapp-mark"
 
 type AuthHeaderProps = {
   align?: "center" | "start"
@@ -150,7 +151,7 @@ export function AuthBrandHeader({ subtitle, title }: AuthBrandHeaderProps) {
 }
 
 type AuthMethodButtonProps = {
-  brandIcon?: "google"
+  brandIcon?: "google" | "whatsapp"
   disabled?: boolean
   icon?: IconKeys
   label: string
@@ -199,6 +200,8 @@ export function AuthMethodButton({
       >
         {brandIcon === "google" ? (
           <GoogleLogo />
+        ) : brandIcon === "whatsapp" ? (
+          <WhatsAppMark />
         ) : (
           <Icon className="size-sm text-foreground" name={icon} />
         )}
@@ -241,6 +244,8 @@ export function AuthMethodButton({
         >
           {brandIcon === "google" ? (
             <GoogleLogo />
+          ) : brandIcon === "whatsapp" ? (
+            <WhatsAppMark />
           ) : (
             <Icon
               className={cn(

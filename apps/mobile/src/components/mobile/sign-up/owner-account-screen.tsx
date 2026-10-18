@@ -8,6 +8,7 @@ import { FormField } from "@/components/mobile/form-field"
 import { GreenTillAuthScreen } from "@/components/mobile/green-till/auth-screen"
 import { SetupPreviewStage } from "@/components/mobile/green-till/auth-stage"
 import { PhoneField } from "@/components/mobile/phone-field"
+import { WhatsAppMark } from "@/components/mobile/whatsapp-mark"
 import { QaQuickFillButton } from "@/components/mobile/qa-quick-fill-button"
 import { StatusBanner } from "@/components/mobile/status-banner"
 import { Pressable } from "@/components/ui/pressable"
@@ -272,8 +273,11 @@ export function OwnerAccountScreen({
                       setConnectWith(item.value)
                       setError(null)
                     }}
-                    className={`min-h-11 justify-center rounded-full border px-3.5 ${choice === item.value ? "border-primary bg-primary/10" : "border-border bg-card"}`}
+                    className={`min-h-11 flex-row items-center justify-center gap-1.5 rounded-full border px-3.5 ${choice === item.value ? "border-primary bg-primary/10" : "border-border bg-card"}`}
                   >
+                    {item.value === "whatsapp" ? (
+                      <WhatsAppMark size={16} />
+                    ) : null}
                     <Text className="text-xs font-semibold text-foreground">
                       {item.label}
                     </Text>
@@ -332,8 +336,9 @@ export function OwnerAccountScreen({
                     setCodeByWhatsApp(item.value)
                     setError(null)
                   }}
-                  className={`min-h-11 justify-center rounded-full border px-3.5 ${codeByWhatsApp === item.value ? "border-primary bg-primary/10" : "border-border bg-card"}`}
+                  className={`min-h-11 flex-row items-center justify-center gap-1.5 rounded-full border px-3.5 ${codeByWhatsApp === item.value ? "border-primary bg-primary/10" : "border-border bg-card"}`}
                 >
+                  {item.value ? <WhatsAppMark size={16} /> : null}
                   <Text className="text-xs font-semibold text-foreground">
                     {item.label}
                   </Text>

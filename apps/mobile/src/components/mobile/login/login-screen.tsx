@@ -243,6 +243,7 @@ export function LoginScreen() {
         {phoneAvailability.data?.enabled ? (
           <AuthMethodButton
             icon="MessageCircle"
+            brandIcon={useWhatsApp ? undefined : "whatsapp"}
             label={useWhatsApp ? "Use email instead" : "Use WhatsApp instead"}
             onPress={() => {
               setUseWhatsApp(!useWhatsApp)
