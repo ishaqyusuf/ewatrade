@@ -2,7 +2,7 @@
   "version": 1,
   "id": "2026-10-18-owner-signup",
   "tickets": ["H02"],
-  "summary": "Account-first mobile and web owner signup, exact QA-safe store links, typed resumable grouping/store setup and launch plan ownership limits; public storefront cap and customer-message capability plus owner Home cards. Source only, no AI or provider/release activation.",
+  "summary": "Account-first mobile and web owner signup, exact QA-safe links, resumable grouping/store setup and canonical revocable launch grants clamped to owner business capacity; public storefront cap, customer-message capability and owner Home cards. OTP and internal network trust hardened; no AI or provider/release activation.",
   "noAssistantImpact": "Account/signup and plan selection are explicit form workflows. Public account APIs have no merchant assistant audience. Owner summary and storefront preview are deliberately form-only; no model tool, private draft exposure, capability grant or confirmation bypass.",
   "capabilities": [],
   "procedures": [
@@ -50,7 +50,7 @@
       "kind": "test",
       "path": "packages/utils/src/owner-signup.test.ts",
       "executed": true,
-      "result": "Four quick pure helper tests31 assertions pass, including derived surface suffix rejection and draft/move semantics."
+      "result": "Six quick pure helper tests48 assertions pass, including QA claim boundaries, launch tier/count resync, partial draft/move and changed-selection preservation; narrow utils typing passes."
     },
     {
       "kind": "test",
@@ -63,6 +63,18 @@
       "path": "apps/api/src/schemas/owner-signup.test.ts",
       "executed": true,
       "result": "Three quick schema tests11 assertions pass, including partial draft/resume versus strict completion. Committed mobile snapshot auth/onboarding/keyboard source guards pass;171 local imports resolve. No UI/device/DB/provider/access acceptance claimed."
+    },
+    {
+      "kind": "test",
+      "path": "packages/db/src/queries/mobile-owner-otp-attempts.test.ts",
+      "executed": true,
+      "result": "One focused OTP guess-budget test11 assertions passes; no provider/DB integration."
+    },
+    {
+      "kind": "test",
+      "path": "packages/db/src/queries/owner-signup-launch-grant.test.ts",
+      "executed": true,
+      "result": "One pure launch grant provenance/revocation test5 assertions passes; durable billing remains authoritative."
     }
   ]
 }
