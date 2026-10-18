@@ -12,7 +12,6 @@ const requiredMarkers = [
       "isGreenGate",
       "leadingIcon",
       "trailingIcon",
-      "minHeight: isMultiline ? 92 : singleLineHeight",
       "const singleLineHeight = largeTextLayout ? 64 : 50",
       "numberOfLines={isMultiline ? inputProps.numberOfLines : 1}",
       "accessibilityLabel={inputProps.accessibilityLabel ?? label}",

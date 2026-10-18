@@ -40,6 +40,7 @@ const ages: { key: Age; label: string }[] = [
 ]
 export function OwnerAccountScreen({
   continuation,
+  ageBand: initialAgeBand,
 }: {
   ageBand?: Exclude<Age, "UNDER_13">
   continuation?: ApprovedNativeOnboarding
@@ -60,7 +61,7 @@ export function OwnerAccountScreen({
   const [phone, setPhone] = useState("")
   const [phoneCountry, setPhoneCountry] = useState("NG")
   const [useWhatsApp, setUseWhatsApp] = useState(false)
-  const [age, setAge] = useState<Age | null>(null)
+  const [age, setAge] = useState<Age | null>(initialAgeBand ?? null)
   const [error, setError] = useState<string | null>(null)
   const [legal, setLegal] = useState({
     version: "",
@@ -167,7 +168,9 @@ export function OwnerAccountScreen({
       stage={
         <SetupPreviewStage
           businessName={businessName}
-          ownerLine={name}
+          ownerLine={
+            name.trim() ? { title: name.trim(), subtitle: "Owner" } : undefined
+          }
           chips={["Your store link", "One login"]}
         />
       }
@@ -208,6 +211,7 @@ export function OwnerAccountScreen({
           setSlugEdited(true)
           setSlug(v)
         }}
+        onCanonicalize={setSlug}
         onAvailability={setLinkReady}
       />
       <FormField
@@ -277,9 +281,9 @@ export function OwnerAccountScreen({
       {age === "UNDER_13" ? (
         <>
           <StatusBanner
-            title="EwaTrade is for ages 13 and up"
-            message="You can come back when you’re 13."
-            tone="destructive"
+            title="Not available under 13"
+            message="ẸwáTrade is available from age 13. Nothing you typed has been saved."
+            tone="warning"
             icon="Info"
           />
           <AuthActionButton onPress={() => router.replace("/login")}>
@@ -330,7 +334,7 @@ export function OwnerAccountScreen({
         isLoading={request.isPending || requestPhone.isPending}
         onPress={sendCode}
       >
-        Send code
+        {useWhatsApp ? "Send code on WhatsApp" : "Send code to email"}
       </AuthActionButton>
       <AuthDivider label="or" />
       <AuthMethodButton
@@ -343,6 +347,10 @@ export function OwnerAccountScreen({
       <AppleAuthButton
         onPress={() => void apple.startAppleAuth()}
         disabled={!ready}
+      />
+      <AuthMethodButton
+        label="Already have an account? Sign in"
+        onPress={() => router.replace("/login")}
       />
       <Text className="text-xs text-muted-foreground">
         Google and Apple still need your business name, store link and age

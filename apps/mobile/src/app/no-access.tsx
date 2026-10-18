@@ -1,5 +1,4 @@
 import { ClassicNoAccessScreen } from "@/components/mobile/green-till/no-access-screen"
-import { NoAccessSavedSales } from "@/components/mobile/no-access-saved-sales"
 import { useAuthContext } from "@/hooks/use-auth"
 import { useTRPC } from "@/trpc/client"
 import { useQuery } from "@tanstack/react-query"
@@ -29,7 +28,6 @@ export default function NoAccessRoute() {
       onPrivacy={() => router.push("/account-privacy")}
       onCheck={() => router.replace("/")}
       onSignOut={auth.onLogout}
-      savedSales={<NoAccessSavedSales />}
     />
   )
 }

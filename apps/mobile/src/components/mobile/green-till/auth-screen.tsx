@@ -26,6 +26,7 @@ type GreenTillAuthScreenProps = {
   backLabel?: string
   /** Long forms keep a shorter stage so fields stay above the keyboard. */
   compact?: boolean
+  scrollEnabled?: boolean
   stageCollapsed?: boolean
   footerHeight?: number
   /** Replaces the title block, for example intro panel dots and copy. */
@@ -54,6 +55,7 @@ export function GreenTillAuthScreen({
   backLabel = "Previous step",
   compact = false,
   stageCollapsed = false,
+  scrollEnabled = true,
   footerHeight = 0,
   headerContent,
   actions,
@@ -82,6 +84,7 @@ export function GreenTillAuthScreen({
       <Stack.Screen options={nativeStackStatusBarStyle(iconTone)} />
       <StatusBar style={iconTone} />
       <MobileScreen
+        scrollEnabled={scrollEnabled}
         safeAreaColor={palette.stageCenter}
         backgroundColor={colors.background}
         contentClassName="px-0 py-0"

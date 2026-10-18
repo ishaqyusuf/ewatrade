@@ -4,6 +4,7 @@ import { CurrentLocationCard } from "@/components/mobile/current-location-card"
 import { FormField } from "@/components/mobile/form-field"
 import { RowDivider } from "@/components/mobile/green-till/kit"
 import { QaQuickFillButton } from "@/components/mobile/qa-quick-fill-button"
+import { Icon } from "@/components/ui/icon"
 import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
 import { View } from "@/components/ui/view"
@@ -43,9 +44,11 @@ export function OwnerStoreStep({
   business,
   plan,
   onChange,
+  onChangeGrouping,
 }: {
   business: OwnerSetupBusiness
   plan: OwnerSetupDraft["planId"]
+  onChangeGrouping: () => void
   onChange: (patch: Partial<OwnerSetupBusiness>) => void
 }) {
   const location = useCurrentAddress()
@@ -87,8 +90,20 @@ export function OwnerStoreStep({
           {business.slug}.ewatrade.com
         </Text>
       </View>
+      <Pressable
+        accessibilityRole="button"
+        onPress={onChangeGrouping}
+        className="min-h-11 justify-center"
+      >
+        <Text className="text-xs font-bold text-primary">
+          Change business types or grouping
+        </Text>
+      </Pressable>
       <Text className="text-sm font-bold text-foreground">
         What does this business do?
+      </Text>
+      <Text className="text-xs text-muted-foreground">
+        Picked from its type. You can change it.
       </Text>
       <View
         accessibilityRole="radiogroup"
@@ -103,7 +118,9 @@ export function OwnerStoreStep({
               checked: business.operatingModel === offer.key,
             }}
             className="min-h-[72px] flex-row items-center gap-3 px-3.5 py-3"
-            onPress={() => onChange({ operatingModel: offer.key })}
+            onPress={() =>
+              onChange({ operatingModel: offer.key, offerTouched: true })
+            }
           >
             <View className="flex-1 gap-1">
               <Text className="text-sm font-bold text-foreground">
@@ -113,9 +130,16 @@ export function OwnerStoreStep({
                 {offer.example}
               </Text>
             </View>
-            <Text className="text-lg text-primary">
-              {business.operatingModel === offer.key ? "◉" : "○"}
-            </Text>
+            <View
+              accessibilityElementsHidden
+              importantForAccessibility="no-hide-descendants"
+            >
+              {business.operatingModel === offer.key ? (
+                <Icon name="CircleCheck" className="size-5 text-primary" />
+              ) : (
+                <View className="size-5 rounded-full border border-border" />
+              )}
+            </View>
             {index < offers.length - 1 ? <RowDivider /> : null}
           </Pressable>
         ))}
@@ -139,6 +163,10 @@ export function OwnerStoreStep({
                 city: address.city,
                 region: address.region,
                 countryCode: address.countryCode ?? business.countryCode,
+                currencyCode:
+                  currencyForCountry(
+                    address.countryCode ?? business.countryCode,
+                  ) ?? business.currencyCode,
               })
           })
         }
@@ -151,6 +179,17 @@ export function OwnerStoreStep({
       ) : null}
       <CountrySelect
         value={business.countryCode}
+        renderTrigger={(country, open) => (
+          <Pressable
+            accessibilityRole="button"
+            className="min-h-11 justify-center rounded-xl border border-border bg-card px-3.5"
+            onPress={open}
+          >
+            <Text className="text-sm text-foreground">
+              {business.countryCode ? country.name : "Choose country"}
+            </Text>
+          </Pressable>
+        )}
         onChange={(countryCode) =>
           onChange({
             countryCode,

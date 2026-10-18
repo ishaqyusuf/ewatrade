@@ -3,9 +3,11 @@ import { BottomSearchFooter } from "@/components/mobile/bottom-search-footer"
 import { FormField } from "@/components/mobile/form-field"
 import { RowDivider } from "@/components/mobile/green-till/kit"
 import { QaQuickFillButton } from "@/components/mobile/qa-quick-fill-button"
+import { Icon } from "@/components/ui/icon"
 import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
 import { View } from "@/components/ui/view"
+import { useLargeTextLayout } from "@/hooks/use-large-text-layout"
 import {
   BUSINESS_TYPES,
   BUSINESS_TYPE_GROUPS,
@@ -70,7 +72,8 @@ export function OwnerTypePicker({
         contentContainerStyle={{ gap: 8 }}
       >
         <Pressable
-          className="min-h-11 justify-center rounded-full border border-border bg-card px-3.5"
+          className={`min-h-11 justify-center rounded-full border px-3.5 ${group === null ? "border-primary bg-primary/10" : "border-border bg-card"}`}
+          accessibilityState={{ selected: group === null }}
           accessibilityRole="button"
           onPress={() => setGroup(null)}
         >
@@ -108,12 +111,17 @@ export function OwnerTypePicker({
                 </Text>
               </View>
               {multi ? (
-                <Text
+                <View
                   accessibilityElementsHidden
-                  className="text-lg text-primary"
+                  importantForAccessibility="no-hide-descendants"
                 >
-                  {selected.includes(type.key) ? "☑" : "☐"}
-                </Text>
+                  <Icon
+                    name={
+                      selected.includes(type.key) ? "CheckSquare" : "Square"
+                    }
+                    className="size-5 text-primary"
+                  />
+                </View>
               ) : null}
               {index < visible.length - 1 ? <RowDivider /> : null}
             </Pressable>
@@ -160,6 +168,7 @@ export function OwnerTypeFooter({
   onMore: () => void
   onContinue: () => void
 }) {
+  const largeText = useLargeTextLayout()
   return (
     <BottomSearchFooter
       accessibilityLabel="Search business types"
@@ -176,7 +185,11 @@ export function OwnerTypeFooter({
       {selected.length > 0 ? (
         <View className="gap-3 rounded-[20px] bg-card p-3.5 shadow-sm">
           {!multi ? (
-            <View className="flex-row items-center gap-3">
+            <View
+              className={
+                largeText ? "items-start gap-3" : "flex-row items-center gap-3"
+              }
+            >
               <BusinessTypeAvatar typeKey={selected[0] ?? "other"} />
               <View className="min-w-0 flex-1">
                 <Text className="text-xs text-muted-foreground">
@@ -198,7 +211,9 @@ export function OwnerTypeFooter({
             </View>
           ) : null}
           <AuthActionButton disabled={!valid} onPress={onContinue}>
-            {multi ? `Continue with ${selected.length} types` : "Proceed"}
+            {multi
+              ? `Continue with ${selected.length} ${selected.length === 1 ? "type" : "types"}`
+              : "Proceed"}
           </AuthActionButton>
         </View>
       ) : null}

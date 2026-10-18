@@ -1,9 +1,7 @@
-import {
-  AuthActionButton,
-  AuthMethodButton,
-} from "@/components/mobile/auth-header"
+import { AuthMethodButton } from "@/components/mobile/auth-header"
 import { FormField } from "@/components/mobile/form-field"
 import { QaQuickFillButton } from "@/components/mobile/qa-quick-fill-button"
+import { Icon } from "@/components/ui/icon"
 import { Modal, useModal } from "@/components/ui/modal"
 import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
@@ -18,7 +16,8 @@ import { moveOwnerBusinessType } from "@ewatrade/utils/owner-signup"
 import { normalizeStoreLink } from "@ewatrade/utils/store-link"
 import { BottomSheetScrollView } from "@gorhom/bottom-sheet"
 import { useEffect, useRef, useState } from "react"
-import { PanResponder, View } from "react-native"
+import { Animated, PanResponder, View } from "react-native"
+import { useReducedMotion } from "react-native-reanimated"
 import { BusinessTypeAvatar } from "./business-type-avatar"
 import { StoreLinkField } from "./store-link-field"
 
@@ -29,6 +28,7 @@ export function OwnerGroupStep({
   onPlan,
   onPreset,
   onReady,
+  onDragging,
   email,
 }: {
   businesses: OwnerSetupBusiness[]
@@ -38,6 +38,7 @@ export function OwnerGroupStep({
   onPreset: (mode: "together" | "separate") => void
   email?: string
   onReady: (ready: boolean) => void
+  onDragging: (dragging: boolean) => void
 }) {
   const colors = useColors()
   const menu = useModal()
@@ -45,7 +46,74 @@ export function OwnerGroupStep({
   const [dragging, setDragging] = useState<string | null>(null)
   const [availability, setAvailability] = useState<Record<string, boolean>>({})
   const targets = useRef(new Map<number | "new", View>())
-  const edited = useRef(new Set<number>())
+  const edited = useRef(new Set<string>())
+  const root = useRef<View>(null)
+  const offset = useRef({ x: 0, y: 0 })
+  const rectangles = useRef<
+    {
+      id: number | "new"
+      x: number
+      y: number
+      width: number
+      height: number
+    }[]
+  >([])
+  const pointer = useRef({ x: 0, y: 0 })
+  const start = useRef({ x: 0, y: 0 })
+  const ghost = useRef(new Animated.ValueXY()).current
+  const [hit, setHit] = useState<number | "new" | null>(null)
+  const reducedMotion = useReducedMotion()
+  const upgradePlan = businesses.length > 3 ? "pro" : "growth"
+  function hitAt(x: number, y: number) {
+    return (
+      rectangles.current.find(
+        (r) =>
+          x >= r.x && x <= r.x + r.width && y >= r.y && y <= r.y + r.height,
+      )?.id ?? null
+    )
+  }
+  function endDrag() {
+    setDragging(null)
+    setHit(null)
+    onDragging(false)
+  }
+  function dragMove(x: number, y: number) {
+    pointer.current = { x, y }
+    ghost.setValue({
+      x: x - offset.current.x - 50,
+      y: y - offset.current.y - 22,
+    })
+    setHit(hitAt(x, y))
+  }
+  function beginDrag(key: string, x: number, y: number) {
+    onDragging(true)
+    setDragging(key)
+    start.current = { x, y }
+    pointer.current = { x, y }
+    root.current?.measureInWindow((left, top) => {
+      offset.current = { x: left, y: top }
+      dragMove(pointer.current.x, pointer.current.y)
+    })
+    void Promise.all(
+      [...targets.current].map(
+        ([id, node]) =>
+          new Promise<{
+            id: number | "new"
+            x: number
+            y: number
+            width: number
+            height: number
+          }>((resolve) =>
+            node.measureInWindow((left, top, width, height) =>
+              resolve({ id, x: left, y: top, width, height }),
+            ),
+          ),
+      ),
+    ).then((values) => {
+      rectangles.current = values
+      setHit(hitAt(pointer.current.x, pointer.current.y))
+    })
+  }
   const limit = getPlan(plan).limits.businesses
   function change(index: number, patch: Partial<OwnerSetupBusiness>) {
     onChange(businesses.map((b, i) => (i === index ? { ...b, ...patch } : b)))
@@ -62,28 +130,25 @@ export function OwnerGroupStep({
     )
   }, [businesses, availability, onReady])
 
-  async function drop(key: string, x: number, y: number) {
-    const rectangles = await Promise.all(
-      [...targets.current].map(
-        ([id, node]) =>
-          new Promise<{
-            id: number | "new"
-            x: number
-            y: number
-            width: number
-            height: number
-          }>((resolve) =>
-            node.measureInWindow((left, top, width, height) =>
-              resolve({ id, x: left, y: top, width, height }),
-            ),
-          ),
-      ),
-    )
-    const target = rectangles.find(
-      (r) => x >= r.x && x <= r.x + r.width && y >= r.y && y <= r.y + r.height,
-    )
-    if (target) onChange(moveOwnerBusinessType(businesses, key, target.id))
-    setDragging(null)
+  function drop(key: string, x: number, y: number) {
+    const target = hitAt(x, y)
+    if (target !== null) {
+      onChange(moveOwnerBusinessType(businesses, key, target))
+      endDrag()
+      return
+    }
+    if (reducedMotion) {
+      endDrag()
+      return
+    }
+    Animated.timing(ghost, {
+      toValue: {
+        x: start.current.x - offset.current.x - 50,
+        y: start.current.y - offset.current.y - 22,
+      },
+      duration: 160,
+      useNativeDriver: true,
+    }).start(endDrag)
   }
   function move(target: number | "new") {
     if (moving) onChange(moveOwnerBusinessType(businesses, moving, target))
@@ -91,7 +156,7 @@ export function OwnerGroupStep({
     menu.dismiss()
   }
   return (
-    <View style={{ gap: 16 }}>
+    <View ref={root} collapsable={false} style={{ gap: 16 }}>
       <QaQuickFillButton
         formId="mobile.signup.group"
         isDirty={businesses.length > 1}
@@ -121,7 +186,7 @@ export function OwnerGroupStep({
       />
       {businesses.map((business, index) => (
         <View
-          key={index === 0 ? "first" : business.typeKeys.join(",")}
+          key={business.id}
           ref={(node) => {
             if (node) targets.current.set(index, node)
             else targets.current.delete(index)
@@ -130,7 +195,7 @@ export function OwnerGroupStep({
           style={{
             gap: 12,
             borderWidth: 1,
-            borderColor: dragging ? colors.primary : colors.border,
+            borderColor: hit === index ? colors.primary : colors.border,
             borderRadius: 20,
             padding: 14,
           }}
@@ -159,7 +224,7 @@ export function OwnerGroupStep({
                 onChangeText={(name) =>
                   change(index, {
                     name,
-                    ...(!edited.current.has(index)
+                    ...(!edited.current.has(business.id ?? String(index))
                       ? { slug: normalizeStoreLink(name) }
                       : {}),
                   })
@@ -171,9 +236,10 @@ export function OwnerGroupStep({
                 value={business.slug}
                 email={email}
                 onChange={(slug) => {
-                  edited.current.add(index)
+                  edited.current.add(business.id ?? String(index))
                   change(index, { slug })
                 }}
+                onCanonicalize={(slug) => change(index, { slug })}
                 onAvailability={(ok) =>
                   setAvailability((current) => {
                     if (current[business.slug] === ok) return current
@@ -194,9 +260,10 @@ export function OwnerGroupStep({
                   setMoving(key)
                   menu.present()
                 }}
-                onStart={() => setDragging(key)}
+                onStart={(x, y) => beginDrag(key, x, y)}
+                onMove={dragMove}
                 onDrop={(x, y) => void drop(key, x, y)}
-                onCancel={() => setDragging(null)}
+                onCancel={endDrag}
               />
             ))}
           </View>
@@ -213,7 +280,8 @@ export function OwnerGroupStep({
           else targets.current.delete("new")
         }}
         collapsable={false}
-        className="rounded-[20px] border border-dashed border-border p-3.5"
+        style={{ borderColor: hit === "new" ? colors.primary : colors.border }}
+        className="rounded-[20px] border border-dashed p-3.5"
       >
         <Text className="text-sm font-bold text-foreground">New business</Text>
         <Text className="text-xs text-muted-foreground">
@@ -229,28 +297,90 @@ export function OwnerGroupStep({
             Starter includes 1 business. Growth runs up to 3 and Pro up to 10.
             Both are free during launch.
           </Text>
-          <AuthActionButton
-            onPress={() => onPlan(businesses.length > 3 ? "pro" : "growth")}
+          <View
+            accessibilityRole="radiogroup"
+            accessibilityLabel="Choose a business plan"
+            style={{ gap: 8 }}
           >
-            Use {businesses.length > 3 ? "Pro" : "Growth"}
-            {plan !== "starter" ? " ✓" : ""}
-          </AuthActionButton>
-          <AuthMethodButton
-            label={`Starter for now${plan === "starter" ? " ✓" : ""}`}
-            onPress={() => onPlan("starter")}
-          />
+            {(
+              [
+                {
+                  key: upgradePlan,
+                  label: `Use ${upgradePlan === "pro" ? "Pro" : "Growth"}`,
+                },
+                { key: "starter", label: "Starter for now" },
+              ] as const
+            ).map((choice) => (
+              <Pressable
+                key={choice.key}
+                accessibilityRole="radio"
+                accessibilityState={{ checked: plan === choice.key }}
+                onPress={() => onPlan(choice.key)}
+                className={`min-h-11 flex-row items-center gap-3 rounded-xl border px-3.5 ${plan === choice.key ? "border-primary bg-primary/10" : "border-border bg-card"}`}
+              >
+                <Text className="flex-1 text-sm font-bold text-foreground">
+                  {choice.label}
+                </Text>
+                <View
+                  accessibilityElementsHidden
+                  importantForAccessibility="no-hide-descendants"
+                >
+                  {plan === choice.key ? (
+                    <Icon name="CircleCheck" className="size-5 text-primary" />
+                  ) : (
+                    <View className="size-5 rounded-full border border-border" />
+                  )}
+                </View>
+              </Pressable>
+            ))}
+          </View>
           <Text className="text-xs text-muted-foreground">
             {plan === "starter"
               ? "The extras wait on Home until you upgrade."
               : "Each business has its own stock, store link and reports."}
           </Text>
         </View>
+      ) : (
+        <View className="gap-2 rounded-[20px] bg-card p-3.5">
+          <Text className="text-sm font-bold text-foreground">
+            One business, one store link
+          </Text>
+          <Text className="text-xs text-muted-foreground">
+            Your types share stock, customers and reports.
+          </Text>
+        </View>
+      )}
+      {dragging ? (
+        <Animated.View
+          pointerEvents="none"
+          accessibilityElementsHidden
+          importantForAccessibility="no-hide-descendants"
+          style={[
+            {
+              position: "absolute",
+              left: 0,
+              top: 0,
+              zIndex: 100,
+              elevation: 12,
+              borderWidth: 1,
+              borderColor: colors.primary,
+              borderRadius: 24,
+              backgroundColor: colors.card,
+              padding: 14,
+            },
+            { transform: ghost.getTranslateTransform() },
+          ]}
+        >
+          <Text className="text-xs font-bold text-foreground">
+            {findBusinessType(dragging)?.label}
+          </Text>
+        </Animated.View>
       ) : null}
       <Modal ref={menu.ref} title="Move to…" snapPoints={["60%"]}>
         <BottomSheetScrollView contentContainerStyle={{ padding: 18, gap: 12 }}>
           {businesses.map((b, i) => (
             <AuthMethodButton
-              key={b.slug || String(i)}
+              key={b.id}
               label={b.name || `Business ${i + 1}`}
               onPress={() => move(i)}
             />
@@ -268,21 +398,35 @@ function TypeChip({
   typeKey,
   onMenu,
   onStart,
+  onMove,
   onDrop,
   onCancel,
 }: {
   typeKey: string
   onMenu: () => void
-  onStart: () => void
+  onStart: (x: number, y: number) => void
+  onMove: (x: number, y: number) => void
   onDrop: (x: number, y: number) => void
   onCancel: () => void
 }) {
-  const handlers = PanResponder.create({
-    onMoveShouldSetPanResponder: (_, g) => Math.abs(g.dx) + Math.abs(g.dy) > 12,
-    onPanResponderGrant: onStart,
-    onPanResponderRelease: (_, g) => onDrop(g.moveX, g.moveY),
-    onPanResponderTerminate: onCancel,
-  })
+  const callbacks = useRef({ onStart, onMove, onDrop, onCancel })
+  callbacks.current = { onStart, onMove, onDrop, onCancel }
+  const handlers = useRef(
+    PanResponder.create({
+      onMoveShouldSetPanResponderCapture: (_, g) =>
+        Math.abs(g.dx) + Math.abs(g.dy) > 6,
+      onMoveShouldSetPanResponder: (_, g) =>
+        Math.abs(g.dx) + Math.abs(g.dy) > 6,
+      onPanResponderGrant: (_, g) =>
+        callbacks.current.onStart(g.moveX || g.x0, g.moveY || g.y0),
+      onPanResponderMove: (_, g) =>
+        callbacks.current.onMove(g.moveX || g.x0, g.moveY || g.y0),
+      onPanResponderRelease: (_, g) =>
+        callbacks.current.onDrop(g.moveX || g.x0, g.moveY || g.y0),
+      onPanResponderTerminationRequest: () => false,
+      onPanResponderTerminate: () => callbacks.current.onCancel(),
+    }),
+  ).current
   return (
     <View {...handlers.panHandlers}>
       <Pressable

@@ -23,6 +23,7 @@ type MobileScreenProps = {
   onScroll?: (event: NativeSyntheticEvent<NativeScrollEvent>) => void
   refreshControl?: ReactElement<RefreshControlProps>
   safeAreaColor?: string
+  scrollEnabled?: boolean
   scroll?: boolean
   testID?: string
 }
@@ -38,6 +39,7 @@ export function MobileScreen({
   refreshControl,
   safeAreaColor,
   scroll = true,
+  scrollEnabled = true,
   testID,
 }: MobileScreenProps) {
   const edgeFeedback = useScrollEdgeFeedback()
@@ -63,6 +65,7 @@ export function MobileScreen({
         {scroll ? (
           <KeyboardAwareScrollView
             {...edgeFeedback}
+            scrollEnabled={scrollEnabled}
             className="flex-1"
             bottomOffset={keyboardBottomOffset}
             contentContainerStyle={[

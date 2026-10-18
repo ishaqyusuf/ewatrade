@@ -1,7 +1,5 @@
-import {
-  AuthActionButton,
-  AuthMethodButton,
-} from "@/components/mobile/auth-header"
+import { AuthActionButton } from "@/components/mobile/auth-header"
+import { BottomSearchFooter } from "@/components/mobile/bottom-search-footer"
 import { GreenTillAuthScreen } from "@/components/mobile/green-till/auth-screen"
 import { SetupPreviewStage } from "@/components/mobile/green-till/auth-stage"
 import { StartupSplash } from "@/components/mobile/startup-splash"
@@ -11,7 +9,6 @@ import { Text } from "@/components/ui/text"
 import { View } from "@/components/ui/view"
 import { useAuthContext } from "@/hooks/use-auth"
 import { getPlan } from "@/lib/retail-ops-subscription"
-import { stepDirection } from "@/lib/step-motion"
 import { useTRPC } from "@/trpc/client"
 import {
   defaultBusinessOffer,
@@ -22,11 +19,11 @@ import {
   type OwnerSetupDraft,
   readOwnerSignupDraft,
 } from "@ewatrade/utils/owner-signup"
-import { isValidStoreLink } from "@ewatrade/utils/store-link"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { Redirect, useRouter } from "expo-router"
-import { useEffect, useRef, useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 import { ScrollView } from "react-native"
+import Animated, { Easing, FadeIn, ReduceMotion } from "react-native-reanimated"
 import { OwnerGroupStep } from "./owner-group-step"
 import { OwnerStoreStep } from "./owner-store-step"
 import { OwnerTypeFooter, OwnerTypePicker } from "./owner-type-picker"
@@ -49,75 +46,151 @@ export function OwnerSetupScreen() {
   const [other, setOther] = useState("")
   const [businesses, setBusinesses] = useState<OwnerSetupBusiness[]>([])
   const [plan, setPlan] = useState<OwnerSetupDraft["planId"]>("starter")
+  const [groupedFor, setGroupedFor] = useState("")
   const [active, setActive] = useState(0)
   const [query, setQuery] = useState("")
   const [multi, setMulti] = useState(false)
   const [focused, setFocused] = useState(false)
   const [footerHeight, setFooterHeight] = useState(0)
   const [groupReady, setGroupReady] = useState(false)
+  const [dragging, setDragging] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [isFinishing, setIsFinishing] = useState(false)
   const restored = useRef(false)
-  const previous = useRef<Step>(step)
-  const direction = stepDirection(steps, previous.current, step)
+  const finishing = useRef(false)
+  const completed = useRef(false)
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const inFlight = useRef<Promise<unknown>>(Promise.resolve())
+  const previous = useRef({ step, active })
+  const stepDirection =
+    step === previous.current.step
+      ? Math.sign(active - previous.current.active)
+      : Math.sign(steps.indexOf(step) - steps.indexOf(previous.current.step))
   useEffect(() => {
-    previous.current = step
-  }, [step])
+    previous.current = { step, active }
+  }, [step, active])
   useEffect(() => {
     if (!setup.data || restored.current) return
     restored.current = true
-    const saved = readOwnerSignupDraft(setup.data.draft)
-    if (saved) {
-      setBusinesses(saved.businesses)
-      setTypes(saved.businesses.flatMap((b) => b.typeKeys))
-      setOther(
+    const saved = readOwnerSignupDraft(setup.data.draft, {
+      allowIncomplete: true,
+    })
+    if (!saved) return
+    const keys =
+      saved.selectedTypeKeys ?? saved.businesses.flatMap((b) => b.typeKeys)
+    setBusinesses(saved.businesses)
+    setTypes(keys)
+    setOther(
+      saved.otherType ??
         saved.businesses.find((b) => b.typeKeys.includes("other"))?.otherType ??
-          "",
-      )
-      setPlan(saved.planId)
-      setMulti(saved.businesses.flatMap((b) => b.typeKeys).length > 1)
-    }
+        "",
+    )
+    setPlan(saved.planId)
+    setGroupedFor(saved.groupedFor ?? keys.join(","))
+    setMulti(keys.length > 1)
+    setStep(saved.step ?? (saved.businesses.length ? "store" : "type"))
+    setActive(
+      Math.min(
+        saved.storeIndex ?? 0,
+        Math.max(
+          0,
+          Math.min(
+            saved.businesses.length,
+            getPlan(saved.planId).limits.businesses,
+          ) - 1,
+        ),
+      ),
+    )
   }, [setup.data])
   const save = useMutation(
-    trpc.tenant.saveOwnerSignupDraft.mutationOptions({
-      gcTime: 0,
-      onError: (e) => setError(e.message),
-    }),
+    trpc.tenant.saveOwnerSignupDraft.mutationOptions({ gcTime: 0 }),
   )
-  const draft = JSON.stringify({ planId: plan, businesses })
+  const draft: OwnerSetupDraft = {
+    planId: plan,
+    businesses,
+    step,
+    storeIndex: active,
+    groupedFor,
+    selectedTypeKeys: types,
+    otherType: other,
+  }
+  const serialized = JSON.stringify(draft)
+  // All writes share one queue so a slower older save cannot win over a newer one.
+  const saveNow = useRef(save.mutateAsync)
+  saveNow.current = save.mutateAsync
+  const enqueueSave = useCallback((snapshot: OwnerSetupDraft) => {
+    const request = inFlight.current
+      .catch(() => undefined)
+      .then(() => saveNow.current(snapshot))
+    inFlight.current = request
+    return request
+  }, [])
   useEffect(() => {
-    if (!readOwnerSignupDraft(JSON.parse(draft))) return
-    if (
-      !restored.current ||
-      !businesses.length ||
-      businesses.some(
-        (b) => !b.name || !isValidStoreLink(b.slug) || !b.typeKeys.length,
+    if (!restored.current || finishing.current || completed.current) return
+    const snapshot = readOwnerSignupDraft(JSON.parse(serialized), {
+      allowIncomplete: true,
+    })
+    if (!snapshot) return
+    timer.current = setTimeout(() => {
+      timer.current = null
+      if (finishing.current || completed.current) return
+      void enqueueSave(snapshot).then(
+        () => setError(null),
+        (e: Error) => setError(e.message),
       )
-    )
+    }, 800)
+    return () => {
+      if (timer.current) clearTimeout(timer.current)
+    }
+  }, [serialized, enqueueSave])
+  const finish = useMutation(trpc.tenant.completeOwnerSignup.mutationOptions())
+  async function complete() {
+    if (finishing.current || completed.current) return
+    if (
+      !readOwnerSignupDraft(draft) ||
+      businesses
+        .slice(0, getPlan(plan).limits.businesses)
+        .some((business) => !business.countryCode || !business.currencyCode)
+    ) {
+      setError(
+        "Complete each business name, store link and type, and choose a country and currency for the businesses you are setting up now.",
+      )
       return
-    const timer = setTimeout(() => save.mutate(JSON.parse(draft)), 800)
-    return () => clearTimeout(timer)
-  }, [draft, save.mutate, businesses])
-  const finish = useMutation(
-    trpc.tenant.completeOwnerSignup.mutationOptions({
-      onError: (e) => setError(e.message),
-      onSuccess: async () => {
-        await client.invalidateQueries(
+    }
+    finishing.current = true
+    setIsFinishing(true)
+    if (timer.current) {
+      clearTimeout(timer.current)
+      timer.current = null
+    }
+    setError(null)
+    try {
+      await enqueueSave(draft)
+      await finish.mutateAsync(draft)
+      completed.current = true
+      await Promise.all([
+        client.invalidateQueries(
           trpc.auth.getMobileAccessProfile.queryFilter(),
-        )
-        await client.invalidateQueries(trpc.tenant.businesses.queryFilter())
-        await client.invalidateQueries(
-          trpc.tenant.ownerSignupSummary.queryFilter(),
-        )
-        auth.updateAccessProfile({
-          ...auth.accessProfile,
-          hasBusinessAccess: true,
-          hasCustomerHistory: auth.accessProfile?.hasCustomerHistory ?? false,
-          setupPending: false,
-        })
-        router.replace("/")
-      },
-    }),
-  )
+        ),
+        client.invalidateQueries(trpc.tenant.businesses.queryFilter()),
+        client.invalidateQueries(trpc.tenant.ownerSignupSummary.queryFilter()),
+      ])
+      auth.updateAccessProfile({
+        ...auth.accessProfile,
+        hasBusinessAccess: true,
+        hasCustomerHistory: auth.accessProfile?.hasCustomerHistory ?? false,
+        setupPending: false,
+      })
+      router.replace("/")
+    } catch (e) {
+      setError(
+        e instanceof Error ? e.message : "Could not finish setup. Try again.",
+      )
+    } finally {
+      finishing.current = false
+      setIsFinishing(false)
+    }
+  }
   if (!auth.isAuthenticated) return <Redirect href="/login" />
   if (setup.isPending) return <StartupSplash />
   if (setup.isError)
@@ -141,18 +214,6 @@ export function OwnerSetupScreen() {
   const first = setup.data
   function selectTypes(keys: string[]) {
     setTypes(keys)
-    if (keys.length)
-      setBusinesses([
-        {
-          name: first.name,
-          slug: first.slug,
-          typeKeys: keys,
-          otherType: other,
-          operatingModel: defaultBusinessOffer(keys),
-          countryCode: "NG",
-          currencyCode: "NGN",
-        },
-      ])
   }
   function updateOther(text: string) {
     setOther(text)
@@ -162,7 +223,6 @@ export function OwnerSetupScreen() {
       ),
     )
   }
-
   function group(mode: "suggested" | "together" | "separate") {
     const groups =
       mode === "together"
@@ -170,19 +230,38 @@ export function OwnerSetupScreen() {
         : mode === "separate"
           ? types.map((key) => [key])
           : groupBusinessTypes(types)
-    setBusinesses(
-      groups.map((typeKeys, index) => ({
-        name: index === 0 ? first.name : (businesses[index]?.name ?? ""),
-        slug: index === 0 ? first.slug : (businesses[index]?.slug ?? ""),
+    const used = new Set<string>()
+    const same = (a: string[], b: string[]) =>
+      a.length === b.length && a.every((key) => b.includes(key))
+    const next = groups.map((typeKeys, index) => {
+      const matched =
+        index === 0
+          ? businesses[0]
+          : businesses
+              .slice(1)
+              .find((b) => !used.has(b.id ?? "") && same(b.typeKeys, typeKeys))
+      let id = matched?.id ?? `business-${index}`
+      let sequence = index
+      while (used.has(id) || (!matched && businesses.some((b) => b.id === id)))
+        id = `business-${++sequence}`
+      used.add(id)
+      return {
+        ...matched,
+        id,
+        name: index === 0 ? first.name : (matched?.name ?? ""),
+        slug: index === 0 ? first.slug : (matched?.slug ?? ""),
         typeKeys,
         otherType: typeKeys.includes("other") ? other.trim() : undefined,
-        operatingModel: defaultBusinessOffer(typeKeys),
-        countryCode: businesses[index]?.countryCode ?? "NG",
-        currencyCode: businesses[index]?.currencyCode ?? "NGN",
-        description: businesses[index]?.description ?? "",
-      })),
-    )
-    setGroupReady(groups.length === 1)
+        operatingModel: matched?.offerTouched
+          ? matched.operatingModel
+          : defaultBusinessOffer(typeKeys),
+        countryCode: matched?.countryCode ?? "",
+        currencyCode: matched?.currencyCode ?? "",
+      } satisfies OwnerSetupBusiness
+    })
+    setBusinesses(next)
+    setGroupedFor(types.join(","))
+    setGroupReady(next.length === 1)
   }
   const validTypes =
     types.length > 0 && (!types.includes("other") || other.trim().length >= 2)
@@ -191,13 +270,13 @@ export function OwnerSetupScreen() {
   const business = now[active]
   function proceedTypes() {
     if (!validTypes) return
-    group("suggested")
+    if (groupedFor !== types.join(",") || !businesses.length) group("suggested")
     setActive(0)
     setStep(types.length > 1 ? "group" : "store")
   }
   function nextStore() {
     if (active < now.length - 1) setActive(active + 1)
-    else finish.mutate({ planId: plan, businesses })
+    else void complete()
   }
   const footer =
     step === "type" ? (
@@ -212,80 +291,18 @@ export function OwnerSetupScreen() {
         onMore={() => setMulti(true)}
         onContinue={proceedTypes}
       />
-    ) : null
-  return (
-    <GreenTillAuthScreen
-      title={
-        step === "type"
-          ? "What kind of business is it?"
-          : step === "group"
-            ? "How do you run these?"
-            : "Set up your store"
-      }
-      subtitle={
-        step === "type"
-          ? multi
-            ? "Tick every type you run. We use them to suggest products, categories and tips."
-            : "Pick the closest one. We use it to suggest products, categories and tips."
-          : step === "group"
-            ? "Types in the same card are one business. Drag a type or tap it to move it."
-            : "A few details for customers and your daily work."
-      }
-      progress={
-        step === "type" ? 2 : step === "group" ? 3 : types.length > 1 ? 4 : 3
-      }
-      progressTotal={types.length > 1 ? 4 : 3}
-      motionKey={`${step}-${active}`}
-      motionDirection={direction}
-      compact
-      stageCollapsed={step === "type" && focused}
-      footerHeight={step === "type" ? footerHeight : 0}
-      footer={footer}
-      onBack={() => {
-        setError(null)
-        if (step === "store" && active > 0) setActive(active - 1)
-        else if (step === "store") setStep(types.length > 1 ? "group" : "type")
-        else if (step === "group") setStep("type")
-        else auth.onLogout()
-      }}
-      stage={
-        <SetupPreviewStage
-          businessName={first.name}
-          chips={["Your business", "Your store link"]}
-        />
-      }
-      testID={`owner-setup-${step}`}
-    >
-      {error ? (
-        <StatusBanner
-          title="Could not save setup"
-          message={error}
-          tone="destructive"
-          icon="TriangleAlert"
-        />
-      ) : null}
-      {step === "type" ? (
-        <OwnerTypePicker
-          selected={types}
-          other={other}
-          onSelected={selectTypes}
-          onOther={updateOther}
-          query={query}
-          multi={multi}
-          footerHeight={footerHeight}
-        />
-      ) : null}
-      {step === "group" ? (
-        <>
-          <OwnerGroupStep
-            businesses={businesses}
-            plan={plan}
-            onChange={setBusinesses}
-            onPlan={setPlan}
-            onPreset={group}
-            onReady={setGroupReady}
-            email={auth.profile?.email}
-          />
+    ) : (
+      <BottomSearchFooter
+        accessibilityLabel="Setup actions"
+        placeholder=""
+        value=""
+        onChangeText={() => undefined}
+        totalCount={0}
+        searchVisible={false}
+        variant="action-bar"
+        onHeightChange={setFooterHeight}
+      >
+        {step === "group" ? (
           <AuthActionButton
             disabled={!groupReady}
             onPress={() => {
@@ -296,15 +313,116 @@ export function OwnerSetupScreen() {
             Continue with {businesses.length}{" "}
             {businesses.length === 1 ? "business" : "businesses"}
           </AuthActionButton>
-        </>
-      ) : null}
-      {step === "store" && business ? (
-        <>
-          <ScrollView horizontal contentContainerStyle={{ gap: 8 }}>
-            {now.length > 1
-              ? now.map((b, i) => (
+        ) : (
+          <AuthActionButton
+            isLoading={isFinishing}
+            disabled={
+              isFinishing || !business?.countryCode || !business.currencyCode
+            }
+            onPress={nextStore}
+          >
+            {active < now.length - 1
+              ? `Next: ${now[active + 1]?.name}`
+              : "Finish setup"}
+          </AuthActionButton>
+        )}
+      </BottomSearchFooter>
+    )
+  return (
+    <GreenTillAuthScreen
+      title={
+        step === "type"
+          ? "What kind of business is it?"
+          : step === "group"
+            ? "How do you run these?"
+            : `Set up ${business?.name ?? "your store"}`
+      }
+      subtitle={
+        step === "type"
+          ? multi
+            ? "Tick every type you run. We use them to suggest products, categories and tips."
+            : "Pick the closest one. We use it to suggest products, categories and tips."
+          : step === "group"
+            ? "Types in the same card are one business. Drag a type or tap it to move it."
+            : `Business ${active + 1} of ${now.length}. A few details for customers and your daily work.`
+      }
+      progress={
+        step === "type" ? 2 : step === "group" ? 3 : types.length > 1 ? 4 : 3
+      }
+      progressTotal={types.length > 1 ? 4 : 3}
+      compact
+      stageCollapsed={step === "type" && focused}
+      footerHeight={footerHeight}
+      footer={footer}
+      scrollEnabled={!dragging && !isFinishing}
+      onBack={
+        step === "type" || isFinishing
+          ? undefined
+          : () => {
+              setError(null)
+              if (step === "store" && active > 0) setActive(active - 1)
+              else if (step === "store")
+                setStep(types.length > 1 ? "group" : "type")
+              else setStep("type")
+            }
+      }
+      stage={
+        <SetupPreviewStage
+          businessName={first.name}
+          chips={["Your business", "Your store link"]}
+        />
+      }
+      testID={`owner-setup-${step}`}
+    >
+      <Animated.View
+        key={`${step}-${active}`}
+        entering={FadeIn.duration(200)
+          .easing(Easing.out(Easing.cubic))
+          .withInitialValues({
+            transform: [{ translateX: stepDirection * 24 }],
+          })
+          .reduceMotion(ReduceMotion.System)}
+        style={{ gap: 16 }}
+        pointerEvents={isFinishing ? "none" : "auto"}
+      >
+        {error ? (
+          <StatusBanner
+            title="Could not save setup"
+            message={error}
+            tone="destructive"
+            icon="TriangleAlert"
+          />
+        ) : null}
+        {step === "type" ? (
+          <OwnerTypePicker
+            selected={types}
+            other={other}
+            onSelected={selectTypes}
+            onOther={updateOther}
+            query={query}
+            multi={multi}
+            footerHeight={footerHeight}
+          />
+        ) : null}
+        {step === "group" ? (
+          <OwnerGroupStep
+            businesses={businesses}
+            plan={plan}
+            onChange={setBusinesses}
+            onPlan={setPlan}
+            onPreset={group}
+            onReady={setGroupReady}
+            onDragging={setDragging}
+            email={auth.profile?.email}
+          />
+        ) : null}
+        {step === "store" && business ? (
+          <>
+            {now.length > 1 ? (
+              <ScrollView horizontal contentContainerStyle={{ gap: 8 }}>
+                {now.map((b, i) => (
                   <Pressable
-                    key={b.slug}
+                    key={b.id}
                     accessibilityRole="tab"
                     accessibilityState={{ selected: i === active }}
                     className={`min-h-11 justify-center rounded-full border px-3.5 ${i === active ? "border-primary bg-primary/10" : "border-border bg-card"}`}
@@ -314,44 +432,30 @@ export function OwnerSetupScreen() {
                       {b.name}
                     </Text>
                   </Pressable>
-                ))
-              : null}
-          </ScrollView>
-          <OwnerStoreStep
-            key={business.slug}
-            business={business}
-            plan={plan}
-            onChange={(patch) =>
-              setBusinesses((current) =>
-                current.map((b, i) => (i === active ? { ...b, ...patch } : b)),
-              )
-            }
-          />
-          <AuthActionButton
-            isLoading={finish.isPending}
-            disabled={
-              finish.isPending ||
-              !business.countryCode ||
-              !business.currencyCode
-            }
-            onPress={nextStore}
-          >
-            {active < now.length - 1
-              ? `Next: ${now[active + 1]?.name}`
-              : "Finish setup"}
-          </AuthActionButton>
-          <AuthMethodButton
-            label="Save and return later"
-            disabled={finish.isPending || save.isPending}
-            onPress={() => {
-              save.mutate(
-                { planId: plan, businesses },
-                { onSuccess: () => router.replace("/login") },
-              )
-            }}
-          />
-        </>
-      ) : null}
+                ))}
+              </ScrollView>
+            ) : null}
+            <OwnerStoreStep
+              key={business.id}
+              business={business}
+              plan={plan}
+              onChangeGrouping={() =>
+                setStep(types.length > 1 ? "group" : "type")
+              }
+              onChange={(patch) =>
+                setBusinesses((current) =>
+                  current.map((b, i) =>
+                    i === active ? { ...b, ...patch } : b,
+                  ),
+                )
+              }
+            />
+          </>
+        ) : null}
+        {step !== "type" ? (
+          <View style={{ height: footerHeight + 24 }} />
+        ) : null}
+      </Animated.View>
     </GreenTillAuthScreen>
   )
 }

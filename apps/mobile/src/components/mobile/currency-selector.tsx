@@ -12,7 +12,7 @@ type CurrencySelectorProps = {
   disabled?: boolean
   label?: string
   onChange: (currencyCode: OperatingCurrencyCode) => void
-  value: OperatingCurrencyCode
+  value: OperatingCurrencyCode | ""
 }
 
 export function CurrencySelector({

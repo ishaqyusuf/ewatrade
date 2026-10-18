@@ -14,12 +14,14 @@ export function StoreLinkField({
   value,
   onChange,
   onAvailability,
+  onCanonicalize,
   fixed = false,
   email,
 }: {
   value: string
   onChange: (slug: string) => void
   onAvailability: (available: boolean) => void
+  onCanonicalize?: (slug: string) => void
   fixed?: boolean
   email?: string
 }) {
@@ -56,8 +58,8 @@ export function StoreLinkField({
   useEffect(() => onAvailability(available), [available, onAvailability])
   useEffect(() => {
     if (check.data && value === debounced && check.data.slug !== value)
-      onChange(check.data.slug)
-  }, [check.data, value, debounced, onChange])
+      onCanonicalize?.(check.data.slug)
+  }, [check.data, value, debounced, onCanonicalize])
   return (
     <View className="gap-2">
       {editing && !fixed ? (
@@ -85,20 +87,23 @@ export function StoreLinkField({
               : !isValidStoreLink(value)
                 ? "Choose a link with 2–40 letters or numbers"
                 : check.isError
-                  ? "Could not check. Try again."
-                  : "Choose a different link"}
+                  ? check.error.message
+                  : value
+                    ? "That link is taken. Try one below, or edit it."
+                    : "Your store link appears here as you name your business"}
       </Text>
       {!fixed ? (
         <Pressable
           accessibilityRole="button"
           className="min-h-11 justify-center"
           onPress={() => {
-            setEditing(true)
+            setEditing((current) => !current)
             if (check.isError) void check.refetch()
           }}
         >
           <Text className="text-xs font-bold text-primary">
-            Edit link{check.isError ? " / retry" : ""}
+            {editing ? "Done editing" : "Edit link"}
+            {check.isError ? " / retry" : ""}
           </Text>
         </Pressable>
       ) : null}

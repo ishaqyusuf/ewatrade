@@ -209,6 +209,10 @@ export const QA_MARKETING_FORM_INVENTORY = [
 ] as const
 
 export const QA_MOBILE_FORM_INVENTORY = [
+  "mobile.signup.account",
+  "mobile.signup.types",
+  "mobile.signup.group",
+  "mobile.signup.store",
   "mobile.app-lock-pin",
   "mobile.business.create",
   "mobile.catalog.item",
