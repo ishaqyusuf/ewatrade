@@ -76,6 +76,7 @@ export async function readOwnerSignupSetup(db: DbClient, userId: string) {
   })
   return {
     tenantId: pending.tenantId,
+    emailDomain: pending.ownerEmail?.split("@")[1]?.toLowerCase(),
     name: pending.tenant.name,
     slug: pending.tenant.slug,
     draft: readOwnerSignupDraft(record(session?.formData).ownerSignup, {
