@@ -3,6 +3,7 @@
 import { Input } from "@ewatrade/ui"
 import { normalizeStoreLink } from "@ewatrade/utils/store-link"
 import { useCallback, useEffect, useRef, useState } from "react"
+import { phoneCountry as phoneCountryHint } from "../../lib/international-phone"
 import type { EligibleAgeBand } from "../../lib/signup-age"
 import { getMarketingUrl } from "../../lib/signup-navigation"
 import { LegacySignupFlow } from "./legacy-signup-flow"
@@ -92,6 +93,23 @@ function AccountFirstSignup() {
               ? cause.message
               : "Signup options could not be loaded. Reload to try again.",
           )
+      })
+    return () => controller.abort()
+  }, [])
+  useEffect(() => {
+    // Same country hint as the earlier signup; Nigeria when no hint is available.
+    const controller = new AbortController()
+    fetch("/api/signup/start", { cache: "no-store", signal: controller.signal })
+      .then((response) => (response.ok ? response.json() : null))
+      .then((data) => {
+        if (controller.signal.aborted) return
+        setPhoneCountry(
+          (current) => current || phoneCountryHint(data?.country) || "NG",
+        )
+      })
+      .catch(() => {
+        if (!controller.signal.aborted)
+          setPhoneCountry((current) => current || "NG")
       })
     return () => controller.abort()
   }, [])

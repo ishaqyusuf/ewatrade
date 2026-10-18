@@ -316,6 +316,11 @@ select.owner-ref-inp.owner-ref-empty { color: var(--muted-fg); }
 .owner-ref-win .signup-label { color:var(--fg);font-size:13px;font-weight:600;gap:7px; }
 .owner-ref-win .signup-input { width:100%;height:48px;min-height:48px;border:1px solid var(--border);border-radius:14px;background:var(--card);padding:0 14px;font-size:15px;color:var(--fg);outline:none;box-shadow:none; }
 .owner-ref-win .signup-input:focus {border-color:var(--accent);box-shadow:0 0 0 3px #49b98d2e;}
+/* Phone: one field (country button + number), like the other inputs. */
+.owner-ref-win .signup-phone-input {height:48px;min-height:48px;border:1px solid var(--border);border-radius:14px;background:var(--card);box-shadow:none;overflow:hidden;}
+.owner-ref-win .signup-phone-input:focus-within {border-color:var(--accent);box-shadow:0 0 0 3px #49b98d2e;outline:none;}
+.owner-ref-win .signup-phone-input .signup-input,.owner-ref-win .signup-phone-input .signup-input:focus {height:100%;min-height:0;border:0;border-radius:0;background:transparent;box-shadow:none;padding-left:10px;}
+.owner-ref-win .signup-phone-input [data-slot="input-group-addon"] {border-right:1px solid var(--border);padding:0 12px;color:var(--fg);}
 .owner-ref-win .signup-primary { width:100%;height:52px;min-height:52px;padding:0 22px;border-radius:14px;border:0;background:var(--primary);color:var(--primary-fg);font-size:15.5px;font-weight:700;display:inline-flex;align-items:center;justify-content:center;gap:10px;margin-top:20px; }
 .owner-ref-win .signup-primary:disabled {opacity:.42;}
 .owner-ref-win .owner-fields {gap:16px;}
