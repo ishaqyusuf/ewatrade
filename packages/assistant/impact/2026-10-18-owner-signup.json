@@ -2,7 +2,7 @@
   "version": 1,
   "id": "2026-10-18-owner-signup",
   "tickets": ["H02"],
-  "summary": "Account-first mobile owner signup, exact QA-safe store links, typed resumable grouping/store setup and launch plan ownership limits; public storefront cap and customer-message capability plus owner Home cards. Source only, no AI or provider/release activation.",
+  "summary": "Account-first mobile and web owner signup, exact QA-safe store links, typed resumable grouping/store setup and launch plan ownership limits; public storefront cap and customer-message capability plus owner Home cards. Source only, no AI or provider/release activation.",
   "noAssistantImpact": "Account/signup and plan selection are explicit form workflows. Public account APIs have no merchant assistant audience. Owner summary and storefront preview are deliberately form-only; no model tool, private draft exposure, capability grant or confirmation bypass.",
   "capabilities": [],
   "procedures": [
@@ -62,7 +62,7 @@
       "kind": "test",
       "path": "apps/api/src/schemas/owner-signup.test.ts",
       "executed": true,
-      "result": "Two quick schema tests9 assertions pass. No UI/device/DB/provider/access acceptance claimed."
+      "result": "Three quick schema tests11 assertions pass, including partial draft/resume versus strict completion. Committed mobile snapshot auth/onboarding/keyboard source guards pass;171 local imports resolve. No UI/device/DB/provider/access acceptance claimed."
     }
   ]
 }
