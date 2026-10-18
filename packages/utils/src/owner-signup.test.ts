@@ -191,4 +191,8 @@ test("changed selections preserve edited cards and merge new types into their su
   )
   expect(removed[0]?.typeKeys).toEqual(["feed"])
   expect(removed[1]?.slug).toBe("styles")
+  const single = reconcileOwnerBusinessTypes(result, ["boutique"], first, "")
+  expect(single).toHaveLength(1)
+  expect(single[0]?.slug).toBe("tolu")
+  expect(single[0]?.typeKeys).toEqual(["boutique"])
 })

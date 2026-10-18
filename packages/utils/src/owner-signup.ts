@@ -228,6 +228,11 @@ export function reconcileOwnerBusinessTypes(
       typeKeys: b.typeKeys.filter((key) => selectedSet.has(key)),
     }))
     .filter((b, index) => index === 0 || b.typeKeys.length > 0)
+  // A sole remaining type always belongs to the reserved first business.
+  if (keys.length === 1 && next[0]?.typeKeys.length === 0) {
+    next[0].typeKeys = [...keys]
+    next.splice(1)
+  }
   const assigned = new Set(next.flatMap((b) => b.typeKeys))
   const usedIds = new Set([...businesses, ...next].map((b) => b.id))
   for (const added of groupBusinessTypes(
