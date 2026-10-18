@@ -26,11 +26,14 @@ type GreenTillAuthScreenProps = {
   backLabel?: string
   /** Long forms keep a shorter stage so fields stay above the keyboard. */
   compact?: boolean
+  stageCollapsed?: boolean
+  footerHeight?: number
   /** Replaces the title block, for example intro panel dots and copy. */
   headerContent?: ReactNode
   actions?: ReactNode
   footer?: ReactNode
   progress?: number
+  progressTotal?: number
   motionKey?: string | number
   /** Cards on the mint stage. Defaults to the labelled sales example. */
   stage?: ReactNode
@@ -50,10 +53,13 @@ export function GreenTillAuthScreen({
   onBack,
   backLabel = "Previous step",
   compact = false,
+  stageCollapsed = false,
+  footerHeight = 0,
   headerContent,
   actions,
   footer,
   progress,
+  progressTotal = 4,
   stage,
   testID,
   motionKey,
@@ -63,11 +69,13 @@ export function GreenTillAuthScreen({
   const largeText = useLargeTextLayout()
   const palette = GREEN_TILL_THEME[colorScheme]
   const gradientId = `market-stage-${useId().replace(/:/g, "")}`
-  const stageHeight = largeText
-    ? LARGE_TEXT_STAGE_HEIGHT
-    : compact
-      ? COMPACT_STAGE_HEIGHT
-      : STAGE_HEIGHT
+  const stageHeight = stageCollapsed
+    ? 70
+    : largeText
+      ? LARGE_TEXT_STAGE_HEIGHT
+      : compact
+        ? COMPACT_STAGE_HEIGHT
+        : STAGE_HEIGHT
   const iconTone = colorScheme === "dark" ? "light" : "dark"
   return (
     <View className="flex-1 bg-background">
@@ -77,7 +85,7 @@ export function GreenTillAuthScreen({
         safeAreaColor={palette.stageCenter}
         backgroundColor={colors.background}
         contentClassName="px-0 py-0"
-        keyboardBottomOffset={24}
+        keyboardBottomOffset={Math.max(24, footerHeight + 12)}
         testID={testID}
       >
         <View style={[styles.stage, { height: stageHeight }]}>
@@ -99,7 +107,9 @@ export function GreenTillAuthScreen({
               <Rect width="100%" height="100%" fill={`url(#${gradientId})`} />
             </Svg>
           </View>
-          {largeText ? null : (stage ?? <SalesExampleStage />)}
+          {largeText || stageCollapsed
+            ? null
+            : (stage ?? <SalesExampleStage />)}
           <View className="absolute left-5 right-4 top-3 min-h-11 flex-row items-center gap-2">
             <BrandLogo reverse={colorScheme === "dark"} width={92} />
             <View className="ml-auto flex-row items-center gap-2">
@@ -147,7 +157,7 @@ export function GreenTillAuthScreen({
             </View>
           )}
           {progress !== undefined ? (
-            <GreenTillSetupProgress step={progress} />
+            <GreenTillSetupProgress step={progress} total={progressTotal} />
           ) : null}
           {motionKey === undefined ? (
             children
@@ -188,16 +198,19 @@ export function AuthStagePill({
   )
 }
 
-export function GreenTillSetupProgress({ step }: { step: number }) {
+export function GreenTillSetupProgress({
+  step,
+  total = 4,
+}: { step: number; total?: number }) {
   const { colorScheme } = useColorScheme()
   const colors = useColors()
   return (
     <View
-      accessibilityLabel={`Step ${step} of 4`}
+      accessibilityLabel={`Step ${step} of ${total}`}
       accessible
       style={styles.progress}
     >
-      {[1, 2, 3, 4].map((index) => (
+      {Array.from({ length: total }, (_, i) => i + 1).map((index) => (
         <View
           key={index}
           style={{

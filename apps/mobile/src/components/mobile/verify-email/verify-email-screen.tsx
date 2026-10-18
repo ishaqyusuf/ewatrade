@@ -44,6 +44,7 @@ export function VerifyEmailScreen() {
     ageBand?: string
     businessProfileKey?: string
     businessProfileVersion?: string
+    requestedSlug?: string
     businessName?: string
     city?: string
     currencyCode?: string
@@ -101,6 +102,7 @@ export function VerifyEmailScreen() {
   const teamSize = BUSINESS_TEAM_SIZE_KEYS.find(
     (value) => value === teamSizeValue,
   )
+  const requestedSlug = firstParam(params.requestedSlug)
   const businessName = firstParam(params.businessName) ?? "My Business"
   const currencyCode = normalizeOperatingCurrencyCode(
     firstParam(params.currencyCode),
@@ -216,6 +218,7 @@ export function VerifyEmailScreen() {
       ageBand,
       businessProfileKey,
       businessProfileVersion,
+      requestedSlug,
       businessName,
       city,
       currencyCode,
@@ -236,6 +239,7 @@ export function VerifyEmailScreen() {
     ageBand,
     businessProfileKey,
     businessProfileVersion,
+    requestedSlug,
     businessName,
     city,
     code,
@@ -328,6 +332,7 @@ export function VerifyEmailScreen() {
         addressLine1,
         businessProfileKey,
         businessProfileVersion,
+        requestedSlug,
         businessName,
         city,
         currencyCode,
@@ -355,6 +360,7 @@ export function VerifyEmailScreen() {
       addressLine1,
       businessProfileKey,
       businessProfileVersion,
+      requestedSlug,
       businessName,
       city,
       currencyCode,
@@ -374,6 +380,7 @@ export function VerifyEmailScreen() {
     addressLine1,
     businessProfileKey,
     businessProfileVersion,
+    requestedSlug,
     businessName,
     city,
     currencyCode,

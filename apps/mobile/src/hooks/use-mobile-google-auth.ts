@@ -37,6 +37,7 @@ type UseMobileGoogleAuthInput = {
   addressLine1?: string
   businessProfileKey?: string
   businessProfileVersion?: 1
+  requestedSlug?: string
   businessName?: string
   city?: string
   countryCode?: string
@@ -120,6 +121,7 @@ export function useMobileGoogleAuth({
   addressLine1,
   businessProfileKey,
   businessProfileVersion,
+  requestedSlug,
   businessName,
   city,
   countryCode,
@@ -200,6 +202,7 @@ export function useMobileGoogleAuth({
         addressLine1,
         businessProfileKey,
         businessProfileVersion,
+        requestedSlug,
         businessName,
         city,
         countryCode,
@@ -224,6 +227,7 @@ export function useMobileGoogleAuth({
       addressLine1,
       businessProfileKey,
       businessProfileVersion,
+      requestedSlug,
       businessName,
       city,
       countryCode,
