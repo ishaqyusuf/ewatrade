@@ -60,11 +60,9 @@ export function readOwnerSignupDraft(
       (!allowIncomplete && !b.typeKeys.length) ||
       !b.typeKeys.every(isBusinessTypeKey) ||
       typeof b.countryCode !== "string" ||
-      (!(allowIncomplete && b.countryCode === "") &&
-        !/^[A-Z]{2}$/.test(b.countryCode)) ||
+      (!(b.countryCode === "") && !/^[A-Z]{2}$/.test(b.countryCode)) ||
       typeof b.currencyCode !== "string" ||
-      (!(allowIncomplete && b.currencyCode === "") &&
-        !isOperatingCurrencyCode(b.currencyCode)) ||
+      (!(b.currencyCode === "") && !isOperatingCurrencyCode(b.currencyCode)) ||
       !BUSINESS_OPERATING_MODEL_KEYS.some((k) => k === b.operatingModel)
     )
       return null

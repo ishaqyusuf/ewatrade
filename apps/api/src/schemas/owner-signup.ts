@@ -35,12 +35,6 @@ const draftBusiness = z
 
 const business = draftBusiness
   .superRefine((v, ctx) => {
-    if (!v.countryCode || !v.currencyCode)
-      ctx.addIssue({
-        code: "custom",
-        path: ["countryCode"],
-        message: "Choose a country and currency",
-      })
     if (!v.name.trim())
       ctx.addIssue({
         code: "custom",
@@ -103,6 +97,12 @@ export const ownerSignupCompletionSchema = z
   })
   .strict()
   .superRefine((v, ctx) => {
+    if (!v.businesses[0]?.countryCode || !v.businesses[0]?.currencyCode)
+      ctx.addIssue({
+        code: "custom",
+        path: ["businesses", 0, "countryCode"],
+        message: "Choose a country and currency",
+      })
     if (new Set(v.businesses.map((b) => b.slug)).size !== v.businesses.length)
       ctx.addIssue({
         code: "custom",

@@ -163,6 +163,16 @@ export async function completeOwnerSignupSetup(
   const available = Math.max(1, plan.limits.businesses - owned + 1)
   const setupNow = businesses.slice(0, available)
   const waiting = businesses.slice(available)
+  if (
+    setupNow.some(
+      (business) =>
+        !/^[A-Z]{2}$/.test(business.countryCode) ||
+        !isOperatingCurrencyCode(business.currencyCode),
+    )
+  )
+    throw new Error(
+      "Choose a country and currency for each business you are setting up now.",
+    )
   const ready: { id: string; name: string; slug: string }[] = []
   const updateStore = async (
     storeId: string,
