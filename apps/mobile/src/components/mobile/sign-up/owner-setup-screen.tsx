@@ -21,9 +21,16 @@ import {
 } from "@ewatrade/utils/owner-signup"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { Redirect, useRouter } from "expo-router"
-import { useCallback, useEffect, useRef, useState } from "react"
+import { type ReactNode, useCallback, useEffect, useRef, useState } from "react"
 import { ScrollView } from "react-native"
-import Animated, { Easing, FadeIn, ReduceMotion } from "react-native-reanimated"
+import Animated, {
+  Easing,
+  ReduceMotion,
+  useAnimatedStyle,
+  useReducedMotion,
+  useSharedValue,
+  withTiming,
+} from "react-native-reanimated"
 import { OwnerGroupStep } from "./owner-group-step"
 import { OwnerStoreStep } from "./owner-store-step"
 import { OwnerTypeFooter, OwnerTypePicker } from "./owner-type-picker"
@@ -374,16 +381,10 @@ export function OwnerSetupScreen() {
       }
       testID={`owner-setup-${step}`}
     >
-      <Animated.View
+      <OwnerStepBody
         key={`${step}-${active}`}
-        entering={FadeIn.duration(200)
-          .easing(Easing.out(Easing.cubic))
-          .withInitialValues({
-            transform: [{ translateX: stepDirection * 24 }],
-          })
-          .reduceMotion(ReduceMotion.System)}
-        style={{ gap: 16 }}
-        pointerEvents={isFinishing ? "none" : "auto"}
+        direction={stepDirection}
+        disabled={isFinishing}
       >
         {error ? (
           <StatusBanner
@@ -455,7 +456,36 @@ export function OwnerSetupScreen() {
         {step !== "type" ? (
           <View style={{ height: footerHeight + 24 }} />
         ) : null}
-      </Animated.View>
+      </OwnerStepBody>
     </GreenTillAuthScreen>
+  )
+}
+
+function OwnerStepBody({
+  children,
+  direction,
+  disabled,
+}: { children: ReactNode; direction: number; disabled: boolean }) {
+  const reducedMotion = useReducedMotion()
+  const from = useRef(direction).current
+  const progress = useSharedValue(reducedMotion ? 1 : 0)
+  useEffect(() => {
+    progress.value = withTiming(1, {
+      duration: 200,
+      easing: Easing.out(Easing.cubic),
+      reduceMotion: ReduceMotion.System,
+    })
+  }, [progress])
+  const style = useAnimatedStyle(() => ({
+    opacity: progress.value,
+    transform: [{ translateX: (1 - progress.value) * from * 24 }],
+  }))
+  return (
+    <Animated.View
+      style={[{ gap: 16 }, style]}
+      pointerEvents={disabled ? "none" : "auto"}
+    >
+      {children}
+    </Animated.View>
   )
 }
