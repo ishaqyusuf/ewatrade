@@ -16,6 +16,8 @@ const ROUTER_MARKERS = [
   "createMobileOwnerOtp",
   "verifyMobileOwnerOtp",
   "verifyMobileGoogleIdentity",
+  "isMobilePasswordEmailVerified",
+  "hasMobileAuthMembership",
   "verifyGoogleIdToken",
   "createEmailMessage",
   "dispatchEmailMessages",
@@ -44,7 +46,10 @@ const QUERY_MARKERS = [
   "createMobileOwnerOtp",
   "verifyMobileOwnerOtp",
   "verifyMobileGoogleIdentity",
-  'providerId = "google"',
+  'provider: "google"',
+  "const providerId = input.provider",
+  "isMobilePasswordEmailVerified",
+  "hasMobileAuthMembership",
   "idToken: cleanText(input.idToken)",
 ]
 const GOOGLE_VERIFIER_MARKERS = [

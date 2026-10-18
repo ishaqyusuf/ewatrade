@@ -24,7 +24,9 @@ import {
   createPhoneOtp,
   getCustomerAccountAgeStatus,
   getMobileAccessProfile,
+  hasMobileAuthMembership,
   isLocalPhoneAuth,
+  isMobilePasswordEmailVerified,
   verifyMobileGoogleIdentity,
   verifyMobileOwnerOtp,
   verifyPhoneOtp,
@@ -502,11 +504,7 @@ export const authRouter = createTRPCRouter({
           code: "TOO_MANY_REQUESTS",
           message: "Too many sign-in attempts. Try again later.",
         })
-      const verifiedUser = await ctx.db.user.findUnique({
-        where: { email: input.email },
-        select: { emailVerified: true },
-      })
-      if (!verifiedUser?.emailVerified) {
+      if (!(await isMobilePasswordEmailVerified(ctx.db, input.email))) {
         throw new TRPCError({
           code: "UNAUTHORIZED",
           message: "Invalid email or password, or the account is not verified.",
@@ -619,11 +617,12 @@ export const authRouter = createTRPCRouter({
         message: "Choose an eligible age range before opening your workspace.",
       })
     if (ctx.qaSessionScope) {
-      const membership = await ctx.db.membership.findFirst({
-        where: qaScopedMembershipWhere(ctx.session.user.id, ctx.qaSessionScope),
-        select: { id: true },
-      })
-      if (!membership)
+      if (
+        !(await hasMobileAuthMembership(
+          ctx.db,
+          qaScopedMembershipWhere(ctx.session.user.id, ctx.qaSessionScope),
+        ))
+      )
         throw new TRPCError({
           code: "FORBIDDEN",
           message: "Your selected QA business or Store is no longer available.",

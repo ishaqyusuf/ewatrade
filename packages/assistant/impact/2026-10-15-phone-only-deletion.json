@@ -1,0 +1,43 @@
+{
+  "version": 1,
+  "id": "2026-10-15-phone-only-deletion",
+  "tickets": ["H01"],
+  "summary": "Phone-only account deletion intake: fresh real session and persisted verified phone identify the signed-in account; a separately verified contact email receives the existing privacy outcome. Public email and actor-scoped challenges remain isolated, single-use and rate limited. No account erasure, provider activation, schema or rollout.",
+  "noAssistantImpact": "Account authentication and personal deletion/contact verification are excluded from merchant assistant tools. No merchant command, Tenant permission, entitlement or business write capability is added.",
+  "procedures": [],
+  "docs": [
+    {
+      "topic": "feature",
+      "path": ".brain/features/whatsapp-otp.md",
+      "status": "local_only"
+    },
+    {
+      "topic": "api",
+      "path": ".brain/api/contracts.md",
+      "status": "local_only"
+    },
+    {
+      "topic": "permissions",
+      "path": ".brain/api/permissions.md",
+      "status": "local_only"
+    },
+    {
+      "topic": "schema",
+      "path": ".brain/database/schema.md",
+      "status": "local_only"
+    },
+    {
+      "topic": "decision",
+      "path": ".brain/decisions/2026-10-15-phone-only-account-deletion.md",
+      "status": "local_only"
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "run",
+      "path": ".brain/qa/2026-10-15-phone-auth-and-deletion.md",
+      "executed": true,
+      "result": "62 focused tests/308 assertions pass; guarded Neon signup/sign-in/deletion intake and owner-authorized native Android14 signup/sign-in/verified-contact deletion request pass with cleanup and no provider sends. Android export and scoped14-file Biome pass. Full app typechecks and whole NativeWind guard retain unrelated diagnostics; live delivery is owner-deferred."
+    }
+  ]
+}

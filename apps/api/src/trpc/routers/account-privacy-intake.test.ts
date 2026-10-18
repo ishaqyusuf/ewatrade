@@ -256,5 +256,5 @@ test("HTTP throttle stays neutral, and failed delivery removes only its code whi
   )
   expect(failed.challenge()).toBeNull()
   expect(failed.request()).toBeNull()
-  expect(failed.buckets.size).toBe(2)
+  expect(failed.buckets.size).toBe(3)
 })

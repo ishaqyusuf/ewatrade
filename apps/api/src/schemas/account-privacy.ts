@@ -4,6 +4,17 @@ import { z } from "zod"
 export const requestAccountDeletionSchema = z
   .object({
     confirmation: z.literal("DELETE MY ACCOUNT"),
+    contactEmail: z
+      .string()
+      .trim()
+      .toLowerCase()
+      .max(254)
+      .pipe(z.email())
+      .optional(),
+    contactCode: z
+      .string()
+      .regex(/^\d{6}$/)
+      .optional(),
   })
   .strict()
 
