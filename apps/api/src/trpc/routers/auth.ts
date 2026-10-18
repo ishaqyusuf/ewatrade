@@ -173,6 +173,7 @@ const mobileOwnerAuthShape = {
     .optional(),
   currencyCode: z.enum(OPERATING_CURRENCY_CODES).optional(),
   region: z.string().trim().max(120).optional(),
+  contactEmail: emailSchema.optional(),
   email: emailSchema,
   mode: mobileAuthModeSchema,
   name: z.string().trim().min(1).max(120).optional(),

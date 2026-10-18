@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test"
+import { currentEffectiveLegalPublication } from "@ewatrade/utils/legal-approval"
 import type { PrismaClient } from "../../generated/prisma/client"
 import {
   createPhoneOtp,
@@ -202,6 +203,36 @@ async function local<T>(action: () => Promise<T>) {
 }
 
 describe("phone authentication security", () => {
+  test("retains secondary contact in the server challenge without changing login identity", async () =>
+    local(async () => {
+      const store = fixture()
+      const publication = currentEffectiveLegalPublication()
+      await createPhoneOtp(
+        store.db,
+        {
+          phone: "+2348000000000",
+          mode: "sign_up",
+          ageBand: "ADULT",
+          businessName: "Test business",
+          contactEmail: "business@example.com",
+          ...(publication
+            ? {
+                legalVersion: publication.version,
+                acceptedTerms: true,
+                acknowledgedPrivacyNotice: true,
+              }
+            : {}),
+        },
+        "test-network",
+      )
+      const row = store.rows[0]
+      if (!row) throw new Error("Missing challenge")
+      const saved = JSON.parse(row.value)
+      expect(saved.draft.contactEmail).toBe("business@example.com")
+      expect(saved.draft.phone).toBe("+2348000000000")
+      expect(saved.draft.email).toBeUndefined()
+      expect(store.user.email).toBe("internal@phone.ewatrade.invalid")
+    }))
   test("expiry cleanup preserves live phone codes and unrelated email verifications", async () => {
     const store = fixture()
     const now = new Date()

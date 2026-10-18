@@ -25,6 +25,29 @@ describe("phone authentication API boundaries", () => {
         .success,
     ).toBe(false)
   })
+  test("accepts a secondary business email without admitting an email identity", () => {
+    const input = {
+      phone: "+2348000000000",
+      mode: "sign_up",
+      ageBand: "ADULT",
+      businessName: "Test business",
+      requestedSlug: "test-business",
+      contactEmail: " Contact@Example.com ",
+    }
+    expect(requestPhoneOtpSchema.parse(input).contactEmail).toBe(
+      "contact@example.com",
+    )
+    expect(
+      requestPhoneOtpSchema.safeParse({ ...input, contactEmail: "invalid" })
+        .success,
+    ).toBe(false)
+    expect(
+      requestPhoneOtpSchema.safeParse({
+        ...input,
+        email: "identity@example.com",
+      }).success,
+    ).toBe(false)
+  })
   test("requires the existing age and business choices for phone signup", () => {
     expect(
       requestPhoneOtpSchema.safeParse({

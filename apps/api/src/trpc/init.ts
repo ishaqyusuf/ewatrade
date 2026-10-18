@@ -165,10 +165,22 @@ export const createTRPCContext = async (
     const expectedInternalKey = process.env.INTERNAL_API_KEY
     const isInternalRequest = safeCompare(internalKey, expectedInternalKey)
     const requestCookies = parseCookieHeader(c.req.header("cookie"))
+    const explicitTenantSlug = c.req.header("x-tenant-slug")
+    const cookieTenantSlug = requestCookies.get("ewatrade.active_tenant_slug")
+    // A remembered business is only a suggestion. Explicit tenant headers stay strict.
+    const cookieMembership =
+      explicitTenantSlug === undefined && cookieTenantSlug && session
+        ? await prisma.membership.findFirst({
+            where: {
+              userId: session.user.id,
+              status: "ACTIVE",
+              tenant: { slug: cookieTenantSlug, isActive: true },
+            },
+            select: { id: true },
+          })
+        : null
     const tenantSlug =
-      c.req.header("x-tenant-slug") ??
-      requestCookies.get("ewatrade.active_tenant_slug") ??
-      null
+      explicitTenantSlug ?? (cookieMembership ? cookieTenantSlug : null) ?? null
 
     return {
       requestHeaders: c.req.raw.headers,

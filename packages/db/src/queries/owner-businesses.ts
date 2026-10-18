@@ -39,6 +39,7 @@ export type CreateOwnerBusinessInput = {
   operatingModel?: BusinessOperatingModel | null
   orderChannels?: string[] | null
   otherBusinessDescription?: string | null
+  contactEmail?: string | null
   phone?: string | null
   teamSize?: string | null
   userId: string
@@ -236,6 +237,7 @@ async function createOwnerBusinessWithSource(
         input.setupStatus ?? (input.requestedSlug ? "pending" : undefined),
       teamSize: input.teamSize,
     },
+    supportEmail: input.contactEmail,
     supportPhone: input.phone,
     tenantId: tenant.id,
   })
