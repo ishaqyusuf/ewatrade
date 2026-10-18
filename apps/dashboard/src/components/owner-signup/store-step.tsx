@@ -3,6 +3,7 @@
 import {
   OwnerBusinessAvatar,
   OwnerSignupIcon,
+  SignupCountryPicker,
   SignupUseLocation,
 } from "@ewatrade/onboarding/components/signup/signup-flow"
 import { Input, SelectControl, Textarea } from "@ewatrade/ui"
@@ -11,6 +12,7 @@ import {
   isOperatingCurrencyCode,
   suggestCurrencyForCountry,
 } from "@ewatrade/utils"
+import { findCountry } from "@ewatrade/utils/countries"
 import { GEO_ADDRESS_ATTRIBUTION } from "@ewatrade/utils/geo-address"
 import type {
   OwnerSetupBusiness,
@@ -24,16 +26,6 @@ import {
   typeLabel,
 } from "./model"
 
-const countries = [
-  { value: "", label: "Choose country" },
-  { value: "NG", label: "Nigeria" },
-  { value: "GH", label: "Ghana" },
-  { value: "KE", label: "Kenya" },
-  { value: "ZA", label: "South Africa" },
-  { value: "EG", label: "Egypt" },
-  { value: "GB", label: "United Kingdom" },
-  { value: "US", label: "United States" },
-]
 const offers = [
   {
     value: "products",
@@ -286,17 +278,13 @@ export function OwnerStoreStep({
       <div className="owner-ref-grid2 owner-store-country">
         <label className="owner-ref-fld" htmlFor={`${id}-country`}>
           <span>Country</span>
-          <SelectControl
+          <SignupCountryPicker
             id={`${id}-country`}
             value={business.countryCode}
-            options={countries}
-            popupClassName="signup-select-menu"
-            onValueChange={(countryCode) =>
+            onChange={(countryCode) =>
               patch({
                 countryCode,
-                currencyCode: countryCode
-                  ? suggestCurrencyForCountry(countryCode)
-                  : "",
+                currencyCode: suggestCurrencyForCountry(countryCode),
               })
             }
           />
@@ -306,13 +294,11 @@ export function OwnerStoreStep({
           <SelectControl
             id={`${id}-currency`}
             value={business.currencyCode}
-            options={[
-              { value: "", label: "Choose currency" },
-              ...OPERATING_CURRENCIES.map((currency) => ({
-                value: currency.code,
-                label: `${currency.symbol} ${currency.label} (${currency.code})`,
-              })),
-            ]}
+            placeholder="Choose currency"
+            options={OPERATING_CURRENCIES.map((currency) => ({
+              value: currency.code,
+              label: `${currency.symbol} ${currency.label} (${currency.code})`,
+            }))}
             popupClassName="signup-select-menu"
             onValueChange={(currencyCode) => {
               if (currencyCode === "" || isOperatingCurrencyCode(currencyCode))
@@ -333,12 +319,8 @@ export function OwnerStoreStep({
               })
             }
           >
-            Same as {first.name} ·{" "}
-            {
-              countries.find((country) => country.value === first.countryCode)
-                ?.label
-            }
-            , {first.currencyCode}
+            Same as {first.name} · {findCountry(first.countryCode)?.name},{" "}
+            {first.currencyCode}
           </button>
         </div>
       )}

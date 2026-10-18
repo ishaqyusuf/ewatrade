@@ -224,11 +224,6 @@ export async function POST(request: NextRequest) {
       { success: true, redirect: "/setup" },
       { headers: { "Cache-Control": "no-store" } },
     )
-    for (const cookie of createBetterAuthSessionCookieHeaders({
-      token: result.token,
-      expiresAt: new Date(result.expiresAt),
-    }))
-      response.headers.append("Set-Cookie", cookie)
     if (result.tenant?.slug) {
       response.cookies.set("ewatrade.active_tenant_slug", result.tenant.slug, {
         httpOnly: true,
@@ -240,6 +235,13 @@ export async function POST(request: NextRequest) {
       response.cookies.delete("ewatrade.active_store_id")
       response.cookies.delete("ewatrade.inventory_scope")
     }
+    // cookies.set()/delete() rewrite the combined Set-Cookie header, so the
+    // hand-signed session cookies go last or the new sign-in is dropped.
+    for (const cookie of createBetterAuthSessionCookieHeaders({
+      token: result.token,
+      expiresAt: new Date(result.expiresAt),
+    }))
+      response.headers.append("Set-Cookie", cookie)
     return response
   } catch (error) {
     return failure(error)

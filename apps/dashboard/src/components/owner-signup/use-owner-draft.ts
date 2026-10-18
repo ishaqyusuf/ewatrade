@@ -14,6 +14,9 @@ export function useOwnerDraft(draft: OwnerSetupDraft) {
   const mounted = useRef(true)
   const finishing = useRef(false)
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  // Last draft sent (serialized), so an unchanged rebuild of the draft object is not resaved.
+  const sent = useRef(JSON.stringify(draft))
+  const serialized = JSON.stringify(draft)
   const [state, setState] = useState<"saved" | "saving" | "error">("saved")
   const [error, setError] = useState("")
   useEffect(() => {
@@ -31,7 +34,10 @@ export function useOwnerDraft(draft: OwnerSetupDraft) {
       }
       const pending = queue.current
         .catch(() => undefined)
-        .then(() => client.tenant.saveOwnerSignupDraft.mutate(snapshot))
+        .then(() => {
+          sent.current = JSON.stringify(snapshot)
+          return client.tenant.saveOwnerSignupDraft.mutate(snapshot)
+        })
       queue.current = pending
       return pending
         .then(() => {
@@ -52,15 +58,14 @@ export function useOwnerDraft(draft: OwnerSetupDraft) {
     [client],
   )
   useEffect(() => {
-    if (finishing.current) return
-    setState("saving")
+    if (finishing.current || serialized === sent.current) return
     timer.current = setTimeout(() => {
-      void save(draft).catch(() => undefined)
-    }, 650)
+      void save(latest.current).catch(() => undefined)
+    }, 900)
     return () => {
       if (timer.current) clearTimeout(timer.current)
     }
-  }, [draft, save])
+  }, [serialized, save])
   async function complete() {
     if (finishing.current) return { completed: false } as const
     finishing.current = true

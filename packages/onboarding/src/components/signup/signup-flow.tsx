@@ -1,7 +1,10 @@
 "use client"
 
 import { Input } from "@ewatrade/ui"
-import { normalizeStoreLink } from "@ewatrade/utils/store-link"
+import {
+  isValidStoreLink,
+  normalizeStoreLink,
+} from "@ewatrade/utils/store-link"
 import { useCallback, useEffect, useRef, useState } from "react"
 import { phoneCountry as phoneCountryHint } from "../../lib/international-phone"
 import type { EligibleAgeBand } from "../../lib/signup-age"
@@ -16,6 +19,7 @@ import { type StoreLinkCheck, StoreLinkField } from "./store-link-field"
 export { OwnerSignupFrame } from "./owner-signup-frame"
 export { OwnerBusinessAvatar, OwnerSignupIcon } from "./owner-signup-artwork"
 export { StoreLinkField } from "./store-link-field"
+export { SignupCountryPicker } from "./signup-country-picker"
 export type { StoreLinkCheck } from "./store-link-field"
 
 type Settings = {
@@ -248,7 +252,7 @@ function AccountFirstSignup() {
   return (
     <OwnerSignupFrame
       name={account.businessName}
-      slug={link?.slug ?? account.slug}
+      slug={link?.slug ?? (isValidStoreLink(account.slug) ? account.slug : "")}
       step={step}
     >
       <main className="signup-main owner-account">

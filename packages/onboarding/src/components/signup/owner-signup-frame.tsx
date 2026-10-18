@@ -71,12 +71,14 @@ export function OwnerSignupFrame({
                 alt="ẸwáTrade"
               />
             </a>
-            <span className="owner-ref-fp-signin">
-              Already have an account?{" "}
-              <a className="owner-ref-lnk" href="/login">
-                Sign in
-              </a>
-            </span>
+            {(!step || step === "account" || step === "code") && (
+              <span className="owner-ref-fp-signin">
+                Already have an account?{" "}
+                <a className="owner-ref-lnk" href="/login">
+                  Sign in
+                </a>
+              </span>
+            )}
           </header>
           <div
             className={`owner-ref-fp-scroll${wide || step === "store" ? " owner-ref-with-footer" : ""}`}

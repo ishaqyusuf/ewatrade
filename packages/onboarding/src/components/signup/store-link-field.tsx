@@ -4,6 +4,7 @@ import { Input } from "@ewatrade/ui"
 import {
   isValidStoreLink,
   normalizeStoreLink,
+  storeLinkSuggestions,
 } from "@ewatrade/utils/store-link"
 import { useEffect, useId, useRef, useState } from "react"
 import { OwnerSignupIcon } from "./owner-signup-artwork"
@@ -53,6 +54,16 @@ export function StoreLinkField({
   const [check, setCheck] = useState<StoreLinkCheck | null>(null)
   const [error, setError] = useState("")
   const [checking, setChecking] = useState(false)
+  // Well-formed but reserved (platform names, -pos/-dashboard surfaces): say so and
+  // offer alternatives instead of the generic format hint.
+  const reserved =
+    /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(value) &&
+    value.length >= 2 &&
+    value.length <= 40 &&
+    !isValidStoreLink(value)
+  const reservedSuggestions = reserved
+    ? storeLinkSuggestions(value).filter(isValidStoreLink).slice(0, 3)
+    : []
   useEffect(() => {
     const controller = new AbortController()
     setCheck(null)
@@ -133,7 +144,11 @@ export function StoreLinkField({
         aria-live="polite"
         className="owner-link-status"
         data-status={
-          check?.available ? "available" : check ? "taken" : undefined
+          check?.available
+            ? "available"
+            : check || reserved
+              ? "taken"
+              : undefined
         }
       >
         {checking ? (
@@ -160,6 +175,14 @@ export function StoreLinkField({
               a different link:
             </span>
           </>
+        ) : reserved ? (
+          <>
+            <OwnerSignupIcon name="alert" />
+            <span>
+              <b>{value}</b>.ewatrade.com is reserved. The name is fine; pick a
+              different link:
+            </span>
+          </>
         ) : value ? (
           <span>Use 2–40 letters, numbers and hyphens for your link.</span>
         ) : (
@@ -179,9 +202,12 @@ export function StoreLinkField({
           </button>
         )}
       </div>
-      {check && !check.available && (
+      {((check && !check.available) || reservedSuggestions.length > 0) && (
         <div className="owner-chips">
-          {check.suggestions.map((slug) => (
+          {(check && !check.available
+            ? check.suggestions
+            : reservedSuggestions
+          ).map((slug) => (
             <button
               type="button"
               className="owner-ref-chip owner-ref-sm"

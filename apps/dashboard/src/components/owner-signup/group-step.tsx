@@ -281,8 +281,8 @@ export function OwnerGroupStep({
                   <SelectControl
                     aria-label={`Move ${typeLabel(key, draft.otherType)} to another business`}
                     value=""
+                    placeholder="Move"
                     options={[
-                      { value: "", label: "Move" },
                       ...draft.businesses
                         .filter((b) => b.id !== business.id)
                         .map((b) => ({
@@ -373,7 +373,7 @@ export function OwnerGroupStep({
         </button>
         <div className="owner-ref-hint">
           {issue ||
-            `${count} businesses · ${draft.planId === "starter" ? `setting up ${draft.businesses[0]?.name} now` : `setting up all ${count} now`}`}
+            `${count} ${count === 1 ? "business" : "businesses"} · ${draft.planId === "starter" ? `setting up ${draft.businesses[0]?.name} now` : `setting up all ${count} now`}`}
         </div>
         <button
           className="signup-primary"
