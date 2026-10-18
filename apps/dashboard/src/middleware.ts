@@ -13,6 +13,7 @@ const BETTER_AUTH_SESSION_COOKIE_NAMES = [
 const PUBLIC_BRAND_ASSET_PATHS = new Set([
   "/favicon.png",
   "/shop-v3/cal-sans.woff2",
+  "/shop-v3/inter-latin.woff2",
   "/shop-v3/inter-regular.ttf",
   "/brand/ewatrade-logo-precision-rise-v1.svg",
   "/brand/ewatrade-logo-precision-rise-v1-mono.svg",

@@ -1,5 +1,9 @@
 import type { AppRouter } from "@ewatrade/api/trpc/routers/_app"
 import { createBetterAuthSessionCookieHeaders } from "@ewatrade/auth"
+import {
+  getTrustedPrivacyNetworkSource,
+  getTrustedQaNetworkSource,
+} from "@ewatrade/utils/qa-network-source"
 import { TRPCClientError, createTRPCClient, httpBatchLink } from "@trpc/client"
 import { type NextRequest, NextResponse } from "next/server"
 import superjson from "superjson"
@@ -44,7 +48,13 @@ function api(request: NextRequest) {
     process.env.API_URL ??
     "http://localhost:3095"
   ).replace(/\/$/, "")
-  const clientAddress = request.headers.get("x-forwarded-for")
+  const internalKey = process.env.INTERNAL_API_KEY?.trim()
+  const source = {
+    env: process.env,
+    getHeader: (name: string) => request.headers.get(name),
+  }
+  const clientAddress =
+    getTrustedPrivacyNetworkSource(source) ?? getTrustedQaNetworkSource(source)
   return createTRPCClient<AppRouter>({
     links: [
       httpBatchLink({
@@ -52,7 +62,12 @@ function api(request: NextRequest) {
         transformer: superjson,
         headers: () => ({
           "x-trpc-source": "web-owner-signup",
-          ...(clientAddress ? { "x-forwarded-for": clientAddress } : {}),
+          ...(internalKey && clientAddress
+            ? {
+                "x-ewatrade-client-ip": clientAddress,
+                "x-internal-key": internalKey,
+              }
+            : {}),
         }),
       }),
     ],
@@ -148,7 +163,12 @@ export async function POST(request: NextRequest) {
         mode: "sign_up",
       })
       return NextResponse.json(
-        { sent: true, devCode: result.devCode },
+        {
+          sent: true,
+          ...(process.env.NODE_ENV !== "production"
+            ? { devCode: result.devCode }
+            : {}),
+        },
         { headers: { "Cache-Control": "no-store" } },
       )
     }
@@ -159,7 +179,12 @@ export async function POST(request: NextRequest) {
         mode: "sign_up",
       })
       return NextResponse.json(
-        { sent: true, devCode: result.devCode },
+        {
+          sent: true,
+          ...(process.env.NODE_ENV !== "production"
+            ? { devCode: result.devCode }
+            : {}),
+        },
         { headers: { "Cache-Control": "no-store" } },
       )
     }
