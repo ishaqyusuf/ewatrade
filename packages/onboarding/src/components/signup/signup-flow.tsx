@@ -1,573 +1,491 @@
 "use client"
-import { useDashboardWorkflow } from "@ewatrade/events/dashboard-client"
 
-import type { OnboardingDraft } from "@ewatrade/db/onboarding-continuation"
-import { isBusinessProfileKey } from "@ewatrade/utils"
-import { useEffect, useState } from "react"
-import { useSignupAge } from "../../hooks/use-signup-age"
-import type { DirectSignupStartResponse } from "../../lib/direct-signup-schema"
-import type {
-  PublicLegalPublication,
-  SignupLegalAcceptance,
-} from "../../lib/legal-publication"
-import {
-  businessValuesFromOnboardingDraft,
-  onboardingDraftFromBusinessValues,
-} from "../../lib/onboarding-draft"
+import { Input } from "@ewatrade/ui"
+import { normalizeStoreLink } from "@ewatrade/utils/store-link"
+import { useCallback, useEffect, useRef, useState } from "react"
 import type { EligibleAgeBand } from "../../lib/signup-age"
-import { getDashboardRouteUrl } from "../../lib/signup-navigation"
-import type { BusinessValues, OwnerValues } from "../../lib/signup-schemas"
-import { SignupPresentation, SignupPreviewSync } from "./signup-presentation"
-import { SignupStart } from "./signup-start"
-import { SignupStepper } from "./signup-stepper"
-import { StepBusiness } from "./step-business"
-import { StepLegal } from "./step-legal"
-import { StepOwner } from "./step-owner"
-import { StepSuccess } from "./step-success"
-import { VerifyApprovedEmail } from "./verify-approved-email"
+import { getMarketingUrl } from "../../lib/signup-navigation"
+import { LegacySignupFlow } from "./legacy-signup-flow"
+import { OwnerSignupFrame } from "./owner-signup-frame"
+import { SignupGoogle } from "./signup-google"
+import { SignupPhoneInput } from "./signup-phone-input"
+import { type StoreLinkCheck, StoreLinkField } from "./store-link-field"
 
-// ─── Accumulated form state ───────────────────────────────────────────────────
+export { OwnerSignupFrame } from "./owner-signup-frame"
+export { StoreLinkField } from "./store-link-field"
+export type { StoreLinkCheck } from "./store-link-field"
 
-type SignupFormState = {
-  business?: Partial<BusinessValues>
-  owner?: Partial<OwnerValues>
-}
-
-type EarlyAccessSessionResponse = {
-  draft?: OnboardingDraft
-  emailVerified: boolean
-  qaWorkspace: boolean
-  accessToken: string
-  expiresAt: string
-  lead: {
-    businessName: string
-    email: string
-    firstName: string
-    fullName: string
-    lastName: string
-    phone: string
+type Settings = {
+  publication: {
+    acceptanceRequired: boolean
+    effective: boolean
+    signupAvailable: boolean
+    version: string | null
   }
+  phoneEnabled: boolean
+  googleClientId: string | null
 }
-
-type SuccessState = {
-  tenantSlug: string
-  businessName: string
-  dashboardUrl?: string
-  devEmailHtml?: string
-  emailDeliveryStatus?: "failed" | "sent"
-  posUrl?: string
-  storefrontUrl?: string
+const ages = [
+  ["UNDER_13", "Under 13"],
+  ["AGE_13_TO_15", "13–15"],
+  ["AGE_16_TO_17", "16–17"],
+  ["ADULT", "18 or older"],
+] as const
+const blank = {
+  businessName: "",
+  name: "",
+  email: "",
+  phone: "",
+  slug: "",
+  terms: false,
 }
-
-const ageChoices: Array<{
-  label: string
-  value: EligibleAgeBand | "UNDER_13"
-}> = [
-  { label: "Under 13", value: "UNDER_13" },
-  { label: "13–15", value: "AGE_13_TO_15" },
-  { label: "16–17", value: "AGE_16_TO_17" },
-  { label: "18 or older", value: "ADULT" },
-]
-
-// ─── Page ─────────────────────────────────────────────────────────────────────
 
 export function SignupFlow() {
-  return (
-    <SignupPresentation>
-      <SignupFlowContent />
-    </SignupPresentation>
-  )
-}
-
-function SignupFlowContent() {
-  const workflow = useDashboardWorkflow()
-  const [entryAgeChoice, setEntryAgeChoice] = useState<
-    EligibleAgeBand | "UNDER_13" | null
-  >(null)
-  const { ageBand, ready: ageReady, confirmAge, clearAge } = useSignupAge()
-  const [step, setStep] = useState<2 | 3 | 4 | 5>(2)
-  const [formState, setFormState] = useState<SignupFormState>({})
-  const [isSubmitting, setIsSubmitting] = useState(false)
-  const [submitError, setSubmitError] = useState("")
-  const [draftError, setDraftError] = useState("")
-  const [success, setSuccess] = useState<SuccessState | null>(null)
-  const [accessToken, setAccessToken] = useState<string | null>(null)
-  const [accessNotice, setAccessNotice] = useState<string | null>(null)
-  const [entryReady, setEntryReady] = useState(false)
-  // No setup token in the URL: show the direct-signup start form first.
-  const [needsStart, setNeedsStart] = useState(false)
-  const [sessionVersion, setSessionVersion] = useState(0)
-  const [startProfileKey, setStartProfileKey] = useState<string>()
-  const [startPreview, setStartPreview] =
-    useState<DirectSignupStartResponse["qaPreview"]>()
-  const [verificationEmail, setVerificationEmail] = useState<string | null>(
-    null,
-  )
-  const [approvedIdentity, setApprovedIdentity] = useState<{
-    businessName: string
-    email: string
-  } | null>(null)
-  const [legalPublication, setLegalPublication] =
-    useState<PublicLegalPublication | null>(null)
-  const [legalPublicationError, setLegalPublicationError] = useState<
-    string | null
-  >(null)
-
+  const [legacy, setLegacy] = useState<boolean | null>(null)
   useEffect(() => {
-    let cancelled = false
-    async function loadLegalPublication() {
-      try {
-        const response = await fetch("/api/legal-publication", {
-          cache: "no-store",
-        })
-        const body = (await response.json()) as PublicLegalPublication
-        if (
-          !response.ok ||
-          typeof body.acceptanceRequired !== "boolean" ||
-          typeof body.approved !== "boolean" ||
-          typeof body.signupAvailable !== "boolean" ||
-          (body.approved && !body.version)
-        )
-          throw new Error("Invalid legal publication status")
-        if (!cancelled) {
-          setLegalPublication(body)
-          setLegalPublicationError(null)
-        }
-      } catch {
-        if (!cancelled)
-          setLegalPublicationError(
-            "The current Terms could not be checked. Reload to continue.",
-          )
-      }
-    }
-    void loadLegalPublication()
-    return () => {
-      cancelled = true
-    }
+    setLegacy(new URLSearchParams(window.location.search).has("access_token"))
   }, [])
-
-  // biome-ignore lint/correctness/useExhaustiveDependencies: sessionVersion re-reads the token after signup start or email confirmation.
-  useEffect(() => {
-    if (!ageBand) return
-    const token = new URLSearchParams(window.location.search)
-      .get("access_token")
-      ?.trim()
-
-    if (!token) {
-      const profile = new URLSearchParams(window.location.search)
-        .get("profile")
-        ?.trim()
-      setStartProfileKey(
-        profile && isBusinessProfileKey(profile) ? profile : undefined,
-      )
-      setNeedsStart(true)
-      return
-    }
-
-    const earlyAccessToken = token
-    let cancelled = false
-    setNeedsStart(false)
-    setAccessToken(earlyAccessToken)
-    setAccessNotice("Checking your setup link…")
-
-    async function loadAccessSession() {
-      const response = await fetch(
-        `/api/early-access/session?token=${encodeURIComponent(earlyAccessToken)}`,
-      )
-      const body = (await response.json().catch(() => null)) as
-        | EarlyAccessSessionResponse
-        | { message?: string }
-        | null
-
-      if (cancelled) return
-
-      if (!response.ok || !body || !("lead" in body)) {
-        const message =
-          body && "message" in body
-            ? body.message
-            : "This setup link could not be verified."
-
-        setAccessNotice(message ?? "This setup link could not be verified.")
-        return
-      }
-
-      setAccessNotice(
-        body.emailVerified
-          ? "Email verified. Finish setting up your business."
-          : "Confirm your email to continue.",
-      )
-      setFormState((current) => ({
-        ...current,
-        business: {
-          ...current.business,
-          ...businessValuesFromOnboardingDraft(body.draft ?? {}),
-          businessName:
-            body.lead.businessName || current.business?.businessName || "",
-          phone:
-            body.draft?.phone ||
-            body.lead.phone ||
-            current.business?.phone ||
-            "",
-        },
-        owner: {
-          ...current.owner,
-          confirmPassword: current.owner?.confirmPassword ?? "",
-          email: body.lead.email,
-          firstName: body.lead.firstName || current.owner?.firstName || "",
-          lastName: body.lead.lastName || current.owner?.lastName || "",
-          password: current.owner?.password ?? "",
-        },
-      }))
-      setApprovedIdentity({
-        businessName: body.lead.businessName,
-        email: body.lead.email,
-      })
-      setVerificationEmail(body.emailVerified ? null : body.lead.email)
-      setEntryReady(body.emailVerified)
-      if (body.emailVerified && body.draft?.step === "account") setStep(3)
-    }
-
-    void loadAccessSession().catch(() => {
-      if (!cancelled) {
-        setAccessNotice("This setup link could not be verified.")
-      }
-    })
-
-    return () => {
-      cancelled = true
-    }
-  }, [ageBand, sessionVersion])
-
-  // The verification link opens in a new tab; refresh this one when it lands.
-  useEffect(() => {
-    if (!verificationEmail || !accessToken) return
-    const token = accessToken
-    const controller = new AbortController()
-    let pending = false
-    let confirmed = false
-    const timer = window.setInterval(async () => {
-      if (pending || confirmed || controller.signal.aborted) return
-      pending = true
-      const response = await fetch(
-        `/api/early-access/session?token=${encodeURIComponent(token)}`,
-        { cache: "no-store", signal: controller.signal },
-      ).catch(() => null)
-      const body = (await response?.json().catch(() => null)) as {
-        emailVerified?: boolean
-      } | null
-      pending = false
-      if (!controller.signal.aborted && response?.ok && body?.emailVerified) {
-        confirmed = true
-        window.clearInterval(timer)
-        setSessionVersion((version) => version + 1)
-      }
-    }, 5000)
-    return () => {
-      controller.abort()
-      window.clearInterval(timer)
-    }
-  }, [verificationEmail, accessToken])
-
-  function handleStarted(response: DirectSignupStartResponse) {
-    const url = new URL(window.location.href)
-    url.searchParams.delete("profile")
-    url.searchParams.set("access_token", response.accessToken)
-    window.history.replaceState(null, "", url)
-    setStartPreview(response.qaPreview)
-    setSessionVersion((version) => version + 1)
-  }
-
-  function goToStep(nextStep: 2 | 3 | 4 | 5) {
-    setStep(nextStep)
-    window.scrollTo({ top: 0 })
-  }
-
-  // ── Step handlers ──────────────────────────────────────────────────────────
-
-  async function handleBusiness(data: BusinessValues) {
-    setDraftError("")
-    try {
-      const response = await fetch("/api/early-access/session", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          token: accessToken,
-          draft: onboardingDraftFromBusinessValues(data),
-        }),
-      })
-      if (!response.ok)
-        throw new Error(
-          "Your setup progress could not be saved. Try again before continuing.",
-        )
-    } catch {
-      setDraftError(
-        "Your setup progress could not be saved. Try again before continuing.",
-      )
-      return
-    }
-    setFormState((s) => ({ ...s, business: data }))
-    goToStep(3)
-  }
-
-  async function createWorkspace(
-    data: OwnerValues,
-    legalAcceptance?: SignupLegalAcceptance,
-  ) {
-    setSubmitError("")
-    setIsSubmitting(true)
-
-    try {
-      const payload = {
-        ageBand,
-        addressLine1: formState.business?.addressLine1 ?? "",
-        accessToken: accessToken ?? undefined,
-        businessName: formState.business?.businessName ?? "",
-        city: formState.business?.city ?? "",
-        businessProfileKey: formState.business?.businessProfileKey ?? "",
-        businessProfileVersion: 1 as const,
-        businessSize: formState.business?.businessSize ?? "",
-        countryCode: formState.business?.countryCode ?? "",
-        currencyCode: formState.business?.currencyCode ?? "NGN",
-        phone: formState.business?.phone ?? "",
-        phoneCountry: formState.business?.phoneCountry,
-        region: formState.business?.region ?? "",
-        firstName: data.firstName,
-        lastName: data.lastName,
-        email: data.email,
-        password: data.password,
-        operatingModel: formState.business?.operatingModel ?? "products",
-        orderChannels: formState.business?.orderChannels ?? [],
-        otherBusinessDescription:
-          formState.business?.otherBusinessDescription ?? undefined,
-        ...legalAcceptance,
-      }
-
-      const response = await workflow.fetch("signup", "/api/auth/signup", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify(payload),
-      })
-
-      const result = (await response.json()) as {
-        success?: boolean
-        message?: string
-        tenantSlug?: string
-        dashboardUrl?: string
-        devEmailHtml?: string
-        emailDeliveryStatus?: "failed" | "sent"
-        posUrl?: string
-        storefrontUrl?: string
-      }
-
-      if (!response.ok || !result.success || !result.tenantSlug) {
-        setSubmitError(
-          result.message ?? "Something went wrong. Please try again.",
-        )
-        return
-      }
-
-      setFormState((s) => ({ ...s, owner: data }))
-      clearAge()
-      window.history.replaceState(null, "", window.location.pathname)
-      setSuccess({
-        tenantSlug: result.tenantSlug,
-        businessName: payload.businessName,
-        dashboardUrl: result.dashboardUrl,
-        devEmailHtml: result.devEmailHtml,
-        emailDeliveryStatus: result.emailDeliveryStatus,
-        posUrl: result.posUrl,
-        storefrontUrl: result.storefrontUrl,
-      })
-      goToStep(5)
-    } catch {
-      setSubmitError(
-        "Unable to connect. Please check your connection and try again.",
-      )
-    } finally {
-      setIsSubmitting(false)
-    }
-  }
-
-  function handleOwner(data: OwnerValues) {
-    setFormState((current) => ({ ...current, owner: data }))
-    if (!legalPublication) return
-    if (legalPublication.acceptanceRequired) goToStep(4)
-    else void createWorkspace(data)
-  }
-
-  // ── Render ─────────────────────────────────────────────────────────────────
-
-  if (!ageReady) {
+  if (legacy === null)
     return (
       <main className="signup-main">
-        <output>Preparing your setup…</output>
+        <output>Preparing your account…</output>
       </main>
     )
-  }
+  if (legacy) return <LegacySignupFlow />
+  return <AccountFirstSignup />
+}
 
-  if (!ageBand) {
-    return (
-      <main className="signup-main signup-age">
-        <section>
-          <p className="signup-eyebrow">A quick check before we start</p>
-          <h1>
-            Welcome to
-            <br />
-            your next chapter.
-          </h1>
-          <p className="signup-intro">
-            EwaTrade accounts are for people aged 13 or older. Choose your age
-            range before entering account or Store details.
+function AccountFirstSignup() {
+  const [account, setAccount] = useState(blank)
+  const [age, setAge] = useState<EligibleAgeBand | "UNDER_13" | null>(null)
+  const [settings, setSettings] = useState<Settings | null>(null)
+  const [mode, setMode] = useState<"email" | "phone">("email")
+  const [phoneCountry, setPhoneCountry] = useState("")
+  const [link, setLink] = useState<StoreLinkCheck | null>(null)
+  const [slugEdited, setSlugEdited] = useState(false)
+  const [step, setStep] = useState<"account" | "code">("account")
+  const [code, setCode] = useState("")
+  const [devCode, setDevCode] = useState<string | null>(null)
+  const [pending, setPending] = useState(false)
+  const submitLock = useRef(false)
+  const [error, setError] = useState("")
+  const [retryAt, setRetryAt] = useState(0)
+  const [now, setNow] = useState(0)
+  const checkLink = useCallback(
+    (value: StoreLinkCheck | null) => setLink(value),
+    [],
+  )
+  useEffect(() => {
+    const controller = new AbortController()
+    fetch("/api/owner-signup", { cache: "no-store", signal: controller.signal })
+      .then(async (response) => {
+        const result = await response.json()
+        if (!response.ok) throw new Error(result.message)
+        if (!controller.signal.aborted) setSettings(result)
+      })
+      .catch((cause) => {
+        if (!controller.signal.aborted)
+          setError(
+            cause instanceof Error
+              ? cause.message
+              : "Signup options could not be loaded. Reload to try again.",
+          )
+      })
+    return () => controller.abort()
+  }, [])
+  useEffect(() => {
+    if (step !== "code") return
+    const timer = setInterval(() => setNow(Date.now()), 1000)
+    return () => clearInterval(timer)
+  }, [step])
+  const eligible = age && age !== "UNDER_13"
+  const ready = Boolean(
+    eligible &&
+      account.terms &&
+      account.businessName.trim() &&
+      account.name.trim() &&
+      link?.available &&
+      settings?.publication.signupAvailable,
+  )
+  const contactReady =
+    mode === "email"
+      ? /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(account.email)
+      : Boolean(
+          settings?.phoneEnabled && /^\+[1-9]\d{7,14}$/.test(account.phone),
+        )
+  const legal = {
+    acceptedTerms: true,
+    acknowledgedPrivacyNotice: true,
+    ...(settings?.publication.version
+      ? { legalVersion: settings.publication.version }
+      : {}),
+  }
+  const profile = {
+    businessName: account.businessName.trim(),
+    requestedSlug: link?.slug ?? account.slug,
+    name: account.name.trim(),
+    ageBand: age,
+  }
+  async function submit(
+    action:
+      | "request_email"
+      | "request_phone"
+      | "verify_email"
+      | "verify_phone"
+      | "google",
+    idToken?: string,
+  ) {
+    if (
+      submitLock.current ||
+      !eligible ||
+      !account.terms ||
+      !settings?.publication.signupAvailable
+    )
+      return
+    submitLock.current = true
+    setPending(true)
+    setError("")
+    try {
+      const input =
+        action === "verify_phone"
+          ? { phone: account.phone, code }
+          : {
+              ...profile,
+              ...(action === "google"
+                ? { idToken, ...legal }
+                : mode === "email"
+                  ? {
+                      email: account.email.trim(),
+                      ...(action === "verify_email" ? { code } : legal),
+                    }
+                  : { phone: account.phone, ...legal }),
+            }
+      const response = await fetch("/api/owner-signup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action, ...input }),
+      })
+      const result = await response.json()
+      if (!response.ok)
+        throw new Error(result.message ?? "Signup could not be completed.")
+      if (result.success) {
+        window.location.assign("/setup")
+        return
+      }
+      setStep("code")
+      setCode("")
+      setDevCode(result.devCode ?? null)
+      setNow(Date.now())
+      setRetryAt(Date.now() + 60_000)
+    } catch (cause) {
+      setError(
+        cause instanceof Error
+          ? cause.message
+          : "Unable to connect. Please try again.",
+      )
+    } finally {
+      submitLock.current = false
+      setPending(false)
+    }
+  }
+  return (
+    <OwnerSignupFrame
+      name={account.businessName}
+      slug={link?.slug ?? account.slug}
+    >
+      <main className="signup-main owner-account">
+        <p className="signup-eyebrow">
+          {step === "account"
+            ? "01 / Your account"
+            : "02 / Verify your contact"}
+        </p>
+        <h1>
+          {step === "account"
+            ? "Your next chapter starts here."
+            : "Check your code."}
+        </h1>
+        <p className="signup-intro">
+          {step === "account"
+            ? "A free store link, a place for your business, and room to grow."
+            : `Enter the six-digit code sent to ${mode === "email" ? account.email : account.phone}.`}
+        </p>
+        {error && (
+          <p role="alert" className="owner-error">
+            {error}
           </p>
-          <div className="grid gap-2">
-            {ageChoices.map((choice) => (
-              <label className="signup-age-choice" key={choice.value}>
-                <input
-                  checked={entryAgeChoice === choice.value}
-                  name="account-entry-age"
-                  onChange={() => setEntryAgeChoice(choice.value)}
-                  type="radio"
+        )}
+        {step === "account" ? (
+          <form
+            onSubmit={(event) => {
+              event.preventDefault()
+              if (ready && contactReady)
+                void submit(
+                  mode === "email" ? "request_email" : "request_phone",
+                )
+            }}
+          >
+            <fieldset
+              disabled={pending || age === "UNDER_13"}
+              className="owner-fields"
+            >
+              <label className="signup-label" htmlFor="owner-business-name">
+                Business name
+                <Input
+                  id="owner-business-name"
+                  className="signup-input"
+                  name="businessName"
+                  autoComplete="organization"
+                  maxLength={120}
+                  required
+                  value={account.businessName}
+                  onChange={(event) => {
+                    const businessName = event.target.value
+                    setAccount((current) => ({
+                      ...current,
+                      businessName,
+                      slug: slugEdited
+                        ? current.slug
+                        : normalizeStoreLink(businessName),
+                    }))
+                  }}
                 />
-                <span>{choice.label}</span>
               </label>
-            ))}
-          </div>
-          {entryAgeChoice === "UNDER_13" ? (
-            <output className="signup-intro">
-              EwaTrade accounts are not available to people under 13.
-            </output>
-          ) : (
+              <StoreLinkField
+                value={account.slug}
+                emailDomain={
+                  mode === "email"
+                    ? account.email.split("@")[1]?.toLowerCase()
+                    : undefined
+                }
+                onChange={(slug) => {
+                  setSlugEdited(true)
+                  setAccount((current) => ({ ...current, slug }))
+                }}
+                onCheck={checkLink}
+              />
+              <label className="signup-label" htmlFor="owner-name">
+                Your name
+                <Input
+                  id="owner-name"
+                  className="signup-input"
+                  name="name"
+                  autoComplete="name"
+                  maxLength={120}
+                  required
+                  value={account.name}
+                  onChange={(event) =>
+                    setAccount((current) => ({
+                      ...current,
+                      name: event.target.value,
+                    }))
+                  }
+                />
+              </label>
+              {mode === "email" ? (
+                <label className="signup-label" htmlFor="owner-email">
+                  Email
+                  <Input
+                    id="owner-email"
+                    className="signup-input"
+                    type="email"
+                    autoComplete="email"
+                    required
+                    value={account.email}
+                    onChange={(event) =>
+                      setAccount((current) => ({
+                        ...current,
+                        email: event.target.value,
+                      }))
+                    }
+                  />
+                </label>
+              ) : (
+                <label className="signup-label" htmlFor="signup-whatsapp">
+                  WhatsApp number
+                  <SignupPhoneInput
+                    id="signup-whatsapp"
+                    value={account.phone}
+                    country={phoneCountry}
+                    onCountryChange={setPhoneCountry}
+                    onChange={(phone) =>
+                      setAccount((current) => ({ ...current, phone }))
+                    }
+                  />
+                </label>
+              )}
+              {settings?.phoneEnabled && (
+                <button
+                  type="button"
+                  className="owner-text-button"
+                  onClick={() => {
+                    setMode(mode === "email" ? "phone" : "email")
+                    setError("")
+                  }}
+                >
+                  {mode === "email"
+                    ? "Use WhatsApp instead"
+                    : "Use email instead"}
+                </button>
+              )}
+            </fieldset>
+            <fieldset className="owner-age" disabled={pending}>
+              <legend>Your age range</legend>
+              <div className="owner-chips">
+                {ages.map(([value, label]) => (
+                  <label
+                    className={`owner-chip ${age === value ? "is-selected" : ""}`}
+                    key={value}
+                  >
+                    <input
+                      type="radio"
+                      name="owner-age"
+                      checked={age === value}
+                      value={value}
+                      onChange={() => {
+                        setAge(value)
+                        if (value === "UNDER_13") {
+                          setAccount(blank)
+                          setSlugEdited(false)
+                          setCode("")
+                          setDevCode(null)
+                          setLink(null)
+                        }
+                      }}
+                    />
+                    {label}
+                  </label>
+                ))}
+              </div>
+            </fieldset>
+            {age === "UNDER_13" ? (
+              <output className="owner-error">
+                EwaTrade accounts are for people aged 13 or older. Your entered
+                details have been cleared.
+              </output>
+            ) : (
+              <label className="owner-terms">
+                <input
+                  type="checkbox"
+                  checked={account.terms}
+                  disabled={pending}
+                  onChange={(event) =>
+                    setAccount((current) => ({
+                      ...current,
+                      terms: event.target.checked,
+                    }))
+                  }
+                />
+                <span>
+                  I agree to the{" "}
+                  <a
+                    href={`${getMarketingUrl()}/terms`}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    Terms
+                  </a>{" "}
+                  and acknowledge the{" "}
+                  <a
+                    href={`${getMarketingUrl()}/privacy`}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    Privacy Notice
+                  </a>
+                  .
+                </span>
+              </label>
+            )}
+            {settings && !settings.publication.signupAvailable && (
+              <output className="owner-error">
+                Signup is unavailable until the current Terms and Privacy Notice
+                are effective.
+              </output>
+            )}
             <button
               className="signup-primary"
-              disabled={!entryAgeChoice}
-              onClick={() => {
-                if (entryAgeChoice) void confirmAge(entryAgeChoice)
-              }}
-              type="button"
+              disabled={!ready || !contactReady || pending}
+              type="submit"
             >
-              Continue
+              {pending ? "Sending your code…" : "Continue"}
             </button>
-          )}
-        </section>
-      </main>
-    )
-  }
-
-  return (
-    <main className="signup-main">
-      <SignupPreviewSync
-        name={formState.business?.businessName}
-        city={formState.business?.city}
-      />
-      <div>
-        {/* Stepper (hidden on success step) */}
-        {step < 5 && !needsStart && (
-          <SignupStepper
-            currentStep={step}
-            entryStage={
-              needsStart
-                ? "start"
-                : verificationEmail && !entryReady
-                  ? "verify"
-                  : undefined
-            }
-            acceptanceRequired={legalPublication?.acceptanceRequired ?? true}
-          />
-        )}
-
-        {/* Focused form, without a surrounding card. */}
-        <div className="signup-screen" key={step}>
-          {step === 2 && needsStart && (
-            <SignupStart
-              businessProfileKey={startProfileKey}
-              loginUrl={getDashboardRouteUrl("/login")}
-              onStarted={handleStarted}
+            <div className="owner-divider">or</div>
+            <SignupGoogle
+              clientId={settings?.googleClientId ?? null}
+              disabled={!ready || pending}
+              onCredential={(idToken) => {
+                if (ready) void submit("google", idToken)
+              }}
             />
-          )}
-
-          {!needsStart && (accessNotice || !entryReady) && step === 2 && (
-            <output className="signup-entry">
-              {accessNotice ?? "Preparing your setup…"}
-              {!entryReady && !verificationEmail && (
-                <a href="/signup" className="mt-2 block underline">
-                  Start a new signup
-                </a>
-              )}
-            </output>
-          )}
-
-          {step === 2 && verificationEmail && accessToken && (
-            <VerifyApprovedEmail
-              accessToken={accessToken}
-              email={verificationEmail}
-              initialPreview={startPreview}
-            />
-          )}
-
-          {step === 2 && entryReady && (
-            <>
-              {draftError ? <p role="alert">{draftError}</p> : null}
-              <StepBusiness
-                approvedBusinessName={approvedIdentity?.businessName}
-                defaultValues={formState.business}
-                onNext={handleBusiness}
-                totalSteps={
-                  legalPublication?.acceptanceRequired === false ? 2 : 3
+          </form>
+        ) : (
+          <form
+            onSubmit={(event) => {
+              event.preventDefault()
+              if (/^\d{6}$/.test(code))
+                void submit(mode === "email" ? "verify_email" : "verify_phone")
+            }}
+            className="owner-fields"
+          >
+            <label className="signup-label" htmlFor="owner-code">
+              Verification code
+              <Input
+                id="owner-code"
+                className="signup-input owner-code"
+                autoComplete="one-time-code"
+                inputMode="numeric"
+                pattern="[0-9]{6}"
+                maxLength={6}
+                required
+                value={code}
+                disabled={pending}
+                onChange={(event) =>
+                  setCode(event.target.value.replace(/\D/g, ""))
                 }
               />
-            </>
-          )}
-
-          {step === 3 && (
-            <StepOwner
-              approvedEmail={approvedIdentity?.email}
-              defaultValues={formState.owner}
-              onNext={handleOwner}
-              onBack={(draft) => {
-                setFormState((current) => ({ ...current, owner: draft }))
-                goToStep(2)
+            </label>
+            {devCode && (
+              <p className="owner-muted">
+                Local development code: <code>{devCode}</code>
+              </p>
+            )}
+            <button
+              type="submit"
+              className="signup-primary"
+              disabled={pending || code.length !== 6}
+            >
+              {pending ? "Verifying…" : "Verify and continue"}
+            </button>
+            <button
+              type="button"
+              className="owner-text-button"
+              disabled={pending || now < retryAt}
+              onClick={() =>
+                void submit(
+                  mode === "email" ? "request_email" : "request_phone",
+                )
+              }
+            >
+              {now < retryAt
+                ? `Resend code in ${Math.ceil((retryAt - now) / 1000)}s`
+                : "Resend code"}
+            </button>
+            <button
+              type="button"
+              className="owner-text-button"
+              disabled={pending}
+              onClick={() => {
+                setStep("account")
+                setCode("")
+                setDevCode(null)
+                setError("")
               }}
-              isSubmitting={isSubmitting}
-              submitError={submitError}
-              finalStep={legalPublication?.acceptanceRequired === false}
-              blocked={!legalPublication || Boolean(legalPublicationError)}
-            />
-          )}
-
-          {step === 4 && legalPublication && (
-            <StepLegal
-              publication={legalPublication}
-              isSubmitting={isSubmitting}
-              submitError={submitError}
-              onBack={() => {
-                setSubmitError("")
-                goToStep(3)
-              }}
-              onNext={(acceptance) => {
-                if (formState.owner)
-                  void createWorkspace(
-                    formState.owner as OwnerValues,
-                    acceptance,
-                  )
-              }}
-            />
-          )}
-          {legalPublicationError && step === 3 && (
-            <p role="alert">{legalPublicationError}</p>
-          )}
-          {step === 5 && success && (
-            <StepSuccess
-              tenantSlug={success.tenantSlug}
-              businessName={success.businessName}
-              dashboardUrl={success.dashboardUrl}
-              devEmailHtml={success.devEmailHtml}
-              emailDeliveryStatus={success.emailDeliveryStatus}
-              posUrl={success.posUrl}
-              storefrontUrl={success.storefrontUrl}
-            />
-          )}
-        </div>
-      </div>
-    </main>
+            >
+              Change account details
+            </button>
+          </form>
+        )}
+      </main>
+    </OwnerSignupFrame>
   )
 }
