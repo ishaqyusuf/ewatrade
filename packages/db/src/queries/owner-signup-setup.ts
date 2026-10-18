@@ -282,11 +282,7 @@ export async function completeOwnerSignupSetup(
       })
     } catch (error) {
       if (error instanceof StoreLinkConflictError)
-        throw new OwnerSignupSetupError(
-          "That store link was just taken. Choose another link.",
-          business.id,
-          "CONFLICT",
-        )
+        throw new OwnerSignupSetupError(error.message, business.id, "CONFLICT")
       throw error
     }
     if (!created.storeId)

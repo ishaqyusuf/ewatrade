@@ -1,4 +1,4 @@
-import { describe, expect, test } from "bun:test"
+import { afterEach, beforeEach, describe, expect, test } from "bun:test"
 import { verifyMobileAppleIdentity } from "./mobile-apple-auth"
 import {
   MobileAccountNotFoundError,
@@ -13,7 +13,19 @@ import {
 import { createOwnerBusiness } from "./owner-businesses"
 import type { DbClient } from "./types"
 
+let previousAuthSecret: string | undefined
+beforeEach(() => {
+  previousAuthSecret = process.env.BETTER_AUTH_SECRET
+  process.env.BETTER_AUTH_SECRET = "mobile-auth-fixture-secret-only"
+})
+afterEach(() => {
+  if (previousAuthSecret === undefined)
+    Reflect.deleteProperty(process.env, "BETTER_AUTH_SECRET")
+  else process.env.BETTER_AUTH_SECRET = previousAuthSecret
+})
+
 type VerificationRow = {
+  id: string
   createdAt: Date
   expiresAt: Date
   identifier: string
@@ -104,7 +116,15 @@ function createMockMobileAuthDb(input?: {
   const memberships = [...(input?.memberships ?? [])]
   const sessions: Array<{ expiresAt: Date; token: string; userId: string }> = []
 
+  const rateBuckets = new Map<string, number>()
   const db = {
+    accountPrivacyRateBucket: {
+      upsert: async ({ where }: { where: { bucketDigest: string } }) => {
+        const sentCount = (rateBuckets.get(where.bucketDigest) ?? 0) + 1
+        rateBuckets.set(where.bucketDigest, sentCount)
+        return { sentCount }
+      },
+    },
     accountPrivacyRequest: {
       findUnique: async () =>
         input?.privacyStatus ? { status: input.privacyStatus } : null,
@@ -457,8 +477,17 @@ function createMockMobileAuthDb(input?: {
       },
     },
     verification: {
+      update: async ({
+        where,
+        data,
+      }: { where: { id: string }; data: Partial<VerificationRow> }) => {
+        const row = verifications.find((v) => v.id === where.id)
+        if (!row) throw new Error("Verification not found")
+        return Object.assign(row, data)
+      },
       create: async ({ data }: { data: VerificationRow }) => {
         verifications.push({
+          id: data.id ?? `verification-${verifications.length + 1}`,
           createdAt: data.createdAt ?? new Date(),
           expiresAt: data.expiresAt,
           identifier: data.identifier,
@@ -474,14 +503,15 @@ function createMockMobileAuthDb(input?: {
       findFirst: async ({
         where,
       }: {
-        where: { expiresAt: { gt: Date }; identifier: string }
+        where: { expiresAt?: { gt: Date }; identifier: string }
       }) => {
         return (
           verifications
             .filter(
               (verification) =>
                 verification.identifier === where.identifier &&
-                verification.expiresAt > where.expiresAt.gt,
+                (!where.expiresAt ||
+                  verification.expiresAt > where.expiresAt.gt),
             )
             .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())[0] ??
           null
@@ -522,8 +552,8 @@ describe("mobile auth queries", () => {
     expect(db.sessions).toHaveLength(0)
   })
 
-  test("uses the fixed OTP only outside production runtimes", () => {
-    expect(shouldUseFixedMobileOwnerOtp({})).toBe(true)
+  test("uses the fixed OTP only in explicit local runtimes", () => {
+    expect(shouldUseFixedMobileOwnerOtp({})).toBe(false)
     expect(
       shouldUseFixedMobileOwnerOtp({
         APP_ENV: "development",

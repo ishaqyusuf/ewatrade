@@ -9,8 +9,10 @@ import type { PrismaClient } from "../../generated/prisma/client"
 import { configuredQaDomainForEmail } from "./qa-maintenance"
 
 export class StoreLinkConflictError extends Error {
-  constructor() {
-    super("That store link was just taken. Choose another link.")
+  constructor(
+    message = "That store link was just taken. Choose another link.",
+  ) {
+    super(message)
     this.name = "StoreLinkConflictError"
   }
 }

@@ -511,6 +511,7 @@ export function OwnerSetupScreen() {
             onDragging={setDragging}
             email={auth.profile?.email}
             conflictBusinessId={conflictBusinessId}
+            onConflictEditorOpened={() => setConflictBusinessId(undefined)}
           />
         ) : null}
         {step === "store" && business ? (

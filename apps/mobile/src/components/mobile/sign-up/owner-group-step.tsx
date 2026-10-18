@@ -32,6 +32,7 @@ export function OwnerGroupStep({
   onDragging,
   email,
   conflictBusinessId,
+  onConflictEditorOpened,
 }: {
   businesses: OwnerSetupBusiness[]
   plan: OwnerSetupDraft["planId"]
@@ -39,6 +40,7 @@ export function OwnerGroupStep({
   onPlan: (plan: OwnerSetupDraft["planId"]) => void
   onPreset: (mode: "together" | "separate") => void
   email?: string
+  onConflictEditorOpened: () => void
   conflictBusinessId?: string
   onReady: (ready: boolean) => void
   onDragging: (dragging: boolean) => void
@@ -275,6 +277,11 @@ export function OwnerGroupStep({
               <StoreLinkField
                 value={business.slug}
                 forceEdit={business.id === conflictBusinessId}
+                onEditorOpened={
+                  business.id === conflictBusinessId
+                    ? onConflictEditorOpened
+                    : undefined
+                }
                 email={email}
                 onChange={(slug) => {
                   edited.current.add(business.id ?? String(index))

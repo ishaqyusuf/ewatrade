@@ -92,7 +92,9 @@ async function createUniqueTenant(
       40,
     )
     if (!isClaimableStoreLink(requestedSlug, Boolean(input.qaSourceDomain)))
-      throw new Error("Choose a valid store link.")
+      throw new StoreLinkConflictError(
+        "That store link is reserved or invalid. Choose another link.",
+      )
     if (
       await db.tenant.findUnique({
         where: { slug: requestedSlug },
@@ -148,6 +150,7 @@ async function createUniqueTenant(
 
   for (let attempt = 0; attempt < 50; attempt++) {
     const slug = attempt === 0 ? baseSlug : `${baseSlug}-${attempt}`
+    if (!input.qaSourceDomain && slug.endsWith("-qa")) continue
     const existing = await db.tenant.findUnique({
       where: { slug },
       select: { id: true },

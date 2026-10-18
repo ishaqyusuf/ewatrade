@@ -18,6 +18,7 @@ export function StoreLinkField({
   fixed = false,
   email,
   forceEdit = false,
+  onEditorOpened,
 }: {
   value: string
   onChange: (slug: string) => void
@@ -25,6 +26,7 @@ export function StoreLinkField({
   onCanonicalize?: (slug: string) => void
   fixed?: boolean
   email?: string
+  onEditorOpened?: () => void
   forceEdit?: boolean
 }) {
   const trpc = useTRPC()
@@ -32,6 +34,9 @@ export function StoreLinkField({
   useEffect(() => {
     if (forceEdit) setEditing(true)
   }, [forceEdit])
+  useEffect(() => {
+    if (forceEdit && editing) onEditorOpened?.()
+  }, [forceEdit, editing, onEditorOpened])
   const [debounced, setDebounced] = useState("")
   useEffect(() => {
     const timer = setTimeout(() => setDebounced(value), 450)
@@ -69,6 +74,7 @@ export function StoreLinkField({
     <View className="gap-2">
       {editing && !fixed ? (
         <FormField
+          autoFocus={forceEdit}
           label="Store link"
           value={value}
           onChangeText={(text) => onChange(normalizeStoreLink(text))}
