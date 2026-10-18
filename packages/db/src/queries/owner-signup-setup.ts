@@ -143,7 +143,7 @@ export async function completeOwnerSignupSetup(
   const pending = await getPendingOwnerSignup(db, userId)
   if (!pending) return { completed: true } // Retry after a committed response loss is harmless.
   // Serialize completion for this owner across requests and tabs.
-  await db.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${`owner-signup:${userId}`}))`
+  await db.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`owner-signup:${userId}`}))`
   const current = await getPendingOwnerSignup(db, userId)
   if (!current) return { completed: true }
   const businesses = input.businesses.map((business, index) =>
