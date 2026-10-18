@@ -29,12 +29,14 @@ export function OwnerGroupStep({
   onPlan,
   onPreset,
   onReady,
+  email,
 }: {
   businesses: OwnerSetupBusiness[]
   plan: OwnerSetupDraft["planId"]
   onChange: (businesses: OwnerSetupBusiness[]) => void
   onPlan: (plan: OwnerSetupDraft["planId"]) => void
   onPreset: (mode: "together" | "separate") => void
+  email?: string
   onReady: (ready: boolean) => void
 }) {
   const colors = useColors()
@@ -167,6 +169,7 @@ export function OwnerGroupStep({
               />
               <StoreLinkField
                 value={business.slug}
+                email={email}
                 onChange={(slug) => {
                   edited.current.add(index)
                   change(index, { slug })

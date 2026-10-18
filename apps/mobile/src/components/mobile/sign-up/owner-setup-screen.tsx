@@ -284,6 +284,7 @@ export function OwnerSetupScreen() {
             onPlan={setPlan}
             onPreset={group}
             onReady={setGroupReady}
+            email={auth.profile?.email}
           />
           <AuthActionButton
             disabled={!groupReady}

@@ -34,9 +34,9 @@ export function StoreLinkField({
     trpc.auth.storeLinkAvailability.queryOptions(
       {
         slug: debounced,
-        email:
+        emailDomain:
           email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
-            ? email.trim().toLowerCase()
+            ? email.trim().toLowerCase().split("@")[1]
             : undefined,
       },
       {

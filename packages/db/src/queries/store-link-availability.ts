@@ -47,11 +47,13 @@ export async function checkStoreLinkAvailability(
   db: PrismaClient,
   value: string,
   network: string | null,
-  email?: string,
+  emailDomain?: string,
 ) {
   const slug = withQaWorkspaceSuffix(
     normalizeStoreLink(value),
-    Boolean(email && configuredQaDomainForEmail(email)),
+    Boolean(
+      emailDomain && configuredQaDomainForEmail(`link-check@${emailDomain}`),
+    ),
     40,
   )
   const now = new Date()
@@ -72,7 +74,10 @@ export async function checkStoreLinkAvailability(
     ...storeLinkSuggestions(slug).map((s) =>
       withQaWorkspaceSuffix(
         s,
-        Boolean(email && configuredQaDomainForEmail(email)),
+        Boolean(
+          emailDomain &&
+            configuredQaDomainForEmail(`link-check@${emailDomain}`),
+        ),
         40,
       ),
     ),

@@ -354,7 +354,16 @@ export const authRouter = createTRPCRouter({
   storeLinkAvailability: publicProcedure
     .input(
       z
-        .object({ slug: z.string().max(120), email: emailSchema.optional() })
+        .object({
+          slug: z.string().max(120),
+          emailDomain: z
+            .string()
+            .trim()
+            .toLowerCase()
+            .max(253)
+            .regex(/^[a-z0-9.-]+\.[a-z]{2,}$/)
+            .optional(),
+        })
         .strict(),
     )
     .query(async ({ ctx, input }) => {
@@ -363,7 +372,7 @@ export const authRouter = createTRPCRouter({
           ctx.db,
           input.slug,
           ctx.privacyClientIp,
-          input.email,
+          input.emailDomain,
         )
       } catch (error) {
         if (error instanceof StoreLinkRateLimitError)

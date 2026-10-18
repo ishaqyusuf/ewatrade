@@ -1,3 +1,4 @@
+import { withQaWorkspaceSuffix } from "@ewatrade/utils"
 import { readBusinessOnboardingFactsFromStoreMetadata } from "@ewatrade/utils/business-profiles"
 import {
   defaultBusinessOffer,
@@ -13,6 +14,7 @@ import {
   createOwnerBusiness,
   requireEligibleOwnerAge,
 } from "./owner-businesses"
+import { configuredQaDomainForEmail } from "./qa-maintenance"
 import { findRetailOpsPlan } from "./retail-ops-subscription-plans"
 import type { DbClient } from "./types"
 
@@ -24,8 +26,8 @@ function record(value: unknown): Record<string, unknown> {
 
 /** Scope comes from the authenticated owner and a pending Store, never input IDs. */
 export async function getPendingOwnerSignup(db: DbClient, userId: string) {
-  await requireEligibleOwnerAge(db, userId)
-  return db.membership.findFirst({
+  const owner = await requireEligibleOwnerAge(db, userId)
+  const membership = await db.membership.findFirst({
     where: {
       userId,
       role: { in: ["OWNER", "ADMIN"] },
@@ -61,6 +63,7 @@ export async function getPendingOwnerSignup(db: DbClient, userId: string) {
       },
     },
   })
+  return membership ? { ...membership, ownerEmail: owner.email } : null
 }
 
 export async function readOwnerSignupSetup(db: DbClient, userId: string) {
@@ -122,7 +125,21 @@ export async function completeOwnerSignupSetup(
   await db.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${`owner-signup:${userId}`}))`
   const current = await getPendingOwnerSignup(db, userId)
   if (!current) return { completed: true }
-  const first = input.businesses[0]
+  const businesses = input.businesses.map((business, index) =>
+    index === 0
+      ? business
+      : {
+          ...business,
+          slug: withQaWorkspaceSuffix(
+            business.slug,
+            Boolean(configuredQaDomainForEmail(current.ownerEmail)),
+            40,
+          ),
+        },
+  )
+  if (new Set(businesses.map((b) => b.slug)).size !== businesses.length)
+    throw new Error("Each business needs its own store link.")
+  const first = businesses[0]
   if (
     !first ||
     first.name !== current.tenant.name ||
@@ -140,8 +157,8 @@ export async function completeOwnerSignupSetup(
     },
   })
   const available = Math.max(1, plan.limits.businesses - owned + 1)
-  const setupNow = input.businesses.slice(0, available)
-  const waiting = input.businesses.slice(available)
+  const setupNow = businesses.slice(0, available)
+  const waiting = businesses.slice(available)
   const ready: { id: string; name: string; slug: string }[] = []
   const updateStore = async (
     storeId: string,
@@ -235,7 +252,7 @@ export async function completeOwnerSignupSetup(
   })
   const formData = {
     ...record(session?.formData),
-    ownerSignup: input,
+    ownerSignup: { ...input, businesses },
     readyBusinesses: ready,
     pendingBusinesses: waiting,
   } as Prisma.InputJsonObject
