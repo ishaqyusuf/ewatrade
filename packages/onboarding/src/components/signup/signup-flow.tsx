@@ -260,7 +260,7 @@ function AccountFirstSignup() {
                   id="owner-business-name"
                   className="signup-input"
                   name="businessName"
-                  placeholder="e.g. Kora Stores"
+                  placeholder="your business name"
                   autoComplete="organization"
                   maxLength={120}
                   required
@@ -296,7 +296,7 @@ function AccountFirstSignup() {
                   id="owner-name"
                   className="signup-input"
                   name="name"
-                  placeholder="e.g. Amina Yusuf"
+                  placeholder="your name"
                   autoComplete="name"
                   maxLength={120}
                   required
@@ -315,7 +315,7 @@ function AccountFirstSignup() {
                   <Input
                     id="owner-email"
                     className="signup-input"
-                    placeholder="you@example.com"
+                    placeholder="email"
                     type="email"
                     autoComplete="email"
                     required
