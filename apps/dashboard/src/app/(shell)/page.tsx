@@ -7,6 +7,7 @@ import {
   OverviewMetricsSkeleton,
 } from "@/components/dashboard/overview-metrics"
 import { OverviewRecentOrders } from "@/components/dashboard/overview-recent-orders"
+import { OwnerSignupHome } from "@/components/dashboard/owner-signup-home"
 import { WorkspaceError } from "@/components/dashboard/workspace-error"
 import { ChangeApprovalsCard } from "@/components/orders/overview/order-change-approvals"
 import { PageHeader } from "@/components/page-header"
@@ -91,6 +92,18 @@ export default async function DashboardHomePage() {
           </div>
         ) : null}
       </div>
+      {store &&
+      tenant &&
+      ["OWNER", "ADMIN"].includes(ctx?.membership.role ?? "") ? (
+        <OwnerSignupHome
+          key={`${tenant.id}:${store.id}`}
+          tenant={{
+            id: tenant.id,
+            name: tenant.name,
+            slug: tenant.slug,
+          }}
+        />
+      ) : null}
       {store && ["OWNER", "ADMIN"].includes(ctx?.membership.role ?? "") ? (
         <>
           <ChangeApprovalsCard timeZone={tenant?.timezone ?? "Africa/Lagos"} />
