@@ -7,16 +7,29 @@ import {
 import {
   type OwnerSetupBusiness,
   type OwnerSetupDraft,
+  ownerSignupLaunchPlan,
   readOwnerSignupDraft,
 } from "@ewatrade/utils/owner-signup"
 import type { Prisma } from "../../generated/prisma/client"
 import {
-  createOwnerBusiness,
+  createOwnerSignupBusiness,
   requireEligibleOwnerAge,
 } from "./owner-businesses"
 import { configuredQaDomainForEmail } from "./qa-maintenance"
 import { findRetailOpsPlan } from "./retail-ops-subscription-plans"
+import { withOwnerSignupLaunchGrant } from "./retail-ops-subscriptions"
+import { StoreLinkConflictError } from "./store-link-availability"
 import type { DbClient } from "./types"
+
+export class OwnerSignupSetupError extends Error {
+  constructor(
+    message: string,
+    readonly businessId?: string,
+    readonly reason: "BAD_REQUEST" | "CONFLICT" = "BAD_REQUEST",
+  ) {
+    super(message)
+  }
+}
 
 function record(value: unknown): Record<string, unknown> {
   return value && typeof value === "object" && !Array.isArray(value)
@@ -30,7 +43,7 @@ export async function getPendingOwnerSignup(db: DbClient, userId: string) {
   const membership = await db.membership.findFirst({
     where: {
       userId,
-      role: { in: ["OWNER", "ADMIN"] },
+      role: "OWNER",
       status: "ACTIVE",
       tenant: {
         isActive: true,
@@ -120,10 +133,13 @@ export async function saveOwnerSignupDraft(
 export async function completeOwnerSignupSetup(
   db: DbClient,
   userId: string,
-  input: OwnerSetupDraft,
+  rawInput: OwnerSetupDraft,
 ) {
-  if (!readOwnerSignupDraft(input))
-    throw new Error("Complete the business details before finishing.")
+  const input = readOwnerSignupDraft(rawInput)
+  if (!input)
+    throw new OwnerSignupSetupError(
+      "Complete the business details before finishing.",
+    )
   const pending = await getPendingOwnerSignup(db, userId)
   if (!pending) return { completed: true } // Retry after a committed response loss is harmless.
   // Serialize completion for this owner across requests and tabs.
@@ -143,16 +159,19 @@ export async function completeOwnerSignupSetup(
         },
   )
   if (new Set(businesses.map((b) => b.slug)).size !== businesses.length)
-    throw new Error("Each business needs its own store link.")
+    throw new OwnerSignupSetupError("Each business needs its own store link.")
   const first = businesses[0]
   if (
     !first ||
     first.name !== current.tenant.name ||
     first.slug !== current.tenant.slug
   )
-    throw new Error("Keep your first business name and store link unchanged.")
-  const plan = findRetailOpsPlan(input.planId)
-  if (!plan) throw new Error("Choose a supported plan.")
+    throw new OwnerSignupSetupError(
+      "Keep your first business name and store link unchanged.",
+    )
+  const chosenPlan = ownerSignupLaunchPlan(input.planId, businesses.length)
+  const plan = findRetailOpsPlan(chosenPlan)
+  if (!plan) throw new OwnerSignupSetupError("Choose a supported plan.")
   const owned = await db.membership.count({
     where: {
       userId,
@@ -164,6 +183,8 @@ export async function completeOwnerSignupSetup(
   const available = Math.max(1, plan.limits.businesses - owned + 1)
   const setupNow = businesses.slice(0, available)
   const waiting = businesses.slice(available)
+  const grantedPlan =
+    setupNow.length <= 1 ? "starter" : setupNow.length <= 3 ? "growth" : "pro"
   if (
     setupNow.some(
       (business) =>
@@ -171,7 +192,7 @@ export async function completeOwnerSignupSetup(
         !isOperatingCurrencyCode(business.currencyCode),
     )
   )
-    throw new Error(
+    throw new OwnerSignupSetupError(
       "Choose a country and currency for each business you are setting up now.",
     )
   const ready: { id: string; name: string; slug: string }[] = []
@@ -184,7 +205,7 @@ export async function completeOwnerSignupSetup(
       where: { id: storeId, tenantId },
       select: { metadata: true },
     })
-    if (!store) throw new Error("Your Store is unavailable.")
+    if (!store) throw new OwnerSignupSetupError("Your Store is unavailable.")
     const metadata = record(store.metadata)
     const retailOps = record(metadata.retailOps)
     const onboarding = {
@@ -220,24 +241,21 @@ export async function completeOwnerSignupSetup(
     })
     const tenant = await db.tenant.findUniqueOrThrow({
       where: { id: tenantId },
-      select: { metadata: true },
+      select: { metadata: true, subscription: { select: { id: true } } },
     })
     const tenantMetadata = record(tenant.metadata)
     await db.tenant.update({
       where: { id: tenantId },
       data: {
         currencyCode: business.currencyCode,
-        metadata: {
-          ...tenantMetadata,
-          retailOps: {
-            ...record(tenantMetadata.retailOps),
-            subscription: {
-              planId: input.planId,
-              status: "active",
-              updatedAt: new Date().toISOString(),
-            },
-          },
-        } as Prisma.InputJsonObject,
+        ...(tenant.subscription
+          ? {}
+          : {
+              metadata: withOwnerSignupLaunchGrant(
+                tenantMetadata,
+                grantedPlan,
+              ) as Prisma.InputJsonObject,
+            }),
       },
     })
   }
@@ -246,20 +264,33 @@ export async function completeOwnerSignupSetup(
       readBusinessOnboardingFactsFromStoreMetadata(s.metadata)?.setupStatus ===
       "pending",
   )
-  if (!firstStore) throw new Error("Your pending Store is unavailable.")
+  if (!firstStore)
+    throw new OwnerSignupSetupError("Your pending Store is unavailable.")
   await updateStore(firstStore.id, current.tenantId, first)
   ready.push({ id: current.tenantId, name: first.name, slug: first.slug })
   for (const business of setupNow.slice(1)) {
     if (!isOperatingCurrencyCode(business.currencyCode))
-      throw new Error("Choose a currency.")
-    const created = await createOwnerBusiness(db, {
-      userId,
-      businessName: business.name,
-      requestedSlug: business.slug,
-      currencyCode: business.currencyCode,
-      setupStatus: "complete",
-    })
-    if (!created.storeId) throw new Error("Unable to create the Store.")
+      throw new OwnerSignupSetupError("Choose a currency.")
+    let created: Awaited<ReturnType<typeof createOwnerSignupBusiness>>
+    try {
+      created = await createOwnerSignupBusiness(db, {
+        userId,
+        businessName: business.name,
+        requestedSlug: business.slug,
+        currencyCode: business.currencyCode,
+        setupStatus: "complete",
+      })
+    } catch (error) {
+      if (error instanceof StoreLinkConflictError)
+        throw new OwnerSignupSetupError(
+          "That store link was just taken. Choose another link.",
+          business.id,
+          "CONFLICT",
+        )
+      throw error
+    }
+    if (!created.storeId)
+      throw new OwnerSignupSetupError("Unable to create the Store.")
     await updateStore(created.storeId, created.id, business)
     ready.push({ id: created.id, name: created.name, slug: created.slug })
   }
@@ -269,7 +300,7 @@ export async function completeOwnerSignupSetup(
   })
   const formData = {
     ...record(session?.formData),
-    ownerSignup: { ...input, businesses },
+    ownerSignup: { ...input, planId: grantedPlan, businesses },
     readyBusinesses: ready,
     pendingBusinesses: waiting,
   } as Prisma.InputJsonObject
@@ -277,6 +308,16 @@ export async function completeOwnerSignupSetup(
     await db.onboardingSession.update({
       where: { id: session.id },
       data: { completed: true, formData },
+    })
+  else
+    await db.onboardingSession.create({
+      data: {
+        tenantId: current.tenantId,
+        userId,
+        completed: true,
+        formData,
+        expiresAt: new Date(Date.now() + 365 * 86400_000),
+      },
     })
   return { completed: true }
 }

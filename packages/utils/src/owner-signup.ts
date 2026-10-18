@@ -187,3 +187,23 @@ export function moveOwnerBusinessType(
         : defaultBusinessOffer(b.typeKeys),
     }))
 }
+
+/** Signup grants require an explicit matching multi-business choice. */
+export function ownerSignupLaunchPlan(
+  choice: OwnerSetupDraft["planId"],
+  businessCount: number,
+): OwnerSetupDraft["planId"] {
+  if (businessCount >= 2 && businessCount <= 3 && choice === "growth")
+    return "growth"
+  if (businessCount >= 4 && choice === "pro") return "pro"
+  return "starter"
+}
+
+/** Keep a previously chosen multi-business tier aligned after editing the grouping. */
+export function syncOwnerSignupPlan(
+  choice: OwnerSetupDraft["planId"],
+  businessCount: number,
+): OwnerSetupDraft["planId"] {
+  if (businessCount <= 1 || choice === "starter") return "starter"
+  return businessCount <= 3 ? "growth" : "pro"
+}

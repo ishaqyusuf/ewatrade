@@ -322,7 +322,7 @@ async function getFirstActiveTenantForUser(
     storeId: activeStore?.id ?? null,
     storeName: activeStore?.name ?? null,
     setupPending:
-      ["OWNER", "ADMIN"].includes(membership.role) &&
+      membership.role === "OWNER" &&
       readBusinessOnboardingFactsFromStoreMetadata(activeStore?.metadata)
         ?.setupStatus === "pending",
   }

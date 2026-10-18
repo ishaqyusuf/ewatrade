@@ -128,3 +128,17 @@ test("saved drafts and moving types preserve first-business identity and recompu
     }),
   ).toBeNull()
 })
+
+test("launch tiers require matching multi-business choices and resync after grouping edits", async () => {
+  const { ownerSignupLaunchPlan, syncOwnerSignupPlan } = await import(
+    "./owner-signup"
+  )
+  expect(ownerSignupLaunchPlan("pro", 1)).toBe("starter")
+  expect(ownerSignupLaunchPlan("pro", 3)).toBe("starter")
+  expect(ownerSignupLaunchPlan("growth", 2)).toBe("growth")
+  expect(ownerSignupLaunchPlan("growth", 4)).toBe("starter")
+  expect(ownerSignupLaunchPlan("pro", 4)).toBe("pro")
+  expect(syncOwnerSignupPlan("growth", 4)).toBe("pro")
+  expect(syncOwnerSignupPlan("pro", 2)).toBe("growth")
+  expect(syncOwnerSignupPlan("pro", 1)).toBe("starter")
+})

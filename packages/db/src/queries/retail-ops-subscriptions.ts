@@ -67,7 +67,13 @@ export type RetailOpsTenantSubscription = {
   currentPeriodEndsAt: string | null
   planId: RetailOpsPlanId
   /** launch_default: no subscription record; the free-during-launch Starter. */
-  source: "launch_default" | "tenant_metadata" | "tenant_subscription"
+  source:
+    | "launch_default"
+    | "tenant_metadata"
+    | "tenant_subscription"
+    | "owner_signup_launch"
+  grantedAt?: string
+  revokedAt?: string | null
   status: RetailOpsSubscriptionStatus
   trialEndsAt: string | null
   updatedAt: string
@@ -981,6 +987,41 @@ function mapDurableRetailOpsTenantSubscription(
   }
 }
 
+/** Provenance lives in the same subscription metadata consumed by every entitlement reader. */
+export function withOwnerSignupLaunchGrant(
+  metadata: unknown,
+  planId: "starter" | "growth" | "pro",
+  now = new Date(),
+) {
+  const root = asRecord(metadata)
+  const retailOps = getRetailOpsMetadata(metadata)
+  return {
+    ...root,
+    retailOps: {
+      ...retailOps,
+      subscription: {
+        ...asRecord(retailOps.subscription),
+        planId,
+        status: "active",
+        source: "owner_signup_launch",
+        grantedAt: now.toISOString(),
+        revokedAt: null,
+        updatedAt: now.toISOString(),
+      },
+    },
+  }
+}
+function metadataSubscriptionPlanId(metadata: unknown) {
+  const subscription = asRecord(getRetailOpsMetadata(metadata).subscription)
+  if (
+    subscription.source === "owner_signup_launch" &&
+    (subscription.revokedAt != null ||
+      !normalizeIsoDate(subscription.grantedAt))
+  )
+    return null
+  return normalizePlanId(subscription.planId)
+}
+
 function getTenantSubscription(input: {
   createdAt: Date
   metadata: unknown
@@ -988,13 +1029,22 @@ function getTenantSubscription(input: {
 }): RetailOpsTenantSubscription {
   const retailOps = getRetailOpsMetadata(input.metadata)
   const subscription = asRecord(retailOps.subscription)
-  const planId = normalizePlanId(subscription.planId)
+  const planId = metadataSubscriptionPlanId(input.metadata)
 
   if (planId) {
     return {
       currentPeriodEndsAt: normalizeIsoDate(subscription.currentPeriodEndsAt),
       planId,
-      source: "tenant_metadata",
+      source:
+        subscription.source === "owner_signup_launch"
+          ? "owner_signup_launch"
+          : "tenant_metadata",
+      ...(subscription.source === "owner_signup_launch"
+        ? {
+            grantedAt: normalizeIsoDate(subscription.grantedAt) ?? undefined,
+            revokedAt: null,
+          }
+        : {}),
       status: normalizeStatus(subscription.status) ?? "trialing",
       trialEndsAt: normalizeIsoDate(subscription.trialEndsAt),
       updatedAt:
@@ -2181,9 +2231,7 @@ export function resolveRetailOpsPlanId(input: {
 }): RetailOpsPlanId {
   return (
     normalizePlanId(input.subscriptionPlanKey) ??
-    normalizePlanId(
-      asRecord(getRetailOpsMetadata(input.metadata).subscription).planId,
-    ) ??
+    metadataSubscriptionPlanId(input.metadata) ??
     RETAIL_OPS_LAUNCH_DEFAULT_PLAN_ID
   )
 }

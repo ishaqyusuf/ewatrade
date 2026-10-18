@@ -1,5 +1,6 @@
 import { canManageTenant, normalizeRole } from "@ewatrade/auth/roles"
 import {
+  OwnerSignupSetupError,
   StoreLinkConflictError,
   completeOwnerSignupSetup,
   getOwnerStorefrontPreview,
@@ -16,7 +17,7 @@ import {
   getWorkspaceFeatureAvailability,
   requireEligibleOwnerAge,
 } from "@ewatrade/db/queries"
-import { AppError } from "@ewatrade/errors"
+import { AppError, ruleRejectedError } from "@ewatrade/errors"
 import { issueAnalyticsContext } from "@ewatrade/events/identity-server"
 import { isQaAnalyticsPrincipal } from "@ewatrade/events/qa-policy-server"
 import { readOwnerSignupDraft } from "@ewatrade/utils/owner-signup"
@@ -67,6 +68,11 @@ export const tenantRouter = createTRPCRouter({
           { isolationLevel: "Serializable", maxWait: 10_000, timeout: 30_000 },
         )
       } catch (error) {
+        if (error instanceof OwnerSignupSetupError)
+          throw new TRPCError({
+            code: error.reason,
+            cause: ruleRejectedError(error),
+          })
         if (error instanceof StoreLinkConflictError)
           throw new TRPCError({ code: "CONFLICT", message: error.message })
         throw error
@@ -87,6 +93,7 @@ export const tenantRouter = createTRPCRouter({
     const session = await ctx.db.onboardingSession.findFirst({
       where: {
         userId: ctx.session.user.id,
+        tenantId: ctx.tenantContext.tenant.id,
         completed: true,
         OR: ["starter", "growth", "pro"].map((planId) => ({
           formData: { path: ["ownerSignup", "planId"], equals: planId },

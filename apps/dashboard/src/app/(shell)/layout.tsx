@@ -34,7 +34,7 @@ export default async function ShellLayout({
   // Verified owners already have a Store, but must finish its descriptive setup.
   if (
     ctx &&
-    ["OWNER", "ADMIN"].includes(ctx.membership.role) &&
+    ctx.membership.role === "OWNER" &&
     ctx.stores.some(
       (store) => store.businessOnboarding?.setupStatus === "pending",
     )

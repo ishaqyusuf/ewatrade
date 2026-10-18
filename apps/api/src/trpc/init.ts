@@ -8,6 +8,7 @@ import {
 } from "@ewatrade/db/performance-tracing"
 import type { TenantContext } from "@ewatrade/db/queries"
 import {
+  OwnerSignupSetupError,
   RetailOpsSubscriptionError,
   getActiveTenantForUser,
   getCustomerAccountAgeStatus,
@@ -214,6 +215,12 @@ const t = initTRPC.context<TRPCContext>().create({
     deserialize: (value) => superjson.deserialize(value),
   },
   errorFormatter({ shape, error, ctx }) {
+    const setupError =
+      error.cause instanceof OwnerSignupSetupError
+        ? error.cause
+        : error.cause?.cause instanceof OwnerSignupSetupError
+          ? error.cause.cause
+          : null
     const appError = {
       ...toPublicError(error),
       requestId: ctx?.requestId,
@@ -224,6 +231,7 @@ const t = initTRPC.context<TRPCContext>().create({
       data: {
         ...shape.data,
         appError,
+        ownerSignupBusinessId: setupError?.businessId,
         stack: undefined,
       },
     }
