@@ -31,6 +31,17 @@ export default async function ShellLayout({
 
   const ctx = await getActiveTenant(session.user.id)
 
+  // Verified owners already have a Store, but must finish its descriptive setup.
+  if (
+    ctx &&
+    ["OWNER", "ADMIN"].includes(ctx.membership.role) &&
+    ctx.stores.some(
+      (store) => store.businessOnboarding?.setupStatus === "pending",
+    )
+  ) {
+    redirect("/setup")
+  }
+
   // No store yet: first-time setup.
   if (ctx && ctx.stores.length === 0 && ctx.staffAccess?.mode === "SCOPED")
     redirect("/access-unavailable")
