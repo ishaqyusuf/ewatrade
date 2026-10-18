@@ -433,3 +433,18 @@ select.owner-ref-inp.owner-ref-empty { color: var(--muted-fg); }
 .owner-ref-win .owner-step-actions .owner-select-more {width:auto;min-width:120px;flex-shrink:0;}
 .owner-ref-win .owner-step-actions .signup-primary {flex-shrink:0;}
 @media(max-width:600px){.owner-ref-win .owner-step-actions .owner-ref-hint {display:none;}.owner-ref-win .owner-step-actions .owner-select-more {min-width:0;padding-inline:12px;}.owner-ref-win .owner-step-actions .signup-primary{padding-inline:12px;}.owner-ref-win .owner-step-actions{gap:8px;}}
+
+/* The frame must not become a programmatic scroll container. */
+.owner-ref-win {overflow:clip;}
+.owner-ref-win .owner-ref-gp-stack,.owner-ref-win .owner-ref-gbiz {min-width:0;max-width:100%;width:100%;}
+.owner-ref-win .owner-ref-gbiz > .owner-ref-av-ill,.owner-ref-win .owner-ref-gbiz > .owner-ref-av-txt {flex-shrink:0;}
+/* Connect with Email | WhatsApp | Both, and the Both code channel. */
+.owner-ref-win .owner-connect {margin:16px 0 4px;}
+.owner-ref-win .owner-connect .owner-chips {gap:8px;}
+.owner-ref-win .owner-codeby {display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:12px 0 0;padding:10px 12px;border:1px solid var(--border);border-radius:12px;font-size:13px;color:var(--muted-fg);}
+.owner-ref-win .owner-codeby legend {float:left;margin:0 4px 0 0;padding:0;font-size:13px;font-weight:500;color:var(--muted-fg);}
+.owner-ref-win .owner-codeby .owner-chip {position:relative;display:inline-flex;align-items:center;height:32px;padding:0 12px;border:1px solid var(--border);border-radius:999px;background:var(--card);color:var(--fg);font-size:12.5px;cursor:pointer;}
+.owner-ref-win .owner-codeby .owner-chip input {position:absolute;opacity:0;width:1px;height:1px;}
+.owner-ref-win .owner-codeby .owner-chip.is-selected {background:var(--sel-bg);border-color:var(--sel-border);color:var(--accent);font-weight:600;}
+.owner-ref-win .owner-codeby .owner-chip:has(:focus-visible) {outline:2px solid var(--accent);outline-offset:2px;}
+.owner-ref-win .signup-label .owner-ref-help {display:block;margin-top:6px;font-weight:400;}

@@ -62,7 +62,10 @@ function AccountFirstSignup() {
   const [account, setAccount] = useState(blank)
   const [age, setAge] = useState<EligibleAgeBand | "UNDER_13" | null>(null)
   const [settings, setSettings] = useState<Settings | null>(null)
-  const [mode, setMode] = useState<"email" | "phone">("email")
+  // Connect with Email | WhatsApp | Both. With Both, one code goes to the chosen
+  // channel and the other contact is saved as the business contact.
+  const [connect, setConnect] = useState<"email" | "whatsapp" | "both">("email")
+  const [codeBy, setCodeBy] = useState<"email" | "phone">("phone")
   const [phoneCountry, setPhoneCountry] = useState("")
   const [link, setLink] = useState<StoreLinkCheck | null>(null)
   const [slugEdited, setSlugEdited] = useState(false)
@@ -118,6 +121,21 @@ function AccountFirstSignup() {
     const timer = setInterval(() => setNow(Date.now()), 1000)
     return () => clearInterval(timer)
   }, [step])
+  const phoneEnabled = Boolean(settings?.phoneEnabled)
+  const connection = !phoneEnabled && connect === "whatsapp" ? "both" : connect
+  const mode: "email" | "phone" =
+    connection === "email"
+      ? "email"
+      : connection === "whatsapp"
+        ? "phone"
+        : phoneEnabled
+          ? codeBy
+          : "email"
+  const showEmail = connection !== "whatsapp"
+  const showPhone = connection !== "email"
+  const linkEmailDomain = showEmail
+    ? account.email.trim().split("@")[1]?.toLowerCase()
+    : undefined
   const eligible = age && age !== "UNDER_13"
   const ready = Boolean(
     eligible &&
@@ -125,18 +143,17 @@ function AccountFirstSignup() {
       account.businessName.trim() &&
       link?.available &&
       link.requestedSlug === account.slug &&
-      link.emailDomain ===
-        (mode === "email"
-          ? account.email.split("@")[1]?.toLowerCase()
-          : undefined) &&
+      link.emailDomain === linkEmailDomain &&
       settings?.publication.signupAvailable,
   )
+  const emailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(account.email.trim())
+  const phoneValid = /^\+[1-9]\d{7,14}$/.test(account.phone)
   const contactReady =
-    mode === "email"
-      ? /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(account.email)
-      : Boolean(
-          settings?.phoneEnabled && /^\+[1-9]\d{7,14}$/.test(account.phone),
-        )
+    (!showEmail || emailValid) &&
+    (!showPhone || phoneValid) &&
+    (mode === "email" || phoneEnabled)
+  // Google supplies the email; a WhatsApp number, when shown, must be valid if typed.
+  const googleContactValid = !showPhone || !account.phone || phoneValid
   const legal = {
     acceptedTerms: true,
     acknowledgedPrivacyNotice: true,
@@ -176,13 +193,23 @@ function AccountFirstSignup() {
           : {
               ...profile,
               ...(action === "google"
-                ? { idToken, ...legal }
+                ? {
+                    idToken,
+                    phone: (showPhone && account.phone) || undefined,
+                    ...legal,
+                  }
                 : mode === "email"
                   ? {
                       email: account.email.trim(),
+                      phone: (showPhone && account.phone) || undefined,
                       ...(action === "verify_email" ? { code } : legal),
                     }
-                  : { phone: account.phone, ...legal }),
+                  : {
+                      phone: account.phone,
+                      contactEmail:
+                        (showEmail && account.email.trim()) || undefined,
+                      ...legal,
+                    }),
             }
       const response = await fetch("/api/owner-signup", {
         method: "POST",
@@ -202,6 +229,12 @@ function AccountFirstSignup() {
       setNow(Date.now())
       setRetryAt(Date.now() + 60_000)
     } catch (cause) {
+      if (action === "verify_email" || action === "verify_phone") {
+        setCode("")
+        requestAnimationFrame(() =>
+          document.getElementById("owner-code")?.focus(),
+        )
+      }
       setError(
         cause instanceof Error
           ? cause.message
@@ -228,7 +261,7 @@ function AccountFirstSignup() {
         </p>
         <h1>
           {step === "account"
-            ? "Start your business on EwaTrade"
+            ? "Start your business on ẸwáTrade"
             : "Enter the 6-digit code"}
         </h1>
         <p className="signup-intro">
@@ -297,11 +330,7 @@ function AccountFirstSignup() {
               </label>
               <StoreLinkField
                 value={account.slug}
-                emailDomain={
-                  mode === "email"
-                    ? account.email.split("@")[1]?.toLowerCase()
-                    : undefined
-                }
+                emailDomain={linkEmailDomain}
                 onChange={(slug) => {
                   setSlugEdited(true)
                   setAccount((current) => ({ ...current, slug }))
@@ -327,7 +356,41 @@ function AccountFirstSignup() {
                   }
                 />
               </label>
-              {mode === "email" ? (
+              <fieldset className="owner-age owner-connect">
+                <legend>Connect with</legend>
+                <div
+                  className="owner-chips"
+                  style={{
+                    gridTemplateColumns: `repeat(${phoneEnabled ? 3 : 2}, minmax(0, 1fr))`,
+                  }}
+                >
+                  {(
+                    [
+                      ["email", "Email"],
+                      ...(phoneEnabled ? [["whatsapp", "WhatsApp"]] : []),
+                      ["both", "Both"],
+                    ] as const
+                  ).map(([value, label]) => (
+                    <label
+                      className={`owner-chip ${connection === value ? "is-selected" : ""}`}
+                      key={value}
+                    >
+                      <input
+                        type="radio"
+                        name="connect-with"
+                        checked={connection === value}
+                        value={value}
+                        onChange={() => {
+                          setConnect(value)
+                          setError("")
+                        }}
+                      />
+                      {label}
+                    </label>
+                  ))}
+                </div>
+              </fieldset>
+              {showEmail && (
                 <label className="signup-label" htmlFor="owner-email">
                   Email
                   <Input
@@ -337,6 +400,11 @@ function AccountFirstSignup() {
                     type="email"
                     autoComplete="email"
                     required
+                    aria-describedby={
+                      connection === "both" && mode !== "email"
+                        ? "owner-email-note"
+                        : undefined
+                    }
                     value={account.email}
                     onChange={(event) =>
                       setAccount((current) => ({
@@ -345,8 +413,14 @@ function AccountFirstSignup() {
                       }))
                     }
                   />
+                  {connection === "both" && mode !== "email" && (
+                    <span id="owner-email-note" className="owner-ref-help">
+                      Saved as your business contact. You can verify it later.
+                    </span>
+                  )}
                 </label>
-              ) : (
+              )}
+              {showPhone && (
                 <label className="signup-label" htmlFor="signup-whatsapp">
                   WhatsApp number
                   <SignupPhoneInput
@@ -357,23 +431,50 @@ function AccountFirstSignup() {
                     onChange={(phone) =>
                       setAccount((current) => ({ ...current, phone }))
                     }
+                    describedBy={
+                      connection === "both" && mode !== "phone"
+                        ? "owner-phone-note"
+                        : undefined
+                    }
                   />
+                  {connection === "both" && mode !== "phone" && (
+                    <span id="owner-phone-note" className="owner-ref-help">
+                      Saved as your business contact. You can verify it later.
+                    </span>
+                  )}
                 </label>
               )}
-              {settings?.phoneEnabled && (
-                <button
-                  type="button"
-                  className="owner-text-button"
-                  onClick={() => {
-                    setMode(mode === "email" ? "phone" : "email")
-                    setError("")
-                  }}
-                >
-                  {mode === "email"
-                    ? "Use WhatsApp instead"
-                    : "Use email instead"}
-                </button>
-              )}
+              {connection === "both" &&
+                (phoneEnabled ? (
+                  <fieldset className="owner-codeby">
+                    <legend>Send my code by</legend>
+                    {(
+                      [
+                        ["phone", "WhatsApp"],
+                        ["email", "Email"],
+                      ] as const
+                    ).map(([value, label]) => (
+                      <label
+                        className={`owner-chip ${mode === value ? "is-selected" : ""}`}
+                        key={value}
+                      >
+                        <input
+                          type="radio"
+                          name="send-code-by"
+                          checked={mode === value}
+                          value={value}
+                          onChange={() => {
+                            setCodeBy(value)
+                            setError("")
+                          }}
+                        />
+                        {label}
+                      </label>
+                    ))}
+                  </fieldset>
+                ) : (
+                  <p className="owner-codeby">We’ll send your code by email.</p>
+                ))}
             </fieldset>
             <fieldset className="owner-age" disabled={pending}>
               <legend>Your age</legend>
@@ -405,7 +506,7 @@ function AccountFirstSignup() {
               </div>
               {age !== "UNDER_13" && (
                 <span className="owner-ref-help">
-                  EwaTrade accounts are for people aged 13 or older.
+                  ẸwáTrade accounts are for people aged 13 or older.
                 </span>
               )}
             </fieldset>
@@ -422,6 +523,7 @@ function AccountFirstSignup() {
               <label className="owner-terms">
                 <input
                   type="checkbox"
+                  aria-label="I agree to the Terms and acknowledge the Privacy Notice"
                   checked={account.terms}
                   disabled={pending}
                   onChange={(event) =>
@@ -476,15 +578,17 @@ function AccountFirstSignup() {
                 <div className="owner-divider">or</div>
                 <SignupGoogle
                   clientId={settings?.googleClientId ?? null}
-                  disabled={!ready || pending}
+                  disabled={!ready || !googleContactValid || pending}
                   onCredential={(idToken) => {
                     if (ready) void submit("google", idToken)
                   }}
                 />
                 <p className="owner-ref-help owner-ref-center">
-                  {ready
-                    ? "Google fills in your name and email."
-                    : "Google needs your business name, age and the Terms above first."}
+                  {!ready
+                    ? "Google needs your business name, age and the Terms above first."
+                    : showPhone
+                      ? "Google fills in your name and email. Your WhatsApp number is saved as your business contact."
+                      : "Google fills in your name and email."}
                 </p>
               </>
             )}
@@ -510,6 +614,15 @@ function AccountFirstSignup() {
                 required
                 value={code}
                 disabled={pending}
+                onFocus={(event) => {
+                  // Keep the caret at the end so Backspace edits the last digit.
+                  const end = event.currentTarget.value.length
+                  event.currentTarget.setSelectionRange(end, end)
+                }}
+                onClick={(event) => {
+                  const end = event.currentTarget.value.length
+                  event.currentTarget.setSelectionRange(end, end)
+                }}
                 onChange={(event) =>
                   setCode(event.target.value.replace(/\D/g, ""))
                 }
