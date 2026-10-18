@@ -56,7 +56,7 @@ export async function purgeExpiredPhoneOtpChallenges(
   })
 }
 
-async function consumeSendBudget(
+export async function consumePhoneOtpSendBudget(
   tx: DbClient,
   key: string,
   maximum: number,
@@ -113,9 +113,9 @@ export async function createPhoneOtp(
   await db.$transaction(
     async (tx) => {
       // Global and trusted-network budgets bound provider costs across many numbers.
-      await consumeSendBudget(tx, "global", 100, now)
-      await consumeSendBudget(tx, `network:${networkSource}`, 20, now)
-      await consumeSendBudget(tx, `phone:${phone}`, 5, now)
+      await consumePhoneOtpSendBudget(tx, "global", 100, now)
+      await consumePhoneOtpSendBudget(tx, `network:${networkSource}`, 20, now)
+      await consumePhoneOtpSendBudget(tx, `phone:${phone}`, 5, now)
       const previous = await tx.verification.findFirst({
         where: { identifier: id },
         orderBy: { createdAt: "desc" },

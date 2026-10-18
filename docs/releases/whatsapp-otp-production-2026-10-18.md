@@ -20,3 +20,9 @@ This scoped candidate starts from deployed API source 931cbfc0388a91a8a3e6061848
 ## Rollback
 
 Keep WHATSAPP_OTP_ENABLED=false until compatible-client and Production received-code acceptance. The previously READY API deployment is dpl_8DVDUGUGd5PnwUiqmQrmAdBNG2PH. API rollback is an independently verified promotion of that exact owned deployment; no database rollback is required by this patch.
+
+## Owner-approved existing-account verification continuation
+
+Both approved personal test phones already belong to existing verified-email Production accounts with unverified phone fields. Owner chose one-time verification from the signed-in account followed by normal phone+WhatsApp-code login. New accountPhoneStatus/requestAccountPhoneOtp/verifyAccountPhoneOtp require genuine fresh persisted non-QA session, verified current email/current attached phone and no active privacy closure. No caller phone/user selector, reassignment, email rewrite or merge. Session/user/phone HMAC-bound five-minute challenge, five attempts, shared send budgets plus actor budget; consume and conditional phoneVerifiedAt update are atomic. Phone linking does not issue another session. Matching native Account/privacy screen added; signup still refuses existing accounts.
+
+Focused combined suite58tests/305assertions passes. Repeatable `bun qa:account-phone-verification` uses actual app.fetch/auth context and guarded Neon Development with only Meta stubbed; exactly one winner in duplicate simultaneous verification, same-user ordinary phone login and genuine new Session, identity preservation, replay refusal and exact fixture cleanup all pass. No real provider sends or Production changes. Global/network shared budgets are preserved during cleanup. Full strict API compile remains pending after8GiB exhaustion; this is not release acceptance. Public client release remains held by the existing gate.

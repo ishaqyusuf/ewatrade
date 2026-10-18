@@ -1,0 +1,50 @@
+{
+  "version": 1,
+  "id": "2026-10-18-account-phone-verification",
+  "tickets": ["H01"],
+  "summary": "One-time phone verification from the existing fresh authenticated account, followed by ordinary phone-code login. The server derives the attached phone, binds code proof to user/session/phone, preserves email and account identity and keeps the global delivery gate. Candidate only; not deployed or activated.",
+  "noAssistantImpact": "Personal authentication, session proof and account-phone codes are excluded from merchant assistant tools. No merchant capability, permission, entitlement, business mutation or assistant credential access is added.",
+  "procedures": [],
+  "docs": [
+    {
+      "topic": "feature",
+      "path": ".brain/features/whatsapp-otp.md",
+      "status": "local_only"
+    },
+    {
+      "topic": "api",
+      "path": ".brain/api/contracts.md",
+      "status": "local_only"
+    },
+    {
+      "topic": "permissions",
+      "path": ".brain/api/permissions.md",
+      "status": "local_only"
+    },
+    {
+      "topic": "decision",
+      "path": ".brain/decisions/2026-10-18-existing-account-phone-verification.md",
+      "status": "local_only"
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "test",
+      "path": "packages/db/src/queries/account-phone-verification.test.ts",
+      "executed": true,
+      "result": "8 tests/55 assertions: session/subject guards, namespace binding, attempts, concurrent single use, rate/cooldown, cleanup and deletion closure."
+    },
+    {
+      "kind": "test",
+      "path": "apps/api/src/auth/account-phone.test.ts",
+      "executed": true,
+      "result": "5 tests/25 assertions: disabled gate before persistence, strict identity input rejection, QA refusal, local code rules, Production secrecy and failed-send exact cleanup. Combined auth/deletion/transport suite58tests305assertions passes."
+    },
+    {
+      "kind": "run",
+      "path": ".brain/qa/2026-10-18-account-phone-verification.md",
+      "executed": true,
+      "result": "Actual app.fetch/auth context/Neon Development account verification and same-account public phone login pass with only Meta stubbed; replay rejected, identity preserved, exact fixture cleanup completes. Production unchanged. No signed-client or full compile acceptance."
+    }
+  ]
+}

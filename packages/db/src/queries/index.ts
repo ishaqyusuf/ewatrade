@@ -179,3 +179,5 @@ export * from "./account-privacy-private-assistant"
 export * from "./business-activity"
 export * from "./business-notifications"
 export * from "./phone-auth"
+
+export * from "./account-phone-verification"

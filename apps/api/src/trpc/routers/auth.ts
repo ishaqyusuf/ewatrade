@@ -56,6 +56,11 @@ import {
 import { TRPCError } from "@trpc/server"
 import { z } from "zod"
 import {
+  accountPhoneStatus,
+  requestAccountPhoneOtp,
+  verifyAccountPhoneOtp,
+} from "../../auth/account-phone"
+import {
   appleCredentialExchangeConfigured,
   exchangeAppleAuthorizationCode,
 } from "../../auth/apple-credentials"
@@ -63,6 +68,7 @@ import { verifyAppleIdToken } from "../../auth/mobile-apple"
 import { verifyGoogleIdToken } from "../../auth/mobile-google"
 import { qaScopedMembershipWhere } from "../../utils/qa-session-access"
 import {
+  authenticatedProcedure,
   createTRPCRouter,
   mobileEntryProcedure,
   publicProcedure,
@@ -355,6 +361,15 @@ export function shouldDispatchMobileOwnerOtpEmail(
 }
 
 export const authRouter = createTRPCRouter({
+  accountPhoneStatus: authenticatedProcedure.query(({ ctx }) =>
+    accountPhoneStatus(ctx),
+  ),
+  requestAccountPhoneOtp: authenticatedProcedure
+    .input(z.object({}).strict())
+    .mutation(({ ctx }) => requestAccountPhoneOtp(ctx)),
+  verifyAccountPhoneOtp: authenticatedProcedure
+    .input(z.object({ code: z.string().regex(/^\d{6}$/) }).strict())
+    .mutation(({ ctx, input }) => verifyAccountPhoneOtp(ctx, input.code)),
   phoneOtpAvailability: publicProcedure.query(() => ({
     enabled: isLocalPhoneAuth() || Boolean(readWhatsAppOtpConfig()),
   })),

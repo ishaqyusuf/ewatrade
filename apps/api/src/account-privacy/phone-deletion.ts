@@ -1,4 +1,5 @@
 import {
+  type DeletionRequestSummary,
   createExternalDeletionChallenge,
   discardUndeliveredExternalDeletionChallenge,
   isLocalPhoneAuth,
@@ -127,7 +128,7 @@ export async function requestPhoneDeletionContactCode(
 export async function requestPhoneAccountDeletion(
   ctx: DeletionContext,
   input: { contactEmail?: string; contactCode?: string },
-) {
+): Promise<DeletionRequestSummary> {
   await requireVerifiedPhone(ctx)
   if (!input.contactEmail || !input.contactCode)
     throw new TRPCError({

@@ -119,6 +119,14 @@ export function AccountPrivacyScreen() {
           />
         ) : null}
       </View>
+      <QuietGroup title="Sign-in">
+        <QuietRow
+          icon="Smartphone"
+          title="Phone sign-in"
+          sub="Verify your phone for WhatsApp codes"
+          onPress={() => router.push("/account-phone")}
+        />
+      </QuietGroup>
       <QuietGroup title="Legal">
         <QuietRow
           icon="FileText"

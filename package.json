@@ -91,7 +91,8 @@
     "typecheck": "turbo typecheck",
     "format": "biome format --write .",
     "db:start": "bun run dev:services",
-    "qa:native-onboarding-continuation": "node scripts/with-workspace-env.mjs DEV_PROFILE=local APP_ENV=local NODE_ENV=development bun --env-file=/dev/null scripts/qa-native-onboarding-continuation.ts"
+    "qa:native-onboarding-continuation": "node scripts/with-workspace-env.mjs DEV_PROFILE=local APP_ENV=local NODE_ENV=development bun --env-file=/dev/null scripts/qa-native-onboarding-continuation.ts",
+    "qa:account-phone-verification": "node scripts/with-workspace-env.mjs DEV_PROFILE=local APP_ENV=local NODE_ENV=production bun --env-file=/dev/null scripts/qa-account-phone-verification.ts"
   },
   "dependencies": {
     "@biomejs/biome": "^1.9.4",
