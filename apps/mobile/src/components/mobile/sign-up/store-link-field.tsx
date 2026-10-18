@@ -91,17 +91,19 @@ export function StoreLinkField({
         {value || "your-business"}.ewatrade.com ·{" "}
         {fixed
           ? "Your store link"
-          : available
-            ? "Available"
-            : value !== debounced || check.isFetching
-              ? "Checking…"
-              : !isValidStoreLink(value)
-                ? "Choose a link with 2–40 letters or numbers"
-                : check.isError
-                  ? check.error.message
-                  : value
-                    ? "That link is taken. Try one below, or edit it."
-                    : "Your store link appears here as you name your business"}
+          : !value
+            ? "Your store link appears here as you name your business"
+            : available
+              ? "Available"
+              : value !== debounced || check.isFetching
+                ? "Checking…"
+                : !isValidStoreLink(value)
+                  ? "Choose a link with 2–40 letters or numbers"
+                  : check.isError
+                    ? check.error.message
+                    : value
+                      ? "That link is taken. Try one below, or edit it."
+                      : "Your store link appears here as you name your business"}
       </Text>
       {!fixed ? (
         <Pressable
