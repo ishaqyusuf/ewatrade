@@ -10,7 +10,7 @@ import {
   BUSINESS_TYPE_GROUPS,
   type BusinessType,
 } from "@ewatrade/utils/business-types"
-import { useState } from "react"
+import { useRef, useState } from "react"
 
 export function OwnerTypeStep({
   selected,
@@ -25,6 +25,7 @@ export function OwnerTypeStep({
   onOther: (value: string) => void
   onNext: () => void
 }) {
+  const results = useRef<HTMLDivElement>(null)
   const [query, setQuery] = useState("")
   const [multi, setMulti] = useState(selected.length > 1)
   const first = selected.length === 1 && !multi
@@ -52,9 +53,16 @@ export function OwnerTypeStep({
     )
   }
   function jump(key: string) {
-    document
-      .getElementById(`owner-group-${key}`)
-      ?.scrollIntoView({ block: "start", behavior: "smooth" })
+    const container = results.current?.closest(".owner-ref-fp-scroll")
+    const target = document.getElementById(`owner-group-${key}`)
+    if (container && target)
+      container.scrollTo({
+        top:
+          container.scrollTop +
+          target.getBoundingClientRect().top -
+          container.getBoundingClientRect().top,
+        behavior: "smooth",
+      })
   }
   function row(type: BusinessType) {
     const chosen = selected.includes(type.key)
@@ -65,12 +73,14 @@ export function OwnerTypeStep({
           <b>{type.label}</b>
           <small>{type.examples}</small>
         </span>
-        <span
-          className={`owner-ref-cbox${chosen ? " owner-ref-on" : ""}`}
-          aria-hidden="true"
-        >
-          {chosen && <OwnerSignupIcon name="check" />}
-        </span>
+        {multi && (
+          <span
+            className={`owner-ref-cbox${chosen ? " owner-ref-on" : ""}`}
+            aria-hidden="true"
+          >
+            {chosen && <OwnerSignupIcon name="check" />}
+          </span>
+        )}
       </>
     )
     return multi ? (
@@ -132,7 +142,7 @@ export function OwnerTypeStep({
             Not listed
           </button>
         </nav>
-        <div className="owner-type-results">
+        <div className="owner-type-results" ref={results}>
           <div className="owner-ref-searchf">
             <OwnerSignupIcon name="search" />
             <Input

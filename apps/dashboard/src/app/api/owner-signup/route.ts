@@ -20,9 +20,15 @@ const legal = {
   acceptedTerms: z.literal(true),
   acknowledgedPrivacyNotice: z.literal(true),
 }
-const emailAccount = account.extend({ email: z.email() })
-const googleAccount = account.extend({ name: account.shape.name.optional() })
 const phone = z.string().regex(/^\+[1-9]\d{7,14}$/)
+const emailAccount = account.extend({
+  email: z.email(),
+  phone: phone.optional(),
+})
+const googleAccount = account.extend({
+  name: account.shape.name.optional(),
+  phone: phone.optional(),
+})
 const code = z.string().regex(/^\d{6}$/)
 const requestSchema = z.discriminatedUnion("action", [
   emailAccount
@@ -30,7 +36,12 @@ const requestSchema = z.discriminatedUnion("action", [
     .strict(),
   emailAccount.extend({ action: z.literal("verify_email"), code }).strict(),
   account
-    .extend({ action: z.literal("request_phone"), phone, ...legal })
+    .extend({
+      action: z.literal("request_phone"),
+      phone,
+      contactEmail: z.email().optional(),
+      ...legal,
+    })
     .strict(),
   z.object({ action: z.literal("verify_phone"), phone, code }).strict(),
   googleAccount
@@ -218,6 +229,17 @@ export async function POST(request: NextRequest) {
       expiresAt: new Date(result.expiresAt),
     }))
       response.headers.append("Set-Cookie", cookie)
+    if (result.tenant?.slug) {
+      response.cookies.set("ewatrade.active_tenant_slug", result.tenant.slug, {
+        httpOnly: true,
+        path: "/",
+        sameSite: "lax",
+        secure: process.env.NODE_ENV === "production",
+        maxAge: 365 * 86400,
+      })
+      response.cookies.delete("ewatrade.active_store_id")
+      response.cookies.delete("ewatrade.inventory_scope")
+    }
     return response
   } catch (error) {
     return failure(error)

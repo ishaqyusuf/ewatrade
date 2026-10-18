@@ -39,10 +39,19 @@ export function OwnerGroupStep({
   onForcedEditOpened?: () => void
 }) {
   useEffect(() => {
-    if (forceEditBusinessId)
-      document
-        .getElementById(`owner-business-${forceEditBusinessId}`)
-        ?.scrollIntoView({ block: "center" })
+    const target = forceEditBusinessId
+      ? document.getElementById(`owner-business-${forceEditBusinessId}`)
+      : null
+    const container = target?.closest(".owner-ref-fp-scroll")
+    if (target && container)
+      container.scrollTo({
+        top:
+          container.scrollTop +
+          target.getBoundingClientRect().top -
+          container.getBoundingClientRect().top -
+          24,
+        behavior: "smooth",
+      })
   }, [forceEditBusinessId])
   const [dragged, setDragged] = useState<string | null>(null)
   const [announcement, setAnnouncement] = useState("")

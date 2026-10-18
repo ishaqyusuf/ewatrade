@@ -11,7 +11,7 @@ import {
 import { createTRPCClient, loggerLink } from "@trpc/client"
 import { httpBatchLink } from "@trpc/client/links/httpBatchLink"
 import { createTRPCOptionsProxy } from "@trpc/tanstack-react-query"
-import { cookies, headers } from "next/headers"
+import { headers } from "next/headers"
 import { cache } from "react"
 import superjson from "superjson"
 import { makeQueryClient } from "./query-client"
@@ -59,9 +59,8 @@ async function getTenantSlugFromRequest() {
     return result.tenantSlug
   }
 
-  return (
-    (await cookies()).get("ewatrade.active_tenant_slug")?.value?.trim() || null
-  )
+  // Forward remembered selection as a cookie so the API can recover stale membership.
+  return null
 }
 
 export const trpc = createTRPCOptionsProxy<AppRouter>({
