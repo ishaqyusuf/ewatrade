@@ -37,6 +37,7 @@ import {
   discoverStoreConversationWhatsAppInboundCandidate,
   processStoreConversationWhatsAppCandidateAction,
 } from "./store-conversation-whatsapp-discovery-runtime"
+import { customerWhatsAppEvents } from "./whatsapp-platform-reservation"
 
 function required(name: string) {
   const value = process.env[name]?.trim()
@@ -93,8 +94,18 @@ export async function handleWhatsAppWebhookRequest(
   } catch {
     return new Response("Invalid event", { status: 400 })
   }
+  const events = customerWhatsAppEvents(
+    parseMetaWhatsAppEvents(payload),
+    process.env.WHATSAPP_OTP_PHONE_NUMBER_ID,
+  )
+  if (events.length === 0) {
+    return new Response(JSON.stringify({ received: true }), {
+      headers: { "content-type": "application/json" },
+      status: 200,
+    })
+  }
   const state = getConfiguredConversationStateStore()
-  for (const event of parseMetaWhatsAppEvents(payload)) {
+  for (const event of events) {
     if (event.kind === "status") {
       const timestampSeconds = Number(event.timestamp)
       const occurredAt = Number.isFinite(timestampSeconds)
