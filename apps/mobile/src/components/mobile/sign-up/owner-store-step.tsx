@@ -184,7 +184,7 @@ export function OwnerStoreStep({
         <Text className="text-xs text-muted-foreground">
           {plan === "starter"
             ? "Your first 3 items show here. Upgrade to list everything and let customers message you about prices and stock."
-            : "Lists everything you offer. Customers can message you about prices and stock."}
+            : "Lists everything you offer. Customer messages are included once your store chat is set up."}
         </Text>
       </View>
     </View>

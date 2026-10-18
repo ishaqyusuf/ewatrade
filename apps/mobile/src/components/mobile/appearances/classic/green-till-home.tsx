@@ -18,6 +18,7 @@ import {
   type StatusPillTone,
 } from "@/components/mobile/green-till/kit"
 import { SetupAssistantEntry } from "@/components/mobile/setup-assistant/setup-assistant-entry"
+import { OwnerSignupHomeCards } from "@/components/mobile/sign-up/owner-signup-home-cards"
 import { StatusBanner } from "@/components/mobile/status-banner"
 import type { IconKeys } from "@/components/ui/icon"
 import { Pressable } from "@/components/ui/pressable"
@@ -92,8 +93,18 @@ export function GreenTillOwnerHome(props: GreenTillOwnerHomeProps) {
       />
     )
   if (props.stage === "setup" || props.stage === "first-order")
-    return <SetupHome {...props} />
-  return <EverydayHome {...props} />
+    return (
+      <View>
+        <SetupHome {...props} />
+        <OwnerSignupHomeCards />
+      </View>
+    )
+  return (
+    <View>
+      <EverydayHome {...props} />
+      <OwnerSignupHomeCards />
+    </View>
+  )
 }
 
 function EverydayHome(props: GreenTillOwnerHomeProps) {

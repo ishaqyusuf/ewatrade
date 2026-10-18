@@ -1,0 +1,68 @@
+{
+  "version": 1,
+  "id": "2026-10-18-owner-signup",
+  "tickets": ["H02"],
+  "summary": "Account-first mobile owner signup, exact QA-safe store links, typed resumable grouping/store setup and launch plan ownership limits; public storefront cap and customer-message capability plus owner Home cards. Source only, no AI or provider/release activation.",
+  "noAssistantImpact": "Account/signup and plan selection are explicit form workflows. Public account APIs have no merchant assistant audience. Owner summary and storefront preview are deliberately form-only; no model tool, private draft exposure, capability grant or confirmation bypass.",
+  "capabilities": [],
+  "procedures": [
+    {
+      "path": "tenant.ownerSignupSummary",
+      "status": "form_only",
+      "reason": "Explicit owner setup/Home form read; server-derived account/Tenant/Store and no assistant tool."
+    },
+    {
+      "path": "tenant.storefrontPreview",
+      "status": "form_only",
+      "reason": "Explicit owner setup/Home form read; server-derived account/Tenant/Store and no assistant tool."
+    }
+  ],
+  "docs": [
+    {
+      "topic": "feature",
+      "path": ".brain/features/retail-ops-onboarding.md",
+      "status": "local_only"
+    },
+    {
+      "topic": "api",
+      "path": ".brain/api/contracts.md",
+      "status": "local_only"
+    },
+    {
+      "topic": "permissions",
+      "path": ".brain/api/permissions.md",
+      "status": "local_only"
+    },
+    {
+      "topic": "schema",
+      "path": ".brain/database/schema.md",
+      "status": "local_only",
+      "note": "Existing JSON/description/hostname usage only; no Prisma or migration change."
+    },
+    {
+      "topic": "capability",
+      "path": "packages/assistant/src/capabilities/COVERAGE.md",
+      "status": "updated"
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "test",
+      "path": "packages/utils/src/owner-signup.test.ts",
+      "executed": true,
+      "result": "Four quick pure helper tests31 assertions pass, including derived surface suffix rejection and draft/move semantics."
+    },
+    {
+      "kind": "test",
+      "path": "apps/mobile/src/lib/retail-ops-subscription.test.ts",
+      "executed": true,
+      "result": "Six pure plan/parity tests24 assertions pass; Free/Starter3 and no messages, Growth/Pro unlimited/messages."
+    },
+    {
+      "kind": "test",
+      "path": "apps/api/src/schemas/owner-signup.test.ts",
+      "executed": true,
+      "result": "Two quick schema tests9 assertions pass. No UI/device/DB/provider/access acceptance claimed."
+    }
+  ]
+}

@@ -341,3 +341,9 @@ excluded(
 planned("services", "D04", ["serviceAssistantIntake.receipt"])
 
 planned("sales", "G01", ["businessReporting.read"])
+
+formOnly(
+  "platform",
+  "Owner signup and storefront preview are explicit forms; no assistant setup, plan selection or public publishing authority.",
+  ["tenant.ownerSignupSummary", "tenant.storefrontPreview"],
+)

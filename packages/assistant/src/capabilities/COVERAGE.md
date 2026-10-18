@@ -6,10 +6,10 @@ Tickets refer to the Brain plan `.brain/plans/2026-10-09-assistant-business-oper
 
 ## Summary
 
-- Router procedures: 624 (471 merchant, 153 public/account/internal)
+- Router procedures: 630 (473 merchant, 157 public/account/internal)
 - Merchant supported by a capability: 160
 - Merchant planned: 125
-- Merchant form-only: 138
+- Merchant form-only: 140
 - Merchant excluded: 48
 - Capabilities: 150 (76 read, 74 write)
 
@@ -832,5 +832,7 @@ track conversational evaluation separately from these source test links.
 | `tenant.createStore` | mutation | Owner/Admin only | platform | form_only | Creating a Store changes plan usage and setup; use Store management. |
 | `tenant.current` | query | read | platform | excluded | Client session context; the server supplies assistant scope. |
 | `tenant.featureAvailability` | query | read | platform | excluded | Client session context; the server supplies assistant scope. |
+| `tenant.ownerSignupSummary` | query | Owner/Admin only | platform | form_only | Owner signup and storefront preview are explicit forms; no assistant setup, plan selection or public publishing authority. |
 | `tenant.storeContext` | query | read | platform | excluded | Client session context; the server supplies assistant scope. |
+| `tenant.storefrontPreview` | query | Owner/Admin only | platform | form_only | Owner signup and storefront preview are explicit forms; no assistant setup, plan selection or public publishing authority. |
 | `tenant.stores` | query | read | search | supported | stores.count |

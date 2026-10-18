@@ -144,7 +144,10 @@ const contracts = [
   },
   {
     file: "components/mobile/green-till/auth-screen.tsx",
-    markers: ["<MobileScreen", "keyboardBottomOffset={Math.max(24, footerHeight + 12)}"],
+    markers: [
+      "<MobileScreen",
+      "keyboardBottomOffset={Math.max(24, footerHeight + 12)}",
+    ],
     reason: "auth forms must render inside the keyboard-aware route screen",
   },
   {

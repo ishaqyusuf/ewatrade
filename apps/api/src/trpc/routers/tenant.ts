@@ -2,6 +2,7 @@ import { canManageTenant, normalizeRole } from "@ewatrade/auth/roles"
 import {
   StoreLinkConflictError,
   completeOwnerSignupSetup,
+  getOwnerStorefrontPreview,
   readOwnerSignupSetup,
   saveOwnerSignupDraft,
 } from "@ewatrade/db/queries"
@@ -68,13 +69,25 @@ export const tenantRouter = createTRPCRouter({
         throw error
       }
     }),
+  storefrontPreview: protectedProcedure.query(({ ctx }) => {
+    assertCanManageTenantStores(ctx.tenantContext.membership.role)
+    const store = ctx.tenantContext.activeStore ?? ctx.tenantContext.stores[0]
+    return store
+      ? getOwnerStorefrontPreview(ctx.db, {
+          tenantId: ctx.tenantContext.tenant.id,
+          storeId: store.id,
+        })
+      : []
+  }),
   ownerSignupSummary: protectedProcedure.query(async ({ ctx }) => {
     assertCanManageTenantStores(ctx.tenantContext.membership.role)
     const session = await ctx.db.onboardingSession.findFirst({
       where: {
-        tenantId: ctx.tenantId,
         userId: ctx.session.user.id,
         completed: true,
+        OR: ["starter", "growth", "pro"].map((planId) => ({
+          formData: { path: ["ownerSignup", "planId"], equals: planId },
+        })),
       },
       orderBy: { createdAt: "desc" },
       select: { formData: true },
