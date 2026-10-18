@@ -3,9 +3,11 @@ import type {
   OperatingCurrencyCode,
 } from "@ewatrade/utils"
 import { withQaWorkspaceSuffix } from "@ewatrade/utils"
+import { isValidStoreLink } from "@ewatrade/utils/store-link"
 import { Prisma } from "../../generated/prisma/client"
 import { AccountAgeBand } from "../../generated/prisma/enums"
 import { configuredQaDomainForEmail } from "./qa-maintenance"
+import { StoreLinkConflictError } from "./store-link-availability"
 import { createTenantStore } from "./stores"
 import type { DbClient } from "./types"
 
@@ -25,6 +27,8 @@ export type CreateOwnerBusinessInput = {
   businessProfileKey?: string | null
   businessProfileVersion?: 1 | null
   businessName: string
+  requestedSlug?: string
+  setupStatus?: "pending" | "complete"
   city?: string | null
   countryCode?: string | null
   region?: string | null
@@ -74,9 +78,43 @@ async function createUniqueTenant(
   input: {
     businessName: string
     currencyCode: OperatingCurrencyCode
+    requestedSlug?: string
     qaSourceDomain?: string | null
   },
 ) {
+  if (input.requestedSlug !== undefined) {
+    if (!isValidStoreLink(input.requestedSlug))
+      throw new Error("Choose a valid store link.")
+    if (
+      await db.tenant.findUnique({
+        where: { slug: input.requestedSlug },
+        select: { id: true },
+      })
+    )
+      throw new StoreLinkConflictError()
+    try {
+      return await db.tenant.create({
+        data: {
+          name: input.businessName,
+          slug: input.requestedSlug,
+          currencyCode: input.currencyCode,
+          enabledModes: ["STORE", "MERCHANT"],
+          type: "MERCHANT",
+          dataClassification: input.qaSourceDomain ? "QA" : "LIVE",
+          qaSourceDomain: input.qaSourceDomain ?? null,
+          qaMarkedAt: input.qaSourceDomain ? new Date() : null,
+        },
+        select: { currencyCode: true, id: true, name: true, slug: true },
+      })
+    } catch (error) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === "P2002"
+      )
+        throw new StoreLinkConflictError()
+      throw error
+    }
+  }
   const baseSlug = withQaWorkspaceSuffix(
     toSlug(input.businessName) || "business",
     Boolean(input.qaSourceDomain),
@@ -137,6 +175,7 @@ async function createOwnerBusinessWithSource(
     businessName: input.businessName,
     currencyCode: input.currencyCode,
     qaSourceDomain,
+    requestedSlug: input.requestedSlug,
   })
 
   await db.membership.create({
@@ -165,6 +204,8 @@ async function createOwnerBusinessWithSource(
       orderChannels: input.orderChannels,
       otherBusinessDescription: input.otherBusinessDescription,
       source,
+      setupStatus:
+        input.setupStatus ?? (input.requestedSlug ? "pending" : undefined),
       teamSize: input.teamSize,
     },
     supportPhone: input.phone,

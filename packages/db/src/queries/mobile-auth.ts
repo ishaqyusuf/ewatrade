@@ -4,6 +4,7 @@ import {
   type OperatingCurrencyCode,
   normalizeOperatingCurrencyCode,
 } from "@ewatrade/utils"
+import { readBusinessOnboardingFactsFromStoreMetadata } from "@ewatrade/utils/business-profiles"
 import {
   currentEffectiveLegalPublication,
   resolveLegalSignupChoice,
@@ -38,11 +39,13 @@ export class MobileAccountNotFoundError extends Error {
 }
 
 export type MobileAuthTenantSummary = OwnerBusinessSummary & {
+  setupPending?: boolean
   staffAccessMode?: "LEGACY" | "SCOPED"
   catalogEditor?: boolean
 }
 
 export type MobileAccessProfile = {
+  setupPending?: boolean
   hasBusinessAccess: boolean
   hasCustomerHistory: boolean
 }
@@ -80,6 +83,7 @@ export type MobileGoogleIdentityInput = {
   addressLine1?: string | null
   businessProfileKey?: string | null
   businessProfileVersion?: 1 | null
+  requestedSlug?: string
   businessName?: string | null
   city?: string | null
   countryCode?: string | null
@@ -105,6 +109,7 @@ async function requireMobileApprovedSignup(
     mode: MobileAuthMode
     accessToken?: string
     email: string
+    requestedSlug?: string
     businessName?: string | null
   },
 ) {
@@ -266,6 +271,7 @@ async function getFirstActiveTenantForUser(
               name: true,
               status: true,
               currencyCode: true,
+              metadata: true,
             },
           },
         },
@@ -312,6 +318,10 @@ async function getFirstActiveTenantForUser(
     status: membership.status,
     storeId: activeStore?.id ?? null,
     storeName: activeStore?.name ?? null,
+    setupPending:
+      ["OWNER", "ADMIN"].includes(membership.role) &&
+      readBusinessOnboardingFactsFromStoreMetadata(activeStore?.metadata)
+        ?.setupStatus === "pending",
   }
 }
 
@@ -338,6 +348,7 @@ export async function getMobileAccessProfile(
           tenant.storeId),
     ),
     hasCustomerHistory: Boolean(linkedConversation),
+    ...(tenant?.setupPending ? { setupPending: true } : {}),
   }
 }
 
@@ -347,6 +358,7 @@ async function ensureOwnerTenant(
     addressLine1?: string | null
     businessProfileKey?: string | null
     businessProfileVersion?: 1 | null
+    requestedSlug?: string
     businessName: string
     city?: string | null
     countryCode?: string | null
@@ -489,6 +501,7 @@ export async function createMobileOwnerOtp(
     addressLine1?: string | null
     businessProfileKey?: string | null
     businessProfileVersion?: 1 | null
+    requestedSlug?: string
     businessName?: string | null
     city?: string | null
     countryCode?: string | null
@@ -531,6 +544,7 @@ export async function createMobileOwnerOtp(
         addressLine1: cleanText(input.addressLine1),
         businessProfileKey: cleanText(input.businessProfileKey),
         businessProfileVersion: input.businessProfileVersion === 1 ? 1 : null,
+        requestedSlug: input.requestedSlug,
         businessName: cleanText(input.businessName),
         city: cleanText(input.city),
         codeHash: hashOtp(code),
@@ -568,6 +582,7 @@ export async function verifyMobileOwnerOtp(
     addressLine1?: string | null
     businessProfileKey?: string | null
     businessProfileVersion?: 1 | null
+    requestedSlug?: string
     businessName?: string | null
     city?: string | null
     code: string
@@ -604,6 +619,7 @@ export async function verifyMobileOwnerOtp(
     addressLine1?: string | null
     businessProfileKey?: string | null
     businessProfileVersion?: 1 | null
+    requestedSlug?: string
     businessName?: string | null
     legalVersion?: string | null
     legalDocumentHash?: string | null
@@ -773,6 +789,7 @@ export async function verifyMobileOwnerOtp(
           businessProfileKey,
           businessProfileVersion,
           businessName,
+          requestedSlug: payload.requestedSlug,
           city,
           countryCode: countryCode ?? approvedOnboarding?.draft?.countryCode,
           region: region ?? approvedOnboarding?.draft?.region,
@@ -977,6 +994,7 @@ export async function verifyMobileSocialIdentity(
           businessProfileKey: input.businessProfileKey,
           businessProfileVersion: input.businessProfileVersion,
           businessName,
+          requestedSlug: input.requestedSlug,
           city: input.city,
           countryCode:
             normalizeCountryCode(input.countryCode) ??

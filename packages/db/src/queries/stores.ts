@@ -25,6 +25,9 @@ export type CreateTenantStoreInput = {
 }
 
 export type CreateTenantStoreOnboardingInput = {
+  setupStatus?: "pending" | "complete"
+  businessTypeKeys?: string[]
+  otherBusinessType?: string | null
   businessProfileKey?: string | null
   businessProfileVersion?: number | null
   countryCode?: string | null
@@ -119,6 +122,12 @@ function buildOnboardingMetadata(
     onboardingMetadata.businessProfileVersion = BUSINESS_PROFILE_SCHEMA_VERSION
   }
 
+  if (onboarding.setupStatus)
+    onboardingMetadata.setupStatus = onboarding.setupStatus
+  if (onboarding.businessTypeKeys)
+    onboardingMetadata.businessTypeKeys = onboarding.businessTypeKeys
+  if (onboarding.otherBusinessType)
+    onboardingMetadata.otherBusinessType = onboarding.otherBusinessType
   const orderChannels = cleanTextArray(onboarding.orderChannels)
 
   if (orderChannels.length > 0) onboardingMetadata.orderChannels = orderChannels

@@ -25,6 +25,7 @@
     "./colors": "./src/colors.ts",
     "./constants": "./src/constants.ts",
     "./catalog-setup-helpers": "./src/catalog-setup-helpers.ts",
+    "./owner-signup": "./src/owner-signup.ts",
     "./store-link": "./src/store-link.ts",
     "./business-types": "./src/business-types.ts",
     "./business-profiles": "./src/business-profiles.ts",

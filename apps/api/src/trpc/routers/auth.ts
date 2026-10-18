@@ -11,6 +11,10 @@ import {
   verifyApprovedOnboardingEmail,
 } from "@ewatrade/db/onboarding-continuation"
 import {
+  StoreLinkConflictError,
+  checkStoreLinkAvailability,
+} from "@ewatrade/db/queries"
+import {
   consumeMobileAppleChallenge,
   createMobileAppleChallenge,
   getMobileAppleChallenge,
@@ -51,6 +55,7 @@ import {
   isSignupAvailableForLegalPublication,
   resolveLegalSignupChoice,
 } from "@ewatrade/utils/legal-approval"
+import { isValidStoreLink } from "@ewatrade/utils/store-link"
 import { TRPCError } from "@trpc/server"
 import { z } from "zod"
 import {
@@ -108,6 +113,8 @@ type MobileSignupProfileInput = {
   businessProfileKey?: string
   businessProfileVersion?: 1
   mode: "login" | "sign_up"
+  requestedSlug?: string
+  businessName?: string
   operatingModel?: string
   orderChannels?: string[]
   otherBusinessDescription?: string
@@ -120,45 +127,27 @@ function requireMobileSignupProfile(
 ) {
   if (value.mode !== "sign_up") return
 
-  const requiredFields = [
-    [value.ageBand, "ageBand", "Choose an eligible age range"],
-    [
-      value.businessProfileKey,
-      "businessProfileKey",
-      "Select your business category",
-    ],
-    [
-      value.businessProfileVersion,
-      "businessProfileVersion",
-      "Business profile version is required",
-    ],
-    [value.operatingModel, "operatingModel", "Select what you sell"],
-    [value.teamSize, "teamSize", "Select your team size"],
-  ] as const
-
-  for (const [fieldValue, path, message] of requiredFields) {
-    if (fieldValue !== undefined && fieldValue !== "") continue
-    ctx.addIssue({ code: "custom", message, path: [path] })
-  }
-
-  if (!value.orderChannels?.length) {
+  if (value.requestedSlug && !value.businessName?.trim())
     ctx.addIssue({
       code: "custom",
-      message: "Select at least one order channel",
-      path: ["orderChannels"],
+      path: ["businessName"],
+      message: "Enter your business name",
     })
-  }
-
   if (
     value.businessProfileKey === "other-mixed-business" &&
     !value.otherBusinessDescription?.trim()
-  ) {
+  )
     ctx.addIssue({
       code: "custom",
-      message: "Tell us what your business does",
       path: ["otherBusinessDescription"],
+      message: "Tell us what your business does",
     })
-  }
+  if (!value.ageBand)
+    ctx.addIssue({
+      code: "custom",
+      message: "Choose an eligible age range",
+      path: ["ageBand"],
+    })
 }
 
 const mobileOwnerAuthShape = {
@@ -167,6 +156,10 @@ const mobileOwnerAuthShape = {
   addressLine1: z.string().trim().min(3).max(200).optional(),
   businessProfileKey: businessProfileKeySchema.optional(),
   businessProfileVersion: z.literal(BUSINESS_PROFILE_SCHEMA_VERSION).optional(),
+  requestedSlug: z
+    .string()
+    .refine(isValidStoreLink, "Choose a valid store link")
+    .optional(),
   businessName: z.string().trim().min(1).max(120).optional(),
   city: z.string().trim().min(2).max(120).optional(),
   countryCode: z
@@ -272,6 +265,10 @@ export const verifyMobileGoogleSchema = z
     businessProfileVersion: z
       .literal(BUSINESS_PROFILE_SCHEMA_VERSION)
       .optional(),
+    requestedSlug: z
+      .string()
+      .refine(isValidStoreLink, "Choose a valid store link")
+      .optional(),
     businessName: z.string().trim().min(1).max(120).optional(),
     city: z.string().trim().min(2).max(120).optional(),
     countryCode: z
@@ -353,6 +350,23 @@ export function shouldDispatchMobileOwnerOtpEmail(
 }
 
 export const authRouter = createTRPCRouter({
+  storeLinkAvailability: publicProcedure
+    .input(z.object({ slug: z.string().max(120) }).strict())
+    .query(async ({ ctx, input }) => {
+      try {
+        return await checkStoreLinkAvailability(
+          ctx.db,
+          input.slug,
+          ctx.privacyClientIp,
+        )
+      } catch {
+        throw new TRPCError({
+          code: "TOO_MANY_REQUESTS",
+          message:
+            "Store-link checks are temporarily unavailable. Try again shortly.",
+        })
+      }
+    }),
   phoneOtpAvailability: publicProcedure.query(() => ({
     enabled: isLocalPhoneAuth() || Boolean(readWhatsAppOtpConfig()),
   })),
@@ -388,6 +402,8 @@ export const authRouter = createTRPCRouter({
           devCode: local ? otp.code : null,
         }
       } catch (error) {
+        if (error instanceof StoreLinkConflictError)
+          throw new TRPCError({ code: "CONFLICT", message: error.message })
         throw new TRPCError({
           code: "BAD_REQUEST",
           message:
@@ -411,6 +427,8 @@ export const authRouter = createTRPCRouter({
       try {
         return await verifyPhoneOtp(ctx.db, input)
       } catch (error) {
+        if (error instanceof StoreLinkConflictError)
+          throw new TRPCError({ code: "CONFLICT", message: error.message })
         throw new TRPCError({
           code: "BAD_REQUEST",
           message:
@@ -597,6 +615,8 @@ export const authRouter = createTRPCRouter({
           { isolationLevel: "Serializable", maxWait: 10_000, timeout: 30_000 },
         )
       } catch (error) {
+        if (error instanceof StoreLinkConflictError)
+          throw new TRPCError({ code: "CONFLICT", message: error.message })
         if (error instanceof OnboardingContinuationError)
           onboardingFailure(error)
         if (error instanceof MobileAccountNotFoundError)
@@ -641,6 +661,8 @@ export const authRouter = createTRPCRouter({
         try {
           return await createMobileOwnerOtp(ctx.db, input)
         } catch (error) {
+          if (error instanceof StoreLinkConflictError)
+            throw new TRPCError({ code: "CONFLICT", message: error.message })
           if (error instanceof OnboardingContinuationError)
             onboardingFailure(error)
           throw new TRPCError({
@@ -698,6 +720,8 @@ export const authRouter = createTRPCRouter({
           { isolationLevel: "Serializable", maxWait: 10_000, timeout: 30_000 },
         )
       } catch (error) {
+        if (error instanceof StoreLinkConflictError)
+          throw new TRPCError({ code: "CONFLICT", message: error.message })
         if (error instanceof OnboardingContinuationError)
           onboardingFailure(error)
         throw new TRPCError({
@@ -726,6 +750,7 @@ export const authRouter = createTRPCRouter({
               businessProfileKey: input.businessProfileKey,
               businessProfileVersion: input.businessProfileVersion,
               businessName: input.businessName,
+              requestedSlug: input.requestedSlug,
               city: input.city,
               countryCode: input.countryCode,
               currencyCode: input.currencyCode,
@@ -748,6 +773,8 @@ export const authRouter = createTRPCRouter({
           { isolationLevel: "Serializable", maxWait: 10_000, timeout: 30_000 },
         )
       } catch (error) {
+        if (error instanceof StoreLinkConflictError)
+          throw new TRPCError({ code: "CONFLICT", message: error.message })
         if (error instanceof OnboardingContinuationError)
           onboardingFailure(error)
         throw new TRPCError({

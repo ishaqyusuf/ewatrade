@@ -1,0 +1,248 @@
+import { readBusinessOnboardingFactsFromStoreMetadata } from "@ewatrade/utils/business-profiles"
+import {
+  defaultBusinessOffer,
+  findBusinessType,
+} from "@ewatrade/utils/business-types"
+import {
+  type OwnerSetupBusiness,
+  type OwnerSetupDraft,
+  readOwnerSignupDraft,
+} from "@ewatrade/utils/owner-signup"
+import type { Prisma } from "../../generated/prisma/client"
+import {
+  createOwnerBusiness,
+  requireEligibleOwnerAge,
+} from "./owner-businesses"
+import { findRetailOpsPlan } from "./retail-ops-subscription-plans"
+import type { DbClient } from "./types"
+
+function record(value: unknown): Record<string, unknown> {
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : {}
+}
+
+/** Scope comes from the authenticated owner and a pending Store, never input IDs. */
+export async function getPendingOwnerSignup(db: DbClient, userId: string) {
+  await requireEligibleOwnerAge(db, userId)
+  return db.membership.findFirst({
+    where: {
+      userId,
+      role: { in: ["OWNER", "ADMIN"] },
+      status: "ACTIVE",
+      tenant: {
+        isActive: true,
+        stores: {
+          some: {
+            metadata: {
+              path: ["retailOps", "onboarding", "setupStatus"],
+              equals: "pending",
+            },
+            status: { not: "ARCHIVED" },
+          },
+        },
+      },
+    },
+    orderBy: { createdAt: "asc" },
+    select: {
+      tenantId: true,
+      tenant: {
+        select: {
+          id: true,
+          name: true,
+          slug: true,
+          metadata: true,
+          stores: {
+            where: { status: { not: "ARCHIVED" } },
+            orderBy: { createdAt: "asc" },
+            select: { id: true, metadata: true },
+          },
+        },
+      },
+    },
+  })
+}
+
+export async function readOwnerSignupSetup(db: DbClient, userId: string) {
+  const pending = await getPendingOwnerSignup(db, userId)
+  if (!pending) return null
+  const session = await db.onboardingSession.findFirst({
+    where: { tenantId: pending.tenantId, userId },
+    orderBy: { createdAt: "desc" },
+    select: { formData: true },
+  })
+  return {
+    tenantId: pending.tenantId,
+    name: pending.tenant.name,
+    slug: pending.tenant.slug,
+    draft: readOwnerSignupDraft(record(session?.formData).ownerSignup),
+  }
+}
+
+export async function saveOwnerSignupDraft(
+  db: DbClient,
+  userId: string,
+  draft: OwnerSetupDraft,
+) {
+  const pending = await getPendingOwnerSignup(db, userId)
+  if (!pending) throw new Error("This setup is already complete. Return Home.")
+  const session = await db.onboardingSession.findFirst({
+    where: { tenantId: pending.tenantId, userId },
+    orderBy: { createdAt: "desc" },
+  })
+  const formData = {
+    ...record(session?.formData),
+    ownerSignup: draft,
+  } as Prisma.InputJsonObject
+  if (session)
+    await db.onboardingSession.update({
+      where: { id: session.id },
+      data: { formData, completed: false },
+    })
+  else
+    await db.onboardingSession.create({
+      data: {
+        tenantId: pending.tenantId,
+        userId,
+        formData,
+        expiresAt: new Date(Date.now() + 365 * 86400_000),
+      },
+    })
+  return { saved: true }
+}
+
+export async function completeOwnerSignupSetup(
+  db: DbClient,
+  userId: string,
+  input: OwnerSetupDraft,
+) {
+  const pending = await getPendingOwnerSignup(db, userId)
+  if (!pending) return { completed: true } // Retry after a committed response loss is harmless.
+  // Serialize completion for this owner across requests and tabs.
+  await db.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${`owner-signup:${userId}`}))`
+  const current = await getPendingOwnerSignup(db, userId)
+  if (!current) return { completed: true }
+  const first = input.businesses[0]
+  if (
+    !first ||
+    first.name !== current.tenant.name ||
+    first.slug !== current.tenant.slug
+  )
+    throw new Error("Keep your first business name and store link unchanged.")
+  const plan = findRetailOpsPlan(input.planId)
+  if (!plan) throw new Error("Choose a supported plan.")
+  const owned = await db.membership.count({
+    where: {
+      userId,
+      role: "OWNER",
+      status: "ACTIVE",
+      tenant: { isActive: true },
+    },
+  })
+  const available = Math.max(1, plan.limits.businesses - owned + 1)
+  const setupNow = input.businesses.slice(0, available)
+  const waiting = input.businesses.slice(available)
+  const ready: { id: string; name: string; slug: string }[] = []
+  const updateStore = async (
+    storeId: string,
+    tenantId: string,
+    business: OwnerSetupBusiness,
+  ) => {
+    const store = await db.store.findFirst({
+      where: { id: storeId, tenantId },
+      select: { metadata: true },
+    })
+    if (!store) throw new Error("Your Store is unavailable.")
+    const metadata = record(store.metadata)
+    const retailOps = record(metadata.retailOps)
+    const onboarding = {
+      ...record(retailOps.onboarding),
+      businessTypeKeys: business.typeKeys,
+      otherBusinessType: business.typeKeys.includes("other")
+        ? (business.otherType?.trim() ?? null)
+        : null,
+      businessProfileKey:
+        findBusinessType(business.typeKeys[0])?.businessProfileKey ??
+        "other-mixed-business",
+      businessProfileVersion: 1,
+      operatingModel:
+        business.operatingModel ?? defaultBusinessOffer(business.typeKeys),
+      setupStatus: "complete",
+      countryCode: business.countryCode,
+      currencyCode: business.currencyCode,
+    }
+    await db.store.update({
+      where: { id: storeId },
+      data: {
+        currencyCode: business.currencyCode,
+        countryCode: business.countryCode,
+        description: business.description?.trim() || null,
+        addressLine1: business.addressLine1?.trim() || null,
+        city: business.city?.trim() || null,
+        region: business.region?.trim() || null,
+        metadata: {
+          ...metadata,
+          retailOps: { ...retailOps, onboarding },
+        } as Prisma.InputJsonObject,
+      },
+    })
+    const tenant = await db.tenant.findUniqueOrThrow({
+      where: { id: tenantId },
+      select: { metadata: true },
+    })
+    const tenantMetadata = record(tenant.metadata)
+    await db.tenant.update({
+      where: { id: tenantId },
+      data: {
+        currencyCode: business.currencyCode,
+        metadata: {
+          ...tenantMetadata,
+          retailOps: {
+            ...record(tenantMetadata.retailOps),
+            subscription: {
+              planId: input.planId,
+              status: "active",
+              updatedAt: new Date().toISOString(),
+            },
+          },
+        } as Prisma.InputJsonObject,
+      },
+    })
+  }
+  const firstStore = current.tenant.stores.find(
+    (s) =>
+      readBusinessOnboardingFactsFromStoreMetadata(s.metadata)?.setupStatus ===
+      "pending",
+  )
+  if (!firstStore) throw new Error("Your pending Store is unavailable.")
+  await updateStore(firstStore.id, current.tenantId, first)
+  ready.push({ id: current.tenantId, name: first.name, slug: first.slug })
+  for (const business of setupNow.slice(1)) {
+    const created = await createOwnerBusiness(db, {
+      userId,
+      businessName: business.name,
+      requestedSlug: business.slug,
+      currencyCode: business.currencyCode,
+      setupStatus: "complete",
+    })
+    if (!created.storeId) throw new Error("Unable to create the Store.")
+    await updateStore(created.storeId, created.id, business)
+    ready.push({ id: created.id, name: created.name, slug: created.slug })
+  }
+  const session = await db.onboardingSession.findFirst({
+    where: { tenantId: current.tenantId, userId },
+    orderBy: { createdAt: "desc" },
+  })
+  const formData = {
+    ...record(session?.formData),
+    ownerSignup: input,
+    readyBusinesses: ready,
+    pendingBusinesses: waiting,
+  } as Prisma.InputJsonObject
+  if (session)
+    await db.onboardingSession.update({
+      where: { id: session.id },
+      data: { completed: true, formData },
+    })
+  return { completed: true }
+}

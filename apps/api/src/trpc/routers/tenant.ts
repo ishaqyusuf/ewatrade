@@ -1,5 +1,11 @@
 import { canManageTenant, normalizeRole } from "@ewatrade/auth/roles"
 import {
+  StoreLinkConflictError,
+  completeOwnerSignupSetup,
+  readOwnerSignupSetup,
+  saveOwnerSignupDraft,
+} from "@ewatrade/db/queries"
+import {
   OwnerBusinessAgeError,
   RetailOpsSubscriptionError,
   createOwnerBusiness,
@@ -14,6 +20,7 @@ import { issueAnalyticsContext } from "@ewatrade/events/identity-server"
 import { isQaAnalyticsPrincipal } from "@ewatrade/events/qa-policy-server"
 import { TRPCError } from "@trpc/server"
 import { z } from "zod"
+import { ownerSignupDraftSchema } from "../../schemas/owner-signup"
 import { createBusinessSchema, createStoreSchema } from "../../schemas/tenant"
 import { qaScopedMembershipWhere } from "../../utils/qa-session-access"
 import {
@@ -35,6 +42,44 @@ function assertCanManageTenantStores(role: string) {
 }
 
 export const tenantRouter = createTRPCRouter({
+  ownerSignupSetup: authenticatedProcedure.query(({ ctx }) =>
+    readOwnerSignupSetup(ctx.db, ctx.session.user.id),
+  ),
+  saveOwnerSignupDraft: authenticatedProcedure
+    .input(ownerSignupDraftSchema)
+    .mutation(({ ctx, input }) =>
+      ctx.db.$transaction(
+        (tx) => saveOwnerSignupDraft(tx, ctx.session.user.id, input),
+        { isolationLevel: "Serializable", maxWait: 10_000, timeout: 30_000 },
+      ),
+    ),
+  completeOwnerSignup: authenticatedProcedure
+    .input(ownerSignupDraftSchema)
+    .mutation(async ({ ctx, input }) => {
+      try {
+        return await ctx.db.$transaction(
+          (tx) => completeOwnerSignupSetup(tx, ctx.session.user.id, input),
+          { isolationLevel: "Serializable", maxWait: 10_000, timeout: 30_000 },
+        )
+      } catch (error) {
+        if (error instanceof StoreLinkConflictError)
+          throw new TRPCError({ code: "CONFLICT", message: error.message })
+        throw error
+      }
+    }),
+  ownerSignupSummary: protectedProcedure.query(async ({ ctx }) => {
+    assertCanManageTenantStores(ctx.tenantContext.membership.role)
+    const session = await ctx.db.onboardingSession.findFirst({
+      where: {
+        tenantId: ctx.tenantId,
+        userId: ctx.session.user.id,
+        completed: true,
+      },
+      orderBy: { createdAt: "desc" },
+      select: { formData: true },
+    })
+    return session?.formData ?? null
+  }),
   createBusiness: authenticatedProcedure
     .input(createBusinessSchema)
     .mutation(async ({ ctx, input }) => {
