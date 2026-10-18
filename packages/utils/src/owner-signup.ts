@@ -15,7 +15,7 @@ export type OwnerSetupBusiness = {
   otherType?: string
   operatingModel: BusinessOperatingModel
   countryCode: string
-  currencyCode: OperatingCurrencyCode
+  currencyCode: OperatingCurrencyCode | ""
   description?: string
   addressLine1?: string
   city?: string
@@ -60,9 +60,11 @@ export function readOwnerSignupDraft(
       (!allowIncomplete && !b.typeKeys.length) ||
       !b.typeKeys.every(isBusinessTypeKey) ||
       typeof b.countryCode !== "string" ||
-      !/^[A-Z]{2}$/.test(b.countryCode) ||
+      (!(allowIncomplete && b.countryCode === "") &&
+        !/^[A-Z]{2}$/.test(b.countryCode)) ||
       typeof b.currencyCode !== "string" ||
-      !isOperatingCurrencyCode(b.currencyCode) ||
+      (!(allowIncomplete && b.currencyCode === "") &&
+        !isOperatingCurrencyCode(b.currencyCode)) ||
       !BUSINESS_OPERATING_MODEL_KEYS.some((k) => k === b.operatingModel)
     )
       return null

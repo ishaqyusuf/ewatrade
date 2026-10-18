@@ -24,8 +24,8 @@ const draftBusiness = z
       .max(42),
     otherType: z.string().trim().max(60).optional(),
     operatingModel: z.enum(BUSINESS_OPERATING_MODEL_KEYS),
-    countryCode: z.string().regex(/^[A-Z]{2}$/),
-    currencyCode: z.enum(OPERATING_CURRENCY_CODES),
+    countryCode: z.union([z.literal(""), z.string().regex(/^[A-Z]{2}$/)]),
+    currencyCode: z.union([z.literal(""), z.enum(OPERATING_CURRENCY_CODES)]),
     description: z.string().trim().max(280).optional(),
     addressLine1: z.string().trim().max(200).optional(),
     city: z.string().trim().max(120).optional(),
@@ -35,6 +35,12 @@ const draftBusiness = z
 
 const business = draftBusiness
   .superRefine((v, ctx) => {
+    if (!v.countryCode || !v.currencyCode)
+      ctx.addIssue({
+        code: "custom",
+        path: ["countryCode"],
+        message: "Choose a country and currency",
+      })
     if (!v.name.trim())
       ctx.addIssue({
         code: "custom",

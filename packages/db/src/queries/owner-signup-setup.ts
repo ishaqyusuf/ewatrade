@@ -1,4 +1,4 @@
-import { withQaWorkspaceSuffix } from "@ewatrade/utils"
+import { isOperatingCurrencyCode, withQaWorkspaceSuffix } from "@ewatrade/utils"
 import { readBusinessOnboardingFactsFromStoreMetadata } from "@ewatrade/utils/business-profiles"
 import {
   defaultBusinessOffer,
@@ -239,6 +239,8 @@ export async function completeOwnerSignupSetup(
   await updateStore(firstStore.id, current.tenantId, first)
   ready.push({ id: current.tenantId, name: first.name, slug: first.slug })
   for (const business of setupNow.slice(1)) {
+    if (!isOperatingCurrencyCode(business.currencyCode))
+      throw new Error("Choose a currency.")
     const created = await createOwnerBusiness(db, {
       userId,
       businessName: business.name,
