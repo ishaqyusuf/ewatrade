@@ -17,6 +17,7 @@ const legal = {
   acknowledgedPrivacyNotice: z.literal(true),
 }
 const emailAccount = account.extend({ email: z.email() })
+const googleAccount = account.extend({ name: account.shape.name.optional() })
 const phone = z.string().regex(/^\+[1-9]\d{7,14}$/)
 const code = z.string().regex(/^\d{6}$/)
 const requestSchema = z.discriminatedUnion("action", [
@@ -28,7 +29,7 @@ const requestSchema = z.discriminatedUnion("action", [
     .extend({ action: z.literal("request_phone"), phone, ...legal })
     .strict(),
   z.object({ action: z.literal("verify_phone"), phone, code }).strict(),
-  account
+  googleAccount
     .extend({
       action: z.literal("google"),
       idToken: z.string().min(20).max(16000),
@@ -111,10 +112,15 @@ export async function POST(request: NextRequest) {
   const origin = request.headers.get("origin")
   const host =
     request.headers.get("x-forwarded-host") ?? request.headers.get("host")
+  let sameOrigin = false
+  try {
+    sameOrigin = Boolean(origin && new URL(origin).host === host)
+  } catch {
+    /* Malformed origins fail closed. */
+  }
   if (
     !request.headers.get("content-type")?.startsWith("application/json") ||
-    !origin ||
-    new URL(origin).host !== host
+    !sameOrigin
   ) {
     return NextResponse.json(
       { message: "Reload this signup page and try again." },
@@ -171,7 +177,7 @@ export async function POST(request: NextRequest) {
               mode: "sign_up",
             })
           : await client.auth.verifyMobileGoogle.mutate({
-              ...account.parse(value),
+              ...googleAccount.parse(value),
               idToken: value.idToken,
               legalVersion: value.legalVersion,
               acceptedTerms: true,

@@ -40,7 +40,7 @@ export function SignupGoogle({
     const google = (
       window as Window & { google?: { accounts: { id: GoogleIdentity } } }
     ).google
-    if (!ready || !google || !clientId || !element.current) return
+    if (!ready || disabled || !google || !clientId || !element.current) return
     google.accounts.id.initialize({
       client_id: clientId,
       callback: (response) => {
@@ -54,17 +54,17 @@ export function SignupGoogle({
       text: "continue_with",
       width: 360,
     })
-  }, [ready, clientId])
+  }, [ready, clientId, disabled])
   return (
     <div className="owner-google">
-      {clientId && (
+      {clientId && !disabled && (
         <Script
           src="https://accounts.google.com/gsi/client"
           onReady={() => setReady(true)}
           onError={() => setFailed(true)}
         />
       )}
-      {clientId && ready && !failed ? (
+      {clientId && ready && !failed && !disabled ? (
         <div
           aria-disabled={disabled}
           inert={disabled}

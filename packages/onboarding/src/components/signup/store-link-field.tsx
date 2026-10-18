@@ -11,6 +11,8 @@ export type StoreLinkCheck = {
   slug: string
   available: boolean
   suggestions: string[]
+  requestedSlug: string
+  emailDomain?: string
 }
 
 export function StoreLinkField({
@@ -56,8 +58,9 @@ export function StoreLinkField({
             result.message ?? "The link could not be checked. Try again.",
           )
         if (!controller.signal.aborted) {
-          setCheck(result)
-          onCheck?.(result)
+          const checked = { ...result, requestedSlug: value, emailDomain }
+          setCheck(checked)
+          onCheck?.(checked)
         }
       } catch (cause) {
         if (!controller.signal.aborted)
@@ -90,9 +93,16 @@ export function StoreLinkField({
             autoCapitalize="none"
             autoCorrect="off"
             spellCheck={false}
-            onChange={(event) =>
-              onChange(normalizeStoreLink(event.target.value))
-            }
+            onChange={(event) => {
+              const typed = event.target.value
+              const normalized = normalizeStoreLink(typed)
+              onChange(
+                typed.endsWith("-") && normalized && normalized.length < 40
+                  ? `${normalized}-`
+                  : normalized,
+              )
+            }}
+            onBlur={() => onChange(normalizeStoreLink(value))}
           />
           <span>.ewatrade.com</span>
         </span>

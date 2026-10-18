@@ -103,8 +103,12 @@ function AccountFirstSignup() {
     eligible &&
       account.terms &&
       account.businessName.trim() &&
-      account.name.trim() &&
       link?.available &&
+      link.requestedSlug === account.slug &&
+      link.emailDomain ===
+        (mode === "email"
+          ? account.email.split("@")[1]?.toLowerCase()
+          : undefined) &&
       settings?.publication.signupAvailable,
   )
   const contactReady =
@@ -123,7 +127,7 @@ function AccountFirstSignup() {
   const profile = {
     businessName: account.businessName.trim(),
     requestedSlug: link?.slug ?? account.slug,
-    name: account.name.trim(),
+    name: account.name.trim() || undefined,
     ageBand: age,
   }
   async function submit(
@@ -218,7 +222,7 @@ function AccountFirstSignup() {
           <form
             onSubmit={(event) => {
               event.preventDefault()
-              if (ready && contactReady)
+              if (ready && account.name.trim() && contactReady)
                 void submit(
                   mode === "email" ? "request_email" : "request_phone",
                 )
@@ -358,9 +362,13 @@ function AccountFirstSignup() {
               </div>
             </fieldset>
             {age === "UNDER_13" ? (
-              <output className="owner-error">
-                EwaTrade accounts are for people aged 13 or older. Your entered
-                details have been cleared.
+              <output className="owner-age-warning">
+                <b>Not available under 13</b>
+                <span>
+                  ẸwáTrade is available from age 13. Nothing you typed has been
+                  saved.
+                </span>
+                <a href="/login">Close setup</a>
               </output>
             ) : (
               <label className="owner-terms">
@@ -402,21 +410,31 @@ function AccountFirstSignup() {
                 are effective.
               </output>
             )}
-            <button
-              className="signup-primary"
-              disabled={!ready || !contactReady || pending}
-              type="submit"
-            >
-              {pending ? "Sending your code…" : "Continue"}
-            </button>
-            <div className="owner-divider">or</div>
-            <SignupGoogle
-              clientId={settings?.googleClientId ?? null}
-              disabled={!ready || pending}
-              onCredential={(idToken) => {
-                if (ready) void submit("google", idToken)
-              }}
-            />
+            {age !== "UNDER_13" && (
+              <>
+                <button
+                  className="signup-primary"
+                  disabled={
+                    !ready || !account.name.trim() || !contactReady || pending
+                  }
+                  type="submit"
+                >
+                  {pending
+                    ? "Sending your code…"
+                    : mode === "email"
+                      ? "Send code to email"
+                      : "Send code on WhatsApp"}
+                </button>
+                <div className="owner-divider">or</div>
+                <SignupGoogle
+                  clientId={settings?.googleClientId ?? null}
+                  disabled={!ready || pending}
+                  onCredential={(idToken) => {
+                    if (ready) void submit("google", idToken)
+                  }}
+                />
+              </>
+            )}
           </form>
         ) : (
           <form
@@ -489,3 +507,5 @@ function AccountFirstSignup() {
     </OwnerSignupFrame>
   )
 }
+
+export { SignupUseLocation } from "./signup-location"

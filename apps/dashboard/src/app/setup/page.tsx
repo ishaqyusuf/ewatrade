@@ -1,5 +1,11 @@
-import { StoreSetupForm } from "@/components/auth/store-setup-form"
+import { OwnerSetupEntry } from "@/components/owner-signup/owner-setup"
+import { HydrateClient, prefetch, trpc } from "@/trpc/server"
 
-export default function SetupPage() {
-  return <StoreSetupForm />
+export default async function SetupPage() {
+  await prefetch(trpc.tenant.ownerSignupSetup.queryOptions())
+  return (
+    <HydrateClient>
+      <OwnerSetupEntry />
+    </HydrateClient>
+  )
 }
