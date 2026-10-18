@@ -9,6 +9,7 @@ import {
 } from "@ewatrade/utils/store-link"
 import { useQuery } from "@tanstack/react-query"
 import { useEffect, useState } from "react"
+import { useOwnerSignupColors } from "./owner-signup-frame"
 
 export function StoreLinkField({
   value,
@@ -16,6 +17,7 @@ export function StoreLinkField({
   onAvailability,
   onCanonicalize,
   fixed = false,
+  compact = false,
   email,
   forceEdit = false,
   onEditorOpened,
@@ -25,10 +27,12 @@ export function StoreLinkField({
   onAvailability: (available: boolean) => void
   onCanonicalize?: (slug: string) => void
   fixed?: boolean
+  compact?: boolean
   email?: string
   onEditorOpened?: () => void
   forceEdit?: boolean
 }) {
+  const colors = useOwnerSignupColors()
   const trpc = useTRPC()
   const [editing, setEditing] = useState(false)
   useEffect(() => {
@@ -84,42 +88,64 @@ export function StoreLinkField({
           variant="green-gate"
         />
       ) : null}
-      <Text
-        accessibilityLiveRegion="polite"
-        className="text-xs text-muted-foreground"
+      <View
+        style={{
+          flexDirection: compact ? "row" : "column",
+          gap: compact ? 6 : 8,
+          alignItems: compact ? "center" : undefined,
+        }}
       >
-        {value || "your-business"}.ewatrade.com ·{" "}
-        {fixed
-          ? "Your store link"
-          : !value
-            ? "Your store link appears here as you name your business"
-            : available
-              ? "Available"
-              : value !== debounced || check.isFetching
-                ? "Checking…"
-                : !isValidStoreLink(value)
-                  ? "Choose a link with 2–40 letters or numbers"
-                  : check.isError
-                    ? check.error.message
-                    : value
-                      ? "That link is taken. Try one below, or edit it."
-                      : "Your store link appears here as you name your business"}
-      </Text>
-      {!fixed ? (
-        <Pressable
-          accessibilityRole="button"
-          className="min-h-11 justify-center"
-          onPress={() => {
-            setEditing((current) => !current)
-            if (check.isError) void check.refetch()
-          }}
+        <Text
+          style={
+            compact
+              ? {
+                  flex: 1,
+                  fontSize: 14,
+                  lineHeight: 20,
+                  color: colors.mutedForeground,
+                }
+              : undefined
+          }
+          accessibilityLiveRegion="polite"
+          className="text-xs text-muted-foreground"
         >
-          <Text className="text-xs font-bold text-primary">
-            {editing ? "Done editing" : "Edit link"}
-            {check.isError ? " / retry" : ""}
-          </Text>
-        </Pressable>
-      ) : null}
+          {value || "your-business"}.ewatrade.com ·{" "}
+          {fixed
+            ? "Your store link"
+            : !value
+              ? "Your store link appears here as you name your business"
+              : available
+                ? "Available"
+                : value !== debounced || check.isFetching
+                  ? "Checking…"
+                  : !isValidStoreLink(value)
+                    ? "Choose a link with 2–40 letters or numbers"
+                    : check.isError
+                      ? check.error.message
+                      : value
+                        ? "That link is taken. Try one below, or edit it."
+                        : "Your store link appears here as you name your business"}
+        </Text>
+        {!fixed ? (
+          <Pressable
+            accessibilityRole="button"
+            className={compact ? undefined : "min-h-11 justify-center"}
+            style={
+              compact ? { minHeight: 28, justifyContent: "center" } : undefined
+            }
+            hitSlop={compact ? 8 : undefined}
+            onPress={() => {
+              setEditing((current) => !current)
+              if (check.isError) void check.refetch()
+            }}
+          >
+            <Text className="text-xs font-bold text-primary">
+              {editing ? "Done editing" : "Edit link"}
+              {check.isError ? " / retry" : ""}
+            </Text>
+          </Pressable>
+        ) : null}
+      </View>
       {!fixed && check.data && !check.data.available ? (
         <View className="flex-row flex-wrap gap-2">
           {check.data.suggestions.map((slug) => (

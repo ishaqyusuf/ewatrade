@@ -1,7 +1,6 @@
 import { AuthActionButton } from "@/components/mobile/auth-header"
 import { BottomSearchFooter } from "@/components/mobile/bottom-search-footer"
 import { GreenTillAuthScreen } from "@/components/mobile/green-till/auth-screen"
-import { SetupPreviewStage } from "@/components/mobile/green-till/auth-stage"
 import { StartupSplash } from "@/components/mobile/startup-splash"
 import { StatusBanner } from "@/components/mobile/status-banner"
 import { Pressable } from "@/components/ui/pressable"
@@ -25,7 +24,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { TRPCClientError } from "@trpc/client"
 import { Redirect, useRouter } from "expo-router"
 import { type ReactNode, useCallback, useEffect, useRef, useState } from "react"
-import { AppState, ScrollView } from "react-native"
+import { AppState, Keyboard, ScrollView } from "react-native"
 import Animated, {
   Easing,
   ReduceMotion,
@@ -35,6 +34,7 @@ import Animated, {
   withTiming,
 } from "react-native-reanimated"
 import { OwnerGroupStep } from "./owner-group-step"
+import { OwnerSignupFrame } from "./owner-signup-frame"
 import { OwnerStoreStep } from "./owner-store-step"
 import { OwnerTypeFooter, OwnerTypePicker } from "./owner-type-picker"
 
@@ -60,7 +60,14 @@ export function OwnerSetupScreen() {
   const [active, setActive] = useState(0)
   const [query, setQuery] = useState("")
   const [multi, setMulti] = useState(false)
+  const [pickRequest, setPickRequest] = useState(0)
   const [focused, setFocused] = useState(false)
+  useEffect(() => {
+    if (step === "type") {
+      setMulti(false)
+      setPickRequest(0)
+    }
+  }, [step])
   const [footerHeight, setFooterHeight] = useState(0)
   const [groupReady, setGroupReady] = useState(false)
   const [dragging, setDragging] = useState(false)
@@ -100,7 +107,7 @@ export function OwnerSetupScreen() {
     )
     setPlan(syncOwnerSignupPlan(saved.planId, saved.businesses.length))
     setGroupedFor(saved.groupedFor ?? keys.join(","))
-    setMulti(keys.length > 1)
+    setMulti(false)
     setStep(saved.step ?? (saved.businesses.length ? "store" : "type"))
     setActive(
       Math.min(
@@ -285,6 +292,8 @@ export function OwnerSetupScreen() {
   const first = setup.data
   function selectTypes(keys: string[]) {
     setTypes(keys)
+    if (!multi) Keyboard.dismiss()
+    setPickRequest((current) => current + 1)
   }
   function updateOther(text: string) {
     setOther(text)
@@ -375,9 +384,16 @@ export function OwnerSetupScreen() {
         onFocus={setFocused}
         onHeight={setFooterHeight}
         multi={multi}
+        pickRequest={pickRequest}
+        other={other}
+        onOther={updateOther}
         selected={types}
         valid={validTypes}
         onMore={() => setMulti(true)}
+        onClear={() => {
+          setTypes([])
+          setMulti(false)
+        }}
         onContinue={proceedTypes}
       />
     ) : (
@@ -418,7 +434,8 @@ export function OwnerSetupScreen() {
       </BottomSearchFooter>
     )
   return (
-    <GreenTillAuthScreen
+    <OwnerSignupFrame
+      key={`${step}-${active}`}
       title={
         step === "type"
           ? "What kind of business is it?"
@@ -432,34 +449,28 @@ export function OwnerSetupScreen() {
             ? "Tick every type you run. We use them to suggest products, categories and tips."
             : "Pick the closest one. We use it to suggest products, categories and tips."
           : step === "group"
-            ? "Types in the same card are one business. Drag a type or tap it to move it."
-            : `Business ${active + 1} of ${now.length}. A few details for customers and your daily work.`
+            ? "Types in the same card are one business. Drag a type to another card, or onto “New business” to run it separately."
+            : "Almost done. You can change all of this later."
       }
       progress={
         step === "type" ? 2 : step === "group" ? 3 : types.length > 1 ? 4 : 3
       }
       progressTotal={types.length > 1 ? 4 : 3}
-      compact
-      stageCollapsed={step === "type" && focused}
+      collapsed={step === "type" && focused}
       footerHeight={footerHeight}
       footer={footer}
       scrollEnabled={!dragging && !isFinishing}
       onBack={
-        step === "type" || isFinishing
+        step === "type"
           ? undefined
           : () => {
+              if (isFinishing) return
               setError(null)
               if (step === "store" && active > 0) setActive(active - 1)
               else if (step === "store")
                 setStep(types.length > 1 ? "group" : "type")
               else setStep("type")
             }
-      }
-      stage={
-        <SetupPreviewStage
-          businessName={first.name}
-          chips={["Your business", "Your store link"]}
-        />
       }
       testID={`owner-setup-${step}`}
     >
@@ -475,19 +486,6 @@ export function OwnerSetupScreen() {
             tone="destructive"
             icon="TriangleAlert"
           />
-        ) : null}
-        {step === "type" ? (
-          <Pressable
-            accessibilityRole="button"
-            className="min-h-11 self-end justify-center px-3.5"
-            onPress={() => {
-              void flushSave()
-                .catch(() => undefined)
-                .then(() => auth.onLogout())
-            }}
-          >
-            <Text className="text-xs text-muted-foreground">Sign out</Text>
-          </Pressable>
         ) : null}
         {step === "type" ? (
           <OwnerTypePicker
@@ -554,7 +552,7 @@ export function OwnerSetupScreen() {
           <View style={{ height: footerHeight + 24 }} />
         ) : null}
       </OwnerStepBody>
-    </GreenTillAuthScreen>
+    </OwnerSignupFrame>
   )
 }
 
@@ -579,7 +577,7 @@ function OwnerStepBody({
   }))
   return (
     <Animated.View
-      style={[{ gap: 16 }, style]}
+      style={[{ gap: 12 }, style]}
       pointerEvents={disabled ? "none" : "auto"}
     >
       {children}

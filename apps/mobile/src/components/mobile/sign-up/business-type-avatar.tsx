@@ -16,13 +16,23 @@ export function BusinessTypeAvatar({
   const palette = GREEN_TILL_THEME[colorScheme]
   const type = findBusinessType(typeKey)
   const group = BUSINESS_TYPE_GROUPS.find((g) => g.key === type?.group)
+  const tint = group ? palette[group.tone] : colors.muted
+  const tintInk = group
+    ? {
+        mint: palette.mintForeground,
+        amber: palette.amberForeground,
+        sky: palette.skyForeground,
+        lilac: palette.lilacForeground,
+        rose: colorScheme === "dark" ? "#F7A3A3" : palette.roseForeground,
+      }[group.tone]
+    : colors.mutedForeground
   const xml = getCatalogIllustrationSvg(
     type?.illustrationId ?? "ill-generic-product",
     {
-      ink: colors.foreground,
+      ink: tintInk,
       fill: colors.card,
-      accent: colors.primary,
-      highlight: colors.accent,
+      accent: tintInk,
+      highlight: tint,
     },
   )
   return (
@@ -31,13 +41,15 @@ export function BusinessTypeAvatar({
       style={{
         width: size,
         height: size,
-        borderRadius: 14,
+        borderRadius: size / 2,
         alignItems: "center",
         justifyContent: "center",
-        backgroundColor: group ? palette[group.tone] : colors.muted,
+        backgroundColor: tint,
       }}
     >
-      {xml ? <SvgXml xml={xml} width={size - 8} height={size - 8} /> : null}
+      {xml ? (
+        <SvgXml xml={xml} width={size * 0.74} height={size * 0.74} />
+      ) : null}
     </View>
   )
 }
