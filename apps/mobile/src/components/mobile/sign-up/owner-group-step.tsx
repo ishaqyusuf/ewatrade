@@ -236,7 +236,13 @@ export function OwnerGroupStep({
             }}
           >
             <BusinessTypeAvatar typeKey={business.typeKeys[0] ?? "other"} />
-            <Text className="flex-1 text-sm font-bold text-foreground">
+            <Text
+              className={
+                largeText
+                  ? "text-sm font-bold text-foreground"
+                  : "flex-1 text-sm font-bold text-foreground"
+              }
+            >
               Business {index + 1}
               {index >= limit ? " · Waits for an upgrade" : ""}
             </Text>

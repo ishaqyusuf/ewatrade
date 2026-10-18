@@ -77,7 +77,7 @@ export function OwnerStoreStep({
           }
         >
           <BusinessTypeAvatar typeKey={business.typeKeys[0] ?? "other"} />
-          <View className="min-w-0 flex-1">
+          <View className={largeText ? "min-w-0" : "min-w-0 flex-1"}>
             <Text className="text-sm font-bold text-foreground">
               {business.name}
             </Text>
