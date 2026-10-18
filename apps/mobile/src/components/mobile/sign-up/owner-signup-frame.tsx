@@ -4,6 +4,7 @@ import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
 import { useColorScheme, useColors } from "@/hooks/use-color"
 import { GREEN_TILL_THEME } from "@/lib/green-till-theme"
+import { nativeStackStatusBarStyle } from "@/lib/native-stack-status-bar"
 import { Stack } from "expo-router"
 import { StatusBar } from "expo-status-bar"
 import { type ReactNode, createContext, useContext, useId, useRef } from "react"
@@ -73,12 +74,7 @@ export function OwnerSignupFrame({
       }}
       testID={testID}
     >
-      <Stack.Screen
-        options={{
-          statusBarStyle: "light",
-          statusBarBackgroundColor: palette.heroFrom,
-        }}
-      />
+      <Stack.Screen options={nativeStackStatusBarStyle("light")} />
       <StatusBar style="light" />
       <SectionScroll.Provider value={jump}>
         <KeyboardAwareScrollView
