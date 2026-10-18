@@ -1,14 +1,18 @@
 "use client"
 
-import { StoreSetupForm } from "@/components/auth/store-setup-form"
 import { useTRPC } from "@/trpc/client"
-import { OwnerSignupFrame } from "@ewatrade/onboarding/components/signup/signup-flow"
+import {
+  OwnerSignupFrame,
+  StoreLinkField,
+} from "@ewatrade/onboarding/components/signup/signup-flow"
+import { Input } from "@ewatrade/ui"
 import {
   type OwnerSetupDraft,
   reconcileOwnerBusinessTypes,
   syncOwnerSignupPlan,
 } from "@ewatrade/utils/owner-signup"
-import { useQuery, useQueryClient } from "@tanstack/react-query"
+import { normalizeStoreLink } from "@ewatrade/utils/store-link"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useRouter } from "next/navigation"
 import { useCallback, useEffect, useRef, useState } from "react"
 import { OwnerGroupStep } from "./group-step"
@@ -49,8 +53,125 @@ export function OwnerSetupEntry() {
         <a href="/login">Sign in again</a>
       </main>
     )
-  if (!query.data) return <StoreSetupForm />
+  if (!query.data) return <StartOwnerSetup onPending={() => query.refetch()} />
   return <OwnerSetupForm key={query.data.tenantId} setup={query.data} />
+}
+
+/**
+ * No pending setup: finished owners go Home; a business without a Store, or an
+ * account without a business, starts the same type → group → store flow.
+ */
+function StartOwnerSetup({ onPending }: { onPending: () => unknown }) {
+  const trpc = useTRPC()
+  const router = useRouter()
+  const [needsBusiness, setNeedsBusiness] = useState(false)
+  const [businessName, setBusinessName] = useState("")
+  const [slug, setSlug] = useState("")
+  const [slugEdited, setSlugEdited] = useState(false)
+  const [link, setLink] = useState<{
+    slug: string
+    available: boolean
+    requestedSlug: string
+  } | null>(null)
+  const checkLink = useCallback((value: typeof link) => setLink(value), [])
+  const start = useMutation(
+    trpc.tenant.startOwnerSetup.mutationOptions({
+      onSuccess(result) {
+        if (result.status === "complete") router.replace("/")
+        else if (result.status === "pending") void onPending()
+        else setNeedsBusiness(true)
+      },
+    }),
+  )
+  const started = useRef(false)
+  useEffect(() => {
+    if (started.current) return
+    started.current = true
+    start.mutate(undefined)
+  }, [start])
+  const ready = Boolean(
+    businessName.trim() &&
+      link?.available &&
+      link.requestedSlug === slug &&
+      !start.isPending,
+  )
+  if (!needsBusiness)
+    return (
+      <main className="signup-main">
+        {start.error ? (
+          <>
+            <h1>Your setup could not start.</h1>
+            <p role="alert">{start.error.message}</p>
+            <button
+              type="button"
+              className="signup-primary"
+              onClick={() => start.mutate(undefined)}
+            >
+              Try again
+            </button>
+          </>
+        ) : (
+          <output>Loading your setup…</output>
+        )}
+      </main>
+    )
+  return (
+    <OwnerSignupFrame name={businessName} slug={link?.slug ?? ""} step="type">
+      <main className="signup-main owner-account">
+        <p className="signup-eyebrow">Your business</p>
+        <h1>Name your business</h1>
+        <p className="signup-intro">
+          Your store gets its own free link. You choose the type next.
+        </p>
+        {start.error && (
+          <p role="alert" className="owner-error">
+            {start.error.message}
+          </p>
+        )}
+        <form
+          onSubmit={(event) => {
+            event.preventDefault()
+            if (ready)
+              start.mutate({
+                businessName: businessName.trim(),
+                requestedSlug: link?.slug ?? slug,
+              })
+          }}
+        >
+          <fieldset className="owner-fields" disabled={start.isPending}>
+            <label className="signup-label" htmlFor="owner-setup-business">
+              Business name
+              <Input
+                id="owner-setup-business"
+                className="signup-input"
+                placeholder="Your business name"
+                autoComplete="organization"
+                maxLength={120}
+                required
+                value={businessName}
+                onChange={(event) => {
+                  const next = event.target.value
+                  setBusinessName(next)
+                  if (!slugEdited) setSlug(normalizeStoreLink(next))
+                }}
+              />
+            </label>
+            <StoreLinkField
+              value={slug}
+              onChange={(next) => {
+                setSlugEdited(true)
+                setSlug(next)
+              }}
+              onCheck={checkLink}
+            />
+          </fieldset>
+          <button className="signup-primary" disabled={!ready} type="submit">
+            {start.isPending ? "Saving…" : "Continue"}
+          </button>
+        </form>
+      </main>
+    </OwnerSignupFrame>
+  )
 }
 
 function OwnerSetupForm({ setup }: { setup: OwnerSetup }) {

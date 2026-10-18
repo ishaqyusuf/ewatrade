@@ -6,6 +6,7 @@ import {
   getOwnerStorefrontPreview,
   readOwnerSignupSetup,
   saveOwnerSignupDraft,
+  startOwnerSetup,
 } from "@ewatrade/db/queries"
 import {
   OwnerBusinessAgeError,
@@ -21,6 +22,7 @@ import { AppError, ruleRejectedError } from "@ewatrade/errors"
 import { issueAnalyticsContext } from "@ewatrade/events/identity-server"
 import { isQaAnalyticsPrincipal } from "@ewatrade/events/qa-policy-server"
 import { readOwnerSignupDraft } from "@ewatrade/utils/owner-signup"
+import { isValidStoreLink } from "@ewatrade/utils/store-link"
 import { TRPCError } from "@trpc/server"
 import { z } from "zod"
 import {
@@ -51,6 +53,37 @@ export const tenantRouter = createTRPCRouter({
   ownerSignupSetup: authenticatedProcedure.query(({ ctx }) =>
     readOwnerSignupSetup(ctx.db, ctx.session.user.id),
   ),
+  // /setup without a pending setup: resume or start the new owner setup flow.
+  startOwnerSetup: authenticatedProcedure
+    .input(
+      z
+        .object({
+          businessName: z.string().trim().min(1).max(120).optional(),
+          requestedSlug: z
+            .string()
+            .refine(isValidStoreLink, "Choose a valid store link")
+            .optional(),
+        })
+        .strict()
+        .optional(),
+    )
+    .mutation(async ({ ctx, input }) => {
+      try {
+        return await ctx.db.$transaction(
+          (tx) => startOwnerSetup(tx, ctx.session.user.id, input ?? {}),
+          { isolationLevel: "Serializable", maxWait: 10_000, timeout: 30_000 },
+        )
+      } catch (error) {
+        if (error instanceof StoreLinkConflictError)
+          throw new TRPCError({ code: "CONFLICT", message: error.message })
+        if (error instanceof OwnerBusinessAgeError)
+          throw new TRPCError({
+            code: "PRECONDITION_FAILED",
+            message: error.message,
+          })
+        throw error
+      }
+    }),
   saveOwnerSignupDraft: authenticatedProcedure
     .input(ownerSignupDraftSchema)
     .mutation(({ ctx, input }) =>

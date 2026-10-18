@@ -19,6 +19,7 @@ import { configuredQaDomainForEmail } from "./qa-maintenance"
 import { findRetailOpsPlan } from "./retail-ops-subscription-plans"
 import { withOwnerSignupLaunchGrant } from "./retail-ops-subscriptions"
 import { StoreLinkConflictError } from "./store-link-availability"
+import { createTenantStore } from "./stores"
 import type { DbClient } from "./types"
 
 export class OwnerSignupSetupError extends Error {
@@ -77,6 +78,68 @@ export async function getPendingOwnerSignup(db: DbClient, userId: string) {
     },
   })
   return membership ? { ...membership, ownerEmail: owner.email } : null
+}
+
+export type StartOwnerSetupResult =
+  | { status: "pending" }
+  | { status: "complete" }
+  | { status: "needs_business" }
+
+/**
+ * Puts a signed-in owner who reaches /setup without a pending setup onto the
+ * same type → group → store flow as sign-up, instead of the old store form:
+ * a business without a Store gets a pending main Store; an account without a
+ * business gets one from a name and store link (as sign-up does).
+ */
+export async function startOwnerSetup(
+  db: DbClient,
+  userId: string,
+  input: { businessName?: string; requestedSlug?: string } = {},
+): Promise<StartOwnerSetupResult> {
+  if (await getPendingOwnerSignup(db, userId)) return { status: "pending" }
+  await requireEligibleOwnerAge(db, userId)
+  const memberships = await db.membership.findMany({
+    where: { userId, status: "ACTIVE", tenant: { isActive: true } },
+    orderBy: { createdAt: "asc" },
+    select: {
+      role: true,
+      tenant: {
+        select: {
+          id: true,
+          name: true,
+          currencyCode: true,
+          stores: {
+            where: { status: { not: "ARCHIVED" } },
+            select: { id: true },
+          },
+        },
+      },
+    },
+  })
+  const bare = memberships.find(
+    (item) => item.role === "OWNER" && item.tenant.stores.length === 0,
+  )
+  if (bare) {
+    await createTenantStore(db, {
+      tenantId: bare.tenant.id,
+      name: bare.tenant.name,
+      createdByUserId: userId,
+      currencyCode: bare.tenant.currencyCode,
+      onboarding: { setupStatus: "pending", source: "owner_setup_resume" },
+    })
+    return { status: "pending" }
+  }
+  if (memberships.length) return { status: "complete" }
+  const businessName = input.businessName?.trim()
+  if (!businessName || !input.requestedSlug) return { status: "needs_business" }
+  await createOwnerSignupBusiness(db, {
+    userId,
+    businessName,
+    requestedSlug: input.requestedSlug,
+    setupStatus: "pending",
+    currencyCode: "NGN",
+  })
+  return { status: "pending" }
 }
 
 export async function readOwnerSignupSetup(db: DbClient, userId: string) {
