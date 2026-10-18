@@ -7,6 +7,7 @@ import {
 import { type CreateStoreCta, getCreateStoreCta } from "./create-store-url"
 
 export const PLAN_FEATURE_LABELS: Record<RetailOpsPlanFeature, string> = {
+  customerMessages: "Customer messages",
   invoices: "Invoices",
   finance: "Finance",
   staff: "Staff accounts",
@@ -17,6 +18,7 @@ export const PLAN_FEATURE_LABELS: Record<RetailOpsPlanFeature, string> = {
 }
 
 const FEATURE_ORDER: RetailOpsPlanFeature[] = [
+  "customerMessages",
   "invoices",
   "finance",
   "staff",

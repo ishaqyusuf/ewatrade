@@ -1,4 +1,5 @@
 import { randomBytes } from "node:crypto"
+import { assertStorefrontCustomerMessages } from "./public-storefront"
 
 import {
   DEFAULT_STORE_CONVERSATION_RESPONSE_SLA_MINUTES,
@@ -178,6 +179,16 @@ export async function bootstrapWebStoreConversation(
             tenantId: entry.tenantId,
           },
         })
+    if (!existingAccess && !existingOwner) {
+      try {
+        await assertStorefrontCustomerMessages(tx, entry.tenantId)
+      } catch (error) {
+        throw new StoreConversationError(
+          "NOT_READY",
+          "This Store is not accepting new customer conversations right now.",
+        )
+      }
+    }
     const conversation =
       existingAccess?.conversation ??
       (await tx.storeConversation.upsert({

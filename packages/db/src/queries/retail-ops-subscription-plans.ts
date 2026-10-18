@@ -7,6 +7,8 @@ export type RetailOpsPlanId = "free" | "starter" | "growth" | "pro"
 export type RetailOpsPaidPlanId = Exclude<RetailOpsPlanId, "free">
 
 export type RetailOpsPlanLimits = {
+  /** Public storefront items; null means unlimited. */
+  storefrontItems: number | null
   businesses: number
   offlineDevices: number
   /** Commercial orders created per calendar month; null means unlimited. */
@@ -18,6 +20,7 @@ export type RetailOpsPlanLimits = {
 
 /** Paid-tier capabilities the Free plan leaves out. */
 export type RetailOpsPlanFeature =
+  | "customerMessages"
   | "advancedReports"
   | "finance"
   | "invoices"
@@ -52,6 +55,7 @@ export const RETAIL_OPS_SUBSCRIPTION_PLANS: RetailOpsSubscriptionPlan[] = [
     features: [],
     id: "free",
     limits: {
+      storefrontItems: 3,
       businesses: 1,
       offlineDevices: 1,
       ordersPerMonth: 30,
@@ -68,6 +72,7 @@ export const RETAIL_OPS_SUBSCRIPTION_PLANS: RetailOpsSubscriptionPlan[] = [
     features: PAID_FEATURES,
     id: "starter",
     limits: {
+      storefrontItems: 3,
       businesses: 1,
       offlineDevices: 1,
       ordersPerMonth: null,
@@ -81,9 +86,10 @@ export const RETAIL_OPS_SUBSCRIPTION_PLANS: RetailOpsSubscriptionPlan[] = [
   },
   {
     description: "For growing teams that need more attendants and history.",
-    features: PAID_FEATURES,
+    features: [...PAID_FEATURES, "customerMessages"],
     id: "growth",
     limits: {
+      storefrontItems: null,
       businesses: 3,
       offlineDevices: 5,
       ordersPerMonth: null,
@@ -97,9 +103,10 @@ export const RETAIL_OPS_SUBSCRIPTION_PLANS: RetailOpsSubscriptionPlan[] = [
   },
   {
     description: "For multi-branch businesses with heavier operations.",
-    features: PAID_FEATURES,
+    features: [...PAID_FEATURES, "customerMessages"],
     id: "pro",
     limits: {
+      storefrontItems: null,
       businesses: 10,
       offlineDevices: 20,
       ordersPerMonth: null,
@@ -124,6 +131,7 @@ export const RETAIL_OPS_PLAN_FEATURE_LABELS: Record<
   RetailOpsPlanFeature,
   string
 > = {
+  customerMessages: "Customer messages",
   advancedReports: "Advanced reports",
   finance: "Finance",
   invoices: "Receipts and invoices",
@@ -138,6 +146,7 @@ export const RETAIL_OPS_PLAN_FEATURE_ACTIONS: Record<
   RetailOpsPlanFeature,
   string
 > = {
+  customerMessages: "receive customer messages",
   advancedReports: "use advanced reports",
   finance: "use finance",
   invoices: "generate receipts",

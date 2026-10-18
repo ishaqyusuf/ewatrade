@@ -5,6 +5,8 @@
 export type RetailOpsPlanId = "free" | "starter" | "growth" | "pro"
 
 export type RetailOpsPlanLimits = {
+  /** Public storefront items; null means unlimited. */
+  storefrontItems: number | null
   businesses: number
   offlineDevices: number
   /** Commercial orders created per calendar month (UTC); null means unlimited. */
@@ -15,6 +17,7 @@ export type RetailOpsPlanLimits = {
 }
 
 export type RetailOpsPlanFeature =
+  | "customerMessages"
   | "advancedReports"
   | "finance"
   | "invoices"
@@ -58,6 +61,7 @@ export const RETAIL_OPS_PLANS: RetailOpsPlan[] = [
     features: [],
     id: "free",
     limits: {
+      storefrontItems: 3,
       businesses: 1,
       offlineDevices: 1,
       ordersPerMonth: 30,
@@ -74,6 +78,7 @@ export const RETAIL_OPS_PLANS: RetailOpsPlan[] = [
     features: PAID_FEATURES,
     id: "starter",
     limits: {
+      storefrontItems: 3,
       businesses: 1,
       offlineDevices: 1,
       ordersPerMonth: null,
@@ -87,9 +92,10 @@ export const RETAIL_OPS_PLANS: RetailOpsPlan[] = [
   },
   {
     description: "For growing teams that need more attendants and history.",
-    features: PAID_FEATURES,
+    features: [...PAID_FEATURES, "customerMessages"],
     id: "growth",
     limits: {
+      storefrontItems: null,
       businesses: 3,
       offlineDevices: 5,
       ordersPerMonth: null,
@@ -103,9 +109,10 @@ export const RETAIL_OPS_PLANS: RetailOpsPlan[] = [
   },
   {
     description: "For multi-branch businesses with heavier operations.",
-    features: PAID_FEATURES,
+    features: [...PAID_FEATURES, "customerMessages"],
     id: "pro",
     limits: {
+      storefrontItems: null,
       businesses: 10,
       offlineDevices: 20,
       ordersPerMonth: null,

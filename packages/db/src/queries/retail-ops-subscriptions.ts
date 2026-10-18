@@ -662,6 +662,7 @@ function normalizePlanLimits(
   const limits = asRecord(value)
 
   return {
+    storefrontItems: fallback.storefrontItems,
     businesses: normalizePlanLimit(limits.businesses, fallback.businesses),
     offlineDevices: normalizePlanLimit(
       limits.offlineDevices,
@@ -955,6 +956,7 @@ function mapDurableRetailOpsTenantSubscription(
       limits:
         timeBoundAccess === false
           ? {
+              storefrontItems: 0,
               businesses: 0,
               offlineDevices: 0,
               ordersPerMonth: 0,
@@ -2102,6 +2104,7 @@ const ENTITLEMENT_NOUNS: Record<
   keyof RetailOpsPlanLimits,
   [one: string, many: string]
 > = {
+  storefrontItems: ["storefront item", "storefront items"],
   businesses: ["business", "businesses"],
   offlineDevices: ["offline device", "offline devices"],
   ordersPerMonth: ["order a month", "orders a month"],
