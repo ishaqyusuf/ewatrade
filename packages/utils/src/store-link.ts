@@ -62,3 +62,8 @@ export function storeLinkSuggestions(value: string): string[] {
     (suffix) => `${base}-${suffix}`,
   )
 }
+
+/** Syntax readers may read QA links; only verified QA owners may claim that namespace. */
+export function isClaimableStoreLink(value: string, qaOwner: boolean) {
+  return isValidStoreLink(value) && (!value.endsWith("-qa") || qaOwner)
+}

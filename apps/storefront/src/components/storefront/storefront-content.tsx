@@ -43,10 +43,10 @@ export function StorefrontContent({ store }: { store: Storefront }) {
                   </p>
                   {item.priceMinor !== null ? (
                     <p className="mt-2 font-semibold">
-                      {new Intl.NumberFormat("en-NG", {
-                        style: "currency",
-                        currency: item.currencyCode,
-                      }).format(item.priceMinor / 100)}
+                      {formatStorefrontPrice(
+                        item.priceMinor,
+                        item.currencyCode,
+                      )}
                     </p>
                   ) : null}
                 </CardContent>
@@ -97,4 +97,15 @@ function CatalogPicture({ id }: { id: string }) {
       dangerouslySetInnerHTML={{ __html: svg }}
     />
   ) : null
+}
+
+function formatStorefrontPrice(minor: number, currency: string) {
+  try {
+    return new Intl.NumberFormat("en-NG", {
+      style: "currency",
+      currency,
+    }).format(minor / 100)
+  } catch {
+    return new Intl.NumberFormat("en-NG").format(minor / 100)
+  }
 }

@@ -108,7 +108,14 @@ export async function getPublicStorefront(
   if (
     cursor &&
     !(await db.catalogItem.findFirst({
-      where: { id: cursor, tenantId: tenant.id },
+      where: {
+        ...saleEligibleCatalogItem,
+        id: cursor,
+        tenantId: tenant.id,
+        status: "ACTIVE",
+        archivedAt: null,
+        offerings: { some: offeringWhere },
+      },
       select: { id: true },
     }))
   )

@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto"
 import { withQaWorkspaceSuffix } from "@ewatrade/utils"
 import {
-  isValidStoreLink,
+  isClaimableStoreLink,
   normalizeStoreLink,
   storeLinkSuggestions,
 } from "@ewatrade/utils/store-link"
@@ -95,7 +95,12 @@ export async function checkStoreLinkAvailability(
   const unavailable = new Set(taken.map((t) => t.slug))
   const unavailableHosts = new Set(hosts.map((h) => h.hostname))
   const available = (s: string) =>
-    isValidStoreLink(s) &&
+    isClaimableStoreLink(
+      s,
+      Boolean(
+        emailDomain && configuredQaDomainForEmail(`link-check@${emailDomain}`),
+      ),
+    ) &&
     !unavailable.has(s) &&
     !storeLinkHostnames([s]).some((host) => unavailableHosts.has(host))
   return {

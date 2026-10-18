@@ -10,6 +10,7 @@ import {
   groupBusinessTypes,
 } from "./business-types"
 import {
+  isClaimableStoreLink,
   isValidStoreLink,
   normalizeStoreLink,
   storeLinkSuggestions,
@@ -32,6 +33,9 @@ describe("owner signup shared contracts", () => {
     ])
       expect(isValidStoreLink(value)).toBe(false)
     expect(isValidStoreLink("tolu-styles")).toBe(true)
+    expect(isClaimableStoreLink("tolu-qa", false)).toBe(false)
+    expect(isClaimableStoreLink("tolu-qa", true)).toBe(true)
+    expect(isClaimableStoreLink("tolu", false)).toBe(true)
     expect(storeLinkSuggestions("a".repeat(60)).every(isValidStoreLink)).toBe(
       true,
     )

@@ -3,7 +3,7 @@ import type {
   OperatingCurrencyCode,
 } from "@ewatrade/utils"
 import { withQaWorkspaceSuffix } from "@ewatrade/utils"
-import { isValidStoreLink } from "@ewatrade/utils/store-link"
+import { isClaimableStoreLink } from "@ewatrade/utils/store-link"
 import { Prisma } from "../../generated/prisma/client"
 import { AccountAgeBand } from "../../generated/prisma/enums"
 import { configuredQaDomainForEmail } from "./qa-maintenance"
@@ -91,7 +91,7 @@ async function createUniqueTenant(
       Boolean(input.qaSourceDomain),
       40,
     )
-    if (!isValidStoreLink(requestedSlug))
+    if (!isClaimableStoreLink(requestedSlug, Boolean(input.qaSourceDomain)))
       throw new Error("Choose a valid store link.")
     if (
       await db.tenant.findUnique({
