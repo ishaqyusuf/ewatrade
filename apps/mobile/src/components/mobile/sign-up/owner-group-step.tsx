@@ -263,7 +263,7 @@ export function OwnerGroupStep({
                   <Text
                     style={{
                       fontSize: 16,
-                      lineHeight: 20,
+                      lineHeight: 22,
                       fontWeight: "700",
                       color: colors.foreground,
                     }}

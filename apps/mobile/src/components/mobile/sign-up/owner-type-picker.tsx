@@ -45,9 +45,9 @@ export function OwnerTypePicker({
   const types = useMemo(
     () =>
       rankBySearch(BUSINESS_TYPES, query, (type) => [
-        type.label,
-        type.examples,
-        type.group,
+        { text: type.label },
+        { text: type.examples },
+        { text: type.group },
       ]),
     [query],
   )

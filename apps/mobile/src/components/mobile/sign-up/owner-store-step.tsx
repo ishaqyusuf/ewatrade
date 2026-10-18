@@ -387,7 +387,7 @@ export function OwnerStoreStep({
           <Pressable
             accessibilityRole="button"
             accessibilityLabel={`Currency: ${business.currencyCode || "Choose currency"}`}
-            onPress={currency.present}
+            onPress={() => currency.present()}
             style={{
               ...input,
               flexDirection: "row",
