@@ -1,4 +1,5 @@
 import profileFile from "./business-profiles.json"
+import { type BusinessTypeKey, isBusinessTypeKey } from "./business-types"
 import {
   CATALOG_SETUP_HELPERS,
   type CatalogSetupHelper,
@@ -66,6 +67,9 @@ export const BUSINESS_TEAM_SIZE_KEYS = [
 export type BusinessTeamSize = (typeof BUSINESS_TEAM_SIZE_KEYS)[number]
 
 export type BusinessOnboardingFacts = {
+  businessTypeKeys: BusinessTypeKey[]
+  otherBusinessType: string | null
+  setupStatus: "pending" | "complete" | null
   businessProfileKey: string | null
   operatingModel: BusinessOperatingModel | null
   orderChannels: BusinessOrderChannel[]
@@ -315,5 +319,28 @@ export function readBusinessOnboardingFactsFromStoreMetadata(
     ? (onboarding.teamSize as BusinessTeamSize)
     : null
 
-  return { businessProfileKey, operatingModel, orderChannels, teamSize }
+  const businessTypeKeys = Array.isArray(onboarding.businessTypeKeys)
+    ? [...new Set(onboarding.businessTypeKeys.filter(isBusinessTypeKey))]
+    : []
+  const otherBusinessType =
+    businessTypeKeys.includes("other") &&
+    typeof onboarding.otherBusinessType === "string" &&
+    onboarding.otherBusinessType.trim().length >= 2 &&
+    onboarding.otherBusinessType.trim().length <= 60
+      ? onboarding.otherBusinessType.trim()
+      : null
+  const setupStatus =
+    onboarding.setupStatus === "pending" ||
+    onboarding.setupStatus === "complete"
+      ? onboarding.setupStatus
+      : null
+  return {
+    businessProfileKey,
+    operatingModel,
+    orderChannels,
+    teamSize,
+    businessTypeKeys,
+    otherBusinessType,
+    setupStatus,
+  }
 }

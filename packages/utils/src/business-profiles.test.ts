@@ -186,6 +186,9 @@ describe("business profiles", () => {
       operatingModel: "products",
       orderChannels: ["phone_whatsapp", "walk_in"],
       teamSize: "6_10",
+      businessTypeKeys: [],
+      otherBusinessType: null,
+      setupStatus: null,
     })
 
     expect(
@@ -204,6 +207,9 @@ describe("business profiles", () => {
       operatingModel: null,
       orderChannels: ["phone_whatsapp"],
       teamSize: null,
+      businessTypeKeys: [],
+      otherBusinessType: null,
+      setupStatus: null,
     })
 
     expect(readBusinessOnboardingFactsFromStoreMetadata(null)).toBeNull()
