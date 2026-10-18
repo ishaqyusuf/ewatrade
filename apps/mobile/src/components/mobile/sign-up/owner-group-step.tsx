@@ -2,7 +2,6 @@ import { AuthMethodButton } from "@/components/mobile/auth-header"
 import { Icon } from "@/components/ui/icon"
 import { Modal, useModal } from "@/components/ui/modal"
 import { Pressable } from "@/components/ui/pressable"
-import { Text } from "@/components/ui/text"
 import { useColorScheme } from "@/hooks/use-color"
 import { useLargeTextLayout } from "@/hooks/use-large-text-layout"
 import { GREEN_TILL_THEME } from "@/lib/green-till-theme"
@@ -16,6 +15,7 @@ import { moveOwnerBusinessType } from "@ewatrade/utils/owner-signup"
 import { normalizeStoreLink } from "@ewatrade/utils/store-link"
 import { BottomSheetScrollView } from "@gorhom/bottom-sheet"
 import { useEffect, useRef, useState } from "react"
+import { Text } from "react-native"
 import { Animated, PanResponder, TextInput, View } from "react-native"
 import { useReducedMotion } from "react-native-reanimated"
 import { BusinessTypeAvatar } from "./business-type-avatar"
@@ -338,8 +338,8 @@ export function OwnerGroupStep({
             {businesses.length > 1 ? (
               <View
                 style={{
-                  width: 24,
-                  height: 24,
+                  minWidth: largeText ? 44 : 24,
+                  minHeight: largeText ? 44 : 24,
                   borderRadius: 12,
                   backgroundColor: colors.card,
                   alignItems: "center",

@@ -1,6 +1,5 @@
 import { FormField } from "@/components/mobile/form-field"
 import { Pressable } from "@/components/ui/pressable"
-import { Text } from "@/components/ui/text"
 import { View } from "@/components/ui/view"
 import { useTRPC } from "@/trpc/client"
 import {
@@ -9,6 +8,7 @@ import {
 } from "@ewatrade/utils/store-link"
 import { useQuery } from "@tanstack/react-query"
 import { useEffect, useState } from "react"
+import { Text } from "react-native"
 import { useOwnerSignupColors } from "./owner-signup-frame"
 
 export function StoreLinkField({

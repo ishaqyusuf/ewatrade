@@ -3,7 +3,6 @@ import { FormField } from "@/components/mobile/form-field"
 import { Icon } from "@/components/ui/icon"
 import { Modal, useModal } from "@/components/ui/modal"
 import { Pressable } from "@/components/ui/pressable"
-import { Text } from "@/components/ui/text"
 import { View } from "@/components/ui/view"
 import { useLargeTextLayout } from "@/hooks/use-large-text-layout"
 import {
@@ -15,6 +14,7 @@ import {
 import { rankBySearch } from "@ewatrade/utils/search-rank"
 import { BottomSheetView } from "@gorhom/bottom-sheet"
 import { useEffect, useMemo, useRef } from "react"
+import { Text } from "react-native"
 import { type View as NativeView, ScrollView } from "react-native"
 import { BusinessTypeAvatar } from "./business-type-avatar"
 import {
@@ -40,6 +40,7 @@ export function OwnerTypePicker({
   footerHeight: number
 }) {
   const colors = useOwnerSignupColors()
+  const largeText = useLargeTextLayout()
   const jump = useOwnerSectionScroll()
   const sections = useRef(new Map<string, NativeView>())
   const types = useMemo(
@@ -116,7 +117,7 @@ export function OwnerTypePicker({
             {type.label}
           </Text>
           <Text
-            numberOfLines={1}
+            numberOfLines={largeText ? undefined : 1}
             style={{
               fontSize: 14,
               lineHeight: 20,
