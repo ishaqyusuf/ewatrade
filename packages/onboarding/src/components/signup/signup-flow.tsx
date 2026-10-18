@@ -260,7 +260,7 @@ function AccountFirstSignup() {
                   id="owner-business-name"
                   className="signup-input"
                   name="businessName"
-                  placeholder="e.g. Mama Tolu Farms"
+                  placeholder="e.g. Kora Stores"
                   autoComplete="organization"
                   maxLength={120}
                   required
@@ -296,7 +296,7 @@ function AccountFirstSignup() {
                   id="owner-name"
                   className="signup-input"
                   name="name"
-                  placeholder="e.g. Tolu Adebayo"
+                  placeholder="e.g. Amina Yusuf"
                   autoComplete="name"
                   maxLength={120}
                   required
