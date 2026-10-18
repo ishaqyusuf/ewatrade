@@ -9,6 +9,7 @@ import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
 import { View } from "@/components/ui/view"
 import { useCurrentAddress } from "@/hooks/use-current-address"
+import { useLargeTextLayout } from "@/hooks/use-large-text-layout"
 import { createBusinessFixture } from "@/internal-tooling/fixture-recipes"
 import type { BusinessOperatingModel } from "@ewatrade/utils/business-profiles"
 import { findBusinessType } from "@ewatrade/utils/business-types"
@@ -51,6 +52,7 @@ export function OwnerStoreStep({
   onChangeGrouping: () => void
   onChange: (patch: Partial<OwnerSetupBusiness>) => void
 }) {
+  const largeText = useLargeTextLayout()
   const location = useCurrentAddress()
   return (
     <View className="gap-4">
@@ -69,7 +71,11 @@ export function OwnerStoreStep({
         }}
       />
       <View className="gap-3 rounded-[20px] bg-card p-3.5">
-        <View className="flex-row items-center gap-3">
+        <View
+          className={
+            largeText ? "items-start gap-3" : "flex-row items-center gap-3"
+          }
+        >
           <BusinessTypeAvatar typeKey={business.typeKeys[0] ?? "other"} />
           <View className="min-w-0 flex-1">
             <Text className="text-sm font-bold text-foreground">
@@ -182,6 +188,7 @@ export function OwnerStoreStep({
         renderTrigger={(country, open) => (
           <Pressable
             accessibilityRole="button"
+            accessibilityLabel={`Country: ${business.countryCode ? country.name : "Choose country"}`}
             className="min-h-11 justify-center rounded-xl border border-border bg-card px-3.5"
             onPress={open}
           >

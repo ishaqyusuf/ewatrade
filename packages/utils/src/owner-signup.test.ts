@@ -146,3 +146,49 @@ test("launch tiers require matching multi-business choices and resync after grou
   expect(syncOwnerSignupPlan("pro", 2)).toBe("growth")
   expect(syncOwnerSignupPlan("pro", 1)).toBe("starter")
 })
+
+test("changed selections preserve edited cards and merge new types into their suggested group", async () => {
+  const { reconcileOwnerBusinessTypes } = await import("./owner-signup")
+  const first = {
+    id: "first",
+    name: "Tolu",
+    slug: "tolu",
+    typeKeys: ["poultry"],
+    operatingModel: "services" as const,
+    offerTouched: true,
+    countryCode: "NG",
+    currencyCode: "NGN" as const,
+  }
+  const second = {
+    ...first,
+    id: "edited",
+    name: "Styles",
+    slug: "styles",
+    typeKeys: ["boutique"],
+    description: "Our store",
+  }
+  const result = reconcileOwnerBusinessTypes(
+    [first, second],
+    ["poultry", "feed", "boutique"],
+    first,
+    "",
+  )
+  const initial = reconcileOwnerBusinessTypes(
+    [],
+    ["poultry", "boutique"],
+    { ...first, id: "business-0", typeKeys: [] },
+    "",
+  )
+  expect(new Set(initial.map((b) => b.id)).size).toBe(initial.length)
+  expect(result[0]?.typeKeys).toEqual(["poultry", "feed"])
+  expect(result[0]?.operatingModel).toBe("services")
+  expect(result[1]).toEqual(second)
+  const removed = reconcileOwnerBusinessTypes(
+    result,
+    ["feed", "boutique"],
+    first,
+    "",
+  )
+  expect(removed[0]?.typeKeys).toEqual(["feed"])
+  expect(removed[1]?.slug).toBe("styles")
+})

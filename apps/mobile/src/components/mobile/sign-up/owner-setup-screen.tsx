@@ -18,11 +18,14 @@ import {
   type OwnerSetupBusiness,
   type OwnerSetupDraft,
   readOwnerSignupDraft,
+  reconcileOwnerBusinessTypes,
+  syncOwnerSignupPlan,
 } from "@ewatrade/utils/owner-signup"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { TRPCClientError } from "@trpc/client"
 import { Redirect, useRouter } from "expo-router"
 import { type ReactNode, useCallback, useEffect, useRef, useState } from "react"
-import { ScrollView } from "react-native"
+import { AppState, ScrollView } from "react-native"
 import Animated, {
   Easing,
   ReduceMotion,
@@ -62,7 +65,10 @@ export function OwnerSetupScreen() {
   const [groupReady, setGroupReady] = useState(false)
   const [dragging, setDragging] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [errorTitle, setErrorTitle] = useState("Could not save setup")
+  const [conflictBusinessId, setConflictBusinessId] = useState<string>()
   const [isFinishing, setIsFinishing] = useState(false)
+  const mounted = useRef(true)
   const restored = useRef(false)
   const finishing = useRef(false)
   const completed = useRef(false)
@@ -92,7 +98,7 @@ export function OwnerSetupScreen() {
         saved.businesses.find((b) => b.typeKeys.includes("other"))?.otherType ??
         "",
     )
-    setPlan(saved.planId)
+    setPlan(syncOwnerSignupPlan(saved.planId, saved.businesses.length))
     setGroupedFor(saved.groupedFor ?? keys.join(","))
     setMulti(keys.length > 1)
     setStep(saved.step ?? (saved.businesses.length ? "store" : "type"))
@@ -121,7 +127,24 @@ export function OwnerSetupScreen() {
     selectedTypeKeys: types,
     otherType: other,
   }
+  useEffect(() => {
+    if (!restored.current || !businesses.length) return
+    setPlan((current) => syncOwnerSignupPlan(current, businesses.length))
+  }, [businesses.length])
+  useEffect(() => {
+    setActive((current) =>
+      Math.min(
+        current,
+        Math.max(
+          0,
+          Math.min(businesses.length, getPlan(plan).limits.businesses) - 1,
+        ),
+      ),
+    )
+  }, [businesses.length, plan])
   const serialized = JSON.stringify(draft)
+  const latestDraft = useRef(draft)
+  latestDraft.current = draft
   // All writes share one queue so a slower older save cannot win over a newer one.
   const saveNow = useRef(save.mutateAsync)
   saveNow.current = save.mutateAsync
@@ -132,6 +155,26 @@ export function OwnerSetupScreen() {
     inFlight.current = request
     return request
   }, [])
+  const flushSave = useCallback(() => {
+    if (timer.current) {
+      clearTimeout(timer.current)
+      timer.current = null
+    }
+    if (!restored.current || finishing.current || completed.current)
+      return inFlight.current
+    return enqueueSave(latestDraft.current)
+  }, [enqueueSave])
+  useEffect(() => {
+    mounted.current = true
+    const subscription = AppState.addEventListener("change", (state) => {
+      if (state !== "active") void flushSave().catch(() => undefined)
+    })
+    return () => {
+      mounted.current = false
+      subscription.remove()
+      void flushSave().catch(() => undefined)
+    }
+  }, [flushSave])
   useEffect(() => {
     if (!restored.current || finishing.current || completed.current) return
     const snapshot = readOwnerSignupDraft(JSON.parse(serialized), {
@@ -142,8 +185,15 @@ export function OwnerSetupScreen() {
       timer.current = null
       if (finishing.current || completed.current) return
       void enqueueSave(snapshot).then(
-        () => setError(null),
-        (e: Error) => setError(e.message),
+        () => {
+          if (mounted.current) setError(null)
+        },
+        (e: Error) => {
+          if (mounted.current) {
+            setErrorTitle("Could not save setup")
+            setError(e.message)
+          }
+        },
       )
     }, 800)
     return () => {
@@ -159,6 +209,7 @@ export function OwnerSetupScreen() {
         .slice(0, getPlan(plan).limits.businesses)
         .some((business) => !business.countryCode || !business.currencyCode)
     ) {
+      setErrorTitle("Check your business details")
       setError(
         "Complete each business name, store link and type, and choose a country and currency for the businesses you are setting up now.",
       )
@@ -190,6 +241,19 @@ export function OwnerSetupScreen() {
       })
       router.replace("/")
     } catch (e) {
+      setErrorTitle("Could not finish setup")
+      const businessId =
+        e instanceof TRPCClientError ? e.data?.ownerSignupBusinessId : undefined
+      if (typeof businessId === "string") {
+        setConflictBusinessId(businessId)
+        setActive(
+          Math.max(
+            0,
+            businesses.findIndex((b) => b.id === businessId),
+          ),
+        )
+        setStep("group")
+      }
       setError(
         e instanceof Error ? e.message : "Could not finish setup. Try again.",
       )
@@ -277,7 +341,25 @@ export function OwnerSetupScreen() {
   const business = now[active]
   function proceedTypes() {
     if (!validTypes) return
-    if (groupedFor !== types.join(",") || !businesses.length) group("suggested")
+    if (groupedFor !== types.join(",") || !businesses.length) {
+      const next = reconcileOwnerBusinessTypes(
+        businesses,
+        types,
+        {
+          id: "business-0",
+          name: first.name,
+          slug: first.slug,
+          typeKeys: [],
+          operatingModel: "products",
+          countryCode: "",
+          currencyCode: "",
+        },
+        other,
+      )
+      setBusinesses(next)
+      setGroupedFor(types.join(","))
+      setGroupReady(next.length === 1)
+    }
     setActive(0)
     setStep(types.length > 1 ? "group" : "store")
   }
@@ -388,11 +470,24 @@ export function OwnerSetupScreen() {
       >
         {error ? (
           <StatusBanner
-            title="Could not save setup"
+            title={errorTitle}
             message={error}
             tone="destructive"
             icon="TriangleAlert"
           />
+        ) : null}
+        {step === "type" ? (
+          <Pressable
+            accessibilityRole="button"
+            className="min-h-11 self-end justify-center px-3.5"
+            onPress={() => {
+              void flushSave()
+                .catch(() => undefined)
+                .then(() => auth.onLogout())
+            }}
+          >
+            <Text className="text-xs text-muted-foreground">Sign out</Text>
+          </Pressable>
         ) : null}
         {step === "type" ? (
           <OwnerTypePicker
@@ -415,6 +510,7 @@ export function OwnerSetupScreen() {
             onReady={setGroupReady}
             onDragging={setDragging}
             email={auth.profile?.email}
+            conflictBusinessId={conflictBusinessId}
           />
         ) : null}
         {step === "store" && business ? (

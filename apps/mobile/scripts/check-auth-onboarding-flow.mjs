@@ -210,7 +210,8 @@ const CONTRACTS = [
     ),
     markers: [
       "PanResponder",
-      "measureInWindow",
+      ".measure(",
+      "delayLongPress={250}",
       "Move to…",
       "All one business",
       "Each separate",

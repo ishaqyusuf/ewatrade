@@ -2,7 +2,12 @@ import {
   BUSINESS_OPERATING_MODEL_KEYS,
   type BusinessOperatingModel,
 } from "./business-profiles"
-import { defaultBusinessOffer, isBusinessTypeKey } from "./business-types"
+import {
+  defaultBusinessOffer,
+  findBusinessType,
+  groupBusinessTypes,
+  isBusinessTypeKey,
+} from "./business-types"
 import { type OperatingCurrencyCode, isOperatingCurrencyCode } from "./currency"
 import { isValidStoreLink } from "./store-link"
 
@@ -206,4 +211,57 @@ export function syncOwnerSignupPlan(
 ): OwnerSetupDraft["planId"] {
   if (businessCount <= 1 || choice === "starter") return "starter"
   return businessCount <= 3 ? "growth" : "pro"
+}
+
+/** Reconcile a changed type selection without replacing the owner's edited businesses. */
+export function reconcileOwnerBusinessTypes(
+  businesses: OwnerSetupBusiness[],
+  selected: string[],
+  first: OwnerSetupBusiness,
+  otherType: string,
+): OwnerSetupBusiness[] {
+  const keys = [...new Set(selected.filter(isBusinessTypeKey))]
+  const selectedSet = new Set<string>(keys)
+  const next = (businesses.length ? businesses : [first])
+    .map((b) => ({
+      ...b,
+      typeKeys: b.typeKeys.filter((key) => selectedSet.has(key)),
+    }))
+    .filter((b, index) => index === 0 || b.typeKeys.length > 0)
+  const assigned = new Set(next.flatMap((b) => b.typeKeys))
+  const usedIds = new Set([...businesses, ...next].map((b) => b.id))
+  for (const added of groupBusinessTypes(
+    keys.filter((key) => !assigned.has(key)),
+  )) {
+    const group = findBusinessType(added[0] ?? "")?.group
+    let target = next.find((b) =>
+      b.typeKeys.some((key) => findBusinessType(key)?.group === group),
+    )
+    if (!target && next[0]?.typeKeys.length === 0) target = next[0]
+    if (!target) {
+      let sequence = 0
+      while (usedIds.has(`business-${sequence}`)) sequence++
+      const id = `business-${sequence}`
+      usedIds.add(id)
+      target = {
+        id,
+        name: "",
+        slug: "",
+        typeKeys: [],
+        operatingModel: "products",
+        countryCode: "",
+        currencyCode: "",
+      }
+      next.push(target)
+    }
+    target.typeKeys.push(...added)
+  }
+  return next.map((b, index) => ({
+    ...b,
+    ...(index === 0 ? { name: first.name, slug: first.slug } : {}),
+    otherType: b.typeKeys.includes("other") ? otherType.trim() : undefined,
+    operatingModel: b.offerTouched
+      ? b.operatingModel
+      : defaultBusinessOffer(b.typeKeys),
+  }))
 }

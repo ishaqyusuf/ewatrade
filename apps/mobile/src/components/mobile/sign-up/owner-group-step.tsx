@@ -6,6 +6,7 @@ import { Modal, useModal } from "@/components/ui/modal"
 import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
 import { useColors } from "@/hooks/use-color"
+import { useLargeTextLayout } from "@/hooks/use-large-text-layout"
 import { getPlan } from "@/lib/retail-ops-subscription"
 import { findBusinessType } from "@ewatrade/utils/business-types"
 import type {
@@ -30,6 +31,7 @@ export function OwnerGroupStep({
   onReady,
   onDragging,
   email,
+  conflictBusinessId,
 }: {
   businesses: OwnerSetupBusiness[]
   plan: OwnerSetupDraft["planId"]
@@ -37,9 +39,11 @@ export function OwnerGroupStep({
   onPlan: (plan: OwnerSetupDraft["planId"]) => void
   onPreset: (mode: "together" | "separate") => void
   email?: string
+  conflictBusinessId?: string
   onReady: (ready: boolean) => void
   onDragging: (dragging: boolean) => void
 }) {
+  const largeText = useLargeTextLayout()
   const colors = useColors()
   const menu = useModal()
   const [moving, setMoving] = useState<string | null>(null)
@@ -62,6 +66,18 @@ export function OwnerGroupStep({
   const start = useRef({ x: 0, y: 0 })
   const ghost = useRef(new Animated.ValueXY()).current
   const [hit, setHit] = useState<number | "new" | null>(null)
+  const generation = useRef(0)
+  const [ghostReady, setGhostReady] = useState(false)
+  const draggingCallback = useRef(onDragging)
+  draggingCallback.current = onDragging
+  useEffect(
+    () => () => {
+      generation.current++
+      ghost.stopAnimation()
+      draggingCallback.current(false)
+    },
+    [ghost],
+  )
   const reducedMotion = useReducedMotion()
   const upgradePlan = businesses.length > 3 ? "pro" : "growth"
   function hitAt(x: number, y: number) {
@@ -72,7 +88,10 @@ export function OwnerGroupStep({
       )?.id ?? null
     )
   }
-  function endDrag() {
+  function endDrag(token = generation.current) {
+    if (token !== generation.current) return
+    generation.current++
+    setGhostReady(false)
     setDragging(null)
     setHit(null)
     onDragging(false)
@@ -86,13 +105,20 @@ export function OwnerGroupStep({
     setHit(hitAt(x, y))
   }
   function beginDrag(key: string, x: number, y: number) {
+    const token = ++generation.current
+    ghost.stopAnimation()
+    rectangles.current = []
+    setGhostReady(false)
+    setHit(null)
     onDragging(true)
     setDragging(key)
     start.current = { x, y }
     pointer.current = { x, y }
-    root.current?.measureInWindow((left, top) => {
+    root.current?.measure((_x, _y, _width, _height, left, top) => {
+      if (token !== generation.current) return
       offset.current = { x: left, y: top }
       dragMove(pointer.current.x, pointer.current.y)
+      setGhostReady(true)
     })
     void Promise.all(
       [...targets.current].map(
@@ -104,12 +130,13 @@ export function OwnerGroupStep({
             width: number
             height: number
           }>((resolve) =>
-            node.measureInWindow((left, top, width, height) =>
+            node.measure((_x, _y, width, height, left, top) =>
               resolve({ id, x: left, y: top, width, height }),
             ),
           ),
       ),
     ).then((values) => {
+      if (token !== generation.current) return
       rectangles.current = values
       setHit(hitAt(pointer.current.x, pointer.current.y))
     })
@@ -141,6 +168,7 @@ export function OwnerGroupStep({
       endDrag()
       return
     }
+    const token = generation.current
     Animated.timing(ghost, {
       toValue: {
         x: start.current.x - offset.current.x - 50,
@@ -148,7 +176,7 @@ export function OwnerGroupStep({
       },
       duration: 160,
       useNativeDriver: true,
-    }).start(endDrag)
+    }).start(() => endDrag(token))
   }
   function move(target: number | "new") {
     if (moving) onChange(moveOwnerBusinessType(businesses, moving, target))
@@ -200,7 +228,13 @@ export function OwnerGroupStep({
             padding: 14,
           }}
         >
-          <View style={{ flexDirection: "row", gap: 12, alignItems: "center" }}>
+          <View
+            style={{
+              flexDirection: largeText ? "column" : "row",
+              gap: 12,
+              alignItems: largeText ? "flex-start" : "center",
+            }}
+          >
             <BusinessTypeAvatar typeKey={business.typeKeys[0] ?? "other"} />
             <Text className="flex-1 text-sm font-bold text-foreground">
               Business {index + 1}
@@ -234,6 +268,7 @@ export function OwnerGroupStep({
               />
               <StoreLinkField
                 value={business.slug}
+                forceEdit={business.id === conflictBusinessId}
                 email={email}
                 onChange={(slug) => {
                   edited.current.add(business.id ?? String(index))
@@ -263,7 +298,7 @@ export function OwnerGroupStep({
                 onStart={(x, y) => beginDrag(key, x, y)}
                 onMove={dragMove}
                 onDrop={(x, y) => void drop(key, x, y)}
-                onCancel={endDrag}
+                onCancel={() => endDrag()}
               />
             ))}
           </View>
@@ -280,8 +315,13 @@ export function OwnerGroupStep({
           else targets.current.delete("new")
         }}
         collapsable={false}
-        style={{ borderColor: hit === "new" ? colors.primary : colors.border }}
-        className="rounded-[20px] border border-dashed p-3.5"
+        style={{
+          borderColor: hit === "new" ? colors.primary : colors.border,
+          borderWidth: 1,
+          borderStyle: "dashed",
+          borderRadius: 20,
+          padding: 14,
+        }}
       >
         <Text className="text-sm font-bold text-foreground">New business</Text>
         <Text className="text-xs text-muted-foreground">
@@ -350,7 +390,7 @@ export function OwnerGroupStep({
           </Text>
         </View>
       )}
-      {dragging ? (
+      {dragging && ghostReady ? (
         <Animated.View
           pointerEvents="none"
           accessibilityElementsHidden
@@ -411,20 +451,36 @@ function TypeChip({
 }) {
   const callbacks = useRef({ onStart, onMove, onDrop, onCancel })
   callbacks.current = { onStart, onMove, onDrop, onCancel }
+  const armed = useRef(false)
+  const captured = useRef(false)
+  const wasLongPress = useRef(false)
+  const pressOutTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  useEffect(
+    () => () => {
+      if (pressOutTimer.current) clearTimeout(pressOutTimer.current)
+    },
+    [],
+  )
   const handlers = useRef(
     PanResponder.create({
-      onMoveShouldSetPanResponderCapture: (_, g) =>
-        Math.abs(g.dx) + Math.abs(g.dy) > 6,
-      onMoveShouldSetPanResponder: (_, g) =>
-        Math.abs(g.dx) + Math.abs(g.dy) > 6,
-      onPanResponderGrant: (_, g) =>
-        callbacks.current.onStart(g.moveX || g.x0, g.moveY || g.y0),
-      onPanResponderMove: (_, g) =>
-        callbacks.current.onMove(g.moveX || g.x0, g.moveY || g.y0),
-      onPanResponderRelease: (_, g) =>
-        callbacks.current.onDrop(g.moveX || g.x0, g.moveY || g.y0),
-      onPanResponderTerminationRequest: () => false,
-      onPanResponderTerminate: () => callbacks.current.onCancel(),
+      onMoveShouldSetPanResponderCapture: () => armed.current,
+      onMoveShouldSetPanResponder: () => armed.current,
+      onPanResponderGrant: () => {
+        if (pressOutTimer.current) clearTimeout(pressOutTimer.current)
+        captured.current = true
+      },
+      onPanResponderMove: (_, g) => callbacks.current.onMove(g.moveX, g.moveY),
+      onPanResponderRelease: (_, g) => {
+        armed.current = false
+        captured.current = false
+        callbacks.current.onDrop(g.moveX, g.moveY)
+      },
+      onPanResponderTerminationRequest: () => !armed.current,
+      onPanResponderTerminate: () => {
+        armed.current = false
+        captured.current = false
+        callbacks.current.onCancel()
+      },
     }),
   ).current
   return (
@@ -436,7 +492,32 @@ function TypeChip({
           { name: "activate", label: "Move to another business" },
         ]}
         onAccessibilityAction={onMenu}
-        onPress={onMenu}
+        delayLongPress={250}
+        onPressIn={() => {
+          if (pressOutTimer.current) clearTimeout(pressOutTimer.current)
+          wasLongPress.current = false
+        }}
+        onLongPress={(event) => {
+          armed.current = true
+          wasLongPress.current = true
+          callbacks.current.onStart(
+            event.nativeEvent.pageX,
+            event.nativeEvent.pageY,
+          )
+        }}
+        onPressOut={(event) => {
+          const { pageX, pageY } = event.nativeEvent
+          // Responder takeover may terminate Pressability before its grant callback.
+          pressOutTimer.current = setTimeout(() => {
+            if (armed.current && !captured.current) {
+              armed.current = false
+              callbacks.current.onDrop(pageX, pageY)
+            }
+          }, 0)
+        }}
+        onPress={() => {
+          if (!wasLongPress.current) onMenu()
+        }}
         className="min-h-11 justify-center rounded-full border border-border bg-card px-3.5"
       >
         <Text className="text-xs font-semibold text-foreground">

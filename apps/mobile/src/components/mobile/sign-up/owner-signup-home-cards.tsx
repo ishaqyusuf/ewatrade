@@ -1,4 +1,5 @@
 import { AuthMethodButton } from "@/components/mobile/auth-header"
+import { RowDivider } from "@/components/mobile/green-till/kit"
 import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
 import { View } from "@/components/ui/view"
@@ -132,14 +133,14 @@ export function OwnerSignupHomeCards() {
       summary.data.readyBusinesses.length +
         summary.data.pendingBusinesses.length >
         1 ? (
-        <View className="gap-3 rounded-[20px] bg-card p-3.5">
-          <Text className="text-sm font-bold text-foreground">
+        <View className="overflow-hidden rounded-[20px] bg-card">
+          <Text className="px-3.5 py-3 text-sm font-bold text-foreground">
             Your businesses
           </Text>
           {summary.data.readyBusinesses.map((business) => (
             <View
               key={business.id}
-              className="min-h-11 flex-row items-center gap-3"
+              className="min-h-11 flex-row items-center gap-3 px-3.5 py-3"
             >
               <View className="flex-1">
                 <Text className="text-sm font-bold text-foreground">
@@ -150,12 +151,13 @@ export function OwnerSignupHomeCards() {
                 </Text>
               </View>
               <Text className="text-xs font-bold text-primary">Ready</Text>
+              <RowDivider />
             </View>
           ))}
           {summary.data.pendingBusinesses.map((business) => (
             <View
               key={business.slug}
-              className="min-h-11 flex-row items-center gap-3"
+              className="min-h-11 flex-row items-center gap-3 px-3.5 py-3"
             >
               <View className="flex-1">
                 <Text className="text-sm font-bold text-foreground">
@@ -173,9 +175,10 @@ export function OwnerSignupHomeCards() {
               >
                 <Text className="text-xs font-bold text-primary">Upgrade</Text>
               </Pressable>
+              <RowDivider />
             </View>
           ))}
-          <Text className="text-xs text-muted-foreground">
+          <Text className="px-3.5 py-3 text-xs text-muted-foreground">
             Switch businesses from the top of Home.
           </Text>
         </View>

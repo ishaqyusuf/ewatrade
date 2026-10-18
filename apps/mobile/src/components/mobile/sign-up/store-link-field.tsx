@@ -17,6 +17,7 @@ export function StoreLinkField({
   onCanonicalize,
   fixed = false,
   email,
+  forceEdit = false,
 }: {
   value: string
   onChange: (slug: string) => void
@@ -24,9 +25,13 @@ export function StoreLinkField({
   onCanonicalize?: (slug: string) => void
   fixed?: boolean
   email?: string
+  forceEdit?: boolean
 }) {
   const trpc = useTRPC()
   const [editing, setEditing] = useState(false)
+  useEffect(() => {
+    if (forceEdit) setEditing(true)
+  }, [forceEdit])
   const [debounced, setDebounced] = useState("")
   useEffect(() => {
     const timer = setTimeout(() => setDebounced(value), 450)

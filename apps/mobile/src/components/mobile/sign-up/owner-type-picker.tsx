@@ -91,7 +91,11 @@ export function OwnerTypePicker({
           </Pressable>
         ))}
       </ScrollView>
-      <View className="overflow-hidden rounded-[20px] bg-card">
+      <View
+        accessibilityRole={multi ? undefined : "radiogroup"}
+        accessibilityLabel="Business types"
+        className="overflow-hidden rounded-[20px] bg-card"
+      >
         {visible.map((type, index) => (
           <Fragment key={type.key}>
             <Pressable
@@ -121,6 +125,13 @@ export function OwnerTypePicker({
                     }
                     className="size-5 text-primary"
                   />
+                </View>
+              ) : selected.includes(type.key) ? (
+                <View
+                  accessibilityElementsHidden
+                  importantForAccessibility="no-hide-descendants"
+                >
+                  <Icon name="CircleCheck" className="size-5 text-primary" />
                 </View>
               ) : null}
               {index < visible.length - 1 ? <RowDivider /> : null}
