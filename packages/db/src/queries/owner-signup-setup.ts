@@ -78,7 +78,9 @@ export async function readOwnerSignupSetup(db: DbClient, userId: string) {
     tenantId: pending.tenantId,
     name: pending.tenant.name,
     slug: pending.tenant.slug,
-    draft: readOwnerSignupDraft(record(session?.formData).ownerSignup),
+    draft: readOwnerSignupDraft(record(session?.formData).ownerSignup, {
+      allowIncomplete: true,
+    }),
   }
 }
 
@@ -88,7 +90,7 @@ export async function saveOwnerSignupDraft(
   draft: OwnerSetupDraft,
 ) {
   const pending = await getPendingOwnerSignup(db, userId)
-  if (!pending) throw new Error("This setup is already complete. Return Home.")
+  if (!pending) return { saved: true } // A late autosave must not overwrite completed setup.
   const session = await db.onboardingSession.findFirst({
     where: { tenantId: pending.tenantId, userId },
     orderBy: { createdAt: "desc" },
@@ -119,6 +121,8 @@ export async function completeOwnerSignupSetup(
   userId: string,
   input: OwnerSetupDraft,
 ) {
+  if (!readOwnerSignupDraft(input))
+    throw new Error("Complete the business details before finishing.")
   const pending = await getPendingOwnerSignup(db, userId)
   if (!pending) return { completed: true } // Retry after a committed response loss is harmless.
   // Serialize completion for this owner across requests and tabs.

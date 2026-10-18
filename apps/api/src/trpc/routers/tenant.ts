@@ -22,7 +22,10 @@ import { isQaAnalyticsPrincipal } from "@ewatrade/events/qa-policy-server"
 import { readOwnerSignupDraft } from "@ewatrade/utils/owner-signup"
 import { TRPCError } from "@trpc/server"
 import { z } from "zod"
-import { ownerSignupDraftSchema } from "../../schemas/owner-signup"
+import {
+  ownerSignupCompletionSchema,
+  ownerSignupDraftSchema,
+} from "../../schemas/owner-signup"
 import { createBusinessSchema, createStoreSchema } from "../../schemas/tenant"
 import { qaScopedMembershipWhere } from "../../utils/qa-session-access"
 import {
@@ -56,7 +59,7 @@ export const tenantRouter = createTRPCRouter({
       ),
     ),
   completeOwnerSignup: authenticatedProcedure
-    .input(ownerSignupDraftSchema)
+    .input(ownerSignupCompletionSchema)
     .mutation(async ({ ctx, input }) => {
       try {
         return await ctx.db.$transaction(

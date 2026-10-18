@@ -1,5 +1,8 @@
 import { expect, test } from "bun:test"
-import { ownerSignupDraftSchema } from "./owner-signup"
+import {
+  ownerSignupCompletionSchema,
+  ownerSignupDraftSchema,
+} from "./owner-signup"
 const business = {
   name: "Tolu",
   slug: "tolu",
@@ -10,7 +13,7 @@ const business = {
 }
 test("setup accepts only supported types and explicit country/currency", () => {
   expect(
-    ownerSignupDraftSchema.safeParse({
+    ownerSignupCompletionSchema.safeParse({
       planId: "starter",
       businesses: [business],
     }).success,
@@ -24,7 +27,7 @@ test("setup accepts only supported types and explicit country/currency", () => {
     { description: "a".repeat(281) },
   ])
     expect(
-      ownerSignupDraftSchema.safeParse({
+      ownerSignupCompletionSchema.safeParse({
         planId: "starter",
         businesses: [{ ...business, ...change }],
       }).success,
@@ -32,15 +35,31 @@ test("setup accepts only supported types and explicit country/currency", () => {
 })
 test("setup rejects duplicate business links and duplicated types across cards", () => {
   expect(
-    ownerSignupDraftSchema.safeParse({
+    ownerSignupCompletionSchema.safeParse({
       planId: "growth",
       businesses: [business, { ...business, typeKeys: ["feed"] }],
     }).success,
   ).toBe(false)
   expect(
-    ownerSignupDraftSchema.safeParse({
+    ownerSignupCompletionSchema.safeParse({
       planId: "growth",
       businesses: [business, { ...business, slug: "another-link" }],
     }).success,
   ).toBe(false)
+})
+
+test("draft saves partial grouping and resume data while completion rejects it", () => {
+  const draft = {
+    planId: "growth",
+    step: "group",
+    storeIndex: 0,
+    groupedFor: "poultry,feed",
+    selectedTypeKeys: ["poultry", "feed"],
+    businesses: [
+      { ...business, id: "business-0", typeKeys: [] },
+      { ...business, id: "business-1", name: "", slug: "", typeKeys: ["feed"] },
+    ],
+  }
+  expect(ownerSignupDraftSchema.safeParse(draft).success).toBe(true)
+  expect(ownerSignupCompletionSchema.safeParse(draft).success).toBe(false)
 })

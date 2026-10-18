@@ -7,6 +7,8 @@ import { type OperatingCurrencyCode, isOperatingCurrencyCode } from "./currency"
 import { isValidStoreLink } from "./store-link"
 
 export type OwnerSetupBusiness = {
+  id?: string
+  offerTouched?: boolean
   name: string
   slug: string
   typeKeys: string[]
@@ -20,6 +22,11 @@ export type OwnerSetupBusiness = {
   region?: string
 }
 export type OwnerSetupDraft = {
+  step?: "type" | "group" | "store"
+  storeIndex?: number
+  groupedFor?: string
+  selectedTypeKeys?: string[]
+  otherType?: string
   planId: "starter" | "growth" | "pro"
   businesses: OwnerSetupBusiness[]
 }
@@ -27,12 +34,15 @@ function record(v: unknown): v is Record<string, unknown> {
   return !!v && typeof v === "object" && !Array.isArray(v)
 }
 /** Stored JSON is descriptive draft data and never an authority or a plan grant. */
-export function readOwnerSignupDraft(value: unknown): OwnerSetupDraft | null {
+export function readOwnerSignupDraft(
+  value: unknown,
+  { allowIncomplete = false }: { allowIncomplete?: boolean } = {},
+): OwnerSetupDraft | null {
   if (
     !record(value) ||
     !["starter", "growth", "pro"].includes(String(value.planId)) ||
     !Array.isArray(value.businesses) ||
-    !value.businesses.length ||
+    (!allowIncomplete && !value.businesses.length) ||
     value.businesses.length > 42
   )
     return null
@@ -41,12 +51,13 @@ export function readOwnerSignupDraft(value: unknown): OwnerSetupDraft | null {
     if (
       !record(b) ||
       typeof b.name !== "string" ||
-      !b.name.trim() ||
+      (!allowIncomplete && !b.name.trim()) ||
       b.name.length > 120 ||
       typeof b.slug !== "string" ||
-      !isValidStoreLink(b.slug) ||
+      b.slug.length > 40 ||
+      (!allowIncomplete && !isValidStoreLink(b.slug)) ||
       !Array.isArray(b.typeKeys) ||
-      !b.typeKeys.length ||
+      (!allowIncomplete && !b.typeKeys.length) ||
       !b.typeKeys.every(isBusinessTypeKey) ||
       typeof b.countryCode !== "string" ||
       !/^[A-Z]{2}$/.test(b.countryCode) ||
@@ -70,11 +81,21 @@ export function readOwnerSignupDraft(value: unknown): OwnerSetupDraft | null {
       }
     }
     if (
+      !allowIncomplete &&
       b.typeKeys.includes("other") &&
       (!optional.otherType || optional.otherType.length < 2)
     )
       return null
+    if (
+      b.id !== undefined &&
+      (typeof b.id !== "string" || !/^[a-zA-Z0-9_-]{1,80}$/.test(b.id))
+    )
+      return null
+    if (b.offerTouched !== undefined && typeof b.offerTouched !== "boolean")
+      return null
     businesses.push({
+      id: typeof b.id === "string" ? b.id : `business-${businesses.length}`,
+      ...(b.offerTouched !== undefined ? { offerTouched: b.offerTouched } : {}),
       name: b.name.trim(),
       slug: b.slug,
       typeKeys: [...new Set(b.typeKeys)],
@@ -84,7 +105,54 @@ export function readOwnerSignupDraft(value: unknown): OwnerSetupDraft | null {
       ...optional,
     })
   }
-  return { planId: value.planId as OwnerSetupDraft["planId"], businesses }
+  if (new Set(businesses.map((b) => b.id)).size !== businesses.length)
+    return null
+  if (!allowIncomplete) {
+    const types = businesses.flatMap((b) => b.typeKeys)
+    if (
+      new Set(types).size !== types.length ||
+      new Set(businesses.map((b) => b.slug)).size !== businesses.length
+    )
+      return null
+  }
+  const navigation: Partial<OwnerSetupDraft> = {}
+  if (value.step !== undefined) {
+    if (!["type", "group", "store"].includes(String(value.step))) return null
+    navigation.step = value.step as OwnerSetupDraft["step"]
+  }
+  if (value.storeIndex !== undefined) {
+    if (
+      !Number.isInteger(value.storeIndex) ||
+      Number(value.storeIndex) < 0 ||
+      Number(value.storeIndex) > 41
+    )
+      return null
+    navigation.storeIndex = Number(value.storeIndex)
+  }
+  if (value.groupedFor !== undefined) {
+    if (typeof value.groupedFor !== "string" || value.groupedFor.length > 2000)
+      return null
+    navigation.groupedFor = value.groupedFor
+  }
+  if (value.selectedTypeKeys !== undefined) {
+    if (
+      !Array.isArray(value.selectedTypeKeys) ||
+      value.selectedTypeKeys.length > 42 ||
+      !value.selectedTypeKeys.every(isBusinessTypeKey)
+    )
+      return null
+    navigation.selectedTypeKeys = [...new Set(value.selectedTypeKeys)]
+  }
+  if (value.otherType !== undefined) {
+    if (typeof value.otherType !== "string" || value.otherType.length > 60)
+      return null
+    navigation.otherType = value.otherType
+  }
+  return {
+    ...navigation,
+    planId: value.planId as OwnerSetupDraft["planId"],
+    businesses,
+  }
 }
 export function moveOwnerBusinessType(
   businesses: OwnerSetupBusiness[],
@@ -97,16 +165,25 @@ export function moveOwnerBusinessType(
     ...b,
     typeKeys: b.typeKeys.filter((t) => t !== key),
   }))
-  if (target === "new")
+  if (target === "new") {
+    let id = 0
+    while (next.some((b) => b.id === `business-${id}`)) id++
     next.push({
       ...source,
+      id: `business-${id}`,
+      offerTouched: false,
       name: "",
       slug: "",
       typeKeys: [key],
       description: "",
     })
-  else if (next[target]) next[target].typeKeys.push(key)
+  } else if (next[target]) next[target].typeKeys.push(key)
   return next
     .filter((b, i) => i === 0 || b.typeKeys.length > 0)
-    .map((b) => ({ ...b, operatingModel: defaultBusinessOffer(b.typeKeys) }))
+    .map((b) => ({
+      ...b,
+      operatingModel: b.offerTouched
+        ? b.operatingModel
+        : defaultBusinessOffer(b.typeKeys),
+    }))
 }
