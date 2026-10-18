@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test"
 import {
+  getTrustedInternalClientIp,
   getTrustedPrivacyNetworkSource,
   getTrustedQaNetworkSource,
   isTrustedClientIpHeaderConfigured,
@@ -78,6 +79,33 @@ test("privacy intake requires its own configured proxy-sanitized IP header", () 
     getTrustedPrivacyNetworkSource({
       env: { ACCOUNT_PRIVACY_TRUSTED_CLIENT_IP_HEADER: "x-real-ip" },
       getHeader: () => "not-an-ip:evil",
+    }),
+  ).toBeNull()
+})
+
+test("bridge network hints require internal authentication and exactly one valid IP", () => {
+  expect(
+    getTrustedInternalClientIp({
+      isInternalRequest: false,
+      getHeader: () => "203.0.113.8",
+    }),
+  ).toBeNull()
+  expect(
+    getTrustedInternalClientIp({
+      isInternalRequest: true,
+      getHeader: () => "203.0.113.8",
+    }),
+  ).toBe("203.0.113.8")
+  expect(
+    getTrustedInternalClientIp({
+      isInternalRequest: true,
+      getHeader: () => "203.0.113.8, 203.0.113.9",
+    }),
+  ).toBeNull()
+  expect(
+    getTrustedInternalClientIp({
+      isInternalRequest: true,
+      getHeader: () => "not-an-ip",
     }),
   ).toBeNull()
 })

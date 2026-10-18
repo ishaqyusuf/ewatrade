@@ -1,4 +1,10 @@
-import { createHash, createHmac, randomBytes, randomInt } from "node:crypto"
+import {
+  createHash,
+  createHmac,
+  randomBytes,
+  randomInt,
+  timingSafeEqual,
+} from "node:crypto"
 import {
   type BusinessOperatingModel,
   type OperatingCurrencyCode,
@@ -13,6 +19,7 @@ import { AccountAgeBand, MembershipRole } from "../../generated/prisma/enums"
 import { recordLegalAcceptance } from "./account-privacy"
 import { isAccountPrivacyAccessBlocked } from "./account-privacy-access"
 import { isLegalSignupSessionBlocked } from "./legal-session-access"
+import { shouldUseFixedMobileOwnerOtp } from "./mobile-otp-development-policy"
 import {
   type MobileAuthMode,
   buildMobileOtpIdentifier,
@@ -70,6 +77,7 @@ export type MobileAuthSessionResult = {
 }
 
 export type MobileOwnerOtpResult = {
+  deliverySuppressed?: true
   code: string
   email: string
   expiresAt: Date
@@ -185,12 +193,7 @@ function hashOtp(code: string) {
   return createHash("sha256").update(code).digest("hex")
 }
 
-export function shouldUseFixedMobileOwnerOtp(env: {
-  APP_ENV?: string
-  NODE_ENV?: string
-}) {
-  return env.APP_ENV !== "production" && env.NODE_ENV !== "production"
-}
+export { shouldUseFixedMobileOwnerOtp } from "./mobile-otp-development-policy"
 
 function createOtpCode() {
   if (shouldUseFixedMobileOwnerOtp(process.env)) {
@@ -491,6 +494,34 @@ export async function consumeMobilePasswordAttempt(
   )
 }
 
+export class MobileOtpAttemptError extends Error {}
+export class MobileOtpRateLimitError extends Error {}
+
+/** Atomic fixed-window counters persist independently of rejected challenge requests. */
+async function consumeOwnerOtpBudget(
+  db: DbClient,
+  key: string,
+  maximum: number,
+  windowMs: number,
+  now: Date,
+) {
+  const secret = process.env.BETTER_AUTH_SECRET ?? process.env.AUTH_SECRET
+  if (!secret) throw new Error("Authentication secret is required")
+  const bucketDigest = createHmac("sha256", secret)
+    .update(`owner-email-otp:${key}:${Math.floor(now.getTime() / windowMs)}`)
+    .digest("hex")
+  const row = await db.accountPrivacyRateBucket.upsert({
+    where: { bucketDigest },
+    create: { bucketDigest, sentCount: 1, windowStartedAt: now },
+    update: { sentCount: { increment: 1 } },
+    select: { sentCount: true },
+  })
+  if (row.sentCount > maximum)
+    throw new MobileOtpRateLimitError(
+      "Too many codes requested. Try again later.",
+    )
+}
+
 export async function createMobileOwnerOtp(
   db: DbClient,
   input: {
@@ -517,6 +548,7 @@ export async function createMobileOwnerOtp(
     phone?: string | null
     teamSize?: string | null
   },
+  networkSource = "unknown",
 ): Promise<MobileOwnerOtpResult> {
   const ageBand = requireMobileSignupAgeBand(input.mode, input.ageBand)
   const legalPublication =
@@ -529,6 +561,31 @@ export async function createMobileOwnerOtp(
   const now = new Date()
   const expiresAt = addMinutes(now, OTP_TTL_MINUTES)
   const identifier = buildMobileOtpIdentifier({ email, mode: input.mode })
+  await consumeOwnerOtpBudget(
+    db,
+    `network:${networkSource}`,
+    20,
+    15 * 60_000,
+    now,
+  )
+  await consumeOwnerOtpBudget(db, `email:${email}`, 5, 15 * 60_000, now)
+  const previous = await db.verification.findFirst({
+    where: { identifier },
+    orderBy: { createdAt: "desc" },
+  })
+  if (previous && now.getTime() - previous.createdAt.getTime() < 60_000)
+    throw new MobileOtpRateLimitError(
+      "Wait one minute before requesting another code.",
+    )
+  await consumeOwnerOtpBudget(db, `cooldown:${email}`, 1, 60_000, now)
+  if (input.mode === "sign_up") {
+    const existing = await db.user.findUnique({
+      where: { email },
+      select: { emailVerified: true },
+    })
+    if (existing?.emailVerified)
+      return { code, email, expiresAt, deliverySuppressed: true }
+  }
 
   await db.verification.deleteMany({
     where: { identifier },
@@ -548,6 +605,7 @@ export async function createMobileOwnerOtp(
         businessName: cleanText(input.businessName),
         city: cleanText(input.city),
         codeHash: hashOtp(code),
+        attempts: 0,
         countryCode: normalizeCountryCode(input.countryCode),
         region: cleanText(input.region),
         legalVersion: legalPublication?.version ?? null,
@@ -624,6 +682,7 @@ export async function verifyMobileOwnerOtp(
     legalVersion?: string | null
     legalDocumentHash?: string | null
     city?: string | null
+    attempts?: number
     codeHash?: string
     countryCode?: string | null
     region?: string | null
@@ -642,8 +701,33 @@ export async function verifyMobileOwnerOtp(
     throw new Error("The verification code could not be read.")
   }
 
-  if (!payload.codeHash || payload.codeHash !== hashOtp(input.code)) {
-    throw new Error("The verification code is incorrect.")
+  const attempts = payload.attempts ?? 0
+  if (
+    !Number.isInteger(attempts) ||
+    attempts < 0 ||
+    attempts >= 5 ||
+    !payload.codeHash ||
+    !/^[a-f0-9]{64}$/.test(payload.codeHash)
+  )
+    throw new MobileOtpAttemptError(
+      "Too many incorrect codes. Request a new code.",
+    )
+  if (
+    !/^\d{6}$/.test(input.code) ||
+    !timingSafeEqual(
+      Buffer.from(payload.codeHash, "hex"),
+      Buffer.from(hashOtp(input.code), "hex"),
+    )
+  ) {
+    const nextAttempts = attempts + 1
+    await db.verification.update({
+      where: { id: verification.id },
+      data: {
+        value: JSON.stringify({ ...payload, attempts: nextAttempts }),
+        ...(nextAttempts >= 5 ? { expiresAt: new Date() } : {}),
+      },
+    })
+    throw new MobileOtpAttemptError("The verification code is incorrect.")
   }
 
   if (input.accessToken !== payload.accessToken)
@@ -717,10 +801,14 @@ export async function verifyMobileOwnerOtp(
     where: { email },
     select: {
       id: true,
+      emailVerified: true,
       name: true,
       ageBand: true,
     },
   })
+
+  if (input.mode === "sign_up" && existingUser?.emailVerified)
+    throw new Error("Use your existing sign-in method for this account.")
 
   if (
     signupAgeBand &&

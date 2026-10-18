@@ -18,6 +18,7 @@ import { dashboardProcedure } from "@ewatrade/events/dashboard-workflows"
 import { dashboardCommandId } from "@ewatrade/events/server-dashboard"
 import { recordDashboardOutcome } from "@ewatrade/jobs/product-analytics"
 import {
+  getTrustedInternalClientIp,
   getTrustedPrivacyNetworkSource,
   getTrustedQaNetworkSource,
 } from "@ewatrade/utils/qa-network-source"
@@ -161,6 +162,7 @@ export const createTRPCContext = async (
         : null
     const internalKey = c.req.header("x-internal-key")
     const expectedInternalKey = process.env.INTERNAL_API_KEY
+    const isInternalRequest = safeCompare(internalKey, expectedInternalKey)
     const requestCookies = parseCookieHeader(c.req.header("cookie"))
     const tenantSlug =
       c.req.header("x-tenant-slug") ??
@@ -176,7 +178,7 @@ export const createTRPCContext = async (
       tenantId: null,
       requestId,
       cfRay,
-      isInternalRequest: safeCompare(internalKey, expectedInternalKey),
+      isInternalRequest,
       forcePrimary: c.req.header("x-force-primary") === "true",
       customerConversationCredential:
         c.req.header("x-store-conversation-credential") ?? null,
@@ -187,10 +189,15 @@ export const createTRPCContext = async (
         env: process.env,
         getHeader: (name) => c.req.header(name),
       }),
-      privacyClientIp: getTrustedPrivacyNetworkSource({
-        env: process.env,
-        getHeader: (name) => c.req.header(name),
-      }),
+      privacyClientIp:
+        getTrustedInternalClientIp({
+          isInternalRequest,
+          getHeader: (name) => c.req.header(name),
+        }) ??
+        getTrustedPrivacyNetworkSource({
+          env: process.env,
+          getHeader: (name) => c.req.header(name),
+        }),
       userAgent: c.req.header("user-agent") ?? null,
       activeStoreId:
         c.req.header("x-store-id") ??

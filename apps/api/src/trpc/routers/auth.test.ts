@@ -358,7 +358,7 @@ describe("mobile auth router schemas", () => {
     )
   })
 
-  test("dispatches OTP email only in production", () => {
+  test("dispatches OTP email outside explicitly allowed fixed-code profiles", () => {
     expect(shouldDispatchMobileOwnerOtpEmail({ NODE_ENV: "production" })).toBe(
       true,
     )
@@ -368,11 +368,16 @@ describe("mobile auth router schemas", () => {
         NODE_ENV: "development",
       }),
     ).toBe(true)
-    expect(shouldDispatchMobileOwnerOtpEmail({ NODE_ENV: "development" })).toBe(
-      false,
-    )
-    expect(shouldDispatchMobileOwnerOtpEmail({ NODE_ENV: "test" })).toBe(false)
-    expect(shouldDispatchMobileOwnerOtpEmail({})).toBe(false)
+    expect(
+      shouldDispatchMobileOwnerOtpEmail({
+        APP_ENV: "development",
+        NODE_ENV: "development",
+      }),
+    ).toBe(false)
+    expect(
+      shouldDispatchMobileOwnerOtpEmail({ APP_ENV: "test", NODE_ENV: "test" }),
+    ).toBe(false)
+    expect(shouldDispatchMobileOwnerOtpEmail({})).toBe(true)
   })
 })
 

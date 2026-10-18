@@ -50,3 +50,13 @@ function getTrustedClientIp(
   const value = getHeader(headerName)?.trim()
   return value && isPlausibleIpAddress(value) ? value : null
 }
+
+/** The server-to-server bridge may assert a proxy-sanitized address only with an authenticated internal key. */
+export function getTrustedInternalClientIp(input: {
+  isInternalRequest: boolean
+  getHeader(name: string): string | null | undefined
+}) {
+  if (!input.isInternalRequest) return null
+  const value = input.getHeader("x-ewatrade-client-ip")?.trim()
+  return value && isPlausibleIpAddress(value) ? value : null
+}

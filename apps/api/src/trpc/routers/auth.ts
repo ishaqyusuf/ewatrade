@@ -23,6 +23,8 @@ import {
 } from "@ewatrade/db/queries"
 import {
   MobileAccountNotFoundError,
+  MobileOtpAttemptError,
+  MobileOtpRateLimitError,
   consumeMobilePasswordAttempt,
   createMobileOwnerOtp,
   createMobileSessionForVerifiedUser,
@@ -30,6 +32,7 @@ import {
   getCustomerAccountAgeStatus,
   getMobileAccessProfile,
   isLocalPhoneAuth,
+  shouldUseFixedMobileOwnerOtp,
   verifyMobileGoogleIdentity,
   verifyMobileOwnerOtp,
   verifyPhoneOtp,
@@ -41,7 +44,7 @@ import {
   dispatchEmailMessages,
   renderMobileOwnerOtpTemplate,
 } from "@ewatrade/email"
-import { AppError } from "@ewatrade/errors"
+import { AppError, ruleRejectedError } from "@ewatrade/errors"
 import {
   BUSINESS_OPERATING_MODEL_KEYS,
   BUSINESS_ORDER_CHANNEL_KEYS,
@@ -347,7 +350,7 @@ export function createMobileOwnerOtpEmailMessages(input: {
 export function shouldDispatchMobileOwnerOtpEmail(
   env: Pick<EmailRoutingEnv, "NODE_ENV"> & { APP_ENV?: string } = process.env,
 ) {
-  return env.NODE_ENV === "production" || env.APP_ENV === "production"
+  return !shouldUseFixedMobileOwnerOtp(env)
 }
 
 export const authRouter = createTRPCRouter({
@@ -679,8 +682,17 @@ export const authRouter = createTRPCRouter({
       requireMobileLegalChoice(input)
       const otp = await (async () => {
         try {
-          return await createMobileOwnerOtp(ctx.db, input)
+          return await createMobileOwnerOtp(
+            ctx.db,
+            input,
+            ctx.privacyClientIp ?? ctx.clientIp ?? "unknown",
+          )
         } catch (error) {
+          if (error instanceof MobileOtpRateLimitError)
+            throw new TRPCError({
+              code: "TOO_MANY_REQUESTS",
+              cause: ruleRejectedError(error),
+            })
           if (error instanceof StoreLinkConflictError)
             throw new TRPCError({ code: "CONFLICT", message: error.message })
           if (error instanceof OnboardingContinuationError)
@@ -695,7 +707,7 @@ export const authRouter = createTRPCRouter({
         }
       })()
 
-      if (shouldDispatchMobileOwnerOtpEmail()) {
+      if (!otp.deliverySuppressed && shouldDispatchMobileOwnerOtpEmail()) {
         const emailMessages = (() => {
           try {
             return createMobileOwnerOtpEmailMessages({
@@ -725,7 +737,10 @@ export const authRouter = createTRPCRouter({
       }
 
       return {
-        devCode: shouldDispatchMobileOwnerOtpEmail() ? null : otp.code,
+        devCode:
+          !otp.deliverySuppressed && shouldUseFixedMobileOwnerOtp(process.env)
+            ? otp.code
+            : null,
         email: otp.email,
         expiresAt: otp.expiresAt,
       }
@@ -735,11 +750,27 @@ export const authRouter = createTRPCRouter({
     .input(verifyMobileOwnerOtpSchema)
     .mutation(async ({ ctx, input }) => {
       try {
-        return await ctx.db.$transaction(
-          (tx) => verifyMobileOwnerOtp(tx, input),
+        const result = await ctx.db.$transaction(
+          async (tx) => {
+            try {
+              return { session: await verifyMobileOwnerOtp(tx, input) }
+            } catch (error) {
+              // Commit bad-guess counters. Throwing inside the callback would roll them back.
+              if (error instanceof MobileOtpAttemptError)
+                return { attemptError: error.message }
+              throw error
+            }
+          },
           { isolationLevel: "Serializable", maxWait: 10_000, timeout: 30_000 },
         )
+        if ("attemptError" in result)
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            cause: ruleRejectedError(new Error(result.attemptError)),
+          })
+        return result.session
       } catch (error) {
+        if (error instanceof TRPCError) throw error
         if (error instanceof StoreLinkConflictError)
           throw new TRPCError({ code: "CONFLICT", message: error.message })
         if (error instanceof OnboardingContinuationError)
