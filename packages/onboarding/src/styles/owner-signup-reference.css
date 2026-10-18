@@ -453,3 +453,5 @@ select.owner-ref-inp.owner-ref-empty { color: var(--muted-fg); }
 .owner-ref-win .owner-country-trigger .owner-country-name {flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .owner-ref-win .owner-country-trigger .owner-country-placeholder {color:var(--muted-fg);}
 .owner-ref-win .owner-country-trigger svg {width:16px;height:16px;color:var(--muted-fg);flex-shrink:0;}
+/* Chips that carry a brand mark (WhatsApp). */
+.owner-ref-win .owner-connect .owner-chip,.owner-ref-win .owner-codeby .owner-chip {gap:7px;}

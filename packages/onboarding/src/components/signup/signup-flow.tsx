@@ -15,11 +15,13 @@ import { OwnerSignupFrame } from "./owner-signup-frame"
 import { SignupGoogle } from "./signup-google"
 import { SignupPhoneInput } from "./signup-phone-input"
 import { type StoreLinkCheck, StoreLinkField } from "./store-link-field"
+import { WhatsAppMark } from "./whatsapp-mark"
 
 export { OwnerSignupFrame } from "./owner-signup-frame"
 export { OwnerBusinessAvatar, OwnerSignupIcon } from "./owner-signup-artwork"
 export { StoreLinkField } from "./store-link-field"
 export { SignupCountryPicker } from "./signup-country-picker"
+export { WhatsAppMark } from "./whatsapp-mark"
 export type { StoreLinkCheck } from "./store-link-field"
 
 type Settings = {
@@ -389,6 +391,7 @@ function AccountFirstSignup() {
                           setError("")
                         }}
                       />
+                      {value === "whatsapp" && <WhatsAppMark size={18} />}
                       {label}
                     </label>
                   ))}
@@ -472,6 +475,7 @@ function AccountFirstSignup() {
                             setError("")
                           }}
                         />
+                        {value === "phone" && <WhatsAppMark size={15} />}
                         {label}
                       </label>
                     ))}
