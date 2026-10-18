@@ -31,6 +31,12 @@ import type { ApprovedNativeOnboarding } from "../onboarding/onboarding-continua
 import { SignupLegalChoices } from "./signup-legal-choices"
 import { StoreLinkField } from "./store-link-field"
 
+type ConnectWith = "email" | "whatsapp" | "both"
+const contactOptions: { value: ConnectWith; label: string }[] = [
+  { value: "email", label: "Email" },
+  { value: "whatsapp", label: "WhatsApp" },
+  { value: "both", label: "Both" },
+]
 type Age = "UNDER_13" | "AGE_13_TO_15" | "AGE_16_TO_17" | "ADULT"
 const ages: { key: Age; label: string }[] = [
   { key: "UNDER_13", label: "Under 13" },
@@ -60,7 +66,8 @@ export function OwnerAccountScreen({
   const [email, setEmail] = useState(continuation?.email ?? "")
   const [phone, setPhone] = useState("")
   const [phoneCountry, setPhoneCountry] = useState("NG")
-  const [useWhatsApp, setUseWhatsApp] = useState(false)
+  const [connectWith, setConnectWith] = useState<ConnectWith>("email")
+  const [codeByWhatsApp, setCodeByWhatsApp] = useState(true)
   const [age, setAge] = useState<Age | null>(initialAgeBand ?? null)
   const [error, setError] = useState<string | null>(null)
   const [legal, setLegal] = useState({
@@ -73,6 +80,16 @@ export function OwnerAccountScreen({
   )
   const whatsapp = useQuery(
     trpc.auth.phoneOtpAvailability.queryOptions(undefined, { retry: false }),
+  )
+  const choice =
+    continuation || (!whatsapp.data?.enabled && connectWith === "whatsapp")
+      ? "email"
+      : connectWith
+  const showEmail = choice !== "whatsapp"
+  const showPhone = choice !== "email"
+  const useWhatsApp = Boolean(
+    whatsapp.data?.enabled &&
+      (choice === "whatsapp" || (choice === "both" && codeByWhatsApp)),
   )
   const version =
     publication.data?.acceptanceRequired && publication.data.effective
@@ -87,7 +104,14 @@ export function OwnerAccountScreen({
       !publication.data.effective ||
       (Boolean(publicLegalUrl("terms")) && terms && privacy))
   const ageBand = age && age !== "UNDER_13" ? age : undefined
+  const phoneValue = phone.trim()
+    ? toInternationalPhone(getCountry(phoneCountry).dialCode, phone)
+    : ""
+  const emailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())
+  const phoneValid = /^\+[1-9]\d{7,14}$/.test(phoneValue)
+  const socialContactReady = !showPhone || !phone.trim() || phoneValid
   const common = {
+    phone: showPhone ? phoneValue || undefined : undefined,
     accessToken: continuation?.accessToken,
     ageBand,
     businessName: businessName.trim(),
@@ -104,10 +128,6 @@ export function OwnerAccountScreen({
   }
   const google = useMobileGoogleAuth({ ...common, onError: setError })
   const apple = useMobileAppleAuth({ ...common, onError: setError })
-  const phoneValue = toInternationalPhone(
-    getCountry(phoneCountry).dialCode,
-    phone,
-  )
   const sent = () =>
     router.push({
       pathname: "/verify-email",
@@ -116,8 +136,8 @@ export function OwnerAccountScreen({
         businessName: common.businessName,
         requestedSlug: slug,
         name,
-        email: email.trim().toLowerCase(),
-        phone: useWhatsApp ? phoneValue : undefined,
+        email: showEmail ? email.trim().toLowerCase() : undefined,
+        phone: showPhone ? phoneValue || undefined : undefined,
         channel: useWhatsApp ? "whatsapp" : "email",
         ageBand,
         accessToken: continuation?.accessToken,
@@ -146,15 +166,19 @@ export function OwnerAccountScreen({
   const ready = Boolean(
     common.businessName && linkReady && ageBand && legalReady && !busy,
   )
-  const contactReady = useWhatsApp
-    ? /^\+[1-9]\d{7,14}$/.test(phoneValue)
-    : /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())
+  const contactReady = (!showEmail || emailValid) && (!showPhone || phoneValid)
   function sendCode() {
     if (!ready || !contactReady || !name.trim()) return
     setError(null)
     if (useWhatsApp) {
       const { accessToken: _token, ...profile } = common
-      requestPhone.mutate({ ...profile, phone: phoneValue })
+      requestPhone.mutate({
+        ...profile,
+        phone: phoneValue,
+        contactEmail: showEmail
+          ? email.trim().toLowerCase() || undefined
+          : undefined,
+      })
     } else request.mutate({ ...common, email: email.trim().toLowerCase() })
   }
   return (
@@ -207,7 +231,7 @@ export function OwnerAccountScreen({
         />
         <StoreLinkField
           value={slug}
-          email={email}
+          email={showEmail ? email : undefined}
           onChange={(v) => {
             setSlugEdited(true)
             setSlug(v)
@@ -224,19 +248,44 @@ export function OwnerAccountScreen({
           editable={!busy}
           textContentType="name"
         />
-        {useWhatsApp ? (
-          <PhoneField
-            label="WhatsApp number"
-            countryCode={phoneCountry}
-            onCountryChange={setPhoneCountry}
-            value={phone}
-            onChangeText={setPhone}
-            variant="green-gate"
-            editable={!busy}
-          />
-        ) : (
+        {!continuation ? (
+          <View style={{ gap: 8 }}>
+            <Text className="text-xs font-bold text-foreground">
+              Connect with
+            </Text>
+            <View
+              accessibilityRole="radiogroup"
+              accessibilityLabel="Connect with"
+              className={largeText ? "gap-2" : "flex-row flex-wrap gap-2"}
+            >
+              {contactOptions
+                .filter(
+                  (item) => item.value !== "whatsapp" || whatsapp.data?.enabled,
+                )
+                .map((item) => (
+                  <Pressable
+                    key={item.value}
+                    accessibilityRole="radio"
+                    accessibilityState={{ checked: choice === item.value }}
+                    disabled={busy}
+                    onPress={() => {
+                      setConnectWith(item.value)
+                      setError(null)
+                    }}
+                    className={`min-h-11 justify-center rounded-full border px-3.5 ${choice === item.value ? "border-primary bg-primary/10" : "border-border bg-card"}`}
+                  >
+                    <Text className="text-xs font-semibold text-foreground">
+                      {item.label}
+                    </Text>
+                  </Pressable>
+                ))}
+            </View>
+          </View>
+        ) : null}
+        {showEmail ? (
           <FormField
             label="Email"
+            placeholder="Email"
             value={email}
             onChangeText={setEmail}
             autoCapitalize="none"
@@ -246,17 +295,52 @@ export function OwnerAccountScreen({
             variant="green-gate"
             editable={!busy && !continuation}
           />
-        )}
-        {!continuation && whatsapp.data?.enabled ? (
-          <AuthMethodButton
-            icon={useWhatsApp ? "Mail" : "WhatsApp"}
-            label={useWhatsApp ? "Use email instead" : "Use WhatsApp instead"}
-            disabled={busy}
-            onPress={() => {
-              setUseWhatsApp(!useWhatsApp)
-              setError(null)
-            }}
+        ) : null}
+        {showPhone ? (
+          <PhoneField
+            label="WhatsApp number"
+            countryCode={phoneCountry}
+            onCountryChange={setPhoneCountry}
+            value={phone}
+            onChangeText={setPhone}
+            variant="green-gate"
+            editable={!busy}
           />
+        ) : null}
+        {choice === "both" && whatsapp.data?.enabled ? (
+          <View style={{ gap: 8 }}>
+            <Text className="text-xs font-bold text-foreground">
+              Send my code by
+            </Text>
+            <View
+              accessibilityRole="radiogroup"
+              accessibilityLabel="Send my code by"
+              className={largeText ? "gap-2" : "flex-row flex-wrap gap-2"}
+            >
+              {[
+                { value: true, label: "WhatsApp" },
+                { value: false, label: "Email" },
+              ].map((item) => (
+                <Pressable
+                  key={item.label}
+                  accessibilityRole="radio"
+                  accessibilityState={{
+                    checked: codeByWhatsApp === item.value,
+                  }}
+                  disabled={busy}
+                  onPress={() => {
+                    setCodeByWhatsApp(item.value)
+                    setError(null)
+                  }}
+                  className={`min-h-11 justify-center rounded-full border px-3.5 ${codeByWhatsApp === item.value ? "border-primary bg-primary/10" : "border-border bg-card"}`}
+                >
+                  <Text className="text-xs font-semibold text-foreground">
+                    {item.label}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
+          </View>
         ) : null}
         <Text className="text-xs font-bold text-foreground">Your age</Text>
         <View
@@ -342,12 +426,12 @@ export function OwnerAccountScreen({
           label="Continue with Google"
           brandIcon="google"
           onPress={() => void google.startGoogleAuth()}
-          disabled={!ready}
+          disabled={!ready || !socialContactReady}
           pending={google.isPending}
         />
         <AppleAuthButton
           onPress={() => void apple.startAppleAuth()}
-          disabled={!ready}
+          disabled={!ready || !socialContactReady}
         />
         <AuthMethodButton
           label="Already have an account? Sign in"

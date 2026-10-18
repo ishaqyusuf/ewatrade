@@ -318,6 +318,7 @@ export function VerifyEmailScreen() {
     if (useWhatsApp) {
       requestPhoneMutation.mutate({
         phone: phone ?? "",
+        contactEmail: email || undefined,
         mode: apiMode,
         ageBand,
         ...(legalVersion &&
