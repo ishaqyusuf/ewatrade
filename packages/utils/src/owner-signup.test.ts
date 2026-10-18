@@ -195,4 +195,16 @@ test("changed selections preserve edited cards and merge new types into their su
   expect(single).toHaveLength(1)
   expect(single[0]?.slug).toBe("tolu")
   expect(single[0]?.typeKeys).toEqual(["boutique"])
+  const retainedExtra = { ...second, typeKeys: ["phones", "phone-repair"] }
+  const multiple = reconcileOwnerBusinessTypes(
+    [first, retainedExtra],
+    retainedExtra.typeKeys,
+    first,
+    "",
+  )
+  expect(multiple[0]?.typeKeys).toEqual(["phones"])
+  expect(multiple[0]?.slug).toBe("tolu")
+  expect(multiple[1]?.id).toBe("edited")
+  expect(multiple[1]?.typeKeys).toEqual(["phone-repair"])
+  expect(multiple[1]?.description).toBe("Our store")
 })

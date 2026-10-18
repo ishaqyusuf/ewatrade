@@ -228,11 +228,6 @@ export function reconcileOwnerBusinessTypes(
       typeKeys: b.typeKeys.filter((key) => selectedSet.has(key)),
     }))
     .filter((b, index) => index === 0 || b.typeKeys.length > 0)
-  // A sole remaining type always belongs to the reserved first business.
-  if (keys.length === 1 && next[0]?.typeKeys.length === 0) {
-    next[0].typeKeys = [...keys]
-    next.splice(1)
-  }
   const assigned = new Set(next.flatMap((b) => b.typeKeys))
   const usedIds = new Set([...businesses, ...next].map((b) => b.id))
   for (const added of groupBusinessTypes(
@@ -260,6 +255,16 @@ export function reconcileOwnerBusinessTypes(
       next.push(target)
     }
     target.typeKeys.push(...added)
+  }
+  // The reserved first business must stay usable when all its old types were removed.
+  // Prefer newly suggested types above; otherwise move one retained type from an extra.
+  if (next[0]?.typeKeys.length === 0) {
+    const donor = next.findIndex(
+      (b, index) => index > 0 && b.typeKeys.length > 0,
+    )
+    const key = next[donor]?.typeKeys.shift()
+    if (key) next[0].typeKeys.push(key)
+    if (donor > 0 && next[donor]?.typeKeys.length === 0) next.splice(donor, 1)
   }
   return next.map((b, index) => ({
     ...b,
