@@ -100,7 +100,7 @@ export function OwnerSignupHomeCards() {
           </View>
         ) : null}
         <AuthMethodButton
-          icon="Share2"
+          icon="Share"
           label="Share store link"
           onPress={() => {
             setShareError(null)
