@@ -3,7 +3,11 @@
 import { StoreSetupForm } from "@/components/auth/store-setup-form"
 import { useTRPC } from "@/trpc/client"
 import { OwnerSignupFrame } from "@ewatrade/onboarding/components/signup/signup-flow"
-import type { OwnerSetupDraft } from "@ewatrade/utils/owner-signup"
+import {
+  type OwnerSetupDraft,
+  reconcileOwnerBusinessTypes,
+  syncOwnerSignupPlan,
+} from "@ewatrade/utils/owner-signup"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { useRouter } from "next/navigation"
 import { useEffect, useRef, useState } from "react"
@@ -11,12 +15,12 @@ import { OwnerGroupStep } from "./group-step"
 import {
   OWNER_PLAN_LIMITS,
   type OwnerSetup,
-  arrangeOwnerTypes,
   businessLabel,
   initialOwnerDraft,
   storeReady,
   typeLabel,
 } from "./model"
+import { OwnerSetupRail } from "./setup-rail"
 import { OwnerStoreStep } from "./store-step"
 import { OwnerTypeStep } from "./type-step"
 import { useOwnerDraft } from "./use-owner-draft"
@@ -67,6 +71,7 @@ function OwnerSetupForm({ setup }: { setup: OwnerSetup }) {
   }, [draft.step, draft.storeIndex])
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState("")
+  const [conflictBusinessId, setConflictBusinessId] = useState<string>()
   const storage = useOwnerDraft(draft)
   const trpc = useTRPC()
   const queryClient = useQueryClient()
@@ -76,10 +81,25 @@ function OwnerSetupForm({ setup }: { setup: OwnerSetup }) {
   const wide = draft.step !== "store"
   const setupNow = draft.businesses.slice(0, OWNER_PLAN_LIMITS[draft.planId])
   function nextTypes() {
+    const first = draft.businesses[0]
+    if (!first) return
     const arranged =
       draft.groupedFor === selected.join(",")
         ? draft
-        : arrangeOwnerTypes(draft, "suggested")
+        : (() => {
+            const businesses = reconcileOwnerBusinessTypes(
+              draft.businesses,
+              selected,
+              first,
+              draft.otherType ?? "",
+            )
+            return {
+              ...draft,
+              businesses,
+              groupedFor: selected.join(","),
+              planId: syncOwnerSignupPlan(draft.planId, businesses.length),
+            }
+          })()
     setError("")
     setDraft({
       ...arranged,
@@ -104,7 +124,8 @@ function OwnerSetupForm({ setup }: { setup: OwnerSetup }) {
       return
     }
     setSubmitting(true)
-    if (await storage.complete()) {
+    const result = await storage.complete()
+    if (result.completed) {
       await Promise.all([
         queryClient.invalidateQueries({
           queryKey: trpc.tenant.ownerSignupSetup.queryKey(),
@@ -118,46 +139,31 @@ function OwnerSetupForm({ setup }: { setup: OwnerSetup }) {
       ])
       router.replace("/")
       router.refresh()
-    } else setSubmitting(false)
+    } else {
+      setSubmitting(false)
+      if (
+        result.businessId &&
+        draft.businesses.some(
+          (business, index) => index > 0 && business.id === result.businessId,
+        )
+      ) {
+        setConflictBusinessId(result.businessId)
+        setDraft((current) => ({ ...current, step: "group" }))
+      }
+    }
   }
-  const rail = (
-    <div className="owner-setup-rail">
-      <p className="owner-preview-eyebrow">TAKING SHAPE</p>
-      <h2>{setup.name}</h2>
-      <p className="owner-rail-link">{setup.slug}.ewatrade.com</p>
-      <div className="owner-rail-section">
-        <small>{selected.length} TYPES PICKED</small>
-        {selected.map((key) => (
-          <p key={key}>✓ {typeLabel(key, draft.otherType)}</p>
-        ))}
-        {!selected.length && <p>Pick your first type to get started.</p>}
-      </div>
-      {draft.step === "group" && (
-        <div className="owner-rail-section">
-          <small>YOUR BUSINESSES</small>
-          {draft.businesses.map((business, index) => (
-            <p key={business.id}>
-              {index + 1}. {businessLabel(business, index)}
-            </p>
-          ))}
-        </div>
-      )}
-      <div className="owner-rail-section">
-        <small>
-          {draft.planId.toUpperCase()} · {OWNER_PLAN_LIMITS[draft.planId]}{" "}
-          {draft.planId === "starter" ? "BUSINESS" : "BUSINESSES"}
-        </small>
-        <p>
-          {draft.planId === "starter"
-            ? "Your first 3 items are free."
-            : "Free during launch. Room for your businesses."}
-        </p>
-      </div>
-    </div>
-  )
+  const rail = <OwnerSetupRail draft={draft} />
   return (
     <OwnerSignupFrame
       wide={wide}
+      step={draft.step}
+      typeKeys={current?.typeKeys}
+      otherType={draft.otherType}
+      operatingModel={current?.operatingModel}
+      address={[current?.addressLine1, current?.city, current?.region]
+        .filter(Boolean)
+        .join(", ")}
+      planId={draft.planId}
       rail={rail}
       name={current?.name || setup.name}
       slug={current?.slug || setup.slug}
@@ -211,6 +217,7 @@ function OwnerSetupForm({ setup }: { setup: OwnerSetup }) {
             <OwnerGroupStep
               draft={draft}
               emailDomain={setup.emailDomain}
+              forceEditBusinessId={conflictBusinessId}
               onChange={setDraft}
               onBack={() => setDraft({ ...draft, step: "type" })}
               disabled={submitting}

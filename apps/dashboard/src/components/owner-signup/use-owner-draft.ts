@@ -2,6 +2,7 @@
 
 import { useTRPCClient } from "@/trpc/client"
 import type { OwnerSetupDraft } from "@ewatrade/utils/owner-signup"
+import { TRPCClientError } from "@trpc/client"
 import { useCallback, useEffect, useRef, useState } from "react"
 
 /** Serial writes prevent a slower earlier autosave from replacing a newer draft. */
@@ -61,14 +62,14 @@ export function useOwnerDraft(draft: OwnerSetupDraft) {
     }
   }, [draft, save])
   async function complete() {
-    if (finishing.current) return false
+    if (finishing.current) return { completed: false } as const
     finishing.current = true
     if (timer.current) clearTimeout(timer.current)
     const finalSnapshot = latest.current
     try {
       await save(finalSnapshot)
       await client.tenant.completeOwnerSignup.mutate(finalSnapshot)
-      return true
+      return { completed: true } as const
     } catch (cause) {
       if (mounted.current) {
         setState("error")
@@ -79,7 +80,12 @@ export function useOwnerDraft(draft: OwnerSetupDraft) {
         )
       }
       finishing.current = false
-      return false
+      const businessId =
+        cause instanceof TRPCClientError &&
+        typeof cause.data?.ownerSignupBusinessId === "string"
+          ? cause.data.ownerSignupBusinessId
+          : undefined
+      return { completed: false, businessId } as const
     }
   }
   return { state, error, retry: () => save(latest.current), complete }

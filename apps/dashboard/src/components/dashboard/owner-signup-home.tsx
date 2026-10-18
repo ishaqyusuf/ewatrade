@@ -7,6 +7,7 @@ import { buildInternalTenantHostname } from "@ewatrade/utils"
 import { useQuery } from "@tanstack/react-query"
 import Link from "next/link"
 import { useState } from "react"
+import "./owner-signup-home.css"
 
 function storefrontUrl(slug: string) {
   const hostname = buildInternalTenantHostname({
@@ -62,15 +63,25 @@ export function OwnerSignupHome({
     }
   }
   return (
-    <div className="grid gap-4">
+    <div className="owner-home grid gap-4">
       <section
-        className="rounded-xl border bg-muted/10 p-5 sm:p-6"
+        className="owner-home-share rounded-xl border bg-muted/10 p-5 sm:p-6"
         aria-labelledby="owner-share-title"
       >
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <h2 id="owner-share-title" className="text-lg font-semibold">
-            Share your store
-          </h2>
+          <div className="owner-home-identity">
+            <span className="owner-home-avatar" aria-hidden="true">
+              {tenant.name
+                .split(/\s+/)
+                .slice(0, 2)
+                .map((word) => word[0])
+                .join("")}
+            </span>
+            <div>
+              <p className="owner-home-eyebrow">{tenant.name}</p>
+              <h2 id="owner-share-title">Share your store</h2>
+            </div>
+          </div>
           <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
             {plan?.name ?? "Loading plan…"}
           </span>
@@ -201,7 +212,7 @@ export function OwnerSignupHome({
           summaryData.pendingBusinesses.length >
           1 && (
           <section
-            className="rounded-xl border p-5 sm:p-6"
+            className="owner-home-businesses rounded-xl border p-5 sm:p-6"
             aria-labelledby="owner-businesses-title"
           >
             <h2
@@ -217,7 +228,16 @@ export function OwnerSignupHome({
                   className="min-w-0 rounded-lg border bg-background p-4"
                 >
                   <div className="flex items-center justify-between gap-3">
-                    <h3 className="font-semibold">{business.name}</h3>
+                    <h3 className="owner-home-business-title">
+                      <span className="owner-home-avatar" aria-hidden="true">
+                        {business.name
+                          .split(/\s+/)
+                          .slice(0, 2)
+                          .map((word) => word[0])
+                          .join("")}
+                      </span>
+                      {business.name}
+                    </h3>
                     <span className="rounded-full bg-primary/10 px-2 py-1 text-[10px] text-primary">
                       Ready
                     </span>
@@ -253,7 +273,16 @@ export function OwnerSignupHome({
                     key={business.id ?? business.slug}
                     className="min-w-0 rounded-lg border border-dashed p-4"
                   >
-                    <h3 className="font-semibold">{business.name}</h3>
+                    <h3 className="owner-home-business-title">
+                      <span className="owner-home-avatar" aria-hidden="true">
+                        {business.name
+                          .split(/\s+/)
+                          .slice(0, 2)
+                          .map((word) => word[0])
+                          .join("")}
+                      </span>
+                      {business.name}
+                    </h3>
                     <p className="mt-1 break-all text-xs text-muted-foreground">
                       {business.slug}.ewatrade.com
                     </p>

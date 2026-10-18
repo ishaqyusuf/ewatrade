@@ -5,7 +5,8 @@ import {
   isValidStoreLink,
   normalizeStoreLink,
 } from "@ewatrade/utils/store-link"
-import { useEffect, useId, useState } from "react"
+import { useEffect, useId, useRef, useState } from "react"
+import { OwnerSignupIcon } from "./owner-signup-artwork"
 
 export type StoreLinkCheck = {
   slug: string
@@ -22,6 +23,7 @@ export function StoreLinkField({
   onCheck,
   disabled = false,
   label = "Store link",
+  forceEdit = false,
 }: {
   value: string
   onChange: (value: string) => void
@@ -29,8 +31,20 @@ export function StoreLinkField({
   onCheck?: (result: StoreLinkCheck | null) => void
   disabled?: boolean
   label?: string
+  forceEdit?: boolean
 }) {
   const id = useId()
+  const [editing, setEditing] = useState(false)
+  const field = useRef<HTMLInputElement>(null)
+  useEffect(() => {
+    if (forceEdit) setEditing(true)
+  }, [forceEdit])
+  useEffect(() => {
+    if (editing) field.current?.focus()
+  }, [editing])
+  useEffect(() => {
+    if (!value) setEditing(false)
+  }, [value])
   const [check, setCheck] = useState<StoreLinkCheck | null>(null)
   const [error, setError] = useState("")
   const [checking, setChecking] = useState(false)
@@ -80,51 +94,92 @@ export function StoreLinkField({
   }, [value, emailDomain, onCheck])
   return (
     <div className="owner-link-field">
-      <label className="signup-label" htmlFor={id}>
-        {label}
-        <span className="owner-link-input">
-          <Input
-            id={id}
-            aria-label={label}
-            className="signup-input"
-            value={value}
-            maxLength={40}
-            disabled={disabled}
-            autoCapitalize="none"
-            autoCorrect="off"
-            spellCheck={false}
-            onChange={(event) => {
-              const typed = event.target.value
-              const normalized = normalizeStoreLink(typed)
-              onChange(
-                typed.endsWith("-") && normalized && normalized.length < 40
-                  ? `${normalized}-`
-                  : normalized,
-              )
-            }}
-            onBlur={() => onChange(normalizeStoreLink(value))}
-          />
-          <span>.ewatrade.com</span>
-        </span>
-      </label>
-      <div aria-live="polite" className="owner-link-status">
-        {checking
-          ? "Checking your free store link…"
-          : error ||
-            (check?.available
-              ? `${check.slug}.ewatrade.com is available`
-              : check
-                ? "That link is taken. Your business name is fine; choose another link."
-                : value
-                  ? "Use 2–40 letters, numbers and hyphens for your link."
-                  : "Your business gets its own free store link.")}
+      {editing && (
+        <label className="signup-label" htmlFor={id}>
+          {label}
+          <span className="owner-link-input">
+            <Input
+              id={id}
+              ref={field}
+              aria-label={label}
+              className="signup-input"
+              value={value}
+              maxLength={40}
+              disabled={disabled}
+              autoCapitalize="none"
+              autoCorrect="off"
+              spellCheck={false}
+              onChange={(event) => {
+                const typed = event.target.value
+                const normalized = normalizeStoreLink(typed)
+                onChange(
+                  typed.endsWith("-") && normalized && normalized.length < 40
+                    ? `${normalized}-`
+                    : normalized,
+                )
+              }}
+              onBlur={() => onChange(normalizeStoreLink(value))}
+            />
+            <span>.ewatrade.com</span>
+          </span>
+        </label>
+      )}
+      <div
+        aria-live="polite"
+        className="owner-link-status"
+        data-status={
+          check?.available ? "available" : check ? "taken" : undefined
+        }
+      >
+        {checking ? (
+          <>
+            <span className="owner-ref-spin" />
+            <span>
+              Checking <b>{value}</b>.ewatrade.com…
+            </span>
+          </>
+        ) : error ? (
+          <span>{error}</span>
+        ) : check?.available ? (
+          <>
+            <OwnerSignupIcon name="check" />
+            <span>
+              <b>{check.slug}</b>.ewatrade.com is available
+            </span>
+          </>
+        ) : check ? (
+          <>
+            <OwnerSignupIcon name="alert" />
+            <span>
+              <b>{check.slug}</b>.ewatrade.com is taken. The name is fine; pick
+              a different link:
+            </span>
+          </>
+        ) : value ? (
+          <span>Use 2–40 letters, numbers and hyphens for your link.</span>
+        ) : (
+          <span>
+            Your store gets its own free link, like{" "}
+            <b>your-business.ewatrade.com</b>
+          </span>
+        )}
+        {value && !editing && (
+          <button
+            type="button"
+            className="owner-ref-lnk"
+            aria-label="Edit store link"
+            onClick={() => setEditing(true)}
+          >
+            Edit
+          </button>
+        )}
       </div>
       {check && !check.available && (
         <div className="owner-chips">
           {check.suggestions.map((slug) => (
             <button
               type="button"
-              className="owner-chip"
+              className="owner-ref-chip owner-ref-sm"
               key={slug}
               onClick={() => onChange(slug)}
             >

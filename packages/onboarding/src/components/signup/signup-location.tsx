@@ -13,6 +13,7 @@ import {
 } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { useState } from "react"
+import { OwnerSignupIcon } from "./owner-signup-artwork"
 
 /**
  * "Use my current location" for web sign-up: the browser shares its position,
@@ -20,8 +21,10 @@ import { useState } from "react"
  */
 export function SignupUseLocation({
   onLocated,
+  appearance,
 }: {
   onLocated: (address: ResolvedAddress) => void
+  appearance?: "owner-signup"
 }) {
   const [status, setStatus] = useState<"idle" | "busy" | "found">("idle")
   const [address, setAddress] = useState<ResolvedAddress | null>(null)
@@ -118,16 +121,24 @@ export function SignupUseLocation({
     <div>
       <button
         aria-busy={status === "busy"}
-        className="signup-location-button"
+        className={
+          appearance === "owner-signup"
+            ? "owner-ref-locbtn"
+            : "signup-location-button"
+        }
         disabled={status === "busy"}
         onClick={locate}
         type="button"
       >
-        <HugeiconsIcon
-          className={status === "busy" ? "animate-spin" : undefined}
-          icon={status === "busy" ? Loading03Icon : Navigation03Icon}
-          size={18}
-        />
+        {appearance === "owner-signup" ? (
+          <OwnerSignupIcon name="flag" />
+        ) : (
+          <HugeiconsIcon
+            className={status === "busy" ? "animate-spin" : undefined}
+            icon={status === "busy" ? Loading03Icon : Navigation03Icon}
+            size={18}
+          />
+        )}
         {status === "busy"
           ? "Finding your location…"
           : "Use my current location"}

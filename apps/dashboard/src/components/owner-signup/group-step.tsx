@@ -1,6 +1,8 @@
 "use client"
 
 import {
+  OwnerBusinessAvatar,
+  OwnerSignupIcon,
   type StoreLinkCheck,
   StoreLinkField,
 } from "@ewatrade/onboarding/components/signup/signup-flow"
@@ -8,11 +10,12 @@ import { Input, SelectControl } from "@ewatrade/ui"
 import type { OwnerSetupDraft } from "@ewatrade/utils/owner-signup"
 import { moveOwnerBusinessType } from "@ewatrade/utils/owner-signup"
 import { normalizeStoreLink } from "@ewatrade/utils/store-link"
-import { useCallback, useState } from "react"
+import { useCallback, useEffect, useState } from "react"
 import {
   OWNER_PLAN_LIMITS,
   arrangeOwnerTypes,
   businessLabel,
+  ownerPlanForBusinessCount,
   typeLabel,
 } from "./model"
 
@@ -23,14 +26,22 @@ export function OwnerGroupStep({
   onBack,
   disabled,
   emailDomain,
+  forceEditBusinessId,
 }: {
   draft: OwnerSetupDraft
   onChange: (draft: OwnerSetupDraft) => void
   onNext: (draft: OwnerSetupDraft) => void
   onBack: () => void
   disabled: boolean
-  emailDomain: string
+  emailDomain?: string
+  forceEditBusinessId?: string
 }) {
+  useEffect(() => {
+    if (forceEditBusinessId)
+      document
+        .getElementById(`owner-business-${forceEditBusinessId}`)
+        ?.scrollIntoView({ block: "center" })
+  }, [forceEditBusinessId])
   const [dragged, setDragged] = useState<string | null>(null)
   const [announcement, setAnnouncement] = useState("")
   const [available, setAvailable] = useState<
@@ -74,58 +85,87 @@ export function OwnerGroupStep({
     onChange({
       ...draft,
       businesses,
-      planId:
-        draft.planId !== "starter" &&
-        businesses.length > OWNER_PLAN_LIMITS[draft.planId]
-          ? "starter"
-          : draft.planId,
+      planId: ownerPlanForBusinessCount(draft.planId, businesses.length),
     })
     setAnnouncement(
       `${typeLabel(key, draft.otherType)} moved to ${target === "new" ? "a new business" : draft.businesses[Number(index)]?.name || `Business ${Number(index) + 1}`}.`,
     )
     setDragged(null)
   }
+  const issue = draft.businesses.find((business) => !business.typeKeys.length)
+    ? "Put at least one type in each business."
+    : draft.businesses.find((business) => !business.name.trim())
+      ? "Name each business."
+      : !canProceed
+        ? "Pick an available store link for each business."
+        : ""
   return (
     <>
       <header>
-        <p className="signup-eyebrow">04 / Organise your businesses</p>
+        <p className="signup-eyebrow">Step 2 of 3 · Your businesses</p>
         <h1>How do you run these?</h1>
         <p className="signup-intro">
-          Keep related types together, or give each business its own space. Drag
-          a type or use its Move menu.
+          Types in the same card are one business. Drag a type to another card,
+          or onto “New business” to run it separately.
         </p>
       </header>
-      <div className="owner-chips owner-presets">
+      <fieldset
+        className="owner-ref-arropts"
+        aria-label="How do you run these?"
+      >
         <button
           type="button"
-          className="owner-chip"
+          className={`owner-ref-arropt${count === 1 ? " owner-ref-on" : ""}`}
+          aria-pressed={count === 1}
           onClick={() => onChange(arrangeOwnerTypes(draft, "together"))}
         >
-          All one business
+          <span
+            className={`owner-ref-radio${count === 1 ? " owner-ref-on" : ""}`}
+          />
+          <span>
+            <b>All one business</b>
+            <small>
+              One name, one store link, one stock list. Like a phone shop that
+              also does repairs.
+            </small>
+          </span>
         </button>
         <button
           type="button"
-          className="owner-chip"
+          className={`owner-ref-arropt${count > 1 ? " owner-ref-on" : ""}`}
+          aria-pressed={count > 1}
           onClick={() => onChange(arrangeOwnerTypes(draft, "separate"))}
         >
-          Each separate
+          <span
+            className={`owner-ref-radio${count > 1 ? " owner-ref-on" : ""}`}
+          />
+          <span>
+            <b>
+              Each separate <em className="owner-ref-recpill">Suggested</em>
+            </b>
+            <small>
+              Each gets its own name, store link, stock and reports. One login
+              switches between them.
+            </small>
+          </span>
         </button>
-        <button
-          type="button"
-          className="owner-chip"
-          onClick={() => onChange(arrangeOwnerTypes(draft, "suggested"))}
-        >
-          Suggested grouping
-        </button>
-      </div>
+      </fieldset>
+      <h2 className="owner-ref-sl">
+        {count} {count === 1 ? "business" : "businesses"}
+        <small>Drag, or use Move (works with the keyboard)</small>
+      </h2>
       <output className="sr-only" aria-live="polite">
         {announcement}
       </output>
-      <div className="owner-group-board">
+      <div
+        className={`owner-ref-board${dragged ? " owner-ref-is-dragging" : ""}`}
+      >
         {draft.businesses.map((business, index) => (
           <section
+            className="owner-ref-bcard"
+            id={`owner-business-${business.id}`}
             key={business.id}
-            className="owner-business-card"
+            aria-label={`Business ${index + 1}: ${businessLabel(business, index)}`}
             onDragOver={(event) => {
               if (dragged) event.preventDefault()
             }}
@@ -133,30 +173,26 @@ export function OwnerGroupStep({
               event.preventDefault()
               if (dragged && business.id) move(dragged, business.id)
             }}
-            aria-label={businessLabel(business, index)}
           >
-            <div className="owner-business-number">
-              {String(index + 1).padStart(2, "0")}{" "}
-              <span>
-                {index === 0 ? "Your first business" : "Separate business"}
-              </span>
-            </div>
-            {index === 0 ? (
-              <>
-                <h2>{business.name}</h2>
-                <p className="owner-muted">
-                  {business.slug}.ewatrade.com · Fixed from your account
-                </p>
-              </>
-            ) : (
-              <div className="owner-fields">
-                <label className="signup-label" htmlFor={`name-${business.id}`}>
-                  Business name
+            <div className="owner-ref-bcard-h">
+              <OwnerBusinessAvatar
+                typeKey={business.typeKeys[0]}
+                name={business.name}
+                size={38}
+              />
+              <div className="owner-ref-bh">
+                {index === 0 ? (
+                  <>
+                    <b>{business.name}</b>
+                    <small>{business.slug}.ewatrade.com</small>
+                  </>
+                ) : (
                   <Input
-                    id={`name-${business.id}`}
-                    className="signup-input"
+                    className="signup-input owner-group-name"
+                    aria-label={`Business ${index + 1} name`}
                     maxLength={120}
                     value={business.name}
+                    placeholder="Name this business"
                     onChange={(event) => {
                       const name = event.target.value
                       onChange({
@@ -175,31 +211,37 @@ export function OwnerGroupStep({
                       })
                     }}
                   />
-                </label>
-                <BusinessLink
-                  value={business.slug}
-                  id={business.id ?? ""}
-                  onAvailable={onAvailable}
-                  emailDomain={emailDomain}
-                  onChange={(slug) => {
-                    setEdited((current) =>
-                      new Set(current).add(business.id ?? ""),
-                    )
-                    onChange({
-                      ...draft,
-                      businesses: draft.businesses.map((b) =>
-                        b.id === business.id ? { ...b, slug } : b,
-                      ),
-                    })
-                  }}
-                />
+                )}
               </div>
+              {index === 0 && (
+                <span className="owner-ref-bnum">From step 1</span>
+              )}
+            </div>
+            {index > 0 && (
+              <BusinessLink
+                value={business.slug}
+                id={business.id ?? ""}
+                emailDomain={emailDomain}
+                forceEdit={business.id === forceEditBusinessId}
+                onAvailable={onAvailable}
+                onChange={(slug) => {
+                  setEdited((current) =>
+                    new Set(current).add(business.id ?? ""),
+                  )
+                  onChange({
+                    ...draft,
+                    businesses: draft.businesses.map((b) =>
+                      b.id === business.id ? { ...b, slug } : b,
+                    ),
+                  })
+                }}
+              />
             )}
-            <div className="owner-business-types">
+            <div className="owner-ref-tchips">
               {business.typeKeys.map((key) => (
                 <div
+                  className="owner-ref-tchip"
                   key={key}
-                  className="owner-move-type"
                   draggable
                   onDragStart={(event) => {
                     setDragged(key)
@@ -208,10 +250,24 @@ export function OwnerGroupStep({
                   }}
                   onDragEnd={() => setDragged(null)}
                 >
-                  <span aria-hidden="true">⠿</span>
-                  <b>{typeLabel(key, draft.otherType)}</b>
+                  <svg
+                    className="owner-ref-grip"
+                    viewBox="0 0 24 24"
+                    fill="currentColor"
+                    aria-hidden="true"
+                  >
+                    {[6, 12, 18].flatMap((cy) =>
+                      [9, 15].map((cx) => (
+                        <circle cx={cx} cy={cy} r={1.6} key={`${cx}-${cy}`} />
+                      )),
+                    )}
+                  </svg>
+                  <OwnerBusinessAvatar typeKey={key} size={26} />
+                  <span className="owner-ref-tl">
+                    {typeLabel(key, draft.otherType)}
+                  </span>
                   <SelectControl
-                    aria-label={`Move ${typeLabel(key, draft.otherType)}`}
+                    aria-label={`Move ${typeLabel(key, draft.otherType)} to another business`}
                     value=""
                     options={[
                       { value: "", label: "Move" },
@@ -231,15 +287,13 @@ export function OwnerGroupStep({
                 </div>
               ))}
               {!business.typeKeys.length && (
-                <p className="owner-muted">
-                  Move at least one type here to keep your first business.
-                </p>
+                <div className="owner-ref-emptydrop">Drop a type here</div>
               )}
             </div>
           </section>
         ))}
         <section
-          className="owner-new-business"
+          className="owner-ref-dropnew"
           aria-label="New business drop area"
           onDragOver={(event) => {
             if (dragged) event.preventDefault()
@@ -249,53 +303,66 @@ export function OwnerGroupStep({
             if (dragged) move(dragged, "new")
           }}
         >
-          <span>+</span>
-          <p>New business</p>
-          <small>Drop a type here or use Move → New business</small>
+          <OwnerSignupIcon name="plus" />
+          <span>
+            <b>New business</b>
+            <small>Drag a type here to run it on its own</small>
+          </span>
         </section>
       </div>
       {count > 1 && (
-        <section className="owner-plan-picker">
-          <h2>Room for {count} businesses</h2>
-          <p className="owner-muted">
-            Growth runs up to 3 businesses. Pro runs up to 10. Both are free
-            during launch.
-          </p>
-          <div className="owner-chips">
-            {(["starter", "growth", "pro"] as const).map((plan) => (
-              <button
-                type="button"
-                key={plan}
-                disabled={plan !== "starter" && count > OWNER_PLAN_LIMITS[plan]}
-                aria-pressed={draft.planId === plan}
-                className={`owner-chip ${draft.planId === plan ? "is-selected" : ""}`}
-                onClick={() => onChange({ ...draft, planId: plan })}
-              >
-                {plan === "starter"
-                  ? "Starter for now"
-                  : `${plan === "growth" ? "Growth" : "Pro"} · Free during launch`}
-                {plan === neededPlan ? " · Suggested" : ""}
-              </button>
-            ))}
+        <section className="owner-ref-plancard">
+          <div className="owner-ref-plan-h">
+            <OwnerSignupIcon name="sparkle" />
+            <b>
+              {count} businesses need{" "}
+              {neededPlan === "growth" ? "Growth" : "Pro"}
+            </b>
           </div>
-          {draft.planId === "starter" && (
-            <p className="owner-muted">
-              We’ll set up your first business. {count - 1} will wait on Home
-              until you upgrade.
-            </p>
-          )}
-          {count > 10 && (
-            <p className="owner-muted">
-              Set up the first business on Starter now. Extra businesses remain
-              waiting; Pro supports up to 10.
-            </p>
-          )}
+          <p>
+            Starter, your plan now, includes 1 business.{" "}
+            {neededPlan === "growth" ? "Growth" : "Pro"} runs up to{" "}
+            {OWNER_PLAN_LIMITS[neededPlan]} and is free during launch. You can
+            change plans anytime.
+          </p>
+          <div className="owner-ref-chips">
+            <button
+              type="button"
+              className={`owner-ref-chip${draft.planId === neededPlan ? " owner-ref-on" : ""}`}
+              disabled={count > OWNER_PLAN_LIMITS[neededPlan]}
+              onClick={() => onChange({ ...draft, planId: neededPlan })}
+            >
+              Use {neededPlan === "growth" ? "Growth" : "Pro"} · free during
+              launch
+            </button>
+            <button
+              type="button"
+              className={`owner-ref-chip${draft.planId === "starter" ? " owner-ref-on" : ""}`}
+              onClick={() => onChange({ ...draft, planId: "starter" })}
+            >
+              Starter for now
+            </button>
+          </div>
+          <span className="owner-ref-help">
+            {draft.planId === "starter"
+              ? `We’ll set up ${draft.businesses[0]?.name} now. The others wait on Home until you upgrade.`
+              : `You’ll set up all ${count} now, one after another. Nothing is charged.`}
+          </span>
         </section>
       )}
-      <div className="owner-step-actions">
-        <button className="signup-secondary" type="button" onClick={onBack}>
-          Back
+      <footer className="owner-step-actions">
+        <button
+          className="signup-secondary"
+          type="button"
+          onClick={onBack}
+          aria-label="Back"
+        >
+          <OwnerSignupIcon name="arrowRight" className="owner-back-icon" />
         </button>
+        <div className="owner-ref-hint">
+          {issue ||
+            `${count} businesses · ${draft.planId === "starter" ? `setting up ${draft.businesses[0]?.name} now` : `setting up all ${count} now`}`}
+        </div>
         <button
           className="signup-primary"
           disabled={!canProceed || disabled}
@@ -316,9 +383,9 @@ export function OwnerGroupStep({
             })
           }
         >
-          Continue to Store
+          Continue
         </button>
-      </div>
+      </footer>
     </>
   )
 }
@@ -329,12 +396,14 @@ function BusinessLink({
   onChange,
   onAvailable,
   emailDomain,
+  forceEdit,
 }: {
   value: string
   id: string
   onChange: (value: string) => void
   onAvailable: (id: string, requested: string, canonical: string) => void
-  emailDomain: string
+  emailDomain?: string
+  forceEdit?: boolean
 }) {
   const check = useCallback(
     (result: StoreLinkCheck | null) =>
@@ -345,6 +414,7 @@ function BusinessLink({
     <StoreLinkField
       value={value}
       emailDomain={emailDomain}
+      forceEdit={forceEdit}
       onChange={onChange}
       onCheck={check}
     />

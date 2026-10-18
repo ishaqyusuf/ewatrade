@@ -6,12 +6,14 @@ import { useCallback, useEffect, useRef, useState } from "react"
 import type { EligibleAgeBand } from "../../lib/signup-age"
 import { getMarketingUrl } from "../../lib/signup-navigation"
 import { LegacySignupFlow } from "./legacy-signup-flow"
+import { OwnerSignupIcon } from "./owner-signup-artwork"
 import { OwnerSignupFrame } from "./owner-signup-frame"
 import { SignupGoogle } from "./signup-google"
 import { SignupPhoneInput } from "./signup-phone-input"
 import { type StoreLinkCheck, StoreLinkField } from "./store-link-field"
 
 export { OwnerSignupFrame } from "./owner-signup-frame"
+export { OwnerBusinessAvatar, OwnerSignupIcon } from "./owner-signup-artwork"
 export { StoreLinkField } from "./store-link-field"
 export type { StoreLinkCheck } from "./store-link-field"
 
@@ -29,7 +31,7 @@ const ages = [
   ["UNDER_13", "Under 13"],
   ["AGE_13_TO_15", "13–15"],
   ["AGE_16_TO_17", "16–17"],
-  ["ADULT", "18 or older"],
+  ["ADULT", "18+"],
 ] as const
 const blank = {
   businessName: "",
@@ -196,22 +198,42 @@ function AccountFirstSignup() {
     <OwnerSignupFrame
       name={account.businessName}
       slug={link?.slug ?? account.slug}
+      step={step}
     >
       <main className="signup-main owner-account">
         <p className="signup-eyebrow">
           {step === "account"
-            ? "01 / Your account"
-            : "02 / Verify your contact"}
+            ? "Step 1 of 3 · Account"
+            : mode === "email"
+              ? "Check your email"
+              : "Check WhatsApp"}
         </p>
         <h1>
           {step === "account"
-            ? "Your next chapter starts here."
-            : "Check your code."}
+            ? "Start your business on EwaTrade"
+            : "Enter the 6-digit code"}
         </h1>
         <p className="signup-intro">
-          {step === "account"
-            ? "A free store link, a place for your business, and room to grow."
-            : `Enter the six-digit code sent to ${mode === "email" ? account.email : account.phone}.`}
+          {step === "account" ? (
+            "Your business name and how you’ll sign in. Takes about a minute."
+          ) : (
+            <>
+              We sent it to {mode === "email" ? account.email : account.phone}.{" "}
+              <button
+                type="button"
+                className="owner-ref-lnk"
+                disabled={pending}
+                onClick={() => {
+                  setStep("account")
+                  setCode("")
+                  setDevCode(null)
+                  setError("")
+                }}
+              >
+                Change
+              </button>
+            </>
+          )}
         </p>
         {error && (
           <p role="alert" className="owner-error">
@@ -238,6 +260,7 @@ function AccountFirstSignup() {
                   id="owner-business-name"
                   className="signup-input"
                   name="businessName"
+                  placeholder="e.g. Mama Tolu Farms"
                   autoComplete="organization"
                   maxLength={120}
                   required
@@ -273,6 +296,7 @@ function AccountFirstSignup() {
                   id="owner-name"
                   className="signup-input"
                   name="name"
+                  placeholder="e.g. Tolu Adebayo"
                   autoComplete="name"
                   maxLength={120}
                   required
@@ -291,6 +315,7 @@ function AccountFirstSignup() {
                   <Input
                     id="owner-email"
                     className="signup-input"
+                    placeholder="you@example.com"
                     type="email"
                     autoComplete="email"
                     required
@@ -333,7 +358,7 @@ function AccountFirstSignup() {
               )}
             </fieldset>
             <fieldset className="owner-age" disabled={pending}>
-              <legend>Your age range</legend>
+              <legend>Your age</legend>
               <div className="owner-chips">
                 {ages.map(([value, label]) => (
                   <label
@@ -360,6 +385,11 @@ function AccountFirstSignup() {
                   </label>
                 ))}
               </div>
+              {age !== "UNDER_13" && (
+                <span className="owner-ref-help">
+                  EwaTrade accounts are for people aged 13 or older.
+                </span>
+              )}
             </fieldset>
             {age === "UNDER_13" ? (
               <output className="owner-age-warning">
@@ -433,6 +463,11 @@ function AccountFirstSignup() {
                     if (ready) void submit("google", idToken)
                   }}
                 />
+                <p className="owner-ref-help owner-ref-center">
+                  {ready
+                    ? "Google fills in your name and email."
+                    : "Google needs your business name, age and the Terms above first."}
+                </p>
               </>
             )}
           </form>
@@ -443,13 +478,13 @@ function AccountFirstSignup() {
               if (/^\d{6}$/.test(code))
                 void submit(mode === "email" ? "verify_email" : "verify_phone")
             }}
-            className="owner-fields"
+            className="owner-code-form"
           >
-            <label className="signup-label" htmlFor="owner-code">
+            <label className="sr-only" htmlFor="owner-code">
               Verification code
               <Input
                 id="owner-code"
-                className="signup-input owner-code"
+                className="owner-ref-otp-real"
                 autoComplete="one-time-code"
                 inputMode="numeric"
                 pattern="[0-9]{6}"
@@ -462,45 +497,59 @@ function AccountFirstSignup() {
                 }
               />
             </label>
-            {devCode && (
-              <p className="owner-muted">
-                Local development code: <code>{devCode}</code>
-              </p>
-            )}
+            <label
+              htmlFor="owner-code"
+              className="owner-ref-otp"
+              aria-hidden="true"
+            >
+              {[0, 1, 2, 3, 4, 5].map((index) => (
+                <i
+                  className={
+                    index === code.length ? "owner-ref-cur" : undefined
+                  }
+                  key={index}
+                >
+                  {code[index] ?? ""}
+                </i>
+              ))}
+            </label>
+            <div className="owner-ref-otp-msg">
+              Didn’t get it?{" "}
+              <button
+                type="button"
+                className="owner-ref-lnk"
+                disabled={pending || now < retryAt}
+                onClick={() =>
+                  void submit(
+                    mode === "email" ? "request_email" : "request_phone",
+                  )
+                }
+              >
+                {now < retryAt
+                  ? `Resend in 0:${String(Math.ceil((retryAt - now) / 1000)).padStart(2, "0")}`
+                  : "Resend code"}
+              </button>
+              {devCode && (
+                <>
+                  {" "}
+                  · Local development code: <code>{devCode}</code>
+                </>
+              )}
+            </div>
             <button
               type="submit"
               className="signup-primary"
               disabled={pending || code.length !== 6}
             >
-              {pending ? "Verifying…" : "Verify and continue"}
+              {pending ? "Verifying…" : "Verify"}
             </button>
-            <button
-              type="button"
-              className="owner-text-button"
-              disabled={pending || now < retryAt}
-              onClick={() =>
-                void submit(
-                  mode === "email" ? "request_email" : "request_phone",
-                )
-              }
-            >
-              {now < retryAt
-                ? `Resend code in ${Math.ceil((retryAt - now) / 1000)}s`
-                : "Resend code"}
-            </button>
-            <button
-              type="button"
-              className="owner-text-button"
-              disabled={pending}
-              onClick={() => {
-                setStep("account")
-                setCode("")
-                setDevCode(null)
-                setError("")
-              }}
-            >
-              Change account details
-            </button>
+            <div className="owner-ref-banner owner-ref-t-sky">
+              <OwnerSignupIcon name="lock" />
+              <div>
+                Your account is created once the code checks out. If you leave
+                after this, your progress is saved.
+              </div>
+            </div>
           </form>
         )}
       </main>

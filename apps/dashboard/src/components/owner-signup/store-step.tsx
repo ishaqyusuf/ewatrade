@@ -1,17 +1,31 @@
 "use client"
 
-import { SignupUseLocation } from "@ewatrade/onboarding/components/signup/signup-flow"
+import {
+  OwnerBusinessAvatar,
+  OwnerSignupIcon,
+  SignupUseLocation,
+} from "@ewatrade/onboarding/components/signup/signup-flow"
 import { Input, SelectControl, Textarea } from "@ewatrade/ui"
-import { OPERATING_CURRENCIES, isOperatingCurrencyCode } from "@ewatrade/utils"
+import {
+  OPERATING_CURRENCIES,
+  isOperatingCurrencyCode,
+  suggestCurrencyForCountry,
+} from "@ewatrade/utils"
+import { GEO_ADDRESS_ATTRIBUTION } from "@ewatrade/utils/geo-address"
 import type {
   OwnerSetupBusiness,
   OwnerSetupDraft,
 } from "@ewatrade/utils/owner-signup"
-import type { Dispatch, SetStateAction } from "react"
-import { OWNER_PLAN_LIMITS, businessLabel, storeReady } from "./model"
+import { type Dispatch, type SetStateAction, useState } from "react"
+import {
+  OWNER_PLAN_LIMITS,
+  businessLabel,
+  storeReady,
+  typeLabel,
+} from "./model"
 
 const countries = [
-  { value: "", label: "Choose a country" },
+  { value: "", label: "Choose country" },
   { value: "NG", label: "Nigeria" },
   { value: "GH", label: "Ghana" },
   { value: "KE", label: "Kenya" },
@@ -23,16 +37,19 @@ const countries = [
 const offers = [
   {
     value: "products",
+    icon: "box",
     label: "I sell",
     description: "Things customers buy, like eggs, phones or clothes",
   },
   {
     value: "services",
+    icon: "users",
     label: "I offer services",
     description: "Work I do for customers, like repairs, hair or cleaning",
   },
   {
     value: "products_and_services",
+    icon: "store",
     label: "I sell and offer services",
     description: "Both, like a salon that also sells hair products",
   },
@@ -55,6 +72,9 @@ export function OwnerStoreStep({
   const index = Math.min(draft.storeIndex ?? 0, setupNow.length - 1)
   const business = setupNow[index]
   const first = setupNow[0]
+  const [typing, setTyping] = useState(false)
+  const [typedAddress, setTypedAddress] = useState("")
+  const [locatedBusinessId, setLocatedBusinessId] = useState<string>()
   if (!business || !first) return null
   function patch(changes: Partial<OwnerSetupBusiness>) {
     onChange((current) => ({
@@ -64,123 +84,248 @@ export function OwnerStoreStep({
       ),
     }))
   }
-  const locationId = `owner-store-${business.id}`
+  const id = `owner-store-${business.id}`
+  const types = business.typeKeys
+    .map((key) => typeLabel(key, draft.otherType))
+    .join(" + ")
+  const address = [business.addressLine1, business.city, business.region]
+    .filter(Boolean)
+    .join(", ")
+  const upgraded = draft.planId !== "starter"
   return (
     <>
       <header>
         <p className="signup-eyebrow">
-          05 / Store {index + 1}
-          {setupNow.length > 1 ? ` of ${setupNow.length}` : ""}
+          Step 3 of 3 ·{" "}
+          {setupNow.length > 1
+            ? `Business ${index + 1} of ${setupNow.length}`
+            : "Store"}
         </p>
-        <h1>Make it yours.</h1>
+        <h1>Set up {business.name}</h1>
         <p className="signup-intro">
-          A few details for {business.name}. You can change these later.
+          Almost done. You can change all of this later in Settings.
         </p>
       </header>
       {setupNow.length > 1 && (
-        <nav className="owner-store-tabs" aria-label="Set up each business">
+        <nav className="owner-ref-biztabs" aria-label="Businesses">
           {setupNow.map((item, i) => (
             <button
               type="button"
               key={item.id}
-              className={i === index ? "is-active" : undefined}
+              className={`owner-ref-biztab${i === index ? " owner-ref-on" : ""}`}
               aria-current={i === index ? "step" : undefined}
-              onClick={() => onChange({ ...draft, storeIndex: i })}
+              onClick={() => {
+                setTyping(false)
+                onChange({ ...draft, storeIndex: i })
+              }}
             >
-              {storeReady(item) ? "✓ " : ""}
+              <OwnerBusinessAvatar
+                typeKey={item.typeKeys[0]}
+                name={item.name}
+                size={24}
+              />
               {businessLabel(item, i)}
+              {storeReady(item) && i !== index && (
+                <OwnerSignupIcon name="check" />
+              )}
             </button>
           ))}
         </nav>
       )}
-      <fieldset className="owner-offers">
-        <legend>What will customers find here?</legend>
-        {offers.map((offer) => (
-          <label
-            className={`owner-offer ${business.operatingModel === offer.value ? "is-selected" : ""}`}
-            key={offer.value}
-          >
-            <input
-              type="radio"
-              name={`offer-${business.id}`}
-              checked={business.operatingModel === offer.value}
-              onChange={() =>
-                patch({ operatingModel: offer.value, offerTouched: true })
-              }
-            />
-            <span>
-              <b>{offer.label}</b>
-              <small>{offer.description}</small>
-            </span>
-          </label>
-        ))}
+      <div className="owner-ref-bizhead">
+        <OwnerBusinessAvatar
+          typeKey={business.typeKeys[0]}
+          name={business.name}
+          size={42}
+        />
+        <div>
+          <b>{business.name}</b>
+          <small>
+            {business.slug}.ewatrade.com · {types}
+          </small>
+        </div>
+        <button type="button" className="owner-ref-lnk" onClick={onBack}>
+          Change
+        </button>
+      </div>
+      <fieldset className="owner-offer-fieldset">
+        <legend className="owner-ref-glbl">
+          What does your business do?{" "}
+          {!business.offerTouched && (
+            <small>· picked for {types.toLowerCase()}</small>
+          )}
+        </legend>
+        <div className="owner-ref-offeropts">
+          {offers.map((offer) => (
+            <label
+              className={`owner-ref-offeropt${business.operatingModel === offer.value ? " owner-ref-on" : ""}`}
+              key={offer.value}
+            >
+              <input
+                className="sr-only"
+                type="radio"
+                name={`offer-${business.id}`}
+                checked={business.operatingModel === offer.value}
+                onChange={() =>
+                  patch({ operatingModel: offer.value, offerTouched: true })
+                }
+              />
+              <span className="owner-ref-oi">
+                <OwnerSignupIcon name={offer.icon} />
+              </span>
+              <span className="owner-ref-ot">
+                <b>{offer.label}</b>
+                <small>{offer.description}</small>
+              </span>
+              <span
+                className={`owner-ref-radio${business.operatingModel === offer.value ? " owner-ref-on" : ""}`}
+                aria-hidden="true"
+              />
+            </label>
+          ))}
+        </div>
       </fieldset>
-      <div className="owner-fields">
-        <div className="owner-location">
-          <p>
-            Location <span className="owner-muted">Optional</span>
-          </p>
+      <div className="owner-ref-glbl">
+        Where you trade <small>· optional, helps customers find you</small>
+      </div>
+      {address ? (
+        <>
+          <div className="owner-ref-loccard">
+            <span className="owner-ref-pin">
+              <OwnerSignupIcon name="flag" />
+            </span>
+            <div>
+              <b>{address}</b>
+              <small>
+                {locatedBusinessId === business.id
+                  ? "From your current location"
+                  : "Your business address"}
+              </small>
+            </div>
+            <button
+              type="button"
+              className="owner-ref-lnk"
+              onClick={() => {
+                patch({ addressLine1: "", city: "", region: "" })
+                setLocatedBusinessId(undefined)
+              }}
+            >
+              Remove
+            </button>
+          </div>
+          {locatedBusinessId === business.id && (
+            <small className="owner-ref-help">{GEO_ADDRESS_ATTRIBUTION}</small>
+          )}
+        </>
+      ) : typing ? (
+        <>
+          <div className="owner-typed-location">
+            <Input
+              className="signup-input"
+              value={typedAddress}
+              maxLength={200}
+              placeholder="Street, area, city"
+              aria-label="Address"
+              onChange={(event) => setTypedAddress(event.target.value)}
+            />
+            <button
+              type="button"
+              className="owner-ref-chip"
+              disabled={!typedAddress.trim()}
+              onClick={() => {
+                patch({ addressLine1: typedAddress.trim() })
+                setTyping(false)
+                setLocatedBusinessId(undefined)
+              }}
+            >
+              Use
+            </button>
+          </div>
+          <button
+            type="button"
+            className="owner-ref-lnk owner-ref-switch"
+            onClick={() => setTyping(false)}
+          >
+            Use my current location instead
+          </button>
+        </>
+      ) : (
+        <>
           <SignupUseLocation
             key={business.id}
-            onLocated={(address) => {
-              // The callback updates its originating stable business, even if a tab changed while geolocation was pending.
+            appearance="owner-signup"
+            onLocated={(value) => {
+              setLocatedBusinessId(business.id)
               onChange((current) => ({
                 ...current,
                 businesses: current.businesses.map((b) =>
                   b.id === business.id
                     ? {
                         ...b,
-                        addressLine1: address.addressLine1,
-                        city: address.city,
-                        region: address.region,
+                        addressLine1: value.addressLine1,
+                        city: value.city,
+                        region: value.region,
                       }
                     : b,
                 ),
               }))
             }}
           />
-        </div>
-        <label className="signup-label" htmlFor={`${locationId}-address`}>
-          Street or area
-          <Input
-            id={`${locationId}-address`}
-            className="signup-input"
-            value={business.addressLine1 ?? ""}
-            maxLength={200}
-            autoComplete="street-address"
-            placeholder="Type an address, or leave it for later"
-            onChange={(event) => patch({ addressLine1: event.target.value })}
-          />
-        </label>
-        <div className="signup-row">
-          <label className="signup-label" htmlFor={`${locationId}-city`}>
-            City
-            <Input
-              id={`${locationId}-city`}
-              className="signup-input"
-              value={business.city ?? ""}
-              maxLength={120}
-              autoComplete="address-level2"
-              onChange={(event) => patch({ city: event.target.value })}
-            />
-          </label>
-          <label className="signup-label" htmlFor={`${locationId}-region`}>
-            State or region
-            <Input
-              id={`${locationId}-region`}
-              className="signup-input"
-              value={business.region ?? ""}
-              maxLength={120}
-              autoComplete="address-level1"
-              onChange={(event) => patch({ region: event.target.value })}
-            />
-          </label>
-        </div>
-        {index > 0 && (
           <button
             type="button"
-            className="owner-text-button"
-            disabled={!first.countryCode || !first.currencyCode}
+            className="owner-ref-lnk owner-ref-switch"
+            onClick={() => {
+              setTypedAddress("")
+              setTyping(true)
+            }}
+          >
+            Type the address instead
+          </button>
+        </>
+      )}
+      <div className="owner-ref-grid2 owner-store-country">
+        <label className="owner-ref-fld" htmlFor={`${id}-country`}>
+          <span>Country</span>
+          <SelectControl
+            id={`${id}-country`}
+            value={business.countryCode}
+            options={countries}
+            popupClassName="signup-select-menu"
+            onValueChange={(countryCode) =>
+              patch({
+                countryCode,
+                currencyCode: countryCode
+                  ? suggestCurrencyForCountry(countryCode)
+                  : "",
+              })
+            }
+          />
+        </label>
+        <label className="owner-ref-fld" htmlFor={`${id}-currency`}>
+          <span>Currency</span>
+          <SelectControl
+            id={`${id}-currency`}
+            value={business.currencyCode}
+            options={[
+              { value: "", label: "Choose currency" },
+              ...OPERATING_CURRENCIES.map((currency) => ({
+                value: currency.code,
+                label: `${currency.symbol} ${currency.label} (${currency.code})`,
+              })),
+            ]}
+            popupClassName="signup-select-menu"
+            onValueChange={(currencyCode) => {
+              if (currencyCode === "" || isOperatingCurrencyCode(currencyCode))
+                patch({ currencyCode })
+            }}
+          />
+        </label>
+      </div>
+      {index > 0 && first.countryCode && first.currencyCode && (
+        <div className="owner-ref-chips owner-same-country">
+          <button
+            type="button"
+            className="owner-ref-chip owner-ref-sm"
             onClick={() =>
               patch({
                 countryCode: first.countryCode,
@@ -188,83 +333,74 @@ export function OwnerStoreStep({
               })
             }
           >
-            Same country and currency as {first.name}
+            Same as {first.name} ·{" "}
+            {
+              countries.find((country) => country.value === first.countryCode)
+                ?.label
+            }
+            , {first.currencyCode}
           </button>
-        )}
-        <div className="signup-row">
-          <label className="signup-label" htmlFor={`${locationId}-country`}>
-            Country
-            <SelectControl
-              id={`${locationId}-country`}
-              value={business.countryCode}
-              options={countries}
-              popupClassName="signup-select-menu"
-              onValueChange={(countryCode) => patch({ countryCode })}
-            />
-          </label>
-          <label className="signup-label" htmlFor={`${locationId}-currency`}>
-            Currency
-            <SelectControl
-              id={`${locationId}-currency`}
-              value={business.currencyCode}
-              options={[
-                { value: "", label: "Choose a currency" },
-                ...OPERATING_CURRENCIES.map((currency) => ({
-                  value: currency.code,
-                  label: `${currency.symbol} ${currency.label} (${currency.code})`,
-                })),
-              ]}
-              popupClassName="signup-select-menu"
-              onValueChange={(currencyCode) => {
-                if (
-                  currencyCode === "" ||
-                  isOperatingCurrencyCode(currencyCode)
-                )
-                  patch({ currencyCode })
-              }}
-            />
-          </label>
         </div>
-        <label className="signup-label" htmlFor={`${locationId}-about`}>
-          About this store <span className="owner-muted">Optional</span>
-          <Textarea
-            id={`${locationId}-about`}
-            className="signup-input"
-            rows={3}
-            maxLength={280}
-            value={business.description ?? ""}
-            placeholder="A short introduction for your customers"
-            onChange={(event) => patch({ description: event.target.value })}
-          />
-          <small className="owner-muted">
-            {business.description?.length ?? 0}/280 · Shown on your store page
-          </small>
-        </label>
-        <div className="owner-free-link">
-          <span className="owner-muted">Your free store link</span>
+      )}
+      <label
+        className="owner-ref-fld owner-store-about"
+        htmlFor={`${id}-about`}
+      >
+        <span>
+          About this store <small>· optional</small>
+          <em className="owner-ref-counter">
+            {business.description?.length ?? 0}/280
+          </em>
+        </span>
+        <Textarea
+          id={`${id}-about`}
+          className="signup-input"
+          rows={3}
+          maxLength={280}
+          value={business.description ?? ""}
+          placeholder="A line or two about what you offer. Shown on your store page."
+          onChange={(event) => patch({ description: event.target.value })}
+        />
+        <small className="owner-ref-help">
+          Shown on your store page. Skip it now if you like.
+        </small>
+      </label>
+      <div className="owner-ref-banner owner-ref-t-mint owner-free-store-banner">
+        <OwnerSignupIcon name="store" />
+        <div>
+          <b>Your free store link works right away</b>
           <b>{business.slug}.ewatrade.com</b>
-          <p>
-            Start with 3 items on Starter. Growth and Pro give you room for
-            more.
-          </p>
+          {upgraded ? (
+            `On ${draft.planId === "growth" ? "Growth" : "Pro"} it can list all your items. Customer messages are included once your store chat is set up.`
+          ) : (
+            <>
+              On Starter it shows your{" "}
+              <b className="owner-inline-bold">first 3 items</b>. Upgrade to
+              show everything and let customers message you once your store chat
+              is set up.
+            </>
+          )}
         </div>
-        {draft.planId === "starter" && draft.businesses.length > 1 && (
-          <p className="owner-muted">
-            {draft.businesses.length - 1} extra{" "}
-            {draft.businesses.length === 2 ? "business is" : "businesses are"}{" "}
-            waiting on Home. You can finish their Store details after upgrading.
-          </p>
-        )}
       </div>
-      <div className="owner-step-actions">
+      <footer className="owner-step-actions">
         <button
           className="signup-secondary"
           disabled={disabled}
           type="button"
           onClick={onBack}
+          aria-label="Back"
         >
-          Back
+          <OwnerSignupIcon name="arrowRight" className="owner-back-icon" />
         </button>
+        <div className="owner-ref-hint">
+          {!storeReady(business)
+            ? "Choose a country and currency."
+            : index < setupNow.length - 1
+              ? `Next: ${setupNow[index + 1]?.name}`
+              : draft.businesses.length > setupNow.length
+                ? `${draft.businesses.length - setupNow.length} more wait on Home`
+                : "Last step"}
+        </div>
         <button
           className="signup-primary"
           type="button"
@@ -274,10 +410,10 @@ export function OwnerStoreStep({
           {disabled
             ? "Saving…"
             : index < setupNow.length - 1
-              ? "Next business"
-              : "Open my dashboard"}
+              ? `Continue to ${setupNow[index + 1]?.name}`
+              : "Finish setup"}
         </button>
-      </div>
+      </footer>
     </>
   )
 }

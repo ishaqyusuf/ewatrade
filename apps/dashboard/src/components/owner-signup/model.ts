@@ -9,6 +9,7 @@ import type {
   OwnerSetupBusiness,
   OwnerSetupDraft,
 } from "@ewatrade/utils/owner-signup"
+import { syncOwnerSignupPlan } from "@ewatrade/utils/owner-signup"
 import { isValidStoreLink } from "@ewatrade/utils/store-link"
 
 export type OwnerSetup = NonNullable<
@@ -24,6 +25,7 @@ export const OWNER_PLAN_LIMITS = {
   growth: planCapacity("growth"),
   pro: planCapacity("pro"),
 } as const
+export { syncOwnerSignupPlan as ownerPlanForBusinessCount } from "@ewatrade/utils/owner-signup"
 export function emptyBusiness(id: string): OwnerSetupBusiness {
   return {
     id,
@@ -105,7 +107,13 @@ export function arrangeOwnerTypes(
         : defaultBusinessOffer(typeKeys),
     }
   })
-  return { ...draft, businesses, groupedFor: keys.join(","), storeIndex: 0 }
+  return {
+    ...draft,
+    businesses,
+    planId: syncOwnerSignupPlan(draft.planId, businesses.length),
+    groupedFor: keys.join(","),
+    storeIndex: 0,
+  }
 }
 export function businessLabel(business: OwnerSetupBusiness, index: number) {
   return business.name.trim() || `Business ${index + 1}`

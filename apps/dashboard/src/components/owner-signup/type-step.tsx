@@ -1,13 +1,16 @@
 "use client"
 
-import { CatalogIllustrationPreview } from "@/components/catalog-item/catalog-illustration-preview"
+import {
+  OwnerBusinessAvatar,
+  OwnerSignupIcon,
+} from "@ewatrade/onboarding/components/signup/signup-flow"
 import { Input } from "@ewatrade/ui"
 import {
   BUSINESS_TYPES,
   BUSINESS_TYPE_GROUPS,
+  type BusinessType,
 } from "@ewatrade/utils/business-types"
-import { Fragment, useState } from "react"
-import { typeLabel } from "./model"
+import { useState } from "react"
 
 export function OwnerTypeStep({
   selected,
@@ -24,183 +27,209 @@ export function OwnerTypeStep({
 }) {
   const [query, setQuery] = useState("")
   const [multi, setMulti] = useState(selected.length > 1)
-  const [group, setGroup] = useState("")
   const first = selected.length === 1 && !multi
   const valid =
     selected.length > 0 &&
     (!selected.includes("other") || other.trim().length >= 2)
-  const visible = BUSINESS_TYPES.filter(
-    (type) =>
-      type.key === "other" ||
-      ((!group || type.group === group) &&
-        `${type.label} ${type.examples}`
+  const groups = BUSINESS_TYPE_GROUPS.map((group) => ({
+    ...group,
+    types: BUSINESS_TYPES.filter(
+      (type) =>
+        type.group === group.key &&
+        `${type.label} ${type.examples} ${group.label}`
           .toLowerCase()
-          .includes(query.toLowerCase().trim())),
-  )
+          .includes(query.toLowerCase().trim()),
+    ),
+  })).filter((group) => group.types.length)
+  const otherType = BUSINESS_TYPES.find((type) => type.key === "other")
   function pick(key: string) {
-    if (multi)
-      onChange(
-        selected.includes(key)
+    onChange(
+      multi
+        ? selected.includes(key)
           ? selected.filter((value) => value !== key)
-          : [...selected, key],
-      )
-    else onChange([key])
+          : [...selected, key]
+        : [key],
+    )
+  }
+  function jump(key: string) {
+    document
+      .getElementById(`owner-group-${key}`)
+      ?.scrollIntoView({ block: "start", behavior: "smooth" })
+  }
+  function row(type: BusinessType) {
+    const chosen = selected.includes(type.key)
+    const content = (
+      <>
+        <OwnerBusinessAvatar typeKey={type.key} size={44} />
+        <span className="owner-ref-tb">
+          <b>{type.label}</b>
+          <small>{type.examples}</small>
+        </span>
+        <span
+          className={`owner-ref-cbox${chosen ? " owner-ref-on" : ""}`}
+          aria-hidden="true"
+        >
+          {chosen && <OwnerSignupIcon name="check" />}
+        </span>
+      </>
+    )
+    return multi ? (
+      <label
+        className={`owner-ref-trow${chosen ? " owner-ref-on" : ""}`}
+        key={type.key}
+      >
+        <input
+          type="checkbox"
+          className="sr-only"
+          checked={chosen}
+          aria-label={type.label}
+          onChange={() => pick(type.key)}
+        />
+        {content}
+      </label>
+    ) : (
+      <button
+        type="button"
+        className={`owner-ref-trow${chosen ? " owner-ref-on" : ""}`}
+        key={type.key}
+        aria-pressed={chosen}
+        onClick={() => pick(type.key)}
+      >
+        {content}
+      </button>
+    )
   }
   return (
     <>
       <header>
-        <p className="signup-eyebrow">03 / Business type</p>
-        <h1>What do you do?</h1>
+        <p className="signup-eyebrow">Step 2 of 3 · Business type</p>
+        <h1>What kind of business is it?</h1>
         <p className="signup-intro">
-          Pick the closest fit. You can run more than one kind of business.
+          Pick all that apply. We use it to suggest products, categories and
+          tips. It never locks features.
         </p>
       </header>
-      <div className="owner-type-tools">
-        <label htmlFor="owner-type-search" className="sr-only">
-          Search business types
-        </label>
-        <Input
-          id="owner-type-search"
-          type="search"
-          className="signup-input"
-          value={query}
-          placeholder="Search phones, food, farming…"
-          onChange={(event) => setQuery(event.target.value)}
-        />
-        {multi && (
-          <span className="owner-muted">{selected.length} selected</span>
-        )}
-      </div>
-      <div className="owner-type-layout">
-        <nav className="owner-group-index" aria-label="Business type groups">
-          <button
-            type="button"
-            className={!group ? "is-active" : undefined}
-            onClick={() => setGroup("")}
-          >
-            All types
-          </button>
-          {BUSINESS_TYPE_GROUPS.map((item) => (
-            <button
-              type="button"
-              key={item.key}
-              className={group === item.key ? "is-active" : undefined}
-              onClick={() => setGroup(item.key)}
-            >
-              {item.label}
-            </button>
-          ))}
-        </nav>
-        <div className="owner-type-list">
-          {visible.map((type) => {
-            const className = `owner-type-card ${selected.includes(type.key) ? "is-selected" : ""}`
-            const content = (
-              <Fragment key={type.key}>
-                <span className={`owner-type-avatar tone-${type.group}`}>
-                  <CatalogIllustrationPreview
-                    illustrationId={type.illustrationId}
-                    compact
-                  />
-                </span>
-                <span>
-                  <b>{type.label}</b>
-                  <small>{type.examples}</small>
-                </span>
-                <span aria-hidden="true" className="owner-type-check">
-                  {selected.includes(type.key) ? "✓" : multi ? "□" : "+"}
-                </span>
-              </Fragment>
-            )
-            return multi ? (
-              <label key={type.key} className={className}>
-                <input
-                  type="checkbox"
-                  className="sr-only"
-                  checked={selected.includes(type.key)}
-                  onChange={() => pick(type.key)}
-                  aria-label={type.label}
-                />
-                {content}
-              </label>
-            ) : (
+      <div className="owner-ref-typewide">
+        <nav className="owner-ref-gindex" aria-label="Jump to group">
+          {BUSINESS_TYPE_GROUPS.map((group) => {
+            const count = selected.filter(
+              (key) =>
+                BUSINESS_TYPES.find((type) => type.key === key)?.group ===
+                group.key,
+            ).length
+            return (
               <button
+                key={group.key}
                 type="button"
-                key={type.key}
-                aria-pressed={selected.includes(type.key)}
-                className={className}
-                onClick={() => pick(type.key)}
+                onClick={() => jump(group.key)}
               >
-                {content}
+                {group.label}
+                {count > 0 && <em>{count}</em>}
               </button>
             )
           })}
-          {!visible.length && (
-            <p className="owner-muted">
-              No matching type. Clear your search or choose Something else.
-            </p>
+          <button type="button" onClick={() => jump("other")}>
+            Not listed
+          </button>
+        </nav>
+        <div className="owner-type-results">
+          <div className="owner-ref-searchf">
+            <OwnerSignupIcon name="search" />
+            <Input
+              type="search"
+              className="owner-type-search"
+              aria-label="Search business types"
+              value={query}
+              placeholder="Search, e.g. eggs, salon, phones"
+              onChange={(event) => setQuery(event.target.value)}
+            />
+            {query && (
+              <button
+                type="button"
+                className="owner-ref-lnk"
+                onClick={() => setQuery("")}
+                aria-label="Clear search"
+              >
+                ✕
+              </button>
+            )}
+          </div>
+          {groups.map((group) => (
+            <section key={group.key}>
+              <h2 className="owner-ref-sl" id={`owner-group-${group.key}`}>
+                {group.label}
+              </h2>
+              <div className="owner-ref-tlist">{group.types.map(row)}</div>
+            </section>
+          ))}
+          {!groups.length && (
+            <div className="owner-ref-noresult">
+              No match for “{query}”. Choose <b>Something else</b> below and
+              type it.
+            </div>
+          )}
+          <h2 className="owner-ref-sl" id="owner-group-other">
+            Not listed
+          </h2>
+          <div className="owner-ref-tlist">{otherType && row(otherType)}</div>
+          {selected.includes("other") && (
+            <label
+              className="owner-ref-fld owner-ref-otherbox"
+              htmlFor="owner-other-type"
+            >
+              <span>What kind of business is it?</span>
+              <Input
+                id="owner-other-type"
+                className="signup-input"
+                maxLength={60}
+                value={other}
+                placeholder="e.g. Event rentals, car wash, POS agent"
+                onChange={(event) => onOther(event.target.value)}
+              />
+              <small className="owner-ref-help">
+                We’ll register it as you type it. {other.length}/60 · At least 2
+                characters
+              </small>
+            </label>
           )}
         </div>
       </div>
-      {selected.includes("other") && (
-        <label
-          className="signup-label owner-other-label"
-          htmlFor="owner-other-type"
+      <footer className="owner-step-actions">
+        <button
+          className="signup-secondary"
+          type="button"
+          disabled
+          aria-label="Account already verified"
         >
-          What kind of business?
-          <Input
-            id="owner-other-type"
-            className="signup-input"
-            maxLength={60}
-            value={other}
-            placeholder="Describe it in a few words"
-            onChange={(event) => onOther(event.target.value)}
-          />
-          <small className="owner-muted">
-            {other.length}/60 · At least 2 characters
-          </small>
-        </label>
-      )}
-      {first && (
-        <section className="owner-first-pick">
-          <div>
-            <span className="owner-muted">Your pick</span>
-            <p>{typeLabel(selected[0] ?? "", other)}</p>
-          </div>
-          <div>
-            <button
-              className="signup-primary"
-              type="button"
-              disabled={!valid}
-              onClick={onNext}
-            >
-              Proceed
-            </button>
-            <button
-              className="signup-secondary"
-              type="button"
-              onClick={() => setMulti(true)}
-            >
-              Select more
-            </button>
-          </div>
-        </section>
-      )}
-      {!first && (
-        <div className="owner-step-actions">
-          <span className="owner-muted">
-            {selected.length} {selected.length === 1 ? "type" : "types"}{" "}
-            selected
-          </span>
-          <button
-            className="signup-primary"
-            type="button"
-            disabled={!valid}
-            onClick={onNext}
-          >
-            Continue
-          </button>
+          <OwnerSignupIcon name="arrowRight" className="owner-back-icon" />
+        </button>
+        <div className="owner-ref-hint">
+          {selected.length
+            ? `${selected.length} ${selected.length === 1 ? "type" : "types"} picked`
+            : "Can’t find yours? “Something else” is at the end."}
         </div>
-      )}
+        {first && (
+          <button
+            className="signup-secondary owner-select-more"
+            type="button"
+            onClick={() => setMulti(true)}
+          >
+            Select more types
+          </button>
+        )}
+        <button
+          className="signup-primary"
+          type="button"
+          disabled={!valid}
+          onClick={onNext}
+        >
+          {first
+            ? "Proceed"
+            : selected.length > 1
+              ? `Continue with ${selected.length} types`
+              : "Continue"}
+        </button>
+      </footer>
     </>
   )
 }
