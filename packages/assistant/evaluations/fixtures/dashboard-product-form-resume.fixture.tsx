@@ -119,13 +119,19 @@ mock.module(at("components/catalog-item/catalog-detail-editor.tsx"), () => ({
   CatalogDetailRow: pass,
   CatalogEditorPanel: pass,
   CatalogFooterLabel: pass,
-  useCatalogEditorStack: () => ({
-    active: "main",
-    parent: "main",
+  CatalogSection: pass,
+  CatalogSectionNav: () => null,
+  CatalogSections: pass,
+  useCatalogSections: () => ({
     containerRef: { current: null },
-    open() {},
-    back() {},
+    open: [],
+    setOpen() {},
+    reveal() {},
+    section: (id: string) => ({ active: id, open() {}, back() {} }),
   }),
+}))
+mock.module(at("components/catalog-item/catalog-saved-photos.tsx"), () => ({
+  CatalogSavedPhotos: () => null,
 }))
 mock.module("next/navigation", () => ({
   useRouter: () => ({ refresh() {}, push() {} }),
@@ -317,6 +323,10 @@ const trpc = {
     createSimpleItem: mutation(async () => {
       ordinaryCreates++
       throw Error("Ordinary create forbidden for saved chat")
+    }),
+    updateItem: mutation(async () => {
+      ordinaryCreates++
+      throw Error("Editing a saved item is not part of chat resume")
     }),
     photos: {
       createIntent: mutation(async () => {

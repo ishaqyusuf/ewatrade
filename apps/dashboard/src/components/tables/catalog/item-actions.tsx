@@ -2,6 +2,7 @@
 
 import { useCatalogThemeClass } from "@/components/catalog-item/catalog-appearance"
 import { CatalogSavedPhotos } from "@/components/catalog-item/catalog-saved-photos"
+import { useCatalogItemParams } from "@/hooks/use-catalog-item-params"
 import { useInventoryParams } from "@/hooks/use-inventory-params"
 import { INVENTORY_ACTIONS } from "@/lib/inventory-operations"
 import {
@@ -20,6 +21,7 @@ import {
   Image01Icon,
   MoreVerticalIcon,
   Package01Icon,
+  PencilEdit02Icon,
   RulerIcon,
   Upload01Icon,
 } from "@hugeicons/core-free-icons"
@@ -39,6 +41,7 @@ export function CatalogItemActions({
   const [imagesOpen, setImagesOpen] = useState(false)
   const themeClass = useCatalogThemeClass()
   const { setParams } = useInventoryParams()
+  const { editCatalogItem } = useCatalogItemParams()
   const productId = item.product?.id
   // Stock consumed inside the business is recorded for Internal use or Both.
   const canRecordUse =
@@ -67,6 +70,15 @@ export function CatalogItemActions({
           className={themeClass}
         >
           <DropdownMenuGroup>
+            <DropdownMenuItem
+              onClick={(event) => {
+                event.stopPropagation()
+                void editCatalogItem(item.id)
+              }}
+            >
+              <HugeiconsIcon icon={PencilEdit02Icon} aria-hidden="true" />
+              Edit
+            </DropdownMenuItem>
             <DropdownMenuItem
               onClick={(event) => {
                 event.stopPropagation()

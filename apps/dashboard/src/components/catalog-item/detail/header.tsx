@@ -1,9 +1,14 @@
+import { useCatalogDetailParams } from "@/hooks/use-catalog-detail-params"
+import { useCatalogItemParams } from "@/hooks/use-catalog-item-params"
 import {
   Badge,
+  Button,
   DialogDescription,
   DialogHeader,
   DialogTitle,
 } from "@ewatrade/ui"
+import { PencilEdit02Icon } from "@hugeicons/core-free-icons"
+import { HugeiconsIcon } from "@hugeicons/react"
 import { CatalogIllustrationPreview } from "../catalog-illustration-preview"
 import { CatalogPhotoPreview } from "../catalog-photo-preview"
 import type { CatalogDetail } from "./display"
@@ -18,6 +23,8 @@ export function CatalogDetailHeader({
   readOnly: boolean
 }) {
   const item = detail.item
+  const { close } = useCatalogDetailParams()
+  const { editCatalogItem } = useCatalogItemParams()
   const affordances = catalogDetailAffordances({
     readOnly,
     inventoryAllowed: detail.inventoryAllowed,
@@ -42,7 +49,7 @@ export function CatalogDetailHeader({
           </span>
         )}
       </div>
-      <div className="grid min-w-0 gap-2">
+      <div className="grid min-w-0 flex-1 gap-2">
         <div className="flex flex-wrap gap-2">
           <Badge variant="secondary" className="capitalize">
             {item.kind}
@@ -60,6 +67,22 @@ export function CatalogDetailHeader({
           {store.name}
         </DialogDescription>
       </div>
+      {readOnly || item.status === "archived" ? null : (
+        <Button
+          appearance="form"
+          type="button"
+          variant="outline"
+          size="sm"
+          className="shrink-0 self-start"
+          onClick={async () => {
+            await close()
+            await editCatalogItem(item.id)
+          }}
+        >
+          <HugeiconsIcon icon={PencilEdit02Icon} data-icon="inline-start" />
+          Edit
+        </Button>
+      )}
     </DialogHeader>
   )
 }

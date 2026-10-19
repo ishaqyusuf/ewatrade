@@ -50,11 +50,17 @@ import { createCatalogFixture } from "@/components/qa/fixture-recipes"
 import { QaDashboardQuickFill } from "@/components/qa/qa-quick-fill"
 import { useCatalogItemParams } from "@/hooks/use-catalog-item-params"
 import { useCatalogPhoto } from "@/hooks/use-catalog-photo"
+import {
+  type SavedCatalogItem,
+  savedCatalogIds,
+  savedItemToFormState,
+} from "@/lib/catalog-item-edit"
 import { getDataCacheGeneration, useTRPC, useTRPCClient } from "@/trpc/client"
 import type { RouterInputs } from "@ewatrade/api/trpc/routers/_app"
 import { findCatalogIllustration } from "@ewatrade/utils/catalog-illustrations"
 import { CatalogImageEditor } from "./catalog-image-editor"
 import { CatalogItemSkeleton } from "./catalog-item-skeleton"
+import { CatalogSavedPhotos } from "./catalog-saved-photos"
 
 import {
   type CatalogSetupHelper,
@@ -104,8 +110,11 @@ import { useCatalogItemForm } from "./form-context"
 type CatalogItemFormProps = {
   businessProfileKey?: string | null
   currencyCode: string
+  /** A saved item opens the same form for editing. */
+  editItem?: SavedCatalogItem | null
   footerHost?: HTMLDivElement | null
   onCreated: (name: string) => void
+  onSaved?: (name: string) => void
   storeId: string
 }
 
@@ -168,8 +177,10 @@ function unitKey(index: number) {
 export function CatalogItemForm({
   businessProfileKey: initialBusinessProfileKey,
   currencyCode,
+  editItem,
   footerHost,
   onCreated,
+  onSaved,
   storeId: initialStoreId,
 }: CatalogItemFormProps) {
   const [storeId, setStockStoreId] = useState(initialStoreId)
@@ -371,6 +382,61 @@ export function CatalogItemForm({
     setShowOpeningStock,
     photo.restore,
   ])
+  const editing = Boolean(editItem)
+  const savedIds = useMemo(
+    () => (editItem ? savedCatalogIds(editItem) : null),
+    [editItem],
+  )
+  const [priceChangeReason, setPriceChangeReason] = useState("")
+  const [savedPhotosOpen, setSavedPhotosOpen] = useState(false)
+  const [onHandQuantity, setOnHandQuantity] = useState("0")
+  const loadedItem = useRef<string | null>(null)
+  useEffect(() => {
+    if (!editItem || loadedItem.current === editItem.id) return
+    loadedItem.current = editItem.id
+    const saved = savedItemToFormState(editItem)
+    setForm({
+      description: saved.description,
+      kind: saved.kind,
+      name: saved.name,
+      openingStockQuantity: "",
+      price: saved.price,
+      unitName: saved.unitName,
+      usage: saved.usage,
+    })
+    setCategory(saved.category)
+    setSku(saved.sku)
+    setBarcode(saved.barcode)
+    setShowAdvanced(saved.showAdvanced)
+    setShowUnits(saved.additionalUnits.length > 0)
+    setShowDescription(true)
+    setCanonicalTransactionScale(saved.canonicalTransactionScale)
+    setOptionGroups(
+      saved.optionGroups.length ? saved.optionGroups : [newOptionGroup()],
+    )
+    setVariantDrafts(saved.variantDrafts)
+    setAdditionalUnits(saved.additionalUnits)
+    setDefaultQuoteRequired(saved.quoteRequired)
+    setTrackServiceWork(saved.trackServiceWork)
+    setServiceAuthorization(saved.serviceAuthorization)
+    setServiceGuidance(saved.serviceGuidance)
+    setServiceQuantityScale(saved.serviceQuantityScale)
+    setOnHandQuantity(saved.onHandQuantity)
+  }, [editItem, setForm, setShowDescription])
+  useEffect(() => {
+    if (!editing || showAdvanced) return
+    setVariantDrafts((current) =>
+      current.default && current.default.quoteRequired !== defaultQuoteRequired
+        ? {
+            ...current,
+            default: {
+              ...current.default,
+              quoteRequired: defaultQuoteRequired,
+            },
+          }
+        : current,
+    )
+  }, [editing, showAdvanced, defaultQuoteRequired])
   const openProductChat = async () => {
     if (startProductChat.isPending || handoffStarted.current) return
     handoffStarted.current = true
@@ -570,6 +636,20 @@ export function CatalogItemForm({
     trpc.catalog.createItem.mutationOptions({
       onError: (mutationError) => setError(mutationError.message),
       onSuccess: onCreatedMutation,
+    }),
+  )
+  const updateMutation = useMutation(
+    trpc.catalog.updateItem.mutationOptions({
+      onError: (mutationError) => setError(mutationError.message),
+      onSuccess: (item) => {
+        // The table reads an infinite page query; the path key covers every catalog read.
+        void queryClient.invalidateQueries({
+          queryKey: trpc.catalog.pathKey(),
+        })
+        onSaved?.(item.name)
+        setCatalogItemMode(null)
+        router.refresh()
+      },
     }),
   )
   const createAssistantForm = useMutation(
@@ -931,6 +1011,7 @@ export function CatalogItemForm({
     const priceMinor = parsedPriceMinor ?? undefined
 
     if (
+      editing ||
       showAdvanced ||
       photo.hasPhoto ||
       illustrationId ||
@@ -1108,6 +1189,149 @@ export function CatalogItemForm({
       })
 
       try {
+        if (editItem && savedIds) {
+          if (form.kind === "product" && !form.unitName.trim()) {
+            setError("Enter the Product's main unit.")
+            return
+          }
+          const labelOf = new Map(
+            normalizedOptionGroups.flatMap((group) =>
+              group.values.map((value) => [
+                `${group.key}:${value.key}`,
+                value.label,
+              ]),
+            ),
+          )
+          const extraUnitPrice = (
+            draft: AdvancedVariantDraft,
+            unit: AdvancedUnitDraft,
+            variantPriceMinor: number | undefined,
+          ) =>
+            draft.orderTotal
+              ? undefined
+              : draft.unitPrices[unit.id]?.trim()
+                ? (parsePrice(draft.unitPrices[unit.id] ?? "") ??
+                  variantPriceMinor)
+                : unit.price.trim()
+                  ? (parsePrice(unit.price) ?? variantPriceMinor)
+                  : undefined
+          await updateMutation.mutateAsync({
+            itemId: editItem.id,
+            expectedUpdatedAt: editItem.updatedAt,
+            clientOperationId: clientOperationId.current,
+            kind: form.kind,
+            name: form.name.trim(),
+            description: form.description.trim() || undefined,
+            category: category.trim() || undefined,
+            usage: form.kind === "product" ? form.usage : undefined,
+            priceChangeReason: priceChangeReason.trim() || undefined,
+            storeId,
+            optionGroups: showAdvanced
+              ? normalizedOptionGroups.map((group, groupIndex) => {
+                  const formId = optionGroups[groupIndex]?.id
+                  return {
+                    id:
+                      formId && savedIds.groupIds.has(formId)
+                        ? formId
+                        : undefined,
+                    name: group.name,
+                    values: group.values.map((value) => value.label),
+                  }
+                })
+              : [],
+            units:
+              form.kind === "product"
+                ? [
+                    {
+                      id: savedIds.canonicalUnitId,
+                      name: form.unitName.trim(),
+                      factor: "1",
+                      stockBehavior: "canonical_shared" as const,
+                      transactionScale: canonicalTransactionScale,
+                    },
+                    ...additionalUnits.map((unit) => ({
+                      id: savedIds.unitIds.has(unit.id) ? unit.id : undefined,
+                      name: unit.name.trim(),
+                      factor: unitFactors.get(unit.id) ?? "",
+                      stockBehavior: unit.stockBehavior,
+                      transactionScale: unit.transactionScale,
+                    })),
+                  ]
+                : undefined,
+            variants: variantRows.map(
+              ({
+                commonOffering,
+                draft,
+                enabled,
+                isDefault,
+                selections,
+                variantPriceMinor,
+              }) => ({
+                selections: selections.map(
+                  (selection) =>
+                    labelOf.get(
+                      `${selection.groupKey}:${selection.valueKey}`,
+                    ) ?? "",
+                ),
+                enabled,
+                isDefault,
+                offerings:
+                  form.kind === "product"
+                    ? [
+                        {
+                          unitIndex: 0,
+                          pricingPolicy: draft.orderTotal
+                            ? ("order_total" as const)
+                            : ("fixed" as const),
+                          fixedPriceMinor: draft.orderTotal
+                            ? undefined
+                            : variantPriceMinor,
+                          enabled: commonOffering.enabled,
+                          sku:
+                            (showAdvanced ? draft.sku : sku).trim() ||
+                            undefined,
+                          barcode:
+                            (showAdvanced ? draft.barcode : barcode).trim() ||
+                            undefined,
+                          storeAvailability: commonOffering.storeAvailability,
+                        },
+                        ...additionalUnits.map((unit, unitIndex) => ({
+                          unitIndex: unitIndex + 1,
+                          pricingPolicy: draft.orderTotal
+                            ? ("order_total" as const)
+                            : ("fixed" as const),
+                          fixedPriceMinor: extraUnitPrice(
+                            draft,
+                            unit,
+                            variantPriceMinor,
+                          ),
+                          enabled: commonOffering.enabled,
+                          storeAvailability: commonOffering.storeAvailability,
+                        })),
+                      ]
+                    : [
+                        {
+                          pricingPolicy: draft.quoteRequired
+                            ? ("quote_required" as const)
+                            : ("fixed" as const),
+                          fixedPriceMinor: draft.quoteRequired
+                            ? undefined
+                            : (variantPriceMinor ?? 0),
+                          enabled: commonOffering.enabled,
+                          storeAvailability: commonOffering.storeAvailability,
+                          authorizationPolicy: serviceAuthorization,
+                          guidance: serviceGuidance.trim() || undefined,
+                          quantityScale: serviceQuantityScale,
+                          workPolicy: trackServiceWork
+                            ? ("tracked" as const)
+                            : ("charge_only" as const),
+                        },
+                      ],
+              }),
+            ),
+          })
+          return
+        }
         if (form.kind === "product") {
           if (!form.unitName.trim()) {
             setError("Enter the Product's main unit.")
@@ -1300,7 +1524,8 @@ export function CatalogItemForm({
     photo.uploading ||
     createMutation.isPending ||
     createAssistantForm.isPending ||
-    createAdvancedMutation.isPending
+    createAdvancedMutation.isPending ||
+    updateMutation.isPending
 
   const priceSummary = showAdvanced
     ? `${combinations.length} customer choices`
@@ -1355,16 +1580,23 @@ export function CatalogItemForm({
         : "Sell trays or packs as well as single units.",
       done: additionalUnits.length > 0,
     },
-    stock: {
-      title: "Opening stock",
-      icon: WarehouseIcon,
-      summary: showAdvanced
-        ? "Set stock for each customer choice."
-        : form.openingStockQuantity.trim()
-          ? `${form.openingStockQuantity} ${form.unitName}`
-          : "Record what you have on hand. Optional.",
-      done: !showAdvanced && Boolean(form.openingStockQuantity.trim()),
-    },
+    stock: editing
+      ? {
+          title: "Stock",
+          icon: WarehouseIcon,
+          summary: `${onHandQuantity} ${form.unitName || "units"} on hand`,
+          done: true,
+        }
+      : {
+          title: "Opening stock",
+          icon: WarehouseIcon,
+          summary: showAdvanced
+            ? "Set stock for each customer choice."
+            : form.openingStockQuantity.trim()
+              ? `${form.openingStockQuantity} ${form.unitName}`
+              : "Record what you have on hand. Optional.",
+          done: !showAdvanced && Boolean(form.openingStockQuantity.trim()),
+        },
     work: {
       title: "Work settings",
       icon: Task01Icon,
@@ -1407,6 +1639,30 @@ export function CatalogItemForm({
 
   function sectionContent(id: CatalogSectionId) {
     const stack = sections.section(id)
+    if (id === "images" && editItem)
+      return (
+        <div className="flex flex-col items-start gap-3">
+          <p className="text-sm text-muted-foreground">
+            Saved photos and illustrations change on their own, without saving
+            this form.
+          </p>
+          <Button
+            appearance="form"
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => setSavedPhotosOpen(true)}
+          >
+            Manage images
+          </Button>
+          <CatalogSavedPhotos
+            item={editItem}
+            storeId={storeId}
+            open={savedPhotosOpen}
+            onOpenChange={setSavedPhotosOpen}
+          />
+        </div>
+      )
     if (id === "images")
       return (
         <CatalogDetailEditor
@@ -1475,6 +1731,14 @@ export function CatalogItemForm({
             />
           </Field>
         </CatalogDetailEditor>
+      )
+    if (id === "stock" && editing)
+      return (
+        <p className="text-sm text-muted-foreground">
+          {onHandQuantity} {form.unitName || "units"} on hand across your
+          stores. Record stock changes in Inventory so every movement keeps its
+          history.
+        </p>
       )
     if (id === "stock")
       return showAdvanced ? (
@@ -1764,7 +2028,7 @@ export function CatalogItemForm({
     if (id === "options")
       return (
         <>
-          {itemKind === "product" && stack.active === "options" ? (
+          {!editing && itemKind === "product" && stack.active === "options" ? (
             <div className="grid gap-2">
               <p className="text-sm font-medium">Stock store</p>
               <StoreSelector
@@ -1805,6 +2069,7 @@ export function CatalogItemForm({
             form={{ kind: itemKind, unitName: form.unitName }}
             formGuidance={formGuidance}
             hasOpeningStock={Boolean(form.openingStockQuantity.trim())}
+            allowOpeningStock={!editing}
             onBack={stack.back}
             onConfirmOptions={() => setDraftConfirmation({ kind: "options" })}
             onEnable={enableOptions}
@@ -1841,7 +2106,8 @@ export function CatalogItemForm({
   const footerAction = (
     <div className="flex w-full items-center gap-3">
       <p className="min-w-0 flex-1 truncate text-sm text-muted-foreground">
-        {form.kind === "product" ? "Product" : "Service"} draft · {priceSummary}
+        {form.kind === "product" ? "Product" : "Service"}
+        {editing ? "" : " draft"} · {priceSummary}
       </p>
       <SubmitButton
         isSubmitting={suggestionsDisabled}
@@ -1850,13 +2116,17 @@ export function CatalogItemForm({
         disabled={suggestionsDisabled}
       >
         <CatalogFooterLabel>
-          {suggestionsDisabled
-            ? "Adding…"
-            : createMutation.variables || createAdvancedMutation.variables
-              ? "Retry same item"
-              : form.kind === "product"
-                ? "Add product"
-                : "Add service"}
+          {editing
+            ? updateMutation.isPending
+              ? "Saving…"
+              : "Save changes"
+            : suggestionsDisabled
+              ? "Adding…"
+              : createMutation.variables || createAdvancedMutation.variables
+                ? "Retry same item"
+                : form.kind === "product"
+                  ? "Add product"
+                  : "Add service"}
         </CatalogFooterLabel>
       </SubmitButton>
     </div>
@@ -2002,7 +2272,7 @@ export function CatalogItemForm({
             </AlertDescription>
           </Alert>
         ) : null}
-        {form.kind === "product" && capability.data?.enabled ? (
+        {!editing && form.kind === "product" && capability.data?.enabled ? (
           <div className="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-lg border bg-muted/20 p-4">
             <div>
               <p className="text-sm font-medium">Create with AI</p>
@@ -2103,45 +2373,52 @@ export function CatalogItemForm({
               className="flex min-w-0 flex-col gap-6"
             >
               <FieldGroup className="gap-4">
-                <QaDashboardQuickFill
-                  canUndo={canUndoQuickFill}
-                  formId="dashboard.catalog.item"
-                  isDirty={Boolean(form.name || form.price || form.description)}
-                  onFill={(context, sequence) => {
-                    quickFillSnapshot.current = form
-                    const fixture = createCatalogFixture(context, sequence)
-                    setForm((current) => ({
-                      ...current,
-                      description: fixture.description,
-                      kind: current.kind ?? "product",
-                      name: fixture.name,
-                      openingStockQuantity:
-                        current.kind === "service" ? "" : "12",
-                      price: fixture.price,
-                      unitName: current.kind === "service" ? "" : fixture.unit,
-                    }))
-                    setShowDescription(true)
-                    if (form.kind !== "service") setShowOpeningStock(true)
-                    setCanUndoQuickFill(true)
-                  }}
-                  onUndo={() => {
-                    if (!quickFillSnapshot.current) return
-                    setForm(quickFillSnapshot.current)
-                    quickFillSnapshot.current = null
-                    setCanUndoQuickFill(false)
-                  }}
-                />
-                <Button
-                  appearance="form"
-                  type="button"
-                  className="w-full justify-center"
-                  onClick={() => setHelperPickerOpen(true)}
-                  variant="outline"
-                >
-                  {selectedHelper
-                    ? `Quick setup: ${selectedHelper.title}`
-                    : "Choose a quick setup"}
-                </Button>
+                {editing ? null : (
+                  <>
+                    <QaDashboardQuickFill
+                      canUndo={canUndoQuickFill}
+                      formId="dashboard.catalog.item"
+                      isDirty={Boolean(
+                        form.name || form.price || form.description,
+                      )}
+                      onFill={(context, sequence) => {
+                        quickFillSnapshot.current = form
+                        const fixture = createCatalogFixture(context, sequence)
+                        setForm((current) => ({
+                          ...current,
+                          description: fixture.description,
+                          kind: current.kind ?? "product",
+                          name: fixture.name,
+                          openingStockQuantity:
+                            current.kind === "service" ? "" : "12",
+                          price: fixture.price,
+                          unitName:
+                            current.kind === "service" ? "" : fixture.unit,
+                        }))
+                        setShowDescription(true)
+                        if (form.kind !== "service") setShowOpeningStock(true)
+                        setCanUndoQuickFill(true)
+                      }}
+                      onUndo={() => {
+                        if (!quickFillSnapshot.current) return
+                        setForm(quickFillSnapshot.current)
+                        quickFillSnapshot.current = null
+                        setCanUndoQuickFill(false)
+                      }}
+                    />
+                    <Button
+                      appearance="form"
+                      type="button"
+                      className="w-full justify-center"
+                      onClick={() => setHelperPickerOpen(true)}
+                      variant="outline"
+                    >
+                      {selectedHelper
+                        ? `Quick setup: ${selectedHelper.title}`
+                        : "Choose a quick setup"}
+                    </Button>
+                  </>
+                )}
 
                 <Field
                   htmlFor="catalog-item-name"
@@ -2222,6 +2499,26 @@ export function CatalogItemForm({
                   </Alert>
                 ) : null}
 
+                {editing ? (
+                  <Field
+                    htmlFor="catalog-price-reason"
+                    label="Reason for price changes (optional)"
+                  >
+                    <TextInput
+                      id="catalog-price-reason"
+                      maxLength={500}
+                      placeholder="e.g. New supplier price"
+                      value={priceChangeReason}
+                      onChange={(event) =>
+                        setPriceChangeReason(event.target.value)
+                      }
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Kept in the price history. Past Orders keep the price they
+                      were sold at.
+                    </p>
+                  </Field>
+                ) : null}
                 {form.kind === "product" ? (
                   <Field htmlFor="catalog-item-unit" label="Main unit">
                     <TextInput

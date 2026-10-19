@@ -2,6 +2,7 @@
 
 import { SheetFrame } from "@/components/sheets/sheet-frame"
 import { useCatalogItemParams } from "@/hooks/use-catalog-item-params"
+import type { SavedCatalogItem } from "@/lib/catalog-item-edit"
 import { type ComponentProps, useState } from "react"
 import { useCatalogThemeClass } from "./catalog-appearance"
 import { CatalogItemKindChoices } from "./catalog-item-kind-choices"
@@ -16,7 +17,9 @@ type CatalogItemContentProps = {
   allowKindChange?: boolean
   businessProfileKey?: string | null
   currencyCode: string
+  editItem?: SavedCatalogItem
   onCreated: (name: string) => void
+  onSaved?: (name: string) => void
   storeId: string
 }
 
@@ -47,11 +50,15 @@ export function CatalogItemContent(props: CatalogItemContentProps) {
         catalogCreateMode === "chat" ? "max-md:px-0 max-md:pb-0" : undefined
       }
       title={
-        form.kind === "product"
-          ? "Add product"
-          : form.kind === "service"
-            ? "Add service"
-            : "Add item"
+        props.editItem
+          ? form.kind === "service"
+            ? "Edit service"
+            : "Edit product"
+          : form.kind === "product"
+            ? "Add product"
+            : form.kind === "service"
+              ? "Add service"
+              : "Add item"
       }
       // Only the kind chooser needs a subtitle; the forms and chat keep the top compact.
       description={form.kind ? undefined : "Choose what you want to add."}

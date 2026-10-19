@@ -92,6 +92,7 @@ export function CatalogItemsPage({
         currencyCode={store.currencyCode}
         storeId={store.id}
         onCreated={(name) => setNotice(`${name} added.`)}
+        onSaved={(name) => setNotice(`${name} saved.`)}
       />
     </CatalogAppearance>
   )

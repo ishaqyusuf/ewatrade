@@ -35,22 +35,35 @@ export function getCatalogStock(item: CatalogRow) {
     : "—"
 }
 
+// Edits archive replaced choices and units; the list shows only live rows.
+function liveVariants(item: CatalogRow) {
+  return item.variants.filter((variant) => variant.status !== "archived")
+}
+
+function liveOfferings(variant: CatalogRow["variants"][number] | undefined) {
+  return (variant?.offerings ?? []).filter(
+    (offering) => offering.status !== "archived",
+  )
+}
+
 export function primaryOffering(item: CatalogRow) {
+  const variants = liveVariants(item)
   const variant =
-    item.variants.find((candidate) => candidate.isDefault) ?? item.variants[0]
-  return variant?.offerings[0] ?? null
+    variants.find((candidate) => candidate.isDefault) ?? variants[0]
+  return liveOfferings(variant)[0] ?? null
 }
 
 export function itemDetail(item: CatalogRow) {
-  if (item.variants.length !== 1) {
-    return `${item.variants.length} variants`
+  const variants = liveVariants(item)
+  if (variants.length !== 1) {
+    return `${variants.length} variants`
   }
 
-  const variant = item.variants[0]
+  const variant = variants[0]
   const offering = primaryOffering(item)
   return catalogItemDetail({
     itemName: item.name,
-    offeringCount: variant?.offerings.length ?? 0,
+    offeringCount: liveOfferings(variant).length,
     offeringName: offering?.name,
     variantName: variant?.name,
   })
