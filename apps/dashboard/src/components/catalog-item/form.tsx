@@ -641,9 +641,10 @@ export function CatalogItemForm({
   const updateMutation = useMutation(
     trpc.catalog.updateItem.mutationOptions({
       onError: (mutationError) => setError(mutationError.message),
-      onSuccess: (item) => {
+      onSuccess: async (item) => {
         // The table reads an infinite page query; the path key covers every catalog read.
-        void queryClient.invalidateQueries({
+        // Waiting keeps "Saving…" up until the list behind the sheet shows the change.
+        await queryClient.invalidateQueries({
           queryKey: trpc.catalog.pathKey(),
         })
         onSaved?.(item.name)
@@ -2091,6 +2092,11 @@ export function CatalogItemForm({
         active={stack.active}
         canonicalName={form.unitName}
         currencyCode={currencyCode}
+        lockedReason={
+          editing && Number(onHandQuantity) !== 0
+            ? `This Product has ${onHandQuantity} ${form.unitName || "units"} in stock, so its selling units can be renamed and repriced but not added, removed or resized. Clear its stock in Inventory first to change them.`
+            : null
+        }
         onBack={stack.back}
         onChange={(units) => {
           setAdditionalUnits(units)
@@ -2105,10 +2111,17 @@ export function CatalogItemForm({
 
   const footerAction = (
     <div className="flex w-full items-center gap-3">
-      <p className="min-w-0 flex-1 truncate text-sm text-muted-foreground">
-        {form.kind === "product" ? "Product" : "Service"}
-        {editing ? "" : " draft"} · {priceSummary}
-      </p>
+      {error ? (
+        // The body scrolls, so a save error stays next to the button that caused it.
+        <p role="alert" className="min-w-0 flex-1 text-sm text-destructive">
+          {error}
+        </p>
+      ) : (
+        <p className="min-w-0 flex-1 truncate text-sm text-muted-foreground">
+          {form.kind === "product" ? "Product" : "Service"}
+          {editing ? "" : " draft"} · {priceSummary}
+        </p>
+      )}
       <SubmitButton
         isSubmitting={suggestionsDisabled}
         type="submit"
@@ -2566,7 +2579,7 @@ export function CatalogItemForm({
             </fieldset>
           </div>
         </div>
-        {error ? (
+        {error && catalogCreateMode === "chat" ? (
           <FormFeedback appearance="dashboard">{error}</FormFeedback>
         ) : null}
         {(createMutation.variables || createAdvancedMutation.variables) &&

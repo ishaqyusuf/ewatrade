@@ -51,14 +51,33 @@ export function useCatalogSections() {
   })
 
   function reveal(section: string) {
+    const alreadyOpen = open.includes(section)
     setOpen((current) =>
       current.includes(section) ? current : [...current, section],
     )
-    requestAnimationFrame(() =>
-      containerRef.current
-        ?.querySelector(`[data-section="${CSS.escape(section)}"]`)
-        ?.scrollIntoView({ block: "start", behavior: "smooth" }),
-    )
+    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches
+    // Scroll after the panel has expanded so the whole section can reach the top.
+    requestAnimationFrame(() => {
+      const target = containerRef.current?.querySelector(
+        `[data-section="${CSS.escape(section)}"]`,
+      )
+      if (!target) return
+      const scroll = () =>
+        target.scrollIntoView({
+          block: "start",
+          behavior: reduce ? "auto" : "smooth",
+        })
+      const panel = target.querySelector('[data-slot="accordion-content"]')
+      if (alreadyOpen || reduce || !panel) return scroll()
+      let done = false
+      const once = () => {
+        if (done) return
+        done = true
+        scroll()
+      }
+      panel.addEventListener("animationend", once, { once: true })
+      window.setTimeout(once, 400)
+    })
   }
 
   return {
