@@ -21,6 +21,7 @@ import {
   MoreVerticalIcon,
   Package01Icon,
   RulerIcon,
+  Upload01Icon,
 } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { useState } from "react"
@@ -39,6 +40,9 @@ export function CatalogItemActions({
   const themeClass = useCatalogThemeClass()
   const { setParams } = useInventoryParams()
   const productId = item.product?.id
+  // Stock consumed inside the business is recorded for Internal use or Both.
+  const canRecordUse =
+    item.product?.usage === "INTERNAL_USE" || item.product?.usage === "BOTH"
 
   return (
     <>
@@ -100,6 +104,20 @@ export function CatalogItemActions({
                       {action.label}
                     </DropdownMenuItem>
                   ))}
+                  {canRecordUse ? (
+                    <DropdownMenuItem
+                      onClick={(event) => {
+                        event.stopPropagation()
+                        void setParams({
+                          inventoryOperation: "internal_use",
+                          inventoryProduct: productId,
+                        })
+                      }}
+                    >
+                      <HugeiconsIcon icon={Upload01Icon} aria-hidden="true" />
+                      Record use
+                    </DropdownMenuItem>
+                  ) : null}
                 </DropdownMenuSubContent>
               </DropdownMenuSub>
             ) : null}

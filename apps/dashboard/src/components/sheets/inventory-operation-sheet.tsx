@@ -14,6 +14,7 @@ const operationTitles = {
   adjustment: "Adjust stock",
   count: "Count stock",
   custody: "Move stock custody",
+  internal_use: "Record use",
   receipt: "Receive stock",
   transfer: "Transfer stock",
   transformation: "Transform stock",
@@ -60,7 +61,9 @@ export function InventoryOperationSheet({
                 ? "Move exact stock between independently balanced packaged units."
                 : operation === "count"
                   ? "Observe the physical balance, then post any variance."
-                  : "Choose stock in this store and record the quantity change."
+                  : operation === "internal_use"
+                    ? "Record stock used inside the business. It leaves stock without a sale."
+                    : "Choose stock in this store and record the quantity change."
           }
         >
           {selectedStore ? (

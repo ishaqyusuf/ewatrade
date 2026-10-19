@@ -27,6 +27,7 @@ import { initialInventorySource } from "@/lib/inventory-view"
 import { useTRPC } from "@/trpc/client"
 import type { RouterInputs } from "@ewatrade/api/trpc/routers/_app"
 
+import { StoreSelector } from "@/components/stores/store-selector"
 import {
   type StockCategoryDraft,
   collectStockCategoryDraft,
@@ -42,9 +43,15 @@ import { useRef, useState } from "react"
 import { InventoryQuantityInput } from "./inventory-quantity-input"
 import { InventoryReceiptSource } from "./inventory-receipt-source"
 import { StockCategoriesInput } from "./stock-categories-input"
-import { StoreSelector } from "@/components/stores/store-selector"
 
 type StoreSummary = { currencyCode: string; id: string; name: string }
+/** A sent stock command, kept so a retry repeats the exact same request. */
+type RetainedOperation =
+  | {
+      kind: "balance"
+      input: RouterInputs["inventory"]["postBalanceOperation"]
+    }
+  | { kind: "use"; input: RouterInputs["inventory"]["recordInternalUse"] }
 
 const field =
   "h-10 w-full rounded-lg border border-border bg-background px-3 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
@@ -86,10 +93,14 @@ export function InventoryOperationForm({
   const [reason, setReason] = useState("")
   const [categories, setCategories] = useState<StockCategoryDraft[]>([])
   const [categoryInput, setCategoryInput] = useState("")
-  const retainedOperation = useRef<
-    RouterInputs["inventory"]["postBalanceOperation"] | null
-  >(null)
+  const retainedOperation = useRef<RetainedOperation | null>(null)
   const usesCategories = operation === "receipt" || operation === "adjustment"
+  const recordsUse = operation === "internal_use"
+  // Record use opens from one Product; only its balances are offered.
+  const sourceRows =
+    recordsUse && productId
+      ? rows.filter((row) => row.productId === productId)
+      : rows
   const [targetCustodyType, setTargetCustodyType] = useState<"staff" | "store">(
     "staff",
   )
@@ -109,7 +120,8 @@ export function InventoryOperationForm({
     targetStoreId: string
   } | null>(null)
   const selected = rows.find((row) => row.balanceSourceId === sourceId)
-  const canConvertQuantity = usesCategories || operation === "count"
+  const canConvertQuantity =
+    usesCategories || recordsUse || operation === "count"
   const configurations = useQuery(
     trpc.catalog.listUnitConfigurations.queryOptions(
       { productId: selected?.productId ?? "" },
@@ -157,20 +169,39 @@ export function InventoryOperationForm({
     setParams(null)
   }
   const fail = (failure: { message: string }) => setError(failure.message)
+  async function failRetained(failure: {
+    message: string
+    data?: Parameters<typeof inventoryOperationRecovery>[0]
+  }) {
+    const recovery = inventoryOperationRecovery(failure.data)
+    if (recovery === "refresh") {
+      await refreshRejectedStock()
+      return
+    }
+    if (recovery === "edit") retainedOperation.current = null
+    fail(failure)
+  }
   const operationMutation = useMutation(
     trpc.inventory.postBalanceOperation.mutationOptions({
-      onError: async (failure) => {
-        const recovery = inventoryOperationRecovery(failure.data)
-        if (recovery === "refresh") {
-          await refreshRejectedStock()
-          return
-        }
-        if (recovery === "edit") retainedOperation.current = null
-        fail(failure)
-      },
+      onError: failRetained,
       onSuccess: complete,
     }),
   )
+  const recordUseMutation = useMutation(
+    trpc.inventory.recordInternalUse.mutationOptions({
+      onError: failRetained,
+      onSuccess: complete,
+    }),
+  )
+  const retainedError =
+    retainedOperation.current?.kind === "use"
+      ? recordUseMutation.error
+      : operationMutation.error
+  function send(retained: RetainedOperation) {
+    retainedOperation.current = retained
+    if (retained.kind === "use") recordUseMutation.mutate(retained.input)
+    else operationMutation.mutate(retained.input)
+  }
   const transformMutation = useMutation(
     trpc.inventory.transformPackagedStock.mutationOptions({
       onError: fail,
@@ -233,25 +264,25 @@ export function InventoryOperationForm({
 
   function submit() {
     if (retainedOperation.current) {
-      if (
-        inventoryOperationRecovery(operationMutation.error?.data) === "refresh"
-      ) {
+      if (inventoryOperationRecovery(retainedError?.data) === "refresh") {
         void refreshRejectedStock()
         return
       }
-      operationMutation.mutate(retainedOperation.current)
+      send(retainedOperation.current)
       return
     }
     if (
       !operation ||
       !selected ||
       !quantity.trim() ||
-      (!usesCategories && !reason.trim())
+      (!usesCategories && !recordsUse && !reason.trim())
     ) {
       setError(
         usesCategories
           ? "Choose a balance, enter a quantity, and add categories."
-          : "Choose a balance, enter a quantity, and add a reason.",
+          : recordsUse
+            ? "Choose a balance and enter the quantity used."
+            : "Choose a balance, enter a quantity, and add a reason.",
       )
       return
     }
@@ -351,6 +382,24 @@ export function InventoryOperationForm({
       })
       return
     }
+    if (operation === "internal_use") {
+      send({
+        kind: "use",
+        input: {
+          balanceSourceId: selected.balanceSourceId,
+          clientOperationId: crypto.randomUUID(),
+          enteredInventoryUnitId: enteredUnit.id,
+          enteredQuantity: quantity.trim(),
+          expectedBalanceRevision: selected.revision,
+          expectedConfigurationVersionId: selected.configurationVersionId,
+          ...(reason.trim() ? { reason: reason.trim() } : {}),
+          schemaVersion: 1,
+          source: "dashboard_inventory",
+          storeId: store.id,
+        },
+      })
+      return
+    }
     let selectedCategories: StockCategoryDraft[]
     try {
       selectedCategories = collectStockCategoryDraft(categories, categoryInput)
@@ -378,14 +427,14 @@ export function InventoryOperationForm({
     input.categories = stockCategorySelectors(selectedCategories)
     setCategories(selectedCategories)
     setCategoryInput("")
-    retainedOperation.current = input
-    operationMutation.mutate(input)
+    send({ kind: "balance", input })
   }
 
   const pending =
     preparingStock ||
     refreshingBalances ||
     operationMutation.isPending ||
+    recordUseMutation.isPending ||
     transformMutation.isPending ||
     countMutation.isPending ||
     finalizeCountMutation.isPending ||
@@ -513,7 +562,7 @@ export function InventoryOperationForm({
           <InventoryReceiptSource
             storeId={store.id}
             productId={null}
-            rows={rows}
+            rows={sourceRows}
             sourceId={sourceId}
             onSourceChange={changeSource}
             onPreparingChange={setPreparingStock}
@@ -643,6 +692,14 @@ export function InventoryOperationForm({
             onInputChange={setCategoryInput}
             disabled={pending || Boolean(retainedOperation.current)}
           />
+        ) : recordsUse ? (
+          <ControlField label={<>Note (optional)</>}>
+            <Textarea
+              value={reason}
+              placeholder="What was it used for?"
+              onChange={(event) => setReason(event.target.value)}
+            />
+          </ControlField>
         ) : (
           <ControlField label={<>Reason</>}>
             <Textarea
@@ -662,8 +719,7 @@ export function InventoryOperationForm({
           {pending
             ? "Posting…"
             : retainedOperation.current
-              ? inventoryOperationRecovery(operationMutation.error?.data) ===
-                "refresh"
+              ? inventoryOperationRecovery(retainedError?.data) === "refresh"
                 ? "Refresh stock"
                 : "Retry same operation"
               : "Review and confirm"}
