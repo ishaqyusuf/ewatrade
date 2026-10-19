@@ -49,6 +49,7 @@ const ENTITLEMENT_LABELS: Record<Entitlement["key"], string> = {
   products: "Catalog items",
   reportsHistoryDays: "Report history",
   staff: "Staff",
+  storefrontItems: "Storefront items",
 }
 
 const ENTITLEMENT_ICONS: Record<Entitlement["key"], typeof Store04Icon> = {
@@ -58,6 +59,7 @@ const ENTITLEMENT_ICONS: Record<Entitlement["key"], typeof Store04Icon> = {
   products: Package01Icon,
   reportsHistoryDays: Analytics01Icon,
   staff: UserCircle02Icon,
+  storefrontItems: Store04Icon,
 }
 
 const PLAN_FEATURE_ORDER: RetailOpsPlanFeature[] = [
