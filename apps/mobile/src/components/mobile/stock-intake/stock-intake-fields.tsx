@@ -144,7 +144,9 @@ export function StockIntakeFields({ model }: { model: StockIntakeModel }) {
                   ? "Quantity received"
                   : draft.mode === "adjustment"
                     ? "Quantity to adjust"
-                    : "Quantity to move"
+                    : draft.mode === "use"
+                      ? "Quantity used"
+                      : "Quantity to move"
             }
             value={draft.quantity}
             onChange={(quantity) => model.edit({ quantity })}
@@ -169,6 +171,17 @@ export function StockIntakeFields({ model }: { model: StockIntakeModel }) {
             disabled={model.locked}
             onChange={(categories) => model.edit({ categories })}
             onInputChange={(categoryInput) => model.edit({ categoryInput })}
+          />
+        ) : draft.mode === "use" ? (
+          <FormField
+            label="Note (optional)"
+            multiline
+            maxLength={500}
+            variant="filled"
+            value={draft.reason}
+            editable={!model.locked}
+            onChangeText={(reason) => model.edit({ reason })}
+            placeholder="What was it used for?"
           />
         ) : (
           <FormField

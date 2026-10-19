@@ -16,6 +16,7 @@ export default function StockIntakeModalRoute() {
     storeId: params.storeId,
     variantId: params.variantId,
   })
+  const recordUse = params.mode === "use"
 
   return (
     // iOS presents this route natively above the root, so its balance chooser
@@ -23,13 +24,14 @@ export default function StockIntakeModalRoute() {
     <BottomSheetModalProvider>
       <WorkflowModalScreen
         chrome={StockIntakeChrome}
-        closeLabel="Close stock intake"
-        title="Record stock"
+        closeLabel={recordUse ? "Close record use" : "Close stock intake"}
+        title={recordUse ? "Record use" : "Record stock"}
       >
         {/* Remount per target so no selection or review follows a new request. */}
         <StockIntakeContent
-          key={JSON.stringify(target)}
+          key={`${JSON.stringify(target)}:${recordUse}`}
           presentation="screen"
+          recordUse={recordUse}
           target={target}
         />
       </WorkflowModalScreen>

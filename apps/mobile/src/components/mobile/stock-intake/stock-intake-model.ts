@@ -23,6 +23,8 @@ export type StockIntakeProps = {
   presentation?: "screen" | "sheet"
   /** Requested origin (Catalog Item etc.). Absent means generic entry. */
   target?: ParsedStockIntakeTarget
+  /** Opened as "Record use" from an Internal use or Both Product. */
+  recordUse?: boolean
 }
 export const STOCK_MODES = [
   {
@@ -44,6 +46,11 @@ export const STOCK_MODES = [
     key: "custody",
     label: "Move",
     description: "Move custody within this Store, not between Stores.",
+  },
+  {
+    key: "use",
+    label: "Use",
+    description: "Record stock used inside the business, not sold.",
   },
 ] as const
 export type StockMode = (typeof STOCK_MODES)[number]["key"]
@@ -85,6 +92,7 @@ export type StockCommand =
     }
   | { kind: "count"; input: RouterInputs["inventory"]["createStockCount"] }
   | { kind: "custody"; input: RouterInputs["inventory"]["moveCustody"] }
+  | { kind: "use"; input: RouterInputs["inventory"]["recordInternalUse"] }
 export type StockAttempt = {
   review: StockReview
   command: StockCommand
@@ -118,11 +126,13 @@ export function stockQuantityLine(
       ? "Counted"
       : draft.mode === "custody"
         ? "Move"
-        : draft.mode === "receipt"
-          ? "Receive"
-          : draft.direction === "increase"
-            ? "Increase"
-            : "Decrease"
+        : draft.mode === "use"
+          ? "Use"
+          : draft.mode === "receipt"
+            ? "Receive"
+            : draft.direction === "increase"
+              ? "Increase"
+              : "Decrease"
   return `${verb} ${quantity} ${unit}`
 }
 
@@ -218,6 +228,9 @@ export function stockDraftReadiness(
         quantity: null,
       }
     }
+  } else if (draft.mode === "use") {
+    if (draft.reason.trim().length > 500)
+      return { error: "Keep the note under 500 characters.", quantity: null }
   } else if (!draft.reason.trim() || draft.reason.trim().length > 500)
     return { error: "Add a reason of 1–500 characters.", quantity: null }
   if (draft.mode === "custody") {
@@ -306,6 +319,22 @@ export function stockCommand(
           draft.targetCustodyType === "store"
             ? ""
             : draft.targetCustodyReferenceId,
+      },
+    }
+  if (draft.mode === "use")
+    return {
+      kind: "use",
+      input: {
+        clientOperationId,
+        schemaVersion: 1,
+        source: "mobile_inventory",
+        storeId,
+        balanceSourceId: balance.balanceSourceId,
+        enteredInventoryUnitId: balance.inventoryUnitId,
+        enteredQuantity: quantity,
+        expectedBalanceRevision: balance.revision,
+        expectedConfigurationVersionId: balance.configurationVersionId,
+        ...(draft.reason ? { reason: draft.reason } : {}),
       },
     }
   return {

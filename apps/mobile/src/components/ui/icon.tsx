@@ -81,6 +81,7 @@ const CreditCard = hugeIcon("CreditCard")
 const Delete = hugeIcon("Delete")
 const DoorOpen = hugeIcon("Door01Icon")
 const Download = hugeIcon("Download01Icon")
+const Upload = hugeIcon("Upload01Icon")
 const Eye = hugeIcon("EyeIcon")
 const EyeOff = hugeIcon("ViewOffIcon")
 const Fence = hugeIcon("FenceIcon")
@@ -318,6 +319,7 @@ const appIcons = {
   Delete,
   DoorOpen,
   Download,
+  Upload,
   Eye,
   EyeOff,
   Fence,

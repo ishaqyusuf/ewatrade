@@ -231,7 +231,10 @@ export function StockIntakeContent(props: StockIntakeProps) {
                         largeText && "flex-wrap",
                       )}
                     >
-                      {STOCK_MODES.map((mode) => {
+                      {STOCK_MODES.filter(
+                        // Use only applies to Internal use or Both Products.
+                        (mode) => mode.key !== "use" || model.recordUse,
+                      ).map((mode) => {
                         const on = model.draft.mode === mode.key
                         return (
                           <Pressable

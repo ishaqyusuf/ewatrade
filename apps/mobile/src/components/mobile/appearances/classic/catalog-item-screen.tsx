@@ -58,6 +58,7 @@ export function ClassicCatalogItemOverview({
   onCreateSelectedOrder,
   onOpenServiceJobs,
   onStockIn,
+  onRecordUse,
   storeId,
   cachedAt,
 }: CatalogItemOverviewProps) {
@@ -82,6 +83,8 @@ export function ClassicCatalogItemOverview({
   )
   // Internal use Products never reach customer orders (the API agrees).
   const internalUse = item.product?.usage === "INTERNAL_USE"
+  // Stock consumed inside the business is recorded for Internal use or Both.
+  const usable = internalUse || item.product?.usage === "BOTH"
   const sellable =
     item.status === "active" && !internalUse
       ? flattenSaleOfferings(
@@ -231,13 +234,18 @@ export function ClassicCatalogItemOverview({
       ) : null}
       <QuickActionRow
         actions={[
-          {
-            disabled: !sellableOfferings.length,
-            gold: true,
-            icon: "Plus",
-            label: "New order",
-            onPress: newOrder,
-          },
+          // An Internal use Product can never be ordered, so Record use leads.
+          ...(internalUse
+            ? []
+            : [
+                {
+                  disabled: !sellableOfferings.length,
+                  gold: true,
+                  icon: "Plus" as const,
+                  label: "New order",
+                  onPress: newOrder,
+                },
+              ]),
           product
             ? {
                 disabled: !onStockIn || Boolean(cachedAt),
@@ -252,6 +260,20 @@ export function ClassicCatalogItemOverview({
                 label: "Jobs",
                 onPress: () => onOpenServiceJobs?.(),
               },
+          ...(product && usable
+            ? [
+                {
+                  disabled: !onRecordUse || Boolean(cachedAt),
+                  gold: internalUse,
+                  icon: "Upload" as const,
+                  label: "Record use",
+                  onPress: () =>
+                    onRecordUse?.(
+                      activeFilter ? { variantId: activeFilter } : {},
+                    ),
+                },
+              ]
+            : []),
           {
             disabled: !canEditImages,
             icon: "Image",
