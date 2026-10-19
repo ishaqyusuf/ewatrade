@@ -95,7 +95,7 @@ export function OperationSuccessScreen({
           done
           sub={
             internalUse
-              ? "Saved for business use and hidden from customer orders. Record its stock with Stock in."
+              ? "Hidden from customer orders. Record its stock with Stock in."
               : "Available in your catalog. You can change it any time."
           }
           testID="item-success-hero"
