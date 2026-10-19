@@ -140,6 +140,7 @@ export * from "./order-visibility"
 export * from "./oversight"
 
 export * from "./catalog-product-update"
+export * from "./catalog-item-update"
 
 export { previewCatalogCategoryLabel } from "./catalog-categories"
 

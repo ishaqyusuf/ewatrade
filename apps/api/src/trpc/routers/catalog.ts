@@ -23,6 +23,7 @@ import {
   publishProductUnitConfiguration,
   setCatalogOfferingStoreAvailability,
   setCatalogProductUsage,
+  updateCatalogItemInTransaction,
   updateCatalogPriceInTransaction,
   updateProductDetailsInTransaction,
   updateProductIdentifiersInTransaction,
@@ -49,6 +50,7 @@ import {
   catalogPublishUnitConfigurationSchema,
   catalogSetOfferingAvailabilitySchema,
   catalogSetProductUsageSchema,
+  catalogUpdateItemSchema,
   catalogUpdatePriceSchema,
   catalogUpdateProductDetailsSchema,
   catalogUpdateProductIdentifiersSchema,
@@ -162,6 +164,33 @@ function catalogTRPCError(error: CatalogError) {
 }
 
 export const catalogRouter = createTRPCRouter({
+  updateItem: protectedProcedure
+    .input(catalogUpdateItemSchema)
+    .mutation(async ({ ctx, input }) => {
+      assertCanManageCatalog(ctx.tenantContext)
+      const storeId = resolveStoreId(
+        ctx.tenantContext.stores,
+        ctx.tenantContext.activeStore,
+        input.storeId,
+      )
+      const scope = catalogPhotoActorScope(ctx, storeId)
+      try {
+        return await ctx.db.$transaction(
+          (tx) =>
+            updateCatalogItemInTransaction(tx, {
+              ...input,
+              ...scope,
+              expectedUpdatedAt: new Date(input.expectedUpdatedAt),
+            }),
+          { maxWait: 10_000, timeout: 60_000 },
+        )
+      } catch (error) {
+        if (error instanceof CatalogError) throw catalogTRPCError(error)
+        if (error instanceof CatalogPhotoError)
+          throw catalogPhotoTRPCError(error)
+        throw error
+      }
+    }),
   updateProductDetails: protectedProcedure
     .input(catalogUpdateProductDetailsSchema)
     .mutation(async ({ ctx, input }) => {

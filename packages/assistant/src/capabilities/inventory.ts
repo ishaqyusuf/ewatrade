@@ -129,6 +129,11 @@ planned("catalog", "B03", [
 formOnly("catalog", "Photo capture and upload belong to the product form.", [
   "catalog.photos.*",
 ])
+formOnly(
+  "catalog",
+  "Whole-item editor payload from the catalog sheet; assistant edits use the narrow price, details, identifier and availability capabilities.",
+  ["catalog.updateItem"],
+)
 
 // Customers
 planned("customers", "E02", ["customerLedger.*"])

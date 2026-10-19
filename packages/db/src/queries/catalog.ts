@@ -380,7 +380,7 @@ function slugifyCatalogItem(value: string) {
   )
 }
 
-function stableJson(value: unknown): string {
+export function stableJson(value: unknown): string {
   if (value === undefined) {
     return "null"
   }

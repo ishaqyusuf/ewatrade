@@ -335,6 +335,83 @@ export const catalogCreateSimpleItemSchema = z.discriminatedUnion("kind", [
   catalogCreateSimpleServiceSchema,
 ])
 
+const catalogUpdateOfferingSchema = z
+  .object({
+    unitIndex: z.number().int().min(0).max(47).optional(),
+    pricingPolicy: z.enum(["fixed", "order_total", "quote_required"]),
+    fixedPriceMinor: catalogPriceMinorSchema.optional(),
+    enabled: z.boolean().optional(),
+    sku: z.string().trim().max(120).optional(),
+    barcode: z.string().trim().max(120).optional(),
+    storeAvailability: z
+      .array(catalogStoreAvailabilitySchema)
+      .max(100)
+      .optional(),
+    ...serviceWorkPolicyFields,
+  })
+  .strict()
+
+/** Whole-form edit of a saved item; saved rows are referenced by id or label, not client keys. */
+export const catalogUpdateItemSchema = z
+  .object({
+    itemId: z.string().trim().min(1).max(128),
+    expectedUpdatedAt: z.string().datetime(),
+    clientOperationId: z.string().trim().min(8).max(160),
+    kind: z.enum(["product", "service"]),
+    name: z.string().trim().min(1).max(160),
+    description: z.string().trim().max(2_000).optional(),
+    category: z.string().trim().max(120).optional(),
+    categoryId: catalogItemFields.categoryId,
+    subcategoryId: catalogItemFields.subcategoryId,
+    usage: z.enum(["FOR_SALE", "INTERNAL_USE", "BOTH"]).optional(),
+    priceChangeReason: z.string().trim().max(500).optional(),
+    storeId: z.string().trim().min(1).optional(),
+    optionGroups: z
+      .array(
+        z
+          .object({
+            id: z.string().trim().min(1).max(128).optional(),
+            name: z.string().trim().min(1).max(80),
+            values: z.array(z.string().trim().min(1).max(80)).min(1).max(100),
+          })
+          .strict(),
+      )
+      .max(12),
+    units: z
+      .array(
+        z
+          .object({
+            id: z.string().trim().min(1).max(128).optional(),
+            name: z.string().trim().min(1).max(80),
+            factor: exactFactorSchema,
+            stockBehavior: z.enum([
+              "alternate_transaction",
+              "canonical_shared",
+              "packaged_stock",
+            ]),
+            transactionScale: z.coerce.number().int().min(0).max(6),
+          })
+          .strict(),
+      )
+      .min(1)
+      .max(48)
+      .optional(),
+    variants: z
+      .array(
+        z
+          .object({
+            selections: z.array(z.string().trim().min(1).max(80)).max(12),
+            enabled: z.boolean(),
+            isDefault: z.boolean(),
+            offerings: z.array(catalogUpdateOfferingSchema).min(1).max(48),
+          })
+          .strict(),
+      )
+      .min(1)
+      .max(96),
+  })
+  .strict()
+
 export const catalogGetItemSchema = z
   .object({
     itemId: z.string().trim().min(1),
