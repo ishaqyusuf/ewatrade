@@ -198,6 +198,7 @@ enum StockOperationType {
   CORRECTION
   CORRECTION_REVERSAL
   CORRECTION_REPLACEMENT
+  INTERNAL_USE
 }
 
 enum ServiceWorkPolicy {
