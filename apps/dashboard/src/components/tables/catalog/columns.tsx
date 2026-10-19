@@ -112,7 +112,6 @@ export function CatalogItemThumbnail({
       ) : item.illustrations.find((entry) => entry.storeId === storeId) ? (
         <CatalogIllustrationPreview
           compact
-          fit
           illustrationId={
             item.illustrations.find((entry) => entry.storeId === storeId)
               ?.illustrationId ?? ""
