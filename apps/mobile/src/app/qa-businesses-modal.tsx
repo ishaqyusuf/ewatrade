@@ -1,20 +1,22 @@
 import { MobileWorkflowChrome } from "@/components/mobile/appearances/workflow-chrome"
 import { QaBusinessesScreen } from "@/components/mobile/qa-businesses-screen"
-import { isDevelopmentAppVariant } from "@/lib/app-variant"
+import { useQaAccelerator } from "@/hooks/use-qa-accelerator"
 import { Redirect, Stack, useRouter } from "expo-router"
 import { useCallback } from "react"
 import { useReducedMotion } from "react-native-reanimated"
 
 // QA tooling only: the full-screen business list when a QA domain has more
-// than five businesses. Development app variant only; redirects otherwise.
+// than five businesses. Uses the same authorized internal-client gate as its entry.
 export default function QaBusinessesModalRoute() {
+  const qa = useQaAccelerator()
   const router = useRouter()
   const reduceMotion = useReducedMotion()
   const close = useCallback(() => {
     if (router.canGoBack()) router.back()
     else router.replace("/")
   }, [router])
-  if (!__DEV__ || !isDevelopmentAppVariant()) return <Redirect href="/" />
+  if (!qa.clientEnabled || !qa.capabilityAvailable || !qa.authorization)
+    return <Redirect href="/" />
   return (
     <>
       <Stack.Screen
