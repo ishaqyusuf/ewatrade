@@ -46,20 +46,29 @@ export function CustomerDataTable({
   rows,
   view,
   currencyCode,
+  canSeeBalances,
   isLoading,
-  filtered,
-  selectionScope,
+  query,
+  onClearSearch,
+  onAddCustomer,
+  onEdit,
   initialSettings,
 }: {
   rows: DashboardCustomerRow[]
   view: DirectoryView
   currencyCode: string
+  canSeeBalances: boolean
   isLoading: boolean
-  filtered: boolean
-  selectionScope: string
+  query: string
+  onClearSearch: () => void
+  onAddCustomer?: () => void
+  onEdit: (customerId: string) => void
   initialSettings?: Partial<TableSettings>
 }) {
-  const columns = useMemo(() => customerColumns(currencyCode), [currencyCode])
+  const columns = useMemo(
+    () => customerColumns({ currencyCode, canSeeBalances, onEdit }),
+    [currencyCode, canSeeBalances, onEdit],
+  )
   const columnIds = useMemo(() => getColumnIds(columns), [columns])
   const tableSettings = useTableSettings({
     tableId: "customers",
@@ -67,11 +76,11 @@ export function CustomerDataTable({
     columnIds,
     fixedColumnIds: FIXED_COLUMN_IDS,
   })
-  const { sort, sorting } = useSortParams({ fields: customerSortFields })
+  const { sorting } = useSortParams({ fields: customerSortFields })
   const [rowSelection, setRowSelection] = useLoadedRowSelection({
     rows,
     getRowId: getCustomerId,
-    scope: selectionScope,
+    scope: query.trim(),
   })
   const table = useReactTable({
     data: rows,
@@ -115,53 +124,62 @@ export function CustomerDataTable({
     return (
       <CustomerTableSkeleton
         currencyCode={currencyCode}
+        canSeeBalances={canSeeBalances}
         columnVisibility={tableSettings.columnVisibility}
         columnSizing={tableSettings.columnSizing}
         columnOrder={tableSettings.columnOrder}
       />
     )
   }
-  if (!rows.length) return <CustomerDirectoryEmptyState filtered={filtered} />
+  if (!rows.length)
+    return (
+      <CustomerDirectoryEmptyState
+        query={query}
+        onClearSearch={onClearSearch}
+        onAddCustomer={onAddCustomer}
+      />
+    )
+  const search = query.trim()
 
   return (
     <div className="grid gap-3" aria-busy={isLoading}>
       <DirectoryToolbar
         table={table}
         view={view}
-        selectAllLabel="Select all loaded customers"
+        selectAllLabel="Select all"
         disabled={isLoading}
-        summary={`${rows.length} customers${isLoading ? " · Updating…" : ""}${
-          sort
-            ? ` · sorted by ${sort.field} ${sort.direction}`
-            : " · newest activity first"
-        }`}
+        summary={`${rows.length} ${rows.length === 1 ? "customer" : "customers"}${
+          search ? ` match “${search}”` : ""
+        }${isLoading ? " · Updating…" : ""}`}
       >
-        {view === "table" ? (
-          <>
-            {tableSettings.persistenceError ? (
-              <Button
-                appearance="form"
-                variant="outline"
-                onClick={tableSettings.retryPersistence}
-              >
-                Retry saving columns
-              </Button>
-            ) : null}
-            <CustomerTableSettings table={table} />
-          </>
+        {view === "table" && tableSettings.persistenceError ? (
+          <Button
+            appearance="form"
+            variant="outline"
+            onClick={tableSettings.retryPersistence}
+          >
+            Columns not saved. Try again
+          </Button>
         ) : null}
       </DirectoryToolbar>
+      <CustomerTableSettings
+        table={table}
+        showColumns={view === "table"}
+        canSeeBalances={canSeeBalances}
+      />
       {view !== "table" ? (
         <CustomerCollection
           view={view}
           rows={tableRows}
           currencyCode={currencyCode}
+          canSeeBalances={canSeeBalances}
+          onEdit={onEdit}
         />
       ) : (
         <div
           ref={tableScroll.setContainerRef}
           className="max-h-[560px] overflow-auto overscroll-contain border border-border"
-          aria-label="Customer directory"
+          aria-label="Customers"
         >
           <DndContext
             id="customers-directory-dnd"

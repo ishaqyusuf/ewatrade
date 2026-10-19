@@ -10,16 +10,22 @@ import { customerColumns } from "./columns"
 
 export function CustomerTableSkeleton({
   currencyCode,
+  canSeeBalances,
   columnVisibility,
   columnSizing,
   columnOrder,
 }: {
   currencyCode: string
+  canSeeBalances: boolean
   columnVisibility?: VisibilityState
   columnSizing?: ColumnSizingState
   columnOrder?: ColumnOrderState
 }) {
-  const columns = customerColumns(currencyCode)
+  const columns = customerColumns({
+    currencyCode,
+    canSeeBalances,
+    onEdit: () => undefined,
+  })
   return (
     <TableSkeleton
       columns={columns}

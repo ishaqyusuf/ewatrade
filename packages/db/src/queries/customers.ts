@@ -292,6 +292,8 @@ export async function countCustomers(
 }
 
 export type CustomerOrderDirectoryAggregate = {
+  /** Saved customer linked to the group's orders, newest link first. */
+  customerId: string | null
   email: string | null
   firstSeenAt: Date
   id: string
@@ -329,10 +331,21 @@ export async function listCustomerOrderDirectory(
     ? Prisma.sql`AND (
         "customerName" ILIKE ${`%${query}%`} OR
         "customerPhone" ILIKE ${`%${query}%`} OR
-        "customerEmail" ILIKE ${`%${query}%`}
+        "customerEmail" ILIKE ${`%${query}%`} OR
+        "customerId" IN (
+          SELECT id FROM "Customer"
+          WHERE "tenantId" = ${input.tenantId} AND (
+            name ILIKE ${`%${query}%`} OR
+            phone ILIKE ${`%${query}%`} OR
+            email ILIKE ${`%${query}%`}
+          )
+        )
       )`
     : Prisma.empty
+  // Orders linked to a saved customer group under that customer; the rest
+  // group by the contact typed on the order, and walk-ins stay one per order.
   const customerIdentityKey = Prisma.sql`COALESCE(
+    'customer:' || "customerId",
     NULLIF(
       LOWER(BTRIM(COALESCE(
         NULLIF("customerPhone", ''),
@@ -346,6 +359,7 @@ export async function listCustomerOrderDirectory(
 
   const rows = await db.$queryRaw<
     Array<{
+      customerId: string | null
       email: string | null
       firstSeenAt: Date
       id: string
@@ -373,6 +387,7 @@ export async function listCustomerOrderDirectory(
         "customerName",
         "customerPhone",
         "customerEmail",
+        "customerId",
         ${customerIdentityKey} AS "identityKey",
         ROW_NUMBER() OVER (
           PARTITION BY ${customerIdentityKey}
@@ -396,7 +411,9 @@ export async function listCustomerOrderDirectory(
         MAX("orderNumber") FILTER (WHERE "recentRank" = 1) AS "lastOrderNumber",
         MAX("paymentStatus") FILTER (WHERE "recentRank" = 1) AS "lastOrderPaymentStatus",
         MAX("status") FILTER (WHERE "recentRank" = 1) AS "lastOrderStatus",
-        MAX("totalMinor") FILTER (WHERE "recentRank" = 1) AS "lastOrderTotalMinor"
+        MAX("totalMinor") FILTER (WHERE "recentRank" = 1) AS "lastOrderTotalMinor",
+        (ARRAY_AGG("customerId" ORDER BY "createdAt" DESC, "id" DESC)
+          FILTER (WHERE "customerId" IS NOT NULL))[1] AS "customerId"
       FROM matching_orders
       GROUP BY "identityKey"
     )
@@ -404,13 +421,14 @@ export async function listCustomerOrderDirectory(
       "identityKey" AS "id",
       CASE
         WHEN "identityKey" LIKE 'walk-in:%' THEN 'walk-in'
-        WHEN "customerPhone" IS NOT NULL AND "customerPhone" <> '' THEN 'phone'
-        WHEN "customerEmail" IS NOT NULL AND "customerEmail" <> '' THEN 'email'
+        WHEN COALESCE(NULLIF(saved.phone, ''), NULLIF("customerPhone", '')) IS NOT NULL THEN 'phone'
+        WHEN COALESCE(NULLIF(saved.email, ''), NULLIF("customerEmail", '')) IS NOT NULL THEN 'email'
         ELSE 'name'
       END AS "identityType",
-      "customerName" AS "name",
-      "customerPhone" AS "phone",
-      "customerEmail" AS "email",
+      grouped_orders."customerId",
+      COALESCE(NULLIF(saved.name, ''), "customerName") AS "name",
+      COALESCE(NULLIF(saved.phone, ''), NULLIF("customerPhone", '')) AS "phone",
+      COALESCE(NULLIF(saved.email, ''), NULLIF("customerEmail", '')) AS "email",
       "orderCount",
       "totalMinor",
       "firstSeenAt",
@@ -421,10 +439,13 @@ export async function listCustomerOrderDirectory(
       "lastOrderStatus",
       "lastOrderTotalMinor"
     FROM grouped_orders
+    LEFT JOIN "Customer" saved
+      ON saved.id = grouped_orders."customerId" AND saved."tenantId" = ${input.tenantId}
     ORDER BY "lastSeenAt" DESC, "id" ASC
   `)
 
   return rows.map((row) => ({
+    customerId: row.customerId,
     email: row.email,
     firstSeenAt: row.firstSeenAt,
     id: row.id,
@@ -442,6 +463,86 @@ export async function listCustomerOrderDirectory(
     phone: row.phone,
     totalMinor: row.totalMinor,
   }))
+}
+
+export type CustomerBookRow = Omit<
+  CustomerOrderDirectoryAggregate,
+  "lastOrder"
+> & {
+  lastOrder: CustomerOrderDirectoryAggregate["lastOrder"] | null
+}
+
+/**
+ * The store's customer book: everyone who ordered (from the order history),
+ * linked to their saved customer by order link, phone or email, plus saved
+ * customers who have not ordered yet. Saved customers belong to the tenant, so
+ * a store-scoped or own-sales book leaves the unordered ones out.
+ */
+export async function listCustomerBook(
+  db: PrismaClient,
+  input: Parameters<typeof listCustomerOrderDirectory>[1] & {
+    includeSavedCustomers: boolean
+  },
+): Promise<CustomerBookRow[]> {
+  const ordered: CustomerBookRow[] = await listCustomerOrderDirectory(db, input)
+  if (!input.includeSavedCustomers) return ordered
+  const query = input.query?.trim()
+  const saved = await db.customer.findMany({
+    where: {
+      tenantId: input.tenantId,
+      ...(query
+        ? {
+            OR: (["name", "email", "phone"] as const).map((field) => ({
+              [field]: {
+                contains: literalContains(query),
+                mode: "insensitive",
+              },
+            })),
+          }
+        : {}),
+    },
+    orderBy: [{ createdAt: "desc" }, { id: "asc" }],
+    select: customerSelect,
+  })
+  const byPhone = new Map<string, (typeof saved)[number]>()
+  const byEmail = new Map<string, (typeof saved)[number]>()
+  for (const customer of saved) {
+    const phone = normalizePhone(customer.phone ?? undefined)
+    const email = normalizeEmail(customer.email ?? undefined)
+    if (phone && !byPhone.has(phone)) byPhone.set(phone, customer)
+    if (email && !byEmail.has(email)) byEmail.set(email, customer)
+  }
+  const linked = new Set<string>()
+  const rows = ordered.map((row) => {
+    const match = row.customerId
+      ? null
+      : (byPhone.get(normalizePhone(row.phone ?? undefined) ?? "") ??
+        byEmail.get(normalizeEmail(row.email ?? undefined) ?? ""))
+    const customerId = row.customerId ?? match?.id ?? null
+    if (customerId) linked.add(customerId)
+    return customerId === row.customerId ? row : { ...row, customerId }
+  })
+  for (const customer of saved) {
+    if (linked.has(customer.id)) continue
+    rows.push({
+      customerId: customer.id,
+      email: customer.email,
+      firstSeenAt: customer.createdAt,
+      id: `customer:${customer.id}`,
+      identityType: customer.phone
+        ? "phone"
+        : customer.email
+          ? "email"
+          : "name",
+      lastOrder: null,
+      lastSeenAt: customer.createdAt,
+      name: customer.name,
+      orderCount: 0,
+      phone: customer.phone,
+      totalMinor: "0",
+    })
+  }
+  return rows
 }
 
 export async function listCustomersPage(
