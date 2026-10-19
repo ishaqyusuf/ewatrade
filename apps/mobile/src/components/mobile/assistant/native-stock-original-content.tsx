@@ -32,6 +32,7 @@ function cost(minor: number | string | null, currency: string | null) {
 const operationTitles: Partial<Record<NativeStockOperation["type"], string>> = {
   RECEIPT: "Stock received",
   ADJUSTMENT: "Stock adjusted",
+  INTERNAL_USE: "Stock used",
   CORRECTION: "Stock correction",
   CORRECTION_REPLACEMENT: "Stock correction",
   CORRECTION_REVERSAL: "Correction reversal",

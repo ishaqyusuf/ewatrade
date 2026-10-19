@@ -395,7 +395,8 @@ function resolveOriginal(
     correction.store.tenantId !== tenantId ||
     (original.type !== "RECEIPT" &&
       original.type !== "RETURN" &&
-      original.type !== "ADJUSTMENT") ||
+      original.type !== "ADJUSTMENT" &&
+      original.type !== "INTERNAL_USE") ||
     original.correctionOfOperationId !== null ||
     original.committedReservation != null ||
     correction.committedReservation != null ||

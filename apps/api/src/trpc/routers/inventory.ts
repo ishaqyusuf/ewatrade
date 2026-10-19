@@ -1,10 +1,10 @@
-import { canStaffPerform } from "@ewatrade/auth/store-access"
 import {
   type EwaTradeRole,
   canManageSalesOperations,
   canOperatePos,
   normalizeRole,
 } from "@ewatrade/auth/roles"
+import { canStaffPerform } from "@ewatrade/auth/store-access"
 import { StockOperationType } from "@ewatrade/db/enums"
 import type { TenantContext } from "@ewatrade/db/queries"
 import { FinanceError } from "@ewatrade/db/queries"
@@ -21,15 +21,15 @@ import {
   getCatalogOfferingAvailability,
   getConfiguredCatalogOfferingAvailability,
   getInventoryBalanceSource,
-  getInventoryReconciliationSummary,
-  getStockOperationAudit,
-  getStockCountReview,
-  getStockTransferReview,
   getInventoryCloseoutReview,
-  listInventoryCloseouts,
+  getInventoryReconciliationSummary,
+  getStockCountReview,
+  getStockOperationAudit,
+  getStockTransferReview,
   listCatalogLowStockPage,
-  listInventoryBalanceReport,
   listInventoryBalancePage,
+  listInventoryBalanceReport,
+  listInventoryCloseouts,
   listInventoryCompatibleTotalsPage,
   listInventoryOperationHistory,
   listServiceAssignees,
@@ -46,23 +46,21 @@ import { TRPCError } from "@trpc/server"
 
 import {
   inventoryAuditExportSchema,
-  inventoryBalanceReportSchema,
   inventoryBalancePageSchema,
+  inventoryBalanceReportSchema,
   inventoryBalanceSourceSchema,
-  inventoryCompatibleTotalsPageSchema,
   inventoryCategorySuggestionsSchema,
+  inventoryCloseoutReviewSchema,
   inventoryCommitReservationSchema,
+  inventoryCompatibleTotalsPageSchema,
   inventoryCorrectOperationSchema,
   inventoryCreateCloseoutSchema,
   inventoryCreateStockCountSchema,
   inventoryCustodyAssigneesSchema,
-  inventoryStockCountReviewSchema,
-  inventoryTransferReviewSchema,
-  inventoryCloseoutReviewSchema,
-  inventoryListCloseoutsSchema,
   inventoryDispatchTransferSchema,
   inventoryFinalizeCloseoutSchema,
   inventoryFinalizeStockCountSchema,
+  inventoryListCloseoutsSchema,
   inventoryListTransfersSchema,
   inventoryLowStockPageSchema,
   inventoryMoveCustodySchema,
@@ -70,9 +68,12 @@ import {
   inventoryOperationAuditSchema,
   inventoryOperationHistorySchema,
   inventoryReconciliationReportSchema,
+  inventoryRecordInternalUseSchema,
   inventoryReleaseReservationSchema,
   inventoryReserveOfferingSchema,
   inventorySingleBalanceOperationSchema,
+  inventoryStockCountReviewSchema,
+  inventoryTransferReviewSchema,
   inventoryTransformationSchema,
   inventoryTransitionTransferSchema,
 } from "../../schemas/inventory"
@@ -234,14 +235,26 @@ export const inventoryRouter = createTRPCRouter({
     .input(inventoryTransferReviewSchema)
     .query(async ({ ctx, input }) => {
       assertCanManageInventory(ctx.tenantContext)
-      const storeId = resolveStoreId(ctx.tenantContext.stores, ctx.tenantContext.activeStore, input.storeId)
+      const storeId = resolveStoreId(
+        ctx.tenantContext.stores,
+        ctx.tenantContext.activeStore,
+        input.storeId,
+      )
       try {
         return await getStockTransferReview(ctx.db, {
           tenantId: ctx.tenantContext.tenant.id,
           storeId,
           transferId: input.transferId,
           allowedStoreIds: ctx.tenantContext.stores
-            .filter((store) => !ctx.tenantContext.staffAccess || canStaffPerform(ctx.tenantContext.staffAccess, "stock", store.id))
+            .filter(
+              (store) =>
+                !ctx.tenantContext.staffAccess ||
+                canStaffPerform(
+                  ctx.tenantContext.staffAccess,
+                  "stock",
+                  store.id,
+                ),
+            )
             .map((store) => store.id),
         })
       } catch (error) {
@@ -345,7 +358,12 @@ export const inventoryRouter = createTRPCRouter({
     .input(inventoryOperationAuditSchema)
     .query(async ({ ctx, input }) => {
       assertCanManageInventory(ctx.tenantContext)
-      if (input.storeId) resolveStoreId(ctx.tenantContext.stores, ctx.tenantContext.activeStore, input.storeId)
+      if (input.storeId)
+        resolveStoreId(
+          ctx.tenantContext.stores,
+          ctx.tenantContext.activeStore,
+          input.storeId,
+        )
       return getStockOperationAudit(ctx.db, {
         ...input,
         tenantId: ctx.tenantContext.tenant.id,
@@ -414,17 +432,33 @@ export const inventoryRouter = createTRPCRouter({
     .input(inventoryListCloseoutsSchema)
     .query(async ({ ctx, input }) => {
       assertCanManageInventory(ctx.tenantContext)
-      const storeId = resolveStoreId(ctx.tenantContext.stores, ctx.tenantContext.activeStore, input.storeId)
-      return listInventoryCloseouts(ctx.db, { ...input, storeId, tenantId: ctx.tenantContext.tenant.id })
+      const storeId = resolveStoreId(
+        ctx.tenantContext.stores,
+        ctx.tenantContext.activeStore,
+        input.storeId,
+      )
+      return listInventoryCloseouts(ctx.db, {
+        ...input,
+        storeId,
+        tenantId: ctx.tenantContext.tenant.id,
+      })
     }),
 
   closeoutReview: protectedProcedure
     .input(inventoryCloseoutReviewSchema)
     .query(async ({ ctx, input }) => {
       assertCanManageInventory(ctx.tenantContext)
-      const storeId = resolveStoreId(ctx.tenantContext.stores, ctx.tenantContext.activeStore, input.storeId)
+      const storeId = resolveStoreId(
+        ctx.tenantContext.stores,
+        ctx.tenantContext.activeStore,
+        input.storeId,
+      )
       try {
-        return await getInventoryCloseoutReview(ctx.db, { ...input, storeId, tenantId: ctx.tenantContext.tenant.id })
+        return await getInventoryCloseoutReview(ctx.db, {
+          ...input,
+          storeId,
+          tenantId: ctx.tenantContext.tenant.id,
+        })
       } catch (error) {
         if (error instanceof CatalogError) throw inventoryError(error)
         throw error
@@ -628,6 +662,31 @@ export const inventoryRouter = createTRPCRouter({
           actorUserId: ctx.session.user.id,
           storeId,
           tenantId: ctx.tenantContext.tenant.id,
+        })
+      } catch (error) {
+        if (error instanceof CatalogError || error instanceof FinanceError)
+          throw inventoryError(error)
+        throw error
+      }
+    }),
+
+  recordInternalUse: protectedProcedure
+    .input(inventoryRecordInternalUseSchema)
+    .mutation(async ({ ctx, input }) => {
+      assertCanManageInventory(ctx.tenantContext)
+      const storeId = resolveStoreId(
+        ctx.tenantContext.stores,
+        ctx.tenantContext.activeStore,
+        input.storeId,
+      )
+      try {
+        return await postSingleBalanceStockOperation(ctx.db, {
+          ...input,
+          actorUserId: ctx.session.user.id,
+          direction: "decrease",
+          storeId,
+          tenantId: ctx.tenantContext.tenant.id,
+          type: "internal_use",
         })
       } catch (error) {
         if (error instanceof CatalogError || error instanceof FinanceError)
