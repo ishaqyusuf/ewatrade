@@ -13,6 +13,7 @@ type Env = Record<string, string | undefined>
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..")
 const apiOrigin = "https://preview-api.ewatrade.com"
 const dashboardOrigin = "https://preview-dashboard.ewatrade.com"
+let inspectionStep = "arguments"
 const assistantFlags = [
   "ASSISTANT_WHATSAPP_ENABLED",
   "ASSISTANT_WHATSAPP_READS_ENABLED",
@@ -75,6 +76,7 @@ async function main() {
   const sourceRoot = args["--source-root"] ?? root
   const source = (name: string) =>
     readFileSync(path.join(sourceRoot, name), "utf8")
+  inspectionStep = "pure_configuration_helpers"
   const { applyEwatradeSharedEnv } = await import(
     pathToFileURL(path.join(sourceRoot, "packages/utils/src/shared-env.ts"))
       .href
@@ -83,6 +85,7 @@ async function main() {
     pathToFileURL(path.join(sourceRoot, "packages/utils/src/qa-accelerator.ts"))
       .href
   )
+  inspectionStep = "selected_profiles"
   const selected = loadRootEnvironment(profileRoot, {
     APP_ENV: "preview",
     DEV_PROFILE: "preview",
@@ -229,6 +232,7 @@ async function main() {
     )
   }
   // Import only Next configuration, with public configuration inputs and no credentials.
+  inspectionStep = "next_configuration"
   const originalEnv = { ...process.env }
   let rewrites: Array<{ source: string; destination: string }> = []
   let pageExtensions: string[] = []
@@ -270,6 +274,7 @@ async function main() {
     ),
   )
   check("DASHBOARD_QA_ROUTES_INCLUDED", pageExtensions.includes("qa.ts"))
+  inspectionStep = "source_fingerprints"
   const sourceFiles = [
     "packages/auth/src/index.ts",
     "packages/utils/src/qa-accelerator.ts",
@@ -333,6 +338,7 @@ try {
     JSON.stringify({
       status: "not_ready",
       issues: ["PAIRED_PREVIEW_CONFIGURATION_INSPECTION_FAILED"],
+      step: inspectionStep,
     }),
   )
   process.exitCode = 1
