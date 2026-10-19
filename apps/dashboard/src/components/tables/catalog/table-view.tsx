@@ -98,9 +98,9 @@ export function CatalogTableView({
         view={view}
         selectAllLabel="Select all loaded catalog items"
         summary={`${rows.length} items loaded`}
-      >
-        <CatalogTableSettings table={table} showColumns={view === "table"} />
-      </DirectoryToolbar>
+      />
+      {/* Sort and Columns render in the page header row beside View and Add. */}
+      <CatalogTableSettings table={table} showColumns={view === "table"} />
 
       {persistenceError ? (
         <div className="flex items-center justify-between gap-3" role="alert">

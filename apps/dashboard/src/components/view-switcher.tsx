@@ -11,6 +11,7 @@ import {
   DropdownMenuTrigger,
 } from "@ewatrade/ui"
 import {
+  ArrowDown01Icon,
   GridViewIcon,
   LayoutTable01Icon,
   ListViewIcon,
@@ -33,6 +34,74 @@ export const directoryViewOptions = [
 type ViewOptions<Value extends string> =
   | readonly [ViewOption<Value>, ViewOption<Value>]
   | readonly [ViewOption<Value>, ViewOption<Value>, ViewOption<Value>]
+
+/** One outline button naming the current view; it opens every view as a radio menu. */
+export function ViewDropdown<Value extends string>({
+  label,
+  value,
+  options,
+  onValueChange,
+}: {
+  label: string
+  value: Value
+  options: readonly ViewOption<Value>[]
+  onValueChange: (value: Value) => void
+}) {
+  const current = options.find((option) => option.value === value) ?? options[0]
+  if (!current) return null
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger
+        render={
+          <Button
+            type="button"
+            variant="outline"
+            className="rounded-none"
+            aria-label={`${label}: ${current.label}. Choose view`}
+          />
+        }
+      >
+        <HugeiconsIcon
+          icon={current.icon}
+          data-icon="inline-start"
+          aria-hidden="true"
+        />
+        {current.label}
+        <HugeiconsIcon
+          icon={ArrowDown01Icon}
+          data-icon="inline-end"
+          className="text-muted-foreground"
+          aria-hidden="true"
+        />
+      </DropdownMenuTrigger>
+      <DropdownMenuContent
+        appearance="dashboard"
+        align="end"
+        className="min-w-40"
+      >
+        <DropdownMenuRadioGroup
+          aria-label={label}
+          value={current.value}
+          onValueChange={(nextValue) => {
+            const option = options.find((option) => option.value === nextValue)
+            if (option) onValueChange(option.value)
+          }}
+        >
+          {options.map((option) => (
+            <DropdownMenuRadioItem
+              key={option.value}
+              value={option.value}
+              closeOnClick
+            >
+              <HugeiconsIcon icon={option.icon} aria-hidden="true" />
+              {option.label}
+            </DropdownMenuRadioItem>
+          ))}
+        </DropdownMenuRadioGroup>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  )
+}
 
 export function ViewSwitcher<Value extends string>({
   label,

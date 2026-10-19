@@ -31,9 +31,12 @@ import {
   TableHeader,
   TableRow,
 } from "@ewatrade/ui"
+import { ArrowDown01Icon } from "@hugeicons/core-free-icons"
+import { HugeiconsIcon } from "@hugeicons/react"
 import type { Table } from "@tanstack/react-table"
 import type { CSSProperties } from "react"
 import type { CatalogRow } from "./columns"
+import { CatalogToolbarPortal } from "./toolbar-slot"
 
 const FIXED_COLUMNS = new Set([SELECT_COLUMN_ID, "item", "actions"])
 
@@ -229,40 +232,19 @@ export function CatalogTableSettings({
 }) {
   const { sort, setParams } = useSortParams({ fields: catalogSortFields })
   return (
-    <div className="flex items-center gap-2">
-      <DropdownMenu>
-        <DropdownMenuTrigger
-          render={
-            <Button type="button" variant="outline" className="rounded-none">
-              Sort by update
-            </Button>
-          }
-        />
-        <DropdownMenuContent appearance="dashboard" align="end">
-          <DropdownMenuItem
-            onClick={() => setParams({ sort: ["updatedAt", "desc"] })}
-          >
-            Newest first
-            {sort?.field === "updatedAt" && sort.direction === "desc"
-              ? " ✓"
-              : ""}
-          </DropdownMenuItem>
-          <DropdownMenuItem
-            onClick={() => setParams({ sort: ["updatedAt", "asc"] })}
-          >
-            Oldest first
-            {sort?.field === "updatedAt" && sort.direction === "asc"
-              ? " ✓"
-              : ""}
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
+    <CatalogToolbarPortal>
       {showColumns ? (
         <DropdownMenu>
           <DropdownMenuTrigger
             render={
               <Button type="button" variant="outline" className="rounded-none">
                 Columns
+                <HugeiconsIcon
+                  icon={ArrowDown01Icon}
+                  data-icon="inline-end"
+                  className="text-muted-foreground"
+                  aria-hidden="true"
+                />
               </Button>
             }
           />
@@ -297,6 +279,39 @@ export function CatalogTableSettings({
           </DropdownMenuContent>
         </DropdownMenu>
       ) : null}
-    </div>
+      <DropdownMenu>
+        <DropdownMenuTrigger
+          render={
+            <Button type="button" variant="outline" className="rounded-none">
+              Sort by update
+              <HugeiconsIcon
+                icon={ArrowDown01Icon}
+                data-icon="inline-end"
+                className="text-muted-foreground"
+                aria-hidden="true"
+              />
+            </Button>
+          }
+        />
+        <DropdownMenuContent appearance="dashboard" align="end">
+          <DropdownMenuItem
+            onClick={() => setParams({ sort: ["updatedAt", "desc"] })}
+          >
+            Newest first
+            {sort?.field === "updatedAt" && sort.direction === "desc"
+              ? " ✓"
+              : ""}
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            onClick={() => setParams({ sort: ["updatedAt", "asc"] })}
+          >
+            Oldest first
+            {sort?.field === "updatedAt" && sort.direction === "asc"
+              ? " ✓"
+              : ""}
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </CatalogToolbarPortal>
   )
 }

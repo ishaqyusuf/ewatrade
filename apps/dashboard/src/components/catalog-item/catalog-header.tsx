@@ -1,11 +1,23 @@
 "use client"
 
 import { PageHeader, PageToolbar } from "@/components/page-header"
-import { AssistantProductEntry } from "@/components/product-assistant/assistant-home"
-import { ViewSwitcher, directoryViewOptions } from "@/components/view-switcher"
+import { CatalogToolbarSlot } from "@/components/tables/catalog/toolbar-slot"
+import { ViewDropdown, type ViewOption } from "@/components/view-switcher"
 import type { DirectoryView } from "@/utils/directory-view-settings"
+import {
+  GridViewIcon,
+  LayoutTable01Icon,
+  ListViewIcon,
+} from "@hugeicons/core-free-icons"
 import { CatalogSearchFilter } from "./catalog-search-filter"
 import { OpenCatalogItemSheet } from "./open-catalog-item-sheet"
+
+// The saved value stays "cards" so existing view cookies keep working.
+const catalogViewOptions = [
+  { value: "table", label: "Table", icon: LayoutTable01Icon },
+  { value: "list", label: "List", icon: ListViewIcon },
+  { value: "cards", label: "Grid", icon: GridViewIcon },
+] as const satisfies readonly ViewOption<DirectoryView>[]
 
 export function CatalogHeader({
   storeName,
@@ -25,14 +37,14 @@ export function CatalogHeader({
       <PageToolbar
         actions={
           <>
-            <ViewSwitcher
+            <CatalogToolbarSlot />
+            <ViewDropdown
               label="Catalog view"
               value={view}
-              options={directoryViewOptions}
+              options={catalogViewOptions}
               onValueChange={onViewChange}
             />
             <OpenCatalogItemSheet />
-            <AssistantProductEntry />
           </>
         }
       >
