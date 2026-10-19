@@ -119,7 +119,7 @@ const serverInput = {
 test("review discloses a staff-reported record, no send and customer tracking", async () => {
   calls.length = 0
   refusal = null
-  const result = await serviceMessageShare.review(context(), draft)
+  const result = await serviceMessageShare.review!(context(), draft)
   expect(calls).toEqual([["review", serverInput]])
   expect(result.target).toEqual({ id: "job-1", revision: "rev-1" })
   expect(result.lines).toEqual([
@@ -141,7 +141,7 @@ test("recipient, Store and tenant come from the server, never the draft", async 
     storeId: "store-b",
   } as unknown as Share
   await expect(
-    serviceMessageShare.review(context(), smuggled),
+    serviceMessageShare.review!(context(), smuggled),
   ).rejects.toThrow()
   expect(calls).toEqual([])
 })

@@ -11,7 +11,7 @@ afterAll(() => {
 import { simpleMoneyInAction } from "@ewatrade/assistant/general/contracts"
 import type { GeneralTransactionContext } from "./general-actions"
 import { simpleMoneyInRecord } from "./general-simple-money-in"
-function context(role = "OWNER") {
+function context(role = "OWNER", startsAt = new Date("2026-01-01")) {
   return {
     session: { user: { id: "user" }, session: { id: "session" } },
     requestHeaders: new Headers({ "x-assistant-client": "dashboard" }),
@@ -38,7 +38,7 @@ function context(role = "OWNER") {
         findUnique: async () => ({ id: "book", currencyCode: "NGN" }),
         findFirst: async () => ({
           id: "book",
-          startsAt: new Date("2026-01-01"),
+          startsAt,
           closedThrough: null,
         }),
       },
@@ -140,12 +140,7 @@ test("incomplete, foreign-account, future-date and non-finance actor guards rema
 })
 
 test("first bookkeeping day clamps an earlier time; pre-book dates still fail", async () => {
-  const ctx = context()
-  ctx.db.financeBook.findFirst = async () =>
-    ({
-      startsAt: new Date("2026-01-01T18:00:00.000Z"),
-      closedThrough: null,
-    }) as never
+  const ctx = context("OWNER", new Date("2026-01-01T18:00:00.000Z"))
   const input = simpleMoneyInAction.parse({
     action: "money_in_record",
     amountMinor: 100,

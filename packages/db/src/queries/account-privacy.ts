@@ -7,6 +7,7 @@ import {
   currentLegalPublicationDigest,
 } from "@ewatrade/utils/legal-approval"
 import type { PrismaClient } from "../../generated/prisma/client"
+import type { AccountPrivacyRequestStatus } from "../../generated/prisma/enums"
 import { getAccountPrivacyCommercialInventory } from "./account-privacy-commercial-inventory"
 import { getAccountPrivacyConversationInventory } from "./account-privacy-conversation-inventory"
 import { getAccountPrivacyPrescriptionInventory } from "./account-privacy-prescription-inventory"
@@ -20,6 +21,14 @@ import { getAccountPrivacyStaffInvitationInventory } from "./account-privacy-sta
 import { isLocalPhoneAuth } from "./phone-auth-profile"
 import type { DbClient } from "./types"
 
+export type DeletionRequestSummary = {
+  id: string
+  status: AccountPrivacyRequestStatus
+  requestedAt: Date
+  updatedAt: Date
+  completedAt: Date | null
+}
+
 const requestProjection = {
   id: true,
   status: true,
@@ -32,7 +41,7 @@ export async function requestAccountDeletion(
   db: Pick<PrismaClient, "accountPrivacyRequest">,
   userId: string,
   contactEmail?: string,
-) {
+): Promise<DeletionRequestSummary> {
   // One active account-wide command, stable across retried client requests.
   return db.accountPrivacyRequest.upsert({
     where: { requestKey: `account-deletion:${userId}` },
@@ -238,14 +247,14 @@ export async function submitExternalDeletionRequest(
   rawEmail: string,
   code: string,
   authenticatedPhoneSubjectId?: string,
-) {
+): Promise<DeletionRequestSummary | null> {
   const email = normalizePrivacyEmail(rawEmail)
   const emailDigest = deletionEmailDigest(email, authenticatedPhoneSubjectId)
   const candidate = privacyDigest(
     "account-deletion-code",
     `${emailDigest}:${code}`,
   )
-  return db.$transaction(
+  return db.$transaction<DeletionRequestSummary | null>(
     async (tx) => {
       const challenge = await tx.accountPrivacyChallenge.findUnique({
         where: { emailDigest },
