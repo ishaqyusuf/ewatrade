@@ -290,7 +290,7 @@ async function main() {
         schemaVersion: 1,
         observedAt: new Date().toISOString(),
         scope: hasSnapshots
-          ? "provided_hosted_environment_snapshots_and_source"
+          ? "provided_environment_snapshots_and_source"
           : "local_profile_and_proposed_surface_overrides_only",
         status: issues.length
           ? "not_ready"
