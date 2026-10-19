@@ -28,10 +28,11 @@ import { resolveCatalogUnitFactors } from "@/lib/catalog-selling-units"
 import { CatalogCategoryEditor } from "./catalog-category-editor"
 import {
   CatalogDetailEditor,
-  CatalogDetailRow,
-  CatalogEditorPanel,
   CatalogFooterLabel,
-  useCatalogEditorStack,
+  CatalogSection,
+  CatalogSectionNav,
+  CatalogSections,
+  useCatalogSections,
 } from "./catalog-detail-editor"
 import type {
   AdvancedOptionGroup,
@@ -145,6 +146,17 @@ function createClientOperationId() {
 
 const DEFAULT_UNIT_TRANSACTION_SCALE = 2
 
+type CatalogSectionId =
+  | "images"
+  | "category"
+  | "pricing"
+  | "options"
+  | "units"
+  | "stock"
+  | "work"
+  | "description"
+  | "codes"
+
 function newOptionGroup(): AdvancedOptionGroup {
   return { id: globalThis.crypto.randomUUID(), name: "", values: "" }
 }
@@ -181,7 +193,7 @@ export function CatalogItemForm({
     showDescription,
   } = useCatalogItemForm()
   const clientOperationId = useRef(createClientOperationId())
-  const editor = useCatalogEditorStack()
+  const sections = useCatalogSections()
   const [category, setCategory] = useState("")
   const themeClass = useCatalogThemeClass()
   const photo = useCatalogPhoto(storeId)
@@ -854,7 +866,6 @@ export function CatalogItemForm({
       createAdvancedMutation.isPending
     )
       return
-    if (editor.active !== "main") return
     if (catalogConversation) {
       try {
         productFormExpectedRevision(
@@ -1282,6 +1293,7 @@ export function CatalogItemForm({
   }
 
   if (!form.kind) return null
+  const itemKind = form.kind
   const suggestionsDisabled =
     restoringForm ||
     Boolean(catalogConversation && (!formVersion || !productData)) ||
@@ -1290,28 +1302,551 @@ export function CatalogItemForm({
     createAssistantForm.isPending ||
     createAdvancedMutation.isPending
 
-  const footerAction =
-    editor.active !== "main" ? (
-      <Button
-        type="button"
-        className="w-full"
-        appearance="form"
-        onClick={editor.back}
-      >
-        <CatalogFooterLabel>
-          {editor.parent === "units"
-            ? "Done · back to selling units"
-            : editor.parent === "options"
-              ? "Done · back to customer choices"
-              : "Done · back to setup"}
-        </CatalogFooterLabel>
-      </Button>
-    ) : (
+  const priceSummary = showAdvanced
+    ? `${combinations.length} customer choices`
+    : defaultQuoteRequired
+      ? "Quote each job"
+      : form.price.trim()
+        ? `${currencyCode} ${form.price}${form.kind === "product" ? ` / ${form.unitName || "main unit"}` : ""}`
+        : "Price not set"
+  const sectionMeta: Record<
+    CatalogSectionId,
+    { title: string; icon: typeof Image01Icon; summary: string; done: boolean }
+  > = {
+    images: {
+      title: "Images",
+      icon: Image01Icon,
+      summary: illustrationId
+        ? (findCatalogIllustration(illustrationId)?.label ??
+          "Illustration selected")
+        : photo.file
+          ? "Photo selected"
+          : "Photos or illustrations that describe this item.",
+      done: Boolean(illustrationId || photo.file),
+    },
+    category: {
+      title: "Category",
+      icon: Tag01Icon,
+      summary: category.trim() || "Uncategorized",
+      done: Boolean(category.trim()),
+    },
+    pricing: {
+      title: "How you charge",
+      icon: Money03Icon,
+      summary: defaultQuoteRequired ? "Quote each job" : "Fixed price",
+      done: true,
+    },
+    options: {
+      title:
+        form.kind === "service"
+          ? "Packages or customer choices"
+          : "Customer choices",
+      icon: Layers01Icon,
+      summary: showAdvanced
+        ? `${combinations.length} choices · prices set individually`
+        : formGuidance.options.helperText,
+      done: showAdvanced,
+    },
+    units: {
+      title: "Selling units",
+      icon: Package01Icon,
+      summary: additionalUnits.length
+        ? additionalUnits.map((unit) => unit.name || "Unnamed unit").join(" · ")
+        : "Sell trays or packs as well as single units.",
+      done: additionalUnits.length > 0,
+    },
+    stock: {
+      title: "Opening stock",
+      icon: WarehouseIcon,
+      summary: showAdvanced
+        ? "Set stock for each customer choice."
+        : form.openingStockQuantity.trim()
+          ? `${form.openingStockQuantity} ${form.unitName}`
+          : "Record what you have on hand. Optional.",
+      done: !showAdvanced && Boolean(form.openingStockQuantity.trim()),
+    },
+    work: {
+      title: "Work settings",
+      icon: Task01Icon,
+      summary: trackServiceWork
+        ? "Track work after order confirmation"
+        : "Charge only · no tracked job",
+      done: true,
+    },
+    description: {
+      title: "Description",
+      icon: TextAlignLeftIcon,
+      summary: form.description.trim()
+        ? "Description added"
+        : "Explain what customers should know.",
+      done: Boolean(form.description.trim()),
+    },
+    codes: {
+      title: "SKU and barcode",
+      icon: BarcodeScanIcon,
+      summary: showAdvanced
+        ? "Set inventory codes for each customer choice."
+        : sku || barcode
+          ? "Inventory codes added"
+          : "Optional codes for finding this product.",
+      done: !showAdvanced && Boolean(sku || barcode),
+    },
+  }
+  const sectionOrder: CatalogSectionId[] =
+    form.kind === "product"
+      ? [
+          "images",
+          "category",
+          "options",
+          "units",
+          "stock",
+          "description",
+          "codes",
+        ]
+      : ["images", "category", "pricing", "options", "work", "description"]
+
+  function sectionContent(id: CatalogSectionId) {
+    const stack = sections.section(id)
+    if (id === "images")
+      return (
+        <CatalogDetailEditor
+          active={stack.active}
+          editor="images"
+          title="Images"
+          description="A photo or illustration describes the Product or Service. Saving it does not publish a storefront or attach private job evidence."
+          onBack={stack.back}
+        >
+          <CatalogImageEditor
+            photo={photo}
+            illustrationId={illustrationId}
+            onIllustrationChange={setIllustrationId}
+            businessProfileKey={businessProfileKey}
+            category={category}
+            kind={itemKind}
+            disabled={
+              suggestionsDisabled || Boolean(createAdvancedMutation.variables)
+            }
+          />
+        </CatalogDetailEditor>
+      )
+    if (id === "category")
+      return (
+        <CatalogDetailEditor
+          active={stack.active}
+          editor="category"
+          title="Category"
+          description="Group this item for browsing. Leave it Uncategorized if no category fits."
+          onBack={stack.back}
+        >
+          <CatalogCategoryEditor
+            businessProfileKey={businessProfileKey}
+            kind={itemKind}
+            category={category}
+            enabled={sections.open.includes("category")}
+            storeId={storeId}
+            onChange={setCategory}
+          />
+        </CatalogDetailEditor>
+      )
+    if (id === "description")
+      return (
+        <CatalogDetailEditor
+          active={stack.active}
+          editor="description"
+          title="Description"
+          description="Explain the item in customer-friendly language. This does not publish the item."
+          onBack={stack.back}
+        >
+          <Field
+            htmlFor="catalog-item-description"
+            label="Description (optional)"
+          >
+            <Textarea
+              id="catalog-item-description"
+              maxLength={2000}
+              placeholder={formGuidance.description.placeholder}
+              value={form.description}
+              onChange={(event) =>
+                setForm((current) => ({
+                  ...current,
+                  description: event.target.value,
+                }))
+              }
+            />
+          </Field>
+        </CatalogDetailEditor>
+      )
+    if (id === "stock")
+      return showAdvanced ? (
+        <div className="flex flex-col items-start gap-3">
+          <p className="text-sm text-muted-foreground">
+            Each customer choice has its own opening stock.
+          </p>
+          <Button
+            appearance="form"
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => sections.reveal("options")}
+          >
+            Open customer choices
+          </Button>
+        </div>
+      ) : (
+        <CatalogDetailEditor
+          active={stack.active}
+          editor="stock"
+          title="Opening stock"
+          description="Enter stock you actually have, counted in the main unit. Blank means no opening stock is declared."
+          onBack={stack.back}
+        >
+          <Field htmlFor="catalog-stock-store" label="Store">
+            <StoreSelector
+              value={stores.find((store) => store.id === storeId) ?? null}
+              disabled={
+                suggestionsDisabled ||
+                Boolean(createAdvancedMutation.variables) ||
+                Boolean(createMutation.variables)
+              }
+              onChange={(store) => {
+                setStockStoreId(store.id)
+                setVariantDrafts((current) =>
+                  Object.fromEntries(
+                    Object.entries(current).map(([key, draft]) => [
+                      key,
+                      {
+                        ...draft,
+                        storeIds: Array.from(
+                          new Set([...draft.storeIds, store.id]),
+                        ),
+                      },
+                    ]),
+                  ),
+                )
+              }}
+            />
+          </Field>
+          <Field
+            htmlFor="catalog-opening-stock"
+            label={`Opening stock in ${form.unitName || "main units"} (optional)`}
+          >
+            <TextInput
+              id="catalog-opening-stock"
+              inputMode="decimal"
+              value={form.openingStockQuantity}
+              onChange={(event) => {
+                setShowOpeningStock(true)
+                setForm((current) => ({
+                  ...current,
+                  openingStockQuantity: event.target.value,
+                }))
+              }}
+            />
+          </Field>
+        </CatalogDetailEditor>
+      )
+    if (id === "codes")
+      return (
+        <CatalogDetailEditor
+          active={stack.active}
+          editor="codes"
+          title="SKU and barcode"
+          description="Codes identify the main selling unit of this Product or each enabled customer choice."
+          onBack={stack.back}
+        >
+          {showAdvanced &&
+          !combinations.some(
+            (combination) => variantDraft(combination.key).enabled,
+          ) ? (
+            <p className="text-sm text-muted-foreground">
+              Add or enable a choice in Customer choices to enter its codes.
+            </p>
+          ) : null}
+          {showAdvanced ? (
+            combinations
+              .filter((combination) => variantDraft(combination.key).enabled)
+              .map((combination) => {
+                const draft = variantDraft(combination.key)
+                return (
+                  <FieldSet
+                    key={
+                      choiceIdentities.get(combination.key) ?? combination.key
+                    }
+                  >
+                    <FieldLegend>{combination.name}</FieldLegend>
+                    <FieldGroup>
+                      <Field
+                        htmlFor={`catalog-sku-${combination.key}`}
+                        label="SKU (optional)"
+                      >
+                        <TextInput
+                          id={`catalog-sku-${combination.key}`}
+                          maxLength={120}
+                          value={draft.sku}
+                          onChange={(event) =>
+                            updateVariantDraft(combination.key, {
+                              sku: event.target.value,
+                            })
+                          }
+                        />
+                      </Field>
+                      <Field
+                        htmlFor={`catalog-barcode-${combination.key}`}
+                        label="Barcode (optional)"
+                      >
+                        <TextInput
+                          id={`catalog-barcode-${combination.key}`}
+                          maxLength={120}
+                          value={draft.barcode}
+                          onChange={(event) =>
+                            updateVariantDraft(combination.key, {
+                              barcode: event.target.value,
+                            })
+                          }
+                        />
+                      </Field>
+                    </FieldGroup>
+                  </FieldSet>
+                )
+              })
+          ) : (
+            <>
+              <Field htmlFor="catalog-item-sku" label="SKU (optional)">
+                <TextInput
+                  id="catalog-item-sku"
+                  maxLength={120}
+                  value={sku}
+                  onChange={(event) => setSku(event.target.value)}
+                />
+              </Field>
+              <Field htmlFor="catalog-item-barcode" label="Barcode (optional)">
+                <TextInput
+                  id="catalog-item-barcode"
+                  maxLength={120}
+                  value={barcode}
+                  onChange={(event) => setBarcode(event.target.value)}
+                />
+              </Field>
+            </>
+          )}
+        </CatalogDetailEditor>
+      )
+    if (id === "pricing")
+      return (
+        <CatalogDetailEditor
+          active={stack.active}
+          editor="pricing"
+          title="How you charge"
+          description="Choose a known amount before ordering, or confirm a quote after the request. Each customer choice can use its own policy."
+          onBack={stack.back}
+        >
+          <ToggleGroup
+            value={[defaultQuoteRequired ? "quote" : "fixed"]}
+            onValueChange={(values) => {
+              if (values.length) setDefaultQuoteRequired(values[0] === "quote")
+            }}
+            variant="outline"
+            aria-label="Service pricing"
+          >
+            <ToggleGroupItem value="fixed">Fixed price</ToggleGroupItem>
+            <ToggleGroupItem value="quote">Quote each job</ToggleGroupItem>
+          </ToggleGroup>
+          {defaultQuoteRequired ? (
+            <p className="text-sm text-muted-foreground">
+              A starting price cannot be saved yet. Your fixed-price draft is
+              kept when you switch back.
+            </p>
+          ) : (
+            <Field htmlFor="catalog-service-fixed-price" label="Fixed price">
+              <CurrencyInput
+                id="catalog-service-fixed-price"
+                currencyCode={currencyCode}
+                value={form.price}
+                onValueChange={(price) =>
+                  setForm((current) => ({ ...current, price }))
+                }
+              />
+            </Field>
+          )}
+        </CatalogDetailEditor>
+      )
+    if (id === "work")
+      return (
+        <CatalogDetailEditor
+          active={stack.active}
+          editor="work"
+          title="Work settings"
+          description="Charge only records the Service on an Order without a tracked job. Track work creates work after a confirmed Order; a quote request alone creates none."
+          onBack={stack.back}
+        >
+          <ToggleGroup
+            value={[trackServiceWork ? "tracked" : "charge_only"]}
+            onValueChange={(values) => {
+              if (values.length) setTrackServiceWork(values[0] === "tracked")
+            }}
+            variant="outline"
+            aria-label="Service work policy"
+          >
+            <ToggleGroupItem value="charge_only">Charge only</ToggleGroupItem>
+            <ToggleGroupItem value="tracked">Track work</ToggleGroupItem>
+          </ToggleGroup>
+          {itemKind === "service" && trackServiceWork ? (
+            <section className="grid gap-4 border border-border bg-muted/20 p-4">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <h3 className="font-medium">Tracked work</h3>
+                  <p className="text-xs text-muted-foreground">
+                    Orders for this offering create work lines in the Service
+                    queue.
+                  </p>
+                </div>
+                <Button
+                  appearance="form"
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => setTrackServiceWork(false)}
+                >
+                  Remove
+                </Button>
+              </div>
+              <Field
+                htmlFor="service-work-authorization"
+                label="Work can start"
+              >
+                <SelectControl
+                  popupClassName={themeClass}
+                  id="service-work-authorization"
+                  value={serviceAuthorization}
+                  onValueChange={(value) =>
+                    setServiceAuthorization(
+                      value as typeof serviceAuthorization,
+                    )
+                  }
+                  options={[
+                    {
+                      value: "on_order_confirmation",
+                      label: <>When order is confirmed</>,
+                    },
+                    {
+                      value: "after_required_payment",
+                      label: <>After required payment</>,
+                    },
+                    {
+                      value: "manual_release",
+                      label: <>After manager release</>,
+                    },
+                  ]}
+                />
+                <p className="text-xs text-muted-foreground">
+                  {serviceAuthorization === "manual_release"
+                    ? "A manager authorizes work separately. Release does not mark the Order paid."
+                    : serviceAuthorization === "after_required_payment"
+                      ? "Hold work until the Order’s required payment is received."
+                      : "Work may start when the Order is confirmed; payment is not required before starting."}
+                </p>
+              </Field>
+              <Field
+                htmlFor="service-guidance"
+                label="Customer guidance (optional)"
+              >
+                <TextInput
+                  id="service-guidance"
+                  placeholder="What the customer should know"
+                  value={serviceGuidance}
+                  onChange={(event) => setServiceGuidance(event.target.value)}
+                />
+              </Field>
+            </section>
+          ) : null}
+        </CatalogDetailEditor>
+      )
+    if (id === "options")
+      return (
+        <>
+          {itemKind === "product" && stack.active === "options" ? (
+            <div className="grid gap-2">
+              <p className="text-sm font-medium">Stock store</p>
+              <StoreSelector
+                label="Stock store"
+                value={stores.find((store) => store.id === storeId) ?? null}
+                disabled={
+                  suggestionsDisabled ||
+                  Boolean(createAdvancedMutation.variables)
+                }
+                onChange={(store) => {
+                  setStockStoreId(store.id)
+                  setVariantDrafts((current) =>
+                    Object.fromEntries(
+                      Object.entries(current).map(([key, draft]) => [
+                        key,
+                        {
+                          ...draft,
+                          storeIds: Array.from(
+                            new Set([...draft.storeIds, store.id]),
+                          ),
+                        },
+                      ]),
+                    ),
+                  )
+                }}
+              />
+              <p className="text-xs text-muted-foreground">
+                Opening quantities below belong to this store. Add stock at
+                other stores from Inventory after saving.
+              </p>
+            </div>
+          ) : null}
+          <CatalogOptionsEditor
+            active={stack.active}
+            additionalUnits={additionalUnits}
+            combinations={combinations}
+            currencyCode={currencyCode}
+            form={{ kind: itemKind, unitName: form.unitName }}
+            formGuidance={formGuidance}
+            hasOpeningStock={Boolean(form.openingStockQuantity.trim())}
+            onBack={stack.back}
+            onConfirmOptions={() => setDraftConfirmation({ kind: "options" })}
+            onEnable={enableOptions}
+            onOpen={stack.open}
+            onRemove={() => setDraftConfirmation({ kind: "remove-options" })}
+            optionGroups={optionGroups}
+            optionIssue={optionIssue}
+            setOptionGroups={setOptionGroups}
+            showAdvanced={showAdvanced}
+            stores={stores}
+            suggestionsDisabled={suggestionsDisabled}
+            updateVariantDraft={updateVariantDraft}
+            variantDraft={variantDraft}
+          />
+        </>
+      )
+    return itemKind === "product" ? (
+      <CatalogSellingUnitsEditor
+        active={stack.active}
+        canonicalName={form.unitName}
+        currencyCode={currencyCode}
+        onBack={stack.back}
+        onChange={(units) => {
+          setAdditionalUnits(units)
+          setShowUnits(units.length > 0)
+        }}
+        onError={setError}
+        onOpen={stack.open}
+        units={additionalUnits}
+      />
+    ) : null
+  }
+
+  const footerAction = (
+    <div className="flex w-full items-center gap-3">
+      <p className="min-w-0 flex-1 truncate text-sm text-muted-foreground">
+        {form.kind === "product" ? "Product" : "Service"} draft · {priceSummary}
+      </p>
       <SubmitButton
         isSubmitting={suggestionsDisabled}
         type="submit"
         form="catalog-item-create-form"
-        className="w-full"
         disabled={suggestionsDisabled}
       >
         <CatalogFooterLabel>
@@ -1324,7 +1859,8 @@ export function CatalogItemForm({
                 : "Add service"}
         </CatalogFooterLabel>
       </SubmitButton>
-    )
+    </div>
+  )
 
   return (
     <>
@@ -1542,758 +2078,196 @@ export function CatalogItemForm({
             }
           }}
         />
-        <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_220px]">
-          <div ref={editor.containerRef} className="min-w-0">
+        <div
+          ref={sections.containerRef}
+          className="grid items-start gap-6 lg:grid-cols-[180px_minmax(0,1fr)]"
+        >
+          <CatalogSectionNav
+            essentialsSummary={priceSummary}
+            sections={sectionOrder.map((id) => ({ id, ...sectionMeta[id] }))}
+            onSelect={(id) =>
+              id === "essentials"
+                ? document
+                    .getElementById("catalog-item-name")
+                    ?.scrollIntoView({ block: "center", behavior: "smooth" })
+                : sections.reveal(id)
+            }
+          />
+          <div className="min-w-0">
             <fieldset
               disabled={Boolean(
                 suggestionsDisabled ||
                   createMutation.variables ||
                   createAdvancedMutation.variables,
               )}
-              className="min-w-0"
+              className="flex min-w-0 flex-col gap-6"
             >
-              <CatalogEditorPanel
-                active={editor.active === "main"}
-                editor="main"
-              >
-                <FieldGroup className="gap-4">
-                  <QaDashboardQuickFill
-                    canUndo={canUndoQuickFill}
-                    formId="dashboard.catalog.item"
-                    isDirty={Boolean(
-                      form.name || form.price || form.description,
-                    )}
-                    onFill={(context, sequence) => {
-                      quickFillSnapshot.current = form
-                      const fixture = createCatalogFixture(context, sequence)
+              <FieldGroup className="gap-4">
+                <QaDashboardQuickFill
+                  canUndo={canUndoQuickFill}
+                  formId="dashboard.catalog.item"
+                  isDirty={Boolean(form.name || form.price || form.description)}
+                  onFill={(context, sequence) => {
+                    quickFillSnapshot.current = form
+                    const fixture = createCatalogFixture(context, sequence)
+                    setForm((current) => ({
+                      ...current,
+                      description: fixture.description,
+                      kind: current.kind ?? "product",
+                      name: fixture.name,
+                      openingStockQuantity:
+                        current.kind === "service" ? "" : "12",
+                      price: fixture.price,
+                      unitName: current.kind === "service" ? "" : fixture.unit,
+                    }))
+                    setShowDescription(true)
+                    if (form.kind !== "service") setShowOpeningStock(true)
+                    setCanUndoQuickFill(true)
+                  }}
+                  onUndo={() => {
+                    if (!quickFillSnapshot.current) return
+                    setForm(quickFillSnapshot.current)
+                    quickFillSnapshot.current = null
+                    setCanUndoQuickFill(false)
+                  }}
+                />
+                <Button
+                  appearance="form"
+                  type="button"
+                  className="w-full justify-center"
+                  onClick={() => setHelperPickerOpen(true)}
+                  variant="outline"
+                >
+                  {selectedHelper
+                    ? `Quick setup: ${selectedHelper.title}`
+                    : "Choose a quick setup"}
+                </Button>
+
+                <Field
+                  htmlFor="catalog-item-name"
+                  label={
+                    form.kind === "product" ? "Product name" : "Service name"
+                  }
+                >
+                  <TextInput
+                    maxLength={160}
+                    id="catalog-item-name"
+                    autoFocus
+                    autoComplete="off"
+                    placeholder={formGuidance.name.placeholder}
+                    value={form.name}
+                    onChange={(event) =>
                       setForm((current) => ({
                         ...current,
-                        description: fixture.description,
-                        kind: current.kind ?? "product",
-                        name: fixture.name,
-                        openingStockQuantity:
-                          current.kind === "service" ? "" : "12",
-                        price: fixture.price,
-                        unitName:
-                          current.kind === "service" ? "" : fixture.unit,
+                        name: event.target.value,
                       }))
-                      setShowDescription(true)
-                      if (form.kind !== "service") setShowOpeningStock(true)
-                      setCanUndoQuickFill(true)
-                    }}
-                    onUndo={() => {
-                      if (!quickFillSnapshot.current) return
-                      setForm(quickFillSnapshot.current)
-                      quickFillSnapshot.current = null
-                      setCanUndoQuickFill(false)
-                    }}
+                    }
+                    required
                   />
-                  <Button
-                    appearance="form"
-                    type="button"
-                    className="w-full justify-center"
-                    onClick={() => setHelperPickerOpen(true)}
-                    variant="outline"
-                  >
-                    {selectedHelper
-                      ? `Quick setup: ${selectedHelper.title}`
-                      : "Choose a quick setup"}
-                  </Button>
+                </Field>
 
+                {form.kind === "product" ? (
+                  <ProductUsageField
+                    value={form.usage}
+                    onChange={(usage) =>
+                      setForm((current) => ({ ...current, usage }))
+                    }
+                  />
+                ) : null}
+                <div
+                  hidden={
+                    showAdvanced ||
+                    (form.kind === "service" && defaultQuoteRequired)
+                  }
+                >
                   <Field
-                    htmlFor="catalog-item-name"
+                    htmlFor="catalog-item-price"
                     label={
-                      form.kind === "product" ? "Product name" : "Service name"
+                      form.kind === "service"
+                        ? "Fixed price"
+                        : `Selling price per ${form.unitName.trim() || "main unit"} (optional)`
                     }
                   >
+                    <CurrencyInput
+                      id="catalog-item-price"
+                      currencyCode={currencyCode}
+                      value={form.price}
+                      onValueChange={(value) =>
+                        setForm((current) => ({ ...current, price: value }))
+                      }
+                      required={
+                        form.kind === "service" &&
+                        !defaultQuoteRequired &&
+                        !showAdvanced
+                      }
+                    />
+                  </Field>
+                </div>
+                {showAdvanced ? (
+                  <p className="text-sm text-muted-foreground">
+                    Set each choice’s price in{" "}
+                    {form.kind === "service"
+                      ? "Packages or customer choices"
+                      : "Customer choices"}
+                    .
+                  </p>
+                ) : null}
+                {form.kind === "service" && defaultQuoteRequired ? (
+                  <Alert appearance="dashboard">
+                    <AlertTitle>Quote each job</AlertTitle>
+                    <AlertDescription>
+                      Confirm the amount after the request. A quote alone does
+                      not start tracked work.
+                    </AlertDescription>
+                  </Alert>
+                ) : null}
+
+                {form.kind === "product" ? (
+                  <Field htmlFor="catalog-item-unit" label="Main unit">
                     <TextInput
-                      maxLength={160}
-                      id="catalog-item-name"
-                      autoFocus
+                      id="catalog-item-unit"
                       autoComplete="off"
-                      placeholder={formGuidance.name.placeholder}
-                      value={form.name}
+                      placeholder={formGuidance.stockUnit?.placeholder}
+                      value={form.unitName}
                       onChange={(event) =>
                         setForm((current) => ({
                           ...current,
-                          name: event.target.value,
+                          unitName: event.target.value,
                         }))
                       }
                       required
                     />
+                    <p className="text-xs text-muted-foreground">
+                      {formGuidance.stockUnit?.helperText}
+                    </p>
+                    <CatalogGuidanceSuggestions
+                      label="Stock unit suggestions"
+                      values={formGuidance.stockUnit?.suggestions ?? []}
+                      disabled={suggestionsDisabled}
+                      onSelect={(unitName) =>
+                        setForm((current) => ({ ...current, unitName }))
+                      }
+                    />
                   </Field>
-
-                  {form.kind === "product" ? (
-                    <ProductUsageField
-                      value={form.usage}
-                      onChange={(usage) =>
-                        setForm((current) => ({ ...current, usage }))
-                      }
-                    />
-                  ) : null}
-                  <div
-                    hidden={
-                      showAdvanced ||
-                      (form.kind === "service" && defaultQuoteRequired)
-                    }
-                  >
-                    <Field
-                      htmlFor="catalog-item-price"
-                      label={
-                        form.kind === "service"
-                          ? "Fixed price"
-                          : `Selling price per ${form.unitName.trim() || "main unit"} (optional)`
-                      }
-                    >
-                      <CurrencyInput
-                        id="catalog-item-price"
-                        currencyCode={currencyCode}
-                        value={form.price}
-                        onValueChange={(value) =>
-                          setForm((current) => ({ ...current, price: value }))
-                        }
-                        required={
-                          form.kind === "service" &&
-                          !defaultQuoteRequired &&
-                          !showAdvanced
-                        }
-                      />
-                    </Field>
-                  </div>
-                  {showAdvanced ? (
-                    <p className="text-sm text-muted-foreground">
-                      Set each choice’s price in{" "}
-                      {form.kind === "service"
-                        ? "Packages or customer choices"
-                        : "Customer choices"}
-                      .
-                    </p>
-                  ) : null}
-                  {form.kind === "service" && defaultQuoteRequired ? (
-                    <Alert appearance="dashboard">
-                      <AlertTitle>Quote each job</AlertTitle>
-                      <AlertDescription>
-                        Confirm the amount after the request. A quote alone does
-                        not start tracked work.
-                      </AlertDescription>
-                    </Alert>
-                  ) : null}
-
-                  {form.kind === "product" ? (
-                    <Field htmlFor="catalog-item-unit" label="Main unit">
-                      <TextInput
-                        id="catalog-item-unit"
-                        autoComplete="off"
-                        placeholder={formGuidance.stockUnit?.placeholder}
-                        value={form.unitName}
-                        onChange={(event) =>
-                          setForm((current) => ({
-                            ...current,
-                            unitName: event.target.value,
-                          }))
-                        }
-                        required
-                      />
-                      <p className="text-xs text-muted-foreground">
-                        {formGuidance.stockUnit?.helperText}
-                      </p>
-                      <CatalogGuidanceSuggestions
-                        label="Stock unit suggestions"
-                        values={formGuidance.stockUnit?.suggestions ?? []}
-                        disabled={suggestionsDisabled}
-                        onSelect={(unitName) =>
-                          setForm((current) => ({ ...current, unitName }))
-                        }
-                      />
-                    </Field>
-                  ) : null}
-
-                  <Separator />
-                  <FieldSet className="gap-1 pt-3">
-                    <FieldLegend className="flex items-baseline gap-2">
-                      <span className="text-lg font-semibold">
-                        More details
-                      </span>
-                      <span className="text-sm font-normal text-muted-foreground">
-                        Optional
-                      </span>
-                    </FieldLegend>
-                    <CatalogDetailRow
-                      icon={Image01Icon}
-                      title="Images"
-                      summary={
-                        illustrationId
-                          ? (findCatalogIllustration(illustrationId)?.label ??
-                            "Illustration selected")
-                          : photo.file
-                            ? "Photo selected"
-                            : "Photos or illustrations that describe this item."
-                      }
-                      onClick={() => editor.open("images")}
-                    />
-                    <CatalogDetailRow
-                      icon={Tag01Icon}
-                      title="Category"
-                      summary={category.trim() || "Uncategorized"}
-                      onClick={() => editor.open("category")}
-                    />
-                    {form.kind === "service" ? (
-                      <CatalogDetailRow
-                        icon={Money03Icon}
-                        title="How you charge"
-                        summary={
-                          defaultQuoteRequired
-                            ? "Quote each job"
-                            : "Fixed price"
-                        }
-                        onClick={() => editor.open("pricing")}
-                      />
-                    ) : null}
-                    <CatalogDetailRow
-                      icon={Layers01Icon}
-                      title={
-                        form.kind === "service"
-                          ? "Packages or customer choices"
-                          : "Customer choices"
-                      }
-                      summary={
-                        showAdvanced
-                          ? `${combinations.length} choices · prices set individually`
-                          : formGuidance.options.helperText
-                      }
-                      onClick={() => editor.open("options")}
-                    />
-                    {form.kind === "product" ? (
-                      <>
-                        <CatalogDetailRow
-                          icon={Package01Icon}
-                          title="Selling units"
-                          summary={
-                            additionalUnits.length
-                              ? additionalUnits
-                                  .map((unit) => unit.name || "Unnamed unit")
-                                  .join(" · ")
-                              : "Sell trays or packs as well as single units."
-                          }
-                          onClick={() => editor.open("units")}
-                        />
-                        <CatalogDetailRow
-                          icon={WarehouseIcon}
-                          title="Opening stock"
-                          summary={
-                            showAdvanced
-                              ? "Set stock for each customer choice."
-                              : form.openingStockQuantity.trim()
-                                ? `${form.openingStockQuantity} ${form.unitName}`
-                                : "Record what you have on hand. Optional."
-                          }
-                          onClick={() =>
-                            editor.open(showAdvanced ? "options" : "stock")
-                          }
-                        />
-                      </>
-                    ) : (
-                      <CatalogDetailRow
-                        icon={Task01Icon}
-                        title="Work settings"
-                        summary={
-                          trackServiceWork
-                            ? "Track work after order confirmation"
-                            : "Charge only · no tracked job"
-                        }
-                        onClick={() => editor.open("work")}
-                      />
-                    )}
-                    <CatalogDetailRow
-                      icon={TextAlignLeftIcon}
-                      title="Description"
-                      summary={
-                        form.description.trim()
-                          ? "Description added"
-                          : "Explain what customers should know."
-                      }
-                      onClick={() => editor.open("description")}
-                    />
-                    {form.kind === "product" ? (
-                      <CatalogDetailRow
-                        icon={BarcodeScanIcon}
-                        title="SKU and barcode"
-                        summary={
-                          showAdvanced
-                            ? "Set inventory codes for each customer choice."
-                            : sku || barcode
-                              ? "Inventory codes added"
-                              : "Optional codes for finding this product."
-                        }
-                        onClick={() => editor.open("codes")}
-                      />
-                    ) : null}
-                  </FieldSet>
-                </FieldGroup>
-              </CatalogEditorPanel>
-              <CatalogDetailEditor
-                active={editor.active}
-                editor="images"
-                title="Images"
-                description="A photo or illustration describes the Product or Service. Saving it does not publish a storefront or attach private job evidence."
-                onBack={editor.back}
-              >
-                <CatalogImageEditor
-                  photo={photo}
-                  illustrationId={illustrationId}
-                  onIllustrationChange={setIllustrationId}
-                  businessProfileKey={businessProfileKey}
-                  category={category}
-                  kind={form.kind}
-                  disabled={
-                    suggestionsDisabled ||
-                    Boolean(createAdvancedMutation.variables)
-                  }
-                />
-              </CatalogDetailEditor>
-              <CatalogDetailEditor
-                active={editor.active}
-                editor="category"
-                title="Category"
-                description="Group this item for browsing. Leave it Uncategorized if no category fits."
-                onBack={editor.back}
-              >
-                <CatalogCategoryEditor
-                  businessProfileKey={businessProfileKey}
-                  kind={form.kind}
-                  category={category}
-                  enabled={editor.active === "category"}
-                  storeId={storeId}
-                  onChange={setCategory}
-                />
-              </CatalogDetailEditor>
-              <CatalogDetailEditor
-                active={editor.active}
-                editor="description"
-                title="Description"
-                description="Explain the item in customer-friendly language. This does not publish the item."
-                onBack={editor.back}
-              >
-                <Field
-                  htmlFor="catalog-item-description"
-                  label="Description (optional)"
-                >
-                  <Textarea
-                    id="catalog-item-description"
-                    maxLength={2000}
-                    placeholder={formGuidance.description.placeholder}
-                    value={form.description}
-                    onChange={(event) =>
-                      setForm((current) => ({
-                        ...current,
-                        description: event.target.value,
-                      }))
-                    }
-                  />
-                </Field>
-              </CatalogDetailEditor>
-              {form.kind === "product" ? (
-                <>
-                  <CatalogDetailEditor
-                    active={editor.active}
-                    editor="stock"
-                    title="Opening stock"
-                    description="Enter stock you actually have, counted in the main unit. Blank means no opening stock is declared."
-                    onBack={editor.back}
-                  >
-                    <Field htmlFor="catalog-stock-store" label="Store">
-                      <StoreSelector
-                        value={
-                          stores.find((store) => store.id === storeId) ?? null
-                        }
-                        disabled={
-                          suggestionsDisabled ||
-                          Boolean(createAdvancedMutation.variables) ||
-                          Boolean(createMutation.variables)
-                        }
-                        onChange={(store) => {
-                          setStockStoreId(store.id)
-                          setVariantDrafts((current) =>
-                            Object.fromEntries(
-                              Object.entries(current).map(([key, draft]) => [
-                                key,
-                                {
-                                  ...draft,
-                                  storeIds: Array.from(
-                                    new Set([...draft.storeIds, store.id]),
-                                  ),
-                                },
-                              ]),
-                            ),
-                          )
-                        }}
-                      />
-                    </Field>
-                    <Field
-                      htmlFor="catalog-opening-stock"
-                      label={`Opening stock in ${form.unitName || "main units"} (optional)`}
-                    >
-                      <TextInput
-                        id="catalog-opening-stock"
-                        inputMode="decimal"
-                        value={form.openingStockQuantity}
-                        onChange={(event) => {
-                          setShowOpeningStock(true)
-                          setForm((current) => ({
-                            ...current,
-                            openingStockQuantity: event.target.value,
-                          }))
-                        }}
-                      />
-                    </Field>
-                  </CatalogDetailEditor>
-                  <CatalogDetailEditor
-                    active={editor.active}
-                    editor="codes"
-                    title="SKU and barcode"
-                    description="Codes identify the main selling unit of this Product or each enabled customer choice."
-                    onBack={editor.back}
-                  >
-                    {showAdvanced &&
-                    !combinations.some(
-                      (combination) => variantDraft(combination.key).enabled,
-                    ) ? (
-                      <p className="text-sm text-muted-foreground">
-                        Add or enable a choice in Customer choices to enter its
-                        codes.
-                      </p>
-                    ) : null}
-                    {showAdvanced ? (
-                      combinations
-                        .filter(
-                          (combination) =>
-                            variantDraft(combination.key).enabled,
-                        )
-                        .map((combination) => {
-                          const draft = variantDraft(combination.key)
-                          return (
-                            <FieldSet
-                              key={
-                                choiceIdentities.get(combination.key) ??
-                                combination.key
-                              }
-                            >
-                              <FieldLegend>{combination.name}</FieldLegend>
-                              <FieldGroup>
-                                <Field
-                                  htmlFor={`catalog-sku-${combination.key}`}
-                                  label="SKU (optional)"
-                                >
-                                  <TextInput
-                                    id={`catalog-sku-${combination.key}`}
-                                    maxLength={120}
-                                    value={draft.sku}
-                                    onChange={(event) =>
-                                      updateVariantDraft(combination.key, {
-                                        sku: event.target.value,
-                                      })
-                                    }
-                                  />
-                                </Field>
-                                <Field
-                                  htmlFor={`catalog-barcode-${combination.key}`}
-                                  label="Barcode (optional)"
-                                >
-                                  <TextInput
-                                    id={`catalog-barcode-${combination.key}`}
-                                    maxLength={120}
-                                    value={draft.barcode}
-                                    onChange={(event) =>
-                                      updateVariantDraft(combination.key, {
-                                        barcode: event.target.value,
-                                      })
-                                    }
-                                  />
-                                </Field>
-                              </FieldGroup>
-                            </FieldSet>
-                          )
-                        })
-                    ) : (
-                      <>
-                        <Field
-                          htmlFor="catalog-item-sku"
-                          label="SKU (optional)"
-                        >
-                          <TextInput
-                            id="catalog-item-sku"
-                            maxLength={120}
-                            value={sku}
-                            onChange={(event) => setSku(event.target.value)}
-                          />
-                        </Field>
-                        <Field
-                          htmlFor="catalog-item-barcode"
-                          label="Barcode (optional)"
-                        >
-                          <TextInput
-                            id="catalog-item-barcode"
-                            maxLength={120}
-                            value={barcode}
-                            onChange={(event) => setBarcode(event.target.value)}
-                          />
-                        </Field>
-                      </>
-                    )}
-                  </CatalogDetailEditor>
-                </>
-              ) : (
-                <CatalogDetailEditor
-                  active={editor.active}
-                  editor="pricing"
-                  title="How you charge"
-                  description="Choose a known amount before ordering, or confirm a quote after the request. Each customer choice can use its own policy."
-                  onBack={editor.back}
-                >
-                  <ToggleGroup
-                    value={[defaultQuoteRequired ? "quote" : "fixed"]}
-                    onValueChange={(values) => {
-                      if (values.length)
-                        setDefaultQuoteRequired(values[0] === "quote")
-                    }}
-                    variant="outline"
-                    aria-label="Service pricing"
-                  >
-                    <ToggleGroupItem value="fixed">Fixed price</ToggleGroupItem>
-                    <ToggleGroupItem value="quote">
-                      Quote each job
-                    </ToggleGroupItem>
-                  </ToggleGroup>
-                  {defaultQuoteRequired ? (
-                    <p className="text-sm text-muted-foreground">
-                      A starting price cannot be saved yet. Your fixed-price
-                      draft is kept when you switch back.
-                    </p>
-                  ) : (
-                    <Field
-                      htmlFor="catalog-service-fixed-price"
-                      label="Fixed price"
-                    >
-                      <CurrencyInput
-                        id="catalog-service-fixed-price"
-                        currencyCode={currencyCode}
-                        value={form.price}
-                        onValueChange={(price) =>
-                          setForm((current) => ({ ...current, price }))
-                        }
-                      />
-                    </Field>
-                  )}
-                </CatalogDetailEditor>
-              )}
-              <CatalogDetailEditor
-                active={editor.active}
-                editor="work"
-                title="Work settings"
-                description="Charge only records the Service on an Order without a tracked job. Track work creates work after a confirmed Order; a quote request alone creates none."
-                onBack={editor.back}
-              >
-                <ToggleGroup
-                  value={[trackServiceWork ? "tracked" : "charge_only"]}
-                  onValueChange={(values) => {
-                    if (values.length)
-                      setTrackServiceWork(values[0] === "tracked")
-                  }}
-                  variant="outline"
-                  aria-label="Service work policy"
-                >
-                  <ToggleGroupItem value="charge_only">
-                    Charge only
-                  </ToggleGroupItem>
-                  <ToggleGroupItem value="tracked">Track work</ToggleGroupItem>
-                </ToggleGroup>
-                {form.kind === "service" && trackServiceWork ? (
-                  <section className="grid gap-4 border border-border bg-muted/20 p-4">
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <h3 className="font-medium">Tracked work</h3>
-                        <p className="text-xs text-muted-foreground">
-                          Orders for this offering create work lines in the
-                          Service queue.
-                        </p>
-                      </div>
-                      <Button
-                        appearance="form"
-                        type="button"
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => setTrackServiceWork(false)}
-                      >
-                        Remove
-                      </Button>
-                    </div>
-                    <Field
-                      htmlFor="service-work-authorization"
-                      label="Work can start"
-                    >
-                      <SelectControl
-                        popupClassName={themeClass}
-                        id="service-work-authorization"
-                        value={serviceAuthorization}
-                        onValueChange={(value) =>
-                          setServiceAuthorization(
-                            value as typeof serviceAuthorization,
-                          )
-                        }
-                        options={[
-                          {
-                            value: "on_order_confirmation",
-                            label: <>When order is confirmed</>,
-                          },
-                          {
-                            value: "after_required_payment",
-                            label: <>After required payment</>,
-                          },
-                          {
-                            value: "manual_release",
-                            label: <>After manager release</>,
-                          },
-                        ]}
-                      />
-                      <p className="text-xs text-muted-foreground">
-                        {serviceAuthorization === "manual_release"
-                          ? "A manager authorizes work separately. Release does not mark the Order paid."
-                          : serviceAuthorization === "after_required_payment"
-                            ? "Hold work until the Order’s required payment is received."
-                            : "Work may start when the Order is confirmed; payment is not required before starting."}
-                      </p>
-                    </Field>
-                    <Field
-                      htmlFor="service-guidance"
-                      label="Customer guidance (optional)"
-                    >
-                      <TextInput
-                        id="service-guidance"
-                        placeholder="What the customer should know"
-                        value={serviceGuidance}
-                        onChange={(event) =>
-                          setServiceGuidance(event.target.value)
-                        }
-                      />
-                    </Field>
-                  </section>
                 ) : null}
-              </CatalogDetailEditor>
-              {form.kind === "product" && editor.active === "options" ? (
-                <div className="grid gap-2">
-                  <p className="text-sm font-medium">Stock store</p>
-                  <StoreSelector
-                    label="Stock store"
-                    value={stores.find((store) => store.id === storeId) ?? null}
-                    disabled={
-                      suggestionsDisabled ||
-                      Boolean(createAdvancedMutation.variables)
-                    }
-                    onChange={(store) => {
-                      setStockStoreId(store.id)
-                      setVariantDrafts((current) =>
-                        Object.fromEntries(
-                          Object.entries(current).map(([key, draft]) => [
-                            key,
-                            {
-                              ...draft,
-                              storeIds: Array.from(
-                                new Set([...draft.storeIds, store.id]),
-                              ),
-                            },
-                          ]),
-                        ),
-                      )
-                    }}
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    Opening quantities below belong to this store. Add stock at
-                    other stores from Inventory after saving.
-                  </p>
-                </div>
-              ) : null}
-              <CatalogOptionsEditor
-                active={editor.active}
-                additionalUnits={additionalUnits}
-                combinations={combinations}
-                currencyCode={currencyCode}
-                form={{ kind: form.kind, unitName: form.unitName }}
-                formGuidance={formGuidance}
-                hasOpeningStock={Boolean(form.openingStockQuantity.trim())}
-                onBack={editor.back}
-                onConfirmOptions={() =>
-                  setDraftConfirmation({ kind: "options" })
-                }
-                onEnable={enableOptions}
-                onOpen={editor.open}
-                onRemove={() =>
-                  setDraftConfirmation({ kind: "remove-options" })
-                }
-                optionGroups={optionGroups}
-                optionIssue={optionIssue}
-                setOptionGroups={setOptionGroups}
-                showAdvanced={showAdvanced}
-                stores={stores}
-                suggestionsDisabled={suggestionsDisabled}
-                updateVariantDraft={updateVariantDraft}
-                variantDraft={variantDraft}
-              />
-              {form.kind === "product" ? (
-                <CatalogSellingUnitsEditor
-                  active={editor.active}
-                  canonicalName={form.unitName}
-                  currencyCode={currencyCode}
-                  onBack={editor.back}
-                  onChange={(units) => {
-                    setAdditionalUnits(units)
-                    setShowUnits(units.length > 0)
-                  }}
-                  onError={setError}
-                  onOpen={editor.open}
-                  units={additionalUnits}
-                />
-              ) : null}
+              </FieldGroup>
+              <div className="flex flex-col gap-2">
+                <p className="text-sm font-medium text-muted-foreground">
+                  Optional details · open only what you need
+                </p>
+                <CatalogSections
+                  value={sections.open}
+                  onValueChange={sections.setOpen}
+                >
+                  {sectionOrder.map((id) => (
+                    <CatalogSection key={id} id={id} {...sectionMeta[id]}>
+                      {sectionContent(id)}
+                    </CatalogSection>
+                  ))}
+                </CatalogSections>
+              </div>
             </fieldset>
           </div>
-          <aside
-            className="hidden lg:flex lg:flex-col lg:gap-3 lg:sticky lg:top-0"
-            aria-label="Setup summary"
-          >
-            <Badge variant="secondary">
-              {form.kind === "product" ? "Product" : "Service"} · Draft
-            </Badge>
-            <h3 className="break-words font-medium">
-              {form.name.trim() || "Your new item"}
-            </h3>
-            <p className="text-sm text-muted-foreground">
-              {showAdvanced
-                ? `${combinations.length} customer choices`
-                : defaultQuoteRequired
-                  ? "Quote each job"
-                  : form.price.trim()
-                    ? `${currencyCode} ${form.price}${form.kind === "product" ? ` / ${form.unitName || "main unit"}` : ""}`
-                    : "Price not set"}
-            </p>
-            <p className="text-sm text-muted-foreground">
-              {category.trim() || "Uncategorized"}
-            </p>
-            {form.kind === "product" ? (
-              <p className="text-sm text-muted-foreground">
-                {form.unitName || "Choose a main unit"}
-                {additionalUnits.length
-                  ? ` + ${additionalUnits.length} selling units`
-                  : ""}
-              </p>
-            ) : (
-              <p className="text-sm text-muted-foreground">
-                {trackServiceWork ? "Tracked work" : "Charge only"}
-              </p>
-            )}
-            <p className="text-xs text-muted-foreground">
-              Start with the essentials. Optional editors keep your draft when
-              you return.
-            </p>
-          </aside>
         </div>
         {error ? (
           <FormFeedback appearance="dashboard">{error}</FormFeedback>
