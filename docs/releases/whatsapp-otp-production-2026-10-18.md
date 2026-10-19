@@ -1,5 +1,26 @@
 # WhatsApp phone-authentication production candidate — 18 October 2026
 
+## Main consolidation and priority — 19 October 2026
+
+Continue from the primary `main` checkout. The owner-directed checkpoint
+`ff267716` commits current shared implementation, and merge `799a7b43` incorporates
+OTP candidate `8293e2c4` while retaining the newer full WhatsApp platform handler,
+shared auth/privacy features and larger typography. The OTP managed worktree is
+archived. No push, deployment or fresh tests/build were performed; the earlier
+candidate checks below do not establish acceptance of the full merged source.
+
+Prioritize the combined API, matching functional client, phone-only deletion and
+controlled rollout/signup/sign-in. Keep basic delivery/failure visibility and a
+compatible rollback. Advanced monitoring, display-name follow-up and credential
+renewal are secondary implementation work (renew before 13 December 2026).
+Shared Store safety and platform/privacy release work can be handled separately
+from OTP implementation, but the existing publication gate remains in force.
+Public OTP delivery is not activated by this commit.
+
+The older rollback paragraph below is historical: after phone-only users exist,
+retain compatible deletion/contact API support when disabling OTP delivery. Do
+not promote an older incompatible API solely because it was the old baseline.
+
 This scoped candidate starts from deployed API source 931cbfc0388a91a8a3e6061848ccaf7d954c48b2. It includes the reviewed phone-only deletion implementation and matching native screens from ea40a1da336fefc438d5320aca70a213ede28b85. Existing email identities are preserved; an unverified phone on an email account cannot be claimed by phone signup.
 
 ## Verified
