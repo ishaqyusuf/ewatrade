@@ -42,7 +42,7 @@ mock.module("expo-router", () => ({
 }))
 
 const { default: QaBusinessesModalRoute } = await import(
-  "./qa-businesses-modal"
+  "../app/qa-businesses-modal"
 )
 const render = () => renderToStaticMarkup(createElement(QaBusinessesModalRoute))
 
