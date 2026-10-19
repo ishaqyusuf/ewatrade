@@ -80,8 +80,10 @@ export function ClassicCatalogItemOverview({
         (store) => store.storeId === storeId && store.isAvailable,
       ),
   )
+  // Internal use Products never reach customer orders (the API agrees).
+  const internalUse = item.product?.usage === "INTERNAL_USE"
   const sellable =
-    item.status === "active"
+    item.status === "active" && !internalUse
       ? flattenSaleOfferings(
           [
             {
@@ -122,13 +124,17 @@ export function ClassicCatalogItemOverview({
           : balance.kind === "shared_pool"),
     )
   }
-  const reason = !offerings.length
-    ? "Add an active option with a price before this item can be ordered."
-    : offerings.every(
-          (entry) => entry.offering.pricingPolicy === "quote_required",
-        )
-      ? "Every option needs a quote before it can be sold."
-      : "Add an active option with a price and available stock to sell this item."
+  const reason = internalUse
+    ? canManageUsage
+      ? "Internal use Products are hidden from customer orders. Change its usage below to sell it."
+      : "Internal use Products are hidden from customer orders."
+    : !offerings.length
+      ? "Add an active option with a price before this item can be ordered."
+      : offerings.every(
+            (entry) => entry.offering.pricingPolicy === "quote_required",
+          )
+        ? "Every option needs a quote before it can be sold."
+        : "Add an active option with a price and available stock to sell this item."
   const newOrder = () => {
     const [only] = sellableOfferings
     if (!only) return
@@ -259,7 +265,7 @@ export function ClassicCatalogItemOverview({
         <StatusBanner
           tone="warning"
           icon="Tag"
-          title="No sellable options"
+          title={internalUse ? "For business use only" : "No sellable options"}
           message={reason}
         />
       ) : null}

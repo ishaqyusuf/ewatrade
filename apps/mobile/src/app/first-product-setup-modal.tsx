@@ -39,6 +39,7 @@ export default function FirstProductSetupModalRoute() {
             kind: completion.kind,
             name: completion.name,
             status: "created",
+            usage: completion.usage,
           })
         }
       />
