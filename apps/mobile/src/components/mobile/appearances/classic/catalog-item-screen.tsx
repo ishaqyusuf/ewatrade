@@ -11,6 +11,7 @@ import {
   CatalogItemThumb,
   CatalogSavedPhotos,
 } from "@/components/mobile/catalog-item/catalog-saved-photos"
+import { ProductUsageEditor } from "@/components/mobile/catalog-item/product-usage-editor"
 import { flattenSaleOfferings } from "@/components/mobile/create-sale/create-sale-model"
 import { EmptyState } from "@/components/mobile/empty-state"
 import {
@@ -32,9 +33,13 @@ import { useAuthContext } from "@/hooks/use-auth"
 import { useColorScheme } from "@/hooks/use-color"
 import { useLargeTextLayout } from "@/hooks/use-large-text-layout"
 import { GREEN_TILL_THEME, type GreenTillTint } from "@/lib/green-till-theme"
-import { canEditMobileCatalog } from "@/lib/mobile-roles"
+import { canEditMobileCatalog, normalizeMobileRole } from "@/lib/mobile-roles"
 import { cn } from "@/lib/utils"
 import { useOperationalModeStore } from "@/store/operationalModeStore"
+import {
+  productUsageDescriptions,
+  productUsageLabels,
+} from "@ewatrade/utils/product-usage"
 import { StatusBar } from "expo-status-bar"
 import { useState } from "react"
 import { Text as NativeText, ScrollView, Share } from "react-native"
@@ -62,6 +67,11 @@ export function ClassicCatalogItemOverview({
   const { profile } = useAuthContext()
   const offline = useOperationalModeStore((state) => state.isOfflineMode)
   const canEditImages = canEditMobileCatalog(profile) && !offline && !cachedAt
+  // Matches the API: only Owners and Admins change Product usage.
+  const canManageUsage =
+    ["OWNER", "ADMIN"].includes(normalizeMobileRole(profile?.role)) &&
+    !offline &&
+    !cachedAt
   const offerings = catalogItemOfferings(item).filter(
     ({ offering, variant }) =>
       offering.status === "active" &&
@@ -339,8 +349,25 @@ export function ClassicCatalogItemOverview({
                 : "Work is tracked in Service jobs"
             }
           />
+          {item.product && !canManageUsage ? (
+            <AboutRow
+              border
+              icon="Tag"
+              tint="amber"
+              title={productUsageLabels[item.product.usage]}
+              sub={productUsageDescriptions[item.product.usage]}
+            />
+          ) : null}
         </View>
       </View>
+      {item.product && canManageUsage ? (
+        <ProductUsageEditor
+          key={`${item.id}:${String(item.product.updatedAt)}`}
+          itemId={item.id}
+          updatedAt={item.product.updatedAt}
+          usage={item.product.usage}
+        />
+      ) : null}
       {editingImages ? null : (
         <CatalogSavedPhotos
           item={item}

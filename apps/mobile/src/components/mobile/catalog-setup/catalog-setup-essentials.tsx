@@ -1,5 +1,6 @@
 import * as Classic from "@/components/mobile/appearances/classic/catalog-setup"
 import { FormField } from "@/components/mobile/form-field"
+import { ProductUsagePicker } from "@/components/mobile/product-usage-picker"
 import { Icon, type IconKeys } from "@/components/ui/icon"
 import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
@@ -80,6 +81,10 @@ export function CatalogSetupEssentials({
         showProductEssentials={kind === "product"}
         unitName={unitName}
       />
+
+      {kind === "product" ? (
+        <ProductUsagePicker onChange={model.setUsage} value={model.usage} />
+      ) : null}
 
       {kind === "service" ? (
         <ToggleRow
