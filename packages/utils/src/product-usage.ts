@@ -7,6 +7,13 @@ export const productUsageLabels: Record<ProductUsage, string> = {
   BOTH: "Both",
 }
 
+export const productUsageDescriptions: Record<ProductUsage, string> = {
+  FOR_SALE: "Available for customer orders.",
+  INTERNAL_USE:
+    "Track purchases and stock for business use. Hidden from customer orders.",
+  BOTH: "Sell to customers and use within the business.",
+}
+
 export function isSaleEligibleProduct(usage: ProductUsage | undefined) {
   return usage === undefined || usage === "FOR_SALE" || usage === "BOTH"
 }

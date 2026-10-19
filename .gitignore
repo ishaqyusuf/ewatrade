@@ -30,6 +30,11 @@ packages/jobs/.trigger/
 /outputs/
 /artifacts/
 
+# Generated document renders and spreadsheet previews; retain their source scripts.
+/tmp/commercialization/pdf-renders/
+/tmp/commercialization/previews/
+/tmp/pdfs/
+
 # Expo CLI local state
 .expo/
 apps/wapi/.cache/

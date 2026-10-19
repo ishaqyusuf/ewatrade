@@ -31,6 +31,7 @@ import {
 } from "@ewatrade/utils/business-catalog-guidance"
 import type { CatalogCategorySuggestion } from "@ewatrade/utils/catalog-category-suggestions"
 import { EXACT_CANONICAL_MAX_SCALE } from "@ewatrade/utils/exact-decimal"
+import type { ProductUsage } from "@ewatrade/utils/product-usage"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { TRPCClientError } from "@trpc/client"
 import * as Crypto from "expo-crypto"
@@ -232,6 +233,7 @@ export function useCatalogSetup({
     showAdvanced: boolean
     showDescription: boolean
     showOpeningStock: boolean
+    usage: ProductUsage
     trackServiceWork: boolean
     unitEditorDraft: MobileUnitDraft | null
     unitEditorError: string | null
@@ -269,6 +271,7 @@ export function useCatalogSetup({
     subcategoryId?: string
   } | null>(null)
   const [showOpeningStock, setShowOpeningStock] = useState(false)
+  const [usage, setUsage] = useState<ProductUsage>("FOR_SALE")
   const [showDescription, setShowDescription] = useState(false)
   const [showAdvanced, setShowAdvanced] = useState(false)
   const [canonicalTransactionScale, setCanonicalTransactionScale] = useState(
@@ -953,6 +956,7 @@ export function useCatalogSetup({
           : {}),
         kind: "product",
         name: trimmedName,
+        usage,
         openingStockQuantity: showOpeningStock
           ? showAdvanced
             ? undefined
@@ -1179,6 +1183,7 @@ export function useCatalogSetup({
           description: description.trim() || undefined,
           kind,
           name: trimmedName,
+          usage,
           openingStockQuantity: showOpeningStock
             ? getExactOpeningStock(openingStock, canonicalTransactionScale)
             : undefined,
@@ -1731,6 +1736,7 @@ export function useCatalogSetup({
       unitEditorDraft,
       unitEditorError,
       unitName,
+      usage,
       variantComposerMode,
       variantDrafts,
     }
@@ -1820,6 +1826,7 @@ export function useCatalogSetup({
     setShowAdvanced(snapshot.showAdvanced)
     setShowDescription(snapshot.showDescription)
     setShowOpeningStock(snapshot.showOpeningStock)
+    setUsage(snapshot.usage)
     setTrackServiceWork(snapshot.trackServiceWork)
     setUnitEditorDraft(snapshot.unitEditorDraft)
     setUnitEditorError(snapshot.unitEditorError)
@@ -1980,6 +1987,8 @@ export function useCatalogSetup({
     setShowDescription: guardEdit(setShowDescription),
     showAdvanced,
     setShowAdvanced: guardEdit(setShowAdvanced),
+    usage,
+    setUsage: guardEdit(setUsage),
     canonicalTransactionScale,
     trackServiceWork,
     setTrackServiceWork: guardEdit(setTrackServiceWork),
