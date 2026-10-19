@@ -44,7 +44,7 @@ const product = (key: string): Entity => ({
   committedRecordId: null,
 })
 
-const customer: Entity = {
+const customer = {
   id: "ent_mama",
   key: "customer:mama-ade",
   kind: "CUSTOMER",
@@ -56,7 +56,7 @@ const customer: Entity = {
   },
   errorCode: null,
   committedRecordId: null,
-}
+} satisfies Entity
 
 const money = (
   key: string,

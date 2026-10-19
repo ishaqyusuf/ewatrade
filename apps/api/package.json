@@ -58,6 +58,7 @@
     "@biomejs/biome": "^1.9.4",
     "@ewatrade/tsconfig": "workspace:*",
     "@types/bun": "latest",
+    "@xmldom/xmldom": "0.8.15",
     "typescript": "catalog:"
   }
 }

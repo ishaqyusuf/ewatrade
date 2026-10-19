@@ -18,11 +18,23 @@ export function triggerSecretKeyFrom(env) {
 const HOSTED_PROD_SECRET_KEY =
   /^tr_prod_(?:sk_[A-Za-z0-9_-]{1,512}|(?!sk_|pk_)[A-Za-z0-9_-]{1,512})$/
 
+const assistantWhatsAppFlags = [
+  "ASSISTANT_WHATSAPP_ENABLED",
+  "ASSISTANT_WHATSAPP_READS_ENABLED",
+  "ASSISTANT_WHATSAPP_WRITES_ENABLED",
+  "ASSISTANT_WHATSAPP_MEDIA_ENABLED",
+  "ASSISTANT_WHATSAPP_SETUP_ENABLED",
+  "ASSISTANT_WHATSAPP_PRODUCT_ENABLED",
+  "ASSISTANT_WHATSAPP_WORKFLOW_WRITES_ENABLED",
+]
+
 export const TRIGGER_JOB_ENV_KEYS = [
   "APP_ENV",
   "API_URL",
   "INTERNAL_API_KEY",
-  "ASSISTANT_WHATSAPP_ENABLED",
+  ...assistantWhatsAppFlags,
+  "ASSISTANT_API_PROTECTION_BYPASS_SECRET",
+  "ASSISTANT_API_PROTECTION_BYPASS_HOST",
   "ASSISTANT_VOICE_GATEWAY_SECRET",
   "ASSISTANT_TRANSCRIBE_MODEL",
   "ASSISTANT_XAI_API_KEY",
@@ -73,6 +85,8 @@ export const TRIGGER_JOB_ENV_KEYS = [
 
 const isolatedPreviewKeys = new Set([
   "INTERNAL_API_KEY",
+  "ASSISTANT_API_PROTECTION_BYPASS_SECRET",
+  "ASSISTANT_API_PROTECTION_BYPASS_HOST",
   "ASSISTANT_OPENAI_API_KEY",
   "XAI_API_KEY",
   "ASSISTANT_VOICE_GATEWAY_SECRET",
@@ -95,6 +109,37 @@ const isolatedPreviewKeys = new Set([
   "WEBSITE_DOMAINS_LAUNCH_APPROVED",
   "WHATSAPP_WEBHOOK_VERIFY_TOKEN",
 ])
+
+function assertAssistantWorkerProtection(env) {
+  const secret = env.ASSISTANT_API_PROTECTION_BYPASS_SECRET?.trim()
+  const host = env.ASSISTANT_API_PROTECTION_BYPASS_HOST?.trim()
+  if (!secret && !host) return
+  let url
+  try {
+    url = new URL(env.API_URL)
+  } catch {
+    throw new Error("Assistant worker protection configuration invalid.")
+  }
+  if (
+    !secret ||
+    !host ||
+    env.APP_ENV !== "preview" ||
+    url.protocol !== "https:" ||
+    url.username ||
+    url.password ||
+    url.port ||
+    url.pathname !== "/" ||
+    url.search ||
+    url.hash ||
+    host !== url.hostname ||
+    !/^ewatrade(?:-api)?-[a-z0-9]+-ishaqyusufs-projects\.vercel\.app$/.test(
+      host,
+    ) ||
+    /[\r\n]/.test(secret)
+  ) {
+    throw new Error("Assistant worker protection configuration invalid.")
+  }
+}
 
 // Hosted task loading does not receive user-defined TRIGGER_* variables.
 // Resolve the config from the application's fixed mapping, while the deploy
@@ -159,6 +204,17 @@ export function assertTriggerDeployProfile(env) {
     throw new Error(
       "Jobs deployment refuses a conflicting Trigger project reference.",
     )
+  }
+  assertAssistantWorkerProtection(env)
+  if (
+    env.APP_ENV === "preview" &&
+    env.ASSISTANT_WHATSAPP_ENABLED?.trim() !== "true" &&
+    assistantWhatsAppFlags.some((key) => {
+      const value = env[key]?.trim()
+      return value && value !== "false"
+    })
+  ) {
+    throw new Error("Disabled Preview jobs require every WhatsApp gate off.")
   }
 }
 
@@ -248,10 +304,17 @@ export function triggerDeployCommand(command, env) {
 
 export function syncedTriggerJobEnvironment(env) {
   assertTriggerDeployProfile(env)
-  return Object.fromEntries(
+  const result = Object.fromEntries(
     TRIGGER_JOB_ENV_KEYS.flatMap((key) => {
       const value = env[key]?.trim()
       return value ? [[key, value]] : []
     }),
   )
+  if (
+    env.APP_ENV === "preview" &&
+    env.ASSISTANT_WHATSAPP_ENABLED?.trim() !== "true"
+  ) {
+    for (const key of assistantWhatsAppFlags) result[key] = "false"
+  }
+  return result
 }

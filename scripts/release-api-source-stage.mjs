@@ -140,6 +140,15 @@ function isEnvironmentOrSecretPath(filePath) {
 }
 
 function isSelected(filePath) {
+  // Generated compiler caches are not committed source inputs.
+  if (filePath.endsWith(".tsbuildinfo")) return false
+  // The API's cross-surface projection verification imports this pure guard.
+  // Include its actual source without bringing the native application into the build.
+  if (
+    filePath ===
+    "apps/mobile/src/components/mobile/assistant/assistant-route-conversation.ts"
+  )
+    return true
   if (
     [
       "package.json",

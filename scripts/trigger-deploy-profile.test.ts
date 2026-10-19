@@ -68,6 +68,55 @@ describe("Trigger jobs selected deployment profile", () => {
       )
     })
 
+    test("syncs all seven disabled gates and only the selected protected Preview credentials", () => {
+      const host = "ewatrade-api-fixture123-ishaqyusufs-projects.vercel.app"
+      const selected = {
+        ...preview,
+        ...previewMachine,
+        API_URL: `https://${host}`,
+        ASSISTANT_API_PROTECTION_BYPASS_HOST: host,
+        ASSISTANT_API_PROTECTION_BYPASS_SECRET: "fixture-preview-bypass",
+      }
+      const synced = syncedTriggerJobEnvironment(
+        selectedTriggerDeployEnvironment(preview, selected, production),
+      )
+      expect(synced.ASSISTANT_API_PROTECTION_BYPASS_HOST).toBe(host)
+      expect(synced.ASSISTANT_API_PROTECTION_BYPASS_SECRET).toBe(
+        "fixture-preview-bypass",
+      )
+      const gates = Object.entries(synced).filter(
+        ([key]) =>
+          key.startsWith("ASSISTANT_WHATSAPP_") && key.endsWith("ENABLED"),
+      )
+      expect(gates).toHaveLength(7)
+      expect(gates.every(([, value]) => value === "false")).toBe(true)
+      for (const change of [
+        { ASSISTANT_WHATSAPP_MEDIA_ENABLED: "true" },
+        { ASSISTANT_API_PROTECTION_BYPASS_HOST: "foreign.vercel.app" },
+        { API_URL: `https://${host}/foreign` },
+        { API_URL: `https://${host}:8443` },
+        { ASSISTANT_API_PROTECTION_BYPASS_SECRET: "" },
+      ]) {
+        expect(() =>
+          syncedTriggerJobEnvironment({ ...selected, ...change }),
+        ).toThrow()
+      }
+      expect(() =>
+        syncedTriggerJobEnvironment({
+          ...production,
+          API_URL: selected.API_URL,
+          ASSISTANT_API_PROTECTION_BYPASS_HOST: host,
+          ASSISTANT_API_PROTECTION_BYPASS_SECRET: "fixture-preview-bypass",
+        }),
+      ).toThrow("Assistant worker protection configuration invalid.")
+      expect(() =>
+        selectedTriggerDeployEnvironment(preview, selected, {
+          ...production,
+          ASSISTANT_API_PROTECTION_BYPASS_SECRET: "fixture-preview-bypass",
+        }),
+      ).toThrow("Production value for ASSISTANT_API_PROTECTION_BYPASS_SECRET")
+    })
+
     test("rejects a copied Production machine key before sync without revealing its value", () => {
       let failure = ""
       try {
@@ -89,15 +138,22 @@ describe("Trigger jobs selected deployment profile", () => {
 
     test("removes unsourced parent machine credentials and endpoint instead of inheriting them", () => {
       const result = selectedTriggerDeployEnvironment(
-        { ...preview, ...productionMachine },
+        {
+          ...preview,
+          ...productionMachine,
+          ASSISTANT_API_PROTECTION_BYPASS_SECRET: "fixture-inherited-bypass",
+          ASSISTANT_API_PROTECTION_BYPASS_HOST: "fixture-inherited-host",
+        },
         preview,
         { ...production, ...productionMachine },
       )
       const synced = syncedTriggerJobEnvironment(result)
+      expect(synced.ASSISTANT_API_PROTECTION_BYPASS_SECRET).toBeUndefined()
+      expect(synced.ASSISTANT_API_PROTECTION_BYPASS_HOST).toBeUndefined()
       expect(result.INTERNAL_API_KEY).toBeUndefined()
       expect(synced.INTERNAL_API_KEY).toBeUndefined()
       expect(synced.API_URL).toBeUndefined()
-      expect(synced.ASSISTANT_WHATSAPP_ENABLED).toBeUndefined()
+      expect(synced.ASSISTANT_WHATSAPP_ENABLED).toBe("false")
     })
   })
 

@@ -506,6 +506,7 @@ suite("existing charge-only Service WhatsApp app-review crossover", () => {
       status: "PENDING",
     })
     const reviewed = await generalProposalWithReview(browser, pending)
+    if (!reviewed.review) throw Error("Saved service release review required")
     expect(reviewed.review.join("\n")).toContain("Full saved quantity: 2.5")
     expect(reviewed.review.join("\n")).toContain("Record manager release only")
     expect(reviewed.review.join("\n")).toContain("No physical stock movement")
@@ -560,6 +561,7 @@ suite("existing charge-only Service WhatsApp app-review crossover", () => {
     expect(freshRow.targetRevision).not.toBe(pending.targetRevision)
     expect(edited.revision).toBe(pending.revision + 1)
     const fresh = await generalProposalWithReview(browser, freshRow)
+    if (!fresh.review) throw Error("Fresh service release review required")
     expect(fresh.review.join("\n")).toContain("2026-01-02T00:00:00.000Z")
     const releaseDecision = {
       proposalId: freshRow.id,
@@ -614,6 +616,8 @@ suite("existing charge-only Service WhatsApp app-review crossover", () => {
       where: { id: performDraft.proposalId },
     })
     const performanceReview = await generalProposalWithReview(app, performRow)
+    if (!performanceReview.review)
+      throw Error("Saved service performance review required")
     expect(performanceReview.review.join("\n")).toContain(
       "Record service performance now",
     )

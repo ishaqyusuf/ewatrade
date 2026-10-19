@@ -276,8 +276,10 @@ test("exact-step retry and repeated completion are idempotent; skip, backward to
   const t = transport(result)
   const ref = t.start.manifest.reviewRef
   const raw = { reviewRef: ref, index: 0, checkpoint: t.start.checkpoint }
+  const firstPage = t.pages[0]
+  if (!firstPage) throw Error("First canonical booking review page required")
   expect(page(packet(result), raw, t.scope, key, now).fragment).toBe(
-    t.pages[0]?.fragment,
+    firstPage.fragment,
   )
   expect(() =>
     page(t.handle, { ...raw, index: 1 }, t.scope, key, now),

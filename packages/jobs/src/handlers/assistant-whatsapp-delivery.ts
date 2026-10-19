@@ -6,37 +6,20 @@ import {
   whatsAppDeliveryResultSchema,
 } from "@ewatrade/assistant/channels/delivery"
 import { triggerJob } from "../trigger"
+import {
+  type AssistantWorkerEndpoint,
+  assistantWorkerEndpoint,
+  assistantWorkerHeaders,
+} from "./assistant-worker-endpoint"
 
 type Dependencies = {
-  endpoint: () => { url: URL; key: string }
+  endpoint: () => AssistantWorkerEndpoint
   send: (url: URL, init: RequestInit) => Promise<Response>
   enqueue: (outboxId: string) => Promise<unknown>
 }
 export function defaultAssistantWhatsAppDeliveryDependencies(): Dependencies {
   return {
-    endpoint: () => {
-      const origin = process.env.API_URL?.trim()
-      const key = process.env.INTERNAL_API_KEY?.trim()
-      if (!origin || !key) throw Error("Assistant worker endpoint unavailable.")
-      const url = new URL(origin)
-      if (
-        url.username ||
-        url.password ||
-        url.search ||
-        url.hash ||
-        (url.protocol !== "https:" &&
-          !(
-            process.env.APP_ENV === "local" &&
-            url.protocol === "http:" &&
-            url.hostname.endsWith(".localhost")
-          ))
-      )
-        throw Error("Assistant worker endpoint invalid.")
-      return {
-        url: new URL("/api/internal/assistant/channel-delivery", url),
-        key,
-      }
-    },
+    endpoint: () => assistantWorkerEndpoint("channel-delivery"),
     send: (url, init) => fetch(url, init),
     enqueue: (outboxId) =>
       triggerJob(
@@ -54,12 +37,13 @@ export async function runAssistantWhatsAppDelivery(
 ) {
   const input = whatsAppDeliveryJobSchema.safeParse(payload)
   if (!input.success) throw Error("Invalid assistant job.")
-  const { url, key } = deps.endpoint()
+  const endpoint = deps.endpoint()
+  const { url } = endpoint
   let response: Response
   try {
     response = await deps.send(url, {
       method: "POST",
-      headers: { "Content-Type": "application/json", "x-internal-key": key },
+      headers: assistantWorkerHeaders(endpoint),
       body: JSON.stringify(input.data),
       redirect: "error",
       signal: AbortSignal.timeout(90_000),
