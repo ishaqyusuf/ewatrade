@@ -63,6 +63,13 @@ function ItemTitle({ item, onOpen }: { item: CatalogRow; onOpen: () => void }) {
   )
 }
 
+function hasStoreImage(item: CatalogRow, storeId: string) {
+  return (
+    item.photos.some((entry) => entry.storeId === storeId) ||
+    item.illustrations.some((entry) => entry.storeId === storeId)
+  )
+}
+
 /** The card image: the Store's photo, its illustration, or the kind icon. */
 function CatalogItemMedia({
   item,
@@ -96,7 +103,7 @@ function CatalogItemMedia({
   return (
     <HugeiconsIcon
       icon={item.kind === "service" ? ToolsIcon : Package01Icon}
-      className="size-7 text-muted-foreground"
+      className="size-5 text-muted-foreground"
       aria-hidden="true"
     />
   )
@@ -117,13 +124,20 @@ function CatalogGrid({
       {rows.map((row) => {
         const item = row.original
         const stock = getCatalogStock(item)
+        // Without an image a short band keeps the card's controls and avoids
+        // a large empty frame; the body below still lines up across the row.
+        const imageClass = hasStoreImage(item, storeId)
+          ? "aspect-[4/3]"
+          : "h-14"
         return (
           <li key={row.id} className="min-w-0">
             <article
               data-state={row.getIsSelected() ? "selected" : undefined}
               className="flex h-full flex-col overflow-hidden rounded-xl border bg-card data-[state=selected]:border-transparent data-[state=selected]:ring-2 data-[state=selected]:ring-primary"
             >
-              <div className="relative grid aspect-[4/3] place-items-center overflow-hidden bg-muted">
+              <div
+                className={`relative grid place-items-center overflow-hidden bg-muted ${imageClass}`}
+              >
                 <CatalogItemMedia item={item} storeId={storeId} />
                 <div className="absolute top-2.5 left-2.5 flex rounded-md bg-background p-1 ring-1 ring-border">
                   <RowSelectCheckbox row={row} label={`Select ${item.name}`} />
