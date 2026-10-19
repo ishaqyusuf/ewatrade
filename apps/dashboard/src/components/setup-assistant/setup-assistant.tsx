@@ -251,6 +251,8 @@ export function SetupAssistant({
 
   return (
     <>
+      {/* Overview: the getting-started list leads; the banner offers the assistant. */}
+      {fallback}
       {banner ? (
         <ResumeBanner
           mediaEnabled={mediaEnabled}
@@ -260,7 +262,6 @@ export function SetupAssistant({
           onResume={() => setSetupOpen(true)}
         />
       ) : null}
-      {fallback}
       <Dialog
         open={setupOpen}
         onOpenChange={(open) => {
@@ -352,33 +353,32 @@ function resumeCopy(
   if (!followUp || (followUp.committed === 0 && followUp.open === 0))
     return started && openAreas.length
       ? {
-          text: `Still to set up: ${openAreas.map((entry) => entry.label).join("; ")}. Nothing is compulsory.`,
+          text: `Still to set up: ${openAreas.map((entry) => entry.label).join(", ")}. All optional.`,
           action: "Continue setup",
         }
       : {
           text: mediaEnabled
-            ? "Prefer to describe your business instead? The setup assistant can build your list for you, by chat, voice note or a photo of your price list."
-            : "Prefer to describe your business instead? The setup assistant can build your list for you, by chat.",
-          action: "Set up with AI",
+            ? "Describe your business by chat, voice note or a photo of your price list. The assistant adds your items for you."
+            : "Describe your business by chat. The assistant adds your items for you.",
+          action: "Start with assistant",
         }
   const notes: string[] = []
-  if (followUp.needsDetails)
-    notes.push(`${plural(followUp.needsDetails, "record")} still need details`)
+  if (followUp.needsDetails) notes.push(`${followUp.needsDetails} need details`)
   const ready = followUp.readyToConfirm + followUp.waitingToAdd
-  if (ready) notes.push(`${plural(ready, "record")} ready to add`)
-  if (followUp.failed) notes.push(`${plural(followUp.failed, "record")} to fix`)
+  if (ready) notes.push(`${ready} ready to add`)
+  if (followUp.failed) notes.push(`${followUp.failed} to fix`)
   if (followUp.balancesPending)
     notes.push(
-      `${plural(followUp.balancesPending, "customer balance")} waiting to be recorded`,
+      `${plural(followUp.balancesPending, "customer balance")} to record`,
     )
   return notes.length
     ? {
-        text: `Your setup list has ${notes.join(", ")}.`,
+        text: `Your setup list: ${notes.join(", ")}.`,
         action: "Continue setup",
       }
     : {
-        text: "Want to add more products, services or customers? The setup assistant can help.",
-        action: "Add more with AI",
+        text: "Need more products, services or customers? The assistant can add them.",
+        action: "Add with assistant",
       }
 }
 

@@ -105,21 +105,26 @@ function useDecide(onDone: () => Promise<unknown> | unknown) {
 
 function DecideRow({
   approvalId,
+  requestedBy,
   onDone,
   extra,
 }: {
   approvalId: string
+  requestedBy?: string | null
   onDone: () => Promise<unknown> | unknown
   extra?: React.ReactNode
 }) {
   const [note, setNote] = useState("")
   const decide = useDecide(onDone)
+  const firstName = requestedBy?.split(/\s+/)[0]
   return (
     <div className="grid gap-2">
       <Input
-        aria-label="Note to the person who asked"
+        aria-label={`Note to ${requestedBy ?? "the person who asked"}`}
         maxLength={500}
-        placeholder="Note (optional)"
+        placeholder={
+          firstName ? `Note to ${firstName} (optional)` : "Note (optional)"
+        }
         value={note}
         disabled={decide.isPending}
         onChange={(event) => setNote(event.target.value)}
@@ -155,7 +160,7 @@ function DecideRow({
             })
           }
         >
-          Not approve
+          Decline
         </Button>
         {extra}
       </div>
@@ -319,7 +324,11 @@ export function OrderApprovalBanners({
             currencyCode={currencyCode}
             timeZone={timeZone}
           />
-          <DecideRow approvalId={approval.id} onDone={onDone} />
+          <DecideRow
+            approvalId={approval.id}
+            requestedBy={approval.requestedBy}
+            onDone={onDone}
+          />
         </Banner>
       ))}
       {mine.map((approval) => (
@@ -337,59 +346,67 @@ export function OrderApprovalBanners({
 }
 
 /** Home: requests waiting for this Owner/Admin in the selected Store. */
-export function ChangeApprovalsCard({ timeZone }: { timeZone?: string }) {
+export function usePendingChangeApprovals() {
   const trpc = useTRPC()
-  const pending = useQuery(
+  return useQuery(
     trpc.orders.pendingChangeApprovals.queryOptions(undefined, {
       refetchInterval: 30_000,
       retry: false,
     }),
   )
-  const rows: Pending[] = pending.data ?? []
-  if (!rows.length) return null
+}
+
+/** One row per request, inside the Overview's Needs you card. */
+export function ChangeApprovalRows({
+  rows,
+  timeZone,
+  onDone,
+}: {
+  rows: Pending[]
+  timeZone?: string
+  onDone: () => Promise<unknown>
+}) {
   return (
-    <section
-      aria-label="Approvals waiting"
-      className="grid gap-3 rounded-xl border border-amber-500/30 bg-amber-500/5 p-4"
-    >
-      <div>
-        <h2 className="font-semibold">
-          {rows.length} {rows.length === 1 ? "approval" : "approvals"} waiting
-        </h2>
-        <p className="text-sm text-muted-foreground">
-          Returns and refunds your team asked for today. Once you approve, the
-          person who asked records it before the end of the day.
-        </p>
-      </div>
-      <ul className="grid gap-3">
-        {rows.map((row) => (
-          <li key={row.id} className="grid gap-2 rounded-lg border bg-card p-3">
-            <p className="text-sm font-medium">
-              {row.requestedBy ?? "A team member"} asks to {ACTION[row.kind]} ·{" "}
-              {row.orderNumber}
+    <ul className="grid border-t border-border">
+      {rows.map((row) => (
+        <li
+          key={row.id}
+          className="grid gap-x-5 gap-y-2.5 border-b border-border py-3.5 text-sm last:border-b-0 last:pb-0.5 md:grid-cols-[minmax(0,1fr)_minmax(0,22rem)] md:items-start"
+        >
+          <div className="min-w-0">
+            <p className="font-semibold">
+              {row.kind === "refund" ? "Refund" : "Return"}
+              {row.amountMinor > 0
+                ? ` ${orderMoney(row.amountMinor, row.currencyCode)}`
+                : ""}{" "}
+              · {row.orderNumber}
+            </p>
+            <p className="text-muted-foreground">
+              {row.summary}
+              {row.reason ? ` · ${row.reason}` : ""}
+            </p>
+            <p className="text-muted-foreground">
+              {row.requestedBy ?? "A team member"} ·{" "}
+              {formatOrderTime(row.requestedAt, timeZone)}
               {row.customerName ? ` · ${row.customerName}` : ""}
             </p>
-            <Facts
-              approval={row}
-              currencyCode={row.currencyCode}
-              timeZone={timeZone}
-            />
-            <DecideRow
-              approvalId={row.id}
-              onDone={() => pending.refetch()}
-              extra={
-                <Link
-                  href={`/sales/orders/${encodeURIComponent(row.orderId)}`}
-                  className="inline-flex items-center px-2 text-sm text-muted-foreground hover:text-foreground"
-                >
-                  Open order
-                </Link>
-              }
-            />
-          </li>
-        ))}
-      </ul>
-    </section>
+          </div>
+          <DecideRow
+            approvalId={row.id}
+            requestedBy={row.requestedBy}
+            onDone={onDone}
+            extra={
+              <Link
+                href={`/sales/orders/${encodeURIComponent(row.orderId)}`}
+                className="inline-flex items-center px-2 text-sm text-muted-foreground hover:text-foreground"
+              >
+                View order
+              </Link>
+            }
+          />
+        </li>
+      ))}
+    </ul>
   )
 }
 

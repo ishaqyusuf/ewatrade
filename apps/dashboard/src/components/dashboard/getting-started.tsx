@@ -27,7 +27,7 @@ export function GettingStarted({
               Set up your business
             </h2>
             <p className="mt-1 text-sm text-muted-foreground">
-              Start with the records you need for your business.
+              Start with any of these.
             </p>
           </div>
         </div>

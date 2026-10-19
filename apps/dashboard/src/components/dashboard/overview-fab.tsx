@@ -50,7 +50,7 @@ export function OverviewFab({
     })
   if (assistant)
     actions.push({
-      label: "Assistant",
+      label: "Ask assistant",
       icon: BubbleChatIcon,
       onSelect: () => {
         if (!requestQuickAssistant()) router.push("/assistant")
@@ -58,5 +58,5 @@ export function OverviewFab({
     })
   if (actions.length === 0) return null
   // Listed top-down: the first action sits furthest from the button.
-  return <PageFabMenu label="Quick add" actions={actions.reverse()} />
+  return <PageFabMenu label="Add" actions={actions.reverse()} />
 }
