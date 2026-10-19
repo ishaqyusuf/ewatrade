@@ -428,7 +428,7 @@ function Statement({
                     e.reversalOfId ? (
                       <StatusPill tone="muted" label="Correction" />
                     ) : (
-                      <Text className="text-[11.5px] tabular-nums text-muted-foreground">
+                      <Text className="text-xs tabular-nums text-muted-foreground">
                         Net {whole(e.runningBalanceMinor)}
                       </Text>
                     )
@@ -502,7 +502,7 @@ function UnappliedStrip({
         <NativeText
           style={{
             color: palette.amberForeground,
-            fontSize: 14,
+            fontSize: 16,
             fontWeight: "800",
           }}
         >
@@ -511,7 +511,7 @@ function UnappliedStrip({
         <NativeText
           style={{
             color: palette.amberForeground,
-            fontSize: 12,
+            fontSize: 16,
             opacity: 0.85,
           }}
         >
@@ -529,7 +529,7 @@ function UnappliedStrip({
         <NativeText
           style={{
             color: palette.amberForeground,
-            fontSize: 13,
+            fontSize: 16,
             fontWeight: "800",
             opacity: disabled ? 0.5 : 1,
           }}

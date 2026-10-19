@@ -203,7 +203,7 @@ export function CloseoutContent(props: CloseoutContentProps) {
                   onChangeText={model.editReason}
                   value={model.reason}
                 />
-                <Text className="text-xs [-rn-line-height:18] text-muted-foreground">
+                <Text className="text-xs [-rn-line-height:22] text-muted-foreground">
                   Expected quantities are prefilled. Check each declaration.
                   Different units are kept separate.
                 </Text>

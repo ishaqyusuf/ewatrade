@@ -1,0 +1,9 @@
+bun test v1.3.9 (cf6cdbbb)
+
+packages/assistant/evaluations/fixtures/dashboard-product-form-resume.fixture.tsx:
+(pass) mounted rich Product resume restores owner facts, submits only same-chat commands and refuses stale local edits until explicit reload [199.76ms]
+
+ 1 pass
+ 0 fail
+ 47 expect() calls
+Ran 1 test across 1 file. [599.00ms]

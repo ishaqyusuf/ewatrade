@@ -1,0 +1,113 @@
+{
+  "version": 1,
+  "id": "2026-10-15-assistant-phase-continuation",
+  "tickets": [
+    "C04",
+    "E03",
+    "H05"
+  ],
+  "summary": "Completed stock-transfer decisions now recheck both saved Store grants through an optional read-only adapter recovery boundary. Inventory form modes no longer open the global original-operation audit sheet. Simple recorded transfers validate the canonical nonempty journal ID before producing a receipt. Existing clients, roles, rollout, money/stock posting and public DTOs remain unchanged.",
+  "capabilities": [
+    {
+      "id": "inventory.transfer.dispatch",
+      "change": "changed",
+      "rollout": "source",
+      "note": "Same dashboard command and source availability; completed recovery additionally verifies both canonical Store grants and dispatch endpoints. Subsequent WhatsApp continuation adds explicit app-review transport-source client metadata only; canonical domain and rollout remain unchanged. See 2026-10-15-whatsapp-workflows-actions-media."
+    },
+    {
+      "id": "inventory.transfer.receive",
+      "change": "changed",
+      "rollout": "source",
+      "note": "Same destination confirmation rule; completed recovery refuses revoked/narrowed access at either participating Store without re-executing stock effects. Subsequent WhatsApp continuation adds explicit app-review transport-source client metadata only; canonical domain and rollout remain unchanged. See 2026-10-15-whatsapp-workflows-actions-media."
+    },
+    {
+      "id": "inventory.transfer.cancel",
+      "change": "changed",
+      "rollout": "source",
+      "note": "Same remaining-stock return command; completed recovery requires current both-Store access and original source confirmation Store. Subsequent WhatsApp continuation adds explicit app-review transport-source client metadata only; canonical domain and rollout remain unchanged. See 2026-10-15-whatsapp-workflows-actions-media."
+    },
+    {
+      "id": "finance.transfer.record_simple",
+      "change": "changed",
+      "rollout": "source",
+      "note": "Existing bookkeeping transfer only; canonical JSON result is validated before a finance_movement receipt is constructed. Later Phase5 continuation adds mobile source editor/Book-pinned receipt support (separate phase5-native-money impact record); this aggregate coverage row is now changed."
+    }
+  ],
+  "procedures": [],
+  "docs": [
+    {
+      "topic": "feature",
+      "path": ".brain/features/assistant-business-operations.md",
+      "status": "local_only",
+      "note": "Phase continuation and exact evidence limits; no additional parent acceptance."
+    },
+    {
+      "topic": "feature",
+      "path": ".brain/features/assistant-simple-transfers.md",
+      "status": "local_only",
+      "note": "Canonical result boundary and unchanged pilot scope."
+    },
+    {
+      "topic": "api",
+      "path": ".brain/api/contracts.md",
+      "status": "local_only",
+      "note": "No public input/DTO change; internal completed recovery and receipt validation recorded."
+    },
+    {
+      "topic": "permissions",
+      "path": ".brain/api/permissions.md",
+      "status": "local_only",
+      "note": "Both current participating Store stock grants remain required on completed decision recovery."
+    },
+    {
+      "topic": "decision",
+      "path": ".brain/decisions/2026-10-15-completed-transfer-recovery-authority.md",
+      "status": "local_only",
+      "note": "Record-specific current authority without a stale stock review or re-execution."
+    },
+    {
+      "topic": "capability",
+      "status": "updated",
+      "note": "Initial recovery/result hardening did not change policy. Later Phase4/5 source clients in the same task change aggregate rows; separate native impact records describe those additions. Shared foreign WhatsApp rows are not independently accepted here.",
+      "path": "packages/assistant/src/capabilities/COVERAGE.md"
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "test",
+      "path": "packages/assistant/evaluations/phase-regressions.test.ts",
+      "executed": true,
+      "result": "3 isolated child wrappers pass, containing 35 logical cases/73 assertions: actual completed decisions, actual inventory form/detail consumers and actual simple-transfer adapter with bounded stand-ins. No database/provider connection."
+    },
+    {
+      "kind": "test",
+      "path": "packages/assistant/evaluations/fixtures/stock-transfer-recovery.production-path.fixture.ts",
+      "executed": true,
+      "result": "20 pass/49 assertions; initial valid controls reproduced 9 missing other-Store/original checks. Valid original receipt recovery is unchanged; no writes."
+    },
+    {
+      "kind": "test",
+      "path": "packages/assistant/evaluations/fixtures/inventory-operation-routing.fixture.tsx",
+      "executed": true,
+      "result": "8 pass/16 assertions after 6 form-mode failures; exact original-record and cleared-URL controls retained. Live demo transfer form/Close verified without business effects."
+    },
+    {
+      "kind": "test",
+      "path": "packages/assistant/evaluations/fixtures/simple-transfer-result.fixture.ts",
+      "executed": true,
+      "result": "7 pass/8 assertions; malformed canonical results cannot become success receipts, valid journal remains exact and missing Book refuses before account reads."
+    },
+    {
+      "kind": "fixture",
+      "path": "apps/api/src/assistant/general-stock-transfer.integration-check.ts",
+      "executed": false,
+      "result": "Wrong-Store and overreceipt require exact intended errors; overreceipt preserves the saved partial transfer. No connected lifecycle executed."
+    },
+    {
+      "kind": "review",
+      "path": "packages/assistant/evaluations/runs/2026-10-15-phase-continuation.md",
+      "executed": true,
+      "result": "Affected API source compilation passes; reused/gated evidence distinguished. Phase3 remains4/5, accepted13/45. No native/provider/rollout acceptance."
+    }
+  ]
+}

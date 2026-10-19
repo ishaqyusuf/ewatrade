@@ -115,7 +115,7 @@ export function SyncReliabilityPanel({
         ) : null}
         <View className="min-w-0 flex-1 gap-1">
           <Text className="font-extrabold text-foreground">{title}</Text>
-          <Text className="text-sm leading-5 text-muted-foreground">
+          <Text className="text-sm [-rn-line-height:22] text-muted-foreground">
             {description}
           </Text>
         </View>
@@ -183,7 +183,7 @@ export function SyncReliabilityToggle({
     >
       <View className="min-w-0 flex-1 gap-1">
         <Text className="font-extrabold text-foreground">{label}</Text>
-        <Text className="text-sm leading-5 text-muted-foreground">
+        <Text className="text-sm [-rn-line-height:22] text-muted-foreground">
           {description}
         </Text>
       </View>

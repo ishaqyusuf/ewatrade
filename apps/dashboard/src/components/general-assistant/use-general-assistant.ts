@@ -319,14 +319,25 @@ export function useGeneralAssistant({
       ].map((queryKey) => queryClient.invalidateQueries({ queryKey })),
     )
   const act = useCallback(
-    async (operation: () => Promise<unknown>) => {
-      if (actionLock.current || busy || runId || state.isError) return false
+    async (
+      operation: () => Promise<unknown>,
+      { navigation = false }: { navigation?: boolean } = {},
+    ) => {
+      if (
+        actionLock.current ||
+        busy ||
+        runId ||
+        (navigation
+          ? !enabled || conversations.isPending || pending
+          : state.isError)
+      )
+        return false
       actionLock.current = true
       setPending(true)
       setNotice(null)
       try {
         await operation()
-        if (mounted.current) await refresh()
+        if (mounted.current && !navigation) await refresh()
         return mounted.current
       } catch (error) {
         if (mounted.current) {
@@ -339,19 +350,34 @@ export function useGeneralAssistant({
         if (mounted.current) setPending(false)
       }
     },
-    [busy, runId, state.isError, refresh],
+    [
+      busy,
+      runId,
+      state.isError,
+      enabled,
+      conversations.isPending,
+      pending,
+      refresh,
+    ],
   )
   const newThread = useCallback(
     ({ preserveDraft = false }: { preserveDraft?: boolean } = {}) =>
-      act(async () => {
-        const created = await start.mutateAsync()
-        if (!mounted.current) return
-        typed.current = false
-        setConversationId(created.id)
-        chat.setMessages([])
-        if (!preserveDraft) setDraft("")
-        void conversations.refetch()
-      }),
+      act(
+        async () => {
+          const created = await start.mutateAsync()
+          if (!mounted.current) return
+          typed.current = false
+          setReadyAttachments([])
+          setInitialFiles([])
+          fileStartedConversation.current = null
+          setAttachmentTrayKey((key) => key + 1)
+          setConversationId(created.id)
+          chat.setMessages([])
+          if (!preserveDraft) setDraft("")
+          void conversations.refetch()
+        },
+        { navigation: true },
+      ),
     [act, start.mutateAsync, chat.setMessages, conversations.refetch],
   )
   // Resume saved history or prepare one empty thread on first open. A failed
@@ -542,16 +568,24 @@ export function useGeneralAssistant({
   }
   /** Back to a blank chat; the first message creates its conversation. */
   const clearThread = () => {
-    if (busy || runId || pending) return
+    if (!enabled || conversations.isPending || busy || runId || pending) return
     typed.current = false
+    setReadyAttachments([])
+    setInitialFiles([])
+    fileStartedConversation.current = null
+    setAttachmentTrayKey((key) => key + 1)
     chat.setMessages([])
     setConversationId(null)
     setDraft("")
     setNotice(null)
   }
   const choose = (id: string) => {
-    if (busy || runId || pending) return
+    if (!enabled || conversations.isPending || busy || runId || pending) return
     typed.current = false
+    setReadyAttachments([])
+    setInitialFiles([])
+    fileStartedConversation.current = null
+    setAttachmentTrayKey((key) => key + 1)
     chat.setMessages([])
     setConversationId(id)
     setDraft("")

@@ -97,7 +97,7 @@ export function UnitConversionReview({
                   {review.source.revision} · Target revision{" "}
                   {review.target.revision}
                 </Text>
-                <Text className="text-xs [-rn-line-height:18] text-muted-foreground">
+                <Text className="text-xs [-rn-line-height:22] text-muted-foreground">
                   From {conversionCustody(review.source)} to{" "}
                   {conversionCustody(review.target)}
                 </Text>
@@ -106,7 +106,7 @@ export function UnitConversionReview({
                   target={review.target}
                   projection={review.projection}
                 />
-                <Text className="text-sm [-rn-line-height:21] text-foreground">
+                <Text className="text-sm [-rn-line-height:22] text-foreground">
                   Reason: {review.reason}
                 </Text>
               </>
@@ -120,7 +120,7 @@ export function UnitConversionReview({
                 message="Return online to the original account, business and Store with inventory management permission."
               />
             ) : null}
-            <Text className="text-xs [-rn-line-height:18] text-muted-foreground">
+            <Text className="text-xs [-rn-line-height:22] text-muted-foreground">
               {model.hasAttempt
                 ? "The reviewed quantities and command ID are locked for retry. Closing does not undo a posted transformation. A revision conflict needs operational review before any new command."
                 : "The server rechecks revisions, available stock and exact conservation, then posts both movements together. This review does not reserve stock."}

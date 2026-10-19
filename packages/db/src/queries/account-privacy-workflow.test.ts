@@ -86,6 +86,7 @@ function database(
     subject?: string
     status?: string
     count?: number
+    channelCount?: number
   } = {},
 ) {
   return {
@@ -108,6 +109,22 @@ function database(
     assistantAttachment: { count: async () => 0 },
     assistantUsageEvent: { count: async () => 0 },
     assistantActionProposal: { count: async () => 0 },
+    $queryRaw: async () => [
+      {
+        assistantWhatsAppIdentities: input.channelCount ?? 0,
+        assistantWhatsAppLinks: 0,
+        assistantWhatsAppGrants: 0,
+        assistantWhatsAppBindings: 0,
+        assistantWhatsAppInbox: 0,
+        assistantWhatsAppOutbox: 0,
+        assistantWhatsAppAttempts: 0,
+        assistantWhatsAppReceipts: 0,
+        assistantWhatsAppUsageBuckets: 0,
+        assistantWhatsAppSelections: 0,
+        assistantWhatsAppActionReviews: 0,
+        assistantWhatsAppWorkflowReviews: 0,
+      },
+    ],
     productAnalyticsEvent: { count: async () => input.count ?? 0 },
     storeConversationAccountAccess: { count: async () => 0 },
     $transaction: () => {
@@ -170,4 +187,13 @@ test("private assistant data is processed before conversation outcomes, includin
   expect(
     nextAccountPrivacyWorkflowStep({ ...snapshot, privateAssistantRecords: 2 }),
   ).toBe("ERASE_PRIVATE_ASSISTANT")
+})
+
+test("channel-only private attribution keeps canonical erasure step available", async () => {
+  const result = await getAccountPrivacyWorkflow(
+    database({ channelCount: 1 }),
+    { requestId: "request", operatorUserId: "operator" },
+  )
+  expect(result.privateAssistantRecords).toBe(1)
+  expect(result.nextStep).toBe("ERASE_PRIVATE_ASSISTANT")
 })

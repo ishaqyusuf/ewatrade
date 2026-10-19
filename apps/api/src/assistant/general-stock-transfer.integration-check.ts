@@ -156,7 +156,11 @@ export async function verifyStockTransferComposition(
       quantity: "1",
       reason: "Wrong active Store",
     }),
-  ).rejects.toThrow()
+  ).rejects.toMatchObject({
+    code: "FORBIDDEN",
+    message:
+      "This transfer requires inventory access to both Stores and confirmation at the receiving or sending Store.",
+  })
   console.info("Transfer proposal acceptance: receipt and role loss")
   const receive = await draft(targetCtx, targetConversation.id, {
     action: "stock_transfer_receive",
@@ -224,7 +228,11 @@ export async function verifyStockTransferComposition(
       quantity: "4",
       reason: "Over receipt",
     }),
-  ).rejects.toThrow()
+  ).rejects.toMatchObject({
+    code: "INSUFFICIENT_STOCK",
+    message: "The acknowledged quantity exceeds remaining transit stock.",
+  })
+  expect(await read()).toEqual(partial)
   console.info("Transfer proposal acceptance: return outstanding stock")
   const cancel = await draft(sourceCtx, conversationId, {
     action: "stock_transfer_cancel",

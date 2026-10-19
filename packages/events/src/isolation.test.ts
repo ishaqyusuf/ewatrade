@@ -8,6 +8,11 @@ const keys = [
   "LOGLY_PROJECT_KEY",
   "NEXT_PUBLIC_LOGLY_PROJECT",
   "LOGLY_MOBILE_PROJECT_KEY",
+  "NODE_ENV",
+  "APP_ENV",
+  "VERCEL",
+  "VERCEL_ENV",
+  "LOGLY_MOBILE_ENABLED",
 ] as const
 const original = Object.fromEntries(keys.map((key) => [key, process.env[key]]))
 afterEach(() => {
@@ -86,15 +91,17 @@ test("fixed namespaces and exact origins isolate dashboard and marketing despite
   }
   Reflect.deleteProperty(process.env, "LOGLY_DASHBOARD_PROJECT_KEY")
   expect(
-    (
-      await createEventsRoute("dashboard")(
-        request("https://dash.ewatrade.com"),
-      )
-    ).status,
+    (await createEventsRoute("dashboard")(request("https://dash.ewatrade.com")))
+      .status,
   ).toBe(503)
 })
 test("native contract retains Android attribution while dropping private fields", async () => {
   configure()
+  process.env.NODE_ENV = "production"
+  process.env.APP_ENV = "production"
+  process.env.VERCEL = "1"
+  process.env.VERCEL_ENV = "production"
+  process.env.LOGLY_MOBILE_ENABLED = "true"
   globalThis.fetch = (async (_url, init) => {
     expect(new Headers(init?.headers).get("x-logly-project-key")).toBe(
       "mobile-key",

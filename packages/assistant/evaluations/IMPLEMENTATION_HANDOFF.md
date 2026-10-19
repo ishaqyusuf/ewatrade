@@ -9,8 +9,10 @@ acceptance bookmarks and serialized commits to `main`.
 
 This handoff originally covered twelve pending tickets. A04 and H02 now have
 implementation packets under coordinator review; their implementation owner
-continues those repairs. S05/F01/F04 source and F03/H05 packets are also with that owner. Five tickets
-remain unstarted. Avoid duplicate ownership.
+continues those repairs. S05/F01/F04 source and F03/H05 packets are also with that
+owner. G04 custody/packing and G05 manual-message source are implemented in part;
+three tickets remain unstarted (F02/F05/H04). Avoid duplicate ownership. All
+existing pauses and execution gates below remain in force.
 
 | ID | Deliverable |
 |---|---|
@@ -134,3 +136,65 @@ Do not spawn additional chats or agents unless the human explicitly authorizes i
 Continue implementing the pending backlog and fixing your review findings while
 the coordinator handles acceptance. Report real blockers precisely; do not stop
 at a plan or claim all twelve tickets complete from source-only evidence.
+
+
+15 October native continuation (Phases4/5): nine order/money editors and exact Book-pinned
+Finance originals added in source; native write gaps59→50, declared mobile writes24,
+zero registry gaps. Focused34/151, actual order component7/41 and money/original
+component8/55 pass in isolated scopes. Compiler retains78imported-path diagnostics;
+coverage/impact result and owned snapshots are in runs/2026-10-15-phase5-native-money-source.md.
+No parent/native acceptance, rollout promotion or connected execution;13accepted/
+29partial/3unstarted retained. G01/Paystack/D04/E05/G04/S05 gates remain. Actual
+native journeys need the normal QA session; reachable emulator is signed out at OTP.
+
+
+15 October Phase6 source: three parallel native staff editor packets integrated with
+exact status/access event and invitation command original screens. All six client
+rows remain planned;27declared mobile writes/42reads/0registry gaps,47fullwritegaps.
+Scope/lifetime/duplicate guards, original/current distinctions and no-send semantics
+verified in isolated source/component checks; final counts/compiler limits in
+runs/2026-10-15-phase6-native-staff-source.md. No parent/native acceptance:13accepted/
+29partial/3unstarted. D04 audit preserves12unscheduled; S05 bounded proposal preserves
+7unrun/unscheduled; G05 older delivery-evidence defect handed offbbe3fd9c for owner
+repair/freeze. No connected/provider/runtime/rollout/staging/commit/push/deploy.
+
+
+15October S01 native continuation: directory/member/recorded-history protected
+read screens and strict exact answer routing implemented. Scope/freshness/privacy,
+saved filters/cursors, currenttotal vs page and partialhistory remain explicit.
+Hidden-only snapshot no longer means empty original grants. Three mobile reads
+remain planned;27mobilewrites/45reads/0declaredgaps/47fullwritegaps. Source30/135
+passes plus bounded actualcomponent fixtures;17paths lint. No actualdevice/saved/
+connected acceptance, provider/runtime/rollout action or parent change.13/45
+retained. [Source/evidence](runs/2026-10-15-s01-native-reads.md).
+
+
+15October Phase7native source: all7work editors, fullsimpleintake and2quote
+decisions plus exact event/note/exception/intake+Order/quotation originals.17planned
+mobile client/test rows, no rollout/policy/procedure/version change.37mobilewrites/
+52reads/0declaredgaps/37fullwritegaps.66sourcechecks/558assertions; component/
+compiler/current gate limits in [source checkpoint](runs/2026-10-15-phase7-native-service-source.md).
+No parent/device/connected acceptance;13/45retained. All existing gates preserved;
+booking/request/capacity, exact currentJob handover and savedrecovery remain open.
+
+## 15 October 2026 — native exact originals and cash source packet
+
+Root coordinated three authorized agents and independently reviewed integration.
+Native booking keeps booking/source/offering; current Job is a distinct protected
+handover with retained same-scope retry controller and stale-fact/history fences.
+Cash records keep fixed Book/account and exact acknowledged physical observation;
+original count and advisory day are pure readers, no adjustment/fiscal close.
+Native Service payment text now stays raw until strict decimal validation.
+Workshop01 dd3f6aab-765d-4b3f-ba3d-dae9dbbe823e selected among3archived sample
+layouts; integrated device verification remains open. Planned mobile38writes/57reads,
+36remaining fullwritegaps; six exact client/test manifest hunks only.
+
+Final source62/327 across8files/25isolatedchildren; compiler78imported baseline and
+0owned errors,37scopedBiomeready with7existing findings in3sharedpaths. Coverage/
+current and local mixed-ownership impact pass. Source report/JSON packet name:
+`runs/2026-10-15-phase78-native-originals`. Eleven local Brain files listed there,
+including ADR0048. No acceptance/policy/rollout/schema/API effect changed.
+Remain13/45accepted, preserve G01/Paystack/D04/E05/G04/S05/C04 gates. Do not run
+connected cases, provider/device authentication, runtime activation or release from
+this source-only handoff. Next useful source includes G03 requests/capacity, G01
+native report originals and G05 settings/message originals. No staging or commit.

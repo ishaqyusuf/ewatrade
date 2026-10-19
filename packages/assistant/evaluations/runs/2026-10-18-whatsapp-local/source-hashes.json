@@ -1,0 +1,547 @@
+{
+  "scope": "bounded production source list; not transitive build or live configuration",
+  "fileCount": 135,
+  "sourceFingerprint": "de64599871af6b4c2f50aa8c1cc15351b78b573045f0241cdba8f0d8e9ade5c4",
+  "files": [
+    {
+      "path": "scripts/assistant-whatsapp-readiness.ts",
+      "sha256": "5871fb176cacdddba698208317139e3f80b8ed6594379a6a170819a03a224775"
+    },
+    {
+      "path": "packages/assistant/src/channels/readiness.ts",
+      "sha256": "15303961950797344e566b66d0a706f78ca82fa99403ebd8f9f6643cdfae45a2"
+    },
+    {
+      "path": "packages/assistant/src/channels/policy.ts",
+      "sha256": "2ec65c48a447fa397ff0f29d952e969460adb6451e5de70e26bc762c50332fa7"
+    },
+    {
+      "path": "packages/assistant/src/channels/controls.ts",
+      "sha256": "e1e83ecfd7af4e2ce932aeb0370623bfc291a134f0ec08aa66595739213e6523"
+    },
+    {
+      "path": "packages/assistant/src/channels/support.ts",
+      "sha256": "413e340f25b1d2ada922c865936a95664a6a28959712bdcf23e78d16ace3a416"
+    },
+    {
+      "path": "packages/assistant/src/channels/render.ts",
+      "sha256": "b6805e0932f3aef26dc89c30bea69155f2b7866f1b840d3ee870721720009a28"
+    },
+    {
+      "path": "packages/assistant/src/channels/action-review.ts",
+      "sha256": "045e87685d2f280de7465442f6565d057b9d45dc189dfffd6189f4f7f6b5a11e"
+    },
+    {
+      "path": "packages/assistant/src/channels/capability-action-handoff.ts",
+      "sha256": "eeeeea200dafb69d9797abf0adfbe457f80f24af7dbabafe51feee738050842e"
+    },
+    {
+      "path": "packages/assistant/src/channels/conversation-links.ts",
+      "sha256": "2d9d6004cf7a542b27341c1df3ba7de6604f41e36e5c2244205dbf43011447f8"
+    },
+    {
+      "path": "packages/assistant/src/channels/workflow.ts",
+      "sha256": "e0e2aa0e1690ec668e6de957fe6f8e30b57ee52e147a64280e6ca1dcacf87fa8"
+    },
+    {
+      "path": "packages/assistant/src/channels/workflow-action-review.ts",
+      "sha256": "0762ec063896d8beafb05f15fa883460ba90eebdd452b080448df1737994cb2e"
+    },
+    {
+      "path": "packages/assistant/src/channels/workflow-action-result.ts",
+      "sha256": "09da753ce865e52c40278cf75a14027ab39c912483e92651717c08dc60ad0195"
+    },
+    {
+      "path": "packages/assistant/src/channels/media.ts",
+      "sha256": "783d116df03eff5c8d5ae57d046c4193f20cf2fb085786a04010181c118c5c73"
+    },
+    {
+      "path": "packages/assistant/src/setup/attachment-processing.ts",
+      "sha256": "2233d575b665e63e6d11a83fc9d94c2f0c05753e76dce643caced8ebe529af4e"
+    },
+    {
+      "path": "packages/assistant/src/capabilities/manifest.ts",
+      "sha256": "15b871b3677dbe42dea8ab80ee91fd0a8a85f0cdc6904edbd067a50b7eb582c8"
+    },
+    {
+      "path": "apps/api/src/assistant/channel-operations.ts",
+      "sha256": "9120ccc4ed2fc8c8c2ede6b6fbdf2d0847fae88ed00e5d9eab985a8e115c8b86"
+    },
+    {
+      "path": "apps/api/src/assistant/channel-principal.ts",
+      "sha256": "2a5985787a2cfd18910fd507684fce1f8adeb92a6d3a3329534720611805a3b9"
+    },
+    {
+      "path": "apps/api/src/trpc/routers/assistant-channels.ts",
+      "sha256": "36841df033424e11faaafecc12c95873c5c0ca120eaf363e632675100c95b044"
+    },
+    {
+      "path": "apps/api/src/communications/whatsapp-platform-runtime.ts",
+      "sha256": "3226795eca2fdb6c5a94c38e5d4676a0ad6fc3c8ce87cccb986a0527f1971a05"
+    },
+    {
+      "path": "apps/api/src/assistant/channel-turn.ts",
+      "sha256": "6ffdbc9b97eb01ab9864a950837205655fdfc33ad954fc1713ba40adfaf93cf6"
+    },
+    {
+      "path": "apps/api/src/assistant/channel-action-turn.ts",
+      "sha256": "258e3154a5b5f29097025fdce07da5e1f349856aa09cfc9269571d72ff730985"
+    },
+    {
+      "path": "apps/api/src/assistant/channel-review-staging.ts",
+      "sha256": "99ea4b56d20062e7eac9d3f3dffd998381cd17720ab56627244255d8fd0576a9"
+    },
+    {
+      "path": "apps/api/src/assistant/channel-proposal-review.ts",
+      "sha256": "d5dc3792422097654e73d3cc87e5cd1f2b4e4d0223300e78d8bdf6289bb1e10c"
+    },
+    {
+      "path": "apps/api/src/assistant/channel-workflow-turn.ts",
+      "sha256": "f23d3688dd49dc383d74c38f4ce71ac5ce20b9046c10041f18bb091e7890caa0"
+    },
+    {
+      "path": "apps/api/src/assistant/workflow-turn.ts",
+      "sha256": "4c4663fc811fe9a65c98c592ebc76bda508618525dde9426aaee822804b5ab31"
+    },
+    {
+      "path": "apps/api/src/assistant/channel-workflow-review-staging.ts",
+      "sha256": "2fe018d0787ffa22b00428781943c3189bc5f3b14c7ffaa04139e17dd47dd0cc"
+    },
+    {
+      "path": "apps/api/src/assistant/channel-workflow-action-turn.ts",
+      "sha256": "ae83049718f2917bd4becd3ce2e72c3a3156f0a6f57c0cf796c2a0543d6fcaaf"
+    },
+    {
+      "path": "apps/api/src/assistant/channel-workflow-command.ts",
+      "sha256": "5cec0b2f6c0e7ccd97a9bbf905a34e01258d7126a77bbbd564657ae356fd18f1"
+    },
+    {
+      "path": "apps/api/src/assistant/channel-media-turn.ts",
+      "sha256": "dd2b345f3bed99034b1294ca640008f60b0f07905d72723a008dd28e7fe8adad"
+    },
+    {
+      "path": "apps/api/src/assistant/whatsapp-media/ingest.ts",
+      "sha256": "d41729b4bb3625fc88c55b49b197898e88602d3c306361d8f5d625e3f5e44ee3"
+    },
+    {
+      "path": "apps/api/src/assistant/general-context.ts",
+      "sha256": "89f1daaa7d59f21ab7d488bd3948f7cd1d50eb265c81e30d3153cd11fa750778"
+    },
+    {
+      "path": "apps/api/src/assistant/general-proposals.ts",
+      "sha256": "972b78b91471d6a8538de6701aad9225fe311ca210d37efef6c557a457bf0d77"
+    },
+    {
+      "path": "apps/api/src/assistant/general-actions.ts",
+      "sha256": "e27dcfa3eb5cfe8914faf3b13bb458d8ae71ce75cfc8677036976d93a202867a"
+    },
+    {
+      "path": "apps/api/src/assistant/general-simple-sale.ts",
+      "sha256": "784c81ee4836e981ce3bf90941f49c08dd804e6105f7a87a5559b50117a17129"
+    },
+    {
+      "path": "apps/api/src/assistant/general-simple-expense.ts",
+      "sha256": "50e03c08c52da049393cb7fc1ab0a17b87396994f321a144c55a39afe523cacd"
+    },
+    {
+      "path": "apps/api/src/assistant/general-simple-money-in.ts",
+      "sha256": "510dbf3f3342971b02efc8324cb513e932e74322a1583e7c0acec7ca68390fdb"
+    },
+    {
+      "path": "apps/api/src/assistant/general-simple-transfer.ts",
+      "sha256": "facc685e12620d220a71c85f2483f597a89da42962a17b3f360285e86f2ec16e"
+    },
+    {
+      "path": "apps/api/src/assistant/general-reviewed-new-book.ts",
+      "sha256": "ea30fd4966c81b3d5e7cd6859961eb5658e1374870ba91653a5e2cc28230f28d"
+    },
+    {
+      "path": "apps/api/src/assistant/proposal-security.ts",
+      "sha256": "222bf86776bb0782da30f5e6ff2b9c810ff6b7cef1acf3930051f6cd94ca880a"
+    },
+    {
+      "path": "apps/api/src/assistant/product-command.ts",
+      "sha256": "cfa50668ca5decfe7bb7b55b958c7ff0cd1d7c19f0a8204a31146a306cd85045"
+    },
+    {
+      "path": "apps/api/src/assistant/setup-commit.ts",
+      "sha256": "7fee26da6b22fcd32ca8edcbf27f07305406ffbe3670fbb9de3c9663b526bc04"
+    },
+    {
+      "path": "packages/db/src/queries/assistant.ts",
+      "sha256": "afe2223abeecba774d6e0b83c060d44b6f049be5245e71673ff0ac4a34c7296d"
+    },
+    {
+      "path": "packages/db/src/queries/assistant-general.ts",
+      "sha256": "15b07f8d86dd5d6f3e1b128d06ba70ed5c8c297dcc0c8562f4eccec61d6b7dea"
+    },
+    {
+      "path": "packages/db/src/queries/assistant-whatsapp/authority.ts",
+      "sha256": "70a55f76cf3c9518ba3262ffe88f3c8cdb5f091aef5928f599ff8c5bceb45db0"
+    },
+    {
+      "path": "packages/db/src/queries/assistant-whatsapp/grants.ts",
+      "sha256": "9ed4cdad5d2e65e1476d4d1edbefe018b64fb6160c9789f7b727af0c4ec18c5b"
+    },
+    {
+      "path": "packages/db/src/queries/assistant-whatsapp/controls.ts",
+      "sha256": "118d658dad05c00674e87541a34ad90ef40984aff5d5bc6914002d25e005f2bb"
+    },
+    {
+      "path": "packages/db/src/queries/assistant-whatsapp/control-authority.ts",
+      "sha256": "8b4108013a447a54148254f3e651fc84831f188ff988d9ed9296a16e73f49b7a"
+    },
+    {
+      "path": "packages/db/src/queries/assistant-whatsapp/conversations.ts",
+      "sha256": "e8d8de74aac277614285f5d96b66ab7ce4b8fb327e72bbeadeec9402dd7bafe4"
+    },
+    {
+      "path": "packages/db/src/queries/assistant-whatsapp/execution.ts",
+      "sha256": "f0381270352964f7b7e69a3f480ed25455e10cffef7e1b051f9b9360ec14f300"
+    },
+    {
+      "path": "packages/db/src/queries/assistant-whatsapp/action-reviews.ts",
+      "sha256": "cbe1c2c76454299a2b14be1c67d594f7f841719c01018ba033bbd6fc8b99b114"
+    },
+    {
+      "path": "packages/db/src/queries/assistant-whatsapp/workflow-action-reviews.ts",
+      "sha256": "a36ebd560c157fc36213dd5edbb40a9ad9dcaba2626f77a8cf73533ee0c296d3"
+    },
+    {
+      "path": "packages/db/src/queries/assistant-whatsapp/workflow-terminal.ts",
+      "sha256": "edd4a390952053270d0ed44cdd94a24462851dc0303079e2ff259f29b085034a"
+    },
+    {
+      "path": "packages/db/src/queries/assistant-whatsapp/workflow-reply.ts",
+      "sha256": "e3d0f4a02e3d4f16521cd96545c542fc6d53b811852a288301909ef8114cf8b3"
+    },
+    {
+      "path": "packages/db/src/queries/assistant-whatsapp/inbox.ts",
+      "sha256": "ea12c04a405d3d5ff031a30dd4d2bbc1b016a1dac03fb09cfa3aacd6c3175d46"
+    },
+    {
+      "path": "packages/db/src/queries/assistant-whatsapp/outbox.ts",
+      "sha256": "0b3228dc32c920d8ad00fa30ea8f6c9a0da5071e8c63084e30a882f27f7b39bb"
+    },
+    {
+      "path": "packages/db/src/queries/assistant-whatsapp/processing.ts",
+      "sha256": "16381e4d987645eae7d5e4f0aebf886bc85c83d7f1666e6f90a294057448932b"
+    },
+    {
+      "path": "packages/db/src/queries/assistant-whatsapp/delivery.ts",
+      "sha256": "cb81e45d35e541e3bb3316699be2914142a4082c667f80f7dcc744971356732d"
+    },
+    {
+      "path": "packages/db/src/queries/assistant-whatsapp/queued-work.ts",
+      "sha256": "105e0cbfd7cea9760079dd278c50b00b40614c132faa9c3ebdb4711d1659a577"
+    },
+    {
+      "path": "packages/db/src/queries/assistant-whatsapp/lifecycle.ts",
+      "sha256": "c7bdafdf69fe1e26343cc17c3d449fde25d62017556a4d03d1cc08c37c54a2f9"
+    },
+    {
+      "path": "packages/db/src/queries/assistant-whatsapp/media-review.ts",
+      "sha256": "e7a4d3ef59e70c74a6ec1db647b5a63901c476cb0521f6c50bb9d63428894241"
+    },
+    {
+      "path": "packages/db/src/queries/assistant-whatsapp/media-source.ts",
+      "sha256": "a17b9d9840c88b0af0b4bc9feffbcba04ccbab8f6369b7d1fb5c2dbb0f47743c"
+    },
+    {
+      "path": "packages/db/src/queries/assistant-whatsapp/media-source-lifecycle.ts",
+      "sha256": "edb2a44cf50d1226278336a7bd495d99feb990da765963613551989f458cae3d"
+    },
+    {
+      "path": "packages/db/src/queries/assistant-whatsapp/notices.ts",
+      "sha256": "e77be0df015934503039cc1ab47b5f9927b32cde8732f40c9f2cf218fda62798"
+    },
+    {
+      "path": "packages/db/src/queries/assistant-whatsapp/quota-notice.ts",
+      "sha256": "7d0dd5ef468995bd0ecc0b93f3863e500f6c4e154a0959493154a8fe698f7593"
+    },
+    {
+      "path": "packages/db/src/queries/assistant-whatsapp/privacy.ts",
+      "sha256": "719a3ffbe68395e1e84fadf4fd91ee3d57bbdb6066330c88d48be750fad99fb7"
+    },
+    {
+      "path": "packages/db/src/queries/assistant-attachments.ts",
+      "sha256": "c258a669289d932b377f842dbb21a6890d7b7f0e53517f25b09f12482af41f26"
+    },
+    {
+      "path": "packages/db/src/queries/assistant-voice.ts",
+      "sha256": "c993f1ab6364f2572a1a339ac4e308b083389dcca55e49c6fb8329ac12720365"
+    },
+    {
+      "path": "packages/db/src/queries/assistant-operations.ts",
+      "sha256": "9e76d4d2452a4a57f645d6b8ba26196f0532cffa00b42310698ed40f1a1771e2"
+    },
+    {
+      "path": "packages/db/prisma/models/assistant-whatsapp.prisma",
+      "sha256": "cc7418ba892d95ad3cc3a92165e6d14abfeae9cd0a5d312bd7dde161411daa3c"
+    },
+    {
+      "path": "packages/communications/src/whatsapp.ts",
+      "sha256": "e33af6ad567fd9b1d7a46d9b5413eb79f683d2959b8ca08f6ede6e8f7417ab33"
+    },
+    {
+      "path": "packages/communications/src/whatsapp-media.ts",
+      "sha256": "963c4d105adf0176ddcf08b38174a07f0f9c2782e0111fcb854177391f1cc83e"
+    },
+    {
+      "path": "packages/communications/src/whatsapp-platform.ts",
+      "sha256": "59248cd53cc53f37516fa7591656cd525b6ef9094aea9eea9d511ed2a8ea250b"
+    },
+    {
+      "path": "packages/jobs/src/assistant-whatsapp.ts",
+      "sha256": "b47683b640fc8345c0ee038e924cb834a97aac532bc5c70fe0d5ab36bd60147d"
+    },
+    {
+      "path": "packages/jobs/src/handlers/assistant-attachment-process.ts",
+      "sha256": "1ccf65340f9aa591cb6c3a7c345077627fc742bc848c9194d5a1e6e7a7f1c156"
+    },
+    {
+      "path": "packages/jobs/src/handlers/assistant-maintenance.ts",
+      "sha256": "2a64a1c6f81e49326021eabdfded365fdc8327172e0ee0ffb1a129eb56e10b6a"
+    },
+    {
+      "path": "apps/dashboard/src/components/assistant-whatsapp/whatsapp-connections.tsx",
+      "sha256": "90e91e12fa1df4baf96c35784416887a57a79232e68c0b6542ae8fb108cc651c"
+    },
+    {
+      "path": "apps/dashboard/src/components/assistant-whatsapp/whatsapp-scope-picker.tsx",
+      "sha256": "a75a642ab8079a9378711f4bc5c67a0edf08995b8c95e1de1ab990f027d47776"
+    },
+    {
+      "path": "apps/dashboard/src/components/assistant-whatsapp/connect-whatsapp.tsx",
+      "sha256": "dd82cdfb2af244ea1dbf26391061b5a6f6033925e6a7527e630ddc0f0e89a701"
+    },
+    {
+      "path": "apps/dashboard/src/components/general-assistant/use-general-assistant.ts",
+      "sha256": "0185c909e8c34e9d4aa8a50cbe4309102f3845e73a30f50d58a6086c68e9e085"
+    },
+    {
+      "path": "apps/dashboard/src/components/general-assistant/general-chat.tsx",
+      "sha256": "13af81c0293868b3851d364d8dda51edd197ae812b0e1acce83811e3df1405a1"
+    },
+    {
+      "path": "apps/dashboard/src/hooks/use-catalog-item-params.ts",
+      "sha256": "981bb6b37cab83a151a33ff0f436b2032d14a11b9c3b4fbd9b678ff6b3be4d64"
+    },
+    {
+      "path": "apps/dashboard/src/components/catalog-item/catalog-item-content.tsx",
+      "sha256": "b194878ca8cdd061b745fc4a7df7c458f59303c00f9687fc35a2edeba05cb3bd"
+    },
+    {
+      "path": "apps/dashboard/src/components/catalog-item/form.tsx",
+      "sha256": "dd278a394bfc7db81a4e3b35eb60a0c9bebf806c177d2f4dc149c0e85a3a7d41"
+    },
+    {
+      "path": "apps/dashboard/src/components/product-assistant/product-form-resume.ts",
+      "sha256": "dada258adefc6c9a1ca6c7e4bee416f0b94576b9527108f6bab584b7a27950ce"
+    },
+    {
+      "path": "packages/assistant/src/product/contracts.ts",
+      "sha256": "41d6605df93ad86948db5eb9c85a877f18203e2531e80434b51021866e188c52"
+    },
+    {
+      "path": "packages/assistant/src/channels/read-record-links.ts",
+      "sha256": "e5ea6a628738542c2a8856dfc840326753c042de077d06d58d2062af46200354"
+    },
+    {
+      "path": "apps/dashboard/src/lib/navigation.ts",
+      "sha256": "b3af3778f06ed78dc93ec44fccbe97c2ccf307fdd60baa3496e22457bb2e35e0"
+    },
+    {
+      "path": "apps/dashboard/src/app/(shell)/layout.tsx",
+      "sha256": "0b62d5f1cf2b7d537449feb65df68b8a41d2a7ca8041c66879c1165a4fa4c855"
+    },
+    {
+      "path": "apps/dashboard/src/components/general-assistant/assistant-workbench.tsx",
+      "sha256": "105cc335cf4036400345f53b4b448055d4ad09101a6b14c65ed3ebc6f48b8269"
+    },
+    {
+      "path": "apps/dashboard/src/components/sheets/global-sheets.tsx",
+      "sha256": "e293be792f72a6f02a6280f533fc1017c666a65dcddb508194016fc84a1648aa"
+    },
+    {
+      "path": "apps/dashboard/src/components/catalog-item/catalog-item-detail-modal.tsx",
+      "sha256": "7940acf6d223a63d27fe494f2c9bb622df72df09ff379e22a122e82430e68c3e"
+    },
+    {
+      "path": "apps/dashboard/src/components/catalog-item/detail/activity.tsx",
+      "sha256": "be93e373228f79ca7c1e3e4876f824f7414f3f12fb8e065ec13495fbbbe6ce83"
+    },
+    {
+      "path": "apps/dashboard/src/components/catalog-item/detail/content.tsx",
+      "sha256": "6ab44314c14251f0c10f700300aebdd4e96201c6103a2fcc56b5917af4441b1c"
+    },
+    {
+      "path": "apps/dashboard/src/components/catalog-item/detail/header.tsx",
+      "sha256": "6f56365e836ab8a8c9f0a0623a3407ce805306ec1c7046ee1cc8eda95637ad27"
+    },
+    {
+      "path": "apps/dashboard/src/components/catalog-item/detail/orders.tsx",
+      "sha256": "5c5d7e016a63f0fa69e72857f6c1b1cd458a4f05ebe36298dfd7366043a96c36"
+    },
+    {
+      "path": "apps/dashboard/src/components/catalog-item/detail/overview.tsx",
+      "sha256": "7725add458b3682bf10695c72bc175085a44f7b7498dee20ba3498d7c0f6f05a"
+    },
+    {
+      "path": "apps/dashboard/src/components/catalog-item/detail/read-access.ts",
+      "sha256": "b1093ea4526855d200798e346bb94a133aac28cf1f3eceb2d34b908d762075bf"
+    },
+    {
+      "path": "apps/dashboard/src/hooks/use-catalog-detail-params.ts",
+      "sha256": "bc460ecb145e3f773d33f5ef2b90e601cef4bad78aea8decc3dbe1c035288fe7"
+    },
+    {
+      "path": "apps/mobile/src/components/mobile/assistant-whatsapp/screen.tsx",
+      "sha256": "d2ecb893a0ef102e2ef8bb8aafb0a98735586ec0665aa0676ad1ae18aa90f151"
+    },
+    {
+      "path": "apps/mobile/src/components/mobile/assistant-whatsapp/scope-picker.tsx",
+      "sha256": "b4d845c08e9cb4a846fa0e0cd6ecaa8a851ea0d32b7e4d7497337b89a5c72e8f"
+    },
+    {
+      "path": "apps/mobile/src/components/mobile/assistant-whatsapp/selected-chat-route.ts",
+      "sha256": "e35c7414b605c2ba8b208ab300697fb6b44bd1c21d8c6862ad6e654897821575"
+    },
+    {
+      "path": "apps/mobile/src/components/mobile/assistant/use-general-assistant.ts",
+      "sha256": "3e4f7f20e293114009078fb9f266b265a27509c58d243ac2ecc60cad15294143"
+    },
+    {
+      "path": "apps/mobile/src/components/mobile/assistant/ask-assistant-live.tsx",
+      "sha256": "312d68901134de64b61da98bfe0c3b67a073b181108b3f55b0168533dc3f5225"
+    },
+    {
+      "path": "apps/mobile/src/components/mobile/assistant/assistant-chat-box.tsx",
+      "sha256": "a9eb35debb25eaa9a4127ea443e43bb39e4eee4899fd1164448bbf27fa036416"
+    },
+    {
+      "path": "apps/mobile/src/components/mobile/assistant/use-assistant-receipts.ts",
+      "sha256": "24258084cc05609b62fce9bb640ba31c40ab96958a2e05ad1811749f3ac81c47"
+    },
+    {
+      "path": "apps/mobile/src/components/mobile/setup-assistant/setup-route-conversation.ts",
+      "sha256": "f5d9eef8965912f22951f11267a7d1f2fbaa1a3e9864796ea5570e39fb68a106"
+    },
+    {
+      "path": "apps/mobile/src/components/mobile/setup-assistant/setup-assistant-screen.tsx",
+      "sha256": "d8b8121ce0cd97cb96afe75165a74b0fc8868cf5546d843ead5e14e32cf249f8"
+    },
+    {
+      "path": "apps/mobile/src/components/mobile/setup-assistant/use-setup-assistant.ts",
+      "sha256": "494840061234fec9a40cacbb55117532c1174461a5a63c18f6f8ffa85e31d44e"
+    },
+    {
+      "path": "packages/assistant/src/general/read-record-context.ts",
+      "sha256": "b625411fd6bb2b92fac1ad118120c0abd26d57909163ae8b976d994e13426d92"
+    },
+    {
+      "path": "packages/assistant/src/general/read-continuation.ts",
+      "sha256": "f469b30d7fda9a39bf6faca717d33db2d76b53d296901c324b734e06fb5ce9b2"
+    },
+    {
+      "path": "apps/api/src/assistant/general-catalog-history.ts",
+      "sha256": "697aec2f15806277a15e6a93c2f143ee89d0cb4554b66df6fd18bb43453a5ad5"
+    },
+    {
+      "path": "apps/api/src/assistant/general-catalog-history-answer.ts",
+      "sha256": "5119991bc9c8cba4ec158e7e5064b452fc60f6ebef649ac0c1319bee6ee62667"
+    },
+    {
+      "path": "packages/db/src/queries/catalog-detail.ts",
+      "sha256": "2a5e76e120de38149dda0fb0430da73a18a1ec64f07629b95b0d103823b35659"
+    },
+    {
+      "path": "packages/db/src/queries/catalog.ts",
+      "sha256": "3fa957445f7231525444b5a287bfbfddb636e95915171a1a0705a9a6ca7d57bc"
+    },
+    {
+      "path": "packages/db/src/queries/inventory-reporting.ts",
+      "sha256": "2a749fb62e191a3a5c5600cb974889397511d801652d8808ea50a87eb9c4471e"
+    },
+    {
+      "path": "packages/db/src/queries/assistant-private-export.ts",
+      "sha256": "66220e2d376685b27500dd14d7b17fca0a7aa5f3b0f2face0d0bfb276c3d1bfd"
+    },
+    {
+      "path": "packages/db/src/queries/assistant-private-export-projection.ts",
+      "sha256": "8249f5b47e625857718566f45a1fb0d6abd90584c6c7963f4672402b693fc17c"
+    },
+    {
+      "path": "packages/db/package.json",
+      "sha256": "0addf06ba0557c8f931827c3896677fd6f1e1b35ea419b9ed9551ad05a4db37d"
+    },
+    {
+      "path": "apps/api/src/account-privacy/assistant-export-session.ts",
+      "sha256": "fa6bdc7f8fbe954b1cdac164bfa7c37dc24e8759c38caf10577481f833343c7e"
+    },
+    {
+      "path": "apps/api/src/account-privacy/assistant-export.ts",
+      "sha256": "9f3ce2c80de3644c103a068e67090e6fa2e522ed9320a5a264a0bdf0136b9174"
+    },
+    {
+      "path": "apps/api/src/index.ts",
+      "sha256": "a4a885b5fea7d12bf4280c0dcb6942834cde825a34d7791eeb960314043ee9ad"
+    },
+    {
+      "path": "apps/dashboard/src/app/account/assistant-data/page.tsx",
+      "sha256": "c486bb4390b2569b86ffbf83e5f4c0b8765b0ae648a4940b2ed8a1eab0ef5cc4"
+    },
+    {
+      "path": "apps/dashboard/src/components/account/assistant-data-download.tsx",
+      "sha256": "6a3dc2a88dc6bba1342756289445e80260258dbf2eccc6e745733611b934e0ba"
+    },
+    {
+      "path": "apps/dashboard/src/app/account/whatsapp/page.tsx",
+      "sha256": "97355faa9b6bd74a44bef50922d7db8ef1ff538bb51cb441a67b88558db38ee4"
+    },
+    {
+      "path": "apps/mobile/src/app/assistant-data.tsx",
+      "sha256": "7e74486051fcdabe6a571d16b98c329585d4a38ef072a51a32cec9fa90cf36ff"
+    },
+    {
+      "path": "apps/mobile/src/components/mobile/account-privacy/assistant-data-screen.tsx",
+      "sha256": "864590bff02ea373b506d304dbe72a035e56de9c6a231c4335c249878e6dd31a"
+    },
+    {
+      "path": "apps/mobile/src/components/mobile/account-privacy/assistant-data-transfer.ts",
+      "sha256": "1483633933c626cac360ede8b0c19c8cd2faa2f0c46bff7be8963cd3827e3cdd"
+    },
+    {
+      "path": "apps/mobile/src/components/mobile/account-privacy/assistant-data-file.ts",
+      "sha256": "1b0b7a2e6fee8d975a656ad02ae6b2bffff0dc0ee9d6c2c064a3c991d0db4f9c"
+    },
+    {
+      "path": "apps/mobile/src/app/_layout.tsx",
+      "sha256": "f6e2e4425d1456aa046594f23c73e431ccb261c405bd40ca33668b7d8b096d39"
+    },
+    {
+      "path": "apps/mobile/src/components/mobile/account-privacy-screen.tsx",
+      "sha256": "0b3299826f8f654f09c04d5c1a51e1e400e8c24ca49fc83949c680c7f3f5aa9c"
+    },
+    {
+      "path": "packages/db/src/queries/account-privacy-private-assistant.ts",
+      "sha256": "8bc11e02271250a57d58256ce20b8dff05450ec4ad859ea01970d5217680ed1c"
+    },
+    {
+      "path": "packages/db/src/queries/assistant-whatsapp/private-cleanup.ts",
+      "sha256": "081ffbe8b2c57609367530e9772737496db341109f7e60f9d8959626ef5a34fd"
+    },
+    {
+      "path": "apps/api/src/account-privacy/private-assistant-media.ts",
+      "sha256": "195fa9c19d6d118e2fc440efc41819dfb15e422d83bb42865f11880aa85d6535"
+    },
+    {
+      "path": "packages/assistant/src/setup/attachments.ts",
+      "sha256": "a694c8fb64917283bbc3da123326afb7adcf18540a916b445fc3c2a1f6161758"
+    },
+    {
+      "path": "apps/api/src/trpc/routers/setup-assistant-attachments.ts",
+      "sha256": "eca5762ed2b44a7bba5ec6e80ef12c95415665491f46a9647b14db0faa20ebc2"
+    }
+  ]
+}

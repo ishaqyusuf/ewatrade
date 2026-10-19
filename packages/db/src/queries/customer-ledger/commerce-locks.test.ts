@@ -1,6 +1,9 @@
 import { expect, test } from "bun:test"
 import type { Prisma } from "../../../generated/prisma/client"
-import { lockCommerceFinancialOrder } from "./commerce-locks"
+import {
+  assertHeldCommerceFinancialOrder,
+  lockCommerceFinancialOrder,
+} from "./commerce-locks"
 
 type OrderIdentity = { customerId: string | null; currencyCode: string }
 type CommerceOrder = OrderIdentity & {
@@ -18,10 +21,10 @@ type FindFirstArgs = {
 type RawCall = { query: string; values: unknown[] }
 
 function transactionFixture(options: {
-  findFirst: Array<OrderIdentity | CommerceOrder | null>
+  findFirst: Array<OrderIdentity | null>
   financeBooks?: Array<{ id: string }>
   customerAccounts?: Array<{ id: string }>
-  orderLocks?: Array<{ id: string }>
+  orderLocks?: CommerceOrder[]
 }) {
   const findFirstCalls: FindFirstArgs[] = []
   const rawCalls: RawCall[] = []
@@ -34,6 +37,7 @@ function transactionFixture(options: {
     commercialOrder: {
       findFirst: async (args: FindFirstArgs) => {
         findFirstCalls.push(args)
+        if (!args.select) throw Error("Redundant unlocked ORM reread")
         return findFirstResults.shift() ?? null
       },
     },
@@ -80,7 +84,7 @@ test("returns null before any finance or Order lock when the scoped Order is mis
   expect(fixture.rawCalls).toHaveLength(0)
 })
 
-test("scopes both identity reads and all lock queries to the requested Tenant", async () => {
+test("scopes the planning read and authoritative row lock to the requested Tenant", async () => {
   const order: CommerceOrder = {
     id: "order-a",
     tenantId: "tenant-a",
@@ -90,10 +94,10 @@ test("scopes both identity reads and all lock queries to the requested Tenant", 
     totalMinor: 2500,
   }
   const fixture = transactionFixture({
-    findFirst: [{ customerId: "customer-a", currencyCode: "NGN" }, order],
+    findFirst: [{ customerId: "customer-a", currencyCode: "NGN" }],
     financeBooks: [{ id: "book-a" }],
     customerAccounts: [{ id: "account-a" }],
-    orderLocks: [{ id: "order-a" }],
+    orderLocks: [order],
   })
 
   const result = await lockCommerceFinancialOrder(fixture.tx, {
@@ -101,9 +105,8 @@ test("scopes both identity reads and all lock queries to the requested Tenant", 
     orderId: "order-a",
   })
 
-  expect(fixture.findFirstCalls).toHaveLength(2)
+  expect(fixture.findFirstCalls).toHaveLength(1)
   expect(fixture.findFirstCalls.map(scopedArgs)).toEqual([
-    { id: "order-a", tenantId: "tenant-a" },
     { id: "order-a", tenantId: "tenant-a" },
   ])
   expect(fixture.rawCalls.map((call) => call.values)).toEqual([
@@ -121,8 +124,10 @@ for (const changed of [
 ]) {
   test(`rejects changed financial identity ${JSON.stringify(changed)}`, async () => {
     const fixture = transactionFixture({
-      findFirst: [
-        { customerId: "customer-a", currencyCode: "NGN" },
+      findFirst: [{ customerId: "customer-a", currencyCode: "NGN" }],
+      financeBooks: [{ id: "book-a" }],
+      customerAccounts: [{ id: "account-a" }],
+      orderLocks: [
         {
           id: "order-a",
           tenantId: "tenant-a",
@@ -131,9 +136,6 @@ for (const changed of [
           totalMinor: 2500,
         },
       ],
-      financeBooks: [{ id: "book-a" }],
-      customerAccounts: [{ id: "account-a" }],
-      orderLocks: [{ id: "order-a" }],
     })
 
     await expect(
@@ -171,7 +173,7 @@ test("returns null if the Order disappears before its row can be locked", async 
   expect(fixture.findFirstCalls).toHaveLength(1)
 })
 
-test("still locks and rereads the Order when no finance book exists", async () => {
+test("still reads the authoritative locked Order when no finance book exists", async () => {
   const order: CommerceOrder = {
     id: "order-a",
     tenantId: "tenant-a",
@@ -181,8 +183,8 @@ test("still locks and rereads the Order when no finance book exists", async () =
     totalMinor: 2500,
   }
   const fixture = transactionFixture({
-    findFirst: [{ customerId: null, currencyCode: "NGN" }, order],
-    orderLocks: [{ id: "order-a" }],
+    findFirst: [{ customerId: null, currencyCode: "NGN" }],
+    orderLocks: [order],
   })
 
   const result = await lockCommerceFinancialOrder(fixture.tx, {
@@ -198,7 +200,7 @@ test("still locks and rereads the Order when no finance book exists", async () =
   expect(fixture.rawCalls[1]?.values).toEqual(["order-a", "tenant-a"])
 })
 
-test("returns the locked reread and the acquired finance context", async () => {
+test("returns the authoritative raw locked row and the acquired finance context", async () => {
   const lockedOrder: CommerceOrder = {
     id: "order-a",
     tenantId: "tenant-a",
@@ -208,10 +210,10 @@ test("returns the locked reread and the acquired finance context", async () => {
     totalMinor: 2500,
   }
   const fixture = transactionFixture({
-    findFirst: [{ customerId: "customer-a", currencyCode: "NGN" }, lockedOrder],
+    findFirst: [{ customerId: "customer-a", currencyCode: "NGN" }],
     financeBooks: [{ id: "book-a" }],
     customerAccounts: [{ id: "account-a" }],
-    orderLocks: [{ id: "order-a" }],
+    orderLocks: [lockedOrder],
   })
 
   const result = await lockCommerceFinancialOrder(fixture.tx, {
@@ -219,14 +221,76 @@ test("returns the locked reread and the acquired finance context", async () => {
     orderId: "order-a",
   })
 
-  expect(result?.order.id).toBe(lockedOrder.id)
   expect(result?.context).toEqual({ bookId: "book-a", accountId: "account-a" })
-  expect(fixture.findFirstCalls[1]?.select).toBeUndefined()
+  expect(Object.is(result?.order, lockedOrder)).toBe(true)
   expect(fixture.rawCalls.map((call) => call.query)).toEqual([
     expect.stringContaining('FROM "FinanceBook"'),
     expect.stringContaining('FROM "CustomerLedgerAccount"'),
     expect.stringContaining('FROM "CommercialOrder"'),
   ])
+})
+
+test("plain forged lock evidence is refused without any database read", () => {
+  const fixture = transactionFixture({ findFirst: [] })
+  expect(() =>
+    assertHeldCommerceFinancialOrder(
+      fixture.tx,
+      {},
+      {
+        tenantId: "tenant-a",
+        orderId: "order-a",
+      },
+    ),
+  ).toThrow()
+  expect(fixture.findFirstCalls).toHaveLength(0)
+  expect(fixture.rawCalls).toHaveLength(0)
+})
+
+test("authentic evidence cannot be cloned, moved to another transaction or rebound", async () => {
+  const order: CommerceOrder = {
+    id: "order-a",
+    tenantId: "tenant-a",
+    customerId: null,
+    currencyCode: "NGN",
+    orderNumber: "A-1",
+    totalMinor: 2500,
+  }
+  const fixture = transactionFixture({
+    findFirst: [{ customerId: null, currencyCode: "NGN" }],
+    financeBooks: [{ id: "book-a" }],
+    orderLocks: [order],
+  })
+  const lock = await lockCommerceFinancialOrder(fixture.tx, {
+    tenantId: "tenant-a",
+    orderId: "order-a",
+  })
+  if (!lock) throw Error("Expected authentic held lock")
+  const scope = { tenantId: "tenant-a", orderId: "order-a" }
+  expect(() =>
+    assertHeldCommerceFinancialOrder(fixture.tx, lock, scope),
+  ).not.toThrow()
+  expect(() =>
+    assertHeldCommerceFinancialOrder(fixture.tx, { ...lock }, scope),
+  ).toThrow()
+  const other = transactionFixture({ findFirst: [] })
+  expect(() =>
+    assertHeldCommerceFinancialOrder(other.tx, lock, scope),
+  ).toThrow()
+  expect(() =>
+    assertHeldCommerceFinancialOrder(fixture.tx, lock, {
+      ...scope,
+      tenantId: "tenant-b",
+    }),
+  ).toThrow()
+  expect(() =>
+    assertHeldCommerceFinancialOrder(fixture.tx, lock, {
+      ...scope,
+      orderId: "order-b",
+    }),
+  ).toThrow()
+  expect(fixture.findFirstCalls).toHaveLength(1)
+  expect(other.findFirstCalls).toHaveLength(0)
+  expect(other.rawCalls).toHaveLength(0)
 })
 
 for (const changed of [
@@ -254,7 +318,7 @@ for (const changed of [
   })
 }
 
-test("uses a matching expected identity before FinanceBook, account, Order, and reread", async () => {
+test("uses a matching expected identity before FinanceBook, account and authoritative Order", async () => {
   const order: CommerceOrder = {
     id: "order-a",
     tenantId: "tenant-a",
@@ -264,10 +328,10 @@ test("uses a matching expected identity before FinanceBook, account, Order, and 
     totalMinor: 2500,
   }
   const fixture = transactionFixture({
-    findFirst: [{ customerId: "customer-a", currencyCode: "NGN" }, order],
+    findFirst: [{ customerId: "customer-a", currencyCode: "NGN" }],
     financeBooks: [{ id: "book-a" }],
     customerAccounts: [{ id: "account-a" }],
-    orderLocks: [{ id: "order-a" }],
+    orderLocks: [order],
   })
 
   const result = await lockCommerceFinancialOrder(fixture.tx, {
@@ -278,8 +342,11 @@ test("uses a matching expected identity before FinanceBook, account, Order, and 
 
   expect(result?.order).toMatchObject(order)
   expect(result?.context).toEqual({ bookId: "book-a", accountId: "account-a" })
-  expect(fixture.findFirstCalls).toHaveLength(2)
-  expect(fixture.findFirstCalls[1]?.select).toBeUndefined()
+  expect(fixture.findFirstCalls).toHaveLength(1)
+  expect(fixture.findFirstCalls[0]?.select).toEqual({
+    customerId: true,
+    currencyCode: true,
+  })
   expect(fixture.rawCalls.map((call) => call.query)).toEqual([
     expect.stringContaining('FROM "FinanceBook"'),
     expect.stringContaining('FROM "CustomerLedgerAccount"'),

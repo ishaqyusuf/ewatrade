@@ -1,0 +1,59 @@
+{
+  "version": 1,
+  "id": "2026-10-15-whatsapp-conversation-principal",
+  "tickets": ["A01", "H01"],
+  "summary": "WhatsApp channel plan W07/W09: generated canonical conversation bindings and selection generations; fresh branded linked principals without browser Session IDs/tokens; protected caller read allowlist, canonical namespaced domain callers, purpose-bound proposals, Store/chat invalidation and sender disconnect. Search gains transport-source compatibility with unchanged source rollout; full turn runtime and delivery remain open. Existing OTP sender/configuration/verification remain intact.",
+  "capabilities": [
+    {
+      "id": "search.records",
+      "change": "changed",
+      "rollout": "source",
+      "note": "Adds explicit whatsapp client compatibility to the existing canonical search read. Actual linked context/shared tool cross-Tenant isolation verified on guarded local Neon. No model, message delivery, capability rollout promotion or broader WhatsApp client support claimed."
+    }
+  ],
+  "docs": [
+    {
+      "topic": "feature",
+      "path": ".brain/features/whatsapp-assistant.md",
+      "status": "local_only"
+    },
+    {
+      "topic": "api",
+      "path": ".brain/api/contracts.md",
+      "status": "local_only"
+    },
+    {
+      "topic": "permissions",
+      "path": ".brain/api/permissions.md",
+      "status": "local_only"
+    },
+    {
+      "topic": "schema",
+      "path": ".brain/database/schema.md",
+      "status": "local_only"
+    },
+    {
+      "topic": "capability",
+      "path": "packages/assistant/src/capabilities/COVERAGE.md",
+      "status": "updated"
+    },
+    {
+      "topic": "capability",
+      "path": "packages/assistant/evaluations/WHATSAPP-COVERAGE.md",
+      "status": "updated"
+    },
+    {
+      "topic": "decision",
+      "path": ".brain/decisions/2026-10-15-whatsapp-assistant-channel.md",
+      "status": "local_only"
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "run",
+      "path": ".brain/qa/2026-10-15-whatsapp-assistant.md",
+      "executed": true,
+      "result": "Final guarded local Neon linked context/shared canonical search test1/31 passes, including fresh-role narrowing, cross-Tenant, scope-generation, mutation/global endpoint, purpose/rollout/member and disconnect checks; fixtures cleaned. Original linking lifecycle1/21 passes separately. Full offline assistant suite383/2073 and focused shared security/private-media/privacy/OTP270/1025 pass; final header/disconnect/privacy4/24 pass. See QA for scope and inherited full-package type errors."
+    }
+  ]
+}

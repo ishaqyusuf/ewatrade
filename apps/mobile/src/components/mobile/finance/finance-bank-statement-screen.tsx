@@ -298,7 +298,7 @@ function StatementWorkspace({
               Equal balances do not prove every transaction. The imported
               statement and posted records stay separate.
             </Text>
-            <Text className="text-[11px] text-muted-foreground">
+            <Text className="text-xs text-muted-foreground">
               Evidence revision {data.bankRevision} · journal snapshot{" "}
               {data.snapshotSequence}
             </Text>

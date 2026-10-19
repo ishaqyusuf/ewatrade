@@ -19,7 +19,7 @@ import Animated, {
 } from "react-native-reanimated"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 
-type BottomSearchFooterProps = {
+export type BottomSearchFooterProps = {
   accessibilityLabel: string
   alwaysShowSearch?: boolean
   autoFocus?: boolean
@@ -34,6 +34,10 @@ type BottomSearchFooterProps = {
    * visible while the search is focused or has text. */
   hidden?: boolean
   includeSafeArea?: boolean
+  editable?: boolean
+  /** A Gorhom sheet already owns keyboard movement. Keep the same dock UI. */
+  keyboardOwner?: "screen" | "sheet"
+  position?: "absolute" | "relative"
   label?: string
   layout?: "inline" | "stacked"
   maxLength?: number
@@ -66,6 +70,9 @@ export function BottomSearchFooter({
   actionsAboveSearch = false,
   hidden = false,
   includeSafeArea = true,
+  editable = true,
+  keyboardOwner = "screen",
+  position = "absolute",
   label = "Search",
   layout = "stacked",
   maxLength,
@@ -136,14 +143,17 @@ export function BottomSearchFooter({
     onHeightChange?.(event.nativeEvent.layout.height)
   }
 
+  const FooterContainer = keyboardOwner === "sheet" ? View : KeyboardStickyView
   return (
-    <KeyboardStickyView
-      offset={{ closed: -bottomOffset, opened: 0 }}
+    <FooterContainer
+      {...(keyboardOwner === "screen"
+        ? { offset: { closed: -bottomOffset, opened: 0 } }
+        : {})}
       pointerEvents="box-none"
       style={{
         bottom: 0,
         left: 0,
-        position: "absolute",
+        position,
         right: 0,
         zIndex: 20,
       }}
@@ -180,7 +190,7 @@ export function BottomSearchFooter({
               <FloatingSearchField
                 accessibilityLabel={accessibilityLabel || label}
                 autoFocus={autoFocus}
-                editable={!isOffline || localSearch}
+                editable={editable && (!isOffline || localSearch)}
                 focused={searchFocused}
                 maxLength={maxLength}
                 onBlur={() => setFocused(false)}
@@ -228,6 +238,6 @@ export function BottomSearchFooter({
           </View>
         </Animated.View>
       )}
-    </KeyboardStickyView>
+    </FooterContainer>
   )
 }

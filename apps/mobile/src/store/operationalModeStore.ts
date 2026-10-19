@@ -58,3 +58,26 @@ export const useOperationalModeStore = create<OperationalModeState>()(
     },
   ),
 )
+
+// Memory-only generation: returning to the same mode/business cannot revive
+// observations captured before an intervening operational-mode transition.
+let operationalModeGeneration = 0
+useOperationalModeStore.subscribe((state, previous) => {
+  if (
+    state.activeBusinessId !== previous.activeBusinessId ||
+    state.isOfflineMode !== previous.isOfflineMode ||
+    isOfflineAccessAllowed(
+      state.offlineAccessByBusinessId,
+      state.activeBusinessId,
+    ) !==
+      isOfflineAccessAllowed(
+        previous.offlineAccessByBusinessId,
+        previous.activeBusinessId,
+      )
+  )
+    operationalModeGeneration++
+})
+
+export function getOperationalModeGeneration() {
+  return operationalModeGeneration
+}

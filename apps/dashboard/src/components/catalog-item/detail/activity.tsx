@@ -1,6 +1,7 @@
 "use client"
 import { useCatalogDetailParams } from "@/hooks/use-catalog-detail-params"
-import { useTRPC } from "@/trpc/client"
+import { getDataCacheGeneration, useTRPC, useTRPCClient } from "@/trpc/client"
+import type { RouterInputs } from "@ewatrade/api/trpc/routers/_app"
 import { Badge, Button, ToggleGroup, ToggleGroupItem } from "@ewatrade/ui"
 import {
   Add01Icon,
@@ -17,39 +18,69 @@ import { HugeiconsIcon } from "@hugeicons/react"
 import { useInfiniteQuery } from "@tanstack/react-query"
 import Link from "next/link"
 import { dateTime, money, orderHref } from "./display"
+import {
+  type CatalogDetailReadScope,
+  catalogDetailQueryKey,
+  catalogDetailReadIsFresh,
+} from "./read-access"
 import { DetailEmpty, DetailError, DetailLoading } from "./states"
 export function CatalogDetailActivity({
   itemId,
   storeId,
   inventoryAllowed,
+  readScope,
   preview = false,
 }: {
   itemId: string
   storeId: string
   inventoryAllowed: boolean
+  readScope: CatalogDetailReadScope
   preview?: boolean
 }) {
+  const client = useTRPCClient()
   const trpc = useTRPC()
   const { catalogActivity, setParams } = useCatalogDetailParams()
   const category = preview ? "all" : catalogActivity
-  const query = useInfiniteQuery(
-    trpc.catalog.detail.activity.infiniteQueryOptions(
-      { itemId, storeId, category, limit: preview ? 2 : 30 },
-      {
-        getNextPageParam: (page) => page.nextCursor ?? undefined,
-        retry: false,
-        staleTime: 0,
-      },
+  const query = useInfiniteQuery({
+    queryKey: catalogDetailQueryKey(
+      trpc.catalog.detail.activity.infiniteQueryKey({
+        itemId,
+        storeId,
+        category,
+        limit: preview ? 2 : 30,
+      }),
+      readScope,
     ),
-  )
+    queryFn: ({ pageParam, signal }) =>
+      client.catalog.detail.activity.query(
+        {
+          itemId,
+          storeId,
+          category,
+          limit: preview ? 2 : 30,
+          cursor: pageParam,
+        },
+        { signal },
+      ),
+    initialPageParam:
+      undefined as RouterInputs["catalog"]["detail"]["activity"]["cursor"],
+    getNextPageParam: (page) => page.nextCursor ?? undefined,
+    enabled: readScope.generation === getDataCacheGeneration(),
+    retry: false,
+    staleTime: 0,
+    gcTime: 0,
+    refetchOnMount: "always",
+  })
   if (query.isPending) return <DetailLoading />
-  if (query.isError && !query.data)
+  if (query.isError)
     return (
       <DetailError
         message={query.error.message}
         retry={() => void query.refetch()}
       />
     )
+  if (!catalogDetailReadIsFresh(query, readScope, getDataCacheGeneration()))
+    return <DetailLoading />
   const events = query.data?.pages.flatMap((page) => page.items) ?? []
   return (
     <div className="grid gap-4">
@@ -154,16 +185,6 @@ export function CatalogDetailActivity({
           description="Retained events for this category will appear here."
         />
       )}
-      {query.isError ? (
-        <DetailError
-          message={query.error.message}
-          retry={() =>
-            void (query.isFetchNextPageError
-              ? query.fetchNextPage()
-              : query.refetch())
-          }
-        />
-      ) : null}
       {!preview && query.hasNextPage ? (
         <Button
           variant="outline"

@@ -1,16 +1,20 @@
+import { createHash } from "node:crypto"
 import { readCommercialServiceEvidence } from "./commercial-service-evidence"
 import { assertCommercialServiceLineReview } from "./commercial-service-line-review"
-import { createHash } from "node:crypto"
 
-import { assertChargeOnlyServicePerformance } from "./commercial-service-line-policy"
 import { Prisma, type PrismaClient } from "../../generated/prisma/client"
-import { runInOwnTransaction } from "./own-transaction"
 import { CatalogError } from "./catalog"
 import { readCommercialOrderLinesComplete } from "./commercial-order-completion"
+import { assertChargeOnlyServicePerformance } from "./commercial-service-line-policy"
 import {
   assertHeldCommerceFinancialOrder,
   lockCommerceFinancialOrder,
 } from "./customer-ledger/commerce-locks"
+import {
+  type RecoveryFulfillmentAuthorization,
+  recoveryFulfillmentReviewer,
+} from "./offline-recovery-fulfillment-authorization"
+import { runInOwnTransaction } from "./own-transaction"
 
 const FULFILLMENT_COMMAND_ID_MIN_LENGTH = 8
 const FULFILLMENT_COMMAND_ID_MAX_LENGTH = 160
@@ -347,6 +351,7 @@ export async function fulfillCatalogFreeLinesInTransaction(
     schemaVersion: number
     tenantId: string
   },
+  recoveryAuthorization?: RecoveryFulfillmentAuthorization,
 ) {
   const lines = await tx.commercialOrderLine.findMany({
     orderBy: [{ createdAt: "asc" }, { id: "asc" }],
@@ -364,7 +369,13 @@ export async function fulfillCatalogFreeLinesInTransaction(
     },
   })
   if (lines.length === 0) return 0
-  await assertActivePosMember(tx, input)
+  const authorizerUserId = recoveryAuthorization
+    ? await recoveryFulfillmentReviewer(tx, recoveryAuthorization, input)
+    : input.actorUserId
+  await assertActivePosMember(tx, {
+    actorUserId: authorizerUserId,
+    tenantId: input.tenantId,
+  })
   const performedAt = new Date()
   const rows = lines.map((line) => {
     const normalized = validateInput({

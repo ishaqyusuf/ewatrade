@@ -1,0 +1,66 @@
+{
+  "capturedAt": "2026-10-15T08:50:03.268Z",
+  "note": "Snapshot after source checks, not connected/runtime acceptance or ownership of all mixed file hunks",
+  "files": [
+    {
+      "path": "apps/api/src/assistant/general-actions.ts",
+      "sha256": "94ad7ac1c38ae20cc0f50c66567f12717caecf92c891b4d39cd0a59572c08df4",
+      "ownership": "Continuation source/test/config; preexisting content retained"
+    },
+    {
+      "path": "apps/api/src/assistant/general-proposals.ts",
+      "sha256": "163387eb20857fa5ee07468af0c7407cd7189c621a9554d98b38a83b225d724a",
+      "ownership": "Mixed: this packet owns completed authorizeRecovery branch only; linked principal changes belong to another session"
+    },
+    {
+      "path": "apps/api/src/assistant/general-stock-transfer.ts",
+      "sha256": "50e66ac34658bffe633fd14d40ceddae2a032f73f5f00cb8af1dc04f4389d4a7",
+      "ownership": "Continuation source/test/config; preexisting content retained"
+    },
+    {
+      "path": "apps/api/src/assistant/general-simple-transfer.ts",
+      "sha256": "ac2dc019baf3f866ad07f6b32fa8d1665f07ca43bbb0e401c80e87200d386d4c",
+      "ownership": "Continuation source/test/config; preexisting content retained"
+    },
+    {
+      "path": "apps/api/src/assistant/general-stock-transfer.integration-check.ts",
+      "sha256": "b53e8bee4a70ca1a2e52300b121d538bd11711e56295770270fb2d30532ceff2",
+      "ownership": "Continuation source/test/config; preexisting content retained"
+    },
+    {
+      "path": "apps/dashboard/src/components/sheets/inventory-operation-details-sheet.tsx",
+      "sha256": "1cd58153140c7ccf280ef6b26be37738d0f366bb69a0854ef9e445d6f3bf9e3b",
+      "ownership": "Continuation source/test/config; preexisting content retained"
+    },
+    {
+      "path": "packages/assistant/evaluations/fixtures/stock-transfer-recovery.production-path.fixture.ts",
+      "sha256": "094e87defc753b9b417cdf1120f86d5ce1ccd25e8ae595d20b96186660c9723e",
+      "ownership": "Continuation source/test/config; preexisting content retained"
+    },
+    {
+      "path": "packages/assistant/evaluations/fixtures/inventory-operation-routing.fixture.tsx",
+      "sha256": "ceda451bfb90ea1a57bb3c8dd46ec39bb2197ce968bac61997b3ef037dea6951",
+      "ownership": "Continuation source/test/config; preexisting content retained"
+    },
+    {
+      "path": "packages/assistant/evaluations/fixtures/simple-transfer-result.fixture.ts",
+      "sha256": "4f2367a16003ba8c05df5249f0119c79b7bed6a4fe4a0650cac572e355c626e0",
+      "ownership": "Continuation source/test/config; preexisting content retained"
+    },
+    {
+      "path": "packages/assistant/evaluations/phase-regressions.test.ts",
+      "sha256": "1be11a6093709be3e26f218c1fb00f49afd245b94d5113686b3696959feacf94",
+      "ownership": "Continuation source/test/config; preexisting content retained"
+    },
+    {
+      "path": "packages/assistant/evaluations/phase-continuation.tsconfig.json",
+      "sha256": "8cac8b2a1ab63eef94cde2f1f483dcb8e850dd1b3385e9670929757101a3fdb6",
+      "ownership": "Continuation source/test/config; preexisting content retained"
+    },
+    {
+      "path": ".github/workflows/assistant-gate.yml",
+      "sha256": "9127812d83eb10f658ce2f31e5098e6be86d2fae632571ff3ffd3710a78c04a2",
+      "ownership": "Continuation source/test/config; preexisting content retained"
+    }
+  ]
+}

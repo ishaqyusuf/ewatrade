@@ -4,12 +4,13 @@ import type {
 } from "@ewatrade/assistant/general/contracts"
 import {
   createAndDispatchStockTransferInTransaction,
-  lockStockTransferReview,
   getStockTransferLockScope,
+  lockStockTransferReview,
   previewStockTransferDispatch,
   previewStockTransferTransition,
   receiveOrCancelStockTransferInTransaction,
 } from "@ewatrade/db/queries"
+import { TRPCError } from "@trpc/server"
 import {
   inventoryDispatchTransferSchema,
   inventoryTransitionTransferSchema,
@@ -19,12 +20,12 @@ import type {
   GeneralTransactionContext,
 } from "./general-actions"
 import { requireGeneralScope } from "./general-context"
+import { assertGeneralTransferAccess } from "./general-transfer-access"
+import { proposalDigest } from "./proposal-security"
 import {
   stockTransferDispatchPresentation,
   stockTransferTransitionPresentation,
 } from "./review-presentations"
-import { assertGeneralTransferAccess } from "./general-transfer-access"
-import { proposalDigest } from "./proposal-security"
 
 type Dispatch = Extract<GeneralAction, { action: "stock_transfer_dispatch" }>
 type Receive = Extract<GeneralAction, { action: "stock_transfer_receive" }>
@@ -65,6 +66,7 @@ async function dispatchReview(
 export const stockTransferDispatch: GeneralActionAdapter<Dispatch> = {
   stale,
   unavailable,
+  authorizeRecovery: authorizeTransferRecovery,
   async validate(ctx, payload, lock) {
     return (
       lock
@@ -165,6 +167,7 @@ function transitionAdapter<
   return {
     stale,
     unavailable,
+    authorizeRecovery: authorizeTransferRecovery,
     async validate(ctx, payload, lock) {
       return (
         lock
@@ -219,6 +222,53 @@ function transitionAdapter<
 export const stockTransferReceive = transitionAdapter<Receive>()
 export const stockTransferCancel = transitionAdapter<Cancel>()
 
+/** A completed transfer needs both current Store grants, but no fresh stock review. */
+async function authorizeTransferRecovery(
+  ctx: GeneralTransactionContext,
+  payload: Dispatch | Receive | Cancel,
+  receipt: GeneralReceipt,
+) {
+  const scope = requireGeneralScope(ctx)
+  if (receipt.kind !== "stock_transfer")
+    throw new TRPCError({ code: "FORBIDDEN", message: unavailable })
+  const transfer = await ctx.db.stockTransfer.findFirst({
+    where: {
+      id: receipt.recordId,
+      tenantId: scope.tenantId,
+      sourceStoreId: { in: ctx.tenantContext.stores.map((store) => store.id) },
+      targetStoreId: { in: ctx.tenantContext.stores.map((store) => store.id) },
+      OR: [{ sourceStoreId: scope.storeId }, { targetStoreId: scope.storeId }],
+    },
+    select: {
+      id: true,
+      tenantId: true,
+      sourceStoreId: true,
+      targetStoreId: true,
+      sourceBalanceSourceId: true,
+    },
+  })
+  if (
+    !transfer ||
+    transfer.id !== receipt.recordId ||
+    transfer.tenantId !== scope.tenantId ||
+    (payload.action === "stock_transfer_dispatch"
+      ? transfer.sourceBalanceSourceId !== payload.sourceBalanceSourceId ||
+        transfer.targetStoreId !== payload.targetStoreId
+      : transfer.id !== payload.transferId)
+  )
+    throw new TRPCError({ code: "FORBIDDEN", message: unavailable })
+  assertGeneralTransferAccess(ctx.tenantContext, {
+    sourceStoreId: transfer.sourceStoreId,
+    targetStoreId: transfer.targetStoreId,
+    stage:
+      payload.action === "stock_transfer_dispatch"
+        ? "dispatch"
+        : payload.action === "stock_transfer_receive"
+          ? "receive"
+          : "cancel",
+  })
+}
+
 async function executeTransition(
   ctx: GeneralTransactionContext,
   payload: Receive | Cancel,
@@ -230,9 +280,11 @@ async function executeTransition(
     review: r,
     transition,
   } = current ?? (await transitionReview(ctx, payload))
+  if (!r.transit)
+    throw new TRPCError({ code: "CONFLICT", message: unavailable })
   const parsed = inventoryTransitionTransferSchema.parse({
     clientOperationId: key,
-    expectedTransitRevision: r.transit!.revision,
+    expectedTransitRevision: r.transit.revision,
     quantity: r.plan.quantity,
     reason: payload.reason,
     schemaVersion: 1,

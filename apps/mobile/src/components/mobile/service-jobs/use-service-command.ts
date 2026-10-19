@@ -9,6 +9,8 @@ export type ServiceScope = {
   storeId: string | undefined
   canOperate: boolean
   canManage: boolean
+  /** Optional current-read fence for an exact assistant workspace handover. */
+  isCurrent?: () => boolean
 }
 type ServiceIdentity = { userId: string; businessId: string; storeId: string }
 export type PreparedServiceAction = {
@@ -58,6 +60,7 @@ export function useServiceCommand(scope: ServiceScope) {
   const [phase, setPhase] = useState<Phase>("review")
   const [error, setError] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
+  const currentRead = scope.isCurrent?.() ?? true
   useEffect(() => {
     mounted.current = true
     return () => {
@@ -65,16 +68,22 @@ export function useServiceCommand(scope: ServiceScope) {
     }
   }, [])
   useEffect(() => {
-    if (review) modal.present()
+    if (
+      review &&
+      (!live.current.isCurrent ||
+        matches(review.identity, review.kind === "message"))
+    )
+      modal.present()
   }, [review, modal.present])
   useEffect(() => {
-    void resumeAcceptedFollowUp()
+    if (currentRead) void resumeAcceptedFollowUp()
   }, [
     scope.userId,
     scope.businessId,
     scope.storeId,
     scope.canOperate,
     scope.canManage,
+    currentRead,
     phase,
   ])
 
@@ -83,6 +92,7 @@ export function useServiceCommand(scope: ServiceScope) {
     return (
       mounted.current &&
       current.canOperate &&
+      (current.isCurrent?.() ?? true) &&
       (!manager || current.canManage) &&
       identity.userId === current.userId &&
       identity.businessId === current.businessId &&
@@ -231,7 +241,16 @@ export function useServiceCommand(scope: ServiceScope) {
     confirm,
     dismiss,
     afterDismiss,
-    resume: modal.present,
+    resume: () => {
+      // Ordinary queue callers retain their existing behavior. A focused
+      // handover cannot reopen stale review facts after its proof is lost.
+      if (live.current.isCurrent) {
+        const request = active.current
+        if (!request || !matches(request.identity, request.kind === "message"))
+          return
+      }
+      modal.present()
+    },
     pending: phase === "posting",
     hasAttempt: attempted.current,
     isAccepted: accepted.current,

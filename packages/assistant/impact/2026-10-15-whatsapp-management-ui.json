@@ -1,0 +1,37 @@
+{
+  "version": 1,
+  "id": "2026-10-15-whatsapp-management-ui",
+  "tickets": ["G05", "H01"],
+  "summary": "W12 dashboard/mobile personal assistant WhatsApp connection UI source: same existing OTP platform number, explicit private link and fresh masked sender confirmation, expiry/retry/relink, owned paginated withdrawal and generation-fenced business/Store/chat selection. Personal routes remain reachable after lost workspace access. Both clients suppress assistantChannels logger payloads. Source implementation reviewed; rendering/device acceptance remains pending.",
+  "noAssistantImpact": "Personal connection/consent management UI changes no merchant command/capability rollout, client tool eligibility or provider activation. GENERAL/SETUP/PRODUCT_CREATE WhatsApp capability classifications remain unchanged; scoped workflow selection labels app continuation until those adapters are implemented.",
+  "docs": [
+    {
+      "topic": "feature",
+      "path": ".brain/features/whatsapp-assistant.md",
+      "status": "local_only"
+    },
+    {
+      "topic": "api",
+      "path": ".brain/api/contracts.md",
+      "status": "local_only"
+    },
+    {
+      "topic": "permissions",
+      "path": ".brain/api/permissions.md",
+      "status": "local_only"
+    },
+    {
+      "topic": "decision",
+      "path": ".brain/decisions/2026-10-15-whatsapp-assistant-channel.md",
+      "status": "local_only"
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "run",
+      "path": ".brain/qa/2026-10-15-whatsapp-assistant.md",
+      "executed": true,
+      "result": "Dashboard focused logger5/13 and9-file scoped lint pass. Mobile focused helper/logger/navigation17/71 plus final fresh-status helper3/19 pass; scoped lint and3-module syntax bundle pass. Read-only cross-agent review found superseded dashboard selection false-success and stale cached mobile confirmation; owners fixed both. No broad repeated typecheck, emulator/browser/dev stack, provider/model send or private env action. W12 remains unchecked pending rendered/native connection-state verification; full goal active."
+    }
+  ]
+}

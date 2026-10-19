@@ -60,36 +60,50 @@ export function AssistantChatBox({
   onChangeRef.current = composer.onChange
   // "Stop and send": send once the written-out words reach the box.
   const sendWhenWritten = useRef(false)
-  const [pendingSend, setPendingSend] = useState<string | null>(null)
-  const receipts = useAssistantReceipts(conversationId ?? "", (text) => {
-    const current = valueRef.current
-    const next = current.trim() ? `${current.trimEnd()}\n${text}` : text
-    onChangeRef.current(next)
-    if (sendWhenWritten.current) {
-      sendWhenWritten.current = false
-      setPendingSend(next)
-    }
-  })
+  const [pendingSend, setPendingSend] = useState<{
+    text: string
+    conversationId: string | null
+    resetKey: number
+  } | null>(null)
+  const receipts = useAssistantReceipts(
+    conversationId ?? "",
+    (text) => {
+      const current = valueRef.current
+      const next = current.trim() ? `${current.trimEnd()}\n${text}` : text
+      onChangeRef.current(next)
+      if (sendWhenWritten.current) {
+        sendWhenWritten.current = false
+        setPendingSend({ text: next, conversationId, resetKey })
+      }
+    },
+    resetKey,
+  )
   const { onSend, value } = composer
   useEffect(() => {
-    if (pendingSend === null || value !== pendingSend) return
+    if (
+      !pendingSend ||
+      pendingSend.conversationId !== conversationId ||
+      pendingSend.resetKey !== resetKey ||
+      value !== pendingSend.text
+    )
+      return
     setPendingSend(null)
     onSend()
-  }, [pendingSend, value, onSend])
+  }, [pendingSend, value, onSend, conversationId, resetKey])
   const recorder = useCustomerVoiceNote({
     enabled: capabilities.data?.enabled === true && Boolean(conversationId),
-    scopeKey: conversationId ?? "none",
+    scopeKey: `${conversationId ?? "none"}:${resetKey}`,
     onReady: (file) => {
       void receipts.addRecording(file)
       return true
     },
   })
-  const { clear } = receipts
-  // biome-ignore lint/correctness/useExhaustiveDependencies: resetKey is the trigger.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: a new composer scope resets transient controls.
   useEffect(() => {
-    clear()
     setMenuOpen(false)
-  }, [resetKey])
+    sendWhenWritten.current = false
+    setPendingSend(null)
+  }, [conversationId, resetKey])
   const readyKey = receipts.ready
     .map((file) => `${file.attachmentId}\u0000${file.fileName}`)
     .join("\u0001")
@@ -190,7 +204,7 @@ export function AssistantChatBox({
                 name="ReceiptText"
               />
               <Text
-                className="max-w-[150px] text-xs text-foreground"
+                className="max-w-[150px] text-base [-rn-line-height:22] text-foreground"
                 numberOfLines={1}
               >
                 {item.fileName}
@@ -198,8 +212,8 @@ export function AssistantChatBox({
               <Text
                 className={
                   item.phase === "failed"
-                    ? "text-xs text-destructive"
-                    : "text-xs text-muted-foreground"
+                    ? "text-base [-rn-line-height:22] text-destructive"
+                    : "text-base [-rn-line-height:22] text-muted-foreground"
                 }
                 numberOfLines={1}
               >
@@ -249,12 +263,15 @@ function MenuChip({
         borderRadius: 999,
         flexDirection: "row",
         gap: 6,
-        height: 34,
+        minHeight: 34,
+        paddingVertical: 6,
         paddingHorizontal: 12,
       }}
     >
       <Icon className="size-[15px]" color={colors.foreground} name={icon} />
-      <Text className="text-xs font-bold text-foreground">{label}</Text>
+      <Text className="text-base [-rn-line-height:22] font-bold text-foreground">
+        {label}
+      </Text>
     </Pressable>
   )
 }

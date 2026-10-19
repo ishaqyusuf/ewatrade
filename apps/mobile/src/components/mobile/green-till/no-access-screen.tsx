@@ -8,6 +8,7 @@ import { NoAccessStage } from "@/components/mobile/green-till/auth-stage"
 import { Icon } from "@/components/ui/icon"
 import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
+import type { ReactNode } from "react"
 
 export type NoAccessPresentationProps = {
   email?: string
@@ -17,6 +18,8 @@ export type NoAccessPresentationProps = {
   onCheck: () => void
   onSignOut: () => void
   checking?: boolean
+  /** Sales saved on this phone before access changed (shown when any). */
+  savedSales?: ReactNode
 }
 export function ClassicNoAccessScreen({
   email,
@@ -26,6 +29,7 @@ export function ClassicNoAccessScreen({
   onCheck,
   onSignOut,
   checking,
+  savedSales,
 }: NoAccessPresentationProps) {
   return (
     <GreenTillAuthScreen
@@ -67,6 +71,7 @@ export function ClassicNoAccessScreen({
           title="Account and privacy"
         />
       </AuthListCard>
+      {savedSales}
       <ActionButton
         onPress={onCheck}
         isLoading={checking}
@@ -82,7 +87,7 @@ export function ClassicNoAccessScreen({
         onPress={onSignOut}
       >
         <Icon className="size-[16px] text-muted-foreground" name="LogOut" />
-        <Text className="text-[13px] [-rn-line-height:18] text-muted-foreground">
+        <Text className="text-xs [-rn-line-height:22] text-muted-foreground">
           Sign out
         </Text>
       </Pressable>

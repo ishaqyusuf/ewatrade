@@ -1,0 +1,9 @@
+bun test v1.3.9 (cf6cdbbb)
+
+packages/assistant/evaluations/fixtures/mobile-whatsapp-connect.fixture.tsx:
+(pass) actual mobile WhatsApp screen confirms fresh claims and fences offline/scope changes while managing personal grants [263.60ms]
+
+ 1 pass
+ 0 fail
+ 38 expect() calls
+Ran 1 test across 1 file. [329.00ms]

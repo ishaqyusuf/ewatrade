@@ -193,7 +193,7 @@ export function ReturnRefundSettingsScreen() {
         ) : null}
         <View className="mt-2 flex-row items-start gap-2">
           <Icon className="mt-0.5 size-sm text-primary" name="Info" />
-          <Text className="min-w-0 flex-1 text-xs leading-5 text-muted-foreground">
+          <Text className="min-w-0 flex-1 text-xs [-rn-line-height:22] text-muted-foreground">
             Requests show on your Home and on the order. An approval lasts until
             the end of the day, and only the person who asked can use it. A
             return that gives money back also follows the Refunds setting.

@@ -26,7 +26,9 @@ import { qaToolsRouter } from "./qa-tools"
 import { retailOpsRouter } from "./retail-ops"
 import { searchRouter } from "./search"
 import { serviceAccessRouter } from "./service-access"
+import { serviceAssistantBookingsRouter } from "./service-assistant-bookings"
 import { serviceAssistantIntakeRouter } from "./service-assistant-intake"
+import { serviceAssistantRequestsRouter } from "./service-assistant-requests"
 import { serviceAssistantWorkRouter } from "./service-assistant-work"
 import { serviceCommerceRouter } from "./service-commerce"
 import { serviceCommunicationsRouter } from "./service-communications"
@@ -43,6 +45,7 @@ const qaAccessRegistration: { qaAccess: typeof qaAccessRouter } =
     : ({} as { qaAccess: typeof qaAccessRouter })
 
 export const appRouter = createTRPCRouter({
+  assistantChannels: assistantChannelsRouter,
   activity: activityRouter,
   businessNotifications: businessNotificationsRouter,
   businessReporting: businessReportingRouter,
@@ -68,7 +71,9 @@ export const appRouter = createTRPCRouter({
   serviceCommerce: serviceCommerceRouter,
   serviceCommunications: serviceCommunicationsRouter,
   services: servicesRouter,
+  serviceAssistantBookings: serviceAssistantBookingsRouter,
   serviceAssistantIntake: serviceAssistantIntakeRouter,
+  serviceAssistantRequests: serviceAssistantRequestsRouter,
   serviceAssistantWork: serviceAssistantWorkRouter,
   serviceReporting: serviceReportingRouter,
   retailOps: retailOpsRouter,
@@ -83,3 +88,4 @@ export const appRouter = createTRPCRouter({
 export type AppRouter = typeof appRouter
 export type RouterInputs = inferRouterInputs<AppRouter>
 export type RouterOutputs = inferRouterOutputs<AppRouter>
+import { assistantChannelsRouter } from "./assistant-channels"

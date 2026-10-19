@@ -15,7 +15,6 @@ import { View } from "@/components/ui/view"
 import { useAuthContext } from "@/hooks/use-auth"
 import { useMobileAppleAuth } from "@/hooks/use-mobile-apple-auth"
 import { useMobileGoogleAuth } from "@/hooks/use-mobile-google-auth"
-import { SESSION_ENDED_NOTICE } from "@/lib/session-expiry"
 import { useOnboardingStore } from "@/store/onboardingStore"
 import { useTRPC } from "@/trpc/client"
 import { getCountry, toInternationalPhone } from "@ewatrade/utils/countries"
@@ -168,6 +167,13 @@ export function LoginScreen() {
 
   return (
     <ClassicLoginScreen
+      subtitle={
+        useWhatsApp
+          ? "Use your WhatsApp number. We’ll send a 6-digit code."
+          : usePassword
+            ? "Use your email and password to sign in."
+            : "Use your email. We’ll send a 6-digit code."
+      }
       footer={
         <AuthFooterAction
           eyebrow="New to ẸwáTrade?"
@@ -177,13 +183,6 @@ export function LoginScreen() {
       }
     >
       <View className="gap-4">
-        {params.notice === SESSION_ENDED_NOTICE && !error ? (
-          <StatusBanner
-            icon="LogOut"
-            message="Your session ended. Sign in again."
-            tone="warning"
-          />
-        ) : null}
         {useWhatsApp ? (
           <PhoneField
             countryCode={phoneCountry}
@@ -242,7 +241,7 @@ export function LoginScreen() {
         </AuthActionButton>
         {phoneAvailability.data?.enabled ? (
           <AuthMethodButton
-            icon="MessageCircle"
+            icon={useWhatsApp ? "Mail" : "WhatsApp"}
             brandIcon={useWhatsApp ? undefined : "whatsapp"}
             label={useWhatsApp ? "Use email instead" : "Use WhatsApp instead"}
             onPress={() => {
@@ -266,7 +265,7 @@ export function LoginScreen() {
               setError(null)
             }}
           >
-            <Text className="text-[13px] font-extrabold [-rn-line-height:18] text-primary">
+            <Text className="text-xs font-extrabold [-rn-line-height:22] text-primary">
               {usePassword
                 ? "Use a login code instead"
                 : "Use a password instead"}

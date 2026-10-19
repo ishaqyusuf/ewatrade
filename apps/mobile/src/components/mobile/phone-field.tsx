@@ -107,7 +107,7 @@ export function PhoneField({
                   color={colors.mutedForeground}
                   name="ChevronDown"
                 />
-                <Text className="text-[15px] font-semibold text-foreground">
+                <Text className="text-base font-semibold text-foreground">
                   +{country.dialCode}
                 </Text>
               </Pressable>

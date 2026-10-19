@@ -15,14 +15,21 @@ function caller(input?: {
   db?: unknown
   installation?: string
   qaSessionScope?: { membershipId: string; storeId: string; tenantId: string }
-  session?: unknown
+  session?: { user: { id: string } }
 }) {
+  const session = input?.session
+    ? {
+        ...input.session,
+        session: { id: "customer-conversation-test-session" },
+      }
+    : null
   return createCaller({
     customerConversationCredential: input?.credential ?? null,
     customerConversationInstallation: input?.installation ?? null,
     db: input?.db ?? {},
     qaSessionScope: input?.qaSessionScope ?? null,
-    session: input?.session ?? null,
+    identity: session,
+    session,
   } as never)
 }
 

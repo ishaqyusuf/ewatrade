@@ -1,0 +1,10 @@
+{
+  "apps/dashboard/src/components/assistant-whatsapp/connect-whatsapp.tsx": "dd82cdfb2af244ea1dbf26391061b5a6f6033925e6a7527e630ddc0f0e89a701",
+  "apps/dashboard/src/components/assistant-whatsapp/whatsapp-connections.tsx": "90e91e12fa1df4baf96c35784416887a57a79232e68c0b6542ae8fb108cc651c",
+  "apps/mobile/src/components/mobile/assistant-whatsapp/screen.tsx": "d2ecb893a0ef102e2ef8bb8aafb0a98735586ec0665aa0676ad1ae18aa90f151",
+  "apps/mobile/src/components/mobile/assistant-whatsapp/link-state.ts": "18884c8496ef903610a52fb486aa32616d3772789b6180a4590fd473c89d86d5",
+  "apps/dashboard/src/components/assistant-whatsapp/connect-whatsapp.mounted.test.ts": "acb2246c03992890891838174ac05ac47f92ebe2daa8c704d56b74c2962cce5e",
+  "apps/mobile/src/components/mobile/assistant-whatsapp/screen.mounted.test.ts": "45bf9b083435d5f5a8a48eb7f2c0cc060b3c13bd1ae4f8bf59368f9ffb5ef4b9",
+  "packages/assistant/evaluations/fixtures/dashboard-whatsapp-connect.fixture.tsx": "a204f5f6d36cfe0814aea59529db27dfc1ad0bbf084be746a9d53a375179aae8",
+  "packages/assistant/evaluations/fixtures/mobile-whatsapp-connect.fixture.tsx": "d7af62fb7feeae1c86e05e2ef0868c7bf4bb31b42f7941586d14cbf80ed94859"
+}

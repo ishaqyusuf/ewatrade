@@ -65,7 +65,7 @@ export function ReportRecordRow({ item }: ReportRecordRowProps) {
           {item.label}
         </Text>
         {item.detail ? (
-          <Text className="text-xs leading-4 text-muted-foreground">
+          <Text className="text-xs [-rn-line-height:22] text-muted-foreground">
             {item.detail}
           </Text>
         ) : null}

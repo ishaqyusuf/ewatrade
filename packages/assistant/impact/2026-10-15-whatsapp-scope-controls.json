@@ -1,0 +1,54 @@
+{
+  "version": 1,
+  "id": "2026-10-15-whatsapp-scope-controls",
+  "tickets": ["A01", "H01"],
+  "summary": "W10 backend source: personal actual-browser-session paged consented business/Store/chat choices, strict exact-scope new GENERAL or existing workflow selection, serializable generation fencing and Identity-owned hashed replay receipts. Old queued content cancels; possible sends remain UNKNOWN and late original outcomes reconcile metadata without resend. WhatsApp deterministic menus/actions/durable server replies/bootstrap remain open; roadmap10/48, no live OTP/provider/private-config/Production action.",
+  "docs": [
+    {
+      "topic": "feature",
+      "path": ".brain/features/whatsapp-assistant.md",
+      "status": "local_only"
+    },
+    {
+      "topic": "api",
+      "path": ".brain/api/contracts.md",
+      "status": "local_only"
+    },
+    {
+      "topic": "permissions",
+      "path": ".brain/api/permissions.md",
+      "status": "local_only"
+    },
+    {
+      "topic": "schema",
+      "path": ".brain/database/schema.md",
+      "status": "local_only"
+    },
+    {
+      "topic": "decision",
+      "path": ".brain/decisions/2026-10-15-whatsapp-assistant-channel.md",
+      "status": "local_only"
+    },
+    {
+      "topic": "capability",
+      "path": "packages/assistant/src/capabilities/COVERAGE.md",
+      "status": "updated"
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "run",
+      "path": ".brain/qa/2026-10-15-whatsapp-assistant.md",
+      "executed": true,
+      "result": "W10 backend verified locally, leaf unaccepted10/48. Final actual current five-case choices/exact scope/replay/deleted-chat/same- and independent-identity race/queued uncertainty/assignment proof5/51,0fail149.72s with cleanup. Raw commit40001 was unwrapped by driver: minimized regression red5pass/1fail then narrow known-driver classifier green6/41, original concurrent race green; max3 unchanged, no unrelated retries. Queue invalidation materializes affected IDs and skips empty writes. Earlier full principal/worker/delivery8/202,0fail652.91s predates last helper query/classifier tightening and is bounded accordingly in QA. Final current offline233/697,11connected skips; separate OTP25/133 green. Assistant/query/integration/shared transaction tests types pass; API inherited unrelated errors only. Generated local migration20261015113420 and required push, scoped19file Biome/diff/H01/150+3channel inventory/11-record H02 pass. Four global authenticated personal controls excluded from model access and outside merchant inventory. Menus/control actions/durable replies/bootstrap still open; no live config/provider/model or Production effect."
+    }
+  ],
+  "capabilities": [
+    {
+      "id": "search.records",
+      "change": "changed",
+      "rollout": "source",
+      "note": "Cumulative working-tree coverage versus HEAD includes existing native/source WhatsApp search support from W09/W18. W10 scopes that runtime through personal browser-only selection and queued disclosure invalidation; no additional business command, compatibility or rollout promotion. Global authenticated personal controls are outside merchant-procedure inventory and never model tools."
+    }
+  ]
+}

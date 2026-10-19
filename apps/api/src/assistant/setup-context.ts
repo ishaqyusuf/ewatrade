@@ -21,7 +21,7 @@ export const SETUP_BUDGET_LIMITS = {
   windowMs: 30 * 24 * 60 * 60 * 1000,
 }
 
-type ProtectedContext = TRPCContext & {
+type ProtectedContext = Pick<TRPCContext, "session" | "tenantContext"> & {
   session: NonNullable<TRPCContext["session"]>
   tenantContext: NonNullable<TRPCContext["tenantContext"]>
 }

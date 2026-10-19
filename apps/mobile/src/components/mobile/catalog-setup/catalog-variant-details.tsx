@@ -67,7 +67,7 @@ export function CatalogVariantDetails({
             <Text className="text-xs font-bold uppercase tracking-[1.4px] text-muted-foreground">
               Prices by unit
             </Text>
-            <Text className="text-xs [-rn-line-height:20] text-muted-foreground">
+            <Text className="text-xs [-rn-line-height:22] text-muted-foreground">
               Each unit keeps its own price. Leave blank only when that unit has
               a default price.
             </Text>
@@ -100,7 +100,7 @@ export function CatalogVariantDetails({
             <Text className="text-xs font-bold uppercase tracking-[1.4px] text-muted-foreground">
               Availability
             </Text>
-            <Text className="text-xs [-rn-line-height:20] text-muted-foreground">
+            <Text className="text-xs [-rn-line-height:22] text-muted-foreground">
               Choose where this choice is available.
             </Text>
           </View>
@@ -185,7 +185,7 @@ export function CatalogVariantDetails({
               ? "Stock, price, and description"
               : "Pricing and description"}
           </Text>
-          <Text className="text-xs [-rn-line-height:20] text-muted-foreground">
+          <Text className="text-xs [-rn-line-height:22] text-muted-foreground">
             {kind === "product"
               ? `Return to the main ${editorTitle || "combination"} settings.`
               : "Return to the main choice settings."}

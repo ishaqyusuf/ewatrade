@@ -38,10 +38,21 @@ export const getSession = (): MobileSession | null => {
   }
 }
 
-export const setSession = (session: MobileSession) =>
-  SecureStore.setItem(SESSION_KEY, JSON.stringify(session))
+// Private runtime generation only; no token/session schema or persistence
+// changes. Even an identical restored Session is a new observation lifetime.
+let sessionGeneration = 0
+export const getSessionGeneration = () => sessionGeneration
 
-export const deleteSession = () => SecureStore.deleteItemAsync(SESSION_KEY)
+export const setSession = (session: MobileSession) => {
+  sessionGeneration++
+  return SecureStore.setItem(SESSION_KEY, JSON.stringify(session))
+}
+
+export const deleteSession = () => {
+  // Retire captures synchronously, before the asynchronous native deletion.
+  sessionGeneration++
+  return SecureStore.deleteItemAsync(SESSION_KEY)
+}
 
 export const getToken = () => getSession()?.token ?? null
 

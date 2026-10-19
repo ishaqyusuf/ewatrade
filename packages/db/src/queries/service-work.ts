@@ -36,6 +36,7 @@ import {
   WorkAuthorizationPolicy,
   WorkAuthorizationStatus,
 } from "../../generated/prisma/enums"
+import { assertAttachmentEntitlement } from "./attachment-entitlement"
 import { CatalogError } from "./catalog"
 import {
   isCommercialOrderFulfillmentAllowed,
@@ -1824,6 +1825,7 @@ export async function captureServiceEvidence(
         ? ServiceEvidenceUploadStatus.QUEUED
         : ServiceEvidenceUploadStatus.LOCAL
   return db.$transaction(async (tx) => {
+    await assertAttachmentEntitlement(tx, input)
     const evidence = await tx.serviceEvidence.upsert({
       create: {
         assetReference: input.assetReference,
@@ -1881,6 +1883,8 @@ export async function updateServiceEvidenceUpload(
         "Service Evidence not found.",
       )
     }
+    // A failed upload may still be marked for cleanup after a downgrade.
+    if (input.status !== "failed") await assertAttachmentEntitlement(tx, input)
     const status =
       input.status === "available"
         ? ServiceEvidenceUploadStatus.AVAILABLE
@@ -1947,6 +1951,7 @@ export async function publishServiceEvidence(
         "Only an available, safety-reviewed asset can be published.",
       )
     }
+    await assertAttachmentEntitlement(tx, input)
     const tracking = await tx.customerTrackingAccess.findFirst({
       where: {
         serviceJobId: evidence.serviceJobId,

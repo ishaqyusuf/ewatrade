@@ -8,17 +8,19 @@ import { Pressable } from "@/components/ui/pressable"
 import { View } from "@/components/ui/view"
 import { useBottomSearchScroll } from "@/hooks/use-bottom-search-scroll"
 import { VariableContextProvider } from "nativewind"
-import { useRef, useState } from "react"
+import { useLayoutEffect, useRef, useState } from "react"
 import { Keyboard, type ScrollView } from "react-native"
 import { KeyboardAwareScrollView } from "react-native-keyboard-controller"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 import { ListCreateFab } from "../list-create-fab"
 import { getListCreateFabFooterOffset } from "../list-create-fab-model"
 import { useSearchFold } from "../search-fold"
+import { SearchFooterScope, SearchFooterSpacer } from "../search-footer-scope"
 import { ServiceAction } from "./service-action"
 import {
   ServiceChromeContext,
   type ServiceChromeHeader,
+  useSetServiceChromeHeader,
 } from "./service-chrome-context"
 import { ServiceCommandReview } from "./service-command-review"
 import { ServiceHistorySheet } from "./service-history-sheet"
@@ -39,7 +41,7 @@ export function ServiceJobsChrome(props: WorkflowModalChromeProps) {
         {...props}
         title={header?.title ?? props.title}
         onBack={header?.onBack}
-        backLabel="Back to work queue"
+        backLabel={props.back ? props.closeLabel : "Back to work queue"}
         trailing={
           header ? (
             <Pressable
@@ -58,8 +60,8 @@ export function ServiceJobsChrome(props: WorkflowModalChromeProps) {
   )
 }
 
-export function ServiceJobsContent(_props: ServiceJobsProps = {}) {
-  const model = useServiceJobs()
+export function ServiceJobsContent(props: ServiceJobsProps = {}) {
+  const model = useServiceJobs(props.focusedJob)
   const scroll = useRef<ScrollView>(null)
   const intakeTop = useRef(0)
   const choicesTop = useRef(0)
@@ -81,6 +83,38 @@ export function ServiceJobsContent(_props: ServiceJobsProps = {}) {
     search,
     setSearch,
   } = model
+  const setChromeHeader = useSetServiceChromeHeader()
+  const focusedCurrent = model.focusedJob?.isCurrent() ?? true
+  useLayoutEffect(() => {
+    if (!focusedCurrent) setChromeHeader(null)
+  }, [focusedCurrent, setChromeHeader])
+  // Hooks and the command owner remain mounted while a same-Job fresh read is
+  // checking/refused. No old workspace, editor, history or command facts render.
+  if (model.focusedJob && !focusedCurrent)
+    return (
+      <View className="gap-4 p-5">
+        <StatusBanner
+          icon="Lock"
+          title="Current Job access required"
+          message={
+            model.focusedJob.checking
+              ? "Checking current access to this exact saved Service Job…"
+              : "This exact saved Service Job is unavailable with current access. Any retained action stays locked until a fresh authorized read."
+          }
+        />
+        {!model.focusedJob.checking ? (
+          <ServiceAction
+            variant="outline"
+            onPress={() => void model.focusedJob?.refresh().catch(() => {})}
+          >
+            Retry exact Job
+          </ServiceAction>
+        ) : null}
+        <ServiceAction variant="outline" onPress={model.focusedJob.onBack}>
+          Back to the assistant
+        </ServiceAction>
+      </View>
+    )
   const feedback = (
     <>
       {error ? (
@@ -124,7 +158,7 @@ export function ServiceJobsContent(_props: ServiceJobsProps = {}) {
           </ServiceAction>
         </View>
       ) : null}
-      {selectedJobId && model.jobQuery.isError ? (
+      {!model.focusedJob && selectedJobId && model.jobQuery.isError ? (
         <View className="gap-3">
           <StatusBanner
             icon="AlertCircle"
@@ -146,7 +180,8 @@ export function ServiceJobsContent(_props: ServiceJobsProps = {}) {
   const blocked = model.scopeChanged || !model.canOperate || !model.storeId
   // The queue search sits at the bottom with the gold New service button
   // above it, both hiding on scroll like the tab bar.
-  const classicQueue = !blocked && !creating && !selectedJobId
+  const classicQueue =
+    !model.focusedJob && !blocked && !creating && !selectedJobId
   return (
     <VariableContextProvider
       value={{
@@ -154,7 +189,7 @@ export function ServiceJobsContent(_props: ServiceJobsProps = {}) {
           showQueueSearch || classicQueue ? footerHeight + 24 : 48,
       }}
     >
-      <View className="flex-1 bg-background">
+      <SearchFooterScope className="flex-1 bg-background">
         {model.command.locked ? (
           <View className="gap-2 px-5 py-3">
             <ServiceAction
@@ -275,24 +310,37 @@ export function ServiceJobsContent(_props: ServiceJobsProps = {}) {
                         }}
                       />
                     </View>
-                  ) : model.jobQuery.isPending && !isOfflineMode ? (
+                  ) : !model.focusedJob &&
+                    model.jobQuery.isPending &&
+                    !isOfflineMode ? (
                     <DetailSkeleton label="Loading the selected job" rows={3} />
                   ) : (
                     <View className="gap-4">
                       <StatusBanner
                         icon="Info"
                         title="Selected job"
-                        message="This job is not available in the current Store or offline cache."
+                        message={
+                          model.focusedJob
+                            ? "This exact saved job is unavailable with current access. Return to the assistant; no queue or cached job substitutes for it."
+                            : "This job is not available in the current Store or offline cache."
+                        }
                       />
                       <ServiceAction
                         variant="outline"
-                        onPress={() => model.setSelectedJobId(null)}
+                        onPress={() =>
+                          model.focusedJob
+                            ? model.focusedJob.onBack()
+                            : model.setSelectedJobId(null)
+                        }
                       >
-                        Back to work queue
+                        {model.focusedJob
+                          ? "Back to the assistant"
+                          : "Back to work queue"}
                       </ServiceAction>
                     </View>
                   )}
                 </View>
+                <SearchFooterSpacer />
               </KeyboardAwareScrollView>
             ) : (
               <ServiceJobsQueue
@@ -363,7 +411,7 @@ export function ServiceJobsContent(_props: ServiceJobsProps = {}) {
           scopeChanged={model.scopeChanged}
         />
         <ServiceHistorySheet model={model} />
-      </View>
+      </SearchFooterScope>
     </VariableContextProvider>
   )
 }

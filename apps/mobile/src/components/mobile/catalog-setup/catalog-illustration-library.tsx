@@ -1,14 +1,14 @@
 import { ActionButton } from "@/components/mobile/action-button"
-import { FormField } from "@/components/mobile/form-field"
+import { SearchFooterField } from "@/components/mobile/search-footer-scope"
 import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
 import { useColors } from "@/hooks/use-color"
+import { CATALOG_CATEGORY_PRESETS } from "@ewatrade/utils/catalog-category-presets"
 import { getCatalogIllustrationSvg } from "@ewatrade/utils/catalog-illustration-artwork"
 import {
   findCatalogIllustration,
   getCatalogIllustrations,
 } from "@ewatrade/utils/catalog-illustrations"
-import { CATALOG_CATEGORY_PRESETS } from "@ewatrade/utils/catalog-category-presets"
 import { useState } from "react"
 import { View } from "react-native"
 import { SvgXml } from "react-native-svg"
@@ -58,8 +58,9 @@ export function CatalogIllustrationLibrary({
   }).filter(({ recommended }) => all || Boolean(query.trim()) || recommended)
   return (
     <View className="gap-4">
-      <FormField
-        label="Search illustrations"
+      <SearchFooterField
+        localSearch
+        accessibilityLabel="Search illustrations"
         placeholder="Search the whole library"
         value={query}
         onChangeText={setQuery}
@@ -129,7 +130,8 @@ export function catalogIllustrationCategoryKey(category?: string | null) {
   )
   return (
     root?.subcategories.find(
-      (child) => child.key === childLabel || child.label.toLowerCase() === childLabel,
+      (child) =>
+        child.key === childLabel || child.label.toLowerCase() === childLabel,
     )?.key ?? root?.key
   )
 }

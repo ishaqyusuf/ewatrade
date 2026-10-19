@@ -161,7 +161,7 @@ export function CatalogVariantBasics({
           </View>
           <View className="min-w-0 flex-1 gap-0.5">
             <Text className="font-bold text-foreground">Description</Text>
-            <Text className="text-xs [-rn-line-height:20] text-muted-foreground">
+            <Text className="text-xs [-rn-line-height:22] text-muted-foreground">
               Explain what this Service choice includes.
             </Text>
           </View>
@@ -191,7 +191,7 @@ export function CatalogVariantBasics({
       >
         <View className="min-w-0 flex-1 gap-0.5">
           <Text className="font-bold text-foreground">More details</Text>
-          <Text className="text-xs [-rn-line-height:20] text-muted-foreground">
+          <Text className="text-xs [-rn-line-height:22] text-muted-foreground">
             Image and availability
           </Text>
         </View>

@@ -41,6 +41,66 @@ const production = {
 }
 
 describe("Trigger jobs selected deployment profile", () => {
+  describe("assistant machine environment isolation", () => {
+    const previewMachine = {
+      API_URL: "https://fixture-preview-api.example",
+      INTERNAL_API_KEY: "fixture-preview-machine-key",
+      ASSISTANT_WHATSAPP_ENABLED: "false",
+    }
+    const productionMachine = {
+      API_URL: "https://fixture-production-api.example",
+      INTERNAL_API_KEY: "fixture-production-machine-key",
+      ASSISTANT_WHATSAPP_ENABLED: "false",
+    }
+
+    test("syncs only the explicitly selected Preview endpoint, machine key and disabled gate", () => {
+      const result = selectedTriggerDeployEnvironment(
+        { ...preview, ...productionMachine },
+        { ...preview, ...previewMachine },
+        { ...production, ...productionMachine },
+      )
+      const synced = syncedTriggerJobEnvironment(result)
+      expect(synced.API_URL).toBe(previewMachine.API_URL)
+      expect(synced.INTERNAL_API_KEY).toBe(previewMachine.INTERNAL_API_KEY)
+      expect(synced.ASSISTANT_WHATSAPP_ENABLED).toBe("false")
+      expect(Object.values(synced)).not.toContain(
+        productionMachine.INTERNAL_API_KEY,
+      )
+    })
+
+    test("rejects a copied Production machine key before sync without revealing its value", () => {
+      let failure = ""
+      try {
+        selectedTriggerDeployEnvironment(
+          preview,
+          {
+            ...preview,
+            ...previewMachine,
+            INTERNAL_API_KEY: productionMachine.INTERNAL_API_KEY,
+          },
+          { ...production, ...productionMachine },
+        )
+      } catch (error) {
+        failure = String(error)
+      }
+      expect(failure).toContain("Production value for INTERNAL_API_KEY")
+      expect(failure).not.toContain(productionMachine.INTERNAL_API_KEY)
+    })
+
+    test("removes unsourced parent machine credentials and endpoint instead of inheriting them", () => {
+      const result = selectedTriggerDeployEnvironment(
+        { ...preview, ...productionMachine },
+        preview,
+        { ...production, ...productionMachine },
+      )
+      const synced = syncedTriggerJobEnvironment(result)
+      expect(result.INTERNAL_API_KEY).toBeUndefined()
+      expect(synced.INTERNAL_API_KEY).toBeUndefined()
+      expect(synced.API_URL).toBeUndefined()
+      expect(synced.ASSISTANT_WHATSAPP_ENABLED).toBeUndefined()
+    })
+  })
+
   test("binds Preview to its distinct project's prod worker and Production to original", () => {
     for (const env of [preview, production]) {
       const command = triggerDeployCommand(

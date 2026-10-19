@@ -1,0 +1,367 @@
+// Platform staff assistant identity; never a Tenant customer Connection or OTP proof.
+model AssistantWhatsAppIdentity {
+  id            String   @id @default(cuid())
+  phoneNumberId String
+  senderId      String
+  userId        String
+  generation    Int      @default(1)
+  selectionGeneration Int @default(1)
+  controlSequence Int @default(0)
+  activeBindingId String?
+  revokedAt     DateTime?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  grants AssistantWhatsAppGrant[]
+  bindings AssistantWhatsAppBinding[]
+  selections AssistantWhatsAppSelection[]
+  controlInbox AssistantWhatsAppInbox[]
+
+  @@unique([phoneNumberId, senderId])
+  @@index([userId, revokedAt])
+}
+
+model AssistantWhatsAppLink {
+  id               String   @id @default(cuid())
+  tokenDigest      String   @unique
+  phoneNumberId    String
+  userId           String
+  tenantId         String
+  storeId          String
+  membershipId     String
+  revision         Int      @default(1)
+  claimedSenderId  String?
+  claimedMessageId String?
+  claimedAt        DateTime?
+  confirmedAt      DateTime?
+  confirmedGrantGeneration Int?
+  cancelledAt      DateTime?
+  expiresAt        DateTime
+  createdAt        DateTime @default(now())
+
+  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tenant     Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  store      Store      @relation(fields: [storeId, tenantId], references: [id, tenantId], onDelete: Cascade)
+  membership Membership @relation(fields: [membershipId, tenantId], references: [id, tenantId], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@index([expiresAt])
+}
+
+model AssistantWhatsAppGrant {
+  id               String   @id @default(cuid())
+  identityId       String
+  tenantId         String
+  membershipId     String
+  storeId          String
+  generation       Int      @default(1)
+  consentedAt      DateTime
+  lastUsedAt       DateTime
+  expiresAt        DateTime
+  idleExpiresAt    DateTime
+  revokedAt        DateTime?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  identity   AssistantWhatsAppIdentity @relation(fields: [identityId], references: [id], onDelete: Cascade)
+  tenant     Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  store      Store      @relation(fields: [storeId, tenantId], references: [id, tenantId], onDelete: Cascade)
+  membership Membership @relation(fields: [membershipId, tenantId], references: [id, tenantId], onDelete: Cascade)
+  bindings AssistantWhatsAppBinding[]
+
+  @@unique([identityId, tenantId])
+  @@index([membershipId, revokedAt])
+  @@index([expiresAt])
+}
+
+// Immutable scope snapshot. The identity's active pointer and generations must match.
+model AssistantWhatsAppBinding {
+  id String @id @default(cuid())
+  identityId String
+  grantId String
+  identityGeneration Int
+  grantGeneration Int
+  selectionGeneration Int
+  conversationId String
+  purpose AssistantConversationPurpose
+  inboundSequence Int @default(0)
+  inbox AssistantWhatsAppInbox[]
+  actionReviews AssistantWhatsAppActionReview[]
+  workflowReviews AssistantWhatsAppWorkflowReview[]
+  createdAt DateTime @default(now())
+
+  identity AssistantWhatsAppIdentity @relation(fields: [identityId], references: [id], onDelete: Cascade)
+  grant AssistantWhatsAppGrant @relation(fields: [grantId], references: [id], onDelete: Cascade)
+  conversation AssistantConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@unique([identityId, selectionGeneration])
+  @@index([conversationId])
+  @@index([grantId, grantGeneration])
+}
+
+// Transient verified ingress; canonical assistant history is written by the turn runner.
+enum AssistantWhatsAppInboxState {
+  PENDING
+  PROCESSING
+  COMPLETED
+  CANCELLED
+  FAILED
+  EXPIRED
+}
+
+enum AssistantWhatsAppInboxKind {
+  TURN
+  CONTROL
+  ACTION
+}
+
+model AssistantWhatsAppInbox {
+  id String @id @default(cuid())
+  phoneNumberId String
+  providerMessageId String
+  contentDigest String
+  kind AssistantWhatsAppInboxKind @default(TURN)
+  bindingId String?
+  identityId String?
+  identityGeneration Int?
+  selectionGeneration Int?
+  sequence Int
+  requestId String @unique
+  userMessageId String @unique
+  providerOccurredAt DateTime
+  receivedAt DateTime @default(now())
+  expiresAt DateTime
+  content Json?
+  state AssistantWhatsAppInboxState @default(PENDING)
+  nextAttemptAt DateTime?
+  attempts Int @default(0)
+  leaseGeneration Int @default(0)
+  leaseOwner String?
+  leaseExpiresAt DateTime?
+  executionAuthorityDigest String?
+  outbox AssistantWhatsAppOutbox[]
+  runId String?
+  errorCode String?
+  completedAt DateTime?
+  updatedAt DateTime @updatedAt
+
+  binding AssistantWhatsAppBinding? @relation(fields: [bindingId], references: [id], onDelete: Cascade)
+  identity AssistantWhatsAppIdentity? @relation(fields: [identityId], references: [id], onDelete: Cascade)
+  run AssistantRun? @relation(fields: [runId], references: [id], onDelete: SetNull)
+
+  @@unique([phoneNumberId, providerMessageId])
+  @@unique([bindingId, sequence])
+  @@unique([identityId, sequence])
+  @@index([state, receivedAt])
+  @@index([expiresAt])
+  @@index([runId])
+}
+
+// Immutable rendered reply chunks; actual provider attempts/receipts remain independently fenced.
+enum AssistantWhatsAppOutboxState {
+  PENDING
+  SENDING
+  SENT
+  DELIVERED
+  READ
+  FAILED
+  UNKNOWN
+  CANCELLED
+  EXPIRED
+}
+
+model AssistantWhatsAppOutbox {
+  id String @id @default(cuid())
+  inboxId String
+  phoneNumberId String
+  runId String?
+  messageId String?
+  responseRevision Int @default(1)
+  chunkIndex Int
+  chunkCount Int
+  rendererVersion String
+  renderKind String @default("reply")
+  authorityDigest String
+  content String?
+  contentDigest String
+  state AssistantWhatsAppOutboxState @default(PENDING)
+  expiresAt DateTime
+  attempts Int @default(0)
+  leaseGeneration Int @default(0)
+  leaseOwner String?
+  leaseExpiresAt DateTime?
+  nextAttemptAt DateTime?
+  providerMessageId String?
+  sentAt DateTime?
+  deliveredAt DateTime?
+  readAt DateTime?
+  failedAt DateTime?
+  errorCode String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  deliveryAttempts AssistantWhatsAppAttempt[]
+  actionReview AssistantWhatsAppActionReview?
+  workflowReview AssistantWhatsAppWorkflowReview?
+  inbox AssistantWhatsAppInbox @relation(fields: [inboxId], references: [id], onDelete: Cascade)
+
+  @@unique([inboxId, responseRevision, chunkIndex])
+  @@unique([phoneNumberId, providerMessageId])
+  @@index([state, nextAttemptAt, createdAt])
+  @@index([expiresAt])
+  @@index([runId])
+  @@index([messageId])
+}
+
+// Exact reviewed action proof. Decision codes are derived at dispatch; only digests persist.
+model AssistantWhatsAppWorkflowReview {
+  id String @id @default(cuid())
+  bindingId String
+  conversationId String
+  draftId String
+  draftRevision Int
+  source Json
+  sourceDigest String
+  reviewDigest String
+  authorityDigest String
+  identityGeneration Int
+  grantGeneration Int
+  selectionGeneration Int
+  nonce String @unique
+  keyVersion String
+  confirmDigest String @unique
+  cancelDigest String @unique
+  reviewOutboxId String @unique
+  expiresAt DateTime
+  state String @default("PENDING")
+  consumedByIngressId String?
+  decision String?
+  resultRef Json?
+  completedAt DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  binding AssistantWhatsAppBinding @relation(fields: [bindingId], references: [id], onDelete: Cascade)
+  conversation AssistantConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  draft SetupDraft @relation(fields: [draftId], references: [id], onDelete: Cascade)
+  reviewOutbox AssistantWhatsAppOutbox @relation(fields: [reviewOutboxId], references: [id], onDelete: Cascade)
+
+  @@index([bindingId, state, expiresAt])
+  @@index([conversationId, draftRevision, state])
+  @@index([expiresAt])
+  @@index([consumedByIngressId])
+}
+
+model AssistantWhatsAppActionReview {
+  id String @id @default(cuid())
+  bindingId String
+  proposalId String
+  proposalRevision Int
+  payloadHash String
+  targetRevision String?
+  reviewDigest String
+  authorityDigest String
+  identityGeneration Int
+  grantGeneration Int
+  selectionGeneration Int
+  nonce String @unique
+  keyVersion String
+  confirmDigest String @unique
+  cancelDigest String @unique
+  reviewOutboxId String @unique
+  expiresAt DateTime
+  state String @default("PENDING")
+  consumedByIngressId String?
+  decision String?
+  resultRef Json?
+  completedAt DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  binding AssistantWhatsAppBinding @relation(fields: [bindingId], references: [id], onDelete: Cascade)
+  proposal AssistantActionProposal @relation(fields: [proposalId], references: [id], onDelete: Cascade)
+  reviewOutbox AssistantWhatsAppOutbox @relation(fields: [reviewOutboxId], references: [id], onDelete: Cascade)
+
+  @@index([proposalId, proposalRevision, state])
+  @@index([bindingId, state, expiresAt])
+  @@index([expiresAt])
+  @@index([consumedByIngressId])
+}
+
+// One durable intent per possible HTTP effect. UNKNOWN is never automatically sent again.
+enum AssistantWhatsAppAttemptState {
+  STARTED
+  ACCEPTED
+  REJECTED
+  UNKNOWN
+}
+
+model AssistantWhatsAppAttempt {
+  id String @id @default(cuid())
+  outboxId String
+  generation Int
+  owner String
+  callbackDigest String @unique
+  state AssistantWhatsAppAttemptState @default(STARTED)
+  providerMessageId String?
+  errorCode String?
+  startedAt DateTime @default(now())
+  resolvedAt DateTime?
+  updatedAt DateTime @updatedAt
+
+  outbox AssistantWhatsAppOutbox @relation(fields: [outboxId], references: [id], onDelete: Cascade)
+  receipts AssistantWhatsAppReceipt[]
+  @@unique([outboxId, generation])
+  @@index([state, startedAt])
+}
+
+// Only verified, positively correlated assistant receipts are retained; never unmatched OTP traffic.
+model AssistantWhatsAppReceipt {
+  id String @id @default(cuid())
+  attemptId String
+  eventDigest String @unique
+  status String
+  providerOccurredAt DateTime
+  receivedAt DateTime @default(now())
+  failureCode String?
+  attempt AssistantWhatsAppAttempt @relation(fields: [attemptId], references: [id], onDelete: Cascade)
+  @@index([attemptId, providerOccurredAt])
+}
+
+// Transport quotas survive chat deletion, scope changes and channel relinking.
+enum AssistantWhatsAppUsageWindow {
+  MINUTE
+  DAY
+}
+model AssistantWhatsAppUsageBucket {
+  id String @id @default(cuid())
+  tenantId String
+  userId String
+  windowKind AssistantWhatsAppUsageWindow
+  windowStartedAt DateTime
+  windowEndsAt DateTime
+  expiresAt DateTime
+  ingress Int @default(0)
+  deliveryAttempts Int @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@unique([tenantId, userId, windowKind, windowStartedAt])
+  @@index([userId, windowKind, windowStartedAt])
+  @@index([tenantId, windowKind, windowStartedAt])
+  @@index([expiresAt])
+}
+
+// Idempotent personal scope operations. A retry never reactivates a superseded selection.
+model AssistantWhatsAppSelection {
+  id String @id @default(cuid())
+  identityId String
+  operationDigest String @unique
+  requestDigest String
+  bindingId String
+  createdAt DateTime @default(now())
+  identity AssistantWhatsAppIdentity @relation(fields: [identityId], references: [id], onDelete: Cascade)
+  @@index([identityId, createdAt])
+}

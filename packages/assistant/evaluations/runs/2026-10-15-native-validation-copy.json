@@ -1,0 +1,118 @@
+{
+  "version": 1,
+  "date": "2026-10-15",
+  "scope": "Native five-editor local Zod display source repair only",
+  "sourceSnapshot": {
+    "apps/mobile/src/components/mobile/assistant/native-validation-copy.ts": "696308b2d72c17ed6fe832c54cd33ca476d7919f65b1961d535a44e052beca74",
+    "apps/mobile/src/components/mobile/assistant/native-validation-copy.test.ts": "1a0a2285a71dcb12603de9d32e4b93bc956ba0af8fa6253741f8d84ae4f23dde",
+    "apps/mobile/src/components/mobile/assistant/native-order-values.ts": "d8435dc99c6abec7417c0cfb711dd5deee691a01e1cb533572303cc6bb713781",
+    "apps/mobile/src/components/mobile/assistant/native-staff-status-values.ts": "58f0654ea7945b69acc9c54a19e0cc4e68fee0d0323a37758f087a19898d12a5",
+    "apps/mobile/src/components/mobile/assistant/native-staff-invitation-values.ts": "41a0b06f46cc3a8dd78bf69c26bc34340467d21a7ffe2fbf763a8bcf913bda12",
+    "apps/mobile/src/components/mobile/assistant/native-service-intake-values.ts": "095cf6de8ba398ed3ba188eefb0c98d83693c876d9fb669dd444fa91d79f7cf1",
+    "apps/mobile/src/components/mobile/assistant/native-quote-decision-values.ts": "c9d0109574723e4a21a9a031d8c11b741ce89942eeedbc47e0c4c2e9a61e7860"
+  },
+  "verification": {
+    "rootFocusedTests": {
+      "passed": 52,
+      "failed": 0,
+      "assertions": 325,
+      "files": 6,
+      "log": "/private/tmp/assistant-ui-validation-copy-final-root-tests.log"
+    },
+    "rootIsolatedActualEditorFixtures": {
+      "passed": 47,
+      "failed": 0,
+      "assertions": 458,
+      "files": 5,
+      "fixtures": [
+        "native-order-editor",
+        "native-staff-status-editor",
+        "native-staff-invitation-editor",
+        "native-service-intake-editor",
+        "native-quote-decision"
+      ],
+      "logPrefix": "/private/tmp/assistant-ui-validation-",
+      "scope": "Native primitives/queryhooks stoodin; real editors/callback policy/helper code, no layout/device/connected proof"
+    },
+    "lint": "7files pass",
+    "compiler": {
+      "result": "not_green",
+      "diagnostics": 78,
+      "ownedDiagnostics": 0,
+      "log": "/private/tmp/assistant-g03-quote-wire-repaired-final-types.log",
+      "scope": "Current widened coordinator graph includes all seven touched helpers/tests; no whole-mobile green claim."
+    }
+  },
+  "findingsClosed": [
+    "Authored/custom/default message identity: preserve author text even when it begins Invalid/Expected/Too small; no broad prefix proof.",
+    "Inclusive0 minimum now zero-or-more; canonical0price successful; positive-onlypayment remains positive."
+  ],
+  "sourceAcceptance": {
+    "job": "2bca833f-8705-43ae-b019-0e11c3b23bf8",
+    "revision": 2,
+    "independentReview": "cc944325-277e-4b5c-851f-6677606fa87e",
+    "decision": "accept_source_only",
+    "acceptanceMessage": "50d0153a-4eba-4410-9eae-292bebeb5e8a"
+  },
+  "preserved": [
+    "Exact schemas/bounds/IDs/quantities/money/UTC",
+    "Authored/custom and ordinary server refusal messages",
+    "Failure remains non-saving; mount/current async callback/authority fences",
+    "No editor relayout/redesign"
+  ],
+  "remaining": [
+    "Actualapp/device/connected acceptance",
+    "Managedjob93receipt reconciliation and ordersv3/hubrefresh verification",
+    "BroaderUIfindings and fullnativeparity remain separate"
+  ],
+  "nextUIJob": {
+    "id": "6d98800d-218f-405f-8ca2-826ef471f0c0",
+    "scope": "All12missingnativeassistantstockeditors+exactoriginals,3Workshopdirections and sourceimplementation; sharedhostintegration proposal first",
+    "handoff": "cc8711dd-c314-4cad-84e2-0be011540a40",
+    "ownerAck": "09be5ed9-a46d-409d-81a6-62af5179a0d5",
+    "status": "owner_read; previewrefreshfirst; no implementation claim"
+  },
+  "acceptance": {
+    "accepted": 13,
+    "total": 45,
+    "promotion": false
+  },
+  "gates": "unchanged",
+  "brainFiles": [
+    ".brain/features/assistant-business-operations.md",
+    ".brain/features/agent-communication.md",
+    ".brain/features/assistant-service-requests.md",
+    ".brain/tasks/in-progress.md",
+    ".brain/plans/2026-10-15-assistant-operations-phase-checklist.md"
+  ],
+  "previewRefresh": {
+    "hubRevision": "e7487edb-7ddf-4fa4-aae0-8056c7034520",
+    "orders": "39bd9957-6967-4c1b-ac8f-9dae883aef21",
+    "staff": "d55cbf16-f5ed-48e5-b6b2-bbf5245717ab",
+    "services": "17b8e6d4-6557-4940-92b6-56210ab4352c",
+    "independentBrowser": "Existing wrapper v9 summary0 observed; selected published v10 through revision link, verified all3newv2refs,4FixedInSource labels and openorders residual wording, reviewsummary0. Oldv9fulltableftuntouched. Opened staffv2, blankreason Save refused with Enter a reason/nothing saved. Didnotexerciseeverynewpreviewstate."
+  },
+  "residualFollowup": {
+    "job": "93b11427-9ff7-454b-84cf-33e9f4948af3",
+    "source": "be504ce82002e2378a2b7f9b9abaf9150722be32f5168b95c665312d0eaa1deb",
+    "test": "f45123eb12fb4594c9a2211d64b4c2438bf4ebdfc236f0b9467a6b9a391d0691",
+    "rootTests": {
+      "passed": 53,
+      "assertions": 331,
+      "files": 6,
+      "log": "/private/tmp/assistant-ui-validation-copy-residual-root-tests.log"
+    },
+    "independentReviewer": "native_staff_access10/80+Biome2pass; noactionabledefect",
+    "status": "formally_source_accepted_after_completed_independent_codex_review",
+    "preview": "ordersv3 c504871e +hubv11 4a85c07d independently checked in separate dated hub evidence; source reproduction only",
+    "priorManualAcceptanceStatus": "manual_source_only_accepted_after_independent_review; managed_job_queued_unclaimed_receipts_pending",
+    "managedReview": "9a311043-6c58-45fb-a4eb-ba412db066ba",
+    "acceptanceMessage": "6d07cdd6-bc18-479c-ab40-1f5c9828466a",
+    "currentRootCheck": {
+      "passed": 10,
+      "assertions": 80,
+      "log": "/private/tmp/assistant-ui-residual-managed-review-tests.log",
+      "biome": "2paths pass"
+    }
+  }
+}

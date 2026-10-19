@@ -139,7 +139,7 @@ export function AuthBrandHeader({ subtitle, title }: AuthBrandHeaderProps) {
         </Text>
         <Text
           className={cn(
-            "text-xs leading-5 text-muted-foreground",
+            "text-xs [-rn-line-height:22] text-muted-foreground",
             largeTextLayout ? "w-full text-left" : "max-w-[260px] text-center",
           )}
         >
@@ -206,7 +206,7 @@ export function AuthMethodButton({
           <Icon className="size-sm text-foreground" name={icon} />
         )}
         <Text
-          className="text-[14px] font-extrabold [-rn-line-height:20] text-foreground"
+          className="text-base font-extrabold [-rn-line-height:22] text-foreground"
           numberOfLines={1}
         >
           {pending && loadingLabel ? loadingLabel : label}
@@ -230,32 +230,36 @@ export function AuthMethodButton({
       transition
     >
       <View className="min-h-[50px] flex-row items-center justify-center gap-2.5">
-        <View
-          style={{
-            alignItems: "center",
-            backgroundColor: isPrimary ? colors.primaryForeground : colors.card,
-            borderColor: isPrimary ? colors.primaryForeground : colors.border,
-            borderRadius: 999,
-            borderWidth: 1,
-            height: 28,
-            justifyContent: "center",
-            width: 28,
-          }}
-        >
-          {brandIcon === "google" ? (
-            <GoogleLogo />
-          ) : brandIcon === "whatsapp" ? (
-            <WhatsAppMark />
-          ) : (
-            <Icon
-              className={cn(
-                "size-sm",
-                isPrimary ? "text-primary" : "text-muted-foreground",
-              )}
-              name={icon}
-            />
-          )}
-        </View>
+        {brandIcon === "whatsapp" ? (
+          <WhatsAppMark size={26} />
+        ) : (
+          <View
+            style={{
+              alignItems: "center",
+              backgroundColor: isPrimary
+                ? colors.primaryForeground
+                : colors.card,
+              borderColor: isPrimary ? colors.primaryForeground : colors.border,
+              borderRadius: 999,
+              borderWidth: 1,
+              height: 28,
+              justifyContent: "center",
+              width: 28,
+            }}
+          >
+            {brandIcon === "google" ? (
+              <GoogleLogo />
+            ) : (
+              <Icon
+                className={cn(
+                  "size-sm",
+                  isPrimary ? "text-primary" : "text-muted-foreground",
+                )}
+                name={icon}
+              />
+            )}
+          </View>
+        )}
         <Text
           className={cn(
             "text-sm font-bold",
@@ -338,9 +342,9 @@ export function AuthFooterAction({
       href={href}
       transition
     >
-      <Text className="text-center text-[13px] [-rn-line-height:20] text-muted-foreground">
+      <Text className="text-center text-xs [-rn-line-height:22] text-muted-foreground">
         {eyebrow}{" "}
-        <Text className="text-[13px] font-extrabold text-primary">{label}</Text>
+        <Text className="text-xs font-extrabold text-primary">{label}</Text>
       </Text>
     </Pressable>
   )

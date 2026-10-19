@@ -159,6 +159,144 @@ export type ServiceManualMessageReview = Awaited<
   ReturnType<typeof reviewServiceManualMessageInTransaction>
 >["review"]
 
+type MessageReadScope = Pick<
+  ServiceManualMessageInput,
+  "tenantId" | "storeId" | "actorUserId" | "jobId"
+>
+
+/** Current recipient facts for draft editing; never persists or sends content. */
+export async function readServiceManualMessageEditorContextInTransaction(
+  tx: Prisma.TransactionClient,
+  input: MessageReadScope,
+) {
+  await authority(tx, input)
+  const job = await authorizedJob(tx, input)
+  const order = job.commercialOrder
+  return {
+    actorUserId: input.actorUserId,
+    tenantId: input.tenantId,
+    storeId: input.storeId,
+    job: { id: job.id, revision: job.revision },
+    order: { id: order.id, number: order.orderNumber },
+    recipient: {
+      name: order.customerName?.trim() || null,
+      phone: order.customerPhone?.trim() || null,
+      email: order.customerEmail?.trim() || null,
+    },
+    asOf: new Date().toISOString(),
+  }
+}
+
+/** Exact recorded share, independent of bounded history and current contacts. */
+export async function readServiceManualMessageOriginalInTransaction(
+  tx: Prisma.TransactionClient,
+  input: MessageReadScope & { intentId: string; shareId: string },
+) {
+  await authority(tx, input)
+  const job = await authorizedJob(tx, input)
+  if (
+    ![input.intentId, input.shareId].every(
+      (id) =>
+        typeof id === "string" && id.trim().length > 0 && id.length <= 128,
+    )
+  )
+    conflict("Choose the exact recorded manual message and share.")
+  const intent = await tx.serviceNotificationIntent.findFirst({
+    where: {
+      id: input.intentId,
+      tenantId: input.tenantId,
+      storeId: input.storeId,
+      serviceJobId: job.id,
+      channel: ServiceNotificationChannel.MANUAL,
+      status: ServiceNotificationIntentStatus.COMPLETED,
+      templatePurpose: serviceManualMessagePurpose,
+      audienceKey: serviceManualMessageAudience,
+    },
+    select: {
+      id: true,
+      tenantId: true,
+      storeId: true,
+      serviceJobId: true,
+      channel: true,
+      status: true,
+      templatePurpose: true,
+      audienceKey: true,
+      renderedMessage: true,
+      customerPhone: true,
+      customerEmail: true,
+      createdAt: true,
+      completedAt: true,
+      deliveryAttempts: { take: 1, select: { id: true } },
+      manualShares: {
+        where: { id: input.shareId },
+        take: 1,
+        select: {
+          id: true,
+          notificationIntentId: true,
+          channel: true,
+          note: true,
+          sharedAt: true,
+          sharedByUserId: true,
+        },
+      },
+    },
+  })
+  const share = intent?.manualShares[0]
+  if (
+    !intent ||
+    intent.id !== input.intentId ||
+    intent.tenantId !== input.tenantId ||
+    intent.storeId !== input.storeId ||
+    intent.serviceJobId !== job.id ||
+    intent.channel !== ServiceNotificationChannel.MANUAL ||
+    intent.status !== ServiceNotificationIntentStatus.COMPLETED ||
+    intent.templatePurpose !== serviceManualMessagePurpose ||
+    intent.audienceKey !== serviceManualMessageAudience ||
+    !intent.completedAt ||
+    !intent.renderedMessage.trim() ||
+    intent.renderedMessage.length > 1000 ||
+    intent.deliveryAttempts.length > 0 ||
+    !share ||
+    share.id !== input.shareId ||
+    share.notificationIntentId !== intent.id ||
+    !["MANUAL", "SMS", "WHATSAPP"].includes(share.channel) ||
+    (share.note?.length ?? 0) > 500
+  )
+    conflict("This exact recorded manual message is unavailable.")
+  return {
+    actorUserId: input.actorUserId,
+    tenantId: input.tenantId,
+    storeId: input.storeId,
+    job: { id: job.id, revision: job.revision },
+    order: {
+      id: job.commercialOrder.id,
+      number: job.commercialOrder.orderNumber,
+    },
+    intent: {
+      id: intent.id,
+      channel: intent.channel,
+      status: intent.status,
+      purpose: intent.templatePurpose,
+      message: intent.renderedMessage,
+      recipient: { phone: intent.customerPhone, email: intent.customerEmail },
+      createdAt: intent.createdAt.toISOString(),
+      completedAt: intent.completedAt.toISOString(),
+    },
+    share: {
+      id: share.id,
+      channel: share.channel,
+      note: share.note,
+      sharedAt: share.sharedAt.toISOString(),
+      sharedByUserId: share.sharedByUserId || null,
+    },
+    currentOrderRecipientName: job.commercialOrder.customerName?.trim() || null,
+    asOf: new Date().toISOString(),
+    kind: "staff_reported_share" as const,
+    sending: "none" as const,
+    delivery: "unverified" as const,
+  }
+}
+
 /**
  * Locks the Order (recipient source) for share, then the Job for update, in
  * the established Order-before-Job order. Refuses a Job outside the tenant or
@@ -221,7 +359,13 @@ export async function recordServiceManualMessageInTransaction(
   }
   const existing = await tx.serviceNotificationIntent.findUnique({
     where: { tenantId_businessEventKey_audienceKey_templatePurpose: key },
-    include: { manualShares: true, deliveryAttempts: { select: { id: true } } },
+    include: {
+      manualShares: {
+        orderBy: [{ sharedAt: "desc" }, { id: "desc" }],
+        take: 2,
+      },
+      deliveryAttempts: { take: 1, select: { id: true } },
+    },
   })
   if (existing) {
     const share = existing.manualShares[0]
@@ -316,47 +460,66 @@ export async function listServiceJobMessagesInTransaction(
       },
     },
   })
-  const messages = rows.slice(0, limit).map((row) => {
-    const attempts = row.deliveryAttempts
-    const kind =
-      row.channel === ServiceNotificationChannel.MANUAL
-        ? ("staff_reported_share" as const)
-        : row.status === ServiceNotificationIntentStatus.CANCELLED
-          ? ("cancelled" as const)
-          : attempts.some((a) => a.status === "DELIVERED")
-            ? ("provider_delivered" as const)
-            : attempts.some((a) => a.status === "SENT")
-              ? ("provider_sent_unconfirmed" as const)
-              : attempts.some((a) => a.status === "FAILED")
-                ? ("provider_failed" as const)
-                : ("provider_pending" as const)
-    return {
-      id: row.id,
-      createdAt: row.createdAt.toISOString(),
-      completedAt: row.completedAt?.toISOString() ?? null,
-      kind,
-      channel: row.channel,
-      status: row.status,
-      purpose: row.templatePurpose,
-      message:
-        row.renderedMessage.length > 300
-          ? `${row.renderedMessage.slice(0, 297)}...`
-          : row.renderedMessage,
-      recipientPhoneLast4: row.customerPhone
-        ? row.customerPhone.replace(/\D/g, "").slice(-4) || null
-        : null,
-      shares: row.manualShares.map((share) => ({
-        channel: share.channel,
-        sharedAt: share.sharedAt.toISOString(),
-        note: share.note,
-      })),
-      attempts: attempts.map((attempt) => ({
-        channel: attempt.channel,
-        status: attempt.status,
-        at: attempt.createdAt.toISOString(),
-      })),
-    }
-  })
+  const messages = await Promise.all(
+    rows.slice(0, limit).map(async (row) => {
+      const attempts = row.deliveryAttempts
+      // Keep displayed attempts bounded without forgetting older terminal facts.
+      // Both existence probes use the owning intent's indexed relation and LIMIT 1.
+      const [delivered, sent] =
+        row.channel !== ServiceNotificationChannel.MANUAL &&
+        row.status !== ServiceNotificationIntentStatus.CANCELLED
+          ? await Promise.all(
+              ["DELIVERED", "SENT"].map((status) =>
+                tx.serviceDeliveryAttempt.findFirst({
+                  where: {
+                    notificationIntentId: row.id,
+                    status: status === "DELIVERED" ? "DELIVERED" : "SENT",
+                  },
+                  select: { id: true },
+                }),
+              ),
+            )
+          : [null, null]
+      const kind =
+        row.channel === ServiceNotificationChannel.MANUAL
+          ? ("staff_reported_share" as const)
+          : row.status === ServiceNotificationIntentStatus.CANCELLED
+            ? ("cancelled" as const)
+            : delivered
+              ? ("provider_delivered" as const)
+              : sent
+                ? ("provider_sent_unconfirmed" as const)
+                : attempts.some((a) => a.status === "FAILED")
+                  ? ("provider_failed" as const)
+                  : ("provider_pending" as const)
+      return {
+        id: row.id,
+        createdAt: row.createdAt.toISOString(),
+        completedAt: row.completedAt?.toISOString() ?? null,
+        kind,
+        channel: row.channel,
+        status: row.status,
+        purpose: row.templatePurpose,
+        message:
+          row.renderedMessage.length > 300
+            ? `${row.renderedMessage.slice(0, 297)}...`
+            : row.renderedMessage,
+        recipientPhoneLast4: row.customerPhone
+          ? row.customerPhone.replace(/\D/g, "").slice(-4) || null
+          : null,
+        shares: row.manualShares.map((share) => ({
+          channel: share.channel,
+          sharedAt: share.sharedAt.toISOString(),
+          note: share.note,
+        })),
+        attempts: attempts.map((attempt) => ({
+          channel: attempt.channel,
+          status: attempt.status,
+          at: attempt.createdAt.toISOString(),
+        })),
+      }
+    }),
+  )
   return {
     jobId: job.id,
     orderNumber: job.commercialOrder.orderNumber,

@@ -1,6 +1,12 @@
 import { createHash } from "node:crypto"
 import { z } from "zod"
 import type { Prisma, PrismaClient } from "../../generated/prisma/client"
+import { assistantWhatsAppPrivacyInventory } from "./assistant-whatsapp/privacy"
+import {
+  AssistantWhatsAppPrivateCleanupError,
+  eraseAssistantWhatsAppPrivateCleanupInTransaction,
+  prepareAssistantWhatsAppPrivateCleanupInTransaction,
+} from "./assistant-whatsapp/private-cleanup"
 import { runInOwnSerializableTransaction } from "./own-transaction"
 
 const policySchema = z
@@ -74,6 +80,22 @@ export type AccountPrivacyPrivateMediaPort = (
   attachment: AccountPrivacyPrivateAttachment,
 ) => Promise<void>
 
+export function unresolvedPrivateAssistantTranscription(row: {
+  outcome: string
+  completedAt: Date | null
+  errorCode: string | null
+  billingStatus: string
+}) {
+  return (
+    row.outcome === "started" ||
+    row.completedAt === null ||
+    row.errorCode === "UNKNOWN_OUTCOME" ||
+    (row.outcome === "failed" &&
+      row.errorCode === "TIMEOUT" &&
+      row.billingStatus === "unknown")
+  )
+}
+
 async function context(
   tx: Prisma.TransactionClient,
   input: { requestId: string; operatorUserId: string },
@@ -129,6 +151,7 @@ export async function countAccountPrivacyPrivateAssistant(
     | "assistantAttachment"
     | "assistantUsageEvent"
     | "assistantActionProposal"
+    | "$queryRaw"
   >,
   subjectId: string,
 ) {
@@ -148,13 +171,20 @@ export async function countAccountPrivacyPrivateAssistant(
   const proposals = await db.assistantActionProposal.count({
     where: { actorUserId: subjectId },
   })
+  const channel = await assistantWhatsAppPrivacyInventory(db, subjectId)
+  const channelRecords = Object.values(channel).reduce(
+    (sum, count) => sum + count,
+    0,
+  )
   return {
     conversations,
     runs,
     attachments,
     usage,
     proposals,
-    total: conversations + runs + attachments + usage + proposals,
+    channelRecords,
+    total:
+      conversations + runs + attachments + usage + proposals + channelRecords,
   }
 }
 
@@ -228,6 +258,25 @@ async function snapshot(
           { status: "PENDING_UPLOAD", uploadExpiresAt: { gt: now } },
         ],
       },
+    })) ||
+    (await tx.assistantAttachment.count({
+      where: {
+        actorUserId: subjectId,
+        transcriptionAttempts: {
+          some: {
+            OR: [
+              { outcome: "started" },
+              { completedAt: null },
+              { errorCode: "UNKNOWN_OUTCOME" },
+              {
+                outcome: "failed",
+                errorCode: "TIMEOUT",
+                billingStatus: "unknown",
+              },
+            ],
+          },
+        },
+      },
     }))
   )
     throw new AccountPrivacyPrivateAssistantError("PRIVATE_WORK_UNRESOLVED")
@@ -270,8 +319,36 @@ async function snapshot(
     ...row,
     dataClassification: conversation.tenant.dataClassification,
   }))
+  const transcriptionAttempts = await tx.assistantTranscriptionAttempt.findMany(
+    {
+      where: { attachmentId: { in: attachments.map((row) => row.id) } },
+      orderBy: { id: "asc" },
+      take: 501,
+      select: {
+        id: true,
+        attachmentId: true,
+        generation: true,
+        ordinal: true,
+        outcome: true,
+        billingStatus: true,
+        errorCode: true,
+        completedAt: true,
+      },
+    },
+  )
+  if (transcriptionAttempts.length > 500)
+    throw new AccountPrivacyPrivateAssistantError("PRIVATE_WORK_UNRESOLVED")
+  if (transcriptionAttempts.some(unresolvedPrivateAssistantTranscription))
+    throw new AccountPrivacyPrivateAssistantError("PRIVATE_WORK_UNRESOLVED")
   const digest = createHash("sha256")
-    .update(JSON.stringify({ conversations, attachments: normalized, usage }))
+    .update(
+      JSON.stringify({
+        conversations,
+        attachments: normalized,
+        usage,
+        transcriptionAttempts,
+      }),
+    )
     .digest("hex")
   return { conversations, attachments: normalized, usage, digest }
 }
@@ -291,6 +368,20 @@ export async function processAccountPrivacyPrivateAssistant(
   const policy = getApprovedPrivateAssistantPolicy(process.env, now)
   if (!policy)
     throw new AccountPrivacyPrivateAssistantError("POLICY_NOT_APPROVED")
+  const channel = await channelOperation(() =>
+    runInOwnSerializableTransaction(db, async (tx) => {
+      const { subjectId } = await context(tx, input, now)
+      return prepareAssistantWhatsAppPrivateCleanupInTransaction(
+        tx,
+        subjectId,
+        now,
+      )
+    }),
+  )
+  // Keep the committed revocation/pending cancellation even when original send
+  // proof or a live lease must remain for real provider reconciliation.
+  if (channel.unresolved)
+    throw new AccountPrivacyPrivateAssistantError("PRIVATE_WORK_UNRESOLVED")
   const before = await runInOwnSerializableTransaction(db, async (tx) => {
     const { subjectId } = await context(tx, input, now)
     return { subjectId, ...(await snapshot(tx, subjectId, now)) }
@@ -321,77 +412,104 @@ export async function processAccountPrivacyPrivateAssistant(
       )
     }
   }
-  return runInOwnSerializableTransaction(db, async (tx) => {
-    const { request, subjectId } = await context(tx, input, now)
-    const fresh = await snapshot(tx, subjectId, now)
-    if (fresh.digest !== before.digest) {
-      const residual = await countAccountPrivacyPrivateAssistant(tx, subjectId)
-      if (residual.total === 0)
-        return {
-          requestId: request.id,
-          remaining: 0,
-          replay: true,
-          attachmentsRemoved: 0,
-          conversationsRemoved: 0,
-          usageRemoved: 0,
-        }
-      throw new AccountPrivacyPrivateAssistantError("SCOPE_CHANGED")
-    }
-    const attachmentsRemoved = await tx.assistantAttachment.deleteMany({
-      where: {
-        id: { in: fresh.attachments.map((row) => row.id) },
-        actorUserId: subjectId,
-      },
-    })
-    const usageRemoved = await tx.assistantUsageEvent.deleteMany({
-      where: {
-        id: { in: fresh.usage.map((row) => row.id) },
-        actorUserId: subjectId,
-      },
-    })
-    // Cascades only owned private children after all their object references have been reconciled.
-    const conversationsRemoved = await tx.assistantConversation.deleteMany({
-      where: {
-        id: { in: fresh.conversations.map((row) => row.id) },
-        ownerUserId: subjectId,
-        attachments: { none: {} },
-      },
-    })
-    const remaining = await countAccountPrivacyPrivateAssistant(tx, subjectId)
-    const removed =
-      attachmentsRemoved.count + usageRemoved.count + conversationsRemoved.count
-    if (removed) {
-      const previous =
-        request.outcome &&
-        typeof request.outcome === "object" &&
-        !Array.isArray(request.outcome)
-          ? request.outcome
-          : {}
-      await tx.accountPrivacyRequest.update({
-        where: { id: request.id },
-        data: {
-          outcome: {
-            ...previous,
-            privateAssistantCleanup: {
-              processor: "account-privacy-private-assistant-v1",
-              policyVersion: policy.version,
-              policyDigest: policy.digest,
-              operatorUserId: input.operatorUserId,
-              lastBatchDigest: fresh.digest,
-              lastBatchAt: now.toISOString(),
-              remaining: remaining.total,
-            },
-          },
+  return channelOperation(() =>
+    runInOwnSerializableTransaction(db, async (tx) => {
+      const { request, subjectId } = await context(tx, input, now)
+      const fresh = await snapshot(tx, subjectId, now)
+      if (fresh.digest !== before.digest) {
+        const residual = await countAccountPrivacyPrivateAssistant(
+          tx,
+          subjectId,
+        )
+        if (residual.total === 0)
+          return {
+            requestId: request.id,
+            remaining: 0,
+            replay: true,
+            attachmentsRemoved: 0,
+            conversationsRemoved: 0,
+            usageRemoved: 0,
+          }
+        throw new AccountPrivacyPrivateAssistantError("SCOPE_CHANGED")
+      }
+      const channelRecordsRemoved =
+        await eraseAssistantWhatsAppPrivateCleanupInTransaction(
+          tx,
+          subjectId,
+          channel,
+          new Date(),
+        )
+      const attachmentsRemoved = await tx.assistantAttachment.deleteMany({
+        where: {
+          id: { in: fresh.attachments.map((row) => row.id) },
+          actorUserId: subjectId,
         },
       })
-    }
-    return {
-      requestId: request.id,
-      remaining: remaining.total,
-      replay: removed === 0,
-      attachmentsRemoved: attachmentsRemoved.count,
-      conversationsRemoved: conversationsRemoved.count,
-      usageRemoved: usageRemoved.count,
-    }
-  })
+      const usageRemoved = await tx.assistantUsageEvent.deleteMany({
+        where: {
+          id: { in: fresh.usage.map((row) => row.id) },
+          actorUserId: subjectId,
+        },
+      })
+      // Cascades only owned private children after all their object references have been reconciled.
+      const conversationsRemoved = await tx.assistantConversation.deleteMany({
+        where: {
+          id: { in: fresh.conversations.map((row) => row.id) },
+          ownerUserId: subjectId,
+          attachments: { none: {} },
+        },
+      })
+      const remaining = await countAccountPrivacyPrivateAssistant(tx, subjectId)
+      const removed =
+        attachmentsRemoved.count +
+        usageRemoved.count +
+        conversationsRemoved.count +
+        channelRecordsRemoved
+      if (removed) {
+        const previous =
+          request.outcome &&
+          typeof request.outcome === "object" &&
+          !Array.isArray(request.outcome)
+            ? request.outcome
+            : {}
+        await tx.accountPrivacyRequest.update({
+          where: { id: request.id },
+          data: {
+            outcome: {
+              ...previous,
+              privateAssistantCleanup: {
+                processor: "account-privacy-private-assistant-v1",
+                policyVersion: policy.version,
+                policyDigest: policy.digest,
+                operatorUserId: input.operatorUserId,
+                lastBatchDigest: fresh.digest,
+                lastBatchAt: now.toISOString(),
+                remaining: remaining.total,
+                channelRecordsRemoved,
+              },
+            },
+          },
+        })
+      }
+      return {
+        requestId: request.id,
+        remaining: remaining.total,
+        replay: removed === 0,
+        attachmentsRemoved: attachmentsRemoved.count,
+        conversationsRemoved: conversationsRemoved.count,
+        usageRemoved: usageRemoved.count,
+        channelRecordsRemoved,
+      }
+    }),
+  )
+}
+
+async function channelOperation<T>(operation: () => Promise<T>): Promise<T> {
+  try {
+    return await operation()
+  } catch (error) {
+    if (error instanceof AssistantWhatsAppPrivateCleanupError)
+      throw new AccountPrivacyPrivateAssistantError(error.code)
+    throw error
+  }
 }

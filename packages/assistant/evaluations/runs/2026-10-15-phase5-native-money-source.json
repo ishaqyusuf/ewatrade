@@ -1,0 +1,108 @@
+{
+  "version": 1,
+  "scope": "Phase5 native source only, not acceptance",
+  "files": [
+    {
+      "path": "apps/mobile/src/components/mobile/assistant/general-money-operation-editor.tsx",
+      "sha256": "60b4f815f6b1f5f281a0889871338ed8e1bd0091cfd3d502e2eda58dd62a54ae",
+      "ownership": "owned source or scoped hunks"
+    },
+    {
+      "path": "apps/mobile/src/components/mobile/assistant/native-money-values.ts",
+      "sha256": "f88663182d3c053bdcb8001c0714675ad2d693a62b45ec9ae7b4ae7774497fc3",
+      "ownership": "owned source or scoped hunks"
+    },
+    {
+      "path": "apps/mobile/src/components/mobile/assistant/native-money-values.test.ts",
+      "sha256": "7d13a948bff0267920cd8a9920552838916e28ee5e773e2935a67143d8fc2ede",
+      "ownership": "owned source or scoped hunks"
+    },
+    {
+      "path": "apps/mobile/src/components/mobile/assistant/general-model.ts",
+      "sha256": "48854083675a6bfccf86cf5f03225ce1a435cea789bdc82587c516a622e9a40f",
+      "ownership": "owned source or scoped hunks"
+    },
+    {
+      "path": "apps/mobile/src/components/mobile/assistant/general-model.test.ts",
+      "sha256": "9d5be215956dc266382dedddb0c717b30cb91f1c4362ecc979f5feab25021c1f",
+      "ownership": "owned source or scoped hunks"
+    },
+    {
+      "path": "apps/mobile/src/components/mobile/assistant/general-proposal-editor.tsx",
+      "sha256": "550c4c3c15e80a73f7f76b9f95f6df851d8030d0f419b1a02cb92716b2babcaf",
+      "ownership": "added dispatch only; earlier Phase4 dispatch retained"
+    },
+    {
+      "path": "apps/mobile/src/components/mobile/assistant/native-parity.ts",
+      "sha256": "2abd181e9324861fd584b16825ae0a7827f41437f517467679e8dc17fa59fd5d",
+      "ownership": "owned source or scoped hunks"
+    },
+    {
+      "path": "apps/mobile/src/components/mobile/assistant/native-parity.test.ts",
+      "sha256": "1f52390d9f53d05b4367d7ea465656059e7b14358e45935d379a5b426919157d",
+      "ownership": "owned source or scoped hunks"
+    },
+    {
+      "path": "apps/mobile/src/components/mobile/finance/finance-workspace-gate.tsx",
+      "sha256": "1edc8c791d9ac2bba00bebd3c6dc5229c8c05ae0915faf947382db0e2d0fc0fb",
+      "ownership": "owned source or scoped hunks"
+    },
+    {
+      "path": "apps/mobile/src/components/mobile/finance/finance-movement-screen.tsx",
+      "sha256": "eb4b645c96b01bcde843b10ca18e22ae91a24f969ca6f507362ea620c3892d55",
+      "ownership": "owned source or scoped hunks"
+    },
+    {
+      "path": "apps/mobile/src/components/mobile/finance/finance-expense-screen.tsx",
+      "sha256": "52b169e6e5f3314892a1b51e55e90225cf7ace883ba4f2487dd2cd9c8943de80",
+      "ownership": "owned source or scoped hunks"
+    },
+    {
+      "path": "apps/mobile/src/app/finance-expense/[billId].tsx",
+      "sha256": "251847a5327424559ef818526d1dd566f164b854878e4b739362f1d0cb6551af",
+      "ownership": "owned source or scoped hunks"
+    },
+    {
+      "path": "apps/mobile/src/app/finance-movement/[entryId].tsx",
+      "sha256": "386436a51fd54950877bf3d3eafd6ff3a153073e37ba32b4bb4fbe1296547088",
+      "ownership": "owned source or scoped hunks"
+    },
+    {
+      "path": "packages/assistant/evaluations/fixtures/native-money-editor.fixture.tsx",
+      "sha256": "a7e5561f85435f61aca5afaea2a03d88ad216bd56afa83bc884e6fe3e6be8cb6",
+      "ownership": "owned source or scoped hunks"
+    },
+    {
+      "path": "packages/assistant/evaluations/phase-regressions.test.ts",
+      "sha256": "0df8ea5336e816408f720c5d711b3cfd43147c750f20864701621f30e99e3a54",
+      "ownership": "owned source or scoped hunks"
+    },
+    {
+      "path": "packages/assistant/src/capabilities/manifest.ts",
+      "sha256": "e375c76a33636379df7d3c075536e8d8908f3ec18a038f847a594658d11da49d",
+      "ownership": "three exact client-list hunks; prior Phase4 and foreign rows preserved"
+    },
+    {
+      "path": "packages/assistant/src/capabilities/COVERAGE.md",
+      "sha256": "d3e22381090a76ffbb5f10d79bd3a70eef212b13bed96d1ec0178c8cbe097a24",
+      "ownership": "generated mixed manifest; no foreign acceptance"
+    }
+  ],
+  "manifestChanges": [
+    {
+      "id": "finance.money_in.record_simple",
+      "before": "  {id:\"finance.money_in.record_simple\",version:1,mode:\"write\",action:\"money_in_record\",schema:actionSchema(\"money_in_record\"),effect:\"book\",receipt:\"finance_movement\",title:\"Record money\",domain:\"finance\",tool:\"draftAction\",policy:{roles:[\"OWNER\",\"ADMIN\"]},scope:\"book\",clients:[\"dashboard\"],rollout:\"source\",procedures:[\"finance.recordMoney\",\"finance.createMoneyAccount\"],examples:[\"Put 20k into Shop cash\"],tests:[\"packages/assistant/src/general/simple-money-in.test.ts\",\"apps/api/src/assistant/general-simple-money-in.test.ts\"],brain:\".brain/features/assistant-simple-money-in.md\"},\n",
+      "after": "  {id:\"finance.money_in.record_simple\",version:1,mode:\"write\",action:\"money_in_record\",schema:actionSchema(\"money_in_record\"),effect:\"book\",receipt:\"finance_movement\",title:\"Record money\",domain:\"finance\",tool:\"draftAction\",policy:{roles:[\"OWNER\",\"ADMIN\"]},scope:\"book\",clients:[\"dashboard\",\"mobile\"],rollout:\"source\",procedures:[\"finance.recordMoney\",\"finance.createMoneyAccount\"],examples:[\"Put 20k into Shop cash\"],tests:[\"packages/assistant/src/general/simple-money-in.test.ts\",\"apps/api/src/assistant/general-simple-money-in.test.ts\"],brain:\".brain/features/assistant-simple-money-in.md\"},\n"
+    },
+    {
+      "id": "finance.expense.record_simple",
+      "before": "  {id:\"finance.expense.record_simple\",version:1,mode:\"write\",action:\"expense_record_simple\",schema:actionSchema(\"expense_record_simple\"),effect:\"book\",receipt:\"finance_bill\",title:\"Record expense\",domain:\"finance\",tool:\"draftAction\",policy:{roles:[\"OWNER\",\"ADMIN\"]},scope:\"book\",clients:[\"dashboard\"],rollout:\"source\",procedures:[\"finance.recordExpense\"],examples:[\"Spent 5k on feed from Shop cash\"],tests:[\"packages/assistant/src/general/simple-expense.test.ts\",\"apps/api/src/assistant/general-simple-expense.test.ts\"],brain},\n",
+      "after": "  {id:\"finance.expense.record_simple\",version:1,mode:\"write\",action:\"expense_record_simple\",schema:actionSchema(\"expense_record_simple\"),effect:\"book\",receipt:\"finance_bill\",title:\"Record expense\",domain:\"finance\",tool:\"draftAction\",policy:{roles:[\"OWNER\",\"ADMIN\"]},scope:\"book\",clients:[\"dashboard\",\"mobile\"],rollout:\"source\",procedures:[\"finance.recordExpense\"],examples:[\"Spent 5k on feed from Shop cash\"],tests:[\"packages/assistant/src/general/simple-expense.test.ts\",\"apps/api/src/assistant/general-simple-expense.test.ts\"],brain},\n"
+    },
+    {
+      "id": "finance.transfer.record_simple",
+      "before": "  {id:\"finance.transfer.record_simple\",version:1,mode:\"write\",action:\"money_transfer_simple\",schema:actionSchema(\"money_transfer_simple\"),effect:\"book\",receipt:\"finance_movement\",title:\"Record transfer\",domain:\"finance\",tool:\"draftAction\",policy:{roles:[\"OWNER\",\"ADMIN\"]},scope:\"book\",clients:[\"dashboard\"],rollout:\"source\",procedures:[\"finance.recordMoney\",\"finance.createMoneyAccount\"],examples:[\"Move 5k from Shop cash to Ishaq PalmPay\"],tests:[\"packages/assistant/src/general/simple-transfer.test.ts\",\"apps/api/src/assistant/general-simple-transfer.test.ts\"],brain:\".brain/features/assistant-simple-transfers.md\"},\n",
+      "after": "  {id:\"finance.transfer.record_simple\",version:1,mode:\"write\",action:\"money_transfer_simple\",schema:actionSchema(\"money_transfer_simple\"),effect:\"book\",receipt:\"finance_movement\",title:\"Record transfer\",domain:\"finance\",tool:\"draftAction\",policy:{roles:[\"OWNER\",\"ADMIN\"]},scope:\"book\",clients:[\"dashboard\",\"mobile\"],rollout:\"source\",procedures:[\"finance.recordMoney\",\"finance.createMoneyAccount\"],examples:[\"Move 5k from Shop cash to Ishaq PalmPay\"],tests:[\"packages/assistant/src/general/simple-transfer.test.ts\",\"apps/api/src/assistant/general-simple-transfer.test.ts\"],brain:\".brain/features/assistant-simple-transfers.md\"},\n"
+    }
+  ]
+}

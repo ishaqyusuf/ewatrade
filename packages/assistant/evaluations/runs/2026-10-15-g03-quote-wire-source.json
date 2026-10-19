@@ -1,0 +1,95 @@
+{
+  "version": 1,
+  "date": "2026-10-15",
+  "scope": "Full-scope G03 request draft composition and coherent complete review transport components; no endpoint/action/client registration",
+  "sourceSnapshot": {
+    "apps/api/src/assistant/general-quote-issue-wire-body.ts": "115526c0b1b72c3d1c60ccd421ee9faafbcbc624ed0fb5acda79979c31239e5f",
+    "apps/api/src/assistant/general-quote-issue-wire-body.test.ts": "2f617f5815db9254ed9913178cae39cd0e1720b449c93d699bf5890e1049ae67",
+    "apps/api/src/assistant/general-quote-issue-draft-edit.ts": "0c122136a30381d6d19b0fce1c32a79847f970dccc551fa627d82d4b9cc1ceb9",
+    "apps/api/src/assistant/general-quote-issue-draft-edit.test.ts": "8684e72c0539ea45fbb973d24b4adddd08fcd150b2f377d5d7864a337083dfef",
+    "apps/api/src/assistant/general-quote-issue-review-pages.ts": "9dc9b42f0372869086011c6954216351b943a71207e485375616e8402b35e4a9",
+    "apps/api/src/assistant/general-quote-issue-review-pages.test.ts": "c331e7598aa256887404205af66412a381f0a701a08e97cc8b95aa00fc0c596f",
+    "packages/db/package.json": "cfbbd9406e453fddecdd8c487634bf76a68908dcd6553d246bcdb83c6e0016b5"
+  },
+  "dependencies": [
+    "packages/assistant/evaluations/runs/2026-10-15-g03-quote-preflight-source.json",
+    "packages/assistant/evaluations/proposals/2026-10-15-g03-quote-wire-budget.md"
+  ],
+  "verification": {
+    "rootCombinedTests": {
+      "passed": 183,
+      "failed": 0,
+      "assertions": 4613,
+      "files": 16,
+      "log": "/private/tmp/assistant-g03-quote-wire-repaired-final-tests.log",
+      "scope": "actual canonical source and Request/stream fixtures; QA text fixture only, no connected DB/provider"
+    },
+    "lint": {
+      "files": 14,
+      "result": "pass",
+      "scope": "six wire source/tests, seven native-copy/source helpers and DBpackage"
+    },
+    "compiler": {
+      "result": "not_green",
+      "diagnostics": 78,
+      "ownedDiagnostics": 0,
+      "config": "/private/tmp/assistant-g03-quote-preflight-tsconfig.json",
+      "log": "/private/tmp/assistant-g03-quote-wire-repaired-final-types.log",
+      "note": "Three owned fixture-only type errors repaired; final current graph retains78foreign/imported diagnostics."
+    },
+    "coverage": {
+      "result": "current",
+      "log": "/private/tmp/assistant-g03-quote-wire-coverage.log"
+    },
+    "impact": {
+      "result": "pass",
+      "records": 31,
+      "wholeMixedCheckoutChangedCapabilityRows": 126,
+      "wholeMixedCheckoutChangedProcedureRows": 8,
+      "log": "/private/tmp/assistant-g03-quote-wire-impact.log"
+    }
+  },
+  "implemented": [
+    "Actual streaming1MiBencodedrequest admission beforeJSONparse; fatalUTF8, wholeenvelope/rawwhitespace, headerdoesnotbypass, no compression, overflow/abortcancellation and safeproducererrors.",
+    "Strict revisionbound wholeoption set/remove/move and exactexpiry edits; complete source-specific20x100canonical intent validation, source/operation immutable and server-native identity parity retained.",
+    "ActualRequest\u2192single strict{json:patch}\u2192fullintentcomposition, ownedtrusted snapshot beforebodyawait; no metadata/batches; no persistence or authority claim.",
+    "Complete semantic review canonicalISOJSON, ONLY named generated option-line price-observation clock omission; no businessfact truncation.",
+    "Exactproposal/scope/payload/target/source/currentversion/count/content/page binding;128KiUTF16surrogate-safefragments; actualinstalledSuperJSONsingle-result tRPCbatch envelope+4096reserve<=1MiB.",
+    "Purefreshparent recomputation+exactpreviousmanifest comparison and all-or-nothing completepage integrity/referenceassembly."
+  ],
+  "independentReview": {
+    "body": "Access source-reviewed root byte/abort/adversarial reader; root repaired fixture-only RequestInit typing with semantic tests unchanged.",
+    "draft": "Access reviewed pure e7e5 checkpoint; root independently reviewed final actualRequest composition0c122136 and fullscope body tests. Final fixture-only3typing errors repaired withoutcasts/suppressions.",
+    "pages": "Access reviewed frozen9dc9b42f/c331e759 and reran9/2299; no remaining actionable scoped defect."
+  },
+  "limits": [
+    "Pure components are not public endpoints or a completed strict full wire/application contract.",
+    "Fresh authenticated owner lookup, transactional draft CAS/persistence, invalidation/re-signing, compact generic history/model projection and complete endpoints remain.",
+    "Final all-entrypoint GENERAL/WhatsApp outerpreflight and separate approvalpreflight remain; no transaction kept open for actual provider work here.",
+    "Reference page assembler is server-only; native/dashboard assembly/rendering and separatelytrusted manifest acquisition remain.",
+    "Hashes are integrity, not authentication or approval; no token or execution capability emitted.",
+    "Logical64MiB doesnotbound priorDBobjects/cloning/wholeheap, HTTP/proxy/serverperformance or all legacy data.",
+    "Actual outgoing wholebody enforcement/single-result batching/transformer compatibility must be installed and tested in future routes."
+  ],
+  "remaining": [
+    "Protected review/draft routes with exactowner/scope/client controls and durable revisionCAS/signing.",
+    "Safe compact Quote projection in generic history/model responses; fullintent cannot be returned through ordinary GET/cards.",
+    "GENERAL issue/revise registration/adapters and authenticated outerproviderpreflight at every entrypoint, including canonicalnonconsumingWhatsApp proofinspection.",
+    "Separate exactsavedapproval preflight, atomiccommand/receipt/original recovery and source/Quoteconcurrency.",
+    "Full native/dashboard editors/review rendering/originals and broaderG03 business scope/connected/device acceptance."
+  ],
+  "acceptance": {
+    "accepted": 13,
+    "total": 45,
+    "promotion": false
+  },
+  "gates": "G01/Paystack/D04/E05/G04/S05/C04 unchanged; no actualDB/provider/send/runtime/restart/deploy/commit/push",
+  "brainFiles": [
+    ".brain/features/service-commerce.md",
+    ".brain/features/assistant-service-requests.md",
+    ".brain/api/contracts.md",
+    ".brain/tasks/in-progress.md",
+    ".brain/plans/2026-10-15-assistant-operations-phase-checklist.md",
+    ".brain/decisions/2026-10-15-complete-quote-review-transport.md"
+  ]
+}

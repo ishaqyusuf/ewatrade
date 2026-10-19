@@ -68,6 +68,79 @@ function harness(
 }
 
 describe("setup attachment processing", () => {
+  test("cancellation while image preparation is paused prevents vision, allowance and READY completion", async () => {
+    let active = true
+    let visionCalls = 0
+    let prepared: () => void = () => {}
+    let resume: () => void = () => {}
+    const paused = new Promise<void>((resolve) => {
+      prepared = resolve
+    })
+    const release = new Promise<void>((resolve) => {
+      resume = resolve
+    })
+    const { deps, log } = harness(
+      attachment({ kind: "IMAGE", contentType: "image/png" }),
+      new Uint8Array([1]),
+      {
+        assertActive: async () => {
+          if (!active) throw Error("source revoked")
+        },
+        prepareImage: async (bytes) => {
+          prepared()
+          await release
+          return { bytes, mediaType: "image/webp" }
+        },
+        media: async () => {
+          const adapter = createRehearsalMediaAdapters({
+            transcript: "",
+            image: () => setupRehearsalImageRead(),
+          })
+          return {
+            ...adapter,
+            readImage: async (input) => {
+              visionCalls++
+              return adapter.readImage(input)
+            },
+          }
+        },
+      },
+    )
+    const processing = processSetupAttachment("att_1", deps)
+    await paused
+    active = false
+    resume()
+    expect(await processing).toEqual({
+      status: "failed",
+      errorCode: "PROCESSING_CANCELLED",
+      retryable: false,
+    })
+    expect(visionCalls).toBe(0)
+    expect(log.reserved).toEqual([])
+    expect(log.completed).toEqual([])
+    expect(log.usage).toEqual([])
+  })
+
+  test("a source lost after claim prevents even reading private bytes", async () => {
+    let reads = 0
+    const { deps, log } = harness(attachment(), new Uint8Array([1]), {
+      assertActive: async () => {
+        throw Error("source erased")
+      },
+      readBytes: async () => {
+        reads++
+        return new Uint8Array([1])
+      },
+    })
+    expect(await processSetupAttachment("att_1", deps)).toEqual({
+      status: "failed",
+      errorCode: "PROCESSING_CANCELLED",
+      retryable: false,
+    })
+    expect(reads).toBe(0)
+    expect(log.completed).toEqual([])
+  })
+
   test("nothing to claim is a no-op", async () => {
     const { deps, log } = harness(null, new Uint8Array())
     expect(await processSetupAttachment("att_1", deps)).toEqual({

@@ -1,0 +1,111 @@
+{
+  "checkedAt": "2026-10-18T17:28:37.564Z",
+  "sourceFingerprint": "de64599871af6b4c2f50aa8c1cc15351b78b573045f0241cdba8f0d8e9ade5c4",
+  "readiness": {
+    "version": "whatsapp-readiness-v1",
+    "scope": "logical_configuration_and_recorded_evidence_only",
+    "configuration": {
+      "status": "disabled",
+      "checks": {
+        "environment": false,
+        "toggles": true,
+        "sharedOtpSender": false,
+        "providerCredential": false,
+        "displayNumber": false,
+        "webhookSignatureSecret": false,
+        "webhookVerificationSecret": false,
+        "workerAuthentication": false,
+        "workerEndpoint": false,
+        "appOrigin": true,
+        "approvalSigningKey": false,
+        "approvalKeyVersion": true,
+        "pilotEnrollment": false,
+        "pilotTenantEnrollment": false,
+        "sourceFingerprint": true,
+        "sourceWorkflowScope": true
+      },
+      "invalidToggleCount": 0,
+      "pilotCount": 0,
+      "pilotTenantCount": 0
+    },
+    "flags": {
+      "channel": false,
+      "reads": false,
+      "writes": false,
+      "media": false,
+      "setup": false,
+      "product": false,
+      "workflowNativeWrites": false,
+      "localSource": false
+    },
+    "capabilities": {
+      "canonical": 154,
+      "planned": 72,
+      "declaredChannel": 82,
+      "nativeEnabled": 0,
+      "appReviewWrites": 44
+    },
+    "externalEvidence": {
+      "boundToCurrentSourceAndTarget": false,
+      "gates": [
+        {
+          "id": "capability_parity",
+          "status": "not_recorded"
+        },
+        {
+          "id": "provider_use_case_eligibility",
+          "status": "not_recorded"
+        },
+        {
+          "id": "sender_account_and_webhook",
+          "status": "not_recorded"
+        },
+        {
+          "id": "current_pricing_and_graph_version",
+          "status": "not_recorded"
+        },
+        {
+          "id": "privacy_retention_and_deletion",
+          "status": "not_recorded"
+        },
+        {
+          "id": "abuse_recovery_and_window_policy",
+          "status": "not_recorded"
+        },
+        {
+          "id": "support_and_opt_out",
+          "status": "not_recorded"
+        },
+        {
+          "id": "consented_android_ios_pilot",
+          "status": "not_recorded"
+        },
+        {
+          "id": "hosted_verification",
+          "status": "not_recorded"
+        },
+        {
+          "id": "target_release_approval",
+          "status": "not_recorded"
+        },
+        {
+          "id": "rollback_verification",
+          "status": "not_recorded"
+        }
+      ],
+      "complete": false
+    },
+    "provider": {
+      "availability": "not_probed",
+      "monetaryCost": "not_verified"
+    },
+    "release": {
+      "authorization": "none",
+      "activationPermitted": false,
+      "deploymentVerified": false
+    }
+  },
+  "operations": {
+    "status": "not_requested"
+  }
+}

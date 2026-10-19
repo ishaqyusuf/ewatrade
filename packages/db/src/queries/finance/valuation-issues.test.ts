@@ -1,5 +1,9 @@
 import { describe, expect, test } from "bun:test"
-import type { Prisma } from "../../../generated/prisma/client"
+import { Prisma } from "../../../generated/prisma/client"
+import {
+  lockCommerceFinancialOrder,
+  readHeldCommerceFinanceBook,
+} from "../customer-ledger/commerce-locks"
 import { FinanceError } from "./rules"
 import { recordProductFulfillmentValuationInTransaction } from "./valuation-issues"
 
@@ -181,6 +185,7 @@ function fixture(
     state,
     fulfillment,
     movement,
+    book,
   }
 }
 
@@ -404,4 +409,421 @@ describe("Product fulfillment inventory valuation", () => {
       }),
     ).rejects.toMatchObject({ code: "CONFLICT" })
   })
+})
+
+// The issuer and Book proof are actual production functions. Only database
+// ports are inert. Default-call cases above retain their original surface.
+async function heldFixture(options: Parameters<typeof fixture>[0] = {}) {
+  const base = fixture(options)
+  const calls = {
+    sources: [] as unknown[],
+    bookReads: 0,
+    redundant: [] as string[],
+    poolWrites: 0,
+    eventWrites: 0,
+  }
+  let movementCount = options.movementCount ?? 3
+  let responseTransform:
+    | ((balance: Record<string, unknown>) => void)
+    | undefined
+  const lockedOrder = {
+    id: "order-1",
+    tenantId: "tenant-1",
+    storeId: "store-1",
+    currencyCode: "NGN",
+    customerId: null,
+  }
+  const snapshot = base.fulfillment.orderLine.snapshot
+  if (snapshot)
+    snapshot.unitFactor = new Prisma.Decimal(snapshot.unitFactor.toFixed())
+  base.fulfillment.quantity = new Prisma.Decimal(
+    base.fulfillment.quantity.toFixed(),
+  )
+  base.fulfillment.orderLine.quantity = new Prisma.Decimal(
+    base.fulfillment.orderLine.quantity.toFixed(),
+  )
+  base.movement.unitFactorSnapshot = new Prisma.Decimal(
+    base.movement.unitFactorSnapshot.toFixed(),
+  )
+  if (base.state.pool)
+    base.state.pool.quantity = new Prisma.Decimal(options.before ?? "3")
+  const refuseRead = (name: string): never => {
+    calls.redundant.push(name)
+    throw Error(`Redundant ${name} read`)
+  }
+  const writePool = (data: Record<string, unknown>) => {
+    calls.poolWrites++
+    if (typeof data.quantity !== "string")
+      throw Error("Expected exact pool quantity")
+    base.state.pool = {
+      id: "pool-1",
+      ...base.state.pool,
+      ...data,
+      quantity: new Prisma.Decimal(data.quantity),
+    }
+    return base.state.pool
+  }
+  const tx = {
+    $queryRaw: async (parts: TemplateStringsArray) => {
+      const sql = parts.join("?")
+      if (sql.includes('FROM "FinanceBook"'))
+        return base.book ? [{ id: "book-1" }] : []
+      if (sql.includes('FROM "CommercialOrder"')) return [{ ...lockedOrder }]
+      throw Error("Unexpected lock port")
+    },
+    commercialOrder: { findFirst: async () => ({ ...lockedOrder }) },
+    productFulfillment: {
+      findFirst: async (args: unknown) => {
+        calls.sources.push(args)
+        if (options.missingFulfillment) return null
+        // Return fresh DB-shaped state for EVERY source read, including the
+        // effects of an earlier issue in this same transaction.
+        return {
+          ...base.fulfillment,
+          stockOperation: {
+            ...base.fulfillment.stockOperation,
+            movements: base.fulfillment.stockOperation.movements.map(
+              (movement) => {
+                const balanceSource = {
+                  ...movement.balanceSource,
+                  financeInventoryPools: base.state.pool
+                    ? [{ ...base.state.pool }]
+                    : [],
+                  _count: { movements: movementCount },
+                }
+                responseTransform?.(balanceSource)
+                return { ...movement, balanceSource }
+              },
+            ),
+          },
+        }
+      },
+    },
+    financeBook: {
+      findUnique: async () => refuseRead("Book"),
+      findUniqueOrThrow: async () => {
+        calls.bookReads++
+        if (!base.book) throw Error("Absent Book cannot be read")
+        return base.book
+      },
+    },
+    financeInventoryPool: {
+      findUnique: async () => refuseRead("pool"),
+      update: async ({ data }: { data: Record<string, unknown> }) =>
+        writePool(data),
+      create: async ({ data }: { data: Record<string, unknown> }) =>
+        writePool(data),
+    },
+    stockMovement: { count: async () => refuseRead("movement count") },
+    financeInventoryValuationEvent: {
+      create: async ({ data }: { data: Record<string, unknown> }) => {
+        calls.eventWrites++
+        base.state.event = data
+        return data
+      },
+    },
+  } as unknown as Prisma.TransactionClient
+  const held = await lockCommerceFinancialOrder(tx, {
+    tenantId: lockedOrder.tenantId,
+    orderId: lockedOrder.id,
+  })
+  if (!held) throw Error("Actual issuer did not return a lock")
+  // Model the actual payment path having loaded this same held Book already.
+  await readHeldCommerceFinanceBook(tx, held, {
+    tenantId: lockedOrder.tenantId,
+    orderId: lockedOrder.id,
+  })
+  return {
+    ...base,
+    tx,
+    held,
+    calls,
+    setMovementCount: (count: number) => {
+      movementCount = count
+    },
+    setProjectionTransform: (
+      transform: (balance: Record<string, unknown>) => void,
+    ) => {
+      responseTransform = transform
+    },
+  }
+}
+
+function invokeHeld(
+  f: Awaited<ReturnType<typeof heldFixture>>,
+  proof: unknown = f.held,
+  input = { tenantId: "tenant-1", fulfillmentId: f.fulfillment.id },
+) {
+  // Reflect permits runtime RED against the original two-argument function;
+  // the intended third argument is always a real issuer's evidence or an
+  // explicit adversarial input, never a test-minted positive proof.
+  return Reflect.apply(
+    recordProductFulfillmentValuationInTransaction,
+    undefined,
+    [f.tx, input, proof],
+  )
+}
+
+function expectJoinedScope(f: Awaited<ReturnType<typeof heldFixture>>) {
+  expect(f.calls.sources.at(-1)).toMatchObject({
+    relationLoadStrategy: "join",
+    where: {
+      id: f.fulfillment.id,
+      orderLine: { order: { tenantId: "tenant-1" } },
+    },
+    include: {
+      stockOperation: {
+        include: {
+          movements: {
+            include: {
+              balanceSource: {
+                include: {
+                  financeInventoryPools: { where: { bookId: "book-1" } },
+                  _count: { select: { movements: true } },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+  })
+  expect(f.calls.bookReads).toBe(1)
+  expect(f.calls.redundant).toEqual([])
+}
+
+test("held Product issue reuses the actual Book proof and joined current pool/history", async () => {
+  const f = await heldFixture()
+  const result = await invokeHeld(f)
+  expect(result).toMatchObject({
+    sourceCostMinor: 67n,
+    valueAfterMinor: 34n,
+    quantityAfter: "1",
+  })
+  expectJoinedScope(f)
+  expect(f.calls.poolWrites).toBe(1)
+  expect(f.calls.eventWrites).toBe(1)
+  expect(f.state.pool?.quantity).toBeInstanceOf(Prisma.Decimal)
+})
+
+test("missing joined pool projection is refused rather than inferred as an absent pool", async () => {
+  const f = await heldFixture()
+  f.setProjectionTransform((balance) => {
+    Reflect.deleteProperty(balance, "financeInventoryPools")
+  })
+  const error = await invokeHeld(f).then(
+    () => null,
+    (reason: unknown) => reason,
+  )
+  expect(error).toBeInstanceOf(FinanceError)
+  expect(error).toMatchObject({ code: "CONFLICT" })
+  expect(f.calls.poolWrites).toBe(0)
+  expect(f.calls.eventWrites).toBe(0)
+  expect(f.calls.redundant).toEqual([])
+})
+
+test("missing or invalid joined movement count refuses without guessing or extra reads", async () => {
+  const invalidCounts = [
+    undefined,
+    null,
+    -1,
+    0,
+    1.5,
+    Number.MAX_SAFE_INTEGER + 1,
+    Number.NaN,
+    Number.POSITIVE_INFINITY,
+    "3",
+  ]
+  for (const projectedCount of [
+    undefined,
+    null,
+    {},
+    ...invalidCounts.map((movements) => ({ movements })),
+  ]) {
+    const f = await heldFixture()
+    f.setProjectionTransform((balance) => {
+      if (projectedCount === undefined)
+        Reflect.deleteProperty(balance, "_count")
+      else balance._count = projectedCount
+    })
+    const error = await invokeHeld(f).then(
+      () => null,
+      (reason: unknown) => reason,
+    )
+    expect(error).toBeInstanceOf(FinanceError)
+    expect(error).toMatchObject({ code: "CONFLICT" })
+    expect(f.calls.poolWrites).toBe(0)
+    expect(f.calls.eventWrites).toBe(0)
+    expect(f.calls.redundant).toEqual([])
+  }
+})
+
+for (const [label, options, expected] of [
+  [
+    "known zero",
+    { pool: { valueMinor: 0n } },
+    { sourceCostMinor: 0n, valueAfterMinor: 0n, unknownReason: null },
+  ],
+  [
+    "prior unknown",
+    { pool: { valueMinor: null, unknownReason: "PRIOR_UNKNOWN_COST" } },
+    {
+      sourceCostMinor: null,
+      valueAfterMinor: null,
+      unknownReason: "PRIOR_UNKNOWN_COST",
+    },
+  ],
+  [
+    "missing pool",
+    { pool: null },
+    {
+      sourceCostMinor: null,
+      valueAfterMinor: null,
+      unknownReason: "MISSING_OPENING_COST",
+    },
+  ],
+  [
+    "movement gap",
+    { movementCount: 5 },
+    {
+      sourceCostMinor: null,
+      valueAfterMinor: null,
+      unknownReason: "UNCAPTURED_MOVEMENTS",
+    },
+  ],
+] as const) {
+  test(`joined issue retains ${label} semantics`, async () => {
+    const f = await heldFixture(options)
+    expect(await invokeHeld(f)).toMatchObject(expected)
+    expectJoinedScope(f)
+  })
+}
+
+test("joined issue retains real Decimal fractions and BigInt carrying value beyond safe Number", async () => {
+  const huge = await heldFixture({ pool: { valueMinor: 9007199254740993n } })
+  expect(await invokeHeld(huge)).toMatchObject({
+    sourceCostMinor: 6004799503160662n,
+    valueAfterMinor: 3002399751580331n,
+  })
+  expectJoinedScope(huge)
+  const fractional = await heldFixture({
+    before: "3.000000000000000001",
+    after: "1.000000000000000001",
+  })
+  expect(await invokeHeld(fractional)).toMatchObject({
+    quantityBefore: "3.000000000000000001",
+    quantityAfter: "1.000000000000000001",
+    sourceCostMinor: 67n,
+    valueAfterMinor: 34n,
+  })
+  expectJoinedScope(fractional)
+})
+
+test("a second same-balance issue reloads the pool written by the first under the same lock", async () => {
+  const f = await heldFixture()
+  expect(await invokeHeld(f)).toMatchObject({
+    sourceCostMinor: 67n,
+    valueAfterMinor: 34n,
+    sequence: 5n,
+  })
+  f.fulfillment.id = "fulfillment-2"
+  f.fulfillment.stockOperationId = f.fulfillment.stockOperation.id =
+    "operation-2"
+  f.fulfillment.orderLine.id = f.fulfillment.reservation.commercialOrderLineId =
+    "line-2"
+  f.fulfillment.quantity = f.fulfillment.orderLine.quantity =
+    new Prisma.Decimal(1)
+  f.fulfillment.reservation.enteredQuantity =
+    f.fulfillment.reservation.canonicalQuantity = new Prisma.Decimal(1)
+  f.movement.id = "movement-2"
+  f.movement.enteredQuantity = new Prisma.Decimal(1)
+  f.movement.signedCanonicalEffect = new Prisma.Decimal(-1)
+  f.movement.previousOnHandQuantity = new Prisma.Decimal(1)
+  f.movement.resultingOnHandQuantity = f.movement.balanceSource.onHandQuantity =
+    new Prisma.Decimal(0)
+  f.movement.balanceSource.revision++
+  f.setMovementCount(4)
+  expect(await invokeHeld(f)).toMatchObject({
+    sourceCostMinor: 34n,
+    valueAfterMinor: 0n,
+    quantityAfter: "0",
+    sequence: 6n,
+  })
+  expect(f.calls.sources).toHaveLength(2)
+  expect(f.calls.eventWrites).toBe(2)
+  expectJoinedScope(f)
+})
+
+for (const denial of ["forged", "other transaction", "other Tenant"] as const) {
+  test(`held issue refuses ${denial} evidence before source reads or effects`, async () => {
+    const f = await heldFixture()
+    let proof: unknown = f.held
+    if (denial === "forged") proof = { ...f.held }
+    if (denial === "other transaction") proof = (await heldFixture()).held
+    await expect(
+      invokeHeld(f, proof, {
+        tenantId: denial === "other Tenant" ? "tenant-2" : "tenant-1",
+        fulfillmentId: f.fulfillment.id,
+      }),
+    ).rejects.toMatchObject({ code: "REVISION_CONFLICT" })
+    expect(f.calls.sources).toHaveLength(0)
+    expect(f.calls.redundant).toEqual([])
+    expect(f.calls.poolWrites).toBe(0)
+    expect(f.calls.eventWrites).toBe(0)
+  })
+}
+
+for (const denial of [
+  "different Order",
+  "foreign reservation",
+  "closed date",
+  "later pool",
+] as const) {
+  test(`held optimization retains ${denial} refusal with zero effects`, async () => {
+    const f = await heldFixture(
+      denial === "later pool"
+        ? { pool: { latestEffectiveAt: new Date("2026-09-16T00:00:00Z") } }
+        : denial === "closed date"
+          ? {
+              book: {
+                id: "book-1",
+                tenantId: "tenant-1",
+                currencyCode: "NGN",
+                startsAt: new Date("2026-01-01T00:00:00Z"),
+                closedThrough: new Date("2026-09-16T00:00:00Z"),
+              },
+            }
+          : {},
+    )
+    if (denial === "different Order")
+      f.fulfillment.orderLine.order.id = "other-order"
+    if (denial === "foreign reservation")
+      f.fulfillment.reservation.storeId = "other-store"
+    await expect(invokeHeld(f)).rejects.toMatchObject({
+      code:
+        denial === "different Order"
+          ? "REVISION_CONFLICT"
+          : denial === "foreign reservation"
+            ? "CONFLICT"
+            : denial === "closed date"
+              ? "CLOSED_PERIOD"
+              : "INVALID_JOURNAL",
+    })
+    expect(f.calls.poolWrites).toBe(0)
+    expect(f.calls.eventWrites).toBe(0)
+    expect(f.calls.redundant).toEqual([])
+  })
+}
+
+test("held no-Book keeps the existing no-costing behavior and missing source still refuses", async () => {
+  const absent = await heldFixture({ book: null, missingSnapshot: true })
+  expect(await invokeHeld(absent)).toBeNull()
+  expect(absent.calls.poolWrites).toBe(0)
+  expect(absent.calls.eventWrites).toBe(0)
+  expect(absent.calls.bookReads).toBe(0)
+  expect(absent.calls.redundant).toEqual([])
+  const missing = await heldFixture({ missingFulfillment: true })
+  await expect(invokeHeld(missing)).rejects.toMatchObject({ code: "NOT_FOUND" })
+  expect(missing.calls.poolWrites).toBe(0)
+  expect(missing.calls.eventWrites).toBe(0)
 })

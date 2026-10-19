@@ -7,6 +7,7 @@ import {
   simpleSaleAction,
 } from "@ewatrade/assistant/general/contracts"
 import { Button, Input } from "@ewatrade/ui"
+import { catalogFreeLineDescriptionError } from "@ewatrade/utils/catalog-free-lines"
 import { majorToMinor, minorToMajorInput } from "@ewatrade/utils/currency"
 import { useQuery } from "@tanstack/react-query"
 import { useDeferredValue, useId, useState } from "react"
@@ -40,6 +41,9 @@ export function GeneralSimpleSaleEditor({
   const options = useQuery(
     trpc.assistant.saleOptions.queryOptions({ customerName: query }),
   )
+  // A typed-price sale must say what was sold (canonical rule). An older
+  // draft without it still opens here so it can be completed.
+  const [descriptionError, setDescriptionError] = useState<string | null>(null)
   const patch = (changes: Partial<SimpleSale>) =>
     setSale((current) => ({ ...current, ...changes }))
   function save() {
@@ -49,8 +53,20 @@ export function GeneralSimpleSaleEditor({
       setError("Enter a valid amount.")
       return
     }
+    const description = sale.description?.trim() ?? ""
+    const missing = catalogFreeLineDescriptionError({
+      kind: "quick_sale",
+      description,
+    })
+    if (missing) {
+      setDescriptionError(missing)
+      setError("")
+      return
+    }
+    setDescriptionError(null)
     const parsed = simpleSaleAction.safeParse({
       ...sale,
+      description,
       receivedMinor: paid ?? undefined,
       totalMinor: full ?? undefined,
     })
@@ -205,16 +221,46 @@ export function GeneralSimpleSaleEditor({
         />
       </label>
       <label htmlFor={`${fieldId}-description`} className="grid gap-2 text-sm">
-        Description (optional)
+        <span className="flex justify-between gap-2">
+          What was sold?
+          <span
+            className={
+              descriptionError ? "text-destructive" : "text-muted-foreground"
+            }
+          >
+            Required
+          </span>
+        </span>
         <Input
           id={`${fieldId}-description`}
           value={sale.description ?? ""}
           disabled={disabled}
-          maxLength={200}
-          onChange={(event) =>
-            patch({ description: event.target.value || undefined })
+          maxLength={240}
+          required
+          aria-invalid={descriptionError ? true : undefined}
+          aria-describedby={
+            descriptionError ? `${fieldId}-description-error` : undefined
           }
+          onChange={(event) => {
+            patch({ description: event.target.value || undefined })
+            if (descriptionError)
+              setDescriptionError(
+                catalogFreeLineDescriptionError({
+                  kind: "quick_sale",
+                  description: event.target.value.trim(),
+                }),
+              )
+          }}
         />
+        {descriptionError ? (
+          <span
+            id={`${fieldId}-description-error`}
+            role="alert"
+            className="text-destructive"
+          >
+            {descriptionError}
+          </span>
+        ) : null}
       </label>
       {sale.attachmentIds.length ? (
         <p className="text-sm text-muted-foreground">

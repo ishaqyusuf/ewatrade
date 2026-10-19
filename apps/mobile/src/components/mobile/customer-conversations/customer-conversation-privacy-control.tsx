@@ -117,14 +117,14 @@ export function CustomerConversationPrivacyControl({
           contentContainerStyle={{ paddingBottom: 80 }}
         >
           <View className="gap-4 px-5 pb-6">
-            <Text className="text-sm leading-5 text-muted-foreground">
+            <Text className="text-sm [-rn-line-height:22] text-muted-foreground">
               Choose what ẸwáTrade should remove or review. Each category gets
               its own result.
             </Text>
 
             <View className="min-h-11 flex-row items-center gap-2 border-l-2 border-primary bg-muted/60 px-3 py-2">
               <Icon className="size-sm text-primary" name="ShieldCheck" />
-              <Text className="min-w-0 flex-1 text-xs leading-4 text-muted-foreground">
+              <Text className="min-w-0 flex-1 text-xs [-rn-line-height:22] text-muted-foreground">
                 Required records are reported, not silently deleted.
               </Text>
             </View>
@@ -146,7 +146,7 @@ export function CustomerConversationPrivacyControl({
                       <Text className="font-bold text-foreground">
                         {option.label}
                       </Text>
-                      <Text className="text-xs leading-4 text-muted-foreground">
+                      <Text className="text-xs [-rn-line-height:22] text-muted-foreground">
                         {option.description}
                       </Text>
                     </View>

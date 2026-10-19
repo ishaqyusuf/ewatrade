@@ -61,6 +61,7 @@
     "@trpc/server": "^11.16.0"
   },
   "devDependencies": {
+    "@xmldom/xmldom": "0.8.15",
     "@ewatrade/tsconfig": "workspace:*",
     "@tailwindcss/postcss": "catalog:",
     "@types/node": "^24.6.0",

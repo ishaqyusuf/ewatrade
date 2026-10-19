@@ -1,12 +1,11 @@
 import { AppBottomSheetBackdrop } from "@/components/app/bottom-sheet-backdrop"
 import { ServiceChoice as Choice } from "@/components/mobile/appearances/classic/service-jobs"
 import { FormField } from "@/components/mobile/form-field"
-import { MoneyField } from "@/components/mobile/money-field"
 import { BottomSheetKeyboardAwareScrollView } from "@/components/ui/bottom-sheet-keyboard-aware-scroll-view"
 import { Modal, useModal } from "@/components/ui/modal"
 import { Text } from "@/components/ui/text"
 import { View } from "@/components/ui/view"
-import { formatMinorMoney } from "@ewatrade/utils"
+import { formatMinorMoney, getCurrencySymbol } from "@ewatrade/utils"
 import {
   BottomSheetFooter,
   type BottomSheetFooterProps,
@@ -34,7 +33,7 @@ export function useServicePaymentEditor(
   const [reviewError, setReviewError] = useState(false)
   const hasDraft = draft !== null
   useEffect(() => {
-    if (hasDraft) modal.present()
+    if (hasDraft && presentation > 0) modal.present()
   }, [hasDraft, presentation, modal.present])
   function open(
     job: WorkJob,
@@ -160,10 +159,10 @@ export function ServicePaymentSheet({
               </Text>
             ) : draft ? (
               <>
-                <Text className={ink + " font-bold"}>
+                <Text className={`${ink} font-bold`}>
                   {draft.job.orderNumber}
                 </Text>
-                <Text className={ink + " text-sm"}>
+                <Text className={`${ink} text-sm`}>
                   {formatMinorMoney(
                     draft.job.balanceDueMinor,
                     draft.job.currencyCode,
@@ -172,12 +171,13 @@ export function ServicePaymentSheet({
                 </Text>
                 {draft.job.balanceDueMinor > 0 ? (
                   <>
-                    <MoneyField
+                    <FormField
                       variant="filled"
-                      currencyCode={draft.job.currencyCode}
-                      label="Amount received"
+                      label={`Amount received (${draft.job.currencyCode})`}
+                      leadingText={getCurrencySymbol(draft.job.currencyCode)}
+                      keyboardType="decimal-pad"
                       value={draft.amount}
-                      onChangeValue={(amount) => editor.edit({ amount })}
+                      onChangeText={(amount) => editor.edit({ amount })}
                       editable={allowed}
                     />
                     <View className="gap-2">
@@ -209,7 +209,7 @@ export function ServicePaymentSheet({
                     />
                   </>
                 ) : (
-                  <Text className={ink + " text-sm"}>
+                  <Text className={`${ink} text-sm`}>
                     No additional payment is due. Review collection before
                     marking the order collected.
                   </Text>

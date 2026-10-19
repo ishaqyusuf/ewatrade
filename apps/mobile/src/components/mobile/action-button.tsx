@@ -66,7 +66,7 @@ export function ActionButton({
   const isDefaultVariant = !variant || variant === "default"
   const isOutlineVariant = variant === "outline"
   const foregroundClassName = cn(
-    "text-sm font-bold leading-5",
+    "text-sm font-bold [-rn-line-height:22]",
     isDefaultVariant &&
       (isDisabled ? "text-muted-foreground" : "text-primary-foreground"),
     isOutlineVariant && "text-foreground",
@@ -152,8 +152,8 @@ export function ActionButton({
                 ? "text-[color:var(--action-foreground)]"
                 : foregroundClassName,
               // After the color classes, whose text-sm/font-bold would win.
-              "text-[14.5px] font-extrabold",
-              largeTextLayout ? "[-rn-line-height:28]" : "[-rn-line-height:20]",
+              "text-base font-extrabold",
+              largeTextLayout ? "[-rn-line-height:28]" : "[-rn-line-height:22]",
               labelClassName,
             )}
           >

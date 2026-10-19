@@ -1,3 +1,4 @@
+import { catalogFreeLineDescriptionError } from "@ewatrade/utils/catalog-free-lines"
 import { z } from "zod"
 import { statedAmountToMinor } from "./stated-money"
 
@@ -31,6 +32,13 @@ export function simpleSaleStep(sale: SimpleSale) {
     return "customer"
   if (sale.customerChoice === "new" && !sale.customerName) return "customer"
   if (sale.partial && sale.totalMinor === undefined) return "total"
+  if (
+    catalogFreeLineDescriptionError({
+      kind: "quick_sale",
+      description: sale.description,
+    })
+  )
+    return "description"
   return "review"
 }
 export const simpleSaleQuestions = {
@@ -38,6 +46,7 @@ export const simpleSaleQuestions = {
   customer: "Who is this sale for?",
   received: "How much?",
   total: "What is the full sale total?",
+  description: "What was sold? Describe it in up to 200 characters.",
   review: "Review the sale, then save it.",
 } as const
 export function normalizedSaleName(value: string) {

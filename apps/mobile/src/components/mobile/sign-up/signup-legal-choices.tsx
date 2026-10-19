@@ -45,7 +45,7 @@ export function SignupLegalChoices({
   return (
     <View className="gap-2 border-t border-border pt-4">
       <Text className="font-semibold text-foreground">Terms and privacy</Text>
-      <Text className="text-sm leading-5 text-muted-foreground">
+      <Text className="text-sm [-rn-line-height:22] text-muted-foreground">
         {effective
           ? hasLegalPages
             ? `Version ${version} · Effective ${effectiveDate}. Review both documents before creating your account.`
@@ -97,7 +97,7 @@ export function SignupLegalChoices({
               Notice.
             </Text>
           </Pressable>
-          <Text className="text-xs leading-5 text-muted-foreground">
+          <Text className="text-xs [-rn-line-height:22] text-muted-foreground">
             Privacy acknowledgment is not consent to optional marketing.
           </Text>
         </>

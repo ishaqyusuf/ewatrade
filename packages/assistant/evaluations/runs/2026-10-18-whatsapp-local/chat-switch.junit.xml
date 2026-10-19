@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuites name="bun test" tests="1" assertions="41" failures="0" skipped="0" time="0.482692">
+  <testsuite name="packages/assistant/evaluations/fixtures/whatsapp-chat-attachment-switch.fixture.tsx" file="packages/assistant/evaluations/fixtures/whatsapp-chat-attachment-switch.fixture.tsx" tests="1" assertions="41" failures="0" skipped="0" time="0.083" hostname="MacBook-Pro.local">
+    <testcase name="mounted New/choose clears old originals and stale native uploads/voice cannot follow the selected chat" classname="" time="0.083596" file="packages/assistant/evaluations/fixtures/whatsapp-chat-attachment-switch.fixture.tsx" line="452" assertions="41" />
+  </testsuite>
+</testsuites>

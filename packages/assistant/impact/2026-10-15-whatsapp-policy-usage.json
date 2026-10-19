@@ -1,0 +1,54 @@
+{
+  "version": 1,
+  "id": "2026-10-15-whatsapp-policy-usage",
+  "tickets": ["A01", "H01"],
+  "summary": "WhatsApp W18 source: independently validated capability mode/rollout, local-only source support, current read/write/media gates and execution policy snapshot; existing shared GENERAL model allowance preserved. Separate User/Tenant UTC transport quotas survive chat/scope/relink, charge atomic new ingress/effects only and expire through existing cadence, with privacy attribution. No OTP/private config/provider/live capability promotion.",
+  "capabilities": [
+    {
+      "id": "search.records",
+      "change": "changed",
+      "rollout": "source",
+      "note": "Adds explicit native/source WhatsApp metadata and policy proof; native source needs local/nonproduction and read gate. Canonical/global role/Store/rollout rules remain. Dashboard/mobile unchanged; channel is not promoted to pilot/enabled."
+    }
+  ],
+  "docs": [
+    {
+      "topic": "feature",
+      "path": ".brain/features/whatsapp-assistant.md",
+      "status": "local_only"
+    },
+    {
+      "topic": "api",
+      "path": ".brain/api/contracts.md",
+      "status": "local_only"
+    },
+    {
+      "topic": "permissions",
+      "path": ".brain/api/permissions.md",
+      "status": "local_only"
+    },
+    {
+      "topic": "schema",
+      "path": ".brain/database/schema.md",
+      "status": "local_only"
+    },
+    {
+      "topic": "decision",
+      "path": ".brain/decisions/2026-10-15-whatsapp-assistant-channel.md",
+      "status": "local_only"
+    },
+    {
+      "topic": "capability",
+      "path": "packages/assistant/evaluations/WHATSAPP-COVERAGE.md",
+      "status": "updated"
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "run",
+      "path": ".brain/qa/2026-10-15-whatsapp-assistant.md",
+      "executed": true,
+      "result": "W18 source/backend accepted: final actual shared worker/browser-WhatsApp monthly allowance/new chat/saved delivery/policy cancellation3/81,0fail319.89s with cleanup. Real quota3/17(22.02s) including original resolved-scope shape, ingress1/33(49.65s), delivery3/53(218.32s), quota hold/resume1/8(29.33s) pass with cleanup. Pure policy/gates31/118, combined offline597/2671(19connected skips), OTP/auth/deletion25/133 pass (overlap). Assistant/jobs/query types and scoped26file Biome/diff/H01/150+3inventory/ten-record H02 pass; API inherited unrelated errors only. Generated guarded local usage migration/required push/generation pass. No rollout promotion, private OTP/config, real model/provider send or Production effect. Roadmap10/48; transport source/backend6/6, full remaining parity/release active."
+    }
+  ]
+}

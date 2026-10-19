@@ -1,0 +1,121 @@
+{
+  "version": 1,
+  "date": "2026-10-15",
+  "scope": "Native stock prerequisites G1/G2 protected context reads and G6 shared canonical calculation; full12actions/4originals remain",
+  "sourceSnapshot": {
+    "packages/db/src/queries/inventory-reporting.ts": "3119b4249219997b6b1859eb1445d573d2f1b7dbb9f2a97d93f37ddd172d8df5",
+    "packages/db/src/queries/inventory-reporting.test.ts": "f88360bd9beacd40d56b6815139739ca6a9861633c4ee88e6e8cf37ea043012e",
+    "apps/api/src/schemas/inventory.ts": "6217c299c94f8273bbdb9cb5704cd86956cb244817fd38683cd23920cc2e0411",
+    "apps/api/src/trpc/routers/inventory.ts": "2b1b8b49e26c8965a27c820f15ae516d249d049e72f9dcdf5171074f18f21259",
+    "apps/api/src/utils/staff-procedure-policy.ts": "7eb178ecc420408f13af6e4aa6f4ac46ba0278841c590e36c458e2b1bf1abe61",
+    "apps/api/src/utils/staff-procedure-policy.test.ts": "68d212dcf5a29aa4e964d2efaa371d157cec7b2a0cb6f56a7b5431fca54bbf13",
+    "packages/assistant/evaluations/fixtures/inventory-editor-reads-router.fixture.ts": "5becfb912a1c490ccd1b8a3252bd0e655ec40f14f9f0750ef7a34d17deb5843c",
+    "packages/assistant/src/general/stock-custody.ts": "c2ec9184c50d3f64fb1ee0f0d539042d20c92d3f5ce53b8078c4ddd452cf448c",
+    "packages/assistant/src/general/stock-transform.ts": "36d18af7d143738d6a681b633ff211e20e12680b1cd1044c8087e74ba2f618bf",
+    "packages/assistant/src/general/stock-custody-kind.test.ts": "a3829cdaf58cceadd3c16ec7fba29f327e6139a46c7fb0d1245587b46138fbc4",
+    "packages/assistant/src/general/stock-transform-derive.test.ts": "1144bb5f604d9ecf32f0a30716bfef871896ecc433524b3b6b373badccebc91f",
+    "apps/api/src/assistant/general-stock-custody.ts": "18d1b8ccf429ae3f5638c9fdcd323134e32e569fcf24367c8070bf185b5f6868",
+    "apps/api/src/assistant/general-stock-transform.ts": "e766f04e1080af6d5a438cde87f9b0431dcf24634dc4b7e26850eaee71920e4c",
+    "packages/assistant/package.json": "5b7af56a3280e6e11bd797e90439283bc073095ff8c24899d6a886748cad803d",
+    "packages/assistant/src/capabilities/inventory.ts": "f9cb64535db0b864b4636b90169f77229c00e9a48181e2a5082b4a0f2ddf0c50"
+  },
+  "verification": {
+    "rootTests": {
+      "passed": 51,
+      "assertions": 343,
+      "failed": 0,
+      "runs": {
+        "router": {
+          "passed": 11,
+          "assertions": 96,
+          "log": "/private/tmp/assistant-stock-g1-g2-root-router-tests.log"
+        },
+        "reportingPolicy": {
+          "passed": 14,
+          "assertions": 80,
+          "log": "/private/tmp/assistant-stock-g1-g2-root-helper-tests.log"
+        },
+        "custodyAPI": {
+          "passed": 10,
+          "assertions": 55,
+          "log": "/private/tmp/assistant-stock-g6-root-custody.log"
+        },
+        "transformAPI": {
+          "passed": 7,
+          "assertions": 47,
+          "log": "/private/tmp/assistant-stock-g6-root-transform.log"
+        },
+        "shared": {
+          "passed": 9,
+          "assertions": 65,
+          "log": "/private/tmp/assistant-stock-g6-root-shared.log"
+        }
+      }
+    },
+    "lint": {
+      "cleanPaths": 11,
+      "existingPathsWithUnchangedDiagnostics": 4,
+      "baselineDiagnostics": 5,
+      "currentDiagnostics": 5,
+      "newDiagnostics": 0,
+      "delta": "/private/tmp/assistant-stock-g1-g2-baseline/biome-delta.json",
+      "note": "Existing formatting/import/non-null hunks preserved; no claim of whole15fileclean. G6seven/fixturepolicythree/classificationone clean."
+    },
+    "compiler": {
+      "result": "not_green",
+      "diagnostics": 78,
+      "ownedDiagnostics": 0,
+      "config": "/private/tmp/assistant-quote-stock-source-tsconfig.json",
+      "log": "/private/tmp/assistant-quote-stock-source-types.log",
+      "exitCode": 2,
+      "note": "Finite integrated process terminal; retained foreign/imported baseline. Both new Quote fixture typing errors repaired without casts/suppressions."
+    },
+    "coverage": {
+      "result": "current",
+      "log": "/private/tmp/assistant-quote-stock-source-coverage.log",
+      "snapshotSha256": "4bcdfb7d6dd10228edab34a43245d3c60068ee573b401939cea79329ba21f27e"
+    },
+    "impact": {
+      "result": "pass",
+      "records": 33,
+      "wholeMixedCheckoutChangedCapabilityRows": 126,
+      "wholeMixedCheckoutChangedProcedureRows": 10,
+      "log": "/private/tmp/assistant-quote-stock-source-impact.log"
+    },
+    "capabilityTests": {
+      "passed": 6,
+      "assertions": 13,
+      "log": "/private/tmp/assistant-quote-stock-source-capability-tests.log"
+    },
+    "ui": "No UI surface changed by this backend/shared calculation checkpoint. Actual native consumers/testing remain separate."
+  },
+  "contracts": {
+    "inventory.balanceSource": {
+      "input": "strict {storeId,balanceSourceId}, trimmed1..128",
+      "output": "existing exact serialized balance row|null; scoped central identity guard may deny absent/foreign identity before query",
+      "authority": "existing protected inventory management/stock query gate, explicit authorizedStore, tenant+Store+id, no initialization"
+    },
+    "inventory.custodyAssignees": {
+      "input": "strict {storeId}, trimmed1..128",
+      "output": "{storeId,assignees:[{id,name:string|null,role}]}",
+      "authority": "actor stock access in requested authorizedStore; actual GENERAL custody recipient serviceAssigneeWhere eligibility, not recipient stock-grant requirement",
+      "privacy": "no email field; blank/contact-only fallback label becomes null; same names retain exact distinct userIDs"
+    },
+    "sharedCustody": "@ewatrade/assistant/general/stock-custody exports custodyMoveKind,CustodySource; API reexport unchanged",
+    "sharedTransform": "@ewatrade/assistant/general/stock-transform exports derivePackTargetResult,PackTargetInput,PackTargetResult; exact arithmetic, typed normal refusal, API TRPC(CONFLICT) wrapper unchanged"
+  },
+  "limits": [
+    "Router fixture substitutes authentication/tenant middleware and Prisma transport while calling actual scopeStaffRequest/canonical query/router; no real protectedProcedure Session/privacy/current persisted actor acceptance.",
+    "Ordinary explicit authorizedStore semantics retained; native editor must pin/recheck currentStore and returned identities.",
+    "Read rights and recipient eligibility never grant confirmation; server authority/revisions/availability/locks stay unchanged.",
+    "SESSION custody has no stock-session name source; never join authSession/token/IP; show truthful label-unavailable, retain exact identity. Former STAFF holder may not be in eligible choices.",
+    "Malformed saved sourceFactor multiplication retains existing thrown ExactDecimalError; native callers fail closed; no rounding/normalization introduced.",
+    "No stock write mobile declarations or custody/transform planned rollout promotion. All12editors/4originals/GeneralAnswertarget routing and actual native/device/connected journeys remain."
+  ],
+  "acceptance": {
+    "parentAccepted": 13,
+    "parentTotal": 45,
+    "status": "source_only_no_parent_promotion"
+  },
+  "gates": "G01/Paystack/D04/E05/G04/S05/C04 unchanged; no actualDB/provider/send/runtime/restart/deploy/commit/push"
+}

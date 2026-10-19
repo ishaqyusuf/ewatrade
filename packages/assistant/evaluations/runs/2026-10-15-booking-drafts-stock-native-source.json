@@ -1,0 +1,315 @@
+{
+  "date": "2026-10-15",
+  "status": "source_verified_parent_acceptance_open",
+  "goal": "Full phases4\u201312 remain active",
+  "parentAcceptance": {
+    "accepted": 13,
+    "total": 45,
+    "partial": 30,
+    "unstarted": 2
+  },
+  "sourceHashes": [
+    {
+      "path": "apps/api/src/assistant/general-booking-confirmation-recovery.ts",
+      "sha256": "f1432996fd2047057381ff7253b62913f692fcfbcfa5cde4b96a7da7de2a3741"
+    },
+    {
+      "path": "apps/api/src/assistant/general-booking-draft-review.ts",
+      "sha256": "3d61d22e81c00341b129f24fe42067347a3db386566e43e2ecc20e79afc6a352"
+    },
+    {
+      "path": "apps/api/src/assistant/general-booking-decision.test.ts",
+      "sha256": "6d09908292fc382aed7fa5fac5ad963eda0690c8d5f5890c24d8ec93829d4301"
+    },
+    {
+      "path": "apps/api/src/assistant/general-booking-drafts.test.ts",
+      "sha256": "6af4167e65e6e505c2d262da6e4c6caee920608d731fe86d03927c905fce354d"
+    },
+    {
+      "path": "apps/api/src/assistant/general-booking-draft-contract.ts",
+      "sha256": "2ba4811f0fa917a96a19d3fcdbbefb44606fcbbc878b3693516434e6abf668f8"
+    },
+    {
+      "path": "apps/api/src/assistant/general-booking-input.ts",
+      "sha256": "2af3d0a799fc92381cd7c5a8efcf2ec4ddfe9d9d41f49fa4388bd54895d20d40"
+    },
+    {
+      "path": "apps/api/src/assistant/general-booking-confirmation-fixture.ts",
+      "sha256": "6d02b14ee66640fffc88882882e076812b5b361ad2037882f019418217168277"
+    },
+    {
+      "path": "apps/api/src/assistant/general-booking-drafts.ts",
+      "sha256": "6a724f40398ca602ca52063ac51788a83ca142096d257513266390ca55fe28e4"
+    },
+    {
+      "path": "apps/api/src/assistant/general-booking-confirmation.test.ts",
+      "sha256": "cd48688b26f0e7742e028b716e176cb4ea8bcb5eac01f08f2a2a01babe0e8497"
+    },
+    {
+      "path": "apps/api/src/assistant/general-booking-confirmation.ts",
+      "sha256": "6bbf376cda9169c8b5de101363e28b3ef4572ab2209f423205b4d366cc0bb85e"
+    },
+    {
+      "path": "apps/api/src/assistant/general-booking-input.test.ts",
+      "sha256": "279c970f5258e88a1435f4f01618fc3604d94ade36a057202089407b41b94e3d"
+    },
+    {
+      "path": "apps/api/src/assistant/general-booking-draft-store.test.ts",
+      "sha256": "683a6d7aaa4f7d650bfc4d49b9719f0ffe3f181e6ecebe44d8f7baebd4a1809a"
+    },
+    {
+      "path": "apps/api/src/assistant/general-booking-decision.ts",
+      "sha256": "6b1e6d67deb2fd621380f3ef65deba0a007472fa1f2a350e1b1e4432578507f5"
+    },
+    {
+      "path": "apps/api/src/assistant/general-booking-draft-row.ts",
+      "sha256": "356ea201fd9a60f623f10e572747d6ece5fe34e18219e63efa2a6b40951c6a43"
+    },
+    {
+      "path": "apps/api/src/assistant/general-booking-confirmation-contract.ts",
+      "sha256": "ba5b63a16c362ec94d25e776ed354e8ed71553748d4b8e53054fb9be4b6f0aed"
+    },
+    {
+      "path": "apps/api/src/assistant/general-booking-draft-store.ts",
+      "sha256": "1d6ec9b94f0e2e0ffac97a34e75dc485539d8362e58f5cad3e8029cba804e118"
+    },
+    {
+      "path": "apps/api/src/assistant/test-helpers/general-booking-fresh.ts",
+      "sha256": "bcebcbdd838345ed2d26f6c324addf6b7a3d384d348a910d9b902efd6aee6604"
+    },
+    {
+      "path": "packages/db/src/queries/test-helpers/general-booking-draft.ts",
+      "sha256": "510b276bba9b939b1ce1562f0f134a0f6ed2e35e1708a1e589af836de1e1c0ca"
+    },
+    {
+      "path": "apps/mobile/src/components/mobile/assistant/native-parity.ts",
+      "sha256": "e059b9c454938645516c5252990383e2d830322dcbb2cd8fea33df17ba90348b"
+    },
+    {
+      "path": "apps/mobile/src/components/mobile/assistant/native-parity.test.ts",
+      "sha256": "d8a367033ebb6e53a577da14d4d30e82b06ce62af1dff4730cdaafbd6f295786"
+    },
+    {
+      "path": "packages/assistant/src/capabilities/manifest.ts",
+      "sha256": "15b871b3677dbe42dea8ab80ee91fd0a8a85f0cdc6904edbd067a50b7eb582c8"
+    },
+    {
+      "path": "packages/assistant/src/capabilities/COVERAGE.md",
+      "sha256": "0716518ea73f5699506878592789e3821f7a8bd21c6ca1f49ab7ca000c6c3c3b"
+    },
+    {
+      "path": "apps/mobile/src/components/mobile/assistant/general-stock-balance-editor.tsx",
+      "sha256": "0f46b796c05dfc75ccf221515aab32a67666e5ed9bd040ea2d18dceefb624e75"
+    },
+    {
+      "path": "apps/mobile/src/components/mobile/assistant/general-stock-closeout-editor.tsx",
+      "sha256": "1a8ac94aa93db0f010874856516bfd571ee3e38470e8d0e0a87768156d7977aa"
+    },
+    {
+      "path": "apps/mobile/src/components/mobile/assistant/general-stock-correct-editor.tsx",
+      "sha256": "0055aff4eb67447406f8e334460e836d2812b34d8eef00f131813aa45e6694a4"
+    },
+    {
+      "path": "apps/mobile/src/components/mobile/assistant/general-stock-count-editor.tsx",
+      "sha256": "cab76d5a5f2e26a4d663e2c812ee976e58adaeb56dfc14640d40f6839d92e41d"
+    },
+    {
+      "path": "apps/mobile/src/components/mobile/assistant/general-stock-custody-editor.tsx",
+      "sha256": "e7d151d351ebabdd993f4a5d4352a876b5ee74bb95918316be047b0920eafb02"
+    },
+    {
+      "path": "apps/mobile/src/components/mobile/assistant/general-stock-editor-parts.tsx",
+      "sha256": "7f16f788a82e865f06eafc883d25fc81a4537ebde1db3dffacd2ffd7787ffec0"
+    },
+    {
+      "path": "apps/mobile/src/components/mobile/assistant/general-stock-editor.tsx",
+      "sha256": "ced418bc5fdd54915433906d73b246e1be74496126ffececc71e998845d27dab"
+    },
+    {
+      "path": "apps/mobile/src/components/mobile/assistant/general-stock-transfer-editor.tsx",
+      "sha256": "ea2b8c6f6e4878369fcf8c43529bbb855160b808c6f3cb62de5b26a3e503eb79"
+    },
+    {
+      "path": "apps/mobile/src/components/mobile/assistant/general-stock-transform-editor.tsx",
+      "sha256": "4087992db0bbfe8a8e44ba7251aea9d077bd4efa1853ff6480807e0abedcc5aa"
+    },
+    {
+      "path": "apps/mobile/src/components/mobile/assistant/native-stock-state.test.ts",
+      "sha256": "539ab57e1b7cf7bf0bab3bb2015f540cf70b4cc3ef14f86d118b0d13ec4ecf46"
+    },
+    {
+      "path": "apps/mobile/src/components/mobile/assistant/native-stock-state.ts",
+      "sha256": "6574117a871e4c6c2cd99abe781073ac50be703e7083279b1274490854495653"
+    },
+    {
+      "path": "apps/mobile/src/components/mobile/assistant/native-stock-target.test.ts",
+      "sha256": "9beafe25841eeeb0c2a336f3fc9e7f981041677aacec705c3c46455114cdbc49"
+    },
+    {
+      "path": "apps/mobile/src/components/mobile/assistant/native-stock-target.ts",
+      "sha256": "9f68fef732a5ee3daafc3495d251a0fbbd7400059594e18119e54c0c5cb8250e"
+    },
+    {
+      "path": "apps/mobile/src/components/mobile/assistant/native-stock-values.test.ts",
+      "sha256": "09f4405e605f34f061708c573d07e36a1b59516fd0183bb96c245417a644d16d"
+    },
+    {
+      "path": "apps/mobile/src/components/mobile/assistant/native-stock-values.ts",
+      "sha256": "4ad6fbb398d6237befb84cf8aa299047c5422b55a7e7c4cce7d91370efb5998f"
+    },
+    {
+      "path": "apps/mobile/src/components/mobile/assistant/native-stock-original-content.tsx",
+      "sha256": "7b67fc154cb5f47c7e5b93ba79840d7906f7b9d2ee92fad46accdfda5b23e98d"
+    },
+    {
+      "path": "apps/mobile/src/components/mobile/assistant/native-stock-original-screen.tsx",
+      "sha256": "fa41c325df5980a971473a32f01c60c8f98921da6daa8570503d9a8b833a25f8"
+    },
+    {
+      "path": "apps/mobile/src/components/mobile/assistant/native-validation-copy.ts",
+      "sha256": "37d3cad5100c4a90776412aaa8d10cf5324a63b710b18940d54baecde1d6cc9a"
+    },
+    {
+      "path": "apps/mobile/src/components/mobile/assistant/native-validation-copy.test.ts",
+      "sha256": "f45123eb12fb4594c9a2211d64b4c2438bf4ebdfc236f0b9467a6b9a391d0691"
+    },
+    {
+      "path": "apps/mobile/src/app/stock-operation/[operationId].tsx",
+      "sha256": "955a5deaaa4efeb487c988b1b43c7b97a4b304436f451703e11c7513b3367cf6"
+    },
+    {
+      "path": "apps/mobile/src/app/stock-count/[stockCountId].tsx",
+      "sha256": "c000e83aa6ee0abed7eb5bfc4ed400ce6297d74c2689ec0382253afc684a4b43"
+    },
+    {
+      "path": "apps/mobile/src/app/stock-transfer/[transferId].tsx",
+      "sha256": "efe2c8f80c962553b15fe657a32a201eda269aee5154bd34e7a7293f9dc99ce6"
+    },
+    {
+      "path": "apps/mobile/src/app/inventory-closeout/[closeoutId].tsx",
+      "sha256": "cc19a5e059245a4f5c7df05c816a018fbb1df4ffe4dc01782dfdc1bdd76f7558"
+    },
+    {
+      "path": "packages/assistant/evaluations/fixtures/native-stock-editor.fixture.tsx",
+      "sha256": "0aacdf28f1ce2b20af71643b489715517b5eedf6994742f5842034ad03c76ddb"
+    },
+    {
+      "path": "packages/assistant/evaluations/fixtures/native-stock-save-fence.fixture.tsx",
+      "sha256": "21a0f4a310194b342d08dddc6a36db6cfb181aa51fbd295dc70da69797b8c0ef"
+    },
+    {
+      "path": "apps/mobile/src/components/mobile/assistant/general-proposal-editor.tsx",
+      "sha256": "2d2d11a9b43702926f8e9e66aba706b8f2afc8932b6ef898cda6aacf91abcae8"
+    },
+    {
+      "path": "apps/mobile/src/components/mobile/assistant/general-model.ts",
+      "sha256": "a84f90e80e561ef8542067fcebc0a4ee04bb53f6340eee7980bc4bbd821d33a9"
+    },
+    {
+      "path": "apps/mobile/src/app/_layout.tsx",
+      "sha256": "a69edfdf324c05d705bc5459c78b1192ed587c201a3380e99b9dd4c818d7f940"
+    }
+  ],
+  "verification": {
+    "booking": {
+      "tests": 86,
+      "assertions": 1412,
+      "files": 7,
+      "log": "/private/tmp/assistant-booking-stock-final-root-tests.log"
+    },
+    "stockMounted": {
+      "tests": 18,
+      "assertions": 179,
+      "log": "/private/tmp/assistant-stock-revision4-root-mounted-final.log"
+    },
+    "stockStatic": {
+      "tests": 8,
+      "assertions": 47,
+      "log": "/private/tmp/assistant-stock-revision4-root-static.log"
+    },
+    "stockPure": {
+      "tests": 19,
+      "assertions": 122,
+      "log": "/private/tmp/assistant-stock-revision4-root-values.log"
+    },
+    "nativePairing": {
+      "tests": 21,
+      "assertions": 170,
+      "log": "/private/tmp/assistant-stock-pairing-root-tests.log"
+    },
+    "originalProbes": {
+      "tests": 5,
+      "assertions": 5,
+      "log": "/private/tmp/assistant-stock-revision4-root-probes.log"
+    },
+    "overlap": "Independent reruns overlap; assertions/test executions are not parent acceptance milestones."
+  },
+  "compiler": {
+    "config": "/private/tmp/assistant-booking-stock-final-types-tsconfig.json",
+    "entries": 236,
+    "initialLog": "/private/tmp/assistant-booking-stock-final-types.log",
+    "initialExit": 2,
+    "initialDiagnostics": 90,
+    "exactImportedBaseline": 78,
+    "newTestDiagnostics": 12,
+    "productionNewDiagnostics": 0,
+    "status": "All12new test typing errors repaired;236entrygraph retains78identical imported baseline diagnostics,0owned. Whole-checkout compiler not green.",
+    "repairedLog": "/private/tmp/assistant-booking-stock-final-types-repaired.log",
+    "repairedExit": 2,
+    "repairedDiagnostics": 79,
+    "baselineFullDiagnosticBlocksIdentical": true,
+    "bookingOwnedDiagnostics": 0,
+    "pendingStockTestDiagnostics": 0,
+    "finalLog": "/private/tmp/assistant-booking-stock-final-types-closed.log",
+    "finalExit": 2,
+    "finalDiagnostics": 78,
+    "newOwnedDiagnostics": 0
+  },
+  "biome": {
+    "log": "/private/tmp/assistant-booking-stock-final-biome.log",
+    "checked": 49,
+    "clean": 48,
+    "existingFinding": "general-proposal-editor.tsx noArrayIndexKey custom:index, reproduced HEAD313/current432; frozenhostunchanged",
+    "baselineLog": "/private/tmp/assistant-general-proposal-editor-baseline-biome.log"
+  },
+  "gates": {
+    "coverageCurrent": true,
+    "coverageLog": "/private/tmp/assistant-booking-stock-final-coverage-check.log",
+    "impactPassed": true,
+    "impactRecords": 40,
+    "mixedCheckoutCapabilitiesChanged": 128,
+    "mixedCheckoutProceduresChanged": 11,
+    "impactLog": "/private/tmp/assistant-booking-stock-final-impact.log",
+    "hostedCI": "unproven"
+  },
+  "nativeMetadata": {
+    "manifest": 154,
+    "mobileWrites": 51,
+    "mobileReads": 67,
+    "declaredGaps": 0,
+    "allWriteGaps": 23,
+    "rollout": "existing10SOURCE, custody/repackPLANNED unchanged"
+  },
+  "stockReview": {
+    "job": "6d98800d-218f-405f-8ca2-826ef471f0c0",
+    "review": "0aa82a58-c405-4ae8-a351-f718d512798b",
+    "sourceRevision": 4,
+    "jobRevision": 3,
+    "sourceDecision": "accept only identified UI source, no connected/device/runtime acceptance",
+    "typingRepairMessage": "ad23974a-81a4-42cd-82d7-7ca8bb69842b"
+  },
+  "workshop": {
+    "hubRevision": "99f835db-26e2-4610-aa77-9397c49c7eeb",
+    "stockReproduction": "4963d539-0be6-431a-aea2-6497c34fc116",
+    "items": 486,
+    "groups": 10,
+    "verification": "Root observed current record/stocklink, usertabs/notesuntouched; labelsrefreshpending UIowner"
+  },
+  "remaining": [
+    "Complete public-safe booking review transport/paging and signed delivery",
+    "Full shared GENERAL/channel/action/history/client integrations",
+    "Original saved/SQL/concurrent/HTTP/linkedprincipal/device/provider acceptance"
+  ],
+  "approvalGates": "G01humanpaused; allPaystackpaused; D04unattributed12UNSCHEDULED; E05activationrestartrefusal; G04sixdeferred; S05sevenUNRUNretryUNSCHEDULED; C04exactisolatedtargets only; schema target unanswered; no alternate profile/runner/budget",
+  "executedExternalActions": "No DB/schema/migration/push/provider/model/OTP/customer send/runtime/restart/activation/deploy/stage/commit/push."
+}

@@ -72,7 +72,7 @@ export function CustomerConversationListEmpty({
         >
           {presentation.title}
         </Text>
-        <Text className="mt-1.5 max-w-72 text-center text-sm leading-5 text-muted-foreground">
+        <Text className="mt-1.5 max-w-72 text-center text-sm [-rn-line-height:22] text-muted-foreground">
           {presentation.message}
         </Text>
         <View className="mt-4 flex-row items-center gap-1.5">
@@ -102,7 +102,7 @@ export function CustomerConversationListEmpty({
       >
         {presentation.title}
       </Text>
-      <Text className="mt-1.5 max-w-72 text-center text-sm leading-5 text-muted-foreground">
+      <Text className="mt-1.5 max-w-72 text-center text-sm [-rn-line-height:22] text-muted-foreground">
         {presentation.message}
       </Text>
       <Pressable

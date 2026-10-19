@@ -209,7 +209,7 @@ export function ClassicSelectedOrderLine({
             selectionColor={colors.primary}
             style={{
               color: colors.foreground,
-              fontSize: 15,
+              fontSize: 16,
               fontVariant: ["tabular-nums"],
               fontWeight: "700",
               minWidth: 26,

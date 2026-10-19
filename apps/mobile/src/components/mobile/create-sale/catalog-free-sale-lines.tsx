@@ -12,8 +12,10 @@ import {
   CATALOG_FREE_LINE_LABELS,
   type CatalogFreeLineKind,
   catalogFreeLineAmountMinor,
+  catalogFreeLineDescriptionError,
   catalogFreeLineDisplay,
 } from "@ewatrade/utils/catalog-free-lines"
+import { useState } from "react"
 import { Text as NativeText, TextInput } from "react-native"
 import type { CreateSaleViewModel } from "./create-sale-presentation"
 
@@ -35,10 +37,14 @@ export function CatalogFreeSaleLines({
     actionsLocked,
     addCatalogFreeLine,
     catalogFreeLines,
+    catalogFreeErrorsVisible,
     currencyCode,
     removeCatalogFreeLine,
     updateCatalogFreeLine,
   } = model
+  // Show a line's description error once its field was left, or once
+  // Continue/Confirm was blocked.
+  const [touched, setTouched] = useState<ReadonlySet<string>>(new Set())
   return (
     <View className="gap-2.5">
       {catalogFreeLines.length ? (
@@ -83,32 +89,72 @@ export function CatalogFreeSaleLines({
                 testID={`sale-catalog-free-amount-${index}`}
                 value={line.amount}
               />
-              <TextInput
-                accessibilityLabel={`${CATALOG_FREE_LINE_LABELS[line.kind]} description`}
-                editable={!actionsLocked}
-                maxFontSizeMultiplier={1.3}
-                maxLength={CATALOG_FREE_DESCRIPTION_MAX_LENGTH}
-                onChangeText={(description) =>
-                  updateCatalogFreeLine(line.id, { description })
-                }
-                placeholder={
-                  line.kind === "quick_sale"
-                    ? "What was sold? (optional)"
-                    : "What is this cost for? (optional)"
-                }
-                placeholderTextColor={colors.mutedForeground}
-                selectionColor={colors.primary}
-                style={{
-                  backgroundColor: colors.muted,
-                  borderRadius: 14,
-                  color: colors.foreground,
-                  fontSize: 15,
-                  minHeight: 46,
-                  paddingHorizontal: 14,
-                }}
-                testID={`sale-catalog-free-description-${index}`}
-                value={line.description}
-              />
+              {(() => {
+                const required = line.kind === "quick_sale"
+                const descriptionError =
+                  catalogFreeErrorsVisible || touched.has(line.id)
+                    ? catalogFreeLineDescriptionError(line)
+                    : null
+                return (
+                  <View className="gap-1.5">
+                    <View className="flex-row items-center gap-2">
+                      <Text className="text-xs font-bold text-muted-foreground">
+                        {required ? "What was sold?" : "What is this cost for?"}
+                      </Text>
+                      <Text
+                        className={cn(
+                          "rounded-full px-2 py-0.5 text-xs font-extrabold",
+                          required
+                            ? "bg-tint-amber text-tint-amber-foreground"
+                            : "bg-muted text-muted-foreground",
+                        )}
+                      >
+                        {required ? "Required" : "Optional"}
+                      </Text>
+                    </View>
+                    <TextInput
+                      accessibilityHint={descriptionError ?? undefined}
+                      accessibilityLabel={`${CATALOG_FREE_LINE_LABELS[line.kind]} description${required ? ", required" : ", optional"}`}
+                      editable={!actionsLocked}
+                      maxFontSizeMultiplier={1.3}
+                      maxLength={CATALOG_FREE_DESCRIPTION_MAX_LENGTH}
+                      onBlur={() =>
+                        setTouched((current) => new Set(current).add(line.id))
+                      }
+                      onChangeText={(description) =>
+                        updateCatalogFreeLine(line.id, { description })
+                      }
+                      placeholder={
+                        required ? "e.g. 2 crates of eggs" : "e.g. Delivery"
+                      }
+                      placeholderTextColor={colors.mutedForeground}
+                      selectionColor={colors.primary}
+                      style={{
+                        backgroundColor: colors.muted,
+                        borderColor: descriptionError
+                          ? colors.destructive
+                          : "transparent",
+                        borderRadius: 14,
+                        borderWidth: 1.5,
+                        color: colors.foreground,
+                        fontSize: 16,
+                        minHeight: 46,
+                        paddingHorizontal: 14,
+                      }}
+                      testID={`sale-catalog-free-description-${index}`}
+                      value={line.description}
+                    />
+                    {descriptionError ? (
+                      <Text
+                        accessibilityLiveRegion="polite"
+                        className="text-xs font-semibold text-destructive"
+                      >
+                        {descriptionError}
+                      </Text>
+                    ) : null}
+                  </View>
+                )
+              })()}
             </View>
           ))}
         </View>
@@ -181,7 +227,7 @@ function CatalogFreeAddButton({
         maxFontSizeMultiplier={1.3}
         style={{
           color: colors.accentForeground,
-          fontSize: 13,
+          fontSize: 16,
           fontWeight: "800",
         }}
       >

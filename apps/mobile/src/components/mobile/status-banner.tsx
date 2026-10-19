@@ -72,7 +72,7 @@ export function StatusBanner({
           {title ? (
             <Text
               className={cn(
-                "text-[13.5px] font-bold [-rn-line-height:19]",
+                "text-xs font-bold [-rn-line-height:22]",
                 textClassName,
               )}
             >
@@ -81,7 +81,7 @@ export function StatusBanner({
           ) : null}
           <Text
             className={cn(
-              "text-[13px] [-rn-line-height:18]",
+              "text-xs [-rn-line-height:22]",
               tone === "default" ? "text-muted-foreground" : textClassName,
             )}
           >
@@ -97,7 +97,7 @@ export function StatusBanner({
             hitSlop={6}
             onPress={onLinkPress}
           >
-            <Text className={cn("text-[13px] font-extrabold", textClassName)}>
+            <Text className={cn("text-xs font-extrabold", textClassName)}>
               {linkLabel}
             </Text>
           </Pressable>

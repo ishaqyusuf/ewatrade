@@ -1,0 +1,100 @@
+{
+  "version": 1,
+  "id": "2026-10-15-g03-request-read-source",
+  "tickets": [
+    "G03",
+    "H01",
+    "H02",
+    "A04"
+  ],
+  "summary": "Schema-free protected bounded generic ServiceRequest discovery and exact original canonical/API/model reads with filter-bound saved continuation. Planned dashboard declarations only while actual native/original UI is delegated; no disposition/schema/provider activation.",
+  "capabilities": [
+    {
+      "id": "services.requests.read",
+      "change": "added",
+      "rollout": "planned",
+      "note": "Backend/model source with canonical protected read; actual exact client views and connected/saved acceptance remain open."
+    },
+    {
+      "id": "services.request.original.read",
+      "change": "added",
+      "rollout": "planned",
+      "note": "Backend/model source with canonical protected read; actual exact client views and connected/saved acceptance remain open."
+    }
+  ],
+  "procedures": [
+    {
+      "path": "serviceAssistantRequests.listPage",
+      "status": "supported",
+      "reason": "New protected source query maps to planned capability; no rollout/acceptance promotion."
+    },
+    {
+      "path": "serviceAssistantRequests.original",
+      "status": "supported",
+      "reason": "New protected source query maps to planned capability; no rollout/acceptance promotion."
+    }
+  ],
+  "docs": [
+    {
+      "topic": "feature",
+      "path": ".brain/features/assistant-service-requests.md",
+      "status": "local_only",
+      "note": "Read/source semantics, limits, authority and full remaining G03 requirements."
+    },
+    {
+      "topic": "api",
+      "path": ".brain/api/contracts.md",
+      "status": "local_only",
+      "note": "Strict input/read output/contact-safe model/saved cursor contracts."
+    },
+    {
+      "topic": "api",
+      "path": ".brain/api/endpoints.md",
+      "status": "local_only",
+      "note": "New pure protected queries with bounded RepeatableRead."
+    },
+    {
+      "topic": "permissions",
+      "path": ".brain/api/permissions.md",
+      "status": "local_only",
+      "note": "Existing role ceiling/persisted authority, no staff admission, clinical refusal."
+    },
+    {
+      "topic": "capability",
+      "path": "packages/assistant/src/capabilities/COVERAGE.md",
+      "status": "updated",
+      "note": "154capabilities;2new protected procedure source mappings, allplanned."
+    },
+    {
+      "topic": "schema",
+      "status": "not_applicable",
+      "note": "No Prisma/schema/database change; disposition event design prerequisite remains open."
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "test",
+      "path": "packages/db/src/queries/service-request-read.test.ts",
+      "executed": true,
+      "result": "Canonical9/97 child-run actual functions/inert transaction stand-ins, independently source-reviewed."
+    },
+    {
+      "kind": "test",
+      "path": "packages/assistant/evaluations/fixtures/service-request-read-router.fixture.ts",
+      "executed": true,
+      "result": "Actual router/schema/role/error/transaction-options11/143, middleware+canonicalstandins; noHTTP/DB."
+    },
+    {
+      "kind": "test",
+      "path": "packages/assistant/src/general/service-request-read.test.ts",
+      "executed": true,
+      "result": "Focused model/schema/saved-continuation5/50; combined46/239 with32isolated fixture children. Exact origin/input separation and future private-field withholding."
+    },
+    {
+      "kind": "review",
+      "path": "packages/assistant/evaluations/runs/2026-10-15-g03-request-read-source.md",
+      "executed": true,
+      "result": "Canonical independent review and source/check observations; all client/connected/fullG03 exits explicit."
+    }
+  ]
+}

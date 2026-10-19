@@ -1,6 +1,16 @@
 import { useAuthContext } from "@/hooks/use-auth"
-import { useTRPC } from "@/trpc/client"
+import {
+  type MobileSession,
+  getSession,
+  getSessionGeneration,
+} from "@/lib/session-store"
+import { getDataCacheGeneration, useTRPC } from "@/trpc/client"
 import type { EventMetadata } from "@ewatrade/events/metadata"
+import {
+  type MobileActivityInput,
+  mobileActivityEvent,
+} from "@ewatrade/events/mobile-activity"
+import { canInitializeMobileAnalytics } from "@ewatrade/events/mobile-policy"
 import { createNativeAnalytics } from "@ewatrade/events/native"
 import { useQuery } from "@tanstack/react-query"
 import Constants from "expo-constants"
@@ -18,28 +28,96 @@ export function trackProductEvent(
   activeClient?.track(name, properties)
 }
 
+/** Product activity is observational; collection failure cannot change a write. */
+export function trackMobileActivity(input: MobileActivityInput) {
+  try {
+    const event = mobileActivityEvent(input)
+    if (event) activeClient?.track(event.name, event.properties)
+  } catch {
+    // Keep business operations independent of analytics, including its adapter.
+  }
+}
+
 const keyFor = (key: string) => key.replaceAll(":", ".")
+
+// Memory-only ownership proof. Raw session tokens never enter event metadata,
+// query keys, storage or transport through this value.
+function sessionLifetime(session: MobileSession | null, generation: number) {
+  if (!session?.token || !session.profile?.id) return null
+  const profile = session.profile
+  return JSON.stringify([
+    session.token,
+    profile.id,
+    profile.businessId ?? null,
+    profile.storeId ?? null,
+    profile.role ?? null,
+    profile.staffAccessMode ?? null,
+    profile.status ?? null,
+    session.accessProfile?.hasBusinessAccess ?? null,
+    generation,
+    getSessionGeneration(),
+  ])
+}
+
+function liveSessionLifetime() {
+  try {
+    return sessionLifetime(getSession(), getDataCacheGeneration())
+  } catch {
+    return null
+  }
+}
+
 export function AnalyticsRuntime() {
   const auth = useAuthContext()
   const trpc = useTRPC()
-  const enabled =
-    !__DEV__ &&
-    Platform.OS === "android" &&
-    process.env.EXPO_PUBLIC_LOGLY_ENABLED === "true" &&
-    auth.isAuthenticated
+  const sessionOwner = auth.profile?.id
+  const cacheGeneration = getDataCacheGeneration()
+  const ownerLifetime = sessionLifetime(auth.session, cacheGeneration)
+  const ownerGeneration = useRef({ lifetime: ownerLifetime, value: 0 })
+  if (ownerGeneration.current.lifetime !== ownerLifetime)
+    ownerGeneration.current = {
+      lifetime: ownerLifetime,
+      value: ownerGeneration.current.value + 1,
+    }
+  const enabled = canInitializeMobileAnalytics({
+    development: __DEV__,
+    platform: Platform.OS,
+    environment: Constants.expoConfig?.extra?.mobileAnalyticsEnvironment,
+    enabled: process.env.EXPO_PUBLIC_LOGLY_ENABLED,
+    project: process.env.EXPO_PUBLIC_LOGLY_PROJECT,
+    endpoint: process.env.EXPO_PUBLIC_LOGLY_ENDPOINT,
+    authenticated:
+      auth.isAuthenticated && Boolean(sessionOwner) && ownerLifetime !== null,
+  })
+  const identityOptions = trpc.tenant.analyticsContext.queryOptions()
+  const identityCacheArgs = {
+    ...identityOptions.queryKey[1],
+    // Cache metadata only. Keep tRPC's path/input tuple intact for transport.
+    mobileAnalyticsOwner: {
+      actorId: sessionOwner,
+      businessId: auth.profile?.businessId,
+      lifetimeGeneration: ownerGeneration.current.value,
+      cacheGeneration,
+    },
+  }
   const identity = useQuery({
-    ...trpc.tenant.analyticsContext.queryOptions(),
+    ...identityOptions,
+    // Local query ownership only: never reuse a previous account/business proof.
+    queryKey: [identityOptions.queryKey[0], identityCacheArgs],
     enabled,
     retry: false,
     refetchInterval: 600000,
     staleTime: 0,
   })
-  const trackingAllowed = identity.isSuccess && identity.data?.enabled === true
+  const trackingAllowed =
+    enabled &&
+    identity.isSuccess &&
+    !identity.isFetching &&
+    identity.data?.enabled === true
   const permission = useRef(trackingAllowed)
   permission.current = trackingAllowed
   const context = useRef(identity.data?.context)
   context.current = identity.data?.context
-  const sessionOwner = auth.profile?.id
   const identityKey = trackingAllowed
     ? (identity.data?.context?.identityKey ?? "anonymous")
     : null
@@ -51,14 +129,22 @@ export function AnalyticsRuntime() {
   latestRoute.current = route
   const client = useRef<ReturnType<typeof createNativeAnalytics> | null>(null)
   useEffect(() => {
-    if (!enabled || !identityKey || !sessionOwner) return
+    if (
+      !enabled ||
+      !identityKey ||
+      !sessionOwner ||
+      !ownerLifetime ||
+      liveSessionLifetime() !== ownerLifetime
+    )
+      return
     if (process.env.EXPO_PUBLIC_LOGLY_PROJECT !== "ewatrade-mobile") return
     const endpoint = process.env.EXPO_PUBLIC_LOGLY_ENDPOINT
     if (endpoint !== "https://ewatrade.com/api/analytics/mobile") return
     const analytics = createNativeAnalytics({
       endpoint,
       enabled: true,
-      permission: () => permission.current,
+      permission: () =>
+        permission.current && liveSessionLifetime() === ownerLifetime,
       appVersion: Constants.expoConfig?.version,
       appBuild: Constants.nativeBuildVersion ?? undefined,
       createId: randomUUID,
@@ -86,7 +172,7 @@ export function AnalyticsRuntime() {
       client.current = null
       if (activeClient === analytics) activeClient = null
     }
-  }, [enabled, identityKey, sessionOwner])
+  }, [enabled, identityKey, sessionOwner, ownerLifetime])
   useEffect(() => {
     client.current?.setContext(identity.data?.context ?? null)
   }, [identity.data])

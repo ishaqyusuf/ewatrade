@@ -8,6 +8,7 @@ import {
   simpleMoneyInStep,
 } from "@ewatrade/assistant/general/contracts"
 import { generalProposalWhere } from "@ewatrade/db/assistant-general"
+import { isLinkedAssistantIdentity } from "./channel-principal"
 import type { GeneralContext } from "./general-context"
 import { assertGeneralAction, requireGeneralScope } from "./general-context"
 import {
@@ -17,6 +18,7 @@ import {
   generalProposalForApp,
 } from "./general-proposals"
 import { moneyInOptions } from "./general-simple-money-in"
+import { proposalDigest } from "./proposal-security"
 type Message = { id: string; role: string; parts: unknown }
 export async function handleSimpleMoneyInChat(
   ctx: GeneralContext,
@@ -30,6 +32,14 @@ export async function handleSimpleMoneyInChat(
   },
 ) {
   const text = input.choice?.text ?? input.text.trim()
+  // A channel confirmation must identify an exact delivered review outside this draft helper.
+  if (
+    isLinkedAssistantIdentity(ctx.session) &&
+    /^(?:proceed|confirm|cancel|yes|go ahead|done|save(?: it| sale)?)[.!]*$/i.test(
+      text.trim(),
+    )
+  )
+    return null
   if (!text) return null
   const scope = requireGeneralScope(ctx)
   const intent = isSimpleMoneyInIntent(text)
@@ -83,6 +93,7 @@ export async function handleSimpleMoneyInChat(
         proposalId: pending.id,
       }
     const app = generalProposalForApp(pending)
+    if (isLinkedAssistantIdentity(ctx.session)) return null
     const saved = await decideGeneralProposal(ctx, {
       proposalId: pending.id,
       revision: pending.revision,
@@ -184,6 +195,7 @@ export async function handleSimpleMoneyInChat(
         payload: draft,
       })
     : await draftGeneralProposal(ctx, input.conversationId, draft)
+  const proposalId = "proposalId" in result ? result.proposalId : result.id
   const prepared = simpleMoneyInAction.parse(result.payload)
   const next = simpleMoneyInStep(prepared)
   return {
@@ -193,6 +205,11 @@ export async function handleSimpleMoneyInChat(
         : next === "account"
           ? "Which account?"
           : `Record ${generalMoney(prepared.amountMinor ?? 0, ctx.tenantContext.tenant.currencyCode)} into ${prepared.accountName}${prepared.createAccount ? " (new account)" : ""}. Proceed or change anything?`,
-    proposalId: result.proposalId,
+    proposalId,
+    proposalSource: {
+      proposalId,
+      revision: result.revision,
+      payloadHash: proposalDigest(result.payload),
+    },
   }
 }

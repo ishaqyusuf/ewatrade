@@ -14,6 +14,16 @@ export type SetupAttachmentKind =
   | "SPREADSHEET"
   | "TEXT"
 
+/** Canonical app admission; channel-specific gates may further restrict it. */
+export function assistantAttachmentKindAllowedForPurpose(
+  kind: SetupAttachmentKind,
+  purpose: "GENERAL" | "SETUP" | "PRODUCT_CREATE",
+) {
+  if (purpose === "GENERAL")
+    return kind === "AUDIO" || kind === "IMAGE" || kind === "PDF"
+  return purpose === "SETUP" || purpose === "PRODUCT_CREATE"
+}
+
 export const SETUP_ATTACHMENT_TYPES = {
   IMAGE: ["image/jpeg", "image/png", "image/webp", "image/heic", "image/heif"],
   AUDIO: ["audio/webm", "audio/ogg", "audio/mp4", "audio/mpeg", "audio/wav"],

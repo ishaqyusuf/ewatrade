@@ -195,7 +195,7 @@ export function PinEntryScreen({
         >
           {title}
         </Text>
-        <Text className="mt-1 min-h-[38px] max-w-[300px] text-center text-[13.5px] [-rn-line-height:19] text-[var(--gate-muted)]">
+        <Text className="mt-1 min-h-[38px] max-w-[300px] text-center text-xs [-rn-line-height:22] text-[var(--gate-muted)]">
           {subtitle}
         </Text>
         <AppLockPinPad
@@ -208,8 +208,8 @@ export function PinEntryScreen({
               accessibilityLiveRegion="polite"
               className={
                 error
-                  ? "min-h-5 max-w-[300px] text-center text-[13px] font-semibold [-rn-line-height:19] text-[var(--gate-error)]"
-                  : "min-h-5 max-w-[300px] text-center text-[13px] font-semibold [-rn-line-height:19] text-[var(--gate-muted)]"
+                  ? "min-h-5 max-w-[300px] text-center text-xs font-semibold [-rn-line-height:22] text-[var(--gate-error)]"
+                  : "min-h-5 max-w-[300px] text-center text-xs font-semibold [-rn-line-height:22] text-[var(--gate-muted)]"
               }
             >
               {message ?? " "}
@@ -231,12 +231,12 @@ export function PinEntryScreen({
               haptic
               onPress={footer.onPress}
             >
-              <Text className="text-center text-[13px] font-bold text-[var(--gate-muted)]">
+              <Text className="text-center text-xs font-bold text-[var(--gate-muted)]">
                 {footer.label}
               </Text>
             </Pressable>
           ) : (
-            <Text className="min-h-11 px-4 text-center text-[13px] font-bold [-rn-line-height:19] text-[var(--gate-muted)]">
+            <Text className="min-h-11 px-4 text-center text-xs font-bold [-rn-line-height:22] text-[var(--gate-muted)]">
               {footer.text}
             </Text>
           )}
@@ -279,7 +279,7 @@ export function AppLockBiometricOffer({
       >
         {`Unlock with ${generic ? "your " : ""}${biometricName}?`}
       </Text>
-      <Text className="mt-1 max-w-[300px] text-center text-[13.5px] [-rn-line-height:19] text-[var(--gate-muted)]">
+      <Text className="mt-1 max-w-[300px] text-center text-xs [-rn-line-height:22] text-[var(--gate-muted)]">
         {`Open ${businessName?.trim() || "your business"} without typing your PIN. Your PIN still works.`}
       </Text>
       <View className="mt-6 w-full gap-2">
@@ -321,7 +321,7 @@ function OfferFact({ icon, text }: { icon: IconKeys; text: string }) {
   return (
     <View className="flex-row items-center gap-2.5 rounded-[13px] bg-[var(--gate-chip)] px-3 py-2.5">
       <Icon className="size-[16px]" color={palette.gold} name={icon} />
-      <Text className="min-w-0 flex-1 text-[13px] [-rn-line-height:18] text-[var(--gate-fg)]">
+      <Text className="min-w-0 flex-1 text-xs [-rn-line-height:22] text-[var(--gate-fg)]">
         {text}
       </Text>
     </View>

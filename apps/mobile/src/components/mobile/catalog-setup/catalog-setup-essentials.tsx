@@ -134,7 +134,7 @@ export function CatalogSetupEssentials({
           <Text className="text-lg font-extrabold text-foreground">
             Optional product details
           </Text>
-          <Text className="mb-1 text-xs [-rn-line-height:20] text-muted-foreground">
+          <Text className="mb-1 text-xs [-rn-line-height:22] text-muted-foreground">
             Add starting quantity or customer-facing context only when needed.
           </Text>
           {!showAdvanced && !showOpeningStock ? (
@@ -195,7 +195,7 @@ function CategoryChip({
       />
       <NativeText
         numberOfLines={1}
-        style={{ color: palette.lilacForeground, flex: 1, fontSize: 12.5 }}
+        style={{ color: palette.lilacForeground, flex: 1, fontSize: 16 }}
       >
         {`${lead} · `}
         <NativeText style={{ fontWeight: "800" }}>{value}</NativeText>
@@ -216,7 +216,7 @@ function CategoryChip({
         <NativeText
           style={{
             color: palette.lilacForeground,
-            fontSize: 12.5,
+            fontSize: 16,
             fontWeight: "800",
           }}
         >

@@ -1,6 +1,6 @@
 import { majorToMinor } from "./currency"
 
-/** Order lines recorded without a Catalog item: a typed amount plus optional words. */
+/** Quick sales require words; Additional cost descriptions remain optional. */
 export const catalogFreeLineKinds = ["quick_sale", "additional_cost"] as const
 export type CatalogFreeLineKind = (typeof catalogFreeLineKinds)[number]
 
@@ -10,6 +10,20 @@ export const CATALOG_FREE_LINE_LABELS: Record<CatalogFreeLineKind, string> = {
 }
 export const CATALOG_FREE_NO_DESCRIPTION = "(no description)"
 export const CATALOG_FREE_DESCRIPTION_MAX_LENGTH = 200
+export const QUICK_SALE_DESCRIPTION_REQUIRED =
+  "Describe what was sold for each Quick sale."
+
+export function catalogFreeLineDescriptionError(line: {
+  kind: CatalogFreeLineKind
+  description?: string | null
+}) {
+  const description = line.description?.trim() ?? ""
+  if (line.kind === "quick_sale" && !description)
+    return QUICK_SALE_DESCRIPTION_REQUIRED
+  if (description.length > CATALOG_FREE_DESCRIPTION_MAX_LENGTH)
+    return `Descriptions must be at most ${CATALOG_FREE_DESCRIPTION_MAX_LENGTH} characters.`
+  return null
+}
 
 /** Title and detail as owners read them on carts, orders and receipts. */
 export function catalogFreeLineDisplay(line: {
@@ -75,8 +89,8 @@ export function catalogFreeLinesError(lines: CatalogFreeLineDraft[]) {
   for (const line of lines) {
     if (catalogFreeLineAmountMinor(line) === null)
       return `Enter an amount for each ${CATALOG_FREE_LINE_LABELS[line.kind]}.`
-    if (line.description.trim().length > CATALOG_FREE_DESCRIPTION_MAX_LENGTH)
-      return `Descriptions must be at most ${CATALOG_FREE_DESCRIPTION_MAX_LENGTH} characters.`
+    const descriptionError = catalogFreeLineDescriptionError(line)
+    if (descriptionError) return descriptionError
   }
   return null
 }

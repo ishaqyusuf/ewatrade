@@ -34,10 +34,10 @@ export function VerificationResendLine({
     return (
       <Text
         accessibilityLiveRegion="polite"
-        className="text-center text-[12.5px] [-rn-line-height:18] text-muted-foreground"
+        className="text-center text-xs [-rn-line-height:22] text-muted-foreground"
       >
         Send a new code in{" "}
-        <Text className="text-[12.5px] font-bold tabular-nums text-foreground">
+        <Text className="text-xs font-bold tabular-nums text-foreground">
           {`${Math.floor(cooldownSeconds / 60)}:${String(cooldownSeconds % 60).padStart(2, "0")}`}
         </Text>
       </Text>
@@ -56,14 +56,14 @@ export function VerificationResendLine({
         accessibilityLiveRegion="polite"
         className={
           isError
-            ? "text-center text-xs font-semibold leading-5 text-destructive"
-            : "text-center text-xs leading-5 text-muted-foreground"
+            ? "text-center text-xs font-semibold [-rn-line-height:22] text-destructive"
+            : "text-center text-xs [-rn-line-height:22] text-muted-foreground"
         }
       >
         {lead}
       </Text>
       {!isSending && !isVerifying ? (
-        <Text className="text-center text-xs font-bold leading-5 text-foreground">
+        <Text className="text-center text-xs font-bold [-rn-line-height:22] text-foreground">
           Resend code
         </Text>
       ) : null}

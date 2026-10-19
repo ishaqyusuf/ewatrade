@@ -1,0 +1,88 @@
+{
+  "version": 1,
+  "scope": "Phase4 native source, not acceptance",
+  "files": [
+    {
+      "path": "apps/mobile/src/components/mobile/assistant/general-order-operation-editor.tsx",
+      "sha256": "9cfdf62dd86a9b38f016420df3999e88f6106e8b15cca98474f4906088f6280d",
+      "ownership": "owned source"
+    },
+    {
+      "path": "apps/mobile/src/components/mobile/assistant/native-order-values.ts",
+      "sha256": "94e8e16399b7d396110a7ef1b4e67bc80941ce79920777a13587fde5896b08fc",
+      "ownership": "owned source"
+    },
+    {
+      "path": "apps/mobile/src/components/mobile/assistant/native-order-values.test.ts",
+      "sha256": "d4179fd3565295a237d146b44935ed63006582a2bccb32b8de2f3608448e4c25",
+      "ownership": "owned source"
+    },
+    {
+      "path": "apps/mobile/src/components/mobile/assistant/general-proposal-editor.tsx",
+      "sha256": "545e619a6aaf4220ac6ade08a5a21912d3803fb0e3b29c01866a42771dc37492",
+      "ownership": "minimal dispatch import/branch only"
+    },
+    {
+      "path": "apps/mobile/src/components/mobile/assistant/native-parity.ts",
+      "sha256": "79d116f7f033fa1b1753f102190cc240c661a97478febeee8d9e98e9928a2c16",
+      "ownership": "owned source"
+    },
+    {
+      "path": "apps/mobile/src/components/mobile/assistant/native-parity.test.ts",
+      "sha256": "b49b1032417ef4e630aa5dd0254a180b9a4418add7f2fd22afff7dda1487dc5a",
+      "ownership": "owned source"
+    },
+    {
+      "path": "packages/assistant/evaluations/fixtures/native-order-editor.fixture.tsx",
+      "sha256": "8546b0898820a899b274f5585c318dca00150e87396551d6b0e6f349c473bcfb",
+      "ownership": "owned source"
+    },
+    {
+      "path": "packages/assistant/evaluations/phase-regressions.test.ts",
+      "sha256": "0d5ee6be912034f3a24210182de7c887a10fb904a3baa52d99208746dd14144e",
+      "ownership": "owned source"
+    },
+    {
+      "path": "packages/assistant/src/capabilities/manifest.ts",
+      "sha256": "2e470c65a8972db071d520ff42b835c7c25fc958f6bc3ccb8607b024c87c122f",
+      "ownership": "six client-list hunks only; foreign changes preserved"
+    },
+    {
+      "path": "packages/assistant/src/capabilities/COVERAGE.md",
+      "sha256": "18242b46eb99ff7a2125368c468558a97fb418f02507d5a1f041dec91343915f",
+      "ownership": "generated current mixed manifest; no foreign acceptance"
+    }
+  ],
+  "manifestChanges": [
+    {
+      "id": "sales.product.return",
+      "before": "  {id:\"sales.product.return\",version:1,mode:\"write\",action:\"product_line_return\",schema:actionSchema(\"product_line_return\"),effect:\"record\",receipt:\"order\",title:\"Return a fulfilled product line\",domain:\"sales\",tool:\"draftAction\",policy:{roles:everyone},scope:\"store\",clients:[\"dashboard\"],rollout:\"planned\",procedures:[\"orders.returnProductLine\"],examples:[\"Return one item to stock without issuing a refund\"],tests:[\"packages/assistant/src/general/product-return.test.ts\",\"packages/db/src/queries/commercial-product-return-review-guard.test.ts\"],brain},",
+      "after": "  {id:\"sales.product.return\",version:1,mode:\"write\",action:\"product_line_return\",schema:actionSchema(\"product_line_return\"),effect:\"record\",receipt:\"order\",title:\"Return a fulfilled product line\",domain:\"sales\",tool:\"draftAction\",policy:{roles:everyone},scope:\"store\",clients:[\"dashboard\",\"mobile\"],rollout:\"planned\",procedures:[\"orders.returnProductLine\"],examples:[\"Return one item to stock without issuing a refund\"],tests:[\"packages/assistant/src/general/product-return.test.ts\",\"packages/db/src/queries/commercial-product-return-review-guard.test.ts\"],brain},"
+    },
+    {
+      "id": "sales.products.fulfill",
+      "before": "  {id:\"sales.products.fulfill\",version:1,mode:\"write\",action:\"product_batch_fulfill\",schema:actionSchema(\"product_batch_fulfill\"),effect:\"record\",receipt:\"order\",title:\"Fulfil remaining product and catalog-free lines\",domain:\"sales\",tool:\"draftAction\",policy:{roles:everyone},scope:\"store\",clients:[\"dashboard\"],rollout:\"source\",procedures:[\"orders.fulfillProducts\"],examples:[\"Fulfil the remaining items in this order\"],tests:[\"packages/assistant/src/general/product-fulfillment.test.ts\",\"packages/db/src/queries/product-batch-impact.test.ts\",\"packages/db/src/queries/commercial-product-batch-review.test.ts\",\"apps/api/src/assistant/general-bulk-fulfillment.integration-check.ts\"],brain},",
+      "after": "  {id:\"sales.products.fulfill\",version:1,mode:\"write\",action:\"product_batch_fulfill\",schema:actionSchema(\"product_batch_fulfill\"),effect:\"record\",receipt:\"order\",title:\"Fulfil remaining product and catalog-free lines\",domain:\"sales\",tool:\"draftAction\",policy:{roles:everyone},scope:\"store\",clients:[\"dashboard\",\"mobile\"],rollout:\"source\",procedures:[\"orders.fulfillProducts\"],examples:[\"Fulfil the remaining items in this order\"],tests:[\"packages/assistant/src/general/product-fulfillment.test.ts\",\"packages/db/src/queries/product-batch-impact.test.ts\",\"packages/db/src/queries/commercial-product-batch-review.test.ts\",\"apps/api/src/assistant/general-bulk-fulfillment.integration-check.ts\"],brain},"
+    },
+    {
+      "id": "sales.product.fulfill",
+      "before": "  {id:\"sales.product.fulfill\",version:1,mode:\"write\",action:\"product_line_fulfill\",schema:actionSchema(\"product_line_fulfill\"),effect:\"record\",receipt:\"order\",title:\"Fulfil a reserved product line\",domain:\"sales\",tool:\"draftAction\",policy:{roles:everyone},scope:\"store\",clients:[\"dashboard\"],rollout:\"source\",procedures:[\"orders.fulfillProductLine\"],examples:[\"Fulfil this reserved product line\"],tests:[\"packages/db/src/queries/commercial-product-line-review.test.ts\",\"apps/api/src/assistant/general-fulfillment.integration-check.ts\"],brain},",
+      "after": "  {id:\"sales.product.fulfill\",version:1,mode:\"write\",action:\"product_line_fulfill\",schema:actionSchema(\"product_line_fulfill\"),effect:\"record\",receipt:\"order\",title:\"Fulfil a reserved product line\",domain:\"sales\",tool:\"draftAction\",policy:{roles:everyone},scope:\"store\",clients:[\"dashboard\",\"mobile\"],rollout:\"source\",procedures:[\"orders.fulfillProductLine\"],examples:[\"Fulfil this reserved product line\"],tests:[\"packages/db/src/queries/commercial-product-line-review.test.ts\",\"apps/api/src/assistant/general-fulfillment.integration-check.ts\"],brain},"
+    },
+    {
+      "id": "sales.service.authorize",
+      "before": "  {id:\"sales.service.authorize\",version:1,mode:\"write\",action:\"service_line_authorize\",schema:actionSchema(\"service_line_authorize\"),effect:\"record\",receipt:\"order\",title:\"Authorize a charge-only service\",domain:\"sales\",tool:\"draftAction\",policy:{roles:managers},scope:\"store\",clients:[\"dashboard\"],rollout:\"source\",procedures:[\"orders.authorizeChargeOnlyServiceLine\"],examples:[\"Authorize a charge-only service\"],tests:[\"packages/assistant/src/general/service-fulfillment.test.ts\",\"packages/db/src/queries/commercial-service-line-review.test.ts\",\"apps/api/src/assistant/general-fulfillment.integration-check.ts\"],brain},",
+      "after": "  {id:\"sales.service.authorize\",version:1,mode:\"write\",action:\"service_line_authorize\",schema:actionSchema(\"service_line_authorize\"),effect:\"record\",receipt:\"order\",title:\"Authorize a charge-only service\",domain:\"sales\",tool:\"draftAction\",policy:{roles:managers},scope:\"store\",clients:[\"dashboard\",\"mobile\"],rollout:\"source\",procedures:[\"orders.authorizeChargeOnlyServiceLine\"],examples:[\"Authorize a charge-only service\"],tests:[\"packages/assistant/src/general/service-fulfillment.test.ts\",\"packages/db/src/queries/commercial-service-line-review.test.ts\",\"apps/api/src/assistant/general-fulfillment.integration-check.ts\"],brain},"
+    },
+    {
+      "id": "sales.service.fulfill",
+      "before": "  {id:\"sales.service.fulfill\",version:1,mode:\"write\",action:\"service_line_fulfill\",schema:actionSchema(\"service_line_fulfill\"),effect:\"record\",receipt:\"order\",title:\"Record charge-only service performance\",domain:\"sales\",tool:\"draftAction\",policy:{roles:everyone},scope:\"store\",clients:[\"dashboard\"],rollout:\"source\",procedures:[\"orders.fulfillChargeOnlyServiceLine\"],examples:[\"Record charge-only service performance\"],tests:[\"packages/assistant/src/general/service-fulfillment.test.ts\",\"packages/db/src/queries/commercial-service-line-review.test.ts\",\"apps/api/src/assistant/general-fulfillment.integration-check.ts\"],brain},",
+      "after": "  {id:\"sales.service.fulfill\",version:1,mode:\"write\",action:\"service_line_fulfill\",schema:actionSchema(\"service_line_fulfill\"),effect:\"record\",receipt:\"order\",title:\"Record charge-only service performance\",domain:\"sales\",tool:\"draftAction\",policy:{roles:everyone},scope:\"store\",clients:[\"dashboard\",\"mobile\"],rollout:\"source\",procedures:[\"orders.fulfillChargeOnlyServiceLine\"],examples:[\"Record charge-only service performance\"],tests:[\"packages/assistant/src/general/service-fulfillment.test.ts\",\"packages/db/src/queries/commercial-service-line-review.test.ts\",\"apps/api/src/assistant/general-fulfillment.integration-check.ts\"],brain},"
+    },
+    {
+      "id": "sales.order.replace",
+      "before": "  {id:\"sales.order.replace\",version:1,mode:\"write\",action:\"order_replace\",schema:actionSchema(\"order_replace\"),effect:\"record\",receipt:\"order\",title:\"Replace reviewed order quantities and prices\",domain:\"sales\",tool:\"draftAction\",policy:{roles:managers},scope:\"store\",clients:[\"dashboard\"],rollout:\"source\",procedures:[\"orders.replace\",\"orders.replacementReview\"],examples:[\"Replace reviewed order quantities and prices\"],tests:[\"apps/api/src/assistant/general-order-amendment.integration-check.ts\"],brain},",
+      "after": "  {id:\"sales.order.replace\",version:1,mode:\"write\",action:\"order_replace\",schema:actionSchema(\"order_replace\"),effect:\"record\",receipt:\"order\",title:\"Replace reviewed order quantities and prices\",domain:\"sales\",tool:\"draftAction\",policy:{roles:managers},scope:\"store\",clients:[\"dashboard\",\"mobile\"],rollout:\"source\",procedures:[\"orders.replace\",\"orders.replacementReview\"],examples:[\"Replace reviewed order quantities and prices\"],tests:[\"apps/api/src/assistant/general-order-amendment.integration-check.ts\"],brain},"
+    }
+  ]
+}

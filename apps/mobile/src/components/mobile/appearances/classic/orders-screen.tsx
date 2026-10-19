@@ -239,7 +239,7 @@ export function ClassicOrdersSummary({
                     dateFilter === value
                       ? palette.heroTo
                       : palette.heroForeground,
-                  fontSize: 13,
+                  fontSize: 16,
                   fontWeight: "800",
                 }}
               >
@@ -339,7 +339,7 @@ export function ClassicOrdersFilterRow<T extends string>({
           >
             <Text
               className={cn(
-                "text-[15px] font-bold",
+                "text-base font-bold",
                 on ? "text-background" : "text-foreground",
               )}
             >
@@ -430,7 +430,7 @@ export function ClassicOrdersRow({
               maxFontSizeMultiplier={1.3}
               style={{
                 color: palette[`${avatar.tint}Foreground`],
-                fontSize: 14,
+                fontSize: 16,
                 fontWeight: "800",
               }}
             >
@@ -464,7 +464,7 @@ export function ClassicOrdersRow({
                 <NativeText
                   style={{
                     color: palette.skyForeground,
-                    fontSize: 12,
+                    fontSize: 16,
                     fontWeight: "700",
                   }}
                 >

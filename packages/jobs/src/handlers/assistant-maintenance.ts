@@ -5,9 +5,11 @@ import {
 } from "@ewatrade/db/assistant-operations"
 import { prisma } from "@ewatrade/db/client"
 import {
+  assistantAttachmentStoragePath,
   createAssistantAttachmentStorage,
   resolveAssistantAttachmentStorage,
 } from "@ewatrade/private-media/assistant-attachments"
+import { PrivateObjectStorageError } from "@ewatrade/private-media/object-storage"
 
 /** Bounded per run; the hourly cadence works through any backlog. */
 export const ASSISTANT_MAINTENANCE_BATCH = 50
@@ -46,20 +48,35 @@ export function defaultAssistantMaintenanceDeps(): AssistantMaintenanceDeps {
       listExpiredAssistantAttachments(prisma, { now, limit }),
     removeBytes: async (attachment) => {
       const classification = attachment.dataClassification
-      const storage = createAssistantAttachmentStorage(
-        resolveAssistantAttachmentStorage(classification),
-        classification,
+      const config = resolveAssistantAttachmentStorage(classification)
+      const target = {
+        tenantId: attachment.tenantId,
+        conversationId: attachment.conversationId,
+        attachmentId: attachment.id,
+        contentDigest: attachment.contentDigest,
+        contentType: attachment.contentType,
+        sizeBytes: attachment.sizeBytes,
+      }
+      if (
+        !attachment.storagePath ||
+        attachment.storageProvider !== config.provider ||
+        attachment.storageStoreId !== config.storeId ||
+        attachment.storagePath !== assistantAttachmentStoragePath(target)
       )
-      await storage.remove({
-        target: {
-          tenantId: attachment.tenantId,
-          conversationId: attachment.conversationId,
-          attachmentId: attachment.id,
-          contentDigest: attachment.contentDigest,
-          contentType: attachment.contentType,
-          sizeBytes: attachment.sizeBytes,
-        },
-      })
+        throw new PrivateObjectStorageError("INVALID_OBJECT")
+      const storage = createAssistantAttachmentStorage(config, classification)
+      await storage.remove({ target })
+      try {
+        await storage.read({ target })
+      } catch (error) {
+        if (
+          error instanceof PrivateObjectStorageError &&
+          error.code === "OBJECT_NOT_FOUND"
+        )
+          return
+        throw new PrivateObjectStorageError("STORAGE_UNAVAILABLE")
+      }
+      throw new PrivateObjectStorageError("STORAGE_UNAVAILABLE")
     },
     expire: (attachment) => expireAssistantAttachment(prisma, attachment),
   }
@@ -68,8 +85,8 @@ export function defaultAssistantMaintenanceDeps(): AssistantMaintenanceDeps {
 /**
  * Hourly: closes runs a crashed process left RUNNING, and enforces attachment
  * retention (stored bytes deleted first, then the row is cleared or removed).
- * A live attachment whose bytes cannot be deleted stays for the next run; QA
- * data never had live storage, so its row is expired regardless.
+ * Every stored attachment, including actual QA test bytes, retains attribution
+ * until its original object's absence is confirmed.
  */
 export async function assistantMaintenanceHandler(
   deps: AssistantMaintenanceDeps = defaultAssistantMaintenanceDeps(),
@@ -81,18 +98,23 @@ export async function assistantMaintenanceHandler(
   let cleared = 0
   let kept = 0
   for (const attachment of expired) {
+    if (
+      !attachment.storagePath &&
+      (attachment.storageProvider || attachment.storageStoreId)
+    ) {
+      kept += 1
+      continue
+    }
     if (attachment.storagePath) {
       try {
         await deps.removeBytes(attachment)
       } catch (error) {
-        if (attachment.dataClassification !== "QA") {
-          kept += 1
-          console.error("[assistant-maintenance] bytes not deleted", {
-            attachmentId: attachment.id,
-            name: error instanceof Error ? error.name : typeof error,
-          })
-          continue
-        }
+        kept += 1
+        console.error("[assistant-maintenance] bytes not deleted", {
+          attachmentId: attachment.id,
+          name: error instanceof Error ? error.name : typeof error,
+        })
+        continue
       }
     }
     const result = await deps.expire(attachment)

@@ -6,9 +6,10 @@ import { consumeProductReturnJournalReview, lockProductReturnJournalReview, reme
 const scope = { tenantId: "tenant", storeId: "store", orderId: "order", bookId: "book", sourceCostMinor: "40", clientReturnId: "return-command" }
 const review = { revision: "review", grossEffectiveAt: new Date("2026-09-01"), inventoryAccountId: "inventory", costOfSalesAccountId: "cogs", grossAmount: 100n, priorReturnCost: 20n }
 async function fixture() {
+  const order = { id: "order", currencyCode: "NGN", customerId: null }
   const tx = {
-    commercialOrder: { findFirst: async () => ({ id: "order", currencyCode: "NGN", customerId: null }) },
-    $queryRaw: async () => [{ id: "book" }],
+    commercialOrder: { findFirst: async () => order },
+    $queryRaw: async (parts: TemplateStringsArray) => parts.join("").includes('FROM "CommercialOrder"') ? [order] : [{ id: "book" }],
   } as unknown as Prisma.TransactionClient
   const held = await lockCommerceFinancialOrder(tx, scope)
   if (!held) throw new Error("Missing lock")

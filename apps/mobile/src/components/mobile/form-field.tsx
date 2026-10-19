@@ -24,14 +24,7 @@ type FormFieldProps = Omit<ComponentProps<typeof Input>, "className"> & {
   leadingText?: string
   onActionPress?: () => void
   trailingIcon?: IconKeys
-  variant?:
-    | "auth"
-    | "green-gate"
-    | "filled"
-    | "line"
-    | "search"
-    /** Green Till list search: borderless card field, 46 tall. */
-    | "till-search"
+  variant?: "auth" | "green-gate" | "filled" | "line"
 }
 
 export function FormField({
@@ -55,8 +48,6 @@ export function FormField({
 }: FormFieldProps) {
   const isAuthVariant = variant === "auth"
   const isGreenGate = variant === "green-gate"
-  const isTillSearch = variant === "till-search"
-  const isSearchVariant = variant === "search" || isTillSearch
   const colors = useColors()
   const largeTextLayout = useLargeTextLayout()
   const [isFocused, setIsFocused] = useState(false)
@@ -80,12 +71,11 @@ export function FormField({
     "size-sm",
     error
       ? "text-destructive"
-      : isFocused && !isSearchVariant
+      : isFocused
         ? "text-primary"
         : "text-muted-foreground",
   )
-  const shouldShowLabel =
-    !isSearchVariant && (!isAuthVariant || largeTextLayout)
+  const shouldShowLabel = !isAuthVariant || largeTextLayout
   const isMultiline = !!inputProps.multiline
   const singleLineHeight = largeTextLayout ? 64 : 50
   const embeddedStyle =
@@ -98,10 +88,7 @@ export function FormField({
 
   return (
     <View
-      className={cn(
-        isAuthVariant || isSearchVariant ? "gap-2" : "gap-2.5",
-        containerClassName,
-      )}
+      className={cn(isAuthVariant ? "gap-2" : "gap-2.5", containerClassName)}
     >
       {shouldShowLabel ? (
         <View
@@ -114,10 +101,10 @@ export function FormField({
             className={cn(
               "min-w-0 flex-1 text-xs font-bold",
               isGreenGate
-                ? "[-rn-line-height:18]"
+                ? "[-rn-line-height:22]"
                 : "uppercase tracking-[1.4px]",
               !isGreenGate &&
-                (largeTextLayout ? "leading-7" : "leading-[18px]"),
+                (largeTextLayout ? "leading-7" : "leading-[22px]"),
               error
                 ? "text-destructive"
                 : isFocused
@@ -146,22 +133,13 @@ export function FormField({
       <View
         style={{
           alignItems: isMultiline ? "flex-start" : "center",
-          backgroundColor: isTillSearch
-            ? colors.card
-            : isSearchVariant || isGreenGate
-              ? colors.muted
-              : colors.card,
+          backgroundColor: isGreenGate ? colors.muted : colors.card,
           borderColor: activeBorderColor,
-          borderRadius: isGreenGate || isTillSearch ? 14 : 12,
-          borderWidth: isSearchVariant ? 0 : isFocused || error ? 1.5 : 1,
-          boxShadow: isTillSearch ? "0 1px 2px rgba(0, 0, 0, 0.06)" : undefined,
+          borderRadius: isGreenGate ? 14 : 12,
+          borderWidth: isFocused || error ? 1.5 : 1,
           flexDirection: "row",
           gap: 10,
-          minHeight: isMultiline
-            ? 92
-            : isTillSearch && !largeTextLayout
-              ? 46
-              : singleLineHeight,
+          minHeight: isMultiline ? 92 : singleLineHeight,
           paddingHorizontal: 14,
           paddingVertical: isMultiline ? 10 : largeTextLayout ? 6 : 0,
         }}
@@ -195,11 +173,9 @@ export function FormField({
                 className: cn(
                   isMultiline
                     ? "min-h-[72px] flex-1 border-0 bg-transparent px-0 py-0"
-                    : isTillSearch
-                      ? "h-[46px] flex-1 border-0 bg-transparent px-0 text-[15px]"
-                      : "h-[48px] flex-1 border-0 bg-transparent px-0",
+                    : "h-[48px] flex-1 border-0 bg-transparent px-0",
                   inputClassName,
-                  isGreenGate && "text-[15px] font-semibold",
+                  isGreenGate && "text-base font-semibold",
                 ),
               })}
           expand

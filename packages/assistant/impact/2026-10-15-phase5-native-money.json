@@ -1,0 +1,78 @@
+{
+  "version": 1,
+  "id": "2026-10-15-phase5-native-money",
+  "tickets": ["E01", "E03", "E04", "A04", "H01", "H02", "H03"],
+  "summary": "Three simple bookkeeping actions gain native amount-first editors and exact Book-pinned receipt routes. Fresh authorized choices and matching original Book/record are required before facts/actions are shown. Exact amounts, saved dates, original attachments, existing review/confirmation and server permissions remain; no domain/API/schema/activation/provider changes.",
+  "capabilities": [
+    {
+      "id": "finance.money_in.record_simple",
+      "change": "changed",
+      "rollout": "source",
+      "note": "Adds mobile editor and exact movement receipt retaining saved Book; visible Owner funds default, no money send."
+    },
+    {
+      "id": "finance.expense.record_simple",
+      "change": "changed",
+      "rollout": "source",
+      "note": "Adds mobile paid/unpaid/category editor and exact expense receipt; unpaid funding removed before re-review."
+    },
+    {
+      "id": "finance.transfer.record_simple",
+      "change": "changed",
+      "rollout": "source",
+      "note": "Adds mobile recorded-transfer editor with explicit staged bookkeeping account, distinct endpoints and exact movement receipt."
+    }
+  ],
+  "procedures": [],
+  "docs": [
+    {
+      "topic": "feature",
+      "path": ".brain/features/assistant-business-operations.md",
+      "status": "local_only",
+      "note": "Native source scope and remaining acceptance recorded alongside three simple-pilot feature docs."
+    },
+    {
+      "topic": "api",
+      "path": ".brain/api/contracts.md",
+      "status": "local_only",
+      "note": "Existing public DTOs/procedures unchanged. Native receipts consume stored Book IDs and original-record IDs; dates remain exact saved instants."
+    },
+    {
+      "topic": "permissions",
+      "status": "not_applicable",
+      "note": "Current Owner/Admin Finance and Book authority unchanged; client rejects stale/foreign originals without widening grants."
+    },
+    {
+      "topic": "capability",
+      "path": "packages/assistant/src/capabilities/COVERAGE.md",
+      "status": "updated",
+      "note": "Three source mobile client-list rows regenerated; all broader planned actions retain their gates."
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "test",
+      "path": "apps/mobile/src/components/mobile/assistant/native-money-values.test.ts",
+      "executed": true,
+      "result": "6 pass/32 assertions: exact amount/date/Book/attachments, unpaid and distinct-account/staged guards."
+    },
+    {
+      "kind": "fixture",
+      "path": "packages/assistant/evaluations/fixtures/native-money-editor.fixture.tsx",
+      "executed": true,
+      "result": "8 pass/55 static component assertions through actual editors, Book gate and original screens with bounded native/query/command stand-ins. No device, provider or connected command proof."
+    },
+    {
+      "kind": "test",
+      "path": "packages/assistant/evaluations/phase-regressions.test.ts",
+      "executed": true,
+      "result": "Five isolated child wrappers pass as part of34/151 focused command. Hosted CI not run."
+    },
+    {
+      "kind": "review",
+      "path": "packages/assistant/evaluations/runs/2026-10-15-phase5-native-money-source.md",
+      "executed": true,
+      "result": "Three-direction Workshop/selection/local simulation verified. Native write gaps59→50 across Phases4/5, zero declared-mobile gaps; compiler retains78 imported-path errors; no parent acceptance."
+    }
+  ]
+}

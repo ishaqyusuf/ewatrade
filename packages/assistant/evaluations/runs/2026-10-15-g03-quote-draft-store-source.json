@@ -1,0 +1,77 @@
+{
+  "version": 1,
+  "date": "2026-10-15",
+  "scope": "G03 existing-table durable proposal draft and fresh complete review-page composition; full phases4-12 remain active",
+  "sourceSnapshot": {
+    "apps/api/src/assistant/general-quote-issue-draft-store.ts": "84f5298435bf5b6c9773def6c5551110d758562d0703b2e0f229e992e9b71320",
+    "apps/api/src/assistant/general-quote-issue-draft-store.test.ts": "7928f607f96d7e4fbf4d51e228bdd7c8961931241d7294c4f3009268c8a19d46",
+    "apps/api/src/assistant/general-quote-issue-review-store.ts": "6113f7ddd8fa9d63c9d699bea9d1b6c3e57a58dc9719b0bb6fd10b3ccc7d2058",
+    "apps/api/src/assistant/general-quote-issue-review-store.test.ts": "82426b71761a1708fea72b71f202828e89b0a41fc8cf995b4157421ec4a71936"
+  },
+  "verification": {
+    "rootCombinedTests": {
+      "passed": 208,
+      "assertions": 6978,
+      "failed": 0,
+      "selectedSuites": 18,
+      "bunReportedFiles": 30,
+      "log": "/private/tmp/assistant-g03-quote-store-combined-tests.log",
+      "note": "18 selected suite paths; Bun reports duplicate file headings/30 files. Counts are actual terminal test output."
+    },
+    "lint": {
+      "files": 4,
+      "result": "pass"
+    },
+    "compiler": {
+      "result": "not_green",
+      "diagnostics": 78,
+      "ownedDiagnostics": 0,
+      "config": "/private/tmp/assistant-quote-stock-source-tsconfig.json",
+      "log": "/private/tmp/assistant-quote-stock-source-types.log",
+      "exitCode": 2,
+      "note": "Finite integrated process terminal; retained foreign/imported baseline. Both new Quote fixture typing errors repaired without casts/suppressions."
+    },
+    "coverage": {
+      "result": "current",
+      "log": "/private/tmp/assistant-quote-stock-source-coverage.log",
+      "snapshotSha256": "4bcdfb7d6dd10228edab34a43245d3c60068ee573b401939cea79329ba21f27e"
+    },
+    "impact": {
+      "result": "pass",
+      "records": 33,
+      "wholeMixedCheckoutChangedCapabilityRows": 126,
+      "wholeMixedCheckoutChangedProcedureRows": 10,
+      "log": "/private/tmp/assistant-quote-stock-source-impact.log"
+    },
+    "capabilityTests": {
+      "passed": 6,
+      "assertions": 13,
+      "log": "/private/tmp/assistant-quote-stock-source-capability-tests.log"
+    },
+    "ui": "No UI surface changed by this backend/shared calculation checkpoint. Actual native consumers/testing remain separate."
+  },
+  "implemented": [
+    "Actual AssistantActionProposal create/read/edit composers, exact active owned GENERAL conversation and scope predicates, existing table only.",
+    "Server-supplied stable proposal/idempotency identities outside retry; exact canonical parent and native Quote alias/currentVersion/source read; signed initial INSERT.",
+    "Strict full issue/revise payload, complete20x100 facts retained, logical resource refusal, compact write result with no token/native input/full payload.",
+    "Pending edit CAS binds scope/action/version/revision/payloadHash/idempotencyKey; fresh current parent target and role, renewed expiry/revision/hash invalidates old approval.",
+    "Expired PENDING explicit edit can renew only after intact old signature/payload and complete current canonical review; terminal reads/edits refuse.",
+    "Fresh actual persisted signed draft plus canonical parent recomputation for manifest or exact page; tiny strict4096-byte semantic reference requests.",
+    "Page binding derives from saved row, not client scope/manifest; exact revision/packet/page and safe unavailable on stale/authority/expiry/integrity/resource failures.",
+    "Post-packet expiry boundary repaired after independent review; regression fails before and passes after for manifest and page."
+  ],
+  "limits": [
+    "Unexposed internal composers are not installed GENERAL action/RPC/endpoint or client support.",
+    "Caller must own a fresh authenticated/authorized Serializable GENERAL transaction with actual Session/account/privacy/client/capability/rollout controls; no substitute authorization here.",
+    "Inert predicate-aware delegates prove actual source composition, not SQL rollback, locking, atomicity, persisted concurrency or HTTP authentication.",
+    "Whole body admission/outgoing envelope enforcement, compact registered generic history/model projection, every-entrypoint outer provider preflight including WhatsApp, separate stored approval preflight and final command/receipt recovery remain.",
+    "Server reference assembler is not native/dashboard rendering; full G03 and broader business scope remain open.",
+    "64MiB is logical JSON budget, not whole heap/DB clone/host latency proof; every page currently recomputes the full review."
+  ],
+  "acceptance": {
+    "parentAccepted": 13,
+    "parentTotal": 45,
+    "status": "source_only_no_parent_promotion"
+  },
+  "gates": "G01/Paystack/D04/E05/G04/S05/C04 unchanged; no actualDB/provider/send/runtime/restart/deploy/commit/push"
+}

@@ -4,6 +4,9 @@ let allowed = true
 let failWrite = false
 const events: string[] = []
 let saverAvailable = false
+let afterWrite = () => undefined
+let afterPermission = () => undefined
+let lastUti: string | undefined
 mock.module("react-native", () => ({ Platform: { OS: "android" } }))
 mock.module("expo", () => ({
   requireOptionalNativeModule: () => ({
@@ -23,10 +26,13 @@ mock.module("expo-file-system/legacy", () => ({
   cacheDirectory: "file:///receipt-test/",
   EncodingType: { Base64: "base64" },
   StorageAccessFramework: {
-    requestDirectoryPermissionsAsync: async () => ({
-      granted: allowed,
-      directoryUri: "content://folder",
-    }),
+    requestDirectoryPermissionsAsync: async () => {
+      afterPermission()
+      return {
+        granted: allowed,
+        directoryUri: "content://folder",
+      }
+    },
     createFileAsync: async () => {
       events.push("create")
       return "content://new-file"
@@ -38,6 +44,7 @@ mock.module("expo-file-system/legacy", () => ({
   writeAsStringAsync: async () => {
     events.push("write")
     if (failWrite) throw new Error("Disk full")
+    afterWrite()
   },
   deleteAsync: async () => {
     events.push("cleanup")
@@ -45,7 +52,8 @@ mock.module("expo-file-system/legacy", () => ({
 }))
 mock.module("expo-sharing", () => ({
   isAvailableAsync: async () => true,
-  shareAsync: async () => {
+  shareAsync: async (_uri: string, options: { UTI?: string }) => {
+    lastUti = options.UTI
     events.push("share")
   },
 }))
@@ -88,4 +96,49 @@ test("Android 10+ saves straight to Downloads without a folder prompt", async ()
     "cleanup",
   ])
   saverAvailable = false
+})
+test("scope retired in a folder prompt creates no file", async () => {
+  events.length = 0
+  let valid = true
+  afterPermission = () => {
+    valid = false
+  }
+  try {
+    await expect(
+      deliverReceiptFile(file, "save", () => {
+        if (!valid) throw new Error("retired")
+      }),
+    ).rejects.toThrow("retired")
+    expect(events).toEqual([])
+  } finally {
+    afterPermission = () => undefined
+  }
+})
+test("scope retired during cache write cannot export and its temporary bytes are cleaned", async () => {
+  for (const action of ["save", "share"] as const) {
+    events.length = 0
+    let valid = true
+    saverAvailable = true
+    afterWrite = () => {
+      valid = false
+    }
+    try {
+      await expect(
+        deliverReceiptFile(file, action, () => {
+          if (!valid) throw new Error("retired")
+        }),
+      ).rejects.toThrow("retired")
+      expect(events).toEqual(["directory", "write", "cleanup"])
+    } finally {
+      afterWrite = () => undefined
+      saverAvailable = false
+    }
+  }
+})
+test("original images use their image UTI instead of the Order ZIP type", async () => {
+  await deliverReceiptFile(
+    { ...file, filename: "receipt.heic", mimeType: "image/heic" },
+    "share",
+  )
+  expect(lastUti).toBe("public.heic")
 })

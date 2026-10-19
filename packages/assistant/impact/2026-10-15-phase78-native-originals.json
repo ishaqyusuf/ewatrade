@@ -1,0 +1,118 @@
+{
+  "version": 1,
+  "id": "2026-10-15-phase78-native-originals",
+  "tickets": [
+    "A04",
+    "D04",
+    "D05",
+    "G02",
+    "G03",
+    "H01",
+    "H02",
+    "H03"
+  ],
+  "summary": "Native exact booking and protected current Job handover; cash-count editor and pure exact count/day review with pinned Book/snapshot/currency/scope and fresh acknowledgement. Six planned client/test declarations. Also repairs native Service exact-payment input and retains same-Job in-flight command ownership through temporary freshness loss. Existing approvals, canonical actions and rollout unchanged.",
+  "capabilities": [
+    {
+      "id": "services.booking.read",
+      "change": "changed",
+      "rollout": "planned",
+      "note": "Adds native source consumer and isolated regressions, preserving canonical policy, effects and existing execution gates."
+    },
+    {
+      "id": "finance.cash_count.record",
+      "change": "changed",
+      "rollout": "planned",
+      "note": "Adds native source consumer and isolated regressions, preserving canonical policy, effects and existing execution gates."
+    },
+    {
+      "id": "finance.cash_count.read",
+      "change": "changed",
+      "rollout": "planned",
+      "note": "Adds native source consumer and isolated regressions, preserving canonical policy, effects and existing execution gates."
+    },
+    {
+      "id": "finance.day_close.read",
+      "change": "changed",
+      "rollout": "planned",
+      "note": "Adds native source consumer and isolated regressions, preserving canonical policy, effects and existing execution gates."
+    },
+    {
+      "id": "services.work.original.read",
+      "change": "changed",
+      "rollout": "planned",
+      "note": "Exact original now links separately to current protected Job management, never a queue or replacement original."
+    },
+    {
+      "id": "finance.cash_accounts.read",
+      "change": "changed",
+      "rollout": "planned",
+      "note": "Existing protected bounded discovery/history emits native-compatible plain cards, no invented original link. Enables native cash proposal prerequisite reads."
+    },
+    {
+      "id": "finance.cash_counts.read",
+      "change": "changed",
+      "rollout": "planned",
+      "note": "Existing protected bounded discovery/history emits native-compatible plain cards, no invented original link. Enables native cash proposal prerequisite reads."
+    }
+  ],
+  "procedures": [],
+  "docs": [
+    {
+      "topic": "feature",
+      "path": ".brain/features/assistant-business-operations.md",
+      "status": "local_only",
+      "note": "Native source checkpoint only; connected/device/production acceptance remains open."
+    },
+    {
+      "topic": "feature",
+      "path": ".brain/features/assistant-cash-count-day-close.md",
+      "status": "local_only",
+      "note": "Native source checkpoint only; connected/device/production acceptance remains open."
+    },
+    {
+      "topic": "api",
+      "path": ".brain/api/contracts.md",
+      "status": "local_only",
+      "note": "Native source checkpoint only; connected/device/production acceptance remains open."
+    },
+    {
+      "topic": "permissions",
+      "path": ".brain/api/permissions.md",
+      "status": "local_only",
+      "note": "Native source checkpoint only; connected/device/production acceptance remains open."
+    },
+    {
+      "topic": "capability",
+      "path": "packages/assistant/src/capabilities/COVERAGE.md",
+      "status": "updated",
+      "note": "Six reviewed planned mobile client/test declarations; all availability and policy unchanged."
+    },
+    {
+      "topic": "decision",
+      "path": ".brain/decisions/ADR-0048-native-assistant-original-and-command-lifetime.md",
+      "status": "local_only",
+      "note": "Exact native original identity and same-Job controller retention under fresh authorization fences; no execution authority expansion."
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "test",
+      "path": "packages/assistant/evaluations/phase-regressions.test.ts",
+      "executed": true,
+      "result": "25 isolated child wrappers included in 62 passing affected tests /327 assertions. New mounted Job lifecycle13/125 and raw payment2/43 remain source proof, no connected/native acceptance."
+    },
+    {
+      "kind": "test",
+      "path": "apps/mobile/src/components/mobile/assistant/native-cash-target.test.ts",
+      "executed": true,
+      "result": "Exact Book/count and completed day cutoff; malformed/authority-expanded links refuse."
+    },
+    {
+      "kind": "review",
+      "path": "packages/assistant/evaluations/runs/2026-10-15-phase78-native-originals.md",
+      "executed": true,
+      "result": "Independent review drove controller-retention/history/Chrome and raw exact-payment fixes. Final compiler78 imported baseline/0 owned;37files lint clean,7 retained lint findings in3 baseline files; coverage/current and local mixed-ownership impact pass. Parent acceptance13/45 unchanged."
+    }
+  ]
+}

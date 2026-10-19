@@ -280,6 +280,7 @@ describe("dashboard navigation policy", () => {
 
   test("preserves attendant and limited-role access", () => {
     expect(getDashboardNavigation("CASHIER").map((item) => item.href)).toEqual([
+      "/assistant",
       "/",
       "/conversations",
       "/sales",
@@ -296,6 +297,55 @@ describe("dashboard navigation policy", () => {
     expect(getDashboardNavigation("MEMBER").map((item) => item.href)).toEqual([
       "/",
     ])
+  })
+
+  test("General new and exact saved chats follow canonical operational roles in either staff mode", () => {
+    for (const staffAccessMode of ["LEGACY", "SCOPED"] as const) {
+      const scope = context({ staffAccessMode, catalogEditor: false })
+      for (const role of ["OWNER", "ADMIN", "MANAGER", "CASHIER", "OPERATOR"]) {
+        expect(canAccessDashboardPath("/assistant", role, scope)).toBe(true)
+        expect(
+          canAccessDashboardPath("/assistant/c/saved-chat", role, scope),
+        ).toBe(true)
+        expect(
+          getDashboardNavigation(role, scope).some(
+            (item) => item.href === "/assistant",
+          ),
+        ).toBe(true)
+        expect(
+          getDashboardNavItem("/assistant/c/saved-chat", role, scope)?.href,
+        ).toBe("/assistant")
+      }
+      for (const role of ["SUPPORT", "MEMBER", "unknown", null]) {
+        expect(canAccessDashboardPath("/assistant", role, scope)).toBe(false)
+        expect(
+          canAccessDashboardPath("/assistant/c/saved-chat", role, scope),
+        ).toBe(false)
+        expect(
+          getDashboardNavigation(role, scope).some(
+            (item) => item.href === "/assistant",
+          ),
+        ).toBe(false)
+      }
+      for (const role of ["MANAGER", "CASHIER", "OPERATOR"]) {
+        for (const path of [
+          "/assistant/setup",
+          "/assistant/product",
+          "/assistant/c",
+          "/assistant/c/",
+          "/assistant/c/saved-chat/extra",
+          "/assistant/admin",
+          "/settings",
+          "/finance",
+        ]) {
+          expect(canAccessDashboardPath(path, role, scope)).toBe(false)
+        }
+        if (staffAccessMode === "SCOPED")
+          expect(canAccessDashboardPath("/staff", role, scope)).toBe(false)
+      }
+    }
+    expect(canAccessDashboardPath("/assistant/setup", "OWNER")).toBe(true)
+    expect(canAccessDashboardPath("/assistant/product", "ADMIN")).toBe(true)
   })
 
   test("requires the platform-admin context for QA maintenance", () => {

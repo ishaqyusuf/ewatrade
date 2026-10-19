@@ -1,6 +1,10 @@
-import type { GreenTillHomeStage } from "@/components/mobile/dashboard/green-till-home-model"
+import {
+  type GreenTillHomeStage,
+  homeMoney,
+} from "@/components/mobile/dashboard/green-till-home-model"
 import {
   HeroCard,
+  type HeroCardProps,
   type HeroStat,
 } from "@/components/mobile/green-till/hero-card"
 import {
@@ -24,7 +28,9 @@ import type { IconKeys } from "@/components/ui/icon"
 import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
 import { View } from "@/components/ui/view"
+import { useSalesValueMotion } from "@/hooks/use-sales-value-motion"
 import type { GreenTillTint } from "@/lib/green-till-theme"
+import { useIsFocused } from "@react-navigation/native"
 
 export type HomeRecentOrder = {
   amount: string
@@ -42,6 +48,11 @@ export type HomeSales =
   | {
       status: "ready" | "cached"
       amount: string
+      /**
+       * The confirmed total behind `amount`, for the count-up. `scopeKey`
+       * names the business/Store/role/day it belongs to.
+       */
+      value?: { minor: number; currencyCode: string; scopeKey: string }
       asOf?: string
       delta: { direction: "up" | "down"; value: string } | null
       orderCount: number
@@ -79,6 +90,35 @@ export type GreenTillOwnerHomeProps = {
 }
 
 /** Green Till Home (01) for owners and managers. */
+type ConfirmedSales = Extract<HomeSales, { amount: string }>
+
+/**
+ * The sales hero with Home's confirmed total counting from the last shown
+ * value to the new one (Workshop mobile/home-sales-motion 01). Screen readers
+ * hear the final amount, never the frames in between.
+ */
+function SalesHeroCard({
+  sales,
+  ...props
+}: { sales: ConfirmedSales } & Omit<
+  HeroCardProps,
+  "amount" | "amountAccessibilityLabel"
+>) {
+  // Home rebuilt under a success screen stays still until it's visible.
+  const shown = useSalesValueMotion(sales.value, useIsFocused())
+  const amount =
+    sales.value && shown !== undefined
+      ? homeMoney(shown, sales.value.currencyCode)
+      : sales.amount
+  return (
+    <HeroCard
+      {...props}
+      amount={amount}
+      amountAccessibilityLabel={sales.amount}
+    />
+  )
+}
+
 export function GreenTillOwnerHome(props: GreenTillOwnerHomeProps) {
   if (props.stage === "loading") return <HomeSkeleton />
   if (props.stage === "blocked" && props.blocked)
@@ -126,8 +166,8 @@ function EverydayHome(props: GreenTillOwnerHomeProps) {
           title="—"
         />
       ) : (
-        <HeroCard
-          amount={sales.amount}
+        <SalesHeroCard
+          sales={sales}
           delta={
             sales.status === "ready" ? (sales.delta ?? undefined) : undefined
           }
@@ -179,7 +219,7 @@ function EverydayHome(props: GreenTillOwnerHomeProps) {
           <SectionHeader
             title="Needs attention"
             trailing={
-              <Text className="text-[13px] font-bold text-muted-foreground">
+              <Text className="text-xs font-bold text-muted-foreground">
                 {props.attention.length}
               </Text>
             }
@@ -212,7 +252,7 @@ function EverydayHome(props: GreenTillOwnerHomeProps) {
             disabled={props.team.saving}
             onPress={props.team.onDismiss}
           >
-            <Text className="text-[13px] text-muted-foreground">
+            <Text className="text-xs text-muted-foreground">
               {props.team.saving ? "Saving…" : "I work on my own"}
             </Text>
           </Pressable>
@@ -445,8 +485,8 @@ export function GreenTillRepHome(props: GreenTillRepHomeProps) {
           title="—"
         />
       ) : (
-        <HeroCard
-          amount={sales.amount}
+        <SalesHeroCard
+          sales={sales}
           cta={{
             icon: "Plus",
             label: "Start a sale",

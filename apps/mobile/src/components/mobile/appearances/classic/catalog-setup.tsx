@@ -59,15 +59,15 @@ export function KindChoice({
         />
       </View>
       <View className="min-w-0 flex-1 gap-0.5">
-        <Text className="text-[15px] font-extrabold [-rn-line-height:20] text-foreground">
+        <Text className="text-base font-extrabold [-rn-line-height:22] text-foreground">
           {label}
         </Text>
-        <Text className="text-xs [-rn-line-height:17] text-muted-foreground">
+        <Text className="text-xs [-rn-line-height:22] text-muted-foreground">
           {description}
         </Text>
         {recommendation ? (
           <View className="mt-1 min-h-5 justify-center self-start rounded-full bg-tint-mint px-2 py-0.5">
-            <Text className="text-[10.5px] font-bold [-rn-line-height:14] [-rn-include-font-padding:false] [-rn-text-align-vertical:center] text-tint-mint-foreground">
+            <Text className="text-xs font-bold [-rn-line-height:22] [-rn-include-font-padding:false] [-rn-text-align-vertical:center] text-tint-mint-foreground">
               {recommendation}
             </Text>
           </View>
@@ -119,8 +119,8 @@ export function OptionalDetailAction({
         <Text
           className={
             largeTextLayout
-              ? "text-xs leading-5 text-muted-foreground"
-              : "text-xs leading-4 text-muted-foreground"
+              ? "text-xs [-rn-line-height:22] text-muted-foreground"
+              : "text-xs [-rn-line-height:22] text-muted-foreground"
           }
         >
           {description}
@@ -176,7 +176,7 @@ export function ServiceDetailAction({
       </View>
       <View className="min-w-0 flex-1 gap-0.5">
         <Text className="text-sm font-bold text-foreground">{label}</Text>
-        <Text className="text-xs leading-4 text-muted-foreground">
+        <Text className="text-xs [-rn-line-height:22] text-muted-foreground">
           {description}
         </Text>
       </View>
@@ -237,7 +237,7 @@ export function ServiceAuthorizationOption({
       />
       <View className="min-w-0 flex-1 gap-0.5">
         <Text className="text-sm font-bold text-foreground">{label}</Text>
-        <Text className="text-xs leading-4 text-muted-foreground">
+        <Text className="text-xs [-rn-line-height:22] text-muted-foreground">
           {description}
         </Text>
       </View>
@@ -280,7 +280,7 @@ export function ServiceWorkTrackingSwitch({
         <Text className="text-sm font-bold text-foreground">
           Create tracked work
         </Text>
-        <Text className="text-xs leading-4 text-muted-foreground">
+        <Text className="text-xs [-rn-line-height:22] text-muted-foreground">
           Turn each confirmed service order into a job.
         </Text>
       </View>
@@ -360,7 +360,7 @@ export function EmptyServiceChoiceGroupActions({
         </Pressable>
       </View>
       <View className="border-l-2 border-primary bg-muted px-3 py-3">
-        <Text className="text-xs leading-5 text-muted-foreground">
+        <Text className="text-xs [-rn-line-height:22] text-muted-foreground">
           Customers can choose from {groupName || "this option"} after you add
           its first choice.
         </Text>
@@ -580,7 +580,7 @@ function UnitChips({
           >
             <Text
               className={cn(
-                "text-[12.5px] font-bold",
+                "text-xs font-bold",
                 selected ? "text-primary" : "text-foreground",
               )}
             >
@@ -668,10 +668,10 @@ export function CatalogLivePreview({
           <NativeText
             style={{
               color: palette.heroMuted,
-              fontSize: 14,
+              fontSize: 16,
               fontVariant: ["tabular-nums"],
               fontWeight: "700",
-              lineHeight: 20,
+              lineHeight: 22,
             }}
           >
             {priceLine}
@@ -712,7 +712,7 @@ export function ProductOptionsSectionHeader({
         <Text
           className={
             largeTextLayout
-              ? "text-xs leading-5 text-muted-foreground"
+              ? "text-xs [-rn-line-height:22] text-muted-foreground"
               : "text-xs text-muted-foreground"
           }
         >
@@ -775,7 +775,7 @@ export function ProductFirstOptionAction({
           <Text className="text-sm font-extrabold text-foreground">
             Add first option
           </Text>
-          <Text className="text-xs leading-5 text-muted-foreground">
+          <Text className="text-xs [-rn-line-height:22] text-muted-foreground">
             {helperText}
           </Text>
         </View>
@@ -789,7 +789,7 @@ export function ProductFirstOptionAction({
         />
       </Pressable>
       <View className="border-l-2 border-primary bg-muted px-3 py-3">
-        <Text className="text-xs leading-5 text-muted-foreground">
+        <Text className="text-xs [-rn-line-height:22] text-muted-foreground">
           After you add values, Product stock &amp; pricing will create every
           combination for you.
         </Text>
@@ -834,7 +834,7 @@ export function ProductFirstOptionValueAction({
           <Text className="text-sm font-extrabold text-foreground">
             Add first {groupName || "option"} value
           </Text>
-          <Text className="text-xs leading-5 text-muted-foreground">
+          <Text className="text-xs [-rn-line-height:22] text-muted-foreground">
             {helperText}
           </Text>
         </View>
@@ -848,7 +848,7 @@ export function ProductFirstOptionValueAction({
         />
       </Pressable>
       <View className="border-l-2 border-primary bg-muted px-3 py-3">
-        <Text className="text-xs leading-5 text-muted-foreground">
+        <Text className="text-xs [-rn-line-height:22] text-muted-foreground">
           Product stock &amp; pricing appears after every option has at least
           one value.
         </Text>
@@ -888,7 +888,7 @@ export function ProductUseOnePriceAction({
         <Text className="text-xs font-extrabold text-destructive">
           Use one price instead
         </Text>
-        <Text className="text-xs leading-5 text-muted-foreground">
+        <Text className="text-xs [-rn-line-height:22] text-muted-foreground">
           Clear option setup and return to one Product price.
         </Text>
       </View>

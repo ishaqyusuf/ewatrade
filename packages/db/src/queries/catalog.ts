@@ -229,6 +229,7 @@ export type ListCatalogItemsPageInput = ListCatalogItemsInput & {
   cursor?: string
   limit?: number
   query?: string
+  searchOrder?: "relevance" | "stable"
   sort?: {
     direction: "asc" | "desc"
     field: "name" | "kind" | "status" | "updatedAt"
@@ -1476,13 +1477,14 @@ export async function listCatalogItemsPage(
   const searchTerms = normalizedQuery
     ? searchTokens(normalizedQuery).map(searchStem)
     : []
-  if (searchTerms.length) {
-    return listRankedCatalogItemsPage(db, input, {
-      ...baseWhere,
-      OR: searchTerms.flatMap(catalogSearchConditions),
-    })
+  const where: Prisma.CatalogItemWhereInput = {
+    ...baseWhere,
+    ...(searchTerms.length
+      ? { OR: searchTerms.flatMap(catalogSearchConditions) }
+      : {}),
   }
-  const where: Prisma.CatalogItemWhereInput = baseWhere
+  if (searchTerms.length && input.searchOrder !== "stable")
+    return listRankedCatalogItemsPage(db, input, where)
   const sortFields: Array<{
     direction: "asc" | "desc"
     field: "name" | "kind" | "status" | "updatedAt"

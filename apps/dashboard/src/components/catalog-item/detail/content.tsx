@@ -5,14 +5,19 @@ import { CatalogDetailActivity } from "./activity"
 import type { CatalogDetail } from "./display"
 import { CatalogDetailOrders } from "./orders"
 import { CatalogDetailOverview } from "./overview"
+import type { CatalogDetailReadScope } from "./read-access"
 import { DetailError } from "./states"
 export function CatalogDetailContent({
   detail,
   storeId,
+  readOnly,
+  readScope,
   error,
 }: {
   detail: CatalogDetail
   storeId: string
+  readOnly: boolean
+  readScope: CatalogDetailReadScope
   error?: { message: string; retry: () => void }
 }) {
   const { catalogDetailTab, setParams } = useCatalogDetailParams()
@@ -44,15 +49,25 @@ export function CatalogDetailContent({
           </div>
         ) : null}
         <TabsContent value="overview">
-          <CatalogDetailOverview detail={detail} storeId={storeId} />
+          <CatalogDetailOverview
+            detail={detail}
+            storeId={storeId}
+            readOnly={readOnly}
+            readScope={readScope}
+          />
         </TabsContent>
         <TabsContent value="orders">
-          <CatalogDetailOrders itemId={detail.item.id} storeId={storeId} />
+          <CatalogDetailOrders
+            itemId={detail.item.id}
+            storeId={storeId}
+            readScope={readScope}
+          />
         </TabsContent>
         <TabsContent value="activity">
           <CatalogDetailActivity
             itemId={detail.item.id}
             storeId={storeId}
+            readScope={readScope}
             inventoryAllowed={
               detail.inventoryAllowed && Boolean(detail.item.product)
             }

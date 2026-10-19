@@ -30,6 +30,7 @@ import {
   recordCustomerLedgerOpening,
   recordFinanceMoneyMovement,
 } from "@ewatrade/db/queries"
+import type { Prisma } from "@ewatrade/db/types"
 import { enqueueCatalogPhotoReview } from "@ewatrade/jobs/catalog-photo-review"
 import { findCatalogCategoryPreset } from "@ewatrade/utils/catalog-category-presets"
 import {
@@ -326,40 +327,104 @@ function failure(error: unknown) {
   }
 }
 
+type SetupCustomerCommitScope = AssistantScope & { conversationId?: string }
+type SetupCustomerCommitEntity = Pick<
+  Awaited<ReturnType<typeof readSetupDraft>>["entities"][number],
+  "id" | "key" | "kind" | "state" | "payload" | "committedRecordId"
+>
+
+/** Browser and channel customer creation serialize on the same canonical rows. */
+async function lockSetupCustomerForCommit(
+  tx: Prisma.TransactionClient,
+  scope: SetupCustomerCommitScope,
+  input: { draftId: string; entityId: string; key: string },
+): Promise<SetupCustomerCommitEntity | null> {
+  const conversations = await tx.$queryRaw<Array<{ id: string }>>`
+    SELECT c.id FROM "AssistantConversation" c
+    JOIN "SetupDraft" d ON d."conversationId"=c.id
+    WHERE d.id=${input.draftId} AND c."tenantId"=${scope.tenantId}
+      AND c."storeId"=${scope.storeId} AND c.purpose='SETUP' AND c.status='ACTIVE'
+    FOR UPDATE OF c
+  `
+  const conversation = conversations[0]
+  if (
+    !conversation ||
+    (scope.conversationId && scope.conversationId !== conversation.id)
+  )
+    return null
+  await tx.$queryRaw`SELECT id FROM "SetupDraft" WHERE id=${input.draftId} FOR UPDATE`
+  const membership = await tx.membership.findFirst({
+    where: {
+      tenantId: scope.tenantId,
+      userId: scope.userId,
+      status: "ACTIVE",
+      role: { in: ["OWNER", "ADMIN"] },
+      tenant: { isActive: true },
+    },
+    select: { id: true },
+  })
+  if (!membership) return null
+  return tx.setupDraftEntity.findFirst({
+    where: { id: input.entityId, draftId: input.draftId, key: input.key },
+    select: {
+      id: true,
+      key: true,
+      kind: true,
+      state: true,
+      payload: true,
+      committedRecordId: true,
+    },
+  })
+}
+
 async function commitCustomer(
   db: Db,
-  scope: AssistantScope,
+  scope: SetupCustomerCommitScope,
   entity: { id: string; committedRecordId: string | null },
   payload: Extract<SetupEntityPayload, { kind: "customer" }>,
   draftId: string,
   key: string,
   deps: SetupCommitDeps,
 ): Promise<{ recordId: string; errorCode: string | null; message?: string }> {
-  let customerId = entity.committedRecordId
-  if (!customerId) {
-    // Creation and the draft receipt share one transaction: no orphan on retry.
-    customerId = await db.$transaction(
-      async (tx) => {
-        const customer = await deps.createCustomer(tx as unknown as Db, {
-          tenantId: scope.tenantId,
-          name: payload.name,
-          phone: payload.phone,
-          email: payload.email,
-        })
-        await deps.recordOutcomeInTransaction(tx, {
-          draftId,
-          key,
-          outcome: {
-            state: "COMMITTED",
-            recordId: customer.id,
-            errorCode: payload.opening ? OPENING_BALANCE_PENDING : null,
-          },
-        })
-        return customer.id
-      },
-      { maxWait: 10_000, timeout: 30_000 },
-    )
-  }
+  // Never trust the outer batch snapshot for a customer creation decision.
+  const customerId = await db.$transaction(
+    async (tx) => {
+      const current = await (
+        deps.lockCustomerForCommit ?? lockSetupCustomerForCommit
+      )(tx, scope, { draftId, entityId: entity.id, key })
+      const freshPayload = setupEntityPayloadSchema.safeParse(current?.payload)
+      if (
+        !current ||
+        current.kind !== "CUSTOMER" ||
+        !freshPayload.success ||
+        freshPayload.data.kind !== "customer" ||
+        JSON.stringify(freshPayload.data) !== JSON.stringify(payload) ||
+        !["CONFIRMED", "COMMITTED"].includes(current.state) ||
+        (current.state === "COMMITTED") !== Boolean(current.committedRecordId)
+      )
+        throw new Error(
+          "The saved setup customer changed. Review it again before adding it.",
+        )
+      if (current.committedRecordId) return current.committedRecordId
+      const customer = await deps.createCustomer(tx as unknown as Db, {
+        tenantId: scope.tenantId,
+        name: payload.name,
+        phone: payload.phone,
+        email: payload.email,
+      })
+      await deps.recordOutcomeInTransaction(tx, {
+        draftId,
+        key,
+        outcome: {
+          state: "COMMITTED",
+          recordId: customer.id,
+          errorCode: payload.opening ? OPENING_BALANCE_PENDING : null,
+        },
+      })
+      return customer.id
+    },
+    { maxWait: 10_000, timeout: 30_000 },
+  )
   if (!payload.opening) return { recordId: customerId, errorCode: null }
 
   const actor = { tenantId: scope.tenantId, actorUserId: scope.userId }
@@ -403,6 +468,8 @@ async function commitCustomer(
 }
 
 export type SetupCommitDeps = {
+  /** Production always locks/rereads; optional only for existing injected test dependencies. */
+  lockCustomerForCommit?: typeof lockSetupCustomerForCommit
   readSetupDraft: typeof readSetupDraft
   prepareProductPhoto: typeof prepareSetupProductPhoto
   enqueuePhotoReview: (assetId: string) => Promise<void>
@@ -420,6 +487,7 @@ export type SetupCommitDeps = {
 }
 
 const defaultDeps: SetupCommitDeps = {
+  lockCustomerForCommit: lockSetupCustomerForCommit,
   readSetupDraft,
   prepareProductPhoto: prepareSetupProductPhoto,
   enqueuePhotoReview: enqueueCatalogPhotoReview,
@@ -434,6 +502,9 @@ const defaultDeps: SetupCommitDeps = {
   recordFinanceMoneyMovement,
   now: Date.now,
 }
+
+/** Canonical dependencies with an isolated override object for focused rehearsals. */
+export const defaultSetupCommitDependencies = () => ({ ...defaultDeps })
 
 const isDomainError = (error: unknown) =>
   error instanceof CatalogError ||

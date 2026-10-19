@@ -49,7 +49,7 @@ export function ClassicHelperRow({
       </View>
       <View className="min-w-0 flex-1 gap-1">
         <Text className="font-extrabold text-foreground">{helper.title}</Text>
-        <Text className="text-xs [-rn-line-height:16] text-muted-foreground">
+        <Text className="text-xs [-rn-line-height:22] text-muted-foreground">
           {helper.description}
         </Text>
         {largeTextLayout && badgeLabel ? (
@@ -63,8 +63,8 @@ export function ClassicHelperRow({
             <Text
               className={
                 selected
-                  ? "text-[11px] font-bold text-primary-foreground"
-                  : "text-[11px] font-bold text-primary"
+                  ? "text-xs font-bold text-primary-foreground"
+                  : "text-xs font-bold text-primary"
               }
             >
               {badgeLabel}
@@ -74,13 +74,13 @@ export function ClassicHelperRow({
       </View>
       {!largeTextLayout && selected ? (
         <View className="rounded-full bg-primary px-2.5 py-1">
-          <Text className="text-[11px] font-bold text-primary-foreground">
+          <Text className="text-xs font-bold text-primary-foreground">
             Current
           </Text>
         </View>
       ) : !largeTextLayout && highlighted ? (
         <View className="rounded-full bg-primary/10 px-2.5 py-1">
-          <Text className="text-[11px] font-bold text-primary">
+          <Text className="text-xs font-bold text-primary">
             {personalized ? "Best match" : "Good default"}
           </Text>
         </View>

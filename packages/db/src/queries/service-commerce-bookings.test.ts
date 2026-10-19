@@ -1,8 +1,10 @@
-import { describe, expect, test } from "bun:test"
+import { describe, expect, spyOn, test } from "bun:test"
+import { serviceCommerceBookingConfigurationSchema } from "@ewatrade/service-commerce"
 
 import { Prisma, type PrismaClient } from "../../generated/prisma/client"
 import {
   ServiceCommerceBookingError,
+  bookingTokenDigest,
   claimServiceCommerceBookingNotificationIntent,
   confirmServiceCommerceBooking,
   createServiceCommerceBookingHold,
@@ -16,6 +18,12 @@ import {
   scheduleDueServiceCommerceBookingReminderIntents,
   updateServiceCommerceBookingConfiguration,
 } from "./service-commerce-bookings"
+import { readStaffServiceCommerceBookingAvailabilityInTransaction } from "./service-commerce-bookings/staff-availability"
+import {
+  bookingAvailabilityFixture,
+  field as bookingField,
+  matches as bookingMatches,
+} from "./test-helpers/booking-availability"
 import { allowedServiceCommercePolicyDecisionRows } from "./test-helpers/service-commerce-policy"
 
 const scope = {
@@ -153,6 +161,387 @@ function bookingRow(overrides: Record<string, unknown> = {}) {
 }
 
 describe("Service Commerce booking repository boundary", () => {
+  test("schema-valid repeated rule IDs preserve distinct weekday times in actual configuration, staff and public projections", async () => {
+    const f = bookingAvailabilityFixture()
+    const configuration = serviceCommerceBookingConfigurationSchema.parse({
+      ...scope,
+      offeringId: "offering-1",
+      availabilityRules: [
+        {
+          id: "same-rule",
+          daysOfWeek: [1],
+          startLocalTime: "09:00",
+          endLocalTime: "10:00",
+        },
+        {
+          id: "same-rule",
+          daysOfWeek: [2, 3],
+          startLocalTime: "12:00",
+          endLocalTime: "13:00",
+        },
+      ],
+      exceptions: [],
+      bookingHorizonMinutes: 43_200,
+      cancellationPolicy: {
+        allowedUntilMinutesBeforeStart: 0,
+        refundPolicy: "none",
+        revision: 0,
+      },
+      holdDurationMinutes: 10,
+      leadTimeMinutes: 0,
+      paymentPolicy: { depositMinor: null, requirement: "none", revision: 0 },
+      reminderLeadMinutes: 0,
+      resources: [{ capacity: 2, id: "resource-1", label: "Exact room" }],
+      slotDurationMinutes: 30,
+      timezone: "UTC",
+    })
+    for (const rule of configuration.availabilityRules)
+      for (const dayOfWeek of rule.daysOfWeek)
+        f.state.resource.availability.push({
+          ...scope,
+          resourceId: "resource-1",
+          id: `row-${dayOfWeek}`,
+          clientRuleId: rule.id,
+          dayOfWeek,
+          startMinute: Number(rule.startLocalTime.slice(0, 2)) * 60,
+          endMinute: Number(rule.endLocalTime.slice(0, 2)) * 60,
+          status: "ACTIVE",
+        })
+    Reflect.set(
+      f.state.config.store,
+      "serviceBookingAvailabilityRules",
+      f.state.resource.availability,
+    )
+    Reflect.set(
+      f.state.config.store,
+      "serviceBookingAvailabilityExceptions",
+      [],
+    )
+    Object.assign(f.state.config, {
+      cancellationPolicyRevision: 0,
+      cancellationWindowMinutes: 0,
+      refundPolicy: "NONE",
+      holdDurationMinutes: 10,
+      paymentPolicyRevision: 0,
+      paymentRequirement: "NONE",
+      depositAmountMinor: null,
+    })
+    Reflect.set(f.state.settings, "reminderLeadMinutes", 0)
+    const saved = await getServiceCommerceBookingConfiguration(f.tx, {
+      ...scope,
+      actorUserId: "actor-1",
+      offeringId: "offering-1",
+    })
+    expect(saved.availabilityRules).toEqual(configuration.availabilityRules)
+    expect(saved.availabilityRules.map((rule) => rule.id)).toEqual([
+      "same-rule",
+      "same-rule",
+    ])
+    const from = new Date("2026-10-20T09:00:00Z")
+    const to = new Date("2026-10-20T13:00:00Z")
+    const currentTime = new Date("2026-10-19T08:00:00Z")
+    const clock = spyOn(Date, "now").mockReturnValue(currentTime.getTime())
+    try {
+      const staff =
+        await readStaffServiceCommerceBookingAvailabilityInTransaction(f.tx, {
+          ...scope,
+          actorUserId: "actor-1",
+          source,
+          offeringId: "offering-1",
+          resourceId: "resource-1",
+          from,
+          to,
+        })
+      expect(staff.slots.map((slot) => slot.startAt)).toEqual([
+        "2026-10-20T12:00:00.000Z",
+        "2026-10-20T12:30:00.000Z",
+      ])
+      const accessToken = "existing-public-rule-fixture"
+      const capability = {
+        id: "rule-capability",
+        ...scope,
+        offeringConfigId: "config-1",
+        offeringConfig: f.state.config,
+        sourceId: "request-1",
+        sourceType: "SERVICE_REQUEST",
+        purpose: "VIEW_SLOTS",
+        status: "ACTIVE",
+        stateRevision: 0,
+        expiresAt: new Date("2026-10-24T00:00:00Z"),
+        tokenDigest: bookingTokenDigest(accessToken),
+      }
+      const tx = new Proxy(f.tx, {
+        get(target, table, receiver) {
+          if (table === "serviceBookingAccessCapability")
+            return {
+              findFirst: async (args: unknown) =>
+                bookingMatches(capability, bookingField(args, "where"))
+                  ? capability
+                  : null,
+              updateMany: async () => ({ count: 1 }),
+            }
+          if (table === "serviceCommercePolicyAuditEvent")
+            return { createMany: async () => ({ count: 1 }) }
+          return Reflect.get(target, table, receiver)
+        },
+      })
+      const publicRead: unknown = await Reflect.apply(
+        getPublicServiceCommerceBookingSlots,
+        undefined,
+        [
+          {
+            $transaction: async (
+              run: (client: typeof tx) => Promise<unknown>,
+            ) => run(tx),
+          },
+          { accessToken, from, to, now: currentTime },
+        ],
+      )
+      const publicRows = bookingField(publicRead, "slots")
+      if (!Array.isArray(publicRows))
+        throw Error("Expected actual public slot projection")
+      expect(publicRows.map((row) => bookingField(row, "startAt"))).toEqual(
+        staff.slots.map((slot) => new Date(slot.startAt)),
+      )
+      expect(f.denied).toEqual([])
+    } finally {
+      clock.mockRestore()
+    }
+  })
+
+  test("native hold/reschedule and pure staff availability share the complete-interval partial OPEN refusal", async () => {
+    const f = bookingAvailabilityFixture()
+    const slotStartAt = new Date("2026-10-15T09:00:00Z")
+    const slotEndAt = new Date("2026-10-15T09:30:00Z")
+    f.state.resource.availability.push({
+      ...scope,
+      id: "later",
+      resourceId: "resource-1",
+      clientRuleId: "later",
+      dayOfWeek: 4,
+      startMinute: 12 * 60,
+      endMinute: 13 * 60,
+      status: "ACTIVE",
+    })
+    f.state.resource.exceptions.push({
+      ...scope,
+      id: "partial",
+      resourceId: "resource-1",
+      clientExceptionId: "partial",
+      kind: "OPEN",
+      startAt: slotStartAt,
+      endAt: new Date("2026-10-15T09:15:00Z"),
+      capacity: null,
+      status: "ACTIVE",
+    })
+    const clock = spyOn(Date, "now").mockReturnValue(
+      new Date("2026-10-15T08:00:00Z").getTime(),
+    )
+    try {
+      const read =
+        await readStaffServiceCommerceBookingAvailabilityInTransaction(f.tx, {
+          ...scope,
+          actorUserId: "actor-1",
+          source,
+          offeringId: "offering-1",
+          resourceId: "resource-1",
+          from: slotStartAt,
+          to: slotEndAt,
+        })
+      expect(read.slots).toEqual([])
+      expect(read.coverage).toMatchObject({
+        scannedCandidates: 1,
+        reachedEnd: true,
+      })
+    } finally {
+      clock.mockRestore()
+    }
+    const writes: string[] = []
+    const tx = new Proxy(f.tx, {
+      get(target, table, receiver) {
+        if (table === "$queryRaw") return async () => [{ id: "resource-1" }]
+        if (table === "serviceBookingEvent")
+          return { findFirst: async () => null }
+        if (table === "serviceCommercePolicyAuditEvent")
+          return {
+            createMany: async () => {
+              writes.push("canonical-policy-audit")
+              return { count: 1 }
+            },
+          }
+        return Reflect.get(target, table, receiver)
+      },
+    })
+    const result = Reflect.apply(createServiceCommerceBookingHold, undefined, [
+      {
+        $transaction: async (run: (client: typeof tx) => Promise<unknown>) =>
+          run(tx),
+      },
+      {
+        ...scope,
+        actorUserId: "actor-1",
+        source,
+        clientOperationId: "partial-opening-native-hold",
+        expectedConfigurationRevision: 0,
+        issueCapabilityToken,
+        now: new Date("2026-10-15T08:00:00Z"),
+        offeringId: "offering-1",
+        quantity: 1,
+        resourceId: "resource-1",
+        slotStartAt,
+        slotEndAt,
+      },
+    ])
+    await expect(result).rejects.toMatchObject({
+      code: "BOOKING_CAPACITY_CONFLICT",
+    })
+    expect(writes).toEqual(["canonical-policy-audit"])
+    const existingBooking = {
+      ...scope,
+      id: "existing-booking",
+      resourceId: "resource-1",
+      offeringConfigId: "config-1",
+      offeringConfig: f.state.config,
+      resource: f.state.resource,
+      commercialOrderId: null,
+      startAt: new Date("2026-10-16T09:00:00Z"),
+      endAt: new Date("2026-10-16T09:30:00Z"),
+      status: "CONFIRMED",
+      revision: 4,
+      capacity: 1,
+    }
+    f.state.bookings.push(existingBooking)
+    const reschedule = Reflect.apply(reviseServiceCommerceBooking, undefined, [
+      {
+        $transaction: async (run: (client: typeof tx) => Promise<unknown>) =>
+          run(tx),
+      },
+      {
+        ...scope,
+        actorUserId: "actor-1",
+        bookingId: existingBooking.id,
+        clientOperationId: "partial-opening-reschedule",
+        expectedRevision: 4,
+        issueCapabilityToken,
+        now: new Date("2026-10-15T08:00:00Z"),
+        operation: "reschedule",
+        reasonCode: "requested_time",
+        resourceId: "resource-1",
+        newSlotStartAt: slotStartAt,
+        newSlotEndAt: slotEndAt,
+      },
+    ])
+    await expect(reschedule).rejects.toMatchObject({
+      code: "BOOKING_CAPACITY_CONFLICT",
+    })
+    expect(writes).toEqual(["canonical-policy-audit", "canonical-policy-audit"])
+    expect(f.denied).toEqual([])
+  })
+
+  test("public slot projection advertises only ACTIVE resources in the exact capability Store and Tenant", async () => {
+    const f = bookingAvailabilityFixture()
+    const from = new Date("2026-10-15T09:00:00Z")
+    const to = new Date("2026-10-15T10:00:00Z")
+    f.state.config.resources.push(
+      {
+        resourceId: "inactive",
+        resource: { ...f.state.resource, id: "inactive", status: "INACTIVE" },
+      },
+      {
+        resourceId: "foreign",
+        resource: { ...f.state.resource, id: "foreign", tenantId: "foreign" },
+      },
+    )
+    const accessToken = "existing-fixture-public-capability"
+    const capability = {
+      id: "slot-capability",
+      tenantId: "tenant-1",
+      storeId: "store-1",
+      offeringConfigId: "config-1",
+      offeringConfig: f.state.config,
+      sourceId: "request-1",
+      sourceType: "SERVICE_REQUEST",
+      purpose: "VIEW_SLOTS",
+      status: "ACTIVE",
+      stateRevision: 0,
+      expiresAt: new Date("2026-10-16T00:00:00Z"),
+      tokenDigest: bookingTokenDigest(accessToken),
+    }
+    const writes: string[] = []
+    const tx = new Proxy(f.tx, {
+      get(target, table, receiver) {
+        if (table === "serviceBookingAccessCapability")
+          return {
+            findFirst: async (args: unknown) =>
+              bookingMatches(capability, bookingField(args, "where"))
+                ? capability
+                : null,
+            updateMany: async () => {
+              writes.push("capability-access")
+              return { count: 1 }
+            },
+          }
+        if (table === "serviceCommercePolicyAuditEvent")
+          return {
+            createMany: async () => {
+              writes.push("canonical-policy-audit")
+              return { count: 1 }
+            },
+          }
+        return Reflect.get(target, table, receiver)
+      },
+    })
+    const result: unknown = await Reflect.apply(
+      getPublicServiceCommerceBookingSlots,
+      undefined,
+      [
+        {
+          $transaction: async (run: (client: typeof tx) => Promise<unknown>) =>
+            run(tx),
+        },
+        {
+          accessToken,
+          from,
+          to,
+          now: new Date("2026-10-15T08:00:00Z"),
+        },
+      ],
+    )
+    expect(result).toMatchObject({
+      configurationRevision: 0,
+      offeringId: "offering-1",
+      timezone: "UTC",
+      slots: [
+        { resourceId: "resource-1", startAt: from, remainingCapacity: 2 },
+        {
+          resourceId: "resource-1",
+          startAt: new Date("2026-10-15T09:30:00Z"),
+          remainingCapacity: 2,
+        },
+      ],
+    })
+    const rows = bookingField(result, "slots")
+    expect(Array.isArray(rows) && rows.length === 2).toBe(true)
+    const configQuery = f.reads.find(
+      (read) => read.table === "serviceBookingOfferingConfig",
+    )?.args
+    const resourceQuery = bookingField(
+      bookingField(configQuery, "include"),
+      "resources",
+    )
+    expect(bookingField(resourceQuery, "where")).toEqual({
+      resource: { status: "ACTIVE", storeId: "store-1", tenantId: "tenant-1" },
+    })
+    expect(
+      bookingMatches(
+        f.state.config.resources[1],
+        bookingField(resourceQuery, "where"),
+      ),
+    ).toBe(false)
+    expect(writes).toEqual(["canonical-policy-audit", "capability-access"])
+    expect(f.denied).toEqual([])
+  })
+
   test("clamps a page-generated slot window to the server clock", async () => {
     const db = {
       $transaction: async (callback: (tx: unknown) => Promise<unknown>) =>
@@ -489,7 +878,7 @@ describe("Service Commerce booking repository boundary", () => {
   test("confirms an unexpired hold into a booking with immutable policy snapshots and a public capability", async () => {
     const creates: Array<{ name: string; value: unknown }> = []
     const tx = {
-      $queryRaw: async () => [{ id: "resource-1" }],
+      $queryRaw: async (parts: TemplateStringsArray | { strings: readonly string[] }) => ("strings" in parts ? parts.strings : parts).join("").includes('FROM "CommercialOrder"') ? [{ acceptedCommerceQuoteVersion: { id: "version-1" }, currencyCode: "NGN", customerId: null, paymentStatus: "PENDING", storeId: "store-1", totalMinor: 20_000 }] : [{ id: "resource-1" }],
       membership: { findFirst: async () => ({ id: "membership-1" }) },
       serviceBooking: {
         create: async (value: unknown) => {
@@ -587,7 +976,7 @@ describe("Service Commerce booking repository boundary", () => {
   test("requires revision and a structured reason for reschedule/cancel, records a refund consequence, and leaves payment separate", async () => {
     const events: unknown[] = []
     const tx = {
-      $queryRaw: async () => [{ id: "booking-1" }],
+      $queryRaw: async (parts: TemplateStringsArray | { strings: readonly string[] }) => ("strings" in parts ? parts.strings : parts).join("").includes('FROM "CommercialOrder"') ? [{ completedAt: null, status: "FULFILLING", currencyCode: "NGN", customerId: null, storeId: "store-1" }] : [{ id: "booking-1" }],
       membership: { findFirst: async () => ({ id: "membership-1" }) },
       serviceBooking: {
         findFirst: async () => bookingRow({ commercialOrderId: "order-1" }),
@@ -1000,7 +1389,7 @@ describe("Service Commerce booking repository boundary", () => {
       status: "ARRIVED",
     })
     const tx = {
-      $queryRaw: async () => [{ id: "locked" }],
+      $queryRaw: async (parts: TemplateStringsArray | { strings: readonly string[] }) => ("strings" in parts ? parts.strings : parts).join("").includes('FROM "CommercialOrder"') ? [{ completedAt: null, status: "FULFILLING", currencyCode: "NGN", customerId: null, storeId: "store-1" }] : [{ id: "locked" }],
       membership: { findFirst: async () => ({ id: "membership-1" }) },
       serviceBooking: {
         findFirst: async () => linkedBooking,
@@ -1095,7 +1484,7 @@ describe("Service Commerce booking repository boundary", () => {
       status: "IN_SERVICE",
     })
     const tx = {
-      $queryRaw: async () => [{ id: "locked" }],
+      $queryRaw: async (parts: TemplateStringsArray | { strings: readonly string[] }) => ("strings" in parts ? parts.strings : parts).join("").includes('FROM "CommercialOrder"') ? [{ completedAt: null, status: "FULFILLING", currencyCode: "NGN", customerId: null, storeId: "store-1" }] : [{ id: "locked" }],
       commercialOrder: {
         findFirst: async (args: { select?: unknown }) =>
           args.select

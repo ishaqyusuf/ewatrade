@@ -1,0 +1,489 @@
+{
+  "version": 1,
+  "id": "2026-10-17-mobile-sales-quality-source",
+  "tickets": [
+    "A04",
+    "H01",
+    "H02"
+  ],
+  "summary": "Mobile quality local source includes stock/outcome, checkout, recovery, Free attachment guards, Production-only events, immutable blank offline Quick sale correction and assistant description readiness. Native/cross-platform and alternate-caller acceptance remain open.",
+  "capabilities": [
+    {
+      "id": "sales.order.attachment.add",
+      "change": "changed",
+      "rollout": "source",
+      "note": "Canonical new activity/copy and upload/READY boundaries require fresh server attachments entitlement. Free denied; launch Starter retained. Existing saved replay and historical reads retain authorization; no assistant/client/role rollout widened. Fresh reads do not serialize concurrent downgrade or revoke prior direct tokens."
+    },
+    {
+      "id": "sales.order.create",
+      "change": "changed",
+      "rollout": "source",
+      "note": "New Quick sale writes require shared canonical description. Offline replay binds original author/device/Store; local queue uses immutable captured partitions. Dedicated recovery stages suspended legacy rep drafts and requires fresh Owner/Admin decision with original author/account and separate audit; ordinary replay/review refuses held markers, including after reactivation. Client/envelope hashes retained. Recovery remains management UI-only; assistant authority unchanged. Immutable queued correction client source is reviewed: exact durable intent before every send, real issued receipt/session proof and monotonic unknown outcomes. Full connected immutable correction/replay is verified separately; alternate-caller and native acceptance remain open."
+    },
+    {
+      "id": "sales.order.record_simple",
+      "change": "changed",
+      "rollout": "source",
+      "note": "Existing incomplete/history sale drafts remain parseable. New pending approval and locked/direct execution require canonical Quick sale description before Customer or Order effects, with an explicit description question. Selected existing-account/new-Customer provisioning takes the scoped Finance Book lock first and rejects missing/changed Book. Principal/session/channel/composition/account authority retained. Actual chat22/505 and retained goods19/413 source checks pass. Actual public form-parser normalization4/120 preserves correct raw-bypass approval conflict. Corrected guarded Development caller df02cb55 completed full/partial/generic sale and receipt/retry/account invariants, all12cleanupgroups/zeroowned/disconnect/pool0/lifecycle0; actual host exit0/137607ms. Independent47path freeze/lifecycle/actualexit review accepted. Earlier transport5a7e779a and test-boundary45fce01b failures retained. Primary Claude four description editor sources552/556 are independently accepted with canonical local errors/trim, historical draft editability, optional Additional cost and unchanged explicit review/Confirm. Isolated exact8-case env/lifetime/JUnit wrappers and explicit existing-version test dependencies pass. M06.3 source integration closes; native/browser/fullweb/final acceptance remain open; no rollout/provider change."
+    }
+  ],
+  "procedures": [
+    {
+      "path": "offline.decideRecovery",
+      "status": "excluded",
+      "reason": "Dedicated current Owner/Admin-only recovery decision, exact envelope and separate audit. Management UI source accepted; native/cross-platform acceptance pending. No assistant tool or prompt authority."
+    },
+    {
+      "path": "offline.correctBlankQuickSale",
+      "status": "excluded",
+      "reason": "Original active-author-only description correction with immutable server-derived replacement, current POS/device/Store/policy and retained holds. No assistant tool authority. Client source accepted with durable exact proposal, real issued receipt/session proof and lifecycle guards; connected immutable correction/replay verified; native/alternate-caller acceptance remains open."
+    }
+  ],
+  "docs": [
+    {
+      "topic": "feature",
+      "path": ".brain/features/mobile-sales-quality.md",
+      "status": "local_only"
+    },
+    {
+      "topic": "feature",
+      "path": ".brain/features/logly-analytics.md",
+      "status": "local_only"
+    },
+    {
+      "topic": "decision",
+      "path": ".brain/decisions/2026-10-17-mobile-analytics-production-gate.md",
+      "status": "local_only"
+    },
+    {
+      "topic": "api",
+      "status": "local_only",
+      "note": "Global eligible-account offline.recover is not in the tenant-principal H01 merchant inventory: original-author staging/status only, no business effects or assistant tool. Protected offline.decideRecovery is excluded from assistant access. Analytics default-off Production gate retained.",
+      "path": ".brain/api/contracts.md"
+    },
+    {
+      "topic": "schema",
+      "status": "not_applicable",
+      "note": "No Prisma/database change."
+    },
+    {
+      "topic": "permissions",
+      "status": "local_only",
+      "path": ".brain/api/permissions.md",
+      "note": "Existing Order/Service attachment writes now require fresh paid attachment entitlement; text/history/cleanup remain available. Roles/Store scope unchanged; mobile analytics retains exact Production age/privacy/QA gates."
+    },
+    {
+      "topic": "capability",
+      "path": "packages/assistant/src/capabilities/COVERAGE.md",
+      "status": "updated",
+      "note": "Existing manifest declarations retained; coverage checked separately."
+    },
+    {
+      "topic": "feature",
+      "path": ".brain/features/offline-order-operations.md",
+      "status": "local_only"
+    },
+    {
+      "topic": "feature",
+      "path": ".brain/features/catalog-free-orders.md",
+      "status": "local_only"
+    },
+    {
+      "topic": "decision",
+      "path": ".brain/decisions/2026-10-17-suspended-offline-recovery.md",
+      "status": "local_only"
+    },
+    {
+      "topic": "decision",
+      "path": ".brain/decisions/2026-10-17-offline-quick-sale-correction.md",
+      "status": "local_only",
+      "note": "Locally integrated replay/recovery/canonical/API correction protocol; real PostgreSQL coordination seam passed, full correction flow and mobile queue UI acceptance pending."
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "test",
+      "path": "apps/mobile/src/lib/stock-intake-target.test.ts",
+      "executed": true,
+      "result": "10/70 helper passes; M02 repaired actual hook54/380 plus wrapper/activity effects6/13 pass and source accepted. Native/cross-platform milestone acceptance remains open."
+    },
+    {
+      "kind": "test",
+      "path": "apps/mobile/src/lib/offline-order.test.ts",
+      "executed": true,
+      "result": "Device serialization to strict API replay schema retains selected account; focused offline suites9/18 pass. No connected ledger acceptance."
+    },
+    {
+      "kind": "test",
+      "path": "packages/events/src/route.test.ts",
+      "executed": true,
+      "result": "Entire events package48/3145 and strict package types pass; negative mobile gates make zero collector calls."
+    },
+    {
+      "kind": "fixture",
+      "path": "apps/mobile/src/lib/fixtures/analytics-runtime.fixture.tsx",
+      "executed": true,
+      "result": "Actual mounted runtime/native adapter35/249 and isolated wrapper1/6 independently/root pass, retaining original33. Real Session generation closes identical final-Session ABA before React: queued retry/new capture blocked and fresh query partition/server eligibility required. Raw token absent from keys/metadata/transport. Scoped zero owned errors; inherited diagnostics remain. No provider/native/hosted delivery or collection enable."
+    },
+    {
+      "kind": "fixture",
+      "path": "apps/mobile/src/lib/fixtures/offline-payment-roundtrip.fixture.ts",
+      "executed": true,
+      "result": "Actual replay/approval and realaccount/collectionprojection over inertclients23/142 plus isolatedwrapper1/1 pass, root+independentreviewer. Narrow fixture-only raw Order lock now returns same currency/customer/store facts as preceding identityread (b7854376), satisfying current authentic full-row lock; no canonicalguard/assertion weakening. Actual canonical Order create remains intercepted; this source evidence is separate from current connected selected-bank matrix1/96."
+    },
+    {
+      "kind": "test",
+      "path": "apps/mobile/src/lib/stock-operation-outcome.test.ts",
+      "executed": true,
+      "result": "5/34 passes with actual tRPC client/server errors and public formatter; scoped strict types and Biome pass. No mutation or reconciliation authority."
+    },
+    {
+      "kind": "test",
+      "path": "packages/db/src/queries/catalog-free-line-validation.test.ts",
+      "executed": true,
+      "result": "Shared/canonical source8/37 and surrounding Order snapshot suite15/52 pass; scoped strict types/Biome pass. Rejects missing/whitespace Quick sale text; Additional cost/display remain compatible. Connected and assistant/UI acceptance pending."
+    },
+    {
+      "kind": "test",
+      "path": "packages/events/src/mobile-activity.test.ts",
+      "executed": true,
+      "result": "Fixed11-family activity vocabulary rejects private extras and arbitrary enum strings. Entire events52/3279 and strict types pass; mounted runtime29/212 passes with failures isolated. Consumer dedup/native hosted delivery pending."
+    },
+    {
+      "kind": "test",
+      "path": "packages/db/src/queries/catalog-free-lines.integration.test.ts",
+      "executed": true,
+      "result": "Guarded Neon Development catalog-free + receiving-account integration2/53 pass; blank writes leave no Order/hidden Catalog residue, valid sales/payment/fulfillment and selected receiving accounts post; awaited fixture cleanup completed. Offline device sync not tested."
+    },
+    {
+      "kind": "test",
+      "path": "packages/db/src/queries/catalog-free-line-idempotency.test.ts",
+      "executed": true,
+      "result": "Actual canonical create graph with immutable legacy digest/read-only stand-in2/10 pass: exact old blank request returns original graph, changed description under same identity conflicts. No private hash implementation copied; real persisted legacy DB replay not claimed."
+    },
+    {
+      "kind": "test",
+      "path": "apps/mobile/src/lib/operation-success-router.test.ts",
+      "executed": true,
+      "result": "Installed StackRouter/TabRouter14/124 + helper6/14 pass; standalone cold-entry rebase source repair accepted. Native gestures/share-cancel and cross-platform acceptance remain open."
+    },
+    {
+      "kind": "test",
+      "path": "packages/db/src/queries/attachment-entitlement-commands.test.ts",
+      "executed": true,
+      "result": "Actual canonical functions over inert clients19/95 pass; helper/parity/history10/32 and tRPC1/9 pass. Free rejects fresh writes/copies/upload progression; paid works; downgrade/replay/history/cleanup preserved. No DB/provider/native or concurrent-downgrade serialization proof."
+    },
+    {
+      "kind": "test",
+      "path": "apps/api/src/orders/fixtures/order-attachment-entitlement.fixture.ts",
+      "executed": true,
+      "result": "Actual Hono boundary13/140 plus isolated wrapper1/1 pass: fresh Free denial before byte pulls/storage, unchanged historical GET and READY ack, downgrade after staging refuses READY. No DB/provider calls."
+    },
+    {
+      "kind": "fixture",
+      "path": "apps/mobile/src/lib/fixtures/stock-intake-hook.fixture.tsx",
+      "executed": true,
+      "result": "M02 repair2 actual hook54/380 passes, wrapper + activity effects6/13 passes. Permission-loss privacy, privately retained result after ABA and exact-identity unknown retry verified. Source accepted; local role profile is not fresh server permission proof, native/cross-platform acceptance open."
+    },
+    {
+      "kind": "fixture",
+      "path": "apps/mobile/src/lib/fixtures/offline-command-scope.fixture.ts",
+      "executed": true,
+      "result": "Actual store55/268 plus wrapper56/274 pass, all42 prior cases retained. Fresh real-signin no-business access selects only own complete persisted partitions/current durable device; no mint/adoption/ordinary authority. In-memory exact batch/session proof prevents retargeting; duplicate local identities at acknowledgement refused; terminal and persisted status-only privacy retained. ZERO owned compiler diagnostics; UI/native/cross-platform acceptance open."
+    },
+    {
+      "kind": "test",
+      "path": "packages/db/src/queries/offline-command-origin.test.ts",
+      "executed": true,
+      "result": "Registration/staff/origin40/130 pass: same hash cannot transfer author/device/Store; ordinary replay binds device owner and refuses durable/legacy revocation despite ACTIVE row. Inert clients; no connected concurrency or suspended-author recovery acceptance."
+    },
+    {
+      "kind": "test",
+      "path": "packages/db/src/queries/offline-device-registration.test.ts",
+      "executed": true,
+      "result": "35/108 registration cases pass: canonical transaction Tenant/Membership/key/row lock order, fresh staff/Store, original owner/Store preservation, durable and legacy revocation, no reactivation. Scoped types/Biome pass; no connected concurrency proof."
+    },
+    {
+      "kind": "fixture",
+      "path": "apps/mobile/src/lib/fixtures/checkout-payment-account-cache.fixture.ts",
+      "executed": true,
+      "result": "Actual store18/90 plus pure/wrapper4/30 pass: captured owner/Store/currency/generation, DTO privacy, clones, bounded partitions and delayed hydration write/forget fencing. Last-known cache only; UI integration pending."
+    },
+    {
+      "kind": "fixture",
+      "path": "apps/mobile/src/lib/fixtures/create-sale-account.fixture.tsx",
+      "executed": true,
+      "result": "Actual hook with real cache/session/persist/queue36cases plus wrapper37/152 pass. Source4f59cbe231c22b33 acceptedef80d685: retained query wrappers cannot stamp/delete later owner cache, online/offline mode participates in submit lifetime; explicit original account preserved. No native/connected checkout acceptance."
+    },
+    {
+      "kind": "fixture",
+      "path": "apps/mobile/src/lib/fixtures/offline-reconciler.fixture.tsx",
+      "executed": true,
+      "result": "Actual mounted hook55/146 plus wrapper passes, all42 earlier cases retained. Receipt-based category-only sync/review/decision observations, count/duration, uncertain failures, refresh warning, throwing tracker, synchronous mode and real Session-access ABA, unmounted review all verified. Session/mode monotonic memory generations; no queue/write authority change. Global app-wide sync lifetime retained. No native/hosted delivery."
+    },
+    {
+      "kind": "test",
+      "path": "packages/db/src/queries/offline-recovery-record.test.ts",
+      "executed": true,
+      "result": "Marker+origin23/95 pass: strict server annotation, unchanged envelope hash, normal replay/all review actions including second-transaction race refuse marked commands before facts/effects."
+    },
+    {
+      "kind": "test",
+      "path": "apps/api/src/trpc/routers/offline-recovery-routes.test.ts",
+      "executed": true,
+      "result": "Actual router callers9/36 pass using inert .invalid constructor URL and intercepted DB: absent/QA/age, strict nested overrides, exact original device Tenant, Owner/Admin/current Tenant and wrong QA scope. No live DB effects; API compiler has11 unrelated test diagnostics,0owned."
+    },
+    {
+      "kind": "fixture",
+      "path": "packages/db/src/queries/fixtures/offline-recovery.fixture.ts",
+      "executed": true,
+      "result": "Actual integrated recovery90/603 passes, all80 prior cases retained. Locked Tenant metadata/Device status reused; separate fresh durable revocation read remains after Device lock. Ten new cases first failed on redundant reads; exact DEVICE_REVOKED contract and zero denied effects retained. Shared command-key fence, combined-marker and absent-Book guards unchanged. No full Product/performance pass."
+    },
+    {
+      "kind": "test",
+      "path": "packages/db/src/queries/offline-recovery.integration.test.ts",
+      "executed": true,
+      "result": "Guarded Development rerun4af6c3e9 integrated source passed1/95 in437.91s, awaited cleanup complete. All original Owner/Admin/original author/account/rollback/retry/idempotency/decision race/unavailable-origin and web-control assertions retained. Source canonicalac0536f7/recoveryc016334e/replay47016dba; later customer lock-order repair pending. No Product/mobile/web UI acceptance."
+    },
+    {
+      "kind": "test",
+      "path": "packages/db/src/queries/offline-recovery-projection.test.ts",
+      "executed": true,
+      "result": "Projection10/50 passes: original scoped id/name metadata plus typed enteredTotalMinor retained through strict decision and unchanged digest. No new wire authority, balance, token or substitution. Scoped strict/Biome pass."
+    },
+    {
+      "kind": "test",
+      "path": "packages/db/src/queries/offline-recovery-fulfillment-authorization.test.ts",
+      "executed": true,
+      "result": "Actual authority+canonical custom-line fulfillment35/108 and ordinary regression54/171 pass; root recovery/projection cohort64/219. Opaque tx-bound Owner/Admin execution authority binds exact create/Order/original author/Store/operation and stays outside digest. Ordinary active-author guard retained; original actor/hash parity verified. Sole issuer relies on prior locked recovery admission. Connected/native acceptance separate."
+    },
+    {
+      "kind": "test",
+      "path": "packages/db/src/queries/offline-recovery-stock.integration.test.ts",
+      "executed": true,
+      "result": "Guarded Development full Product runed02110a passed1/47 in179.41s on canonical054ff36e/valuation6b884636/locka0a7be0f/payment37f2c789/recovery917b146e. Original40 ordered assertion expressions and normal30sTX retained: web stock control, stale-revision/payment-denial rollback, original rep/account approval, exact reservation/fulfillment/payment/cash movement, unchanged web graph and effect-free retry. All12guarded cleanup groups/zero-owned rows/disconnect complete. This is current canonical-command evidence, not phone/web UI, all conflicts, a measured query-count saving or a latency guarantee."
+    },
+    {
+      "kind": "fixture",
+      "path": "apps/mobile/src/lib/fixtures/offline-recovery-card.fixture.tsx",
+      "executed": true,
+      "result": "Repaired actual imported card13/48 passes; entered-total classification, rendered role/self/terminal/unmount/current-Store and double-tap guards, coherent approved/rejected/held refresh-warning copy. Combined admin42/113 +rep28/81 totals83/242; bounded source accepted109fe593. No native rendering/server-permission bypass claim."
+    },
+    {
+      "kind": "fixture",
+      "path": "apps/mobile/src/lib/fixtures/offline-recovery-client.fixture.tsx",
+      "executed": true,
+      "result": "Actual rep hook/component32/105 plus wrapper passes, all28 prior retained. Exact own partition/status semantics remain; receipt-based partial/unknown sync telemetry, private metadata refusal, throwing tracker, unmount and offline ABA retirement verified. No business effects/assistant authority/native delivery claim."
+    },
+    {
+      "kind": "fixture",
+      "path": "apps/mobile/src/hooks/attachment-entitlement.fixture.tsx",
+      "executed": true,
+      "result": "All39actual entitlement cases/113 pass with added getter ports; new activity fixture11/38 separately passes. Four Session/operational A-to-B-to-A cases failed before repair: retained Free-sheet actions/picker and awaiting paid picker now retire via monotonic generations. Fixed metadata/tracker exception isolation; final wrappers/model20/55 and Biome clean, zero owned types with inherited errors. Sourcebb06cc74 bounded accepted; no native/provider/plan authority change."
+    },
+    {
+      "kind": "test",
+      "path": "packages/db/src/queries/offline-command-fence.test.ts",
+      "executed": true,
+      "result": "Integrated fence helper21/65 passes; strict/Biome clean. Real Development coordination integration1/73 also passes53.74s with zero-owned cleanup; full correction/API/native acceptance separate."
+    },
+    {
+      "kind": "test",
+      "path": "packages/db/src/queries/offline-quick-sale-correction-input.test.ts",
+      "executed": true,
+      "result": "Immutable derivation/record22/159 pass. Helpers integrated locally in correction/replay/recovery/canonical; actual coordinator71/247 plus wrapper passes. Full connected correction and queue UI remain open."
+    },
+    {
+      "kind": "test",
+      "path": "apps/api/src/trpc/routers/offline-quick-sale-correction-routes.test.ts",
+      "executed": true,
+      "result": "Actual middleware/schema57 cases plus wrapper passes after reproduced exact QA input-Store repair. Inert DB/coordinator only; absent/expired auth, role/Store/strict schema/forwarding/error boundaries. No connected endpoint or native acceptance."
+    },
+    {
+      "kind": "test",
+      "path": "packages/db/src/queries/offline-quick-sale-coordination.integration.test.ts",
+      "executed": true,
+      "result": "Guarded Development PostgreSQL1/73 passes53.74s, awaited zero-owned cleanup. Complete identity-set locking, both winner/rollback orders, RR serialization and canonical allocator retirement seam. No full correction command/API/native acceptance."
+    },
+    {
+      "kind": "test",
+      "path": "packages/db/src/queries/commercial-order-customer-lock-order.test.ts",
+      "executed": true,
+      "result": "Actual canonical prefix16/186 and historical cohort18/196 pass, all original12 retained; root offering/description/recovery-authority48/153, strict types/Biome clean. Sourcecef6603b bounded reviewed. Real heldBook/exact PID blocking6assertions verified, but completed samecontact scenario failed canonical line creation30.536s, awaited cleanupzero. Full concurrency/absence-race and dirty assistant composedcaller remain open."
+    },
+    {
+      "kind": "test",
+      "path": "packages/db/src/queries/offline-quick-sale-correction.integration.test.ts",
+      "executed": true,
+      "result": "Current read-reduced-source run32963cb0 failed0/1,10assertions/184.40s with pg-pool Connection terminated unexpectedly; exact failing SQL/connection stage unavailable. Fixture3a4a2515 retains all61 original ordered expect expressions, predispatch UUID/email/Tenant retention and allSettled snapshots/cleanup; alltracked jobs and12guarded cleanupgroups/zeroowned/disconnect complete. Prior frozen774b diagnostic isolated88.022s preSQLphysicalconnect/noSQL; does not prove current transportcause. Fullcorrection/queueUI remainsopen; prepare read-only adapterburst/reuse probe, no blindrepeat/timeout/providerchange. New fullcurrentdiagnostic3dce0771 failed0/1/654.77s in firstwebcontrolsetup, existing-client planread629.919s, poolwaiting0. Bun ended duringcleanup without proof; original exactQA recovery subsequently completed all12groups/zero/disconnect terminalexit0. Inert actualPrisma reproduction shows failedtimeoutROLLBACK can terminate bun:test beforefinallydrain; standalonefailurehandler drained and exited1. This explains a possible cleanup lifecycle, not original socket/server cause; full correction remains unaccepted."
+    },
+    {
+      "kind": "test",
+      "path": "apps/mobile/src/lib/offline-replay-coordinator.test.ts",
+      "executed": true,
+      "result": "22/54 pass, preserving original14 plus observation cases: actual batch/results/duration, frozen distinct outcome, observer throws, refresh warning, retired/ineligible/empty/superseded silence and actual executed jobs only. Source-only; domain outcomes unchanged."
+    },
+    {
+      "kind": "test",
+      "path": "apps/mobile/src/lib/offline-activity.test.ts",
+      "executed": true,
+      "result": "8/194 pass against real strict schema. Fixed status/action enums, bounded positive counts/durations; malformed/incomplete/sparse/oversized responses do not invent completion or copy private values."
+    },
+    {
+      "kind": "fixture",
+      "path": "apps/mobile/src/components/mobile/create-sale/sale-activity-model.fixture.tsx",
+      "executed": true,
+      "result": "Actual useCreateSale plus observer5/22 passes after initial0/5 reproduction: batched online/offline submit/results, structured rejection, unknown-then-FORBIDDEN remains unknown, saved refresh/callback errors never failed. Final observer13/37 includes Session/mode monotonic generations/status/access and restored-draft suppression; root callsite cohort20/55 passes. Bounded source accepted; no native/hosted or collection enable."
+    },
+    {
+      "kind": "test",
+      "path": "packages/db/src/queries/customer-ledger/commerce-locks.test.ts",
+      "executed": true,
+      "result": "Actual lock helper13/53 passes after5pass/8fail red reproduction of redundant reread. Scoped FOR UPDATE returns the authoritative full Order; initial identity planning and Book/account-before-Order locks, post-lock identity comparison and authentic transaction proof retained. Thirteen affected isolated suites144/533 pass with full-row fixture adapters; source only, no new command authority."
+    },
+    {
+      "kind": "fixture",
+      "path": "packages/db/src/queries/fixtures/commercial-payment-roundtrips.fixture.ts",
+      "executed": true,
+      "result": "Actual payment helper12/72 passes after9pass/3fail on duplicate key read. One immutable receipt lookup retained under authentic held Order lock; current account/refund/link guards and propagated uniqueness errors retained. No automatic cross-Order reconciliation. Scoped strict types and Biome pass."
+    },
+    {
+      "kind": "test",
+      "path": "packages/db/src/queries/offline-web-coexistence.integration.test.ts",
+      "executed": true,
+      "result": "Guarded Development runb8610e2d passed1/65 in128.51s on canonical054ff36e/valuation6b884636/current read-reduced dependencies. M captured before web W; W initial250of750 chosen cash payment/fulfillment, later original-author M500full replay each preserve exact Order/payment/account/author, one committed reservation/fulfillment/movement/ISSUE per Product, cash+750 and unchanged W+M envelope/hash. Second sync adds no effects; all12guarded cleanup groups/zero-owned rows/disconnect complete. No actual native connectivity, HTTP/browser or all-conflict/configuration matrix claim."
+    },
+    {
+      "kind": "test",
+      "path": "packages/db/src/queries/offline-recovery-lifecycle.integration.test.ts",
+      "executed": true,
+      "result": "Current final-source guarded Development run59c16bb3 passed1/68 in183.46s on canonical054ff36e/valuation6b884636/recovery917b146e and unchanged read-reduced dependencies, all12guardedcleanupgroups/zero-ownedrows/disconnect complete. Actual suspension/reactivation and policy OFF/ON retain holds, original author/account approval exactly once without reactivation, rejection, opposed/repeated terminal decisions and original Session/device/envelopes. Prior019cc4061/68 was cef before completion reuse; current pass supersedes that graph limit. With current Producted1/47 closes backend checkpointM12.4 only; no phone/web UI/all-conflict matrix or final milestone acceptance."
+    },
+    {
+      "kind": "run",
+      "path": ".scratch/mobile-sales-quality/debug/connection-handshake-probe.mjs",
+      "executed": true,
+      "result": "Read-only fresh-client probes serial under verifiedDevelopment: Nodeconnect4.317s/end6.045s, Bunconnect2.115s/end3.518s, bothexit0/awaited cleanupfallback0. SeparatefreshUUID labels, native diagnostic-only limits. Two one-off controls prove currentreachability, not runtime performance comparison or intermittent88s acquisition rootcause. No productionclient/acceptance changes."
+    },
+    {
+      "kind": "test",
+      "path": "packages/db/src/queries/finance/valuation-issues.test.ts",
+      "executed": true,
+      "result": "Actual24/158 passes with alloriginal7 retained; original7pass/new17fail before repair. Actual lock issuer/Book proof and explicit join query shape, same-balance sequential freshness, Decimal/BigInt>2^53, zero/unknown/missing projection and scoped/date/source refusals. Closed-date NEW assertion corrected to exact existing CLOSED_PERIOD. Independent review/scoped strict/Biome pass; source6b884636. No physicalSQL count or full30s graph proof."
+    },
+    {
+      "kind": "test",
+      "path": "packages/db/src/queries/commercial-order-fulfillment.test.ts",
+      "executed": true,
+      "result": "Actual10/73 passes on source054ff36e; two new cases first failed on redundant completion-row reread. Authentic held Order passed through both Product paths; fresh mixed-Service obligation read retained. Original7 callback bodies structurally identical to cleanHEAD; old id-only/rawBook-present-but-nullORM fixture ports adapted to coherent full Product/cost provenance.15isolated affected files136/524 outer pass; scoped strict/Biome clean, no entire workspace/compiler claim."
+    },
+    {
+      "kind": "test",
+      "path": "packages/db/src/queries/offline-replay-conflicts.integration.test.ts",
+      "executed": true,
+      "result": "Guarded Development4215625c passed1/72 in322.30s at fixture8b84bac5, runner343b8be6 and unchanged current dependencies. Six immutable pre-web drafts, two paid/fulfilled web sales; actual price/configuration/stock/method/pause conflicts plus explicitly synthetic archived-state guard retain exact durable review, original author/device/hash and zero effects after both syncs. Complete web/stock/valuation/ledger/balance/sequence snapshots unchanged. All12guarded cleanupgroups/zeroowned/disconnect complete. With ordinaryb8611/65 closes backendM12.3; no native/connectivity/HTTP/browser or legal permanent-account-close workflow acceptance."
+    },
+    {
+      "kind": "run",
+      "path": ".scratch/mobile-sales-quality/debug/prisma-pool-burst-probe.ts",
+      "executed": true,
+      "result": "Original679b5d88 probe6cfbc38c failed startup08P01/PrismaP2010 beforequery; clean disconnect. Reviewed compatibility4410ec3f removes diagnostic startup statement_timeout only, retainsRO/native limits with TXLOCAL25s. Current82404670 passed21.869s actual internalpool 9reads/8idleevictions/12sROTX/9reads replacement, 17physicalconnects26queries, all counters/pool0, errors0/fallback0/awaiteddisconnect/exit0. No business/production/provider changes, intermittent correctioncause or acceptance proof. Fullcorrection32963 remainsopen; next prepare current fullgraph instrumentation, no identical blindretry."
+    },
+    {
+      "kind": "test",
+      "path": "packages/db/src/queries/offline-payment-account-matrix.integration.test.ts",
+      "executed": true,
+      "result": "Guarded Development7e6cfac2 passed1/96 in128.25s at fixturea5f17f15/runner94044026, all10frozen sources unchanged/all12cleanupgroups/zeroowned/disconnect exit0. Canonical pending800 beforeBook/account noFinanceeffects; full1000/part400\u2192chosenBANK1191, actual mobilebuilder/JSON/strictAPI/replay offline600\u2192samebank2000/defaultcash+bank0; originalauthor/paymentID and3balancedcollectionjournals, noManualMoneyIn/stock/receivable, online/offline retrysnapshots stable. Test-only DTO/rawIDseam corrected after concrete62efailure, no merchantcodechange. Closes M05.3 commandproof only; no native/cache/connectivity/HTTP/session/receiptUI acceptance."
+    },
+    {
+      "kind": "test",
+      "path": "packages/db/src/queries/mobile-stock-intake.integration.test.ts",
+      "executed": true,
+      "result": "Verified Development2b1f6b66 passed1/56/90.23s; frozen4211f7df plus real report/mobilebuilder/strictschema/canonical concurrent duplicate+discardedreturn+retry produce one A10\u219213 intake. Complete unrelated B/monetary snapshot invariance and changedpayload/stalerevision/wrongStore/missingsource/foreignunit refusals. Book-backed unknown-cost ordinary valuation explicit. All12exactQAcleanupgroups/zero/disconnect complete. Sandbox-only68aabe4d exact User/Tenant counts separatelyzero. Closes M02.3 only, now3/5=60.0%; no protectedmiddleware/HTTP/native/connectivity or webUI acceptance."
+    },
+    {
+      "kind": "fixture",
+      "path": ".scratch/mobile-sales-quality/debug/prisma-rollback-timeout-repro.mjs",
+      "executed": true,
+      "result": "Root independently reran six isolated actualPrismaClient/inerttypedadapter children, no network or realdatabase. Controls exit0/drained; rollback-first and same-turn bun:test rejection children exit1 before cleanup/disconnect finish, including listener variant. Standalone same-turn rejection records oneunhandled+onecommandfailure, awaits cleanup/disconnect/pending0, exits1. protocolMatchedtrue is lifecycle diagnostic evidence, never fullcorrection acceptance or transport rootcause."
+    },
+    {
+      "kind": "test",
+      "path": "packages/db/src/queries/offline-fulfillment-matrix.integration.test.ts",
+      "executed": true,
+      "result": "Verified Development4eafb125 passed1/338/324.97s, terminalexit0 on unchangedcc27d262/runner45a20708/ten-sourcefreeze. Seven Product/explicit-off/mixedTRACKED/Service-only/future valid+refused cases online and actualmobilebuilder\u2192JSON\u2192strictAPI\u2192ordinaryreplay, all exactretries retain fullgraph. TenOrders, fourqueuedauthorizedJobs/events, fourcommitted/fouractiveReservations, fourfulfillmentmovements, onhand16/reserved4, nofinanceeffects or Service completion. Typed forced Service-only/future refusals zero business effects and immutable REVIEW_REQUIRED rows. All13exactQAcleanupgroups/expandedzero/disconnect complete. Closes M07.3 only, now3/5=60.0%; native/UI/network/HTTP and later Service work acceptance remainopen."
+    },
+    {
+      "kind": "review",
+      "path": "apps/mobile/src/hooks/quick-sale-correction.fixture.tsx",
+      "executed": true,
+      "result": "Repaired client511+typeonly513 SOURCE accepted514. Root affected55/374 over13files, finalpure+wrapper8/69 and actualstore/hook/sheet23/101 pass. Independent three originalcounterexamples3/7 + storageawait Session/operational/cache ABA3/12 pass. Full durable readback+consumed proof closes unsavedretrydispatch; child lifecycle closes retainedunmountsend; earlierunknown survives lateradmissiondenial. Final focused0owned/64imported diagnostics, no wholeworkspaceclaim. M06.3 remainsopen for sharedalternatecaller; native/keyboard/HTTP/fullconnected pending."
+    },
+    {
+      "kind": "test",
+      "path": "packages/db/src/queries/offline-customer-book-coordination.integration.test.ts",
+      "executed": true,
+      "result": "Current Developmentd9c3fc1e passed1/20/84.65s, frozene9c7d226+current054ff36e/a0a7be0f unchanged. Actual web Book lock precedes Customer insertion (two NOWAIT55P03/countzero); exact live backend pg_blocking_pids proves offlinewait, both canonical commands converge to one normalizedcontact Customer/two Orders originalauthors/hash and exact retryinvariance. ExistingBook/unpaid only. All12QAcleanupgroups/zero and participant clients/pools/main disconnect complete. Does not certify absentBook/paid/sharedassistantcaller/fullcorrection/native; M06.4 remainsopen."
+    },
+    {
+      "kind": "run",
+      "path": ".scratch/mobile-sales-quality/debug/correction-standalone-main.ts",
+      "executed": true,
+      "result": "Currentbc20d7ac completed full frozen actual Development correction/replay scenario162.589s and drain189.829s; actualchildexit0, all12exactQAcleanupgroups/zeroowned/disconnectpending0pool0, lifecyclefailure/unhandled/scenario/metadata/elapsed all0, no latefallback. All24sourcehashes unchanged; fullcallback/helpers/61originalorderedexpect AST-identical (static count is not Bun assertion count). Reviewed standalone lifecycle has12isolated controls proving failures stayexit1 throughdisposal. Closes M06.4 only3/7=42.9%, no native/HTTP/alternate-caller acceptance. Earlier742c fullscenario completed but cleanupfailed across observedclamshellsleep gap; remainsfailed, exactrecoveryzero/disconnect verified. Newrunused temporarycommand-scopedidle-sleepassertion with lidopen, no permanentsettings/merchanttimeoutchange."
+    },
+    {
+      "kind": "test",
+      "path": "apps/api/src/assistant/mobile-sale-description-readiness.test.ts",
+      "executed": true,
+      "result": "New actual-parser/signer/DTO/adapters wrapper and mobile-simple-sale-lock-order wrapper pass2/2. Missing/blank new-write readiness, locked/direct refusal before effects, optional/history completed receipts and actual scoped Book-before-Customer coordination covered by inert ports. First broad test invocation omitted required inert URL and was invalid; corrected existing suites run isolated with .invalid URL: shared11/71, adapter12/20, strict composition5/35 pass. Connected caller remains unexecuted; chat sale/order-word routing regression under independent review."
+    },
+    {
+      "kind": "test",
+      "path": "apps/api/src/assistant/mobile-sale-description-chat.test.ts",
+      "executed": true,
+      "result": "Actual chat->edit/draft->fresh-session/tenant derivation over typed inert DB ports17/375 pass. Independent original sale/order-word red8pass/2fail and root permanent numeric-goods red13pass/2fail retained; final grammar preserves received500 for Sale/Order2bags descriptions and supports explicit amount/account/total commands, confirmation controls and new sale. No module/function mocks, provider or DB actions in this test. Connected caller5a7e779a is running separately and unaccepted. Whole APIproject tsc exit2 has11 diagnostics in five unrelated tests, zero changedM06 diagnostics; scoped strict/noUnchecked checks pass."
+    },
+    {
+      "kind": "test",
+      "path": "apps/api/src/assistant/fixtures/mobile-sale-description-chat.fixture.ts",
+      "executed": true,
+      "result": "Final sourcee1f5e979/fixturea6edf25a actual22/505 passes root+independent; retained originalgoods probe19/413 and isolatedwrapper1/1 independentlypass. Five new partial-command goods descriptions firstfailed17pass/5fail; completeamount commands+qualifieddestinations repair preserves exactdescription/payment500. Current scoped strict/noUnchecked9rootfiles+transitive source exit0, no diagnostics. WholeAPIproject remains exit2/11diagnostics elsewhere; no blanketgreenclaim. Connected5a7e779a FAILED0pass1fail5assertions128.14s afterchatmissingdescription amongfourawaits,12cleanupgroupszero/awaiteddisconnect/exit1,20oldhashesunchanged. No transportrootcause or connectedacceptance; fullscenarioinstrumentation preparednext."
+    },
+    {
+      "kind": "test",
+      "path": "apps/api/src/assistant/mobile-sale-edit-normalization.test.ts",
+      "executed": true,
+      "result": "Actual router attached public input parser plus actual edit/decide/chat over inert ports4/120, isolated wrapper1/5 pass. Raw padded typed-helper bypass correctly conflicts before execution; public parsed form trim and chat parse reach unchanged approval claim. Strict/noUnchecked0owned/Biome pass; no DB/HTTPmiddleware/native claim."
+    },
+    {
+      "kind": "run",
+      "path": ".scratch/mobile-sales-quality/debug/simple-sale-caller-diagnostic-main.ts",
+      "executed": true,
+      "result": "Corrected V2 Developmentdf02cb55 full frozen caller scenario completed; actual host commandexit0/137607ms. Full500 and part900/300 selectedBANK1191/newCustomers, genericQuick200+optionalCost50, real currentSession/Tenant/legal authority, description/readiness, balancedCOLLECTION800/defaultaccounts0, unchangedstock/billedledger and genuine receipt retry/legacy invariance. All12exactQAcleanupgroups/zeroowned/awaiteddisconnect; finalpending/pool/lifecyclefailure/unhandled/metadata/elapsed0, settled/closedtrue. Original82orderedexpects/fullAST retained; only actual publicschema projection added around padded partial form input. Independent47freeze/lifetime/actualexit review accepted; no Bun assertioncount/HTTP/browser/native/finalmilestone claim."
+    },
+    {
+      "kind": "test",
+      "path": "apps/mobile/src/components/mobile/assistant/sale-description-editors.test.ts",
+      "executed": true,
+      "result": "Four Claude mobile/dashboard description editor sources552/556 independently accepted97a7c8ff/b53d727d/dd1d76f3/f6262dfd. Actual routed fixtures8/33+8/40, independent generic201/optional-cost-only probes10/38+10/47 pass; inert leaf/query/account-choice/sibling customer boundaries explicit. Repaired wrappers7905b440/fb3537f9 exact8JUnit names/0fail/0skip/minenv/25s+30s pass1/14 each, root externalproductionenv controls1/14 each. Explicit xmldom0.8.15 app devdeps and only matching generatedworkspace lock lines preserve all prior dirty/resolutionbytes. Mobile compilerlogs93normalizedbaseline errors identical/0introduced; dashboard ownerlog0. Completes M06.3 source integration only; no native/browser/HTTP/retainedcallback/finalmilestone claim."
+    },
+    {
+      "kind": "review",
+      "path": "apps/mobile/src/components/mobile/assistant/sale-description-editors.test.ts",
+      "executed": true,
+      "result": "Current M06 wrapper refreeze verified independently: mobile520669bc/dashboard4cefb54a are byte-identical to accepted7905b440/fb3537f9 except diagnostic result.signal\u2192result.signalCode. Exact8-case names,0fail/skip,minimalenv,25s/30s and cleanup remain; root2/28 wrapper pass. Explicit-file strict/noUnchecked/noImplicitAny dashboard audit includes all4roots and exits0; mobile includes13roots but first audit exits2 with25graphdiagnostics,11selected (7oldSaleChoice+3oldmodeltest+rootquerykind nowfixed26c2d050). Final mobile rerun awaits Claude narrow typing cleanup; no wholeapp/testtype-green claim. M06.3 source acceptance remains; final32/63 and native/web gates unchanged."
+    },
+    {
+      "kind": "review",
+      "path": "apps/mobile/src/components/mobile/stock-intake/stock-intake-screen.tsx",
+      "executed": true,
+      "result": "Source accepted576after independent exactbaseline review: model6b23adb7/hook0a1677e5/screen15a11f4d/sharedsheet005cdc83 reads actual finalresponse.id only, recorded-only fullReference/selectable=true; malformed/missingid remainsrecorded with nonselectabletruthfulfallback. Countfinalnotdraft, existing scope/privacy/stableattempt/history guards unchanged; no rawidentifiers in activity. Actualhook57/390+wrapper1/6, real screen/model/activity affected18/99 (referencechild5/21), Biome11pass. Explicit14root strongtypes0selected/14unchangedforeign,1697sourcesstable; dashboardprior4rootexit0 retained. Editorb3d63c29 typeonlyOmitchildren; priorassertionsandexactwrappergatesretained. M02.1 restored3/5=60%, overall33/63=52.4%,final0/12; no nativewrap/selection, newDB/HTTP/browser or M10.3 acceptance. Existing canonical API alreadyreturnsid; no assistantcommand/permission/schema addition."
+    },
+    {
+      "kind": "review",
+      "path": ".scratch/mobile-sales-quality/runs/2026-10-17-m10-final-verification/README.md",
+      "executed": true,
+      "result": "M10.3 source/preview acceptance: selected stock01v3 7dc58855 matches reviewed cbd073a3 HTML;6 historical revisions retained. Already-running current384 geometry cases independently checked, zero geometry/console flags;320 semantics and actual22/22 CTA checks pass. Existing keyboard192 proof retained. Mixed-source reference13589 excluded; generic geometry runner is not exit-gated. Overall34/63 checklist54.0%, M10 3/4, final0/12. No new matrix, assistant authority, API, schema or rollout; Android/iOS/full-web/eligible hosted evidence owner-deferred."
+    }
+  ]
+}

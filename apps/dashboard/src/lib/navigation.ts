@@ -121,11 +121,11 @@ function isPharmacyBusiness(context: DashboardNavContext) {
 
 const DASHBOARD_NAV: DashboardNavDefinition[] = [
   {
-    description: "Add products and continue business setup",
+    description: "Ask questions and continue saved business chats",
     href: "/assistant",
     icon: "assistant",
     label: "Assistant",
-    canAccess: (role) => role === "OWNER" || role === "ADMIN",
+    canAccess: canUseRetailOps,
   },
   {
     description: "Daily business overview",
@@ -441,6 +441,7 @@ function scopedPageAllowed(
 ) {
   if (context.staffAccessMode !== "SCOPED" || (role && canManageTenant(role)))
     return true
+  if (isGeneralAssistantPath(href)) return true
   // Order pages; the API still limits which orders scoped staff can open.
   if (href.startsWith("/sales/orders/")) return true
   return [
@@ -454,6 +455,10 @@ function scopedPageAllowed(
     "/inventory/transfers",
     "/catalog",
   ].includes(href)
+}
+
+function isGeneralAssistantPath(pathname: string) {
+  return pathname === "/assistant" || /^\/assistant\/c\/[^/]+$/.test(pathname)
 }
 
 function hasPlanFeature(
@@ -532,6 +537,8 @@ export function canAccessDashboardPath(
 ) {
   const normalizedRole = getNormalizedRole(role)
   if (!scopedPageAllowed(pathname, normalizedRole, context)) return false
+  if (pathname.startsWith("/assistant/") && !isGeneralAssistantPath(pathname))
+    return normalizedRole !== null && canManageTenant(normalizedRole)
   const matchingPaths = flattenDefinitions(DASHBOARD_NAV).filter((item) =>
     matchesPath(pathname, item.href, item.end),
   )

@@ -8,7 +8,10 @@ import {
   generalActionSchema,
 } from "@ewatrade/assistant/general/contracts"
 import { isSimpleProductCreate } from "@ewatrade/assistant/general/product-create"
-import { catalogFreeLineDisplay } from "@ewatrade/utils/catalog-free-lines"
+import {
+  CATALOG_FREE_LINE_LABELS,
+  catalogFreeLineDescriptionError,
+} from "@ewatrade/utils/catalog-free-lines"
 import {
   getCountry,
   toInternationalPhone,
@@ -20,15 +23,30 @@ import { ActionButton } from "../action-button"
 import { CountrySelect } from "../country-select"
 import { FormField } from "../form-field"
 import { QaQuickFillButton } from "../qa-quick-fill-button"
+import { SearchFooterSpacer } from "../search-footer-scope"
+import { GeneralCashCountEditor } from "./general-cash-count-editor"
 import { GeneralChangeEditor } from "./general-change-editor"
+import { GeneralMoneyOperationEditor } from "./general-money-operation-editor"
+import { GeneralOrderOperationEditor } from "./general-order-operation-editor"
 import { GeneralProductCreateRows } from "./general-product-create-rows"
 import {
   GeneralProductPictureField,
   useProductPicture,
 } from "./general-product-picture"
+import { GeneralQuoteDecisionEditor } from "./general-quote-decision-editor"
+import { GeneralServiceIntakeEditor } from "./general-service-intake-editor"
+import { GeneralServiceMessageEditor } from "./general-service-message-editor"
+import { GeneralServiceWorkEditor } from "./general-service-work-editor"
 import { GeneralSimpleSaleEditor } from "./general-simple-sale-editor"
+import { GeneralStaffAccessEditor } from "./general-staff-access-editor"
+import { GeneralStaffInvitationEditor } from "./general-staff-invitation-editor"
+import { GeneralStaffStatusEditor } from "./general-staff-status-editor"
+import { GeneralStockEditor } from "./general-stock-editor"
 import { isNativeChange } from "./native-change-values"
+import { isNativeMoneyAction } from "./native-money-values"
+import { isNativeOrderAction } from "./native-order-values"
 import { nativeEditorActions } from "./native-parity"
+import { isNativeStockAction } from "./native-stock-values"
 export function GeneralProposalEditor(props: {
   proposal: GeneralProposal
   currencyCode: string
@@ -36,11 +54,116 @@ export function GeneralProposalEditor(props: {
   onSave: (payload: GeneralAction) => void
 }) {
   const initial = props.proposal.payload
+  if (initial.action === "service_message_share")
+    return (
+      <GeneralServiceMessageEditor
+        key={`${props.proposal.id}:${props.proposal.revision}`}
+        initial={initial}
+        disabled={props.disabled}
+        onSave={props.onSave}
+      />
+    )
+  if (initial.action === "cash_count_record")
+    return (
+      <GeneralCashCountEditor
+        initial={initial}
+        disabled={props.disabled}
+        onSave={props.onSave}
+      />
+    )
+  if (initial.action === "service_intake")
+    return (
+      <GeneralServiceIntakeEditor
+        initial={initial}
+        disabled={props.disabled}
+        onSave={props.onSave}
+      />
+    )
+  if (
+    initial.action === "commerce_quote_approve" ||
+    initial.action === "commerce_quote_reject"
+  )
+    return (
+      <GeneralQuoteDecisionEditor
+        initial={initial}
+        disabled={props.disabled}
+        onSave={props.onSave}
+      />
+    )
+  if (
+    initial.action === "service_job_assign" ||
+    initial.action === "service_job_reschedule" ||
+    initial.action === "service_job_line_transition" ||
+    initial.action === "service_work_note" ||
+    initial.action === "service_work_exception" ||
+    initial.action === "service_work_rework" ||
+    initial.action === "service_work_handoff"
+  )
+    return (
+      <GeneralServiceWorkEditor
+        initial={initial}
+        disabled={props.disabled}
+        onSave={props.onSave}
+      />
+    )
+  if (initial.action === "staff_status")
+    return (
+      <GeneralStaffStatusEditor
+        initial={initial}
+        disabled={props.disabled}
+        onSave={props.onSave}
+      />
+    )
+  if (initial.action === "staff_invitation")
+    return (
+      <GeneralStaffInvitationEditor
+        initial={initial}
+        disabled={props.disabled}
+        onSave={props.onSave}
+      />
+    )
+  if (initial.action === "staff_access")
+    return (
+      <GeneralStaffAccessEditor
+        initial={initial}
+        disabled={props.disabled}
+        onSave={props.onSave}
+      />
+    )
+  if (isNativeMoneyAction(initial))
+    return (
+      <GeneralMoneyOperationEditor
+        initial={initial}
+        currencyCode={props.currencyCode}
+        disabled={props.disabled}
+        onSave={props.onSave}
+      />
+    )
+  if (isNativeOrderAction(initial))
+    return (
+      <GeneralOrderOperationEditor
+        initial={initial}
+        review={props.proposal.review}
+        currencyCode={props.currencyCode}
+        disabled={props.disabled}
+        onSave={props.onSave}
+      />
+    )
   if (initial.action === "sale_record")
     return (
       <GeneralSimpleSaleEditor
         key={`${props.proposal.id}:${props.proposal.revision}`}
         initial={initial}
+        disabled={props.disabled}
+        onSave={props.onSave}
+      />
+    )
+  if (isNativeStockAction(initial))
+    return (
+      <GeneralStockEditor
+        key={`${props.proposal.id}:${props.proposal.revision}`}
+        initial={initial}
+        currencyCode={props.currencyCode}
         disabled={props.disabled}
         onSave={props.onSave}
       />
@@ -88,6 +211,9 @@ function GeneralRecordEditor({
     country: string
   } | null>(null)
   const [error, setError] = useState<string | null>(null)
+  // Per custom line: a Quick sale must say what was sold; Additional cost
+  // descriptions stay optional. Older drafts still open for repair.
+  const [lineErrors, setLineErrors] = useState<Record<number, string>>({})
   const patch = (value: Record<string, unknown>) =>
     setPayload((current) => ({ ...current, ...value }) as GeneralAction)
   const picture = useProductPicture(initial, disabled)
@@ -103,6 +229,22 @@ function GeneralRecordEditor({
     ) {
       setError("Enter a valid amount.")
       return
+    }
+    if (payload.action === "order_create") {
+      const problems: Record<number, string> = {}
+      payload.lines.forEach((line, index) => {
+        if (!("custom" in line)) return
+        const problem = catalogFreeLineDescriptionError({
+          kind: line.custom,
+          description: line.description?.trim() ?? "",
+        })
+        if (problem) problems[index] = problem
+      })
+      setLineErrors(problems)
+      if (Object.keys(problems).length) {
+        setError(null)
+        return
+      }
     }
     // A new product photo uploads first; a failed upload shows its message.
     const media =
@@ -123,7 +265,18 @@ function GeneralRecordEditor({
                   ? toInternationalPhone(getCountry(country).dialCode, phone)
                   : undefined,
               }
-            : {}),
+            : payload.action === "order_create"
+              ? {
+                  lines: payload.lines.map((line) =>
+                    "custom" in line
+                      ? {
+                          ...line,
+                          description: line.description?.trim() || undefined,
+                        }
+                      : line,
+                  ),
+                }
+              : {}),
     }
     const parsed = generalActionSchema.safeParse(candidate)
     if (!parsed.success) {
@@ -305,16 +458,46 @@ function GeneralRecordEditor({
           <>
             <Text className="text-sm text-muted-foreground">
               Use the sale form to change products or customer. Here you can
-              adjust quantities and notes.
+              adjust quantities, notes and what each typed-price line was for.
             </Text>
             {payload.lines.map((line, index) =>
               "custom" in line ? (
-                <Text
+                <FormField
                   key={`custom:${index}`}
-                  className="text-sm text-foreground"
-                >
-                  {`${catalogFreeLineDisplay({ description: line.description, kind: line.custom }).title} · ${minorToMajorInput(line.amountMinor)}`}
-                </Text>
+                  label={
+                    line.custom === "quick_sale"
+                      ? `What was sold? · line ${index + 1}`
+                      : `${CATALOG_FREE_LINE_LABELS[line.custom]} description · line ${index + 1}`
+                  }
+                  helper={`${line.custom === "quick_sale" ? "Required" : "Optional"} · ${CATALOG_FREE_LINE_LABELS[line.custom]} ${minorToMajorInput(line.amountMinor)}`}
+                  error={lineErrors[index]}
+                  value={line.description ?? ""}
+                  editable={!disabled}
+                  maxLength={240}
+                  onChangeText={(description) => {
+                    patch({
+                      lines: payload.lines.map((current, i) =>
+                        i === index
+                          ? {
+                              ...current,
+                              description: description || undefined,
+                            }
+                          : current,
+                      ),
+                    })
+                    if (lineErrors[index])
+                      setLineErrors((current) => {
+                        const next = { ...current }
+                        const problem = catalogFreeLineDescriptionError({
+                          kind: line.custom,
+                          description: description.trim(),
+                        })
+                        if (problem) next[index] = problem
+                        else delete next[index]
+                        return next
+                      })
+                  }}
+                />
               ) : (
                 <FormField
                   key={`${line.offeringId}:${index}`}
@@ -357,6 +540,7 @@ function GeneralRecordEditor({
         >
           Save draft
         </ActionButton>
+        <SearchFooterSpacer />
       </BottomSheetKeyboardAwareScrollView>
     </BottomSheetInputProvider>
   )

@@ -1,13 +1,16 @@
+import { assistantAttachmentKindAllowedForPurpose } from "@ewatrade/assistant/setup/attachments"
 import { Prisma, type PrismaClient } from "../../generated/prisma/client"
 import {
   type AssistantScope,
   assistantBudgetScopeKey,
   reserveAssistantMediaBudgetInTransaction,
 } from "./assistant"
+import { assertAssistantWhatsAppMediaProcessingSourceActive } from "./assistant-whatsapp/media-source-lifecycle"
 import {
   runInOwnSerializableTransaction,
   runInOwnTransaction,
 } from "./own-transaction"
+import { getActiveTenantForUser } from "./tenants"
 import type { DbClient } from "./types"
 
 const gatewayKey = "assistant.voice.gateway.v1"
@@ -63,40 +66,103 @@ export function readVoiceGateway(db: DbClient) {
   })
 }
 
-export async function assertVoiceAttemptActive(
+export async function assertAssistantAttachmentProcessingActive(
   db: DbClient,
   attachmentId: string,
   generation: number,
+  options: { liveOnly?: boolean } = {},
 ) {
+  const now = new Date()
   const row = await db.assistantAttachment.findFirst({
     where: {
       id: attachmentId,
       status: "PROCESSING",
       processingAttempts: generation,
-      leaseUntil: { gt: new Date() },
-      retentionUntil: { gt: new Date() },
+      leaseUntil: { gt: now },
+      retentionUntil: { gt: now },
       conversation: {
         status: "ACTIVE",
+        owner: {
+          accountPrivacyRequests: {
+            none: { status: { in: ["PROCESSING", "COMPLETED"] } },
+          },
+        },
         tenant: {
           isActive: true,
-          dataClassification: "LIVE",
+          ...(options.liveOnly ? { dataClassification: "LIVE" as const } : {}),
           qaPurgeStartedAt: null,
         },
       },
     },
-    select: { id: true, tenantId: true, actorUserId: true },
+    select: {
+      id: true,
+      kind: true,
+      conversationId: true,
+      tenantId: true,
+      storeId: true,
+      actorUserId: true,
+      clientRequestId: true,
+      conversation: {
+        select: {
+          ownerUserId: true,
+          tenantId: true,
+          storeId: true,
+          purpose: true,
+          tenant: { select: { slug: true } },
+        },
+      },
+    },
   })
   if (!row) throw new Error("VOICE_CANCELLED")
-  const membership = await db.membership.findFirst({
-    where: {
-      tenantId: row.tenantId,
-      userId: row.actorUserId,
-      status: "ACTIVE",
-      role: { in: ["OWNER", "ADMIN"] },
-    },
-    select: { id: true },
+  if (
+    row.conversation.ownerUserId !== row.actorUserId ||
+    row.conversation.tenantId !== row.tenantId ||
+    row.conversation.storeId !== row.storeId ||
+    !["GENERAL", "SETUP", "PRODUCT_CREATE"].includes(
+      row.conversation.purpose,
+    ) ||
+    !assistantAttachmentKindAllowedForPurpose(
+      row.kind,
+      row.conversation.purpose,
+    )
+  )
+    throw new Error("VOICE_ACCESS_REVOKED")
+  // Same canonical active membership and Store-assignment resolution as the app.
+  const context = await getActiveTenantForUser(db, {
+    userId: row.actorUserId,
+    tenantSlug: row.conversation.tenant.slug,
+    storeId: row.storeId,
   })
-  if (!membership) throw new Error("VOICE_ACCESS_REVOKED")
+  const roles =
+    row.conversation.purpose === "GENERAL"
+      ? ["OWNER", "ADMIN", "MANAGER", "CASHIER", "OPERATOR"]
+      : ["OWNER", "ADMIN"]
+  if (
+    !context ||
+    context.tenant.id !== row.tenantId ||
+    (options.liveOnly && context.tenant.dataClassification !== "LIVE") ||
+    context.tenant.qaPurgeStartedAt ||
+    context.activeStore?.id !== row.storeId ||
+    context.activeStore.status !== "ACTIVE" ||
+    context.staffAccess?.status !== "ACTIVE" ||
+    !roles.includes(context.staffAccess.businessRole) ||
+    !roles.includes(context.membership.role)
+  )
+    throw new Error("VOICE_ACCESS_REVOKED")
+  await assertAssistantWhatsAppMediaProcessingSourceActive(db, row, now)
+}
+
+export function assertVoiceAttemptActive(
+  db: DbClient,
+  attachmentId: string,
+  generation: number,
+) {
+  return assertAssistantAttachmentProcessingActive(
+    db,
+    attachmentId,
+    generation,
+    { liveOnly: true },
+  )
 }
 
 /** User allowance charged once for a recording, even across provider fallback/retry. */
@@ -107,10 +173,11 @@ export function reserveVoiceAudio(
   generation: number,
 ) {
   return runInOwnTransaction(db, async (tx) => {
+    const now = new Date()
     const [row] = await tx.$queryRaw<
       Array<{ tenantId: string; audioBudgetReserved: boolean }>
     >(
-      Prisma.sql`SELECT "tenantId", "audioBudgetReserved" FROM "AssistantAttachment" WHERE id = ${attachmentId} AND status = 'PROCESSING' AND "processingAttempts" = ${generation} FOR UPDATE`,
+      Prisma.sql`SELECT "tenantId", "audioBudgetReserved" FROM "AssistantAttachment" WHERE id = ${attachmentId} AND status = 'PROCESSING' AND "processingAttempts" = ${generation} AND "retentionUntil" > ${now} AND "leaseUntil" > ${now} FOR UPDATE`,
     )
     if (!row) return false
     if (row.audioBudgetReserved) return true
@@ -132,8 +199,8 @@ export function reserveVoiceAudio(
   })
 }
 
-export async function recordVoiceAttempt(
-  db: DbClient,
+export async function recordVoiceAttemptInTransaction(
+  db: Prisma.TransactionClient,
   input: {
     attachmentId: string
     generation: number
@@ -152,14 +219,45 @@ export async function recordVoiceAttempt(
   },
 ) {
   const { attachmentId, generation, ordinal, ...data } = input
-  // Do not recreate content-dependent records after the user deleted the attachment.
-  if (
-    !(await db.assistantAttachment.findUnique({
-      where: { id: attachmentId },
-      select: { id: true },
-    }))
-  )
+  const attachment = await db.assistantAttachment.findUnique({
+    where: { id: attachmentId },
+    select: { id: true, actorUserId: true, processingAttempts: true },
+  })
+  if (!attachment) {
+    if (input.outcome === "started") throw new Error("VOICE_CANCELLED")
     return
+  }
+  // Provider admission remains fenced after a privacy feature switch is turned
+  // off. This is the canonical request SHARE lock, without its write-flag bypass.
+  const privacy = await db.$queryRaw<{ status: string }[]>(
+    Prisma.sql`SELECT "status" FROM "AccountPrivacyRequest" WHERE "requestKey"=${`account-deletion:${attachment.actorUserId}`} FOR SHARE`,
+  )
+  const allowed = !privacy.some((row) =>
+    ["PROCESSING", "COMPLETED"].includes(row.status),
+  )
+  const existing = await db.assistantTranscriptionAttempt.findUnique({
+    where: {
+      attachmentId_generation_ordinal: { attachmentId, generation, ordinal },
+    },
+    select: { provider: true },
+  })
+  if (existing && existing.provider !== input.provider)
+    throw new Error("VOICE_ATTEMPT_CHANGED")
+  if (
+    input.outcome === "started" &&
+    (!allowed || attachment.processingAttempts !== generation)
+  )
+    throw new Error("VOICE_CANCELLED")
+  if (!allowed) {
+    // Terminal provider outcomes may reconcile an admitted attempt, but cannot
+    // create a new attempt after the account privacy fence or attachment erasure.
+    if (existing)
+      await db.assistantTranscriptionAttempt.updateMany({
+        where: { attachmentId, generation, ordinal, provider: input.provider },
+        data: { ...data, completedAt: new Date() },
+      })
+    return
+  }
   await db.assistantTranscriptionAttempt.upsert({
     where: {
       attachmentId_generation_ordinal: { attachmentId, generation, ordinal },
@@ -176,6 +274,15 @@ export async function recordVoiceAttempt(
       completedAt: input.outcome === "started" ? null : new Date(),
     },
   })
+}
+
+export function recordVoiceAttempt(
+  db: PrismaClient,
+  input: Parameters<typeof recordVoiceAttemptInTransaction>[1],
+) {
+  return runInOwnTransaction(db, (tx) =>
+    recordVoiceAttemptInTransaction(tx, input),
+  )
 }
 
 export async function voiceCircuitOpen(

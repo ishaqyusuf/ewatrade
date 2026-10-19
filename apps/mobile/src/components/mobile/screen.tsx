@@ -12,6 +12,7 @@ import {
 } from "react-native"
 import { KeyboardAwareScrollView } from "react-native-keyboard-controller"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
+import { SearchFooterScope, SearchFooterSpacer } from "./search-footer-scope"
 
 type MobileScreenProps = {
   backgroundColor?: string
@@ -62,40 +63,43 @@ export function MobileScreen({
           flex: 1,
         }}
       >
-        {scroll ? (
-          <KeyboardAwareScrollView
-            {...edgeFeedback}
-            scrollEnabled={scrollEnabled}
-            className="flex-1"
-            bottomOffset={keyboardBottomOffset}
-            contentContainerStyle={[
-              { flexGrow: 1, paddingBottom: bottomPadding },
-              contentContainerStyle,
-            ]}
-            disableScrollOnKeyboardHide
-            enabled={keyboardAutoScrollEnabled}
-            keyboardDismissMode="interactive"
-            keyboardShouldPersistTaps="handled"
-            onScroll={onScroll}
-            refreshControl={refreshControl}
-            scrollEventThrottle={onScroll ? 16 : undefined}
-          >
-            <View className={cn("min-h-full px-6 py-6", contentClassName)}>
-              {children}
-            </View>
-          </KeyboardAwareScrollView>
-        ) : (
-          <View className={cn("flex-1 px-6 py-6", contentClassName)}>
-            <View
-              style={[
-                { flex: 1, paddingBottom: bottomPadding },
+        <SearchFooterScope>
+          {scroll ? (
+            <KeyboardAwareScrollView
+              {...edgeFeedback}
+              scrollEnabled={scrollEnabled}
+              className="flex-1"
+              bottomOffset={keyboardBottomOffset}
+              contentContainerStyle={[
+                { flexGrow: 1, paddingBottom: bottomPadding },
                 contentContainerStyle,
               ]}
+              disableScrollOnKeyboardHide
+              enabled={keyboardAutoScrollEnabled}
+              keyboardDismissMode="interactive"
+              keyboardShouldPersistTaps="handled"
+              onScroll={onScroll}
+              refreshControl={refreshControl}
+              scrollEventThrottle={onScroll ? 16 : undefined}
             >
-              {children}
+              <View className={cn("min-h-full px-6 py-6", contentClassName)}>
+                {children}
+                <SearchFooterSpacer />
+              </View>
+            </KeyboardAwareScrollView>
+          ) : (
+            <View className={cn("flex-1 px-6 py-6", contentClassName)}>
+              <View
+                style={[
+                  { flex: 1, paddingBottom: bottomPadding },
+                  contentContainerStyle,
+                ]}
+              >
+                {children}
+              </View>
             </View>
-          </View>
-        )}
+          )}
+        </SearchFooterScope>
       </View>
     </View>
   )

@@ -58,6 +58,48 @@ export function bookingTokenDigest(value: string) {
   return opaqueCapabilityTokenDigest(value)
 }
 
+/** Preserve persisted rule identity and each distinct local-time interval. */
+export function projectServiceCommerceBookingAvailabilityRules(
+  rows: ReadonlyArray<{
+    clientRuleId: string
+    dayOfWeek: number
+    startMinute: number
+    endMinute: number
+  }>,
+) {
+  const groups = new Map<
+    string,
+    {
+      id: string
+      daysOfWeek: number[]
+      startLocalTime: string
+      endLocalTime: string
+    }
+  >()
+  const localTime = (minute: number) =>
+    `${String(Math.floor(minute / 60)).padStart(2, "0")}:${String(minute % 60).padStart(2, "0")}`
+  for (const row of rows) {
+    const key = JSON.stringify([
+      row.clientRuleId,
+      row.startMinute,
+      row.endMinute,
+    ])
+    const current = groups.get(key) ?? {
+      id: row.clientRuleId,
+      daysOfWeek: [],
+      startLocalTime: localTime(row.startMinute),
+      endLocalTime: localTime(row.endMinute),
+    }
+    if (!current.daysOfWeek.includes(row.dayOfWeek))
+      current.daysOfWeek.push(row.dayOfWeek)
+    groups.set(key, current)
+  }
+  return [...groups.values()].map((rule) => ({
+    ...rule,
+    daysOfWeek: rule.daysOfWeek.sort((a, b) => a - b),
+  }))
+}
+
 export function bookingSourceType(source: ServiceCommerceSourceRef) {
   if (source.kind !== "service") {
     throw new ServiceCommerceBookingError(
@@ -247,6 +289,13 @@ export async function assertBookingSource(
       tenantId: input.tenantId,
     },
   })
+  assertEligibleBookingSource(request)
+  return request
+}
+
+function assertEligibleBookingSource<
+  T extends { status: ServiceRequestStatus },
+>(request: T | null): asserts request is T {
   if (
     !request ||
     request.status === ServiceRequestStatus.DECLINED ||
@@ -257,6 +306,33 @@ export async function assertBookingSource(
       "Eligible booking source was not found.",
     )
   }
+}
+
+/** The same new-booking source eligibility without loading customer contacts. */
+export async function readBookingSourceIdentity(
+  tx: BookingTransaction,
+  input: {
+    source: ServiceCommerceSourceRef
+    storeId: string
+    tenantId: string
+  },
+) {
+  bookingSourceType(input.source)
+  const request = await tx.serviceRequest.findFirst({
+    select: {
+      id: true,
+      tenantId: true,
+      storeId: true,
+      status: true,
+      revision: true,
+    },
+    where: {
+      id: input.source.id,
+      storeId: input.storeId,
+      tenantId: input.tenantId,
+    },
+  })
+  assertEligibleBookingSource(request)
   return request
 }
 

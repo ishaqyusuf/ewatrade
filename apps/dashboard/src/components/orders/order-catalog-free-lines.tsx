@@ -6,9 +6,11 @@ import {
   CATALOG_FREE_LINE_LABELS,
   type CatalogFreeLineDraft,
   type CatalogFreeLineKind,
+  catalogFreeLineDescriptionError,
 } from "@ewatrade/utils/catalog-free-lines"
 import { Add01Icon, Cancel01Icon, Edit02Icon } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
+import { useEffect, useRef } from "react"
 
 /** Skip-catalog lines: a typed price (Quick sale) or an Additional cost. */
 export function OrderCatalogFreeLines({
@@ -16,12 +18,31 @@ export function OrderCatalogFreeLines({
   currencyCode,
   disabled,
   onChange,
+  validationAttempt = 0,
 }: {
   lines: CatalogFreeLineDraft[]
   currencyCode: string
   disabled: boolean
   onChange: (lines: CatalogFreeLineDraft[]) => void
+  /** Increments on each blocked submit: show line errors, focus the first. */
+  validationAttempt?: number
 }) {
+  const descriptions = useRef(new Map<string, HTMLInputElement>())
+  // Errors appear after a submit attempt and follow typing from then on.
+  const descriptionError = (line: CatalogFreeLineDraft) =>
+    validationAttempt ? catalogFreeLineDescriptionError(line) : null
+  const latest = useRef(lines)
+  latest.current = lines
+  useEffect(() => {
+    if (!validationAttempt) return
+    const first = latest.current.find((line) =>
+      catalogFreeLineDescriptionError(line),
+    )
+    const input = first && descriptions.current.get(first.id)
+    if (!input) return
+    input.focus()
+    input.scrollIntoView?.({ block: "center" })
+  }, [validationAttempt])
   function add(kind: CatalogFreeLineKind) {
     onChange([
       ...lines,
@@ -76,9 +97,22 @@ export function OrderCatalogFreeLines({
                   }
                 />
               </ControlField>
-              <ControlField label="Description (optional)">
+              <ControlField
+                label={
+                  line.kind === "quick_sale"
+                    ? "What was sold? (required)"
+                    : "Description (optional)"
+                }
+                error={descriptionError(line) ?? undefined}
+              >
                 <Input
-                  maxLength={CATALOG_FREE_DESCRIPTION_MAX_LENGTH}
+                  ref={(input) => {
+                    if (input) descriptions.current.set(line.id, input)
+                    else descriptions.current.delete(line.id)
+                  }}
+                  // Room for padding; the canonical check trims to 1–200.
+                  maxLength={CATALOG_FREE_DESCRIPTION_MAX_LENGTH + 40}
+                  required={line.kind === "quick_sale"}
                   placeholder={
                     line.kind === "quick_sale"
                       ? "What was sold?"

@@ -5,6 +5,17 @@ import {
 import { normalizeStockCategoryName } from "@ewatrade/utils/inventory-categories"
 import { z } from "zod"
 
+export const inventoryBalanceSourceSchema = z
+  .object({
+    storeId: z.string().trim().min(1).max(128),
+    balanceSourceId: z.string().trim().min(1).max(128),
+  })
+  .strict()
+
+export const inventoryCustodyAssigneesSchema = z
+  .object({ storeId: z.string().trim().min(1).max(128) })
+  .strict()
+
 const exactTransactionQuantitySchema = z
   .string()
   .trim()

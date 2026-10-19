@@ -8,6 +8,15 @@ const oldProject = process.env.NEXT_PUBLIC_LOGLY_PROJECT
 const oldMobileKey = process.env.LOGLY_MOBILE_PROJECT_KEY
 const oldMobileProject = process.env.LOGLY_MOBILE_PROJECT
 const oldDomain = process.env.PLATFORM_DOMAIN
+const mobileEnvironmentKeys = [
+  "NODE_ENV",
+  "APP_ENV",
+  "VERCEL_ENV",
+  "LOGLY_MOBILE_ENABLED",
+] as const
+const oldMobileEnvironment = Object.fromEntries(
+  mobileEnvironmentKeys.map((key) => [key, process.env[key]]),
+)
 
 afterEach(() => {
   globalThis.fetch = originalFetch
@@ -19,6 +28,7 @@ afterEach(() => {
     LOGLY_PROJECT_KEY: oldKey,
     NEXT_PUBLIC_LOGLY_PROJECT: oldProject,
     PLATFORM_DOMAIN: oldDomain,
+    ...oldMobileEnvironment,
   })) {
     if (value === undefined) delete process.env[key]
     else process.env[key] = value
@@ -29,6 +39,14 @@ function configure() {
   process.env.LOGLY_PROJECT_KEY = "test-only-key"
   process.env.NEXT_PUBLIC_LOGLY_PROJECT = "ewatrade-web"
   process.env.PLATFORM_DOMAIN = "ewatrade.com"
+}
+function configureMobile() {
+  configure()
+  process.env.NODE_ENV = "production"
+  process.env.APP_ENV = "production"
+  process.env.VERCEL = "1"
+  process.env.VERCEL_ENV = "production"
+  process.env.LOGLY_MOBILE_ENABLED = "true"
 }
 function request(origin = "https://tenant.ewatrade.com") {
   return new Request("https://tenant.ewatrade.com/api/analytics", {
@@ -79,7 +97,7 @@ test("forwards only safe project-scoped events and propagates failures", async (
 })
 
 test("mobile proxy fixes project and key independently from web", async () => {
-  configure()
+  configureMobile()
   process.env.LOGLY_MOBILE_PROJECT_KEY = "mobile-test-key"
   process.env.LOGLY_MOBILE_PROJECT = "ewatrade-mobile"
   const mobile = createEventsRoute("mobile")
@@ -121,7 +139,7 @@ test("forwards only product-edge country metadata on Vercel", async () => {
 })
 
 test("native country forwarding preserves its separate project credential", async () => {
-  configure()
+  configureMobile()
   process.env.VERCEL = "1"
   process.env.LOGLY_MOBILE_PROJECT_KEY = "mobile-country-test-key"
   process.env.LOGLY_MOBILE_PROJECT = "ewatrade-mobile"
@@ -138,4 +156,42 @@ test("native country forwarding preserves its separate project credential", asyn
     return Response.json({ accepted: 1 }, { status: 202 })
   }) as typeof fetch
   expect((await createEventsRoute("mobile")(input)).status).toBe(202)
+})
+
+test("mobile proxy never forwards from Preview, unknown deployment or a disabled gate", async () => {
+  let collectorCalls = 0
+  globalThis.fetch = Object.assign(
+    async () => {
+      collectorCalls++
+      return Response.json({ accepted: 1 }, { status: 202 })
+    },
+    { preconnect: originalFetch.preconnect },
+  )
+  for (const key of [
+    "NODE_ENV",
+    "APP_ENV",
+    "VERCEL",
+    "VERCEL_ENV",
+    "LOGLY_MOBILE_ENABLED",
+  ])
+    for (const value of [
+      undefined,
+      "preview",
+      "development",
+      "unknown",
+      "false",
+    ]) {
+      configureMobile()
+      process.env.LOGLY_MOBILE_PROJECT_KEY = "copied-production-key"
+      if (value === undefined) Reflect.deleteProperty(process.env, key)
+      else process.env[key] = value
+      const input = request()
+      input.headers.delete("origin")
+      input.headers.set("x-vercel-env", "production")
+      input.headers.set("x-app-env", "production")
+      const response = await createEventsRoute("mobile")(input)
+      expect(response.status).toBe(204)
+      expect(input.bodyUsed).toBe(false)
+    }
+  expect(collectorCalls).toBe(0)
 })

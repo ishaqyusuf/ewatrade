@@ -604,7 +604,7 @@ function SupplierPurchaseDetail({
                   hitSlop={8}
                   onPress={() => setRecognitionViewId(data.recognitionId)}
                 >
-                  <Text className="text-[13px] font-bold text-primary">
+                  <Text className="text-xs font-bold text-primary">
                     Source history
                   </Text>
                 </Pressable>

@@ -1,0 +1,269 @@
+{
+  "id": "2026-10-16-stock-copy-source-review",
+  "sourceRevision": 5,
+  "sourceReview": "accepted_source_only",
+  "workshopReview": "factual_corrections_verified_source_only",
+  "parentAcceptance": {
+    "accepted": 13,
+    "total": 45,
+    "partial": 30,
+    "unstarted": 2
+  },
+  "sourceFiles": [
+    {
+      "path": "apps/mobile/src/components/mobile/assistant/general-stock-balance-editor.tsx",
+      "sha256": "f143a252550fc468bdc5bbf4a66eead06b1efef8a0400ae8ba193cae65c203ea",
+      "match": true
+    },
+    {
+      "path": "apps/mobile/src/components/mobile/assistant/general-stock-closeout-editor.tsx",
+      "sha256": "1a8ac94aa93db0f010874856516bfd571ee3e38470e8d0e0a87768156d7977aa",
+      "match": true
+    },
+    {
+      "path": "apps/mobile/src/components/mobile/assistant/general-stock-correct-editor.tsx",
+      "sha256": "0055aff4eb67447406f8e334460e836d2812b34d8eef00f131813aa45e6694a4",
+      "match": true
+    },
+    {
+      "path": "apps/mobile/src/components/mobile/assistant/general-stock-count-editor.tsx",
+      "sha256": "cab76d5a5f2e26a4d663e2c812ee976e58adaeb56dfc14640d40f6839d92e41d",
+      "match": true
+    },
+    {
+      "path": "apps/mobile/src/components/mobile/assistant/general-stock-custody-editor.tsx",
+      "sha256": "d3612187ffd5127804b9c95e18f8ca91496a468ad5fc6d92aa6d357c85e36f53",
+      "match": true
+    },
+    {
+      "path": "apps/mobile/src/components/mobile/assistant/general-stock-editor-parts.tsx",
+      "sha256": "7f16f788a82e865f06eafc883d25fc81a4537ebde1db3dffacd2ffd7787ffec0",
+      "match": true
+    },
+    {
+      "path": "apps/mobile/src/components/mobile/assistant/general-stock-editor.tsx",
+      "sha256": "9b65199db00593e660f394194233637190d6fc70d1e8289f01001f7e020175d5",
+      "match": true
+    },
+    {
+      "path": "apps/mobile/src/components/mobile/assistant/general-stock-transfer-editor.tsx",
+      "sha256": "41f83f5dda743574de36cff67c3c1bb46eacbbe4b85a5f0be039c7dc54f75844",
+      "match": true
+    },
+    {
+      "path": "apps/mobile/src/components/mobile/assistant/general-stock-transform-editor.tsx",
+      "sha256": "6942b938458133a4a145e7a359e4e4dc4d7d6d0e6411a979112eff9e4f945cea",
+      "match": true
+    },
+    {
+      "path": "apps/mobile/src/components/mobile/assistant/native-stock-state.test.ts",
+      "sha256": "539ab57e1b7cf7bf0bab3bb2015f540cf70b4cc3ef14f86d118b0d13ec4ecf46",
+      "match": true
+    },
+    {
+      "path": "apps/mobile/src/components/mobile/assistant/native-stock-state.ts",
+      "sha256": "6574117a871e4c6c2cd99abe781073ac50be703e7083279b1274490854495653",
+      "match": true
+    },
+    {
+      "path": "apps/mobile/src/components/mobile/assistant/native-stock-target.test.ts",
+      "sha256": "9beafe25841eeeb0c2a336f3fc9e7f981041677aacec705c3c46455114cdbc49",
+      "match": true
+    },
+    {
+      "path": "apps/mobile/src/components/mobile/assistant/native-stock-target.ts",
+      "sha256": "9f68fef732a5ee3daafc3495d251a0fbbd7400059594e18119e54c0c5cb8250e",
+      "match": true
+    },
+    {
+      "path": "apps/mobile/src/components/mobile/assistant/native-stock-values.test.ts",
+      "sha256": "d8772af755b35d9f966b2ea563cb04eeb4da2ae8b67cbbe2dd5de766b52b9224",
+      "match": true
+    },
+    {
+      "path": "apps/mobile/src/components/mobile/assistant/native-stock-values.ts",
+      "sha256": "e06913001182e1a55073dc9385b5b3f6d866b4f74d4e6a460d15df788dbc4513",
+      "match": true
+    },
+    {
+      "path": "apps/mobile/src/components/mobile/assistant/native-stock-original-content.tsx",
+      "sha256": "7b67fc154cb5f47c7e5b93ba79840d7906f7b9d2ee92fad46accdfda5b23e98d",
+      "match": true
+    },
+    {
+      "path": "apps/mobile/src/components/mobile/assistant/native-stock-original-screen.tsx",
+      "sha256": "62db905b028e2673b1ffacecea5303e2b78fc6e9ebf4c815fcee17efb25dd4e5",
+      "match": true
+    },
+    {
+      "path": "apps/mobile/src/components/mobile/assistant/native-validation-copy.ts",
+      "sha256": "37d3cad5100c4a90776412aaa8d10cf5324a63b710b18940d54baecde1d6cc9a",
+      "match": true
+    },
+    {
+      "path": "apps/mobile/src/components/mobile/assistant/native-validation-copy.test.ts",
+      "sha256": "f45123eb12fb4594c9a2211d64b4c2438bf4ebdfc236f0b9467a6b9a391d0691",
+      "match": true
+    },
+    {
+      "path": "apps/mobile/src/app/stock-operation/[operationId].tsx",
+      "sha256": "955a5deaaa4efeb487c988b1b43c7b97a4b304436f451703e11c7513b3367cf6",
+      "match": true
+    },
+    {
+      "path": "apps/mobile/src/app/stock-count/[stockCountId].tsx",
+      "sha256": "c000e83aa6ee0abed7eb5bfc4ed400ce6297d74c2689ec0382253afc684a4b43",
+      "match": true
+    },
+    {
+      "path": "apps/mobile/src/app/stock-transfer/[transferId].tsx",
+      "sha256": "efe2c8f80c962553b15fe657a32a201eda269aee5154bd34e7a7293f9dc99ce6",
+      "match": true
+    },
+    {
+      "path": "apps/mobile/src/app/inventory-closeout/[closeoutId].tsx",
+      "sha256": "cc19a5e059245a4f5c7df05c816a018fbb1df4ffe4dc01782dfdc1bdd76f7558",
+      "match": true
+    },
+    {
+      "path": "packages/assistant/evaluations/fixtures/native-stock-editor.fixture.tsx",
+      "sha256": "f56c0dd1f9185785e706e2ba5cf07688cbfc0a2d1afee67df4df50d831b6ffd4",
+      "match": true
+    },
+    {
+      "path": "packages/assistant/evaluations/fixtures/native-stock-save-fence.fixture.tsx",
+      "sha256": "8086c67e2546db9ab51d2354a2c63cec9aa4fde241dd2410471110a296ac4703",
+      "match": true
+    },
+    {
+      "path": "apps/mobile/src/components/mobile/assistant/general-proposal-editor.tsx",
+      "sha256": "2d2d11a9b43702926f8e9e66aba706b8f2afc8932b6ef898cda6aacf91abcae8",
+      "match": true
+    },
+    {
+      "path": "apps/mobile/src/components/mobile/assistant/general-model.ts",
+      "sha256": "a84f90e80e561ef8542067fcebc0a4ee04bb53f6340eee7980bc4bbd821d33a9",
+      "match": true
+    },
+    {
+      "path": "apps/mobile/src/app/_layout.tsx",
+      "sha256": "a69edfdf324c05d705bc5459c78b1192ed587c201a3380e99b9dd4c818d7f940",
+      "match": true
+    }
+  ],
+  "tests": {
+    "independentMounted": {
+      "tests": 18,
+      "assertions": 182,
+      "passed": true
+    },
+    "independentStatic": {
+      "tests": 8,
+      "assertions": 47,
+      "passed": true
+    },
+    "independentValuesStateTarget": {
+      "tests": 21,
+      "assertions": 134,
+      "passed": true,
+      "log": "/private/tmp/assistant-stock-revision5-independent-tests.log"
+    },
+    "originalProbes": {
+      "passed": 5,
+      "failed": 0
+    },
+    "focusedValues": {
+      "tests": 12,
+      "assertions": 70,
+      "passed": true,
+      "overlaps": true
+    }
+  },
+  "compiler": {
+    "entries": 252,
+    "exitCode": 2,
+    "diagnostics": 78,
+    "baseline": 78,
+    "new": 0,
+    "missing": 0,
+    "matches": true,
+    "log": "/private/tmp/assistant-stock-revision5-types.log"
+  },
+  "biome": {
+    "paths": 28,
+    "clean": 27,
+    "unchangedBaselineFindings": 1,
+    "baselinePath": "apps/mobile/src/components/mobile/assistant/general-proposal-editor.tsx:432",
+    "log": "/private/tmp/assistant-stock-revision5-root-biome.log"
+  },
+  "coverage": {
+    "current": true,
+    "log": "/private/tmp/assistant-stock-revision5-coverage.log"
+  },
+  "impact": {
+    "localPassed": true,
+    "records": 42,
+    "globalChangedCapabilities": 128,
+    "globalChangedProcedures": 11,
+    "log": "/private/tmp/assistant-stock-revision5-impact.log",
+    "hostedCIClaim": false
+  },
+  "workshop": {
+    "hubRevision": "4d4a93fe-a251-4240-a3f2-a543c695156a",
+    "nativeReproductionRevision": "b8a56525-7485-41f0-9016-51db6486b439",
+    "rootObserved": [
+      "H04partial/source-only",
+      "source stock acceptance and mobile metadata pairing",
+      "preserved older revisions and historical dashboard-only record",
+      "local synthetic31against30receipt refused",
+      "review summary0 unchanged",
+      "no browser errors"
+    ],
+    "deviceOrConnectedProof": false,
+    "screenshot": "artifacts/assistant-ui-review-inventory/stock-revision5-transfer-refusal.png",
+    "correctionsRequested": [
+      "Update stale reproduction dashboard-only manifest claim; actual dashboard+mobile remain planned.",
+      "State app availability unverified; do not infer runtime absence from source.",
+      "Split/narrow partially fixed compound transfer validation/unit wording finding."
+    ],
+    "currentVerifiedHubRevision": "1459efb9-9ec3-491b-bd89-05a945e68b3f",
+    "currentVerifiedReproductionRevision": "bbb23f07-9ccb-4d2c-be14-b111c1e24265",
+    "correctionVerification": {
+      "messageId": "2ed81576-0f0d-4ba8-acb0-34b3d6aea4f5",
+      "allThreeVerified": true,
+      "permanentCatalogLinkVerified": true,
+      "sourceHashesUnchanged": 28,
+      "reviewSummaryUnchanged": 0,
+      "temporaryTabsClosed": [
+        22,
+        23
+      ],
+      "desktopBrowserOnly": true,
+      "ownerReportedCounts": {
+        "items": 487,
+        "findings": 53
+      },
+      "parentAcceptanceChanged": false
+    }
+  },
+  "communication": {
+    "room": "ewatrade-assistant-ui",
+    "messageReviewed": "393ec3e3-6510-482a-b88d-feefc672c476",
+    "replyId": "3df6bc55-a282-46a4-a788-901be05157f4",
+    "sendKey": "725a7111-31f0-46ce-bad7-baeefbfc84fb"
+  },
+  "brainFilesUpdated": [
+    ".brain/features/assistant-business-operations.md",
+    ".brain/features/generic-catalog-inventory-units-stock-operations.md",
+    ".brain/tasks/in-progress.md",
+    ".brain/plans/2026-10-15-assistant-operations-phase-checklist.md"
+  ],
+  "gatesPreserved": [
+    "G01 and Paystack paused",
+    "D04unattributed/12unscheduled",
+    "E05activation/APIrestartrejected",
+    "G04sixdeferred",
+    "S05sevenunrun/retryunscheduled",
+    "C04exactnamedisolatedtargets only"
+  ]
+}

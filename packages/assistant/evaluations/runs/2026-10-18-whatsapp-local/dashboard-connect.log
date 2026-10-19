@@ -1,0 +1,9 @@
+bun test v1.3.9 (cf6cdbbb)
+
+packages/assistant/evaluations/fixtures/dashboard-whatsapp-connect.fixture.tsx:
+(pass) actual dashboard connect and personal management owners render and recover through explicit confirmation, expiry and revoke [261.85ms]
+
+ 1 pass
+ 0 fail
+ 35 expect() calls
+Ran 1 test across 1 file. [358.00ms]

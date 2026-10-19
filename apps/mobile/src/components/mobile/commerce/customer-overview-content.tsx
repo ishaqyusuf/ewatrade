@@ -188,8 +188,8 @@ export function CustomerOverviewContent({
               <Text
                 className={
                   selected
-                    ? "text-[13px] font-extrabold text-foreground"
-                    : "text-[13px] font-extrabold text-muted-foreground"
+                    ? "text-xs font-extrabold text-foreground"
+                    : "text-xs font-extrabold text-muted-foreground"
                 }
               >
                 {tab.key === "orders" && count

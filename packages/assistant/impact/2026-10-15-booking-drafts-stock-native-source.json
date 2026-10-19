@@ -1,0 +1,161 @@
+{
+  "version": 1,
+  "id": "2026-10-15-booking-drafts-stock-native-source",
+  "tickets": [
+    "G03",
+    "A04",
+    "C01",
+    "C02",
+    "C03",
+    "C04",
+    "C05",
+    "G04",
+    "H01",
+    "H02"
+  ],
+  "summary": "Signed all-eight durable booking staging, proof-first confirmation and actual two-fresh-transaction composer; independently reviewed native stock editor/receipt/mobile pairing with existing rollouts unchanged.",
+  "capabilities": [
+    {
+      "id": "inventory.stock.receive",
+      "change": "changed",
+      "rollout": "source",
+      "note": "Reviewed mobile editor and exact original receipt pairing; existing canonical scope/policy and rollout unchanged. No device/connected acceptance."
+    },
+    {
+      "id": "inventory.stock.adjust",
+      "change": "changed",
+      "rollout": "source",
+      "note": "Reviewed mobile editor and exact original receipt pairing; existing canonical scope/policy and rollout unchanged. No device/connected acceptance."
+    },
+    {
+      "id": "inventory.stock.correct",
+      "change": "changed",
+      "rollout": "source",
+      "note": "Reviewed mobile editor and exact original receipt pairing; existing canonical scope/policy and rollout unchanged. No device/connected acceptance."
+    },
+    {
+      "id": "inventory.count.create",
+      "change": "changed",
+      "rollout": "source",
+      "note": "Reviewed mobile editor and exact original receipt pairing; existing canonical scope/policy and rollout unchanged. No device/connected acceptance."
+    },
+    {
+      "id": "inventory.count.finalize",
+      "change": "changed",
+      "rollout": "source",
+      "note": "Reviewed mobile editor and exact original receipt pairing; existing canonical scope/policy and rollout unchanged. No device/connected acceptance."
+    },
+    {
+      "id": "inventory.closeout.create",
+      "change": "changed",
+      "rollout": "source",
+      "note": "Reviewed mobile editor and exact original receipt pairing; existing canonical scope/policy and rollout unchanged. No device/connected acceptance."
+    },
+    {
+      "id": "inventory.closeout.finalize",
+      "change": "changed",
+      "rollout": "source",
+      "note": "Reviewed mobile editor and exact original receipt pairing; existing canonical scope/policy and rollout unchanged. No device/connected acceptance."
+    },
+    {
+      "id": "inventory.transfer.dispatch",
+      "change": "changed",
+      "rollout": "source",
+      "note": "Reviewed mobile editor and exact original receipt pairing; existing canonical scope/policy and rollout unchanged. No device/connected acceptance."
+    },
+    {
+      "id": "inventory.transfer.receive",
+      "change": "changed",
+      "rollout": "source",
+      "note": "Reviewed mobile editor and exact original receipt pairing; existing canonical scope/policy and rollout unchanged. No device/connected acceptance."
+    },
+    {
+      "id": "inventory.transfer.cancel",
+      "change": "changed",
+      "rollout": "source",
+      "note": "Reviewed mobile editor and exact original receipt pairing; existing canonical scope/policy and rollout unchanged. No device/connected acceptance."
+    },
+    {
+      "id": "inventory.custody.move",
+      "change": "changed",
+      "rollout": "planned",
+      "note": "Reviewed mobile editor and exact original receipt pairing; existing canonical scope/policy and rollout unchanged. No device/connected acceptance."
+    },
+    {
+      "id": "inventory.package.transform",
+      "change": "changed",
+      "rollout": "planned",
+      "note": "Reviewed mobile editor and exact original receipt pairing; existing canonical scope/policy and rollout unchanged. No device/connected acceptance."
+    }
+  ],
+  "procedures": [],
+  "docs": [
+    {
+      "topic": "feature",
+      "path": ".brain/features/assistant-business-operations.md",
+      "status": "local_only"
+    },
+    {
+      "topic": "feature",
+      "path": ".brain/features/service-commerce.md",
+      "status": "local_only"
+    },
+    {
+      "topic": "feature",
+      "path": ".brain/features/generic-catalog-inventory-units-stock-operations.md",
+      "status": "local_only"
+    },
+    {
+      "topic": "api",
+      "path": ".brain/api/contracts.md",
+      "status": "local_only"
+    },
+    {
+      "topic": "permissions",
+      "path": ".brain/api/permissions.md",
+      "status": "local_only"
+    },
+    {
+      "topic": "decision",
+      "path": ".brain/decisions/2026-10-15-prepared-booking-and-media-review-boundaries.md",
+      "status": "local_only"
+    },
+    {
+      "topic": "schema",
+      "status": "not_applicable",
+      "note": "Existing AssistantActionProposal and native booking tables only; no Prisma/migration/push."
+    },
+    {
+      "topic": "capability",
+      "path": "packages/assistant/src/capabilities/COVERAGE.md",
+      "status": "updated",
+      "note": "12mobile source-client/test pairings; no rollout or permission promotion."
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "test",
+      "path": "apps/api/src/assistant/general-booking-decision.test.ts",
+      "executed": true,
+      "result": "Actual fresh GENERAL two-transaction wrapper7/82, independent same cohort; no HTTP/SQL/provider proof."
+    },
+    {
+      "kind": "test",
+      "path": "packages/assistant/evaluations/fixtures/native-stock-save-fence.fixture.tsx",
+      "executed": true,
+      "result": "Actual mounted18/179 rootpass after typed callback guard; static8/47, pure19/122 and original5probes pass; no device/SQL acceptance."
+    },
+    {
+      "kind": "test",
+      "path": "apps/mobile/src/components/mobile/assistant/native-parity.test.ts",
+      "executed": true,
+      "result": "Affected source cohort21/170 root+independent passes,0declared native gaps; existing planned rollouts unchanged."
+    },
+    {
+      "kind": "review",
+      "path": "packages/assistant/evaluations/runs/2026-10-15-booking-drafts-stock-native-source.md",
+      "executed": true,
+      "result": "Booking86/1412pass; final236entries78identical full imported baseline diagnostics/0owned, all12newtesttypingerrors repaired. H01current/H02local40records;48Biomepaths clean and1preexistinghostfinding."
+    }
+  ]
+}

@@ -34,7 +34,7 @@ export function SetupFlowHeader({
           <Text className="text-2xl font-extrabold leading-8 text-foreground">
             {title}
           </Text>
-          <Text className="text-sm leading-5 text-muted-foreground">
+          <Text className="text-sm [-rn-line-height:22] text-muted-foreground">
             {description}
           </Text>
         </View>
@@ -55,7 +55,7 @@ export function SetupFlowHeader({
               />
               <Text
                 className={cn(
-                  "text-[11px] font-bold uppercase tracking-[1px]",
+                  "text-xs font-bold uppercase tracking-[1px]",
                   isActive ? "text-primary" : "text-muted-foreground",
                 )}
                 numberOfLines={1}
@@ -88,7 +88,7 @@ export function SetupSection({
           {title}
         </Text>
         {description ? (
-          <Text className="text-xs leading-5 text-muted-foreground">
+          <Text className="text-xs [-rn-line-height:22] text-muted-foreground">
             {description}
           </Text>
         ) : null}
@@ -133,7 +133,7 @@ export function SetupCheckboxRow({
       </View>
       <View className="min-w-0 flex-1 gap-1">
         <Text className="font-semibold text-foreground">{label}</Text>
-        <Text className="text-sm leading-5 text-muted-foreground">
+        <Text className="text-sm [-rn-line-height:22] text-muted-foreground">
           {description}
         </Text>
       </View>
@@ -166,7 +166,7 @@ export function SetupInlineNotice({
   return (
     <View className="flex-row items-start gap-2 border-y border-border py-3">
       <Icon className={cn("mt-0.5 size-sm", toneClassName)} name={icon} />
-      <Text className="min-w-0 flex-1 text-xs leading-5 text-muted-foreground">
+      <Text className="min-w-0 flex-1 text-xs [-rn-line-height:22] text-muted-foreground">
         {text}
       </Text>
     </View>

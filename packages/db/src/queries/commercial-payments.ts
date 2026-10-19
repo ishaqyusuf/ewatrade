@@ -239,17 +239,8 @@ async function recordCommercialOrderPaymentCore(
     return serializePrevious(previous)
   }
 
-  const concurrentPrevious = await tx.commercialOrderPayment.findUnique({
-    where: {
-      tenantId_clientPaymentId: {
-        clientPaymentId: input.clientPaymentId,
-        tenantId: input.tenantId,
-      },
-    },
-  })
-  if (concurrentPrevious) {
-    return serializePrevious(concurrentPrevious)
-  }
+  // The Order lock serializes its receipts; the unique payment key also guards
+  // collisions originating from a different Order.
   // F01: while an online payment link can still be paid, a manual receipt
   // could settle the same balance twice. Only that link's own settlement passes.
   if (input.type !== "refund" && !creditSource) {

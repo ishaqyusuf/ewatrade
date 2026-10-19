@@ -7,6 +7,7 @@ import {
   simpleExpenseStep,
 } from "@ewatrade/assistant/general/contracts"
 import { generalProposalWhere } from "@ewatrade/db/assistant-general"
+import { isLinkedAssistantIdentity } from "./channel-principal"
 import type { GeneralContext } from "./general-context"
 import { assertGeneralAction, requireGeneralScope } from "./general-context"
 import {
@@ -16,6 +17,7 @@ import {
   generalProposalForApp,
 } from "./general-proposals"
 import { simpleExpenseOptions } from "./general-simple-expense"
+import { proposalDigest } from "./proposal-security"
 type Message = { id: string; role: string; parts: unknown }
 export async function handleSimpleExpenseChat(
   ctx: GeneralContext,
@@ -29,6 +31,14 @@ export async function handleSimpleExpenseChat(
   },
 ) {
   const text = input.choice?.text ?? input.text.trim()
+  // A channel confirmation must identify an exact delivered review outside this draft helper.
+  if (
+    isLinkedAssistantIdentity(ctx.session) &&
+    /^(?:proceed|confirm|cancel|yes|go ahead|done|save(?: it| sale)?)[.!]*$/i.test(
+      text.trim(),
+    )
+  )
+    return null
   const intent = isSimpleExpenseIntent(text)
   const proceeding = /^(?:proceed|confirm|go ahead|save|yes)[.!]?$/i.test(text)
   const scope = requireGeneralScope(ctx)
@@ -95,6 +105,7 @@ export async function handleSimpleExpenseChat(
                   : "Which category?",
         proposalId: pending.id,
       }
+    if (isLinkedAssistantIdentity(ctx.session)) return null
     const saved = await decideGeneralProposal(ctx, {
       proposalId: pending.id,
       revision: pending.revision,
@@ -217,6 +228,7 @@ export async function handleSimpleExpenseChat(
         payload: draft,
       })
     : await draftGeneralProposal(ctx, input.conversationId, draft)
+  const proposalId = "proposalId" in result ? result.proposalId : result.id
   const prepared = simpleExpenseAction.parse(result.payload)
   const next = simpleExpenseStep(prepared)
   return {
@@ -232,6 +244,11 @@ export async function handleSimpleExpenseChat(
               : next === "category"
                 ? "Which category?"
                 : `Record ${generalMoney(prepared.amountMinor ?? 0, ctx.tenantContext.tenant.currencyCode)} for ${prepared.description}${prepared.paid ? ` from ${prepared.accountName}` : " as not paid yet"}. Proceed or change anything?`,
-    proposalId: result.proposalId,
+    proposalId,
+    proposalSource: {
+      proposalId,
+      revision: result.revision,
+      payloadHash: proposalDigest(result.payload),
+    },
   }
 }

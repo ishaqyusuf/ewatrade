@@ -4,6 +4,7 @@ import type {
   CommercialOrderAttachmentKind,
   CommercialOrderAttachmentStatus,
 } from "../../generated/prisma/enums"
+import { assertAttachmentEntitlement } from "./attachment-entitlement"
 import { CatalogError } from "./catalog-errors"
 import type { OrderScope } from "./order-visibility"
 import { loadTenantActors } from "./tenant-actors"
@@ -177,6 +178,7 @@ export async function addCommercialOrderActivity(
   })
   if (!order)
     throw new CatalogError("ORDER_NOT_FOUND", "Commercial Order not found.")
+  if (input.attachments.length) await assertAttachmentEntitlement(db, input)
   const uploadExpiresAt = new Date(
     Date.now() + ORDER_ATTACHMENT_UPLOAD_WINDOW_MS,
   )
@@ -269,6 +271,7 @@ export async function markCommercialOrderAttachmentUploaded(
     storagePath: string
   },
 ) {
+  await assertAttachmentEntitlement(db, input)
   const now = new Date()
   const { count } = await db.commercialOrderAttachment.updateMany({
     data: {
@@ -327,6 +330,7 @@ export async function addStoredFileToCommercialOrderInTransaction(
   })
   if (!order)
     throw new CatalogError("ORDER_NOT_FOUND", "Commercial Order not found.")
+  await assertAttachmentEntitlement(tx, input)
   const body = input.body?.trim() || null
   if (body && body.length > ORDER_ACTIVITY_BODY_MAX_LENGTH)
     throw new CatalogError(

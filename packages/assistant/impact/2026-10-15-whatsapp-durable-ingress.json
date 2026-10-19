@@ -1,0 +1,42 @@
+{
+  "version": 1,
+  "id": "2026-10-15-whatsapp-durable-ingress",
+  "tickets": ["A01", "H01"],
+  "summary": "WhatsApp plan W14: generated transient inbox/binding sequence schema, current linked-pilot admission, digest-only action proofs, immutable endpoint/provider replay receipt, stable canonical IDs and private attribution. Bound verified shared webhook acknowledges after persistence and returns safe503 on storage failure. Existing OTP/customer principal routing remains isolated. No new business tool, worker dispatch, model/provider send or rollout promotion.",
+  "capabilities": [],
+  "docs": [
+    {
+      "topic": "feature",
+      "path": ".brain/features/whatsapp-assistant.md",
+      "status": "local_only"
+    },
+    {
+      "topic": "api",
+      "path": ".brain/api/contracts.md",
+      "status": "local_only"
+    },
+    {
+      "topic": "permissions",
+      "path": ".brain/api/permissions.md",
+      "status": "local_only"
+    },
+    {
+      "topic": "schema",
+      "path": ".brain/database/schema.md",
+      "status": "local_only"
+    },
+    {
+      "topic": "decision",
+      "path": ".brain/decisions/2026-10-15-whatsapp-assistant-channel.md",
+      "status": "local_only"
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "run",
+      "path": ".brain/qa/2026-10-15-whatsapp-assistant.md",
+      "executed": true,
+      "result": "Guarded local Neon duplicate/scope/privacy inbox1/29 with cleanup, focused ingress/privacy/full communications186/500 and customer bridge/discovery routing18/54 pass. Generated local migration, required local push and client generation pass. Strict new query/contract/integration types, scoped Biome and H01/H02 pass; full API retains existing unrelated assistant type errors. W14 source/backend accepted; full channel6/48. No OTP/private env/provider/production activation."
+    }
+  ]
+}

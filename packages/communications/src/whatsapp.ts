@@ -9,6 +9,7 @@ import {
 import { type RedisClientType, createClient } from "redis"
 
 import { SERVICE_COMMERCE_CUSTOMER_ACTION_TEMPLATE_KEY } from "./service-commerce-action-capability"
+import { type WhatsAppMediaRequest, fetchWhatsAppMedia } from "./whatsapp-media"
 
 const META_GRAPH_URL = "https://graph.facebook.com/v21.0"
 export const WHATSAPP_SESSION_WINDOW_MS = 24 * 60 * 60_000
@@ -21,10 +22,18 @@ export type WhatsAppCredentials = {
 export type NormalizedWhatsAppMessageEvent = {
   externalCustomerId: string
   kind: "message"
-  media?: { id: string; mediaType: string }
+  media?: {
+    id: string
+    mediaType: string
+    sourceType?: "image" | "document" | "audio"
+    fileName?: string
+    sha256?: string
+    voice?: boolean
+  }
   messageId: string
   phoneNumberId: string
   quickActionId?: string
+  replyToMessageId?: string
   text?: string
   timestamp?: string
   type: "interactive" | "media" | "text" | "unsupported"
@@ -32,6 +41,8 @@ export type NormalizedWhatsAppMessageEvent = {
 
 export type NormalizedWhatsAppStatusEvent = {
   failureCode?: string
+  callbackData?: string
+  recipientId?: string
   kind: "status"
   messageId: string
   phoneNumberId: string
@@ -66,12 +77,15 @@ export interface WhatsAppProvider {
     code: string
     redirectUri: string
   }): Promise<{ accessToken: string }>
-  fetchMedia(input: WhatsAppCredentials & { mediaId: string }): Promise<{
+  fetchMedia(input: WhatsAppMediaRequest): Promise<{
     bytes: Uint8Array
     mediaType: string
+    contentDigest?: string
+    sizeBytes?: number
   }>
   sendButtons(
     input: WhatsAppCredentials & {
+      callbackData?: string
       body: string
       buttons: WhatsAppButton[]
       to: string
@@ -87,6 +101,7 @@ export interface WhatsAppProvider {
   ): Promise<{ messageId: string }>
   sendText(
     input: WhatsAppCredentials & {
+      callbackData?: string
       body: string
       to: string
     },
@@ -121,7 +136,20 @@ function messageId(payload: Record<string, unknown>) {
   if (!first || typeof first !== "object" || !("id" in first)) {
     throw new Error("Meta WhatsApp returned no message identity.")
   }
-  return String((first as { id: unknown }).id)
+  const id = (first as { id: unknown }).id
+  if (
+    typeof id !== "string" ||
+    !id ||
+    id.length > 512 ||
+    [...id].some(
+      (point) =>
+        (point.codePointAt(0) ?? 0) <= 32 ||
+        point === String.fromCharCode(127) ||
+        /\s/u.test(point),
+    )
+  )
+    throw new Error("Meta WhatsApp returned an invalid message identity.")
+  return id
 }
 
 function providerFact(value: unknown) {
@@ -199,8 +227,25 @@ export class DirectMetaWhatsAppProvider implements WhatsAppProvider {
     }
   }
 
-  sendText(input: WhatsAppCredentials & { body: string; to: string }) {
+  async sendText(
+    input: WhatsAppCredentials & {
+      body: string
+      to: string
+      callbackData?: string
+    },
+  ) {
+    if (
+      input.callbackData !== undefined &&
+      !/^[a-zA-Z0-9:_-]{1,128}$/.test(input.callbackData)
+    )
+      throw new WhatsAppProviderSendError(
+        "PROVIDER_REJECTED",
+        "DEFINITE_FAILURE",
+      )
     return this.#send(input, {
+      ...(input.callbackData
+        ? { biz_opaque_callback_data: input.callbackData }
+        : {}),
       text: { body: input.body, preview_url: false },
       to: input.to,
       type: "text",
@@ -209,15 +254,27 @@ export class DirectMetaWhatsAppProvider implements WhatsAppProvider {
 
   sendButtons(
     input: WhatsAppCredentials & {
+      callbackData?: string
       body: string
       buttons: WhatsAppButton[]
       to: string
     },
   ) {
+    if (
+      input.callbackData !== undefined &&
+      !/^[a-zA-Z0-9:_-]{1,128}$/.test(input.callbackData)
+    )
+      throw new WhatsAppProviderSendError(
+        "PROVIDER_REJECTED",
+        "DEFINITE_FAILURE",
+      )
     if (input.buttons.length < 1 || input.buttons.length > 3) {
       throw new Error("WhatsApp supports one to three reply buttons.")
     }
     return this.#send(input, {
+      ...(input.callbackData
+        ? { biz_opaque_callback_data: input.callbackData }
+        : {}),
       interactive: {
         action: {
           buttons: input.buttons.map((button) => ({
@@ -252,25 +309,8 @@ export class DirectMetaWhatsAppProvider implements WhatsAppProvider {
     })
   }
 
-  async fetchMedia(input: WhatsAppCredentials & { mediaId: string }) {
-    const metadata = await json(
-      await this.#fetch(`${META_GRAPH_URL}/${input.mediaId}`, {
-        headers: { Authorization: `Bearer ${input.accessToken}` },
-      }),
-    )
-    const url = String(metadata.url ?? "")
-    if (!url.startsWith("https://")) {
-      throw new Error("Meta returned an invalid private-media URL.")
-    }
-    const response = await this.#fetch(url, {
-      headers: { Authorization: `Bearer ${input.accessToken}` },
-    })
-    if (!response.ok) throw new Error("WhatsApp media retrieval failed.")
-    return {
-      bytes: new Uint8Array(await response.arrayBuffer()),
-      mediaType:
-        response.headers.get("content-type") ?? "application/octet-stream",
-    }
+  async fetchMedia(input: WhatsAppMediaRequest) {
+    return fetchWhatsAppMedia(input, this.#fetch)
   }
 
   async testConnection(
@@ -475,32 +515,71 @@ export function parseMetaWhatsAppEvents(value: unknown) {
           typeof interactive.button_reply === "object"
             ? (interactive.button_reply as Record<string, unknown>)
             : {}
+        const replyContext =
+          item.context && typeof item.context === "object"
+            ? (item.context as Record<string, unknown>)
+            : {}
+        const list =
+          interactive.list_reply && typeof interactive.list_reply === "object"
+            ? (interactive.list_reply as Record<string, unknown>)
+            : {}
+        const sourceType =
+          type === "image" || type === "document" || type === "audio"
+            ? type
+            : undefined
+        const candidate = sourceType ? item[sourceType] : undefined
         const mediaRecord =
-          item.image && typeof item.image === "object"
-            ? (item.image as Record<string, unknown>)
-            : item.document && typeof item.document === "object"
-              ? (item.document as Record<string, unknown>)
-              : null
+          candidate &&
+          typeof candidate === "object" &&
+          !Array.isArray(candidate)
+            ? (candidate as Record<string, unknown>)
+            : null
+        const validMedia =
+          mediaRecord &&
+          typeof mediaRecord.id === "string" &&
+          mediaRecord.id.length > 0 &&
+          mediaRecord.id.length <= 256 &&
+          typeof mediaRecord.mime_type === "string" &&
+          mediaRecord.mime_type.length > 0 &&
+          mediaRecord.mime_type.length <= 128
+            ? mediaRecord
+            : null
         events.push({
           externalCustomerId: String(item.from ?? ""),
           kind: "message",
-          media: mediaRecord
+          media: validMedia
             ? {
-                id: String(mediaRecord.id ?? ""),
-                mediaType: String(mediaRecord.mime_type ?? ""),
+                id: String(validMedia.id),
+                mediaType: String(validMedia.mime_type),
+                sourceType,
+                ...(typeof validMedia.filename === "string"
+                  ? { fileName: validMedia.filename.slice(0, 120) }
+                  : {}),
+                ...(typeof validMedia.sha256 === "string"
+                  ? { sha256: validMedia.sha256.slice(0, 128) }
+                  : {}),
+                ...(sourceType === "audio" &&
+                typeof validMedia.voice === "boolean"
+                  ? { voice: validMedia.voice }
+                  : {}),
               }
             : undefined,
           messageId: String(item.id ?? ""),
           phoneNumberId,
-          quickActionId: String(button.id ?? "") || undefined,
-          text,
+          quickActionId: String(button.id ?? list.id ?? "") || undefined,
+          replyToMessageId: String(replyContext.id ?? "") || undefined,
+          text:
+            text ??
+            (validMedia?.caption !== undefined
+              ? String(validMedia.caption)
+              : undefined),
           timestamp: String(item.timestamp ?? "") || undefined,
           type:
             type === "text"
               ? "text"
               : type === "interactive"
                 ? "interactive"
-                : mediaRecord
+                : validMedia
                   ? "media"
                   : "unsupported",
         })
@@ -551,6 +630,14 @@ export function parseMetaWhatsAppEvents(value: unknown) {
               ? String((firstError as Record<string, unknown>).code ?? "") ||
                 "provider_delivery_failed"
               : undefined,
+          ...(typeof item.biz_opaque_callback_data === "string" &&
+          /^[a-zA-Z0-9:_-]{1,128}$/.test(item.biz_opaque_callback_data)
+            ? { callbackData: item.biz_opaque_callback_data }
+            : {}),
+          ...(typeof item.recipient_id === "string" &&
+          /^[1-9]\d{7,14}$/.test(item.recipient_id)
+            ? { recipientId: item.recipient_id }
+            : {}),
           kind: "status",
           messageId: String(item.id ?? ""),
           phoneNumberId,

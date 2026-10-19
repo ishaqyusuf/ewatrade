@@ -1,0 +1,160 @@
+{
+  "version": 1,
+  "scope": "S01 native source checkpoint; not owner release of foreign source or native/domain acceptance",
+  "files": [
+    {
+      "path": "apps/mobile/src/components/mobile/assistant/native-staff-read-target.ts",
+      "sha256": "33268be15b0da552b070ca00128874bff404cd1594f768a138654a134138c307",
+      "ownership": "owned source or scoped integration/copy hunks; whole-file hash is observation"
+    },
+    {
+      "path": "apps/mobile/src/components/mobile/assistant/native-staff-read-target.test.ts",
+      "sha256": "882b1783d869b1b5006ef5fcdfddeb928d1e480232f93c181fa276baa7a2c576",
+      "ownership": "owned source or scoped integration/copy hunks; whole-file hash is observation"
+    },
+    {
+      "path": "apps/mobile/src/components/mobile/assistant/native-staff-read-screen.tsx",
+      "sha256": "29769ec9c2f2e49c5acbbdc47c0e72de065b1eb1af8b5a1b22f7f2f6dd785f9b",
+      "ownership": "owned source or scoped integration/copy hunks; whole-file hash is observation"
+    },
+    {
+      "path": "apps/mobile/src/components/mobile/assistant/native-staff-directory-screen.tsx",
+      "sha256": "02021d4f9a8142109046aee8d03e6159461c89a6191d78889316cc083d2b0038",
+      "ownership": "owned source or scoped integration/copy hunks; whole-file hash is observation"
+    },
+    {
+      "path": "apps/mobile/src/components/mobile/assistant/native-staff-member-screen.tsx",
+      "sha256": "1e4dffd3d856a50015b200b9cd7158d1bcd9f9e3ecdfdbc3e017def51af0a60a",
+      "ownership": "owned source or scoped integration/copy hunks; whole-file hash is observation"
+    },
+    {
+      "path": "apps/mobile/src/components/mobile/assistant/native-staff-history-screen.tsx",
+      "sha256": "4a395ed62f050cc7b1c09006396121616f045c1a6937d214bdbf0309524a4c77",
+      "ownership": "owned source or scoped integration/copy hunks; whole-file hash is observation"
+    },
+    {
+      "path": "apps/mobile/src/components/mobile/assistant/general-model.ts",
+      "sha256": "4b69eb62a3ce0a5991b75c053d47e766c1694b1a95809aa6a2a99da7521317d0",
+      "ownership": "owned source or scoped integration/copy hunks; whole-file hash is observation"
+    },
+    {
+      "path": "apps/mobile/src/components/mobile/assistant/general-model.test.ts",
+      "sha256": "9110eeaab7fa6cd49aca16266515ae9fb4021fd35d7e03e6182a65f5f33e786b",
+      "ownership": "owned source or scoped integration/copy hunks; whole-file hash is observation"
+    },
+    {
+      "path": "apps/mobile/src/components/mobile/assistant/native-parity.test.ts",
+      "sha256": "19ab8c6b40bf1858109d65931b4d1193e595f99706beea01a1d1baaf0c76b320",
+      "ownership": "owned source or scoped integration/copy hunks; whole-file hash is observation"
+    },
+    {
+      "path": "apps/mobile/src/components/mobile/assistant/staff-original-screen.tsx",
+      "sha256": "7c608483e97cb273166f5c8453b08a7b9c6aa41bafc5bddeb537706041b80b11",
+      "ownership": "owned source or scoped integration/copy hunks; whole-file hash is observation"
+    },
+    {
+      "path": "apps/mobile/src/app/staff-invite-modal.tsx",
+      "sha256": "28908375ed8016fb8bc6cb2007cd7eab25ca32ac6bc9b26a5b2b59f938af3977",
+      "ownership": "owned source or scoped integration/copy hunks; whole-file hash is observation"
+    },
+    {
+      "path": "packages/assistant/evaluations/phase-regressions.test.ts",
+      "sha256": "6cb73af93be10cc925d480a412ca6c8a9abbddb4d3b419d41acfbbb4874060db",
+      "ownership": "owned source or scoped integration/copy hunks; whole-file hash is observation"
+    },
+    {
+      "path": "packages/assistant/src/capabilities/manifest.ts",
+      "sha256": "1a4586266218984a38673b25d71ee7497fd074dfbbe7fbe6214401c2518396f5",
+      "ownership": "three exact client/test blocks; foreign manifest preserved"
+    },
+    {
+      "path": "packages/assistant/src/capabilities/COVERAGE.md",
+      "sha256": "f1626cf59172b837102656b001b72431eb82f6da13629f180b4ef7d1556a0264",
+      "ownership": "owned source or scoped integration/copy hunks; whole-file hash is observation"
+    },
+    {
+      "path": "packages/assistant/impact/2026-10-15-s01-native-reads.json",
+      "sha256": "1826e1c14f00fe3a9305f347ce7f4831e3e63ea2d563af009a7add50ce75aa88",
+      "ownership": "owned source or scoped integration/copy hunks; whole-file hash is observation"
+    },
+    {
+      "path": "packages/assistant/evaluations/runs/2026-10-15-s01-native-reads.md",
+      "sha256": "a785cedc0b63cd8b9ff750235706a880b2a9876e0d2904ae71d16715f2c2c45f",
+      "ownership": "owned source or scoped integration/copy hunks; whole-file hash is observation"
+    },
+    {
+      "path": "packages/assistant/evaluations/fixtures/native-staff-directory.fixture.tsx",
+      "sha256": "226f1c429b18e17dd9b22b9eebfa0fb7893887aea4f5f5b2ffdcda4b3c12d81a",
+      "ownership": "owned source or scoped integration/copy hunks; whole-file hash is observation"
+    },
+    {
+      "path": "packages/assistant/evaluations/fixtures/native-staff-member.fixture.tsx",
+      "sha256": "63d4f804aa58452e1490eaededb134af977711fc58f0d68dd0efbd7f5ba88c61",
+      "ownership": "owned source or scoped integration/copy hunks; whole-file hash is observation"
+    },
+    {
+      "path": "packages/assistant/evaluations/fixtures/native-staff-history.fixture.tsx",
+      "sha256": "877e5596bc8dc40cbf8b19d095368eddfe54d7ace46287582955e0721c635cc0",
+      "ownership": "owned source or scoped integration/copy hunks; whole-file hash is observation"
+    },
+    {
+      "path": "packages/assistant/evaluations/fixtures/native-staff-read-navigation.fixture.tsx",
+      "sha256": "cb894a22be7810a58324a3a31fd511fc2fe1b1642c02518e942b6cfc99df0a19",
+      "ownership": "owned source or scoped integration/copy hunks; whole-file hash is observation"
+    },
+    {
+      "path": "packages/assistant/evaluations/fixtures/native-staff-original.fixture.tsx",
+      "sha256": "5b7211ab9076d2a37b3163c09f910eaf8be8cfb2c20c65aaf398f0c75f73796b",
+      "ownership": "owned source or scoped integration/copy hunks; whole-file hash is observation"
+    }
+  ],
+  "manifestChanges": [
+    {
+      "id": "staff.directory.read",
+      "before": "    id: \"staff.directory.read\", version: 1, mode: \"read\", title: \"Search staff directory\",\n    domain: \"staff\", tool: \"readStaffDirectory\", policy: { roles: managers }, scope: \"tenant\",\n    clients: [\"dashboard\"], rollout: \"planned\", procedures: [\"retailOps.staffDirectoryPage\"],\n    examples: [\"Find staff named Amina\", \"How many active staff memberships do we have?\"],\n    tests: [\"packages/db/src/queries/staff-directory.test.ts\", \"apps/api/src/assistant/general-staff-reads.test.ts\"], brain,",
+      "after": "    id: \"staff.directory.read\", version: 1, mode: \"read\", title: \"Search staff directory\",\n    domain: \"staff\", tool: \"readStaffDirectory\", policy: { roles: managers }, scope: \"tenant\",\n    clients: [\"dashboard\", \"mobile\"], rollout: \"planned\", procedures: [\"retailOps.staffDirectoryPage\"],\n    examples: [\"Find staff named Amina\", \"How many active staff memberships do we have?\"],\n    tests: [\"packages/assistant/evaluations/fixtures/native-staff-directory.fixture.tsx\", \"packages/db/src/queries/staff-directory.test.ts\", \"apps/api/src/assistant/general-staff-reads.test.ts\"], brain,"
+    },
+    {
+      "id": "staff.member.read",
+      "before": "    id: \"staff.member.read\", version: 1, mode: \"read\", title: \"Read exact staff membership\",\n    domain: \"staff\", tool: \"readStaffMember\", policy: { roles: managers }, scope: \"tenant\",\n    clients: [\"dashboard\"], rollout: \"planned\", procedures: [\"retailOps.staffDirectoryMember\"],\n    examples: [\"Show the staff membership we selected\"],\n    tests: [\"packages/db/src/queries/staff-directory.test.ts\", \"apps/api/src/assistant/general-staff-reads.test.ts\"], brain,",
+      "after": "    id: \"staff.member.read\", version: 1, mode: \"read\", title: \"Read exact staff membership\",\n    domain: \"staff\", tool: \"readStaffMember\", policy: { roles: managers }, scope: \"tenant\",\n    clients: [\"dashboard\", \"mobile\"], rollout: \"planned\", procedures: [\"retailOps.staffDirectoryMember\"],\n    examples: [\"Show the staff membership we selected\"],\n    tests: [\"packages/assistant/evaluations/fixtures/native-staff-member.fixture.tsx\", \"packages/db/src/queries/staff-directory.test.ts\", \"apps/api/src/assistant/general-staff-reads.test.ts\"], brain,"
+    },
+    {
+      "id": "staff.history.read",
+      "before": "    id: \"staff.history.read\", version: 1, mode: \"read\", title: \"Read recorded staff history\",\n    domain: \"staff\", tool: \"readStaffHistory\", policy: { roles: [\"OWNER\", \"ADMIN\"] }, scope: \"tenant\",\n    clients: [\"dashboard\"], rollout: \"planned\", procedures: [\"retailOps.staffHistoryPage\"],\n    examples: [\"Who changed this staff member's Store access?\", \"Show staff suspensions last week\"],\n    tests: [\"packages/db/src/queries/staff-history.test.ts\", \"apps/api/src/assistant/general-staff-history.test.ts\"], brain,",
+      "after": "    id: \"staff.history.read\", version: 1, mode: \"read\", title: \"Read recorded staff history\",\n    domain: \"staff\", tool: \"readStaffHistory\", policy: { roles: [\"OWNER\", \"ADMIN\"] }, scope: \"tenant\",\n    clients: [\"dashboard\", \"mobile\"], rollout: \"planned\", procedures: [\"retailOps.staffHistoryPage\"],\n    examples: [\"Who changed this staff member's Store access?\", \"Show staff suspensions last week\"],\n    tests: [\"packages/assistant/evaluations/fixtures/native-staff-history.fixture.tsx\", \"packages/db/src/queries/staff-history.test.ts\", \"apps/api/src/assistant/general-staff-history.test.ts\"], brain,"
+    }
+  ],
+  "checks": {
+    "affected": "30pass/135assertions",
+    "newReadComponents": "35logical cases/348assertions",
+    "readNavigation": "3/25",
+    "updatedOriginals": "10/106",
+    "postTypeOnlyModelRerun": "8/49",
+    "lint": "17paths plus2after literal-type repair clean",
+    "compiler": "exit2;78imported baseline diagnostics,0ownedS01",
+    "coverage": "current",
+    "impact": "16records,19capability/6procedurechanges",
+    "whitespace": "scopedclean",
+    "acceptance": "13/45retained"
+  },
+  "registry": {
+    "capabilities": 150,
+    "writes": 74,
+    "mobileWrites": 27,
+    "mobileReads": 45,
+    "declaredGaps": 0,
+    "allWriteGaps": 47
+  },
+  "brainFiles": [
+    ".brain/plans/2026-10-15-assistant-operations-phase-checklist.md",
+    ".brain/features/assistant-business-operations.md",
+    ".brain/features/assistant-staff-directory.md",
+    ".brain/features/mobile-staff-management.md",
+    ".brain/features/assistant-staff-access-s04.md",
+    ".brain/api/contracts.md",
+    ".brain/api/permissions.md",
+    ".brain/qa/2026-10-15-assistant-operations-phases.md",
+    ".brain/tasks/in-progress.md"
+  ]
+}

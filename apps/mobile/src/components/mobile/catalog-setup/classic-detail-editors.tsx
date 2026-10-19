@@ -50,7 +50,7 @@ function useDrafts(model: CatalogSetupModel) {
 }
 
 function Lead({ children }: { children: string }) {
-  return <Text className="text-[13px] text-muted-foreground">{children}</Text>
+  return <Text className="text-xs text-muted-foreground">{children}</Text>
 }
 
 function Section({ title, trailing }: { title: string; trailing?: string }) {
@@ -58,7 +58,7 @@ function Section({ title, trailing }: { title: string; trailing?: string }) {
     <View className="mt-2 flex-row items-baseline justify-between">
       <Text className="text-base font-extrabold text-foreground">{title}</Text>
       {trailing ? (
-        <Text className="text-[13px] font-bold text-muted-foreground">
+        <Text className="text-xs font-bold text-muted-foreground">
           {trailing}
         </Text>
       ) : null}
@@ -117,7 +117,7 @@ function MiniInput({
     >
       {prefix ? (
         <NativeText
-          style={{ color: colors.mutedForeground, fontWeight: "800" }}
+          style={{ color: colors.mutedForeground, fontSize: 16, fontWeight: "800" }}
         >
           {prefix}
         </NativeText>
@@ -134,7 +134,7 @@ function MiniInput({
         style={{
           color: colors.foreground,
           flex: 1,
-          fontSize: 14,
+          fontSize: 16,
           fontVariant: ["tabular-nums"],
           fontWeight: "700",
           padding: 0,
@@ -231,7 +231,7 @@ export function ClassicOpeningStock({ model }: { model: CatalogSetupModel }) {
               <NativeText
                 style={{
                   color: colors.accentForeground,
-                  fontSize: 12,
+                  fontSize: 16,
                   fontWeight: "600",
                 }}
               >
@@ -240,7 +240,7 @@ export function ClassicOpeningStock({ model }: { model: CatalogSetupModel }) {
               <NativeText
                 style={{
                   color: colors.accentForeground,
-                  fontSize: 15,
+                  fontSize: 16,
                   fontWeight: "800",
                 }}
               >
@@ -250,7 +250,7 @@ export function ClassicOpeningStock({ model }: { model: CatalogSetupModel }) {
             <NativeText
               style={{
                 color: colors.accentForeground,
-                fontSize: 12,
+                fontSize: 16,
                 fontWeight: "700",
               }}
             >
@@ -295,7 +295,7 @@ export function ClassicOpeningStock({ model }: { model: CatalogSetupModel }) {
             <NativeText
               style={{
                 color: colors.accentForeground,
-                fontSize: 12,
+                fontSize: 16,
                 fontWeight: "600",
               }}
             >
@@ -305,7 +305,7 @@ export function ClassicOpeningStock({ model }: { model: CatalogSetupModel }) {
               numberOfLines={1}
               style={{
                 color: colors.accentForeground,
-                fontSize: 15,
+                fontSize: 16,
                 fontWeight: "800",
               }}
             >
@@ -422,7 +422,7 @@ export function ClassicCodes({ model }: { model: CatalogSetupModel }) {
               className="size-[15px] text-accent-foreground"
               name="Sparkles"
             />
-            <Text className="text-[13px] font-extrabold text-accent-foreground">
+            <Text className="text-xs font-extrabold text-accent-foreground">
               Generate
             </Text>
           </Pressable>
@@ -647,7 +647,7 @@ export function ClassicDescription({ model }: { model: CatalogSetupModel }) {
           value={model.description}
           variant="green-gate"
         />
-        <Text className="text-right text-[11.5px] tabular-nums text-muted-foreground">
+        <Text className="text-right text-xs tabular-nums text-muted-foreground">
           {`${model.description.length} / 2000`}
         </Text>
       </Card>
@@ -668,9 +668,7 @@ export function ClassicDescription({ model }: { model: CatalogSetupModel }) {
             }
           >
             <Icon className="size-[13px] text-foreground" name="Plus" />
-            <Text className="text-[12.5px] font-bold text-foreground">
-              {detail}
-            </Text>
+            <Text className="text-xs font-bold text-foreground">{detail}</Text>
           </Pressable>
         ))}
       </View>

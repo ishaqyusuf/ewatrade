@@ -1,0 +1,118 @@
+{
+  "version": 1,
+  "id": "2026-10-15-g05-native-manual-share",
+  "tickets": [
+    "G05",
+    "A04",
+    "H01",
+    "H02"
+  ],
+  "summary": "Native already-shared manual-message editor and exact native/dashboard original navigation; fresh strict protected context/original reads, contact-safe model projections, bounded terminal history and replay repair. All planned; source only.",
+  "capabilities": [
+    {
+      "id": "services.message.share",
+      "change": "changed",
+      "rollout": "planned",
+      "note": "Adds mobile editor and exact service_manual_message receipt/target, no activation."
+    },
+    {
+      "id": "services.message.context.read",
+      "change": "added",
+      "rollout": "planned",
+      "note": "Pure fresh protected current Job/Order recipient context; model contact availability only."
+    },
+    {
+      "id": "services.message.original.read",
+      "change": "added",
+      "rollout": "planned",
+      "note": "Pure protected exact Job/intent/share original; no provider or fallback lookup."
+    },
+    {
+      "id": "services.messages.read",
+      "change": "unchanged",
+      "rollout": "planned",
+      "note": "Dashboard-only history retains older terminal facts independently of bounded displayed attempts."
+    }
+  ],
+  "procedures": [
+    {
+      "path": "serviceCommunications.manualMessageEditorContext",
+      "status": "supported",
+      "reason": "Protected canonical pure read is mapped by a planned capability; supported is source coverage, not rollout."
+    },
+    {
+      "path": "serviceCommunications.manualMessageOriginal",
+      "status": "supported",
+      "reason": "Protected canonical pure read is mapped by a planned capability; supported is source coverage, not rollout."
+    }
+  ],
+  "docs": [
+    {
+      "topic": "feature",
+      "path": ".brain/features/assistant-service-messages.md",
+      "status": "local_only",
+      "note": "Historical packet retained; current source semantics, UI/authority/evidence/remaining gates recorded."
+    },
+    {
+      "topic": "api",
+      "path": ".brain/api/contracts.md",
+      "status": "local_only",
+      "note": "Strict exact identities, client DTO/model privacy and receipt compatibility."
+    },
+    {
+      "topic": "api",
+      "path": ".brain/api/endpoints.md",
+      "status": "local_only",
+      "note": "Pure protected reads and transaction/error bounds."
+    },
+    {
+      "topic": "permissions",
+      "path": ".brain/api/permissions.md",
+      "status": "local_only",
+      "note": "Existing authority/clinical/refusal ceiling unchanged; no new grant."
+    },
+    {
+      "topic": "capability",
+      "path": "packages/assistant/src/capabilities/COVERAGE.md",
+      "status": "updated",
+      "note": "152capabilities; planned native39write/65read; parent45unchanged."
+    },
+    {
+      "topic": "schema",
+      "status": "not_applicable",
+      "note": "No G05 Prisma/schema/migration change; existing Job/Order/intent/share relationships reused."
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "test",
+      "path": "packages/assistant/evaluations/phase-regressions.test.ts",
+      "executed": true,
+      "result": "Combined50pass/222assertions across7top-level files;31 isolated actual source fixture children. Includes mounted ack/Save recovery, strict router and exact original wiring. Stand-ins, no DB/device."
+    },
+    {
+      "kind": "test",
+      "path": "packages/db/src/queries/service-manual-message.test.ts",
+      "executed": true,
+      "result": "Canonical17/196 child-run proof with inert init: pure context/exact original, older terminal facts, bounded replay."
+    },
+    {
+      "kind": "test",
+      "path": "apps/dashboard/src/components/assistant-manual-message-state.test.ts",
+      "executed": true,
+      "result": "Dashboard8/84 across3files, including actual GlobalSheets access-gate isolation; content full text and saved/current labels."
+    },
+    {
+      "kind": "test",
+      "path": "apps/api/src/assistant/general-service-message.test.ts",
+      "executed": true,
+      "result": "Isolated adapter5/35; exact share receipt and planned current-client role gates."
+    },
+    {
+      "kind": "review",
+      "path": "packages/assistant/evaluations/runs/2026-10-15-g05-native-manual-share.md",
+      "executed": true,
+      "result": "Independent UI recovery and integration reviews, dependency observations/checks and explicit remaining acceptance boundaries."
+    }
+  ]
+}

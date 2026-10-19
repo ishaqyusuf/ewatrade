@@ -5,9 +5,14 @@ import { useAuthContext } from "@/hooks/use-auth"
 import { useOperationalModeStore } from "@/store/operationalModeStore"
 import { useTRPC } from "@/trpc/client"
 import type { RouterOutputs } from "@ewatrade/api/trpc/routers/_app"
+import {
+  freshShownRead,
+  mountOwnedRead,
+  nextReadMount,
+} from "@ewatrade/assistant/general/staff-activity-target"
 import { useQuery } from "@tanstack/react-query"
 import { useRouter } from "expo-router"
-import type { ReactNode } from "react"
+import { type ReactNode, useState } from "react"
 import { ActionButton } from "../action-button"
 import { HeroCard } from "../green-till/hero-card"
 
@@ -20,9 +25,11 @@ export type FinanceWorkspace = {
 export function FinanceWorkspaceGate({
   children,
   requireOnline = false,
+  expectedBookId,
 }: {
   children: (workspace: FinanceWorkspace) => ReactNode
   requireOnline?: boolean
+  expectedBookId?: string
 }) {
   const offline = useOperationalModeStore((s) => s.isOfflineMode)
   const { profile } = useAuthContext()
@@ -38,6 +45,10 @@ export function FinanceWorkspaceGate({
     )
   if (
     !profile?.businessId ||
+    (expectedBookId !== undefined && !profile.id) ||
+    (expectedBookId !== undefined &&
+      profile.status !== undefined &&
+      profile.status !== "ACTIVE") ||
     !["OWNER", "ADMIN"].includes(profile.role?.trim().toUpperCase() ?? "")
   )
     return (
@@ -49,9 +60,23 @@ export function FinanceWorkspaceGate({
     )
   return (
     <AuthorizedBook
-      key={`${profile.id}:${profile.businessId}`}
+      key={
+        expectedBookId === undefined
+          ? `${profile.id}:${profile.businessId}:current`
+          : JSON.stringify([
+              profile.id,
+              profile.businessId,
+              profile.storeId,
+              profile.status,
+              profile.role,
+              profile.staffAccessMode,
+              profile.catalogEditor,
+              expectedBookId,
+            ])
+      }
       actorUserId={profile.id}
       tenantId={profile.businessId}
+      expectedBookId={expectedBookId}
     >
       {children}
     </AuthorizedBook>
@@ -62,17 +87,29 @@ function AuthorizedBook({
   actorUserId,
   tenantId,
   children,
+  expectedBookId,
 }: Omit<FinanceWorkspace, "book"> & {
   children: (workspace: FinanceWorkspace) => ReactNode
+  expectedBookId?: string
 }) {
   const router = useRouter()
   const offline = useOperationalModeStore((s) => s.isOfflineMode)
   const trpc = useTRPC()
+  const [mount] = useState(nextReadMount)
+  const options = trpc.finance.book.queryOptions(undefined, {
+    retry: false,
+    enabled: !offline,
+    ...(expectedBookId === undefined
+      ? {}
+      : {
+          staleTime: 0,
+          gcTime: 0,
+          refetchOnMount: "always" as const,
+          trpc: { abortOnUnmount: true },
+        }),
+  })
   const book = useQuery(
-    trpc.finance.book.queryOptions(undefined, {
-      retry: false,
-      enabled: !offline,
-    }),
+    expectedBookId === undefined ? options : mountOwnedRead(options, mount),
   )
   if (book.isPending)
     return offline ? (
@@ -94,6 +131,21 @@ function AuthorizedBook({
         actionLabel="Try again"
         onActionPress={() => void book.refetch()}
         tone="destructive"
+      />
+    )
+  if (expectedBookId !== undefined && freshShownRead(book).state !== "ready")
+    return (
+      <StatusBanner
+        title="Checking the receipt’s Book"
+        message="Wait for a fresh authorized read before viewing this original record."
+      />
+    )
+  if (expectedBookId !== undefined && book.data?.id !== expectedBookId)
+    return (
+      <StatusBanner
+        title="Receipt Book unavailable"
+        message="This receipt belongs to another Finance Book. Open the original from the dashboard."
+        tone="warning"
       />
     )
   if (!book.data)

@@ -1,5 +1,6 @@
 import type { PrismaClient } from "../../generated/prisma/client"
 import { getAccountPrivacyStaffInvitationInventory } from "./account-privacy-staff-invitation-inventory"
+import { assistantWhatsAppPrivacyInventory } from "./assistant-whatsapp/privacy"
 import { customerMessageTemplatePrivacyInventory } from "./customer-messages/privacy"
 
 export type AccountPrivacyAdditionalInventoryClient = Pick<
@@ -58,6 +59,10 @@ export async function getAccountPrivacyAdditionalInventory(
     db,
     subjectId,
   )
+  const assistantWhatsApp = await assistantWhatsAppPrivacyInventory(
+    db,
+    subjectId,
+  )
   return {
     assistantConversations,
     assistantRuns,
@@ -69,5 +74,6 @@ export async function getAccountPrivacyAdditionalInventory(
     staffProfiles,
     ...staffInvitations,
     ...customerMessages,
+    ...assistantWhatsApp,
   }
 }

@@ -350,7 +350,7 @@ function StatementWindow({
         return (
           <View>
             {first ? (
-              <Text className="mb-2 mt-4 px-0.5 text-[11px] font-extrabold uppercase tracking-[1.2px] text-muted-foreground">
+              <Text className="mb-2 mt-4 px-0.5 text-xs font-extrabold uppercase tracking-[1.2px] text-muted-foreground">
                 {financeDisplayDate(item.effectiveAt)}
               </Text>
             ) : null}
@@ -371,7 +371,7 @@ function StatementWindow({
                   tint: net >= 0n ? "mint" : "rose",
                 }}
                 status={
-                  <Text className="text-[11px] tabular-nums text-muted-foreground">
+                  <Text className="text-xs tabular-nums text-muted-foreground">
                     Bal {money(item.balanceMinor)}
                   </Text>
                 }

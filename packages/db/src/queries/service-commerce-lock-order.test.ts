@@ -100,6 +100,18 @@ function createHandoffDb(input: {
       storeId: "store-1",
     }
   }
+  const financialOrder = {
+    amountPaidMinor: 1000,
+    completedAt,
+    currencyCode: "NGN",
+    customerId: null,
+    id: "order-1",
+    paymentStatus: "PAID",
+    status: "FULFILLING",
+    tenantId: "tenant-1",
+    storeId: "store-1",
+    totalMinor: 1000,
+  }
   const tx = {
     $queryRaw: async (strings: TemplateStringsArray) => {
       const query = strings.join(" ")
@@ -109,7 +121,7 @@ function createHandoffDb(input: {
       }
       if (query.includes('"CommercialOrder"')) {
         lockOrder.push("order")
-        return [{ id: "order-1" }]
+        return [financialOrder]
       }
       if (query.includes('"ServiceBooking"')) {
         lockOrder.push("booking")
@@ -125,18 +137,7 @@ function createHandoffDb(input: {
       findFirst: async (args: { select?: unknown }) =>
         args.select
           ? { customerId: null, currencyCode: "NGN" }
-          : {
-              amountPaidMinor: 1000,
-              completedAt,
-              currencyCode: "NGN",
-              customerId: null,
-              id: "order-1",
-              paymentStatus: "PAID",
-              status: "FULFILLING",
-              tenantId: "tenant-1",
-              storeId: "store-1",
-              totalMinor: 1000,
-            },
+          : financialOrder,
       findUniqueOrThrow: async () => ({
         amountPaidMinor: 1000,
         completedAt,

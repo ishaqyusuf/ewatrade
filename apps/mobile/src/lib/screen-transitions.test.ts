@@ -20,6 +20,30 @@ describe("stack transitions", () => {
   })
 })
 
+describe("stack transitions under Reduce Motion", () => {
+  test("pushes and Android modals fade instead of sliding", () => {
+    const android = stackTransitions("android", true)
+    expect(android.push).toEqual({ animation: "fade" })
+    expect(android.modal).toEqual({ presentation: "modal", animation: "fade" })
+    expect(android.gate.animation).toBe("fade")
+    const ios = stackTransitions("ios", true)
+    expect(ios.push).toEqual({ animation: "fade" })
+  })
+
+  test("the iOS modal sheet keeps its system presentation", () => {
+    expect(stackTransitions("ios", true).modal).toEqual({
+      presentation: "modal",
+    })
+  })
+
+  test("the default is unchanged when Reduce Motion is off", () => {
+    expect(stackTransitions("android", false)).toEqual(
+      stackTransitions("android"),
+    )
+    expect(stackTransitions("ios", false)).toEqual(stackTransitions("ios"))
+  })
+})
+
 describe("tab transitions", () => {
   // Stands in for the Animated progress value: interpolate returns its config.
   const sceneStyle = (focused: boolean) => {
@@ -52,7 +76,10 @@ describe("tab transitions", () => {
   test("the tab being opened fades in place", () => {
     const style = sceneStyle(true)
     expect(style.opacity.outputRange).toEqual([0, 1, 0])
-    expect(style.transform).toBeUndefined()
+    expect(style.transform?.[0]?.translateX).toEqual({
+      inputRange: [-1, 0, 1],
+      outputRange: [0, 0, 0],
+    })
   })
 
   test("the tab being left slides away in tab order and fades out early", () => {

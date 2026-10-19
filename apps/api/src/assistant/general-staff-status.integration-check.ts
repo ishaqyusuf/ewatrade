@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto"
 import type { Prisma } from "@ewatrade/db"
 import { reviewStaffStatusChangeInTransaction } from "@ewatrade/db/queries"
 import { getStaffStatusReceiptInTransaction } from "@ewatrade/db/staff-status-receipt"
+import { requireBrowserIdentity } from "./channel-principal"
 import type { GeneralContext } from "./general-context"
 import { decideGeneralProposal } from "./general-proposals"
 import { proposalApprovalToken, proposalDigest } from "./proposal-security"
@@ -57,12 +58,13 @@ export async function verifyStaffStatusProposalRollback(
     where: { id: storeId, tenantId, status: "ACTIVE" },
   })
   check(
-    process.env.S03_QA_SESSION_ID === ctx.session.session.id,
+    process.env.S03_QA_SESSION_ID ===
+      requireBrowserIdentity(ctx.session).session.id,
     "Explicit session pin required",
   )
   await db.session.findFirstOrThrow({
     where: {
-      id: ctx.session.session.id,
+      id: requireBrowserIdentity(ctx.session).session.id,
       userId: actorUserId,
       expiresAt: { gt: new Date() },
     },

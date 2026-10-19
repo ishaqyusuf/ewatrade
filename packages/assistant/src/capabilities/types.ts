@@ -16,7 +16,7 @@ export type CapabilityDomain =
   | "customers"
   | "finance"
   | "staff"
-export type CapabilityClient = "dashboard" | "mobile"
+export type CapabilityClient = "dashboard" | "mobile" | "whatsapp"
 export type CapabilityRollout = "planned" | "source" | "pilot" | "enabled"
 /** `book` and `provider` are reserved for finance and external-money phases. */
 export type CapabilityEffect = "none" | "record" | "book" | "provider"
@@ -39,6 +39,7 @@ type CapabilityBase = {
   scope: "store" | "tenant" | "book"
   clients: readonly CapabilityClient[]
   rollout: CapabilityRollout
+  whatsapp?: { mode: "native" | "app_review"; rollout: CapabilityRollout }
   /** Model-facing name; unchanged when IDs are versioned. */
   tool: string
   /** Canonical procedures this capability reuses, as `router.procedure`. */

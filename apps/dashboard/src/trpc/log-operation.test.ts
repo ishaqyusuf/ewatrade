@@ -55,3 +55,44 @@ test("ordinary development requests still log both directions; absent identity f
     ),
   ).toBe(false)
 })
+
+test.each(["development", "production"])(
+  "assistant linking secrets and identity responses stay unlogged in %s",
+  async (environment) => {
+    const logged: unknown[] = []
+    const client = createTRPCUntypedClient({
+      links: [
+        loggerLink({
+          enabled: (options) =>
+            shouldLogDashboardTrpcOperation(options, environment),
+          logger: (options) => logged.push(options),
+        }),
+        () =>
+          ({ op }) =>
+            observable((observer) => {
+              if (op.path === "assistantChannels.createWhatsAppLink") {
+                observer.next({
+                  result: {
+                    data: {
+                      url: "https://wa.me/12345678?text=private-link-proof",
+                    },
+                  },
+                })
+                observer.complete()
+              } else observer.error(new Error("private-synthetic-error"))
+            }),
+      ],
+    })
+    await client.mutation("assistantChannels.createWhatsAppLink", {})
+    await expect(
+      client.mutation("assistantChannels.confirmWhatsAppLink", {
+        linkId: "private",
+        expectedRevision: 2,
+      }),
+    ).rejects.toThrow()
+    await expect(
+      client.query("assistantChannels.whatsAppConnections"),
+    ).rejects.toThrow()
+    expect(logged).toHaveLength(0)
+  },
+)

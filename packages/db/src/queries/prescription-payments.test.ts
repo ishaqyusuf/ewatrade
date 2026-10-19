@@ -181,7 +181,10 @@ describe("prescription payment provider failures", () => {
           : decision,
     )
     const transaction = {
-      $queryRaw: async () => [{ id: "order-1" }],
+      $queryRaw: async (parts: TemplateStringsArray) =>
+        parts.join("").includes('FROM "CommercialOrder"')
+          ? [financeOrder()]
+          : [{ id: "order-1" }],
       // No open payment link blocks this provider-settled payment.
       collectionIntent: { findFirst: async () => null },
       commercialOrder: {
@@ -247,6 +250,8 @@ describe("prescription payment provider failures", () => {
     const transaction = {
       $queryRaw: async (parts: TemplateStringsArray) => {
         const sql = parts.join("")
+        if (sql.includes('FROM "CommercialOrder"'))
+          return [financeOrder({ paymentStatus: "PAID" })]
         return sql.includes('FROM "FinanceBook"')
           ? []
           : [
@@ -321,7 +326,10 @@ describe("prescription payment provider failures", () => {
   test("records a failed callback without creating payment or receipt facts", async () => {
     const intentUpdates: unknown[] = []
     const transaction = {
-      $queryRaw: async () => [{ id: "order-1" }],
+      $queryRaw: async (parts: TemplateStringsArray) =>
+        parts.join("").includes('FROM "CommercialOrder"')
+          ? [financeOrder()]
+          : [{ id: "order-1" }],
       commercialOrder: { findFirst: async () => financeOrder() },
       prescriptionPaymentIntent: {
         findUnique: async () => callbackPaymentIntent({ id: "payment-1" }),
@@ -362,7 +370,10 @@ describe("prescription payment provider failures", () => {
   test("rejects a mismatched amount before creating payment ledger facts", async () => {
     const eventUpdates: unknown[] = []
     const transaction = {
-      $queryRaw: async () => [{ id: "order-1" }],
+      $queryRaw: async (parts: TemplateStringsArray) =>
+        parts.join("").includes('FROM "CommercialOrder"')
+          ? [financeOrder()]
+          : [{ id: "order-1" }],
       commercialOrder: { findFirst: async () => financeOrder() },
       prescriptionPaymentIntent: {
         findUnique: async () => callbackPaymentIntent({ id: "payment-1" }),
@@ -559,23 +570,26 @@ describe("prescription refund provider result", () => {
   test("records a synchronous provider success in the commercial ledger", async () => {
     const paymentCreates: unknown[] = []
     const orderUpdates: unknown[] = []
+    const financialOrder = financeOrder({
+      amountPaidMinor: 10_000,
+      paymentStatus: "PAID",
+      payments: [
+        {
+          amountMinor: 10_000,
+          id: "payment-1",
+          method: "CARD",
+          type: "PAYMENT",
+        },
+      ],
+      totalMinor: 10_000,
+    })
     const transaction = {
-      $queryRaw: async () => [{ id: "order-1" }],
+      $queryRaw: async (parts: TemplateStringsArray) =>
+        parts.join("").includes('FROM "CommercialOrder"')
+          ? [financialOrder]
+          : [{ id: "order-1" }],
       commercialOrder: {
-        findFirst: async () =>
-          financeOrder({
-            amountPaidMinor: 10_000,
-            paymentStatus: "PAID",
-            payments: [
-              {
-                amountMinor: 10_000,
-                id: "payment-1",
-                method: "CARD",
-                type: "PAYMENT",
-              },
-            ],
-            totalMinor: 10_000,
-          }),
+        findFirst: async () => financialOrder,
         update: async (input: unknown) => {
           orderUpdates.push(input)
           return input
@@ -647,7 +661,10 @@ describe("prescription refund provider result", () => {
   test("reserves pending refunds under a payment-intent lock before provider work", async () => {
     let created = false
     const transaction = {
-      $queryRaw: async () => [{ id: "intent-1" }],
+      $queryRaw: async (parts: TemplateStringsArray) =>
+        parts.join("").includes('FROM "CommercialOrder"')
+          ? [financeOrder()]
+          : [{ id: "intent-1" }],
       commercialOrder: { findFirst: async () => financeOrder() },
       prescriptionPaymentIntent: {
         findUnique: async () =>

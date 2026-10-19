@@ -1,0 +1,90 @@
+{
+  "version": 1,
+  "id": "2026-10-15-g01-native-report-source",
+  "tickets": [
+    "G01",
+    "A04",
+    "H01",
+    "H02"
+  ],
+  "summary": "Integrated six existing report families into native answer navigation and a protected Back-preserving modal, with planned mobile declarations. G01 connected QA remains paused; no canonical API/domain/schema/permission or rollout activation.",
+  "capabilities": [
+    {
+      "id": "sales.items.report",
+      "change": "changed",
+      "rollout": "planned",
+      "note": "Existing canonical report gets a native client reader and source navigation evidence; rollout remains planned, not saved/device or connected acceptance."
+    },
+    {
+      "id": "sales.collections.report",
+      "change": "changed",
+      "rollout": "planned",
+      "note": "Existing canonical report gets a native client reader and source navigation evidence; rollout remains planned, not saved/device or connected acceptance."
+    },
+    {
+      "id": "customers.debt.report",
+      "change": "changed",
+      "rollout": "planned",
+      "note": "Existing canonical report gets a native client reader and source navigation evidence; rollout remains planned, not saved/device or connected acceptance."
+    },
+    {
+      "id": "finance.supplier_aging.report",
+      "change": "changed",
+      "rollout": "planned",
+      "note": "Existing canonical report gets a native client reader and source navigation evidence; rollout remains planned, not saved/device or connected acceptance."
+    },
+    {
+      "id": "finance.posted_profit.report",
+      "change": "changed",
+      "rollout": "planned",
+      "note": "Existing canonical report gets a native client reader and source navigation evidence; rollout remains planned, not saved/device or connected acceptance."
+    },
+    {
+      "id": "inventory.stock.report",
+      "change": "changed",
+      "rollout": "planned",
+      "note": "Existing canonical report gets a native client reader and source navigation evidence; rollout remains planned, not saved/device or connected acceptance."
+    }
+  ],
+  "procedures": [],
+  "docs": [
+    {
+      "topic": "feature",
+      "path": ".brain/features/assistant-business-reporting-g01.md",
+      "status": "local_only",
+      "note": "Native route/answer/reader integration with explicit source-only and paused acceptance limits."
+    },
+    {
+      "topic": "api",
+      "path": ".brain/api/contracts.md",
+      "status": "local_only",
+      "note": "Existing protected target/read contract reused; typed echoes only, no API/schema/permission change."
+    },
+    {
+      "topic": "permissions",
+      "path": ".brain/api/permissions.md",
+      "status": "local_only",
+      "note": "Existing protected role/origin gates unchanged; planned mobile client declared; no runtime rollout enabled."
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "test",
+      "path": "packages/assistant/evaluations/phase-regressions.test.ts",
+      "executed": true,
+      "result": "50/238 across4top-level files with27isolatedchildren; integrated six-family model/modal/protected-screen wiring, malformed params and destination-role repair. Screen15/206; content14/158."
+    },
+    {
+      "kind": "test",
+      "path": "apps/mobile/src/components/mobile/assistant/native-business-report-target.test.ts",
+      "executed": true,
+      "result": "8/138 helper checks include exact destination access predicates; final focused compiler90imported errors/0owned report errors."
+    },
+    {
+      "kind": "review",
+      "path": "packages/assistant/evaluations/runs/2026-10-15-g01-native-report-source.md",
+      "executed": true,
+      "result": "Independent review repaired original-destination role mismatch with required fail-closed canOpen; final current hashes/evidence recorded. Concurrent foreign check failures remain explicit; no connected/native acceptance."
+    }
+  ]
+}

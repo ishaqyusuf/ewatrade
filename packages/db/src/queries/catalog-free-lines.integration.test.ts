@@ -46,6 +46,20 @@ if (enabled) setDefaultTimeout(120_000)
           tenantId,
         }
 
+        for (const [index, description] of [undefined, " \t\n"].entries()) {
+          await expect(
+            createCommercialOrder(prisma, {
+              ...base,
+              clientOrderId: `catalog-free-${id}-blank-${index}`,
+              lines: [{ custom: "quick_sale", amountMinor: 500, description }],
+            }),
+          ).rejects.toMatchObject({ code: "INVALID_ORDER" })
+        }
+        expect(
+          await prisma.commercialOrder.count({ where: { tenantId } }),
+        ).toBe(0)
+        expect(await prisma.catalogItem.count({ where: { tenantId } })).toBe(0)
+
         const paid = await createCommercialOrder(prisma, {
           ...base,
           clientOrderId: `catalog-free-${id}-1`,
@@ -82,10 +96,16 @@ if (enabled) setDefaultTimeout(120_000)
         const open = await createCommercialOrder(prisma, {
           ...base,
           clientOrderId: `catalog-free-${id}-2`,
-          lines: [{ amountMinor: 2_500, custom: "quick_sale" }],
+          lines: [
+            {
+              amountMinor: 2_500,
+              custom: "quick_sale",
+              description: "More rice",
+            },
+          ],
         })
         expect(open.status).toBe("CONFIRMED")
-        expect(open.lines[0]?.snapshot?.catalogItemName).toBe("Quick sale")
+        expect(open.lines[0]?.snapshot?.catalogItemName).toBe("More rice")
         expect(
           await prisma.catalogItem.count({
             where: { systemRole: { not: null }, tenantId },

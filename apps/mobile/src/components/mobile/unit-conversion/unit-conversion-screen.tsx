@@ -256,7 +256,7 @@ function ClassicConversionHero({ model }: { model: ConversionModel }) {
             <NativeText
               style={{
                 color: palette.heroMuted,
-                fontSize: 14,
+                fontSize: 16,
                 fontWeight: "700",
                 letterSpacing: 0,
               }}
@@ -284,7 +284,7 @@ function ClassicConversionHero({ model }: { model: ConversionModel }) {
             <NativeText
               style={{
                 color: palette.heroMuted,
-                fontSize: 14,
+                fontSize: 16,
                 fontWeight: "700",
                 letterSpacing: 0,
               }}
@@ -402,7 +402,7 @@ function ClassicConversionBody({ model }: { model: ConversionModel }) {
       {direction === "to" && model.targetRows.length > 1 ? (
         <StatusPill label={`${model.targetRows.length} match`} tone="muted" />
       ) : (
-        <Text className="text-[13px] font-extrabold text-primary">Change</Text>
+        <Text className="text-xs font-extrabold text-primary">Change</Text>
       )}
     </Pressable>
   )

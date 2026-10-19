@@ -72,4 +72,15 @@ export function serviceOfferings(items: CatalogItem[]) {
   )
 }
 
-export type ServiceJobsProps = { onCreateOrder?: () => void }
+/** Exact assistant handover; the caller owns the fresh nonclinical authority read. */
+export type FocusedServiceJob = {
+  job: WorkJob
+  isCurrent: () => boolean
+  refresh: () => Promise<void>
+  onBack: () => void
+  checking?: boolean
+}
+export type ServiceJobsProps = {
+  onCreateOrder?: () => void
+  focusedJob?: FocusedServiceJob
+}

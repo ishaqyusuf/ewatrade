@@ -43,7 +43,7 @@ export function BusinessHeader({
             />
             <Text
               className={cn(
-                "text-[11px] font-bold uppercase tracking-[1px]",
+                "text-xs font-bold uppercase tracking-[1px]",
                 index === step - 1 ? "text-primary" : "text-muted-foreground",
               )}
             >
@@ -75,7 +75,7 @@ export function BusinessProfileRow({
       )}
     >
       <Text className="font-bold text-foreground">{profile.title}</Text>
-      <Text className="text-xs text-muted-foreground [-rn-line-height:20]">
+      <Text className="text-xs text-muted-foreground [-rn-line-height:22]">
         {profile.description}
       </Text>
     </Pressable>
@@ -105,7 +105,7 @@ export function BusinessChoice({
     >
       <Text
         className={cn(
-          "text-xs font-bold [-rn-line-height:20] [-rn-include-font-padding:false] [-rn-text-align-vertical:center]",
+          "text-xs font-bold [-rn-line-height:22] [-rn-include-font-padding:false] [-rn-text-align-vertical:center]",
           selected ? "text-primary-foreground" : "text-foreground",
         )}
       >

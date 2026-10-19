@@ -1,6 +1,7 @@
 import { expect } from "bun:test"
 import type { Prisma } from "@ewatrade/db"
 import { normalizeStockCategoryName } from "@ewatrade/utils/inventory-categories"
+import { requireBrowserIdentity } from "./channel-principal"
 import type { GeneralContext } from "./general-context"
 import {
   decideGeneralProposal,
@@ -85,7 +86,9 @@ export async function verifyPurchaseReceiptProposalGuards(
   const membership = await db.membership.findFirstOrThrow({
     where: { tenantId, userId: actorUserId, role: "OWNER" },
   })
-  const configurationId = source.lines[0]!.configurationVersionId
+  const firstLine = source.lines[0]
+  if (!firstLine) throw new Error("Purchase receipt fixture line required.")
+  const configurationId = firstLine.configurationVersionId
   const facts = async () => ({
     commands: await db.financeCommand.count({ where: { bookId } }),
     journals: await db.financeJournalEntry.count({ where: { bookId } }),
@@ -130,7 +133,7 @@ export async function verifyPurchaseReceiptProposalGuards(
     ).role,
     sessionExpiry: (
       await db.session.findUniqueOrThrow({
-        where: { id: ctx.session.session.id },
+        where: { id: requireBrowserIdentity(ctx.session).session.id },
         select: { expiresAt: true },
       })
     ).expiresAt,
@@ -216,7 +219,10 @@ export async function verifyPurchaseReceiptProposalGuards(
         expect(
           (
             await tx.session.updateMany({
-              where: { id: ctx.session.session.id, userId: actorUserId },
+              where: {
+                id: requireBrowserIdentity(ctx.session).session.id,
+                userId: actorUserId,
+              },
               data: { expiresAt: new Date("2000-01-01") },
             })
           ).count,

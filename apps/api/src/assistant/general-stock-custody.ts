@@ -2,6 +2,7 @@ import type {
   GeneralAction,
   GeneralReceipt,
 } from "@ewatrade/assistant/general/contracts"
+import { custodyMoveKind } from "@ewatrade/assistant/general/stock-custody"
 import { canManageSalesOperations, normalizeRole } from "@ewatrade/auth/roles"
 import {
   canStaffAccessStore,
@@ -31,42 +32,10 @@ import { proposalDigest } from "./proposal-security"
 
 type Move = Extract<GeneralAction, { action: "stock_custody_move" }>
 
-export type CustodySource = {
-  custodyType: "STORE" | "STAFF" | "SESSION" | "TRANSIT"
-  custodyReferenceId: string
-}
-
-/**
- * The supported moves: Store → staff assignment and staff → same-Store
- * return. Everything else is refused with a reason; session and transit
- * custody stay with their own workflows.
- */
-export function custodyMoveKind(
-  source: CustodySource,
-  target: Move["target"],
-):
-  | { kind: "assignment"; staffUserId: string }
-  | { kind: "return"; staffUserId: string }
-  | { refused: string } {
-  if (source.custodyType === "SESSION" || source.custodyType === "TRANSIT")
-    return {
-      refused:
-        "Session and transit stock move through their own closeout and transfer steps.",
-    }
-  if (source.custodyType === "STORE")
-    return target.type === "staff"
-      ? { kind: "assignment", staffUserId: target.userId }
-      : { refused: "This stock is already in Store custody." }
-  // Source is a staff member's custody.
-  if (target.type === "store")
-    return { kind: "return", staffUserId: source.custodyReferenceId }
-  return target.userId === source.custodyReferenceId
-    ? { refused: "This stock is already with that staff member." }
-    : {
-        refused:
-          "Stock moves between staff only through the Store: return it first, then assign it.",
-      }
-}
+export {
+  custodyMoveKind,
+  type CustodySource,
+} from "@ewatrade/assistant/general/stock-custody"
 
 const stale =
   "Custody stock changed. Review a fresh proposal before confirming."

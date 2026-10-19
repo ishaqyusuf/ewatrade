@@ -3,7 +3,7 @@ import { FormFeedback } from "@/components/forms/form-feedback"
 import { useDashboardWorkflow } from "@ewatrade/events/dashboard-client"
 
 import { clearDashboardDataCache } from "@/trpc/client"
-import { DropdownMenuItem } from "@ewatrade/ui"
+import { Button, DropdownMenuItem } from "@ewatrade/ui"
 import { Logout01Icon } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { useRouter } from "next/navigation"
@@ -11,7 +11,9 @@ import { type MouseEvent, useState } from "react"
 
 type ErrorResponse = { error?: string }
 
-export function SignOut() {
+export function SignOut({
+  appearance = "menu",
+}: { appearance?: "menu" | "button" }) {
   const workflow = useDashboardWorkflow()
   const router = useRouter()
   const [isSigningOut, setIsSigningOut] = useState(false)
@@ -49,15 +51,27 @@ export function SignOut() {
 
   return (
     <>
-      <DropdownMenuItem
-        closeOnClick={false}
-        disabled={isSigningOut}
-        className="rounded-none px-2 py-1.5 font-normal"
-        onClick={handleSignOut}
-      >
-        <HugeiconsIcon icon={Logout01Icon} className="size-4" />
-        {isSigningOut ? "Signing out…" : "Sign out"}
-      </DropdownMenuItem>
+      {appearance === "button" ? (
+        <Button
+          variant="outline"
+          size="sm"
+          disabled={isSigningOut}
+          onClick={handleSignOut}
+        >
+          <HugeiconsIcon icon={Logout01Icon} className="size-4" />
+          {isSigningOut ? "Signing out…" : "Sign out"}
+        </Button>
+      ) : (
+        <DropdownMenuItem
+          closeOnClick={false}
+          disabled={isSigningOut}
+          className="rounded-none px-2 py-1.5 font-normal"
+          onClick={handleSignOut}
+        >
+          <HugeiconsIcon icon={Logout01Icon} className="size-4" />
+          {isSigningOut ? "Signing out…" : "Sign out"}
+        </DropdownMenuItem>
+      )}
       {error ? (
         <FormFeedback appearance="dashboard">{error}</FormFeedback>
       ) : null}

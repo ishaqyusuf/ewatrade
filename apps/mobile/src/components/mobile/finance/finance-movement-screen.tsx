@@ -11,6 +11,11 @@ import {
 import { useOperationalModeStore } from "@/store/operationalModeStore"
 import { useTRPC } from "@/trpc/client"
 import type { RouterOutputs } from "@ewatrade/api/trpc/routers/_app"
+import {
+  freshShownRead,
+  mountOwnedRead,
+  nextReadMount,
+} from "@ewatrade/assistant/general/staff-activity-target"
 import { formatFinanceMoney } from "@ewatrade/utils/finance-money"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useRef, useState } from "react"
@@ -33,14 +38,18 @@ type Review = {
   payload: ReturnType<typeof prepareMoneyCorrection>
   original: Movement
 }
-export function FinanceMovementScreen({ entryId }: { entryId: string }) {
+export function FinanceMovementScreen({
+  entryId,
+  expectedBookId,
+}: { entryId: string; expectedBookId?: string }) {
   return (
-    <FinanceWorkspaceGate requireOnline>
+    <FinanceWorkspaceGate requireOnline expectedBookId={expectedBookId}>
       {(workspace) => (
         <MovementWorkspace
           key={`${workspace.actorUserId}:${workspace.tenantId}:${workspace.book.id}:${entryId}`}
           {...workspace}
           entryId={entryId}
+          pinnedReceipt={expectedBookId !== undefined}
         />
       )}
     </FinanceWorkspaceGate>
@@ -51,14 +60,27 @@ function MovementWorkspace({
   actorUserId,
   tenantId,
   entryId,
-}: FinanceWorkspace & { entryId: string }) {
+  pinnedReceipt,
+}: FinanceWorkspace & { entryId: string; pinnedReceipt: boolean }) {
   const trpc = useTRPC()
   const client = useQueryClient()
+  const [mount] = useState(nextReadMount)
+  const options = trpc.finance.moneyMovement.queryOptions(
+    { bookId: book.id, entryId },
+    {
+      retry: false,
+      ...(pinnedReceipt
+        ? {
+            staleTime: 0,
+            gcTime: 0,
+            refetchOnMount: "always" as const,
+            trpc: { abortOnUnmount: true },
+          }
+        : {}),
+    },
+  )
   const movement = useQuery(
-    trpc.finance.moneyMovement.queryOptions(
-      { bookId: book.id, entryId },
-      { retry: false },
-    ),
+    pinnedReceipt ? mountOwnedRead(options, mount) : options,
   )
   const mutation = useMutation(trpc.finance.reverseMoney.mutationOptions())
   const command = useMobileFinanceCommand({
@@ -136,6 +158,26 @@ function MovementWorkspace({
     )
       done()
   }
+  if (
+    pinnedReceipt &&
+    (freshShownRead(movement).state !== "ready" ||
+      movement.data?.id !== entryId ||
+      movement.data.bookId !== book.id)
+  )
+    return (
+      <FinanceFormBody>
+        <StatusBanner
+          title={
+            movement.isError
+              ? "Movement unavailable"
+              : "Checking the original movement"
+          }
+          message="A fresh authorized read of this exact receipt is required before showing its history or actions."
+          actionLabel="Refresh original"
+          onActionPress={() => void movement.refetch()}
+        />
+      </FinanceFormBody>
+    )
   const original = review?.original ?? movement.data
   const total = (original?.lines ?? [])
     .reduce((sum, line) => sum + BigInt(line.debitMinor), 0n)

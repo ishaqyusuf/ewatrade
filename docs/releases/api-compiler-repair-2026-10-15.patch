@@ -1,0 +1,330 @@
+diff --git a/apps/api/src/assistant/general-service-message.test.ts b/apps/api/src/assistant/general-service-message.test.ts
+index 427ab81e..d379ec42 100644
+--- a/apps/api/src/assistant/general-service-message.test.ts
++++ b/apps/api/src/assistant/general-service-message.test.ts
+@@ -114,7 +114,7 @@ const serverInput = {
+ test("review discloses a staff-reported record, no send and customer tracking", async () => {
+   calls.length = 0
+   refusal = null
+-  const result = await serviceMessageShare.review(context(), draft)
++  const result = await serviceMessageShare.review!(context(), draft)
+   expect(calls).toEqual([["review", serverInput]])
+   expect(result.target).toEqual({ id: "job-1", revision: "rev-1" })
+   expect(result.lines).toEqual([
+@@ -136,7 +136,7 @@ test("recipient, Store and tenant come from the server, never the draft", async
+     storeId: "store-b",
+   } as unknown as Share
+   await expect(
+-    serviceMessageShare.review(context(), smuggled),
++    serviceMessageShare.review!(context(), smuggled),
+   ).rejects.toThrow()
+   expect(calls).toEqual([])
+ })
+diff --git a/apps/api/src/assistant/general-simple-chat-proposal-id.test.ts b/apps/api/src/assistant/general-simple-chat-proposal-id.test.ts
+new file mode 100644
+index 00000000..bb86384a
+--- /dev/null
++++ b/apps/api/src/assistant/general-simple-chat-proposal-id.test.ts
+@@ -0,0 +1,90 @@
++import { expect, mock, test } from "bun:test"
++import type { GeneralContext } from "./general-context"
++
++const scope = { tenantId: "tenant", storeId: "store", userId: "user" }
++mock.module("./general-context", () => ({
++  assertGeneralAction: () => {},
++  requireGeneralScope: () => scope,
++}))
++let pending: {
++  id: string
++  revision: number
++  status: string
++  action: string
++  payload: unknown
++} | null = null
++mock.module("./general-proposals", () => ({
++  decideGeneralProposal: async () => {
++    throw Error("Confirmation must not run")
++  },
++  generalProposalForApp: () => {
++    throw Error("Confirmation must not run")
++  },
++  draftGeneralProposal: async (
++    _ctx: unknown,
++    _conversation: string,
++    payload: unknown,
++  ) => ({ proposalId: "new-proposal", payload }),
++  editGeneralProposal: async (
++    _ctx: unknown,
++    input: { proposalId: string; payload: unknown },
++  ) => ({ id: input.proposalId, payload: input.payload }),
++}))
++const { handleSimpleExpenseChat } = await import(
++  "./general-simple-expense-chat"
++)
++const { handleSimpleMoneyInChat } = await import(
++  "./general-simple-money-in-chat"
++)
++const ctx = {
++  tenantContext: { tenant: { currencyCode: "NGN" } },
++  db: { assistantActionProposal: { findFirst: async () => pending } },
++} as unknown as GeneralContext
++
++for (const flow of [
++  {
++    action: "expense_record_simple",
++    handle: handleSimpleExpenseChat,
++    start: "spent 100",
++    payload: {
++      action: "expense_record_simple",
++      amountMinor: 100,
++      attachmentIds: [],
++    },
++  },
++  {
++    action: "money_in_record",
++    handle: handleSimpleMoneyInChat,
++    start: "put 100 into cash",
++    payload: { action: "money_in_record", amountMinor: 100, attachmentIds: [] },
++  },
++]) {
++  test(`${flow.action} retains the proposal identity after a draft edit`, async () => {
++    pending = {
++      id: "existing-proposal",
++      revision: 2,
++      status: "PENDING",
++      action: flow.action,
++      payload: flow.payload,
++    }
++    const result = await flow.handle(ctx, {
++      conversationId: "conversation",
++      messageId: "edit-message",
++      text: "200",
++      imageIds: [],
++      history: [],
++    })
++    expect(result?.proposalId).toBe("existing-proposal")
++  })
++  test(`${flow.action} retains the identity returned by new draft creation`, async () => {
++    pending = null
++    const result = await flow.handle(ctx, {
++      conversationId: "conversation",
++      messageId: "new-message",
++      text: flow.start,
++      imageIds: [],
++      history: [],
++    })
++    expect(result?.proposalId).toBe("new-proposal")
++  })
++}
+diff --git a/apps/api/src/assistant/general-simple-expense-chat.ts b/apps/api/src/assistant/general-simple-expense-chat.ts
+index 2ea840bd..870e3e9d 100644
+--- a/apps/api/src/assistant/general-simple-expense-chat.ts
++++ b/apps/api/src/assistant/general-simple-expense-chat.ts
+@@ -232,6 +232,6 @@ export async function handleSimpleExpenseChat(
+               : next === "category"
+                 ? "Which category?"
+                 : `Record ${generalMoney(prepared.amountMinor ?? 0, ctx.tenantContext.tenant.currencyCode)} for ${prepared.description}${prepared.paid ? ` from ${prepared.accountName}` : " as not paid yet"}. Proceed or change anything?`,
+-    proposalId: result.proposalId,
++    proposalId: "proposalId" in result ? result.proposalId : result.id,
+   }
+ }
+diff --git a/apps/api/src/assistant/general-simple-money-in-chat.ts b/apps/api/src/assistant/general-simple-money-in-chat.ts
+index dd3d623d..b76ac3cb 100644
+--- a/apps/api/src/assistant/general-simple-money-in-chat.ts
++++ b/apps/api/src/assistant/general-simple-money-in-chat.ts
+@@ -193,6 +193,6 @@ export async function handleSimpleMoneyInChat(
+         : next === "account"
+           ? "Which account?"
+           : `Record ${generalMoney(prepared.amountMinor ?? 0, ctx.tenantContext.tenant.currencyCode)} into ${prepared.accountName}${prepared.createAccount ? " (new account)" : ""}. Proceed or change anything?`,
+-    proposalId: result.proposalId,
++    proposalId: "proposalId" in result ? result.proposalId : result.id,
+   }
+ }
+diff --git a/apps/api/src/assistant/general-simple-money-in.test.ts b/apps/api/src/assistant/general-simple-money-in.test.ts
+index 0e1e2ecb..3da11009 100644
+--- a/apps/api/src/assistant/general-simple-money-in.test.ts
++++ b/apps/api/src/assistant/general-simple-money-in.test.ts
+@@ -11,7 +11,7 @@ afterAll(() => {
+ import { simpleMoneyInAction } from "@ewatrade/assistant/general/contracts"
+ import type { GeneralTransactionContext } from "./general-actions"
+ import { simpleMoneyInRecord } from "./general-simple-money-in"
+-function context(role = "OWNER") {
++function context(role = "OWNER", startsAt = new Date("2026-01-01")) {
+   return {
+     session: { user: { id: "user" }, session: { id: "session" } },
+     requestHeaders: new Headers({ "x-assistant-client": "dashboard" }),
+@@ -38,7 +38,7 @@ function context(role = "OWNER") {
+         findUnique: async () => ({ id: "book", currencyCode: "NGN" }),
+         findFirst: async () => ({
+           id: "book",
+-          startsAt: new Date("2026-01-01"),
++          startsAt,
+           closedThrough: null,
+         }),
+       },
+@@ -140,12 +140,7 @@ test("incomplete, foreign-account, future-date and non-finance actor guards rema
+ })
+ 
+ test("first bookkeeping day clamps an earlier time; pre-book dates still fail", async () => {
+-  const ctx = context()
+-  ctx.db.financeBook.findFirst = async () =>
+-    ({
+-      startsAt: new Date("2026-01-01T18:00:00.000Z"),
+-      closedThrough: null,
+-    }) as never
++  const ctx = context("OWNER", new Date("2026-01-01T18:00:00.000Z"))
+   const input = simpleMoneyInAction.parse({
+     action: "money_in_record",
+     amountMinor: 100,
+diff --git a/apps/api/src/assistant/general-simple-transfer-receipt.test.ts b/apps/api/src/assistant/general-simple-transfer-receipt.test.ts
+new file mode 100644
+index 00000000..3eb9ec55
+--- /dev/null
++++ b/apps/api/src/assistant/general-simple-transfer-receipt.test.ts
+@@ -0,0 +1,71 @@
++import { expect, mock, test } from "bun:test"
++import { simpleTransferAction } from "@ewatrade/assistant/general/contracts"
++import type { GeneralTransactionContext } from "./general-actions"
++let result: unknown = { entryId: "entry-1" }
++mock.module("@ewatrade/db/queries", () => ({
++  assertFinancePostingDate: () => {},
++  createFinanceMoneyAccountInTransaction: async () => {
++    throw Error("Existing destination expected")
++  },
++  getFinanceMoneyMovementReview: async () => ({}),
++  recordFinanceMoneyMovementInTransaction: async () => result,
++}))
++mock.module("@ewatrade/db/assistant-attachments", () => ({
++  listAssistantAttachments: async () => [],
++}))
++mock.module("../trpc/finance-procedure", () => ({
++  assertFinanceAccess: () => {},
++}))
++mock.module("./general-context", () => ({
++  requireGeneralScope: () => ({
++    tenantId: "tenant",
++    storeId: "store",
++    userId: "user",
++  }),
++}))
++mock.module("./proposal-security", () => ({ proposalDigest: () => "digest" }))
++const { simpleTransferRecord } = await import("./general-simple-transfer")
++const ctx = {
++  tenantContext: { tenant: { currencyCode: "NGN" } },
++  db: {
++    financeBook: {
++      findUnique: async () => ({
++        id: "book",
++        currencyCode: "NGN",
++        startsAt: new Date(0),
++        closedThrough: null,
++      }),
++    },
++    financeAccount: {
++      findMany: async () => [
++        { id: "from", name: "Cash", purpose: "CASH" },
++        { id: "to", name: "Bank", purpose: "BANK" },
++      ],
++    },
++  },
++} as unknown as GeneralTransactionContext
++const input = simpleTransferAction.parse({
++  action: "money_transfer_simple",
++  bookId: "book",
++  amountMinor: 100,
++  fromMoneyAccountId: "from",
++  fromAccountName: "Cash",
++  toMoneyAccountId: "to",
++  toAccountName: "Bank",
++  effectiveAt: new Date().toISOString(),
++  attachmentIds: [],
++})
++test("valid canonical transfer receipt keeps its entry identity", async () => {
++  result = { entryId: "entry-1" }
++  expect(
++    await simpleTransferRecord.execute(ctx, input, "operation"),
++  ).toMatchObject({ recordId: "entry-1" })
++})
++test("malformed canonical transfer result cannot produce a success receipt", async () => {
++  for (const invalid of [{}, { entryId: "" }, { entryId: 1 }, null]) {
++    result = invalid
++    await expect(
++      simpleTransferRecord.execute(ctx, input, "operation"),
++    ).rejects.toBeDefined()
++  }
++})
+diff --git a/apps/api/src/assistant/general-simple-transfer.ts b/apps/api/src/assistant/general-simple-transfer.ts
+index 482c8069..df2d0f87 100644
+--- a/apps/api/src/assistant/general-simple-transfer.ts
++++ b/apps/api/src/assistant/general-simple-transfer.ts
+@@ -14,6 +14,7 @@ import {
+   recordFinanceMoneyMovementInTransaction,
+ } from "@ewatrade/db/queries"
+ import { TRPCError } from "@trpc/server"
++import { z } from "zod"
+ import { assertFinanceAccess } from "../trpc/finance-procedure"
+ import type {
+   GeneralActionAdapter,
+@@ -21,7 +22,7 @@ import type {
+ } from "./general-actions"
+ import { requireGeneralScope } from "./general-context"
+ import { proposalDigest } from "./proposal-security"
+-const refuse = (message: string): never => {
++function refuse(message: string): never {
+   throw new TRPCError({ code: "BAD_REQUEST", message })
+ }
+ export async function simpleTransferOptions(ctx: GeneralTransactionContext) {
+@@ -292,9 +293,10 @@ export const simpleTransferRecord = {
+       ...movement(ctx, input, toId),
+       clientCommandId: key,
+     })
++    const receipt = z.object({ entryId: z.string().min(1) }).parse(result)
+     return {
+       kind: "finance_movement" as const,
+-      recordId: result.entryId,
++      recordId: receipt.entryId,
+       bookId: info.options.bookId,
+       title: "Transfer recorded",
+       detail: `${generalMoney(input.amountMinor ?? 0, info.options.currencyCode)} from ${input.fromAccountName} to ${input.toAccountName}.`,
+diff --git a/scripts/api-deploy-target.mjs b/scripts/api-deploy-target.mjs
+index 0419312f..b648bffd 100644
+--- a/scripts/api-deploy-target.mjs
++++ b/scripts/api-deploy-target.mjs
+@@ -82,7 +82,12 @@ export function readProductionApiSharedEnvironmentInventory(
+     const query = new URLSearchParams({ projectId })
+     if (cursor !== undefined) query.set("until", String(cursor))
+     const response = readPage(`/v1/env?${query}`)
+-    if (!Array.isArray(response?.data)) throw unavailable()
++    if (
++      !Array.isArray(response?.data) ||
++      !response.pagination ||
++      !Object.hasOwn(response.pagination, "next")
++    )
++      throw unavailable()
+     data.push(...response.data)
+     const next = response.pagination?.next
+     if (next == null) return { data, pagination: { next: null } }
+diff --git a/scripts/api-deploy-target.test.mjs b/scripts/api-deploy-target.test.mjs
+index b331f029..6803a7d0 100644
+--- a/scripts/api-deploy-target.test.mjs
++++ b/scripts/api-deploy-target.test.mjs
+@@ -34,6 +34,7 @@ test("shared inventory refuses malformed or repeating pagination", () => {
+   for (const page of [
+     null,
+     { data: null },
++    { data: [] },
+     { data: [], pagination: { next: "bad" } },
+     { data: [], pagination: { next: 123 } },
+   ]) {
+diff --git a/scripts/release-vercel-deployment-output.test.ts b/scripts/release-vercel-deployment-output.test.ts
+index 2568a3bc..a2967631 100644
+--- a/scripts/release-vercel-deployment-output.test.ts
++++ b/scripts/release-vercel-deployment-output.test.ts
+@@ -413,6 +413,7 @@ else if (name === 'bunx') {
+   if (command === 'pull') { const stage=args[args.indexOf('--cwd')+1]; fs.writeFileSync(path.join(root,'prepared-project.json'),fs.readFileSync(path.join(stage,'.vercel/project.json'))); fs.writeFileSync(path.join(stage,'.env.production'),'FAKE_PULLED_SECRET'); }
+   else if (command === 'deploy') console.log(JSON.stringify(responses.identity));
+   else if (command === 'api' && args[2].startsWith('/v9/projects/')) console.log(JSON.stringify(responses.inventory));
++  else if (command === 'api' && args[2].startsWith('/v1/env?projectId=')) console.log(JSON.stringify({data:[],pagination:{next:null}}));
+   else if (command === 'api' && args[2].startsWith('/v13/deployments/')) {
+     if (responses.readFailure) { console.error('FAKE_RAW_CREDENTIAL_DIAGNOSTIC'); process.exit(7); }
+     console.log(JSON.stringify(responses.raw));

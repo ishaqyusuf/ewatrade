@@ -6,6 +6,7 @@
   "exports": {
     ".": "./src/index.ts",
     "./catalog-photo-review": "./src/catalog-photo-review.ts",
+    "./assistant-whatsapp": "./src/assistant-whatsapp.ts",
     "./assistant-attachments": "./src/assistant-attachments.ts",
     "./product-analytics": "./src/product-analytics.ts"
   },

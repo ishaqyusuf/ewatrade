@@ -1,0 +1,54 @@
+{
+  "version": 1,
+  "id": "2026-10-15-whatsapp-native-controls",
+  "tickets": ["A01", "H01"],
+  "summary": "W10 source/backend accepted11/48(22.9%): typed Identity-owned CONTROL shares Inbox dedupe/outbox/attempts/receipts while Binding-owned TURN retains canonical model/reply proof. Native Help/Business/Store/New/Continue, exact quoted sender/revision/generation/expiry-bound choices, canonical selection without model budget/fake Session or run, confirmed-link bootstrap, normalized menu authority and all-displayed-scope QA policy. Existing OTP app/WABA/number5343, source default-off, no business tool rollout or live provider/config/Production action.",
+  "capabilities": [
+    {
+      "id": "search.records",
+      "change": "changed",
+      "rollout": "source",
+      "note": "Cumulative working-tree WhatsApp search compatibility remains source. Native personal navigation selects canonical conversations without adding/promoting business tools; canonical linked execution and saved-run reply proof remain mandatory for turns."
+    }
+  ],
+  "docs": [
+    {
+      "topic": "feature",
+      "path": ".brain/features/whatsapp-assistant.md",
+      "status": "local_only"
+    },
+    {
+      "topic": "api",
+      "path": ".brain/api/contracts.md",
+      "status": "local_only"
+    },
+    {
+      "topic": "permissions",
+      "path": ".brain/api/permissions.md",
+      "status": "local_only"
+    },
+    {
+      "topic": "schema",
+      "path": ".brain/database/schema.md",
+      "status": "local_only"
+    },
+    {
+      "topic": "decision",
+      "path": ".brain/decisions/2026-10-15-whatsapp-assistant-channel.md",
+      "status": "local_only"
+    },
+    {
+      "topic": "capability",
+      "path": "packages/assistant/evaluations/WHATSAPP-COVERAGE.md",
+      "status": "updated"
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "run",
+      "path": ".brain/qa/2026-10-15-whatsapp-assistant.md",
+      "executed": true,
+      "result": "Final native5/1040fail617.14s with cleanup; actual signed webhook -> ID-only internal HTTP worker -> existing Meta adapter fake-fetch1/450fail110.89s with cleanup. First HTTP fixture DRAFT Store correctly refused; set synthetic Stores ACTIVE without weakening runtime. Original canonical linking/ingress/shared worker/delivery9/1960fail618.71s, including actual control discriminator for ordinary TURN. Final current extracted scope/queue/uncertainty/idempotency/concurrency5/510fail148.61s with cleanup. Latest label/grammar corrections tested4/32 and actual HTTP: heading cannot imply unselected default Store, whole emoji preserved, named choose-business-work phrases remain model text. Current offline239/738(16connected skips), separate OTP25/132 pass. Original menu serialization red integration/pure repro -> schema-normalized green, no policy weakening. Assistant/query/jobs types0; full API six existing money/message diagnostics outside W10. Scoped18file Biome/diff/H01/150+3inventory/shared H02 pass. Generated local migration20261015121155 and required push pass. Source/backend W10 complete, W11/W12 plus full reads/writes/workflows/media/provider/device/release remain; full goal active."
+    }
+  ]
+}

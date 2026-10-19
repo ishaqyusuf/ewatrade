@@ -1,0 +1,103 @@
+{
+  "version": 1,
+  "id": "2026-10-15-booking-media-stock-source",
+  "tickets": [
+    "G03",
+    "H04",
+    "C01",
+    "C03",
+    "A04",
+    "H01",
+    "H02"
+  ],
+  "summary": "Canonical prepared booking transaction/effect composition, strict media/plan claims and exact pending stock Date validation; full GENERAL/client acceptance remains.",
+  "capabilities": [
+    {
+      "id": "inventory.stock.receive",
+      "change": "changed",
+      "rollout": "source",
+      "note": "Reject nonzero sub-millisecond pending time before native Date; historical stored terminal payload parsing retained."
+    },
+    {
+      "id": "inventory.stock.adjust",
+      "change": "changed",
+      "rollout": "source",
+      "note": "Same exact Date validation; no native/client/rollout promotion."
+    }
+  ],
+  "procedures": [],
+  "docs": [
+    {
+      "topic": "feature",
+      "path": ".brain/features/assistant-business-operations.md",
+      "status": "local_only"
+    },
+    {
+      "topic": "feature",
+      "path": ".brain/features/service-commerce.md",
+      "status": "local_only"
+    },
+    {
+      "topic": "feature",
+      "path": ".brain/features/assistant-voice.md",
+      "status": "local_only"
+    },
+    {
+      "topic": "feature",
+      "path": ".brain/features/generic-catalog-inventory-units-stock-operations.md",
+      "status": "local_only"
+    },
+    {
+      "topic": "api",
+      "path": ".brain/api/contracts.md",
+      "status": "local_only"
+    },
+    {
+      "topic": "permissions",
+      "path": ".brain/api/permissions.md",
+      "status": "local_only"
+    },
+    {
+      "topic": "decision",
+      "path": ".brain/decisions/2026-10-15-prepared-booking-and-media-review-boundaries.md",
+      "status": "local_only"
+    },
+    {
+      "topic": "schema",
+      "status": "not_applicable",
+      "note": "Existing native tables only; no Prisma/migration/push or durable media/plan storage is applied."
+    },
+    {
+      "topic": "capability",
+      "path": "packages/assistant/src/capabilities/COVERAGE.md",
+      "status": "updated",
+      "note": "Regenerated/current; no client/action/rollout promotion."
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "test",
+      "path": "packages/db/src/queries/service-commerce-bookings/booking-commands.test.ts",
+      "executed": true,
+      "result": "71/611 booking cohort with actual native wrappers/inert delegates; independent currentcaller16/317 overlaps, not added."
+    },
+    {
+      "kind": "test",
+      "path": "packages/assistant/src/general/media-provenance.test.ts",
+      "executed": true,
+      "result": "H04/sharedstock24/149; independentPDFreview21/120 overlaps. No claims become authority."
+    },
+    {
+      "kind": "test",
+      "path": "apps/api/src/assistant/general-stock-effective-time.test.ts",
+      "executed": true,
+      "result": "Actual receive/adjust3/37 separateprocess; rejectbeforecontext access, exact prepare and historicalparse."
+    },
+    {
+      "kind": "review",
+      "path": "packages/assistant/evaluations/runs/2026-10-15-booking-media-stock-source.md",
+      "executed": true,
+      "result": "20ownedBiomeclean; compiler78exactimportedbaseline/0owned;8newerrorsfixed; sourcecheckpointbefore nextmovingbookingreview/mediaresolver."
+    }
+  ]
+}

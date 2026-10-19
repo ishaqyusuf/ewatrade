@@ -77,6 +77,11 @@ import {
   buildScopedListCursorWhere,
   buildScopedListPageWhere,
 } from "./list-sort"
+import { assertOfflineOrderIdentityNotRetired } from "./offline-quick-sale-correction-record"
+import {
+  type RecoveryFulfillmentAuthorization,
+  assertRecoveryCreation,
+} from "./offline-recovery-fulfillment-authorization"
 import {
   type OrderScope,
   customerHistoryWhere,
@@ -339,14 +344,19 @@ function serializeOrder(order: OrderGraph) {
 
 async function updateOrderStatusAfterProductFulfillment(
   tx: Prisma.TransactionClient,
-  orderId: string,
+  heldOrder: NonNullable<
+    Awaited<ReturnType<typeof lockCommerceFinancialOrder>>
+  >,
 ) {
-  const order = await tx.commercialOrder.findUniqueOrThrow({
-    where: { id: orderId },
-    select: { completedAt: true, storeId: true, tenantId: true },
+  const { order } = heldOrder
+  assertHeldCommerceFinancialOrder(tx, heldOrder, {
+    tenantId: order.tenantId,
+    orderId: order.id,
   })
+  // These fields are unchanged by Product stock/cost and catalog-free
+  // performance writes. Obligations must still be read AFTER those writes.
   const complete = await readCommercialOrderLinesComplete(tx, {
-    orderId,
+    orderId: order.id,
     storeId: order.storeId,
     tenantId: order.tenantId,
   })
@@ -359,7 +369,7 @@ async function updateOrderStatusAfterProductFulfillment(
           : undefined,
       status,
     },
-    where: { id: orderId },
+    where: { id: order.id },
   })
   return status
 }
@@ -380,9 +390,15 @@ async function applyCommercialOrderProductLineInTransaction(
     tenantId: string
     storeId: string
     expectedReviewRevision?: string
-    financialContext: { bookId: string } | null
+    heldOrder: NonNullable<
+      Awaited<ReturnType<typeof lockCommerceFinancialOrder>>
+    >
   },
 ) {
+  assertHeldCommerceFinancialOrder(tx, input.heldOrder, {
+    tenantId: input.tenantId,
+    orderId: input.line.orderId,
+  })
   if (!input.line.stockReservation) {
     throw new CatalogError(
       "ORDER_NOT_FOUND",
@@ -442,11 +458,15 @@ async function applyCommercialOrderProductLineInTransaction(
       },
     }))
   // Replayed legacy fulfillment is not a reviewed historical cost import.
-  if (!previousFulfillment && input.financialContext !== null) {
-    await recordProductFulfillmentValuationInTransaction(tx, {
-      tenantId: input.tenantId,
-      fulfillmentId: fulfillment.id,
-    })
+  if (!previousFulfillment && input.heldOrder.context !== null) {
+    await recordProductFulfillmentValuationInTransaction(
+      tx,
+      {
+        tenantId: input.tenantId,
+        fulfillmentId: fulfillment.id,
+      },
+      input.heldOrder,
+    )
   }
   return fulfillment
 }
@@ -464,9 +484,11 @@ async function applyCommercialOrderProductsInTransaction(
   existingLock?: NonNullable<
     Awaited<ReturnType<typeof lockCommerceFinancialOrder>>
   >,
+  recoveryAuthorization?: RecoveryFulfillmentAuthorization,
 ) {
-  // Private composition only: the reviewed batch caller already holds these
-  // locks in this transaction. Creation still acquires them through this helper.
+  // Private composition only: reviewed batches and paid immediate creation
+  // already hold these locks in this transaction.
+  if (existingLock) assertHeldCommerceFinancialOrder(tx, existingLock, input)
   const lockedOrder =
     existingLock ?? (await lockCommerceFinancialOrder(tx, input))
   if (!lockedOrder) {
@@ -493,14 +515,18 @@ async function applyCommercialOrderProductsInTransaction(
   // Catalog-free lines are charge-only Services with nothing to pick, so
   // "fulfil" records their performance. They go first because performance
   // is refused once the Order is COMPLETED.
-  const catalogFreeLineCount = await fulfillCatalogFreeLinesInTransaction(tx, {
-    actorUserId: input.actorUserId,
-    clientOperationIdPrefix: input.clientOperationIdPrefix,
-    orderId: input.orderId,
-    reason: input.reason,
-    schemaVersion: input.schemaVersion,
-    tenantId: input.tenantId,
-  })
+  const catalogFreeLineCount = await fulfillCatalogFreeLinesInTransaction(
+    tx,
+    {
+      actorUserId: input.actorUserId,
+      clientOperationIdPrefix: input.clientOperationIdPrefix,
+      orderId: input.orderId,
+      reason: input.reason,
+      schemaVersion: input.schemaVersion,
+      tenantId: input.tenantId,
+    },
+    recoveryAuthorization,
+  )
 
   for (const line of unfulfilledProductLines) {
     await applyCommercialOrderProductLineInTransaction(tx, {
@@ -511,13 +537,13 @@ async function applyCommercialOrderProductsInTransaction(
       schemaVersion: input.schemaVersion,
       tenantId: input.tenantId,
       storeId: lockedOrder.order.storeId,
-      financialContext: lockedOrder.context,
+      heldOrder: lockedOrder,
     })
   }
 
   let status: OrderStatus | null = null
   if (unfulfilledProductLines.length + catalogFreeLineCount > 0) {
-    status = await updateOrderStatusAfterProductFulfillment(tx, input.orderId)
+    status = await updateOrderStatusAfterProductFulfillment(tx, lockedOrder)
   }
 
   return {
@@ -584,11 +610,36 @@ async function attachOrderActors(
   }))
 }
 
+/** Pin a new Order's Book context before any Tenant-dependent write. */
+async function lockNewOrderFinancialContext(
+  tx: Prisma.TransactionClient,
+  input: { tenantId: string; currencyCode: string; customerId?: string },
+) {
+  const context = await lockCommerceFinancialContext(tx, input)
+  if (context) return context
+  // Book creation takes Tenant FOR UPDATE. If it committed while we waited,
+  // restart with that Book first; never acquire a late Book below Tenant.
+  await tx.$queryRaw`SELECT "id" FROM "Tenant" WHERE "id"=${input.tenantId} FOR UPDATE`
+  const appeared = await tx.$queryRaw<Array<{ id: string }>>`
+    SELECT "id" FROM "FinanceBook" WHERE "tenantId"=${input.tenantId}
+    AND "currencyCode"=${input.currencyCode}
+  `
+  if (appeared.length)
+    throw new CatalogError(
+      "REVISION_CONFLICT",
+      "Finance setup changed. Review and retry this sale.",
+    )
+  return null
+}
+
 /** Internal composition returns the graph already read by canonical creation. */
 export async function createCommercialOrderGraphInTransaction(
   tx: Prisma.TransactionClient,
   input: CreateCommercialOrderInput,
+  recoveryAuthorization?: RecoveryFulfillmentAuthorization,
 ) {
+  if (recoveryAuthorization)
+    assertRecoveryCreation(tx, recoveryAuthorization, input)
   assertSchemaVersion(input.schemaVersion)
   if (input.lines.length === 0) {
     throw new CatalogError(
@@ -628,12 +679,21 @@ export async function createCommercialOrderGraphInTransaction(
   }
 
   let customerId = input.customerId
+  let customerBookAbsent = false
   if (input.customerMode === "create") {
     if (input.customerId || !input.customerName?.trim())
       throw new CatalogError(
         "INVALID_ORDER",
         "New customer creation needs a name and cannot also select a Customer ID.",
       )
+    // Customer insertion takes a Tenant FK key-share and may wait on a contact
+    // uniqueness conflict. Take the Book first, as replay/payment do, so neither
+    // of those locks can precede a later wait on another writer's Book.
+    const context = await lockNewOrderFinancialContext(tx, {
+      tenantId: input.tenantId,
+      currencyCode: store.currencyCode,
+    })
+    customerBookAbsent = context === null
     const customer = await ensureOrderCustomerInTransaction(tx, {
       email: input.customerEmail,
       name: input.customerName,
@@ -647,11 +707,15 @@ export async function createCommercialOrderGraphInTransaction(
       )
     customerId = customer.id
   }
-  await lockCommerceFinancialContext(tx, {
-    tenantId: input.tenantId,
-    currencyCode: store.currencyCode,
-    customerId,
-  })
+  // Existing Book is already held for intentional creation; now lock the
+  // resolved Customer's ledger account too. Confirmed absence stays protected
+  // by Tenant, so no Book/account can appear before this transaction ends.
+  if (!customerBookAbsent)
+    await lockNewOrderFinancialContext(tx, {
+      tenantId: input.tenantId,
+      currencyCode: store.currencyCode,
+      customerId,
+    })
 
   // Contact snapshots and directory name matching do not establish financial
   // ownership. Only explicit selection or intentional new-customer creation does.
@@ -897,6 +961,9 @@ export async function createCommercialOrderGraphInTransaction(
   }
 
   const orderNumber = await allocateCommercialOrderNumber(tx, input.tenantId)
+  // Correction updates this same Tenant tuple before proving absence/retiring
+  // an identity. Read after allocation, without taking a Command/key lock.
+  await assertOfflineOrderIdentityNotRetired(tx, input)
   // The order-number update locks the tenant row, so the monthly cap counts
   // concurrent orders one at a time. Idempotent replays returned above.
   await assertRetailOpsOrderAllowance(tx, { now, tenantId: input.tenantId })
@@ -1105,23 +1172,43 @@ export async function createCommercialOrderGraphInTransaction(
     })
   }
 
+  // Payment only changes paid amounts/status, not fulfillment eligibility or
+  // financial ownership. Both commands can reuse this authentic same-TX lock.
+  const compositionLock =
+    input.initialPayment && input.fulfillNow
+      ? await lockCommerceFinancialOrder(tx, {
+          tenantId: input.tenantId,
+          orderId: order.id,
+        })
+      : undefined
+  if (compositionLock === null)
+    throw new CatalogError("ORDER_NOT_FOUND", "Commercial Order not found.")
   if (input.initialPayment) {
-    await recordCommercialOrderPaymentInTransaction(tx, {
-      actorUserId: input.actorUserId,
-      ...input.initialPayment,
-      orderId: order.id,
-      tenantId: input.tenantId,
-    })
+    await recordCommercialOrderPaymentInTransaction(
+      tx,
+      {
+        actorUserId: input.actorUserId,
+        ...input.initialPayment,
+        orderId: order.id,
+        tenantId: input.tenantId,
+      },
+      compositionLock,
+    )
   }
 
   if (input.fulfillNow) {
-    await applyCommercialOrderProductsInTransaction(tx, {
-      actorUserId: input.actorUserId,
-      clientOperationIdPrefix: `${input.clientOrderId}:fulfillment`,
-      orderId: order.id,
-      schemaVersion: input.schemaVersion,
-      tenantId: input.tenantId,
-    })
+    await applyCommercialOrderProductsInTransaction(
+      tx,
+      {
+        actorUserId: input.actorUserId,
+        clientOperationIdPrefix: `${input.clientOrderId}:fulfillment`,
+        orderId: order.id,
+        schemaVersion: input.schemaVersion,
+        tenantId: input.tenantId,
+      },
+      compositionLock,
+      recoveryAuthorization,
+    )
   }
 
   const created = await tx.commercialOrder.findUniqueOrThrow({
@@ -1134,9 +1221,14 @@ export async function createCommercialOrderGraphInTransaction(
 export async function createCommercialOrderInTransaction(
   tx: Prisma.TransactionClient,
   input: CreateCommercialOrderInput,
+  recoveryAuthorization?: RecoveryFulfillmentAuthorization,
 ) {
   return serializeOrder(
-    await createCommercialOrderGraphInTransaction(tx, input),
+    await createCommercialOrderGraphInTransaction(
+      tx,
+      input,
+      recoveryAuthorization,
+    ),
   )
 }
 
@@ -1712,9 +1804,9 @@ export async function fulfillCommercialOrderProductLineInTransaction(
     tenantId: input.tenantId,
     storeId: lockedOrder.order.storeId,
     expectedReviewRevision: input.expectedReviewRevision,
-    financialContext: lockedOrder.context,
+    heldOrder: lockedOrder,
   })
-  await updateOrderStatusAfterProductFulfillment(tx, line.orderId)
+  await updateOrderStatusAfterProductFulfillment(tx, lockedOrder)
   return {
     id: fulfillment.id,
     quantity: fulfillment.quantity.toString(),

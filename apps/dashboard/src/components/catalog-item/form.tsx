@@ -49,7 +49,7 @@ import { createCatalogFixture } from "@/components/qa/fixture-recipes"
 import { QaDashboardQuickFill } from "@/components/qa/qa-quick-fill"
 import { useCatalogItemParams } from "@/hooks/use-catalog-item-params"
 import { useCatalogPhoto } from "@/hooks/use-catalog-photo"
-import { useTRPC } from "@/trpc/client"
+import { getDataCacheGeneration, useTRPC, useTRPCClient } from "@/trpc/client"
 import type { RouterInputs } from "@ewatrade/api/trpc/routers/_app"
 import { findCatalogIllustration } from "@ewatrade/utils/catalog-illustrations"
 import { CatalogImageEditor } from "./catalog-image-editor"
@@ -84,11 +84,17 @@ import type { FormEvent, InputHTMLAttributes, ReactNode } from "react"
 import { useEffect, useMemo, useRef, useState } from "react"
 import { createPortal } from "react-dom"
 
-import { ProductChat } from "@/components/product-assistant/product-chat"
 import {
-  productFormSnapshotSchema,
-  productHandbackSnapshot,
-} from "@ewatrade/assistant/product/contracts"
+  ProductChat,
+  type ProductChatState,
+} from "@/components/product-assistant/product-chat"
+import {
+  type ProductFormVersion,
+  productFormExpectedRevision,
+  productFormStateIsFresh,
+  resumeProductForm,
+} from "@/components/product-assistant/product-form-resume"
+import { productFormSnapshotSchema } from "@ewatrade/assistant/product/contracts"
 import { resolveCatalogFormGuidance } from "@ewatrade/utils/business-catalog-guidance"
 import { CatalogGuidanceSuggestions } from "./catalog-guidance-suggestions"
 import { CatalogSetupHelperPicker } from "./catalog-setup-helper-picker"
@@ -157,6 +163,7 @@ export function CatalogItemForm({
   const [storeId, setStockStoreId] = useState(initialStoreId)
   const router = useRouter()
   const trpc = useTRPC()
+  const client = useTRPCClient()
   const queryClient = useQueryClient()
   const {
     setCatalogItemMode,
@@ -216,20 +223,49 @@ export function CatalogItemForm({
     [],
   )
   const capability = useQuery(trpc.productAssistant.capabilities.queryOptions())
-  const productState = useQuery(
-    trpc.productAssistant.state.queryOptions(
-      { conversationId: catalogConversation ?? "" },
-      {
-        enabled: Boolean(catalogConversation),
-        retry: (failureCount, error) =>
-          !["NOT_FOUND", "FORBIDDEN", "UNAUTHORIZED"].includes(
-            error.data?.code ?? "",
-          ) && failureCount < 2,
-        refetchInterval: (query) =>
-          catalogCreateMode === "chat" && !query.state.error ? 2500 : false,
-      },
-    ),
+  const generation = useRef(getDataCacheGeneration())
+  const [productVisit] = useState(() => crypto.randomUUID())
+  const productScopeCurrent = generation.current === getDataCacheGeneration()
+  const productState = useQuery({
+    queryKey: [
+      ...trpc.productAssistant.state.queryKey({
+        conversationId: catalogConversation ?? "",
+      }),
+      "product-form-resume",
+      generation.current,
+      productVisit,
+    ],
+    queryFn: ({ signal }) =>
+      client.productAssistant.state.query(
+        { conversationId: catalogConversation ?? "" },
+        { signal },
+      ),
+    enabled:
+      Boolean(catalogConversation) &&
+      generation.current === getDataCacheGeneration(),
+    retry: false,
+    staleTime: 0,
+    gcTime: 0,
+    refetchOnMount: "always",
+    refetchInterval: (query) =>
+      catalogCreateMode === "chat" && !query.state.error ? 2500 : false,
+  })
+  const productData = productFormStateIsFresh(
+    productState,
+    generation.current,
+    getDataCacheGeneration(),
   )
+    ? productState.data
+    : undefined
+  // Polling may keep the same verified chat mounted; commands still require fresh state.
+  const productChatData =
+    productState.isSuccess &&
+    productState.isFetchedAfterMount &&
+    !productState.isError &&
+    !productState.isPaused &&
+    generation.current === getDataCacheGeneration()
+      ? productState.data
+      : undefined
   const handoffRequest = useRef(crypto.randomUUID())
   const handoffStarted = useRef(false)
   const handoffAttempt = useRef(0)
@@ -240,23 +276,27 @@ export function CatalogItemForm({
     },
     [],
   )
-  const restored = useRef(false)
-  const previousCreateMode = useRef(catalogCreateMode)
+  const [formVersion, setFormVersion] = useState<ProductFormVersion | null>(
+    null,
+  )
+  const [handback, setHandback] = useState<ProductChatState | null>(null)
+  const [restoringForm, setRestoringForm] = useState(false)
   const [handoffError, setHandoffError] = useState<string | null>(null)
   const startProductChat = useMutation(
     trpc.productAssistant.start.mutationOptions(),
   )
   const updateProductChat = useMutation(
-    trpc.productAssistant.updateSnapshot.mutationOptions(),
+    trpc.productAssistant.updateSnapshot.mutationOptions({
+      onError: () => {
+        void queryClient.invalidateQueries({
+          queryKey: trpc.productAssistant.state.queryKey({
+            conversationId: catalogConversation ?? "",
+          }),
+        })
+      },
+    }),
   )
   useEffect(() => {
-    const returningFromChat =
-      previousCreateMode.current === "chat" && catalogCreateMode !== "chat"
-    previousCreateMode.current = catalogCreateMode
-    if (returningFromChat) {
-      handoffAttempt.current += 1
-      handoffStarted.current = false
-    }
     if (
       catalogCreateMode === "chat" &&
       !catalogConversation &&
@@ -268,13 +308,27 @@ export function CatalogItemForm({
       void setParams({ catalogCreateMode: "form" })
       return
     }
-    const data = productState.data
-    if (!data || (restored.current && !returningFromChat)) return
-    restored.current = true
-    const snapshot = productHandbackSnapshot(
-      data.snapshot,
-      data.draft.entities[0]?.payload,
-    )
+    const data = handback ?? productData
+    if (data?.receipt && catalogConversation && catalogCreateMode !== "chat") {
+      // A saved result remains authoritative after a lost form response or channel commit.
+      void setParams({ catalogCreateMode: "chat" })
+      return
+    }
+    if (!data || !catalogConversation || (formVersion && !handback)) return
+    let resumed: ReturnType<typeof resumeProductForm>
+    try {
+      resumed = resumeProductForm(data, catalogConversation, initialStoreId)
+    } catch (error) {
+      setHandoffError(
+        error instanceof Error
+          ? error.message
+          : "The product draft is not available.",
+      )
+      return
+    }
+    const { snapshot, version } = resumed
+    setFormVersion(version)
+    setHandback(null)
     setForm(snapshot.form)
     setStockStoreId(snapshot.storeId)
     setCategory(snapshot.category)
@@ -296,7 +350,10 @@ export function CatalogItemForm({
     catalogCreateMode,
     catalogConversation,
     setParams,
-    productState.data,
+    productData,
+    handback,
+    formVersion,
+    initialStoreId,
     setForm,
     setShowDescription,
     setShowOpeningStock,
@@ -308,8 +365,24 @@ export function CatalogItemForm({
     const attempt = ++handoffAttempt.current
     setHandoffError(null)
     try {
+      if (generation.current !== getDataCacheGeneration())
+        throw Error(
+          "Your business or account changed. Reopen this product form before continuing.",
+        )
+      const expectedRevision = catalogConversation
+        ? productFormExpectedRevision(
+            formVersion,
+            productData,
+            catalogConversation,
+            initialStoreId,
+          )
+        : null
       const photoAssetIds = await photo.upload(clientOperationId.current)
       if (attempt !== handoffAttempt.current) return
+      if (generation.current !== getDataCacheGeneration())
+        throw Error(
+          "Your business or account changed. Reopen this product form before continuing.",
+        )
       const snapshot = productFormSnapshotSchema.parse({
         form,
         storeId,
@@ -329,10 +402,10 @@ export function CatalogItemForm({
         additionalUnits,
       })
       const result =
-        catalogConversation && productState.data
+        catalogConversation && expectedRevision !== null
           ? await updateProductChat.mutateAsync({
               conversationId: catalogConversation,
-              expectedRevision: productState.data.draft.revision,
+              expectedRevision,
               snapshot,
             })
           : await startProductChat.mutateAsync({
@@ -368,10 +441,43 @@ export function CatalogItemForm({
     )
       void openProductChat()
   })
-  const backToForm = () => {
-    handoffAttempt.current += 1
+  const backToForm = async () => {
+    const attempt = ++handoffAttempt.current
     handoffStarted.current = false
-    void setParams({ catalogCreateMode: "form" })
+    if (!catalogConversation) {
+      await setParams({ catalogCreateMode: "form" })
+      return
+    }
+    setRestoringForm(true)
+    setHandoffError(null)
+    try {
+      const fresh = await productState.refetch()
+      if (attempt !== handoffAttempt.current) return
+      if (
+        !productFormStateIsFresh(
+          fresh,
+          generation.current,
+          getDataCacheGeneration(),
+        ) ||
+        !fresh.data
+      )
+        throw Error(
+          "The saved product draft could not be checked. Your form edits are still here.",
+        )
+      resumeProductForm(fresh.data, catalogConversation, initialStoreId)
+      setHandback(fresh.data)
+      setError(null)
+      await setParams({ catalogCreateMode: "form" })
+    } catch (error) {
+      if (attempt === handoffAttempt.current)
+        setHandoffError(
+          error instanceof Error
+            ? error.message
+            : "The saved product draft could not be loaded.",
+        )
+    } finally {
+      if (attempt === handoffAttempt.current) setRestoringForm(false)
+    }
   }
   const storesQuery = useQuery(trpc.tenant.stores.queryOptions())
   const stores = storesQuery.data ?? []
@@ -456,19 +562,48 @@ export function CatalogItemForm({
   )
   const createAssistantForm = useMutation(
     trpc.productAssistant.createFromForm.mutationOptions({
-      onError: (mutationError) => setError(mutationError.message),
+      onError: (mutationError) => {
+        setError(mutationError.message)
+        void queryClient.invalidateQueries({
+          queryKey: trpc.productAssistant.state.queryKey({
+            conversationId: catalogConversation ?? "",
+          }),
+        })
+      },
       onSuccess: onCreatedMutation,
     }),
   )
   function createSimpleWithAssistant(
     input: RouterInputs["catalog"]["createSimpleItem"],
   ) {
-    if (catalogConversation && productState.data && input.kind === "product") {
-      createAssistantForm.mutate({
-        conversationId: catalogConversation,
-        expectedRevision: productState.data.draft.revision,
-        command: { mode: "simple", input },
-      })
+    if (catalogConversation) {
+      try {
+        if (generation.current !== getDataCacheGeneration())
+          throw Error(
+            "Your business or account changed. Reopen this product form before continuing.",
+          )
+        const expectedRevision = productFormExpectedRevision(
+          formVersion,
+          productData,
+          catalogConversation,
+          initialStoreId,
+        )
+        if (input.kind !== "product")
+          throw Error(
+            "This saved chat creates a product. Keep its original product form.",
+          )
+        createAssistantForm.mutate({
+          conversationId: catalogConversation,
+          expectedRevision,
+          command: { mode: "simple", input },
+        })
+      } catch (error) {
+        setError(
+          error instanceof Error
+            ? error.message
+            : "Review the saved product draft.",
+        )
+      }
     } else createMutation.mutate(input)
   }
   const photoSaveBusy = useRef(false)
@@ -478,7 +613,23 @@ export function CatalogItemForm({
     if (photoSaveBusy.current) return
     photoSaveBusy.current = true
     try {
+      const expectedRevision = catalogConversation
+        ? productFormExpectedRevision(
+            formVersion,
+            productData,
+            catalogConversation,
+            initialStoreId,
+          )
+        : null
+      if (catalogConversation && input.kind !== "product")
+        throw Error(
+          "This saved chat creates a product. Keep its original product form.",
+        )
       const photoAssetIds = await photo.upload(input.clientOperationId)
+      if (generation.current !== getDataCacheGeneration())
+        throw Error(
+          "Your business or account changed. Reopen this product form before continuing.",
+        )
       const command = {
         ...input,
         ...(photoAssetIds.length ? { photoAssetIds } : {}),
@@ -486,12 +637,12 @@ export function CatalogItemForm({
       }
       if (
         catalogConversation &&
-        productState.data &&
+        expectedRevision !== null &&
         input.kind === "product"
       ) {
         await createAssistantForm.mutateAsync({
           conversationId: catalogConversation,
-          expectedRevision: productState.data.draft.revision,
+          expectedRevision,
           command: { mode: "advanced", input: command },
         })
       } else await createAdvancedMutation.mutateAsync(command)
@@ -704,6 +855,23 @@ export function CatalogItemForm({
     )
       return
     if (editor.active !== "main") return
+    if (catalogConversation) {
+      try {
+        productFormExpectedRevision(
+          formVersion,
+          productData,
+          catalogConversation,
+          initialStoreId,
+        )
+      } catch (error) {
+        setError(
+          error instanceof Error
+            ? error.message
+            : "Review the saved product draft.",
+        )
+        return
+      }
+    }
     if (createAdvancedMutation.variables) {
       createAdvancedMutation.mutate(createAdvancedMutation.variables)
       return
@@ -1115,6 +1283,8 @@ export function CatalogItemForm({
 
   if (!form.kind) return null
   const suggestionsDisabled =
+    restoringForm ||
+    Boolean(catalogConversation && (!formVersion || !productData)) ||
     photo.uploading ||
     createMutation.isPending ||
     createAssistantForm.isPending ||
@@ -1158,10 +1328,51 @@ export function CatalogItemForm({
 
   return (
     <>
+      {!productScopeCurrent ? (
+        <Alert>
+          <AlertTitle>Your business or access changed</AlertTitle>
+          <AlertDescription>
+            Refresh to reopen this saved product under your current access.
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => window.location.reload()}
+            >
+              Refresh
+            </Button>
+          </AlertDescription>
+        </Alert>
+      ) : null}
+      {productScopeCurrent &&
+      catalogConversation &&
+      catalogCreateMode !== "chat" &&
+      (!formVersion || productState.isError || productState.isPaused) ? (
+        <Alert>
+          <AlertTitle>
+            {productState.isError || productState.isPaused
+              ? "The saved product draft could not be loaded"
+              : "Loading the saved product draft"}
+          </AlertTitle>
+          <AlertDescription>
+            {formVersion
+              ? "Your form edits are still here. Reloading replaces them with the saved draft."
+              : "Your form can continue after its original saved draft is verified."}
+            {productState.isError || productState.isPaused ? (
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => void backToForm()}
+              >
+                {formVersion ? "Reload saved draft" : "Retry saved draft"}
+              </Button>
+            ) : null}
+          </AlertDescription>
+        </Alert>
+      ) : null}
       {catalogCreateMode === "chat" ? (
-        productState.data ? (
+        productChatData ? (
           <ProductChat
-            data={productState.data}
+            data={productChatData}
             currencyCode={currencyCode}
             onBack={backToForm}
             onCreated={(name) => {
@@ -1197,18 +1408,64 @@ export function CatalogItemForm({
           </div>
         )
       ) : null}
+      {catalogCreateMode === "chat" && handoffError ? (
+        <p role="alert" className="text-sm text-destructive">
+          {handoffError}
+        </p>
+      ) : null}
       <form
         id="catalog-item-create-form"
-        className={catalogCreateMode === "chat" ? "hidden" : "flex flex-col"}
+        className={
+          catalogCreateMode === "chat" ||
+          !productScopeCurrent ||
+          Boolean(
+            catalogConversation &&
+              (productState.isError || productState.isPaused),
+          ) ||
+          Boolean(catalogConversation && !formVersion)
+            ? "hidden"
+            : "flex flex-col"
+        }
         onSubmit={submit}
         noValidate
-        hidden={catalogCreateMode === "chat"}
+        hidden={
+          catalogCreateMode === "chat" ||
+          !productScopeCurrent ||
+          Boolean(
+            catalogConversation &&
+              (productState.isError || productState.isPaused),
+          ) ||
+          Boolean(catalogConversation && !formVersion)
+        }
         inert={
           startProductChat.isPending ||
           updateProductChat.isPending ||
-          photo.uploading
+          photo.uploading ||
+          restoringForm ||
+          Boolean(catalogConversation && !formVersion)
         }
       >
+        {catalogConversation &&
+        formVersion &&
+        productData &&
+        productData.draft.revision !== formVersion.revision ? (
+          <Alert className="mb-4">
+            <AlertTitle>The saved product draft changed</AlertTitle>
+            <AlertDescription>
+              Your form edits are still here. Reloading replaces them with the
+              saved draft; review it before adding the product.
+              <Button
+                type="button"
+                variant="outline"
+                className="mt-2"
+                disabled={restoringForm}
+                onClick={() => void backToForm()}
+              >
+                Reload saved draft
+              </Button>
+            </AlertDescription>
+          </Alert>
+        ) : null}
         {form.kind === "product" && capability.data?.enabled ? (
           <div className="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-lg border bg-muted/20 p-4">
             <div>

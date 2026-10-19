@@ -1,0 +1,95 @@
+{
+  "version": 1,
+  "id": "2026-10-15-phase6-native-staff",
+  "tickets": [
+    "S01",
+    "S02",
+    "S03",
+    "S04",
+    "S05",
+    "A04",
+    "H01",
+    "H02",
+    "H03"
+  ],
+  "summary": "Three native staff proposal editors and strict exact event/command original navigation. Fresh protected read/review and existing explicit confirmation required. Six planned mobile client/test rows; no canonical/API/schema/permission/rollout change.",
+  "capabilities": [
+    {
+      "id": "staff.status.change",
+      "change": "changed",
+      "rollout": "planned",
+      "note": "Adds native editor/exact original consumer and focused evidence; planned availability and current Owner/Admin authority retained."
+    },
+    {
+      "id": "staff.invitation.manage",
+      "change": "changed",
+      "rollout": "planned",
+      "note": "Adds native editor/exact original consumer and focused evidence; planned availability and current Owner/Admin authority retained."
+    },
+    {
+      "id": "staff.access.change",
+      "change": "changed",
+      "rollout": "planned",
+      "note": "Adds native editor/exact original consumer and focused evidence; planned availability and current Owner/Admin authority retained."
+    },
+    {
+      "id": "staff.status.receipt.read",
+      "change": "changed",
+      "rollout": "planned",
+      "note": "Adds native editor/exact original consumer and focused evidence; planned availability and current Owner/Admin authority retained."
+    },
+    {
+      "id": "staff.invitation.command.read",
+      "change": "changed",
+      "rollout": "planned",
+      "note": "Adds native editor/exact original consumer and focused evidence; planned availability and current Owner/Admin authority retained."
+    },
+    {
+      "id": "staff.access.receipt.read",
+      "change": "changed",
+      "rollout": "planned",
+      "note": "Adds native editor/exact original consumer and focused evidence; planned availability and current Owner/Admin authority retained."
+    }
+  ],
+  "procedures": [],
+  "docs": [
+    {
+      "topic": "feature",
+      "path": ".brain/features/assistant-business-operations.md",
+      "status": "local_only",
+      "note": "Phase6 source and remaining saved/native acceptance recorded with staff feature docs."
+    },
+    {
+      "topic": "api",
+      "path": ".brain/api/contracts.md",
+      "status": "local_only",
+      "note": "Local strict navigation target consumes existing protected DTOs; no public endpoint/schema change."
+    },
+    {
+      "topic": "permissions",
+      "path": ".brain/api/permissions.md",
+      "status": "local_only",
+      "note": "Current authority and scope required; client guards do not grant access."
+    },
+    {
+      "topic": "capability",
+      "path": "packages/assistant/src/capabilities/COVERAGE.md",
+      "status": "updated",
+      "note": "Six planned mobile client rows regenerated; source is not acceptance."
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "test",
+      "path": "packages/assistant/evaluations/phase-regressions.test.ts",
+      "executed": true,
+      "result": "Isolated actual component fixtures originals9/103,status7/51,invitation7/93,access9/61 pass; native/query stands-in, no device/domain run."
+    },
+    {
+      "kind": "review",
+      "path": "packages/assistant/evaluations/runs/2026-10-15-phase6-native-staff-source.md",
+      "executed": true,
+      "result": "Independent source review and integration;27mobile writes/42reads,0declared registry gaps,47full write gaps. Parent acceptance13/45 retained."
+    }
+  ]
+}

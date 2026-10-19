@@ -1,0 +1,28 @@
+{
+  "version": 1,
+  "id": "2026-10-17-phone-auth-disabled-release",
+  "tickets": ["H01"],
+  "summary": "Stage the approved OTP sender/template with an explicit false gate in production; add read-only production preparation and hosted disabled-availability verification. No deployment, live delivery or credential copy.",
+  "noAssistantImpact": "Phone authentication and personal account privacy remain excluded from merchant assistant tools. This preflight and the four staged nonsecret API settings change no assistant rollout, role, grant, command or permission.",
+  "procedures": [],
+  "docs": [
+    {
+      "topic": "feature",
+      "path": ".brain/features/whatsapp-otp.md",
+      "status": "local_only"
+    },
+    {
+      "topic": "api",
+      "path": ".brain/api/contracts.md",
+      "status": "local_only"
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "run",
+      "path": ".brain/qa/2026-10-17-phone-auth-production-preparation.md",
+      "executed": true,
+      "result": "13 preflight tests/23 assertions, scoped types/Biome, production-file/hosted disabled probe, exact four-setting provider read-back, API/legal/EAS config, API bundle and Android/iOS production JavaScript exports pass. Phone/privacy regression 62 tests/306 assertions pass. Full app types and existing auth boundary guard retain broader failures; no deployment or live send."
+    }
+  ]
+}

@@ -2,7 +2,13 @@ import { randomUUID } from "node:crypto"
 import { appendFile, mkdir, readFile, rmdir } from "node:fs/promises"
 
 export type Agent = "codex" | "claude"
-export type Kind = "message" | "handoff" | "review" | "status" | "ack"
+export type Kind =
+  | "message"
+  | "handoff"
+  | "review"
+  | "status"
+  | "notice"
+  | "ack"
 export type Entry = {
   id: string
   at: string
@@ -49,7 +55,7 @@ export function parseChat(text: string): Entry[] {
       !Number.isFinite(Date.parse(metadata.at)) ||
       !agent(metadata.from) ||
       !(agent(metadata.to) || metadata.to === "all") ||
-      !["message", "handoff", "review", "status", "ack"].includes(
+      !["message", "handoff", "review", "status", "notice", "ack"].includes(
         metadata.kind,
       ) ||
       (metadata.replyTo !== undefined && typeof metadata.replyTo !== "string")

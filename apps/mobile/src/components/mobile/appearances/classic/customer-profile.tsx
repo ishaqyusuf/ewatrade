@@ -92,7 +92,7 @@ export function ClassicCustomerProfile({
         </NativeText>
         <NativeText
           numberOfLines={1}
-          style={{ color: palette.heroMuted, fontSize: 13 }}
+          style={{ color: palette.heroMuted, fontSize: 16 }}
         >
           {customer.phone ?? customer.email ?? "No contact details"}
         </NativeText>
@@ -173,9 +173,7 @@ function DetailRow({
         />
       </NativeView>
       <View className="min-w-0 flex-1">
-        <Text className="text-[11.5px] font-bold text-muted-foreground">
-          {label}
-        </Text>
+        <Text className="text-xs font-bold text-muted-foreground">{label}</Text>
         <Text className="text-sm font-bold text-foreground">{value}</Text>
       </View>
     </View>

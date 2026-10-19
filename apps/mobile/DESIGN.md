@@ -63,12 +63,36 @@ board (`.brain/tasks/green-till-batch-board.md`).
   above / 10 below; 14 between stacked cards; card padding 14 (hero 18); row
   vertical padding 12 (min height 62 with avatar); chip gap 8.
 - **Radius:** hero 26, list cards 20, tiles and nudges 18, inputs 14, chips full.
-- **Type (size/weight):** hero amount 36/800; hero or screen title 22–23/800;
-  header business name 17/800; section header 16/800; row title 14/700; body
-  13–13.5/400; meta and labels 12; tile label 11.5/700; pill 10.5/700. Money and
-  counts use tabular numbers.
+- **Type (native size/weight):** hero amount 36/800; hero or screen title
+  22–23/800; header business name 17/800; section header 16/800; primary row
+  information16/700; body16/400; supporting labels, metadata, dates, tile labels,
+  helpers, empty states and pills **at least16**. Use22line height for screen
+  copy. Money and counts use tabular numbers. This larger scale is the app-wide
+  standard (owner direction,19October2026; supersedes the14px supporting floor).
+- **Type tokens:** `src/styles/global.css` owns `text-xs`/`text-sm`/`text-base` =16
+  with22line height; hierarchy uses weight, colour and larger headings. Font tokens use explicit
+  native units: NativeWind's 14-unit `rem` must not silently shrink typography.
+  Keep spacing/rem settings independent. Explicit native text styles follow
+  the same minimum; use larger primary text where the information needs it.
+  Let pills fit their text and preserve system text scaling. Receipt-paper/PDF
+  typography uses its own physical document scale, not screen-label sizes.
 - **Controls:** primary buttons 50 tall (64 at large text); quick tiles 54; icon
   buttons 38 with hit slop to 44+; minimum touch target 44.
+
+## Search component ownership — 18 October 2026
+
+Every mobile search uses Global Search's exact floating `BottomSearchFooter` /
+`FloatingSearchField`. Reuse the implementation, including its raised pill,
+search/clear icons, gutters and keyboard behavior. Do not recreate it with
+`FormField` or a custom search bar. `SearchFooterField` declares an embedded
+form's search; the nearest `SearchFooterScope` places the same footer at its
+viewport edge. Add `SearchFooterSpacer` to that viewport's scroll content.
+Sheets retain one keyboard owner; their adapters render the same footer in
+sheet/relative mode. Existing tab search launchers expand into this footer.
+
+Owner instruction: shared-component reuse does not require repeated per-screen,
+large-text or device testing. This migration receives source review only after
+implementation; prior shared Search-screen verification is reused.
 
 ## Motion
 

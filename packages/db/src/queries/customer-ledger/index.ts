@@ -1,5 +1,6 @@
 export * from "./account-reads"
 export * from "./accounts"
+export { lockCommerceFinancialContext } from "./commerce-locks"
 export * from "./allocation-releases"
 export * from "./allocations"
 export * from "./command-status"

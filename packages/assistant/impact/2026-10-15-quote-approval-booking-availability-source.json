@@ -1,0 +1,85 @@
+{
+  "version": 1,
+  "id": "2026-10-15-quote-approval-booking-availability-source",
+  "tickets": [
+    "G03",
+    "A04",
+    "H01",
+    "H02"
+  ],
+  "summary": "Nonclinical Quote outside-TX approval proof and protected live staff booking availability; preserve full domain/client/acceptance scope.",
+  "capabilities": [],
+  "procedures": [
+    {
+      "path": "serviceAssistantBookings.availability",
+      "status": "planned",
+      "reason": "Protected current staff live capacity read installed in source; full typed GENERAL tool/native and hold/confirm/lifecycle integration still required. No reservation/payment inference."
+    }
+  ],
+  "docs": [
+    {
+      "topic": "feature",
+      "path": ".brain/features/assistant-booking-read.md",
+      "status": "local_only",
+      "note": "Live read, interval repairs and full remaining G03."
+    },
+    {
+      "topic": "feature",
+      "path": ".brain/features/assistant-service-requests.md",
+      "status": "local_only",
+      "note": "Prepared approval/source revision; complete outer integration remains."
+    },
+    {
+      "topic": "api",
+      "path": ".brain/api/endpoints.md",
+      "status": "local_only"
+    },
+    {
+      "topic": "api",
+      "path": ".brain/api/contracts.md",
+      "status": "local_only"
+    },
+    {
+      "topic": "permissions",
+      "path": ".brain/api/permissions.md",
+      "status": "local_only",
+      "note": "Read-only exact current Store/native member and SCOPED grant checks; no booking-write grant."
+    },
+    {
+      "topic": "schema",
+      "status": "not_applicable",
+      "note": "No Prisma schema or migration changes; existing tables only."
+    },
+    {
+      "topic": "capability",
+      "path": "packages/assistant/src/capabilities/COVERAGE.md",
+      "status": "updated"
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "test",
+      "path": "packages/db/src/queries/commerce-quote-reviewed-decision.test.ts",
+      "executed": true,
+      "result": "Current six-suite97/947; actual chain/sourceRevision and outside-TX screening, inert persistence."
+    },
+    {
+      "kind": "test",
+      "path": "packages/db/src/queries/service-commerce-bookings/staff-availability.test.ts",
+      "executed": true,
+      "result": "Booking55/294; independent overlapping49/253; no SQL claim."
+    },
+    {
+      "kind": "fixture",
+      "path": "packages/assistant/evaluations/fixtures/booking-availability-router.fixture.ts",
+      "executed": true,
+      "result": "10/154 isolated actual scope/schema/router with inert auth transport/persistence."
+    },
+    {
+      "kind": "review",
+      "path": "packages/assistant/evaluations/runs/2026-10-15-quote-approval-booking-availability-source.md",
+      "executed": true,
+      "result": "Final compiler78 imported/0 owned; all24new errors repaired; full remaining gates retained."
+    }
+  ]
+}

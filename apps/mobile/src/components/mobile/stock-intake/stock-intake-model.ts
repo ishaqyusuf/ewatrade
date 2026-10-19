@@ -1,3 +1,4 @@
+import type { ParsedStockIntakeTarget } from "@/lib/stock-intake-target"
 import type {
   RouterInputs,
   RouterOutputs,
@@ -5,12 +6,14 @@ import type {
 import {
   EXACT_QUANTITY_MAX_SCALE,
   parseExactDecimal,
+  subtractExactDecimals,
 } from "@ewatrade/utils/exact-decimal"
 import {
   type StockCategoryDraft,
   collectStockCategoryDraft,
   stockCategorySelectors,
 } from "@ewatrade/utils/inventory-categories"
+import { stockAfter } from "./stock-preview"
 
 export type StockBalance =
   RouterOutputs["inventory"]["balanceReport"]["rows"][number]
@@ -18,6 +21,8 @@ export type StockPerson = RouterOutputs["services"]["assignees"][number]
 export type StockIntakeProps = {
   onComplete?: () => void
   presentation?: "screen" | "sheet"
+  /** Requested origin (Catalog Item etc.). Absent means generic entry. */
+  target?: ParsedStockIntakeTarget
 }
 export const STOCK_MODES = [
   {
@@ -85,6 +90,80 @@ export type StockAttempt = {
   command: StockCommand
   finalId: string
   countId?: string
+  /** Once a response was lost, later rejections cannot prove nothing saved. */
+  uncertain?: boolean
+}
+/** Every outcome keeps the reviewed snapshot it describes. */
+export type StockOutcome = { review: StockReview } & (
+  | {
+      kind: "recorded"
+      effectiveAt: Date | null
+      /** The saved operation's id from the actual response; null if unreadable. */
+      operationId: string | null
+      /** Balance read time when the command resolved; later reads are post-result. */
+      readBaseline: number
+    }
+  | { kind: "not_recorded"; message: string; canEdit: boolean }
+  | { kind: "unknown" }
+)
+
+/** Exact quantity line for review and outcome, e.g. "Receive 10 bag". */
+export function stockQuantityLine(
+  draft: StockDraft,
+  quantity: string,
+  unit: string,
+) {
+  const verb =
+    draft.mode === "count"
+      ? "Counted"
+      : draft.mode === "custody"
+        ? "Move"
+        : draft.mode === "receipt"
+          ? "Receive"
+          : draft.direction === "increase"
+            ? "Increase"
+            : "Decrease"
+  return `${verb} ${quantity} ${unit}`
+}
+
+function effectiveDate(result: unknown) {
+  const value =
+    result && typeof result === "object" && "effectiveAt" in result
+      ? (result as { effectiveAt?: unknown }).effectiveAt
+      : undefined
+  if (!(typeof value === "string" || value instanceof Date)) return null
+  const date = new Date(value)
+  return Number.isNaN(date.getTime()) ? null : date
+}
+export { effectiveDate as stockResultEffectiveAt }
+
+/**
+ * The saved operation's own id, read only from the actual command response.
+ * Never derived from client, final or Count draft ids; anything malformed is
+ * null so a saved command stays recorded with its reference unavailable.
+ */
+export function stockResultOperationId(result: unknown) {
+  const value =
+    result && typeof result === "object" && "id" in result
+      ? (result as { id?: unknown }).id
+      : undefined
+  if (typeof value !== "string") return null
+  const id = value.trim()
+  return id.length >= 1 && id.length <= 128 && /^[A-Za-z0-9_-]+$/.test(id)
+    ? id
+    : null
+}
+
+/** Recorded-outcome reference row; a missing id never implies a failure. */
+export function stockReferenceRow(
+  operationId: string | null,
+): [string, string, { selectable: boolean }] {
+  return [
+    "Reference",
+    operationId ?? "Not available on this phone — the change is saved",
+    // Only a real saved id is worth copying.
+    { selectable: operationId !== null },
+  ]
 }
 
 export function stockCustodyLabel(
@@ -103,6 +182,24 @@ export function stockCustodyLabel(
         ? "In transit"
         : "Session"
   return `${label}: ${person?.name ?? balance.custodyReferenceId ?? "Unspecified"}`
+}
+
+/** Shared pool and packaged sources are independent balances; never merge. */
+export function stockKindLabel(balance: Pick<StockBalance, "kind">) {
+  return balance.kind === "PACKAGED_STOCK" ? "Packaged stock" : "Shared stock"
+}
+
+/** On hand, reserved and available are distinct facts in the same unit. */
+export function stockFactsLabel(
+  balance: Pick<
+    StockBalance,
+    | "onHandQuantity"
+    | "reservedQuantity"
+    | "availableQuantity"
+    | "inventoryUnitName"
+  >,
+) {
+  return `${balance.onHandQuantity} on hand · ${balance.reservedQuantity} reserved · ${balance.availableQuantity} available ${balance.inventoryUnitName}`
 }
 
 export function stockDraftReadiness(
@@ -229,5 +326,38 @@ export function stockCommand(
       type: draft.mode,
       direction: draft.mode === "receipt" ? "increase" : draft.direction,
     },
+  }
+}
+
+/** Review estimate only; the server confirms the real balance. */
+export function stockReviewLedger(review: StockReview) {
+  const { balance, draft, quantity } = review
+  const after = stockAfter(
+    balance.onHandQuantity,
+    quantity,
+    draft.mode,
+    draft.direction,
+  )
+  let availableAfter: string | null = null
+  if (after !== null)
+    if (balance.custodyType === "TRANSIT") availableAfter = "0"
+    else {
+      const value = subtractExactDecimals(after, balance.reservedQuantity)
+      availableAfter = value.startsWith("-") ? "0" : value
+    }
+  const difference =
+    after === null ? null : subtractExactDecimals(after, balance.onHandQuantity)
+  return {
+    onHand: [balance.onHandQuantity, after] as const,
+    reserved: [balance.reservedQuantity, balance.reservedQuantity] as const,
+    available: [balance.availableQuantity, availableAfter] as const,
+    difference:
+      difference === null
+        ? null
+        : difference.startsWith("-")
+          ? `−${difference.slice(1)}`
+          : difference === "0"
+            ? "0"
+            : `+${difference}`,
   }
 }

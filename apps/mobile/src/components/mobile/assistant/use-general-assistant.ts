@@ -2,7 +2,7 @@ import { useAuthContext } from "@/hooks/use-auth"
 import { getBaseUrl } from "@/lib/base-url"
 import { getSession } from "@/lib/session-store"
 import { useOperationalModeStore } from "@/store/operationalModeStore"
-import { useTRPC } from "@/trpc/client"
+import { getDataCacheGeneration, useTRPC } from "@/trpc/client"
 import { useChat } from "@ai-sdk/react"
 import type {
   GeneralAction,
@@ -20,7 +20,12 @@ import { z } from "zod"
 import type { AssistantReadyFile } from "./assistant-chat-box"
 import { assistantError } from "./assistant-error"
 import {
+  assistantRouteConversation,
+  matchesAssistantRouteConversation,
+} from "./assistant-route-conversation"
+import {
   assistantRequestHeaders,
+  assistantScope,
   assistantScopeKey,
   isAssistantSessionCurrent,
 } from "./assistant-scope"
@@ -41,17 +46,25 @@ export function useGeneralAssistant() {
   const params = useLocalSearchParams<{
     query?: string | string[]
     draft?: string | string[]
+    conversationId?: string | string[]
   }>()
+  const requested = assistantRouteConversation(params.conversationId)
+  const requestedKey = JSON.stringify(requested)
+  const [releasedRoute, setReleasedRoute] = useState<string | null>(null)
+  const exactRoute = requested.kind !== "none" && releasedRoute !== requestedKey
+  const [routeStartedAt, setRouteStartedAt] = useState(Date.now)
   const auth = useAuthContext()
   const trpc = useTRPC()
   const offline = useOperationalModeStore((s) => s.isOfflineMode)
   const [origin] = useState(() => getSession())
+  const [originCacheGeneration] = useState(getDataCacheGeneration)
   const scope = assistantScopeKey(origin)
   const scopeChanged =
     scope !== assistantScopeKey(auth.session) ||
     origin?.token !== auth.token ||
     origin?.profile.role !== auth.profile?.role ||
-    origin?.profile.status !== auth.profile?.status
+    origin?.profile.status !== auth.profile?.status ||
+    originCacheGeneration !== getDataCacheGeneration()
   const mounted = useRef(true)
   const actionLock = useRef(false)
   const recoveryLock = useRef(false)
@@ -67,6 +80,7 @@ export function useGeneralAssistant() {
   const canWork = useCallback(
     () =>
       mounted.current &&
+      originCacheGeneration === getDataCacheGeneration() &&
       origin?.profile.role === getSession()?.profile.role &&
       isAssistantSessionCurrent(
         origin,
@@ -74,9 +88,11 @@ export function useGeneralAssistant() {
         useOperationalModeStore.getState().isOfflineMode,
         false,
       ),
-    [origin],
+    [origin, originCacheGeneration],
   )
-  const [conversationId, setConversationId] = useState<string | null>(null)
+  const [conversationId, setConversationId] = useState<string | null>(() =>
+    requested.kind === "saved" ? requested.conversationId : null,
+  )
   const [cached, setCached] = useState<{
     savedAt: number
     data: GeneralSnapshot
@@ -117,19 +133,42 @@ export function useGeneralAssistant() {
           canWork() && availability.data?.enabled === true && !!conversationId,
         retry: false,
         refetchOnWindowFocus: false,
+        ...(exactRoute
+          ? { staleTime: 0, refetchOnMount: "always" as const }
+          : {}),
       },
     ),
   )
-  const server = useMemo(() => readGeneralSnapshot(state.data), [state.data])
-  const data = scopeChanged
-    ? null
-    : offline
-      ? cached && Date.now() - cached.savedAt < 24 * 60 * 60 * 1000
-        ? cached.data
-        : Date.now() - state.dataUpdatedAt < 24 * 60 * 60 * 1000
-          ? server
-          : null
-      : server
+  const exactRouteReady =
+    !exactRoute ||
+    (requested.kind === "saved" &&
+      conversationId === requested.conversationId &&
+      !offline &&
+      state.isSuccess &&
+      !state.isError &&
+      !state.isPaused &&
+      state.isFetchedAfterMount &&
+      state.dataUpdatedAt >= routeStartedAt &&
+      matchesAssistantRouteConversation(
+        state.data,
+        requested.conversationId,
+        assistantScope(origin),
+      ))
+  const routeUnavailable = exactRoute && !exactRouteReady
+  const server = useMemo(
+    () => (exactRouteReady ? readGeneralSnapshot(state.data) : null),
+    [state.data, exactRouteReady],
+  )
+  const data =
+    scopeChanged || routeUnavailable
+      ? null
+      : offline
+        ? cached && Date.now() - cached.savedAt < 24 * 60 * 60 * 1000
+          ? cached.data
+          : Date.now() - state.dataUpdatedAt < 24 * 60 * 60 * 1000
+            ? server
+            : null
+        : server
   const start = useMutation(trpc.assistant.start.mutationOptions())
   const decide = useMutation(trpc.assistant.decideProposal.mutationOptions())
   const edit = useMutation(trpc.assistant.editProposal.mutationOptions())
@@ -146,14 +185,15 @@ export function useGeneralAssistant() {
         if (live && !scopeChanged) {
           const value = readGeneralCache(raw, scope ?? "")
           setCached(value)
-          if (offline && value) setConversationId(value.data.conversation.id)
+          if (offline && value && !exactRoute)
+            setConversationId(value.data.conversation.id)
         }
       })
       .catch(() => {})
     return () => {
       live = false
     }
-  }, [storageKey, scope, scopeChanged, offline])
+  }, [storageKey, scope, scopeChanged, offline, exactRoute])
   useEffect(() => {
     if (!server || !canWork() || scopeChanged) return
     const value = {
@@ -194,7 +234,7 @@ export function useGeneralAssistant() {
         api: `${getBaseUrl()}/api/assistant/general/chat`,
         fetch: guardedFetch as unknown as typeof fetch,
         prepareSendMessagesRequest: ({ messages, body }) => {
-          if (!canWork() || !conversationId)
+          if (!canWork() || !conversationId || routeUnavailable)
             throw Error("Conversation unavailable")
           const last = [...messages].reverse().find((m) => m.role === "user")
           if (!last) throw Error("Message unavailable")
@@ -232,7 +272,7 @@ export function useGeneralAssistant() {
           }
         },
       }),
-    [conversationId, canWork, guardedFetch],
+    [conversationId, canWork, guardedFetch, routeUnavailable],
   )
   const chat = useChat<Message>({
     id: `${scope}:${conversationId}`,
@@ -265,6 +305,33 @@ export function useGeneralAssistant() {
   })
   const busy = chat.status === "submitted" || chat.status === "streaming"
   useEffect(() => {
+    if (exactRoute && exactRouteReady) setNotice(null)
+  }, [exactRoute, exactRouteReady])
+  useEffect(() => {
+    if (requestedKey === releasedRoute) return
+    const next = assistantRouteConversation(params.conversationId)
+    if (next.kind === "none") return
+    void chat.stop()
+    chat.setMessages([])
+    setConversationId(next.kind === "saved" ? next.conversationId : null)
+    setRunId(null)
+    setQueued(null)
+    setReadyFiles([])
+    setDraft("")
+    setRouteStartedAt(Date.now())
+    setNotice(
+      next.kind === "invalid"
+        ? "This saved chat link is invalid. No other chat was opened."
+        : "Loading this exact saved chat. If unavailable in your current account and Store, no other chat will open.",
+    )
+  }, [
+    requestedKey,
+    releasedRoute,
+    params.conversationId,
+    chat.stop,
+    chat.setMessages,
+  ])
+  useEffect(() => {
     if (conversationId) appliedAt.current = 0
   }, [conversationId])
   const historyAt = offline ? (cached?.savedAt ?? 0) : state.dataUpdatedAt
@@ -286,6 +353,11 @@ export function useGeneralAssistant() {
     setRunId(null)
     setNotice(null)
   }, [offline, scopeChanged, chat.stop])
+  useEffect(() => {
+    if (!scopeChanged && !sessionUnavailable) return
+    setReadyFiles([])
+    setTrayKey((key) => key + 1)
+  }, [scopeChanged, sessionUnavailable])
   useEffect(() => {
     const subscription = AppState.addEventListener("change", (next) => {
       if (next !== "active") void chat.stop()
@@ -358,7 +430,14 @@ export function useGeneralAssistant() {
     return () => clearInterval(timer)
   }, [runId, busy, offline, scopeChanged, recover])
   const act = async (operation: () => Promise<unknown>) => {
-    if (!canWork() || actionLock.current || busy || runId || state.isError)
+    if (
+      !canWork() ||
+      routeUnavailable ||
+      actionLock.current ||
+      busy ||
+      runId ||
+      state.isError
+    )
       return false
     actionLock.current = true
     setPending(true)
@@ -430,6 +509,7 @@ export function useGeneralAssistant() {
     const files = conversationId && !saleChoice ? readyFiles : []
     if (
       !canWork() ||
+      routeUnavailable ||
       (!text && !files.length) ||
       busy ||
       runId ||
@@ -489,20 +569,30 @@ export function useGeneralAssistant() {
   /** Back to the assistant home; the next question starts a new chat. */
   const fresh = () => {
     if (!canWork() || busy || runId || pending) return
+    setReadyFiles([])
+    setTrayKey((key) => key + 1)
     chat.setMessages([])
+    setReleasedRoute(requestedKey)
     setConversationId(null)
     setDraft("")
     setNotice(null)
   }
   const choose = (id: string) => {
     if (!canWork() || busy || runId || pending) return
+    setReadyFiles([])
+    setTrayKey((key) => key + 1)
     chat.setMessages([])
+    setReleasedRoute(requestedKey)
     setConversationId(id)
     setDraft("")
     setNotice(null)
   }
   return {
-    readyFiles,
+    composerConversationId:
+      offline || scopeChanged || routeUnavailable || sessionUnavailable
+        ? null
+        : conversationId,
+    readyFiles: scopeChanged || sessionUnavailable ? [] : readyFiles,
     setReadyFiles,
     trayKey,
     sessionUnavailable,
@@ -513,10 +603,18 @@ export function useGeneralAssistant() {
     chat,
     busy,
     offline,
-    scopeChanged,
-    draft,
+    scopeChanged: scopeChanged || routeUnavailable,
+    draft: scopeChanged || sessionUnavailable ? "" : draft,
     setDraft,
-    notice,
+    notice: routeUnavailable
+      ? requested.kind === "invalid"
+        ? "This saved chat link is invalid. No other chat was opened."
+        : offline
+          ? "Return online to open this exact saved chat. Cached chats are not substituted."
+          : state.isError || state.isSuccess
+            ? "This saved chat is unavailable for your current account, Store or workflow. No other chat was opened."
+            : "Loading this exact saved chat…"
+      : notice,
     pending,
     runId,
     conversationId,

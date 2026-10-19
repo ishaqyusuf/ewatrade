@@ -1,0 +1,144 @@
+{
+  "version": 1,
+  "id": "2026-10-15-whatsapp-native-reads",
+  "tickets": ["A01", "G05", "H01"],
+  "summary": "W19/W20 transport-source implementation: sixteen existing catalog/customer/sales/stock reads join existing search as explicit native WhatsApp source, independent default-off gate and canonical rollout unchanged. Deterministic saved prices/contacts/order/payment/stock facts, strict read continuation hints, canonical catalog paths, bounded search, scoped static object links and existing native/browser consumers. No write/provider/OTP activation or live acceptance; W19/W20 remain pending final scoped regression and rendered/native acceptance.",
+  "capabilities": [
+    {
+      "id": "catalog.history.read",
+      "change": "changed",
+      "rollout": "source",
+      "note": "Adds explicit WhatsApp native transport-source compatibility only; same role ceiling and canonical query paths, current linked authority and independent reads gate. No canonical rollout promotion or new domain read."
+    },
+    {
+      "id": "catalog.item.read",
+      "change": "changed",
+      "rollout": "source",
+      "note": "Adds explicit WhatsApp native transport-source compatibility only; same role ceiling and canonical query paths, current linked authority and independent reads gate. No canonical rollout promotion or new domain read."
+    },
+    {
+      "id": "catalog.page",
+      "change": "changed",
+      "rollout": "source",
+      "note": "Adds explicit WhatsApp native transport-source compatibility only; same role ceiling and canonical query paths, current linked authority and independent reads gate. No canonical rollout promotion or new domain read."
+    },
+    {
+      "id": "catalog.count",
+      "change": "changed",
+      "rollout": "source",
+      "note": "Adds explicit WhatsApp native transport-source compatibility only; same role ceiling and canonical query paths, current linked authority and independent reads gate. No canonical rollout promotion or new domain read."
+    },
+    {
+      "id": "customers.read",
+      "change": "changed",
+      "rollout": "source",
+      "note": "Adds explicit WhatsApp native transport-source compatibility only; same role ceiling and canonical query paths, current linked authority and independent reads gate. No canonical rollout promotion or new domain read."
+    },
+    {
+      "id": "customers.page",
+      "change": "changed",
+      "rollout": "source",
+      "note": "Adds explicit WhatsApp native transport-source compatibility only; same role ceiling and canonical query paths, current linked authority and independent reads gate. No canonical rollout promotion or new domain read."
+    },
+    {
+      "id": "customers.count",
+      "change": "changed",
+      "rollout": "source",
+      "note": "Adds explicit WhatsApp native transport-source compatibility only; same role ceiling and canonical query paths, current linked authority and independent reads gate. No canonical rollout promotion or new domain read."
+    },
+    {
+      "id": "sales.orders.read",
+      "change": "changed",
+      "rollout": "source",
+      "note": "Adds explicit WhatsApp native transport-source compatibility only; same role ceiling and canonical query paths, current linked authority and independent reads gate. No canonical rollout promotion or new domain read."
+    },
+    {
+      "id": "sales.summary.read",
+      "change": "changed",
+      "rollout": "source",
+      "note": "Adds explicit WhatsApp native transport-source compatibility only; same role ceiling and canonical query paths, current linked authority and independent reads gate. No canonical rollout promotion or new domain read."
+    },
+    {
+      "id": "sales.order.read",
+      "change": "changed",
+      "rollout": "source",
+      "note": "Adds explicit WhatsApp native transport-source compatibility only; same role ceiling and canonical query paths, current linked authority and independent reads gate. No canonical rollout promotion or new domain read."
+    },
+    {
+      "id": "sales.orders.summary",
+      "change": "changed",
+      "rollout": "source",
+      "note": "Adds explicit WhatsApp native transport-source compatibility only; same role ceiling and canonical query paths, current linked authority and independent reads gate. No canonical rollout promotion or new domain read."
+    },
+    {
+      "id": "sales.orders.lookup",
+      "change": "changed",
+      "rollout": "source",
+      "note": "Adds explicit WhatsApp native transport-source compatibility only; same role ceiling and canonical query paths, current linked authority and independent reads gate. No canonical rollout promotion or new domain read."
+    },
+    {
+      "id": "inventory.totals.read",
+      "change": "changed",
+      "rollout": "source",
+      "note": "Adds explicit WhatsApp native transport-source compatibility only; same role ceiling and canonical query paths, current linked authority and independent reads gate. No canonical rollout promotion or new domain read."
+    },
+    {
+      "id": "inventory.balances.read",
+      "change": "changed",
+      "rollout": "source",
+      "note": "Adds explicit WhatsApp native transport-source compatibility only; same role ceiling and canonical query paths, current linked authority and independent reads gate. No canonical rollout promotion or new domain read."
+    },
+    {
+      "id": "inventory.offering_stock.read",
+      "change": "changed",
+      "rollout": "source",
+      "note": "Adds explicit WhatsApp native transport-source compatibility only; same role ceiling and canonical query paths, current linked authority and independent reads gate. No canonical rollout promotion or new domain read."
+    },
+    {
+      "id": "inventory.low_stock.read",
+      "change": "changed",
+      "rollout": "source",
+      "note": "Adds explicit WhatsApp native transport-source compatibility only; same role ceiling and canonical query paths, current linked authority and independent reads gate. No canonical rollout promotion or new domain read."
+    }
+  ],
+  "docs": [
+    {
+      "topic": "feature",
+      "path": ".brain/features/whatsapp-assistant.md",
+      "status": "local_only"
+    },
+    {
+      "topic": "api",
+      "path": ".brain/api/contracts.md",
+      "status": "local_only"
+    },
+    {
+      "topic": "permissions",
+      "path": ".brain/api/permissions.md",
+      "status": "local_only"
+    },
+    {
+      "topic": "capability",
+      "path": "packages/assistant/src/capabilities/COVERAGE.md",
+      "status": "updated"
+    },
+    {
+      "topic": "capability",
+      "path": "packages/assistant/evaluations/WHATSAPP-COVERAGE.md",
+      "status": "updated"
+    },
+    {
+      "topic": "decision",
+      "path": ".brain/decisions/2026-10-15-whatsapp-assistant-channel.md",
+      "status": "local_only"
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "run",
+      "path": ".brain/qa/2026-10-15-whatsapp-assistant.md",
+      "executed": true,
+      "result": "Focused facts27/228 and navigation/policy26/273 pass. Additional new pure-builder/target tests source packets retained. Dashboard personal page render crash fixed and loading/error/retry displayed; actual connection and native UI states not accepted. One guarded linked-read regression is being finalized; initial fixture enum failure is not acceptance. Required H01/H02 and final compiler evidence appended to QA before handoff."
+    }
+  ]
+}

@@ -133,7 +133,7 @@ export function CustomerMessage({
           </>
         ) : null}
       </View>
-      <Text className="mt-1 px-1 text-[10px] text-muted-foreground">
+      <Text className="mt-1 px-1 text-xs text-muted-foreground">
         {messageMeta}
       </Text>
     </View>

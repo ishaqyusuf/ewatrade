@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuites name="bun test" tests="1" assertions="47" failures="0" skipped="0" time="0.599851">
+  <testsuite name="packages/assistant/evaluations/fixtures/dashboard-product-form-resume.fixture.tsx" file="packages/assistant/evaluations/fixtures/dashboard-product-form-resume.fixture.tsx" tests="1" assertions="47" failures="0" skipped="0" time="0.199" hostname="MacBook-Pro.local">
+    <testcase name="mounted rich Product resume restores owner facts, submits only same-chat commands and refuses stale local edits until explicit reload" classname="" time="0.199762" file="packages/assistant/evaluations/fixtures/dashboard-product-form-resume.fixture.tsx" line="457" assertions="47" />
+  </testsuite>
+</testsuites>

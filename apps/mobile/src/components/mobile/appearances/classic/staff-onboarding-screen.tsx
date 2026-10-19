@@ -60,7 +60,7 @@ export function ClassicStaffOnboardingScreen(
         >
           Start selling
         </ActionButton>
-        <Text className="text-center text-[13px] [-rn-line-height:18] text-muted-foreground">
+        <Text className="text-center text-xs [-rn-line-height:22] text-muted-foreground">
           Your access stays tied to your own email.
         </Text>
       </View>

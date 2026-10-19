@@ -24,6 +24,7 @@ test("preview shows exact reservation release, no on-hand movement and no refund
       reservationId: "reservation",
       orderLineId: "line",
       balanceSourceId: "balance",
+      unitName: "stock units",
       quantity: "2",
     },
   ])

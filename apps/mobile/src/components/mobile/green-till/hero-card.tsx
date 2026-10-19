@@ -20,7 +20,7 @@ export type HeroPill = {
   tone?: "synced" | "offline" | "busy" | "draft"
 }
 
-type HeroCardProps = {
+export type HeroCardProps = {
   /** Small label at the top left, such as "Today’s sales". */
   label?: string
   /** A gold check above the title, for a finished task. */
@@ -28,6 +28,11 @@ type HeroCardProps = {
   pill?: HeroPill
   /** The one big answer, such as ₦184,500. */
   amount?: string
+  /**
+   * What screen readers hear for the amount, e.g. the final value while the
+   * visible figure is still counting.
+   */
+  amountAccessibilityLabel?: string
   /** Custom headline content in the amount slot (e.g. "50 → 60 bag"). */
   amountContent?: ReactNode
   /** A sentence-style headline used instead of an amount (setup states). */
@@ -52,6 +57,7 @@ type HeroCardProps = {
 /** The Green Till hero: gradient surface, brand watermark, one answer. */
 export function HeroCard({
   amount,
+  amountAccessibilityLabel,
   amountContent,
   children,
   cta,
@@ -146,6 +152,7 @@ export function HeroCard({
       {amountContent ?? null}
       {amount ? (
         <NativeText
+          accessibilityLabel={amountAccessibilityLabel}
           accessibilityRole="header"
           adjustsFontSizeToFit={!largeText}
           numberOfLines={largeText ? undefined : 1}
@@ -352,24 +359,24 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     flexWrap: "wrap",
   },
-  deltaText: { fontSize: 12.5, fontWeight: "700", lineHeight: 18 },
+  deltaText: { fontSize: 16, fontWeight: "700", lineHeight: 22 },
   deltaValue: { alignItems: "center", flexDirection: "row", gap: 2 },
-  label: { flexShrink: 1, fontSize: 12.5, fontWeight: "700", lineHeight: 18 },
+  label: { flexShrink: 1, fontSize: 16, fontWeight: "700", lineHeight: 22 },
   pill: {
     alignItems: "center",
     borderRadius: 999,
     flexDirection: "row",
     gap: 5,
-    height: 24,
+    minHeight: 28,
     justifyContent: "center",
     paddingHorizontal: 10,
   },
   pillDot: { borderRadius: 3, height: 6, width: 6 },
   pillText: {
-    fontSize: 11,
+    fontSize: 16,
     fontWeight: "700",
     includeFontPadding: false,
-    lineHeight: 14,
+    lineHeight: 22,
     textAlignVertical: "center",
   },
   progress: { flexDirection: "row", gap: 6, marginTop: 14 },
@@ -387,12 +394,12 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
   },
   stat: { flex: 1, minWidth: 0 },
-  statLabel: { fontSize: 11, fontWeight: "600", lineHeight: 15 },
+  statLabel: { fontSize: 16, fontWeight: "600", lineHeight: 22 },
   statValue: {
-    fontSize: 15,
+    fontSize: 16,
     fontVariant: ["tabular-nums"],
     fontWeight: "700",
-    lineHeight: 21,
+    lineHeight: 22,
   },
   stats: {
     borderTopWidth: 1,
@@ -401,7 +408,7 @@ const styles = StyleSheet.create({
     paddingTop: 12,
   },
   statsStacked: { flexDirection: "column", gap: 8 },
-  sub: { flexShrink: 1, fontSize: 13, lineHeight: 18 },
+  sub: { flexShrink: 1, fontSize: 16, lineHeight: 22 },
   title: {
     fontSize: 22,
     fontWeight: "800",

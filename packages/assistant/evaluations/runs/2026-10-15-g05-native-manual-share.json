@@ -1,0 +1,154 @@
+{
+  "date": "2026-10-15",
+  "status": "source_verified_not_accepted",
+  "parentAcceptance": {
+    "accepted": 13,
+    "total": 45
+  },
+  "nativeDeclarations": {
+    "writes": 39,
+    "reads": 65,
+    "fullWriteGaps": 35
+  },
+  "capabilities": 152,
+  "checks": [
+    {
+      "scope": "combined source suite",
+      "result": "50 pass,0 fail,222 assertions across7 top-level files;31 isolated regression children",
+      "log": "/private/tmp/assistant-g05-final-combined-tests.log"
+    },
+    {
+      "scope": "canonical child run",
+      "result": "17 pass/196 assertions; no DB, actual canonical functions with transaction stand-ins"
+    },
+    {
+      "scope": "focused protected router fixture",
+      "result": "10 pass/115 assertions; real router/schema/role/error logic, middleware+DB stand-ins"
+    },
+    {
+      "scope": "native UI owner run at current hashes",
+      "result": "editor15 + content5 =20 pass/253 assertions; two new mounted recovery cases fail pre-fix"
+    },
+    {
+      "scope": "native exact original fixture",
+      "result": "4 pass/52 assertions; actual receipt/answer/dispatch/protected reader with query/native stand-ins"
+    },
+    {
+      "scope": "dashboard",
+      "result": "8 pass/84 assertions across3files; includes isolated GlobalSheets access factory",
+      "log": "/private/tmp/assistant-g05-dashboard-tests-final.log"
+    },
+    {
+      "scope": "adapter",
+      "result": "5 pass/35 assertions; inert initializer, isolated process",
+      "log": "/private/tmp/assistant-g05-adapter-tests-final.log"
+    },
+    {
+      "scope": "scoped Biome",
+      "result": "28files:27 initiallyclean, one formatting-only values issue corrected and rechecked clean; owner11 UI files clean"
+    },
+    {
+      "scope": "native/API imported graph compiler",
+      "result": "exit2:78 diagnostics in21 imported files;0 in new G05-owned paths",
+      "log": "/private/tmp/assistant-g05-final-types.log"
+    },
+    {
+      "scope": "dashboard compiler",
+      "result": "exit2:5 diagnostics in separate WhatsApp connections/scope-picker;0 G05 paths",
+      "log": "/private/tmp/assistant-g05-dashboard-types.log"
+    },
+    {
+      "scope": "coverage",
+      "result": "snapshot current, exit0",
+      "log": "/private/tmp/assistant-g05-final-coverage.log"
+    },
+    {
+      "scope": "whole mixed-checkout impact",
+      "result": "exit0:24records cover capability/domain/api/permissions/client/schema;124capability+6procedure rows changed",
+      "log": "/private/tmp/assistant-g05-final-impact.log"
+    }
+  ],
+  "reviews": {
+    "uiRecovery": "Independent child confirmed P2 finally repair closed, exact editor/fixture hashes match. No new actionable finding.",
+    "integration": "Independent child reviewed strict identities, private projections, actual dispatch, authority/freshness, planned rollout and bounded replay; no actionable finding."
+  },
+  "sourceObservations": {
+    "packages/db/src/queries/service-manual-message.ts": "7b0e25a03b24d82b6aab7d7868929772ab2afd3ef3df438027b8083a6af96694",
+    "packages/db/src/queries/service-manual-message.test.ts": "8fa3fc1a3b1d1adb129d3be746439b45b94f14b017008be23fff81f59c39dba5",
+    "packages/assistant/src/general/service-message-read.ts": "0d58070911bc1a267286ad1772fe113dc4abe4d16b3a7fcc3d7cba65a598077c",
+    "packages/assistant/src/general/service-message-read.test.ts": "48b87c1982b004f38659f309e6e41b9d5ad51cd78c56151b0f1005928417624f",
+    "packages/assistant/src/general/contracts.ts": "9eacb3fd950ce4a831a716a6dde20530332daca8ba6b475d2fe8f350f04bf581",
+    "packages/assistant/src/general/answer-target.ts": "dc785b19aade91b5613795afe93a8a1305717984684cb4ec137533a47547a584",
+    "packages/assistant/src/general/service-message.ts": "1167cefb1f3b1cd9f928c57beddfc461dc84d76a221d708955afbb4d11123f2c",
+    "packages/assistant/package.json": "be1b92b237408862642b7e811772741a0a3f22c895dc64b35dea786753dba22c",
+    "packages/assistant/src/capabilities/manifest.ts": "27a7ed063c83a9b97537c5de3ad0533d02565417a7717e57aed3c824b89c8580",
+    "packages/assistant/src/capabilities/COVERAGE.md": "b8a307cf24ac6e7e8960531218c6f4f939388b0e5a5d616fdd5e3f5235bf81d3",
+    "apps/api/src/assistant/general-service-message.ts": "588155ddf256f49a5d292b9d00fcd7a1f415e1fc6bb1cbdffe2e28b0813528ad",
+    "apps/api/src/assistant/general-service-message.test.ts": "416801defb7a47549db409e51e61c8cc206c4da68a9150b55b6183445a8d5c09",
+    "apps/api/src/assistant/general-service-message-reads.ts": "1109a6900e7ac580a9b48af6ee9e9a2c36caf861cd4afc9d77783186c84f315c",
+    "apps/api/src/assistant/general-service-message-reads.test.ts": "158197138c3549a3b4202e1516ef9d56c977159ad82465db5f0b739073ae73c4",
+    "apps/api/src/assistant/general-context.ts": "7d0319db0f3aed8065d381964426623d4ec2ecac734d86ff827ccf07f44c1721",
+    "apps/api/src/assistant/general-tools.ts": "c0a5e1eb9180c9dcb107e27a77bb27a1f9dd2f9144e8721a35843a536d48424f",
+    "apps/api/src/trpc/routers/service-communications.ts": "6d6a39c03f97d4b938929d1d1a426d310cadad00c1c691e662944be12da6a1ed",
+    "apps/api/src/trpc/routers/service-permissions.ts": "8116a2c4a723a0a102533ebcfef88bd7e578740738d12525ff0dd33d9f440623",
+    "apps/api/src/utils/staff-procedure-policy.ts": "aa5cd0a840dae4407a059bd0f43cd36bd94396514a87c6bcb971d83fe886dcf0",
+    "packages/db/src/queries/service-intake-review.ts": "b5791fc6c0feb7e03dfeee26a580697d292dc5daf01078183a3ba9d817e14b90",
+    "packages/db/src/queries/service-public.ts": "ce418de649ee0360d2447fb2ca170dda9d3df86d01dfc5cc279758f82c554c3d",
+    "apps/mobile/src/components/mobile/assistant/native-service-message-values.ts": "ef2195f63bcdb74c46bf4cb265a035967ec7b1ee3b5d098b7ae7e3bdf38d9623",
+    "apps/mobile/src/components/mobile/assistant/native-service-message-values.test.ts": "f02ff925ee4fa85ce520c982f397d3998e93742047dcaedc110649efcf2edccc",
+    "apps/mobile/src/components/mobile/assistant/native-service-message-screen.tsx": "4b87058af21d21ccefa41413d15d1a417de772cc08339c77bd71a330c91eaac4",
+    "apps/mobile/src/components/mobile/assistant/native-service-message-content.tsx": "57c0d0d6dd2ec4ef713f99fc3d8766e43cb6062160c352509d968b41c3a11de1",
+    "apps/mobile/src/components/mobile/assistant/general-service-message-editor.tsx": "7e52ee73a7b94cc70c3d71dfa00f7b00de2382c671f5d346dd50985904cddedd",
+    "apps/mobile/src/components/mobile/assistant/general-proposal-editor.tsx": "3e4ad1db674e4ba8ab095e0b43226d9d4cda28343da221b9b1b3053957ea71a9",
+    "apps/mobile/src/components/mobile/assistant/native-service-original-screen.tsx": "ac8cdf56e57adb39f0afb027b76bffa4fbadae114a26a88b5d39527a7dfce8fc",
+    "apps/mobile/src/components/mobile/assistant/native-service-target.ts": "7db6d88833d51ba1e5cdc91f971c9614c17c5f22aef38d0d155ae91f2f410a90",
+    "apps/mobile/src/components/mobile/assistant/native-parity.ts": "bfef2a79d506761721968174c3695ef0701f285a80a17ba007aed4aab4bf773c",
+    "apps/mobile/src/components/mobile/assistant/native-parity.test.ts": "892200992cf6c0b359d5d2d10c6971ccb99c9e10fbfe0bb565d40e823e67aa7f",
+    "apps/dashboard/src/components/assistant-manual-message-state.ts": "a80c6bf95ed8b9325f5d8476908a3170a313e573ce1f1e4b4a64cc93cdcb2ec3",
+    "apps/dashboard/src/components/assistant-manual-message-state.test.ts": "819c7af1595176bb4e9d0a4004932321d1f672f63b1fa965c869e5645f7b527b",
+    "apps/dashboard/src/components/assistant-manual-message-content.tsx": "9daf265fc4cab431acbb7dfbd979076cbfb973ad7f59e126d0cd6d4b5f3d3d0f",
+    "apps/dashboard/src/components/assistant-manual-message-content.test.tsx": "4f702f826a5bcd5e0b5d19397650851c0acf52b3242d54cdf52e55fb07d0404a",
+    "apps/dashboard/src/components/sheets/assistant-manual-message-sheet.tsx": "4874bf710c4b5b0749011b80f500875be4770e110e4e31873c2c0d8c3bb74d5d",
+    "apps/dashboard/src/components/sheets/global-sheets.tsx": "edd30d9a32ca3a323e5d38195d345eeedb77d05ef17545202243bd4ed8771b07",
+    "apps/dashboard/src/components/sheets/assistant-draft-job-revocation.fixture.tsx": "31f058e3175a2b4e231e58a8b0e9308c9ae157dee45f62fc35f0f95f5fe1d13d",
+    "apps/dashboard/src/hooks/use-assistant-manual-message-params.ts": "8528e019eba7c9727ccd277dfa9647eadc515eafa91fb6db5ad75145766a81bf",
+    "apps/dashboard/src/hooks/use-assistant-receipt.ts": "64bf3aa579eb84dc61b476f9aecee47a801a2cd93a3e2b6b30a12a448e6e4bd4",
+    "apps/dashboard/src/components/general-assistant/general-answer-card.tsx": "2f34c99a4398937ffb32701884816ff453defa51edcbba0e7476fea15b3b6165",
+    "apps/dashboard/src/components/open-assistant-manual-message-sheet.tsx": "fee832abb8a3ed26b6171f800182bdd5b57436b919ecbc48a1198cafd8bd804f",
+    "packages/assistant/evaluations/fixtures/service-manual-message-router.fixture.ts": "3ad3ce3b8e787e5c00c4054ba6bd901c382e9ff1f71732b0c9daaae4178f62b0",
+    "packages/assistant/evaluations/fixtures/native-service-message-editor.fixture.tsx": "73eec26667414c99fd27c5ede58f956e60c020a891b0f04d50f879fcd57772f2",
+    "packages/assistant/evaluations/fixtures/native-service-message-content.fixture.tsx": "5f14e787bb3e5ce4c038f9d5c603aef9667a76a96b057bf69ad8af1f211809dd",
+    "packages/assistant/evaluations/fixtures/native-service-message-original.fixture.tsx": "70a577ef8b44b06c856a4be6757597e4d9ab7ece287c84f75a03f88dafe24660",
+    "packages/assistant/evaluations/fixtures/native-service-original.fixture.tsx": "bbbd7f5b5c7245ca9a4c0f88e13629524354ed18a87a22a11d943790d7df1274",
+    "packages/assistant/evaluations/phase-regressions.test.ts": "815a4932b67c49aa2bd51a75f0c451ebe6d4075a8d80b6999d39e8f3b840a36f"
+  },
+  "sourceLimits": "Hashes identify reviewed bytes in shared dirty checkout, not exclusive freeze of foreign owners or deployable candidate. Refreeze changed dependencies before connected/saved acceptance.",
+  "remaining": [
+    "connected transaction/atomicity/concurrency proof",
+    "actual saved browser/native reload/Back journeys",
+    "wider G05 settings/consent/delivery/recovery",
+    "G03 full request/quote/booking/pickup lifecycle"
+  ],
+  "gates": [
+    "G01 paused",
+    "Paystack paused including repair/extension/registration",
+    "D04 drift unattributed,12cases unscheduled",
+    "E05 activation/restart rejected",
+    "G04 six connected sections deferred",
+    "S05 seven UNRUN, retry UNSCHEDULED",
+    "C04 exact isolated targets only"
+  ],
+  "effects": "No database/schema/provider/model/runtime restart/rollout/deploy/commit/push.",
+  "observedAt": "2026-10-15T15:10:43.556113+00:00",
+  "followups": [
+    {
+      "observedAt": "2026-10-15T15:58:57.979414+00:00",
+      "scope": "dashboard same-tuple read mount freshness",
+      "result": "independent real QueryClient5/46 passes; URL transitions/connected unverified",
+      "sourceObservations": {
+        "apps/dashboard/src/components/sheets/assistant-manual-message-sheet.tsx": "332915bc007ff9af6f24d8f7f690eae7919ce4213c0ed58ddfe5fd7d8f2c0bf2",
+        "packages/assistant/evaluations/fixtures/dashboard-service-request-read.fixture.tsx": "144c5b70b78b21456267007ecc23e4675afeb419ee800f6bac52b9f50e1a0dbc"
+      }
+    }
+  ]
+}

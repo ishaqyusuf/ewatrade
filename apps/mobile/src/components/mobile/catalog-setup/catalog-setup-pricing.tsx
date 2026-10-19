@@ -41,7 +41,7 @@ export function CatalogSetupPricing({
                 ? "Product stock & pricing"
                 : "Price each choice"}
             </Text>
-            <Text className="text-xs [-rn-line-height:20] text-muted-foreground">
+            <Text className="text-xs [-rn-line-height:22] text-muted-foreground">
               {kind === "product"
                 ? "Open any option and unit combination to set its price, stock, and details."
                 : "Set a fixed price, request a quote, or add customer-facing details for each choice."}
@@ -70,7 +70,7 @@ export function CatalogSetupPricing({
           />
           {kind === "service" ? (
             <View className="border-l-2 border-primary bg-muted px-3 py-3">
-              <Text className="text-xs [-rn-line-height:20] text-muted-foreground">
+              <Text className="text-xs [-rn-line-height:22] text-muted-foreground">
                 Set an amount for each fixed-price choice. Use Quote when the
                 amount depends on the customer request.
               </Text>

@@ -118,7 +118,7 @@ export function ClassicSellingUnitFields({
 
   return (
     <View className="gap-3.5 px-[18px] pb-6">
-      <Text className="text-[13px] text-muted-foreground">
+      <Text className="text-xs text-muted-foreground">
         Packs, trays and cartons are amounts customers buy. A size customers
         choose goes in Customer choices.
       </Text>
@@ -239,7 +239,7 @@ export function ClassicSellingUnitFields({
               >
                 <Text
                   className={cn(
-                    "text-[12.5px] font-bold",
+                    "text-xs font-bold",
                     on ? "text-accent-foreground" : "text-foreground",
                   )}
                 >

@@ -92,9 +92,11 @@ describe("admin mobile navigation", () => {
       "order-reminders",
       "receipt-settings",
       "returns-refunds",
+      "whatsapp-messages",
       "website-domain",
       "plan-billing",
       "sync-offline",
+      "assistant-whatsapp",
       "app-theme",
       "app-lock",
       "app-updates",
@@ -167,10 +169,15 @@ describe("admin mobile navigation", () => {
 test("account access has no management tools", () => {
   const items = buildAccountSections().flatMap((s) => s.items)
   expect(items.map((i) => i.id)).toEqual([
+    "assistant-whatsapp",
     "app-theme",
     "app-lock",
     "app-updates",
     "sign-out",
   ])
   expect(items.some((i) => i.id === "finance" || i.id === "team")).toBe(false)
+  expect(items.find((i) => i.id === "assistant-whatsapp")?.action).toEqual({
+    kind: "route",
+    href: "/assistant-whatsapp",
+  })
 })

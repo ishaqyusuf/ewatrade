@@ -1,0 +1,95 @@
+{
+  "version": 1,
+  "id": "2026-10-16-stock-copy-source-review",
+  "tickets": [
+    "C01",
+    "C02",
+    "C03",
+    "C04",
+    "C05",
+    "A04",
+    "H01",
+    "H02"
+  ],
+  "summary": "Independently reviewed native stock source revision5: clearer exact quantity/custody/role/supplier copy and local fresh-transit receipt max; all authority and runtime/rollout gates unchanged. Workshop factual corrections requested.",
+  "capabilities": [
+    {
+      "id": "inventory.stock.receive",
+      "change": "changed",
+      "rollout": "source",
+      "note": "Source-only native edit/copy/local validation review; same canonical review/Confirm and rollout. No device/connected acceptance."
+    },
+    {
+      "id": "inventory.transfer.receive",
+      "change": "changed",
+      "rollout": "source",
+      "note": "Source-only native edit/copy/local validation review; same canonical review/Confirm and rollout. No device/connected acceptance."
+    },
+    {
+      "id": "inventory.custody.move",
+      "change": "changed",
+      "rollout": "planned",
+      "note": "Source-only native edit/copy/local validation review; same canonical review/Confirm and rollout. No device/connected acceptance."
+    },
+    {
+      "id": "inventory.package.transform",
+      "change": "changed",
+      "rollout": "planned",
+      "note": "Source-only native edit/copy/local validation review; same canonical review/Confirm and rollout. No device/connected acceptance."
+    }
+  ],
+  "procedures": [],
+  "docs": [
+    {
+      "topic": "feature",
+      "path": ".brain/features/generic-catalog-inventory-units-stock-operations.md",
+      "status": "local_only"
+    },
+    {
+      "topic": "feature",
+      "path": ".brain/features/assistant-business-operations.md",
+      "status": "local_only"
+    },
+    {
+      "topic": "capability",
+      "path": "packages/assistant/src/capabilities/COVERAGE.md",
+      "status": "updated",
+      "note": "Current existing source snapshot; no rollout/client/procedure declaration changes."
+    },
+    {
+      "topic": "api",
+      "status": "not_applicable",
+      "note": "No API or contract change."
+    },
+    {
+      "topic": "permissions",
+      "status": "not_applicable",
+      "note": "Same authority, protected reads/review and separate Confirm."
+    },
+    {
+      "topic": "schema",
+      "status": "not_applicable",
+      "note": "No schema or database change."
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "fixture",
+      "path": "packages/assistant/evaluations/fixtures/native-stock-save-fence.fixture.tsx",
+      "executed": true,
+      "result": "Independent actual mounted18/182, static8/47 and original5probes pass. Source stand-ins, not native device acceptance."
+    },
+    {
+      "kind": "test",
+      "path": "apps/mobile/src/components/mobile/assistant/native-stock-values.test.ts",
+      "executed": true,
+      "result": "Pure stock values/state/target21/134 pass; exact fresh-transit max/custody eligibility/input grammar preserved."
+    },
+    {
+      "kind": "review",
+      "path": "packages/assistant/evaluations/runs/2026-10-16-stock-copy-source-review.md",
+      "executed": true,
+      "result": "28frozen hashes match;252-entry compiler78exactbaseline/0owned;27Biomeclean+1unchangedhostbaseline. Actual local reproduction31against30refusal;3factualWorkshop-only corrections pending."
+    }
+  ]
+}

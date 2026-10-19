@@ -22,7 +22,7 @@ export function MessageBubble({ text }: { text: string }) {
   return (
     <View className="self-stretch rounded-[18px] rounded-tr-[6px] bg-tint-mint px-3.5 py-3">
       <Text
-        className="text-[15px] leading-[22px] text-tint-mint-foreground"
+        className="text-base leading-[22px] text-tint-mint-foreground"
         selectable
       >
         {text}
@@ -63,10 +63,10 @@ export function MessageComposer({
   return (
     <View className="gap-3">
       <View className="flex-row items-baseline justify-between">
-        <Text className="text-[14px] font-bold text-foreground">{label}</Text>
+        <Text className="text-base font-bold text-foreground">{label}</Text>
         <Text
           className={cn(
-            "text-[12px] text-muted-foreground",
+            "text-xs text-muted-foreground",
             over && "text-destructive",
           )}
         >
@@ -76,7 +76,7 @@ export function MessageComposer({
       <Textarea
         ref={input}
         accessibilityLabel={label}
-        className="min-h-36 rounded-2xl border-0 bg-card px-3.5 py-3 text-[15px]"
+        className="min-h-36 rounded-2xl border-0 bg-card px-3.5 py-3 text-base"
         editable={editable}
         numberOfLines={8}
         onChangeText={onChange}
@@ -86,14 +86,11 @@ export function MessageComposer({
         value={value}
       />
       {problem ? (
-        <Text
-          accessibilityRole="alert"
-          className="text-[13px] text-destructive"
-        >
+        <Text accessibilityRole="alert" className="text-xs text-destructive">
           {problem}
         </Text>
       ) : null}
-      <Text className="text-[12px] text-muted-foreground">
+      <Text className="text-xs text-muted-foreground">
         Tap to add details. They fill in for each customer.
       </Text>
       <View className="flex-row flex-wrap gap-2">
@@ -112,7 +109,7 @@ export function MessageComposer({
               input.current?.focus()
             }}
           >
-            <Text className="text-[13px] font-semibold text-foreground">
+            <Text className="text-xs font-semibold text-foreground">
               + {messageVariableLabel(name)}
             </Text>
           </Pressable>
@@ -120,9 +117,7 @@ export function MessageComposer({
       </View>
       {rendered?.text ? (
         <View className="gap-2">
-          <Text className="text-[12px] text-muted-foreground">
-            {exampleLabel}
-          </Text>
+          <Text className="text-xs text-muted-foreground">{exampleLabel}</Text>
           <MessageBubble text={rendered.text} />
         </View>
       ) : null}

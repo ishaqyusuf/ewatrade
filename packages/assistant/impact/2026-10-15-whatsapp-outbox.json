@@ -1,0 +1,59 @@
+{
+  "version": 1,
+  "id": "2026-10-15-whatsapp-outbox",
+  "tickets": ["A01", "H01"],
+  "summary": "WhatsApp plan W16 source: immutable execution authority across crash recovery, canonical typed authorized search display, deterministic exact-money/scope rendering, bounded final chunks and atomic immutable outbox. Privacy/expiry and single Inbox ownership preserve attribution with verified parent cascade. Reuses existing OTP Meta setup with no sends, capability rollout promotion or live activation.",
+  "capabilities": [
+    {
+      "id": "search.records",
+      "change": "changed",
+      "rollout": "source",
+      "note": "Existing canonical role-scoped search now saves bounded authorized display rows as optional GeneralAnswer.records before deterministic final rendering. Raw command authority unchanged; generic app detail fallback retained. Actual local worker/outbox rehearsal and renderer tests pass. No broader read/write client or live WhatsApp acceptance."
+    }
+  ],
+  "docs": [
+    {
+      "topic": "feature",
+      "path": ".brain/features/whatsapp-assistant.md",
+      "status": "local_only"
+    },
+    {
+      "topic": "api",
+      "path": ".brain/api/contracts.md",
+      "status": "local_only"
+    },
+    {
+      "topic": "permissions",
+      "path": ".brain/api/permissions.md",
+      "status": "local_only"
+    },
+    {
+      "topic": "schema",
+      "path": ".brain/database/schema.md",
+      "status": "local_only"
+    },
+    {
+      "topic": "decision",
+      "path": ".brain/decisions/2026-10-15-whatsapp-assistant-channel.md",
+      "status": "local_only"
+    },
+    {
+      "topic": "capability",
+      "path": "packages/assistant/src/capabilities/COVERAGE.md",
+      "status": "updated"
+    },
+    {
+      "topic": "capability",
+      "path": "packages/assistant/evaluations/WHATSAPP-COVERAGE.md",
+      "status": "updated"
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "run",
+      "path": ".brain/qa/2026-10-15-whatsapp-assistant.md",
+      "executed": true,
+      "result": "Final guarded local actual worker/outbox rehearsal2/67 passes with cleanup; permission downgrade/same-role policy change denies old result; actual transactional insert rollback and retry once verified. Parent-deletion regression red before repair, green1/4 after; original rollback repro2/2green and exact old synthetic fixture cleanup pass. Renderer6/41; focused163/422 and offline assistant395/2124 with14connected skips pass (overlap). Three generated local migrations/required pushes/generation, jobs/query types and scoped checks pass. Full API retains inherited unrelated errors. W16 source/backend accepted, channel8/48. W17 provider send/receipt/unknown behavior still open; no OTP/private env/Production/live provider action."
+    }
+  ]
+}

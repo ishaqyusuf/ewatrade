@@ -2,7 +2,7 @@
 
 import { SheetFrame } from "@/components/sheets/sheet-frame"
 import { useSetupAssistantParams } from "@/hooks/use-setup-assistant-params"
-import { useTRPC } from "@/trpc/client"
+import { getDataCacheGeneration, useTRPC } from "@/trpc/client"
 import type { SetupAssistantDataParts } from "@ewatrade/assistant/setup/messages"
 import {
   Button,
@@ -64,11 +64,47 @@ export function SetupAssistant({
 }) {
   const trpc = useTRPC()
   const queryClient = useQueryClient()
-  const { setupOpen, setSetupOpen } = useSetupAssistantParams()
-  const state = useQuery(trpc.setupAssistant.state.queryOptions())
+  const { setupOpen, setSetupOpen, expectedConversationId } =
+    useSetupAssistantParams()
+  const hasExpected = expectedConversationId !== null
+  const [online, setOnline] = useState(true)
+  useEffect(() => {
+    const update = () => setOnline(navigator.onLine)
+    update()
+    window.addEventListener("online", update)
+    window.addEventListener("offline", update)
+    return () => {
+      window.removeEventListener("online", update)
+      window.removeEventListener("offline", update)
+    }
+  }, [])
+  const cacheGeneration = getDataCacheGeneration()
+  const handoffOwner = useRef({
+    id: expectedConversationId,
+    generation: cacheGeneration,
+    since: Date.now(),
+  })
+  if (
+    handoffOwner.current.id !== expectedConversationId ||
+    handoffOwner.current.generation !== cacheGeneration
+  )
+    handoffOwner.current = {
+      id: expectedConversationId,
+      generation: cacheGeneration,
+      since: Date.now(),
+    }
+  const state = useQuery(
+    trpc.setupAssistant.state.queryOptions(
+      hasExpected ? { expectedConversationId } : undefined,
+      {
+        refetchOnMount: hasExpected ? "always" : true,
+        ...(hasExpected ? { staleTime: 0, gcTime: 0 } : {}),
+      },
+    ),
+  )
   const refresh = () =>
     queryClient.invalidateQueries({
-      queryKey: trpc.setupAssistant.state.queryKey(),
+      queryKey: trpc.setupAssistant.state.pathKey(),
     })
   const start = useMutation(
     trpc.setupAssistant.start.mutationOptions({ onSuccess: refresh }),
@@ -94,6 +130,18 @@ export function SetupAssistant({
   const visited = useRef<string | null>(null)
   const data = state.data
   const conversation = data?.enabled ? data.conversation : null
+  const exactReady =
+    !hasExpected ||
+    (online &&
+      state.isSuccess &&
+      !state.isError &&
+      !state.isFetching &&
+      !state.isPaused &&
+      state.isFetchedAfterMount &&
+      state.dataUpdatedAt >= handoffOwner.current.since &&
+      handoffOwner.current.generation === getDataCacheGeneration() &&
+      conversation?.id === expectedConversationId &&
+      conversation.status === "ACTIVE")
   // A business with nothing in its catalog is offered setup once, opened for
   // it; the modal can start a setup any time after that.
   const firstOffer =
@@ -102,7 +150,10 @@ export function SetupAssistant({
     !hasCatalogItems &&
     offerSetup
   const shouldStart =
-    data?.enabled === true && !data.conversation && (firstOffer || setupOpen)
+    !hasExpected &&
+    data?.enabled === true &&
+    !data.conversation &&
+    (firstOffer || setupOpen)
 
   useEffect(() => {
     if (!shouldStart || started.current) return
@@ -112,7 +163,8 @@ export function SetupAssistant({
 
   // Opening a skipped or finished setup (e.g. from search) reopens it.
   const closed =
-    conversation?.status === "SKIPPED" || conversation?.status === "COMPLETED"
+    !hasExpected &&
+    (conversation?.status === "SKIPPED" || conversation?.status === "COMPLETED")
   useEffect(() => {
     if (!setupOpen || !closed) {
       reopened.current = false
@@ -134,7 +186,12 @@ export function SetupAssistant({
   const conversationId = conversation?.id ?? null
   const conversationStatus = conversation?.status ?? null
   useEffect(() => {
-    if (!setupOpen || !conversationId || visited.current === conversationId)
+    if (
+      !setupOpen ||
+      !conversationId ||
+      !exactReady ||
+      visited.current === conversationId
+    )
       return
     if (conversationStatus === "OFFERED") {
       visited.current = conversationId
@@ -143,7 +200,38 @@ export function SetupAssistant({
       visited.current = conversationId
       visit.mutate({ conversationId })
     }
-  }, [setupOpen, conversationId, conversationStatus, begin, visit])
+  }, [setupOpen, conversationId, conversationStatus, exactReady, begin, visit])
+
+  if (hasExpected && !exactReady)
+    return (
+      <>
+        {fallback}
+        <Dialog
+          open={setupOpen}
+          onOpenChange={(open) => {
+            if (!open) void setSetupOpen(false)
+          }}
+        >
+          <DialogContent>
+            <DialogTitle>Continue saved Setup</DialogTitle>
+            <DialogDescription>
+              {!online
+                ? "Reconnect to load this exact saved Setup conversation. Your saved draft remains in EwaTrade."
+                : state.isPending || state.isFetching
+                  ? "Loading this exact saved Setup conversation…"
+                  : "This saved Setup conversation is unavailable in the selected business and Store. Select its original business and Store, then retry. Another setup has not been opened."}
+            </DialogDescription>
+            <Button
+              variant="outline"
+              disabled={!online || state.isFetching || state.isPaused}
+              onClick={() => void state.refetch()}
+            >
+              Retry saved Setup
+            </Button>
+          </DialogContent>
+        </Dialog>
+      </>
+    )
 
   // The launchpad shows while availability loads, so a disabled assistant
   // never changes the Overview.
@@ -198,8 +286,32 @@ export function SetupAssistant({
                 mediaEnabled={mediaEnabled}
                 hasAdded={(followUp?.committed ?? 0) > 0}
                 pending={begin.isPending || skip.isPending || finish.isPending}
-                onSkip={() => skip.mutate(undefined, { onSuccess: close })}
-                onFinish={() => finish.mutate(undefined, { onSuccess: close })}
+                onSkip={() => {
+                  if (
+                    hasExpected &&
+                    (!exactReady ||
+                      handoffOwner.current.generation !==
+                        getDataCacheGeneration())
+                  )
+                    return
+                  skip.mutate(
+                    hasExpected ? { conversationId: live.id } : undefined,
+                    { onSuccess: close },
+                  )
+                }}
+                onFinish={() => {
+                  if (
+                    hasExpected &&
+                    (!exactReady ||
+                      handoffOwner.current.generation !==
+                        getDataCacheGeneration())
+                  )
+                    return
+                  finish.mutate(
+                    hasExpected ? { conversationId: live.id } : undefined,
+                    { onSuccess: close },
+                  )
+                }}
               />
             ) : (
               <SetupSkeleton />

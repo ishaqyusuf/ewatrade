@@ -44,19 +44,27 @@ function overlaps(
   return left.startAt < right.endAt && right.startAt < left.endAt
 }
 
-function localSlotParts(at: Date, timezone: string) {
-  const parts = new Intl.DateTimeFormat("en-US", {
-    hour: "2-digit",
-    hourCycle: "h23",
-    minute: "2-digit",
-    timeZone: timezone,
-    weekday: "short",
-  }).formatToParts(at)
+function localSlotParts(at: Date, formatter: Intl.DateTimeFormat) {
+  const parts = formatter.formatToParts(at)
   const part = (type: Intl.DateTimeFormatPartTypes) =>
     parts.find((item) => item.type === type)?.value ?? ""
+  const localEpoch = new Date(0)
+  localEpoch.setUTCFullYear(
+    Number(part("year")),
+    Number(part("month")) - 1,
+    Number(part("day")),
+  )
+  localEpoch.setUTCHours(
+    Number(part("hour")),
+    Number(part("minute")),
+    Number(part("second")),
+    0,
+  )
   return {
     minuteOfDay: Number(part("hour")) * 60 + Number(part("minute")),
+    second: Number(part("second")),
     weekday: WEEKDAYS[part("weekday")] ?? -1,
+    offset: localEpoch.getTime() - Math.floor(at.getTime() / 1_000) * 1_000,
   }
 }
 
@@ -65,21 +73,83 @@ function localTimeToMinutes(value: string) {
   return (hours ?? 0) * 60 + (minutes ?? 0)
 }
 
-function matchesAvailabilityRule(
+function matchesAvailabilityRules(
   rules: ServiceCommerceBookingAvailabilityRule[],
   slot: { endAt: Date; startAt: Date },
   timezone: string,
+  openings: ServiceCommerceBookingAvailabilityException[],
 ) {
   if (rules.length === 0) return true
-  const start = localSlotParts(slot.startAt, timezone)
-  const end = localSlotParts(slot.endAt, timezone)
-  if (start.weekday !== end.weekday) return false
-  return rules.some(
-    (rule) =>
-      rule.daysOfWeek.includes(start.weekday) &&
-      start.minuteOfDay >= localTimeToMinutes(rule.startLocalTime) &&
-      end.minuteOfDay <= localTimeToMinutes(rule.endLocalTime),
-  )
+  const formatter = new Intl.DateTimeFormat("en-US", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    hourCycle: "h23",
+    minute: "2-digit",
+    second: "2-digit",
+    timeZone: timezone,
+    weekday: "short",
+  })
+  // OPEN exceptions and recurring hours form a union. Check only the gaps not
+  // covered by an explicit opening; mere overlap never opens the whole slot.
+  const gaps: Array<{ start: number; end: number }> = []
+  let uncovered = slot.startAt.getTime()
+  for (const opening of [...openings].sort(
+    (a, b) => a.startAt.getTime() - b.startAt.getTime(),
+  )) {
+    const start = Math.max(slot.startAt.getTime(), opening.startAt.getTime())
+    const end = Math.min(slot.endAt.getTime(), opening.endAt.getTime())
+    if (start > uncovered) gaps.push({ start: uncovered, end: start })
+    uncovered = Math.max(uncovered, end)
+  }
+  if (uncovered < slot.endAt.getTime())
+    gaps.push({ start: uncovered, end: slot.endAt.getTime() })
+  const intervals = rules.map((rule) => ({
+    days: rule.daysOfWeek,
+    start: localTimeToMinutes(rule.startLocalTime),
+    end: localTimeToMinutes(rule.endLocalTime),
+  }))
+  for (const gap of gaps) {
+    let instant = gap.start
+    while (instant < gap.end) {
+      const local = localSlotParts(new Date(instant), formatter)
+      if (
+        !intervals.some(
+          (rule) =>
+            rule.days.includes(local.weekday) &&
+            local.minuteOfDay >= rule.start &&
+            local.minuteOfDay < rule.end,
+        )
+      )
+        return false
+      // Rules have local-minute precision; retain exact UTC subsecond endpoints.
+      // A clock fold/gap can occur before the next local minute. Split at that
+      // transition too, so neither repeated nor skipped civil time is guessed.
+      const nextMinute =
+        Math.floor(instant / 1_000) * 1_000 + (60 - local.second) * 1_000
+      let boundary = Math.min(gap.end, nextMinute)
+      if (
+        boundary - instant > 1 &&
+        localSlotParts(new Date(boundary - 1), formatter).offset !==
+          local.offset
+      ) {
+        let low = instant + 1
+        let high = boundary - 1
+        while (low < high) {
+          const middle = low + Math.floor((high - low) / 2)
+          if (
+            localSlotParts(new Date(middle), formatter).offset === local.offset
+          )
+            low = middle + 1
+          else high = middle
+        }
+        boundary = low
+      }
+      instant = boundary
+    }
+  }
+  return true
 }
 
 export function assertServiceCommerceBookingTransition(
@@ -146,10 +216,15 @@ export function evaluateServiceCommerceBookingSlot(input: {
     }
   | { eligible: true; remainingCapacity: number } {
   const slot = { endAt: input.endAt, startAt: input.startAt }
-  if (slot.endAt <= slot.startAt) {
+  const now = input.now ?? new Date()
+  if (
+    ![slot.startAt, slot.endAt, now].every(
+      (value) => value instanceof Date && Number.isFinite(value.getTime()),
+    ) ||
+    slot.endAt <= slot.startAt
+  ) {
     return { eligible: false, reason: "invalid_slot", remainingCapacity: 0 }
   }
-  const now = input.now ?? new Date()
   if (slot.startAt.getTime() < now.getTime() + input.leadTimeMinutes * 60_000) {
     return { eligible: false, reason: "lead_time", remainingCapacity: 0 }
   }
@@ -173,16 +248,13 @@ export function evaluateServiceCommerceBookingSlot(input: {
     }
   }
   const effectiveCapacity = capacityOverrides[0]?.capacity ?? input.capacity
-  const hasOpenException = matchingExceptions.some(
-    (exception) => exception.kind === "open",
-  )
   if (
-    !matchesAvailabilityRule(
+    !matchesAvailabilityRules(
       input.availability.rules,
       slot,
       input.availability.timezone,
-    ) &&
-    !hasOpenException
+      matchingExceptions.filter((exception) => exception.kind === "open"),
+    )
   ) {
     return {
       eligible: false,

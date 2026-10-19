@@ -3,7 +3,9 @@ import type { ReceiptFile } from "./receipt-file"
 export async function deliverReceiptFile(
   file: ReceiptFile,
   action: "save" | "share",
+  assertCurrent: () => void = () => undefined,
 ) {
+  assertCurrent()
   const blob = new Blob([Uint8Array.from(file.bytes)], { type: file.mimeType })
   const output = new File([blob], file.filename, { type: file.mimeType })
   if (action === "share") {
@@ -12,6 +14,7 @@ export async function deliverReceiptFile(
         "File sharing is unavailable in this browser. Use Save instead.",
       )
     try {
+      assertCurrent()
       await navigator.share({ files: [output], title: "Order receipt" })
       return "Share sheet closed."
     } catch (error) {
@@ -21,6 +24,7 @@ export async function deliverReceiptFile(
     }
   }
   const url = URL.createObjectURL(blob)
+  assertCurrent()
   const link = document.createElement("a")
   link.href = url
   link.download = file.filename

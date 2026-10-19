@@ -22,8 +22,8 @@ export function CustomerConversationChannelBoundary({
         <Text
           className={
             whatsApp
-              ? "text-center text-[10px] font-bold uppercase tracking-[1.2px] text-primary"
-              : "text-center text-[10px] font-bold uppercase tracking-[1.2px] text-muted-foreground"
+              ? "text-center text-xs font-bold uppercase tracking-[1.2px] text-primary"
+              : "text-center text-xs font-bold uppercase tracking-[1.2px] text-muted-foreground"
           }
         >
           {label}
@@ -31,7 +31,7 @@ export function CustomerConversationChannelBoundary({
         <View className="h-px min-w-6 flex-1 bg-border" />
       </View>
       {detail ? (
-        <Text className="mt-1 text-center text-[10px] text-muted-foreground">
+        <Text className="mt-1 text-center text-xs text-muted-foreground">
           {detail}
         </Text>
       ) : null}

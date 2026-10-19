@@ -1,4 +1,6 @@
 model Store {
+  assistantWhatsAppLinks AssistantWhatsAppLink[]
+  assistantWhatsAppGrants AssistantWhatsAppGrant[]
   customerMessageTemplates CustomerMessageTemplate[]
   businessActivityEvents BusinessActivityEvent[]
   businessActivityScopes BusinessActivityStoreScope[]

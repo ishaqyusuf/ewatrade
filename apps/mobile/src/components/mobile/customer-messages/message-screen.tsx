@@ -171,12 +171,12 @@ function MessageHeader({
     <View className="gap-4">
       <View className="gap-0.5 rounded-[20px] bg-card px-3.5 py-3 shadow-sm">
         <Text
-          className="text-[15px] font-bold text-foreground"
+          className="text-base font-bold text-foreground"
           numberOfLines={1}
         >
           {preview.recipient?.name || "Customer"}
         </Text>
-        <Text className="text-[13px] text-muted-foreground" numberOfLines={1}>
+        <Text className="text-xs text-muted-foreground" numberOfLines={1}>
           {[preview.recipient?.phoneDisplay, preview.orderNumber]
             .filter(Boolean)
             .join(" · ")}
@@ -184,8 +184,8 @@ function MessageHeader({
         {orderFacts(preview).length ? (
           <View className="mt-2 flex-row flex-wrap gap-x-4 gap-y-1">
             {orderFacts(preview).map((fact) => (
-              <Text key={fact.label} className="text-[13px] text-foreground">
-                <Text className="text-[13px] text-muted-foreground">
+              <Text key={fact.label} className="text-xs text-foreground">
+                <Text className="text-xs text-muted-foreground">
                   {fact.label}{" "}
                 </Text>
                 {fact.value}
@@ -195,7 +195,7 @@ function MessageHeader({
         ) : null}
       </View>
       <View className="gap-2">
-        <Text className="text-[14px] font-bold text-foreground">
+        <Text className="text-base font-bold text-foreground">
           Message about
         </Text>
         <View className="flex-row flex-wrap gap-2">
@@ -216,7 +216,7 @@ function MessageHeader({
               >
                 <Text
                   className={cn(
-                    "text-[14px] font-bold",
+                    "text-base font-bold",
                     selected ? "text-primary-foreground" : "text-foreground",
                   )}
                 >
@@ -224,7 +224,7 @@ function MessageHeader({
                 </Text>
                 <Text
                   className={cn(
-                    "text-[11px]",
+                    "text-xs",
                     selected
                       ? "text-primary-foreground/80"
                       : "text-muted-foreground",
@@ -239,7 +239,7 @@ function MessageHeader({
       </View>
       {showSources ? (
         <View className="gap-2">
-          <Text className="text-[14px] font-bold text-foreground">
+          <Text className="text-base font-bold text-foreground">
             {preview.eventKey === "payment.refund_recorded"
               ? "Which refund?"
               : "Which payment?"}
@@ -262,7 +262,7 @@ function MessageHeader({
                   className="size-[18px] text-foreground"
                   name={selected ? "CircleCheck" : "Square"}
                 />
-                <Text className="flex-1 text-[14px] text-foreground">
+                <Text className="flex-1 text-base text-foreground">
                   {choice.label}
                 </Text>
               </Pressable>
@@ -381,24 +381,24 @@ function MessageBody({
     <View className="gap-4">
       {mode.kind === "edit" ? (
         <View className="gap-2">
-          <Text className="text-[14px] font-bold text-foreground">
+          <Text className="text-base font-bold text-foreground">
             This message only
           </Text>
           <Textarea
             accessibilityLabel="This message only"
-            className="min-h-40 rounded-2xl border-0 bg-card px-3.5 py-3 text-[15px]"
+            className="min-h-40 rounded-2xl border-0 bg-card px-3.5 py-3 text-base"
             numberOfLines={10}
             onChangeText={(next) => setMode({ kind: "edit", text: next })}
             value={mode.text}
           />
-          <Text className="text-[12px] text-muted-foreground">
+          <Text className="text-xs text-muted-foreground">
             Changes here aren’t saved for other orders.
           </Text>
         </View>
       ) : (
         <MessageBubble text={text} />
       )}
-      <Text className="text-[12px] text-muted-foreground">
+      <Text className="text-xs text-muted-foreground">
         {event.label}. Send it from WhatsApp after it opens.
       </Text>
       {retryNotice}
@@ -564,7 +564,7 @@ function Composer({
         </View>
       ) : null}
       {notice ? (
-        <Text className="text-[13px] text-muted-foreground">{notice}</Text>
+        <Text className="text-xs text-muted-foreground">{notice}</Text>
       ) : null}
       {problem ? <StatusBanner tone="destructive" message={problem} /> : null}
       {preview.canComposeOneOff ? (
@@ -585,7 +585,7 @@ function Composer({
       ) : null}
       {preview.canManageTemplates ? (
         <View className="gap-3 rounded-[20px] bg-card px-3.5 py-3 shadow-sm">
-          <Text className="text-[14px] text-foreground">
+          <Text className="text-base text-foreground">
             Save it so future {event.label.toLowerCase()} messages are ready.
           </Text>
           <ChoiceRow
@@ -653,7 +653,7 @@ export function ChoiceRow<Value extends string>({
 }) {
   return (
     <View className="gap-1.5">
-      <Text className="text-[12px] text-muted-foreground">{label}</Text>
+      <Text className="text-xs text-muted-foreground">{label}</Text>
       <View className="flex-row flex-wrap gap-2">
         {options.map((option) => {
           const selected = option.value === value
@@ -672,7 +672,7 @@ export function ChoiceRow<Value extends string>({
             >
               <Text
                 className={cn(
-                  "text-[13px] font-semibold",
+                  "text-xs font-semibold",
                   selected ? "text-primary-foreground" : "text-foreground",
                 )}
               >
@@ -800,12 +800,12 @@ function OpenActions({
         Copy
       </ActionButton>
       {reason && text.trim() ? (
-        <Text className="text-[12px] text-muted-foreground">{reason}</Text>
+        <Text className="text-xs text-muted-foreground">{reason}</Text>
       ) : null}
       {status ? (
         <Text
           accessibilityLiveRegion="polite"
-          className="text-[13px] text-muted-foreground"
+          className="text-xs text-muted-foreground"
         >
           {status}
         </Text>

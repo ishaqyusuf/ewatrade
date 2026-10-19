@@ -251,7 +251,7 @@ export function ClassicProductChoices({
   if (!showAdvanced)
     return (
       <View className="gap-3.5">
-        <Text className="text-[13px] text-muted-foreground">
+        <Text className="text-xs text-muted-foreground">
           Sizes or grades customers pick. Each one has its own price.
         </Text>
         <Pressable
@@ -266,7 +266,7 @@ export function ClassicProductChoices({
           }}
         >
           <Icon className="size-[18px] text-primary" name="Plus" />
-          <Text className="text-[14.5px] font-extrabold text-primary">
+          <Text className="text-base font-extrabold text-primary">
             Add sizes or grades
           </Text>
         </Pressable>
@@ -275,7 +275,7 @@ export function ClassicProductChoices({
 
   return (
     <View className="gap-3.5">
-      <Text className="text-[13px] text-muted-foreground">
+      <Text className="text-xs text-muted-foreground">
         Sizes or grades customers pick. Each one has its own price.
       </Text>
       {optionGroups.map((group, index) => (
@@ -304,7 +304,7 @@ export function ClassicProductChoices({
                 className="min-h-9 flex-row items-center gap-1 rounded-full border-[1.5px] border-primary/40 bg-accent pl-3 pr-1"
               >
                 <Icon className="size-[13px] text-primary" name="Check" />
-                <Text className="text-[12.5px] font-bold text-accent-foreground">
+                <Text className="text-xs font-bold text-accent-foreground">
                   {value.label}
                 </Text>
                 <Pressable
@@ -329,7 +329,7 @@ export function ClassicProductChoices({
               onPress={() => openVariantValueComposer(group.id)}
             >
               <Icon className="size-[13px] text-muted-foreground" name="Plus" />
-              <Text className="text-[12.5px] font-bold text-muted-foreground">
+              <Text className="text-xs font-bold text-muted-foreground">
                 Add
               </Text>
             </Pressable>
@@ -342,7 +342,7 @@ export function ClassicProductChoices({
             <Text className="text-base font-extrabold text-foreground">
               {`Price per ${unitLabel}`}
             </Text>
-            <Text className="text-[13px] font-bold text-muted-foreground">
+            <Text className="text-xs font-bold text-muted-foreground">
               {`${enabledCount} on`}
             </Text>
           </View>
@@ -381,6 +381,7 @@ export function ClassicProductChoices({
                     <NativeText
                       style={{
                         color: colors.mutedForeground,
+                        fontSize: 16,
                         fontWeight: "800",
                       }}
                     >
@@ -400,7 +401,7 @@ export function ClassicProductChoices({
                       style={{
                         color: colors.foreground,
                         flex: 1,
-                        fontSize: 14,
+                        fontSize: 16,
                         fontVariant: ["tabular-nums"],
                         fontWeight: "700",
                         padding: 0,

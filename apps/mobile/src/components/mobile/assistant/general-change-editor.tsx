@@ -447,7 +447,7 @@ function Choices<T extends FieldChoice | string>({
           >
             <Text
               className={cn(
-                "text-[13px] font-bold",
+                "text-xs font-bold",
                 value === key ? "text-background" : "text-foreground",
               )}
             >

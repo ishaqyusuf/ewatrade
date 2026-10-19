@@ -38,7 +38,7 @@ export function LegalAcceptancePanel({
         </Text>
       ) : (
         <>
-          <Text className="text-sm leading-5 text-muted-foreground">
+          <Text className="text-sm [-rn-line-height:22] text-muted-foreground">
             Review both documents before accepting this version. A Privacy
             Notice acknowledgment is not consent to optional marketing.
           </Text>

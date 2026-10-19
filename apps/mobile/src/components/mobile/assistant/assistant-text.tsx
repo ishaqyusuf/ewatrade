@@ -7,8 +7,8 @@ export function AssistantText({ text, user }: { text: string; user: boolean }) {
       selectable
       className={
         user
-          ? "text-sm leading-5 text-primary-foreground"
-          : "text-sm leading-5 text-foreground"
+          ? "text-base [-rn-line-height:22] text-primary-foreground"
+          : "text-base [-rn-line-height:22] text-foreground"
       }
     >
       {parts.map((part, index) =>

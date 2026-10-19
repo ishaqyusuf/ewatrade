@@ -2,13 +2,16 @@ import { Icon, type IconKeys } from "@/components/ui/icon"
 import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
 import { View } from "@/components/ui/view"
+import { useAttachmentEntitlement } from "@/hooks/use-attachment-entitlement"
 import { useColorScheme, useColors } from "@/hooks/use-color"
 import { GREEN_TILL_THEME, type GreenTillTint } from "@/lib/green-till-theme"
+import { trackMobileActivity } from "@/runtime/analytics-runtime"
 import { formatMinorMoney } from "@ewatrade/utils"
 import { useEffect, useRef } from "react"
 import { Text as NativeText } from "react-native"
 import { ActionButton } from "../action-button"
 import { workDueLabel } from "../appearances/classic/service-jobs"
+import { AttachmentLockSheet } from "../attachment-lock-sheet"
 import { HeroCard } from "../green-till/hero-card"
 import { StatusBanner } from "../status-banner"
 import { useSetServiceChromeHeader } from "./service-chrome-context"
@@ -48,6 +51,10 @@ export function ClassicServiceJobWorkspace({
   const palette = GREEN_TILL_THEME[colorScheme]
   const job = model.selectedJob
   const setHeader = useSetServiceChromeHeader()
+  const access = useAttachmentEntitlement({
+    surface: "service",
+    track: trackMobileActivity,
+  })
   const latest = useRef({
     back: () => {},
     history: () => {},
@@ -73,6 +80,12 @@ export function ClassicServiceJobWorkspace({
   }, [setHeader, title])
   if (!job) return null
   const canAct = model.command.canAct()
+  const media = access.entitlement.status
+  const mediaLocked = media === "locked"
+  // A locked tile stays pressable so it can explain the plan; checking or
+  // unconfirmed never opens the camera.
+  const mediaDisabled =
+    !canAct || (!mediaLocked && (model.captureBusy || media !== "allowed"))
   const late = overdueWork(job, Date.now())
   const handedOff = Boolean(job.handedOffAt)
   const ready = job.summary === "ready_for_handoff" && !handedOff
@@ -113,7 +126,7 @@ export function ClassicServiceJobWorkspace({
             <NativeText
               style={{
                 color: late ? palette.heroDown : palette.heroMuted,
-                fontSize: 12.5,
+                fontSize: 16,
                 fontWeight: late ? "700" : "400",
               }}
             >
@@ -139,7 +152,7 @@ export function ClassicServiceJobWorkspace({
                 style={{
                   color:
                     index < step ? palette.heroForeground : palette.heroMuted,
-                  fontSize: 11,
+                  fontSize: 16,
                   fontWeight: "700",
                 }}
               >
@@ -231,9 +244,7 @@ export function ClassicServiceJobWorkspace({
                 model.openHistory(job.notes.length ? "notes" : "evidence")
               }
             >
-              <Text className="text-[13px] font-bold text-primary">
-                See all
-              </Text>
+              <Text className="text-xs font-bold text-primary">See all</Text>
             </Pressable>
           ) : null}
         </View>
@@ -241,10 +252,8 @@ export function ClassicServiceJobWorkspace({
           <View className="gap-2.5 rounded-[20px] bg-card p-3 shadow-sm">
             {job.notes.slice(-2).map((entry) => (
               <View key={entry.id} className="rounded-xl bg-muted px-3 py-2.5">
-                <Text className="text-[13px] text-foreground">
-                  {entry.body}
-                </Text>
-                <Text className="mt-0.5 text-[11px] text-muted-foreground">
+                <Text className="text-xs text-foreground">{entry.body}</Text>
+                <Text className="mt-0.5 text-xs text-muted-foreground">
                   {new Date(entry.createdAt).toLocaleTimeString("en-GB", {
                     hour: "2-digit",
                     minute: "2-digit",
@@ -286,15 +295,27 @@ export function ClassicServiceJobWorkspace({
             icon="Camera"
             label="Photo"
             tint="sky"
-            disabled={!canAct || model.captureBusy}
-            onPress={() => void model.captureEvidence(job, "photo")}
+            disabled={mediaDisabled}
+            locked={mediaLocked}
+            onPress={() =>
+              void access.attempt(
+                () => model.captureEvidence(job, "photo"),
+                "camera",
+              )
+            }
           />
           <RecordTile
             icon="Video"
             label="Video"
             tint="sky"
-            disabled={!canAct || model.captureBusy}
-            onPress={() => void model.captureEvidence(job, "video")}
+            disabled={mediaDisabled}
+            locked={mediaLocked}
+            onPress={() =>
+              void access.attempt(
+                () => model.captureEvidence(job, "video"),
+                "video",
+              )
+            }
           />
           <RecordTile
             icon="FileText"
@@ -304,11 +325,26 @@ export function ClassicServiceJobWorkspace({
             onPress={() => model.openTextEditor(job, "note")}
           />
         </View>
+        {canAct && (media === "checking" || media === "unknown") ? (
+          <Text className="px-0.5 text-xs text-muted-foreground">
+            {media === "checking"
+              ? "Checking your plan… Photo and video open once it's confirmed."
+              : "Couldn't confirm your plan, so photo and video are off for now. Notes still save."}
+          </Text>
+        ) : null}
         <Text className="px-0.5 text-xs text-muted-foreground">
           Notes and evidence stay private unless a manager publishes reviewed
           evidence.
         </Text>
       </View>
+      <AttachmentLockSheet
+        canSeePlans={access.sheet?.canSeePlans ?? false}
+        onClose={access.closeSheet}
+        onPromptAction={access.promptAction}
+        onSeePlans={access.seePlans}
+        open={access.sheet !== null}
+        surface="service"
+      />
     </View>
   )
 }
@@ -373,8 +409,8 @@ function InfoCard({
           <Text
             className={
               actionDisabled
-                ? "text-[13px] font-bold text-muted-foreground"
-                : "text-[13px] font-bold text-primary"
+                ? "text-xs font-bold text-muted-foreground"
+                : "text-xs font-bold text-primary"
             }
           >
             {actionLabel}
@@ -390,12 +426,14 @@ function RecordTile({
   label,
   tint,
   disabled,
+  locked,
   onPress,
 }: {
   icon: IconKeys
   label: string
   tint: GreenTillTint
   disabled?: boolean
+  locked?: boolean
   onPress: () => void
 }) {
   return (
@@ -407,7 +445,14 @@ function RecordTile({
       }
     >
       <Pressable
-        accessibilityLabel={`Add ${label.toLowerCase()}`}
+        accessibilityHint={
+          locked ? "Explains why this isn't on the Free plan" : undefined
+        }
+        accessibilityLabel={
+          locked
+            ? `Add ${label.toLowerCase()}, locked on the Free plan`
+            : `Add ${label.toLowerCase()}`
+        }
         accessibilityRole="button"
         accessibilityState={{ disabled }}
         className="items-center gap-1.5 rounded-[18px] py-3.5 active:opacity-80"
@@ -416,8 +461,29 @@ function RecordTile({
         onPress={onPress}
         transition
       >
-        <TintTile icon={icon} tint={tint} />
-        <Text className="text-[13px] font-bold text-foreground">{label}</Text>
+        <View>
+          <TintTile icon={icon} tint={tint} />
+          {locked ? (
+            <View
+              pointerEvents="none"
+              className="absolute -right-1.5 -top-1.5 size-[18px] items-center justify-center rounded-full bg-tint-amber"
+            >
+              <Icon
+                className="size-[11px] text-tint-amber-foreground"
+                name="Lock"
+              />
+            </View>
+          ) : null}
+        </View>
+        <Text
+          className={
+            locked
+              ? "text-xs font-bold text-muted-foreground"
+              : "text-xs font-bold text-foreground"
+          }
+        >
+          {label}
+        </Text>
       </Pressable>
     </View>
   )

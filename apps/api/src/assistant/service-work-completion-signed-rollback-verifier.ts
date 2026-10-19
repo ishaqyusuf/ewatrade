@@ -27,9 +27,9 @@ import {
   verifyServiceIntakeSignedFinanceInventory,
 } from "./service-intake-signed-rollback-facts"
 import {
+  signedIntakeCheck as check,
   serviceIntakeSignedScope,
   serviceIntakeSignedTransactionBridge,
-  signedIntakeCheck as check,
 } from "./service-intake-signed-rollback-guards"
 import { runCompletionSignedCases } from "./service-work-completion-signed-rollback-cases"
 import { seedCompletionSignedFixture } from "./service-work-completion-signed-rollback-fixture"
@@ -62,6 +62,8 @@ export async function verifyServiceWorkCompletionSignedRollback(
   conversationId: string,
   repositoryRoot: string,
 ) {
+  if (!ctx.session.session)
+    throw new Error("A real browser Session is required for this verifier.")
   assertCompletionSignedEnvironment(process.env)
   const featureConfiguration =
     completionSignedFeatureConfiguration(repositoryRoot)

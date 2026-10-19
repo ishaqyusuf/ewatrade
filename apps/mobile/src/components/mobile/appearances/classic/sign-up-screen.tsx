@@ -12,6 +12,7 @@ import type {
 
 export function ClassicSignUpScreen({
   children,
+  direction,
   footer,
   header,
   onBack,
@@ -29,6 +30,7 @@ export function ClassicSignUpScreen({
       progress={header.step}
       footer={footer}
       motionKey={step}
+      motionDirection={direction}
       stage={
         <SetupPreviewStage
           businessName={preview?.businessName}

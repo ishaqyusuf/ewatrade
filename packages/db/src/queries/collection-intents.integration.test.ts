@@ -69,7 +69,13 @@ async function fixture(tx: Prisma.TransactionClient): Promise<Fixture> {
   const order = await createCommercialOrderInTransaction(tx, {
     actorUserId: userId,
     clientOrderId: `collections-${id}`,
-    lines: [{ amountMinor: 10_000, custom: "quick_sale" }],
+    lines: [
+      {
+        amountMinor: 10_000,
+        custom: "quick_sale",
+        description: "Collection fixture sale",
+      },
+    ],
     schemaVersion: 1,
     storeId: store.id,
     tenantId,

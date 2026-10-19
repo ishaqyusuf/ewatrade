@@ -156,7 +156,7 @@ export const StaffInvitationSheet = forwardRef<
                 <Icon name="X" className="size-sm text-foreground" />
               </Pressable>
             </View>
-            <Text className="text-sm leading-5 text-muted-foreground">
+            <Text className="text-sm [-rn-line-height:22] text-muted-foreground">
               An account of their own, with Sales rep access to orders and stock
               work.
             </Text>
@@ -215,7 +215,7 @@ export const StaffInvitationSheet = forwardRef<
               value={draft.name}
               onChangeText={(name) => onChange({ ...draft, name })}
             />
-            <Text className="pb-5 text-xs leading-5 text-muted-foreground">
+            <Text className="pb-5 text-xs [-rn-line-height:22] text-muted-foreground">
               {quotaMessage}
             </Text>
           </View>

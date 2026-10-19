@@ -1,0 +1,124 @@
+{
+  "version": 1,
+  "date": "2026-10-15",
+  "scope": "Complete pure booking review, fresh canonical media source query/API helper and full legacy Quote prose screening; phases4\u201312 remain active",
+  "sourceSnapshot": {
+    "packages/db/src/queries/assistant-general-media-source.ts": "0fcc9cb2653b6f67fd703210666069f17cd9a05b804b31996af81406d3eeea0e",
+    "packages/db/src/queries/assistant-general-media-source.test.ts": "59d1225a146ec5ff70bb5a23af1a3038ac5edba4d9f6b4a6c61c37cbdc14cdbc",
+    "packages/db/src/queries/test-helpers/assistant-general-media-source.ts": "dc1a82e02011d6817808fd7eb868f71a14cc422ed705470c2cac069f28c0c4e1",
+    "apps/api/src/assistant/general-media-source.ts": "9a812a20d6880a3f0bda9c2d506c9ec0cf6782f05b0eee5ff18a11226fb0e67b",
+    "apps/api/src/assistant/general-media-source.test.ts": "235631811d61f1277fa7931115d06a546f125beef5dfcf9324eb485d3c9b9ba0",
+    "packages/assistant/src/general/booking-action.ts": "46cd220ba28d85d8ccb526a15b1cb045008b80a147221c28e745b8c056da60dd",
+    "packages/assistant/src/general/booking-action.test.ts": "53cb7adbd4a9b0f718b4f0a3c2a9aa15663c4d2eb66be7b4b1c4ac4c4e1abb3d",
+    "packages/db/src/queries/service-commerce-bookings/booking-command-review.test.ts": "da1cc22c216aba3e73b2ab5b812086a930fc5d57346705c716e78bf99ce94389",
+    "packages/db/src/queries/service-commerce-bookings/booking-command-review.ts": "6bdee7317103b428337108ddd094745cbc99d3ffc521b98dc0d1501d6cb51f94",
+    "packages/db/src/queries/service-commerce-bookings/booking-review-projection.ts": "94ef5630b0910adae704dce48624fdd8cfebe101e5e9e6d2ac196a98c0bfe8c4",
+    "packages/db/src/queries/service-commerce-bookings/booking-review-work.ts": "1690032bcf3ae17dbec5af78676159c57b30b0b85c6527cb3a10d73555af0040",
+    "packages/db/src/queries/service-commerce-bookings/booking-review-shared.ts": "85a5230bfad9b21a2048e7f560bcd90c4bbc4cde2e3f0c7f7b4e725085360d76",
+    "packages/db/src/queries/service-commerce-bookings/booking-review-facts.ts": "27569059054eba130e273b188ddd99b7dab43c1db23380b6347480419bb6cf6a",
+    "packages/db/src/queries/service-commerce-bookings/booking-work-plan.ts": "dadb7cc22c137ade7b9c785177a020071f68888e6a70571f4c6d377f199ecae3",
+    "packages/assistant/src/general/media-provenance.ts": "70ec207f1891ccb552255b50b9b7442ab651bc32eb20a24ce4e1f0c3f6b9331d",
+    "packages/assistant/src/general/media-provenance.test.ts": "a8de1531adbe41d1410e67fa46e815685d96cedf6adab3788509901e3a118800",
+    "packages/assistant/src/general/bounded-plan.ts": "4bc1ffbada4c09345ed07a55175004f0f60b3a4f497e3e43fbd371fd2bbea33a",
+    "packages/assistant/src/general/bounded-plan.test.ts": "072fe1e95a16c47e9d7b51285f2a0df859ca9d8585a03e9e72f4ab8e668568d6",
+    "packages/db/src/queries/service-commerce-bookings/lifecycle.ts": "f2b772d57baa809787abe44b0489e23614490f93180ad6bcf703a0e4762f9a39",
+    "packages/db/src/queries/commerce-quotes.ts": "7b62ca59d53400630a49dccc2237ba9133f8a8d8ed55003747a18bc5b2482194",
+    "packages/db/src/queries/commerce-quote-decision-review.ts": "d3acd9b1e1da174cb78f41f0830afcf2712de0c2699969dc7e42ab3cff29eace",
+    "packages/db/src/queries/commerce-quote-reviewed-decision.ts": "b955ae42bc1881eeb77af33835b852785bc4fa7bd047005c2ac3b9f13ca179e7",
+    "packages/db/src/queries/commerce-quote-reviewed-decision.test.ts": "09df9520ea2fb3050e9236ce76b56a90c077ec2567504c8853a4364d5e7249be",
+    "packages/db/package.json": "0addf06ba0557c8f931827c3896677fd6f1e1b35ea419b9ed9551ad05a4db37d",
+    "packages/assistant/package.json": "9123ddd5859ac41f80f5be2fd28332745fbb40d18f542419c1ec76e33696feef"
+  },
+  "verification": {
+    "booking": {
+      "tests": 108,
+      "failed": 0,
+      "assertions": 859,
+      "log": "/private/tmp/assistant-booking-review-root-final-tests.log"
+    },
+    "mediaSource": {
+      "tests": 16,
+      "failed": 0,
+      "assertions": 198,
+      "log": "/private/tmp/assistant-media-source-root-tests.log"
+    },
+    "actualFreshAPI": {
+      "tests": 8,
+      "failed": 0,
+      "assertions": 91,
+      "log": "/private/tmp/assistant-media-source-api-root-final-tests.log"
+    },
+    "mediaContracts": {
+      "tests": 22,
+      "failed": 0,
+      "assertions": 127,
+      "log": "/private/tmp/assistant-media-contracts-final-root-tests.log"
+    },
+    "quote": {
+      "tests": 102,
+      "failed": 0,
+      "assertions": 906,
+      "log": "/private/tmp/assistant-quote-legacy-prose-tests-final.log"
+    }
+  },
+  "executionCount": 256,
+  "executionCountQualification": "Five passing cohorts overlap; do not treat summed execution counts or repeated independent runs as unique acceptance criteria.",
+  "compiler": {
+    "entries": 198,
+    "exitCode": 2,
+    "diagnostics": 78,
+    "ownedDiagnostics": 0,
+    "newDiagnosticsRepaired": 16,
+    "baselineExactlyMatches": true,
+    "log": "/private/tmp/assistant-booking-media-integration-types-final.log"
+  },
+  "biome": {
+    "ownedPaths": 23,
+    "clean": true,
+    "log": "/private/tmp/assistant-booking-media-integration-biome.log"
+  },
+  "coverage": {
+    "current": true,
+    "log": "/private/tmp/assistant-booking-media-integration-coverage-check.log"
+  },
+  "exports": {
+    "passed": true,
+    "log": "/private/tmp/assistant-booking-media-export-check.log"
+  },
+  "independentReviews": "booking54/533, mediaAPI8/91, Quote38/527 overlap; not added",
+  "brainFilesUpdated": [
+    ".brain/decisions/2026-10-15-prepared-booking-and-media-review-boundaries.md",
+    ".brain/features/assistant-business-operations.md",
+    ".brain/features/service-commerce.md",
+    ".brain/features/assistant-service-requests.md",
+    ".brain/features/assistant-booking-read.md",
+    ".brain/features/assistant-voice.md",
+    ".brain/features/generic-catalog-inventory-units-stock-operations.md",
+    ".brain/api/contracts.md",
+    ".brain/api/permissions.md",
+    ".brain/tasks/in-progress.md",
+    ".brain/plans/2026-10-15-assistant-operations-phase-checklist.md",
+    ".brain/launch/assistant-voice-implementation-2026-10-09.md"
+  ],
+  "acceptance": {
+    "accepted": 13,
+    "total": 45,
+    "percentage": 28.9,
+    "partial": 30,
+    "unstarted": 2,
+    "promoted": false
+  },
+  "limitations": [
+    "No public action/router/tool/client/rollout registration",
+    "Logical64MiB is after source materialization, not wire/memory bound",
+    "No HTTP/genuineSessionissuer/private linkedprincipal issuance/SQL isolation/rollback/concurrency/device/provider proof",
+    "Durable booking proposal/history and H04 persistence/signatures/retained transcript/complete transport/domain wrappers/all clients remain"
+  ],
+  "gates": "G01humanpause,allPaystackpause,D04unattributed12UNSCHEDULED,E05activationrestartrefusal,G04sixdeferred,S05sevenUNRUN,C04exacttarget; schema target question unanswered. No DB/schema/provider/runtime/send/deploy/stage/commit/push.",
+  "impact": {
+    "passed": true,
+    "records": 39,
+    "log": "/private/tmp/assistant-booking-media-integration-impact.log",
+    "scope": "local mixedcheckout only; hostedCI unproven"
+  }
+}

@@ -1,7 +1,6 @@
 import { ActionButton } from "@/components/mobile/action-button"
 import { ClassicCustomerSuggestionRow } from "@/components/mobile/appearances/classic/create-sale"
 import { BottomSearchFooter } from "@/components/mobile/bottom-search-footer"
-import { FormField } from "@/components/mobile/form-field"
 import { HeroCard } from "@/components/mobile/green-till/hero-card"
 import { StatusBanner } from "@/components/mobile/status-banner"
 import { Text } from "@/components/ui/text"
@@ -80,8 +79,8 @@ export function CreateSaleCustomerStep({
                     style={{
                       color: heroPalette.heroMuted,
                       flexShrink: 1,
-                      fontSize: 13,
-                      lineHeight: 18,
+                      fontSize: 16,
+                      lineHeight: 22,
                     }}
                   >
                     {"Buyer: "}
@@ -127,16 +126,6 @@ export function CreateSaleCustomerStep({
                 onNew={presentCustomerSheet}
                 onSelect={(customer) => selectCustomer(customer, false)}
                 selectedId={model.selectedCustomer?.id ?? null}
-              />
-              <FormField
-                accessibilityLabel="Search all customers"
-                label="Search all customers"
-                leadingIcon="Search"
-                placeholder="Search all customers"
-                value={customerSearch}
-                onChangeText={setCustomerSearch}
-                maxLength={160}
-                variant="till-search"
               />
               {customerSearch ? (
                 <Text className="pt-2 text-xs font-extrabold tracking-[0.3px] text-muted-foreground">
@@ -194,12 +183,14 @@ export function CreateSaleCustomerStep({
       />
       <BottomSearchFooter
         onHeightChange={setActionsHeight}
-        accessibilityLabel="Customer actions"
-        onChangeText={() => undefined}
-        placeholder=""
-        searchVisible={false}
+        accessibilityLabel="Search all customers"
+        onChangeText={setCustomerSearch}
+        placeholder="Search all customers"
+        alwaysShowSearch
+        localSearch
+        maxLength={160}
         totalCount={0}
-        value=""
+        value={customerSearch}
         variant="action-bar"
       >
         <ActionButton

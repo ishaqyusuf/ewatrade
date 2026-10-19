@@ -1,6 +1,5 @@
 import { ActionButton } from "@/components/mobile/action-button"
 import { BottomSearchFooter } from "@/components/mobile/bottom-search-footer"
-import { FormField } from "@/components/mobile/form-field"
 import { Icon } from "@/components/ui/icon"
 import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
@@ -173,7 +172,7 @@ export function CatalogIllustrationBrowser({
               >
                 <Text
                   className={cn(
-                    "text-[13px] font-bold",
+                    "text-xs font-bold",
                     tab === value ? "text-foreground" : "text-muted-foreground",
                   )}
                 >
@@ -207,7 +206,7 @@ export function CatalogIllustrationBrowser({
                 >
                   <Text
                     className={cn(
-                      "text-[12.5px] font-bold",
+                      "text-xs font-bold",
                       on ? "text-accent-foreground" : "text-foreground",
                     )}
                   >
@@ -261,19 +260,21 @@ export function CatalogIllustrationBrowser({
           })}
         </View>
         {!entries.length ? (
-          <Text className="py-8 text-center text-[13px] text-muted-foreground">
+          <Text className="py-8 text-center text-xs text-muted-foreground">
             No illustration matches “{query.trim()}”.
           </Text>
         ) : null}
       </ScrollView>
       <BottomSearchFooter
-        accessibilityLabel="Illustration actions"
-        onChangeText={() => undefined}
+        accessibilityLabel="Search illustrations"
+        onChangeText={setQuery}
         onHeightChange={setFooterHeight}
-        placeholder=""
-        searchVisible={false}
+        placeholder="Search illustrations"
+        alwaysShowSearch
+        localSearch
+        maxLength={160}
         totalCount={0}
-        value=""
+        value={query}
         variant="action-bar"
       >
         {picked ? (
@@ -281,18 +282,6 @@ export function CatalogIllustrationBrowser({
             {`Use ${pickedLabel?.toLowerCase() ?? "illustration"}`}
           </ActionButton>
         ) : null}
-        <FormField
-          accessibilityLabel="Search illustrations"
-          autoCapitalize="none"
-          autoCorrect={false}
-          label="Search illustrations"
-          leadingIcon="Search"
-          onChangeText={setQuery}
-          placeholder={`Search ${everything.length} illustrations`}
-          returnKeyType="search"
-          value={query}
-          variant="search"
-        />
       </BottomSearchFooter>
     </Animated.View>
   )

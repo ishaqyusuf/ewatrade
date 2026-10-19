@@ -1,0 +1,55 @@
+{
+  "version": 1,
+  "id": "2026-10-15-native-cash-reference",
+  "tickets": [
+    "G02",
+    "A04",
+    "H02"
+  ],
+  "summary": "Replace raw native cash reference schema error JSON with actionable missing/bounded reference and invalid-saved-draft messages; strict required-reference/physical-count/payload/authority unchanged.",
+  "capabilities": [],
+  "procedures": [],
+  "docs": [
+    {
+      "topic": "feature",
+      "path": ".brain/features/assistant-cash-count-day-close.md",
+      "status": "local_only",
+      "note": "Source behavior fix and checks, no acceptance promotion."
+    },
+    {
+      "topic": "api",
+      "status": "not_applicable",
+      "note": "No API/contract change."
+    },
+    {
+      "topic": "schema",
+      "status": "not_applicable",
+      "note": "No database/schema change."
+    },
+    {
+      "topic": "permissions",
+      "status": "not_applicable",
+      "note": "Existing physical acknowledgement/current account/Book authority unchanged."
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "test",
+      "path": "apps/mobile/src/components/mobile/assistant/native-cash-count-values.test.ts",
+      "executed": true,
+      "result": "6/39 pass; exact actionable message,200charbound and strict malformed draft refusal."
+    },
+    {
+      "kind": "fixture",
+      "path": "packages/assistant/evaluations/fixtures/native-cash-count-editor.fixture.tsx",
+      "executed": true,
+      "result": "8/87 actual mounted editor with inertquery/furniturestandins; noDB/device."
+    },
+    {
+      "kind": "run",
+      "path": "packages/assistant/evaluations/runs/2026-10-15-native-cash-reference.md",
+      "executed": true,
+      "result": "2fileBiome/sourceobservations and limits."
+    }
+  ]
+}

@@ -1,4 +1,5 @@
 import { CatalogCreateAccessProvider } from "@/components/catalog-item/catalog-create-access"
+import { catalogDetailAccessFingerprint } from "@/components/catalog-item/detail/read-access"
 import { DashboardHeader } from "@/components/dashboard/header"
 import { DashboardSidebar } from "@/components/dashboard/sidebar"
 import { QuickAssistant } from "@/components/quick-assistant/quick-assistant"
@@ -113,6 +114,11 @@ export default async function ShellLayout({
         >
           <GlobalSheetsProvider
             access={{
+              catalogReadAccessKey: catalogDetailAccessFingerprint({
+                membership: ctx.membership,
+                staffAccess: ctx.staffAccess,
+                storeId: store.id,
+              }),
               serviceIntake:
                 ["OWNER", "ADMIN"].includes(ctx.membership.role) ||
                 (ctx.membership.role === "MANAGER" &&
@@ -168,7 +174,11 @@ export default async function ShellLayout({
             </main>
           </GlobalSheetsProvider>
         </CatalogCreateAccessProvider>
-        {navItems.some((item) => item.href === "/assistant") ? (
+        {canAccessDashboardPath(
+          "/assistant",
+          ctx.membership.role,
+          navigationContext,
+        ) ? (
           <QuickAssistant
             key={`${session.user.id}:${ctx.tenant.id}:${store.id}`}
           />

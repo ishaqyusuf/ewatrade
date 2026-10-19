@@ -80,7 +80,7 @@ export function QuietGroup({
         ))}
       </View>
       {footer ? (
-        <Text className="mt-2 px-3.5 text-xs leading-5 text-muted-foreground">
+        <Text className="mt-2 px-3.5 text-xs [-rn-line-height:22] text-muted-foreground">
           {footer}
         </Text>
       ) : null}
@@ -142,7 +142,7 @@ export function QuietRow({
       <View className="min-w-0 flex-1">
         <Text
           className={cn(
-            "text-[15px] [-rn-line-height:20]",
+            "text-base [-rn-line-height:22]",
             tone === "danger"
               ? "font-semibold text-destructive"
               : "text-foreground",
@@ -151,7 +151,7 @@ export function QuietRow({
           {title}
         </Text>
         {sub ? (
-          <Text className="text-xs [-rn-line-height:17] text-muted-foreground">
+          <Text className="text-xs [-rn-line-height:22] text-muted-foreground">
             {sub}
           </Text>
         ) : null}

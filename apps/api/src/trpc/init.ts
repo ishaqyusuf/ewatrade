@@ -27,6 +27,13 @@ import { evaluateQaProviderPolicy } from "@ewatrade/utils/qa-provider-policy"
 import { TRPCError, initTRPC } from "@trpc/server"
 import type { Context } from "hono"
 import superjson from "superjson"
+import {
+  type RequestIdentity,
+  isLinkedAssistantIdentity,
+  requireBrowserIdentity,
+  resolveLinkedAssistantIdentity,
+} from "../assistant/channel-principal"
+import { assertLinkedAssistantRead } from "../assistant/channel-read-policy"
 import { qaLiveEffectForProcedure } from "../utils/qa-provider-operation"
 import {
   type QaSessionScope,
@@ -42,7 +49,10 @@ type AuthenticatedSession = Session
 export type TRPCContext = {
   requestHeaders: Headers
   db: typeof prisma
-  session: AuthenticatedSession | null
+  session: RequestIdentity | null
+  /** Server-only capability context; never read from headers or request input. */
+  assistantReadCapabilityId?: string
+  assistantConversationId?: string
   tenantSlug: string | null
   tenantContext: TenantContext | null
   tenantId: string | null
@@ -271,7 +281,7 @@ const withTimingMiddleware = t.middleware(async (opts) => {
 const withPrimaryDbMiddleware = t.middleware(async (opts) => opts.next())
 
 const requireAuthMiddleware = t.middleware(async (opts) => {
-  const { session } = opts.ctx
+  const session = requireBrowserIdentity(opts.ctx.session)
 
   if (!session) {
     throw new TRPCError({
@@ -289,7 +299,7 @@ const requireAuthMiddleware = t.middleware(async (opts) => {
 })
 
 const requireGlobalAuthMiddleware = t.middleware(async (opts) => {
-  const { session } = opts.ctx
+  const session = requireBrowserIdentity(opts.ctx.session)
   if (!session) {
     throw new TRPCError({
       code: "UNAUTHORIZED",
@@ -329,6 +339,34 @@ export async function resolveProtectedTenantContext(
   recoverStoreSelection = false,
 ) {
   const { session } = ctx
+
+  if (isLinkedAssistantIdentity(session)) {
+    const resolved = await resolveLinkedAssistantIdentity(
+      ctx.db,
+      session.principal,
+      session.inboxLease,
+    )
+    if (
+      ctx.qaSessionScope ||
+      ctx.isInternalRequest ||
+      (ctx.tenantSlug &&
+        ctx.tenantSlug !== resolved.tenantContext.tenant.slug) ||
+      (ctx.activeStoreId && ctx.activeStoreId !== resolved.scope.storeId)
+    )
+      throw new TRPCError({
+        code: "FORBIDDEN",
+        message: "Assistant channel scope changed.",
+      })
+    return {
+      ...ctx,
+      session: resolved.identity,
+      tenantContext: resolved.tenantContext,
+      tenantId: resolved.scope.tenantId,
+      tenantSlug: resolved.tenantContext.tenant.slug,
+      activeStoreId: resolved.scope.storeId,
+      assistantConversationId: resolved.conversation.id,
+    }
+  }
 
   if (!session) {
     throw new TRPCError({
@@ -392,6 +430,39 @@ const withTenantPermissionMiddleware = t.middleware(async (opts) => {
   })
 })
 
+const requireTenantPrincipal = t.middleware(async (opts) => {
+  const identity = opts.ctx.session
+  if (!isLinkedAssistantIdentity(identity)) {
+    const session = requireBrowserIdentity(identity)
+    return opts.next({ ctx: { ...opts.ctx, session } })
+  }
+  if (opts.type !== "query")
+    throw new TRPCError({
+      code: "FORBIDDEN",
+      message: "Use an exact assistant proposal to make changes.",
+    })
+  return opts.next({ ctx: { ...opts.ctx, session: identity } })
+})
+
+const enforceLinkedAssistantRead = t.middleware(async (opts) => {
+  if (
+    isLinkedAssistantIdentity(opts.ctx.session) &&
+    opts.ctx.session.purpose !== "GENERAL"
+  )
+    throw new TRPCError({
+      code: "FORBIDDEN",
+      message: "This read belongs to the business assistant.",
+    })
+  if (isLinkedAssistantIdentity(opts.ctx.session))
+    assertLinkedAssistantRead({
+      capabilityId: opts.ctx.assistantReadCapabilityId,
+      path: opts.path,
+      type: opts.type,
+      role: opts.ctx.tenantContext?.membership.role ?? "",
+    })
+  return opts.next()
+})
+
 // Outside the staff transaction: next() resolves only after commit has succeeded.
 const captureDashboardOutcome = t.middleware(async (opts) => {
   const result = await opts.next()
@@ -435,6 +506,7 @@ const enforceStaffWriteTransaction = t.middleware(async (opts) => {
     opts.type !== "mutation" ||
     // Proposal services lock and reread membership inside their own transaction.
     opts.path.startsWith("assistant.") ||
+    opts.path.startsWith("assistantChannels.") ||
     opts.ctx.tenantContext?.staffAccess?.mode !== "SCOPED" ||
     ["OWNER", "ADMIN"].includes(opts.ctx.tenantContext.staffAccess.businessRole)
   )
@@ -473,7 +545,7 @@ const enforceQaProviderBoundary = t.middleware(async (opts) => {
   })
   if (decision.allowed) return opts.next()
 
-  const qaSession = opts.ctx.session
+  const qaSession = opts.ctx.session?.session
     ? await opts.ctx.db.session.findUnique({
         select: { qaAuthorizationId: true },
         where: { id: opts.ctx.session.session.id },
@@ -556,8 +628,9 @@ export const platformAdminProcedure = authenticatedProcedure.use(
 )
 
 export const protectedProcedure = publicProcedure
-  .use(requireAuthMiddleware)
+  .use(requireTenantPrincipal)
   .use(withTenantPermissionMiddleware)
+  .use(enforceLinkedAssistantRead)
   .use(captureDashboardOutcome)
   .use(enforceStaffWriteTransaction)
   .use(enforceStaffStoreAccess)

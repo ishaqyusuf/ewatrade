@@ -4,8 +4,8 @@ import {
   correctStockOperationInTransaction,
   lockInventorySourcesForReview,
   postOrdinaryBalanceStockOperationInTransaction,
-  previewOrdinaryStockAdjustment,
   previewOrdinaryAdjustmentCost,
+  previewOrdinaryStockAdjustment,
   previewStockCorrection,
   readStockCorrectionTarget,
 } from "@ewatrade/db/queries"
@@ -18,11 +18,12 @@ import type {
   GeneralTransactionContext,
 } from "./general-actions"
 import { requireGeneralScope } from "./general-context"
+import { generalStockEffectiveTime } from "./general-stock-effective-time"
+import { proposalDigest } from "./proposal-security"
 import {
   stockAdjustPresentation,
   stockCorrectPresentation,
 } from "./review-presentations"
-import { proposalDigest } from "./proposal-security"
 function costReview(cost: {
   status: string
   currencyCode: string
@@ -43,6 +44,7 @@ function costReview(cost: {
 type Adjust = Extract<GeneralAction, { action: "stock_adjust" }>
 type Correct = Extract<GeneralAction, { action: "stock_correct" }>
 async function adjustment(ctx: GeneralTransactionContext, payload: Adjust) {
+  const effectiveAt = generalStockEffectiveTime(payload.effectiveAt)
   const scope = requireGeneralScope(ctx)
   const stock = await previewOrdinaryStockAdjustment(ctx.db, {
     ...scope,
@@ -55,9 +57,7 @@ async function adjustment(ctx: GeneralTransactionContext, payload: Adjust) {
     canonicalBefore: stock.canonicalBefore,
     canonicalQuantity: stock.canonicalQuantity,
     direction: payload.direction,
-    effectiveAt: payload.effectiveAt
-      ? new Date(payload.effectiveAt)
-      : new Date(),
+    effectiveAt: effectiveAt ?? new Date(),
   })
   const preview = { ...stock, cost }
   return {
@@ -68,12 +68,14 @@ async function adjustment(ctx: GeneralTransactionContext, payload: Adjust) {
 }
 export const stockAdjust: GeneralActionAdapter<Adjust> = {
   async prepare(_ctx, payload) {
+    generalStockEffectiveTime(payload.effectiveAt)
     return {
       ...payload,
       effectiveAt: payload.effectiveAt ?? new Date().toISOString(),
     }
   },
   async validate(ctx, payload, lock) {
+    generalStockEffectiveTime(payload.effectiveAt)
     if (lock)
       await lockInventorySourcesForReview(ctx.db, {
         ...requireGeneralScope(ctx),

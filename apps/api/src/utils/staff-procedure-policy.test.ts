@@ -1,5 +1,23 @@
 import { expect, test } from "bun:test"
-import { staffProcedureAction } from "./staff-procedure-policy"
+import {
+  staffProcedureAction,
+  staffProcedureStoreInput,
+} from "./staff-procedure-policy"
+
+test("exact stock editor reads require stock authority and remain query-only", () => {
+  for (const path of [
+    "inventory.balanceSource",
+    "inventory.custodyAssignees",
+  ]) {
+    expect(staffProcedureAction(path, "query")).toBe("stock")
+    expect(staffProcedureAction(path, "mutation")).toBeNull()
+    expect(staffProcedureAction(path, "subscription")).toBeNull()
+    expect(staffProcedureStoreInput.has(path)).toBe(true)
+  }
+  expect(
+    staffProcedureAction("inventory.balanceSourceUnsafe", "query"),
+  ).toBeNull()
+})
 
 test("service work editor and original record routes remain query-only", () => {
   for (const path of [
@@ -25,6 +43,22 @@ test("assistant booking detail admits only the exact protected query", () => {
   expect(
     staffProcedureAction("serviceCommerce.assistantBookingConfirm", "mutation"),
   ).toBeNull()
+})
+
+test("staff booking availability is query-only and cannot select another Store", () => {
+  expect(
+    staffProcedureAction("serviceAssistantBookings.availability", "query"),
+  ).toBe("read")
+  for (const type of ["mutation", "subscription"])
+    expect(
+      staffProcedureAction("serviceAssistantBookings.availability", type),
+    ).toBeNull()
+  expect(
+    staffProcedureAction("serviceAssistantBookings.hold", "mutation"),
+  ).toBeNull()
+  expect(
+    staffProcedureStoreInput.has("serviceAssistantBookings.availability"),
+  ).toBe(false)
 })
 
 test("assistant quotation endpoints permit only audited reads and retain unknown-path refusal", () => {

@@ -2,6 +2,10 @@ import type {
   GeneralAction,
   GeneralReceipt,
 } from "@ewatrade/assistant/general/contracts"
+import {
+  type PackTargetInput,
+  derivePackTargetResult,
+} from "@ewatrade/assistant/general/stock-transform"
 import { canManageSalesOperations, normalizeRole } from "@ewatrade/auth/roles"
 import {
   canStaffAccessStore,
@@ -15,9 +19,6 @@ import type { TenantContext } from "@ewatrade/db/tenant-context"
 import {
   addExactDecimals,
   compareExactDecimals,
-  divideExactDecimals,
-  multiplyExactDecimals,
-  parseExactDecimal,
   subtractExactDecimals,
 } from "@ewatrade/utils/exact-decimal"
 import { TRPCError } from "@trpc/server"
@@ -66,46 +67,9 @@ export function assertTransformAccess(tenant: TenantContext, storeId: string) {
  * unit's transaction scale. Nothing is rounded; an amount that cannot be
  * represented in the target unit is refused.
  */
-export function derivePackTarget(input: {
-  sourceQuantity: string
-  sourceFactor: string
-  sourceScale: number
-  targetFactor: string
-  targetScale: number
-  sourceUnitName: string
-  targetUnitName: string
-}) {
-  let sourceQuantity: string
-  try {
-    sourceQuantity = parseExactDecimal(input.sourceQuantity, {
-      allowZero: false,
-      maxScale: input.sourceScale,
-    })
-  } catch {
-    return refuse(
-      `${input.sourceQuantity} cannot be represented in ${input.sourceUnitName}.`,
-    )
-  }
-  const canonical = multiplyExactDecimals(sourceQuantity, input.sourceFactor)
-  let targetQuantity: string
-  try {
-    targetQuantity = divideExactDecimals(
-      canonical,
-      input.targetFactor,
-      input.targetScale,
-    )
-  } catch {
-    return refuse(
-      input.targetScale === 0
-        ? `${sourceQuantity} ${input.sourceUnitName} does not make whole ${input.targetUnitName}.`
-        : `${sourceQuantity} ${input.sourceUnitName} cannot be represented in ${input.targetUnitName}.`,
-    )
-  }
-  if (compareExactDecimals(targetQuantity, "0") <= 0)
-    return refuse(
-      `${sourceQuantity} ${input.sourceUnitName} does not make any ${input.targetUnitName}.`,
-    )
-  return { sourceQuantity, targetQuantity, canonical }
+export function derivePackTarget(input: PackTargetInput) {
+  const result = derivePackTargetResult(input)
+  return result.ok ? result.value : refuse(result.refused)
 }
 
 const balanceInclude = {

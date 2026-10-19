@@ -91,12 +91,12 @@ export function QaQuickFillButton({
       <View className="gap-2.5 rounded-[18px] border-[1.5px] border-primary/25 bg-accent p-3.5">
         <View className="flex-row items-center gap-2">
           <Icon className="size-[16px] text-primary" name="WandSparkles" />
-          <Text className="flex-1 text-sm font-extrabold [-rn-line-height:20] text-foreground">
+          <Text className="flex-1 text-sm font-extrabold [-rn-line-height:22] text-foreground">
             Replace the current draft?
           </Text>
           <QaTag />
         </View>
-        <Text className="text-[12.5px] [-rn-line-height:18] text-muted-foreground">
+        <Text className="text-xs [-rn-line-height:22] text-muted-foreground">
           Cancel keeps every manual edit. Replace applies QA fixture values but
           does not submit this form.
         </Text>
@@ -106,7 +106,7 @@ export function QaQuickFillButton({
             className="min-h-10 justify-center rounded-full px-4 active:bg-card"
             onPress={() => setConfirming(false)}
           >
-            <Text className="text-[13px] font-extrabold text-muted-foreground">
+            <Text className="text-xs font-extrabold text-muted-foreground">
               Cancel
             </Text>
           </Pressable>
@@ -116,7 +116,7 @@ export function QaQuickFillButton({
             haptic
             onPress={fill}
           >
-            <Text className="text-[13px] font-extrabold text-primary-foreground">
+            <Text className="text-xs font-extrabold text-primary-foreground">
               Replace
             </Text>
           </Pressable>
@@ -138,9 +138,7 @@ export function QaQuickFillButton({
           onPress={onUndo}
         >
           <Icon className="size-[15px] text-muted-foreground" name="Undo2" />
-          <Text className="text-[12.5px] font-bold text-muted-foreground">
-            Undo
-          </Text>
+          <Text className="text-xs font-bold text-muted-foreground">Undo</Text>
         </Pressable>
       ) : null}
       <Pressable
@@ -158,7 +156,7 @@ export function QaQuickFillButton({
       >
         <View className="min-h-9 flex-row items-center gap-1.5 rounded-full border-[1.5px] border-dashed border-primary/40 bg-accent pl-3 pr-1.5">
           <Icon className="size-[15px] text-primary" name="WandSparkles" />
-          <Text className="text-[12.5px] font-bold [-rn-line-height:18] text-primary">
+          <Text className="text-xs font-bold [-rn-line-height:22] text-primary">
             {filling ? "Filling…" : label}
           </Text>
           <QaTag />
@@ -170,8 +168,8 @@ export function QaQuickFillButton({
 
 function QaTag() {
   return (
-    <View className="h-4 items-center justify-center rounded-full bg-primary px-1.5">
-      <Text className="text-[9.5px] font-bold [-rn-line-height:12] [-rn-include-font-padding:false] [-rn-text-align-vertical:center] text-primary-foreground">
+    <View className="min-h-[26px] items-center justify-center rounded-full bg-primary px-1.5 py-0.5">
+      <Text className="text-xs font-bold [-rn-line-height:22] [-rn-include-font-padding:false] [-rn-text-align-vertical:center] text-primary-foreground">
         QA
       </Text>
     </View>

@@ -82,6 +82,7 @@ export function fixture(rows = [decision()], allowNativeWrites = false) {
     product: false,
     sourceAvailable: true,
     sourceStatus: "SUBMITTED",
+    sourceRevision: 0,
     policyRevision: 4,
     linkedConversations: [] as Array<{ conversationId: string }>,
   }
@@ -226,7 +227,7 @@ export function fixture(rows = [decision()], allowNativeWrites = false) {
             row.storeId === where.storeId &&
             row.tenantId === where.tenantId,
         )
-          ? { status: state.sourceStatus }
+          ? { status: state.sourceStatus, revision: state.sourceRevision }
           : null,
     }),
     sellableOffering: delegate("offering", {
@@ -295,7 +296,11 @@ export function fixture(rows = [decision()], allowNativeWrites = false) {
       },
     }),
     commerceInquiry: delegate("inquiry", {
-      findFirst: () => ({ vertical: "PHARMACY", status: "READY_TO_QUOTE" }),
+      findFirst: () => ({
+        vertical: "PHARMACY",
+        status: "READY_TO_QUOTE",
+        revision: state.sourceRevision,
+      }),
     }),
     commerceQuoteReplayAccessToken: delegate("replay-token", {}),
     storeConversationRequestLink: delegate("links", {

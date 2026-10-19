@@ -1,4 +1,7 @@
 model Tenant {
+  assistantWhatsAppUsage AssistantWhatsAppUsageBucket[]
+  assistantWhatsAppLinks AssistantWhatsAppLink[]
+  assistantWhatsAppGrants AssistantWhatsAppGrant[]
   customerMessageTemplates CustomerMessageTemplate[]
   businessActivityEvents BusinessActivityEvent[]
   businessNotificationPolicies BusinessNotificationPolicy[]
@@ -363,6 +366,9 @@ model LeadCapture {
 }
 
 model User {
+  assistantWhatsAppUsage AssistantWhatsAppUsageBucket[]
+  assistantWhatsAppIdentities AssistantWhatsAppIdentity[]
+  assistantWhatsAppLinks AssistantWhatsAppLink[]
   updatedCustomerMessageTemplates CustomerMessageTemplate[]
   productAnalyticsEvents ProductAnalyticsEvent[]
   accountPrivacyRequests                         AccountPrivacyRequest[]
@@ -470,6 +476,8 @@ model Verification {
 }
 
 model Membership {
+  assistantWhatsAppLinks AssistantWhatsAppLink[]
+  assistantWhatsAppGrants AssistantWhatsAppGrant[]
   businessNotificationSubscriptions BusinessNotificationSubscription[]
   businessNotificationPreferences BusinessNotificationPreference[]
   businessNotificationReceipts BusinessNotificationReceipt[]

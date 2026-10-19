@@ -10,6 +10,7 @@ import { FlatList } from "react-native"
 import { KeyboardAvoidingView } from "react-native-keyboard-controller"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 import { ActionButton } from "../action-button"
+import { assistantRouteConversation } from "../assistant/assistant-route-conversation"
 import {
   AssistantBubble,
   AssistantComposer,
@@ -35,9 +36,21 @@ import { useSetupAssistant } from "./use-setup-assistant"
 
 export function SetupAssistantScreen() {
   const auth = useAuthContext()
-  const { qaState } = useLocalSearchParams<{ qaState?: string }>()
+  const { qaState, conversationId } = useLocalSearchParams<{
+    qaState?: string
+    conversationId?: string | string[]
+  }>()
+  const requested = assistantRouteConversation(conversationId)
+  if (requested.kind === "invalid")
+    return (
+      <SetupUnavailable
+        title="Saved Setup chat unavailable"
+        message="This saved chat link is invalid. No other Setup chat was opened."
+      />
+    )
   if (
     __DEV__ &&
+    requested.kind === "none" &&
     typeof qaState === "string" &&
     [
       "normal",
@@ -68,7 +81,14 @@ export function SetupAssistantScreen() {
         message="Open your active Store before setting up its products, services and customers."
       />
     )
-  return <SetupAssistantLive />
+  return (
+    <SetupAssistantLive
+      key={requested.kind === "saved" ? requested.conversationId : "default"}
+      expectedConversationId={
+        requested.kind === "saved" ? requested.conversationId : undefined
+      }
+    />
+  )
 }
 export function SetupUnavailable({
   title,
@@ -90,8 +110,10 @@ export function SetupUnavailable({
     </View>
   )
 }
-function SetupAssistantLive() {
-  const vm = useSetupAssistant()
+function SetupAssistantLive({
+  expectedConversationId,
+}: { expectedConversationId?: string }) {
+  const vm = useSetupAssistant(expectedConversationId)
   const router = useRouter()
   const tray = useModal()
   const editor = useModal()
@@ -110,20 +132,23 @@ function SetupAssistantLive() {
   const disabled =
     vm.offline ||
     vm.scopeChanged ||
+    vm.exactConversationUnavailable ||
     vm.state.isError ||
     !!vm.pending ||
     vm.busy ||
     !!vm.runId
   const active = vm.data?.conversation?.status === "ACTIVE"
-  const unavailable = vm.scopeChanged
-    ? "Your session or Store changed. Close and reopen the assistant."
-    : vm.offline && !vm.data
-      ? "No saved setup list is available. Reconnect to load it."
-      : vm.state.isError && !vm.data
-        ? "Setup could not load. Reconnect and try again."
-        : !vm.state.isPending && !vm.data
-          ? "The setup assistant is not available for this Store."
-          : null
+  const unavailable = vm.exactConversationUnavailable
+    ? "This saved Setup chat is unavailable in your current account, business or Store. No other chat was opened."
+    : vm.scopeChanged
+      ? "Your session or Store changed. Close and reopen the assistant."
+      : vm.offline && !vm.data
+        ? "No saved setup list is available. Reconnect to load it."
+        : vm.state.isError && !vm.data
+          ? "Setup could not load. Reconnect and try again."
+          : !vm.state.isPending && !vm.data
+            ? "The setup assistant is not available for this Store."
+            : null
   const close = async () => {
     if (vm.offline || !vm.data?.conversation) {
       router.back()

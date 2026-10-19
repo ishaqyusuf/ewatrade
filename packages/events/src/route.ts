@@ -1,6 +1,7 @@
 import { attributedBatchSchema } from "./attributed-contract"
 import { safeEventMetadata } from "./event-metadata"
 import { verifyAnalyticsContext } from "./identity-server"
+import { canForwardMobileAnalytics } from "./mobile-policy"
 import { nativeBatchSchema } from "./native-contract"
 import { isProductOrigin, safeBatch, safeRoute } from "./policy"
 import { readBatchBody } from "./read-batch-body"
@@ -10,6 +11,8 @@ export function createEventsRoute(
   surface: "web" | "mobile" | WebSurface = "web",
 ) {
   return async function POST(request: Request) {
+    if (surface === "mobile" && !canForwardMobileAnalytics(process.env))
+      return new Response(null, { status: 204 })
     const web =
       surface === "dashboard" || surface === "marketing"
         ? webSurfaces[surface]

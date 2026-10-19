@@ -251,7 +251,7 @@ export function CustomerConversationComposer({
                     />
                   ) : null}
                 </View>
-                <Text className="min-w-0 flex-1 text-xs leading-5 text-foreground">
+                <Text className="min-w-0 flex-1 text-xs [-rn-line-height:22] text-foreground">
                   I consent to this prescription image or PDF being privately
                   processed by this Store for my prescription Request.
                 </Text>
@@ -266,7 +266,7 @@ export function CustomerConversationComposer({
                   <Text className="text-sm font-bold text-foreground">
                     {pickerPresentation.title}
                   </Text>
-                  <Text className="text-xs leading-4 text-muted-foreground">
+                  <Text className="text-xs [-rn-line-height:22] text-muted-foreground">
                     {pickerPresentation.description}
                   </Text>
                 </View>
@@ -295,7 +295,7 @@ export function CustomerConversationComposer({
                         <Text className="text-sm font-bold text-foreground">
                           {item.label}
                         </Text>
-                        <Text className="text-xs leading-4 text-muted-foreground">
+                        <Text className="text-xs [-rn-line-height:22] text-muted-foreground">
                           {item.description}
                         </Text>
                       </View>

@@ -17,7 +17,9 @@ import { ActivitySheet } from "./activity-sheet"
 import { AssistantBookingSheet } from "./assistant-booking-sheet"
 import { AssistantCashCountSheet } from "./assistant-cash-count-sheet"
 import { AssistantDayCloseSheet } from "./assistant-day-close-sheet"
+import { AssistantManualMessageSheet } from "./assistant-manual-message-sheet"
 import { AssistantQuoteApprovalSheet } from "./assistant-quote-approval-sheet"
+import { AssistantServiceRequestSheet } from "./assistant-service-request-sheet"
 import { BusinessReportSheet } from "./business-report-sheet"
 import { CloseoutSheet } from "./closeout-sheet"
 import { CustomerDetailsSheet } from "./customer-details-sheet"
@@ -55,6 +57,8 @@ export type GlobalSheetAccess = {
   /** The Orders list and full order pages. */
   ordersPage?: boolean
   catalog?: boolean
+  /** Fresh Shell role/Store-access fingerprint. Missing identity withholds catalog detail. */
+  catalogReadAccessKey?: string
   scopedStaff?: boolean
   finance: boolean
   prescriptions: boolean
@@ -117,7 +121,16 @@ export function GlobalSheets({
       {access.domains && !access.scopedStaff ? (
         <DomainSheet store={store} />
       ) : null}
-      {access.catalog ? <CatalogItemDetailModal store={store} /> : null}
+      {(access.sales || access.catalog) && access.catalogReadAccessKey ? (
+        <CatalogItemDetailModal
+          key={`catalog-detail:${objectScope}:${Boolean(access.catalog)}:${access.catalogReadAccessKey}`}
+          actorUserId={actorUserId}
+          tenantId={tenantId}
+          store={store}
+          readOnly={!access.catalog}
+          accessKey={access.catalogReadAccessKey}
+        />
+      ) : null}
       {access.sales ? (
         <>
           <OrderDetailsSheet
@@ -149,6 +162,18 @@ export function GlobalSheets({
         key={`quotation:${objectScope}`}
         scopeKey={objectScope}
       />
+      {access.serviceIntake ? (
+        <AssistantManualMessageSheet
+          key={`manual-message:${objectScope}`}
+          scopeKey={objectScope}
+        />
+      ) : null}
+      {access.serviceIntake ? (
+        <AssistantServiceRequestSheet
+          key={`service-request:${objectScope}`}
+          scopeKey={objectScope}
+        />
+      ) : null}
       <AssistantBookingSheet
         key={`booking:${objectScope}`}
         scopeKey={objectScope}

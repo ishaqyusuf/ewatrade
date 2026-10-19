@@ -54,7 +54,7 @@ export function PhoneDeletionContact({
       {notice ? (
         <Text
           accessibilityLiveRegion="polite"
-          className="text-sm leading-5 text-muted-foreground"
+          className="text-sm [-rn-line-height:22] text-muted-foreground"
         >
           {notice}
         </Text>

@@ -23,8 +23,23 @@ jobs:
         with:
           bun-version: 1.3.9
       - run: bun install --frozen-lockfile
+      - name: Generate Prisma client for source tests
+        # Reads the checked-in schema only; no database URL or connection.
+        run: bun --env-file=/dev/null --cwd packages/db run db:generate
       - name: Capability manifest and gate tests
         run: bun test packages/assistant/src/capabilities
+      - name: WhatsApp channel policy and presentation tests
+        run: bun --env-file=/dev/null test packages/assistant/src/channels
+      - name: WhatsApp personal control boundaries
+        env:
+          EWATRADE_DATABASE_URL: postgresql://unit-only@127.0.0.1:1/unused
+        run: bun --env-file=/dev/null test apps/api/src/trpc/routers/assistant-channels.test.ts apps/api/src/assistant/channel-controls.test.ts packages/db/src/queries/assistant-whatsapp/privacy.test.ts
+      - name: WhatsApp inventory is current
+        run: bun scripts/assistant-whatsapp-coverage.ts --check
+      - name: Proposal recovery and inventory routing regressions
+        run: bun --env-file=/dev/null test packages/assistant/evaluations/phase-regressions.test.ts
+      - name: Booking review approval and exact completion regressions
+        run: bun --env-file=/dev/null test packages/assistant/evaluations/booking-source-regressions.test.ts
       - name: Coverage snapshot is current
         run: bun --env-file=/dev/null --cwd apps/api scripts/assistant-coverage.ts --check
       - name: Impact record covers gated changes

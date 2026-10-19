@@ -75,7 +75,10 @@ test("legacy undeclared Account cannot enumerate workspace access at startup", a
       },
     },
     requestHeaders: new Headers(),
-    session: { user: { id: "legacy-account" } },
+    session: {
+      user: { id: "legacy-account" },
+      session: { id: "legacy-session", userId: "legacy-account" },
+    },
   } as never)
 
   await expect(caller.getMobileAccessProfile()).rejects.toMatchObject({
@@ -410,7 +413,10 @@ test("ordinary mobile bootstrap retains business and linked customer access", as
       },
     },
     requestHeaders: new Headers(),
-    session: { user: { id: "ordinary-user" } },
+    session: {
+      user: { id: "ordinary-user" },
+      session: { id: "ordinary-session", userId: "ordinary-user" },
+    },
     qaSessionScope: null,
   } as never)
   expect(await caller.getMobileAccessProfile()).toEqual({
@@ -455,7 +461,13 @@ describe("mobile bootstrap for scoped QA sessions", () => {
         },
       },
       requestHeaders: new Headers(),
-      session: options.session === false ? null : { user: { id: "qa-user" } },
+      session:
+        options.session === false
+          ? null
+          : {
+              user: { id: "qa-user" },
+              session: { id: "qa-session", userId: "qa-user" },
+            },
       qaSessionScope: scope,
     } as never)
     return { caller, reads }

@@ -85,7 +85,7 @@ function InventoryProductCardContent({
         <View className="gap-1">
           <Text className="font-semibold text-foreground">{title}</Text>
           {subtitle ? (
-            <Text className="text-sm leading-5 text-muted-foreground">
+            <Text className="text-sm [-rn-line-height:22] text-muted-foreground">
               {subtitle}
             </Text>
           ) : null}

@@ -31,6 +31,8 @@ import {
   isSalesRepRole,
   normalizeMobileRole,
 } from "@/lib/mobile-roles"
+import { salesValueScope } from "@/lib/sales-value-motion"
+import { getSessionGeneration } from "@/lib/session-store"
 import {
   getMobileDashboardFeatureVisibility,
   getMobileDashboardNavigation,
@@ -43,11 +45,11 @@ import {
   useOfflineCommandStore,
 } from "@/store/offlineCommandStore"
 import { useOperationalModeStore } from "@/store/operationalModeStore"
-import { useTRPC } from "@/trpc/client"
+import { getDataCacheGeneration, useTRPC } from "@/trpc/client"
 import { formatMinorMoney } from "@ewatrade/utils"
 import { useQuery } from "@tanstack/react-query"
 import { useFocusEffect, useRouter } from "expo-router"
-import { useCallback, useMemo, useState } from "react"
+import { useCallback, useMemo, useRef, useState } from "react"
 import { View } from "react-native"
 import {
   SALE_STATUSES,
@@ -134,7 +136,8 @@ export function OperationsDashboardSurface({
   const todaySales = useQuery(
     trpc.orders.reportSummary.queryOptions(
       { ...windows.today, statuses: [...SALE_STATUSES] },
-      { enabled: salesQueryEnabled, retry: false },
+      // Home is rebuilt after a sale: always reread the confirmed total.
+      { enabled: salesQueryEnabled, retry: false, refetchOnMount: "always" },
     ),
   )
   const yesterdaySales = useQuery(
@@ -174,9 +177,44 @@ export function OperationsDashboardSurface({
   const repTodaySales = useQuery(
     trpc.orders.reportSummary.queryOptions(
       { ...windows.today, mine: true, statuses: [...SALE_STATUSES] },
-      { enabled: repSalesQueryEnabled, retry: false },
+      { enabled: repSalesQueryEnabled, retry: false, refetchOnMount: "always" },
     ),
   )
+  // Coming back to Home (after a sale, a modal or another tab) rereads the
+  // confirmed total so the hero can count to it. The first focus is the
+  // mount, which already fetches.
+  const salesFocusSeen = useRef(false)
+  const refetchTodaySales = todaySales.refetch
+  const refetchRepTodaySales = repTodaySales.refetch
+  useFocusEffect(
+    useCallback(() => {
+      if (!salesFocusSeen.current) {
+        salesFocusSeen.current = true
+        return
+      }
+      if (salesQueryEnabled) void refetchTodaySales({ cancelRefetch: false })
+      if (repSalesQueryEnabled)
+        void refetchRepTodaySales({ cancelRefetch: false })
+    }, [
+      salesQueryEnabled,
+      repSalesQueryEnabled,
+      refetchTodaySales,
+      refetchRepTodaySales,
+    ]),
+  )
+  /** Which confirmed total a value belongs to: a change starts a new count. */
+  const salesScope = (mine: boolean, currencyCode: string) =>
+    salesValueScope({
+      actorId: profile?.id,
+      businessId: profile?.businessId,
+      storeId: profile?.storeId,
+      role: profile?.role,
+      mine,
+      dayStartIso: windows.today.createdAfter.toISOString(),
+      currencyCode,
+      sessionGeneration: getSessionGeneration(),
+      dataGeneration: getDataCacheGeneration(),
+    })
   const orderRows = orders.data ?? []
   const toHomeOrder = (
     order: (typeof orderRows)[number],
@@ -577,6 +615,11 @@ export function OperationsDashboardSurface({
                     todaySales.data.orderValueMinor,
                     todaySales.data.currencyCode,
                   ),
+                  value: {
+                    minor: todaySales.data.orderValueMinor,
+                    currencyCode: todaySales.data.currencyCode,
+                    scopeKey: salesScope(false, todaySales.data.currencyCode),
+                  },
                   asOf: isOffline
                     ? timeLabel(new Date(todaySales.dataUpdatedAt))
                     : undefined,
@@ -673,6 +716,11 @@ export function OperationsDashboardSurface({
                     repTodaySales.data.orderValueMinor,
                     repTodaySales.data.currencyCode,
                   ),
+                  value: {
+                    minor: repTodaySales.data.orderValueMinor,
+                    currencyCode: repTodaySales.data.currencyCode,
+                    scopeKey: salesScope(true, repTodaySales.data.currencyCode),
+                  },
                   delta: null,
                   orderCount: repTodaySales.data.orderCount,
                   partial:

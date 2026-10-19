@@ -1,6 +1,11 @@
 import { multiplyExactDecimals } from "@ewatrade/utils/exact-decimal"
 import type { Prisma } from "../../../generated/prisma/client"
 import type { FinanceInventoryUnknownReason } from "../../../generated/prisma/enums"
+import {
+  assertHeldCommerceFinancialOrder,
+  type lockCommerceFinancialOrder,
+  readHeldCommerceFinanceBook,
+} from "../customer-ledger/commerce-locks"
 import { FinanceError, assertFinancePostingDate } from "./rules"
 import {
   calculateWeightedAverageIssue,
@@ -9,6 +14,9 @@ import {
 } from "./valuation-math"
 
 const MAX_DATABASE_MINOR = BigInt("9223372036854775807")
+type HeldOrder = NonNullable<
+  Awaited<ReturnType<typeof lockCommerceFinancialOrder>>
+>
 
 function conflict(message: string): never {
   throw new FinanceError("CONFLICT", message)
@@ -40,8 +48,18 @@ function signedQuantity(value: Prisma.Decimal) {
 export async function recordProductFulfillmentValuationInTransaction(
   tx: Prisma.TransactionClient,
   input: { tenantId: string; fulfillmentId: string },
+  heldOrder?: HeldOrder,
 ) {
+  // This is existing transaction-bound lock evidence, never a caller-supplied
+  // costing snapshot. Payment may already have read the same locked Book.
+  const heldBook = heldOrder
+    ? await readHeldCommerceFinanceBook(tx, heldOrder, {
+        tenantId: input.tenantId,
+        orderId: heldOrder.order?.id ?? "",
+      })
+    : null
   const fulfillment = await tx.productFulfillment.findFirst({
+    relationLoadStrategy: "join",
     where: {
       id: input.fulfillmentId,
       orderLine: { order: { tenantId: input.tenantId } },
@@ -58,7 +76,15 @@ export async function recordProductFulfillmentValuationInTransaction(
         include: {
           movements: {
             include: {
-              balanceSource: { include: { store: true } },
+              balanceSource: {
+                include: {
+                  store: true,
+                  financeInventoryPools: heldBook
+                    ? { where: { bookId: heldBook.id } }
+                    : false,
+                  _count: heldBook ? { select: { movements: true } } : false,
+                },
+              },
               valuationEvent: true,
             },
           },
@@ -72,14 +98,21 @@ export async function recordProductFulfillmentValuationInTransaction(
 
   const { orderLine, reservation, stockOperation: operation } = fulfillment
   const { order, snapshot } = orderLine
-  const book = await tx.financeBook.findUnique({
-    where: {
-      tenantId_currencyCode: {
-        tenantId: input.tenantId,
-        currencyCode: order.currencyCode,
-      },
-    },
-  })
+  if (heldOrder)
+    assertHeldCommerceFinancialOrder(tx, heldOrder, {
+      tenantId: input.tenantId,
+      orderId: order.id,
+    })
+  const book = heldOrder
+    ? heldBook
+    : await tx.financeBook.findUnique({
+        where: {
+          tenantId_currencyCode: {
+            tenantId: input.tenantId,
+            currencyCode: order.currencyCode,
+          },
+        },
+      })
   // Existing Commerce stock operations remain supported where no FinanceBook
   // exists. In that mode this private adapter adds no costing requirements.
   if (!book) return null
@@ -217,14 +250,26 @@ export async function recordProductFulfillmentValuationInTransaction(
     now: new Date(),
   })
 
-  const pool = await tx.financeInventoryPool.findUnique({
-    where: {
-      bookId_balanceSourceId: {
-        bookId: book.id,
-        balanceSourceId: balance.id,
-      },
-    },
-  })
+  // Reload per fulfillment: another line in this transaction may just have
+  // changed this pool. Count ALL balance movements, including corrections.
+  // Missing joined proof is not evidence of a missing pool or known-zero cost.
+  if (
+    heldBook &&
+    (!Array.isArray(balance.financeInventoryPools) ||
+      balance.financeInventoryPools.length > 1 ||
+      !balance._count)
+  )
+    conflict("Inventory valuation source cannot be read.")
+  const pool = heldBook
+    ? (balance.financeInventoryPools[0] ?? null)
+    : await tx.financeInventoryPool.findUnique({
+        where: {
+          bookId_balanceSourceId: {
+            bookId: book.id,
+            balanceSourceId: balance.id,
+          },
+        },
+      })
   if (pool && effectiveAt < pool.latestEffectiveAt) {
     throw new FinanceError(
       "INVALID_JOURNAL",
@@ -232,9 +277,11 @@ export async function recordProductFulfillmentValuationInTransaction(
     )
   }
 
-  const movementCount = await tx.stockMovement.count({
-    where: { balanceSourceId: balance.id },
-  })
+  const movementCount = heldBook
+    ? balance._count.movements
+    : await tx.stockMovement.count({
+        where: { balanceSourceId: balance.id },
+      })
   if (!Number.isSafeInteger(movementCount) || movementCount < 1) {
     conflict("Inventory movement history cannot be counted.")
   }

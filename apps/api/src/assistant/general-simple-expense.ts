@@ -1,6 +1,8 @@
 import {
+  type GeneralReviewPresentation,
   type SimpleExpense,
   generalMoney,
+  generalReviewPresentationSchema,
   normalizedSaleName,
   similarSaleNames,
   simpleExpenseStep,
@@ -163,6 +165,82 @@ async function current(ctx: GeneralTransactionContext, input: SimpleExpense) {
     },
   }
 }
+/** Exact authorized expense facts; incomplete drafts retain their existing question UI. */
+export function simpleExpenseReviewPresentation(
+  input: SimpleExpense,
+  facts: {
+    businessName: string
+    storeName: string
+    currencyCode: string
+    timezone: string
+    account?: { name: string; purpose: string }
+    category?: { name: string }
+  },
+): GeneralReviewPresentation | undefined {
+  if (
+    simpleExpenseStep(input) !== "review" ||
+    !input.effectiveAt ||
+    !facts.timezone ||
+    !facts.category ||
+    (input.paid && !facts.account)
+  )
+    return undefined
+  const presentation: GeneralReviewPresentation = {
+    summary: {
+      party: "Expense",
+      context: input.paid
+        ? "Record an expense already paid."
+        : "Record an unpaid expense already incurred.",
+      amount: generalMoney(input.amountMinor ?? 0, facts.currencyCode),
+      amountLabel: "Expense amount",
+    },
+    facts: [
+      { label: "Currency", value: facts.currencyCode },
+      { label: "Incurred at (UTC)", value: input.effectiveAt },
+      { label: "Book timezone", value: facts.timezone },
+      {
+        label: "Payment",
+        value: input.paid
+          ? "Already paid · business account"
+          : "Unpaid · no payment recorded",
+      },
+    ],
+    sections: [
+      {
+        title: "Expense details",
+        rows: [
+          {
+            label: "Book",
+            value: `${facts.businessName} · ${facts.currencyCode}`,
+            detail: "Existing Book",
+          },
+          { label: "Store", value: facts.storeName },
+          {
+            label: "Category",
+            value: facts.category.name,
+            detail: "Existing expense category",
+          },
+          { label: "Payee", value: input.payeeName || "Not specified" },
+          ...(input.paid && facts.account
+            ? [
+                {
+                  label: "Paid from",
+                  value: facts.account.name,
+                  detail: `Existing ${facts.account.purpose} account · payment effective at ${input.effectiveAt} (UTC)`,
+                },
+              ]
+            : []),
+        ],
+        note: `Description: ${input.description}`,
+      },
+    ],
+    note: input.paid
+      ? "Bookkeeping only: records an already-paid expense. Recording this does not send a payment."
+      : "Records the expense and unpaid amount. No payment or funding account is recorded.",
+  }
+  const parsed = generalReviewPresentationSchema.safeParse(presentation)
+  return parsed.success ? parsed.data : undefined
+}
 export const simpleExpenseRecord = {
   stale: "The expense or account changed. Review it again.",
   unavailable: "Check the expense details and review again.",
@@ -241,6 +319,16 @@ export const simpleExpenseRecord = {
   async review(ctx, input) {
     const info = await current(ctx, input)
     const step = simpleExpenseStep(input)
+    const book = info.options.book
+      ? await ctx.db.financeBook.findFirst({
+          where: {
+            id: info.options.book.id,
+            tenantId: requireGeneralScope(ctx).tenantId,
+          },
+          select: { timezone: true },
+        })
+      : null
+    if (info.options.book && !book) refuse("Review the Finance Book again.")
     const similarAccounts = input.accountName
       ? similarSaleNames(input.accountName, info.options.accounts)
       : []
@@ -288,6 +376,18 @@ export const simpleExpenseRecord = {
           : `Paid from ${info.account?.name ?? input.accountName ?? "an account"}`,
         `Category: ${info.category?.name ?? input.categoryName ?? "pending"}`,
       ],
+      presentation: book
+        ? simpleExpenseReviewPresentation(input, {
+            businessName: ctx.tenantContext.tenant.name,
+            storeName: ctx.tenantContext.activeStore?.name ?? "",
+            currencyCode:
+              info.options.book?.currencyCode ??
+              ctx.tenantContext.tenant.currencyCode,
+            timezone: book.timezone,
+            account: info.account,
+            category: info.category,
+          })
+        : undefined,
     }
   },
   async execute(ctx, input, key) {

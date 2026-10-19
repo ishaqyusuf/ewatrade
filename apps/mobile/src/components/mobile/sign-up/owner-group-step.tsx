@@ -212,8 +212,8 @@ export function OwnerGroupStep({
           >
             <Text
               style={{
-                fontSize: 14,
-                lineHeight: 20,
+                fontSize: 16,
+                lineHeight: 22,
                 fontWeight: "700",
                 color: colors.foreground,
               }}
@@ -272,8 +272,8 @@ export function OwnerGroupStep({
                   </Text>
                   <Text
                     style={{
-                      fontSize: 14,
-                      lineHeight: 20,
+                      fontSize: 16,
+                      lineHeight: 22,
                       color: colors.mutedForeground,
                     }}
                   >
@@ -304,7 +304,7 @@ export function OwnerGroupStep({
                       borderColor: colors.border,
                       backgroundColor: colors.card,
                       color: colors.foreground,
-                      fontSize: 14,
+                      fontSize: 16,
                       fontWeight: "600",
                     }}
                   />
@@ -348,8 +348,8 @@ export function OwnerGroupStep({
               >
                 <Text
                   style={{
-                    fontSize: 14,
-                    lineHeight: 20,
+                    fontSize: 16,
+                    lineHeight: 22,
                     fontWeight: "800",
                     color: colors.mutedForeground,
                   }}
@@ -378,8 +378,8 @@ export function OwnerGroupStep({
           {index >= limit ? (
             <Text
               style={{
-                fontSize: 14,
-                lineHeight: 20,
+                fontSize: 16,
+                lineHeight: 22,
                 fontWeight: "600",
                 color: palette.amberForeground,
               }}
@@ -415,8 +415,8 @@ export function OwnerGroupStep({
         <View style={{ flex: 1 }}>
           <Text
             style={{
-              fontSize: 14,
-              lineHeight: 20,
+              fontSize: 16,
+              lineHeight: 22,
               fontWeight: "700",
               color: colors.foreground,
             }}
@@ -425,8 +425,8 @@ export function OwnerGroupStep({
           </Text>
           <Text
             style={{
-              fontSize: 14,
-              lineHeight: 20,
+              fontSize: 16,
+              lineHeight: 22,
               color: colors.mutedForeground,
             }}
           >
@@ -449,8 +449,8 @@ export function OwnerGroupStep({
             <Icon name="Sparkles" size={16} color={palette.lilacForeground} />
             <Text
               style={{
-                fontSize: 14,
-                lineHeight: 20,
+                fontSize: 16,
+                lineHeight: 22,
                 fontWeight: "700",
                 color: palette.lilacForeground,
               }}
@@ -460,8 +460,8 @@ export function OwnerGroupStep({
           </View>
           <Text
             style={{
-              fontSize: 14,
-              lineHeight: 20,
+              fontSize: 16,
+              lineHeight: 22,
               color: palette.lilacForeground,
             }}
           >
@@ -500,8 +500,8 @@ export function OwnerGroupStep({
               >
                 <Text
                   style={{
-                    fontSize: 14,
-                    lineHeight: 20,
+                    fontSize: 16,
+                    lineHeight: 22,
                     fontWeight: "700",
                     color:
                       plan === item.key
@@ -517,8 +517,8 @@ export function OwnerGroupStep({
           {plan === "starter" ? (
             <Text
               style={{
-                fontSize: 14,
-                lineHeight: 20,
+                fontSize: 16,
+                lineHeight: 22,
                 color: palette.lilacForeground,
               }}
             >
@@ -542,8 +542,8 @@ export function OwnerGroupStep({
           <Text
             style={{
               flex: 1,
-              fontSize: 14,
-              lineHeight: 20,
+              fontSize: 16,
+              lineHeight: 22,
               color: palette.mintForeground,
             }}
           >
@@ -697,8 +697,8 @@ function TypeChip({
         <Icon name="GripHorizontal" size={14} color={colors.mutedForeground} />
         <Text
           style={{
-            fontSize: 14,
-            lineHeight: 20,
+            fontSize: 16,
+            lineHeight: 22,
             fontWeight: "700",
             color: colors.foreground,
           }}

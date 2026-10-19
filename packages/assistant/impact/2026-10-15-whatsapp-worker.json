@@ -1,0 +1,42 @@
+{
+  "version": 1,
+  "id": "2026-10-15-whatsapp-worker",
+  "tickets": ["A01", "H01"],
+  "summary": "WhatsApp plan W15 source: identifier-only jobs/internal operation, fresh linked inbox leases, per-binding FIFO, fenced settlement, failed-enqueue/shared-cadence recovery and atomic canonical saved-reply reference. Raw scope/content stays in the API. Reuses existing model/tools/allowance and OTP platform infrastructure without business rollout promotion, provider send or live config.",
+  "capabilities": [],
+  "docs": [
+    {
+      "topic": "feature",
+      "path": ".brain/features/whatsapp-assistant.md",
+      "status": "local_only"
+    },
+    {
+      "topic": "api",
+      "path": ".brain/api/contracts.md",
+      "status": "local_only"
+    },
+    {
+      "topic": "permissions",
+      "path": ".brain/api/permissions.md",
+      "status": "local_only"
+    },
+    {
+      "topic": "schema",
+      "path": ".brain/database/schema.md",
+      "status": "local_only"
+    },
+    {
+      "topic": "decision",
+      "path": ".brain/decisions/2026-10-15-whatsapp-assistant-channel.md",
+      "status": "local_only"
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "run",
+      "path": ".brain/qa/2026-10-15-whatsapp-assistant.md",
+      "executed": true,
+      "result": "Final guarded local actual internal HTTP/FIFO/shared model-stub/saved-reply recovery/stale existing caller/scoped expiry1/38 and existing product interrupted recovery1/23 pass with fixture cleanup. Offline assistant404/2169 with13connected skips, boundaries66/343 and post-fix fencing14/72 pass. Generated local recovery migration and required push/generation, jobs/query typechecks, scoped Biome, H01/H02 pass. Full API retains existing unrelated assistant errors. W15 source/backend accepted; channel7/48. No live queue/provider/production configuration or sends."
+    }
+  ]
+}

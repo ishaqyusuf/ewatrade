@@ -37,6 +37,8 @@ export type ClaimedSetupAttachment = {
 
 export type SetupAttachmentProcessingDeps = {
   claim: (attachmentId: string) => Promise<ClaimedSetupAttachment | null>
+  /** Fresh row generation and original channel/canonical authority before bytes or provider work. */
+  assertActive?: (attachment: ClaimedSetupAttachment) => Promise<void>
   readBytes: (attachment: ClaimedSetupAttachment) => Promise<Uint8Array>
   /** Null when no media provider is configured for this business. */
   media: (attachment: ClaimedSetupAttachment) => Promise<{
@@ -93,6 +95,17 @@ class ProcessingRefusal extends Error {
   ) {
     super(errorCode)
     this.name = "ProcessingRefusal"
+  }
+}
+
+async function assertActive(
+  attachment: ClaimedSetupAttachment,
+  deps: SetupAttachmentProcessingDeps,
+) {
+  try {
+    await deps.assertActive?.(attachment)
+  } catch {
+    throw new ProcessingRefusal("PROCESSING_CANCELLED", false)
   }
 }
 
@@ -161,8 +174,10 @@ async function extract(
       if (!attachment.durationMs)
         throw new ProcessingRefusal("INVALID_AUDIO", false)
       const audioSeconds = Math.max(1, Math.ceil(attachment.durationMs / 1000))
+      await assertActive(attachment, deps)
       if (!(await deps.reserveMedia(attachment, { audioSeconds })))
         throw new ProcessingRefusal("BUDGET_EXHAUSTED", false)
+      await assertActive(attachment, deps)
       const result = await media.transcribe({ audio: bytes })
       if (!result.text) throw new ProcessingRefusal("NO_SPEECH", false)
       const seconds = result.durationSeconds ?? audioSeconds
@@ -182,14 +197,17 @@ async function extract(
     case "IMAGE": {
       const media = await deps.media(attachment)
       if (!media) throw new ProcessingRefusal("MEDIA_UNAVAILABLE", false)
-      if (!(await deps.reserveMedia(attachment, { images: 1 })))
-        throw new ProcessingRefusal("BUDGET_EXHAUSTED", false)
+      await assertActive(attachment, deps)
       let prepared: Awaited<ReturnType<typeof deps.prepareImage>>
       try {
         prepared = await deps.prepareImage(bytes, attachment.contentType)
       } catch {
         throw new ProcessingRefusal("IMAGE_UNREADABLE", false)
       }
+      await assertActive(attachment, deps)
+      if (!(await deps.reserveMedia(attachment, { images: 1 })))
+        throw new ProcessingRefusal("BUDGET_EXHAUSTED", false)
+      await assertActive(attachment, deps)
       const result = await media.readImage({
         schema: setupImageReadSchema,
         instructions: SETUP_IMAGE_READ_INSTRUCTIONS,
@@ -217,6 +235,7 @@ export async function processSetupAttachment(
   if (!attachment) return { status: "skipped" }
   const startedAt = now()
   try {
+    await assertActive(attachment, deps)
     if (attachment.attachmentOnly && attachment.kind === "IMAGE") {
       const completed = await deps.complete({
         attachmentId: attachment.id,
@@ -234,6 +253,7 @@ export async function processSetupAttachment(
         : { status: "skipped" }
     }
     const bytes = await deps.readBytes(attachment)
+    await assertActive(attachment, deps)
     const result = await extract(attachment, bytes, deps)
     await deps
       .recordUsage(attachment, {
@@ -245,6 +265,7 @@ export async function processSetupAttachment(
         durationMs: now() - startedAt,
       })
       .catch(() => undefined)
+    await assertActive(attachment, deps)
     const completed = await deps.complete({
       attachmentId: attachment.id,
       generation: attachment.processingAttempts,

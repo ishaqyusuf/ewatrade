@@ -109,9 +109,11 @@ async function execute(
   )
   const r = result.review
   return {
-    kind: "order",
+    kind: "service_manual_message",
     recordId: result.intent.id,
+    jobId: r.jobId,
     orderId: r.orderId,
+    shareId: result.share.id,
     title: "Manual share recorded",
     detail: `${r.orderNumber} · You reported sharing this message by ${serviceMessageChannelLabel[r.channel]} with ${recipientLabel(r)}. Nothing was sent by ewatrade and delivery is not verified. It now appears in the customer's tracking history.`,
   }

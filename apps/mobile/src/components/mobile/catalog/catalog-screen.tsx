@@ -559,7 +559,7 @@ export function CatalogItemsContent({
       >
         <BottomSheetScrollView keyboardShouldPersistTaps="handled">
           <View className="gap-3 px-5 pb-6">
-            <Text className="text-[13px] text-muted-foreground">
+            <Text className="text-xs text-muted-foreground">
               What are you adding?
             </Text>
             <ClassicCatalogChoices

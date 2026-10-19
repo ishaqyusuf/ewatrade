@@ -1,0 +1,34 @@
+{
+  "observedAt": "2026-10-15T16:09:21.541765+00:00",
+  "status": "source_verified",
+  "checks": [
+    {
+      "scope": "pure helper",
+      "result": "6pass/39assertions",
+      "log": "/private/tmp/assistant-cash-reference-tests.log"
+    },
+    {
+      "scope": "mounted actual editor",
+      "result": "8pass/87assertions; UI/query standins,realhelper",
+      "log": "/private/tmp/assistant-cash-reference-mounted.log"
+    },
+    {
+      "scope": "scoped lint",
+      "result": "2filesclean",
+      "log": "/private/tmp/assistant-cash-reference-lint.log"
+    }
+  ],
+  "sourceObservations": {
+    "apps/mobile/src/components/mobile/assistant/native-cash-count-values.ts": "08556e13a789321255e4a17ae49148fe1b0e9ac1654dd5d26e9795fa2806d53b",
+    "apps/mobile/src/components/mobile/assistant/native-cash-count-values.test.ts": "e79076fa97820a91302f6b003bc8b959bbb8c559a8b68f841fcb3a175a96b3a6"
+  },
+  "commands": [
+    "bun --env-file=/dev/null test apps/mobile/src/components/mobile/assistant/native-cash-count-values.test.ts",
+    "env -u DATABASE_URL EWATRADE_DATABASE_URL=postgresql://fixture:fixture@127.0.0.1:1/assistant_source_tests bun --env-file=/dev/null test ./packages/assistant/evaluations/fixtures/native-cash-count-editor.fixture.tsx"
+  ],
+  "limits": "Source only; no real UI/device/HTTP/DB/cash mutation. Parent13/45 unchanged; UIreproductionawaitingrefresh.",
+  "previewFollowup": {
+    "revision": "9227b810-6159-4ac4-b59a-270fa30d5b62",
+    "status": "ownerpublished/0headlesserrorsreported;rootnotbrowserchecked;hubv6linkawaitsnextcheckpoint"
+  }
+}

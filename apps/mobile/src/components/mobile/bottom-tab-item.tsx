@@ -160,9 +160,9 @@ export function MobileBottomTabItem({
               color: isActive
                 ? MOBILE_OPERATIONAL_BOTTOM_TAB_TOKENS.activeForeground
                 : MOBILE_OPERATIONAL_BOTTOM_TAB_TOKENS.inactiveForeground,
-              fontSize: 12,
+              fontSize: 16,
               fontWeight: "600",
-              lineHeight: 14,
+              lineHeight: 22,
               textAlign: "center",
               textAlignVertical: "center",
               width: "100%",
@@ -202,11 +202,11 @@ export function MobileBottomTabItem({
               className={
                 isActive
                   ? isReference
-                    ? "text-[11px] font-bold text-primary-foreground"
-                    : "text-[11px] font-extrabold text-primary-foreground"
+                    ? "text-xs font-bold text-primary-foreground"
+                    : "text-xs font-extrabold text-primary-foreground"
                   : isReference
-                    ? "text-[11px] font-bold text-foreground"
-                    : "text-[11px] font-bold text-muted-foreground"
+                    ? "text-xs font-bold text-foreground"
+                    : "text-xs font-bold text-muted-foreground"
               }
               maxFontSizeMultiplier={DISPLAY_TEXT_FONT_SCALE_CAP}
               numberOfLines={largeTextLayout ? 2 : 1}

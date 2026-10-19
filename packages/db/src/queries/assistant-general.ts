@@ -47,7 +47,16 @@ export async function readGeneralConversation(
 ) {
   const row = await db.assistantConversation.findFirst({
     where: { ...generalConversationWhere(scope), id },
-    select: { id: true, updatedAt: true, messages: firstQuestion },
+    select: {
+      id: true,
+      tenantId: true,
+      storeId: true,
+      ownerUserId: true,
+      purpose: true,
+      status: true,
+      updatedAt: true,
+      messages: firstQuestion,
+    },
   })
   if (!row) return null
   const { messages, ...conversation } = row

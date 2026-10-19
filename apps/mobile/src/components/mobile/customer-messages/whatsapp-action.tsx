@@ -94,18 +94,24 @@ export function WhatsAppFollowUp({
   target,
   hasPhone,
   onDismiss,
+  onOpen,
 }: {
   done: string
   target: OrderMessageTarget
   hasPhone: boolean
   onDismiss?: () => void
+  /**
+   * Replaces the ordinary open (e.g. a completed outcome that must leave
+   * history first). An error still only retries; loading stays inert.
+   */
+  onOpen?: () => void
 }) {
   const action = useOrderMessageAction({ target, hasPhone })
   if (action.state.kind === "hidden") return null
   const ready = action.state.kind === "ready"
   return (
     <View className="flex-row items-center gap-3 rounded-2xl bg-card px-3.5 py-3 shadow-sm">
-      <Text className="min-w-0 flex-1 text-[14px] text-foreground">
+      <Text className="min-w-0 flex-1 text-base text-foreground">
         {done} Let the customer know?
       </Text>
       <Pressable
@@ -117,7 +123,9 @@ export function WhatsAppFollowUp({
         )}
         disabled={action.state.kind === "loading"}
         haptic
-        onPress={action.state.kind === "error" ? action.retry : action.open}
+        onPress={
+          action.state.kind === "error" ? action.retry : (onOpen ?? action.open)
+        }
       >
         <Icon
           className={cn(
@@ -128,7 +136,7 @@ export function WhatsAppFollowUp({
         />
         <Text
           className={cn(
-            "text-[14px] font-bold",
+            "text-base font-bold",
             ready ? "text-tint-mint-foreground" : "text-muted-foreground",
           )}
         >

@@ -32,7 +32,7 @@ export function CustomerRequestChoice({
       <Text className="text-base font-bold text-foreground">
         {presentation.heading}
       </Text>
-      <Text className="text-xs leading-5 text-muted-foreground">
+      <Text className="text-xs [-rn-line-height:22] text-muted-foreground">
         {presentation.lead}
       </Text>
       <View className="mt-1">

@@ -15,6 +15,15 @@ type DownloadSaver = {
 const downloadSaver =
   requireOptionalNativeModule<DownloadSaver>("DownloadSaver")
 const DOWNLOAD_FOLDER = "EwaTrade"
+const RECEIPT_UTI: Record<string, string> = {
+  "application/pdf": "com.adobe.pdf",
+  "application/zip": "public.zip-archive",
+  "image/png": "public.png",
+  "image/jpeg": "public.jpeg",
+  "image/webp": "org.webmproject.webp",
+  "image/heic": "public.heic",
+  "image/heif": "public.heif",
+}
 
 export type ReceiptFile = {
   bytes: Uint8Array
@@ -33,7 +42,9 @@ function base64(bytes: Uint8Array) {
 export async function deliverReceiptFile(
   file: ReceiptFile,
   action: "save" | "share",
+  assertCurrent: () => void = () => undefined,
 ) {
+  assertCurrent()
   const encoded = base64(file.bytes)
   if (
     action === "save" &&
@@ -45,10 +56,12 @@ export async function deliverReceiptFile(
     const directory = `${FileSystem.cacheDirectory}receipt-save-${Date.now()}/`
     await FileSystem.makeDirectoryAsync(directory, { intermediates: true })
     try {
+      assertCurrent()
       const uri = `${directory}${file.filename}`
       await FileSystem.writeAsStringAsync(uri, encoded, {
         encoding: FileSystem.EncodingType.Base64,
       })
+      assertCurrent()
       const saved = await downloadSaver.saveToDownloads(
         uri,
         file.filename,
@@ -66,6 +79,7 @@ export async function deliverReceiptFile(
     // Older Android, or a build without the native saver: ask for a folder.
     const permission =
       await FileSystem.StorageAccessFramework.requestDirectoryPermissionsAsync()
+    assertCurrent()
     if (!permission.granted) return "Save cancelled."
     const uri = await FileSystem.StorageAccessFramework.createFileAsync(
       permission.directoryUri,
@@ -73,6 +87,7 @@ export async function deliverReceiptFile(
       file.mimeType,
     )
     try {
+      assertCurrent()
       await FileSystem.writeAsStringAsync(uri, encoded, {
         encoding: FileSystem.EncodingType.Base64,
       })
@@ -86,26 +101,25 @@ export async function deliverReceiptFile(
     return "Receipt saved to your selected folder."
   }
   const sharing = await import("expo-sharing")
+  assertCurrent()
   if (!(await sharing.isAvailableAsync()) || !FileSystem.cacheDirectory) {
     throw new Error(
       "File sharing is unavailable. Install the latest app build and try again.",
     )
   }
+  assertCurrent()
   const directory = `${FileSystem.cacheDirectory}receipt-${Date.now()}-${Math.random().toString(36).slice(2)}/`
   await FileSystem.makeDirectoryAsync(directory, { intermediates: true })
   try {
+    assertCurrent()
     const uri = `${directory}${file.filename}`
     await FileSystem.writeAsStringAsync(uri, encoded, {
       encoding: FileSystem.EncodingType.Base64,
     })
+    assertCurrent()
     await sharing.shareAsync(uri, {
       mimeType: file.mimeType,
-      UTI:
-        file.mimeType === "application/pdf"
-          ? "com.adobe.pdf"
-          : file.mimeType === "image/png"
-            ? "public.png"
-            : "public.zip-archive",
+      UTI: RECEIPT_UTI[file.mimeType],
       dialogTitle: action === "save" ? "Save receipt" : "Share receipt",
     })
     // The share sheet reports nothing useful back, so show no notice.

@@ -27,7 +27,7 @@ function ClassicSellingUnits({ model }: { model: CatalogSetupModel }) {
   const main = unitName.trim() || "main unit"
   return (
     <View className="gap-3.5">
-      <Text className="text-[13px] text-muted-foreground">
+      <Text className="text-xs text-muted-foreground">
         Packs, trays and cartons are amounts customers buy. A size customers
         choose goes in Customer choices.
       </Text>
@@ -111,7 +111,7 @@ function ClassicSellingUnits({ model }: { model: CatalogSetupModel }) {
         </View>
       ) : (
         <View className="rounded-[18px] bg-card px-4 py-3.5 shadow-sm">
-          <Text className="text-[13px] text-muted-foreground">
+          <Text className="text-xs text-muted-foreground">
             {`No other way yet. Customers buy by the ${main.toLowerCase()}.`}
           </Text>
         </View>
@@ -124,7 +124,7 @@ function ClassicSellingUnits({ model }: { model: CatalogSetupModel }) {
         onPress={() => openUnitEditor()}
       >
         <Icon className="size-[18px] text-primary" name="Plus" />
-        <Text className="text-[14.5px] font-extrabold text-primary">
+        <Text className="text-base font-extrabold text-primary">
           {additionalUnits.length ? "Add another way" : "Add a carton or pack"}
         </Text>
       </Pressable>

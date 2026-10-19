@@ -5,7 +5,7 @@ import { useFonts } from "expo-font"
 import { Stack, useSegments } from "expo-router"
 import * as SplashScreen from "expo-splash-screen"
 import { useEffect, useMemo, useState } from "react"
-import "react-native-reanimated"
+import { useReducedMotion } from "react-native-reanimated"
 import "@/styles/global.css"
 import { AppLockProvider } from "@/hooks/use-app-lock"
 import {
@@ -23,6 +23,7 @@ import { QaAuthorizationSheet } from "@/components/mobile/qa-authorization-sheet
 import { StartupSplashGate } from "@/components/mobile/startup-splash-gate"
 import { ToastProviderWithViewport } from "@/components/ui/toast"
 import { applyThemeOverride, useColorScheme } from "@/hooks/use-color"
+import { useOfflineReplay } from "@/hooks/use-offline-replay"
 import { OrderVisibilityReconciler } from "@/hooks/use-order-visibility"
 import { QaAcceleratorProvider } from "@/hooks/use-qa-accelerator"
 import { canAccessAdminTabs } from "@/lib/admin-navigation"
@@ -35,10 +36,12 @@ import {
 import { nativeStackStatusBarStyle } from "@/lib/native-stack-status-bar"
 import { nativewindThemeVars } from "@/lib/nativewind-theme-vars"
 import { stackTransitions } from "@/lib/screen-transitions"
+import { isLocalSessionToken } from "@/lib/session-store"
 import { NAV_THEME } from "@/lib/theme"
 import { getThemeOverride } from "@/lib/theme-preference"
 import { initMobileObservability } from "@/observability/sentry"
 import {
+  activeBusinessOfflineCommands,
   pendingOfflineCommands,
   useOfflineCommandStore,
 } from "@/store/offlineCommandStore"
@@ -65,10 +68,6 @@ export const unstable_settings = {
 }
 
 initMobileObservability()
-
-const transitions = stackTransitions(Platform.OS)
-const modalOptions = { headerShown: false, ...transitions.modal }
-const gateOptions = { headerShown: false, ...transitions.gate }
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync()
@@ -108,7 +107,7 @@ const InitialLayout = ({
   startupVisible = false,
 }: { startupVisible?: boolean }) => {
   const { colorScheme } = useColorScheme()
-  const { isAuthenticated, profile } = useAuthContext()
+  const { isAuthenticated, profile, token } = useAuthContext()
   const navigationTheme =
     colorScheme === "dark" ? NAV_THEME.dark : NAV_THEME.light
   const isInvitedStaff = isInvitedStaffProfile(profile)
@@ -118,6 +117,15 @@ const InitialLayout = ({
   const canManageTenant =
     profile?.role?.trim().toUpperCase() === "OWNER" ||
     profile?.role?.trim().toUpperCase() === "ADMIN"
+  // Native stack presets; Reduce Motion fades pushes instead of sliding.
+  const transitions = stackTransitions(Platform.OS, useReducedMotion())
+  // Task routes: full-screen pages on iOS (push + swipe-back); Android keeps
+  // its slide-from-bottom modal. Sheets inside screens stay overlays.
+  const modalOptions = {
+    headerShown: false,
+    ...(Platform.OS === "ios" ? transitions.push : transitions.modal),
+  }
+  const gateOptions = { headerShown: false, ...transitions.gate }
 
   return (
     <>
@@ -167,10 +175,30 @@ const InitialLayout = ({
           <Stack.Screen name="stock-intake-modal" options={modalOptions} />
           <Stack.Screen name="staff-invite-modal" options={modalOptions} />
           <Stack.Screen name="unit-conversion-modal" options={modalOptions} />
+          <Stack.Screen
+            name="stock-operation/[operationId]"
+            options={modalOptions}
+          />
+          <Stack.Screen
+            name="stock-count/[stockCountId]"
+            options={modalOptions}
+          />
+          <Stack.Screen
+            name="stock-transfer/[transferId]"
+            options={modalOptions}
+          />
+          <Stack.Screen
+            name="inventory-closeout/[closeoutId]"
+            options={modalOptions}
+          />
         </Stack.Protected>
         <Stack.Protected guard={isAuthenticated}>
           <Stack.Screen name="no-access" options={gateOptions} />
           <Stack.Screen name="account" options={{ headerShown: false }} />
+          <Stack.Screen
+            name="assistant-whatsapp"
+            options={{ headerShown: false }}
+          />
           <Stack.Screen
             name="account-privacy"
             options={{ headerShown: false }}
@@ -181,6 +209,19 @@ const InitialLayout = ({
           />
           <Stack.Screen
             name="account-privacy-delete"
+            options={{ headerShown: false }}
+          />
+        </Stack.Protected>
+        <Stack.Protected
+          guard={
+            isAuthenticated &&
+            Boolean(token) &&
+            !isLocalSessionToken(token) &&
+            !token?.startsWith("qas_")
+          }
+        >
+          <Stack.Screen
+            name="assistant-data"
             options={{ headerShown: false }}
           />
         </Stack.Protected>
@@ -287,6 +328,8 @@ const InitialLayout = ({
           <Stack.Screen name="updates" options={{ headerShown: false }} />
           <Stack.Screen name="create-sale-modal" options={modalOptions} />
           <Stack.Screen name="ask-assistant" options={{ headerShown: false }} />
+          <Stack.Screen name="staff-activity-modal" options={modalOptions} />
+          <Stack.Screen name="business-report-modal" options={modalOptions} />
           <Stack.Screen name="global-search" options={modalOptions} />
           <Stack.Screen
             name="operation-success"
@@ -342,73 +385,37 @@ function OfflinePolicyReconciler() {
       retry: false,
     }),
   )
-  const replay = useMutation(
-    trpc.offline.replay.mutationOptions({
-      onSuccess: async (results) => {
-        commandState.applyReplayResults(results)
-        await queryClient.invalidateQueries(
-          trpc.stores.orderVisibility.queryFilter(),
-        )
-        await Promise.all([
-          queryClient.invalidateQueries(trpc.offline.conflicts.queryFilter()),
-          queryClient.invalidateQueries(trpc.catalog.listItems.queryFilter()),
-          queryClient.invalidateQueries(
-            trpc.catalog.listItemsPage.pathFilter(),
-          ),
-          queryClient.invalidateQueries(trpc.orders.list.queryFilter()),
-          queryClient.invalidateQueries(trpc.orders.listPage.pathFilter()),
-          queryClient.invalidateQueries(
-            trpc.tenant.featureAvailability.queryFilter(),
-          ),
-        ])
-      },
-    }),
+  const sync = useOfflineReplay()
+  // Status lookups only ever read this owner's own partition.
+  const ownCommands = activeBusinessOfflineCommands(
+    commandState.commands,
+    profile?.businessId,
   )
-  const register = useMutation(
-    trpc.offline.registerDevice.mutationOptions({
-      onSuccess: () => {
-        const commands = pendingOfflineCommands(
-          commandState,
-          profile?.businessId,
-        )
-        if (commands.length === 0) return
-        replay.mutate({
-          commands,
-          deviceId: commandState.deviceId,
-        })
-      },
-    }),
-  )
+  const ownStatus = (clientCommandId: string) =>
+    ownCommands.find(
+      (candidate) => candidate.clientCommandId === clientCommandId,
+    )?.localStatus
   const pending = pendingOfflineCommands(commandState, profile?.businessId)
   const commandsToSync = pending.filter((command) => {
     if (settings.data?.enabled) return true
-    const localCommand = commandState.commands.find(
-      (candidate) => candidate.clientCommandId === command.clientCommandId,
-    )
-    return (
-      localCommand?.localStatus === "approval" ||
-      localCommand?.localStatus === "review"
-    )
+    const status = ownStatus(command.clientCommandId)
+    return status === "approval" || status === "review"
   })
-  const hasRemoteReview = commandsToSync.some((command) =>
-    commandState.commands.some(
-      (candidate) =>
-        candidate.clientCommandId === command.clientCommandId &&
-        (candidate.localStatus === "approval" ||
-          candidate.localStatus === "review"),
-    ),
-  )
+  const hasRemoteReview = commandsToSync.some((command) => {
+    const status = ownStatus(command.clientCommandId)
+    return status === "approval" || status === "review"
+  })
   const pendingSignature = commandsToSync
-    .map((command) => {
-      const localCommand = commandState.commands.find(
-        (candidate) => candidate.clientCommandId === command.clientCommandId,
-      )
-      return `${command.clientCommandId}:${localCommand?.localStatus ?? "pending"}`
-    })
+    .map(
+      (command) =>
+        `${command.clientCommandId}:${ownStatus(command.clientCommandId) ?? "pending"}`,
+    )
     .join("|")
-  const reconciliationSignature = hasRemoteReview
-    ? `${pendingSignature}:${settings.dataUpdatedAt}`
-    : pendingSignature
+  // The whole owner lifetime is part of the signature, so identical command
+  // ids in another actor/business/Store never suppress that owner's sync.
+  const reconciliationSignature = pendingSignature
+    ? `${sync.lifetimeKey}|${pendingSignature}${hasRemoteReview ? `:${settings.dataUpdatedAt}` : ""}`
+    : ""
   const lastAttemptSignature = useRef("")
 
   useEffect(() => {
@@ -445,33 +452,20 @@ function OfflinePolicyReconciler() {
     }
     if (lastAttemptSignature.current === reconciliationSignature) return
     lastAttemptSignature.current = reconciliationSignature
-    if (!settings.data?.enabled) {
-      replay.mutate({
-        commands: commandsToSync,
-        deviceId: commandState.deviceId,
-      })
-      return
-    }
-    register.mutate({
-      appVersion: Constants.expoConfig?.version,
-      deviceId: commandState.deviceId,
-      deviceName: `${Platform.OS} device`,
-      platform:
-        Platform.OS === "ios" ||
-        Platform.OS === "android" ||
-        Platform.OS === "web"
-          ? Platform.OS
-          : "unknown",
+    const syncIds = new Set(commandsToSync.map((c) => c.clientCommandId))
+    // The coordinator captures the batch, runs one sync at a time (a request
+    // made meanwhile runs right after) and retires on any lifetime change.
+    void sync.request({
+      registerFirst: Boolean(settings.data?.enabled),
+      include: (id) => syncIds.has(id),
     })
   }, [
-    commandState.deviceId,
     commandsToSync,
     customerShell,
     isOfflineMode,
     reconciliationSignature,
     scopedStaff,
-    register.mutate,
-    replay.mutate,
+    sync.request,
     settings.data?.enabled,
   ])
 

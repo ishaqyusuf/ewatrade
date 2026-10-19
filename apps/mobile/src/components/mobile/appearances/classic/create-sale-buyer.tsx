@@ -111,7 +111,7 @@ function RailChoice({
         ) : (
           <NativeText
             maxFontSizeMultiplier={1.3}
-            style={{ color: fg, fontSize: 15, fontWeight: "800" }}
+            style={{ color: fg, fontSize: 16, fontWeight: "800" }}
           >
             {initials}
           </NativeText>
@@ -122,7 +122,7 @@ function RailChoice({
         numberOfLines={1}
         style={{
           color: on ? colors.primary : colors.foreground,
-          fontSize: 12,
+          fontSize: 16,
           fontWeight: on ? "800" : "700",
         }}
       >
@@ -163,7 +163,7 @@ export function ClassicSelectedBuyer({
             maxFontSizeMultiplier={1.3}
             style={{
               color: palette.lilacForeground,
-              fontSize: 13,
+              fontSize: 16,
               fontWeight: "800",
             }}
           >

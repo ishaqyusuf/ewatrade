@@ -30,7 +30,7 @@ export function CustomerAccountInvitationContent({
       <View className="items-start">
         <View className="w-full gap-1 border-y border-border py-3">
           <Text className="font-bold text-foreground">{invitation.title}</Text>
-          <Text className="text-sm leading-5 text-muted-foreground">
+          <Text className="text-sm [-rn-line-height:22] text-muted-foreground">
             {invitation.body}
           </Text>
         </View>
@@ -52,14 +52,14 @@ export function CustomerAccountInvitationContent({
           </View>
           <View className="min-w-0 flex-1">
             <View className="self-start rounded-full bg-muted px-2 py-1">
-              <Text className="text-[10px] font-extrabold uppercase tracking-wide text-muted-foreground">
+              <Text className="text-xs font-extrabold uppercase tracking-wide text-muted-foreground">
                 {presentation.optionalLabel}
               </Text>
             </View>
             <Text className="mt-2 text-base font-extrabold leading-6 text-foreground">
               {invitation.title}
             </Text>
-            <Text className="mt-1 text-sm leading-5 text-muted-foreground">
+            <Text className="mt-1 text-sm [-rn-line-height:22] text-muted-foreground">
               {invitation.body}
             </Text>
             <View
@@ -68,7 +68,7 @@ export function CustomerAccountInvitationContent({
               className="mt-3 flex-row items-start gap-2"
             >
               <Icon className="mt-0.5 size-xs text-primary" name="Check" />
-              <Text className="min-w-0 flex-1 text-xs leading-5 text-muted-foreground">
+              <Text className="min-w-0 flex-1 text-xs [-rn-line-height:22] text-muted-foreground">
                 {presentation.assurance}
               </Text>
             </View>
@@ -121,7 +121,7 @@ export function CustomerAccountInvitationContent({
             {invitationError ? (
               <Text
                 accessibilityLiveRegion="polite"
-                className="text-xs leading-5 text-destructive"
+                className="text-xs [-rn-line-height:22] text-destructive"
               >
                 {invitationError}
               </Text>

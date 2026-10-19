@@ -413,6 +413,7 @@ else if (name === 'bunx') {
   if (command === 'pull') { const stage=args[args.indexOf('--cwd')+1]; fs.writeFileSync(path.join(root,'prepared-project.json'),fs.readFileSync(path.join(stage,'.vercel/project.json'))); fs.writeFileSync(path.join(stage,'.env.production'),'FAKE_PULLED_SECRET'); }
   else if (command === 'deploy') console.log(JSON.stringify(responses.identity));
   else if (command === 'api' && args[2].startsWith('/v9/projects/')) console.log(JSON.stringify(responses.inventory));
+  else if (command === 'api' && args[2].startsWith('/v1/env?projectId=')) console.log(JSON.stringify({data:[],pagination:{next:null}}));
   else if (command === 'api' && args[2].startsWith('/v13/deployments/')) {
     if (responses.readFailure) { console.error('FAKE_RAW_CREDENTIAL_DIAGNOSTIC'); process.exit(7); }
     console.log(JSON.stringify(responses.raw));

@@ -1,5 +1,9 @@
 import { ClassicHelperRow } from "@/components/mobile/appearances/classic/catalog-helper-picker"
-import { FormField } from "@/components/mobile/form-field"
+import {
+  SearchFooterField,
+  SearchFooterScope,
+  SearchFooterSpacer,
+} from "@/components/mobile/search-footer-scope"
 import { Icon } from "@/components/ui/icon"
 import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
@@ -161,7 +165,7 @@ export function CatalogSetupHelperPicker({
           "--helper-bottom": insets.bottom + 24,
         }}
       >
-        <View className="flex-1 bg-background">
+        <SearchFooterScope className="flex-1 bg-background">
           <StatusBar
             backgroundColor={colors.background}
             style={colorScheme === "dark" ? "light" : "dark"}
@@ -175,7 +179,7 @@ export function CatalogSetupHelperPicker({
                 >
                   {kindLabel + " setups"}
                 </Text>
-                <Text className="text-sm [-rn-line-height:20] text-muted-foreground">
+                <Text className="text-sm [-rn-line-height:22] text-muted-foreground">
                   {businessProfile && personalized.length
                     ? businessProfile.title +
                       " starting points appear first. Review every detail before saving."
@@ -194,24 +198,19 @@ export function CatalogSetupHelperPicker({
             </View>
           </View>
           {showSearch ? (
-            <View className="border-b border-border px-4 py-3">
-              <FormField
-                accessibilityLabel={"Search " + kindLabel + " setups"}
-                autoCapitalize="none"
-                autoCorrect={false}
-                label="Search setups"
-                leadingIcon="Search"
-                onChangeText={setQuery}
-                maxLength={160}
-                placeholder={"Search " + kindLabel.toLowerCase() + " setups"}
-                value={query}
-                variant="search"
-              />
-            </View>
+            <SearchFooterField
+              localSearch
+              accessibilityLabel={"Search " + kindLabel + " setups"}
+              onChangeText={setQuery}
+              maxLength={160}
+              placeholder={"Search " + kindLabel.toLowerCase() + " setups"}
+              value={query}
+            />
           ) : null}
           <FlatList
             className="flex-1"
             contentContainerClassName="pb-[var(--helper-bottom)]"
+            ListFooterComponent={<SearchFooterSpacer />}
             data={rows}
             keyExtractor={(row) => row.key}
             keyboardDismissMode="interactive"
@@ -237,7 +236,7 @@ export function CatalogSetupHelperPicker({
                     <Icon name="Check" className="size-sm text-primary" />
                   ) : null}
                 </View>
-                <Text className="text-xs [-rn-line-height:18] text-muted-foreground">
+                <Text className="text-xs [-rn-line-height:22] text-muted-foreground">
                   {kind === "product"
                     ? "Enter the Product, units, and options yourself."
                     : "Enter the Service and work settings yourself."}
@@ -269,7 +268,7 @@ export function CatalogSetupHelperPicker({
               </Text>
             }
           />
-        </View>
+        </SearchFooterScope>
       </VariableContextProvider>
     </NativeModal>
   )

@@ -105,7 +105,19 @@ async function uploadBytes(path: string, buffer: ArrayBuffer, type: string) {
 export function useAssistantReceipts(
   conversationId: string,
   onTranscript: (text: string) => void = () => undefined,
+  resetKey: string | number = 0,
 ) {
+  const scope = useRef({ conversationId, resetKey, generation: 0 })
+  if (
+    scope.current.conversationId !== conversationId ||
+    scope.current.resetKey !== resetKey
+  )
+    scope.current = {
+      conversationId,
+      resetKey,
+      generation: scope.current.generation + 1,
+    }
+  const generation = scope.current.generation
   const onTranscriptRef = useRef(onTranscript)
   onTranscriptRef.current = onTranscript
   const trpc = useTRPC()
@@ -115,16 +127,31 @@ export function useAssistantReceipts(
   const remove = useMutation(
     trpc.setupAssistant.attachments.remove.mutationOptions(),
   )
-  const [items, setItemsState] = useState<AssistantReceipt[]>([])
+  type ScopedReceipt = AssistantReceipt & { generation: number }
+  const [storedItems, setItemsState] = useState<ScopedReceipt[]>([])
+  // A changed chat hides old files in this render, before effects run.
+  const items = storedItems.filter((item) => item.generation === generation)
   const itemsRef = useRef(items)
+  itemsRef.current = items
   const setItems = useCallback(
-    (updater: (current: AssistantReceipt[]) => AssistantReceipt[]) => {
-      itemsRef.current = updater(itemsRef.current)
+    (updater: (current: ScopedReceipt[]) => ScopedReceipt[]) => {
+      itemsRef.current = updater(
+        itemsRef.current.filter(
+          (item) => item.generation === scope.current.generation,
+        ),
+      )
       setItemsState(itemsRef.current)
     },
     [],
   )
+  // biome-ignore lint/correctness/useExhaustiveDependencies: release old items when the scope generation changes.
+  useEffect(() => {
+    // Release hidden previous-chat items as well as fencing their callbacks.
+    setItems((current) => current)
+  }, [generation, setItems])
   const mounted = useRef(true)
+  const current = () =>
+    mounted.current && scope.current.generation === generation
   useEffect(() => {
     mounted.current = true
     return () => {
@@ -132,7 +159,7 @@ export function useAssistantReceipts(
     }
   }, [])
   const update = (localId: string, patch: Partial<AssistantReceipt>) => {
-    if (mounted.current)
+    if (current())
       setItems((current) =>
         current.map((item) =>
           item.localId === localId ? { ...item, ...patch } : item,
@@ -191,6 +218,7 @@ export function useAssistantReceipts(
     },
     options: { audio?: boolean } = {},
   ) {
+    if (!current() || !conversationId) return
     const audio = options.audio === true
     const localId = Crypto.randomUUID()
     const failed = (error: string) =>
@@ -204,6 +232,7 @@ export function useAssistantReceipts(
         fileName: file.fileName,
         localId,
         phase: "uploading",
+        generation,
       },
     ])
     if (
@@ -215,6 +244,7 @@ export function useAssistantReceipts(
       return failed(refusal.TOO_LARGE ?? "")
     try {
       const read = await readOrderAttachmentFile(file.uri)
+      if (!current()) return
       const intent = await createIntent.mutateAsync({
         clientRequestId: localId,
         contentDigest: read.contentDigest,
@@ -223,6 +253,7 @@ export function useAssistantReceipts(
         fileName: file.fileName,
         sizeBytes: read.sizeBytes,
       })
+      if (!current()) return
       if (!intent.ok)
         return failed(refusal[intent.reason] ?? "This file can't be sent.")
       update(localId, { attachmentId: intent.attachment.id })
@@ -300,7 +331,10 @@ export function useAssistantReceipts(
         },
         { audio: true },
       ),
-    clear: () => setItems(() => []),
+    clear: () => {
+      scope.current.generation += 1
+      setItems(() => [])
+    },
     ready: items.flatMap((item) =>
       !item.audio && item.phase === "ready" && item.attachmentId
         ? [{ attachmentId: item.attachmentId, fileName: item.fileName }]

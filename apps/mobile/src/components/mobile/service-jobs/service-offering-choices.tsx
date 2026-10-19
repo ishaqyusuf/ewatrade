@@ -4,6 +4,7 @@ import {
 } from "@/components/mobile/appearances/classic/service-jobs"
 import { FormField } from "@/components/mobile/form-field"
 import { ListSkeleton } from "@/components/mobile/loading-skeletons"
+import { SearchFooterField } from "@/components/mobile/search-footer-scope"
 import { StatusBanner } from "@/components/mobile/status-banner"
 import { Text } from "@/components/ui/text"
 import { View } from "@/components/ui/view"
@@ -159,12 +160,10 @@ export function ServiceOfferingChoices({
           </View>
         </View>
       ) : null}
-      <FormField
-        variant="filled"
-        label="Find a service"
+      <SearchFooterField
+        localSearch
+        placeholder="Find a service"
         accessibilityLabel="Search available service offerings"
-        leadingIcon="Search"
-        autoCapitalize="none"
         maxLength={160}
         value={query}
         onChangeText={(value) => {

@@ -421,7 +421,7 @@ export function ClassicOrderDetailPrimaryAction({
       >
         <View className="flex-row items-center gap-3 pb-[var(--order-action-bottom)]">
           <View className="min-w-0 shrink">
-            <Text className="text-[11px] font-bold text-muted-foreground">
+            <Text className="text-xs font-bold text-muted-foreground">
               Balance due
             </Text>
             <Text className="text-[22px] font-extrabold tabular-nums tracking-tight text-foreground">
@@ -594,7 +594,7 @@ function OrderCustomerRow({
               maxFontSizeMultiplier={1.3}
               style={{
                 color: palette.lilacForeground,
-                fontSize: 14,
+                fontSize: 16,
                 fontWeight: "800",
               }}
             >
@@ -604,14 +604,14 @@ function OrderCustomerRow({
         </NativeView>
         <View className="min-w-0 flex-1">
           <Text
-            className="text-[15px] font-bold text-foreground"
+            className="text-base font-bold text-foreground"
             numberOfLines={1}
             selectable
           >
             {name}
           </Text>
           <Text
-            className="text-[13px] text-muted-foreground"
+            className="text-xs text-muted-foreground"
             numberOfLines={1}
             selectable
           >
@@ -686,7 +686,7 @@ function OrderOverviewSection({
           {title}
         </Text>
         {accessory ? (
-          <Text className="text-[13px] font-bold text-muted-foreground">
+          <Text className="text-xs font-bold text-muted-foreground">
             {accessory}
           </Text>
         ) : null}
@@ -810,7 +810,7 @@ function OrderLineRow({
         )}
       </NativeView>
       <View className="min-w-0 flex-1 gap-1">
-        <Text className="text-sm font-bold text-foreground" selectable>
+        <Text className="text-base font-bold text-foreground" selectable>
           {title}
         </Text>
         <Text className="text-xs text-muted-foreground" selectable>
@@ -850,7 +850,7 @@ function OrderLineRow({
               color: state.tint
                 ? palette[`${state.tint}Foreground`]
                 : colors.mutedForeground,
-              fontSize: 11,
+              fontSize: 16,
               fontWeight: "700",
               includeFontPadding: false,
             }}
@@ -906,7 +906,7 @@ function OrderLineRow({
             <NativeText
               style={{
                 color: colors.primaryForeground,
-                fontSize: 13,
+                fontSize: 16,
                 fontWeight: "800",
               }}
             >
@@ -947,7 +947,7 @@ function OrderTotalRow({
       <Text
         className={
           emphasized
-            ? "text-[15px] font-extrabold text-foreground"
+            ? "text-base font-extrabold text-foreground"
             : "text-sm text-muted-foreground"
         }
         selectable
@@ -963,7 +963,7 @@ function OrderTotalRow({
               : tone === "due"
                 ? palette.amberForeground
                 : colors.foreground,
-          fontSize: emphasized ? 16 : 14,
+          fontSize: 16,
           fontVariant: ["tabular-nums"],
           fontWeight: emphasized ? "800" : "700",
         }}
@@ -1006,10 +1006,13 @@ function OrderInfoRow({
         />
       </NativeView>
       <View className="min-w-0 flex-1">
-        <Text className="text-sm font-bold text-foreground" selectable>
+        <Text className="text-base font-bold text-foreground" selectable>
           {title}
         </Text>
-        <Text className="text-xs leading-5 text-muted-foreground" selectable>
+        <Text
+          className="text-xs [-rn-line-height:22] text-muted-foreground"
+          selectable
+        >
           {detail}
         </Text>
       </View>
@@ -1055,7 +1058,7 @@ function OrderActivityTimeline({
           <View className="min-w-0 flex-1 gap-0.5">
             <View className="flex-row items-baseline justify-between gap-3">
               <Text
-                className="min-w-0 flex-1 text-sm font-bold text-foreground"
+                className="min-w-0 flex-1 text-base font-bold text-foreground"
                 selectable
               >
                 {event.label}
@@ -1068,7 +1071,7 @@ function OrderActivityTimeline({
               </Text>
             </View>
             <Text
-              className="text-xs leading-5 text-muted-foreground"
+              className="text-xs [-rn-line-height:22] text-muted-foreground"
               selectable
             >
               {event.detail}

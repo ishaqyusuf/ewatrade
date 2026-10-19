@@ -1,4 +1,4 @@
-import { FormField } from "@/components/mobile/form-field"
+import { SearchFooterField } from "@/components/mobile/search-footer-scope"
 import { StatusBanner } from "@/components/mobile/status-banner"
 import { Text } from "@/components/ui/text"
 import { View } from "@/components/ui/view"
@@ -62,10 +62,9 @@ export function ServiceWorkLines({
     <View onLayout={(event) => onLayout(event.nativeEvent.layout.y)}>
       <Frame count={job.lines.length}>
         {job.lines.length > PAGE_SIZE || search ? (
-          <FormField
-            variant="filled"
-            label="Find work line"
-            leadingIcon="Search"
+          <SearchFooterField
+            localSearch
+            accessibilityLabel="Find work line"
             maxLength={160}
             value={search}
             onChangeText={(value) => {

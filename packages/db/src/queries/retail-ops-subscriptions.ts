@@ -578,6 +578,24 @@ function getRevokedOfflineDevices(
   })
 }
 
+/** Pure revocation check; callers still obtain their own current scoped proof. */
+export function assertRetailOpsOfflineDeviceNotRevoked(input: {
+  deviceId: string
+  deviceStatus: string | null
+  durableRevocation: boolean
+  tenantMetadata: unknown
+}) {
+  if (
+    input.durableRevocation ||
+    input.deviceStatus === DurableOfflineDeviceStatus.REVOKED ||
+    getRevokedOfflineDevices(input.tenantMetadata).some(
+      (device) => device.deviceId === input.deviceId.trim(),
+    )
+  )
+    throwRevokedOfflineDeviceError()
+  return null
+}
+
 function withOfflineDevices(
   metadata: unknown,
   devices: RetailOpsOfflineDeviceRegistration[],
@@ -2627,11 +2645,12 @@ async function assertRetailOpsOfflineDeviceCanSyncInDurable(
     }),
   ])
 
-  if (revocation || device?.status === DurableOfflineDeviceStatus.REVOKED) {
-    throwRevokedOfflineDeviceError()
-  }
-
-  return null
+  return assertRetailOpsOfflineDeviceNotRevoked({
+    deviceId,
+    deviceStatus: device?.status ?? null,
+    durableRevocation: Boolean(revocation),
+    tenantMetadata: null,
+  })
 }
 
 export async function registerRetailOpsOfflineDevice(
@@ -3015,13 +3034,10 @@ async function assertRetailOpsOfflineDeviceCanSyncInMetadata(
       metadata: true,
     },
   })
-  const revokedDevice = getRevokedOfflineDevices(tenant.metadata).find(
-    (device) => device.deviceId === deviceId,
-  )
-
-  if (revokedDevice) {
-    throwRevokedOfflineDeviceError()
-  }
-
-  return null
+  return assertRetailOpsOfflineDeviceNotRevoked({
+    deviceId,
+    deviceStatus: null,
+    durableRevocation: false,
+    tenantMetadata: tenant.metadata,
+  })
 }

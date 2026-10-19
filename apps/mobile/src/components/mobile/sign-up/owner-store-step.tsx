@@ -83,8 +83,8 @@ export function OwnerStoreStep({
     paddingHorizontal: 14,
   }
   const label = {
-    fontSize: 14,
-    lineHeight: 20,
+    fontSize: 16,
+    lineHeight: 22,
     fontWeight: "700" as const,
     color: colors.mutedForeground,
     marginBottom: 6,
@@ -120,8 +120,8 @@ export function OwnerStoreStep({
         <View style={{ flex: 1, minWidth: 0 }}>
           <Text
             style={{
-              fontSize: 14,
-              lineHeight: 20,
+              fontSize: 16,
+              lineHeight: 22,
               fontWeight: "700",
               color: colors.foreground,
             }}
@@ -130,8 +130,8 @@ export function OwnerStoreStep({
           </Text>
           <Text
             style={{
-              fontSize: 14,
-              lineHeight: 20,
+              fontSize: 16,
+              lineHeight: 22,
               color: colors.mutedForeground,
             }}
           >
@@ -146,8 +146,8 @@ export function OwnerStoreStep({
         >
           <Text
             style={{
-              fontSize: 14,
-              lineHeight: 20,
+              fontSize: 16,
+              lineHeight: 22,
               fontWeight: "800",
               color: colors.primary,
             }}
@@ -161,7 +161,7 @@ export function OwnerStoreStep({
         {!business.offerTouched ? (
           <Text
             style={{
-              fontSize: 14,
+              fontSize: 16,
               fontWeight: "500",
               color: colors.mutedForeground,
             }}
@@ -224,8 +224,8 @@ export function OwnerStoreStep({
                 <Text
                   style={{
                     marginTop: 2,
-                    fontSize: 14,
-                    lineHeight: 20,
+                    fontSize: 16,
+                    lineHeight: 22,
                     color: colors.mutedForeground,
                   }}
                 >
@@ -300,8 +300,8 @@ export function OwnerStoreStep({
             )}
             <Text
               style={{
-                fontSize: 14,
-                lineHeight: 20,
+                fontSize: 16,
+                lineHeight: 22,
                 fontWeight: "800",
                 color: colors.primary,
               }}
@@ -314,8 +314,8 @@ export function OwnerStoreStep({
           <Text
             style={{
               marginTop: 6,
-              fontSize: 14,
-              lineHeight: 20,
+              fontSize: 16,
+              lineHeight: 22,
               color: location.error
                 ? colors.destructive
                 : colors.mutedForeground,
@@ -435,8 +435,8 @@ export function OwnerStoreStep({
         <Text
           style={{
             marginTop: 6,
-            fontSize: 14,
-            lineHeight: 20,
+            fontSize: 16,
+            lineHeight: 22,
             color: colors.mutedForeground,
           }}
         >
@@ -464,8 +464,8 @@ export function OwnerStoreStep({
           />
           <Text
             style={{
-              fontSize: 14,
-              lineHeight: 20,
+              fontSize: 16,
+              lineHeight: 22,
               fontWeight: "700",
               color:
                 plan === "starter"
@@ -491,8 +491,8 @@ export function OwnerStoreStep({
         </Text>
         <Text
           style={{
-            fontSize: 14,
-            lineHeight: 20,
+            fontSize: 16,
+            lineHeight: 22,
             color:
               plan === "starter"
                 ? palette.amberForeground
@@ -523,7 +523,7 @@ export function OwnerStoreStep({
                 {number < 4 ? (
                   <Text
                     style={{
-                      fontSize: 14,
+                      fontSize: 16,
                       fontWeight: "800",
                       color: colors.mutedForeground,
                     }}

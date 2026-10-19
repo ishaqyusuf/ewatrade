@@ -516,7 +516,7 @@ export function OrdersScreen() {
             <ClassicOrdersSection>
               {dayHeaders.has(item.id) ? (
                 <View className="mt-3 -mb-1.5 flex-row flex-wrap items-baseline justify-between gap-2">
-                  <Text className="text-[15px] font-extrabold text-foreground">
+                  <Text className="text-base font-extrabold text-foreground">
                     {dayHeaders.get(item.id)?.label}
                   </Text>
                   <Text className="text-xs font-bold tabular-nums text-muted-foreground">

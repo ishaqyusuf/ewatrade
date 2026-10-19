@@ -1,17 +1,21 @@
+import { AttachmentLockSheet } from "@/components/mobile/attachment-lock-sheet"
 import { formatCommerceDateTime } from "@/components/mobile/commerce/commerce-model"
 import { StatusBanner } from "@/components/mobile/status-banner"
 import { Icon, type IconKeys } from "@/components/ui/icon"
+import { Modal as SheetModal, useModal } from "@/components/ui/modal"
 import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
 import { View } from "@/components/ui/view"
+import { useAttachmentEntitlement } from "@/hooks/use-attachment-entitlement"
 import { useColors } from "@/hooks/use-color"
 import { orderAttachmentSource } from "@/lib/order-attachment-upload"
 import { cn } from "@/lib/utils"
+import { trackMobileActivity } from "@/runtime/analytics-runtime"
+import { BottomSheetView } from "@gorhom/bottom-sheet"
 import { Image } from "expo-image"
 import { VideoView, useVideoPlayer } from "expo-video"
-import { useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import {
-  Alert,
   Modal,
   Text as NativeText,
   View as NativeView,
@@ -34,10 +38,116 @@ export function OrderNotesAndPhotos({
 }) {
   const colors = useColors()
   const model = useOrderActivity(orderId, isOffline)
+  // Free-plan lock: controls stay visible; media actions recheck the plan
+  // right before opening and explain the lock instead when it applies.
+  const access = useAttachmentEntitlement({
+    surface: "order",
+    track: trackMobileActivity,
+  })
+  const locked = access.entitlement.status === "locked"
+  const mediaDisabled =
+    isOffline ||
+    (!locked && (access.entitlement.status !== "allowed" || !model.canAddFiles))
   const [viewing, setViewing] = useState<{
     id: string
     video: boolean
   } | null>(null)
+  const videoSheet = useModal()
+  const videoSession = useRef<{
+    orderId: string
+    retired: boolean
+    attempt: typeof access.attempt
+    source: "camera" | "library" | null
+  } | null>(null)
+  const videoMounted = useRef(true)
+  const latestVideo = useRef({
+    access,
+    model,
+    mediaDisabled,
+    isOffline,
+    orderId,
+  })
+  latestVideo.current = { access, model, mediaDisabled, isOffline, orderId }
+
+  // Retire the chooser when its Order or available attachment controls change.
+  useEffect(() => {
+    if (
+      videoSession.current &&
+      !videoSession.current.retired &&
+      (videoSession.current.orderId !== orderId ||
+        access.entitlement.status !== "allowed" ||
+        mediaDisabled)
+    ) {
+      videoSession.current.retired = true
+      videoSession.current.source = null
+      videoSheet.dismiss()
+    }
+  }, [orderId, access.entitlement.status, mediaDisabled, videoSheet.dismiss])
+  useEffect(() => {
+    videoMounted.current = true
+    return () => {
+      videoMounted.current = false
+      videoSession.current = null
+      videoSheet.dismiss()
+    }
+  }, [videoSheet.dismiss])
+
+  function openVideoSheet() {
+    if (videoSession.current) return
+    videoSession.current = {
+      orderId,
+      retired: false,
+      attempt: access.attempt,
+      source: null,
+    }
+    videoSheet.present()
+  }
+
+  function chooseVideo(source: "camera" | "library") {
+    const session = videoSession.current
+    const live = latestVideo.current
+    if (
+      !session ||
+      session.retired ||
+      session.source ||
+      session.orderId !== live.orderId ||
+      live.mediaDisabled ||
+      live.isOffline
+    )
+      return
+    session.source = source
+    videoSheet.dismiss()
+  }
+
+  function finishVideoDismissal() {
+    const session = videoSession.current
+    videoSession.current = null
+    const live = latestVideo.current
+    if (
+      !videoMounted.current ||
+      !session?.source ||
+      session.retired ||
+      session.orderId !== live.orderId ||
+      live.isOffline ||
+      live.mediaDisabled ||
+      live.access.entitlement.status !== "allowed"
+    )
+      return
+    const source = session.source
+    // The native sheet is gone. Recheck using the opening render's attempt:
+    // its captured lifetime rejects session changes and offline round trips.
+    void session.attempt(() => {
+      const current = latestVideo.current
+      if (
+        !videoMounted.current ||
+        session.orderId !== current.orderId ||
+        current.isOffline ||
+        current.mediaDisabled
+      )
+        return
+      return current.model.pickVideo(source)
+    }, "video")
+  }
   const entries = [...model.entries].reverse()
   const canPost =
     !isOffline &&
@@ -68,7 +178,7 @@ export function OrderNotesAndPhotos({
             backgroundColor: colors.muted,
             borderRadius: 14,
             color: colors.foreground,
-            fontSize: 15,
+            fontSize: 16,
             minHeight: 64,
             paddingHorizontal: 14,
             paddingVertical: 12,
@@ -117,40 +227,38 @@ export function OrderNotesAndPhotos({
         ) : null}
         <View className="flex-row items-center gap-2">
           <ComposerButton
-            disabled={isOffline || !model.canAddFiles}
+            disabled={mediaDisabled}
             icon="Camera"
             label="Take photo"
-            onPress={() => void model.pickPhoto("camera")}
-          />
-          <ComposerButton
-            disabled={isOffline || !model.canAddFiles}
-            icon="Image"
-            label="Choose photo"
-            onPress={() => void model.pickPhoto("library")}
-          />
-          <ComposerButton
-            disabled={isOffline || !model.canAddFiles}
-            icon="Video"
-            label="Add video"
+            locked={locked}
             onPress={() =>
-              Alert.alert("Add a video", "Up to one minute.", [
-                {
-                  text: "Record video",
-                  onPress: () => void model.pickVideo("camera"),
-                },
-                {
-                  text: "Choose video",
-                  onPress: () => void model.pickVideo("library"),
-                },
-                { style: "cancel", text: "Cancel" },
-              ])
+              void access.attempt(() => model.pickPhoto("camera"), "camera")
             }
           />
           <ComposerButton
-            disabled={isOffline || !model.canAddFiles}
+            disabled={mediaDisabled}
+            icon="Image"
+            label="Choose photo"
+            locked={locked}
+            onPress={() =>
+              void access.attempt(() => model.pickPhoto("library"), "gallery")
+            }
+          />
+          <ComposerButton
+            disabled={mediaDisabled}
+            icon="Video"
+            label="Add video"
+            locked={locked}
+            onPress={() => void access.attempt(openVideoSheet, "video")}
+          />
+          <ComposerButton
+            disabled={mediaDisabled}
             icon="FileText"
             label="Attach PDF"
-            onPress={() => void model.pickDocument()}
+            locked={locked}
+            onPress={() =>
+              void access.attempt(() => model.pickDocument(), "document")
+            }
           />
           <View className="flex-1" />
           <Pressable
@@ -175,7 +283,7 @@ export function OrderNotesAndPhotos({
                 color: canPost
                   ? colors.primaryForeground
                   : colors.mutedForeground,
-                fontSize: 14,
+                fontSize: 16,
                 fontWeight: "800",
               }}
             >
@@ -205,7 +313,7 @@ export function OrderNotesAndPhotos({
               testID={`order-activity-entry-${index}`}
             >
               <View className="flex-row items-baseline justify-between gap-3">
-                <Text className="min-w-0 flex-1 text-sm font-bold text-foreground">
+                <Text className="min-w-0 flex-1 text-base font-bold text-foreground">
                   {entry.actor?.name ?? "Team member"}
                   {entry.source === "assistant" ? " · via assistant" : ""}
                 </Text>
@@ -214,7 +322,7 @@ export function OrderNotesAndPhotos({
                 </Text>
               </View>
               {entry.body ? (
-                <Text className="text-sm leading-5 text-foreground" selectable>
+                <Text className="text-base text-foreground" selectable>
                   {entry.body}
                 </Text>
               ) : null}
@@ -226,7 +334,7 @@ export function OrderNotesAndPhotos({
                         key={attachment.id}
                         className="size-16 items-center justify-center rounded-xl bg-muted"
                       >
-                        <Text className="text-[10px] text-muted-foreground">
+                        <Text className="text-xs text-muted-foreground">
                           Uploading
                         </Text>
                       </View>
@@ -270,7 +378,64 @@ export function OrderNotesAndPhotos({
           ))}
         </View>
       ) : null}
+      {!isOffline &&
+      (access.entitlement.status === "checking" ||
+        access.entitlement.status === "unknown") ? (
+        <Text className="text-xs text-muted-foreground">
+          {access.entitlement.status === "checking"
+            ? "Checking your plan… Photo, video and PDF options open once it's confirmed."
+            : "Couldn't confirm your plan, so photo, video and PDF options are off for now. Notes still save."}
+        </Text>
+      ) : null}
+      <SheetModal
+        accessibilityLabel="Add a video"
+        enableDynamicSizing
+        onDismiss={finishVideoDismissal}
+        ref={videoSheet.ref}
+        title="Add a video"
+      >
+        <BottomSheetView style={{ paddingHorizontal: 20, paddingBottom: 24 }}>
+          <Text className="pb-4 text-sm text-muted-foreground">
+            Up to one minute.
+          </Text>
+          {(
+            [
+              { source: "camera", label: "Record video", icon: "Camera" },
+              { source: "library", label: "Choose video", icon: "Image" },
+            ] as const
+          ).map(({ source, label, icon }) => (
+            <Pressable
+              accessibilityLabel={label}
+              accessibilityRole="button"
+              className="-mx-2 min-h-16 flex-row items-center gap-3 border-t border-border px-3 py-3 active:bg-accent"
+              haptic
+              key={source}
+              onPress={() => chooseVideo(source)}
+            >
+              <View className="size-10 items-center justify-center rounded-full bg-muted">
+                {/* Named sizes: IconImpl reads size-5 / size-4 as 5px / 4px. */}
+                <Icon className="size-base text-muted-foreground" name={icon} />
+              </View>
+              <Text className="flex-1 text-base font-extrabold text-foreground">
+                {label}
+              </Text>
+              <Icon
+                className="size-sm text-muted-foreground"
+                name="ChevronRight"
+              />
+            </Pressable>
+          ))}
+        </BottomSheetView>
+      </SheetModal>
       <AttachmentViewer viewing={viewing} onClose={() => setViewing(null)} />
+      <AttachmentLockSheet
+        canSeePlans={access.sheet?.canSeePlans ?? false}
+        onClose={access.closeSheet}
+        onPromptAction={access.promptAction}
+        onSeePlans={access.seePlans}
+        open={access.sheet !== null}
+        surface="order"
+      />
     </View>
   )
 }
@@ -279,24 +444,30 @@ function ComposerButton({
   disabled,
   icon,
   label,
+  locked = false,
   onPress,
 }: {
   disabled: boolean
   icon: IconKeys
   label: string
+  /** Free plan: shown with a lock; pressing explains instead of opening. */
+  locked?: boolean
   onPress: () => void
 }) {
   const colors = useColors()
   return (
     <Pressable
-      accessibilityLabel={label}
+      accessibilityHint={
+        locked ? "Explains why this isn't on the Free plan" : undefined
+      }
+      accessibilityLabel={locked ? `${label}, locked on the Free plan` : label}
       accessibilityRole="button"
       disabled={disabled}
       haptic
       onPress={onPress}
       style={{
         alignItems: "center",
-        backgroundColor: colors.accent,
+        backgroundColor: locked ? colors.muted : colors.accent,
         borderRadius: 12,
         height: 40,
         justifyContent: "center",
@@ -306,9 +477,20 @@ function ComposerButton({
     >
       <Icon
         className="size-[18px]"
-        color={colors.accentForeground}
+        color={locked ? colors.mutedForeground : colors.accentForeground}
         name={icon}
       />
+      {locked ? (
+        <View
+          pointerEvents="none"
+          className="absolute -right-1 -top-1 size-[18px] items-center justify-center rounded-full bg-tint-amber"
+        >
+          <Icon
+            className="size-[11px] text-tint-amber-foreground"
+            name="Lock"
+          />
+        </View>
+      ) : null}
     </Pressable>
   )
 }
@@ -317,7 +499,7 @@ function PdfTile({ name }: { name: string }) {
   return (
     <View className="h-16 w-28 justify-center gap-1 rounded-xl bg-muted px-2.5">
       <Icon className="size-[16px] text-muted-foreground" name="FileText" />
-      <Text className="text-[11px] text-foreground" numberOfLines={1}>
+      <Text className="text-xs text-foreground" numberOfLines={1}>
         {name}
       </Text>
     </View>

@@ -3,11 +3,29 @@ import type {
   GeneralReceipt,
 } from "@ewatrade/assistant/general/contracts"
 import {
+  type ReadRecordOrigin,
+  readRecordTargetSchema,
+} from "@ewatrade/assistant/general/read-record-target"
+import { serviceRequestReadTargetSchema } from "@ewatrade/assistant/general/service-request-read"
+import {
   generalSavedSnapshot,
   generalSnapshotSchema,
 } from "@ewatrade/assistant/general/snapshot"
 import type { StaffActivityRecordRef } from "@ewatrade/assistant/general/staff-activity-target"
 import { z } from "zod"
+import { nativeBusinessReportRoute } from "./native-business-report-target"
+import { nativeCashReadRoute } from "./native-cash-target"
+import {
+  nativeServiceOriginalRoute,
+  nativeServiceReceiptRoute,
+} from "./native-service-target"
+import { nativeStaffReadRoute } from "./native-staff-read-target"
+import { nativeStaffOriginalRoute } from "./native-staff-target"
+import {
+  nativeStockOriginalRoute,
+  nativeStockReceiptOriginal,
+} from "./native-stock-state"
+import { nativeStockAnswerRoute } from "./native-stock-target"
 export {
   type GeneralSnapshot,
   generalAnswers,
@@ -50,7 +68,40 @@ export function generalReceiptRoute(
   receipt: GeneralReceipt,
   activeStoreId?: string | null,
 ) {
+  const serviceOriginal = nativeServiceReceiptRoute(receipt)
+  if (serviceOriginal) return serviceOriginal
   switch (receipt.kind) {
+    case "finance_cash_count":
+      return nativeCashReadRoute({
+        kind: receipt.kind,
+        bookId: receipt.bookId,
+        countId: receipt.recordId,
+      })
+    case "staff_invitation":
+      return nativeStaffOriginalRoute({
+        kind: receipt.kind,
+        commandId: receipt.recordId,
+      })
+    case "staff_status":
+    case "staff_access":
+      return nativeStaffOriginalRoute({
+        kind: receipt.kind,
+        eventId: receipt.recordId,
+      })
+    case "finance_movement":
+      return receipt.bookId?.trim()
+        ? {
+            pathname: "/finance-movement/[entryId]" as const,
+            params: { entryId: receipt.recordId, bookId: receipt.bookId },
+          }
+        : null
+    case "finance_bill":
+      return receipt.bookId?.trim()
+        ? {
+            pathname: "/finance-expense/[billId]" as const,
+            params: { billId: receipt.recordId, bookId: receipt.bookId },
+          }
+        : null
     // Native settings screens show the current Store; another Store's
     // receipt has no exact native object here.
     case "store_receipt_settings":
@@ -89,13 +140,78 @@ export function generalReceiptRoute(
             params: { orderId: receipt.orderId },
           }
         : null
+    // Stock receipts carry no Store: the original opens only in the active
+    // Store, and never falls back to the related catalog item.
+    case "inventory":
+    case "stock_count":
+    case "stock_transfer":
+    case "inventory_closeout": {
+      const original = nativeStockReceiptOriginal(receipt)
+      return original ? nativeStockOriginalRoute(original) : null
+    }
     default:
       return null
   }
 }
 
 /** Where an answer card's Open goes natively, or null when it has none. */
-export function generalAnswerRoute(target: GeneralAnswer["target"]) {
+export function generalAnswerRoute(
+  target: GeneralAnswer["target"],
+  currentScope?: ReadRecordOrigin | null,
+) {
+  const request = serviceRequestReadTargetSchema.safeParse(target)
+  if (request.success) {
+    if (
+      !currentScope ||
+      currentScope.tenantId !== request.data.origin.tenantId ||
+      currentScope.storeId !== request.data.origin.storeId
+    )
+      return null
+    return nativeServiceOriginalRoute(request.data)
+  }
+  const record = readRecordTargetSchema.safeParse(target)
+  if (record.success) {
+    if (
+      !currentScope ||
+      currentScope.tenantId !== record.data.origin.tenantId ||
+      currentScope.storeId !== record.data.origin.storeId
+    )
+      return null
+    if (record.data.kind === "catalog_item")
+      return {
+        pathname: "/catalog-item/[catalogItemId]" as const,
+        params: { catalogItemId: record.data.catalogItemId },
+      }
+    if (record.data.kind === "order")
+      return {
+        pathname: "/order/[orderId]" as const,
+        params: { orderId: record.data.orderId },
+      }
+    // Customer directory/detail has no exact native screen; never substitute ledger.
+    return null
+  }
+  if (target?.kind === "business_report") {
+    const report = nativeBusinessReportRoute(target)
+    if (
+      !report ||
+      !currentScope ||
+      target.origin.tenantId !== currentScope.tenantId ||
+      (target.origin.storeId !== null &&
+        target.origin.storeId !== currentScope.storeId)
+    )
+      return null
+    return report
+  }
+  const stockOriginal = nativeStockAnswerRoute(target, currentScope)
+  if (stockOriginal) return stockOriginal
+  const cashRead = nativeCashReadRoute(target)
+  if (cashRead) return cashRead
+  const serviceOriginal = nativeServiceOriginalRoute(target)
+  if (serviceOriginal) return serviceOriginal
+  const staffRead = nativeStaffReadRoute(target)
+  if (staffRead) return staffRead
+  const staffOriginal = nativeStaffOriginalRoute(target)
+  if (staffOriginal) return staffOriginal
   if (target?.kind !== "staff_activity") return null
   return {
     pathname: "/staff-activity-modal" as const,

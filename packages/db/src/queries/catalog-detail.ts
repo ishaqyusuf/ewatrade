@@ -12,6 +12,35 @@ export type DetailCursor = { at: string; key: string }
 export type DetailPage = { limit: number; cursor?: DetailCursor | null }
 export type ActivityCategory = "all" | "catalog" | "orders" | "stock"
 
+/** Shared retained activity display; quantities remain exact and the read owns its bounds. */
+export function catalogStockActivityDescription(operation: {
+  reason: string | null
+  movements: Array<{
+    enteredQuantity: { toString(): string }
+    previousOnHandQuantity: { toString(): string }
+    resultingOnHandQuantity: { toString(): string }
+    enteredInventoryUnit: { name: string }
+    balanceSource: {
+      variant: { name: string }
+      inventoryUnit: { name: string }
+    }
+  }>
+}) {
+  return (
+    [
+      operation.movements
+        .map(
+          (movement) =>
+            `${movement.balanceSource.variant.name}: ${movement.enteredQuantity.toString()} ${movement.enteredInventoryUnit.name} · balance ${movement.previousOnHandQuantity.toString()} → ${movement.resultingOnHandQuantity.toString()} ${movement.balanceSource.inventoryUnit.name}`,
+        )
+        .join(" · "),
+      operation.reason,
+    ]
+      .filter(Boolean)
+      .join(" · ") || "Stock operation recorded"
+  )
+}
+
 // Each source applies the same total ordering before its bounded read.
 export function detailCursorWhere(
   source: string,
@@ -435,18 +464,7 @@ export async function listCatalogItemActivity(
                   ),
                 ),
               ),
-              description:
-                [
-                  operation.movements
-                    .map(
-                      (movement) =>
-                        `${movement.balanceSource.variant.name}: ${movement.enteredQuantity.toString()} ${movement.enteredInventoryUnit.name} · balance ${movement.previousOnHandQuantity.toString()} → ${movement.resultingOnHandQuantity.toString()} ${movement.balanceSource.inventoryUnit.name}`,
-                    )
-                    .join(" · "),
-                  operation.reason,
-                ]
-                  .filter(Boolean)
-                  .join(" · ") || "Stock operation recorded",
+              description: catalogStockActivityDescription(operation),
               actorUserId: operation.actorUserId,
               orderNumber: null,
               amountMinor: null,

@@ -70,6 +70,19 @@ export function validateCapabilityManifest(
       errors.push(`${label}: no canonical procedure`)
     if (!capability.clients.length) errors.push(`${label}: no client`)
     if (!capability.brain) errors.push(`${label}: no Brain link`)
+    if (capability.clients.includes("whatsapp") && !capability.whatsapp)
+      errors.push(`${label}: WhatsApp client needs explicit mode and rollout`)
+    if (capability.whatsapp && !capability.clients.includes("whatsapp"))
+      errors.push(`${label}: WhatsApp metadata needs its client`)
+    if (
+      capability.whatsapp &&
+      (!["native", "app_review"].includes(capability.whatsapp.mode) ||
+        !["planned", "source", "pilot", "enabled"].includes(
+          capability.whatsapp.rollout,
+        ))
+    )
+      errors.push(`${label}: invalid WhatsApp mode or rollout`)
+
     if (capability.mode === "write") {
       if (actions.has(capability.action))
         errors.push(`${label}: duplicate action ${capability.action}`)
@@ -204,7 +217,10 @@ track conversational evaluation separately from these source test links.
 | Capability | Example requests | Registered regression tests |
 |---|---|---|
 ${manifest
-  .map((entry) => `| \`${entry.id}\` | ${entry.examples.map(cell).join("<br>") || "None registered"} | ${entry.tests.map((path) => `[${cell(path)}](../../../../${path})`).join("<br>") || "None registered"} |`)
+  .map(
+    (entry) =>
+      `| \`${entry.id}\` | ${entry.examples.map(cell).join("<br>") || "None registered"} | ${entry.tests.map((path) => `[${cell(path)}](../../../../${path})`).join("<br>") || "None registered"} |`,
+  )
   .join("\n")}
 
 ## Planned merchant procedures by ticket

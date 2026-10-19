@@ -1,6 +1,9 @@
 import {
   generalActionSummary,
   generalMoney,
+  generalOrderActionSchema,
+  generalOrderDescriptionError,
+  orderCustomLine,
 } from "@ewatrade/assistant/general/contracts"
 import type {
   GeneralAction,
@@ -35,6 +38,7 @@ import {
   type OrderPaymentMethod,
 } from "@ewatrade/utils/finance-payment-methods"
 import { TRPCError } from "@trpc/server"
+import { z } from "zod"
 import { catalogCreateSimpleItemSchema } from "../schemas/catalog"
 import { customerCreateSchema } from "../schemas/customers"
 import {
@@ -54,6 +58,7 @@ import { closeoutCreate, closeoutFinalize } from "./general-closeout"
 import {
   type GeneralContext,
   assertGeneralAction,
+  assertGeneralCompositeDependency,
   requireGeneralScope,
 } from "./general-context"
 import { customerAllocationRelease } from "./general-customer-allocation-release"
@@ -141,6 +146,12 @@ type Action<Name extends GeneralActionName> = Extract<
 export type GeneralActionAdapter<A extends GeneralAction> = {
   /** Server-owned completion of a draft before it is bound and signed. */
   prepare?(ctx: GeneralTransactionContext, payload: A): Promise<A>
+  /** Fresh record-specific authority for a saved result, without rerunning its command or review. */
+  authorizeRecovery?(
+    ctx: GeneralTransactionContext,
+    payload: A,
+    receipt: GeneralReceipt,
+  ): Promise<void>
   /** Check targets and references. `lock` is set while confirming. */
   validate(
     ctx: GeneralTransactionContext,
@@ -528,8 +539,12 @@ export const orderCreate: GeneralActionAdapter<Action<"order_create">> = {
     )
     return { ...payload, lines }
   },
-  async validate(ctx, payload) {
+  async validate(ctx, payload, lock) {
     const scope = requireGeneralScope(ctx)
+    if (lock) {
+      const error = generalOrderDescriptionError(payload)
+      if (error) throw new TRPCError({ code: "BAD_REQUEST", message: error })
+    }
     if (
       payload.customerId &&
       !(await ctx.db.customer.findFirst({
@@ -596,8 +611,10 @@ export const orderCreate: GeneralActionAdapter<Action<"order_create">> = {
     const accountName = payload.initialPayment?.moneyAccountId
       ? await paymentAccountName(ctx, payload.initialPayment)
       : undefined
+    const descriptionError = generalOrderDescriptionError(payload)
     return {
       target: null,
+      ...(descriptionError ? { question: descriptionError } : {}),
       presentation: saleReviewPresentation({
         rows: review.rows,
         totalMinor: review.totalMinor,
@@ -642,50 +659,98 @@ export const orderCreate: GeneralActionAdapter<Action<"order_create">> = {
   unavailable:
     "Sale details changed or are unavailable. Edit quantities and save again, or use the sale form.",
   async execute(ctx, payload, key) {
-    const scope = requireGeneralScope(ctx)
-    const { action: _, ...input } = payload
     if (payload.initialPayment) assertGeneralAction(ctx, "payment_record")
-    const customer = payload.customerId
-      ? await ctx.db.customer.findFirst({
-          where: { id: payload.customerId, tenantId: scope.tenantId },
-          select: { name: true, phone: true, email: true },
-        })
-      : null
-    if (payload.customerId && !customer) throw conflict("Customer unavailable.")
-    const result = await createCommercialOrderInTransaction(ctx.db, {
-      ...commercialOrderCreateSchema.parse({
-        ...input,
-        ...(customer
-          ? {
-              customerName: customer.name,
-              customerPhone: customer.phone ?? undefined,
-              customerEmail: customer.email ?? undefined,
-            }
-          : {}),
-        ...(payload.initialPayment
-          ? {
-              initialPayment: {
-                ...payload.initialPayment,
-                clientPaymentId: `${key}:initial`,
-              },
-            }
-          : {}),
-        storeId: scope.storeId,
-        clientOrderId: key,
-        schemaVersion: 1,
-      }),
-      storeId: scope.storeId,
-      tenantId: scope.tenantId,
-      actorUserId: scope.userId,
-    })
-    return {
-      kind: "order",
-      recordId: result.id,
-      orderId: result.id,
-      title: "Order created",
-      detail: `${result.orderNumber} · total ${generalMoney(result.totalMinor, currency(ctx))} · received ${generalMoney(result.amountPaidMinor, currency(ctx))} · remaining ${generalMoney(result.balanceDueMinor, currency(ctx))}`,
-    }
+    return executeCanonicalOrder(ctx, payload, key)
   },
+}
+
+const simpleSaleOrderSchema = generalOrderActionSchema
+  .omit({ notes: true })
+  .extend({
+    lines: z.tuple([
+      orderCustomLine.extend({
+        custom: z.literal("quick_sale"),
+        description: z.string().trim().min(1).max(200),
+      }),
+    ]),
+    initialPayment: generalOrderActionSchema.shape.initialPayment
+      .unwrap()
+      .omit({ note: true })
+      .extend({
+        moneyAccountId: z.string().trim().min(1).max(128),
+        method: z.enum(["cash", "bank_transfer"]),
+      })
+      .strict(),
+  })
+  .strict()
+  .refine(
+    (payload) =>
+      payload.initialPayment.amountMinor <= payload.lines[0].amountMinor,
+  )
+
+/** Internal exact simple-sale composition, not an adapter/tool for standalone order payloads. */
+export async function executeSimpleSaleOrder(
+  ctx: GeneralTransactionContext,
+  input: unknown,
+  key: string,
+) {
+  assertGeneralCompositeDependency(ctx, "sale_record", "order_create")
+  assertGeneralCompositeDependency(ctx, "sale_record", "payment_record")
+  const parsed = simpleSaleOrderSchema.safeParse(input)
+  if (!parsed.success) throw conflict("Review the exact simple sale again.")
+  return executeCanonicalOrder(ctx, parsed.data, key)
+}
+
+async function executeCanonicalOrder(
+  ctx: GeneralTransactionContext,
+  payload: Action<"order_create">,
+  key: string,
+): Promise<GeneralReceipt> {
+  const scope = requireGeneralScope(ctx)
+  const descriptionError = generalOrderDescriptionError(payload)
+  if (descriptionError)
+    throw new TRPCError({ code: "BAD_REQUEST", message: descriptionError })
+  const { action: _, ...input } = payload
+  const customer = payload.customerId
+    ? await ctx.db.customer.findFirst({
+        where: { id: payload.customerId, tenantId: scope.tenantId },
+        select: { name: true, phone: true, email: true },
+      })
+    : null
+  if (payload.customerId && !customer) throw conflict("Customer unavailable.")
+  const result = await createCommercialOrderInTransaction(ctx.db, {
+    ...commercialOrderCreateSchema.parse({
+      ...input,
+      ...(customer
+        ? {
+            customerName: customer.name,
+            customerPhone: customer.phone ?? undefined,
+            customerEmail: customer.email ?? undefined,
+          }
+        : {}),
+      ...(payload.initialPayment
+        ? {
+            initialPayment: {
+              ...payload.initialPayment,
+              clientPaymentId: `${key}:initial`,
+            },
+          }
+        : {}),
+      storeId: scope.storeId,
+      clientOrderId: key,
+      schemaVersion: 1,
+    }),
+    storeId: scope.storeId,
+    tenantId: scope.tenantId,
+    actorUserId: scope.userId,
+  })
+  return {
+    kind: "order",
+    recordId: result.id,
+    orderId: result.id,
+    title: "Order created",
+    detail: `${result.orderNumber} · total ${generalMoney(result.totalMinor, currency(ctx))} · received ${generalMoney(result.amountPaidMinor, currency(ctx))} · remaining ${generalMoney(result.balanceDueMinor, currency(ctx))}`,
+  }
 }
 
 const paymentRecord: GeneralActionAdapter<Action<"payment_record">> = {

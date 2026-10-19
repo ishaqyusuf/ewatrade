@@ -1,0 +1,93 @@
+{
+  "version": 1,
+  "id": "2026-10-16-booking-safe-review-source",
+  "tickets": [
+    "G03",
+    "D05",
+    "H01",
+    "H02"
+  ],
+  "summary": "Complete safe all-eight booking review projection, encrypted complete paging, unregistered fresh GENERAL approval release and exact native stored Decimal completion; no public/client/rollout activation.",
+  "capabilities": [],
+  "procedures": [
+    {
+      "path": "serviceCommerce.holdBookingSlot",
+      "status": "planned",
+      "reason": "Internal signed draft/review/approval composition only; actual native command reused. Public GENERAL/client/channel registration and original acceptance remain open."
+    },
+    {
+      "path": "serviceCommerce.confirmBooking",
+      "status": "planned",
+      "reason": "Internal signed draft/review/approval composition only; actual native command reused. Public GENERAL/client/channel registration and original acceptance remain open."
+    },
+    {
+      "path": "serviceCommerce.reviseBooking",
+      "status": "planned",
+      "reason": "Internal signed draft/review/approval composition only; actual native command reused. Public GENERAL/client/channel registration and original acceptance remain open."
+    }
+  ],
+  "docs": [
+    {
+      "topic": "feature",
+      "path": ".brain/features/assistant-business-operations.md",
+      "status": "local_only"
+    },
+    {
+      "topic": "feature",
+      "path": ".brain/features/service-commerce.md",
+      "status": "local_only"
+    },
+    {
+      "topic": "api",
+      "path": ".brain/api/contracts.md",
+      "status": "local_only"
+    },
+    {
+      "topic": "permissions",
+      "path": ".brain/api/permissions.md",
+      "status": "local_only"
+    },
+    {
+      "topic": "decision",
+      "path": ".brain/decisions/2026-10-15-prepared-booking-and-media-review-boundaries.md",
+      "status": "local_only"
+    },
+    {
+      "topic": "schema",
+      "status": "not_applicable",
+      "note": "No schema, migration, database mutation or target selection. Existing persisted proposal/native tables only."
+    },
+    {
+      "topic": "capability",
+      "path": "packages/assistant/src/capabilities/COVERAGE.md",
+      "status": "updated",
+      "note": "H01 confirms current existing snapshot; no capability/procedure/client/rollout row promoted or changed by this slice."
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "test",
+      "path": "packages/db/src/queries/commercial-order-completion-decimal.test.ts",
+      "executed": true,
+      "result": "Before-fix actual Decimal exponent reproduction; six regression tests plus existing completion cohort32/170 pass; independent review passes. Shared plain user parser unchanged."
+    },
+    {
+      "kind": "test",
+      "path": "apps/api/src/assistant/general-booking-review-transport.test.ts",
+      "executed": true,
+      "result": "Actual all-eight full parent/projection,2001work,scope/target drift,AEAD tamper/key/AAD/expiry,complete byte/hash assembly;13/218 pass root and independent."
+    },
+    {
+      "kind": "test",
+      "path": "apps/api/src/assistant/general-booking-review.test.ts",
+      "executed": true,
+      "result": "Actual fresh Session/account/legal/Store guards; exact revision and ordered completion before localV1 release;10/132 pass independently. Linked callback test is not linked principal auth proof."
+    },
+    {
+      "kind": "review",
+      "path": "packages/assistant/evaluations/runs/2026-10-16-booking-safe-review-source.md",
+      "executed": true,
+      "result": "Root157/2300 across13files pass; complete safe projection16/368 independently passes. Source-only; HTTP/SQL/device/runtime/client/public integration remains open."
+    }
+  ]
+}

@@ -1,0 +1,48 @@
+{
+  "version": 1,
+  "id": "2026-10-15-assistant-private-data-export",
+  "tickets": ["H01", "H02"],
+  "summary": "Canonical own-account private assistant data download across web/native: exact fresh persisted real Session, privacy/source rechecks after storage I/O, explicit private field projection, globally bounded reads, immutable retained original bytes and explicit exclusions/missing originals. No server artifact, provider send, deletion intake reuse or rollout. Actual guarded QA export passes with owned bytes-first cleanup.",
+  "noAssistantImpact": "Own-account data access is excluded from merchant and model tools. Neither linked WhatsApp identity, Tenant Owner/admin, internal key nor QA delegation grants export authority. The existing WhatsApp OTP sender and disabled channel gates are unchanged. Private export does not implement Meta/device erasure or approve full W42/privacy release.",
+  "procedures": [],
+  "docs": [
+    {
+      "topic": "feature",
+      "path": ".brain/features/assistant-data-export.md",
+      "status": "local_only"
+    },
+    {
+      "topic": "api",
+      "path": ".brain/api/endpoints.md",
+      "status": "local_only"
+    },
+    {
+      "topic": "api",
+      "path": ".brain/api/contracts.md",
+      "status": "local_only"
+    },
+    {
+      "topic": "permissions",
+      "path": ".brain/api/permissions.md",
+      "status": "local_only"
+    },
+    {
+      "topic": "schema",
+      "path": ".brain/database/relationships.md",
+      "status": "local_only"
+    },
+    {
+      "topic": "decision",
+      "path": ".brain/decisions/2026-10-15-assistant-own-account-export.md",
+      "status": "local_only"
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "run",
+      "path": ".brain/qa/2026-10-15-whatsapp-remaining-acceptance-audit.md",
+      "executed": true,
+      "result": "Canonical query/projection6/259, real HTTP-boundary3/33, fresh persisted Session/privacy2/19 and native transfer5/33 pass without provider calls. Actual local QA default query/storage/HTTP and persisted real Session exports exact owned three-purpose history and local original bytes, excludes foreign scope, refuses mixed actor/source edits/PROCESSING privacy/revoked Session:1/37,0fail56.08s with strict bytes-first cleanup. Only request-context adapter is injected from actual fixture.browserContext; no HTTP cookie parsing/device claim. Source reviews clear; scoped source checks and native generated-route/transport typing reconciliation recorded separately. No real-user export, provider/DDL/activation or full privacy/deletion acceptance."
+    }
+  ]
+}

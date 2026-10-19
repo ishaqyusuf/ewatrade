@@ -23,6 +23,7 @@ function excluded(owner: CoverageOwner, reason: string, paths: string[]) {
 
 excluded("assistant", "Assistant transport or a dedicated assistant flow.", [
   "assistant.*",
+  "assistantChannels.*",
   "setupAssistant.*",
   "productAssistant.*",
 ])
@@ -154,6 +155,11 @@ excluded("sales", "Unbounded legacy list; the assistant reads bounded pages.", [
 // Inventory
 formOnly(
   "inventory",
+  "Exact protected stock-editor context and Store-eligible custody choices; no standalone model read tool or confirmation authority. Native stock editors and originals remain in A04 scope.",
+  ["inventory.balanceSource", "inventory.custodyAssignees"],
+)
+formOnly(
+  "inventory",
   "Legacy full response; assistant uses balancePage and compatibleTotalsPage, preserving complete source-group totals with response pagination.",
   ["inventory.balanceReport"],
 )
@@ -239,6 +245,7 @@ planned("staff", "S01", ["retailOps.staff"])
 planned("staff", "S02", ["retailOps.inviteStaff"])
 
 // Service commerce, communications and regulated workflows
+planned("commerce", "G03", ["serviceAssistantBookings.availability"])
 planned("commerce", "G03", [
   "serviceAccess.*",
   "serviceCommerce.*Booking",

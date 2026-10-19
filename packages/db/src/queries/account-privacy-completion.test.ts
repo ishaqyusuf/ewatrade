@@ -1638,6 +1638,18 @@ describe("account privacy completion assessment", () => {
 })
 
 test.each([
+  "assistantWhatsAppIdentities",
+  "assistantWhatsAppLinks",
+  "assistantWhatsAppGrants",
+  "assistantWhatsAppBindings",
+  "assistantWhatsAppInbox",
+  "assistantWhatsAppOutbox",
+  "assistantWhatsAppAttempts",
+  "assistantWhatsAppReceipts",
+  "assistantWhatsAppUsageBuckets",
+  "assistantWhatsAppSelections",
+  "assistantWhatsAppActionReviews",
+  "assistantWhatsAppWorkflowReviews",
   "assistantConversation",
   "assistantRun",
   "assistantAttachment",

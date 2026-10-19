@@ -1,0 +1,97 @@
+{
+  "version": 1,
+  "date": "2026-10-15",
+  "scope": "Prepared nonclinical Quote approval and protected live staff booking availability; full phases4\u201312 retained",
+  "sourceSnapshot": {
+    "packages/db/src/queries/commerce-quote-reviewed-decision.ts": "4a5e0d044009e461dd51159379e5669e5e55652c17074c4a1531b4e6fd39ed4c",
+    "packages/db/src/queries/commerce-quote-reviewed-decision.test.ts": "cef0b4ed35593f5e7128ce194e67779db8c1f10f264167c60737d828baba06a2",
+    "packages/db/src/queries/test-helpers/commerce-quote-reviewed-decision.ts": "e590ed971ea34cbf823d992156e6efbbd4115f12815b5082a63df23ee825c794",
+    "packages/db/src/queries/test-helpers/commerce-quote-decision.ts": "36fa22b78443852a3f63b382303aa8d32db461f41f88f291815d5eafa082ffb7",
+    "packages/db/src/queries/service-commerce-bookings/staff-availability.ts": "0c0aa84eabf5a59c5a64d48554017c45b548ce54a8f2c494784b4d8fa1d26446",
+    "packages/db/src/queries/service-commerce-bookings/staff-availability.test.ts": "dd5a4721ac98030fc6e688d342b62c1e5231f77e1a5617359ddd8a2ca0a15d33",
+    "packages/db/src/queries/test-helpers/booking-availability.ts": "4c06ee5e4a0cb3d191adc99d96f786357d75d400368d2a92a6bb0791f4b1ad76",
+    "packages/db/src/queries/service-commerce-bookings/lifecycle.ts": "2edbf40564eff09b0432334268acb877f5f7bf88349a39591b0a42f53e007a0a",
+    "packages/db/src/queries/service-commerce-bookings/settings.ts": "3d7cccdcf4170bfec0b6442c7bf4c15f3f7f523f5da749c0cb29f4c64844195c",
+    "packages/db/src/queries/service-commerce-bookings/shared.ts": "8673fbc0c33d3d4b3ee302afa02c7c041a73184a590c46f106218ec328effb18",
+    "packages/db/src/queries/service-commerce-bookings.test.ts": "dfddcb3580234a0fef2b4a71bd39bd418831a5fb359662956450c988b4328123",
+    "packages/service-commerce/src/bookings.ts": "b831cb3aaa92512c4e38aa2f9bf802012d5b35ed68ca548d9232d025db131435",
+    "packages/service-commerce/src/booking.test.ts": "1d70fdc6756ee468a755cfebec806fc1528cd577bee1fac52273fbc799354dd5",
+    "packages/db/src/queries/service-booking-read.test.ts": "8139a669f232a2173c2facd6d472b54b3eea20165965fbcb7b4512c05bfbc554",
+    "apps/api/src/schemas/assistant-booking-availability.ts": "40a509740bd62ff4888815e8074f0ab8a113644e24189778e54c16b62a9743fb",
+    "apps/api/src/trpc/routers/service-assistant-bookings.ts": "5d712d6bfefd62becab996ef5e213dbac3df78fb184b0d11416aeb25581650d1",
+    "apps/api/src/trpc/routers/_app.ts": "5ada3a5cb62ec45517fd9d5dae28854f012e3685d2cf1b8f2f6728af5f37bf55",
+    "packages/assistant/evaluations/fixtures/booking-availability-router.fixture.ts": "04af18fbdda2e2ef5e94671de3810bb1a23cf4069c2e5ff7083564c4e1c3e42f",
+    "packages/db/src/queries/commerce-quotes.ts": "40a619649a409f42bf7c2aa47cdad9ffca523a5d6bf74e35ee0b5362ee31adb7",
+    "packages/db/src/queries/commerce-quote-decision-review.ts": "d932d142bb34a2c23aa2bb0a3235b7350d4f26319b9a635693059475bee60761",
+    "packages/db/package.json": "50d3d859511ac0ae4891b7c1d59c23adad777bb3cef9c255ecd2d8fcf2e4cf50",
+    "apps/api/src/utils/staff-procedure-policy.ts": "7008ac5279480a4c406bf67d2ba111921f8c78cff4c7e0669cd867a67741f815",
+    "apps/api/src/utils/staff-procedure-policy.test.ts": "b6e435400be5783d372a4fb015ab6d39f431b8923b6285bf07e7b721d82c27da",
+    "packages/assistant/src/capabilities/inventory.ts": "60104139775a6fd416081eb8914ed798806ed800b7e6f5b7fe6e7efb00dfe8a0",
+    "apps/mobile/src/components/mobile/assistant/general-model.test.ts": "c60183fbfaa152a7cfc83e217a966e11d80992f2cf1b3110fdbbb4cbae5a57db",
+    "apps/mobile/src/components/mobile/assistant/native-parity.test.ts": "3c1672980545fa38e21f3039dbbda985ca08af4cebd5d2f351811b2efde2d7be"
+  },
+  "verification": {
+    "quoteAggregate": {
+      "passed": 97,
+      "assertions": 947,
+      "failed": 0,
+      "log": "/private/tmp/assistant-quote-approval-current-aggregate.log"
+    },
+    "bookingOwner": {
+      "passed": 55,
+      "assertions": 294,
+      "independentOverlapping": {
+        "passed": 49,
+        "assertions": 253,
+        "addToOwnerTotal": false
+      }
+    },
+    "apiFixture": {
+      "passed": 10,
+      "assertions": 154,
+      "isolation": "separate process; inert transport/persistence"
+    },
+    "staffPolicy": {
+      "passed": 10,
+      "assertions": 55
+    },
+    "stockRoutes": {
+      "passed": 17,
+      "assertions": 134
+    },
+    "compiler": {
+      "exitCode": 2,
+      "diagnostics": 78,
+      "ownedDiagnostics": 0,
+      "initialOwnedDiagnosticsRepaired": 24,
+      "log": "/private/tmp/assistant-quote-approval-booking-types-final.log"
+    },
+    "biome": {
+      "ownedPaths": 11,
+      "pass": true,
+      "legacyHelperBaselineFindings": 5
+    },
+    "coverage": "regenerated; planned G03 exact query",
+    "impact": {
+      "result": "pass",
+      "records": 37,
+      "wholeMixedCheckoutChangedCapabilityRows": 126,
+      "wholeMixedCheckoutChangedProcedureRows": 11,
+      "log": "/private/tmp/assistant-quote-booking-impact.log"
+    }
+  },
+  "remaining": [
+    "Full shared GENERAL/WhatsApp inspect/outside preflight/final composition",
+    "Full Quote transport/history/client review",
+    "Caller-owned hold/confirm/all6 booking lifecycle and clients",
+    "Disposition and generic Service/Inquiry fulfillment domain/storage",
+    "Actual saved/persisted/concurrent/device acceptance"
+  ],
+  "acceptance": {
+    "accepted": 13,
+    "total": 45,
+    "percentage": 28.9,
+    "promoted": false
+  },
+  "gates": "G01/Paystack/D04/E05/G04/S05/C04 unchanged; no DB/schema/provider/runtime/send/deploy/commit/push"
+}

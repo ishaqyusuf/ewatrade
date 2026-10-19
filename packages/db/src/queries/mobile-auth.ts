@@ -15,6 +15,7 @@ import {
   currentEffectiveLegalPublication,
   resolveLegalSignupChoice,
 } from "@ewatrade/utils/legal-approval"
+import type { Prisma } from "../../generated/prisma/client"
 import { AccountAgeBand, MembershipRole } from "../../generated/prisma/enums"
 import { recordLegalAcceptance } from "./account-privacy"
 import { isAccountPrivacyAccessBlocked } from "./account-privacy-access"
@@ -55,6 +56,24 @@ export type MobileAccessProfile = {
   setupPending?: boolean
   hasBusinessAccess: boolean
   hasCustomerHistory: boolean
+}
+
+export async function isMobilePasswordEmailVerified(
+  db: DbClient,
+  email: string,
+) {
+  const user = await db.user.findUnique({
+    where: { email },
+    select: { emailVerified: true },
+  })
+  return user?.emailVerified === true
+}
+
+export async function hasMobileAuthMembership(
+  db: DbClient,
+  where: Prisma.MembershipWhereInput,
+) {
+  return Boolean(await db.membership.findFirst({ where, select: { id: true } }))
 }
 
 export type MobileAuthSessionResult = {

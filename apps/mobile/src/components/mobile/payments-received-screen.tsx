@@ -239,11 +239,11 @@ export function PaymentsReceivedScreen() {
                 >
                   <Text
                     accessibilityRole="header"
-                    className="text-[11px] font-extrabold uppercase tracking-[1.2px] text-muted-foreground"
+                    className="text-xs font-extrabold uppercase tracking-[1.2px] text-muted-foreground"
                   >
                     {dayHeading(item.recordedAt)}
                   </Text>
-                  <Text className="text-[12.5px] font-extrabold tabular-nums text-foreground">
+                  <Text className="text-xs font-extrabold tabular-nums text-foreground">
                     {dayTotals.get(day)}
                   </Text>
                 </View>
@@ -260,7 +260,7 @@ export function PaymentsReceivedScreen() {
                   title={item.order.customerName || "Walk-in customer"}
                   meta={`${item.order.orderNumber} · ${label(item.method)}${item.recordedBy?.name ? ` · by ${item.recordedBy.name}` : ""}`}
                   status={
-                    <Text className="text-[11px] tabular-nums text-muted-foreground">
+                    <Text className="text-xs tabular-nums text-muted-foreground">
                       {paymentTime(item.recordedAt)}
                     </Text>
                   }

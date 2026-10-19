@@ -1,7 +1,9 @@
 import { createHash } from "node:crypto"
 import {
+  type GeneralReviewPresentation,
   type SimpleTransfer,
   generalMoney,
+  generalReviewPresentationSchema,
   normalizedSaleName,
   similarSaleNames,
   simpleTransferStep,
@@ -14,6 +16,7 @@ import {
   recordFinanceMoneyMovementInTransaction,
 } from "@ewatrade/db/queries"
 import { TRPCError } from "@trpc/server"
+import { z } from "zod"
 import { assertFinanceAccess } from "../trpc/finance-procedure"
 import type {
   GeneralActionAdapter,
@@ -21,7 +24,7 @@ import type {
 } from "./general-actions"
 import { requireGeneralScope } from "./general-context"
 import { proposalDigest } from "./proposal-security"
-const refuse = (message: string): never => {
+function refuse(message: string): never {
   throw new TRPCError({ code: "BAD_REQUEST", message })
 }
 export async function simpleTransferOptions(ctx: GeneralTransactionContext) {
@@ -165,6 +168,69 @@ export async function validateTransferAttachmentConversation(
   if (files.some((f) => f.conversationId !== conversationId))
     refuse("Use an image sent in this chat.")
 }
+/** Complete display facts from this adapter's authorized current review, without clipping. */
+export function simpleTransferReviewPresentation(
+  input: SimpleTransfer,
+  facts: {
+    businessName: string
+    storeName: string
+    currencyCode: string
+    timezone: string
+    from?: { name: string; purpose: string }
+    to?: { name: string; purpose: string }
+  },
+): GeneralReviewPresentation | undefined {
+  if (
+    simpleTransferStep(input) !== "review" ||
+    !input.effectiveAt ||
+    !facts.timezone ||
+    !facts.from ||
+    (!facts.to && !input.newToAccount)
+  )
+    return undefined
+  const presentation: GeneralReviewPresentation = {
+    summary: {
+      party: "Money transfer",
+      context: "Record a transfer already made between business accounts.",
+      amount: generalMoney(input.amountMinor ?? 0, facts.currencyCode),
+      amountLabel: "Transferred",
+    },
+    facts: [
+      { label: "Currency", value: facts.currencyCode },
+      { label: "Effective at (UTC)", value: input.effectiveAt },
+      { label: "Book timezone", value: facts.timezone },
+    ],
+    sections: [
+      {
+        title: "Transfer details",
+        rows: [
+          {
+            label: "Book",
+            value: `${facts.businessName} · ${facts.currencyCode}`,
+            detail: "Existing Book",
+          },
+          { label: "Store", value: facts.storeName },
+          {
+            label: "Source account",
+            value: facts.from.name,
+            detail: `Existing ${facts.from.purpose} account`,
+          },
+          {
+            label: "Destination account",
+            value: facts.to?.name ?? input.newToAccount?.name ?? "",
+            detail: facts.to
+              ? `Existing ${facts.to.purpose} account`
+              : `Create ${input.newToAccount?.kind} account when recorded`,
+          },
+        ],
+        note: `Note: ${input.note || "Money moved"}`,
+      },
+    ],
+    note: "Bookkeeping only: records an already-made transfer. Recording this does not send money between bank accounts.",
+  }
+  const parsed = generalReviewPresentationSchema.safeParse(presentation)
+  return parsed.success ? parsed.data : undefined
+}
 export const simpleTransferRecord = {
   stale: "The accounts or posting period changed. Review again.",
   unavailable: "Check the amount and accounts, then review again.",
@@ -224,6 +290,11 @@ export const simpleTransferRecord = {
   async review(ctx, input) {
     const info = await current(ctx, input)
     const step = simpleTransferStep(input)
+    const book = await ctx.db.financeBook.findFirst({
+      where: { id: info.options.bookId, tenantId: info.scope.tenantId },
+      select: { timezone: true },
+    })
+    if (!book) refuse("Review the Finance Book again.")
     const name = step === "from" ? input.fromAccountName : input.toAccountName
     const all = info.options.accounts.filter(
       (a) => step !== "to" || a.id !== input.fromMoneyAccountId,
@@ -254,9 +325,19 @@ export const simpleTransferRecord = {
         input.amountMinor === undefined
           ? "Amount pending"
           : `${generalMoney(input.amountMinor, info.options.currencyCode)} from ${input.fromAccountName ?? "an account"} to ${input.toAccountName ?? "an account"}${input.newToAccount ? " (new account)" : ""}`,
-        "Today · by you",
+        input.effectiveAt
+          ? `${input.effectiveAt} (UTC) · ${book.timezone} · recorded by you`
+          : "Posting date pending",
         ...(input.note ? [input.note] : []),
       ],
+      presentation: simpleTransferReviewPresentation(input, {
+        businessName: ctx.tenantContext.tenant.name,
+        storeName: ctx.tenantContext.activeStore?.name ?? "",
+        currencyCode: info.options.currencyCode,
+        timezone: book.timezone,
+        from: info.from,
+        to: info.to,
+      }),
     }
   },
   async execute(ctx, input, key) {
@@ -292,9 +373,10 @@ export const simpleTransferRecord = {
       ...movement(ctx, input, toId),
       clientCommandId: key,
     })
+    const receipt = z.object({ entryId: z.string().min(1) }).parse(result)
     return {
       kind: "finance_movement" as const,
-      recordId: result.entryId,
+      recordId: receipt.entryId,
       bookId: info.options.bookId,
       title: "Transfer recorded",
       detail: `${generalMoney(input.amountMinor ?? 0, info.options.currencyCode)} from ${input.fromAccountName} to ${input.toAccountName}.`,

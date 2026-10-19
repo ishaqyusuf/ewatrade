@@ -1,9 +1,14 @@
 import { canOperatePos, normalizeRole } from "@ewatrade/auth/roles"
-import { OfflineDevicePlatform, OfflineDeviceStatus } from "@ewatrade/db/enums"
+import { OfflineDevicePlatform } from "@ewatrade/db/enums"
 import {
   CatalogError,
+  RetailOpsOfflineDeviceError,
+  correctBlankQuickSale,
+  decideSuspendedOfflineCommand,
   getOfflineOperationsPolicy,
   listOfflineConflictReviews,
+  recoverSuspendedOfflineCommands,
+  registerOwnedOfflineDevice,
   replayOfflineCommands,
   reviewOfflineConflict,
   updateOfflineOperationsPolicy,
@@ -12,12 +17,19 @@ import { TRPCError } from "@trpc/server"
 
 import {
   offlineListConflictsSchema,
+  offlineQuickSaleCorrectionSchema,
+  offlineRecoveryDecisionSchema,
+  offlineRecoverySchema,
   offlineRegisterDeviceSchema,
   offlineReplaySchema,
   offlineReviewConflictSchema,
   offlineSettingsUpdateSchema,
 } from "../../schemas/offline"
-import { createTRPCRouter, protectedProcedure } from "../init"
+import {
+  createTRPCRouter,
+  eligibleAccountProcedure,
+  protectedProcedure,
+} from "../init"
 
 function roleCapabilities(role: string) {
   const normalized = normalizeRole(role)
@@ -122,6 +134,118 @@ function platform(value: "android" | "ios" | "unknown" | "web") {
 }
 
 export const offlineRouter = createTRPCRouter({
+  correctBlankQuickSale: protectedProcedure
+    .input(offlineQuickSaleCorrectionSchema)
+    .mutation(async ({ ctx, input }) => {
+      assertCanUseOffline(ctx.tenantContext.membership.role)
+      const storeId = resolveStoreId(
+        ctx.tenantContext.stores,
+        ctx.tenantContext.activeStore,
+        input.storeId,
+      )
+      if (ctx.qaSessionScope && storeId !== ctx.qaSessionScope.storeId)
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "This QA session is limited to its selected Store.",
+        })
+      try {
+        return await correctBlankQuickSale(ctx.db, {
+          ...input,
+          storeId,
+          actorUserId: ctx.session.user.id,
+          tenantId: ctx.tenantContext.tenant.id,
+        })
+      } catch (error) {
+        if (error instanceof RetailOpsOfflineDeviceError)
+          throw new TRPCError({
+            code: "FORBIDDEN",
+            message: error.message,
+            cause: error,
+          })
+        if (error instanceof CatalogError)
+          throw new TRPCError({
+            code:
+              error.code === "IDEMPOTENCY_MISMATCH"
+                ? "CONFLICT"
+                : error.code === "INVALID_ORDER"
+                  ? "BAD_REQUEST"
+                  : "FORBIDDEN",
+            message: error.message,
+            cause: error,
+          })
+        throw error
+      }
+    }),
+
+  recover: eligibleAccountProcedure
+    .input(offlineRecoverySchema)
+    .mutation(async ({ ctx, input }) => {
+      const origins = await ctx.db.offlineDevice.findMany({
+        where: {
+          deviceId: input.deviceId,
+          registeredByUserId: ctx.session.user.id,
+          storeId: input.storeId,
+          status: "ACTIVE",
+        },
+        select: { tenantId: true },
+        take: 2,
+      })
+      const origin = origins.length === 1 ? origins[0] : null
+      if (!origin)
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message:
+            "Keep these saved records and ask your owner about recovery.",
+        })
+      try {
+        return await recoverSuspendedOfflineCommands(ctx.db, {
+          ...input,
+          actorUserId: ctx.session.user.id,
+          sessionId: ctx.session.session.id,
+          tenantId: origin.tenantId,
+        })
+      } catch (error) {
+        if (
+          error instanceof CatalogError ||
+          error instanceof RetailOpsOfflineDeviceError
+        )
+          throw new TRPCError({
+            code:
+              error instanceof CatalogError &&
+              error.code === "IDEMPOTENCY_MISMATCH"
+                ? "CONFLICT"
+                : "FORBIDDEN",
+            message: error.message,
+            cause: error,
+          })
+        throw error
+      }
+    }),
+
+  decideRecovery: protectedProcedure
+    .input(offlineRecoveryDecisionSchema)
+    .mutation(async ({ ctx, input }) => {
+      assertCanManageOfflineSettings(ctx.tenantContext.membership.role)
+      try {
+        return await decideSuspendedOfflineCommand(ctx.db, {
+          ...input,
+          actorUserId: ctx.session.user.id,
+          tenantId: ctx.tenantContext.tenant.id,
+        })
+      } catch (error) {
+        if (
+          error instanceof CatalogError ||
+          error instanceof RetailOpsOfflineDeviceError
+        )
+          throw new TRPCError({
+            code: "FORBIDDEN",
+            message: error.message,
+            cause: error,
+          })
+        throw error
+      }
+    }),
+
   settings: protectedProcedure.query(async ({ ctx }) => {
     assertCanUseOffline(ctx.tenantContext.membership.role)
     const policy = await getOfflineOperationsPolicy(ctx.db, {
@@ -167,44 +291,26 @@ export const offlineRouter = createTRPCRouter({
         ctx.tenantContext.activeStore,
         input.storeId,
       )
-      const existing = await ctx.db.offlineDevice.findUnique({
-        where: {
-          tenantId_deviceId: {
-            deviceId: input.deviceId,
-            tenantId: ctx.tenantContext.tenant.id,
-          },
-        },
-      })
-      if (existing?.status === OfflineDeviceStatus.REVOKED) {
-        throw new TRPCError({
-          code: "FORBIDDEN",
-          message: "This offline device has been revoked.",
-        })
-      }
-      return ctx.db.offlineDevice.upsert({
-        create: {
-          appVersion: input.appVersion,
-          deviceId: input.deviceId,
-          deviceName: input.deviceName,
+      try {
+        return await registerOwnedOfflineDevice(ctx.db, {
+          ...input,
+          actorUserId: ctx.session.user.id,
           platform: platform(input.platform),
-          registeredByUserId: ctx.session.user.id,
           storeId,
           tenantId: ctx.tenantContext.tenant.id,
-        },
-        update: {
-          appVersion: input.appVersion,
-          deviceName: input.deviceName,
-          lastSeenAt: new Date(),
-          platform: platform(input.platform),
-          storeId,
-        },
-        where: {
-          tenantId_deviceId: {
-            deviceId: input.deviceId,
-            tenantId: ctx.tenantContext.tenant.id,
-          },
-        },
-      })
+        })
+      } catch (error) {
+        if (
+          error instanceof CatalogError ||
+          error instanceof RetailOpsOfflineDeviceError
+        )
+          throw new TRPCError({
+            code: "FORBIDDEN",
+            message: error.message,
+            cause: error,
+          })
+        throw error
+      }
     }),
 
   replay: protectedProcedure
@@ -240,6 +346,12 @@ export const offlineRouter = createTRPCRouter({
           tenantId: ctx.tenantContext.tenant.id,
         })
       } catch (error) {
+        if (error instanceof RetailOpsOfflineDeviceError)
+          throw new TRPCError({
+            code: "FORBIDDEN",
+            message: error.message,
+            cause: error,
+          })
         if (error instanceof CatalogError) {
           throw new TRPCError({ code: "BAD_REQUEST", message: error.message })
         }

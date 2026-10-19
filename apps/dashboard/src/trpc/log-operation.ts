@@ -6,6 +6,7 @@ export function shouldLogDashboardTrpcOperation(
   return (
     typeof options.path === "string" &&
     !options.path.startsWith("customerMessages.") &&
+    !options.path.startsWith("assistantChannels.") &&
     (environment === "development" ||
       (options.direction === "down" && options.result instanceof Error))
   )

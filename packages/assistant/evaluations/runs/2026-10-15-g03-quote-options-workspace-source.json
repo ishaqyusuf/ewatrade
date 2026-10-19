@@ -1,0 +1,128 @@
+{
+  "observedAt": "2026-10-15T16:28:37Z",
+  "status": "source_frozen_final_repair_independent_root_review_pending_not_full_quote_action",
+  "parentAcceptance": { "accepted": 13, "total": 45, "changed": false },
+  "sourceObservations": {
+    "packages/db/src/queries/commerce-quotes.ts": "d72e3f3375c689736dee9b189aa555af3b1b582ceeaf92b542add9cce4f93abb",
+    "packages/db/src/queries/commerce-quotes.test.ts": "6c24dd9d2c5533bd6d3a4b1bc1b453195587510b932da89cb8d1a299377a5a6b",
+    "packages/db/src/queries/commerce-quote-issue-options.test.ts": "29abd26344c1fae7df2fc4bd32f8231c67fedb72293bdc54aec3b920bbe237b1",
+    "packages/db/src/queries/service-commerce-access.ts": "0f3a74d951397112379bb7c6f5066969e91071210db3e84316f46950f85e95ed",
+    "packages/db/src/queries/service-commerce-access.test.ts": "828d53fd4daa1b5c9f708142bb5d513bf427203b59868290c443c41c60a909b8",
+    "packages/db/src/queries/service-commerce-policy.ts": "51cc0b21a2d6226aaf1145ab7a13e066756a0b9de723c2510f6eb925e15e8c98",
+    "packages/db/src/queries/service-commerce-policy.test.ts": "79bfb903512bcc878e2770f91571a0a1321f45bf0b13c2aa2c990506686c85ed"
+  },
+  "exports": [
+    "ReadCommerceQuoteIssueOptionsInput",
+    "QuoteIssueSourcePreparationFact",
+    "readCommerceQuoteIssueOptionsInTransaction",
+    "getServiceCommerceWorkspaceAccessReadOnly",
+    "evaluateServiceCommercePolicyBatchReadOnlyInTransaction"
+  ],
+  "checks": [
+    {
+      "owner": "native_staff_invitation",
+      "scope": "actual Quote options reader/writer and existing issuance invariants with inert tx delegates",
+      "command": "env -u APP_ENV -u DEV_PROFILE STORE_CONVERSATION_TEXT_SAFETY_PROVIDER=qa-fixture EWATRADE_DATABASE_URL=postgresql://fixture:fixture@127.0.0.1:1/assistant_source_tests bun --env-file=/dev/null test ./packages/db/src/queries/commerce-quote-issue-options.test.ts ./packages/db/src/queries/commerce-quotes.test.ts",
+      "passed": 44,
+      "failed": 0,
+      "assertions": 295,
+      "newOptions": { "passed": 13, "assertions": 196 },
+      "existingIssuance": { "passed": 31, "assertions": 99 },
+      "evidenceLocation": "current task tool output; no separate log created"
+    },
+    {
+      "owner": "native_staff_access",
+      "scope": "actual workspace/policy pure versus audited calculation under inert mutation-denying transports",
+      "command": "EWATRADE_DATABASE_URL=postgresql://fixture:fixture@127.0.0.1:1/assistant_source_tests bun --env-file=/dev/null test packages/db/src/queries/service-commerce-access.test.ts packages/db/src/queries/service-commerce-policy.test.ts",
+      "passed": 27,
+      "failed": 0,
+      "assertions": 242,
+      "attribution": "owner reported; packager verified hashes and inspected source/tests, did not rerun",
+      "printedFileSections": 4,
+      "invokedPaths": 2
+    },
+    {
+      "scope": "options changed code",
+      "result": "three paths scoped Biome clean; tracked source/test diff whitespace clean"
+    },
+    {
+      "scope": "workspace owner changed code",
+      "result": "four paths scoped Biome clean, owner reported"
+    },
+    {
+      "scope": "compiler and root final independent review",
+      "result": "pending for these final repaired source hashes"
+    }
+  ],
+  "supersedingRepair": {
+    "initialOptionsSourceHash": "bd83def4b883167ec3bfcf0120a71eed5d756d489f12645503f0a2d3678c7442",
+    "finding": "prepareLines-only supplied Service source ID ownership was bypassed by exact replay and pending approval release",
+    "failedBefore": {
+      "passed": 0,
+      "failed": 2,
+      "scope": "targeted actual replay and pending approval functions"
+    },
+    "repair": "scoped distinct supplied-ID validation shared through Service validateLines; no supplied ID means no added ownership query",
+    "passedAfter": "included in final44/295; valid exact replay remains unpriced; invalid pending approval follows existing superseded path",
+    "existingTestChanges": "two scoped serviceRequestLine.count stand-ins added for fresh Service replay/approval ownership, with prior coverage retained",
+    "preserved": [
+      "omitted same-Offering fallback including duplicate last-entry behavior",
+      "owned explicit substitutions",
+      "duplicate supplied IDs",
+      "exact native replay/hash/proof/token behavior"
+    ],
+    "notClaimed": [
+      "unique provenance for omitted duplicate fallback",
+      "new validation on completed approved/rejected replay",
+      "all public/customer historical read lifecycle paths"
+    ]
+  },
+  "optionsLimits": {
+    "options": 20,
+    "linesPerOption": 100,
+    "moneyStorageMaxMinor": 2147483647,
+    "suggestionEvaluatedUniqueOfferingLimit": 100,
+    "suggestionCoverageMeaning": "first100 unique canonical helper inputs, including evaluated unknown suggestions; later IDs explicitly unevaluated",
+    "evaluationClock": "catalogPriceEvaluationAt is not a stable semantic digest fact"
+  },
+  "notDelivered": [
+    "full protected actor/Store/source-operation authority",
+    "original current Quote/version and Terms review",
+    "overall immutable target digest and linked-effect review",
+    "strict GENERAL issue/revise contracts and signed confirmation integration",
+    "server operation identity allocation",
+    "outside-transaction preflight across every confirmation entrypoint",
+    "safe receipt/exact version original and complete clients",
+    "full G03 or parent acceptance"
+  ],
+  "workspaceAuthorityLimit": "Existing workspace semantics retained; caller must compose fresh Tenant.isActive and staff Store access, plus source-specific authority and Terms/currentQuote/release checks.",
+  "transitiveScreeningLimit": "Prepared issuer proof repair has separate evidence; existing approval/no-proof paths are not made provider-free by this packet.",
+  "unproven": [
+    "real PostgreSQL isolation/rollback/concurrency/collation",
+    "HTTP",
+    "full2000-line transaction timing",
+    "real moderation/provider delivery",
+    "signed saved recovery",
+    "native device journeys",
+    "second vertical",
+    "release"
+  ],
+  "gates": {
+    "G01": "human_paused",
+    "Paystack": "paused",
+    "D04": "12conditional_cases_unscheduled_existing_authorization_fingerprint",
+    "E05": "activation_restart_rejected",
+    "G04": "deferred_sections_unchanged",
+    "S05": "retry_unscheduled",
+    "otherSignedTargetClientGates": "unchanged"
+  },
+  "actionsNotPerformed": [
+    "actual DB",
+    "schema/migration/push",
+    "provider/model",
+    "runtime activation/restart",
+    "browser/device",
+    "deployment"
+  ],
+  "brainAndImpact": "root_owned_reconciliation_pending; packaging edits only new report pair"
+}

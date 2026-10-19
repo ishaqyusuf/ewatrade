@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto"
 import type { Prisma } from "@ewatrade/db"
 import { getFinanceCashCountInTransaction } from "@ewatrade/db/queries"
+import { requireBrowserIdentity } from "./channel-principal"
 import {
   assertG02FactsUnchanged,
   changedG02FactTables,
@@ -81,7 +82,7 @@ export async function verifyG02NativeReadsRollback(
   })
   await db.session.findFirstOrThrow({
     where: {
-      id: ctx.session.session.id,
+      id: requireBrowserIdentity(ctx.session).session.id,
       userId: actorUserId,
       expiresAt: { gt: new Date() },
     },
@@ -160,7 +161,7 @@ export async function verifyG02NativeReadsRollback(
             return nativeTransaction(async (tx) => {
               await tx.session.findFirstOrThrow({
                 where: {
-                  id: ctx.session.session.id,
+                  id: requireBrowserIdentity(ctx.session).session.id,
                   userId: actorUserId,
                   expiresAt: { gt: new Date() },
                 },

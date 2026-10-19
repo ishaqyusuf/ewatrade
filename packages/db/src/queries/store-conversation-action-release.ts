@@ -13,7 +13,11 @@ import {
 import { assertAccountStoreConversationTermsAccepted } from "./store-conversation-account-terms"
 import { appendFirstReleasedQuoteAccountInvitationInTransaction } from "./store-conversation-accounts"
 import { scheduleUnreadStoreConversationNotificationInTransaction } from "./store-conversation-notifications/intents"
-import { assertStoreConversationTextScreened } from "./store-conversation-text-safety"
+import {
+  type ScreenedStoreConversationTexts,
+  assertPreparedStoreConversationTexts,
+  assertStoreConversationTextScreened,
+} from "./store-conversation-text-safety"
 import {
   StoreConversationError,
   lockStoreConversation,
@@ -111,11 +115,14 @@ export async function appendReleasedQuoteActionMessagesInTransaction(
     source: { id: string; kind: StoreConversationRequestKind }
     storeId: string
     tenantId: string
+    screenedTexts?: ScreenedStoreConversationTexts
   },
   publication: NonNullable<
     ReturnType<typeof currentEffectiveLegalPublication>
   > | null = currentEffectiveLegalPublication(),
 ): Promise<ReleasedQuoteActionMessageReceipt[]> {
+  if (input.screenedTexts !== undefined)
+    assertPreparedStoreConversationTexts(input.screenedTexts, [])
   const linked = await tx.storeConversationRequestLink.findMany({
     distinct: ["conversationId"],
     select: { conversationId: true },
@@ -198,8 +205,14 @@ export async function appendReleasedQuoteActionMessagesInTransaction(
     options: version.options,
     version: version.version,
   })
-  for (const option of snapshot.options)
-    await assertStoreConversationTextScreened(option.label)
+  if (input.screenedTexts !== undefined)
+    assertPreparedStoreConversationTexts(
+      input.screenedTexts,
+      snapshot.options.map((option) => option.label),
+    )
+  else
+    for (const option of snapshot.options)
+      await assertStoreConversationTextScreened(option.label)
   const payloadHash = storeConversationPayloadHash({
     quoteSnapshot: snapshot,
     quoteVersionId: version.id,

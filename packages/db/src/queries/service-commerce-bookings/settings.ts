@@ -19,6 +19,7 @@ import {
   ServiceCommerceBookingError,
   assertBookingMember,
   bookingPayloadHash,
+  projectServiceCommerceBookingAvailabilityRules,
   translateBookingTransactionError,
 } from "./shared"
 
@@ -110,27 +111,6 @@ async function loadConfiguration(
   const rules = config.store.serviceBookingAvailabilityRules.filter((rule) =>
     resourceIds.has(rule.resourceId),
   )
-  const rulesByClientId = new Map<
-    string,
-    {
-      daysOfWeek: number[]
-      endLocalTime: string
-      id: string
-      startLocalTime: string
-    }
-  >()
-  for (const rule of rules) {
-    const current = rulesByClientId.get(rule.clientRuleId) ?? {
-      daysOfWeek: [],
-      endLocalTime: `${String(Math.floor(rule.endMinute / 60)).padStart(2, "0")}:${String(rule.endMinute % 60).padStart(2, "0")}`,
-      id: rule.clientRuleId,
-      startLocalTime: `${String(Math.floor(rule.startMinute / 60)).padStart(2, "0")}:${String(rule.startMinute % 60).padStart(2, "0")}`,
-    }
-    if (!current.daysOfWeek.includes(rule.dayOfWeek)) {
-      current.daysOfWeek.push(rule.dayOfWeek)
-    }
-    rulesByClientId.set(rule.clientRuleId, current)
-  }
   const exceptionsByClientId = new Map<
     string,
     (typeof config.store.serviceBookingAvailabilityExceptions)[number]
@@ -144,10 +124,7 @@ async function loadConfiguration(
     }
   }
   return {
-    availabilityRules: [...rulesByClientId.values()].map((rule) => ({
-      ...rule,
-      daysOfWeek: rule.daysOfWeek.sort((left, right) => left - right),
-    })),
+    availabilityRules: projectServiceCommerceBookingAvailabilityRules(rules),
     bookingHorizonMinutes: config.bookingHorizonMinutes,
     cancellationPolicy: {
       allowedUntilMinutesBeforeStart: config.cancellationWindowMinutes,

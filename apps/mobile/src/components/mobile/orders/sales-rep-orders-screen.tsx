@@ -1,8 +1,11 @@
 import { ActionButton } from "@/components/mobile/action-button"
 import { CommerceOrderRow } from "@/components/mobile/commerce"
-import { FormField } from "@/components/mobile/form-field"
 import { QueryRefreshControl } from "@/components/mobile/query-refresh-control"
 import { MobileScreen } from "@/components/mobile/screen"
+import {
+  SearchFooterField,
+  SearchFooterSpacer,
+} from "@/components/mobile/search-footer-scope"
 import { Text } from "@/components/ui/text"
 import { View } from "@/components/ui/view"
 import { useOrderVisibility } from "@/hooks/use-order-visibility"
@@ -68,10 +71,9 @@ export function SalesRepOrdersScreen() {
                 </ActionButton>
               </View>
             ) : null}
-            <FormField
-              label="Search your sales"
+            <SearchFooterField
+              accessibilityLabel="Search your sales"
               placeholder="Search your sales"
-              variant="search"
               value={search}
               onChangeText={setSearch}
             />
@@ -109,15 +111,18 @@ export function SalesRepOrdersScreen() {
           </Text>
         }
         ListFooterComponent={
-          orders.hasNextPage ? (
-            <ActionButton
-              variant="outline"
-              isLoading={orders.isFetchingNextPage}
-              onPress={() => void orders.fetchNextPage()}
-            >
-              Load more sales
-            </ActionButton>
-          ) : null
+          <>
+            {orders.hasNextPage ? (
+              <ActionButton
+                variant="outline"
+                isLoading={orders.isFetchingNextPage}
+                onPress={() => void orders.fetchNextPage()}
+              >
+                Load more sales
+              </ActionButton>
+            ) : null}
+            <SearchFooterSpacer />
+          </>
         }
       />
     </MobileScreen>

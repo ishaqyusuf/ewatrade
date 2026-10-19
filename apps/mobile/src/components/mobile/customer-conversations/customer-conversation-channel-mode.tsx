@@ -33,14 +33,14 @@ export function CustomerConversationChannelMode({
         </View>
         <View className="min-w-0 flex-1">
           <View className="mb-1 self-start rounded-full bg-primary/10 px-2 py-1">
-            <Text className="text-[10px] font-bold uppercase tracking-wide text-primary">
+            <Text className="text-xs font-bold uppercase tracking-wide text-primary">
               {presentation.badge}
             </Text>
           </View>
           <Text className="text-base font-bold text-foreground">
             {presentation.title}
           </Text>
-          <Text className="mt-1 text-xs leading-4 text-muted-foreground">
+          <Text className="mt-1 text-xs [-rn-line-height:22] text-muted-foreground">
             {presentation.detail}
           </Text>
         </View>

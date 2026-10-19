@@ -1,0 +1,78 @@
+{
+  "date": "2026-10-15",
+  "scope": "Native G01 integration source only; mixed shared checkout, no commit",
+  "files": [
+    {
+      "path": "apps/mobile/src/app/business-report-modal.tsx",
+      "sha256": "a0fdaf592a7b8fac2e1d6ab681e86405fc93dd9e97b27a80b07dc5850f12f60e"
+    },
+    {
+      "path": "apps/mobile/src/app/_layout.tsx",
+      "sha256": "a01826482b8ebd0f60c17e823e4d7f0f0f5789c443bd91aa8af43fb86759721e"
+    },
+    {
+      "path": "apps/mobile/src/components/mobile/assistant/general-model.ts",
+      "sha256": "66452b2404298b4a97c28a441271c9b6fb8765a3695b7d06cbcef465f22436c2"
+    },
+    {
+      "path": "apps/mobile/src/components/mobile/assistant/native-business-report-target.ts",
+      "sha256": "ddfde477df7da7301973cd62f85d6195b70dac5926c574a26ed0931a21055702"
+    },
+    {
+      "path": "apps/mobile/src/components/mobile/assistant/native-business-report-target.test.ts",
+      "sha256": "b2ae8f2999fd1acb59906be83df468a1788f8c91d306d42b8723dee752c98cde"
+    },
+    {
+      "path": "apps/mobile/src/components/mobile/assistant/native-business-report-screen.tsx",
+      "sha256": "368aa5dcee4729366ce9f0b898e8ee1a1a48b9c2eadf155e64a93b798ddd8dd8"
+    },
+    {
+      "path": "apps/mobile/src/components/mobile/assistant/native-business-report-content.tsx",
+      "sha256": "56ac2a61ce19e692e4ce9c3e4ec0fbb1085cff2e053a1d9bdf30efbb9a2874c9"
+    },
+    {
+      "path": "packages/assistant/evaluations/fixtures/native-business-report-screen.fixture.tsx",
+      "sha256": "5d92bc89764bafed427967768b261f7fb8c91cd1378901f0ed3ceee50748b89d"
+    },
+    {
+      "path": "packages/assistant/evaluations/fixtures/native-business-report-content.fixture.tsx",
+      "sha256": "6b58fc9778eb10dda3e834121ef15441ce7de322be28261b5ef6b97bbf92dee9"
+    },
+    {
+      "path": "packages/assistant/src/capabilities/manifest.ts",
+      "sha256": "1a8275226064feac0dffe0abd79212d5ac57c7dcdf7bed0782e7cdfa60d56d14"
+    },
+    {
+      "path": "packages/assistant/src/capabilities/COVERAGE.md",
+      "sha256": "746f6be14756e93247fba7549596f214664ce8754a8833cea0701e14a6a2e40f"
+    }
+  ],
+  "checks": {
+    "focused": "50 pass/238 expectations across4 top-level files,27 isolated children",
+    "screen": "15/206",
+    "content": "14/158",
+    "helper": "8/138",
+    "biome": "9 files clean",
+    "compiler": {
+      "diagnostics": 90,
+      "ownedErrors": [],
+      "limitation": "Imported unrelated errors remain; whole project is not type clean"
+    },
+    "coverage": "regenerated and final --check passed 14:35 UTC",
+    "impact": "final whole-checkout fails12 foreign read-client rows; six report rows explicitly covered"
+  },
+  "parentAcceptance": {
+    "accepted": 13,
+    "total": 45,
+    "nativeWrites": 38,
+    "nativeReads": 63,
+    "fullWriteGaps": 36
+  },
+  "gates": "G01/Paystack/D04/E05/G04/S05/C04 unchanged; no execution activation",
+  "hub": {
+    "catalog": "https://workshop.localhost/ewatrade/assistant/review",
+    "revision": "26c76689-0172-402d-ad30-453fdaeeadde",
+    "htmlSha256": "b88705b34229dc3a0261d81c4a457b88315d88bb010aa6bd87b482509054e1f2",
+    "verified": "Independent browser verified report intro/selected-note/gap: source integrated, native/connected evidence still missing; screenshot artifacts/assistant-ui-review-inventory/reports-source-integrated.png"
+  }
+}

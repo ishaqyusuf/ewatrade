@@ -140,9 +140,9 @@ function fixture() {
       ]) {
         if (sql.includes(`"${name}"`)) {
           state.locks.push(name)
-          return name === "CommercialOrder" || name === "ServiceJob"
-            ? [{ id: name === "ServiceJob" ? "job" : "order" }]
-            : []
+          return name === "CommercialOrder"
+            ? [order]
+            : name === "ServiceJob" ? [{ id: "job" }] : []
         }
       }
       return []

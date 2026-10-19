@@ -12,6 +12,21 @@ Append through the CLI; preserve history and never impersonate the other agent.
 Messages coordinate existing work and do not authorize deployment, provider actions
 or changes to human approval boundaries.
 
+## Mobile search presentation
+
+Always reuse the exact floating search footer from the mobile Global Search
+screen: `BottomSearchFooter` and its `FloatingSearchField`. Do not create inline
+search inputs, copy its appearance, or use a separate `FormField` search variant.
+For search state inside a form, use `SearchFooterField` within the owning
+`SearchFooterScope`, with `SearchFooterSpacer` in the scroll content. Sheets keep
+their existing keyboard owner; Gorhom footer adapters reuse `BottomSearchFooter`
+with `keyboardOwner="sheet"` and `position="relative"`.
+
+Reuse the existing shared-component verification. Do not add or repeat device,
+large-text, viewport or per-screen test passes simply to adopt this component.
+For the 18 October 2026 migration, the owner explicitly requested no additional
+tests after implementation; finish with a source review and documentation.
+
 ## Brain Protocol
 
 `.brain/` is the project memory and source of truth for architecture, product state, tasks, and implementation context. Treat Brain documentation as part of the definition of done for every meaningful change.

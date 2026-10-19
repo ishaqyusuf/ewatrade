@@ -20,7 +20,7 @@ function fixture() {
     $queryRaw: async (strings: TemplateStringsArray, ...values: unknown[]) => {
       const sql = strings.join("?")
       if (sql.includes('FROM "FinanceBook"')) { locks.push("book"); return [] }
-      if (sql.includes('FROM "CommercialOrder"')) { locks.push("order"); return [{ id: "order" }] }
+      if (sql.includes('FROM "CommercialOrder"')) { locks.push("order"); return [order] }
       locks.push(`stock:${values[0]}`)
       return [{ id: values[0] }]
     },

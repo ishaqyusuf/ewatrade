@@ -7,6 +7,7 @@ import {
   transferFactsFromText,
 } from "@ewatrade/assistant/general/contracts"
 import { generalProposalWhere } from "@ewatrade/db/assistant-general"
+import { isLinkedAssistantIdentity } from "./channel-principal"
 import type { GeneralContext } from "./general-context"
 import { assertGeneralAction, requireGeneralScope } from "./general-context"
 import {
@@ -16,6 +17,7 @@ import {
   generalProposalForApp,
 } from "./general-proposals"
 import { simpleTransferOptions } from "./general-simple-transfer"
+import { proposalDigest } from "./proposal-security"
 type Message = { id: string; role: string; parts: unknown }
 export async function handleSimpleTransferChat(
   ctx: GeneralContext,
@@ -29,6 +31,14 @@ export async function handleSimpleTransferChat(
   },
 ) {
   const text = input.choice?.text ?? input.text.trim()
+  // A channel confirmation must identify an exact delivered review outside this draft helper.
+  if (
+    isLinkedAssistantIdentity(ctx.session) &&
+    /^(?:proceed|confirm|cancel|yes|go ahead|done|save(?: it| sale)?)[.!]*$/i.test(
+      text.trim(),
+    )
+  )
+    return null
   if (!text && !input.imageIds.length) return null
   const scope = requireGeneralScope(ctx)
   const intent = isSimpleTransferIntent(text)
@@ -82,6 +92,7 @@ export async function handleSimpleTransferChat(
         proposalId: pending.id,
       }
     const app = generalProposalForApp(pending)
+    if (isLinkedAssistantIdentity(ctx.session)) return null
     const saved = await decideGeneralProposal(ctx, {
       proposalId: pending.id,
       revision: pending.revision,
@@ -199,6 +210,7 @@ export async function handleSimpleTransferChat(
         payload: draft,
       })
     : await draftGeneralProposal(ctx, input.conversationId, draft)
+  const proposalId = "proposalId" in result ? result.proposalId : result.id
   const prepared = simpleTransferAction.parse(result.payload)
   const next = simpleTransferStep(prepared)
   return {
@@ -210,6 +222,11 @@ export async function handleSimpleTransferChat(
           : next === "to"
             ? "Which account is it going to?"
             : `Record ${generalMoney(prepared.amountMinor ?? 0, ctx.tenantContext.tenant.currencyCode)} from ${prepared.fromAccountName} to ${prepared.toAccountName}${prepared.newToAccount ? " (new account)" : ""}. Proceed or change anything?`,
-    proposalId: "proposalId" in result ? result.proposalId : result.id,
+    proposalId,
+    proposalSource: {
+      proposalId,
+      revision: result.revision,
+      payloadHash: proposalDigest(result.payload),
+    },
   }
 }

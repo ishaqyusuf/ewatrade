@@ -1,0 +1,59 @@
+{
+  "version": 1,
+  "tickets": ["G03", "A04", "H02"],
+  "summary": "Complete Quote body/draft/paged-review source components, preserving20x100; endpoints/atomic state/GENERAL/client integration remain.",
+  "noAssistantImpact": "No new capability/procedure/action/RPC/modeltool/client/rollout/grant registered. Internal strict transport composition only; prior native behavior and all gates remain.",
+  "capabilities": [],
+  "procedures": [],
+  "docs": [
+    {
+      "topic": "feature",
+      "path": ".brain/features/service-commerce.md",
+      "status": "local_only",
+      "note": "Fullscope source transport and remaining business/integration work."
+    },
+    {
+      "topic": "feature",
+      "path": ".brain/features/assistant-service-requests.md",
+      "status": "local_only",
+      "note": "Draft composition, complete review paging and explicit nonacceptance."
+    },
+    {
+      "topic": "api",
+      "path": ".brain/api/contracts.md",
+      "status": "local_only",
+      "note": "Internal wire shapes/admission; no endpoint registration."
+    },
+    {
+      "topic": "permissions",
+      "status": "not_applicable",
+      "note": "Fresh owner and authority remains required at future endpoints; no grants."
+    },
+    {
+      "topic": "schema",
+      "status": "not_applicable",
+      "note": "No Prisma/database/storage change."
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "test",
+      "path": "apps/api/src/assistant/general-quote-issue-draft-edit.test.ts",
+      "executed": true,
+      "result": "Real Request\u2192canonical fullintent; rootcombined183/4613 across16."
+    },
+    {
+      "kind": "test",
+      "path": "apps/api/src/assistant/general-quote-issue-review-pages.test.ts",
+      "executed": true,
+      "result": "Actualparent>4.5MiB20x100complete roundtrip, <=1MiB perpage envelope; stale/incomplete/tamper/getter refusals."
+    },
+    {
+      "kind": "review",
+      "path": "packages/assistant/evaluations/runs/2026-10-15-g03-quote-wire-source.md",
+      "executed": true,
+      "result": "Independent source reviews; all protocol/authority/client/host limitations recorded."
+    }
+  ],
+  "id": "2026-10-15-g03-quote-wire-source"
+}

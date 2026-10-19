@@ -58,7 +58,7 @@ export function CustomerConversationNotice({
             <Text className="text-sm font-bold text-foreground">
               {restrictionPresentation.title}
             </Text>
-            <Text className="text-xs leading-4 text-muted-foreground">
+            <Text className="text-xs [-rn-line-height:22] text-muted-foreground">
               {restrictionPresentation.detail}
             </Text>
             {restrictionPresentation.recoveryAction && onRecover ? (
@@ -74,7 +74,7 @@ export function CustomerConversationNotice({
                 </Text>
               </Pressable>
             ) : (
-              <Text className="pt-0.5 text-[11px] font-bold uppercase tracking-wide text-warn">
+              <Text className="pt-0.5 text-xs font-bold uppercase tracking-wide text-warn">
                 {restrictionPresentation.recoveryLabel}
               </Text>
             )}
@@ -101,7 +101,7 @@ export function CustomerConversationNotice({
               {availabilityPresentation.title}
             </Text>
             <Text
-              className="text-xs leading-4 text-muted-foreground"
+              className="text-xs [-rn-line-height:22] text-muted-foreground"
               numberOfLines={2}
             >
               {availabilityPresentation.detail}

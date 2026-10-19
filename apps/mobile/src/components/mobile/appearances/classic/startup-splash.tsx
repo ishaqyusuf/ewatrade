@@ -86,7 +86,7 @@ export function ClassicStartupSplash(props: StartupSplashProps) {
                     ? "You’re offline"
                     : "We couldn’t check your access"}
                 </Text>
-                <Text className="text-[13px] text-muted-foreground [-rn-line-height:20]">
+                <Text className="text-xs text-muted-foreground [-rn-line-height:22]">
                   {state === "offline"
                     ? "We’ll open your business once we can confirm your access."
                     : "You’re signed in. Check your connection and try again."}
@@ -114,7 +114,7 @@ export function ClassicStartupSplash(props: StartupSplashProps) {
                 <View className="h-1 w-[54px] rounded-full bg-[var(--splash-gold)]" />
               </View>
             ) : null}
-            <Text className="text-center text-[13px] font-bold tracking-[1.04px] text-[var(--splash-muted)] [-rn-line-height:20]">
+            <Text className="text-center text-xs font-bold tracking-[1.04px] text-[var(--splash-muted)] [-rn-line-height:22]">
               COME. TRADE. TOGETHER.
             </Text>
           </View>

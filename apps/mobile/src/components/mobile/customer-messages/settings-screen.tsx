@@ -279,7 +279,7 @@ function TemplateRows({
   const missing = list.statuses.filter((row) => row.state === "missing").length
   return (
     <View className="gap-3">
-      <Text className="text-[13px] text-muted-foreground">
+      <Text className="text-xs text-muted-foreground">
         {scope === "business"
           ? "Staff see these ready on orders, edit them for one customer if needed, then send from WhatsApp."
           : `What ${list.storeName} uses. Keep the business wording, write its own, or turn a message off.`}
@@ -392,16 +392,16 @@ function TemplateEditor({
   return (
     <View className="gap-4">
       <View className="gap-1">
-        <Text className="text-[13px] text-muted-foreground">
+        <Text className="text-xs text-muted-foreground">
           {event.description}
         </Text>
-        <Text className="text-[14px] text-foreground">{scopeNote}</Text>
+        <Text className="text-base text-foreground">{scopeNote}</Text>
       </View>
       {inherits && !writing ? (
         <View className="gap-3">
           {business?.enabled ? (
             <View className="gap-2">
-              <Text className="text-[12px] text-muted-foreground">
+              <Text className="text-xs text-muted-foreground">
                 Business wording · {SAMPLE_LABEL.toLowerCase()}
               </Text>
               {(() => {
@@ -720,7 +720,7 @@ function ComposeAll({
   if (!drafts)
     return (
       <View className="gap-4">
-        <Text className="text-[13px] text-muted-foreground">
+        <Text className="text-xs text-muted-foreground">
           Drafts are saved for {scopeName} only when you choose Save selected.
         </Text>
         <ListCard>
@@ -747,10 +747,10 @@ function ComposeAll({
                   name={selected ? "CheckSquare" : "Square"}
                 />
                 <View className="min-w-0 flex-1">
-                  <Text className="text-[15px] font-semibold text-foreground">
+                  <Text className="text-base font-semibold text-foreground">
                     {event.label}
                   </Text>
-                  <Text className="text-[12px] text-muted-foreground">
+                  <Text className="text-xs text-muted-foreground">
                     {state === "composed"
                       ? "Replaces the saved wording if you save it"
                       : savedMessageLabel(
@@ -776,12 +776,12 @@ function ComposeAll({
           onChange={setLanguage}
         />
         <View className="gap-1.5">
-          <Text className="text-[12px] text-muted-foreground">
+          <Text className="text-xs text-muted-foreground">
             Anything to include? (optional)
           </Text>
           <Textarea
             accessibilityLabel="Anything to include"
-            className="min-h-20 rounded-2xl border-0 bg-card px-3.5 py-3 text-[15px]"
+            className="min-h-20 rounded-2xl border-0 bg-card px-3.5 py-3 text-base"
             maxLength={500}
             numberOfLines={4}
             onChangeText={setInstructions}
@@ -849,7 +849,7 @@ function ComposeAll({
   return (
     <View className="gap-4">
       {origin ? (
-        <Text className="text-[13px] text-muted-foreground">{origin}</Text>
+        <Text className="text-xs text-muted-foreground">{origin}</Text>
       ) : null}
       {drafts.map((draft) => (
         <View
@@ -873,12 +873,12 @@ function ComposeAll({
               className="size-[20px] text-foreground"
               name={draft.selected ? "CheckSquare" : "Square"}
             />
-            <Text className="flex-1 text-[15px] font-bold text-foreground">
+            <Text className="flex-1 text-base font-bold text-foreground">
               {getCustomerMessageEvent(draft.eventKey).label}
             </Text>
             <Text
               className={cn(
-                "text-[12px]",
+                "text-xs",
                 draft.result?.ok
                   ? "text-tint-mint-foreground"
                   : "text-muted-foreground",
@@ -917,7 +917,7 @@ function ComposeAll({
                   <>
                     {shown?.text ? (
                       <>
-                        <Text className="text-[12px] text-muted-foreground">
+                        <Text className="text-xs text-muted-foreground">
                           Saved now · {SAMPLE_LABEL.toLowerCase()}
                         </Text>
                         <MessageBubble text={shown.text} />

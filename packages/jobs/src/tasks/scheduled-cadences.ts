@@ -10,6 +10,10 @@ import {
   purgeExpiredPhoneOtpChallenges,
 } from "@ewatrade/db/queries"
 import { idempotencyKeys, logger, schedules } from "@trigger.dev/sdk/v3"
+import {
+  recoverAssistantWhatsAppDeliveries,
+  recoverAssistantWhatsAppTurns,
+} from "../assistant-whatsapp"
 import { isCommercialOrderDigestWindow } from "../handlers/commercial-order-reminder-digest"
 import { automaticJobCron } from "../schedule-policy"
 import { accountPrivacyNoticeAlert } from "./account-privacy-notice-alert"
@@ -91,6 +95,12 @@ export const SCHEDULED_CADENCES = {
   "schedules.every-5-minutes": {
     cron: "*/5 * * * *",
     steps: [
+      sweep("assistant.whatsapp.recovery", () =>
+        Promise.all([
+          recoverAssistantWhatsAppTurns(),
+          recoverAssistantWhatsAppDeliveries(),
+        ]),
+      ),
       sweep("auth.phone-otp-expiry", () =>
         purgeExpiredPhoneOtpChallenges(prisma),
       ),

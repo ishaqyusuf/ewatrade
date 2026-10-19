@@ -1,7 +1,9 @@
 import { createHash } from "node:crypto"
 import {
+  type GeneralReviewPresentation,
   type SimpleSale,
   generalMoney,
+  generalReviewPresentationSchema,
   normalizedSaleName,
   similarSaleNames,
   simpleSaleQuestions,
@@ -10,18 +12,27 @@ import {
 import { listAssistantAttachments } from "@ewatrade/db/assistant-attachments"
 import {
   createCustomerInTransaction,
-  createFinanceBookInTransaction,
   createFinanceMoneyAccountInTransaction,
   listOrderPaymentAccounts,
+  lockCommerceFinancialContext,
 } from "@ewatrade/db/queries"
+import { catalogFreeLineDescriptionError } from "@ewatrade/utils/catalog-free-lines"
 import { TRPCError } from "@trpc/server"
 import { assertFinanceAccess } from "../trpc/finance-procedure"
 import type {
   GeneralActionAdapter,
   GeneralTransactionContext,
 } from "./general-actions"
-import { assertGeneralAction, requireGeneralScope } from "./general-context"
+import {
+  assertGeneralAction,
+  assertGeneralCompositeDependency,
+  requireGeneralScope,
+} from "./general-context"
 import { orderAttachmentAdd } from "./general-order-attachment"
+import {
+  createReviewedNewBook,
+  isReviewedNewBookDefault,
+} from "./general-reviewed-new-book"
 import { proposalDigest } from "./proposal-security"
 
 const currency = (ctx: GeneralTransactionContext) =>
@@ -72,8 +83,8 @@ export async function simpleSaleOptions(
 }
 async function current(ctx: GeneralTransactionContext, sale: SimpleSale) {
   const scope = requireGeneralScope(ctx)
-  assertGeneralAction(ctx, "order_create")
-  assertGeneralAction(ctx, "payment_record")
+  assertGeneralCompositeDependency(ctx, "sale_record", "order_create")
+  assertGeneralCompositeDependency(ctx, "sale_record", "payment_record")
   const options = await simpleSaleOptions(ctx, sale)
   const account = options.accounts.find((row) => row.id === sale.moneyAccountId)
   if (
@@ -84,6 +95,16 @@ async function current(ctx: GeneralTransactionContext, sale: SimpleSale) {
   )
     refuse("Choose an available account for this payment.")
   if (sale.createAccount) assertFinanceAccess(ctx.tenantContext)
+  if (
+    sale.createAccount &&
+    !sale.moneyAccountId &&
+    options.accounts.some(
+      (row) =>
+        normalizedSaleName(row.name) ===
+        normalizedSaleName(sale.accountName ?? ""),
+    )
+  )
+    refuse("That account now exists. Choose it and review again.")
   if (!options.book) {
     assertFinanceAccess(ctx.tenantContext)
     if (currency(ctx) !== ctx.tenantContext.tenant.currencyCode)
@@ -148,6 +169,97 @@ export async function validateSaleAttachmentConversation(
   )
   if (files.some((file) => file.conversationId !== conversationId))
     refuse("Use an image sent in this chat.")
+}
+/** The authorized amount-first sale review, including staged bookkeeping effects. */
+export function simpleSaleReviewPresentation(
+  sale: SimpleSale,
+  facts: {
+    businessName: string
+    storeName: string
+    currencyCode: string
+    timezone: string
+    hasBook: boolean
+    accountName?: string
+    customerName?: string
+    total?: number
+  },
+): GeneralReviewPresentation | undefined {
+  if (
+    simpleSaleStep(sale) !== "review" ||
+    sale.receivedMinor === undefined ||
+    facts.total === undefined ||
+    !facts.timezone ||
+    !(facts.accountName ?? sale.accountName)
+  )
+    return undefined
+  const presentation: GeneralReviewPresentation = {
+    summary: {
+      party: facts.customerName ?? sale.customerName ?? "Walk-in",
+      context: "Record an amount-first sale and payment already received.",
+      amount: generalMoney(facts.total, facts.currencyCode),
+      amountLabel: "Sale total",
+    },
+    facts: [
+      { label: "Currency", value: facts.currencyCode },
+      { label: "Recorded at", value: "Time of confirmation" },
+      { label: "Book timezone", value: facts.timezone },
+    ],
+    sections: [
+      {
+        title: "Sale details",
+        rows: [
+          {
+            label: "Book",
+            value: `${facts.businessName} · ${facts.currencyCode}`,
+            detail: facts.hasBook
+              ? "Existing Book"
+              : "Create Book when confirmed; bookkeeping starts at confirmation",
+          },
+          { label: "Store", value: facts.storeName },
+          {
+            label: "Customer",
+            value: facts.customerName ?? sale.customerName ?? "Walk-in",
+            detail:
+              sale.customerChoice === "new"
+                ? "Create saved customer when confirmed"
+                : sale.customerId
+                  ? "Existing saved customer"
+                  : "Walk-in; no saved customer created",
+          },
+          {
+            label: "Receiving account",
+            value: facts.accountName ?? sale.accountName ?? "",
+            detail: sale.createAccount
+              ? "Create account when confirmed"
+              : "Existing account",
+          },
+          {
+            label: "Payment method",
+            value: sale.method === "cash" ? "Cash" : "Bank transfer",
+          },
+          {
+            label: "Received",
+            value: generalMoney(sale.receivedMinor, facts.currencyCode),
+          },
+          {
+            label: "Total",
+            value: generalMoney(facts.total, facts.currencyCode),
+          },
+          {
+            label: "Remaining",
+            value: generalMoney(
+              facts.total - sale.receivedMinor,
+              facts.currencyCode,
+            ),
+          },
+        ],
+        ...(sale.description ? { note: sale.description } : {}),
+      },
+    ],
+    note: "Bookkeeping only: records an existing sale and payment. No inventory or catalog stock is changed. This does not charge a customer or move money between bank accounts.",
+  }
+  const parsed = generalReviewPresentationSchema.safeParse(presentation)
+  return parsed.success ? parsed.data : undefined
 }
 export const simpleSaleRecord = {
   stale: "The sale details changed. Review the draft again.",
@@ -224,12 +336,26 @@ export const simpleSaleRecord = {
   },
   async validate(ctx, sale, lock) {
     if (lock && simpleSaleStep(sale) !== "review")
-      refuse("Finish the account, customer and amounts before saving.")
+      refuse(
+        simpleSaleStep(sale) === "description"
+          ? (catalogFreeLineDescriptionError({
+              kind: "quick_sale",
+              description: sale.description,
+            }) ?? simpleSaleQuestions.description)
+          : "Finish the account, customer, amounts and description before saving.",
+      )
     return (await current(ctx, sale)).target
   },
   async review(ctx, sale) {
     const info = await current(ctx, sale)
     const step = simpleSaleStep(sale)
+    const book = info.options.book
+      ? await ctx.db.financeBook.findFirst({
+          where: { id: info.options.book.id, tenantId: info.scope.tenantId },
+          select: { timezone: true },
+        })
+      : null
+    if (info.options.book && !book) refuse("Review the Finance Book again.")
     const choices =
       step === "account"
         ? (sale.accountName
@@ -275,6 +401,16 @@ export const simpleSaleRecord = {
       target: info.target,
       question: simpleSaleQuestions[step],
       choices,
+      presentation: simpleSaleReviewPresentation(sale, {
+        businessName: ctx.tenantContext.tenant.name,
+        storeName: ctx.tenantContext.activeStore?.name ?? "",
+        currencyCode: currency(ctx),
+        timezone: book?.timezone ?? ctx.tenantContext.tenant.timezone,
+        hasBook: Boolean(info.options.book),
+        accountName: info.account?.name,
+        customerName: info.customer?.name,
+        total: info.total,
+      }),
       lines: [
         `Account: ${info.account?.name ?? (sale.createAccount ? `${sale.accountName} (new)` : "Pending")}`,
         `Customer: ${info.customer?.name ?? (sale.customerChoice === "walk_in" ? "Walk-in" : sale.customerName ? `${sale.customerName}${sale.customerChoice === "new" ? " (new)" : " (choose a match or new customer)"}` : "Walk-in")}`,
@@ -290,8 +426,30 @@ export const simpleSaleRecord = {
   },
   async execute(ctx, sale, key) {
     if (simpleSaleStep(sale) !== "review")
-      refuse("Finish the sale details first.")
+      refuse(
+        simpleSaleStep(sale) === "description"
+          ? (catalogFreeLineDescriptionError({
+              kind: "quick_sale",
+              description: sale.description,
+            }) ?? simpleSaleQuestions.description)
+          : "Finish the sale details first.",
+      )
     const info = await current(ctx, sale)
+    if (
+      sale.moneyAccountId &&
+      !sale.customerId &&
+      sale.customerChoice === "new"
+    ) {
+      // Match canonical/offline Book-before-Customer ordering, after the
+      // current scope/account/authority checks and before the Tenant FK write.
+      const context = await lockCommerceFinancialContext(ctx.db, {
+        tenantId: info.scope.tenantId,
+        currencyCode: currency(ctx),
+        customerId: null,
+      })
+      if (!context || context.bookId !== info.options.book?.id)
+        refuse("The Finance Book changed. Review the sale again.")
+    }
     let moneyAccountId = sale.moneyAccountId
     if (!moneyAccountId) {
       assertFinanceAccess(ctx.tenantContext)
@@ -301,10 +459,7 @@ export const simpleSaleRecord = {
       }
       const book =
         info.options.book ??
-        (await createFinanceBookInTransaction(ctx.db, {
-          ...actor,
-          startsAt: new Date(),
-        }))
+        (await createReviewedNewBook(ctx, actor, new Date()))
       // Lock the book and recheck names: concurrent creation must not duplicate it.
       await ctx.db
         .$queryRaw`SELECT id FROM "FinanceBook" WHERE id = ${book.id} FOR UPDATE`
@@ -319,9 +474,16 @@ export const simpleSaleRecord = {
       )
       if (
         existing &&
-        (existing.paused || !existing.paymentMethods.includes(sale.method))
+        (info.options.book ||
+          existing.paused ||
+          !existing.paymentMethods.includes(sale.method) ||
+          !(await isReviewedNewBookDefault(ctx, {
+            bookId: book.id,
+            accountId: existing.id,
+            purpose: sale.method === "cash" ? "CASH" : "BANK",
+          })))
       )
-        refuse("That account cannot receive this payment.")
+        refuse("That account now exists. Choose it and review again.")
       moneyAccountId =
         existing?.id ??
         (
@@ -363,8 +525,8 @@ export const simpleSaleRecord = {
         method: sale.method,
       },
     }
-    const { orderCreate } = await import("./general-actions")
-    const receipt = await orderCreate.execute(ctx, payload, key)
+    const { executeSimpleSaleOrder } = await import("./general-actions")
+    const receipt = await executeSimpleSaleOrder(ctx, payload, key)
     if (receipt.kind !== "order")
       return refuse("The sale did not produce an order.")
     for (const attachmentId of sale.attachmentIds)

@@ -22,6 +22,13 @@ const normalizedAppVariant = resolveAppVariant({
   EXPO_PUBLIC_APP_VARIANT: process.env.EXPO_PUBLIC_APP_VARIANT,
   EAS_BUILD_PROFILE: process.env.EAS_BUILD_PROFILE,
 })
+const { resolveMobileAnalyticsEnvironment } =
+  require("./mobile-analytics-environment.cjs") as {
+    resolveMobileAnalyticsEnvironment: (env: NodeJS.ProcessEnv) => string
+  }
+const mobileAnalyticsEnvironment = resolveMobileAnalyticsEnvironment(
+  process.env,
+)
 const { getOnboardingLinkConfig } = require("./onboarding-link-config.cjs") as {
   getOnboardingLinkConfig: (
     variant: string,
@@ -337,6 +344,7 @@ const config: ExpoConfig = {
   extra: {
     onboardingDashboardUrl: onboardingLinks?.dashboardUrl,
     appVariant: normalizedAppVariant,
+    mobileAnalyticsEnvironment,
     autoUpdateOnForeground,
     autoUpdateForegroundCooldownMs: Number.isFinite(
       autoUpdateForegroundCooldownMs,

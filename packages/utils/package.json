@@ -16,6 +16,7 @@
     "./countries": "./src/countries.ts",
     "./geo-address": "./src/geo-address.ts",
     "./search-rank": "./src/search-rank.ts",
+    "./expense-receipt-state": "./src/expense-receipt-state.ts",
     "./finance-money": "./src/finance-money.ts",
     "./finance-posting-date": "./src/finance-posting-date.ts",
     "./finance-payment-methods": "./src/finance-payment-methods.ts",

@@ -110,6 +110,13 @@ export function UserMenu({
           </>
         ) : null}
         <DropdownMenuSeparator className="my-1" />
+        <DropdownMenuItem
+          render={<Link href="/account/whatsapp" />}
+          className="rounded-none px-2 py-1.5 font-normal"
+        >
+          WhatsApp assistant
+        </DropdownMenuItem>
+        <DropdownMenuSeparator className="my-1" />
         <div className="flex items-center justify-between px-2 py-1.5">
           <span className="text-xs">Theme</span>
           <ThemeSwitch />

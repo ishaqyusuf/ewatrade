@@ -1,4 +1,4 @@
-import { catalogRouter } from "../trpc/routers/catalog"
+import { createGeneralDomainCaller } from "./general-callers"
 import type { GeneralContext } from "./general-context"
 import { requireGeneralScope } from "./general-context"
 
@@ -8,7 +8,7 @@ export async function readGeneralCatalogItem(
   itemId: string,
 ) {
   const scope = requireGeneralScope(ctx)
-  const detail = await catalogRouter.createCaller(ctx).detail.overview({
+  const detail = await createGeneralDomainCaller(ctx).catalog.detail.overview({
     itemId,
     storeId: scope.storeId,
   })

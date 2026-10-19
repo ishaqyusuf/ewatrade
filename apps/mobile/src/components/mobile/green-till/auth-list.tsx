@@ -89,11 +89,11 @@ export function AuthListRow({
         </View>
       ) : null}
       <View className="min-w-0 flex-1">
-        <Text className="text-sm font-bold [-rn-line-height:20] text-foreground">
+        <Text className="text-sm font-bold [-rn-line-height:22] text-foreground">
           {title}
         </Text>
         {subtitle ? (
-          <Text className="text-xs [-rn-line-height:17] text-muted-foreground">
+          <Text className="text-xs [-rn-line-height:22] text-muted-foreground">
             {subtitle}
           </Text>
         ) : null}
@@ -197,7 +197,7 @@ export function AuthChip({
       ) : null}
       <Text
         className={cn(
-          "text-[12.5px] font-bold [-rn-line-height:18]",
+          "text-xs font-bold [-rn-line-height:22]",
           selected ? "text-primary" : "text-foreground",
         )}
       >
@@ -209,7 +209,7 @@ export function AuthChip({
 
 export function AuthGroupLabel({ children }: { children: ReactNode }) {
   return (
-    <Text className="text-[12.5px] font-extrabold [-rn-line-height:18] text-foreground">
+    <Text className="text-xs font-extrabold [-rn-line-height:22] text-foreground">
       {children}
     </Text>
   )
@@ -273,9 +273,9 @@ export function InviteCard({
           numberOfLines={lines}
           style={{
             color: palette.lilacForeground,
-            fontSize: 15,
+            fontSize: 16,
             fontWeight: "700",
-            lineHeight: 20,
+            lineHeight: 22,
           }}
         >
           {businessName}
@@ -284,8 +284,8 @@ export function InviteCard({
           numberOfLines={lines}
           style={{
             color: palette.lilacForeground,
-            fontSize: 12.5,
-            lineHeight: 17,
+            fontSize: 16,
+            lineHeight: 22,
             opacity: 0.9,
           }}
         >
@@ -304,10 +304,10 @@ export function InviteCard({
         <NativeText
           style={{
             color: palette.lilacForeground,
-            fontSize: 11,
+            fontSize: 16,
             fontWeight: "700",
             includeFontPadding: false,
-            lineHeight: 14,
+            lineHeight: 22,
             textAlignVertical: "center",
           }}
         >

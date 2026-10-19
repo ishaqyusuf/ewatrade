@@ -34,6 +34,8 @@ export type CreateSaleCompletion = {
   itemCount: number
   paymentState: "paid" | "partially_paid" | "pending"
   reference?: string
+  /** Destination Money Account name for receipt context (online sales). */
+  moneyAccount?: string
   status: "created" | "queued"
 }
 

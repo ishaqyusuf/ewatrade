@@ -1,5 +1,5 @@
 /** Source versions stay immutable once approved and used for acceptance. */
-export const LEGAL_DOCUMENT_VERSION = "2026-10-09-support-contact-1"
+export const LEGAL_DOCUMENT_VERSION = "2026-10-15-adult-chat-1"
 export const LEGAL_DOCUMENT_STATUS: "draft" | "approved" = "approved"
 
 export type LegalDocumentKey =
@@ -30,7 +30,7 @@ export const LEGAL_DOCUMENTS: Record<LegalDocumentKey, LegalDocument> = {
       },
       {
         title: "Accounts and access",
-        text: "You must be at least 13 to create an EwaTrade account. Use accurate account information and only act for a business you are authorized to represent. A Store may be created by an eligible account holder aged 13 or older, but creating a Store does not itself establish a registered business or eligibility for payment services. You are responsible for the rules that apply to your business, contracts, staff, products and payments; a payment provider may require an adult account holder. Protect your sign-in credentials and report unauthorized access. Staff access is limited by the business's assigned permissions. Leaving a business, deleting a personal account and closing a business workspace are different actions.",
+        text: "You must be at least 13 to create an EwaTrade account. Use accurate account information and only act for a business you are authorized to represent. A Store may be created by an eligible account holder aged 13 or older, but creating a Store does not itself establish a registered business or eligibility for payment services. You are responsible for the rules that apply to your business, contracts, staff, products and payments; a payment provider may require an adult account holder. Protect your sign-in credentials and report unauthorized access. Staff access is limited by the business's assigned permissions. Leaving a business, deleting a personal account and closing a business workspace are different actions. Free-form Store chat is available only to signed-in account holders who declare that they are 18 or older. The same requirement applies to staff sending free-form replies, and those replies require an active adult account conversation. Guests, accounts with no age declaration and accounts declaring an age under 18 cannot send free-form Store chat. Eligible account holders may continue to browse catalogs and use permitted account and structured transaction features. Conversation history, reporting, blocking and Support remain available under their access controls. An age range is a declaration; EwaTrade does not describe it as identity verification. Contact Support if a saved age range needs correction.",
       },
       {
         title: "Customers and sellers",
@@ -65,7 +65,11 @@ export const LEGAL_DOCUMENTS: Record<LegalDocumentKey, LegalDocument> = {
       },
       {
         title: "Age eligibility",
-        text: "EwaTrade asks for an age range when a person enters account creation or Store chat. The choices distinguish ages 13–15, 16–17 and 18 or older; we record the selected range and time, not a date of birth. People under 13 cannot create an account or start a new Store chat. If you believe someone under 13 has provided personal information to EwaTrade, contact the privacy address below so we can investigate and handle it under the applicable law.",
+        text: "EwaTrade asks for an age range for account and supported customer-entry features. The choices distinguish ages 13–15, 16–17 and 18 or older. We record the chosen range and declaration time, rather than a date of birth. People under 13 cannot create an account. Free-form Store chat requires a signed-in account declaring age 18 or older; Guest and younger accounts cannot use it. Existing permitted browsing, structured request, history, reporting and Support features have separate access controls. Contact the privacy address if you believe a person under 13 provided personal information or if a stored age range needs correction.",
+      },
+      {
+        title: "Text safety screening",
+        text: "When text safety screening is enabled, EwaTrade sends the submitted text to OpenAI's moderation API to check for abuse and safety concerns before accepting it. The text adapter sends the text and the selected moderation model; it does not add your account ID or profile details. Text you submit may itself contain personal information. This screening also applies to supported catalog and structured request text, not only chat. Screening failures pause the affected write rather than treating unchecked text as safe. Authorized human operators handle reports through the published Support channel.\n OpenAI currently documents no training use, abuse-monitoring retention or application-state retention for its moderation endpoint. This endpoint-specific policy is not a promise that EwaTrade's own conversation and business records are erased, and does not describe other AI features or providers. EwaTrade does not claim organization-wide Zero Data Retention. Provider processing may take place outside Nigeria; contact the published privacy address for the applicable provider and transfer details. Photos, audio and documents follow their separate feature controls and are not made safe by text screening.",
       },
       {
         title: "Who is responsible",

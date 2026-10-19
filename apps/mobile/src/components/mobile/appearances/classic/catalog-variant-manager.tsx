@@ -47,7 +47,7 @@ export function ClassicServicePricingModeOption({
           <View className="h-6 w-6 rounded-full border border-border" />
         )}
       </View>
-      <Text className="text-xs [-rn-line-height:20] text-muted-foreground">
+      <Text className="text-xs [-rn-line-height:22] text-muted-foreground">
         {description}
       </Text>
     </Pressable>
@@ -111,11 +111,11 @@ export function ClassicCatalogVariantRow({
             {listingTitle}
           </Text>
           {!row.enabled ? (
-            <Text className="rounded-full bg-muted px-2 py-1 text-[10px] font-bold uppercase tracking-[0.8px] text-muted-foreground">
+            <Text className="rounded-full bg-muted px-2 py-1 text-xs font-bold uppercase tracking-[0.8px] text-muted-foreground">
               Disabled
             </Text>
           ) : kind === "product" ? (
-            <Text className="self-start pt-0.5 text-[10px] font-bold uppercase tracking-[0.8px] text-primary">
+            <Text className="self-start pt-0.5 text-xs font-bold uppercase tracking-[0.8px] text-primary">
               {listingNeedsSetup ? "Needs setup" : "Ready"}
             </Text>
           ) : null}
@@ -135,7 +135,7 @@ export function ClassicCatalogVariantRow({
                       : "h-1.5 w-1.5 rounded-full bg-muted-foreground"
                   }
                 />
-                <Text className="text-[11px] font-bold text-muted-foreground">
+                <Text className="text-xs font-bold text-muted-foreground">
                   {listingUnit.stock}
                 </Text>
               </View>
@@ -147,7 +147,7 @@ export function ClassicCatalogVariantRow({
                       : "h-1.5 w-1.5 rounded-full bg-muted-foreground"
                   }
                 />
-                <Text className="text-[11px] font-bold text-muted-foreground">
+                <Text className="text-xs font-bold text-muted-foreground">
                   {resolvedPrice}
                 </Text>
               </View>
@@ -168,7 +168,7 @@ export function ClassicCatalogVariantRow({
         ) : (
           <View className="flex-row items-center gap-2">
             <Text
-              className="min-w-0 flex-1 text-xs [-rn-line-height:20] text-muted-foreground"
+              className="min-w-0 flex-1 text-xs [-rn-line-height:22] text-muted-foreground"
               numberOfLines={largeTextLayout ? undefined : 2}
             >
               {listingSummary}
@@ -185,7 +185,7 @@ export function ClassicCatalogVariantRow({
         )}
         {row.description ? (
           <Text
-            className="text-xs [-rn-line-height:20] text-muted-foreground"
+            className="text-xs [-rn-line-height:22] text-muted-foreground"
             numberOfLines={largeTextLayout ? undefined : 2}
           >
             {row.description}

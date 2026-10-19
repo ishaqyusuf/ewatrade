@@ -107,7 +107,7 @@ function PageButton({
       {icon === "ChevronLeft" ? (
         <Icon name={icon} className="size-xs text-foreground" />
       ) : null}
-      <Text className="text-sm font-bold text-foreground [-rn-line-height:20] [-rn-include-font-padding:false] [-rn-text-align-vertical:center]">
+      <Text className="text-sm font-bold text-foreground [-rn-line-height:22] [-rn-include-font-padding:false] [-rn-text-align-vertical:center]">
         {label}
       </Text>
       {icon === "ChevronRight" ? (

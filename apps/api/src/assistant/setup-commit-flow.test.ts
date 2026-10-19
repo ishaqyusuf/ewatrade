@@ -1,5 +1,11 @@
 import { describe, expect, mock, test } from "bun:test"
-import { recordSetupDraftCommitOutcomeInTransaction } from "@ewatrade/db/assistant"
+import { deriveSetupEntityState } from "@ewatrade/assistant/setup/contracts"
+import {
+  readSetupDraft,
+  recordSetupDraftCommitOutcomeInTransaction,
+  setSetupDraftEntityStatesInTransaction,
+  upsertSetupDraftEntitiesInTransaction,
+} from "@ewatrade/db/assistant"
 import { CatalogError } from "@ewatrade/db/queries"
 import {
   MONEY_ACCOUNT_NEEDS_FINANCE,
@@ -7,6 +13,7 @@ import {
   OPENING_BALANCE_PENDING,
   type SetupCommitDeps,
   commitSetupDraft,
+  defaultSetupCommitDependencies,
 } from "./setup-commit"
 import { setupMoneyAccountCode } from "./setup-money-account"
 
@@ -82,6 +89,12 @@ function harness(entities: Entity[], overrides: Partial<SetupCommitDeps> = {}) {
     },
   )
   const deps: SetupCommitDeps = {
+    lockCustomerForCommit: mock(
+      async (_tx, _scope, input) =>
+        entities.find(
+          (entity) => entity.id === input.entityId && entity.key === input.key,
+        ) ?? null,
+    ) as never,
     readSetupDraft: mock(async () => ({
       id: "draft",
       revision: 1,
@@ -453,6 +466,114 @@ test("adding selected setup keys leaves other confirmed records untouched", asyn
   expect(outcomes.map((item) => item.key)).toEqual(["second"])
   expect(result.remaining).toBe(0)
 })
+
+test("a stale browser customer snapshot reuses the record committed by another channel", async () => {
+  const namedCustomer: Entity = {
+    ...customer,
+    payload: { kind: "customer", name: "Mama Ade" },
+  }
+  const { deps, outcomes } = harness([namedCustomer], {
+    lockCustomerForCommit: mock(async () => ({
+      ...namedCustomer,
+      state: "COMMITTED",
+      committedRecordId: "customer_saved_by_whatsapp",
+    })) as never,
+  })
+  const result = await commitSetupDraft(db, scope, "draft", deps)
+  expect(deps.lockCustomerForCommit).toHaveBeenCalledTimes(1)
+  expect(deps.createCustomer).not.toHaveBeenCalled()
+  expect(result.results[0]).toMatchObject({
+    state: "COMMITTED",
+    recordId: "customer_saved_by_whatsapp",
+  })
+  expect(outcomes).toEqual([
+    {
+      key: namedCustomer.key,
+      outcome: {
+        state: "COMMITTED",
+        recordId: "customer_saved_by_whatsapp",
+        errorCode: null,
+      },
+      inTx: false,
+    },
+  ])
+})
+
+test("a customer edited after the batch read cannot create or overwrite its fresh draft outcome", async () => {
+  const { deps, outcomes } = harness([customer], {
+    lockCustomerForCommit: mock(async () => ({
+      ...customer,
+      payload: { kind: "customer", name: "Updated name" },
+    })) as never,
+  })
+  const result = await commitSetupDraft(db, scope, "draft", deps)
+  expect(result.interrupted).toBe(true)
+  expect(result.results).toEqual([])
+  expect(deps.createCustomer).not.toHaveBeenCalled()
+  expect(outcomes).toEqual([])
+})
+
+test("canonical customer locks precede the fresh draft read and preserve shared Store owner/admin access", async () => {
+  const order: string[] = []
+  const saved = {
+    ...customer,
+    state: "COMMITTED" as const,
+    committedRecordId: "existing_customer",
+  }
+  const tx = {
+    $queryRaw: mock(async (query: TemplateStringsArray) => {
+      order.push(
+        query.join("").includes("AssistantConversation")
+          ? "conversation"
+          : "draft",
+      )
+      return [{ id: "setup_of_another_owner" }]
+    }),
+    membership: {
+      findFirst: mock(async () => {
+        order.push("membership")
+        return { id: "active_admin" }
+      }),
+    },
+    setupDraftEntity: {
+      findFirst: mock(async () => {
+        order.push("entity")
+        return saved
+      }),
+    },
+  }
+  const lock = defaultSetupCommitDependencies().lockCustomerForCommit
+  if (!lock) throw Error("Canonical customer locking is required")
+  expect(
+    await lock(tx as never, scope, {
+      draftId: "draft",
+      entityId: customer.id,
+      key: customer.key,
+    }),
+  ).toBe(saved)
+  expect(order).toEqual(["conversation", "draft", "membership", "entity"])
+  expect(tx.membership.findFirst).toHaveBeenCalledWith({
+    where: {
+      tenantId: scope.tenantId,
+      userId: scope.userId,
+      status: "ACTIVE",
+      role: { in: ["OWNER", "ADMIN"] },
+      tenant: { isActive: true },
+    },
+    select: { id: true },
+  })
+  expect(tx.setupDraftEntity.findFirst).toHaveBeenCalledWith({
+    where: { id: customer.id, draftId: "draft", key: customer.key },
+    select: {
+      id: true,
+      key: true,
+      kind: true,
+      state: true,
+      payload: true,
+      committedRecordId: true,
+    },
+  })
+})
 test("a missing selected key does not add a different confirmed record", async () => {
   const { deps, outcomes } = harness([product("first")])
   const result = await commitSetupDraft(db, scope, "draft", deps, {
@@ -460,4 +581,229 @@ test("a missing selected key does not add a different confirmed record", async (
   })
   expect(result.results).toEqual([])
   expect(outcomes).toEqual([])
+})
+
+test("ordinary Setup partial success corrects and reconfirms only the failed record while skipped and committed records stay unchanged", async () => {
+  // Stateful storage only: the real read/upsert/state/outcome queries and commit
+  // orchestration below decide readiness, mutability, selection and retry identity.
+  type Row = Entity & {
+    source: { messageId: string; quote: string }
+    openQuestions: unknown
+    sortOrder: number
+    updatedAt: Date
+  }
+  const rows = [
+    product("first"),
+    product("blocked"),
+    {
+      ...product("later"),
+      state: "PROPOSED",
+    },
+  ].map(
+    (entity, sortOrder): Row => ({
+      ...entity,
+      source: { messageId: "ordinary-app-input", quote: entity.key },
+      openQuestions: [],
+      sortOrder,
+      updatedAt: new Date("2026-10-15T00:00:00.000Z"),
+    }),
+  )
+  let revision = 1
+  type StateWhere = { in?: string[]; notIn?: string[]; not?: string }
+  const storage = {
+    setupDraft: {
+      findUniqueOrThrow: async (input: { where: { id: string } }) => {
+        expect(input.where.id).toBe("draft")
+        return structuredClone({
+          id: "draft",
+          revision,
+          areas: null,
+          entities: rows,
+        })
+      },
+      update: async (input: {
+        where: { id: string }
+        data: { revision: { increment: number } }
+      }) => {
+        expect(input.where.id).toBe("draft")
+        revision += input.data.revision.increment
+        return { revision, _count: { entities: rows.length } }
+      },
+    },
+    setupDraftEntity: {
+      findMany: async (input: {
+        where: { draftId: string; key: { in: string[] } }
+      }) => {
+        expect(input.where.draftId).toBe("draft")
+        return structuredClone(
+          rows.filter((row) => input.where.key.in.includes(row.key)),
+        )
+      },
+      upsert: async (input: {
+        where: { draftId_key: { draftId: string; key: string } }
+        update: Partial<Row>
+      }) => {
+        expect(input.where.draftId_key.draftId).toBe("draft")
+        const row = rows.find(
+          (candidate) => candidate.key === input.where.draftId_key.key,
+        )
+        if (!row)
+          throw Error("This recovery journey edits only existing draft records")
+        Object.assign(row, structuredClone(input.update))
+        return structuredClone(row)
+      },
+      updateMany: async (input: {
+        where: {
+          draftId: string
+          key: string | { in: string[] }
+          state?: StateWhere
+        }
+        data: {
+          state?: string
+          committedRecordId?: string
+          errorCode?: string | null
+        }
+      }) => {
+        expect(input.where.draftId).toBe("draft")
+        const key = input.where.key
+        const condition = input.where.state
+        const matched = rows.filter(
+          (row) =>
+            (typeof key === "string"
+              ? row.key === key
+              : key.in.includes(row.key)) &&
+            (!condition?.in || condition.in.includes(row.state)) &&
+            (!condition?.notIn || !condition.notIn.includes(row.state)) &&
+            (!condition?.not || condition.not !== row.state),
+        )
+        for (const row of matched) Object.assign(row, input.data)
+        return { count: matched.length }
+      },
+    },
+  }
+  // The only simulated domain boundary records canonical catalog commands by
+  // their actual operation identity; it refuses one supplied name, then accepts its correction.
+  const saved = new Map<string, { id: string; name: string }>()
+  const attempts: Array<{ name: string; clientOperationId: string }> = []
+  const { deps } = harness(rows, {
+    readSetupDraft,
+    recordOutcome: async (_client, input) =>
+      recordSetupDraftCommitOutcomeInTransaction(storage as never, input),
+    createCatalogItem: mock(
+      async (
+        _client: unknown,
+        input: { name: string; clientOperationId: string },
+      ) => {
+        attempts.push({
+          name: input.name,
+          clientOperationId: input.clientOperationId,
+        })
+        if (input.name === "blocked")
+          throw new CatalogError(
+            "DUPLICATE_CATALOG_KEY",
+            "Correct the duplicate name.",
+          )
+        const existing = saved.get(input.clientOperationId)
+        if (existing) {
+          expect(existing.name).toBe(input.name)
+          return existing
+        }
+        const record = { id: `saved_${input.name}`, name: input.name }
+        saved.set(input.clientOperationId, record)
+        return record
+      },
+    ) as never,
+  })
+  const client = storage as never
+  const first = await commitSetupDraft(client, scope, "draft", deps)
+  expect(first).toMatchObject({ interrupted: false, remaining: 0 })
+  expect(first.results.map((row) => [row.key, row.state])).toEqual([
+    ["first", "COMMITTED"],
+    ["blocked", "FAILED"],
+  ])
+  expect(saved.size).toBe(1)
+  const before = structuredClone(rows.find((row) => row.key === "first"))
+  const correctedPayload = {
+    kind: "product" as const,
+    name: "corrected",
+    unitName: "Crate",
+    priceMinor: 450_000,
+  }
+  const readiness = deriveSetupEntityState(correctedPayload, [])
+  expect(readiness.state).toBe("PROPOSED")
+  const corrected = await upsertSetupDraftEntitiesInTransaction(client, {
+    draftId: "draft",
+    entities: [
+      {
+        key: "blocked",
+        kind: "PRODUCT",
+        payload: correctedPayload,
+        state: readiness.state,
+        source: { messageId: "ordinary-app-input", quote: "blocked" },
+        openQuestions: readiness.questions,
+      },
+      {
+        key: "first",
+        kind: "PRODUCT",
+        payload: { ...correctedPayload, name: "must not overwrite" },
+        state: "PROPOSED",
+      },
+    ],
+  })
+  expect(corrected.changed).toEqual(["blocked"])
+  expect(corrected.rejected).toEqual(["first"])
+  expect(rows.find((row) => row.key === "first")).toEqual(before)
+  expect(rows.find((row) => row.key === "blocked")).toMatchObject({
+    state: "PROPOSED",
+    errorCode: null,
+    payload: { name: "corrected" },
+  })
+  // An edit alone cannot write. This fresh read must ignore its reopened proposal.
+  expect(
+    (await commitSetupDraft(client, scope, "draft", deps)).results,
+  ).toEqual([])
+  expect(saved.size).toBe(1)
+  expect(
+    await setSetupDraftEntityStatesInTransaction(client, {
+      draftId: "draft",
+      keys: ["later"],
+      state: "SKIPPED",
+    }),
+  ).toMatchObject({ updated: 1 })
+  expect(
+    await setSetupDraftEntityStatesInTransaction(client, {
+      draftId: "draft",
+      keys: ["first", "blocked", "later"],
+      state: "CONFIRMED",
+    }),
+  ).toMatchObject({ updated: 1 })
+  const retried = await commitSetupDraft(client, scope, "draft", deps)
+  expect(retried).toMatchObject({ interrupted: false, remaining: 0 })
+  expect(retried.results).toHaveLength(1)
+  expect(retried.results[0]).toMatchObject({
+    key: "blocked",
+    state: "COMMITTED",
+    recordId: "saved_corrected",
+  })
+  expect(rows.find((row) => row.key === "first")).toEqual(before)
+  expect(rows.find((row) => row.key === "later")).toMatchObject({
+    state: "SKIPPED",
+    committedRecordId: null,
+  })
+  expect(attempts.map((attempt) => attempt.name)).toEqual([
+    "first",
+    "blocked",
+    "corrected",
+  ])
+  expect(attempts[2]?.clientOperationId).not.toBe(
+    attempts[1]?.clientOperationId,
+  )
+  expect(saved.size).toBe(2)
+  const receipts = structuredClone(rows)
+  expect(
+    (await commitSetupDraft(client, scope, "draft", deps)).results,
+  ).toEqual([])
+  expect(rows).toEqual(receipts)
+  expect(saved.size).toBe(2)
+  expect(attempts).toHaveLength(3)
 })

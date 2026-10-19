@@ -7,6 +7,11 @@ export type SaleStepViewProps = {
   model: CreateSaleViewModel
   actionsHeight: number
   onActionsHeightChange: (height: number) => void
+  /**
+   * The Items list's scroll offset, kept by the sale view across step
+   * changes so coming back to Items returns to the same place.
+   */
+  itemsScroll?: { current: number }
 }
 
 export type SelectedOrderLineProps = {

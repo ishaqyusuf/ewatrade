@@ -1,6 +1,7 @@
 import type { GeneralAnswer } from "@ewatrade/assistant/general/contracts"
 import type { listInventoryCompatibleTotalsPage } from "@ewatrade/db/queries"
 import { inventoryCompatibleTotalsPageSchema } from "../schemas/inventory"
+import { generalInventoryQuantityValue } from "./general-inventory-balances"
 export const generalInventoryTotalsInput =
   inventoryCompatibleTotalsPageSchema.pick({
     catalogItemId: true,
@@ -20,25 +21,27 @@ export function generalInventoryTotalsAnswers(
       asOf,
       detail: `Item filter: ${input.catalogItemId ?? "all"}. ${input.cursor ? "Continuation page" : "First page"}. ${page.nextCursor ? "More groups available." : "End of this list."} Each group includes all matching sources, separated by variant, unit configuration and custody. This page is not a business total. Missing sources are not zero stock.`,
     },
-    ...page.items.map((group) => ({
-      id: `stock_group_${crypto.randomUUID()}`,
-      title: `${group.productName} · ${group.variantName}`.slice(0, 160),
-      value:
-        `${group.availableCanonicalQuantity} ${group.canonicalUnitName ?? "canonical units"} available`.slice(
-          0,
-          240,
-        ),
-      scope:
-        `${input.storeName} · Configuration ${group.configurationVersionId}`.slice(
-          0,
-          500,
-        ),
-      asOf,
-      detail:
-        `On hand ${group.onHandCanonicalQuantity}; reserved ${group.reservedCanonicalQuantity}. ${group.sourceCount} source(s), converted to ${group.canonicalUnitName ?? "canonical units (unit name unavailable)"}. Custody ${group.custodyType}${group.custodyReferenceId ? ` (${group.custodyReferenceId})` : ""}. Informational total only; use offering availability before selling. Transit stock is not available to sell.`.slice(
-          0,
-          1000,
-        ),
-    })),
+    ...page.items.map((group) => {
+      const quantity = generalInventoryQuantityValue(
+        group.availableCanonicalQuantity,
+        group.canonicalUnitName ?? "canonical units (unit name unavailable)",
+      )
+      return {
+        id: `stock_group_${crypto.randomUUID()}`,
+        title: `${group.productName} · ${group.variantName}`.slice(0, 160),
+        value: quantity.value,
+        scope:
+          `${input.storeName} · Configuration ${group.configurationVersionId}`.slice(
+            0,
+            500,
+          ),
+        asOf,
+        detail:
+          `${quantity.shortened ? "Unit label shortened; open the original inventory record for the full name. " : ""}On hand ${group.onHandCanonicalQuantity}; reserved ${group.reservedCanonicalQuantity}. ${group.sourceCount} source(s). Informational total only; use offering availability before selling. Transit stock is not available to sell. Custody ${group.custodyType}${group.custodyReferenceId ? ` (${group.custodyReferenceId})` : ""}. Converted to ${group.canonicalUnitName ?? "canonical units (unit name unavailable)"}.`.slice(
+            0,
+            1000,
+          ),
+      }
+    }),
   ]
 }

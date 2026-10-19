@@ -2,6 +2,9 @@ import type { StaffAction } from "@ewatrade/auth/store-access"
 
 // Scoped staff use explicitly audited procedures. New procedures fail closed.
 const reads = new Set([
+  "assistantChannels.availability",
+  "assistantChannels.whatsAppLink",
+  "assistantChannels.whatsAppConnections",
   "customerMessages.catalog",
   "customerMessages.templateStatus",
   "customerMessages.preview",
@@ -15,6 +18,7 @@ const reads = new Set([
   "serviceAssistantWork.editorContext",
   "serviceAssistantWork.review",
   "serviceAssistantWork.original",
+  "serviceAssistantBookings.availability",
   "serviceCommerce.assistantBookingDetail",
   "serviceCommerce.assistantQuoteApprovalDetail",
   "serviceCommerce.assistantQuoteDecisionReview",
@@ -85,6 +89,10 @@ const orders = new Set([
   "inventory.releaseReservation",
   "inventory.commitReservation",
 ])
+const stockReads = new Set([
+  "inventory.balanceSource",
+  "inventory.custodyAssignees",
+])
 const stock = new Set([
   "businessReporting.stock",
   "inventory.categorySuggestions",
@@ -153,11 +161,16 @@ export function staffProcedureAction(
       "assistant.start",
       "assistant.editProposal",
       "assistant.decideProposal",
+      // Personal linking controls; repository rechecks fresh actor and Store authority.
+      "assistantChannels.createWhatsAppLink",
+      "assistantChannels.confirmWhatsAppLink",
+      "assistantChannels.revokeWhatsApp",
     ].includes(path)
   )
     return "read"
   if (path === "catalog.photos.getMetadata") return "catalog"
   if (type === "query" && reads.has(path)) return "read"
+  if (type === "query" && stockReads.has(path)) return "stock"
   if (orders.has(path)) return "orders"
   if (stock.has(path)) return "stock"
   if (reconciliation.has(path)) return "reconciliation"
@@ -176,6 +189,8 @@ export const businessNotificationSelfQueries = new Set([
   "businessNotifications.myPreferences",
 ])
 export const staffProcedureStoreInput = new Set([
+  "inventory.balanceSource",
+  "inventory.custodyAssignees",
   "orders.receiptSettings",
   "orders.prepareReceipts",
   "orders.reportSummary",

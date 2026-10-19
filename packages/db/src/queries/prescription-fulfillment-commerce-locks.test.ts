@@ -61,7 +61,7 @@ function createTransitionFixture(input: {
       }
       if (sql.includes('FROM "CommercialOrder"')) {
         events.push("order-lock")
-        return [{ id: "order-1" }]
+        return [order]
       }
       if (sql.includes('FROM "PrescriptionDeliveryAssignment"')) {
         events.push("assignment-lock")

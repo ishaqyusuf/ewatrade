@@ -1,15 +1,22 @@
 import { ActionButton } from "@/components/mobile/action-button"
 import { BrandMark } from "@/components/mobile/brand"
-import { commercialOrderHref } from "@/components/mobile/commerce/commerce-model"
 import { whatsAppActionHint } from "@/components/mobile/customer-messages/message-model"
 import { useOrderMessageAction } from "@/components/mobile/customer-messages/use-order-message"
 import { Icon } from "@/components/ui/icon"
 import { Pressable } from "@/components/ui/pressable"
+import { useAuthContext } from "@/hooks/use-auth"
 import { useColorScheme } from "@/hooks/use-color"
 import { GREEN_TILL_THEME } from "@/lib/green-till-theme"
-import type { OperationSuccessParams } from "@/lib/operation-success-navigation"
-import { useRouter } from "expo-router"
-import { useId, useState } from "react"
+import { isSalesRepRole } from "@/lib/mobile-roles"
+import {
+  type OperationSuccessParams,
+  type OutcomeExit,
+  exitOutcome,
+  rebaseOutcomeOnHome,
+} from "@/lib/operation-success-navigation"
+import { useRoute } from "@react-navigation/native"
+import { useNavigation } from "expo-router"
+import { useEffect, useId, useRef, useState } from "react"
 import { Text as NativeText, StyleSheet, View } from "react-native"
 import Animated, {
   Easing,
@@ -42,7 +49,24 @@ export function ClassicSaleSuccessSheet({
 }: {
   params: OperationSuccessParams
 }) {
-  const router = useRouter()
+  const navigation = useNavigation()
+  const route = useRoute()
+  const { profile } = useAuthContext()
+  const salesRep = isSalesRepRole(profile?.role)
+  // Completed sale: history becomes Home + this checkout (same route key), so
+  // back, swipe and close reach Home; every action below replaces both.
+  const rebased = useRef(false)
+  useEffect(() => {
+    if (rebased.current) return
+    rebased.current = true
+    rebaseOutcomeOnHome(
+      navigation,
+      { key: route.key, name: route.name, params: route.params },
+      { salesRep },
+    )
+  }, [navigation, route.key, route.name, route.params, salesRep])
+  const leave = (exit: OutcomeExit) =>
+    exitOutcome(navigation, exit, { salesRep })
   const insets = useSafeAreaInsets()
   const { colorScheme } = useColorScheme()
   const palette = GREEN_TILL_THEME[colorScheme]
@@ -74,6 +98,16 @@ export function ClassicSaleSuccessSheet({
     ],
     ["Items", itemsLabel],
     ...(payment ? [["Payment", payment] as [string, string]] : []),
+    // Where the money went, so it can be checked against the account.
+    ...(params.moneyAccount && params.paymentState !== "pending"
+      ? [
+          // Queued money isn't recorded yet: it's where it will go.
+          [queued ? "Into, once synced" : "Into", params.moneyAccount] as [
+            string,
+            string,
+          ],
+        ]
+      : []),
     ...(params.balance && params.paymentState !== "paid"
       ? [
           ["Balance due", whole(params.balance) ?? "", true] as [
@@ -199,7 +233,12 @@ export function ClassicSaleSuccessSheet({
           <ActionButton
             tone="gold"
             icon="Plus"
-            onPress={() => router.replace("/create-sale-modal")}
+            onPress={() =>
+              leave({
+                to: "new-sale",
+                service: params.saleKind === "service",
+              })
+            }
           >
             New sale
           </ActionButton>
@@ -215,10 +254,7 @@ export function ClassicSaleSuccessSheet({
             haptic
             onPress={() => {
               if (params.orderId && !queued)
-                router.push({
-                  pathname: "/order-receipts-modal",
-                  params: { orderIds: params.orderId },
-                })
+                leave({ to: "receipt", orderId: params.orderId })
             }}
             style={[
               styles.ghost,
@@ -238,9 +274,9 @@ export function ClassicSaleSuccessSheet({
             accessibilityRole="button"
             haptic
             onPress={() => {
-              if (queued) router.push("/sync-status-modal")
+              if (queued) leave({ to: "sync-status" })
               else if (params.orderId)
-                router.push(commercialOrderHref(params.orderId))
+                leave({ to: "order", orderId: params.orderId })
             }}
             style={[styles.ghost, { backgroundColor: palette.heroChip }]}
           >
@@ -254,14 +290,24 @@ export function ClassicSaleSuccessSheet({
             </NativeText>
           </Pressable>
           {!queued && params.orderId ? (
-            <WhatsAppPill orderId={params.orderId} />
+            <WhatsAppPill
+              onOpen={() => {
+                if (params.orderId)
+                  leave({
+                    to: "customer-message",
+                    orderId: params.orderId,
+                    eventKey: "order.recorded",
+                  })
+              }}
+              orderId={params.orderId}
+            />
           ) : null}
         </View>
         <Pressable
           accessibilityLabel="Go to home"
           accessibilityRole="button"
           haptic
-          onPress={() => router.replace("/dashboard")}
+          onPress={() => leave({ to: "home" })}
           style={styles.home}
         >
           <NativeText style={[styles.homeLabel, { color: muted }]}>
@@ -277,7 +323,14 @@ export function ClassicSaleSuccessSheet({
  * Tell the customer: only for a recorded Order (never a queued sale). The
  * server hides it without a phone; bright icon means wording is ready.
  */
-function WhatsAppPill({ orderId }: { orderId: string }) {
+function WhatsAppPill({
+  orderId,
+  onOpen,
+}: {
+  orderId: string
+  /** Leave the outcome for the composer (history Home → message). */
+  onOpen: () => void
+}) {
   const { colorScheme } = useColorScheme()
   const palette = GREEN_TILL_THEME[colorScheme]
   const fg = palette.heroForeground
@@ -294,7 +347,16 @@ function WhatsAppPill({ orderId }: { orderId: string }) {
       accessibilityState={{ disabled: action.state.kind === "loading" }}
       disabled={action.state.kind === "loading"}
       haptic
-      onPress={action.state.kind === "error" ? action.retry : action.open}
+      // A failed preview only retries and loading is inert; every other
+      // state opens the protected composer (which explains blocked, invalid
+      // phone and similar), leaving Sales recorded first.
+      onPress={
+        action.state.kind === "error"
+          ? action.retry
+          : action.state.kind === "loading"
+            ? undefined
+            : onOpen
+      }
       style={[styles.ghost, { backgroundColor: palette.heroChip }]}
     >
       <Icon
@@ -339,7 +401,7 @@ const styles = StyleSheet.create({
     height: 46,
     justifyContent: "center",
   },
-  ghostLabel: { fontSize: 13.5, fontWeight: "800" },
+  ghostLabel: { fontSize: 16, fontWeight: "800" },
   grab: {
     alignSelf: "center",
     borderRadius: 5,
@@ -350,8 +412,8 @@ const styles = StyleSheet.create({
   head: { alignItems: "center", flexDirection: "row", gap: 14 },
   headText: { flex: 1, minWidth: 0 },
   home: { alignItems: "center", minHeight: 44, justifyContent: "center" },
-  homeLabel: { fontSize: 13, fontWeight: "700" },
-  kicker: { fontSize: 13, fontWeight: "700" },
+  homeLabel: { fontSize: 16, fontWeight: "700" },
+  kicker: { fontSize: 16, fontWeight: "700" },
   newSale: { marginTop: 14 },
   row: {
     borderBottomWidth: 1,
@@ -360,10 +422,10 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     paddingVertical: 9,
   },
-  rowLabel: { fontSize: 13.5 },
+  rowLabel: { fontSize: 16 },
   rowValue: {
     flexShrink: 1,
-    fontSize: 13.5,
+    fontSize: 16,
     fontWeight: "700",
     textAlign: "right",
   },

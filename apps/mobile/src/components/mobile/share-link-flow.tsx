@@ -81,13 +81,13 @@ export function ShareLinkRecordRow({
         <View className="min-w-0 flex-1 gap-1">
           <Text className="font-extrabold text-foreground">{title}</Text>
           <Text
-            className="text-xs leading-5 text-muted-foreground"
+            className="text-xs [-rn-line-height:22] text-muted-foreground"
             numberOfLines={2}
           >
             {detail}
           </Text>
           {meta ? (
-            <Text className="text-xs leading-5 text-muted-foreground">
+            <Text className="text-xs [-rn-line-height:22] text-muted-foreground">
               {meta}
             </Text>
           ) : null}
@@ -110,7 +110,7 @@ export function ShareLinkPanel({
       <View className="flex-row items-start justify-between gap-3">
         <View className="min-w-0 flex-1 gap-1">
           <Text className="font-extrabold text-foreground">{title}</Text>
-          <Text className="text-xs leading-5 text-muted-foreground">
+          <Text className="text-xs [-rn-line-height:22] text-muted-foreground">
             {description}
           </Text>
         </View>

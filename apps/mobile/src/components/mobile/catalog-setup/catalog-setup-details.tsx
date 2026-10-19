@@ -256,7 +256,7 @@ function ClassicDetailRows({
         <Text className="text-base font-extrabold text-foreground">
           More details
         </Text>
-        <Text className="text-[13px] font-bold text-muted-foreground">
+        <Text className="text-xs font-bold text-muted-foreground">
           Optional
         </Text>
       </View>
@@ -419,7 +419,7 @@ function ClassicPhotosEditor({
   const tile = { aspectRatio: 1, borderRadius: 16, width: "31.4%" } as const
   return (
     <View className="gap-3.5">
-      <Text className="text-[13px] text-muted-foreground">
+      <Text className="text-xs text-muted-foreground">
         Show what customers will receive. Choosing another image replaces this
         one.
       </Text>
@@ -461,7 +461,7 @@ function ClassicPhotosEditor({
               <NativeText
                 style={{
                   color: palette.overlayForeground,
-                  fontSize: 10,
+                  fontSize: 16,
                   fontWeight: "800",
                 }}
               >
@@ -527,7 +527,7 @@ function ClassicPhotosEditor({
           >
             <Icon className="size-[22px]" color={colors.primary} name={icon} />
             <NativeText
-              style={{ color: colors.primary, fontSize: 12, fontWeight: "800" }}
+              style={{ color: colors.primary, fontSize: 16, fontWeight: "800" }}
             >
               {label}
             </NativeText>
@@ -561,11 +561,11 @@ function ClassicPhotosEditor({
           haptic
           onPress={onOpenIllustrations}
         >
-          <Text className="text-[13px] font-bold text-primary">See all</Text>
+          <Text className="text-xs font-bold text-primary">See all</Text>
         </Pressable>
       </View>
       <View className="gap-2.5 rounded-[20px] bg-card p-3.5 shadow-sm">
-        <Text className="text-[12.5px] text-muted-foreground">
+        <Text className="text-xs text-muted-foreground">
           Simple images for your business. Good when you have no photo yet.
         </Text>
         <View className="flex-row gap-2">

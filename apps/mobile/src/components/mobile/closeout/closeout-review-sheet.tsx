@@ -104,7 +104,7 @@ export function CloseoutReviewSheet({ model }: { model: CloseoutViewModel }) {
               >
                 Confirm closeout
               </Text>
-              <Text className="text-sm [-rn-line-height:20] text-muted-foreground">
+              <Text className="text-sm [-rn-line-height:22] text-muted-foreground">
                 Finalizing applies these inventory variances. This does not
                 reconcile cash or return stock to a Store.
               </Text>
@@ -123,7 +123,7 @@ export function CloseoutReviewSheet({ model }: { model: CloseoutViewModel }) {
                 />
               ) : null}
               {model.hasAttempt ? (
-                <Text className="text-xs [-rn-line-height:18] text-muted-foreground">
+                <Text className="text-xs [-rn-line-height:22] text-muted-foreground">
                   These declarations are locked for retry with the same request
                   IDs. Closing this review does not undo a server-side closeout.
                 </Text>
@@ -146,7 +146,7 @@ export function CloseoutReviewSheet({ model }: { model: CloseoutViewModel }) {
           )}
           ListFooterComponent={
             <View className="px-5 pt-4">
-              <Text className="text-xs [-rn-line-height:18] text-muted-foreground">
+              <Text className="text-xs [-rn-line-height:22] text-muted-foreground">
                 Reason: {model.review?.reason || "End of shift closeout"}
               </Text>
               <View className="h-[var(--closeout-review-footer)]" />

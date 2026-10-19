@@ -1,0 +1,82 @@
+{
+  "version": 1,
+  "date": "2026-10-15",
+  "scope": "Internal Quote confirmation/full stored decision review and four exact stock read targets; full phase objective retained",
+  "sourceSnapshot": {
+    "packages/assistant/src/general/stock-read-target.ts": "4202c735a94f6304242034b8599c196b6d1c81a0dab757ca8d45ec64d171d393",
+    "packages/assistant/src/general/stock-read-target.test.ts": "00cd7fbbb098c0c9ec5610258f5e7ea97eb4f9f7cb519e05a5ac6630b7198a01",
+    "packages/assistant/src/general/answer-target.ts": "b2546ef9b04c74a53807bc47c0115f8b8b788b993c62e04cc9ac336413184653",
+    "packages/assistant/package.json": "302626ff9246b260b41aa076be60bf3be5a093f038bb1addd9d4e30207c9930b",
+    "apps/api/src/assistant/stock-read-target-answers.ts": "056677da93358ae24a4efec1448107bb5f58f92cb66292ea968122aec46b5644",
+    "apps/api/src/assistant/stock-read-target-answers.test.ts": "a42abe0d9887e826f6d44d2610af23c6869a353c1d9a4d1e285883b5b695a592",
+    "apps/api/src/assistant/general-quote-issue-confirmation.ts": "2401b4fe93b096783bbd584a9900b2b36b908b0c086a49dee88d860fd0cf5e7e",
+    "apps/api/src/assistant/general-quote-issue-confirmation.test.ts": "fec28bc06cc837a6d05468c0772b1dc1fad94fde959fe245ec0927e48402e25b",
+    "packages/db/src/queries/commerce-quote-issue-authority.ts": "040491fed4cad69d409b5ef3786892d047f6a4ef0af663337d58a3a892410322",
+    "packages/db/src/queries/commerce-quote-issue-authority.test.ts": "c8384d1f6052fb3a5275308e950582c54ab208bfed10299ba4bab18e870fd844",
+    "packages/db/src/queries/commerce-quote-decision-review.ts": "b15ad485b693e6805635e6b0f9c1ac524f7c42d5f91c193946b956e6b0df7d2f",
+    "packages/db/src/queries/commerce-quote-decision-review.test.ts": "29fd7cedd2d5f15de0e32af4607fcb0d8cf276a384aa2200b948010b4a45b21e",
+    "packages/db/src/queries/commerce-quotes.ts": "38847daf33ce4f9dbbc8be0b0bd952506cdb0217855bbc0f032dc23ea6c3558a",
+    "packages/db/package.json": "d14390480b4aa6d271f8af833ce8e15796972255aa10f6899fe65aa584607add"
+  },
+  "verification": {
+    "rootFinal": {
+      "passed": 65,
+      "assertions": 1579,
+      "failed": 0,
+      "selectedSuites": 6,
+      "bunReportedFiles": 9,
+      "log": "/private/tmp/assistant-quote-confirm-stock-root-final-tests.log"
+    },
+    "rootNativeRegression": {
+      "passed": 62,
+      "assertions": 442,
+      "failed": 0,
+      "selectedSuites": 4,
+      "bunReportedFiles": 5,
+      "log": "/private/tmp/assistant-quote-confirm-native-regression-tests.log"
+    },
+    "independentReview": {
+      "passed": 23,
+      "assertions": 498,
+      "finding": "none actionable",
+      "note": "Included in root suite scope; do not add again to root127/2021 total."
+    },
+    "compiler": {
+      "exitCode": 2,
+      "diagnostics": 78,
+      "ownedDiagnostics": 0,
+      "initialOwnedDiagnosticsRepaired": 6,
+      "config": "/private/tmp/assistant-quote-confirm-stock-types-tsconfig.json",
+      "log": "/private/tmp/assistant-quote-confirm-stock-types-final.log"
+    },
+    "coverage": {
+      "result": "current",
+      "log": "/private/tmp/assistant-quote-confirm-stock-coverage.log"
+    },
+    "impact": {
+      "result": "pass",
+      "log": "/private/tmp/assistant-quote-confirm-stock-impact.log",
+      "records": 35,
+      "wholeMixedCheckoutChangedCapabilityRows": 126,
+      "wholeMixedCheckoutChangedProcedureRows": 10
+    },
+    "lint": {
+      "files": 14,
+      "result": "pass",
+      "log": "/private/tmp/assistant-quote-confirm-stock-biome.log"
+    }
+  },
+  "acceptance": {
+    "accepted": 13,
+    "total": 45,
+    "status": "source_only_no_parent_promotion"
+  },
+  "limits": [
+    "Not registered/exposed; outer fresh GENERAL actual Session/account/privacy/client/action/domain authority remains",
+    "No actual SQL concurrency/rollback/HTTP/device/provider proof; inert fixtures only",
+    "Stored approval moderation remains in execution; outside approval preflight still open",
+    "Stock projection wrappers unintegrated pending shared-file ownership release",
+    "Logical64MiB admission is not whole heap/DB load proof"
+  ],
+  "gates": "All existing G01/Paystack/D04/E05/G04/S05/C04 gates preserved"
+}

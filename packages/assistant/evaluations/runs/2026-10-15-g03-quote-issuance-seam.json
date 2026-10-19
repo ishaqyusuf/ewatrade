@@ -1,0 +1,108 @@
+{
+  "observedAt": "2026-10-15T16:12:20.930099+00:00",
+  "status": "prepared_issuer_transitive_screening_source_verified_not_full_assistant_action",
+  "checks": [
+    {
+      "scope": "actual canonical Quote source",
+      "result": "31pass/0fail/99assertions,1file; inertdelegates and QA moderationfixture",
+      "log": "/private/tmp/assistant-g03-quote-preflight-tests.log"
+    },
+    {
+      "scope": "independent source review",
+      "result": "No actionable regression; canonical issuance body preserved, opaque proof/privacy/snapshot/retry/currentauthority checked. Terms/protectAction mutation coverage then added and final root rerun passed."
+    },
+    {
+      "scope": "compiler",
+      "result": "79 imported/concurrentdiagnostics,0Quote-owned; full config/diagnostics in native Request companionJSON"
+    },
+    {
+      "scope": "final scoped lint",
+      "result": "39codefiles clean",
+      "log": "/private/tmp/assistant-g03-native-final-lint.log"
+    },
+    {
+      "scope": "H01",
+      "result": "coverage snapshot current",
+      "log": "/private/tmp/assistant-g03-native-final-coverage.log"
+    },
+    {
+      "scope": "H02 mixed checkout",
+      "result": "26records cover126capability+8procedure changedrows",
+      "log": "/private/tmp/assistant-g03-native-final-impact.log"
+    },
+    {
+      "scope": "actual linked new/replay issuer chain+existing release/safety regressions",
+      "result": "53pass/0fail/186assertions across5files, syntheticTX and QA moderation; no actual provider/DB",
+      "log": "/private/tmp/assistant-g03-quote-transitive-final-tests.log"
+    }
+  ],
+  "sourceObservations": {
+    "packages/db/src/queries/commerce-quotes.ts": "9f67726f02d7d44ab180e2b9cfe6794d32da9e5dbfaee251b9fb707953153d2a",
+    "packages/db/src/queries/commerce-quotes.test.ts": "f5dd1eca0883421dde8bef69abd25ea82714e37f5427ea361cd238647e4d4e73",
+    "packages/db/src/queries/index.ts": "8dfbe7d4f93abb1a1434c85884351c017b62a6aaa3de24c78caef78551b186c2",
+    "packages/db/src/queries/store-conversation-text-safety.ts": "526f81d310ff30a32740d413c74cab101cbdb7b84d18ba3569859f532421188d",
+    "packages/db/src/queries/store-conversation-text-safety.test.ts": "4ac5e93cb62a0b02171bfa4418e50f03a0c24d0e3badf7cf3fd1d7add54e7050",
+    "packages/db/src/queries/store-conversation-action-release.ts": "d89bd0a8ba11aa517325028702ce784092e6b2ac3a64d56e09a35a7b05c3aada",
+    "packages/db/src/queries/store-conversation-action-release-screening.test.ts": "de39c5d501ccb6aad9b69430bd5afff00e55541ee7b078ac88c5729c2e4babbe"
+  },
+  "commandEnvironment": {
+    "unset": [
+      "DATABASE_URL",
+      "APP_ENV",
+      "DEV_PROFILE"
+    ],
+    "EWATRADE_DATABASE_URL": "postgresql://fixture:fixture@127.0.0.1:1/assistant_source_tests",
+    "STORE_CONVERSATION_TEXT_SAFETY_PROVIDER": "qa-fixture",
+    "NODE_ENV": "test"
+  },
+  "command": "bun --env-file=/dev/null test ./packages/db/src/queries/commerce-quotes.test.ts",
+  "preserved": [
+    "native signature",
+    "legacy/options hash semantics",
+    "P2034 retry once with same preparedintent/token",
+    "Serializable10s/30s",
+    "fresh authority/source/Terms/approval/release/replay",
+    "private DRAFT/clinical separation"
+  ],
+  "newTests": [
+    "forged/serialized handle before tx",
+    "nestedintent/Date/scope/callback mutation during async prepare",
+    "Terms publication/protectAction callback mutation",
+    "no nested txn/rescreen in preparedhelper",
+    "current authority/source revocation and hash mismatch",
+    "same token digest across simulated rollback/retry",
+    "opaque text proof after all configured screens +copy-beforeawait",
+    "everyactualsavedlabel,invalid/null/serialized/mismatched proof refusal,no providerfallback",
+    "actuallinkedissuernew/replay with moderationunavailable afterprepare",
+    "legacy no-proof callers still screen"
+  ],
+  "limits": "Opaque proof covers prepared issuer path; existing no-proof/approval callers preserve mandatory moderation and need their own outer preflight integration. Single-option linked-chain fixture plus multiple-text proof unit coverage. No actual PostgreSQL/HTTP/provider/model/connected/device proof; full G03 staysopen.",
+  "parentAcceptance": {
+    "accepted": 13,
+    "total": 45
+  },
+  "remaining": [
+    "pure Quote pricing/eligibility/review",
+    "strict GENERAL issue/revise intent and signedreview",
+    "outer confirmation preflight across all entrypoints",
+    "safe receipt/original and clients",
+    "connected/native/saved acceptance under existing gates"
+  ],
+  "newFinding": {
+    "path": "packages/db/src/queries/store-conversation-action-release.ts",
+    "finding": "Inherited linked-release append still screens snapshot labels inside transaction; current extraction is not transitively provider-free.",
+    "next": "Opaque exact-content preflight evidence with synchronous saved-label check; actual linked-path regressions and independent review before guarantee.",
+    "status": "repaired_source_independently_reviewed"
+  },
+  "finalCheckpoint": {
+    "observedAt": "2026-10-15T16:13:34.422406+00:00",
+    "relatedSuite": "53/186",
+    "combinedNative": "63/411",
+    "scopedLint": "45codefilesclean",
+    "coverage": "current",
+    "wholeMixedImpact": "27records,126capability+8procedurechangedrows",
+    "compiler": "80imported/concurrentdiagnostics;0inownedpaths;newforeignassistant-voice.ts143 since prior79",
+    "limits": "Whole compiler remains red; no provider/model/HTTP/DB/native-device acceptance."
+  },
+  "review": "Independent native_staff_status review of exact-text proof/new+replay linked chain no actionable findings; independent prior extraction review and root actual tests retained."
+}

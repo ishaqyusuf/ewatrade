@@ -17,7 +17,10 @@ import {
   Textarea,
 } from "@ewatrade/ui"
 import { majorToMinor, minorToMajorInput } from "@ewatrade/utils"
-import { CATALOG_FREE_LINE_LABELS } from "@ewatrade/utils/catalog-free-lines"
+import {
+  CATALOG_FREE_LINE_LABELS,
+  catalogFreeLineDescriptionError,
+} from "@ewatrade/utils/catalog-free-lines"
 import { useState } from "react"
 import {
   OrderPaymentAccount,
@@ -537,6 +540,9 @@ function GeneralProposalFields({
       : [],
   )
   const [error, setError] = useState<string | null>(null)
+  // Per custom line: a Quick sale must say what was sold; Additional cost
+  // descriptions stay optional. Older drafts still open for repair.
+  const [lineErrors, setLineErrors] = useState<Record<number, string>>({})
   // On an update, a cleared phone or email means remove it; on create, omit it.
   const cleared = payload.action === "customer_update" ? null : undefined
   const patch = (value: Record<string, unknown>) =>
@@ -559,6 +565,22 @@ function GeneralProposalFields({
       setError(account.problem)
       return
     }
+    if (payload.action === "order_create") {
+      const problems: Record<number, string> = {}
+      payload.lines.forEach((line, index) => {
+        if (!("custom" in line)) return
+        const problem = catalogFreeLineDescriptionError({
+          kind: line.custom,
+          description: line.description?.trim() ?? "",
+        })
+        if (problem) problems[index] = problem
+      })
+      setLineErrors(problems)
+      if (Object.keys(problems).length) {
+        setError(null)
+        return
+      }
+    }
     const parsed = generalActionSchema.safeParse({
       ...payload,
       ...(payload.action === "order_create"
@@ -568,6 +590,7 @@ function GeneralProposalFields({
                 ? {
                     ...line,
                     amountMinor: majorToMinor(lineTotals[index] ?? ""),
+                    description: line.description?.trim() || undefined,
                   }
                 : line.enteredTotalMinor === undefined
                   ? line
@@ -1022,26 +1045,56 @@ function GeneralProposalFields({
                     }
                   />
                   <FieldLabel htmlFor={field(`description-${index}`)}>
-                    Description (optional)
+                    {line.custom === "quick_sale"
+                      ? "What was sold? (required)"
+                      : "Description (optional)"}
                   </FieldLabel>
                   <Input
                     id={field(`description-${index}`)}
-                    maxLength={200}
+                    maxLength={240}
                     value={line.description ?? ""}
                     disabled={disabled}
-                    onChange={(event) =>
+                    required={line.custom === "quick_sale"}
+                    aria-invalid={lineErrors[index] ? true : undefined}
+                    aria-describedby={
+                      lineErrors[index]
+                        ? field(`description-${index}-error`)
+                        : undefined
+                    }
+                    onChange={(event) => {
+                      const description = event.target.value
                       patch({
                         lines: payload.lines.map((current, i) =>
                           i === index
                             ? {
                                 ...current,
-                                description: event.target.value || undefined,
+                                description: description || undefined,
                               }
                             : current,
                         ),
                       })
-                    }
+                      if (lineErrors[index])
+                        setLineErrors((current) => {
+                          const next = { ...current }
+                          const problem = catalogFreeLineDescriptionError({
+                            kind: line.custom,
+                            description: description.trim(),
+                          })
+                          if (problem) next[index] = problem
+                          else delete next[index]
+                          return next
+                        })
+                    }}
                   />
+                  {lineErrors[index] ? (
+                    <p
+                      id={field(`description-${index}-error`)}
+                      role="alert"
+                      className="text-sm text-destructive"
+                    >
+                      {lineErrors[index]}
+                    </p>
+                  ) : null}
                 </Field>
               ) : (
                 <Field key={`${line.offeringId}:${index}`}>

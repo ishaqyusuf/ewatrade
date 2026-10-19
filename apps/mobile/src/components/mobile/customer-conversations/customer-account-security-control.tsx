@@ -93,7 +93,7 @@ export function CustomerAccountSecurityControl() {
           contentContainerStyle={{ paddingBottom: 80 }}
         >
           <View className="gap-4 px-5 pb-6">
-            <Text className="text-sm leading-5 text-muted-foreground">
+            <Text className="text-sm [-rn-line-height:22] text-muted-foreground">
               These are guest browsers and app installations that proved access
               to conversations linked to your account. Removing one does not
               delete the conversation or sign out your Ẹ̀wáTrade account.

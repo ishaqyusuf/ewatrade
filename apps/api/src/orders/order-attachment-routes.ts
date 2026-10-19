@@ -1,5 +1,7 @@
 import {
   CatalogError,
+  RetailOpsSubscriptionError,
+  assertAttachmentEntitlement,
   markCommercialOrderAttachmentUploaded,
   readCommercialOrderAttachment,
 } from "@ewatrade/db/queries"
@@ -77,6 +79,8 @@ function mapError(context: Context, error: unknown) {
     return refuse(context, error.status, "UPLOAD_REFUSED", error.message)
   if (error instanceof CatalogError)
     return refuse(context, 404, error.code, error.message)
+  if (error instanceof RetailOpsSubscriptionError)
+    return refuse(context, 403, "PLAN_UPGRADE_REQUIRED", error.message)
   if (error instanceof QaProviderPolicyError)
     return refuse(
       context,
@@ -140,6 +144,7 @@ export function registerOrderAttachmentRoutes(
           "UPLOAD_EXPIRED",
           "This upload expired. Attach the file again.",
         )
+      await assertAttachmentEntitlement(db, { tenantId })
       if (row.kind === "VIDEO")
         return await uploadVideo(context, row, {
           db,

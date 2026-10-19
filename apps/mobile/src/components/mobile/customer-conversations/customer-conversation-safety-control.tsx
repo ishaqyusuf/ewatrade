@@ -172,7 +172,7 @@ export function CustomerConversationSafetyControl({
               >
                 Report this conversation
               </Text>
-              <Text className="text-sm leading-5 text-muted-foreground">
+              <Text className="text-sm [-rn-line-height:22] text-muted-foreground">
                 Choose why you want ẸwáTrade to review this Store conversation.
                 Reporting does not block the Store.
               </Text>
@@ -243,7 +243,7 @@ export function CustomerConversationSafetyControl({
               >
                 {blocked ? "Unblock this Store" : "Block this Store"}
               </Text>
-              <Text className="text-sm leading-5 text-muted-foreground">
+              <Text className="text-sm [-rn-line-height:22] text-muted-foreground">
                 {customerConversationBlockDescription(blocked)}
               </Text>
               {blockError ? (

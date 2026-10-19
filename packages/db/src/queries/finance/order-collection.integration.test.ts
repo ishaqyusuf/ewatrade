@@ -138,7 +138,13 @@ describeWithServiceCommerceDatabase("order receiving accounts", () => {
       const open = await createCommercialOrder(db, {
         ...base,
         clientOrderId: `${runId}:later`,
-        lines: [{ custom: "quick_sale", amountMinor: 2000 }],
+        lines: [
+          {
+            custom: "quick_sale",
+            amountMinor: 2000,
+            description: "Later feed sale",
+          },
+        ],
       })
       const payment = {
         ...actor,

@@ -99,7 +99,7 @@ export function ServiceCommandReview({
                     {fact.label}
                   </Text>
                   <Text
-                    className={ink + " text-sm font-bold [-rn-line-height:21]"}
+                    className={ink + " text-sm font-bold [-rn-line-height:22]"}
                   >
                     {fact.value}
                   </Text>
@@ -123,7 +123,7 @@ export function ServiceCommandReview({
               />
             ) : null}
             {!accepted ? (
-              <Text className={muted + " text-xs [-rn-line-height:19]"}>
+              <Text className={muted + " text-xs [-rn-line-height:22]"}>
                 {command.hasAttempt
                   ? "The reviewed payload stays locked. Retry the same action. Leaving this workflow loses the in-memory retry handle; reconcile the record before entering another command."
                   : "Check these facts before confirming. The server rechecks permissions and current business rules."}

@@ -5,6 +5,43 @@ import { shouldLogMobileTrpcOperation } from "./log-operation"
 
 describe("mobile tRPC operation logging", () => {
   test.each(["development", "production"])(
+    "assistant WhatsApp challenges and owned connections stay private in %s",
+    async (environment) => {
+      const logged: unknown[] = []
+      const client = createTRPCUntypedClient({
+        links: [
+          loggerLink({
+            enabled: (options) =>
+              shouldLogMobileTrpcOperation(options, environment),
+            logger: (options) => logged.push(options),
+          }),
+          () => () =>
+            observable((observer) => {
+              observer.next({
+                result: {
+                  data: { url: "https://wa.me/synthetic-private-challenge" },
+                },
+              })
+              observer.complete()
+            }),
+        ],
+      })
+      await client.mutation("assistantChannels.createWhatsAppLink", {})
+      await client.query("assistantChannels.whatsAppConnections")
+      expect(logged).toHaveLength(0)
+      expect(
+        shouldLogMobileTrpcOperation(
+          {
+            direction: "down",
+            path: "assistantChannels.confirmWhatsAppLink",
+            result: new Error("private"),
+          },
+          environment,
+        ),
+      ).toBe(false)
+    },
+  )
+  test.each(["development", "production"])(
     "customer message text and recipients stay out of request/error logs in %s",
     async (environment) => {
       const logged: unknown[] = []

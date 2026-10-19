@@ -1,0 +1,44 @@
+{
+  "version": 1,
+  "id": "2026-10-15-whatsapp-private-cleanup",
+  "tickets": ["H01", "H02"],
+  "summary": "Integrate exact owned WhatsApp private connection graph into existing approved private-assistant erasure. Commit canonical revocation/pending cancellation before refusing unresolved send/transcription provenance; verify original physical absence before owned cascades. Late transcription admissions use unconditional locked account privacy fence; existing admitted terminal reconciliation remains possible. No schema/provider/deployment or new policy approval.",
+  "noAssistantImpact": "Personal platform-admin account privacy processing remains excluded from merchant/model/WhatsApp tools. Existing distinct human operator, immutable verified subject/contact, approved policy hash/version and prior account access revocation remain mandatory. No linked identity or Tenant Owner authority expansion, assistant capability rollout, live activation or external provider/device erasure.",
+  "procedures": [],
+  "docs": [
+    {
+      "topic": "feature",
+      "path": ".brain/features/account-privacy.md",
+      "status": "local_only"
+    },
+    {
+      "topic": "permissions",
+      "path": ".brain/api/permissions.md",
+      "status": "local_only"
+    },
+    {
+      "topic": "schema",
+      "path": ".brain/database/relationships.md",
+      "status": "local_only"
+    },
+    {
+      "topic": "decision",
+      "path": ".brain/decisions/2026-10-15-whatsapp-private-cleanup-provenance.md",
+      "status": "local_only"
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "run",
+      "path": ".brain/qa/2026-10-15-whatsapp-remaining-acceptance-audit.md",
+      "executed": true,
+      "result": "Actual guarded synthetic QA request/review/account and membership revocation/identity outcome/private processor passes1/46,0fail172.75s including strict owned cleanup. Real local WAV and canonical started transcription survive cleared processing lease; original SENDING send becomes UNKNOWN preserving exact callback proof. Neither uncertain transport nor transcription permits byte deletion. Unconditional late audio admission rejects; new terminal attempt cannot appear under privacy fence; admitted mechanical QA terminal reconciliation enables canonical bytes-first owned graph erasure. Injected storage failure retains attribution; actual storage absence precedes rows; all12 channel inventory fields and private total0, unrelated account intact, genuine workflow nextStep CONFIRM_CONVERSATIONS and replay0effect. Synthetic rejected send and terminal STT outcome are mechanics, not provider settlement/deletion evidence; approved policy category binding is disposable QA only. Last test-only tuple/percount typing correction is equivalent and separately scoped0, no extra connected run."
+    },
+    {
+      "kind": "run",
+      "path": ".brain/qa/2026-10-15-whatsapp-remaining-acceptance-audit.md",
+      "executed": true,
+      "result": "Focused policy/channel graph/voice/workflow source16/103 pass; eight-path scoped Biome/diff and independent exact foreign-edge/uncertain proof/STT concurrency review clear. Seven DB owned semantic roots0; corrected API fixture percount tuple assertion0; finance fixture exact missing review guard separately0. Actual connected result is recorded separately; no external erasure or whole-account completion is inferred."
+    }
+  ]
+}

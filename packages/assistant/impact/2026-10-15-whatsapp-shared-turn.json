@@ -1,0 +1,32 @@
+{
+  "version": 1,
+  "id": "2026-10-15-whatsapp-shared-turn",
+  "tickets": ["A01", "H01"],
+  "summary": "WhatsApp plan W13: extract GENERAL input, model/tool execution and durable turn finalization from the Hono SSE adapter. Browser/mobile retain the shared deterministic money fast paths, scoped history, configured model, allowance, request deduplication and recovery. Branded linked context refreshes authority and binds the exact conversation; channel presentation instructions are independent of capability release. Shared transport has no new business command, provider send, OTP change or rollout promotion.",
+  "capabilities": [],
+  "docs": [
+    {
+      "topic": "feature",
+      "path": ".brain/features/whatsapp-assistant.md",
+      "status": "local_only"
+    },
+    {
+      "topic": "api",
+      "path": ".brain/api/contracts.md",
+      "status": "local_only"
+    },
+    {
+      "topic": "decision",
+      "path": ".brain/decisions/2026-10-15-whatsapp-assistant-channel.md",
+      "status": "local_only"
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "run",
+      "path": ".brain/qa/2026-10-15-whatsapp-assistant.md",
+      "executed": true,
+      "result": "Actual guarded local Neon shared browser/linked model-stub turn and prior principal controls1/60 pass with fixture cleanup. Final HTTP10/40, offline API assistant391/2108 (12connected skips, before final two HTTP-only cases) and OTP/platform10/55 pass. Scoped Biome, diff, H01/H02 pass; full API compiler retains existing diagnostics outside new turn/adapter/integration modules. W13 source/backend accepted; delivery5/48. No model/provider sends or live-channel acceptance."
+    }
+  ]
+}

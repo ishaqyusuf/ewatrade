@@ -121,7 +121,7 @@ export const qaAccessRouter = createTRPCRouter({
         qaStoreId: true,
         qaTenantId: true,
       },
-      where: { id: ctx.session.session.id },
+      where: { id: requireBrowserIdentity(ctx.session).session.id },
     })
     const authorization = session?.qaAuthorization
     if (
@@ -271,3 +271,4 @@ export const qaAccessRouter = createTRPCRouter({
       })
     }),
 })
+import { requireBrowserIdentity } from "../../assistant/channel-principal"

@@ -1,0 +1,165 @@
+{
+  "version": 1,
+  "id": "2026-10-15-phase7-native-service",
+  "tickets": [
+    "D04",
+    "D05",
+    "G03",
+    "A04",
+    "H01",
+    "H02",
+    "H03"
+  ],
+  "summary": "Ten native Service actions plus exact work/note/exception/intake/quotation original consumers. Strict existing schemas, protected current scope, fresh review/local-intent lifetime and exact originals;17planned mobile client/test rows. No canonical/API/schema/provider/policy or rollout change.",
+  "capabilities": [
+    {
+      "id": "services.work.rework",
+      "change": "changed",
+      "rollout": "planned",
+      "note": "Adds native editor/read/original consumer and source evidence; current canonical scope/authority and planned availability retained."
+    },
+    {
+      "id": "services.work.handoff",
+      "change": "changed",
+      "rollout": "planned",
+      "note": "Adds native editor/read/original consumer and source evidence; current canonical scope/authority and planned availability retained."
+    },
+    {
+      "id": "services.work.assign",
+      "change": "changed",
+      "rollout": "planned",
+      "note": "Adds native editor/read/original consumer and source evidence; current canonical scope/authority and planned availability retained."
+    },
+    {
+      "id": "services.work.reschedule",
+      "change": "changed",
+      "rollout": "planned",
+      "note": "Adds native editor/read/original consumer and source evidence; current canonical scope/authority and planned availability retained."
+    },
+    {
+      "id": "services.work.transition",
+      "change": "changed",
+      "rollout": "planned",
+      "note": "Adds native editor/read/original consumer and source evidence; current canonical scope/authority and planned availability retained."
+    },
+    {
+      "id": "services.work.note",
+      "change": "changed",
+      "rollout": "planned",
+      "note": "Adds native editor/read/original consumer and source evidence; current canonical scope/authority and planned availability retained."
+    },
+    {
+      "id": "services.work.exception",
+      "change": "changed",
+      "rollout": "planned",
+      "note": "Adds native editor/read/original consumer and source evidence; current canonical scope/authority and planned availability retained."
+    },
+    {
+      "id": "services.work.context.read",
+      "change": "changed",
+      "rollout": "planned",
+      "note": "Adds native editor/read/original consumer and source evidence; current canonical scope/authority and planned availability retained."
+    },
+    {
+      "id": "services.work.review",
+      "change": "changed",
+      "rollout": "planned",
+      "note": "Adds native editor/read/original consumer and source evidence; current canonical scope/authority and planned availability retained."
+    },
+    {
+      "id": "services.quote.approve",
+      "change": "changed",
+      "rollout": "planned",
+      "note": "Adds native editor/read/original consumer and source evidence; current canonical scope/authority and planned availability retained."
+    },
+    {
+      "id": "services.quote.reject",
+      "change": "changed",
+      "rollout": "planned",
+      "note": "Adds native editor/read/original consumer and source evidence; current canonical scope/authority and planned availability retained."
+    },
+    {
+      "id": "services.quote.review",
+      "change": "changed",
+      "rollout": "planned",
+      "note": "Adds native editor/read/original consumer and source evidence; current canonical scope/authority and planned availability retained."
+    },
+    {
+      "id": "services.quote_approval.read",
+      "change": "changed",
+      "rollout": "planned",
+      "note": "Adds native editor/read/original consumer and source evidence; current canonical scope/authority and planned availability retained."
+    },
+    {
+      "id": "services.quote_approvals.read",
+      "change": "changed",
+      "rollout": "planned",
+      "note": "Adds native editor/read/original consumer and source evidence; current canonical scope/authority and planned availability retained."
+    },
+    {
+      "id": "services.intake.create",
+      "change": "changed",
+      "rollout": "planned",
+      "note": "Adds native editor/read/original consumer and source evidence; current canonical scope/authority and planned availability retained."
+    },
+    {
+      "id": "services.intake.options.read",
+      "change": "changed",
+      "rollout": "planned",
+      "note": "Adds native editor/read/original consumer and source evidence; current canonical scope/authority and planned availability retained."
+    },
+    {
+      "id": "services.work.original.read",
+      "change": "changed",
+      "rollout": "planned",
+      "note": "Adds native editor/read/original consumer and source evidence; current canonical scope/authority and planned availability retained."
+    }
+  ],
+  "procedures": [],
+  "docs": [
+    {
+      "topic": "feature",
+      "path": ".brain/features/assistant-business-operations.md",
+      "status": "local_only",
+      "note": "Phase7 native source and full remaining acceptance tracked with intake/work/quotation feature docs."
+    },
+    {
+      "topic": "api",
+      "path": ".brain/api/contracts.md",
+      "status": "local_only",
+      "note": "Existing protected inputs/DTOs and exact original tuples reused; no endpoint or schema change."
+    },
+    {
+      "topic": "permissions",
+      "path": ".brain/api/permissions.md",
+      "status": "local_only",
+      "note": "Work-history legacy ceiling differs from scopedManager intake read; quotation current policy/maker-checker/clinical boundaries remain canonical."
+    },
+    {
+      "topic": "capability",
+      "path": "packages/assistant/src/capabilities/COVERAGE.md",
+      "status": "updated",
+      "note": "17planned mobile client/test rows; all source rollouts remain planned."
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "test",
+      "path": "packages/assistant/evaluations/phase-regressions.test.ts",
+      "executed": true,
+      "result": "18isolatedchildren in66/558affectedsource command; fournewcomponentchildren51logicalcases/701assertions, no device/domain/provider proof."
+    },
+    {
+      "kind": "test",
+      "path": "apps/mobile/src/components/mobile/assistant/native-service-target.test.ts",
+      "executed": true,
+      "result": "3/31 strict exactreceipt/original navigation, malformed/authority/rework semantics."
+    },
+    {
+      "kind": "review",
+      "path": "packages/assistant/evaluations/runs/2026-10-15-phase7-native-service-source.md",
+      "executed": true,
+      "result": "Independent fixes to localintent race, scopedManager intake policy split and malformedmoney presentation. Parent acceptance13/45 retained; compiler/current gates documented in final checkpoint."
+    }
+  ]
+}

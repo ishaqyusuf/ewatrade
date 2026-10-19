@@ -16,6 +16,7 @@ export type OfflineOrderLine =
 export type OfflineOrderPayment = {
   amountMinor: number
   clientPaymentId: string
+  moneyAccountId?: string
   method: "bank_transfer" | "card" | "cash" | "other" | "pos"
   note?: string
   reference?: string

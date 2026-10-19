@@ -1,0 +1,84 @@
+{
+  "version": 1,
+  "id": "2026-10-15-native-stock-dependencies-source",
+  "tickets": [
+    "C01",
+    "C02",
+    "C03",
+    "C04",
+    "C05",
+    "A04",
+    "H02"
+  ],
+  "summary": "Protected exact stock context reads and shared native-safe custody/pack logic; full native/edit/original/acceptance retained.",
+  "capabilities": [],
+  "procedures": [
+    {
+      "path": "inventory.balanceSource",
+      "status": "form_only",
+      "reason": "Protected editor context, no standalone model read/confirmation authority; full native A04 scope retained."
+    },
+    {
+      "path": "inventory.custodyAssignees",
+      "status": "form_only",
+      "reason": "Protected editor context, no standalone model read/confirmation authority; full native A04 scope retained."
+    }
+  ],
+  "docs": [
+    {
+      "topic": "feature",
+      "path": ".brain/features/generic-catalog-inventory-units-stock-operations.md",
+      "status": "local_only",
+      "note": "Native prerequisite source; all12editors/4originals remain."
+    },
+    {
+      "topic": "api",
+      "path": ".brain/api/endpoints.md",
+      "status": "local_only",
+      "note": "Exact read and Store custody choice procedures."
+    },
+    {
+      "topic": "api",
+      "path": ".brain/api/contracts.md",
+      "status": "local_only",
+      "note": "Strict context shapes, nullable labels, shared calculations."
+    },
+    {
+      "topic": "permissions",
+      "path": ".brain/api/permissions.md",
+      "status": "local_only",
+      "note": "Query-only stock grant and recipient-vs-actor separation."
+    },
+    {
+      "topic": "schema",
+      "status": "not_applicable",
+      "note": "Read query and shared pure logic only; no Prisma/storage changes."
+    },
+    {
+      "topic": "capability",
+      "path": "packages/assistant/src/capabilities/COVERAGE.md",
+      "status": "updated",
+      "note": "New exact context query classifications only; no write/client/rollout change."
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "test",
+      "path": "packages/assistant/evaluations/fixtures/inventory-editor-reads-router.fixture.ts",
+      "executed": true,
+      "result": "Root11/96 actualrouter/centralguard/query source with explicit inert auth/tenant/Prisma."
+    },
+    {
+      "kind": "test",
+      "path": "packages/assistant/src/general/stock-transform-derive.test.ts",
+      "executed": true,
+      "result": "Shared/APIsource51/343 total separate processes; exact arithmetic preserved."
+    },
+    {
+      "kind": "review",
+      "path": "packages/assistant/evaluations/runs/2026-10-15-native-stock-dependencies-source.md",
+      "executed": true,
+      "result": "Independent source reviewed; terminal integrated78foreign/0owned, H01current/H02pass33 and scoped whitespace pass."
+    }
+  ]
+}

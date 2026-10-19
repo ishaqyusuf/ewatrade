@@ -1,0 +1,211 @@
+{
+  "observedAt": "2026-10-15T15:24:48.921928+00:00",
+  "status": "backend_model_source_verified_clients_pending",
+  "parentAcceptance": {
+    "accepted": 13,
+    "total": 45
+  },
+  "capabilities": 154,
+  "nativeDeclarations": {
+    "writes": 39,
+    "reads": 65,
+    "fullWriteGaps": 35
+  },
+  "checks": [
+    {
+      "scope": "canonical child",
+      "result": "9pass/97assertions, actual functions with inert transaction stand-ins; independent source review no actionable finding"
+    },
+    {
+      "scope": "actual router child fixture",
+      "result": "11pass/143assertions, real router/schema/role/error/options with middleware+canonical stand-ins"
+    },
+    {
+      "scope": "combined source",
+      "result": "46pass/239assertions across5top-level files,32isolated children",
+      "log": "/private/tmp/assistant-g03-request-combined.log"
+    },
+    {
+      "scope": "final focused schema/model/savedcontinuation",
+      "result": "5pass/50assertions, after typed test-target correction",
+      "log": "/private/tmp/assistant-g03-request-focused.log"
+    },
+    {
+      "scope": "scopedlint",
+      "result": "15files clean",
+      "log": "/private/tmp/assistant-g03-request-final-lint.log"
+    },
+    {
+      "scope": "compiler",
+      "result": "exit2:79imported/concurrentdiagnostics,0inG03-owned paths; one test type mismatch corrected before final pass",
+      "log": "/private/tmp/assistant-g03-request-final-types.log"
+    },
+    {
+      "scope": "coverage",
+      "result": "snapshot current",
+      "log": "/private/tmp/assistant-g03-request-coverage-check.log"
+    },
+    {
+      "scope": "whole mixed-checkout impact",
+      "result": "exit0:24records;126capability+8procedure rows changed",
+      "log": "/private/tmp/assistant-g03-request-final-impact.log"
+    }
+  ],
+  "uiJob": "ce41c527-08a2-4e4e-8e04-28d73ce0f9a8",
+  "sourceObservations": {
+    "packages/db/src/queries/service-request-read.ts": "4f6e6b6ab3f1b1a9c48144e7dc5ffb53592b625243fc3df58ba0092c93e8d1ae",
+    "packages/db/src/queries/service-request-read.test.ts": "a3730c2050fdf04a943110da45942ba59b690c4d630e62e1c824c0c68c33908c",
+    "packages/db/src/queries/service-intake-review.ts": "b5791fc6c0feb7e03dfeee26a580697d292dc5daf01078183a3ba9d817e14b90",
+    "packages/db/src/queries/service-work-order-scope.ts": "ddacbb1ddd6ac69c1b5a0587e69202d4ce88765f07196f55271c312a3f611622",
+    "packages/db/src/queries/literal-contains.ts": "fad454e0ff62291e22aecb78ed419b1553597f670604ed0d18920486b66ee4b8",
+    "packages/db/package.json": "c925556c707145e12151a8b14d74e0b55717e8a185dcdfbccfe040cdebadf974",
+    "packages/assistant/package.json": "a2e86a86c406e992c9e4f637bc283a4f5ec5ae365d1d692254ac7016bdab82ad",
+    "packages/assistant/src/general/service-request-read.ts": "94423be8bded410562ca0e4e920a97db32ce4011bbadbbc9fd2b21a4d389198c",
+    "packages/assistant/src/general/service-request-read.test.ts": "2cf10355b2f9fde0b7fee0503d1f85a7da1c638735d0562cf5c04593e4e268ab",
+    "packages/assistant/src/general/read-continuation.ts": "86b61cbbd62e4d8c3f0eceafa7074e405d6d824124d4e3d75be092f91445c4d4",
+    "packages/assistant/src/capabilities/manifest.ts": "1bd9e5bdf5f528a2d60e07a9d4709e9eb3d7f8ca83835e416c91dde496a5ba25",
+    "packages/assistant/src/capabilities/COVERAGE.md": "6efb3527b01703d681a668db46be8076dda82d732108338d7153fc621a64ce51",
+    "apps/api/src/trpc/routers/service-assistant-requests.ts": "e66d8b2f5f500432fd7d8ba4ecd90718b2d2a59e082c88bb6e834cbbc2b8aeaa",
+    "apps/api/src/trpc/routers/_app.ts": "82f83d00cb814f27607ecbbf21f55770e12ad68bea0807461d7400ffe56ed983",
+    "apps/api/src/assistant/general-service-request-reads.ts": "181e3308a5176bd2c53eb3693f38ed0f916c1c62000bf5d683a37120719eb1f0",
+    "apps/api/src/assistant/general-service-request-reads.test.ts": "13d548267503847d49262d1ee22d605e9cd808ff8f77fffd3bf3a478eff3f558",
+    "apps/api/src/assistant/general-callers.ts": "16289e01e9c0341125f9976624a0ddfd64b8624a941385fbbf455726197d5b32",
+    "apps/api/src/assistant/general-context.ts": "d98e315735cbe4d7e4fa142e570f5810a9551424efb5d1b29e88aa338e045f3b",
+    "apps/api/src/assistant/general-tools.ts": "9192bc57cde883ed2000d056a7bf543d093a9fc2662a8db11f476c29e18cb71b",
+    "apps/api/src/utils/staff-procedure-policy.ts": "aa5cd0a840dae4407a059bd0f43cd36bd94396514a87c6bcb971d83fe886dcf0",
+    "packages/assistant/evaluations/fixtures/service-request-read-router.fixture.ts": "54f63b1d7ff5bb5ceca1d7a0ad08fad30159f67e1029c1dbeeb5c88e2fd64327",
+    "packages/assistant/evaluations/phase-regressions.test.ts": "c59cedd641e468a13189befcfec05063283446067358a5c40e70c69659fe81ce"
+  },
+  "limits": "Shared-file observations are not exclusive freeze of foreign work; no DB/HTTP/collation/concurrency/saved/browser/device proof. New targets are strict contracts, not yet answer routing. Clients stay dashboard-only/planned until actual native consumers exist.",
+  "remaining": [
+    "native protected page/original +routing",
+    "dashboard exact original wiring",
+    "durable reviewed disposition event/replay/state policy",
+    "Inquiry/staff intake,Quoteissue/revise,capacity/bookings,genericpickupdelivery,progressiveCatalog,secondvertical",
+    "fullsaved/native/connected acceptance"
+  ],
+  "effects": "No DB/schema/provider/model/runtime restart/activation/deploy/commit/push.",
+  "commands": [
+    {
+      "command": "bun --env-file=/dev/null test apps/api/src/assistant/general-service-request-reads.test.ts packages/assistant/src/general/service-request-read.test.ts packages/assistant/src/general/read-continuation.test.ts packages/assistant/evaluations/phase-regressions.test.ts",
+      "scope": "combined46/239"
+    },
+    {
+      "command": "bun --env-file=/dev/null test apps/api/src/assistant/general-service-request-reads.test.ts packages/assistant/src/general/service-request-read.test.ts",
+      "scope": "finalfocused5/50"
+    },
+    {
+      "command": "bun --cwd apps/api assistant:coverage --check",
+      "scope": "H01 source snapshot"
+    },
+    {
+      "command": "bun assistant:impact",
+      "scope": "H02 mixedcheckout source records"
+    }
+  ],
+  "compilerConfig": {
+    "extends": "/Users/M1PRO/Documents/code/ewatrade/apps/mobile/tsconfig.json",
+    "compilerOptions": {
+      "noEmit": true,
+      "incremental": false,
+      "types": [
+        "bun"
+      ],
+      "typeRoots": [
+        "/Users/M1PRO/Documents/code/ewatrade/node_modules/@types"
+      ]
+    },
+    "include": [
+      "/Users/M1PRO/Documents/code/ewatrade/apps/mobile/expo-env.d.ts",
+      "/Users/M1PRO/Documents/code/ewatrade/apps/mobile/nativewind-env.d.ts",
+      "/Users/M1PRO/Documents/code/ewatrade/apps/mobile/src/components/mobile/assistant/general-order-operation-editor.tsx",
+      "/Users/M1PRO/Documents/code/ewatrade/apps/mobile/src/components/mobile/assistant/general-proposal-editor.tsx",
+      "/Users/M1PRO/Documents/code/ewatrade/apps/mobile/src/components/mobile/assistant/native-order-values.ts",
+      "/Users/M1PRO/Documents/code/ewatrade/apps/mobile/src/components/mobile/assistant/native-order-values.test.ts",
+      "/Users/M1PRO/Documents/code/ewatrade/apps/mobile/src/components/mobile/assistant/native-parity.test.ts",
+      "/Users/M1PRO/Documents/code/ewatrade/apps/mobile/src/components/mobile/assistant/general-money-operation-editor.tsx",
+      "/Users/M1PRO/Documents/code/ewatrade/apps/mobile/src/components/mobile/assistant/native-money-values.ts",
+      "/Users/M1PRO/Documents/code/ewatrade/apps/mobile/src/components/mobile/assistant/native-money-values.test.ts",
+      "/Users/M1PRO/Documents/code/ewatrade/apps/mobile/src/components/mobile/finance/finance-workspace-gate.tsx",
+      "/Users/M1PRO/Documents/code/ewatrade/apps/mobile/src/components/mobile/finance/finance-expense-screen.tsx",
+      "/Users/M1PRO/Documents/code/ewatrade/apps/mobile/src/components/mobile/finance/finance-movement-screen.tsx",
+      "/Users/M1PRO/Documents/code/ewatrade/apps/mobile/src/app/finance-expense/[billId].tsx",
+      "/Users/M1PRO/Documents/code/ewatrade/apps/mobile/src/app/finance-movement/[entryId].tsx",
+      "/Users/M1PRO/Documents/code/ewatrade/apps/mobile/src/components/mobile/assistant/staff-original-screen.tsx",
+      "/Users/M1PRO/Documents/code/ewatrade/apps/mobile/src/components/mobile/assistant/native-staff-target.ts",
+      "/Users/M1PRO/Documents/code/ewatrade/apps/mobile/src/components/mobile/assistant/native-staff-target.test.ts",
+      "/Users/M1PRO/Documents/code/ewatrade/apps/mobile/src/app/staff-invite-modal.tsx",
+      "/Users/M1PRO/Documents/code/ewatrade/apps/mobile/src/components/mobile/assistant/general-staff-status-editor.tsx",
+      "/Users/M1PRO/Documents/code/ewatrade/apps/mobile/src/components/mobile/assistant/native-staff-status-values.ts",
+      "/Users/M1PRO/Documents/code/ewatrade/apps/mobile/src/components/mobile/assistant/native-staff-status-values.test.ts",
+      "/Users/M1PRO/Documents/code/ewatrade/apps/mobile/src/components/mobile/assistant/general-staff-invitation-editor.tsx",
+      "/Users/M1PRO/Documents/code/ewatrade/apps/mobile/src/components/mobile/assistant/native-staff-invitation-values.ts",
+      "/Users/M1PRO/Documents/code/ewatrade/apps/mobile/src/components/mobile/assistant/native-staff-invitation-values.test.ts",
+      "/Users/M1PRO/Documents/code/ewatrade/apps/mobile/src/components/mobile/assistant/general-staff-access-editor.tsx",
+      "/Users/M1PRO/Documents/code/ewatrade/apps/mobile/src/components/mobile/assistant/native-staff-access-values.ts",
+      "/Users/M1PRO/Documents/code/ewatrade/apps/mobile/src/components/mobile/assistant/native-staff-access-values.test.ts",
+      "/Users/M1PRO/Documents/code/ewatrade/apps/mobile/src/components/mobile/assistant/native-staff-read-target.ts",
+      "/Users/M1PRO/Documents/code/ewatrade/apps/mobile/src/components/mobile/assistant/native-staff-read-target.test.ts",
+      "/Users/M1PRO/Documents/code/ewatrade/apps/mobile/src/components/mobile/assistant/native-staff-read-screen.tsx",
+      "/Users/M1PRO/Documents/code/ewatrade/apps/mobile/src/components/mobile/assistant/native-staff-member-screen.tsx",
+      "/Users/M1PRO/Documents/code/ewatrade/apps/mobile/src/components/mobile/assistant/native-staff-directory-screen.tsx",
+      "/Users/M1PRO/Documents/code/ewatrade/apps/mobile/src/components/mobile/assistant/native-staff-history-screen.tsx",
+      "/Users/M1PRO/Documents/code/ewatrade/apps/mobile/src/components/mobile/assistant/general-model.test.ts",
+      "/Users/M1PRO/Documents/code/ewatrade/apps/mobile/src/components/mobile/assistant/native-service-target.ts",
+      "/Users/M1PRO/Documents/code/ewatrade/apps/mobile/src/components/mobile/assistant/native-service-target.test.ts",
+      "/Users/M1PRO/Documents/code/ewatrade/apps/mobile/src/components/mobile/assistant/native-service-original-screen.tsx",
+      "/Users/M1PRO/Documents/code/ewatrade/apps/mobile/src/components/mobile/assistant/native-service-work-values.ts",
+      "/Users/M1PRO/Documents/code/ewatrade/apps/mobile/src/components/mobile/assistant/native-service-work-values.test.ts",
+      "/Users/M1PRO/Documents/code/ewatrade/apps/mobile/src/components/mobile/assistant/general-service-work-editor.tsx",
+      "/Users/M1PRO/Documents/code/ewatrade/apps/mobile/src/components/mobile/assistant/native-service-intake-values.ts",
+      "/Users/M1PRO/Documents/code/ewatrade/apps/mobile/src/components/mobile/assistant/native-service-intake-values.test.ts",
+      "/Users/M1PRO/Documents/code/ewatrade/apps/mobile/src/components/mobile/assistant/general-service-intake-editor.tsx",
+      "/Users/M1PRO/Documents/code/ewatrade/apps/mobile/src/components/mobile/assistant/native-quote-decision-values.ts",
+      "/Users/M1PRO/Documents/code/ewatrade/apps/mobile/src/components/mobile/assistant/native-quote-decision-values.test.ts",
+      "/Users/M1PRO/Documents/code/ewatrade/apps/mobile/src/components/mobile/assistant/general-quote-decision-editor.tsx",
+      "/Users/M1PRO/Documents/code/ewatrade/apps/mobile/src/components/mobile/assistant/native-quote-original-screen.tsx",
+      "/Users/M1PRO/Documents/code/ewatrade/apps/mobile/src/app/service-jobs-modal.tsx",
+      "/Users/M1PRO/Documents/code/ewatrade/apps/mobile/src/components/mobile/assistant/native-cash-target.ts",
+      "/Users/M1PRO/Documents/code/ewatrade/apps/mobile/src/components/mobile/assistant/native-cash-target.test.ts",
+      "/Users/M1PRO/Documents/code/ewatrade/apps/mobile/src/components/mobile/assistant/native-cash-count-values.ts",
+      "/Users/M1PRO/Documents/code/ewatrade/apps/mobile/src/components/mobile/assistant/native-cash-count-values.test.ts",
+      "/Users/M1PRO/Documents/code/ewatrade/apps/mobile/src/components/mobile/assistant/general-cash-count-editor.tsx",
+      "/Users/M1PRO/Documents/code/ewatrade/apps/mobile/src/components/mobile/assistant/native-cash-original-screen.tsx",
+      "/Users/M1PRO/Documents/code/ewatrade/apps/mobile/src/components/mobile/assistant/native-day-review-screen.tsx",
+      "/Users/M1PRO/Documents/code/ewatrade/apps/mobile/src/components/mobile/assistant/native-booking-original-screen.tsx",
+      "/Users/M1PRO/Documents/code/ewatrade/apps/mobile/src/components/mobile/assistant/native-service-job-screen.tsx",
+      "/Users/M1PRO/Documents/code/ewatrade/apps/mobile/src/components/mobile/assistant/native-service-job-state.ts",
+      "/Users/M1PRO/Documents/code/ewatrade/apps/mobile/src/components/mobile/assistant/native-service-job-state.test.ts",
+      "/Users/M1PRO/Documents/code/ewatrade/apps/mobile/src/app/finance-count/[countId].tsx",
+      "/Users/M1PRO/Documents/code/ewatrade/apps/mobile/src/app/finance-periods-modal.tsx",
+      "/Users/M1PRO/Documents/code/ewatrade/apps/mobile/src/components/mobile/service-jobs/service-payment-model.test.ts",
+      "/Users/M1PRO/Documents/code/ewatrade/apps/mobile/src/components/mobile/assistant/native-business-report-target.ts",
+      "/Users/M1PRO/Documents/code/ewatrade/apps/mobile/src/components/mobile/assistant/native-business-report-target.test.ts",
+      "/Users/M1PRO/Documents/code/ewatrade/apps/mobile/src/components/mobile/assistant/native-business-report-screen.tsx",
+      "/Users/M1PRO/Documents/code/ewatrade/apps/mobile/src/components/mobile/assistant/native-business-report-content.tsx",
+      "/Users/M1PRO/Documents/code/ewatrade/apps/mobile/src/app/business-report-modal.tsx",
+      "/Users/M1PRO/Documents/code/ewatrade/apps/mobile/src/components/mobile/assistant/native-service-message-values.ts",
+      "/Users/M1PRO/Documents/code/ewatrade/apps/mobile/src/components/mobile/assistant/native-service-message-values.test.ts",
+      "/Users/M1PRO/Documents/code/ewatrade/apps/mobile/src/components/mobile/assistant/native-service-message-screen.tsx",
+      "/Users/M1PRO/Documents/code/ewatrade/apps/mobile/src/components/mobile/assistant/native-service-message-content.tsx",
+      "/Users/M1PRO/Documents/code/ewatrade/apps/mobile/src/components/mobile/assistant/general-service-message-editor.tsx",
+      "/Users/M1PRO/Documents/code/ewatrade/packages/assistant/src/general/service-message-read.ts",
+      "/Users/M1PRO/Documents/code/ewatrade/packages/assistant/src/general/service-message-read.test.ts",
+      "/Users/M1PRO/Documents/code/ewatrade/apps/api/src/assistant/general-service-message-reads.ts",
+      "/Users/M1PRO/Documents/code/ewatrade/apps/api/src/assistant/general-service-message-reads.test.ts",
+      "/Users/M1PRO/Documents/code/ewatrade/apps/api/src/assistant/general-service-message.ts",
+      "/Users/M1PRO/Documents/code/ewatrade/packages/db/src/queries/service-request-read.ts",
+      "/Users/M1PRO/Documents/code/ewatrade/apps/api/src/trpc/routers/service-assistant-requests.ts",
+      "/Users/M1PRO/Documents/code/ewatrade/apps/api/src/assistant/general-service-request-reads.ts",
+      "/Users/M1PRO/Documents/code/ewatrade/apps/api/src/assistant/general-service-request-reads.test.ts",
+      "/Users/M1PRO/Documents/code/ewatrade/packages/assistant/src/general/service-request-read.ts",
+      "/Users/M1PRO/Documents/code/ewatrade/packages/assistant/src/general/service-request-read.test.ts",
+      "/Users/M1PRO/Documents/code/ewatrade/apps/api/src/assistant/general-tools.ts",
+      "/Users/M1PRO/Documents/code/ewatrade/apps/api/src/assistant/general-context.ts",
+      "/Users/M1PRO/Documents/code/ewatrade/apps/api/src/assistant/general-callers.ts"
+    ],
+    "exclude": [
+      "node_modules"
+    ]
+  }
+}

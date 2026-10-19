@@ -493,11 +493,18 @@ export async function completeAssistantRunInTransaction(
       )
         return
     }
-    if (settled.count && input.assistantMessage)
-      await appendAssistantMessage(tx, {
+    if (settled.count && input.assistantMessage) {
+      const saved = await appendAssistantMessage(tx, {
         conversationId: candidate.conversationId,
         message: input.assistantMessage,
       })
+      if (!saved)
+        throw new Error("Assistant reply does not belong to this conversation.")
+      await tx.assistantRun.update({
+        where: { id: input.runId },
+        data: { assistantMessageId: input.assistantMessage.id },
+      })
+    }
     await tx.assistantUsageEvent.create({
       data: {
         runId: input.runId,
@@ -737,6 +744,16 @@ export async function updateProductConversationSnapshot(
 /** Locks admission and draft together; domain write and receipt are atomic. */
 export async function commitProductConversation(
   db: PrismaClient,
+  ...args: ArgsAfterClient<typeof commitProductConversationInTransaction>
+) {
+  return runInOwnTransaction(db, (tx) =>
+    commitProductConversationInTransaction(tx, ...args),
+  )
+}
+
+/** Existing canonical product commit inside an already-owning authority/proof transaction. */
+export async function commitProductConversationInTransaction(
+  tx: Prisma.TransactionClient,
   scope: AssistantScope,
   input: {
     conversationId: string
@@ -748,83 +765,81 @@ export async function commitProductConversation(
     context: unknown,
   ) => CreateCatalogItemInput,
 ) {
-  return runInOwnTransaction(db, async (tx) => {
-    await tx.$queryRaw(
-      Prisma.sql`SELECT "id" FROM "AssistantConversation" WHERE "id" = ${input.conversationId} FOR UPDATE`,
+  await tx.$queryRaw(
+    Prisma.sql`SELECT "id" FROM "AssistantConversation" WHERE "id" = ${input.conversationId} FOR UPDATE`,
+  )
+  const conversation = await readAssistantConversation(
+    tx,
+    scope,
+    input.conversationId,
+  )
+  if (conversation.purpose !== "PRODUCT_CREATE" || !conversation.setupDraft)
+    throw new AssistantRecordError(
+      "CONVERSATION_NOT_FOUND",
+      "This product draft is not available.",
     )
-    const conversation = await readAssistantConversation(
-      tx,
-      scope,
-      input.conversationId,
-    )
-    if (conversation.purpose !== "PRODUCT_CREATE" || !conversation.setupDraft)
-      throw new AssistantRecordError(
-        "CONVERSATION_NOT_FOUND",
-        "This product draft is not available.",
-      )
-    await tx.$queryRaw(
-      Prisma.sql`SELECT "id" FROM "SetupDraft" WHERE "id" = ${conversation.setupDraft.id} FOR UPDATE`,
-    )
-    const draft = await readSetupDraft(tx, conversation.setupDraft.id)
-    let entity = draft.entities.find((entity) => entity.key === "product")
-    const membership = await tx.membership.findFirst({
-      where: {
-        tenantId: scope.tenantId,
-        userId: scope.userId,
-        status: "ACTIVE",
-        role: { in: ["OWNER", "ADMIN"] },
-        tenant: { isActive: true },
-      },
-      select: { id: true },
-    })
-    if (!membership)
-      throw new AssistantRecordError(
-        "CONVERSATION_NOT_FOUND",
-        "You no longer have access to this product draft.",
-      )
-    if (entity?.state === "COMMITTED" && entity.committedRecordId)
-      return {
-        recordId: entity.committedRecordId,
-        name: String((entity.payload as { name?: string }).name ?? "Product"),
-      }
-    if (
-      conversation.status !== "ACTIVE" ||
-      draft.revision !== input.expectedRevision ||
-      (await productConversationHasRunningTurn(tx, conversation.id))
-    )
-      throw new AssistantRecordError(
-        "CONVERSATION_CLOSED",
-        "The product draft changed or a reply is still running. Review it again before creating.",
-      )
-    if (input.manualEntity) {
-      await upsertSetupDraftEntitiesInTransaction(tx, {
-        draftId: draft.id,
-        entities: [input.manualEntity],
-      })
-      entity = (await readSetupDraft(tx, draft.id)).entities.find(
-        (entity) => entity.key === "product",
-      )
-    }
-    if (!entity || draft.entities.length > 1 || entity.kind !== "PRODUCT")
-      throw new AssistantRecordError(
-        "ENTITY_NOT_FOUND",
-        "Describe one product before creating it.",
-      )
-    const command = prepare(entity, conversation.workflowContext)
-    const item = await createCatalogItemInTransaction(tx, {
-      ...command,
-      clientOperationId: `product-${conversation.id}`,
-    })
-    await tx.setupDraftEntity.update({
-      where: { id: entity.id },
-      data: { state: "COMMITTED", committedRecordId: item.id, errorCode: null },
-    })
-    await tx.assistantConversation.update({
-      where: { id: conversation.id },
-      data: { status: "COMPLETED", title: item.name },
-    })
-    return { recordId: item.id, name: item.name }
+  await tx.$queryRaw(
+    Prisma.sql`SELECT "id" FROM "SetupDraft" WHERE "id" = ${conversation.setupDraft.id} FOR UPDATE`,
+  )
+  const draft = await readSetupDraft(tx, conversation.setupDraft.id)
+  let entity = draft.entities.find((entity) => entity.key === "product")
+  const membership = await tx.membership.findFirst({
+    where: {
+      tenantId: scope.tenantId,
+      userId: scope.userId,
+      status: "ACTIVE",
+      role: { in: ["OWNER", "ADMIN"] },
+      tenant: { isActive: true },
+    },
+    select: { id: true },
   })
+  if (!membership)
+    throw new AssistantRecordError(
+      "CONVERSATION_NOT_FOUND",
+      "You no longer have access to this product draft.",
+    )
+  if (entity?.state === "COMMITTED" && entity.committedRecordId)
+    return {
+      recordId: entity.committedRecordId,
+      name: String((entity.payload as { name?: string }).name ?? "Product"),
+    }
+  if (
+    conversation.status !== "ACTIVE" ||
+    draft.revision !== input.expectedRevision ||
+    (await productConversationHasRunningTurn(tx, conversation.id))
+  )
+    throw new AssistantRecordError(
+      "CONVERSATION_CLOSED",
+      "The product draft changed or a reply is still running. Review it again before creating.",
+    )
+  if (input.manualEntity) {
+    await upsertSetupDraftEntitiesInTransaction(tx, {
+      draftId: draft.id,
+      entities: [input.manualEntity],
+    })
+    entity = (await readSetupDraft(tx, draft.id)).entities.find(
+      (entity) => entity.key === "product",
+    )
+  }
+  if (!entity || draft.entities.length > 1 || entity.kind !== "PRODUCT")
+    throw new AssistantRecordError(
+      "ENTITY_NOT_FOUND",
+      "Describe one product before creating it.",
+    )
+  const command = prepare(entity, conversation.workflowContext)
+  const item = await createCatalogItemInTransaction(tx, {
+    ...command,
+    clientOperationId: `product-${conversation.id}`,
+  })
+  await tx.setupDraftEntity.update({
+    where: { id: entity.id },
+    data: { state: "COMMITTED", committedRecordId: item.id, errorCode: null },
+  })
+  await tx.assistantConversation.update({
+    where: { id: conversation.id },
+    data: { status: "COMPLETED", title: item.name },
+  })
+  return { recordId: item.id, name: item.name }
 }
 
 /** Row-locked rolling budget; exhaustion blocks new model calls, never drafts. */

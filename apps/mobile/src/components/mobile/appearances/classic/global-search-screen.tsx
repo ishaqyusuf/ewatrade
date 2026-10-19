@@ -96,7 +96,7 @@ export function ClassicSearchHeader({
         <Text className="text-2xl font-extrabold tracking-tight [-rn-line-height:28] text-foreground">
           Search
         </Text>
-        <Text className="text-[12.5px] text-muted-foreground">
+        <Text className="text-base [-rn-line-height:22] text-muted-foreground">
           {salesRep
             ? "Orders, customers, items and jobs"
             : "Orders, people, items and jobs"}
@@ -120,12 +120,12 @@ export function ClassicSearchSection({
       <View className="flex-row items-baseline justify-between px-0.5">
         <Text
           accessibilityRole="header"
-          className="text-[15px] font-extrabold text-foreground"
+          className="text-base font-extrabold text-foreground"
         >
           {title}
         </Text>
         {count ? (
-          <Text className="text-[12.5px] font-bold tabular-nums text-muted-foreground">
+          <Text className="text-base [-rn-line-height:22] font-bold tabular-nums text-muted-foreground">
             {count}
           </Text>
         ) : null}
@@ -151,7 +151,7 @@ export function ClassicSearchHint({
         color={colors.mutedForeground}
         name={icon}
       />
-      <Text className="min-w-0 flex-1 text-[13px] text-muted-foreground">
+      <Text className="min-w-0 flex-1 text-base [-rn-line-height:22] text-muted-foreground">
         {children}
       </Text>
     </View>
@@ -190,14 +190,14 @@ export function ClassicSearchScopes({
               accessibilityLabel={`${group.label}, ${group.count}`}
               accessibilityRole="button"
               accessibilityState={{ selected }}
-              className="h-[34px] flex-row items-center gap-1.5 rounded-full px-3 active:opacity-80"
+              className="min-h-[34px] flex-row items-center gap-1.5 rounded-full px-3 py-1.5 active:opacity-80"
               haptic
               onPress={() => onChange(selected ? "all" : group.type)}
               transition
             >
               <Text
                 className={cn(
-                  "text-[12.5px] font-extrabold",
+                  "text-base [-rn-line-height:22] font-extrabold",
                   selected ? "text-primary-foreground" : "text-foreground",
                 )}
               >
@@ -205,7 +205,7 @@ export function ClassicSearchScopes({
               </Text>
               <Text
                 className={cn(
-                  "text-[11px] tabular-nums",
+                  "text-base [-rn-line-height:22] tabular-nums",
                   selected
                     ? "text-primary-foreground opacity-80"
                     : "text-muted-foreground",
@@ -330,7 +330,7 @@ export function ClassicSearchRow({
         ) : (
           <NativeText
             maxFontSizeMultiplier={1.3}
-            style={{ color: tintFg, fontSize: 13.5, fontWeight: "800" }}
+            style={{ color: tintFg, fontSize: 16, fontWeight: "800" }}
           >
             {thumb.initials}
           </NativeText>
@@ -338,13 +338,13 @@ export function ClassicSearchRow({
       </View>
       <View className="min-w-0 flex-1">
         <Text
-          className="text-sm font-bold [-rn-line-height:19] text-foreground"
+          className="text-base font-bold [-rn-line-height:22] text-foreground"
           numberOfLines={large ? undefined : 1}
         >
           <Highlighted query={query} text={item.title} />
         </Text>
         <Text
-          className="text-xs [-rn-line-height:17] text-muted-foreground"
+          className="text-base [-rn-line-height:22] text-muted-foreground"
           numberOfLines={large ? undefined : 1}
         >
           <Highlighted query={query} text={subtitle} />
@@ -399,7 +399,7 @@ export function ClassicSearchActionChips({
             accessibilityHint={action.detail}
             accessibilityLabel={action.label}
             accessibilityRole="button"
-            className="h-[38px] flex-row items-center gap-[7px] rounded-xl px-3 active:opacity-80"
+            className="min-h-[38px] flex-row items-center gap-[7px] rounded-xl px-3 py-2 active:opacity-80"
             haptic
             onPress={action.onPress}
             transition
@@ -411,7 +411,7 @@ export function ClassicSearchActionChips({
             />
             <Text
               className={cn(
-                "text-[13px] font-extrabold",
+                "text-base [-rn-line-height:22] font-extrabold",
                 action.gold ? "text-gold-foreground" : "text-foreground",
               )}
             >
@@ -439,13 +439,15 @@ function SoftButton({
       <Pressable
         accessibilityLabel={label}
         accessibilityRole="button"
-        className="min-h-11 flex-row items-center justify-center gap-1.5 rounded-xl px-3 active:opacity-80"
+        className="min-h-11 flex-row items-center justify-center gap-1.5 rounded-xl px-3 py-2 active:opacity-80"
         haptic
         onPress={onPress}
         transition
       >
         <Icon className="size-[16px]" color={colors.primary} name={icon} />
-        <Text className="text-[13px] font-extrabold text-primary">{label}</Text>
+        <Text className="text-base [-rn-line-height:22] font-extrabold text-primary">
+          {label}
+        </Text>
       </Pressable>
     </View>
   )
@@ -463,6 +465,7 @@ export function ClassicSearchNoResults({
   onNewOrder: () => void
 }) {
   const colors = useColors()
+  const large = useLargeTextLayout()
   return (
     <View
       accessibilityLiveRegion="polite"
@@ -475,14 +478,14 @@ export function ClassicSearchNoResults({
           name="Search"
         />
       </View>
-      <Text className="text-center text-[15px] font-bold text-foreground">
+      <Text className="text-center text-lg font-bold text-foreground">
         No matches for “{query}”
       </Text>
-      <Text className="mb-3.5 mt-1 text-center text-[12.5px] text-muted-foreground">
+      <Text className="mb-3.5 mt-1 text-center text-base [-rn-line-height:22] text-muted-foreground">
         Try an order number, a phone number, an item
         {salesRep ? "" : " or a staff name"}.
       </Text>
-      <View className="w-full flex-row gap-2">
+      <View className={cn("w-full gap-2", large ? "flex-col" : "flex-row")}>
         <SoftButton icon="Plus" label="New order" onPress={onNewOrder} />
         <SoftButton
           icon="UserPlus"
@@ -517,13 +520,13 @@ export function ClassicSearchOffline() {
         <NativeText
           style={{
             color: palette.amberForeground,
-            fontSize: 13.5,
+            fontSize: 16,
             fontWeight: "800",
           }}
         >
           Search is unavailable offline
         </NativeText>
-        <NativeText style={{ color: palette.amberForeground, fontSize: 12.5 }}>
+        <NativeText style={{ color: palette.amberForeground, fontSize: 16 }}>
           You can still create an order. It syncs when you reconnect.
         </NativeText>
       </View>

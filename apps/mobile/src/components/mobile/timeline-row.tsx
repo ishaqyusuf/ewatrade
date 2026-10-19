@@ -70,7 +70,7 @@ export function TimelineRow({
           ) : null}
         </View>
         {detail ? (
-          <Text className="mt-1 text-sm leading-5 text-muted-foreground">
+          <Text className="mt-1 text-sm [-rn-line-height:22] text-muted-foreground">
             {detail}
           </Text>
         ) : null}

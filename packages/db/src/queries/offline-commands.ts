@@ -1,7 +1,11 @@
-import { createHash } from "node:crypto"
+import { createHash, randomUUID } from "node:crypto"
 import { saleEligibleCatalogItem } from "./product-usage"
 
-import { Prisma, type PrismaClient } from "../../generated/prisma/client"
+import {
+  type OfflineCommand,
+  Prisma,
+  type PrismaClient,
+} from "../../generated/prisma/client"
 import {
   OfflineCommandStatus,
   OfflineCommandType,
@@ -15,14 +19,24 @@ import {
   isCustomOrderLineInput,
 } from "./catalog-free-lines"
 import { createCommercialOrderInTransaction } from "./commercial-orders"
+import { lockCommerceFinancialContext } from "./customer-ledger/commerce-locks"
+import { FinanceError } from "./finance/rules"
+import { acquireOfflineCommandFences } from "./offline-command-fence"
+import { readOfflineQuickSaleCorrectionRecord } from "./offline-quick-sale-correction-record"
+import {
+  readOfflineRecoveryRecord,
+  withoutOfflineRecoveryRecord,
+} from "./offline-recovery-record"
 import {
   OfflineStaffAccessError,
   assertOfflineStaffActor,
 } from "./offline-staff-access"
+import { assertRetailOpsOfflineDeviceCanSync } from "./retail-ops-subscriptions"
 import type { DbClient } from "./types"
 
 type CommercialOrderPayload = {
   customerId?: string
+  customerMode?: "contact_only" | "create"
   customerEmail?: string
   customerName?: string
   customerPhone?: string
@@ -32,6 +46,7 @@ type CommercialOrderPayload = {
   initialPayment?: {
     amountMinor: number
     clientPaymentId: string
+    moneyAccountId?: string
     method: "bank_transfer" | "card" | "cash" | "other" | "pos"
     note?: string
     reference?: string
@@ -40,15 +55,18 @@ type CommercialOrderPayload = {
   lines: Array<
     | {
         approvedQuotePriceMinor?: number
+        enteredTotalMinor?: number
         expectedBalanceRevision?: number
         expectedConfigurationVersionId?: string
         expectedFixedPriceMinor?: number
         offeringId: string
+        note?: string
         quantity: string
       }
     | CommercialOrderCustomLineInput
   >
   notes?: string
+  serviceChargeMinor?: number
   taxMinor?: number
 }
 
@@ -57,12 +75,7 @@ type StoredOfflineCommandPayload = CommercialOrderPayload & {
   actorUserId: string
 }
 
-class OfflineApprovalConflict extends Error {
-  constructor(readonly catalogError: CatalogError) {
-    super(catalogError.message)
-    this.name = "OfflineApprovalConflict"
-  }
-}
+type OfflineOperationError = CatalogError | FinanceError
 
 export type OfflineCommandEnvelope = {
   clientCommandId: string
@@ -103,13 +116,19 @@ function hash(value: unknown) {
   return createHash("sha256").update(stableJson(value)).digest("hex")
 }
 
+/** Shared by ordinary replay and recovery; server annotations never enter it. */
+export function offlineCommandEnvelopeHash(envelope: OfflineCommandEnvelope) {
+  return hash(envelope)
+}
+
 function json(value: unknown): Prisma.InputJsonValue {
   return JSON.parse(JSON.stringify(value)) as Prisma.InputJsonValue
 }
 
 function storedCommandPayload(value: unknown) {
-  const { actorUserId, ...payload } =
-    value as Partial<StoredOfflineCommandPayload> & CommercialOrderPayload
+  const { actorUserId, ...payload } = withoutOfflineRecoveryRecord(
+    value as Partial<StoredOfflineCommandPayload> & CommercialOrderPayload,
+  )
   return {
     actorUserId,
     payload: payload as CommercialOrderPayload,
@@ -120,7 +139,11 @@ function commandType(_payload: OfflineCommandPayload) {
   return OfflineCommandType.COMMERCIAL_ORDER
 }
 
-function conflictCode(error: CatalogError) {
+export function offlineOperationConflictCode(error: OfflineOperationError) {
+  if (error instanceof FinanceError)
+    return error.code === "FORBIDDEN"
+      ? OfflineConflictCode.PERMISSION_CHANGED
+      : OfflineConflictCode.INVALID_COMMAND
   if (error instanceof OfflineStaffAccessError)
     return OfflineConflictCode.PERMISSION_CHANGED
   if (error.code === "STALE_CONFIGURATION") {
@@ -195,31 +218,301 @@ async function authoritativeState(
   }
 }
 
-async function executeCommand(
-  db: PrismaClient,
-  input: {
-    actorUserId: string
-    clientCommandId: string
-    payload: OfflineCommandPayload
-    storeId: string
-    tenantId: string
-  },
+type OrdinaryScope = Pick<
+  ReplayOfflineCommandsInput,
+  "actorUserId" | "tenantId" | "storeId" | "deviceId"
+>
+type Attempt = { id: string; kind: "replay" | "approve" }
+const transactionOptions = { maxWait: 10_000, timeout: 30_000 } as const
+
+function refusal(message = "Offline review item not found.") {
+  return new CatalogError("INVALID_STOCK_OPERATION", message)
+}
+
+function record(value: Prisma.JsonValue | null) {
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? value
+    : {}
+}
+
+function attemptId(command: OfflineCommand) {
+  const value = record(command.attemptedState)._offlineCommandAttempt
+  const attempt = record(value ?? null)
+  return attempt.version === 1 && typeof attempt.id === "string"
+    ? attempt.id
+    : null
+}
+
+function attemptedState(payload: OfflineCommandPayload, attempt: Attempt) {
+  return json({ payload, _offlineCommandAttempt: { version: 1, ...attempt } })
+}
+
+async function lockIdentity(
+  tx: Prisma.TransactionClient,
+  tenantId: string,
+  clientCommandId: string,
 ) {
-  const common = {
-    actorUserId: input.actorUserId,
-    tenantId: input.tenantId,
-  }
-  const payload = input.payload
-  return db.$transaction(async (tx) => {
-    await assertOfflineStaffActor(tx, common)
-    return createCommercialOrderInTransaction(tx, {
-      ...common,
-      ...payload,
-      clientOrderId: input.clientCommandId,
-      schemaVersion: 1,
-      storeId: input.storeId,
-    })
+  return acquireOfflineCommandFences(tx, {
+    tenantId,
+    clientCommandIds: [clientCommandId],
   })
+}
+
+async function lockTenant(tx: Prisma.TransactionClient, tenantId: string) {
+  const [tenant] = await tx.$queryRaw<
+    Array<{ id: string; metadata: Prisma.JsonValue | null }>
+  >`
+    SELECT "id", "metadata" FROM "Tenant"
+    WHERE "id"=${tenantId} AND "isActive"=true AND "qaPurgeStartedAt" IS NULL FOR UPDATE
+  `
+  if (!tenant)
+    throw refusal("This business is unavailable for offline operations.")
+  return {
+    enabled: record(tenant.metadata).offlineOperationsEnabled !== false,
+    approvalRequired: record(tenant.metadata).offlineApprovalRequired === true,
+  }
+}
+
+async function lockCommand(
+  tx: Prisma.TransactionClient,
+  tenantId: string,
+  clientCommandId: string,
+) {
+  await tx.$queryRaw`SELECT "id" FROM "OfflineCommand"
+    WHERE "tenantId"=${tenantId} AND "clientCommandId"=${clientCommandId} FOR UPDATE`
+  return tx.offlineCommand.findUnique({
+    where: { tenantId_clientCommandId: { tenantId, clientCommandId } },
+  })
+}
+
+async function lockStore(
+  tx: Prisma.TransactionClient,
+  scope: Pick<OrdinaryScope, "tenantId" | "storeId">,
+) {
+  const [store] = await tx.$queryRaw<
+    Array<{ id: string; currencyCode: string }>
+  >`
+    SELECT "id", "currencyCode" FROM "Store" WHERE "id"=${scope.storeId}
+    AND "tenantId"=${scope.tenantId} AND "status"='ACTIVE' FOR SHARE
+  `
+  if (!store)
+    throw refusal("The original Store is unavailable for offline operations.")
+  return store
+}
+
+async function lockOwnedDevice(
+  tx: Prisma.TransactionClient,
+  scope: OrdinaryScope,
+) {
+  await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${JSON.stringify([scope.tenantId, scope.deviceId])}, 0))`
+  await tx.$queryRaw`SELECT "id" FROM "OfflineDevice" WHERE "tenantId"=${scope.tenantId}
+    AND "deviceId"=${scope.deviceId} FOR UPDATE`
+  const device = await tx.offlineDevice.findFirst({
+    where: {
+      deviceId: scope.deviceId,
+      registeredByUserId: scope.actorUserId,
+      status: OfflineDeviceStatus.ACTIVE,
+      storeId: scope.storeId,
+      tenantId: scope.tenantId,
+    },
+  })
+  if (!device) throw refusal("The offline device is not active for this Store.")
+  await assertRetailOpsOfflineDeviceCanSync(tx, scope)
+  return device
+}
+
+async function activeRole(
+  tx: Prisma.TransactionClient,
+  scope: Pick<OrdinaryScope, "actorUserId" | "tenantId">,
+) {
+  const [actor] = await tx.$queryRaw<Array<{ role: string; status: string }>>`
+    SELECT "role", "status" FROM "Membership" WHERE "tenantId"=${scope.tenantId}
+    AND "userId"=${scope.actorUserId} FOR SHARE
+  `
+  if (!actor || actor.status !== "ACTIVE")
+    throw refusal("Current staff access is unavailable.")
+  return actor.role
+}
+
+async function assertReviewer(
+  tx: Prisma.TransactionClient,
+  scope: Pick<OrdinaryScope, "actorUserId" | "tenantId">,
+) {
+  if (!["OWNER", "ADMIN", "MANAGER"].includes(await activeRole(tx, scope)))
+    throw refusal("Only business management can review offline records.")
+}
+
+async function requiresCurrentApproval(
+  tx: Prisma.TransactionClient,
+  scope: OrdinaryScope,
+  required: boolean,
+) {
+  return (
+    required &&
+    !["OWNER", "ADMIN", "MANAGER"].includes(await activeRole(tx, scope))
+  )
+}
+
+async function financialPlan(
+  tx: Prisma.TransactionClient,
+  scope: Pick<OrdinaryScope, "tenantId" | "storeId">,
+  payload: OfflineCommandPayload,
+) {
+  const store = await tx.store.findFirst({
+    where: { id: scope.storeId, tenantId: scope.tenantId, status: "ACTIVE" },
+    select: { currencyCode: true },
+  })
+  if (!store)
+    throw refusal("The original Store is unavailable for offline operations.")
+  const context = await lockCommerceFinancialContext(tx, {
+    tenantId: scope.tenantId,
+    currencyCode: store.currencyCode,
+    customerId: payload.customerId,
+  })
+  return { currencyCode: store.currencyCode, hadBook: context !== null }
+}
+
+async function assertFinancialPlan(
+  tx: Prisma.TransactionClient,
+  tenantId: string,
+  plan: Awaited<ReturnType<typeof financialPlan>>,
+) {
+  if (plan.hadBook) return
+  // An absent row cannot be locked during planning. Recheck after Tenant FOR
+  // UPDATE: its conflicting FK key-share blocks a later Book insertion. If an
+  // insertion committed while we waited for Tenant, restart with that Book first.
+  const books = await tx.$queryRaw<Array<{ id: string }>>`
+    SELECT "id" FROM "FinanceBook" WHERE "tenantId"=${tenantId}
+    AND "currencyCode"=${plan.currencyCode}
+  `
+  if (books.length)
+    throw new CatalogError(
+      "REVISION_CONFLICT",
+      "Finance setup changed. Review and retry this saved sale.",
+    )
+}
+
+function assertOrdinary(command: OfflineCommand) {
+  if (readOfflineRecoveryRecord(command.payload))
+    throw refusal(
+      "Use management recovery to reconcile this held offline record.",
+    )
+  const retirement = readOfflineQuickSaleCorrectionRecord(
+    command.authoritativeState,
+  )
+  if (retirement && command.status !== OfflineCommandStatus.DISCARDED)
+    throw new CatalogError(
+      "IDEMPOTENCY_MISMATCH",
+      "This saved sale was replaced. Reconcile its corrected record.",
+    )
+  return retirement
+}
+
+function assertReplayOrigin(
+  command: OfflineCommand,
+  envelope: OfflineCommandEnvelope,
+  scope: OrdinaryScope,
+  deviceId: string,
+) {
+  if (command.payloadHash !== offlineCommandEnvelopeHash(envelope))
+    throw new CatalogError(
+      "IDEMPOTENCY_MISMATCH",
+      "This offline command identity was already used with different input.",
+    )
+  if (
+    command.tenantId !== scope.tenantId ||
+    command.offlineDeviceId !== deviceId ||
+    command.storeId !== scope.storeId ||
+    storedCommandPayload(command.payload).actorUserId !== scope.actorUserId
+  )
+    throw refusal(
+      "This offline record belongs to another account, device or Store. Keep the original record for management recovery.",
+    )
+  assertOrdinary(command)
+  immutableEnvelope(command)
+}
+
+function terminal(command: OfflineCommand) {
+  return (
+    command.status === OfflineCommandStatus.APPLIED ||
+    command.status === OfflineCommandStatus.DISCARDED
+  )
+}
+
+async function dependents(
+  tx: Prisma.TransactionClient,
+  command: OfflineCommand,
+) {
+  const candidates = await tx.offlineCommand.findMany({
+    select: { clientCommandId: true, dependencyClientIds: true },
+    where: { tenantId: command.tenantId },
+  })
+  return candidates
+    .filter(
+      (candidate) =>
+        Array.isArray(candidate.dependencyClientIds) &&
+        candidate.dependencyClientIds.includes(command.clientCommandId),
+    )
+    .map((candidate) => candidate.clientCommandId)
+}
+
+async function dependencies(
+  tx: Prisma.TransactionClient,
+  tenantId: string,
+  ids: readonly string[],
+) {
+  const rows = ids.length
+    ? await tx.offlineCommand.findMany({
+        where: { tenantId, clientCommandId: { in: [...ids] } },
+      })
+    : []
+  return {
+    rows,
+    accepted:
+      rows.length === ids.length &&
+      rows.every((row) => row.status === OfflineCommandStatus.APPLIED),
+  }
+}
+
+function immutableEnvelope(command: OfflineCommand): OfflineCommandEnvelope {
+  if (
+    !Array.isArray(command.dependencyClientIds) ||
+    !command.dependencyClientIds.every((id) => typeof id === "string")
+  )
+    throw refusal("The saved offline dependencies are invalid.")
+  const envelope = {
+    clientCommandId: command.clientCommandId,
+    createdAtClient: new Date(command.createdAtClient),
+    dependencyClientIds: command.dependencyClientIds as string[],
+    eventVersion: command.eventVersion,
+    payload: storedCommandPayload(command.payload).payload,
+  }
+  if (offlineCommandEnvelopeHash(envelope) !== command.payloadHash)
+    throw new CatalogError(
+      "IDEMPOTENCY_MISMATCH",
+      "The saved offline command no longer matches its original envelope.",
+    )
+  return envelope
+}
+
+async function audit(
+  tx: Prisma.TransactionClient,
+  command: OfflineCommand,
+  actorUserId: string,
+  decision: "RETRY" | "DISCARD",
+  reason?: string,
+) {
+  const dependentClientIds = await dependents(tx, command)
+  await tx.offlineConflictReview.create({
+    data: {
+      commandId: command.id,
+      decision,
+      dependentClientIds: json(dependentClientIds),
+      reason: reason?.trim() || null,
+      reviewedByUserId: actorUserId,
+    },
+  })
+  return dependentClientIds
 }
 
 function serializeCommand(command: {
@@ -254,204 +547,278 @@ function serializeCommand(command: {
 
 export async function replayOfflineCommands(
   db: PrismaClient,
-  input: ReplayOfflineCommandsInput,
+  supplied: ReplayOfflineCommandsInput,
 ) {
+  // Capture every caller-owned Date, array and runtime payload field before awaiting.
+  const input = structuredClone(supplied)
   const device = await db.offlineDevice.findFirst({
     where: {
       deviceId: input.deviceId,
+      registeredByUserId: input.actorUserId,
       status: OfflineDeviceStatus.ACTIVE,
       storeId: input.storeId,
       tenantId: input.tenantId,
     },
   })
-  if (!device) {
-    throw new CatalogError(
-      "INVALID_STOCK_OPERATION",
-      "The offline device is not active for this Store.",
-    )
-  }
-
+  if (!device) throw refusal("The offline device is not active for this Store.")
+  await assertRetailOpsOfflineDeviceCanSync(db, input)
   const results: Array<ReturnType<typeof serializeCommand>> = []
   for (const envelope of input.commands) {
-    const payloadHash = hash(envelope)
-    let command = await db.offlineCommand.findUnique({
+    // Read-only fast refusal is not authority: every writer rereads under its fence.
+    const existing = await db.offlineCommand.findUnique({
       where: {
         tenantId_clientCommandId: {
-          clientCommandId: envelope.clientCommandId,
           tenantId: input.tenantId,
+          clientCommandId: envelope.clientCommandId,
         },
       },
     })
-    if (command && command.payloadHash !== payloadHash) {
-      throw new CatalogError(
-        "IDEMPOTENCY_MISMATCH",
-        "This offline command identity was already used with different input.",
-      )
-    }
-    const isNewCommand = !command
-    if (!command && !input.acceptNewCommands) {
-      throw new CatalogError(
-        "INVALID_STOCK_OPERATION",
-        "Offline operations are disabled. Existing records may still reconcile.",
-      )
-    }
-    if (!command) {
-      command = await db.offlineCommand.create({
-        data: {
-          clientCommandId: envelope.clientCommandId,
-          createdAtClient: envelope.createdAtClient,
-          dependencyClientIds: json(envelope.dependencyClientIds),
-          eventVersion: envelope.eventVersion,
-          offlineDeviceId: device.id,
-          payload: json({
-            ...envelope.payload,
-            actorUserId: input.actorUserId,
-          }),
-          payloadHash,
-          ...(input.requiresApproval
+    if (existing) assertReplayOrigin(existing, envelope, input, device.id)
+    const attempt: Attempt = { id: randomUUID(), kind: "replay" }
+    const staged = await db.$transaction(
+      async (tx) => {
+        await lockIdentity(tx, input.tenantId, envelope.clientCommandId)
+        const policy = await lockTenant(tx, input.tenantId)
+        await assertOfflineStaffActor(tx, input)
+        await lockStore(tx, input)
+        const owned = await lockOwnedDevice(tx, input)
+        let command = await lockCommand(
+          tx,
+          input.tenantId,
+          envelope.clientCommandId,
+        )
+        if (command) assertReplayOrigin(command, envelope, input, owned.id)
+        const enabled = policy.enabled && input.acceptNewCommands
+        if (!command && !enabled)
+          throw refusal(
+            "Offline operations are disabled. Existing records may still reconcile.",
+          )
+        const requiresApproval =
+          input.requiresApproval ||
+          (await requiresCurrentApproval(tx, input, policy.approvalRequired))
+        if (!command)
+          command = await tx.offlineCommand.create({
+            data: {
+              clientCommandId: envelope.clientCommandId,
+              createdAtClient: envelope.createdAtClient,
+              dependencyClientIds: json(envelope.dependencyClientIds),
+              eventVersion: envelope.eventVersion,
+              offlineDeviceId: owned.id,
+              payload: json({
+                ...envelope.payload,
+                actorUserId: input.actorUserId,
+              }),
+              payloadHash: offlineCommandEnvelopeHash(envelope),
+              storeId: input.storeId,
+              tenantId: input.tenantId,
+              type: commandType(envelope.payload),
+              ...(requiresApproval
+                ? {
+                    status: OfflineCommandStatus.REVIEW_REQUIRED,
+                    conflictMessage: "Awaiting management approval.",
+                  }
+                : {}),
+            },
+          })
+        if (
+          terminal(command) ||
+          command.status !== OfflineCommandStatus.PENDING
+        )
+          return { command, execute: false }
+        if (!enabled) {
+          if (attemptId(command))
+            command = await tx.offlineCommand.update({
+              where: { id: command.id },
+              data: { attemptedState: Prisma.JsonNull },
+            })
+          return { command, execute: false }
+        }
+        const pending = await dependencies(
+          tx,
+          input.tenantId,
+          envelope.dependencyClientIds,
+        )
+        const conflict =
+          envelope.eventVersion !== 1
             ? {
-                conflictMessage: "Awaiting management approval.",
-                processedAt: null,
+                conflictCode: OfflineConflictCode.UNSUPPORTED_CLIENT,
+                conflictMessage: `Offline event version ${envelope.eventVersion} is unsupported.`,
                 status: OfflineCommandStatus.REVIEW_REQUIRED,
               }
-            : {}),
-          storeId: input.storeId,
-          tenantId: input.tenantId,
-          type: commandType(envelope.payload),
-        },
-      })
-    }
-    if (
-      command.status === OfflineCommandStatus.APPLIED ||
-      command.status === OfflineCommandStatus.DISCARDED
-    ) {
-      results.push(serializeCommand(command))
-      continue
-    }
-    if (!input.acceptNewCommands) {
-      results.push(serializeCommand(command))
-      continue
-    }
-    if (
-      !isNewCommand &&
-      (command.status === OfflineCommandStatus.BLOCKED ||
-        command.status === OfflineCommandStatus.REVIEW_REQUIRED)
-    ) {
-      results.push(serializeCommand(command))
-      continue
-    }
-    if (envelope.eventVersion !== 1) {
-      command = await db.offlineCommand.update({
-        data: {
-          conflictCode: OfflineConflictCode.UNSUPPORTED_CLIENT,
-          conflictMessage: `Offline event version ${envelope.eventVersion} is unsupported.`,
-          processedAt: new Date(),
-          status: OfflineCommandStatus.REVIEW_REQUIRED,
-        },
-        where: { id: command.id },
-      })
-      results.push(serializeCommand(command))
-      continue
-    }
-    const dependencies = await db.offlineCommand.findMany({
-      where: {
-        clientCommandId: { in: envelope.dependencyClientIds },
-        tenantId: input.tenantId,
+            : !pending.accepted
+              ? {
+                  conflictCode: OfflineConflictCode.DEPENDENCY_BLOCKED,
+                  conflictMessage:
+                    "One or more required offline commands have not been accepted.",
+                  status: OfflineCommandStatus.BLOCKED,
+                  authoritativeState: json({
+                    dependencies: pending.rows.map((row) => ({
+                      clientCommandId: row.clientCommandId,
+                      status: row.status,
+                    })),
+                  }),
+                }
+              : !hasCapability(envelope.payload, input.capabilities)
+                ? {
+                    conflictCode: OfflineConflictCode.PERMISSION_CHANGED,
+                    conflictMessage:
+                      "Your current permissions no longer allow this offline action.",
+                    status: OfflineCommandStatus.REVIEW_REQUIRED,
+                  }
+                : requiresApproval
+                  ? {
+                      conflictCode: null,
+                      conflictMessage: "Awaiting management approval.",
+                      status: OfflineCommandStatus.REVIEW_REQUIRED,
+                    }
+                  : null
+        if (conflict) {
+          command = await tx.offlineCommand.update({
+            where: { id: command.id },
+            data: {
+              ...conflict,
+              attemptedState: Prisma.JsonNull,
+              processedAt: new Date(),
+            },
+          })
+          return { command, execute: false }
+        }
+        command = await tx.offlineCommand.update({
+          where: { id: command.id },
+          data: { attemptedState: attemptedState(envelope.payload, attempt) },
+        })
+        return { command, execute: true }
       },
-    })
-    if (
-      dependencies.length !== envelope.dependencyClientIds.length ||
-      dependencies.some(
-        (dependency) => dependency.status !== OfflineCommandStatus.APPLIED,
-      )
-    ) {
-      command = await db.offlineCommand.update({
-        data: {
-          authoritativeState: json({
-            dependencies: dependencies.map((dependency) => ({
-              clientCommandId: dependency.clientCommandId,
-              status: dependency.status,
-            })),
-          }),
-          conflictCode: OfflineConflictCode.DEPENDENCY_BLOCKED,
-          conflictMessage:
-            "One or more required offline commands have not been accepted.",
-          processedAt: new Date(),
-          status: OfflineCommandStatus.BLOCKED,
-        },
-        where: { id: command.id },
-      })
-      results.push(serializeCommand(command))
-      continue
-    }
-    if (!hasCapability(envelope.payload, input.capabilities)) {
-      command = await db.offlineCommand.update({
-        data: {
-          conflictCode: OfflineConflictCode.PERMISSION_CHANGED,
-          conflictMessage:
-            "Your current permissions no longer allow this offline action.",
-          processedAt: new Date(),
-          status: OfflineCommandStatus.REVIEW_REQUIRED,
-        },
-        where: { id: command.id },
-      })
-      results.push(serializeCommand(command))
-      continue
-    }
-    if (isNewCommand && input.requiresApproval) {
-      results.push(serializeCommand(command))
+      { ...transactionOptions },
+    )
+    if (!staged.execute) {
+      results.push(serializeCommand(staged.command))
       continue
     }
     try {
-      const storedPayload = storedCommandPayload(command.payload)
-      const executionPayload =
-        isNewCommand || !storedPayload.actorUserId
-          ? envelope.payload
-          : storedPayload.payload
-      const result = await executeCommand(db, {
-        actorUserId:
-          !isNewCommand && storedPayload.actorUserId
-            ? storedPayload.actorUserId
-            : input.actorUserId,
-        clientCommandId: envelope.clientCommandId,
-        payload: executionPayload,
-        storeId: isNewCommand ? input.storeId : command.storeId,
-        tenantId: input.tenantId,
-      })
-      command = await db.offlineCommand.update({
-        data: {
-          authoritativeState: Prisma.JsonNull,
-          conflictCode: null,
-          conflictMessage: null,
-          processedAt: new Date(),
-          result: json(result),
-          status: OfflineCommandStatus.APPLIED,
+      const applied = await db.$transaction(
+        async (tx) => {
+          await lockIdentity(tx, input.tenantId, envelope.clientCommandId)
+          const currency = await financialPlan(tx, input, envelope.payload)
+          const policy = await lockTenant(tx, input.tenantId)
+          await assertFinancialPlan(tx, input.tenantId, currency)
+          await assertOfflineStaffActor(tx, input)
+          const store = await lockStore(tx, input)
+          if (store.currencyCode !== currency.currencyCode)
+            throw refusal(
+              "The original Store currency changed. Review this saved sale.",
+            )
+          const owned = await lockOwnedDevice(tx, input)
+          const command = await lockCommand(
+            tx,
+            input.tenantId,
+            envelope.clientCommandId,
+          )
+          if (!command) throw refusal()
+          assertReplayOrigin(command, envelope, input, owned.id)
+          if (
+            terminal(command) ||
+            command.status !== OfflineCommandStatus.PENDING ||
+            attemptId(command) !== attempt.id
+          )
+            return command
+          if (!policy.enabled || !input.acceptNewCommands)
+            return tx.offlineCommand.update({
+              where: { id: command.id },
+              data: { attemptedState: Prisma.JsonNull },
+            })
+          if (
+            input.requiresApproval ||
+            (await requiresCurrentApproval(tx, input, policy.approvalRequired))
+          )
+            return tx.offlineCommand.update({
+              where: { id: command.id },
+              data: {
+                status: OfflineCommandStatus.REVIEW_REQUIRED,
+                conflictCode: null,
+                conflictMessage: "Awaiting management approval.",
+                attemptedState: Prisma.JsonNull,
+                processedAt: null,
+              },
+            })
+          const pending = await dependencies(
+            tx,
+            input.tenantId,
+            envelope.dependencyClientIds,
+          )
+          if (
+            envelope.eventVersion !== 1 ||
+            !pending.accepted ||
+            !hasCapability(envelope.payload, input.capabilities)
+          )
+            throw refusal(
+              "Review this saved sale and its dependencies before retrying.",
+            )
+          const result = await createCommercialOrderInTransaction(tx, {
+            ...storedCommandPayload(command.payload).payload,
+            actorUserId: input.actorUserId,
+            tenantId: input.tenantId,
+            storeId: input.storeId,
+            clientOrderId: command.clientCommandId,
+            schemaVersion: 1,
+          })
+          return tx.offlineCommand.update({
+            where: { id: command.id },
+            data: {
+              authoritativeState: Prisma.JsonNull,
+              attemptedState: Prisma.JsonNull,
+              conflictCode: null,
+              conflictMessage: null,
+              processedAt: new Date(),
+              result: json(result),
+              status: OfflineCommandStatus.APPLIED,
+            },
+          })
         },
-        where: { id: command.id },
-      })
+        { ...transactionOptions },
+      )
+      results.push(serializeCommand(applied))
     } catch (error) {
-      if (!(error instanceof CatalogError)) throw error
-      const storedPayload = storedCommandPayload(command.payload)
-      const state = await authoritativeState(db, {
-        payload: storedPayload.actorUserId
-          ? storedPayload.payload
-          : envelope.payload,
-        storeId: isNewCommand ? input.storeId : command.storeId,
-        tenantId: input.tenantId,
-      })
-      command = await db.offlineCommand.update({
-        data: {
-          attemptedState: json(envelope.payload),
-          authoritativeState: json(state),
-          conflictCode: conflictCode(error),
-          conflictMessage: error.message,
-          processedAt: new Date(),
-          status: OfflineCommandStatus.REVIEW_REQUIRED,
+      if (!(error instanceof CatalogError || error instanceof FinanceError))
+        throw error
+      const failed = await db.$transaction(
+        async (tx) => {
+          await lockIdentity(tx, input.tenantId, envelope.clientCommandId)
+          await lockTenant(tx, input.tenantId)
+          const command = await lockCommand(
+            tx,
+            input.tenantId,
+            envelope.clientCommandId,
+          )
+          if (!command) throw refusal()
+          assertReplayOrigin(command, envelope, input, device.id)
+          if (
+            terminal(command) ||
+            command.status !== OfflineCommandStatus.PENDING ||
+            attemptId(command) !== attempt.id
+          )
+            return command
+          const state = await authoritativeState(tx, {
+            payload: envelope.payload,
+            storeId: input.storeId,
+            tenantId: input.tenantId,
+          })
+          return tx.offlineCommand.update({
+            where: { id: command.id },
+            data: {
+              attemptedState: json(envelope.payload),
+              authoritativeState: json(state),
+              conflictCode: offlineOperationConflictCode(error),
+              conflictMessage: error.message,
+              processedAt: new Date(),
+              status: OfflineCommandStatus.REVIEW_REQUIRED,
+            },
+          })
         },
-        where: { id: command.id },
-      })
+        { ...transactionOptions },
+      )
+      results.push(serializeCommand(failed))
     }
-    results.push(serializeCommand(command))
   }
   return results
 }
@@ -487,39 +854,139 @@ export async function listOfflineConflictReviews(
     where: { id: { in: actorUserIds } },
   })
   const actorsById = new Map(actors.map((actor) => [actor.id, actor]))
-  return commands.map((command) => ({
-    ...serializeCommand(command),
-    actor:
-      actorsById.get(
-        (command.payload as unknown as Partial<StoredOfflineCommandPayload>)
-          .actorUserId ?? "",
-      ) ?? null,
-    dependentCommands: all
-      .filter((candidate) =>
-        Array.isArray(candidate.dependencyClientIds)
-          ? candidate.dependencyClientIds.includes(command.clientCommandId)
-          : false,
-      )
-      .map((candidate) => ({
-        clientCommandId: candidate.clientCommandId,
-        status: candidate.status,
-      })),
-    reviewKind:
-      command.status === OfflineCommandStatus.REVIEW_REQUIRED &&
-      command.conflictCode === null
-        ? ("approval" as const)
-        : ("conflict" as const),
-    safeActions:
-      command.status === OfflineCommandStatus.REVIEW_REQUIRED &&
-      command.conflictCode === null
+  const recoveryCommands = commands.filter((command) =>
+    Boolean(readOfflineRecoveryRecord(command.payload)),
+  )
+  const recoveryDevices = recoveryCommands.length
+    ? await db.offlineDevice.findMany({
+        where: {
+          tenantId: input.tenantId,
+          id: {
+            in: recoveryCommands.map((command) => command.offlineDeviceId),
+          },
+        },
+        select: {
+          id: true,
+          deviceId: true,
+          deviceName: true,
+          platform: true,
+          registeredAt: true,
+        },
+      })
+    : []
+  const recoveryStores = recoveryCommands.length
+    ? await db.store.findMany({
+        where: {
+          tenantId: input.tenantId,
+          id: { in: recoveryCommands.map((command) => command.storeId) },
+        },
+        select: { id: true, name: true, currencyCode: true, status: true },
+      })
+    : []
+  const devicesById = new Map(
+    recoveryDevices.map((device) => [device.id, device]),
+  )
+  const storesById = new Map(recoveryStores.map((store) => [store.id, store]))
+  const recoveryAccountScopes = recoveryCommands.flatMap((command) => {
+    const store = storesById.get(command.storeId)
+    const moneyAccountId = storedCommandPayload(command.payload).payload
+      .initialPayment?.moneyAccountId
+    return store && typeof moneyAccountId === "string" && moneyAccountId
+      ? [
+          {
+            id: moneyAccountId,
+            book: {
+              tenantId: input.tenantId,
+              currencyCode: store.currencyCode,
+            },
+          },
+        ]
+      : []
+  })
+  const recoveryAccounts = recoveryAccountScopes.length
+    ? await db.financeAccount.findMany({
+        where: { OR: recoveryAccountScopes },
+        select: {
+          id: true,
+          name: true,
+          book: { select: { currencyCode: true } },
+        },
+      })
+    : []
+  const accountsByCurrencyAndId = new Map(
+    recoveryAccounts.map((account) => [
+      JSON.stringify([account.book.currencyCode, account.id]),
+      { id: account.id, name: account.name },
+    ]),
+  )
+  return commands.map((command) => {
+    const recovery = readOfflineRecoveryRecord(command.payload)
+    const recoveryDependencies =
+      Array.isArray(command.dependencyClientIds) &&
+      command.dependencyClientIds.every((entry) => typeof entry === "string")
+        ? command.dependencyClientIds
+        : null
+    return {
+      ...serializeCommand(command),
+      actor:
+        actorsById.get(
+          (command.payload as unknown as Partial<StoredOfflineCommandPayload>)
+            .actorUserId ?? "",
+        ) ?? null,
+      recovery,
+      recoveryOrigin: recovery
+        ? {
+            store: storesById.get(command.storeId) ?? null,
+            device: devicesById.get(command.offlineDeviceId) ?? null,
+            moneyAccount:
+              accountsByCurrencyAndId.get(
+                JSON.stringify([
+                  storesById.get(command.storeId)?.currencyCode,
+                  storedCommandPayload(command.payload).payload.initialPayment
+                    ?.moneyAccountId,
+                ]),
+              ) ?? null,
+          }
+        : null,
+      recoveryEnvelope:
+        recovery && recoveryDependencies
+          ? {
+              clientCommandId: command.clientCommandId,
+              createdAtClient: command.createdAtClient,
+              dependencyClientIds: recoveryDependencies,
+              eventVersion: command.eventVersion,
+              payload: storedCommandPayload(command.payload).payload,
+            }
+          : null,
+      dependentCommands: all
+        .filter((candidate) =>
+          Array.isArray(candidate.dependencyClientIds)
+            ? candidate.dependencyClientIds.includes(command.clientCommandId)
+            : false,
+        )
+        .map((candidate) => ({
+          clientCommandId: candidate.clientCommandId,
+          status: candidate.status,
+        })),
+      reviewKind: recovery
+        ? ("suspended_recovery" as const)
+        : command.status === OfflineCommandStatus.REVIEW_REQUIRED &&
+            command.conflictCode === null
+          ? ("approval" as const)
+          : ("conflict" as const),
+      safeActions: recovery
         ? (["approve", "reject"] as const)
-        : (["retry", "discard"] as const),
-  }))
+        : command.status === OfflineCommandStatus.REVIEW_REQUIRED &&
+            command.conflictCode === null
+          ? (["approve", "reject"] as const)
+          : (["retry", "discard"] as const),
+    }
+  })
 }
 
 export async function reviewOfflineConflict(
   db: PrismaClient,
-  input: {
+  supplied: {
     actorUserId: string
     commandId: string
     decision: "approve" | "discard" | "reject" | "retry"
@@ -527,115 +994,93 @@ export async function reviewOfflineConflict(
     tenantId: string
   },
 ) {
-  try {
-    return await db.$transaction(async (tx) => {
-      await tx.$queryRaw(Prisma.sql`
-        SELECT "id"
-        FROM "OfflineCommand"
-        WHERE "id" = ${input.commandId}
-          AND "tenantId" = ${input.tenantId}
-        FOR UPDATE
-      `)
-      const command = await tx.offlineCommand.findFirst({
-        where: {
-          conflictCode:
-            input.decision === "approve" || input.decision === "reject"
-              ? null
-              : { not: null },
-          id: input.commandId,
-          status: {
-            in:
-              input.decision === "approve" || input.decision === "reject"
-                ? [OfflineCommandStatus.REVIEW_REQUIRED]
-                : [
-                    OfflineCommandStatus.BLOCKED,
-                    OfflineCommandStatus.REVIEW_REQUIRED,
-                  ],
-          },
-          tenantId: input.tenantId,
-        },
-      })
-      if (!command) {
-        throw new CatalogError(
-          "INVALID_STOCK_OPERATION",
-          "Offline review item not found.",
-        )
-      }
-      const candidates = await tx.offlineCommand.findMany({
-        select: { clientCommandId: true, dependencyClientIds: true },
-        where: { tenantId: input.tenantId },
-      })
-      const dependentClientIds = candidates
-        .filter((candidate) =>
-          Array.isArray(candidate.dependencyClientIds)
-            ? candidate.dependencyClientIds.includes(command.clientCommandId)
-            : false,
-        )
-        .map((candidate) => candidate.clientCommandId)
-      await tx.offlineConflictReview.create({
-        data: {
-          commandId: command.id,
-          decision:
-            input.decision === "approve"
-              ? OfflineReviewDecision.RETRY
-              : input.decision === "reject"
-                ? OfflineReviewDecision.DISCARD
-                : input.decision === "retry"
-                  ? OfflineReviewDecision.RETRY
-                  : OfflineReviewDecision.DISCARD,
-          dependentClientIds: json(dependentClientIds),
-          reason: input.reason?.trim() || null,
-          reviewedByUserId: input.actorUserId,
-        },
-      })
+  const input = structuredClone(supplied)
+  // This read plans the immutable key/origin only. It grants no write authority.
+  const found = await db.offlineCommand.findFirst({
+    where: { id: input.commandId, tenantId: input.tenantId },
+    include: { offlineDevice: { select: { deviceId: true } } },
+  })
+  if (!found) throw refusal()
+  const plan = structuredClone(found)
+  assertOrdinary(plan)
+  const envelope = immutableEnvelope(plan)
+  const authorUserId = storedCommandPayload(plan.payload).actorUserId
+  if (!authorUserId)
+    throw refusal("The staff member for this offline record is unavailable.")
+  const scope: OrdinaryScope = {
+    actorUserId: authorUserId,
+    tenantId: input.tenantId,
+    storeId: plan.storeId,
+    deviceId: plan.offlineDevice.deviceId,
+  }
+  const attempt: Attempt = { id: randomUUID(), kind: "approve" }
+  const assertSnapshot = (command: OfflineCommand) => {
+    assertOrdinary(command)
+    if (
+      command.id !== plan.id ||
+      command.tenantId !== input.tenantId ||
+      command.clientCommandId !== plan.clientCommandId ||
+      command.offlineDeviceId !== plan.offlineDeviceId ||
+      command.storeId !== plan.storeId ||
+      command.payloadHash !== plan.payloadHash ||
+      stableJson(command.payload) !== stableJson(plan.payload)
+    )
+      throw refusal("The saved offline record changed. Review it again.")
+    immutableEnvelope(command)
+  }
+  const staged = await db.$transaction(
+    async (tx) => {
+      await lockIdentity(tx, input.tenantId, plan.clientCommandId)
+      await lockTenant(tx, input.tenantId)
+      await assertReviewer(tx, input)
+      const command = await lockCommand(
+        tx,
+        input.tenantId,
+        plan.clientCommandId,
+      )
+      if (!command) throw refusal()
+      assertSnapshot(command)
+      if (terminal(command))
+        return {
+          command,
+          dependentClientIds: await dependents(tx, command),
+          execute: false,
+        }
+      const approvalDecision =
+        input.decision === "approve" || input.decision === "reject"
+      if (
+        approvalDecision
+          ? command.status !== OfflineCommandStatus.REVIEW_REQUIRED ||
+            command.conflictCode !== null
+          : ![
+              OfflineCommandStatus.BLOCKED,
+              OfflineCommandStatus.REVIEW_REQUIRED,
+            ].some((status) => status === command.status) ||
+            command.conflictCode === null
+      )
+        throw refusal()
       if (input.decision === "approve") {
-        const storedPayload =
-          command.payload as unknown as StoredOfflineCommandPayload
-        if (!storedPayload.actorUserId) {
-          throw new CatalogError(
-            "INVALID_STOCK_OPERATION",
-            "The staff member for this offline record is unavailable.",
-          )
-        }
-        const { actorUserId, ...payload } = storedPayload
-        try {
-          await assertOfflineStaffActor(tx, {
-            actorUserId,
-            tenantId: command.tenantId,
-          })
-          const result = await createCommercialOrderInTransaction(tx, {
-            actorUserId,
-            ...payload,
-            clientOrderId: command.clientCommandId,
-            schemaVersion: 1,
-            storeId: command.storeId,
-            tenantId: command.tenantId,
-          })
-          const applied = await tx.offlineCommand.update({
-            data: {
-              authoritativeState: Prisma.JsonNull,
-              conflictCode: null,
-              conflictMessage: null,
-              processedAt: new Date(),
-              result: json(result),
-              reviewedAt: new Date(),
-              reviewedByUserId: input.actorUserId,
-              status: OfflineCommandStatus.APPLIED,
-            },
-            where: { id: command.id },
-          })
-          return {
-            ...serializeCommand(applied),
-            dependentClientIds,
-          }
-        } catch (error) {
-          if (!(error instanceof CatalogError)) throw error
-          throw new OfflineApprovalConflict(error)
+        const reserved = await tx.offlineCommand.update({
+          where: { id: command.id },
+          data: { attemptedState: attemptedState(envelope.payload, attempt) },
+        })
+        return {
+          command: reserved,
+          dependentClientIds: [] as string[],
+          execute: true,
         }
       }
-
+      const dependentClientIds = await audit(
+        tx,
+        command,
+        input.actorUserId,
+        input.decision === "retry" ? "RETRY" : "DISCARD",
+        input.reason,
+      )
       const updated = await tx.offlineCommand.update({
+        where: { id: command.id },
         data: {
+          attemptedState: Prisma.JsonNull,
           reviewedAt: new Date(),
           reviewedByUserId: input.actorUserId,
           status:
@@ -643,82 +1088,148 @@ export async function reviewOfflineConflict(
               ? OfflineCommandStatus.PENDING
               : OfflineCommandStatus.DISCARDED,
         },
-        where: { id: command.id },
       })
-      return {
-        ...serializeCommand(updated),
-        dependentClientIds,
-      }
-    })
-  } catch (error) {
-    if (!(error instanceof OfflineApprovalConflict)) throw error
-    return db.$transaction(async (tx) => {
-      await tx.$queryRaw(Prisma.sql`
-        SELECT "id"
-        FROM "OfflineCommand"
-        WHERE "id" = ${input.commandId}
-          AND "tenantId" = ${input.tenantId}
-        FOR UPDATE
-      `)
-      const command = await tx.offlineCommand.findFirst({
-        where: {
-          conflictCode: null,
-          id: input.commandId,
-          status: OfflineCommandStatus.REVIEW_REQUIRED,
+      return { command: updated, dependentClientIds, execute: false }
+    },
+    { ...transactionOptions },
+  )
+  if (!staged.execute)
+    return {
+      ...serializeCommand(staged.command),
+      dependentClientIds: staged.dependentClientIds,
+    }
+  try {
+    return await db.$transaction(
+      async (tx) => {
+        await lockIdentity(tx, input.tenantId, plan.clientCommandId)
+        const currency = await financialPlan(tx, scope, envelope.payload)
+        const policy = await lockTenant(tx, input.tenantId)
+        await assertFinancialPlan(tx, input.tenantId, currency)
+        await assertReviewer(tx, input)
+        await assertOfflineStaffActor(tx, scope)
+        const store = await lockStore(tx, scope)
+        if (store.currencyCode !== currency.currencyCode)
+          throw refusal(
+            "The original Store currency changed. Review this saved sale.",
+          )
+        const device = await lockOwnedDevice(tx, scope)
+        const command = await lockCommand(
+          tx,
+          input.tenantId,
+          plan.clientCommandId,
+        )
+        if (!command) throw refusal()
+        assertSnapshot(command)
+        assertReplayOrigin(command, envelope, scope, device.id)
+        if (
+          terminal(command) ||
+          command.status !== OfflineCommandStatus.REVIEW_REQUIRED ||
+          command.conflictCode !== null ||
+          attemptId(command) !== attempt.id
+        )
+          return {
+            ...serializeCommand(command),
+            dependentClientIds: await dependents(tx, command),
+          }
+        if (!policy.enabled)
+          throw refusal(
+            "Offline operations have been disabled by the business owner.",
+          )
+        const pending = await dependencies(
+          tx,
+          input.tenantId,
+          envelope.dependencyClientIds,
+        )
+        if (envelope.eventVersion !== 1 || !pending.accepted)
+          throw refusal(
+            "Review this saved sale and its dependencies before approval.",
+          )
+        const result = await createCommercialOrderInTransaction(tx, {
+          ...envelope.payload,
+          actorUserId: authorUserId,
           tenantId: input.tenantId,
-        },
-      })
-      if (!command) {
-        throw new CatalogError(
-          "INVALID_STOCK_OPERATION",
-          "Offline review item not found.",
+          storeId: command.storeId,
+          clientOrderId: command.clientCommandId,
+          schemaVersion: 1,
+        })
+        const dependentClientIds = await audit(
+          tx,
+          command,
+          input.actorUserId,
+          "RETRY",
+          input.reason,
         )
-      }
-      const storedPayload =
-        command.payload as unknown as StoredOfflineCommandPayload
-      const { actorUserId: _actorUserId, ...payload } = storedPayload
-      const candidates = await tx.offlineCommand.findMany({
-        select: { clientCommandId: true, dependencyClientIds: true },
-        where: { tenantId: input.tenantId },
-      })
-      const dependentClientIds = candidates
-        .filter((candidate) =>
-          Array.isArray(candidate.dependencyClientIds)
-            ? candidate.dependencyClientIds.includes(command.clientCommandId)
-            : false,
+        const applied = await tx.offlineCommand.update({
+          where: { id: command.id },
+          data: {
+            authoritativeState: Prisma.JsonNull,
+            attemptedState: Prisma.JsonNull,
+            conflictCode: null,
+            conflictMessage: null,
+            processedAt: new Date(),
+            result: json(result),
+            reviewedAt: new Date(),
+            reviewedByUserId: input.actorUserId,
+            status: OfflineCommandStatus.APPLIED,
+          },
+        })
+        return { ...serializeCommand(applied), dependentClientIds }
+      },
+      { ...transactionOptions },
+    )
+  } catch (error) {
+    if (!(error instanceof CatalogError || error instanceof FinanceError))
+      throw error
+    return db.$transaction(
+      async (tx) => {
+        await lockIdentity(tx, input.tenantId, plan.clientCommandId)
+        await lockTenant(tx, input.tenantId)
+        await assertReviewer(tx, input)
+        const command = await lockCommand(
+          tx,
+          input.tenantId,
+          plan.clientCommandId,
         )
-        .map((candidate) => candidate.clientCommandId)
-      const state = await authoritativeState(tx, {
-        payload,
-        storeId: command.storeId,
-        tenantId: command.tenantId,
-      })
-      await tx.offlineConflictReview.create({
-        data: {
-          commandId: command.id,
-          decision: OfflineReviewDecision.RETRY,
-          dependentClientIds: json(dependentClientIds),
-          reason: input.reason?.trim() || null,
-          reviewedByUserId: input.actorUserId,
-        },
-      })
-      const conflicted = await tx.offlineCommand.update({
-        data: {
-          attemptedState: json(command.payload),
-          authoritativeState: json(state),
-          conflictCode: conflictCode(error.catalogError),
-          conflictMessage: error.catalogError.message,
-          processedAt: new Date(),
-          reviewedAt: new Date(),
-          reviewedByUserId: input.actorUserId,
-          status: OfflineCommandStatus.REVIEW_REQUIRED,
-        },
-        where: { id: command.id },
-      })
-      return {
-        ...serializeCommand(conflicted),
-        dependentClientIds,
-      }
-    })
+        if (!command) throw refusal()
+        assertSnapshot(command)
+        if (
+          terminal(command) ||
+          command.status !== OfflineCommandStatus.REVIEW_REQUIRED ||
+          command.conflictCode !== null ||
+          attemptId(command) !== attempt.id
+        )
+          return {
+            ...serializeCommand(command),
+            dependentClientIds: await dependents(tx, command),
+          }
+        const state = await authoritativeState(tx, {
+          payload: envelope.payload,
+          storeId: command.storeId,
+          tenantId: command.tenantId,
+        })
+        const dependentClientIds = await audit(
+          tx,
+          command,
+          input.actorUserId,
+          "RETRY",
+          input.reason,
+        )
+        const conflicted = await tx.offlineCommand.update({
+          where: { id: command.id },
+          data: {
+            attemptedState: json(envelope.payload),
+            authoritativeState: json(state),
+            conflictCode: offlineOperationConflictCode(error),
+            conflictMessage: error.message,
+            processedAt: new Date(),
+            reviewedAt: new Date(),
+            reviewedByUserId: input.actorUserId,
+            status: OfflineCommandStatus.REVIEW_REQUIRED,
+          },
+        })
+        return { ...serializeCommand(conflicted), dependentClientIds }
+      },
+      { ...transactionOptions },
+    )
   }
 }

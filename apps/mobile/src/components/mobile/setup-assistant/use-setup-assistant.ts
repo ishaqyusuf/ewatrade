@@ -2,7 +2,7 @@ import { useAuthContext } from "@/hooks/use-auth"
 import { getBaseUrl } from "@/lib/base-url"
 import { getSession } from "@/lib/session-store"
 import { useOperationalModeStore } from "@/store/operationalModeStore"
-import { useTRPC } from "@/trpc/client"
+import { getDataCacheGeneration, useTRPC } from "@/trpc/client"
 import { useChat } from "@ai-sdk/react"
 import type { SetupEntityPayload } from "@ewatrade/assistant/setup/contracts"
 import type { SetupAssistantDataParts } from "@ewatrade/assistant/setup/messages"
@@ -13,6 +13,7 @@ import { fetch as expoFetch } from "expo/fetch"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { AppState } from "react-native"
 import { assistantError } from "../assistant/assistant-error"
+import { assistantRouteConversation } from "../assistant/assistant-route-conversation"
 import {
   assistantRequestHeaders,
   assistantScopeKey,
@@ -26,13 +27,19 @@ import {
   setupInitialMessages,
   setupPlainText,
 } from "./setup-model"
+import {
+  matchesSetupRouteConversation,
+  setupRouteCacheKey,
+} from "./setup-route-conversation"
 
 type Message = UIMessage<never, SetupAssistantDataParts>
-export function useSetupAssistant() {
+export function useSetupAssistant(expectedConversationId?: string) {
+  const requested = assistantRouteConversation(expectedConversationId)
   const auth = useAuthContext()
   const trpc = useTRPC()
   const offline = useOperationalModeStore((s) => s.isOfflineMode)
   const [origin] = useState(() => getSession())
+  const [originCacheGeneration] = useState(getDataCacheGeneration)
   const scope = assistantScopeKey(origin)
   const [cached, setCached] = useState<{
     savedAt: number
@@ -48,27 +55,52 @@ export function useSetupAssistant() {
   const canWork = useCallback(
     () =>
       mounted.current &&
+      requested.kind !== "invalid" &&
+      originCacheGeneration === getDataCacheGeneration() &&
+      origin?.profile.role === getSession()?.profile.role &&
       isAssistantSessionCurrent(
         origin,
         getSession(),
         useOperationalModeStore.getState().isOfflineMode,
       ),
-    [origin],
+    [origin, originCacheGeneration, requested.kind],
   )
   const currentScope = assistantScopeKey(auth.session)
-  const scopeChanged = scope !== currentScope || origin?.token !== auth.token
-  const storageKey = `ewatrade:setup-assistant:v1:${scope}`
+  const scopeChanged =
+    scope !== currentScope ||
+    origin?.token !== auth.token ||
+    origin?.profile.role !== auth.profile?.role ||
+    originCacheGeneration !== getDataCacheGeneration()
+  const storageKey = setupRouteCacheKey(scope, expectedConversationId)
   const state = useQuery(
-    trpc.setupAssistant.state.queryOptions(undefined, {
-      enabled: canWork(),
-      retry: false,
-      refetchOnWindowFocus: false,
-    }),
+    trpc.setupAssistant.state.queryOptions(
+      requested.kind === "saved"
+        ? { expectedConversationId: requested.conversationId }
+        : undefined,
+      {
+        enabled: canWork(),
+        retry: false,
+        refetchOnWindowFocus: false,
+      },
+    ),
   )
-  const server = useMemo(() => readSetupSnapshot(state.data), [state.data])
+  const server = useMemo(() => {
+    const snapshot = readSetupSnapshot(state.data)
+    return matchesSetupRouteConversation(snapshot, expectedConversationId)
+      ? snapshot
+      : null
+  }, [state.data, expectedConversationId])
+  const exactConversationUnavailable =
+    requested.kind === "invalid" ||
+    (requested.kind === "saved" &&
+      (state.isError || (!state.isPending && !server)))
   const now = Date.now()
   const cachedData =
-    cached && now - cached.savedAt <= 24 * 60 * 60 * 1000 ? cached.data : null
+    cached &&
+    now - cached.savedAt <= 24 * 60 * 60 * 1000 &&
+    matchesSetupRouteConversation(cached.data, expectedConversationId)
+      ? cached.data
+      : null
   const recentServer =
     state.dataUpdatedAt > 0 && now - state.dataUpdatedAt <= 24 * 60 * 60 * 1000
       ? server
@@ -92,8 +124,16 @@ export function useSetupAssistant() {
   const commit = useMutation(trpc.setupAssistant.commit.mutationOptions())
   const refresh = useCallback(async () => {
     if (!canWork()) return
-    return state.refetch({ throwOnError: true })
-  }, [canWork, state.refetch])
+    const result = await state.refetch({ throwOnError: true })
+    if (
+      !matchesSetupRouteConversation(
+        readSetupSnapshot(result.data),
+        expectedConversationId,
+      )
+    )
+      throw Error("This exact saved Setup chat is unavailable.")
+    return result
+  }, [canWork, state.refetch, expectedConversationId])
   useEffect(() => {
     mounted.current = true
     return () => {
@@ -103,11 +143,21 @@ export function useSetupAssistant() {
   useEffect(() => {
     let live = true
     setCacheLoading(true)
+    if (!storageKey) {
+      setCached(null)
+      setCacheLoading(false)
+      return
+    }
     void AsyncStorage.getItem(storageKey)
       .then((raw) => {
         if (live && !scopeChanged) {
           const value = readSetupCache(raw, scope ?? "")
-          setCached(value ? { savedAt: value.savedAt, data: value.data } : null)
+          setCached(
+            value &&
+              matchesSetupRouteConversation(value.data, expectedConversationId)
+              ? { savedAt: value.savedAt, data: value.data }
+              : null,
+          )
         }
       })
       .catch(() => {})
@@ -117,9 +167,9 @@ export function useSetupAssistant() {
     return () => {
       live = false
     }
-  }, [scope, storageKey, scopeChanged])
+  }, [scope, storageKey, scopeChanged, expectedConversationId])
   useEffect(() => {
-    if (!state.data || !canWork()) return
+    if (!state.data || !canWork() || !storageKey) return
     if (!server) {
       setCached(null)
       void AsyncStorage.removeItem(storageKey).catch(() => {})
@@ -310,8 +360,20 @@ export function useSetupAssistant() {
         setNotice("Reply status is uncertain. Reconnect and check again.")
     }
   }
-  const act = async (label: string, work: () => Promise<unknown>) => {
-    if (!canWork() || actionLock.current || busy || runId || state.isError)
+  const act = async (
+    label: string,
+    work: () => Promise<unknown>,
+    options: { refreshAfter?: boolean } = {},
+  ) => {
+    if (
+      !canWork() ||
+      actionLock.current ||
+      busy ||
+      runId ||
+      state.isError ||
+      exactConversationUnavailable ||
+      !matchesSetupRouteConversation(data, expectedConversationId)
+    )
       return false
     actionLock.current = true
     setPending(label)
@@ -319,7 +381,7 @@ export function useSetupAssistant() {
     try {
       await work()
       if (!canWork()) return false
-      await refresh()
+      if (options.refreshAfter !== false) await refresh()
       return true
     } catch {
       if (canWork())
@@ -336,6 +398,9 @@ export function useSetupAssistant() {
   }
   const open = () =>
     act("Starting…", async () => {
+      if (expectedConversationId !== undefined) {
+        return
+      }
       if (!data?.conversation) {
         await start.mutateAsync(undefined)
         if (!canWork()) return
@@ -408,6 +473,7 @@ export function useSetupAssistant() {
     savedAt,
     offline,
     scopeChanged,
+    exactConversationUnavailable,
     cacheLoading,
     notice,
     pending,
@@ -426,8 +492,22 @@ export function useSetupAssistant() {
     retry,
     refresh,
     close: (hasAdded: boolean) =>
-      act("Saving…", () =>
-        hasAdded ? finish.mutateAsync(undefined) : skip.mutateAsync(undefined),
+      act(
+        "Saving…",
+        () =>
+          hasAdded
+            ? finish.mutateAsync(
+                expectedConversationId
+                  ? { conversationId: expectedConversationId }
+                  : undefined,
+              )
+            : skip.mutateAsync(
+                expectedConversationId
+                  ? { conversationId: expectedConversationId }
+                  : undefined,
+              ),
+        // A successful close makes this exact ACTIVE-only route unavailable.
+        { refreshAfter: expectedConversationId === undefined },
       ),
     canWork,
   }

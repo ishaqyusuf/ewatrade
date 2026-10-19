@@ -4,6 +4,7 @@ import {
   SETUP_ATTACHMENT_RETENTION_MS,
   SETUP_ATTACHMENT_UPLOAD_WINDOW_MS,
   type SetupAttachmentExtraction,
+  assistantAttachmentKindAllowedForPurpose,
   sanitizeSetupAttachmentName,
   setupAttachmentExtractionSchema,
   summarizeSetupAttachment,
@@ -171,8 +172,10 @@ export const setupAssistantAttachmentsRouter = createTRPCRouter({
       // General chats take voice notes (written out, not sent) and photos or
       // PDFs such as receipts, which are read and sent with the message.
       if (
-        conversation.purpose === "GENERAL" &&
-        !["AUDIO", "IMAGE", "PDF"].includes(checked.kind)
+        !assistantAttachmentKindAllowedForPurpose(
+          checked.kind,
+          conversation.purpose,
+        )
       )
         return { ok: false as const, reason: "UNSUPPORTED_TYPE" as const }
       if (!isSetupAttachmentStorageAvailable(scope.dataClassification))

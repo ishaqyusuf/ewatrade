@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuites name="bun test" tests="1" assertions="38" failures="0" skipped="0" time="0.329828">
+  <testsuite name="packages/assistant/evaluations/fixtures/mobile-whatsapp-connect.fixture.tsx" file="packages/assistant/evaluations/fixtures/mobile-whatsapp-connect.fixture.tsx" tests="1" assertions="38" failures="0" skipped="0" time="0.263" hostname="MacBook-Pro.local">
+    <testcase name="actual mobile WhatsApp screen confirms fresh claims and fences offline/scope changes while managing personal grants" classname="" time="0.263599" file="packages/assistant/evaluations/fixtures/mobile-whatsapp-connect.fixture.tsx" line="308" assertions="38" />
+  </testsuite>
+</testsuites>

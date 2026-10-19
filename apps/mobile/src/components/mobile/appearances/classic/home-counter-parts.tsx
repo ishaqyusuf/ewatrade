@@ -116,7 +116,7 @@ export function ClassicCounterHeader(props: DashboardHeroProps) {
               {props.businessName}
             </Text>
             {props.roleLabel ? (
-              <Text className="shrink-0 text-[13px] font-semibold text-muted-foreground">
+              <Text className="shrink-0 text-xs font-semibold text-muted-foreground">
                 · {props.roleLabel}
               </Text>
             ) : (

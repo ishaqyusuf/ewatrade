@@ -21,7 +21,10 @@ import {
   WhatsAppBindingStatus,
   WhatsAppConnectionStatus,
 } from "../../generated/prisma/enums"
-import { evaluateServiceCommercePolicyBatchInTransaction } from "./service-commerce-policy"
+import {
+  evaluateServiceCommercePolicyBatchInTransaction,
+  evaluateServiceCommercePolicyBatchReadOnlyInTransaction,
+} from "./service-commerce-policy"
 import type { DbClient } from "./types"
 
 const configurationDefaults: ServiceCommerceProfileConfiguration = {
@@ -160,6 +163,8 @@ function readPolicyRestrictedCapabilities(
   )
 }
 
+type WorkspaceReadMode = "audited" | "read_only"
+
 type ServiceCommerceReadinessFacts = {
   providerUnavailable: ServiceCommerceCapability[]
   restricted: ServiceCommerceCapability[]
@@ -172,6 +177,7 @@ async function resolveServiceCommerceReadinessFacts(
   input: { actorUserId: string; storeId: string; tenantId: string },
   configuration: ServiceCommerceProfileConfiguration,
   profile: PersistedProfile | null,
+  readMode: WorkspaceReadMode = "audited",
 ): Promise<ServiceCommerceReadinessFacts> {
   const trackedInventory = await db.stockBalanceSource.findFirst({
     select: { id: true },
@@ -246,9 +252,13 @@ async function resolveServiceCommerceReadinessFacts(
       }
     }
   }
+  const evaluatePolicies =
+    readMode === "read_only"
+      ? evaluateServiceCommercePolicyBatchReadOnlyInTransaction
+      : evaluateServiceCommercePolicyBatchInTransaction
   const policyEvaluations =
     policyScopes.length > 0
-      ? await evaluateServiceCommercePolicyBatchInTransaction(db, {
+      ? await evaluatePolicies(db, {
           actorUserId: input.actorUserId,
           purpose: "service_commerce_readiness",
           scopes: policyScopes,
@@ -344,9 +354,31 @@ async function resolveActorStore(
   return { access: roleAccess(membership.role), store }
 }
 
+type WorkspaceAccessInput = {
+  actorUserId: string
+  storeId: string
+  tenantId: string
+}
+
 export async function getServiceCommerceWorkspaceAccess(
   db: DbClient,
-  input: { actorUserId: string; storeId: string; tenantId: string },
+  input: WorkspaceAccessInput,
+) {
+  return resolveServiceCommerceWorkspaceAccess(db, input, "audited")
+}
+
+/** Same current workspace authority and readiness, without policy audit writes. */
+export async function getServiceCommerceWorkspaceAccessReadOnly(
+  db: DbClient,
+  input: WorkspaceAccessInput,
+) {
+  return resolveServiceCommerceWorkspaceAccess(db, input, "read_only")
+}
+
+async function resolveServiceCommerceWorkspaceAccess(
+  db: DbClient,
+  input: WorkspaceAccessInput,
+  readMode: WorkspaceReadMode,
 ) {
   const { access, store } = await resolveActorStore(db, input)
   const configuration = mapPersistedProfile(store.serviceCommerceProfile)
@@ -355,6 +387,7 @@ export async function getServiceCommerceWorkspaceAccess(
     input,
     configuration,
     store.serviceCommerceProfile,
+    readMode,
   )
   const storeActive = store.status === StoreStatus.ACTIVE
   const readiness = deriveStoredReadiness(

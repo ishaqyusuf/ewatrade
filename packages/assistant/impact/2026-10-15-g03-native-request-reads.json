@@ -1,0 +1,96 @@
+{
+  "version": 1,
+  "id": "2026-10-15-g03-native-request-reads",
+  "tickets": [
+    "G03",
+    "G05",
+    "A04",
+    "H01",
+    "H02"
+  ],
+  "summary": "Actual protected native ServiceRequest page/original and dashboard exact-original source integration, strict saved origin/filters, focused callback lifetime and compact-card length repairs, dashboard G03/G05 mount-owned freshness. Both mobile read declarations planned; no disposition/Quote/schema/provider activation.",
+  "capabilities": [
+    {
+      "id": "services.requests.read",
+      "change": "added",
+      "rollout": "planned",
+      "note": "Actual native read consumers added after canonical/API/model source; no whole-ticket or connected/device promotion. Compared with HEAD these capabilities are still new; this packet extends their uncommitted source with actual clients."
+    },
+    {
+      "id": "services.request.original.read",
+      "change": "added",
+      "rollout": "planned",
+      "note": "Actual native read consumers added after canonical/API/model source; no whole-ticket or connected/device promotion. Compared with HEAD these capabilities are still new; this packet extends their uncommitted source with actual clients."
+    }
+  ],
+  "procedures": [],
+  "docs": [
+    {
+      "topic": "feature",
+      "path": ".brain/features/assistant-service-requests.md",
+      "status": "local_only",
+      "note": "Native/dashboard source semantics, limits, full remaining G03."
+    },
+    {
+      "topic": "api",
+      "path": ".brain/api/contracts.md",
+      "status": "local_only",
+      "note": "Strict saved page/exact original target, compact answer bound."
+    },
+    {
+      "topic": "permissions",
+      "path": ".brain/api/permissions.md",
+      "status": "local_only",
+      "note": "Existing role ceiling, origin and current protected access; no expansion."
+    },
+    {
+      "topic": "api",
+      "path": ".brain/api/endpoints.md",
+      "status": "local_only",
+      "note": "Existing protected procedures now have actual native/dashboard source consumers."
+    },
+    {
+      "topic": "capability",
+      "path": "packages/assistant/src/capabilities/COVERAGE.md",
+      "status": "updated",
+      "note": "154capabilities/25services; planned mobile reads67,writes39."
+    },
+    {
+      "topic": "schema",
+      "status": "not_applicable",
+      "note": "No Prisma/database change; durable disposition remains a reviewable design-only prerequisite."
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "test",
+      "path": "packages/assistant/evaluations/fixtures/native-service-request-screen.fixture.tsx",
+      "executed": true,
+      "result": "18/280 actual mounted controller/route source with query/UI standins; batched-focus pre-fix failure and repaired pass retained."
+    },
+    {
+      "kind": "test",
+      "path": "apps/mobile/src/components/mobile/assistant/native-service-request-state.test.ts",
+      "executed": true,
+      "result": "8/230 strict scope/identity/DTO/quantity/page validation."
+    },
+    {
+      "kind": "test",
+      "path": "packages/assistant/evaluations/fixtures/dashboard-service-request-read.fixture.tsx",
+      "executed": true,
+      "result": "Independent real QueryClient5/46 with simultaneous same-tuple observers, private-data withholding, fresh reopen, scope/input/signal; URL/close animation not real."
+    },
+    {
+      "kind": "test",
+      "path": "apps/api/src/assistant/general-service-request-reads.test.ts",
+      "executed": true,
+      "result": "3/24 model privacy and maximum160-char-name compact answer regression."
+    },
+    {
+      "kind": "review",
+      "path": "packages/assistant/evaluations/runs/2026-10-15-g03-native-request-reads.md",
+      "executed": true,
+      "result": "Independent findings repaired; source evidence only, device/connected/parent exits remain open."
+    }
+  ]
+}

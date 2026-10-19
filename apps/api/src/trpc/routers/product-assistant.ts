@@ -24,7 +24,7 @@ import {
 import { CatalogError, simpleCatalogItemCommand } from "@ewatrade/db/queries"
 import { TRPCError } from "@trpc/server"
 import { z } from "zod"
-import { catalogCommandForSetupEntity } from "../../assistant/setup-commit"
+import { catalogCommandForProductConversation } from "../../assistant/product-command"
 import {
   SETUP_BUDGET_LIMITS,
   requireSetupAssistantScope,
@@ -229,34 +229,8 @@ export const productAssistantRouter = createTRPCRouter({
         ctx.db,
         scope,
         input,
-        (entity, context) => {
-          const snapshot = productWorkflowContextSchema.parse(context).snapshot
-          if (!productCreationReady(entity.payload, snapshot))
-            throw new TRPCError({
-              code: "PRECONDITION_FAILED",
-              message:
-                "Finish the missing details or use Back to form to create this product.",
-            })
-          const payload = setupProductPayloadSchema.parse(entity.payload)
-          const command = catalogCommandForSetupEntity(entity.id, payload, {
-            tenantId: scope.tenantId,
-            storeId: scope.storeId,
-            actorUserId: scope.userId,
-          })
-          return {
-            ...command,
-            category: command.category ?? (snapshot.category || undefined),
-            ...(snapshot.photoAssetIds.length
-              ? {
-                  photoAssetIds: snapshot.photoAssetIds,
-                  illustrationId: undefined,
-                }
-              : {
-                  illustrationId:
-                    snapshot.illustrationId ?? command.illustrationId,
-                }),
-          }
-        },
+        (entity, context) =>
+          catalogCommandForProductConversation(scope, entity, context),
       )
     }),
   createFromForm: productProcedure

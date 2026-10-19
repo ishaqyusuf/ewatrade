@@ -32,6 +32,7 @@ import {
   failAssistantAttachmentProcessing,
 } from "@ewatrade/db/assistant-attachments"
 import {
+  assertAssistantAttachmentProcessingActive,
   assertVoiceAttemptActive,
   readVoiceGateway,
   recordVoiceAttempt,
@@ -86,6 +87,12 @@ export function defaultAssistantAttachmentDeps(
   const scopeKey = (tenantId: string) =>
     assistantBudgetScopeKey(tenantId, "SETUP")
   return {
+    assertActive: (attachment) =>
+      assertAssistantAttachmentProcessingActive(
+        prisma,
+        attachment.id,
+        attachment.processingAttempts,
+      ),
     claim: async (attachmentId) => {
       const row = await claimAssistantAttachmentProcessing(prisma, {
         attachmentId,

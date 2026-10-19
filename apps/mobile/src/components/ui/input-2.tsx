@@ -103,7 +103,7 @@ function Input({
       const field = (
         <NativeTextInput
           className={cn(
-            "min-w-0 bg-transparent border-0 px-0 py-0 text-base text-foreground [-rn-line-height:20]",
+            "min-w-0 bg-transparent border-0 px-0 py-0 text-base text-foreground [-rn-line-height:22]",
             expand ? "basis-0 grow shrink" : "w-full",
             props.multiline
               ? "min-h-[72px] [-rn-text-align-vertical:top]"
@@ -151,7 +151,7 @@ function Input({
   return (
     <NativeTextInput
       className={cn(
-        "flex h-12 w-full min-w-0 flex-row items-center border border-border bg-background px-3 py-1 text-base leading-5 text-foreground dark:bg-input/30 sm:h-9 rounded-lg",
+        "flex h-12 w-full min-w-0 flex-row items-center border border-border bg-background px-3 py-1 text-base [-rn-line-height:22] text-foreground dark:bg-input/30 sm:h-9 rounded-lg",
         props.editable === false &&
           cn(
             "opacity-50",

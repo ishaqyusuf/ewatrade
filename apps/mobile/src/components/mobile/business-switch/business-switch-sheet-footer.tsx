@@ -1,7 +1,6 @@
 import { ActionButton } from "@/components/mobile/action-button"
-import { FormField } from "@/components/mobile/form-field"
+import { BottomSearchFooter } from "@/components/mobile/bottom-search-footer"
 import { BottomSheetInputProvider } from "@/components/ui/bottom-sheet-input-context"
-import { View } from "@/components/ui/view"
 import {
   BottomSheetFooter,
   type BottomSheetFooterProps,
@@ -26,32 +25,30 @@ export function BusinessSwitchSheetFooter(props: BottomSheetFooterProps) {
   return (
     <BottomSheetFooter {...props}>
       <BottomSheetInputProvider>
-        <View
-          className="gap-3 bg-card px-5 pb-5 pt-3"
-          onLayout={(event) => onHeight(event.nativeEvent.layout.height)}
-        >
-          {!vm.blocked && !vm.accepted ? (
-            <>
-              <FormField
-                variant="filled"
-                label="Find business"
-                leadingIcon="Search"
-                maxLength={BUSINESS_SEARCH_LIMIT}
-                editable={!vm.selectingId}
-                value={vm.search}
-                onChangeText={vm.setSearch}
-                placeholder="Name, role or currency"
-              />
-              <ActionButton
-                icon="Plus"
-                disabled={!vm.canCreate}
-                onPress={vm.openCreate}
-              >
-                Add business
-              </ActionButton>
-            </>
-          ) : null}
-        </View>
+        {!vm.blocked && !vm.accepted ? (
+          <BottomSearchFooter
+            accessibilityLabel="Find business"
+            alwaysShowSearch
+            editable={!vm.selectingId}
+            keyboardOwner="sheet"
+            localSearch
+            maxLength={BUSINESS_SEARCH_LIMIT}
+            onChangeText={vm.setSearch}
+            onHeightChange={onHeight}
+            placeholder="Name, role or currency"
+            position="relative"
+            totalCount={0}
+            value={vm.search}
+          >
+            <ActionButton
+              icon="Plus"
+              disabled={!vm.canCreate}
+              onPress={vm.openCreate}
+            >
+              Add business
+            </ActionButton>
+          </BottomSearchFooter>
+        ) : null}
       </BottomSheetInputProvider>
     </BottomSheetFooter>
   )

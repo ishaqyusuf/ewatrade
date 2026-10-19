@@ -18,6 +18,8 @@ const attachment = (id: string, facts: Partial<Expired> = {}): Expired => ({
   sizeBytes: 1024,
   fileName: "record-book.png",
   storagePath: `assistant/attachments/${id}.png`,
+  storageProvider: "vercel_blob_private",
+  storageStoreId: "original-store",
   dataClassification: "LIVE",
   ...facts,
 })
@@ -43,7 +45,12 @@ describe("assistant maintenance", () => {
     const d = deps([
       attachment("sent"),
       attachment("unsent", { messageId: null }),
-      attachment("never-uploaded", { messageId: null, storagePath: null }),
+      attachment("never-uploaded", {
+        messageId: null,
+        storagePath: null,
+        storageProvider: null,
+        storageStoreId: null,
+      }),
     ])
     const result = await assistantMaintenanceHandler(d)
     expect(result).toEqual({
@@ -68,13 +75,25 @@ describe("assistant maintenance", () => {
     expect(d.expire).not.toHaveBeenCalled()
   })
 
-  test("QA data never had live storage, so its row is expired anyway", async () => {
+  test("QA bytes retain canonical attribution when removal fails, just like LIVE bytes", async () => {
     const d = deps([attachment("qa", { dataClassification: "QA" })], {
       removeBytes: mock(async () => {
         throw new Error("QA storage is refused in production")
       }),
     })
     const result = await assistantMaintenanceHandler(d)
-    expect(result).toMatchObject({ kept: 0, cleared: 1 })
+    expect(result).toMatchObject({ kept: 1, cleared: 0, deleted: 0 })
+    expect(d.expire).not.toHaveBeenCalled()
+  })
+
+  test("incomplete stored-object attribution cannot be erased as an unused upload intent", async () => {
+    const d = deps([attachment("missing-path", { storagePath: null })])
+    expect(await assistantMaintenanceHandler(d)).toMatchObject({
+      kept: 1,
+      cleared: 0,
+      deleted: 0,
+    })
+    expect(d.expire).not.toHaveBeenCalled()
+    expect(d.removeBytes).not.toHaveBeenCalled()
   })
 })

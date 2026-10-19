@@ -1,0 +1,57 @@
+{
+  "version": 1,
+  "id": "2026-10-15-g03-quote-draft-store-source",
+  "tickets": [
+    "G03",
+    "A04",
+    "H02"
+  ],
+  "summary": "Existing-table signed Quote draft CAS and fresh complete review composition; endpoints/GENERAL/allclient/atomicconfirmation remain.",
+  "capabilities": [],
+  "procedures": [],
+  "docs": [
+    {
+      "topic": "feature",
+      "path": ".brain/features/assistant-service-requests.md",
+      "status": "local_only",
+      "note": "Durable draft source and complete remaining G03."
+    },
+    {
+      "topic": "api",
+      "path": ".brain/api/contracts.md",
+      "status": "local_only",
+      "note": "Internal persisted intent/review composition; no Quote route installed."
+    },
+    {
+      "topic": "permissions",
+      "status": "not_applicable",
+      "note": "No grants/actions/rollouts registered; caller existing fresh GENERAL authorization required."
+    },
+    {
+      "topic": "schema",
+      "status": "not_applicable",
+      "note": "Existing AssistantActionProposal table only; no Prisma schema/storage migration."
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "test",
+      "path": "apps/api/src/assistant/general-quote-issue-draft-store.test.ts",
+      "executed": true,
+      "result": "Root combined208/6978; exact scoped persistence/CAS/security/canonical source with inert delegates."
+    },
+    {
+      "kind": "test",
+      "path": "apps/api/src/assistant/general-quote-issue-review-store.test.ts",
+      "executed": true,
+      "result": "Fresh pages full20x100, stale authority/edits and postserializationexpiry failclosed."
+    },
+    {
+      "kind": "review",
+      "path": "packages/assistant/evaluations/runs/2026-10-15-g03-quote-draft-store-source.md",
+      "executed": true,
+      "result": "Independent source reviewed; terminal integrated78foreign/0owned, H01current/H02pass33 and scoped whitespace pass."
+    }
+  ],
+  "noAssistantImpact": "No new action/procedure/capability/tool/client/rollout registered; internal source composition only."
+}

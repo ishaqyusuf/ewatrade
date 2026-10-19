@@ -64,6 +64,7 @@ const PLAN_FEATURE_ORDER: RetailOpsPlanFeature[] = [
   "invoices",
   "finance",
   "staff",
+  "attachments",
   "suppliers",
   "advancedReports",
   "orderReminders",

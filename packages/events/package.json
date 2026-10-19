@@ -8,6 +8,8 @@
     "./route": "./src/route.ts",
     "./policy": "./src/policy.ts",
     "./native": "./src/native.ts",
+    "./mobile-policy": "./src/mobile-policy.ts",
+    "./mobile-activity": "./src/mobile-activity.ts",
     "./identity-server": "./src/identity-server.ts",
     "./browser": "./src/browser-attribution.ts",
     "./metadata": "./src/event-metadata.ts",

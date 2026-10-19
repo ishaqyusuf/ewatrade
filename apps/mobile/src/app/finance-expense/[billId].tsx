@@ -3,7 +3,10 @@ import { WorkflowModalScreen } from "@/components/mobile/workflow-modal-screen"
 import { useLocalSearchParams } from "expo-router"
 
 export default function FinanceExpenseRoute() {
-  const { billId } = useLocalSearchParams<{ billId: string }>()
+  const { billId, bookId } = useLocalSearchParams<{
+    billId: string
+    bookId?: string | string[]
+  }>()
   return (
     <WorkflowModalScreen
       back
@@ -11,7 +14,16 @@ export default function FinanceExpenseRoute() {
       closeLabel="Back to spending"
       closeHref="/finance-modal"
     >
-      <FinanceExpenseScreen billId={billId ?? ""} />
+      <FinanceExpenseScreen
+        billId={billId ?? ""}
+        expectedBookId={
+          bookId === undefined
+            ? undefined
+            : typeof bookId === "string"
+              ? bookId
+              : ""
+        }
+      />
     </WorkflowModalScreen>
   )
 }

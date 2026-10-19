@@ -6,6 +6,7 @@ import {
   assertApiDeployTarget,
   assertProductionApiDeployMode,
   assertProductionApiProjectEnvironment,
+  readProductionApiSharedEnvironmentInventory,
 } from "./api-deploy-target.mjs"
 import {
   probeProductionApi,
@@ -194,18 +195,24 @@ try {
     "--raw",
     ...vercelScopeArgs,
   ])
-  const sharedInventory = runStage("bunx", [
-    RELEASE_VERCEL_CLI,
-    "api",
-    "/v1/env?limit=100",
-    "--cwd",
-    apiDir,
-    "--raw",
-    ...vercelScopeArgs,
-  ])
+  const sharedInventory = readProductionApiSharedEnvironmentInventory(
+    (url) =>
+      JSON.parse(
+        runStage("bunx", [
+          RELEASE_VERCEL_CLI,
+          "api",
+          url,
+          "--cwd",
+          apiDir,
+          "--raw",
+          ...vercelScopeArgs,
+        ]).stdout,
+      ),
+    env.VERCEL_API_PROJECT_ID,
+  )
   assertProductionApiProjectEnvironment(
     JSON.parse(inventory.stdout),
-    JSON.parse(sharedInventory.stdout),
+    sharedInventory,
     env.VERCEL_API_PROJECT_ID,
   )
 } catch (error) {

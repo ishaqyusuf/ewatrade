@@ -1,7 +1,9 @@
 import { describe, expect, test } from "bun:test"
+import { createHash } from "node:crypto"
 
 import { Prisma, type PrismaClient } from "../../generated/prisma/client"
 import {
+  type IssueCommerceQuoteInput,
   approveCommerceQuoteVersion,
   assertCommerceQuoteCustomerTextScreened,
   assertCommerceQuoteSource,
@@ -10,7 +12,9 @@ import {
   assertQuotedSourceQuoteIdentity,
   getCommerceQuoteAcceptanceContext,
   issueCommerceQuote,
+  issuePreparedCommerceQuoteInTransaction,
   normalizeIssueCommerceQuoteOptions,
+  prepareCommerceQuoteIssue,
   quoteLineRequiresStoreAvailability,
   rejectCommerceQuoteVersion,
   resolveCommerceQuoteAccess,
@@ -29,6 +33,307 @@ const acceptedQuoteTerms = {
     documentHash: quoteTermsPublication.documentHash,
   }),
 }
+
+function issuePreparationFixture(
+  payloadHash = "47ff439870b7667e9c42a013dd578aad04d67e2c9b26dd9bd62ed9c80d2c9703",
+  sourceType = "SERVICE_REQUEST",
+) {
+  const state = {
+    active: true,
+    sourceAvailable: true,
+    payloadHash,
+    status: "DRAFT",
+  }
+  const reads: Array<{ name: string; input: unknown }> = []
+  const tokenDigests: string[] = []
+  let authorized = 0
+  const input = {
+    actorUserId: "actor-1",
+    authorize: async () => {
+      authorized++
+    },
+    availabilityOutcome: "unavailable" as const,
+    clientQuoteId: "quote-command-1",
+    clientVersionId: "version-command-1",
+    lines: [{ outcome: "unavailable" as const, sourceLineId: "line-1" }],
+    sourceId: "source-1",
+    sourceType:
+      sourceType === "COMMERCE_INQUIRY"
+        ? ("commerce_inquiry" as const)
+        : ("service_request" as const),
+    storeId: "store-1",
+    tenantId: "tenant-1",
+  }
+  const tx = {
+    $transaction: () => {
+      throw Error("Caller-owned helper must not nest transactions")
+    },
+    membership: {
+      findFirst: async () =>
+        state.active
+          ? { id: "member-1", role: "OWNER", status: "ACTIVE" }
+          : null,
+    },
+    serviceCommerceQuoteReleasePolicy: { findFirst: async () => null },
+    serviceCommerceStoreTeamAssignment: { findMany: async () => [] },
+    store: { findFirst: async () => ({ id: "store-1", currencyCode: "NGN" }) },
+    serviceRequest: {
+      findFirst: async () =>
+        state.sourceAvailable ? { status: "SUBMITTED" } : null,
+    },
+    // Service source ownership now revalidates before exact version replay.
+    serviceRequestLine: {
+      count: async ({
+        where,
+      }: {
+        where: {
+          requestId: string
+          request: { tenantId: string; storeId: string }
+          id: { in: string[] }
+        }
+      }) =>
+        where.requestId === "source-1" &&
+        where.request.tenantId === "tenant-1" &&
+        where.request.storeId === "store-1" &&
+        where.id.in.length === 1 &&
+        where.id.in[0] === "line-1"
+          ? 1
+          : 0,
+    },
+    commerceInquiry: {
+      findFirst: async () =>
+        state.sourceAvailable ? { status: "READY_TO_QUOTE" } : null,
+    },
+    commerceInquiryLine: { count: async () => 1 },
+    commerceQuote: {
+      upsert: async (value: unknown) => {
+        reads.push({ name: "quote", input: value })
+        return {
+          id: "quote-1",
+          sourceId: "source-1",
+          sourceType,
+          storeId: "store-1",
+          currentVersionId: "version-1",
+        }
+      },
+    },
+    commerceQuoteVersion: {
+      findUnique: async (value: unknown) => {
+        reads.push({ name: "version", input: value })
+        return {
+          id: "version-1",
+          payloadHash: state.payloadHash,
+          status: state.status,
+          quoteApproval: { status: "PENDING" },
+        }
+      },
+    },
+    commerceQuoteReplayAccessToken: {
+      upsert: async (value: { create: { tokenDigest: string } }) => {
+        tokenDigests.push(value.create.tokenDigest)
+      },
+    },
+    storeConversationRequestLink: { findMany: async () => [] },
+  }
+  return {
+    input,
+    tx: tx as unknown as Prisma.TransactionClient,
+    state,
+    reads,
+    tokenDigests,
+    authorized: () => authorized,
+  }
+}
+
+describe("Commerce Quote caller-owned issuance preparation", () => {
+  test("rejects forged or serialized handles before any transaction access", async () => {
+    const tx = new Proxy(
+      {},
+      {
+        get: () => {
+          throw Error("No transaction access for forged proof")
+        },
+      },
+    )
+    for (const forged of [
+      {},
+      Object.freeze({ screened: true }),
+      null,
+      JSON.parse("{}"),
+    ])
+      await expect(
+        Reflect.apply(issuePreparedCommerceQuoteInTransaction, undefined, [
+          tx,
+          forged,
+        ]),
+      ).rejects.toMatchObject({ code: "QUOTE_CONFLICT" })
+  })
+
+  test("a valid opaque handle keeps the legacy hash, runs source authority again and never screens or nests in the caller transaction", async () => {
+    const fixture = issuePreparationFixture()
+    const prepared = await prepareCommerceQuoteIssue(
+      fixture.input,
+      quoteTermsPublication,
+    )
+    expect(JSON.stringify(prepared)).toBe("{}")
+    expect(Object.isFrozen(prepared)).toBe(true)
+    const appEnv = process.env.APP_ENV
+    try {
+      // Production without an approved live screen always refuses screening.
+      // An already prepared caller-owned helper must not invoke that screen.
+      process.env.APP_ENV = "production"
+      expect(
+        await issuePreparedCommerceQuoteInTransaction(fixture.tx, prepared),
+      ).toEqual({
+        quoteId: "quote-1",
+        versionId: "version-1",
+        releaseState: "pending_approval",
+        token: null,
+      })
+    } finally {
+      if (appEnv === undefined) Reflect.deleteProperty(process.env, "APP_ENV")
+      else process.env.APP_ENV = appEnv
+    }
+    expect(fixture.authorized()).toBe(1)
+    fixture.state.active = false
+    await expect(
+      issuePreparedCommerceQuoteInTransaction(fixture.tx, prepared),
+    ).rejects.toMatchObject({ code: "QUOTE_RELEASE_FORBIDDEN" })
+    expect(fixture.authorized()).toBe(2)
+    fixture.state.active = true
+    fixture.state.sourceAvailable = false
+    await expect(
+      issuePreparedCommerceQuoteInTransaction(fixture.tx, prepared),
+    ).rejects.toMatchObject({ code: "QUOTE_SOURCE_NOT_FOUND" })
+    fixture.state.sourceAvailable = true
+    fixture.state.payloadHash = "different-input"
+    await expect(
+      issuePreparedCommerceQuoteInTransaction(fixture.tx, prepared),
+    ).rejects.toMatchObject({ code: "IDEMPOTENCY_MISMATCH" })
+    expect(fixture.tokenDigests).toEqual([])
+  })
+
+  test("input nested data, Dates, scope and callbacks are snapshotted before asynchronous screening yields", async () => {
+    const fixture = issuePreparationFixture(
+      "b75bb881daf32193083132d37799ae1ad771b994e74c20cc30c5c9c338753abf",
+    )
+    const line = { outcome: "unavailable" as const, sourceLineId: "line-1" }
+    const option = {
+      availabilityOutcome: "unavailable" as const,
+      clientOptionId: "option-1",
+      label: " Original label ",
+      lines: [line],
+    }
+    const expiry = new Date("2030-01-01T00:00:00.000Z")
+    const {
+      availabilityOutcome: _availability,
+      lines: _lines,
+      ...base
+    } = fixture.input
+    const input = { ...base, expiresAt: expiry, options: [option] }
+    const pending = prepareCommerceQuoteIssue(input, quoteTermsPublication)
+    option.label = "[[qa-reject]]"
+    line.sourceLineId = "changed-line"
+    expiry.setUTCFullYear(2040)
+    input.sourceId = "changed-source"
+    input.storeId = "changed-store"
+    input.clientVersionId = "changed-command"
+    input.authorize = async () => {
+      throw Error("Changed callback must not replace original")
+    }
+    const prepared = await pending
+    expect(
+      (await issuePreparedCommerceQuoteInTransaction(fixture.tx, prepared))
+        .versionId,
+    ).toBe("version-1")
+    expect(fixture.authorized()).toBe(1)
+    expect(fixture.reads).toEqual([
+      {
+        name: "quote",
+        input: {
+          create: {
+            clientQuoteId: "quote-command-1",
+            createdByUserId: "actor-1",
+            sourceId: "source-1",
+            sourceType: "SERVICE_REQUEST",
+            storeId: "store-1",
+            tenantId: "tenant-1",
+          },
+          update: {},
+          where: {
+            tenantId_clientQuoteId: {
+              clientQuoteId: "quote-command-1",
+              tenantId: "tenant-1",
+            },
+          },
+        },
+      },
+      {
+        name: "version",
+        input: {
+          include: { quoteApproval: true },
+          where: {
+            quoteId_clientVersionId: {
+              clientVersionId: "version-command-1",
+              quoteId: "quote-1",
+            },
+          },
+        },
+      },
+    ])
+  })
+
+  test("ordinary wrapper retries the same screened intent and private issuance token with unchanged serializable limits", async () => {
+    const fixture = issuePreparationFixture(
+      "b0c8568f2552d3ba41f15722e82c96a50ccbc4d84f37c2ee01d6210d81e19969",
+      "COMMERCE_INQUIRY",
+    )
+    fixture.state.status = "ISSUED"
+    let attempts = 0
+    const options: unknown[] = []
+    const root = {
+      $transaction: async (
+        callback: (tx: Prisma.TransactionClient) => Promise<unknown>,
+        value: unknown,
+      ) => {
+        options.push(value)
+        const result = await callback(fixture.tx)
+        if (attempts++ === 0)
+          throw new Prisma.PrismaClientKnownRequestError(
+            "synthetic serialization abort",
+            { code: "P2034", clientVersion: "source-fixture" },
+          )
+        return result
+      },
+    } as unknown as PrismaClient
+    const result = await issueCommerceQuote(
+      root,
+      fixture.input,
+      quoteTermsPublication,
+    )
+    expect(attempts).toBe(2)
+    expect(fixture.authorized()).toBe(2)
+    expect(options).toEqual(
+      Array.from({ length: 2 }, () => ({
+        isolationLevel: "Serializable",
+        maxWait: 10_000,
+        timeout: 30_000,
+      })),
+    )
+    expect(fixture.tokenDigests).toHaveLength(2)
+    expect(fixture.tokenDigests[0]).toBe(fixture.tokenDigests[1])
+    expect(result).toMatchObject({
+      quoteId: "quote-1",
+      versionId: "version-1",
+      releaseState: "released",
+    })
+    expect(typeof result.token).toBe("string")
+    if (!result.token) throw Error("Expected native private token")
+    expect(createHash("sha256").update(result.token).digest("hex")).toBe(
+      fixture.tokenDigests[0],
+    )
+  })
+})
 
 describe("Commerce Quote invariants", () => {
   test("requires exact effective Quote-author Terms and permits retry after acceptance", async () => {
@@ -738,8 +1043,9 @@ describe("Commerce Quote invariants", () => {
     expect(persistedLines[0]?.catalogPriceEvaluationAt).toBeInstanceOf(Date)
   })
 
-  test("releases a Prescription Quote with its protected quote-ready effects in one transaction", async () => {
+  test("prepared Prescription release retains original Terms and protected callback across async input mutation", async () => {
     const events: string[] = []
+    const observedTerms: unknown[] = []
     const offering = {
       catalogItem: { name: "Medicine" },
       id: "offering-1",
@@ -752,7 +1058,12 @@ describe("Commerce Quote invariants", () => {
       variant: { name: "Default", selections: [] },
     }
     const client = {
-      legalAcceptance: acceptedQuoteTerms,
+      legalAcceptance: {
+        findUnique: async (args: unknown) => {
+          observedTerms.push(args)
+          return { documentHash: quoteTermsPublication.documentHash }
+        },
+      },
       $transaction: async (callback: (tx: PrismaClient) => Promise<unknown>) =>
         callback(client as unknown as PrismaClient),
       commerceQuote: {
@@ -844,32 +1155,43 @@ describe("Commerce Quote invariants", () => {
       },
     } as unknown as PrismaClient
 
-    const result = await issueCommerceQuote(
-      client,
-      {
-        actorUserId: "actor-1",
-        availabilityOutcome: "full",
-        clientQuoteId: "quote-command-rx",
-        clientVersionId: "quote-version-rx",
-        expiresAt: new Date("2030-01-01T00:00:00.000Z"),
-        lines: [
-          {
-            balanceRevision: 4,
-            configurationVersionId: "configuration-1",
-            offeringId: "offering-1",
-            outcome: "included",
-            quantity: "1",
-            sourceLineId: "transcription-line-1",
-            unitPriceMinor: 7_500,
-          },
-        ],
-        protectActionId: (actionId) => `protected:${actionId.length}`,
-        sourceId: "request-1",
-        sourceType: "prescription_request",
-        storeId: "store-1",
-        tenantId: "tenant-1",
+    let protectedCalls = 0
+    const releaseInput: IssueCommerceQuoteInput = {
+      actorUserId: "actor-1",
+      availabilityOutcome: "full",
+      clientQuoteId: "quote-command-rx",
+      clientVersionId: "quote-version-rx",
+      expiresAt: new Date("2030-01-01T00:00:00.000Z"),
+      lines: [
+        {
+          balanceRevision: 4,
+          configurationVersionId: "configuration-1",
+          offeringId: "offering-1",
+          outcome: "included",
+          quantity: "1",
+          sourceLineId: "transcription-line-1",
+          unitPriceMinor: 7_500,
+        },
+      ],
+      protectActionId: (actionId) => {
+        protectedCalls++
+        return `protected:${actionId.length}`
       },
-      quoteTermsPublication,
+      sourceId: "request-1",
+      sourceType: "prescription_request",
+      storeId: "store-1",
+      tenantId: "tenant-1",
+    }
+    const publication = { ...quoteTermsPublication }
+    const pending = prepareCommerceQuoteIssue(releaseInput, publication)
+    publication.documentHash = "b".repeat(64)
+    publication.version = "changed-during-screening"
+    releaseInput.protectActionId = () => {
+      throw Error("Replacement callback must not execute")
+    }
+    const result = await issuePreparedCommerceQuoteInTransaction(
+      client,
+      await pending,
     )
 
     expect(result).toMatchObject({
@@ -887,6 +1209,18 @@ describe("Commerce Quote invariants", () => {
       "action:create",
       "action:create",
       "intent:quote-ready",
+    ])
+    expect(protectedCalls).toBe(3)
+    expect(observedTerms).toEqual([
+      {
+        where: {
+          userId_version: {
+            userId: "actor-1",
+            version: quoteTermsPublication.version,
+          },
+        },
+        select: { documentHash: true },
+      },
     ])
   })
 
@@ -1185,6 +1519,25 @@ describe("Commerce Quote invariants", () => {
           events.push("source:quoted")
           return { count: 1 }
         },
+      },
+      // The saved version's supplied source line is freshly checked before release.
+      serviceRequestLine: {
+        count: async ({
+          where,
+        }: {
+          where: {
+            requestId: string
+            request: { tenantId: string; storeId: string }
+            id: { in: string[] }
+          }
+        }) =>
+          where.requestId === "request-1" &&
+          where.request.tenantId === "tenant-1" &&
+          where.request.storeId === "store-1" &&
+          where.id.in.length === 1 &&
+          where.id.in[0] === "request-line-1"
+            ? 1
+            : 0,
       },
       storeConversation: {
         findFirst: async () => ({

@@ -1,5 +1,6 @@
 import { getAuthenticatedQaFixtureContext } from "@ewatrade/db/queries"
 import { z } from "zod"
+import { requireBrowserIdentity } from "../../assistant/channel-principal"
 import { createTRPCRouter, protectedProcedure } from "../init"
 
 export const qaToolsRouter = createTRPCRouter({
@@ -14,7 +15,7 @@ export const qaToolsRouter = createTRPCRouter({
     .query(({ ctx }) =>
       getAuthenticatedQaFixtureContext(ctx.db, {
         membershipId: ctx.tenantContext.membership.id,
-        sessionId: ctx.session.session.id,
+        sessionId: requireBrowserIdentity(ctx.session).session.id,
         storeId: ctx.tenantContext.activeStore?.id ?? null,
         tenantId: ctx.tenantId,
         userId: ctx.session.user.id,

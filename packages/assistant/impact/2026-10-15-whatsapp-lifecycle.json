@@ -1,0 +1,49 @@
+{
+  "version": 1,
+  "id": "2026-10-15-whatsapp-lifecycle",
+  "tickets": ["G05", "H01"],
+  "summary": "W11 source/backend accepted12/48(25.0%): real personal Session-owned discovery/revoke after business access/config loss, exact typed payload cleanup preserving uncertain attempt proof, bounded expiry before rollout, original actor-time idle refresh and exact generation-bound confirmation retry. Existing OTP app/WABA/sender5343/default-off and capability rollout remain unchanged. Global personal management paths are documented in API/security contracts, not merchant coverage rows.",
+  "noAssistantImpact": "Changes channel consent/security lifecycle, not merchant capability availability or canonical commands. Personal lifecycle operations remain excluded from model tools. No business tool/client rollout or provider activation.",
+  "procedures": [
+    {
+      "path": "assistantChannels.confirmWhatsAppLink",
+      "status": "excluded",
+      "reason": "Fresh scoped app consent remains required. Only exact persisted original confirmed grant generation may return an effect-free retry; superseded/revoked consent cannot be restored by an old link."
+    }
+  ],
+  "docs": [
+    {
+      "topic": "feature",
+      "path": ".brain/features/whatsapp-assistant.md",
+      "status": "local_only"
+    },
+    {
+      "topic": "api",
+      "path": ".brain/api/contracts.md",
+      "status": "local_only"
+    },
+    {
+      "topic": "permissions",
+      "path": ".brain/api/permissions.md",
+      "status": "local_only"
+    },
+    {
+      "topic": "schema",
+      "path": ".brain/database/schema.md",
+      "status": "local_only"
+    },
+    {
+      "topic": "decision",
+      "path": ".brain/decisions/2026-10-15-whatsapp-assistant-channel.md",
+      "status": "local_only"
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "run",
+      "path": ".brain/qa/2026-10-15-whatsapp-assistant.md",
+      "executed": true,
+      "result": "Final guarded local lifecycle7/1080fail159.34s and only3 affected native navigation/empty-queue concurrency/delivery-refusal regressions3/580fail312.88s pass with cleanup. Includes foreign/expired/QA denial, labels after access loss, per-grant isolation, both typed queues/terminal payloads, original UNKNOWN proof and late receipts, actor-time new input/control/no replay touch, absolute/idle expiry, same-time exact confirmation/relink, preserved canonical/model/transport state and concurrency. Earlier broad parallel SSI/busy failures led to exact Binding/Inbox ID cleanup; no retry expansion/isolation weakening. Fresh OTP25/132, offline60/293 and scoped types/lint pass; API has six prior unrelated diagnostics. Generated local migration20261015131922, required push/client generation pass. W12 UI source implemented/independently reviewed/focused checked, rendered/native acceptance open. No live model/provider/private env/Production action; full goal active."
+    }
+  ]
+}

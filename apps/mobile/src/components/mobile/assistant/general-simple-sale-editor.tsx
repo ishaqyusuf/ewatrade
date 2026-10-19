@@ -7,6 +7,7 @@ import {
   similarSaleNames,
   simpleSaleAction,
 } from "@ewatrade/assistant/general/contracts"
+import { catalogFreeLineDescriptionError } from "@ewatrade/utils/catalog-free-lines"
 import { majorToMinor, minorToMajorInput } from "@ewatrade/utils/currency"
 import { useQuery } from "@tanstack/react-query"
 import { type ComponentProps, useDeferredValue, useState } from "react"
@@ -34,6 +35,9 @@ export function GeneralSimpleSaleEditor({
       : minorToMajorInput(initial.totalMinor),
   )
   const [error, setError] = useState("")
+  // A typed-price sale must say what was sold (canonical rule). An older
+  // draft without it still opens here so it can be completed.
+  const [descriptionError, setDescriptionError] = useState<string | null>(null)
   const trpc = useTRPC()
   const customerName = useDeferredValue(sale.customerName)
   const options = useQuery(
@@ -48,8 +52,20 @@ export function GeneralSimpleSaleEditor({
       setError("Enter a valid amount.")
       return
     }
+    const description = sale.description?.trim() ?? ""
+    const missing = catalogFreeLineDescriptionError({
+      kind: "quick_sale",
+      description,
+    })
+    if (missing) {
+      setDescriptionError(missing)
+      setError("")
+      return
+    }
+    setDescriptionError(null)
     const parsed = simpleSaleAction.safeParse({
       ...sale,
+      description,
       receivedMinor: paid ?? undefined,
       totalMinor: full ?? undefined,
     })
@@ -180,11 +196,23 @@ export function GeneralSimpleSaleEditor({
         onChangeText={setTotal}
       />
       <FormField
-        label="Description (optional)"
+        label="What was sold?"
+        helper="Required · up to 200 characters"
+        error={descriptionError ?? undefined}
+        accessibilityHint="Required. Up to 200 characters."
         value={sale.description ?? ""}
         editable={!disabled}
-        maxLength={200}
-        onChangeText={(value) => patch({ description: value || undefined })}
+        maxLength={240}
+        onChangeText={(value) => {
+          patch({ description: value || undefined })
+          if (descriptionError)
+            setDescriptionError(
+              catalogFreeLineDescriptionError({
+                kind: "quick_sale",
+                description: value.trim(),
+              }),
+            )
+        }}
       />
       {sale.attachmentIds.length ? (
         <Text className="text-sm text-muted-foreground">
@@ -204,6 +232,6 @@ export function GeneralSimpleSaleEditor({
 function SaleChoice({
   label,
   ...props
-}: ComponentProps<typeof ActionButton> & { label: string }) {
+}: Omit<ComponentProps<typeof ActionButton>, "children"> & { label: string }) {
   return <ActionButton {...props}>{label}</ActionButton>
 }

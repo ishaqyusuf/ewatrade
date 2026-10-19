@@ -5,6 +5,7 @@
   "type": "module",
   "files": ["src", "generated", "prisma", "prisma.config.ts"],
   "exports": {
+    "./assistant-whatsapp": "./src/queries/assistant-whatsapp/index.ts",
     "./customer-messages": "./src/queries/customer-messages/index.ts",
     "./performance-tracing": "./src/performance-tracing.ts",
     "./onboarding-continuation": "./src/queries/onboarding-continuation.ts",
@@ -33,6 +34,7 @@
     "./tenant-context": "./src/queries/tenants.ts",
     "./types": "./src/types.ts",
     "./assistant": "./src/queries/assistant.ts",
+    "./assistant-private-export": "./src/queries/assistant-private-export.ts",
     "./assistant-attachments": "./src/queries/assistant-attachments.ts",
     "./assistant-operations": "./src/queries/assistant-operations.ts",
     "./store-conversation-account-terms": "./src/queries/store-conversation-account-terms.ts",
@@ -43,6 +45,7 @@
     "./assistant-voice": "./src/queries/assistant-voice.ts",
     "./staff-invitation-custody": "./src/staff-invitation-custody.ts",
     "./service-intake-review": "./src/queries/service-intake-review.ts",
+    "./service-request-read": "./src/queries/service-request-read.ts",
     "./service-intake-receipt": "./src/queries/service-intake-receipt.ts",
     "./business-reporting/presentation": "./src/queries/business-reporting/presentation.ts",
     "./business-reporting": "./src/queries/business-reporting/index.ts",
@@ -52,11 +55,23 @@
     "./service-work-review": "./src/queries/service-work-review.ts",
     "./service-work-record-review": "./src/queries/service-work-record-review.ts",
     "./service-booking-read": "./src/queries/service-booking-read.ts",
+    "./service-booking-availability": "./src/queries/service-commerce-bookings/staff-availability.ts",
+    "./service-booking-commands": "./src/queries/service-commerce-bookings/booking-commands.ts",
+    "./service-booking-command-effects": "./src/queries/service-commerce-bookings/booking-command-effects.ts",
+    "./service-booking-command-review": "./src/queries/service-commerce-bookings/booking-command-review.ts",
+    "./assistant-general-media-source": "./src/queries/assistant-general-media-source.ts",
     "./service-work-editor-context": "./src/queries/service-work-editor-context.ts",
     "./service-work-original": "./src/queries/service-work-original.ts",
     "./staff-assigned-service-work": "./src/queries/staff-assigned-service-work.ts",
     "./service-work-completion-review": "./src/queries/service-work-completion-review.ts",
-    "./commerce-quote-decision-review": "./src/queries/commerce-quote-decision-review.ts"
+    "./commerce-quote-decision-review": "./src/queries/commerce-quote-decision-review.ts",
+    "./commerce-quotes": "./src/queries/commerce-quotes.ts",
+    "./commerce-quote-issue-authority": "./src/queries/commerce-quote-issue-authority.ts",
+    "./commerce-quote-issue-review": "./src/queries/commerce-quote-issue-review.ts",
+    "./commerce-quote-review-budget": "./src/queries/commerce-quote-review-budget.ts",
+    "./commerce-quote-reviewed-issue": "./src/queries/commerce-quote-reviewed-issue.ts",
+    "./commerce-quote-reviewed-decision": "./src/queries/commerce-quote-reviewed-decision.ts",
+    "./own-transaction": "./src/queries/own-transaction.ts"
   },
   "scripts": {
     "seed:category-suggestion-config": "bun scripts/seed-category-suggestion-config.ts",
@@ -78,6 +93,7 @@
     "db:studio": "prisma studio"
   },
   "dependencies": {
+    "@ewatrade/assistant": "workspace:*",
     "@ewatrade/customer-messages": "workspace:*",
     "@ewatrade/catalog": "workspace:*",
     "@ewatrade/prescriptions": "workspace:*",

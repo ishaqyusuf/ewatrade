@@ -46,7 +46,7 @@ export function ClassicVerifyEmailScreen({
         className="-mt-2 min-h-11 items-center justify-center"
         href={authEntryHref}
       >
-        <Text className="text-[13px] font-extrabold [-rn-line-height:18] text-primary">
+        <Text className="text-xs font-extrabold [-rn-line-height:22] text-primary">
           {channel === "whatsapp" ? "Use another number" : "Use another email"}
         </Text>
       </Pressable>

@@ -1,5 +1,4 @@
 import type { RouterInputs } from "@ewatrade/api/trpc/routers/_app"
-import { majorToMinor } from "@ewatrade/utils"
 import type { WorkJob } from "./service-jobs-model"
 
 export type ServicePaymentFields = {
@@ -13,9 +12,17 @@ export type ServicePaymentDraft = ServicePaymentFields & {
   job: WorkJob
 }
 
+function exactPaymentMinor(value: string): number | null {
+  const match = /^(\d{1,12})(?:\.(\d{1,2}))?$/.exec(value)
+  if (!match?.[1]) return null
+  const minor =
+    BigInt(match[1]) * 100n + BigInt((match[2] ?? "").padEnd(2, "0"))
+  return minor <= 100_000_000n ? Number(minor) : null
+}
+
 // The form and the final command boundary use the same validation.
 export function projectServicePayment(
-  job: WorkJob,
+  job: Pick<WorkJob, "summary" | "handedOffAt" | "balanceDueMinor">,
   kind: ServicePaymentKind,
   fields: ServicePaymentFields,
 ): { amountMinor: number; error: null } | { amountMinor: null; error: string } {
@@ -32,12 +39,18 @@ export function projectServicePayment(
       amountMinor: null,
       error: "All active work must be ready before collection.",
     }
-  const amountMinor = fields.amount.trim()
-    ? majorToMinor(fields.amount)
+  const amount = fields.amount.trim()
+  const amountMinor = amount
+    ? exactPaymentMinor(amount)
     : kind === "handoff"
       ? 0
       : null
-  if (amountMinor === null || amountMinor < 0 || amountMinor > 100_000_000)
+  if (
+    amountMinor === null ||
+    !Number.isSafeInteger(amountMinor) ||
+    amountMinor < 0 ||
+    amountMinor > 100_000_000
+  )
     return { amountMinor: null, error: "Enter a supported payment amount." }
   if (
     kind === "payment" &&

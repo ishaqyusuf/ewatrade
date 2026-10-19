@@ -209,7 +209,7 @@ export function CustomerQuoteMessage({
         }
       >
         <View className="min-w-0 flex-1 gap-0.5">
-          <Text className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+          <Text className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
             {heading.eyebrow}
           </Text>
           <Text className="text-lg font-extrabold text-foreground">
@@ -217,14 +217,14 @@ export function CustomerQuoteMessage({
           </Text>
         </View>
         <View className="rounded-full bg-primary/10 px-2.5 py-1.5">
-          <Text className="text-[11px] font-extrabold text-primary">
+          <Text className="text-xs font-extrabold text-primary">
             {heading.status}
           </Text>
         </View>
       </View>
 
       {heading.guidance ? (
-        <Text className="text-xs leading-5 text-muted-foreground">
+        <Text className="text-xs [-rn-line-height:22] text-muted-foreground">
           {heading.guidance}
         </Text>
       ) : null}
@@ -277,7 +277,7 @@ export function CustomerQuoteMessage({
         <View className="gap-2">
           <Text
             accessibilityLiveRegion="polite"
-            className="text-xs leading-5 text-destructive"
+            className="text-xs [-rn-line-height:22] text-destructive"
           >
             {feedback.status}
           </Text>
@@ -314,7 +314,7 @@ export function CustomerQuoteMessage({
                     <Text className="text-sm font-bold text-foreground">
                       Confirm {action.label.toLowerCase()}
                     </Text>
-                    <Text className="text-xs leading-5 text-muted-foreground">
+                    <Text className="text-xs [-rn-line-height:22] text-muted-foreground">
                       {action.consequence}
                       {amount ? ` Amount: ${amount}.` : ""}
                     </Text>

@@ -33,7 +33,7 @@ export function CatalogSetupConfirmation({
           >
             {confirmationCopy.title}
           </Text>
-          <Text className="text-sm [-rn-line-height:21] text-muted-foreground">
+          <Text className="text-sm [-rn-line-height:22] text-muted-foreground">
             {confirmationCopy.message}
           </Text>
         </View>

@@ -1,0 +1,77 @@
+{
+  "version": 1,
+  "id": "2026-10-18-native-expense-receipts",
+  "tickets": [
+    "E04",
+    "H04",
+    "H02"
+  ],
+  "summary": "Native private Expense evidence caller reuses existing protected receipt commands, exact original upload and session-bound grants. Opaque retry identities persist; original bytes stay in memory and picker cache copies are removed. Uses existing attachment entitlement hook. Existing financial posting, API signatures, permissions and provider gates are unchanged.",
+  "noAssistantImpact": "Native explicit-form parity only. Assistant expense evidence procedures remain planned H04; no assistant tool, media safety approval, prompt authority, confirmation bypass or provider activation is added. Chat original attachments remain a distinct existing consumer.",
+  "capabilities": [],
+  "procedures": [
+    {
+      "path": "finance.expenseReceipts.createIntent",
+      "status": "planned",
+      "reason": "Existing Owner/Admin Book/Expense command; native form caller added, assistant H04 remains planned."
+    },
+    {
+      "path": "finance.expenseReceipts.get",
+      "status": "planned",
+      "reason": "Existing Owner/Admin Book/Expense command; native form caller added, assistant H04 remains planned."
+    },
+    {
+      "path": "finance.expenseReceipts.list",
+      "status": "planned",
+      "reason": "Existing Owner/Admin Book/Expense command; native form caller added, assistant H04 remains planned."
+    },
+    {
+      "path": "finance.expenseReceipts.attach",
+      "status": "planned",
+      "reason": "Existing Owner/Admin Book/Expense command; native form caller added, assistant H04 remains planned."
+    },
+    {
+      "path": "finance.expenseReceipts.withdraw",
+      "status": "planned",
+      "reason": "Existing Owner/Admin Book/Expense command; native form caller added, assistant H04 remains planned."
+    }
+  ],
+  "docs": [
+    {
+      "topic": "feature",
+      "path": ".brain/features/merchant-finance.md",
+      "status": "local_only",
+      "note": "M04 native integration and bounded acceptance limits."
+    },
+    {
+      "topic": "capability",
+      "path": "packages/assistant/src/capabilities/COVERAGE.md",
+      "status": "updated",
+      "note": "Regenerated source registry; expense receipt family stays planned H04."
+    },
+    {
+      "topic": "api",
+      "status": "not_applicable",
+      "note": "Existing protected procedure and private HTTP contracts unchanged."
+    },
+    {
+      "topic": "permissions",
+      "status": "not_applicable",
+      "note": "Current Owner/Admin Finance scope, original safety, authenticated Session and provider policy retained."
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "test",
+      "path": "apps/mobile/src/lib/expense-receipt-client.test.ts",
+      "executed": true,
+      "result": "Focused command reconstruction, exact scoped transport, file bounds and owned picker cleanup pass. No provider/persistence/UI claim."
+    },
+    {
+      "kind": "test",
+      "path": "apps/mobile/src/components/mobile/receipts/receipt-file.test.ts",
+      "executed": true,
+      "result": "7 pass/14 assertions including authority loss during picker or cache write and original-image UTI; shared default callers unchanged."
+    }
+  ]
+}

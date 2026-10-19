@@ -3,6 +3,7 @@ import {
   ORDER_ACTIVITY_BODY_MAX_LENGTH,
   ORDER_ACTIVITY_MAX_ATTACHMENTS,
   addCommercialOrderActivity,
+  assertAttachmentEntitlement,
   listCommercialOrderActivity,
   markCommercialOrderAttachmentUploaded,
   readCommercialOrderAttachment,
@@ -212,6 +213,9 @@ async function pendingAttachment(ctx: ActivityContext, attachmentId: string) {
           ? "This file is already saved."
           : "This upload expired. Attach the file again.",
     })
+  await assertAttachmentEntitlement(ctx.db, {
+    tenantId: ctx.tenantContext.tenant.id,
+  })
   return row
 }
 

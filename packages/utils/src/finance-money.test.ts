@@ -37,4 +37,35 @@ describe("finance money", () => {
     expect(formatFinanceMoney("-1", "NGN")).toContain("-₦0.01")
     expect(formatFinanceMoney("-12345", "NGN")).toContain("-₦123.45")
   })
+  test("native Intl without formatToParts retains exact digits, currency layout and signs", () => {
+    const cases = [
+      ["0", "NGN"],
+      ["-1", "NGN"],
+      ["-12345", "USD"],
+      ["900719925474099301", "NGN"],
+      ["-9223372036854775807", "GBP"],
+    ] as const
+    const expected = cases.map(([value, currency]) =>
+      formatFinanceMoney(value, currency),
+    )
+    const original = Object.getOwnPropertyDescriptor(
+      Intl.NumberFormat.prototype,
+      "formatToParts",
+    )
+    Object.defineProperty(Intl.NumberFormat.prototype, "formatToParts", {
+      configurable: true,
+      value: undefined,
+    })
+    try {
+      for (const [index, [value, currency]] of cases.entries())
+        expect(formatFinanceMoney(value, currency)).toBe(expected[index])
+    } finally {
+      if (original)
+        Object.defineProperty(
+          Intl.NumberFormat.prototype,
+          "formatToParts",
+          original,
+        )
+    }
+  })
 })

@@ -21,23 +21,14 @@ export function formatFinanceMoney(value: string, currency: string): string {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   })
-  // Hermes (React Native) cannot format a BigInt, so the locale only
-  // supplies the layout (sign, symbol, separators) from small numbers and the
-  // exact digits are spliced in as strings.
-  const group =
-    formatter.formatToParts(1000).find((part) => part.type === "group")
-      ?.value ?? ","
-  const digits = whole.replace(/\B(?=(\d{3})+(?!\d))/g, group)
-  return formatter
-    .formatToParts(amount < BigInt(0) ? -1 : 1)
-    .map((part) =>
-      part.type === "integer"
-        ? digits
-        : part.type === "fraction"
-          ? fraction
-          : part.value,
-    )
-    .join("")
+  // Native Intl may lack both BigInt formatting and formatToParts. Only a
+  // small sample reaches Intl; splice the exact digits into its en-NG layout.
+  const sample = formatter.format(amount < BigInt(0) ? -1234.56 : 1234.56)
+  const layout = /1([^0-9]*)234([^0-9]*)56/.exec(sample)
+  if (!layout)
+    throw new Error("Currency formatting is unavailable on this device.")
+  const digits = whole.replace(/\B(?=(\d{3})+(?!\d))/g, layout[1] ?? ",")
+  return sample.replace(layout[0], () => `${digits}${layout[2]}${fraction}`)
 }
 
 export function parseFinanceCashCount(value: string): string {

@@ -1,6 +1,7 @@
 import { ClassicVerifyEmailScreen } from "@/components/mobile/appearances/classic/verify-email-screen"
 import { OtpInput } from "@/components/mobile/otp-input"
 import { OtpKeypad } from "@/components/mobile/otp-keypad"
+import { Toast } from "@/components/ui/toast"
 import { useAuthContext } from "@/hooks/use-auth"
 import { clearPendingOnboarding } from "@/lib/onboarding-continuation-store"
 import { useOnboardingStore } from "@/store/onboardingStore"
@@ -127,10 +128,16 @@ export function VerifyEmailScreen() {
         setStatus("error")
         setMessage(error.message || "We could not resend the code.")
       },
-      onSuccess() {
+      onSuccess(data) {
         setStatus("resent")
         setMessage("Code sent again")
         setCooldown(RESEND_COOLDOWN_SECONDS)
+        if (data.devCode)
+          Toast.show(`Use ${data.devCode} as OTP`, {
+            duration: 8000,
+            position: "top",
+            type: "info",
+          })
       },
     }),
   )
@@ -170,10 +177,16 @@ export function VerifyEmailScreen() {
         setStatus("error")
         setMessage(error.message || "We could not resend the code.")
       },
-      onSuccess() {
+      onSuccess(data) {
         setStatus("resent")
         setMessage("Code sent again")
         setCooldown(RESEND_COOLDOWN_SECONDS)
+        if (data.devCode)
+          Toast.show(`Use ${data.devCode} as OTP`, {
+            duration: 8000,
+            position: "top",
+            type: "info",
+          })
       },
     }),
   )

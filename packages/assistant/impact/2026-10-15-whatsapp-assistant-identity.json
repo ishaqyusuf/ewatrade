@@ -1,0 +1,74 @@
+{
+  "version": 1,
+  "id": "2026-10-15-whatsapp-assistant-identity",
+  "tickets": ["G05", "H01"],
+  "summary": "Full WhatsApp assistant channel plan W01/W08: existing OTP platform-number isolation and independently disabled assistant configuration; expiring hashed link, verified sender claim and fresh authenticated app confirmation; scoped revocable identity grants and privacy inventory. Generated local additive migration. No model tools, business writes, provider sends or rollout activated. W11 moves connection discovery/revoke out of merchant procedures to authenticated-global personal controls; these paths are documented as personal API/security contracts rather than merchant coverage rows.",
+  "noAssistantImpact": "This foundation changes assistant channel identity and transport security, not merchant capability or command coverage. GENERAL/SETUP/PRODUCT_CREATE WhatsApp tools remain planned. Linking controls are deliberately excluded from model tools and may only be used by the authenticated actor. G05/H01 are existing assistant gate references, not acceptance credit; canonical new channel checklist is W01-W48.",
+  "procedures": [
+    {
+      "path": "assistantChannels.availability",
+      "status": "excluded",
+      "reason": "Personal transport availability; no merchant tool or scope grant."
+    },
+    {
+      "path": "assistantChannels.createWhatsAppLink",
+      "status": "excluded",
+      "reason": "Fresh real Session and current Store actor create a single-use link; never exposed to model."
+    },
+    {
+      "path": "assistantChannels.whatsAppLink",
+      "status": "excluded",
+      "reason": "Actor-owned pending claim status with masked sender only."
+    },
+    {
+      "path": "assistantChannels.confirmWhatsAppLink",
+      "status": "excluded",
+      "reason": "Explicit authenticated actor confirmation binds sender, Tenant and Store; no OTP/Customer inference."
+    }
+  ],
+  "docs": [
+    {
+      "topic": "feature",
+      "path": ".brain/features/whatsapp-assistant.md",
+      "status": "local_only"
+    },
+    {
+      "topic": "api",
+      "path": ".brain/api/contracts.md",
+      "status": "local_only"
+    },
+    {
+      "topic": "permissions",
+      "path": ".brain/api/permissions.md",
+      "status": "local_only"
+    },
+    {
+      "topic": "schema",
+      "path": ".brain/database/schema.md",
+      "status": "local_only"
+    },
+    {
+      "topic": "capability",
+      "path": "packages/assistant/src/capabilities/COVERAGE.md",
+      "status": "updated"
+    },
+    {
+      "topic": "capability",
+      "path": "packages/assistant/evaluations/WHATSAPP-COVERAGE.md",
+      "status": "updated"
+    },
+    {
+      "topic": "decision",
+      "path": ".brain/decisions/2026-10-15-whatsapp-assistant-channel.md",
+      "status": "local_only"
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "run",
+      "path": ".brain/qa/2026-10-15-whatsapp-assistant.md",
+      "executed": true,
+      "result": "Focused security/OTP/privacy suite 168 tests/473 assertions and guarded local Neon linking lifecycle 1/21 pass after final Membership/Session locks; fixtures cleaned, required migrate/push, strict foundation types and H01/H02 pass. No UI/provider/production acceptance."
+    }
+  ]
+}

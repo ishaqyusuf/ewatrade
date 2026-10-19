@@ -2,6 +2,8 @@
  * Provider-free Setup Assistant script for QA tenants and tests. It understands
  * simple "name, price, stock" lines and "X owes me N" sentences; it is not AI.
  */
+import { parseWhatsAppWorkflowRequest } from "../channels/workflow"
+import { parseWhatsAppWorkflowReviewSelection } from "../channels/workflow-action-review"
 
 type PromptMessage = {
   role: string
@@ -131,7 +133,16 @@ export function respondSetupRehearsal(
   prompt: readonly PromptMessage[],
 ): SetupRehearsalTurn {
   const userIndex = prompt.findLastIndex((message) => message.role === "user")
-  const parsed = parseSetupRehearsalLines(lastText(prompt[userIndex]))
+  const text = lastText(prompt[userIndex])
+  if (
+    parseWhatsAppWorkflowReviewSelection(text)?.kind === "review_selection" ||
+    parseWhatsAppWorkflowRequest(text)?.kind === "list"
+  )
+    return {
+      kind: "text",
+      text: "Your saved draft is unchanged. Review the exact saved records below.",
+    }
+  const parsed = parseSetupRehearsalLines(text)
   // One tool call per non-empty area, in setup-area order, then the reply.
   const calls = [
     parsed.items.length

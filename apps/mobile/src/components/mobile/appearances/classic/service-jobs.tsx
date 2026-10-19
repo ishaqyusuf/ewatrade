@@ -41,7 +41,7 @@ export function ServiceHeader({
           {title}
         </Text>
       ) : null}
-      <Text className="text-sm text-muted-foreground [-rn-line-height:20]">
+      <Text className="text-sm text-muted-foreground [-rn-line-height:22]">
         {description}
       </Text>
       {meta ? (
@@ -135,7 +135,7 @@ export function ServiceJobRow({
             maxFontSizeMultiplier={1.3}
             style={{
               color: palette[`${tint}Foreground`],
-              fontSize: 13,
+              fontSize: 16,
               fontWeight: "800",
             }}
           >
@@ -144,13 +144,13 @@ export function ServiceJobRow({
         </View>
         <View className="min-w-0 flex-1">
           <Text
-            className="text-sm font-bold [-rn-line-height:19] text-foreground"
+            className="text-sm font-bold [-rn-line-height:22] text-foreground"
             numberOfLines={large ? undefined : 1}
           >
             {name}
           </Text>
           <Text
-            className="text-xs [-rn-line-height:17] text-muted-foreground"
+            className="text-xs [-rn-line-height:22] text-muted-foreground"
             numberOfLines={large ? undefined : 1}
           >
             {job.priority === "urgent" ? "Urgent · " : ""}
@@ -198,7 +198,7 @@ export function ServiceSection({
           {title}
         </Text>
         {description ? (
-          <Text className="text-xs text-muted-foreground [-rn-line-height:20]">
+          <Text className="text-xs text-muted-foreground [-rn-line-height:22]">
             {description}
           </Text>
         ) : null}
@@ -239,7 +239,7 @@ export function ServiceChoice({
           {title}
         </Text>
         {description ? (
-          <Text className="text-xs text-muted-foreground [-rn-line-height:18]">
+          <Text className="text-xs text-muted-foreground [-rn-line-height:22]">
             {description}
           </Text>
         ) : null}

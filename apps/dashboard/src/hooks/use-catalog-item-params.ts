@@ -8,17 +8,20 @@ import {
   catalogFilterParams,
 } from "./use-catalog-filter-params"
 
+/** Shared with route-contract checks; these are the sheet/form's actual URL parsers. */
+export const catalogItemParamParsers = {
+  catalogItem: parseAsStringEnum(["create"]),
+  catalogCreateKind: parseAsStringEnum([...CATALOG_KINDS]),
+  catalogCreateMode: parseAsStringEnum(["form", "chat"]),
+  catalogCreateName: parseAsString,
+  catalogCreatePrice: parseAsString,
+  catalogConversation: parseAsString,
+  ...catalogFilterParams,
+  productUnits: parseAsString,
+}
+
 export function useCatalogItemParams() {
-  const [params, updateParams] = useQueryStates({
-    catalogItem: parseAsStringEnum(["create"]),
-    catalogCreateKind: parseAsStringEnum([...CATALOG_KINDS]),
-    catalogCreateMode: parseAsStringEnum(["form", "chat"]),
-    catalogCreateName: parseAsString,
-    catalogCreatePrice: parseAsString,
-    catalogConversation: parseAsString,
-    ...catalogFilterParams,
-    productUnits: parseAsString,
-  })
+  const [params, updateParams] = useQueryStates(catalogItemParamParsers)
   function setParams(
     values: {
       catalogItem?: "create" | null

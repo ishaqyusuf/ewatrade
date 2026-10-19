@@ -42,7 +42,7 @@ export function SignUpChoice({
     >
       <Text
         className={cn(
-          "text-center text-sm font-bold [-rn-line-height:20] [-rn-include-font-padding:false] [-rn-text-align-vertical:center]",
+          "text-center text-sm font-bold [-rn-line-height:22] [-rn-include-font-padding:false] [-rn-text-align-vertical:center]",
           selected ? "text-primary" : "text-foreground",
         )}
       >

@@ -11,11 +11,13 @@ import type {
   GeneralTransactionContext,
 } from "./general-actions"
 import { requireGeneralScope } from "./general-context"
-import { stockReceivePresentation } from "./review-presentations"
+import { generalStockEffectiveTime } from "./general-stock-effective-time"
 import { proposalDigest } from "./proposal-security"
+import { stockReceivePresentation } from "./review-presentations"
 
 type Action = Extract<GeneralAction, { action: "stock_receive" }>
 async function receiptTarget(ctx: GeneralTransactionContext, payload: Action) {
+  generalStockEffectiveTime(payload.effectiveAt)
   const scope = requireGeneralScope(ctx)
   const preview = await previewOrdinaryStockReceipt(ctx.db, {
     ...scope,
@@ -29,12 +31,14 @@ async function receiptTarget(ctx: GeneralTransactionContext, payload: Action) {
 }
 export const stockReceive: GeneralActionAdapter<Action> = {
   async prepare(_ctx, payload) {
+    generalStockEffectiveTime(payload.effectiveAt)
     return {
       ...payload,
       effectiveAt: payload.effectiveAt ?? new Date().toISOString(),
     }
   },
   async validate(ctx, payload, lock) {
+    generalStockEffectiveTime(payload.effectiveAt)
     if (lock)
       await lockInventorySourcesForReview(ctx.db, {
         ...requireGeneralScope(ctx),
@@ -94,9 +98,7 @@ export const stockReceive: GeneralActionAdapter<Action> = {
         : payload.reason,
       categories: payload.categories,
       source: payload.source,
-      effectiveAt: payload.effectiveAt
-        ? new Date(payload.effectiveAt)
-        : undefined,
+      effectiveAt: generalStockEffectiveTime(payload.effectiveAt),
       unitCostMinor: payload.unitCostMinor,
     }
     const {

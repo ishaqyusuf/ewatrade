@@ -29,6 +29,7 @@ import {
 import { prepareServiceIntake } from "./service-intake-command"
 import { projectServiceIntake } from "./service-intake-model"
 import {
+  type FocusedServiceJob,
   type PendingEvidence,
   type WorkJob,
   type actions,
@@ -41,7 +42,7 @@ import { useServiceTextEditor } from "./service-text-sheet"
 import { useServiceActions } from "./use-service-actions"
 import { useServiceCommand } from "./use-service-command"
 
-export function useServiceJobs() {
+export function useServiceJobs(focusedJob?: FocusedServiceJob) {
   const trpc = useTRPC()
   const queryClient = useQueryClient()
   const { profile } = useAuthContext()
@@ -68,7 +69,10 @@ export function useServiceJobs() {
   const qaMessageSnapshot = useRef<string | null>(null)
   const [canUndoQaMessage, setCanUndoQaMessage] = useState(false)
   const [showDetails, setShowDetails] = useState(false)
-  const [selectedJobId, setSelectedJobId] = useState<string | null>(null)
+  const [queueSelectedJobId, setSelectedJobId] = useState<string | null>(null)
+  const selectedJobId = focusedJob?.job.id ?? queueSelectedJobId
+  const focus = useRef(focusedJob)
+  focus.current = focusedJob
   const [error, setError] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
   const [jobNote, setJobNote] = useState("")
@@ -87,24 +91,28 @@ export function useServiceJobs() {
   const canOperate = canManage || isSalesRepRole(profile?.role)
   const availability = useQuery(
     trpc.tenant.featureAvailability.queryOptions(undefined, {
-      enabled: canOperate && !isOfflineMode,
+      enabled: canOperate && !isOfflineMode && !focusedJob,
       retry: false,
     }),
   )
-  const storeId = profile?.storeId ?? availability.data?.storeId
+  const storeId =
+    focusedJob?.job.storeId ?? profile?.storeId ?? availability.data?.storeId
   const command = useServiceCommand({
     userId: profile?.id,
     businessId: profile?.businessId,
     storeId,
     canOperate,
     canManage,
+    isCurrent: focusedJob
+      ? () => Boolean(focus.current?.isCurrent())
+      : undefined,
   })
   const enabled =
     canOperate && !isOfflineMode && !command.scopeChanged && Boolean(storeId)
   const catalogQuery = useQuery(
     trpc.catalog.listItems.queryOptions(
       { kind: "service" },
-      { enabled, retry: false },
+      { enabled: enabled && !focusedJob, retry: false },
     ),
   )
   const jobsQuery = useInfiniteQuery(
@@ -114,7 +122,11 @@ export function useServiceJobs() {
         storeId,
         query: isOfflineMode ? undefined : deferredSearch || undefined,
       },
-      { enabled, getNextPageParam: (page) => page.nextCursor, retry: false },
+      {
+        enabled: enabled && !focusedJob,
+        getNextPageParam: (page) => page.nextCursor,
+        retry: false,
+      },
     ),
   )
   const settingsQuery = useQuery(
@@ -126,12 +138,15 @@ export function useServiceJobs() {
   const jobQuery = useQuery(
     trpc.services.getJob.queryOptions(
       { jobId: selectedJobId ?? "" },
-      { enabled: enabled && Boolean(selectedJobId), retry: false },
+      {
+        enabled: enabled && Boolean(selectedJobId) && !focusedJob,
+        retry: false,
+      },
     ),
   )
   const offerings = useMemo(
     () =>
-      canOperate && !command.scopeChanged && storeId
+      canOperate && !command.scopeChanged && storeId && !focusedJob
         ? serviceOfferings(catalogQuery.data ?? []).filter(
             (offering) =>
               offering.pricingPolicy === "fixed" &&
@@ -140,16 +155,22 @@ export function useServiceJobs() {
               ),
           )
         : [],
-    [catalogQuery.data, storeId, canOperate, command.scopeChanged],
+    [catalogQuery.data, storeId, canOperate, command.scopeChanged, focusedJob],
   )
   const loadedJobs = useMemo(
     () =>
-      canOperate && !command.scopeChanged && storeId
+      canOperate && !command.scopeChanged && storeId && !focusedJob
         ? (jobsQuery.data?.pages.flatMap((page) => page.items) ?? []).filter(
             (job) => job.storeId === storeId,
           )
         : [],
-    [jobsQuery.data?.pages, storeId, canOperate, command.scopeChanged],
+    [
+      jobsQuery.data?.pages,
+      storeId,
+      canOperate,
+      command.scopeChanged,
+      focusedJob,
+    ],
   )
   const jobs = useMemo(() => {
     const query = search.trim().toLowerCase()
@@ -170,8 +191,11 @@ export function useServiceJobs() {
             .includes(query),
         )
   }, [isOfflineMode, loadedJobs, search])
-  const jobCandidate =
-    jobQuery.data ?? loadedJobs.find((job) => job.id === selectedJobId)
+  const jobCandidate = focusedJob
+    ? focusedJob.isCurrent()
+      ? focusedJob.job
+      : undefined
+    : (jobQuery.data ?? loadedJobs.find((job) => job.id === selectedJobId))
   const selectedJob =
     canOperate &&
     !command.scopeChanged &&
@@ -193,6 +217,7 @@ export function useServiceJobs() {
   const history = useServiceHistory()
   function openHistory(kind: ServiceHistoryKind) {
     if (
+      (focus.current && !focus.current.isCurrent()) ||
       !canOperate ||
       command.scopeChanged ||
       command.locked ||
@@ -366,6 +391,15 @@ export function useServiceJobs() {
   const [captureBusy, setCaptureBusy] = useState(false)
 
   async function refresh() {
+    const focusedOwner = focus.current
+    if (focusedOwner) {
+      await focusedOwner.refresh()
+      if (
+        focus.current?.isCurrent !== focusedOwner.isCurrent ||
+        !focusedOwner.isCurrent()
+      )
+        return
+    }
     await Promise.all([
       queryClient.invalidateQueries(trpc.services.queuePage.pathFilter()),
       queryClient.invalidateQueries(trpc.services.getJob.queryFilter()),
@@ -404,7 +438,12 @@ export function useServiceJobs() {
   }
   function requireJob(job: WorkJob) {
     if (!requireOnlineServiceWork()) return false
-    if (job.storeId !== storeId || jobQuery.isError || jobQuery.isFetching) {
+    if (
+      job.storeId !== storeId ||
+      (focus.current &&
+        (!focus.current.isCurrent() || job.id !== focus.current.job.id)) ||
+      (!focus.current && (jobQuery.isError || jobQuery.isFetching))
+    ) {
       setError("Reload the current Store's job before changing it.")
       return false
     }
@@ -421,6 +460,10 @@ export function useServiceJobs() {
       textEditor.draft
     )
       return
+    if (focus.current) {
+      if (id === null && focus.current.isCurrent()) focus.current.onBack()
+      return
+    }
     setSelectedJobId(id)
     setAmountPaid("")
     setPaymentReference("")
@@ -699,6 +742,7 @@ export function useServiceJobs() {
   }
 
   return {
+    focusedJob,
     history,
     openHistory,
     removePendingEvidence,
@@ -711,9 +755,9 @@ export function useServiceJobs() {
     canOperate,
     storeId,
     scopeChanged: command.scopeChanged,
-    contextError: availability.error?.message ?? null,
-    contextPending: availability.isPending,
-    retryContext: availability.refetch,
+    contextError: focusedJob ? null : (availability.error?.message ?? null),
+    contextPending: focusedJob ? false : availability.isPending,
+    retryContext: focusedJob ? focusedJob.refresh : availability.refetch,
     jobQuery,
     selectedJobId,
     attachmentCount: attachments.length,
@@ -733,8 +777,8 @@ export function useServiceJobs() {
     profile,
     canManage,
     isOfflineMode,
-    creating,
-    setCreating,
+    creating: focusedJob ? false : creating,
+    setCreating: focusedJob ? () => {} : setCreating,
     search,
     setSearch,
     quantities,

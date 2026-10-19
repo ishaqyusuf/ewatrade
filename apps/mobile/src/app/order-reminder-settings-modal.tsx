@@ -266,7 +266,7 @@ export default function OrderReminderSettingsModalRoute() {
         ) : null}
         <View className="mt-4 flex-row items-start gap-2">
           <Icon className="mt-0.5 size-sm text-primary" name="Info" />
-          <Text className="min-w-0 flex-1 text-xs leading-5 text-muted-foreground">
+          <Text className="min-w-0 flex-1 text-xs [-rn-line-height:22] text-muted-foreground">
             Only unfulfilled product orders. A reminder never marks an order
             fulfilled.
           </Text>

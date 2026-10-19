@@ -1,33 +1,56 @@
 "use client"
-import { useTRPC } from "@/trpc/client"
+import { getDataCacheGeneration, useTRPC, useTRPCClient } from "@/trpc/client"
+import type { RouterInputs } from "@ewatrade/api/trpc/routers/_app"
 import { Badge, Button } from "@ewatrade/ui"
 import { useInfiniteQuery } from "@tanstack/react-query"
 import Link from "next/link"
 import { dateTime, money, orderHref } from "./display"
+import {
+  type CatalogDetailReadScope,
+  catalogDetailQueryKey,
+  catalogDetailReadIsFresh,
+} from "./read-access"
 import { DetailEmpty, DetailError, DetailLoading } from "./states"
 export function CatalogDetailOrders({
   itemId,
   storeId,
-}: { itemId: string; storeId: string }) {
+  readScope,
+}: { itemId: string; storeId: string; readScope: CatalogDetailReadScope }) {
+  const client = useTRPCClient()
   const trpc = useTRPC()
-  const query = useInfiniteQuery(
-    trpc.catalog.detail.orders.infiniteQueryOptions(
-      { itemId, storeId, limit: 30 },
-      {
-        getNextPageParam: (page) => page.nextCursor ?? undefined,
-        retry: false,
-        staleTime: 0,
-      },
+  const query = useInfiniteQuery({
+    queryKey: catalogDetailQueryKey(
+      trpc.catalog.detail.orders.infiniteQueryKey({
+        itemId,
+        storeId,
+        limit: 30,
+      }),
+      readScope,
     ),
-  )
+    queryFn: ({ pageParam, signal }) =>
+      client.catalog.detail.orders.query(
+        { itemId, storeId, limit: 30, cursor: pageParam },
+        { signal },
+      ),
+    initialPageParam:
+      undefined as RouterInputs["catalog"]["detail"]["orders"]["cursor"],
+    getNextPageParam: (page) => page.nextCursor ?? undefined,
+    enabled: readScope.generation === getDataCacheGeneration(),
+    retry: false,
+    staleTime: 0,
+    gcTime: 0,
+    refetchOnMount: "always",
+  })
   if (query.isPending) return <DetailLoading />
-  if (query.isError && !query.data)
+  if (query.isError)
     return (
       <DetailError
         message={query.error.message}
         retry={() => void query.refetch()}
       />
     )
+  if (!catalogDetailReadIsFresh(query, readScope, getDataCacheGeneration()))
+    return <DetailLoading />
   const rows = query.data?.pages.flatMap((page) => page.items) ?? []
   return (
     <div className="grid gap-4">
@@ -80,16 +103,6 @@ export function CatalogDetailOrders({
           description="Orders containing this item will appear here."
         />
       )}
-      {query.isError ? (
-        <DetailError
-          message={query.error.message}
-          retry={() =>
-            void (query.isFetchNextPageError
-              ? query.fetchNextPage()
-              : query.refetch())
-          }
-        />
-      ) : null}
       {query.hasNextPage ? (
         <Button
           variant="outline"

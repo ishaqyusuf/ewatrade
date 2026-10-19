@@ -38,6 +38,7 @@ describe("scheduled cadences", () => {
       "account-privacy.verification-expiry": "15 2 * * * sweep",
       "analytics.dashboard.recovery": "*/15 * * * * task",
       "assistant.attachment.process-recovery": "*/5 * * * * task",
+      "assistant.whatsapp.recovery": "*/5 * * * * sweep",
       "assistant.maintenance": "0 * * * * task",
       "auth.phone-otp-expiry": "*/5 * * * * sweep",
       "catalog.photo.cleanup": "0 * * * * task",

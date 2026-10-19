@@ -137,7 +137,7 @@ export function orderAmendmentFixture() {
       if (sql.includes('FROM "Customer"')) return [{ id: customer.id }]
       if (sql.includes('FROM "CommercialOrder"')) {
         events.push("lock:order")
-        return [{ id: "order" }]
+        return [row]
       }
       if (sql.includes('FROM "StockReservation"')) {
         events.push("lock:reservation")

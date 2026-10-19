@@ -48,7 +48,7 @@ export function CommercePageHeader({
             {title}
           </Text>
           {subtitle ? (
-            <Text className="mt-1 text-sm leading-5 text-muted-foreground">
+            <Text className="mt-1 text-sm [-rn-line-height:22] text-muted-foreground">
               {subtitle}
             </Text>
           ) : null}

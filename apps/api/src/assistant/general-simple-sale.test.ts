@@ -39,6 +39,12 @@ function context(role = "OWNER", cashName = "Cash") {
     db: {
       financeBook: {
         findUnique: async () => ({ id: "book", currencyCode: "NGN" }),
+        findFirst: async ({
+          where,
+        }: { where: { id: string; tenantId: string } }) =>
+          where.id === "book" && where.tenantId === "tenant"
+            ? { timezone: "Africa/Lagos" }
+            : null,
       },
       financeAccount: {
         findMany: async () => [

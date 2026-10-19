@@ -159,7 +159,7 @@ export function CustomerAccountInvitationMessage({
               <Text className="text-xl font-extrabold text-foreground">
                 Choose what to link
               </Text>
-              <Text className="text-sm leading-5 text-muted-foreground">
+              <Text className="text-sm [-rn-line-height:22] text-muted-foreground">
                 Only conversations already available on this device appear here.
                 Nothing is matched by email or phone.
               </Text>

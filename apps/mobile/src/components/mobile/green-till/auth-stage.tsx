@@ -82,9 +82,9 @@ export function StageHeroCard({
         maxFontSizeMultiplier={1.2}
         style={{
           color: palette.heroMuted,
-          fontSize: 11,
+          fontSize: 16,
           fontWeight: "700",
-          lineHeight: 15,
+          lineHeight: 22,
         }}
       >
         {label}
@@ -175,7 +175,7 @@ export function StageCard({
       <Text
         maxFontSizeMultiplier={1.2}
         numberOfLines={1}
-        style={{ color: ink, fontSize: 13, fontWeight: "800", lineHeight: 18 }}
+        style={{ color: ink, fontSize: 16, fontWeight: "800", lineHeight: 22 }}
       >
         {title}
       </Text>
@@ -185,8 +185,8 @@ export function StageCard({
           numberOfLines={1}
           style={{
             color: dashed ? palette.stageInk : colors.mutedForeground,
-            fontSize: 11,
-            lineHeight: 15,
+            fontSize: 16,
+            lineHeight: 22,
           }}
         >
           {subtitle}
@@ -487,11 +487,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
   },
   chipText: {
-    fontSize: 10.5,
+    fontSize: 16,
     // 800 mis-measures short labels on Android ("2 staff" drew as "2").
     fontWeight: "700",
     includeFontPadding: false,
-    lineHeight: 13,
+    lineHeight: 22,
     textAlignVertical: "center",
   },
   iconChip: {

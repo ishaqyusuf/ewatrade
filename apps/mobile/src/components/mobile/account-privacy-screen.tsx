@@ -2,6 +2,7 @@ import { Text } from "@/components/ui/text"
 import { View } from "@/components/ui/view"
 import { useAuthContext } from "@/hooks/use-auth"
 import { getMobileRoleLabel } from "@/lib/mobile-roles"
+import { isLocalSessionToken } from "@/lib/session-store"
 import { useTRPC } from "@/trpc/client"
 import { useQuery } from "@tanstack/react-query"
 import { useRouter } from "expo-router"
@@ -25,7 +26,7 @@ function initialsOf(name: string) {
 
 export function AccountPrivacyScreen() {
   const router = useRouter()
-  const { profile } = useAuthContext()
+  const { profile, token } = useAuthContext()
   const trpc = useTRPC()
   const { hasLegalPages, linkError, openPolicy } = useOpenPolicy()
   const legalStatus = useQuery(
@@ -119,6 +120,21 @@ export function AccountPrivacyScreen() {
           />
         ) : null}
       </View>
+      <QuietGroup title="Connected">
+        <QuietRow
+          icon="WhatsApp"
+          title="Assistant on WhatsApp"
+          onPress={() => router.push("/assistant-whatsapp")}
+        />
+        {token && !isLocalSessionToken(token) && !token.startsWith("qas_") ? (
+          <QuietRow
+            icon="FileText"
+            title="Your assistant data"
+            sub="Download private chats and retained files"
+            onPress={() => router.push("/assistant-data")}
+          />
+        ) : null}
+      </QuietGroup>
       <QuietGroup title="Legal">
         <QuietRow
           icon="FileText"

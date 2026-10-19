@@ -1,5 +1,6 @@
 import { expect, test } from "bun:test"
 import {
+  QUICK_SALE_DESCRIPTION_REQUIRED,
   catalogFreeLineCatalogDraft,
   catalogFreeLineDisplay,
   catalogFreeLinesError,
@@ -53,6 +54,22 @@ test("asks for an amount on empty or zero lines", () => {
     "Enter an amount for each Additional cost.",
   )
   expect(catalogFreeLinesTotalMinor([line("quick_sale", "abc")])).toBe(0)
+})
+
+test("new typed-price Quick sales require words while Additional cost stays optional", () => {
+  for (const description of ["", "  ", "\t\n\u00a0"])
+    expect(
+      catalogFreeLinesError([line("quick_sale", "100", description)]),
+    ).toBe(QUICK_SALE_DESCRIPTION_REQUIRED)
+  expect(
+    catalogFreeLinesError([line("additional_cost", "100", "  ")]),
+  ).toBeNull()
+  expect(
+    catalogFreeLinesError([line("quick_sale", "100", " Rice ")]),
+  ).toBeNull()
+  expect(
+    catalogFreeLinesError([line("quick_sale", "100", "a".repeat(201))]),
+  ).toBe("Descriptions must be at most 200 characters.")
 })
 
 test("drafts a Catalog item from a described typed-price line", () => {

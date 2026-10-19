@@ -1,8 +1,46 @@
 import { describe, expect, test } from "bun:test"
 
+import type { OfflineCommandPayload } from "@ewatrade/db/queries"
+import { offlineReplaySchema } from "../../../api/src/schemas/offline"
 import { buildOfflineOrderCommand } from "./offline-order"
 
 describe("offline Order command", () => {
+  test("preserves the selected payment account across device persistence and API replay", () => {
+    const built = buildOfflineOrderCommand({
+      clientCommandId: "selected-account-order",
+      lines: [{ offeringId: "offering_123", quantity: "1" }],
+      payment: {
+        amountMinor: 25_000,
+        clientPaymentId: "selected-account-payment",
+        moneyAccountId: "selected-bank-account",
+        method: "bank_transfer",
+      },
+    })
+    const persisted = JSON.parse(
+      JSON.stringify({
+        ...built,
+        createdAtClient: new Date("2026-10-17T06:00:00.000Z"),
+      }),
+    )
+    const replay = offlineReplaySchema.parse({
+      commands: [persisted],
+      deviceId: "account-offline-device",
+      storeId: "store_123",
+    })
+    const command = replay.commands[0]
+    if (!command) throw new Error("Expected the persisted Order command")
+    const payload: OfflineCommandPayload = command.payload
+    expect(payload.initialPayment).toEqual({
+      amountMinor: 25_000,
+      clientPaymentId: "selected-account-payment",
+      moneyAccountId: "selected-bank-account",
+      method: "bank_transfer",
+    })
+    expect(payload).not.toHaveProperty("moneyAccountId")
+    expect(replay.commands).toHaveLength(1)
+    expect(replay.commands[0]?.clientCommandId).toBe(built.clientCommandId)
+  })
+
   test("carries only an explicit saved directory identity", () => {
     const base = {
       clientCommandId: "saved-customer-order",

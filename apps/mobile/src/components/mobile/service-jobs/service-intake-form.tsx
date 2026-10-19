@@ -1,4 +1,5 @@
 import { ServiceHeader as Header } from "@/components/mobile/appearances/classic/service-jobs"
+import { AttachmentLockSheet } from "@/components/mobile/attachment-lock-sheet"
 import { FormField } from "@/components/mobile/form-field"
 import { MoneyField } from "@/components/mobile/money-field"
 import { QaQuickFillButton } from "@/components/mobile/qa-quick-fill-button"
@@ -7,6 +8,8 @@ import { Icon } from "@/components/ui/icon"
 import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
 import { View } from "@/components/ui/view"
+import { useAttachmentEntitlement } from "@/hooks/use-attachment-entitlement"
+import { trackMobileActivity } from "@/runtime/analytics-runtime"
 import { formatMinorMoney } from "@ewatrade/utils"
 import { ServiceAction as ActionButton } from "./service-action"
 import { discardRetainedEvidence } from "./service-evidence-files"
@@ -22,6 +25,12 @@ export function ServiceIntakeForm({
   onPageChange: () => void
   onChoicesLayout: (y: number) => void
 }) {
+  const access = useAttachmentEntitlement({
+    surface: "service",
+    track: trackMobileActivity,
+  })
+  const media = access.entitlement.status
+  const mediaLocked = media === "locked"
   const currencyCode =
     model.intakeProjection.value?.currencyCode ??
     model.offerings[0]?.currencyCode ??
@@ -168,7 +177,7 @@ export function ServiceIntakeForm({
         <View className="gap-4">
           <View className="gap-1">
             <Text className="font-bold text-foreground">Payment</Text>
-            <Text className="text-xs leading-5 text-muted-foreground">
+            <Text className="text-xs [-rn-line-height:22] text-muted-foreground">
               Leave empty to collect the full balance on delivery.
             </Text>
           </View>
@@ -293,16 +302,38 @@ export function ServiceIntakeForm({
               <Text className="font-bold text-foreground">
                 Photo or video package
               </Text>
-              <Text className="text-xs leading-5 text-muted-foreground">
+              <Text className="text-xs [-rn-line-height:22] text-muted-foreground">
                 Optional and private. Available when at least one selected
                 Service creates tracked work.
               </Text>
+              {intakeCreatesTrackedWork &&
+              (media === "checking" || media === "unknown") ? (
+                <Text className="text-xs [-rn-line-height:22] text-muted-foreground">
+                  {media === "checking"
+                    ? "Checking your plan… Photo and video open once it's confirmed."
+                    : "Couldn't confirm your plan, so photo and video are off for now."}
+                </Text>
+              ) : null}
             </View>
             <View className="flex-row gap-2">
               <View className="flex-1">
                 <ActionButton
-                  disabled={!intakeCreatesTrackedWork}
-                  onPress={() => void captureIntakeEvidence("photo")}
+                  accessibilityLabel={
+                    mediaLocked
+                      ? "Take photo, locked on the Free plan"
+                      : undefined
+                  }
+                  disabled={
+                    !intakeCreatesTrackedWork ||
+                    (!mediaLocked && media !== "allowed")
+                  }
+                  icon={mediaLocked ? "Lock" : undefined}
+                  onPress={() =>
+                    void access.attempt(
+                      () => captureIntakeEvidence("photo"),
+                      "camera",
+                    )
+                  }
                   variant="outline"
                 >
                   Take photo
@@ -310,8 +341,22 @@ export function ServiceIntakeForm({
               </View>
               <View className="flex-1">
                 <ActionButton
-                  disabled={!intakeCreatesTrackedWork}
-                  onPress={() => void captureIntakeEvidence("video")}
+                  accessibilityLabel={
+                    mediaLocked
+                      ? "Record video, locked on the Free plan"
+                      : undefined
+                  }
+                  disabled={
+                    !intakeCreatesTrackedWork ||
+                    (!mediaLocked && media !== "allowed")
+                  }
+                  icon={mediaLocked ? "Lock" : undefined}
+                  onPress={() =>
+                    void access.attempt(
+                      () => captureIntakeEvidence("video"),
+                      "video",
+                    )
+                  }
                   variant="outline"
                 >
                   Record video
@@ -369,6 +414,14 @@ export function ServiceIntakeForm({
       >
         Cancel
       </ActionButton>
+      <AttachmentLockSheet
+        canSeePlans={access.sheet?.canSeePlans ?? false}
+        onClose={access.closeSheet}
+        onPromptAction={access.promptAction}
+        onSeePlans={access.seePlans}
+        open={access.sheet !== null}
+        surface="service"
+      />
     </View>
   )
 }

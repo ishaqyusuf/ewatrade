@@ -1,6 +1,7 @@
 import { ActionButton } from "@/components/mobile/action-button"
 import { BottomSearchFooter } from "@/components/mobile/bottom-search-footer"
 import { CatalogFreeSaleSummaryRows } from "@/components/mobile/create-sale/catalog-free-sale-lines"
+import { CheckoutMoneyAccountField } from "@/components/mobile/create-sale/checkout-money-account"
 import {
   PAYMENT_METHODS,
   deliveryDateLabel,
@@ -190,7 +191,7 @@ export function ClassicSaleCheckout({
                     />
                   </View>
                   <View className="min-w-0 flex-1">
-                    <Text className="text-[15px] font-bold text-foreground">
+                    <Text className="text-base font-bold text-foreground">
                       {label}
                     </Text>
                     <Text className="text-xs text-muted-foreground">
@@ -269,7 +270,7 @@ export function ClassicSaleCheckout({
                         color: on
                           ? colors.primaryForeground
                           : colors.foreground,
-                        fontSize: 14,
+                        fontSize: 16,
                         fontWeight: "800",
                       }}
                     >
@@ -297,6 +298,20 @@ export function ClassicSaleCheckout({
               />
             </View>
           ) : null}
+          <CheckoutMoneyAccountField
+            accounts={model.paymentAccountList}
+            disabled={model.actionsLocked}
+            method={paymentMethod}
+            methodLabel={methodLabel}
+            onChoose={model.chooseAccount}
+            onRecordPending={() => {
+              setEnteringPartPayment(false)
+              setAmountReceived("")
+            }}
+            onRetry={model.retryPaymentAccounts}
+            receivedLabel={money(paymentSummary.receivedMinor, currencyCode)}
+            state={model.accountState}
+          />
 
           <SectionLabel
             action={{
@@ -326,7 +341,7 @@ export function ClassicSaleCheckout({
                     maxFontSizeMultiplier={1.3}
                     style={{
                       color: palette.lilacForeground,
-                      fontSize: 13,
+                      fontSize: 16,
                       fontWeight: "800",
                     }}
                   >
@@ -365,7 +380,7 @@ export function ClassicSaleCheckout({
                 haptic
                 onPress={() => setStep("customer")}
               >
-                <Text className="text-[13px] font-extrabold text-primary">
+                <Text className="text-xs font-extrabold text-primary">
                   Change
                 </Text>
               </Pressable>
@@ -435,7 +450,7 @@ export function ClassicSaleCheckout({
                 haptic
                 onPress={() => setDeliveryPickerMode("date")}
               >
-                <Text className="text-[13px] font-extrabold text-primary">
+                <Text className="text-xs font-extrabold text-primary">
                   Date
                 </Text>
               </Pressable>
@@ -447,7 +462,7 @@ export function ClassicSaleCheckout({
                 haptic
                 onPress={() => setDeliveryPickerMode("time")}
               >
-                <Text className="text-[13px] font-extrabold text-primary">
+                <Text className="text-xs font-extrabold text-primary">
                   Time
                 </Text>
               </Pressable>
@@ -508,7 +523,7 @@ export function ClassicSaleCheckout({
         value=""
       >
         <ActionButton
-          disabled={model.actionsLocked}
+          disabled={model.actionsLocked || model.accountBlocksConfirm}
           icon={isOffline ? "Clock" : "Check"}
           isLoading={isSubmitting}
           loadingLabel="Confirming sale"
@@ -542,7 +557,7 @@ function SectionLabel({
           haptic
           onPress={action.onPress}
         >
-          <Text className="text-[13px] font-extrabold text-primary">
+          <Text className="text-xs font-extrabold text-primary">
             {action.label}
           </Text>
         </Pressable>

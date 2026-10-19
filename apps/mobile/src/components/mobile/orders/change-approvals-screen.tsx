@@ -40,7 +40,7 @@ function RequestCard({
       testID={`change-approval-${request.id}`}
     >
       <View className="gap-1">
-        <Text className="text-[15px] font-extrabold text-foreground">
+        <Text className="text-base font-extrabold text-foreground">
           {request.requestedBy ?? "A team member"} asks to{" "}
           {request.kind === "return" ? "return items" : "give a refund"}
         </Text>
@@ -56,7 +56,7 @@ function RequestCard({
           {formatOrderDetailMoney(request.amountMinor, request.currencyCode)}
         </Text>
       ) : null}
-      <Text className="text-xs leading-5 text-muted-foreground">
+      <Text className="text-xs [-rn-line-height:22] text-muted-foreground">
         Reason: {request.reason}
       </Text>
       <FormField

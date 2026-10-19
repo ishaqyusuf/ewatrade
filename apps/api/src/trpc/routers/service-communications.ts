@@ -1,8 +1,14 @@
 import {
+  serviceManualMessageContextInput,
+  serviceManualMessageOriginalInput,
+} from "@ewatrade/assistant/general/service-message-read"
+import {
   CatalogError,
   createBatchServiceNotificationIntents,
   createServiceNotificationIntent,
   listServiceJobMessagesInTransaction,
+  readServiceManualMessageEditorContextInTransaction,
+  readServiceManualMessageOriginalInTransaction,
   recordServiceDeliveryAttempt,
   recordServiceManualMessageInTransaction,
   recordServiceManualShare,
@@ -68,6 +74,44 @@ async function messaging<T>(run: () => Promise<T>) {
 }
 
 export const serviceCommunicationsRouter = createTRPCRouter({
+  manualMessageEditorContext: protectedProcedure
+    .input(serviceManualMessageContextInput)
+    .query(({ ctx, input }) => {
+      const scope = messagingScope(ctx)
+      return messaging(() =>
+        ctx.db.$transaction(
+          (tx) =>
+            readServiceManualMessageEditorContextInTransaction(tx, {
+              ...scope,
+              ...input,
+            }),
+          {
+            isolationLevel: "RepeatableRead",
+            maxWait: 10_000,
+            timeout: 30_000,
+          },
+        ),
+      )
+    }),
+  manualMessageOriginal: protectedProcedure
+    .input(serviceManualMessageOriginalInput)
+    .query(({ ctx, input }) => {
+      const scope = messagingScope(ctx)
+      return messaging(() =>
+        ctx.db.$transaction(
+          (tx) =>
+            readServiceManualMessageOriginalInTransaction(tx, {
+              ...scope,
+              ...input,
+            }),
+          {
+            isolationLevel: "RepeatableRead",
+            maxWait: 10_000,
+            timeout: 30_000,
+          },
+        ),
+      )
+    }),
   createBatchIntents: protectedProcedure
     .input(serviceBatchNotificationIntentSchema)
     .mutation(async ({ ctx, input }) => {

@@ -88,7 +88,7 @@ export function ClassicOnboardingScreen({
                 >
                   {step.title}
                 </Text>
-                <Text className="text-[13.5px] [-rn-line-height:20] text-muted-foreground">
+                <Text className="text-xs [-rn-line-height:22] text-muted-foreground">
                   {step.body}
                 </Text>
               </Animated.View>

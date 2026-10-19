@@ -1,8 +1,15 @@
-import type { FinanceBook, Prisma } from "../../../generated/prisma/client"
+import type {
+  CommercialOrder,
+  FinanceBook,
+  Prisma,
+} from "../../../generated/prisma/client"
 import { CatalogError } from "../catalog"
 
 // Lock evidence is valid only for the transaction and scope that acquired it.
-const heldOrderLocks = new WeakMap<object, { tx: Prisma.TransactionClient; tenantId: string; orderId: string }>()
+const heldOrderLocks = new WeakMap<
+  object,
+  { tx: Prisma.TransactionClient; tenantId: string; orderId: string }
+>()
 
 export function assertHeldCommerceFinancialOrder(
   tx: Prisma.TransactionClient,
@@ -10,8 +17,16 @@ export function assertHeldCommerceFinancialOrder(
   input: { tenantId: string; orderId: string },
 ) {
   const held = heldOrderLocks.get(lock)
-  if (!held || held.tx !== tx || held.tenantId !== input.tenantId || held.orderId !== input.orderId)
-    throw new CatalogError("REVISION_CONFLICT", "Order lock does not belong to this transaction and scope.")
+  if (
+    !held ||
+    held.tx !== tx ||
+    held.tenantId !== input.tenantId ||
+    held.orderId !== input.orderId
+  )
+    throw new CatalogError(
+      "REVISION_CONFLICT",
+      "Order lock does not belong to this transaction and scope.",
+    )
 }
 
 const heldBooks = new WeakMap<object, FinanceBook>()
@@ -89,15 +104,11 @@ export async function lockCommerceFinancialOrder(
     ...input,
     ...identity,
   })
-  const rows = await tx.$queryRaw<Array<{ id: string }>>`
-    SELECT id FROM "CommercialOrder"
+  const [order] = await tx.$queryRaw<CommercialOrder[]>`
+    SELECT * FROM "CommercialOrder"
     WHERE id = ${input.orderId} AND "tenantId" = ${input.tenantId}
     FOR UPDATE
   `
-  if (rows.length === 0) return null
-  const order = await tx.commercialOrder.findFirst({
-    where: { id: input.orderId, tenantId: input.tenantId },
-  })
   if (!order) return null
   // Do not acquire a different book/account after holding the Order lock.
   if (
@@ -110,6 +121,10 @@ export async function lockCommerceFinancialOrder(
     )
   }
   const locked = { context, order }
-  heldOrderLocks.set(locked, { tx, tenantId: input.tenantId, orderId: input.orderId })
+  heldOrderLocks.set(locked, {
+    tx,
+    tenantId: input.tenantId,
+    orderId: input.orderId,
+  })
   return locked
 }

@@ -2,7 +2,10 @@
 
 import { OpenAssistantBookingSheet } from "@/components/open-assistant-booking-sheet"
 import { OpenAssistantFinanceReview } from "@/components/open-assistant-finance-review"
+import { OpenAssistantManualMessageSheet } from "@/components/open-assistant-manual-message-sheet"
 import { OpenAssistantQuoteApprovalSheet } from "@/components/open-assistant-quote-approval-sheet"
+import { OpenAssistantReadRecord } from "@/components/open-assistant-read-record"
+import { OpenAssistantServiceRequestSheet } from "@/components/open-assistant-service-request-sheet"
 import { OpenBusinessReportSheet } from "@/components/open-business-report-sheet"
 import { OpenServiceWorkOriginalSheet } from "@/components/open-service-work-original-sheet"
 import { OpenStaffAccessSheet } from "@/components/open-staff-access-sheet"
@@ -45,6 +48,27 @@ export function GeneralAnswerCard({ answer }: { answer: GeneralAnswer }) {
           {answer.value}
         </p>
         <p className="mt-1 text-sm">{answer.detail}</p>
+        {answer.records?.rows.length ? (
+          <ol className="mt-3 grid gap-3">
+            {answer.records.rows.slice(0, 6).map((row, index) => (
+              <li
+                key={`${row.type}:${row.title}:${index}`}
+                className="grid justify-items-start gap-1 border-t pt-2"
+              >
+                <p className="text-xs text-muted-foreground">{row.type}</p>
+                <p className="text-sm font-medium">{row.title}</p>
+                {row.subtitle ? (
+                  <p className="text-sm text-muted-foreground">
+                    {row.subtitle}
+                  </p>
+                ) : null}
+                {row.target ? (
+                  <OpenAssistantReadRecord target={row.target} />
+                ) : null}
+              </li>
+            ))}
+          </ol>
+        ) : null}
         <p className="mt-1.5 text-xs text-muted-foreground">
           {answer.scope} · as of{" "}
           <time dateTime={answer.asOf}>
@@ -54,7 +78,11 @@ export function GeneralAnswerCard({ answer }: { answer: GeneralAnswer }) {
       </div>
       {answer.target ? (
         <div className="shrink-0">
-          {answer.target.kind === "commerce_quote_approval" ? (
+          {answer.target.kind === "service_request" ? (
+            <OpenAssistantServiceRequestSheet target={answer.target} />
+          ) : answer.target.kind === "service_manual_message" ? (
+            <OpenAssistantManualMessageSheet target={answer.target} />
+          ) : answer.target.kind === "commerce_quote_approval" ? (
             <OpenAssistantQuoteApprovalSheet target={answer.target} />
           ) : answer.target.kind === "service_booking" ? (
             <OpenAssistantBookingSheet target={answer.target} />
@@ -79,9 +107,14 @@ export function GeneralAnswerCard({ answer }: { answer: GeneralAnswer }) {
             <OpenStaffDirectorySheet target={answer.target} />
           ) : answer.target.kind === "staff_invitation" ? (
             <OpenStaffInvitationSheet commandId={answer.target.commandId} />
-          ) : (
+          ) : answer.target.kind === "staff_member" ? (
             <OpenStaffMemberSheet membershipId={answer.target.membershipId} />
-          )}
+          ) : answer.target.kind === "catalog_item" ||
+            answer.target.kind === "customer" ||
+            answer.target.kind === "customer_directory" ||
+            answer.target.kind === "order" ? (
+            <OpenAssistantReadRecord target={answer.target} />
+          ) : null}
         </div>
       ) : null}
     </div>

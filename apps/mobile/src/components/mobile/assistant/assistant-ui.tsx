@@ -62,11 +62,13 @@ export function AssistantHeader({
         <View className="min-w-0 flex-1">
           <Text
             accessibilityRole="header"
-            className="text-base font-bold text-foreground"
+            className="text-lg font-bold text-foreground"
           >
             {title}
           </Text>
-          <Text className="text-xs text-muted-foreground">{business}</Text>
+          <Text className="text-base [-rn-line-height:22] text-muted-foreground">
+            {business}
+          </Text>
         </View>
         {icons?.map((item) => (
           <Pressable
@@ -95,7 +97,9 @@ export function AssistantHeader({
             onPress={onAction}
             className="min-h-[44px] justify-center"
           >
-            <Text className="text-xs font-bold text-primary">{action}</Text>
+            <Text className="text-base [-rn-line-height:22] font-bold text-primary">
+              {action}
+            </Text>
           </Pressable>
         ) : null}
       </View>
@@ -267,7 +271,7 @@ export function AssistantComposer({
       {reason ? (
         <Text
           accessibilityLiveRegion="polite"
-          className="text-xs text-muted-foreground"
+          className="text-base [-rn-line-height:22] text-muted-foreground"
         >
           {reason}
         </Text>
@@ -278,12 +282,14 @@ export function AssistantComposer({
           accessibilityLabel="Dismiss voice note error"
           onPress={voice.dismiss}
         >
-          <Text className="text-xs text-destructive">{voice.error}</Text>
+          <Text className="text-base [-rn-line-height:22] text-destructive">
+            {voice.error}
+          </Text>
         </Pressable>
       ) : voice?.status ? (
         <Text
           accessibilityLiveRegion="polite"
-          className="text-xs text-muted-foreground"
+          className="text-base [-rn-line-height:22] text-muted-foreground"
         >
           {voice.status}
         </Text>
@@ -372,7 +378,7 @@ export function AssistantComposer({
                 selectionColor={colors.primary}
                 style={{
                   color: colors.foreground,
-                  fontSize: 15,
+                  fontSize: 16,
                   maxHeight: 160,
                   minHeight: 38,
                   paddingHorizontal: stacked ? 10 : 6,
@@ -389,7 +395,7 @@ export function AssistantComposer({
                   pointerEvents="none"
                   style={{
                     color: colors.mutedForeground,
-                    fontSize: 15,
+                    fontSize: 16,
                     left: stacked ? 10 : 6,
                     position: "absolute",
                     right: stacked ? 10 : 6,
@@ -460,7 +466,9 @@ export function AssistantThinking() {
   return (
     <View className="flex-row items-center gap-2 pl-9">
       <ActivityIndicator />
-      <Text className="text-xs text-muted-foreground">Thinking…</Text>
+      <Text className="text-base [-rn-line-height:22] text-muted-foreground">
+        Thinking…
+      </Text>
     </View>
   )
 }
@@ -498,7 +506,7 @@ export function AssistantDayMarker({
   return (
     <View className="mb-1 items-center">
       <View className="rounded-full bg-muted px-2.5 py-0.5">
-        <Text className="text-[11px] font-extrabold text-muted-foreground">
+        <Text className="text-base [-rn-line-height:22] font-extrabold text-muted-foreground">
           {day}
         </Text>
       </View>

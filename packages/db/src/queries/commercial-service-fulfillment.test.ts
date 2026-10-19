@@ -1,10 +1,10 @@
 import { expect, test } from "bun:test"
 import { Prisma, type PrismaClient } from "../../generated/prisma/client"
-import { lockCommerceFinancialOrder } from "./customer-ledger/commerce-locks"
 import {
   fulfillCommercialOrderChargeOnlyServiceLine,
   fulfillCommercialOrderChargeOnlyServiceLineInTransaction,
 } from "./commercial-service-fulfillment"
+import { lockCommerceFinancialOrder } from "./customer-ledger/commerce-locks"
 
 const input = {
   actorUserId: "actor-1",
@@ -83,7 +83,7 @@ function fixture(
       }
       if (sql.includes('"CommercialOrder"')) {
         calls.push("order-lock")
-        return [{ id: order.id }]
+        return [order]
       }
       if (sql.includes('"Membership"')) {
         calls.push("membership-lock")
@@ -297,38 +297,60 @@ test("composed service command refuses another active Store before writes", asyn
   expect(f.writes).toBe(0)
 })
 
-
 test("reviewed service fulfillment refuses stale evidence before writes", async () => {
   const f = fixture()
-  await expect(fulfillCommercialOrderChargeOnlyServiceLineInTransaction(f.tx, {
-    ...input, storeId: "store-1", expectedReviewRevision: "stale-review",
-  })).rejects.toMatchObject({ code: "REVISION_CONFLICT" })
+  await expect(
+    fulfillCommercialOrderChargeOnlyServiceLineInTransaction(f.tx, {
+      ...input,
+      storeId: "store-1",
+      expectedReviewRevision: "stale-review",
+    }),
+  ).rejects.toMatchObject({ code: "REVISION_CONFLICT" })
   expect(f.writes).toBe(0)
 })
 
 test("bulk service composition reuses only an authentic lock from the same transaction", async () => {
   const f = fixture()
-  const lock = await lockCommerceFinancialOrder(f.tx, { tenantId: input.tenantId, orderId: "order-1" })
+  const lock = await lockCommerceFinancialOrder(f.tx, {
+    tenantId: input.tenantId,
+    orderId: "order-1",
+  })
   if (!lock) throw Error("Expected lock")
-  const first = await fulfillCommercialOrderChargeOnlyServiceLineInTransaction(f.tx, input, lock)
+  const first = await fulfillCommercialOrderChargeOnlyServiceLineInTransaction(
+    f.tx,
+    input,
+    lock,
+  )
   expect(first.orderLineId).toBe(input.orderLineId)
-  expect(f.calls.filter(call => call === "order-lock")).toHaveLength(1)
+  expect(f.calls.filter((call) => call === "order-lock")).toHaveLength(1)
   expect(f.calls).toContain("membership-lock")
   expect(f.calls).toContain("line-lock")
   const other = fixture()
-  await expect(fulfillCommercialOrderChargeOnlyServiceLineInTransaction(other.tx, input, lock))
-    .rejects.toMatchObject({ code: "REVISION_CONFLICT" })
+  await expect(
+    fulfillCommercialOrderChargeOnlyServiceLineInTransaction(
+      other.tx,
+      input,
+      lock,
+    ),
+  ).rejects.toMatchObject({ code: "REVISION_CONFLICT" })
   expect(other.writes).toBe(0)
-  await expect(fulfillCommercialOrderChargeOnlyServiceLineInTransaction(other.tx, input, { ...lock }))
-    .rejects.toMatchObject({ code: "REVISION_CONFLICT" })
+  await expect(
+    fulfillCommercialOrderChargeOnlyServiceLineInTransaction(other.tx, input, {
+      ...lock,
+    }),
+  ).rejects.toMatchObject({ code: "REVISION_CONFLICT" })
   expect(other.writes).toBe(0)
 })
 
 test("reused order lock cannot bypass current service authority", async () => {
   const f = fixture({ active: false })
-  const lock = await lockCommerceFinancialOrder(f.tx, { tenantId: input.tenantId, orderId: "order-1" })
+  const lock = await lockCommerceFinancialOrder(f.tx, {
+    tenantId: input.tenantId,
+    orderId: "order-1",
+  })
   if (!lock) throw Error("Expected lock")
-  await expect(fulfillCommercialOrderChargeOnlyServiceLineInTransaction(f.tx, input, lock))
-    .rejects.toMatchObject({ code: "SERVICE_WORK_NOT_AUTHORIZED" })
+  await expect(
+    fulfillCommercialOrderChargeOnlyServiceLineInTransaction(f.tx, input, lock),
+  ).rejects.toMatchObject({ code: "SERVICE_WORK_NOT_AUTHORIZED" })
   expect(f.writes).toBe(0)
 })

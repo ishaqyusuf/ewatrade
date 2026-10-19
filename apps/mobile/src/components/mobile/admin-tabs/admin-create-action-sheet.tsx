@@ -74,7 +74,7 @@ export function AdminCreateActionContent({
         <Text className="text-2xl font-extrabold tracking-tight text-foreground">
           What are you adding?
         </Text>
-        <Text className="text-sm leading-5 text-muted-foreground">
+        <Text className="text-sm [-rn-line-height:22] text-muted-foreground">
           Start your catalog or add someone to your store.
         </Text>
       </View>
@@ -122,7 +122,7 @@ export function AdminCreateActionContent({
             <Text className="font-extrabold text-foreground">
               {action.label}
             </Text>
-            <Text className="text-sm leading-5 text-muted-foreground">
+            <Text className="text-sm [-rn-line-height:22] text-muted-foreground">
               {action.detail}
             </Text>
           </View>

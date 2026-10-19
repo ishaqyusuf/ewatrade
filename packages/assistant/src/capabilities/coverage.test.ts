@@ -9,7 +9,8 @@ import {
 import { capabilityForAction, capabilityManifest } from "./manifest"
 import type { Capability, ProcedureRule } from "./types"
 
-const read = capabilityManifest.find((entry) => entry.id === "search.records")!
+const read = capabilityManifest.find((entry) => entry.id === "search.records")
+if (!read) throw Error("Search required")
 const write = capabilityForAction("customer_create")
 
 test("the manifest registers every reviewed action with schema, policy and receipt", () => {
@@ -92,4 +93,23 @@ test("coverage fails on unclassified merchant, stale and conflicting entries", (
     ["orders.refund", "excluded"],
     ["search.global", "supported"],
   ])
+})
+
+test("WhatsApp support requires an explicit independently reviewed mode and rollout", () => {
+  expect(
+    validateCapabilityManifest([{ ...read, whatsapp: undefined }]),
+  ).toContain("search.records: WhatsApp client needs explicit mode and rollout")
+  expect(
+    validateCapabilityManifest([{ ...read, clients: ["dashboard"] }]),
+  ).toContain("search.records: WhatsApp metadata needs its client")
+})
+
+test("the coverage gate rejects malformed channel rollout values at runtime", () => {
+  const malformed: Capability = {
+    ...read,
+    whatsapp: JSON.parse('{"mode":"native","rollout":"future"}'),
+  }
+  expect(validateCapabilityManifest([malformed])).toContain(
+    "search.records: invalid WhatsApp mode or rollout",
+  )
 })

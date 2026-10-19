@@ -36,7 +36,7 @@ export function StoreSubscriptionPanel() {
       <Text className="text-lg font-bold text-foreground">
         App subscriptions
       </Text>
-      <Text className="text-sm leading-5 text-muted-foreground">
+      <Text className="text-sm [-rn-line-height:22] text-muted-foreground">
         Software plans renew through your store account. Review the price,
         billing period and renewal terms in the store confirmation before
         subscribing. You can manage or cancel renewal in your store settings.

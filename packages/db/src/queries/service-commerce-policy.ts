@@ -245,36 +245,36 @@ export async function evaluateServiceCommercePolicyInTransaction(
   return evaluation
 }
 
+type EvaluatePolicyBatchInput = {
+  actorUserId: string
+  preloaded?: {
+    countryCode: string | null
+    decisions: ServiceCommercePolicyDecisionForEvaluation[]
+  }
+  purpose: string
+  scopes: Array<Pick<EvaluatePolicyInput, "channel" | "subject" | "vertical">>
+  storeId: string
+  tenantId: string
+}
+
 export async function evaluateServiceCommercePolicyBatchInTransaction(
   tx: PolicyTx,
-  input: {
-    actorUserId: string
-    preloaded?: {
-      countryCode: string | null
-      decisions: ServiceCommercePolicyDecisionForEvaluation[]
-    }
-    purpose: string
-    scopes: Array<Pick<EvaluatePolicyInput, "channel" | "subject" | "vertical">>
-    storeId: string
-    tenantId: string
-  },
+  input: EvaluatePolicyBatchInput,
 ): Promise<ServiceCommercePolicyEvaluation[]> {
   return evaluatePolicyBatch(tx, input, true)
 }
 
+/** Same current policy and launch gates, without creating READ audit rows. */
+export async function evaluateServiceCommercePolicyBatchReadOnlyInTransaction(
+  tx: PolicyTx,
+  input: EvaluatePolicyBatchInput,
+): Promise<ServiceCommercePolicyEvaluation[]> {
+  return evaluatePolicyBatch(tx, input, false)
+}
+
 async function evaluatePolicyBatch(
   tx: PolicyTx,
-  input: {
-    actorUserId: string
-    preloaded?: {
-      countryCode: string | null
-      decisions: ServiceCommercePolicyDecisionForEvaluation[]
-    }
-    purpose: string
-    scopes: Array<Pick<EvaluatePolicyInput, "channel" | "subject" | "vertical">>
-    storeId: string
-    tenantId: string
-  },
+  input: EvaluatePolicyBatchInput,
   recordAudit: boolean,
 ): Promise<ServiceCommercePolicyEvaluation[]> {
   const store = input.preloaded

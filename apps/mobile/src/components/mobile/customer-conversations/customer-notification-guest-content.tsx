@@ -72,7 +72,7 @@ export function CustomerNotificationGuestContent({
         <View className="min-w-0 flex-1">
           <View className="-mr-2 -mt-2 min-h-11 flex-row items-center justify-between gap-2">
             <View className="rounded-full bg-muted px-2 py-1">
-              <Text className="text-[10px] font-extrabold uppercase tracking-wide text-muted-foreground">
+              <Text className="text-xs font-extrabold uppercase tracking-wide text-muted-foreground">
                 {presentation.optionalLabel}
               </Text>
             </View>
@@ -91,7 +91,7 @@ export function CustomerNotificationGuestContent({
           <Text className="text-base font-extrabold leading-6 text-foreground">
             {presentation.title}
           </Text>
-          <Text className="mt-1 text-sm leading-5 text-muted-foreground">
+          <Text className="mt-1 text-sm [-rn-line-height:22] text-muted-foreground">
             {presentation.body}
           </Text>
           <View className="mt-3 gap-2">

@@ -12,6 +12,11 @@ import {
   ToggleRow,
 } from "@/components/mobile/green-till/kit"
 import { MoneyField } from "@/components/mobile/money-field"
+import {
+  SearchFooterField,
+  SearchFooterScope,
+  SearchFooterSpacer,
+} from "@/components/mobile/search-footer-scope"
 import { StatusBanner } from "@/components/mobile/status-banner"
 import { BottomSheetKeyboardAwareScrollView } from "@/components/ui/bottom-sheet-keyboard-aware-scroll-view"
 import { Icon, type IconKeys } from "@/components/ui/icon"
@@ -350,7 +355,7 @@ function ChangeMenu({
               onPress={() => setShowLocked((current) => !current)}
               testID="order-change-locked"
             >
-              <Text className="text-[13px] font-extrabold text-muted-foreground">
+              <Text className="text-xs font-extrabold text-muted-foreground">
                 Not available now ({locked.length})
               </Text>
               <Icon
@@ -373,10 +378,10 @@ function ChangeMenu({
                       name="Lock"
                     />
                     <View className="min-w-0 flex-1">
-                      <Text className="text-[13px] font-bold text-foreground">
+                      <Text className="text-xs font-bold text-foreground">
                         {action.title}
                       </Text>
-                      <Text className="text-xs font-bold leading-5 text-tint-amber-foreground">
+                      <Text className="text-xs font-bold [-rn-line-height:22] text-tint-amber-foreground">
                         {reasonFor(action.key)}
                       </Text>
                     </View>
@@ -391,7 +396,7 @@ function ChangeMenu({
             className="mt-0.5 size-[14px] text-muted-foreground"
             name="Info"
           />
-          <Text className="min-w-0 flex-1 text-xs leading-5 text-muted-foreground">
+          <Text className="min-w-0 flex-1 text-xs [-rn-line-height:22] text-muted-foreground">
             Every change asks for a short reason and shows in Activity with your
             name.
           </Text>
@@ -411,7 +416,7 @@ function reasonLines(reason: string) {
 
 function GroupLabel({ children }: { children: ReactNode }) {
   return (
-    <Text className="mt-2 text-[11.5px] font-extrabold uppercase tracking-wider text-muted-foreground">
+    <Text className="mt-2 text-xs font-extrabold uppercase tracking-wider text-muted-foreground">
       {children}
     </Text>
   )
@@ -440,23 +445,26 @@ function FormShell({
   const largeText = useLargeTextLayout()
   return (
     <View className="flex-1">
-      <BottomSheetKeyboardAwareScrollView
-        bottomOffset={24}
-        extraKeyboardSpace={24}
-        keyboardShouldPersistTaps="handled"
-      >
-        <View className="gap-5 px-5 pb-6">
-          {children}
-          {changes.error ? (
-            <StatusBanner
-              icon="AlertCircle"
-              message={changes.error}
-              title="Not saved"
-              tone="destructive"
-            />
-          ) : null}
-        </View>
-      </BottomSheetKeyboardAwareScrollView>
+      <SearchFooterScope sheet>
+        <BottomSheetKeyboardAwareScrollView
+          bottomOffset={24}
+          extraKeyboardSpace={24}
+          keyboardShouldPersistTaps="handled"
+        >
+          <View className="gap-5 px-5 pb-6">
+            {children}
+            <SearchFooterSpacer />
+            {changes.error ? (
+              <StatusBanner
+                icon="AlertCircle"
+                message={changes.error}
+                title="Not saved"
+                tone="destructive"
+              />
+            ) : null}
+          </View>
+        </BottomSheetKeyboardAwareScrollView>
+      </SearchFooterScope>
       <View
         className={cn(
           "border-t border-border px-5 pb-5 pt-3",
@@ -525,7 +533,7 @@ function Chips<T extends string>({
           >
             <Text
               className={cn(
-                "text-[13px] font-bold",
+                "text-xs font-bold",
                 value === key ? "text-background" : "text-foreground",
               )}
             >
@@ -620,14 +628,12 @@ function CustomerForm({
         )
       }
     >
-      <FormField
-        autoCapitalize="none"
-        label="Find customer"
-        leadingIcon="Search"
+      <SearchFooterField
+        localSearch
+        accessibilityLabel="Find customer"
         onChangeText={setSearch}
         placeholder="Name or phone"
         value={search}
-        variant="till-search"
       />
       <ListCard>
         <RecordRow
@@ -735,7 +741,7 @@ function DetailsForm({
     >
       <View className="gap-2">
         <Text className="text-sm font-bold text-foreground">Delivery</Text>
-        <Text className="text-[15px] font-bold text-foreground" selectable>
+        <Text className="text-base font-bold text-foreground" selectable>
           {due ? formatCommerceDateTime(due) : "No delivery time"}
         </Text>
         <View className="flex-row flex-wrap gap-2">
@@ -754,9 +760,7 @@ function DetailsForm({
               key={label}
               onPress={onPress}
             >
-              <Text className="text-[13px] font-bold text-foreground">
-                {label}
-              </Text>
+              <Text className="text-xs font-bold text-foreground">{label}</Text>
             </Pressable>
           ))}
         </View>
@@ -1000,7 +1004,7 @@ function CancelForm({
       destructive
       onConfirm={() => void changes.cancelOrder(reason.value)}
     >
-      <Text className="text-[15px] font-bold text-foreground">
+      <Text className="text-base font-bold text-foreground">
         Cancel {order.orderNumber} for{" "}
         {order.customerName || "Walk-in customer"}?
       </Text>
@@ -1054,7 +1058,7 @@ function OutcomeRow({
     <View className="flex-row items-baseline justify-between gap-3">
       <Text
         className={cn(
-          "text-[13px] text-tint-amber-foreground",
+          "text-xs text-tint-amber-foreground",
           emphasized && "font-extrabold",
         )}
       >
@@ -1062,17 +1066,17 @@ function OutcomeRow({
       </Text>
       <View className="flex-row items-baseline gap-1.5">
         {before ? (
-          <Text className="text-[13px] tabular-nums text-tint-amber-foreground line-through opacity-70">
+          <Text className="text-xs tabular-nums text-tint-amber-foreground line-through opacity-70">
             {before}
           </Text>
         ) : null}
         {before ? (
-          <Text className="text-[13px] text-tint-amber-foreground">→</Text>
+          <Text className="text-xs text-tint-amber-foreground">→</Text>
         ) : null}
         <Text
           className={cn(
-            "text-[13px] font-bold tabular-nums text-tint-amber-foreground",
-            emphasized && "text-[15px] font-extrabold",
+            "text-xs font-bold tabular-nums text-tint-amber-foreground",
+            emphasized && "text-base font-extrabold",
           )}
         >
           {after}
@@ -1087,7 +1091,7 @@ function Outcome({ children }: { children: ReactNode }) {
     <View className="gap-2 rounded-[16px] bg-tint-amber px-4 py-3">
       <View className="flex-row items-center gap-2">
         <Icon className="size-[15px] text-tint-amber-foreground" name="Info" />
-        <Text className="text-[13px] font-extrabold text-tint-amber-foreground">
+        <Text className="text-xs font-extrabold text-tint-amber-foreground">
           What the order shows after
         </Text>
       </View>
@@ -1312,7 +1316,7 @@ function ApprovalFacts({
     <View className="gap-2.5 rounded-[18px] bg-muted p-3.5">
       {rows.map(([label, value]) => (
         <View className="gap-0.5" key={label}>
-          <Text className="text-[11.5px] font-extrabold uppercase tracking-wider text-muted-foreground">
+          <Text className="text-xs font-extrabold uppercase tracking-wider text-muted-foreground">
             {label}
           </Text>
           <Text className="text-sm text-foreground">{value}</Text>
@@ -1599,7 +1603,7 @@ function ReturnForm({
               >
                 <Icon className="size-[18px] text-primary" name="Minus" />
               </Pressable>
-              <Text className="min-w-[56px] text-center text-[15px] font-bold tabular-nums text-foreground">
+              <Text className="min-w-[56px] text-center text-base font-bold tabular-nums text-foreground">
                 {formatCommerceQuantity(row.quantity)}
                 <Text className="text-xs text-muted-foreground">
                   {" "}
@@ -1693,7 +1697,7 @@ function ReturnForm({
       ) : null}
       {reason.field}
       {chosen.length ? (
-        <Text className="text-xs leading-5 text-muted-foreground">
+        <Text className="text-xs [-rn-line-height:22] text-muted-foreground">
           Stock back:{" "}
           {restocked.length
             ? restocked

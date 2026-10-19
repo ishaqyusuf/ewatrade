@@ -1,5 +1,6 @@
 "use client"
 import { FormFeedback } from "@/components/forms/form-feedback"
+import { useAttachmentAccess } from "@/hooks/use-attachment-access"
 import {
   Badge,
   Button,
@@ -13,19 +14,19 @@ import {
 } from "@ewatrade/ui"
 
 import {
+  type DraftJobHandoff,
+  type DraftJobScope,
+  draftJobNativeReadState,
+} from "@/components/general-assistant/assistant-draft-job-handoff-state"
+import {
   availableActions,
   formatMoney,
   label,
 } from "@/components/service-work/service-utils"
 import { useTRPC, useTRPCClient } from "@/trpc/client"
-import {
-  draftJobNativeReadState,
-  type DraftJobHandoff,
-  type DraftJobScope,
-} from "@/components/general-assistant/assistant-draft-job-handoff-state"
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { useState } from "react"
+import { useRef, useState } from "react"
 
 export function ServiceJobWorkspace({
   canManage,
@@ -38,6 +39,7 @@ export function ServiceJobWorkspace({
   draftJobHandoff?: DraftJobHandoff
   draftJobScope?: DraftJobScope
 }) {
+  const attachments = useAttachmentAccess(jobId)
   const trpc = useTRPC()
   const client = useTRPCClient()
   const queryClient = useQueryClient()
@@ -74,6 +76,8 @@ export function ServiceJobWorkspace({
   >("delay")
   const [evidenceLabel, setEvidenceLabel] = useState("")
   const [evidenceReference, setEvidenceReference] = useState("")
+  const evidenceAdmission = useRef(false)
+  const [evidenceSubmitting, setEvidenceSubmitting] = useState(false)
   const [lineQuantities, setLineQuantities] = useState<Record<string, string>>(
     {},
   )
@@ -525,6 +529,7 @@ export function ServiceJobWorkspace({
       </section>
       <section className="grid gap-3 border-t border-border pt-4">
         <div>
+          {attachments.dialog}
           <h3 className="font-medium">Private evidence</h3>
           <p className="mt-1 text-xs text-muted-foreground">
             Capture is optional. Add a private reference only when your managed
@@ -536,6 +541,7 @@ export function ServiceJobWorkspace({
           <ControlField label="Label">
             <Input
               placeholder="Label"
+              disabled={attachments.knownFree}
               value={evidenceLabel}
               onChange={(event) => setEvidenceLabel(event.target.value)}
             />
@@ -543,6 +549,7 @@ export function ServiceJobWorkspace({
           <ControlField label="Private asset reference (optional)">
             <Input
               placeholder="Private asset reference (optional)"
+              disabled={attachments.knownFree}
               value={evidenceReference}
               onChange={(event) => setEvidenceReference(event.target.value)}
             />
@@ -550,24 +557,35 @@ export function ServiceJobWorkspace({
         </div>
         <SubmitButton
           type="button"
-          isSubmitting={evidenceMutation.isPending}
+          isSubmitting={evidenceSubmitting || evidenceMutation.isPending}
           size="sm"
           variant="outline"
-          disabled={evidenceMutation.isPending}
-          onClick={() =>
-            evidenceMutation.mutate({
-              assetReference: evidenceReference.trim() || undefined,
-              capturedAt: new Date(),
-              clientEvidenceId: crypto.randomUUID(),
-              jobId: job.id,
-              label: evidenceLabel.trim() || undefined,
-              mediaType: "photo",
-              purpose: "progress",
-              uploadStatus: "local",
-            })
-          }
+          disabled={evidenceSubmitting || evidenceMutation.isPending}
+          onClick={async () => {
+            if (evidenceAdmission.current) return
+            evidenceAdmission.current = true
+            setEvidenceSubmitting(true)
+            try {
+              if (!(await attachments.allow())) return
+              await evidenceMutation.mutateAsync({
+                assetReference: evidenceReference.trim() || undefined,
+                capturedAt: new Date(),
+                clientEvidenceId: crypto.randomUUID(),
+                jobId: job.id,
+                label: evidenceLabel.trim() || undefined,
+                mediaType: "photo",
+                purpose: "progress",
+                uploadStatus: "local",
+              })
+            } catch {
+              // The mutation onError callback presents the failure.
+            } finally {
+              evidenceAdmission.current = false
+              setEvidenceSubmitting(false)
+            }
+          }}
         >
-          Add private evidence
+          Add private evidence{attachments.knownFree ? " · Locked" : ""}
         </SubmitButton>
         {job.evidence.map((entry) => (
           <div

@@ -1,14 +1,15 @@
 import { createHash } from "node:crypto"
 import {
+  type GeneralReviewPresentation,
   type SimpleMoneyIn,
   generalMoney,
+  generalReviewPresentationSchema,
   normalizedSaleName,
   similarSaleNames,
   simpleMoneyInStep,
 } from "@ewatrade/assistant/general/contracts"
 import { listAssistantAttachments } from "@ewatrade/db/assistant-attachments"
 import {
-  createFinanceBookInTransaction,
   createFinanceMoneyAccountInTransaction,
   listOrderPaymentAccounts,
   recordFinanceMoneyMovementInTransaction,
@@ -22,6 +23,10 @@ import type {
   GeneralTransactionContext,
 } from "./general-actions"
 import { requireGeneralScope } from "./general-context"
+import {
+  createReviewedNewBook,
+  isReviewedNewBookDefault,
+} from "./general-reviewed-new-book"
 import { proposalDigest } from "./proposal-security"
 const refuse = (message: string): never => {
   throw new TRPCError({ code: "BAD_REQUEST", message })
@@ -42,6 +47,16 @@ async function current(ctx: GeneralTransactionContext, input: SimpleMoneyIn) {
   )
   if (input.moneyAccountId && !account)
     refuse("Choose an account from this business.")
+  if (
+    input.createAccount &&
+    !input.moneyAccountId &&
+    options.accounts.some(
+      (row) =>
+        normalizedSaleName(row.name) ===
+        normalizedSaleName(input.accountName ?? ""),
+    )
+  )
+    refuse("That account now exists. Choose it and review again.")
   const files = await listAssistantAttachments(
     ctx.db,
     scope,
@@ -104,6 +119,66 @@ export async function validateMoneyInAttachmentConversation(
   )
   if (files.some((file) => file.conversationId !== conversationId))
     refuse("Use an image sent in this chat.")
+}
+/** Current Book and existing/staged destination facts, without inventing account identities. */
+export function simpleMoneyInReviewPresentation(
+  input: SimpleMoneyIn,
+  facts: {
+    businessName: string
+    storeName: string
+    currencyCode: string
+    timezone: string
+    existingBook: boolean
+    account?: { name: string; purpose: string }
+  },
+): GeneralReviewPresentation | undefined {
+  if (
+    simpleMoneyInStep(input) !== "review" ||
+    !input.effectiveAt ||
+    !facts.timezone ||
+    (!facts.account && !input.createAccount)
+  )
+    return undefined
+  const presentation: GeneralReviewPresentation = {
+    summary: {
+      party: "Owner funds",
+      context: "Record owner funds already received by the business.",
+      amount: generalMoney(input.amountMinor ?? 0, facts.currencyCode),
+      amountLabel: "Owner contribution",
+    },
+    facts: [
+      { label: "Currency", value: facts.currencyCode },
+      { label: "Effective at (UTC)", value: input.effectiveAt },
+      { label: "Book timezone", value: facts.timezone },
+      { label: "Funding", value: "Owner contribution · not sales income" },
+    ],
+    sections: [
+      {
+        title: "Money received details",
+        rows: [
+          {
+            label: "Book",
+            value: `${facts.businessName} · ${facts.currencyCode}`,
+            detail: facts.existingBook
+              ? "Existing Book"
+              : `Create Book when recorded · bookkeeping starts ${input.effectiveAt} (UTC)`,
+          },
+          { label: "Store", value: facts.storeName },
+          {
+            label: "Destination account",
+            value: facts.account?.name ?? input.accountName ?? "",
+            detail: facts.account
+              ? `Existing ${facts.account.purpose} account`
+              : `Create ${/\bcash\b/i.test(input.accountName ?? "") ? "CASH" : "BANK"} account when recorded`,
+          },
+        ],
+        note: `Description: ${input.description || "Money added"}`,
+      },
+    ],
+    note: "Bookkeeping only: records money already received. Recording this does not collect or transfer money.",
+  }
+  const parsed = generalReviewPresentationSchema.safeParse(presentation)
+  return parsed.success ? parsed.data : undefined
 }
 export const simpleMoneyInRecord = {
   stale: "The account changed. Review it again.",
@@ -174,6 +249,14 @@ export const simpleMoneyInRecord = {
   async review(ctx, input) {
     const info = await current(ctx, input)
     const step = simpleMoneyInStep(input)
+    const book = info.options.book
+      ? await ctx.db.financeBook.findFirst({
+          where: { id: info.options.book.id, tenantId: info.scope.tenantId },
+          select: { timezone: true },
+        })
+      : null
+    if (info.options.book && !book) refuse("Review the Finance Book again.")
+    const timezone = book?.timezone ?? ctx.tenantContext.tenant.timezone
     const choices =
       step === "account"
         ? (input.accountName
@@ -201,9 +284,17 @@ export const simpleMoneyInRecord = {
         input.amountMinor === undefined
           ? "Amount pending"
           : `${generalMoney(input.amountMinor, info.options.currencyCode)} into ${info.account?.name ?? input.accountName ?? "an account"}${input.createAccount ? " (new account)" : ""}`,
-        `Owner funds · ${input.effectiveAt ? new Date(input.effectiveAt).toLocaleDateString("en-GB", { timeZone: ctx.tenantContext.tenant.timezone ?? "Africa/Lagos" }) : "Today"} · recorded by you`,
+        `Owner funds · ${input.effectiveAt ? `${input.effectiveAt} (UTC) · ${timezone}` : "Posting date pending"} · recorded by you`,
         ...(input.description ? [input.description] : []),
       ],
+      presentation: simpleMoneyInReviewPresentation(input, {
+        businessName: ctx.tenantContext.tenant.name,
+        storeName: ctx.tenantContext.activeStore?.name ?? "",
+        currencyCode: info.options.currencyCode,
+        timezone,
+        existingBook: Boolean(book),
+        account: info.account,
+      }),
     }
   },
   async execute(ctx, input, key) {
@@ -217,10 +308,7 @@ export const simpleMoneyInRecord = {
     const effectiveAt = new Date(input.effectiveAt ?? new Date().toISOString())
     const book =
       info.options.book ??
-      (await createFinanceBookInTransaction(ctx.db, {
-        ...actor,
-        startsAt: effectiveAt,
-      }))
+      (await createReviewedNewBook(ctx, actor, effectiveAt))
     let accountId = input.moneyAccountId
     if (!accountId) {
       await ctx.db
@@ -231,6 +319,19 @@ export const simpleMoneyInRecord = {
           normalizedSaleName(a.name) ===
           normalizedSaleName(input.accountName ?? ""),
       )
+      const purpose = /\bcash\b/i.test(input.accountName ?? "")
+        ? "CASH"
+        : "BANK"
+      if (
+        exact &&
+        (info.options.book ||
+          !(await isReviewedNewBookDefault(ctx, {
+            bookId: book.id,
+            accountId: exact.id,
+            purpose,
+          })))
+      )
+        refuse("That account now exists. Choose it and review again.")
       accountId =
         exact?.id ??
         (
@@ -242,9 +343,7 @@ export const simpleMoneyInRecord = {
               .digest("hex")
               .slice(0, 20)}`,
             name: input.accountName ?? refuse("Name the account."),
-            purpose: /\bcash\b/i.test(input.accountName ?? "")
-              ? "CASH"
-              : "BANK",
+            purpose,
           })
         ).id
     }

@@ -21,6 +21,32 @@ export function runInOwnTransaction<T>(
   return db.$transaction(run, { ...OWN_TRANSACTION_OPTIONS })
 }
 
+export function isOwnSerializationConflict(error: unknown) {
+  const property = (value: unknown, key: string) =>
+    typeof value === "object" && value !== null
+      ? Reflect.get(value, key)
+      : undefined
+  if (!(error instanceof Prisma.PrismaClientKnownRequestError)) {
+    // The adapter may reject commit directly, after Prisma's callback has finished.
+    return (
+      error instanceof Error &&
+      error.name === "DriverAdapterError" &&
+      property(error.cause, "kind") === "TransactionWriteConflict" &&
+      property(error.cause, "originalCode") === "40001"
+    )
+  }
+  if (error.code === "P2034") return true
+  if (error.code !== "P2010") return false
+  return (
+    property(error.meta, "code") === "40001" ||
+    property(
+      property(property(error.meta, "driverAdapterError"), "cause"),
+      "kind",
+    ) === "TransactionWriteConflict" ||
+    error.message.includes("Code: `40001`")
+  )
+}
+
 /** Only rolled-back serialization conflicts are retried, with fresh authority reads. */
 export async function runInOwnSerializableTransaction<T>(
   db: PrismaClient,
@@ -34,12 +60,7 @@ export async function runInOwnSerializableTransaction<T>(
         timeout: 30_000,
       })
     } catch (error) {
-      if (
-        !(error instanceof Prisma.PrismaClientKnownRequestError) ||
-        error.code !== "P2034" ||
-        attempt >= 2
-      )
-        throw error
+      if (!isOwnSerializationConflict(error) || attempt >= 2) throw error
     }
   }
 }

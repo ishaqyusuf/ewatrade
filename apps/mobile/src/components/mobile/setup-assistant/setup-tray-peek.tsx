@@ -27,19 +27,17 @@ export function SetupTrayPeek({
       <View className="size-[34px] items-center justify-center rounded-[11px] bg-background/10">
         <Icon name="ClipboardList" className="size-[17px] text-background" />
         {counts.open ? (
-          <View className="absolute -right-[11px] -top-2 h-5 min-w-5 items-center justify-center rounded-full border-2 border-ink bg-gold px-1">
-            <Text className="text-[11px] font-extrabold text-gold-foreground">
+          <View className="absolute -right-[11px] -top-2 min-h-[26px] min-w-[26px] items-center justify-center rounded-full border-2 border-ink bg-gold px-1 py-0.5">
+            <Text className="text-xs font-extrabold text-gold-foreground">
               {counts.open}
             </Text>
           </View>
         ) : null}
       </View>
       <View className="ml-1 min-w-0 flex-1">
-        <Text className="text-[13.5px] font-bold text-background">
-          Setup list
-        </Text>
+        <Text className="text-xs font-bold text-background">Setup list</Text>
         <Text
-          className="text-[11.5px] text-background/70"
+          className="text-xs text-background/70"
           numberOfLines={large ? undefined : 1}
         >
           {counts.confirmed} confirmed · {counts.check} to check
@@ -47,7 +45,7 @@ export function SetupTrayPeek({
       </View>
       <View className="h-[34px] flex-row items-center gap-1 rounded-[11px] bg-gold px-3">
         {large ? null : (
-          <Text className="text-[12.5px] font-extrabold text-gold-foreground">
+          <Text className="text-xs font-extrabold text-gold-foreground">
             Review
           </Text>
         )}

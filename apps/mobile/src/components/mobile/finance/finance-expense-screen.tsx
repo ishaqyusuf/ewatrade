@@ -7,6 +7,11 @@ import { useColors } from "@/hooks/use-color"
 import { useOperationalModeStore } from "@/store/operationalModeStore"
 import { useTRPC } from "@/trpc/client"
 import type { RouterOutputs } from "@ewatrade/api/trpc/routers/_app"
+import {
+  freshShownRead,
+  mountOwnedRead,
+  nextReadMount,
+} from "@ewatrade/assistant/general/staff-activity-target"
 import { formatFinanceMoney } from "@ewatrade/utils/finance-money"
 import { useQuery } from "@tanstack/react-query"
 import { useState } from "react"
@@ -19,6 +24,7 @@ import {
   FinanceExpenseCorrectionForm,
   FinanceExpensePaymentForm,
 } from "./finance-expense-forms"
+import { FinanceExpenseReceipts } from "./finance-expense-receipts"
 import { FinanceDetailScaffold } from "./finance-ledger-layout"
 import {
   type FinanceWorkspace,
@@ -30,16 +36,20 @@ export type ExpenseDetail = RouterOutputs["finance"]["bill"]
 export type ExpensePayment = ExpenseDetail["payments"][number]
 type Action = { kind: "PAY" } | { kind: "CORRECT"; paymentId?: string }
 
-export function FinanceExpenseScreen({ billId }: { billId: string }) {
+export function FinanceExpenseScreen({
+  billId,
+  expectedBookId,
+}: { billId: string; expectedBookId?: string }) {
   if (!billId)
     return <StatusBanner message="Choose an expense from spending records." />
   return (
-    <FinanceWorkspaceGate requireOnline>
+    <FinanceWorkspaceGate requireOnline expectedBookId={expectedBookId}>
       {(workspace) => (
         <ExpenseWorkspace
           key={`${workspace.actorUserId}:${workspace.tenantId}:${workspace.book.id}:${billId}`}
           {...workspace}
           billId={billId}
+          pinnedReceipt={expectedBookId !== undefined}
         />
       )}
     </FinanceWorkspaceGate>
@@ -51,7 +61,8 @@ function ExpenseWorkspace({
   actorUserId,
   tenantId,
   billId,
-}: FinanceWorkspace & { billId: string }) {
+  pinnedReceipt,
+}: FinanceWorkspace & { billId: string; pinnedReceipt: boolean }) {
   const trpc = useTRPC()
   const colors = useColors()
   const offline = useOperationalModeStore((s) => s.isOfflineMode)
@@ -60,11 +71,24 @@ function ExpenseWorkspace({
     tenantId,
     bookId: book.id,
   })
+  const [mount] = useState(nextReadMount)
+  const options = trpc.finance.bill.queryOptions(
+    { bookId: book.id, billId },
+    {
+      retry: false,
+      enabled: !offline,
+      ...(pinnedReceipt
+        ? {
+            staleTime: 0,
+            gcTime: 0,
+            refetchOnMount: "always" as const,
+            trpc: { abortOnUnmount: true },
+          }
+        : {}),
+    },
+  )
   const detail = useQuery(
-    trpc.finance.bill.queryOptions(
-      { bookId: book.id, billId },
-      { retry: false, enabled: !offline },
-    ),
+    pinnedReceipt ? mountOwnedRead(options, mount) : options,
   )
   const [action, setAction] = useState<Action | null>(null)
   const feedback = (
@@ -74,6 +98,24 @@ function ExpenseWorkspace({
       onRejected={() => setAction(null)}
     />
   )
+  if (
+    pinnedReceipt &&
+    (freshShownRead(detail).state !== "ready" ||
+      detail.data?.id !== billId ||
+      detail.data.bookId !== book.id)
+  )
+    return (
+      <StatusBanner
+        title={
+          detail.isError
+            ? "Expense unavailable"
+            : "Checking the original expense"
+        }
+        message="A fresh authorized read of this exact receipt is required before showing its history or actions."
+        actionLabel="Refresh original"
+        onActionPress={() => void detail.refetch()}
+      />
+    )
   if (offline || (detail.isFetching && detail.data))
     return (
       <View className="gap-4 px-[18px]">
@@ -272,6 +314,13 @@ function ExpenseWorkspace({
           ) : null}
         </View>
       )}
+      <FinanceExpenseReceipts
+        actorUserId={actorUserId}
+        tenantId={tenantId}
+        bookId={book.id}
+        billId={bill.id}
+        cancelled={Boolean(bill.voidedAt)}
+      />
       <View>
         <SectionHeader title="Expense lines" />
         <ListCard>

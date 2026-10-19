@@ -54,9 +54,7 @@ export function SectionHeader({
           hitSlop={8}
           onPress={onAction}
         >
-          <Text className="text-[13px] font-bold text-primary">
-            {actionLabel}
-          </Text>
+          <Text className="text-xs font-bold text-primary">{actionLabel}</Text>
         </Pressable>
       ) : null}
     </View>
@@ -136,7 +134,7 @@ export function QuickActionRow({
             noRipple
             onPress={action.onPress}
           >
-            <Text className="text-center text-[11.5px] font-bold [-rn-line-height:15] text-foreground">
+            <Text className="text-center text-xs font-bold [-rn-line-height:22] text-foreground">
               {action.label}
             </Text>
           </Pressable>
@@ -223,9 +221,9 @@ function AttentionCard({ item }: { item: AttentionItem }) {
           <NativeText
             style={{
               color: tint.fg,
-              fontSize: 14,
+              fontSize: 16,
               fontWeight: "700",
-              lineHeight: 18,
+              lineHeight: 22,
             }}
           >
             {item.title}
@@ -233,8 +231,8 @@ function AttentionCard({ item }: { item: AttentionItem }) {
           <NativeText
             style={{
               color: tint.fg,
-              fontSize: 12,
-              lineHeight: 17,
+              fontSize: 16,
+              lineHeight: 22,
               opacity: 0.85,
             }}
           >
@@ -349,7 +347,7 @@ export function RecordRow({
         ) : (
           <NativeText
             maxFontSizeMultiplier={1.3}
-            style={{ color: tint.fg, fontSize: 13, fontWeight: "800" }}
+            style={{ color: tint.fg, fontSize: 16, fontWeight: "800" }}
           >
             {avatar.initials}
           </NativeText>
@@ -358,7 +356,7 @@ export function RecordRow({
       <View className={stackDetails && largeText ? "w-full" : "min-w-0 flex-1"}>
         <Text
           className={cn(
-            "text-sm font-bold [-rn-line-height:19]",
+            "text-sm font-bold [-rn-line-height:22]",
             danger ? "text-destructive" : "text-foreground",
           )}
           numberOfLines={lines}
@@ -368,7 +366,7 @@ export function RecordRow({
         {(Array.isArray(meta) ? meta : meta ? [meta] : []).map((line) => (
           <Text
             key={line}
-            className="text-xs [-rn-line-height:17] text-muted-foreground"
+            className="text-xs [-rn-line-height:22] text-muted-foreground"
             numberOfLines={lines}
           >
             {line}
@@ -424,9 +422,9 @@ export function StatusPill({
         borderRadius: 999,
         flexDirection: "row",
         gap: 4,
-        // A fixed height with centred content keeps short labels optically
-        // centred on Android, where font padding pushes text up.
-        height: 20,
+        // Let the larger label and system text scaling determine its height.
+        minHeight: 26,
+        paddingVertical: 2,
         justifyContent: "center",
         marginTop: 3,
         paddingHorizontal: 8,
@@ -445,17 +443,17 @@ export function StatusPill({
           maxFontSizeMultiplier={1.4}
           style={{
             color: fg,
-            fontSize: 10.5,
+            fontSize: 16,
             fontWeight: "700",
             includeFontPadding: false,
-            lineHeight: 13,
+            lineHeight: 22,
             textAlignVertical: "center",
           }}
         >
           {label}
         </NativeText>
       ) : (
-        <Text className="text-[10.5px] font-bold [-rn-line-height:13] [-rn-include-font-padding:false] [-rn-text-align-vertical:center] text-muted-foreground">
+        <Text className="text-xs font-bold [-rn-line-height:22] [-rn-include-font-padding:false] [-rn-text-align-vertical:center] text-muted-foreground">
           {label}
         </Text>
       )}
@@ -519,7 +517,7 @@ export function SetupSteps({ steps }: { steps: SetupStep[] }) {
               ) : (
                 <Text
                   className={cn(
-                    "text-[13px] font-extrabold",
+                    "text-xs font-extrabold",
                     step.state === "now"
                       ? "text-primary-foreground"
                       : "text-muted-foreground",
@@ -532,7 +530,7 @@ export function SetupSteps({ steps }: { steps: SetupStep[] }) {
             <View className="min-w-0 flex-1">
               <Text
                 className={cn(
-                  "text-sm font-bold [-rn-line-height:19]",
+                  "text-sm font-bold [-rn-line-height:22]",
                   step.state === "done"
                     ? "text-muted-foreground line-through"
                     : "text-foreground",
@@ -540,7 +538,7 @@ export function SetupSteps({ steps }: { steps: SetupStep[] }) {
               >
                 {step.title}
               </Text>
-              <Text className="text-xs [-rn-line-height:17] text-muted-foreground">
+              <Text className="text-xs [-rn-line-height:22] text-muted-foreground">
                 {step.sub}
               </Text>
             </View>
@@ -661,10 +659,10 @@ export function NudgeCard({
         <Icon className="size-[20px]" color={colors.fg} name={icon} />
       </View>
       <View className="min-w-0 flex-1">
-        <Text className="text-sm font-bold [-rn-line-height:19] text-foreground">
+        <Text className="text-sm font-bold [-rn-line-height:22] text-foreground">
           {title}
         </Text>
-        <Text className="text-xs [-rn-line-height:17] text-muted-foreground">
+        <Text className="text-xs [-rn-line-height:22] text-muted-foreground">
           {sub}
         </Text>
       </View>
@@ -676,7 +674,7 @@ export function NudgeCard({
           hitSlop={6}
           onPress={onAction}
         >
-          <Text className="text-[13px] font-extrabold text-primary">
+          <Text className="text-xs font-extrabold text-primary">
             {actionLabel}
           </Text>
         </Pressable>
@@ -707,11 +705,11 @@ export function ToggleRow({
     <View className="min-h-[56px] flex-row items-center gap-3 py-3">
       {icon ? <ToggleRowIcon icon={icon} /> : null}
       <View className="min-w-0 flex-1">
-        <Text className="text-sm font-bold [-rn-line-height:19] text-foreground">
+        <Text className="text-sm font-bold [-rn-line-height:22] text-foreground">
           {title}
         </Text>
         {sub ? (
-          <Text className="text-xs [-rn-line-height:17] text-muted-foreground">
+          <Text className="text-xs [-rn-line-height:22] text-muted-foreground">
             {sub}
           </Text>
         ) : null}

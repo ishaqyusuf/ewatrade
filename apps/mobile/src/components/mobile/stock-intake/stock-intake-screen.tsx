@@ -6,18 +6,25 @@ import { QaQuickFillButton } from "@/components/mobile/qa-quick-fill-button"
 import { StatusBanner } from "@/components/mobile/status-banner"
 import type { WorkflowModalChromeProps } from "@/components/mobile/workflow-modal-screen"
 import { Icon } from "@/components/ui/icon"
-import { Modal, useModal } from "@/components/ui/modal"
+import { useModal } from "@/components/ui/modal"
 import { Pressable } from "@/components/ui/pressable"
 import { Skeleton, SkeletonGroup } from "@/components/ui/skeleton"
 import { Text } from "@/components/ui/text"
 import { View } from "@/components/ui/view"
+import { useAuthContext } from "@/hooks/use-auth"
 import { useBottomSearchScroll } from "@/hooks/use-bottom-search-scroll"
 import { useColorScheme } from "@/hooks/use-color"
 import { useLargeTextLayout } from "@/hooks/use-large-text-layout"
 import { GREEN_TILL_THEME } from "@/lib/green-till-theme"
+import { isSalesRepRole } from "@/lib/mobile-roles"
+import {
+  exitOutcome,
+  rebaseOutcomeOnHome,
+} from "@/lib/operation-success-navigation"
 import { cn } from "@/lib/utils"
-import { BottomSheetScrollView } from "@gorhom/bottom-sheet"
-import { useRouter } from "expo-router"
+import { trackMobileActivity } from "@/runtime/analytics-runtime"
+import { useRoute } from "@react-navigation/native"
+import { useNavigation, useRouter } from "expo-router"
 import { VariableContextProvider } from "nativewind"
 import { useEffect, useRef, useState } from "react"
 import {
@@ -28,18 +35,24 @@ import {
 } from "react-native"
 import { FlatList } from "react-native-css/components/FlatList"
 import { KeyboardAwareScrollView } from "react-native-keyboard-controller"
-import { FormField } from "../form-field"
 import { HeroCard } from "../green-till/hero-card"
+import { StockBalanceChooser } from "./stock-balance-chooser"
 import { StockIntakeFields } from "./stock-intake-fields"
 import {
   STOCK_MODES,
   type StockBalance,
   type StockIntakeProps,
   stockCustodyLabel,
+  stockFactsLabel,
+  stockKindLabel,
+  stockQuantityLine,
+  stockReferenceRow,
 } from "./stock-intake-model"
 import { StockIntakeReview } from "./stock-intake-review"
+import { StockOutcomeSheet } from "./stock-outcome-sheet"
 import { stockAfter } from "./stock-preview"
-import { useStockIntake } from "./use-stock-intake"
+import { useStockActivity } from "./use-stock-activity"
+import { type StockIntakeModel, useStockIntake } from "./use-stock-intake"
 
 export function StockIntakeChrome(props: WorkflowModalChromeProps) {
   return <MobileWorkflowChrome {...props} />
@@ -47,6 +60,7 @@ export function StockIntakeChrome(props: WorkflowModalChromeProps) {
 
 export function StockIntakeContent(props: StockIntakeProps) {
   const model = useStockIntake(props)
+  useStockActivity(model, trackMobileActivity)
   const largeText = useLargeTextLayout()
   const router = useRouter()
   const [footerHeight, setFooterHeight] = useState(150)
@@ -62,10 +76,17 @@ export function StockIntakeContent(props: StockIntakeProps) {
         model.draft.direction,
       )
     : null
-  const firstBalanceId = model.rows[0]?.balanceSourceId
+  const catalogEntry = model.target.kind !== "generic"
+  // Catalog entry never preselects one of several sources (the resolver only
+  // selects a single eligible row). Generic entry keeps its first-row default,
+  // but only for a fresh draft, so a vanished choice is never replaced.
+  const firstBalanceId = catalogEntry
+    ? undefined
+    : model.rows[0]?.balanceSourceId
   useEffect(() => {
     if (
       completed ||
+      model.draft.balanceId ||
       model.locked ||
       model.selected ||
       model.query ||
@@ -78,9 +99,14 @@ export function StockIntakeContent(props: StockIntakeProps) {
     model.locked,
     model.selected,
     model.query,
+    model.draft.balanceId,
     firstBalanceId,
     model.edit,
   ])
+  const blocked =
+    model.resolution === "invalid" ||
+    model.resolution === "scope_changed" ||
+    (catalogEntry && model.resolution === "empty")
   useEffect(() => {
     if (model.error && !model.review)
       list.current?.scrollToOffset({ offset: 0, animated: true })
@@ -94,7 +120,11 @@ export function StockIntakeContent(props: StockIntakeProps) {
           ref={list}
           className="flex-1"
           contentContainerClassName="grow gap-1 px-[18px] pb-[var(--stock-intake-footer)]"
-          data={[]}
+          // Catalog entry lists its own sources inline so the exact balance
+          // that will change stays visible; generic entry uses the chooser.
+          data={
+            catalogEntry && !completed && model.totalRows > 1 ? model.rows : []
+          }
           keyExtractor={(row) => row.balanceSourceId}
           keyboardDismissMode="interactive"
           keyboardShouldPersistTaps="handled"
@@ -112,14 +142,20 @@ export function StockIntakeContent(props: StockIntakeProps) {
             <View className="gap-5 pb-4 pt-2">
               <ClassicStockHero
                 after={after}
+                catalogEntry={catalogEntry}
+                choiceCount={model.totalRows}
+                onGoHome={() => router.replace("/dashboard")}
+                onBackToItem={() =>
+                  router.canGoBack()
+                    ? router.back()
+                    : router.replace("/dashboard")
+                }
+                resolution={model.resolution}
+                storeName={model.allStoreName}
                 loading={model.loading}
                 locked={model.locked}
                 modeKey={model.draft.mode}
-                noBalances={
-                  !model.loading &&
-                  model.hasBalanceData &&
-                  model.totalRows === 0
-                }
+                noBalances={!catalogEntry && model.resolution === "empty"}
                 offline={model.offline}
                 onAddProduct={() =>
                   router.push(
@@ -135,7 +171,7 @@ export function StockIntakeContent(props: StockIntakeProps) {
                   tone="warning"
                   icon="Lock"
                   title="Online connection required"
-                  message={`Stock operations require a connection. ${model.balancesUpdatedAt ? `Saved balances as of ${new Date(model.balancesUpdatedAt).toLocaleString()}.` : "Reconnect to load balances."}`}
+                  message={`Stock operations and balances require a connection. ${model.balancesUpdatedAt ? `Last loaded ${new Date(model.balancesUpdatedAt).toLocaleString()}; reconnect to see current balances.` : "Reconnect to load balances."}`}
                 />
               ) : null}
               {!model.canManage ? (
@@ -161,16 +197,14 @@ export function StockIntakeContent(props: StockIntakeProps) {
               {model.error ? (
                 <StatusBanner tone="destructive" message={model.error} />
               ) : null}
-              {completed ? (
+              {model.resolution === "selection_missing" && !model.hasAttempt ? (
                 <StatusBanner
-                  tone="success"
-                  title="Stock operation recorded"
-                  message={
-                    model.notice ??
-                    "The server accepted this operation. No repeat submission is available."
-                  }
+                  tone="warning"
+                  title="That balance is no longer available"
+                  message="Choose another balance. Nothing was recorded."
                 />
-              ) : (
+              ) : null}
+              {blocked || completed ? null : (
                 <>
                   {model.hasAttempt ? (
                     <StatusBanner
@@ -219,7 +253,7 @@ export function StockIntakeContent(props: StockIntakeProps) {
                           >
                             <Text
                               className={cn(
-                                "text-[13px] font-extrabold",
+                                "text-xs font-extrabold",
                                 on
                                   ? "text-foreground"
                                   : "text-muted-foreground",
@@ -248,32 +282,39 @@ export function StockIntakeContent(props: StockIntakeProps) {
             <Row
               icon="Warehouse"
               title={item.productName}
-              subtitle={`${item.variantName} · ${item.kind.toLowerCase().replaceAll("_", " ")} · ${stockCustodyLabel(item, model.people)}`}
-              quantityLabel={`${item.onHandQuantity} ${item.inventoryUnitName} on hand · ${item.availableQuantity} available`}
-              selected={model.draft.balanceId === item.balanceSourceId}
+              subtitle={`${item.variantName} · ${stockKindLabel(item)} · ${stockCustodyLabel(item, model.people)}`}
+              quantityLabel={stockFactsLabel(item)}
+              selected={
+                model.selected?.balanceSourceId === item.balanceSourceId
+              }
               disabled={model.locked}
               onPress={() => model.edit({ balanceId: item.balanceSourceId })}
             />
           )}
           ListFooterComponent={
-            !completed && model.canManage && !model.scopeChanged ? (
+            !completed && !blocked && model.canManage && !model.scopeChanged ? (
               <StockIntakeFields model={model} />
             ) : null
           }
         />
-        {!completed ? (
+        {!completed && !blocked && !model.outcome ? (
           <BottomSearchFooter
             localSearch
-            searchVisible={false}
+            searchVisible={
+              model.draft.mode === "custody" &&
+              model.draft.targetCustodyType === "staff"
+            }
+            alwaysShowSearch
+            editable={!model.locked}
             includeSafeArea={props.presentation !== "sheet"}
-            accessibilityLabel="Search stock balances"
-            label="Find balance"
+            accessibilityLabel="Find team member"
+            label="Find team member"
             maxLength={160}
-            value={model.query}
-            onChangeText={model.setQuery}
+            value={model.personQuery}
+            onChangeText={model.setPersonQuery}
             totalCount={model.totalRows}
             onHeightChange={setFooterHeight}
-            placeholder="Product, variant, unit, custody"
+            placeholder="Find team member"
           >
             <ActionButton
               disabled={!model.canReview}
@@ -290,43 +331,9 @@ export function StockIntakeContent(props: StockIntakeProps) {
             </ActionButton>
           </BottomSearchFooter>
         ) : null}
-        <Modal
-          ref={chooser.ref}
-          title="Choose stock balance"
-          snapPoints={["80%"]}
-          keyboardBehavior="fillParent"
-        >
-          <BottomSheetScrollView
-            contentContainerStyle={{ padding: 18, gap: 12 }}
-            keyboardShouldPersistTaps="handled"
-          >
-            <FormField
-              label="Find balance"
-              value={model.query}
-              onChangeText={model.setQuery}
-              placeholder="Product, variant, unit, custody"
-            />
-            {model.rows.map((item) => (
-              <Row
-                key={item.balanceSourceId}
-                icon="Warehouse"
-                title={item.productName}
-                subtitle={`${item.variantName} · ${stockCustodyLabel(item, model.people)}`}
-                quantityLabel={`${item.onHandQuantity} ${item.inventoryUnitName}`}
-                selected={model.draft.balanceId === item.balanceSourceId}
-                disabled={model.locked}
-                onPress={() => {
-                  model.edit({ balanceId: item.balanceSourceId })
-                  chooser.dismiss()
-                }}
-              />
-            ))}
-            {!model.rows.length ? (
-              <Text>No matching stock balances.</Text>
-            ) : null}
-          </BottomSheetScrollView>
-        </Modal>
+        <StockBalanceChooser modal={chooser} model={model} />
         <StockIntakeReview model={model} />
+        <StockOutcome model={model} />
       </View>
     </VariableContextProvider>
   )
@@ -338,6 +345,12 @@ export function StockIntakeContent(props: StockIntakeProps) {
  */
 function ClassicStockHero({
   after,
+  catalogEntry,
+  choiceCount,
+  onBackToItem,
+  onGoHome,
+  resolution,
+  storeName,
   loading,
   locked,
   modeKey,
@@ -349,6 +362,12 @@ function ClassicStockHero({
   selected,
 }: {
   after: string | null
+  catalogEntry: boolean
+  choiceCount: number
+  onBackToItem: () => void
+  onGoHome: () => void
+  resolution: StockIntakeModel["resolution"]
+  storeName: string | undefined
   loading: boolean
   locked: boolean
   modeKey: string
@@ -361,6 +380,44 @@ function ClassicStockHero({
 }) {
   const { colorScheme } = useColorScheme()
   const palette = GREEN_TILL_THEME[colorScheme]
+  if (resolution === "invalid")
+    return (
+      <HeroCard
+        label="Record stock"
+        pill={{ label: "Not opened", tone: "draft" }}
+        title="This stock link is incomplete"
+        sub="It doesn't identify an item this screen can open. Nothing was changed."
+        cta={{ icon: "House", label: "Go home", onPress: onGoHome }}
+      />
+    )
+  if (resolution === "scope_changed")
+    return (
+      <HeroCard
+        label="Record stock"
+        pill={{ label: "Other Store", tone: "draft" }}
+        title="Opened for another Store"
+        sub="Switch to that Store, then open Stock in from the item again. Nothing was changed."
+        cta={{
+          icon: "ArrowLeft",
+          label: "Back to item",
+          onPress: onBackToItem,
+        }}
+      />
+    )
+  if (catalogEntry && resolution === "empty")
+    return (
+      <HeroCard
+        label="Record stock"
+        pill={{ label: "Online", tone: "synced" }}
+        title="No stock balance for this item"
+        sub={`Nothing for this item is tracked in ${storeName ?? "this Store"}. Other products' stock isn't offered here.`}
+        cta={{
+          icon: "ArrowLeft",
+          label: "Back to item",
+          onPress: onBackToItem,
+        }}
+      />
+    )
   if (noBalances)
     return (
       <HeroCard
@@ -383,9 +440,15 @@ function ClassicStockHero({
           tone: offline ? "offline" : "draft",
         }}
         title={loading ? "Finding balances…" : "Choose a stock balance"}
-        sub="See what changes before you record it."
+        sub={
+          catalogEntry && !loading && choiceCount > 1
+            ? `This item has ${choiceCount} balances here. Pick the one that changes.`
+            : "See what changes before you record it."
+        }
         cta={
-          loading
+          // Generic entry can open the chooser while balances first load (it
+          // shows skeletons); catalog entry lists its own sources inline.
+          catalogEntry && (loading || choiceCount > 1)
             ? undefined
             : { icon: "Search", label: "Choose balance", onPress: onChange }
         }
@@ -403,48 +466,62 @@ function ClassicStockHero({
     STOCK_MODES.find((mode) => mode.key === modeKey)?.label ?? "Record"
   return (
     <HeroCard
-      label={
-        selected.variantName && selected.variantName !== selected.productName
-          ? `${selected.productName} · ${selected.variantName}`
-          : selected.productName
-      }
-      labelAction={
-        <Pressable
-          accessibilityLabel="Change stock balance"
-          accessibilityRole="button"
-          className="rounded-full active:opacity-80"
-          disabled={locked}
-          haptic
-          onPress={onChange}
-          transition
+      top={
+        <NativeView
+          style={{ alignItems: "flex-start", flexDirection: "row", gap: 12 }}
         >
-          <NativeView
+          <NativeText
+            accessibilityRole="header"
             style={{
-              alignItems: "center",
-              backgroundColor: palette.heroLine,
-              borderRadius: 999,
-              flexDirection: "row",
-              gap: 6,
-              minHeight: 36,
-              paddingHorizontal: 12,
+              color: palette.heroForeground,
+              flex: 1,
+              fontSize: 24,
+              fontWeight: "800",
+              lineHeight: 30,
             }}
           >
-            <Icon
-              className="size-[14px]"
-              color={palette.heroForeground}
-              name="Search"
-            />
-            <NativeText
+            {selected.variantName &&
+            selected.variantName !== selected.productName
+              ? `${selected.productName} · ${selected.variantName}`
+              : selected.productName}
+          </NativeText>
+          <Pressable
+            accessibilityLabel="Change stock balance"
+            accessibilityRole="button"
+            className="rounded-full active:opacity-80"
+            disabled={locked}
+            haptic
+            onPress={onChange}
+            transition
+          >
+            <NativeView
               style={{
-                color: palette.heroForeground,
-                fontSize: 12.5,
-                fontWeight: "800",
+                alignItems: "center",
+                backgroundColor: palette.heroLine,
+                borderRadius: 999,
+                flexDirection: "row",
+                gap: 6,
+                minHeight: 36,
+                paddingHorizontal: 12,
               }}
             >
-              Change
-            </NativeText>
-          </NativeView>
-        </Pressable>
+              <Icon
+                className="size-[14px]"
+                color={palette.heroForeground}
+                name="Search"
+              />
+              <NativeText
+                style={{
+                  color: palette.heroForeground,
+                  fontSize: 16,
+                  fontWeight: "800",
+                }}
+              >
+                Change
+              </NativeText>
+            </NativeView>
+          </Pressable>
+        </NativeView>
       }
       amountContent={
         <NativeView
@@ -487,7 +564,7 @@ function ClassicStockHero({
           <NativeText
             style={{
               color: palette.heroMuted,
-              fontSize: 14,
+              fontSize: 16,
               fontWeight: "700",
             }}
           >
@@ -495,12 +572,164 @@ function ClassicStockHero({
           </NativeText>
         </NativeView>
       }
-      sub={`${verb} · ${stockCustodyLabel(selected, people)}`}
+      sub={`${verb} · ${stockKindLabel(selected)} · ${stockCustodyLabel(selected, people)}`}
       stats={[
         { label: "On hand", value: String(selected.onHandQuantity) },
+        { label: "Reserved", value: String(selected.reservedQuantity) },
         { label: "Available", value: String(selected.availableQuantity) },
-        { label: "After", value: after ?? "—" },
       ]}
+    />
+  )
+}
+
+/**
+ * Terminal stock outcomes. Showing one rebases history to Home + this route
+ * (same route key, so the draft and attempt survive): system back, swipe and
+ * close then reach Home, never the submitted form. Only Edit reopens a draft.
+ */
+function StockOutcome({ model }: { model: StockIntakeModel }) {
+  const navigation = useNavigation()
+  const route = useRoute()
+  const rebased = useRef(false)
+  const outcome = model.outcome
+  const { profile } = useAuthContext()
+  const salesRep = isSalesRepRole(profile?.role)
+  useEffect(() => {
+    if (!outcome || rebased.current) return
+    rebased.current = true
+    rebaseOutcomeOnHome(
+      navigation,
+      { key: route.key, name: route.name, params: route.params },
+      { salesRep },
+    )
+  }, [outcome, navigation, route.key, route.name, route.params, salesRep])
+  if (!outcome) return null
+  const { review } = outcome
+  const unit = review.balance.inventoryUnitName
+  const movement = stockQuantityLine(review.draft, review.quantity, unit)
+  const item = `${review.balance.productName} · ${review.balance.storeName}`
+  const goHome = () => exitOutcome(navigation, { to: "home" }, { salesRep })
+  const catalogItemId =
+    model.target.kind === "catalog" ? model.target.target.catalogItemId : null
+  const backToProduct = () => {
+    if (catalogItemId)
+      exitOutcome(
+        navigation,
+        { to: "catalog-item", catalogItemId },
+        { salesRep },
+      )
+  }
+  const home = { icon: "House" as const, label: "Go home", onPress: goHome }
+  // Every terminal outcome can return to its originating Product (exact
+  // target, Home underneath). Leaving an unknown outcome never retries it.
+  const productExit = catalogItemId
+    ? {
+        icon: "Package" as const,
+        label: `Back to ${review.balance.productName}`,
+        onPress: backToProduct,
+      }
+    : null
+  if (outcome.kind === "recorded") {
+    const balance = model.recordedBalance
+    const time = outcome.effectiveAt?.toLocaleTimeString(undefined, {
+      hour: "numeric",
+      minute: "2-digit",
+    })
+    return (
+      <StockOutcomeSheet
+        tone="recorded"
+        kicker={time ? `Recorded at ${time}` : "Recorded"}
+        title="Stock recorded"
+        amount={balance ? balance.onHandQuantity : movement}
+        amountUnit={balance ? `${unit} on hand` : undefined}
+        rows={[
+          ["Change", movement],
+          ["Item", item],
+          [
+            "Available now",
+            balance
+              ? `${balance.availableQuantity} ${unit}`
+              : model.refreshFailed
+                ? "—"
+                : "Updating…",
+          ],
+          stockReferenceRow(outcome.operationId),
+        ]}
+        warning={
+          model.refreshFailed
+            ? "Recorded. The balance couldn't refresh, so it isn't shown here. Reload stock when you're back on a good connection."
+            : null
+        }
+        primary={
+          catalogItemId
+            ? {
+                icon: "Package",
+                label: `Back to ${review.balance.productName}`,
+                onPress: backToProduct,
+              }
+            : home
+        }
+        secondary={catalogItemId ? home : undefined}
+      />
+    )
+  }
+  if (outcome.kind === "not_recorded")
+    return (
+      <StockOutcomeSheet
+        tone="not_recorded"
+        kicker="Nothing changed"
+        title="Not recorded"
+        amount={movement}
+        rows={[
+          ["Reason", outcome.message],
+          ["Item", item],
+          ["Your draft", "Kept"],
+        ]}
+        primary={
+          outcome.canEdit
+            ? {
+                icon: "Pencil",
+                label: "Edit draft",
+                onPress: model.editAfterFailure,
+              }
+            : {
+                icon: "RefreshCw",
+                label: "Try again",
+                loading: model.pending,
+                loadingLabel: "Finalizing count",
+                onPress: () => void model.confirm(),
+              }
+        }
+        secondary={productExit ?? home}
+        onHome={productExit ? goHome : undefined}
+      />
+    )
+  return (
+    <StockOutcomeSheet
+      tone="unknown"
+      kicker="Connection lost before we heard back"
+      title="Outcome not confirmed"
+      amount={movement}
+      rows={[
+        ["What we know", "The request was sent; the reply didn't arrive"],
+        [
+          "Safe to retry",
+          "Check status reuses this exact request, so it can't be recorded twice",
+        ],
+      ]}
+      primary={{
+        icon: "RefreshCw",
+        label: "Check status",
+        loading: model.pending,
+        loadingLabel: "Checking",
+        onPress: () => void model.confirm(),
+      }}
+      secondary={
+        productExit
+          ? { ...productExit, disabled: model.pending }
+          : { ...home, disabled: model.pending }
+      }
+      onHome={productExit && !model.pending ? goHome : undefined}
     />
   )
 }

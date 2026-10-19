@@ -1,0 +1,112 @@
+{
+  "version": 1,
+  "id": "2026-10-18-mobile-web-quality",
+  "tickets": [
+    "A04",
+    "H02"
+  ],
+  "summary": "Source-only dashboard quality changes add pre-picker attachment entitlement checks to Order and Service actions and an explicit management offline-record review surface in Reports. Canonical commands, roles, Store scope, provider gates and assistant rollout are unchanged. M09.6 representative Chromium entitlement regression is accepted; M12.9 remains unaccepted; Owner-only Chromium approval/rejection is verified separately and WebKit/native checks are separate.",
+  "noAssistantImpact": "These are dashboard form guards and management UI callers of existing protected procedures. They add no assistant tool, prompt authority, execution adapter, capability declaration, provider action or rollout. Existing assistant attachment actions still use their canonical entitlement boundary. Offline review and recovery decisions remain deliberately excluded from assistant access.",
+  "capabilities": [],
+  "procedures": [
+    {
+      "path": "offline.conflicts",
+      "status": "excluded",
+      "reason": "Dashboard Reports reads the existing management queue for the exact active Store. Existing server role and Tenant/Store checks remain authoritative; no assistant access is added."
+    },
+    {
+      "path": "offline.review",
+      "status": "excluded",
+      "reason": "Explicit dashboard confirmation uses the existing active-staff approval/conflict procedure after fresh identity, Store and immutable-record checks. Canonical management permissions and server decision semantics are unchanged; no assistant approval/retry/discard authority."
+    },
+    {
+      "path": "offline.decideRecovery",
+      "status": "excluded",
+      "reason": "Existing suspended-author recovery remains an explicit different-Owner/Admin decision with the original envelope and reason. The dashboard exposes only current safe actions; no staff reactivation, assistant authority or ordinary replay bypass."
+    }
+  ],
+  "docs": [
+    {
+      "topic": "feature",
+      "path": ".brain/features/mobile-sales-quality.md",
+      "status": "local_only",
+      "note": "Local current web findings and remaining M09.6/M12.9 acceptance limits; Brain is not represented as CI-visible evidence."
+    },
+    {
+      "topic": "feature",
+      "path": ".brain/features/offline-order-operations.md",
+      "status": "local_only",
+      "note": "Existing canonical staging/review/recovery policy remains authoritative. New dashboard caller does not alter its roles, payloads or business-effect boundary."
+    },
+    {
+      "topic": "decision",
+      "path": ".brain/decisions/ADR-0023-optional-management-approval-for-staff-offline-orders.md",
+      "status": "local_only",
+      "note": "Existing explicit management approval decision retained."
+    },
+    {
+      "topic": "api",
+      "status": "not_applicable",
+      "note": "No API signature, protected procedure implementation or shared contract change."
+    },
+    {
+      "topic": "permissions",
+      "status": "not_applicable",
+      "note": "No canonical role, Store assignment, scoped navigation permission, entitlement policy or provider gate change. Client checks do not grant authority."
+    },
+    {
+      "topic": "schema",
+      "status": "not_applicable",
+      "note": "No Prisma/database schema or migration change."
+    },
+    {
+      "topic": "capability",
+      "status": "not_applicable",
+      "note": "No manifest/coverage declaration or assistant rollout change; offline.conflicts, offline.review and offline.decideRecovery retain excluded status."
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "test",
+      "path": "apps/dashboard/src/lib/attachment-access.test.ts",
+      "executed": true,
+      "result": "Parent-reported focused helper run: 6 tests/21 assertions passed. Covers Free/paid/unknown/offline, fresh downgrade denial, changed identity/business/membership/Store and retired in-flight generations. Pure helper evidence, not a mounted picker or Chromium/WebKit journey."
+    },
+    {
+      "kind": "test",
+      "path": "apps/dashboard/src/components/dashboard/offline-record-review.test.ts",
+      "executed": true,
+      "result": "Parent-reported combined pure review guards and existing report sections: 7 tests/50 assertions passed. Review tests cover exact Store/scope, role/safe-action ceilings, separate recovery author/envelope, immutable fingerprint and terminal versus pending receipts. Not actual web decision acceptance."
+    },
+    {
+      "kind": "test",
+      "path": "apps/dashboard/src/components/dashboard/operations-report-sections.test.ts",
+      "executed": true,
+      "result": "Included in the parent-reported 7-test/50-assertion combined run; provisional commands remain separate from authoritative balance metrics. This is not an additional 7-test run."
+    },
+    {
+      "kind": "review",
+      "path": "apps/dashboard/src/hooks/use-attachment-access.tsx",
+      "executed": true,
+      "result": "Source inspected: fresh tenant.current entitlement with actor/Tenant/membership/Store and lifetime fences; Free explanation and existing owner/admin billing route. Order caller also guards file admission/read/post/upload, and Service caller guards private-evidence mutation. No browser acceptance inferred."
+    },
+    {
+      "kind": "review",
+      "path": "apps/dashboard/src/components/dashboard/offline-record-review.tsx",
+      "executed": true,
+      "result": "Source inspected: explicit selected-record confirmation, current identity/active Store reads and record fingerprint revalidation, existing offline.review/decideRecovery callers, in-flight/lifetime fences and receipt-based outcome copy. Reports integration is in operations-reports.tsx. Actual Owner-only synthetic Chromium approve/reject each confirmed once; one unpaid Order, zero rejected effects, exact device revoked; no M09.6/M12.9 checkpoint closure."
+    },
+    {
+      "kind": "review",
+      "path": ".brain/qa/2026-10-18-mobile-chromium-acceptance.md",
+      "executed": true,
+      "result": "Root actual Chromium Service note/private-reference, description guard/saved sale, selected Bank payment, stock cancellation, exact Owner-only review apply/reject and canonical invariants verified. Reference capture is not upload; no native/eligible-rep/WebKit acceptance. M09.6 later accepted through separately recorded real Chromium entitlement-change UI checks; M12.9 remains open."
+    },
+    {
+      "kind": "review",
+      "path": ".brain/qa/2026-10-18-web-entitlement-change.md",
+      "executed": true,
+      "result": "Root real Chromium picker-return, staged-Post and Service evidence paid-to-Free denial plus revoked synthetic-workspace unavailable-access UI. Exact fixture fields/all240 table signatures restored, lease closed, normal QA renewal/Free explanation verified, independent review accepted M09.6. No product/authority change, real upload, transport-offline, native or WebKit acceptance."
+    }
+  ]
+}

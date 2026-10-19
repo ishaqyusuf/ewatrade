@@ -1,0 +1,40 @@
+{
+  "version": 1,
+  "id": "2026-10-18-scripted-phone-auth-qa",
+  "tickets": ["H01"],
+  "summary": "Add repeatable real-provider and isolated HTTP/Neon phone signup/sign-in scripts; preserve auth API boundaries through query extraction and current Session test fixtures. Persist private in-progress allowlisted provider message/queue diagnostics for an accepted-but-unreceived owner test.",
+  "noAssistantImpact": "Personal account authentication and its QA tooling are excluded from merchant assistant commands. No merchant write, permission, grant, capability or transport rollout is introduced. Live delivery is confined to an explicitly selected recipient in the interactive Development runner; Production remains disabled.",
+  "procedures": [],
+  "docs": [
+    {
+      "topic": "feature",
+      "path": ".brain/features/whatsapp-otp.md",
+      "status": "local_only"
+    },
+    {
+      "topic": "api",
+      "path": ".brain/api/contracts.md",
+      "status": "local_only"
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "run",
+      "path": ".brain/qa/2026-10-18-whatsapp-otp-scripted-acceptance.md",
+      "executed": true,
+      "result": "Runner unit9/19 and focused auth/phone/deletion42/177 pass; actual HTTP/random-code/Neon rehearsal passes with stubbed final Meta transport and owned cleanup. Provider/token read-only checks and disabled hosted availability pass. Real received-code acceptance and Production release remain pending."
+    },
+    {
+      "kind": "run",
+      "path": ".brain/qa/2026-10-18-whatsapp-otp-scripted-acceptance.md",
+      "executed": true,
+      "result": "First real send returned Meta200/accepted but owner received no code; no signup accepted. Immediate-progress regression reproduced missing-file failure and now passes; runner11/24, combined24/47, scoped Biome and config check pass. New instrumented run awaits owner SEND; production remains disabled."
+    },
+    {
+      "kind": "run",
+      "path": ".brain/qa/2026-10-18-whatsapp-otp-scripted-acceptance.md",
+      "executed": true,
+      "result": "Actual owner-entered real WhatsApp signup and sign-in passed: report1792343128459-9b0d06d2 exit0, same account/business, two saved bearer Sessions and replay refusal. Independent Development read confirms phone verified, email unverified, active Owner, two run Sessions and no challenges. Original setup/test5/5 complete. Fresh hosted availability disabled; Production rollout remains unaccepted."
+    }
+  ]
+}

@@ -1,5 +1,16 @@
 # Assistant conversation evaluations
 
+15 October continuation: [Phase6 native staff source](runs/2026-10-15-phase6-native-staff-source.md),
+[D04 audit](runs/2026-10-15-d04-authorization-audit.md),
+[Phase8 inventory](runs/2026-10-15-phase8-source-followup.md),
+[G05 finding](runs/2026-10-15-g05-source-followup.md),
+[S05 proposal](proposals/2026-10-15-s05-bounded-followup.md),
+[G04 proposal](proposals/2026-10-15-g04-bounded-followup.md),
+[Phase10–12 readiness](runs/2026-10-15-final-phase-readiness.md).
+These are bounded source/preparation evidence.13/45accepted; no connected/provider/
+activation/restart/release gate is lifted. Older catalog entries below retain
+their original checkpoints; later packets distinguish repaired and remaining gaps.
+
 [Quick-chat object continuity](runs/2026-10-12-quick-chat-object-continuity.md): actual saved chat and original object retain the unsent draft through Close and Minimize/Reopen; screenshots captured. No additional ticket acceptance.
 
 [Saved purchase category visibility](runs/2026-10-12-purchase-category-review-visibility.md): ten stock/value rows visible, unknown opening costs preserved; only 30 of 100 category names are reachable, with a static remainder chip. Repair required; screenshot captured, no business write.
@@ -298,7 +309,9 @@ and summarize results in Brain. Record safe metadata in a versioned run report w
 available. Do not claim a pass without the expected behavior and postconditions.
 Do not submit a write confirmation merely to obtain a model transcript: confirmation
 is its own explicitly scoped QA step. Keep model assertions separate from command
-and browser assertions. Mobile evaluations are excluded from the current work.
+and browser assertions. Mobile evaluations are required by the active cross-client
+roadmap. Phase4–6 native source/component checks are catalogued separately; actual
+saved-device evaluations remain unrun and cannot be inferred from static fixtures.
 
 - [Purchase registration proposal database acceptance, 11 October 2026](runs/2026-10-11-registration-proposal-database.md): 37 assertions pass; rollback, concurrent replay, fresh supplier/authority guards and actual reads; full web/model acceptance pending.
 
@@ -408,3 +421,28 @@ S04 source integration and labeled web preview: [staff access checkpoint](runs/2
 [D05/G03 first source packets](runs/2026-10-12-service-work-quote-source-packets.md): focused checks pass; integration/acceptance pending.
 
 [D05/S04/G03 dashboard integration](runs/2026-10-12-service-work-dashboard-integration.md): original global objects, reviewed work editors and exact workload source integrated; affected checks pass. Authenticated screenshot and saved-chat acceptance wait on QA sign-in. Ticket acceptance remains 13/45.
+
+
+15October S01 native continuation: directory/member/recorded-history protected
+read screens and strict exact answer routing implemented. Scope/freshness/privacy,
+saved filters/cursors, currenttotal vs page and partialhistory remain explicit.
+Hidden-only snapshot no longer means empty original grants. Three mobile reads
+remain planned;27mobilewrites/45reads/0declaredgaps/47fullwritegaps. Source30/135
+passes plus bounded actualcomponent fixtures;17paths lint. No actualdevice/saved/
+connected acceptance, provider/runtime/rollout action or parent change.13/45
+retained. [Source/evidence](runs/2026-10-15-s01-native-reads.md).
+
+
+15October Phase7native source: all7work editors, fullsimpleintake and2quote
+decisions plus exact event/note/exception/intake+Order/quotation originals.17planned
+mobile client/test rows, no rollout/policy/procedure/version change.37mobilewrites/
+52reads/0declaredgaps/37fullwritegaps.66sourcechecks/558assertions; component/
+compiler/current gate limits in [source checkpoint](runs/2026-10-15-phase7-native-service-source.md).
+No parent/device/connected acceptance;13/45retained. All existing gates preserved;
+booking/request/capacity, exact currentJob handover and savedrecovery remain open.
+
+- [15 October native booking/Job/cash source continuation](runs/2026-10-15-phase78-native-originals.md):
+  exact native originals, stable current Job retry ownership, physical cash editor,
+  advisory day reader, raw exact Service payments and six planned mobile rows.
+  Source62/327, compiler78imported baseline/0owned; connected/device/parent and
+  hosted CI acceptance remain open. Snapshot/impact/Brain inventory accompany it.

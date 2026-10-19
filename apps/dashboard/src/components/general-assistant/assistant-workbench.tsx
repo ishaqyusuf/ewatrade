@@ -54,7 +54,7 @@ export function AssistantWorkbench() {
     blankStart: true,
   })
   const router = useRouter()
-  const { enabled, disabled } = generalChatFlags(vm)
+  const { enabled, navigationDisabled } = generalChatFlags(vm)
   const pending = useGeneralPendingReviews(vm)
   const pendingChats = new Set(pending.map((row) => row.conversationId))
   const focus = useReviewFocus(vm)
@@ -62,6 +62,7 @@ export function AssistantWorkbench() {
   const review = (row: GeneralPendingReview) => focus.review(row)
   // A new chat is /assistant; its first message creates the conversation.
   const newChat = () => {
+    if (navigationDisabled) return
     setHistoryOpen(false)
     router.push("/assistant", { scroll: false })
   }
@@ -103,7 +104,7 @@ export function AssistantWorkbench() {
       return
     }
     // A reply in progress keeps its chat; the URL's chat opens after it.
-    if (vm.busy || vm.runId || vm.pending) return
+    if (navigationDisabled) return
     routeWanted.current = null
     shown.current = wanted.id
     if (wanted.id) vm.choose(wanted.id)
@@ -111,11 +112,9 @@ export function AssistantWorkbench() {
   }, [
     routeTarget,
     vm.conversationId,
-    vm.busy,
-    vm.runId,
-    vm.pending,
     vm.choose,
     vm.clearThread,
+    navigationDisabled,
   ])
 
   // A loaded chat with nothing in it yet opens on the welcome, composer first.
@@ -138,7 +137,7 @@ export function AssistantWorkbench() {
           aria-label="Saved chats"
           className="hidden min-h-0 flex-col gap-2 overflow-y-auto border-r bg-muted/20 p-3 xl:flex"
         >
-          <Button size="sm" disabled={!enabled || disabled} onClick={newChat}>
+          <Button size="sm" disabled={navigationDisabled} onClick={newChat}>
             <HugeiconsIcon icon={PlusSignIcon} className="size-4" />
             New chat
           </Button>
@@ -166,7 +165,7 @@ export function AssistantWorkbench() {
                 <Button
                   size="sm"
                   variant="ghost"
-                  disabled={!enabled || disabled}
+                  disabled={navigationDisabled}
                   onClick={newChat}
                 >
                   <HugeiconsIcon icon={PlusSignIcon} className="size-4" />
@@ -192,7 +191,7 @@ export function AssistantWorkbench() {
                     Chat history
                   </DropdownMenuItem>
                   <DropdownMenuItem
-                    disabled={!enabled || disabled}
+                    disabled={navigationDisabled}
                     onClick={newChat}
                   >
                     <HugeiconsIcon icon={PlusSignIcon} className="size-4" />
@@ -218,8 +217,7 @@ export function AssistantWorkbench() {
           ) : !enabled ? (
             <div className="flex flex-col gap-4 p-6">
               <p className="text-sm text-muted-foreground">
-                Chat isn't available for your role or this Store. You can still
-                add products and continue setup.
+                Chat isn't available for your role or this Store.
               </p>
               {links}
             </div>
@@ -269,7 +267,7 @@ export function AssistantWorkbench() {
           <Button
             size="sm"
             className="self-start"
-            disabled={!enabled || disabled}
+            disabled={navigationDisabled}
             onClick={newChat}
           >
             <HugeiconsIcon icon={PlusSignIcon} className="size-4" />

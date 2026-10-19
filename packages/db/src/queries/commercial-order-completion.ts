@@ -1,11 +1,35 @@
 import {
+  ExactDecimalError,
   addExactDecimals,
   compareExactDecimals,
   parseExactDecimal,
 } from "@ewatrade/utils/exact-decimal"
+import { Prisma as PrismaValues } from "../../generated/prisma/browser"
 import type { Prisma } from "../../generated/prisma/client"
 
 type Quantity = { toString(): string }
+/** Stored Decimal(38,6) values may stringify in exponent notation. Keep the
+ * plain input grammar intact and expand only actual finite database Decimals,
+ * without rounding or changing the Decimal constructor's global configuration. */
+function completionQuantity(value: Quantity) {
+  let plain: string
+  if (value instanceof PrismaValues.Decimal) {
+    if (
+      !value.isFinite() ||
+      value.e > 31 ||
+      value.e < -6 ||
+      value.decimalPlaces() > 6
+    ) {
+      throw new ExactDecimalError(
+        "INVALID_DECIMAL",
+        "Stored completion quantity must fit Decimal(38,6).",
+      )
+    }
+    plain = value.toFixed()
+  } else plain = value.toString()
+  return parseExactDecimal(plain, { allowZero: false, maxScale: 6 })
+}
+
 export type CommercialCompletionLine = {
   kind: string
   id?: string
@@ -58,10 +82,7 @@ export function areCommercialOrderLinesComplete(
 ) {
   if (lines.length === 0) return false
   return lines.every((line) => {
-    const ordered = parseExactDecimal(line.quantity.toString(), {
-      allowZero: false,
-      maxScale: 6,
-    })
+    const ordered = completionQuantity(line.quantity)
     let performed = "0"
     if (line.kind === "PRODUCT_UNIT") {
       for (const fulfillment of line.productFulfillments) {
@@ -72,10 +93,7 @@ export function areCommercialOrderLinesComplete(
           return false
         performed = addExactDecimals(
           performed,
-          parseExactDecimal(fulfillment.quantity.toString(), {
-            allowZero: false,
-            maxScale: 6,
-          }),
+          completionQuantity(fulfillment.quantity),
         )
       }
     } else if (line.kind === "SERVICE") {
@@ -103,14 +121,8 @@ export function areCommercialOrderLinesComplete(
             Number.isNaN(authorization.authorizedAt.getTime()) ||
             authorization.authorizedAt > source.performedAt ||
             compareExactDecimals(
-              parseExactDecimal(authorization.quantity.toString(), {
-                allowZero: false,
-                maxScale: 6,
-              }),
-              parseExactDecimal(line.quantity.toString(), {
-                allowZero: false,
-                maxScale: 6,
-              }),
+              completionQuantity(authorization.quantity),
+              ordered,
             ) !== 0
           )
             return false
@@ -119,10 +131,7 @@ export function areCommercialOrderLinesComplete(
           serviceAuthorizationPolicy !== "AFTER_REQUIRED_PAYMENT"
         )
           return false
-        performed = parseExactDecimal(source.quantity.toString(), {
-          allowZero: false,
-          maxScale: 6,
-        })
+        performed = completionQuantity(source.quantity)
       } else {
         if (
           (serviceWorkPolicy !== null && serviceWorkPolicy !== "TRACKED") ||
@@ -139,13 +148,7 @@ export function areCommercialOrderLinesComplete(
           )
             return false
           if (allocation.reworkOfLineId) continue
-          const quantity = parseExactDecimal(
-            allocation.allocatedQuantity.toString(),
-            {
-              allowZero: false,
-              maxScale: 6,
-            },
-          )
+          const quantity = completionQuantity(allocation.allocatedQuantity)
           allocated = addExactDecimals(allocated, quantity)
           if (allocation.status === "CANCELLED") continue
           if (

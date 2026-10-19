@@ -196,7 +196,7 @@ export function DashboardOverviewMetric({
       <View className="mt-2 flex-row items-center gap-1.5">
         <Icon className="size-xs text-primary" name="TrendingUp" />
         <Text
-          className="min-w-0 flex-1 text-[11px] text-muted-foreground"
+          className="min-w-0 flex-1 text-xs text-muted-foreground"
           numberOfLines={1}
         >
           {detail}
@@ -325,7 +325,7 @@ export function DashboardStoreSetup({
             {catalogReady ? "Order next" : "Sell or add items"}
           </Text>
         </View>
-        <Text className="text-sm leading-5 text-muted-foreground">
+        <Text className="text-sm [-rn-line-height:22] text-muted-foreground">
           {catalogReady
             ? "Your catalog is ready. Take one order to turn on your trading overview."
             : "Take your first order now, or add a Product or Service for stock and faster sales."}
@@ -432,7 +432,7 @@ export function DashboardStoreSnapshot({
           >
             {largeTextLayout ? (
               <>
-                <Text className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+                <Text className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
                   {fact.label}
                 </Text>
                 <Text
@@ -450,7 +450,7 @@ export function DashboardStoreSnapshot({
                 >
                   {fact.value}
                 </Text>
-                <Text className="mt-1 text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+                <Text className="mt-1 text-xs font-bold uppercase tracking-wider text-muted-foreground">
                   {fact.label}
                 </Text>
               </>
@@ -512,7 +512,7 @@ function DashboardSetupStep({
       </View>
       <View className="min-w-0 flex-1 gap-1">
         <Text className="font-extrabold text-foreground">{label}</Text>
-        <Text className="text-xs leading-4 text-muted-foreground">
+        <Text className="text-xs [-rn-line-height:22] text-muted-foreground">
           {detail}
         </Text>
       </View>
@@ -670,7 +670,7 @@ export function DashboardMetricCard({
             name={tone === "warning" ? "TriangleAlert" : "TrendingUp"}
           />
         </View>
-        <Text className="text-right text-[11px] font-bold uppercase tracking-[1px] text-muted-foreground">
+        <Text className="text-right text-xs font-bold uppercase tracking-[1px] text-muted-foreground">
           {label}
         </Text>
       </View>
@@ -678,7 +678,7 @@ export function DashboardMetricCard({
         <Text className="text-2xl font-extrabold leading-8 text-foreground">
           {displayValue}
         </Text>
-        <Text className="text-xs leading-5 text-muted-foreground">
+        <Text className="text-xs [-rn-line-height:22] text-muted-foreground">
           {detail}
         </Text>
       </View>
@@ -711,7 +711,7 @@ export function DashboardQuickAction({
       </View>
       <View className="gap-1">
         <Text className="text-sm font-extrabold text-foreground">{label}</Text>
-        <Text className="text-xs leading-5 text-muted-foreground">
+        <Text className="text-xs [-rn-line-height:22] text-muted-foreground">
           {description}
         </Text>
       </View>
@@ -759,7 +759,7 @@ export function DashboardPanel({
           ) : null}
           <View className="min-w-0 flex-1 gap-1">
             <Text className="font-extrabold text-foreground">{title}</Text>
-            <Text className="text-sm leading-5 text-muted-foreground">
+            <Text className="text-sm [-rn-line-height:22] text-muted-foreground">
               {description}
             </Text>
           </View>
@@ -799,14 +799,14 @@ export function DashboardStatTile({
 
   return (
     <View variant="muted" className="min-w-[47%] flex-1 p-3">
-      <Text className="text-[11px] font-bold uppercase tracking-[1px] text-muted-foreground">
+      <Text className="text-xs font-bold uppercase tracking-[1px] text-muted-foreground">
         {label}
       </Text>
       <Text className={cn("mt-1 text-lg font-extrabold", toneClassNames.text)}>
         {value}
       </Text>
       {detail ? (
-        <Text className="mt-1 text-xs leading-4 text-muted-foreground">
+        <Text className="mt-1 text-xs [-rn-line-height:22] text-muted-foreground">
           {detail}
         </Text>
       ) : null}
@@ -871,13 +871,13 @@ export function DashboardRecordRow({
               {title}
             </Text>
             <Text
-              className="text-sm leading-5 text-muted-foreground"
+              className="text-sm [-rn-line-height:22] text-muted-foreground"
               numberOfLines={2}
             >
               {detail}
             </Text>
             {metadata ? (
-              <Text className="text-xs leading-4 text-muted-foreground">
+              <Text className="text-xs [-rn-line-height:22] text-muted-foreground">
                 {metadata}
               </Text>
             ) : null}

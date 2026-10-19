@@ -93,15 +93,16 @@ const markdownComponents = {
 /** Shared state flags for the page and widget layouts. */
 export function generalChatFlags(vm: GeneralAssistantVM) {
   const enabled = vm.availability.data?.enabled === true
+  const navigationDisabled =
+    !enabled ||
+    vm.conversations.isPending ||
+    vm.pending ||
+    vm.busy ||
+    !!vm.runId
   return {
     enabled,
-    disabled:
-      !enabled ||
-      vm.conversations.isPending ||
-      vm.state.isError ||
-      vm.pending ||
-      vm.busy ||
-      !!vm.runId,
+    navigationDisabled,
+    disabled: navigationDisabled || vm.state.isError,
     exhausted: !!vm.data && generalBudgetUsed(vm.data.allowance),
     currencyCode: vm.data?.currencyCode ?? "",
   }
@@ -706,7 +707,7 @@ export function GeneralChatList({
   /** Called after a chat is opened, e.g. to close the history dialog. */
   onChosen?: () => void
 }) {
-  const { disabled } = generalChatFlags(vm)
+  const { navigationDisabled } = generalChatFlags(vm)
   return (
     <div className="flex flex-col gap-0.5">
       {groupChats(savedChats(vm)).map(([group, chats]) => (
@@ -719,7 +720,7 @@ export function GeneralChatList({
               <li key={conversation.id}>
                 <button
                   type="button"
-                  disabled={disabled}
+                  disabled={navigationDisabled}
                   aria-current={conversation.id === vm.conversationId}
                   onClick={() => {
                     vm.choose(conversation.id)
@@ -764,7 +765,7 @@ export function GeneralChatSwitcher({
   pendingChats: Set<string>
   pageLink?: boolean
 }) {
-  const { disabled } = generalChatFlags(vm)
+  const { navigationDisabled } = generalChatFlags(vm)
   return (
     <DropdownMenu>
       <DropdownMenuTrigger
@@ -786,7 +787,7 @@ export function GeneralChatSwitcher({
           {savedChats(vm).map((conversation) => (
             <DropdownMenuItem
               key={conversation.id}
-              disabled={disabled}
+              disabled={navigationDisabled}
               onClick={() => vm.choose(conversation.id)}
               className={cn(
                 "flex flex-col items-start gap-0",
@@ -877,7 +878,7 @@ export function GeneralChat({
     initialConversationId: chatId,
   })
   useQuickChatUrl(vm, active)
-  const { disabled } = generalChatFlags(vm)
+  const { navigationDisabled } = generalChatFlags(vm)
   const pending = useGeneralPendingReviews(vm)
   const pendingChats = new Set(pending.map((row) => row.conversationId))
   const focus = useReviewFocus(vm)
@@ -900,7 +901,7 @@ export function GeneralChat({
           size="icon"
           aria-label="New chat"
           title="New chat"
-          disabled={disabled}
+          disabled={navigationDisabled}
           onClick={() => void vm.newThread()}
         >
           <HugeiconsIcon icon={PlusSignIcon} className="size-4" />

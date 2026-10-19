@@ -2,13 +2,18 @@ import { Modal, useModal } from "@/components/ui/modal"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Text } from "@/components/ui/text"
 import { View } from "@/components/ui/view"
+import { getSession } from "@/lib/session-store"
+import { useOperationalModeStore } from "@/store/operationalModeStore"
+import { getDataCacheGeneration } from "@/trpc/client"
 import { capabilityForAction } from "@ewatrade/assistant/capabilities/manifest"
 import {
+  type GeneralAnswer,
   type GeneralProposal,
   generalActionSummary,
   simpleSaleStep,
 } from "@ewatrade/assistant/general/contracts"
 import { productCreatePicture } from "@ewatrade/assistant/general/product-create"
+import { readRecordTargetSchema } from "@ewatrade/assistant/general/read-record-target"
 import { BottomSheetScrollView } from "@gorhom/bottom-sheet"
 import { useRouter } from "expo-router"
 import { useEffect, useRef, useState } from "react"
@@ -17,6 +22,7 @@ import { KeyboardAvoidingView } from "react-native-keyboard-controller"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 import { ActionButton } from "../action-button"
 import { ListCard } from "../green-till/kit"
+import { SearchFooterScope } from "../search-footer-scope"
 import { StatusBanner } from "../status-banner"
 import {
   AssistantAnswerCard,
@@ -26,6 +32,7 @@ import {
 } from "./assistant-cards"
 import { AssistantChatBox } from "./assistant-chat-box"
 import { AssistantChatRow, AssistantHome } from "./assistant-home"
+import { isAssistantSessionCurrent } from "./assistant-scope"
 import {
   AssistantBubble,
   AssistantDayMarker,
@@ -46,6 +53,8 @@ import { useAssistantPrefillFocus } from "./use-assistant-prefill"
 import { useGeneralAssistant } from "./use-general-assistant"
 export function AskAssistantLive() {
   const vm = useGeneralAssistant()
+  const [answerOrigin] = useState(() => getSession())
+  const [answerCacheGeneration] = useState(getDataCacheGeneration)
   const router = useRouter()
   const insets = useSafeAreaInsets()
   const saved = useModal()
@@ -61,6 +70,68 @@ export function AskAssistantLive() {
     vm.pending ||
     vm.busy ||
     !!vm.runId
+  const openAnswerTarget = (target: GeneralAnswer["target"]) => {
+    const current = getSession()
+    if (
+      vm.offline ||
+      vm.scopeChanged ||
+      vm.sessionUnavailable ||
+      getDataCacheGeneration() !== answerCacheGeneration ||
+      answerOrigin?.profile.role !== current?.profile.role ||
+      !isAssistantSessionCurrent(
+        answerOrigin,
+        current,
+        useOperationalModeStore.getState().isOfflineMode,
+        false,
+      )
+    )
+      return
+    const freshRoute = generalAnswerRoute(target, {
+      tenantId: current?.profile.businessId ?? "",
+      storeId: current?.profile.storeId ?? "",
+    })
+    if (freshRoute) router.push(freshRoute)
+  }
+  const renderAnswerTargetAction = (
+    target: GeneralAnswer["target"],
+    recordLabel?: string,
+  ) => {
+    const record = readRecordTargetSchema.safeParse(target)
+    const route = generalAnswerRoute(target, {
+      tenantId: vm.profile?.businessId ?? "",
+      storeId: vm.profile?.storeId ?? "",
+    })
+    const wrongRecordScope =
+      record.success &&
+      (record.data.origin.tenantId !== vm.profile?.businessId ||
+        record.data.origin.storeId !== vm.profile?.storeId)
+    if (route)
+      return (
+        <ActionButton
+          variant="outline"
+          disabled={vm.offline || vm.scopeChanged || vm.sessionUnavailable}
+          accessibilityLabel={recordLabel ? `Open ${recordLabel}` : undefined}
+          onPress={() => openAnswerTarget(target)}
+        >
+          {target?.kind === "staff_activity" ? "Open activity" : "Open record"}
+        </ActionButton>
+      )
+    if (wrongRecordScope)
+      return (
+        <Text className="text-sm text-muted-foreground">
+          Select the original business and Store to open this record.
+        </Text>
+      )
+    if (record.success)
+      return (
+        <Text className="text-sm text-muted-foreground">
+          Open this saved customer{" "}
+          {record.data.kind === "customer_directory" ? "directory" : "record"}{" "}
+          on the dashboard in the same business and Store.
+        </Text>
+      )
+    return null
+  }
   const exhausted =
     !!vm.data &&
     (vm.data.allowance.remainingRequests <= 0 ||
@@ -297,7 +368,6 @@ export function AskAssistantLive() {
                   <AssistantBubble text={text} user={item.role === "user"} />
                 ) : null}
                 {answers.map((answer) => {
-                  const route = generalAnswerRoute(answer.target)
                   return (
                     <AssistantAnswerCard
                       key={answer.id}
@@ -309,14 +379,29 @@ export function AskAssistantLive() {
                       <Text className="text-sm text-muted-foreground">
                         {answer.detail}
                       </Text>
-                      {route ? (
-                        <ActionButton
-                          variant="outline"
-                          onPress={() => router.push(route)}
+                      {answer.records?.rows.slice(0, 6).map((row, index) => (
+                        <View
+                          key={`${answer.id}:record:${index}`}
+                          className="gap-2 rounded-xl bg-muted/40 p-3"
                         >
-                          Open activity
-                        </ActionButton>
+                          <Text className="font-semibold">
+                            {index + 1}. {row.title} · {row.type}
+                          </Text>
+                          {row.subtitle ? (
+                            <Text className="text-sm text-muted-foreground">
+                              {row.subtitle}
+                            </Text>
+                          ) : null}
+                          {renderAnswerTargetAction(row.target, row.title)}
+                        </View>
+                      ))}
+                      {answer.records?.labelsShortened ? (
+                        <Text className="text-sm text-muted-foreground">
+                          Some names are shortened. Open the saved record for
+                          full names.
+                        </Text>
                       ) : null}
+                      {renderAnswerTargetAction(answer.target)}
                     </AssistantAnswerCard>
                   )
                 })}
@@ -336,7 +421,8 @@ export function AskAssistantLive() {
                       title={proposal.receipt.title}
                       detail={proposal.receipt.detail}
                       media={
-                        proposal.payload.action === "order_attachment_add" ? (
+                        proposal.payload.action === "order_attachment_add" &&
+                        proposal.payload.attachmentId ? (
                           <ChatPhotoThumb
                             attachmentId={proposal.payload.attachmentId}
                           />
@@ -373,7 +459,8 @@ export function AskAssistantLive() {
                             proposal.payload.action === "product_create" ? (
                               <GeneralProductThumb payload={proposal.payload} />
                             ) : proposal.payload.action ===
-                              "order_attachment_add" ? (
+                                "order_attachment_add" &&
+                              proposal.payload.attachmentId ? (
                               <ChatPhotoThumb
                                 attachmentId={proposal.payload.attachmentId}
                               />
@@ -474,7 +561,7 @@ export function AskAssistantLive() {
           }
         />
         <AssistantChatBox
-          conversationId={vm.offline ? null : vm.conversationId}
+          conversationId={vm.composerConversationId}
           resetKey={vm.trayKey}
           onReadyChange={vm.setReadyFiles}
           value={vm.draft}
@@ -522,20 +609,22 @@ export function AskAssistantLive() {
           </BottomSheetScrollView>
         </Modal>
         <Modal ref={editor.ref} title="Edit draft" snapPoints={["90%"]}>
-          {editing ? (
-            <GeneralProposalEditor
-              key={`${editing.id}:${editing.revision}`}
-              proposal={editing}
-              currencyCode={vm.data?.currencyCode ?? "NGN"}
-              disabled={disabled || !!noAccess}
-              onSave={async (payload) => {
-                if (await vm.save(editing, payload)) {
-                  editor.dismiss()
-                  setEditing(null)
-                }
-              }}
-            />
-          ) : null}
+          <SearchFooterScope sheet>
+            {editing ? (
+              <GeneralProposalEditor
+                key={`${editing.id}:${editing.revision}`}
+                proposal={editing}
+                currencyCode={vm.data?.currencyCode ?? "NGN"}
+                disabled={disabled || !!noAccess}
+                onSave={async (payload) => {
+                  if (await vm.save(editing, payload)) {
+                    editor.dismiss()
+                    setEditing(null)
+                  }
+                }}
+              />
+            ) : null}
+          </SearchFooterScope>
         </Modal>
       </KeyboardAvoidingView>
     </View>

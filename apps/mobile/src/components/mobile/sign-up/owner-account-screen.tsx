@@ -8,11 +8,12 @@ import { FormField } from "@/components/mobile/form-field"
 import { GreenTillAuthScreen } from "@/components/mobile/green-till/auth-screen"
 import { SetupPreviewStage } from "@/components/mobile/green-till/auth-stage"
 import { PhoneField } from "@/components/mobile/phone-field"
-import { WhatsAppMark } from "@/components/mobile/whatsapp-mark"
 import { QaQuickFillButton } from "@/components/mobile/qa-quick-fill-button"
 import { StatusBanner } from "@/components/mobile/status-banner"
+import { WhatsAppMark } from "@/components/mobile/whatsapp-mark"
 import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
+import { Toast } from "@/components/ui/toast"
 import { View } from "@/components/ui/view"
 import { useLargeTextLayout } from "@/hooks/use-large-text-layout"
 import { useMobileAppleAuth } from "@/hooks/use-mobile-apple-auth"
@@ -129,7 +130,7 @@ export function OwnerAccountScreen({
   }
   const google = useMobileGoogleAuth({ ...common, onError: setError })
   const apple = useMobileAppleAuth({ ...common, onError: setError })
-  const sent = () =>
+  const sent = (result: { devCode: string | null }) => {
     router.push({
       pathname: "/verify-email",
       params: {
@@ -147,6 +148,13 @@ export function OwnerAccountScreen({
         acknowledgedPrivacyNotice: privacy ? "true" : undefined,
       },
     })
+    if (result.devCode)
+      Toast.show(`Use ${result.devCode} as OTP`, {
+        duration: 8000,
+        position: "top",
+        type: "info",
+      })
+  }
   const request = useMutation(
     trpc.auth.requestMobileOwnerOtp.mutationOptions({
       onSuccess: sent,

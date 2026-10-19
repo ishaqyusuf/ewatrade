@@ -20,6 +20,7 @@ import {
   finalizeStockCount,
   getCatalogOfferingAvailability,
   getConfiguredCatalogOfferingAvailability,
+  getInventoryBalanceSource,
   getInventoryReconciliationSummary,
   getStockOperationAudit,
   getStockCountReview,
@@ -31,6 +32,7 @@ import {
   listInventoryBalancePage,
   listInventoryCompatibleTotalsPage,
   listInventoryOperationHistory,
+  listServiceAssignees,
   listStockOperationCategoryNames,
   listStockTransfers,
   moveInventoryCustody,
@@ -46,12 +48,14 @@ import {
   inventoryAuditExportSchema,
   inventoryBalanceReportSchema,
   inventoryBalancePageSchema,
+  inventoryBalanceSourceSchema,
   inventoryCompatibleTotalsPageSchema,
   inventoryCategorySuggestionsSchema,
   inventoryCommitReservationSchema,
   inventoryCorrectOperationSchema,
   inventoryCreateCloseoutSchema,
   inventoryCreateStockCountSchema,
+  inventoryCustodyAssigneesSchema,
   inventoryStockCountReviewSchema,
   inventoryTransferReviewSchema,
   inventoryCloseoutReviewSchema,
@@ -169,6 +173,53 @@ function inventoryError(error: CatalogError | FinanceError) {
 }
 
 export const inventoryRouter = createTRPCRouter({
+  balanceSource: protectedProcedure
+    .input(inventoryBalanceSourceSchema)
+    .query(({ ctx, input }) => {
+      assertCanManageInventory(ctx.tenantContext)
+      const storeId = resolveStoreId(
+        ctx.tenantContext.stores,
+        ctx.tenantContext.activeStore,
+        input.storeId,
+      )
+      return getInventoryBalanceSource(ctx.db, {
+        balanceSourceId: input.balanceSourceId,
+        storeId,
+        tenantId: ctx.tenantContext.tenant.id,
+      })
+    }),
+
+  custodyAssignees: protectedProcedure
+    .input(inventoryCustodyAssigneesSchema)
+    .query(async ({ ctx, input }) => {
+      assertCanManageInventory(ctx.tenantContext)
+      const storeId = resolveStoreId(
+        ctx.tenantContext.stores,
+        ctx.tenantContext.activeStore,
+        input.storeId,
+      )
+      const assignees = await listServiceAssignees(ctx.db, {
+        tenantId: ctx.tenantContext.tenant.id,
+        storeId,
+      })
+      return {
+        storeId,
+        assignees: assignees.map((assignee) => {
+          const name = assignee.name.trim()
+          // The canonical helper falls back to email; a missing human label
+          // remains unavailable on this stock picker instead of exposing it.
+          return {
+            id: assignee.id,
+            name:
+              name && name.toLowerCase() !== assignee.email.trim().toLowerCase()
+                ? name
+                : null,
+            role: assignee.role,
+          }
+        }),
+      }
+    }),
+
   categorySuggestions: protectedProcedure
     .input(inventoryCategorySuggestionsSchema)
     .query(({ ctx, input }) => {

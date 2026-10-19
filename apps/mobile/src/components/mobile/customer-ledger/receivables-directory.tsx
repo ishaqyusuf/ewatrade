@@ -1,3 +1,4 @@
+import { SearchFooterField } from "@/components/mobile/search-footer-scope"
 import { Pressable } from "@/components/ui/pressable"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Text } from "@/components/ui/text"
@@ -11,7 +12,6 @@ import { useRouter } from "expo-router"
 import { useState } from "react"
 import { ActionButton } from "../action-button"
 import { FinanceFormBody } from "../finance/finance-form-body"
-import { FormField } from "../form-field"
 import { HeroCard } from "../green-till/hero-card"
 import {
   ListCard,
@@ -145,17 +145,13 @@ export function ReceivablesDirectory({ onBrowse }: { onBrowse: () => void }) {
           </View>
         ) : null}
       </HeroCard>
-      <FormField
+      <SearchFooterField
         accessibilityLabel="Find a customer"
-        autoCapitalize="none"
-        label="Find a customer"
-        leadingIcon="Search"
         placeholder="Find a customer"
         value={search}
         onChangeText={setSearch}
         editable={!offline}
         maxLength={160}
-        variant="till-search"
       />
       {offline ? (
         <StatusBanner
@@ -182,7 +178,7 @@ export function ReceivablesDirectory({ onBrowse }: { onBrowse: () => void }) {
               title={group.label}
               trailing={
                 group.key === "owes" ? (
-                  <Text className="text-[13px] font-bold text-primary">
+                  <Text className="text-xs font-bold text-primary">
                     {group.items.length}
                   </Text>
                 ) : undefined
@@ -277,7 +273,7 @@ export function ReceivablesDirectory({ onBrowse }: { onBrowse: () => void }) {
         haptic
         onPress={onBrowse}
       >
-        <Text className="text-[13px] font-bold text-muted-foreground">
+        <Text className="text-xs font-bold text-muted-foreground">
           All saved customers
         </Text>
       </Pressable>

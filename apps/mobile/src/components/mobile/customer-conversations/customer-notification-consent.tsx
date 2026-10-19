@@ -33,7 +33,7 @@ export function CustomerNotificationConsent({
           <Icon className="size-xs text-primary-foreground" name="Check" />
         ) : null}
       </View>
-      <Text className="min-w-0 flex-1 text-xs leading-5 text-muted-foreground">
+      <Text className="min-w-0 flex-1 text-xs [-rn-line-height:22] text-muted-foreground">
         {label}
       </Text>
     </Pressable>

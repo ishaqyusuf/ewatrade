@@ -122,6 +122,7 @@
         "@types/qrcode": "^1.5.5",
         "@types/react": "^19.1.13",
         "@types/react-dom": "^19.1.9",
+        "@xmldom/xmldom": "0.8.15",
         "tailwindcss": "catalog:",
         "typescript": "catalog:",
       },
@@ -277,6 +278,7 @@
         "@tailwindcss/postcss": "catalog:",
         "@tanstack/eslint-plugin-query": "^5.91.2",
         "@types/react": "~19.1.10",
+        "@xmldom/xmldom": "0.8.15",
         "babel-preset-expo": "~54.0.11",
         "eslint": "^9.25.0",
         "eslint-config-expo": "~10.0.0",
@@ -443,6 +445,7 @@
       "name": "@ewatrade/communications",
       "version": "1.0.0",
       "dependencies": {
+        "@ewatrade/assistant": "workspace:*",
         "redis": "^6.2.0",
       },
       "devDependencies": {
@@ -469,6 +472,7 @@
       "name": "@ewatrade/db",
       "version": "1.0.0",
       "dependencies": {
+        "@ewatrade/assistant": "workspace:*",
         "@ewatrade/catalog": "workspace:*",
         "@ewatrade/customer-messages": "workspace:*",
         "@ewatrade/notifications": "workspace:*",

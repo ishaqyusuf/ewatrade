@@ -21,9 +21,11 @@ import { useBottomSearchScroll } from "@/hooks/use-bottom-search-scroll"
 import { useColorScheme, useColors } from "@/hooks/use-color"
 import { useLargeTextLayout } from "@/hooks/use-large-text-layout"
 import { GREEN_TILL_THEME } from "@/lib/green-till-theme"
+import { itemsScrollRestore } from "@/lib/sale-step-motion"
 import { cn } from "@/lib/utils"
 import { formatMinorMoney } from "@ewatrade/utils"
 import { searchMatch } from "@ewatrade/utils/search-rank"
+import { useRef } from "react"
 import { Text as NativeText } from "react-native"
 import type { ScrollViewProps } from "react-native"
 import { FlatList } from "react-native-css/components/FlatList"
@@ -62,7 +64,28 @@ export function ClassicSaleItems({
   model,
   actionsHeight,
   onActionsHeightChange: setActionsHeight,
+  itemsScroll,
 }: SaleStepViewProps) {
+  // Back to the same place in the list after Customer or Checkout.
+  const listRef = useRef<{
+    scrollToOffset: (params: { offset: number; animated: boolean }) => void
+  } | null>(null)
+  const restored = useRef(false)
+  const viewport = useRef(0)
+  const contentHeight = useRef(0)
+  // Try once both sizes are known; either measurement can arrive last.
+  const tryRestore = () => {
+    if (restored.current || !itemsScroll) return
+    if (!(viewport.current > 0) || !(contentHeight.current > 0)) return
+    const offset = itemsScrollRestore(
+      itemsScroll.current,
+      contentHeight.current,
+      viewport.current,
+    )
+    if (offset === null) return
+    restored.current = true
+    if (offset > 0) listRef.current?.scrollToOffset({ offset, animated: false })
+  }
   const largeText = useLargeTextLayout()
   const scrollHide = useBottomSearchScroll()
   const {
@@ -154,7 +177,16 @@ export function ClassicSaleItems({
   return (
     <View className="flex-1">
       <FlatList
+        ref={listRef as never}
         contentContainerClassName="grow px-4 pb-[var(--sale-items-bottom)]"
+        onLayout={(event) => {
+          viewport.current = event.nativeEvent.layout.height
+          tryRestore()
+        }}
+        onContentSizeChange={(_, height) => {
+          contentHeight.current = height
+          tryRestore()
+        }}
         renderScrollComponent={(props: ScrollViewProps) => (
           <KeyboardAwareScrollView
             {...props}
@@ -169,7 +201,15 @@ export function ClassicSaleItems({
         keyboardShouldPersistTaps="handled"
         onEndReached={fetchNextChoices}
         onEndReachedThreshold={0.35}
-        onScroll={scrollHide.onScroll}
+        // The person scrolling takes over from any pending restore.
+        onScrollBeginDrag={() => {
+          restored.current = true
+        }}
+        onScroll={(event) => {
+          if (itemsScroll && restored.current)
+            itemsScroll.current = event.nativeEvent.contentOffset.y
+          scrollHide.onScroll(event)
+        }}
         scrollEventThrottle={16}
         showsVerticalScrollIndicator={false}
         ListHeaderComponent={
@@ -420,7 +460,7 @@ function SaleChoiceRow({
             <NativeText
               style={{
                 color: palette.roseForeground,
-                fontSize: 10.5,
+                fontSize: 16,
                 fontWeight: "700",
                 includeFontPadding: false,
               }}
@@ -453,7 +493,7 @@ function SaleChoiceRow({
             <NativeText
               style={{
                 color: colors.accentForeground,
-                fontSize: 13,
+                fontSize: 16,
                 fontWeight: "800",
               }}
             >

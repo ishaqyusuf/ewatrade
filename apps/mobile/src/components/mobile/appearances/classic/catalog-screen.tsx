@@ -275,14 +275,14 @@ export function ClassicCatalogFilter({
     >
       <Text
         className={cn(
-          "text-[13px] font-bold",
+          "text-xs font-bold",
           active ? "text-foreground" : "text-muted-foreground",
         )}
       >
         {label}
       </Text>
       {showCount ? (
-        <Text className="text-[11px] font-bold tabular-nums text-muted-foreground">
+        <Text className="text-xs font-bold tabular-nums text-muted-foreground">
           {count}
         </Text>
       ) : null}

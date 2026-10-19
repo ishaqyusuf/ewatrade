@@ -1,6 +1,6 @@
 import { ActionButton } from "@/components/mobile/action-button"
 import { FinanceFormBody } from "@/components/mobile/finance/finance-form-body"
-import { FormField } from "@/components/mobile/form-field"
+import { SearchFooterField } from "@/components/mobile/search-footer-scope"
 import { StatusBanner } from "@/components/mobile/status-banner"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Text } from "@/components/ui/text"
@@ -64,8 +64,9 @@ function Directory() {
           }
         />
       ) : null}
-      <FormField
-        label="Find a customer"
+      <SearchFooterField
+        placeholder="Find a customer"
+        accessibilityLabel="Find a customer"
         value={search}
         onChangeText={(v) => {
           setSearch(v)

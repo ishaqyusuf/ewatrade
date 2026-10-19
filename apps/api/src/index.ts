@@ -18,8 +18,11 @@ import type { Context } from "hono"
 import { cors } from "hono/cors"
 import { HTTPException } from "hono/http-exception"
 import { secureHeaders } from "hono/secure-headers"
+import { registerAssistantPrivateExportRoute } from "./account-privacy/assistant-export"
 import { registerAccountPrivacyResendWebhook } from "./account-privacy/resend-webhook"
 import { registerAssistantAttachmentRoutes } from "./assistant/attachment-upload"
+import { registerAssistantChannelDeliveryRoute } from "./assistant/channel-delivery-route"
+import { registerAssistantChannelTurnRoute } from "./assistant/channel-turn-route"
 import { registerAssistantChatRoutes } from "./assistant/chat-route"
 import { registerGeneralAssistantChatRoutes } from "./assistant/general-chat-route"
 import { registerVoiceGatewayRoutes } from "./assistant/voice-gateway"
@@ -209,9 +212,12 @@ registerDomainPaystackWebhook(app)
 registerSelfServiceStoreDetectionRoutes(app)
 registerAssistantChatRoutes(app)
 registerAssistantAttachmentRoutes(app)
+registerAssistantPrivateExportRoute(app)
 registerOrderAttachmentRoutes(app)
 registerVoiceGatewayRoutes(app)
 registerGeneralAssistantChatRoutes(app)
+registerAssistantChannelTurnRoute(app)
+registerAssistantChannelDeliveryRoute(app)
 registerPrescriptionMediaDeliveryRoutes(app)
 registerServiceCommerceMediaDeliveryRoutes(app)
 registerServiceCommerceMediaUploadRoutes(app)

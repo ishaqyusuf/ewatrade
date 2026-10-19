@@ -469,3 +469,316 @@ describe("Service Commerce booking contracts", () => {
     ).toMatchObject({ purpose: "view_slots" })
   })
 })
+
+describe("complete half-open booking availability", () => {
+  function assess(
+    input: Pick<
+      Parameters<typeof evaluateServiceCommerceBookingSlot>[0],
+      "startAt" | "endAt" | "availability"
+    >,
+  ) {
+    return evaluateServiceCommerceBookingSlot({
+      ...input,
+      capacity: 2,
+      bookings: [],
+      holds: [],
+      leadTimeMinutes: 0,
+      now: new Date("2026-01-01T00:00:00Z"),
+    })
+  }
+  test("adjacent weekly hours form a union but same weekday a week later does not prove the interval", () => {
+    const rules = [
+      {
+        id: "morning",
+        daysOfWeek: [1],
+        startLocalTime: "09:00",
+        endLocalTime: "10:00",
+      },
+      {
+        id: "later",
+        daysOfWeek: [1],
+        startLocalTime: "10:00",
+        endLocalTime: "11:00",
+      },
+    ]
+    expect(
+      assess({
+        startAt: new Date("2026-10-12T09:30:00Z"),
+        endAt: new Date("2026-10-12T10:30:00Z"),
+        availability: { rules, timezone: "UTC" },
+      }),
+    ).toEqual({ eligible: true, remainingCapacity: 2 })
+    for (const endAt of ["2026-10-19T10:00:00Z", "2026-11-02T10:00:00Z"])
+      expect(
+        assess({
+          startAt: new Date("2026-10-12T09:00:00Z"),
+          endAt: new Date(endAt),
+          availability: { rules, timezone: "UTC" },
+        }),
+      ).toMatchObject({ eligible: false, reason: "outside_availability" })
+  })
+  test("partial opening never opens uncovered time; adjacent openings can complete recurring hours across midnight", () => {
+    const startAt = new Date("2026-10-12T23:30:00Z")
+    const endAt = new Date("2026-10-13T00:30:00Z")
+    const rules = [
+      {
+        id: "monday",
+        daysOfWeek: [1],
+        startLocalTime: "22:00",
+        endLocalTime: "23:59",
+      },
+      {
+        id: "tuesday",
+        daysOfWeek: [2],
+        startLocalTime: "00:00",
+        endLocalTime: "01:00",
+      },
+    ]
+    expect(
+      assess({
+        startAt,
+        endAt,
+        availability: {
+          rules,
+          timezone: "UTC",
+          exceptions: [
+            {
+              id: "part",
+              kind: "open",
+              startAt,
+              endAt: new Date("2026-10-12T23:59:30Z"),
+            },
+          ],
+        },
+      }),
+    ).toMatchObject({ eligible: false, reason: "outside_availability" })
+    const opening = {
+      id: "bridge",
+      kind: "open" as const,
+      startAt: new Date("2026-10-12T23:59:00Z"),
+      endAt: new Date("2026-10-13T00:00:00Z"),
+    }
+    expect(
+      assess({
+        startAt,
+        endAt,
+        availability: { rules, timezone: "UTC", exceptions: [opening] },
+      }),
+    ).toEqual({ eligible: true, remainingCapacity: 2 })
+    expect(
+      assess({
+        startAt,
+        endAt,
+        availability: {
+          rules,
+          timezone: "UTC",
+          exceptions: [
+            opening,
+            {
+              id: "closed",
+              kind: "closed",
+              startAt: new Date("2026-10-12T23:59:59.999Z"),
+              endAt,
+            },
+          ],
+        },
+      }),
+    ).toMatchObject({ eligible: false, reason: "exception_closed" })
+  })
+  test("opening unions retain exact subsecond gaps and weekly closing endpoints are exclusive", () => {
+    const startAt = new Date("2026-10-12T09:00:00Z")
+    const endAt = new Date("2026-10-12T10:00:00Z")
+    const rules = [
+      {
+        id: "elsewhere",
+        daysOfWeek: [1],
+        startLocalTime: "12:00",
+        endLocalTime: "13:00",
+      },
+    ]
+    const openings = [
+      {
+        id: "first",
+        kind: "open" as const,
+        startAt,
+        endAt: new Date("2026-10-12T09:30:00Z"),
+      },
+      {
+        id: "second",
+        kind: "open" as const,
+        startAt: new Date("2026-10-12T09:30:00Z"),
+        endAt,
+      },
+    ]
+    expect(
+      assess({
+        startAt,
+        endAt,
+        availability: { rules, timezone: "UTC", exceptions: openings },
+      }),
+    ).toMatchObject({ eligible: true })
+    const second = openings[1]
+    if (!second) throw Error("Expected adjacent opening")
+    openings[1] = {
+      ...second,
+      startAt: new Date("2026-10-12T09:30:00.001Z"),
+    }
+    expect(
+      assess({
+        startAt,
+        endAt,
+        availability: { rules, timezone: "UTC", exceptions: openings },
+      }),
+    ).toMatchObject({ eligible: false, reason: "outside_availability" })
+    const weekly = [
+      {
+        id: "morning",
+        daysOfWeek: [1],
+        startLocalTime: "09:00",
+        endLocalTime: "10:00",
+      },
+    ]
+    expect(
+      assess({
+        startAt: new Date("2026-10-12T09:59:59.999Z"),
+        endAt,
+        availability: { rules: weekly, timezone: "UTC" },
+      }),
+    ).toMatchObject({ eligible: true })
+    expect(
+      assess({
+        startAt,
+        endAt: new Date(endAt.getTime() + 1),
+        availability: { rules: weekly, timezone: "UTC" },
+      }),
+    ).toMatchObject({ eligible: false, reason: "outside_availability" })
+  })
+  test("DST folds check repeated local minutes and spring gaps keep the supplied exact UTC instants", () => {
+    const timezone = "America/New_York"
+    expect(
+      assess({
+        startAt: new Date("2026-11-01T05:45:00Z"),
+        endAt: new Date("2026-11-01T06:45:00Z"),
+        availability: {
+          timezone,
+          rules: [
+            {
+              id: "narrow",
+              daysOfWeek: [0],
+              startLocalTime: "01:30",
+              endLocalTime: "02:30",
+            },
+          ],
+        },
+      }),
+    ).toMatchObject({ eligible: false, reason: "outside_availability" })
+    expect(
+      assess({
+        startAt: new Date("2026-11-01T05:00:00Z"),
+        endAt: new Date("2026-11-01T07:00:00Z"),
+        availability: {
+          timezone,
+          rules: [
+            {
+              id: "fold",
+              daysOfWeek: [0],
+              startLocalTime: "01:00",
+              endLocalTime: "02:00",
+            },
+          ],
+        },
+      }),
+    ).toMatchObject({ eligible: true })
+    expect(
+      assess({
+        startAt: new Date("2026-03-08T06:45:00Z"),
+        endAt: new Date("2026-03-08T07:15:00Z"),
+        availability: {
+          timezone,
+          rules: [
+            {
+              id: "gap",
+              daysOfWeek: [0],
+              startLocalTime: "01:30",
+              endLocalTime: "03:30",
+            },
+          ],
+        },
+      }),
+    ).toMatchObject({ eligible: true })
+    expect(
+      assess({
+        startAt: new Date("2026-03-08T06:30:00Z"),
+        endAt: new Date("2026-03-08T07:00:00Z"),
+        availability: {
+          timezone,
+          rules: [
+            {
+              id: "before-gap",
+              daysOfWeek: [0],
+              startLocalTime: "01:30",
+              endLocalTime: "02:00",
+            },
+          ],
+        },
+      }),
+    ).toMatchObject({ eligible: true })
+  })
+  test("conservative overlap-sum capacity and conflicting override policy remain unchanged", () => {
+    const startAt = new Date("2026-10-12T09:00:00Z")
+    const endAt = new Date("2026-10-12T10:00:00Z")
+    const base = {
+      startAt,
+      endAt,
+      now: new Date("2026-10-12T08:00:00Z"),
+      leadTimeMinutes: 0,
+      capacity: 2,
+      availability: { timezone: "UTC", rules: [] },
+      holds: [],
+    }
+    expect(
+      evaluateServiceCommerceBookingSlot({
+        ...base,
+        bookings: [
+          {
+            startAt,
+            endAt: new Date("2026-10-12T09:30:00Z"),
+            quantity: 1,
+            status: "confirmed",
+          },
+          {
+            startAt: new Date("2026-10-12T09:30:00Z"),
+            endAt,
+            quantity: 1,
+            status: "confirmed",
+          },
+        ],
+      }),
+    ).toMatchObject({ eligible: false, reason: "capacity_exhausted" })
+    expect(
+      evaluateServiceCommerceBookingSlot({
+        ...base,
+        bookings: [],
+        availability: {
+          ...base.availability,
+          exceptions: [
+            {
+              id: "one",
+              kind: "capacity_override",
+              capacity: 2,
+              startAt,
+              endAt: new Date("2026-10-12T09:30:00Z"),
+            },
+            {
+              id: "two",
+              kind: "capacity_override",
+              capacity: 3,
+              startAt: new Date("2026-10-12T09:30:00Z"),
+              endAt,
+            },
+          ],
+        },
+      }),
+    ).toMatchObject({ eligible: false, reason: "ambiguous_exception" })
+  })
+})

@@ -6,6 +6,7 @@ import type {
   Capability,
   CapabilityRole,
 } from "@ewatrade/assistant/capabilities/types"
+import { whatsAppCapabilityEnabled } from "@ewatrade/assistant/channels/policy"
 import type { GeneralActionName } from "@ewatrade/assistant/general/contracts"
 import { canOperatePos, normalizeRole } from "@ewatrade/auth/roles"
 import {
@@ -30,6 +31,7 @@ import {
 import { assertServiceManager } from "../trpc/routers/service-permissions"
 import { assertServiceOperator } from "../trpc/routers/service-permissions"
 import { staffProcedureAction } from "../utils/staff-procedure-policy"
+import { isLinkedAssistantIdentity } from "./channel-principal"
 import { generalCapabilityEnabled } from "./general-rollout"
 export type GeneralContext = TRPCContext & {
   session: NonNullable<TRPCContext["session"]>
@@ -43,8 +45,9 @@ export function supportsGeneralCapability(
   ctx: GeneralScopeContext,
   capability: Capability,
 ) {
-  const client =
-    ctx.requestHeaders?.get("x-assistant-client") === "dashboard"
+  const client = isLinkedAssistantIdentity(ctx.session)
+    ? "whatsapp"
+    : ctx.requestHeaders?.get("x-assistant-client") === "dashboard"
       ? "dashboard"
       : "mobile"
   return capability.clients.includes(client)
@@ -53,6 +56,14 @@ type TenantContext = GeneralContext["tenantContext"]
 export function requireGeneralScope(
   ctx: GeneralScopeContext,
 ): AssistantScope & { dataClassification: "LIVE" | "QA" } {
+  if (
+    isLinkedAssistantIdentity(ctx.session) &&
+    ctx.session.purpose !== "GENERAL"
+  )
+    throw new TRPCError({
+      code: "FORBIDDEN",
+      message: "Choose a business assistant conversation.",
+    })
   if (
     !process.env.ASSISTANT_APPROVAL_SIGNING_KEY ||
     process.env.ASSISTANT_APPROVAL_SIGNING_KEY.length < 32
@@ -279,6 +290,14 @@ const domainAccess: Record<CapabilityId, (tenant: TenantContext) => void> = {
     assertServiceManager(tenant.membership.role),
   "services.messages.read": (tenant) =>
     assertServiceManager(tenant.membership.role),
+  "services.requests.read": (tenant) =>
+    assertServiceManager(tenant.membership.role),
+  "services.request.original.read": (tenant) =>
+    assertServiceManager(tenant.membership.role),
+  "services.message.context.read": (tenant) =>
+    assertServiceManager(tenant.membership.role),
+  "services.message.original.read": (tenant) =>
+    assertServiceManager(tenant.membership.role),
   // Quote reads/decisions enforce native active Store/team and selected approver rules in the DB.
   "services.quote_approval.read": () => {},
   "services.quote_approvals.read": () => {},
@@ -347,7 +366,11 @@ export function assertCapability(
   capability: Capability,
 ) {
   requireGeneralScope(ctx)
-  if (!generalCapabilityEnabled(capability))
+  if (
+    !generalCapabilityEnabled(capability) ||
+    (isLinkedAssistantIdentity(ctx.session) &&
+      !whatsAppCapabilityEnabled(capability))
+  )
     throw new TRPCError({
       code: "FORBIDDEN",
       message: "The assistant can't do this yet.",
@@ -369,6 +392,34 @@ export function assertCapabilityAuthority(
       code: "FORBIDDEN",
       message: "Use the dashboard to review this action.",
     })
+  return assertCapabilityDomainAuthority(ctx, capability, scope)
+}
+
+/** Destination navigation only. Never used by drafting, canonical callers or proposal decisions. */
+export function assertGeneralActionHandoffAuthority(
+  ctx: GeneralScopeContext,
+  capability: Capability,
+) {
+  const scope = requireGeneralScope(ctx)
+  if (
+    !isLinkedAssistantIdentity(ctx.session) ||
+    capability.mode !== "write" ||
+    !generalCapabilityEnabled(capability) ||
+    !capability.clients.includes("dashboard")
+  )
+    throw new TRPCError({
+      code: "FORBIDDEN",
+      message: "This action is unavailable for app review.",
+    })
+  return assertCapabilityDomainAuthority(ctx, capability, scope)
+}
+
+/** Shared role ceiling, canonical domain/plan policy and exact scoped Store grant. */
+function assertCapabilityDomainAuthority(
+  ctx: GeneralScopeContext,
+  capability: Capability,
+  scope: ReturnType<typeof requireGeneralScope>,
+) {
   const tenant = ctx.tenantContext
   const role = normalizeRole(tenant.membership.role)
   if (!role || !capability.policy.roles.includes(role as CapabilityRole))
@@ -413,4 +464,30 @@ export function assertGeneralActionAuthority(
   action: GeneralActionName,
 ) {
   return assertCapabilityAuthority(ctx, capabilityForAction(action))
+}
+
+/** Fixed canonical dependencies of the fully authorized composite sale, never standalone transport access. */
+export function assertGeneralCompositeDependency(
+  ctx: GeneralScopeContext,
+  parent: "sale_record",
+  dependency: "order_create" | "payment_record",
+) {
+  if (parent !== "sale_record")
+    throw new TRPCError({
+      code: "FORBIDDEN",
+      message: "Unsupported assistant composition.",
+    })
+  assertGeneralAction(ctx, "sale_record")
+  if (dependency !== "order_create" && dependency !== "payment_record")
+    throw new TRPCError({
+      code: "FORBIDDEN",
+      message: "Unsupported sale dependency.",
+    })
+  const capability = capabilityForAction(dependency)
+  if (!generalCapabilityEnabled(capability))
+    throw new TRPCError({
+      code: "FORBIDDEN",
+      message: "The assistant can't do this yet.",
+    })
+  return assertCapabilityAuthority(ctx, capability)
 }

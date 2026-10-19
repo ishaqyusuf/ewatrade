@@ -84,8 +84,8 @@ export function ClassicOrderPaymentChoice({
     >
       <Text
         className={cn(
-          "text-[14px] font-bold [-rn-include-font-padding:false] [-rn-text-align-vertical:center]",
-          largeText ? "[-rn-line-height:24]" : "[-rn-line-height:20]",
+          "text-base font-bold [-rn-include-font-padding:false] [-rn-text-align-vertical:center]",
+          largeText ? "[-rn-line-height:24]" : "[-rn-line-height:22]",
           selected ? "text-background" : "text-foreground",
         )}
         maxFontSizeMultiplier={COMPACT_CONTROL_FONT_SCALE_CAP}

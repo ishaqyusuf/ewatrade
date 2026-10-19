@@ -71,7 +71,7 @@ export function CustomerConversationListItem({
         maxFontSizeMultiplier={1.3}
         style={{
           color: palette[`${tint}Foreground`],
-          fontSize: 15,
+          fontSize: 16,
           fontWeight: "800",
         }}
       >
@@ -150,7 +150,7 @@ export function CustomerConversationListItem({
                   className="mt-0.5 min-w-5 shrink-0 items-center justify-center rounded-full bg-gold px-1.5 py-0.5"
                   importantForAccessibility="no-hide-descendants"
                 >
-                  <Text className="text-[11px] font-extrabold text-gold-foreground">
+                  <Text className="text-xs font-extrabold text-gold-foreground">
                     {presentation.unreadLabel}
                   </Text>
                 </View>
@@ -234,7 +234,7 @@ export function CustomerConversationListItem({
                 className="min-w-5 items-center justify-center rounded-full bg-gold px-1.5 py-0.5"
                 importantForAccessibility="no-hide-descendants"
               >
-                <Text className="text-[11px] font-extrabold text-gold-foreground">
+                <Text className="text-xs font-extrabold text-gold-foreground">
                   {presentation.unreadLabel}
                 </Text>
               </View>

@@ -37,6 +37,11 @@ import {
   discoverStoreConversationWhatsAppInboundCandidate,
   processStoreConversationWhatsAppCandidateAction,
 } from "./store-conversation-whatsapp-discovery-runtime"
+import { processPlatformWhatsAppEvent } from "./whatsapp-platform-runtime"
+import {
+  WHATSAPP_WEBHOOK_MAX_EVENTS,
+  readWhatsAppWebhookBody,
+} from "./whatsapp-webhook-body"
 
 function required(name: string) {
   const value = process.env[name]?.trim()
@@ -59,6 +64,7 @@ function safeUsageDeduplicationKey(input: {
 export async function handleWhatsAppWebhookRequest(
   request: Request,
   requestId?: string,
+  dependencies = { processPlatformEvent: processPlatformWhatsAppEvent },
 ) {
   if (request.method === "GET") {
     const url = new URL(request.url)
@@ -73,7 +79,8 @@ export async function handleWhatsAppWebhookRequest(
       : new Response("Unauthorized", { status: 401 })
   }
 
-  const body = await request.text()
+  const body = await readWhatsAppWebhookBody(request)
+  if (body === null) return new Response("Event too large", { status: 413 })
   if (
     !verifyMetaWebhookSignature({
       appSecret: required("META_APP_SECRET"),
@@ -93,8 +100,20 @@ export async function handleWhatsAppWebhookRequest(
   } catch {
     return new Response("Invalid event", { status: 400 })
   }
-  const state = getConfiguredConversationStateStore()
-  for (const event of parseMetaWhatsAppEvents(payload)) {
+  const events = parseMetaWhatsAppEvents(payload)
+  if (events.length > WHATSAPP_WEBHOOK_MAX_EVENTS)
+    return new Response("Too many events", { status: 413 })
+  let state: ReturnType<typeof getConfiguredConversationStateStore> | undefined
+  for (const event of events) {
+    try {
+      if (await dependencies.processPlatformEvent(event)) continue
+    } catch (error) {
+      console.error("[webhook] platform ingress unavailable", {
+        name: error instanceof Error ? error.name : "unknown",
+      })
+      return new Response("Temporarily unavailable", { status: 503 })
+    }
+    state ??= getConfiguredConversationStateStore()
     if (event.kind === "status") {
       const timestampSeconds = Number(event.timestamp)
       const occurredAt = Number.isFinite(timestampSeconds)

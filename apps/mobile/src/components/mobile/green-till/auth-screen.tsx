@@ -4,11 +4,13 @@ import { MobileScreen } from "@/components/mobile/screen"
 import { Icon } from "@/components/ui/icon"
 import { MotionView } from "@/components/ui/motion"
 import { Pressable } from "@/components/ui/pressable"
+import { StepTransition } from "@/components/ui/step-transition"
 import { Text } from "@/components/ui/text"
 import { useColorScheme, useColors } from "@/hooks/use-color"
 import { useLargeTextLayout } from "@/hooks/use-large-text-layout"
 import { GREEN_TILL_THEME } from "@/lib/green-till-theme"
 import { nativeStackStatusBarStyle } from "@/lib/native-stack-status-bar"
+import type { StepDirection } from "@/lib/step-motion"
 import { type Href, Stack } from "expo-router"
 import { StatusBar } from "expo-status-bar"
 import { type ReactNode, useId } from "react"
@@ -36,6 +38,11 @@ type GreenTillAuthScreenProps = {
   progress?: number
   progressTotal?: number
   motionKey?: string | number
+  /**
+   * With motionKey, which way the step changed. The body then drifts in from
+   * that side (shared step motion) instead of only fading.
+   */
+  motionDirection?: StepDirection
   /** Cards on the mint stage. Defaults to the labelled sales example. */
   stage?: ReactNode
   testID?: string
@@ -65,6 +72,7 @@ export function GreenTillAuthScreen({
   stage,
   testID,
   motionKey,
+  motionDirection,
 }: GreenTillAuthScreenProps) {
   const { colorScheme } = useColorScheme()
   const colors = useColors()
@@ -154,7 +162,7 @@ export function GreenTillAuthScreen({
               >
                 {title}
               </Text>
-              <Text className="text-[13.5px] [-rn-line-height:20] text-muted-foreground">
+              <Text className="text-xs [-rn-line-height:22] text-muted-foreground">
                 {subtitle}
               </Text>
             </View>
@@ -164,6 +172,14 @@ export function GreenTillAuthScreen({
           ) : null}
           {motionKey === undefined ? (
             children
+          ) : motionDirection !== undefined ? (
+            <StepTransition
+              direction={motionDirection}
+              order={[motionKey]}
+              step={motionKey}
+            >
+              {children}
+            </StepTransition>
           ) : (
             <MotionView key={`body-${motionKey}`} fill>
               {children}
@@ -194,7 +210,7 @@ export function AuthStagePill({
       onPress={onPress}
       haptic
     >
-      <Text className="text-[13px] font-extrabold [-rn-line-height:18] text-foreground">
+      <Text className="text-xs font-extrabold [-rn-line-height:22] text-foreground">
         {label}
       </Text>
     </Pressable>

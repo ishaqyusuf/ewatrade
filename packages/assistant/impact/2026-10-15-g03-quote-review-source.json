@@ -1,0 +1,68 @@
+{
+  "version": 1,
+  "id": "2026-10-15-g03-quote-review-source",
+  "tickets": [
+    "G03",
+    "H02"
+  ],
+  "summary": "Shared canonical pure options/workspace/policy and full nonclinical source/authority/current-Quote review; exact Int32 and supplied Service line ownership on new/replay/approval paths. Internal source only; full action/client/connected scope remains.",
+  "noAssistantImpact": "No capability, merchant procedure, tool, rollout or new grant registered. Existing native wrapper shares resolver and ownership guard; future assistant issue/revise action remains unregistered until full contract/preflight/receipt integration.",
+  "capabilities": [],
+  "procedures": [],
+  "docs": [
+    {
+      "topic": "feature",
+      "path": ".brain/features/service-commerce.md",
+      "status": "local_only",
+      "note": "Pure source seams, native validation and incomplete full integration."
+    },
+    {
+      "topic": "feature",
+      "path": ".brain/features/assistant-service-requests.md",
+      "status": "local_only",
+      "note": "Review source progress only; full G03 unchanged."
+    },
+    {
+      "topic": "api",
+      "path": ".brain/api/contracts.md",
+      "status": "local_only",
+      "note": "Internal protected review shape, no new public RPC/wire/action registration."
+    },
+    {
+      "topic": "permissions",
+      "status": "not_applicable",
+      "note": "Existing source ceilings/current authority remain; unsupported scoped grants explicitly refuse."
+    },
+    {
+      "topic": "schema",
+      "status": "not_applicable",
+      "note": "No Prisma/schema/database change or migration."
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "test",
+      "path": "packages/db/src/queries/commerce-quote-issue-options.test.ts",
+      "executed": true,
+      "result": "Actual source-owned options+native regressions44/295; root combined with workspace+authority79/692 across5paths; inert delegates, no DB/provider."
+    },
+    {
+      "kind": "review",
+      "path": "packages/assistant/evaluations/runs/2026-10-15-g03-quote-options-workspace-source.md",
+      "executed": true,
+      "result": "Independent source review found and closed supplied-line replay/approval omission. Parent source review repairs pending conversation narrowing and nested evidence order; final tests pending."
+    },
+    {
+      "kind": "test",
+      "path": "packages/db/src/queries/commerce-quote-issue-review.test.ts",
+      "executed": true,
+      "result": "Root actual parent+authority+canonical+linked suite119/972 across10files; parent18/193; noDB/provider."
+    },
+    {
+      "kind": "review",
+      "path": "packages/assistant/evaluations/runs/2026-10-15-g03-quote-review-source.md",
+      "executed": true,
+      "result": "Independent source repairs verified;11ownedcode/testlint+packageJSONpass, compiler78foreign/0owned, H01current/H02pass28records. Full action/client/connected acceptance remainsopen."
+    }
+  ]
+}

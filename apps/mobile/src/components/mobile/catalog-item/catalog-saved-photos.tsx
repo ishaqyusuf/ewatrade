@@ -106,9 +106,7 @@ export function CatalogSavedPhotos({
           />
         </View>
         <View className="flex-row items-center">
-          <Text className="text-[12.5px] text-muted-foreground">
-            No image yet
-          </Text>
+          <Text className="text-xs text-muted-foreground">No image yet</Text>
           {canManage ? (
             <Pressable
               accessibilityLabel="Add an image"
@@ -117,7 +115,7 @@ export function CatalogSavedPhotos({
               hitSlop={8}
               onPress={() => setEditing(true)}
             >
-              <Text className="text-[12.5px] font-bold text-primary">
+              <Text className="text-xs font-bold text-primary">
                 {" · Add an image"}
               </Text>
             </Pressable>
@@ -177,7 +175,7 @@ export function CatalogSavedPhotos({
           <NativeText
             style={{
               color: service ? palette.lilacForeground : palette.skyForeground,
-              fontSize: 10.5,
+              fontSize: 16,
               fontWeight: "700",
               includeFontPadding: false,
             }}
@@ -239,7 +237,7 @@ export function CatalogSavedPhotos({
           <NativeText
             style={{
               color: palette.overlayForeground,
-              fontSize: 12,
+              fontSize: 16,
               fontWeight: "800",
             }}
           >

@@ -1,124 +1,49 @@
-import { isPlainAccountBalanceRequest } from "@ewatrade/assistant/general/contracts"
-import {
-  type GeneralDataParts,
-  generalStoredPartSchema,
-} from "@ewatrade/assistant/general/contracts"
-import {
-  GENERAL_PROMPT_VERSION,
-  generalInstructions,
-  generalLocalNow,
-} from "@ewatrade/assistant/general/prompt"
-import { SETUP_ATTACHMENT_PART } from "@ewatrade/assistant/setup/attachments"
-import {
-  type AssistantStoredMessage,
-  beginAssistantRunInTransaction,
-  completeAssistantRun,
-  listAssistantMessages,
-  newAssistantMessageId,
-  reserveAssistantBudget,
-} from "@ewatrade/db/assistant"
-import {
-  listAssistantAttachments,
-  readAssistantAttachmentsForConversation,
-} from "@ewatrade/db/assistant-attachments"
-import {
-  readGeneralActiveRun,
-  readGeneralConversation,
-  readGeneralRun,
-} from "@ewatrade/db/assistant-general"
+import { readGeneralRun } from "@ewatrade/db/assistant-general"
 import type { OpenAPIHono } from "@hono/zod-openapi"
 import { TRPCError } from "@trpc/server"
 import { getHTTPStatusCodeFromError } from "@trpc/server/http"
-import {
-  type LanguageModelUsage,
-  ToolLoopAgent,
-  type UIMessage,
-  convertToModelMessages,
-  createUIMessageStream,
-  createUIMessageStreamResponse,
-  stepCountIs,
-} from "ai"
+import { createUIMessageStreamResponse } from "ai"
 import type { Context } from "hono"
-import { z } from "zod"
 import { createTRPCContext, resolveProtectedTenantContext } from "../trpc/init"
+import { type GeneralContext, requireGeneralScope } from "./general-context"
+import { createGeneralAssistantTurn } from "./general-turn"
 import {
-  attachmentSendRefusal,
-  referencedAttachmentIds,
-  storedUserParts,
-  withAttachmentText,
-} from "./chat-attachments"
-import { resolveModel } from "./chat-route"
-import {
-  GENERAL_BUDGET_LIMITS,
-  generalBudgetScopeKey,
-} from "./general-allowance"
-import { streamGeneralReply } from "./general-announced-action"
-import { requireGeneralScope } from "./general-context"
-import { generalPersistentParts } from "./general-persistence"
-import { handleSimpleExpenseChat } from "./general-simple-expense-chat"
-import { handleSimpleMoneyInChat } from "./general-simple-money-in-chat"
-import { handleSimpleSaleChat } from "./general-simple-sale-chat"
-import { handleSimpleTransferChat } from "./general-simple-transfer-chat"
-import { createGeneralTools } from "./general-tools"
-export type GeneralUIMessage = UIMessage<never, GeneralDataParts>
-const requestSchema = z
-  .object({
-    conversationId: z.string().min(1).max(128),
-    requestId: z.string().min(8).max(120),
-    saleChoice: z
-      .object({
-        proposalId: z.string().min(1).max(128),
-        revision: z.number().int().positive(),
-        text: z.string().min(1).max(300),
-      })
-      .strict()
-      .optional(),
-    message: z
-      .object({
-        id: z.string().min(1).max(80),
-        role: z.literal("user"),
-        parts: z
-          .array(
-            z.union([
-              z
-                .object({
-                  type: z.literal("text"),
-                  text: z.string().min(1).max(8000),
-                })
-                .strict(),
-              // A photo or PDF uploaded to this chat (e.g. a receipt).
-              z
-                .object({
-                  type: z.literal(SETUP_ATTACHMENT_PART),
-                  data: z
-                    .object({ attachmentId: z.string().min(1).max(64) })
-                    .strict(),
-                })
-                .strict(),
-            ]),
-          )
-          .min(1)
-          .max(8),
-      })
-      .strict(),
-  })
-  .strict()
+  GeneralTurnError,
+  generalTurnInputSchema,
+} from "./general-turn-contract"
+export type { GeneralUIMessage } from "./general-turn-contract"
+
+type GeneralChatRouteDependencies = {
+  admit: (context: Context) => Promise<GeneralContext>
+  createTurn: typeof createGeneralAssistantTurn
+  readRun: (
+    context: GeneralContext,
+    runId: string,
+  ) => Promise<Awaited<ReturnType<typeof readGeneralRun>>>
+}
 const failure = (c: Context, status: number, code: string, error: string) => {
   c.header("Cache-Control", "no-store")
   return c.json({ code, error }, status as 400)
 }
-export function registerGeneralAssistantChatRoutes(app: OpenAPIHono) {
+
+/** Trusted wiring only; requests cannot replace admission or turn execution. */
+export function registerGeneralAssistantChatRoutes(
+  app: OpenAPIHono,
+  dependencies: Partial<GeneralChatRouteDependencies> = {},
+) {
+  const deps: GeneralChatRouteDependencies = {
+    admit: async (c) =>
+      resolveProtectedTenantContext(await createTRPCContext(undefined, c)),
+    createTurn: createGeneralAssistantTurn,
+    readRun: (ctx, runId) =>
+      readGeneralRun(ctx.db, requireGeneralScope(ctx), runId),
+    ...dependencies,
+  }
   app.get("/api/assistant/general/runs/:runId", async (c) => {
     c.header("Cache-Control", "no-store")
     try {
-      const ctx = await resolveProtectedTenantContext(
-        await createTRPCContext(undefined, c),
-      )
-      const run = await readGeneralRun(
-        ctx.db,
-        requireGeneralScope(ctx),
-        c.req.param("runId"),
-      )
+      const ctx = await deps.admit(c)
+      const run = await deps.readRun(ctx, c.req.param("runId"))
       return run
         ? c.json(run)
         : failure(
@@ -133,363 +58,22 @@ export function registerGeneralAssistantChatRoutes(app: OpenAPIHono) {
   })
   app.post("/api/assistant/general/chat", async (c) => {
     try {
-      const ctx = await resolveProtectedTenantContext(
-        await createTRPCContext(undefined, c),
-      )
-      const scope = requireGeneralScope(ctx)
+      const ctx = await deps.admit(c)
       const raw = await c.req.text()
       if (new TextEncoder().encode(raw).length > 64 * 1024)
         return failure(c, 413, "PAYLOAD_TOO_LARGE", "Message is too long.")
-      let body: z.infer<typeof requestSchema>
+      let input: unknown
       try {
-        body = requestSchema.parse(JSON.parse(raw))
+        input = JSON.parse(raw)
       } catch {
         return failure(c, 400, "BAD_REQUEST", "Invalid assistant message.")
       }
-      const conversation = await readGeneralConversation(
-        ctx.db,
-        scope,
-        body.conversationId,
-      )
-      if (!conversation)
-        return failure(
-          c,
-          404,
-          "NOT_FOUND",
-          "Conversation unavailable in this Store.",
-        )
-      const model = await resolveModel(
-        ctx.db,
-        scope.dataClassification,
-        "GENERAL",
-      )
-      if (!model)
-        return failure(
-          c,
-          503,
-          "ASSISTANT_UNAVAILABLE",
-          "The assistant is unavailable. Your saved answers and proposals are still here.",
-        )
-      const budgetScopeKey = generalBudgetScopeKey(scope)
-      const textParts = body.message.parts.filter(
-        (part): part is { type: "text"; text: string } => part.type === "text",
-      )
-      const attachmentIds = body.message.parts.flatMap((part) =>
-        part.type === SETUP_ATTACHMENT_PART ? [part.data.attachmentId] : [],
-      )
-      const attachments = await listAssistantAttachments(
-        ctx.db,
-        scope,
-        attachmentIds,
-      )
-      const refusal = attachmentSendRefusal(attachments, {
-        conversationId: conversation.id,
-        messageId: body.message.id,
-        requested: attachmentIds,
-      })
-      if (refusal)
-        return failure(
-          c,
-          409,
-          refusal,
-          refusal === "ATTACHMENT_NOT_READY"
-            ? "Wait until every file has finished uploading, then send again."
-            : "One of these files is not available. Attach it again.",
-        )
-      const begun = await ctx.db.$transaction(async (tx) => {
-        await tx.$queryRaw`SELECT "id" FROM "AssistantConversation" WHERE "id" = ${conversation.id} FOR UPDATE`
-        if (await readGeneralActiveRun(tx, scope, conversation.id))
-          throw new TRPCError({
-            code: "CONFLICT",
-            message:
-              "A reply is already running. Check its status before sending again.",
-          })
-        return beginAssistantRunInTransaction(tx, {
-          actorUserId: scope.userId,
-          conversationId: conversation.id,
-          model: model.modelId,
-          promptVersion: GENERAL_PROMPT_VERSION,
-          provider: model.provider,
-          requestId: body.requestId,
-          userMessage: {
-            ...body.message,
-            parts: storedUserParts(
-              textParts,
-              attachments,
-              attachmentIds,
-            ) as unknown as AssistantStoredMessage["parts"],
-          },
-          attachmentIds,
-        })
-      })
-      if (begun.replay)
-        return failure(
-          c,
-          409,
-          "REQUEST_REPLAYED",
-          "This message was already sent. Refresh to see its reply.",
-        )
-      const budget = await reserveAssistantBudget(ctx.db, {
-        scopeKey: budgetScopeKey,
-        limits: GENERAL_BUDGET_LIMITS,
-      })
-      if (!budget.allowed) {
-        await completeAssistantRun(ctx.db, {
-          runId: begun.run.id,
-          tenantId: scope.tenantId,
-          actorUserId: scope.userId,
-          provider: model.provider,
-          model: model.modelId,
-          status: "FAILED",
-          errorCode: "BUDGET_EXHAUSTED",
-        })
-        return failure(
-          c,
-          429,
-          "BUDGET_EXHAUSTED",
-          "This month's assistant allowance is used up. You can still review and confirm existing drafts.",
-        )
-      }
-      const stored = await listAssistantMessages(ctx.db, conversation.id, {
-        limit: 40,
-      })
-      // Only saved text goes back into the model. App-issued approvals are never history.
-      const savedMessageSchema = z.object({
-        id: z.string(),
-        role: z.enum(["assistant", "user", "system"]),
-        parts: z.array(generalStoredPartSchema),
-      })
-      // Attachments reach the model only as delimited, untrusted text.
-      const sentAttachments = await readAssistantAttachmentsForConversation(
-        ctx.db,
-        {
-          conversationId: conversation.id,
-          attachmentIds: referencedAttachmentIds(
-            stored as unknown as Parameters<typeof referencedAttachmentIds>[0],
-          ),
-        },
-      )
-      const readable = withAttachmentText(
-        stored as unknown as Parameters<typeof withAttachmentText>[0],
-        sentAttachments,
-        { attachmentOnlyImages: true },
-      ) as unknown as typeof stored
-      const history: GeneralUIMessage[] = readable.flatMap((message) => {
-        const parsed = savedMessageSchema.safeParse({
-          ...message,
-          parts: Array.isArray(message.parts)
-            ? message.parts.filter(
-                (part) =>
-                  part &&
-                  typeof part === "object" &&
-                  "type" in part &&
-                  (part.type === "text" || part.type === "data-general-answer"),
-              )
-            : [],
-        })
-        return parsed.success ? [parsed.data] : []
-      })
-      const messages = await convertToModelMessages(
-        history.map(({ role, parts }) => ({
-          role,
-          parts: parts.filter((part) => part.type === "text"),
-        })),
-      )
-      const controller = new AbortController()
-      const deadline = setTimeout(() => controller.abort(), 45_000)
-      const abort = () => controller.abort()
-      c.req.raw.signal.addEventListener("abort", abort, { once: true })
-      const startedAt = Date.now()
-      let failed = false
-      const usages: LanguageModelUsage[] = []
-      let steps = 0
-      const stream = createUIMessageStream<GeneralUIMessage>({
-        originalMessages: history,
-        generateId: newAssistantMessageId,
-        execute: async ({ writer }) => {
-          writer.write({
-            type: "data-general-run",
-            data: {
-              runId: begun.run.id,
-              remainingRequests: budget.remainingRequests,
-            },
-            transient: true,
-          })
-          const tools = createGeneralTools(
-            ctx,
-            conversation.id,
-            (proposalId) =>
-              writer.write({
-                type: "data-general-proposal",
-                data: { proposalId },
-                transient: true,
-              }),
-            (answer) =>
-              writer.write({ type: "data-general-answer", data: answer }),
-          )
-          const balanceRead = tools.readMoneyAccountBalances
-          if (
-            !body.saleChoice &&
-            !attachments.length &&
-            isPlainAccountBalanceRequest(
-              textParts.map((part) => part.text).join("\n"),
-            ) &&
-            balanceRead?.execute
-          ) {
-            // Reuse the gated tool and its fresh authority checks, not a second balance reader.
-            const result = await balanceRead.execute(
-              {},
-              { toolCallId: `balance_${begun.run.id}`, messages: [] },
-            )
-            const available =
-              result &&
-              typeof result === "object" &&
-              "status" in result &&
-              result.status === "available"
-            writer.write({ type: "text-start", id: "balance-reply" })
-            writer.write({
-              type: "text-delta",
-              id: "balance-reply",
-              delta: available
-                ? "Here are your recorded balances."
-                : "Account balances are unavailable for your current access or setup.",
-            })
-            writer.write({ type: "text-end", id: "balance-reply" })
-            return
-          }
-          const saleReply =
-            (await handleSimpleTransferChat(ctx, {
-              conversationId: conversation.id,
-              messageId: body.message.id,
-              text: textParts.map((part) => part.text).join("\n"),
-              choice: body.saleChoice,
-              imageIds: attachments
-                .filter((file) => file.kind === "IMAGE")
-                .map((file) => file.id),
-              history: stored,
-            })) ??
-            (await handleSimpleExpenseChat(ctx, {
-              conversationId: conversation.id,
-              messageId: body.message.id,
-              text: textParts.map((part) => part.text).join("\n"),
-              choice: body.saleChoice,
-              imageIds: attachments
-                .filter((file) => file.kind === "IMAGE")
-                .map((file) => file.id),
-              history: stored,
-            })) ??
-            (await handleSimpleMoneyInChat(ctx, {
-              conversationId: conversation.id,
-              messageId: body.message.id,
-              text: textParts.map((part) => part.text).join("\n"),
-              choice: body.saleChoice,
-              imageIds: attachments
-                .filter((file) => file.kind === "IMAGE")
-                .map((file) => file.id),
-              history: stored,
-            })) ??
-            (await handleSimpleSaleChat(ctx, {
-              conversationId: conversation.id,
-              messageId: body.message.id,
-              text: textParts.map((part) => part.text).join("\n"),
-              choice: body.saleChoice,
-              imageIds: attachments
-                .filter((file) => file.kind === "IMAGE")
-                .map((file) => file.id),
-              history: stored,
-            }))
-          if (saleReply) {
-            if (saleReply.proposalId)
-              writer.write({
-                type: "data-general-proposal",
-                data: { proposalId: saleReply.proposalId },
-                transient: true,
-              })
-            writer.write({ type: "text-start", id: "sale-reply" })
-            writer.write({
-              type: "text-delta",
-              id: "sale-reply",
-              delta: saleReply.text,
-            })
-            writer.write({ type: "text-end", id: "sale-reply" })
-            return
-          }
-          const agent = new ToolLoopAgent({
-            model: model.model,
-            instructions: generalInstructions({
-              businessName: ctx.tenantContext.tenant.name,
-              storeName: ctx.tenantContext.activeStore?.name ?? "Store",
-              currencyCode:
-                ctx.tenantContext.activeStore?.currencyCode ??
-                ctx.tenantContext.tenant.currencyCode,
-              role: ctx.tenantContext.membership.role,
-              ...generalLocalNow(
-                ctx.tenantContext.tenant.timezone ?? "Africa/Lagos",
-              ),
-            }),
-            tools,
-            stopWhen: stepCountIs(6),
-            maxOutputTokens: 2000,
-            maxRetries: 1,
-            providerOptions: model.providerOptions as never,
-            onFinish: (event) => {
-              usages.push(event.totalUsage)
-              steps += event.steps.length
-            },
-          })
-          await streamGeneralReply(agent, messages, writer, controller.signal)
-        },
-        onError: () => {
-          failed = true
-          return "Reply interrupted. Your saved answers and drafts are safe. Check reply status before retrying."
-        },
-        onFinish: async ({ responseMessage, isAborted }) => {
-          clearTimeout(deadline)
-          c.req.raw.signal.removeEventListener("abort", abort)
-          const parts = generalPersistentParts(responseMessage.parts)
-          await completeAssistantRun(ctx.db, {
-            runId: begun.run.id,
-            tenantId: scope.tenantId,
-            actorUserId: scope.userId,
-            provider: model.provider,
-            model: model.modelId,
-            status: failed || isAborted ? "FAILED" : "COMPLETED",
-            errorCode: failed
-              ? "STREAM_FAILED"
-              : isAborted
-                ? "ABORTED"
-                : undefined,
-            usage: usages.length
-              ? {
-                  inputTokens: sumUsage(usages, (u) => u.inputTokens),
-                  outputTokens: sumUsage(usages, (u) => u.outputTokens),
-                  cachedInputTokens: sumUsage(
-                    usages,
-                    (u) => u.inputTokenDetails?.cacheReadTokens,
-                  ),
-                  totalTokens: sumUsage(usages, (u) => u.totalTokens),
-                }
-              : undefined,
-            stepCount: steps,
-            durationMs: Date.now() - startedAt,
-            budgetScopeKey,
-            assistantMessage: parts.length
-              ? {
-                  id: responseMessage.id,
-                  role: "assistant",
-                  parts: parts as unknown as AssistantStoredMessage["parts"],
-                }
-              : undefined,
-          }).catch((error: unknown) =>
-            console.error("[assistant] General run finalization failed", {
-              runId: begun.run.id,
-              name: error instanceof Error ? error.name : "unknown",
-            }),
-          )
-        },
-      })
+      const parsed = generalTurnInputSchema.safeParse(input)
+      if (!parsed.success)
+        return failure(c, 400, "BAD_REQUEST", "Invalid assistant message.")
+      const turn = await deps.createTurn(ctx, parsed.data, c.req.raw.signal)
       return createUIMessageStreamResponse({
-        stream,
+        stream: turn.stream,
         headers: { "Cache-Control": "no-store" },
       })
     } catch (error) {
@@ -497,17 +81,9 @@ export function registerGeneralAssistantChatRoutes(app: OpenAPIHono) {
     }
   })
 }
-/** Undefined when no pass reported the figure. */
-function sumUsage(
-  usages: LanguageModelUsage[],
-  pick: (usage: LanguageModelUsage) => number | undefined,
-) {
-  const values = usages
-    .map(pick)
-    .filter((value): value is number => value !== undefined)
-  return values.length ? values.reduce((a, b) => a + b, 0) : undefined
-}
 function routeFailure(c: Context, error: unknown) {
+  if (error instanceof GeneralTurnError)
+    return failure(c, error.status, error.code, error.message)
   if (!(error instanceof TRPCError))
     console.error("[assistant] General request failed", {
       name: error instanceof Error ? error.name : "unknown",

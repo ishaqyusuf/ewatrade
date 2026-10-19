@@ -119,8 +119,8 @@ export function OwnerTypePicker({
           <Text
             numberOfLines={largeText ? undefined : 1}
             style={{
-              fontSize: 14,
-              lineHeight: 20,
+              fontSize: 16,
+              lineHeight: 22,
               color: colors.mutedForeground,
             }}
           >
@@ -174,8 +174,8 @@ export function OwnerTypePicker({
           >
             <Text
               style={{
-                fontSize: 14,
-                lineHeight: 20,
+                fontSize: 16,
+                lineHeight: 22,
                 fontWeight: "700",
                 color: colors.foreground,
               }}
@@ -197,8 +197,8 @@ export function OwnerTypePicker({
           <Text
             accessibilityRole="header"
             style={{
-              fontSize: 14,
-              lineHeight: 20,
+              fontSize: 16,
+              lineHeight: 22,
               fontWeight: "800",
               color: colors.mutedForeground,
               letterSpacing: 0.69,
@@ -390,8 +390,8 @@ export function OwnerTypeFooter({
             <View style={{ flex: 1, minWidth: 0 }}>
               <Text
                 style={{
-                  fontSize: 14,
-                  lineHeight: 20,
+                  fontSize: 16,
+                  lineHeight: 22,
                   fontWeight: "700",
                   color: colors.mutedForeground,
                 }}
@@ -460,8 +460,8 @@ export function OwnerTypeFooter({
             >
               <Text
                 style={{
-                  fontSize: 14,
-                  lineHeight: 20,
+                  fontSize: 16,
+                  lineHeight: 22,
                   fontWeight: "800",
                   color: colors.primary,
                 }}

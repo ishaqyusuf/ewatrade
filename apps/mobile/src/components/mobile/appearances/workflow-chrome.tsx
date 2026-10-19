@@ -8,6 +8,7 @@ import { StatusBar } from "expo-status-bar"
 import { VariableContextProvider } from "nativewind"
 import type { ReactNode } from "react"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
+import { SearchFooterScope } from "../search-footer-scope"
 
 // WorkflowModalScreen retains the shared authentication, role and close-route policy.
 export function MobileWorkflowChrome({
@@ -66,7 +67,9 @@ export function MobileWorkflowChrome({
             {trailing ?? <View className="size-11" />}
           </View>
         ) : null}
-        <View className="min-h-0 flex-1 bg-background">{children}</View>
+        <SearchFooterScope className="min-h-0 flex-1 bg-background">
+          {children}
+        </SearchFooterScope>
       </View>
     </VariableContextProvider>
   )

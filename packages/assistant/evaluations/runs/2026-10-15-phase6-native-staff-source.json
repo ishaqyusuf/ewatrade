@@ -1,0 +1,225 @@
+{
+  "version": 1,
+  "scope": "Phase6 native source and remaining-phase reviewer reports; not domain/native acceptance or implementation-owner freeze",
+  "files": [
+    {
+      "path": "apps/mobile/src/components/mobile/assistant/general-staff-status-editor.tsx",
+      "sha256": "403127ce062aac57c19a2fa429e532e5257c2c0786d8f4bf7c2b87c02b39a5dc",
+      "ownership": "owned source or scoped integration hunks; whole-file hash is observation"
+    },
+    {
+      "path": "apps/mobile/src/components/mobile/assistant/native-staff-status-values.ts",
+      "sha256": "8ae0bfdd97c82e39bf697dea72bd2ffb81b3d03a7d98b618fc4468e70ac9626f",
+      "ownership": "owned source or scoped integration hunks; whole-file hash is observation"
+    },
+    {
+      "path": "apps/mobile/src/components/mobile/assistant/native-staff-status-values.test.ts",
+      "sha256": "8beb37003ad3f7d1c0b3f4c65b5453ddb03c10785bcfdf6a3777f39c289be85f",
+      "ownership": "owned source or scoped integration hunks; whole-file hash is observation"
+    },
+    {
+      "path": "apps/mobile/src/components/mobile/assistant/general-staff-invitation-editor.tsx",
+      "sha256": "3d4fb02cfa23d3d114a00f02c16312a0bfcd758cb967fad3981ed10bc03bf5e8",
+      "ownership": "owned source or scoped integration hunks; whole-file hash is observation"
+    },
+    {
+      "path": "apps/mobile/src/components/mobile/assistant/native-staff-invitation-values.ts",
+      "sha256": "9cc66b8e7f8d189c9455ce4eb0ab7c621ef75e5b945f1dc84142eed753d431a6",
+      "ownership": "owned source or scoped integration hunks; whole-file hash is observation"
+    },
+    {
+      "path": "apps/mobile/src/components/mobile/assistant/native-staff-invitation-values.test.ts",
+      "sha256": "a081df9eac1ab35ccac94c98e40ccebb49b508e191ed01e4f9b9d2a5771a5786",
+      "ownership": "owned source or scoped integration hunks; whole-file hash is observation"
+    },
+    {
+      "path": "apps/mobile/src/components/mobile/assistant/general-staff-access-editor.tsx",
+      "sha256": "90b10db37009145d2708b24e0732dc8728059735e39ef1ffe778ebe712b1e49d",
+      "ownership": "owned source or scoped integration hunks; whole-file hash is observation"
+    },
+    {
+      "path": "apps/mobile/src/components/mobile/assistant/native-staff-access-values.ts",
+      "sha256": "138caa33590bc60b3af7437a26897b0a5934d63de1ca412df60238042fad4eb3",
+      "ownership": "owned source or scoped integration hunks; whole-file hash is observation"
+    },
+    {
+      "path": "apps/mobile/src/components/mobile/assistant/native-staff-access-values.test.ts",
+      "sha256": "605d52589898d06353badd1ac827da1459c3b01577b2ad438ef15a1f1b761b55",
+      "ownership": "owned source or scoped integration hunks; whole-file hash is observation"
+    },
+    {
+      "path": "apps/mobile/src/components/mobile/assistant/staff-original-screen.tsx",
+      "sha256": "c3f462d8b6c8e39600214a2cf97e2774b5522a56166dcaecc3774253f4406aab",
+      "ownership": "owned source or scoped integration hunks; whole-file hash is observation"
+    },
+    {
+      "path": "apps/mobile/src/components/mobile/assistant/native-staff-target.ts",
+      "sha256": "4be542c66f6b089ea96dcb7e2f214645c254d3c443d3f45516fab649cac931ea",
+      "ownership": "owned source or scoped integration hunks; whole-file hash is observation"
+    },
+    {
+      "path": "apps/mobile/src/components/mobile/assistant/native-staff-target.test.ts",
+      "sha256": "e1f25acaf35418e2931c7920f52d93955d9c07c71a24805965d88d2e26709853",
+      "ownership": "owned source or scoped integration hunks; whole-file hash is observation"
+    },
+    {
+      "path": "apps/mobile/src/components/mobile/assistant/general-model.ts",
+      "sha256": "12ca4a4f5f4b9343fa897e8ca2cee0be1acf85379e294d8b0706feea840e3d08",
+      "ownership": "owned source or scoped integration hunks; whole-file hash is observation"
+    },
+    {
+      "path": "apps/mobile/src/components/mobile/assistant/general-model.test.ts",
+      "sha256": "d1bd711396b0dc7088c84f5cbdd312f89ecc0686e042cdd1c4d30040489d1878",
+      "ownership": "owned source or scoped integration hunks; whole-file hash is observation"
+    },
+    {
+      "path": "apps/mobile/src/components/mobile/assistant/general-proposal-editor.tsx",
+      "sha256": "97086e1a8651518e52519c9077bfa2eca9633ed07e3c2ed05246b146320b249b",
+      "ownership": "owned source or scoped integration hunks; whole-file hash is observation"
+    },
+    {
+      "path": "apps/mobile/src/components/mobile/assistant/native-parity.ts",
+      "sha256": "82449c75d227b5c48351a9ff35e7bbdced3f8d31918cb8394189b718dabfe68c",
+      "ownership": "owned source or scoped integration hunks; whole-file hash is observation"
+    },
+    {
+      "path": "apps/mobile/src/components/mobile/assistant/native-parity.test.ts",
+      "sha256": "6abca2995f3f50e905132a8ab40bc10165fea842d0fd6a5821c87bd533352019",
+      "ownership": "owned source or scoped integration hunks; whole-file hash is observation"
+    },
+    {
+      "path": "apps/mobile/src/app/staff-invite-modal.tsx",
+      "sha256": "19c215982a46d36f123758c4410811cccb8d4749552349a3c9ced3baa3e3520e",
+      "ownership": "owned source or scoped integration hunks; whole-file hash is observation"
+    },
+    {
+      "path": "packages/assistant/evaluations/phase-regressions.test.ts",
+      "sha256": "849af156df74c9a5fc1098f74a34d616e6bb9c6b614463096f9d51c31f8d584f",
+      "ownership": "owned source or scoped integration hunks; whole-file hash is observation"
+    },
+    {
+      "path": "packages/assistant/src/capabilities/manifest.ts",
+      "sha256": "918a56913d02cec862907100651f9451dd6dff5dab87496892b937d6b12fb9eb",
+      "ownership": "six client/test hunks only; foreign manifest preserved"
+    },
+    {
+      "path": "packages/assistant/src/capabilities/COVERAGE.md",
+      "sha256": "d216466187df38e93dac91b32d6e3252374209a23c60666250336b2a6f1a1bd9",
+      "ownership": "owned source or scoped integration hunks; whole-file hash is observation"
+    },
+    {
+      "path": "packages/assistant/impact/2026-10-15-phase6-native-staff.json",
+      "sha256": "f456da88f93ef1d5e1c9c775a1dd72ecd0374a26eed5a73b3be2b0e20e8441e2",
+      "ownership": "owned source or scoped integration hunks; whole-file hash is observation"
+    },
+    {
+      "path": "packages/assistant/evaluations/fixtures/native-staff-original.fixture.tsx",
+      "sha256": "5c8ac47f3929fdb70b77235c5450cbeb0bfac4689490e1b4a50da01ab10da8eb",
+      "ownership": "owned source or scoped integration hunks; whole-file hash is observation"
+    },
+    {
+      "path": "packages/assistant/evaluations/fixtures/native-staff-status-editor.fixture.tsx",
+      "sha256": "fd71d830a1042dee7aaed9ed02450495da04e210937268dd1b7e4f71933f7e30",
+      "ownership": "owned source or scoped integration hunks; whole-file hash is observation"
+    },
+    {
+      "path": "packages/assistant/evaluations/fixtures/native-staff-invitation-editor.fixture.tsx",
+      "sha256": "c3683d37d1ba7a1c462aa270aa6a1e2f331d649a0be967fd1cfd04357303125e",
+      "ownership": "owned source or scoped integration hunks; whole-file hash is observation"
+    },
+    {
+      "path": "packages/assistant/evaluations/fixtures/native-staff-access-editor.fixture.tsx",
+      "sha256": "43b1321fa7479e706482490b7eb943208eade207a8d508cf14107f6ece910c0d",
+      "ownership": "owned source or scoped integration hunks; whole-file hash is observation"
+    },
+    {
+      "path": "packages/assistant/evaluations/fixtures/d04-authorization-inert.fixture.ts",
+      "sha256": "c8ec0bce56b86ff748b45a833a7bd119867c5719a0fcd1e94d28751e3c7df16a",
+      "ownership": "owned source or scoped integration hunks; whole-file hash is observation"
+    },
+    {
+      "path": "packages/assistant/evaluations/runs/2026-10-15-phase6-native-staff-source.md",
+      "sha256": "fbca78ea47578da362339d507a223a85acc97fb3fda4934b8067cfa8153ab8cd",
+      "ownership": "owned source or scoped integration hunks; whole-file hash is observation"
+    },
+    {
+      "path": "packages/assistant/evaluations/runs/2026-10-15-d04-authorization-audit.md",
+      "sha256": "1927f8c58f9c63337c9e5175319c3018aa95b6bb47be6ac8b4c4e0ec9a2ab248",
+      "ownership": "reviewer report only, not owner release"
+    },
+    {
+      "path": "packages/assistant/evaluations/runs/2026-10-15-g05-source-followup.md",
+      "sha256": "5e08d38f0f99352c4719fc510d5c28268ab0ae11794b15255a4ddb18efc32b22",
+      "ownership": "reviewer report only, not owner release"
+    },
+    {
+      "path": "packages/assistant/evaluations/runs/2026-10-15-phase8-source-followup.md",
+      "sha256": "17011cd8c317ecca545b35a59e07ca21a328d600793c683ce88d83bf7fdc3d40",
+      "ownership": "reviewer report only, not owner release"
+    },
+    {
+      "path": "packages/assistant/evaluations/runs/2026-10-15-final-phase-readiness.md",
+      "sha256": "afcb14e85035302845a581b9a9ace164ecddabd4e24d7f3a7276a031dfc04e72",
+      "ownership": "reviewer report only, not owner release"
+    },
+    {
+      "path": "packages/assistant/evaluations/proposals/2026-10-15-s05-bounded-followup.md",
+      "sha256": "7eab8aab7551bf1717ba5a8563eb4c66afc22af44e98af1669f6b4c9e6f0df65",
+      "ownership": "reviewer report only, not owner release"
+    },
+    {
+      "path": "packages/assistant/evaluations/proposals/2026-10-15-g04-bounded-followup.md",
+      "sha256": "3aef472ec3c2a43e6f4601bf367599bbcc662e7431b4179e3ca83543e510242c",
+      "ownership": "reviewer report only, not owner release"
+    }
+  ],
+  "manifestChanges": [
+    {
+      "id": "staff.status.change",
+      "before": "id: \"staff.status.change\",\n    version: 1,\n    mode: \"write\",\n    title: \"Change business staff status\",\n    domain: \"staff\",\n    tool: \"draftAction\",\n    action: \"staff_status\",\n    schema: actionSchema(\"staff_status\"),\n    effect: \"record\",\n    receipt: \"staff_status\",\n    policy: { roles: [\"OWNER\", \"ADMIN\"] },\n    scope: \"tenant\",\n    clients: [\"dashboard\"],\n    rollout: \"planned\",\n    procedures: [\"retailOps.updateStaffStatus\"],\n    examples: [\"Suspend Amina's business access because she is on leave\"],\n    tests: [\n      \"apps/api/src/assistant/general-staff-status.test.ts\",\n      \"packages/assistant/src/general/staff-status.test.ts\",\n      \"packages/db/src/queries/staff-status-change.test.ts\",\n    ],\n    brain: \".brain/features/assistant-staff-status.md\",",
+      "after": "id: \"staff.status.change\",\n    version: 1,\n    mode: \"write\",\n    title: \"Change business staff status\",\n    domain: \"staff\",\n    tool: \"draftAction\",\n    action: \"staff_status\",\n    schema: actionSchema(\"staff_status\"),\n    effect: \"record\",\n    receipt: \"staff_status\",\n    policy: { roles: [\"OWNER\", \"ADMIN\"] },\n    scope: \"tenant\",\n    clients: [\"dashboard\", \"mobile\"],\n    rollout: \"planned\",\n    procedures: [\"retailOps.updateStaffStatus\"],\n    examples: [\"Suspend Amina's business access because she is on leave\"],\n    tests: [\"apps/mobile/src/components/mobile/assistant/native-staff-status-values.test.ts\",\n      \"apps/api/src/assistant/general-staff-status.test.ts\",\n      \"packages/assistant/src/general/staff-status.test.ts\",\n      \"packages/db/src/queries/staff-status-change.test.ts\",\n    ],\n    brain: \".brain/features/assistant-staff-status.md\","
+    },
+    {
+      "id": "staff.invitation.manage",
+      "before": "id: \"staff.invitation.manage\",\n    version: 1,\n    mode: \"write\",\n    action: \"staff_invitation\",\n    schema: actionSchema(\"staff_invitation\"),\n    effect: \"record\",\n    receipt: \"staff_invitation\",\n    title: \"Staff invitation\",\n    domain: \"staff\",\n    tool: \"draftAction\",\n    policy: { roles: [\"OWNER\", \"ADMIN\"] },\n    scope: \"tenant\",\n    clients: [\"dashboard\"],\n    rollout: \"planned\",\n    procedures: [\"retailOps.staffInvitationCommandReview\", \"retailOps.staffInvitationCommandSave\"],\n    examples: [\n      \"Invite Amina as Cashier in this Store\",\n      \"Resend Amina's pending invitation\",\n      \"Revoke this unaccepted invitation\",\n    ],\n    tests: [\n      \"packages/assistant/src/general/staff-invitation.test.ts\",\n      \"packages/db/src/queries/staff-invitation-commands.test.ts\",\n    ],\n    brain,",
+      "after": "id: \"staff.invitation.manage\",\n    version: 1,\n    mode: \"write\",\n    action: \"staff_invitation\",\n    schema: actionSchema(\"staff_invitation\"),\n    effect: \"record\",\n    receipt: \"staff_invitation\",\n    title: \"Staff invitation\",\n    domain: \"staff\",\n    tool: \"draftAction\",\n    policy: { roles: [\"OWNER\", \"ADMIN\"] },\n    scope: \"tenant\",\n    clients: [\"dashboard\", \"mobile\"],\n    rollout: \"planned\",\n    procedures: [\"retailOps.staffInvitationCommandReview\", \"retailOps.staffInvitationCommandSave\"],\n    examples: [\n      \"Invite Amina as Cashier in this Store\",\n      \"Resend Amina's pending invitation\",\n      \"Revoke this unaccepted invitation\",\n    ],\n    tests: [\"apps/mobile/src/components/mobile/assistant/native-staff-invitation-values.test.ts\",\n      \"packages/assistant/src/general/staff-invitation.test.ts\",\n      \"packages/db/src/queries/staff-invitation-commands.test.ts\",\n    ],\n    brain,"
+    },
+    {
+      "id": "staff.access.change",
+      "before": "id: \"staff.access.change\", version: 1, mode: \"write\", title: \"Change staff Store access\",\n    domain: \"staff\", tool: \"draftAction\", action: \"staff_access\", schema: actionSchema(\"staff_access\"),\n    effect: \"record\", receipt: \"staff_access\", policy: { roles: [\"OWNER\", \"ADMIN\"] },\n    scope: \"tenant\", clients: [\"dashboard\"], rollout: \"planned\", procedures: [\"retailOps.staffStoreAccessReview\"],\n    examples: [\"Make Amina a cashier at the Bakery Store and remove her Warehouse access\"],\n    tests: [\"packages/db/src/queries/staff-access-update.test.ts\", \"packages/assistant/src/general/staff-access.test.ts\"],\n    brain: \".brain/features/assistant-staff-access-s04.md\",",
+      "after": "id: \"staff.access.change\", version: 1, mode: \"write\", title: \"Change staff Store access\",\n    domain: \"staff\", tool: \"draftAction\", action: \"staff_access\", schema: actionSchema(\"staff_access\"),\n    effect: \"record\", receipt: \"staff_access\", policy: { roles: [\"OWNER\", \"ADMIN\"] },\n    scope: \"tenant\", clients: [\"dashboard\", \"mobile\"], rollout: \"planned\", procedures: [\"retailOps.staffStoreAccessReview\"],\n    examples: [\"Make Amina a cashier at the Bakery Store and remove her Warehouse access\"],\n    tests: [\"apps/mobile/src/components/mobile/assistant/native-staff-access-values.test.ts\", \"packages/db/src/queries/staff-access-update.test.ts\", \"packages/assistant/src/general/staff-access.test.ts\"],\n    brain: \".brain/features/assistant-staff-access-s04.md\","
+    },
+    {
+      "id": "staff.status.receipt.read",
+      "before": "id: \"staff.status.receipt.read\",\n    version: 1,\n    mode: \"read\",\n    title: \"Read original staff status outcome\",\n    domain: \"staff\",\n    tool: \"readStaffStatusReceipt\",\n    policy: { roles: [\"OWNER\", \"ADMIN\"] },\n    scope: \"tenant\",\n    clients: [\"dashboard\"],\n    rollout: \"planned\",\n    procedures: [\"retailOps.staffStatusReceipt\"],\n    examples: [\"Open the original saved staff suspension\"],\n    tests: [\"packages/db/src/queries/staff-status-receipt.test.ts\"],\n    brain: \".brain/features/assistant-staff-status.md\",",
+      "after": "id: \"staff.status.receipt.read\",\n    version: 1,\n    mode: \"read\",\n    title: \"Read original staff status outcome\",\n    domain: \"staff\",\n    tool: \"readStaffStatusReceipt\",\n    policy: { roles: [\"OWNER\", \"ADMIN\"] },\n    scope: \"tenant\",\n    clients: [\"dashboard\", \"mobile\"],\n    rollout: \"planned\",\n    procedures: [\"retailOps.staffStatusReceipt\"],\n    examples: [\"Open the original saved staff suspension\"],\n    tests: [\"packages/assistant/evaluations/fixtures/native-staff-original.fixture.tsx\", \"packages/db/src/queries/staff-status-receipt.test.ts\"],\n    brain: \".brain/features/assistant-staff-status.md\","
+    },
+    {
+      "id": "staff.invitation.command.read",
+      "before": "id: \"staff.invitation.command.read\",\n    version: 1,\n    mode: \"read\",\n    title: \"Read saved invitation command\",\n    domain: \"staff\",\n    tool: \"readStaffInvitationCommand\",\n    policy: { roles: [\"OWNER\", \"ADMIN\"] },\n    scope: \"tenant\",\n    clients: [\"dashboard\"],\n    rollout: \"planned\",\n    procedures: [\"retailOps.staffInvitationCommand\"],\n    examples: [\"Show the saved invitation and current delivery status\"],\n    tests: [\"packages/db/src/queries/staff-invitation-commands.test.ts\"],\n    brain,",
+      "after": "id: \"staff.invitation.command.read\",\n    version: 1,\n    mode: \"read\",\n    title: \"Read saved invitation command\",\n    domain: \"staff\",\n    tool: \"readStaffInvitationCommand\",\n    policy: { roles: [\"OWNER\", \"ADMIN\"] },\n    scope: \"tenant\",\n    clients: [\"dashboard\", \"mobile\"],\n    rollout: \"planned\",\n    procedures: [\"retailOps.staffInvitationCommand\"],\n    examples: [\"Show the saved invitation and current delivery status\"],\n    tests: [\"packages/assistant/evaluations/fixtures/native-staff-original.fixture.tsx\", \"packages/db/src/queries/staff-invitation-commands.test.ts\"],\n    brain,"
+    },
+    {
+      "id": "staff.access.receipt.read",
+      "before": "id: \"staff.access.receipt.read\", version: 1, mode: \"read\", title: \"Read original staff Store access\",\n    domain: \"staff\", tool: \"readStaffAccessReceipt\", policy: { roles: [\"OWNER\", \"ADMIN\"] },\n    scope: \"tenant\", clients: [\"dashboard\"], rollout: \"planned\", procedures: [\"retailOps.staffAccessReceipt\"],\n    examples: [\"Open the original saved Store access change\"],\n    tests: [\"packages/db/src/queries/staff-access-update.test.ts\"],\n    brain: \".brain/features/assistant-staff-access-s04.md\",",
+      "after": "id: \"staff.access.receipt.read\", version: 1, mode: \"read\", title: \"Read original staff Store access\",\n    domain: \"staff\", tool: \"readStaffAccessReceipt\", policy: { roles: [\"OWNER\", \"ADMIN\"] },\n    scope: \"tenant\", clients: [\"dashboard\", \"mobile\"], rollout: \"planned\", procedures: [\"retailOps.staffAccessReceipt\"],\n    examples: [\"Open the original saved Store access change\"],\n    tests: [\"packages/assistant/evaluations/fixtures/native-staff-original.fixture.tsx\", \"packages/db/src/queries/staff-access-update.test.ts\"],\n    brain: \".brain/features/assistant-staff-access-s04.md\","
+    }
+  ],
+  "checks": {
+    "focused": "53pass/271assertions",
+    "newComponents": "32logical cases/308assertions",
+    "isolatedChildren": "85logical cases/490assertions across ten, not additive domain coverage",
+    "compiler": "exit2;78imported baseline diagnostics,0ownedPhase6",
+    "coverage": "current",
+    "impact": "15records;16capability/6procedurechanges",
+    "acceptance": "13/45retained"
+  },
+  "registry": {
+    "capabilities": 150,
+    "writes": 74,
+    "mobileWrites": 27,
+    "mobileReads": 42,
+    "declaredGaps": 0,
+    "allWriteGaps": 47
+  }
+}

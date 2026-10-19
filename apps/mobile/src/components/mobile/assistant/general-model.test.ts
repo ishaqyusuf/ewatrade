@@ -1,5 +1,6 @@
 import { expect, test } from "bun:test"
 import {
+  generalAnswerRoute,
   generalAnswers,
   generalReceiptRoute,
   generalSavedSnapshot,
@@ -74,6 +75,136 @@ test("receipt navigation uses actual command IDs and the existing native route p
     pathname: "/catalog-item/[catalogItemId]",
     params: { catalogItemId: "product-real" },
   })
+})
+
+test("finance receipt routes retain the exact Book and original record, refusing unpinned originals", () => {
+  for (const kind of ["finance_movement", "finance_bill"] as const) {
+    const base = { kind, recordId: "original", title: "Saved", detail: "Saved" }
+    expect(generalReceiptRoute(base)).toBeNull()
+    expect(generalReceiptRoute({ ...base, bookId: " " })).toBeNull()
+    expect(generalReceiptRoute({ ...base, bookId: "saved-book" })).toEqual(
+      kind === "finance_movement"
+        ? {
+            pathname: "/finance-movement/[entryId]",
+            params: { entryId: "original", bookId: "saved-book" },
+          }
+        : {
+            pathname: "/finance-expense/[billId]",
+            params: { billId: "original", bookId: "saved-book" },
+          },
+    )
+  }
+})
+
+test("staff receipt and answer Opens retain exact event or command identities", () => {
+  for (const kind of [
+    "staff_status",
+    "staff_access",
+    "staff_invitation",
+  ] as const) {
+    const target =
+      kind === "staff_invitation"
+        ? { kind, commandId: "original" }
+        : { kind, eventId: "original" }
+    const route = {
+      pathname: "/staff-invite-modal" as const,
+      params: { target: JSON.stringify(target) },
+    }
+    expect(
+      generalReceiptRoute({
+        kind,
+        recordId: "original",
+        title: "Saved",
+        detail: "Saved",
+      }),
+    ).toEqual(route)
+    expect(generalAnswerRoute(target)).toEqual(route)
+    expect(
+      generalReceiptRoute({
+        kind,
+        recordId: "",
+        title: "Saved",
+        detail: "Saved",
+      }),
+    ).toBeNull()
+  }
+})
+
+test("staff directory, member and history answer Opens keep exact saved filters", () => {
+  for (const target of [
+    { kind: "staff_member", membershipId: "selected-member" },
+    {
+      kind: "staff_directory",
+      filters: {
+        search: "Amina",
+        assignmentStoreId: "saved-store",
+        cursor: "saved-page",
+      },
+    },
+    {
+      kind: "staff_history",
+      filters: {
+        membershipId: "selected-member",
+        stream: "STORE_ACCESS",
+        cursor: "saved-history-page",
+      },
+    },
+  ] as const) {
+    const route = generalAnswerRoute(target)
+    expect(route?.pathname).toBe("/staff-invite-modal")
+    expect(route?.params).toEqual({ target: JSON.stringify(target) })
+  }
+})
+
+test("service answer and receipt Opens select saved originals rather than the work queue or a related Order", () => {
+  const intake = generalReceiptRoute({
+    kind: "service_intake",
+    recordId: "saved-intake",
+    orderId: "saved-order",
+    title: "Saved",
+    detail: "Saved",
+  })
+  expect(intake?.pathname).toBe("/service-jobs-modal")
+  expect(
+    intake && "target" in intake.params
+      ? JSON.parse(intake.params.target ?? "null")
+      : null,
+  ).toEqual({
+    kind: "service_intake",
+    intakeId: "saved-intake",
+    orderId: "saved-order",
+  })
+  expect(
+    generalReceiptRoute({
+      kind: "service_intake",
+      recordId: "saved-intake",
+      title: "Legacy",
+      detail: "Missing original Order",
+    }),
+  ).toBeNull()
+  for (const target of [
+    { kind: "service_work", jobId: "saved-job", eventId: "saved-event" },
+    { kind: "service_work_note", jobId: "saved-job", recordId: "saved-note" },
+    {
+      kind: "service_work_exception",
+      jobId: "saved-job",
+      recordId: "saved-exception",
+    },
+    {
+      kind: "commerce_quote_approval",
+      approvalId: "saved-approval",
+      quoteId: "saved-quote",
+      quoteVersionId: "saved-version",
+    },
+  ] as const) {
+    const route = generalAnswerRoute(target)
+    expect(route?.pathname).toBe("/service-jobs-modal")
+    expect(
+      route?.pathname === "/service-jobs-modal"
+        ? JSON.parse(route.params.target)
+        : null,
+    ).toEqual(target)
+  }
 })
 
 test("only validated server answer cards survive saved history", () => {

@@ -626,7 +626,7 @@ function QaConversationContext({
   return (
     <View className="gap-3 pb-2">
       <View className="items-center py-1">
-        <Text className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground">
+        <Text className="text-xs font-bold uppercase tracking-wide text-muted-foreground">
           Today
         </Text>
       </View>

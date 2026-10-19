@@ -1,0 +1,53 @@
+{
+  "version": 1,
+  "id": "2026-10-15-g03-quote-preflight-source",
+  "tickets": ["G03", "H02"],
+  "summary": "Internal strict Quote intent/server command identity, opaque reviewed issuer, normalized Decimal storage guard and complete logical review resource budget. Full action/client/wire work remains.",
+  "noAssistantImpact": "No new capability, procedure, public RPC, model tool, action union, grant or rollout registered. Native quantity representability now refuses before version/option/line persistence; full assistant issue/revise remains unregistered.",
+  "capabilities": [],
+  "procedures": [],
+  "docs": [
+    {
+      "topic": "feature",
+      "path": ".brain/features/service-commerce.md",
+      "status": "local_only",
+      "note": "Internal source preflight/quantity/budget and remaining scope."
+    },
+    {
+      "topic": "feature",
+      "path": ".brain/features/assistant-service-requests.md",
+      "status": "local_only",
+      "note": "Source progress only, full G03 open."
+    },
+    {
+      "topic": "api",
+      "path": ".brain/api/contracts.md",
+      "status": "local_only",
+      "note": "Strict internal contracts and no public route registration."
+    },
+    {
+      "topic": "permissions",
+      "status": "not_applicable",
+      "note": "Existing source authority and approval boundaries unchanged; no grants."
+    },
+    {
+      "topic": "schema",
+      "status": "not_applicable",
+      "note": "No Prisma or database changes."
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "test",
+      "path": "packages/db/src/queries/commerce-quote-reviewed-issue.test.ts",
+      "executed": true,
+      "result": "Root actual source152/1937 across13files, no connected DB/provider."
+    },
+    {
+      "kind": "review",
+      "path": "packages/assistant/evaluations/runs/2026-10-15-g03-quote-preflight-source.md",
+      "executed": true,
+      "result": "Independent scoped source review; full transport/GENERAL/approval/client/connected work remains."
+    }
+  ]
+}

@@ -322,11 +322,11 @@ function ShowMoreToggle({
       haptic
       onPress={onToggle}
     >
-      <Text className="text-[13.5px] font-extrabold text-primary">
+      <Text className="text-xs font-extrabold text-primary">
         {open ? "Show less" : "Show more"}
       </Text>
       {open ? null : (
-        <Text className="min-w-0 flex-1 text-[12.5px] font-semibold text-muted-foreground">
+        <Text className="min-w-0 flex-1 text-xs font-semibold text-muted-foreground">
           {hint}
         </Text>
       )}
@@ -369,7 +369,7 @@ function ClassicSheetHeader({
         </Text>
         <View className="size-11" />
       </View>
-      <Text className="text-[13px] text-muted-foreground">{description}</Text>
+      <Text className="text-xs text-muted-foreground">{description}</Text>
     </View>
   )
 }

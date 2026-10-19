@@ -120,7 +120,7 @@ export function ClassicCategoryEditor({
               />
             ))}
             {!results.length ? (
-              <Text className="py-4 text-[13px] text-muted-foreground">
+              <Text className="py-4 text-xs text-muted-foreground">
                 No category matches. Use “{query.trim()}” as your own below.
               </Text>
             ) : null}
@@ -253,7 +253,7 @@ export function ClassicCategoryEditor({
             haptic
             onPress={() => use((own.trim() || query.trim()).slice(0, 120))}
           >
-            <Text className="text-[13px] font-extrabold text-accent-foreground">
+            <Text className="text-xs font-extrabold text-accent-foreground">
               Use
             </Text>
           </Pressable>
@@ -276,7 +276,7 @@ function SectionTitle({
         {title}
       </Text>
       {trailing ? (
-        <Text className="text-[13px] font-bold text-muted-foreground">
+        <Text className="text-xs font-bold text-muted-foreground">
           {trailing}
         </Text>
       ) : null}
@@ -324,14 +324,14 @@ function SelectedCategoryCard({
         <NativeText
           style={{
             color: category ? palette.mintForeground : colors.mutedForeground,
-            fontSize: 11.5,
+            fontSize: 16,
             fontWeight: "800",
             letterSpacing: 0.5,
           }}
         >
           SELECTED
         </NativeText>
-        <Text className="text-[15.5px] font-bold text-foreground">
+        <Text className="text-base font-bold text-foreground">
           {category ? shown(category) : "Uncategorized"}
         </Text>
       </View>
@@ -343,7 +343,7 @@ function SelectedCategoryCard({
           haptic
           onPress={onRemove}
         >
-          <Text className="text-[13px] font-extrabold text-primary">
+          <Text className="text-xs font-extrabold text-primary">
             Remove
           </Text>
         </Pressable>
@@ -421,7 +421,7 @@ function CategoryChoiceRow({
             color: selected
               ? colors.primaryForeground
               : colors.accentForeground,
-            fontSize: 12.5,
+            fontSize: 16,
             fontWeight: "800",
           }}
         >
@@ -460,7 +460,7 @@ function CategoryChip({
       ) : null}
       <Text
         className={cn(
-          "text-[12.5px] font-bold",
+          "text-xs font-bold",
           selected ? "text-accent-foreground" : "text-foreground",
         )}
       >

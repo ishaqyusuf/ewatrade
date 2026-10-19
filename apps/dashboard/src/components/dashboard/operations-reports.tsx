@@ -1,5 +1,6 @@
 "use client"
 
+import { OfflineRecordReview } from "@/components/dashboard/offline-record-review"
 import { PageHeader } from "@/components/page-header"
 import { ReportError } from "@/components/reports/report-error"
 import {
@@ -116,6 +117,7 @@ function InventoryPanel({ store }: { store: Store }) {
       <ReportMetricGroups
         groups={buildInventoryGroups({ balances, reconciliation })}
       />
+      <OfflineRecordReview key={store.id} store={store} />
       <p className="text-xs text-muted-foreground">
         Compatible canonical totals show their component balances and are
         informational; they are never used as automatic fulfillment

@@ -100,8 +100,8 @@ export function StoreLinkField({
             compact
               ? {
                   flex: 1,
-                  fontSize: 14,
-                  lineHeight: 20,
+                  fontSize: 16,
+                  lineHeight: 22,
                   color: colors.mutedForeground,
                 }
               : undefined

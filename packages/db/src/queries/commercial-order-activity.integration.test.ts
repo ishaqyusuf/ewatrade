@@ -45,7 +45,13 @@ if (enabled) setDefaultTimeout(120_000)
         const order = await createCommercialOrder(prisma, {
           actorUserId: userId,
           clientOrderId: `order-activity-${id}`,
-          lines: [{ amountMinor: 1_000, custom: "quick_sale" }],
+          lines: [
+            {
+              amountMinor: 1_000,
+              custom: "quick_sale",
+              description: "Activity fixture sale",
+            },
+          ],
           schemaVersion: 1,
           storeId: store.id,
           tenantId,

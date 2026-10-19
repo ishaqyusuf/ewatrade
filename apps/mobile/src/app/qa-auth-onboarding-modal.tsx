@@ -184,9 +184,9 @@ function AuthQa() {
               setStep(0)
             }}
           >
-            <Text className="text-center text-[13px] [-rn-line-height:20] text-muted-foreground">
+            <Text className="text-center text-xs [-rn-line-height:22] text-muted-foreground">
               New to ẸwáTrade?{" "}
-              <Text className="text-[13px] font-extrabold text-primary">
+              <Text className="text-xs font-extrabold text-primary">
                 Create a business account
               </Text>
             </Text>
@@ -230,7 +230,7 @@ function AuthQa() {
               setError(false)
             }}
           >
-            <Text className="text-[13px] font-extrabold [-rn-line-height:18] text-primary">
+            <Text className="text-xs font-extrabold [-rn-line-height:22] text-primary">
               {passwordMode
                 ? "Use a login code instead"
                 : "Use a password instead"}

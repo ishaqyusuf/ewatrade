@@ -2,6 +2,8 @@ import { expect, test } from "bun:test"
 import type { Prisma, PrismaClient } from "../../generated/prisma/client"
 import {
   listServiceJobMessagesInTransaction,
+  readServiceManualMessageEditorContextInTransaction,
+  readServiceManualMessageOriginalInTransaction,
   recordServiceManualMessageInTransaction,
   reviewServiceManualMessageInTransaction,
 } from "./service-manual-message"
@@ -25,6 +27,7 @@ type Intent = {
   createdByUserId: string
   createdAt: Date
   manualShares: Array<{
+    notificationIntentId: string
     channel: string
     note: string | null
     sharedByUserId: string
@@ -44,10 +47,24 @@ function world(
     mode?: string
     phone?: string | null
     clinical?: boolean
+    active?: boolean
   } = {},
 ) {
   const intents: Intent[] = []
   const locks: string[] = []
+  const terminalProbes: Array<{
+    notificationIntentId: string
+    status: string
+  }> = []
+  const historyBounds: Array<{
+    take: number
+    attempts: number
+    shares: number
+  }> = []
+  const replayBounds: Array<{
+    manualShares: { take: number; orderBy: Array<Record<string, string>> }
+    deliveryAttempts: { take: number; select: { id: boolean } }
+  }> = []
   const order = {
     id: "order-1",
     tenantId: "tenant-a",
@@ -75,13 +92,17 @@ function world(
     $queryRaw: async (strings: TemplateStringsArray, ...values: unknown[]) => {
       const sql = strings.join("?")
       if (sql.includes('FROM "Membership"'))
-        return [
-          {
-            id: "m-1",
-            role: options.role ?? "OWNER",
-            staffAccessMode: options.mode ?? "LEGACY",
-          },
-        ]
+        return options.active === false ||
+          !values.includes("tenant-a") ||
+          values.includes("unauthorized-u")
+          ? []
+          : [
+              {
+                id: "m-1",
+                role: options.role ?? "OWNER",
+                staffAccessMode: options.mode ?? "LEGACY",
+              },
+            ]
       if (sql.includes('FROM "CommercialOrder"')) {
         locks.push("order")
         return values.includes(job.id) && values.includes("store-a")
@@ -97,8 +118,10 @@ function world(
       return []
     },
     store: {
-      findFirst: async (args: { where: { id: string } }) =>
-        args.where.id === "store-a" ? { id: "store-a" } : null,
+      findFirst: async (args: { where: { id: string; tenantId: string } }) =>
+        args.where.id === "store-a" && args.where.tenantId === "tenant-a"
+          ? { id: "store-a" }
+          : null,
     },
     staffStoreAssignment: {
       findFirst: async () => ({ id: "a-1", revision: 1 }),
@@ -114,19 +137,67 @@ function world(
           : null,
     },
     serviceNotificationIntent: {
+      findFirst: async (args: {
+        where: Record<string, unknown>
+        select: {
+          manualShares: { where: { id: string }; take: number }
+          deliveryAttempts: { take: number }
+        }
+      }) => {
+        const intent = intents.find((row) =>
+          Object.entries(args.where).every(
+            ([key, value]) => Reflect.get(row, key) === value,
+          ),
+        )
+        return intent
+          ? {
+              ...intent,
+              manualShares: intent.manualShares
+                .filter(
+                  (share) => share.id === args.select.manualShares.where.id,
+                )
+                .slice(0, args.select.manualShares.take),
+              deliveryAttempts: intent.deliveryAttempts.slice(
+                0,
+                args.select.deliveryAttempts.take,
+              ),
+            }
+          : null
+      },
       findUnique: async (args: {
         where: {
           tenantId_businessEventKey_audienceKey_templatePurpose: {
             businessEventKey: string
           }
         }
-      }) =>
-        intents.find(
+        include: {
+          manualShares: { take: number; orderBy: Array<Record<string, string>> }
+          deliveryAttempts: { take: number; select: { id: boolean } }
+        }
+      }) => {
+        replayBounds.push(args.include)
+        const intent = intents.find(
           (intent) =>
             intent.businessEventKey ===
             args.where.tenantId_businessEventKey_audienceKey_templatePurpose
               .businessEventKey,
-        ) ?? null,
+        )
+        return intent
+          ? {
+              ...intent,
+              manualShares: [...intent.manualShares]
+                .sort(
+                  (a, b) =>
+                    b.sharedAt.getTime() - a.sharedAt.getTime() ||
+                    b.id.localeCompare(a.id),
+                )
+                .slice(0, args.include.manualShares.take),
+              deliveryAttempts: intent.deliveryAttempts
+                .slice(0, args.include.deliveryAttempts.take)
+                .map((attempt) => ({ id: attempt.id })),
+            }
+          : null
+      },
       create: async (args: {
         data: Omit<
           Intent,
@@ -143,10 +214,46 @@ function world(
         intents.push(intent)
         return intent
       },
-      findMany: async (args: { take: number }) =>
-        [...intents]
+      findMany: async (args: {
+        take: number
+        select: {
+          deliveryAttempts: { take: number }
+          manualShares: { take: number }
+        }
+      }) => {
+        historyBounds.push({
+          take: args.take,
+          attempts: args.select.deliveryAttempts.take,
+          shares: args.select.manualShares.take,
+        })
+        return [...intents]
           .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
-          .slice(0, args.take),
+          .slice(0, args.take)
+          .map((row) => ({
+            ...row,
+            deliveryAttempts: [...row.deliveryAttempts]
+              .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
+              .slice(0, args.select.deliveryAttempts.take),
+            manualShares: row.manualShares.slice(
+              0,
+              args.select.manualShares.take,
+            ),
+          }))
+      },
+    },
+    serviceDeliveryAttempt: {
+      findFirst: async (args: {
+        where: { notificationIntentId: string; status: string }
+        select: { id: boolean }
+      }) => {
+        terminalProbes.push(args.where)
+        const row = intents
+          .find((intent) => intent.id === args.where.notificationIntentId)
+          ?.deliveryAttempts.find(
+            (attempt) => attempt.status === args.where.status,
+          )
+        return row ? { id: row.id } : null
+      },
     },
     serviceManualShare: {
       create: async (args: {
@@ -172,6 +279,9 @@ function world(
     locks,
     order,
     job,
+    terminalProbes,
+    historyBounds,
+    replayBounds,
   }
 }
 const input = {
@@ -343,6 +453,52 @@ test("a stale reviewed revision is refused before any write", async () => {
   expect(w.intents).toHaveLength(0)
 })
 
+test("replay bounds multiplicity detection to two shares and any delivery attempt to one", async () => {
+  const w = world()
+  const command = { ...input, clientCommandId: "bounded-replay-0001" }
+  const first = await recordServiceManualMessageInTransaction(w.tx, command)
+  expect(
+    (await recordServiceManualMessageInTransaction(w.tx, command)).replayed,
+  ).toBe(true)
+  const intent = w.intents[0]
+  const share = intent?.manualShares[0]
+  if (!intent || !share) throw Error("Missing saved original")
+  for (let index = 0; index < 100; index++)
+    intent.manualShares.push({
+      ...share,
+      id: `extra-${index}`,
+      sharedAt: new Date(share.sharedAt.getTime() + index + 1),
+    })
+  const beforeShares = JSON.stringify(w.intents)
+  await expect(
+    recordServiceManualMessageInTransaction(w.tx, command),
+  ).rejects.toThrow("already recorded a different")
+  expect(JSON.stringify(w.intents)).toBe(beforeShares)
+  intent.manualShares = [share]
+  for (let index = 0; index < 100; index++)
+    intent.deliveryAttempts.push({
+      id: `private-${index}`,
+      channel: "SMS",
+      status: "PENDING",
+      createdAt: new Date(index),
+    })
+  const beforeAttempts = JSON.stringify(w.intents)
+  await expect(
+    recordServiceManualMessageInTransaction(w.tx, command),
+  ).rejects.toThrow("already recorded a different")
+  expect(JSON.stringify(w.intents)).toBe(beforeAttempts)
+  for (const bounds of w.replayBounds)
+    expect(bounds).toEqual({
+      manualShares: {
+        orderBy: [{ sharedAt: "desc" }, { id: "desc" }],
+        take: 2,
+      },
+      deliveryAttempts: { take: 1, select: { id: true } },
+    })
+  expect(w.intents).toHaveLength(1)
+  expect(first.intent.id).toBe(intent.id)
+})
+
 test("the provider dispatcher can never select a manual record", async () => {
   let where: unknown
   const db = {
@@ -419,4 +575,368 @@ test("a completed replay after access is revoked or narrowed is refused unchange
   }
   expect(w.intents).toHaveLength(1)
   expect(w.intents[0]?.manualShares).toHaveLength(1)
+})
+
+test("history keeps older delivered/sent truth independently of its latest three displayed attempts", async () => {
+  for (const terminal of ["DELIVERED", "SENT"])
+    for (const recent of ["FAILED", "PENDING"]) {
+      const w = world()
+      await recordServiceManualMessageInTransaction(w.tx, {
+        ...input,
+        clientCommandId: "terminal-history",
+      })
+      const row = w.intents[0]
+      if (!row) throw Error("Missing synthetic intent")
+      row.channel = "SMS"
+      row.deliveryAttempts = [terminal, recent, recent, recent].map(
+        (status, index) => ({
+          id: `private-attempt-${index}`,
+          channel: "SMS",
+          status,
+          createdAt: new Date(1000 + index),
+        }),
+      )
+      const result = await listServiceJobMessagesInTransaction(w.tx, input)
+      expect(result.messages[0]?.kind).toBe(
+        terminal === "DELIVERED"
+          ? "provider_delivered"
+          : "provider_sent_unconfirmed",
+      )
+      expect(result.messages[0]?.attempts.map((a) => a.status)).toEqual([
+        recent,
+        recent,
+        recent,
+      ])
+      expect(w.terminalProbes).toEqual([
+        { notificationIntentId: row.id, status: "DELIVERED" },
+        { notificationIntentId: row.id, status: "SENT" },
+      ])
+      expect(w.historyBounds).toEqual([{ take: 11, attempts: 3, shares: 3 }])
+      expect(JSON.stringify(result)).not.toContain("private-attempt")
+      row.status = "CANCELLED"
+      w.terminalProbes.length = 0
+      expect(
+        (await listServiceJobMessagesInTransaction(w.tx, input)).messages[0]
+          ?.kind,
+      ).toBe("cancelled")
+      expect(w.terminalProbes).toHaveLength(0)
+      row.channel = "MANUAL"
+      expect(
+        (await listServiceJobMessagesInTransaction(w.tx, input)).messages[0]
+          ?.kind,
+      ).toBe("staff_reported_share")
+      expect(w.terminalProbes).toHaveLength(0)
+    }
+})
+
+test("terminal truth probes are bounded to two per displayed provider intent with the existing twenty-intent cap", async () => {
+  const w = world()
+  await recordServiceManualMessageInTransaction(w.tx, {
+    ...input,
+    clientCommandId: "bounded-history",
+  })
+  const template = w.intents[0]
+  if (!template) throw Error("Missing intent")
+  w.intents.length = 0
+  for (let index = 0; index < 25; index++)
+    w.intents.push({
+      ...template,
+      id: `provider-${index}`,
+      channel: "SMS",
+      createdAt: new Date(index),
+      manualShares: [],
+      deliveryAttempts: [],
+    })
+  const result = await listServiceJobMessagesInTransaction(w.tx, {
+    ...input,
+    limit: 50,
+  })
+  expect(result.messages).toHaveLength(20)
+  expect(result.hasMore).toBe(true)
+  expect(w.terminalProbes).toHaveLength(40)
+  expect(w.historyBounds).toEqual([{ take: 21, attempts: 3, shares: 3 }])
+})
+
+test("older delivery outranks older sent evidence while failed-only messages remain failed", async () => {
+  const w = world()
+  await recordServiceManualMessageInTransaction(w.tx, {
+    ...input,
+    clientCommandId: "delivery-precedence",
+  })
+  const row = w.intents[0]
+  if (!row) throw Error("Missing provider intent")
+  row.channel = "WHATSAPP"
+  row.deliveryAttempts = [
+    "DELIVERED",
+    "SENT",
+    "FAILED",
+    "FAILED",
+    "FAILED",
+  ].map((status, index) => ({
+    id: `attempt-${index}`,
+    channel: "WHATSAPP",
+    status,
+    createdAt: new Date(index),
+  }))
+  expect(
+    (await listServiceJobMessagesInTransaction(w.tx, input)).messages[0]?.kind,
+  ).toBe("provider_delivered")
+  row.deliveryAttempts = row.deliveryAttempts.filter(
+    (attempt) => attempt.status === "FAILED",
+  )
+  expect(
+    (await listServiceJobMessagesInTransaction(w.tx, input)).messages[0]?.kind,
+  ).toBe("provider_failed")
+})
+
+test("editor context returns fresh current recipient and owning identities without recording a share", async () => {
+  for (const role of ["OWNER", "ADMIN", "MANAGER"]) {
+    const w = world({ role })
+    const result = await readServiceManualMessageEditorContextInTransaction(
+      w.tx,
+      input,
+    )
+    expect(result).toMatchObject({
+      actorUserId: "owner-u",
+      tenantId: "tenant-a",
+      storeId: "store-a",
+      job: { id: "job-1", revision: 4 },
+      order: { id: "order-1", number: "ORD-7" },
+      recipient: {
+        name: "Amina",
+        phone: "+234 803 000 1234",
+        email: "amina@example.test",
+      },
+    })
+    expect(Number.isFinite(Date.parse(result.asOf))).toBe(true)
+    expect(w.intents).toHaveLength(0)
+    expect(w.locks).toEqual([])
+  }
+  const w = world({ phone: null })
+  expect(
+    (await readServiceManualMessageEditorContextInTransaction(w.tx, input))
+      .recipient.phone,
+  ).toBeNull()
+  w.order.customerName = "Changed current name"
+  expect(
+    (await readServiceManualMessageEditorContextInTransaction(w.tx, input))
+      .recipient.name,
+  ).toBe("Changed current name")
+})
+
+async function recordedWorld() {
+  const w = world()
+  const result = await recordServiceManualMessageInTransaction(w.tx, {
+    ...input,
+    message: "x".repeat(1000),
+    reason: "n".repeat(500),
+    clientCommandId: "exact-original-message",
+  })
+  const target = {
+    ...input,
+    intentId: result.intent.id,
+    shareId: result.share.id,
+  }
+  w.locks.length = 0
+  return { ...w, target }
+}
+
+test("exact original retains full saved content/contact and selected share while labelling current Order name separately", async () => {
+  const w = await recordedWorld()
+  const original = w.intents[0]
+  const share = original?.manualShares[0]
+  if (!original || !share) throw Error("Missing exact record")
+  original.manualShares.unshift({
+    ...share,
+    id: "other-share",
+    note: "Different share",
+    channel: "MANUAL",
+  })
+  w.order.customerName = "Current name changed"
+  w.order.customerPhone = "+234 changed phone"
+  w.order.customerEmail = "current@example.test"
+  const before = JSON.stringify(w.intents)
+  const result = await readServiceManualMessageOriginalInTransaction(
+    w.tx,
+    w.target,
+  )
+  expect(result.intent).toEqual({
+    id: original.id,
+    channel: "MANUAL",
+    status: "COMPLETED",
+    purpose: "assistant_manual_share",
+    message: "x".repeat(1000),
+    recipient: {
+      phone: "+234 803 000 1234",
+      email: "amina@example.test",
+    },
+    createdAt: original.createdAt.toISOString(),
+    completedAt: original.completedAt?.toISOString(),
+  })
+  expect(result.share).toEqual({
+    id: share.id,
+    channel: "WHATSAPP",
+    note: "n".repeat(500),
+    sharedAt: share.sharedAt.toISOString(),
+    sharedByUserId: "owner-u",
+  })
+  expect(result.currentOrderRecipientName).toBe("Current name changed")
+  expect(result).toMatchObject({
+    actorUserId: "owner-u",
+    tenantId: "tenant-a",
+    storeId: "store-a",
+    job: { id: "job-1", revision: 4 },
+    order: { id: "order-1", number: "ORD-7" },
+    kind: "staff_reported_share",
+    sending: "none",
+    delivery: "unverified",
+  })
+  expect(result.intent.message).toHaveLength(1000)
+  for (const privateKey of [
+    "businessEventKey",
+    "providerKey",
+    "providerAttemptId",
+    "deliveryAttempts",
+    "createdByUserId",
+  ])
+    expect(JSON.stringify(result)).not.toContain(privateKey)
+  expect(JSON.stringify(w.intents)).toBe(before)
+  expect(w.locks).toEqual([])
+})
+
+test("exact original supports all three manual-share channels for every permitted role, with nullable saved contacts", async () => {
+  for (const role of ["OWNER", "ADMIN", "MANAGER"])
+    for (const channel of ["manual", "sms", "whatsapp"] as const) {
+      const w = world({ role })
+      const result = await recordServiceManualMessageInTransaction(w.tx, {
+        ...input,
+        channel,
+        clientCommandId: "channel-role-original",
+      })
+      const original = await readServiceManualMessageOriginalInTransaction(
+        w.tx,
+        { ...input, intentId: result.intent.id, shareId: result.share.id },
+      )
+      expect(original.share.channel).toBe(channel.toUpperCase())
+      expect(original.sending).toBe("none")
+      expect(original.delivery).toBe("unverified")
+    }
+  const w = world({ phone: null })
+  const result = await recordServiceManualMessageInTransaction(w.tx, {
+    ...input,
+    channel: "manual",
+    clientCommandId: "nullable-original",
+  })
+  const row = w.intents[0]
+  const share = row?.manualShares[0]
+  if (!row || !share) throw Error("Missing original")
+  row.customerEmail = null
+  share.sharedByUserId = ""
+  const original = await readServiceManualMessageOriginalInTransaction(w.tx, {
+    ...input,
+    intentId: result.intent.id,
+    shareId: result.share.id,
+  })
+  expect(original.intent.recipient).toEqual({ phone: null, email: null })
+  expect(original.share.sharedByUserId).toBeNull()
+})
+
+test("context and original both recheck current authority, exact Store/Job/Order and clinical refusal", async () => {
+  for (const options of [
+    { role: "CASHIER" },
+    { role: "OPERATOR" },
+    { role: "MANAGER", mode: "SCOPED" },
+    { active: false },
+    { clinical: true },
+  ]) {
+    const w = world(options)
+    for (const read of [
+      readServiceManualMessageEditorContextInTransaction,
+      readServiceManualMessageOriginalInTransaction,
+    ])
+      await expect(
+        read(w.tx, { ...input, intentId: "intent", shareId: "share" }),
+      ).rejects.toThrow()
+    expect(w.intents).toHaveLength(0)
+  }
+  const w = await recordedWorld()
+  for (const changed of [
+    { tenantId: "other" },
+    { storeId: "other" },
+    { jobId: "other" },
+    { actorUserId: "unauthorized-u" },
+  ]) {
+    for (const read of [
+      readServiceManualMessageEditorContextInTransaction,
+      readServiceManualMessageOriginalInTransaction,
+    ])
+      await expect(read(w.tx, { ...w.target, ...changed })).rejects.toThrow()
+  }
+  w.order.id = "different-order"
+  for (const read of [
+    readServiceManualMessageEditorContextInTransaction,
+    readServiceManualMessageOriginalInTransaction,
+  ])
+    await expect(read(w.tx, w.target)).rejects.toThrow("invalid Order linkage")
+})
+
+test("original refuses foreign/missing/malformed intent/share identities and corrupted manual records without fallback", async () => {
+  const w = await recordedWorld()
+  for (const changed of [
+    { intentId: "other" },
+    { shareId: "other" },
+    { intentId: "" },
+    { shareId: " " },
+    { intentId: "x".repeat(129) },
+  ])
+    await expect(
+      readServiceManualMessageOriginalInTransaction(w.tx, {
+        ...w.target,
+        ...changed,
+      }),
+    ).rejects.toThrow()
+  for (const changed of [
+    { tenantId: "other" },
+    { storeId: "other" },
+    { serviceJobId: "other" },
+    { channel: "SMS" },
+    { status: "READY" },
+    { templatePurpose: "other" },
+    { audienceKey: "other" },
+    { completedAt: null },
+    { renderedMessage: " " },
+    { renderedMessage: "x".repeat(1001) },
+    {
+      deliveryAttempts: [
+        {
+          id: "private",
+          channel: "SMS",
+          status: "DELIVERED",
+          createdAt: new Date(),
+        },
+      ],
+    },
+  ]) {
+    const current = w.intents[0]
+    if (!current) throw Error("Missing intent")
+    w.intents[0] = { ...current, ...changed }
+    await expect(
+      readServiceManualMessageOriginalInTransaction(w.tx, w.target),
+    ).rejects.toThrow()
+    w.intents[0] = current
+  }
+  const share = w.intents[0]?.manualShares[0]
+  if (!share) throw Error("Missing share")
+  for (const changed of [
+    { notificationIntentId: "other" },
+    { channel: "EMAIL" },
+    { note: "x".repeat(501) },
+  ]) {
+    const saved = { ...share }
+    Object.assign(share, changed)
+    await expect(
+      readServiceManualMessageOriginalInTransaction(w.tx, w.target),
+    ).rejects.toThrow()
+    Object.assign(share, saved)
+  }
 })

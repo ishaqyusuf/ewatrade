@@ -841,8 +841,8 @@ function ChoiceChip({
       <Text
         className={
           selected
-            ? "text-[13px] font-bold text-accent-foreground"
-            : "text-[13px] font-bold text-foreground"
+            ? "text-xs font-bold text-accent-foreground"
+            : "text-xs font-bold text-foreground"
         }
       >
         {label}
@@ -862,11 +862,11 @@ function ReviewRow({
 }) {
   return (
     <View className="min-h-11 flex-row items-center justify-between gap-2.5 py-2.5">
-      <Text className="text-[13.5px] text-muted-foreground">{label}</Text>
+      <Text className="text-xs text-muted-foreground">{label}</Text>
       <View className="min-w-0 flex-1 flex-row items-center justify-end gap-1.5">
         {before !== undefined && before !== value ? (
           <>
-            <Text className="text-[13.5px] text-muted-foreground line-through">
+            <Text className="text-xs text-muted-foreground line-through">
               {before}
             </Text>
             <Icon
@@ -877,7 +877,7 @@ function ReviewRow({
         ) : null}
         <Text
           numberOfLines={2}
-          className="shrink text-right text-[13.5px] font-bold tabular-nums text-foreground"
+          className="shrink text-right text-xs font-bold tabular-nums text-foreground"
         >
           {value}
         </Text>

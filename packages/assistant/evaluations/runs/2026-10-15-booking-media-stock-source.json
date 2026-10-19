@@ -1,0 +1,119 @@
+{
+  "version": 1,
+  "date": "2026-10-15",
+  "scope": "Canonical prepared booking commands, H04 contract primitives, exact stock Date boundary; full phases4–12 remain active",
+  "snapshotQualification": "Verified checkpoint BEFORE the next booking pure-review extraction and media resolver. Lifecycle checkpoint0bddf1b4 is preserved in /private/tmp/assistant-booking-review-lifecycle-before.ts; later active edits require new evidence.",
+  "sourceSnapshot": {
+    "packages/assistant/src/general/stock-effective-time.ts": "7d3e626584df328378af6b7e29469dfab897bc7cee6a3ca170673c96c3cefd13",
+    "packages/assistant/src/general/stock-effective-time.test.ts": "46d914c6b319197d8ba476245815a40bcbe6f730267bc4184215ac0a2d1ba627",
+    "apps/api/src/assistant/general-stock-effective-time.ts": "2c21bf38a2e88ce54e531c94f464922fb50b0566e3a7fcc826acca8bb8371e91",
+    "apps/api/src/assistant/general-stock-effective-time.test.ts": "c676116c98fab381339c78ad433e2dd7ce3f965b3ca63aa4a2b60abd196d382e",
+    "apps/api/src/assistant/general-stock-receipt.ts": "ece5f3fc14eb5103768af7fc49112af143847dcf4ccc6638d7517bb52b5c0deb",
+    "apps/api/src/assistant/general-stock-adjustment.ts": "c664e1c53d5254869323c2c8c95c3490346490dbab8f5dec1cabe83b13724779",
+    "packages/assistant/src/general/media-provenance.ts": "fb975d398b550d04b708d5d3c0239d1129d82ac8ae912dc0c8346c8d9e203b2f",
+    "packages/assistant/src/general/media-provenance.test.ts": "900aaaa724520a5d1367f0c078200fa21939c4ab829fd8e1b7c10e8fa954e2c3",
+    "packages/assistant/src/general/bounded-plan.ts": "4bc1ffbada4c09345ed07a55175004f0f60b3a4f497e3e43fbd371fd2bbea33a",
+    "packages/assistant/src/general/bounded-plan.test.ts": "072fe1e95a16c47e9d7b51285f2a0df859ca9d8585a03e9e72f4ab8e668568d6",
+    "packages/db/src/queries/service-commerce-bookings/lifecycle.ts": "0bddf1b422f7850a0d055b7ead318dd02bf12b59b99f56bc327afe38839971e1",
+    "packages/db/src/queries/test-helpers/booking-commands.ts": "0b9ec03e5857705d12933e63faf58f1810cd4a60423e103b839a05dbf9af0cc8",
+    "packages/db/package.json": "09439019b85054e327a9ee864424f78c48d7a05c9eda8607958d390a99277f76",
+    "packages/assistant/package.json": "087f2757bcd4d3e464930cb68ad832001e42f38e2bc1b23b9002f2f04745a6f3",
+    "packages/assistant/evaluations/proposals/2026-10-15-h04-media-provenance-and-bounded-plans.md": "08e79c853c3f17a6beae5963672e63a4eb81942edeb8b82a5915940a88004a5f",
+    "packages/assistant/evaluations/proposals/2026-10-15-g03-disposition-command.md": "50c18d7e95feaafb4fdee92cc74fefec5139d04c6437eff0156bb8e0edcae8bc",
+    "packages/assistant/evaluations/proposals/2026-10-15-g03-generic-fulfillment-implementation.md": "96bd8e08a3b86fb67c0f15c3e5b3859f1b5591a7c24af7d1ac1ae906ee4c92c6",
+    "packages/assistant/evaluations/proposals/2026-10-15-general-booking-integration.md": "aec8f1845f612bdc47858b72d9952b14d89836d35e53659f2e777704822966b0",
+    "packages/db/src/queries/service-commerce-bookings/booking-command-inputs.ts": "d43708ef17265754de8558452a98e52092e97a083ffb73912eb35a04a7c9fa5e",
+    "packages/db/src/queries/service-commerce-bookings/booking-command-authority.ts": "eec5bf0f7d9b799b80d5e36b3f3c9211074f677e172fd02030d702077e402350",
+    "packages/db/src/queries/service-commerce-bookings/booking-commands.test.ts": "f8ac00b8f6c0ae04b94aad168e4a15a587088921e4a37f8dabd850321d522f11",
+    "packages/db/src/queries/service-commerce-bookings/booking-commands.ts": "e08e4632df34a75a026bdb3c2fe8878df0c6a71b1dbfe02566f9456f2c8fa279",
+    "packages/db/src/queries/service-commerce-bookings/booking-command-effects.ts": "4e5d4b772b40490d983c79270792c424cfae254283e8d87f9388a8ed4bdca468",
+    "packages/db/src/queries/service-commerce-bookings/booking-command-types.ts": "d07be831830c3e63c7bd1ea0eef01f026d4ea802ce81b7ace1de7dad737d7854",
+    "packages/db/src/queries/service-commerce-bookings/booking-command-contacts.ts": "b47425a8e5169213b093899e2c4b3a48544a3679b36400854a1e2b212d71af67",
+    "packages/db/src/queries/service-commerce-bookings/booking-command-schemas.ts": "fb5e594f1f2c6179e5b501add29ca9c32dd2f876ce88804c61c44823d13eeaa9"
+  },
+  "verification": {
+    "booking": {
+      "passed": 71,
+      "failed": 0,
+      "assertions": 611,
+      "files": 8,
+      "log": "/private/tmp/assistant-booking-command-final-tests.log"
+    },
+    "mediaAndSharedStockTime": {
+      "passed": 24,
+      "failed": 0,
+      "assertions": 149,
+      "files": 3,
+      "log": "/private/tmp/assistant-media-stock-shared-final-tests.log"
+    },
+    "actualStockAdapters": {
+      "passed": 3,
+      "failed": 0,
+      "assertions": 37,
+      "files": 2,
+      "log": "/private/tmp/assistant-stock-time-adapters-final-tests.log"
+    },
+    "independentReviews": {
+      "bookingCurrentCallerScope": "closed;16/317 overlap, not added",
+      "H04PDFCoverage": "closed;21/120 overlap, not added",
+      "stockTime": "source reviewed; narrow helper/API checks overlap"
+    },
+    "compiler": {
+      "exitCode": 2,
+      "diagnostics": 78,
+      "ownedDiagnostics": 0,
+      "initialNewDiagnostics": 8,
+      "baselineExactlyMatches": true,
+      "explicitEntries": 184,
+      "log": "/private/tmp/assistant-booking-media-stock-types-final.log"
+    },
+    "biome": {
+      "ownedFiles": 20,
+      "clean": true,
+      "log": "/private/tmp/assistant-booking-media-stock-biome.log"
+    },
+    "coverage": "regenerated/current; no capability/client/rollout promotion",
+    "impact": {
+      "passed": true,
+      "records": 38,
+      "mixedCheckoutChangedCapabilityRows": 126,
+      "mixedCheckoutChangedProcedureRows": 11,
+      "log": "/private/tmp/assistant-booking-media-stock-impact.log"
+    }
+  },
+  "acceptance": {
+    "accepted": 13,
+    "total": 45,
+    "percentage": 28.9,
+    "promoted": false
+  },
+  "limitations": [
+    "Inert persistence delegates do not prove SQL isolation, locks, atomic rollback, concurrency or HTTP authentication",
+    "H04 parsing/matching is data comparison, not source authority, human approval, signing, persistence or execution",
+    "Full GENERAL/WhatsApp composition, all client editors/reviews/history, exact saved/native device acceptance remain open",
+    "No new route/action/client/rollout/provider/schema/database/runtime/send/deploy/commit/push"
+  ],
+  "gates": {
+    "G01": "human-paused",
+    "Paystack": "all provider/source work paused",
+    "D04": "historical drift unattributed;12conditional UNSCHEDULED",
+    "E05": "activation/restart approval rejected; no alternate restart",
+    "G04": "six connected sections deferred; no alternate runner/budget",
+    "S05": "seven UNRUN; retry UNSCHEDULED",
+    "C04": "only exact previously authorized isolated target; no shared profile"
+  },
+  "brainFilesUpdated": [
+    ".brain/decisions/2026-10-15-prepared-booking-and-media-review-boundaries.md",
+    ".brain/features/assistant-business-operations.md",
+    ".brain/features/service-commerce.md",
+    ".brain/features/assistant-service-requests.md",
+    ".brain/features/assistant-booking-read.md",
+    ".brain/features/assistant-voice.md",
+    ".brain/features/generic-catalog-inventory-units-stock-operations.md",
+    ".brain/api/contracts.md",
+    ".brain/api/permissions.md",
+    ".brain/tasks/in-progress.md",
+    ".brain/plans/2026-10-15-assistant-operations-phase-checklist.md",
+    ".brain/launch/assistant-voice-implementation-2026-10-09.md"
+  ]
+}

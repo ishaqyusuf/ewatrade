@@ -48,7 +48,12 @@ mock.module("@ewatrade/db/queries", () => ({
   ) => {
     calls.push(["record", input])
     if (refusal) throw refusal
-    return { intent: { id: "intent-1" }, review, replayed: false }
+    return {
+      intent: { id: "intent-1" },
+      share: { id: "share-1" },
+      review,
+      replayed: false,
+    }
   },
 }))
 const { serviceMessageShare } = await import("./general-service-message")
@@ -160,9 +165,11 @@ test("confirmation locks Order then Job, then records under the reviewed revisio
     },
   ])
   expect(receipt).toEqual({
-    kind: "order",
+    kind: "service_manual_message",
     recordId: "intent-1",
+    jobId: "job-1",
     orderId: "order-1",
+    shareId: "share-1",
     title: "Manual share recorded",
     detail:
       "ORD-7 · You reported sharing this message by WhatsApp from your own phone with Amina · +234 803 000 1234. Nothing was sent by ewatrade and delivery is not verified. It now appears in the customer's tracking history.",
@@ -182,7 +189,7 @@ test("canonical refusals keep their code and wording", async () => {
   refusal = null
 })
 
-test("central authority: legacy managers only, dashboard only, still planned", () => {
+test("central authority: legacy managers only, declared clients only, still planned", () => {
   const scoped = (storeRole: string) => ({
     status: "ACTIVE",
     mode: "SCOPED",
@@ -220,13 +227,44 @@ test("central authority: legacy managers only, dashboard only, still planned", (
     context("CASHIER", legacy("CASHIER")),
     context("OPERATOR", legacy("OPERATOR")),
     context("MANAGER", legacy("MANAGER", "SUSPENDED")),
-    context("OWNER", legacy("OWNER"), "mobile"),
   ]) {
     expect(() =>
       assertGeneralActionAuthority(ctx, "service_message_share"),
     ).toThrow()
     expect(() => assertCapabilityAuthority(ctx, read)).toThrow()
   }
+  expect(() =>
+    assertGeneralActionAuthority(
+      context("OWNER", legacy("OWNER"), "mobile"),
+      "service_message_share",
+    ),
+  ).not.toThrow()
+  expect(() =>
+    assertCapabilityAuthority(
+      context("OWNER", legacy("OWNER"), "mobile"),
+      read,
+    ),
+  ).toThrow()
+  for (const id of [
+    "services.message.context.read",
+    "services.message.original.read",
+  ]) {
+    const capability = capabilityManifest.find((row) => row.id === id)
+    if (!capability) throw Error("Missing message read capability")
+    expect(() =>
+      assertCapabilityAuthority(
+        context("OWNER", legacy("OWNER"), "mobile"),
+        capability,
+      ),
+    ).not.toThrow()
+    expect(() =>
+      assertCapabilityAuthority(
+        context("MANAGER", scoped("MANAGER")),
+        capability,
+      ),
+    ).toThrow()
+  }
+
   expect(() =>
     assertGeneralAction(
       context("OWNER", legacy("OWNER")),

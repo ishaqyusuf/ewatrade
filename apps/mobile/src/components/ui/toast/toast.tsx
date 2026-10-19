@@ -403,7 +403,7 @@ const styles = StyleSheet.create({
     marginLeft: 12,
   },
   actionText: {
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: "600",
   },
 })

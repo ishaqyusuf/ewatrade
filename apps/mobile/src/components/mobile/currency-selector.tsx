@@ -25,7 +25,7 @@ export function CurrencySelector({
   if (appearance === "chips")
     return (
       <View className="gap-2">
-        <Text className="text-xs font-bold [-rn-line-height:18] text-muted-foreground">
+        <Text className="text-xs font-bold [-rn-line-height:22] text-muted-foreground">
           {label}
         </Text>
         <View className="-mx-[18px]">
@@ -55,7 +55,7 @@ export function CurrencySelector({
                 >
                   <Text
                     className={cn(
-                      "text-[13px] font-extrabold [-rn-line-height:18]",
+                      "text-xs font-extrabold [-rn-line-height:22]",
                       selected ? "text-primary" : "text-foreground",
                     )}
                   >
@@ -97,7 +97,7 @@ export function CurrencySelector({
             >
               <Text
                 className={cn(
-                  "text-sm font-semibold [-rn-include-font-padding:false] [-rn-line-height:20] [-rn-text-align-vertical:center]",
+                  "text-sm font-semibold [-rn-include-font-padding:false] [-rn-line-height:22] [-rn-text-align-vertical:center]",
                   selected ? "text-primary" : "text-foreground",
                 )}
               >
@@ -107,7 +107,7 @@ export function CurrencySelector({
           )
         })}
       </View>
-      <Text className="text-xs [-rn-line-height:16] text-muted-foreground">
+      <Text className="text-xs [-rn-line-height:22] text-muted-foreground">
         Used for prices, totals, reports, and customer pages.
       </Text>
     </View>

@@ -21,14 +21,20 @@ export function AssistantAnswerCard({
     <ListCard>
       <View className="gap-2 py-3">
         <View className="gap-0.5">
-          <Text className="text-sm font-bold text-foreground">{title}</Text>
-          <Text className="text-xs text-muted-foreground">{scope}</Text>
+          <Text className="text-base [-rn-line-height:22] font-bold text-foreground">
+            {title}
+          </Text>
+          <Text className="text-base [-rn-line-height:22] text-muted-foreground">
+            {scope}
+          </Text>
         </View>
         <Text className="text-2xl font-extrabold tracking-tight text-foreground">
           {value}
         </Text>
         {children}
-        <Text className="text-[11px] text-muted-foreground">{asOf}</Text>
+        <Text className="text-base [-rn-line-height:22] text-muted-foreground">
+          {asOf}
+        </Text>
       </View>
     </ListCard>
   )
@@ -69,7 +75,9 @@ export function ProposalCard({
   return (
     <View className="gap-3 rounded-[18px] border border-gold bg-card p-3">
       <View className="flex-row flex-wrap items-center justify-between gap-2">
-        <Text className="text-sm font-bold text-foreground">{title}</Text>
+        <Text className="text-base [-rn-line-height:22] font-bold text-foreground">
+          {title}
+        </Text>
         <StatusPill
           label={
             state === "pending"
@@ -91,13 +99,15 @@ export function ProposalCard({
         <View className="flex-row gap-3">
           {media}
           {summary ? (
-            <Text className="flex-1 text-sm text-foreground">{summary}</Text>
+            <Text className="flex-1 text-base [-rn-line-height:22] text-foreground">
+              {summary}
+            </Text>
           ) : null}
         </View>
       ) : null}
       {state === "pending" ? (
         <>
-          <Text className="text-xs text-muted-foreground">
+          <Text className="text-base [-rn-line-height:22] text-muted-foreground">
             {reason ?? "Nothing changes until you confirm."}
           </Text>
           <View className="flex-row flex-wrap gap-2">
@@ -150,14 +160,18 @@ export function ResultCard({
       <View className="flex-row items-center gap-3">
         {media}
         <View className="min-w-0 flex-1 gap-1">
-          <Text className="text-sm font-bold text-tint-mint-foreground">
+          <Text className="text-base [-rn-line-height:22] font-bold text-tint-mint-foreground">
             {title}
           </Text>
-          <Text className="text-xs text-tint-mint-foreground">{detail}</Text>
+          <Text className="text-base [-rn-line-height:22] text-tint-mint-foreground">
+            {detail}
+          </Text>
         </View>
       </View>
       {unavailable ? (
-        <Text className="text-xs text-tint-mint-foreground">{unavailable}</Text>
+        <Text className="text-base [-rn-line-height:22] text-tint-mint-foreground">
+          {unavailable}
+        </Text>
       ) : onOpen ? (
         <ActionButton variant="outline" onPress={onOpen}>
           Open record
@@ -184,13 +198,13 @@ export function UnavailableProposalCard({
       accessibilityRole="summary"
       className="gap-1 rounded-[18px] border border-border bg-card p-3"
     >
-      <Text className="text-sm font-bold text-foreground">
+      <Text className="text-base [-rn-line-height:22] font-bold text-foreground">
         Saved action unavailable here
       </Text>
-      <Text className="text-xs text-muted-foreground">
+      <Text className="text-base [-rn-line-height:22] text-muted-foreground">
         Saved status: {row.status.toLowerCase()}
       </Text>
-      <Text className="text-sm text-foreground">
+      <Text className="text-base [-rn-line-height:22] text-foreground">
         {row.reason === "client_unavailable"
           ? "Review, edit or confirm this action on the dashboard."
           : row.reason === "receipt_unavailable"
@@ -214,10 +228,12 @@ export function RefusalCard({
 }) {
   return (
     <View className="gap-3 rounded-[18px] bg-tint-amber p-3">
-      <Text className="text-sm font-bold text-tint-amber-foreground">
+      <Text className="text-base [-rn-line-height:22] font-bold text-tint-amber-foreground">
         {title}
       </Text>
-      <Text className="text-xs text-tint-amber-foreground">{reason}</Text>
+      <Text className="text-base [-rn-line-height:22] text-tint-amber-foreground">
+        {reason}
+      </Text>
       {alternative && onAlternative ? (
         <ActionButton variant="outline" onPress={onAlternative}>
           {alternative}

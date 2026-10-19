@@ -11,12 +11,14 @@ import {
 import { summarizeSetupFollowUp } from "@ewatrade/assistant/setup/follow-up"
 import { setupCommitSummaryMessage } from "@ewatrade/assistant/setup/messages"
 import {
+  AssistantRecordError,
   appendAssistantMessage,
   appendAssistantMessageIfLatest,
   createSetupConversation,
   findSetupConversation,
   listAssistantMessages,
   newAssistantMessageId,
+  readAssistantConversation,
   readLastAssistantMessage,
   readSetupDraft,
   removeSetupDraftEntities,
@@ -109,91 +111,129 @@ function setupFollowUpState(entities: DraftEntities) {
 export const setupAssistantRouter = createTRPCRouter({
   attachments: setupAssistantAttachmentsRouter,
 
-  state: protectedProcedure.query(async ({ ctx }) => {
-    const role = ctx.tenantContext.membership.role
-    if (!["OWNER", "ADMIN"].includes(role) || !ctx.tenantContext.activeStore)
-      return { enabled: false as const }
-    const scope = requireSetupAssistantScope(ctx)
-    const media = assistantMediaAvailability(scope.dataClassification)
-    const location = await ctx.db.store.findFirst({
-      where: { id: scope.storeId, tenantId: scope.tenantId },
-      select: { countryCode: true, tenant: { select: { countryCode: true } } },
-    })
-    const countryCode =
-      location?.countryCode ?? location?.tenant.countryCode ?? "NG"
-    const conversation = await findSetupConversation(ctx.db, scope)
-    if (!conversation?.setupDraft)
+  state: protectedProcedure
+    .input(
+      z.object({ expectedConversationId: conversationIdSchema }).optional(),
+    )
+    .query(async ({ ctx, input }) => {
+      const role = ctx.tenantContext.membership.role
+      if (!["OWNER", "ADMIN"].includes(role) || !ctx.tenantContext.activeStore)
+        return { enabled: false as const }
+      const scope = requireSetupAssistantScope(ctx)
+      const media = assistantMediaAvailability(scope.dataClassification)
+      const location = await ctx.db.store.findFirst({
+        where: { id: scope.storeId, tenantId: scope.tenantId },
+        select: {
+          countryCode: true,
+          tenant: { select: { countryCode: true } },
+        },
+      })
+      const countryCode =
+        location?.countryCode ?? location?.tenant.countryCode ?? "NG"
+      const conversation = input
+        ? await readAssistantConversation(
+            ctx.db,
+            scope,
+            input.expectedConversationId,
+          ).catch((error: unknown) => {
+            if (error instanceof AssistantRecordError)
+              throw new TRPCError({
+                code: "NOT_FOUND",
+                message:
+                  "This saved Setup conversation is unavailable in the selected business and Store.",
+              })
+            throw error
+          })
+        : await findSetupConversation(ctx.db, scope)
+      if (
+        input &&
+        (!conversation ||
+          conversation.purpose !== "SETUP" ||
+          conversation.ownerUserId !== scope.userId ||
+          conversation.status !== "ACTIVE")
+      )
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message:
+            "This saved Setup conversation is unavailable in the selected business and Store. Choose its original scope and try again.",
+        })
+      if (input)
+        assertSetupConversationCurrent(
+          await findSetupConversation(ctx.db, scope),
+          input.expectedConversationId,
+        )
+      if (!conversation?.setupDraft)
+        return {
+          enabled: true as const,
+          conversation: null,
+          messages: [],
+          draft: null,
+          currencyCode: ctx.tenantContext.activeStore.currencyCode,
+          countryCode,
+          prerequisites: { termsRequired: false, financeBookMissing: false },
+          followUp: setupFollowUpState([]),
+          areas: summarizeSetupAreas(null, []),
+          attachments: [],
+          mediaEnabled: media.files,
+          media,
+          businessProfileKey: ctx.tenantContext.activeStore.businessProfileKey,
+        }
+      const [messages, draft, sent, activeRun] = await Promise.all([
+        listAssistantMessages(ctx.db, conversation.id),
+        readSetupDraft(ctx.db, conversation.setupDraft.id),
+        listSentAssistantAttachments(ctx.db, conversation.id),
+        ctx.db.assistantRun.findFirst({
+          where: {
+            conversationId: conversation.id,
+            actorUserId: scope.userId,
+            status: "RUNNING",
+          },
+          orderBy: { startedAt: "desc" },
+          select: { id: true },
+        }),
+      ])
+      const attachments = sent.map(({ errorCode, ...attachment }) => ({
+        ...attachment,
+        expired: errorCode === SETUP_ATTACHMENT_EXPIRED,
+      }))
+      const expired = new Set(
+        attachments
+          .filter((attachment) => attachment.expired)
+          .map((attachment) => attachment.id),
+      )
+      const prerequisites = await readSetupPrerequisites(
+        ctx.db,
+        {
+          userId: scope.userId,
+          tenantId: scope.tenantId,
+          currencyCode: ctx.tenantContext.tenant.currencyCode,
+        },
+        draft.entities,
+      )
       return {
         enabled: true as const,
-        conversation: null,
-        messages: [],
-        draft: null,
+        conversation: {
+          id: conversation.id,
+          status: conversation.status,
+        },
+        activeRunId: activeRun?.id ?? null,
+        messages: withExpiredAttachments(
+          messages.map(({ id, role, parts }) => ({ id, role, parts })),
+          expired,
+        ),
+        draft,
         currencyCode: ctx.tenantContext.activeStore.currencyCode,
         countryCode,
-        prerequisites: { termsRequired: false, financeBookMissing: false },
-        followUp: setupFollowUpState([]),
-        areas: summarizeSetupAreas(null, []),
-        attachments: [],
+        prerequisites,
+        followUp: setupFollowUpState(draft.entities),
+        areas: summarizeSetupAreas(draft.areas, draft.entities),
+        attachments,
         mediaEnabled: media.files,
         media,
+        /** Ranks library illustrations in the setup list's picker. */
         businessProfileKey: ctx.tenantContext.activeStore.businessProfileKey,
       }
-    const [messages, draft, sent, activeRun] = await Promise.all([
-      listAssistantMessages(ctx.db, conversation.id),
-      readSetupDraft(ctx.db, conversation.setupDraft.id),
-      listSentAssistantAttachments(ctx.db, conversation.id),
-      ctx.db.assistantRun.findFirst({
-        where: {
-          conversationId: conversation.id,
-          actorUserId: scope.userId,
-          status: "RUNNING",
-        },
-        orderBy: { startedAt: "desc" },
-        select: { id: true },
-      }),
-    ])
-    const attachments = sent.map(({ errorCode, ...attachment }) => ({
-      ...attachment,
-      expired: errorCode === SETUP_ATTACHMENT_EXPIRED,
-    }))
-    const expired = new Set(
-      attachments
-        .filter((attachment) => attachment.expired)
-        .map((attachment) => attachment.id),
-    )
-    const prerequisites = await readSetupPrerequisites(
-      ctx.db,
-      {
-        userId: scope.userId,
-        tenantId: scope.tenantId,
-        currencyCode: ctx.tenantContext.tenant.currencyCode,
-      },
-      draft.entities,
-    )
-    return {
-      enabled: true as const,
-      conversation: {
-        id: conversation.id,
-        status: conversation.status,
-      },
-      activeRunId: activeRun?.id ?? null,
-      messages: withExpiredAttachments(
-        messages.map(({ id, role, parts }) => ({ id, role, parts })),
-        expired,
-      ),
-      draft,
-      currencyCode: ctx.tenantContext.activeStore.currencyCode,
-      countryCode,
-      prerequisites,
-      followUp: setupFollowUpState(draft.entities),
-      areas: summarizeSetupAreas(draft.areas, draft.entities),
-      attachments,
-      mediaEnabled: media.files,
-      media,
-      /** Ranks library illustrations in the setup list's picker. */
-      businessProfileKey: ctx.tenantContext.activeStore.businessProfileKey,
-    }
-  }),
+    }),
 
   start: protectedProcedure.mutation(async ({ ctx }) => {
     const scope = requireSetupAssistantScope(ctx)
@@ -278,28 +318,40 @@ export const setupAssistantRouter = createTRPCRouter({
       return { appended }
     }),
 
-  skip: protectedProcedure.mutation(async ({ ctx }) => {
-    const scope = requireSetupAssistantScope(ctx)
-    const { conversation } = await requireDraft(ctx.db, scope)
-    await setAssistantConversationStatus(ctx.db, {
-      conversationId: conversation.id,
-      from: ["OFFERED", "ACTIVE"],
-      to: "SKIPPED",
-    })
-    return { status: "SKIPPED" as const }
-  }),
+  skip: protectedProcedure
+    .input(z.object({ conversationId: conversationIdSchema }).optional())
+    .mutation(async ({ ctx, input }) => {
+      const scope = requireSetupAssistantScope(ctx)
+      const { conversation } = await requireDraft(
+        ctx.db,
+        scope,
+        input?.conversationId,
+      )
+      await setAssistantConversationStatus(ctx.db, {
+        conversationId: conversation.id,
+        from: ["OFFERED", "ACTIVE"],
+        to: "SKIPPED",
+      })
+      return { status: "SKIPPED" as const }
+    }),
 
   /** "Done for now" after records were added; the launchpad offers to continue. */
-  finish: protectedProcedure.mutation(async ({ ctx }) => {
-    const scope = requireSetupAssistantScope(ctx)
-    const { conversation } = await requireDraft(ctx.db, scope)
-    await setAssistantConversationStatus(ctx.db, {
-      conversationId: conversation.id,
-      from: ["ACTIVE"],
-      to: "COMPLETED",
-    })
-    return { status: "COMPLETED" as const }
-  }),
+  finish: protectedProcedure
+    .input(z.object({ conversationId: conversationIdSchema }).optional())
+    .mutation(async ({ ctx, input }) => {
+      const scope = requireSetupAssistantScope(ctx)
+      const { conversation } = await requireDraft(
+        ctx.db,
+        scope,
+        input?.conversationId,
+      )
+      await setAssistantConversationStatus(ctx.db, {
+        conversationId: conversation.id,
+        from: ["ACTIVE"],
+        to: "COMPLETED",
+      })
+      return { status: "COMPLETED" as const }
+    }),
 
   updateEntity: protectedProcedure
     .input(

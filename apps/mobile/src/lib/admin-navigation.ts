@@ -36,6 +36,7 @@ export type AdminMoreItemId =
   | "app-lock"
   | "sync-offline"
   | "app-updates"
+  | "assistant-whatsapp"
   | "sign-out"
 
 export type AdminMoreItem = {
@@ -315,6 +316,12 @@ export function buildAccountSections(): AdminMoreSection[] {
     {
       id: "account-settings",
       items: [
+        {
+          action: { href: "/assistant-whatsapp", kind: "route" },
+          icon: "WhatsApp",
+          id: "assistant-whatsapp",
+          label: "Assistant on WhatsApp",
+        },
         {
           action: { kind: "theme" },
           icon: "AppWindow",

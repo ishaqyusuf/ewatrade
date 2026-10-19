@@ -43,7 +43,7 @@ export function EmptyState({
         <Text className="text-center text-lg font-bold text-foreground">
           {title}
         </Text>
-        <Text className="text-center text-sm leading-5 text-muted-foreground">
+        <Text className="text-center text-sm [-rn-line-height:22] text-muted-foreground">
           {message}
         </Text>
       </View>

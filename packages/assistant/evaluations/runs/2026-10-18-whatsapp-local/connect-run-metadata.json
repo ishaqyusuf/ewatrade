@@ -1,0 +1,28 @@
+[
+  {
+    "surface": "dashboard",
+    "command": [
+      "/opt/homebrew/bin/bun",
+      "--env-file=/dev/null",
+      "test",
+      "--reporter=junit",
+      "--reporter-outfile=/Users/M1PRO/Documents/code/ewatrade/packages/assistant/evaluations/runs/2026-10-18-whatsapp-local/dashboard-connect.xml",
+      "./packages/assistant/evaluations/fixtures/dashboard-whatsapp-connect.fixture.tsx"
+    ],
+    "exitCode": 0,
+    "fixtureSha256": "a204f5f6d36cfe0814aea59529db27dfc1ad0bbf084be746a9d53a375179aae8"
+  },
+  {
+    "surface": "mobile",
+    "command": [
+      "/opt/homebrew/bin/bun",
+      "--env-file=/dev/null",
+      "test",
+      "--reporter=junit",
+      "--reporter-outfile=/Users/M1PRO/Documents/code/ewatrade/packages/assistant/evaluations/runs/2026-10-18-whatsapp-local/mobile-connect.xml",
+      "./packages/assistant/evaluations/fixtures/mobile-whatsapp-connect.fixture.tsx"
+    ],
+    "exitCode": 0,
+    "fixtureSha256": "d7af62fb7feeae1c86e05e2ef0868c7bf4bb31b42f7941586d14cbf80ed94859"
+  }
+]

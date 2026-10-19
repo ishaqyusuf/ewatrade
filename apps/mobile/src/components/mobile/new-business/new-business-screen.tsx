@@ -9,6 +9,7 @@ import { QaQuickFillButton } from "@/components/mobile/qa-quick-fill-button"
 import { useSearchFold } from "@/components/mobile/search-fold"
 import { StatusBanner } from "@/components/mobile/status-banner"
 import type { WorkflowModalChromeProps } from "@/components/mobile/workflow-modal-screen"
+import { StepTransition } from "@/components/ui/step-transition"
 import { Text } from "@/components/ui/text"
 import { useBottomSearchScroll } from "@/hooks/use-bottom-search-scroll"
 import { useTRPC } from "@/trpc/client"
@@ -26,6 +27,8 @@ import {
   NewBusinessReview,
 } from "./new-business-fields"
 import { useNewBusiness } from "./use-new-business"
+
+const NEW_BUSINESS_STEPS = [1, 2, 3, 4] as const
 
 export function NewBusinessWorkflowChrome(props: WorkflowModalChromeProps) {
   return <MobileWorkflowChrome {...props} />
@@ -127,7 +130,7 @@ export function NewBusinessOnboardingScreen() {
         onUndo={model.undoFill}
       />
       {model.step === 1 ? (
-        <Text className="text-sm text-muted-foreground [-rn-line-height:21]">
+        <Text className="text-sm text-muted-foreground [-rn-line-height:22]">
           The type personalizes recommendations. It does not restrict what this
           business can sell.
         </Text>
@@ -139,57 +142,59 @@ export function NewBusinessOnboardingScreen() {
       value={{ "--new-business-footer": footerHeight + 24 }}
     >
       <View className="flex-1">
-        {model.step === 1 ? (
-          <FlatList
-            className="flex-1"
-            contentContainerClassName="px-4 pb-[var(--new-business-footer)]"
-            data={model.profiles}
-            keyExtractor={(profile) => profile.key}
-            keyboardDismissMode="interactive"
-            keyboardShouldPersistTaps="handled"
-            onScroll={scrollHide.onScroll}
-            scrollEventThrottle={16}
-            ListHeaderComponent={header}
-            renderItem={({ item }) => (
-              <BusinessProfileRow
-                profile={item}
-                selected={model.draft.businessProfileKey === item.key}
-                disabled={model.locked}
-                onPress={() => model.selectProfile(item)}
-              />
-            )}
-            ListEmptyComponent={
-              <Text className="py-8 text-sm text-muted-foreground">
-                No business type matches that search. Try a broader term.
-              </Text>
-            }
-          />
-        ) : (
-          <KeyboardAwareScrollView
-            ref={scrollRef}
-            key={model.step}
-            className="flex-1"
-            bottomOffset={footerHeight + 12}
-            extraKeyboardSpace={0}
-            disableScrollOnKeyboardHide
-            keyboardDismissMode="interactive"
-            keyboardShouldPersistTaps="handled"
-          >
-            <View
-              pointerEvents={model.locked ? "none" : "auto"}
-              className="px-4 pb-[var(--new-business-footer)]"
-            >
-              {header}
-              {model.step === 2 ? (
-                <NewBusinessProfile model={model} />
-              ) : model.step === 3 ? (
-                <NewBusinessDetails model={model} />
-              ) : (
-                <NewBusinessReview model={model} />
+        <StepTransition order={NEW_BUSINESS_STEPS} step={model.step}>
+          {model.step === 1 ? (
+            <FlatList
+              className="flex-1"
+              contentContainerClassName="px-4 pb-[var(--new-business-footer)]"
+              data={model.profiles}
+              keyExtractor={(profile) => profile.key}
+              keyboardDismissMode="interactive"
+              keyboardShouldPersistTaps="handled"
+              onScroll={scrollHide.onScroll}
+              scrollEventThrottle={16}
+              ListHeaderComponent={header}
+              renderItem={({ item }) => (
+                <BusinessProfileRow
+                  profile={item}
+                  selected={model.draft.businessProfileKey === item.key}
+                  disabled={model.locked}
+                  onPress={() => model.selectProfile(item)}
+                />
               )}
-            </View>
-          </KeyboardAwareScrollView>
-        )}
+              ListEmptyComponent={
+                <Text className="py-8 text-sm text-muted-foreground">
+                  No business type matches that search. Try a broader term.
+                </Text>
+              }
+            />
+          ) : (
+            <KeyboardAwareScrollView
+              ref={scrollRef}
+              key={model.step}
+              className="flex-1"
+              bottomOffset={footerHeight + 12}
+              extraKeyboardSpace={0}
+              disableScrollOnKeyboardHide
+              keyboardDismissMode="interactive"
+              keyboardShouldPersistTaps="handled"
+            >
+              <View
+                pointerEvents={model.locked ? "none" : "auto"}
+                className="px-4 pb-[var(--new-business-footer)]"
+              >
+                {header}
+                {model.step === 2 ? (
+                  <NewBusinessProfile model={model} />
+                ) : model.step === 3 ? (
+                  <NewBusinessDetails model={model} />
+                ) : (
+                  <NewBusinessReview model={model} />
+                )}
+              </View>
+            </KeyboardAwareScrollView>
+          )}
+        </StepTransition>
         <BottomSearchFooter
           localSearch
           accessibilityLabel={

@@ -38,6 +38,8 @@ enum SetupDraftEntityState {
 }
 
 model AssistantConversation {
+  whatsAppWorkflowReviews AssistantWhatsAppWorkflowReview[]
+  whatsAppBindings AssistantWhatsAppBinding[]
   id           String                       @id @default(cuid())
   tenantId     String
   storeId      String
@@ -158,6 +160,7 @@ model AssistantMessage {
   // AI SDK UIMessage parts, bounded and allowlisted before persistence.
   parts           Json
   clientRequestId String?
+  completedRun AssistantRun? @relation("AssistantRunReply")
   createdAt       DateTime @default(now())
 
   conversation AssistantConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
@@ -178,9 +181,12 @@ model AssistantRun {
   errorCode      String?
   startedAt      DateTime           @default(now())
   completedAt    DateTime?
+  assistantMessageId String? @unique
+  assistantMessage AssistantMessage? @relation("AssistantRunReply", fields: [assistantMessageId], references: [id], onDelete: SetNull)
 
   conversation AssistantConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
   usageEvents  AssistantUsageEvent[]
+  whatsAppInbox AssistantWhatsAppInbox[]
 
   @@unique([actorUserId, requestId])
 }
@@ -224,6 +230,7 @@ model AssistantBudget {
 }
 
 model SetupDraft {
+  whatsAppWorkflowReviews AssistantWhatsAppWorkflowReview[]
   id             String   @id @default(cuid())
   conversationId String   @unique
   tenantId       String
@@ -297,6 +304,7 @@ model AssistantActionProposal {
 
   conversation AssistantConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
   actor User @relation("AssistantProposalActor", fields: [actorUserId], references: [id], onDelete: Restrict)
+  whatsAppActionReviews AssistantWhatsAppActionReview[]
 
   @@unique([tenantId, actorUserId, idempotencyKey])
   @@index([conversationId, status, createdAt])

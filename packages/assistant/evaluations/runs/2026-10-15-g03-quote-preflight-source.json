@@ -1,0 +1,112 @@
+{
+  "version": 1,
+  "date": "2026-10-15",
+  "scope": "G03 Quote issuer preflight, server-owned intent identity and complete logical review budget source checkpoint; full phases4\u201312 remain active",
+  "sourceSnapshot": {
+    "packages/db/src/queries/commerce-quotes.ts": "bfa47439c4dd2fbeb91b32d188c6b40c6b2cb14b97daa67c5f673da64c225d68",
+    "packages/db/src/queries/commerce-quote-issue-review.ts": "d5fb587fb21fb77274d27eedfaf8af9af30bcb7da64f938dccb870ba6b5f2e45",
+    "packages/db/src/queries/commerce-quote-review-budget.ts": "2fb64b9de2eba76fd3c8bb09b62dcfbf03c537498bd75166ee35ca6be75cc18e",
+    "packages/db/src/queries/commerce-quote-review-budget.test.ts": "e9b98c9f01b7df078dcfccf6c6aa55bab00a39a2ba954e9bba7b44f796b7750e",
+    "packages/db/src/queries/commerce-quote-reviewed-issue.ts": "cc713ee4c895276dd7543c9ca1c685602ef147ed4b0092b703953c8d744b63bd",
+    "packages/db/src/queries/commerce-quote-reviewed-issue.test.ts": "4fc11351ed05393705beac8b5742481c6922fa63d4500922b49e4e7e41875337",
+    "packages/db/src/queries/test-helpers/commerce-quote-reviewed-issue.ts": "2299d870c112837f599f29d4c76fd82853cd2bcd02863fbd50776ea23d8f0a1a",
+    "packages/db/src/queries/commerce-quote-issue-review.test.ts": "9813be87c997b40df20aeba9472c1c14f695bb07437f620896c76163a4331f9e",
+    "packages/db/src/queries/commerce-quote-issue-options.test.ts": "94e99e4c4b96a074dda68cddd20664ce08d41d6d710c43c2548c1e77b6548a34",
+    "packages/assistant/src/general/quote-issue-intent.ts": "b36d32d975d81f326c1332c00c4294ed5acd1f12100ac5436d15afee739a95b4",
+    "apps/api/src/assistant/general-quote-issue-intent.ts": "39d34e49e11757706b576f761ded9e140273bbd49fef52da43c6546f5a1f130c",
+    "apps/api/src/assistant/general-quote-issue-intent.test.ts": "5472583f5ce185054682ffcd03bd89a9db9f71a7a862d2d2e156a824cd57b0b2",
+    "packages/db/package.json": "55d862025b72c736f5778b7f9adba0a24976aa35b7e5cd8636f7c04fca322a2e",
+    "packages/assistant/package.json": "f9524db129e8e08b2429b5aa4e671568c9f3286fc7fb8f0444e672e713de86a7"
+  },
+  "verification": {
+    "rootCombinedTests": {
+      "passed": 152,
+      "failed": 0,
+      "assertions": 1937,
+      "files": 13,
+      "log": "/private/tmp/assistant-g03-quote-preflight-budget-final-tests.log",
+      "scope": "actual source chain with inert delegates and QA fixture moderation, no connected DB/provider"
+    },
+    "lint": {
+      "files": 14,
+      "result": "pass"
+    },
+    "compiler": {
+      "result": "not_green",
+      "diagnostics": 78,
+      "ownedDiagnostics": 0,
+      "config": "/private/tmp/assistant-g03-quote-preflight-tsconfig.json",
+      "log": "/private/tmp/assistant-g03-quote-preflight-budget-final-types.log"
+    },
+    "coverage": {
+      "result": "current_after_regeneration",
+      "path": "packages/assistant/src/capabilities/COVERAGE.md",
+      "log": "/private/tmp/assistant-g03-quote-preflight-budget-coverage.log",
+      "note": "Concurrent checkout snapshot was stale; regenerated deterministic coverage only, no manifest edits."
+    },
+    "impact": {
+      "result": "pass",
+      "records": 29,
+      "wholeMixedCheckoutChangedCapabilityRows": 126,
+      "wholeMixedCheckoutChangedProcedureRows": 8,
+      "log": "/private/tmp/assistant-g03-quote-preflight-budget-impact.log"
+    }
+  },
+  "implemented": [
+    "Strict editable issue/revise intent prohibits server authority/proof/configuration claims and distinguishes Service/Inquiry source-line and attestation semantics; not registered in action union/tool/manifest/RPC.",
+    "Exact normalized quantity storage bounds32integer/6fraction digits; valid32digit zero-price and redundant zeros preserved. Native writer guard precedes version/option/line persistence, not all identity/availability writes; owning transaction rollback required.",
+    "Pure API server-domain-separated command IDs stable across edits/retries; revision requires server-loaded existing clientQuoteId.",
+    "Opaque reviewed-issue handle binds copied intent/expected revision; provider moderation happens outside caller transaction; actual parent authority/digest recheck and prepared native issuer inside caller transaction; explicit safe saved-version receipt readback.",
+    "Complete logical intent/review/target64MiB JSON counter runs before stable sorting/hash serialization; typed complete_review_too_large or complete_review_unsupported refuses without partial review;20x100 preserved."
+  ],
+  "review": {
+    "independent": "Access reviewed reviewed-issuer+quantity repair; invitation reviewed budget/helper/parent overflow regression read-only, no remaining actionable scoped defect. Root reran actual source tests.",
+    "limits": [
+      "Synthetic source tests do not prove SQL isolation/locks/rollback/concurrency or hosted/client/device/provider behavior.",
+      "Strict parsed plain inputs required. Budget counter rejects callbacks but parent cloning/source reads precede it; no arbitrary hostile JavaScript object membrane or bounded total heap claim.",
+      "64MiB logical resource budget is provisional engineering choice, not HTTP delivery guarantee or support for all historical snapshots.",
+      "Caller must validate authenticated signed pending proposal before paying for moderation. Internal handle is not a public authority grant.",
+      "Completed GENERAL result recovery must precede preparing a new handle; committed native aliases cannot be reissued as fresh proposals."
+    ]
+  },
+  "remaining": [
+    "Revision-bound server drafts/patches and coherent <=1MiB review pages; measured complete responses4.77\u201341.78MB exceed ordinary host transport.",
+    "Protected complete context/review/model projection and native/dashboard editors.",
+    "GENERAL union/manifest/adapters and all-entrypoint outer preflight; WhatsApp currently uses direct transactional decision entrypoint and needs canonical nonconsuming action-review inspection.",
+    "Separate exact stored-version approval preflight; current approval retains existing screens inside transaction.",
+    "Atomic final command/receipt/original recovery and source/Quote concurrency protocol.",
+    "Broader G03 Inquiry/disposition/capacity/booking/generic fulfilment/progressive catalog/second vertical and separately permitted acceptance."
+  ],
+  "audits": [
+    "packages/assistant/evaluations/proposals/2026-10-15-general-quote-preflight-integration-audit.md",
+    "packages/assistant/evaluations/proposals/2026-10-15-g03-quote-wire-budget.md",
+    "packages/assistant/evaluations/proposals/2026-10-15-g03-quote-wire-budget.json"
+  ],
+  "acceptance": {
+    "accepted": 13,
+    "total": 45,
+    "promotion": false
+  },
+  "gates": {
+    "G01": "human_paused",
+    "Paystack": "paused",
+    "D04": "12conditional_unscheduled_drift_unattributed",
+    "E05": "activation_restart_auto_review_rejected_no_workaround",
+    "G04": "six_connected_sections_deferred",
+    "S05": "seven_unrun_retry_unscheduled",
+    "C04": "exact_two_isolated_targets_only"
+  },
+  "actionsNotPerformed": [
+    "actual model/provider/customer send",
+    "connected DB/schema/migration/push",
+    "product runtime restart/activation",
+    "deployment/commit/push"
+  ],
+  "brainFiles": [
+    ".brain/features/service-commerce.md",
+    ".brain/features/assistant-service-requests.md",
+    ".brain/api/contracts.md",
+    ".brain/tasks/in-progress.md",
+    ".brain/plans/2026-10-15-assistant-operations-phase-checklist.md"
+  ]
+}

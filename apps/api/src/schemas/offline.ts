@@ -1,3 +1,4 @@
+import { CATALOG_FREE_DESCRIPTION_MAX_LENGTH } from "@ewatrade/utils/catalog-free-lines"
 import { z } from "zod"
 
 import {
@@ -48,6 +49,45 @@ export const offlineReplaySchema = z
       .max(250),
     deviceId: z.string().trim().min(8).max(160),
     storeId: z.string().trim().min(1).optional(),
+  })
+  .strict()
+
+// The original registration, not a body Tenant/author override, selects recovery.
+export const offlineRecoverySchema = offlineReplaySchema.extend({
+  storeId: z.string().trim().min(1),
+})
+
+export const offlineRecoveryDecisionSchema = z
+  .object({
+    commandId: z.string().trim().min(1),
+    decision: z.enum(["approve", "reject"]),
+    reason: z.string().trim().min(1).max(500),
+    envelope: offlineReplaySchema.shape.commands.element,
+  })
+  .strict()
+
+export const offlineQuickSaleCorrectionSchema = z
+  .object({
+    deviceId: z.string().trim().min(8).max(160),
+    storeId: z.string().trim().min(1),
+    envelope: offlineReplaySchema.shape.commands.element,
+    replacementClientCommandId: z.string().trim().min(8).max(160),
+    replacementClientPaymentId: z.string().trim().min(8).max(160).optional(),
+    descriptions: z
+      .array(
+        z
+          .object({
+            lineIndex: z.number().int().nonnegative().max(99),
+            description: z
+              .string()
+              .trim()
+              .min(1)
+              .max(CATALOG_FREE_DESCRIPTION_MAX_LENGTH),
+          })
+          .strict(),
+      )
+      .min(1)
+      .max(100),
   })
   .strict()
 

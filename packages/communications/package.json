@@ -18,6 +18,7 @@
     "typescript": "catalog:"
   },
   "dependencies": {
+    "@ewatrade/assistant": "workspace:*",
     "redis": "^6.2.0"
   }
 }

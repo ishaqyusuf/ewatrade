@@ -59,11 +59,9 @@ export function FloatingSearchCaption({
         paddingHorizontal: 14,
       }}
     >
-      <Text className="text-[12.5px] font-bold text-muted-foreground">
-        {label}
-      </Text>
+      <Text className="text-xs font-bold text-muted-foreground">{label}</Text>
       {value ? (
-        <Text className="text-[15.5px] font-extrabold tabular-nums text-foreground">
+        <Text className="text-base font-extrabold tabular-nums text-foreground">
           {value}
         </Text>
       ) : null}
@@ -159,7 +157,7 @@ export function FloatingSearchField({
         autoCapitalize="none"
         autoCorrect={false}
         autoFocus={autoFocus}
-        className={cn(largeText ? "h-16" : "h-[50px]", "text-[15px]")}
+        className={cn(largeText ? "h-16" : "h-[50px]", "text-base")}
         editable={editable}
         expand
         maxLength={maxLength}

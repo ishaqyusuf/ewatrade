@@ -1,5 +1,8 @@
-import { FormField } from "@/components/mobile/form-field"
-import { BottomSheetInputProvider } from "@/components/ui/bottom-sheet-input-context"
+import {
+  SearchFooterField,
+  SearchFooterScope,
+  SearchFooterSpacer,
+} from "@/components/mobile/search-footer-scope"
 import { Icon } from "@/components/ui/icon"
 import { Modal, useModal } from "@/components/ui/modal"
 import { Pressable } from "@/components/ui/pressable"
@@ -60,7 +63,7 @@ export function CountrySelect({
         renderTrigger(country, open)
       ) : (
         <>
-          <Text className="text-xs font-bold [-rn-line-height:18] text-muted-foreground">
+          <Text className="text-xs font-bold [-rn-line-height:22] text-muted-foreground">
             {label}
           </Text>
           <Pressable
@@ -88,7 +91,7 @@ export function CountrySelect({
               {countryFlag(country.code)}
             </Text>
             <Text
-              className="min-w-0 flex-1 text-[15px] font-semibold text-foreground"
+              className="min-w-0 flex-1 text-base font-semibold text-foreground"
               numberOfLines={largeText ? undefined : 1}
             >
               {country.name}
@@ -112,71 +115,66 @@ export function CountrySelect({
         stackBehavior="push"
         title="Country"
       >
-        <BottomSheetFlatList<Country>
-          contentContainerStyle={{ paddingBottom: 24 }}
-          data={countries}
-          initialNumToRender={14}
-          keyboardShouldPersistTaps="handled"
-          keyExtractor={(item) => item.code}
-          ListEmptyComponent={
-            <Text className="px-5 py-6 text-center text-sm text-muted-foreground">
-              No country matches “{search.trim()}”.
-            </Text>
-          }
-          ListHeaderComponent={
-            <BottomSheetInputProvider>
-              <View className="px-5 pb-2">
-                <FormField
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                  label="Search countries"
-                  leadingIcon="Search"
-                  onChangeText={setSearch}
-                  placeholder="Country, code or +dial code"
-                  value={search}
-                  variant="search"
-                />
-              </View>
-            </BottomSheetInputProvider>
-          }
-          renderItem={({ item }) => {
-            const selected = item.code === country.code
-            return (
-              <Pressable
-                accessibilityLabel={`${item.name}, plus ${item.dialCode}`}
-                accessibilityRole="radio"
-                accessibilityState={{ selected, disabled }}
-                disabled={disabled}
-                className={cn(
-                  "mx-3 min-h-12 flex-row items-center gap-3 rounded-2xl px-3 py-2.5 active:bg-accent",
-                  selected && "bg-accent",
-                )}
-                haptic
-                onPress={() => choose(item)}
-              >
-                <Text className="text-[22px] [-rn-line-height:28]">
-                  {countryFlag(item.code)}
-                </Text>
-                <Text
+        <SearchFooterScope sheet>
+          <SearchFooterField
+            localSearch
+            accessibilityLabel="Search countries"
+            onChangeText={setSearch}
+            placeholder="Country, code or +dial code"
+            value={search}
+          />
+
+          <BottomSheetFlatList<Country>
+            contentContainerStyle={{ paddingBottom: 24 }}
+            data={countries}
+            ListFooterComponent={<SearchFooterSpacer />}
+            initialNumToRender={14}
+            keyboardShouldPersistTaps="handled"
+            keyExtractor={(item) => item.code}
+            ListEmptyComponent={
+              <Text className="px-5 py-6 text-center text-sm text-muted-foreground">
+                No country matches “{search.trim()}”.
+              </Text>
+            }
+            renderItem={({ item }) => {
+              const selected = item.code === country.code
+              return (
+                <Pressable
+                  accessibilityLabel={`${item.name}, plus ${item.dialCode}`}
+                  accessibilityRole="radio"
+                  accessibilityState={{ selected, disabled }}
+                  disabled={disabled}
                   className={cn(
-                    "min-w-0 flex-1 text-[15px] [-rn-line-height:20] text-foreground",
-                    selected ? "font-bold" : "font-medium",
+                    "mx-3 min-h-12 flex-row items-center gap-3 rounded-2xl px-3 py-2.5 active:bg-accent",
+                    selected && "bg-accent",
                   )}
+                  haptic
+                  onPress={() => choose(item)}
                 >
-                  {item.name}
-                </Text>
-                <Text className="text-sm font-semibold text-muted-foreground">
-                  +{item.dialCode}
-                </Text>
-                {selected ? (
-                  <Icon className="size-[18px] text-primary" name="Check" />
-                ) : (
-                  <View className="size-[18px]" />
-                )}
-              </Pressable>
-            )
-          }}
-        />
+                  <Text className="text-[22px] [-rn-line-height:28]">
+                    {countryFlag(item.code)}
+                  </Text>
+                  <Text
+                    className={cn(
+                      "min-w-0 flex-1 text-base [-rn-line-height:22] text-foreground",
+                      selected ? "font-bold" : "font-medium",
+                    )}
+                  >
+                    {item.name}
+                  </Text>
+                  <Text className="text-sm font-semibold text-muted-foreground">
+                    +{item.dialCode}
+                  </Text>
+                  {selected ? (
+                    <Icon className="size-[18px] text-primary" name="Check" />
+                  ) : (
+                    <View className="size-[18px]" />
+                  )}
+                </Pressable>
+              )
+            }}
+          />
+        </SearchFooterScope>
       </Modal>
     </View>
   )

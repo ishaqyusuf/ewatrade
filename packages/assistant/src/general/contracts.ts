@@ -57,6 +57,7 @@ export { serviceWorkRecordDraftInstructions } from "./service-work-records"
 export { serviceWorkCompletionDraftInstructions } from "./service-work-completion"
 import { serviceIntakeAction } from "./service-intake"
 import { serviceMessageShareAction } from "./service-message"
+import { serviceManualMessageReceiptSchema } from "./service-message-read"
 import { staffAccessAction } from "./staff-access"
 import { staffStatusAction } from "./staff-status"
 export {
@@ -176,6 +177,7 @@ export {
   orderMetadataAction,
   orderReplaceAction,
 } from "./order-amendment"
+import { catalogFreeLineDescriptionError } from "@ewatrade/utils/catalog-free-lines"
 import { formatFinanceMoney } from "@ewatrade/utils/finance-money"
 import { normalizeStockCategoryName } from "@ewatrade/utils/inventory-categories"
 import { z } from "zod"
@@ -203,7 +205,7 @@ const quantity = z
   .string()
   .regex(/^\d{1,12}(\.\d{1,6})?$/)
   .refine((v) => Number(v) > 0, "Quantity must be positive")
-/** Quick sale (typed price) or Additional cost; description is optional. */
+/** Draft/history parser; new Quick sale confirmation requires a description. */
 export const orderCustomLine = z
   .object({
     custom: z.enum(["quick_sale", "additional_cost"]),
@@ -477,6 +479,20 @@ export const generalActionSchema = z.discriminatedUnion("action", [
 ])
 export const generalOrderActionSchema = generalActionSchema.options[2]
 export type GeneralAction = z.infer<typeof generalActionSchema>
+/** Keep old saved payloads readable while gating new Quick sale confirmation. */
+export function generalOrderDescriptionError(
+  order: Pick<Extract<GeneralAction, { action: "order_create" }>, "lines">,
+) {
+  for (const line of order.lines) {
+    if (!("custom" in line)) continue
+    const error = catalogFreeLineDescriptionError({
+      kind: line.custom,
+      description: line.description,
+    })
+    if (error) return error
+  }
+  return null
+}
 export type GeneralActionName = GeneralAction["action"]
 const generalRecordReceiptSchema = z
   .object({
@@ -532,6 +548,7 @@ const generalRecordReceiptSchema = z
     },
   )
 export const generalReceiptSchema = z.union([
+  serviceManualMessageReceiptSchema,
   generalRecordReceiptSchema,
   serviceWorkLifecycleReceipt,
   serviceWorkCompletionReceipt,
@@ -571,6 +588,9 @@ export const generalProposalSchema = z
   })
   .strict()
 export type GeneralProposal = z.infer<typeof generalProposalSchema>
+import { capabilityActionHandoffSchema } from "../channels/capability-action-handoff"
+import { generalReadContinuationSchema } from "./read-continuation"
+import { generalSearchRecordsSchema } from "./search-answer"
 export const generalAnswerSchema = z
   .object({
     id,
@@ -582,9 +602,25 @@ export const generalAnswerSchema = z
     target: generalAnswerTargetSchema.optional(),
     /** Structured rows for a money accounts read; `detail` stays the fallback. */
     accounts: generalMoneyAccountsSchema.optional(),
+    records: generalSearchRecordsSchema.optional(),
+    /** Server-saved read hints only; never grants authority or executes a request. */
+    continuation: generalReadContinuationSchema.optional().catch(undefined),
+    /** Saved continuation instruction only; the app independently rechecks action authority. */
+    handoff: capabilityActionHandoffSchema.optional().catch(undefined),
   })
   .strict()
 export type GeneralAnswer = z.infer<typeof generalAnswerSchema>
+/** Server-created draft provenance, not a confirmation capability or model instruction. */
+export const generalProposalReferenceSchema = z
+  .object({
+    proposalId: id,
+    revision: z.number().int().positive(),
+    payloadHash: z.string().regex(/^[a-f0-9]{64}$/),
+  })
+  .strict()
+export type GeneralProposalReference = z.infer<
+  typeof generalProposalReferenceSchema
+>
 export const generalStoredPartSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("text"), text: z.string().max(16000) }).strict(),
   // A photo or PDF the owner sent (e.g. a receipt); display data only.
@@ -608,11 +644,18 @@ export const generalStoredPartSchema = z.discriminatedUnion("type", [
       data: generalAnswerSchema,
     })
     .strict(),
+  z
+    .object({
+      type: z.literal("data-general-proposal-reference"),
+      data: generalProposalReferenceSchema,
+    })
+    .strict(),
 ])
 export type GeneralDataParts = {
   "general-answer": GeneralAnswer
   "general-run": { runId: string; remainingRequests: number }
   "general-proposal": { proposalId: string }
+  "general-proposal-reference": GeneralProposalReference
   /** Receipt photo or PDF sent with a user message. */
   "setup-attachment": {
     attachmentId: string

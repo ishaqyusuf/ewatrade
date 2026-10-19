@@ -1,3 +1,4 @@
+import type { StepDirection } from "@/lib/step-motion"
 import type { BusinessProfile } from "@ewatrade/utils"
 import type { ReactNode } from "react"
 
@@ -11,6 +12,8 @@ export type SignUpPresentationProps = {
   preview?: SignUpPreview
   onBack: () => void
   step: SignUpStep
+  /** Which way the last step change went, for the step motion. */
+  direction?: StepDirection
 }
 
 export type SignUpPreview = {

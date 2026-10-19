@@ -1,0 +1,46 @@
+{
+  "version": 1,
+  "id": "2026-10-15-native-validation-copy",
+  "tickets": ["A04", "D01", "S02", "S03", "D04", "G03", "H02"],
+  "summary": "Plain native local validation errors across five existing editor flows; preserve authored/server refusals and exact zero/positive boundaries.",
+  "noAssistantImpact": "Presentation-only source repair: no capability/procedure/client/rollout/grant/schema changes. Existing validation and effects remain canonical; source acceptance is not device or parent acceptance.",
+  "capabilities": [],
+  "procedures": [],
+  "docs": [
+    {
+      "topic": "feature",
+      "path": ".brain/features/assistant-business-operations.md",
+      "status": "local_only",
+      "note": "Source UI repair and broader pending scope."
+    },
+    {
+      "topic": "api",
+      "status": "not_applicable",
+      "note": "No API contract or request changes in this UI repair."
+    },
+    {
+      "topic": "permissions",
+      "status": "not_applicable",
+      "note": "Existing authority and server refusal behavior retained."
+    },
+    {
+      "topic": "schema",
+      "status": "not_applicable",
+      "note": "No schema/database change."
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "test",
+      "path": "apps/mobile/src/components/mobile/assistant/native-validation-copy.test.ts",
+      "executed": true,
+      "result": "Root52/325 actualhelpers plus47/458 actualeditorisolatedfixtures."
+    },
+    {
+      "kind": "review",
+      "path": "packages/assistant/evaluations/runs/2026-10-15-native-validation-copy.md",
+      "executed": true,
+      "result": "Independentfindingsclosed, managedrevision2acceptedsourceonly; allgatesremain."
+    }
+  ]
+}

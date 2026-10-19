@@ -17,8 +17,9 @@ export type RetailOpsPlanLimits = {
 }
 
 export type RetailOpsPlanFeature =
-  | "customerMessages"
   | "advancedReports"
+  | "attachments"
+  | "customerMessages"
   | "finance"
   | "invoices"
   | "multipleBusinesses"
@@ -47,6 +48,7 @@ export type RetailOpsSubscription = {
 
 const PAID_FEATURES: RetailOpsPlanFeature[] = [
   "advancedReports",
+  "attachments",
   "finance",
   "invoices",
   "multipleBusinesses",

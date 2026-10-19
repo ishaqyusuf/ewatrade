@@ -4,6 +4,7 @@ import type { PrismaClient } from "../../generated/prisma/client"
 import {
   getApprovedPrivateAssistantPolicy,
   processAccountPrivacyPrivateAssistant,
+  unresolvedPrivateAssistantTranscription,
 } from "./account-privacy-private-assistant"
 const names = [
   "ACCOUNT_PRIVACY_PROCESSING_ENABLED",
@@ -19,6 +20,40 @@ afterEach(() => {
     if (value === undefined) delete process.env[key]
     else process.env[key] = value
   }
+})
+
+test("only admitted unresolved STT states block erasure; missing pricing on a completed success is not uncertainty", () => {
+  const completed = {
+    outcome: "success",
+    completedAt: now,
+    errorCode: null,
+    billingStatus: "unknown",
+  }
+  expect(unresolvedPrivateAssistantTranscription(completed)).toBe(false)
+  expect(
+    unresolvedPrivateAssistantTranscription({
+      ...completed,
+      outcome: "skipped",
+      billingStatus: "not_billable",
+    }),
+  ).toBe(false)
+  expect(
+    unresolvedPrivateAssistantTranscription({
+      ...completed,
+      outcome: "failed",
+      errorCode: "TIMEOUT",
+      billingStatus: "not_billable",
+    }),
+  ).toBe(false)
+  for (const change of [
+    { outcome: "started" },
+    { completedAt: null },
+    { errorCode: "UNKNOWN_OUTCOME" },
+    { outcome: "failed", errorCode: "TIMEOUT" },
+  ])
+    expect(
+      unresolvedPrivateAssistantTranscription({ ...completed, ...change }),
+    ).toBe(true)
 })
 const now = new Date("2026-10-12T14:00:00Z")
 function configuration(overrides: Record<string, unknown> = {}) {

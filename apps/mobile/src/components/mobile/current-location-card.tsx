@@ -57,10 +57,10 @@ export function CurrentLocationCard({
           />
         </View>
         <View className="min-w-0 flex-1">
-          <Text className="text-[13.5px] font-bold [-rn-line-height:19] text-foreground">
+          <Text className="text-xs font-bold [-rn-line-height:22] text-foreground">
             Using your current location
           </Text>
-          <Text className="text-xs [-rn-line-height:17] text-muted-foreground">
+          <Text className="text-xs [-rn-line-height:22] text-muted-foreground">
             {address.label}
           </Text>
           <View className="mt-1 flex-row gap-4">
@@ -74,7 +74,7 @@ export function CurrentLocationCard({
                 )
               }
             >
-              <Text className="text-[12.5px] font-extrabold text-primary">
+              <Text className="text-xs font-extrabold text-primary">
                 Open in Maps
               </Text>
               <Icon className="size-[13px] text-primary" name="Link" />
@@ -85,12 +85,10 @@ export function CurrentLocationCard({
               hitSlop={6}
               onPress={onClear}
             >
-              <Text className="text-[12.5px] font-extrabold text-primary">
-                Clear
-              </Text>
+              <Text className="text-xs font-extrabold text-primary">Clear</Text>
             </Pressable>
           </View>
-          <Text className="text-[10.5px] text-muted-foreground">
+          <Text className="text-xs text-muted-foreground">
             {GEO_ADDRESS_ATTRIBUTION}
           </Text>
         </View>
@@ -114,7 +112,7 @@ export function CurrentLocationCard({
         ) : (
           <Icon className="size-[18px] text-primary" name="LocateIcon" />
         )}
-        <Text className="text-sm font-extrabold [-rn-line-height:20] text-primary">
+        <Text className="text-sm font-extrabold [-rn-line-height:22] text-primary">
           {busy ? "Finding your location…" : "Use my current location"}
         </Text>
       </Pressable>

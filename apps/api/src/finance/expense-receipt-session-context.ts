@@ -1,6 +1,7 @@
 import { isAccountPrivacyAccessBlocked } from "@ewatrade/db/account-privacy-access"
 import { TRPCError } from "@trpc/server"
 import type { Context } from "hono"
+import { requireBrowserIdentity } from "../assistant/channel-principal"
 import { createTRPCContext, resolveProtectedTenantContext } from "../trpc/init"
 import {
   createExpenseReceiptSessionCheck,
@@ -21,8 +22,8 @@ export function createFinanceExpenseReceiptSessionCheck(
   return createExpenseReceiptSessionCheck(
     {
       ...actor,
-      sessionId: initial.session.session.id,
-      token: initial.session.session.token,
+      sessionId: requireBrowserIdentity(initial.session).session.id,
+      token: requireBrowserIdentity(initial.session).session.token,
     },
     {
       async current() {
@@ -30,7 +31,7 @@ export function createFinanceExpenseReceiptSessionCheck(
           await createTRPCContext(undefined, context),
         )
         const currentActor = financeExpenseReceiptActorScope(fresh)
-        if (!fresh.session) return null
+        if (!fresh.session?.session) return null
         return {
           ...currentActor,
           sessionId: fresh.session.session.id,

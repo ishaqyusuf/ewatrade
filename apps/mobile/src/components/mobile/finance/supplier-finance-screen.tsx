@@ -850,7 +850,7 @@ function SupplierStatement({
                     hitSlop={6}
                     onPress={() => onReverse(item)}
                   >
-                    <Text className="text-[13px] font-bold text-primary">
+                    <Text className="text-xs font-bold text-primary">
                       Correct
                     </Text>
                   </Pressable>
@@ -863,7 +863,7 @@ function SupplierStatement({
                     hitSlop={6}
                     onPress={() => onAllocateAdvance(item)}
                   >
-                    <Text className="text-[13px] font-bold text-primary">
+                    <Text className="text-xs font-bold text-primary">
                       Apply to a purchase
                     </Text>
                   </Pressable>
@@ -1195,10 +1195,10 @@ function SupplierAging({
                   return (
                     <View key={bucket.bucket} className="gap-1.5">
                       <View className="flex-row justify-between gap-3">
-                        <Text className="min-w-0 flex-1 text-[13px] font-semibold text-foreground">
+                        <Text className="min-w-0 flex-1 text-xs font-semibold text-foreground">
                           {supplierAgingBucketLabels[bucket.bucket]}
                         </Text>
-                        <Text className="text-[13px] font-bold tabular-nums text-foreground">
+                        <Text className="text-xs font-bold tabular-nums text-foreground">
                           {formatFinanceMoney(bucket.amountMinor, currencyCode)}
                         </Text>
                       </View>

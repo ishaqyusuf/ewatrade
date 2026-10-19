@@ -58,14 +58,6 @@ export function StockIntakeFields({ model }: { model: StockIntakeModel }) {
           </View>
           {draft.targetCustodyType === "staff" ? (
             <View className="gap-3">
-              <FormField
-                label="Find team member"
-                variant="search"
-                value={model.personQuery}
-                maxLength={160}
-                onChangeText={model.setPersonQuery}
-                editable={!model.locked}
-              />
               {model.peopleLoading ? (
                 <Text className="text-muted-foreground">
                   Loading team members…

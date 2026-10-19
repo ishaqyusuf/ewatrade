@@ -1,0 +1,96 @@
+{
+  "version": 1,
+  "id": "2026-10-15-phase4-native-orders",
+  "tickets": ["D01", "D02", "D03", "A04", "H01", "H02", "H03"],
+  "summary": "Six existing order actions gain native editors and declare mobile source support. Exact selected identities, current original-order reads, strict amounts, existing re-review/confirmation and original receipts are retained. Product return remains planned; no permission, procedure or runtime activation changes.",
+  "capabilities": [
+    {
+      "id": "sales.order.replace",
+      "change": "changed",
+      "rollout": "source",
+      "note": "Mobile replacement editor uses freshly authorized original line pricing policies and exact amounts."
+    },
+    {
+      "id": "sales.product.fulfill",
+      "change": "changed",
+      "rollout": "source",
+      "note": "Mobile reason editor preserves saved product line and quantity selection."
+    },
+    {
+      "id": "sales.products.fulfill",
+      "change": "changed",
+      "rollout": "source",
+      "note": "Mobile reason editor preserves the reviewed batch selection."
+    },
+    {
+      "id": "sales.service.authorize",
+      "change": "changed",
+      "rollout": "source",
+      "note": "Mobile reason editor distinguishes authorization from performance/payment."
+    },
+    {
+      "id": "sales.service.fulfill",
+      "change": "changed",
+      "rollout": "source",
+      "note": "Mobile reason editor preserves the reviewed service selection."
+    },
+    {
+      "id": "sales.product.return",
+      "change": "changed",
+      "rollout": "planned",
+      "note": "Native quantity/disposition editor and exact existing Order receipt; planned availability remains closed."
+    }
+  ],
+  "procedures": [],
+  "docs": [
+    {
+      "topic": "feature",
+      "path": ".brain/features/assistant-business-operations.md",
+      "status": "local_only",
+      "note": "Native source scope, evidence and remaining acceptance recorded."
+    },
+    {
+      "topic": "api",
+      "path": ".brain/api/contracts.md",
+      "status": "local_only",
+      "note": "Public DTOs/canonical procedures unchanged; native consumer contract recorded."
+    },
+    {
+      "topic": "permissions",
+      "status": "not_applicable",
+      "note": "Roles, Store scope, approval and confirmation rules unchanged. Original Order reads use existing protected query."
+    },
+    {
+      "topic": "capability",
+      "path": "packages/assistant/src/capabilities/COVERAGE.md",
+      "status": "updated",
+      "note": "Six mobile client lists regenerated with current manifest; planned/source availability preserved."
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "test",
+      "path": "apps/mobile/src/components/mobile/assistant/native-order-values.test.ts",
+      "executed": true,
+      "result": "12 cases pass: exact values/quantities, original-policy match, fixed selected identities, refused malformed fields and non-restock destination removal."
+    },
+    {
+      "kind": "fixture",
+      "path": "packages/assistant/evaluations/fixtures/native-order-editor.fixture.tsx",
+      "executed": true,
+      "result": "7 pass/41 assertions against actual editor with static native/query stand-ins; fresh/stale/denied/loading and disabled Save. No device acceptance."
+    },
+    {
+      "kind": "test",
+      "path": "packages/assistant/evaluations/phase-regressions.test.ts",
+      "executed": true,
+      "result": "4 isolated child wrappers pass; included by existing CI step, no hosted run dispatched."
+    },
+    {
+      "kind": "review",
+      "path": "packages/assistant/evaluations/runs/2026-10-15-phase4-native-order-source.md",
+      "executed": true,
+      "result": "Full-manifest native write gaps 59 to 53; no declared mobile registry gap. Compiler graph retains 78 imported-path errors. Phase4 stays0/3, accepted13/45."
+    }
+  ]
+}

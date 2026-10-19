@@ -1,0 +1,676 @@
+{
+  "version": 1,
+  "id": "2026-10-15-whatsapp-workflows-actions-media",
+  "tickets": [
+    "A01",
+    "G05",
+    "H01"
+  ],
+  "summary": "Default-off WhatsApp source reuses existing OTP sender and canonical business runtime, current linked authority and explicit reviewed actions/app handoffs. Current channel46/48(95.8%): W04 restricted-business internal policy/service-pricing assessment and owner-revised W40 deterministic supported files/original-photo-no-analysis scope accepted; W46live pilot and W47full release remain open. WhatsAppSetup image admission now refuses before private reads/download/persistence/enqueue; GENERAL original photos and canonical deterministic purpose rules remain. Image interpretation/OCR/OpenAI image work is future scope. No capability rollout, assistant access or OTP setting changed.",
+  "capabilities": [
+    {
+      "id": "finance.purchase.fact.reverse",
+      "change": "changed",
+      "rollout": "source",
+      "note": "Existing canonical rollout remains source; explicit WhatsApp app_review transport-source support is separately default-off/local-source. Canonical roles, plan, Store/Book and domain guards preserved. App-review classification grants navigation only, never domain draft/decision authority."
+    },
+    {
+      "id": "finance.purchase.payment.reverse",
+      "change": "changed",
+      "rollout": "source",
+      "note": "Existing canonical rollout remains source; explicit WhatsApp app_review transport-source support is separately default-off/local-source. Canonical roles, plan, Store/Book and domain guards preserved. App-review classification grants navigation only, never domain draft/decision authority."
+    },
+    {
+      "id": "finance.supplier.allocation.release",
+      "change": "changed",
+      "rollout": "source",
+      "note": "Existing canonical rollout remains source; explicit WhatsApp app_review transport-source support is separately default-off/local-source. Canonical roles, plan, Store/Book and domain guards preserved. App-review classification grants navigation only, never domain draft/decision authority."
+    },
+    {
+      "id": "finance.supplier.advance",
+      "change": "changed",
+      "rollout": "source",
+      "note": "Existing canonical rollout remains source; explicit WhatsApp app_review transport-source support is separately default-off/local-source. Canonical roles, plan, Store/Book and domain guards preserved. App-review classification grants navigation only, never domain draft/decision authority."
+    },
+    {
+      "id": "finance.supplier.advance.allocate",
+      "change": "changed",
+      "rollout": "source",
+      "note": "Existing canonical rollout remains source; explicit WhatsApp app_review transport-source support is separately default-off/local-source. Canonical roles, plan, Store/Book and domain guards preserved. App-review classification grants navigation only, never domain draft/decision authority."
+    },
+    {
+      "id": "finance.purchase.pay",
+      "change": "changed",
+      "rollout": "source",
+      "note": "Existing canonical rollout remains source; explicit WhatsApp app_review transport-source support is separately default-off/local-source. Canonical roles, plan, Store/Book and domain guards preserved. App-review classification grants navigation only, never domain draft/decision authority."
+    },
+    {
+      "id": "finance.purchase.recognize",
+      "change": "changed",
+      "rollout": "source",
+      "note": "Existing canonical rollout remains source; explicit WhatsApp app_review transport-source support is separately default-off/local-source. Canonical roles, plan, Store/Book and domain guards preserved. App-review classification grants navigation only, never domain draft/decision authority."
+    },
+    {
+      "id": "finance.purchase.register",
+      "change": "changed",
+      "rollout": "source",
+      "note": "Existing canonical rollout remains source; explicit WhatsApp app_review transport-source support is separately default-off/local-source. Canonical roles, plan, Store/Book and domain guards preserved. App-review classification grants navigation only, never domain draft/decision authority."
+    },
+    {
+      "id": "finance.purchase_registrations.read",
+      "change": "changed",
+      "rollout": "source",
+      "note": "Existing canonical rollout remains source; explicit WhatsApp native transport-source support is separately default-off/local-source. Canonical roles, plan, Store/Book and domain guards preserved. App-review classification grants navigation only, never domain draft/decision authority."
+    },
+    {
+      "id": "finance.purchase_recognition.read",
+      "change": "changed",
+      "rollout": "source",
+      "note": "Existing canonical rollout remains source; explicit WhatsApp native transport-source support is separately default-off/local-source. Canonical roles, plan, Store/Book and domain guards preserved. App-review classification grants navigation only, never domain draft/decision authority."
+    },
+    {
+      "id": "finance.purchases.read",
+      "change": "changed",
+      "rollout": "source",
+      "note": "Existing canonical rollout remains source; explicit WhatsApp native transport-source support is separately default-off/local-source. Canonical roles, plan, Store/Book and domain guards preserved. App-review classification grants navigation only, never domain draft/decision authority."
+    },
+    {
+      "id": "finance.purchase.read",
+      "change": "changed",
+      "rollout": "source",
+      "note": "Existing canonical rollout remains source; explicit WhatsApp native transport-source support is separately default-off/local-source. Canonical roles, plan, Store/Book and domain guards preserved. App-review classification grants navigation only, never domain draft/decision authority."
+    },
+    {
+      "id": "finance.supplier.create",
+      "change": "changed",
+      "rollout": "source",
+      "note": "Existing canonical rollout remains source; explicit WhatsApp app_review transport-source support is separately default-off/local-source. Canonical roles, plan, Store/Book and domain guards preserved. App-review classification grants navigation only, never domain draft/decision authority."
+    },
+    {
+      "id": "finance.expense.record",
+      "change": "changed",
+      "rollout": "enabled",
+      "note": "Existing canonical rollout remains enabled; explicit WhatsApp app_review transport-source support is separately default-off/local-source. Canonical roles, plan, Store/Book and domain guards preserved. App-review classification grants navigation only, never domain draft/decision authority."
+    },
+    {
+      "id": "finance.expense.record_simple",
+      "change": "changed",
+      "rollout": "source",
+      "note": "Existing canonical rollout remains source; explicit WhatsApp native transport-source support is separately default-off/local-source. Canonical roles, plan, Store/Book and domain guards preserved. App-review classification grants navigation only, never domain draft/decision authority."
+    },
+    {
+      "id": "finance.money_in.record_simple",
+      "change": "changed",
+      "rollout": "source",
+      "note": "Existing canonical rollout remains source; explicit WhatsApp native transport-source support is separately default-off/local-source. Canonical roles, plan, Store/Book and domain guards preserved. App-review classification grants navigation only, never domain draft/decision authority."
+    },
+    {
+      "id": "finance.transfer.record_simple",
+      "change": "changed",
+      "rollout": "source",
+      "note": "Existing canonical rollout remains source; explicit WhatsApp native transport-source support is separately default-off/local-source. Canonical roles, plan, Store/Book and domain guards preserved. App-review classification grants navigation only, never domain draft/decision authority."
+    },
+    {
+      "id": "finance.money_movement.record",
+      "change": "changed",
+      "rollout": "enabled",
+      "note": "Existing canonical rollout remains enabled; explicit WhatsApp app_review transport-source support is separately default-off/local-source. Canonical roles, plan, Store/Book and domain guards preserved. App-review classification grants navigation only, never domain draft/decision authority."
+    },
+    {
+      "id": "finance.suppliers.read",
+      "change": "changed",
+      "rollout": "source",
+      "note": "Existing canonical rollout remains source; explicit WhatsApp native transport-source support is separately default-off/local-source. Canonical roles, plan, Store/Book and domain guards preserved. App-review classification grants navigation only, never domain draft/decision authority."
+    },
+    {
+      "id": "finance.supplier_statement.read",
+      "change": "changed",
+      "rollout": "source",
+      "note": "Existing canonical rollout remains source; explicit WhatsApp native transport-source support is separately default-off/local-source. Canonical roles, plan, Store/Book and domain guards preserved. App-review classification grants navigation only, never domain draft/decision authority."
+    },
+    {
+      "id": "finance.expense_categories.read",
+      "change": "changed",
+      "rollout": "enabled",
+      "note": "Existing canonical rollout remains enabled; explicit WhatsApp native transport-source support is separately default-off/local-source. Canonical roles, plan, Store/Book and domain guards preserved. App-review classification grants navigation only, never domain draft/decision authority."
+    },
+    {
+      "id": "finance.money_account_balances.read",
+      "change": "changed",
+      "rollout": "source",
+      "note": "Existing canonical rollout remains source; explicit WhatsApp native transport-source support is separately default-off/local-source. Canonical roles, plan, Store/Book and domain guards preserved. App-review classification grants navigation only, never domain draft/decision authority."
+    },
+    {
+      "id": "finance.money_accounts.read",
+      "change": "changed",
+      "rollout": "enabled",
+      "note": "Existing canonical rollout remains enabled; explicit WhatsApp native transport-source support is separately default-off/local-source. Canonical roles, plan, Store/Book and domain guards preserved. App-review classification grants navigation only, never domain draft/decision authority."
+    },
+    {
+      "id": "sales.products.fulfill",
+      "change": "changed",
+      "rollout": "source",
+      "note": "Existing canonical rollout remains source; explicit WhatsApp app_review transport-source support is separately default-off/local-source. Canonical roles, plan, Store/Book and domain guards preserved. App-review classification grants navigation only, never domain draft/decision authority."
+    },
+    {
+      "id": "sales.product.fulfill",
+      "change": "changed",
+      "rollout": "source",
+      "note": "Existing canonical rollout remains source; explicit WhatsApp app_review transport-source support is separately default-off/local-source. Canonical roles, plan, Store/Book and domain guards preserved. App-review classification grants navigation only, never domain draft/decision authority."
+    },
+    {
+      "id": "sales.service.authorize",
+      "change": "changed",
+      "rollout": "source",
+      "note": "Existing canonical rollout remains source; explicit WhatsApp app_review transport-source support is separately default-off/local-source. Canonical roles, plan, Store/Book and domain guards preserved. App-review classification grants navigation only, never domain draft/decision authority."
+    },
+    {
+      "id": "sales.service.fulfill",
+      "change": "changed",
+      "rollout": "source",
+      "note": "Existing canonical rollout remains source; explicit WhatsApp app_review transport-source support is separately default-off/local-source. Canonical roles, plan, Store/Book and domain guards preserved. App-review classification grants navigation only, never domain draft/decision authority."
+    },
+    {
+      "id": "sales.order.cancel",
+      "change": "changed",
+      "rollout": "source",
+      "note": "Existing canonical rollout remains source; explicit WhatsApp app_review transport-source support is separately default-off/local-source. Canonical roles, plan, Store/Book and domain guards preserved. App-review classification grants navigation only, never domain draft/decision authority."
+    },
+    {
+      "id": "sales.order.metadata.update",
+      "change": "changed",
+      "rollout": "source",
+      "note": "Existing canonical rollout remains source; explicit WhatsApp app_review transport-source support is separately default-off/local-source. Canonical roles, plan, Store/Book and domain guards preserved. App-review classification grants navigation only, never domain draft/decision authority."
+    },
+    {
+      "id": "sales.order.replace",
+      "change": "changed",
+      "rollout": "source",
+      "note": "Existing canonical rollout remains source; explicit WhatsApp app_review transport-source support is separately default-off/local-source. Canonical roles, plan, Store/Book and domain guards preserved. App-review classification grants navigation only, never domain draft/decision authority."
+    },
+    {
+      "id": "sales.order.attachment.add",
+      "change": "changed",
+      "rollout": "source",
+      "note": "Existing canonical rollout remains source; explicit WhatsApp app_review transport-source support is separately default-off/local-source. Canonical roles, plan, Store/Book and domain guards preserved. App-review classification grants navigation only, never domain draft/decision authority."
+    },
+    {
+      "id": "services.queue.read",
+      "change": "changed",
+      "rollout": "source",
+      "note": "Existing canonical rollout remains source; explicit WhatsApp native transport-source support is separately default-off/local-source. Canonical roles, plan, Store/Book and domain guards preserved. App-review classification grants navigation only, never domain draft/decision authority."
+    },
+    {
+      "id": "customers.receivables.read",
+      "change": "changed",
+      "rollout": "source",
+      "note": "Existing canonical rollout remains source; explicit WhatsApp native transport-source support is separately default-off/local-source. Canonical roles, plan, Store/Book and domain guards preserved. App-review classification grants navigation only, never domain draft/decision authority."
+    },
+    {
+      "id": "customers.accounts.read",
+      "change": "changed",
+      "rollout": "source",
+      "note": "Existing canonical rollout remains source; explicit WhatsApp native transport-source support is separately default-off/local-source. Canonical roles, plan, Store/Book and domain guards preserved. App-review classification grants navigation only, never domain draft/decision authority."
+    },
+    {
+      "id": "customers.create",
+      "change": "changed",
+      "rollout": "source",
+      "note": "Existing canonical rollout remains source; explicit WhatsApp native transport-source support is separately default-off/local-source. Canonical roles, plan, Store/Book and domain guards preserved. App-review classification grants navigation only, never domain draft/decision authority."
+    },
+    {
+      "id": "catalog.product.create",
+      "change": "changed",
+      "rollout": "source",
+      "note": "Existing canonical rollout remains source; explicit WhatsApp native transport-source support is separately default-off/local-source. Canonical roles, plan, Store/Book and domain guards preserved. App-review classification grants navigation only, never domain draft/decision authority."
+    },
+    {
+      "id": "sales.order.record_simple",
+      "change": "changed",
+      "rollout": "source",
+      "note": "Existing canonical rollout remains source; explicit WhatsApp native transport-source support is separately default-off/local-source. Canonical roles, plan, Store/Book and domain guards preserved. App-review classification grants navigation only, never domain draft/decision authority."
+    },
+    {
+      "id": "sales.order.create",
+      "change": "changed",
+      "rollout": "source",
+      "note": "Existing canonical rollout remains source; explicit WhatsApp app_review transport-source support is separately default-off/local-source. Canonical roles, plan, Store/Book and domain guards preserved. App-review classification grants navigation only, never domain draft/decision authority."
+    },
+    {
+      "id": "sales.payment.record",
+      "change": "changed",
+      "rollout": "source",
+      "note": "Existing canonical rollout remains source; explicit WhatsApp app_review transport-source support is separately default-off/local-source. Canonical roles, plan, Store/Book and domain guards preserved. App-review classification grants navigation only, never domain draft/decision authority."
+    },
+    {
+      "id": "customers.update",
+      "change": "changed",
+      "rollout": "source",
+      "note": "Existing canonical rollout remains source; explicit WhatsApp native transport-source support is separately default-off/local-source. Canonical roles, plan, Store/Book and domain guards preserved. App-review classification grants navigation only, never domain draft/decision authority."
+    },
+    {
+      "id": "catalog.price.update",
+      "change": "changed",
+      "rollout": "source",
+      "note": "Existing canonical rollout remains source; explicit WhatsApp app_review transport-source support is separately default-off/local-source. Canonical roles, plan, Store/Book and domain guards preserved. App-review classification grants navigation only, never domain draft/decision authority."
+    },
+    {
+      "id": "catalog.details.update",
+      "change": "changed",
+      "rollout": "source",
+      "note": "Existing canonical rollout remains source; explicit WhatsApp app_review transport-source support is separately default-off/local-source. Canonical roles, plan, Store/Book and domain guards preserved. App-review classification grants navigation only, never domain draft/decision authority."
+    },
+    {
+      "id": "catalog.identifiers.update",
+      "change": "changed",
+      "rollout": "source",
+      "note": "Existing canonical rollout remains source; explicit WhatsApp app_review transport-source support is separately default-off/local-source. Canonical roles, plan, Store/Book and domain guards preserved. App-review classification grants navigation only, never domain draft/decision authority."
+    },
+    {
+      "id": "catalog.availability.update",
+      "change": "changed",
+      "rollout": "source",
+      "note": "Existing canonical rollout remains source; explicit WhatsApp app_review transport-source support is separately default-off/local-source. Canonical roles, plan, Store/Book and domain guards preserved. App-review classification grants navigation only, never domain draft/decision authority."
+    },
+    {
+      "id": "catalog.units.draft",
+      "change": "changed",
+      "rollout": "source",
+      "note": "Existing canonical rollout remains source; explicit WhatsApp app_review transport-source support is separately default-off/local-source. Canonical roles, plan, Store/Book and domain guards preserved. App-review classification grants navigation only, never domain draft/decision authority."
+    },
+    {
+      "id": "catalog.units.publish",
+      "change": "changed",
+      "rollout": "source",
+      "note": "Existing canonical rollout remains source; explicit WhatsApp app_review transport-source support is separately default-off/local-source. Canonical roles, plan, Store/Book and domain guards preserved. App-review classification grants navigation only, never domain draft/decision authority."
+    },
+    {
+      "id": "sales.order_contacts.count",
+      "change": "changed",
+      "rollout": "source",
+      "note": "Existing canonical rollout remains source; explicit WhatsApp native transport-source support is separately default-off/local-source. Canonical roles, plan, Store/Book and domain guards preserved. App-review classification grants navigation only, never domain draft/decision authority."
+    },
+    {
+      "id": "stores.count",
+      "change": "changed",
+      "rollout": "source",
+      "note": "Existing canonical rollout remains source; explicit WhatsApp native transport-source support is separately default-off/local-source. Canonical roles, plan, Store/Book and domain guards preserved. App-review classification grants navigation only, never domain draft/decision authority."
+    },
+    {
+      "id": "inventory.stock.receive",
+      "change": "changed",
+      "rollout": "source",
+      "note": "Existing canonical rollout remains source; explicit WhatsApp app_review transport-source support is separately default-off/local-source. Canonical roles, plan, Store/Book and domain guards preserved. App-review classification grants navigation only, never domain draft/decision authority."
+    },
+    {
+      "id": "inventory.stock.adjust",
+      "change": "changed",
+      "rollout": "source",
+      "note": "Existing canonical rollout remains source; explicit WhatsApp app_review transport-source support is separately default-off/local-source. Canonical roles, plan, Store/Book and domain guards preserved. App-review classification grants navigation only, never domain draft/decision authority."
+    },
+    {
+      "id": "inventory.stock.correct",
+      "change": "changed",
+      "rollout": "source",
+      "note": "Existing canonical rollout remains source; explicit WhatsApp app_review transport-source support is separately default-off/local-source. Canonical roles, plan, Store/Book and domain guards preserved. App-review classification grants navigation only, never domain draft/decision authority."
+    },
+    {
+      "id": "inventory.count.create",
+      "change": "changed",
+      "rollout": "source",
+      "note": "Existing canonical rollout remains source; explicit WhatsApp app_review transport-source support is separately default-off/local-source. Canonical roles, plan, Store/Book and domain guards preserved. App-review classification grants navigation only, never domain draft/decision authority."
+    },
+    {
+      "id": "inventory.count.finalize",
+      "change": "changed",
+      "rollout": "source",
+      "note": "Existing canonical rollout remains source; explicit WhatsApp app_review transport-source support is separately default-off/local-source. Canonical roles, plan, Store/Book and domain guards preserved. App-review classification grants navigation only, never domain draft/decision authority."
+    },
+    {
+      "id": "inventory.count.read",
+      "change": "changed",
+      "rollout": "source",
+      "note": "Existing canonical rollout remains source; explicit WhatsApp native transport-source support is separately default-off/local-source. Canonical roles, plan, Store/Book and domain guards preserved. App-review classification grants navigation only, never domain draft/decision authority."
+    },
+    {
+      "id": "inventory.operations.history",
+      "change": "changed",
+      "rollout": "source",
+      "note": "Existing canonical rollout remains source; explicit WhatsApp native transport-source support is separately default-off/local-source. Canonical roles, plan, Store/Book and domain guards preserved. App-review classification grants navigation only, never domain draft/decision authority."
+    },
+    {
+      "id": "inventory.operations.read",
+      "change": "changed",
+      "rollout": "source",
+      "note": "Existing canonical rollout remains source; explicit WhatsApp native transport-source support is separately default-off/local-source. Canonical roles, plan, Store/Book and domain guards preserved. App-review classification grants navigation only, never domain draft/decision authority."
+    },
+    {
+      "id": "inventory.closeout.create",
+      "change": "changed",
+      "rollout": "source",
+      "note": "Existing canonical rollout remains source; explicit WhatsApp app_review transport-source support is separately default-off/local-source. Canonical roles, plan, Store/Book and domain guards preserved. App-review classification grants navigation only, never domain draft/decision authority."
+    },
+    {
+      "id": "inventory.closeout.finalize",
+      "change": "changed",
+      "rollout": "source",
+      "note": "Existing canonical rollout remains source; explicit WhatsApp app_review transport-source support is separately default-off/local-source. Canonical roles, plan, Store/Book and domain guards preserved. App-review classification grants navigation only, never domain draft/decision authority."
+    },
+    {
+      "id": "inventory.closeout.list",
+      "change": "changed",
+      "rollout": "source",
+      "note": "Existing canonical rollout remains source; explicit WhatsApp native transport-source support is separately default-off/local-source. Canonical roles, plan, Store/Book and domain guards preserved. App-review classification grants navigation only, never domain draft/decision authority."
+    },
+    {
+      "id": "inventory.closeout.read",
+      "change": "changed",
+      "rollout": "source",
+      "note": "Existing canonical rollout remains source; explicit WhatsApp native transport-source support is separately default-off/local-source. Canonical roles, plan, Store/Book and domain guards preserved. App-review classification grants navigation only, never domain draft/decision authority."
+    },
+    {
+      "id": "inventory.transfer.list",
+      "change": "changed",
+      "rollout": "source",
+      "note": "Existing canonical rollout remains source; explicit WhatsApp native transport-source support is separately default-off/local-source. Canonical roles, plan, Store/Book and domain guards preserved. App-review classification grants navigation only, never domain draft/decision authority."
+    },
+    {
+      "id": "inventory.transfer.read",
+      "change": "changed",
+      "rollout": "source",
+      "note": "Existing canonical rollout remains source; explicit WhatsApp native transport-source support is separately default-off/local-source. Canonical roles, plan, Store/Book and domain guards preserved. App-review classification grants navigation only, never domain draft/decision authority."
+    },
+    {
+      "id": "inventory.transfer.dispatch",
+      "change": "changed",
+      "rollout": "source",
+      "note": "Existing canonical rollout remains source; explicit WhatsApp app_review transport-source support is separately default-off/local-source. Canonical roles, plan, Store/Book and domain guards preserved. App-review classification grants navigation only, never domain draft/decision authority."
+    },
+    {
+      "id": "inventory.transfer.receive",
+      "change": "changed",
+      "rollout": "source",
+      "note": "Existing canonical rollout remains source; explicit WhatsApp app_review transport-source support is separately default-off/local-source. Canonical roles, plan, Store/Book and domain guards preserved. App-review classification grants navigation only, never domain draft/decision authority."
+    },
+    {
+      "id": "inventory.transfer.cancel",
+      "change": "changed",
+      "rollout": "source",
+      "note": "Existing canonical rollout remains source; explicit WhatsApp app_review transport-source support is separately default-off/local-source. Canonical roles, plan, Store/Book and domain guards preserved. App-review classification grants navigation only, never domain draft/decision authority."
+    },
+    {
+      "id": "catalog.page",
+      "change": "changed",
+      "rollout": "source",
+      "note": "Canonical catalog.listItemsPage now honors existing API searchOrder stable through the existing scoped keyword/keyset path, fixing assistant full-name pagination beyond the ranked300 candidate cap. Ordinary omitted/relevance behavior and all current role/Store/system-item/cursor authority remain; no rollout promotion."
+    }
+  ],
+  "docs": [
+    {
+      "topic": "feature",
+      "path": ".brain/features/whatsapp-assistant.md",
+      "status": "local_only"
+    },
+    {
+      "topic": "api",
+      "path": ".brain/api/contracts.md",
+      "status": "local_only"
+    },
+    {
+      "topic": "permissions",
+      "path": ".brain/api/permissions.md",
+      "status": "local_only"
+    },
+    {
+      "topic": "capability",
+      "path": "packages/assistant/src/capabilities/COVERAGE.md",
+      "status": "updated"
+    },
+    {
+      "topic": "capability",
+      "path": "packages/assistant/evaluations/WHATSAPP-COVERAGE.md",
+      "status": "updated"
+    },
+    {
+      "topic": "decision",
+      "path": ".brain/decisions/2026-10-15-whatsapp-assistant-channel.md",
+      "status": "local_only"
+    },
+    {
+      "topic": "schema",
+      "path": ".brain/database/schema.md",
+      "status": "local_only"
+    },
+    {
+      "topic": "schema",
+      "path": ".brain/database/relationships.md",
+      "status": "local_only"
+    },
+    {
+      "topic": "schema",
+      "path": ".brain/database/migrations.md",
+      "status": "local_only"
+    },
+    {
+      "topic": "feature",
+      "path": ".brain/features/assistant-voice.md",
+      "status": "local_only"
+    },
+    {
+      "topic": "feature",
+      "path": ".brain/features/ai-setup-assistant.md",
+      "status": "local_only"
+    },
+    {
+      "topic": "feature",
+      "path": ".brain/features/account-privacy.md",
+      "status": "local_only"
+    },
+    {
+      "topic": "feature",
+      "path": ".brain/qa/2026-10-15-whatsapp-media-retention-voice-source.md",
+      "status": "local_only"
+    },
+    {
+      "topic": "feature",
+      "path": ".brain/qa/2026-10-15-whatsapp-native-workflow-continuation-source.md",
+      "status": "local_only"
+    },
+    {
+      "topic": "feature",
+      "path": ".brain/qa/2026-10-15-whatsapp-original-bytes-cancellation.md",
+      "status": "local_only"
+    },
+    {
+      "topic": "feature",
+      "path": ".brain/features/assistant-simple-sales.md",
+      "status": "local_only"
+    },
+    {
+      "topic": "feature",
+      "path": ".brain/features/assistant-simple-money-in.md",
+      "status": "local_only"
+    },
+    {
+      "topic": "feature",
+      "path": ".brain/qa/2026-10-15-whatsapp-source-completeness-audit.md",
+      "status": "local_only"
+    },
+    {
+      "topic": "decision",
+      "path": ".brain/decisions/2026-10-15-whatsapp-tenant-pilot-quota-notice.md",
+      "status": "local_only"
+    },
+    {
+      "topic": "feature",
+      "path": ".brain/qa/2026-10-15-whatsapp-native-money-product-revoke.md",
+      "status": "local_only"
+    },
+    {
+      "topic": "feature",
+      "path": ".brain/qa/2026-10-15-whatsapp-remaining-acceptance-audit.md",
+      "status": "local_only"
+    },
+    {
+      "topic": "decision",
+      "path": ".brain/decisions/2026-10-15-whatsapp-app-resume-and-read-authority.md",
+      "status": "local_only"
+    },
+    {
+      "topic": "decision",
+      "path": ".brain/decisions/2026-10-15-whatsapp-media-purpose-parity.md",
+      "status": "local_only"
+    },
+    {
+      "topic": "feature",
+      "path": ".brain/qa/2026-10-15-whatsapp-readiness-operations-source.md",
+      "status": "local_only"
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "run",
+      "path": ".brain/qa/2026-10-15-whatsapp-assistant.md",
+      "executed": true,
+      "result": "Sequential canonical General action2/190, targeted workflow selected review2/131, principal1/79, workflow Cancel/Product possible matches2/189, persisted supplier pagination1/29, voice review3/312, and recovery1/28 pass with owned cleanup. Focused source guards, native exact-route parser6/64, workflow parser19/258 plus commands5/39, and media/voice/retention13/85 pass. Actual owned PNG byte/default-job/Disconnect journey1/39 and queued-media cancellation guard26/134 pass with bytes-first owned cleanup; no live provider/model/config/Production action. Full API compiler is not claimed clean; inherited fixture diagnostics retained. Independent configuration-gate finding fixed and verified; focused14/88 passes. Owned-file semantics27 API/shared/DB/job+2desktop+6mobile pass, not a full compiler claim. H01/H02 pass; inert69-file fingerprint readiness stays disabled/unprobed. Final bounded38read/7native+37app-review write/workflow audits fixed exact final sale review4/22, staged-account freshness/bootstrap/replay6/46 and oversize exact workflow handoff1/17; independent review clear. Final8file owned action/workflow semantics pass. Readiness75file bounded fingerprint, no release authority. Actual branded native simple-sale/first-Book/default-cash/payment/duplicate receipt proof1/84 passes148.79s with exact owned cleanup. Fixed linked-only composite subordinate transport blocker through full-parent/exact-canonical-dependency private generated quick-sale entry; standalone order/payment unchanged. Focused composition5/35, independent review and six scoped source/fixture semantics pass. No new full W26 or live acceptance."
+    },
+    {
+      "kind": "run",
+      "path": "packages/assistant/evaluations/runs/2026-10-15-whatsapp-money-product-continuation.md",
+      "executed": true,
+      "result": "Coordinator-executed local QA native money3/259 (404.32s) and GENERAL simple product1/122 (168.20s) pass with exact owned cleanup, fake Meta acceptance and no model/provider requests. Existing-Book money-in/paid-expense/transfer receipts and replay, simple product original stock plus saved authorized catalog/search/offering reads and post-disconnect refusal are bounded proofs. Actual canonical conversation projection/native route guard2/19 and Product chosen-audio provenance/denial guards4/24 pass as pure source checks. Actual admitted-run Disconnect1/40 (57.92s), only model boundary stubbed, preserves canonical app audit/known usage and denies stale tools, outbox/attempt creation and blind run/budget replay; exact owned cleanup passed. Coordinator accepted local backend W45 using this plus retained fault proofs: delivery24/48(50.0%). No device navigation, real transcription/provider, full W19-W29/W35/W41 acceptance or rollout promotion; registry154/eligible82 unchanged. Generator/matrix/H01/H02 regeneration is held for final coordinated freeze."
+    },
+    {
+      "kind": "run",
+      "path": ".brain/qa/2026-10-15-whatsapp-native-money-product-revoke.md",
+      "executed": true,
+      "result": "W44 current Tenant pilot plus one fixed daily no-body/no-model quota notice wired with ID-only delivery, current authority/window/quota/recovery and private-safe known/unknown metrics. Actual signed ingress/ceiling/duplicate/attempt/Tenant-off/Disconnect case1/40 passes51.68s with owned cleanup; focused initial28/176, finalquota5/32, ops5/42, readiness/API13/123 and bare opt-out aliases6/33 pass. Scoped16 gate/runtime and final4 control/ops semantic diagnostics0; independent crossreviews clear. Local W44 accepted25/48(52.1%), no provider/device/template/hosted rollout inference or private env/schema action. Customer-update backend acceptance remains pending its sole sequential connected case."
+    },
+    {
+      "kind": "run",
+      "path": ".brain/qa/2026-10-15-whatsapp-native-money-product-revoke.md",
+      "executed": true,
+      "result": "Actual branded customer_update changed-target refusal, canonical edited revision/current comparison, old-proof refusal, exact fresh quoted confirmation and saved receipt replay1/142 passes224.95s with strict owned cleanup. External email preserved and same-name decoy unchanged; no repeat update/run/customer. Only canonical edited result persisted by completed-model stand-in; no NLP/device claim. One-file scoped semantic0 and independent review clear. With prior six native action paths plus shared edit/cancel/stale/race proofs, coordinator accepts current seven native GENERAL backend journeys W26,26/48(54.2%); standalone order/payment and37 rich/sensitive handoffs remain app review and W24/W27-W29 acceptance stays open."
+    },
+    {
+      "kind": "run",
+      "path": ".brain/qa/2026-10-15-whatsapp-remaining-acceptance-audit.md",
+      "executed": true,
+      "result": "Current W23 inventory18/eligible0 stays fully planned; retained Owner/allflags actual path denials support explicit closed-eligibility acceptance. Actual signed three-purpose linked/canonical rehearsal main case PASS:3 separate runs/drafts, General1/sharedSetup2 allowance,7 invalid admissions without spend, zero domain effects. Initial suite afterAll refused canonical empty bootstrap and is retained as failed; corrected strict guard plus separately reviewed exact owned atomic recovery succeeded with zero residual roots/budgets. No unnecessary main rerun or clean-suite relabel. Local W36 accepted28/48(58.3%), F4/6; no model/provider/UI/full product/setup inference."
+    },
+    {
+      "kind": "run",
+      "path": ".brain/decisions/2026-10-15-whatsapp-app-resume-and-read-authority.md",
+      "executed": true,
+      "result": "Actual Product producer-to-nuqs consumer10/107 and navigation16/216; catalog original access/cache15/113 plus final role-narrowing3/28; rich complete Product handback/revision guards2/36; joined Setup partial correction/confirm/skip/retry1/41 pass. Current6-file cache/route and3-file Product owned semantic diagnostics0;15 actual initial dashboard sources had0 diagnostics and one temporary harness path was corrected. Existing conversation-keyed actual form mount independently checked; false lifecycle candidates retracted without unnecessary edits. No browser/device acceptance. Service fixture remains prepared/running source until separate retained result."
+    },
+    {
+      "kind": "run",
+      "path": ".brain/qa/2026-10-15-whatsapp-remaining-acceptance-audit.md",
+      "executed": true,
+      "result": "Existing charge-only Service two-action signed WhatsApp handoff to actual protected real-Session same General chat RPC, exact persisted original/action, canonical target amendment/stale review refusal, fresh manager release then separate performance/effect/receipt/replay passes1/114,0fail135.27s with strict owned cleanup. No native Service proposal/proof, extra chat, physical stock/money or tracked job. First newcase array-review substring assertion failed safely and cleaned up; onlycase rerun after test-only join fix, not a production repair. Current eligible W28 app-review accepted29/48(60.4%), E4/6; dedicated plannedservices/quote/booking/work remain closed and W22queue/device/provider gates unclaimed."
+    },
+    {
+      "kind": "run",
+      "path": ".brain/qa/2026-10-15-whatsapp-remaining-acceptance-audit.md",
+      "executed": true,
+      "result": "Saved canonical read identity projection11/181 and catalog activity complete-fact projection2/31 pass with independent source review; no fact authorization inferred from saved display hints. Actual inventory Decimal producers preserve tiny quantity/conversion and large fractional Decimal minor-unit costs7/55 source checks; three owned semantic roots0. Measured actual1.2s WAV through signed ingestion, real local original, untouched default QA processing/reservation/known nonbillable usage and quoted Cancel1/53,0fail112.41s with strict cleanup; no real STT/provider/Meta/device proof or W19/W20/W41 promotion. Final fetch preconnect trap strengthening was scoped typechecked without repeating connected run."
+    },
+    {
+      "kind": "run",
+      "path": ".brain/qa/2026-10-15-whatsapp-remaining-acceptance-audit.md",
+      "executed": true,
+      "result": "Current eligible services.queue.read actual canonical nonempty tracked orders/reschedules\u2192linked exact job/line/revision/allocated quantities/order due/as-of/filter persistence/endpage\u2192fixed unavailable after revocation with no saved facts and unchanged domain snapshot1/46,0fail59.02s incl strict owned cleanup; initial wrong test no-answer assumption failed and cleaned, only newcase corrected/rerun. W22 current scope accepted30/48,D2/6; planned request/quote/booking/work originals stay closed. Actual eligible expense_record signed handoff\u2192protected real samechat\u2192canonical foreignBook denial/period-close stale refusal/newreview/exact bill partialpayment balanced journals/receipt replay1/83,0fail119.93s with strict owned2Book cleanup. Representative W29 evidence only; other finance actions/UI/provider unclaimed. Canonical shared media-purpose allowlist repairs actual GENERAL CSV/TEXT divergence at ingress and queued jobs; source9/57, independent reviews clear, scoped changed roots0, actual Setup CSV parity proof pending."
+    },
+    {
+      "kind": "run",
+      "path": ".brain/qa/2026-10-15-whatsapp-remaining-acceptance-audit.md",
+      "executed": true,
+      "result": "Representative current eligible inventory.stock.receive signed linked handoff\u2192actual protected real-Session same General chat\u2192canonical complete review\u2192actual protected catalog rename\u2192oldtarget CONFLICT/noeffect\u2192explicit fresh review\u2192one exact2.5 Piece receipt/movement/revision1/replay passes1/74,0fail92.48s incl strict ownedcleanup. Setup uses protected canonical offeringAvailability zero-source initialization, explicitly a setup write; no manually seeded source, native action proof, finance/orders/media/usage, device/provider or whole W27 acceptance. Final newcase optional-review explicit guards semantic0."
+    },
+    {
+      "kind": "run",
+      "path": ".brain/qa/2026-10-15-whatsapp-remaining-acceptance-audit.md",
+      "executed": true,
+      "result": "Actual General app/channel CSV refusal before download/private rows; actual Setup signed/default-ingest vsrealSession appintent/canonicalupload same untoucheddefaultjob exact row2/4/leadingzero/large+tinydecimal/provenance/persisteduntrustedsource parity; exact2owned defaultmaintenance candidates with actual original remove/absence before canonical metadata/content expiry passes1/88,0fail105.85s with strictcleanup and rejectingfetch guard. Combined export1/37+approved privatecleanup1/46+PNG1/39 and authority/expiry sourceguards independently accepts W42 platform-owned local criterion:31/48,G3/6. Full account othercategories/Meta/device/HTTPupload/rendered/live/provider/W40fidelity/W41fullvoice remain separate. New W33 mainpassed but strictcleanup retained oneopeningusage; actual read-onlyaudit discovered unintended DeepSeek syntheticopening349input139output488tokens. Owner informed; wholeW33 suite not clean/notaccepted, exact recovery and explicitrehearsal+networkguard correction pending, no refund/externalerasure claimed."
+    },
+    {
+      "kind": "run",
+      "path": ".brain/qa/2026-10-15-whatsapp-remaining-acceptance-audit.md",
+      "executed": true,
+      "result": "W33 exactretainedQA recoveryPASS with independent0residue; original DeepSeek488token call remainsdisclosed, no refund/externalerasure. Later savedscript inversehardening notclaimedexecuted. OnlyaffectedordinarySetup case rerunwith forcedrehearsal and rejectingfetch/preconnect: actual canonical conflict/partialcommit/correction requiringexplicitreconfirm/priorcommitted+skipped preservation/durable refs+summary replay1/43,0fail62.62s incl exactownedcleanup;0externalattempts, exactknown fallback openingusage/nulltokens, no budget. Final single-root semantics0. Combined nativeatomic/cancel evidence accepts localW33:32/48(66.7%),F5/6. FullUI/provider/otherworkflows remainseparate."
+    },
+    {
+      "kind": "run",
+      "path": ".brain/qa/2026-10-15-whatsapp-remaining-acceptance-audit.md",
+      "executed": true,
+      "result": "Actual signed1.2sWAV/defaultQAprocessing/once-onlyceil2secusage/deliveredquotedEdit/realGeneralturn/onependingSale+persistedproposalreference+actionreview/replaynoextraeffect1/79,0fail166.37s incl strictownedbytesfirstcleanup; explicitrehearsal/rejectfetch observed0attempts. ExistingUse/Edit/Cancel3/312+measuredCancel1/53 and retainedactualHTTPfallbackadapter1/4,7filtered0fail445ms independently accept localW41 orchestration:33/48(68.8%),G4/6. FixedQAtranscript/injectedHTTPresponses are not real speechquality/providerbilling/Meta/device evidence; W04/W46 externalgates remain. Fournewfixture roots ultimatelydiagnostics0 aftertestonly unknowninput/Bookfilter/localoriginalcleanupAPI fixes; no prodadapter/typeglobalsemanticclaim."
+    },
+    {
+      "kind": "test",
+      "path": "packages/db/src/queries/catalog-stable-search.test.ts",
+      "executed": true,
+      "result": "Subagent executed final2tests/82assertions0fail533ms with inertDBURL and stateful query port; actual repository walks301logicalkeyword matches with originalkeyset/tienames/scope/filter/SystemRole/Store graph and refuses foreign/filter cursor before pagequery. Default/explicitrelevance preserves ranked300cap. Independent source review clear; DBproduction root diagnostics0, sole optional-lastrow testtype repaired without cast; finalaffectedtestroot diagnostics0. No301realrows/provider/permission/rollout inference."
+    },
+    {
+      "kind": "review",
+      "path": ".brain/qa/2026-10-15-whatsapp-remaining-acceptance-audit.md",
+      "executed": true,
+      "result": "Independent exactcriterion audit accepts LOCAL W27/W29 with all10inventory/all11finance explicitAPP_REVIEW classification and canonical complete review/editor/lockedcommand source plus actual common samechat realSession/stale/foreignBook/effect/receipt proofs stock1/74 andfinance1/83. All37handoffrows/48leaves unchanged; staff/settings/custody/transform plannedclosed. No37duplicateDBdomainjourney requirement or renderedUI/provider inference. Delivery35/48(72.9%),E6/6; W20newstockread extension separatepending."
+    },
+    {
+      "kind": "run",
+      "path": ".brain/qa/2026-10-15-whatsapp-remaining-acceptance-audit.md",
+      "executed": true,
+      "result": "Parent serial guarded QA final customer receivables1/59,0fail73.06s; actual saved11customer pagination1/70,0fail46.35s; expanded canonical stock receipt plus three saved read paths1/123,0fail112.57s; invoice-only purchase registration/recognition/two bills/exact partpayment and six linked reads1/110,0fail111.26s. Each includes strict owned cleanup, explicit rehearsal and rejecting external fetch/preconnect. Independent actual-log review accepts local W19/W20/W21 with retained catalog/search/ambiguity/original-target/order/payment/exact Decimal/Book-role-plan-source/supplier-pagination contracts:38/48(79.2%),D5/6. No rendered UI/provider/eligibility activation. Earlier failed customer logs and exact owned recovery remain attributed."
+    },
+    {
+      "kind": "run",
+      "path": ".brain/qa/2026-10-15-whatsapp-remaining-acceptance-audit.md",
+      "executed": true,
+      "result": "Original-photo corrected whole case remains FAILED0/1/297,417.84s with clean strict cleanup; sale/expense/money-in rows completed before transfer correctly requested destination clarification. Only remaining transfer mode actual protected moneyAccounts selection/editProposal/same original+proposal/fresh review/stale revision refusal/immutable app handoff/Cancel replay passes1/98,0fail140.93s with strict bytes-first owned cleanup. Independent source review permits combined local W39 acceptance with exact split evidence:39/48(81.3%),G5/6. No full-four clean-run relabel, parser widening, native write authority, image interpretation, provider or device claim. Actual selectable ASCII text two-page PDF original/default parser/exact page/decimal/provenance/usage/replay1/39,0fail73.00s includes strict cleanup; standardFontDataUrl warning retained and no arbitrary font/nonLatin/OCR/vision claim. Final128path source packet refresh cbc72d0802e3dbf717b02d8f7dd53b8d4ce0c34d8be2157730dc3bc64cb01263 preserves concurrent DB package export edits; seven channel gates/localSource off in clean inert run, no private/live configuration audit."
+    },
+    {
+      "kind": "review",
+      "path": ".brain/qa/2026-10-15-whatsapp-readiness-operations-source.md",
+      "executed": true,
+      "result": "Remaining-source subagent audit found concrete operator preparation gap. Added only public .env.example missing SETUP/PRODUCT/WORKFLOW_WRITES defaults=false and approval keyVersion=v1, plus ordered shared-OTP sender configuration/webhook challenge+signature+status ownership/target env names/identifier-only worker transport/source-bound evidence/consented pilot/observable rollback+OTP regression runbook. No private profile, runtime enablement, provider/account calls, DB, migration, code changes or broader tests. Delivery stays39/48; W05/W48 and all9remaining leaves unaccepted. Fresh bounded official Meta terms/pricing/Graph retrieval still blocked; no eligibility/rate/version assumption or change."
+    },
+    {
+      "kind": "test",
+      "path": "apps/dashboard/src/components/assistant-whatsapp/connect-whatsapp.mounted.test.ts",
+      "executed": true,
+      "result": "Actual React/TanStack connect/personalmanage mounted35assertions directPASS449ms,0network. Reproduced cachedclaimedstatus pausedrefetch couldconfirm; minimalbutton+handlerisPausedguard and truthfulofflineretry fix. Isolatedwrapper now requires ownedJUnit exact1case/0fail/0skip plus exit0 after Bun1.3.9 nested reporter returned empty captured streams; lifecycle assertions unchanged. Real authenticated disabledaccess/Demo personalguard page and normalnavigations observed after user-approved QAlookup/signin; no Meta linkactivation, device or fullW12 acceptance inferred."
+    },
+    {
+      "kind": "test",
+      "path": "packages/assistant/evaluations/whatsapp-chat-attachment-switch.test.ts",
+      "executed": true,
+      "result": "Actual mounted web/native hooks/composer/receipts/workbench41assertions directPASS403ms. Repairs old originals afterNew/choose, lateupload/voice/transcript afteractor/cache/session invalidation, and actualNew/history recovery fromfailedsavedtarget while businesssend/proposal/error/busy/availabilityguards remain. Authenticated actualIAB failedexacttarget denied withsenddisabled; explicitNew navigatescleanblank/assistant. Independent compositeaudit joins priorcanonical5/104/currentDBscope,DTOroute2/19+6/64 and realSession samechatService1/114,stock1/123,finance1/83 toacceptlocalW24. Device/realMeta tapping remainsW46."
+    },
+    {
+      "kind": "test",
+      "path": "apps/dashboard/src/components/product-assistant/product-form-resume.mounted.test.ts",
+      "executed": true,
+      "result": "Actual mounted CatalogItemForm/provider/reacthookform/QueryClient richgraph47assertions directPASS540ms, statefulRPCboundaryonly. Exactsamecommandretry/stalerevision refusal/localedit preservation/explicitreload/currentgeneration/completion callback, no ordinarycreate. Authenticated actualIAB existingProductdraft producer -> exactsavedchat ->Backtoform preserves sameconversation,name/price/unit withoutSave or modelmessage. IndependentW35audit joins actualPRODUCT_CREATE richcontextcase and Productterminalreceipt/replay206.39s from retainedMIXEDFAILEDsuite (whole result notrelabelled), canonicalmanualadvanced samechat/replay fixture retained6/107. GENERALproduct1/122 is supportive, not mislabeledPRODUCT_CREATE. LocalW35accepted with phone/Meta/hosted/release separate. Delivery41/48(85.4%)."
+    },
+    {
+      "kind": "test",
+      "path": "packages/assistant/evaluations/fixtures/mobile-whatsapp-connect.fixture.tsx",
+      "executed": true,
+      "result": "18October fresh clean-env direct actual dashboard connect/manage1/35 and mobile connect/manage1/38 PASS, zero failure/skip/network; actual React+TanStack orchestration with RPC/native/primitive boundaries, exact revision, claim noautoconfirm, loading/error/retry/expiry/personalrevoke and paused cache+scope/session refusal. Independent review clear, no production edit needed. W12 LOCAL accepted42/48(87.5%),B6/6. Actual handset/WhatsApp/Meta pilot remainsW46; no privateenv/DB/provider/runtime/deploy action. Durable logs/JUnit/connect hashes packages/assistant/evaluations/runs/2026-10-18-whatsapp-local/."
+    },
+    {
+      "kind": "review",
+      "path": ".brain/qa/2026-10-18-whatsapp-local-completion.md",
+      "executed": true,
+      "result": "Independent narrow review found no W12/W24/W35 blocker. Missing old temporary mountedlogs repaired with ONLY fresh existing inert chat1/41 and Product richform1/47 PASS, no source changes or connected reruns; prior canonical connected acceptance remains historical. Prepared all11readiness gate producers, consented10case pilot matrix and targetrelease/rollback receipt. W04/W05/W40/W46/W47/W48 remain open; no synthetic vision/provider/device/release acceptance. Current135path inert source report has seven flags/localSource false, provider not_probed, operations not_requested, activation false; not a private/live audit."
+    },
+    {
+      "kind": "test",
+      "path": "apps/api/src/assistant/whatsapp-media/ingest.test.ts",
+      "executed": true,
+      "result": "18October disabled W46/W47 continuation: focused inert ingest group PASS5tests/30assertions after channel-local SetupIMAGE refusal repair; authorize-only refusal,zero HTTP/private row/storage/enqueue. Kind matrix retains GENERAL originalPHOTO, supportedSETUP deterministic files, canonicalGENERAL spreadsheet refusal, PRODUCT nonaudio refusal and audio. NoDB/model/provider/env/flag/deploy/OTP action; no broadtypecheck."
+    }
+  ]
+}

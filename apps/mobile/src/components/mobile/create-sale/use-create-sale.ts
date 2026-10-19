@@ -22,12 +22,14 @@ import {
   shouldShowListSearch,
 } from "@/lib/list-pagination"
 import { buildOfflineOrderCommand } from "@/lib/offline-order"
+import { classifyOperationFailure } from "@/lib/operation-failure"
+import { useCheckoutPaymentAccountStore } from "@/store/checkoutPaymentAccountStore"
 import { useOfflineCommandStore } from "@/store/offlineCommandStore"
 import {
   isOfflineAccessAllowed,
   useOperationalModeStore,
 } from "@/store/operationalModeStore"
-import { useTRPC } from "@/trpc/client"
+import { getDataCacheGeneration, useTRPC } from "@/trpc/client"
 import { formatMinorMoney } from "@ewatrade/utils"
 import {
   type CatalogFreeLineDraft,
@@ -56,6 +58,13 @@ import {
 } from "react"
 import { Keyboard, Platform } from "react-native"
 import {
+  type CheckoutAccountChoice,
+  type CheckoutAccountRead,
+  type CheckoutMoneyAccount,
+  checkoutAccountForSubmit,
+  resolveCheckoutAccount,
+} from "./checkout-money-account-model"
+import {
   type CreateSaleCompletion,
   type CreateSaleContentProps,
   type OfferingRow,
@@ -66,6 +75,7 @@ import {
 } from "./create-sale-model"
 import { buildSaleCustomerSuggestions } from "./sale-customer-suggestions"
 import { saleUnitCount } from "./sale-unit-count"
+import type { SaleSubmissionOutcome } from "./use-sale-activity"
 import { useSaleFulfillment } from "./use-sale-fulfillment"
 
 export function useCreateSale({
@@ -77,15 +87,37 @@ export function useCreateSale({
   onRecorded,
 }: CreateSaleContentProps) {
   const submissionPending = useRef(false)
-  const submitted = useRef(false)
+  // The current checkout lifetime (set below) and the lifetime whose sale
+  // settled. A settled sale only locks the draft of the owner who made it.
+  const lifetimeRef = useRef<string | null>(null)
+  const settledLifetime = useRef<string | null>(null)
+  const submitted = {
+    get current() {
+      return (
+        settledLifetime.current !== null &&
+        settledLifetime.current === lifetimeRef.current
+      )
+    },
+  }
   const mounted = useRef(true)
   const [isConfirming, setIsConfirming] = useState(false)
-  const [completion, setCompletion] = useState<CreateSaleCompletion | null>(
-    null,
-  )
+  const [completionState, setCompletionState] = useState<{
+    lifetime: string
+    value: CreateSaleCompletion
+  } | null>(null)
   const [postSubmitWarning, setPostSubmitWarning] = useState<string | null>(
     null,
   )
+  // Observation only (M11): one private object per accepted confirmation and
+  // its authoritative or classified outcome, for the owner that made it.
+  const [submissionState, setSubmissionState] = useState<{
+    owner: string
+    attempt: object
+    outcome?: SaleSubmissionOutcome
+  } | null>(null)
+  // The operation identity whose last attempt ended with an unknown outcome:
+  // a later rejection of that same operation can't prove it never applied.
+  const priorUnknownOperation = useRef<string | null>(null)
   useEffect(() => {
     mounted.current = true
     return () => {
@@ -136,7 +168,15 @@ export function useCreateSale({
   const [deliveryPickerMode, setDeliveryPickerMode] = useState<
     "date" | "time" | null
   >(null)
-  const [fulfillNowRequested, setFulfillNowRequested] = useState(false)
+  // Untouched (null) means on for eligible Product stock due now; an explicit
+  // choice (on or off) is kept through steps and ineligible spells.
+  const [fulfillPreference, setFulfillPreference] = useState<boolean | null>(
+    null,
+  )
+  const fulfillNowRequested = fulfillPreference ?? true
+  // Field-level catalog-free errors appear once Continue/Confirm is blocked.
+  const [catalogFreeErrorsVisible, setCatalogFreeErrorsVisible] =
+    useState(false)
   const [productSearch, setProductSearch] = useState("")
   const deferredCustomerSearch = useDeferredValue(customerSearch)
   const deferredProductSearch = useDeferredValue(productSearch)
@@ -286,7 +326,8 @@ export function useCreateSale({
     }
     if (
       submissionPending.current ||
-      submitted.current ||
+      (settledLifetime.current !== null &&
+        settledLifetime.current === lifetimeRef.current) ||
       !allRows.some((row) => row.catalogItemId === initialCatalogItemId)
     )
       return
@@ -333,6 +374,157 @@ export function useCreateSale({
       .map(() => "1"),
   ]
   const paymentSummary = salePaymentSummary(totalMinor, amountReceived)
+  // Destination Money Account (M05). The read, any choice and every retained
+  // handler belong to one checkout lifetime: actor, business, profile Store,
+  // role, access mode and data-cache generation (so A→B→A is a new lifetime).
+  const checkoutStoreId = profile?.storeId
+  const storeAgrees =
+    Boolean(checkoutStoreId) && availability.data?.storeId === checkoutStoreId
+  const checkoutOwner = JSON.stringify([
+    profile?.id ?? null,
+    businessId ?? null,
+    checkoutStoreId ?? null,
+    profile?.role ?? null,
+    profile?.staffAccessMode ?? null,
+    getDataCacheGeneration(),
+  ])
+  const checkoutOwnerRef = lifetimeRef
+  checkoutOwnerRef.current = checkoutOwner
+  // A completion is only ever shown to the lifetime that recorded it.
+  const completion =
+    completionState?.lifetime === checkoutOwner ? completionState.value : null
+  const paymentAccountOptions = trpc.orders.paymentAccounts.queryOptions()
+  const paymentAccountCacheArgs = {
+    ...paymentAccountOptions.queryKey[1],
+    // Cache ownership only; tRPC's path/input tuple stays intact.
+    checkoutOwner: {
+      actorId: profile?.id,
+      businessId,
+      storeId: checkoutStoreId,
+    },
+  }
+  const basePaymentAccountsQuery = paymentAccountOptions.queryFn
+  const paymentAccounts = useQuery({
+    ...paymentAccountOptions,
+    queryKey: [paymentAccountOptions.queryKey[0], paymentAccountCacheArgs],
+    // Capture the owner partition before this exact request; record only a
+    // valid fresh answer for it, and forget it on an explicit denial. Network
+    // failures leave any earlier snapshot alone.
+    // A queryFn retained from an older lifetime never captures, records or
+    // forgets anything for whoever is signed in now.
+    queryFn: basePaymentAccountsQuery
+      ? async (context) => {
+          const queryLifetime = checkoutOwner
+          const current = () => queryLifetime === checkoutOwnerRef.current
+          if (!current())
+            throw new Error("This account read belongs to another session.")
+          const ticket = useCheckoutPaymentAccountStore
+            .getState()
+            .capture(currencyCode)
+          try {
+            const data = await basePaymentAccountsQuery(context)
+            if (ticket && current())
+              useCheckoutPaymentAccountStore.getState().record(ticket, data)
+            return data
+          } catch (failure) {
+            const code = (failure as { data?: { code?: string } } | null)?.data
+              ?.code
+            if (
+              ticket &&
+              current() &&
+              (code === "FORBIDDEN" || code === "UNAUTHORIZED")
+            )
+              useCheckoutPaymentAccountStore.getState().forget(ticket)
+            throw failure
+          }
+        }
+      : undefined,
+    enabled:
+      !isOffline && Boolean(profile?.id && businessId && checkoutStoreId),
+    refetchOnMount: "always",
+    retry: false,
+  })
+  const paymentAccountCode = (
+    paymentAccounts.error as { data?: { code?: string } } | null
+  )?.data?.code
+  // Only a settled read from this mount, for the profile's own Store and in
+  // this sale's currency, may supply a destination.
+  const accountRead: CheckoutAccountRead = paymentAccounts.isError
+    ? {
+        status:
+          paymentAccountCode === "FORBIDDEN" ||
+          paymentAccountCode === "UNAUTHORIZED"
+            ? "denied"
+            : "error",
+      }
+    : !storeAgrees ||
+        !paymentAccounts.isFetchedAfterMount ||
+        paymentAccounts.isFetching ||
+        !paymentAccounts.data
+      ? { status: "loading" }
+      : paymentAccounts.data.book &&
+          paymentAccounts.data.book.currencyCode !== currencyCode
+        ? { status: "error" }
+        : {
+            status: "ready",
+            book: paymentAccounts.data.book,
+            accounts: paymentAccounts.data.accounts,
+          }
+  const [accountChoice, setAccountChoice] =
+    useState<CheckoutAccountChoice | null>(null)
+  // Offline: only this owner's previously checked snapshot for this currency
+  // (subscribed so a fresh record re-renders; read() applies scope fences).
+  useCheckoutPaymentAccountStore((state) => state.snapshots)
+  const offlineSnapshot = isOffline
+    ? (useCheckoutPaymentAccountStore.getState().read(currencyCode)?.data ??
+      null)
+    : null
+  const accountState = resolveCheckoutAccount({
+    receivedMinor: paymentSummary.receivedMinor,
+    method: paymentMethod,
+    offline: isOffline,
+    read: accountRead,
+    owner: checkoutOwner,
+    choice: accountChoice,
+    offlineSnapshot,
+  })
+  const accountStateRef = useRef(accountState)
+  accountStateRef.current = accountState
+  // Every fact the submit sends. A retained submit from an older draft (other
+  // amount, method, lines, customer or delivery) is inert.
+  const submitDraftKey = JSON.stringify([
+    // Online vs offline is part of the operation: a click from the other
+    // mode (order vs queued command) is retired.
+    isOffline,
+    amountReceived,
+    paymentMethod,
+    selectedRows.map((row) => [row.offering.id, row.quantity]),
+    catalogFreeLines,
+    selectedCustomer?.id ?? null,
+    selectedCustomer?.directoryId ?? null,
+    deliveryDueAt.toISOString(),
+    fulfillNowRequested,
+  ])
+  const submitDraftKeyRef = useRef(submitDraftKey)
+  submitDraftKeyRef.current = submitDraftKey
+  // Idempotency ids belong to one lifetime: retries reuse them, another
+  // owner's sale never does.
+  const clientIdsLifetime = useRef<string | null>(null)
+  const chooseAccount = (account: CheckoutMoneyAccount) => {
+    // A row handler from an earlier lifetime or read is inert.
+    if (checkoutOwner !== checkoutOwnerRef.current) return
+    const current = accountStateRef.current
+    if (
+      !("eligible" in current) ||
+      !current.eligible.some((entry) => entry.id === account.id)
+    )
+      return
+    setAccountChoice({
+      owner: checkoutOwner,
+      id: account.id,
+      name: account.name,
+    })
+  }
   // Catalog-free lines have nothing to pick, so they can be handed over now too.
   const hasFulfillableLines =
     catalogFreeLines.length > 0 ||
@@ -498,6 +690,7 @@ export function useCreateSale({
     const catalogFreeError = catalogFreeLinesError(catalogFreeLines)
     if (catalogFreeError) {
       setError(catalogFreeError)
+      setCatalogFreeErrorsVisible(true)
       return
     }
     if (
@@ -626,6 +819,12 @@ export function useCreateSale({
 
   async function submit() {
     if (submissionPending.current || submitted.current) return
+    // A handler from an older draft or lifetime never sends anything.
+    if (
+      submitDraftKey !== submitDraftKeyRef.current ||
+      checkoutOwner !== checkoutOwnerRef.current
+    )
+      return
     if (
       !Number.isSafeInteger(totalMinor) ||
       selectedRows.length !== selectedLines.length ||
@@ -641,12 +840,33 @@ export function useCreateSale({
     const catalogFreeError = catalogFreeLinesError(catalogFreeLines)
     if (catalogFreeError) {
       setError(catalogFreeError)
+      setCatalogFreeErrorsVisible(true)
       setStep("items")
       return
     }
     if (paymentSummary.error) {
       setError(paymentSummary.error)
       return
+    }
+    // Validate at invocation: this handler's lifetime must still be current
+    // and the *current* account read must still allow this destination.
+    const submitLifetime = checkoutOwner
+    const currentAccount = accountStateRef.current
+    const destination = checkoutAccountForSubmit(currentAccount)
+    if (!destination.ok || submitLifetime !== checkoutOwnerRef.current) {
+      setError("Choose where the money goes before confirming.")
+      return
+    }
+    const moneyAccountName =
+      currentAccount.kind === "selected"
+        ? currentAccount.account.name
+        : undefined
+    if (clientIdsLifetime.current !== submitLifetime) {
+      if (clientIdsLifetime.current !== null) {
+        orderClientId.current = `order-${Crypto.randomUUID()}`
+        paymentClientId.current = `payment-${Crypto.randomUUID()}`
+      }
+      clientIdsLifetime.current = submitLifetime
     }
     const catalogLines = selectedRows.flatMap(
       ({ offering, quantity, totalMinor }) =>
@@ -685,6 +905,8 @@ export function useCreateSale({
     setError(null)
     submissionPending.current = true
     setIsConfirming(true)
+    const attempt = {}
+    setSubmissionState({ owner: submitLifetime, attempt })
     Keyboard.dismiss()
     const fulfillNow = getSaleFulfillmentOption({
       deliveryDueAt,
@@ -708,6 +930,8 @@ export function useCreateSale({
                     amountMinor: paymentSummary.receivedMinor,
                     clientPaymentId: paymentClientId.current,
                     method: paymentMethod,
+                    // From the saved snapshot; checked again when it syncs.
+                    moneyAccountId: destination.id,
                   }
                 : undefined,
           }),
@@ -724,10 +948,20 @@ export function useCreateSale({
             paymentSummary.balanceDueMinor,
             currencyCode,
           ),
+          // The account chosen for the money received; none when pending.
+          moneyAccount:
+            paymentSummary.receivedMinor > 0 ? moneyAccountName : undefined,
           status: "queued",
         }
-        submitted.current = true
-        if (mounted.current) setCompletion(result)
+        settledLifetime.current = submitLifetime
+        if (mounted.current) {
+          setCompletionState({ lifetime: submitLifetime, value: result })
+          setSubmissionState({
+            owner: submitLifetime,
+            attempt,
+            outcome: "queued",
+          })
+        }
         if (mounted.current) onRecorded?.(result)
         if (mounted.current) onComplete?.(result)
         return
@@ -743,6 +977,7 @@ export function useCreateSale({
                 amountMinor: paymentSummary.receivedMinor,
                 clientPaymentId: paymentClientId.current,
                 method: paymentMethod,
+                moneyAccountId: destination.id,
               }
             : undefined,
         schemaVersion: 1,
@@ -759,22 +994,49 @@ export function useCreateSale({
         balance: formatMinorMoney(paymentSummary.balanceDueMinor, currencyCode),
         reference: order.orderNumber,
         orderId: order.id,
+        moneyAccount:
+          paymentSummary.receivedMinor > 0 ? moneyAccountName : undefined,
         status: "created",
       }
-      submitted.current = true
-      if (mounted.current) setCompletion(result)
-      if (mounted.current) onRecorded?.(result)
+      // Settled for the lifetime that made it (never resubmitted there), but
+      // another owner/lifetime is not shown it, locked by it or called back.
+      settledLifetime.current = submitLifetime
+      const present = () =>
+        mounted.current && submitLifetime === checkoutOwnerRef.current
+      if (mounted.current) {
+        setCompletionState({ lifetime: submitLifetime, value: result })
+        setSubmissionState({ owner: submitLifetime, attempt, outcome: "saved" })
+      }
+      if (present()) onRecorded?.(result)
       try {
         await refreshOrderQueries()
       } catch {
-        if (mounted.current)
+        if (present())
           setPostSubmitWarning(
             "Order recorded. Some lists could not refresh; reload them when connected.",
           )
       }
-      if (mounted.current) onComplete?.(result)
+      if (present()) onComplete?.(result)
     } catch (failure) {
-      if (submitted.current || !mounted.current) return
+      if (
+        settledLifetime.current === submitLifetime ||
+        !mounted.current ||
+        submitLifetime !== checkoutOwnerRef.current
+      )
+        return
+      // Only a structured rejection proves this attempt failed; a lost
+      // response stays unknown, as does any later retry of that operation.
+      const operation = orderClientId.current
+      const unknown =
+        classifyOperationFailure(failure, {
+          previousOutcomeUnknown: priorUnknownOperation.current === operation,
+        }) === "unknown"
+      if (unknown) priorUnknownOperation.current = operation
+      setSubmissionState({
+        owner: submitLifetime,
+        attempt,
+        outcome: unknown ? "unknown" : "failed",
+      })
       setError(
         failure instanceof Error ? failure.message : "Could not confirm order.",
       )
@@ -826,6 +1088,14 @@ export function useCreateSale({
     itemKind,
     actionsLocked: isSubmitting || completion !== null,
     completion,
+    /** The current owner's latest confirmation attempt (observation only). */
+    submission:
+      submissionState?.owner === checkoutOwner
+        ? {
+            attempt: submissionState.attempt,
+            outcome: submissionState.outcome,
+          }
+        : null,
     postSubmitWarning,
     isOffline,
     error,
@@ -834,10 +1104,24 @@ export function useCreateSale({
     setAmountReceived: guardEdit(setAmountReceived),
     paymentMethod,
     setPaymentMethod: guardEdit(setPaymentMethod),
+    accountState,
+    chooseAccount: (account: CheckoutMoneyAccount) => {
+      if (!submissionPending.current && !submitted.current)
+        chooseAccount(account)
+    },
+    accountBlocksConfirm: !checkoutAccountForSubmit(accountState).ok,
+    paymentAccountList:
+      accountRead.status === "ready" && accountRead.book
+        ? accountRead.accounts
+        : [],
+    retryPaymentAccounts: () => {
+      if (!isOffline) void paymentAccounts.refetch()
+    },
     deliveryDueAt,
     deliveryPickerMode,
     setDeliveryPickerMode: guardEdit(setDeliveryPickerMode),
-    setFulfillNowRequested: guardEdit(setFulfillNowRequested),
+    setFulfillNowRequested: guardEdit<boolean | null>(setFulfillPreference),
+    catalogFreeErrorsVisible,
     changeDeliveryDueAt,
     selectedLines,
     selectedRows,

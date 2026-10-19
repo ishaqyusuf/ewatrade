@@ -1,0 +1,19 @@
+{
+  "extends": "../../../apps/api/tsconfig.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "incremental": false,
+    "typeRoots": ["../../../node_modules/@types"]
+  },
+  "include": [
+    "../../../apps/api/src/assistant/general-actions.ts",
+    "../../../apps/api/src/assistant/general-proposals.ts",
+    "../../../apps/api/src/assistant/general-stock-transfer.ts",
+    "../../../apps/api/src/assistant/general-simple-transfer.ts",
+    "../../../apps/api/src/assistant/general-stock-transfer.integration-check.ts",
+    "fixtures/stock-transfer-recovery.production-path.fixture.ts",
+    "fixtures/simple-transfer-result.fixture.ts",
+    "phase-regressions.test.ts"
+  ],
+  "exclude": ["node_modules"]
+}

@@ -1,0 +1,141 @@
+{
+  "id": "2026-10-16-booking-safe-review-source",
+  "status": "source_verified_parent_acceptance_open",
+  "parentAcceptance": {
+    "accepted": 13,
+    "total": 45,
+    "partial": 30,
+    "unstarted": 2
+  },
+  "sourceFiles": [
+    {
+      "path": "apps/api/src/assistant/general-booking-review-projection-fixture.ts",
+      "sha256": "270e4250f046d0b8933787aec01257d1ea6d9049e0b90b1ee66aa5a907b286d8"
+    },
+    {
+      "path": "apps/api/src/assistant/general-booking-review-projection-work.ts",
+      "sha256": "619d335cfa78d8c49a3bfbd39b66d4dba84b4c7f7fd28336cf39c3cf215e4af5"
+    },
+    {
+      "path": "apps/api/src/assistant/general-booking-review-projection.test.ts",
+      "sha256": "b4ce8e72f6b938c425797613631a899fa14ad9275ca20652c5c66935df7ba414"
+    },
+    {
+      "path": "apps/api/src/assistant/general-booking-review-projection.ts",
+      "sha256": "861b51fae2f5657d229b89da7270ac119d945f94e79160dbc4f2370ed16465ec"
+    },
+    {
+      "path": "apps/api/src/assistant/general-booking-review-transport-checkpoint.ts",
+      "sha256": "823d95e72758bbc488f5d1b93001d32a023a28f8550bde8f0dd2e5a621784cff"
+    },
+    {
+      "path": "apps/api/src/assistant/general-booking-review-transport-data.ts",
+      "sha256": "b97dd62b99234ef2530f9ab3a7aae1b8aefbf359b291f9cc85975add34bf0269"
+    },
+    {
+      "path": "apps/api/src/assistant/general-booking-review-transport-envelope.ts",
+      "sha256": "c5aa068459525cd0be1a39a1f207787f6ce91f0c29625068a26cb8552f63bbfe"
+    },
+    {
+      "path": "apps/api/src/assistant/general-booking-review-transport.test.ts",
+      "sha256": "83b155862186b6ed5e4baf839bea61c55d4ae802fc1f8a7805b27debd6cfc4ae"
+    },
+    {
+      "path": "apps/api/src/assistant/general-booking-review-transport.ts",
+      "sha256": "d98df51645fbf5071bb7a2191af067939d05cb6bb942a24b23610104bfd78af4"
+    },
+    {
+      "path": "apps/api/src/assistant/general-booking-review.test.ts",
+      "sha256": "db64fc02f72eadc37ed8d0b2f56fb5fe790a4c68495f1db32b901dc445b1b277"
+    },
+    {
+      "path": "apps/api/src/assistant/general-booking-review.ts",
+      "sha256": "df3a95a5b2109bd96a0b3151b7af18dd73e59db345c4f96caa732f3113f414ca"
+    },
+    {
+      "path": "packages/assistant/src/general/booking-review.test.ts",
+      "sha256": "c01e1948cb3d3a383e690ebb69ef93b208d75f8f60663d5681dbfc0185e64f09"
+    },
+    {
+      "path": "packages/assistant/src/general/booking-review.ts",
+      "sha256": "ebb4d3e439b9ce8d339addff63d1542aabafa1425677a34d8b4625b49ccc049d"
+    },
+    {
+      "path": "packages/db/src/queries/commercial-order-completion-decimal.test.ts",
+      "sha256": "23c2fba95812b3425265455fe478dcf4b1218f1b88b195e63810b1537577d57b"
+    },
+    {
+      "path": "packages/db/src/queries/commercial-order-completion.ts",
+      "sha256": "b9e1eea9ba15440ac784ad8fb104bf8d15247df71110046eaa73e7812ecffebf"
+    }
+  ],
+  "priorDependencyPacket": "packages/assistant/evaluations/runs/2026-10-15-booking-drafts-stock-native-source.json",
+  "tests": {
+    "combined": {
+      "tests": 157,
+      "assertions": 2300,
+      "files": 13,
+      "passed": true,
+      "log": "/private/tmp/assistant-booking-public-review-root-tests.log"
+    },
+    "finalTypedTestRepair": {
+      "tests": 26,
+      "assertions": 500,
+      "files": 3,
+      "passed": true,
+      "overlapsCombined": true,
+      "log": "/private/tmp/assistant-booking-public-review-root-type-repair-tests.log"
+    }
+  },
+  "compiler": {
+    "entries": 252,
+    "exitCode": 2,
+    "diagnostics": 78,
+    "baseline": "/private/tmp/assistant-booking-stock-final-types-closed.log",
+    "new": 0,
+    "missing": 0,
+    "matches": true,
+    "log": "/private/tmp/assistant-booking-public-review-types-closed.log"
+  },
+  "biome": {
+    "files": 15,
+    "passed": true,
+    "log": "/private/tmp/assistant-booking-public-review-biome.log"
+  },
+  "coverage": {
+    "current": true,
+    "log": "/private/tmp/assistant-booking-public-review-coverage.log",
+    "rolloutChanged": false
+  },
+  "impact": {
+    "localPassed": true,
+    "records": 41,
+    "globalChangedCapabilities": 128,
+    "globalChangedProcedures": 11,
+    "log": "/private/tmp/assistant-booking-public-review-impact.log",
+    "hostedCIClaim": false
+  },
+  "limits": [
+    "Unregistered source helpers; no actual HTTP raw body/batch/no-store admission or public action/tool/channel/client integration.",
+    "8192 parsed envelope, 1MiB ONE installed SuperJSON response plus reserve; 64MiB postmaterialization logical refusal is not peak-memory/SQL-time proof.",
+    "Linked callback stand-in is not genuine linked-principal authentication proof.",
+    "Inert actual-function delegates are not SQL locking/rollback/concurrency, Session issuance, device, provider or saved acceptance."
+  ],
+  "gatesPreserved": [
+    "G01 and all Paystack paused",
+    "D04 drift unattributed;12 conditional unscheduled",
+    "E05 activation/API restart rejected",
+    "G04 six deferred",
+    "S05 seven unrun/retry unscheduled",
+    "C04 exact isolated named targets only"
+  ],
+  "brainFilesUpdated": [
+    ".brain/plans/2026-10-15-assistant-operations-phase-checklist.md",
+    ".brain/features/assistant-business-operations.md",
+    ".brain/features/service-commerce.md",
+    ".brain/api/contracts.md",
+    ".brain/api/permissions.md",
+    ".brain/decisions/2026-10-15-prepared-booking-and-media-review-boundaries.md",
+    ".brain/tasks/in-progress.md"
+  ]
+}

@@ -1,0 +1,91 @@
+{
+  "version": 1,
+  "id": "2026-10-15-s01-native-reads",
+  "tickets": [
+    "S01",
+    "S04",
+    "A04",
+    "H01",
+    "H02",
+    "H03"
+  ],
+  "summary": "Native exact staff directory/member/history protected consumers and validated answer routes. Saved filters/cursors and exact identities retained, current scope/freshness and original/current/private boundaries enforced. Three client/test rows gain mobile while all remain planned; no domain/API/schema/permission/rollout change.",
+  "capabilities": [
+    {
+      "id": "staff.directory.read",
+      "change": "changed",
+      "rollout": "planned",
+      "note": "Adds native exact read consumer and isolated component evidence; fresh protected authority remains canonical."
+    },
+    {
+      "id": "staff.member.read",
+      "change": "changed",
+      "rollout": "planned",
+      "note": "Adds native exact read consumer and isolated component evidence; fresh protected authority remains canonical."
+    },
+    {
+      "id": "staff.history.read",
+      "change": "changed",
+      "rollout": "planned",
+      "note": "Adds native exact read consumer and isolated component evidence; fresh protected authority remains canonical."
+    }
+  ],
+  "procedures": [],
+  "docs": [
+    {
+      "topic": "feature",
+      "path": ".brain/features/assistant-staff-directory.md",
+      "status": "local_only",
+      "note": "Native directory/member/history source, privacy/freshness scope and saved/device acceptance limits recorded."
+    },
+    {
+      "topic": "api",
+      "path": ".brain/api/contracts.md",
+      "status": "local_only",
+      "note": "Validated local target uses existing protected procedures/DTOs; exact filters+limit10 and current authority unchanged."
+    },
+    {
+      "topic": "permissions",
+      "status": "not_applicable",
+      "note": "Current Owner/Admin or explicit LEGACY Manager for directory/member, Owner/Admin for history; protected API remains authoritative. No grants or policy changes."
+    },
+    {
+      "topic": "capability",
+      "path": "packages/assistant/src/capabilities/COVERAGE.md",
+      "status": "updated",
+      "note": "Three planned mobile read rows; source classification is not availability/acceptance."
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "fixture",
+      "path": "packages/assistant/evaluations/fixtures/native-staff-member.fixture.tsx",
+      "executed": true,
+      "result": "10cases/118assertions; actual member component, query/native stands-in, no device/DB."
+    },
+    {
+      "kind": "fixture",
+      "path": "packages/assistant/evaluations/fixtures/native-staff-directory.fixture.tsx",
+      "executed": true,
+      "result": "9cases/107assertions; exactfilters/scope, currentauthority, stale/private withholding and paging callbacks."
+    },
+    {
+      "kind": "fixture",
+      "path": "packages/assistant/evaluations/fixtures/native-staff-history.fixture.tsx",
+      "executed": true,
+      "result": "16cases/123assertions; recorded/current snapshots, hiddenStores, exactfilters, partialtotals, originals and paging."
+    },
+    {
+      "kind": "test",
+      "path": "packages/assistant/evaluations/phase-regressions.test.ts",
+      "executed": true,
+      "result": "14 isolated child wrappers pass in30/135affected command; exactreadnavigation3/25, updatedoriginals10/106 included. No hostedCI."
+    },
+    {
+      "kind": "review",
+      "path": "packages/assistant/evaluations/runs/2026-10-15-s01-native-reads.md",
+      "executed": true,
+      "result": "Independent source review; planned availability retained and actualdevice/savedcontinuity unrun."
+    }
+  ]
+}

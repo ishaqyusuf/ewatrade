@@ -1,0 +1,274 @@
+{
+  "version": 1,
+  "scope": "Phase7 native source checkpoint; whole-file shared hashes are observations, not release or acceptance of foreign implementation",
+  "files": [
+    {
+      "path": "apps/mobile/src/components/mobile/assistant/general-service-work-editor.tsx",
+      "sha256": "fd00c18d41c8890f5fe6bc40af2760cbb71280174683c7ea4d30b0f26915733a",
+      "ownership": "owned new source or scoped integration hunks; generated coverage is mixed"
+    },
+    {
+      "path": "apps/mobile/src/components/mobile/assistant/native-service-work-values.ts",
+      "sha256": "ddb8437e1a69b350f255305dcbe54d789892fcd157e5b61ee373e91fae6c6cf5",
+      "ownership": "owned new source or scoped integration hunks; generated coverage is mixed"
+    },
+    {
+      "path": "apps/mobile/src/components/mobile/assistant/native-service-work-values.test.ts",
+      "sha256": "a3f9814c761c11990313ad52fae1c445f2917f972878d18a8f987d84fe7ab8e8",
+      "ownership": "owned new source or scoped integration hunks; generated coverage is mixed"
+    },
+    {
+      "path": "apps/mobile/src/components/mobile/assistant/general-service-intake-editor.tsx",
+      "sha256": "5cdd6af20aa18b3782bb4fe35179633016b2d8d41e2aa75e253aecd4fda34540",
+      "ownership": "owned new source or scoped integration hunks; generated coverage is mixed"
+    },
+    {
+      "path": "apps/mobile/src/components/mobile/assistant/native-service-intake-values.ts",
+      "sha256": "413578fea6fc0e9de2ccfc47a5fcc31626511ebb97b8a840d0ea7ed46ac02e25",
+      "ownership": "owned new source or scoped integration hunks; generated coverage is mixed"
+    },
+    {
+      "path": "apps/mobile/src/components/mobile/assistant/native-service-intake-values.test.ts",
+      "sha256": "23e5ca20f78ecbed950b07a4c637c41c78676c161a6b1ef82574bcb2841d64ef",
+      "ownership": "owned new source or scoped integration hunks; generated coverage is mixed"
+    },
+    {
+      "path": "apps/mobile/src/components/mobile/assistant/general-quote-decision-editor.tsx",
+      "sha256": "4550b9f85d885a91b843699c31f8dd1c544ca7558a61ec639c6201549a994229",
+      "ownership": "owned new source or scoped integration hunks; generated coverage is mixed"
+    },
+    {
+      "path": "apps/mobile/src/components/mobile/assistant/native-quote-decision-values.ts",
+      "sha256": "3b6b25ea499e7e6e86ba7ef8fdaf612f036b64ff8236ee6e0ea230076942e8c3",
+      "ownership": "owned new source or scoped integration hunks; generated coverage is mixed"
+    },
+    {
+      "path": "apps/mobile/src/components/mobile/assistant/native-quote-decision-values.test.ts",
+      "sha256": "6909bad5cc81a486dabf2e814643ea2449a3e02891e8585354e8d468049d6bfe",
+      "ownership": "owned new source or scoped integration hunks; generated coverage is mixed"
+    },
+    {
+      "path": "apps/mobile/src/components/mobile/assistant/native-quote-original-screen.tsx",
+      "sha256": "eb9255ae0fa79c950b0033d6a9019f03b310bf6487b1895e7db57bdd40fe0301",
+      "ownership": "owned new source or scoped integration hunks; generated coverage is mixed"
+    },
+    {
+      "path": "apps/mobile/src/components/mobile/assistant/native-service-target.ts",
+      "sha256": "d081ca1f31ea9e5be4f2d0551f345e22fe18d759acc79bd1310f05eba60c897f",
+      "ownership": "owned new source or scoped integration hunks; generated coverage is mixed"
+    },
+    {
+      "path": "apps/mobile/src/components/mobile/assistant/native-service-target.test.ts",
+      "sha256": "20b09dda7a3c17f59e4ecfee2e3afeebd48a3f35da177ca70ce9275c557922e4",
+      "ownership": "owned new source or scoped integration hunks; generated coverage is mixed"
+    },
+    {
+      "path": "apps/mobile/src/components/mobile/assistant/native-service-original-screen.tsx",
+      "sha256": "f12837c798b527a37459c39f0cc532fc0471d6c755329033d9a879e9e85eca87",
+      "ownership": "owned new source or scoped integration hunks; generated coverage is mixed"
+    },
+    {
+      "path": "apps/mobile/src/components/mobile/assistant/general-model.ts",
+      "sha256": "9bbe738824a8de1a2582b922e6b540511cf7caf62c5191ea9192c4545547574a",
+      "ownership": "owned new source or scoped integration hunks; generated coverage is mixed"
+    },
+    {
+      "path": "apps/mobile/src/components/mobile/assistant/general-model.test.ts",
+      "sha256": "489eb35697f697ed6cbf34cd9c38b109f54cd562d60f154c1a8d8f6c4cec0e94",
+      "ownership": "owned new source or scoped integration hunks; generated coverage is mixed"
+    },
+    {
+      "path": "apps/mobile/src/components/mobile/assistant/general-proposal-editor.tsx",
+      "sha256": "289e455e4a572ed9bf8399f97621d6fdfe67d0a1ab05a94adc1f3aae8fc4ac4c",
+      "ownership": "owned new source or scoped integration hunks; generated coverage is mixed"
+    },
+    {
+      "path": "apps/mobile/src/components/mobile/assistant/native-parity.ts",
+      "sha256": "875e3524a8c0ee4df2dc282519b9869992fc321707d1b83c29f1cdbd96d311d4",
+      "ownership": "owned new source or scoped integration hunks; generated coverage is mixed"
+    },
+    {
+      "path": "apps/mobile/src/components/mobile/assistant/native-parity.test.ts",
+      "sha256": "51dd776dfec33aba999ddc11e3da3484b4266644fb109fffcfc6c2899184f5c8",
+      "ownership": "owned new source or scoped integration hunks; generated coverage is mixed"
+    },
+    {
+      "path": "apps/mobile/src/app/service-jobs-modal.tsx",
+      "sha256": "aaf171788c0c8b1f7681852059617ecf0e19db0aa4ecf809bc9cc2c85c39a0ac",
+      "ownership": "owned new source or scoped integration hunks; generated coverage is mixed"
+    },
+    {
+      "path": "packages/assistant/evaluations/phase-regressions.test.ts",
+      "sha256": "be0fd582814b35317901ea880949487f400a6d298461253876610888dad0922f",
+      "ownership": "owned new source or scoped integration hunks; generated coverage is mixed"
+    },
+    {
+      "path": "packages/assistant/src/capabilities/manifest.ts",
+      "sha256": "234557394a89cbf232452e36c9254db2c963579db6bd1101612c37813fe5a7b2",
+      "ownership": "17exact client/test hunks only; foreign rows preserved"
+    },
+    {
+      "path": "packages/assistant/src/capabilities/COVERAGE.md",
+      "sha256": "d472f2e45c5652b01cf1acffbcc2bd1c9c44ac51a5773a0c78f83b61c7e19765",
+      "ownership": "owned new source or scoped integration hunks; generated coverage is mixed"
+    },
+    {
+      "path": "packages/assistant/impact/2026-10-15-phase7-native-service.json",
+      "sha256": "693cf30846da5815a129e0da56bce5c809db47c8e61ad90df76f149005e746fa",
+      "ownership": "owned new source or scoped integration hunks; generated coverage is mixed"
+    },
+    {
+      "path": "packages/assistant/evaluations/runs/2026-10-15-phase7-native-service-source.md",
+      "sha256": "d50a1f5963a9ac296090cac59d09f8bef88f90f175a2e53d1580f512963a2e0f",
+      "ownership": "owned new source or scoped integration hunks; generated coverage is mixed"
+    },
+    {
+      "path": "packages/assistant/evaluations/fixtures/native-service-work-editor.fixture.tsx",
+      "sha256": "548cf520321ade0084ca127209d99b01f7de961a7586f7b04a1e0b8c5683d79a",
+      "ownership": "owned new source or scoped integration hunks; generated coverage is mixed"
+    },
+    {
+      "path": "packages/assistant/evaluations/fixtures/native-service-intake-editor.fixture.tsx",
+      "sha256": "b294a197c6ed8e869a08c0ab9ab725c5a7bf754382ad1eb7169e77af5b453fa9",
+      "ownership": "owned new source or scoped integration hunks; generated coverage is mixed"
+    },
+    {
+      "path": "packages/assistant/evaluations/fixtures/native-quote-decision.fixture.tsx",
+      "sha256": "05f66e8ad4421a021e38675571be53ad29a1fc2959d3828dad95f32626e86521",
+      "ownership": "owned new source or scoped integration hunks; generated coverage is mixed"
+    },
+    {
+      "path": "packages/assistant/evaluations/fixtures/native-service-original.fixture.tsx",
+      "sha256": "347f6c2d72feb82634604bf14c9a71c7717e4ba20ad4c960fc42071d8fe413e1",
+      "ownership": "owned new source or scoped integration hunks; generated coverage is mixed"
+    }
+  ],
+  "manifestChanges": [
+    {
+      "id": "services.work.rework",
+      "before": "id: \"services.work.rework\", version: 1, mode: \"write\", title: \"Create linked Service rework\", domain: \"services\", tool: \"draftAction\", action: \"service_work_rework\", schema: actionSchema(\"service_work_rework\"), policy: { roles: managers }, scope: \"store\", clients: [\"dashboard\"], rollout: \"planned\", procedures: [\"services.createRework\"], effect: \"record\", receipt: \"service_work\", examples: [\"Redo the completed washing line in Amina's saved job\"], tests: [\"packages/assistant/src/general/service-work-completion.test.ts\", \"packages/db/src/queries/service-work-completion-review.test.ts\"], brain: \".brain/features/assistant-service-work-lifecycle.md\" },",
+      "after": "id: \"services.work.rework\", version: 1, mode: \"write\", title: \"Create linked Service rework\", domain: \"services\", tool: \"draftAction\", action: \"service_work_rework\", schema: actionSchema(\"service_work_rework\"), policy: { roles: managers }, scope: \"store\", clients: [\"dashboard\", \"mobile\"], rollout: \"planned\", procedures: [\"services.createRework\"], effect: \"record\", receipt: \"service_work\", examples: [\"Redo the completed washing line in Amina's saved job\"], tests: [\"packages/assistant/evaluations/fixtures/native-service-work-editor.fixture.tsx\", \"packages/assistant/src/general/service-work-completion.test.ts\", \"packages/db/src/queries/service-work-completion-review.test.ts\"], brain: \".brain/features/assistant-service-work-lifecycle.md\" },"
+    },
+    {
+      "id": "services.work.handoff",
+      "before": "id: \"services.work.handoff\", version: 1, mode: \"write\", title: \"Record settled Service handoff\", domain: \"services\", tool: \"draftAction\", action: \"service_work_handoff\", schema: actionSchema(\"service_work_handoff\"), policy: { roles: managers }, scope: \"store\", clients: [\"dashboard\"], rollout: \"planned\", procedures: [\"services.handoff\"], effect: \"record\", receipt: \"service_work\", examples: [\"Record Amina collecting her ready work after payment\"], tests: [\"packages/assistant/src/general/service-work-completion.test.ts\", \"packages/db/src/queries/service-work-completion-review.test.ts\"], brain: \".brain/features/assistant-service-work-lifecycle.md\" },",
+      "after": "id: \"services.work.handoff\", version: 1, mode: \"write\", title: \"Record settled Service handoff\", domain: \"services\", tool: \"draftAction\", action: \"service_work_handoff\", schema: actionSchema(\"service_work_handoff\"), policy: { roles: managers }, scope: \"store\", clients: [\"dashboard\", \"mobile\"], rollout: \"planned\", procedures: [\"services.handoff\"], effect: \"record\", receipt: \"service_work\", examples: [\"Record Amina collecting her ready work after payment\"], tests: [\"packages/assistant/evaluations/fixtures/native-service-work-editor.fixture.tsx\", \"packages/assistant/src/general/service-work-completion.test.ts\", \"packages/db/src/queries/service-work-completion-review.test.ts\"], brain: \".brain/features/assistant-service-work-lifecycle.md\" },"
+    },
+    {
+      "id": "services.work.assign",
+      "before": "id: \"services.work.assign\", version: 1, mode: \"write\", title: \"Assign Service work\", domain: \"services\", tool: \"draftAction\", action: \"service_job_assign\", schema: actionSchema(\"service_job_assign\"), policy: { roles: managers }, scope: \"store\", clients: [\"dashboard\"], rollout: \"planned\", procedures: [\"services.assignJob\"], effect: \"record\", receipt: \"service_work\", examples: [\"Assign Amina's saved work to Bola\"], tests: [\"packages/assistant/src/general/service-work.test.ts\", \"packages/db/src/queries/service-work-review.test.ts\"], brain: \".brain/features/assistant-service-work-lifecycle.md\" },",
+      "after": "id: \"services.work.assign\", version: 1, mode: \"write\", title: \"Assign Service work\", domain: \"services\", tool: \"draftAction\", action: \"service_job_assign\", schema: actionSchema(\"service_job_assign\"), policy: { roles: managers }, scope: \"store\", clients: [\"dashboard\", \"mobile\"], rollout: \"planned\", procedures: [\"services.assignJob\"], effect: \"record\", receipt: \"service_work\", examples: [\"Assign Amina's saved work to Bola\"], tests: [\"packages/assistant/evaluations/fixtures/native-service-work-editor.fixture.tsx\", \"packages/assistant/src/general/service-work.test.ts\", \"packages/db/src/queries/service-work-review.test.ts\"], brain: \".brain/features/assistant-service-work-lifecycle.md\" },"
+    },
+    {
+      "id": "services.work.reschedule",
+      "before": "id: \"services.work.reschedule\", version: 1, mode: \"write\", title: \"Revise Service promised time\", domain: \"services\", tool: \"draftAction\", action: \"service_job_reschedule\", schema: actionSchema(\"service_job_reschedule\"), policy: { roles: managers }, scope: \"store\", clients: [\"dashboard\"], rollout: \"planned\", procedures: [\"services.rescheduleJob\"], effect: \"record\", receipt: \"service_work\", examples: [\"Move Amina's pickup promise to Thursday morning\"], tests: [\"packages/assistant/src/general/service-work.test.ts\", \"packages/db/src/queries/service-work-review.test.ts\"], brain: \".brain/features/assistant-service-work-lifecycle.md\" },",
+      "after": "id: \"services.work.reschedule\", version: 1, mode: \"write\", title: \"Revise Service promised time\", domain: \"services\", tool: \"draftAction\", action: \"service_job_reschedule\", schema: actionSchema(\"service_job_reschedule\"), policy: { roles: managers }, scope: \"store\", clients: [\"dashboard\", \"mobile\"], rollout: \"planned\", procedures: [\"services.rescheduleJob\"], effect: \"record\", receipt: \"service_work\", examples: [\"Move Amina's pickup promise to Thursday morning\"], tests: [\"packages/assistant/evaluations/fixtures/native-service-work-editor.fixture.tsx\", \"packages/assistant/src/general/service-work.test.ts\", \"packages/db/src/queries/service-work-review.test.ts\"], brain: \".brain/features/assistant-service-work-lifecycle.md\" },"
+    },
+    {
+      "id": "services.work.transition",
+      "before": "id: \"services.work.transition\", version: 1, mode: \"write\", title: \"Record Service line progress\", domain: \"services\", tool: \"draftAction\", action: \"service_job_line_transition\", schema: actionSchema(\"service_job_line_transition\"), policy: { roles: managers }, scope: \"store\", clients: [\"dashboard\"], rollout: \"planned\", procedures: [\"services.transitionLine\"], effect: \"record\", receipt: \"service_work\", examples: [\"Start the exact washing line in Amina's saved job\"], tests: [\"packages/assistant/src/general/service-work.test.ts\", \"packages/db/src/queries/service-work-review.test.ts\"], brain: \".brain/features/assistant-service-work-lifecycle.md\" },",
+      "after": "id: \"services.work.transition\", version: 1, mode: \"write\", title: \"Record Service line progress\", domain: \"services\", tool: \"draftAction\", action: \"service_job_line_transition\", schema: actionSchema(\"service_job_line_transition\"), policy: { roles: managers }, scope: \"store\", clients: [\"dashboard\", \"mobile\"], rollout: \"planned\", procedures: [\"services.transitionLine\"], effect: \"record\", receipt: \"service_work\", examples: [\"Start the exact washing line in Amina's saved job\"], tests: [\"packages/assistant/evaluations/fixtures/native-service-work-editor.fixture.tsx\", \"packages/assistant/src/general/service-work.test.ts\", \"packages/db/src/queries/service-work-review.test.ts\"], brain: \".brain/features/assistant-service-work-lifecycle.md\" },"
+    },
+    {
+      "id": "services.work.note",
+      "before": "id: \"services.work.note\", version: 1, mode: \"write\", title: \"Record an internal work note\", domain: \"services\", tool: \"draftAction\", action: \"service_work_note\", schema: actionSchema(\"service_work_note\"), policy: { roles: managers }, scope: \"store\", clients: [\"dashboard\"], rollout: \"planned\", procedures: [\"services.addNote\"], effect: \"record\", receipt: \"service_work_note\", examples: [\"Add a private care note to Amina's saved job\"], tests: [\"packages/assistant/src/general/service-work-records.test.ts\", \"packages/db/src/queries/service-work-record-review.test.ts\"], brain: \".brain/features/assistant-service-work-lifecycle.md\" },",
+      "after": "id: \"services.work.note\", version: 1, mode: \"write\", title: \"Record an internal work note\", domain: \"services\", tool: \"draftAction\", action: \"service_work_note\", schema: actionSchema(\"service_work_note\"), policy: { roles: managers }, scope: \"store\", clients: [\"dashboard\", \"mobile\"], rollout: \"planned\", procedures: [\"services.addNote\"], effect: \"record\", receipt: \"service_work_note\", examples: [\"Add a private care note to Amina's saved job\"], tests: [\"packages/assistant/evaluations/fixtures/native-service-work-editor.fixture.tsx\", \"packages/assistant/src/general/service-work-records.test.ts\", \"packages/db/src/queries/service-work-record-review.test.ts\"], brain: \".brain/features/assistant-service-work-lifecycle.md\" },"
+    },
+    {
+      "id": "services.work.exception",
+      "before": "id: \"services.work.exception\", version: 1, mode: \"write\", title: \"Record an open work exception\", domain: \"services\", tool: \"draftAction\", action: \"service_work_exception\", schema: actionSchema(\"service_work_exception\"), policy: { roles: managers }, scope: \"store\", clients: [\"dashboard\"], rollout: \"planned\", procedures: [\"services.recordException\"], effect: \"record\", receipt: \"service_work_exception\", examples: [\"Record the stated delay on Amina's exact washing line\"], tests: [\"packages/assistant/src/general/service-work-records.test.ts\", \"packages/db/src/queries/service-work-record-review.test.ts\"], brain: \".brain/features/assistant-service-work-lifecycle.md\" },",
+      "after": "id: \"services.work.exception\", version: 1, mode: \"write\", title: \"Record an open work exception\", domain: \"services\", tool: \"draftAction\", action: \"service_work_exception\", schema: actionSchema(\"service_work_exception\"), policy: { roles: managers }, scope: \"store\", clients: [\"dashboard\", \"mobile\"], rollout: \"planned\", procedures: [\"services.recordException\"], effect: \"record\", receipt: \"service_work_exception\", examples: [\"Record the stated delay on Amina's exact washing line\"], tests: [\"packages/assistant/evaluations/fixtures/native-service-work-editor.fixture.tsx\", \"packages/assistant/src/general/service-work-records.test.ts\", \"packages/db/src/queries/service-work-record-review.test.ts\"], brain: \".brain/features/assistant-service-work-lifecycle.md\" },"
+    },
+    {
+      "id": "services.work.context.read",
+      "before": "id: \"services.work.context.read\", version: 1, mode: \"read\", title: \"Read saved Service work choices\",\n    domain: \"services\", tool: \"readServiceWorkContext\", policy: { roles: managers }, scope: \"store\",\n    clients: [\"dashboard\"], rollout: \"planned\", procedures: [\"serviceAssistantWork.editorContext\"],\n    examples: [\"Show the current washing line and eligible staff for Amina's saved job\"],\n    tests: [\"packages/db/src/queries/service-work-editor-context.test.ts\"],\n    brain: \".brain/features/assistant-service-work-lifecycle.md\",",
+      "after": "id: \"services.work.context.read\", version: 1, mode: \"read\", title: \"Read saved Service work choices\",\n    domain: \"services\", tool: \"readServiceWorkContext\", policy: { roles: managers }, scope: \"store\",\n    clients: [\"dashboard\", \"mobile\"], rollout: \"planned\", procedures: [\"serviceAssistantWork.editorContext\"],\n    examples: [\"Show the current washing line and eligible staff for Amina's saved job\"],\n    tests: [\"packages/assistant/evaluations/fixtures/native-service-work-editor.fixture.tsx\", \"packages/db/src/queries/service-work-editor-context.test.ts\"],\n    brain: \".brain/features/assistant-service-work-lifecycle.md\","
+    },
+    {
+      "id": "services.work.review",
+      "before": "id: \"services.work.review\", version: 1, mode: \"read\", title: \"Review a Service work intention\",\n    domain: \"services\", tool: \"reviewServiceWork\", policy: { roles: managers }, scope: \"store\",\n    clients: [\"dashboard\"], rollout: \"planned\", procedures: [\"serviceAssistantWork.review\"],\n    examples: [\"Review the stated promised-time change before preparing its card\"],\n    tests: [\"packages/db/src/queries/service-work-review.test.ts\", \"packages/db/src/queries/service-work-record-review.test.ts\"],\n    brain: \".brain/features/assistant-service-work-lifecycle.md\",",
+      "after": "id: \"services.work.review\", version: 1, mode: \"read\", title: \"Review a Service work intention\",\n    domain: \"services\", tool: \"reviewServiceWork\", policy: { roles: managers }, scope: \"store\",\n    clients: [\"dashboard\", \"mobile\"], rollout: \"planned\", procedures: [\"serviceAssistantWork.review\"],\n    examples: [\"Review the stated promised-time change before preparing its card\"],\n    tests: [\"packages/assistant/evaluations/fixtures/native-service-work-editor.fixture.tsx\", \"packages/db/src/queries/service-work-review.test.ts\", \"packages/db/src/queries/service-work-record-review.test.ts\"],\n    brain: \".brain/features/assistant-service-work-lifecycle.md\","
+    },
+    {
+      "id": "services.quote.approve",
+      "before": "id: \"services.quote.approve\", version: 1, mode: \"write\", title: \"Approve and release original quotation\", domain: \"services\", tool: \"draftAction\", action: \"commerce_quote_approve\", schema: actionSchema(\"commerce_quote_approve\"), policy: { roles: everyone }, scope: \"store\", clients: [\"dashboard\"], rollout: \"planned\", procedures: [\"serviceCommerce.approveQuoteVersion\"], effect: \"record\", receipt: \"commerce_quote_decision\", examples: [\"Approve and release original quotation with the stated reason\"], tests: [\"packages/assistant/src/general/quote-decision.test.ts\", \"packages/db/src/queries/commerce-quote-decision-review.test.ts\", \"packages/db/src/queries/commerce-quote-decision-seam.test.ts\", \"packages/assistant/src/general/quote-decision-integration.test.ts\", \"apps/dashboard/src/components/general-assistant/quote-decision-editor-state.test.ts\", \"apps/dashboard/src/components/general-assistant/quote-decision-editor-ui.test.ts\"], brain: \".brain/features/assistant-quote-reads.md\" },",
+      "after": "id: \"services.quote.approve\", version: 1, mode: \"write\", title: \"Approve and release original quotation\", domain: \"services\", tool: \"draftAction\", action: \"commerce_quote_approve\", schema: actionSchema(\"commerce_quote_approve\"), policy: { roles: everyone }, scope: \"store\", clients: [\"dashboard\", \"mobile\"], rollout: \"planned\", procedures: [\"serviceCommerce.approveQuoteVersion\"], effect: \"record\", receipt: \"commerce_quote_decision\", examples: [\"Approve and release original quotation with the stated reason\"], tests: [\"packages/assistant/evaluations/fixtures/native-quote-decision.fixture.tsx\", \"packages/assistant/src/general/quote-decision.test.ts\", \"packages/db/src/queries/commerce-quote-decision-review.test.ts\", \"packages/db/src/queries/commerce-quote-decision-seam.test.ts\", \"packages/assistant/src/general/quote-decision-integration.test.ts\", \"apps/dashboard/src/components/general-assistant/quote-decision-editor-state.test.ts\", \"apps/dashboard/src/components/general-assistant/quote-decision-editor-ui.test.ts\"], brain: \".brain/features/assistant-quote-reads.md\" },"
+    },
+    {
+      "id": "services.quote.reject",
+      "before": "id: \"services.quote.reject\", version: 1, mode: \"write\", title: \"Reject original quotation\", domain: \"services\", tool: \"draftAction\", action: \"commerce_quote_reject\", schema: actionSchema(\"commerce_quote_reject\"), policy: { roles: everyone }, scope: \"store\", clients: [\"dashboard\"], rollout: \"planned\", procedures: [\"serviceCommerce.rejectQuoteVersion\"], effect: \"record\", receipt: \"commerce_quote_decision\", examples: [\"Reject original quotation with the stated reason\"], tests: [\"packages/assistant/src/general/quote-decision.test.ts\", \"packages/db/src/queries/commerce-quote-decision-review.test.ts\", \"packages/db/src/queries/commerce-quote-decision-seam.test.ts\", \"packages/assistant/src/general/quote-decision-integration.test.ts\", \"apps/dashboard/src/components/general-assistant/quote-decision-editor-state.test.ts\", \"apps/dashboard/src/components/general-assistant/quote-decision-editor-ui.test.ts\"], brain: \".brain/features/assistant-quote-reads.md\" },",
+      "after": "id: \"services.quote.reject\", version: 1, mode: \"write\", title: \"Reject original quotation\", domain: \"services\", tool: \"draftAction\", action: \"commerce_quote_reject\", schema: actionSchema(\"commerce_quote_reject\"), policy: { roles: everyone }, scope: \"store\", clients: [\"dashboard\", \"mobile\"], rollout: \"planned\", procedures: [\"serviceCommerce.rejectQuoteVersion\"], effect: \"record\", receipt: \"commerce_quote_decision\", examples: [\"Reject original quotation with the stated reason\"], tests: [\"packages/assistant/evaluations/fixtures/native-quote-decision.fixture.tsx\", \"packages/assistant/src/general/quote-decision.test.ts\", \"packages/db/src/queries/commerce-quote-decision-review.test.ts\", \"packages/db/src/queries/commerce-quote-decision-seam.test.ts\", \"packages/assistant/src/general/quote-decision-integration.test.ts\", \"apps/dashboard/src/components/general-assistant/quote-decision-editor-state.test.ts\", \"apps/dashboard/src/components/general-assistant/quote-decision-editor-ui.test.ts\"], brain: \".brain/features/assistant-quote-reads.md\" },"
+    },
+    {
+      "id": "services.quote.review",
+      "before": "id: \"services.quote.review\", version: 1, mode: \"read\", title: \"Review exact original quotation decision\", domain: \"services\", tool: \"reviewQuoteDecision\", policy: { roles: everyone }, scope: \"store\", clients: [\"dashboard\"], rollout: \"planned\", procedures: [\"serviceCommerce.assistantQuoteDecisionReview\"], examples: [\"Review the exact quotation approval and commercial release before confirmation\"], tests: [\"packages/db/src/queries/commerce-quote-decision-review.test.ts\"], brain: \".brain/features/assistant-quote-reads.md\" },",
+      "after": "id: \"services.quote.review\", version: 1, mode: \"read\", title: \"Review exact original quotation decision\", domain: \"services\", tool: \"reviewQuoteDecision\", policy: { roles: everyone }, scope: \"store\", clients: [\"dashboard\", \"mobile\"], rollout: \"planned\", procedures: [\"serviceCommerce.assistantQuoteDecisionReview\"], examples: [\"Review the exact quotation approval and commercial release before confirmation\"], tests: [\"packages/assistant/evaluations/fixtures/native-quote-decision.fixture.tsx\", \"packages/db/src/queries/commerce-quote-decision-review.test.ts\"], brain: \".brain/features/assistant-quote-reads.md\" },"
+    },
+    {
+      "id": "services.quote_approval.read",
+      "before": "id: \"services.quote_approval.read\", version: 1, mode: \"read\", title: \"Read original quotation approval\",\n    domain: \"services\", tool: \"readQuoteApproval\", policy: { roles: everyone }, scope: \"store\",\n    clients: [\"dashboard\"], rollout: \"planned\", procedures: [\"serviceCommerce.assistantQuoteApprovalDetail\"],\n    examples: [\"Open this saved quotation version and its review status\"],\n    tests: [\"packages/db/src/queries/commerce-quote-reads.test.ts\", \"packages/assistant/src/general/quote-reads.test.ts\", \"packages/assistant/src/general/service-read-answer-target.test.ts\", \"apps/dashboard/src/components/assistant-quote-approval-state.test.ts\"],\n    brain: \".brain/features/assistant-quote-reads.md\",",
+      "after": "id: \"services.quote_approval.read\", version: 1, mode: \"read\", title: \"Read original quotation approval\",\n    domain: \"services\", tool: \"readQuoteApproval\", policy: { roles: everyone }, scope: \"store\",\n    clients: [\"dashboard\", \"mobile\"], rollout: \"planned\", procedures: [\"serviceCommerce.assistantQuoteApprovalDetail\"],\n    examples: [\"Open this saved quotation version and its review status\"],\n    tests: [\"packages/assistant/evaluations/fixtures/native-quote-decision.fixture.tsx\", \"packages/db/src/queries/commerce-quote-reads.test.ts\", \"packages/assistant/src/general/quote-reads.test.ts\", \"packages/assistant/src/general/service-read-answer-target.test.ts\", \"apps/dashboard/src/components/assistant-quote-approval-state.test.ts\"],\n    brain: \".brain/features/assistant-quote-reads.md\","
+    },
+    {
+      "id": "services.quote_approvals.read",
+      "before": "id: \"services.quote_approvals.read\", version: 1, mode: \"read\", title: \"Find pending quotation review records\",\n    domain: \"services\", tool: \"readPendingQuoteApprovals\", policy: { roles: everyone }, scope: \"store\",\n    clients: [\"dashboard\"], rollout: \"planned\", procedures: [\"serviceCommerce.assistantPendingQuoteApprovals\"],\n    examples: [\"Show quotations waiting for review in this Store\"],\n    tests: [\"packages/db/src/queries/commerce-quote-reads.test.ts\", \"packages/assistant/src/general/quote-reads.test.ts\"],\n    brain: \".brain/features/assistant-quote-reads.md\",",
+      "after": "id: \"services.quote_approvals.read\", version: 1, mode: \"read\", title: \"Find pending quotation review records\",\n    domain: \"services\", tool: \"readPendingQuoteApprovals\", policy: { roles: everyone }, scope: \"store\",\n    clients: [\"dashboard\", \"mobile\"], rollout: \"planned\", procedures: [\"serviceCommerce.assistantPendingQuoteApprovals\"],\n    examples: [\"Show quotations waiting for review in this Store\"],\n    tests: [\"packages/assistant/evaluations/fixtures/native-quote-decision.fixture.tsx\", \"packages/db/src/queries/commerce-quote-reads.test.ts\", \"packages/assistant/src/general/quote-reads.test.ts\"],\n    brain: \".brain/features/assistant-quote-reads.md\","
+    },
+    {
+      "id": "services.intake.create",
+      "before": "id: \"services.intake.create\", version: 1, mode: \"write\", title: \"Create and confirm a simple Service intake\", domain: \"services\", tool: \"draftAction\", action: \"service_intake\", schema: actionSchema(\"service_intake\"), policy: { roles: managers }, scope: \"store\", clients: [\"dashboard\"], rollout: \"planned\", procedures: [\"services.createAndConfirmIntake\"], effect: \"record\", receipt: \"service_intake\", examples: [\"Take two shirts for Amina and promise Thursday morning\"], tests: [\"packages/assistant/src/general/service-intake.test.ts\", \"packages/db/src/queries/service-intake-review.test.ts\", \"apps/api/src/assistant/general-service-intake-rollback.integration-check.ts\"], brain: \".brain/features/assistant-service-intake.md\" },",
+      "after": "id: \"services.intake.create\", version: 1, mode: \"write\", title: \"Create and confirm a simple Service intake\", domain: \"services\", tool: \"draftAction\", action: \"service_intake\", schema: actionSchema(\"service_intake\"), policy: { roles: managers }, scope: \"store\", clients: [\"dashboard\", \"mobile\"], rollout: \"planned\", procedures: [\"services.createAndConfirmIntake\"], effect: \"record\", receipt: \"service_intake\", examples: [\"Take two shirts for Amina and promise Thursday morning\"], tests: [\"packages/assistant/evaluations/fixtures/native-service-intake-editor.fixture.tsx\", \"packages/assistant/src/general/service-intake.test.ts\", \"packages/db/src/queries/service-intake-review.test.ts\", \"apps/api/src/assistant/general-service-intake-rollback.integration-check.ts\"], brain: \".brain/features/assistant-service-intake.md\" },"
+    },
+    {
+      "id": "services.intake.options.read",
+      "before": "id: \"services.intake.options.read\", version: 1, mode: \"read\", title: \"Find simple Service intake choices\", domain: \"services\", tool: \"readServiceIntakeOptions\", policy: { roles: managers }, scope: \"store\", clients: [\"dashboard\"], rollout: \"planned\", procedures: [\"catalog.listItemsPage\", \"services.getSettings\", \"services.assignees\", \"serviceAssistantIntake.options\"], examples: [\"Find shirt washing services and assignees\"], tests: [\"packages/db/src/queries/service-intake-review.test.ts\", \"apps/dashboard/src/components/general-assistant/service-intake-editor-options.test.ts\", \"apps/dashboard/src/components/general-assistant/service-intake-editor-options-ui.test.ts\"], brain: \".brain/features/assistant-service-intake.md\" },",
+      "after": "id: \"services.intake.options.read\", version: 1, mode: \"read\", title: \"Find simple Service intake choices\", domain: \"services\", tool: \"readServiceIntakeOptions\", policy: { roles: managers }, scope: \"store\", clients: [\"dashboard\", \"mobile\"], rollout: \"planned\", procedures: [\"catalog.listItemsPage\", \"services.getSettings\", \"services.assignees\", \"serviceAssistantIntake.options\"], examples: [\"Find shirt washing services and assignees\"], tests: [\"packages/assistant/evaluations/fixtures/native-service-intake-editor.fixture.tsx\", \"packages/db/src/queries/service-intake-review.test.ts\", \"apps/dashboard/src/components/general-assistant/service-intake-editor-options.test.ts\", \"apps/dashboard/src/components/general-assistant/service-intake-editor-options-ui.test.ts\"], brain: \".brain/features/assistant-service-intake.md\" },"
+    },
+    {
+      "id": "services.work.original.read",
+      "before": "id: \"services.work.original.read\", version: 1, mode: \"read\", title: \"Read original Service work record\",\n    domain: \"services\", tool: \"readOriginalServiceWork\", policy: { roles: managers }, scope: \"store\",\n    clients: [\"dashboard\"], rollout: \"planned\", procedures: [\"serviceAssistantWork.original\"],\n    examples: [\"Open the original saved work event, private note or exception\"],\n    tests: [\"packages/db/src/queries/service-work-original.test.ts\", \"packages/assistant/src/general/service-work-original.test.ts\", \"apps/dashboard/src/components/service-work-original-state.test.ts\"],\n    brain: \".brain/features/assistant-service-work-lifecycle.md\",",
+      "after": "id: \"services.work.original.read\", version: 1, mode: \"read\", title: \"Read original Service work record\",\n    domain: \"services\", tool: \"readOriginalServiceWork\", policy: { roles: managers }, scope: \"store\",\n    clients: [\"dashboard\", \"mobile\"], rollout: \"planned\", procedures: [\"serviceAssistantWork.original\"],\n    examples: [\"Open the original saved work event, private note or exception\"],\n    tests: [\"packages/assistant/evaluations/fixtures/native-service-original.fixture.tsx\", \"packages/db/src/queries/service-work-original.test.ts\", \"packages/assistant/src/general/service-work-original.test.ts\", \"apps/dashboard/src/components/service-work-original-state.test.ts\"],\n    brain: \".brain/features/assistant-service-work-lifecycle.md\","
+    }
+  ],
+  "foreignImpactFailureObservations": [
+    {
+      "path": "packages/assistant/impact/2026-10-15-whatsapp-assistant-identity.json",
+      "sha256": "51508d42a3e605f5994efc5c973beb25b007f5921ec0c9885d30df32b86c7eb7",
+      "ownership": "foreign unchanged byroot; reviewer observation only"
+    },
+    {
+      "path": "apps/api/src/trpc/routers/assistant-channels.ts",
+      "sha256": "66a2af1a53962ef63dc5f0dddf16400ef126c08fe574048141e5a02e5013116b",
+      "ownership": "foreign unchanged byroot; reviewer observation only"
+    }
+  ],
+  "checks": {
+    "source": "66pass/558assertions",
+    "newComponents": "51logicalcases/701assertions",
+    "compiler": "terminalexit2;78imported baseline diagnostics,0ownedPhase7",
+    "lint": "23pathsplusaffectedrepairpaths pass; dispatcherformattedonly",
+    "coverage": "current",
+    "impact": "exit1;2foreign identity record unknown merchant procedures, handedoff9eba9bb4; noownedrecorderrorsreported",
+    "whitespace": "scopedclean",
+    "acceptance": "13/45retained"
+  },
+  "registry": {
+    "capabilities": 150,
+    "writes": 74,
+    "mobileWrites": 37,
+    "mobileReads": 52,
+    "declaredGaps": 0,
+    "allWriteGaps": 37
+  },
+  "brainFiles": [
+    ".brain/plans/2026-10-15-assistant-operations-phase-checklist.md",
+    ".brain/features/assistant-business-operations.md",
+    ".brain/features/assistant-service-intake.md",
+    ".brain/features/assistant-service-work-lifecycle.md",
+    ".brain/features/assistant-quote-reads.md",
+    ".brain/api/contracts.md",
+    ".brain/api/permissions.md",
+    ".brain/qa/2026-10-15-assistant-operations-phases.md",
+    ".brain/tasks/in-progress.md"
+  ]
+}

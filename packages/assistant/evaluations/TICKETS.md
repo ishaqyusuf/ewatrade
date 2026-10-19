@@ -1,11 +1,13 @@
-# Assistant ticket status — 12 October 2026
+# Assistant ticket status — 15 October 2026
 
 Snapshot of the canonical 45-ticket roadmap. The owner now includes web/dashboard
 and mobile. Existing accepted bookmarks record web acceptance; mobile parity is
 not certified by those bookmarks.
 
 **Accepted for web: 13/45 (28.9%). Pending web acceptance: 32/45 (71.1%).**
-Of those 32: 27 are partial and 5 have not started implementation. A04 has
+Of those 32: 30 are partial and 2 have not started implementation. G04 custody/
+packing and G05 manual-message source now exist; their former unstarted marks
+are superseded. A04 has
 native packets under review; H02's two source repairs are independently
 revalidated, with CI acceptance pending. S05 and F01 source packets require
 the recorded review repairs. F03 research and H05 readiness packets are also
@@ -18,6 +20,14 @@ Legend: ✓ complete for the current web scope; ◐ partially implemented/verifi
 ○ pending; ⏸ deferred; 🔖 accepted milestone. A partial pass does not complete
 its parent ticket. Unbookmarked tickets are not accepted yet. Pending means no
 accepted milestone is recorded; it does not assert that no related source exists.
+
+15 October continuation: C04 completed-recovery authority and inventory form/audit
+routing repaired; E03 simple-transfer canonical result validated. New35isolated
+logical cases73assertions and affected API compilation pass. Existing assistant
+CI now invokes their subprocess wrapper; hosted CI is unverified. C04's isolated
+database target is not selected by the current local profile. Native registry
+audit150capabilities/59write gaps is source evidence only. Parent acceptance and
+existing pauses/gates remain unchanged. [Report](runs/2026-10-15-phase-continuation.md).
 
 | ID | Ticket | Implementation | Acceptance |
 |---|---|---|---|
@@ -58,13 +68,13 @@ accepted milestone is recorded; it does not assert that no related source exists
 | F05 | Settlement and recovery | ○ Pending | Pending |
 | G01 | Business reporting | ◐ Partial | Pending |
 | G02 | Cash count and close day | ◐ Partial | Pending |
-| G03 | Quotes, bookings and delivery | ◐ Partial | Pending |
-| G04 | Advanced inventory and catalog | ○ Pending | Pending |
-| G05 | Settings and communications | ○ Pending | Pending |
+| G03 | Quotes, bookings and delivery | ◐ Partial — internal signed booking drafts and proof-first fresh confirmation source tested; public/client/transport/SQL journeys and wider requests/logistics remain open | Pending |
+| G04 | Advanced inventory and catalog | ◐ Partial — custody/packing source reviewed; connected and client acceptance open | Pending |
+| G05 | Settings and communications | ◐ Partial — manual-share commands, assistant adapter and web editor source; connected/UI and wider settings scope open | Pending |
 | H01 | Coverage CI gate | ◐ Partial | Pending |
 | H02 | Brain and feature change gate | ◐ Partial — source repairs and final frozen handoff reviewed; hosted CI acceptance pending | Pending |
 | H03 | Evaluation and observability | ◐ Partial | Pending |
-| H04 | Media and controlled multi-step use | ○ Pending | Pending |
+| H04 | Media and controlled multi-step use | ◐ Partial — provenance/field-review, bounded-plan shapes and fresh canonical source query/API helper; durable integration and all clients remain open | Pending |
 | H05 | Operational acceptance and rollout | ◐ Partial — eight isolated decision checks pass; connected/UI/canary/release acceptance pending | Pending |
 
 Current delivery split: root owns acceptance review, necessary targeted web/mobile checks and screenshots, acceptance bookmarks and serialized main commits. Former D05/S04/G03 workers have finished their bounded source packets and are archived; reviewed source is preserved on main (`dfd156cd`, `155f0eda`, `67dfe5e5`). Their parent tickets remain partial; no further implementation assignment is active for those workers. The separate implementation handoff covers the twelve pending tickets including reopened A04 through [the implementation instruction prompt](IMPLEMENTATION_HANDOFF.md). No new agent has been dispatched by this document. S01/S02 saved web acceptance and E05 activation/API restart approval remain pending. Historical web-only/deferred snapshots below remain evidence of their original scope.
@@ -242,3 +252,55 @@ or accepted-percentage change.
 D05 lifecycle and G03 pure quotation-read first source packets passed focused
 checks; central tool/editor/global integration and signed/saved acceptance remain
 open. [Source checkpoint](runs/2026-10-12-service-work-quote-source-packets.md).
+
+
+15 October native continuation (Phases4/5): nine order/money editors and exact Book-pinned
+Finance originals added in source; native write gaps59→50, declared mobile writes24,
+zero registry gaps. Focused34/151, actual order component7/41 and money/original
+component8/55 pass in isolated scopes. Compiler retains78imported-path diagnostics;
+coverage/impact result and owned snapshots are in runs/2026-10-15-phase5-native-money-source.md.
+No parent/native acceptance, rollout promotion or connected execution;13accepted/
+29partial/3unstarted retained. G01/Paystack/D04/E05/G04/S05 gates remain. Actual
+native journeys need the normal QA session; reachable emulator is signed out at OTP.
+
+
+15 October Phase6 source: three parallel native staff editor packets integrated with
+exact status/access event and invitation command original screens. All six client
+rows remain planned;27declared mobile writes/42reads/0registry gaps,47fullwritegaps.
+Scope/lifetime/duplicate guards, original/current distinctions and no-send semantics
+verified in isolated source/component checks; final counts/compiler limits in
+runs/2026-10-15-phase6-native-staff-source.md. No parent/native acceptance:13accepted/
+29partial/3unstarted. D04 audit preserves12unscheduled; S05 bounded proposal preserves
+7unrun/unscheduled; G05 older delivery-evidence defect handed offbbe3fd9c for owner
+repair/freeze. No connected/provider/runtime/rollout/staging/commit/push/deploy.
+
+
+15October S01 native continuation: directory/member/recorded-history protected
+read screens and strict exact answer routing implemented. Scope/freshness/privacy,
+saved filters/cursors, currenttotal vs page and partialhistory remain explicit.
+Hidden-only snapshot no longer means empty original grants. Three mobile reads
+remain planned;27mobilewrites/45reads/0declaredgaps/47fullwritegaps. Source30/135
+passes plus bounded actualcomponent fixtures;17paths lint. No actualdevice/saved/
+connected acceptance, provider/runtime/rollout action or parent change.13/45
+retained. [Source/evidence](runs/2026-10-15-s01-native-reads.md).
+
+
+15October Phase7native source: all7work editors, fullsimpleintake and2quote
+decisions plus exact event/note/exception/intake+Order/quotation originals.17planned
+mobile client/test rows, no rollout/policy/procedure/version change.37mobilewrites/
+52reads/0declaredgaps/37fullwritegaps.66sourcechecks/558assertions; component/
+compiler/current gate limits in [source checkpoint](runs/2026-10-15-phase7-native-service-source.md).
+No parent/device/connected acceptance;13/45retained. All existing gates preserved;
+booking/request/capacity, exact currentJob handover and savedrecovery remain open.
+
+## 15 October 2026 — native booking/Job/cash continuation (source only)
+
+Phase7/8 adds exact booking originals, separately protected current Job management,
+cash-count editing and pure saved count/day review. Independent review repaired
+same-Job command/retry retention and raw exact Service payment input. Six planned
+mobile client rows;38mobilewrites/57reads,36fullwritegaps,0declaredgaps.
+Affected62/327 passes (25isolatedchildren), compiler78importedbaseline/0owned,
+37scopedlintclean with7retained findings in3existing paths. Coverage/current and
+local impact pass after foreign identity-record owner correction. No parent
+acceptance:13/45(28.9%), Phase7 0/3 and Phase8 0/2. Existing approval gates remain.
+[Evidence and Brain inventory](runs/2026-10-15-phase78-native-originals.md).

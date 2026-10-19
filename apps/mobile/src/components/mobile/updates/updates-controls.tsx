@@ -52,7 +52,7 @@ export function UpdatesStepRow({ step }: { step: UpdateStep }) {
           <View className="size-2 rounded-full bg-muted-foreground/50" />
         )}
       </View>
-      <Text className="min-w-0 flex-1 text-sm font-semibold text-foreground [-rn-line-height:21]">
+      <Text className="min-w-0 flex-1 text-sm font-semibold text-foreground [-rn-line-height:22]">
         {step.label}
       </Text>
     </View>

@@ -46,6 +46,8 @@ const expiredSelect = {
   contentType: true,
   sizeBytes: true,
   fileName: true,
+  storageProvider: true,
+  storageStoreId: true,
   storagePath: true,
 } as const
 

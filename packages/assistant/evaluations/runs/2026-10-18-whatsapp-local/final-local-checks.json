@@ -1,0 +1,17 @@
+{
+  "sourceFiles": 135,
+  "sourceDrift": false,
+  "accepted": 42,
+  "total": 48,
+  "remaining": [
+    "W04",
+    "W05",
+    "W40",
+    "W46",
+    "W47",
+    "W48"
+  ],
+  "typechecksRun": 0,
+  "providerOperationsRequested": false,
+  "databaseOperationsRequested": false
+}

@@ -15,6 +15,7 @@ import {
   CATALOG_FREE_LINE_LABELS,
   CATALOG_FREE_NO_DESCRIPTION,
   type CatalogFreeLineKind,
+  catalogFreeLineDescriptionError,
   catalogFreeLineKinds,
 } from "@ewatrade/utils/catalog-free-lines"
 
@@ -75,12 +76,12 @@ export function normalizeCatalogFreeLine(line: CommercialOrderCustomLineInput) {
     )
   }
   const description = line.description?.trim() || null
-  if (description && description.length > CATALOG_FREE_DESCRIPTION_MAX_LENGTH) {
-    throw new CatalogError(
-      "INVALID_ORDER",
-      `Descriptions must be at most ${CATALOG_FREE_DESCRIPTION_MAX_LENGTH} characters.`,
-    )
-  }
+  const descriptionError = catalogFreeLineDescriptionError({
+    kind: line.custom,
+    description,
+  })
+  if (descriptionError)
+    throw new CatalogError("INVALID_ORDER", descriptionError)
   return { amountMinor: line.amountMinor, description, kind: line.custom }
 }
 

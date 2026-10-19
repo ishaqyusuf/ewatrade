@@ -175,7 +175,7 @@ export function ClassicCustomerBookFilter({
     >
       <Text
         className={cn(
-          "text-[13px] font-bold",
+          "text-xs font-bold",
           active ? "text-background" : "text-foreground",
         )}
       >
@@ -184,7 +184,7 @@ export function ClassicCustomerBookFilter({
       {count !== undefined && !largeText ? (
         <Text
           className={cn(
-            "text-[11.5px] font-extrabold tabular-nums",
+            "text-xs font-extrabold tabular-nums",
             active ? "text-background opacity-70" : "text-muted-foreground",
           )}
         >

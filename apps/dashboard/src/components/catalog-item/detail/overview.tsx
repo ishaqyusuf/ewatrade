@@ -26,14 +26,30 @@ import { useMemo } from "react"
 import { ProductUsageForm } from "../product-usage-form"
 import { CatalogDetailActivity } from "./activity"
 import { type CatalogDetail, dateTime, money, orderHref } from "./display"
+import {
+  type CatalogDetailReadScope,
+  catalogDetailAffordances,
+} from "./read-access"
 export function CatalogDetailOverview({
   detail,
   storeId,
-}: { detail: CatalogDetail; storeId: string }) {
+  readOnly,
+  readScope,
+}: {
+  detail: CatalogDetail
+  storeId: string
+  readOnly: boolean
+  readScope: CatalogDetailReadScope
+}) {
   const { setParams, close } = useCatalogDetailParams()
   const { setParams: setItemParams } = useCatalogItemParams()
   const { item, lastOrder } = detail
   const product = item.product
+  const affordances = catalogDetailAffordances({
+    readOnly,
+    inventoryAllowed: detail.inventoryAllowed,
+    canManageUsage: detail.canManageUsage,
+  })
   const units = product?.currentUnitConfiguration?.units ?? []
   const main =
     units.find((unit) => unit.stockBehavior === "canonical_shared") ??
@@ -57,7 +73,7 @@ export function CatalogDetailOverview({
           itemId={item.id}
           usage={product.usage}
           updatedAt={product.updatedAt}
-          canManage={detail.canManageUsage}
+          canManage={affordances.manageUsage}
         />
       ) : null}
       <div className={product ? "grid gap-4 sm:grid-cols-2" : "grid gap-4"}>
@@ -147,7 +163,7 @@ export function CatalogDetailOverview({
       <section className="grid gap-3">
         <div className="flex items-center justify-between gap-3">
           <h3 className="font-medium">Current prices</h3>
-          {product && detail.inventoryAllowed ? (
+          {product && affordances.configureUnits ? (
             <Button
               size="sm"
               variant="outline"
@@ -256,6 +272,7 @@ export function CatalogDetailOverview({
         <CatalogDetailActivity
           itemId={item.id}
           storeId={storeId}
+          readScope={readScope}
           inventoryAllowed={detail.inventoryAllowed && Boolean(product)}
           preview
         />

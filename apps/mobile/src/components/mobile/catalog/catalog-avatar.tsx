@@ -45,7 +45,7 @@ export function CatalogAvatar({
     ) : (
       <Text
         maxFontSizeMultiplier={1.3}
-        className={`text-[15px] font-bold ${CATALOG_AVATAR_TINT[tint].fg}`}
+        className={`text-base font-bold ${CATALOG_AVATAR_TINT[tint].fg}`}
       >
         {media.label}
       </Text>

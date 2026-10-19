@@ -1,0 +1,310 @@
+{
+  "version": 1,
+  "scope": "Native Phase7/8 source checkpoint; scoped integration ownership only, shared whole-file hashes observe concurrent work and do not accept or release it",
+  "files": [
+    {
+      "path": "apps/mobile/src/components/mobile/assistant/native-booking-original-screen.tsx",
+      "sha256": "9ebe9e769bdfa7dacb431b595f984d0e05d92dba2a6d12f87b190a811bd5c1fa",
+      "ownership": "owned new native source or scoped integration hunks"
+    },
+    {
+      "path": "apps/mobile/src/components/mobile/assistant/general-cash-count-editor.tsx",
+      "sha256": "9167201d6f830aeacd6552722bae9319f57a50ab7007f0b90591069dd961fb0c",
+      "ownership": "owned new native source or scoped integration hunks"
+    },
+    {
+      "path": "apps/mobile/src/components/mobile/assistant/native-cash-count-values.ts",
+      "sha256": "e4a36059abff92f39171a456c0533702fb390906d6ff5ee23df4819ea187da70",
+      "ownership": "owned new native source or scoped integration hunks"
+    },
+    {
+      "path": "apps/mobile/src/components/mobile/assistant/native-cash-count-values.test.ts",
+      "sha256": "9768a99805b5ce517bb0d0abc0ac3e7c98c2d34b07dae82d6c7c424d2aa874d1",
+      "ownership": "owned new native source or scoped integration hunks"
+    },
+    {
+      "path": "apps/mobile/src/components/mobile/assistant/native-cash-original-screen.tsx",
+      "sha256": "d92ab55957357c0305f2098ccb6bad4ed8dc2b2871c0568b36b0251cc0ea7a66",
+      "ownership": "owned new native source or scoped integration hunks"
+    },
+    {
+      "path": "apps/mobile/src/components/mobile/assistant/native-day-review-screen.tsx",
+      "sha256": "58b0d03d6a0d46777e1bb28ba6cf9cd8e127784e506d101bda5f7d0d37f5f263",
+      "ownership": "owned new native source or scoped integration hunks"
+    },
+    {
+      "path": "apps/mobile/src/components/mobile/assistant/native-service-job-screen.tsx",
+      "sha256": "bd254ca9b958051c9c592df2d181679a26b7fdff0304ec3636ddfbe77a075380",
+      "ownership": "owned new native source or scoped integration hunks"
+    },
+    {
+      "path": "apps/mobile/src/components/mobile/assistant/native-service-job-state.ts",
+      "sha256": "82edf97748490f6f1188451535c82a4603171d41d2738b615ff3ef3b23de13a7",
+      "ownership": "owned new native source or scoped integration hunks"
+    },
+    {
+      "path": "apps/mobile/src/components/mobile/assistant/native-service-job-state.test.ts",
+      "sha256": "4b9239f56905b8a155c5211d83e94e8a6757b15229f3b0c9501c8bfa83ccf672",
+      "ownership": "owned new native source or scoped integration hunks"
+    },
+    {
+      "path": "apps/mobile/src/components/mobile/assistant/native-cash-target.ts",
+      "sha256": "1260224f880be59567a7be6937cf0179d04680d00b2b6be57c00a11cb7c80104",
+      "ownership": "owned new native source or scoped integration hunks"
+    },
+    {
+      "path": "apps/mobile/src/components/mobile/assistant/native-cash-target.test.ts",
+      "sha256": "2da11485e00f18e5a534e04a89fdf33c4cbb1d6c5b84722ec73195af65d7a6fc",
+      "ownership": "owned new native source or scoped integration hunks"
+    },
+    {
+      "path": "apps/mobile/src/components/mobile/assistant/native-service-target.ts",
+      "sha256": "7bccc05eb952823f274b0228afbce7bbb610a3099beb41f25cc2677053678192",
+      "ownership": "owned new native source or scoped integration hunks"
+    },
+    {
+      "path": "apps/mobile/src/components/mobile/assistant/native-service-target.test.ts",
+      "sha256": "a1068164324d85e5f7532e6d5221a1e2dae0fd51cc12772e1d95507f3525af36",
+      "ownership": "owned new native source or scoped integration hunks"
+    },
+    {
+      "path": "apps/mobile/src/components/mobile/assistant/native-service-original-screen.tsx",
+      "sha256": "1ec3101f712499f59ab451e57095a2c9f416a8541c7ca8fc930764402650c859",
+      "ownership": "owned new native source or scoped integration hunks"
+    },
+    {
+      "path": "apps/mobile/src/components/mobile/assistant/general-model.ts",
+      "sha256": "a5370f93c49220c41859f7199ad738973ea23bf47959e6d8a0114aa92a01f516",
+      "ownership": "owned new native source or scoped integration hunks"
+    },
+    {
+      "path": "apps/mobile/src/components/mobile/assistant/general-model.test.ts",
+      "sha256": "f5a789efe7eb0be6bfa9095703beeed824311259a514af0ea05b776b921136dd",
+      "ownership": "owned new native source or scoped integration hunks"
+    },
+    {
+      "path": "apps/mobile/src/components/mobile/assistant/general-proposal-editor.tsx",
+      "sha256": "544385df7440944baacd1789262daee85dcd84f948c064eff5d8aae2587bb7a3",
+      "ownership": "owned new native source or scoped integration hunks"
+    },
+    {
+      "path": "apps/mobile/src/components/mobile/assistant/native-parity.ts",
+      "sha256": "b6956ca192c5e373d908ae2305f133cccfa433bdc12682fd3499234cdbd0f8a3",
+      "ownership": "owned new native source or scoped integration hunks"
+    },
+    {
+      "path": "apps/mobile/src/components/mobile/assistant/native-parity.test.ts",
+      "sha256": "2e1a1f13279c713b4e10f89a54dc4c036774ed701cd671489fbce496cb3344f6",
+      "ownership": "owned new native source or scoped integration hunks"
+    },
+    {
+      "path": "apps/mobile/src/components/mobile/service-jobs/service-jobs-model.ts",
+      "sha256": "30bebe00d46a02fc39343a2a084ff3a987e4e606c96b797fb15a00eb6a5332ef",
+      "ownership": "owned new native source or scoped integration hunks"
+    },
+    {
+      "path": "apps/mobile/src/components/mobile/service-jobs/service-jobs-screen.tsx",
+      "sha256": "3b843337834fa8e59946bea11b2fddfa384f795d5f4e25c95a2603cb733f6476",
+      "ownership": "owned new native source or scoped integration hunks"
+    },
+    {
+      "path": "apps/mobile/src/components/mobile/service-jobs/use-service-jobs.ts",
+      "sha256": "9d7115d757722cbb99525e2eb34c9a61e2cbb6865f522d3275f04b04afb3acca",
+      "ownership": "owned new native source or scoped integration hunks"
+    },
+    {
+      "path": "apps/mobile/src/components/mobile/service-jobs/use-service-command.ts",
+      "sha256": "98240dee88667558d20a30f7c7e4d8a05b2d9750448b88edfcf41d4ca1e972d5",
+      "ownership": "owned new native source or scoped integration hunks"
+    },
+    {
+      "path": "apps/mobile/src/components/mobile/service-jobs/service-payment-model.ts",
+      "sha256": "3ae0a67c3971f7bd506168d6f0d0bb3ac9201f0270e92b07dbe072c7a02b08b1",
+      "ownership": "owned new native source or scoped integration hunks"
+    },
+    {
+      "path": "apps/mobile/src/components/mobile/service-jobs/service-payment-model.test.ts",
+      "sha256": "ee8374da1b2e72ab8b7bb732e19352a861dab69d9c861367006abb0cd8155bd8",
+      "ownership": "owned new native source or scoped integration hunks"
+    },
+    {
+      "path": "apps/mobile/src/components/mobile/service-jobs/service-payment-sheet.tsx",
+      "sha256": "2f601a5e4857e227128bb58a7ed5a2ba9100157ccc28cffddaaf9d18e710c678",
+      "ownership": "owned new native source or scoped integration hunks"
+    },
+    {
+      "path": "apps/mobile/src/components/mobile/finance/finance-workspace-gate.tsx",
+      "sha256": "b13fae620d7ffedcc772068bcd73a40322e475adde2339fe512e800ee0dbc80f",
+      "ownership": "owned new native source or scoped integration hunks"
+    },
+    {
+      "path": "apps/mobile/src/app/service-jobs-modal.tsx",
+      "sha256": "d1104d157dd795595a6f447805a3bea23997a7b55c2c3e7d756b8ba719bcc6eb",
+      "ownership": "owned new native source or scoped integration hunks"
+    },
+    {
+      "path": "apps/mobile/src/app/finance-count/[countId].tsx",
+      "sha256": "04fb2b9ba0b6ab73e6dec15168e19874c3e6bc23b56171aa248cb60a5973026d",
+      "ownership": "owned new native source or scoped integration hunks"
+    },
+    {
+      "path": "apps/mobile/src/app/finance-periods-modal.tsx",
+      "sha256": "97adec61a87c0e99a328929a35415972f43d70071d97d9388e5d679a4d37abf1",
+      "ownership": "owned new native source or scoped integration hunks"
+    },
+    {
+      "path": "packages/assistant/evaluations/fixtures/native-booking-original.fixture.tsx",
+      "sha256": "bf96c0cfca2c9e13d879bf76b81ff5bdfb923df4448d5bb5dc05ec23d79947cb",
+      "ownership": "owned new native source or scoped integration hunks"
+    },
+    {
+      "path": "packages/assistant/evaluations/fixtures/native-cash-count-editor.fixture.tsx",
+      "sha256": "e2fe932da52740475e8a8f47e7bfcb7a96bf3a25e057302c4a299472c5089c57",
+      "ownership": "owned new native source or scoped integration hunks"
+    },
+    {
+      "path": "packages/assistant/evaluations/fixtures/native-cash-original.fixture.tsx",
+      "sha256": "e5ce5eb06eacbd737a2dac4a47c7bb6e832dd4afdb974ca1b8dfff75c0d623e8",
+      "ownership": "owned new native source or scoped integration hunks"
+    },
+    {
+      "path": "packages/assistant/evaluations/fixtures/native-day-review.fixture.tsx",
+      "sha256": "0d89223b0e4ea69a09b47e51ecd0431f458280bb02eca6e019ea0373ab6e91da",
+      "ownership": "owned new native source or scoped integration hunks"
+    },
+    {
+      "path": "packages/assistant/evaluations/fixtures/native-service-job.fixture.tsx",
+      "sha256": "5a181d867f9b1470b7922abf28f82f33f89ae0634f6b22b82eedf4b12c517904",
+      "ownership": "owned new native source or scoped integration hunks"
+    },
+    {
+      "path": "packages/assistant/evaluations/fixtures/native-service-payment.fixture.tsx",
+      "sha256": "d49d5847be7975d507f1309272ecc0aa71bef7af49df6812c76aa676beb90778",
+      "ownership": "owned new native source or scoped integration hunks"
+    },
+    {
+      "path": "packages/assistant/evaluations/fixtures/native-cash-navigation.fixture.tsx",
+      "sha256": "900e47975fe173ebd9f6827be03c424b246fe84b22179a92aba741698e432184",
+      "ownership": "owned new native source or scoped integration hunks"
+    },
+    {
+      "path": "packages/assistant/evaluations/fixtures/native-service-original.fixture.tsx",
+      "sha256": "c948e749bc7d53e730af6ab7ee2f5249940b123cf2a95d343b0e35cae7d3d675",
+      "ownership": "owned new native source or scoped integration hunks"
+    },
+    {
+      "path": "packages/assistant/evaluations/fixtures/native-money-editor.fixture.tsx",
+      "sha256": "32fb483165873006d675577c928ccbcd1f5f116bed8f10a13f691ba2038a833d",
+      "ownership": "owned new native source or scoped integration hunks"
+    },
+    {
+      "path": "packages/assistant/evaluations/phase-regressions.test.ts",
+      "sha256": "e84c15df96736bc448743c4072ae52c84a24835d9c52b7d00e50cbe515959220",
+      "ownership": "owned new native source or scoped integration hunks"
+    },
+    {
+      "path": "packages/assistant/src/capabilities/manifest.ts",
+      "sha256": "da42a10d7122fd97deac1cfc3eb0e9e7947a2347f47e6b702dcb939f81386dbb",
+      "ownership": "six exact planned client/test hunks only; foreign rows retained"
+    },
+    {
+      "path": "packages/assistant/src/capabilities/COVERAGE.md",
+      "sha256": "74280378b1a8ea349955abdb2f34df818c29197830ea605f24f9ab4d5d83ffc3",
+      "ownership": "mixed generated coverage observation"
+    },
+    {
+      "path": "packages/assistant/impact/2026-10-15-phase78-native-originals.json",
+      "sha256": "f8a088bbc5ed8bb704b0b9b7433e6aecc98bc2f2b261698bedd1fe6f204dc753",
+      "ownership": "owned new native source or scoped integration hunks"
+    },
+    {
+      "path": "artifacts/assistant-native-cash-day/manifest.json",
+      "sha256": "b9f8c3bdf4e4972afb6861c4354a36b24cb6fd7fd05bc7056194b10487bd9778",
+      "ownership": "owned new native source or scoped integration hunks"
+    },
+    {
+      "path": "artifacts/assistant-native-cash-day/direction-01/index.html",
+      "sha256": "eba0b1b7c4d6f704390f3add0738587d116ca2a4a79dce394c9e7b44d01bb553",
+      "ownership": "owned new native source or scoped integration hunks"
+    },
+    {
+      "path": "artifacts/assistant-native-cash-day/direction-02/index.html",
+      "sha256": "3360fe777108b9c53c5f1128dbed898437e7b2ba806afe12dbbb78a44e50dc78",
+      "ownership": "owned new native source or scoped integration hunks"
+    },
+    {
+      "path": "artifacts/assistant-native-cash-day/direction-03/index.html",
+      "sha256": "a9ab8fd4f08a80c06c56d0578edc1ab5354127a8075bb36e6aefe4c033f9abc9",
+      "ownership": "owned new native source or scoped integration hunks"
+    }
+  ],
+  "acceptance": {
+    "accepted": 13,
+    "total": 45,
+    "partial": 29,
+    "unstarted": 3,
+    "phase7Accepted": 0,
+    "phase8Accepted": 0
+  },
+  "checks": {
+    "affectedTests": 62,
+    "assertions": 327,
+    "isolatedFixtureChildren": 25,
+    "finalFocusedCashRouteTest": "4/51 after type-inference-only correction",
+    "compiler": {
+      "exit": 2,
+      "importedBaselineDiagnostics": 78,
+      "ownedDiagnostics": 0
+    },
+    "biomeCleanFiles": 37,
+    "retainedLintFindings": 7,
+    "baselineFiles": 3,
+    "format": "pass",
+    "coverage": "current",
+    "localMixedOwnershipImpact": "pass;20 records,42capability/4procedure rows",
+    "native": {
+      "totalCapabilities": 150,
+      "totalWrites": 74,
+      "mobileWrites": 38,
+      "mobileReads": 57,
+      "declaredGaps": 0,
+      "fullWriteGaps": 36
+    }
+  },
+  "workshop": {
+    "path": "mobile/assistant-cash-count-day-review",
+    "selectedRevision": "dd3f6aab-765d-4b3f-ba3d-dae9dbbe823e",
+    "status": "SELECTED",
+    "actualNativeVerified": false
+  },
+  "notExecuted": [
+    "connected acceptance",
+    "device or OTP authentication",
+    "provider sends or activation",
+    "model calls",
+    "DB/schema",
+    "runtime restart",
+    "deploy"
+  ],
+  "gates": [
+    "G01 human pause",
+    "Paystack pause",
+    "D04 historical attribution and12UNSCHEDULED",
+    "E05 rejected activation/restart",
+    "G04 sixdeferred",
+    "S05 sevenunrun/UNSCHEDULED",
+    "C04 namedisolatedtargets only"
+  ],
+  "foreignObservations": [
+    {
+      "path": "packages/assistant/impact/2026-10-15-whatsapp-assistant-identity.json",
+      "sha256": "f60a782ad9f3f3229ff0d0a716ccb5a7d5778494b2d3439ddaa07c1f7c6bedbb",
+      "note": "observation only, not owned/accepted by this checkpoint"
+    },
+    {
+      "path": "apps/api/src/trpc/routers/assistant-channels.ts",
+      "sha256": "66a2af1a53962ef63dc5f0dddf16400ef126c08fe574048141e5a02e5013116b",
+      "note": "observation only, not owned/accepted by this checkpoint"
+    }
+  ]
+}

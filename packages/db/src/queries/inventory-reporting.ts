@@ -37,29 +37,45 @@ function serializeInventoryBalanceRow(
       balance.custodyType === "TRANSIT"
         ? "0"
         : subtractExactDecimals(
-            balance.onHandQuantity.toString(),
-            balance.reservedQuantity.toString(),
+            balance.onHandQuantity.toFixed(),
+            balance.reservedQuantity.toFixed(),
           ),
     balanceSourceId: balance.id,
     catalogItemId: balance.product.catalogItem.id,
     custodyReferenceId: balance.custodyReferenceId || null,
     custodyType: balance.custodyType,
     configurationVersionId: balance.inventoryUnit.configurationVersionId,
-    inventoryUnitFactor: balance.inventoryUnit.factor.toString(),
+    inventoryUnitFactor: balance.inventoryUnit.factor.toFixed(),
     inventoryUnitId: balance.inventoryUnitId,
     inventoryUnitName: balance.inventoryUnit.name,
     inventoryUnitTransactionScale: balance.inventoryUnit.transactionScale,
     kind: balance.kind,
-    onHandQuantity: balance.onHandQuantity.toString(),
+    onHandQuantity: balance.onHandQuantity.toFixed(),
     productId: balance.productId,
     productName: balance.product.catalogItem.name,
-    reservedQuantity: balance.reservedQuantity.toString(),
+    reservedQuantity: balance.reservedQuantity.toFixed(),
     revision: balance.revision,
     storeId: balance.storeId,
     storeName: balance.store.name,
     variantId: balance.variantId,
     variantName: balance.variant.name,
   }
+}
+
+/** Exact scoped source read; a missing balance stays missing, never initialized. */
+export async function getInventoryBalanceSource(
+  db: DbClient,
+  input: { tenantId: string; storeId: string; balanceSourceId: string },
+) {
+  const balance = await db.stockBalanceSource.findFirst({
+    include: balanceReportGraph,
+    where: {
+      id: input.balanceSourceId,
+      tenantId: input.tenantId,
+      storeId: input.storeId,
+    },
+  })
+  return balance ? serializeInventoryBalanceRow(balance) : null
 }
 
 /** Bounded live source page, never an aggregate or an initialization of missing stock. */
@@ -170,12 +186,12 @@ export async function listInventoryBalanceReport(
       balance.custodyReferenceId,
     ].join(":")
     const canonicalOnHand = multiplyExactDecimals(
-      balance.onHandQuantity.toString(),
-      balance.inventoryUnit.factor.toString(),
+      balance.onHandQuantity.toFixed(),
+      balance.inventoryUnit.factor.toFixed(),
     )
     const canonicalReserved = multiplyExactDecimals(
-      balance.reservedQuantity.toString(),
-      balance.inventoryUnit.factor.toString(),
+      balance.reservedQuantity.toFixed(),
+      balance.inventoryUnit.factor.toFixed(),
     )
     const group = groups.get(key) ?? {
       components: [],
@@ -241,12 +257,16 @@ export async function getStockOperationAudit(
         },
       },
     },
-    where: { id: input.operationId, tenantId: input.tenantId, storeId: input.storeId },
+    where: {
+      id: input.operationId,
+      tenantId: input.tenantId,
+      storeId: input.storeId,
+    },
   })
   if (!operation) return null
   const canonicalNetEffect = operation.movements.reduce(
     (total, movement) =>
-      addExactDecimals(total, movement.signedCanonicalEffect.toString()),
+      addExactDecimals(total, movement.signedCanonicalEffect.toFixed()),
     "0",
   )
   return {
@@ -270,20 +290,20 @@ export async function getStockOperationAudit(
       custodyType: movement.balanceSource.custodyType,
       enteredInventoryUnitId: movement.enteredInventoryUnitId,
       enteredInventoryUnitName: movement.enteredInventoryUnit.name,
-      enteredQuantity: movement.enteredQuantity.toString(),
+      enteredQuantity: movement.enteredQuantity.toFixed(),
       id: movement.id,
-      previousOnHandQuantity: movement.previousOnHandQuantity.toString(),
+      previousOnHandQuantity: movement.previousOnHandQuantity.toFixed(),
       productName: movement.balanceSource.product.catalogItem.name,
-      resultingOnHandQuantity: movement.resultingOnHandQuantity.toString(),
+      resultingOnHandQuantity: movement.resultingOnHandQuantity.toFixed(),
       reversalIds: movement.reversals.map((row) => row.id),
       reversalOfMovementId: movement.reversalOfMovement?.id ?? null,
-      signedCanonicalEffect: movement.signedCanonicalEffect.toString(),
+      signedCanonicalEffect: movement.signedCanonicalEffect.toFixed(),
       storeName: movement.balanceSource.store.name,
       totalCostMinorSnapshot:
-        movement.totalCostMinorSnapshot?.toString() ?? null,
+        movement.totalCostMinorSnapshot?.toFixed() ?? null,
       transactionScaleSnapshot: movement.transactionScaleSnapshot,
       unitCostMinorSnapshot: movement.unitCostMinorSnapshot,
-      unitFactorSnapshot: movement.unitFactorSnapshot.toString(),
+      unitFactorSnapshot: movement.unitFactorSnapshot.toFixed(),
       variantName: movement.balanceSource.variant.name,
     })),
     payloadHash: operation.payloadHash,
@@ -326,7 +346,7 @@ export async function listInventoryOperationHistory(
     actorUserId: operation.actorUserId,
     canonicalNetEffect: operation.movements.reduce(
       (total, movement) =>
-        addExactDecimals(total, movement.signedCanonicalEffect.toString()),
+        addExactDecimals(total, movement.signedCanonicalEffect.toFixed()),
       "0",
     ),
     createdAt: operation.createdAt,
@@ -427,20 +447,20 @@ export async function exportInventoryAuditRows(
     createdAt: movement.createdAt.toISOString(),
     currencyCodeSnapshot: movement.currencyCodeSnapshot,
     effectiveAt: movement.operation.effectiveAt.toISOString(),
-    enteredQuantity: movement.enteredQuantity.toString(),
+    enteredQuantity: movement.enteredQuantity.toFixed(),
     enteredUnit: movement.enteredInventoryUnit.name,
     movementId: movement.id,
     operationId: movement.operationId,
     operationType: movement.operation.type,
-    previousOnHandQuantity: movement.previousOnHandQuantity.toString(),
+    previousOnHandQuantity: movement.previousOnHandQuantity.toFixed(),
     productName: movement.balanceSource.product.catalogItem.name,
-    resultingOnHandQuantity: movement.resultingOnHandQuantity.toString(),
-    signedCanonicalEffect: movement.signedCanonicalEffect.toString(),
+    resultingOnHandQuantity: movement.resultingOnHandQuantity.toFixed(),
+    signedCanonicalEffect: movement.signedCanonicalEffect.toFixed(),
     source: movement.operation.source,
     storeName: movement.balanceSource.store.name,
-    totalCostMinorSnapshot: movement.totalCostMinorSnapshot?.toString() ?? null,
+    totalCostMinorSnapshot: movement.totalCostMinorSnapshot?.toFixed() ?? null,
     unitCostMinorSnapshot: movement.unitCostMinorSnapshot,
-    unitFactorSnapshot: movement.unitFactorSnapshot.toString(),
+    unitFactorSnapshot: movement.unitFactorSnapshot.toFixed(),
     variantName: movement.balanceSource.variant.name,
   }))
 }

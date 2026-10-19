@@ -664,7 +664,7 @@ function Segmented<T extends string>({
               >
                 <Text
                   className={cn(
-                    "text-[13px] font-extrabold",
+                    "text-xs font-extrabold",
                     selected ? "text-foreground" : "text-muted-foreground",
                   )}
                 >

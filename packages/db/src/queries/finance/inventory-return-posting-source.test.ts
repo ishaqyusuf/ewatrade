@@ -313,7 +313,7 @@ function fixture(
     lastSequence: 5n,
   }
   const tx = {
-    $queryRaw: async () => [{ id: book.id }],
+    $queryRaw: async (parts: TemplateStringsArray) => parts.join("").includes('FROM "CommercialOrder"') ? [order] : [{ id: book.id }],
     membership: { findFirst: async () => ({ tenant: { isActive: true } }) },
     productReturn: {
       findFirst: async () => productReturn,

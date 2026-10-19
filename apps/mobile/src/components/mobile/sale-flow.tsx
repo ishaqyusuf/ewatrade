@@ -104,7 +104,7 @@ export function SaleSegmentOption({
       />
       <Text
         className={cn(
-          "shrink text-center text-sm font-extrabold [-rn-line-height:20] [-rn-include-font-padding:false] [-rn-text-align-vertical:center]",
+          "shrink text-center text-sm font-extrabold [-rn-line-height:22] [-rn-include-font-padding:false] [-rn-text-align-vertical:center]",
           selected ? "text-primary-foreground" : "text-foreground",
         )}
       >

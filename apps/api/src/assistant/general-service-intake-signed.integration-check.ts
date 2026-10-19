@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto"
 import { readServiceIntakeReceiptInTransaction } from "@ewatrade/db/service-intake-receipt"
 import type { Prisma } from "@ewatrade/db/types"
 import { TRPCError } from "@trpc/server"
+import { requireBrowserIdentity } from "./channel-principal"
 import {
   type G02BudgetCall,
   observeG02BudgetCalls,
@@ -95,7 +96,7 @@ export async function verifyServiceIntakeSignedRollback(
       storeId: ctx.tenantContext.activeStore?.id ?? "",
       userId: ctx.session.user.id,
       conversationId,
-      sessionId: ctx.session.session.id,
+      sessionId: requireBrowserIdentity(ctx.session).session.id,
     },
     process.env,
   )
@@ -123,7 +124,7 @@ export async function verifyServiceIntakeSignedRollback(
   })
   await db.session.findFirstOrThrow({
     where: {
-      id: ctx.session.session.id,
+      id: requireBrowserIdentity(ctx.session).session.id,
       userId: actorUserId,
       expiresAt: { gt: new Date() },
     },
@@ -226,7 +227,7 @@ export async function verifyServiceIntakeSignedRollback(
       })
     if (mode === "expired-session")
       await tx.session.update({
-        where: { id: ctx.session.session.id },
+        where: { id: requireBrowserIdentity(ctx.session).session.id },
         data: { expiresAt: new Date(0) },
       })
     if (mode === "cross-tenant")

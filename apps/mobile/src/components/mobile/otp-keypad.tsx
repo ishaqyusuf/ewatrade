@@ -129,7 +129,7 @@ function OtpKey({
           className="size-base text-muted-foreground"
           name="ClipboardList"
         />
-        <Text className="mt-0.5 text-[10px] font-medium text-muted-foreground">
+        <Text className="mt-0.5 text-xs font-medium text-muted-foreground">
           Paste
         </Text>
       </Pressable>
@@ -165,7 +165,7 @@ function OtpKey({
           {label}
         </Text>
         {letters ? (
-          <Text className="text-[10px] font-medium [-rn-line-height:12] text-muted-foreground">
+          <Text className="text-xs font-medium [-rn-line-height:22] text-muted-foreground">
             {letters}
           </Text>
         ) : null}
@@ -229,7 +229,7 @@ function GreenTillKey({
           )}
         >
           {paste ? (
-            <Text className="text-[12.5px] font-extrabold [-rn-line-height:18] text-primary">
+            <Text className="text-xs font-extrabold [-rn-line-height:22] text-primary">
               Paste
             </Text>
           ) : action ? (

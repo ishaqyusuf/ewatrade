@@ -12,6 +12,7 @@ import {
 import {
   type ServiceCommercePolicyError,
   evaluateServiceCommercePolicyBatchInTransaction,
+  evaluateServiceCommercePolicyBatchReadOnlyInTransaction,
   getServiceCommercePolicyDecisionDetail,
   listServiceCommercePolicyDecisions,
   revokeServiceCommercePolicyDecision,
@@ -373,5 +374,127 @@ describe("Service Commerce policy decisions", () => {
         name: "audit.create",
       }),
     )
+  })
+})
+
+describe("read-only policy batch", () => {
+  test("matches audited current policy outcomes and launch gates while refusing all writes", async () => {
+    const previousAppEnv = process.env.APP_ENV
+    const previousApproval = process.env.PRESCRIPTION_COMMERCE_LAUNCH_APPROVED
+    process.env.APP_ENV = "production"
+    process.env.PRESCRIPTION_COMMERCE_LAUNCH_APPROVED = "false"
+    try {
+      for (const decisions of [
+        [row(), row({ vertical: ServiceCommercePolicyVertical.PHARMACY })],
+        [row({ jurisdictionCode: "GH" })],
+        [row({ expiresAt: new Date(now.getTime() - 1) })],
+        [row({ revokedAt: now })],
+        [],
+      ]) {
+        const ordinary = createDb({ decisions })
+        const pure = createDb({ decisions })
+        const reads: Array<{ name: string; args: unknown }> = []
+        const forbidden: string[] = []
+        const pureTransport = new Proxy(pure.client, {
+          get(target, model) {
+            const value = Reflect.get(target, model)
+            if (typeof value === "function") {
+              return () => {
+                forbidden.push(String(model))
+                throw new Error("Read-only policy attempted a transaction")
+              }
+            }
+            return new Proxy(value, {
+              get(modelTarget, operation) {
+                if (operation === "findFirst" || operation === "findMany") {
+                  return async (args: unknown) => {
+                    reads.push({
+                      name: `${String(model)}.${String(operation)}`,
+                      args,
+                    })
+                    return Reflect.get(modelTarget, operation)(args)
+                  }
+                }
+                return () => {
+                  forbidden.push(`${String(model)}.${String(operation)}`)
+                  throw new Error("Read-only policy attempted a write")
+                }
+              },
+            })
+          },
+        })
+        const input = {
+          actorUserId: "user-1",
+          purpose: "quote_review",
+          scopes: [scope, { ...scope, vertical: "pharmacy" as const }],
+          storeId: "store-1",
+          tenantId: "tenant-1",
+        }
+        const expected = await evaluateServiceCommercePolicyBatchInTransaction(
+          ordinary.client as never,
+          input,
+        )
+        const actual =
+          await evaluateServiceCommercePolicyBatchReadOnlyInTransaction(
+            pureTransport as never,
+            input,
+          )
+        expect(actual).toEqual(expected)
+        expect(actual[1]?.outcome).toBe("restricted")
+        expect(forbidden).toEqual([])
+        expect(pure.calls).toEqual([])
+        expect(reads).toEqual([
+          {
+            name: "store.findFirst",
+            args: {
+              select: { countryCode: true },
+              where: { id: "store-1", tenantId: "tenant-1" },
+            },
+          },
+          {
+            name: "serviceCommercePolicyDecision.findMany",
+            args: { where: { storeId: "store-1", tenantId: "tenant-1" } },
+          },
+        ])
+        expect(
+          ordinary.calls.filter(({ name }) => name === "audit.createMany"),
+        ).toHaveLength(2)
+        expect(JSON.stringify(actual)).not.toContain("private-evidence-1")
+      }
+    } finally {
+      process.env.APP_ENV = previousAppEnv ?? ""
+      process.env.PRESCRIPTION_COMMERCE_LAUNCH_APPROVED = previousApproval ?? ""
+    }
+  })
+
+  test("keeps the existing preloaded-facts semantics and empty batch without database calls", async () => {
+    const unexpectedDb = new Proxy(
+      {},
+      {
+        get(_target, property) {
+          throw new Error(`Unexpected database call: ${String(property)}`)
+        },
+      },
+    )
+    const input = {
+      actorUserId: "user-1",
+      purpose: "quote_review",
+      preloaded: { countryCode: "NG", decisions: [row()] },
+      scopes: [scope],
+      storeId: "store-1",
+      tenantId: "tenant-1",
+    }
+    const result =
+      await evaluateServiceCommercePolicyBatchReadOnlyInTransaction(
+        unexpectedDb as never,
+        input,
+      )
+    expect(result).toMatchObject([{ outcome: "allowed", policyRevision: 1 }])
+    expect(
+      await evaluateServiceCommercePolicyBatchReadOnlyInTransaction(
+        unexpectedDb as never,
+        { ...input, scopes: [] },
+      ),
+    ).toEqual([])
   })
 })

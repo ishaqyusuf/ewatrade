@@ -109,6 +109,7 @@ export function OrderForm({
   const [creatingCustomer, setCreatingCustomer] = useState(false)
   const [customerSearch, setCustomerSearch] = useState("")
   const [error, setError] = useState<string | null>(null)
+  const [catalogFreeAttempt, setCatalogFreeAttempt] = useState(0)
   const quickFillSnapshot = useRef<{
     selectedCustomer: OrderCustomerSelection | null
     customerEmail: string
@@ -191,6 +192,9 @@ export function OrderForm({
           ? failure.message
           : "Check the selected items.",
       )
+      // Typed-price lines show their own errors by the field and take focus.
+      if (catalogFreeLinesError(catalogFreeLines))
+        setCatalogFreeAttempt((attempt) => attempt + 1)
       return
     }
     const paidMinor = paidInFull ? orderLinesTotalMinor(lines) : null
@@ -360,6 +364,7 @@ export function OrderForm({
           setCatalogFreeLines(next)
           setError(null)
         }}
+        validationAttempt={catalogFreeAttempt}
       />
       {totalMinor !== null ? (
         <div className="flex items-baseline justify-between border-t border-border pt-3">

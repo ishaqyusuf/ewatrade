@@ -18,7 +18,7 @@ export function StockSection({
     <View className="gap-3">
       <Text className="text-base font-extrabold text-foreground">{title}</Text>
       {description ? (
-        <Text className="text-sm text-muted-foreground [-rn-line-height:20]">
+        <Text className="text-sm text-muted-foreground [-rn-line-height:22]">
           {description}
         </Text>
       ) : null}
@@ -66,6 +66,7 @@ export function StockRow({ quantityLabel, ...props }: StockRowProps) {
       accessibilityRole="radio"
       accessibilityLabel={`${props.title}, ${props.subtitle}, ${quantityLabel}`}
       accessibilityState={{ checked: props.selected, disabled: props.disabled }}
+      className="border-border"
       stockTone="muted"
       stockLabel={quantityLabel}
     />

@@ -1,6 +1,130 @@
 import { expect, test } from "bun:test"
+import { Prisma } from "../../generated/prisma/client"
 import { listInventoryCompatibleTotalsPage } from "./inventory-compatible-pages"
-import { listInventoryBalanceReport } from "./inventory-reporting"
+import {
+  getInventoryBalanceSource,
+  listInventoryBalanceReport,
+} from "./inventory-reporting"
+
+test("exact source reads bind tenant, Store and ID without scanning, initializing or leaking unrelated fields", async () => {
+  const rows = [
+    { ...source("wanted"), privateProviderSecret: "withheld" },
+    {
+      ...source("elsewhere", { store: "other" }),
+      privateProviderSecret: "withheld",
+    },
+    {
+      ...source("foreign"),
+      tenantId: "foreign",
+      privateProviderSecret: "withheld",
+    },
+  ]
+  const predicates: unknown[] = []
+  let effects = 0
+  const db = new Proxy(
+    {
+      stockBalanceSource: new Proxy(
+        {
+          async findFirst(args: {
+            where: { id: string; tenantId: string; storeId: string }
+            include: unknown
+          }) {
+            predicates.push(args.where)
+            expect(args.include).toHaveProperty("inventoryUnit")
+            return (
+              rows.find(
+                (row) =>
+                  row.id === args.where.id &&
+                  row.tenantId === args.where.tenantId &&
+                  row.storeId === args.where.storeId,
+              ) ?? null
+            )
+          },
+        },
+        {
+          get(target, key) {
+            if (key === "findFirst") return target.findFirst
+            effects++
+            throw Error("Only the exact source query is allowed")
+          },
+        },
+      ),
+    },
+    {
+      get(target, key) {
+        if (key === "stockBalanceSource") return target.stockBalanceSource
+        effects++
+        throw Error("No transaction, writes or other delegates")
+      },
+    },
+  )
+  // Partial delegates intentionally represent an inert database transport,
+  // not a production PrismaClient or real SQL acceptance.
+  const read = (id: string): Promise<unknown> =>
+    Reflect.apply(getInventoryBalanceSource, undefined, [
+      db,
+      { tenantId: "tenant", storeId: "store", balanceSourceId: id },
+    ])
+  const exact = await read("wanted")
+  expect(exact).toEqual({
+    availableQuantity: "2",
+    balanceSourceId: "wanted",
+    catalogItemId: "item",
+    custodyReferenceId: null,
+    custodyType: "STORE",
+    configurationVersionId: "config-a",
+    inventoryUnitFactor: "1",
+    inventoryUnitId: "unit-wanted",
+    inventoryUnitName: "Piece",
+    inventoryUnitTransactionScale: 3,
+    kind: "SHARED_POOL",
+    onHandQuantity: "2",
+    productId: "product",
+    productName: "Eggs",
+    reservedQuantity: "0",
+    revision: 1,
+    storeId: "store",
+    storeName: "Shop",
+    variantId: "variant",
+    variantName: "Large",
+  })
+  for (const id of ["elsewhere", "foreign", "missing"])
+    expect(await read(id)).toBeNull()
+  expect(predicates).toEqual(
+    ["wanted", "elsewhere", "foreign", "missing"].map((id) => ({
+      id,
+      tenantId: "tenant",
+      storeId: "store",
+    })),
+  )
+  expect(effects).toBe(0)
+})
+
+test("exact source reuses report arithmetic, preserving large decimals and nonavailable transit", async () => {
+  for (const custody of ["STORE", "STAFF", "SESSION", "TRANSIT"]) {
+    const row = source("exact", {
+      custody,
+      onHand: "9007199254740993.125",
+      reserved: "0.125",
+      factor: "24",
+    })
+    const result: unknown = await Reflect.apply(
+      getInventoryBalanceSource,
+      undefined,
+      [
+        { stockBalanceSource: { findFirst: async () => row } },
+        { tenantId: "tenant", storeId: "store", balanceSourceId: "exact" },
+      ],
+    )
+    expect(result).toMatchObject({
+      onHandQuantity: "9007199254740993.125",
+      reservedQuantity: "0.125",
+      availableQuantity: custody === "TRANSIT" ? "0" : "9007199254740993",
+      inventoryUnitFactor: "24",
+      custodyType: custody,
+    })
+  }
+})
 
 function source(
   id: string,
@@ -24,14 +148,14 @@ function source(
     custodyType: patch.custody ?? "STORE",
     custodyReferenceId: patch.custody === "TRANSIT" ? "transfer" : "",
     kind: "SHARED_POOL",
-    onHandQuantity: patch.onHand ?? "2",
-    reservedQuantity: patch.reserved ?? "0",
+    onHandQuantity: new Prisma.Decimal(patch.onHand ?? "2"),
+    reservedQuantity: new Prisma.Decimal(patch.reserved ?? "0"),
     product: { catalogItem: { id: "item", name: "Eggs" } },
     variant: { name: "Large" },
     store: { name: "Shop" },
     inventoryUnit: {
       name: "Piece",
-      factor: patch.factor ?? "1",
+      factor: new Prisma.Decimal(patch.factor ?? "1"),
       transactionScale: 3,
       configurationVersionId: patch.config ?? "config-a",
     },
@@ -95,11 +219,12 @@ test("compatible pagination aggregates all sources before limiting groups", asyn
     storeId: "store",
     limit: 1,
   })
+  if (!first.nextCursor) throw Error("Expected the next compatible group")
   const second = await listInventoryCompatibleTotalsPage(db, {
     tenantId: "tenant",
     storeId: "store",
     limit: 1,
-    cursor: first.nextCursor!,
+    cursor: first.nextCursor,
   })
   expect(first.items[0]?.sourceCount).toBe(51)
   expect(first.items[0]?.onHandCanonicalQuantity).toBe("102")

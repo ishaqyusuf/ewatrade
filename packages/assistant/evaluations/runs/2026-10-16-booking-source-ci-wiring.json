@@ -1,0 +1,149 @@
+{
+  "id": "2026-10-16-booking-source-ci-wiring",
+  "status": "ci_source_wired_hosted_acceptance_open",
+  "parentAcceptance": {
+    "accepted": 13,
+    "total": 45,
+    "partial": 30,
+    "unstarted": 2
+  },
+  "sources": [
+    {
+      "path": ".github/workflows/assistant-gate.yml",
+      "sha256": "6d3384f29f3c10e507596b5fb5da3339171f8814c87563d03397a9503bfaad40",
+      "role": "changed"
+    },
+    {
+      "path": "packages/assistant/evaluations/booking-source-regressions.test.ts",
+      "sha256": "392732400da38fb0821944916f7ae337d6c3fa8786b89ee147ffde59fa318849",
+      "role": "changed"
+    },
+    {
+      "path": "packages/db/prisma.generate.config.ts",
+      "sha256": "dafe60122efccb36026a7b3fc5dd660ccf8e982bfe6438585ef5ffb27eec75be",
+      "role": "generation_dependency"
+    },
+    {
+      "path": "packages/db/scripts/align-prisma-client-types.ts",
+      "sha256": "3f63b5261ff64ee63b4cefd0450c56a9a9d648811a3eeb717e1acd5bbdfc6d82",
+      "role": "generation_dependency"
+    },
+    {
+      "path": "packages/db/package.json",
+      "sha256": "0addf06ba0557c8f931827c3896677fd6f1e1b35ea419b9ed9551ad05a4db37d",
+      "role": "generation_dependency"
+    },
+    {
+      "path": "packages/db/prisma/schema.prisma",
+      "sha256": "f5859c52d8ae537c53eaeccc9cc6d16205e9fd051c4b3aea8ae3202203d42e8f",
+      "role": "generation_dependency"
+    }
+  ],
+  "suites": [
+    {
+      "path": "packages/db/src/queries/commercial-order-completion.test.ts",
+      "sha256": "e73d2244dcb51e69eaaf4609f678e84c25b094462492a9e93d184f4e44531ba2"
+    },
+    {
+      "path": "packages/db/src/queries/commercial-order-completion-decimal.test.ts",
+      "sha256": "23c2fba95812b3425265455fe478dcf4b1218f1b88b195e63810b1537577d57b"
+    },
+    {
+      "path": "packages/db/src/queries/service-commerce-bookings/booking-command-review.test.ts",
+      "sha256": "da1cc22c216aba3e73b2ab5b812086a930fc5d57346705c716e78bf99ce94389"
+    },
+    {
+      "path": "packages/db/src/queries/service-commerce-bookings/booking-commands.test.ts",
+      "sha256": "f8ac00b8f6c0ae04b94aad168e4a15a587088921e4a37f8dabd850321d522f11"
+    },
+    {
+      "path": "apps/api/src/assistant/general-booking-input.test.ts",
+      "sha256": "279c970f5258e88a1435f4f01618fc3604d94ade36a057202089407b41b94e3d"
+    },
+    {
+      "path": "apps/api/src/assistant/general-booking-draft-store.test.ts",
+      "sha256": "683a6d7aaa4f7d650bfc4d49b9719f0ffe3f181e6ecebe44d8f7baebd4a1809a"
+    },
+    {
+      "path": "apps/api/src/assistant/general-booking-drafts.test.ts",
+      "sha256": "6af4167e65e6e505c2d262da6e4c6caee920608d731fe86d03927c905fce354d"
+    },
+    {
+      "path": "apps/api/src/assistant/general-booking-confirmation.test.ts",
+      "sha256": "cd48688b26f0e7742e028b716e176cb4ea8bcb5eac01f08f2a2a01babe0e8497"
+    },
+    {
+      "path": "apps/api/src/assistant/general-booking-decision.test.ts",
+      "sha256": "6d09908292fc382aed7fa5fac5ad963eda0690c8d5f5890c24d8ec93829d4301"
+    },
+    {
+      "path": "apps/api/src/assistant/general-booking-review-projection.test.ts",
+      "sha256": "b4ce8e72f6b938c425797613631a899fa14ad9275ca20652c5c66935df7ba414"
+    },
+    {
+      "path": "packages/assistant/src/general/booking-review.test.ts",
+      "sha256": "c01e1948cb3d3a383e690ebb69ef93b208d75f8f60663d5681dbfc0185e64f09"
+    },
+    {
+      "path": "apps/api/src/assistant/general-booking-review-transport.test.ts",
+      "sha256": "83b155862186b6ed5e4baf839bea61c55d4ae802fc1f8a7805b27debd6cfc4ae"
+    },
+    {
+      "path": "apps/api/src/assistant/general-booking-review.test.ts",
+      "sha256": "db64fc02f72eadc37ed8d0b2f56fb5fe790a4c68495f1db32b901dc445b1b277"
+    }
+  ],
+  "localExecution": {
+    "authorWrapperCases": 13,
+    "rootWrapperCases": 13,
+    "rootAssertions": 13,
+    "rootSeconds": 7.69,
+    "log": "/private/tmp/assistant-booking-ci-root-tests.log",
+    "samePreviouslyVerifiedInnerCohort": {
+      "tests": 157,
+      "assertions": 2300,
+      "notAdditionalAcceptance": true
+    },
+    "childTimeoutMs": 10000,
+    "caseTimeoutMs": 15000
+  },
+  "checks": {
+    "standaloneTypecheck": {
+      "exitCode": 0,
+      "log": "/private/tmp/assistant-booking-ci-types.log"
+    },
+    "yamlParsed": true,
+    "workflowPermissions": "contents:read",
+    "workflowTriggers": [
+      "pull_request",
+      "push"
+    ],
+    "existingForeignStepsPreserved": true,
+    "wrapperBiomeClean": true,
+    "scopedDiffClean": true,
+    "localH02": {
+      "passed": true,
+      "records": 42,
+      "globalCapabilityChanges": 128,
+      "globalProcedureChanges": 11,
+      "log": "/private/tmp/assistant-booking-ci-impact.log"
+    }
+  },
+  "notRun": [
+    "Local Prisma generation",
+    "Fresh Linux install/generation",
+    "Hosted CI/dispatch",
+    "DB/schema/provider/model/login/runtime/rollout/deploy/commit/push"
+  ],
+  "nextDependency": {
+    "legacyReleaseRequest": "d489e03f-ce0f-4de3-87cf-18cd48872233",
+    "replyToOriginal": "5564d73c-5adb-4916-a91a-f3a6124d5c39",
+    "minimalSharedRelease": "general-tools.ts import and seven stock-target producer callsites",
+    "bookingIntegration": "Coordinated contract/admission/history/decision/router ownership; ordinary GENERAL approval cannot accept localV1 booking."
+  },
+  "brainFilesUpdated": [
+    ".brain/features/assistant-business-operations.md",
+    ".brain/tasks/in-progress.md",
+    ".brain/plans/2026-10-15-assistant-operations-phase-checklist.md"
+  ]
+}

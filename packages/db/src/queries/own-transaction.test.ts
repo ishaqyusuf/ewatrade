@@ -105,3 +105,107 @@ test("business refusals and non-serialization errors are never retried", async (
     expect(calls).toBe(1)
   }
 })
+
+test("a raw lock serialization failure restarts fresh reads, while unrelated raw and unique errors never retry", async () => {
+  for (const [code, meta, message, retryable] of [
+    ["P2010", { code: "40001" }, "serialization aborted", true],
+    [
+      "P2010",
+      { driverAdapterError: { cause: { kind: "TransactionWriteConflict" } } },
+      "serialization aborted",
+      true,
+    ],
+    [
+      "P2010",
+      {},
+      "Raw query failed. Code: `40001`. Message: `could not serialize access due to concurrent update`",
+      true,
+    ],
+    ["P2010", { code: "42P01" }, "relation missing", false],
+    ["P2002", {}, "unique collision", false],
+  ] as const) {
+    let calls = 0
+    const optionsSeen: object[] = []
+    const failure = new Prisma.PrismaClientKnownRequestError(message, {
+      code,
+      meta,
+      clientVersion: "7.6.0",
+    })
+    const db = {
+      $transaction: async (
+        run: (tx: unknown) => Promise<string>,
+        options: object,
+      ) => {
+        calls++
+        optionsSeen.push(options)
+        if (calls === 1) throw failure
+        return run({})
+      },
+    }
+    const result = runInOwnSerializableTransaction(
+      db as never,
+      async () => "fresh authority",
+    )
+    if (retryable) {
+      expect(await result).toBe("fresh authority")
+      expect(calls).toBe(2)
+      expect(optionsSeen[0]).not.toBe(optionsSeen[1])
+    } else {
+      await expect(result).rejects.toBe(failure)
+      expect(calls).toBe(1)
+    }
+  }
+})
+
+test("an unwrapped driver commit serialization failure retries the rolled-back callback, while unrelated driver errors do not", async () => {
+  for (const [name, kind, originalCode, retries] of [
+    ["DriverAdapterError", "TransactionWriteConflict", "40001", true],
+    ["DriverAdapterError", "TransactionWriteConflict", "23505", false],
+    ["DriverAdapterError", "GenericJs", "40001", false],
+    ["Error", "TransactionWriteConflict", "40001", false],
+  ] as const) {
+    const failure = new Error(kind, { cause: { kind, originalCode } })
+    failure.name = name
+    let transactions = 0
+    let callbacks = 0
+    const db = {
+      $transaction: async (run: (tx: unknown) => Promise<string>) => {
+        transactions++
+        const result = await run({})
+        // Prisma's raw driver failure happens after the callback, during commit.
+        if (transactions === 1) throw failure
+        return result
+      },
+    }
+    const operation = runInOwnSerializableTransaction(db as never, async () => {
+      callbacks++
+      return "fresh authority"
+    })
+    if (retries) {
+      expect(await operation).toBe("fresh authority")
+      expect(transactions).toBe(2)
+      expect(callbacks).toBe(2)
+    } else {
+      await expect(operation).rejects.toBe(failure)
+      expect(transactions).toBe(1)
+      expect(callbacks).toBe(1)
+    }
+  }
+  let attempts = 0
+  const exhausted = new Error("TransactionWriteConflict", {
+    cause: { kind: "TransactionWriteConflict", originalCode: "40001" },
+  })
+  exhausted.name = "DriverAdapterError"
+  await expect(
+    runInOwnSerializableTransaction(
+      {
+        $transaction: async () => {
+          attempts++
+          throw exhausted
+        },
+      } as never,
+      async () => "never",
+    ),
+  ).rejects.toBe(exhausted)
+  expect(attempts).toBe(3)
+})

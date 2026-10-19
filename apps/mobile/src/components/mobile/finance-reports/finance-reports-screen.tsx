@@ -249,17 +249,17 @@ function ReportWindowView({
       </Pressable>
       {showCoverage ? (
         <View className="gap-2 rounded-2xl bg-card p-4">
-          <Text className="text-sm leading-5 text-foreground">
+          <Text className="text-sm [-rn-line-height:22] text-foreground">
             Sales, payments, stock costs and opening balances are incomplete, so
             these totals aren’t your full profit or financial position.
           </Text>
-          <Text className="text-sm leading-5 text-muted-foreground">
+          <Text className="text-sm [-rn-line-height:22] text-muted-foreground">
             Posted finance entries only. Automatic Commerce posting is off.
             Refresh to include newer entries; changing dates starts a new
             snapshot.
           </Text>
           {report ? (
-            <Text className="text-xs leading-5 text-muted-foreground">
+            <Text className="text-xs [-rn-line-height:22] text-muted-foreground">
               {report.currencyCode} · Snapshot {report.snapshotSequence}
               {"\n"}Coverage:{" "}
               {report.coverage.replaceAll("_", " ").toLowerCase()}

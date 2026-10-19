@@ -1,6 +1,10 @@
 import { ActionButton } from "@/components/mobile/action-button"
 import { ConversionRow } from "@/components/mobile/appearances/classic/unit-conversion"
-import { FormField } from "@/components/mobile/form-field"
+import {
+  SearchFooterField,
+  SearchFooterScope,
+  SearchFooterSpacer,
+} from "@/components/mobile/search-footer-scope"
 import { Modal, useModal } from "@/components/ui/modal"
 import { Text } from "@/components/ui/text"
 import { View } from "@/components/ui/view"
@@ -61,11 +65,10 @@ export function ConversionBalanceChoices({
         </Text>
       ) : null}
       {rows.length > 0 || query ? (
-        <FormField
+        <SearchFooterField
+          localSearch
           accessibilityLabel={`Search ${label.toLowerCase()}`}
-          label={`Find ${label.toLowerCase()}`}
           maxLength={160}
-          variant="search"
           value={query}
           onChangeText={(value) => {
             setQuery(value)
@@ -127,12 +130,15 @@ export function ConversionBalanceChoices({
         snapPoints={["80%"]}
         enableDynamicSizing={false}
       >
-        <BottomSheetScrollView
-          keyboardShouldPersistTaps="handled"
-          contentContainerStyle={{ padding: 18, paddingBottom: 32 }}
-        >
-          {content}
-        </BottomSheetScrollView>
+        <SearchFooterScope sheet>
+          <BottomSheetScrollView
+            keyboardShouldPersistTaps="handled"
+            contentContainerStyle={{ padding: 18, paddingBottom: 32 }}
+          >
+            {content}
+            <SearchFooterSpacer />
+          </BottomSheetScrollView>
+        </SearchFooterScope>
       </Modal>
     </>
   )

@@ -55,6 +55,20 @@ export type AssistantAttachmentRecord = Prisma.AssistantAttachmentGetPayload<{
   select: typeof attachmentSelect
 }>
 
+/** Same original owner/chat request recovers the same attachment across upload retries. */
+export function assistantAttachmentRequestId(
+  scope: AssistantScope,
+  conversationId: string,
+  clientRequestId: string,
+) {
+  return `voice_${createHash("sha256")
+    .update(
+      [scope.tenantId, scope.storeId, scope.userId, conversationId, clientRequestId].join("\n"),
+    )
+    .digest("hex")
+    .slice(0, 48)}`
+}
+
 /** Owner-scoped: the actor's own attachments in the active Store's conversation. */
 function ownedWhere(scope: AssistantScope, attachmentId: string) {
   return {
@@ -115,7 +129,11 @@ export async function createAssistantAttachmentIntentInTransaction(
     return tx.assistantAttachment.create({
       data: {
         id: input.clientRequestId
-          ? `voice_${createHash("sha256").update([scope.tenantId, scope.storeId, scope.userId, input.conversationId, input.clientRequestId].join("\n")).digest("hex").slice(0, 48)}`
+          ? assistantAttachmentRequestId(
+              scope,
+              input.conversationId,
+              input.clientRequestId,
+            )
           : undefined,
         conversationId: input.conversationId,
         tenantId: scope.tenantId,
@@ -308,7 +326,9 @@ export async function claimAssistantAttachmentProcessing(
   const result = await db.assistantAttachment.updateMany({
     where: {
       id: input.attachmentId,
+      retentionUntil: { gt: now },
       conversation: {
+        status: "ACTIVE",
         owner: {
           accountPrivacyRequests: {
             none: { status: { in: ["PROCESSING", "COMPLETED"] } },
@@ -345,9 +365,11 @@ export async function completeAssistantAttachmentProcessing(
     now?: Date
   },
 ) {
+  const now = input.now ?? new Date()
   const result = await db.assistantAttachment.updateMany({
     where: {
       id: input.attachmentId,
+      retentionUntil: { gt: now },
       conversation: {
         owner: {
           accountPrivacyRequests: {
@@ -365,7 +387,7 @@ export async function completeAssistantAttachmentProcessing(
       ...(input.durationMs != null ? { durationMs: input.durationMs } : {}),
       errorCode: null,
       leaseUntil: null,
-      processedAt: input.now ?? new Date(),
+      processedAt: now,
     },
   })
   if (!result.count)
@@ -386,7 +408,7 @@ export async function completeAssistantAttachmentProcessing(
         status: "FAILED",
         errorCode: "ACCOUNT_DELETION",
         leaseUntil: null,
-        processedAt: input.now ?? new Date(),
+        processedAt: now,
       },
     })
   return result.count === 1
@@ -424,6 +446,7 @@ export async function listAssistantAttachmentsToProcess(
   const now = input.now ?? new Date()
   return db.assistantAttachment.findMany({
     where: {
+      retentionUntil: { gt: now },
       processingAttempts: { lt: input.maxAttempts },
       OR: [
         { status: "UPLOADED" },

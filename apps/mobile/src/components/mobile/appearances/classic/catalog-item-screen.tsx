@@ -227,7 +227,8 @@ export function ClassicCatalogItemOverview({
                 disabled: !onStockIn || Boolean(cachedAt),
                 icon: "Download",
                 label: "Stock in",
-                onPress: () => onStockIn?.(),
+                onPress: () =>
+                  onStockIn?.(activeFilter ? { variantId: activeFilter } : {}),
               }
             : {
                 disabled: !onOpenServiceJobs,
@@ -314,7 +315,7 @@ export function ClassicCatalogItemOverview({
         <SectionHeader title="About" />
         <View className="rounded-[20px] bg-card px-3.5 shadow-sm">
           {item.description ? (
-            <Text className="py-3 text-[13.5px] leading-5 text-muted-foreground">
+            <Text className="py-3 text-xs [-rn-line-height:22] text-muted-foreground">
               {item.description}
             </Text>
           ) : null}
@@ -358,7 +359,7 @@ function TableHead({
   return (
     <Text
       className={cn(
-        "text-[10.5px] font-extrabold uppercase tracking-[0.8px] text-muted-foreground",
+        "text-xs font-extrabold uppercase tracking-[0.8px] text-muted-foreground",
         className,
       )}
     >
@@ -397,7 +398,7 @@ function PriceRow({
       className={cn(
         "text-right tabular-nums",
         quote || offering.fixedPriceMinor === null
-          ? "text-[13px] font-bold text-muted-foreground"
+          ? "text-xs font-bold text-muted-foreground"
           : "text-sm font-extrabold text-foreground",
         !largeText && "w-[84px]",
       )}
@@ -408,17 +409,17 @@ function PriceRow({
   const stockText = product ? (
     stock ? (
       <View className={largeText ? "flex-row items-baseline gap-1.5" : "w-16"}>
-        <Text className="text-right text-[13px] font-bold tabular-nums text-foreground">
+        <Text className="text-right text-xs font-bold tabular-nums text-foreground">
           {largeText ? `${stock.onHandQuantity} on hand` : stock.onHandQuantity}
         </Text>
-        <Text className="text-right text-[11px] font-semibold tabular-nums text-muted-foreground">
+        <Text className="text-right text-xs font-semibold tabular-nums text-muted-foreground">
           {`${stock.reservedQuantity} res.`}
         </Text>
       </View>
     ) : (
       <Text
         className={cn(
-          "text-right text-[13px] font-bold text-muted-foreground",
+          "text-right text-xs font-bold text-muted-foreground",
           !largeText && "w-16",
         )}
       >
@@ -428,7 +429,7 @@ function PriceRow({
   ) : (
     <Text
       className={cn(
-        "text-right text-[11px] font-semibold text-muted-foreground",
+        "text-right text-xs font-semibold text-muted-foreground",
         !largeText && "w-16",
       )}
     >
@@ -439,7 +440,7 @@ function PriceRow({
     <>
       {first ? null : <RowDivider position="top" />}
       <View className="min-w-0 flex-1">
-        <Text className="text-[13.5px] font-bold text-foreground">
+        <Text className="text-xs font-bold text-foreground">
           {offering.name}
         </Text>
         {sub ? (
@@ -511,7 +512,7 @@ function FilterChip({
     >
       <Text
         className={cn(
-          "text-[12.5px] font-bold",
+          "text-xs font-bold",
           selected ? "text-background" : "text-muted-foreground",
         )}
       >
@@ -519,7 +520,7 @@ function FilterChip({
       </Text>
       <Text
         className={cn(
-          "text-[11px] font-bold opacity-70 tabular-nums",
+          "text-xs font-bold opacity-70 tabular-nums",
           selected ? "text-background" : "text-muted-foreground",
         )}
       >
@@ -541,7 +542,8 @@ function KindPill({ service }: { service: boolean }) {
         borderRadius: 999,
         flexDirection: "row",
         gap: 4,
-        height: 20,
+        minHeight: 26,
+        paddingVertical: 2,
         justifyContent: "center",
         marginTop: 3,
         paddingHorizontal: 8,
@@ -556,10 +558,10 @@ function KindPill({ service }: { service: boolean }) {
         maxFontSizeMultiplier={1.4}
         style={{
           color: fg,
-          fontSize: 10.5,
+          fontSize: 16,
           fontWeight: "700",
           includeFontPadding: false,
-          lineHeight: 13,
+          lineHeight: 22,
           textAlignVertical: "center",
         }}
       >

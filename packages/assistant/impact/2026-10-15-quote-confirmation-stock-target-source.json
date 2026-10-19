@@ -1,0 +1,63 @@
+{
+  "version": 1,
+  "id": "2026-10-15-quote-confirmation-stock-target-source",
+  "tickets": [
+    "G03",
+    "C01",
+    "C02",
+    "C03",
+    "C04",
+    "C05",
+    "A04",
+    "H02"
+  ],
+  "summary": "Internal Quote confirmation/full stored reviews and exact stock navigation targets; public authority/client/SQL acceptance retained.",
+  "capabilities": [],
+  "procedures": [],
+  "docs": [
+    {
+      "topic": "feature",
+      "path": ".brain/features/assistant-service-requests.md",
+      "status": "local_only",
+      "note": "Internal confirmation and complete remaining G03."
+    },
+    {
+      "topic": "api",
+      "path": ".brain/api/contracts.md",
+      "status": "local_only",
+      "note": "Internal proof/recovery and exact navigation contracts; no public route."
+    },
+    {
+      "topic": "permissions",
+      "path": ".brain/api/permissions.md",
+      "status": "local_only",
+      "note": "Existing actor/Store base factored; no new read/action grants."
+    },
+    {
+      "topic": "schema",
+      "status": "not_applicable",
+      "note": "Existing tables only; no Prisma schema or migration changes."
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "test",
+      "path": "apps/api/src/assistant/general-quote-issue-confirmation.test.ts",
+      "executed": true,
+      "result": "Root65/1579 plus native62/442; independent source review23/498."
+    },
+    {
+      "kind": "test",
+      "path": "apps/api/src/assistant/stock-read-target-answers.test.ts",
+      "executed": true,
+      "result": "Actual producers, exact128identities, typed list/detail scope and saved target transport."
+    },
+    {
+      "kind": "review",
+      "path": "packages/assistant/evaluations/runs/2026-10-15-quote-confirmation-stock-target-source.md",
+      "executed": true,
+      "result": "Terminal compiler78foreign/0owned, source limits and full gates retained."
+    }
+  ],
+  "noAssistantImpact": "No new tool/action/procedure/client/rollout registration. Internal composers and navigation metadata only."
+}

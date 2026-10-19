@@ -1,5 +1,4 @@
 import { ActionButton } from "@/components/mobile/action-button"
-import { commercialOrderHref } from "@/components/mobile/commerce/commerce-model"
 import { HeroCard } from "@/components/mobile/green-till/hero-card"
 import {
   GhostPreview,
@@ -8,8 +7,17 @@ import {
 } from "@/components/mobile/green-till/kit"
 import { MobileScreen } from "@/components/mobile/screen"
 import { Text } from "@/components/ui/text"
-import type { OperationSuccessParams } from "@/lib/operation-success-navigation"
-import { useRouter } from "expo-router"
+import { useAuthContext } from "@/hooks/use-auth"
+import { isSalesRepRole } from "@/lib/mobile-roles"
+import {
+  type OperationSuccessParams,
+  type OutcomeExit,
+  exitOutcome,
+  rebaseOutcomeOnHome,
+} from "@/lib/operation-success-navigation"
+import { useRoute } from "@react-navigation/native"
+import { useNavigation, useRouter } from "expo-router"
+import { useEffect, useRef } from "react"
 import { View } from "react-native"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 import { WhatsAppFollowUp } from "./customer-messages/whatsapp-action"
@@ -105,7 +113,24 @@ export function OperationSuccessScreen({
 }
 
 function SaleSuccess({ params }: { params: OperationSuccessParams }) {
-  const router = useRouter()
+  const navigation = useNavigation()
+  const route = useRoute()
+  const { profile } = useAuthContext()
+  const salesRep = isSalesRepRole(profile?.role)
+  // Cold or direct entry: guarantee Home under this outcome (same route key),
+  // so system back and swipe reach Home. Every action then leaves the outcome.
+  const rebased = useRef(false)
+  useEffect(() => {
+    if (rebased.current) return
+    rebased.current = true
+    rebaseOutcomeOnHome(
+      navigation,
+      { key: route.key, name: route.name, params: route.params },
+      { salesRep },
+    )
+  }, [navigation, route.key, route.name, route.params, salesRep])
+  const leave = (exit: OutcomeExit) =>
+    exitOutcome(navigation, exit, { salesRep })
   const queued = params.status === "queued"
   const method =
     params.paymentMethod === "cash"
@@ -145,6 +170,12 @@ function SaleSuccess({ params }: { params: OperationSuccessParams }) {
         {method ? (
           <SuccessDetailRow label="Payment method" value={method} />
         ) : null}
+        {params.moneyAccount && params.paymentState !== "pending" ? (
+          <SuccessDetailRow
+            label={queued ? "Into, once synced" : "Into"}
+            value={params.moneyAccount}
+          />
+        ) : null}
         {params.balance && params.paymentState !== "paid" ? (
           <SuccessDetailRow label="Balance due" value={params.balance} />
         ) : null}
@@ -155,13 +186,24 @@ function SaleSuccess({ params }: { params: OperationSuccessParams }) {
         <WhatsAppFollowUp
           done="Sale recorded."
           hasPhone
+          // Leave the outcome first: history becomes Home → composer.
+          onOpen={() => {
+            if (params.orderId)
+              leave({
+                to: "customer-message",
+                orderId: params.orderId,
+                eventKey: "order.recorded",
+              })
+          }}
           target={{ orderId: params.orderId, eventKey: "order.recorded" }}
         />
       ) : null}
       <ActionButton
         tone="gold"
         icon="Plus"
-        onPress={() => router.replace("/create-sale-modal")}
+        onPress={() =>
+          leave({ to: "new-sale", service: params.saleKind === "service" })
+        }
       >
         New sale
       </ActionButton>
@@ -171,10 +213,7 @@ function SaleSuccess({ params }: { params: OperationSuccessParams }) {
         disabled={queued || !params.orderId}
         onPress={() => {
           if (params.orderId && !queued)
-            router.push({
-              pathname: "/order-receipts-modal",
-              params: { orderIds: params.orderId },
-            })
+            leave({ to: "receipt", orderId: params.orderId })
         }}
       >
         {queued ? "Receipt available after sync" : "Receipt"}
@@ -182,7 +221,7 @@ function SaleSuccess({ params }: { params: OperationSuccessParams }) {
       {queued ? (
         <ActionButton
           variant="outline"
-          onPress={() => router.push("/sync-status-modal")}
+          onPress={() => leave({ to: "sync-status" })}
         >
           View sync status
         </ActionButton>
@@ -190,7 +229,7 @@ function SaleSuccess({ params }: { params: OperationSuccessParams }) {
         <ActionButton
           variant="outline"
           onPress={() => {
-            if (params.orderId) router.push(commercialOrderHref(params.orderId))
+            if (params.orderId) leave({ to: "order", orderId: params.orderId })
           }}
         >
           View order
@@ -199,7 +238,7 @@ function SaleSuccess({ params }: { params: OperationSuccessParams }) {
       <ActionButton
         variant="ghost"
         accessibilityLabel="Go to home"
-        onPress={() => router.replace("/dashboard")}
+        onPress={() => leave({ to: "home" })}
       >
         Go to home
       </ActionButton>

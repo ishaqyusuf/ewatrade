@@ -50,6 +50,7 @@ test("partial payments require the full total before review", () => {
     createAccount: true,
     customerChoice: "walk_in",
     partial: true,
+    description: "Two bags of rice",
   })
   expect(simpleSaleStep(sale)).toBe("received")
   expect(simpleSaleStep({ ...sale, receivedMinor: 3500000 })).toBe("total")
@@ -66,6 +67,7 @@ test("customer name stays unresolved until an explicit choice", () => {
     moneyAccountId: "bank",
     customerName: "Salman",
     receivedMinor: 10000,
+    description: "Phone repair",
   })
   expect(simpleSaleStep(sale)).toBe("customer")
   expect(simpleSaleStep({ ...sale, customerId: "customer" })).toBe("review")
@@ -127,7 +129,10 @@ test("short sale caption asks amount; explicit amount and account defaults to Wa
       ...facts,
       createAccount: true,
     })
-    expect(simpleSaleStep(sale)).toBe("review")
+    expect(simpleSaleStep(sale)).toBe("description")
+    expect(simpleSaleStep({ ...sale, description: "Two bags of rice" })).toBe(
+      "review",
+    )
   }
   expect(saleFactsFromText("20k")).toEqual({ receivedMinor: 2000000 })
   expect(saleFactsFromText("total 105k")).toEqual({ totalMinor: 10500000 })

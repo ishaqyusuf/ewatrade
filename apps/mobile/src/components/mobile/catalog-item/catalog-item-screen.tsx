@@ -67,8 +67,22 @@ export function CatalogItemScreen({
       }
       onCreateSelectedOrder={createOrder}
       onStockIn={
-        canAccessAdminTabs(profile?.role)
-          ? () => router.push("/stock-intake-modal" as never)
+        canAccessAdminTabs(profile?.role) && item
+          ? (context) =>
+              // A request only: Stock in re-resolves this item within the
+              // current authorized Store and never widens to other Products.
+              router.push({
+                params: {
+                  catalogItemId: item.id,
+                  ...(availability.data?.storeId
+                    ? { storeId: availability.data.storeId }
+                    : {}),
+                  ...(context?.variantId
+                    ? { variantId: context.variantId }
+                    : {}),
+                },
+                pathname: "/stock-intake-modal",
+              })
           : undefined
       }
       onOpenServiceJobs={() => router.push("/service-jobs-modal" as never)}

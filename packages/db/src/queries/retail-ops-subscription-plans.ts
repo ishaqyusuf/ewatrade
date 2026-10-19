@@ -20,8 +20,9 @@ export type RetailOpsPlanLimits = {
 
 /** Paid-tier capabilities the Free plan leaves out. */
 export type RetailOpsPlanFeature =
-  | "customerMessages"
   | "advancedReports"
+  | "attachments"
+  | "customerMessages"
   | "finance"
   | "invoices"
   | "multipleBusinesses"
@@ -41,6 +42,7 @@ export type RetailOpsSubscriptionPlan = {
 
 const PAID_FEATURES: RetailOpsPlanFeature[] = [
   "advancedReports",
+  "attachments",
   "finance",
   "invoices",
   "multipleBusinesses",
@@ -133,6 +135,7 @@ export const RETAIL_OPS_PLAN_FEATURE_LABELS: Record<
 > = {
   customerMessages: "Customer messages",
   advancedReports: "Advanced reports",
+  attachments: "Photos, videos and documents",
   finance: "Finance",
   invoices: "Receipts and invoices",
   multipleBusinesses: "More than one business",
@@ -148,6 +151,7 @@ export const RETAIL_OPS_PLAN_FEATURE_ACTIONS: Record<
 > = {
   customerMessages: "receive customer messages",
   advancedReports: "use advanced reports",
+  attachments: "attach photos, videos and documents",
   finance: "use finance",
   invoices: "generate receipts",
   multipleBusinesses: "add another business",

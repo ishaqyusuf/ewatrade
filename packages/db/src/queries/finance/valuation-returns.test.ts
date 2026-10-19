@@ -499,7 +499,7 @@ test("locked return reuses source history once but reads the new return and vali
   const tx = {
     ...fixture.tx,
     commercialOrder: { findFirst: async () => fixture.productReturn.order },
-    $queryRaw: async () => [{ id: "book-1" }],
+    $queryRaw: async (parts: TemplateStringsArray) => parts.join("").includes('FROM "CommercialOrder"') ? [fixture.productReturn.order] : [{ id: "book-1" }],
     productReturn: { findFirst: async (args: { include: Record<string, unknown> }) => {
       currentReads++
       expect(args.include.orderLine).toBeUndefined()
@@ -528,7 +528,7 @@ test("source reuse refuses forged tokens and cross-transaction evidence", async 
   const { consumeProductReturnSource, lockProductReturnSource } = await import("./product-return-source-snapshot")
   const { lockCommerceFinancialOrder } = await import("../customer-ledger/commerce-locks")
   const fixture = baseFixture({ disposition: "DAMAGED" })
-  const tx = { ...fixture.tx, commercialOrder: { findFirst: async () => fixture.productReturn.order }, $queryRaw: async () => [{ id: "book-1" }] } as unknown as Prisma.TransactionClient
+  const tx = { ...fixture.tx, commercialOrder: { findFirst: async () => fixture.productReturn.order }, $queryRaw: async (parts: TemplateStringsArray) => parts.join("").includes('FROM "CommercialOrder"') ? [fixture.productReturn.order] : [{ id: "book-1" }] } as unknown as Prisma.TransactionClient
   const scope = { clientReturnId: "command", tenantId: "tenant-1", storeId: "store-1", orderId: fixture.productReturn.order.id, orderLineId: fixture.productReturn.orderLine.id, quantity: fixture.productReturn.quantity.toFixed() }
   const held = await lockCommerceFinancialOrder(tx, scope)
   const preview = await previewProductReturnOriginalCost(tx, scope)
@@ -549,7 +549,7 @@ test("reused prior history cannot hide an invalid newly created restock movement
   const tx = {
     ...fixture.tx,
     commercialOrder: { findFirst: async () => fixture.productReturn.order },
-    $queryRaw: async () => [{ id: "book-1" }],
+    $queryRaw: async (parts: TemplateStringsArray) => parts.join("").includes('FROM "CommercialOrder"') ? [fixture.productReturn.order] : [{ id: "book-1" }],
     productReturn: { findFirst: async () => {
       const { order: _order, orderLine: _line, ...current } = fixture.productReturn
       return { ...current, stockOperation: { ...current.stockOperation,

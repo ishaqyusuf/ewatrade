@@ -93,7 +93,7 @@ function fixture(
       }
       if (sql.includes('"CommercialOrder"')) {
         calls.push("order-lock")
-        return [{ id: order.id }]
+        return [order]
       }
       if (sql.includes('"Membership"')) {
         calls.push("membership-lock")

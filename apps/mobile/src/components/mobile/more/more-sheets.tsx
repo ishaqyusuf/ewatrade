@@ -67,7 +67,7 @@ export const MoreThemeSheet = forwardRef<
     >
       <BottomSheetScrollView keyboardShouldPersistTaps="handled">
         <View className="gap-3 px-4 pb-5">
-          <Text className="text-xs text-muted-foreground [-rn-line-height:18]">
+          <Text className="text-xs text-muted-foreground [-rn-line-height:22]">
             Choose Light, Dark or System for this device.
           </Text>
           {error ? (
@@ -106,7 +106,7 @@ export const MoreThemeSheet = forwardRef<
                   <Text className="font-extrabold text-foreground">
                     {option.label}
                   </Text>
-                  <Text className="text-xs text-muted-foreground [-rn-line-height:18]">
+                  <Text className="text-xs text-muted-foreground [-rn-line-height:22]">
                     {option.detail}
                   </Text>
                 </View>
@@ -130,7 +130,7 @@ export const MoreThemeSheet = forwardRef<
           </View>
           <Text
             accessibilityLiveRegion="polite"
-            className="text-xs text-muted-foreground [-rn-line-height:18]"
+            className="text-xs text-muted-foreground [-rn-line-height:22]"
           >
             {pending
               ? "Saving appearance…"

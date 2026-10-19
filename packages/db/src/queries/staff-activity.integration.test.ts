@@ -290,7 +290,13 @@ async function seedCanonical(
   const order = await createCommercialOrderInTransaction(tx, {
     actorUserId: ids.users.amina,
     clientOrderId: `s05-${ids.run}`,
-    lines: [{ amountMinor: 10_000, custom: "quick_sale" }],
+    lines: [
+      {
+        amountMinor: 10_000,
+        custom: "quick_sale",
+        description: "Staff activity fixture sale",
+      },
+    ],
     schemaVersion: 1,
     storeId: ids.stores.a,
     tenantId: ids.tenantId,

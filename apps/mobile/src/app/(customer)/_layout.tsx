@@ -6,11 +6,11 @@ import { CustomerConversationAPIProvider } from "@/trpc/customer-client"
 import { Stack } from "expo-router"
 import { useEffect, useState } from "react"
 import { Platform, View } from "react-native"
-
-const transitions = stackTransitions(Platform.OS)
+import { useReducedMotion } from "react-native-reanimated"
 
 export default function CustomerLayout() {
   const [ready, setReady] = useState(false)
+  const transitions = stackTransitions(Platform.OS, useReducedMotion())
 
   useEffect(() => {
     void initializeCustomerConversationStore()

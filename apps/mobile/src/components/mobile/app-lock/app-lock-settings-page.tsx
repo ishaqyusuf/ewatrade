@@ -87,10 +87,10 @@ export function AppLockSettingsPage({
               <NativeText
                 style={{
                   color: palette.goldForeground,
-                  fontSize: 11,
+                  fontSize: 16,
                   fontWeight: "800",
                   includeFontPadding: false,
-                  lineHeight: 14,
+                  lineHeight: 22,
                 }}
               >
                 Off
@@ -158,7 +158,7 @@ export function AppLockSettingsPage({
                 title={`${biometricLabel} unlock`}
               />
             </ListCard>
-            <Text className="mt-3 px-1 text-xs leading-5 text-muted-foreground">
+            <Text className="mt-3 px-1 text-xs [-rn-line-height:22] text-muted-foreground">
               {DEVICE_NOTE}
             </Text>
           </View>
@@ -186,7 +186,7 @@ export function AppLockSettingsPage({
               title="Create a 6-digit PIN"
             />
           </ListCard>
-          <Text className="mt-3 px-1 text-xs leading-5 text-muted-foreground">
+          <Text className="mt-3 px-1 text-xs [-rn-line-height:22] text-muted-foreground">
             {DEVICE_NOTE}
           </Text>
         </View>
@@ -204,7 +204,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 12,
   },
-  noteText: { flex: 1, fontSize: 13, fontWeight: "700", lineHeight: 18 },
+  noteText: { flex: 1, fontSize: 16, fontWeight: "700", lineHeight: 22 },
   offPill: {
     borderRadius: 999,
     height: 24,

@@ -2,8 +2,8 @@ import { beforeEach, expect, mock, test } from "bun:test"
 import type { ReactNode } from "react"
 import { renderToStaticMarkup } from "react-dom/server"
 import {
-  createDraftJobHandoffStore,
   type DraftJobHandoff,
+  createDraftJobHandoffStore,
 } from "../general-assistant/assistant-draft-job-handoff-state"
 
 // Actual production factory and Job sheet; URL, query, overlay subscription and
@@ -170,7 +170,15 @@ for (const [path, name] of [
   ["./assistant-cash-count-sheet", "AssistantCashCountSheet"],
   ["./assistant-quote-approval-sheet", "AssistantQuoteApprovalSheet"],
   ["./assistant-booking-sheet", "AssistantBookingSheet"],
+
   ["./assistant-day-close-sheet", "AssistantDayCloseSheet"],
+  ["./activity-sheet", "ActivitySheet"],
+  ["./staff-activity-sheet", "StaffActivitySheet"],
+  ["./customer-message-sheet", "CustomerMessageSheet"],
+  [
+    "@/components/notification-center/business-notification-settings",
+    "BusinessNotificationPreferencesSheet",
+  ],
   ["./business-report-sheet", "BusinessReportSheet"],
   ["./closeout-sheet", "CloseoutSheet"],
   ["./customer-details-sheet", "CustomerDetailsSheet"],
@@ -194,9 +202,24 @@ for (const [path, name] of [
   ["./stock-count-sheet", "StockCountSheet"],
   ["./stock-transfer-details-sheet", "StockTransferDetailsSheet"],
   ["./store-conversation-sheet", "StoreConversationSheet"],
+  ["./store-settings-sheet", "StoreSettingsSheet"],
 ] as const)
   mock.module(path, () => ({ [name]: () => null }))
 
+let manualMessageMounts = 0
+let serviceRequestMounts = 0
+mock.module("./assistant-manual-message-sheet", () => ({
+  AssistantManualMessageSheet: () => {
+    manualMessageMounts += 1
+    return null
+  },
+}))
+mock.module("./assistant-service-request-sheet", () => ({
+  AssistantServiceRequestSheet: () => {
+    serviceRequestMounts += 1
+    return null
+  },
+}))
 const { GlobalSheets } = await import("./global-sheets")
 function render(serviceIntake: boolean) {
   return renderToStaticMarkup(
@@ -302,4 +325,17 @@ test("revocation does not mount ordinary or mismatched Jobs, or duplicate the se
   expect(readsEnabled).toEqual([])
   expect(urlUpdates).toEqual([])
   expect(handoffs.getSnapshot()?.token).toBe(handoff.token)
+})
+
+test("message and Request original factories follow existing service-management access ceiling", () => {
+  manualMessageMounts = 0
+  serviceRequestMounts = 0
+  render(true)
+  expect(manualMessageMounts).toBe(1)
+  expect(serviceRequestMounts).toBe(1)
+  manualMessageMounts = 0
+  serviceRequestMounts = 0
+  render(false)
+  expect(manualMessageMounts).toBe(0)
+  expect(serviceRequestMounts).toBe(0)
 })

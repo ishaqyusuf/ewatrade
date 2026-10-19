@@ -1,0 +1,66 @@
+{
+  "version": 1,
+  "id": "2026-10-15-g03-quote-issuance-seam",
+  "tickets": [
+    "G03",
+    "H02"
+  ],
+  "summary": "Extract immutable opaque server-only screened Quote preparation plus caller-owned canonical transaction helper, retaining native wrapper and existing authority/replay/release semantics; no assistant action/schema/provider activation. Includes opaque exact-text screening evidence at linked new/replay release; no-proof/approval callers preserve mandatory screening.",
+  "capabilities": [],
+  "procedures": [],
+  "docs": [
+    {
+      "topic": "feature",
+      "path": ".brain/features/service-commerce.md",
+      "status": "local_only",
+      "note": "Canonical composition seam and native compatibility."
+    },
+    {
+      "topic": "feature",
+      "path": ".brain/features/assistant-service-requests.md",
+      "status": "local_only",
+      "note": "Full G03 outer preflight/action/review remainder retained."
+    },
+    {
+      "topic": "feature",
+      "path": ".brain/decisions/2026-10-15-commerce-quote-issuance-preflight.md",
+      "status": "local_only",
+      "note": "Durable opaque preflight/composition architecture decision."
+    },
+    {
+      "topic": "schema",
+      "status": "not_applicable",
+      "note": "No schema/database change or migration."
+    },
+    {
+      "topic": "api",
+      "status": "not_applicable",
+      "note": "Existing native public wrapper/API input/output unchanged; new internal canonical functions only."
+    },
+    {
+      "topic": "permissions",
+      "status": "not_applicable",
+      "note": "Fresh current authority/source/Terms/approval checks preserved; opaque handle grants no authority."
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "test",
+      "path": "packages/db/src/queries/commerce-quotes.test.ts",
+      "executed": true,
+      "result": "Actual canonical source suite31/99 with inert delegates; private proof, immutable intent, authority/replay and bounded wrapper retries. No DB/provider."
+    },
+    {
+      "kind": "review",
+      "path": "packages/assistant/evaluations/runs/2026-10-15-g03-quote-issuance-seam.md",
+      "executed": true,
+      "result": "Independent extraction review no actionable regression; full assistant integration and connected acceptance remain open."
+    },
+    {
+      "kind": "test",
+      "path": "packages/db/src/queries/store-conversation-action-release-screening.test.ts",
+      "executed": true,
+      "result": "Actual issuer/linked/invitation/unread chain53/186 related suite, independentreview no actionabledefect; inertTX/QAmoderation only."
+    }
+  ]
+}

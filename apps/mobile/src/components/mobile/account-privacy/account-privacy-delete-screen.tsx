@@ -110,7 +110,7 @@ export function AccountPrivacyDeleteScreen() {
       ) : (
         <>
           <View className="gap-3 px-1">
-            <Text className="text-[15px] leading-6 text-foreground">
+            <Text className="text-base leading-6 text-foreground">
               A deletion request starts a review. It does not immediately erase
               your account or close your business.
             </Text>

@@ -37,7 +37,7 @@ export function SecondarySheetHeader({
       <View className="gap-2">
         <Text className="text-xl font-extrabold text-foreground">{title}</Text>
         {description ? (
-          <Text className="text-sm leading-5 text-muted-foreground">
+          <Text className="text-sm [-rn-line-height:22] text-muted-foreground">
             {description}
           </Text>
         ) : null}
@@ -75,11 +75,11 @@ export function SecondaryOperationalRow({
           ) : null}
           <View className="min-w-0 flex-1 gap-1">
             <Text className="font-extrabold text-foreground">{title}</Text>
-            <Text className="text-sm leading-5 text-muted-foreground">
+            <Text className="text-sm [-rn-line-height:22] text-muted-foreground">
               {detail}
             </Text>
             {metadata ? (
-              <Text className="text-xs leading-4 text-muted-foreground">
+              <Text className="text-xs [-rn-line-height:22] text-muted-foreground">
                 {metadata}
               </Text>
             ) : null}

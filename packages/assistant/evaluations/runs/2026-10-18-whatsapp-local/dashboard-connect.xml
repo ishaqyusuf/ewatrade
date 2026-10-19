@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuites name="bun test" tests="1" assertions="35" failures="0" skipped="0" time="0.358627">
+  <testsuite name="packages/assistant/evaluations/fixtures/dashboard-whatsapp-connect.fixture.tsx" file="packages/assistant/evaluations/fixtures/dashboard-whatsapp-connect.fixture.tsx" tests="1" assertions="35" failures="0" skipped="0" time="0.261" hostname="MacBook-Pro.local">
+    <testcase name="actual dashboard connect and personal management owners render and recover through explicit confirmation, expiry and revoke" classname="" time="0.261849" file="packages/assistant/evaluations/fixtures/dashboard-whatsapp-connect.fixture.tsx" line="237" assertions="35" />
+  </testsuite>
+</testsuites>

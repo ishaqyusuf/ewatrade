@@ -1,0 +1,56 @@
+{
+  "approvedSource": "931cbfc0388a91a8a3e6061848ccaf7d954c48b2",
+  "deployment": {
+    "id": "dpl_8DVDUGUGd5PnwUiqmQrmAdBNG2PH",
+    "status": "READY",
+    "target": "production",
+    "project": "prj_ykC8ltJlPgEuFN90CQhFpC5uC3Vh",
+    "owner": "team_BV5rgKHJH4fMyFL1YfscZIZK",
+    "aliases": [
+      "api.ewatrade.com",
+      "ewatrade-api.vercel.app",
+      "ewatrade-api-ishaqyusufs-projects.vercel.app"
+    ],
+    "createdAt": 1792076489697,
+    "ready": 1792076695158
+  },
+  "publicLegal": {
+    "api": {
+      "status": 200,
+      "keys": [
+        "acceptanceRequired",
+        "effective",
+        "signupAvailable",
+        "version",
+        "effectiveDate"
+      ],
+      "acceptanceRequired": true,
+      "effective": true,
+      "signupAvailable": true,
+      "version": "2026-10-15-adult-chat-1",
+      "effectiveDate": "2026-10-15"
+    },
+    "marketing": {
+      "status": 200,
+      "keys": [
+        "acceptanceRequired",
+        "approved",
+        "signupAvailable",
+        "version",
+        "effectiveDate",
+        "documentHash"
+      ],
+      "acceptanceRequired": true,
+      "approved": true,
+      "signupAvailable": true,
+      "version": "2026-10-15-adult-chat-1",
+      "effectiveDate": "2026-10-15",
+      "documentHash": "302a4b24da5303e09f91b57724cb4d1e66b3cabc01d25cc4855d4335776e8cff"
+    }
+  },
+  "ordinaryIsolatedBuildPassed": true,
+  "healthAuthLegalProbesPassed": true,
+  "schemaChanged": false,
+  "otaPublished": false,
+  "playArtifactUploaded": false
+}

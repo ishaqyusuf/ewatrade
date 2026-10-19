@@ -69,7 +69,7 @@ export function ReceiptSettingsScreen() {
         >
           Receipt settings
         </Text>
-        <Text numberOfLines={1} className="text-[12.5px] text-muted-foreground">
+        <Text numberOfLines={1} className="text-xs text-muted-foreground">
           One template for dashboard and mobile
         </Text>
       </View>
@@ -219,8 +219,8 @@ function ReceiptSettingsEditor({
                 numberOfLines={largeText ? 2 : 1}
                 className={
                   scope === value
-                    ? "text-center text-[13px] font-extrabold text-foreground"
-                    : "text-center text-[13px] font-extrabold text-muted-foreground"
+                    ? "text-center text-xs font-extrabold text-foreground"
+                    : "text-center text-xs font-extrabold text-muted-foreground"
                 }
               >
                 {label}
@@ -293,11 +293,11 @@ function ReceiptSettingsEditor({
           <View className="flex-row justify-between gap-3">
             <Text
               nativeID="receipt-thank-you-label"
-              className="text-[11.5px] font-bold text-muted-foreground"
+              className="text-xs font-bold text-muted-foreground"
             >
               Thank-you note
             </Text>
-            <Text className="text-[11.5px] font-bold tabular-nums text-muted-foreground">
+            <Text className="text-xs font-bold tabular-nums text-muted-foreground">
               {displayed.thankYouNote.length}/300
             </Text>
           </View>
@@ -313,7 +313,7 @@ function ReceiptSettingsEditor({
             placeholderTextColor={colors.mutedForeground}
             style={{
               color: colors.foreground,
-              fontSize: 14.5,
+              fontSize: 16,
               marginTop: 4,
               minHeight: 22,
               padding: 0,

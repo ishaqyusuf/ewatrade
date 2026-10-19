@@ -1,6 +1,7 @@
 "use client"
 
 import { FormFeedback } from "@/components/forms/form-feedback"
+import { useAttachmentAccess } from "@/hooks/use-attachment-access"
 import { useTRPC } from "@/trpc/client"
 import { Button, Textarea } from "@ewatrade/ui"
 import {
@@ -11,7 +12,7 @@ import {
 import { HugeiconsIcon } from "@hugeicons/react"
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { put } from "@vercel/blob/client"
-import { useRef, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 
 const VIDEO_TYPES = ["video/mp4", "video/quicktime"]
 const ACCEPT = [
@@ -42,6 +43,9 @@ function contentPath(attachmentId: string) {
 
 /** The note box at the foot of an order's Activity: text, photos, PDFs, videos. */
 export function OrderNoteComposer({ orderId }: { orderId: string }) {
+  const attachments = useAttachmentAccess(orderId)
+  const pickerCheck = useRef<(() => Promise<boolean>) | null>(null)
+  const selectedOrder = useRef<string | null>(null)
   const trpc = useTRPC()
   const client = useQueryClient()
   const add = useMutation(trpc.orders.activity.add.mutationOptions())
@@ -59,8 +63,15 @@ export function OrderNoteComposer({ orderId }: { orderId: string }) {
   // Kept across retries so a failed upload resumes the same entry.
   const clientActivityId = useRef(`activity-${crypto.randomUUID()}`)
   const input = useRef<HTMLInputElement>(null)
+  useEffect(() => {
+    setFiles([])
+    selectedOrder.current = orderId
+    pickerCheck.current = null
+  }, [orderId])
 
-  function choose(list: FileList | null) {
+  async function choose(list: FileList | null) {
+    if (!pickerCheck.current || !(await pickerCheck.current())) return
+    selectedOrder.current = orderId
     const picked = Array.from(list ?? [])
     if (picked.some((file) => !ACCEPT.split(",").includes(file.type))) {
       setError(
@@ -86,9 +97,15 @@ export function OrderNoteComposer({ orderId }: { orderId: string }) {
     setPosting(true)
     setError(null)
     try {
+      if (
+        files.length &&
+        (selectedOrder.current !== orderId || !(await attachments.allow()))
+      )
+        return
       const read = await Promise.all(
         files.map(async (file) => ({ file, digest: await sha256(file) })),
       )
+      if (files.length && !(await attachments.allow())) return
       const entry = await add.mutateAsync({
         attachments: read.map(({ file, digest }) => ({
           contentDigest: digest,
@@ -107,9 +124,11 @@ export function OrderNoteComposer({ orderId }: { orderId: string }) {
         )
         const attachment = index >= 0 ? pending.splice(index, 1)[0] : undefined
         if (attachment?.status !== "PENDING_UPLOAD") continue
+        if (!(await attachments.allow())) return
         const route = await uploadTarget.mutateAsync({
           attachmentId: attachment.id,
         })
+        if (!(await attachments.allow())) return
         if (route.mode === "direct") {
           // Live files go straight to private storage, then get checked.
           await put(route.pathname, file, {
@@ -119,6 +138,7 @@ export function OrderNoteComposer({ orderId }: { orderId: string }) {
             token: route.clientToken,
             onUploadProgress: ({ percentage }) => setProgress(percentage),
           })
+          if (!(await attachments.allow())) return
           await confirmUpload.mutateAsync({ attachmentId: attachment.id })
           continue
         }
@@ -153,6 +173,7 @@ export function OrderNoteComposer({ orderId }: { orderId: string }) {
 
   return (
     <div className="grid gap-2">
+      {attachments.dialog}
       <Textarea
         aria-label="Order note"
         disabled={posting}
@@ -196,9 +217,13 @@ export function OrderNoteComposer({ orderId }: { orderId: string }) {
           multiple
           accept={ACCEPT}
           type="file"
-          onChange={(event) => {
-            choose(event.target.files)
-            event.target.value = ""
+          onChange={async (event) => {
+            const target = event.currentTarget
+            try {
+              await choose(target.files)
+            } finally {
+              target.value = ""
+            }
           }}
         />
         <Button
@@ -206,10 +231,13 @@ export function OrderNoteComposer({ orderId }: { orderId: string }) {
           variant="outline"
           size="sm"
           disabled={posting || files.length >= MAX_FILES}
-          onClick={() => input.current?.click()}
+          onClick={async () => {
+            pickerCheck.current = attachments.allow
+            if (await attachments.allow()) input.current?.click()
+          }}
         >
           <HugeiconsIcon icon={Attachment01Icon} className="size-4" />
-          Photo, PDF or video
+          Photo, PDF or video{attachments.knownFree ? " · Locked" : ""}
         </Button>
         <Button
           type="button"

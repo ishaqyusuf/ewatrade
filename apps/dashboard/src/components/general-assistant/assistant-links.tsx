@@ -4,6 +4,7 @@ import { useSetupAssistantParams } from "@/hooks/use-setup-assistant-params"
 import { useTRPC } from "@/trpc/client"
 import { cn } from "@ewatrade/ui"
 import { useQuery } from "@tanstack/react-query"
+import Link from "next/link"
 import type { ReactNode } from "react"
 import {
   type GeneralPendingReview,
@@ -92,6 +93,12 @@ export function AssistantLinks({
   return (
     <div className={cn("flex flex-col items-center gap-1", className)}>
       <div className="flex flex-wrap items-center justify-center gap-x-1">
+        <Link
+          href="/account/whatsapp"
+          className="rounded-md px-2 py-1 text-xs text-muted-foreground hover:bg-muted hover:text-foreground"
+        >
+          WhatsApp assistant
+        </Link>
         {first ? (
           <QuietLink warn onClick={() => onReview(first)}>
             {pending.length} draft{pending.length > 1 ? "s" : ""} need

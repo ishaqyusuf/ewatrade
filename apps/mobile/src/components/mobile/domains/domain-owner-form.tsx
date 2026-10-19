@@ -77,7 +77,7 @@ export function DomainOwnerForm({
         <Text className="text-lg font-extrabold text-foreground">
           Legal domain owner
         </Text>
-        <Text className="text-sm leading-5 text-muted-foreground">
+        <Text className="text-sm [-rn-line-height:22] text-muted-foreground">
           Registrars require the real person or business that owns the domain.
           We encrypt these details.
         </Text>

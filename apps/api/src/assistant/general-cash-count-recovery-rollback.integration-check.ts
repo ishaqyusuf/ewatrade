@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto"
 import { cashCountAction } from "@ewatrade/assistant/general/contracts"
 import type { Prisma } from "@ewatrade/db"
 import { getFinanceCashCountInTransaction } from "@ewatrade/db/queries"
+import { requireBrowserIdentity } from "./channel-principal"
 import { cashCountRecord } from "./general-cash-count"
 import { cashCountReceiptFault } from "./general-cash-count-receipt-fault"
 import {
@@ -198,7 +199,7 @@ export async function verifyG02RecoveryRollback(
             })
             if (mode === "expired-session")
               await tx.session.update({
-                where: { id: ctx.session.session.id },
+                where: { id: requireBrowserIdentity(ctx.session).session.id },
                 data: { expiresAt: new Date(0) },
               })
             if (mode === "suspended-membership")

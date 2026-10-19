@@ -25,13 +25,26 @@ export type StackTransitions = {
 // Android falls back to its OS default, which reads as a static swap and
 // treats presentation "modal" exactly like a push. iOS keeps its native push,
 // swipe-back and modal sheet.
-export function stackTransitions(os: string): StackTransitions {
+//
+// With the OS Reduce Motion setting on, pushes (and Android modals) fade
+// instead of sliding; the iOS modal sheet stays system presentation. Gestures
+// and history are unchanged.
+export function stackTransitions(
+  os: string,
+  reduceMotion = false,
+): StackTransitions {
   const android = os === "android"
   return {
-    push: android ? { animation: "ios_from_right" } : {},
+    push: reduceMotion
+      ? { animation: "fade" }
+      : android
+        ? { animation: "ios_from_right" }
+        : {},
     modal: {
       presentation: "modal",
-      ...(android ? { animation: "slide_from_bottom" } : {}),
+      ...(android
+        ? { animation: reduceMotion ? "fade" : "slide_from_bottom" }
+        : {}),
     },
     // animationDuration only applies on iOS; Android uses its native timing.
     gate: { animation: "fade", animationDuration: 220 },
@@ -68,6 +81,15 @@ const forLeavingTab: TabSceneInterpolator = ({ current }) => ({
 // The tab being opened fades in where it is.
 const forEnteringTab: TabSceneInterpolator = ({ current }) => ({
   sceneStyle: {
+    // Keep the reset on the native animated graph, including repeated returns.
+    transform: [
+      {
+        translateX: current.progress.interpolate({
+          inputRange: [-1, 0, 1],
+          outputRange: [0, 0, 0],
+        }),
+      },
+    ],
     opacity: current.progress.interpolate({
       inputRange: [-1, 0, 1],
       outputRange: [0, 1, 0],

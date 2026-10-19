@@ -31,7 +31,7 @@ export function CustomerNotificationControls({
   return (
     <View className="gap-2 py-1">
       {blocked ? (
-        <Text className="text-xs leading-4 text-muted-foreground">
+        <Text className="text-xs [-rn-line-height:22] text-muted-foreground">
           Conversation notifications are paused while this Store is blocked. You
           can still manage your notification settings and contacts.
         </Text>

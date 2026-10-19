@@ -52,7 +52,7 @@ export function BigAmountField({
       <NativeText
         style={{
           color: colors.mutedForeground,
-          fontSize: 12,
+          fontSize: 16,
           fontWeight: "700",
         }}
       >
@@ -118,7 +118,7 @@ export function BigAmountField({
               <NativeText
                 style={{
                   color: palette[`${suggestion.tint}Foreground`],
-                  fontSize: 12,
+                  fontSize: 16,
                   fontWeight: "800",
                 }}
               >

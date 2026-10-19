@@ -6,12 +6,16 @@ import {
   dayCloseTargetSchema,
 } from "./cash-count-target"
 import { quoteApprovalTargetSchema } from "./quote-reads"
+import { readRecordTargetSchema } from "./read-record-target"
+import { serviceManualMessageTargetSchema } from "./service-message-read"
+import { serviceRequestReadTargetSchema } from "./service-request-read"
 import { serviceWorkOriginalTargetSchema } from "./service-work-original"
 import { staffAccessTargetSchema } from "./staff-access"
 import { staffActivityTargetSchema } from "./staff-activity-target"
 import { staffDirectoryTargetSchema } from "./staff-directory-target"
 import { staffHistoryTargetSchema } from "./staff-history-target"
 import { staffStatusTargetSchema } from "./staff-status"
+import { stockReadTargetSchema } from "./stock-read-target"
 
 /** Navigation identity only; the native query derives Tenant/actor and checks access. */
 export const staffMemberTargetSchema = z
@@ -29,6 +33,10 @@ export const staffInvitationTargetSchema = z
   .strict()
 
 export const generalAnswerTargetSchema = z.discriminatedUnion("kind", [
+  ...serviceRequestReadTargetSchema.options,
+  serviceManualMessageTargetSchema,
+  ...readRecordTargetSchema.options,
+  ...stockReadTargetSchema.options,
   quoteApprovalTargetSchema,
   serviceBookingTargetSchema,
   ...serviceWorkOriginalTargetSchema.options,

@@ -1,0 +1,2 @@
+$ bun scripts/assistant-coverage.ts --check
+Assistant coverage snapshot is current.

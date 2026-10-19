@@ -2,6 +2,7 @@ import { createFinanceExpenseReceiptDeliveryRepository } from "@ewatrade/db/fina
 import type { ExpenseReceiptContentType } from "@ewatrade/private-media/expense-receipts"
 import { createVercelPrivateObjectPort } from "@ewatrade/private-media/vercel-blob"
 import { TRPCError } from "@trpc/server"
+import { requireBrowserIdentity } from "../assistant/channel-principal"
 import { createTRPCContext, resolveProtectedTenantContext } from "../trpc/init"
 import type { PrepareExpenseReceiptDelivery } from "./expense-receipt-delivery"
 import { financeExpenseReceiptActorScope } from "./expense-receipt-session"
@@ -21,7 +22,7 @@ export const prepareFinanceExpenseReceiptDelivery: PrepareExpenseReceiptDelivery
       await createTRPCContext(undefined, context),
     )
     const actor = financeExpenseReceiptActorScope(ctx)
-    const session = ctx.session
+    const session = requireBrowserIdentity(ctx.session)
     if (!session)
       throw new TRPCError({
         code: "UNAUTHORIZED",

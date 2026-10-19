@@ -4,6 +4,7 @@ import { Prisma } from "../../generated/prisma/client"
 import {
   ServiceCommerceAccessError,
   getServiceCommerceWorkspaceAccess,
+  getServiceCommerceWorkspaceAccessReadOnly,
   setServiceCommerceStoreProfileActivation,
   updateServiceCommerceStoreProfile,
 } from "./service-commerce-access"
@@ -55,9 +56,12 @@ const settings = {
 
 function createDb(input?: {
   createError?: unknown
+  policyAllowed?: boolean
   profile?: typeof profile | null
   role?: string | null
+  storeMissing?: boolean
   storeStatus?: string
+  trackedInventory?: boolean
   updateCount?: number
   whatsappBindings?: Array<{
     connection: { status: string }
@@ -92,7 +96,9 @@ function createDb(input?: {
     serviceCommercePolicyDecision: {
       findMany: async (args: Record<string, unknown>) => {
         calls.push({ args, name: "policyDecision.findMany" })
-        return allowedServiceCommercePolicyDecisionRows()
+        return input?.policyAllowed === false
+          ? []
+          : allowedServiceCommercePolicyDecisionRows()
       },
     },
     serviceCommerceStoreAuditEvent: {
@@ -124,13 +130,13 @@ function createDb(input?: {
     stockBalanceSource: {
       findFirst: async (args: Record<string, unknown>) => {
         calls.push({ args, name: "stockBalanceSource.findFirst" })
-        return null
+        return input?.trackedInventory ? { id: "balance_source" } : null
       },
     },
     store: {
       findFirst: async (args: Record<string, unknown>) => {
         calls.push({ args, name: "store.findFirst" })
-        return store
+        return input?.storeMissing ? null : store
       },
     },
     whatsAppStoreBinding: {
@@ -494,5 +500,208 @@ describe("service commerce access", () => {
       }),
     ).rejects.toBeInstanceOf(ServiceCommerceAccessError)
     expect(db.calls).toEqual([])
+  })
+})
+
+// Actual workspace/policy code runs against read transports; every other operation
+// fails even if a future implementation tries a new mutation or nested transaction.
+function mutationDeniedClient(client: DbClient) {
+  const denied: string[] = []
+  function wrap(value: object, path = "db"): object {
+    return new Proxy(value, {
+      get(target, property) {
+        const name = String(property)
+        const next = Reflect.get(target, property)
+        if (typeof next === "function") {
+          if (name === "findFirst" || name === "findMany") return next
+          return () => {
+            denied.push(`${path}.${name}`)
+            throw new Error(`Mutation/transaction forbidden: ${path}.${name}`)
+          }
+        }
+        if (next && typeof next === "object")
+          return wrap(next, `${path}.${name}`)
+        throw new Error(`Unexpected database transport: ${path}.${name}`)
+      },
+    })
+  }
+  return { client: wrap(client) as DbClient, denied }
+}
+
+const workspaceScope = {
+  actorUserId: "user_123",
+  storeId: "store_123",
+  tenantId: "tenant_123",
+}
+
+describe("read-only Service Commerce workspace", () => {
+  test("shares exact audited output for active, unavailable and restricted persisted facts without any mutation", async () => {
+    const scenarios: Array<Parameters<typeof createDb>[0]> = [
+      { profile: { ...profile, status: "ACTIVE" } },
+      {},
+      { profile: null },
+      { profile: { ...profile, status: "SUSPENDED" } },
+      { profile: { ...profile, status: "ACTIVE" }, storeStatus: "DRAFT" },
+      { profile: { ...profile, status: "ACTIVE" }, policyAllowed: false },
+      {
+        profile: {
+          ...profile,
+          policyRestrictedCapabilities: ["intake"],
+          status: "ACTIVE",
+        },
+      },
+      {
+        profile: {
+          ...profile,
+          attachmentsEnabled: true,
+          bookingEnabled: true,
+          catalogAdoptionMode: "INVENTORY_MANAGED",
+          staffEnabled: false,
+          status: "ACTIVE",
+          whatsappEnabled: true,
+        },
+        trackedInventory: true,
+        whatsappBindings: [
+          {
+            connection: { status: "RECONNECTING" },
+            id: "binding_123",
+            status: "ACTIVE",
+          },
+        ],
+      },
+      {
+        profile: {
+          ...profile,
+          staffEnabled: false,
+          status: "ACTIVE",
+          whatsappEnabled: true,
+        },
+        whatsappBindings: [
+          {
+            connection: { status: "ACTIVE" },
+            id: "binding_123",
+            status: "ACTIVE",
+          },
+        ],
+      },
+    ]
+    for (const scenario of scenarios) {
+      const ordinary = createDb(scenario)
+      const pureDb = createDb(scenario)
+      const pure = mutationDeniedClient(pureDb.client)
+      const expected = await getServiceCommerceWorkspaceAccess(
+        ordinary.client,
+        workspaceScope,
+      )
+      const actual = await getServiceCommerceWorkspaceAccessReadOnly(
+        pure.client,
+        workspaceScope,
+      )
+      expect(actual).toEqual(expected)
+      expect(pure.denied).toEqual([])
+      expect(
+        pureDb.calls.some(({ name }) => name === "policyAudit.createMany"),
+      ).toBe(false)
+      expect(pureDb.calls).toEqual(
+        ordinary.calls.filter(({ name }) => name !== "policyAudit.createMany"),
+      )
+      if (scenario?.profile !== null) {
+        expect(
+          call(ordinary.calls, "policyAudit.createMany").args,
+        ).toMatchObject({
+          data: expect.arrayContaining([
+            expect.objectContaining({
+              actorUserId: "user_123",
+              storeId: "store_123",
+              tenantId: "tenant_123",
+              type: "READ",
+            }),
+          ]),
+        })
+      }
+      expect(JSON.stringify(actual)).not.toContain("private-test-evidence")
+    }
+  })
+
+  test("keeps role ceilings and current active membership/Store scope identical", async () => {
+    for (const role of [
+      "OWNER",
+      "ADMIN",
+      "MANAGER",
+      "CASHIER",
+      "OPERATOR",
+      "SUPPORT",
+      "MEMBER",
+    ]) {
+      const db = createDb({ profile: { ...profile, status: "ACTIVE" }, role })
+      const pure = mutationDeniedClient(db.client)
+      const result = await getServiceCommerceWorkspaceAccessReadOnly(
+        pure.client,
+        workspaceScope,
+      )
+      const manages = role === "OWNER" || role === "ADMIN"
+      const operates =
+        manages || ["MANAGER", "CASHIER", "OPERATOR"].includes(role)
+      expect(result.access).toEqual({
+        canManage: manages,
+        canOperate: operates,
+        exceptionalAccess: false,
+      })
+      expect(result.canCreateAssistedRequest).toBe(operates)
+      expect(call(db.calls, "membership.findFirst").args).toEqual({
+        select: { role: true },
+        where: { status: "ACTIVE", tenantId: "tenant_123", userId: "user_123" },
+      })
+      expect(call(db.calls, "store.findFirst").args).toEqual({
+        include: { serviceCommerceProfile: true },
+        where: { id: "store_123", tenantId: "tenant_123" },
+      })
+      expect(call(db.calls, "policyDecision.findMany").args).toEqual({
+        where: { storeId: "store_123", tenantId: "tenant_123" },
+      })
+      expect(pure.denied).toEqual([])
+    }
+    for (const [scenario, code] of [
+      [{ role: null }, "FORBIDDEN"],
+      [{ storeMissing: true }, "NOT_FOUND"],
+    ] as const) {
+      for (const read of [
+        getServiceCommerceWorkspaceAccess,
+        getServiceCommerceWorkspaceAccessReadOnly,
+      ]) {
+        const db = createDb(scenario)
+        const pure = mutationDeniedClient(db.client)
+        await expect(read(pure.client, workspaceScope)).rejects.toMatchObject({
+          code,
+        })
+        expect(pure.denied).toEqual([])
+        expect(
+          db.calls.some(({ name }) => name === "policyDecision.findMany"),
+        ).toBe(false)
+      }
+    }
+  })
+
+  test("retains unavailable readiness rather than authorizing through setup or policy gaps", async () => {
+    for (const scenario of [
+      {},
+      { profile: { ...profile, status: "ACTIVE" }, storeStatus: "DRAFT" },
+      { profile: { ...profile, status: "ACTIVE" }, policyAllowed: false },
+      {
+        profile: {
+          ...profile,
+          status: "ACTIVE",
+          staffEnabled: false,
+          whatsappEnabled: true,
+        },
+      },
+    ]) {
+      const db = createDb(scenario)
+      const result = await getServiceCommerceWorkspaceAccessReadOnly(
+        mutationDeniedClient(db.client).client,
+        workspaceScope,
+      )
+      expect(result.canCreateAssistedRequest).toBe(false)
+    }
   })
 })

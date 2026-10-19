@@ -1,0 +1,70 @@
+{
+  "version": 1,
+  "id": "2026-10-15-booking-review-media-resolver-source",
+  "tickets": [
+    "G03",
+    "H04",
+    "A04",
+    "H01",
+    "H02"
+  ],
+  "summary": "Complete pure booking review, fresh canonical media source query/API helper and full legacy Quote prose screening; phases4\u201312 remain active",
+  "capabilities": [],
+  "procedures": [],
+  "docs": [
+    {
+      "topic": "feature",
+      "path": ".brain/features/assistant-business-operations.md",
+      "status": "local_only"
+    },
+    {
+      "topic": "feature",
+      "path": ".brain/features/service-commerce.md",
+      "status": "local_only"
+    },
+    {
+      "topic": "feature",
+      "path": ".brain/features/assistant-voice.md",
+      "status": "local_only"
+    },
+    {
+      "topic": "feature",
+      "path": ".brain/features/generic-catalog-inventory-units-stock-operations.md",
+      "status": "local_only"
+    },
+    {
+      "topic": "api",
+      "path": ".brain/api/contracts.md",
+      "status": "local_only"
+    },
+    {
+      "topic": "permissions",
+      "path": ".brain/api/permissions.md",
+      "status": "local_only"
+    },
+    {
+      "topic": "decision",
+      "path": ".brain/decisions/2026-10-15-prepared-booking-and-media-review-boundaries.md",
+      "status": "local_only"
+    },
+    {
+      "topic": "schema",
+      "status": "not_applicable",
+      "note": "Existing native tables only; no Prisma/migration/push or durable media/plan storage is applied."
+    },
+    {
+      "topic": "capability",
+      "path": "packages/assistant/src/capabilities/COVERAGE.md",
+      "status": "updated",
+      "note": "Regenerated/current; no client/action/rollout promotion."
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "review",
+      "path": "packages/assistant/evaluations/runs/2026-10-15-booking-review-media-resolver-source.md",
+      "executed": true,
+      "result": "Booking108/859, mediaquery16/198, actualfreshAPI8/91, H04contracts22/127, Quote102/906; overlapping source cohorts. Compiler78exactbaseline/0owned;23Biomeclean."
+    }
+  ]
+}

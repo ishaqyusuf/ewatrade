@@ -215,7 +215,7 @@ export function AssistantHome({
         {homeGreeting(new Date().getHours())}
         {firstName ? `, ${firstName}` : ""}. How can I help today?
       </Text>
-      <Text className="text-[13px] text-muted-foreground">
+      <Text className="text-base [-rn-line-height:22] text-muted-foreground">
         {rep
           ? "Ask about your sales and what’s in stock, or start a sale."
           : "Ask about sales, stock and customers, or tell me what to record. Nothing changes until you confirm."}
@@ -270,7 +270,7 @@ export function AssistantHome({
                     <View className="gap-0.5">
                       <Text
                         className={cn(
-                          "text-[13.5px] font-bold",
+                          "text-base font-bold",
                           gold ? "text-gold-foreground" : "text-foreground",
                         )}
                       >
@@ -278,7 +278,7 @@ export function AssistantHome({
                       </Text>
                       <Text
                         className={cn(
-                          "text-[11.5px]",
+                          "text-base [-rn-line-height:22]",
                           gold
                             ? "text-gold-foreground/70"
                             : "text-muted-foreground",

@@ -209,19 +209,17 @@ function ReviewCard({
           hitSlop={8}
           onPress={onEdit}
         >
-          <Text className="text-[13px] font-bold text-primary">Edit</Text>
+          <Text className="text-xs font-bold text-primary">Edit</Text>
         </Pressable>
       </View>
       <ListCard>
         {lines.map((line) => (
           <View key={line.main} className="gap-0.5 py-3">
-            <Text className="text-[15px] font-bold text-foreground">
+            <Text className="text-base font-bold text-foreground">
               {line.main}
             </Text>
             {line.sub ? (
-              <Text className="text-[13px] text-muted-foreground">
-                {line.sub}
-              </Text>
+              <Text className="text-xs text-muted-foreground">{line.sub}</Text>
             ) : null}
           </View>
         ))}
@@ -284,7 +282,7 @@ export function NewBusinessReview({ model }: FieldsProps) {
           },
         ]}
       />
-      <Text className="px-0.5 text-xs text-muted-foreground [-rn-line-height:18]">
+      <Text className="px-0.5 text-xs text-muted-foreground [-rn-line-height:22]">
         {model.local
           ? "This preview creates a device-local workspace only."
           : "The new business keeps its stock, sales, customers and staff separate."}
