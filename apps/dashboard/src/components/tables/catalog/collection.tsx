@@ -102,11 +102,12 @@ function CatalogItemMedia({
     )
   if (illustration)
     return (
-      // The artwork sits inside a padded 128px canvas, so it takes the frame's
-      // full height rather than a fraction of its width.
-      <div className="aspect-square h-full py-2">
+      // Cropped to the drawing and sized by the frame's height, so wide or
+      // tall artwork is never clipped.
+      <div className="aspect-square h-full py-8">
         <CatalogIllustrationPreview
           compact
+          fit
           illustrationId={illustration.illustrationId}
         />
       </div>
