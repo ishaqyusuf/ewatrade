@@ -12,8 +12,10 @@ import { ScrollableContent } from "@/components/scrollable-content"
 import { InventoryOperationSheet } from "@/components/sheets/inventory-operation-sheet"
 import { CatalogDataTable } from "@/components/tables/catalog/data-table"
 import { CatalogTableSkeleton } from "@/components/tables/catalog/skeleton"
-import { CatalogToolbarSlotProvider } from "@/components/tables/catalog/toolbar-slot"
-import { DirectoryCollectionSkeleton } from "@/components/tables/core"
+import {
+  DirectoryCollectionSkeleton,
+  TableToolbarSlotProvider,
+} from "@/components/tables/core"
 import { useDirectoryView } from "@/hooks/use-directory-view"
 import type { DirectoryViewSettings } from "@/utils/directory-view-settings"
 import type { TableSettings } from "@/utils/table-settings"
@@ -47,7 +49,7 @@ export function CatalogItemsPage({
 
   return (
     <CatalogAppearance>
-      <CatalogToolbarSlotProvider>
+      <TableToolbarSlotProvider>
         <ScrollableContent>
           <div className="flex min-w-0 flex-1 flex-col gap-6 pt-6">
             <CatalogHeader
@@ -87,7 +89,7 @@ export function CatalogItemsPage({
             </ErrorBoundary>
           </div>
         </ScrollableContent>
-      </CatalogToolbarSlotProvider>
+      </TableToolbarSlotProvider>
       <CatalogInventorySheet store={store} />
       <CatalogUnitConfigurationSheet />
       <CatalogItemSheet

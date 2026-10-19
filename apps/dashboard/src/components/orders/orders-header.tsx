@@ -2,13 +2,26 @@
 
 import { PageFab } from "@/components/page-fab/page-fab"
 import { PageHeader, PageToolbar } from "@/components/page-header"
-import { ViewSwitcher, directoryViewOptions } from "@/components/view-switcher"
+import { TableToolbarSlot } from "@/components/tables/core"
+import { ViewDropdown, type ViewOption } from "@/components/view-switcher"
 import { useOrderParams } from "@/hooks/use-order-params"
 import type { DirectoryView } from "@/utils/directory-view-settings"
 import { Button } from "@ewatrade/ui"
-import { Add01Icon } from "@hugeicons/core-free-icons"
+import {
+  Add01Icon,
+  GridViewIcon,
+  LayoutTable01Icon,
+  ListViewIcon,
+} from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { OrdersSearchFilter } from "./orders-search-filter"
+
+// The saved value stays "cards" so existing view cookies keep working.
+const orderViewOptions = [
+  { value: "table", label: "Table", icon: LayoutTable01Icon },
+  { value: "list", label: "List", icon: ListViewIcon },
+  { value: "cards", label: "Grid", icon: GridViewIcon },
+] as const satisfies readonly ViewOption<DirectoryView>[]
 
 export function OrdersHeader({
   storeName,
@@ -32,10 +45,11 @@ export function OrdersHeader({
       <PageToolbar
         actions={
           <>
-            <ViewSwitcher
+            <TableToolbarSlot />
+            <ViewDropdown
               label="Order view"
               value={view}
-              options={directoryViewOptions}
+              options={orderViewOptions}
               onValueChange={onViewChange}
             />
             <Button

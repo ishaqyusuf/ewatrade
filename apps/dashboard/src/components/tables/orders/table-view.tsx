@@ -25,7 +25,7 @@ import { OrdersTableHeader, OrdersTableSettings } from "./table-header"
 const ROW_HEIGHT = 57
 const STICKY_COLUMNS = [
   { id: "select", width: 50 },
-  { id: "orderNumber", width: 200 },
+  { id: "orderNumber", width: 170 },
 ]
 
 type OrderSort = {
@@ -36,6 +36,7 @@ type OrderSort = {
 export function OrdersTableView({
   table,
   view,
+  timeZone,
   sort,
   toggleSort,
   filtered,
@@ -52,6 +53,7 @@ export function OrdersTableView({
 }: {
   table: ReactTable<OrderRow>
   view: DirectoryView
+  timeZone?: string
   sort?: OrderSort
   toggleSort: (field: OrderSort["field"]) => Promise<unknown>
   filtered: boolean
@@ -129,14 +131,10 @@ export function OrdersTableView({
         table={table}
         view={view}
         selectAllLabel="Select all loaded orders"
-        summary={`${table.getRowModel().rows.length} orders loaded${
-          sort
-            ? ` · sorted by ${sort.field} ${sort.direction === "asc" ? "ascending" : "descending"}`
-            : " · newest first"
-        }`}
-      >
-        {view === "table" ? <OrdersTableSettings table={table} /> : null}
-      </DirectoryToolbar>
+        summary={`${table.getRowModel().rows.length} orders loaded`}
+      />
+      {/* Sort and Columns render in the page header row beside View and New order. */}
+      <OrdersTableSettings table={table} showColumns={view === "table"} />
 
       {persistenceError ? (
         <div className="flex items-center justify-between gap-3" role="alert">
@@ -156,7 +154,7 @@ export function OrdersTableView({
           <OrdersEmptyState filtered={filtered} />
         </div>
       ) : view !== "table" ? (
-        <OrdersCollection view={view} rows={rows} />
+        <OrdersCollection view={view} rows={rows} timeZone={timeZone} />
       ) : (
         <section
           ref={tableScroll.setContainerRef}

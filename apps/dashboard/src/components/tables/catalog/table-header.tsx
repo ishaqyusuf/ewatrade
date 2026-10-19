@@ -8,6 +8,7 @@ import {
   SelectAllCheckbox,
   type TableColumnMeta,
   type TableScrollState,
+  TableToolbarPortal,
   getHeaderLabel,
 } from "@/components/tables/core"
 import { DraggableHeader } from "@/components/tables/draggable-header"
@@ -36,7 +37,6 @@ import { HugeiconsIcon } from "@hugeicons/react"
 import type { Table } from "@tanstack/react-table"
 import type { CSSProperties } from "react"
 import type { CatalogRow } from "./columns"
-import { CatalogToolbarPortal } from "./toolbar-slot"
 
 const FIXED_COLUMNS = new Set([SELECT_COLUMN_ID, "item", "actions"])
 
@@ -232,7 +232,7 @@ export function CatalogTableSettings({
 }) {
   const { sort, setParams } = useSortParams({ fields: catalogSortFields })
   return (
-    <CatalogToolbarPortal>
+    <TableToolbarPortal>
       {showColumns ? (
         <DropdownMenu>
           <DropdownMenuTrigger
@@ -312,6 +312,6 @@ export function CatalogTableSettings({
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
-    </CatalogToolbarPortal>
+    </TableToolbarPortal>
   )
 }

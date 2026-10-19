@@ -4,11 +4,13 @@ import {
   SELECT_COLUMN_ID,
   SelectAllCheckbox,
   type TableColumnMeta,
+  TableToolbarPortal,
   getHeaderLabel,
 } from "@/components/tables/core"
 import { DraggableHeader } from "@/components/tables/draggable-header"
 import { ResizeHandle } from "@/components/tables/resize-handle"
 import { orderSortFields } from "@/hooks/sort-params"
+import { useSortParams } from "@/hooks/use-sort-params"
 import {
   SortableContext,
   horizontalListSortingStrategy,
@@ -19,11 +21,15 @@ import {
   DropdownMenuCheckboxItem,
   DropdownMenuContent,
   DropdownMenuGroup,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
   DropdownMenuTrigger,
   TableHead,
   TableHeader,
   TableRow,
 } from "@ewatrade/ui"
+import { ArrowDown01Icon } from "@hugeicons/core-free-icons"
+import { HugeiconsIcon } from "@hugeicons/react"
 import type { Table } from "@tanstack/react-table"
 import type { CSSProperties, ReactNode } from "react"
 import type { OrderRow } from "./columns"
@@ -194,43 +200,141 @@ export function OrdersTableHeader({
   )
 }
 
-export function OrdersTableSettings({ table }: { table: Table<OrderRow> }) {
+/** Newest first is the list's default order, so choosing it clears the sort. */
+const ORDER_SORTS = [
+  { value: "createdAt:desc", label: "Newest first" },
+  { value: "createdAt:asc", label: "Oldest first" },
+  { value: "total:desc", label: "Highest total" },
+  { value: "total:asc", label: "Lowest total" },
+  { value: "orderNumber:asc", label: "Order number" },
+  { value: "status:asc", label: "Status" },
+] as const
+
+const SORT_FIELD_LABELS: Record<OrderSort["field"], string> = {
+  createdAt: "Date",
+  orderNumber: "Order number",
+  status: "Status",
+  total: "Total",
+}
+
+function sortLabel(sort?: OrderSort) {
+  if (!sort) return ORDER_SORTS[0].label
+  const value = `${sort.field}:${sort.direction}`
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger
-        render={
-          <Button type="button" variant="outline" className="rounded-none">
-            Columns
-          </Button>
-        }
-      />
-      <DropdownMenuContent
-        appearance="dashboard"
-        align="end"
-        sideOffset={8}
-        className="min-w-48"
-      >
-        <DropdownMenuGroup>
-          {table
-            .getAllLeafColumns()
-            .filter((column) => column.getCanHide())
-            .map((column) => {
-              const meta = column.columnDef.meta as TableColumnMeta | undefined
-              return (
-                <DropdownMenuCheckboxItem
-                  key={column.id}
-                  checked={column.getIsVisible()}
-                  closeOnClick={false}
-                  onCheckedChange={(checked) =>
-                    column.toggleVisibility(checked)
-                  }
-                >
-                  {meta?.headerLabel ?? getHeaderLabel(column.columnDef)}
-                </DropdownMenuCheckboxItem>
-              )
-            })}
-        </DropdownMenuGroup>
-      </DropdownMenuContent>
-    </DropdownMenu>
+    ORDER_SORTS.find((option) => option.value === value)?.label ??
+    `${SORT_FIELD_LABELS[sort.field]}, ${sort.direction === "asc" ? "ascending" : "descending"}`
+  )
+}
+
+function ChevronDown() {
+  return (
+    <HugeiconsIcon
+      icon={ArrowDown01Icon}
+      data-icon="inline-end"
+      className="text-muted-foreground"
+      aria-hidden="true"
+    />
+  )
+}
+
+/** Columns (Table view only) and Sort, shown in the page header row. */
+export function OrdersTableSettings({
+  table,
+  showColumns,
+}: {
+  table: Table<OrderRow>
+  showColumns: boolean
+}) {
+  const { sort, setParams } = useSortParams({ fields: orderSortFields })
+  const current = sort ? `${sort.field}:${sort.direction}` : "createdAt:desc"
+  const label = sortLabel(sort)
+  return (
+    <TableToolbarPortal>
+      {showColumns ? (
+        <DropdownMenu>
+          <DropdownMenuTrigger
+            render={
+              <Button type="button" variant="outline" className="rounded-none">
+                Columns
+                <ChevronDown />
+              </Button>
+            }
+          />
+          <DropdownMenuContent
+            appearance="dashboard"
+            align="end"
+            sideOffset={8}
+            className="min-w-48"
+          >
+            <DropdownMenuGroup>
+              {table
+                .getAllLeafColumns()
+                .filter((column) => column.getCanHide())
+                .map((column) => {
+                  const meta = column.columnDef.meta as
+                    | TableColumnMeta
+                    | undefined
+                  return (
+                    <DropdownMenuCheckboxItem
+                      key={column.id}
+                      checked={column.getIsVisible()}
+                      closeOnClick={false}
+                      onCheckedChange={(checked) =>
+                        column.toggleVisibility(checked)
+                      }
+                    >
+                      {meta?.headerLabel ?? getHeaderLabel(column.columnDef)}
+                    </DropdownMenuCheckboxItem>
+                  )
+                })}
+            </DropdownMenuGroup>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      ) : null}
+      <DropdownMenu>
+        <DropdownMenuTrigger
+          render={
+            <Button
+              type="button"
+              variant="outline"
+              className="rounded-none"
+              aria-label={`Sort orders: ${label}`}
+            />
+          }
+        >
+          {label}
+          <ChevronDown />
+        </DropdownMenuTrigger>
+        <DropdownMenuContent
+          appearance="dashboard"
+          align="end"
+          className="min-w-44"
+        >
+          <DropdownMenuRadioGroup
+            aria-label="Sort orders"
+            value={current}
+            onValueChange={(value) => {
+              const [field, direction] = String(value).split(":")
+              void setParams({
+                sort:
+                  value === "createdAt:desc" || !field || !direction
+                    ? null
+                    : [field, direction],
+              })
+            }}
+          >
+            {ORDER_SORTS.map((option) => (
+              <DropdownMenuRadioItem
+                key={option.value}
+                value={option.value}
+                closeOnClick
+              >
+                {option.label}
+              </DropdownMenuRadioItem>
+            ))}
+          </DropdownMenuRadioGroup>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </TableToolbarPortal>
   )
 }

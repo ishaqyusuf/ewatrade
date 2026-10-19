@@ -1,7 +1,7 @@
 "use client"
 
 import { PageHeader, PageToolbar } from "@/components/page-header"
-import { CatalogToolbarSlot } from "@/components/tables/catalog/toolbar-slot"
+import { TableToolbarSlot } from "@/components/tables/core"
 import { ViewDropdown, type ViewOption } from "@/components/view-switcher"
 import type { DirectoryView } from "@/utils/directory-view-settings"
 import {
@@ -37,7 +37,7 @@ export function CatalogHeader({
       <PageToolbar
         actions={
           <>
-            <CatalogToolbarSlot />
+            <TableToolbarSlot />
             <ViewDropdown
               label="Catalog view"
               value={view}

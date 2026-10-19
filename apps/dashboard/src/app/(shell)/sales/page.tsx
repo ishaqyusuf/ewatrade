@@ -84,6 +84,7 @@ export default async function SalesRoutePage({
         <SalesPage
           salesRep={["CASHIER", "OPERATOR"].includes(ctx.membership.role)}
           store={store}
+          timeZone={ctx.tenant.timezone}
           initialSettings={initialSettings}
           initialViewSettings={initialViewSettings}
           customerDirectory={

@@ -32,6 +32,11 @@ export { SimpleDirectoryTable } from "./simple-table"
 export { SkeletonCell } from "./skeleton-cell"
 export { TableSkeleton } from "./table-skeleton"
 export {
+  TableToolbarPortal,
+  TableToolbarSlot,
+  TableToolbarSlotProvider,
+} from "./toolbar-slot"
+export {
   ACTIONS_FULL_WIDTH_CELL_CLASS,
   ACTIONS_FULL_WIDTH_HEADER_CLASS,
   ACTIONS_STICKY_HEADER_CLASS,
