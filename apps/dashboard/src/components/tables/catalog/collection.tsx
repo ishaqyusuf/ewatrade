@@ -63,12 +63,21 @@ function ItemTitle({ item, onOpen }: { item: CatalogRow; onOpen: () => void }) {
   )
 }
 
-function hasStoreImage(item: CatalogRow, storeId: string) {
-  return (
-    item.photos.some((entry) => entry.storeId === storeId) ||
-    item.illustrations.some((entry) => entry.storeId === storeId)
-  )
+function storeImageKind(item: CatalogRow, storeId: string) {
+  if (item.photos.some((entry) => entry.storeId === storeId)) return "photo"
+  if (item.illustrations.some((entry) => entry.storeId === storeId))
+    return "illustration"
+  return "none"
 }
+
+// Illustrations fill with --muted, so their frame is lighter to keep the
+// shape visible. Without an image a short band keeps the card's controls and
+// avoids a large empty frame; the body below still lines up across the row.
+const MEDIA_CLASS = {
+  photo: "aspect-[4/3] bg-muted",
+  illustration: "aspect-[4/3] bg-muted/40",
+  none: "h-14 bg-muted",
+} as const
 
 /** The card image: the Store's photo, its illustration, or the kind icon. */
 function CatalogItemMedia({
@@ -93,7 +102,9 @@ function CatalogItemMedia({
     )
   if (illustration)
     return (
-      <div className="h-3/4 w-1/2">
+      // The artwork sits inside a padded 128px canvas, so it takes the frame's
+      // full height rather than a fraction of its width.
+      <div className="aspect-square h-full py-2">
         <CatalogIllustrationPreview
           compact
           illustrationId={illustration.illustrationId}
@@ -124,11 +135,7 @@ function CatalogGrid({
       {rows.map((row) => {
         const item = row.original
         const stock = getCatalogStock(item)
-        // Without an image a short band keeps the card's controls and avoids
-        // a large empty frame; the body below still lines up across the row.
-        const imageClass = hasStoreImage(item, storeId)
-          ? "aspect-[4/3]"
-          : "h-14"
+        const mediaClass = MEDIA_CLASS[storeImageKind(item, storeId)]
         return (
           <li key={row.id} className="min-w-0">
             <article
@@ -136,7 +143,7 @@ function CatalogGrid({
               className="flex h-full flex-col overflow-hidden rounded-xl border bg-card data-[state=selected]:border-transparent data-[state=selected]:ring-2 data-[state=selected]:ring-primary"
             >
               <div
-                className={`relative grid place-items-center overflow-hidden bg-muted ${imageClass}`}
+                className={`relative grid place-items-center overflow-hidden ${mediaClass}`}
               >
                 <CatalogItemMedia item={item} storeId={storeId} />
                 <div className="absolute top-2.5 left-2.5 flex rounded-md bg-background p-1 ring-1 ring-border">
