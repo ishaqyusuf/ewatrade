@@ -107,12 +107,18 @@ for (const args of [
     expect(stderr).toContain("--ios-testflight requires")
   })
 
-test("TestFlight OTA rejects every runtime except the installed build", async () => {
+test("TestFlight OTA rejects every runtime except inspected signed build 7", async () => {
   const { assertTestFlightRuntime, TESTFLIGHT_RUNTIME } = await import(
     "./publish-testflight-preview"
   )
+  expect(TESTFLIGHT_RUNTIME).toBe("59b38390d09d433711fb525cfbe298eebda73318")
   expect(() => assertTestFlightRuntime(TESTFLIGHT_RUNTIME)).not.toThrow()
-  for (const runtime of ["", "unknown", "a".repeat(40)]) {
+  for (const runtime of [
+    "",
+    "unknown",
+    "a".repeat(40),
+    "b3ad3f3baf65b159779712694db8d35cd9445149",
+  ]) {
     expect(() => assertTestFlightRuntime(runtime)).toThrow(
       "A new native build is required",
     )
