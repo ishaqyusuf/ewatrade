@@ -86,12 +86,19 @@ export function formatPrice(
 export function CatalogItemThumbnail({
   item,
   storeId,
+  className,
 }: {
   item: CatalogRow
   storeId: string
+  className?: string
 }) {
   return (
-    <div className="flex size-9 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-muted">
+    <div
+      className={cn(
+        "flex size-9 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-muted",
+        className,
+      )}
+    >
       {item.photos.find((photo) => photo.storeId === storeId) ? (
         <CatalogPhotoPreview
           compact
@@ -120,7 +127,10 @@ export function CatalogItemThumbnail({
   )
 }
 
-export function CatalogKindBadge({ item }: { item: CatalogRow }) {
+export function CatalogKindBadge({
+  item,
+  className,
+}: { item: CatalogRow; className?: string }) {
   return (
     <Badge
       className={cn(
@@ -128,6 +138,7 @@ export function CatalogKindBadge({ item }: { item: CatalogRow }) {
         item.kind === "service"
           ? "bg-accent text-accent-foreground"
           : "bg-secondary text-secondary-foreground",
+        className,
       )}
     >
       {item.kind === "service" ? "Service" : "Product"}
@@ -173,7 +184,7 @@ export function createCatalogColumns(
             >
               {row.original.name}
             </Button>
-            <p className="truncate text-xs text-muted-foreground">
+            <p className="truncate text-[13.5px] text-muted-foreground">
               {itemDetail(row.original)}
               {row.original.product
                 ? ` · ${productUsageLabels[row.original.product.usage ?? "FOR_SALE"]}`

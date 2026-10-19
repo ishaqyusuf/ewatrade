@@ -8,7 +8,15 @@ export function CatalogPhotoPreview({
   storeId,
   label,
   compact = false,
-}: { assetId: string; storeId: string; label: string; compact?: boolean }) {
+  className,
+}: {
+  assetId: string
+  storeId: string
+  label: string
+  compact?: boolean
+  /** Replaces the image classes, e.g. to fill a catalog grid card. */
+  className?: string
+}) {
   const [failed, setFailed] = useState(false)
   if (failed)
     return compact ? (
@@ -38,9 +46,10 @@ export function CatalogPhotoPreview({
       src={`/api/catalog/photos/${encodeURIComponent(assetId)}/preview?storeId=${encodeURIComponent(storeId)}${compact ? "&variant=thumbnail" : ""}`}
       alt={label}
       className={
-        compact
+        className ??
+        (compact
           ? "size-9 object-contain"
-          : "h-52 w-full rounded-xl border bg-muted object-contain"
+          : "h-52 w-full rounded-xl border bg-muted object-contain")
       }
       onError={() => setFailed(true)}
     />
