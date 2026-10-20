@@ -1,5 +1,6 @@
 import { describe, expect, setDefaultTimeout, test } from "bun:test"
 import { createHash, randomUUID } from "node:crypto"
+import type { createOfficePrivacyQa } from "../../../../scripts/qa-oversight-office-fixture"
 import { assertQaAccessAcceptanceDatabase } from "./acceptance/qa-access/database"
 import { requestAccountDeletion } from "./account-privacy"
 import { isAccountPrivacyAccessBlocked } from "./account-privacy-access"
@@ -84,17 +85,7 @@ databaseTests(
       const previous = Object.fromEntries(
         keys.map((key) => [key, process.env[key]]),
       )
-      let office:
-        | {
-            advance: (
-              input: Parameters<typeof advanceAccountPrivacyWorkflow>[1],
-              providers: Parameters<typeof advanceAccountPrivacyWorkflow>[2],
-            ) => Promise<
-              Awaited<ReturnType<typeof advanceAccountPrivacyWorkflow>>
-            >
-            close: () => Promise<void>
-          }
-        | undefined
+      let office: Awaited<ReturnType<typeof createOfficePrivacyQa>> | undefined
       let requestId: string | undefined
       try {
         await prisma.user.createMany({
@@ -560,9 +551,11 @@ databaseTests(
           confirmationsReviewed: true as const,
           receipts,
         }
-        expect(
-          await recordAccountPrivacyExternalReview(prisma, reviewInput),
-        ).toMatchObject({ replay: false, providersReviewed: 1 })
+        if (office) await office.externalReview(reviewInput)
+        else
+          expect(
+            await recordAccountPrivacyExternalReview(prisma, reviewInput),
+          ).toMatchObject({ replay: false, providersReviewed: 1 })
         expect(
           await recordAccountPrivacyExternalReview(prisma, reviewInput),
         ).toMatchObject({ replay: true })
@@ -635,6 +628,7 @@ databaseTests(
             providers,
           ),
         ).rejects.toMatchObject({ code: "NOTICE_DELIVERY_REQUIRED" })
+        if (office) await office.deliverAndComplete()
         expect(
           await prisma.user.findUnique({
             where: { id: ids.other },
@@ -655,6 +649,9 @@ databaseTests(
       } finally {
         await office?.close()
         if (requestId) {
+          await prisma.accountPrivacyNoticeAttempt.deleteMany({
+            where: { requestId },
+          })
           await prisma.accountPrivacyDomainOutcome.deleteMany({
             where: { requestId },
           })

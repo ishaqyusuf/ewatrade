@@ -1,6 +1,5 @@
 import type { PrismaClient } from "@ewatrade/db"
 import {
-  ACCOUNT_PRIVACY_WORKFLOW_STEPS,
   advanceAccountPrivacyWorkflow,
   getAccountPrivacyWorkflow,
   isAccountPrivacyAccessBlocked,
@@ -13,7 +12,19 @@ import {
   revokeAppleAuthorization,
 } from "../auth/apple-credentials"
 import { revokeGoogleAuthorization } from "../auth/google-credentials"
+import {
+  officePrivacyCommandSchema,
+  officePrivacyDetailSchema,
+  officePrivacyExternalReviewSchema,
+  officePrivacyNoticeSchema,
+} from "../schemas/office-privacy"
+import type { sendAccountPrivacyOutcomeNotice } from "./notice-sender"
 import { authenticateOfficePrivacy } from "./office-auth"
+import {
+  dispatchOfficePrivacyNotice,
+  getOfficePrivacyReview,
+  reviewOfficePrivacyProviders,
+} from "./office-fulfillment"
 import { removeAccountPrivacyPrivateAttachment } from "./private-assistant-media"
 const queueSchema = z
   .object({
@@ -30,16 +41,6 @@ const queueSchema = z
       .optional(),
   })
   .strict()
-const detailSchema = z
-  .object({ requestId: z.string().min(1).max(200) })
-  .strict()
-const advanceSchema = detailSchema
-  .extend({
-    commandId: z.string().uuid(),
-    expectedStep: z.enum(ACCOUNT_PRIVACY_WORKFLOW_STEPS),
-    reason: z.string().trim().min(10).max(1000),
-  })
-  .strict()
 export function createOfficePrivacyRoutes(
   getDb: () => PrismaClient,
   providers: Parameters<typeof advanceAccountPrivacyWorkflow>[2] = {
@@ -48,6 +49,7 @@ export function createOfficePrivacyRoutes(
     revokeAppleAccess: revokeAppleAccessToken,
     revokeGoogle: revokeGoogleAuthorization,
   },
+  dependencies: { sendNotice?: typeof sendAccountPrivacyOutcomeNotice } = {},
 ) {
   const app = new Hono()
   app.post("/", async (c) => {
@@ -104,11 +106,36 @@ export function createOfficePrivacyRoutes(
       if (auth.envelope.operation === "workflow")
         return c.json(
           await getAccountPrivacyWorkflow(db, {
-            ...detailSchema.parse(input),
+            ...officePrivacyDetailSchema.parse(input),
             operatorUserId: auth.operatorUserId,
           }),
         )
-      const parsed = advanceSchema.parse(input)
+      if (auth.envelope.operation === "review")
+        return c.json(
+          await getOfficePrivacyReview(db, {
+            ...officePrivacyDetailSchema.parse(input),
+            operatorUserId: auth.operatorUserId,
+          }),
+        )
+      if (auth.envelope.operation === "externalReview")
+        return c.json(
+          await reviewOfficePrivacyProviders(db, {
+            ...officePrivacyExternalReviewSchema.parse(input),
+            operatorUserId: auth.operatorUserId,
+          }),
+        )
+      if (auth.envelope.operation === "sendNotice")
+        return c.json(
+          await dispatchOfficePrivacyNotice(
+            db,
+            {
+              ...officePrivacyNoticeSchema.parse(input),
+              operatorUserId: auth.operatorUserId,
+            },
+            dependencies.sendNotice,
+          ),
+        )
+      const parsed = officePrivacyCommandSchema.parse(input)
       const result = await advanceAccountPrivacyWorkflow(
         db,
         {

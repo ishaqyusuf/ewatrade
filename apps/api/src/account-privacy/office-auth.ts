@@ -5,7 +5,14 @@ export const officeEnvelopeSchema = z
     version: z.literal(1),
     actorId: z.string().min(1).max(100),
     issuedAt: z.string().datetime(),
-    operation: z.enum(["queue", "workflow", "advance"]),
+    operation: z.enum([
+      "queue",
+      "workflow",
+      "advance",
+      "review",
+      "externalReview",
+      "sendNotice",
+    ]),
     input: z.unknown(),
   })
   .strict()
