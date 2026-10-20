@@ -133,6 +133,7 @@ function SettingsFields({
           disabled={save.isPending}
           error={tried ? (problem ?? undefined) : undefined}
         />
+        {/* biome-ignore lint/a11y/noLabelWithoutControl: the switch is the label's child */}
         <label className="flex cursor-pointer items-start justify-between gap-4 border border-border px-3 py-2.5">
           <span className="grid gap-0.5">
             <span className="text-sm font-medium">Use for new payments</span>
