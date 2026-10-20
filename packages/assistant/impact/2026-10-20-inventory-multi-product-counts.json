@@ -1,0 +1,48 @@
+{
+  "version": 1,
+  "id": "2026-10-20-inventory-multi-product-counts",
+  "tickets": ["H02"],
+  "summary": "Dashboard counts of several products: count entries may be 0 (an empty shelf), inventory.stockCounts lists a Store's saved count drafts and inventory.discardStockCount cancels a draft without touching stock. The dashboard Count stock sheet saves drafts, shows the differences and finishes through the existing createStockCount and finalizeStockCount.",
+  "noAssistantImpact": "The assistant's stock count capabilities (create, finalize, read) keep their own action schemas, authority and confirmation; the zero allowance applies to the tRPC createStockCount input only. The two new procedures are dashboard steps classified form_only; the assistant reads a saved count with readStockCount and starts new counts itself.",
+  "capabilities": [],
+  "procedures": [
+    {
+      "path": "inventory.stockCounts",
+      "status": "form_only",
+      "reason": "Count stock sheet list of saved drafts; the assistant reads one count with readStockCount."
+    },
+    {
+      "path": "inventory.discardStockCount",
+      "status": "form_only",
+      "reason": "Dashboard step to drop a saved draft; nothing changes stock."
+    }
+  ],
+  "docs": [
+    {
+      "topic": "api",
+      "status": "local_only",
+      "path": ".brain/api/endpoints.md",
+      "note": "inventory.stockCounts and inventory.discardStockCount; counts accept 0."
+    },
+    {
+      "topic": "capability",
+      "status": "updated",
+      "path": "packages/assistant/src/capabilities/inventory.ts",
+      "note": "Two procedures classified form_only."
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "test",
+      "path": "packages/db/src/queries/inventory-stock-count-drafts.test.ts",
+      "executed": true,
+      "result": "Drafts listed per Store; discard cancels only a Draft, repeats harmlessly, refuses a finished count: pass."
+    },
+    {
+      "kind": "test",
+      "path": "apps/api/src/schemas/inventory-count.test.ts",
+      "executed": true,
+      "result": "Count entry 0 accepted, negative refused: pass."
+    }
+  ]
+}

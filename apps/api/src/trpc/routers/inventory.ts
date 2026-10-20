@@ -15,6 +15,7 @@ import {
   createAndDispatchStockTransfer,
   createInventoryCloseout,
   createStockCount,
+  discardStockCount,
   exportInventoryAuditRows,
   finalizeInventoryCloseout,
   finalizeStockCount,
@@ -27,6 +28,7 @@ import {
   getStockOperationAudit,
   getStockTransferReview,
   listCatalogLowStockPage,
+  listDraftStockCounts,
   listInventoryBalancePage,
   listInventoryBalanceReport,
   listInventoryCloseouts,
@@ -58,6 +60,7 @@ import {
   inventoryCreateCloseoutSchema,
   inventoryCreateStockCountSchema,
   inventoryCustodyAssigneesSchema,
+  inventoryDiscardStockCountSchema,
   inventoryDispatchTransferSchema,
   inventoryFinalizeCloseoutSchema,
   inventoryFinalizeStockCountSchema,
@@ -74,6 +77,7 @@ import {
   inventoryReserveOfferingSchema,
   inventorySingleBalanceOperationSchema,
   inventoryStockCountReviewSchema,
+  inventoryStockCountsSchema,
   inventoryTransferReviewSchema,
   inventoryTransformationSchema,
   inventoryTransitionTransferSchema,
@@ -511,6 +515,43 @@ export const inventoryRouter = createTRPCRouter({
       )
       try {
         return await getStockCountReview(ctx.db, {
+          tenantId: ctx.tenantContext.tenant.id,
+          storeId,
+          stockCountId: input.stockCountId,
+        })
+      } catch (error) {
+        if (error instanceof CatalogError) throw inventoryError(error)
+        throw error
+      }
+    }),
+
+  stockCounts: protectedProcedure
+    .input(inventoryStockCountsSchema)
+    .query(async ({ ctx, input }) => {
+      assertCanManageInventory(ctx.tenantContext)
+      const storeId = resolveStoreId(
+        ctx.tenantContext.stores,
+        ctx.tenantContext.activeStore,
+        input.storeId,
+      )
+      return listDraftStockCounts(ctx.db, {
+        tenantId: ctx.tenantContext.tenant.id,
+        storeId,
+        limit: input.limit,
+      })
+    }),
+
+  discardStockCount: protectedProcedure
+    .input(inventoryDiscardStockCountSchema)
+    .mutation(async ({ ctx, input }) => {
+      assertCanManageInventory(ctx.tenantContext)
+      const storeId = resolveStoreId(
+        ctx.tenantContext.stores,
+        ctx.tenantContext.activeStore,
+        input.storeId,
+      )
+      try {
+        return await discardStockCount(ctx.db, {
           tenantId: ctx.tenantContext.tenant.id,
           storeId,
           stockCountId: input.stockCountId,

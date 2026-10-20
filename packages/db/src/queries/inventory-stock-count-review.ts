@@ -99,3 +99,68 @@ export async function getStockCountReview(
       lines.every((line) => line.stockCurrent && line.configurationCurrent),
   }
 }
+
+/** Saved counts not yet finished in one Store, newest first, for Carry on. */
+export async function listDraftStockCounts(
+  db: Prisma.TransactionClient,
+  input: { tenantId: string; storeId: string; limit?: number },
+) {
+  const counts = await db.stockCount.findMany({
+    where: {
+      tenantId: input.tenantId,
+      storeId: input.storeId,
+      status: "DRAFT",
+    },
+    orderBy: { createdAt: "desc" },
+    take: Math.min(Math.max(input.limit ?? 20, 1), 50),
+    select: {
+      id: true,
+      reason: true,
+      createdAt: true,
+      actorUserId: true,
+      _count: { select: { lines: true } },
+    },
+  })
+  return counts.map((count) => ({
+    id: count.id,
+    reason: count.reason,
+    createdAt: count.createdAt.toISOString(),
+    actorUserId: count.actorUserId,
+    lineCount: count._count.lines,
+  }))
+}
+
+/**
+ * Discard a saved count that will not be finished. Only a Draft changes; it
+ * becomes Cancelled and keeps its observations. Repeating it is harmless.
+ */
+export async function discardStockCount(
+  db: Prisma.TransactionClient,
+  input: { tenantId: string; storeId: string; stockCountId: string },
+) {
+  const count = await db.stockCount.findFirst({
+    where: {
+      id: input.stockCountId,
+      tenantId: input.tenantId,
+      storeId: input.storeId,
+    },
+    select: { id: true, status: true },
+  })
+  if (!count || count.status === "FINALIZED")
+    throw new CatalogError(
+      "STOCK_COUNT_NOT_FOUND",
+      "Draft Stock Count not found.",
+    )
+  if (count.status === "CANCELLED")
+    return { id: count.id, status: count.status }
+  const updated = await db.stockCount.updateMany({
+    where: { id: count.id, status: "DRAFT" },
+    data: { status: "CANCELLED" },
+  })
+  if (updated.count !== 1)
+    throw new CatalogError(
+      "STOCK_COUNT_NOT_FOUND",
+      "Draft Stock Count not found.",
+    )
+  return { id: count.id, status: "CANCELLED" as const }
+}

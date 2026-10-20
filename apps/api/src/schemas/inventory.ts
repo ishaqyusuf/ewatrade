@@ -40,6 +40,31 @@ const exactTransactionQuantitySchema = z
     }),
   )
 
+/** A counted quantity may be 0: an empty shelf is a real count. */
+const exactCountQuantitySchema = z
+  .string()
+  .trim()
+  .superRefine((value, ctx) => {
+    try {
+      parseExactDecimal(value, {
+        allowZero: true,
+        maxScale: EXACT_QUANTITY_MAX_SCALE,
+      })
+    } catch (error) {
+      ctx.addIssue({
+        code: "custom",
+        message:
+          error instanceof Error ? error.message : "Invalid exact quantity.",
+      })
+    }
+  })
+  .transform((value) =>
+    parseExactDecimal(value, {
+      allowZero: true,
+      maxScale: EXACT_QUANTITY_MAX_SCALE,
+    }),
+  )
+
 export const inventoryOfferingAvailabilitySchema = z
   .object({
     offeringId: z.string().trim().min(1),
@@ -184,6 +209,20 @@ export const inventoryStockCountReviewSchema = z
   })
   .strict()
 
+export const inventoryStockCountsSchema = z
+  .object({
+    limit: z.number().int().min(1).max(50).optional(),
+    storeId: z.string().trim().min(1).optional(),
+  })
+  .strict()
+
+export const inventoryDiscardStockCountSchema = z
+  .object({
+    stockCountId: z.string().trim().min(1).max(128),
+    storeId: z.string().trim().min(1).optional(),
+  })
+  .strict()
+
 export const inventoryCreateStockCountSchema = z
   .object({
     actorNote: z.string().trim().max(500).optional(),
@@ -198,7 +237,7 @@ export const inventoryCreateStockCountSchema = z
                 z
                   .object({
                     enteredInventoryUnitId: z.string().trim().min(1),
-                    enteredQuantity: exactTransactionQuantitySchema,
+                    enteredQuantity: exactCountQuantitySchema,
                   })
                   .strict(),
               )
