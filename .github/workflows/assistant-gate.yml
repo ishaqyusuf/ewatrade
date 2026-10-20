@@ -25,7 +25,8 @@ jobs:
       - run: bun install --frozen-lockfile
       - name: Generate Prisma client for source tests
         # Reads the checked-in schema only; no database URL or connection.
-        run: bun --env-file=/dev/null --cwd packages/db run db:generate
+        working-directory: packages/db
+        run: bun --env-file=/dev/null run db:generate
       - name: Capability manifest and gate tests
         run: bun test packages/assistant/src/capabilities
       - name: WhatsApp channel policy and presentation tests
@@ -41,6 +42,7 @@ jobs:
       - name: Booking review approval and exact completion regressions
         run: bun --env-file=/dev/null test packages/assistant/evaluations/booking-source-regressions.test.ts
       - name: Coverage snapshot is current
-        run: bun --env-file=/dev/null --cwd apps/api scripts/assistant-coverage.ts --check
+        working-directory: apps/api
+        run: bun --env-file=/dev/null scripts/assistant-coverage.ts --check
       - name: Impact record covers gated changes
         run: bun scripts/assistant-impact.ts --base ${{ github.event_name == 'pull_request' && format('origin/{0}', github.base_ref) || github.event.before }}

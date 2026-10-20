@@ -3,10 +3,11 @@ import { assertStaffInvitationCustodyConfigured } from "@ewatrade/db/staff-invit
 import {
   type EmailMessage,
   type EmailTransport,
-  createTestRoutedEmailMessages,
+  createManagedQaEmailMessages,
   getTestEmailRouting,
   isValidEmailSender,
 } from "@ewatrade/email"
+import { getQaPolicyEnvironment } from "@ewatrade/utils/qa-policy-server"
 import type { StaffInvitationDispatchDependencies } from "./staff-invitation-notification-dispatch"
 
 /** Invitations are emailed whenever live email is set up. */
@@ -47,7 +48,10 @@ export function createStaffInvitationEmailAdapter(
   return {
     async assertProviderAllowed({ tenantId, recipient }) {
       assertConfigured()
-      const routing = getTestEmailRouting({ to: recipient, env: config })
+      const routing = getTestEmailRouting({
+        to: recipient,
+        env: await getQaPolicyEnvironment({ ...process.env, ...config }),
+      })
       if (routing.recipients.length !== 1)
         throw Error("Staff invitation email requires one delivery destination.")
       await assertProviderAllowed({
@@ -58,7 +62,9 @@ export function createStaffInvitationEmailAdapter(
     },
     async send(message: EmailMessage) {
       assertConfigured()
-      const messages = createTestRoutedEmailMessages(message, { env: config })
+      const messages = await createManagedQaEmailMessages(message, {
+        env: config,
+      })
       if (messages.length !== 1 || !message.idempotencyKey)
         throw Error("Staff invitation email delivery identity is unavailable.")
       const routed = messages[0]

@@ -65,7 +65,7 @@ export async function GET(request: NextRequest) {
 
   return NextResponse.json(
     {
-      qaWorkspace: shouldPreviewEarlyAccess({ email: formData.email }),
+      qaWorkspace: await shouldPreviewEarlyAccess({ email: formData.email }),
       accessToken: session.token,
       expiresAt: session.expiresAt.toISOString(),
       emailVerified: Boolean(formData.emailVerifiedAt),

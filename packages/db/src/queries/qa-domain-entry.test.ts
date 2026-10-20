@@ -1,9 +1,10 @@
-import { describe, expect, test } from "bun:test"
+import { afterAll, beforeAll, describe, expect, test } from "bun:test"
 import { authorizeQaDomain } from "./qa-access"
 
 const env = {
   APP_ENV: "preview",
-  QA_ACCELERATOR_ENABLED: "true",
+  QA_POLICY_URL: "https://oversight.example.test/api/qa-policy/v1/ewatrade",
+  QA_POLICY_READ_KEY: "domain-entry-policy-reader-at-least-32-chars",
   QA_ACCELERATOR_SECRET: "domain-entry-server-signing-secret-32-chars",
   EMAIL_QA_DOMAIN_ROUTES: '{"example.qa.test":"tester@example.com"}',
 }
@@ -13,13 +14,39 @@ const input = {
   qaDomain: "example.qa.test",
 }
 
+const originalFetch = globalThis.fetch
+beforeAll(() => {
+  globalThis.fetch = Object.assign(
+    async () =>
+      Response.json({
+        projectId: "ewatrade",
+        revision: 1,
+        environments: { development: true, preview: true, production: false },
+        entries: [
+          {
+            id: "57da5d46-6b28-44ef-8be7-d29eb6171f3f",
+            email: "tester@example.com",
+            qa: "example.qa.test",
+            phone: null,
+            accountId: null,
+            active: true,
+          },
+        ],
+      }),
+    { preconnect: originalFetch.preconnect },
+  ) as typeof fetch
+})
+afterAll(() => {
+  globalThis.fetch = originalFetch
+})
+
 describe("domain-only non-production QA entry", () => {
   test.each([
     { ...env, APP_ENV: "production", QA_ACCELERATOR_ENABLED: "false" },
     { ...env, APP_ENV: "unknown" },
-    { ...env, QA_ACCELERATOR_ENABLED: "false" },
+    { ...env, QA_POLICY_READ_KEY: "" },
     { ...env, QA_ACCELERATOR_SECRET: "short" },
-    { ...env, EMAIL_QA_DOMAIN_ROUTES: "{}" },
+    { ...env, QA_POLICY_URL: undefined },
   ])(
     "denies unsafe or disabled environments before database access %#",
     async (environment) => {

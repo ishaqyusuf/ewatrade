@@ -4,6 +4,7 @@ import { OtpKeypad } from "@/components/mobile/otp-keypad"
 import { Toast } from "@/components/ui/toast"
 import { useAuthContext } from "@/hooks/use-auth"
 import { clearPendingOnboarding } from "@/lib/onboarding-continuation-store"
+import { getStoredQaAuthorization } from "@/lib/qa-authorization-store"
 import { useOnboardingStore } from "@/store/onboardingStore"
 import { useTRPC } from "@/trpc/client"
 import type { RouterOutputs } from "@ewatrade/api/trpc/routers/_app"
@@ -58,6 +59,7 @@ export function VerifyEmailScreen() {
     orderChannels?: string
     otherBusinessDescription?: string
     phone?: string
+    qaEntryId?: string
     returnTo?: string
     teamSize?: string
   }>()
@@ -330,6 +332,10 @@ export function VerifyEmailScreen() {
 
     if (useWhatsApp) {
       requestPhoneMutation.mutate({
+        qaEntryId: firstParam(params.qaEntryId),
+        qaToken: firstParam(params.qaEntryId)
+          ? getStoredQaAuthorization()?.token
+          : undefined,
         phone: phone ?? "",
         contactEmail: email || undefined,
         mode: apiMode,
@@ -406,6 +412,7 @@ export function VerifyEmailScreen() {
     orderChannels,
     otherBusinessDescription,
     phone,
+    params.qaEntryId,
     requestOtpMutation,
     params.acceptedTerms,
     params.acknowledgedPrivacyNotice,
