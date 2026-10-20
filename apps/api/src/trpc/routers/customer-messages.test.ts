@@ -36,9 +36,15 @@ function withEnvironment(values: Record<string, string | undefined>) {
 }
 
 function callerFixture(
-  options: { role?: string; privacyStatus?: string; requests?: number } = {},
+  options: {
+    role?: string
+    privacyStatus?: string
+    requests?: number
+    stores?: Array<{ id: string }>
+  } = {},
 ) {
   const events: string[] = []
+  const storeReads: string[] = []
   const rawQueries: string[] = []
   let runtimeReads = 0
   let budgetUpserts = 0
@@ -94,10 +100,11 @@ function callerFixture(
       },
     },
     store: {
-      findFirst: async () => {
+      findFirst: async (args: { where: { id: string } }) => {
         events.push("store-read")
+        storeReads.push(args.where.id)
         return {
-          id: "store-a",
+          id: args.where.id,
           name: "QA Test Store",
           countryCode: "NG",
           supportPhone: null,
@@ -110,6 +117,9 @@ function callerFixture(
           },
         }
       },
+    },
+    customerMessageTemplate: {
+      findMany: async () => [],
     },
     assistantBudget: {
       upsert: async () => {
@@ -163,7 +173,7 @@ function callerFixture(
       },
       membership: { id: "membership-a", role: options.role ?? "OWNER" },
       activeStore: { id: "store-a", name: "QA Test Store" },
-      stores: [{ id: "store-a" }],
+      stores: options.stores ?? [{ id: "store-a" }],
     },
     tenantId: "tenant-a",
     tenantSlug: "qa-test",
@@ -180,6 +190,7 @@ function callerFixture(
     caller,
     events,
     rawQueries,
+    storeReads,
     runtimeReads: () => runtimeReads,
     budgetUpserts: () => budgetUpserts,
     budgetUpdates: () => budgetUpdates,
@@ -255,4 +266,34 @@ test("exhausted General allowance returns starters without model generation or u
   } finally {
     restore()
   }
+})
+
+test("saved wording lists the active Store unless Settings names another accessible one", async () => {
+  const f = callerFixture({ stores: [{ id: "store-a" }, { id: "store-b" }] })
+  expect((await f.caller.templates.list()).storeId).toBe("store-a")
+  expect((await f.caller.templates.list({ storeId: "store-b" })).storeId).toBe(
+    "store-b",
+  )
+  expect(f.storeReads).toEqual(["store-a", "store-b"])
+})
+
+test("saved wording refuses a Store outside the person's accessible Stores before any read or write", async () => {
+  const f = callerFixture()
+  await expect(
+    f.caller.templates.list({ storeId: "store-other" }),
+  ).rejects.toMatchObject({
+    code: "NOT_FOUND",
+    message: "Choose an accessible Store.",
+  })
+  await expect(
+    f.caller.templates.setEnabled({
+      storeId: "store-other",
+      eventKey: "order.recorded",
+      scope: "store",
+      enabled: false,
+      expectedRevision: 0,
+    }),
+  ).rejects.toMatchObject({ code: "NOT_FOUND" })
+  expect(f.transactions()).toBe(0)
+  expect(f.events).toEqual([])
 })

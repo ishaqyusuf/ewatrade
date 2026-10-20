@@ -28,6 +28,7 @@ export function MessageComposer({
   exampleLabel,
   disabled = false,
   label = "Message",
+  placeholder,
 }: {
   id: string
   eventKey: CustomerMessageEventKey
@@ -37,6 +38,7 @@ export function MessageComposer({
   exampleLabel: string
   disabled?: boolean
   label?: string
+  placeholder?: string
 }) {
   const ref = useRef<HTMLTextAreaElement>(null)
   const event = getCustomerMessageEvent(eventKey)
@@ -69,6 +71,7 @@ export function MessageComposer({
           id={id}
           value={value}
           disabled={disabled}
+          placeholder={placeholder}
           rows={6}
           aria-invalid={problem ? true : undefined}
           aria-describedby={problem ? `${id}-problem` : undefined}
@@ -83,7 +86,7 @@ export function MessageComposer({
       </div>
       <fieldset className="grid gap-2" disabled={disabled}>
         <legend className="mb-2 text-xs text-muted-foreground">
-          Add details. They fill in for each customer.
+          Insert details that fill in for each customer
         </legend>
         <div className="flex flex-wrap gap-1.5">
           {event.variables.map((name) => (

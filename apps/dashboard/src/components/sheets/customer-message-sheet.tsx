@@ -7,6 +7,7 @@ import { WhatsAppNotifyButton } from "@/components/customer-messages/whatsapp-no
 import { SheetFrame } from "@/components/sheets/sheet-frame"
 import { useCustomerMessageParams } from "@/hooks/use-customer-message-params"
 import { useSheetDismissal } from "@/hooks/use-sheet-dismissal"
+import { getCustomerMessageEvent } from "@ewatrade/customer-messages/client"
 import { Button, Sheet } from "@ewatrade/ui"
 import { useCallback, useRef } from "react"
 
@@ -14,11 +15,6 @@ const COPY = {
   order: {
     title: "WhatsApp message",
     description: "Review it here, then send it from WhatsApp.",
-  },
-  template: {
-    title: "Saved WhatsApp message",
-    description:
-      "Orders use this wording. Staff can still edit it per customer.",
   },
   "compose-all": {
     title: "Write WhatsApp messages",
@@ -37,6 +33,10 @@ export function CustomerMessageSheet() {
   const onDirtyChange = useCallback((value: boolean) => {
     dirty.current = value
   }, [])
+  const close = async () => {
+    dirty.current = false
+    await params.close()
+  }
   const { closeError, requestClose } = useSheetDismissal(async () => {
     if (
       dirty.current &&
@@ -51,6 +51,16 @@ export function CustomerMessageSheet() {
     (mode === "order" && Boolean(params.messageOrderId)) ||
     (mode === "template" && Boolean(params.messageEvent)) ||
     mode === "compose-all"
+  // Saved wording is titled by its message, e.g. "Out for delivery".
+  const event =
+    mode === "template" && params.messageEvent
+      ? getCustomerMessageEvent(params.messageEvent)
+      : null
+  const copy = event
+    ? { title: event.label, description: event.description }
+    : mode && mode !== "template"
+      ? COPY[mode]
+      : null
   return (
     <>
       {params.messageOffer && !open ? (
@@ -77,10 +87,10 @@ export function CustomerMessageSheet() {
           if (!value) void requestClose()
         }}
       >
-        {open && mode ? (
+        {open && copy ? (
           <SheetFrame
-            title={COPY[mode].title}
-            description={COPY[mode].description}
+            title={copy.title}
+            description={copy.description}
             closeError={closeError}
             mobileBottomSheet
             popupClassName="sm:max-w-[560px]"
@@ -98,12 +108,16 @@ export function CustomerMessageSheet() {
               <TemplateEditor
                 eventKey={params.messageEvent}
                 scope={params.messageScope ?? "business"}
+                storeId={params.messageStoreId}
                 onDirtyChange={onDirtyChange}
+                onDone={() => void close()}
+                onCancel={() => void requestClose()}
               />
             ) : null}
             {mode === "compose-all" ? (
               <AiDraftReview
                 scope={params.messageScope ?? "business"}
+                storeId={params.messageStoreId}
                 onDirtyChange={onDirtyChange}
                 onDone={() => void params.close()}
               />

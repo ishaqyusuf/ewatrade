@@ -9,7 +9,9 @@ import {
   editorStateFor,
   expectedFor,
   reconcileEditor,
+  savedMessageRowState,
   scopeTemplate,
+  templateListInput,
   writeContextIsCurrent,
 } from "./template-model"
 
@@ -214,5 +216,38 @@ describe("write context fence", () => {
     expect(
       writeContextIsCurrent(undefined, { storeId: "s1", generation: 3 }),
     ).toBe(false)
+  })
+})
+
+describe("Settings row state", () => {
+  const key = "order.recorded" as const
+  test("All stores shows the business message", () => {
+    expect(savedMessageRowState(list([]), key, "business")).toBe("missing")
+    expect(savedMessageRowState(list([row({})]), key, "business")).toBe("ready")
+    expect(
+      savedMessageRowState(list([row({ enabled: false })]), key, "business"),
+    ).toBe("off")
+  })
+
+  test("a Store shows its own message, else the business one it falls back to", () => {
+    const own = row({ id: "t2", scopeKey: "store:s1" })
+    expect(savedMessageRowState(list([row({}), own]), key, "store")).toBe("own")
+    expect(
+      savedMessageRowState(
+        list([row({}), { ...own, enabled: false }]),
+        key,
+        "store",
+      ),
+    ).toBe("ownoff")
+    expect(savedMessageRowState(list([row({})]), key, "store")).toBe("inherit")
+    expect(
+      savedMessageRowState(list([row({ enabled: false })]), key, "store"),
+    ).toBe("inheritoff")
+    expect(savedMessageRowState(list([]), key, "store")).toBe("missing")
+  })
+
+  test("no Store id reads the active Store", () => {
+    expect(templateListInput(null)).toBeUndefined()
+    expect(templateListInput("s2")).toEqual({ storeId: "s2" })
   })
 })

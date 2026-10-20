@@ -23,7 +23,7 @@ import {
 } from "./message-status"
 import { tryRenderMessage } from "./message-variables"
 import { SAMPLE_LABEL, sampleMessageVariables } from "./sample-variables"
-import { captureBaselines } from "./template-model"
+import { captureBaselines, templateListInput } from "./template-model"
 import { useDraftWriter } from "./use-draft-writer"
 import {
   type TemplateList,
@@ -52,30 +52,38 @@ type Draft = {
  */
 export function AiDraftReview({
   scope,
+  storeId,
   onDirtyChange,
   onDone,
 }: {
   scope: TemplateScope
+  /** The Store Settings is editing; none means the active Store. */
+  storeId: string | null
   onDirtyChange: (dirty: boolean) => void
   onDone: () => void
 }) {
   const trpc = useTRPC()
   const list = useQuery(
-    trpc.customerMessages.templates.list.queryOptions(undefined, {
-      retry: false,
-    }),
+    trpc.customerMessages.templates.list.queryOptions(
+      templateListInput(storeId),
+      { retry: false },
+    ),
   )
   if (list.isPending)
-    return <output aria-live="polite">Loading saved messages…</output>
+    return <output aria-live="polite">Loading messages…</output>
   if (!list.data || (list.isError && hidesCachedData(list.error)))
     return (
-      <FormFeedback appearance="dashboard">
-        Only owners and admins can write saved messages.
-      </FormFeedback>
+      <div role="alert" className="grid justify-items-start gap-3">
+        <p className="text-sm">Couldn’t load messages.</p>
+        <Button variant="outline" onClick={() => void list.refetch()}>
+          Try again
+        </Button>
+      </div>
     )
   return (
     <Review
       scope={scope}
+      storeId={storeId}
       list={list.data}
       onDirtyChange={onDirtyChange}
       onDone={onDone}
@@ -85,11 +93,13 @@ export function AiDraftReview({
 
 function Review({
   scope,
+  storeId,
   list,
   onDirtyChange,
   onDone,
 }: {
   scope: TemplateScope
+  storeId: string | null
   list: TemplateList
   onDirtyChange: (dirty: boolean) => void
   onDone: () => void
@@ -109,7 +119,7 @@ function Review({
   const [problem, setProblem] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
   const writer = useDraftWriter()
-  const { save } = useTemplateMutations()
+  const { save } = useTemplateMutations(storeId)
   const variables = sampleMessageVariables({
     businessName: list.businessName,
     storeName: list.storeName,
@@ -118,7 +128,7 @@ function Review({
   const dirty = pending.some((draft) => draft.selected)
   useEffect(() => onDirtyChange(dirty), [dirty, onDirtyChange])
   useEffect(() => () => onDirtyChange(false), [onDirtyChange])
-  const scopeName = scope === "business" ? "all Stores" : list.storeName
+  const scopeName = scope === "business" ? "all stores" : list.storeName
 
   function update(eventKey: CustomerMessageEventKey, patch: Partial<Draft>) {
     setDrafts(
@@ -138,6 +148,7 @@ function Review({
       if (!draft.selected || draft.result?.ok) continue
       try {
         await save.mutateAsync({
+          ...templateListInput(storeId),
           eventKey: draft.eventKey,
           scope,
           body: draft.body,
@@ -174,7 +185,7 @@ function Review({
             setOrigin(
               result.source === "ai"
                 ? "Drafts ready. Read each one before you save."
-                : `Starter wording; AI unavailable${result.reason ? ` (${result.reason})` : ""}. Edit before you save.`,
+                : `${result.reason ?? "AI isn’t available right now, so we added suggested wording."} Check each one before you save.`,
             )
             setDrafts(
               result.drafts.map((draft) => ({
@@ -196,7 +207,7 @@ function Review({
         }}
       >
         <p className="text-sm text-muted-foreground">
-          Drafts are saved for {scopeName} only when you choose Save selected.
+          Nothing is saved until you check the drafts and save them.
         </p>
         <fieldset className="grid gap-2">
           <legend className="mb-2 text-sm font-medium">

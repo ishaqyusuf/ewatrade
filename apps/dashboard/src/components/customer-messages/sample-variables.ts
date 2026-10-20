@@ -29,4 +29,4 @@ export function sampleMessageVariables({
   }
 }
 
-export const SAMPLE_LABEL = "Example with sample details"
+export const SAMPLE_LABEL = "Example"

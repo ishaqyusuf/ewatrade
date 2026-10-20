@@ -6,10 +6,33 @@ export function savedMessageLabel(
   state: SavedMessageState,
   scope: SavedMessageScope,
 ) {
-  if (state === "missing") return "Not written yet"
+  if (state === "missing") return "Not written"
   if (state === "disabled")
-    return scope === "store" ? "Off for this Store" : "Turned off"
-  return scope === "store" ? "Ready · this Store’s wording" : "Ready"
+    return scope === "store" ? "Off at this store" : "Off"
+  return scope === "store" ? "Own message" : "Ready"
+}
+
+/** One Settings row: what this view sends for the event. */
+export type SavedMessageRowState =
+  | "missing"
+  | "ready"
+  | "off"
+  | "own"
+  | "ownoff"
+  | "inherit"
+  | "inheritoff"
+
+export const SAVED_MESSAGE_ROW: Record<
+  SavedMessageRowState,
+  { label: string; tone: SavedMessageState }
+> = {
+  missing: { label: "Not written", tone: "missing" },
+  ready: { label: "Ready", tone: "composed" },
+  off: { label: "Off", tone: "disabled" },
+  own: { label: "Own message", tone: "composed" },
+  ownoff: { label: "Off at this store", tone: "disabled" },
+  inherit: { label: "Business message", tone: "composed" },
+  inheritoff: { label: "Off", tone: "disabled" },
 }
 
 export const SAVED_MESSAGE_TONE: Record<SavedMessageState, string> = {

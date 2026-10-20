@@ -20,6 +20,8 @@ export const customerMessageParams = {
   messageEvent: parseAsStringEnum(eventKeys),
   messageSource: parseAsString,
   messageScope: parseAsStringEnum(["business", "store"] as const),
+  /** Settings: the Store whose own wording is edited; none means the active one. */
+  messageStoreId: parseAsString,
   /** A just-recorded Order whose customer can be told; never auto-opens. */
   messageOffer: parseAsString,
 }
@@ -38,6 +40,7 @@ export function useCustomerMessageParams() {
         messageEvent: null,
         messageSource: null,
         messageScope: null,
+        messageStoreId: null,
         messageOffer: null,
       }),
   }

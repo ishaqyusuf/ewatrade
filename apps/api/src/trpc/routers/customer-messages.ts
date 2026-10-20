@@ -31,6 +31,7 @@ import {
   customerMessageOpenSchema,
   customerMessagePreviewSchema,
   messageTemplateEnabledSchema,
+  messageTemplateListSchema,
   messageTemplateResetSchema,
   messageTemplateSaveSchema,
 } from "../../schemas/customer-messages"
@@ -44,6 +45,23 @@ function activeScope(ctx: ProtectedContext) {
   const storeId = ctx.tenantContext.activeStore?.id
   if (!storeId)
     throw new TRPCError({ code: "NOT_FOUND", message: "Choose a Store first." })
+  return {
+    tenantId: ctx.tenantContext.tenant.id,
+    storeId,
+    actorUserId: ctx.session.user.id,
+  }
+}
+/**
+ * Saved wording in Settings: another Store the person can reach, or the
+ * active Store when none is named. Order messages always use the active one.
+ */
+function templateScope(ctx: ProtectedContext, storeId: string | undefined) {
+  if (!storeId) return activeScope(ctx)
+  if (!ctx.tenantContext.stores.some((store) => store.id === storeId))
+    throw new TRPCError({
+      code: "NOT_FOUND",
+      message: "Choose an accessible Store.",
+    })
   return {
     tenantId: ctx.tenantContext.tenant.id,
     storeId,
@@ -77,35 +95,42 @@ export const customerMessagesRouter = createTRPCRouter({
     ),
   ),
   templates: createTRPCRouter({
-    list: protectedProcedure.query(({ ctx }) =>
-      messaging(() => listCustomerMessageTemplates(ctx.db, activeScope(ctx))),
-    ),
+    list: protectedProcedure
+      .input(messageTemplateListSchema)
+      .query(({ ctx, input }) =>
+        messaging(() =>
+          listCustomerMessageTemplates(
+            ctx.db,
+            templateScope(ctx, input?.storeId),
+          ),
+        ),
+      ),
     save: protectedProcedure
       .input(messageTemplateSaveSchema)
-      .mutation(({ ctx, input }) =>
+      .mutation(({ ctx, input: { storeId, ...input } }) =>
         messaging(() =>
           saveCustomerMessageTemplate(ctx.db, {
-            ...activeScope(ctx),
+            ...templateScope(ctx, storeId),
             ...input,
           }),
         ),
       ),
     reset: protectedProcedure
       .input(messageTemplateResetSchema)
-      .mutation(({ ctx, input }) =>
+      .mutation(({ ctx, input: { storeId, ...input } }) =>
         messaging(() =>
           resetCustomerMessageTemplate(ctx.db, {
-            ...activeScope(ctx),
+            ...templateScope(ctx, storeId),
             ...input,
           }),
         ),
       ),
     setEnabled: protectedProcedure
       .input(messageTemplateEnabledSchema)
-      .mutation(({ ctx, input }) =>
+      .mutation(({ ctx, input: { storeId, ...input } }) =>
         messaging(() =>
           setCustomerMessageTemplateEnabled(ctx.db, {
-            ...activeScope(ctx),
+            ...templateScope(ctx, storeId),
             ...input,
           }),
         ),

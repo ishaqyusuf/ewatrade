@@ -1,10 +1,16 @@
 import type { RouterOutputs } from "@ewatrade/api/trpc/routers/_app"
 import type { CustomerMessageEventKey } from "@ewatrade/customer-messages/client"
+import type { SavedMessageRowState } from "./message-status"
 
 export type TemplateList =
   RouterOutputs["customerMessages"]["templates"]["list"]
 export type SavedTemplate = TemplateList["templates"][number]
 export type TemplateScope = "business" | "store"
+
+/** Settings may read another Store's wording; no id means the active Store. */
+export function templateListInput(storeId: string | null | undefined) {
+  return storeId ? { storeId } : undefined
+}
 
 /** The selected scope's own row, never the inherited one. */
 export function scopeTemplate(
@@ -20,6 +26,25 @@ export function scopeTemplate(
   )
 }
 
+/**
+ * What a Settings row shows: the business message in All stores, otherwise
+ * the Store's own message or the business message it falls back to.
+ */
+export function savedMessageRowState(
+  list: Pick<TemplateList, "templates" | "storeId">,
+  eventKey: CustomerMessageEventKey,
+  scope: TemplateScope,
+): SavedMessageRowState {
+  const business = scopeTemplate(list, eventKey, "business")
+  if (scope === "store") {
+    const own = scopeTemplate(list, eventKey, "store")
+    if (own) return own.enabled ? "own" : "ownoff"
+  }
+  if (!business) return "missing"
+  if (scope === "business") return business.enabled ? "ready" : "off"
+  return business.enabled ? "inherit" : "inheritoff"
+}
+
 /** Optimistic-concurrency fields for a write to this scope's row. */
 export function expectedFor(row: SavedTemplate | null) {
   return row
@@ -28,6 +53,8 @@ export function expectedFor(row: SavedTemplate | null) {
 }
 
 export type TemplateWrite = {
+  /** Settings names the Store it edits; none means the active Store. */
+  storeId?: string
   eventKey: CustomerMessageEventKey
   scope: TemplateScope
 }

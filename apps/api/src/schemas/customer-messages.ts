@@ -10,7 +10,14 @@ const body = z
     (value) => Array.from(value).length <= 1_000,
     "Keep saved wording within 1,000 characters.",
   )
+/** Settings can edit another accessible Store; no value means the active one. */
+const settingsStoreId = id.optional()
+export const messageTemplateListSchema = z
+  .object({ storeId: settingsStoreId })
+  .strict()
+  .optional()
 const write = {
+  storeId: settingsStoreId,
   eventKey: customerMessageEventKeySchema,
   scope: z.enum(["business", "store"]),
   expectedRevision: z.number().int().nonnegative(),
