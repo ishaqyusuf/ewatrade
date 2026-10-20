@@ -295,3 +295,11 @@ export const qaAccessRouter = createTRPCRouter({
     }),
 })
 import { requireBrowserIdentity } from "../../assistant/channel-principal"
+
+/** Production keeps only grant-scoped phone access; profile bypass routes stay absent. */
+export const qaPhoneAccessRouter = createTRPCRouter({
+  phoneCapability: qaAccessRouter.phoneCapability,
+  phoneEntries: qaAccessRouter.phoneEntries,
+  exchange: qaAccessRouter.exchange,
+  revoke: qaAccessRouter.revoke,
+})
