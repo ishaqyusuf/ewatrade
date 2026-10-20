@@ -27,6 +27,7 @@ export const financeSheetModes = [
   "supplier-statement",
   "supplier-opening",
   "supplier-advance",
+  "pay-supplier",
 ] as const
 export type FinanceSheetMode = (typeof financeSheetModes)[number]
 

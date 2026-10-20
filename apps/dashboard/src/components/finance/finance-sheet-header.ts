@@ -19,4 +19,5 @@ export const financeSheetTitles: Record<FinanceSheetMode, string> = {
   "supplier-statement": "Supplier",
   "supplier-opening": "Supplier starting balance",
   "supplier-advance": "Pay ahead",
+  "pay-supplier": "Pay supplier",
 }

@@ -233,6 +233,15 @@ function FinanceSupplierHistory({
         </div>
       </dl>
       <div className="flex flex-wrap gap-2">
+        {BigInt(statement.payableMinor) > 0n ? (
+          <Button
+            onClick={() =>
+              void setParams({ financeSheet: "pay-supplier", supplierId })
+            }
+          >
+            Pay
+          </Button>
+        ) : null}
         <Button
           variant="outline"
           onClick={() =>

@@ -16,6 +16,7 @@ import { FinancePeriodForm } from "./period-form"
 import { FinanceSetupForm } from "./setup-form"
 import { FinanceSupplierEntryForm } from "./supplier-entry-form"
 import { FinanceSupplierForm } from "./supplier-form"
+import { FinanceSupplierPaymentForm } from "./supplier-payment-form"
 import { FinanceSupplierStatement } from "./supplier-statement"
 import type { FinanceBook } from "./types"
 export function FinanceContent({
@@ -78,10 +79,21 @@ export function FinanceContent({
         mode={mode === "supplier-opening" ? "opening" : "advance"}
       />
     )
-  if (
-    ["supplier-statement", "supplier-opening", "supplier-advance"].includes(
-      mode,
+  if (mode === "pay-supplier" && supplierId)
+    return (
+      <FinanceSupplierPaymentForm
+        book={book}
+        supplierId={supplierId}
+        billId={billId}
+      />
     )
+  if (
+    [
+      "supplier-statement",
+      "supplier-opening",
+      "supplier-advance",
+      "pay-supplier",
+    ].includes(mode)
   )
     return <p>Choose a supplier from the supplier directory.</p>
   if (mode === "expense")
