@@ -4,12 +4,12 @@ export function StaffDirectoryReadTableHeader() {
   return (
     <TableHeader>
       <TableRow>
-        <TableHead scope="col">Membership identity</TableHead>
+        <TableHead scope="col">Name</TableHead>
         <TableHead scope="col" className="w-[110px]">
-          Current state
+          Role and status
         </TableHead>
         <TableHead scope="col" className="w-[90px]">
-          Details
+          <span className="sr-only">Open</span>
         </TableHead>
       </TableRow>
     </TableHeader>

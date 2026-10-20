@@ -8,23 +8,12 @@ export function StaffHistoryContent({
       <div className="grid gap-2">
         <p className="text-lg font-medium">
           {page.total === null
-            ? `${page.knownMatchingEvents} known recorded events · full total unknown`
-            : `${page.total} matching recorded events`}
+            ? `At least ${page.knownMatchingEvents} ${page.knownMatchingEvents === 1 ? "change" : "changes"}`
+            : `${page.total} ${page.total === 1 ? "change" : "changes"}`}
         </p>
-        <p className="text-muted-foreground">
-          {page.data.length} on this page. Counts describe recorded events, not
-          people.
-        </p>
-        <p className="text-muted-foreground">{page.coverage.detail}</p>
         {page.total === null ? (
-          <p role="status">
-            A requested history stream is unavailable. The full matching total
-            is unknown.
-          </p>
+          <output>Some older changes couldn’t be loaded.</output>
         ) : null}
-        <p className="text-xs text-muted-foreground">
-          As of {new Date(page.asOf).toISOString()} (UTC)
-        </p>
       </div>
       {page.data.length ? (
         page.data.map((event) => (
@@ -34,7 +23,7 @@ export function StaffHistoryContent({
           />
         ))
       ) : (
-        <p>No matching events in the available recorded streams.</p>
+        <p>No changes yet.</p>
       )}
     </div>
   )

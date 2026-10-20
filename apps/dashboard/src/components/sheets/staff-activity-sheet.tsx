@@ -21,9 +21,9 @@ import { SheetFrame } from "./sheet-frame"
 
 type Event = RouterOutputs["retailOps"]["staffActivityPage"]["data"][number]
 const relationLabel = {
-  PERFORMED: "did",
-  APPROVED: "approved",
-  ASSIGNED: "was assigned",
+  PERFORMED: "",
+  APPROVED: " approved",
+  ASSIGNED: " assigned",
 } as const
 
 /** Params that open the exact canonical original of one event. */
@@ -66,14 +66,14 @@ export function staffActivityOpen(
   context: StaffActivityOpenContext,
 ) {
   const params = staffActivityOriginalParams(event.record)
-  if (!params) return { unavailable: "Open from Finance" } as const
+  if (!params) return { unavailable: "Open it in Finance" } as const
   const kind = event.record.kind
   if (
     ((kind === "order" || kind === "payment") && !context.opens.order) ||
     (kind === "product" && !context.opens.product) ||
     (kind === "service_job" && !context.opens.serviceJob)
   )
-    return { unavailable: "Not available with your access" } as const
+    return { unavailable: "You can’t open this" } as const
   if (
     kind !== "product" &&
     event.store &&
@@ -88,11 +88,11 @@ export function staffActivityOpen(
 const eventSummary = (event: Event) =>
   `${
     event.actor.coverage === "unknown"
-      ? "Unknown (not recorded)"
+      ? "Someone"
       : event.actor.coverage === "unavailable"
-        ? "Unavailable person"
+        ? "A former staff member"
         : event.actor.name
-  } ${relationLabel[event.relation]}: ${event.outcome}`
+  }${relationLabel[event.relation]} · ${event.outcome}`
 
 /**
  * The exact events an assistant answer showed, re-read under current
@@ -116,11 +116,11 @@ export function StaffActivitySheet({
       {isOpen ? (
         <SheetFrame
           title="Staff activity"
-          description="Recorded actions from the assistant answer, checked against your current access. Each opens its original record."
+          description="From your assistant answer."
         >
           {!target ? (
             <p role="alert">
-              This activity link is invalid. Close it and open the answer again.
+              This link no longer works. Ask the assistant again.
             </p>
           ) : (
             // Keyed so every read and the opt-in current view reset for a new
@@ -220,13 +220,11 @@ function StaffActivityBody({
   return (
     <div className="grid gap-5 text-sm">
       <section className="grid gap-3">
-        <h3 className="font-medium">Shown in the answer</h3>
+        <h3 className="font-medium">From the answer</h3>
         {fresh.state === "checking" ? (
-          <output aria-live="polite">Checking your current access…</output>
+          <output aria-live="polite">Loading…</output>
         ) : fresh.state === "refused" ? (
-          <p role="alert">
-            This activity is unavailable for your business or access.
-          </p>
+          <p role="alert">You can’t see this activity.</p>
         ) : (
           <ul className="grid gap-3">
             {target.shown.map((saved) => {
@@ -241,7 +239,7 @@ function StaffActivityBody({
                   key={`${saved.stream}:${saved.id}`}
                   className="border-b pb-3 text-muted-foreground"
                 >
-                  No longer available to you.
+                  You can’t open this anymore.
                 </li>
               )
             })}
@@ -250,7 +248,7 @@ function StaffActivityBody({
       </section>
       <section className="grid gap-3">
         <div className="flex items-center justify-between gap-3">
-          <h3 className="font-medium">Current activity for these filters</h3>
+          <h3 className="font-medium">Since then</h3>
           <Button
             variant="outline"
             size="sm"
@@ -259,25 +257,21 @@ function StaffActivityBody({
               showCurrent ? void current.refetch() : setShowCurrent(true)
             }
           >
-            {showCurrent ? "Refresh" : "Load current"}
+            {showCurrent ? "Refresh" : "Show latest"}
           </Button>
         </div>
         {!showCurrent ? (
           <p className="text-muted-foreground">
-            Re-reads the same filters now; new activity may differ from the
-            answer.
+            See what’s happened since the answer.
           </p>
         ) : loading ? (
-          <output aria-live="polite">Loading current activity…</output>
+          <output aria-live="polite">Loading…</output>
         ) : currentRead.state === "refused" ? (
-          <p role="alert">
-            Current activity is unavailable for your business or access.
-          </p>
+          <p role="alert">You can’t see the latest activity.</p>
         ) : currentRead.state === "ready" ? (
           <>
             <p className="text-muted-foreground">
-              {currentRead.data.data.length} of {currentRead.data.total}{" "}
-              recorded actions now · the total counts every matching record
+              Showing {currentRead.data.data.length} of {currentRead.data.total}
             </p>
             <ul className="grid gap-3">{currentRead.data.data.map(row)}</ul>
           </>

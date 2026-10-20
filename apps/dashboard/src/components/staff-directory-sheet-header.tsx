@@ -1,4 +1,5 @@
 "use client"
+import { getStaffRoleLabel, getStaffStatusLabel } from "@/lib/staff-management"
 import { staffDirectoryTargetSchema } from "@ewatrade/assistant/general/contracts"
 import { Button, Input, Select } from "@ewatrade/ui"
 
@@ -40,7 +41,7 @@ export function StaffDirectorySheetHeader({
       <Input
         name="search"
         aria-label="Search staff by name or email"
-        placeholder="Search name or email"
+        placeholder="Search by name or email"
         defaultValue={filters.search ?? ""}
         maxLength={120}
         disabled={disabled}
@@ -55,7 +56,7 @@ export function StaffDirectorySheetHeader({
           <option value="">All roles</option>
           {roles.map((role) => (
             <option key={role} value={role}>
-              {role}
+              {getStaffRoleLabel(role)}
             </option>
           ))}
         </Select>
@@ -68,20 +69,19 @@ export function StaffDirectorySheetHeader({
           <option value="">All statuses</option>
           {statuses.map((status) => (
             <option key={status} value={status}>
-              {status}
+              {getStaffStatusLabel(status)}
             </option>
           ))}
         </Select>
       </div>
       {filters.assignmentStoreId ? (
-        <p className="break-all text-xs text-muted-foreground">
-          Explicit active assignment Store: {filters.assignmentStoreId}. Legacy
-          access is not inferred.
+        <p className="text-xs text-muted-foreground">
+          Only staff assigned to one store.
         </p>
       ) : null}
       <div className="flex gap-2">
         <Button type="submit" variant="outline" size="sm" disabled={disabled}>
-          Apply filters
+          Apply
         </Button>
         <Button
           type="button"

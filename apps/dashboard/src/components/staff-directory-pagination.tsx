@@ -1,4 +1,4 @@
-import { staffDirectoryTargetSchema } from "@ewatrade/assistant/general/contracts"
+import type { staffDirectoryTargetSchema } from "@ewatrade/assistant/general/contracts"
 import { Button } from "@ewatrade/ui"
 
 type Target = ReturnType<typeof staffDirectoryTargetSchema.parse>

@@ -1,6 +1,5 @@
 "use client"
 import { StaffStatusContent } from "@/components/staff-status-content"
-import { StaffStatusSheetHeader } from "@/components/staff-status-sheet-header"
 import {
   assistantObjectParams,
   closedAssistantObjectParams,
@@ -15,6 +14,32 @@ import { Button, Sheet } from "@ewatrade/ui"
 import { useQuery } from "@tanstack/react-query"
 import { useQueryStates } from "nuqs"
 import { SheetFrame } from "./sheet-frame"
+
+function statusTitle(record: {
+  eventType: string
+  subject: { name: string | null }
+}) {
+  const name = record.subject.name?.trim()
+  if (!name) return "Status change"
+  return record.eventType === "SUSPENDED"
+    ? `${name} was suspended`
+    : record.eventType === "REACTIVATED"
+      ? `${name} was reactivated`
+      : "Status change"
+}
+
+function statusDescription(
+  record: { happenedAt: string; actor: { name: string | null } },
+  timeZone: string,
+) {
+  const when = new Intl.DateTimeFormat("en-NG", {
+    dateStyle: "medium",
+    timeStyle: "short",
+    timeZone,
+  }).format(new Date(record.happenedAt))
+  const by = record.actor.name?.trim()
+  return by ? `${when} by ${by}` : when
+}
 
 export function StaffStatusSheet({ timeZone }: { timeZone: string }) {
   const { isOpen, eventId, close } = useStaffStatusParams()
@@ -38,10 +63,9 @@ export function StaffStatusSheet({ timeZone }: { timeZone: string }) {
     >
       {isOpen ? (
         <SheetFrame
-          title="Original staff status"
-          description="Saved outcome and current membership are separate."
-          header={
-            readable ? <StaffStatusSheetHeader record={query.data} /> : null
+          title={readable ? statusTitle(query.data) : "Status change"}
+          description={
+            readable ? statusDescription(query.data, timeZone) : undefined
           }
           footer={
             eventId ? (
@@ -57,17 +81,13 @@ export function StaffStatusSheet({ timeZone }: { timeZone: string }) {
         >
           {!eventId ? (
             <p role="alert">
-              This status link is invalid. Close it and open the original
-              receipt.
+              This link no longer works. Ask the assistant again.
             </p>
           ) : query.isPending || query.isFetching || query.isPaused ? (
-            <output aria-live="polite">Loading original status…</output>
+            <output aria-live="polite">Loading…</output>
           ) : query.isError ? (
             <div role="alert" className="grid gap-3">
-              <p>
-                This original status is unavailable for your current business or
-                access.
-              </p>
+              <p>You can’t see this change.</p>
               <Button variant="outline" onClick={() => void query.refetch()}>
                 Try again
               </Button>

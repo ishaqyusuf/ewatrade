@@ -26,8 +26,8 @@ export function StaffInvitationSheet() {
     >
       {isOpen ? (
         <SheetFrame
-          title="Staff invitation"
-          description="Original review and current invitation status."
+          title="Invite"
+          description="What was sent and where it is now."
           footer={
             commandId && query.data && !query.isError ? (
               <Button
@@ -42,15 +42,13 @@ export function StaffInvitationSheet() {
         >
           {!commandId ? (
             <p role="alert">
-              This invitation link is invalid. Close it and open a fresh result.
+              This link no longer works. Ask the assistant again.
             </p>
           ) : query.isPending || query.isFetching ? (
-            <output aria-live="polite">Loading saved invitation…</output>
+            <output aria-live="polite">Loading…</output>
           ) : query.isError ? (
             <div role="alert" className="grid gap-3">
-              <p>
-                This invitation is unavailable for your current access or setup.
-              </p>
+              <p>You can’t see this invite.</p>
               <Button variant="outline" onClick={() => void query.refetch()}>
                 Try again
               </Button>

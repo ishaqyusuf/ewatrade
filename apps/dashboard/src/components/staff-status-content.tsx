@@ -1,12 +1,13 @@
 "use client"
+import { getStaffRoleLabel, getStaffStatusLabel } from "@/lib/staff-management"
 import type { StaffStatusReceiptRecord } from "@ewatrade/db/staff-status-receipt"
 import { Button } from "@ewatrade/ui"
 
-const label = (value: string | null) =>
-  value ? value.toLowerCase().replaceAll("_", " ") : "Unavailable"
+const status = (value: string | null) =>
+  value ? getStaffStatusLabel(value) : "Unknown"
+
 export function StaffStatusContent({
   record: r,
-  timeZone,
   onOpenMember,
   onOpenHistory,
 }: {
@@ -15,73 +16,52 @@ export function StaffStatusContent({
   onOpenMember: () => void
   onOpenHistory: () => void
 }) {
+  const name = r.subject.name?.trim()
+  const role = r.after.role ?? r.before.role
   return (
     <div className="grid gap-5 text-sm">
       <section className="grid gap-3">
-        <h3 className="font-medium">Original saved outcome</h3>
+        <h3 className="font-medium">What changed</h3>
         <dl className="grid grid-cols-2 gap-2">
-          <dt>Before</dt>
+          <dt>Status</dt>
           <dd>
-            {label(r.before.status)} · {label(r.before.role)}
+            {status(r.before.status)} → {status(r.after.status)}
           </dd>
-          <dt>After</dt>
-          <dd>
-            {label(r.after.status)} · {label(r.after.role)}
-          </dd>
-          <dt>Recorded</dt>
-          <dd>
-            <time dateTime={r.happenedAt}>
-              {new Date(r.happenedAt).toLocaleString("en-NG", { timeZone })}
-            </time>
-          </dd>
+          {role ? (
+            <>
+              <dt>Role</dt>
+              <dd>{getStaffRoleLabel(role)}</dd>
+            </>
+          ) : null}
         </dl>
         <div>
-          <p className="font-medium">Original reason</p>
+          <p className="font-medium">Reason</p>
           <p className="whitespace-pre-wrap break-words">
-            {r.reason ?? "Not recorded"}
+            {r.reason ?? "No reason given"}
           </p>
         </div>
         <p>
-          Whole-business membership. This saved event does not describe a change
-          to one Store grant.
+          {r.eventType === "SUSPENDED"
+            ? "Suspended staff can’t sign in to any store."
+            : "They can sign in again."}
         </p>
       </section>
       <section className="grid gap-2 border-t pt-4">
-        <h3 className="font-medium">Current directory identities</h3>
-        <p>
-          Staff: {r.subject.name ?? "Unavailable"}
-          {r.subject.email ? ` · ${r.subject.email}` : ""}
-        </p>
-        <p>
-          Recorded actor: {r.actor.name ?? "Unavailable"}
-          {r.actor.email ? ` · ${r.actor.email}` : ""}
-        </p>
-        <p className="text-xs text-muted-foreground">
-          Names and contacts come from the current same-business directory.
-          Original identity snapshots and original Store grants are not recorded
-          here.
-        </p>
-        <p className="break-all text-xs text-muted-foreground">
-          Original actor reference: {r.originalActorUserId ?? "Not recorded"}
-        </p>
-      </section>
-      <section className="grid gap-2 border-t pt-4">
-        <h3 className="font-medium">Current membership</h3>
+        <h3 className="font-medium">Today</h3>
         <p>
           {r.currentMembership
-            ? `${label(r.currentMembership.status)} · ${label(r.currentMembership.role)} · access revision ${r.currentMembership.accessRevision}`
-            : "Unavailable in the current business directory."}
+            ? `${status(r.currentMembership.status)} · ${getStaffRoleLabel(r.currentMembership.role)}`
+            : "No longer in your business."}
         </p>
         <p className="text-xs text-muted-foreground">
-          Current access is separate from the original outcome. Open the member
-          to review current Store assignments; removed grants are not restored.
+          Reactivating them won’t bring back stores that were removed.
         </p>
         <div className="flex flex-wrap gap-2">
           <Button variant="outline" onClick={onOpenMember}>
-            Open current member
+            {name ? `Open ${name}` : "Open person"}
           </Button>
           <Button variant="outline" onClick={onOpenHistory}>
-            Open recorded history
+            See history
           </Button>
         </div>
       </section>

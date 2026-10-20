@@ -98,7 +98,7 @@ test("Store originals open only in their own Store and with access", async () =>
       },
       { ...context, opens: { ...context.opens, order: false } },
     ),
-  ).toEqual({ unavailable: "Not available with your access" })
+  ).toEqual({ unavailable: "You can’t open this" })
   expect(
     staffActivityOpen(
       {
@@ -107,7 +107,7 @@ test("Store originals open only in their own Store and with access", async () =>
       },
       context,
     ),
-  ).toEqual({ unavailable: "Open from Finance" })
+  ).toEqual({ unavailable: "Open it in Finance" })
 })
 
 test("closing during a pending read never lets the reopened view show it", async () => {

@@ -1,7 +1,7 @@
 "use client"
 import { StaffDirectoryContent } from "@/components/staff-directory-content"
-import { StaffDirectorySheetHeader } from "@/components/staff-directory-sheet-header"
 import { StaffDirectoryPagination } from "@/components/staff-directory-pagination"
+import { StaffDirectorySheetHeader } from "@/components/staff-directory-sheet-header"
 import { useStaffDirectorySheetParams } from "@/hooks/use-staff-directory-sheet-params"
 import { useStaffMemberParams } from "@/hooks/use-staff-member-params"
 import { useTRPC } from "@/trpc/client"
@@ -28,8 +28,8 @@ export function StaffDirectorySheet() {
     >
       {isOpen ? (
         <SheetFrame
-          title="Staff directory"
-          description="Current business memberships, with exact matching counts."
+          title="Staff"
+          description="Everyone in your business."
           header={
             target ? (
               <StaffDirectorySheetHeader
@@ -54,15 +54,13 @@ export function StaffDirectorySheet() {
         >
           {!target ? (
             <p role="alert">
-              This directory link is invalid. Close it and open a fresh result.
+              This link no longer works. Ask the assistant again.
             </p>
           ) : query.isPending || query.isFetching ? (
-            <output aria-live="polite">Loading current staff directory…</output>
+            <output aria-live="polite">Loading…</output>
           ) : query.isError ? (
             <div role="alert" className="grid gap-3">
-              <p>
-                Staff directory is unavailable for your current access or setup.
-              </p>
+              <p>You don’t have access to staff.</p>
               <Button variant="outline" onClick={() => void query.refetch()}>
                 Try again
               </Button>

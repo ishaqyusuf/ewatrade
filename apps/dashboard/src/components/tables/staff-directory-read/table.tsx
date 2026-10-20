@@ -1,3 +1,4 @@
+import { getStaffRoleLabel, getStaffStatusLabel } from "@/lib/staff-management"
 import type { RouterOutputs } from "@ewatrade/api/trpc/routers/_app"
 import { Button, Table, TableBody, TableCell, TableRow } from "@ewatrade/ui"
 import { StaffDirectoryReadTableHeader } from "./table-header"
@@ -19,22 +20,19 @@ export function StaffDirectoryReadTable({
               <div className="grid gap-1 break-all">
                 <p className="font-medium">{member.name}</p>
                 <p className="text-xs text-muted-foreground">{member.email}</p>
-                <p className="text-xs text-muted-foreground">
-                  {member.membershipId}
-                </p>
               </div>
             </TableCell>
             <TableCell>
-              <p className="break-all">{member.role}</p>
+              <p className="break-all">{getStaffRoleLabel(member.role)}</p>
               <p className="break-all text-xs text-muted-foreground">
-                {member.status}
+                {getStaffStatusLabel(member.status)}
               </p>
             </TableCell>
             <TableCell>
               <Button
                 variant="outline"
                 size="sm"
-                aria-label={`Open staff ${member.email}`}
+                aria-label={`Open ${member.name || member.email}`}
                 onClick={() => onOpenMember(member.membershipId)}
               >
                 Open
