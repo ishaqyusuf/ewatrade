@@ -1,4 +1,5 @@
 "use client"
+import { FormCombobox } from "@/components/forms/form-controls"
 import { useCustomerLedgerCommand } from "@/hooks/use-customer-ledger-command"
 import {
   type CustomerLedgerMode,
@@ -16,29 +17,18 @@ import {
   Alert,
   AlertDescription,
   Button,
-  Calendar,
-  Combobox,
-  ComboboxContent,
-  ComboboxEmpty,
-  ComboboxInput,
-  ComboboxItem,
-  ComboboxList,
   ControlField,
+  DatePicker,
   FieldGroup,
   FormActions,
   Input,
   MoneyInput,
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
   SelectControl,
   SubmitButton,
   Textarea,
 } from "@ewatrade/ui"
 import { formatFinanceMoney } from "@ewatrade/utils/finance-money"
 import { zodResolver } from "@hookform/resolvers/zod"
-import { Calendar03Icon } from "@hugeicons/core-free-icons"
-import { HugeiconsIcon } from "@hugeicons/react"
 import { useMutation, useQuery } from "@tanstack/react-query"
 import { useEffect, useState } from "react"
 import { Controller, useForm } from "react-hook-form"
@@ -56,96 +46,21 @@ const OPERATION_WORDS: Record<string, string> = {
 
 type LedgerOption = { value: string; label: string }
 
-/** Day picker for an ISO time; keeps the time of day and blocks future days. */
-function LedgerDatePicker({
-  value,
-  onChange,
-}: {
-  value: string
-  onChange: (iso: string) => void
-}) {
-  const [open, setOpen] = useState(false)
-  const parsed = value ? new Date(value) : undefined
-  const selected =
-    parsed && !Number.isNaN(parsed.getTime()) ? parsed : undefined
-  return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger
-        render={
-          <Button
-            type="button"
-            variant="outline"
-            className="w-full justify-start font-normal"
-          />
-        }
-      >
-        <HugeiconsIcon icon={Calendar03Icon} />
-        {selected ? formatLedgerDate(selected) : "Choose a date"}
-      </PopoverTrigger>
-      <PopoverContent
-        appearance="dashboard"
-        align="start"
-        className="w-auto p-0"
-      >
-        <Calendar
-          mode="single"
-          selected={selected}
-          defaultMonth={selected}
-          autoFocus
-          disabled={{ after: new Date() }}
-          onSelect={(day) => {
-            if (!day) return
-            const time = selected ?? new Date()
-            const next = new Date(day)
-            next.setHours(time.getHours(), time.getMinutes(), time.getSeconds())
-            onChange(next.toISOString())
-            setOpen(false)
-          }}
-        />
-      </PopoverContent>
-    </Popover>
-  )
+/** Local calendar day (YYYY-MM-DD) of an ISO time, for the date picker. */
+function isoToDay(iso: string) {
+  const date = new Date(iso)
+  if (Number.isNaN(date.getTime())) return ""
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`
 }
 
-/** Searchable pick from the loaded page of payments or Orders. */
-function LedgerSourceCombobox({
-  options,
-  value,
-  onChange,
-  placeholder,
-  empty,
-}: {
-  options: LedgerOption[]
-  value: string
-  onChange: (value: string) => void
-  placeholder: string
-  empty: string
-}) {
-  return (
-    <Combobox<LedgerOption>
-      items={options}
-      value={options.find((option) => option.value === value) ?? null}
-      itemToStringLabel={(option) => option.label}
-      isItemEqualToValue={(a, b) => a.value === b.value}
-      autoHighlight
-      onValueChange={(option) => onChange(option?.value ?? "")}
-    >
-      <ComboboxInput
-        placeholder={placeholder}
-        className="w-full rounded-none border-border bg-transparent"
-      />
-      <ComboboxContent className="rounded-none border border-border bg-popover shadow-md ring-0 before:hidden **:data-[slot$=-item]:rounded-none">
-        <ComboboxEmpty>{empty}</ComboboxEmpty>
-        <ComboboxList>
-          {(option: LedgerOption) => (
-            <ComboboxItem key={option.value} value={option}>
-              {option.label}
-            </ComboboxItem>
-          )}
-        </ComboboxList>
-      </ComboboxContent>
-    </Combobox>
-  )
+/** A picked day as an ISO time, keeping the time of day of `iso`. */
+function dayToIso(day: string, iso: string) {
+  const [year, month, date] = day.split("-").map(Number)
+  const time = new Date(iso)
+  const base = Number.isNaN(time.getTime()) ? new Date() : time
+  const next = new Date(base)
+  next.setFullYear(year ?? 0, (month ?? 1) - 1, date ?? 1)
+  return next.toISOString()
 }
 
 export function CustomerLedgerCommandForm({
@@ -364,24 +279,15 @@ export function CustomerLedgerCommandForm({
     sources: NonNullable<typeof credits.data>["sources"],
     isFetching: boolean,
   ) => (
-    <Controller
-      control={form.control}
-      name={name}
-      render={({ field }) => (
-        <ControlField
-          label={title}
-          error={form.formState.errors[name]?.message}
-        >
-          <LedgerSourceCombobox
-            value={field.value}
-            onChange={field.onChange}
-            placeholder={placeholder}
-            empty={isFetching ? "Loading…" : "Nothing matches."}
-            options={sources.map((s) => ({ value: s.id, label: label(s) }))}
-          />
-        </ControlField>
-      )}
-    />
+    <ControlField label={title} error={form.formState.errors[name]?.message}>
+      <FormCombobox
+        control={form.control}
+        name={name}
+        placeholder={placeholder}
+        empty={isFetching ? "Loading…" : "Nothing matches."}
+        options={sources.map((s) => ({ value: s.id, label: label(s) }))}
+      />
+    </ControlField>
   )
   const after = review ? customerLedgerReviewTotals(account, review) : null
   const creditId =
@@ -727,10 +633,15 @@ export function CustomerLedgerCommandForm({
                     label="Date"
                     error={form.formState.errors.date?.message}
                   >
-                    <LedgerDatePicker
-                      value={field.value}
-                      onChange={(iso) =>
-                        form.setValue("date", iso, { shouldValidate: true })
+                    <DatePicker
+                      value={isoToDay(field.value)}
+                      max={isoToDay(new Date().toISOString())}
+                      placeholder="Choose a date"
+                      onBlur={field.onBlur}
+                      onValueChange={(day) =>
+                        form.setValue("date", dayToIso(day, field.value), {
+                          shouldValidate: true,
+                        })
                       }
                     />
                   </ControlField>
