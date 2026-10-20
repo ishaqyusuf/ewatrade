@@ -6,6 +6,7 @@ import { useQuery } from "@tanstack/react-query"
 import { useState } from "react"
 import { FinanceCashAdjustmentForm } from "./cash-adjustment-form"
 import { FinanceCashAdjustmentReversalForm } from "./cash-adjustment-reversal-form"
+import { dayIn, plainDay } from "./review-changes"
 import type { FinanceBook } from "./types"
 export function FinanceCashCountDetail({
   book,
@@ -48,16 +49,31 @@ export function FinanceCashCountDetail({
         <p className="text-sm text-muted-foreground">
           {new Date(count.asOf).toLocaleString("en-NG", {
             timeZone: book.timezone,
+            day: "numeric",
+            month: "short",
+            year: "numeric",
+            hour: "numeric",
+            minute: "2-digit",
           })}
         </p>
       </div>
       <p>{count.reference}</p>
-      <dl className="grid gap-4">
+      <dl className="grid grid-cols-3 gap-3">
         {(
           [
-            ["Finance expected", count.expectedBalanceMinor],
-            ["Cash you counted", count.observedBalanceMinor],
-            ["Short or over", count.differenceMinor],
+            ["Should hold", count.expectedBalanceMinor],
+            ["Counted", count.observedBalanceMinor],
+            [
+              BigInt(count.differenceMinor) < BigInt(0)
+                ? "Short"
+                : BigInt(count.differenceMinor) > BigInt(0)
+                  ? "Over"
+                  : "Difference",
+              (BigInt(count.differenceMinor) < BigInt(0)
+                ? -BigInt(count.differenceMinor)
+                : BigInt(count.differenceMinor)
+              ).toString(),
+            ],
           ] as const
         ).map(([label, amount]) => (
           <div key={label}>
@@ -72,24 +88,28 @@ export function FinanceCashCountDetail({
         {count.status === "REVIEW_REQUIRED"
           ? "Look at this: a later entry changed this account for a time before the count. The count is kept as it was. Find that entry before you count again."
           : count.status === "ADJUSTED"
-            ? "A fix was recorded for this difference. The count and its difference stay in history as they were."
+            ? "The account was adjusted to this count. The count and its difference stay in history as they were."
             : count.status === "ADJUSTMENT_REVERSED"
               ? "The fix was undone. The count and difference stay in history as they were. Look at the difference again before deciding what to do."
               : count.status === "MATCHED"
-                ? "The count matches what Finance expected."
-                : "The count is different from what Finance expected. Look for missing or wrong entries before you fix it."}
+                ? "The count matches what the account should hold."
+                : "The count is different from what the account should hold. Look for missing sales or expenses first; adjust only a difference you can't explain."}
       </p>
       {count.adjustment ? (
         <section className="grid gap-2 border border-border p-4">
-          <h4 className="font-medium">Fix history</h4>
+          <h4 className="font-medium">Adjustment</h4>
           <p className="break-words text-sm">{count.adjustment.description}</p>
           <p className="text-sm text-muted-foreground">
-            Fix recorded {new Date(count.adjustment.recordedAt).toISOString()}.
+            Adjusted{" "}
+            {plainDay(dayIn(count.adjustment.recordedAt, book.timezone))}.
           </p>
           {count.adjustment.reversal ? (
             <p className="break-words text-sm">
               Undone{" "}
-              {new Date(count.adjustment.reversal.recordedAt).toISOString()}.
+              {plainDay(
+                dayIn(count.adjustment.reversal.recordedAt, book.timezone),
+              )}
+              .
             </p>
           ) : null}
           <p className="text-xs text-muted-foreground">
@@ -103,12 +123,12 @@ export function FinanceCashCountDetail({
       ) : null}
       {count.status === "DIFFERENCE" && !count.adjustment ? (
         <Button variant="outline" onClick={() => setAdjusting(true)}>
-          Fix the difference
+          Adjust to count
         </Button>
       ) : null}
       {count.adjustment && !count.adjustment.reversal ? (
         <Button variant="outline" onClick={() => setAdjusting(true)}>
-          Undo the fix
+          Undo adjustment
         </Button>
       ) : null}
     </div>
