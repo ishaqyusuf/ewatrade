@@ -1,8 +1,9 @@
 "use client"
-import { FieldGroup, FormActions, Input, SubmitButton } from "@ewatrade/ui"
+import { FieldGroup, Input } from "@ewatrade/ui"
 
-import { FormSelectControl } from "@/components/forms/form-controls"
+import { FormRadioChoices } from "@/components/forms/form-controls"
 import { FormFeedback } from "@/components/forms/form-feedback"
+import { useFinanceParams } from "@/hooks/use-finance-params"
 import { useZodForm } from "@/hooks/use-zod-form"
 import { useTRPC } from "@/trpc/client"
 
@@ -14,7 +15,7 @@ import { useMutation } from "@tanstack/react-query"
 import { useEffect, useState } from "react"
 import { Controller } from "react-hook-form"
 import { z } from "zod"
-import { FinanceField } from "./form-fields"
+import { FinanceField, FinanceFormFooter } from "./form-fields"
 import { PaymentMethodChecks } from "./payment-method-checks"
 import { useCompleteFinanceForm } from "./use-complete-finance-form"
 const schema = z.object({
@@ -33,7 +34,15 @@ export function FinanceAccountForm({
   category = false,
 }: { bookId: string; category?: boolean }) {
   const trpc = useTRPC()
-  const complete = useCompleteFinanceForm()
+  const { close } = useFinanceParams()
+  const [savedName, setSavedName] = useState("")
+  const complete = useCompleteFinanceForm(
+    savedName
+      ? category
+        ? `Spending category “${savedName}” added.`
+        : `Money account “${savedName}” added. Add what it holds with Move money → Starting balance.`
+      : undefined,
+  )
   const [code] = useState(
     () => `${category ? "E" : "M"}_${crypto.randomUUID().slice(0, 12)}`,
   )
@@ -72,40 +81,43 @@ export function FinanceAccountForm({
     <form
       onSubmit={
         category
-          ? form.handleSubmit((values) =>
-              expense.mutate({ bookId, code, name: values.name }),
-            )
-          : form.handleSubmit((values) =>
-              account.mutate({ bookId, code, ...values }),
-            )
+          ? form.handleSubmit((values) => {
+              setSavedName(values.name.trim())
+              expense.mutate({ bookId, code, name: values.name })
+            })
+          : form.handleSubmit((values) => {
+              setSavedName(values.name.trim())
+              account.mutate({ bookId, code, ...values })
+            })
       }
     >
       <FieldGroup className="min-w-0 grid gap-5">
-        <FinanceField
-          label={category ? "Category name" : "Money account name"}
-          error={form.formState.errors.name?.message}
-        >
+        <FinanceField label="Name" error={form.formState.errors.name?.message}>
           <Input
             {...form.register("name")}
             placeholder={
-              category
-                ? "Rent, transport, utilities…"
-                : "Shop cash or business bank…"
+              category ? "Rent, Transport, Fuel…" : "Shop cash, GTBank current…"
             }
           />
         </FinanceField>
         {!category ? (
           <>
             <FinanceField label="Type">
-              <FormSelectControl
+              <FormRadioChoices
                 control={form.control}
-                name={"purpose"}
+                name="purpose"
+                label="Type"
                 options={[
-                  { value: "BANK", label: <>Bank or mobile money</> },
-                  { value: "CASH", label: <>Cash</> },
+                  { value: "CASH", label: "Cash", hint: "A till or cash box." },
+                  {
+                    value: "BANK",
+                    label: "Bank or mobile money",
+                    hint: "A bank account, or an OPay, PalmPay or Moniepoint wallet.",
+                  },
                   {
                     value: "CLEARING",
-                    label: <>Card and POS money on its way</>,
+                    label: "Card and POS money on its way",
+                    hint: "Card and POS payments the provider hasn't paid into your bank yet.",
                   },
                 ]}
               />
@@ -128,15 +140,12 @@ export function FinanceAccountForm({
         {error ? (
           <FormFeedback appearance="dashboard">{error.message}</FormFeedback>
         ) : null}
-        <FormActions>
-          <SubmitButton isSubmitting={pending} type="submit" disabled={pending}>
-            {pending
-              ? "Saving…"
-              : category
-                ? "Add category"
-                : "Add money account"}
-          </SubmitButton>
-        </FormActions>
+        <FinanceFormFooter
+          onCancel={() => void close()}
+          submitLabel={category ? "Add category" : "Add account"}
+          isSubmitting={pending}
+          disabled={pending}
+        />
       </FieldGroup>
     </form>
   )

@@ -79,9 +79,11 @@ export function FinanceAccounts({
 }
 
 /** Payment methods staff can't record yet, because no available account takes them. */
-function PaymentMethodGaps({
+export function PaymentMethodGaps({
   accounts,
+  fix = "Open Payment settings on an account to fix this.",
 }: {
+  fix?: string
   accounts: Array<{
     purpose: string
     archivedAt: Date | string | null
@@ -109,8 +111,7 @@ function PaymentMethodGaps({
     <FormFeedback appearance="dashboard">
       No account takes{" "}
       {missing.map((method) => ORDER_PAYMENT_METHOD_LABELS[method]).join(", ")}{" "}
-      payments, so staff can't record them yet. Open Payment settings on an
-      account to fix this.
+      payments, so staff can't record them yet. {fix}
     </FormFeedback>
   )
 }

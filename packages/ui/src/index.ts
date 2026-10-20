@@ -54,6 +54,7 @@ export {
 } from "./components/date-picker"
 export { Toaster, toast } from "./components/sonner"
 export { RadioGroup, RadioGroupItem } from "./components/radio-group"
+export { Switch } from "./components/switch"
 // Free text with suggestions; styled by the caller.
 export { Autocomplete } from "@base-ui/react/autocomplete"
 export * from "./components/popover"
