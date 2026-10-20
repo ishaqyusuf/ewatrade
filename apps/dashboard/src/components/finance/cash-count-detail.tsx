@@ -57,9 +57,9 @@ export function FinanceCashCountDetail({
       <dl className="grid gap-4">
         {(
           [
-            ["Recorded balance at count", count.expectedBalanceMinor],
-            ["Cash physically counted", count.observedBalanceMinor],
-            ["Difference at count", count.differenceMinor],
+            ["Finance expected", count.expectedBalanceMinor],
+            ["Cash you counted", count.observedBalanceMinor],
+            ["Short or over", count.differenceMinor],
           ] as const
         ).map(([label, amount]) => (
           <div key={label}>
@@ -72,33 +72,34 @@ export function FinanceCashCountDetail({
       </dl>
       <p className="border border-border p-4 text-sm">
         {count.status === "REVIEW_REQUIRED"
-          ? "Review required: a later entry changed this account’s history at or before the count time. The original count is preserved. Investigate the entry before recording a new count."
+          ? "Look at this: a later entry changed this account for a time before the count. The count is kept as it was. Find that entry before you count again."
           : count.status === "ADJUSTED"
-            ? "An adjustment was recorded for this difference. The original count and its difference remain unchanged in history."
+            ? "A fix was recorded for this difference. The count and its difference stay in history as they were."
             : count.status === "ADJUSTMENT_REVERSED"
-              ? "The adjustment was reversed. The original count and difference remain unchanged; review the difference before making any new accounting decision."
+              ? "The fix was undone. The count and difference stay in history as they were. Look at the difference again before deciding what to do."
               : count.status === "MATCHED"
-                ? "Count matches the recorded cash balance at this time."
-                : "The count differs from the recorded balance. Investigate missing or incorrect transactions before making a correction."}
+                ? "The count matches what Finance expected."
+                : "The count is different from what Finance expected. Look for missing or wrong entries before you fix it."}
       </p>
       {count.adjustment ? (
         <section className="grid gap-2 border border-border p-4">
-          <h4 className="font-medium">Adjustment history</h4>
+          <h4 className="font-medium">Fix history</h4>
           <p className="break-words text-sm">{count.adjustment.description}</p>
           <p className="text-sm text-muted-foreground">
-            Original adjustment recorded{" "}
-            {new Date(count.adjustment.recordedAt).toISOString()} UTC.
+            Fix recorded {new Date(count.adjustment.recordedAt).toISOString()}.
           </p>
           {count.adjustment.reversal ? (
             <p className="break-words text-sm">
-              Reversed by journal entry {count.adjustment.reversal.id}, recorded{" "}
-              {new Date(count.adjustment.reversal.recordedAt).toISOString()}{" "}
-              UTC.
+              Undone{" "}
+              {new Date(count.adjustment.reversal.recordedAt).toISOString()}.
             </p>
           ) : null}
           <p className="text-xs text-muted-foreground">
-            Count snapshot {count.snapshotSequence} · Current journal snapshot{" "}
-            {count.currentSnapshotSequence}
+            Records have{" "}
+            {count.snapshotSequence === count.currentSnapshotSequence
+              ? "not changed"
+              : "changed"}{" "}
+            since this count.
           </p>
         </section>
       ) : null}
@@ -108,7 +109,7 @@ export function FinanceCashCountDetail({
           variant="outline"
           onClick={() => setAdjusting(true)}
         >
-          Adjust investigated difference
+          Fix the difference
         </Button>
       ) : null}
       {count.adjustment && !count.adjustment.reversal ? (
@@ -117,7 +118,7 @@ export function FinanceCashCountDetail({
           variant="outline"
           onClick={() => setAdjusting(true)}
         >
-          Reverse cash adjustment
+          Undo the fix
         </Button>
       ) : null}
     </div>

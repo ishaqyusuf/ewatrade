@@ -166,7 +166,7 @@ function ExpenseReceiptWorkspace({
     queryFn: async (queryContext) => {
       const fetchPage = listOptions.queryFn
       if (typeof fetchPage !== "function")
-        throw new Error("Receipt query is unavailable.")
+        throw new Error("Receipts aren't available right now.")
       const request = readGeneration.current.begin(
         queryClient.getQueryState(listOptions.queryKey)?.dataUpdatedAt ?? 0,
       )
@@ -346,14 +346,14 @@ function ExpenseReceiptWorkspace({
       activeScope.current.cancelled !== cancelled ||
       !activeScope.current.online
     )
-      throw new Error("The expense changed. Reopen it before continuing.")
+      throw new Error("This expense changed. Open it again to continue.")
   }
 
   function chooseFile(next: File | undefined) {
     if (!next || busy.current) return
     if (operation.current?.started) {
       setError(
-        "Retry the same receipt first, or finish it before choosing another file.",
+        "Try the same receipt again first, or finish it before choosing another file.",
       )
       return
     }
@@ -392,7 +392,7 @@ function ExpenseReceiptWorkspace({
       }
       if (!draft.bytes || !draft.digest || !draft.contentType)
         throw new Error(
-          "Receipt bytes could not be prepared. Retry the same file.",
+          "We couldn't read this receipt. Try the same file again.",
         )
       if (!draft.intentIdentity) {
         draft.intentIdentity = await expenseReceiptIntentIdentity({
@@ -437,7 +437,7 @@ function ExpenseReceiptWorkspace({
       }
       if (!draft.assetId)
         throw new Error(
-          "Receipt upload could not be confirmed. Retry the same file.",
+          "We couldn't confirm the upload. Try the same file again.",
         )
       const assetId = draft.assetId
       const beforeUpload = await queryClient.fetchQuery(
@@ -487,8 +487,8 @@ function ExpenseReceiptWorkspace({
       ) {
         setError(
           approved.safetyState === "REJECTED"
-            ? "This receipt did not pass safety review and cannot be attached."
-            : "The original is verified. Attachment will be available after safety review clears it.",
+            ? "This receipt failed the safety check and can't be added."
+            : "The receipt is uploaded. You can add it once the safety check finishes.",
         )
       } else {
         const commandId = getExpenseReceiptCommandId(
@@ -558,10 +558,10 @@ function ExpenseReceiptWorkspace({
       if (mounted.current && !reconciled)
         setError(
           activeController.signal.aborted
-            ? "Receipt transfer stopped. Retry the same original file."
+            ? "Upload stopped. Try the same file again."
             : failure instanceof Error
               ? failure.message
-              : "Receipt upload failed. Retry the same file.",
+              : "Upload failed. Try the same file again.",
         )
     } finally {
       busy.current = false
@@ -601,9 +601,7 @@ function ExpenseReceiptWorkspace({
           await query.refetch()
           return
         }
-        setError(
-          "Receipt status changed. Refresh the list before attaching it.",
-        )
+        setError("This receipt changed. Refresh the list before adding it.")
         await query.refetch()
         return
       }
@@ -664,7 +662,7 @@ function ExpenseReceiptWorkspace({
         setError(
           failure instanceof Error
             ? failure.message
-            : "Receipt could not be attached.",
+            : "Couldn't add the receipt.",
         )
       if (mounted.current) await query.refetch()
     } finally {
@@ -704,9 +702,7 @@ function ExpenseReceiptWorkspace({
         return
       }
       if (fresh.attachmentState !== "ATTACHED") {
-        setError(
-          "Receipt status changed. Refresh the list before withdrawing it.",
-        )
+        setError("This receipt changed. Refresh the list before removing it.")
         await query.refetch()
         return
       }
@@ -764,7 +760,7 @@ function ExpenseReceiptWorkspace({
         setError(
           failure instanceof Error
             ? failure.message
-            : "Receipt could not be withdrawn.",
+            : "Couldn't remove the receipt.",
         )
       if (mounted.current) await query.refetch()
     } finally {
@@ -793,7 +789,7 @@ function ExpenseReceiptWorkspace({
       assertCurrent(activeController.signal)
       if (!canDownloadExpenseReceipt(fresh)) {
         workflow.track("expense_receipt_download", "blocked")
-        setError("Receipt access changed. Refresh the list before downloading.")
+        setError("This receipt changed. Refresh the list before downloading.")
         await query.refetch()
         return
       }
@@ -813,10 +809,10 @@ function ExpenseReceiptWorkspace({
       if (mounted.current)
         setError(
           activeController.signal.aborted
-            ? "Receipt download stopped. Request a fresh download when ready."
+            ? "Download stopped. Try again when you are ready."
             : failure instanceof Error
               ? failure.message
-              : "Receipt download failed.",
+              : "Download failed.",
         )
     } finally {
       busy.current = false
@@ -837,8 +833,8 @@ function ExpenseReceiptWorkspace({
             Receipts
           </h4>
           <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
-            Private evidence for this expense. Receipts do not change its amount
-            or payment history.
+            Only you and admins can see receipts. They don't change the amount
+            or payments.
           </p>
         </div>
         <Button
@@ -865,8 +861,8 @@ function ExpenseReceiptWorkspace({
       {cancelled ? (
         <Alert appearance="dashboard">
           <AlertDescription>
-            This expense is cancelled. Existing receipt evidence remains
-            available; new receipts are disabled.
+            This expense is cancelled. You can still see its receipts, but you
+            can't add new ones.
           </AlertDescription>
         </Alert>
       ) : null}
@@ -914,9 +910,7 @@ function ExpenseReceiptWorkspace({
               </p>
             ) : null}
             {transport === "upload" ? (
-              <p className="mt-1 text-xs text-muted-foreground">
-                Uploading the original…
-              </p>
+              <p className="mt-1 text-xs text-muted-foreground">Uploading…</p>
             ) : null}
           </div>
           <div className="flex flex-wrap items-center gap-2">
@@ -942,7 +936,7 @@ function ExpenseReceiptWorkspace({
                 (busyAsset && operation.current?.assetId === busyAsset)
                   ? "Uploading…"
                   : operation.current?.assetId
-                    ? "Retry same receipt"
+                    ? "Try same receipt again"
                     : "Upload receipt"}
               </Button>
             ) : null}
@@ -952,30 +946,28 @@ function ExpenseReceiptWorkspace({
 
       {query.isPending ? (
         <p className="text-sm text-muted-foreground">
-          {online ? "Loading receipts…" : "Connect to view receipt details."}
+          {online ? "Loading receipts…" : "Connect to see receipts."}
         </p>
       ) : null}
       {!query.isPending && query.isFetching ? (
-        <p className="text-sm text-muted-foreground">Updating receipt list…</p>
+        <p className="text-sm text-muted-foreground">Updating receipts…</p>
       ) : null}
       {isFresh && receipts.length === 0 && !cancelled ? (
         <EmptyState
           appearance="form"
           title="No receipts yet"
-          description="Add a private original to keep evidence with this expense."
+          description="Add a photo or PDF so the receipt is kept with this expense."
           actionLabel="Choose receipt"
           onAction={() => fileInput.current?.click()}
         />
       ) : null}
       {isFresh && receipts.length === 0 && cancelled ? (
-        <p className="text-sm text-muted-foreground">
-          No receipts have been added.
-        </p>
+        <p className="text-sm text-muted-foreground">No receipts were added.</p>
       ) : null}
       {receipts.length > 0 ? (
         <ul
           className="divide-y divide-border border-y border-border"
-          aria-label="Expense receipts"
+          aria-label="Receipts"
         >
           {receipts.map((receipt) => (
             <ReceiptRow
@@ -999,7 +991,7 @@ function ExpenseReceiptWorkspace({
             disabled={query.isFetchingNextPage}
             onClick={() => void query.fetchNextPage()}
           >
-            {query.isFetchingNextPage ? "Loading…" : "Load older receipts"}
+            {query.isFetchingNextPage ? "Loading…" : "Load older"}
           </Button>
         </div>
       ) : null}
@@ -1011,10 +1003,10 @@ function ExpenseReceiptWorkspace({
         }}
       >
         <AlertDialogContent>
-          <AlertDialogTitle>Withdraw this receipt?</AlertDialogTitle>
+          <AlertDialogTitle>Remove this receipt?</AlertDialogTitle>
           <AlertDialogDescription>
-            It will no longer be attached to this expense. The original evidence
-            is retained for financial records.
+            It will no longer be shown on this expense. A copy is kept in your
+            records.
           </AlertDialogDescription>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={Boolean(busyAsset)}>
@@ -1028,8 +1020,8 @@ function ExpenseReceiptWorkspace({
                 onClick={() => void withdrawReceipt(confirmWithdrawal)}
               >
                 {busyAsset === confirmWithdrawal.id
-                  ? "Withdrawing…"
-                  : "Withdraw receipt"}
+                  ? "Removing…"
+                  : "Remove receipt"}
               </Button>
             ) : null}
           </AlertDialogFooter>
@@ -1077,7 +1069,7 @@ function ReceiptRow({
             disabled={busy}
             onClick={onAttach}
           >
-            {busy ? "Attaching…" : "Attach"}
+            {busy ? "Adding…" : "Add to expense"}
           </Button>
         ) : null}
         {canDownloadExpenseReceipt(receipt) ? (
@@ -1088,7 +1080,7 @@ function ReceiptRow({
             disabled={busy}
             onClick={onDownload}
           >
-            {busy ? "Working…" : "Download original"}
+            {busy ? "Working…" : "Download"}
           </Button>
         ) : null}
         {receipt.attachmentState === "ATTACHED" ? (
@@ -1099,7 +1091,7 @@ function ReceiptRow({
             disabled={busy}
             onClick={onWithdraw}
           >
-            Withdraw
+            Remove
           </Button>
         ) : null}
       </div>

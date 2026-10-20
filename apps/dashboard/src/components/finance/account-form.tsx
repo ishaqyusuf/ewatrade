@@ -26,7 +26,7 @@ const schema = z.object({
   purpose: z.enum(["CASH", "BANK", "CLEARING"]),
   paymentMethods: z
     .array(z.enum(ORDER_PAYMENT_METHODS))
-    .min(1, "Choose at least one payment method."),
+    .min(1, "Choose at least one way to pay."),
 })
 export function FinanceAccountForm({
   bookId,
@@ -82,7 +82,7 @@ export function FinanceAccountForm({
     >
       <FieldGroup className="min-w-0 grid gap-5">
         <FinanceField
-          label={category ? "Category name" : "Account name"}
+          label={category ? "Category name" : "Money account name"}
           error={form.formState.errors.name?.message}
         >
           <Input
@@ -96,16 +96,16 @@ export function FinanceAccountForm({
         </FinanceField>
         {!category ? (
           <>
-            <FinanceField label="Account type">
+            <FinanceField label="Type">
               <FormSelectControl
                 control={form.control}
                 name={"purpose"}
                 options={[
-                  { value: "BANK", label: <>Bank account</> },
+                  { value: "BANK", label: <>Bank or mobile money</> },
                   { value: "CASH", label: <>Cash</> },
                   {
                     value: "CLEARING",
-                    label: <>POS / payments awaiting settlement</>,
+                    label: <>Card and POS money on its way</>,
                   },
                 ]}
               />
@@ -133,8 +133,8 @@ export function FinanceAccountForm({
             {pending
               ? "Saving…"
               : category
-                ? "Create category"
-                : "Create account"}
+                ? "Add category"
+                : "Add money account"}
           </SubmitButton>
         </FormActions>
       </FieldGroup>

@@ -84,7 +84,7 @@ export function FinancePeriodForm({ book }: { book: FinanceBook }) {
       if (!online) {
         generation.current++
         setError(
-          "Connection changed. Review current records before confirming.",
+          "Connection changed. Check your records again before confirming.",
         )
       }
     })
@@ -115,16 +115,16 @@ export function FinancePeriodForm({ book }: { book: FinanceBook }) {
     fetch: () => Promise<T>,
   ) {
     if (!current(token))
-      throw new Error("Finance scope changed. Refresh the close review.")
+      throw new Error("Something changed. Refresh and check again.")
     await client.cancelQueries({ queryKey: key, exact: true }, { silent: true })
     if (!current(token))
-      throw new Error("Finance scope changed. Refresh the close review.")
+      throw new Error("Something changed. Refresh and check again.")
     const result = await fetch()
     if (!current(token))
-      throw new Error("Finance scope changed. Refresh the close review.")
+      throw new Error("Something changed. Refresh and check again.")
     const state = client.getQueryState(key)
     if (state?.status !== "success" || state.fetchStatus !== "idle")
-      throw new Error("Fresh online finance records are unavailable.")
+      throw new Error("Latest records aren't available. Check your connection.")
     return result
   }
   function readPeriods(token: number) {
@@ -159,7 +159,7 @@ export function FinancePeriodForm({ book }: { book: FinanceBook }) {
       actual.tenantId !== scope.current.tenantId ||
       !["OWNER", "ADMIN"].includes(actual.role.trim().toUpperCase())
     )
-      throw new Error("Your finance access changed. Refresh the close review.")
+      throw new Error("Your access changed. Refresh and check again.")
   }
   async function prepare() {
     if (preparing || reading.current) return
@@ -168,7 +168,7 @@ export function FinancePeriodForm({ book }: { book: FinanceBook }) {
     setPreparing(true)
     setError(null)
     try {
-      if (!reason.trim()) throw new Error("Enter a reason for this change.")
+      if (!reason.trim()) throw new Error("Enter why you are doing this.")
       await assertCurrentScope(token)
       const [state, currentBook] = await Promise.all([
         readPeriods(token),
@@ -181,9 +181,7 @@ export function FinancePeriodForm({ book }: { book: FinanceBook }) {
         new Date(currentBook.startsAt).getTime() !==
           new Date(book.startsAt).getTime()
       )
-        throw new Error(
-          "The active finance book changed. Refresh this close review.",
-        )
+        throw new Error("Finance changed. Refresh and check again.")
       await assertCurrentScope(token)
       if (action === "REOPEN") {
         const period = state.periods.find(
@@ -193,17 +191,16 @@ export function FinancePeriodForm({ book }: { book: FinanceBook }) {
             new Date(item.endsAt).getTime() ===
               new Date(state.closedThrough).getTime(),
         )
-        if (!period) throw new Error("There is no closed period to reopen.")
+        if (!period)
+          throw new Error("No month is closed, so there is nothing to reopen.")
         const saved = command.recoveryMetadata
         if (saved && (saved.action !== action || saved.periodId !== period.id))
-          throw new Error(
-            "Use the saved period details or check their result first.",
-          )
+          throw new Error("Use the saved details or check their result first.")
         const snapshot =
           saved?.expectedSnapshotSequence ?? state.snapshotSequence
         if (snapshot !== state.snapshotSequence)
           throw new Error(
-            "The saved period snapshot changed. Check its result before continuing.",
+            "Records changed since this was saved. Check the result before continuing.",
           )
         setReview({
           action,
@@ -220,7 +217,7 @@ export function FinancePeriodForm({ book }: { book: FinanceBook }) {
         const throughIso = through.toISOString()
         if (saved && (saved.action !== action || saved.through !== throughIso))
           throw new Error(
-            "Use the saved cutoff or check its result before continuing.",
+            "Use the saved date or check its result before continuing.",
           )
         const snapshot =
           saved?.expectedSnapshotSequence ?? state.snapshotSequence
@@ -237,9 +234,7 @@ export function FinancePeriodForm({ book }: { book: FinanceBook }) {
           snapshotSequence: snapshot,
         })
         if (state.snapshotSequence !== snapshot)
-          throw new Error(
-            "The journal changed since this close command was saved.",
-          )
+          throw new Error("Records changed since this was saved.")
         if (!current(token)) return
         setReview({
           action,
@@ -257,7 +252,7 @@ export function FinancePeriodForm({ book }: { book: FinanceBook }) {
         setError(
           failure instanceof Error
             ? failure.message
-            : "Unable to prepare the period change.",
+            : "Couldn't check this change.",
         )
     } finally {
       reading.current = false
@@ -283,9 +278,7 @@ export function FinancePeriodForm({ book }: { book: FinanceBook }) {
         new Date(currentBook.startsAt).getTime() !==
           new Date(book.startsAt).getTime()
       )
-        throw new Error(
-          "The active finance book changed. Refresh the close review.",
-        )
+        throw new Error("Finance changed. Refresh and check again.")
       await assertCurrentScope(value.generation)
       if (value.action === "CLOSE") {
         const checklist = await readChecklist(value.generation, value.through)
@@ -305,9 +298,7 @@ export function FinancePeriodForm({ book }: { book: FinanceBook }) {
           !financeCloseChecklistMatchesReview(checklist, value.checklist) ||
           !financeCloseChecklistCanProceed(checklist)
         )
-          throw new Error(
-            "The close checklist changed. Refresh and review the current records.",
-          )
+          throw new Error("The checks changed. Refresh and look again.")
       } else {
         const period = state.periods.find(
           (item) =>
@@ -325,7 +316,7 @@ export function FinancePeriodForm({ book }: { book: FinanceBook }) {
           !period
         )
           throw new Error(
-            "The latest closed period changed. Refresh and review the current records.",
+            "The last closed month changed. Refresh and look again.",
           )
       }
       await assertCurrentScope(value.generation)
@@ -336,7 +327,7 @@ export function FinancePeriodForm({ book }: { book: FinanceBook }) {
         setError(
           failure instanceof Error
             ? failure.message
-            : "Unable to refresh the close checklist.",
+            : "Couldn't refresh the checks.",
         )
       return
     } finally {
@@ -367,9 +358,7 @@ export function FinancePeriodForm({ book }: { book: FinanceBook }) {
         write: async (clientCommandId) => {
           await assertCurrentScope(value.generation)
           if (!current(value.generation))
-            throw new Error(
-              "The reviewed finance scope changed. Nothing was sent.",
-            )
+            throw new Error("Something changed. Nothing was saved.")
           return mutation.mutateAsync({ ...payload, clientCommandId })
         },
       })
@@ -384,7 +373,7 @@ export function FinancePeriodForm({ book }: { book: FinanceBook }) {
     setReview(null)
     setError(null)
   }
-  if (query.isPending) return <output>Loading periods…</output>
+  if (query.isPending) return <output>Loading months…</output>
   if (query.isError)
     return (
       <FormFeedback appearance="dashboard">{query.error.message}</FormFeedback>
@@ -406,28 +395,27 @@ export function FinancePeriodForm({ book }: { book: FinanceBook }) {
       >
         <h3 className="font-medium">
           {review.action === "CLOSE"
-            ? "Lock postings through"
-            : "Reopen period ending"}{" "}
-          {review.date} UTC
+            ? "Close up to"
+            : "Reopen the month ending"}{" "}
+          {review.date}
         </h3>
         <p className="text-sm">
           {review.action === "CLOSE"
-            ? "New entries and corrections dated on or before this cutoff will be rejected. Later-dated entries remain available."
-            : "This permits postings into the reopened period. Earlier closed periods remain locked."}
+            ? "Nobody will be able to add or change records dated on or before this day. Later dates stay open."
+            : "Records can be added or changed again in this month. Earlier closed months stay closed."}
         </p>
         {review.action === "CLOSE" ? (
           <FinancePeriodCloseChecklistView checklist={review.checklist} />
         ) : null}
         <p className="text-sm">Reason: {review.reason}</p>
         <p className="text-sm">
-          Reviewed journal snapshot {review.snapshot}
           {review.action === "CLOSE"
-            ? ` · Trial-balance difference ${formatFinanceMoney(review.difference, book.currencyCode)}`
+            ? `Difference in your records: ${formatFinanceMoney(review.difference, book.currencyCode)}.`
             : ""}
         </p>
         <p className="text-sm text-muted-foreground">
-          This date lock does not certify complete financial records or
-          reconcile your cash, stock and customer balances.
+          Closing stops anyone changing records up to this date. It doesn't
+          prove every naira is accounted for.
         </p>
       </FinanceReview>
     )
@@ -441,8 +429,8 @@ export function FinancePeriodForm({ book }: { book: FinanceBook }) {
       <FieldGroup className="min-w-0 grid gap-5">
         <p className="text-sm">
           {query.data.closedThrough
-            ? `Currently locked through ${new Date(query.data.closedThrough).toISOString().slice(0, 10)} UTC.`
-            : "No posting dates are currently locked."}
+            ? `Closed up to ${new Date(query.data.closedThrough).toISOString().slice(0, 10)}.`
+            : "No month is closed yet."}
         </p>
         <FinanceField label="Action">
           <SelectControl
@@ -452,17 +440,17 @@ export function FinancePeriodForm({ book }: { book: FinanceBook }) {
               setAction(value === "REOPEN" ? "REOPEN" : "CLOSE")
             }
             options={[
-              { value: "CLOSE", label: <>Close a period</> },
+              { value: "CLOSE", label: <>Close a month</> },
               {
                 value: "REOPEN",
-                label: <>Reopen latest closed period</>,
+                label: <>Reopen the last closed month</>,
                 disabled: !query.data.closedThrough,
               },
             ]}
           />
         </FinanceField>
         {action === "CLOSE" ? (
-          <FinanceField label="Lock through date (UTC)">
+          <FinanceField label="Close up to">
             <DateControl
               required
               type="date"
@@ -474,7 +462,7 @@ export function FinancePeriodForm({ book }: { book: FinanceBook }) {
             />
           </FinanceField>
         ) : null}
-        <FinanceField label="Reason">
+        <FinanceField label="Why (required)">
           <Input
             required
             maxLength={400}
@@ -488,7 +476,11 @@ export function FinancePeriodForm({ book }: { book: FinanceBook }) {
         ) : null}
         <FormActions>
           <Button appearance="form" type="submit" disabled={preparing}>
-            {preparing ? "Checking records…" : "Review period change"}
+            {preparing
+              ? "Checking records…"
+              : action === "CLOSE"
+                ? "Check before closing"
+                : "Check before reopening"}
           </Button>
         </FormActions>
       </FieldGroup>

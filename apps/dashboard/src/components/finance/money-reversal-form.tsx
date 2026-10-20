@@ -21,6 +21,7 @@ import { formatFinanceMoney } from "@ewatrade/utils/finance-money"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useState } from "react"
 import { z } from "zod"
+import { financeSourceLabel } from "./bank-source-detail"
 import { FinanceField, FinanceReview } from "./form-fields"
 import type { FinanceBook } from "./types"
 import { useCompleteFinanceForm } from "./use-complete-finance-form"
@@ -28,14 +29,14 @@ import { useCompleteFinanceForm } from "./use-complete-finance-form"
 type MoneyMovement = RouterOutputs["finance"]["moneyMovement"]
 const utcDate = z
   .string()
-  .regex(/^\d{4}-\d{2}-\d{2}$/, "Choose a valid UTC date.")
+  .regex(/^\d{4}-\d{2}-\d{2}$/, "Choose a valid date.")
   .refine((value) => {
     const parsed = new Date(`${value}T00:00:00.000Z`)
     return (
       Number.isFinite(parsed.getTime()) &&
       parsed.toISOString().slice(0, 10) === value
     )
-  }, "Choose a valid UTC date.")
+  }, "Choose a valid date.")
 const schema = z.object({
   reason: z
     .string()
@@ -89,9 +90,7 @@ export function FinanceMoneyReversalForm({
   async function prepare(values: Values) {
     if (preparing) return
     if (!command.ready) {
-      setPrepareError(
-        "Checking saved submissions. Wait before reviewing again.",
-      )
+      setPrepareError("Checking what you saved. Wait a moment, then try again.")
       return
     }
     setPreparing(true)
@@ -104,13 +103,15 @@ export function FinanceMoneyReversalForm({
         ),
       )
       if (source.bookId !== book.id) {
-        throw new Error("This movement belongs to another finance book.")
+        throw new Error("This movement is not in your Finance.")
       }
       if (!eligibleSourceKinds.includes(source.sourceKind)) {
-        throw new Error("This entry is not an eligible money movement.")
+        throw new Error(
+          "This entry is not a money movement that can be undone.",
+        )
       }
       if (source.reversal) {
-        throw new Error("This movement has already been reversed.")
+        throw new Error("This movement has already been undone.")
       }
       const original = new Date(source.effectiveAt)
       const requested = new Date(`${values.date}T00:00:00.000Z`)
@@ -121,12 +122,10 @@ export function FinanceMoneyReversalForm({
             `${source.effectiveAt.toISOString().slice(0, 10)}T00:00:00.000Z`,
           )
       ) {
-        throw new Error(
-          "The reversal date cannot precede the original movement.",
-        )
+        throw new Error("The date can't be before the original movement.")
       }
       if (values.date > today) {
-        throw new Error("Choose a date no later than today (UTC).")
+        throw new Error("Choose a date no later than today.")
       }
       const effectiveAt = requested < original ? original : requested
       setReview({ source, effectiveAt, reason: values.reason.trim() })
@@ -134,7 +133,7 @@ export function FinanceMoneyReversalForm({
       setPrepareError(
         failure instanceof Error
           ? failure.message
-          : "Unable to review this movement.",
+          : "Couldn't check this movement.",
       )
     } finally {
       setPreparing(false)
@@ -157,7 +156,7 @@ export function FinanceMoneyReversalForm({
   }
 
   if (sourceQuery.isPending) {
-    return <output aria-busy="true">Loading movement details…</output>
+    return <output aria-busy="true">Loading movement…</output>
   }
   if (sourceQuery.isError) {
     return (
@@ -166,7 +165,7 @@ export function FinanceMoneyReversalForm({
         variant="destructive"
         className="grid gap-3"
       >
-        <AlertTitle>Movement could not be loaded</AlertTitle>
+        <AlertTitle>Couldn't load this movement</AlertTitle>
         <AlertDescription>{sourceQuery.error.message}</AlertDescription>
         <Button
           appearance="form"
@@ -186,9 +185,9 @@ export function FinanceMoneyReversalForm({
   ) {
     return (
       <Alert appearance="dashboard" variant="destructive">
-        <AlertTitle>Movement unavailable</AlertTitle>
+        <AlertTitle>Movement not available</AlertTitle>
         <AlertDescription>
-          This entry is not an eligible money movement in this finance book.
+          This entry is not a money movement that can be undone.
         </AlertDescription>
       </Alert>
     )
@@ -199,18 +198,13 @@ export function FinanceMoneyReversalForm({
   if (history) {
     return (
       <FieldGroup className="grid gap-4">
-        <h3 className="font-semibold">Movement already reversed</h3>
+        <h3 className="font-semibold">Movement already undone</h3>
         <Alert appearance="dashboard">
-          <AlertDescription>
-            The original movement remains in the statement history.
-          </AlertDescription>
+          <AlertDescription>The original stays in history.</AlertDescription>
         </Alert>
         <div className="border border-border p-4 text-sm">
-          <p className="font-medium">Correction: {history.description}</p>
-          <p>
-            Effective {new Date(history.effectiveAt).toISOString()} · recorded{" "}
-            {new Date(history.recordedAt).toISOString()}
-          </p>
+          <p className="font-medium">Undo: {history.description}</p>
+          <p>Dated {new Date(history.effectiveAt).toISOString()}</p>
         </div>
       </FieldGroup>
     )
@@ -223,10 +217,10 @@ export function FinanceMoneyReversalForm({
         onBack={() => setReview(null)}
         onConfirm={() => submit(review)}
       >
-        <h3 className="font-medium">Review movement reversal</h3>
+        <h3 className="font-medium">Undo this movement</h3>
         <MovementSummary source={review.source} money={money} />
         <section className="grid gap-2 border border-border p-4">
-          <h4 className="font-medium">Opposite accounting correction</h4>
+          <h4 className="font-medium">What the undo changes</h4>
           {review.source.lines.map((line) => (
             <div
               key={line.accountId}
@@ -234,20 +228,19 @@ export function FinanceMoneyReversalForm({
             >
               <span>{line.accountName}</span>
               <span className="tabular-nums">
-                Debit {money(line.creditMinor)} · Credit{" "}
-                {money(line.debitMinor)}
+                {lineAmounts(line, line.creditMinor, line.debitMinor, money)}
               </span>
             </div>
           ))}
         </section>
         <p className="text-sm">
-          Reversal effective at {review.effectiveAt.toISOString()} UTC.
+          Undo dated {review.effectiveAt.toISOString().slice(0, 10)}.
         </p>
-        <p className="break-words text-sm">Reason: {review.reason}</p>
+        <p className="break-words text-sm">Why: {review.reason}</p>
         <Alert appearance="dashboard">
           <AlertDescription>
-            This posts an accounting correction only. It does not move actual
-            cash or bank funds; reconcile the real-world movement separately.
+            This only changes your records; no money is sent. The original stays
+            in history. Move the real money yourself if you need to.
           </AlertDescription>
         </Alert>
       </FinanceReview>
@@ -260,19 +253,16 @@ export function FinanceMoneyReversalForm({
       className="grid gap-5"
       onSubmit={form.handleSubmit((values) => void prepare(values))}
     >
-      <h3 className="font-semibold">Reverse money movement</h3>
+      <h3 className="font-semibold">Undo money movement</h3>
       <MovementSummary source={source} money={money} />
       <Alert appearance="dashboard">
         <AlertDescription>
-          The original entry and its account lines stay in history. This action
-          posts their exact accounting opposite.
+          The original stays in history. This adds the exact opposite entry. No
+          money is sent.
         </AlertDescription>
       </Alert>
       <FieldGroup className="gap-4">
-        <FinanceField
-          label="Effective date (UTC)"
-          error={form.formState.errors.date?.message}
-        >
+        <FinanceField label="Date" error={form.formState.errors.date?.message}>
           <FormDateControl
             required
             type="date"
@@ -284,14 +274,14 @@ export function FinanceMoneyReversalForm({
           />
         </FinanceField>
         <FinanceField
-          label="Reason"
+          label="Why (required)"
           error={form.formState.errors.reason?.message}
         >
           <Input
             required
             maxLength={400}
             autoComplete="off"
-            placeholder="Explain why this movement is being corrected"
+            placeholder="Why are you undoing this?"
             disabled={preparing}
             {...form.register("reason")}
           />
@@ -308,11 +298,25 @@ export function FinanceMoneyReversalForm({
           type="submit"
           disabled={preparing || !command.ready}
         >
-          {preparing ? "Refreshing movement…" : "Review reversal"}
+          {preparing ? "Refreshing movement…" : "Review undo"}
         </SubmitButton>
       </FormActions>
     </form>
   )
+}
+
+function lineAmounts(
+  line: { accountKind: string; accountPurpose: string },
+  debit: string,
+  credit: string,
+  money: (minor: string) => string,
+) {
+  const moneyAccount =
+    line.accountKind === "ASSET" &&
+    ["CASH", "BANK", "CLEARING"].includes(line.accountPurpose)
+  return moneyAccount
+    ? `Money in ${money(debit)} · Money out ${money(credit)}`
+    : `Debit ${money(debit)} · Credit ${money(credit)}`
 }
 
 function MovementSummary({
@@ -327,27 +331,21 @@ function MovementSummary({
       <div>
         <p className="font-medium">{source.description}</p>
         <p className="text-sm text-muted-foreground">
-          {source.sourceKind.replaceAll("_", " ")} ·{" "}
-          {new Date(source.effectiveAt).toISOString()} UTC
+          {financeSourceLabel(source.sourceKind)} ·{" "}
+          {new Date(source.effectiveAt).toISOString()}
         </p>
       </div>
       <p className="text-xs text-muted-foreground">
-        Recorded {new Date(source.recordedAt).toISOString()}
+        Added {new Date(source.recordedAt).toISOString()}
       </p>
       <div className="grid gap-2">
         {source.lines.map((line, index) => (
           <div key={line.accountId} className="grid gap-2 text-sm">
             {index > 0 ? <Separator /> : null}
             <div className="grid gap-1 sm:grid-cols-[1fr_auto]">
-              <span>
-                {line.accountName}{" "}
-                <span className="text-muted-foreground">
-                  ({line.accountKind} · {line.accountPurpose})
-                </span>
-              </span>
+              <span>{line.accountName}</span>
               <span className="tabular-nums">
-                Debit {money(line.debitMinor)} · Credit{" "}
-                {money(line.creditMinor)}
+                {lineAmounts(line, line.debitMinor, line.creditMinor, money)}
               </span>
             </div>
           </div>

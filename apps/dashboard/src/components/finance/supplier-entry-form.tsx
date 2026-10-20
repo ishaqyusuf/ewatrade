@@ -32,14 +32,14 @@ import { useCompleteFinanceForm } from "./use-complete-finance-form"
 
 const utcDate = z
   .string()
-  .regex(/^\d{4}-\d{2}-\d{2}$/, "Choose a valid UTC date.")
+  .regex(/^\d{4}-\d{2}-\d{2}$/, "Choose a valid date.")
   .refine((value) => {
     const parsed = new Date(`${value}T00:00:00.000Z`)
     return (
       Number.isFinite(parsed.getTime()) &&
       parsed.toISOString().slice(0, 10) === value
     )
-  }, "Choose a valid UTC date.")
+  }, "Choose a valid date.")
 
 const schema = z.object({
   kind: z.enum(["PAYABLE", "ADVANCE"]),
@@ -150,9 +150,7 @@ export function FinanceSupplierEntryForm({
   async function prepare(values: Values) {
     if (preparing) return
     if (!command.ready) {
-      setPrepareError(
-        "Checking saved submissions. Wait before reviewing again.",
-      )
+      setPrepareError("Checking what you saved. Wait a moment, then try again.")
       return
     }
     setPreparing(true)
@@ -168,7 +166,7 @@ export function FinanceSupplierEntryForm({
         supplierStatement.supplier.id !== supplierId ||
         supplierStatement.supplier.bookId !== book.id
       ) {
-        throw new Error("This supplier does not belong to this finance book.")
+        throw new Error("This Supplier is not in your Finance.")
       }
 
       let moneyAccountName: string | null = null
@@ -181,7 +179,7 @@ export function FinanceSupplierEntryForm({
           }),
         )
         if (currentBook?.id !== book.id) {
-          throw new Error("The active finance book could not be confirmed.")
+          throw new Error("We couldn't confirm your Finance. Try again.")
         }
         const activeAccounts = currentBook.accounts.filter(
           (account) =>
@@ -194,7 +192,7 @@ export function FinanceSupplierEntryForm({
         )
         if (!moneyAccount) {
           form.setError("moneyAccountId", {
-            message: "Choose an active cash, bank, or clearing account.",
+            message: "Choose a money account.",
           })
           return
         }
@@ -203,13 +201,11 @@ export function FinanceSupplierEntryForm({
       }
 
       if (opening && startsAt !== values.date) {
-        throw new Error(
-          "The opening entry must use the finance book start date.",
-        )
+        throw new Error("A starting balance must use your Finance start date.")
       }
       if (!opening && (values.date < startsAt || values.date > today)) {
         form.setError("date", {
-          message: `Choose a date from ${startsAt} through ${today} (UTC).`,
+          message: `Choose a date from ${startsAt} to ${today}.`,
         })
         return
       }
@@ -237,7 +233,7 @@ export function FinanceSupplierEntryForm({
       setPrepareError(
         failure instanceof Error
           ? failure.message
-          : "Unable to review this supplier entry.",
+          : "Couldn't check this entry.",
       )
     } finally {
       setPreparing(false)
@@ -271,7 +267,7 @@ export function FinanceSupplierEntryForm({
   }
 
   if (supplierQuery.isPending) {
-    return <output aria-busy="true">Loading supplier details…</output>
+    return <output aria-busy="true">Loading Supplier…</output>
   }
   if (supplierQuery.isError) {
     return (
@@ -280,7 +276,7 @@ export function FinanceSupplierEntryForm({
         variant="destructive"
         className="grid gap-3"
       >
-        <AlertTitle>Supplier could not be loaded</AlertTitle>
+        <AlertTitle>Couldn't load this Supplier</AlertTitle>
         <AlertDescription>{supplierQuery.error.message}</AlertDescription>
         <Button
           appearance="form"
@@ -299,15 +295,15 @@ export function FinanceSupplierEntryForm({
   ) {
     return (
       <Alert appearance="dashboard" variant="destructive">
-        <AlertTitle>Supplier unavailable</AlertTitle>
+        <AlertTitle>Supplier not available</AlertTitle>
         <AlertDescription>
-          This supplier does not belong to the current finance book.
+          This Supplier is not in your Finance.
         </AlertDescription>
       </Alert>
     )
   }
   if (!opening && accountsQuery.isPending) {
-    return <output aria-busy="true">Loading active money accounts…</output>
+    return <output aria-busy="true">Loading money accounts…</output>
   }
   if (!opening && accountsQuery.isError) {
     return (
@@ -316,7 +312,7 @@ export function FinanceSupplierEntryForm({
         variant="destructive"
         className="grid gap-3"
       >
-        <AlertTitle>Money accounts could not be loaded</AlertTitle>
+        <AlertTitle>Couldn't load money accounts</AlertTitle>
         <AlertDescription>{accountsQuery.error.message}</AlertDescription>
         <Button
           appearance="form"
@@ -336,10 +332,8 @@ export function FinanceSupplierEntryForm({
         variant="destructive"
         className="grid gap-3"
       >
-        <AlertTitle>Finance book could not be confirmed</AlertTitle>
-        <AlertDescription>
-          Reload the active finance book before recording an advance.
-        </AlertDescription>
+        <AlertTitle>Couldn't confirm your Finance</AlertTitle>
+        <AlertDescription>Reload before paying ahead.</AlertDescription>
         <Button
           appearance="form"
           className="w-fit"
@@ -362,9 +356,9 @@ export function FinanceSupplierEntryForm({
         <h4 className="font-medium">
           {opening
             ? review.kind === "PAYABLE"
-              ? "Opening payable"
-              : "Opening held advance"
-            : "Paid supplier advance"}
+              ? "Owed before you started"
+              : "Paid ahead before you started"
+            : "Pay ahead"}
         </h4>
         <dl className="grid gap-2 text-sm sm:grid-cols-[auto_1fr] sm:gap-x-4">
           <dt className="text-muted-foreground">Supplier</dt>
@@ -375,15 +369,15 @@ export function FinanceSupplierEntryForm({
           <dd>
             {opening
               ? review.kind === "PAYABLE"
-                ? "Payable"
-                : "Held advance"
-              : "Paid advance"}
+                ? "You owe"
+                : "Paid ahead"
+              : "Paid ahead"}
           </dd>
           <dt className="text-muted-foreground">Amount</dt>
           <dd className="font-medium tabular-nums">
             {formatFinanceMoney(review.amountMinor, book.currencyCode)}
           </dd>
-          <dt className="text-muted-foreground">Date (UTC)</dt>
+          <dt className="text-muted-foreground">Date</dt>
           <dd>{review.effectiveAt.toISOString()}</dd>
           {review.moneyAccountName ? (
             <>
@@ -398,9 +392,9 @@ export function FinanceSupplierEntryForm({
           <AlertDescription>
             {opening
               ? review.kind === "PAYABLE"
-                ? "This records a payable at the bookkeeping cutoff. It is not current spending or a cash movement."
-                : "This records a held supplier advance separately from payables. It does not net the two balances."
-              : "This records a merchant-reported cash or bank movement. It does not initiate a transfer or confirm an inventory receipt."}
+                ? "This records what you owed on your start date. It is not new spending and no money moves."
+                : "This records money you had paid ahead on your start date. It is kept apart from what you owe."
+              : "This records money you paid. It does not send money or confirm that stock arrived."}
           </AlertDescription>
         </Alert>
       </FinanceReview>
@@ -420,7 +414,7 @@ export function FinanceSupplierEntryForm({
         {opening ? (
           <>
             <FinanceField
-              label="Opening balance type"
+              label="Starting balance type"
               error={form.formState.errors.kind?.message}
             >
               <FormSelectControl
@@ -428,27 +422,25 @@ export function FinanceSupplierEntryForm({
                 name="kind"
                 disabled={disabled}
                 options={[
-                  { value: "PAYABLE", label: "Opening payable" },
-                  { value: "ADVANCE", label: "Opening held advance" },
+                  { value: "PAYABLE", label: "Owed before you started" },
+                  { value: "ADVANCE", label: "Paid ahead before you started" },
                 ]}
               />
             </FinanceField>
             <Alert appearance="dashboard">
               <AlertDescription>
-                Opening entries use the exact bookkeeping start date, {startsAt}
-                . Payables and held advances remain separate. An opening entry
-                does not represent current spending or a cash movement. Each
-                supplier can have one opening source of each type; the finance
-                book enforces this even if an earlier opening was reversed.
+                Starting balances use your Finance start date, {startsAt}. What
+                you owe and what you paid ahead are kept apart. A starting
+                balance is not new spending and no money moves. Each Supplier
+                can have one of each type, even if an earlier one was undone.
               </AlertDescription>
             </Alert>
           </>
         ) : noMoneyAccounts ? (
           <Alert appearance="dashboard">
-            <AlertTitle>No active money accounts</AlertTitle>
+            <AlertTitle>No money accounts</AlertTitle>
             <AlertDescription>
-              Create an active cash, bank, or clearing account before recording
-              a paid supplier advance.
+              Add a money account before paying a Supplier ahead.
             </AlertDescription>
           </Alert>
         ) : null}
@@ -486,18 +478,18 @@ export function FinanceSupplierEntryForm({
           <Input
             autoComplete="off"
             maxLength={400}
-            placeholder="Describe the supplier balance or payment"
+            placeholder="What is this balance or payment for?"
             disabled={disabled || noMoneyAccounts}
             {...form.register("description")}
           />
         </FinanceField>
         {opening ? (
           <p className="text-sm text-muted-foreground">
-            Effective date: {startsAt} (the finance book start date).
+            Date: {startsAt} (your Finance start date).
           </p>
         ) : (
           <FinanceField
-            label="Payment date (UTC)"
+            label="Payment date"
             error={form.formState.errors.date?.message}
           >
             <FormDateControl
@@ -538,10 +530,10 @@ export function FinanceSupplierEntryForm({
             disabled={disabled || noMoneyAccounts}
           >
             {preparing
-              ? "Checking supplier…"
+              ? "Checking Supplier…"
               : opening
-                ? "Review opening entry"
-                : "Review advance"}
+                ? "Review starting balance"
+                : "Review payment"}
           </Button>
         </FormActions>
       </FieldGroup>

@@ -28,7 +28,7 @@ const schema = z.object({
     .trim()
     .toUpperCase()
     .regex(/^[A-Z0-9][A-Z0-9_-]{0,39}$/, "Use 1–40 letters, numbers, _ or -."),
-  name: z.string().trim().min(1, "Enter a supplier name.").max(160),
+  name: z.string().trim().min(1, "Enter a Supplier name.").max(160),
 })
 
 type Values = z.infer<typeof schema>
@@ -68,7 +68,7 @@ export function FinanceSupplierForm({ book }: { book: FinanceBook }) {
         onBack={() => setReview(null)}
         onConfirm={() => submit(review)}
       >
-        <h4 className="font-medium">New supplier</h4>
+        <h4 className="font-medium">New Supplier</h4>
         <dl className="grid gap-2 text-sm sm:grid-cols-[auto_1fr] sm:gap-x-4">
           <dt className="text-muted-foreground">Code</dt>
           <dd className="font-medium">{review.code}</dd>
@@ -77,8 +77,8 @@ export function FinanceSupplierForm({ book }: { book: FinanceBook }) {
         </dl>
         <Alert appearance="dashboard">
           <AlertDescription>
-            This adds a supplier identity to this finance book. It does not
-            record a payable, advance, purchase, or cash movement.
+            This adds the Supplier only. It doesn't record anything you owe,
+            anything paid ahead, a purchase or any money movement.
           </AlertDescription>
         </Alert>
       </FinanceReview>
@@ -127,7 +127,7 @@ export function FinanceSupplierForm({ book }: { book: FinanceBook }) {
           <Input
             autoComplete="organization"
             maxLength={160}
-            placeholder="Business or supplier name"
+            placeholder="Business or Supplier name"
             disabled={!command.ready}
             {...form.register("name")}
           />
@@ -139,7 +139,7 @@ export function FinanceSupplierForm({ book }: { book: FinanceBook }) {
         ) : null}
         <FormActions>
           <Button appearance="form" type="submit" disabled={!command.ready}>
-            Review supplier
+            Review Supplier
           </Button>
         </FormActions>
       </FieldGroup>

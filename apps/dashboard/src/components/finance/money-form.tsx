@@ -57,10 +57,17 @@ const schema = z
       ctx.addIssue({
         code: "custom",
         path: ["destinationAccountId"],
-        message: "Choose a different destination account.",
+        message: "Choose a different account to move it to.",
       })
   })
 type Values = z.infer<typeof schema>
+
+const movementLabels: Record<Values["kind"], string> = {
+  TRANSFER: "Move between accounts",
+  OWNER_CONTRIBUTION: "Owner put money in",
+  OWNER_WITHDRAWAL: "Owner took money out",
+  OPENING_BALANCE: "Starting balance",
+}
 export function FinanceMoneyForm({ book }: { book: FinanceBook }) {
   const trpc = useTRPC()
   const command = useFinanceCommand(
@@ -81,7 +88,7 @@ export function FinanceMoneyForm({ book }: { book: FinanceBook }) {
       ctx.addIssue({
         code: "custom",
         path: ["date"],
-        message: `Bookkeeping starts on ${new Date(book.startsAt).toLocaleDateString([], { day: "numeric", month: "short", year: "numeric" })}.`,
+        message: `Finance starts on ${new Date(book.startsAt).toLocaleDateString([], { day: "numeric", month: "short", year: "numeric" })}.`,
       })
   })
   const form = useZodForm<Values>(datedSchema, {
@@ -135,7 +142,7 @@ export function FinanceMoneyForm({ book }: { book: FinanceBook }) {
         </p>
         <p>{review.description}</p>
         <p className="text-sm text-muted-foreground">
-          {review.kind.replaceAll("_", " ").toLowerCase()} ·{" "}
+          {movementLabels[review.kind]} ·{" "}
           {accounts.find((account) => account.id === review.accountId)?.name}
           {review.kind === "TRANSFER"
             ? ` → ${accounts.find((account) => account.id === review.destinationAccountId)?.name}`
@@ -146,22 +153,31 @@ export function FinanceMoneyForm({ book }: { book: FinanceBook }) {
   return (
     <form onSubmit={form.handleSubmit(setReview)}>
       <FieldGroup className="min-w-0 grid gap-5">
-        <FinanceField label="Movement">
+        <FinanceField label="What happened">
           <FormSelectControl
             control={form.control}
             name={"kind"}
             options={[
-              { value: "TRANSFER", label: <>Transfer between accounts</> },
-              { value: "OWNER_CONTRIBUTION", label: <>Owner puts money in</> },
-              { value: "OWNER_WITHDRAWAL", label: <>Owner takes money out</> },
-              { value: "OPENING_BALANCE", label: <>Opening account balance</> },
+              { value: "TRANSFER", label: <>{movementLabels.TRANSFER}</> },
+              {
+                value: "OWNER_CONTRIBUTION",
+                label: <>{movementLabels.OWNER_CONTRIBUTION}</>,
+              },
+              {
+                value: "OWNER_WITHDRAWAL",
+                label: <>{movementLabels.OWNER_WITHDRAWAL}</>,
+              },
+              {
+                value: "OPENING_BALANCE",
+                label: <>{movementLabels.OPENING_BALANCE}</>,
+              },
             ]}
           />
         </FinanceField>
         <FinanceField
           label={
             kind === "TRANSFER" || kind === "OWNER_WITHDRAWAL"
-              ? "From account"
+              ? "From"
               : "Account"
           }
         >
@@ -178,7 +194,7 @@ export function FinanceMoneyForm({ book }: { book: FinanceBook }) {
         </FinanceField>
         {kind === "TRANSFER" ? (
           <FinanceField
-            label="To account"
+            label="To"
             error={form.formState.errors.destinationAccountId?.message}
           >
             <FormSelectControl
@@ -211,9 +227,9 @@ export function FinanceMoneyForm({ book }: { book: FinanceBook }) {
         </FinanceField>
         {kind === "OPENING_BALANCE" ? (
           <p className="text-sm text-muted-foreground">
-            Opening balance as of{" "}
+            Starting balance on{" "}
             {new Date(book.startsAt).toISOString().slice(0, 10)}. Enter it once
-            per account; later funds are a separate movement.
+            per account. Money that comes later is a separate move.
           </p>
         ) : (
           <FinanceField
@@ -230,7 +246,7 @@ export function FinanceMoneyForm({ book }: { book: FinanceBook }) {
         )}
         <FormActions>
           <Button appearance="form" type="submit">
-            Review movement
+            Review
           </Button>
         </FormActions>
       </FieldGroup>

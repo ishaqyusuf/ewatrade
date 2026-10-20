@@ -15,6 +15,44 @@ import { FinanceBankSupplierCorrectionForm } from "./bank-supplier-correction-fo
 import { useFinanceForm } from "./form-context"
 import type { FinanceBook } from "./types"
 
+const sourceLabels: Record<string, string> = {
+  EXPENSE: "Expense",
+  EXPENSE_BILL: "Expense",
+  EXPENSE_BILL_REVERSAL: "Expense undone",
+  BILL_PAYMENT: "Expense payment",
+  BILL_PAYMENT_REVERSAL: "Expense payment undone",
+  OWNER_BILL_PAYMENT: "Expense paid with owner's money",
+  OWNER_BILL_PAYMENT_REVERSAL: "Owner-paid expense undone",
+  OWNER_CONTRIBUTION: "Owner put money in",
+  OWNER_WITHDRAWAL: "Owner took money out",
+  TRANSFER: "Moved between accounts",
+  MONEY_REVERSAL: "Money movement undone",
+  OPENING_BALANCE: "Starting balance",
+  CASH_COUNT_ADJUSTMENT: "Cash count change",
+  CASH_COUNT_ADJUSTMENT_REVERSAL: "Cash count change undone",
+  PURCHASE_BILL: "Bill",
+  PURCHASE_PAYMENT: "Supplier payment",
+  PURCHASE_PAYMENT_REVERSAL: "Supplier payment undone",
+  SUPPLIER_ADVANCE: "Paid ahead",
+  SUPPLIER_ADVANCE_ALLOCATION: "Paid-ahead money used on a bill",
+  SUPPLIER_ALLOCATION_RELEASE: "Undo using paid-ahead money",
+  SUPPLIER_ENTRY_REVERSAL: "Supplier entry undone",
+  SUPPLIER_OPENING_PAYABLE: "Owed before you started",
+  CUSTOMER_RECEIPT: "Customer payment",
+  CUSTOMER_HELD_CREDIT_REFUND: "Paid-ahead money returned",
+  CUSTOMER_LEDGER_REVERSAL: "Customer entry undone",
+  COMMERCIAL_PAYMENT: "Order payment",
+  COMMERCIAL_ORDER_COLLECTION: "Order payment",
+}
+
+/** Plain label for a record's source; never shows a raw code. */
+export function financeSourceLabel(kind: string) {
+  const known = sourceLabels[kind]
+  if (known) return known
+  const text = kind.toLowerCase().replaceAll("_", " ")
+  return text.charAt(0).toUpperCase() + text.slice(1)
+}
+
 /** Resolves original domain identities; a journal source ID is not a UI record ID. */
 export function FinanceBankSourceDetail({
   book,
@@ -81,7 +119,7 @@ export function FinanceBankSourceDetail({
       setError(
         failure instanceof Error
           ? failure.message
-          : "Saved source correction is unavailable.",
+          : "Saved change isn't available.",
       )
     }
   }, [actorUserId, tenantId, book.id, accountId, query.data, recoveryRefresh])
@@ -103,7 +141,7 @@ export function FinanceBankSourceDetail({
       JSON.stringify(initial.current) !== JSON.stringify(current.current)
     )
       throw new Error(
-        "Your finance scope or connection changed. Reopen the original transaction.",
+        "Your connection or access changed. Open the original record again.",
       )
     if (
       readPendingFinanceCommand(window.localStorage, {
@@ -112,9 +150,7 @@ export function FinanceBankSourceDetail({
         bookId: book.id,
       })
     )
-      throw new Error(
-        "Resolve the saved finance submission before opening another correction.",
-      )
+      throw new Error("Finish the saved entry before opening another one.")
   }
   async function authority() {
     assertCurrent()
@@ -126,9 +162,7 @@ export function FinanceBankSourceDetail({
       actual.tenantId !== tenantId ||
       !["OWNER", "ADMIN"].includes(actual.role.toUpperCase())
     )
-      throw new Error(
-        "Your finance authority changed. Reopen the original transaction.",
-      )
+      throw new Error("Your access changed. Open the original record again.")
   }
   async function openOriginal() {
     if (navigating.current || !query.data) return
@@ -157,9 +191,7 @@ export function FinanceBankSourceDetail({
         actualBook.tenantId !== tenantId ||
         actualBook.currencyCode !== book.currencyCode
       )
-        throw new Error(
-          "The active financial book changed. Reopen the original transaction.",
-        )
+        throw new Error("Finance changed. Open the original record again.")
       await client.cancelQueries(
         { queryKey: sourceOptions.queryKey, exact: true },
         { silent: true },
@@ -176,12 +208,10 @@ export function FinanceBankSourceDetail({
         source.journalEntryId !== entryId
       )
         throw new Error(
-          "The original source does not belong to this bank transaction.",
+          "This original record doesn't belong to this bank line.",
         )
       if (JSON.stringify(source.target) !== JSON.stringify(query.data.target))
-        throw new Error(
-          "The original source changed. Refresh and review it again.",
-        )
+        throw new Error("The original record changed. Refresh and look again.")
       await authority()
       const target = source.target
       if (target.kind === "MONEY")
@@ -209,14 +239,14 @@ export function FinanceBankSourceDetail({
         throw new Error(
           target.kind === "UNAVAILABLE"
             ? target.reason
-            : "Purchase correction is not yet available in this dashboard.",
+            : "This can't be undone from here yet.",
         )
     } catch (failure) {
       if (mounted.current)
         setError(
           failure instanceof Error
             ? failure.message
-            : "Original transaction is unavailable.",
+            : "Original record isn't available.",
         )
     } finally {
       navigating.current = false
@@ -225,11 +255,11 @@ export function FinanceBankSourceDetail({
   }
 
   if (query.isPending)
-    return <output aria-busy="true">Loading original transaction…</output>
+    return <output aria-busy="true">Loading original record…</output>
   if (query.isError)
     return (
       <Alert variant="destructive" appearance="dashboard">
-        <AlertTitle>Original transaction unavailable</AlertTitle>
+        <AlertTitle>Original record not available</AlertTitle>
         <AlertDescription>{query.error.message}</AlertDescription>
         <Button variant="outline" onClick={() => void query.refetch()}>
           Try again
@@ -245,7 +275,7 @@ export function FinanceBankSourceDetail({
     return (
       <Alert appearance="dashboard" variant="destructive">
         <AlertDescription>
-          The original transaction scope changed. Reopen the bank statement.
+          Something changed. Open the bank statement again.
         </AlertDescription>
       </Alert>
     )
@@ -277,28 +307,30 @@ export function FinanceBankSourceDetail({
   return (
     <div className="grid min-w-0 gap-5">
       <div>
-        <h3 className="text-lg font-medium">Original posted transaction</h3>
+        <h3 className="text-lg font-medium">Original record</h3>
         <p className="break-words text-sm">{source.posted.description}</p>
         <p className="mt-2 font-medium tabular-nums">
           {formatFinanceMoney(source.posted.amountMinor, book.currencyCode)}
         </p>
         <p className="text-xs text-muted-foreground">
-          Entry {source.posted.sequence} ·{" "}
-          {new Date(source.posted.effectiveAt).toISOString().slice(0, 10)} UTC
+          Record {source.posted.sequence} ·{" "}
+          {new Date(source.posted.effectiveAt).toISOString().slice(0, 10)}
         </p>
       </div>
       <dl className="grid min-w-0 gap-3 text-sm">
         <div>
-          <dt className="text-muted-foreground">Posted source</dt>
-          <dd className="break-words">{source.sourceKind}</dd>
+          <dt className="text-muted-foreground">Source</dt>
+          <dd className="break-words">
+            {financeSourceLabel(source.sourceKind)}
+          </dd>
         </div>
         <div>
-          <dt className="text-muted-foreground">Original source reference</dt>
+          <dt className="text-muted-foreground">Reference</dt>
           <dd className="break-all font-mono text-xs">{source.sourceId}</dd>
         </div>
         {target.kind === "BILL" || target.kind === "PURCHASE" ? (
           <div>
-            <dt className="text-muted-foreground">Original bill</dt>
+            <dt className="text-muted-foreground">Original expense</dt>
             <dd className="break-all font-mono text-xs">
               {target.billId}
               {target.paymentId ? ` · Payment ${target.paymentId}` : ""}
@@ -309,7 +341,7 @@ export function FinanceBankSourceDetail({
           <>
             <div>
               <dt className="text-muted-foreground">
-                Original purchase payment
+                Original supplier payment
               </dt>
               <dd className="break-words">
                 {target.payment.description} ·{" "}
@@ -320,25 +352,24 @@ export function FinanceBankSourceDetail({
                 ·{" "}
                 {new Date(target.payment.effectiveAt)
                   .toISOString()
-                  .slice(0, 10)}{" "}
-                UTC
+                  .slice(0, 10)}
               </dd>
             </div>
             <div>
-              <dt className="text-muted-foreground">Latest bill activity</dt>
+              <dt className="text-muted-foreground">
+                Latest activity on the bill
+              </dt>
               <dd className="break-words">
-                {new Date(target.payment.latestEffectiveAt).toISOString()} UTC
+                {new Date(target.payment.latestEffectiveAt).toISOString()}
               </dd>
             </div>
             {target.payment.reversed ? (
               <div>
-                <dt className="text-muted-foreground">
-                  Retained payment reversal
-                </dt>
+                <dt className="text-muted-foreground">Payment undone</dt>
                 <dd>
                   {target.payment.reversalEffectiveAt
-                    ? `${new Date(target.payment.reversalEffectiveAt).toISOString()} UTC`
-                    : "Already reversed; accounting date unavailable."}
+                    ? new Date(target.payment.reversalEffectiveAt).toISOString()
+                    : "Already undone; date not available."}
                 </dd>
               </div>
             ) : null}
@@ -347,30 +378,29 @@ export function FinanceBankSourceDetail({
         {target.kind === "SUPPLIER" ? (
           <>
             <div>
-              <dt className="text-muted-foreground">Original supplier entry</dt>
+              <dt className="text-muted-foreground">Original Supplier entry</dt>
               <dd className="break-all font-mono text-xs">
                 {target.supplierEntryId}
               </dd>
             </div>
             <div>
               <dt className="text-muted-foreground">
-                Original supplier record
+                Original Supplier record
               </dt>
               <dd className="break-words">
                 {target.description} ·{" "}
                 {formatFinanceMoney(target.amountMinor, book.currencyCode)} ·{" "}
-                {new Date(target.effectiveAt).toISOString().slice(0, 10)} UTC
+                {new Date(target.effectiveAt).toISOString().slice(0, 10)}
               </dd>
             </div>
             {target.reversal ? (
               <div>
-                <dt className="text-muted-foreground">Retained reversal</dt>
+                <dt className="text-muted-foreground">Undone</dt>
                 <dd className="break-all text-xs">
                   {target.reversal.id} ·{" "}
                   {new Date(target.reversal.effectiveAt)
                     .toISOString()
-                    .slice(0, 10)}{" "}
-                  UTC
+                    .slice(0, 10)}
                 </dd>
               </div>
             ) : null}
@@ -378,7 +408,7 @@ export function FinanceBankSourceDetail({
         ) : null}
         {target.kind === "CUSTOMER" ? (
           <div>
-            <dt className="text-muted-foreground">Original customer entry</dt>
+            <dt className="text-muted-foreground">Original Customer entry</dt>
             <dd className="break-all font-mono text-xs">{target.entryId}</dd>
           </div>
         ) : null}
@@ -386,15 +416,15 @@ export function FinanceBankSourceDetail({
       <Alert appearance="dashboard">
         <AlertTitle>
           {available || correctionTarget
-            ? "Review the original record before correcting"
-            : "Correction entry point unavailable"}
+            ? "Check the original record before fixing"
+            : "Can't fix this from here"}
         </AlertTitle>
         <AlertDescription>
           {target.kind === "UNAVAILABLE"
             ? target.reason
             : target.kind === "PURCHASE" && !correctionTarget
-              ? "This purchase has no supported original bank payment to correct here. Review its source purchase workflow."
-              : "The original record owns its correction. Any correction must retain its history; importing or matching a bank transaction does not post a payment."}
+              ? "This purchase has no bank payment that can be undone here."
+              : "Fix this on the original record. The original stays in history. Uploading or matching a bank line does not record a payment."}
         </AlertDescription>
       </Alert>
       {error ? (
@@ -409,8 +439,8 @@ export function FinanceBankSourceDetail({
             onClick={() => setSupplierCorrection(true)}
           >
             {correctionTarget.reversed
-              ? "Original purchase payment already reversed"
-              : "Correct original purchase payment"}
+              ? "This payment is already undone"
+              : "Undo this payment"}
           </Button>
         ) : null}
         {target.kind === "SUPPLIER" ? (
@@ -419,8 +449,8 @@ export function FinanceBankSourceDetail({
             onClick={() => setSupplierCorrection(true)}
           >
             {target.reversal
-              ? "Original supplier entry already reversed"
-              : "Correct original supplier entry"}
+              ? "This entry is already undone"
+              : "Undo this Supplier entry"}
           </Button>
         ) : null}
         {available ? (
@@ -431,7 +461,7 @@ export function FinanceBankSourceDetail({
             {busy
               ? "Checking original record…"
               : target.kind === "SUPPLIER"
-                ? "Open original supplier statement"
+                ? "Open Supplier"
                 : "Open original record"}
           </Button>
         ) : null}
@@ -440,7 +470,7 @@ export function FinanceBankSourceDetail({
           disabled={busy || query.isFetching}
           onClick={() => void query.refetch()}
         >
-          Refresh original record
+          Refresh
         </Button>
         {statementId ? (
           <Button

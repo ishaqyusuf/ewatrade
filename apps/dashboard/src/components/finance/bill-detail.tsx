@@ -57,8 +57,8 @@ export function FinanceBillDetail({
       </div>
       {bill.voidedAt ? (
         <p className="border border-border p-4 text-sm">
-          Cancelled: {bill.voidReason}. Original amount and payment history are
-          retained.
+          Cancelled: {bill.voidReason}. The amount and payments stay in the
+          record.
         </p>
       ) : null}
       <dl className="grid grid-cols-2 gap-3 border-y border-border py-4">
@@ -69,7 +69,7 @@ export function FinanceBillDetail({
           </dd>
         </div>
         <div>
-          <dt className="text-sm text-muted-foreground">Outstanding</dt>
+          <dt className="text-sm text-muted-foreground">Still to pay</dt>
           <dd className="font-medium">
             {formatFinanceMoney(bill.outstandingMinor, book.currencyCode)}
           </dd>
@@ -80,7 +80,7 @@ export function FinanceBillDetail({
           appearance="form"
           onClick={() => setParams({ financeSheet: "pay-bill", billId })}
         >
-          Record payment
+          Pay
         </Button>
       ) : null}
       {!bill.voidedAt ? (
@@ -101,7 +101,7 @@ export function FinanceBillDetail({
           </Button>
           {bill.payments.some((payment) => !payment.reversedAt) ? (
             <p className="text-sm text-muted-foreground">
-              Reverse the recorded payments before cancelling this expense.
+              Undo the payments before cancelling this expense.
             </p>
           ) : null}
         </div>
@@ -112,7 +112,7 @@ export function FinanceBillDetail({
         cancelled={Boolean(bill.voidedAt)}
       />
       <section>
-        <h4 className="font-medium">Expense lines</h4>
+        <h4 className="font-medium">What it was for</h4>
         {bill.lines.map((line) => (
           <div
             className="flex justify-between gap-4 border-b border-border py-3 text-sm"
@@ -129,11 +129,9 @@ export function FinanceBillDetail({
         ))}
       </section>
       <section>
-        <h4 className="font-medium">Payment history</h4>
+        <h4 className="font-medium">Payments</h4>
         {bill.payments.length === 0 ? (
-          <p className="mt-2 text-sm text-muted-foreground">
-            No payments recorded.
-          </p>
+          <p className="mt-2 text-sm text-muted-foreground">No payments yet.</p>
         ) : (
           bill.payments.map((payment) => (
             <div
@@ -144,7 +142,7 @@ export function FinanceBillDetail({
                 {payment.account.name}
                 {payment.reversedAt ? (
                   <p className="font-medium">
-                    Reversed: {payment.reversalReason}
+                    Undone: {payment.reversalReason}
                   </p>
                 ) : null}
                 <p className="text-muted-foreground">
@@ -171,7 +169,7 @@ export function FinanceBillDetail({
                       })
                     }
                   >
-                    Reverse payment
+                    Undo payment
                   </Button>
                 ) : null}
               </div>

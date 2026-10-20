@@ -35,7 +35,7 @@ const money = z.string().refine((value) => {
   } catch {
     return false
   }
-}, "Enter a positive amount with up to two decimal places.")
+}, "Enter an amount above zero, with up to two decimal places.")
 const schema = z
   .object({
     payee: z.string().trim().min(1).max(160),
@@ -54,7 +54,7 @@ const schema = z
       ctx.addIssue({
         code: "custom",
         path: ["paymentAccount"],
-        message: "Choose the account used to pay.",
+        message: "Choose the money account you paid from.",
       })
     if (
       value.paid === "partial" &&
@@ -66,7 +66,7 @@ const schema = z
       ctx.addIssue({
         code: "custom",
         path: ["paymentAmount"],
-        message: "Enter a payment no greater than the expense.",
+        message: "Enter an amount no more than the expense.",
       })
   })
 type Values = z.infer<typeof schema>
@@ -158,7 +158,7 @@ export function FinanceExpenseForm({
       >
         <dl className="grid gap-3 text-sm">
           <div>
-            <dt className="text-muted-foreground">Payee</dt>
+            <dt className="text-muted-foreground">Paid to</dt>
             <dd>{review.payee}</dd>
           </div>
           <div>
@@ -175,8 +175,8 @@ export function FinanceExpenseForm({
             <dt className="text-muted-foreground">Payment</dt>
             <dd>
               {review.paid === "unpaid"
-                ? "Unpaid bill"
-                : `${formatFinanceMoney(parseFinanceMoney(review.paid === "paid" ? review.amount : review.paymentAmount), book.currencyCode)} from ${review.paymentAccount === "OWNER_CAPITAL" ? "Owner personal funds (capital contribution)" : accounts.find((account) => account.id === review.paymentAccount)?.name}`}
+                ? "Unpaid"
+                : `${formatFinanceMoney(parseFinanceMoney(review.paid === "paid" ? review.amount : review.paymentAmount), book.currencyCode)} from ${review.paymentAccount === "OWNER_CAPITAL" ? "Owner's own money" : accounts.find((account) => account.id === review.paymentAccount)?.name}`}
             </dd>
           </div>
         </dl>
@@ -212,7 +212,7 @@ export function FinanceExpenseForm({
           }}
         />
         <FinanceField
-          label="Paid to / owed to"
+          label="Paid to"
           error={form.formState.errors.payee?.message}
         >
           <Input {...form.register("payee")} autoComplete="off" />
@@ -285,7 +285,7 @@ export function FinanceExpenseForm({
               options={[
                 {
                   value: "OWNER_CAPITAL",
-                  label: <>Owner personal funds (capital contribution)</>,
+                  label: <>Owner's own money</>,
                 },
                 ...(accounts.map((account) => ({
                   value: account.id,

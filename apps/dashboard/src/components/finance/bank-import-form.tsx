@@ -49,9 +49,7 @@ import { FinanceField, FinanceReview } from "./form-fields"
 import type { FinanceBook } from "./types"
 import { useCompleteFinanceForm } from "./use-complete-finance-form"
 
-const utcDate = z
-  .string()
-  .regex(/^\d{4}-\d{2}-\d{2}$/, "Choose a valid UTC date.")
+const utcDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Choose a valid date.")
 const signedBalance = z.string().refine((value) => {
   try {
     parseFinanceBankBalance(value)
@@ -59,24 +57,26 @@ const signedBalance = z.string().refine((value) => {
   } catch {
     return false
   }
-}, "Enter a signed balance with up to two decimal places.")
+}, "Enter a balance with up to two decimal places. It can be negative.")
 
 const schema = z
   .object({
-    accountId: z.string().min(1, "Choose a bank or clearing account."),
+    accountId: z.string().min(1, "Choose an account."),
     reference: z
       .string()
       .trim()
-      .min(1, "Enter a statement reference.")
+      .min(1, "Enter a name for this statement.")
       .max(160, "Use 160 characters or fewer."),
     startsOn: utcDate,
     endsOn: utcDate,
     openingBalance: signedBalance,
     closingBalance: signedBalance,
-    transactionIdColumn: z.string().min(1, "Map the transaction ID column."),
-    dateColumn: z.string().min(1, "Map the transaction date column."),
-    amountColumn: z.string().min(1, "Map the signed amount column."),
-    descriptionColumn: z.string().min(1, "Map the description column."),
+    transactionIdColumn: z
+      .string()
+      .min(1, "Pick the column with the bank ref."),
+    dateColumn: z.string().min(1, "Pick the date column."),
+    amountColumn: z.string().min(1, "Pick the amount column."),
+    descriptionColumn: z.string().min(1, "Pick the description column."),
     units: z.enum(["MAJOR", "MINOR"]),
   })
   .superRefine((values, context) => {
@@ -89,7 +89,7 @@ const schema = z
     if (new Set(selected).size !== selected.length)
       context.addIssue({
         code: "custom",
-        message: "Choose four distinct CSV columns.",
+        message: "Pick four different columns.",
         path: ["descriptionColumn"],
       })
   })
@@ -207,7 +207,9 @@ export function FinanceBankImportForm({ book }: { book: FinanceBook }) {
         setReading(false)
         setPreparing(false)
         setConfirming(false)
-        setError("Connection changed. Recheck the statement before importing.")
+        setError(
+          "Connection changed. Check the statement again before uploading.",
+        )
       } else {
         setOnline(true)
         setReview((currentReview) =>
@@ -258,7 +260,7 @@ export function FinanceBankImportForm({ book }: { book: FinanceBook }) {
 
   function assertCurrent(token: number) {
     if (!current(token))
-      throw new Error("Finance scope or connection changed. Review again.")
+      throw new Error("Your connection or access changed. Check again.")
   }
 
   async function fresh<T>(
@@ -273,7 +275,7 @@ export function FinanceBankImportForm({ book }: { book: FinanceBook }) {
     assertCurrent(token)
     const state = client.getQueryState(queryKey)
     if (state?.status !== "success" || state.fetchStatus !== "idle")
-      throw new Error("A fresh finance read is not available.")
+      throw new Error("Latest records aren't available. Check your connection.")
     return result
   }
 
@@ -315,8 +317,7 @@ export function FinanceBankImportForm({ book }: { book: FinanceBook }) {
         accountPurposes.includes(candidate.purpose) &&
         !candidate.archivedAt,
     )
-    if (!account)
-      throw new Error("Choose an active bank or clearing account in this book.")
+    if (!account) throw new Error("Choose an active account.")
     return account
   }
 
@@ -329,7 +330,7 @@ export function FinanceBankImportForm({ book }: { book: FinanceBook }) {
       client.fetchQuery(options),
     )
     if (result.bookId !== book.id || result.accountId !== accountId)
-      throw new Error("Bank history belongs to a different account or book.")
+      throw new Error("This bank history belongs to a different account.")
     return result.snapshotRevision
   }
 
@@ -347,7 +348,7 @@ export function FinanceBankImportForm({ book }: { book: FinanceBook }) {
       return
     }
     if (file.size < 1 || file.size > FINANCE_BANK_STATEMENT_MAX_CSV_BYTES) {
-      setError("CSV statements must be between 1 byte and 512 KiB.")
+      setError("The file must be a CSV under 512 KB.")
       return
     }
     setReading(true)
@@ -357,7 +358,7 @@ export function FinanceBankImportForm({ book }: { book: FinanceBook }) {
       const columns = financeBankStatementCsvHeaders(text)
       if (columns.length < 4)
         throw new Error(
-          "Map transaction ID, date, amount and description columns.",
+          "Pick the columns for bank ref, date, amount and description.",
         )
       setCsv(text)
       setFileName(file.name)
@@ -377,7 +378,7 @@ export function FinanceBankImportForm({ book }: { book: FinanceBook }) {
         setError(
           failure instanceof Error
             ? failure.message
-            : "The CSV file could not be read.",
+            : "We couldn't read this file.",
         )
     } finally {
       if (current(token)) setReading(false)
@@ -404,7 +405,7 @@ export function FinanceBankImportForm({ book }: { book: FinanceBook }) {
           saved.accountId !== values.accountId
         )
           throw new Error(
-            "Re-enter the original account and statement details for this unresolved import.",
+            "Enter the same account and statement details as the unfinished upload.",
           )
         expectedRevision = saved.expectedBankRevision
       }
@@ -459,7 +460,7 @@ export function FinanceBankImportForm({ book }: { book: FinanceBook }) {
         setError(
           failure instanceof Error
             ? failure.message
-            : "Unable to prepare this statement review.",
+            : "Couldn't check this statement.",
         )
     } finally {
       if (current(token)) setPreparing(false)
@@ -487,14 +488,14 @@ export function FinanceBankImportForm({ book }: { book: FinanceBook }) {
         (saved?.accountId !== attempt.payload.accountId ||
           saved.expectedBankRevision !== attempt.payload.expectedRevision)
       )
-        throw new Error("Retry only the saved account and evidence revision.")
+        throw new Error("Retry with the same account and statement.")
       if (
         !command.uncertain &&
         currentRevision !== attempt.payload.expectedRevision
       ) {
         setReview(null)
         throw new Error(
-          "Bank evidence changed after review. Prepare a fresh statement review.",
+          "The bank lines changed since you checked. Check the statement again.",
         )
       }
       assertCurrent(token)
@@ -518,7 +519,7 @@ export function FinanceBankImportForm({ book }: { book: FinanceBook }) {
             latestRevision !== attempt.payload.expectedRevision
           )
             throw new Error(
-              "Bank evidence changed before submission. Review the statement again.",
+              "The bank lines changed. Check the statement again.",
             )
           await assertScope(token)
           assertCurrent(token)
@@ -533,7 +534,7 @@ export function FinanceBankImportForm({ book }: { book: FinanceBook }) {
         setError(
           failure instanceof Error
             ? failure.message
-            : "The statement import could not be confirmed.",
+            : "We couldn't confirm the upload.",
         )
     } finally {
       if (current(token)) setConfirming(false)
@@ -541,11 +542,7 @@ export function FinanceBankImportForm({ book }: { book: FinanceBook }) {
   }
 
   if (accounts.length === 0)
-    return (
-      <p>
-        Create an active bank or clearing account before importing a statement.
-      </p>
-    )
+    return <p>Add a money account before uploading a statement.</p>
 
   if (
     command.uncertain &&
@@ -555,8 +552,8 @@ export function FinanceBankImportForm({ book }: { book: FinanceBook }) {
     return (
       <Alert appearance="dashboard">
         <AlertDescription>
-          The saved bank account is no longer active in this finance book. The
-          unresolved import cannot be retried from this sheet.
+          The saved account is no longer active. The unfinished upload can't be
+          retried from here.
         </AlertDescription>
       </Alert>
     )
@@ -569,8 +566,7 @@ export function FinanceBankImportForm({ book }: { book: FinanceBook }) {
     return (
       <Alert appearance="dashboard">
         <AlertDescription>
-          The finance scope changed. Close and reopen this import sheet before
-          continuing.
+          Something changed. Close this and open it again to continue.
         </AlertDescription>
       </Alert>
     )
@@ -593,47 +589,47 @@ export function FinanceBankImportForm({ book }: { book: FinanceBook }) {
             <p className="text-xs text-muted-foreground">Statement</p>
             <p className="font-medium">{review.payload.reference}</p>
             <p className="text-sm text-muted-foreground">
-              {review.fileName} · {review.rowCount} transactions
+              {review.fileName} · {review.rowCount} bank lines
             </p>
           </div>
           <div>
-            <p className="text-xs text-muted-foreground">Bank account</p>
+            <p className="text-xs text-muted-foreground">Account</p>
             <p className="font-medium">{review.accountName}</p>
             <p className="text-sm text-muted-foreground">
               {review.payload.startsAt.toISOString().slice(0, 10)} –{" "}
-              {review.payload.endsAt.toISOString().slice(0, 10)} · evidence
-              revision {review.payload.expectedRevision}
+              {review.payload.endsAt.toISOString().slice(0, 10)}
             </p>
           </div>
         </div>
         <div className="grid gap-3 sm:grid-cols-3">
           <BalanceSummary
-            label="Opening balance"
+            label="Balance at the start"
             value={review.openingBalanceMinor}
             currencyCode={book.currencyCode}
           />
           <BalanceSummary
-            label="Transactions"
+            label="Bank lines total"
             value={review.transactionTotalMinor}
             currencyCode={book.currencyCode}
           />
           <BalanceSummary
-            label="Closing balance"
+            label="Balance at the end"
             value={review.closingBalanceMinor}
             currencyCode={book.currencyCode}
           />
         </div>
         <p className="text-sm text-muted-foreground">
-          Opening balance plus signed transactions equals closing balance.
-          Importing preserves the original bank evidence; it does not post money
-          to the ledger.
+          Balance at the start plus the bank lines equals balance at the end.
+          Uploading keeps your bank's lines as they are. It doesn't move any
+          money.
         </p>
         <p className="text-xs text-muted-foreground">
-          Columns: ID “{review.payload.columns.transactionId}”, date “
+          Columns: bank ref “{review.payload.columns.transactionId}”, date “
           {review.payload.columns.date}”, amount “
           {review.payload.columns.amount}”, description “
           {review.payload.columns.description}” ·{" "}
-          {review.payload.units === "MAJOR" ? "major" : "minor"} units.
+          {review.payload.units === "MAJOR" ? "whole" : "smallest-unit"}{" "}
+          amounts.
         </p>
         {error ? (
           <FormFeedback appearance="dashboard">{error}</FormFeedback>
@@ -642,9 +638,9 @@ export function FinanceBankImportForm({ book }: { book: FinanceBook }) {
           <Table>
             <TableHeader className="sticky top-0 bg-background">
               <TableRow>
-                <TableHead>Transaction ID</TableHead>
+                <TableHead>Bank ref</TableHead>
                 <TableHead>Date</TableHead>
-                <TableHead className="text-right">Signed amount</TableHead>
+                <TableHead className="text-right">Amount</TableHead>
                 <TableHead>Description</TableHead>
               </TableRow>
             </TableHeader>
@@ -674,8 +670,8 @@ export function FinanceBankImportForm({ book }: { book: FinanceBook }) {
                     colSpan={4}
                     className="py-6 text-center text-muted-foreground"
                   >
-                    This statement has no transaction rows. Its opening and
-                    closing balances match.
+                    This statement has no bank lines. The start and end balances
+                    match.
                   </TableCell>
                 </TableRow>
               ) : null}
@@ -690,16 +686,15 @@ export function FinanceBankImportForm({ book }: { book: FinanceBook }) {
     <form onSubmit={form.handleSubmit((values) => void prepare(values))}>
       <FieldGroup className="min-w-0 grid gap-5">
         <p className="text-sm text-muted-foreground">
-          Import a completed bank statement as original evidence. Transactions
-          are not posted to the finance ledger.
+          Upload a finished statement from your bank (CSV). Uploading doesn't
+          move any money.
         </p>
         {command.uncertain ? (
           <Alert appearance="dashboard">
             <AlertDescription>
-              An earlier import is unresolved. Re-select the original CSV and
-              re-enter its exact statement details. The saved account and
-              evidence revision will be reused; changed details cannot start a
-              new import until recovery is resolved.
+              An earlier upload wasn't finished. Choose the same CSV again and
+              enter the same statement details. You can't start a different
+              upload until this one is sorted out.
             </AlertDescription>
           </Alert>
         ) : null}
@@ -721,14 +716,13 @@ export function FinanceBankImportForm({ book }: { book: FinanceBook }) {
             className="truncate text-sm text-muted-foreground"
             title={fileName}
           >
-            {fileName} · {csv.length.toLocaleString("en-NG")} characters · up to{" "}
-            {FINANCE_BANK_STATEMENT_MAX_ROWS} rows
+            {fileName} · up to {FINANCE_BANK_STATEMENT_MAX_ROWS} lines
           </p>
         ) : null}
         {headers.length > 0 ? (
           <>
             <FinanceField
-              label="Bank or clearing account"
+              label="Account"
               error={form.formState.errors.accountId?.message}
             >
               <FormSelectControl
@@ -755,7 +749,7 @@ export function FinanceBankImportForm({ book }: { book: FinanceBook }) {
             </FinanceField>
             <div className="grid gap-4 sm:grid-cols-2">
               <FinanceField
-                label="Statement starts (UTC)"
+                label="Statement starts"
                 error={form.formState.errors.startsOn?.message}
               >
                 <FormDateControl
@@ -768,7 +762,7 @@ export function FinanceBankImportForm({ book }: { book: FinanceBook }) {
                 />
               </FinanceField>
               <FinanceField
-                label="Statement ends (UTC)"
+                label="Statement ends"
                 error={form.formState.errors.endsOn?.message}
               >
                 <FormDateControl
@@ -783,7 +777,7 @@ export function FinanceBankImportForm({ book }: { book: FinanceBook }) {
             </div>
             <div className="grid gap-4 sm:grid-cols-2">
               <FinanceField
-                label={`Opening balance (${book.currencyCode})`}
+                label={`Balance at the start (${book.currencyCode})`}
                 error={form.formState.errors.openingBalance?.message}
               >
                 <Input
@@ -794,7 +788,7 @@ export function FinanceBankImportForm({ book }: { book: FinanceBook }) {
                 />
               </FinanceField>
               <FinanceField
-                label={`Closing balance (${book.currencyCode})`}
+                label={`Balance at the end (${book.currencyCode})`}
                 error={form.formState.errors.closingBalance?.message}
               >
                 <Input
@@ -806,10 +800,10 @@ export function FinanceBankImportForm({ book }: { book: FinanceBook }) {
               </FinanceField>
             </div>
             <div>
-              <h3 className="mb-3 font-medium">Map the original CSV columns</h3>
+              <h3 className="mb-3 font-medium">Which column is which?</h3>
               <div className="grid gap-4 sm:grid-cols-2">
                 <ColumnSelect
-                  label="Original transaction ID"
+                  label="Bank ref"
                   control={form.control}
                   name="transactionIdColumn"
                   headers={headers}
@@ -817,7 +811,7 @@ export function FinanceBankImportForm({ book }: { book: FinanceBook }) {
                   disabled={preparing}
                 />
                 <ColumnSelect
-                  label="Transaction date"
+                  label="Date"
                   control={form.control}
                   name="dateColumn"
                   headers={headers}
@@ -825,7 +819,7 @@ export function FinanceBankImportForm({ book }: { book: FinanceBook }) {
                   disabled={preparing}
                 />
                 <ColumnSelect
-                  label="Signed amount"
+                  label="Amount"
                   control={form.control}
                   name="amountColumn"
                   headers={headers}
@@ -843,7 +837,7 @@ export function FinanceBankImportForm({ book }: { book: FinanceBook }) {
               </div>
             </div>
             <FinanceField
-              label="CSV amount units"
+              label="Amounts in the file are in"
               error={form.formState.errors.units?.message}
             >
               <FormSelectControl
@@ -851,8 +845,14 @@ export function FinanceBankImportForm({ book }: { book: FinanceBook }) {
                 name="units"
                 disabled={preparing}
                 options={[
-                  { value: "MAJOR", label: "Major units (for example 125.50)" },
-                  { value: "MINOR", label: "Minor units (for example 12550)" },
+                  {
+                    value: "MAJOR",
+                    label: "Whole amounts (for example 125.50)",
+                  },
+                  {
+                    value: "MINOR",
+                    label: "Smallest units (for example 12550)",
+                  },
                 ]}
               />
             </FinanceField>
@@ -879,7 +879,7 @@ export function FinanceBankImportForm({ book }: { book: FinanceBook }) {
               ? "Reading CSV…"
               : preparing
                 ? "Checking statement…"
-                : "Review statement"}
+                : "Check statement"}
           </SubmitButton>
         </FormActions>
       </FieldGroup>
@@ -932,7 +932,7 @@ function ColumnSelect({
         name={name}
         disabled={disabled}
         options={[
-          { value: "", label: "Choose a CSV column" },
+          { value: "", label: "Choose a column" },
           ...headers.map((header) => ({ value: header, label: header })),
         ]}
       />

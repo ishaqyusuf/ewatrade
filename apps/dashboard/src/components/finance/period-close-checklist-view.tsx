@@ -7,9 +7,9 @@ import { formatFinanceMoney } from "@ewatrade/utils/finance-money"
 type Checklist = RouterOutputs["finance"]["periodCloseChecklist"]
 
 const statusLabel = {
-  PASS: "Pass",
-  BLOCKED: "Blocked",
-  REVIEW_REQUIRED: "Review required",
+  PASS: "OK",
+  BLOCKED: "Fix",
+  REVIEW_REQUIRED: "Look at",
 } as const
 
 function sourceGapLabel(value: string) {
@@ -36,19 +36,19 @@ export function FinancePeriodCloseChecklistView({
     <section className="grid gap-4 rounded-md border border-border p-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
-          <h4 className="font-medium">Operational close checklist</h4>
+          <h4 className="font-medium">Before you close</h4>
           <p className="text-sm text-muted-foreground">
             {new Date(checklist.from).toISOString().slice(0, 10)}–
-            {new Date(checklist.through).toISOString().slice(0, 10)} UTC ·{" "}
-            {checklist.currencyCode} · snapshot {checklist.snapshotSequence}
+            {new Date(checklist.through).toISOString().slice(0, 10)} ·{" "}
+            {checklist.currencyCode}
           </p>
         </div>
         <Badge variant={canProceed ? "secondary" : "destructive"}>
           {canProceed
-            ? "Date lock eligible"
+            ? "Ready to close"
             : checklist.dateLockEligible
-              ? "Resolve blockers"
-              : "Date lock unavailable"}
+              ? "Fix these first"
+              : "Can't close yet"}
         </Badge>
       </div>
       <Alert
@@ -57,19 +57,17 @@ export function FinancePeriodCloseChecklistView({
       >
         <AlertTitle>
           {!checklist.dateLockEligible
-            ? "This cutoff is not eligible for a date lock"
+            ? "You can't close up to this date yet"
             : canProceed
               ? reviewRequired
-                ? `${reviewRequired} review${reviewRequired === 1 ? "" : "s"} still required`
-                : "Checklist checks pass"
-              : `${blocked} blocking check${blocked === 1 ? "" : "s"} need attention`}
+                ? `${reviewRequired} ${reviewRequired === 1 ? "thing" : "things"} to look at`
+                : "All checks are OK"
+              : `${blocked} ${blocked === 1 ? "check needs" : "checks need"} fixing first`}
         </AlertTitle>
         <AlertDescription>
-          A date lock only protects this posting cutoff. The current report
-          coverage is{" "}
-          {checklist.completeness.toLowerCase().replaceAll("_", " ")}. It does
-          not certify fully reconciled business records or complete operational
-          reconciliation.
+          Closing stops anyone changing records up to this date. It doesn't
+          prove every naira is accounted for. Your reports are{" "}
+          {checklist.completeness.toLowerCase().replaceAll("_", " ")}.
         </AlertDescription>
       </Alert>
       <ul className="grid gap-3">
@@ -94,14 +92,14 @@ export function FinancePeriodCloseChecklistView({
             </div>
             <p className="text-sm text-muted-foreground">
               {check.id === "POSTED_TRIAL_BALANCE"
-                ? `Posted debits ${formatFinanceMoney(checklist.trialBalance.debitMinor, checklist.currencyCode)} · credits ${formatFinanceMoney(checklist.trialBalance.creditMinor, checklist.currencyCode)}.`
+                ? `Debits ${formatFinanceMoney(checklist.trialBalance.debitMinor, checklist.currencyCode)} · credits ${formatFinanceMoney(checklist.trialBalance.creditMinor, checklist.currencyCode)}.`
                 : check.explanation}
             </p>
           </li>
         ))}
       </ul>
       <div className="grid gap-2">
-        <h5 className="text-sm font-medium">Cash at the exact cutoff</h5>
+        <h5 className="text-sm font-medium">Cash on the closing date</h5>
         {checklist.cash.length ? (
           <ul className="grid gap-2">
             {checklist.cash.map((row) => (
@@ -111,13 +109,13 @@ export function FinancePeriodCloseChecklistView({
               >
                 <span>{row.name}</span>
                 <span className="text-muted-foreground">
-                  Posted{" "}
+                  Your records{" "}
                   {formatFinanceMoney(
                     row.closingBalanceMinor,
                     checklist.currencyCode,
                   )}
                   {row.observedBalanceMinor === null
-                    ? " · no cutoff count"
+                    ? " · not counted"
                     : ` · counted ${formatFinanceMoney(row.observedBalanceMinor, checklist.currencyCode)}`}
                   {` · ${statusLabel[row.status]}`}
                 </span>
@@ -126,19 +124,21 @@ export function FinancePeriodCloseChecklistView({
           </ul>
         ) : (
           <p className="text-sm text-muted-foreground">
-            No posted cash accounts were returned for this Book.
+            No cash accounts found.
           </p>
         )}
         {!checklist.cashCountCoverageComplete ? (
           <p className="text-sm text-destructive">
-            Cash-count coverage exceeds the bounded review limit of{" "}
-            {checklist.cashCountReviewLimit}; this list is incomplete.
+            There are more cash counts than we can check here (limit{" "}
+            {checklist.cashCountReviewLimit}), so this list is incomplete.
           </p>
         ) : null}
       </div>
       {checklist.coverageGaps.length ? (
         <div className="grid gap-1">
-          <h5 className="text-sm font-medium">Known report coverage gaps</h5>
+          <h5 className="text-sm font-medium">
+            What your reports don't cover yet
+          </h5>
           <p className="text-sm text-muted-foreground">
             {checklist.coverageGaps.map(sourceGapLabel).join(" · ")}
           </p>
@@ -146,15 +146,15 @@ export function FinancePeriodCloseChecklistView({
       ) : null}
       {checklist.checks.some((check) => check.id === "YEAR_END_EARNINGS") ? (
         <p className="text-sm text-muted-foreground">
-          Closing dates does not transfer earnings; year-end retained earnings
-          remains a separate workflow.
+          Closing a month doesn't close the year's profit. That is a separate
+          step.
         </p>
       ) : null}
       {canProceed ? (
         <p className="text-sm text-muted-foreground">
           {reviewRequired
-            ? "The listed reviews remain open. A date lock does not mark them complete or waive them."
-            : "Operational source coverage remains separate from date-lock eligibility."}
+            ? "These items stay open. Closing doesn't mark them done."
+            : "Closing doesn't check every sale or stock record."}
         </p>
       ) : null}
     </section>

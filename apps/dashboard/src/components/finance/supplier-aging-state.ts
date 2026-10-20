@@ -4,13 +4,13 @@ export type SupplierAging = RouterOutputs["finance"]["supplierPayableAging"]
 export type SupplierAgingCursor = NonNullable<SupplierAging["nextCursor"]>
 
 export const supplierAgingBucketLabels = {
-  NOT_DUE: "Not due",
+  NOT_DUE: "Not due yet",
   DUE_TODAY: "Due today",
-  OVERDUE_1_30: "1–30 days overdue",
-  OVERDUE_31_60: "31–60 days overdue",
-  OVERDUE_61_90: "61–90 days overdue",
-  OVERDUE_91_PLUS: "91+ days overdue",
-  UNDATED: "Undated",
+  OVERDUE_1_30: "1–30 days late",
+  OVERDUE_31_60: "31–60 days late",
+  OVERDUE_61_90: "61–90 days late",
+  OVERDUE_91_PLUS: "Over 90 days late",
+  UNDATED: "No due date",
 } as const
 
 export function isSupplierAgingDay(value: string, startsAt: Date | string) {

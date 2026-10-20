@@ -50,8 +50,8 @@ export function FinanceSupplierAgingView({
         <p className="text-sm text-muted-foreground">{aging.supplier.code}</p>
       </div>
       <p className="text-sm text-muted-foreground">
-        All Stores, including unassigned opening balances. As of{" "}
-        {aging.asOfDate} UTC · Snapshot {aging.snapshotSequence}.
+        All stores, including starting balances not tied to a store. On{" "}
+        {aging.asOfDate}.
       </p>
       <dl
         data-summary-grid
@@ -59,34 +59,30 @@ export function FinanceSupplierAgingView({
         className="grid grid-cols-1 gap-4 sm:grid-cols-2"
       >
         <div>
-          <dt className="text-sm text-muted-foreground">Recorded payable</dt>
+          <dt className="text-sm text-muted-foreground">You owe</dt>
           <dd className="text-lg font-medium tabular-nums">
             {money(aging.payableMinor)}
           </dd>
         </div>
         <div>
-          <dt className="text-sm text-muted-foreground">Unapplied advance</dt>
+          <dt className="text-sm text-muted-foreground">Paid ahead</dt>
           <dd className="text-lg font-medium tabular-nums">
             {money(aging.advanceMinor)}
           </dd>
         </div>
       </dl>
       <p className="text-sm text-muted-foreground">
-        Advances remain separate from payables. Recorded payments, allocations
-        and corrections through this UTC day and snapshot reduce outstanding
-        sources. Aging uses each source’s original due date; a missing due date
-        stays undated.
+        Money paid ahead is kept apart from what you owe. Payments up to this
+        day reduce what is still to pay. Each bill is placed by its original due
+        date; a bill with no due date goes under No due date.
       </p>
-      <section
-        className="border border-border"
-        aria-label="Payable aging buckets"
-      >
+      <section className="border border-border" aria-label="When it's due">
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead scope="col">Original due date bucket</TableHead>
+              <TableHead scope="col">When it was due</TableHead>
               <TableHead scope="col" className="text-right">
-                Recorded payable
+                You owe
               </TableHead>
             </TableRow>
           </TableHeader>
@@ -96,7 +92,7 @@ export function FinanceSupplierAgingView({
                 <TableCell>
                   <p>{supplierAgingBucketLabels[bucket]}</p>
                   <p className="text-xs text-muted-foreground">
-                    {sourceCount} {sourceCount === 1 ? "source" : "sources"}
+                    {sourceCount} {sourceCount === 1 ? "bill" : "bills"}
                   </p>
                 </TableCell>
                 <TableCell className="text-right tabular-nums">
@@ -108,11 +104,11 @@ export function FinanceSupplierAgingView({
         </Table>
       </section>
       <div>
-        <h4 className="font-medium">Outstanding recorded sources</h4>
+        <h4 className="font-medium">Still to pay</h4>
         <p className="text-xs text-muted-foreground">
-          Page {page} · {aging.outstandingSourceCount} outstanding sources ·{" "}
-          {aging.sourcesRead} recorded entries checked. Full aging totals stay
-          pinned when paging.
+          Page {page} · {aging.outstandingSourceCount} still to pay ·{" "}
+          {aging.sourcesRead} entries checked. Totals stay the same as you
+          change pages.
         </p>
       </div>
       <InlineSelectionStatus selection={selection} />
@@ -120,7 +116,7 @@ export function FinanceSupplierAgingView({
         className="overflow-x-auto border border-border"
         // biome-ignore lint/a11y/noNoninteractiveTabindex: Wide source table supports keyboard scrolling.
         tabIndex={0}
-        aria-label="Outstanding supplier payable sources"
+        aria-label="Bills still to pay"
       >
         <Table className="min-w-[660px]">
           <TableHeader>
@@ -128,16 +124,16 @@ export function FinanceSupplierAgingView({
               <TableHead scope="col" className="w-10">
                 <InlineSelectAllCheckbox
                   selection={selection}
-                  label="Select all loaded payable sources"
+                  label="Select all loaded bills"
                 />
               </TableHead>
-              <TableHead scope="col">Record</TableHead>
-              <TableHead scope="col">Original due (UTC)</TableHead>
+              <TableHead scope="col">What</TableHead>
+              <TableHead scope="col">Due date</TableHead>
               <TableHead scope="col" className="text-right">
-                Original
+                Billed
               </TableHead>
               <TableHead scope="col" className="text-right">
-                Outstanding
+                Still to pay
               </TableHead>
             </TableRow>
           </TableHeader>
@@ -156,29 +152,28 @@ export function FinanceSupplierAgingView({
                     <InlineRowCheckbox
                       selection={selection}
                       id={source.sourceEntryId}
-                      label={`Select payable source ${source.sequence}`}
+                      label={`Select bill ${source.sequence}`}
                     />
                   </TableCell>
                   <TableCell className="max-w-sm align-top">
                     <p className="break-words">{source.description}</p>
                     <p className="text-xs text-muted-foreground">
                       {source.kind === "OPENING_PAYABLE"
-                        ? "Opening payable"
-                        : "Purchase bill"}{" "}
+                        ? "Owed before you started"
+                        : "Bill"}{" "}
                       · #{source.sequence}
                       {source.reference ? ` · ${source.reference}` : ""}
                     </p>
                     <p className="text-xs text-muted-foreground">
-                      Recorded{" "}
-                      {new Date(source.incurredAt).toISOString().slice(0, 10)}{" "}
-                      UTC
+                      Billed{" "}
+                      {new Date(source.incurredAt).toISOString().slice(0, 10)}
                     </p>
                   </TableCell>
                   <TableCell className="align-top">
                     <p className="whitespace-nowrap">
                       {source.dueAt
                         ? new Date(source.dueAt).toISOString().slice(0, 10)
-                        : "No due date recorded"}
+                        : "No due date"}
                     </p>
                     <p className="text-xs text-muted-foreground">
                       {supplierAgingBucketLabels[source.bucket]}
@@ -194,9 +189,7 @@ export function FinanceSupplierAgingView({
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={5}>
-                  No outstanding recorded payables at this day and snapshot.
-                </TableCell>
+                <TableCell colSpan={5}>Nothing to pay on this day.</TableCell>
               </TableRow>
             )}
           </TableBody>

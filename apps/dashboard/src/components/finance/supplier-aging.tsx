@@ -44,9 +44,13 @@ function SupplierAgingWorkspace({
     <div className="flex min-w-0 flex-col gap-5">
       <div className="flex flex-wrap items-end gap-2">
         <ControlField
-          label="As-of day (UTC)"
+          label="On this day"
           className="w-48"
-          error={invalid ? "Choose a valid day within this Book." : undefined}
+          error={
+            invalid
+              ? "Choose a valid day on or after your start date."
+              : undefined
+          }
         >
           <DateControl
             value={day}
@@ -67,14 +71,14 @@ function SupplierAgingWorkspace({
             setVersion((value) => value + 1)
           }}
         >
-          Apply day
+          Show
         </Button>
         <Button
           appearance="form"
           variant="outline"
           onClick={() => setVersion((value) => value + 1)}
         >
-          Refresh aging
+          Refresh
         </Button>
       </div>
       <SupplierAgingPage
@@ -140,13 +144,13 @@ function SupplierAgingPage({
   if (query.isError)
     return (
       <Alert appearance="dashboard" variant="destructive">
-        <AlertTitle>Payable aging could not be loaded</AlertTitle>
+        <AlertTitle>Couldn't load when this is due</AlertTitle>
         <AlertDescription>{query.error.message}</AlertDescription>
         <AlertDescription>
-          No aging balances are shown.
+          Nothing is shown.
           {query.error.message ===
           "Payable aging exceeds the 1000-source limit; a staged report is required."
-            ? " Histories above the 1,000-source limit require a staged report."
+            ? " There are too many entries to show here."
             : null}
         </AlertDescription>
         <Button
@@ -170,24 +174,23 @@ function SupplierAgingPage({
     return (
       <output aria-busy="true" className="text-sm text-muted-foreground">
         {query.fetchStatus === "paused"
-          ? "Waiting for a connection to verify payable aging…"
-          : "Loading payable aging…"}
+          ? "Waiting for a connection…"
+          : "Loading when this is due…"}
       </output>
     )
   }
   if (!matchesSupplierAgingScope(query.data, scope)) {
     return (
       <Alert appearance="dashboard" variant="destructive">
-        <AlertTitle>The aging response no longer matches this view</AlertTitle>
+        <AlertTitle>This no longer matches what you asked for</AlertTitle>
         <AlertDescription>
-          Refresh aging to verify the supplier, Book, UTC day and snapshot. No
-          balances are shown.
+          Refresh to check the Supplier and day. Nothing is shown until you do.
         </AlertDescription>
       </Alert>
     )
   }
   if (snapshotSequence === undefined)
-    return <output aria-busy="true">Pinning payable aging snapshot…</output>
+    return <output aria-busy="true">Loading…</output>
   const aging = query.data
   return (
     <FinanceSupplierAgingView

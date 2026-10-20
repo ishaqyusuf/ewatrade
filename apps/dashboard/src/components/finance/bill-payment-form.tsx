@@ -35,7 +35,7 @@ const schema = z.object({
     } catch {
       return false
     }
-  }, "Enter a positive amount with up to two decimal places."),
+  }, "Enter an amount above zero, with up to two decimal places."),
   date: z.string().min(1),
   reference: z.string().max(160),
 })
@@ -68,7 +68,7 @@ export function FinanceBillPaymentForm({
       reference: "",
     },
   })
-  if (query.isPending) return <output>Loading bill…</output>
+  if (query.isPending) return <output>Loading expense…</output>
   if (query.isError)
     return (
       <FormFeedback appearance="dashboard">{query.error.message}</FormFeedback>
@@ -112,7 +112,7 @@ export function FinanceBillPaymentForm({
         <p className="text-sm">
           From{" "}
           {review.accountId === "OWNER_CAPITAL"
-            ? "Owner personal funds (capital contribution)"
+            ? "Owner's own money"
             : accounts.find((account) => account.id === review.accountId)?.name}
         </p>
       </FinanceReview>
@@ -125,7 +125,7 @@ export function FinanceBillPaymentForm({
           BigInt(query.data.outstandingMinor)
         ) {
           form.setError("amount", {
-            message: "Payment exceeds the outstanding amount.",
+            message: "That is more than is still to pay.",
           })
           return
         }
@@ -134,7 +134,7 @@ export function FinanceBillPaymentForm({
     >
       <FieldGroup className="min-w-0 grid gap-5">
         <p className="text-sm">
-          {query.data.payeeName} · Outstanding{" "}
+          {query.data.payeeName} · Still to pay{" "}
           {formatFinanceMoney(query.data.outstandingMinor, book.currencyCode)}
         </p>
         <FinanceField
@@ -154,7 +154,7 @@ export function FinanceBillPaymentForm({
             options={[
               {
                 value: "OWNER_CAPITAL",
-                label: <>Owner personal funds (capital contribution)</>,
+                label: <>Owner's own money</>,
               },
               ...(accounts.map((account) => ({
                 value: account.id,

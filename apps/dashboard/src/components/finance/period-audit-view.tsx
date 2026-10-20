@@ -59,7 +59,7 @@ export function FinancePeriodAuditView({
 }) {
   const eventIds = useMemo(() => events.map((event) => event.id), [events])
   const selection = useInlineSelection({ ids: eventIds, scope })
-  if (pending) return <output>Loading close/reopen history…</output>
+  if (pending) return <output>Loading close and reopen history…</output>
   if (error) {
     return (
       <div className="grid gap-3 pt-3">
@@ -80,7 +80,7 @@ export function FinancePeriodAuditView({
       {events.length ? (
         <div className="grid gap-1">
           <InlineSelectionBar
-            label="Select all loaded close/reopen changes"
+            label="Select all loaded close and reopen changes"
             selection={selection}
           />
           <ol className="divide-y divide-border">
@@ -98,23 +98,22 @@ export function FinancePeriodAuditView({
                     <InlineRowCheckbox
                       selection={selection}
                       id={event.id}
-                      label={`Select ${event.kind === "PERIOD_CLOSE" ? "close" : "reopen"} through ${audit?.through || "unknown date"}`}
+                      label={`Select ${event.kind === "PERIOD_CLOSE" ? "close" : "reopen"} up to ${audit?.through || "unknown date"}`}
                     />
                   </span>
                   <div className="grid min-w-0 flex-1 gap-1">
                     <p className="font-medium">
-                      {event.kind === "PERIOD_CLOSE" ? "Closed" : "Reopened"}{" "}
-                      period through {audit?.through || "unknown date"}
+                      {event.kind === "PERIOD_CLOSE" ? "Closed" : "Reopened"} up
+                      to {audit?.through || "unknown date"}
                     </p>
                     <p className="break-words">
-                      {audit?.reason || "No recorded reason"}
+                      {audit?.reason || "No reason given"}
                     </p>
                     <p className="text-xs text-muted-foreground">
-                      Recorded {new Date(event.createdAt).toISOString()} ·
-                      Snapshot {audit?.snapshot || "unknown"}
+                      {new Date(event.createdAt).toISOString()}
                     </p>
                     <p className="break-all text-xs text-muted-foreground">
-                      Actor: {event.actorUserId}
+                      Done by: {event.actorUserId}
                     </p>
                   </div>
                 </li>
@@ -124,12 +123,12 @@ export function FinancePeriodAuditView({
         </div>
       ) : (
         <p className="text-sm text-muted-foreground">
-          No close/reopen changes recorded yet.
+          Nothing closed or reopened yet.
         </p>
       )}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="text-xs text-muted-foreground" aria-live="polite">
-          {events.length} changes loaded{hasNextPage ? "" : " · End of history"}
+          {events.length} changes{hasNextPage ? "" : " · That is all"}
         </p>
         <div className="flex flex-wrap gap-2">
           {hasNextPage ? (
@@ -140,7 +139,7 @@ export function FinancePeriodAuditView({
               disabled={fetching}
               onClick={onLoadOlder}
             >
-              {fetching ? "Loading…" : "Load older changes"}
+              {fetching ? "Loading…" : "Load older"}
             </Button>
           ) : null}
           <Button
@@ -150,7 +149,7 @@ export function FinancePeriodAuditView({
             disabled={fetching}
             onClick={onRefresh}
           >
-            Refresh history
+            Refresh
           </Button>
         </div>
       </div>

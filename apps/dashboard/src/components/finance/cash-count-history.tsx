@@ -37,8 +37,7 @@ export function FinanceCashCountHistory({ book }: { book: FinanceBook }) {
         </OpenFinanceSheet>
       </div>
       <p className="text-sm text-muted-foreground">
-        Compare physical cash with recorded balances. Open a count to check
-        whether later entries changed its history.
+        Count the cash and compare it with what Finance expects.
       </p>
       {query.isPending ? (
         <output>Loading cash counts…</output>
@@ -50,9 +49,7 @@ export function FinanceCashCountHistory({ book }: { book: FinanceBook }) {
           </Button>
         </div>
       ) : !counts.length ? (
-        <p className="py-6 text-muted-foreground">
-          No cash counts recorded yet.
-        </p>
+        <p className="py-6 text-muted-foreground">No cash counts yet.</p>
       ) : (
         <div className="grid gap-1">
           <InlineSelectionBar
@@ -91,7 +88,7 @@ export function FinanceCashCountHistory({ book }: { book: FinanceBook }) {
                         count.observedBalanceMinor,
                         book.currencyCode,
                       )}{" "}
-                      · Difference at count{" "}
+                      · Short or over{" "}
                       {formatFinanceMoney(
                         count.differenceAtCountMinor,
                         book.currencyCode,
@@ -124,7 +121,7 @@ export function FinanceCashCountHistory({ book }: { book: FinanceBook }) {
           disabled={query.isFetchingNextPage}
           onClick={() => void query.fetchNextPage()}
         >
-          {query.isFetchingNextPage ? "Loading…" : "Load more counts"}
+          {query.isFetchingNextPage ? "Loading…" : "Load more"}
         </Button>
       ) : null}
     </section>

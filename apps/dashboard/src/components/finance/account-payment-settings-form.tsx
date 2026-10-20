@@ -38,7 +38,7 @@ export function FinanceAccountPaymentSettingsForm({
       !row.archivedAt &&
       ["CASH", "BANK", "CLEARING"].includes(row.purpose),
   )
-  if (balances.isPending) return <output>Loading account…</output>
+  if (balances.isPending) return <output>Loading money account…</output>
   if (balances.isError)
     return (
       <FormFeedback appearance="dashboard">
@@ -48,7 +48,7 @@ export function FinanceAccountPaymentSettingsForm({
   if (!account)
     return (
       <FormFeedback appearance="dashboard">
-        This money account is no longer active.
+        This money account is no longer in use.
       </FormFeedback>
     )
   const purpose = account.purpose as MoneyAccountPurpose
@@ -126,7 +126,7 @@ function SettingsFields({
         />
         <CheckboxField
           label="Available for new payments"
-          description="A paused account keeps its balance and history, and refunds can still come out of it. Staff just can't choose it for new payments."
+          description="A paused account keeps its balance and history, and refunds can still come out of it. Staff just can't pick it for new payments."
         >
           <Checkbox
             checked={available}
