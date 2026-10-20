@@ -90,6 +90,9 @@ export function FinanceBillDetail({
                 billId,
                 description: bill.description,
                 amountMinor: bill.totalMinor,
+                payeeName: bill.payeeName,
+                billDescription: bill.description,
+                outstandingMinor: bill.outstandingMinor,
               })
             }
           >
@@ -161,6 +164,12 @@ export function FinanceBillDetail({
                         paymentId: payment.id,
                         description: `Payment from ${payment.account.name}`,
                         amountMinor: payment.amountMinor,
+                        payeeName: bill.payeeName,
+                        billDescription: bill.description,
+                        outstandingMinor: bill.outstandingMinor,
+                        accountId: book.accounts.find(
+                          (account) => account.name === payment.account.name,
+                        )?.id,
                       })
                     }
                   >

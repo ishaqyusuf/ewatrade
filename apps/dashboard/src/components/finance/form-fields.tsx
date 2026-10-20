@@ -32,6 +32,38 @@ export function FinanceField({
     </ControlField>
   )
 }
+/**
+ * Top of a change made inside a record's own sheet: "← Back to …", then the
+ * action's name and what it does.
+ */
+export function FinanceBackTo({
+  label,
+  onBack,
+  title,
+  description,
+}: {
+  label: string
+  onBack: () => void
+  title: string
+  description?: string
+}) {
+  return (
+    <div className="grid gap-1 border-b border-border pb-3">
+      <button
+        type="button"
+        onClick={onBack}
+        className="-ml-0.5 justify-self-start text-sm text-muted-foreground hover:text-foreground"
+      >
+        ← {label}
+      </button>
+      <h3 className="text-base font-semibold">{title}</h3>
+      {description ? (
+        <p className="text-sm text-muted-foreground">{description}</p>
+      ) : null}
+    </div>
+  )
+}
+
 /** Cancel and the primary action, kept in view at the bottom of the sheet. */
 export function FinanceFormFooter({
   onCancel,

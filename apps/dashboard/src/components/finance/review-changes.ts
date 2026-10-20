@@ -1,6 +1,9 @@
 "use client"
 import { useTRPC } from "@/trpc/client"
-import { formatFinanceMoney } from "@ewatrade/utils/finance-money"
+import {
+  formatFinanceMoney,
+  parseFinanceMoney,
+} from "@ewatrade/utils/finance-money"
 import { useQuery } from "@tanstack/react-query"
 import { useMemo } from "react"
 import type { FinanceChange } from "./form-fields"
@@ -99,4 +102,57 @@ export function dayIn(at: Date | string, timeZone?: string) {
 /** Today's day in the book's time zone, as YYYY-MM-DD. */
 export function todayIn(timeZone?: string) {
   return dayIn(new Date(), timeZone)
+}
+
+/** "Paid from" choices: each money account with its balance, then the owner's own money. */
+export function paidFromOptions(
+  accounts: { id: string; name: string }[],
+  balances: Map<string, MoneyBalance>,
+  currency: string,
+  withOwner = true,
+) {
+  return [
+    ...accounts.map((account) => {
+      const balance = balances.get(account.id)
+      return {
+        value: account.id,
+        label: balance
+          ? `${account.name} · ${formatFinanceMoney(balance.balanceMinor.toString(), currency)}`
+          : account.name,
+      }
+    }),
+    ...(withOwner
+      ? [
+          {
+            value: "OWNER_CAPITAL",
+            label: "Owner's own money (they put it in)",
+          },
+        ]
+      : []),
+  ]
+}
+
+/** Active cash, bank and clearing accounts of a book. */
+export function moneyAccounts<
+  T extends { purpose: string; archivedAt: Date | string | null },
+>(accounts: T[]) {
+  return accounts.filter(
+    (account) =>
+      ["CASH", "BANK", "CLEARING"].includes(account.purpose) &&
+      !account.archivedAt,
+  )
+}
+
+export function minorOf(value: string) {
+  return BigInt(parseFinanceMoney(value))
+}
+
+export function moneyText(minor: bigint | string, currency: string) {
+  return formatFinanceMoney(minor.toString(), currency)
+}
+
+/** A minor-unit amount as money-input text, e.g. 38000000 → "380000.00". */
+export function amountInput(minor: bigint | string) {
+  const value = BigInt(minor)
+  return `${value / BigInt(100)}.${String(value % BigInt(100)).padStart(2, "0")}`
 }
