@@ -1,7 +1,7 @@
 "use client"
+import { stockChangeLabel, stockDate } from "@/lib/inventory-labels"
 import type { RouterOutputs } from "@ewatrade/api/trpc/routers/_app"
 import type { ColumnDef } from "@tanstack/react-table"
-import { inventoryDate, inventoryLabel } from "../inventory-ledger/format"
 import { LedgerRowActions } from "../inventory-ledger/row-actions"
 export type InventoryOperation =
   RouterOutputs["inventory"]["operationHistory"][number]
@@ -10,57 +10,56 @@ export const operationSortFields = [
   "effectiveAt",
   "movementCount",
 ] as const
+
+/** Reasons picked from the list, then any typed note. */
+export function operationReason(row: InventoryOperation) {
+  return [row.categories.map((c) => c.name).join(", "), row.reason]
+    .filter(Boolean)
+    .join(" · ")
+}
+
+export function productsChangedText(count: number) {
+  return `${count} product${count === 1 ? "" : "s"}`
+}
+
 export function operationColumns(
   onOpen: (row: InventoryOperation) => void,
 ): ColumnDef<InventoryOperation>[] {
   return [
     {
       id: "identity",
-      accessorKey: "type",
-      header: "Operation",
-      size: 240,
+      accessorFn: (row) => stockChangeLabel(row.type),
+      header: "Change",
+      size: 220,
       enableHiding: false,
       meta: {
-        headerLabel: "Operation",
+        headerLabel: "Change",
         sortField: "identity",
         sticky: true,
         className:
           "z-20 bg-background group-hover:bg-muted/40 group-aria-selected:bg-muted/60",
       },
       cell: ({ row }) => (
-        <div className="min-w-0">
-          <p className="truncate font-medium">
-            {inventoryLabel(row.original.type)}
-          </p>
-          <p className="truncate text-xs text-muted-foreground">
-            {row.original.id}
-          </p>
-        </div>
+        <span className="truncate font-medium">
+          {stockChangeLabel(row.original.type)}
+        </span>
       ),
     },
     {
       id: "effectiveAt",
       accessorKey: "effectiveAt",
-      header: "Effective (UTC)",
-      size: 210,
-      meta: { sortField: "effectiveAt" },
-      cell: ({ row }) => inventoryDate(row.original.effectiveAt),
+      header: "When",
+      size: 190,
+      meta: { headerLabel: "When", sortField: "effectiveAt" },
+      cell: ({ row }) => stockDate(row.original.effectiveAt),
     },
-    { id: "store", accessorKey: "storeName", header: "Store", size: 180 },
-    {
-      id: "categories",
-      accessorFn: (row) => row.categories.map((c) => c.name).join(", "),
-      header: "Categories",
-      size: 200,
-      cell: ({ getValue }) => (
-        <span className="truncate">{String(getValue() || "—")}</span>
-      ),
-    },
+    { id: "store", accessorKey: "storeName", header: "Store", size: 170 },
     {
       id: "reason",
-      accessorKey: "reason",
-      header: "Reason",
-      size: 280,
+      accessorFn: operationReason,
+      header: "Reason and note",
+      size: 320,
+      meta: { headerLabel: "Reason and note" },
       cell: ({ getValue }) => (
         <span className="truncate">{String(getValue() || "—")}</span>
       ),
@@ -68,9 +67,10 @@ export function operationColumns(
     {
       id: "movementCount",
       accessorKey: "movementCount",
-      header: "Movements",
-      size: 140,
-      meta: { sortField: "movementCount" },
+      header: "Products changed",
+      size: 160,
+      meta: { headerLabel: "Products changed", sortField: "movementCount" },
+      cell: ({ row }) => productsChangedText(row.original.movementCount),
     },
     {
       id: "actions",
@@ -81,7 +81,7 @@ export function operationColumns(
       meta: { sticky: true },
       cell: ({ row }) => (
         <LedgerRowActions
-          label={`${inventoryLabel(row.original.type)} ${row.original.id}`}
+          label={`${stockChangeLabel(row.original.type)}, ${stockDate(row.original.effectiveAt)}`}
           onOpen={() => onOpen(row.original)}
         />
       ),

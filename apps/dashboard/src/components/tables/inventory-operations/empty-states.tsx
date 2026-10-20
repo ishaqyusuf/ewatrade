@@ -9,12 +9,12 @@ export function OperationsEmpty({
   return (
     <div className="grid justify-items-center gap-3 border border-border py-20 text-center">
       <h2 className="text-lg font-medium">
-        {filtered ? "No matching operations" : "No operations yet"}
+        {filtered ? "No changes match" : "No stock changes yet"}
       </h2>
       <p className="max-w-sm text-sm text-muted-foreground">
         {filtered
-          ? "Try a different search or clear the filters."
-          : "Stock changes recorded for this store will appear here."}
+          ? "Clear the search or pick All changes."
+          : "Changes appear here when you add, count, sell or move stock."}
       </p>
       {filtered ? (
         <Button variant="outline" onClick={onClear}>

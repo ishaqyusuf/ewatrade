@@ -1,8 +1,10 @@
 "use client"
-import { formatInventoryQuantity } from "@/lib/inventory-view"
+import { stockDate, transferStatusLabel } from "@/lib/inventory-labels"
+import { formatStockQuantity } from "@/lib/inventory-view"
 import type { RouterOutputs } from "@ewatrade/api/trpc/routers/_app"
+import { Badge, cn } from "@ewatrade/ui"
+import { compareExactDecimals } from "@ewatrade/utils/exact-decimal"
 import type { ColumnDef } from "@tanstack/react-table"
-import { inventoryDate, inventoryLabel } from "../inventory-ledger/format"
 import { LedgerRowActions } from "../inventory-ledger/row-actions"
 export type StockTransfer = RouterOutputs["inventory"]["transfers"][number]
 export const transferSortFields = [
@@ -12,6 +14,45 @@ export const transferSortFields = [
   "source",
   "target",
 ] as const
+
+const statusTone: Record<string, string> = {
+  IN_TRANSIT: "bg-amber-500/15 text-amber-700 dark:text-amber-300",
+  DISPATCHED: "bg-amber-500/15 text-amber-700 dark:text-amber-300",
+  RECEIVED: "bg-primary/10 text-primary",
+  CANCELLED: "bg-muted text-muted-foreground",
+  EXCEPTION: "bg-destructive/10 text-destructive",
+}
+
+export function TransferStatusBadge({ status }: { status: string }) {
+  return (
+    <Badge
+      className={cn(
+        "rounded-full border-0",
+        statusTone[status] ?? "bg-muted text-foreground",
+      )}
+    >
+      {transferStatusLabel(status)}
+    </Badge>
+  )
+}
+
+export function transferProductDetail(row: StockTransfer) {
+  return row.variantName && row.variantName !== row.productName
+    ? row.variantName
+    : null
+}
+
+/** "300 eggs", or "300 eggs · 100 still on the way" after a part arrived. */
+export function transferQuantityText(row: StockTransfer) {
+  const sent = formatStockQuantity(row.quantity, row.inventoryUnitName)
+  const partly =
+    row.status === "IN_TRANSIT" &&
+    compareExactDecimals(row.remainingQuantity, row.quantity) < 0
+  return partly
+    ? `${sent} · ${formatStockQuantity(row.remainingQuantity, row.inventoryUnitName)} still on the way`
+    : sent
+}
+
 export function transferColumns(
   onOpen: (row: StockTransfer) => void,
 ): ColumnDef<StockTransfer>[] {
@@ -23,6 +64,7 @@ export function transferColumns(
       size: 240,
       enableHiding: false,
       meta: {
+        headerLabel: "Product",
         sortField: "identity",
         sticky: true,
         className:
@@ -31,9 +73,11 @@ export function transferColumns(
       cell: ({ row }) => (
         <div className="min-w-0">
           <p className="truncate font-medium">{row.original.productName}</p>
-          <p className="truncate text-xs text-muted-foreground">
-            {row.original.variantName}
-          </p>
+          {transferProductDetail(row.original) ? (
+            <p className="truncate text-xs text-muted-foreground">
+              {transferProductDetail(row.original)}
+            </p>
+          ) : null}
         </div>
       ),
     },
@@ -41,11 +85,10 @@ export function transferColumns(
       id: "quantity",
       accessorKey: "quantity",
       header: "Quantity",
-      size: 170,
+      size: 200,
       cell: ({ row }) => (
-        <span className="tabular-nums">
-          {formatInventoryQuantity(row.original.quantity)}{" "}
-          {row.original.inventoryUnitName}
+        <span className="truncate tabular-nums">
+          {transferQuantityText(row.original)}
         </span>
       ),
     },
@@ -53,35 +96,31 @@ export function transferColumns(
       id: "source",
       accessorFn: (row) => row.sourceStore.name,
       header: "From",
-      size: 190,
+      size: 180,
       meta: { sortField: "source" },
     },
     {
       id: "target",
       accessorFn: (row) => row.targetStore.name,
       header: "To",
-      size: 190,
+      size: 180,
       meta: { sortField: "target" },
     },
     {
       id: "status",
       accessorKey: "status",
       header: "Status",
-      size: 150,
+      size: 140,
       meta: { sortField: "status" },
-      cell: ({ row }) => (
-        <span className="border border-border px-2 py-1 text-xs">
-          {inventoryLabel(row.original.status)}
-        </span>
-      ),
+      cell: ({ row }) => <TransferStatusBadge status={row.original.status} />,
     },
     {
       id: "createdAt",
       accessorKey: "createdAt",
-      header: "Created (UTC)",
-      size: 210,
-      meta: { sortField: "createdAt" },
-      cell: ({ row }) => inventoryDate(row.original.createdAt),
+      header: "Sent",
+      size: 190,
+      meta: { headerLabel: "Sent", sortField: "createdAt" },
+      cell: ({ row }) => stockDate(row.original.createdAt),
     },
     {
       id: "actions",
@@ -92,7 +131,8 @@ export function transferColumns(
       meta: { sticky: true },
       cell: ({ row }) => (
         <LedgerRowActions
-          label={`${row.original.productName} ${row.original.id}`}
+          label={`${row.original.productName}, sent ${stockDate(row.original.createdAt)}`}
+          viewLabel="View transfer"
           onOpen={() => onOpen(row.original)}
         />
       ),

@@ -105,10 +105,10 @@ export function getDashboardCommands(
 
   if (available.has("/inventory")) {
     commands.push({
-      description: "Open inventory operations and record stock intake.",
+      description: "Add stock that arrived: collected, bought or returned.",
       href: "/inventory?inventoryOperation=receipt",
       id: "record-stock-intake",
-      title: "Record stock intake",
+      title: "Stock in",
     })
   }
 

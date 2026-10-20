@@ -9,7 +9,7 @@ import { getInitialDirectoryView } from "@/utils/directory-views"
 import type { Metadata } from "next"
 import { redirect } from "next/navigation"
 import { Suspense } from "react"
-export const metadata: Metadata = { title: "Stock transfers | EwaTrade" }
+export const metadata: Metadata = { title: "Transfers | EwaTrade" }
 export default async function Page() {
   const session = await getServerSession()
   if (!session) redirect("/login")

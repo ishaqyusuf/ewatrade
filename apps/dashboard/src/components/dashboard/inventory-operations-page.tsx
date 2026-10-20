@@ -1,14 +1,22 @@
 "use client"
 
 import { WorkspaceError } from "@/components/dashboard/workspace-error"
+import { inventoryHistoryViewOptions } from "@/components/inventory/inventory-header"
+import { InventoryLedgerFilters } from "@/components/inventory/inventory-ledger-filters"
 import { InventoryOperationMenu } from "@/components/inventory/inventory-operation-menu"
-import { PageHeader } from "@/components/page-header"
+import { InventoryTabs } from "@/components/inventory/inventory-tabs"
+import { PageHeader, PageToolbar } from "@/components/page-header"
 import { ScrollableContent } from "@/components/scrollable-content"
 import { InventoryOperationSheet } from "@/components/sheets/inventory-operation-sheet"
+import {
+  TableToolbarSlot,
+  TableToolbarSlotProvider,
+} from "@/components/tables/core"
 import { OperationsDataTable } from "@/components/tables/inventory-operations/data-table"
 import { OperationsSkeleton } from "@/components/tables/inventory-operations/skeleton"
-import { ViewSwitcher, directoryViewOptions } from "@/components/view-switcher"
+import { ViewDropdown } from "@/components/view-switcher"
 import { useDirectoryView } from "@/hooks/use-directory-view"
+import { stockChangeGroups } from "@/lib/inventory-labels"
 import type { DirectoryViewSettings } from "@/utils/directory-view-settings"
 import type { TableSettings } from "@/utils/table-settings"
 import { Alert, AlertDescription, Button } from "@ewatrade/ui"
@@ -31,26 +39,38 @@ export function InventoryOperationsPage({
       queryKey: "operationView",
       initialSettings: initialViewSettings,
     })
+  // History has no grid; a saved Grid choice shows as List.
+  const shownView = view === "cards" ? "list" : view
   return (
-    <>
+    <TableToolbarSlotProvider>
       <ScrollableContent>
         <div className="flex min-w-0 flex-1 flex-col gap-6 pt-6">
-          <div className="flex flex-wrap items-center justify-between gap-4">
-            <PageHeader
-              eyebrow={allStores ? "All stores" : store.name}
-              title="Operations"
-              description="Review stock changes and their recorded movements."
-            />
-            <div className="flex flex-wrap items-center gap-2">
-              <ViewSwitcher
-                label="Operation view"
-                value={view}
-                options={directoryViewOptions}
-                onValueChange={setView}
+          <PageHeader
+            eyebrow={allStores ? "All stores" : store.name}
+            title="Stock history"
+            description="Every change to your stock, newest first."
+          >
+            <PageToolbar
+              actions={
+                <>
+                  <TableToolbarSlot />
+                  <ViewDropdown
+                    label="Stock history view"
+                    value={shownView}
+                    options={inventoryHistoryViewOptions}
+                    onValueChange={setView}
+                  />
+                  <InventoryOperationMenu />
+                </>
+              }
+            >
+              <InventoryLedgerFilters
+                placeholder="Search reason, note or store"
+                filters={stockChangeGroups}
               />
-              <InventoryOperationMenu />
-            </div>
-          </div>
+            </PageToolbar>
+            <InventoryTabs />
+          </PageHeader>
           {persistenceError ? (
             <Alert appearance="dashboard" role="alert">
               <AlertDescription>{persistenceError}</AlertDescription>
@@ -62,19 +82,22 @@ export function InventoryOperationsPage({
           <ErrorBoundary errorComponent={WorkspaceError}>
             <Suspense
               fallback={
-                <OperationsSkeleton settings={initialSettings} view={view} />
+                <OperationsSkeleton
+                  settings={initialSettings}
+                  view={shownView}
+                />
               }
             >
               <OperationsDataTable
                 storeId={allStores ? undefined : store.id}
                 initialSettings={initialSettings}
-                view={view}
+                view={shownView}
               />
             </Suspense>
           </ErrorBoundary>
         </div>
       </ScrollableContent>
       <InventoryOperationSheet store={store} />
-    </>
+    </TableToolbarSlotProvider>
   )
 }

@@ -14,12 +14,10 @@ import {
 import {
   Add01Icon,
   ArrowDown01Icon,
-  Clock01Icon,
   MoreVerticalIcon,
   ViewIcon,
 } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
-import { useRouter } from "next/navigation"
 
 type BalanceContext = {
   storeId: string
@@ -38,7 +36,6 @@ export function InventoryOperationMenu({
 }: { balance?: BalanceContext; onAction?: () => void }) {
   const { setParams } = useInventoryParams()
   const { open } = useCatalogDetailParams()
-  const router = useRouter()
   return (
     <DropdownMenu>
       <DropdownMenuTrigger
@@ -92,18 +89,6 @@ export function InventoryOperationMenu({
             >
               <HugeiconsIcon icon={ViewIcon} aria-hidden="true" />
               View product
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              onClick={(event) => {
-                event.stopPropagation()
-                onAction?.()
-                router.push(
-                  `/inventory/operations?q=${encodeURIComponent(balance.productName)}`,
-                )
-              }}
-            >
-              <HugeiconsIcon icon={Clock01Icon} aria-hidden="true" />
-              Stock history
             </DropdownMenuItem>
             <DropdownMenuSeparator />
           </>

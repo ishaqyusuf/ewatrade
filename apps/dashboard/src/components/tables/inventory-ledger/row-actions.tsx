@@ -10,8 +10,9 @@ import { MoreVerticalIcon } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
 export function LedgerRowActions({
   label,
+  viewLabel = "View details",
   onOpen,
-}: { label: string; onOpen: () => void }) {
+}: { label: string; viewLabel?: string; onOpen: () => void }) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger
@@ -34,7 +35,7 @@ export function LedgerRowActions({
             onOpen()
           }}
         >
-          View details
+          {viewLabel}
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

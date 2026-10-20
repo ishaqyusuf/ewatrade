@@ -20,6 +20,11 @@ export const inventoryViewOptions = [
   { value: "cards", label: "Grid", icon: GridViewIcon },
 ] as const satisfies readonly ViewOption<DirectoryView>[]
 
+export const inventoryHistoryViewOptions = [
+  { value: "table", label: "Table", icon: LayoutTable01Icon },
+  { value: "list", label: "List", icon: ListViewIcon },
+] as const satisfies readonly ViewOption<DirectoryView>[]
+
 export function InventoryHeader({
   storeName,
   view,

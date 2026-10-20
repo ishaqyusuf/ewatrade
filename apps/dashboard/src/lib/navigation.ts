@@ -150,7 +150,7 @@ const DASHBOARD_NAV: DashboardNavDefinition[] = [
     canAccess: canManageCatalog,
   },
   {
-    description: "Stock, inbounds, and movement controls",
+    description: "Stock in each store, history and transfers",
     href: "/inventory",
     icon: "inventory",
     label: "Inventory",
@@ -160,16 +160,16 @@ const DASHBOARD_NAV: DashboardNavDefinition[] = [
       {
         href: "/inventory/operations",
         icon: "inventory",
-        label: "Operations",
-        description: "Stock operation history",
+        label: "Stock history",
+        description: "Every change to your stock",
         canAccess: (role, context) =>
           canOperateInventory(role, context.staffAccessMode),
       },
       {
         href: "/inventory/transfers",
         icon: "inventory",
-        label: "Stock transfers",
-        description: "Incoming and outgoing stock transfers",
+        label: "Transfers",
+        description: "Stock moving between your stores",
         canAccess: (role, context) =>
           canOperateInventory(role, context.staffAccessMode),
       },
