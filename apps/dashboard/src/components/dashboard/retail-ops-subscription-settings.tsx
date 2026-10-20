@@ -1,56 +1,49 @@
 "use client"
 
-import { PageHeader } from "@/components/page-header"
-import type { SessionUser } from "@/lib/session"
-import type { TenantContext } from "@/lib/tenant"
+import {
+  SettingsHeader,
+  SettingsNotice,
+  SettingsPage,
+  SettingsRow,
+  SettingsSection,
+} from "@/components/settings/settings-page"
 import { useTRPC } from "@/trpc/client"
 import { cn } from "@/utils"
 import type { RouterOutputs } from "@ewatrade/api/trpc/routers/_app"
-import {
-  RETAIL_OPS_PLAN_FEATURE_LABELS,
-  type RetailOpsPaidPlanId,
-  type RetailOpsPlanFeature,
+import type {
+  RetailOpsPaidPlanId,
+  RetailOpsPlanFeature,
 } from "@ewatrade/db/subscription-plans"
-import { Button } from "@ewatrade/ui"
+import { Button, toast } from "@ewatrade/ui"
 import {
   Analytics01Icon,
   Archive01Icon,
   Invoice01Icon,
   Package01Icon,
-  Settings01Icon,
   Store04Icon,
   UserCircle02Icon,
 } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { useMutation, useQuery } from "@tanstack/react-query"
+import type { ReactNode } from "react"
 
 type SubscriptionSnapshot = RouterOutputs["retailOps"]["subscription"]
-type CheckoutIntent =
-  RouterOutputs["retailOps"]["createSubscriptionCheckoutIntent"]
 type Entitlement = SubscriptionSnapshot["entitlements"][number]
 type Plan = SubscriptionSnapshot["plans"][number]
-type SettingsContext = {
-  activeStore: TenantContext["activeStore"]
-  membershipRole: string
-  stores: TenantContext["stores"]
-  tenant: TenantContext["tenant"]
-  user: SessionUser
-} | null
 
-type SettingsPanelItem = {
-  label: string
-  value: string
-}
-
+// The store limit is the "businesses" entitlement.
 const ENTITLEMENT_LABELS: Record<Entitlement["key"], string> = {
-  businesses: "Businesses",
-  offlineDevices: "Offline devices",
-  ordersPerMonth: "Orders this month",
+  businesses: "Stores",
   products: "Catalog items",
-  reportsHistoryDays: "Report history",
   staff: "Staff",
-  storefrontItems: "Storefront items",
+  offlineDevices: "Offline devices",
+  reportsHistoryDays: "Report history",
+  ordersPerMonth: "Orders this month",
+  storefrontItems: "Online store items",
 }
+const ENTITLEMENT_ORDER = Object.keys(
+  ENTITLEMENT_LABELS,
+) as Entitlement["key"][]
 
 const ENTITLEMENT_ICONS: Record<Entitlement["key"], typeof Store04Icon> = {
   businesses: Store04Icon,
@@ -62,470 +55,358 @@ const ENTITLEMENT_ICONS: Record<Entitlement["key"], typeof Store04Icon> = {
   storefrontItems: Store04Icon,
 }
 
-const PLAN_FEATURE_ORDER: RetailOpsPlanFeature[] = [
-  "invoices",
-  "finance",
-  "staff",
-  "attachments",
-  "suppliers",
-  "advancedReports",
-  "orderReminders",
-  "multipleBusinesses",
-]
+// Plain names for what a plan leaves out; matches the settings menu nouns.
+const FEATURE_LABELS: Record<RetailOpsPlanFeature, string> = {
+  invoices: "Receipts",
+  finance: "Finance",
+  staff: "Staff accounts",
+  attachments: "Photos and documents",
+  suppliers: "Suppliers",
+  advancedReports: "Advanced reports",
+  orderReminders: "Reminder emails",
+  customerMessages: "WhatsApp messages",
+  multipleBusinesses: "More than one store",
+}
+const FEATURE_ORDER = Object.keys(FEATURE_LABELS) as RetailOpsPlanFeature[]
 
-function formatDate(value: string | null) {
-  if (!value) return "Not set"
+const number = new Intl.NumberFormat("en-NG")
 
-  return new Intl.DateTimeFormat("en-NG", {
-    dateStyle: "medium",
-  }).format(new Date(value))
+function formatDate(value: string) {
+  return new Intl.DateTimeFormat("en-NG", { dateStyle: "medium" }).format(
+    new Date(value),
+  )
 }
 
-function formatLimit(key: Entitlement["key"], limit: number | null) {
-  if (limit === null) return "Unlimited"
-
-  if (key === "reportsHistoryDays") {
-    return `${limit} days`
-  }
-
-  return new Intl.NumberFormat("en-NG").format(limit)
+function planLimit(key: Entitlement["key"], limit: number | null) {
+  if (limit === null) return "No limit"
+  if (key === "reportsHistoryDays") return `${number.format(limit)} days`
+  return number.format(limit)
 }
 
-function formatUsage(entitlement: Entitlement) {
-  if (entitlement.key === "reportsHistoryDays") {
-    return `${formatLimit(entitlement.key, entitlement.limit)} included`
-  }
-
-  if (entitlement.limit === null) {
-    return `${new Intl.NumberFormat("en-NG").format(entitlement.used)} used · no limit`
-  }
-
-  return `${new Intl.NumberFormat("en-NG").format(
-    entitlement.used,
-  )} of ${formatLimit(entitlement.key, entitlement.limit)} used`
+function usageText(entitlement: Entitlement) {
+  if (entitlement.key === "reportsHistoryDays")
+    return entitlement.limit === null
+      ? "All of it"
+      : `Last ${number.format(entitlement.limit)} days`
+  if (entitlement.limit === null)
+    return `${number.format(entitlement.used)} · no limit`
+  return `${number.format(entitlement.used)} of ${number.format(entitlement.limit)}`
 }
 
 function statusLabel(status: SubscriptionSnapshot["subscription"]["status"]) {
-  if (status === "past_due") return "Past due"
+  if (status === "past_due") return "Payment due"
   if (status === "trialing") return "Trial"
-
   return status.charAt(0).toUpperCase() + status.slice(1)
 }
 
-function statusTone(status: SubscriptionSnapshot["subscription"]["status"]) {
-  if (status === "active") return "bg-success text-success-foreground"
-  if (status === "past_due") return "bg-warning text-warning-foreground"
-  if (status === "cancelled") return "bg-danger text-danger-foreground"
-
-  return "bg-primary/10 text-primary"
-}
-
-function SettingsPanel({
-  icon,
-  items,
-  title,
+function Pill({
+  children,
+  tone,
 }: {
-  icon: typeof Store04Icon
-  items: SettingsPanelItem[]
-  title: string
+  children: ReactNode
+  tone: "ok" | "warn" | "muted"
 }) {
   return (
-    <section className="border border-border/70 bg-background p-4 ">
-      <div className="flex items-center gap-2">
-        <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-muted">
-          <HugeiconsIcon icon={icon} className="size-4 text-muted-foreground" />
-        </div>
-        <h2 className="text-sm font-semibold">{title}</h2>
-      </div>
-      <dl className="mt-4 grid gap-3 text-sm">
-        {items.map((item) => (
-          <div
-            key={item.label}
-            className="flex justify-between gap-4 border-t border-border/70 pt-3"
+    <span
+      className={cn(
+        "inline-flex shrink-0 items-center rounded-full px-2.5 py-0.5 text-xs font-semibold",
+        tone === "ok" &&
+          "bg-emerald-100 text-emerald-800 dark:bg-emerald-500/15 dark:text-emerald-200",
+        tone === "warn" &&
+          "bg-amber-100 text-amber-900 dark:bg-amber-500/15 dark:text-amber-100",
+        tone === "muted" && "bg-muted text-muted-foreground",
+      )}
+    >
+      {children}
+    </span>
+  )
+}
+
+function UsageRow({ entitlement }: { entitlement: Entitlement }) {
+  const full = entitlement.isAtLimit
+  const share =
+    entitlement.limit && entitlement.key !== "reportsHistoryDays"
+      ? Math.min(100, Math.round((entitlement.used / entitlement.limit) * 100))
+      : null
+  return (
+    <SettingsRow
+      label={
+        <span className="inline-flex items-center gap-3">
+          <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-muted">
+            <HugeiconsIcon
+              icon={ENTITLEMENT_ICONS[entitlement.key]}
+              className="size-4 text-muted-foreground"
+            />
+          </span>
+          {ENTITLEMENT_LABELS[entitlement.key]}
+        </span>
+      }
+      description={
+        share === null ? null : (
+          <span
+            className="mt-1.5 block h-1.5 max-w-72 overflow-hidden rounded-full bg-muted"
+            aria-hidden="true"
           >
-            <dt className="text-muted-foreground">{item.label}</dt>
-            <dd className="max-w-[60%] text-right font-medium">{item.value}</dd>
-          </div>
-        ))}
-      </dl>
-    </section>
-  )
-}
-
-function SettingsOverview({ context }: { context: SettingsContext }) {
-  const tenant = context?.tenant
-  const activeStore = context?.activeStore
-  const user = context?.user
-
-  return (
-    <>
-      <section className="grid gap-4 lg:grid-cols-3">
-        <SettingsPanel
-          icon={Store04Icon}
-          title="Business"
-          items={[
-            { label: "Name", value: tenant?.name ?? "Loading..." },
-            { label: "Slug", value: tenant?.slug ?? "Loading..." },
-            { label: "Catalog model", value: "Products, services, or both" },
-            { label: "Timezone", value: tenant?.timezone ?? "Loading..." },
-          ]}
-        />
-        <SettingsPanel
-          icon={Package01Icon}
-          title="Store"
-          items={[
-            { label: "Active store", value: activeStore?.name ?? "Not set" },
-            { label: "Store slug", value: activeStore?.slug ?? "Not set" },
-            { label: "Status", value: activeStore?.status ?? "Not set" },
-            {
-              label: "Stores",
-              value: context
-                ? new Intl.NumberFormat("en-NG").format(context.stores.length)
-                : "Loading...",
-            },
-          ]}
-        />
-        <SettingsPanel
-          icon={UserCircle02Icon}
-          title="Account"
-          items={[
-            {
-              label: "User",
-              value: user?.displayName ?? user?.email ?? "Loading...",
-            },
-            { label: "Email", value: user?.email ?? "Loading..." },
-            { label: "Role", value: context?.membershipRole ?? "Loading..." },
-            { label: "Currency", value: tenant?.currencyCode ?? "Loading..." },
-          ]}
-        />
-      </section>
-
-      <section className="grid gap-4 lg:grid-cols-3">
-        <SettingsPanel
-          icon={Settings01Icon}
-          title="Notifications"
-          items={[
-            { label: "Order alerts", value: "Email queue" },
-            { label: "Staff invites", value: "Email queue" },
-            { label: "Sync conflicts", value: "Dashboard review" },
-          ]}
-        />
-        <SettingsPanel
-          icon={UserCircle02Icon}
-          title="Permissions"
-          items={[
-            { label: "Billing access", value: "Owner/admin" },
-            { label: "Staff access", value: "Owner/admin/manager" },
-            { label: "POS access", value: "Assigned roles" },
-          ]}
-        />
-        <SettingsPanel
-          icon={Archive01Icon}
-          title="Payroll and payout"
-          items={[
-            { label: "Payroll", value: "Planned" },
-            { label: "Owner payouts", value: "Planned" },
-            { label: "Provider settlement", value: "Future provider scope" },
-          ]}
-        />
-      </section>
-    </>
-  )
-}
-
-function EntitlementRow({ entitlement }: { entitlement: Entitlement }) {
-  const Icon = ENTITLEMENT_ICONS[entitlement.key]
-
-  return (
-    <div className="flex items-center justify-between gap-4 border-b border-border/70 px-4 py-3 last:border-b-0">
-      <div className="flex min-w-0 items-center gap-3">
-        <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-muted">
-          <HugeiconsIcon icon={Icon} className="size-4 text-muted-foreground" />
-        </div>
-        <div className="min-w-0">
-          <p className="text-sm font-medium">
-            {ENTITLEMENT_LABELS[entitlement.key]}
-          </p>
-          <p className="text-xs text-muted-foreground">
-            {formatUsage(entitlement)}
-          </p>
-        </div>
-      </div>
-      <span
-        className={cn(
-          "shrink-0 rounded-full px-2.5 py-1 text-xs font-medium",
-          entitlement.isAtLimit
-            ? "bg-warning text-warning-foreground"
-            : "bg-success text-success-foreground",
-        )}
-      >
-        {entitlement.isAtLimit ? "At limit" : "Available"}
-      </span>
-    </div>
+            <span
+              className={cn(
+                "block h-full rounded-full",
+                full ? "bg-amber-500" : "bg-primary",
+              )}
+              style={{ width: `${share}%` }}
+            />
+          </span>
+        )
+      }
+    >
+      <span className="text-sm tabular-nums">{usageText(entitlement)}</span>
+      {full ? <Pill tone="warn">Limit reached</Pill> : null}
+    </SettingsRow>
   )
 }
 
 function PlanCard({
-  checkoutPending,
   current,
-  onCheckout,
+  onUpgrade,
+  pending,
   plan,
+  upgrade,
 }: {
-  checkoutPending: boolean
   current: boolean
-  onCheckout: (planId: RetailOpsPaidPlanId) => void
+  onUpgrade: (planId: RetailOpsPaidPlanId) => void
+  pending: boolean
   plan: Plan
+  upgrade: boolean
 }) {
-  const excludedFeatures = PLAN_FEATURE_ORDER.filter(
+  const missing = FEATURE_ORDER.filter(
     (feature) => !plan.features.includes(feature),
   )
-
+  const limits: Array<[string, string]> = [
+    ["Stores", planLimit("businesses", plan.limits.businesses)],
+    ["Catalog items", planLimit("products", plan.limits.products)],
+    ["Staff", planLimit("staff", plan.limits.staff)],
+    [
+      "Orders per month",
+      planLimit("ordersPerMonth", plan.limits.ordersPerMonth),
+    ],
+    [
+      "Report history",
+      planLimit("reportsHistoryDays", plan.limits.reportsHistoryDays),
+    ],
+  ]
   return (
     <div
       className={cn(
-        "flex flex-col border bg-background p-4 ",
-        current ? "border-primary" : "border-border/70",
+        "flex flex-col gap-1 rounded-xl border bg-card p-3.5",
+        current ? "border-primary ring-1 ring-primary" : "border-border",
       )}
     >
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <h2 className="text-sm font-semibold">{plan.name}</h2>
-          <p className="mt-0.5 text-xs font-medium text-foreground">
-            {plan.priceLabel}
-          </p>
-          <p className="mt-1 text-xs text-muted-foreground">
-            {plan.description}
-          </p>
-        </div>
-        {current ? (
-          <span className="shrink-0 rounded-full bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary">
-            Current
-          </span>
-        ) : null}
+      <div className="flex items-center justify-between gap-2">
+        <h3 className="text-[15px] font-semibold">{plan.name}</h3>
+        {current ? <Pill tone="ok">Your plan</Pill> : null}
       </div>
-      <dl className="mt-4 grid gap-2 text-xs text-muted-foreground">
-        <div className="flex justify-between gap-3">
-          <dt>Businesses</dt>
-          <dd className="font-medium text-foreground">
-            {formatLimit("businesses", plan.limits.businesses)}
-          </dd>
-        </div>
-        <div className="flex justify-between gap-3">
-          <dt>Catalog items</dt>
-          <dd className="font-medium text-foreground">
-            {formatLimit("products", plan.limits.products)}
-          </dd>
-        </div>
-        <div className="flex justify-between gap-3">
-          <dt>Staff</dt>
-          <dd className="font-medium text-foreground">
-            {formatLimit("staff", plan.limits.staff)}
-          </dd>
-        </div>
-        <div className="flex justify-between gap-3">
-          <dt>Orders a month</dt>
-          <dd className="font-medium text-foreground">
-            {formatLimit("ordersPerMonth", plan.limits.ordersPerMonth)}
-          </dd>
-        </div>
-        <div className="flex justify-between gap-3">
-          <dt>Report history</dt>
-          <dd className="font-medium text-foreground">
-            {formatLimit("reportsHistoryDays", plan.limits.reportsHistoryDays)}
-          </dd>
-        </div>
+      <p className="text-sm font-semibold">{plan.priceLabel}</p>
+      <p className="text-sm text-muted-foreground">{plan.description}</p>
+      <dl className="mt-2 grid gap-1 text-sm">
+        {limits.map(([label, value]) => (
+          <div key={label} className="flex justify-between gap-2">
+            <dt className="text-muted-foreground">{label}</dt>
+            <dd className="font-medium">{value}</dd>
+          </div>
+        ))}
       </dl>
-      {excludedFeatures.length ? (
-        <div className="mt-4 border-t border-border/70 pt-3 text-xs">
-          <p className="font-medium text-foreground">Not included</p>
-          <p className="mt-1 text-muted-foreground">
-            {excludedFeatures
-              .map((feature) => RETAIL_OPS_PLAN_FEATURE_LABELS[feature])
-              .join(", ")}
-          </p>
+      {missing.length ? (
+        <div className="mt-2 border-t border-border pt-2 text-sm">
+          <p className="text-muted-foreground">Not included</p>
+          <ul className="mt-1 list-disc pl-4 text-muted-foreground">
+            {missing.map((feature) => (
+              <li key={feature}>{FEATURE_LABELS[feature]}</li>
+            ))}
+          </ul>
         </div>
       ) : null}
-      {plan.id === "free" ? null : (
-        <div className="mt-auto pt-4">
-          <Button
-            type="button"
-            variant={current ? "outline" : "default"}
-            size="sm"
-            disabled={current || checkoutPending}
-            onClick={() => {
-              if (plan.id !== "free") onCheckout(plan.id)
-            }}
-            className="w-full rounded-none"
-          >
-            {current
-              ? "Active plan"
-              : checkoutPending
-                ? "Preparing checkout"
-                : "Request upgrade"}
-          </Button>
-        </div>
-      )}
+      {upgrade && plan.id !== "free" ? (
+        <Button
+          type="button"
+          size="sm"
+          className="mt-3 w-full"
+          disabled={pending}
+          onClick={() => {
+            if (plan.id !== "free") onUpgrade(plan.id)
+          }}
+        >
+          {pending ? "Checking…" : `Upgrade to ${plan.name}`}
+        </Button>
+      ) : null}
     </div>
   )
 }
 
-function CheckoutIntentNotice({ intent }: { intent: CheckoutIntent }) {
+function limitNotice(snapshot: SubscriptionSnapshot) {
+  const full = snapshot.entitlements.find(
+    (entitlement) =>
+      entitlement.isAtLimit &&
+      entitlement.limit !== null &&
+      entitlement.key !== "reportsHistoryDays",
+  )
+  if (!full || full.limit === null) return null
+  const used = full.limit
+  const current = snapshot.plans.findIndex(
+    (plan) => plan.id === snapshot.plan.id,
+  )
+  const next = snapshot.plans.slice(current + 1).find((plan) => {
+    const limit = plan.limits[full.key]
+    return limit === null || limit > used
+  })
+  const more = next
+    ? `move to ${next.name} for ${planLimit(full.key, next.limits[full.key]).toLowerCase()}.`
+    : "contact us for more."
   return (
-    <div className="border border-primary/20 bg-primary/5 px-4 py-3 text-sm">
-      <p className="font-medium text-foreground">
-        {intent.targetPlan.name} checkout
-      </p>
-      <p className="mt-1 text-muted-foreground">{intent.message}</p>
-    </div>
+    <>
+      You've used all <b>{number.format(used)}</b>{" "}
+      {ENTITLEMENT_LABELS[full.key].toLowerCase()} on {snapshot.plan.name}.{" "}
+      {full.key === "products"
+        ? `Archive items you no longer sell, or ${more}`
+        : more.charAt(0).toUpperCase() + more.slice(1)}
+    </>
   )
 }
 
-export function RetailOpsSubscriptionSettings({
-  settingsContext,
-}: {
-  settingsContext: SettingsContext
-}) {
+export function RetailOpsSubscriptionSettings() {
   const trpc = useTRPC()
   const subscriptionQuery = useQuery(
     trpc.retailOps.subscription.queryOptions(undefined, {
       retry: false,
     }),
   )
-  const checkoutIntentMutation = useMutation(
-    trpc.retailOps.createSubscriptionCheckoutIntent.mutationOptions(),
+  const upgrade = useMutation(
+    trpc.retailOps.createSubscriptionCheckoutIntent.mutationOptions({
+      onSuccess: (intent) => toast(intent.message),
+      onError: (error) => toast.error(error.message),
+    }),
   )
   const snapshot = subscriptionQuery.data
-  const requestCheckout = (planId: RetailOpsPaidPlanId) => {
-    checkoutIntentMutation.mutate({
-      planId,
-      surface: "dashboard",
-    })
-  }
+  const notice = snapshot ? limitNotice(snapshot) : null
+  const currentIndex = snapshot
+    ? snapshot.plans.findIndex((plan) => plan.id === snapshot.plan.id)
+    : -1
 
   return (
-    <div className="flex min-w-0 flex-1 flex-col gap-6">
-      <PageHeader
-        eyebrow="Settings"
-        title="Billing and plan"
-        description="Plan limits, usage, and billing state for Retail Ops."
+    <SettingsPage>
+      <SettingsHeader
+        title="Plan and billing"
+        description="Your plan, how much you've used, and what each plan includes."
       />
 
-      <SettingsOverview context={settingsContext} />
-
-      {subscriptionQuery.error ? (
-        <div className="border border-destructive/20 bg-destructive/10 px-4 py-3 text-sm text-destructive">
-          {subscriptionQuery.error.message}
-        </div>
+      {subscriptionQuery.isError ? (
+        <SettingsNotice
+          tone="warning"
+          action={
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => void subscriptionQuery.refetch()}
+            >
+              Try again
+            </Button>
+          }
+        >
+          Couldn't load your plan. {subscriptionQuery.error.message}
+        </SettingsNotice>
       ) : null}
 
-      {checkoutIntentMutation.error ? (
-        <div className="border border-destructive/20 bg-destructive/10 px-4 py-3 text-sm text-destructive">
-          {checkoutIntentMutation.error.message}
-        </div>
+      {notice ? (
+        <SettingsNotice
+          tone="warning"
+          action={
+            <Button
+              variant="outline"
+              size="sm"
+              className="bg-background"
+              onClick={() =>
+                document
+                  .getElementById("plans")
+                  ?.scrollIntoView({ behavior: "smooth", block: "start" })
+              }
+            >
+              Compare plans
+            </Button>
+          }
+        >
+          {notice}
+        </SettingsNotice>
       ) : null}
 
-      <div className="grid gap-6 xl:grid-cols-[0.9fr_1.1fr]">
-        <section className="border border-border/70 bg-background p-5 ">
-          <div className="flex items-start justify-between gap-4">
-            <div>
-              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                Current plan
-              </p>
-              <h2 className="mt-2 text-2xl font-semibold tracking-tight">
-                {snapshot?.plan.name ?? "Loading..."}
-              </h2>
-              <p className="mt-1 text-sm text-muted-foreground">
-                {snapshot?.tenant.name ?? "Resolving tenant plan"}
-              </p>
-            </div>
-            {snapshot ? (
-              <span
-                className={cn(
-                  "rounded-full px-2.5 py-1 text-xs font-medium",
-                  statusTone(snapshot.subscription.status),
-                )}
-              >
-                {statusLabel(snapshot.subscription.status)}
+      <SettingsSection title="Your plan">
+        {snapshot ? (
+          <SettingsRow
+            label={
+              <span className="text-lg font-semibold">
+                {snapshot.plan.name}
               </span>
-            ) : null}
-          </div>
+            }
+            description={
+              <>
+                {snapshot.plan.priceLabel}.
+                {snapshot.subscription.status === "trialing" &&
+                snapshot.subscription.trialEndsAt
+                  ? ` Your trial ends on ${formatDate(snapshot.subscription.trialEndsAt)}.`
+                  : snapshot.subscription.currentPeriodEndsAt
+                    ? ` Renews on ${formatDate(snapshot.subscription.currentPeriodEndsAt)}.`
+                    : ""}
+              </>
+            }
+          >
+            <Pill
+              tone={snapshot.subscription.status === "active" ? "ok" : "warn"}
+            >
+              {statusLabel(snapshot.subscription.status)}
+            </Pill>
+          </SettingsRow>
+        ) : (
+          <SettingsRow label="Loading your plan…" />
+        )}
+      </SettingsSection>
 
-          <dl className="mt-6 grid gap-3 text-sm">
-            <div className="flex justify-between gap-4 border-t border-border/70 pt-3">
-              <dt className="text-muted-foreground">Price</dt>
-              <dd className="font-medium">
-                {snapshot?.plan.priceLabel ?? "Loading..."}
-              </dd>
-            </div>
-            {snapshot?.subscription.status === "trialing" &&
-            snapshot.subscription.trialEndsAt ? (
-              <div className="flex justify-between gap-4 border-t border-border/70 pt-3">
-                <dt className="text-muted-foreground">Trial ends</dt>
-                <dd className="font-medium">
-                  {formatDate(snapshot.subscription.trialEndsAt)}
-                </dd>
-              </div>
-            ) : null}
-            <div className="flex justify-between gap-4 border-t border-border/70 pt-3">
-              <dt className="text-muted-foreground">Current period ends</dt>
-              <dd className="font-medium">
-                {formatDate(snapshot?.subscription.currentPeriodEndsAt ?? null)}
-              </dd>
-            </div>
-            <div className="flex justify-between gap-4 border-t border-border/70 pt-3">
-              <dt className="text-muted-foreground">Source</dt>
-              <dd className="font-medium">
-                {snapshot?.subscription.source === "tenant_subscription"
-                  ? "Billing record"
-                  : snapshot?.subscription.source === "tenant_metadata"
-                    ? "Production metadata"
-                    : "Launch plan"}
-              </dd>
-            </div>
-          </dl>
-        </section>
+      <SettingsSection title="What you've used">
+        {snapshot ? (
+          ENTITLEMENT_ORDER.flatMap((key) => {
+            const entitlement = snapshot.entitlements.find(
+              (row) => row.key === key,
+            )
+            return entitlement ? (
+              <UsageRow key={key} entitlement={entitlement} />
+            ) : (
+              []
+            )
+          })
+        ) : (
+          <SettingsRow label="Loading what you've used…" />
+        )}
+      </SettingsSection>
 
-        <section className="overflow-hidden border border-border/70 bg-background ">
-          <div className="border-b border-border/70 px-4 py-3">
-            <h2 className="text-sm font-semibold">Usage and limits</h2>
-            <p className="mt-1 text-xs text-muted-foreground">
-              Server-enforced counters for plan-limited Retail Ops workflows.
-            </p>
-          </div>
-          {snapshot ? (
-            snapshot.entitlements.map((entitlement) => (
-              <EntitlementRow key={entitlement.key} entitlement={entitlement} />
-            ))
-          ) : (
-            <div className="px-4 py-8 text-sm text-muted-foreground">
-              Loading subscription usage...
-            </div>
-          )}
-        </section>
-      </div>
-
-      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        {(snapshot?.plans ?? []).map((plan) => (
-          <PlanCard
-            key={plan.id}
-            plan={plan}
-            current={plan.id === snapshot?.plan.id}
-            checkoutPending={checkoutIntentMutation.isPending}
-            onCheckout={requestCheckout}
-          />
-        ))}
+      <section id="plans" className="grid scroll-mt-4 gap-2.5">
+        <h2 className="text-[15px] font-semibold">Plans</h2>
+        <div className="grid gap-3 sm:grid-cols-2">
+          {(snapshot?.plans ?? []).map((plan, index) => (
+            <PlanCard
+              key={plan.id}
+              plan={plan}
+              current={plan.id === snapshot?.plan.id}
+              upgrade={currentIndex >= 0 && index > currentIndex}
+              pending={
+                upgrade.isPending && upgrade.variables?.planId === plan.id
+              }
+              onUpgrade={(planId) =>
+                upgrade.mutate({ planId, surface: "dashboard" })
+              }
+            />
+          ))}
+        </div>
+        <p className="text-sm text-muted-foreground">
+          Free is free forever. Starter, Growth and Pro are free during launch.
+          Free plan orders reset on the 1st of each month.
+        </p>
       </section>
-
-      {checkoutIntentMutation.data ? (
-        <CheckoutIntentNotice intent={checkoutIntentMutation.data} />
-      ) : null}
-
-      <div className="border border-border/70 bg-background px-4 py-3 text-xs text-muted-foreground">
-        Free stays free forever. Starter, Growth and Pro are free during launch
-        and paid checkout is off, so no plan charges you yet. Plan limits and
-        Free-plan features are enforced by the Retail Ops APIs; Free orders
-        reset on the first day of each month (UTC).
-      </div>
-    </div>
+    </SettingsPage>
   )
 }

@@ -53,7 +53,7 @@ const PAID_FEATURES: RetailOpsPlanFeature[] = [
 
 export const RETAIL_OPS_SUBSCRIPTION_PLANS: RetailOpsSubscriptionPlan[] = [
   {
-    description: "For one owner selling a couple of products, free forever.",
+    description: "For one owner selling a few products.",
     features: [],
     id: "free",
     limits: {
@@ -87,7 +87,7 @@ export const RETAIL_OPS_SUBSCRIPTION_PLANS: RetailOpsSubscriptionPlan[] = [
     supportLabel: "Standard support",
   },
   {
-    description: "For growing teams that need more attendants and history.",
+    description: "For growing teams that need more staff and history.",
     features: [...PAID_FEATURES, "customerMessages"],
     id: "growth",
     limits: {
@@ -104,7 +104,7 @@ export const RETAIL_OPS_SUBSCRIPTION_PLANS: RetailOpsSubscriptionPlan[] = [
     supportLabel: "Priority support",
   },
   {
-    description: "For multi-branch businesses with heavier operations.",
+    description: "For businesses with many stores and lots of orders.",
     features: [...PAID_FEATURES, "customerMessages"],
     id: "pro",
     limits: {

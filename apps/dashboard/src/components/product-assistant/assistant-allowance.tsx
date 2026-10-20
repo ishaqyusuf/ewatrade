@@ -1,4 +1,8 @@
 "use client"
+import {
+  SettingsRow,
+  SettingsSection,
+} from "@/components/settings/settings-page"
 import { useTRPC } from "@/trpc/client"
 import { Button } from "@ewatrade/ui"
 import { useQuery } from "@tanstack/react-query"
@@ -14,15 +18,15 @@ export function AssistantAllowance({ compact = false }: { compact?: boolean }) {
   if (query.isPending)
     return (
       <output className="text-sm text-muted-foreground">
-        Loading AI allowance…
+        Loading AI messages…
       </output>
     )
   if (query.isError)
     return (
       <div className="text-sm">
-        <p>AI allowance could not be loaded.</p>
+        <p>Couldn't load your AI messages.</p>
         <Button variant="ghost" onClick={() => void query.refetch()}>
-          Retry
+          Try again
         </Button>
       </div>
     )
@@ -41,47 +45,37 @@ export function AssistantAllowance({ compact = false }: { compact?: boolean }) {
         <span className="max-md:hidden"> · {reset}</span>
       </p>
     )
+  const share = allowance.requestLimit
+    ? Math.round((allowance.requestsRemaining / allowance.requestLimit) * 100)
+    : 0
+  const comesBack = allowance.resetsAt
+    ? `They come back on ${new Intl.DateTimeFormat("en-NG", { dateStyle: "medium" }).format(new Date(allowance.resetsAt))}.`
+    : `Your ${allowance.windowDays}-day allowance starts with your next message.`
   return (
-    <section
-      className="space-y-4 rounded-lg border p-5"
-      aria-label="AI allowance"
-    >
-      <div>
-        <h2 className="font-semibold">AI allowance</h2>
-        <p className="text-sm text-muted-foreground">
-          Shared across this business's assistant conversations.
-        </p>
-      </div>
-      <dl className="grid grid-cols-2 gap-4 sm:grid-cols-3">
-        <div>
-          <dt className="text-sm text-muted-foreground">Tokens used</dt>
-          <dd className="text-xl font-semibold tabular-nums">
-            {allowance.tokensUsed.toLocaleString()}
-          </dd>
-        </div>
-        <div>
-          <dt className="text-sm text-muted-foreground">Tokens remaining</dt>
-          <dd className="text-xl font-semibold tabular-nums">
-            {allowance.tokensRemaining.toLocaleString()}
-          </dd>
-        </div>
-        <div>
-          <dt className="text-sm text-muted-foreground">Messages remaining</dt>
-          <dd className="text-xl font-semibold tabular-nums">
-            {allowance.requestsRemaining} / {allowance.requestLimit}
-          </dd>
-        </div>
-      </dl>
-      <p className="text-sm text-muted-foreground">
-        {allowance.tokenLimit.toLocaleString()} tokens per{" "}
-        {allowance.windowDays} days. {reset}
-      </p>
-      {allowance.exhausted ? (
-        <p className="text-sm">
-          Your allowance is used up. You can still review drafts and create
-          products with the form.
-        </p>
-      ) : null}
-    </section>
+    <SettingsSection title="AI assistant">
+      <SettingsRow
+        label="Messages left"
+        description={
+          <>
+            <span
+              className="mt-1.5 mb-1.5 block h-1.5 max-w-72 overflow-hidden rounded-full bg-muted"
+              aria-hidden="true"
+            >
+              <span
+                className="block h-full rounded-full bg-primary"
+                style={{ width: `${share}%` }}
+              />
+            </span>
+            {allowance.exhausted
+              ? `You've used all your AI messages. ${comesBack} You can still add products with the form.`
+              : `Everyone in your business shares these. ${comesBack}`}
+          </>
+        }
+      >
+        <span className="text-sm tabular-nums">
+          {allowance.requestsRemaining} of {allowance.requestLimit}
+        </span>
+      </SettingsRow>
+    </SettingsSection>
   )
 }

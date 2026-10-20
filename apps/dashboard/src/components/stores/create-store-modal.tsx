@@ -31,11 +31,11 @@ export function CreateStoreModal() {
           <div className="p-4">
             <DialogHeader className="mb-6 pr-8">
               <DialogTitle className="mb-4 text-lg font-semibold">
-                Add Store
+                Add store
               </DialogTitle>
               <DialogDescription>
-                Create a Store for this business. Your plan’s Store limit
-                applies.
+                Add another store to this business. Your plan sets how many you
+                can have.
               </DialogDescription>
             </DialogHeader>
             {closeError ? (

@@ -11,7 +11,7 @@ import { useEffect } from "react"
 import { z } from "zod"
 
 const schema = z.object({
-  name: z.string().trim().min(1, "Enter a Store name.").max(120),
+  name: z.string().trim().min(1, "Enter a store name.").max(120),
 })
 
 export function CreateStoreForm({
@@ -56,6 +56,7 @@ export function CreateStoreForm({
         <FieldLabel htmlFor="new-store-name">Store name</FieldLabel>
         <Input
           id="new-store-name"
+          placeholder="For example, Lekki Phase 1"
           autoFocus
           maxLength={120}
           disabled={form.formState.isSubmitting}
@@ -66,7 +67,7 @@ export function CreateStoreForm({
           <FieldError>{form.formState.errors.name.message}</FieldError>
         ) : null}
         <p className="text-sm text-muted-foreground">
-          Uses your business currency. Staff access is managed separately.
+          It uses your business currency. Add staff to it later from Staff.
         </p>
       </Field>
       {create.error ? (
@@ -86,7 +87,7 @@ export function CreateStoreForm({
         </FormFeedback>
       ) : null}
       <Button type="submit" disabled={form.formState.isSubmitting}>
-        {form.formState.isSubmitting ? "Adding Store…" : "Add Store"}
+        {form.formState.isSubmitting ? "Adding store…" : "Add store"}
       </Button>
     </form>
   )

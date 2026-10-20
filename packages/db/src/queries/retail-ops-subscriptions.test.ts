@@ -511,7 +511,7 @@ describe("retail ops subscription queries", () => {
         id: "tenant_123",
       },
     })
-    expect(intent.message).toContain("Billing checkout is not configured yet")
+    expect(intent.message).toContain("Paid plans aren't available yet")
 
     const planUpsert = getCall(db.calls, "subscriptionPlan.upsert")
     expect(planUpsert.where).toEqual({ key: "pro" })

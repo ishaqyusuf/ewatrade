@@ -1540,8 +1540,8 @@ export async function createRetailOpsSubscriptionCheckoutIntent(
     },
     message:
       status === "active_plan"
-        ? `${targetPlan.name} is already the active Retail Ops plan.`
-        : "Billing checkout is not configured yet. This intent preserves the provider-neutral upgrade boundary.",
+        ? `${targetPlan.name} is already your plan.`
+        : "Paid plans aren't available yet. Everything is free during launch.",
     provider: "none",
     subscription: snapshot.subscription,
     targetPlan,
@@ -2173,7 +2173,7 @@ const ENTITLEMENT_NOUNS: Record<
   [one: string, many: string]
 > = {
   storefrontItems: ["storefront item", "storefront items"],
-  businesses: ["business", "businesses"],
+  businesses: ["store", "stores"],
   offlineDevices: ["offline device", "offline devices"],
   ordersPerMonth: ["order a month", "orders a month"],
   products: ["product", "products"],
