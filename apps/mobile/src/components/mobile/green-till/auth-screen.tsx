@@ -45,6 +45,11 @@ type GreenTillAuthScreenProps = {
   motionDirection?: StepDirection
   /** Cards on the mint stage. Defaults to the labelled sales example. */
   stage?: ReactNode
+  /**
+   * "grouped" (sign-in, workshop mobile/sign-in-spacing 03): roomier sheet
+   * padding and a 28px gap between the title and the form's groups.
+   */
+  spacing?: "default" | "grouped"
   testID?: string
 }
 
@@ -70,6 +75,7 @@ export function GreenTillAuthScreen({
   progress,
   progressTotal = 4,
   stage,
+  spacing = "default",
   testID,
   motionKey,
   motionDirection,
@@ -149,6 +155,7 @@ export function GreenTillAuthScreen({
         <View
           style={[
             styles.sheet,
+            spacing === "grouped" ? styles.groupedSheet : null,
             {
               backgroundColor: colors.background,
               boxShadow: `0 -8px 26px -8px ${palette.heroTo}6B`,
@@ -267,6 +274,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 18,
     paddingTop: 28,
   },
+  groupedSheet: { gap: 28, paddingHorizontal: 20, paddingTop: 32 },
   stage: { overflow: "hidden", position: "relative" },
   progress: { flexDirection: "row", gap: 6 },
 })

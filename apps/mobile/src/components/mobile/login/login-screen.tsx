@@ -178,60 +178,64 @@ export function LoginScreen() {
         />
       }
     >
-      <View className="gap-4">
-        {useWhatsApp ? (
-          <PhoneField
-            countryCode={phoneCountry}
-            onCountryChange={setPhoneCountry}
-            onChangeText={setPhone}
-            value={phone}
-            label="WhatsApp number"
-            variant="green-gate"
-          />
-        ) : (
-          <FormField
-            autoCapitalize="none"
-            keyboardType="email-address"
-            label="Email address"
-            onChangeText={setEmail}
-            placeholder="Enter your email address"
-            textContentType="emailAddress"
-            value={email}
-            variant="green-gate"
-          />
-        )}
-        {usePassword && !useWhatsApp ? (
-          <FormField
-            autoCapitalize="none"
-            autoComplete="current-password"
-            label="Password"
-            leadingIcon="Lock"
-            onChangeText={setPassword}
-            placeholder="Enter your password"
-            secureTextEntry
-            textContentType="password"
-            value={password}
-            variant="green-gate"
-          />
-        ) : null}
-        <AuthActionButton
-          disabled={
-            useWhatsApp
-              ? phone.length < 7
-              : !normalizedEmail || (usePassword && !password)
-          }
-          isLoading={isPending}
-          loadingLabel={usePassword ? "Signing in" : "Sending code"}
-          onPress={continueWithEmail}
-          trailingIcon="ArrowRight"
-        >
-          {useWhatsApp
-            ? "Send WhatsApp code"
-            : usePassword
-              ? "Sign in with password"
-              : "Send login code"}
-        </AuthActionButton>
-        <View className="flex-row gap-3">
+      {/* Grouped spacing (workshop mobile/sign-in-spacing 03): 10px inside a
+          group, 28px between groups. */}
+      <View className="gap-7">
+        <View className="gap-2.5">
+          {useWhatsApp ? (
+            <PhoneField
+              countryCode={phoneCountry}
+              onCountryChange={setPhoneCountry}
+              onChangeText={setPhone}
+              value={phone}
+              label="WhatsApp number"
+              variant="green-gate"
+            />
+          ) : (
+            <FormField
+              autoCapitalize="none"
+              keyboardType="email-address"
+              label="Email address"
+              onChangeText={setEmail}
+              placeholder="Enter your email address"
+              textContentType="emailAddress"
+              value={email}
+              variant="green-gate"
+            />
+          )}
+          {usePassword && !useWhatsApp ? (
+            <FormField
+              autoCapitalize="none"
+              autoComplete="current-password"
+              label="Password"
+              leadingIcon="Lock"
+              onChangeText={setPassword}
+              placeholder="Enter your password"
+              secureTextEntry
+              textContentType="password"
+              value={password}
+              variant="green-gate"
+            />
+          ) : null}
+          <AuthActionButton
+            disabled={
+              useWhatsApp
+                ? phone.length < 7
+                : !normalizedEmail || (usePassword && !password)
+            }
+            isLoading={isPending}
+            loadingLabel={usePassword ? "Signing in" : "Sending code"}
+            onPress={continueWithEmail}
+            trailingIcon="ArrowRight"
+          >
+            {useWhatsApp
+              ? "Send WhatsApp code"
+              : usePassword
+                ? "Sign in with password"
+                : "Send login code"}
+          </AuthActionButton>
+        </View>
+        <View className="flex-row gap-2.5">
           {phoneAvailability.data?.enabled ? (
             <View className="flex-1">
               <AuthMethodButton
@@ -270,20 +274,22 @@ export function LoginScreen() {
             tone="destructive"
           />
         ) : null}
-        <AuthDivider label="or" plain />
-        <AppleAuthButton
-          onPress={appleAuth.startAppleAuth}
-          disabled={appleAuth.isPending}
-        />
-        <AuthMethodButton
-          brandIcon="google"
-          disabled={googleAuth.isPending}
-          label="Continue with Google"
-          variant="sso"
-          loadingLabel="Connecting to Google"
-          onPress={continueWithGoogle}
-          pending={googleAuth.isPending}
-        />
+        <View className="gap-2.5">
+          <AuthDivider label="or" plain />
+          <AppleAuthButton
+            onPress={appleAuth.startAppleAuth}
+            disabled={appleAuth.isPending}
+          />
+          <AuthMethodButton
+            brandIcon="google"
+            disabled={googleAuth.isPending}
+            label="Continue with Google"
+            variant="sso"
+            loadingLabel="Connecting to Google"
+            onPress={continueWithGoogle}
+            pending={googleAuth.isPending}
+          />
+        </View>
       </View>
     </ClassicLoginScreen>
   )
