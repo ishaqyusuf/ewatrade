@@ -11,8 +11,15 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@ewatrade/ui"
-import { ArrowDown01Icon, MoreVerticalIcon } from "@hugeicons/core-free-icons"
+import {
+  Add01Icon,
+  ArrowDown01Icon,
+  Clock01Icon,
+  MoreVerticalIcon,
+  ViewIcon,
+} from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
+import { useRouter } from "next/navigation"
 
 type BalanceContext = {
   storeId: string
@@ -24,12 +31,14 @@ type BalanceContext = {
   inventoryUnitName: string
 }
 
+/** Update stock: the header button, or a row's ⋮ menu with the product preselected. */
 export function InventoryOperationMenu({
   balance,
   onAction,
 }: { balance?: BalanceContext; onAction?: () => void }) {
   const { setParams } = useInventoryParams()
   const { open } = useCatalogDetailParams()
+  const router = useRouter()
   return (
     <DropdownMenu>
       <DropdownMenuTrigger
@@ -43,7 +52,7 @@ export function InventoryOperationMenu({
             aria-label={
               balance
                 ? `Actions for ${balance.productName}, ${balance.variantName}, ${balance.inventoryUnitName}`
-                : "Stock operation"
+                : "Update stock"
             }
             onClick={(event) => event.stopPropagation()}
           />
@@ -53,16 +62,25 @@ export function InventoryOperationMenu({
           <HugeiconsIcon icon={MoreVerticalIcon} aria-hidden="true" />
         ) : (
           <>
-            Stock operation{" "}
+            <HugeiconsIcon
+              icon={Add01Icon}
+              data-icon="inline-start"
+              aria-hidden="true"
+            />
+            Update stock
             <HugeiconsIcon
               icon={ArrowDown01Icon}
-              className="ml-2 size-4"
+              data-icon="inline-end"
               aria-hidden="true"
             />
           </>
         )}
       </DropdownMenuTrigger>
-      <DropdownMenuContent appearance="dashboard" align="end">
+      <DropdownMenuContent
+        appearance="dashboard"
+        align="end"
+        className="min-w-64"
+      >
         {balance ? (
           <>
             <DropdownMenuItem
@@ -72,14 +90,28 @@ export function InventoryOperationMenu({
                 void open(balance.catalogItemId)
               }}
             >
-              View item
+              <HugeiconsIcon icon={ViewIcon} aria-hidden="true" />
+              View product
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={(event) => {
+                event.stopPropagation()
+                onAction?.()
+                router.push(
+                  `/inventory/operations?q=${encodeURIComponent(balance.productName)}`,
+                )
+              }}
+            >
+              <HugeiconsIcon icon={Clock01Icon} aria-hidden="true" />
+              Stock history
             </DropdownMenuItem>
             <DropdownMenuSeparator />
           </>
         ) : null}
         {INVENTORY_ACTIONS.map((action) => (
           <DropdownMenuItem
-            key={action.mode}
+            key={action.label}
+            className="items-start"
             onClick={(event) => {
               event.stopPropagation()
               onAction?.()
@@ -88,28 +120,18 @@ export function InventoryOperationMenu({
                 inventoryProduct: balance?.productId ?? null,
                 inventoryStore: balance?.storeId ?? null,
                 inventoryBalance: balance?.balanceSourceId ?? null,
+                inventoryPreset: "preset" in action ? action.preset : null,
               })
             }}
           >
-            {action.label === "Adjust" ? "Adjust stock" : action.label}
+            <span className="flex flex-col">
+              <span className="font-medium">{action.label}</span>
+              <span className="text-xs text-muted-foreground">
+                {action.hint}
+              </span>
+            </span>
           </DropdownMenuItem>
         ))}
-        <DropdownMenuSeparator />
-        <DropdownMenuItem
-          onClick={(event) => {
-            event.stopPropagation()
-            onAction?.()
-            void setParams({
-              inventoryOperation: "adjustment",
-              inventoryProduct: balance?.productId ?? null,
-              inventoryStore: balance?.storeId ?? null,
-              inventoryBalance: balance?.balanceSourceId ?? null,
-              inventoryPreset: "loss",
-            })
-          }}
-        >
-          Record damage or loss
-        </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   )

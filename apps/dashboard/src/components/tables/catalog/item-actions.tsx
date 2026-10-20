@@ -100,35 +100,32 @@ export function CatalogItemActions({
                   appearance="dashboard"
                   className={themeClass}
                 >
-                  {INVENTORY_ACTIONS.map((action) => (
+                  {INVENTORY_ACTIONS.filter(
+                    (action) => action.mode !== "internal_use" || canRecordUse,
+                  ).map((action) => (
                     <DropdownMenuItem
-                      key={action.mode}
+                      key={action.label}
                       onClick={(event) => {
                         event.stopPropagation()
                         void setParams({
                           inventoryOperation: action.mode,
                           inventoryProduct: productId,
+                          inventoryPreset:
+                            "preset" in action ? action.preset : null,
                         })
                       }}
                     >
-                      <HugeiconsIcon icon={Add01Icon} aria-hidden="true" />
+                      <HugeiconsIcon
+                        icon={
+                          action.mode === "internal_use"
+                            ? Upload01Icon
+                            : Add01Icon
+                        }
+                        aria-hidden="true"
+                      />
                       {action.label}
                     </DropdownMenuItem>
                   ))}
-                  {canRecordUse ? (
-                    <DropdownMenuItem
-                      onClick={(event) => {
-                        event.stopPropagation()
-                        void setParams({
-                          inventoryOperation: "internal_use",
-                          inventoryProduct: productId,
-                        })
-                      }}
-                    >
-                      <HugeiconsIcon icon={Upload01Icon} aria-hidden="true" />
-                      Record use
-                    </DropdownMenuItem>
-                  ) : null}
                 </DropdownMenuSubContent>
               </DropdownMenuSub>
             ) : null}
@@ -140,7 +137,7 @@ export function CatalogItemActions({
                 }}
               >
                 <HugeiconsIcon icon={RulerIcon} aria-hidden="true" />
-                Configure units
+                Units
               </DropdownMenuItem>
             ) : null}
           </DropdownMenuGroup>

@@ -5,6 +5,7 @@ import { WorkspaceError } from "@/components/dashboard/workspace-error"
 import { InventoryHeader } from "@/components/inventory/inventory-header"
 import { ScrollableContent } from "@/components/scrollable-content"
 import { InventoryOperationSheet } from "@/components/sheets/inventory-operation-sheet"
+import { TableToolbarSlotProvider } from "@/components/tables/core"
 import { InventoryDataTable } from "@/components/tables/inventory/data-table"
 import { InventoryTableSkeleton } from "@/components/tables/inventory/skeleton"
 import { useDirectoryView } from "@/hooks/use-directory-view"
@@ -33,7 +34,7 @@ export function InventoryPage({
       initialSettings: initialViewSettings,
     })
   return (
-    <>
+    <TableToolbarSlotProvider>
       <ScrollableContent>
         <div className="flex min-w-0 flex-1 flex-col gap-6 pt-6">
           <InventoryHeader
@@ -69,6 +70,6 @@ export function InventoryPage({
       </ScrollableContent>
       <InventoryOperationSheet store={store} />
       <CatalogUnitConfigurationSheet />
-    </>
+    </TableToolbarSlotProvider>
   )
 }

@@ -12,12 +12,12 @@ export function InventoryEmptyState({ filtered }: { filtered: boolean }) {
         className="size-6 text-muted-foreground"
       />
       <p className="mt-3 font-medium">
-        {filtered ? "No matching balances" : "No inventory balances"}
+        {filtered ? "No products match" : "No stock yet"}
       </p>
       <p className="mt-1 text-sm text-muted-foreground">
         {filtered
-          ? "Clear or change your search and stock filters."
-          : "Create a Product to establish its canonical balance."}
+          ? "Clear the search or pick All stock."
+          : "Add stock with Stock in, or set opening stock on a Product."}
       </p>
     </div>
   )

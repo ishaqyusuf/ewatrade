@@ -3,6 +3,7 @@
 import {
   DirectoryToolbar,
   SelectionBar,
+  TableToolbarPortal,
   VirtualRow,
 } from "@/components/tables/core"
 import { useStickyColumns } from "@/hooks/use-sticky-columns"
@@ -83,11 +84,14 @@ export function InventoryTableView({
       <DirectoryToolbar
         table={table}
         view={view}
-        selectAllLabel="Select all loaded inventory balances"
-        summary={`${rows.length} balance${rows.length === 1 ? "" : "s"}`}
-      >
-        {view === "table" ? <InventoryTableSettings table={table} /> : null}
-      </DirectoryToolbar>
+        selectAllLabel="Select all shown stock"
+        summary={`${rows.length} shown`}
+      />
+      {view === "table" ? (
+        <TableToolbarPortal>
+          <InventoryTableSettings table={table} />
+        </TableToolbarPortal>
+      ) : null}
 
       {persistenceError ? (
         <div className="flex items-center justify-between gap-3" role="alert">
@@ -111,7 +115,7 @@ export function InventoryTableView({
         <section
           ref={tableScroll.setContainerRef}
           className="max-h-[560px] overflow-auto overscroll-contain border border-border"
-          aria-label="Inventory balances"
+          aria-label="Stock"
         >
           <DndContext
             id="inventory-table-dnd"

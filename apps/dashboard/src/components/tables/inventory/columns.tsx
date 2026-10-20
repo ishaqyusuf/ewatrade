@@ -2,9 +2,14 @@
 
 import { InventoryOperationMenu } from "@/components/inventory/inventory-operation-menu"
 import { type TableColumnMeta, selectColumn } from "@/components/tables/core"
-import { formatInventoryQuantity } from "@/lib/inventory-view"
+import {
+  type InventoryStockStatus,
+  formatStockQuantity,
+  getInventoryStatus,
+  inventoryStatusLabels,
+} from "@/lib/inventory-view"
 import type { RouterOutputs } from "@ewatrade/api/trpc/routers/_app"
-import { Badge, Button } from "@ewatrade/ui"
+import { Badge, Button, cn } from "@ewatrade/ui"
 import { compareExactDecimals } from "@ewatrade/utils/exact-decimal"
 import type { ColumnDef, SortingFn } from "@tanstack/react-table"
 
@@ -15,15 +20,64 @@ export type InventoryBalance =
 
 export const inventorySortFields = [
   "productName",
-  "kind",
   "onHandQuantity",
   "reservedQuantity",
   "availableQuantity",
-  "custodyType",
 ] as const
 
-export function inventoryLabel(value: string) {
-  return value.toLowerCase().replaceAll("_", " ")
+const statusTone: Record<InventoryStockStatus, string> = {
+  in_stock: "bg-primary/10 text-primary",
+  out: "bg-destructive/10 text-destructive",
+  transit: "bg-amber-500/15 text-amber-700 dark:text-amber-300",
+  staff: "bg-muted text-foreground",
+}
+
+export function InventoryStatusBadge({ row }: { row: InventoryBalance }) {
+  const status = getInventoryStatus(row)
+  return (
+    <Badge className={cn("rounded-full border-0", statusTone[status])}>
+      {inventoryStatusLabels[status]}
+    </Badge>
+  )
+}
+
+/** Variant, packed unit and store, whichever tell this line apart. */
+export function getInventoryLineDetail(row: InventoryBalance) {
+  const parts = [
+    row.variantName && row.variantName !== row.productName
+      ? row.variantName
+      : null,
+    row.kind === "PACKAGED_STOCK" ? `Packed: ${row.inventoryUnitName}` : null,
+    row.storeBalances ? storeCountText(row) : null,
+  ].filter(Boolean)
+  return parts.length
+    ? parts.join(" · ")
+    : `Counted in ${formatStockQuantity("2", row.inventoryUnitName).slice(2)}`
+}
+
+function storeCountText(row: InventoryBalance) {
+  const count = getInventoryStoreCount(row)
+  return `${count} store${count === 1 ? "" : "s"}`
+}
+
+function Quantity({
+  value,
+  unit,
+  strong = false,
+  blankZero = false,
+}: {
+  value: string
+  unit: string
+  strong?: boolean
+  blankZero?: boolean
+}) {
+  if (blankZero && compareExactDecimals(value, "0") === 0)
+    return <span className="text-muted-foreground">—</span>
+  return (
+    <span className={cn("tabular-nums", strong && "font-semibold")}>
+      {formatStockQuantity(value, unit)}
+    </span>
+  )
 }
 
 const exactQuantitySort: SortingFn<InventoryBalance> = (rowA, rowB, columnId) =>
@@ -117,7 +171,7 @@ export function createInventoryColumns(
             {row.original.productName}
           </Button>
           <p className="truncate text-xs text-muted-foreground">
-            {row.original.variantName}
+            {getInventoryLineDetail(row.original)}
           </p>
         </div>
       ),
@@ -135,103 +189,81 @@ export function createInventoryColumns(
             className="truncate p-0"
             onClick={() => onStores?.(row.original)}
           >
-            {getInventoryStoreCount(row.original)} store(s)
+            {storeCountText(row.original)}
           </Button>
         ) : (
           <span className="truncate">{row.original.storeName}</span>
         ),
     },
     {
-      id: "source",
-      accessorFn: (row) => row.kind,
-      header: "Balance source",
-      size: 170,
-      minSize: 140,
-      maxSize: 300,
-      meta: meta("Balance source", "w-24", { sortField: "kind" }),
-      cell: ({ row }) => (
-        <div>
-          <Badge className="rounded-full capitalize">
-            {inventoryLabel(row.original.kind)}
-          </Badge>
-          <p className="mt-1 text-xs text-muted-foreground">
-            {row.original.inventoryUnitName}
-          </p>
-        </div>
-      ),
-    },
-    {
       id: "onHand",
       accessorFn: (row) => row.onHandQuantity,
-      header: "On hand",
-      size: 120,
-      minSize: 100,
-      maxSize: 220,
+      header: "In stock",
+      size: 140,
+      minSize: 110,
+      maxSize: 240,
       sortingFn: exactQuantitySort,
-      meta: meta("On hand", "w-20", {
+      meta: meta("In stock", "w-20", {
         sortField: "onHandQuantity",
         className: "text-right",
       }),
       cell: ({ row }) => (
-        <span className="tabular-nums">
-          {formatInventoryQuantity(row.original.onHandQuantity)}
-        </span>
+        <Quantity
+          value={row.original.onHandQuantity}
+          unit={row.original.inventoryUnitName}
+        />
       ),
     },
     {
       id: "reserved",
       accessorFn: (row) => row.reservedQuantity,
-      header: "Reserved",
-      size: 120,
-      minSize: 100,
-      maxSize: 220,
+      header: "Held for orders",
+      size: 170,
+      minSize: 120,
+      maxSize: 240,
       sortingFn: exactQuantitySort,
-      meta: meta("Reserved", "w-20", {
+      meta: meta("Held for orders", "w-20", {
         sortField: "reservedQuantity",
         className: "text-right",
       }),
       cell: ({ row }) => (
-        <span className="tabular-nums">
-          {formatInventoryQuantity(row.original.reservedQuantity)}
-        </span>
+        <Quantity
+          value={row.original.reservedQuantity}
+          unit={row.original.inventoryUnitName}
+          blankZero
+        />
       ),
     },
     {
       id: "available",
       accessorFn: (row) => row.availableQuantity,
-      header: "Available",
-      size: 120,
-      minSize: 100,
-      maxSize: 220,
+      header: "Free to sell",
+      size: 140,
+      minSize: 110,
+      maxSize: 240,
       sortingFn: exactQuantitySort,
-      meta: meta("Available", "w-20", {
+      meta: meta("Free to sell", "w-20", {
         sortField: "availableQuantity",
         className: "text-right",
       }),
       cell: ({ row }) => (
-        <div className="text-right">
-          <span className="font-semibold tabular-nums">
-            {formatInventoryQuantity(row.original.availableQuantity)}
-          </span>
-          <p className="mt-1 text-xs text-muted-foreground">
-            {row.original.inventoryUnitName}
-          </p>
-        </div>
+        <Quantity
+          value={row.original.availableQuantity}
+          unit={row.original.inventoryUnitName}
+          strong
+        />
       ),
     },
     {
-      id: "custody",
-      accessorFn: (row) => row.custodyType,
-      header: "Custody",
-      size: 140,
+      id: "status",
+      accessorFn: (row) => getInventoryStatus(row),
+      header: "Status",
+      size: 130,
       minSize: 110,
-      maxSize: 250,
-      meta: meta("Custody", "w-24", { sortField: "custodyType" }),
-      cell: ({ row }) => (
-        <span className="capitalize text-muted-foreground">
-          {inventoryLabel(row.original.custodyType)}
-        </span>
-      ),
+      maxSize: 200,
+      enableSorting: false,
+      meta: meta("Status", "w-20"),
+      cell: ({ row }) => <InventoryStatusBadge row={row.original} />,
     },
     {
       id: "actions",

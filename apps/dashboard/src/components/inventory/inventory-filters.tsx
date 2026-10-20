@@ -5,18 +5,18 @@ import { useInventoryParams } from "@/hooks/use-inventory-params"
 import { Button } from "@ewatrade/ui"
 
 const filters = [
-  { id: "all", label: "All balances" },
-  { id: "reserved", label: "Reserved" },
+  { id: "all", label: "All stock" },
+  { id: "reserved", label: "Held for orders" },
   { id: "out", label: "Out of stock" },
 ] as const
 
 export function InventoryFilters() {
   const { query, stockFilter, setParams } = useInventoryParams()
   return (
-    <div className="flex flex-wrap items-center justify-between gap-3">
+    <div className="flex flex-wrap items-center gap-3">
       <SearchField
         value={query}
-        placeholder="Search product, variant, unit, or custody..."
+        placeholder="Search products"
         onSearch={(value) =>
           void setParams({ inventoryQuery: value.trim() || null })
         }

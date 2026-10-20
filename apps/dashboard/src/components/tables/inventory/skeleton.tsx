@@ -31,7 +31,7 @@ export function InventoryTableSkeleton({
         ))}
       </div>
       {view !== "table" ? (
-        <DirectoryCollectionSkeleton label="inventory balances" />
+        <DirectoryCollectionSkeleton label="stock" />
       ) : (
         <TableSkeleton
           columns={inventoryColumns}
