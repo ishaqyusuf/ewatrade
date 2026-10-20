@@ -439,6 +439,11 @@ export function ServiceCommerceReportWorkspace({
               report.isPlaceholderData && "opacity-60",
             )}
           >
+            {report.isPlaceholderData ? (
+              <output className="text-sm text-muted-foreground">
+                Updating figures…
+              </output>
+            ) : null}
             {report.data.mayBeTruncated ? (
               <output className="block border border-amber-500/30 bg-amber-500/5 p-4 text-sm text-amber-700 dark:text-amber-400">
                 Some figures may be missing because the date range is very long.
@@ -476,6 +481,8 @@ function RequestsByDayCard({
   const days = reportRangeDays(range)
   const requestDays = countRequestDays(report)
   const total = report.lifecycle.requestsReceived
+  // An older API may not send daily counts yet; the chart then says so.
+  const daily = report.daily ?? []
   return (
     <ReportChartCard
       note={
@@ -485,11 +492,11 @@ function RequestsByDayCard({
       }
       subtitle={formatReportRangeLabel(range)}
       table={
-        report.daily.length
+        total > 0 && daily.length
           ? {
               columns: ["Date", "Requests", "Quotes sent", "Paid"],
               numericFrom: 1,
-              rows: [...report.daily].reverse().map((day) => ({
+              rows: [...daily].reverse().map((day) => ({
                 cells: [
                   formatReportDay(day.date, true),
                   countFormat.format(day.requests),
@@ -503,10 +510,18 @@ function RequestsByDayCard({
       }
       title="Requests by day"
     >
-      {total === 0 || !report.daily.length ? (
+      {total === 0 || !daily.length ? (
         <ReportChartEmpty
-          description="They show here when a Customer asks for something."
-          title={`No requests ${formatReportRangeBetween(range)}`}
+          description={
+            daily.length || total === 0
+              ? "They show here when a Customer asks for something."
+              : "Refresh the page to load them."
+          }
+          title={
+            daily.length || total === 0
+              ? `No requests ${formatReportRangeBetween(range)}`
+              : "Daily counts aren't available yet"
+          }
         />
       ) : (
         <>
@@ -515,7 +530,7 @@ function RequestsByDayCard({
             {total === 1 ? "request" : "requests"} in these dates
           </p>
           <DailyBarChart
-            data={report.daily.map((day) => ({
+            data={daily.map((day) => ({
               date: day.date,
               requests: day.requests,
             }))}
@@ -692,7 +707,7 @@ function SectionTab({
         <ReportMetricGroups groups={content.groups} />
       ) : content.key === "costs" ? (
         <p className="border border-dashed border-border p-4 text-sm text-muted-foreground">
-          No charges in these dates for this Store.
+          No charges in these dates.
         </p>
       ) : null}
       {content.footnote ? (

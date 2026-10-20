@@ -38,7 +38,7 @@ import { useTRPC } from "@/trpc/client"
 import { Tabs, TabsContent, TabsTrigger, cn } from "@ewatrade/ui"
 import { Alert02Icon, Clock01Icon } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
-import { useQuery, useSuspenseQuery } from "@tanstack/react-query"
+import { useSuspenseQuery } from "@tanstack/react-query"
 import { ErrorBoundary } from "next/dist/client/components/error-boundary"
 import {
   type ComponentProps,
@@ -48,6 +48,7 @@ import {
   useTransition,
 } from "react"
 import {
+  type OperationsSalesReport,
   buildInventoryGroups,
   buildSalesReportCsv,
   buildServiceGroups,
@@ -70,15 +71,34 @@ function useSalesReport(store: Store, range: ReportRange) {
   ).data
 }
 
-/** The same days just before; comparisons are left out until it loads or if it fails. */
-function usePreviousSalesReport(store: Store, range: ReportRange) {
+type SalesTotals = OperationsSalesReport["totals"]
+
+/** Change against the same days just before; shows nothing until it loads or if it fails. */
+function PreviousSalesDelta({
+  current,
+  pick,
+  range,
+  store,
+}: {
+  current: number
+  pick: (totals: SalesTotals) => number
+  range: ReportRange
+  store: Store
+}) {
   const trpc = useTRPC()
-  return useQuery(
+  const previous = useSuspenseQuery(
     trpc.orders.salesReport.queryOptions(
       salesInput(store, previousReportRange(range)),
       { retry: false },
     ),
   ).data
+  return (
+    <ReportDelta
+      current={current}
+      days={reportRangeDays(range)}
+      previous={pick(previous.totals)}
+    />
+  )
 }
 
 function useServiceSummary(store: Store) {
@@ -96,19 +116,26 @@ function SalesHeadlines({
   store,
 }: { range: ReportRange; store: Store }) {
   const report = useSalesReport(store, range)
-  const previous = usePreviousSalesReport(store, range)
-  const days = reportRangeDays(range)
   const { totals } = report
   const money = (minor: number) => formatReportMoney(minor, report.currencyCode)
   const servicesSold = Number(totals.serviceQuantity)
-  const delta = (current: number, before: number | undefined) => (
-    <ReportDelta current={current} days={days} previous={before} />
+  const delta = (current: number, pick: (totals: SalesTotals) => number) => (
+    <ErrorBoundary errorComponent={SilentFailure}>
+      <Suspense fallback={null}>
+        <PreviousSalesDelta
+          current={current}
+          pick={pick}
+          range={range}
+          store={store}
+        />
+      </Suspense>
+    </ErrorBoundary>
   )
   return (
     <ReportHeadlineStrip
       items={[
         {
-          detail: delta(totals.orderCount, previous?.totals.orderCount),
+          detail: delta(totals.orderCount, (before) => before.orderCount),
           label: "Orders",
           muted: totals.orderCount === 0,
           value: countFormat.format(totals.orderCount),
@@ -116,7 +143,7 @@ function SalesHeadlines({
         {
           detail: delta(
             totals.orderValueMinor,
-            previous?.totals.orderValueMinor,
+            (before) => before.orderValueMinor,
           ),
           label: "Sales",
           money: true,
@@ -124,16 +151,15 @@ function SalesHeadlines({
           value: money(totals.orderValueMinor),
         },
         {
-          detail: delta(totals.serviceMinor, previous?.totals.serviceMinor),
+          detail: delta(totals.serviceMinor, (before) => before.serviceMinor),
           label: "Service sales",
           money: true,
           muted: totals.serviceMinor === 0,
           value: money(totals.serviceMinor),
         },
         {
-          detail: delta(
-            servicesSold,
-            previous ? Number(previous.totals.serviceQuantity) : undefined,
+          detail: delta(servicesSold, (before) =>
+            Number(before.serviceQuantity),
           ),
           label: "Services sold",
           muted: servicesSold === 0,
@@ -170,19 +196,29 @@ function SalesCharts({
 }
 
 function SalesDownload({ range, store }: { range: ReportRange; store: Store }) {
-  const trpc = useTRPC()
-  const report = useQuery(
-    trpc.orders.salesReport.queryOptions(salesInput(store, range), {
-      retry: false,
-    }),
-  ).data
+  const report = useSalesReport(store, range)
   return (
     <ReportDownloadButton
-      build={() =>
-        report ? buildSalesReportCsv(report, range, store.name) : null
-      }
-      disabled={!report}
+      build={() => buildSalesReportCsv(report, range, store.name)}
     />
+  )
+}
+
+/** Disabled until the sales report has loaded, and if it fails. */
+function SalesDownloadButton({
+  range,
+  store,
+}: {
+  range: ReportRange
+  store: Store
+}) {
+  const disabled = <ReportDownloadButton build={() => null} disabled />
+  return (
+    <ErrorBoundary errorComponent={() => disabled}>
+      <Suspense fallback={disabled}>
+        <SalesDownload range={range} store={store} />
+      </Suspense>
+    </ErrorBoundary>
   )
 }
 
@@ -344,7 +380,7 @@ export function OperationsReports({
             actions={
               <>
                 <ReportDateControl onChange={setRange} range={range} />
-                <SalesDownload range={range} store={store} />
+                <SalesDownloadButton range={range} store={store} />
               </>
             }
           />
@@ -356,6 +392,11 @@ export function OperationsReports({
             refreshing && "opacity-60",
           )}
         >
+          {refreshing ? (
+            <output className="text-sm text-muted-foreground">
+              Updating figures…
+            </output>
+          ) : null}
           <IsolatedReport
             fallback={<ReportHeadlineStripSkeleton count={4} />}
             title="Sales"

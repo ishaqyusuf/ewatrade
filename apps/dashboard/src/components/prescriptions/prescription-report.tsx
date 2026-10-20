@@ -208,10 +208,15 @@ export function PrescriptionReport({ stores }: { stores: StoreOption[] }) {
           <div
             aria-busy={report.isPlaceholderData}
             className={cn(
-              "transition-opacity",
+              "grid min-w-0 grid-cols-[minmax(0,1fr)] gap-4 transition-opacity",
               report.isPlaceholderData && "opacity-60",
             )}
           >
+            {report.isPlaceholderData ? (
+              <output className="text-sm text-muted-foreground">
+                Updating figures…
+              </output>
+            ) : null}
             <PrescriptionReportContent
               onTabChange={(tab) => void params.setTab(tab)}
               previous={
@@ -250,7 +255,7 @@ function RequestsByDayCard({
       }
       subtitle={formatReportRangeLabel(range)}
       table={
-        daily.length
+        report.requestCount > 0 && daily.length
           ? {
               columns: ["Date", "Requests", "Quotes sent", "Paid orders"],
               numericFrom: 1,
@@ -270,8 +275,16 @@ function RequestsByDayCard({
     >
       {report.requestCount === 0 || !daily.length ? (
         <ReportChartEmpty
-          description="They show here when a Customer sends a prescription."
-          title={`No prescription requests ${formatReportRangeBetween(range)}`}
+          description={
+            daily.length || report.requestCount === 0
+              ? "They show here when a Customer sends a prescription."
+              : "Refresh the page to load them."
+          }
+          title={
+            daily.length || report.requestCount === 0
+              ? `No prescription requests ${formatReportRangeBetween(range)}`
+              : "Daily counts aren't available yet"
+          }
         />
       ) : (
         <>

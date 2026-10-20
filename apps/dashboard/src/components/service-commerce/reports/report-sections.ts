@@ -515,7 +515,7 @@ export function buildReportSections(
 export function countRequestDays(
   report: Pick<ServiceCommerceReportOutput, "daily">,
 ) {
-  return report.daily.filter((day) => day.requests > 0).length
+  return (report.daily ?? []).filter((day) => day.requests > 0).length
 }
 
 /** CSV of the daily counts behind Requests by day and the request-to-payment steps. */
@@ -535,7 +535,7 @@ export function buildServiceCommerceReportCsv(
       "Paid",
       "Amount paid",
     ],
-    ...report.daily.map((day) => [
+    ...(report.daily ?? []).map((day) => [
       day.date,
       day.requests,
       day.quotesIssued,

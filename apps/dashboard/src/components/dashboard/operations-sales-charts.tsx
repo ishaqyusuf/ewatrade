@@ -134,6 +134,7 @@ export function SalesByDayCard({
               { color: PRODUCT_COLOR, key: "product", label: "Products" },
               { color: SERVICE_COLOR, key: "service", label: "Services" },
             ]}
+            totalLabel="Items total"
           />
           {itemsTotal !== totals.orderValueMinor ? (
             <p className="text-xs text-muted-foreground">
