@@ -20,7 +20,7 @@ import Svg, { Defs, RadialGradient, Rect, Stop } from "react-native-svg"
 type GreenTillAuthScreenProps = {
   children: ReactNode
   title: string
-  subtitle: ReactNode
+  subtitle?: ReactNode
   /** Kept for callers; Market Preview shows the title and subtitle only. */
   eyebrow?: string
   backHref?: Href
@@ -163,9 +163,11 @@ export function GreenTillAuthScreen({
               >
                 {title}
               </Text>
-              <Text className="text-xs [-rn-line-height:22] text-muted-foreground">
-                {subtitle}
-              </Text>
+              {subtitle ? (
+                <Text className="text-xs [-rn-line-height:22] text-muted-foreground">
+                  {subtitle}
+                </Text>
+              ) : null}
             </View>
           )}
           {progress !== undefined ? (

@@ -167,13 +167,6 @@ export function LoginScreen() {
 
   return (
     <ClassicLoginScreen
-      subtitle={
-        useWhatsApp
-          ? "Use your WhatsApp number. We’ll send a 6-digit code."
-          : usePassword
-            ? "Use your email and password to sign in."
-            : "Use your email. We’ll send a 6-digit code."
-      }
       footer={
         <AuthFooterAction
           eyebrow="New to ẸwáTrade?"
