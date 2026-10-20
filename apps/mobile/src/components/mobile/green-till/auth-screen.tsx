@@ -144,13 +144,14 @@ export function GreenTillAuthScreen({
           </View>
         </View>
         {/* The sheet casts a soft shadow up onto the stage so it reads as its
-            own layer (owner, 10 Oct). */}
+            own layer (owner, 10 Oct). boxShadow, because Android elevation
+            ignores shadowOffset and drew no upward shadow. */}
         <View
           style={[
             styles.sheet,
             {
               backgroundColor: colors.background,
-              shadowColor: palette.heroTo,
+              boxShadow: `0 -8px 26px -8px ${palette.heroTo}6B`,
             },
           ]}
         >
@@ -257,16 +258,12 @@ const styles = StyleSheet.create({
   sheet: {
     borderTopLeftRadius: 28,
     borderTopRightRadius: 28,
-    elevation: 12,
     flex: 1,
     gap: 16,
     marginTop: -30,
     paddingBottom: 24,
     paddingHorizontal: 18,
     paddingTop: 28,
-    shadowOffset: { height: -8, width: 0 },
-    shadowOpacity: 0.28,
-    shadowRadius: 16,
   },
   stage: { overflow: "hidden", position: "relative" },
   progress: { flexDirection: "row", gap: 6 },
