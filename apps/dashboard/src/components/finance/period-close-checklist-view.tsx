@@ -3,6 +3,7 @@
 import type { RouterOutputs } from "@ewatrade/api/trpc/routers/_app"
 import { Alert, AlertDescription, AlertTitle, Badge } from "@ewatrade/ui"
 import { formatFinanceMoney } from "@ewatrade/utils/finance-money"
+import { plainDay } from "./review-changes"
 
 type Checklist = RouterOutputs["finance"]["periodCloseChecklist"]
 
@@ -11,6 +12,47 @@ const statusLabel = {
   BLOCKED: "Fix",
   REVIEW_REQUIRED: "Look at",
 } as const
+
+// Plain words for the server's checks, by id; unknown ids keep the server text.
+const PLAIN_CHECKS: Record<string, [string, string]> = {
+  CONTIGUOUS_DATES: [
+    "Follows the last closed date",
+    "There's no gap between this and the last time you closed.",
+  ],
+  POSTED_TRIAL_BALANCE: ["Money in and out adds up", ""],
+  POSTED_POSITION_IDENTITY: [
+    "What you own equals what you owe plus owner's money",
+    "Checked for everything recorded in Finance.",
+  ],
+  CASH_RECONCILIATION: [
+    "Cash counted on the closing date",
+    "Count each cash account on the closing date. A missing or different count needs a look.",
+  ],
+  BANK_RECONCILIATION: [
+    "Bank and card money",
+    "Check your bank statements are uploaded and every line is matched.",
+  ],
+  CUSTOMER_RECONCILIATION: [
+    "What Customers owe you",
+    "Check what each Customer owes and has paid ahead with them.",
+  ],
+  SUPPLIER_RECONCILIATION: [
+    "What you owe Suppliers",
+    "Check it against their bills and what you paid ahead.",
+  ],
+  INVENTORY_RECONCILIATION: [
+    "Stock",
+    "Stock costs aren't fully linked to Finance yet, so profit may be incomplete.",
+  ],
+  OPENING_AND_ADJUSTMENTS: [
+    "Starting balances",
+    "Check the starting balances you added once against your old books.",
+  ],
+  YEAR_END_EARNINGS: [
+    "Profit for the year",
+    "Closing a month doesn't move profit into owner's money. That happens at year end.",
+  ],
+}
 
 function sourceGapLabel(value: string) {
   return value
@@ -32,15 +74,19 @@ export function FinancePeriodCloseChecklistView({
     (check) => check.status === "REVIEW_REQUIRED",
   ).length
   const canProceed = checklist.dateLockEligible && blocked === 0
+  const rank = { BLOCKED: 0, REVIEW_REQUIRED: 1, PASS: 2 } as const
+  const open = checklist.checks
+    .filter((check) => check.status !== "PASS")
+    .sort((a, b) => rank[a.status] - rank[b.status])
+  const ok = checklist.checks.filter((check) => check.status === "PASS")
   return (
     <section className="grid gap-4 rounded-md border border-border p-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
           <h4 className="font-medium">Before you close</h4>
           <p className="text-sm text-muted-foreground">
-            {new Date(checklist.from).toISOString().slice(0, 10)}–
-            {new Date(checklist.through).toISOString().slice(0, 10)} ·{" "}
-            {checklist.currencyCode}
+            {plainDay(new Date(checklist.from).toISOString().slice(0, 10))} –{" "}
+            {plainDay(new Date(checklist.through).toISOString().slice(0, 10))}
           </p>
         </div>
         <Badge variant={canProceed ? "secondary" : "destructive"}>
@@ -66,38 +112,28 @@ export function FinancePeriodCloseChecklistView({
         </AlertTitle>
         <AlertDescription>
           Closing stops anyone changing records up to this date. It doesn't
-          prove every naira is accounted for. Your reports are{" "}
-          {checklist.completeness.toLowerCase().replaceAll("_", " ")}.
+          prove every naira is accounted for: some sales and stock costs
+          aren&apos;t linked to Finance yet.
         </AlertDescription>
       </Alert>
+      {/* Exceptions first: what needs fixing or a look, then the OK checks folded away. */}
       <ul className="grid gap-3">
-        {checklist.checks.map((check) => (
-          <li
-            key={check.id}
-            className="grid gap-1 border-b border-border pb-3 last:border-b-0 last:pb-0"
-          >
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <span className="font-medium">{check.label}</span>
-              <Badge
-                variant={
-                  check.status === "BLOCKED"
-                    ? "destructive"
-                    : check.status === "PASS"
-                      ? "secondary"
-                      : "outline"
-                }
-              >
-                {statusLabel[check.status]}
-              </Badge>
-            </div>
-            <p className="text-sm text-muted-foreground">
-              {check.id === "POSTED_TRIAL_BALANCE"
-                ? `Debits ${formatFinanceMoney(checklist.trialBalance.debitMinor, checklist.currencyCode)} · credits ${formatFinanceMoney(checklist.trialBalance.creditMinor, checklist.currencyCode)}.`
-                : check.explanation}
-            </p>
-          </li>
+        {open.map((check) => (
+          <CheckRow key={check.id} check={check} checklist={checklist} />
         ))}
       </ul>
+      {ok.length ? (
+        <details className="text-sm">
+          <summary className="cursor-pointer text-muted-foreground">
+            {ok.length} {ok.length === 1 ? "check is" : "checks are"} OK
+          </summary>
+          <ul className="mt-3 grid gap-3">
+            {ok.map((check) => (
+              <CheckRow key={check.id} check={check} checklist={checklist} />
+            ))}
+          </ul>
+        </details>
+      ) : null}
       <div className="grid gap-2">
         <h5 className="text-sm font-medium">Cash on the closing date</h5>
         {checklist.cash.length ? (
@@ -158,5 +194,39 @@ export function FinancePeriodCloseChecklistView({
         </p>
       ) : null}
     </section>
+  )
+}
+
+function CheckRow({
+  check,
+  checklist,
+}: {
+  check: Checklist["checks"][number]
+  checklist: Checklist
+}) {
+  return (
+    <li className="grid gap-1 border-b border-border pb-3 last:border-b-0 last:pb-0">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <span className="font-medium">
+          {PLAIN_CHECKS[check.id]?.[0] ?? check.label}
+        </span>
+        <Badge
+          variant={
+            check.status === "BLOCKED"
+              ? "destructive"
+              : check.status === "PASS"
+                ? "secondary"
+                : "outline"
+          }
+        >
+          {statusLabel[check.status]}
+        </Badge>
+      </div>
+      <p className="text-sm text-muted-foreground">
+        {check.id === "POSTED_TRIAL_BALANCE"
+          ? `Money in and out adds up: ${formatFinanceMoney(checklist.trialBalance.debitMinor, checklist.currencyCode)} each way.`
+          : PLAIN_CHECKS[check.id]?.[1] || check.explanation}
+      </p>
+    </li>
   )
 }

@@ -1,17 +1,17 @@
 "use client"
 import {
-  Button,
-  DateControl,
+  DatePicker,
   FieldGroup,
-  FormActions,
   Input,
-  SelectControl,
+  RadioGroup,
+  RadioGroupItem,
 } from "@ewatrade/ui"
 
 import { readFinanceCloseScope } from "@/actions/read-finance-close-scope"
 import { useFinanceForm } from "@/components/finance/form-context"
 import { FormFeedback } from "@/components/forms/form-feedback"
 import { useFinanceCommand } from "@/hooks/use-finance-command"
+import { useFinanceParams } from "@/hooks/use-finance-params"
 import { useTRPC } from "@/trpc/client"
 
 import type { RouterOutputs } from "@ewatrade/api/trpc/routers/_app"
@@ -28,8 +28,14 @@ import {
   useQueryClient,
 } from "@tanstack/react-query"
 import { useEffect, useRef, useState } from "react"
-import { FinanceField, FinanceReview } from "./form-fields"
+import {
+  FinanceDetails,
+  FinanceField,
+  FinanceFormFooter,
+  FinanceReview,
+} from "./form-fields"
 import { FinancePeriodCloseChecklistView } from "./period-close-checklist-view"
+import { plainDay } from "./review-changes"
 import type { FinanceBook } from "./types"
 import { useCompleteFinanceForm } from "./use-complete-finance-form"
 
@@ -59,15 +65,21 @@ export function FinancePeriodForm({ book }: { book: FinanceBook }) {
   const client = useQueryClient()
   const query = useQuery(trpc.finance.periods.queryOptions({ bookId: book.id }))
   const mutation = useMutation(trpc.finance.changePeriod.mutationOptions())
+  const [action, setAction] = useState<"CLOSE" | "REOPEN">("CLOSE")
+  // Close a whole month by default: the last day of last month.
+  const [date, setDate] = useState(() => {
+    const now = new Date()
+    return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 0))
+      .toISOString()
+      .slice(0, 10)
+  })
+  const [done, setDone] = useState("")
   const command = useFinanceCommand(
-    useCompleteFinanceForm(),
+    useCompleteFinanceForm(done || undefined),
     book.id,
     "changePeriod",
   )
-  const [action, setAction] = useState<"CLOSE" | "REOPEN">("CLOSE")
-  const [date, setDate] = useState(
-    new Date(Date.now() - 86_400_000).toISOString().slice(0, 10),
-  )
+  const { close } = useFinanceParams()
   const [reason, setReason] = useState("")
   const [review, setReview] = useState<Review | null>(null)
   const [preparing, setPreparing] = useState(false)
@@ -168,7 +180,8 @@ export function FinancePeriodForm({ book }: { book: FinanceBook }) {
     setPreparing(true)
     setError(null)
     try {
-      if (!reason.trim()) throw new Error("Enter why you are doing this.")
+      if (!reason.trim())
+        throw new Error("Say why, so others understand later.")
       await assertCurrentScope(token)
       const [state, currentBook] = await Promise.all([
         readPeriods(token),
@@ -391,32 +404,38 @@ export function FinancePeriodForm({ book }: { book: FinanceBook }) {
           (review.action === "CLOSE" &&
             !financeCloseChecklistCanProceed(review.checklist))
         }
-        onConfirm={() => void submit(review)}
+        onConfirm={() => {
+          setDone(
+            review.action === "CLOSE"
+              ? `Closed up to ${plainDay(review.date)}.`
+              : "Reopened. People can change those records again.",
+          )
+          void submit(review)
+        }}
+        confirmLabel={
+          review.action === "CLOSE"
+            ? `Close up to ${plainDay(review.date)}`
+            : "Reopen"
+        }
+        sentence={
+          review.action === "CLOSE" ? (
+            <>
+              Closing locks records dated up to <b>{plainDay(review.date)}</b>.
+              Nobody can add or change them until you reopen.
+            </>
+          ) : (
+            <>
+              This lets people add and change records in the month ending{" "}
+              <b>{plainDay(review.date)}</b> again. Earlier closed months stay
+              closed.
+            </>
+          )
+        }
       >
-        <h3 className="font-medium">
-          {review.action === "CLOSE"
-            ? "Close up to"
-            : "Reopen the month ending"}{" "}
-          {review.date}
-        </h3>
-        <p className="text-sm">
-          {review.action === "CLOSE"
-            ? "Nobody will be able to add or change records dated on or before this day. Later dates stay open."
-            : "Records can be added or changed again in this month. Earlier closed months stay closed."}
-        </p>
         {review.action === "CLOSE" ? (
           <FinancePeriodCloseChecklistView checklist={review.checklist} />
         ) : null}
-        <p className="text-sm">Reason: {review.reason}</p>
-        <p className="text-sm">
-          {review.action === "CLOSE"
-            ? `Difference in your records: ${formatFinanceMoney(review.difference, book.currencyCode)}.`
-            : ""}
-        </p>
-        <p className="text-sm text-muted-foreground">
-          Closing stops anyone changing records up to this date. It doesn't
-          prove every naira is accounted for.
-        </p>
+        <FinanceDetails rows={[["Why", review.reason]]} />
       </FinanceReview>
     )
   return (
@@ -427,45 +446,73 @@ export function FinancePeriodForm({ book }: { book: FinanceBook }) {
       }}
     >
       <FieldGroup className="min-w-0 grid gap-5">
-        <p className="text-sm">
+        <p className="text-sm text-muted-foreground">
           {query.data.closedThrough
-            ? `Closed up to ${new Date(query.data.closedThrough).toISOString().slice(0, 10)}.`
-            : "No month is closed yet."}
+            ? `Closed up to ${plainDay(new Date(query.data.closedThrough).toISOString().slice(0, 10))}.`
+            : "No month is closed yet."}{" "}
+          Closing stops anyone changing records up to a date, after you've
+          checked them.
         </p>
-        <FinanceField label="Action">
-          <SelectControl
+        <FinanceField label="What do you want to do?">
+          <RadioGroup
+            aria-label="What do you want to do?"
             value={action}
-            disabled={preparing}
             onValueChange={(value) =>
               setAction(value === "REOPEN" ? "REOPEN" : "CLOSE")
             }
-            options={[
-              { value: "CLOSE", label: <>Close a month</> },
-              {
-                value: "REOPEN",
-                label: <>Reopen the last closed month</>,
-                disabled: !query.data.closedThrough,
-              },
-            ]}
-          />
+          >
+            {(
+              [
+                [
+                  "CLOSE",
+                  "Close up to a date",
+                  "Usually the last day of a month.",
+                ],
+                [
+                  "REOPEN",
+                  "Reopen the last closed month",
+                  query.data.closedThrough
+                    ? `Records up to ${plainDay(new Date(query.data.closedThrough).toISOString().slice(0, 10))} can be changed again.`
+                    : "No month is closed yet.",
+                ],
+              ] as const
+            ).map(([value, label, hint]) => (
+              // biome-ignore lint/a11y/noLabelWithoutControl: the radio is the label's child
+              <label
+                key={value}
+                className="flex cursor-pointer items-start gap-2.5 border border-border px-3 py-2 text-sm has-data-checked:border-foreground"
+              >
+                <RadioGroupItem
+                  value={value}
+                  className="mt-0.5"
+                  disabled={
+                    preparing ||
+                    (value === "REOPEN" && !query.data.closedThrough)
+                  }
+                />
+                <span className="grid gap-0.5">
+                  <span className="font-medium">{label}</span>
+                  <span className="text-xs text-muted-foreground">{hint}</span>
+                </span>
+              </label>
+            ))}
+          </RadioGroup>
         </FinanceField>
         {action === "CLOSE" ? (
           <FinanceField label="Close up to">
-            <DateControl
-              required
-              type="date"
+            <DatePicker
               value={date}
               disabled={preparing}
               min={new Date(book.startsAt).toISOString().slice(0, 10)}
               max={new Date(Date.now() - 86_400_000).toISOString().slice(0, 10)}
-              onValueChange={(value) => setDate(value)}
+              onValueChange={setDate}
             />
           </FinanceField>
         ) : null}
-        <FinanceField label="Why (required)">
+        <FinanceField label="Why?">
           <Input
-            required
             maxLength={400}
+            placeholder="Monthly close"
             value={reason}
             disabled={preparing}
             onChange={(event) => setReason(event.target.value)}
@@ -474,15 +521,12 @@ export function FinancePeriodForm({ book }: { book: FinanceBook }) {
         {error ? (
           <FormFeedback appearance="dashboard">{error}</FormFeedback>
         ) : null}
-        <FormActions>
-          <Button type="submit" disabled={preparing}>
-            {preparing
-              ? "Checking records…"
-              : action === "CLOSE"
-                ? "Check before closing"
-                : "Check before reopening"}
-          </Button>
-        </FormActions>
+        <FinanceFormFooter
+          onCancel={() => void close()}
+          submitLabel="Review"
+          isSubmitting={preparing}
+          disabled={preparing}
+        />
       </FieldGroup>
     </form>
   )
