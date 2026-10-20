@@ -216,6 +216,15 @@ planned("finance", "E05", [
   "finance.*Purchase*",
   "finance.purchase*",
 ])
+excluded(
+  "finance",
+  "Dashboard list projections for Finance pages; the assistant answers these amounts through supplier statements, customer statements and money account balances.",
+  [
+    "finance.owedSummary",
+    "finance.supplierBalances",
+    "finance.customerBalances",
+  ],
+)
 planned("finance", "G01", [
   "finance.journal",
   "finance.supplierPayableAging",
