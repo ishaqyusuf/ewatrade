@@ -188,7 +188,7 @@ export function CustomerLedgerStatement({
                 Add starting balance
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => startAction("refund")}>
-                Refund paid-ahead money
+                Return paid-ahead money
               </DropdownMenuItem>
             </>
           ) : null}
