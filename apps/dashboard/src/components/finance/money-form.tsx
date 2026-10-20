@@ -1,29 +1,40 @@
 "use client"
-import {
-  Button,
-  FieldGroup,
-  FormActions,
-  Input,
-  MoneyInput,
-} from "@ewatrade/ui"
+import { FieldGroup, Input, MoneyInput } from "@ewatrade/ui"
 import { financePostingDayStart } from "@ewatrade/utils/finance-posting-date"
 
 import {
-  FormDateControl,
+  FormDatePicker,
+  FormRadioChoices,
   FormSelectControl,
 } from "@/components/forms/form-controls"
 import { useFinanceCommand } from "@/hooks/use-finance-command"
+import { useFinanceParams } from "@/hooks/use-finance-params"
 import { useZodForm } from "@/hooks/use-zod-form"
 import { useTRPC } from "@/trpc/client"
 
-import {
-  formatFinanceMoney,
-  parseFinanceMoney,
-} from "@ewatrade/utils/finance-money"
+import { parseFinanceMoney } from "@ewatrade/utils/finance-money"
 import { useMutation } from "@tanstack/react-query"
 import { useState } from "react"
 import { z } from "zod"
-import { FinanceField, FinanceReview } from "./form-fields"
+import {
+  FinanceDetails,
+  FinanceField,
+  FinanceFormFooter,
+  FinanceReview,
+} from "./form-fields"
+import {
+  balanceChange,
+  changes,
+  dayIn,
+  minorOf,
+  moneyAccounts,
+  moneyText,
+  overdrawWarning,
+  paidFromOptions,
+  plainDay,
+  todayIn,
+  useMoneyBalances,
+} from "./review-changes"
 import type { FinanceBook } from "./types"
 import { useCompleteFinanceForm } from "./use-complete-finance-form"
 
@@ -35,7 +46,7 @@ const schema = z
       "OWNER_WITHDRAWAL",
       "OPENING_BALANCE",
     ]),
-    accountId: z.string().min(1),
+    accountId: z.string().min(1, "Choose an account."),
     destinationAccountId: z.string(),
     amount: z.string().refine((value) => {
       try {
@@ -44,9 +55,13 @@ const schema = z
       } catch {
         return false
       }
-    }, "Enter a positive amount with up to two decimal places."),
-    description: z.string().trim().min(1).max(500),
-    date: z.string().min(1),
+    }, "Enter an amount above zero, like 100000."),
+    description: z
+      .string()
+      .trim()
+      .min(1, "Add a short note, like Banked takings.")
+      .max(500, "Use 500 characters or fewer."),
+    date: z.string().min(1, "Pick a date."),
   })
   .superRefine((value, ctx) => {
     if (
@@ -63,42 +78,49 @@ const schema = z
 type Values = z.infer<typeof schema>
 
 const movementLabels: Record<Values["kind"], string> = {
-  TRANSFER: "Move between accounts",
+  TRANSFER: "Moved between accounts",
   OWNER_CONTRIBUTION: "Owner put money in",
   OWNER_WITHDRAWAL: "Owner took money out",
   OPENING_BALANCE: "Starting balance",
 }
 export function FinanceMoneyForm({ book }: { book: FinanceBook }) {
   const trpc = useTRPC()
+  const currency = book.currencyCode
+  const balances = useMoneyBalances(book.id)
+  const [review, setReview] = useState<Values | null>(null)
+  const accounts = moneyAccounts(book.accounts)
+  const name = (id: string) =>
+    accounts.find((account) => account.id === id)?.name ?? ""
   const command = useFinanceCommand(
-    useCompleteFinanceForm(),
+    useCompleteFinanceForm(
+      review
+        ? review.kind === "TRANSFER"
+          ? `Moved ${moneyText(minorOf(review.amount), currency)} from ${name(review.accountId)} to ${name(review.destinationAccountId)}.`
+          : `Recorded ${moneyText(minorOf(review.amount), currency)} for ${name(review.accountId)}.`
+        : undefined,
+    ),
     book.id,
     "recordMoney",
   )
+  const { close } = useFinanceParams()
   const mutation = useMutation(trpc.finance.recordMoney.mutationOptions())
-  const accounts = book.accounts.filter(
-    (account) =>
-      ["CASH", "BANK", "CLEARING"].includes(account.purpose) &&
-      !account.archivedAt,
-  )
-  const [review, setReview] = useState<Values | null>(null)
-  const startDay = new Date(book.startsAt).toISOString().slice(0, 10)
+  const startDay = dayIn(book.startsAt, book.timezone)
   const datedSchema = schema.superRefine((value, ctx) => {
     if (value.kind !== "OPENING_BALANCE" && value.date < startDay)
       ctx.addIssue({
         code: "custom",
         path: ["date"],
-        message: `Finance starts on ${new Date(book.startsAt).toLocaleDateString([], { day: "numeric", month: "short", year: "numeric" })}.`,
+        message: `Pick ${plainDay(startDay)} or later. That's when you started using Finance.`,
       })
   })
   const form = useZodForm<Values>(datedSchema, {
     defaultValues: {
       kind: "TRANSFER",
-      accountId: accounts[0]?.id ?? "",
-      destinationAccountId: accounts[1]?.id ?? "",
+      accountId: "",
+      destinationAccountId: "",
       amount: "",
       description: "",
-      date: new Date().toISOString().slice(0, 10),
+      date: todayIn(book.timezone),
     },
   })
   const kind = form.watch("kind")
@@ -127,49 +149,113 @@ export function FinanceMoneyForm({ book }: { book: FinanceBook }) {
         mutation.mutateAsync({ ...payload, clientCommandId }),
     })
   }
-  if (review)
+  if (review) {
+    const amount = minorOf(review.amount)
+    const money = moneyText(amount, currency)
+    const from = name(review.accountId)
+    const sentence = {
+      TRANSFER: (
+        <>
+          You're moving <b>{money}</b> from {from} to{" "}
+          {name(review.destinationAccountId)}.
+        </>
+      ),
+      OWNER_CONTRIBUTION: (
+        <>
+          The owner put <b>{money}</b> into {from}.
+        </>
+      ),
+      OWNER_WITHDRAWAL: (
+        <>
+          The owner took <b>{money}</b> out of {from}.
+        </>
+      ),
+      OPENING_BALANCE: (
+        <>
+          {from} held <b>{money}</b> on {plainDay(startDay)}, when you started
+          using Finance.
+        </>
+      ),
+    }[review.kind]
+    const out = review.kind === "TRANSFER" || review.kind === "OWNER_WITHDRAWAL"
     return (
       <FinanceReview
         command={command}
         onBack={() => setReview(null)}
         onConfirm={() => submit(review)}
+        confirmLabel={
+          {
+            TRANSFER: "Move money",
+            OWNER_CONTRIBUTION: "Record money put in",
+            OWNER_WITHDRAWAL: "Record money taken out",
+            OPENING_BALANCE: "Add starting balance",
+          }[review.kind]
+        }
+        sentence={sentence}
+        changes={changes([
+          balanceChange(
+            balances,
+            review.accountId,
+            out ? -amount : amount,
+            currency,
+          ),
+          review.kind === "TRANSFER"
+            ? balanceChange(
+                balances,
+                review.destinationAccountId,
+                amount,
+                currency,
+              )
+            : null,
+          review.kind === "OWNER_CONTRIBUTION"
+            ? { label: "Owner's money", after: `+${money}` }
+            : review.kind === "OWNER_WITHDRAWAL"
+              ? { label: "Owner's money", after: `−${money}` }
+              : null,
+        ])}
+        warning={
+          out
+            ? overdrawWarning(balances, review.accountId, amount, currency)
+            : undefined
+        }
       >
-        <p className="text-lg font-semibold">
-          {formatFinanceMoney(
-            parseFinanceMoney(review.amount),
-            book.currencyCode,
-          )}
-        </p>
-        <p>{review.description}</p>
-        <p className="text-sm text-muted-foreground">
-          {movementLabels[review.kind]} ·{" "}
-          {accounts.find((account) => account.id === review.accountId)?.name}
-          {review.kind === "TRANSFER"
-            ? ` → ${accounts.find((account) => account.id === review.destinationAccountId)?.name}`
-            : ""}
-        </p>
+        <FinanceDetails
+          rows={[
+            ["What", movementLabels[review.kind]],
+            [
+              "Date",
+              review.kind === "OPENING_BALANCE"
+                ? plainDay(startDay)
+                : plainDay(review.date),
+            ],
+            ["Note", review.description],
+          ]}
+        />
       </FinanceReview>
     )
+  }
   return (
     <form onSubmit={form.handleSubmit(setReview)}>
       <FieldGroup className="min-w-0 grid gap-5">
-        <FinanceField label="What happened">
-          <FormSelectControl
+        <FinanceField label="What happened?">
+          <FormRadioChoices
             control={form.control}
-            name={"kind"}
+            name="kind"
+            label="What happened?"
             options={[
-              { value: "TRANSFER", label: <>{movementLabels.TRANSFER}</> },
+              { value: "TRANSFER", label: movementLabels.TRANSFER },
               {
                 value: "OWNER_CONTRIBUTION",
-                label: <>{movementLabels.OWNER_CONTRIBUTION}</>,
+                label: movementLabels.OWNER_CONTRIBUTION,
               },
               {
                 value: "OWNER_WITHDRAWAL",
-                label: <>{movementLabels.OWNER_WITHDRAWAL}</>,
+                label: movementLabels.OWNER_WITHDRAWAL,
               },
               {
                 value: "OPENING_BALANCE",
-                label: <>{movementLabels.OPENING_BALANCE}</>,
+                label: movementLabels.OPENING_BALANCE,
+                hint: `What an account held on ${plainDay(startDay)}, when you started using Finance.`,
               },
             ]}
           />
@@ -178,18 +264,17 @@ export function FinanceMoneyForm({ book }: { book: FinanceBook }) {
           label={
             kind === "TRANSFER" || kind === "OWNER_WITHDRAWAL"
               ? "From"
-              : "Account"
+              : kind === "OWNER_CONTRIBUTION"
+                ? "Into"
+                : "Account"
           }
+          error={form.formState.errors.accountId?.message}
         >
           <FormSelectControl
             control={form.control}
-            name={"accountId"}
-            options={[
-              ...(accounts.map((account) => ({
-                value: account.id,
-                label: account.name,
-              })) ?? []),
-            ]}
+            name="accountId"
+            placeholder="Choose an account"
+            options={paidFromOptions(accounts, balances, currency, false)}
           />
         </FinanceField>
         {kind === "TRANSFER" ? (
@@ -199,54 +284,52 @@ export function FinanceMoneyForm({ book }: { book: FinanceBook }) {
           >
             <FormSelectControl
               control={form.control}
-              name={"destinationAccountId"}
-              options={[
-                ...(accounts.map((account) => ({
-                  value: account.id,
-                  label: account.name,
-                })) ?? []),
-              ]}
+              name="destinationAccountId"
+              placeholder="Choose an account"
+              options={paidFromOptions(accounts, balances, currency, false)}
             />
           </FinanceField>
         ) : null}
         <FinanceField
-          label={`Amount (${book.currencyCode})`}
+          label="Amount"
           error={form.formState.errors.amount?.message}
         >
           <MoneyInput
             currencyCode={book.currencyCode}
             inputMode="decimal"
+            placeholder="0.00"
             {...form.register("amount")}
           />
         </FinanceField>
         <FinanceField
-          label="Description"
+          label="Note"
           error={form.formState.errors.description?.message}
         >
-          <Input {...form.register("description")} />
+          <Input
+            {...form.register("description")}
+            placeholder="Banked takings"
+          />
         </FinanceField>
         {kind === "OPENING_BALANCE" ? (
           <p className="text-sm text-muted-foreground">
-            Starting balance on{" "}
-            {new Date(book.startsAt).toISOString().slice(0, 10)}. Enter it once
-            per account. Money that comes later is a separate move.
+            Starting balances are dated {plainDay(startDay)}, the day you
+            started using Finance. Add one per account. Money added later is a
+            separate movement.
           </p>
         ) : (
           <FinanceField
             label="Date"
             error={form.formState.errors.date?.message}
           >
-            <FormDateControl
-              type="date"
-              min={startDay}
+            <FormDatePicker
               control={form.control}
-              name={"date"}
+              name="date"
+              min={startDay}
+              max={todayIn(book.timezone)}
             />
           </FinanceField>
         )}
-        <FormActions>
-          <Button type="submit">Review</Button>
-        </FormActions>
+        <FinanceFormFooter onCancel={() => void close()} submitLabel="Review" />
       </FieldGroup>
     </form>
   )
