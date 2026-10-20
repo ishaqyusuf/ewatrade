@@ -12,7 +12,7 @@ import {
 import {
   type EmailTransport,
   createEmailMessage,
-  createTestRoutedEmailMessages,
+  createManagedQaEmailMessages,
   getDefaultEmailTransport,
   renderStoreConversationNotificationTemplate,
 } from "@ewatrade/email"
@@ -210,7 +210,7 @@ export async function runStoreConversationNotificationDispatch(
         text: emailContent.text,
         to: recipient,
       })
-      const routed = createTestRoutedEmailMessages(message)
+      const routed = await createManagedQaEmailMessages(message)
       await dependencies.assertProviderAllowed({
         operation: "email",
         qaEmailRouted:

@@ -43,7 +43,9 @@
     "./catalog-illustrations": "./src/catalog-illustrations.ts",
     "./catalog-illustration-artwork": "./src/catalog-illustration-artwork.ts",
     "./finance-bank-statement": "./src/finance-bank-statement.ts",
-    "./app-update": "./src/app-update.ts"
+    "./app-update": "./src/app-update.ts",
+    "./qa-policy": "./src/qa-policy.ts",
+    "./qa-policy-server": "./src/qa-policy-server.ts"
   },
   "sideEffects": false,
   "scripts": {

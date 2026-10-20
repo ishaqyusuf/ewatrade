@@ -505,6 +505,7 @@
       "name": "@ewatrade/email",
       "version": "1.0.0",
       "dependencies": {
+        "@ewatrade/utils": "workspace:*",
         "@react-email/components": "1.0.12",
         "react": "catalog:",
         "react-dom": "catalog:",
