@@ -13,9 +13,11 @@ import {
 } from "@ewatrade/ui"
 
 export function StaffInviteModal({
+  businessName,
   storeId,
   onInvited,
 }: {
+  businessName: string
   storeId: string
   onInvited: (email: string, qaInviteUrl: string | null) => Promise<void>
 }) {
@@ -30,14 +32,14 @@ export function StaffInviteModal({
       }}
     >
       {inviteOpen ? (
-        <DialogContent className="max-w-[455px]">
+        <DialogContent className="max-h-[calc(100dvh-2rem)] max-w-[480px] overflow-y-auto">
           <div className="p-4">
             <DialogHeader className="mb-6 pr-8">
               <DialogTitle className="mb-4 text-lg font-semibold leading-none tracking-tight">
                 Invite staff
               </DialogTitle>
               <DialogDescription className="text-sm text-muted-foreground">
-                Cashier, operator, or manager access
+                We’ll email them a link to join {businessName}.
               </DialogDescription>
             </DialogHeader>
             {closeError ? (

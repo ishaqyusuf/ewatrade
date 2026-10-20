@@ -368,7 +368,11 @@ export function StaffPage({
             actions={actions}
           />
 
-          <StaffInviteModal storeId={store.id} onInvited={onInvited} />
+          <StaffInviteModal
+            businessName={businessName}
+            storeId={store.id}
+            onInvited={onInvited}
+          />
           <CancelInviteAlert
             name={cancelling ? getStaffDisplayName(cancelling) : ""}
             open={Boolean(cancelling)}
