@@ -64,7 +64,17 @@ export type DashboardSessionRow = {
   }
 }
 
+export type DashboardCustomerBalance = {
+  owedMinor: string
+  paidAheadMinor: string
+  netMinor: string
+}
+
 export type DashboardCustomerRow = {
+  /** Saved customer behind the row; the statement and edit need it. */
+  customerId: string | null
+  /** Present only for people allowed to see balances, and only with an account. */
+  balance: DashboardCustomerBalance | null
   email: string | null
   firstSeenAt: string
   id: string
@@ -75,7 +85,7 @@ export type DashboardCustomerRow = {
     paymentStatus: string
     status: string
     totalMinor: number
-  }
+  } | null
   lastSeenAt: string
   name: string
   orderCount: number
@@ -87,6 +97,11 @@ export function canUseSalesOperations(role: string | null | undefined) {
   const normalizedRole = normalizeRole(role)
 
   return normalizedRole ? canOperatePos(normalizedRole) : false
+}
+
+/** Balances and statements are finance records: owners and admins only. */
+export function canReviewCustomerBalances(role: string | null | undefined) {
+  return ["OWNER", "ADMIN"].includes(String(role ?? "").toUpperCase())
 }
 
 export function canManageSalesReports(role: string | null | undefined) {

@@ -141,7 +141,7 @@ test("method guards exclude archived accounts and cash from card collection", ()
       fields: { ...fields, method: "CARD" },
       moneyAccounts: [cash],
     }),
-  ).toThrow("money account")
+  ).toThrow("payment method")
 })
 test("source caps use exact integers and reject missing or exhausted credits", () => {
   expect(() =>
@@ -152,7 +152,7 @@ test("source caps use exact integers and reject missing or exhausted credits", (
       credits: [{ ...credit, remainingAmountMinor: "600000" }],
       charges: [charge],
     }),
-  ).toThrow("remaining balance")
+  ).toThrow("up to what’s left")
   expect(() =>
     prepareCustomerLedgerCommand({
       mode: "apply",
@@ -161,7 +161,7 @@ test("source caps use exact integers and reject missing or exhausted credits", (
       credits: [credit],
       charges: [{ ...charge, remainingAmountMinor: "1" }],
     }),
-  ).toThrow("remaining balance")
+  ).toThrow("up to what’s left")
   expect(() =>
     prepareCustomerLedgerCommand({
       mode: "refund",
@@ -170,7 +170,7 @@ test("source caps use exact integers and reject missing or exhausted credits", (
       moneyAccounts: [money("cash", "CASH")],
       credits: [],
     }),
-  ).toThrow("available credit")
+  ).toThrow("paid ahead")
 })
 test("refund retains the exact UTC time so same-day receipts can be corrected", () => {
   const result = prepareCustomerLedgerCommand({
@@ -194,10 +194,10 @@ test("refund retains the exact UTC time so same-day receipts can be corrected", 
       credits: [credit],
       moneyAccounts: [money("cash", "CASH")],
     }),
-  ).toThrow("valid ISO")
+  ).toThrow("valid date")
   expect(() =>
     prepareCustomerLedgerCommand({ mode: "reverse", account, fields }),
-  ).toThrow("standalone correction")
+  ).toThrow("undone on its own")
 })
 
 test("applying credit preserves net balance while a receipt only increases held credit", () => {

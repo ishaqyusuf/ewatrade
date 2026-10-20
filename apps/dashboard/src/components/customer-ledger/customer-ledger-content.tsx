@@ -29,12 +29,13 @@ export function CustomerLedgerContent({
       { retry: false },
     ),
   )
-  if (query.isPending)
-    return <output aria-busy="true">Loading customer account…</output>
+  if (query.isPending) return <output aria-busy="true">Loading…</output>
   if (query.isError)
     return (
       <Alert appearance="dashboard" variant="destructive">
-        <AlertDescription>{query.error.message}</AlertDescription>
+        <AlertDescription>
+          Couldn’t load this customer. Check your connection and try again.
+        </AlertDescription>
         <Button onClick={() => void query.refetch()}>Try again</Button>
       </Alert>
     )
@@ -42,7 +43,7 @@ export function CustomerLedgerContent({
     return (
       <Alert appearance="dashboard" variant="destructive">
         <AlertDescription>
-          This account is not owned by the selected customer.
+          This statement belongs to a different customer.
         </AlertDescription>
       </Alert>
     )
@@ -50,12 +51,10 @@ export function CustomerLedgerContent({
     return entryId ? (
       <CustomerLedgerEntryDetail account={query.data} entryId={entryId} />
     ) : (
-      <p>Choose an entry from the statement.</p>
+      <p>Choose an entry on the statement.</p>
     )
   if (!query.data.book)
-    return (
-      <p>Start a matching currency book before recording customer activity.</p>
-    )
+    return <p>Set up Finance in this currency before recording payments.</p>
   return (
     <CustomerLedgerCommandForm
       account={query.data}

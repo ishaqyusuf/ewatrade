@@ -18,6 +18,54 @@ export function customerLedgerTotalsFromAggregates(input: {
     netBalanceMinor: (input.debit - input.credit).toString(),
   }
 }
+export type CustomerLedgerBalance = ReturnType<
+  typeof customerLedgerTotalsFromAggregates
+>
+
+/**
+ * Each listed customer's balance in one currency, from their account at its
+ * saved posting sequence. Customers without an account are left out.
+ */
+export async function listCustomerLedgerBalances(
+  db: Pick<Prisma.TransactionClient, "$queryRaw">,
+  input: { tenantId: string; currencyCode: string; customerIds: string[] },
+): Promise<Map<string, CustomerLedgerBalance>> {
+  const balances = new Map<string, CustomerLedgerBalance>()
+  if (!input.customerIds.length) return balances
+  const rows = await db.$queryRaw<
+    Array<{
+      customerId: string
+      debit: string
+      credit: string
+      allocations: string
+      releases: string
+    }>
+  >(Prisma.sql`
+    SELECT account."customerId", COALESCE(e.debit,0)::text AS debit, COALESCE(e.credit,0)::text AS credit,
+      COALESCE(a.amount,0)::text AS allocations, COALESCE(r.amount,0)::text AS releases
+    FROM "CustomerLedgerAccount" account
+    LEFT JOIN LATERAL (SELECT SUM("amountMinor") FILTER (WHERE side = 'DEBIT') AS debit, SUM("amountMinor") FILTER (WHERE side = 'CREDIT') AS credit
+      FROM "CustomerLedgerEntry" WHERE "accountId" = account.id AND sequence <= account."lastSequence") e ON TRUE
+    LEFT JOIN LATERAL (SELECT SUM("amountMinor") AS amount FROM "CustomerLedgerAllocation" WHERE "accountId" = account.id AND sequence <= account."lastSequence") a ON TRUE
+    LEFT JOIN LATERAL (SELECT SUM(rel."amountMinor") AS amount FROM "CustomerLedgerAllocationRelease" rel
+      JOIN "CustomerLedgerAllocation" allocation ON allocation.id = rel."allocationId"
+      WHERE allocation."accountId" = account.id AND allocation.sequence <= account."lastSequence" AND rel.sequence <= account."lastSequence") r ON TRUE
+    WHERE account."tenantId" = ${input.tenantId} AND account."currencyCode" = ${input.currencyCode}
+      AND account."customerId" = ANY(${input.customerIds}::text[])
+  `)
+  for (const row of rows)
+    balances.set(
+      row.customerId,
+      customerLedgerTotalsFromAggregates({
+        debit: BigInt(row.debit),
+        credit: BigInt(row.credit),
+        allocations: BigInt(row.allocations),
+        releases: BigInt(row.releases),
+      }),
+    )
+  return balances
+}
+
 /** All matching accounts at each saved posting sequence; never an account-page sum. */
 export async function getCustomerLedgerScopeTotalsInTransaction(
   tx: Prisma.TransactionClient,

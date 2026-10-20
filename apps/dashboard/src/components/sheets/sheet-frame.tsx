@@ -12,7 +12,7 @@ import {
   SheetTitle,
   cn,
 } from "@ewatrade/ui"
-import { Cancel01Icon } from "@hugeicons/core-free-icons"
+import { ArrowLeft01Icon, Cancel01Icon } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { ErrorBoundary } from "next/dist/client/components/error-boundary"
 import { Suspense } from "react"
@@ -24,6 +24,8 @@ type SheetFrameProps = {
   closeError?: string | null
   title: string
   description?: string
+  /** A view inside a record's sheet returns to the record with this. */
+  back?: { label: string; onClick: () => void }
   header?: ReactNode
   footer?: ReactNode
   headerClassName?: string
@@ -40,6 +42,7 @@ export function SheetFrame({
   closeError,
   title,
   description,
+  back,
   header,
   footer,
   headerClassName,
@@ -63,6 +66,20 @@ export function SheetFrame({
         )}
       >
         <div className="min-w-0 space-y-2">
+          {back ? (
+            <button
+              type="button"
+              className="-mt-1 mb-1 inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
+              onClick={back.onClick}
+            >
+              <HugeiconsIcon
+                icon={ArrowLeft01Icon}
+                className="size-4"
+                aria-hidden="true"
+              />
+              {back.label}
+            </button>
+          ) : null}
           <SheetTitle className="text-xl font-medium">{title}</SheetTitle>
           {description ? (
             <SheetDescription className="text-sm text-muted-foreground">

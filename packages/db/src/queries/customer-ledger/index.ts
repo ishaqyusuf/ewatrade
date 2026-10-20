@@ -19,3 +19,7 @@ export * from "./refund-review"
 export * from "./receipt-review"
 
 export * from "./credit-review"
+export {
+  type CustomerLedgerBalance,
+  listCustomerLedgerBalances,
+} from "./totals-projection"

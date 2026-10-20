@@ -1,4 +1,5 @@
 "use client"
+import { FormCombobox } from "@/components/forms/form-controls"
 import { useCustomerLedgerCommand } from "@/hooks/use-customer-ledger-command"
 import {
   type CustomerLedgerMode,
@@ -17,6 +18,7 @@ import {
   AlertDescription,
   Button,
   ControlField,
+  DatePicker,
   FieldGroup,
   FormActions,
   Input,
@@ -31,8 +33,36 @@ import { useMutation, useQuery } from "@tanstack/react-query"
 import { useEffect, useState } from "react"
 import { Controller, useForm } from "react-hook-form"
 import type { LedgerAccount, LedgerRequest } from "../types"
-import { ledgerLabels } from "../types"
+import { formatLedgerDate, ledgerLabels, paymentMethodLabels } from "../types"
 import { useCustomerLedgerForm } from "./form-context"
+const OPERATION_WORDS: Record<string, string> = {
+  recordOpening: "starting balance",
+  recordReceipt: "payment",
+  applyCredit: "use on an Order",
+  releaseAllocation: "undo",
+  refundUnusedCredit: "return of paid-ahead money",
+  reverseEntry: "undo",
+}
+
+type LedgerOption = { value: string; label: string }
+
+/** Local calendar day (YYYY-MM-DD) of an ISO time, for the date picker. */
+function isoToDay(iso: string) {
+  const date = new Date(iso)
+  if (Number.isNaN(date.getTime())) return ""
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`
+}
+
+/** A picked day as an ISO time, keeping the time of day of `iso`. */
+function dayToIso(day: string, iso: string) {
+  const [year, month, date] = day.split("-").map(Number)
+  const time = new Date(iso)
+  const base = Number.isNaN(time.getTime()) ? new Date() : time
+  const next = new Date(base)
+  next.setFullYear(year ?? 0, (month ?? 1) - 1, date ?? 1)
+  return next.toISOString()
+}
+
 export function CustomerLedgerCommandForm({
   account,
   actorUserId,
@@ -49,7 +79,8 @@ export function CustomerLedgerCommandForm({
   allocationId?: string
 }) {
   const trpc = useTRPC()
-  const { close, ledgerAllocationAfter } = useCustomerLedgerParams()
+  const { close, backToEntry, ledgerAllocationAfter } =
+    useCustomerLedgerParams()
   const { setLocked } = useCustomerLedgerForm()
   const command = useCustomerLedgerCommand({
     actorUserId,
@@ -158,7 +189,7 @@ export function CustomerLedgerCommandForm({
   function prepare(fields: LedgerFields) {
     try {
       if (dataError || loading)
-        throw new Error("Refresh the current sources before reviewing.")
+        throw new Error("Refresh the list above, then continue.")
       setReview(
         prepareCustomerLedgerCommand({
           mode,
@@ -174,7 +205,9 @@ export function CustomerLedgerCommandForm({
       setError(null)
     } catch (failure) {
       setError(
-        failure instanceof Error ? failure.message : "Check customer details.",
+        failure instanceof Error
+          ? failure.message
+          : "Check the details and try again.",
       )
     }
   }
@@ -206,9 +239,9 @@ export function CustomerLedgerCommandForm({
       form.setValue("revision", metadata.expectedSnapshotSequence)
   }, [command.retained, form])
   const label = (s: NonNullable<typeof credits.data>["sources"][number]) =>
-    `${ledgerLabels[s.kind] ?? s.kind} #${s.sequence}${s.order ? ` · ${s.order.orderNumber}` : ""} · ${formatFinanceMoney(s.remainingAmountMinor, account.currencyCode)} remaining`
+    `${s.order ? `Order ${s.order.orderNumber}` : (ledgerLabels[s.kind] ?? "Entry")} · ${formatFinanceMoney(s.remainingAmountMinor, account.currencyCode)} left`
   const text = (
-    name: "reason" | "reference" | "date" | "revision",
+    name: "reason" | "reference" | "revision",
     label: string,
     multiline = false,
   ) => (
@@ -221,14 +254,9 @@ export function CustomerLedgerCommandForm({
     </ControlField>
   )
   const select = (
-    name:
-      | "direction"
-      | "method"
-      | "moneyAccountId"
-      | "creditEntryId"
-      | "chargeEntryId",
+    name: "direction" | "method" | "moneyAccountId",
     label: string,
-    options: { value: string; label: string }[],
+    options: LedgerOption[],
   ) => (
     <Controller
       control={form.control}
@@ -243,6 +271,23 @@ export function CustomerLedgerCommandForm({
         </ControlField>
       )}
     />
+  )
+  const pick = (
+    name: "creditEntryId" | "chargeEntryId",
+    title: string,
+    placeholder: string,
+    sources: NonNullable<typeof credits.data>["sources"],
+    isFetching: boolean,
+  ) => (
+    <ControlField label={title} error={form.formState.errors[name]?.message}>
+      <FormCombobox
+        control={form.control}
+        name={name}
+        placeholder={placeholder}
+        empty={isFetching ? "Loading…" : "Nothing matches."}
+        options={sources.map((s) => ({ value: s.id, label: label(s) }))}
+      />
+    </ControlField>
   )
   const after = review ? customerLedgerReviewTotals(account, review) : null
   const creditId =
@@ -265,30 +310,31 @@ export function CustomerLedgerCommandForm({
       <Alert appearance="dashboard">
         <AlertDescription>
           {mode === "receipt"
-            ? "Record actual money already received. It becomes available credit; apply it separately to a charge. This does not send money."
+            ? "Record money you’ve already received. It’s kept as paid ahead until it’s used on an Order."
             : mode === "apply" || mode === "release"
-              ? "This changes settlement only. Cash and net customer balance stay unchanged."
+              ? "This only changes which Order the money counts toward. No money moves and the balance stays the same."
               : mode === "refund"
-                ? "Record money already returned to the customer from unused credit. This does not execute a payout."
+                ? "Record money you’ve already given back from what they paid ahead. This doesn’t send money."
                 : mode === "reverse"
-                  ? "Append a bookkeeping correction. Original entries remain. This does not execute a cash refund."
-                  : "Record debt or credit held at the bookkeeping start date. No cash is collected."}
+                  ? "Adds an undo line. The original stays on the statement. This doesn’t send money."
+                  : "Add what they owed, or had paid ahead, on the day you started using ewatrade. No money moves."}
         </AlertDescription>
       </Alert>
       {command.retained ? (
         <Alert appearance="dashboard">
           <AlertDescription>
-            Earlier {command.retained.command.operation} needs confirmation.
-            Re-enter only its exact original details, including revision and
-            date. No amount or reason is saved on this device.
+            We couldn’t confirm whether the last{" "}
+            {OPERATION_WORDS[command.retained.command.operation] ?? "record"}{" "}
+            was saved. Check first. If you try again, enter exactly the same
+            details, including the date; amounts and notes aren’t kept on this
+            device.
           </AlertDescription>
           <Button
-            appearance="form"
             variant="outline"
             disabled={command.pending}
             onClick={() => void command.acknowledge()}
           >
-            Check saved result
+            Check if it was saved
           </Button>
         </Alert>
       ) : null}
@@ -298,7 +344,6 @@ export function CustomerLedgerCommandForm({
             {command.error ?? error ?? dataError}
           </AlertDescription>
           <Button
-            appearance="form"
             variant="outline"
             disabled={command.pending}
             onClick={() => {
@@ -308,7 +353,7 @@ export function CustomerLedgerCommandForm({
               if (entryId) void detail.refetch()
             }}
           >
-            Refresh sources
+            Refresh
           </Button>
         </Alert>
       ) : null}
@@ -316,12 +361,18 @@ export function CustomerLedgerCommandForm({
         <output aria-live="polite">{command.notice}</output>
       ) : null}
       {command.saved ? (
-        <Button appearance="form" onClick={() => void close()}>
-          Done
+        <Button
+          onClick={() =>
+            void (mode === "release" || mode === "reverse"
+              ? backToEntry()
+              : close())
+          }
+        >
+          {mode === "release" || mode === "reverse" ? "Back to entry" : "Done"}
         </Button>
       ) : review ? (
         <>
-          <h3 className="text-lg font-medium">Review before recording</h3>
+          <h3 className="text-lg font-medium">Check and save</h3>
           <p className="text-2xl tabular-nums">
             {formatFinanceMoney(
               "amountMinor" in review.payload
@@ -334,38 +385,46 @@ export function CustomerLedgerCommandForm({
             {review.operation === "recordOpening" ? (
               <p>
                 {review.payload.direction === "DEBT"
-                  ? "Customer owes the business"
-                  : "Business holds customer credit"}{" "}
-                · Bookkeeping start date
+                  ? "They owe you"
+                  : "They paid ahead"}{" "}
+                · Starting balance
               </p>
             ) : null}
             {"creditEntryId" in review.payload ? (
               <p>
-                Credit:{" "}
-                {credits.data?.sources.find((s) => s.id === creditId)?.sequence
-                  ? `#${credits.data.sources.find((s) => s.id === creditId)?.sequence}`
-                  : "Reviewed source"}
+                From {(() => {
+                  const source = credits.data?.sources.find(
+                    (s) => s.id === creditId,
+                  )
+                  return source ? label(source) : "the selected payment"
+                })()}
               </p>
             ) : null}
             {"chargeEntryId" in review.payload ? (
               <p>
-                Charge:{" "}
-                {debits.data?.sources.find((s) => s.id === chargeId)?.order
-                  ?.orderNumber ??
-                  `#${debits.data?.sources.find((s) => s.id === chargeId)?.sequence ?? "Reviewed outstanding debt"}`}
+                On {(() => {
+                  const source = debits.data?.sources.find(
+                    (s) => s.id === chargeId,
+                  )
+                  return source?.order
+                    ? `Order ${source.order.orderNumber}`
+                    : source
+                      ? (ledgerLabels[source.kind] ?? "the selected balance")
+                      : "the selected balance"
+                })()}
               </p>
             ) : null}
             {"moneyAccountId" in review.payload ? (
               <p>
-                Money account:{" "}
+                {mode === "refund" ? "Paid from" : "Paid into"}{" "}
                 {money.data?.accounts.find((a) => a.id === moneyId)?.name} ·{" "}
-                {review.payload.method}
+                {paymentMethodLabels[review.payload.method] ?? "Other"}
               </p>
             ) : (
               <p>
                 {mode === "reverse"
-                  ? "Bookkeeping reverses original effects; no payout is executed."
-                  : `Cash effect: ${formatFinanceMoney("0", account.currencyCode)}`}
+                  ? "Adds an undo line; no money is sent."
+                  : "No money moves."}
               </p>
             )}
             {"reason" in review.payload ? (
@@ -375,15 +434,13 @@ export function CustomerLedgerCommandForm({
             ) : null}
             {"effectiveAt" in review.payload &&
             review.payload.effectiveAt instanceof Date ? (
-              <p>{review.payload.effectiveAt.toISOString()} UTC</p>
+              <p>{formatLedgerDate(review.payload.effectiveAt)}</p>
             ) : null}
           </div>
           {after ? (
             <dl className="grid gap-3 border-y border-border py-4 text-sm">
               <div>
-                <dt className="text-muted-foreground">
-                  Amount owed after this record
-                </dt>
+                <dt className="text-muted-foreground">Owes you after this</dt>
                 <dd>
                   {formatFinanceMoney(
                     after.outstandingDebtMinor,
@@ -392,9 +449,7 @@ export function CustomerLedgerCommandForm({
                 </dd>
               </div>
               <div>
-                <dt className="text-muted-foreground">
-                  Credit available after this record
-                </dt>
+                <dt className="text-muted-foreground">Paid ahead after this</dt>
                 <dd>
                   {formatFinanceMoney(
                     after.availableCreditMinor,
@@ -403,9 +458,7 @@ export function CustomerLedgerCommandForm({
                 </dd>
               </div>
               <div>
-                <dt className="text-muted-foreground">
-                  Net balance after this record
-                </dt>
+                <dt className="text-muted-foreground">Balance after this</dt>
                 <dd>
                   {formatFinanceMoney(
                     after.netBalanceMinor,
@@ -414,19 +467,18 @@ export function CustomerLedgerCommandForm({
                 </dd>
               </div>
               <p className="text-xs text-muted-foreground">
-                Based on the reviewed account. The server checks current records
-                when confirming.
+                These figures are checked again when you save, in case someone
+                recorded something in the meantime.
               </p>
             </dl>
           ) : null}
           <FormActions>
             <Button
-              appearance="form"
               variant="outline"
               disabled={command.pending}
               onClick={() => setReview(null)}
             >
-              Back to details
+              Back
             </Button>
             <SubmitButton
               type="button"
@@ -434,7 +486,7 @@ export function CustomerLedgerCommandForm({
               disabled={!command.ready || command.pending}
               onClick={() => void confirm()}
             >
-              Confirm and record
+              Save
             </SubmitButton>
           </FormActions>
         </>
@@ -442,19 +494,19 @@ export function CustomerLedgerCommandForm({
         <form onSubmit={form.handleSubmit(prepare)}>
           <FieldGroup>
             {mode === "opening"
-              ? select("direction", "Opening balance", [
-                  { value: "DEBT", label: "Customer owes the business" },
-                  { value: "CREDIT", label: "Business holds customer credit" },
+              ? select("direction", "Starting balance", [
+                  { value: "DEBT", label: "They owe you" },
+                  { value: "CREDIT", label: "They paid ahead" },
                 ])
               : null}
             {needsCredit
-              ? select("creditEntryId", "Available credit", [
-                  { value: "", label: "Choose credit" },
-                  ...(credits.data?.sources ?? []).map((s) => ({
-                    value: s.id,
-                    label: label(s),
-                  })),
-                ])
+              ? pick(
+                  "creditEntryId",
+                  "Money paid ahead",
+                  "Search payments",
+                  credits.data?.sources ?? [],
+                  credits.isFetching,
+                )
               : null}
             {needsCredit ? (
               <div className="flex gap-2">
@@ -467,7 +519,7 @@ export function CustomerLedgerCommandForm({
                     form.setValue("creditEntryId", "")
                   }}
                 >
-                  Previous credits
+                  Back
                 </Button>
                 <Button
                   type="button"
@@ -481,18 +533,18 @@ export function CustomerLedgerCommandForm({
                     form.setValue("creditEntryId", "")
                   }}
                 >
-                  More credits
+                  Show more
                 </Button>
               </div>
             ) : null}
             {mode === "apply"
-              ? select("chargeEntryId", "Outstanding charge", [
-                  { value: "", label: "Choose charge" },
-                  ...(debits.data?.sources ?? []).map((s) => ({
-                    value: s.id,
-                    label: label(s),
-                  })),
-                ])
+              ? pick(
+                  "chargeEntryId",
+                  "Unpaid Order",
+                  "Search Orders",
+                  debits.data?.sources ?? [],
+                  debits.isFetching,
+                )
               : null}
             {mode === "apply" ? (
               <div className="flex gap-2">
@@ -505,7 +557,7 @@ export function CustomerLedgerCommandForm({
                     form.setValue("chargeEntryId", "")
                   }}
                 >
-                  Previous charges
+                  Back
                 </Button>
                 <Button
                   type="button"
@@ -519,7 +571,7 @@ export function CustomerLedgerCommandForm({
                     form.setValue("chargeEntryId", "")
                   }}
                 >
-                  More charges
+                  Show more
                 </Button>
               </div>
             ) : null}
@@ -548,7 +600,7 @@ export function CustomerLedgerCommandForm({
             ) : null}
             {needsMoney ? (
               <>
-                {select("method", "Payment method", [
+                {select("method", "Paid by", [
                   { value: "CASH", label: "Cash" },
                   { value: "BANK_TRANSFER", label: "Bank transfer" },
                   { value: "CARD", label: "Card" },
@@ -557,11 +609,9 @@ export function CustomerLedgerCommandForm({
                 ])}
                 {select(
                   "moneyAccountId",
-                  mode === "receipt"
-                    ? "Money received into"
-                    : "Money returned from",
+                  mode === "receipt" ? "Paid into" : "Paid from",
                   [
-                    { value: "", label: "Choose money account" },
+                    { value: "", label: "Choose an account" },
                     ...eligibleLedgerMoneyAccounts(
                       money.data?.accounts ?? [],
                       form.watch("method"),
@@ -572,18 +622,35 @@ export function CustomerLedgerCommandForm({
               </>
             ) : null}
             {mode !== "apply"
-              ? text(
-                  "reason",
-                  mode === "receipt" ? "Description" : "Reason",
-                  true,
-                )
+              ? text("reason", mode === "receipt" ? "Note" : "Reason", true)
               : null}
-            {mode === "refund" || mode === "reverse"
-              ? text("date", "Effective time (ISO UTC)")
-              : null}
+            {mode === "refund" || mode === "reverse" ? (
+              <Controller
+                control={form.control}
+                name="date"
+                render={({ field }) => (
+                  <ControlField
+                    label="Date"
+                    error={form.formState.errors.date?.message}
+                  >
+                    <DatePicker
+                      value={isoToDay(field.value)}
+                      max={isoToDay(new Date().toISOString())}
+                      placeholder="Choose a date"
+                      onBlur={field.onBlur}
+                      onValueChange={(day) =>
+                        form.setValue("date", dayToIso(day, field.value), {
+                          shouldValidate: true,
+                        })
+                      }
+                    />
+                  </ControlField>
+                )}
+              />
+            ) : null}
             {command.retained &&
             ["apply", "refund", "reverse", "release"].includes(mode)
-              ? text("revision", "Original reviewed revision (exact retry)")
+              ? text("revision", "Check number from the earlier attempt")
               : null}
             <SubmitButton
               isSubmitting={false}

@@ -29,10 +29,43 @@ export type LedgerRequest = {
   | "refundUnusedCredit"
   | "reverseEntry"]
 export const ledgerLabels: Record<string, string> = {
-  OPENING_DEBT: "Opening debt",
-  OPENING_CREDIT: "Opening credit",
-  RECEIPT: "Payment received",
-  ORDER_CHARGE: "Order charge",
-  REFUND: "Unused credit returned",
-  REVERSAL: "Correction",
+  OPENING_DEBT: "Starting balance",
+  OPENING_CREDIT: "Starting balance, paid ahead",
+  RECEIPT: "Payment",
+  ORDER_CHARGE: "Order",
+  REFUND: "Paid-ahead money returned",
+  REVERSAL: "Undo",
+}
+
+/** Payment methods in everyday words; the stored values stay codes. */
+export const paymentMethodLabels: Record<string, string> = {
+  CASH: "Cash",
+  BANK_TRANSFER: "Bank transfer",
+  CARD: "Card",
+  POS: "POS",
+  CUSTOMER_CREDIT: "Paid ahead",
+  OTHER: "Other",
+}
+
+/** "₦45,000 owed", "₦12,500 paid ahead" or "₦0"; never a minus sign. */
+export function ledgerBalanceWords(
+  netMinor: string,
+  money: (minor: string) => string,
+) {
+  const net = BigInt(netMinor)
+  if (net > BigInt(0)) return `${money(net.toString())} owed`
+  if (net < BigInt(0)) return `${money((-net).toString())} paid ahead`
+  return money("0")
+}
+
+export function formatLedgerDate(value: string | Date, withTime = false) {
+  const date = new Date(value)
+  return Number.isNaN(date.getTime())
+    ? String(value)
+    : new Intl.DateTimeFormat(
+        "en-NG",
+        withTime
+          ? { dateStyle: "medium", timeStyle: "short" }
+          : { dateStyle: "medium" },
+      ).format(date)
 }

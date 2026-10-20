@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test"
 
 import {
   ensureOrderCustomerInTransaction,
+  listCustomerBook,
   listCustomerOrderDirectory,
 } from "./customers"
 import type { DbClient } from "./types"
@@ -46,6 +47,7 @@ describe("Order customer directory projection", () => {
         queryCalls.push(query)
         return [
           {
+            customerId: "customer_123",
             email: "ada@example.com",
             firstSeenAt: new Date("2026-01-01T10:00:00.000Z"),
             id: "08000000000",
@@ -84,6 +86,7 @@ describe("Order customer directory projection", () => {
     expect(querySql).not.toContain('SUM("totalMinor")::integer')
     expect(result).toEqual([
       {
+        customerId: "customer_123",
         email: "ada@example.com",
         firstSeenAt: new Date("2026-01-01T10:00:00.000Z"),
         id: "08000000000",
@@ -151,5 +154,86 @@ describe("Order customer directory projection", () => {
       "customer.createMany",
       "customer.findFirst",
     ])
+  })
+})
+
+describe("Customer book", () => {
+  const ordered = (row: Record<string, unknown>) => ({
+    customerId: null,
+    email: null,
+    firstSeenAt: new Date("2026-01-01T10:00:00.000Z"),
+    identityType: "phone",
+    lastOrderCreatedAt: new Date("2026-07-24T10:00:00.000Z"),
+    lastOrderNumber: "ORD-2",
+    lastOrderPaymentStatus: "PAID",
+    lastOrderStatus: "COMPLETED",
+    lastOrderTotalMinor: 2500,
+    lastSeenAt: new Date("2026-07-24T10:00:00.000Z"),
+    name: "Ada Okafor",
+    orderCount: 2,
+    phone: null,
+    totalMinor: "5000",
+    ...row,
+  })
+  const savedCustomer = (row: Record<string, unknown>) => ({
+    createdAt: new Date("2026-07-01T10:00:00.000Z"),
+    email: null,
+    name: "Saved",
+    phone: null,
+    updatedAt: new Date("2026-07-01T10:00:00.000Z"),
+    ...row,
+  })
+  function bookDb(orders: unknown[], saved: unknown[]) {
+    const findManyCalls: unknown[] = []
+    const db = {
+      $queryRaw: async () => orders,
+      customer: {
+        findMany: async (args: unknown) => {
+          findManyCalls.push(args)
+          return saved
+        },
+      },
+    }
+    return {
+      db: db as unknown as Parameters<typeof listCustomerBook>[0],
+      findManyCalls,
+    }
+  }
+  const input = { storeId: "store_1", tenantId: "tenant_1" }
+
+  test("links order customers by phone and adds saved customers without orders", async () => {
+    const { db } = bookDb(
+      [ordered({ id: "+2348031234567", phone: "+234 803 123 4567" })],
+      [
+        savedCustomer({ id: "c_ada", name: "Ada", phone: "+2348031234567" }),
+        savedCustomer({ id: "c_new", name: "New Customer", email: "n@x.io" }),
+      ],
+    )
+    const rows = await listCustomerBook(db, {
+      ...input,
+      includeSavedCustomers: true,
+    })
+    expect(rows.map((row) => [row.id, row.customerId, row.orderCount])).toEqual(
+      [
+        ["+2348031234567", "c_ada", 2],
+        ["customer:c_new", "c_new", 0],
+      ],
+    )
+    expect(rows[1]?.lastOrder).toBeNull()
+    expect(rows[1]?.identityType).toBe("email")
+  })
+
+  test("keeps the order link and skips saved customers for own-sales books", async () => {
+    const { db, findManyCalls } = bookDb(
+      [ordered({ id: "ada", customerId: "c_linked" })],
+      [savedCustomer({ id: "c_other" })],
+    )
+    const rows = await listCustomerBook(db, {
+      ...input,
+      createdByUserId: "user_1",
+      includeSavedCustomers: false,
+    })
+    expect(rows.map((row) => row.customerId)).toEqual(["c_linked"])
+    expect(findManyCalls).toHaveLength(0)
   })
 })

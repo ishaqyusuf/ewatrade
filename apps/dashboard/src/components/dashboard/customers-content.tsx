@@ -1,5 +1,6 @@
 import { CustomersPage } from "@/components/dashboard/customers-page"
 import { getDashboardCustomerBook } from "@/lib/sales-data"
+import { canReviewCustomerBalances } from "@/lib/sales-operations"
 import type { TenantStore } from "@/lib/tenant"
 import type { DirectoryViewSettings } from "@/utils/directory-view-settings"
 import type { TableSettings } from "@/utils/table-settings"
@@ -22,6 +23,7 @@ export async function CustomersContent({
   initialViewSettings: DirectoryViewSettings
 }) {
   const customers = await getDashboardCustomerBook({
+    currencyCode: store.currencyCode,
     role,
     search: search.trim() || undefined,
     storeId: store.id,
@@ -35,6 +37,7 @@ export async function CustomersContent({
       initialCustomers={customers}
       initialSettings={initialSettings}
       initialViewSettings={initialViewSettings}
+      canSeeBalances={canReviewCustomerBalances(role)}
       store={store}
     />
   )

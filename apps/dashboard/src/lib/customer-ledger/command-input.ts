@@ -59,15 +59,18 @@ export function prepareCustomerLedgerCommand({
   allocationId?: string
 }): LedgerRequest {
   fields = ledgerFieldsSchema.parse(fields)
-  if (!account.book) throw new Error("A matching currency book is required.")
+  if (!account.book)
+    throw new Error(
+      "Set up Finance in this currency before recording payments.",
+    )
   const base = { bookId: account.book.id, accountId: account.id }
   const reason = fields.reason.trim()
   const expectedRevision = fields.revision
   const needsRevision = ["apply", "release", "refund", "reverse"].includes(mode)
   if (needsRevision && !/^(0|[1-9]\d{0,18})$/.test(expectedRevision))
-    throw new Error("Keep the exact reviewed revision.")
+    throw new Error("Enter the same check number as the earlier attempt.")
   if (!["apply"].includes(mode) && !reason)
-    throw new Error("Enter a description or reason.")
+    throw new Error("Add a short note or reason.")
   const effectiveAt = new Date(fields.date)
   if (
     ["refund", "reverse"].includes(mode) &&
@@ -75,9 +78,7 @@ export function prepareCustomerLedgerCommand({
       Number.isNaN(effectiveAt.getTime()) ||
       effectiveAt.toISOString() !== fields.date)
   )
-    throw new Error(
-      "Enter a valid ISO UTC time (for example 2026-10-02T10:00:00.000Z).",
-    )
+    throw new Error("Choose a valid date and time.")
   if (mode === "reverse") {
     if (
       !detail ||
@@ -88,14 +89,12 @@ export function prepareCustomerLedgerCommand({
       ) ||
       detail.reconciliationRequired
     )
-      throw new Error("This entry does not support a standalone correction.")
+      throw new Error("This entry can’t be undone on its own.")
     if (
       detail.entry.kind !== "REFUND" &&
       BigInt(detail.usedAmountMinor) !== BigInt(0)
     )
-      throw new Error(
-        "Release active allocations before correcting this entry.",
-      )
+      throw new Error("Take this payment off its Orders first, then undo it.")
     return {
       operation: "reverseEntry",
       payload: {
@@ -119,9 +118,7 @@ export function prepareCustomerLedgerCommand({
         (a) => a.id === fields.moneyAccountId,
       )
     )
-      throw new Error(
-        "Choose an active money account that matches the payment method.",
-      )
+      throw new Error("Choose an account that takes this payment method.")
   }
   if (mode === "receipt")
     return {
@@ -139,14 +136,14 @@ export function prepareCustomerLedgerCommand({
   if (mode === "apply" || mode === "refund") {
     if (!credit || BigInt(amountMinor) > BigInt(credit.remainingAmountMinor))
       throw new Error(
-        "Choose available credit and an amount within its remaining balance.",
+        "Choose money paid ahead, and an amount up to what’s left of it.",
       )
   }
   if (mode === "apply") {
     const charge = charges.find((s) => s.id === fields.chargeEntryId)
     if (!charge || BigInt(amountMinor) > BigInt(charge.remainingAmountMinor))
       throw new Error(
-        "Choose an outstanding charge and an amount within its remaining balance.",
+        "Choose an unpaid Order, and an amount up to what’s left to pay on it.",
       )
     return {
       operation: "applyCredit",
@@ -180,9 +177,7 @@ export function prepareCustomerLedgerCommand({
     detail?.reconciliationRequired ||
     BigInt(amountMinor) > BigInt(allocation.remainingAmountMinor)
   )
-    throw new Error(
-      "Choose an active allocation and an amount within its unreleased balance.",
-    )
+    throw new Error("Choose an amount up to what’s still used on this Order.")
   return {
     operation: "releaseAllocation",
     payload: {

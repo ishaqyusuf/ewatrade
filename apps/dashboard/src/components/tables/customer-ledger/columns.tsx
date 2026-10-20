@@ -1,17 +1,22 @@
 import {
   type LedgerEntry,
+  formatLedgerDate,
+  ledgerBalanceWords,
   ledgerLabels,
 } from "@/components/customer-ledger/types"
 import { type TableColumnMeta, selectColumn } from "@/components/tables/core"
 import { Badge, Button } from "@ewatrade/ui"
 import { formatFinanceMoney } from "@ewatrade/utils/finance-money"
+import { ArrowRight01Icon } from "@hugeicons/core-free-icons"
+import { HugeiconsIcon } from "@hugeicons/react"
 import type { ColumnDef } from "@tanstack/react-table"
+
+/** Column ids stay the stored ones (debit, credit, record) so saved layouts keep working. */
 export function customerLedgerColumns(
   currency: string,
   open: (id: string) => void,
 ): ColumnDef<LedgerEntry>[] {
-  const amount = (side: string, entry: LedgerEntry) =>
-    formatFinanceMoney(entry.side === side ? entry.amountMinor : "0", currency)
+  const money = (minor: string) => formatFinanceMoney(minor, currency)
   const meta = (
     headerLabel: string,
     extra: Partial<TableColumnMeta> = {},
@@ -21,85 +26,100 @@ export function customerLedgerColumns(
     ...extra,
   })
   return [
-    selectColumn((entry) => `statement entry ${entry.sequence}`),
+    selectColumn(
+      (entry) =>
+        `${ledgerLabels[entry.kind] ?? "entry"}, ${formatLedgerDate(entry.effectiveAt)}`,
+      "Select all",
+    ),
     {
       id: "date",
       accessorKey: "effectiveAt",
-      header: "Date (UTC)",
-      size: 170,
+      header: "Date",
+      size: 150,
       enableHiding: false,
-      meta: meta("Date (UTC)", {
+      meta: meta("Date", {
         sticky: true,
         reorderable: false,
         className:
           "z-20 bg-background group-hover:bg-muted/40 group-aria-selected:bg-muted/60",
       }),
-      cell: ({ row }) =>
-        new Date(row.original.effectiveAt).toISOString().slice(0, 10),
+      cell: ({ row }) => formatLedgerDate(row.original.effectiveAt),
     },
     {
       id: "record",
       accessorKey: "description",
-      header: "Record",
+      header: "Details",
       size: 320,
-      meta: meta("Record"),
-      cell: ({ row }) => (
-        <div className="min-w-0">
-          <p className="truncate">{row.original.description}</p>
-          <p className="text-xs text-muted-foreground">
-            {ledgerLabels[row.original.kind] ?? row.original.kind} · #
-            {row.original.sequence}
-          </p>
-          {row.original.reversalOfId ? (
-            <Badge variant="secondary">Correction</Badge>
-          ) : null}
-        </div>
-      ),
+      meta: meta("Details"),
+      cell: ({ row }) => {
+        const entry = row.original
+        const label = ledgerLabels[entry.kind] ?? "Entry"
+        return (
+          <div className="min-w-0">
+            <p className="truncate font-medium">{label}</p>
+            {entry.description && entry.description !== label ? (
+              <p className="truncate text-xs text-muted-foreground">
+                {entry.description}
+              </p>
+            ) : null}
+            {entry.reversalOfId ? (
+              <Badge variant="secondary">Undoes an earlier entry</Badge>
+            ) : null}
+          </div>
+        )
+      },
     },
     {
       id: "debit",
-      header: "Debit",
-      size: 170,
-      meta: meta("Debit"),
-      cell: ({ row }) => (
-        <span className="tabular-nums">{amount("DEBIT", row.original)}</span>
-      ),
+      header: "Charged",
+      size: 150,
+      meta: meta("Charged"),
+      cell: ({ row }) =>
+        row.original.side === "DEBIT" ? (
+          <span className="tabular-nums">
+            {money(row.original.amountMinor)}
+          </span>
+        ) : null,
     },
     {
       id: "credit",
-      header: "Credit",
-      size: 170,
-      meta: meta("Credit"),
-      cell: ({ row }) => (
-        <span className="tabular-nums">{amount("CREDIT", row.original)}</span>
-      ),
+      header: "Paid",
+      size: 150,
+      meta: meta("Paid"),
+      cell: ({ row }) =>
+        row.original.side === "CREDIT" ? (
+          <span className="tabular-nums">
+            {money(row.original.amountMinor)}
+          </span>
+        ) : null,
     },
     {
       id: "balance",
       accessorKey: "runningBalanceMinor",
-      header: "Running net balance",
-      size: 210,
-      meta: meta("Running net balance"),
+      header: "Balance",
+      size: 190,
+      meta: meta("Balance"),
       cell: ({ row }) => (
         <span className="tabular-nums">
-          {formatFinanceMoney(row.original.runningBalanceMinor, currency)}
+          {ledgerBalanceWords(row.original.runningBalanceMinor, money)}
         </span>
       ),
     },
     {
       id: "actions",
-      header: "Actions",
-      size: 96,
+      header: "Details",
+      size: 64,
       enableHiding: false,
       enableResizing: false,
-      meta: meta("Actions", { sticky: true, reorderable: false }),
+      meta: meta("Details", { sticky: true, reorderable: false }),
       cell: ({ row }) => (
         <Button
           variant="ghost"
-          aria-label={`View entry ${row.original.sequence}`}
+          size="icon"
+          aria-label={`Details for ${ledgerLabels[row.original.kind] ?? "entry"}, ${formatLedgerDate(row.original.effectiveAt)}`}
           onClick={() => open(row.original.id)}
         >
-          View
+          <HugeiconsIcon icon={ArrowRight01Icon} className="size-4" />
         </Button>
       ),
     },
