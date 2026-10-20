@@ -7,9 +7,12 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useRouter } from "next/navigation"
 import { useId } from "react"
 
-type Visibility = "OWN_SALES" | "ALL_STORE_ORDERS"
+export type Visibility = "OWN_SALES" | "ALL_STORE_ORDERS"
 
-const OPTIONS: Array<{ value: Visibility; label: string }> = [
+export const ORDER_VISIBILITY_OPTIONS: Array<{
+  value: Visibility
+  label: string
+}> = [
   { value: "OWN_SALES", label: "Only orders they made" },
   { value: "ALL_STORE_ORDERS", label: "All orders in this store" },
 ]
@@ -28,7 +31,7 @@ export function useOrderVisibility(storeId: string, review = false) {
 }
 
 /** Saving without a visibility only marks the setting as reviewed. */
-function useUpdateOrderVisibility(storeId: string) {
+export function useUpdateOrderVisibility(storeId: string) {
   const trpc = useTRPC()
   const client = useQueryClient()
   const router = useRouter()
@@ -100,7 +103,7 @@ export function OrderVisibilityQuestion({
               })
             }
           >
-            {OPTIONS.map((option) => (
+            {ORDER_VISIBILITY_OPTIONS.map((option) => (
               <option key={option.value} value={option.value}>
                 {option.label}
               </option>
@@ -178,7 +181,7 @@ export function OrderVisibilityCard({
               })
             }
           >
-            {OPTIONS.map((option) => (
+            {ORDER_VISIBILITY_OPTIONS.map((option) => (
               <option key={option.value} value={option.value}>
                 {option.label}
               </option>

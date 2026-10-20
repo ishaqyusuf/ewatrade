@@ -17,7 +17,7 @@ export function StaffInviteModal({
   onInvited,
 }: {
   storeId: string
-  onInvited: (qaInviteUrl: string | null) => Promise<void>
+  onInvited: (email: string, qaInviteUrl: string | null) => Promise<void>
 }) {
   const { inviteOpen, setInviteOpen } = useStaffParams()
   const close = () => setInviteOpen(false)

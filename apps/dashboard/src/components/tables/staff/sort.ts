@@ -1,13 +1,7 @@
 import { sortParamsSchema } from "@/hooks/sort-params"
 import { createLoader } from "nuqs/server"
 
-export const staffSortFields = [
-  "name",
-  "role",
-  "status",
-  "invitedAt",
-  "acceptedAt",
-] as const
+export const staffSortFields = ["name", "role", "status", "invitedAt"] as const
 
 const loadSort = createLoader(sortParamsSchema)
 

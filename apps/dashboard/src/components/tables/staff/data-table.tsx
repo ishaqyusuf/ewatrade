@@ -6,6 +6,8 @@ import type { DirectoryView } from "@/utils/directory-view-settings"
 import { Checkbox, Table, TableBody, TableCell, TableRow } from "@ewatrade/ui"
 import {
   type RowSelectionState,
+  type SortingState,
+  type VisibilityState,
   flexRender,
   getCoreRowModel,
   getSortedRowModel,
@@ -13,30 +15,35 @@ import {
 } from "@tanstack/react-table"
 import { AnimatePresence } from "framer-motion"
 import { useEffect, useMemo, useState } from "react"
+import type { StaffRowActions } from "./actions"
 import { StaffCollection } from "./collection"
 import { staffColumns } from "./columns"
 import { StaffEmptyState } from "./empty-states"
 import { StaffSkeleton } from "./skeleton"
 import { staffSortFields } from "./sort"
-import { StaffTableHeader } from "./table-header"
+import { StaffTableHeader, StaffTableSettings } from "./table-header"
+
+// With no sort in the URL the list reads A to Z by name.
+const DEFAULT_SORTING: SortingState = [{ id: "name", desc: false }]
 
 export function StaffDataTable({
   rows,
   view: staffView,
   isLoading,
-  updatingId,
-  onUpdateStatus,
+  filtered,
+  actions,
 }: {
   rows: StaffMemberRow[]
   view: DirectoryView
   isLoading: boolean
-  updatingId: string | null
-  onUpdateStatus: (staff: StaffMemberRow) => void
+  filtered: boolean
+  actions: StaffRowActions
 }) {
   const { sort, sorting, toggleSort } = useSortParams({
     fields: staffSortFields,
   })
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({})
+  const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({})
   useEffect(() => {
     const ids = new Set(rows.map((row) => row.id))
     setRowSelection((previous) =>
@@ -47,10 +54,7 @@ export function StaffDataTable({
       ),
     )
   }, [rows])
-  const columns = useMemo(
-    () => staffColumns({ updatingId, onUpdateStatus }),
-    [updatingId, onUpdateStatus],
-  )
+  const columns = useMemo(() => staffColumns(actions), [actions])
   const table = useReactTable({
     data: rows,
     columns,
@@ -59,19 +63,25 @@ export function StaffDataTable({
     getSortedRowModel: getSortedRowModel(),
     enableRowSelection: !isLoading,
     onRowSelectionChange: setRowSelection,
-    state: { sorting, rowSelection },
+    onColumnVisibilityChange: setColumnVisibility,
+    state: {
+      sorting: sort ? sorting : DEFAULT_SORTING,
+      rowSelection,
+      columnVisibility,
+    },
   })
   const selectedCount = table.getSelectedRowModel().rows.length
   return (
     <div className="flex min-w-0 flex-col gap-3" aria-busy={isLoading}>
-      <div className="flex flex-wrap items-center gap-3">
-        {staffView !== "table" ? (
-          <div className="flex items-center gap-2 text-sm">
+      <StaffTableSettings table={table} showColumns={staffView === "table"} />
+      <div className="flex flex-wrap items-center gap-3 text-sm">
+        {staffView !== "table" && rows.length ? (
+          <div className="flex items-center gap-2">
             <Checkbox
               aria-label="Select all staff"
               checked={table.getIsAllRowsSelected()}
               indeterminate={table.getIsSomeRowsSelected()}
-              disabled={isLoading || !rows.length}
+              disabled={isLoading}
               onCheckedChange={(checked) =>
                 table.toggleAllRowsSelected(checked)
               }
@@ -79,60 +89,52 @@ export function StaffDataTable({
             Select all
           </div>
         ) : null}
-        <p className="text-sm text-muted-foreground" aria-live="polite">
-          {rows.length} staff members{isLoading ? " · Updating…" : ""}
-          {sort ? ` · sorted by ${sort.field} ${sort.direction}` : ""}
+        <p className="text-muted-foreground" aria-live="polite">
+          {rows.length === 1 ? "1 person" : `${rows.length} people`}
+          {isLoading ? " · Updating…" : ""}
         </p>
       </div>
       {!rows.length ? (
         isLoading ? (
           <StaffSkeleton />
         ) : (
-          <StaffEmptyState />
+          <StaffEmptyState filtered={filtered} />
         )
       ) : staffView !== "table" ? (
         <StaffCollection
           view={staffView}
           rows={table.getRowModel().rows}
-          updatingId={updatingId}
-          onUpdateStatus={onUpdateStatus}
+          actions={actions}
         />
       ) : (
         <div className="overflow-x-auto border border-border">
-          <Table className="min-w-[760px]">
+          <Table className="min-w-[820px]">
             <StaffTableHeader
               table={table}
               sort={sort}
               toggleSort={toggleSort}
             />
             <TableBody>
-              {table.getRowModel().rows.length ? (
-                table.getRowModel().rows.map((row) => (
-                  <TableRow
-                    key={row.id}
-                    data-state={row.getIsSelected() ? "selected" : undefined}
-                  >
-                    {row.getVisibleCells().map((cell) => (
-                      <TableCell key={cell.id} className="py-3">
-                        {flexRender(
-                          cell.column.columnDef.cell,
-                          cell.getContext(),
-                        )}
-                      </TableCell>
-                    ))}
-                  </TableRow>
-                ))
-              ) : (
-                <TableRow>
-                  <TableCell
-                    colSpan={columns.length}
-                    className="h-24 text-center text-muted-foreground"
-                  >
-                    No staff found. Invite a staff member or adjust the current
-                    filters.
-                  </TableCell>
+              {table.getRowModel().rows.map((row) => (
+                <TableRow
+                  key={row.id}
+                  data-state={row.getIsSelected() ? "selected" : undefined}
+                >
+                  {row.getVisibleCells().map((cell) => (
+                    <TableCell
+                      key={cell.id}
+                      className={
+                        cell.column.id === "actions" ? "w-12 py-3" : "py-3"
+                      }
+                    >
+                      {flexRender(
+                        cell.column.columnDef.cell,
+                        cell.getContext(),
+                      )}
+                    </TableCell>
+                  ))}
                 </TableRow>
-              )}
+              ))}
             </TableBody>
           </Table>
         </div>

@@ -1,135 +1,117 @@
 "use client"
 
+import { RowSelectCheckbox } from "@/components/tables/core"
 import {
   type StaffMemberRow,
   getStaffDisplayName,
   getStaffRoleLabel,
-  getStaffStatusLabel,
 } from "@/lib/staff-management"
-import {
-  Badge,
-  Card,
-  CardAction,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-  Checkbox,
-  Item,
-  ItemActions,
-  ItemContent,
-  ItemDescription,
-  ItemGroup,
-  ItemMedia,
-  ItemTitle,
-} from "@ewatrade/ui"
 import type { Row } from "@tanstack/react-table"
-import { StaffActions, type StaffActionsProps } from "./actions"
-import { formatStaffDate } from "./format"
+import { StaffActionsMenu, type StaffRowActions } from "./actions"
+import {
+  StaffAvatar,
+  StaffName,
+  StaffStatus,
+  formatStaffDate,
+  staffStatusDetail,
+  staffStoresText,
+} from "./format"
 
-function StaffBadges({ member }: { member: StaffMemberRow }) {
+type CollectionProps = {
+  rows: Row<StaffMemberRow>[]
+  actions: StaffRowActions
+}
+
+/** One bordered panel with a single-line row per person; extras hide on phones. */
+function StaffList({ rows, actions }: CollectionProps) {
   return (
-    <div className="flex flex-wrap gap-2">
-      <Badge variant="secondary">{getStaffRoleLabel(member.role)}</Badge>
-      <Badge
-        variant={member.status === "SUSPENDED" ? "destructive" : "outline"}
-      >
-        {getStaffStatusLabel(member.status)}
-      </Badge>
-    </div>
+    <ul aria-label="Staff list" className="divide-y rounded-lg border">
+      {rows.map((row) => {
+        const member = row.original
+        return (
+          <li
+            key={row.id}
+            data-state={row.getIsSelected() ? "selected" : undefined}
+            className="grid grid-cols-[1rem_1.75rem_minmax(0,1fr)_auto_2rem] items-center gap-3 px-3 py-2.5 data-[state=selected]:bg-muted md:grid-cols-[1rem_1.75rem_minmax(0,1fr)_6rem_9rem_8rem_2rem]"
+          >
+            <RowSelectCheckbox
+              row={row}
+              label={`Select ${getStaffDisplayName(member)}`}
+            />
+            <StaffAvatar member={member} className="size-7" />
+            <div className="flex min-w-0 items-baseline gap-2">
+              <StaffName member={member} onOpen={actions.onOpen} />
+              <span className="truncate text-sm text-muted-foreground max-md:hidden">
+                {member.user.email}
+              </span>
+            </div>
+            <span className="truncate text-sm text-muted-foreground max-md:hidden">
+              {getStaffRoleLabel(member.role)}
+            </span>
+            <span className="truncate text-sm text-muted-foreground max-md:hidden">
+              {staffStoresText(member)}
+            </span>
+            <StaffStatus member={member} showDetail={false} />
+            <StaffActionsMenu member={member} actions={actions} />
+          </li>
+        )
+      })}
+    </ul>
   )
 }
 
-function StaffDates({ member }: { member: StaffMemberRow }) {
+/** Grid columns are fixed by screen width: 1, then 2 at md, 3 at lg, 4 at xl. */
+function StaffGrid({ rows, actions }: CollectionProps) {
   return (
-    <dl className="flex flex-wrap gap-x-6 gap-y-2 text-sm">
-      <div>
-        <dt className="text-muted-foreground">Invited</dt>
-        <dd>{formatStaffDate(member.invitedAt)}</dd>
-      </div>
-      <div>
-        <dt className="text-muted-foreground">Accepted</dt>
-        <dd>{formatStaffDate(member.acceptedAt)}</dd>
-      </div>
-    </dl>
+    <ul
+      aria-label="Staff grid"
+      className="grid min-w-0 gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
+    >
+      {rows.map((row) => {
+        const member = row.original
+        const detail = staffStatusDetail(member)
+        return (
+          <li key={row.id} className="min-w-0">
+            <article
+              data-state={row.getIsSelected() ? "selected" : undefined}
+              className="flex h-full flex-col gap-2.5 rounded-xl border bg-card p-3 data-[state=selected]:border-transparent data-[state=selected]:ring-2 data-[state=selected]:ring-primary"
+            >
+              <div className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2.5">
+                <StaffAvatar member={member} />
+                <div className="grid min-w-0">
+                  <StaffName member={member} onOpen={actions.onOpen} />
+                  <span className="truncate text-sm text-muted-foreground">
+                    {getStaffRoleLabel(member.role)} · {staffStoresText(member)}
+                  </span>
+                </div>
+                <div className="flex items-center gap-0.5">
+                  <RowSelectCheckbox
+                    row={row}
+                    label={`Select ${getStaffDisplayName(member)}`}
+                  />
+                  <StaffActionsMenu member={member} actions={actions} />
+                </div>
+              </div>
+              <div className="mt-auto flex items-center justify-between gap-2">
+                <StaffStatus member={member} showDetail={false} />
+                <span className="truncate text-sm text-muted-foreground">
+                  {detail ??
+                    (member.acceptedAt
+                      ? `Joined ${formatStaffDate(member.acceptedAt)}`
+                      : "")}
+                </span>
+              </div>
+            </article>
+          </li>
+        )
+      })}
+    </ul>
   )
 }
 
 export function StaffCollection({
-  rows,
   view,
-  ...actions
-}: Omit<StaffActionsProps, "member"> & {
-  rows: Row<StaffMemberRow>[]
-  view: "list" | "cards"
-}) {
-  const items = rows.map((row) => {
-    const member = row.original
-    const name = getStaffDisplayName(member)
-    const checkbox = (
-      <Checkbox
-        aria-label={`Select ${name}`}
-        checked={row.getIsSelected()}
-        disabled={!row.getCanSelect()}
-        onCheckedChange={(checked) => row.toggleSelected(checked)}
-      />
-    )
-    if (view === "cards")
-      return (
-        <li key={row.id} className="min-w-0">
-          <Card
-            data-state={row.getIsSelected() ? "selected" : undefined}
-            size="sm"
-            className="h-full min-w-0"
-          >
-            <CardHeader>
-              <CardTitle className="min-w-0 break-words">{name}</CardTitle>
-              <CardDescription className="min-w-0 break-all">
-                {member.user.email}
-              </CardDescription>
-              <CardAction>{checkbox}</CardAction>
-            </CardHeader>
-            <CardContent className="flex flex-col gap-4">
-              <StaffBadges member={member} />
-              <StaffDates member={member} />
-            </CardContent>
-            <CardFooter className="mt-auto flex-wrap">
-              <StaffActions member={member} {...actions} />
-            </CardFooter>
-          </Card>
-        </li>
-      )
-    return (
-      <Item
-        key={row.id}
-        render={<li />}
-        variant="outline"
-        data-state={row.getIsSelected() ? "selected" : undefined}
-      >
-        <ItemMedia>{checkbox}</ItemMedia>
-        <ItemContent className="min-w-0 basis-48">
-          <ItemTitle className="max-w-full break-words">{name}</ItemTitle>
-          <ItemDescription className="break-all">
-            {member.user.email}
-          </ItemDescription>
-          <StaffBadges member={member} />
-        </ItemContent>
-        <StaffDates member={member} />
-        <ItemActions className="flex-wrap">
-          <StaffActions member={member} {...actions} />
-        </ItemActions>
-      </Item>
-    )
-  })
-  return view === "cards" ? (
-    <ul
-      aria-label="Staff cards"
-      className="grid min-w-0 gap-4 md:grid-cols-2 xl:grid-cols-3"
-    >
-      {items}
-    </ul>
-  ) : (
-    <ItemGroup aria-label="Staff list">{items}</ItemGroup>
-  )
+  ...props
+}: CollectionProps & { view: "list" | "cards" }) {
+  return view === "cards" ? <StaffGrid {...props} /> : <StaffList {...props} />
 }

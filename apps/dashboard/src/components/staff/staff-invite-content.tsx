@@ -37,7 +37,7 @@ export function StaffInviteContent({
 }: {
   storeId: string
   onClose: () => Promise<unknown>
-  onInvited: (qaInviteUrl: string | null) => Promise<void>
+  onInvited: (email: string, qaInviteUrl: string | null) => Promise<void>
 }) {
   const workflow = useDashboardWorkflow()
   const [inviteForm, setInviteForm] = useState<InviteForm>(emptyInviteForm)
@@ -131,7 +131,7 @@ export function StaffInviteContent({
         throw new Error(result.error ?? "Staff invite failed.")
       }
 
-      await onInvited(result.qaInviteUrl ?? null)
+      await onInvited(inviteForm.email.trim(), result.qaInviteUrl ?? null)
       await onClose()
     } catch (saveError) {
       setError(

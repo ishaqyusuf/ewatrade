@@ -1,19 +1,33 @@
 "use client"
+import type { TableColumnMeta } from "@/components/tables/core"
 import {
   type StaffMemberRow,
   getStaffDisplayName,
   getStaffRoleLabel,
-  getStaffStatusLabel,
 } from "@/lib/staff-management"
-import { Badge, Checkbox } from "@ewatrade/ui"
+import { Checkbox } from "@ewatrade/ui"
 import type { ColumnDef } from "@tanstack/react-table"
-import { StaffActions, type StaffActionsProps } from "./actions"
-import { formatStaffDate as formatDate } from "./format"
+import { StaffActionsMenu, type StaffRowActions } from "./actions"
+import {
+  StaffAvatar,
+  StaffJoined,
+  StaffName,
+  StaffRoleBadge,
+  StaffStatus,
+  staffStoresText,
+} from "./format"
 
-export function staffColumns({
-  updatingId,
-  onUpdateStatus,
-}: Omit<StaffActionsProps, "member">): ColumnDef<StaffMemberRow>[] {
+const ROLE_RANK: Record<string, number> = {
+  OWNER: 0,
+  ADMIN: 1,
+  MANAGER: 2,
+  CASHIER: 3,
+  OPERATOR: 4,
+}
+
+export function staffColumns(
+  actions: StaffRowActions,
+): ColumnDef<StaffMemberRow>[] {
   return [
     {
       id: "select",
@@ -40,13 +54,17 @@ export function staffColumns({
     {
       id: "name",
       accessorFn: getStaffDisplayName,
-      header: "Staff",
+      header: "Name",
+      enableHiding: false,
       cell: ({ row }) => (
-        <div className="min-w-48">
-          <p className="font-medium">{getStaffDisplayName(row.original)}</p>
-          <p className="text-sm text-muted-foreground">
-            {row.original.user.email}
-          </p>
+        <div className="flex max-w-72 min-w-48 items-center gap-3">
+          <StaffAvatar member={row.original} />
+          <div className="grid min-w-0">
+            <StaffName member={row.original} onOpen={actions.onOpen} />
+            <span className="truncate text-sm text-muted-foreground">
+              {row.original.user.email}
+            </span>
+          </div>
         </div>
       ),
     },
@@ -54,56 +72,41 @@ export function staffColumns({
       id: "role",
       accessorFn: (row) => getStaffRoleLabel(row.role),
       header: "Role",
+      sortingFn: (a, b) =>
+        (ROLE_RANK[a.original.role] ?? 9) - (ROLE_RANK[b.original.role] ?? 9),
+      cell: ({ row }) => <StaffRoleBadge role={row.original.role} />,
+    },
+    {
+      id: "stores",
+      accessorFn: (row) => staffStoresText(row),
+      header: "Stores",
+      enableSorting: false,
       cell: ({ row }) => (
-        <Badge variant="secondary">
-          {getStaffRoleLabel(row.original.role)}
-        </Badge>
+        <span className="whitespace-nowrap">
+          {staffStoresText(row.original)}
+        </span>
       ),
     },
     {
       id: "status",
       accessorFn: (row) => row.status,
       header: "Status",
-      cell: ({ row }) => (
-        <Badge
-          variant={
-            row.original.status === "SUSPENDED" ? "destructive" : "outline"
-          }
-        >
-          {getStaffStatusLabel(row.original.status)}
-        </Badge>
-      ),
+      cell: ({ row }) => <StaffStatus member={row.original} />,
     },
     {
       id: "invitedAt",
-      accessorKey: "invitedAt",
-      header: "Invited",
-      cell: ({ row }) => (
-        <span className="whitespace-nowrap text-muted-foreground">
-          {formatDate(row.original.invitedAt)}
-        </span>
-      ),
-    },
-    {
-      id: "acceptedAt",
-      accessorKey: "acceptedAt",
-      header: "Accepted",
-      cell: ({ row }) => (
-        <span className="whitespace-nowrap text-muted-foreground">
-          {formatDate(row.original.acceptedAt)}
-        </span>
-      ),
+      accessorFn: (row) => row.acceptedAt ?? row.invitedAt ?? "",
+      header: "Joined",
+      meta: { headerLabel: "Joined" } satisfies TableColumnMeta,
+      cell: ({ row }) => <StaffJoined member={row.original} />,
     },
     {
       id: "actions",
       enableSorting: false,
-      header: "Actions",
+      enableHiding: false,
+      header: () => <span className="sr-only">Actions</span>,
       cell: ({ row }) => (
-        <StaffActions
-          member={row.original}
-          updatingId={updatingId}
-          onUpdateStatus={onUpdateStatus}
-        />
+        <StaffActionsMenu member={row.original} actions={actions} />
       ),
     },
   ]

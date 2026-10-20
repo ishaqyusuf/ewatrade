@@ -2,14 +2,10 @@
 
 import { PageHeader, PageToolbar } from "@/components/page-header"
 import { SearchFilter } from "@/components/search-filter"
-import { ViewSwitcher, directoryViewOptions } from "@/components/view-switcher"
+import { TableToolbarSlot } from "@/components/tables/core"
+import { ViewDropdown, type ViewOption } from "@/components/view-switcher"
 import { useStaffDirectoryParams } from "@/hooks/use-staff-directory-params"
-import {
-  type StaffRoleFilter,
-  type StaffStatusFilter,
-  getStaffRoleLabel,
-  getStaffStatusLabel,
-} from "@/lib/staff-management"
+import { type StaffRoleFilter, getStaffRoleLabel } from "@/lib/staff-management"
 import type { DirectoryView } from "@/utils/directory-view-settings"
 import {
   Button,
@@ -19,7 +15,12 @@ import {
   DropdownMenuSubContent,
   DropdownMenuSubTrigger,
 } from "@ewatrade/ui"
-import { Add01Icon } from "@hugeicons/core-free-icons"
+import {
+  Add01Icon,
+  GridViewIcon,
+  LayoutTable01Icon,
+  ListViewIcon,
+} from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
 
 const roles: StaffRoleFilter[] = [
@@ -29,45 +30,56 @@ const roles: StaffRoleFilter[] = [
   "cashier",
   "operator",
 ]
-const statuses: StaffStatusFilter[] = ["active", "invited", "suspended"]
+// The saved value stays "cards" so existing view cookies keep working.
+const staffViewOptions = [
+  { value: "table", label: "Table", icon: LayoutTable01Icon },
+  { value: "list", label: "List", icon: ListViewIcon },
+  { value: "cards", label: "Grid", icon: GridViewIcon },
+] as const satisfies readonly ViewOption<DirectoryView>[]
 
 export function StaffDirectoryHeader({
+  businessName,
   onInvite,
-  storeName,
   view,
   onViewChange,
 }: {
+  businessName: string
   onInvite: () => void
-  storeName: string
   view: DirectoryView
   onViewChange: (view: DirectoryView) => void
 }) {
-  const { clearFilters, setParams, staffQuery, staffRole, staffStatus } =
+  const { clearFilters, setParams, staffQuery, staffRole } =
     useStaffDirectoryParams()
 
   return (
     <PageHeader
-      eyebrow={storeName}
-      title="Staff management"
-      description="Manage staff access and invitations across your business."
+      eyebrow={businessName}
+      title="Staff"
+      description="Invite staff and choose what they can do in each store."
     >
       <PageToolbar
         actions={
           <>
-            <ViewSwitcher
+            <TableToolbarSlot />
+            <ViewDropdown
               label="Staff view"
               value={view}
-              options={directoryViewOptions}
+              options={staffViewOptions}
               onValueChange={onViewChange}
             />
             <Button
-              aria-label="Invite staff"
               type="button"
-              variant="outline"
-              className="size-9 rounded-none"
+              className="rounded-none max-md:size-9 max-md:px-0"
+              aria-label="Invite staff"
               onClick={onInvite}
             >
-              <HugeiconsIcon icon={Add01Icon} className="size-4" />
+              <HugeiconsIcon
+                icon={Add01Icon}
+                data-icon="inline-start"
+                className="size-4"
+                aria-hidden="true"
+              />
+              <span className="max-md:sr-only">Invite staff</span>
             </Button>
           </>
         }
@@ -84,29 +96,17 @@ export function StaffDirectoryHeader({
                   label: getStaffRoleLabel(value),
                 })),
               },
-              {
-                id: "status",
-                label: "Status",
-                allLabel: "All statuses",
-                options: statuses.map((value) => ({
-                  value,
-                  label: getStaffStatusLabel(value),
-                })),
-              },
             ],
             values: {
               role: staffRole === "all" ? [] : [staffRole],
-              status: staffStatus === "all" ? [] : [staffStatus],
             },
             onApply: (draft) =>
               setParams({
                 staffRole:
                   roles.find((value) => value === draft.role?.[0]) ?? null,
-                staffStatus:
-                  statuses.find((value) => value === draft.status?.[0]) ?? null,
               }),
           }}
-          placeholder="Search staff..."
+          placeholder="Search by name or email"
           value={staffQuery}
           onSearch={(value) => void setParams({ staffQuery: value || null })}
           onClear={clearFilters}
@@ -117,15 +117,6 @@ export function StaffDirectoryHeader({
                     id: "role",
                     label: getStaffRoleLabel(staffRole),
                     onRemove: () => void setParams({ staffRole: null }),
-                  },
-                ]
-              : []),
-            ...(staffStatus !== "all"
-              ? [
-                  {
-                    id: "status",
-                    label: getStaffStatusLabel(staffStatus),
-                    onRemove: () => void setParams({ staffStatus: null }),
                   },
                 ]
               : []),
@@ -157,35 +148,6 @@ export function StaffDirectoryHeader({
                     }
                   >
                     {getStaffRoleLabel(role)}
-                  </DropdownMenuCheckboxItem>
-                ))}
-              </DropdownMenuSubContent>
-            </DropdownMenuSub>
-            <DropdownMenuSub>
-              <DropdownMenuSubTrigger>Status</DropdownMenuSubTrigger>
-              <DropdownMenuSubContent
-                appearance="dashboard"
-                className="min-w-40 max-w-[calc(100vw-32px)] rounded-none bg-popover p-0 shadow-md before:hidden"
-                sideOffset={14}
-                alignOffset={-4}
-              >
-                <DropdownMenuCheckboxItem
-                  checked={staffStatus === "all"}
-                  closeOnClick={false}
-                  onCheckedChange={() => void setParams({ staffStatus: null })}
-                >
-                  All statuses
-                </DropdownMenuCheckboxItem>
-                {statuses.map((status) => (
-                  <DropdownMenuCheckboxItem
-                    key={status}
-                    checked={staffStatus === status}
-                    closeOnClick={false}
-                    onCheckedChange={(checked) =>
-                      void setParams({ staffStatus: checked ? status : null })
-                    }
-                  >
-                    {getStaffStatusLabel(status)}
                   </DropdownMenuCheckboxItem>
                 ))}
               </DropdownMenuSubContent>
