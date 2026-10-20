@@ -293,6 +293,7 @@ export const dashboardBrowserActions = {
     action: "customer_statement_export",
   },
   expense_export: { category: "reports", action: "expense_export" },
+  report_csv_export: { category: "reports", action: "report_csv_export" },
   expense_receipt_download: {
     category: "reports",
     action: "expense_receipt_download",

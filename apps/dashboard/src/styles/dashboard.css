@@ -47,6 +47,14 @@
   --sidebar-accent-foreground: var(--accent-foreground);
   --sidebar-border: var(--border);
   --sidebar-ring: var(--ring);
+  /* Report charts. Checked with the dataviz palette validator on this surface:
+     Products/Services pass the categorical checks; steps pass the ordinal ones. */
+  --report-product: #007a55;
+  --report-service: #2a78d6;
+  --report-step-1: #6ab99b;
+  --report-step-2: #3a9c78;
+  --report-step-3: #007a55;
+  --report-step-4: #00513a;
 }
 
 .ewatrade-dashboard body {
@@ -91,6 +99,12 @@
   --highlight: oklch(28.3% 0.141 291.089 / 45%);
   --highlight-foreground: oklch(81.1% 0.111 293.571);
   --highlight-border: oklch(43.2% 0.232 292.759 / 60%);
+  --report-product: #00a370;
+  --report-service: #3987e5;
+  --report-step-1: #006045;
+  --report-step-2: #00805a;
+  --report-step-3: #00a370;
+  --report-step-4: #6fd3ad;
 }
 
 .ewatrade-dashboard .scrollbar-hide {

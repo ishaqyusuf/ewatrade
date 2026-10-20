@@ -6,6 +6,8 @@ import {
   reportMetric,
 } from "@/components/reports/report-metrics"
 import type { ServiceCommerceReportSection } from "@/hooks/use-service-commerce-report-params"
+import { reportCsv, reportCsvMoney } from "@/lib/report-csv"
+import { type ReportRange, reportRangeFileDates } from "@/lib/report-range"
 import type { ServiceCommerceReportOutput } from "@ewatrade/service-commerce"
 
 export type ReportSectionContent = {
@@ -21,8 +23,8 @@ const CHANNEL_LABELS: Record<
   ServiceCommerceReportOutput["lifecycle"]["byChannel"][number]["channel"],
   string
 > = {
-  staff: "Staff",
-  web: "Web",
+  staff: "Added by staff",
+  web: "Website",
   whatsapp: "WhatsApp",
 }
 
@@ -30,23 +32,23 @@ const SOURCE_LABELS: Record<
   ServiceCommerceReportOutput["lifecycle"]["bySource"][number]["source"],
   string
 > = {
-  commerce_inquiry: "Commerce inquiry",
-  prescription: "Prescription",
-  service: "Service",
+  commerce_inquiry: "Products",
+  prescription: "Prescriptions",
+  service: "Services",
 }
 
 export const COST_LABELS: Record<
   ServiceCommerceReportOutput["costs"][number]["costKind"],
   string
 > = {
-  bsp_or_twilio_markup: "BSP or Twilio markup",
+  bsp_or_twilio_markup: "Messaging partner fee",
   delivery: "Delivery",
-  ewatrade_subscription: "EwaTrade subscription",
+  ewatrade_subscription: "EwaTrade plan",
   ewatrade_usage: "EwaTrade usage",
-  meta_delivered_message: "Meta delivered messages",
-  number: "Number fees",
-  payment_provider_fee: "Payment-provider fees",
-  revenue: "Business revenue",
+  meta_delivered_message: "WhatsApp message charges",
+  number: "Phone number fees",
+  payment_provider_fee: "Card and transfer fees",
+  revenue: "Money received from sales",
   tax: "Tax",
 }
 
@@ -60,10 +62,54 @@ const OBSERVED_OUTCOME_TONES: Partial<
   failed: "failure",
 }
 
+const REPORT_VALUE_LABELS: Record<string, string> = {
+  attempted: "Sent",
+  issued: "Sent",
+  provider_attempt: "Message",
+  provider_recorded: "Reported by provider",
+  quote: "Quote",
+  received: "Received",
+  recorded: "Recorded",
+  request_received: "Request",
+  staff: "Added by staff",
+  staff_phone: "Phone (staff)",
+  staff_walk_in: "Walk-in (staff)",
+  succeeded: "Received",
+  web: "Website",
+  whatsapp: "WhatsApp",
+}
+
+/** Plain sentence-case words for report codes: "message_delivery" → "Message delivery". */
 export function humanizeReportValue(value: string) {
-  return value
-    .replaceAll("_", " ")
-    .replace(/\b\w/g, (letter) => letter.toUpperCase())
+  const known = REPORT_VALUE_LABELS[value]
+  if (known) return known
+  const words = value.replaceAll("_", " ").toLowerCase()
+  return words.charAt(0).toUpperCase() + words.slice(1)
+}
+
+const MESSAGE_CATEGORY_LABELS: Record<string, string> = {
+  authentication: "Login codes",
+  marketing: "Promotions",
+  service: "Customer service",
+  utility: "Updates",
+}
+
+const BILLING_OWNER_LABELS: Record<string, string> = {
+  business: "Paid by you",
+  ewatrade: "Paid by EwaTrade",
+}
+
+const regionNames =
+  typeof Intl.DisplayNames === "function"
+    ? new Intl.DisplayNames(["en"], { type: "region" })
+    : null
+
+function regionName(code: string) {
+  try {
+    return regionNames?.of(code.toUpperCase()) ?? code
+  } catch {
+    return code
+  }
 }
 
 export function usageAttributionLabel(dimension: {
@@ -73,10 +119,16 @@ export function usageAttributionLabel(dimension: {
   recipientMarket?: string | null
 }) {
   return [
-    dimension.connectionId ? `Connection ${dimension.connectionId}` : null,
-    dimension.recipientMarket,
-    dimension.messageCategory,
-    dimension.billingOwner,
+    dimension.connectionId ? `WhatsApp number ${dimension.connectionId}` : null,
+    dimension.recipientMarket ? regionName(dimension.recipientMarket) : null,
+    dimension.messageCategory
+      ? (MESSAGE_CATEGORY_LABELS[dimension.messageCategory] ??
+        humanizeReportValue(dimension.messageCategory))
+      : null,
+    dimension.billingOwner
+      ? (BILLING_OWNER_LABELS[dimension.billingOwner] ??
+        humanizeReportValue(dimension.billingOwner))
+      : null,
   ]
     .filter(Boolean)
     .join(" · ")
@@ -86,10 +138,10 @@ export function lifecycleFunnel(
   lifecycle: ServiceCommerceReportOutput["lifecycle"],
 ): ReportFunnelStep[] {
   return buildReportFunnel([
-    { label: "Requests received", count: lifecycle.requestsReceived },
-    { label: "Quotes issued", count: lifecycle.quotesIssued },
+    { label: "Requests", count: lifecycle.requestsReceived },
+    { label: "Quotes sent", count: lifecycle.quotesIssued },
     { label: "Quotes accepted", count: lifecycle.quotesAccepted },
-    { label: "Payments succeeded", count: lifecycle.paymentsSucceeded },
+    { label: "Paid", count: lifecycle.paymentsSucceeded },
   ])
 }
 
@@ -109,23 +161,23 @@ export function buildReportSections(
   return [
     {
       key: "lifecycle",
-      tab: "Lifecycle",
-      title: "Lifecycle",
+      tab: "Requests",
+      title: "Requests",
       description:
-        "Request, Quote, payment, booking and fulfilment occurrences in the selected window.",
+        "Requests, Quotes, payments, bookings and hand-overs in these dates.",
       groups: [
         {
-          title: "Fulfilment",
+          title: "Handed over",
           metrics: [
             metric("Bookings confirmed", lifecycle.bookingsConfirmed),
             metric("Bookings completed", lifecycle.bookingsCompleted),
-            metric("Pickups completed", lifecycle.pickupsCompleted),
-            metric("Deliveries completed", lifecycle.deliveriesCompleted),
-            metric("Service completions", lifecycle.serviceCompletions),
+            metric("Picked up", lifecycle.pickupsCompleted),
+            metric("Delivered", lifecycle.deliveriesCompleted),
+            metric("Services done", lifecycle.serviceCompletions),
           ],
         },
         {
-          title: "Requests by channel",
+          title: "Where requests came from",
           metrics: lifecycle.byChannel.map((entry) =>
             metric(CHANNEL_LABELS[entry.channel], entry.count, {
               shareOf: requestTotal,
@@ -133,7 +185,7 @@ export function buildReportSections(
           ),
         },
         {
-          title: "Requests by source",
+          title: "What was asked for",
           metrics: lifecycle.bySource.map((entry) =>
             metric(SOURCE_LABELS[entry.source], entry.count, {
               shareOf: requestTotal,
@@ -145,28 +197,28 @@ export function buildReportSections(
     {
       key: "conversations",
       tab: "Conversations",
-      title: "Store Conversation service quality",
+      title: "Conversations",
       description:
-        "Content-free operational counts. Customer messages, contacts, credentials and provider identifiers are never included.",
+        "How quickly your team replied, and how messages were delivered. Message text is never shown.",
       groups: [
         {
           title: "Conversations",
           metrics: [
             metric(
-              "Conversations started",
+              "New conversations",
               conversations.lifecycle.conversationsStarted,
             ),
             metric(
-              "Customer messages",
+              "Messages from Customers",
               conversations.lifecycle.customerMessages,
             ),
-            metric("Store replies", conversations.lifecycle.storeReplies),
+            metric("Replies sent", conversations.lifecycle.storeReplies),
             metric(
-              "First response average",
+              "Average first reply",
               conversations.lifecycle.firstResponse.averageSeconds,
               {
                 format: "duration",
-                unknownReason: "No first response was measured in this window.",
+                unknownReason: "No replies in these dates.",
               },
             ),
           ],
@@ -174,52 +226,49 @@ export function buildReportSections(
         {
           title: "Team",
           metrics: [
-            metric("Claims", conversations.team.claimed),
-            metric("Unclaimed", conversations.team.unclaimedCurrent, {
+            metric("Picked up by staff", conversations.team.claimed),
+            metric("Waiting for staff", conversations.team.unclaimedCurrent, {
               current: true,
               tone: "block",
             }),
-            metric("Overdue", conversations.team.overdueCurrent, {
+            metric("Reply overdue", conversations.team.overdueCurrent, {
               current: true,
               tone: "failure",
             }),
-            metric("Escalations opened", conversations.team.escalationsOpened),
+            metric("Passed to a manager", conversations.team.escalationsOpened),
             metric(
-              "Escalations resolved",
+              "Resolved by a manager",
               conversations.team.escalationsResolved,
             ),
           ],
         },
         {
-          title: "Availability",
+          title: "Opening hours",
           metrics: [
-            metric("Paused", conversations.availability.paused),
-            metric("Resumed", conversations.availability.resumed),
+            metric("Replies paused", conversations.availability.paused),
+            metric("Replies resumed", conversations.availability.resumed),
+            metric("Hours changed", conversations.availability.scheduleUpdates),
             metric(
-              "Schedule updates",
-              conversations.availability.scheduleUpdates,
-            ),
-            metric(
-              "Coverage blocks",
+              "Messages outside staff hours",
               conversations.availability.coverageBlockObservations,
               { tone: "block" },
             ),
             metric(
-              "Policy blocks",
+              "Blocked by message rules",
               conversations.availability.policyBlockObservations,
               { tone: "block" },
             ),
             metric(
-              "Provider blocks",
+              "Blocked by WhatsApp",
               conversations.availability.providerBlockObservations,
               { tone: "block" },
             ),
             metric(
-              "Scheduled closures",
+              "During a planned closure",
               conversations.availability.scheduledClosureObservations,
               {
                 unknownReason:
-                  "Past scheduled closures are not stored, so this stays Unknown.",
+                  "Past closures aren't saved, so this can't be counted.",
               },
             ),
           ],
@@ -227,50 +276,53 @@ export function buildReportSections(
         {
           title: "Messages by channel",
           metrics: [
-            metric("Web", conversations.channels.webMessages),
-            metric("Mobile", conversations.channels.mobileMessages),
+            metric("Website", conversations.channels.webMessages),
+            metric("Mobile app", conversations.channels.mobileMessages),
             metric("WhatsApp", conversations.channels.whatsAppMessages),
-            metric("Bridge initiated", conversations.channels.bridgeInitiated),
-            metric("Bridge confirmed", conversations.channels.bridgeConfirmed),
+            metric(
+              "Asked to move to WhatsApp",
+              conversations.channels.bridgeInitiated,
+            ),
+            metric("Moved to WhatsApp", conversations.channels.bridgeConfirmed),
           ],
         },
         {
-          title: "Notifications",
+          title: "Staff alerts",
           metrics: [
-            metric("Scheduled", conversations.notifications.scheduled),
-            metric("Delivered", conversations.notifications.delivered),
-            metric("Coalesced", conversations.notifications.coalesced),
+            metric("Queued", conversations.notifications.scheduled),
+            metric("Sent", conversations.notifications.delivered),
+            metric("Grouped into one", conversations.notifications.coalesced),
             metric(
-              "Cancelled by read",
+              "Not needed (already read)",
               conversations.notifications.cancelledByRead,
             ),
-            metric("Suppressed", conversations.notifications.suppressed),
-            metric("Unavailable", conversations.notifications.unavailable),
+            metric("Held back", conversations.notifications.suppressed),
+            metric("Couldn't send", conversations.notifications.unavailable),
           ],
         },
         {
-          title: "Provider delivery",
+          title: "WhatsApp delivery",
           metrics: [
-            metric("Attempts", conversations.providerReliability.attempts),
-            metric("Failures", conversations.providerReliability.failed, {
+            metric("Messages sent", conversations.providerReliability.attempts),
+            metric("Failed", conversations.providerReliability.failed, {
               tone: "failure",
             }),
             metric(
-              "Outcome unknown",
+              "Delivery not confirmed",
               conversations.providerReliability.outcomeUnknown,
             ),
             metric(
-              "Cost known",
+              "Cost reported",
               conversations.costVisibility.knownObservations,
             ),
             metric(
-              "Cost unknown",
+              "Cost not reported yet",
               conversations.costVisibility.unknownObservations,
             ),
           ],
         },
         {
-          title: "Requests and current state",
+          title: "Requests and open conversations",
           metrics: [
             metric(
               "Product requests",
@@ -284,7 +336,7 @@ export function buildReportSections(
               "Prescription requests",
               conversations.lifecycle.requestKinds.prescription,
             ),
-            metric("Active", conversations.lifecycle.currentSnapshot.active, {
+            metric("Open", conversations.lifecycle.currentSnapshot.active, {
               current: true,
             }),
             metric(
@@ -301,66 +353,63 @@ export function buildReportSections(
         },
       ],
       footnote:
-        "Scheduled closure and arbitrary WhatsApp history remain unknown because those historical observations are not persisted. They are not reported as zero. Store Conversations has no daily detail.",
+        "Closures and older WhatsApp history aren't saved, so they show as Unknown, not 0. Conversations has no day-by-day table.",
     },
     {
       key: "catalog",
       tab: "Catalog",
-      title: "Progressive Catalog",
+      title: "Catalog",
       description:
-        "How requests resolved to drafts or existing Offerings, and how Quote prices were set.",
+        "How requests were matched to your items, and how Quote prices were set.",
       groups: [
         {
-          title: "Resolution",
+          title: "Matching",
           metrics: [
-            metric("Demand resolved", catalog.demandResolved),
-            metric("Drafts created", catalog.draftsCreated),
+            metric("Matched to an item", catalog.demandResolved),
+            metric("New draft items", catalog.draftsCreated),
             metric(
-              "Existing Offerings matched",
+              "Matched to an existing item",
               catalog.existingOfferingsMatched,
             ),
-            metric("Resolution unknown", catalog.resolutionUnknown),
+            metric("Not matched yet", catalog.resolutionUnknown),
           ],
         },
         {
           title: "Pricing and stock",
           metrics: [
-            metric("Quote overrides", catalog.quoteOverrides),
-            metric("Quote override unknown", catalog.quoteOverrideUnknown),
+            metric("Price changed on the Quote", catalog.quoteOverrides),
+            metric("Price change not recorded", catalog.quoteOverrideUnknown),
             metric(
-              "Reusable price promotions",
+              "Price saved for next time",
               catalog.reusablePricePromotions,
             ),
             metric(
-              "Procure-to-order commitments",
+              "Bought in for a Customer",
               catalog.procureToOrderCommitments,
             ),
-            metric(
-              "Managed inventory graduations",
-              catalog.managedInventoryGraduations,
-            ),
+            metric("Now tracked in stock", catalog.managedInventoryGraduations),
           ],
         },
       ],
     },
     {
       key: "reliability",
-      tab: "Reliability",
-      title: "Reliability and recovery",
-      description: "Provider attempts, job recovery and routing readiness.",
+      tab: "System health",
+      title: "System health",
+      description: "Messages and tasks that failed or needed a retry.",
       groups: [
         {
-          title: "Provider and jobs",
+          title: "Messages and tasks",
           metrics: [
-            metric("Provider attempts", reliability.providerAttempts),
-            metric("Provider failures", reliability.providerFailures, {
+            metric("Messages sent", reliability.providerAttempts),
+            metric("Messages failed", reliability.providerFailures, {
               tone: "failure",
             }),
-            metric("Provider retries", reliability.providerRetries),
-            metric("Job recoveries", reliability.jobRecoveries),
-            metric("Job recovery attempts", reliability.jobRecoveryAttempts),
+            metric("Sent again automatically", reliability.providerRetries),
+            metric("Tasks restarted", reliability.jobRecoveries),
+            metric("Restart tries", reliability.jobRecoveryAttempts),
             metric(
-              "Stale capability rejections",
+              "Stopped: link out of date",
               reliability.staleCapabilityRejections,
               { tone: "block" },
             ),
@@ -369,7 +418,7 @@ export function buildReportSections(
         ...(report.observability.length
           ? [
               {
-                title: "Observed outcomes",
+                title: "Results by type",
                 metrics: report.observability.map((entry) =>
                   metric(
                     `${humanizeReportValue(entry.kind)} · ${humanizeReportValue(entry.outcome)}`,
@@ -384,28 +433,32 @@ export function buildReportSections(
     },
     {
       key: "media",
-      tab: "Media",
-      title: "Media safety and observations",
+      tab: "Photos and files",
+      title: "Photos and files",
       description:
-        "Aggregate safety and conversion facts only; media content, object keys and customer descriptions remain private.",
+        "Safety checks on photos and files Customers sent. The files themselves are never shown.",
       groups: [
         {
-          title: "Attachments",
+          title: "Files",
           metrics: [
-            metric("Active", media.attachmentsActive),
-            metric("Safe", media.attachmentsSafe),
-            metric("Quarantined", media.attachmentsQuarantined, {
+            metric("In use", media.attachmentsActive),
+            metric("Passed the safety check", media.attachmentsSafe),
+            metric("Held for checking", media.attachmentsQuarantined, {
               tone: "block",
             }),
-            metric("Rejected", media.attachmentsRejected, { tone: "failure" }),
-            metric("Retryable", media.attachmentsRetryable, { tone: "block" }),
+            metric("Rejected as unsafe", media.attachmentsRejected, {
+              tone: "failure",
+            }),
+            metric("Check failed, will retry", media.attachmentsRetryable, {
+              tone: "block",
+            }),
           ],
         },
         {
-          title: "Observations",
+          title: "Photo notes",
           metrics: [
-            metric("Current observations", media.observationsCurrent),
-            metric("Converted", media.observationsConverted),
+            metric("Photo notes", media.observationsCurrent),
+            metric("Turned into requests", media.observationsConverted),
           ],
         },
       ],
@@ -413,13 +466,13 @@ export function buildReportSections(
     {
       key: "costs",
       tab: "Costs",
-      title: "Costs and billing ownership",
+      title: "Costs and fees",
       description:
-        "A known zero remains zero. External costs that are not yet available stay unknown and are never estimated into another category.",
+        "Charges for messages, payments and delivery in these dates. Charges not reported yet show as Unknown; we never guess them.",
       groups: report.costs.length
         ? [
             {
-              title: "By cost kind",
+              title: "By type",
               metrics: report.costs.map((cost) =>
                 metric(
                   COST_LABELS[cost.costKind],
@@ -427,9 +480,8 @@ export function buildReportSections(
                   {
                     currencyCode: cost.currencyCode,
                     format: "money",
-                    note: `${cost.knownCount} known · ${cost.unknownCount} unknown`,
-                    unknownReason:
-                      "No provider amount has been reported for these facts.",
+                    note: `${cost.knownCount} ${cost.knownCount === 1 ? "charge" : "charges"}${cost.unknownCount ? ` · ${cost.unknownCount} not reported yet` : ""}`,
+                    unknownReason: "No amount reported yet.",
                   },
                 ),
               ),
@@ -437,16 +489,17 @@ export function buildReportSections(
             ...(report.usageCostsByDimension.length
               ? [
                   {
-                    title: "Meta usage by attribution",
+                    title: "WhatsApp charges by number",
                     metrics: report.usageCostsByDimension.map((dimension) =>
                       metric(
-                        usageAttributionLabel(dimension) || "Unattributed",
+                        usageAttributionLabel(dimension) ||
+                          "No number recorded",
                         dimension.costs.reduce(
                           (count, cost) =>
                             count + cost.knownCount + cost.unknownCount,
                           0,
                         ),
-                        { note: "Usage facts" },
+                        { note: "Messages" },
                       ),
                     ),
                   },
@@ -456,4 +509,57 @@ export function buildReportSections(
         : [],
     },
   ]
+}
+
+/** Days with any request, for the quiet-period note. */
+export function countRequestDays(
+  report: Pick<ServiceCommerceReportOutput, "daily">,
+) {
+  return report.daily.filter((day) => day.requests > 0).length
+}
+
+/** CSV of the daily counts behind Requests by day and the request-to-payment steps. */
+export function buildServiceCommerceReportCsv(
+  report: ServiceCommerceReportOutput,
+  range: ReportRange,
+  storeName: string,
+) {
+  const { lifecycle } = report
+  const rows: Array<Array<string | number>> = [
+    ["Requests and quotes", storeName, `Amounts in ${report.currencyCode}`],
+    [
+      "Date",
+      "Requests",
+      "Quotes sent",
+      "Quotes accepted",
+      "Paid",
+      "Amount paid",
+    ],
+    ...report.daily.map((day) => [
+      day.date,
+      day.requests,
+      day.quotesIssued,
+      day.quotesAccepted,
+      day.paymentsSucceeded,
+      reportCsvMoney(day.paymentValueMinor),
+    ]),
+    [
+      "Total",
+      lifecycle.requestsReceived,
+      lifecycle.quotesIssued,
+      lifecycle.quotesAccepted,
+      lifecycle.paymentsSucceeded,
+      reportCsvMoney(lifecycle.paymentValueMinor),
+    ],
+    [],
+    ["Bookings confirmed", lifecycle.bookingsConfirmed],
+    ["Bookings completed", lifecycle.bookingsCompleted],
+    ["Picked up", lifecycle.pickupsCompleted],
+    ["Delivered", lifecycle.deliveriesCompleted],
+    ["Services done", lifecycle.serviceCompletions],
+  ]
+  return {
+    fileName: `requests-and-quotes_${reportRangeFileDates(range)}.csv`,
+    text: reportCsv(rows),
+  }
 }

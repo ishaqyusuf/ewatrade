@@ -15,7 +15,7 @@ import { redirect } from "next/navigation"
 import { Suspense } from "react"
 
 export const metadata: Metadata = {
-  title: "Service Commerce reports | EwaTrade",
+  title: "Requests and quotes | EwaTrade",
 }
 
 type Props = {

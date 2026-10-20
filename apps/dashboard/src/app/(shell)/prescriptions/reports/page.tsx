@@ -22,9 +22,8 @@ export default async function Page({
   if (!session || !ctx) redirect("/")
   const store = ctx.activeStore ?? ctx.stores[0]
   if (!store) redirect("/setup")
-  const to = new Date()
-  const from = new Date(to.getTime() - 30 * 86_400_000)
   const reportParams = await loadPrescriptionReportParams(searchParams)
+  const { from, to } = reportParams.range
   const reportStoreId = reportParams.storeId
     ? (ctx.stores.find((item) => item.id === reportParams.storeId)?.id ?? null)
     : null
@@ -37,18 +36,14 @@ export default async function Page({
   )
   return (
     <HydrateClient>
-      <div className="grid min-w-0 flex-1 gap-6 pt-6">
-        <Suspense fallback={<PrescriptionReportSkeleton />}>
-          <PrescriptionReport
-            from={from}
-            stores={ctx.stores.map((item) => ({
-              id: item.id,
-              name: item.name,
-            }))}
-            to={to}
-          />
-        </Suspense>
-      </div>
+      <Suspense fallback={<PrescriptionReportSkeleton />}>
+        <PrescriptionReport
+          stores={ctx.stores.map((item) => ({
+            id: item.id,
+            name: item.name,
+          }))}
+        />
+      </Suspense>
     </HydrateClient>
   )
 }

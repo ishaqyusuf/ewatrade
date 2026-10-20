@@ -5,6 +5,8 @@ import {
   reportMetric as metric,
 } from "@/components/reports/report-metrics"
 import type { PrescriptionReportTab } from "@/hooks/use-prescription-report-params"
+import { reportCsv, reportCsvMoney } from "@/lib/report-csv"
+import { type ReportRange, reportRangeFileDates } from "@/lib/report-range"
 
 type CostSummary = {
   amountMinor: number | null
@@ -26,6 +28,14 @@ export type PrescriptionReportData = {
   conversionRate: number
   costs: Record<PrescriptionCostKey, CostSummary>
   currencyCode: string
+  /** One entry per UTC day in the window. */
+  daily?: Array<{
+    amountPaidMinor: number
+    date: string
+    paidOrders: number
+    quotesIssued: number
+    requests: number
+  }>
   deliveryCompleted: number
   payment: { paidAmountMinor: number; paidCount: number; totalAttempts: number }
   pickupCompleted: number
@@ -52,19 +62,19 @@ export type PrescriptionReportSection = {
 }
 
 const CHANNEL_LABELS: Record<string, string> = {
-  staff_phone: "Staff phone",
-  staff_walk_in: "Staff walk-in",
-  web: "Web",
+  staff_phone: "Phone (staff)",
+  staff_walk_in: "Walk-in (staff)",
+  web: "Website",
   whatsapp: "WhatsApp",
 }
 
 export const PRESCRIPTION_COST_LABELS: Record<PrescriptionCostKey, string> = {
-  deliveryCostMinor: "Delivery costs",
-  metaCostMinor: "Meta messaging charges",
-  paymentProviderFeeMinor: "Payment-provider fees",
-  pharmacyRevenueMinor: "Pharmacy revenue",
-  platformChargeMinor: "EwaTrade platform charges",
-  taxMinor: "Taxes",
+  deliveryCostMinor: "Delivery",
+  metaCostMinor: "WhatsApp message charges",
+  paymentProviderFeeMinor: "Card and transfer fees",
+  pharmacyRevenueMinor: "Money received from sales",
+  platformChargeMinor: "EwaTrade charges",
+  taxMinor: "Tax",
 }
 
 /** Share of requests converted to orders; Unknown when there were none. */
@@ -94,10 +104,10 @@ export function prescriptionReportFunnel(
   report: PrescriptionReportData,
 ): ReportFunnelStep[] {
   return buildReportFunnel([
-    { label: "Requests received", count: report.requestCount },
-    { label: "Quotes issued", count: report.quoteCount },
+    { label: "Requests", count: report.requestCount },
+    { label: "Quotes sent", count: report.quoteCount },
     { label: "Quotes accepted", count: report.quoteOutcomes.accepted },
-    { label: "Paid orders", count: report.payment.paidCount },
+    { label: "Paid", count: report.payment.paidCount },
   ])
 }
 
@@ -111,31 +121,31 @@ export function buildPrescriptionReportSections(
   return [
     {
       key: "lifecycle",
-      tab: "Lifecycle",
-      title: "Lifecycle",
+      tab: "Requests",
+      title: "Requests",
       description:
-        "Requests, Quotes, payments and fulfilment in the last 30 days. De-identified: no patient or prescription details are included.",
+        "Requests, Quotes, payments and hand-overs in these dates. No patient details are included.",
       groups: [
         {
-          title: "Fulfilment",
+          title: "Handed over",
           metrics: [
-            metric("Pickups completed", report.pickupCompleted),
-            metric("Deliveries completed", report.deliveryCompleted),
+            metric("Picked up", report.pickupCompleted),
+            metric("Delivered", report.deliveryCompleted),
           ],
         },
         {
           title: "Payments",
           metrics: [
             metric("Paid orders", report.payment.paidCount),
-            metric("Payment attempts", report.payment.totalAttempts),
-            metric("Paid value", report.payment.paidAmountMinor, {
+            metric("Tries to pay", report.payment.totalAttempts),
+            metric("Amount paid", report.payment.paidAmountMinor, {
               currencyCode: report.currencyCode,
               format: "money",
             }),
           ],
         },
         {
-          title: "Requests by channel",
+          title: "Where requests came from",
           metrics: Object.entries(report.channelMix).map(([channel, count]) =>
             metric(CHANNEL_LABELS[channel] ?? channel, count, {
               shareOf: channelTotal,
@@ -143,22 +153,22 @@ export function buildPrescriptionReportSections(
           ),
         },
         {
-          title: "Review",
+          title: "Speed and results",
           metrics: [
             metric(
-              "Average review time",
+              "Average time to check a prescription",
               report.reviewTimeMs === null ? null : report.reviewTimeMs / 1000,
               {
                 format: "duration",
-                unknownReason: "No review was completed in this window.",
+                unknownReason: "No prescriptions were checked in these dates.",
               },
             ),
             metric(
-              "Converted to orders",
+              "Requests that became Orders",
               prescriptionConversionPercent(report),
               {
                 format: "percent",
-                unknownReason: "No requests were received in this window.",
+                unknownReason: "No requests in these dates.",
               },
             ),
           ],
@@ -168,9 +178,9 @@ export function buildPrescriptionReportSections(
     {
       key: "quotes",
       tab: "Quotes",
-      title: "Quote outcomes",
+      title: "Quotes",
       description:
-        "How customers answered issued Quotes, and how much of each request the pharmacy could supply.",
+        "How Customers answered your Quotes, and how much of each prescription you had in stock.",
       groups: [
         {
           title: "Customer answers",
@@ -180,11 +190,11 @@ export function buildPrescriptionReportSections(
           ],
         },
         {
-          title: "Availability",
+          title: "In stock when quoted",
           metrics: [
-            metric("Full", report.quoteOutcomes.full),
-            metric("Partial", report.quoteOutcomes.partial),
-            metric("Unavailable", report.quoteOutcomes.unavailable),
+            metric("Everything", report.quoteOutcomes.full),
+            metric("Some items", report.quoteOutcomes.partial),
+            metric("Nothing", report.quoteOutcomes.unavailable),
           ],
         },
       ],
@@ -192,12 +202,12 @@ export function buildPrescriptionReportSections(
     {
       key: "costs",
       tab: "Costs",
-      title: "Commercial amounts by owner",
+      title: "Costs and fees",
       description:
-        "Unknown provider costs stay unknown; they are never estimated or folded into another category.",
+        "Charges for messages, payments and delivery in these dates. Charges not reported yet show as Unknown; we never guess them.",
       groups: [
         {
-          title: "By owner",
+          title: "By type",
           metrics: (
             Object.keys(PRESCRIPTION_COST_LABELS) as PrescriptionCostKey[]
           ).map((key) => {
@@ -205,13 +215,52 @@ export function buildPrescriptionReportSections(
             return metric(PRESCRIPTION_COST_LABELS[key], cost.amountMinor, {
               currencyCode: report.currencyCode,
               format: "money",
-              note: `${cost.observedCount} known · ${cost.unknownCount} awaiting cost data`,
-              unknownReason:
-                "No amount has been reported yet for these events, so it stays Unknown.",
+              note: `${cost.observedCount} ${cost.observedCount === 1 ? "charge" : "charges"}${cost.unknownCount ? ` · ${cost.unknownCount} not reported yet` : ""}`,
+              unknownReason: "No amount reported yet.",
             })
           }),
         },
       ],
     },
   ]
+}
+
+/** Days with any request, for the quiet-period note. */
+export function countPrescriptionRequestDays(report: PrescriptionReportData) {
+  return (report.daily ?? []).filter((day) => day.requests > 0).length
+}
+
+/** CSV of the daily counts behind Prescription requests by day. */
+export function buildPrescriptionReportCsv(
+  report: PrescriptionReportData,
+  range: ReportRange,
+  storeName: string,
+) {
+  const rows: Array<Array<string | number>> = [
+    ["Prescriptions", storeName, `Amounts in ${report.currencyCode}`],
+    ["Date", "Requests", "Quotes sent", "Paid orders", "Amount paid"],
+    ...(report.daily ?? []).map((day) => [
+      day.date,
+      day.requests,
+      day.quotesIssued,
+      day.paidOrders,
+      reportCsvMoney(day.amountPaidMinor),
+    ]),
+    [
+      "Total",
+      report.requestCount,
+      report.quoteCount,
+      report.payment.paidCount,
+      reportCsvMoney(report.payment.paidAmountMinor),
+    ],
+    [],
+    ["Picked up", report.pickupCompleted],
+    ["Delivered", report.deliveryCompleted],
+    ["Quotes accepted", report.quoteOutcomes.accepted],
+    ["Quotes declined", report.quoteOutcomes.declined],
+  ]
+  return {
+    fileName: `prescriptions_${reportRangeFileDates(range)}.csv`,
+    text: reportCsv(rows),
+  }
 }

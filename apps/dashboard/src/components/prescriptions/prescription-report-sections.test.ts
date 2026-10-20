@@ -2,7 +2,9 @@ import { describe, expect, test } from "bun:test"
 
 import {
   type PrescriptionReportData,
+  buildPrescriptionReportCsv,
   buildPrescriptionReportSections,
+  countPrescriptionRequestDays,
   hasPrescriptionReportActivity,
   prescriptionConversionPercent,
   prescriptionReportFunnel,
@@ -70,22 +72,23 @@ describe("Prescription report sections", () => {
   })
 
   test("labels channels and shows them as shares of all requests", () => {
-    expect(findMetric(report(), "lifecycle", "Web")).toMatchObject({
+    expect(findMetric(report(), "lifecycle", "Website")).toMatchObject({
       shareOf: 4,
       value: 3,
     })
-    expect(findMetric(report(), "lifecycle", "Staff walk-in")?.value).toBe(1)
+    expect(findMetric(report(), "lifecycle", "Walk-in (staff)")?.value).toBe(1)
   })
 
   test("keeps review time and conversion Unknown when nothing was measured", () => {
     expect(
-      findMetric(report(), "lifecycle", "Average review time")?.value,
+      findMetric(report(), "lifecycle", "Average time to check a prescription")
+        ?.value,
     ).toBe(90)
     expect(
       findMetric(
         report({ reviewTimeMs: null }),
         "lifecycle",
-        "Average review time",
+        "Average time to check a prescription",
       )?.value,
     ).toBeNull()
     expect(prescriptionConversionPercent(report())).toBe(50)
@@ -98,21 +101,55 @@ describe("Prescription report sections", () => {
 
   test("keeps a known zero cost apart from an unreported one", () => {
     expect(
-      findMetric(report(), "costs", "Meta messaging charges"),
-    ).toMatchObject({ note: "2 known · 0 awaiting cost data", value: 0 })
-    expect(findMetric(report(), "costs", "Taxes")?.value).toBeNull()
+      findMetric(report(), "costs", "WhatsApp message charges"),
+    ).toMatchObject({ note: "2 charges", value: 0 })
+    expect(findMetric(report(), "costs", "Tax")?.value).toBeNull()
     expect(
-      findMetric(report(), "costs", "Payment-provider fees"),
-    ).toMatchObject({ note: "1 known · 1 awaiting cost data", value: 150 })
+      findMetric(report(), "costs", "Card and transfer fees"),
+    ).toMatchObject({ note: "1 charge · 1 not reported yet", value: 150 })
   })
 
-  test("funnel follows requests, quotes, acceptances and paid orders", () => {
+  test("funnel follows requests, quotes, acceptances and paid orders as shares of requests", () => {
     expect(prescriptionReportFunnel(report())).toEqual([
-      { count: 4, label: "Requests received" },
-      { count: 3, label: "Quotes issued", ratio: 75 },
-      { count: 2, label: "Quotes accepted", ratio: 67 },
-      { count: 2, label: "Paid orders", ratio: 100 },
+      { count: 4, label: "Requests" },
+      { count: 3, label: "Quotes sent", share: 75 },
+      { count: 2, label: "Quotes accepted", share: 50 },
+      { count: 2, label: "Paid", share: 50 },
     ])
+  })
+
+  test("downloads the daily counts with exact amounts", () => {
+    const withDays = report({
+      daily: [
+        {
+          amountPaidMinor: 0,
+          date: "2026-10-05",
+          paidOrders: 0,
+          quotesIssued: 1,
+          requests: 3,
+        },
+        {
+          amountPaidMinor: 750_050,
+          date: "2026-10-06",
+          paidOrders: 2,
+          quotesIssued: 2,
+          requests: 1,
+        },
+      ],
+    })
+    expect(countPrescriptionRequestDays(withDays)).toBe(2)
+    const csv = buildPrescriptionReportCsv(
+      withDays,
+      {
+        from: new Date("2026-10-05T00:00:00.000Z"),
+        to: new Date("2026-10-07T00:00:00.000Z"),
+      },
+      "Main store",
+    )
+    expect(csv.fileName).toBe("prescriptions_2026-10-05_to_2026-10-06.csv")
+    const lines = csv.text.split("\r\n")
+    expect(lines[1]).toBe("Date,Requests,Quotes sent,Paid orders,Amount paid")
+    expect(lines[3]).toBe("2026-10-06,1,2,2,7500.50")
   })
 
   test("detects a window with no activity at all", () => {

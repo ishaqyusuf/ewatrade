@@ -1,7 +1,11 @@
 "use client"
 
 import { OfflineRecordReview } from "@/components/dashboard/offline-record-review"
-import { PageHeader } from "@/components/page-header"
+import { PageHeader, PageToolbar } from "@/components/page-header"
+import { ReportBarList } from "@/components/reports/report-bar-list"
+import { ReportDateControl } from "@/components/reports/report-date-control"
+import { ReportDelta } from "@/components/reports/report-delta"
+import { ReportDownloadButton } from "@/components/reports/report-download-button"
 import { ReportError } from "@/components/reports/report-error"
 import {
   ReportHeadlineStrip,
@@ -9,12 +13,15 @@ import {
 } from "@/components/reports/report-headline-strip"
 import {
   ReportMetricGroups,
+  ReportNowTag,
   ReportTabPanel,
   ReportTabsList,
   ReportToneDot,
 } from "@/components/reports/report-metric-groups"
 import {
   reportCountFormat as countFormat,
+  formatReportMoney,
+  metricTone,
   sectionTone,
 } from "@/components/reports/report-metrics"
 import { ScrollableContent } from "@/components/scrollable-content"
@@ -22,23 +29,57 @@ import {
   isOperationsReportTab,
   useOperationsReportParams,
 } from "@/hooks/use-operations-report-params"
+import {
+  type ReportRange,
+  previousReportRange,
+  reportRangeDays,
+} from "@/lib/report-range"
 import { useTRPC } from "@/trpc/client"
-import { Tabs, TabsContent, TabsTrigger } from "@ewatrade/ui"
-import { formatMinorMoney } from "@ewatrade/utils"
-import { useSuspenseQuery } from "@tanstack/react-query"
+import { Tabs, TabsContent, TabsTrigger, cn } from "@ewatrade/ui"
+import { Alert02Icon, Clock01Icon } from "@hugeicons/core-free-icons"
+import { HugeiconsIcon } from "@hugeicons/react"
+import { useQuery, useSuspenseQuery } from "@tanstack/react-query"
 import { ErrorBoundary } from "next/dist/client/components/error-boundary"
 import {
   type ComponentProps,
   type ReactNode,
   Suspense,
   useCallback,
+  useTransition,
 } from "react"
 import {
   buildInventoryGroups,
+  buildSalesReportCsv,
   buildServiceGroups,
+  buildServiceJobsNow,
 } from "./operations-report-sections"
+import { SalesByDayCard, TopSellersCard } from "./operations-sales-charts"
 
 type Store = { currencyCode: string; id: string; name: string }
+
+function salesInput(store: Store, range: ReportRange) {
+  return { from: range.from, storeId: store.id, to: range.to }
+}
+
+function useSalesReport(store: Store, range: ReportRange) {
+  const trpc = useTRPC()
+  return useSuspenseQuery(
+    trpc.orders.salesReport.queryOptions(salesInput(store, range), {
+      retry: false,
+    }),
+  ).data
+}
+
+/** The same days just before; comparisons are left out until it loads or if it fails. */
+function usePreviousSalesReport(store: Store, range: ReportRange) {
+  const trpc = useTRPC()
+  return useQuery(
+    trpc.orders.salesReport.queryOptions(
+      salesInput(store, previousReportRange(range)),
+      { retry: false },
+    ),
+  ).data
+}
 
 function useServiceSummary(store: Store) {
   const trpc = useTRPC()
@@ -50,47 +91,97 @@ function useServiceSummary(store: Store) {
   ).data
 }
 
-function CommerceHeadlines({ store }: { store: Store }) {
-  const trpc = useTRPC()
-  const service = useServiceSummary(store)
-  const { data: orders } = useSuspenseQuery(
-    trpc.orders.reportSummary.queryOptions(
-      { storeId: store.id },
-      { retry: false },
-    ),
+function SalesHeadlines({
+  range,
+  store,
+}: { range: ReportRange; store: Store }) {
+  const report = useSalesReport(store, range)
+  const previous = usePreviousSalesReport(store, range)
+  const days = reportRangeDays(range)
+  const { totals } = report
+  const money = (minor: number) => formatReportMoney(minor, report.currencyCode)
+  const servicesSold = Number(totals.serviceQuantity)
+  const delta = (current: number, before: number | undefined) => (
+    <ReportDelta current={current} days={days} previous={before} />
   )
   return (
     <ReportHeadlineStrip
-      label="Commerce"
       items={[
         {
+          detail: delta(totals.orderCount, previous?.totals.orderCount),
           label: "Orders",
-          value: countFormat.format(orders.orderCount),
-          muted: orders.orderCount === 0,
+          muted: totals.orderCount === 0,
+          value: countFormat.format(totals.orderCount),
         },
         {
-          label: "Order value",
-          value: formatMinorMoney(orders.orderValueMinor, store.currencyCode),
-          money: true,
-          muted: orders.orderValueMinor === 0,
-        },
-        {
-          label: "Service revenue",
-          value: formatMinorMoney(
-            service.commercial.serviceRevenueMinor,
-            store.currencyCode,
+          detail: delta(
+            totals.orderValueMinor,
+            previous?.totals.orderValueMinor,
           ),
+          label: "Sales",
           money: true,
-          muted: service.commercial.serviceRevenueMinor === 0,
+          muted: totals.orderValueMinor === 0,
+          value: money(totals.orderValueMinor),
         },
         {
-          label: "Service quantity",
-          value: countFormat.format(
-            Number(service.commercial.immutableServiceQuantity),
+          detail: delta(totals.serviceMinor, previous?.totals.serviceMinor),
+          label: "Service sales",
+          money: true,
+          muted: totals.serviceMinor === 0,
+          value: money(totals.serviceMinor),
+        },
+        {
+          detail: delta(
+            servicesSold,
+            previous ? Number(previous.totals.serviceQuantity) : undefined,
           ),
-          muted: Number(service.commercial.immutableServiceQuantity) === 0,
+          label: "Services sold",
+          muted: servicesSold === 0,
+          value: countFormat.format(servicesSold),
         },
       ]}
+      label="Sales"
+    />
+  )
+}
+
+function SalesCharts({
+  onRange,
+  range,
+  store,
+}: {
+  onRange: (range: ReportRange) => void
+  range: ReportRange
+  store: Store
+}) {
+  const report = useSalesReport(store, range)
+  return (
+    <div className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
+      {report.partial ? (
+        <output className="block border border-amber-500/30 bg-amber-500/5 p-4 text-sm text-amber-700 lg:col-span-2 dark:text-amber-400">
+          Only the first 5,000 Orders in these dates are counted. Try fewer
+          days.
+        </output>
+      ) : null}
+      <SalesByDayCard onRange={onRange} range={range} report={report} />
+      <TopSellersCard report={report} />
+    </div>
+  )
+}
+
+function SalesDownload({ range, store }: { range: ReportRange; store: Store }) {
+  const trpc = useTRPC()
+  const report = useQuery(
+    trpc.orders.salesReport.queryOptions(salesInput(store, range), {
+      retry: false,
+    }),
+  ).data
+  return (
+    <ReportDownloadButton
+      build={() =>
+        report ? buildSalesReportCsv(report, range, store.name) : null
+      }
+      disabled={!report}
     />
   )
 }
@@ -111,17 +202,16 @@ function InventoryPanel({ store }: { store: Store }) {
   )
   return (
     <ReportTabPanel
-      description="Stock balance sources and offline commands awaiting reconciliation."
-      title="Inventory"
+      description="Where your stock counts come from, and changes made offline that still need to sync. The dates above don't change this tab."
+      title="Stock"
     >
       <ReportMetricGroups
         groups={buildInventoryGroups({ balances, reconciliation })}
       />
       <OfflineRecordReview key={store.id} store={store} />
       <p className="text-xs text-muted-foreground">
-        Compatible canonical totals show their component balances and are
-        informational; they are never used as automatic fulfillment
-        availability.
+        Combined stock totals are for information only. They are never used to
+        decide what can be sold.
       </p>
     </ReportTabPanel>
   )
@@ -131,9 +221,50 @@ function ServicePanel({ store }: { store: Store }) {
   const service = useServiceSummary(store)
   return (
     <ReportTabPanel
-      description="Service work, quality and customer messaging for this Store."
-      title="Service operations"
+      description="Jobs for Customers right now, and every job so far. The dates above don't change this tab."
+      title="Service jobs"
     >
+      <section aria-label="Jobs right now" className="grid gap-2">
+        <h3 className="text-sm font-semibold">
+          Jobs right now
+          <ReportNowTag />
+        </h3>
+        <ReportBarList
+          label="Jobs right now"
+          rows={buildServiceJobsNow(service).map((metric) => {
+            const tone = metricTone(metric)
+            return {
+              barClassName:
+                metric.tone === "failure"
+                  ? "bg-destructive"
+                  : metric.tone === "block"
+                    ? "bg-amber-500"
+                    : "bg-primary",
+              hint:
+                tone === "block"
+                  ? "Blocked: it can't continue until something is fixed."
+                  : tone === "failure"
+                    ? "Overdue: past the time promised to the Customer."
+                    : undefined,
+              icon: metric.tone ? (
+                <HugeiconsIcon
+                  aria-hidden="true"
+                  className={
+                    metric.tone === "failure"
+                      ? "size-4 shrink-0 text-destructive"
+                      : "size-4 shrink-0 text-amber-600 dark:text-amber-400"
+                  }
+                  icon={metric.tone === "failure" ? Clock01Icon : Alert02Icon}
+                />
+              ) : null,
+              key: metric.label,
+              label: metric.label,
+              value: metric.value ?? 0,
+              valueLabel: countFormat.format(metric.value ?? 0),
+            }
+          })}
+        />
+      </section>
       <ReportMetricGroups groups={buildServiceGroups(service)} />
     </ReportTabPanel>
   )
@@ -144,7 +275,9 @@ function ServiceTabTone({ store }: { store: Store }) {
   const service = useServiceSummary(store)
   return (
     <ReportToneDot
-      tone={sectionTone({ groups: buildServiceGroups(service) })}
+      tone={sectionTone({
+        groups: [{ metrics: buildServiceJobsNow(service), title: "Now" }],
+      })}
     />
   )
 }
@@ -179,25 +312,60 @@ const panelSkeleton = (
   <div aria-hidden="true" className="h-72 animate-pulse bg-muted" />
 )
 
+const chartsSkeleton = (
+  <div
+    aria-hidden="true"
+    className="grid gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]"
+  >
+    <div className="h-80 animate-pulse bg-muted" />
+    <div className="h-80 animate-pulse bg-muted" />
+  </div>
+)
+
 export function OperationsReports({
   store,
   tenantName,
 }: { store: Store; tenantName: string }) {
   const params = useOperationsReportParams()
+  const { range } = params
+  // A date change keeps the current figures on screen, dimmed, until the new ones load.
+  const [refreshing, startTransition] = useTransition()
+  const setRange = (next: ReportRange) =>
+    void params.setRange(next, startTransition)
   return (
     <ScrollableContent>
       <div className="grid min-w-0 flex-1 grid-cols-[minmax(0,1fr)] gap-6 pt-6">
         <PageHeader
+          description={`How sales, stock and service jobs are going at ${store.name}.`}
           eyebrow={`${tenantName} · ${store.name}`}
           title="Reports"
-          description="Commerce, inventory, service work, and offline reconciliation keep their own source of truth."
-        />
-        <IsolatedReport
-          fallback={<ReportHeadlineStripSkeleton count={4} />}
-          title="Commerce"
         >
-          <CommerceHeadlines store={store} />
-        </IsolatedReport>
+          <PageToolbar
+            actions={
+              <>
+                <ReportDateControl onChange={setRange} range={range} />
+                <SalesDownload range={range} store={store} />
+              </>
+            }
+          />
+        </PageHeader>
+        <div
+          aria-busy={refreshing}
+          className={cn(
+            "grid min-w-0 grid-cols-[minmax(0,1fr)] gap-6 transition-opacity",
+            refreshing && "opacity-60",
+          )}
+        >
+          <IsolatedReport
+            fallback={<ReportHeadlineStripSkeleton count={4} />}
+            title="Sales"
+          >
+            <SalesHeadlines range={range} store={store} />
+          </IsolatedReport>
+          <IsolatedReport fallback={chartsSkeleton} title="Sales by day">
+            <SalesCharts onRange={setRange} range={range} store={store} />
+          </IsolatedReport>
+        </div>
         <Tabs
           className="min-w-0 gap-6"
           onValueChange={(value) => {
@@ -206,9 +374,9 @@ export function OperationsReports({
           value={params.tab}
         >
           <ReportTabsList label="Report sections">
-            <TabsTrigger value="inventory">Inventory</TabsTrigger>
+            <TabsTrigger value="inventory">Stock</TabsTrigger>
             <TabsTrigger value="service">
-              Service operations
+              Service jobs
               <ErrorBoundary errorComponent={SilentFailure}>
                 <Suspense fallback={null}>
                   <ServiceTabTone store={store} />
@@ -217,12 +385,12 @@ export function OperationsReports({
             </TabsTrigger>
           </ReportTabsList>
           <TabsContent value="inventory">
-            <IsolatedReport fallback={panelSkeleton} title="Inventory">
+            <IsolatedReport fallback={panelSkeleton} title="Stock">
               <InventoryPanel store={store} />
             </IsolatedReport>
           </TabsContent>
           <TabsContent value="service">
-            <IsolatedReport fallback={panelSkeleton} title="Service operations">
+            <IsolatedReport fallback={panelSkeleton} title="Service jobs">
               <ServicePanel store={store} />
             </IsolatedReport>
           </TabsContent>

@@ -1,6 +1,13 @@
 "use client"
-import { FormFeedback } from "@/components/forms/form-feedback"
 import { PageHeader, PageToolbar } from "@/components/page-header"
+import {
+  ReportChartCard,
+  ReportChartEmpty,
+} from "@/components/reports/report-chart-card"
+import { ReportDateControl } from "@/components/reports/report-date-control"
+import { ReportDelta } from "@/components/reports/report-delta"
+import { ReportDownloadButton } from "@/components/reports/report-download-button"
+import { ReportError } from "@/components/reports/report-error"
 import {
   ReportHeadlineStrip,
   ReportHeadlineStripSkeleton,
@@ -12,7 +19,12 @@ import {
   ReportTabsList,
   ReportTabsSkeleton,
 } from "@/components/reports/report-metric-groups"
-import { reportCountFormat as countFormat } from "@/components/reports/report-metrics"
+import {
+  reportCountFormat as countFormat,
+  formatReportCountCompact,
+  formatReportMoney,
+} from "@/components/reports/report-metrics"
+import { ScrollableContent } from "@/components/scrollable-content"
 import {
   InlineRowCheckbox,
   InlineSelectAllCheckbox,
@@ -21,6 +33,7 @@ import {
 } from "@/components/tables/core"
 import {
   Button,
+  DailyBarChart,
   SelectControl,
   Table,
   TableBody,
@@ -33,6 +46,8 @@ import {
   TabsTrigger,
   cn,
 } from "@ewatrade/ui"
+import { ArrowLeft01Icon } from "@hugeicons/core-free-icons"
+import { HugeiconsIcon } from "@hugeicons/react"
 import Link from "next/link"
 
 import {
@@ -40,13 +55,24 @@ import {
   isPrescriptionReportTab,
   usePrescriptionReportParams,
 } from "@/hooks/use-prescription-report-params"
+import {
+  type ReportRange,
+  formatReportDay,
+  formatReportDayLong,
+  formatReportRangeBetween,
+  formatReportRangeLabel,
+  previousReportRange,
+  reportPresetRange,
+  reportRangeDays,
+} from "@/lib/report-range"
 import { useTRPC } from "@/trpc/client"
-import { formatMinorMoney } from "@ewatrade/utils"
-import { useQuery } from "@tanstack/react-query"
+import { keepPreviousData, useQuery } from "@tanstack/react-query"
 import { useMemo } from "react"
 import {
   type PrescriptionReportData,
+  buildPrescriptionReportCsv,
   buildPrescriptionReportSections,
+  countPrescriptionRequestDays,
   hasPrescriptionReportActivity,
   prescriptionConversionPercent,
   prescriptionReportFunnel,
@@ -54,105 +80,242 @@ import {
 
 type StoreOption = { id: string; name: string }
 
-export function PrescriptionReport({
-  from,
-  stores,
-  to,
-}: {
-  from: Date
-  stores: StoreOption[]
-  to: Date
-}) {
+export function PrescriptionReport({ stores }: { stores: StoreOption[] }) {
   const trpc = useTRPC()
   const params = usePrescriptionReportParams()
+  const { range } = params
   const storeId = stores.some((store) => store.id === params.storeId)
     ? params.storeId
     : null
+  const storeName =
+    stores.find((store) => store.id === storeId)?.name ?? "All Stores"
+  // New dates or Store keep the current figures on screen, dimmed, until the new ones load.
   const report = useQuery(
-    trpc.prescriptions.report.queryOptions({ from, storeId, to }),
+    trpc.prescriptions.report.queryOptions(
+      { from: range.from, storeId, to: range.to },
+      { placeholderData: keepPreviousData, retry: false },
+    ),
+  )
+  const previousRange = previousReportRange(range)
+  const previous = useQuery(
+    trpc.prescriptions.report.queryOptions(
+      { from: previousRange.from, storeId, to: previousRange.to },
+      { retry: false },
+    ),
   )
 
   return (
-    <div className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-6">
-      <PageHeader
-        eyebrow="Prescriptions"
-        title="Prescription operations"
-        description="De-identified lifecycle and commercial metrics for the last 30 days."
-      >
-        <PageToolbar
-          actions={
-            <>
-              <SelectControl
-                aria-label="Prescription report Store"
-                className="h-9 w-full sm:w-64"
-                value={storeId ?? ""}
-                onValueChange={(value) => void params.setStoreId(value || null)}
-                options={[
-                  { value: "", label: <>All Stores</> },
-                  ...stores.map((store) => ({
-                    value: store.id,
-                    label: store.name,
-                  })),
-                ]}
-              />
-              <Button
-                render={<Link href="/prescriptions" />}
-                variant="outline"
-                className="h-9 rounded-none"
-              >
-                Back to queue
-              </Button>
-            </>
-          }
-        />
-      </PageHeader>
+    <ScrollableContent>
+      <div className="grid min-w-0 flex-1 grid-cols-[minmax(0,1fr)] content-start gap-6 pt-6">
+        <PageHeader
+          eyebrow="Reports"
+          title="Prescriptions"
+          description="Prescription requests, Quotes and payments. Patient and prescription details are never shown."
+        >
+          <PageToolbar
+            actions={
+              <>
+                <SelectControl
+                  aria-label="Store"
+                  className="h-9 w-full sm:w-64"
+                  value={storeId ?? ""}
+                  onValueChange={(value) =>
+                    void params.setStoreId(value || null)
+                  }
+                  options={[
+                    { value: "", label: <>All Stores</> },
+                    ...stores.map((store) => ({
+                      value: store.id,
+                      label: store.name,
+                    })),
+                  ]}
+                />
+                <ReportDateControl
+                  onChange={(next) => void params.setRange(next)}
+                  range={range}
+                />
+                <ReportDownloadButton
+                  build={() =>
+                    report.data && !report.isPlaceholderData
+                      ? buildPrescriptionReportCsv(
+                          report.data,
+                          range,
+                          storeName,
+                        )
+                      : null
+                  }
+                  disabled={!report.data || report.isPlaceholderData}
+                />
+                <Button
+                  render={<Link href="/prescriptions" />}
+                  variant="ghost"
+                  className="h-9 rounded-none"
+                >
+                  <HugeiconsIcon
+                    aria-hidden="true"
+                    className="size-4"
+                    icon={ArrowLeft01Icon}
+                  />
+                  Back to prescriptions
+                </Button>
+              </>
+            }
+          />
+        </PageHeader>
 
-      {report.isPending ? (
-        <PrescriptionReportLoading />
-      ) : report.isError ? (
-        <div className="grid gap-3">
-          <FormFeedback appearance="dashboard">
-            {report.error.message}
-          </FormFeedback>
-          <Button
-            className="w-fit"
-            variant="outline"
-            onClick={() => void report.refetch()}
-            type="button"
+        {report.isPending ? (
+          <PrescriptionReportLoading />
+        ) : report.isError ? (
+          <ReportError
+            error={report.error}
+            retry={() => void report.refetch()}
+          />
+        ) : !report.data ? null : !hasPrescriptionReportActivity(
+            report.data,
+          ) ? (
+          <section className="grid gap-1 border border-border bg-background p-6">
+            <h2 className="font-semibold">
+              No prescription requests {formatReportRangeBetween(range)}
+            </h2>
+            <p className="text-sm text-muted-foreground">
+              Requests show here when a Customer sends a prescription. Try more
+              days or another Store.
+            </p>
+            <div className="mt-3 flex flex-wrap gap-2">
+              {reportRangeDays(range) < 90 ? (
+                <Button
+                  className="h-9 rounded-none"
+                  onClick={() => void params.setRange(reportPresetRange(90))}
+                  type="button"
+                  variant="outline"
+                >
+                  Show last 90 days
+                </Button>
+              ) : null}
+              {storeId ? (
+                <Button
+                  className="h-9 rounded-none"
+                  onClick={() => void params.setStoreId(null)}
+                  type="button"
+                  variant="outline"
+                >
+                  Show all Stores
+                </Button>
+              ) : null}
+            </div>
+          </section>
+        ) : (
+          <div
+            aria-busy={report.isPlaceholderData}
+            className={cn(
+              "transition-opacity",
+              report.isPlaceholderData && "opacity-60",
+            )}
           >
-            Retry report
-          </Button>
-        </div>
-      ) : !report.data ? null : !hasPrescriptionReportActivity(report.data) ? (
-        <section className="border border-border bg-background p-6">
-          <h2 className="font-semibold">
-            No prescription activity in the last 30 days
-          </h2>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Try another Store. Counts appear here once requests, Quotes or
-            payments are recorded; unavailable provider costs remain explicitly
-            unknown.
-          </p>
-        </section>
-      ) : (
-        <PrescriptionReportContent
-          onTabChange={(tab) => void params.setTab(tab)}
-          report={report.data}
-          scopeKey={`${storeId ?? "all"}:${from.toISOString()}:${to.toISOString()}`}
-          tab={params.tab}
+            <PrescriptionReportContent
+              onTabChange={(tab) => void params.setTab(tab)}
+              previous={
+                previous.data && !report.isPlaceholderData
+                  ? previous.data
+                  : undefined
+              }
+              range={range}
+              report={report.data}
+              scopeKey={`${storeId ?? "all"}:${range.from.toISOString()}:${range.to.toISOString()}`}
+              tab={params.tab}
+            />
+          </div>
+        )}
+      </div>
+    </ScrollableContent>
+  )
+}
+
+function RequestsByDayCard({
+  range,
+  report,
+}: {
+  range: ReportRange
+  report: PrescriptionReportData
+}) {
+  const daily = report.daily ?? []
+  const days = reportRangeDays(range)
+  const requestDays = countPrescriptionRequestDays(report)
+  return (
+    <ReportChartCard
+      note={
+        report.requestCount > 0 && requestDays < days / 3
+          ? `Quiet period: requests on ${requestDays} of ${days} days.`
+          : undefined
+      }
+      subtitle={formatReportRangeLabel(range)}
+      table={
+        daily.length
+          ? {
+              columns: ["Date", "Requests", "Quotes sent", "Paid orders"],
+              numericFrom: 1,
+              rows: [...daily].reverse().map((day) => ({
+                cells: [
+                  formatReportDay(day.date, true),
+                  countFormat.format(day.requests),
+                  countFormat.format(day.quotesIssued),
+                  countFormat.format(day.paidOrders),
+                ],
+                key: day.date,
+              })),
+            }
+          : undefined
+      }
+      title="Prescription requests by day"
+    >
+      {report.requestCount === 0 || !daily.length ? (
+        <ReportChartEmpty
+          description="They show here when a Customer sends a prescription."
+          title={`No prescription requests ${formatReportRangeBetween(range)}`}
         />
+      ) : (
+        <>
+          <p className="text-sm">
+            <span className="font-semibold">
+              {countFormat.format(report.requestCount)}
+            </span>{" "}
+            {report.requestCount === 1 ? "request" : "requests"} in these dates
+          </p>
+          <DailyBarChart
+            data={daily.map((day) => ({
+              date: day.date,
+              requests: day.requests,
+            }))}
+            formatDay={(date) => formatReportDay(date)}
+            formatDayLong={formatReportDayLong}
+            formatTick={formatReportCountCompact}
+            formatValue={(value) => countFormat.format(value)}
+            label={`Prescription requests by day, ${formatReportRangeLabel(range)}. Use the arrow keys to read each day.`}
+            series={[
+              {
+                color: "var(--report-product)",
+                key: "requests",
+                label: "Requests",
+              },
+            ]}
+          />
+        </>
       )}
-    </div>
+    </ReportChartCard>
   )
 }
 
 function PrescriptionReportContent({
   onTabChange,
+  previous,
+  range,
   report,
   scopeKey,
   tab,
 }: {
   onTabChange: (tab: PrescriptionReportTab) => void
+  previous: PrescriptionReportData | undefined
+  range: ReportRange
   report: PrescriptionReportData
   scopeKey: string
   tab: PrescriptionReportTab
@@ -165,6 +328,7 @@ function PrescriptionReportContent({
     report.scope === "tenant" && report.storeBreakdown.length > 0
   const activeTab = tab === "stores" && !showStores ? "lifecycle" : tab
   const conversion = prescriptionConversionPercent(report)
+  const days = reportRangeDays(range)
 
   return (
     <div className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-6">
@@ -174,14 +338,21 @@ function PrescriptionReportContent({
           {
             label: "Requests",
             value: countFormat.format(report.requestCount),
-            detail:
-              conversion === null
-                ? "None received"
-                : `${conversion}% converted to orders`,
+            detail: previous ? (
+              <ReportDelta
+                current={report.requestCount}
+                days={days}
+                previous={previous.requestCount}
+              />
+            ) : conversion === null ? (
+              "None in these dates"
+            ) : (
+              `${conversion}% became Orders`
+            ),
             muted: report.requestCount === 0,
           },
           {
-            label: "Quotes issued",
+            label: "Quotes sent",
             value: countFormat.format(report.quoteCount),
             detail: `${countFormat.format(report.quoteOutcomes.accepted)} accepted`,
             muted: report.quoteCount === 0,
@@ -189,21 +360,42 @@ function PrescriptionReportContent({
           {
             label: "Paid orders",
             value: countFormat.format(report.payment.paidCount),
-            detail: `${countFormat.format(report.payment.totalAttempts)} payment ${report.payment.totalAttempts === 1 ? "attempt" : "attempts"}`,
+            detail: `${countFormat.format(report.payment.totalAttempts)} ${report.payment.totalAttempts === 1 ? "try" : "tries"} to pay`,
             muted: report.payment.paidCount === 0,
           },
           {
-            label: "Payment value",
-            value: formatMinorMoney(
+            label: "Amount paid",
+            value: formatReportMoney(
               report.payment.paidAmountMinor,
               report.currencyCode,
             ),
-            detail: "Paid in the last 30 days",
+            detail: previous ? (
+              <ReportDelta
+                current={report.payment.paidAmountMinor}
+                days={days}
+                previous={previous.payment.paidAmountMinor}
+              />
+            ) : (
+              "In these dates"
+            ),
             money: true,
             muted: report.payment.paidAmountMinor === 0,
           },
         ]}
       />
+
+      <div className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
+        <RequestsByDayCard range={range} report={report} />
+        <ReportChartCard
+          subtitle={formatReportRangeLabel(range)}
+          title="From request to payment"
+        >
+          <ReportFunnel
+            label="From request to payment"
+            steps={prescriptionReportFunnel(report)}
+          />
+        </ReportChartCard>
+      </div>
 
       <Tabs
         className="min-w-0 gap-6"
@@ -230,12 +422,6 @@ function PrescriptionReportContent({
               description={section.description}
               title={section.title}
             >
-              {section.key === "lifecycle" ? (
-                <ReportFunnel
-                  label="Prescription lifecycle funnel"
-                  steps={prescriptionReportFunnel(report)}
-                />
-              ) : null}
               <ReportMetricGroups groups={section.groups} />
             </ReportTabPanel>
           </TabsContent>
@@ -243,8 +429,8 @@ function PrescriptionReportContent({
         {showStores ? (
           <TabsContent value="stores">
             <ReportTabPanel
-              description="Each Store's requests in the last 30 days."
-              title="Store breakdown"
+              description="Each Store's requests in these dates."
+              title="Stores"
             >
               <PrescriptionStoreTable report={report} scopeKey={scopeKey} />
             </ReportTabPanel>
@@ -274,7 +460,7 @@ function PrescriptionStoreTable({
         className="overflow-x-auto border border-border"
         // biome-ignore lint/a11y/noNoninteractiveTabindex: Keyboard users must be able to scroll the report table.
         tabIndex={0}
-        aria-label="Store breakdown table"
+        aria-label="Stores table"
       >
         <Table className="w-full min-w-[24rem] text-left text-sm">
           <TableHeader className="bg-muted/40 text-xs text-muted-foreground">
@@ -282,7 +468,7 @@ function PrescriptionStoreTable({
               <TableHead scope="col" className="w-10 px-4 py-2 font-normal">
                 <InlineSelectAllCheckbox
                   selection={selection}
-                  label="Select all Stores in this breakdown"
+                  label="Select all Stores"
                 />
               </TableHead>
               <TableHead scope="col" className="px-4 py-2 font-normal">
@@ -333,13 +519,26 @@ function PrescriptionStoreTable({
 function PrescriptionReportLoading() {
   return (
     <div className="grid min-w-0 gap-6">
-      <output className="sr-only">Loading prescription report</output>
+      <output className="sr-only">Loading prescription reports</output>
       <ReportHeadlineStripSkeleton count={4} />
+      <div
+        aria-hidden="true"
+        className="grid gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]"
+      >
+        <div className="h-80 animate-pulse bg-muted" />
+        <div className="h-80 animate-pulse bg-muted" />
+      </div>
       <ReportTabsSkeleton />
     </div>
   )
 }
 
 export function PrescriptionReportSkeleton() {
-  return <PrescriptionReportLoading />
+  return (
+    <ScrollableContent>
+      <div className="pt-6">
+        <PrescriptionReportLoading />
+      </div>
+    </ScrollableContent>
+  )
 }

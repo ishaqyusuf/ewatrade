@@ -2,7 +2,12 @@ import { describe, expect, test } from "bun:test"
 import type { ServiceCommerceReportOutput } from "@ewatrade/service-commerce"
 
 import { metricTone, sectionTone } from "@/components/reports/report-metrics"
-import { buildReportSections, lifecycleFunnel } from "./report-sections"
+import {
+  buildReportSections,
+  buildServiceCommerceReportCsv,
+  countRequestDays,
+  lifecycleFunnel,
+} from "./report-sections"
 
 function report(
   overrides: Partial<ServiceCommerceReportOutput> = {},
@@ -21,6 +26,7 @@ function report(
     },
     costs: [],
     currencyCode: "NGN",
+    daily: [],
     lifecycle: {
       bookingsCompleted: 0,
       bookingsConfirmed: 0,
@@ -165,31 +171,35 @@ describe("Service Commerce report sections", () => {
     for (const section of sections)
       for (const group of section.groups) expect(group.title).not.toBe("")
     expect(
-      findMetric(sections, "conversations", "Bridge initiated")?.value,
+      findMetric(sections, "conversations", "Asked to move to WhatsApp")?.value,
     ).toBe(2)
     expect(
-      findMetric(sections, "conversations", "Bridge confirmed")?.value,
+      findMetric(sections, "conversations", "Moved to WhatsApp")?.value,
     ).toBe(1)
-    expect(findMetric(sections, "conversations", "Policy blocks")?.value).toBe(
-      64,
-    )
+    expect(
+      findMetric(sections, "conversations", "Blocked by message rules")?.value,
+    ).toBe(64)
   })
 
   test("keeps unavailable facts Unknown instead of zero", () => {
     const sections = buildReportSections(report())
     expect(
-      findMetric(sections, "conversations", "First response average")?.value,
+      findMetric(sections, "conversations", "Average first reply")?.value,
     ).toBeNull()
     expect(
-      findMetric(sections, "conversations", "Scheduled closures")?.value,
+      findMetric(sections, "conversations", "During a planned closure")?.value,
     ).toBeNull()
-    expect(findMetric(sections, "conversations", "Unclaimed")?.current).toBe(
-      true,
-    )
+    expect(
+      findMetric(sections, "conversations", "Waiting for staff")?.current,
+    ).toBe(true)
   })
 
   test("shows channel and source rows as shares of all requests", () => {
-    const web = findMetric(buildReportSections(report()), "lifecycle", "Web")
+    const web = findMetric(
+      buildReportSections(report()),
+      "lifecycle",
+      "Website",
+    )
     expect(web).toMatchObject({ shareOf: 4, value: 3 })
   })
 
@@ -239,25 +249,25 @@ describe("Service Commerce report sections", () => {
     expect(findMetric(sections, "costs", "EwaTrade usage")).toMatchObject({
       currencyCode: "NGN",
       format: "money",
-      note: "1 known · 0 unknown",
+      note: "1 charge",
       value: 0,
     })
-    expect(findMetric(sections, "costs", "Number fees")?.value).toBeNull()
+    expect(findMetric(sections, "costs", "Phone number fees")?.value).toBeNull()
     expect(
       findMetric(
         sections,
         "costs",
-        "Connection conn_1 · NG · utility · business",
+        "WhatsApp number conn_1 · Nigeria · Updates · Paid by you",
       )?.value,
     ).toBe(3)
   })
 
-  test("funnel ratios compare with the step above and stay empty after a zero step", () => {
+  test("funnel steps are shares of requests", () => {
     expect(lifecycleFunnel(report().lifecycle)).toEqual([
-      { count: 4, label: "Requests received" },
-      { count: 3, label: "Quotes issued", ratio: 75 },
-      { count: 0, label: "Quotes accepted", ratio: 0 },
-      { count: 2, label: "Payments succeeded", ratio: null },
+      { count: 4, label: "Requests" },
+      { count: 3, label: "Quotes sent", share: 75 },
+      { count: 0, label: "Quotes accepted", share: 0 },
+      { count: 2, label: "Paid", share: 50 },
     ])
   })
 
@@ -268,10 +278,10 @@ describe("Service Commerce report sections", () => {
       const metric = findMetric(sections, key, label)
       return metric ? metricTone(metric) : undefined
     }
-    expect(tone("conversations", "Policy blocks")).toBe("block")
-    expect(tone("conversations", "Overdue")).toBeNull()
-    expect(tone("conversations", "Outcome unknown")).toBeNull()
-    expect(tone("catalog", "Resolution unknown")).toBeNull()
+    expect(tone("conversations", "Blocked by message rules")).toBe("block")
+    expect(tone("conversations", "Reply overdue")).toBeNull()
+    expect(tone("conversations", "Delivery not confirmed")).toBeNull()
+    expect(tone("catalog", "Not matched yet")).toBeNull()
     expect(
       sectionTone(
         sections.find((s) => s.key === "conversations") ?? { groups: [] },
@@ -311,11 +321,52 @@ describe("Service Commerce report sections", () => {
     expect(sectionTone(section("reliability"))).toBe("block")
     expect(
       metricTone(
-        findMetric(failing, "reliability", "Provider Attempt · Available") ?? {
+        findMetric(failing, "reliability", "Message · Available") ?? {
           label: "",
           value: 0,
         },
       ),
     ).toBeNull()
+  })
+
+  test("downloads the daily counts with exact amounts", () => {
+    const withDays = report({
+      daily: [
+        {
+          date: "2026-10-05",
+          paymentsSucceeded: 0,
+          paymentValueMinor: 0,
+          quotesAccepted: 0,
+          quotesIssued: 1,
+          requests: 3,
+        },
+        {
+          date: "2026-10-06",
+          paymentsSucceeded: 2,
+          paymentValueMinor: 1_140_000,
+          quotesAccepted: 0,
+          quotesIssued: 2,
+          requests: 0,
+        },
+      ],
+    })
+    expect(countRequestDays(withDays)).toBe(1)
+    const csv = buildServiceCommerceReportCsv(
+      withDays,
+      {
+        from: new Date("2026-10-05T00:00:00.000Z"),
+        to: new Date("2026-10-07T00:00:00.000Z"),
+      },
+      "All Stores",
+    )
+    expect(csv.fileName).toBe(
+      "requests-and-quotes_2026-10-05_to_2026-10-06.csv",
+    )
+    const lines = csv.text.split("\r\n")
+    expect(lines[1]).toBe(
+      "Date,Requests,Quotes sent,Quotes accepted,Paid,Amount paid",
+    )
+    expect(lines[3]).toBe("2026-10-06,0,2,0,2,11400.00")
+    expect(lines[4]).toBe("Total,4,3,0,2,11400.00")
   })
 })

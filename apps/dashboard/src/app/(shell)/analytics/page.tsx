@@ -1,4 +1,6 @@
 import { OperationsReports } from "@/components/dashboard/operations-reports"
+import { loadOperationsReportParams } from "@/hooks/use-operations-report-params"
+import { previousReportRange } from "@/lib/report-range"
 import { getServerSession } from "@/lib/session"
 import { getActiveTenant } from "@/lib/tenant"
 import { HydrateClient, prefetch, trpc } from "@/trpc/server"
@@ -10,7 +12,11 @@ export const metadata: Metadata = {
   title: "Reports | EwaTrade",
 }
 
-export default async function AnalyticsPage() {
+type Props = {
+  searchParams: Promise<Record<string, string | string[] | undefined>>
+}
+
+export default async function AnalyticsPage({ searchParams }: Props) {
   const session = await getServerSession()
 
   if (!session) {
@@ -25,7 +31,23 @@ export default async function AnalyticsPage() {
 
   const store = ctx.activeStore ?? ctx.stores[0]
   if (!store) redirect("/setup")
+  const { range } = await loadOperationsReportParams(searchParams)
+  const previous = previousReportRange(range)
   void Promise.allSettled([
+    prefetch(
+      trpc.orders.salesReport.queryOptions({
+        from: range.from,
+        storeId: store.id,
+        to: range.to,
+      }),
+    ),
+    prefetch(
+      trpc.orders.salesReport.queryOptions({
+        from: previous.from,
+        storeId: store.id,
+        to: previous.to,
+      }),
+    ),
     prefetch(
       trpc.inventory.reconciliationReport.queryOptions({ storeId: store.id }),
     ),
@@ -36,7 +58,6 @@ export default async function AnalyticsPage() {
       }),
     ),
     prefetch(trpc.serviceReporting.summary.queryOptions({ storeId: store.id })),
-    prefetch(trpc.orders.reportSummary.queryOptions({ storeId: store.id })),
   ])
   return (
     <HydrateClient>

@@ -2,53 +2,26 @@ import { TabsList, cn } from "@ewatrade/ui"
 import { formatMinorMoney } from "@ewatrade/utils"
 import type { ReactNode } from "react"
 
+import { ReportBarList } from "./report-bar-list"
 import {
   type ReportFunnelStep,
   type ReportMetric,
   type ReportMetricGroup,
   type ReportMetricTone,
-  formatReportDuration,
+  formatReportDurationPlain,
   metricTone,
   reportCountFormat,
 } from "./report-metrics"
 
-function MetricValue({ metric }: { metric: ReportMetric }) {
-  if (
-    metric.value === null ||
-    (metric.format === "money" && !metric.currencyCode)
-  )
-    return (
-      <dd
-        className="cursor-help text-right italic text-muted-foreground underline decoration-dotted underline-offset-4"
-        title={
-          metric.unknownReason ??
-          "Not available for this window. It is never shown as zero."
-        }
-      >
-        Unknown
-      </dd>
-    )
-  const text =
-    metric.format === "money" && metric.currencyCode
-      ? formatMinorMoney(metric.value, metric.currencyCode)
-      : metric.format === "duration"
-        ? formatReportDuration(metric.value)
-        : metric.format === "percent"
-          ? `${metric.value}%`
-          : reportCountFormat.format(metric.value)
-  const tone = metricTone(metric)
-  return (
-    <dd
-      className={cn(
-        "whitespace-nowrap text-right tabular-nums",
-        metric.value === 0 ? "text-muted-foreground" : "font-semibold",
-        tone === "failure" && "text-destructive",
-        tone === "block" && "text-amber-700 dark:text-amber-400",
-      )}
-    >
-      {text}
-    </dd>
-  )
+const UNKNOWN_REASON = "Not recorded for these dates."
+
+function metricText(metric: ReportMetric & { value: number }) {
+  if (metric.format === "money" && metric.currencyCode)
+    return formatMinorMoney(metric.value, metric.currencyCode)
+  if (metric.format === "duration")
+    return formatReportDurationPlain(metric.value)
+  if (metric.format === "percent") return `${metric.value}%`
+  return reportCountFormat.format(metric.value)
 }
 
 const TONE_LABELS: Record<ReportMetricTone, string> = {
@@ -74,8 +47,20 @@ export function ReportToneDot({ tone }: { tone: ReportMetricTone | null }) {
   )
 }
 
+/** "Right now": a count at this moment that the dates do not change. */
+export function ReportNowTag() {
+  return (
+    <span className="ml-1.5 rounded-full border border-border px-1.5 align-[1px] text-[11px] text-muted-foreground">
+      Right now
+    </span>
+  )
+}
+
 function MetricRow({ metric }: { metric: ReportMetric }) {
-  const recorded = metric.value !== null && metric.value !== 0
+  const unknown =
+    metric.value === null || (metric.format === "money" && !metric.currencyCode)
+  const recorded = !unknown && metric.value !== 0
+  const tone = metricTone(metric)
   return (
     <div className="flex items-baseline justify-between gap-3 border-b border-border py-2 text-sm">
       <dt
@@ -85,17 +70,15 @@ function MetricRow({ metric }: { metric: ReportMetric }) {
         )}
       >
         {metric.label}
-        {metric.current ? (
-          <span
-            className="ml-1.5 border border-border px-1 align-[1px] text-[10px] uppercase tracking-wide text-muted-foreground"
-            title="Current snapshot, not a count inside the window"
-          >
-            now
-          </span>
-        ) : null}
+        {metric.current ? <ReportNowTag /> : null}
         {metric.note ? (
           <span className="block text-xs text-muted-foreground">
             {metric.note}
+          </span>
+        ) : null}
+        {unknown ? (
+          <span className="block text-xs text-muted-foreground">
+            {metric.unknownReason ?? UNKNOWN_REASON}
           </span>
         ) : null}
         {metric.shareOf !== undefined ? (
@@ -109,12 +92,25 @@ function MetricRow({ metric }: { metric: ReportMetric }) {
           </span>
         ) : null}
       </dt>
-      <MetricValue metric={metric} />
+      {unknown ? (
+        <dd className="text-right italic text-muted-foreground">Unknown</dd>
+      ) : (
+        <dd
+          className={cn(
+            "whitespace-nowrap text-right tabular-nums",
+            metric.value === 0 ? "text-muted-foreground" : "font-semibold",
+            tone === "failure" && "text-destructive",
+            tone === "block" && "text-amber-700 dark:text-amber-400",
+          )}
+        >
+          {metricText(metric as ReportMetric & { value: number })}
+        </dd>
+      )}
     </div>
   )
 }
 
-/** Named groups of label/value rows: zeros muted, Unknown explicit. */
+/** Named groups of label/value rows: zeros muted, Unknown explicit with its reason. */
 export function ReportMetricGroups({
   groups,
 }: { groups: ReportMetricGroup[] }) {
@@ -122,9 +118,7 @@ export function ReportMetricGroups({
     <div className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,13.5rem),1fr))] gap-x-8 gap-y-5">
       {groups.map((group) => (
         <section aria-label={group.title} key={group.title}>
-          <h3 className="mb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-            {group.title}
-          </h3>
+          <h3 className="mb-1 text-sm font-semibold">{group.title}</h3>
           <dl>
             {group.metrics.map((metric) => (
               <MetricRow key={metric.label} metric={metric} />
@@ -136,6 +130,14 @@ export function ReportMetricGroups({
   )
 }
 
+const STEP_CLASSES = [
+  "bg-[var(--report-step-1)]",
+  "bg-[var(--report-step-2)]",
+  "bg-[var(--report-step-3)]",
+  "bg-[var(--report-step-4)]",
+]
+
+/** From request to payment: each step as a share of requests. */
 export function ReportFunnel({
   label,
   steps,
@@ -143,49 +145,33 @@ export function ReportFunnel({
   label: string
   steps: ReportFunnelStep[]
 }) {
-  const largest = Math.max(...steps.map((step) => step.count), 1)
+  const last = steps.at(-1)
   return (
-    <div className="grid gap-2.5">
-      <ol aria-label={label} className="grid gap-2.5">
-        {steps.map((step) => (
-          <li
-            className="grid grid-cols-[minmax(0,1fr)_3.5rem_3rem] items-center gap-x-3 gap-y-1.5 text-sm sm:grid-cols-[10rem_minmax(0,1fr)_4rem_3rem]"
-            key={step.label}
-          >
-            <span>{step.label}</span>
-            <span
-              aria-hidden="true"
-              className="col-span-3 row-start-2 h-2.5 bg-muted sm:col-span-1 sm:row-start-auto"
-            >
-              <span
-                className="block h-full bg-primary"
-                style={{ width: `${(step.count / largest) * 100}%` }}
-              />
-            </span>
-            <span
-              className={cn(
-                "text-right tabular-nums",
-                step.count === 0 ? "text-muted-foreground" : "font-semibold",
-              )}
-            >
-              {reportCountFormat.format(step.count)}
-            </span>
-            <span
-              className="text-right text-xs tabular-nums text-muted-foreground"
-              title="Compared with the step above"
-            >
-              {step.ratio === undefined
-                ? ""
-                : step.ratio === null
-                  ? "—"
-                  : `${step.ratio}%`}
-            </span>
-          </li>
-        ))}
-      </ol>
+    <div className="grid gap-3">
+      {last?.share !== undefined && last.share !== null ? (
+        <p className="text-sm">
+          <span className="font-semibold">{last.share}%</span> of requests ended
+          in a payment
+        </p>
+      ) : null}
+      <ReportBarList
+        label={label}
+        layout="stacked"
+        rows={steps.map((step, index) => ({
+          barClassName: STEP_CLASSES[index] ?? STEP_CLASSES.at(-1),
+          detail:
+            index > 0 && step.share !== null && step.share !== undefined
+              ? `${step.share}% of requests`
+              : undefined,
+          key: step.label,
+          label: step.label,
+          value: step.count,
+          valueLabel: reportCountFormat.format(step.count),
+        }))}
+      />
       <p className="text-xs text-muted-foreground">
-        Percentages compare counts in this window with the step above. They
-        don't follow the same customers through, so a step can be above 100%.
+        Each step counts what happened in these dates, not the same Customers
+        followed through, so a step can go above 100%.
       </p>
     </div>
   )
@@ -193,10 +179,12 @@ export function ReportFunnel({
 
 /** The bordered panel inside one report tab. */
 export function ReportTabPanel({
+  actions,
   children,
   description,
   title,
 }: {
+  actions?: ReactNode
   children: ReactNode
   description: string
   title: string
@@ -206,11 +194,14 @@ export function ReportTabPanel({
       aria-label={title}
       className="grid min-w-0 gap-5 border border-border bg-background p-4 sm:p-6"
     >
-      <div>
-        <h2 className="font-semibold">{title}</h2>
-        <p className="mt-1 max-w-3xl text-sm text-muted-foreground">
-          {description}
-        </p>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0">
+          <h2 className="font-semibold">{title}</h2>
+          <p className="mt-1 max-w-3xl text-sm text-muted-foreground">
+            {description}
+          </p>
+        </div>
+        {actions}
       </div>
       {children}
     </section>
