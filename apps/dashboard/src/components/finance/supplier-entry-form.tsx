@@ -6,40 +6,53 @@ import {
   AlertTitle,
   Button,
   FieldGroup,
-  FormActions,
   Input,
   MoneyInput,
 } from "@ewatrade/ui"
-import {
-  formatFinanceMoney,
-  parseFinanceMoney,
-} from "@ewatrade/utils/finance-money"
+import { parseFinanceMoney } from "@ewatrade/utils/finance-money"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useEffect, useState } from "react"
 import { z } from "zod"
 
 import {
-  FormDateControl,
+  FormDatePicker,
+  FormRadioChoices,
   FormSelectControl,
 } from "@/components/forms/form-controls"
 import { useFinanceCommand } from "@/hooks/use-finance-command"
+import { useFinanceParams } from "@/hooks/use-finance-params"
 import { useZodForm } from "@/hooks/use-zod-form"
 import { useTRPC } from "@/trpc/client"
 
-import { FinanceField, FinanceReview } from "./form-fields"
+import {
+  FinanceDetails,
+  FinanceField,
+  FinanceFormFooter,
+  FinanceReview,
+} from "./form-fields"
+import {
+  balanceChange,
+  changes,
+  dayIn,
+  moneyText,
+  paidFromOptions,
+  plainDay,
+  todayIn,
+  useMoneyBalances,
+} from "./review-changes"
 import type { FinanceBook } from "./types"
 import { useCompleteFinanceForm } from "./use-complete-finance-form"
 
 const utcDate = z
   .string()
-  .regex(/^\d{4}-\d{2}-\d{2}$/, "Choose a valid date.")
+  .regex(/^\d{4}-\d{2}-\d{2}$/, "Pick a date.")
   .refine((value) => {
     const parsed = new Date(`${value}T00:00:00.000Z`)
     return (
       Number.isFinite(parsed.getTime()) &&
       parsed.toISOString().slice(0, 10) === value
     )
-  }, "Choose a valid date.")
+  }, "Pick a date.")
 
 const schema = z.object({
   kind: z.enum(["PAYABLE", "ADVANCE"]),
@@ -51,11 +64,11 @@ const schema = z.object({
     } catch {
       return false
     }
-  }, "Enter a positive amount with up to two decimal places."),
+  }, "Enter an amount above zero, like 150000."),
   description: z
     .string()
     .trim()
-    .min(1, "Enter a description.")
+    .min(1, "Add a short note.")
     .max(400, "Use 400 characters or fewer."),
   date: utcDate,
 })
@@ -115,17 +128,26 @@ export function FinanceSupplierEntryForm({
   const advanceMutation = useMutation(
     trpc.finance.recordSupplierAdvance.mutationOptions(),
   )
+  const [review, setReview] = useState<Review | null>(null)
+  const balances = useMoneyBalances(book.id)
+  const currency = book.currencyCode
   const command = useFinanceCommand(
-    useCompleteFinanceForm(),
+    useCompleteFinanceForm(
+      review
+        ? opening
+          ? `Starting balance added for ${review.supplier.name}.`
+          : `Recorded ${moneyText(review.amountMinor, currency)} paid ahead to ${review.supplier.name}.`
+        : undefined,
+    ),
     book.id,
     operation,
   )
-  const [review, setReview] = useState<Review | null>(null)
+  const { close } = useFinanceParams()
   const [preparing, setPreparing] = useState(false)
   const [prepareError, setPrepareError] = useState<string | null>(null)
-  const today = new Date().toISOString().slice(0, 10)
+  const today = todayIn(book.timezone)
   const bookStart = new Date(book.startsAt)
-  const startsAt = bookStart.toISOString().slice(0, 10)
+  const startsAt = dayIn(book.startsAt, book.timezone)
   const form = useZodForm<Values>(schema, {
     defaultValues: {
       kind: "PAYABLE",
@@ -192,7 +214,7 @@ export function FinanceSupplierEntryForm({
         )
         if (!moneyAccount) {
           form.setError("moneyAccountId", {
-            message: "Choose a money account.",
+            message: "Choose where the money came from.",
           })
           return
         }
@@ -205,7 +227,7 @@ export function FinanceSupplierEntryForm({
       }
       if (!opening && (values.date < startsAt || values.date > today)) {
         form.setError("date", {
-          message: `Choose a date from ${startsAt} to ${today}.`,
+          message: `Pick a date from ${plainDay(startsAt)} to today.`,
         })
         return
       }
@@ -344,56 +366,65 @@ export function FinanceSupplierEntryForm({
   }
 
   if (review) {
+    const amount = moneyText(review.amountMinor, currency)
+    const owed = opening && review.kind === "PAYABLE"
+    const paidFrom = accounts.find(
+      (account) => account.name === review.moneyAccountName,
+    )?.id
     return (
       <FinanceReview
         command={command}
         onBack={() => setReview(null)}
         onConfirm={() => submit(review)}
-      >
-        <h4 className="font-medium">
-          {opening
-            ? review.kind === "PAYABLE"
-              ? "Owed before you started"
-              : "Paid ahead before you started"
-            : "Pay ahead"}
-        </h4>
-        <dl className="grid gap-2 text-sm sm:grid-cols-[auto_1fr] sm:gap-x-4">
-          <dt className="text-muted-foreground">Supplier</dt>
-          <dd className="font-medium">
-            {review.supplier.code} · {review.supplier.name}
-          </dd>
-          <dt className="text-muted-foreground">Entry</dt>
-          <dd>
-            {opening
-              ? review.kind === "PAYABLE"
-                ? "You owe"
-                : "Paid ahead"
-              : "Paid ahead"}
-          </dd>
-          <dt className="text-muted-foreground">Amount</dt>
-          <dd className="font-medium tabular-nums">
-            {formatFinanceMoney(review.amountMinor, book.currencyCode)}
-          </dd>
-          <dt className="text-muted-foreground">Date</dt>
-          <dd>{review.effectiveAt.toISOString()}</dd>
-          {review.moneyAccountName ? (
+        confirmLabel={opening ? "Add starting balance" : "Record payment"}
+        sentence={
+          opening ? (
+            owed ? (
+              <>
+                On {plainDay(startsAt)} you owed {review.supplier.name}{" "}
+                <b>{amount}</b>.
+              </>
+            ) : (
+              <>
+                On {plainDay(startsAt)} you had paid {review.supplier.name}{" "}
+                <b>{amount}</b> ahead.
+              </>
+            )
+          ) : (
             <>
-              <dt className="text-muted-foreground">Paid from</dt>
-              <dd>{review.moneyAccountName}</dd>
+              You paid {review.supplier.name} <b>{amount}</b> ahead, from{" "}
+              {review.moneyAccountName}.
             </>
-          ) : null}
-          <dt className="text-muted-foreground">Description</dt>
-          <dd className="break-words">{review.description}</dd>
-        </dl>
-        <Alert appearance="dashboard">
-          <AlertDescription>
-            {opening
-              ? review.kind === "PAYABLE"
-                ? "This records what you owed on your start date. It is not new spending and no money moves."
-                : "This records money you had paid ahead on your start date. It is kept apart from what you owe."
-              : "This records money you paid. It does not send money or confirm that stock arrived."}
-          </AlertDescription>
-        </Alert>
+          )
+        }
+        changes={changes([
+          opening
+            ? null
+            : balanceChange(
+                balances,
+                paidFrom,
+                -BigInt(review.amountMinor),
+                currency,
+              ),
+          {
+            label: owed
+              ? `You owe ${review.supplier.name}`
+              : `Paid ahead to ${review.supplier.name}`,
+            after: `+${amount}`,
+          },
+        ])}
+        note={
+          opening
+            ? "No money moves, and it doesn't count as spending this month."
+            : "This records money you already paid. It doesn't send money or confirm that stock arrived."
+        }
+      >
+        <FinanceDetails
+          rows={[
+            ["Date", plainDay(dayIn(review.effectiveAt, book.timezone))],
+            ["Note", review.description],
+          ]}
+        />
       </FinanceReview>
     )
   }
@@ -404,34 +435,28 @@ export function FinanceSupplierEntryForm({
   return (
     <form onSubmit={form.handleSubmit((values) => void prepare(values))}>
       <FieldGroup className="min-w-0 grid gap-5">
-        <p className="text-sm">
-          {supplierQuery.data.supplier.code} ·{" "}
-          {supplierQuery.data.supplier.name}
+        <p className="text-sm text-muted-foreground">
+          {supplierQuery.data.supplier.name} ·{" "}
+          {supplierQuery.data.supplier.code}
         </p>
         {opening ? (
           <>
             <FinanceField
-              label="Starting balance type"
+              label={`On ${plainDay(startsAt)}…`}
+              description="Use what stood on the day you started using Finance. You can add one of each."
               error={form.formState.errors.kind?.message}
             >
-              <FormSelectControl
+              <FormRadioChoices
                 control={form.control}
                 name="kind"
-                disabled={disabled}
+                label="Starting balance"
+                inline
                 options={[
-                  { value: "PAYABLE", label: "Owed before you started" },
-                  { value: "ADVANCE", label: "Paid ahead before you started" },
+                  { value: "PAYABLE", label: "You owed them" },
+                  { value: "ADVANCE", label: "You had paid them ahead" },
                 ]}
               />
             </FinanceField>
-            <Alert appearance="dashboard">
-              <AlertDescription>
-                Starting balances use your Finance start date, {startsAt}. What
-                you owe and what you paid ahead are kept apart. A starting
-                balance is not new spending and no money moves. Each Supplier
-                can have one of each type, even if an earlier one was undone.
-              </AlertDescription>
-            </Alert>
           </>
         ) : noMoneyAccounts ? (
           <Alert appearance="dashboard">
@@ -442,12 +467,13 @@ export function FinanceSupplierEntryForm({
           </Alert>
         ) : null}
         <FinanceField
-          label={`Amount (${book.currencyCode})`}
+          label="Amount"
           error={form.formState.errors.amount?.message}
         >
           <MoneyInput
             currencyCode={book.currencyCode}
             inputMode="decimal"
+            placeholder="0.00"
             disabled={disabled || noMoneyAccounts}
             {...form.register("amount")}
           />
@@ -461,36 +487,35 @@ export function FinanceSupplierEntryForm({
               control={form.control}
               name="moneyAccountId"
               disabled={disabled}
-              options={accounts.map((account) => ({
-                value: account.id,
-                label: account.name,
-              }))}
+              placeholder="Choose an account"
+              options={paidFromOptions(accounts, balances, currency, false)}
             />
           </FinanceField>
         ) : null}
         <FinanceField
-          label="Description"
+          label={opening ? "Note" : "What it's for"}
           error={form.formState.errors.description?.message}
         >
           <Input
             autoComplete="off"
             maxLength={400}
-            placeholder="What is this balance or payment for?"
+            placeholder={
+              opening ? "Chicks delivered in December" : "Maize for November"
+            }
             disabled={disabled || noMoneyAccounts}
             {...form.register("description")}
           />
         </FinanceField>
         {opening ? (
           <p className="text-sm text-muted-foreground">
-            Date: {startsAt} (your Finance start date).
+            Dated {plainDay(startsAt)}, the day you started using Finance.
           </p>
         ) : (
           <FinanceField
-            label="Payment date"
+            label="Date paid"
             error={form.formState.errors.date?.message}
           >
-            <FormDateControl
-              type="date"
+            <FormDatePicker
               min={startsAt}
               max={today}
               disabled={disabled || noMoneyAccounts}
@@ -519,15 +544,12 @@ export function FinanceSupplierEntryForm({
             </Button>
           </Alert>
         ) : null}
-        <FormActions>
-          <Button type="submit" disabled={disabled || noMoneyAccounts}>
-            {preparing
-              ? "Checking Supplier…"
-              : opening
-                ? "Review starting balance"
-                : "Review payment"}
-          </Button>
-        </FormActions>
+        <FinanceFormFooter
+          onCancel={() => void close()}
+          submitLabel="Review"
+          isSubmitting={preparing}
+          disabled={disabled || noMoneyAccounts}
+        />
       </FieldGroup>
     </form>
   )
