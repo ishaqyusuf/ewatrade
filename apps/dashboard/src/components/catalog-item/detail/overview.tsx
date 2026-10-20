@@ -6,7 +6,6 @@ import {
   useInlineSelection,
 } from "@/components/tables/core"
 import { useCatalogDetailParams } from "@/hooks/use-catalog-detail-params"
-import { useCatalogItemParams } from "@/hooks/use-catalog-item-params"
 import {
   Button,
   Card,
@@ -41,8 +40,7 @@ export function CatalogDetailOverview({
   readOnly: boolean
   readScope: CatalogDetailReadScope
 }) {
-  const { setParams, close } = useCatalogDetailParams()
-  const { setParams: setItemParams } = useCatalogItemParams()
+  const { setParams, setView } = useCatalogDetailParams()
   const { item, lastOrder } = detail
   const product = item.product
   const affordances = catalogDetailAffordances({
@@ -187,10 +185,7 @@ export function CatalogDetailOverview({
             <Button
               size="sm"
               variant="outline"
-              onClick={async () => {
-                await close()
-                await setItemParams({ productUnits: product.id })
-              }}
+              onClick={() => void setView("units")}
             >
               Units
             </Button>

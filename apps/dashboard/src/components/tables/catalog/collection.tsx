@@ -24,7 +24,6 @@ import { CatalogItemActions } from "./item-actions"
 type CollectionProps = {
   rows: Row<CatalogRow>[]
   storeId: string
-  openUnits: (productId: string) => void
   openDetail: (itemId: string) => void
 }
 
@@ -121,12 +120,7 @@ function CatalogItemMedia({
 }
 
 /** Grid columns are fixed by screen width: 1, then 2 at md, 3 at lg, 4 at xl. */
-function CatalogGrid({
-  rows,
-  storeId,
-  openUnits,
-  openDetail,
-}: CollectionProps) {
+function CatalogGrid({ rows, storeId, openDetail }: CollectionProps) {
   return (
     <ul
       aria-label="Catalog item grid"
@@ -150,11 +144,7 @@ function CatalogGrid({
                   <RowSelectCheckbox row={row} label={`Select ${item.name}`} />
                 </div>
                 <div className="absolute top-2 right-2 rounded-md bg-background ring-1 ring-border">
-                  <CatalogItemActions
-                    item={item}
-                    storeId={storeId}
-                    openUnits={openUnits}
-                  />
+                  <CatalogItemActions item={item} />
                 </div>
               </div>
               <div className="flex min-w-0 flex-1 flex-col gap-1 px-3.5 pt-3 pb-3.5">
@@ -181,12 +171,7 @@ function CatalogGrid({
 }
 
 /** One bordered panel with a divided row per item; figures wrap under the name on phones. */
-function CatalogList({
-  rows,
-  storeId,
-  openUnits,
-  openDetail,
-}: CollectionProps) {
+function CatalogList({ rows, storeId, openDetail }: CollectionProps) {
   return (
     <ul aria-label="Catalog item list" className="divide-y rounded-lg border">
       {rows.map((row) => {
@@ -213,11 +198,7 @@ function CatalogList({
             <ListFigure label="Price" value={getCatalogPrice(item)} />
             <ListFigure label="Stock" value={getCatalogStock(item)} />
             <div className="max-md:col-start-4 max-md:row-start-1">
-              <CatalogItemActions
-                item={item}
-                storeId={storeId}
-                openUnits={openUnits}
-              />
+              <CatalogItemActions item={item} />
             </div>
           </li>
         )

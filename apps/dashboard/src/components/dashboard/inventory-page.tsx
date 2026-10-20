@@ -1,6 +1,5 @@
 "use client"
 
-import { CatalogUnitConfigurationSheet } from "@/components/catalog-item/catalog-unit-configuration-sheet"
 import { WorkspaceError } from "@/components/dashboard/workspace-error"
 import { InventoryHeader } from "@/components/inventory/inventory-header"
 import { ScrollableContent } from "@/components/scrollable-content"
@@ -69,7 +68,6 @@ export function InventoryPage({
         </div>
       </ScrollableContent>
       <InventoryOperationSheet store={store} />
-      <CatalogUnitConfigurationSheet />
     </TableToolbarSlotProvider>
   )
 }

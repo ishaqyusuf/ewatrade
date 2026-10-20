@@ -9,12 +9,16 @@ import type {
 } from "@ewatrade/api/trpc/routers/_app"
 import { Button, Sheet } from "@ewatrade/ui"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { useEffect, useRef, useState } from "react"
+import { type ComponentProps, useEffect, useRef, useState } from "react"
 import { useCatalogThemeClass } from "./catalog-appearance"
 import { CatalogImageEditor } from "./catalog-image-editor"
 import { CatalogPhotoPreview } from "./catalog-photo-preview"
 
-type Item = RouterOutputs["catalog"]["getItem"]
+// The details sheet passes its own read of the item, so only the fields the editor uses are required.
+type Item = Pick<
+  RouterOutputs["catalog"]["getItem"],
+  "id" | "name" | "photos" | "illustrations" | "category" | "kind"
+>
 
 export function CatalogSavedPhotos({
   item,
@@ -54,16 +58,52 @@ export function CatalogSavedPhotos({
   )
 }
 
-function SavedPhotoEditor({
+/** Images as a view inside the item's details sheet: it saves, then returns to the item. */
+export function CatalogSavedPhotosView({
   item,
   storeId,
-  close,
+  storeName,
+  back,
   onBusy,
+  finalFocus,
 }: {
   item: Item
   storeId: string
+  storeName: string
+  back(): void
+  onBusy(value: boolean): void
+  finalFocus?: ComponentProps<typeof SheetFrame>["finalFocus"]
+}) {
+  return (
+    <SavedPhotoEditor
+      key={`${item.id}:${storeId}`}
+      item={item}
+      storeId={storeId}
+      description={`${item.name} · ${storeName}`}
+      back={{ label: `Back to ${item.name}`, onClick: back }}
+      close={back}
+      onBusy={onBusy}
+      finalFocus={finalFocus}
+    />
+  )
+}
+
+function SavedPhotoEditor({
+  item,
+  storeId,
+  description = item.name,
+  back,
+  close,
+  onBusy,
+  finalFocus,
+}: {
+  item: Item
+  storeId: string
+  description?: string
+  back?: { label: string; onClick: () => void }
   close(): void
   onBusy(value: boolean): void
+  finalFocus?: ComponentProps<typeof SheetFrame>["finalFocus"]
 }) {
   const themeClass = useCatalogThemeClass()
   const trpc = useTRPC()
@@ -146,8 +186,19 @@ function SavedPhotoEditor({
     <SheetFrame
       title="Images"
       popupClassName={themeClass}
-      description={item.name}
+      description={description}
+      back={
+        back
+          ? {
+              label: back.label,
+              onClick: () => {
+                if (!busy.current) back.onClick()
+              },
+            }
+          : undefined
+      }
       closeDisabled={saving}
+      finalFocus={finalFocus}
       footer={
         <Button disabled={saving} onClick={() => void save()}>
           {saving

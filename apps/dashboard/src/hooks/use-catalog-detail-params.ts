@@ -6,12 +6,14 @@ export function useCatalogDetailParams() {
   const [params, setParams] = useQueryStates(catalogDetailParamParsers, {
     history: "push",
   })
+  /** Opens the item's details sheet, or one of its views (Images, Units) directly. */
   const open = useCallback(
-    (id: string) =>
+    (id: string, view?: CatalogDetailView) =>
       setParams({
         catalogDetail: id,
         catalogDetailTab: null,
         catalogActivity: null,
+        catalogDetailView: view ?? null,
       }),
     [setParams],
   )
@@ -21,7 +23,12 @@ export function useCatalogDetailParams() {
         catalogDetail: null,
         catalogDetailTab: null,
         catalogActivity: null,
+        catalogDetailView: null,
       }),
+    [setParams],
+  )
+  const setView = useCallback(
+    (view: CatalogDetailView | null) => setParams({ catalogDetailView: view }),
     [setParams],
   )
   return {
@@ -29,10 +36,13 @@ export function useCatalogDetailParams() {
     setParams,
     open,
     close,
+    setView,
   }
 }
 
-/** The canonical detail modal's query contract, also consumed by handoff regression checks. */
+export type CatalogDetailView = "images" | "units"
+
+/** The canonical details sheet's query contract, also consumed by handoff regression checks. */
 export const catalogDetailParamParsers = {
   catalogDetail: parseAsString,
   catalogDetailTab: parseAsStringEnum([
@@ -46,4 +56,6 @@ export const catalogDetailParamParsers = {
     "orders",
     "stock",
   ]).withDefault("all"),
+  /** A view inside the details sheet that changes the item; it returns to the item. */
+  catalogDetailView: parseAsStringEnum<CatalogDetailView>(["images", "units"]),
 }

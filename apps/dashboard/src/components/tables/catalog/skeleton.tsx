@@ -10,7 +10,7 @@ export function CatalogTableSkeleton({
 }: {
   settings?: Partial<TableSettings>
 }) {
-  const columns = useMemo(() => createCatalogColumns(() => {}), [])
+  const columns = useMemo(() => createCatalogColumns(), [])
   return (
     <TableSkeleton
       columns={columns}

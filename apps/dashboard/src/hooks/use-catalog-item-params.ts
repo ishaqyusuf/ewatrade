@@ -18,7 +18,6 @@ export const catalogItemParamParsers = {
   catalogCreatePrice: parseAsString,
   catalogConversation: parseAsString,
   ...catalogFilterParams,
-  productUnits: parseAsString,
 }
 
 export function useCatalogItemParams() {
@@ -36,7 +35,6 @@ export function useCatalogItemParams() {
       catalogKind?: (typeof CATALOG_KINDS)[number] | null
       catalogStatus?: (typeof CATALOG_STATUSES)[number] | null
       catalogQuery?: string | null
-      productUnits?: string | null
     } | null,
   ) {
     return updateParams(
@@ -48,7 +46,6 @@ export function useCatalogItemParams() {
         catalogCreateName: null,
         catalogCreatePrice: null,
         catalogConversation: null,
-        productUnits: null,
       },
       { history: "push" },
     )
@@ -72,7 +69,6 @@ export function useCatalogItemParams() {
     hasFilters: Boolean(
       params.catalogKind || params.catalogStatus || params.catalogQuery?.trim(),
     ),
-    productUnitsId: params.productUnits,
     /** Opens the item sheet; editing a saved item passes its id. */
     editCatalogItem: (itemId: string) =>
       setParams({ catalogItem: "edit", catalogEditItem: itemId }),

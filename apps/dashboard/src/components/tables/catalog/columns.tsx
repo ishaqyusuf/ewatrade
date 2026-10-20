@@ -147,7 +147,6 @@ export function CatalogKindBadge({
 }
 
 export function createCatalogColumns(
-  openUnits: (productId: string) => void,
   storeId = "",
   openDetail: (itemId: string) => void = () => {},
 ): ColumnDef<CatalogRow>[] {
@@ -264,13 +263,7 @@ export function createCatalogColumns(
         className: "z-20 border-l bg-background md:sticky",
         skeleton: { type: "icon" },
       },
-      cell: ({ row }) => (
-        <CatalogItemActions
-          item={row.original}
-          storeId={storeId}
-          openUnits={openUnits}
-        />
-      ),
+      cell: ({ row }) => <CatalogItemActions item={row.original} />,
     },
   ]
 }

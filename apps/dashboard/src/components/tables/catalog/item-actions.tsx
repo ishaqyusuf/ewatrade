@@ -1,7 +1,7 @@
 "use client"
 
 import { useCatalogThemeClass } from "@/components/catalog-item/catalog-appearance"
-import { CatalogSavedPhotos } from "@/components/catalog-item/catalog-saved-photos"
+import { useCatalogDetailParams } from "@/hooks/use-catalog-detail-params"
 import { useCatalogItemParams } from "@/hooks/use-catalog-item-params"
 import { useInventoryParams } from "@/hooks/use-inventory-params"
 import { INVENTORY_ACTIONS } from "@/lib/inventory-operations"
@@ -26,19 +26,11 @@ import {
   Upload01Icon,
 } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
-import { useState } from "react"
 import type { CatalogRow } from "./columns"
 
-export function CatalogItemActions({
-  item,
-  storeId,
-  openUnits,
-}: {
-  item: CatalogRow
-  storeId: string
-  openUnits(productId: string): void
-}) {
-  const [imagesOpen, setImagesOpen] = useState(false)
+/** Images and Units change the item, so they open as views inside its details sheet. */
+export function CatalogItemActions({ item }: { item: CatalogRow }) {
+  const { open: openDetail } = useCatalogDetailParams()
   const themeClass = useCatalogThemeClass()
   const { setParams } = useInventoryParams()
   const { editCatalogItem } = useCatalogItemParams()
@@ -81,7 +73,7 @@ export function CatalogItemActions({
             <DropdownMenuItem
               onClick={(event) => {
                 event.stopPropagation()
-                setImagesOpen(true)
+                void openDetail(item.id, "images")
               }}
             >
               <HugeiconsIcon icon={Image01Icon} aria-hidden="true" />
@@ -133,7 +125,7 @@ export function CatalogItemActions({
               <DropdownMenuItem
                 onClick={(event) => {
                   event.stopPropagation()
-                  openUnits(productId)
+                  void openDetail(item.id, "units")
                 }}
               >
                 <HugeiconsIcon icon={RulerIcon} aria-hidden="true" />
@@ -143,12 +135,6 @@ export function CatalogItemActions({
           </DropdownMenuGroup>
         </DropdownMenuContent>
       </DropdownMenu>
-      <CatalogSavedPhotos
-        item={item}
-        storeId={storeId}
-        open={imagesOpen}
-        onOpenChange={setImagesOpen}
-      />
     </>
   )
 }

@@ -6,7 +6,6 @@ import {
 } from "@/components/catalog-item/catalog-appearance"
 import { CatalogHeader } from "@/components/catalog-item/catalog-header"
 import { CatalogItemSheet } from "@/components/catalog-item/catalog-item-sheet"
-import { CatalogUnitConfigurationSheet } from "@/components/catalog-item/catalog-unit-configuration-sheet"
 import { WorkspaceError } from "@/components/dashboard/workspace-error"
 import { ScrollableContent } from "@/components/scrollable-content"
 import { InventoryOperationSheet } from "@/components/sheets/inventory-operation-sheet"
@@ -91,7 +90,6 @@ export function CatalogItemsPage({
         </ScrollableContent>
       </TableToolbarSlotProvider>
       <CatalogInventorySheet store={store} />
-      <CatalogUnitConfigurationSheet />
       <CatalogItemSheet
         businessProfileKey={store.businessProfileKey}
         currencyCode={store.currencyCode}

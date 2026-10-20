@@ -12,7 +12,7 @@ import type { DirectoryView } from "@/utils/directory-view-settings"
 import { type TableSettings, getColumnIds } from "@/utils/table-settings"
 import { useSuspenseInfiniteQuery } from "@tanstack/react-query"
 import { getCoreRowModel, useReactTable } from "@tanstack/react-table"
-import { useCallback, useMemo } from "react"
+import { useMemo } from "react"
 import { type CatalogRow, createCatalogColumns } from "./columns"
 import { CatalogTableView } from "./table-view"
 
@@ -30,7 +30,7 @@ export function CatalogDataTable({
 }) {
   const trpc = useTRPC()
   const { open } = useCatalogDetailParams()
-  const { filter, hasFilters, setParams } = useCatalogItemParams()
+  const { filter, hasFilters } = useCatalogItemParams()
   const { sort } = useSortParams({ fields: catalogSortFields })
   const query = useSuspenseInfiniteQuery(
     trpc.catalog.listItemsPage.infiniteQueryOptions(
@@ -53,13 +53,9 @@ export function CatalogDataTable({
     getRowId: getCatalogItemId,
     scope: JSON.stringify([storeId, filter.kind, filter.status, filter.query]),
   })
-  const openUnits = useCallback(
-    (productId: string) => void setParams({ productUnits: productId }),
-    [setParams],
-  )
   const columns = useMemo(
-    () => createCatalogColumns(openUnits, storeId, open),
-    [openUnits, storeId, open],
+    () => createCatalogColumns(storeId, open),
+    [storeId, open],
   )
   const columnIds = useMemo(() => getColumnIds(columns), [columns])
   const tableSettings = useTableSettings({
@@ -96,7 +92,6 @@ export function CatalogDataTable({
       table={table}
       view={view}
       storeId={storeId}
-      openUnits={openUnits}
       openDetail={open}
       hasFilters={hasFilters}
       hasNextPage={query.hasNextPage}

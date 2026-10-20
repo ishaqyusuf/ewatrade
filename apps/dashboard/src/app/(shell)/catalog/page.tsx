@@ -83,9 +83,6 @@ export default async function CatalogRoutePage({
           ),
         ]
       : []),
-    ...(typeof params.productUnits === "string" && params.productUnits
-      ? [prefetch(trpc.catalog.listItems.queryOptions({}))]
-      : []),
   ])
 
   return (

@@ -32,7 +32,6 @@ export function CatalogTableView({
   table,
   view,
   storeId,
-  openUnits,
   openDetail,
   hasFilters,
   hasNextPage,
@@ -48,7 +47,6 @@ export function CatalogTableView({
   table: ReactTable<CatalogRow>
   view: DirectoryView
   storeId: string
-  openUnits: (productId: string) => void
   openDetail: (itemId: string) => Promise<unknown>
   hasFilters: boolean
   hasNextPage: boolean
@@ -140,7 +138,6 @@ export function CatalogTableView({
           view={view}
           rows={rows}
           storeId={storeId}
-          openUnits={openUnits}
           openDetail={(itemId) => void openDetail(itemId)}
         />
       ) : (
