@@ -86,11 +86,8 @@ export function FinanceHeader({
               {viewControl}
               <FinancePageActions view={view} />
             </>
-          ) : (
-            <OpenFinanceSheet mode="setup" primary>
-              Set up finance
-            </OpenFinanceSheet>
-          )
+          ) : // Not set up yet: the start-date form sits on the page itself.
+          null
         }
       >
         {ready && view === "spending" ? <ExpenseSearchFilter /> : null}

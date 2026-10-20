@@ -28,6 +28,7 @@ import {
 import { FinanceHeader, type FinanceView } from "./finance-header"
 import { FinanceOverview } from "./finance-overview"
 import { FinanceReports } from "./finance-reports"
+import { FinanceSetupForm } from "./setup-form"
 import type { FinanceBook } from "./types"
 
 const UNSAVED_VIEW: DirectoryViewSettings = { scope: "", view: null }
@@ -210,15 +211,16 @@ function FinanceDirectoryPage({
 
 function FinanceSetupIntro() {
   return (
-    <section className="grid max-w-xl gap-3 py-10">
+    <section className="my-6 grid max-w-xl gap-3 border border-border p-5">
       <h2 className="text-xl font-medium">
         Start tracking your business money
       </h2>
-      <p className="text-muted-foreground">
-        Pick a start date, then add what is in your cash, bank and mobile money
-        accounts on that day. Add expenses as you pay them. Older sales and
-        payments aren&apos;t brought in.
+      <p className="text-sm text-muted-foreground">
+        Pick the day you start tracking money in EwaTrade. Next you'll add what
+        each cash, bank and mobile money account held on that day. Older sales
+        and payments aren&apos;t brought in.
       </p>
+      <FinanceSetupForm />
     </section>
   )
 }
