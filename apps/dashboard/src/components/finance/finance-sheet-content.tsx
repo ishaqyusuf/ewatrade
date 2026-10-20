@@ -4,6 +4,7 @@ import { FormFeedback } from "@/components/forms/form-feedback"
 import { FinanceContent } from "@/components/finance/finance-content"
 import { financeSheetTitles } from "@/components/finance/finance-sheet-header"
 import { useFinanceForm } from "@/components/finance/form-context"
+import { FinanceDialogFrame } from "@/components/modals/finance-dialog-frame"
 import { SheetFrame } from "@/components/sheets/sheet-frame"
 import { useFinanceInvalidation } from "@/hooks/use-finance-invalidation"
 import { useFinanceParams } from "@/hooks/use-finance-params"
@@ -299,8 +300,9 @@ export function FinanceSheetContent({
     tenantId,
     trpc,
   ])
+  const Frame = financeSheet === "bank-import" ? FinanceDialogFrame : SheetFrame
   return (
-    <SheetFrame
+    <Frame
       title={financeSheet ? financeSheetTitles[financeSheet] : "Finance"}
       description={
         locked
@@ -309,7 +311,7 @@ export function FinanceSheetContent({
       }
       closeDisabled={locked}
       popupClassName={
-        financeSheet === "bank-statement" || financeSheet === "bank-import"
+        financeSheet === "bank-statement"
           ? "sm:w-[min(900px,100vw)] sm:max-w-[900px]"
           : undefined
       }
@@ -353,6 +355,6 @@ export function FinanceSheetContent({
           />
         </>
       ) : null}
-    </SheetFrame>
+    </Frame>
   )
 }

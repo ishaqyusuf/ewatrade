@@ -3,7 +3,7 @@
 import { FinanceSheetContent } from "@/components/finance/finance-sheet-content"
 import { FinanceFormProvider } from "@/components/finance/form-context"
 import { useFinanceParams } from "@/hooks/use-finance-params"
-import { Sheet } from "@ewatrade/ui"
+import { Dialog, Sheet } from "@ewatrade/ui"
 import { useCallback, useRef, useState } from "react"
 
 export function FinanceSheet({
@@ -18,6 +18,8 @@ export function FinanceSheet({
   const { financeSheet, close } = useFinanceParams()
   const lockedRef = useRef(false)
   const open = Boolean(financeSheet)
+  // Upload statement is a centred dialog (choose file → map columns → check).
+  const Root = financeSheet === "bank-import" ? Dialog : Sheet
   const [closeError, setCloseError] = useState<string | null>(null)
 
   const closeSheet = useCallback(async () => {
@@ -27,7 +29,7 @@ export function FinanceSheet({
   }, [close])
 
   return (
-    <Sheet
+    <Root
       open={open}
       onOpenChange={(nextOpen, details) => {
         if (nextOpen) return
@@ -58,6 +60,6 @@ export function FinanceSheet({
           />
         </FinanceFormProvider>
       ) : null}
-    </Sheet>
+    </Root>
   )
 }
