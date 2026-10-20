@@ -52,6 +52,14 @@ export const financeSupplierAdvanceSchema = command
   })
   .strict()
 
+/** Pay toward a Supplier's starting balance (opening payable) from a money account. */
+export const financeSupplierOpeningPaymentSchema =
+  financeSupplierAdvanceSchema.strict()
+
+export const financeSupplierOpeningBalanceSchema = z
+  .object({ bookId: id, supplierId: id })
+  .strict()
+
 export const financeSupplierReversalSchema = command
   .extend({
     entryId: id,

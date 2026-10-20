@@ -97,6 +97,12 @@ export {
   type FinanceSupplierEntryReversalInput,
 } from "./supplier-writes"
 export { getFinanceSupplierAdvanceReview } from "./supplier-advance-review"
+export {
+  getFinanceSupplierOpeningBalance,
+  payFinanceSupplierOpening,
+  payFinanceSupplierOpeningInTransaction,
+  type FinanceSupplierOpeningPaymentInput,
+} from "./supplier-opening-payment"
 export { getFinanceSupplierCreationReview } from "./supplier-create-review"
 export {
   listFinanceSuppliers,

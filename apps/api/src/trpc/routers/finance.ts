@@ -20,6 +20,7 @@ import {
   getFinancePurchaseBill,
   getFinancePurchaseRecognition,
   getFinanceReports,
+  getFinanceSupplierOpeningBalance,
   getFinanceSupplierPayableAging,
   getFinanceSupplierStatement,
   getFinanceYearEndPreview,
@@ -38,6 +39,7 @@ import {
   listFinanceSuppliers,
   payFinanceBill,
   payFinancePurchaseBill,
+  payFinanceSupplierOpening,
   recognizeFinancePurchase,
   recordFinanceCashCount,
   recordFinanceExpense,
@@ -107,6 +109,8 @@ import { financeSupplierPayableAgingSchema } from "../../schemas/finance-supplie
 import {
   financeSupplierAdvanceSchema,
   financeSupplierCreateSchema,
+  financeSupplierOpeningBalanceSchema,
+  financeSupplierOpeningPaymentSchema,
   financeSupplierOpeningSchema,
   financeSupplierReversalSchema,
   financeSupplierStatementSchema,
@@ -234,6 +238,19 @@ export const financeRouter = createTRPCRouter({
     .input(financeSuppliersSchema)
     .query(({ ctx, input }) =>
       listFinanceSuppliers(ctx.db, { ...input, ...ctx.financeActor }),
+    ),
+  paySupplierOpening: financeProcedure
+    .input(financeSupplierOpeningPaymentSchema)
+    .mutation(({ ctx, input }) =>
+      payFinanceSupplierOpening(ctx.db, { ...input, ...ctx.financeActor }),
+    ),
+  supplierOpeningBalance: financeProcedure
+    .input(financeSupplierOpeningBalanceSchema)
+    .query(({ ctx, input }) =>
+      getFinanceSupplierOpeningBalance(ctx.db, {
+        ...input,
+        ...ctx.financeActor,
+      }),
     ),
   supplierStatement: financeProcedure
     .input(financeSupplierStatementSchema)

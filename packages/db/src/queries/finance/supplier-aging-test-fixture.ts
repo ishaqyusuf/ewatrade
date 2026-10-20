@@ -13,10 +13,11 @@ export function agingSource(input: {
   reversal?: SupplierAgingSource
 }): SupplierAgingSource {
   const kind = input.kind ?? "PURCHASE_BILL"
+  // Opening entries sit on the start date; a starting-balance payment does not.
+  const atStart = kind.startsWith("OPENING_") && kind !== "OPENING_PAYMENT"
   const amount = input.amount ?? BigInt(1000)
   const effectiveAt =
-    input.effectiveAt ??
-    (kind.startsWith("OPENING_") ? start : date("2026-01-02"))
+    input.effectiveAt ?? (atStart ? start : date("2026-01-02"))
   const billId =
     input.billId === undefined
       ? kind === "PURCHASE_BILL"
@@ -26,7 +27,9 @@ export function agingSource(input: {
   const payable =
     kind === "PURCHASE_BILL" || kind === "OPENING_PAYABLE"
       ? amount
-      : kind === "PURCHASE_PAYMENT" || kind === "ADVANCE_ALLOCATION"
+      : kind === "PURCHASE_PAYMENT" ||
+          kind === "ADVANCE_ALLOCATION" ||
+          kind === "OPENING_PAYMENT"
         ? -amount
         : kind === "ALLOCATION_RELEASE"
           ? amount
@@ -78,7 +81,7 @@ export function agingSource(input: {
     if (!control) throw new Error("Missing control")
     const other = line(
       "other",
-      kind.startsWith("OPENING_") ? "OPENING_EQUITY" : "CASH",
+      atStart ? "OPENING_EQUITY" : "CASH",
       amount,
       true,
     )
@@ -109,7 +112,11 @@ export function agingSource(input: {
   const paymentId = kind === "PURCHASE_PAYMENT" ? `payment-${input.id}` : null
   const moneyAccountId =
     original?.moneyAccountId ??
-    (kind === "ADVANCE" || kind === "PURCHASE_PAYMENT" ? "other" : null)
+    (kind === "ADVANCE" ||
+    kind === "PURCHASE_PAYMENT" ||
+    kind === "OPENING_PAYMENT"
+      ? "other"
+      : null)
   return {
     id: input.id,
     bookId: "book",
@@ -168,7 +175,7 @@ export function agingSource(input: {
         ? original.kind === "PURCHASE_BILL"
           ? "recognition-reversal"
           : original.id
-        : kind.startsWith("OPENING_")
+        : atStart
           ? "supplier"
           : (paymentId ?? input.id),
       effectiveAt,

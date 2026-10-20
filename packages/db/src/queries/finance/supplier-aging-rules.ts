@@ -216,6 +216,12 @@ export function calculateSupplierPayableAging(input: {
     { source: SupplierAgingSource; outstandingMinor: bigint }
   >()
   const reversed = new Set<string>()
+  // A Supplier has at most one opening payable; its payments settle it.
+  const openingPrincipalId = () => {
+    for (const [id, item] of principals)
+      if (item.source.kind === "OPENING_PAYABLE") return id
+    return null
+  }
   const released = new Map<string, bigint>()
   const advanceResiduals = new Map<string, bigint>()
   let lastSequence = BigInt(0)
@@ -260,6 +266,7 @@ export function calculateSupplierPayableAging(input: {
           "ADVANCE",
           "PURCHASE_BILL",
           "PURCHASE_PAYMENT",
+          "OPENING_PAYMENT",
         ].includes(original.kind) ||
         reversed.has(original.id) ||
         journal.reversalOfId !== original.journalEntry.id ||
@@ -304,7 +311,11 @@ export function calculateSupplierPayableAging(input: {
         advanceResiduals.set(original.id, BigInt(0))
       }
       principalId =
-        original.kind === "OPENING_PAYABLE" ? original.id : original.billId
+        original.kind === "OPENING_PAYABLE"
+          ? original.id
+          : original.kind === "OPENING_PAYMENT"
+            ? openingPrincipalId()
+            : original.billId
       reversed.add(original.id)
     } else {
       if (source.reversalOfId !== null || journal.reversalOfId !== null)
@@ -315,7 +326,34 @@ export function calculateSupplierPayableAging(input: {
         "ALLOCATION_RELEASE",
       ].includes(source.kind)
       if (source.side !== (creditSide ? "CREDIT" : "DEBIT")) conflict()
-      if (
+      if (source.kind === "OPENING_PAYMENT") {
+        // Paying toward the Supplier's starting balance from a money account.
+        const openingId = openingPrincipalId()
+        const opening = openingId ? principals.get(openingId) : undefined
+        if (
+          !openingId ||
+          !opening ||
+          reversed.has(openingId) ||
+          journal.sourceKind !== "SUPPLIER_OPENING_PAYMENT" ||
+          journal.sourceId !== source.id ||
+          source.billId !== null ||
+          source.paymentId !== null ||
+          source.bill !== null ||
+          source.moneyAccountId === null ||
+          source.effectiveAt < opening.source.effectiveAt ||
+          journal.lines.length !== 2 ||
+          !journal.lines.some(
+            (line) =>
+              line.accountId === source.moneyAccountId &&
+              line.creditMinor === amount &&
+              line.account.kind === "ASSET" &&
+              ["CASH", "BANK", "CLEARING"].includes(line.account.purpose),
+          )
+        )
+          conflict()
+        expectedPayable = -amount
+        principalId = openingId
+      } else if (
         ["OPENING_PAYABLE", "OPENING_ADVANCE", "ADVANCE"].includes(source.kind)
       ) {
         const sourceKind = `SUPPLIER_${source.kind}`

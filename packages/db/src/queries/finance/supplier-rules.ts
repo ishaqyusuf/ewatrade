@@ -37,7 +37,12 @@ type SupplierJournalLine = {
 }
 
 export function assertOriginalSupplierPosting(input: {
-  kind: "OPENING_PAYABLE" | "OPENING_ADVANCE" | "ADVANCE" | "REVERSAL"
+  kind:
+    | "OPENING_PAYABLE"
+    | "OPENING_ADVANCE"
+    | "ADVANCE"
+    | "OPENING_PAYMENT"
+    | "REVERSAL"
   side: "DEBIT" | "CREDIT"
   amountMinor: bigint
   moneyAccountId: string | null
@@ -61,6 +66,9 @@ export function assertOriginalSupplierPosting(input: {
   openingEquityAccountId: string
 }) {
   const { journal } = input
+  // Advances and starting-balance payments come out of a money account.
+  const paidFromMoney =
+    input.kind === "ADVANCE" || input.kind === "OPENING_PAYMENT"
   if (
     input.kind === "REVERSAL" ||
     input.side !== (input.kind === "OPENING_PAYABLE" ? "CREDIT" : "DEBIT") ||
@@ -69,18 +77,19 @@ export function assertOriginalSupplierPosting(input: {
         ? "SUPPLIER_OPENING_PAYABLE"
         : input.kind === "OPENING_ADVANCE"
           ? "SUPPLIER_OPENING_ADVANCE"
-          : "SUPPLIER_ADVANCE") ||
-    journal.sourceId !==
-      (input.kind === "ADVANCE" ? input.entryId : input.supplierId) ||
+          : input.kind === "OPENING_PAYMENT"
+            ? "SUPPLIER_OPENING_PAYMENT"
+            : "SUPPLIER_ADVANCE") ||
+    journal.sourceId !== (paidFromMoney ? input.entryId : input.supplierId) ||
     journal.reversalOfId !== null ||
     journal.actorUserId !== input.supplierActorUserId ||
     journal.effectiveAt.getTime() !== input.supplierEffectiveAt.getTime() ||
     journal.description !== input.supplierDescription ||
-    (input.kind !== "ADVANCE" &&
+    (!paidFromMoney &&
       (input.moneyAccountId !== null ||
         input.supplierEffectiveAt.getTime() !==
           input.bookStartsAt.getTime())) ||
-    (input.kind === "ADVANCE" && input.moneyAccountId === null) ||
+    (paidFromMoney && input.moneyAccountId === null) ||
     journal.lines.length !== 2
   ) {
     throw new FinanceError(
@@ -100,10 +109,15 @@ export function assertOriginalSupplierPosting(input: {
             [input.advanceAccountId, "DEBIT" as const],
             [input.openingEquityAccountId, "CREDIT" as const],
           ]
-        : [
-            [input.advanceAccountId, "DEBIT" as const],
-            [input.moneyAccountId, "CREDIT" as const],
-          ]
+        : input.kind === "OPENING_PAYMENT"
+          ? [
+              [input.payableAccountId, "DEBIT" as const],
+              [input.moneyAccountId, "CREDIT" as const],
+            ]
+          : [
+              [input.advanceAccountId, "DEBIT" as const],
+              [input.moneyAccountId, "CREDIT" as const],
+            ]
   const matchesExpectedLine = (
     accountId: string | null,
     side: "DEBIT" | "CREDIT",

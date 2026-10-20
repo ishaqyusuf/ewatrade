@@ -1,7 +1,7 @@
 import { expect, test } from "bun:test"
 import type { Prisma } from "../../../generated/prisma/client"
-import { getFinanceSupplierEntryReversalReview } from "./supplier-writes"
 import { MAX_FINANCE_AMOUNT } from "./rules"
+import { getFinanceSupplierEntryReversalReview } from "./supplier-writes"
 const startsAt = new Date("2026-01-01T00:00:00Z"),
   originalAt = new Date("2026-09-02T12:00:00.123Z")
 const input = {
@@ -99,6 +99,7 @@ function fixture(
     missingEntry: false,
     allocated: 0n,
     released: 0n,
+    openingPayments: 0,
     allocationAt: null as Date | null,
     releaseAt: null as Date | null,
   }
@@ -111,6 +112,7 @@ function fixture(
     financeBook: { findFirst: async () => (state.missingBook ? null : book) },
     financeSupplierEntry: {
       findFirst: async () => (state.missingEntry ? null : original),
+      count: async () => state.openingPayments,
     },
     financeAccount: {
       findUnique: async ({
@@ -376,4 +378,14 @@ test("wrong source, authority, cutoff, consumed funds and malformed original pro
         ...change,
       }),
     ).rejects.toThrow()
+})
+
+test("a starting balance cannot be undone while payments toward it stand", async () => {
+  const f = fixture("OPENING_PAYABLE")
+  f.state.openingPayments = 1
+  await expect(
+    getFinanceSupplierEntryReversalReview(f.tx, input),
+  ).rejects.toThrow(
+    "Undo the payments toward this starting balance before undoing it.",
+  )
 })

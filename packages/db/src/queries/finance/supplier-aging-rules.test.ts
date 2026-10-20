@@ -310,3 +310,82 @@ test("corrupt attribution, inverse, negative residual and mismatched controls fa
     ),
   ).toThrow("source limit")
 })
+
+test("payments toward a starting balance reduce it and undo cleanly", () => {
+  const opening = agingSource({
+    id: "opening",
+    sequence: 1,
+    kind: "OPENING_PAYABLE",
+    amount: BigInt(500),
+  })
+  const payment = agingSource({
+    id: "opening-payment",
+    sequence: 2,
+    kind: "OPENING_PAYMENT",
+    amount: BigInt(200),
+    effectiveAt: date("2026-02-01"),
+  })
+  const paid = calculate([opening, payment], BigInt(300))
+  expect(paid.data).toHaveLength(1)
+  expect(paid.data[0]?.sourceEntryId).toBe("opening")
+  expect(paid.data[0]?.outstandingMinor).toBe("300")
+  const undo = agingSource({
+    id: "undo-payment",
+    sequence: 3,
+    kind: "REVERSAL",
+    reversal: payment,
+    amount: BigInt(200),
+    effectiveAt: date("2026-02-02"),
+  })
+  expect(
+    calculate([opening, payment, undo], BigInt(500)).data[0]?.outstandingMinor,
+  ).toBe("500")
+  const rest = agingSource({
+    id: "opening-payment-2",
+    sequence: 4,
+    kind: "OPENING_PAYMENT",
+    amount: BigInt(300),
+    effectiveAt: date("2026-03-01"),
+  })
+  expect(calculate([opening, payment, rest], BigInt(0)).data).toEqual([])
+})
+
+test("starting-balance payments need an open starting balance and fit inside it", () => {
+  const opening = agingSource({
+    id: "opening",
+    sequence: 1,
+    kind: "OPENING_PAYABLE",
+    amount: BigInt(100),
+  })
+  const tooMuch = agingSource({
+    id: "too-much",
+    sequence: 2,
+    kind: "OPENING_PAYMENT",
+    amount: BigInt(150),
+  })
+  expect(() => calculate([opening, tooMuch], BigInt(-50))).toThrow()
+  const orphan = agingSource({
+    id: "orphan",
+    sequence: 1,
+    kind: "OPENING_PAYMENT",
+    amount: BigInt(10),
+  })
+  expect(() => calculate([orphan], BigInt(-10))).toThrow()
+  const payment = agingSource({
+    id: "payment",
+    sequence: 2,
+    kind: "OPENING_PAYMENT",
+    amount: BigInt(40),
+  })
+  const undoOpening = agingSource({
+    id: "undo-opening",
+    sequence: 3,
+    kind: "REVERSAL",
+    reversal: opening,
+    amount: BigInt(100),
+    effectiveAt: date("2026-03-01"),
+  })
+  expect(() =>
+    calculate([opening, payment, undoOpening], BigInt(-40)),
+  ).toThrow()
+})

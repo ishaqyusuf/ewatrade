@@ -5,13 +5,13 @@ import type {
   PrismaClient,
 } from "../../../generated/prisma/client"
 import {
+  type FinanceActor,
   assertFinanceManager,
   lockFinanceBook,
-  type FinanceActor,
 } from "./access"
 import { financeDocumentCommand, financePostingCommandId } from "./commands"
 import { postFinanceJournalInTransaction } from "./posting"
-import { FinanceError, financeAmount, assertFinancePostingDate } from "./rules"
+import { FinanceError, assertFinancePostingDate, financeAmount } from "./rules"
 import { assertFinanceSupplierCodeAvailable } from "./supplier-create-source"
 import {
   assertOriginalSupplierPosting,
@@ -25,10 +25,10 @@ import {
 } from "./supplier-advance-review"
 
 import {
+  type FinanceSupplierOpeningReviewInput,
+  loadSupplierOpeningReview,
   normalizeSupplierOpening,
   reviewSupplierOpeningSource,
-  loadSupplierOpeningReview,
-  type FinanceSupplierOpeningReviewInput,
 } from "./supplier-opening-review"
 
 const SUPPLIER_REVERSAL_SOURCE = "SUPPLIER_ENTRY_REVERSAL"
@@ -356,7 +356,8 @@ async function resolveSupplierEntryReversalSource(
   if (
     original.kind !== "OPENING_PAYABLE" &&
     original.kind !== "OPENING_ADVANCE" &&
-    original.kind !== "ADVANCE"
+    original.kind !== "ADVANCE" &&
+    original.kind !== "OPENING_PAYMENT"
   ) {
     throw new FinanceError(
       "CONFLICT",
@@ -395,11 +396,11 @@ async function resolveSupplierEntryReversalSource(
         )
       : null
   const payable =
-    original.kind === "OPENING_PAYABLE"
+    original.kind === "OPENING_PAYABLE" || original.kind === "OPENING_PAYMENT"
       ? await getControlAccount(tx, book.id, "2000", "LIABILITY", "PAYABLE")
       : null
   const equity =
-    original.kind !== "ADVANCE"
+    original.kind !== "ADVANCE" && original.kind !== "OPENING_PAYMENT"
       ? await getControlAccount(tx, book.id, "3900", "EQUITY", "OPENING_EQUITY")
       : null
   assertOriginalSupplierPosting({
@@ -460,7 +461,23 @@ async function resolveSupplierEntryReversalSource(
         "An advance reversal cannot precede its latest allocation or release.",
       )
   }
-  if (original.kind === "ADVANCE") {
+  if (original.kind === "OPENING_PAYABLE") {
+    // Payments toward a starting balance must be undone before the balance.
+    const payments = await tx.financeSupplierEntry.count({
+      where: {
+        bookId: book.id,
+        supplierId: original.supplierId,
+        kind: "OPENING_PAYMENT",
+        reversals: { none: {} },
+      },
+    })
+    if (payments > 0)
+      throw new FinanceError(
+        "CONFLICT",
+        "Undo the payments toward this starting balance before undoing it.",
+      )
+  }
+  if (original.kind === "ADVANCE" || original.kind === "OPENING_PAYMENT") {
     const moneyAccount = await tx.financeAccount.findFirst({
       where: { id: original.moneyAccountId ?? "", bookId: book.id },
       select: { id: true, kind: true, purpose: true },
@@ -624,12 +641,19 @@ async function loadSupplierEntryReversalReview(
         original.kind === "OPENING_PAYABLE"
           ? original.amountMinor.toString()
           : "0",
+      // Undoing a starting-balance payment puts the amount back on what you owe.
+      payableIncreaseMinor:
+        original.kind === "OPENING_PAYMENT"
+          ? original.amountMinor.toString()
+          : "0",
       unallocatedAdvanceDecreaseMinor:
-        original.kind === "OPENING_PAYABLE"
-          ? "0"
-          : original.amountMinor.toString(),
+        original.kind === "OPENING_ADVANCE" || original.kind === "ADVANCE"
+          ? original.amountMinor.toString()
+          : "0",
       recordedMoneyIncreaseMinor:
-        original.kind === "ADVANCE" ? original.amountMinor.toString() : "0",
+        original.kind === "ADVANCE" || original.kind === "OPENING_PAYMENT"
+          ? original.amountMinor.toString()
+          : "0",
       lines: original.journalEntry.lines
         .map((l) => ({
           accountId: l.account.id,

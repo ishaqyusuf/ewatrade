@@ -111,6 +111,7 @@ function sourcePolarityMatches(sourceKind: string, amountMinor: bigint) {
     sourceKind === "OWNER_BILL_PAYMENT" ||
     sourceKind === "PURCHASE_PAYMENT" ||
     sourceKind === "SUPPLIER_ADVANCE" ||
+    sourceKind === "SUPPLIER_OPENING_PAYMENT" ||
     sourceKind === "CUSTOMER_HELD_CREDIT_REFUND"
   )
     return amountMinor < 0n
@@ -366,13 +367,18 @@ async function resolveOriginalTarget(
 
   if (
     input.sourceKind === "SUPPLIER_ADVANCE" ||
+    input.sourceKind === "SUPPLIER_OPENING_PAYMENT" ||
     input.sourceKind === "SUPPLIER_OPENING_ADVANCE" ||
     input.sourceKind === "SUPPLIER_OPENING_PAYABLE"
   ) {
+    // Advances and starting-balance payments are keyed by their own entry.
+    const ownEntry =
+      input.sourceKind === "SUPPLIER_ADVANCE" ||
+      input.sourceKind === "SUPPLIER_OPENING_PAYMENT"
     const source = await tx.financeSupplierEntry.findFirst({
       where: {
         bookId: input.bookId,
-        ...(input.sourceKind === "SUPPLIER_ADVANCE"
+        ...(ownEntry
           ? { id: input.sourceId, journalEntryId: input.journalEntryId }
           : {
               supplierId: input.sourceId,
@@ -403,9 +409,11 @@ async function resolveOriginalTarget(
       source.kind !==
         (input.sourceKind === "SUPPLIER_ADVANCE"
           ? "ADVANCE"
-          : input.sourceKind === "SUPPLIER_OPENING_ADVANCE"
-            ? "OPENING_ADVANCE"
-            : "OPENING_PAYABLE") ||
+          : input.sourceKind === "SUPPLIER_OPENING_PAYMENT"
+            ? "OPENING_PAYMENT"
+            : input.sourceKind === "SUPPLIER_OPENING_ADVANCE"
+              ? "OPENING_ADVANCE"
+              : "OPENING_PAYABLE") ||
       source.side !==
         (input.sourceKind === "SUPPLIER_OPENING_PAYABLE"
           ? "CREDIT"
@@ -424,7 +432,7 @@ async function resolveOriginalTarget(
           ? -input.selectedAmountMinor
           : input.selectedAmountMinor) ||
       source.reversals.length > 1 ||
-      (source.kind === "ADVANCE" &&
+      ((source.kind === "ADVANCE" || source.kind === "OPENING_PAYMENT") &&
         source.moneyAccountId !== input.bankAccountId)
     )
       return unavailable(
