@@ -192,7 +192,7 @@ export function CatalogDetailOverview({
                 await setItemParams({ productUnits: product.id })
               }}
             >
-              Configure units
+              Units
             </Button>
           ) : null}
         </div>
