@@ -1,5 +1,5 @@
 /* Recommended B — the Recommended direction (Green Gate base with a day timeline), web-first.
-   The web dashboard is the default view; the mobile app is shown as coming soon.
+   The web dashboard is the default view, with mobile app previews alongside it.
    Builds on ../shared/shared.css tokens; only gradients and shadows carry literal colours. */
 
 .launch-v4 {
@@ -595,7 +595,7 @@
 .launch-v4[data-platform="web"] .b-only-mobile,
 .launch-v4[data-platform="mobile"] .b-only-web { display: none !important; }
 
-/* Segmented switch: Web | Mobile (Coming soon) */
+/* Segmented switch: Web | Mobile */
 .launch-v4 .b-switch { display: inline-flex; align-items: center; gap: 2px; padding: 4px; border-radius: 999px; background: var(--gg-wash); box-shadow: inset 0 0 0 1px var(--ew-on-green-line); color: var(--ew-on-green); }
 .launch-v4 .b-switch button {
   display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 18px; border: 0; border-radius: 999px;
@@ -738,7 +738,7 @@
 @media (max-width: 640px) { .launch-v4[data-platform="web"] .gg-m-stage { padding: 14px 12px; } }
 
 /* ------------------------------------------------------------------ */
-/* Web today, the app soon                                            */
+/* Web and mobile                                            */
 /* ------------------------------------------------------------------ */
 .launch-v4 .b-avail { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr); gap: 16px; align-items: stretch; }
 .launch-v4 .b-av { position: relative; overflow: hidden; border-radius: 28px; padding: 40px; }

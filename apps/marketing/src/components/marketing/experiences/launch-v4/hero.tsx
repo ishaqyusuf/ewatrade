@@ -103,7 +103,7 @@ export function Hero({ signupEnabled }: { signupEnabled: boolean }) {
             {"\n        "}
             <p className={"gg-hero-sub"}>
               {
-                "Record a sale, count your stock and see who owes you. The web dashboard works today in any browser, on a computer or a phone. The mobile app is coming soon."
+                "Record a sale, count your stock and see who owes you. Manage your business from a computer or phone."
               }
             </p>
             {"\n        "}
@@ -176,7 +176,7 @@ export function Hero({ signupEnabled }: { signupEnabled: boolean }) {
                   />
                   {"\n              "}
                   <span className={"b-soon-tag"} aria-hidden={"true"}>
-                    {"Mobile app · coming soon"}
+                    {"Mobile app"}
                   </span>
                   {"\n            "}
                 </div>
@@ -189,7 +189,7 @@ export function Hero({ signupEnabled }: { signupEnabled: boolean }) {
                   tabIndex={-1}
                   aria-hidden={"true"}
                 >
-                  <span>{"Mobile app · coming soon"}</span>
+                  <span>{"Mobile app"}</span>
                 </button>
                 {"\n          "}
               </div>

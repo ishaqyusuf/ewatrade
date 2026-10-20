@@ -59,9 +59,7 @@ export function HowItStarts() {
                 "Three steps, in your own words. Pick a business below to see the setup assistant at work"
               }
               <span className={"b-only-web"}>{" on the web dashboard"}</span>
-              <span className={"b-only-mobile"}>
-                {" in the mobile app, coming soon"}
-              </span>
+              <span className={"b-only-mobile"}>{" in the mobile app"}</span>
               {"."}
             </p>
             {"\n          "}

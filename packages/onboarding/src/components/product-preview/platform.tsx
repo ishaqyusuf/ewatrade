@@ -83,7 +83,6 @@ export function PlatformSwitch({
           }}
         >
           <span>{value === "web" ? "Web" : "Mobile"}</span>
-          {value === "mobile" && <small className="b-soon">Coming soon</small>}
         </button>
       ))}
     </fieldset>

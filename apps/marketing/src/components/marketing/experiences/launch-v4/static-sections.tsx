@@ -25,7 +25,7 @@ export function Availability({ signupEnabled }: { signupEnabled: boolean }) {
           <div className={"gg-split-head"}>
             {"\n          "}
             <h2 className={"gg-h2 ew-reveal is-in"} id={"dash-h"}>
-              {"The web for the back office. The phone for the counter, soon."}
+              {"The web for the back office. The phone for the counter."}
             </h2>
             {"\n          "}
             <p
@@ -33,7 +33,7 @@ export function Availability({ signupEnabled }: { signupEnabled: boolean }) {
               style={{ "--d": "80ms" } as CSSProperties}
             >
               {
-                "Sales, stock, customers, staff and finance work today in the web dashboard. The mobile app is coming soon, for one-handed selling at the counter, even when the network drops."
+                "Sales, stock, customers, staff and finance on your computer or phone."
               }
             </p>
             {"\n        "}
@@ -95,10 +95,6 @@ export function Availability({ signupEnabled }: { signupEnabled: boolean }) {
               {"\n            "}
               <div className={"b-av-copy"}>
                 {"\n              "}
-                <span className={"b-av-tag b-av-tag--soon"}>
-                  {"Coming soon"}
-                </span>
-                {"\n              "}
                 <h3 id={"av-app"}>{"Mobile app"}</h3>
                 {"\n              "}
                 <p>
@@ -107,11 +103,6 @@ export function Availability({ signupEnabled }: { signupEnabled: boolean }) {
                   }
                 </p>
                 {"\n              "}
-                <p>
-                  {
-                    "Keep using the web dashboard on your phone or computer while the app is on its way."
-                  }
-                </p>
                 {"\n            "}
               </div>
               {"\n            "}
@@ -169,7 +160,7 @@ export function Faq() {
               {"\n            "}
               <p>
                 {
-                  "It’s coming soon. Until then, ẸwáTrade works in the browser on any phone or computer."
+                  "The mobile app brings your sales, stock and customer balances together on your phone. You can also use ẸwáTrade in any browser."
                 }
               </p>
               {"\n          "}
@@ -214,7 +205,7 @@ export function Faq() {
               {"\n            "}
               <p>
                 {
-                  "The web dashboard needs a connection. The mobile app, coming soon, will keep selling with no signal: sales save on the phone, show “Waiting to sync” and sync when you’re back online."
+                  "The web dashboard needs a connection. On mobile, sales save on the phone, show “Waiting to sync” and sync when you’re back online."
                 }
               </p>
               {"\n          "}

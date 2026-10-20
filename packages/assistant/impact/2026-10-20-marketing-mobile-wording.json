@@ -1,0 +1,25 @@
+{
+  "version": 1,
+  "id": "2026-10-20-marketing-mobile-wording",
+  "tickets": ["H02"],
+  "summary": "Owner-requested copy-only removal of mobile coming-soon wording from the production marketing page; mobile sections and previews remain.",
+  "noAssistantImpact": "Marketing presentation only. No assistant capability, API, permission, signup flow, download or mobile publication authority changes. Shared product-preview switch only drops its future-release text badge.",
+  "capabilities": [],
+  "procedures": [],
+  "docs": [
+    {
+      "topic": "feature",
+      "status": "local_only",
+      "path": ".brain/features/marketing-launch-v4.md",
+      "note": "Owner selected keep mobile sections and previews; remove future-release wording."
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "run",
+      "path": "apps/marketing/src/components/marketing/experiences/launch-v4/hero.tsx",
+      "executed": true,
+      "result": "Scoped Biome check of5TSXfiles and git diff--check pass. Source search finds no coming-soon/on-its-way copy in active launch-v4 components or shared platform switch; hosted build and browser verification follow deployment."
+    }
+  ]
+}

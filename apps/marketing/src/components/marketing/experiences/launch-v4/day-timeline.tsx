@@ -145,7 +145,7 @@ export function DayTimeline() {
             from a sample day in Ibadan,{" "}
             {platform === "web"
               ? "on the web dashboard."
-              : "on the mobile app screens. The app is coming soon."}
+              : "on the mobile app screens."}
           </p>
         </div>
         <div className="gg-day">
@@ -181,7 +181,7 @@ export function DayTimeline() {
                       </h3>
                       <p>
                         {offline
-                          ? "Coming with the mobile app: sales save on the phone and show Waiting to sync. When the signal comes back, they sync on their own."
+                          ? "Sales save on the phone and show Waiting to sync. When the signal comes back, they sync on their own."
                           : m.copy}
                       </p>
                       <div className="gg-pills">
@@ -232,9 +232,7 @@ export function DayTimeline() {
                 </span>
               </div>
               <span className="b-stage-tag">
-                {platform === "web"
-                  ? "Web dashboard"
-                  : "Mobile app · coming soon"}
+                {platform === "web" ? "Web dashboard" : "Mobile app"}
               </span>
               <div
                 className={platform === "web" ? "b-day-web" : "gg-day-phone"}
