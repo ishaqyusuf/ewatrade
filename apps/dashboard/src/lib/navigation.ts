@@ -200,7 +200,7 @@ const DASHBOARD_NAV: DashboardNavDefinition[] = [
     isVisible: isPharmacyBusiness,
   },
   {
-    description: "Customer book and follow-up records",
+    description: "Customers, their orders and what they owe",
     href: "/customers",
     icon: "customers",
     label: "Customers",

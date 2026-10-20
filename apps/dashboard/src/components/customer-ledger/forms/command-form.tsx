@@ -33,6 +33,23 @@ import { Controller, useForm } from "react-hook-form"
 import type { LedgerAccount, LedgerRequest } from "../types"
 import { ledgerLabels } from "../types"
 import { useCustomerLedgerForm } from "./form-context"
+const OPERATION_WORDS: Record<string, string> = {
+  recordOpening: "starting balance",
+  recordReceipt: "payment",
+  applyCredit: "use on an Order",
+  releaseAllocation: "undo",
+  refundUnusedCredit: "refund",
+  reverseEntry: "undo",
+}
+
+/** ISO time to the value a datetime-local field shows, in local time. */
+function toLocalDateTime(iso: string | undefined) {
+  const date = iso ? new Date(iso) : new Date()
+  if (Number.isNaN(date.getTime())) return ""
+  const local = new Date(date.getTime() - date.getTimezoneOffset() * 60_000)
+  return local.toISOString().slice(0, 16)
+}
+
 export function CustomerLedgerCommandForm({
   account,
   actorUserId,
@@ -158,7 +175,7 @@ export function CustomerLedgerCommandForm({
   function prepare(fields: LedgerFields) {
     try {
       if (dataError || loading)
-        throw new Error("Refresh the current sources before reviewing.")
+        throw new Error("Refresh the list above, then continue.")
       setReview(
         prepareCustomerLedgerCommand({
           mode,
@@ -174,7 +191,9 @@ export function CustomerLedgerCommandForm({
       setError(null)
     } catch (failure) {
       setError(
-        failure instanceof Error ? failure.message : "Check customer details.",
+        failure instanceof Error
+          ? failure.message
+          : "Check the details and try again.",
       )
     }
   }
@@ -206,7 +225,7 @@ export function CustomerLedgerCommandForm({
       form.setValue("revision", metadata.expectedSnapshotSequence)
   }, [command.retained, form])
   const label = (s: NonNullable<typeof credits.data>["sources"][number]) =>
-    `${ledgerLabels[s.kind] ?? s.kind} #${s.sequence}${s.order ? ` · ${s.order.orderNumber}` : ""} · ${formatFinanceMoney(s.remainingAmountMinor, account.currencyCode)} remaining`
+    `${s.order ? `Order ${s.order.orderNumber}` : (ledgerLabels[s.kind] ?? "Entry")} · ${formatFinanceMoney(s.remainingAmountMinor, account.currencyCode)} left`
   const text = (
     name: "reason" | "reference" | "date" | "revision",
     label: string,
@@ -215,6 +234,18 @@ export function CustomerLedgerCommandForm({
     <ControlField label={label} error={form.formState.errors[name]?.message}>
       {multiline ? (
         <Textarea {...form.register(name)} maxLength={400} />
+      ) : name === "date" ? (
+        <Input
+          type="datetime-local"
+          value={toLocalDateTime(form.watch("date"))}
+          onChange={(event) => {
+            const parsed = new Date(event.target.value)
+            if (!Number.isNaN(parsed.getTime()))
+              form.setValue("date", parsed.toISOString(), {
+                shouldValidate: true,
+              })
+          }}
+        />
       ) : (
         <Input {...form.register(name)} />
       )}
@@ -265,22 +296,24 @@ export function CustomerLedgerCommandForm({
       <Alert appearance="dashboard">
         <AlertDescription>
           {mode === "receipt"
-            ? "Record actual money already received. It becomes available credit; apply it separately to a charge. This does not send money."
+            ? "Record money you’ve already received. It’s kept as paid ahead until it’s used on an Order."
             : mode === "apply" || mode === "release"
-              ? "This changes settlement only. Cash and net customer balance stay unchanged."
+              ? "This only changes which Order the money counts toward. No money moves and the balance stays the same."
               : mode === "refund"
-                ? "Record money already returned to the customer from unused credit. This does not execute a payout."
+                ? "Record money you’ve already given back from what they paid ahead. This doesn’t send money."
                 : mode === "reverse"
-                  ? "Append a bookkeeping correction. Original entries remain. This does not execute a cash refund."
-                  : "Record debt or credit held at the bookkeeping start date. No cash is collected."}
+                  ? "Adds an undo line. The original stays on the statement. This doesn’t send money."
+                  : "Add what they owed, or had paid ahead, on the day you started using ewatrade. No money moves."}
         </AlertDescription>
       </Alert>
       {command.retained ? (
         <Alert appearance="dashboard">
           <AlertDescription>
-            Earlier {command.retained.command.operation} needs confirmation.
-            Re-enter only its exact original details, including revision and
-            date. No amount or reason is saved on this device.
+            We couldn’t confirm whether the last{" "}
+            {OPERATION_WORDS[command.retained.command.operation] ?? "record"}{" "}
+            was saved. Check first. If you try again, enter exactly the same
+            details, including the date; amounts and notes aren’t kept on this
+            device.
           </AlertDescription>
           <Button
             appearance="form"
@@ -288,7 +321,7 @@ export function CustomerLedgerCommandForm({
             disabled={command.pending}
             onClick={() => void command.acknowledge()}
           >
-            Check saved result
+            Check if it was saved
           </Button>
         </Alert>
       ) : null}
@@ -308,7 +341,7 @@ export function CustomerLedgerCommandForm({
               if (entryId) void detail.refetch()
             }}
           >
-            Refresh sources
+            Refresh
           </Button>
         </Alert>
       ) : null}
@@ -334,9 +367,9 @@ export function CustomerLedgerCommandForm({
             {review.operation === "recordOpening" ? (
               <p>
                 {review.payload.direction === "DEBT"
-                  ? "Customer owes the business"
-                  : "Business holds customer credit"}{" "}
-                · Bookkeeping start date
+                  ? "They owe you"
+                  : "They paid ahead"}{" "}
+                · Starting balance
               </p>
             ) : null}
             {"creditEntryId" in review.payload ? (
@@ -344,7 +377,7 @@ export function CustomerLedgerCommandForm({
                 Credit:{" "}
                 {credits.data?.sources.find((s) => s.id === creditId)?.sequence
                   ? `#${credits.data.sources.find((s) => s.id === creditId)?.sequence}`
-                  : "Reviewed source"}
+                  : "Selected payment"}
               </p>
             ) : null}
             {"chargeEntryId" in review.payload ? (
@@ -352,7 +385,7 @@ export function CustomerLedgerCommandForm({
                 Charge:{" "}
                 {debits.data?.sources.find((s) => s.id === chargeId)?.order
                   ?.orderNumber ??
-                  `#${debits.data?.sources.find((s) => s.id === chargeId)?.sequence ?? "Reviewed outstanding debt"}`}
+                  `#${debits.data?.sources.find((s) => s.id === chargeId)?.sequence ?? "selected balance"}`}
               </p>
             ) : null}
             {"moneyAccountId" in review.payload ? (
@@ -364,8 +397,8 @@ export function CustomerLedgerCommandForm({
             ) : (
               <p>
                 {mode === "reverse"
-                  ? "Bookkeeping reverses original effects; no payout is executed."
-                  : `Cash effect: ${formatFinanceMoney("0", account.currencyCode)}`}
+                  ? "Adds an undo line; no money is sent."
+                  : "No money moves."}
               </p>
             )}
             {"reason" in review.payload ? (
@@ -381,9 +414,7 @@ export function CustomerLedgerCommandForm({
           {after ? (
             <dl className="grid gap-3 border-y border-border py-4 text-sm">
               <div>
-                <dt className="text-muted-foreground">
-                  Amount owed after this record
-                </dt>
+                <dt className="text-muted-foreground">Owes you after this</dt>
                 <dd>
                   {formatFinanceMoney(
                     after.outstandingDebtMinor,
@@ -392,9 +423,7 @@ export function CustomerLedgerCommandForm({
                 </dd>
               </div>
               <div>
-                <dt className="text-muted-foreground">
-                  Credit available after this record
-                </dt>
+                <dt className="text-muted-foreground">Paid ahead after this</dt>
                 <dd>
                   {formatFinanceMoney(
                     after.availableCreditMinor,
@@ -403,9 +432,7 @@ export function CustomerLedgerCommandForm({
                 </dd>
               </div>
               <div>
-                <dt className="text-muted-foreground">
-                  Net balance after this record
-                </dt>
+                <dt className="text-muted-foreground">Balance after this</dt>
                 <dd>
                   {formatFinanceMoney(
                     after.netBalanceMinor,
@@ -426,7 +453,7 @@ export function CustomerLedgerCommandForm({
               disabled={command.pending}
               onClick={() => setReview(null)}
             >
-              Back to details
+              Back
             </Button>
             <SubmitButton
               type="button"
@@ -434,7 +461,7 @@ export function CustomerLedgerCommandForm({
               disabled={!command.ready || command.pending}
               onClick={() => void confirm()}
             >
-              Confirm and record
+              Save
             </SubmitButton>
           </FormActions>
         </>
@@ -442,14 +469,14 @@ export function CustomerLedgerCommandForm({
         <form onSubmit={form.handleSubmit(prepare)}>
           <FieldGroup>
             {mode === "opening"
-              ? select("direction", "Opening balance", [
-                  { value: "DEBT", label: "Customer owes the business" },
-                  { value: "CREDIT", label: "Business holds customer credit" },
+              ? select("direction", "Starting balance", [
+                  { value: "DEBT", label: "They owe you" },
+                  { value: "CREDIT", label: "They paid ahead" },
                 ])
               : null}
             {needsCredit
-              ? select("creditEntryId", "Available credit", [
-                  { value: "", label: "Choose credit" },
+              ? select("creditEntryId", "Money paid ahead", [
+                  { value: "", label: "Choose a payment" },
                   ...(credits.data?.sources ?? []).map((s) => ({
                     value: s.id,
                     label: label(s),
@@ -467,7 +494,7 @@ export function CustomerLedgerCommandForm({
                     form.setValue("creditEntryId", "")
                   }}
                 >
-                  Previous credits
+                  Back
                 </Button>
                 <Button
                   type="button"
@@ -481,13 +508,13 @@ export function CustomerLedgerCommandForm({
                     form.setValue("creditEntryId", "")
                   }}
                 >
-                  More credits
+                  Show more
                 </Button>
               </div>
             ) : null}
             {mode === "apply"
-              ? select("chargeEntryId", "Outstanding charge", [
-                  { value: "", label: "Choose charge" },
+              ? select("chargeEntryId", "Unpaid Order", [
+                  { value: "", label: "Choose an Order" },
                   ...(debits.data?.sources ?? []).map((s) => ({
                     value: s.id,
                     label: label(s),
@@ -505,7 +532,7 @@ export function CustomerLedgerCommandForm({
                     form.setValue("chargeEntryId", "")
                   }}
                 >
-                  Previous charges
+                  Back
                 </Button>
                 <Button
                   type="button"
@@ -519,7 +546,7 @@ export function CustomerLedgerCommandForm({
                     form.setValue("chargeEntryId", "")
                   }}
                 >
-                  More charges
+                  Show more
                 </Button>
               </div>
             ) : null}
@@ -548,7 +575,7 @@ export function CustomerLedgerCommandForm({
             ) : null}
             {needsMoney ? (
               <>
-                {select("method", "Payment method", [
+                {select("method", "Paid by", [
                   { value: "CASH", label: "Cash" },
                   { value: "BANK_TRANSFER", label: "Bank transfer" },
                   { value: "CARD", label: "Card" },
@@ -557,11 +584,9 @@ export function CustomerLedgerCommandForm({
                 ])}
                 {select(
                   "moneyAccountId",
-                  mode === "receipt"
-                    ? "Money received into"
-                    : "Money returned from",
+                  mode === "receipt" ? "Paid into" : "Paid from",
                   [
-                    { value: "", label: "Choose money account" },
+                    { value: "", label: "Choose an account" },
                     ...eligibleLedgerMoneyAccounts(
                       money.data?.accounts ?? [],
                       form.watch("method"),
@@ -574,16 +599,16 @@ export function CustomerLedgerCommandForm({
             {mode !== "apply"
               ? text(
                   "reason",
-                  mode === "receipt" ? "Description" : "Reason",
+                  mode === "receipt" ? "Note (optional)" : "Reason",
                   true,
                 )
               : null}
             {mode === "refund" || mode === "reverse"
-              ? text("date", "Effective time (ISO UTC)")
+              ? text("date", "Date and time")
               : null}
             {command.retained &&
             ["apply", "refund", "reverse", "release"].includes(mode)
-              ? text("revision", "Original reviewed revision (exact retry)")
+              ? text("revision", "Check number from the earlier attempt")
               : null}
             <SubmitButton
               isSubmitting={false}
