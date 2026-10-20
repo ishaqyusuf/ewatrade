@@ -207,9 +207,12 @@ export function OwnerAccountScreen({
           chips={["Your store link", "One login"]}
         />
       }
+      spacing="grouped"
       testID="green-gate-setup-account"
     >
-      <View style={{ gap: 16 }}>
+      {/* Grouped spacing (workshop mobile/sign-up-spacing 02): 10px inside a
+          group, 28px between groups. */}
+      <View className="gap-7">
         <QaQuickFillButton
           formId="mobile.signup.account"
           isDirty={Boolean(name || email || businessName)}
@@ -227,126 +230,156 @@ export function OwnerAccountScreen({
             setError(null)
           }}
         />
-        <FormField
-          label="Business name"
-          value={businessName}
-          variant="green-gate"
-          maxLength={120}
-          editable={!busy && !continuation}
-          onChangeText={(v) => {
-            setBusinessName(v)
-            if (!slugEdited) setSlug(normalizeStoreLink(v))
-          }}
-        />
-        <StoreLinkField
-          value={slug}
-          email={showEmail ? email : undefined}
-          onChange={(v) => {
-            setSlugEdited(true)
-            setSlug(v)
-          }}
-          onCanonicalize={setSlug}
-          onAvailability={setLinkReady}
-        />
-        <FormField
-          label="Your name"
-          value={name}
-          onChangeText={setName}
-          maxLength={120}
-          variant="green-gate"
-          editable={!busy}
-          textContentType="name"
-        />
-        {!continuation ? (
-          <View style={{ gap: 8 }}>
-            <Text className="text-xs font-bold text-foreground">
-              Connect with
-            </Text>
-            <View
-              accessibilityRole="radiogroup"
-              accessibilityLabel="Connect with"
-              className={largeText ? "gap-2" : "flex-row flex-wrap gap-2"}
-            >
-              {contactOptions
-                .filter(
-                  (item) => item.value !== "whatsapp" || whatsapp.data?.enabled,
-                )
-                .map((item) => (
+        <View className="gap-1.5">
+          <FormField
+            label="Business name"
+            value={businessName}
+            variant="green-gate"
+            maxLength={120}
+            editable={!busy && !continuation}
+            onChangeText={(v) => {
+              setBusinessName(v)
+              if (!slugEdited) setSlug(normalizeStoreLink(v))
+            }}
+          />
+          <StoreLinkField
+            value={slug}
+            email={showEmail ? email : undefined}
+            onChange={(v) => {
+              setSlugEdited(true)
+              setSlug(v)
+            }}
+            onCanonicalize={setSlug}
+            onAvailability={setLinkReady}
+          />
+        </View>
+        <View className="gap-2.5">
+          <FormField
+            label="Your name"
+            value={name}
+            onChangeText={setName}
+            maxLength={120}
+            variant="green-gate"
+            editable={!busy}
+            textContentType="name"
+          />
+          {!continuation ? (
+            <View style={{ gap: 8 }}>
+              <Text className="text-xs font-bold text-foreground">
+                Connect with
+              </Text>
+              <View
+                accessibilityRole="radiogroup"
+                accessibilityLabel="Connect with"
+                className={largeText ? "gap-2" : "flex-row flex-wrap gap-2"}
+              >
+                {contactOptions
+                  .filter(
+                    (item) =>
+                      item.value !== "whatsapp" || whatsapp.data?.enabled,
+                  )
+                  .map((item) => (
+                    <Pressable
+                      key={item.value}
+                      accessibilityRole="radio"
+                      accessibilityState={{ checked: choice === item.value }}
+                      disabled={busy}
+                      onPress={() => {
+                        setConnectWith(item.value)
+                        setError(null)
+                      }}
+                      className={`min-h-11 flex-row items-center justify-center gap-1.5 rounded-full border px-3.5 ${choice === item.value ? "border-primary bg-primary/10" : "border-border bg-card"}`}
+                    >
+                      {item.value === "whatsapp" ? (
+                        <WhatsAppMark size={16} />
+                      ) : null}
+                      <Text className="text-xs font-semibold text-foreground">
+                        {item.label}
+                      </Text>
+                    </Pressable>
+                  ))}
+              </View>
+            </View>
+          ) : null}
+          {showEmail ? (
+            <FormField
+              label="Email"
+              placeholder="Email"
+              value={email}
+              onChangeText={setEmail}
+              autoCapitalize="none"
+              autoCorrect={false}
+              keyboardType="email-address"
+              textContentType="emailAddress"
+              variant="green-gate"
+              editable={!busy && !continuation}
+            />
+          ) : null}
+          {showPhone ? (
+            <PhoneField
+              label="WhatsApp number"
+              countryCode={phoneCountry}
+              onCountryChange={setPhoneCountry}
+              value={phone}
+              onChangeText={setPhone}
+              variant="green-gate"
+              editable={!busy}
+            />
+          ) : null}
+          {choice === "both" && whatsapp.data?.enabled ? (
+            <View style={{ gap: 8 }}>
+              <Text className="text-xs font-bold text-foreground">
+                Send my code by
+              </Text>
+              <View
+                accessibilityRole="radiogroup"
+                accessibilityLabel="Send my code by"
+                className={largeText ? "gap-2" : "flex-row flex-wrap gap-2"}
+              >
+                {[
+                  { value: true, label: "WhatsApp" },
+                  { value: false, label: "Email" },
+                ].map((item) => (
                   <Pressable
-                    key={item.value}
+                    key={item.label}
                     accessibilityRole="radio"
-                    accessibilityState={{ checked: choice === item.value }}
+                    accessibilityState={{
+                      checked: codeByWhatsApp === item.value,
+                    }}
                     disabled={busy}
                     onPress={() => {
-                      setConnectWith(item.value)
+                      setCodeByWhatsApp(item.value)
                       setError(null)
                     }}
-                    className={`min-h-11 flex-row items-center justify-center gap-1.5 rounded-full border px-3.5 ${choice === item.value ? "border-primary bg-primary/10" : "border-border bg-card"}`}
+                    className={`min-h-11 flex-row items-center justify-center gap-1.5 rounded-full border px-3.5 ${codeByWhatsApp === item.value ? "border-primary bg-primary/10" : "border-border bg-card"}`}
                   >
-                    {item.value === "whatsapp" ? (
-                      <WhatsAppMark size={16} />
-                    ) : null}
+                    {item.value ? <WhatsAppMark size={16} /> : null}
                     <Text className="text-xs font-semibold text-foreground">
                       {item.label}
                     </Text>
                   </Pressable>
                 ))}
+              </View>
             </View>
-          </View>
-        ) : null}
-        {showEmail ? (
-          <FormField
-            label="Email"
-            placeholder="Email"
-            value={email}
-            onChangeText={setEmail}
-            autoCapitalize="none"
-            autoCorrect={false}
-            keyboardType="email-address"
-            textContentType="emailAddress"
-            variant="green-gate"
-            editable={!busy && !continuation}
-          />
-        ) : null}
-        {showPhone ? (
-          <PhoneField
-            label="WhatsApp number"
-            countryCode={phoneCountry}
-            onCountryChange={setPhoneCountry}
-            value={phone}
-            onChangeText={setPhone}
-            variant="green-gate"
-            editable={!busy}
-          />
-        ) : null}
-        {choice === "both" && whatsapp.data?.enabled ? (
-          <View style={{ gap: 8 }}>
-            <Text className="text-xs font-bold text-foreground">
-              Send my code by
-            </Text>
+          ) : null}
+        </View>
+        <View className="gap-2.5">
+          <View className="gap-2">
+            <Text className="text-xs font-bold text-foreground">Your age</Text>
             <View
               accessibilityRole="radiogroup"
-              accessibilityLabel="Send my code by"
+              accessibilityLabel="Your age"
               className={largeText ? "gap-2" : "flex-row flex-wrap gap-2"}
             >
-              {[
-                { value: true, label: "WhatsApp" },
-                { value: false, label: "Email" },
-              ].map((item) => (
+              {ages.map((item) => (
                 <Pressable
-                  key={item.label}
+                  key={item.key}
                   accessibilityRole="radio"
-                  accessibilityState={{
-                    checked: codeByWhatsApp === item.value,
-                  }}
+                  accessibilityState={{ checked: age === item.key }}
+                  className={`min-h-11 justify-center rounded-full border px-3.5 ${age === item.key ? "border-primary bg-primary/10" : "border-border bg-card"}`}
                   disabled={busy}
-                  onPress={() => {
-                    setCodeByWhatsApp(item.value)
-                    setError(null)
-                  }}
-                  className={`min-h-11 flex-row items-center justify-center gap-1.5 rounded-full border px-3.5 ${codeByWhatsApp === item.value ? "border-primary bg-primary/10" : "border-border bg-card"}`}
+                  onPress={() => setAge(item.key)}
                 >
-                  {item.value ? <WhatsAppMark size={16} /> : null}
                   <Text className="text-xs font-semibold text-foreground">
                     {item.label}
                   </Text>
@@ -354,106 +387,89 @@ export function OwnerAccountScreen({
               ))}
             </View>
           </View>
-        ) : null}
-        <Text className="text-xs font-bold text-foreground">Your age</Text>
-        <View
-          accessibilityRole="radiogroup"
-          accessibilityLabel="Your age"
-          className={largeText ? "gap-2" : "flex-row flex-wrap gap-2"}
-        >
-          {ages.map((item) => (
-            <Pressable
-              key={item.key}
-              accessibilityRole="radio"
-              accessibilityState={{ checked: age === item.key }}
-              className={`min-h-11 justify-center rounded-full border px-3.5 ${age === item.key ? "border-primary bg-primary/10" : "border-border bg-card"}`}
-              disabled={busy}
-              onPress={() => setAge(item.key)}
-            >
-              <Text className="text-xs font-semibold text-foreground">
-                {item.label}
-              </Text>
-            </Pressable>
-          ))}
+          {age === "UNDER_13" ? (
+            <>
+              <StatusBanner
+                title="Not available under 13"
+                message="ẸwáTrade is available from age 13. Nothing you typed has been saved."
+                tone="warning"
+                icon="Info"
+              />
+              <AuthActionButton onPress={() => router.replace("/login")}>
+                Close setup
+              </AuthActionButton>
+            </>
+          ) : null}
         </View>
-        {age === "UNDER_13" ? (
-          <>
-            <StatusBanner
-              title="Not available under 13"
-              message="ẸwáTrade is available from age 13. Nothing you typed has been saved."
-              tone="warning"
-              icon="Info"
+        <View className="gap-2.5">
+          {publication.data?.acceptanceRequired ? (
+            <SignupLegalChoices
+              effective={publication.data.effective}
+              signupAvailable={publication.data.signupAvailable}
+              version={publication.data.version}
+              effectiveDate={publication.data.effectiveDate}
+              acceptedTerms={terms}
+              acknowledgedPrivacyNotice={privacy}
+              onAcceptedTermsChange={(v) =>
+                setLegal({ version: version ?? "", terms: v, privacy })
+              }
+              onAcknowledgedPrivacyNoticeChange={(v) =>
+                setLegal({ version: version ?? "", terms, privacy: v })
+              }
             />
-            <AuthActionButton onPress={() => router.replace("/login")}>
-              Close setup
-            </AuthActionButton>
-          </>
-        ) : null}
-        {publication.data?.acceptanceRequired ? (
-          <SignupLegalChoices
-            effective={publication.data.effective}
-            signupAvailable={publication.data.signupAvailable}
-            version={publication.data.version}
-            effectiveDate={publication.data.effectiveDate}
-            acceptedTerms={terms}
-            acknowledgedPrivacyNotice={privacy}
-            onAcceptedTermsChange={(v) =>
-              setLegal({ version: version ?? "", terms: v, privacy })
-            }
-            onAcknowledgedPrivacyNoticeChange={(v) =>
-              setLegal({ version: version ?? "", terms, privacy: v })
-            }
-          />
-        ) : null}
-        {publication.isError ? (
-          <>
+          ) : null}
+          {publication.isError ? (
+            <>
+              <StatusBanner
+                title="Policies unavailable"
+                message="Connect and try the policy check again."
+                tone="destructive"
+                icon="TriangleAlert"
+              />
+              <AuthMethodButton
+                label="Retry policy check"
+                onPress={() => void publication.refetch()}
+              />
+            </>
+          ) : null}
+          {error ? (
             <StatusBanner
-              title="Policies unavailable"
-              message="Connect and try the policy check again."
+              title="Review your details"
+              message={error}
               tone="destructive"
               icon="TriangleAlert"
             />
-            <AuthMethodButton
-              label="Retry policy check"
-              onPress={() => void publication.refetch()}
-            />
-          </>
-        ) : null}
-        {error ? (
-          <StatusBanner
-            title="Review your details"
-            message={error}
-            tone="destructive"
-            icon="TriangleAlert"
+          ) : null}
+          <AuthActionButton
+            disabled={!ready || !name.trim() || !contactReady}
+            isLoading={request.isPending || requestPhone.isPending}
+            onPress={sendCode}
+          >
+            {useWhatsApp ? "Send code on WhatsApp" : "Send code to email"}
+          </AuthActionButton>
+        </View>
+        <View className="gap-2.5">
+          <AuthDivider label="or" />
+          <AuthMethodButton
+            label="Continue with Google"
+            brandIcon="google"
+            onPress={() => void google.startGoogleAuth()}
+            disabled={!ready || !socialContactReady}
+            pending={google.isPending}
           />
-        ) : null}
-        <AuthActionButton
-          disabled={!ready || !name.trim() || !contactReady}
-          isLoading={request.isPending || requestPhone.isPending}
-          onPress={sendCode}
-        >
-          {useWhatsApp ? "Send code on WhatsApp" : "Send code to email"}
-        </AuthActionButton>
-        <AuthDivider label="or" />
-        <AuthMethodButton
-          label="Continue with Google"
-          brandIcon="google"
-          onPress={() => void google.startGoogleAuth()}
-          disabled={!ready || !socialContactReady}
-          pending={google.isPending}
-        />
-        <AppleAuthButton
-          onPress={() => void apple.startAppleAuth()}
-          disabled={!ready || !socialContactReady}
-        />
+          <AppleAuthButton
+            onPress={() => void apple.startAppleAuth()}
+            disabled={!ready || !socialContactReady}
+          />
+          <Text className="text-xs text-muted-foreground">
+            Google and Apple still need your business name, store link and age
+            above.
+          </Text>
+        </View>
         <AuthMethodButton
           label="Already have an account? Sign in"
           onPress={() => router.replace("/login")}
         />
-        <Text className="text-xs text-muted-foreground">
-          Google and Apple still need your business name, store link and age
-          above.
-        </Text>
       </View>
     </GreenTillAuthScreen>
   )

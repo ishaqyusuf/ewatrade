@@ -162,24 +162,29 @@ export function GreenTillAuthScreen({
             },
           ]}
         >
-          {headerContent ?? (
-            <View className="gap-1">
-              <Text
-                accessibilityRole="header"
-                className="text-[23px] font-extrabold tracking-tight [-rn-line-height:28] text-foreground"
-              >
-                {title}
-              </Text>
-              {subtitle ? (
-                <Text className="text-xs [-rn-line-height:22] text-muted-foreground">
-                  {subtitle}
+          {/* Grouped keeps the progress bar close to its title. */}
+          <View
+            style={spacing === "grouped" ? styles.groupedHeader : styles.header}
+          >
+            {headerContent ?? (
+              <View className="gap-1">
+                <Text
+                  accessibilityRole="header"
+                  className="text-[23px] font-extrabold tracking-tight [-rn-line-height:28] text-foreground"
+                >
+                  {title}
                 </Text>
-              ) : null}
-            </View>
-          )}
-          {progress !== undefined ? (
-            <GreenTillSetupProgress step={progress} total={progressTotal} />
-          ) : null}
+                {subtitle ? (
+                  <Text className="text-xs [-rn-line-height:22] text-muted-foreground">
+                    {subtitle}
+                  </Text>
+                ) : null}
+              </View>
+            )}
+            {progress !== undefined ? (
+              <GreenTillSetupProgress step={progress} total={progressTotal} />
+            ) : null}
+          </View>
           {motionKey === undefined ? (
             children
           ) : motionDirection !== undefined ? (
@@ -275,6 +280,8 @@ const styles = StyleSheet.create({
     paddingTop: 28,
   },
   groupedSheet: { gap: 28, paddingHorizontal: 20, paddingTop: 32 },
+  header: { gap: 16 },
+  groupedHeader: { gap: 14 },
   stage: { overflow: "hidden", position: "relative" },
   progress: { flexDirection: "row", gap: 6 },
 })

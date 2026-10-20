@@ -95,19 +95,20 @@ export function StoreLinkField({
           alignItems: compact ? "center" : undefined,
         }}
       >
+        {/* One styling method per branch: an explicit style prop next to
+            className drops the className color (hint went black in dark). */}
         <Text
-          style={
-            compact
-              ? {
+          {...(compact
+            ? {
+                style: {
                   flex: 1,
                   fontSize: 16,
                   lineHeight: 22,
                   color: colors.mutedForeground,
-                }
-              : undefined
-          }
+                },
+              }
+            : { className: "text-xs text-muted-foreground" })}
           accessibilityLiveRegion="polite"
-          className="text-xs text-muted-foreground"
         >
           {value || "your-business"}.ewatrade.com ·{" "}
           {fixed
@@ -129,10 +130,9 @@ export function StoreLinkField({
         {!fixed ? (
           <Pressable
             accessibilityRole="button"
-            className={compact ? undefined : "min-h-11 justify-center"}
-            style={
-              compact ? { minHeight: 28, justifyContent: "center" } : undefined
-            }
+            {...(compact
+              ? { style: { minHeight: 28, justifyContent: "center" } }
+              : { className: "min-h-11 justify-center" })}
             hitSlop={compact ? 8 : undefined}
             onPress={() => {
               setEditing((current) => !current)
