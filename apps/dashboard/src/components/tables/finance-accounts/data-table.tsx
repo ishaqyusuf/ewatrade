@@ -70,32 +70,20 @@ export function moneyAccountPurposeLabel(purpose: string) {
 
 function AccountActions({
   account,
-  onOpen,
   onOpenPaymentSettings,
 }: {
   account: MoneyAccountRow
-  onOpen: (accountId: string) => void
   onOpenPaymentSettings: (accountId: string) => void
 }) {
   return (
-    <div className="flex flex-wrap gap-2">
-      <Button
-        appearance="form"
-        variant="outline"
-        aria-label={`${account.name}: money in and out`}
-        onClick={() => onOpen(account.id)}
-      >
-        Money in and out
-      </Button>
-      <Button
-        appearance="form"
-        variant="outline"
-        aria-label={`${account.name} payment settings`}
-        onClick={() => onOpenPaymentSettings(account.id)}
-      >
-        Payment settings
-      </Button>
-    </div>
+    <Button
+      appearance="form"
+      variant="outline"
+      aria-label={`${account.name} payment settings`}
+      onClick={() => onOpenPaymentSettings(account.id)}
+    >
+      Payment settings
+    </Button>
   )
 }
 
@@ -122,8 +110,15 @@ export function MoneyAccountsDataTable({
         header: "Account",
         cell: ({ row }) => (
           <div className="min-w-40">
-            <p className="flex items-center gap-2 font-medium">
-              {row.original.name}
+            <p className="flex items-center gap-2">
+              <button
+                type="button"
+                className="text-left font-medium underline-offset-4 hover:underline focus-visible:underline"
+                aria-label={`${row.original.name}: money in and out`}
+                onClick={() => onOpenStatement(row.original.id)}
+              >
+                {row.original.name}
+              </button>
               <PausedBadge account={row.original} />
             </p>
             <p className="text-xs text-muted-foreground">
@@ -139,9 +134,7 @@ export function MoneyAccountsDataTable({
       },
       {
         id: "moneyIn",
-        header: () => (
-          <span className="block text-right">Money in this month</span>
-        ),
+        header: () => <span className="block text-right">In this month</span>,
         cell: ({ row }) => (
           <p className="text-right tabular-nums">
             {formatFinanceMoney(
@@ -153,9 +146,7 @@ export function MoneyAccountsDataTable({
       },
       {
         id: "moneyOut",
-        header: () => (
-          <span className="block text-right">Money out this month</span>
-        ),
+        header: () => <span className="block text-right">Out this month</span>,
         cell: ({ row }) => (
           <p className="text-right tabular-nums">
             {formatFinanceMoney(
@@ -180,7 +171,6 @@ export function MoneyAccountsDataTable({
         cell: ({ row }) => (
           <AccountActions
             account={row.original}
-            onOpen={onOpenStatement}
             onOpenPaymentSettings={onOpenPaymentSettings}
           />
         ),
@@ -262,7 +252,6 @@ export function MoneyAccountsDataTable({
               actions={
                 <AccountActions
                   account={row.original}
-                  onOpen={onOpenStatement}
                   onOpenPaymentSettings={onOpenPaymentSettings}
                 />
               }

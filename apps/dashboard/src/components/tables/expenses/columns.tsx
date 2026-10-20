@@ -60,7 +60,7 @@ export function expenseColumns(
     {
       accessorKey: "incurredAt",
       header: "Date",
-      size: 120,
+      size: 100,
       minSize: 100,
       maxSize: 180,
       enableResizing: true,
@@ -101,7 +101,7 @@ export function expenseColumns(
     {
       accessorKey: "payeeName",
       header: "Paid to",
-      size: 180,
+      size: 160,
       minSize: 130,
       maxSize: 280,
       meta: {
@@ -113,7 +113,7 @@ export function expenseColumns(
     {
       accessorKey: "totalMinor",
       header: "Amount",
-      size: 150,
+      size: 130,
       minSize: 120,
       maxSize: 200,
       meta: {
@@ -126,7 +126,7 @@ export function expenseColumns(
     {
       accessorKey: "paidMinor",
       header: "Paid",
-      size: 150,
+      size: 130,
       minSize: 120,
       maxSize: 200,
       meta: {
@@ -139,7 +139,7 @@ export function expenseColumns(
     {
       accessorKey: "outstandingMinor",
       header: "Still to pay",
-      size: 150,
+      size: 130,
       minSize: 120,
       maxSize: 200,
       meta: {
@@ -164,7 +164,7 @@ export function expenseColumns(
     {
       id: "receipt",
       header: "Receipt",
-      size: 120,
+      size: 110,
       minSize: 100,
       maxSize: 160,
       meta: {

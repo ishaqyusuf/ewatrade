@@ -103,7 +103,7 @@ function ReportResults({
   return (
     <div className="grid gap-8">
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border pb-4">
-        <h2 className="font-medium">Reports</h2>
+        <h2 className="font-medium">Totals for these dates</h2>
         <FinanceReportExport report={report} />
       </div>
       <p className="text-xs text-muted-foreground">

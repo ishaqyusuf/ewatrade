@@ -16,6 +16,23 @@ import { FinanceSupplierTableView } from "./table-view"
 const FIXED_COLUMN_IDS = ["select", "name"]
 const getSupplierId = (supplier: FinanceSupplierListRow) => supplier.id
 
+type SupplierBalance = {
+  supplierId: string
+  owedMinor: string
+  paidAheadMinor: string
+}
+function combineSupplierBalances(
+  results: Array<{ data?: { items: SupplierBalance[] } }>,
+) {
+  return new Map(
+    results.flatMap((result) =>
+      (result.data?.items ?? []).map(
+        (item) => [item.supplierId, item] as const,
+      ),
+    ),
+  )
+}
+
 export function FinanceSupplierDataTable({
   book,
   initialSettings,
@@ -41,24 +58,17 @@ export function FinanceSupplierDataTable({
       },
     ),
   )
-  // Balances load per page, apart from the supplier identities.
-  const balancePages = useQueries({
+  // Balances load per page, apart from the supplier identities. `combine`
+  // keeps one Map per change, so rows stay stable between renders.
+  const balances = useQueries({
     queries: (query.data?.pages ?? []).map((page) =>
       trpc.finance.supplierBalances.queryOptions({
         bookId: book.id,
         supplierIds: page.data.map((supplier) => supplier.id),
       }),
     ),
+    combine: combineSupplierBalances,
   })
-  const balances = useMemo(
-    () =>
-      new Map(
-        balancePages.flatMap((result) =>
-          (result.data?.items ?? []).map((item) => [item.supplierId, item]),
-        ),
-      ),
-    [balancePages],
-  )
   const data = useMemo<FinanceSupplierListRow[]>(
     () =>
       (query.data?.pages.flatMap((page) => page.data) ?? []).map(

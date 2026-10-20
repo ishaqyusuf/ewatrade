@@ -22,13 +22,11 @@ function Amount({
   strong?: boolean
 }) {
   if (value === undefined)
-    return <span className="block text-right text-muted-foreground">…</span>
+    return <span className="text-muted-foreground">…</span>
   if (!strong && value === "0")
-    return <span className="block text-right text-muted-foreground">—</span>
+    return <span className="text-muted-foreground">—</span>
   return (
-    <span
-      className={`block text-right tabular-nums ${strong ? "font-semibold" : ""}`}
-    >
+    <span className={`tabular-nums ${strong ? "font-semibold" : ""}`}>
       {formatFinanceMoney(value, currency)}
     </span>
   )
@@ -73,7 +71,7 @@ export function financeSupplierColumns(
     },
     {
       id: "owed",
-      header: () => <span className="block text-right">You owe</span>,
+      header: "You owe",
       size: 180,
       minSize: 140,
       maxSize: 260,
@@ -87,7 +85,7 @@ export function financeSupplierColumns(
     },
     {
       id: "paidAhead",
-      header: () => <span className="block text-right">Paid ahead</span>,
+      header: "Paid ahead",
       size: 180,
       minSize: 140,
       maxSize: 260,
