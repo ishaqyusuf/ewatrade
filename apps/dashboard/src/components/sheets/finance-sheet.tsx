@@ -3,7 +3,7 @@
 import { FinanceSheetContent } from "@/components/finance/finance-sheet-content"
 import { FinanceFormProvider } from "@/components/finance/form-context"
 import { useFinanceParams } from "@/hooks/use-finance-params"
-import { Dialog, Sheet } from "@ewatrade/ui"
+import { Sheet } from "@ewatrade/ui"
 import { useCallback, useRef, useState } from "react"
 
 export function FinanceSheet({
@@ -18,7 +18,6 @@ export function FinanceSheet({
   const { financeSheet, close } = useFinanceParams()
   const lockedRef = useRef(false)
   const open = Boolean(financeSheet)
-  const Root = financeSheet === "supplier" ? Dialog : Sheet
   const [closeError, setCloseError] = useState<string | null>(null)
 
   const closeSheet = useCallback(async () => {
@@ -28,7 +27,7 @@ export function FinanceSheet({
   }, [close])
 
   return (
-    <Root
+    <Sheet
       open={open}
       onOpenChange={(nextOpen, details) => {
         if (nextOpen) return
@@ -59,6 +58,6 @@ export function FinanceSheet({
           />
         </FinanceFormProvider>
       ) : null}
-    </Root>
+    </Sheet>
   )
 }

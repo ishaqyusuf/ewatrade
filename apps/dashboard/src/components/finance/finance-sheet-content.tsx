@@ -4,7 +4,6 @@ import { FormFeedback } from "@/components/forms/form-feedback"
 import { FinanceContent } from "@/components/finance/finance-content"
 import { financeSheetTitles } from "@/components/finance/finance-sheet-header"
 import { useFinanceForm } from "@/components/finance/form-context"
-import { FinanceSupplierModalContent } from "@/components/modals/finance-supplier-modal-content"
 import { SheetFrame } from "@/components/sheets/sheet-frame"
 import { useFinanceInvalidation } from "@/hooks/use-finance-invalidation"
 import { useFinanceParams } from "@/hooks/use-finance-params"
@@ -300,10 +299,8 @@ export function FinanceSheetContent({
     tenantId,
     trpc,
   ])
-  const Frame =
-    financeSheet === "supplier" ? FinanceSupplierModalContent : SheetFrame
   return (
-    <Frame
+    <SheetFrame
       title={financeSheet ? financeSheetTitles[financeSheet] : "Finance"}
       description={
         locked
@@ -356,6 +353,6 @@ export function FinanceSheetContent({
           />
         </>
       ) : null}
-    </Frame>
+    </SheetFrame>
   )
 }
