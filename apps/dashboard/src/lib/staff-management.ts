@@ -1,4 +1,8 @@
-import { canManageSalesOperations, canManageTenant, normalizeRole } from "@ewatrade/auth/roles"
+import {
+  canManageSalesOperations,
+  canManageTenant,
+  normalizeRole,
+} from "@ewatrade/auth/roles"
 
 export type StaffRoleFilter =
   | "admin"
@@ -12,7 +16,18 @@ export type StaffStatusFilter = "active" | "all" | "invited" | "suspended"
 
 export type StaffInviteRole = "cashier" | "manager" | "operator"
 
+export type StaffAccessView = {
+  /** Owners, admins and legacy-mode staff can use every Store. */
+  allStores: boolean
+  catalogEditor: boolean
+  defaultStoreId: string | null
+  stores: Array<{ storeId: string; storeName: string; role: string }>
+  invitationId: string | null
+  invitationExpiresAt: string | null
+}
+
 export type StaffMemberRow = {
+  access?: StaffAccessView
   acceptedAt: string | null
   createdAt: string
   id: string
@@ -40,7 +55,11 @@ export type StaffFilters = {
 export function canManageStaff(role: string | null | undefined, mode?: string) {
   const normalizedRole = normalizeRole(role)
 
-  return normalizedRole ? (mode === "SCOPED" ? canManageTenant(normalizedRole) : canManageSalesOperations(normalizedRole)) : false
+  return normalizedRole
+    ? mode === "SCOPED"
+      ? canManageTenant(normalizedRole)
+      : canManageSalesOperations(normalizedRole)
+    : false
 }
 
 export function getStaffDisplayName(staff: StaffMemberRow) {
@@ -60,12 +79,60 @@ export function getStaffRoleLabel(role: string) {
     case "MANAGER":
       return "Manager"
     case "OPERATOR":
-      return "Operator"
+      return "Sales rep"
     case "CASHIER":
       return "Cashier"
     default:
       return "Staff"
   }
+}
+
+/** What each role can do, in the words the Staff page uses. */
+export const staffRoleDescriptions: Record<string, string> = {
+  OWNER: "Owns the business. Can do everything, including billing.",
+  ADMIN: "Runs every store, the catalog, staff and reports.",
+  MANAGER: "Runs their stores: orders, stock, cash counts and reports.",
+  CASHIER: "Sells and takes payments. Can’t change stock or prices.",
+  OPERATOR: "Sells, takes payments and updates stock. Can’t change prices.",
+}
+
+export type StaffStatusKey = "active" | "expired" | "invited" | "suspended"
+
+/** Active, invited, invite expired or suspended; expiry comes from the pending link. */
+export function getStaffStatusKey(
+  staff: StaffMemberRow,
+  now = Date.now(),
+): StaffStatusKey {
+  const status = staff.status.trim().toUpperCase()
+  if (status === "SUSPENDED") return "suspended"
+  if (status !== "INVITED") return "active"
+  const expiresAt = staff.access?.invitationExpiresAt
+  return expiresAt && new Date(expiresAt).getTime() <= now
+    ? "expired"
+    : "invited"
+}
+
+export const staffStatusKeyLabels: Record<StaffStatusKey, string> = {
+  active: "Active",
+  expired: "Invite expired",
+  invited: "Invited",
+  suspended: "Suspended",
+}
+
+export type StaffAction =
+  | "access"
+  | "cancel"
+  | "reactivate"
+  | "resend"
+  | "suspend"
+
+/** Actions in display order; owners and admins have none here. */
+export function getStaffActions(staff: StaffMemberRow): StaffAction[] {
+  if (!canUpdateStaffStatus(staff)) return []
+  const key = getStaffStatusKey(staff)
+  if (key === "active") return ["access", "suspend"]
+  if (key === "suspended") return ["reactivate", "access"]
+  return ["resend", "cancel"]
 }
 
 export function getStaffStatusLabel(status: string) {

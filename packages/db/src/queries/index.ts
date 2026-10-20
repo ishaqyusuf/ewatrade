@@ -129,6 +129,7 @@ export {
 
 export * from "./catalog-detail"
 
+export * from "./staff-access-summaries"
 export * from "./staff-store-access"
 export { setCatalogProductUsage } from "./product-usage"
 
