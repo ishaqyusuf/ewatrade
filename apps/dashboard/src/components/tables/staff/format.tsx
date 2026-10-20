@@ -2,8 +2,8 @@
 import {
   type StaffMemberRow,
   getStaffDisplayName,
-  getStaffRoleLabel,
   getStaffStatusKey,
+  getStaffWorkingRoleLabel,
   staffStatusKeyLabels,
 } from "@/lib/staff-management"
 import { Avatar, AvatarFallback, Badge, cn } from "@ewatrade/ui"
@@ -92,11 +92,11 @@ export function StaffStatus({
   )
 }
 
-export function StaffRoleBadge({ role }: { role: string }) {
-  const lead = ["OWNER", "ADMIN"].includes(role.trim().toUpperCase())
+export function StaffRoleBadge({ member }: { member: StaffMemberRow }) {
+  const lead = ["OWNER", "ADMIN"].includes(member.role.trim().toUpperCase())
   return (
     <Badge variant={lead ? "outline" : "secondary"}>
-      {getStaffRoleLabel(role)}
+      {getStaffWorkingRoleLabel(member)}
     </Badge>
   )
 }

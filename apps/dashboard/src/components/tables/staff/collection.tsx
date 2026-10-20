@@ -4,7 +4,7 @@ import { RowSelectCheckbox } from "@/components/tables/core"
 import {
   type StaffMemberRow,
   getStaffDisplayName,
-  getStaffRoleLabel,
+  getStaffWorkingRoleLabel,
 } from "@/lib/staff-management"
 import type { Row } from "@tanstack/react-table"
 import { StaffActionsMenu, type StaffRowActions } from "./actions"
@@ -46,7 +46,7 @@ function StaffList({ rows, actions }: CollectionProps) {
               </span>
             </div>
             <span className="truncate text-sm text-muted-foreground max-md:hidden">
-              {getStaffRoleLabel(member.role)}
+              {getStaffWorkingRoleLabel(member)}
             </span>
             <span className="truncate text-sm text-muted-foreground max-md:hidden">
               {staffStoresText(member)}
@@ -81,7 +81,8 @@ function StaffGrid({ rows, actions }: CollectionProps) {
                 <div className="grid min-w-0">
                   <StaffName member={member} onOpen={actions.onOpen} />
                   <span className="truncate text-sm text-muted-foreground">
-                    {getStaffRoleLabel(member.role)} · {staffStoresText(member)}
+                    {getStaffWorkingRoleLabel(member)} ·{" "}
+                    {staffStoresText(member)}
                   </span>
                 </div>
                 <div className="flex items-center gap-0.5">

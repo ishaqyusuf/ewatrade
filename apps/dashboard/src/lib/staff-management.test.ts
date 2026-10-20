@@ -10,6 +10,7 @@ import {
   getStaffRoleLabel,
   getStaffStatusKey,
   getStaffStatusLabel,
+  getStaffWorkingRoleLabel,
 } from "./staff-management"
 
 const staff: StaffMemberRow[] = [
@@ -127,5 +128,38 @@ describe("staff management helpers", () => {
     expect(getStaffActions(invited)).toEqual(["resend", "cancel"])
     expect(getStaffActions(staff[0])).toEqual(["access", "suspend"])
     expect(getStaffActions({ ...staff[0], role: "OWNER" })).toEqual([])
+    expect(
+      getStaffActions({ ...staff[0], status: "SUSPENDED", acceptedAt: null }),
+    ).toEqual([])
+  })
+
+  test("shows the Store role for staff limited to some stores", () => {
+    const access = {
+      allStores: false,
+      catalogEditor: false,
+      defaultStoreId: null,
+      invitationId: null,
+      invitationExpiresAt: null,
+    }
+    const one = {
+      ...staff[2],
+      access: {
+        ...access,
+        stores: [{ storeId: "s1", storeName: "Main", role: "MANAGER" }],
+      },
+    }
+    const mixed = {
+      ...one,
+      access: {
+        ...access,
+        stores: [
+          { storeId: "s1", storeName: "Main", role: "MANAGER" },
+          { storeId: "s2", storeName: "Branch", role: "CASHIER" },
+        ],
+      },
+    }
+    expect(getStaffWorkingRoleLabel(one)).toBe("Manager")
+    expect(getStaffWorkingRoleLabel(mixed)).toBe("Mixed roles")
+    expect(getStaffWorkingRoleLabel(staff[2])).toBe("Sales rep")
   })
 })

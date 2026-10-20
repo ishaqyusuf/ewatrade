@@ -37,7 +37,7 @@ import { Cancel01Icon } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { useQueryClient } from "@tanstack/react-query"
 import { useRouter } from "next/navigation"
-import { useMemo, useState } from "react"
+import { useMemo, useRef, useState } from "react"
 
 type StaffResponse = {
   staff: StaffMemberRow[]
@@ -235,13 +235,22 @@ export function StaffPage({
     else setCancelling(target)
   }
 
-  const actions: StaffRowActions = {
-    busyId,
-    canSeeHistory: canManageAccess,
-    onOpen: canOpenMember ? (target) => void member.open(target.id) : undefined,
-    onHistory: (target) => void member.openHistory(target.id),
-    onAction: runAction,
-  }
+  // Columns are rebuilt when actions change, so keep them stable and read
+  // the latest handlers through a ref; otherwise every render remounts cells.
+  const latest = useRef({ runAction, member })
+  latest.current = { runAction, member }
+  const actions = useMemo<StaffRowActions>(
+    () => ({
+      busyId,
+      canSeeHistory: canManageAccess,
+      onOpen: canOpenMember
+        ? (target) => void latest.current.member.open(target.id)
+        : undefined,
+      onHistory: (target) => void latest.current.member.openHistory(target.id),
+      onAction: (action, target) => latest.current.runAction(action, target),
+    }),
+    [busyId, canManageAccess, canOpenMember],
+  )
 
   return (
     <ScrollableContent>

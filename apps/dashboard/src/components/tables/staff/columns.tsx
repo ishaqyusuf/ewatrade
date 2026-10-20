@@ -3,7 +3,8 @@ import type { TableColumnMeta } from "@/components/tables/core"
 import {
   type StaffMemberRow,
   getStaffDisplayName,
-  getStaffRoleLabel,
+  getStaffWorkingRole,
+  getStaffWorkingRoleLabel,
 } from "@/lib/staff-management"
 import { Checkbox } from "@ewatrade/ui"
 import type { ColumnDef } from "@tanstack/react-table"
@@ -70,11 +71,12 @@ export function staffColumns(
     },
     {
       id: "role",
-      accessorFn: (row) => getStaffRoleLabel(row.role),
+      accessorFn: (row) => getStaffWorkingRoleLabel(row),
       header: "Role",
       sortingFn: (a, b) =>
-        (ROLE_RANK[a.original.role] ?? 9) - (ROLE_RANK[b.original.role] ?? 9),
-      cell: ({ row }) => <StaffRoleBadge role={row.original.role} />,
+        (ROLE_RANK[getStaffWorkingRole(a.original) ?? ""] ?? 9) -
+        (ROLE_RANK[getStaffWorkingRole(b.original) ?? ""] ?? 9),
+      cell: ({ row }) => <StaffRoleBadge member={row.original} />,
     },
     {
       id: "stores",

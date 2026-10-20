@@ -96,6 +96,23 @@ export const staffRoleDescriptions: Record<string, string> = {
   OPERATOR: "Sells, takes payments and updates stock. Can’t change prices.",
 }
 
+/**
+ * The role people work as: Store roles decide what staff limited to some
+ * Stores can do, so their shared Store role wins over the business role.
+ */
+export function getStaffWorkingRole(staff: StaffMemberRow): string | null {
+  const access = staff.access
+  if (!access || access.allStores || !access.stores.length) return staff.role
+  const roles = new Set(access.stores.map((store) => store.role.toUpperCase()))
+  return roles.size === 1 ? ([...roles][0] ?? null) : null
+}
+
+/** "Mixed roles" when Stores differ; otherwise the working role's label. */
+export function getStaffWorkingRoleLabel(staff: StaffMemberRow) {
+  const role = getStaffWorkingRole(staff)
+  return role ? getStaffRoleLabel(role) : "Mixed roles"
+}
+
 export type StaffStatusKey = "active" | "expired" | "invited" | "suspended"
 
 /** Active, invited, invite expired or suspended; expiry comes from the pending link. */
@@ -131,7 +148,9 @@ export function getStaffActions(staff: StaffMemberRow): StaffAction[] {
   if (!canUpdateStaffStatus(staff)) return []
   const key = getStaffStatusKey(staff)
   if (key === "active") return ["access", "suspend"]
-  if (key === "suspended") return ["reactivate", "access"]
+  // Only people who finished onboarding can be reactivated.
+  if (key === "suspended")
+    return staff.acceptedAt ? ["reactivate", "access"] : []
   return ["resend", "cancel"]
 }
 

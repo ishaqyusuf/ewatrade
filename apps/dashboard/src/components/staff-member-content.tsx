@@ -70,10 +70,13 @@ export function memberAsStaffRow(
 export function StaffMemberContent({
   row,
   showStores,
+  loading = false,
   onOpenInvitation,
 }: {
   row: StaffMemberRow
   showStores: boolean
+  /** Store access and the invite link are still loading. */
+  loading?: boolean
   onOpenInvitation?: () => void
 }) {
   const key = getStaffStatusKey(row)
@@ -81,7 +84,7 @@ export function StaffMemberContent({
   return (
     <div className="grid gap-6 text-sm">
       <div className="flex flex-wrap items-center gap-3">
-        <StaffRoleBadge role={row.role} />
+        <StaffRoleBadge member={row} />
         <StaffStatus member={row} showDetail={false} />
       </div>
       {key === "suspended" ? (
@@ -120,7 +123,9 @@ export function StaffMemberContent({
             <p className="text-muted-foreground">
               {key === "expired"
                 ? "Send a new invite so they can join."
-                : `Not accepted yet. The link expires ${formatDate(access?.invitationExpiresAt)}.`}
+                : access?.invitationExpiresAt
+                  ? `Not accepted yet. The link expires ${formatDate(access.invitationExpiresAt)}.`
+                  : "Not accepted yet."}
             </p>
             {onOpenInvitation ? (
               <Button
@@ -138,7 +143,11 @@ export function StaffMemberContent({
       {showStores && access ? (
         <section className="grid gap-2">
           <h3 className="font-medium">Stores</h3>
-          {access.allStores ? (
+          {loading ? (
+            <output aria-live="polite" className="text-muted-foreground">
+              Loading…
+            </output>
+          ) : access.allStores ? (
             <p>Every store</p>
           ) : access.stores.length ? (
             <ul className="grid gap-1.5">

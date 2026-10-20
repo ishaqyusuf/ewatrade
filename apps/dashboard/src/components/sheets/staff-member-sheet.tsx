@@ -191,7 +191,7 @@ export function StaffMemberSheet({
           </div>
         </SheetFrame>
       )
-    if (view === "access" && historyAllowed)
+    if (view === "access" && actions.includes("access"))
       return (
         <SheetFrame
           title="Change access"
@@ -205,7 +205,7 @@ export function StaffMemberSheet({
           />
         </SheetFrame>
       )
-    if (view === "suspend")
+    if (view === "suspend" && actions.includes("suspend"))
       return (
         <SheetFrame
           title={`Suspend ${member.name}`}
@@ -272,6 +272,7 @@ export function StaffMemberSheet({
           <StaffMemberContent
             row={row}
             showStores={historyAllowed}
+            loading={historyAllowed && (access.isPending || invites.isLoading)}
             onOpenInvitation={
               inviteCommandId
                 ? () => void invitationSheet.open(inviteCommandId)
