@@ -1,8 +1,10 @@
-import { describe, expect, it } from "bun:test"
+import { describe, expect, it, test } from "bun:test"
 import { parseExactDecimal } from "@ewatrade/utils/exact-decimal"
 import {
   inventoryQuantityTotal,
   inventoryQuantityUnits,
+  normalizeQuantityInput,
+  plainQuantityError,
 } from "./inventory-quantity"
 
 const balance = {
@@ -103,4 +105,24 @@ describe("inventory quantity units", () => {
       inventoryQuantityTotal("0", crate, balance, true).balanceQuantity,
     ).toBe(parseExactDecimal("0"))
   })
+})
+
+test("reads typed quantities and explains bad ones plainly", () => {
+  expect(normalizeQuantityInput("1,000")).toBe("1000")
+  expect(normalizeQuantityInput(" 2 500 ")).toBe("2500")
+  expect(
+    plainQuantityError(
+      "Decimal result exceeds the maximum scale of 0.",
+      "Eggs",
+    ),
+  ).toBe("Eggs must be whole numbers.")
+  expect(
+    plainQuantityError("A value greater than zero is required.", "Eggs"),
+  ).toBe("Enter more than 0.")
+  expect(
+    plainQuantityError(
+      "Use a plain decimal string without exponent notation.",
+      "Eggs",
+    ),
+  ).toBe("Enter a number like 12 or 2.5.")
 })

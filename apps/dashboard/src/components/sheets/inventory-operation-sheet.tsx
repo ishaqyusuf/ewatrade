@@ -11,13 +11,25 @@ import { useQuery } from "@tanstack/react-query"
 type StoreSummary = { currencyCode: string; id: string; name: string }
 
 const operationTitles = {
-  adjustment: "Adjust stock",
+  adjustment: "Correct stock",
   count: "Count stock",
-  custody: "Move stock custody",
-  internal_use: "Record use",
-  receipt: "Receive stock",
-  transfer: "Transfer stock",
-  transformation: "Transform stock",
+  custody: "Hand to staff",
+  internal_use: "Used in the business",
+  receipt: "Stock in",
+  transfer: "Send to another store",
+  transformation: "Pack or unpack",
+} as const
+
+const operationDescriptions = {
+  adjustment:
+    "Fix a number that is wrong. To check everything on the shelf, use Count stock.",
+  count: "Type what you find on the shelf. Stock is set to your count.",
+  custody:
+    "Track stock a staff member carries to sell, such as on a van or at a stall.",
+  internal_use: "Stock the business used itself, not sold.",
+  receipt: "Add stock that arrived: collected, bought or returned.",
+  transfer: "Move stock to another of your stores.",
+  transformation: "Move stock between loose stock and packs kept separately.",
 } as const
 
 export function InventoryOperationSheet({
@@ -51,19 +63,13 @@ export function InventoryOperationSheet({
           popupClassName={popupClassName}
           title={
             operation === "adjustment" && preset === "loss"
-              ? "Record damage or loss"
+              ? "Damaged or lost"
               : operationTitles[operation]
           }
           description={
-            operation === "transfer"
-              ? "Choose the source and destination stores, then the stock to move."
-              : operation === "transformation"
-                ? "Move exact stock between independently balanced packaged units."
-                : operation === "count"
-                  ? "Observe the physical balance, then post any variance."
-                  : operation === "internal_use"
-                    ? "Record stock used inside the business. It leaves stock without a sale."
-                    : "Choose stock in this store and record the quantity change."
+            operation === "adjustment" && preset === "loss"
+              ? "Remove stock that broke, died, expired or went missing."
+              : operationDescriptions[operation]
           }
         >
           {selectedStore ? (
@@ -74,8 +80,8 @@ export function InventoryOperationSheet({
           ) : (
             <p>
               {stores.isError
-                ? "Could not load stores. Close and try again."
-                : "Loading store…"}
+                ? "Your stores couldn’t load. Close and try again."
+                : "Loading…"}
             </p>
           )}
         </SheetFrame>

@@ -3,6 +3,7 @@
 import { FormFeedback } from "@/components/forms/form-feedback"
 import { useTRPC } from "@/trpc/client"
 import {
+  Button,
   Combobox,
   ComboboxChip,
   ComboboxChips,
@@ -34,12 +35,18 @@ export function StockCategoriesInput({
   onChange,
   onInputChange,
   disabled = false,
+  label = "Reason",
+  presets = [],
 }: {
   value: StockCategoryDraft[]
   input: string
   onChange: (value: StockCategoryDraft[]) => void
   onInputChange: (value: string) => void
   disabled?: boolean
+  /** The question this field answers, e.g. "What happened?". */
+  label?: string
+  /** Ready-made reasons shown as one-tap chips. */
+  presets?: readonly string[]
 }) {
   const trpc = useTRPC()
   const id = useId()
@@ -117,7 +124,44 @@ export function StockCategoriesInput({
 
   return (
     <Field className="gap-2">
-      <FieldLabel htmlFor={id}>Categories</FieldLabel>
+      <FieldLabel htmlFor={id}>{label}</FieldLabel>
+      {presets.length ? (
+        <div className="flex flex-wrap gap-1.5">
+          {presets.map((name) => {
+            const key = normalizeStockCategoryName(name).normalizedName
+            const on = value.some(
+              (category) =>
+                normalizeStockCategoryName(category.name).normalizedName ===
+                key,
+            )
+            return (
+              <Button
+                key={name}
+                type="button"
+                size="sm"
+                variant={on ? "secondary" : "outline"}
+                className="rounded-full"
+                aria-pressed={on}
+                disabled={disabled || (!on && atLimit)}
+                onClick={() => {
+                  onChange(
+                    on
+                      ? value.filter(
+                          (category) =>
+                            normalizeStockCategoryName(category.name)
+                              .normalizedName !== key,
+                        )
+                      : [...value, categories.get(key) ?? { name }],
+                  )
+                  setError(null)
+                }}
+              >
+                {name}
+              </Button>
+            )
+          })}
+        </div>
+      ) : null}
       <div className="flex items-start gap-2">
         <Combobox
           multiple
@@ -179,27 +223,27 @@ export function StockCategoriesInput({
               aria-describedby={`${id}-help`}
               aria-invalid={Boolean(error)}
               placeholder={
-                value.length
-                  ? "Add another category"
-                  : "Select or type a category"
+                value.length || presets.length
+                  ? "Type your own"
+                  : "Type a reason"
               }
             />
             <ComboboxTrigger
-              aria-label="Show saved categories"
+              aria-label="Show reasons you used before"
               disabled={disabled}
             />
           </ComboboxChips>
           <ComboboxContent anchor={anchor}>
             {!input.trim() && Boolean(suggestions.data?.length) ? (
               <p className="px-3 pt-3 pb-1 text-xs text-muted-foreground">
-                Start typing to add a new category.
+                Or type a new reason.
               </p>
             ) : null}
             {suggestions.isPending || input.trim() ? (
               <ComboboxEmpty>
                 {suggestions.isPending
-                  ? "Loading categories…"
-                  : "Type a valid category name to add it."}
+                  ? "Loading reasons…"
+                  : "Type a reason to add it."}
               </ComboboxEmpty>
             ) : null}
             <ComboboxList>
@@ -220,13 +264,13 @@ export function StockCategoriesInput({
       </div>
       <FieldDescription id={`${id}-help`}>
         {atLimit
-          ? "10 categories selected. Remove one to add another."
-          : "Select multiple categories, or type a new name and press Enter. Commas also add names."}{" "}
-        Categories from saved activities become available next time.
+          ? "10 reasons picked. Remove one to add another."
+          : "Pick one or more, or type your own and press Enter."}{" "}
+        Reasons you use are remembered.
       </FieldDescription>
       {suggestions.isError ? (
         <p className="text-xs text-muted-foreground">
-          Saved categories could not load. You can still enter a name.
+          Reasons you used before couldn’t load. You can still type one.
         </p>
       ) : null}
       {error ? (
