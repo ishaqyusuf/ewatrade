@@ -192,9 +192,7 @@ export function resolveLoadedOrdinaryStockSource(
     operation.tenantId !== tenantId ||
     store.tenantId !== tenantId ||
     operation.storeId !== store.id ||
-    !["RECEIPT", "RETURN", "ADJUSTMENT", "INTERNAL_USE"].includes(
-      operation.type,
-    ) ||
+    !["RECEIPT", "RETURN", "ADJUSTMENT"].includes(operation.type) ||
     operation.movements.length !== 1 ||
     operation._count.movements !== 1 ||
     hasOwnedSource(operation)

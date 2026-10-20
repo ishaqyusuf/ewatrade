@@ -373,9 +373,7 @@ function AccountFirstSignup() {
                   {(
                     [
                       ["email", "Email"],
-                      ...(phoneEnabled
-                        ? [["whatsapp", "WhatsApp"] as const]
-                        : []),
+                      ...(phoneEnabled ? [["whatsapp", "WhatsApp"]] : []),
                       ["both", "Both"],
                     ] as const
                   ).map(([value, label]) => (

@@ -1,29 +1,16 @@
 "use client"
-import { FieldGroup, Input } from "@ewatrade/ui"
+import { Button, FieldGroup, FormActions, Input } from "@ewatrade/ui"
 
-import { FormDatePicker } from "@/components/forms/form-controls"
+import { FormDateControl } from "@/components/forms/form-controls"
 import { useFinanceCommand } from "@/hooks/use-finance-command"
 import { useZodForm } from "@/hooks/use-zod-form"
 import { useTRPC } from "@/trpc/client"
 
+import { formatFinanceMoney } from "@ewatrade/utils/finance-money"
 import { useMutation } from "@tanstack/react-query"
 import { useState } from "react"
 import { z } from "zod"
-import {
-  FinanceBackTo,
-  FinanceDetails,
-  FinanceField,
-  FinanceFormFooter,
-  FinanceReview,
-} from "./form-fields"
-import {
-  balanceChange,
-  changes,
-  moneyText,
-  plainDay,
-  todayIn,
-  useMoneyBalances,
-} from "./review-changes"
+import { FinanceField, FinanceReview } from "./form-fields"
 import type { FinanceBook } from "./types"
 import { useCompleteFinanceForm } from "./use-complete-finance-form"
 
@@ -32,22 +19,13 @@ export type BillCorrectionTarget = {
   paymentId?: string
   description: string
   amountMinor: string
-  payeeName: string
-  billDescription: string
-  outstandingMinor: string
-  accountId?: string
 }
 const schema = z.object({
-  reason: z
-    .string()
-    .trim()
-    .min(1, "Say why, so others understand later.")
-    .max(400, "Use 400 characters or fewer."),
-  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Pick a date."),
+  reason: z.string().trim().min(1, "Enter a reason.").max(400),
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Choose a date."),
 })
 type Values = z.infer<typeof schema>
 
-/** Cancel an expense or undo one of its payments, inside the Expense sheet. */
 export function FinanceBillCorrectionForm({
   book,
   target,
@@ -58,27 +36,21 @@ export function FinanceBillCorrectionForm({
   onBack: () => void
 }) {
   const trpc = useTRPC()
-  const currency = book.currencyCode
-  const balances = useMoneyBalances(book.id)
-  const undo = Boolean(target.paymentId)
-  const amount = moneyText(target.amountMinor, currency)
-  const outstanding = BigInt(target.outstandingMinor)
   const reverse = useMutation(trpc.finance.reverseBillPayment.mutationOptions())
   const cancel = useMutation(trpc.finance.voidExpense.mutationOptions())
   const command = useFinanceCommand(
-    useCompleteFinanceForm(
-      undo
-        ? `Payment undone. ${target.payeeName} is owed ${moneyText(outstanding + BigInt(target.amountMinor), currency)} again.`
-        : `${target.billDescription} is cancelled. It stays in history.`,
-    ),
+    useCompleteFinanceForm(),
     book.id,
-    undo ? "reverseBillPayment" : "voidExpense",
+    target.paymentId ? "reverseBillPayment" : "voidExpense",
   )
   const [review, setReview] = useState<Values | null>(null)
   const form = useZodForm<Values>(schema, {
-    defaultValues: { reason: "", date: todayIn(book.timezone) },
+    defaultValues: {
+      reason: "",
+      date: new Date().toISOString().slice(0, 10),
+    },
   })
-  const title = undo ? "Undo payment" : "Cancel expense"
+  const action = target.paymentId ? "Reverse payment" : "Cancel expense"
   function submit(values: Values) {
     const common = {
       bookId: book.id,
@@ -101,119 +73,60 @@ export function FinanceBillCorrectionForm({
             }),
     })
   }
-  const back = (
-    <FinanceBackTo
-      label="Back to expense"
-      onBack={onBack}
-      title={title}
-      description={
-        undo
-          ? "Takes back a payment in your records. No money moves."
-          : "It stops counting in Spending and Still to pay, and stays in history."
-      }
-    />
-  )
+  const explanation = target.paymentId
+    ? "This corrects the recorded payment and reopens the amount owed. It does not send money or issue a refund. The original payment remains in history."
+    : "This cancels the recorded expense. Its original amount and correction history remain available."
   if (review)
     return (
-      <div className="grid gap-5">
-        {back}
-        <FinanceReview
-          command={command}
-          onBack={() => setReview(null)}
-          onConfirm={() => submit(review)}
-          confirmLabel={title}
-          sentence={
-            undo ? (
-              <>
-                This takes back the <b>{amount}</b> payment to{" "}
-                {target.payeeName} in your records. It doesn't send or return
-                any money. The payment stays in history, marked Undone.
-              </>
-            ) : (
-              <>
-                This cancels the <b>{amount}</b> expense{" "}
-                {target.billDescription}. It stops counting in Spending and
-                Still to pay. You'll still see it, marked Cancelled, with your
-                reason.
-              </>
-            )
-          }
-          changes={changes(
-            undo
-              ? [
-                  balanceChange(
-                    balances,
-                    target.accountId,
-                    BigInt(target.amountMinor),
-                    currency,
-                  ),
-                  {
-                    label: `Still to pay ${target.payeeName}`,
-                    before: moneyText(outstanding, currency),
-                    after: moneyText(
-                      outstanding + BigInt(target.amountMinor),
-                      currency,
-                    ),
-                  },
-                ]
-              : [
-                  outstanding > BigInt(0)
-                    ? {
-                        label: `Still to pay ${target.payeeName}`,
-                        before: moneyText(outstanding, currency),
-                        after: moneyText(BigInt(0), currency),
-                      }
-                    : null,
-                ],
-          )}
-        >
-          <FinanceDetails
-            rows={[
-              ["Date", plainDay(review.date)],
-              ["Why", review.reason],
-            ]}
-          />
-        </FinanceReview>
-      </div>
+      <FinanceReview
+        command={command}
+        onBack={() => setReview(null)}
+        onConfirm={() => submit(review)}
+      >
+        <h4 className="font-medium">{action}</h4>
+        <p>
+          {target.description} ·{" "}
+          {formatFinanceMoney(target.amountMinor, book.currencyCode)}
+        </p>
+        <p className="text-sm">{explanation}</p>
+        <p className="text-sm">Effective date: {review.date}</p>
+        <p className="break-words text-sm">Reason: {review.reason}</p>
+      </FinanceReview>
     )
-  const errors = form.formState.errors
   return (
     <form onSubmit={form.handleSubmit(setReview)}>
       <FieldGroup className="min-w-0 grid gap-5">
-        {back}
-        <div className="grid gap-0.5 border border-border bg-muted/40 px-3 py-2 text-sm">
-          <span className="flex justify-between gap-3 font-medium">
-            <span>{target.description}</span>
-            <span className="tabular-nums">{amount}</span>
-          </span>
-          <span className="text-muted-foreground">
-            {target.billDescription} · {target.payeeName}
-          </span>
-        </div>
-        <FinanceField label="Date" error={errors.date?.message}>
-          <FormDatePicker
-            control={form.control}
-            name="date"
-            max={todayIn(book.timezone)}
-          />
+        <h3 className="font-semibold">{action}</h3>
+        <p>
+          {target.description} ·{" "}
+          {formatFinanceMoney(target.amountMinor, book.currencyCode)}
+        </p>
+        <p className="text-sm text-muted-foreground">{explanation}</p>
+        <FinanceField
+          label="Correction date"
+          error={form.formState.errors.date?.message}
+        >
+          <FormDateControl type="date" control={form.control} name={"date"} />
         </FinanceField>
         <FinanceField
-          label={
-            undo ? "Why are you undoing it?" : "Why are you cancelling it?"
-          }
-          error={errors.reason?.message}
+          label="Reason for correction"
+          error={form.formState.errors.reason?.message}
         >
-          <Input
-            maxLength={400}
-            placeholder={
-              undo
-                ? "The transfer failed and came back"
-                : "Entered twice, or it was waived"
-            }
-            {...form.register("reason")}
-          />
+          <Input maxLength={400} {...form.register("reason")} />
         </FinanceField>
-        <FinanceFormFooter onCancel={onBack} submitLabel="Review" />
+        <FormActions>
+          <Button
+            appearance="form"
+            type="button"
+            variant="outline"
+            onClick={onBack}
+          >
+            Back to expense
+          </Button>
+          <Button appearance="form" type="submit">
+            Review correction
+          </Button>
+        </FormActions>
       </FieldGroup>
     </form>
   )

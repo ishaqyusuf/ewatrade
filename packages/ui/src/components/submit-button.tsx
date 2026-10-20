@@ -17,6 +17,7 @@ export function SubmitButton({
     <Button
       {...props}
       type={type}
+      appearance="form"
       disabled={isSubmitting || disabled}
       aria-busy={isSubmitting}
       className={cn("relative", className)}

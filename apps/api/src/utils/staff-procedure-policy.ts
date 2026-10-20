@@ -147,7 +147,6 @@ const catalog = new Set([
   "catalog.updatePrice",
   "catalog.updateProductDetails",
   "catalog.updateProductIdentifiers",
-  "catalog.updateItem",
 ])
 export function staffProcedureAction(
   path: string,

@@ -43,15 +43,17 @@ export function FinanceReports({ book }: { book: FinanceBook }) {
   return (
     <section className="grid gap-6">
       <div className="border border-border bg-background p-6">
-        <h2 className="font-medium">Not your full profit yet</h2>
+        <h2 className="font-medium">Partial financial records</h2>
         <p className="mt-2 text-sm text-muted-foreground">
-          These reports only count money recorded in Finance. Sales and stock
-          costs aren't linked yet, so the totals aren't your full profit.
+          These reports include posted finance entries only. Sales, customer
+          payments and inventory costs are not yet connected, and opening
+          balances need reconciliation. The totals do not represent your
+          complete business profit or financial position.
         </p>
       </div>
-      <div className="grid gap-2">
+      <div>
         <DateRangeControl
-          label="Report date range"
+          label="Financial report date range (UTC)"
           start={from}
           end={through}
           min={start}
@@ -59,9 +61,6 @@ export function FinanceReports({ book }: { book: FinanceBook }) {
             void setRange(range).then(() => setRevision((value) => value + 1))
           }}
         />
-        <p className="text-xs text-muted-foreground">
-          Days run midnight to midnight UTC (1 am in Lagos).
-        </p>
       </div>
       <FinancePeriodHistory book={book} />
       <FinanceReportAccountLedger book={book} />
@@ -92,7 +91,7 @@ function ReportResults({
     ),
   )
   if (query.isPending)
-    return <ReportSectionSkeleton count={4} title="Reports" />
+    return <ReportSectionSkeleton count={4} title="Financial reports" />
   if (query.isError)
     return (
       <ReportError error={query.error} retry={() => void query.refetch()} />
@@ -103,23 +102,21 @@ function ReportResults({
   return (
     <div className="grid gap-8">
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border pb-4">
-        <h2 className="font-medium">Totals for these dates</h2>
+        <h2 className="font-medium">Recorded financial reports</h2>
         <FinanceReportExport report={report} />
       </div>
       <p className="text-xs text-muted-foreground">
-        {from} to {through} · {book.currencyCode}
+        {from} to {through} UTC · Snapshot {report.snapshotSequence} ·{" "}
+        {book.currencyCode}
       </p>
-      <ReportSection title="Profit and loss" description="Did you make money?">
+      <ReportSection title={<>Profit and loss — recorded entries</>}>
         <dl className="grid gap-3">
           {[
-            { label: "Sales", amount: profit.revenueMinor },
-            { label: "Cost of what you sold", amount: profit.costOfSalesMinor },
-            {
-              label: "Profit before expenses",
-              amount: profit.grossProfitMinor,
-            },
-            { label: "Expenses", amount: profit.expensesMinor },
-            { label: "Profit", amount: profit.netProfitMinor },
+            { label: "Revenue", amount: profit.revenueMinor },
+            { label: "Cost of sales", amount: profit.costOfSalesMinor },
+            { label: "Gross profit", amount: profit.grossProfitMinor },
+            { label: "Other expenses", amount: profit.expensesMinor },
+            { label: "Net profit / loss", amount: profit.netProfitMinor },
           ].map((row) => (
             <div
               key={row.label}
@@ -130,7 +127,7 @@ function ReportResults({
             </div>
           ))}
         </dl>
-        <Disclosure title={<>Show the accounts behind this</>}>
+        <Disclosure title={<>View income and expense accounts</>}>
           <dl className="mt-3 grid gap-3">
             {profit.accounts.map((account) => (
               <div
@@ -154,42 +151,41 @@ function ReportResults({
           </dl>
         </Disclosure>
       </ReportSection>
-      <ReportSection title="Money in and out">
+      <ReportSection title={<>Cash flow — recorded cash and bank entries</>}>
         <p className="text-sm text-muted-foreground">
-          Money still on its way isn't counted. Moves between your own accounts
-          cancel out; moves to or from money on its way show separately.
-          Expenses the owner paid from their own pocket don't change business
-          money.
+          Clearing balances awaiting settlement are excluded. Transfers between
+          included accounts cancel out; transfers to or from clearing appear
+          separately. Owner-paid bills do not move business cash.
         </p>
         <dl className="grid gap-3">
           {[
             {
-              label: "Money at the start",
+              label: "Opening cash and bank",
               amount: report.cashFlow.openingMinor,
             },
             {
-              label: "From running the business",
+              label: "Operating cash movement",
               amount: report.cashFlow.operatingMinor,
             },
             {
-              label: "Owner put in or took out",
+              label: "Owner financing movement",
               amount: report.cashFlow.financingMinor,
             },
             {
-              label: "Moved between accounts",
+              label: "Transfers and clearing movement",
               amount: report.cashFlow.transfersAndClearingMinor,
             },
             {
-              label: "Starting balances added",
+              label: "Opening balance imports",
               amount: report.cashFlow.openingAdjustmentsMinor,
             },
             {
-              label: "Not sorted yet",
+              label: "Unclassified movement",
               amount: report.cashFlow.unclassifiedMinor,
             },
-            { label: "Change", amount: report.cashFlow.netChangeMinor },
+            { label: "Net change", amount: report.cashFlow.netChangeMinor },
             {
-              label: "Money at the end",
+              label: "Closing cash and bank",
               amount: report.cashFlow.closingMinor,
             },
           ].map((row) => (
@@ -204,36 +200,38 @@ function ReportResults({
         </dl>
         {!report.cashFlow.classificationComplete ? (
           <FormFeedback appearance="dashboard">
-            Some money isn't sorted yet. Sort it before relying on the totals
-            above.
+            Some cash entries need classification. Review them before relying on
+            category totals.
           </FormFeedback>
         ) : null}
         {!report.cashFlow.reconciled ? (
           <FormFeedback appearance="dashboard">
-            Money at the end is off by {money(report.cashFlow.differenceMinor)}
+            Cash reconciliation difference:{" "}
+            {money(report.cashFlow.differenceMinor)}
           </FormFeedback>
         ) : null}
       </ReportSection>
-      <ReportSection title={<>What you own and owe on {through}</>}>
+      <ReportSection
+        title={<>Balance sheet — recorded entries as of {through}</>}
+      >
         <p className="text-sm text-muted-foreground">
-          What you own, what you owe and the owner's money add up everything
-          recorded up to this date. Profit not yet closed counts all income and
-          expenses up to this date, whatever start date you picked for the
-          profit report.
+          Assets, liabilities and equity include cumulative posted balances.
+          Unclosed earnings include all income and expenses through this date,
+          independent of the selected profit-and-loss start date.
         </p>
         {[
           {
-            title: "What you own",
+            title: "Assets",
             accounts: report.balanceSheet.assets,
             total: report.balanceSheet.assetsMinor,
           },
           {
-            title: "What you owe",
+            title: "Liabilities",
             accounts: report.balanceSheet.liabilities,
             total: report.balanceSheet.liabilitiesMinor,
           },
           {
-            title: "Owner's money",
+            title: "Posted equity",
             accounts: report.balanceSheet.equity,
             total: report.balanceSheet.postedEquityMinor,
           },
@@ -242,7 +240,7 @@ function ReportResults({
             key={group.title}
             title={
               <>
-                {group.title} · {money(group.total)}
+                {group.title}· {money(group.total)}
               </>
             }
           >
@@ -271,19 +269,19 @@ function ReportResults({
         ))}
         <dl className="grid gap-3">
           <div className="flex justify-between gap-4">
-            <dt>Profit not yet closed</dt>
+            <dt>Unclosed earnings</dt>
             <dd className="tabular-nums">
               {money(report.balanceSheet.unclosedEarningsMinor)}
             </dd>
           </div>
           <div className="flex justify-between gap-4">
-            <dt>Owner's money including profit</dt>
+            <dt>Total equity including earnings</dt>
             <dd className="tabular-nums">
               {money(report.balanceSheet.totalEquityMinor)}
             </dd>
           </div>
           <div className="flex justify-between gap-4 border-t border-border pt-3 font-medium">
-            <dt>What you owe plus owner's money</dt>
+            <dt>Liabilities and equity</dt>
             <dd className="tabular-nums">
               {money(report.balanceSheet.liabilitiesAndEquityMinor)}
             </dd>
@@ -291,29 +289,22 @@ function ReportResults({
         </dl>
         {!report.balanceSheet.balanced ? (
           <FormFeedback appearance="dashboard">
-            What you own and what you owe plus owner's money differ by{" "}
-            {money(report.balanceSheet.differenceMinor)}. Fix this before
-            relying on this report.
+            Balance-sheet difference:{" "}
+            {money(report.balanceSheet.differenceMinor)}. Resolve the journal
+            imbalance before relying on this report.
           </FormFeedback>
         ) : null}
       </ReportSection>
-      <ReportSection
-        title={
-          <>
-            Account totals for your accountant (trial balance) as of {through}
-          </>
-        }
-      >
+      <ReportSection title={<>Trial balance as of {through}</>}>
         <p className="text-sm text-muted-foreground">
-          Everything recorded from your start date up to this date. When the two
-          sides match, your records add up. That doesn't mean nothing is
-          missing.
+          Includes all recorded activity from bookkeeping start through this
+          date. Equal debits and credits confirm journal balance; they do not
+          confirm complete records.
         </p>
         {!report.trialBalance.balanced ? (
           <FormFeedback appearance="dashboard">
-            Your records don't add up by{" "}
-            {money(report.trialBalance.differenceMinor)}. Fix this before
-            relying on these reports.
+            Journal imbalance: {money(report.trialBalance.differenceMinor)}.
+            Resolve this before relying on reports.
           </FormFeedback>
         ) : null}
         <TrialBalanceTable report={report} money={money} />
@@ -344,13 +335,13 @@ function TrialBalanceTable({
     <>
       <InlineSelectionStatus
         selection={selection}
-        note="The CSV export includes every account"
+        note="The report pack export includes every account"
       />
       <section
         className="overflow-x-auto"
         // biome-ignore lint/a11y/noNoninteractiveTabindex: Keyboard users must be able to scroll the report table.
         tabIndex={0}
-        aria-label="Account totals table"
+        aria-label="Trial balance table"
       >
         <Table className="w-full min-w-[600px] text-sm">
           <TableHeader>
@@ -358,17 +349,17 @@ function TrialBalanceTable({
               <TableHead scope="col" className="w-10 p-3">
                 <InlineSelectAllCheckbox
                   selection={selection}
-                  label="Select all accounts"
+                  label="Select all trial balance accounts"
                 />
               </TableHead>
               <TableHead scope="col" className="p-3 text-left">
                 Account
               </TableHead>
               <TableHead scope="col" className="p-3 text-right">
-                Debit (money in or owned)
+                Debit
               </TableHead>
               <TableHead scope="col" className="p-3 text-right">
-                Credit (money out or owed)
+                Credit
               </TableHead>
             </TableRow>
           </TableHeader>

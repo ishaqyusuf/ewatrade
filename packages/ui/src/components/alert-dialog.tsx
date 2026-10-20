@@ -36,7 +36,7 @@ function AlertDialogCancel(props: AlertDialogPrimitive.Close.Props) {
   return (
     <AlertDialogPrimitive.Close
       data-slot="alert-dialog-cancel"
-      render={<Button type="button" variant="outline" />}
+      render={<Button type="button" variant="outline" appearance="form" />}
       {...props}
     />
   )

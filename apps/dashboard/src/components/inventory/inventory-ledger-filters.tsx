@@ -8,7 +8,7 @@ export function InventoryLedgerFilters({
 }: { placeholder: string; filters: { id: string; label: string }[] }) {
   const { params, setParams } = useInventoryLedgerParams()
   return (
-    <div className="flex flex-wrap items-center gap-3">
+    <div className="flex flex-wrap items-center justify-between gap-3">
       <SearchField
         value={params.q ?? ""}
         placeholder={placeholder}

@@ -73,6 +73,7 @@ export function PrescriptionPublicChannel({ storeId }: { storeId: string }) {
             {channel.error.message}
           </FormFeedback>
           <Button
+            appearance="form"
             className="w-fit"
             onClick={() => void channel.refetch()}
             type="button"
@@ -89,6 +90,7 @@ export function PrescriptionPublicChannel({ storeId }: { storeId: string }) {
             </FormFeedback>
           ) : null}
           <Button
+            appearance="form"
             disabled={ensure.isPending || channel.isLoading}
             onClick={() => ensure.mutate({ storeId })}
             type="button"
@@ -138,6 +140,7 @@ export function PrescriptionPublicChannel({ storeId }: { storeId: string }) {
             ) : null}
             <div className="flex flex-wrap gap-2">
               <Button
+                appearance="form"
                 onClick={async () => {
                   try {
                     await navigator.clipboard.writeText(url)
@@ -154,6 +157,7 @@ export function PrescriptionPublicChannel({ storeId }: { storeId: string }) {
                 {copied ? "Copied" : "Copy link"}
               </Button>
               <Button
+                appearance="form"
                 disabled={!url}
                 onClick={() => window.print()}
                 type="button"

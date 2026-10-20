@@ -22,11 +22,7 @@ import { Alert, AlertDescription, Button, Table, TableBody } from "@ewatrade/ui"
 import { formatFinanceMoney } from "@ewatrade/utils/finance-money"
 import type { Table as ReactTable } from "@tanstack/react-table"
 import { useVirtualizer } from "@tanstack/react-virtual"
-import {
-  StatementMatchPill,
-  formatStatementRange,
-  getStatementAccountName,
-} from "./columns"
+import { formatStatementRange, getStatementAccountName } from "./columns"
 import { FinanceBankStatementEmptyState } from "./empty-states"
 import { FinanceBankStatementTableSkeleton } from "./skeleton"
 import {
@@ -88,10 +84,6 @@ export function FinanceBankStatementTableView({
   })
   const tableScroll = useTableScroll({ useColumnWidths: true })
   const rows = table.getRowModel().rows
-  const toMatch = rows.reduce(
-    (total, row) => total + row.original.unmatchedCount,
-    0,
-  )
   const rowVirtualizer = useVirtualizer({
     count: rows.length,
     getScrollElement: () => tableScroll.containerRef.current,
@@ -131,7 +123,12 @@ export function FinanceBankStatementTableView({
         <AlertDescription>
           {errorMessage || "Statements could not be loaded."}
         </AlertDescription>
-        <Button type="button" variant="outline" onClick={() => void refetch()}>
+        <Button
+          appearance="form"
+          type="button"
+          variant="outline"
+          onClick={() => void refetch()}
+        >
           Try again
         </Button>
       </Alert>
@@ -153,6 +150,7 @@ export function FinanceBankStatementTableView({
                 : "Statements could not be refreshed.")}
           </AlertDescription>
           <Button
+            appearance="form"
             type="button"
             variant="outline"
             onClick={() =>
@@ -168,11 +166,12 @@ export function FinanceBankStatementTableView({
         table={table}
         view={view}
         selectAllLabel="Select all loaded bank statements"
-        summary={`${rows.length} statement${rows.length === 1 ? "" : "s"} · ${toMatch} line${toMatch === 1 ? "" : "s"} to match`}
-      />
-      {view === "table" ? (
-        <FinanceBankStatementTableSettings table={table} />
-      ) : null}
+        summary={`${rows.length} statement${rows.length === 1 ? "" : "s"} loaded`}
+      >
+        {view === "table" ? (
+          <FinanceBankStatementTableSettings table={table} />
+        ) : null}
+      </DirectoryToolbar>
 
       {persistenceError ? (
         <Alert
@@ -181,7 +180,12 @@ export function FinanceBankStatementTableView({
           className="flex flex-wrap items-center justify-between gap-3"
         >
           <AlertDescription>{persistenceError}</AlertDescription>
-          <Button type="button" variant="outline" onClick={retryPersistence}>
+          <Button
+            appearance="form"
+            type="button"
+            variant="outline"
+            onClick={retryPersistence}
+          >
             Retry saving columns
           </Button>
         </Alert>
@@ -204,12 +208,11 @@ export function FinanceBankStatementTableView({
                 row={row}
                 view={view}
                 selectLabel={`Select ${statement.reference}`}
-                title={`${getStatementAccountName(book, statement)}, ${formatStatementRange(statement)}`}
+                title={statement.reference}
                 onOpen={open}
-                description={statement.reference}
-                badges={<StatementMatchPill statement={statement} />}
+                description={`${getStatementAccountName(book, statement)} · ${formatStatementRange(statement)}`}
                 highlight={{
-                  label: "Balance at the end",
+                  label: "Closing balance",
                   value: formatFinanceMoney(
                     statement.closingBalanceMinor,
                     statement.currencyCode,
@@ -217,7 +220,7 @@ export function FinanceBankStatementTableView({
                 }}
                 details={[
                   {
-                    label: "Lines",
+                    label: "Transactions",
                     value: (
                       <span className="tabular-nums">{statement.rowCount}</span>
                     ),
@@ -228,10 +231,10 @@ export function FinanceBankStatementTableView({
                     type="button"
                     variant="ghost"
                     size="sm"
-                    aria-label={`Open ${statement.reference}`}
+                    aria-label={`Review ${statement.reference}`}
                     onClick={open}
                   >
-                    Open
+                    Review
                   </Button>
                 }
               />
@@ -300,6 +303,7 @@ export function FinanceBankStatementTableView({
 
       {hasNextPage && !isFetchNextPageError ? (
         <Button
+          appearance="form"
           type="button"
           className="w-fit"
           variant="outline"

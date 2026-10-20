@@ -2,14 +2,14 @@ import { readFileSync } from "node:fs"
 import path from "node:path"
 import { testFlightPreviewFailures } from "./check-testflight-preview.mjs"
 
-// Build 1.0.0 (7), inspected from its signed IPA. New native builds must get
+// Build 1.0.0 (6), inspected from its signed IPA. New native builds must get
 // their own verified compatibility target before this route is changed.
-export const TESTFLIGHT_RUNTIME = "59b38390d09d433711fb525cfbe298eebda73318"
+export const TESTFLIGHT_RUNTIME = "b3ad3f3baf65b159779712694db8d35cd9445149"
 
 export function assertTestFlightRuntime(runtime: string) {
   if (runtime !== TESTFLIGHT_RUNTIME) {
     throw new Error(
-      `TestFlight OTA stopped: native runtime ${runtime} does not match build 7 (${TESTFLIGHT_RUNTIME}). A new native build is required.`,
+      `TestFlight OTA stopped: native runtime ${runtime} does not match build 6 (${TESTFLIGHT_RUNTIME}). A new native build is required.`,
     )
   }
 }
@@ -62,7 +62,7 @@ if (import.meta.main) {
   if ((await proc.exited) !== 0)
     throw new Error("Native runtime calculation failed")
   assertTestFlightRuntime(JSON.parse(output).runtimeVersion)
-  console.log(`Verified TestFlight build 7 runtime: ${TESTFLIGHT_RUNTIME}`)
+  console.log(`Verified TestFlight build 6 runtime: ${TESTFLIGHT_RUNTIME}`)
   const head = Bun.spawnSync(["git", "rev-parse", "HEAD"], { cwd: root })
     .stdout.toString()
     .trim()

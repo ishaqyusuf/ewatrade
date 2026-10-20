@@ -108,6 +108,7 @@ export function WhatsAppConnectionSetup({ storeId }: { storeId: string }) {
           {connections.error.message}
         </FormFeedback>
         <Button
+          appearance="form"
           className="w-fit"
           onClick={() => void connections.refetch()}
           variant="outline"
@@ -130,7 +131,7 @@ export function WhatsAppConnectionSetup({ storeId }: { storeId: string }) {
           </p>
         </div>
         {embedded.isLoading ? (
-          <Button disabled type="button">
+          <Button appearance="form" disabled type="button">
             Checking Meta signup…
           </Button>
         ) : embedded.data?.available && embedded.data.url ? (
@@ -141,7 +142,7 @@ export function WhatsAppConnectionSetup({ storeId }: { storeId: string }) {
             Connect with Meta
           </a>
         ) : (
-          <Button disabled type="button">
+          <Button appearance="form" disabled type="button">
             Embedded signup unavailable
           </Button>
         )}
@@ -153,6 +154,7 @@ export function WhatsAppConnectionSetup({ storeId }: { storeId: string }) {
             still available below.
           </FormFeedback>
           <Button
+            appearance="form"
             onClick={() => void embedded.refetch()}
             type="button"
             variant="outline"
@@ -251,6 +253,7 @@ export function WhatsAppConnectionSetup({ storeId }: { storeId: string }) {
                 </div>
                 <div className="flex gap-2">
                   <Button
+                    appearance="form"
                     onClick={() =>
                       retest.mutate({ connectionId: connection.id, storeId })
                     }
@@ -266,6 +269,7 @@ export function WhatsAppConnectionSetup({ storeId }: { storeId: string }) {
                       binding.status !== "SUSPENDED",
                   ) ? (
                     <Button
+                      appearance="form"
                       onClick={() =>
                         suspendBinding.mutate({
                           connectionId: connection.id,
@@ -281,6 +285,7 @@ export function WhatsAppConnectionSetup({ storeId }: { storeId: string }) {
                   ) : null}
                   {connection.status !== "REVOKED" ? (
                     <Button
+                      appearance="form"
                       onClick={() =>
                         lifecycle.mutate({
                           connectionId: connection.id,

@@ -1,23 +1,16 @@
 "use client"
-import { FieldGroup, Input } from "@ewatrade/ui"
+import { Button, FieldGroup, FormActions, Input } from "@ewatrade/ui"
 
 import { useFinanceCommand } from "@/hooks/use-finance-command"
 import { useTRPC } from "@/trpc/client"
 import type { RouterOutputs } from "@ewatrade/api/trpc/routers/_app"
 
+import { formatFinanceMoney } from "@ewatrade/utils/finance-money"
 import { useMutation } from "@tanstack/react-query"
 import { useState } from "react"
-import {
-  FinanceBackTo,
-  FinanceDetails,
-  FinanceField,
-  FinanceFormFooter,
-  FinanceReview,
-} from "./form-fields"
-import { changes, moneyText, useMoneyBalances } from "./review-changes"
+import { FinanceField, FinanceReview } from "./form-fields"
 import { useCompleteFinanceForm } from "./use-complete-finance-form"
 
-/** Adjust the cash account to a count, inside the Cash count sheet. */
 export function FinanceCashAdjustmentForm({
   bookId,
   count,
@@ -28,22 +21,15 @@ export function FinanceCashAdjustmentForm({
   onBack: () => void
 }) {
   const trpc = useTRPC()
-  const balances = useMoneyBalances(bookId)
-  const currency = count.currencyCode
-  const diff = BigInt(count.differenceMinor)
-  const surplus = diff > BigInt(0)
-  const size = moneyText(surplus ? diff : -diff, currency)
   const mutation = useMutation(trpc.finance.adjustCashCount.mutationOptions())
   const command = useFinanceCommand(
-    useCompleteFinanceForm(
-      `${count.accountName} adjusted to the count. The count stays in history.`,
-    ),
+    useCompleteFinanceForm(),
     bookId,
     "adjustCashCount",
   )
   const [reason, setReason] = useState("")
-  const [error, setError] = useState<string | null>(null)
   const [review, setReview] = useState(false)
+  const surplus = BigInt(count.differenceMinor) > BigInt(0)
   function submit() {
     const payload = {
       bookId,
@@ -65,86 +51,67 @@ export function FinanceCashAdjustmentForm({
         mutation.mutateAsync({ ...payload, clientCommandId }),
     })
   }
-  const account = [...balances.values()].find(
-    (row) => row.name === count.accountName,
-  )
-  const back = (
-    <FinanceBackTo
-      label="Back to count"
-      onBack={onBack}
-      title="Adjust to count"
-      description="Only for a difference you can't explain."
-    />
+  const explanation = (
+    <>
+      <p>
+        {count.accountName} ·{" "}
+        {formatFinanceMoney(count.differenceMinor, count.currencyCode)}
+      </p>
+      <p className="text-sm">
+        This records a{" "}
+        {surplus ? "cash surplus as income" : "cash shortage as an expense"} at
+        the original count time, {new Date(count.asOf).toISOString()}. It
+        changes the recorded cash balance without transferring money. The
+        original count remains in history.
+      </p>
+    </>
   )
   if (review)
     return (
-      <div className="grid gap-5">
-        {back}
-        <FinanceReview
-          command={command}
-          onBack={() => setReview(false)}
-          onConfirm={submit}
-          confirmLabel="Adjust to count"
-          sentence={
-            <>
-              This records{" "}
-              <b>
-                {size} cash {surplus ? "over" : "short"}
-              </b>{" "}
-              as {surplus ? "income" : "an expense"} at the count time, so{" "}
-              {count.accountName} matches what you counted. No money moves. The
-              count stays in history.
-            </>
-          }
-          changes={changes([
-            account
-              ? {
-                  label: count.accountName,
-                  before: moneyText(account.balanceMinor, currency),
-                  after: moneyText(account.balanceMinor + diff, currency),
-                  tone: surplus ? "in" : "out",
-                }
-              : null,
-          ])}
-        >
-          <FinanceDetails rows={[["What you found", reason]]} />
-        </FinanceReview>
-      </div>
+      <FinanceReview
+        command={command}
+        onBack={() => setReview(false)}
+        onConfirm={submit}
+      >
+        {explanation}
+        <p className="break-words text-sm">Reason: {reason}</p>
+      </FinanceReview>
     )
   return (
     <form
       onSubmit={(event) => {
         event.preventDefault()
-        if (!reason.trim()) {
-          setError("Say what you checked, so others understand later.")
-          return
-        }
-        setReview(true)
+        if (reason.trim()) setReview(true)
       }}
     >
       <FieldGroup className="min-w-0 grid gap-5">
-        {back}
-        <div className="grid gap-0.5 border border-border bg-muted/40 px-3 py-2 text-sm">
-          <span className="font-medium">
-            {count.accountName}: {size} {surplus ? "over" : "short"}
-          </span>
-          <span className="text-muted-foreground">
-            Look for missing sales or expenses first. Adjust only a difference
-            you can't explain.
-          </span>
-        </div>
-        <FinanceField label="What did you find?" error={error ?? undefined}>
+        <h3 className="font-medium">Adjust investigated cash difference</h3>
+        {explanation}
+        <p className="text-sm text-muted-foreground">
+          Correct missing or incorrect transactions first. Use this adjustment
+          only for a remaining difference you have investigated.
+        </p>
+        <FinanceField label="Investigation and adjustment reason">
           <Input
+            required
             maxLength={400}
             value={reason}
-            placeholder="Checked sales and expenses; nothing missing"
-            onChange={(event) => {
-              setReason(event.target.value)
-              setError(null)
-            }}
+            onChange={(event) => setReason(event.target.value)}
           />
         </FinanceField>
-        <FinanceFormFooter onCancel={onBack} submitLabel="Review" />
+        <FormActions>
+          <Button
+            appearance="form"
+            type="button"
+            variant="outline"
+            onClick={onBack}
+          >
+            Back to count
+          </Button>
+          <Button appearance="form" type="submit" disabled={!reason.trim()}>
+            Review adjustment
+          </Button>
+        </FormActions>
       </FieldGroup>
     </form>
   )

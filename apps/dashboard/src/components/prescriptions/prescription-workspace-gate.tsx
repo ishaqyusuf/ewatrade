@@ -78,6 +78,7 @@ export function PrescriptionWorkspaceGate({
             closed until those checks pass.
           </p>
           <Button
+            appearance="form"
             className="mt-5"
             render={<Link href="/settings/compliance" />}
           >
@@ -106,7 +107,7 @@ export function PrescriptionWorkspaceGate({
               : "Your data has not been changed. Try loading the workspace again."}
           </p>
           {accessState === "error" ? (
-            <Button className="mt-6" onClick={retryWorkspace}>
+            <Button appearance="form" className="mt-6" onClick={retryWorkspace}>
               Try again
             </Button>
           ) : null}

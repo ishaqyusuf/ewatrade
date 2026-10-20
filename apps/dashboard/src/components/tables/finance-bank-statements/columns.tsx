@@ -1,9 +1,4 @@
 "use client"
-import {
-  formatFinanceDate,
-  formatFinanceShortDate,
-} from "@/components/finance/format-date"
-import { Pill } from "@/components/orders/overview/order-overview-parts"
 
 import type {
   FinanceBankStatementRow,
@@ -25,20 +20,7 @@ export function getStatementAccountName(
 }
 
 export function formatStatementRange(statement: FinanceBankStatementRow) {
-  return `${formatFinanceShortDate(statement.startsAt, "UTC")} – ${formatFinanceDate(statement.endsAt, "UTC")}`
-}
-
-/** Lines still to match are amber; a fully matched statement is green. */
-export function StatementMatchPill({
-  statement,
-}: {
-  statement: FinanceBankStatementRow
-}) {
-  return statement.unmatchedCount ? (
-    <Pill tone="amber">{statement.unmatchedCount} to match</Pill>
-  ) : (
-    <Pill tone="green">All matched</Pill>
-  )
+  return `${new Date(statement.startsAt).toISOString().slice(0, 10)} – ${new Date(statement.endsAt).toISOString().slice(0, 10)}`
 }
 
 export function financeBankStatementColumns(
@@ -84,12 +66,12 @@ export function financeBankStatementColumns(
     },
     {
       id: "range",
-      header: "Dates",
+      header: "Statement dates",
       size: 240,
       minSize: 200,
       maxSize: 300,
       meta: {
-        headerLabel: "Dates",
+        headerLabel: "Statement dates",
         skeleton: { type: "text", width: "w-40" },
       } satisfies TableColumnMeta,
       cell: ({ row }) => (
@@ -100,12 +82,12 @@ export function financeBankStatementColumns(
     },
     {
       accessorKey: "rowCount",
-      header: "Lines",
+      header: "Transactions",
       size: 120,
       minSize: 110,
       maxSize: 160,
       meta: {
-        headerLabel: "Lines",
+        headerLabel: "Transactions",
         skeleton: { type: "text", width: "w-12" },
       } satisfies TableColumnMeta,
       cell: ({ row }) => (
@@ -113,25 +95,13 @@ export function financeBankStatementColumns(
       ),
     },
     {
-      id: "toMatch",
-      header: "To match",
-      size: 140,
-      minSize: 120,
-      maxSize: 180,
-      meta: {
-        headerLabel: "To match",
-        skeleton: { type: "badge", width: "w-20" },
-      } satisfies TableColumnMeta,
-      cell: ({ row }) => <StatementMatchPill statement={row.original} />,
-    },
-    {
       accessorKey: "closingBalanceMinor",
-      header: "Balance at the end",
+      header: "Closing balance",
       size: 200,
       minSize: 160,
       maxSize: 280,
       meta: {
-        headerLabel: "Balance at the end",
+        headerLabel: "Closing balance",
         skeleton: { type: "text", width: "w-28" },
       } satisfies TableColumnMeta,
       cell: ({ row }) => (
@@ -164,10 +134,10 @@ export function financeBankStatementColumns(
           data-row-interactive="true"
           variant="ghost"
           size="sm"
-          aria-label={`Open ${row.original.reference}`}
+          aria-label={`Review ${row.original.reference}`}
           onClick={() => openStatement(row.original.id)}
         >
-          Open
+          Review
         </Button>
       ),
     },

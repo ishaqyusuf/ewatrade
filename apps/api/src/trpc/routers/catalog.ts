@@ -23,14 +23,12 @@ import {
   publishProductUnitConfiguration,
   setCatalogOfferingStoreAvailability,
   setCatalogProductUsage,
-  updateCatalogItemInTransaction,
   updateCatalogPriceInTransaction,
   updateProductDetailsInTransaction,
   updateProductIdentifiersInTransaction,
   updateProductUnitConfigurationDraft,
 } from "@ewatrade/db/queries"
 import type { TenantContext } from "@ewatrade/db/tenant-context"
-import { ruleRejectedError } from "@ewatrade/errors"
 import { TRPCError } from "@trpc/server"
 import { catalogPhotoActorScope } from "../../catalog/photo-access"
 import { catalogCategoriesRouter } from "./catalog-categories"
@@ -51,7 +49,6 @@ import {
   catalogPublishUnitConfigurationSchema,
   catalogSetOfferingAvailabilitySchema,
   catalogSetProductUsageSchema,
-  catalogUpdateItemSchema,
   catalogUpdatePriceSchema,
   catalogUpdateProductDetailsSchema,
   catalogUpdateProductIdentifiersSchema,
@@ -165,41 +162,6 @@ function catalogTRPCError(error: CatalogError) {
 }
 
 export const catalogRouter = createTRPCRouter({
-  updateItem: protectedProcedure
-    .input(catalogUpdateItemSchema)
-    .mutation(async ({ ctx, input }) => {
-      assertCanManageCatalog(ctx.tenantContext)
-      const storeId = resolveStoreId(
-        ctx.tenantContext.stores,
-        ctx.tenantContext.activeStore,
-        input.storeId,
-      )
-      const scope = catalogPhotoActorScope(ctx, storeId)
-      try {
-        return await ctx.db.$transaction(
-          (tx) =>
-            updateCatalogItemInTransaction(tx, {
-              ...input,
-              ...scope,
-              expectedUpdatedAt: new Date(input.expectedUpdatedAt),
-            }),
-          { maxWait: 10_000, timeout: 60_000 },
-        )
-      } catch (error) {
-        // Edit refusals are written for the owner (e.g. clear stock first); keep them public.
-        if (error instanceof CatalogError) {
-          const mapped = catalogTRPCError(error)
-          throw new TRPCError({
-            code: mapped.code,
-            message: error.message,
-            cause: ruleRejectedError(error, "catalog.updateItem"),
-          })
-        }
-        if (error instanceof CatalogPhotoError)
-          throw catalogPhotoTRPCError(error)
-        throw error
-      }
-    }),
   updateProductDetails: protectedProcedure
     .input(catalogUpdateProductDetailsSchema)
     .mutation(async ({ ctx, input }) => {

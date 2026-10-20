@@ -15,6 +15,7 @@ export function PrescriptionActionsMenu({
 }) {
   return (
     <Button
+      appearance="form"
       type="button"
       data-row-interactive="true"
       aria-label={`Open prescription ${requestId}`}

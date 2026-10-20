@@ -152,19 +152,6 @@ export const inventorySingleBalanceOperationSchema = z
       })
   })
 
-/** Stock consumed inside the business; always a decrease, note optional. */
-export const inventoryRecordInternalUseSchema = z
-  .object({
-    ...inventoryOperationFields,
-    reason: inventoryOperationFields.reason.optional(),
-    balanceSourceId: z.string().trim().min(1),
-    effectiveAt: z.coerce.date().optional(),
-    enteredInventoryUnitId: z.string().trim().min(1),
-    enteredQuantity: exactTransactionQuantitySchema,
-    expectedBalanceRevision: z.number().int().nonnegative(),
-  })
-  .strict()
-
 export const inventoryTransformationSchema = z
   .object({
     ...inventoryOperationFields,
@@ -335,10 +322,7 @@ export const inventoryBalanceReportSchema = z
   .strict()
 
 export const inventoryOperationAuditSchema = z
-  .object({
-    operationId: z.string().trim().min(1),
-    storeId: z.string().trim().min(1).optional(),
-  })
+  .object({ operationId: z.string().trim().min(1), storeId: z.string().trim().min(1).optional() })
   .strict()
 
 export const inventoryOperationHistorySchema = z
@@ -410,24 +394,18 @@ export const inventoryCompatibleTotalsPageSchema = inventoryBalancePageSchema
   .extend({ cursor: z.string().min(1).max(1024).optional() })
   .strict()
 
-export const inventoryTransferReviewSchema = z
-  .object({
-    transferId: z.string().trim().min(1).max(128),
-    storeId: z.string().trim().min(1).optional(),
-  })
-  .strict()
+export const inventoryTransferReviewSchema = z.object({
+  transferId: z.string().trim().min(1).max(128),
+  storeId: z.string().trim().min(1).optional(),
+}).strict()
 
-export const inventoryCloseoutReviewSchema = z
-  .object({
-    closeoutId: z.string().trim().min(1).max(128),
-    storeId: z.string().trim().min(1).optional(),
-  })
-  .strict()
+export const inventoryCloseoutReviewSchema = z.object({
+  closeoutId: z.string().trim().min(1).max(128),
+  storeId: z.string().trim().min(1).optional(),
+}).strict()
 
-export const inventoryListCloseoutsSchema = z
-  .object({
-    storeId: z.string().trim().min(1).optional(),
-    status: z.enum(["DRAFT", "FINALIZED", "CANCELLED"]).optional(),
-    limit: z.number().int().min(1).max(50).optional(),
-  })
-  .strict()
+export const inventoryListCloseoutsSchema = z.object({
+  storeId: z.string().trim().min(1).optional(),
+  status: z.enum(["DRAFT", "FINALIZED", "CANCELLED"]).optional(),
+  limit: z.number().int().min(1).max(50).optional(),
+}).strict()

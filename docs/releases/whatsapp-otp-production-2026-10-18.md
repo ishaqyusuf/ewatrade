@@ -1,17 +1,5 @@
 # WhatsApp phone-authentication production candidate — 18 October 2026
 
-## Feature-specific source completion — 20 October 2026
-
-Current main integration review is complete. Reused the shared explicit-public
-error wrapper for safe OTP request/account-phone rule messages so expiry, incorrect
-codes and cooldown guidance survive formatting. The account-phone screen now
-shows the existing one-minute resend countdown and offers status-query Retry
-instead of presenting a failed read as an absent phone. No authorization, identity,
-rate/expiry, DTO or assistant routing policy changed. No tests/build/device/provider
-or database action was run; no deployment or OTP activation. Earlier acceptance
-remains tied to its original revisions. Feature coding is complete; release and
-operational acceptance remain separately deferred at the owner's direction.
-
 ## Main consolidation and priority — 19 October 2026
 
 Continue from the primary `main` checkout. The owner-directed checkpoint

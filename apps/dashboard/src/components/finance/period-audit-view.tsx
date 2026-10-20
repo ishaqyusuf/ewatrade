@@ -59,12 +59,17 @@ export function FinancePeriodAuditView({
 }) {
   const eventIds = useMemo(() => events.map((event) => event.id), [events])
   const selection = useInlineSelection({ ids: eventIds, scope })
-  if (pending) return <output>Loading close and reopen history…</output>
+  if (pending) return <output>Loading close/reopen history…</output>
   if (error) {
     return (
       <div className="grid gap-3 pt-3">
         <FormFeedback appearance="dashboard">{error}</FormFeedback>
-        <Button variant="outline" disabled={fetching} onClick={onRefresh}>
+        <Button
+          appearance="form"
+          variant="outline"
+          disabled={fetching}
+          onClick={onRefresh}
+        >
           {fetching ? "Retrying…" : "Try again"}
         </Button>
       </div>
@@ -75,7 +80,7 @@ export function FinancePeriodAuditView({
       {events.length ? (
         <div className="grid gap-1">
           <InlineSelectionBar
-            label="Select all loaded close and reopen changes"
+            label="Select all loaded close/reopen changes"
             selection={selection}
           />
           <ol className="divide-y divide-border">
@@ -93,22 +98,23 @@ export function FinancePeriodAuditView({
                     <InlineRowCheckbox
                       selection={selection}
                       id={event.id}
-                      label={`Select ${event.kind === "PERIOD_CLOSE" ? "close" : "reopen"} up to ${audit?.through || "unknown date"}`}
+                      label={`Select ${event.kind === "PERIOD_CLOSE" ? "close" : "reopen"} through ${audit?.through || "unknown date"}`}
                     />
                   </span>
                   <div className="grid min-w-0 flex-1 gap-1">
                     <p className="font-medium">
-                      {event.kind === "PERIOD_CLOSE" ? "Closed" : "Reopened"} up
-                      to {audit?.through || "unknown date"}
+                      {event.kind === "PERIOD_CLOSE" ? "Closed" : "Reopened"}{" "}
+                      period through {audit?.through || "unknown date"}
                     </p>
                     <p className="break-words">
-                      {audit?.reason || "No reason given"}
+                      {audit?.reason || "No recorded reason"}
                     </p>
                     <p className="text-xs text-muted-foreground">
-                      {new Date(event.createdAt).toISOString()}
+                      Recorded {new Date(event.createdAt).toISOString()} ·
+                      Snapshot {audit?.snapshot || "unknown"}
                     </p>
                     <p className="break-all text-xs text-muted-foreground">
-                      Done by: {event.actorUserId}
+                      Actor: {event.actorUserId}
                     </p>
                   </div>
                 </li>
@@ -118,31 +124,33 @@ export function FinancePeriodAuditView({
         </div>
       ) : (
         <p className="text-sm text-muted-foreground">
-          Nothing closed or reopened yet.
+          No close/reopen changes recorded yet.
         </p>
       )}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="text-xs text-muted-foreground" aria-live="polite">
-          {events.length} changes{hasNextPage ? "" : " · That is all"}
+          {events.length} changes loaded{hasNextPage ? "" : " · End of history"}
         </p>
         <div className="flex flex-wrap gap-2">
           {hasNextPage ? (
             <Button
+              appearance="form"
               variant="outline"
               size="sm"
               disabled={fetching}
               onClick={onLoadOlder}
             >
-              {fetching ? "Loading…" : "Load older"}
+              {fetching ? "Loading…" : "Load older changes"}
             </Button>
           ) : null}
           <Button
+            appearance="form"
             variant="outline"
             size="sm"
             disabled={fetching}
             onClick={onRefresh}
           >
-            Refresh
+            Refresh history
           </Button>
         </div>
       </div>

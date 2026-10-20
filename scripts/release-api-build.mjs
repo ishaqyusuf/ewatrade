@@ -74,12 +74,6 @@ export const API_BUILD_RECIPE = Object.freeze({
 const FORWARDER =
   'import { Hono } from "hono"\nimport bundledApp from "./bundle.js"\nconst app = new Hono()\napp.all("*", (context) => bundledApp.fetch(context.req.raw))\nexport default app\n'
 
-// The prepared JavaScript retains the real Hono default export. Provider entry
-// compilation needs its adjacent declaration even after the strict source build.
-export function preparedApiBundleDeclaration() {
-  return 'import type { Hono } from "hono"\n\ndeclare const bundledApp: Pick<Hono, "fetch">\nexport default bundledApp\n'
-}
-
 function digest(bytes) {
   return createHash("sha256").update(bytes).digest("hex")
 }
@@ -744,12 +738,6 @@ export async function prepareCommittedApiArtifact({ repository, revision }) {
       mkdirSync(path.dirname(destination), { recursive: true, mode: 0o700 })
       writeFileSync(destination, item.bytes, { flag: "wx", mode: 0o644 })
     }
-    const declaration = Buffer.from(preparedApiBundleDeclaration())
-    writeFileSync(
-      path.join(uploadSnapshot.stage, "apps/api/src/bundle.d.ts"),
-      declaration,
-      { flag: "wx", mode: 0o644 },
-    )
     const apiConfigPath = path.join(
       uploadSnapshot.stage,
       "apps/api/tsconfig.json",
@@ -770,7 +758,7 @@ export async function prepareCommittedApiArtifact({ repository, revision }) {
       ...uploadSnapshot,
       bundleSha256: digest(bundle),
       generatedOutputs: Object.freeze(
-        [...outputs, { path: "apps/api/src/bundle.d.ts", bytes: declaration }].map((item) =>
+        outputs.map((item) =>
           Object.freeze({
             path: item.path,
             bytes: item.bytes.length,

@@ -2,18 +2,14 @@
 import { useDashboardEmptyState } from "@ewatrade/events/dashboard-client"
 import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "@ewatrade/ui"
 
-export function StaffEmptyState({ filtered }: { filtered: boolean }) {
+export function StaffEmptyState() {
   useDashboardEmptyState("staff")
   return (
-    <Empty className="border border-dashed">
+    <Empty>
       <EmptyHeader>
-        <EmptyTitle>
-          {filtered ? "No staff match your search" : "No staff yet"}
-        </EmptyTitle>
+        <EmptyTitle>No staff found</EmptyTitle>
         <EmptyDescription>
-          {filtered
-            ? "Try another name or clear the filters."
-            : "Invite your first cashier or sales rep."}
+          Invite a staff member or adjust the current filters.
         </EmptyDescription>
       </EmptyHeader>
     </Empty>

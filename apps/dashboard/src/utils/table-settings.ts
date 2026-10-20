@@ -75,26 +75,9 @@ export function normalizeColumnOrder(
 ): string[] {
   const known = new Set(columnIds)
   const fixed = new Set([...fixedColumnIds, "select", "actions"])
-  const isMovable = (id: string) => known.has(id) && !fixed.has(id)
-  const movable = [...new Set(saved)].filter(isMovable)
-  const defaults = columnIds.filter(isMovable)
-  // A column the saved order has never seen goes next to its default
-  // neighbours: after the nearest earlier one, else before the nearest later one.
-  defaults.forEach((id, index) => {
-    if (movable.includes(id)) return
-    const before = defaults
-      .slice(0, index)
-      .reverse()
-      .find((other) => movable.includes(other))
-    if (before) {
-      movable.splice(movable.indexOf(before) + 1, 0, id)
-      return
-    }
-    const after = defaults
-      .slice(index + 1)
-      .find((other) => movable.includes(other))
-    movable.splice(after ? movable.indexOf(after) : movable.length, 0, id)
-  })
+  const movable = [...new Set([...saved, ...columnIds])].filter(
+    (id) => known.has(id) && !fixed.has(id),
+  )
   const leading = columnIds.filter((id) => fixed.has(id) && id !== "actions")
   return [...leading, ...movable, ...(known.has("actions") ? ["actions"] : [])]
 }

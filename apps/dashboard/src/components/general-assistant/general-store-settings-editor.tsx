@@ -158,7 +158,7 @@ export function GeneralStoreSettingsEditor(props: Props) {
         {change.section === "order_visibility" ? (
           <ControlField
             label="Sales reps see"
-            description="Applies to cashiers and sales reps in this store."
+            description="Applies to Cashiers and Operators in this Store."
           >
             <SelectControl
               value={change.visibility}

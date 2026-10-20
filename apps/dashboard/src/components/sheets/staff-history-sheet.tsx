@@ -25,8 +25,8 @@ export function StaffHistorySheet() {
     >
       {isOpen ? (
         <SheetFrame
-          title="History"
-          description="Changes to role, status and stores."
+          title="Staff history"
+          description="Original recorded membership and access changes."
           header={
             target ? <StaffHistorySheetHeader filters={target.filters} /> : null
           }
@@ -57,14 +57,15 @@ export function StaffHistorySheet() {
                 {query.data.nextCursor ? (
                   <Button
                     disabled={query.isFetching}
-                    onClick={() => {
-                      const cursor = query.data.nextCursor
-                      if (cursor)
-                        void open({
-                          kind: "staff_history",
-                          filters: { ...target.filters, cursor },
-                        })
-                    }}
+                    onClick={() =>
+                      void open({
+                        kind: "staff_history",
+                        filters: {
+                          ...target.filters,
+                          cursor: query.data.nextCursor!,
+                        },
+                      })
+                    }
                   >
                     Next page
                   </Button>
@@ -73,8 +74,8 @@ export function StaffHistorySheet() {
                   {query.isFetching
                     ? "Refreshing…"
                     : query.data.nextCursor
-                      ? null
-                      : "That’s everything."}
+                      ? "More recorded events available"
+                      : "End of available recorded results"}
                 </span>
               </>
             ) : null
@@ -82,13 +83,15 @@ export function StaffHistorySheet() {
         >
           {!target ? (
             <p role="alert">
-              This link no longer works. Ask the assistant again.
+              This history link is invalid. Close it and open a fresh result.
             </p>
           ) : query.isPending ? (
-            <output aria-live="polite">Loading…</output>
+            <output aria-live="polite">Loading recorded staff history…</output>
           ) : query.isError ? (
             <div role="alert" className="grid gap-3">
-              <p>You don’t have access to staff history.</p>
+              <p>
+                Staff history is unavailable for your current access or setup.
+              </p>
               <Button variant="outline" onClick={() => void query.refetch()}>
                 Try again
               </Button>

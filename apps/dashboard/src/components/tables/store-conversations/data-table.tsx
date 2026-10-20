@@ -145,7 +145,7 @@ export function StoreConversationDataTable({
       {fetchError ? (
         <div className="flex items-center justify-between gap-3" role="alert">
           <p className="text-sm text-destructive">{fetchError}</p>
-          <Button variant="outline" onClick={retry}>
+          <Button variant="outline" onClick={retry} appearance="form">
             Try again
           </Button>
         </div>
@@ -158,6 +158,7 @@ export function StoreConversationDataTable({
           <Button
             variant="outline"
             onClick={retryPersistence ?? settings.retryPersistence}
+            appearance="form"
           >
             Retry saving columns
           </Button>

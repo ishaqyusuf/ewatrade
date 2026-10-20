@@ -6,7 +6,7 @@ Tickets refer to the Brain plan `.brain/plans/2026-10-09-assistant-business-oper
 
 ## Summary
 
-- Router procedures: 651 (486 merchant, 165 public/account/internal)
+- Router procedures: 659 (486 merchant, 173 public/account/internal)
 - Merchant supported by a capability: 164
 - Merchant planned: 126
 - Merchant form-only: 142

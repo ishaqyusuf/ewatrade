@@ -343,6 +343,10 @@ standIn("components/mobile/finance/finance-ledger-layout", {
   HistoryTimeline: () => null,
   FinanceDetailScaffold: children,
 })
+// Receipt upload/native fetch is outside this exact-original read regression.
+standIn("components/mobile/finance/finance-expense-receipts", {
+  FinanceExpenseReceipts: () => null,
+})
 standIn("components/mobile/finance/finance-expense-forms", {
   FinanceExpenseCorrectionForm: () => null,
   FinanceExpensePaymentForm: () => null,

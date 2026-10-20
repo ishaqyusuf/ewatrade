@@ -1,34 +1,19 @@
 "use client"
-import type { TableColumnMeta } from "@/components/tables/core"
 import {
   type StaffMemberRow,
   getStaffDisplayName,
-  getStaffWorkingRole,
-  getStaffWorkingRoleLabel,
+  getStaffRoleLabel,
+  getStaffStatusLabel,
 } from "@/lib/staff-management"
-import { Checkbox } from "@ewatrade/ui"
+import { Badge, Checkbox } from "@ewatrade/ui"
 import type { ColumnDef } from "@tanstack/react-table"
-import { StaffActionsMenu, type StaffRowActions } from "./actions"
-import {
-  StaffAvatar,
-  StaffJoined,
-  StaffName,
-  StaffRoleBadge,
-  StaffStatus,
-  staffStoresText,
-} from "./format"
+import { StaffActions, type StaffActionsProps } from "./actions"
+import { formatStaffDate as formatDate } from "./format"
 
-const ROLE_RANK: Record<string, number> = {
-  OWNER: 0,
-  ADMIN: 1,
-  MANAGER: 2,
-  CASHIER: 3,
-  OPERATOR: 4,
-}
-
-export function staffColumns(
-  actions: StaffRowActions,
-): ColumnDef<StaffMemberRow>[] {
+export function staffColumns({
+  updatingId,
+  onUpdateStatus,
+}: Omit<StaffActionsProps, "member">): ColumnDef<StaffMemberRow>[] {
   return [
     {
       id: "select",
@@ -55,60 +40,70 @@ export function staffColumns(
     {
       id: "name",
       accessorFn: getStaffDisplayName,
-      header: "Name",
-      enableHiding: false,
+      header: "Staff",
       cell: ({ row }) => (
-        <div className="flex max-w-72 min-w-48 items-center gap-3">
-          <StaffAvatar member={row.original} />
-          <div className="grid min-w-0">
-            <StaffName member={row.original} onOpen={actions.onOpen} />
-            <span className="truncate text-sm text-muted-foreground">
-              {row.original.user.email}
-            </span>
-          </div>
+        <div className="min-w-48">
+          <p className="font-medium">{getStaffDisplayName(row.original)}</p>
+          <p className="text-sm text-muted-foreground">
+            {row.original.user.email}
+          </p>
         </div>
       ),
     },
     {
       id: "role",
-      accessorFn: (row) => getStaffWorkingRoleLabel(row),
+      accessorFn: (row) => getStaffRoleLabel(row.role),
       header: "Role",
-      sortingFn: (a, b) =>
-        (ROLE_RANK[getStaffWorkingRole(a.original) ?? ""] ?? 9) -
-        (ROLE_RANK[getStaffWorkingRole(b.original) ?? ""] ?? 9),
-      cell: ({ row }) => <StaffRoleBadge member={row.original} />,
-    },
-    {
-      id: "stores",
-      accessorFn: (row) => staffStoresText(row),
-      header: "Stores",
-      enableSorting: false,
       cell: ({ row }) => (
-        <span className="whitespace-nowrap">
-          {staffStoresText(row.original)}
-        </span>
+        <Badge variant="secondary">
+          {getStaffRoleLabel(row.original.role)}
+        </Badge>
       ),
     },
     {
       id: "status",
       accessorFn: (row) => row.status,
       header: "Status",
-      cell: ({ row }) => <StaffStatus member={row.original} />,
+      cell: ({ row }) => (
+        <Badge
+          variant={
+            row.original.status === "SUSPENDED" ? "destructive" : "outline"
+          }
+        >
+          {getStaffStatusLabel(row.original.status)}
+        </Badge>
+      ),
     },
     {
       id: "invitedAt",
-      accessorFn: (row) => row.acceptedAt ?? row.invitedAt ?? "",
-      header: "Joined",
-      meta: { headerLabel: "Joined" } satisfies TableColumnMeta,
-      cell: ({ row }) => <StaffJoined member={row.original} />,
+      accessorKey: "invitedAt",
+      header: "Invited",
+      cell: ({ row }) => (
+        <span className="whitespace-nowrap text-muted-foreground">
+          {formatDate(row.original.invitedAt)}
+        </span>
+      ),
+    },
+    {
+      id: "acceptedAt",
+      accessorKey: "acceptedAt",
+      header: "Accepted",
+      cell: ({ row }) => (
+        <span className="whitespace-nowrap text-muted-foreground">
+          {formatDate(row.original.acceptedAt)}
+        </span>
+      ),
     },
     {
       id: "actions",
       enableSorting: false,
-      enableHiding: false,
-      header: () => <span className="sr-only">Actions</span>,
+      header: "Actions",
       cell: ({ row }) => (
-        <StaffActionsMenu member={row.original} actions={actions} />
+        <StaffActions
+          member={row.original}
+          updatingId={updatingId}
+          onUpdateStatus={onUpdateStatus}
+        />
       ),
     },
   ]

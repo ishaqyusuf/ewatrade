@@ -5,43 +5,15 @@ import { CustomerLedgerSkeleton } from "@/components/tables/customer-ledger/skel
 import { useCustomerLedgerParams } from "@/hooks/use-customer-ledger-params"
 import { useTRPC } from "@/trpc/client"
 import type { TableSettings } from "@/utils/table-settings"
-import {
-  Alert,
-  AlertDescription,
-  Button,
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@ewatrade/ui"
+import { Alert, AlertDescription, Button } from "@ewatrade/ui"
 import { formatFinanceMoney } from "@ewatrade/utils/finance-money"
-import { ArrowDown01Icon } from "@hugeicons/core-free-icons"
-import { HugeiconsIcon } from "@hugeicons/react"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
-import { type ReactNode, useCallback, useEffect, useState } from "react"
-import { useCustomerLedgerExport } from "./statement-export"
-
-type LedgerMode = "receipt" | "apply" | "opening" | "refund"
-
-/**
- * One customer's statement in one currency: actions, the three totals and
- * every recorded charge and payment, oldest first. `renderHeader` places the
- * actions beside the customer's name.
- */
+import { useCallback, useEffect, useState } from "react"
+import { CustomerLedgerExport } from "./statement-export"
 export function CustomerLedgerStatement({
   accountId,
-  customerName,
   initialSettings,
-  onEditCustomer,
-  renderHeader,
-}: {
-  accountId: string
-  customerName?: string
-  initialSettings?: Partial<TableSettings>
-  onEditCustomer?: () => void
-  renderHeader: (actions: ReactNode) => ReactNode
-}) {
+}: { accountId: string; initialSettings?: Partial<TableSettings> }) {
   const trpc = useTRPC()
   const client = useQueryClient()
   const { ledgerSnapshot, ledgerAfter, setParams } = useCustomerLedgerParams()
@@ -128,179 +100,122 @@ export function CustomerLedgerStatement({
       setError(
         failure instanceof Error
           ? failure.message
-          : "Couldn’t refresh. The statement below is from before.",
+          : "Refresh failed; previous snapshot retained.",
       )
     } finally {
       setRefreshing(false)
     }
   }
-  const exporter = useCustomerLedgerExport({
-    accountId,
-    snapshotSequence: query.data?.snapshotSequence ?? "",
-    customerName,
-  })
-  const book = Boolean(detail.data?.book)
-  const startAction = (mode: LedgerMode) =>
-    void setParams({
-      ledgerAction: mode,
-      ledgerAccount: accountId,
-      ledgerEntry: null,
-      ledgerAllocation: null,
-    })
-  const busy = query.isFetching || refreshing
-  const actions = (
-    <div className="flex flex-wrap gap-2">
-      {book ? (
-        <Button onClick={() => startAction("receipt")}>
-          Record payment
-        </Button>
-      ) : null}
-      <DropdownMenu>
-        <DropdownMenuTrigger
-          render={
-            <Button variant="outline">
-              More
-              <HugeiconsIcon
-                icon={ArrowDown01Icon}
-                data-icon="inline-end"
-                className="text-muted-foreground"
-                aria-hidden="true"
-              />
-            </Button>
-          }
-        />
-        <DropdownMenuContent
-          appearance="dashboard"
-          align="end"
-          className="min-w-56"
-        >
-          {onEditCustomer ? (
-            <DropdownMenuItem onClick={onEditCustomer}>
-              Edit customer details
-            </DropdownMenuItem>
-          ) : null}
-          {book ? (
-            <>
-              <DropdownMenuItem onClick={() => startAction("apply")}>
-                Use on an Order
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => startAction("opening")}>
-                Add starting balance
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => startAction("refund")}>
-                Return paid-ahead money
-              </DropdownMenuItem>
-            </>
-          ) : null}
-          <DropdownMenuSeparator />
-          <DropdownMenuItem
-            disabled={!query.data || exporter.busy}
-            onClick={() => void exporter.download()}
-          >
-            {exporter.busy ? "Preparing file…" : "Download statement (CSV)"}
-          </DropdownMenuItem>
-          <DropdownMenuItem disabled={busy} onClick={() => void refresh()}>
-            {refreshing ? "Refreshing…" : "Refresh"}
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
-    </div>
-  )
   if (query.isPending || (!ledgerSnapshot && query.isFetching))
-    return (
-      <>
-        {renderHeader(actions)}
-        <CustomerLedgerSkeleton />
-      </>
-    )
+    return <CustomerLedgerSkeleton />
   if (query.isError)
     return (
-      <>
-        {renderHeader(actions)}
-        <Alert appearance="dashboard" variant="destructive">
-          <AlertDescription>
-            Couldn’t load this statement. Check your connection and try again.
-          </AlertDescription>
-          <Button
-            onClick={() =>
-              void setParams({ ledgerSnapshot: null, ledgerAfter: null })
-            }
-          >
-            Try again
-          </Button>
-        </Alert>
-      </>
+      <Alert appearance="dashboard" variant="destructive">
+        <AlertDescription>{query.error.message}</AlertDescription>
+        <Button onClick={() => void query.refetch()}>Try again</Button>
+        <Button
+          variant="outline"
+          onClick={() =>
+            void setParams({ ledgerSnapshot: null, ledgerAfter: null })
+          }
+        >
+          Start a new snapshot
+        </Button>
+      </Alert>
     )
   const statement = query.data
   const money = (v: string) => formatFinanceMoney(v, statement.currencyCode)
-  const net = BigInt(statement.totals.netBalanceMinor)
-  const owed = BigInt(statement.totals.outstandingDebtMinor)
-  const paidAhead = BigInt(statement.totals.availableCreditMinor)
-  const updated = new Intl.DateTimeFormat("en-NG", {
-    timeStyle: "short",
-  }).format(new Date(query.dataUpdatedAt))
+  const busy = query.isFetching || refreshing
   return (
     <section className="flex min-w-0 flex-col gap-5">
-      {renderHeader(actions)}
+      <Alert appearance="dashboard">
+        <AlertDescription>
+          Recorded customer ledger entries only. Unintegrated Order history is
+          excluded. Amount owed and available credit are separate; credit
+          becomes settlement only when explicitly applied.
+        </AlertDescription>
+      </Alert>
       <dl
         data-summary-grid
         data-summary-money
-        className="grid gap-3 sm:grid-cols-3"
+        className="grid gap-5 border-b border-border pb-5 sm:grid-cols-3"
       >
-        <div className="border border-border p-4">
-          <dt className="text-sm text-muted-foreground">Owes you</dt>
-          <dd
-            className={`mt-1 text-2xl font-semibold tabular-nums ${owed > BigInt(0) ? "text-amber-700 dark:text-amber-300" : ""}`}
-          >
+        <div>
+          <dt className="text-sm text-muted-foreground">
+            Recorded amount owed
+          </dt>
+          <dd className="mt-2 text-2xl tabular-nums">
             {money(statement.totals.outstandingDebtMinor)}
           </dd>
-          <dd className="text-sm text-muted-foreground">
-            Unpaid Orders and starting balance
-          </dd>
         </div>
-        <div className="border border-border p-4">
-          <dt className="text-sm text-muted-foreground">Paid ahead</dt>
-          <dd
-            className={`mt-1 text-2xl font-semibold tabular-nums ${paidAhead > BigInt(0) ? "text-primary" : ""}`}
-          >
+        <div>
+          <dt className="text-sm text-muted-foreground">Credit available</dt>
+          <dd className="mt-2 text-2xl tabular-nums">
             {money(statement.totals.availableCreditMinor)}
           </dd>
-          <dd className="text-sm text-muted-foreground">
-            Paid before an Order, not used yet
-          </dd>
         </div>
-        <div className="border border-border bg-muted p-4">
-          <dt className="text-sm text-muted-foreground">Balance</dt>
-          <dd className="mt-1 text-2xl font-semibold tabular-nums">
-            {net > BigInt(0)
-              ? money(net.toString())
-              : net < BigInt(0)
-                ? money((-net).toString())
-                : money("0")}
-            {net !== BigInt(0) ? (
-              <span className="ml-1.5 text-sm font-normal text-muted-foreground">
-                {net > BigInt(0) ? "owed" : "paid ahead"}
-              </span>
-            ) : null}
-          </dd>
-          <dd className="text-sm text-muted-foreground">
-            {net > BigInt(0)
-              ? "Owes you, minus paid ahead"
-              : net < BigInt(0)
-                ? "Paid ahead, minus what they owe"
-                : "Nothing owed"}
+        <div>
+          <dt className="text-sm text-muted-foreground">
+            Net balance (debt − credit)
+          </dt>
+          <dd className="mt-2 text-2xl tabular-nums">
+            {money(statement.totals.netBalanceMinor)}
           </dd>
         </div>
       </dl>
-      <p className="text-sm text-muted-foreground">
-        Shows charges and payments recorded since you started tracking balances.
-        A payment is kept as paid ahead until it’s used on an Order.
-      </p>
-      {error || exporter.error ? (
+      <div className="flex flex-wrap gap-2">
+        {detail.data?.book ? (
+          <>
+            {(
+              [
+                ["receipt", "Receive payment"],
+                ["apply", "Apply credit"],
+                ["opening", "Opening balance"],
+                ["refund", "Return unused credit"],
+              ] as const
+            ).map(([mode, label]) => (
+              <Button
+                key={mode}
+                appearance="form"
+                variant={mode === "receipt" ? "default" : "outline"}
+                onClick={() =>
+                  void setParams({
+                    ledgerAction: mode,
+                    ledgerAccount: accountId,
+                    ledgerEntry: null,
+                    ledgerAllocation: null,
+                  })
+                }
+              >
+                {label}
+              </Button>
+            ))}
+          </>
+        ) : null}
+        <Button
+          appearance="form"
+          variant="outline"
+          disabled={busy}
+          onClick={() => void refresh()}
+        >
+          {refreshing ? "Refreshing…" : "Refresh statement"}
+        </Button>
+      </div>
+      {error ? (
         <Alert appearance="dashboard" variant="destructive">
-          <AlertDescription>{error ?? exporter.error}</AlertDescription>
+          <AlertDescription>{error}</AlertDescription>
         </Alert>
       ) : null}
+      <CustomerLedgerExport
+        key={`${accountId}:${statement.snapshotSequence}`}
+        accountId={accountId}
+        snapshotSequence={statement.snapshotSequence}
+      />
+      <p className="text-sm text-muted-foreground">
+        Snapshot #{statement.snapshotSequence} · balances cover the whole posted
+        account at this snapshot. Refresh to include newer entries or
+        corrections.
+      </p>
       {statement.entries.length ? (
         <CustomerLedgerDataTable
           initialSettings={initialSettings}
@@ -309,48 +224,25 @@ export function CustomerLedgerStatement({
           onOpen={open}
         />
       ) : (
-        <CustomerLedgerEmptyState
-          customerName={customerName}
-          onRecordPayment={book ? () => startAction("receipt") : undefined}
-          onStartingBalance={book ? () => startAction("opening") : undefined}
-        />
+        <CustomerLedgerEmptyState onRefresh={() => void refresh()} />
       )}
-      <div className="flex flex-wrap items-center justify-between gap-2 text-sm text-muted-foreground">
-        <span>
-          {statement.entries.length
-            ? `${statement.entries.length} ${statement.entries.length === 1 ? "entry" : "entries"}, oldest first · `
-            : ""}
-          Updated {updated}
-        </span>
-        <div className="flex flex-wrap gap-2">
-          {ledgerAfter ? (
-            <Button
-              variant="outline"
-              disabled={busy}
-              onClick={() => void setParams({ ledgerAfter: null })}
-            >
-              Back to the start
-            </Button>
-          ) : null}
-          {statement.nextCursor && ledgerSnapshot ? (
-            <Button
-              variant="outline"
-              disabled={busy}
-              onClick={() =>
-                void setParams({ ledgerAfter: statement.nextCursor })
-              }
-            >
-              Show later entries
-            </Button>
-          ) : null}
-          <Button
-            variant="outline"
-            disabled={busy}
-            onClick={() => void refresh()}
-          >
-            {refreshing ? "Refreshing…" : "Refresh"}
-          </Button>
-        </div>
+      <div className="flex gap-2">
+        <Button
+          appearance="form"
+          variant="outline"
+          disabled={!ledgerAfter || busy}
+          onClick={() => void setParams({ ledgerAfter: null })}
+        >
+          First page
+        </Button>
+        <Button
+          appearance="form"
+          variant="outline"
+          disabled={!statement.nextCursor || !ledgerSnapshot || busy}
+          onClick={() => void setParams({ ledgerAfter: statement.nextCursor })}
+        >
+          Next page
+        </Button>
       </div>
     </section>
   )

@@ -72,6 +72,7 @@ export function QaBusinessesScreen({ onClose }: { onClose: () => void }) {
       <BottomSearchFooter
         accessibilityLabel="Search QA businesses"
         alwaysShowSearch
+        autoFocus
         label="Search businesses"
         localSearch
         maxLength={160}

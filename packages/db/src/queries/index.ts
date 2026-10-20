@@ -129,7 +129,6 @@ export {
 
 export * from "./catalog-detail"
 
-export * from "./staff-access-summaries"
 export * from "./staff-store-access"
 export { setCatalogProductUsage } from "./product-usage"
 
@@ -141,7 +140,6 @@ export * from "./order-visibility"
 export * from "./oversight"
 
 export * from "./catalog-product-update"
-export * from "./catalog-item-update"
 
 export { previewCatalogCategoryLabel } from "./catalog-categories"
 

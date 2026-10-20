@@ -13,7 +13,8 @@ import {
   type SelectedQaPhone,
 } from "@/components/mobile/qa-phone-entry-picker"
 import { StatusBanner } from "@/components/mobile/status-banner"
-import { Text as QaPhoneText } from "@/components/ui/text"
+import { Pressable } from "@/components/ui/pressable"
+import { Text } from "@/components/ui/text"
 import { View } from "@/components/ui/view"
 import { useAuthContext } from "@/hooks/use-auth"
 import { useMobileAppleAuth } from "@/hooks/use-mobile-apple-auth"
@@ -146,11 +147,6 @@ export function LoginScreen() {
     }),
   )
 
-  const isPending =
-    requestOtpMutation.isPending ||
-    passwordMutation.isPending ||
-    requestPhoneMutation.isPending
-
   const continueWithEmail = () => {
     if (useWhatsApp) {
       requestPhoneMutation.mutate({
@@ -181,6 +177,13 @@ export function LoginScreen() {
 
   return (
     <ClassicLoginScreen
+      subtitle={
+        useWhatsApp
+          ? "Use your WhatsApp number. We’ll send a 6-digit code."
+          : usePassword
+            ? "Use your email and password to sign in."
+            : "Use your email. We’ll send a 6-digit code."
+      }
       footer={
         <AuthFooterAction
           eyebrow="New to ẸwáTrade?"
@@ -189,107 +192,109 @@ export function LoginScreen() {
         />
       }
     >
-      {/* Grouped spacing (workshop mobile/sign-in-spacing 03): 10px inside a
-          group, 28px between groups. */}
-      <View className="gap-7">
-        <View className="gap-2.5">
-          {useWhatsApp ? (
-            <View className="gap-3">
-              <QaPhoneEntryPicker
-                value={qaPhone}
-                onChange={setQaPhone}
-                disabled={isPending}
+      <View className="gap-4">
+        {useWhatsApp ? (
+          <View className="gap-3">
+            <QaPhoneEntryPicker
+              value={qaPhone}
+              onChange={setQaPhone}
+              disabled={requestPhoneMutation.isPending}
+            />
+            {qaPhone ? (
+              <Text className="rounded-xl border border-border p-4">
+                {qaPhone.phone}
+              </Text>
+            ) : (
+              <PhoneField
+                countryCode={phoneCountry}
+                onCountryChange={setPhoneCountry}
+                onChangeText={setPhone}
+                value={phone}
+                label="WhatsApp number"
+                variant="green-gate"
               />
-              {qaPhone ? (
-                <QaPhoneText className="rounded-xl border border-border p-4">
-                  {qaPhone.phone}
-                </QaPhoneText>
-              ) : (
-                <PhoneField
-                  countryCode={phoneCountry}
-                  onCountryChange={setPhoneCountry}
-                  onChangeText={setPhone}
-                  value={phone}
-                  label="WhatsApp number"
-                  variant="green-gate"
-                />
-              )}
-            </View>
-          ) : (
-            <FormField
-              autoCapitalize="none"
-              keyboardType="email-address"
-              label="Email address"
-              onChangeText={setEmail}
-              placeholder="Enter your email address"
-              textContentType="emailAddress"
-              value={email}
-              variant="green-gate"
-            />
-          )}
-          {usePassword && !useWhatsApp ? (
-            <FormField
-              autoCapitalize="none"
-              autoComplete="current-password"
-              label="Password"
-              leadingIcon="Lock"
-              onChangeText={setPassword}
-              placeholder="Enter your password"
-              secureTextEntry
-              textContentType="password"
-              value={password}
-              variant="green-gate"
-            />
-          ) : null}
-          <AuthActionButton
-            disabled={
-              useWhatsApp
-                ? phone.length < 7
-                : !normalizedEmail || (usePassword && !password)
-            }
-            isLoading={isPending}
-            loadingLabel={usePassword ? "Signing in" : "Sending code"}
-            onPress={continueWithEmail}
-            trailingIcon="ArrowRight"
-          >
-            {useWhatsApp
-              ? "Send WhatsApp code"
-              : usePassword
-                ? "Sign in with password"
-                : "Send login code"}
-          </AuthActionButton>
-        </View>
-        <View className="flex-row gap-2.5">
-          {phoneAvailability.data?.enabled ? (
-            <View className="flex-1">
-              <AuthMethodButton
-                icon={useWhatsApp ? "Mail" : "WhatsApp"}
-                brandIcon={useWhatsApp ? undefined : "whatsapp"}
-                label={useWhatsApp ? "Use email" : "Use WhatsApp"}
-                variant="sso"
-                onPress={() => {
-                  setUseWhatsApp(!useWhatsApp)
-                  setUsePassword(false)
-                  setError(null)
-                }}
-                disabled={isPending}
-              />
-            </View>
-          ) : null}
-          <View className="flex-1">
-            <AuthMethodButton
-              icon={usePassword ? "Mail" : "Lock"}
-              label={usePassword ? "Use code" : "Use password"}
-              variant="sso"
-              onPress={() => {
-                setUsePassword(!usePassword)
-                setUseWhatsApp(false)
-                setError(null)
-              }}
-              disabled={isPending}
-            />
+            )}
           </View>
-        </View>
+        ) : (
+          <FormField
+            autoCapitalize="none"
+            keyboardType="email-address"
+            label="Email address"
+            onChangeText={setEmail}
+            placeholder="Enter your email address"
+            textContentType="emailAddress"
+            value={email}
+            variant="green-gate"
+          />
+        )}
+        {usePassword && !useWhatsApp ? (
+          <FormField
+            autoCapitalize="none"
+            autoComplete="current-password"
+            label="Password"
+            leadingIcon="Lock"
+            onChangeText={setPassword}
+            placeholder="Enter your password"
+            secureTextEntry
+            textContentType="password"
+            value={password}
+            variant="green-gate"
+          />
+        ) : null}
+        <AuthActionButton
+          disabled={
+            useWhatsApp
+              ? !qaPhone && phone.length < 7
+              : !normalizedEmail || (usePassword && !password)
+          }
+          isLoading={
+            requestOtpMutation.isPending ||
+            passwordMutation.isPending ||
+            requestPhoneMutation.isPending
+          }
+          loadingLabel={usePassword ? "Signing in" : "Sending code"}
+          onPress={continueWithEmail}
+          trailingIcon="ArrowRight"
+        >
+          {useWhatsApp
+            ? "Send WhatsApp code"
+            : usePassword
+              ? "Sign in with password"
+              : "Send login code"}
+        </AuthActionButton>
+        {phoneAvailability.data?.enabled ? (
+          <AuthMethodButton
+            icon={useWhatsApp ? "Mail" : "WhatsApp"}
+            brandIcon={useWhatsApp ? undefined : "whatsapp"}
+            label={useWhatsApp ? "Use email instead" : "Use WhatsApp instead"}
+            onPress={() => {
+              setUseWhatsApp(!useWhatsApp)
+              setUsePassword(false)
+              setError(null)
+            }}
+            disabled={
+              requestPhoneMutation.isPending ||
+              requestOtpMutation.isPending ||
+              passwordMutation.isPending
+            }
+          />
+        ) : null}
+        {!useWhatsApp ? (
+          <Pressable
+            accessibilityRole="button"
+            className="-my-3 min-h-11 items-center justify-center"
+            onPress={() => {
+              setUsePassword((current) => !current)
+              setError(null)
+            }}
+          >
+            <Text className="text-xs font-extrabold [-rn-line-height:22] text-primary">
+              {usePassword
+                ? "Use a login code instead"
+                : "Use a password instead"}
+            </Text>
+          </Pressable>
+        ) : null}
         {error ? (
           <StatusBanner
             icon="TriangleAlert"
@@ -298,22 +303,20 @@ export function LoginScreen() {
             tone="destructive"
           />
         ) : null}
-        <View className="gap-2.5">
-          <AuthDivider label="or" plain />
-          <AppleAuthButton
-            onPress={appleAuth.startAppleAuth}
-            disabled={appleAuth.isPending}
-          />
-          <AuthMethodButton
-            brandIcon="google"
-            disabled={googleAuth.isPending}
-            label="Continue with Google"
-            variant="sso"
-            loadingLabel="Connecting to Google"
-            onPress={continueWithGoogle}
-            pending={googleAuth.isPending}
-          />
-        </View>
+        <AuthDivider label="or" plain />
+        <AppleAuthButton
+          onPress={appleAuth.startAppleAuth}
+          disabled={appleAuth.isPending}
+        />
+        <AuthMethodButton
+          brandIcon="google"
+          disabled={googleAuth.isPending}
+          label="Continue with Google"
+          variant="sso"
+          loadingLabel="Connecting to Google"
+          onPress={continueWithGoogle}
+          pending={googleAuth.isPending}
+        />
       </View>
     </ClassicLoginScreen>
   )

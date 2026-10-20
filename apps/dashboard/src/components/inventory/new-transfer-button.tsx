@@ -1,8 +1,6 @@
 "use client"
 import { useInventoryParams } from "@/hooks/use-inventory-params"
 import { Button } from "@ewatrade/ui"
-import { ArrowDataTransferHorizontalIcon } from "@hugeicons/core-free-icons"
-import { HugeiconsIcon } from "@hugeicons/react"
 export function NewTransferButton() {
   const { setParams } = useInventoryParams()
   return (
@@ -17,12 +15,7 @@ export function NewTransferButton() {
         })
       }
     >
-      <HugeiconsIcon
-        icon={ArrowDataTransferHorizontalIcon}
-        data-icon="inline-start"
-        aria-hidden="true"
-      />
-      Send stock
+      New transfer
     </Button>
   )
 }

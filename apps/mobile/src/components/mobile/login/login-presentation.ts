@@ -4,4 +4,5 @@ export type LoginPresentationProps = {
   actions?: ReactNode
   children: ReactNode
   footer: ReactNode
+  subtitle?: string
 }

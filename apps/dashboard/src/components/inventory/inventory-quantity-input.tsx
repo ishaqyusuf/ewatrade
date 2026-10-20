@@ -4,11 +4,7 @@ import type {
   InventoryQuantityBalance,
   InventoryQuantityUnit,
 } from "@/lib/inventory-quantity"
-import {
-  inventoryQuantityTotal,
-  normalizeQuantityInput,
-} from "@/lib/inventory-quantity"
-import { formatStockQuantity, pluralizeUnitName } from "@/lib/inventory-view"
+import { inventoryQuantityTotal } from "@/lib/inventory-quantity"
 import {
   Field,
   FieldDescription,
@@ -46,7 +42,7 @@ export function InventoryQuantityInput({
   if (quantity.trim() && unit && balance) {
     try {
       total = inventoryQuantityTotal(
-        normalizeQuantityInput(quantity),
+        quantity,
         unit,
         balance,
         allowZero,
@@ -73,7 +69,7 @@ export function InventoryQuantityInput({
           className="border-l border-border py-0 pr-0"
         >
           <SelectControl
-            aria-label="Unit"
+            aria-label="Quantity unit"
             value={unit?.id ?? ""}
             onValueChange={onUnitChange}
             disabled={disabled || !balance || units.length < 2}
@@ -90,13 +86,21 @@ export function InventoryQuantityInput({
         </InputGroupAddon>
       </InputGroup>
       <FieldDescription id={`${id}-total`} aria-live="polite">
-        {!unit || !balance
-          ? "Choose a product to see its units."
-          : unit.id === balance.inventoryUnitId
-            ? `In ${pluralizeUnitName(unit.name).toLowerCase()}.`
-            : total
-              ? `= ${formatStockQuantity(total, balance.inventoryUnitName)} (1 ${unit.name.toLowerCase()} = ${formatStockQuantity(unit.factor, balance.inventoryUnitName)})`
-              : `1 ${unit.name.toLowerCase()} = ${formatStockQuantity(unit.factor, balance.inventoryUnitName)}.`}
+        {total && balance ? (
+          <>
+            Total: {total} {balance.inventoryUnitName}
+          </>
+        ) : unit ? (
+          <>Enter a quantity in {unit.name}.</>
+        ) : (
+          "Choose stock to see its units."
+        )}
+        {unit && balance && unit.id !== balance.inventoryUnitId ? (
+          <>
+            {" "}
+            · 1 {unit.name} = {unit.factor} {balance.inventoryUnitName}
+          </>
+        ) : null}
       </FieldDescription>
     </Field>
   )

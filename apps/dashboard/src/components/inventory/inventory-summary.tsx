@@ -5,26 +5,20 @@ export function InventorySummary({
 }: { summary: ReturnType<typeof summarizeInventory> }) {
   const cards = [
     {
-      label: "Products you can sell",
-      value: summary.sellable,
+      label: "Products with stock",
+      value: summary.stocked,
       total: summary.products,
-      detail: "Have stock that is not held for orders",
+      detail: `Across ${summary.balances} physical balance${summary.balances === 1 ? "" : "s"}`,
     },
     {
-      label: "Held for orders",
-      value: summary.held,
-      detail:
-        summary.held === 1
-          ? "1 product has stock set aside"
-          : `${summary.held} products have stock set aside`,
+      label: "With reservations",
+      value: summary.reserved,
+      detail: "Balances committed to orders",
     },
     {
       label: "Out of stock",
       value: summary.out,
-      detail:
-        summary.out === 1
-          ? "1 product has none to sell"
-          : `${summary.out} products have none to sell`,
+      detail: "No quantity available",
     },
   ]
   return (
@@ -35,7 +29,7 @@ export function InventorySummary({
     >
       {cards.map((card) => (
         <div key={card.label} className="px-5 py-4">
-          <p data-summary-label className="text-sm text-muted-foreground">
+          <p data-summary-label className="text-xs text-muted-foreground">
             {card.label}
           </p>
           <p
@@ -45,11 +39,11 @@ export function InventorySummary({
             {card.value}
             {card.total !== undefined ? (
               <span className="ml-2 text-sm text-muted-foreground">
-                of {card.total}
+                / {card.total}
               </span>
             ) : null}
           </p>
-          <p data-summary-detail className="text-sm text-muted-foreground">
+          <p data-summary-detail className="text-xs text-muted-foreground">
             {card.detail}
           </p>
         </div>

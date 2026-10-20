@@ -20,7 +20,7 @@ import Svg, { Defs, RadialGradient, Rect, Stop } from "react-native-svg"
 type GreenTillAuthScreenProps = {
   children: ReactNode
   title: string
-  subtitle?: ReactNode
+  subtitle: ReactNode
   /** Kept for callers; Market Preview shows the title and subtitle only. */
   eyebrow?: string
   backHref?: Href
@@ -45,11 +45,6 @@ type GreenTillAuthScreenProps = {
   motionDirection?: StepDirection
   /** Cards on the mint stage. Defaults to the labelled sales example. */
   stage?: ReactNode
-  /**
-   * "grouped" (sign-in, workshop mobile/sign-in-spacing 03): roomier sheet
-   * padding and a 28px gap between the title and the form's groups.
-   */
-  spacing?: "default" | "grouped"
   testID?: string
 }
 
@@ -75,7 +70,6 @@ export function GreenTillAuthScreen({
   progress,
   progressTotal = 4,
   stage,
-  spacing = "default",
   testID,
   motionKey,
   motionDirection,
@@ -150,15 +144,13 @@ export function GreenTillAuthScreen({
           </View>
         </View>
         {/* The sheet casts a soft shadow up onto the stage so it reads as its
-            own layer (owner, 10 Oct). boxShadow, because Android elevation
-            ignores shadowOffset and drew no upward shadow. */}
+            own layer (owner, 10 Oct). */}
         <View
           style={[
             styles.sheet,
-            spacing === "grouped" ? styles.groupedSheet : null,
             {
               backgroundColor: colors.background,
-              boxShadow: `0 -8px 26px -8px ${palette.heroTo}6B`,
+              shadowColor: palette.heroTo,
             },
           ]}
         >
@@ -170,11 +162,9 @@ export function GreenTillAuthScreen({
               >
                 {title}
               </Text>
-              {subtitle ? (
-                <Text className="text-xs [-rn-line-height:22] text-muted-foreground">
-                  {subtitle}
-                </Text>
-              ) : null}
+              <Text className="text-xs [-rn-line-height:22] text-muted-foreground">
+                {subtitle}
+              </Text>
             </View>
           )}
           {progress !== undefined ? (
@@ -267,14 +257,17 @@ const styles = StyleSheet.create({
   sheet: {
     borderTopLeftRadius: 28,
     borderTopRightRadius: 28,
+    elevation: 12,
     flex: 1,
     gap: 16,
     marginTop: -30,
     paddingBottom: 24,
     paddingHorizontal: 18,
     paddingTop: 28,
+    shadowOffset: { height: -8, width: 0 },
+    shadowOpacity: 0.28,
+    shadowRadius: 16,
   },
-  groupedSheet: { gap: 28, paddingHorizontal: 20, paddingTop: 32 },
   stage: { overflow: "hidden", position: "relative" },
   progress: { flexDirection: "row", gap: 6 },
 })

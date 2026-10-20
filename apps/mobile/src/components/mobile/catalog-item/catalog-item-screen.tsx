@@ -6,7 +6,6 @@ import { useOperationalModeStore } from "@/store/operationalModeStore"
 import { useTRPC } from "@/trpc/client"
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query"
 import { useRouter } from "expo-router"
-import type { StockInContext } from "./catalog-item-presentation"
 
 export function CatalogItemScreen({
   catalogItemId,
@@ -50,23 +49,6 @@ export function CatalogItemScreen({
       pathname: "/create-sale-modal",
     })
   }
-  const canRecordStock = canAccessAdminTabs(profile?.role) && Boolean(item)
-  // A request only: Stock intake re-resolves this item within the current
-  // authorized Store and never widens to other Products.
-  const openStock = (context?: StockInContext, mode?: "use") => {
-    if (!item) return
-    router.push({
-      params: {
-        catalogItemId: item.id,
-        ...(availability.data?.storeId
-          ? { storeId: availability.data.storeId }
-          : {}),
-        ...(context?.variantId ? { variantId: context.variantId } : {}),
-        ...(mode ? { mode } : {}),
-      },
-      pathname: "/stock-intake-modal",
-    })
-  }
   const goBack = () => {
     if (router.canGoBack()) router.back()
     else router.replace("/catalog")
@@ -84,9 +66,24 @@ export function CatalogItemScreen({
           : undefined
       }
       onCreateSelectedOrder={createOrder}
-      onStockIn={canRecordStock ? (context) => openStock(context) : undefined}
-      onRecordUse={
-        canRecordStock ? (context) => openStock(context, "use") : undefined
+      onStockIn={
+        canAccessAdminTabs(profile?.role) && item
+          ? (context) =>
+              // A request only: Stock in re-resolves this item within the
+              // current authorized Store and never widens to other Products.
+              router.push({
+                params: {
+                  catalogItemId: item.id,
+                  ...(availability.data?.storeId
+                    ? { storeId: availability.data.storeId }
+                    : {}),
+                  ...(context?.variantId
+                    ? { variantId: context.variantId }
+                    : {}),
+                },
+                pathname: "/stock-intake-modal",
+              })
+          : undefined
       }
       onOpenServiceJobs={() => router.push("/service-jobs-modal" as never)}
       isOffline={isOffline}

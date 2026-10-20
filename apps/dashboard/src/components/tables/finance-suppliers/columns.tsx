@@ -3,99 +3,43 @@
 import type { FinanceSupplierRow } from "@/components/finance/types"
 import { type TableColumnMeta, selectColumn } from "@/components/tables/core"
 import { Button } from "@ewatrade/ui"
-import { formatFinanceMoney } from "@ewatrade/utils/finance-money"
 import type { ColumnDef } from "@tanstack/react-table"
-
-/** A supplier row with its balances; undefined while they load. */
-export type FinanceSupplierListRow = FinanceSupplierRow & {
-  owedMinor?: string
-  paidAheadMinor?: string
-}
-
-function Amount({
-  value,
-  currency,
-  strong = false,
-}: {
-  value?: string
-  currency: string
-  strong?: boolean
-}) {
-  if (value === undefined)
-    return <span className="text-muted-foreground">…</span>
-  if (!strong && value === "0")
-    return <span className="text-muted-foreground">—</span>
-  return (
-    <span className={`tabular-nums ${strong ? "font-semibold" : ""}`}>
-      {formatFinanceMoney(value, currency)}
-    </span>
-  )
-}
 
 export function financeSupplierColumns(
   openStatement: (id: string) => void,
-  currency = "NGN",
-): ColumnDef<FinanceSupplierListRow>[] {
+): ColumnDef<FinanceSupplierRow>[] {
   return [
     selectColumn((supplier) => supplier.name),
     {
-      accessorKey: "name",
-      header: "Supplier",
-      size: 300,
-      minSize: 200,
-      maxSize: 520,
+      accessorKey: "code",
+      header: "Code",
+      size: 180,
+      minSize: 130,
+      maxSize: 280,
       enableHiding: false,
       meta: {
-        headerLabel: "Supplier",
+        headerLabel: "Code",
         sticky: true,
         reorderable: false,
         className:
           "z-20 bg-background group-hover:bg-muted/40 group-aria-selected:bg-muted/60 md:sticky",
+        skeleton: { type: "text", width: "w-24" },
+      } satisfies TableColumnMeta,
+      cell: ({ row }) => (
+        <span className="truncate font-mono text-xs">{row.original.code}</span>
+      ),
+    },
+    {
+      accessorKey: "name",
+      header: "Supplier",
+      size: 320,
+      minSize: 200,
+      maxSize: 520,
+      meta: {
+        headerLabel: "Supplier",
         skeleton: { type: "text", width: "w-40" },
       } satisfies TableColumnMeta,
-      cell: ({ row }) => (
-        <div className="grid min-w-0">
-          <button
-            type="button"
-            data-row-interactive="true"
-            className="truncate text-left font-medium underline-offset-4 hover:underline focus-visible:underline"
-            onClick={() => openStatement(row.original.id)}
-          >
-            {row.original.name}
-          </button>
-          <span className="truncate text-[13px] text-muted-foreground">
-            {row.original.code}
-          </span>
-        </div>
-      ),
-    },
-    {
-      id: "owed",
-      header: "You owe",
-      size: 180,
-      minSize: 140,
-      maxSize: 260,
-      meta: {
-        headerLabel: "You owe",
-        skeleton: { type: "text", width: "w-24" },
-      } satisfies TableColumnMeta,
-      cell: ({ row }) => (
-        <Amount value={row.original.owedMinor} currency={currency} strong />
-      ),
-    },
-    {
-      id: "paidAhead",
-      header: "Paid ahead",
-      size: 180,
-      minSize: 140,
-      maxSize: 260,
-      meta: {
-        headerLabel: "Paid ahead",
-        skeleton: { type: "text", width: "w-24" },
-      } satisfies TableColumnMeta,
-      cell: ({ row }) => (
-        <Amount value={row.original.paidAheadMinor} currency={currency} />
-      ),
+      cell: ({ row }) => <span className="truncate">{row.original.name}</span>,
     },
     {
       id: "actions",
@@ -132,14 +76,14 @@ export function ViewSupplierButton({
   return (
     <Button
       type="button"
-      aria-label={`Open ${supplier.name}`}
+      aria-label={`View ${supplier.name} statement`}
       data-row-interactive="true"
       className="rounded-none"
       size="sm"
       variant="ghost"
       onClick={onOpen}
     >
-      Open
+      View
     </Button>
   )
 }

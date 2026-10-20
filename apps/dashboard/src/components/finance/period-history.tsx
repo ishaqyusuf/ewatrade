@@ -14,18 +14,18 @@ export function FinancePeriodHistory({ book }: { book: FinanceBook }) {
   return (
     <section className="grid gap-4 border-t border-border pt-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2 className="text-lg font-medium">Months</h2>
+        <h2 className="text-lg font-medium">Period date locks</h2>
         <OpenFinanceSheet mode="period" secondary>
-          Close or reopen a month
+          Close or reopen period
         </OpenFinanceSheet>
       </div>
       <p className="text-sm text-muted-foreground">
-        Close a month after you've checked your reports and records. Closing
-        stops anyone changing records up to that date. It doesn't prove every
-        naira is accounted for.
+        Lock reviewed posting dates after checking reports and reconciling
+        source records. Date locks do not confirm that all business activity has
+        been recorded.
       </p>
       {query.isPending ? (
-        <output>Loading months…</output>
+        <output>Loading period history…</output>
       ) : query.isError ? (
         <FormFeedback appearance="dashboard">
           {query.error.message}
@@ -34,14 +34,14 @@ export function FinancePeriodHistory({ book }: { book: FinanceBook }) {
         <>
           <p className="font-medium">
             {query.data.closedThrough
-              ? `Closed up to ${new Date(query.data.closedThrough).toISOString().slice(0, 10)}`
-              : "No month closed yet"}
+              ? `Locked through ${new Date(query.data.closedThrough).toISOString().slice(0, 10)} UTC`
+              : "No closed posting period"}
           </p>
           <details
             onToggle={(event) => setHistoryOpen(event.currentTarget.open)}
           >
             <summary className="cursor-pointer text-sm font-medium">
-              Close and reopen history
+              Close/reopen history
             </summary>
             {historyOpen ? (
               <FinancePeriodAuditHistory key={book.id} bookId={book.id} />

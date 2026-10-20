@@ -16,24 +16,6 @@ import { useQuery } from "@tanstack/react-query"
 import { useQueryStates } from "nuqs"
 import { SheetFrame } from "./sheet-frame"
 
-function accessTitle(record: { subject: { name: string | null } }) {
-  const name = record.subject.name?.trim()
-  return name ? `${name}’s access changed` : "Access change"
-}
-
-function accessDescription(
-  record: { happenedAt: string; actor: { name: string | null } },
-  timeZone: string,
-) {
-  const when = new Intl.DateTimeFormat("en-NG", {
-    dateStyle: "medium",
-    timeStyle: "short",
-    timeZone,
-  }).format(new Date(record.happenedAt))
-  const by = record.actor.name?.trim()
-  return by ? `${when} by ${by}` : when
-}
-
 export function StaffAccessSheet({ timeZone }: { timeZone: string }) {
   const { isOpen, eventId, close } = useStaffAccessParams()
   const [, setRelated] = useQueryStates(assistantObjectParams, {
@@ -46,7 +28,6 @@ export function StaffAccessSheet({ timeZone }: { timeZone: string }) {
       { enabled: isOpen && Boolean(eventId), retry: false, staleTime: 0 },
     ),
   )
-  const readable = query.isSuccess && !query.isFetching && !query.isPaused
   return (
     <Sheet
       open={isOpen}
@@ -56,10 +37,8 @@ export function StaffAccessSheet({ timeZone }: { timeZone: string }) {
     >
       {isOpen ? (
         <SheetFrame
-          title={readable ? accessTitle(query.data) : "Access change"}
-          description={
-            readable ? accessDescription(query.data, timeZone) : undefined
-          }
+          title="Original Store access"
+          description="Saved access snapshots and current membership are separate."
           footer={
             eventId ? (
               <Button
@@ -74,13 +53,17 @@ export function StaffAccessSheet({ timeZone }: { timeZone: string }) {
         >
           {!eventId ? (
             <p role="alert">
-              This link no longer works. Ask the assistant again.
+              This access link is invalid. Close it and open the original
+              receipt.
             </p>
           ) : query.isPending || query.isFetching || query.isPaused ? (
-            <output aria-live="polite">Loading…</output>
+            <output aria-live="polite">Loading original Store access…</output>
           ) : query.isError ? (
             <div role="alert" className="grid gap-3">
-              <p>You can’t see this change.</p>
+              <p>
+                This original access record is unavailable for your current
+                business or access.
+              </p>
               <Button variant="outline" onClick={() => void query.refetch()}>
                 Try again
               </Button>

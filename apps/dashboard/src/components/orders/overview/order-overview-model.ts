@@ -105,52 +105,34 @@ export function lineStatus(line: OverviewLine): {
   return { label: "Not fulfilled", tone: "muted" }
 }
 
-type PaymentFields = Pick<
-  OverviewOrder,
-  | "amountPaidMinor"
-  | "balanceDueMinor"
-  | "creditMinor"
-  | "currencyCode"
-  | "paymentStatus"
-  | "status"
-  | "totalMinor"
->
-
-/** The payment pill: closed state, refunded, unpaid or part paid with the amount due, credited or paid. */
-export function orderPaymentPill(order: PaymentFields): {
-  label: string
-  tone: PillTone
-} {
+export function orderPills(order: OverviewOrder) {
   const money = (value: number) => orderMoney(value, order.currencyCode)
-  if (order.status === "CANCELLED") return { label: "Cancelled", tone: "red" }
-  if (order.status === "REFUNDED") return { label: "Refunded", tone: "red" }
+  const pills: Array<{ label: string; tone: PillTone }> = []
+  if (order.status === "CANCELLED")
+    pills.push({ label: "Cancelled", tone: "red" })
+  else if (order.status === "REFUNDED")
+    pills.push({ label: "Refunded", tone: "red" })
   // Every payment went back (refunds or credits), as mobile's pill says.
-  if (order.paymentStatus === "REFUNDED")
-    return { label: "Refunded", tone: "muted" }
-  if (order.amountPaidMinor <= 0 && order.totalMinor > 0)
-    return {
+  else if (order.paymentStatus === "REFUNDED")
+    pills.push({ label: "Refunded", tone: "muted" })
+  else if (order.amountPaidMinor <= 0 && order.totalMinor > 0)
+    pills.push({
       label: `Unpaid · ${money(order.balanceDueMinor)} due`,
       tone: "amber",
-    }
-  if (order.balanceDueMinor > 0)
-    return {
+    })
+  else if (order.balanceDueMinor > 0)
+    pills.push({
       label: `Part paid · ${money(order.balanceDueMinor)} due`,
       tone: "amber",
-    }
+    })
   // Nothing was paid and credits took the whole total (items came back).
-  if (
+  else if (
     order.totalMinor === 0 &&
     order.creditMinor > 0 &&
     order.amountPaidMinor <= 0
   )
-    return { label: "Credited", tone: "muted" }
-  return { label: "Paid", tone: "green" }
-}
-
-export function orderPills(order: OverviewOrder) {
-  const pills: Array<{ label: string; tone: PillTone }> = [
-    orderPaymentPill(order),
-  ]
+    pills.push({ label: "Credited", tone: "muted" })
+  else pills.push({ label: "Paid", tone: "green" })
   if (!isClosedOrder(order.status)) {
     const { done, total, returned, partReturned } = fulfilmentCount(order)
     pills.push(
@@ -174,20 +156,6 @@ export const formatQuantity = (value: string) =>
 /** Order times read in the business time zone, the same on server and client. */
 export function formatOrderTime(value: string | Date, timeZone?: string) {
   return new Date(value).toLocaleTimeString("en-NG", {
-    hour: "2-digit",
-    minute: "2-digit",
-    timeZone,
-  })
-}
-
-/** Day, month and time without the year, for list rows. */
-export function formatOrderShortDateTime(
-  value: string | Date,
-  timeZone?: string,
-) {
-  return new Date(value).toLocaleString("en-NG", {
-    day: "numeric",
-    month: "short",
     hour: "2-digit",
     minute: "2-digit",
     timeZone,

@@ -11,12 +11,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@ewatrade/ui"
-import {
-  Add01Icon,
-  ArrowDown01Icon,
-  MoreVerticalIcon,
-  ViewIcon,
-} from "@hugeicons/core-free-icons"
+import { ArrowDown01Icon, MoreVerticalIcon } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
 
 type BalanceContext = {
@@ -29,7 +24,6 @@ type BalanceContext = {
   inventoryUnitName: string
 }
 
-/** Update stock: the header button, or a row's ⋮ menu with the product preselected. */
 export function InventoryOperationMenu({
   balance,
   onAction,
@@ -49,7 +43,7 @@ export function InventoryOperationMenu({
             aria-label={
               balance
                 ? `Actions for ${balance.productName}, ${balance.variantName}, ${balance.inventoryUnitName}`
-                : "Update stock"
+                : "Stock operation"
             }
             onClick={(event) => event.stopPropagation()}
           />
@@ -59,25 +53,16 @@ export function InventoryOperationMenu({
           <HugeiconsIcon icon={MoreVerticalIcon} aria-hidden="true" />
         ) : (
           <>
-            <HugeiconsIcon
-              icon={Add01Icon}
-              data-icon="inline-start"
-              aria-hidden="true"
-            />
-            Update stock
+            Stock operation{" "}
             <HugeiconsIcon
               icon={ArrowDown01Icon}
-              data-icon="inline-end"
+              className="ml-2 size-4"
               aria-hidden="true"
             />
           </>
         )}
       </DropdownMenuTrigger>
-      <DropdownMenuContent
-        appearance="dashboard"
-        align="end"
-        className="min-w-64"
-      >
+      <DropdownMenuContent appearance="dashboard" align="end">
         {balance ? (
           <>
             <DropdownMenuItem
@@ -87,16 +72,14 @@ export function InventoryOperationMenu({
                 void open(balance.catalogItemId)
               }}
             >
-              <HugeiconsIcon icon={ViewIcon} aria-hidden="true" />
-              View product
+              View item
             </DropdownMenuItem>
             <DropdownMenuSeparator />
           </>
         ) : null}
         {INVENTORY_ACTIONS.map((action) => (
           <DropdownMenuItem
-            key={action.label}
-            className="items-start"
+            key={action.mode}
             onClick={(event) => {
               event.stopPropagation()
               onAction?.()
@@ -105,18 +88,28 @@ export function InventoryOperationMenu({
                 inventoryProduct: balance?.productId ?? null,
                 inventoryStore: balance?.storeId ?? null,
                 inventoryBalance: balance?.balanceSourceId ?? null,
-                inventoryPreset: "preset" in action ? action.preset : null,
               })
             }}
           >
-            <span className="flex flex-col">
-              <span className="font-medium">{action.label}</span>
-              <span className="text-xs text-muted-foreground">
-                {action.hint}
-              </span>
-            </span>
+            {action.label === "Adjust" ? "Adjust stock" : action.label}
           </DropdownMenuItem>
         ))}
+        <DropdownMenuSeparator />
+        <DropdownMenuItem
+          onClick={(event) => {
+            event.stopPropagation()
+            onAction?.()
+            void setParams({
+              inventoryOperation: "adjustment",
+              inventoryProduct: balance?.productId ?? null,
+              inventoryStore: balance?.storeId ?? null,
+              inventoryBalance: balance?.balanceSourceId ?? null,
+              inventoryPreset: "loss",
+            })
+          }}
+        >
+          Record damage or loss
+        </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   )

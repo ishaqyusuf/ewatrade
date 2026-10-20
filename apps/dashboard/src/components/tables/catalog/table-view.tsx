@@ -98,14 +98,18 @@ export function CatalogTableView({
         view={view}
         selectAllLabel="Select all loaded catalog items"
         summary={`${rows.length} items loaded`}
-      />
-      {/* Sort and Columns render in the page header row beside View and Add. */}
-      <CatalogTableSettings table={table} showColumns={view === "table"} />
+      >
+        <CatalogTableSettings table={table} showColumns={view === "table"} />
+      </DirectoryToolbar>
 
       {persistenceError ? (
         <div className="flex items-center justify-between gap-3" role="alert">
           <p className="text-sm text-destructive">{persistenceError}</p>
-          <Button variant="outline" onClick={retryPersistence}>
+          <Button
+            appearance="form"
+            variant="outline"
+            onClick={retryPersistence}
+          >
             Retry saving columns
           </Button>
         </div>
@@ -116,7 +120,11 @@ export function CatalogTableView({
           <p className="text-sm text-destructive">
             {errorMessage || "Catalog items could not be refreshed."}
           </p>
-          <Button variant="outline" onClick={() => void refetch()}>
+          <Button
+            appearance="form"
+            variant="outline"
+            onClick={() => void refetch()}
+          >
             Try again
           </Button>
         </div>
@@ -127,7 +135,7 @@ export function CatalogTableView({
           <p className="text-sm text-destructive">
             {errorMessage || "Catalog items could not be loaded."}
           </p>
-          <Button variant="outline" onClick={retryNextPage}>
+          <Button appearance="form" variant="outline" onClick={retryNextPage}>
             Retry loading items
           </Button>
         </div>
@@ -199,6 +207,7 @@ export function CatalogTableView({
 
       {hasNextPage && !isFetchNextPageError ? (
         <Button
+          appearance="form"
           className="w-fit"
           variant="outline"
           disabled={isFetchingNextPage}

@@ -25,12 +25,10 @@ export function OrdersDataTable({
   storeId,
   initialSettings,
   view,
-  timeZone,
 }: {
   storeId: string
   initialSettings?: Partial<TableSettings>
   view: DirectoryView
-  timeZone?: string
 }) {
   const trpc = useTRPC()
   const { filter, hasFilters } = useOrderParams()
@@ -53,7 +51,7 @@ export function OrdersDataTable({
     getRowId: getOrderId,
     scope: JSON.stringify([storeId, getOrderListPageInput(filter)]),
   })
-  const columns = useMemo(() => orderColumns(timeZone), [timeZone])
+  const columns = useMemo(() => orderColumns(), [])
   const columnIds = useMemo(
     () =>
       columns.map(
@@ -93,7 +91,6 @@ export function OrdersDataTable({
       <OrdersTableView
         table={table}
         view={view}
-        timeZone={timeZone}
         sort={sort}
         toggleSort={toggleSort}
         filtered={hasFilters}

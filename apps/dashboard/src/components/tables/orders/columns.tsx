@@ -1,13 +1,7 @@
-import { orderStatusPill } from "@/components/orders/order-status"
-import {
-  formatOrderShortDateTime,
-  isClosedOrder,
-  orderPaymentPill,
-} from "@/components/orders/overview/order-overview-model"
-import { Pill } from "@/components/orders/overview/order-overview-parts"
 import { selectColumn } from "@/components/tables/core"
 import { formatOrderItemGroups } from "@/lib/order-item-descriptions"
 import type { RouterOutputs } from "@ewatrade/api/trpc/routers/_app"
+import { Badge } from "@ewatrade/ui"
 import type { ColumnDef } from "@tanstack/react-table"
 import { OrderActionsMenu } from "./action-menu"
 
@@ -24,39 +18,14 @@ export function getOrderCustomer(order: OrderRow) {
   return order.customerName || order.customerPhone || "Walk-in"
 }
 
-// Readable sizes from the Orders page workshop (01 Labeled view dropdown).
-export const ORDER_PILL_CLASS = "h-auto px-2.5 py-0.5 text-[12.5px]"
-export const ORDER_SUBTITLE_CLASS =
-  "truncate text-[13.5px] text-muted-foreground"
-
-export function OrderStatusPill({ status }: { status: string }) {
-  const pill = orderStatusPill(status)
-  return (
-    <Pill tone={pill.tone} className={ORDER_PILL_CLASS}>
-      {pill.label}
-    </Pill>
-  )
-}
-
-/** Closed orders show their state in Status, so Payment stays empty. */
-export function OrderPaymentPill({ order }: { order: OrderRow }) {
-  if (isClosedOrder(order.status)) return null
-  const pill = orderPaymentPill(order)
-  return (
-    <Pill tone={pill.tone} className={ORDER_PILL_CLASS}>
-      {pill.label}
-    </Pill>
-  )
-}
-
-export function orderColumns(timeZone?: string): ColumnDef<OrderRow>[] {
+export function orderColumns(): ColumnDef<OrderRow>[] {
   return [
     selectColumn((order) => order.orderNumber),
     {
       accessorKey: "orderNumber",
       header: "Order",
-      size: 170,
-      minSize: 140,
+      size: 200,
+      minSize: 160,
       maxSize: 300,
       enableHiding: false,
       meta: {
@@ -70,37 +39,18 @@ export function orderColumns(timeZone?: string): ColumnDef<OrderRow>[] {
       },
       cell: ({ row }) => (
         <div className="min-w-0">
-          <p className="truncate text-[14.5px] font-semibold">
-            {row.original.orderNumber}
-          </p>
-          <p className={ORDER_SUBTITLE_CLASS}>
+          <p className="truncate font-medium">{row.original.orderNumber}</p>
+          <p className="truncate text-xs text-muted-foreground">
             {getOrderCustomer(row.original)}
           </p>
         </div>
       ),
     },
     {
-      accessorKey: "createdAt",
-      header: "Placed",
-      size: 140,
-      minSize: 120,
-      maxSize: 200,
-      meta: {
-        headerLabel: "Placed",
-        sortField: "createdAt",
-        skeleton: { type: "text" as const, width: "w-24" },
-      },
-      cell: ({ row }) => (
-        <span className="text-muted-foreground tabular-nums">
-          {formatOrderShortDateTime(row.original.createdAt, timeZone)}
-        </span>
-      ),
-    },
-    {
       id: "items",
       header: "Items",
-      size: 200,
-      minSize: 170,
+      size: 360,
+      minSize: 240,
       maxSize: 560,
       meta: {
         headerLabel: "Items",
@@ -119,7 +69,9 @@ export function orderColumns(timeZone?: string): ColumnDef<OrderRow>[] {
                 </span>
               ) : null}
             </p>
-            <p className={ORDER_SUBTITLE_CLASS}>{first.details}</p>
+            <p className="truncate text-xs text-muted-foreground">
+              {first.details}
+            </p>
           </div>
         ) : null
       },
@@ -127,36 +79,16 @@ export function orderColumns(timeZone?: string): ColumnDef<OrderRow>[] {
     {
       accessorKey: "totalMinor",
       header: "Total",
-      size: 130,
-      minSize: 110,
+      size: 150,
+      minSize: 120,
       maxSize: 220,
       meta: {
         headerLabel: "Total",
         sortField: "total",
         skeleton: { type: "text" as const, width: "w-24" },
       },
-      cell: ({ row }) => (
-        <span className="tabular-nums">
-          {formatOrderMoney(row.original.totalMinor, row.original.currencyCode)}
-        </span>
-      ),
-    },
-    {
-      id: "payment",
-      header: "Payment",
-      size: 230,
-      minSize: 180,
-      maxSize: 320,
-      meta: {
-        headerLabel: "Payment",
-        skeleton: { type: "badge" as const, width: "w-32" },
-      },
       cell: ({ row }) =>
-        isClosedOrder(row.original.status) ? (
-          <span className="text-muted-foreground">—</span>
-        ) : (
-          <OrderPaymentPill order={row.original} />
-        ),
+        formatOrderMoney(row.original.totalMinor, row.original.currencyCode),
     },
     {
       accessorKey: "status",
@@ -169,7 +101,11 @@ export function orderColumns(timeZone?: string): ColumnDef<OrderRow>[] {
         sortField: "status",
         skeleton: { type: "badge" as const, width: "w-24" },
       },
-      cell: ({ row }) => <OrderStatusPill status={row.original.status} />,
+      cell: ({ row }) => (
+        <Badge className="rounded-full capitalize">
+          {row.original.status.toLowerCase()}
+        </Badge>
+      ),
     },
     {
       id: "actions",

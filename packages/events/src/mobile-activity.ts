@@ -6,7 +6,7 @@ const saleCategory = z.enum([
   "additional_cost",
   "mixed",
 ])
-const stockAction = z.enum(["receipt", "count", "adjustment", "custody", "use"])
+const stockAction = z.enum(["receipt", "count", "adjustment", "custody"])
 const stockCategory = z.enum(["shared", "packaged"])
 const count = z.number().int().min(0).max(1000)
 

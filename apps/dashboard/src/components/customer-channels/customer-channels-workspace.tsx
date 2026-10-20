@@ -97,6 +97,7 @@ export function CustomerChannelsWorkspace({
             ])
           }
           variant="outline"
+          appearance="form"
         >
           Try again
         </Button>
@@ -320,6 +321,7 @@ function PendingApprovalCards({
               className="mt-auto w-fit"
               onClick={() => onReview(approval)}
               variant="outline"
+              appearance="form"
             >
               Review exact version
             </Button>
@@ -361,7 +363,12 @@ function ChannelTaskCard({
         <h2 className="font-semibold">{title}</h2>
         <p className="mt-1 text-sm text-muted-foreground">{description}</p>
       </div>
-      <Button className="w-fit" onClick={onOpen} variant="outline">
+      <Button
+        className="w-fit"
+        onClick={onOpen}
+        variant="outline"
+        appearance="form"
+      >
         {action}
       </Button>
     </article>

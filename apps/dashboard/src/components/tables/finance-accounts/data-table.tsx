@@ -29,9 +29,6 @@ export type MoneyAccountRow = {
   name: string
   purpose: string
   balanceMinor: string
-  /** Money in and out since the 1st of this month (UTC); asset accounts only. */
-  monthDebitMinor?: string
-  monthCreditMinor?: string
   paymentMethods: string[]
   paymentsPausedAt: Date | string | null
 }
@@ -62,7 +59,7 @@ const getAccountId = (account: MoneyAccountRow) => account.id
 
 export function moneyAccountPurposeLabel(purpose: string) {
   return purpose === "CLEARING"
-    ? "Card and POS money on its way"
+    ? "Awaiting settlement"
     : purpose === "CASH"
       ? "Cash"
       : "Bank"
@@ -70,19 +67,32 @@ export function moneyAccountPurposeLabel(purpose: string) {
 
 function AccountActions({
   account,
+  onOpen,
   onOpenPaymentSettings,
 }: {
   account: MoneyAccountRow
+  onOpen: (accountId: string) => void
   onOpenPaymentSettings: (accountId: string) => void
 }) {
   return (
-    <Button
-      variant="outline"
-      aria-label={`${account.name} payment settings`}
-      onClick={() => onOpenPaymentSettings(account.id)}
-    >
-      Payment settings
-    </Button>
+    <div className="flex flex-wrap gap-2">
+      <Button
+        appearance="form"
+        variant="outline"
+        aria-label={`View ${account.name} statement`}
+        onClick={() => onOpen(account.id)}
+      >
+        View statement
+      </Button>
+      <Button
+        appearance="form"
+        variant="outline"
+        aria-label={`${account.name} payment settings`}
+        onClick={() => onOpenPaymentSettings(account.id)}
+      >
+        Payment settings
+      </Button>
+    </div>
   )
 }
 
@@ -109,15 +119,8 @@ export function MoneyAccountsDataTable({
         header: "Account",
         cell: ({ row }) => (
           <div className="min-w-40">
-            <p className="flex items-center gap-2">
-              <button
-                type="button"
-                className="text-left font-medium underline-offset-4 hover:underline focus-visible:underline"
-                aria-label={`${row.original.name}: money in and out`}
-                onClick={() => onOpenStatement(row.original.id)}
-              >
-                {row.original.name}
-              </button>
+            <p className="flex items-center gap-2 font-medium">
+              {row.original.name}
               <PausedBadge account={row.original} />
             </p>
             <p className="text-xs text-muted-foreground">
@@ -130,30 +133,6 @@ export function MoneyAccountsDataTable({
         id: "takes",
         header: "Takes",
         cell: ({ row }) => <PaymentMethodsTaken account={row.original} />,
-      },
-      {
-        id: "moneyIn",
-        header: () => <span className="block text-right">In this month</span>,
-        cell: ({ row }) => (
-          <p className="text-right tabular-nums">
-            {formatFinanceMoney(
-              row.original.monthDebitMinor ?? "0",
-              currencyCode,
-            )}
-          </p>
-        ),
-      },
-      {
-        id: "moneyOut",
-        header: () => <span className="block text-right">Out this month</span>,
-        cell: ({ row }) => (
-          <p className="text-right tabular-nums">
-            {formatFinanceMoney(
-              row.original.monthCreditMinor ?? "0",
-              currencyCode,
-            )}
-          </p>
-        ),
       },
       {
         id: "balance",
@@ -170,6 +149,7 @@ export function MoneyAccountsDataTable({
         cell: ({ row }) => (
           <AccountActions
             account={row.original}
+            onOpen={onOpenStatement}
             onOpenPaymentSettings={onOpenPaymentSettings}
           />
         ),
@@ -196,15 +176,7 @@ export function MoneyAccountsDataTable({
         table={table}
         view={view}
         selectAllLabel="Select all money accounts"
-        summary={`${accounts.length} money account${accounts.length === 1 ? "" : "s"} · ${formatFinanceMoney(
-          accounts
-            .reduce(
-              (total, account) => total + BigInt(account.balanceMinor),
-              0n,
-            )
-            .toString(),
-          currencyCode,
-        )} in total`}
+        summary={`${accounts.length} money account${accounts.length === 1 ? "" : "s"}`}
       />
       {view === "table" ? (
         <SimpleDirectoryTable table={table} label="Money accounts" />
@@ -232,25 +204,10 @@ export function MoneyAccountsDataTable({
                   currencyCode,
                 ),
               }}
-              details={[
-                {
-                  label: "Money in this month",
-                  value: formatFinanceMoney(
-                    row.original.monthDebitMinor ?? "0",
-                    currencyCode,
-                  ),
-                },
-                {
-                  label: "Money out this month",
-                  value: formatFinanceMoney(
-                    row.original.monthCreditMinor ?? "0",
-                    currencyCode,
-                  ),
-                },
-              ]}
               actions={
                 <AccountActions
                   account={row.original}
+                  onOpen={onOpenStatement}
                   onOpenPaymentSettings={onOpenPaymentSettings}
                 />
               }

@@ -1,4 +1,4 @@
-import { Prisma, type PrismaClient } from "../../../generated/prisma/client"
+import type { Prisma, PrismaClient } from "../../../generated/prisma/client"
 import { type FinanceActor, assertFinanceManager } from "./access"
 import { FinanceError } from "./rules"
 
@@ -126,45 +126,6 @@ export async function listFinanceSuppliers(
     },
     { maxWait: 10_000, timeout: 30_000, isolationLevel: "RepeatableRead" },
   )
-}
-
-/**
- * What each supplier is owed (PAYABLE, credit minus debit) and holds as paid
- * ahead (SUPPLIER_ADVANCE, debit minus credit) at a snapshot. Same rule as the
- * supplier statement, batched for a page: each journal entry has at most one
- * supplier entry, so lines are attributed through it.
- */
-export async function listFinanceSupplierBalances(
-  db: Pick<Prisma.TransactionClient, "$queryRaw">,
-  input: { bookId: string; snapshot: bigint; supplierIds: string[] },
-) {
-  const balances = new Map<
-    string,
-    { payableMinor: string; advanceMinor: string }
-  >()
-  if (!input.supplierIds.length) return balances
-  const rows = await db.$queryRaw<
-    Array<{ supplierId: string; payable: string; advance: string }>
-  >(Prisma.sql`
-    SELECT se."supplierId",
-      COALESCE(SUM(l."creditMinor" - l."debitMinor") FILTER (WHERE a.purpose = 'PAYABLE'), 0)::text AS payable,
-      COALESCE(SUM(l."debitMinor" - l."creditMinor") FILTER (WHERE a.purpose = 'SUPPLIER_ADVANCE'), 0)::text AS advance
-    FROM "FinanceSupplierEntry" se
-    JOIN "FinanceJournalEntry" e ON e."bookId" = se."bookId" AND e.id = se."journalEntryId"
-    JOIN "FinanceJournalLine" l ON l."bookId" = e."bookId" AND l."entryId" = e.id
-    JOIN "FinanceAccount" a ON a."bookId" = l."bookId" AND a.id = l."accountId"
-    WHERE se."bookId" = ${input.bookId}
-      AND se."supplierId" IN (${Prisma.join(input.supplierIds)})
-      AND e.sequence <= ${input.snapshot}
-      AND a.purpose IN ('PAYABLE', 'SUPPLIER_ADVANCE')
-    GROUP BY se."supplierId"
-  `)
-  for (const row of rows)
-    balances.set(row.supplierId, {
-      payableMinor: row.payable,
-      advanceMinor: row.advance,
-    })
-  return balances
 }
 
 export type FinanceSupplierStatementInput = FinanceActor & {

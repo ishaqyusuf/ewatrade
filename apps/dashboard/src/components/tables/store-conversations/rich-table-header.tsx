@@ -111,6 +111,7 @@ export function StoreConversationRichTableHeader({
                       event.stopPropagation()
                       toggleSort(field)
                     }}
+                    appearance="form"
                   >
                     <span className="truncate">{label}</span>
                     <span aria-hidden="true">
@@ -211,7 +212,12 @@ export function StoreConversationColumnSettings({
     <DropdownMenu>
       <DropdownMenuTrigger
         render={
-          <Button type="button" variant="outline" className="rounded-none">
+          <Button
+            type="button"
+            variant="outline"
+            className="rounded-none"
+            appearance="form"
+          >
             Columns
           </Button>
         }

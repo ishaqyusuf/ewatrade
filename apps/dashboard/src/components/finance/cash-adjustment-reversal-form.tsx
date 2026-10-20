@@ -1,45 +1,35 @@
 "use client"
-import { FieldGroup, Input } from "@ewatrade/ui"
+import { Button, FieldGroup, FormActions, Input } from "@ewatrade/ui"
 
-import { FormDatePicker } from "@/components/forms/form-controls"
+import { FormDateControl } from "@/components/forms/form-controls"
 import { FormFeedback } from "@/components/forms/form-feedback"
 import { useFinanceCommand } from "@/hooks/use-finance-command"
 import { useZodForm } from "@/hooks/use-zod-form"
 import { useTRPC } from "@/trpc/client"
 import type { RouterOutputs } from "@ewatrade/api/trpc/routers/_app"
 
+import { formatFinanceMoney } from "@ewatrade/utils/finance-money"
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { useState } from "react"
 import { z } from "zod"
-import {
-  FinanceBackTo,
-  FinanceDetails,
-  FinanceField,
-  FinanceFormFooter,
-  FinanceReview,
-} from "./form-fields"
-import { moneyText, plainDay } from "./review-changes"
+import { FinanceField, FinanceReview } from "./form-fields"
 import { useCompleteFinanceForm } from "./use-complete-finance-form"
 
 type CashCount = RouterOutputs["finance"]["cashCount"]
 const dateValue = z
   .string()
-  .regex(/^\d{4}-\d{2}-\d{2}$/, "Pick a date.")
+  .regex(/^\d{4}-\d{2}-\d{2}$/, "Choose a valid UTC date.")
   .refine((value) => {
     const parsed = new Date(`${value}T00:00:00.000Z`)
     return (
       Number.isFinite(parsed.getTime()) &&
       parsed.toISOString().slice(0, 10) === value
     )
-  }, "Pick a date.")
+  }, "Choose a valid UTC date.")
 const createSchema = (minDate: string) =>
   z
     .object({
-      reason: z
-        .string()
-        .trim()
-        .min(1, "Say why, so others understand later.")
-        .max(400, "Use 400 characters or fewer."),
+      reason: z.string().trim().min(1, "Enter a reason.").max(400),
       date: dateValue,
     })
     .superRefine((value, context) => {
@@ -49,14 +39,14 @@ const createSchema = (minDate: string) =>
         context.addIssue({
           code: "custom",
           path: ["date"],
-          message: "Pick the count day or later.",
+          message: "The reversal date cannot precede the cash adjustment.",
         })
       }
       if (value.date > today || !Number.isFinite(reversalTime)) {
         context.addIssue({
           code: "custom",
           path: ["date"],
-          message: "Pick today or an earlier day.",
+          message: "Choose a date no later than today (UTC).",
         })
       }
     })
@@ -85,9 +75,7 @@ export function FinanceCashAdjustmentReversalForm({
     trpc.finance.reverseCashAdjustment.mutationOptions(),
   )
   const command = useFinanceCommand(
-    useCompleteFinanceForm(
-      `Adjustment undone. ${count.accountName} is back to its recorded balance.`,
-    ),
+    useCompleteFinanceForm(),
     bookId,
     "cashAdjustmentReversal",
   )
@@ -105,7 +93,9 @@ export function FinanceCashAdjustmentReversalForm({
   async function prepare(values: Values) {
     if (preparing) return
     if (!command.ready) {
-      setPrepareError("Checking what you saved. Wait a moment, then try again.")
+      setPrepareError(
+        "Checking saved submissions. Wait before reviewing again.",
+      )
       return
     }
     setPreparing(true)
@@ -120,11 +110,11 @@ export function FinanceCashAdjustmentReversalForm({
       const currentAdjustment = current.adjustment
       if (!currentAdjustment || currentAdjustment.id !== adjustment?.id) {
         throw new Error(
-          "The adjustment changed. Close and open the count again.",
+          "The cash adjustment changed. Refresh the count before continuing.",
         )
       }
       if (currentAdjustment.reversal) {
-        throw new Error("This adjustment has already been undone.")
+        throw new Error("This cash adjustment has already been reversed.")
       }
       const requestedDate = new Date(`${values.date}T00:00:00.000Z`)
       const effectiveAt =
@@ -149,7 +139,7 @@ export function FinanceCashAdjustmentReversalForm({
       setPrepareError(
         failure instanceof Error
           ? failure.message
-          : "We couldn't check this adjustment. Try again.",
+          : "Unable to review the current cash adjustment.",
       )
     } finally {
       setPreparing(false)
@@ -176,87 +166,97 @@ export function FinanceCashAdjustmentReversalForm({
     })
   }
 
-  const back = (
-    <FinanceBackTo
-      label="Back to count"
-      onBack={onBack}
-      title="Undo adjustment"
-      description="Takes the adjustment back in your records. No cash moves."
-    />
-  )
   if (review)
     return (
-      <div className="grid gap-5">
-        {back}
-        <FinanceReview
-          command={command}
-          onBack={() => setReview(null)}
-          onConfirm={() => submit(review)}
-          confirmLabel="Undo adjustment"
-          sentence={
-            <>
-              This undoes the{" "}
-              <b>
-                {moneyText(absolute(count.differenceMinor), count.currencyCode)}
-              </b>{" "}
-              adjustment to {count.accountName}. No cash moves. The count and
-              its difference stay in history.
-            </>
-          }
-        >
-          <FinanceDetails
-            rows={[
-              ["Adjustment", review.adjustmentDescription],
-              ["Date", plainDay(review.effectiveAt.toISOString().slice(0, 10))],
-              ["Why", review.reason],
-            ]}
-          />
-        </FinanceReview>
-      </div>
+      <FinanceReview
+        command={command}
+        onBack={() => setReview(null)}
+        onConfirm={() => submit(review)}
+      >
+        <h3 className="font-medium">Reverse cash-count adjustment</h3>
+        <p className="break-words text-sm">{review.adjustmentDescription}</p>
+        <p className="text-sm">
+          Original adjustment recorded{" "}
+          {new Date(review.adjustmentRecordedAt).toISOString()}.
+        </p>
+        <p className="text-sm">
+          Effective at: {review.effectiveAt.toISOString()} UTC · Reviewed
+          journal snapshot {review.snapshot}
+        </p>
+        <p className="break-words text-sm">Reason: {review.reason}</p>
+        <p className="border border-border p-4 text-sm">
+          This posts opposite accounting entries for the adjustment. It does not
+          return cash or issue a refund. The physical count and original
+          adjustment remain in history, and the count difference remains visible
+          for review.
+        </p>
+        <p className="text-sm font-medium">
+          Adjustment amount:{" "}
+          {formatFinanceMoney(count.differenceMinor, count.currencyCode)}
+        </p>
+      </FinanceReview>
     )
 
   return (
     <form onSubmit={form.handleSubmit((values) => void prepare(values))}>
       <FieldGroup className="min-w-0 grid gap-5">
-        {back}
-        <p className="break-words border border-border bg-muted/40 px-3 py-2 text-sm">
-          {adjustment?.description}
+        <h3 className="font-semibold">Reverse cash-count adjustment</h3>
+        <p className="break-words text-sm">{adjustment?.description}</p>
+        <p className="text-sm text-muted-foreground">
+          This reverses the accounting entry only. It does not return cash or
+          issue a refund. The original count and adjustment stay in history.
         </p>
-        <FinanceField label="Date" error={form.formState.errors.date?.message}>
-          <FormDatePicker
+        <FinanceField
+          label="Effective date (UTC)"
+          error={form.formState.errors.date?.message}
+        >
+          <FormDateControl
+            required
+            type="date"
             min={minDate}
             max={today}
             disabled={preparing}
             control={form.control}
-            name="date"
+            name={"date"}
           />
         </FinanceField>
         <FinanceField
-          label="Why are you undoing it?"
+          label="Reason for reversal"
           error={form.formState.errors.reason?.message}
         >
           <Input
+            required
             maxLength={400}
             disabled={preparing}
-            placeholder="Found the missing sale"
             {...form.register("reason")}
           />
         </FinanceField>
         {prepareError ? (
           <FormFeedback appearance="dashboard">{prepareError}</FormFeedback>
         ) : null}
-        <FinanceFormFooter
-          onCancel={onBack}
-          submitLabel="Review"
-          isSubmitting={preparing}
-          disabled={preparing || !command.ready}
-        />
+        <FormActions>
+          <Button
+            appearance="form"
+            type="button"
+            variant="outline"
+            onClick={onBack}
+            disabled={preparing}
+          >
+            Back to count
+          </Button>
+          <Button
+            appearance="form"
+            type="submit"
+            disabled={preparing || !command.ready}
+          >
+            {preparing
+              ? "Checking current entries…"
+              : !command.ready
+                ? "Checking saved submissions…"
+                : "Review reversal"}
+          </Button>
+        </FormActions>
       </FieldGroup>
     </form>
   )
-}
-
-function absolute(minor: string) {
-  const value = BigInt(minor)
-  return value < BigInt(0) ? -value : value
 }

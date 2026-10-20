@@ -26,7 +26,6 @@ import { useEffect, useRef, useState } from "react"
 import { type BankReviewAction, FinanceBankMatchForm } from "./bank-match-form"
 import { FinanceBankMatchHistory } from "./bank-match-history"
 import { bankMatchSelection } from "./bank-match-state"
-import { financeSourceLabel } from "./bank-source-detail"
 import { useFinanceForm } from "./form-context"
 import type { FinanceBook } from "./types"
 
@@ -72,7 +71,7 @@ export function FinanceBankStatementDetail({
       setRecoveryError(
         failure instanceof Error
           ? failure.message
-          : "Saved matching progress isn't available.",
+          : "Saved matching status is unavailable.",
       )
     }
   }, [actorUserId, tenantId, book.id, statementId, recoveryRefresh])
@@ -111,7 +110,7 @@ export function FinanceBankStatementDetail({
   if (query.isError)
     return (
       <Alert variant="destructive" appearance="dashboard">
-        <AlertTitle>Couldn't load this statement</AlertTitle>
+        <AlertTitle>Statement review unavailable</AlertTitle>
         <AlertDescription>{query.error.message}</AlertDescription>
         <Button variant="outline" onClick={() => void query.refetch()}>
           Try again
@@ -133,7 +132,7 @@ export function FinanceBankStatementDetail({
     bankMatchSelection(data, bankRowIds, journalLineIds)
   } catch (failure) {
     selectionError =
-      failure instanceof Error ? failure.message : "Check what you selected."
+      failure instanceof Error ? failure.message : "Review selected sources."
   }
   const bankTotal = data.rows
     .filter((row) => bankRowIds.includes(row.id))
@@ -145,7 +144,7 @@ export function FinanceBankStatementDetail({
     .toString()
   const money = (amount: string) =>
     formatFinanceMoney(amount, data.currencyCode)
-  // Select-all follows the match rules: lines not matched yet, at most 50.
+  // Select-all follows the match rules: unmatched rows only, at most 50.
   const selectionLocked = query.isFetching || Boolean(recoveryError)
   const eligibleBankRowIds = data.rows
     .filter((row) => !row.activeMatchId)
@@ -164,12 +163,13 @@ export function FinanceBankStatementDetail({
         <div>
           <h3 className="text-lg font-medium">{data.statement.reference}</h3>
           <p className="text-sm text-muted-foreground">
-            {account?.name ?? "Money account"} ·{" "}
+            {account?.name ?? "Bank account"} ·{" "}
             {new Date(data.statement.startsAt).toISOString().slice(0, 10)} –{" "}
             {new Date(data.statement.endsAt).toISOString().slice(0, 10)}
           </p>
           <p className="mt-1 text-xs text-muted-foreground">
-            As of the latest records.
+            Bank revision {data.bankRevision} · Posted snapshot{" "}
+            {data.snapshotSequence}
           </p>
         </div>
         <Button
@@ -177,17 +177,17 @@ export function FinanceBankStatementDetail({
           disabled={query.isFetching}
           onClick={() => void query.refetch()}
         >
-          {query.isFetching ? "Refreshing…" : "Refresh"}
+          {query.isFetching ? "Refreshing…" : "Refresh review"}
         </Button>
       </div>
       <dl className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         {[
-          ["Start balance", data.statement.openingBalanceMinor],
-          ["Your records at start", data.postedOpeningMinor],
-          ["End balance", data.statement.closingBalanceMinor],
-          ["Your records at end", data.postedClosingMinor],
-          ["Difference at start", data.openingDifferenceMinor],
-          ["Difference at end", data.closingDifferenceMinor],
+          ["Statement opening", data.statement.openingBalanceMinor],
+          ["Posted opening", data.postedOpeningMinor],
+          ["Statement closing", data.statement.closingBalanceMinor],
+          ["Posted closing", data.postedClosingMinor],
+          ["Opening difference", data.openingDifferenceMinor],
+          ["Closing difference", data.closingDifferenceMinor],
         ].map(([label, amount]) => (
           <div key={label} className="border border-border p-4">
             <dt className="text-xs text-muted-foreground">{label}</dt>
@@ -198,21 +198,19 @@ export function FinanceBankStatementDetail({
         ))}
       </dl>
       <Alert appearance="dashboard">
-        <AlertTitle>Still to match</AlertTitle>
+        <AlertTitle>Review remains open</AlertTitle>
         <AlertDescription>
-          {data.unmatchedBankRows}{" "}
-          {data.unmatchedBankRows === 1 ? "bank line" : "bank lines"} not
-          matched yet · net {money(data.unmatchedBankMinor)}. Matching a line
-          doesn't change any money. If something is wrong, fix the original
-          record. Matching every line doesn't prove every naira is accounted
-          for.
+          {data.unmatchedBankRows} unmatched bank transactions · net{" "}
+          {money(data.unmatchedBankMinor)}. Matching and original-record
+          correction preserve original records. These figures do not certify
+          that the business is fully reconciled.
         </AlertDescription>
       </Alert>
       <FieldSet className="grid min-w-0 gap-3">
-        <FieldLegend>Bank lines</FieldLegend>
+        <FieldLegend>Original bank transactions</FieldLegend>
         <p className="text-xs text-muted-foreground">
-          {data.statement.rowCount} lines from your bank file, kept exactly as
-          uploaded.
+          {data.statement.rowCount} retained transactions. Original bank IDs,
+          dates, signed amounts and descriptions are preserved.
         </p>
         {data.rows.length ? (
           <div className="max-h-80 overflow-auto overscroll-contain border border-border">
@@ -223,8 +221,8 @@ export function FinanceBankStatementDetail({
                     <Checkbox
                       aria-label={
                         eligibleBankRowIds.length > 50
-                          ? "Select all bank lines not matched yet (more than 50; pick up to 50 one by one)"
-                          : "Select all bank lines not matched yet"
+                          ? "Select all unmatched bank transactions (more than 50; select up to 50 individually)"
+                          : "Select all unmatched bank transactions"
                       }
                       checked={allBankSelected}
                       indeterminate={bankRowIds.length > 0 && !allBankSelected}
@@ -238,7 +236,7 @@ export function FinanceBankStatementDetail({
                       }
                     />
                   </TableHead>
-                  <TableHead>Bank ref</TableHead>
+                  <TableHead>Bank ID</TableHead>
                   <TableHead>Date</TableHead>
                   <TableHead>Description</TableHead>
                   <TableHead>Amount</TableHead>
@@ -250,7 +248,7 @@ export function FinanceBankStatementDetail({
                   <TableRow key={row.id}>
                     <TableCell>
                       <Checkbox
-                        aria-label={`Select bank line ${row.externalId}`}
+                        aria-label={`Select bank ${row.externalId}`}
                         checked={bankRowIds.includes(row.id)}
                         disabled={
                           Boolean(row.activeMatchId) ||
@@ -282,7 +280,7 @@ export function FinanceBankStatementDetail({
                       <Badge
                         variant={row.activeMatchId ? "secondary" : "outline"}
                       >
-                        {row.activeMatchId ? "Matched" : "Not matched"}
+                        {row.activeMatchId ? "Matched" : "Unmatched"}
                       </Badge>
                     </TableCell>
                   </TableRow>
@@ -292,18 +290,19 @@ export function FinanceBankStatementDetail({
           </div>
         ) : (
           <p className="text-sm text-muted-foreground">
-            This statement has no lines.
+            This original statement has no movements.
           </p>
         )}
       </FieldSet>
       <FieldSet className="grid min-w-0 gap-3">
-        <FieldLegend>Records not matched yet</FieldLegend>
+        <FieldLegend>Unmatched posted candidates</FieldLegend>
         {!data.candidateCoverageComplete ? (
           <Alert appearance="dashboard" variant="destructive">
-            <AlertTitle>This list is incomplete</AlertTitle>
+            <AlertTitle>Candidate list is incomplete</AlertTitle>
             <AlertDescription>
-              Only the first {data.candidateReviewLimit} records are shown.
-              There are more records to check.
+              Only the first {data.candidateReviewLimit} candidates are shown.
+              Additional posted records require review; this list cannot certify
+              reconciliation.
             </AlertDescription>
           </Alert>
         ) : null}
@@ -316,8 +315,8 @@ export function FinanceBankStatementDetail({
                     <Checkbox
                       aria-label={
                         candidateIds.length > 50
-                          ? "Select all records (more than 50; pick up to 50 one by one)"
-                          : "Select all records"
+                          ? "Select all posted candidates (more than 50; select up to 50 individually)"
+                          : "Select all posted candidates"
                       }
                       checked={allCandidatesSelected}
                       indeterminate={
@@ -334,7 +333,7 @@ export function FinanceBankStatementDetail({
                     />
                   </TableHead>
                   <TableHead>Date</TableHead>
-                  <TableHead>Your record</TableHead>
+                  <TableHead>Posted record</TableHead>
                   <TableHead>Source</TableHead>
                   <TableHead>Amount</TableHead>
                 </TableRow>
@@ -344,7 +343,7 @@ export function FinanceBankStatementDetail({
                   <TableRow key={line.id}>
                     <TableCell>
                       <Checkbox
-                        aria-label={`Select record ${line.sequence}`}
+                        aria-label={`Select posted entry ${line.sequence}`}
                         checked={journalLineIds.includes(line.id)}
                         disabled={
                           query.isFetching ||
@@ -365,11 +364,11 @@ export function FinanceBankStatementDetail({
                     <TableCell className="max-w-80 whitespace-normal break-words">
                       {line.description}
                       <span className="block text-xs text-muted-foreground">
-                        Record {line.sequence}
+                        Entry {line.sequence}
                       </span>
                     </TableCell>
                     <TableCell className="text-xs">
-                      {financeSourceLabel(line.sourceKind)}
+                      {line.sourceKind}
                       <Button
                         variant="outline"
                         size="sm"
@@ -382,7 +381,7 @@ export function FinanceBankStatementDetail({
                           })
                         }
                       >
-                        Open original record
+                        Review original transaction
                       </Button>
                     </TableCell>
                     <TableCell className="whitespace-nowrap tabular-nums">
@@ -395,7 +394,7 @@ export function FinanceBankStatementDetail({
           </div>
         ) : (
           <p className="text-sm text-muted-foreground">
-            No records waiting to be matched up to this statement's end date.
+            No unmatched posted candidates in this statement cutoff.
           </p>
         )}
       </FieldSet>
@@ -407,10 +406,10 @@ export function FinanceBankStatementDetail({
       <div className="sticky bottom-0 grid gap-3 border border-border bg-background p-4">
         <div className="flex flex-wrap items-center justify-between gap-3 text-sm">
           <span>
-            {bankRowIds.length}/50 bank lines · {money(bankTotal)}
+            {bankRowIds.length}/50 bank · {money(bankTotal)}
           </span>
           <span>
-            {journalLineIds.length}/50 records · {money(postedTotal)}
+            {journalLineIds.length}/50 posted · {money(postedTotal)}
           </span>
           {bankRowIds.length || journalLineIds.length ? (
             <Button
@@ -443,15 +442,15 @@ export function FinanceBankStatementDetail({
             })
           }
         >
-          Match
+          Review selected match
         </Button>
       </div>
       <Alert appearance="dashboard">
-        <AlertTitle>If something doesn't match</AlertTitle>
+        <AlertTitle>Investigate differences at their source</AlertTitle>
         <AlertDescription>
-          Check the original payment, expense or Customer or Supplier record
-          before fixing anything. If real money moved and isn't recorded, add
-          it. Bank lines never change.
+          Review original payments, expenses or customer/supplier records before
+          recording a correction. For an unrecorded real movement, record its
+          actual source. Imported bank IDs and amounts stay unchanged.
         </AlertDescription>
         <div className="mt-3 flex flex-wrap gap-2">
           <Button
@@ -460,7 +459,7 @@ export function FinanceBankStatementDetail({
               void setParams({ financeSheet: "expense", statementId: null })
             }
           >
-            Add the missing expense
+            Record actual expense
           </Button>
           <Button
             variant="outline"
@@ -468,7 +467,7 @@ export function FinanceBankStatementDetail({
               void setParams({ financeSheet: "money", statementId: null })
             }
           >
-            Add the missing money movement
+            Record actual movement
           </Button>
         </div>
       </Alert>

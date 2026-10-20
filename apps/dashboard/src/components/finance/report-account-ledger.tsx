@@ -62,6 +62,7 @@ export function FinanceReportAccountLedger({ book }: { book: FinanceBook }) {
       <div className="flex flex-wrap justify-between gap-3">
         <h2 className="font-medium">Report account entries</h2>
         <Button
+          appearance="form"
           variant="outline"
           onClick={() =>
             void setParams({
@@ -130,7 +131,9 @@ function LedgerRows({
     return (
       <div role="alert">
         <p>{query.error.message}</p>
-        <Button onClick={() => void query.refetch()}>Try again</Button>
+        <Button appearance="form" onClick={() => void query.refetch()}>
+          Try again
+        </Button>
       </div>
     )
   const first = query.data.pages[0]
@@ -182,6 +185,7 @@ function LedgerRows({
               ) : null}
               {entry.sourceKind === "EXPENSE_BILL" ? (
                 <Button
+                  appearance="form"
                   variant="outline"
                   onClick={() =>
                     void setParams({
@@ -199,6 +203,7 @@ function LedgerRows({
       )}
       {query.hasNextPage ? (
         <Button
+          appearance="form"
           variant="outline"
           disabled={query.isFetchingNextPage}
           onClick={() => void query.fetchNextPage()}

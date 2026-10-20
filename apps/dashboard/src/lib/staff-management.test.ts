@@ -5,12 +5,9 @@ import {
   canUpdateStaffStatus,
   filterStaffRows,
   getNextStaffStatus,
-  getStaffActions,
   getStaffDisplayName,
   getStaffRoleLabel,
-  getStaffStatusKey,
   getStaffStatusLabel,
-  getStaffWorkingRoleLabel,
 } from "./staff-management"
 
 const staff: StaffMemberRow[] = [
@@ -84,7 +81,6 @@ describe("staff management helpers", () => {
     expect(getStaffDisplayName(staff[0])).toBe("Store Manager")
     expect(getStaffDisplayName(staff[2])).toBe("operator@example.com")
     expect(getStaffRoleLabel("CASHIER")).toBe("Cashier")
-    expect(getStaffRoleLabel("OPERATOR")).toBe("Sales rep")
     expect(getStaffStatusLabel("SUSPENDED")).toBe("Suspended")
   })
 
@@ -105,61 +101,5 @@ describe("staff management helpers", () => {
     expect(canUpdateStaffStatus({ ...staff[0], role: "OWNER" })).toBe(false)
     expect(getNextStaffStatus(staff[0])).toBe("suspended")
     expect(getNextStaffStatus(staff[2])).toBe("active")
-  })
-
-  test("tells pending and expired invites apart", () => {
-    const invited = {
-      ...staff[0],
-      status: "INVITED",
-      access: {
-        allStores: false,
-        catalogEditor: false,
-        defaultStoreId: null,
-        stores: [],
-        invitationId: "invite_1",
-        invitationExpiresAt: "2026-10-24T00:00:00.000Z",
-      },
-    }
-    const now = Date.parse("2026-10-20T00:00:00.000Z")
-    expect(getStaffStatusKey(invited, now)).toBe("invited")
-    expect(
-      getStaffStatusKey(invited, Date.parse("2026-10-25T00:00:00.000Z")),
-    ).toBe("expired")
-    expect(getStaffActions(invited)).toEqual(["resend", "cancel"])
-    expect(getStaffActions(staff[0])).toEqual(["access", "suspend"])
-    expect(getStaffActions({ ...staff[0], role: "OWNER" })).toEqual([])
-    expect(
-      getStaffActions({ ...staff[0], status: "SUSPENDED", acceptedAt: null }),
-    ).toEqual([])
-  })
-
-  test("shows the Store role for staff limited to some stores", () => {
-    const access = {
-      allStores: false,
-      catalogEditor: false,
-      defaultStoreId: null,
-      invitationId: null,
-      invitationExpiresAt: null,
-    }
-    const one = {
-      ...staff[2],
-      access: {
-        ...access,
-        stores: [{ storeId: "s1", storeName: "Main", role: "MANAGER" }],
-      },
-    }
-    const mixed = {
-      ...one,
-      access: {
-        ...access,
-        stores: [
-          { storeId: "s1", storeName: "Main", role: "MANAGER" },
-          { storeId: "s2", storeName: "Branch", role: "CASHIER" },
-        ],
-      },
-    }
-    expect(getStaffWorkingRoleLabel(one)).toBe("Manager")
-    expect(getStaffWorkingRoleLabel(mixed)).toBe("Mixed roles")
-    expect(getStaffWorkingRoleLabel(staff[2])).toBe("Sales rep")
   })
 })

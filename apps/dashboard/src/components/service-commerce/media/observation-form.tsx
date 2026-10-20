@@ -119,6 +119,7 @@ export function ObservationForm({ storeId }: { storeId: string }) {
                 {...form.register(`attributes.${index}.value`)}
               />
               <Button
+                appearance="form"
                 aria-label={`Remove attribute ${index + 1}`}
                 disabled={!canVerify}
                 onClick={() => fields.remove(index)}
@@ -130,6 +131,7 @@ export function ObservationForm({ storeId }: { storeId: string }) {
             </div>
           ))}
           <Button
+            appearance="form"
             className="w-fit"
             disabled={!canVerify || fields.fields.length >= 12}
             onClick={() => fields.append({ name: "", value: "" })}
@@ -151,6 +153,7 @@ export function ObservationForm({ storeId }: { storeId: string }) {
         {attachment.data.observation &&
         attachment.data.attachment.sourceLineId ? (
           <Button
+            appearance="form"
             onClick={() =>
               void params.setParams({
                 serviceCommerceSheet: "catalog_draft",

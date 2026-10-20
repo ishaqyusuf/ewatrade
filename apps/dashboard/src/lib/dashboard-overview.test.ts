@@ -41,7 +41,7 @@ describe("dashboard getting started actions", () => {
   test("keeps the first order enabled with or without a sellable item", () => {
     expect(
       getGettingStartedActions("OWNER", emptyAvailability).find(
-        (action) => action.label === "Create your first order",
+        (action) => action.label === "Create first order",
       ),
     ).toEqual(expect.objectContaining({ disabled: false }))
 
@@ -53,7 +53,7 @@ describe("dashboard getting started actions", () => {
     })
 
     expect(
-      actions.find((action) => action.label === "Create your first order"),
+      actions.find((action) => action.label === "Create first order"),
     ).toEqual(expect.objectContaining({ disabled: false }))
   })
 
@@ -62,6 +62,6 @@ describe("dashboard getting started actions", () => {
       getGettingStartedActions("CASHIER", emptyAvailability).map(
         (action) => action.label,
       ),
-    ).toEqual(["Create your first order"])
+    ).toEqual(["Create first order"])
   })
 })

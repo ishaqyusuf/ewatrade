@@ -12,10 +12,7 @@ import { ScrollableContent } from "@/components/scrollable-content"
 import { InventoryOperationSheet } from "@/components/sheets/inventory-operation-sheet"
 import { CatalogDataTable } from "@/components/tables/catalog/data-table"
 import { CatalogTableSkeleton } from "@/components/tables/catalog/skeleton"
-import {
-  DirectoryCollectionSkeleton,
-  TableToolbarSlotProvider,
-} from "@/components/tables/core"
+import { DirectoryCollectionSkeleton } from "@/components/tables/core"
 import { useDirectoryView } from "@/hooks/use-directory-view"
 import type { DirectoryViewSettings } from "@/utils/directory-view-settings"
 import type { TableSettings } from "@/utils/table-settings"
@@ -49,47 +46,45 @@ export function CatalogItemsPage({
 
   return (
     <CatalogAppearance>
-      <TableToolbarSlotProvider>
-        <ScrollableContent>
-          <div className="flex min-w-0 flex-1 flex-col gap-6 pt-6">
-            <CatalogHeader
-              storeName={store.name}
-              view={view}
-              onViewChange={setView}
-            />
-            {persistenceError ? (
-              <Alert appearance="dashboard" role="alert">
-                <AlertDescription>{persistenceError}</AlertDescription>
-                <Button variant="outline" size="sm" onClick={retryPersistence}>
-                  Retry saving view
-                </Button>
-              </Alert>
-            ) : null}
-            {notice ? (
-              <p className="border border-success-border bg-success px-4 py-3 text-sm text-success-foreground">
-                {notice}
-              </p>
-            ) : null}
-            <ErrorBoundary errorComponent={WorkspaceError}>
-              <Suspense
-                fallback={
-                  view === "table" ? (
-                    <CatalogTableSkeleton settings={initialSettings} />
-                  ) : (
-                    <DirectoryCollectionSkeleton label="catalog items" />
-                  )
-                }
-              >
-                <CatalogDataTable
-                  initialSettings={initialSettings}
-                  storeId={store.id}
-                  view={view}
-                />
-              </Suspense>
-            </ErrorBoundary>
-          </div>
-        </ScrollableContent>
-      </TableToolbarSlotProvider>
+      <ScrollableContent>
+        <div className="flex min-w-0 flex-1 flex-col gap-6 pt-6">
+          <CatalogHeader
+            storeName={store.name}
+            view={view}
+            onViewChange={setView}
+          />
+          {persistenceError ? (
+            <Alert appearance="dashboard" role="alert">
+              <AlertDescription>{persistenceError}</AlertDescription>
+              <Button variant="outline" size="sm" onClick={retryPersistence}>
+                Retry saving view
+              </Button>
+            </Alert>
+          ) : null}
+          {notice ? (
+            <p className="border border-success-border bg-success px-4 py-3 text-sm text-success-foreground">
+              {notice}
+            </p>
+          ) : null}
+          <ErrorBoundary errorComponent={WorkspaceError}>
+            <Suspense
+              fallback={
+                view === "table" ? (
+                  <CatalogTableSkeleton settings={initialSettings} />
+                ) : (
+                  <DirectoryCollectionSkeleton label="catalog items" />
+                )
+              }
+            >
+              <CatalogDataTable
+                initialSettings={initialSettings}
+                storeId={store.id}
+                view={view}
+              />
+            </Suspense>
+          </ErrorBoundary>
+        </div>
+      </ScrollableContent>
       <CatalogInventorySheet store={store} />
       <CatalogUnitConfigurationSheet />
       <CatalogItemSheet
@@ -97,7 +92,6 @@ export function CatalogItemsPage({
         currencyCode={store.currencyCode}
         storeId={store.id}
         onCreated={(name) => setNotice(`${name} added.`)}
-        onSaved={(name) => setNotice(`${name} saved.`)}
       />
     </CatalogAppearance>
   )

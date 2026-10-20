@@ -1,25 +1,25 @@
 "use client"
 
 import { useTRPC } from "@/trpc/client"
-import type { RouterOutputs } from "@ewatrade/api/trpc/routers/_app"
 import { Button, Select, Skeleton } from "@ewatrade/ui"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useRouter } from "next/navigation"
 import { useId } from "react"
 
-export type Visibility = "OWN_SALES" | "ALL_STORE_ORDERS"
-
-export const ORDER_VISIBILITY_OPTIONS: Array<{
-  value: Visibility
-  label: string
-}> = [
-  { value: "OWN_SALES", label: "Only orders they made" },
-  { value: "ALL_STORE_ORDERS", label: "All orders in this store" },
-]
-
-export function useOrderVisibility(storeId: string, review = false) {
+export function OrderVisibilityCard({
+  storeId,
+  storeName,
+  review = false,
+}: {
+  storeId: string
+  storeName?: string
+  review?: boolean
+}) {
   const trpc = useTRPC()
-  return useQuery(
+  const client = useQueryClient()
+  const router = useRouter()
+  const id = useId()
+  const query = useQuery(
     trpc.stores.orderVisibility.queryOptions(
       { storeId },
       {
@@ -28,14 +28,7 @@ export function useOrderVisibility(storeId: string, review = false) {
       },
     ),
   )
-}
-
-/** Saving without a visibility only marks the setting as reviewed. */
-export function useUpdateOrderVisibility(storeId: string) {
-  const trpc = useTRPC()
-  const client = useQueryClient()
-  const router = useRouter()
-  return useMutation(
+  const update = useMutation(
     trpc.stores.updateOrderVisibility.mutationOptions({
       onSuccess: async (data) => {
         client.setQueryData(
@@ -64,98 +57,26 @@ export function useUpdateOrderVisibility(storeId: string) {
       },
     }),
   )
-}
-
-/** Overview: the one-time question inside the Needs you card. */
-export function OrderVisibilityQuestion({
-  storeId,
-  storeName,
-  data,
-}: {
-  storeId: string
-  storeName: string
-  data: RouterOutputs["stores"]["orderVisibility"]
-}) {
-  const id = useId()
-  const update = useUpdateOrderVisibility(storeId)
-  return (
-    <div className="grid gap-x-5 gap-y-2.5 text-sm md:grid-cols-[minmax(0,1fr)_minmax(0,22rem)] md:items-start">
-      <div className="min-w-0">
-        <p className="font-semibold">Which orders can cashiers see?</p>
-        <p className="text-muted-foreground">
-          {storeName} · Applies to cashiers and sales reps.
-        </p>
-      </div>
-      <div className="grid gap-2">
-        <div className="flex gap-2">
-          <label htmlFor={id} className="sr-only">
-            Cashiers and sales reps see
-          </label>
-          <Select
-            id={id}
-            className="min-w-0 flex-1 rounded-none"
-            value={data.salesRepOrderVisibility}
-            disabled={update.isPending}
-            onChange={(event) =>
-              update.mutate({
-                storeId,
-                visibility: event.target.value as Visibility,
-              })
-            }
-          >
-            {ORDER_VISIBILITY_OPTIONS.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </Select>
-          <Button
-            variant="outline"
-            disabled={update.isPending}
-            onClick={() => update.mutate({ storeId })}
-          >
-            Keep this
-          </Button>
-        </div>
-        {update.isPending ? (
-          <output className="text-muted-foreground">Saving…</output>
-        ) : null}
-        {update.isError ? (
-          <p role="alert" className="text-destructive">
-            {update.error.message}
-          </p>
-        ) : null}
-      </div>
-    </div>
-  )
-}
-
-export function OrderVisibilityCard({
-  storeId,
-  storeName,
-}: {
-  storeId: string
-  storeName?: string
-}) {
-  const id = useId()
-  const query = useOrderVisibility(storeId)
-  const update = useUpdateOrderVisibility(storeId)
-  if (query.isPending) return <Skeleton className="h-32 w-full" />
+  if (query.isPending)
+    return review ? null : <Skeleton className="h-32 w-full" />
+  if (review && query.data?.salesRepOrderVisibilityReviewedAt) return null
   return (
     <section
       className="grid gap-4 border border-border bg-card p-5"
-      aria-label="Staff rules"
+      aria-label={review ? "Review sales rep visibility" : "Staff rules"}
     >
       <div>
-        <h2 className="font-semibold">Staff rules</h2>
+        <h2 className="font-semibold">
+          {review ? "Choose what your sales reps can see" : "Staff rules"}
+        </h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          {storeName ?? query.data?.name} · Choose which orders cashiers and
-          operators see in this store.
+          {storeName ?? query.data?.name} · Choose whether reps see their own
+          sales or all orders in this store.
         </p>
       </div>
       {query.isError ? (
         <div role="alert" className="text-sm">
-          Couldn’t load this setting.{" "}
+          Could not load Staff rules.{" "}
           <Button
             variant="outline"
             size="sm"
@@ -167,7 +88,7 @@ export function OrderVisibilityCard({
       ) : (
         <div className="grid gap-2 sm:max-w-sm">
           <label htmlFor={id} className="text-sm font-medium">
-            Cashiers and sales reps see
+            What sales reps can see
           </label>
           <Select
             id={id}
@@ -177,20 +98,30 @@ export function OrderVisibilityCard({
             onChange={(event) =>
               update.mutate({
                 storeId,
-                visibility: event.target.value as Visibility,
+                visibility: event.target.value as
+                  | "OWN_SALES"
+                  | "ALL_STORE_ORDERS",
               })
             }
           >
-            {ORDER_VISIBILITY_OPTIONS.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
+            <option value="OWN_SALES">Only their own sales</option>
+            <option value="ALL_STORE_ORDERS">All orders in this store</option>
           </Select>
+          {review ? (
+            <Button
+              variant="outline"
+              disabled={update.isPending}
+              onClick={() => update.mutate({ storeId })}
+            >
+              Keep as it is
+            </Button>
+          ) : null}
         </div>
       )}
       {update.isPending ? (
-        <output className="text-sm text-muted-foreground">Saving…</output>
+        <output className="text-sm text-muted-foreground">
+          Saving Staff rules…
+        </output>
       ) : null}
       {update.isError ? (
         <p role="alert" className="text-sm text-destructive">

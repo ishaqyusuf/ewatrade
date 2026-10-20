@@ -25,7 +25,7 @@ import { OrdersTableHeader, OrdersTableSettings } from "./table-header"
 const ROW_HEIGHT = 57
 const STICKY_COLUMNS = [
   { id: "select", width: 50 },
-  { id: "orderNumber", width: 170 },
+  { id: "orderNumber", width: 200 },
 ]
 
 type OrderSort = {
@@ -36,7 +36,6 @@ type OrderSort = {
 export function OrdersTableView({
   table,
   view,
-  timeZone,
   sort,
   toggleSort,
   filtered,
@@ -53,7 +52,6 @@ export function OrdersTableView({
 }: {
   table: ReactTable<OrderRow>
   view: DirectoryView
-  timeZone?: string
   sort?: OrderSort
   toggleSort: (field: OrderSort["field"]) => Promise<unknown>
   filtered: boolean
@@ -97,7 +95,11 @@ export function OrdersTableView({
     return (
       <div role="alert" className="grid gap-3 py-6">
         <p>{errorMessage}</p>
-        <Button variant="outline" onClick={() => void refetch()}>
+        <Button
+          appearance="form"
+          variant="outline"
+          onClick={() => void refetch()}
+        >
           Try again
         </Button>
       </div>
@@ -112,6 +114,7 @@ export function OrdersTableView({
             {errorMessage || "Orders could not be refreshed."}
           </p>
           <Button
+            appearance="form"
             variant="outline"
             onClick={() =>
               isFetchNextPageError ? retryNextPage() : void refetch()
@@ -126,15 +129,23 @@ export function OrdersTableView({
         table={table}
         view={view}
         selectAllLabel="Select all loaded orders"
-        summary={`${table.getRowModel().rows.length} orders loaded`}
-      />
-      {/* Sort and Columns render in the page header row beside View and New order. */}
-      <OrdersTableSettings table={table} showColumns={view === "table"} />
+        summary={`${table.getRowModel().rows.length} orders loaded${
+          sort
+            ? ` · sorted by ${sort.field} ${sort.direction === "asc" ? "ascending" : "descending"}`
+            : " · newest first"
+        }`}
+      >
+        {view === "table" ? <OrdersTableSettings table={table} /> : null}
+      </DirectoryToolbar>
 
       {persistenceError ? (
         <div className="flex items-center justify-between gap-3" role="alert">
           <p className="text-sm text-destructive">{persistenceError}</p>
-          <Button variant="outline" onClick={retryPersistence}>
+          <Button
+            appearance="form"
+            variant="outline"
+            onClick={retryPersistence}
+          >
             Retry saving columns
           </Button>
         </div>
@@ -145,7 +156,7 @@ export function OrdersTableView({
           <OrdersEmptyState filtered={filtered} />
         </div>
       ) : view !== "table" ? (
-        <OrdersCollection view={view} rows={rows} timeZone={timeZone} />
+        <OrdersCollection view={view} rows={rows} />
       ) : (
         <section
           ref={tableScroll.setContainerRef}
@@ -180,6 +191,7 @@ export function OrdersTableView({
 
       {hasNextPage && !isFetchNextPageError ? (
         <Button
+          appearance="form"
           className="w-fit"
           variant="outline"
           disabled={isFetchingNextPage}

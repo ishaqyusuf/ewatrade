@@ -18,12 +18,13 @@ import type { DirectoryView } from "@/utils/directory-view-settings"
 import { DndContext, closestCenter } from "@dnd-kit/core"
 import type { RouterOutputs } from "@ewatrade/api/trpc/routers/_app"
 import { Button, Table, TableBody } from "@ewatrade/ui"
+import { Badge } from "@ewatrade/ui"
 import { formatFinanceMoney } from "@ewatrade/utils/finance-money"
 import type { Table as ReactTable } from "@tanstack/react-table"
 import { useVirtualizer } from "@tanstack/react-virtual"
 import { AnimatePresence } from "framer-motion"
 import { ExpenseBottomBar } from "./bottom-bar"
-import { ExpenseReceipt, ExpenseStatusPill, formatExpenseDate } from "./columns"
+import { expenseStatusLabels, formatExpenseDate } from "./columns"
 import { ExpenseEmptyState } from "./empty-states"
 import { ExpenseTableSkeleton } from "./skeleton"
 import { ExpenseTableHeader, ExpenseTableSettings } from "./table-header"
@@ -46,6 +47,7 @@ export function ExpenseTableView({
   book,
   table,
   view,
+  sort,
   summary,
   filtered,
   isPending,
@@ -125,7 +127,11 @@ export function ExpenseTableView({
     return (
       <div role="alert" className="grid gap-3 py-6">
         <p>{errorMessage}</p>
-        <Button variant="outline" onClick={() => void refetch()}>
+        <Button
+          appearance="form"
+          variant="outline"
+          onClick={() => void refetch()}
+        >
           Try again
         </Button>
       </div>
@@ -148,13 +154,13 @@ export function ExpenseTableView({
       <div className="grid gap-4 border-y border-border py-5 sm:grid-cols-3">
         {(
           [
-            ["Spent", summary.summary.incurredMinor],
-            ["Paid", summary.summary.paidAgainstBillsMinor],
-            ["Still to pay", summary.summary.outstandingMinor],
+            ["Expenses incurred", summary.summary.incurredMinor],
+            ["Paid against these bills", summary.summary.paidAgainstBillsMinor],
+            ["Outstanding", summary.summary.outstandingMinor],
           ] as const
         ).map(([label, value]) => (
           <div key={label}>
-            <p className="text-sm text-muted-foreground">{label}</p>
+            <p className="text-xs text-muted-foreground">{label}</p>
             <p className="mt-2 text-xl font-semibold tabular-nums">
               {formatFinanceMoney(value, currency)}
             </p>
@@ -168,6 +174,7 @@ export function ExpenseTableView({
             {errorMessage || "Expenses could not be refreshed."}
           </p>
           <Button
+            appearance="form"
             variant="outline"
             onClick={() =>
               isFetchNextPageError ? retryNextPage() : void refetch()
@@ -182,14 +189,19 @@ export function ExpenseTableView({
         table={table}
         view={view}
         selectAllLabel="Select all loaded expenses"
-        summary={`${summary.count} expense${summary.count === 1 ? "" : "s"}`}
-      />
-      <ExpenseTableSettings table={table} showColumns={view === "table"} />
+        summary={`${summary.count} expenses · ${sortCaption(sort)}`}
+      >
+        {view === "table" ? <ExpenseTableSettings table={table} /> : null}
+      </DirectoryToolbar>
 
       {persistenceError ? (
         <div className="flex items-center justify-between gap-3" role="alert">
           <p className="text-sm text-destructive">{persistenceError}</p>
-          <Button variant="outline" onClick={retryPersistence}>
+          <Button
+            appearance="form"
+            variant="outline"
+            onClick={retryPersistence}
+          >
             Retry saving columns
           </Button>
         </div>
@@ -216,18 +228,17 @@ export function ExpenseTableView({
                   book.timezone,
                 )}`}
                 badges={
-                  <>
-                    <ExpenseStatusPill status={bill.status} />
-                    <ExpenseReceipt bill={bill} />
-                  </>
+                  <Badge variant="outline">
+                    {expenseStatusLabels[bill.status]}
+                  </Badge>
                 }
                 highlight={{
-                  label: "Still to pay",
+                  label: "Outstanding",
                   value: formatFinanceMoney(bill.outstandingMinor, currency),
                 }}
                 details={[
                   {
-                    label: "Amount",
+                    label: "Total",
                     value: formatFinanceMoney(bill.totalMinor, currency),
                   },
                   {
@@ -306,6 +317,7 @@ export function ExpenseTableView({
 
       {hasNextPage && !isFetchNextPageError ? (
         <Button
+          appearance="form"
           className="w-fit"
           variant="outline"
           disabled={isFetchingNextPage}
@@ -326,4 +338,16 @@ export function ExpenseTableView({
       </AnimatePresence>
     </div>
   )
+}
+
+function sortCaption(sort?: ExpenseSort) {
+  if (!sort) return "newest expense date first"
+  const labels: Record<(typeof expenseSortFields)[number], string> = {
+    incurredAt: "expense date",
+    description: "description",
+    payeeName: "payee",
+    totalMinor: "total amount",
+    paidMinor: "amount paid",
+  }
+  return `sorted by ${labels[sort.field]} ${sort.direction === "asc" ? "ascending" : "descending"}`
 }

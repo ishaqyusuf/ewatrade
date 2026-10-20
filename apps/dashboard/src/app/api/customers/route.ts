@@ -56,7 +56,6 @@ export async function GET(request: NextRequest) {
 
   const { ctx, session, store } = customersContext
   const customers = await getDashboardCustomerBook({
-    currencyCode: store.currencyCode,
     role: ctx.membership.role,
     search: url.searchParams.get("search")?.trim() || undefined,
     storeId: store.id,

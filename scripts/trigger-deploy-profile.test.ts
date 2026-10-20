@@ -41,37 +41,6 @@ const production = {
 }
 
 describe("Trigger jobs selected deployment profile", () => {
-  test("pins migrated Preview ownership and refuses retired or Production project refs", () => {
-    expect(EWATRADE_TRIGGER_TARGETS.organizationId).toBe(
-      "cmv56r6n3001vmw0i4y43rqtv",
-    )
-    expect(EWATRADE_TRIGGER_TARGETS.organizationSlug).toBe("zeroes-one-9521")
-    expect(EWATRADE_TRIGGER_TARGETS.production).toEqual({
-      projectRef: "proj_ahtovhgtjjkctpakuwjz",
-      projectSlug: "ewatrade-kERp",
-      providerEnvironment: "prod",
-    })
-    expect(EWATRADE_TRIGGER_TARGETS.preview).toEqual({
-      projectRef: "proj_qxavabbrflnewutcortw",
-      projectSlug: "ewatrade-preview-fXYm",
-      providerEnvironment: "prod",
-    })
-    expect(triggerProjectForConfigEnv({ APP_ENV: "preview" })).toBe(
-      preview.TRIGGER_PROJECT_ID,
-    )
-    for (const project of [
-      "proj_hymzhteicvpixaksoyqk",
-      production.TRIGGER_PROJECT_ID,
-    ]) {
-      expect(() =>
-        triggerDeployCommand(["trigger", "deploy"], {
-          ...preview,
-          TRIGGER_PROJECT_ID: project,
-        }),
-      ).toThrow("does not match the selected application environment")
-    }
-  })
-
   describe("assistant machine environment isolation", () => {
     const previewMachine = {
       API_URL: "https://fixture-preview-api.example",

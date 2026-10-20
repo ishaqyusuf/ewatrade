@@ -17,18 +17,15 @@ const PILL: Record<PillTone, string> = {
 export function Pill({
   tone,
   children,
-  className,
 }: {
   tone: PillTone
   children: ReactNode
-  className?: string
 }) {
   return (
     <span
       className={cn(
         "inline-flex h-6 items-center whitespace-nowrap rounded-full px-2.5 text-xs font-medium",
         PILL[tone],
-        className,
       )}
     >
       {children}

@@ -1,8 +1,13 @@
 "use client"
 import { FormFeedback } from "@/components/forms/form-feedback"
-import { useFinanceParams } from "@/hooks/use-finance-params"
 import { useTRPC } from "@/trpc/client"
-import { FieldGroup, Switch } from "@ewatrade/ui"
+import {
+  Checkbox,
+  CheckboxField,
+  FieldGroup,
+  FormActions,
+  SubmitButton,
+} from "@ewatrade/ui"
 import {
   type MoneyAccountPurpose,
   type OrderPaymentMethod,
@@ -11,8 +16,6 @@ import {
 } from "@ewatrade/utils/finance-payment-methods"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useState } from "react"
-import { PaymentMethodGaps } from "./finance-accounts"
-import { FinanceFormFooter } from "./form-fields"
 import { PaymentMethodChecks } from "./payment-method-checks"
 import type { FinanceBook } from "./types"
 import { useCompleteFinanceForm } from "./use-complete-finance-form"
@@ -35,7 +38,7 @@ export function FinanceAccountPaymentSettingsForm({
       !row.archivedAt &&
       ["CASH", "BANK", "CLEARING"].includes(row.purpose),
   )
-  if (balances.isPending) return <output>Loading money account…</output>
+  if (balances.isPending) return <output>Loading account…</output>
   if (balances.isError)
     return (
       <FormFeedback appearance="dashboard">
@@ -45,14 +48,13 @@ export function FinanceAccountPaymentSettingsForm({
   if (!account)
     return (
       <FormFeedback appearance="dashboard">
-        This money account is no longer in use.
+        This money account is no longer active.
       </FormFeedback>
     )
   const purpose = account.purpose as MoneyAccountPurpose
   return (
     <SettingsFields
       key={account.id}
-      accounts={balances.data.accounts}
       bookId={book.id}
       accountId={account.id}
       name={account.name}
@@ -67,7 +69,6 @@ export function FinanceAccountPaymentSettingsForm({
 }
 
 function SettingsFields({
-  accounts,
   bookId,
   accountId,
   name,
@@ -75,11 +76,6 @@ function SettingsFields({
   initialMethods,
   initialAvailable,
 }: {
-  accounts: Array<
-    Parameters<typeof PaymentMethodGaps>[0]["accounts"][number] & {
-      id: string
-    }
-  >
   bookId: string
   accountId: string
   name: string
@@ -89,12 +85,9 @@ function SettingsFields({
 }) {
   const trpc = useTRPC()
   const queryClient = useQueryClient()
+  const complete = useCompleteFinanceForm()
   const [methods, setMethods] = useState(initialMethods)
   const [available, setAvailable] = useState(initialAvailable)
-  const complete = useCompleteFinanceForm(
-    `Payment settings saved for ${name}.${available ? "" : " It's paused for new payments."}`,
-  )
-  const { close } = useFinanceParams()
   const [tried, setTried] = useState(false)
   const save = useMutation(
     trpc.finance.updateMoneyAccountPayments.mutationOptions({
@@ -123,9 +116,7 @@ function SettingsFields({
       }}
     >
       <FieldGroup className="min-w-0 grid gap-5">
-        <p className="text-sm text-muted-foreground">
-          Which payments {name} takes, and whether staff can choose it.
-        </p>
+        <p className="text-sm font-medium">{name}</p>
         <PaymentMethodChecks
           purpose={purpose}
           value={methods}
@@ -133,44 +124,30 @@ function SettingsFields({
           disabled={save.isPending}
           error={tried ? (problem ?? undefined) : undefined}
         />
-        {/* biome-ignore lint/a11y/noLabelWithoutControl: the switch is the label's child */}
-        <label className="flex cursor-pointer items-start justify-between gap-4 border border-border px-3 py-2.5">
-          <span className="grid gap-0.5">
-            <span className="text-sm font-medium">Use for new payments</span>
-            <span className="text-xs text-muted-foreground">
-              Turn off to pause it. Its balance and history stay, and refunds
-              can still come out of it.
-            </span>
-          </span>
-          <Switch
+        <CheckboxField
+          label="Available for new payments"
+          description="A paused account keeps its balance and history, and refunds can still come out of it. Staff just can't choose it for new payments."
+        >
+          <Checkbox
             checked={available}
             disabled={save.isPending}
             onCheckedChange={(checked) => setAvailable(checked === true)}
           />
-        </label>
-        <PaymentMethodGaps
-          fix="Choose them here or on another account."
-          accounts={accounts.map((row) =>
-            row.id === accountId
-              ? {
-                  ...row,
-                  paymentMethods: methods,
-                  paymentsPausedAt: available ? null : new Date(),
-                }
-              : row,
-          )}
-        />
+        </CheckboxField>
         {save.error ? (
           <FormFeedback appearance="dashboard">
             {save.error.message}
           </FormFeedback>
         ) : null}
-        <FinanceFormFooter
-          onCancel={() => void close()}
-          submitLabel="Save"
-          isSubmitting={save.isPending}
-          disabled={save.isPending}
-        />
+        <FormActions>
+          <SubmitButton
+            isSubmitting={save.isPending}
+            type="submit"
+            disabled={save.isPending}
+          >
+            {save.isPending ? "Saving…" : "Save payment settings"}
+          </SubmitButton>
+        </FormActions>
       </FieldGroup>
     </form>
   )

@@ -4,7 +4,6 @@ import { Button } from "@ewatrade/ui"
 import { formatFinanceMoney } from "@ewatrade/utils/finance-money"
 import { useQuery } from "@tanstack/react-query"
 import { useState } from "react"
-import { formatLedgerDate } from "./types"
 import type { LedgerAccount } from "./types"
 
 export function AllocationHistory({
@@ -34,33 +33,30 @@ export function AllocationHistory({
         aria-expanded={expanded}
         onClick={() => setExpanded((v) => !v)}
       >
-        {expanded ? "Hide history" : "History"}
+        {expanded ? "Hide" : "View"} allocation history
       </Button>
       {expanded ? (
         <div className="grid gap-3 border-l border-border pl-4">
           {query.isPending ? (
-            <output aria-busy="true">Loading history…</output>
+            <output aria-busy="true">Loading correction history…</output>
           ) : query.isError ? (
             <div role="alert">
-              <p>Couldn’t load the history. Try again.</p>
+              <p>{query.error.message}</p>
               <Button onClick={() => void query.refetch()}>Try again</Button>
             </div>
           ) : (
             <>
               <p className="text-sm">
-                Used on{" "}
-                {formatLedgerDate(query.data.allocation.createdAt, true)}
+                Applied by {query.data.allocation.actorUserId} ·{" "}
+                {new Date(query.data.allocation.createdAt).toISOString()}
               </p>
               {query.data.reconciliationRequired ? (
-                <p role="alert">
-                  This history doesn’t add up. Someone in Finance needs to check
-                  it.
-                </p>
+                <p role="alert">Release totals require reconciliation.</p>
               ) : null}
               {query.data.releases.map((release) => (
                 <article key={release.id} className="grid gap-1 text-sm">
                   <p>
-                    Taken back ·{" "}
+                    Release #{release.sequence} ·{" "}
                     {formatFinanceMoney(
                       release.amountMinor,
                       account.currencyCode,
@@ -68,15 +64,19 @@ export function AllocationHistory({
                   </p>
                   <p>{release.reason}</p>
                   <p className="break-words text-muted-foreground">
-                    {formatLedgerDate(release.createdAt, true)}
+                    Recorded by {release.actorUserId} ·{" "}
+                    {new Date(release.createdAt).toISOString()}
                   </p>
                   {release.orderSettlementReversal ? (
-                    <p>Part of an Order correction</p>
+                    <p>
+                      Order settlement correction:{" "}
+                      {release.orderSettlementReversal.orderId}
+                    </p>
                   ) : null}
                 </article>
               ))}
               {!query.data.releases.length ? (
-                <p className="text-sm">Nothing was taken back.</p>
+                <p className="text-sm">No releases on this page.</p>
               ) : null}
               <div className="flex flex-wrap gap-2">
                 <Button
@@ -84,7 +84,7 @@ export function AllocationHistory({
                   disabled={cursors.length === 1 || query.isFetching}
                   onClick={() => setCursors((v) => v.slice(0, -1))}
                 >
-                  Back
+                  Previous releases
                 </Button>
                 <Button
                   variant="outline"
@@ -96,7 +96,7 @@ export function AllocationHistory({
                     ])
                   }
                 >
-                  Show more
+                  More releases
                 </Button>
               </div>
             </>

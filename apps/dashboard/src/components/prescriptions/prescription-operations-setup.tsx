@@ -148,6 +148,7 @@ export function PrescriptionOperationsSetup({ storeId }: { storeId: string }) {
       <div className="grid gap-3 rounded-none border border-destructive/30 p-5">
         <FormFeedback appearance="dashboard">{queryError.message}</FormFeedback>
         <Button
+          appearance="form"
           className="w-fit"
           onClick={() =>
             void Promise.all(requiredQueries.map((query) => query.refetch()))

@@ -154,6 +154,7 @@ export function ConversationWorkspace({
                 void params.setFilters({ cursor: queue.data?.nextCursor })
               }
               variant="outline"
+              appearance="form"
             >
               Next page
             </Button>

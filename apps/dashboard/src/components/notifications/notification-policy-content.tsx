@@ -15,7 +15,7 @@ export const POLICY_ROLES = [
   { value: "ADMIN", label: "Admins" },
   { value: "MANAGER", label: "Store managers" },
   { value: "CASHIER", label: "Cashiers" },
-  { value: "OPERATOR", label: "Sales reps" },
+  { value: "OPERATOR", label: "Operators" },
 ] as const
 
 export type PolicyDraft = {

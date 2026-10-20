@@ -62,26 +62,27 @@ export function FinanceBankMatchHistory({
     <section className="grid gap-3">
       <h4 className="font-medium">Matching history</h4>
       <p className="text-xs text-muted-foreground">
-        Every match and unmatch stays in this account’s history.
+        Original matches and linked releases remain in this account’s history.
       </p>
       {history.isPending ? (
-        <output>Loading match history…</output>
+        <output>Loading matching history…</output>
       ) : history.isError ? (
         <Alert variant="destructive" appearance="dashboard">
-          <AlertTitle>Couldn't load history</AlertTitle>
+          <AlertTitle>History unavailable</AlertTitle>
           <AlertDescription>{history.error.message}</AlertDescription>
           <Button variant="outline" onClick={() => void history.refetch()}>
-            Try again
+            Retry history
           </Button>
         </Alert>
       ) : (
         <>
           <p className="text-xs text-muted-foreground">
-            As of the latest records.
+            History through bank revision{" "}
+            {history.data.pages[0]?.snapshotRevision}
           </p>
           {events.length ? (
             <InlineSelectionBar
-              label="Select all loaded matches"
+              label="Select all loaded matching events"
               selection={selection}
             />
           ) : null}
@@ -107,10 +108,12 @@ export function FinanceBankMatchHistory({
                     <InlineRowCheckbox
                       selection={selection}
                       id={event.id}
-                      label={`Select ${event.kind === "MATCH" ? "match" : "unmatch"} ${event.revision}`}
+                      label={`Select ${event.kind === "MATCH" ? "original match" : "released match"} revision ${event.revision}`}
                     />
                     <Badge variant="outline">
-                      {event.kind === "MATCH" ? "Matched" : "Unmatched"}
+                      {event.kind === "MATCH"
+                        ? "Original match"
+                        : "Released match"}
                     </Badge>
                   </span>
                   <span className="tabular-nums">
@@ -119,25 +122,27 @@ export function FinanceBankMatchHistory({
                 </div>
                 <p className="break-words">{event.reason}</p>
                 <p className="break-words text-xs text-muted-foreground">
-                  {new Date(event.createdAt).toISOString()} · By{" "}
+                  Revision {event.revision} · Posted snapshot{" "}
+                  {event.snapshotSequence} ·{" "}
+                  {new Date(event.createdAt).toISOString()} · Actor{" "}
                   {event.actorUserId}
                 </p>
                 {event.reversalOfId ? (
                   <p className="break-words text-xs">
-                    Unmatches {event.reversalOfId}
+                    Release of original match {event.reversalOfId}
                   </p>
                 ) : null}
                 {evidence ? (
                   <details>
                     <summary className="cursor-pointer">
-                      Lines and records · {evidence.bank.length} bank /{" "}
-                      {evidence.journal.length} yours
+                      Original records · {evidence.bank.length} bank /{" "}
+                      {evidence.journal.length} posted
                     </summary>
                     <div className="mt-2 grid gap-1 break-words text-xs">
                       {evidence.bank.map((row) => (
                         <p key={row.id}>
-                          Bank line {row.externalId} ·{" "}
-                          {row.occurredAt.slice(0, 10)} ·{" "}
+                          Bank {row.externalId} · {row.occurredAt.slice(0, 10)}{" "}
+                          ·{" "}
                           {formatFinanceMoney(
                             row.amountMinor,
                             book.currencyCode,
@@ -146,7 +151,7 @@ export function FinanceBankMatchHistory({
                       ))}
                       {evidence.journal.map((line) => (
                         <p key={line.id}>
-                          Your record {line.sequence} ·{" "}
+                          Posted entry {line.sequence} · {line.entryId} ·{" "}
                           {line.effectiveAt.slice(0, 10)} ·{" "}
                           {formatFinanceMoney(
                             (
@@ -161,8 +166,8 @@ export function FinanceBankMatchHistory({
                 ) : (
                   <Alert appearance="dashboard" variant="destructive">
                     <AlertDescription>
-                      We can't check the lines behind this match, so it can't be
-                      unmatched.
+                      Original matching evidence cannot be verified. Release is
+                      unavailable.
                     </AlertDescription>
                   </Alert>
                 )}
@@ -173,14 +178,16 @@ export function FinanceBankMatchHistory({
                     disabled={disabled || !evidence}
                     onClick={() => onRelease(event)}
                   >
-                    Unmatch
+                    Review release
                   </Button>
                 ) : null}
               </article>
             )
           })}
           {!events.length ? (
-            <p className="text-sm text-muted-foreground">No matches yet.</p>
+            <p className="text-sm text-muted-foreground">
+              No matching events recorded.
+            </p>
           ) : null}
           {history.hasNextPage ? (
             <Button
@@ -188,7 +195,9 @@ export function FinanceBankMatchHistory({
               disabled={history.isFetchingNextPage}
               onClick={() => void history.fetchNextPage()}
             >
-              {history.isFetchingNextPage ? "Loading older…" : "Load older"}
+              {history.isFetchingNextPage
+                ? "Loading older history…"
+                : "Load older history"}
             </Button>
           ) : null}
         </>

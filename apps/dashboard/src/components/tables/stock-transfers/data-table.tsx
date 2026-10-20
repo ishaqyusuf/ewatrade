@@ -1,58 +1,50 @@
 "use client"
-import { useInventoryLedgerParams } from "@/hooks/use-inventory-ledger-params"
+import { InventoryLedgerFilters } from "@/components/inventory/inventory-ledger-filters"
 import { useStockTransferParams } from "@/hooks/use-stock-transfer-params"
-import { stockDate, transferStatusLabel } from "@/lib/inventory-labels"
+import { useInventoryLedgerParams } from "@/hooks/use-inventory-ledger-params"
+import { formatInventoryQuantity } from "@/lib/inventory-view"
 import { useTRPC } from "@/trpc/client"
 import type { DirectoryView } from "@/utils/directory-view-settings"
 import type { TableSettings } from "@/utils/table-settings"
+import { Badge } from "@ewatrade/ui"
 import { useSuspenseQuery } from "@tanstack/react-query"
 import { useCallback, useMemo } from "react"
 import { InventoryLedgerTable } from "../inventory-ledger/data-table"
+import { inventoryDate, inventoryLabel } from "../inventory-ledger/format"
 import {
   type StockTransfer,
-  TransferStatusBadge,
   transferColumns,
-  transferProductDetail,
-  transferQuantityText,
   transferSortFields,
 } from "./columns"
 import { TransfersEmpty } from "./empty-states"
-
-/** Status filters, plus Coming in / Going out when one store is open. */
-export function transferFilters(singleStore: boolean) {
-  return [
-    { id: "all", label: "All" },
-    { id: "IN_TRANSIT", label: "On the way" },
-    { id: "RECEIVED", label: "Received" },
-    { id: "CANCELLED", label: "Cancelled" },
-    ...(singleStore
-      ? [
-          { id: "incoming", label: "Coming in" },
-          { id: "outgoing", label: "Going out" },
-        ]
-      : []),
-  ]
-}
+const filters = [
+  { id: "all", label: "All transfers" },
+  { id: "incoming", label: "Incoming" },
+  { id: "outgoing", label: "Outgoing" },
+  { id: "IN_TRANSIT", label: "In transit" },
+  { id: "RECEIVED", label: "Received" },
+  { id: "CANCELLED", label: "Cancelled" },
+]
 const getTransferLabel = (row: StockTransfer) =>
-  `${row.productName}, sent ${stockDate(row.createdAt)}`
+  `${row.productName} ${row.variantName} transfer ${row.id}`
 
 function describeTransfer(row: StockTransfer) {
   return {
     title: row.productName,
-    description: transferProductDetail(row) ?? undefined,
-    badges: <TransferStatusBadge status={row.status} />,
+    description: row.variantName,
+    badges: <Badge variant="outline">{inventoryLabel(row.status)}</Badge>,
     details: [
       {
         label: "Quantity",
         value: (
-          <span className="tabular-nums">{transferQuantityText(row)}</span>
+          <span className="tabular-nums">
+            {formatInventoryQuantity(row.quantity)} {row.inventoryUnitName}
+          </span>
         ),
       },
-      {
-        label: "From → To",
-        value: `${row.sourceStore.name} → ${row.targetStore.name}`,
-      },
-      { label: "Sent", value: stockDate(row.createdAt) },
+      { label: "From", value: row.sourceStore.name },
+      { label: "To", value: row.targetStore.name },
+      { label: "Created (UTC)", value: inventoryDate(row.createdAt) },
     ],
   }
 }
@@ -89,12 +81,13 @@ export function TransfersDataTable({
                 ? row.sourceStore.id === storeId
                 : row.status === params.filter)) &&
           [
+            row.id,
             row.productName,
             row.variantName,
             row.inventoryUnitName,
             row.sourceStore.name,
             row.targetStore.name,
-            transferStatusLabel(row.status),
+            inventoryLabel(row.status),
           ]
             .join(" ")
             .toLowerCase()
@@ -104,15 +97,27 @@ export function TransfersDataTable({
   )
   return (
     <div className="grid gap-4">
+      <InventoryLedgerFilters
+        placeholder="Search product, variant, or store..."
+        filters={
+          storeId
+            ? filters
+            : filters.filter(
+                (filter) => !["incoming", "outgoing"].includes(filter.id),
+              )
+        }
+      />
+      <p className="text-xs text-muted-foreground">
+        Latest 200 transfers in this view. Search and filters apply to these
+        records.
+      </p>
       <InventoryLedgerTable
         rows={rows}
         columns={columns}
         tableId="stock-transfers"
         initialSettings={initialSettings}
         sortFields={transferSortFields}
-        label="Transfers"
-        summary={`${rows.length} transfer${rows.length === 1 ? "" : "s"}${data.length >= 200 ? " · showing the latest 200" : ""}`}
-        viewLabel="View transfer"
+        label="Stock transfers"
         view={view}
         selectionScope={JSON.stringify([
           storeId ?? "all",

@@ -32,7 +32,6 @@ export const staffActivityTargetStockOperationTypes = [
   "CORRECTION",
   "CORRECTION_REVERSAL",
   "CORRECTION_REPLACEMENT",
-  "INTERNAL_USE",
 ] as const
 const id = z.string().trim().min(1).max(160)
 const label = z.string().trim().min(1).max(120)

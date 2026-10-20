@@ -95,7 +95,6 @@ const stockOperationTypes = [
   "CORRECTION",
   "CORRECTION_REVERSAL",
   "CORRECTION_REPLACEMENT",
-  "INTERNAL_USE",
 ] as const
 
 const id = z.string().trim().min(1).max(160)

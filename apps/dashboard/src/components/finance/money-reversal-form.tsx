@@ -5,12 +5,14 @@ import {
   AlertTitle,
   Button,
   FieldGroup,
+  FormActions,
   Input,
+  Separator,
+  SubmitButton,
 } from "@ewatrade/ui"
 
-import { FormDatePicker } from "@/components/forms/form-controls"
+import { FormDateControl } from "@/components/forms/form-controls"
 import { useFinanceCommand } from "@/hooks/use-finance-command"
-import { useFinanceParams } from "@/hooks/use-finance-params"
 import { useZodForm } from "@/hooks/use-zod-form"
 import { useTRPC } from "@/trpc/client"
 import type { RouterOutputs } from "@ewatrade/api/trpc/routers/_app"
@@ -19,35 +21,21 @@ import { formatFinanceMoney } from "@ewatrade/utils/finance-money"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useState } from "react"
 import { z } from "zod"
-import { financeSourceLabel } from "./bank-source-detail"
-import {
-  FinanceDetails,
-  FinanceField,
-  FinanceFormFooter,
-  FinanceReview,
-} from "./form-fields"
-import {
-  balanceChange,
-  changes,
-  dayIn,
-  plainDay,
-  todayIn,
-  useMoneyBalances,
-} from "./review-changes"
+import { FinanceField, FinanceReview } from "./form-fields"
 import type { FinanceBook } from "./types"
 import { useCompleteFinanceForm } from "./use-complete-finance-form"
 
 type MoneyMovement = RouterOutputs["finance"]["moneyMovement"]
 const utcDate = z
   .string()
-  .regex(/^\d{4}-\d{2}-\d{2}$/, "Choose a valid date.")
+  .regex(/^\d{4}-\d{2}-\d{2}$/, "Choose a valid UTC date.")
   .refine((value) => {
     const parsed = new Date(`${value}T00:00:00.000Z`)
     return (
       Number.isFinite(parsed.getTime()) &&
       parsed.toISOString().slice(0, 10) === value
     )
-  }, "Choose a valid date.")
+  }, "Choose a valid UTC date.")
 const schema = z.object({
   reason: z
     .string()
@@ -85,21 +73,15 @@ export function FinanceMoneyReversalForm({
     ),
   )
   const mutation = useMutation(trpc.finance.reverseMoney.mutationOptions())
-  const [review, setReview] = useState<Review | null>(null)
-  const balances = useMoneyBalances(book.id)
   const command = useFinanceCommand(
-    useCompleteFinanceForm(
-      review
-        ? `Movement undone: ${review.source.description}. The original stays in history.`
-        : undefined,
-    ),
+    useCompleteFinanceForm(),
     book.id,
     "reverseMoney",
   )
+  const [review, setReview] = useState<Review | null>(null)
   const [preparing, setPreparing] = useState(false)
   const [prepareError, setPrepareError] = useState<string | null>(null)
-  const today = todayIn(book.timezone)
-  const { close } = useFinanceParams()
+  const today = new Date().toISOString().slice(0, 10)
   const form = useZodForm<Values>(schema, {
     defaultValues: { reason: "", date: today },
   })
@@ -107,7 +89,9 @@ export function FinanceMoneyReversalForm({
   async function prepare(values: Values) {
     if (preparing) return
     if (!command.ready) {
-      setPrepareError("Checking what you saved. Wait a moment, then try again.")
+      setPrepareError(
+        "Checking saved submissions. Wait before reviewing again.",
+      )
       return
     }
     setPreparing(true)
@@ -120,15 +104,13 @@ export function FinanceMoneyReversalForm({
         ),
       )
       if (source.bookId !== book.id) {
-        throw new Error("This movement is not in your Finance.")
+        throw new Error("This movement belongs to another finance book.")
       }
       if (!eligibleSourceKinds.includes(source.sourceKind)) {
-        throw new Error(
-          "This entry is not a money movement that can be undone.",
-        )
+        throw new Error("This entry is not an eligible money movement.")
       }
       if (source.reversal) {
-        throw new Error("This movement has already been undone.")
+        throw new Error("This movement has already been reversed.")
       }
       const original = new Date(source.effectiveAt)
       const requested = new Date(`${values.date}T00:00:00.000Z`)
@@ -139,10 +121,12 @@ export function FinanceMoneyReversalForm({
             `${source.effectiveAt.toISOString().slice(0, 10)}T00:00:00.000Z`,
           )
       ) {
-        throw new Error("The date can't be before the original movement.")
+        throw new Error(
+          "The reversal date cannot precede the original movement.",
+        )
       }
       if (values.date > today) {
-        throw new Error("Choose a date no later than today.")
+        throw new Error("Choose a date no later than today (UTC).")
       }
       const effectiveAt = requested < original ? original : requested
       setReview({ source, effectiveAt, reason: values.reason.trim() })
@@ -150,7 +134,7 @@ export function FinanceMoneyReversalForm({
       setPrepareError(
         failure instanceof Error
           ? failure.message
-          : "Couldn't check this movement.",
+          : "Unable to review this movement.",
       )
     } finally {
       setPreparing(false)
@@ -173,7 +157,7 @@ export function FinanceMoneyReversalForm({
   }
 
   if (sourceQuery.isPending) {
-    return <output aria-busy="true">Loading movement…</output>
+    return <output aria-busy="true">Loading movement details…</output>
   }
   if (sourceQuery.isError) {
     return (
@@ -182,9 +166,10 @@ export function FinanceMoneyReversalForm({
         variant="destructive"
         className="grid gap-3"
       >
-        <AlertTitle>Couldn't load this movement</AlertTitle>
+        <AlertTitle>Movement could not be loaded</AlertTitle>
         <AlertDescription>{sourceQuery.error.message}</AlertDescription>
         <Button
+          appearance="form"
           className="w-fit"
           variant="outline"
           onClick={() => void sourceQuery.refetch()}
@@ -201,9 +186,9 @@ export function FinanceMoneyReversalForm({
   ) {
     return (
       <Alert appearance="dashboard" variant="destructive">
-        <AlertTitle>Movement not available</AlertTitle>
+        <AlertTitle>Movement unavailable</AlertTitle>
         <AlertDescription>
-          This entry is not a money movement that can be undone.
+          This entry is not an eligible money movement in this finance book.
         </AlertDescription>
       </Alert>
     )
@@ -214,51 +199,57 @@ export function FinanceMoneyReversalForm({
   if (history) {
     return (
       <FieldGroup className="grid gap-4">
-        <h3 className="font-semibold">Movement already undone</h3>
+        <h3 className="font-semibold">Movement already reversed</h3>
         <Alert appearance="dashboard">
-          <AlertDescription>The original stays in history.</AlertDescription>
+          <AlertDescription>
+            The original movement remains in the statement history.
+          </AlertDescription>
         </Alert>
         <div className="border border-border p-4 text-sm">
-          <p className="font-medium">Undo: {history.description}</p>
-          <p>Dated {plainDay(dayIn(history.effectiveAt, book.timezone))}</p>
+          <p className="font-medium">Correction: {history.description}</p>
+          <p>
+            Effective {new Date(history.effectiveAt).toISOString()} · recorded{" "}
+            {new Date(history.recordedAt).toISOString()}
+          </p>
         </div>
       </FieldGroup>
     )
   }
 
   if (review) {
-    const moved = moneyLines(review.source)
     return (
       <FinanceReview
         command={command}
         onBack={() => setReview(null)}
         onConfirm={() => submit(review)}
-        confirmLabel="Undo movement"
-        sentence={
-          <>
-            This undoes <b>{review.source.description}</b> in your records. It
-            doesn't move real money. The original stays in history, marked
-            Undone.
-          </>
-        }
-        changes={changes(
-          moved.map((line) =>
-            balanceChange(
-              balances,
-              line.accountId,
-              BigInt(line.creditMinor) - BigInt(line.debitMinor),
-              book.currencyCode,
-            ),
-          ),
-        )}
-        note="Move the real money yourself if you need to."
       >
-        <FinanceDetails
-          rows={[
-            ["Date", plainDay(review.effectiveAt.toISOString().slice(0, 10))],
-            ["Why", review.reason],
-          ]}
-        />
+        <h3 className="font-medium">Review movement reversal</h3>
+        <MovementSummary source={review.source} money={money} />
+        <section className="grid gap-2 border border-border p-4">
+          <h4 className="font-medium">Opposite accounting correction</h4>
+          {review.source.lines.map((line) => (
+            <div
+              key={line.accountId}
+              className="flex flex-wrap justify-between gap-2 text-sm"
+            >
+              <span>{line.accountName}</span>
+              <span className="tabular-nums">
+                Debit {money(line.creditMinor)} · Credit{" "}
+                {money(line.debitMinor)}
+              </span>
+            </div>
+          ))}
+        </section>
+        <p className="text-sm">
+          Reversal effective at {review.effectiveAt.toISOString()} UTC.
+        </p>
+        <p className="break-words text-sm">Reason: {review.reason}</p>
+        <Alert appearance="dashboard">
+          <AlertDescription>
+            This posts an accounting correction only. It does not move actual
+            cash or bank funds; reconcile the real-world movement separately.
+          </AlertDescription>
+        </Alert>
       </FinanceReview>
     )
   }
@@ -269,14 +260,22 @@ export function FinanceMoneyReversalForm({
       className="grid gap-5"
       onSubmit={form.handleSubmit((values) => void prepare(values))}
     >
-      <MovementSummary source={source} money={money} timeZone={book.timezone} />
-      <p className="text-sm text-muted-foreground">
-        Undoing takes it back in your records. No real money moves, and the
-        original stays in history.
-      </p>
+      <h3 className="font-semibold">Reverse money movement</h3>
+      <MovementSummary source={source} money={money} />
+      <Alert appearance="dashboard">
+        <AlertDescription>
+          The original entry and its account lines stay in history. This action
+          posts their exact accounting opposite.
+        </AlertDescription>
+      </Alert>
       <FieldGroup className="gap-4">
-        <FinanceField label="Date" error={form.formState.errors.date?.message}>
-          <FormDatePicker
+        <FinanceField
+          label="Effective date (UTC)"
+          error={form.formState.errors.date?.message}
+        >
+          <FormDateControl
+            required
+            type="date"
             min={originalDate}
             max={today}
             disabled={preparing}
@@ -285,14 +284,14 @@ export function FinanceMoneyReversalForm({
           />
         </FinanceField>
         <FinanceField
-          label="Why are you undoing it?"
+          label="Reason"
           error={form.formState.errors.reason?.message}
         >
           <Input
             required
             maxLength={400}
             autoComplete="off"
-            placeholder="Typed the wrong amount"
+            placeholder="Explain why this movement is being corrected"
             disabled={preparing}
             {...form.register("reason")}
           />
@@ -303,53 +302,57 @@ export function FinanceMoneyReversalForm({
           <AlertDescription>{prepareError}</AlertDescription>
         </Alert>
       ) : null}
-      <FinanceFormFooter
-        onCancel={() => void close()}
-        submitLabel="Review"
-        isSubmitting={preparing}
-        disabled={preparing || !command.ready}
-      />
+      <FormActions>
+        <SubmitButton
+          isSubmitting={preparing}
+          type="submit"
+          disabled={preparing || !command.ready}
+        >
+          {preparing ? "Refreshing movement…" : "Review reversal"}
+        </SubmitButton>
+      </FormActions>
     </form>
-  )
-}
-
-/** The money-account lines of a movement (cash, bank, clearing). */
-function moneyLines(source: MoneyMovement) {
-  return source.lines.filter(
-    (line) =>
-      line.accountKind === "ASSET" &&
-      ["CASH", "BANK", "CLEARING"].includes(line.accountPurpose),
   )
 }
 
 function MovementSummary({
   source,
   money,
-  timeZone,
 }: {
   source: MoneyMovement
   money: (minor: string) => string
-  timeZone: string
 }) {
   return (
-    <section className="grid gap-2 border border-border bg-muted/40 px-3 py-2 text-sm">
+    <section className="grid gap-3 border border-border p-4">
       <div>
         <p className="font-medium">{source.description}</p>
-        <p className="text-muted-foreground">
-          {financeSourceLabel(source.sourceKind)} ·{" "}
-          {plainDay(dayIn(source.effectiveAt, timeZone))}
+        <p className="text-sm text-muted-foreground">
+          {source.sourceKind.replaceAll("_", " ")} ·{" "}
+          {new Date(source.effectiveAt).toISOString()} UTC
         </p>
       </div>
-      {moneyLines(source).map((line) => (
-        <div key={line.accountId} className="flex justify-between gap-3">
-          <span>{line.accountName}</span>
-          <span className="tabular-nums">
-            {BigInt(line.debitMinor) > BigInt(0)
-              ? `Money in ${money(line.debitMinor)}`
-              : `Money out ${money(line.creditMinor)}`}
-          </span>
-        </div>
-      ))}
+      <p className="text-xs text-muted-foreground">
+        Recorded {new Date(source.recordedAt).toISOString()}
+      </p>
+      <div className="grid gap-2">
+        {source.lines.map((line, index) => (
+          <div key={line.accountId} className="grid gap-2 text-sm">
+            {index > 0 ? <Separator /> : null}
+            <div className="grid gap-1 sm:grid-cols-[1fr_auto]">
+              <span>
+                {line.accountName}{" "}
+                <span className="text-muted-foreground">
+                  ({line.accountKind} · {line.accountPurpose})
+                </span>
+              </span>
+              <span className="tabular-nums">
+                Debit {money(line.debitMinor)} · Credit{" "}
+                {money(line.creditMinor)}
+              </span>
+            </div>
+          </div>
+        ))}
+      </div>
     </section>
   )
 }

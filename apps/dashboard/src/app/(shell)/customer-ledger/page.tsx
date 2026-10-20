@@ -4,9 +4,6 @@ import { getActiveTenant } from "@/lib/tenant"
 import { HydrateClient, getQueryClient, trpc } from "@/trpc/server"
 import { getInitialDirectoryView } from "@/utils/directory-views"
 import { redirect } from "next/navigation"
-
-export const metadata = { title: "Customer balances | EwaTrade" }
-
 export default async function Page() {
   const session = await getServerSession()
   if (!session) redirect("/")

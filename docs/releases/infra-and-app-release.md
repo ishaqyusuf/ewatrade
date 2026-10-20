@@ -56,22 +56,19 @@ unsigned facts; it does not produce ready signed release evidence. Hosted
 protection, signing and live acceptance must be configured before treating the
 application gate as active. Planning and local tests do not establish readiness.
 
-Trigger uses two separate projects in Zeroes & One (`zeroes-one-9521`).
-Application Preview uses `EwaTrade Preview` (`proj_qxavabbrflnewutcortw`, slug
-`ewatrade-preview-fXYm`); real Production keeps Ewatrade
-(`proj_ahtovhgtjjkctpakuwjz`). Both hosted environments are labelled `prod` by
-Trigger. Exact distinct project references establish the mapping; Preview never
-uses the real Production project or its runtime key. The retired School Clerk
-Preview project `proj_hymzhteicvpixaksoyqk` must not be selected for new releases.
+Trigger uses two separate projects. Application Preview uses `ewatrade preview`
+(`proj_hymzhteicvpixaksoyqk`) in School Clerk; real Production uses Ewatrade
+(`proj_ahtovhgtjjkctpakuwjz`) in Zeroes & One. Both hosted environments are
+labelled `prod` by Trigger. Exact distinct project references establish the
+mapping; Preview never uses the real Production project or its runtime key.
 
 For a standalone jobs deployment, use `bun run jobs:preview:deploy` or
 `bun run jobs:deploy`. The commands select `.env.preview` or `.env.production`
 through the ordinary workspace profile. Each selected file must own its Trigger
 project, runtime key and database URL. Missing values, CLI overrides or copied
-Production credentials refuse before upload. Project creation or runtime-key
-presence does not establish deployed tasks; retain the exact deployment receipt.
-Organization usage limits still apply; a second project does not add paid Preview
-branches.
+Production credentials refuse before upload. The Preview project currently has
+no deployed tasks or configured runtime key. The Free plan's organization usage
+limits still apply; a second project does not add paid Preview branches.
 
 The verifier checks exact owned deployment proof even when jobs source is
 unchanged. Collection reports application environment separately from Trigger's

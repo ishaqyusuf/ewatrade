@@ -107,7 +107,6 @@ export function GlobalSheets({
               setNotice(`${name} added.`)
               void setCatalogItemMode(null)
             }}
-            onSaved={(name) => setNotice(`${name} saved.`)}
           />
         </CatalogAppearance>
       ) : null}

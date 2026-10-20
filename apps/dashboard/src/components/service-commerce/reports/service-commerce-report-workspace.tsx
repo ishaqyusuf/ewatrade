@@ -181,6 +181,7 @@ function ReportDailyDetail({
             Report detail is temporarily unavailable.
           </p>
           <Button
+            appearance="form"
             className="w-fit"
             onClick={() => void drilldown.refetch()}
             size="sm"

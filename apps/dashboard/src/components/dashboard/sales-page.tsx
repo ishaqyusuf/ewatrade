@@ -4,7 +4,6 @@ import { WorkspaceError } from "@/components/dashboard/workspace-error"
 import { OrdersHeader } from "@/components/orders/orders-header"
 import { ScrollableContent } from "@/components/scrollable-content"
 import { OrderCreateSheet } from "@/components/sheets/order-create-sheet"
-import { TableToolbarSlotProvider } from "@/components/tables/core"
 import { OrdersDataTable } from "@/components/tables/orders/data-table"
 import { OrdersTableSkeleton } from "@/components/tables/orders/skeleton"
 import { useDirectoryView } from "@/hooks/use-directory-view"
@@ -21,15 +20,12 @@ export function SalesPage({
   initialViewSettings,
   customerDirectory = true,
   salesRep = false,
-  timeZone,
 }: {
   store: StoreSummary
   initialSettings?: Partial<TableSettings>
   initialViewSettings: DirectoryViewSettings
   customerDirectory?: boolean
   salesRep?: boolean
-  /** The business time zone for order dates. */
-  timeZone?: string
 }) {
   const { view, setView, persistenceError, retryPersistence } =
     useDirectoryView({
@@ -38,7 +34,7 @@ export function SalesPage({
       initialSettings: initialViewSettings,
     })
   return (
-    <TableToolbarSlotProvider>
+    <>
       <ScrollableContent>
         <div className="flex min-w-0 flex-1 flex-col gap-6 pt-6">
           <OrdersHeader
@@ -69,13 +65,12 @@ export function SalesPage({
                 storeId={store.id}
                 initialSettings={initialSettings}
                 view={view}
-                timeZone={timeZone}
               />
             </Suspense>
           </ErrorBoundary>
         </div>
       </ScrollableContent>
       <OrderCreateSheet store={store} customerDirectory={customerDirectory} />
-    </TableToolbarSlotProvider>
+    </>
   )
 }

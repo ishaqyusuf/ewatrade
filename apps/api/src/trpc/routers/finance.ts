@@ -1,4 +1,6 @@
 import {
+  listFinanceExpenseCategories,
+  listFinanceMoneyAccounts,
   adjustFinanceCashCount,
   allocateFinanceSupplierAdvance,
   changeFinancePeriod,
@@ -6,6 +8,7 @@ import {
   createFinanceBook,
   createFinanceExpenseCategory,
   createFinanceMoneyAccount,
+  updateFinanceMoneyAccountPayments,
   createFinanceSupplier,
   getFinanceAccountBalances,
   getFinanceBill,
@@ -14,7 +17,6 @@ import {
   getFinanceCommandStatus,
   getFinanceFiscalCalendar,
   getFinanceMoneyMovement,
-  getFinanceOwedSummary,
   getFinancePeriodCloseChecklist,
   getFinancePeriods,
   getFinancePurchaseBill,
@@ -27,14 +29,10 @@ import {
   listFinanceAccountLedger,
   listFinanceBills,
   listFinanceCashCounts,
-  listFinanceCustomerBalances,
-  listFinanceExpenseCategories,
   listFinanceJournal,
-  listFinanceMoneyAccounts,
   listFinancePeriodAudit,
   listFinancePurchaseBills,
   listFinancePurchaseRecognitions,
-  listFinanceSupplierListBalances,
   listFinanceSuppliers,
   payFinanceBill,
   payFinancePurchaseBill,
@@ -53,12 +51,14 @@ import {
   reverseFinancePurchasePayment,
   reverseFinancePurchaseRecognition,
   reverseFinanceSupplierEntry,
-  updateFinanceMoneyAccountPayments,
   voidFinanceExpense,
 } from "@ewatrade/db/queries"
 import {
+  financeExpenseCategoriesSchema,
+  financeMoneyAccountsSchema,
   financeAccountActivitySchema,
   financeAccountSchema,
+  financeMoneyAccountPaymentsSchema,
   financeBillPaymentSchema,
   financeBillSchema,
   financeBillsSchema,
@@ -70,13 +70,9 @@ import {
   financeCashCountsSchema,
   financeCategorySchema,
   financeCommandSchema,
-  financeCustomerBalancesSchema,
-  financeExpenseCategoriesSchema,
   financeExpenseSchema,
   financeFiscalCalendarSchema,
   financeJournalPageSchema,
-  financeMoneyAccountPaymentsSchema,
-  financeMoneyAccountsSchema,
   financeMoneyMovementSchema,
   financeMoneyReversalSchema,
   financeMoneySchema,
@@ -85,7 +81,6 @@ import {
   financeReportsSchema,
   financeReverseBillPaymentSchema,
   financeSetupSchema,
-  financeSupplierBalancesSchema,
   financeVoidExpenseSchema,
 } from "../../schemas/finance"
 import { financePeriodAuditSchema } from "../../schemas/finance-period-audit"
@@ -350,16 +345,12 @@ export const financeRouter = createTRPCRouter({
     .query(({ ctx, input }) =>
       listFinanceBills(ctx.db, { ...input, ...ctx.financeActor }),
     ),
-  expenseCategories: financeProcedure
-    .input(financeExpenseCategoriesSchema)
-    .query(({ ctx, input }) =>
-      listFinanceExpenseCategories(ctx.db, { ...input, ...ctx.financeActor }),
-    ),
-  moneyAccounts: financeProcedure
-    .input(financeMoneyAccountsSchema)
-    .query(({ ctx, input }) =>
-      listFinanceMoneyAccounts(ctx.db, { ...input, ...ctx.financeActor }),
-    ),
+  expenseCategories: financeProcedure.input(financeExpenseCategoriesSchema).query(({ ctx, input }) =>
+    listFinanceExpenseCategories(ctx.db, { ...input, ...ctx.financeActor }),
+  ),
+  moneyAccounts: financeProcedure.input(financeMoneyAccountsSchema).query(({ ctx, input }) =>
+    listFinanceMoneyAccounts(ctx.db, { ...input, ...ctx.financeActor }),
+  ),
   book: financeProcedure.query(({ ctx }) =>
     getFinanceBook(ctx.db, ctx.financeActor),
   ),
@@ -385,24 +376,6 @@ export const financeRouter = createTRPCRouter({
     .input(financeBookSchema)
     .query(({ ctx, input }) =>
       getFinanceAccountBalances(ctx.db, { ...input, ...ctx.financeActor }),
-    ),
-  owedSummary: financeProcedure
-    .input(financeBookSchema)
-    .query(({ ctx, input }) =>
-      getFinanceOwedSummary(ctx.db, { ...input, ...ctx.financeActor }),
-    ),
-  customerBalances: financeProcedure
-    .input(financeCustomerBalancesSchema)
-    .query(({ ctx, input }) =>
-      listFinanceCustomerBalances(ctx.db, { ...input, ...ctx.financeActor }),
-    ),
-  supplierBalances: financeProcedure
-    .input(financeSupplierBalancesSchema)
-    .query(({ ctx, input }) =>
-      listFinanceSupplierListBalances(ctx.db, {
-        ...input,
-        ...ctx.financeActor,
-      }),
     ),
   journal: financeProcedure
     .input(financeJournalPageSchema)

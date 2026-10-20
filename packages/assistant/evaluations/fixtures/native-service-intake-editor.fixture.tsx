@@ -18,6 +18,23 @@ function standIn(path: string, value: Record<string, unknown>) {
 const children = ({ children }: { children?: ReactNode }) => (
   <div>{children}</div>
 )
+// Retain the shared search contract while isolating native keyboard furniture.
+standIn("components/mobile/search-footer-scope", {
+  SearchFooterScope: children,
+  SearchFooterSpacer: () => null,
+  SearchFooterField: ({
+    accessibilityLabel,
+    value,
+  }: {
+    accessibilityLabel: string
+    value: string
+  }) => (
+    <label>
+      {accessibilityLabel}
+      <input value={value} readOnly />
+    </label>
+  ),
+})
 for (const [path, name] of [
   ["ui/bottom-sheet-input-context", "BottomSheetInputProvider"],
   [

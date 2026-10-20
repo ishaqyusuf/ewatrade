@@ -1,6 +1,5 @@
 "use client"
 import { FormFeedback } from "@/components/forms/form-feedback"
-import { pluralizeUnitName } from "@/lib/inventory-view"
 import { Button, ControlField, Input, SelectControl } from "@ewatrade/ui"
 
 import { useTRPC } from "@/trpc/client"
@@ -93,7 +92,7 @@ export function UnitConfigurationManager({
       onError: (failure) => setError(failure.message),
       onSuccess: () => {
         setError(null)
-        setNotice("Draft started from the units in use.")
+        setNotice("Draft created from the Current configuration.")
         void configurations.refetch()
       },
     }),
@@ -104,7 +103,7 @@ export function UnitConfigurationManager({
       onSuccess: () => {
         setError(null)
         setNotice(
-          "Draft saved. Past sales and stock changes keep the units they used.",
+          "Draft saved. Existing transactions still use their snapshots.",
         )
         void configurations.refetch()
       },
@@ -115,7 +114,7 @@ export function UnitConfigurationManager({
       onError: (failure) => setError(failure.message),
       onSuccess: () => {
         setError(null)
-        setNotice("These units are now in use.")
+        setNotice("Draft published as the Current unit configuration.")
         setStockTransitionOperationId("")
         void configurations.refetch()
       },
@@ -159,7 +158,7 @@ export function UnitConfigurationManager({
       setError(null)
     } catch {
       setError(
-        "That number doesn’t work the other way round. Keep it as it is.",
+        "This relationship cannot be transposed exactly. Keep the current direction.",
       )
     }
   }
@@ -191,19 +190,24 @@ export function UnitConfigurationManager({
       setError(
         relationError instanceof Error
           ? relationError.message
-          : "Check the number for each unit.",
+          : "Review the unit relationships.",
       )
     }
   }
 
-  if (configurations.isPending) return <output>Loading units…</output>
+  if (configurations.isPending)
+    return <output>Loading unit configurations…</output>
   if (configurations.isError)
     return (
       <div className="grid gap-3">
         <FormFeedback appearance="dashboard">
           {configurations.error.message}
         </FormFeedback>
-        <Button variant="outline" onClick={() => void configurations.refetch()}>
+        <Button
+          appearance="form"
+          variant="outline"
+          onClick={() => void configurations.refetch()}
+        >
           Try again
         </Button>
       </div>
@@ -212,8 +216,8 @@ export function UnitConfigurationManager({
   return (
     <section className="grid min-w-0 gap-5">
       <p className="text-sm text-muted-foreground">
-        Stock is counted in one main unit. Other units are sold from it, or
-        packed separately with their own stock.
+        One Main unit anchors stock. Shared selling units affect its balance;
+        Packaged Stock keeps an independent balance.
       </p>
 
       {error ? (
@@ -230,32 +234,26 @@ export function UnitConfigurationManager({
       <div className="flex flex-wrap gap-2">
         {(configurations.data ?? []).map((row) => (
           <span
-            className="rounded-full bg-muted px-3 py-1 text-xs font-medium"
+            className="rounded-full bg-muted px-3 py-1 text-xs font-medium capitalize"
             key={row.id}
           >
-            {row.status === "current"
-              ? "In use"
-              : row.status === "draft"
-                ? "Draft, not in use yet"
-                : `Old version ${row.version}`}
+            Version {row.version} · {row.status}
           </span>
         ))}
       </div>
 
       {!draft ? (
         <Button
+          appearance="form"
           className="w-fit"
           disabled={createDraft.isPending || !current}
           onClick={() => createDraft.mutate({ productId })}
         >
-          Edit units
+          Create editable Draft
         </Button>
       ) : (
         <>
-          <ControlField
-            label={<>Decimal places in stock</>}
-            description={`0 means whole ${pluralizeUnitName(mainUnitName).toLowerCase()} only.`}
-          >
+          <ControlField label={<>Main-unit stock precision</>}>
             <Input
               max={18}
               min={0}
@@ -275,15 +273,15 @@ export function UnitConfigurationManager({
               >
                 <Input
                   aria-label={`Unit ${index + 1} name`}
-                  placeholder="e.g. Tray"
+                  placeholder="Unit name"
                   value={unit.name}
                   onChange={(event) =>
                     patchUnit(index, { name: event.target.value })
                   }
                 />
                 <Input
-                  aria-label={`Unit ${index + 1} short code`}
-                  placeholder="Short code"
+                  aria-label={`Unit ${index + 1} key`}
+                  placeholder="Stable key"
                   value={unit.key}
                   onChange={(event) =>
                     patchUnit(index, {
@@ -313,8 +311,7 @@ export function UnitConfigurationManager({
                         value: "units_per_canonical",
                         label: (
                           <>
-                            {unit.name ? pluralizeUnitName(unit.name) : "Units"}{" "}
-                            in 1 {mainUnitName}
+                            {unit.name || "This unit"} inside 1 {mainUnitName}
                           </>
                         ),
                       },
@@ -322,8 +319,7 @@ export function UnitConfigurationManager({
                         value: "canonical_per_unit",
                         label: (
                           <>
-                            {pluralizeUnitName(mainUnitName)} in 1{" "}
-                            {unit.name || "unit"}
+                            1 {unit.name || "unit"} contains {mainUnitName}
                           </>
                         ),
                       },
@@ -351,7 +347,7 @@ export function UnitConfigurationManager({
                   }
                 />
                 <Input
-                  aria-label={`Unit ${index + 1} decimal places`}
+                  aria-label={`Unit ${index + 1} precision`}
                   max={6}
                   min={0}
                   type="number"
@@ -364,7 +360,7 @@ export function UnitConfigurationManager({
                 />
                 <SelectControl
                   popupClassName={popupClassName}
-                  aria-label={`How unit ${index + 1} is stocked`}
+                  aria-label={`Unit ${index + 1} stock behavior`}
                   value={unit.stockBehavior}
                   onValueChange={(value) =>
                     patchUnit(index, {
@@ -375,20 +371,16 @@ export function UnitConfigurationManager({
                     { value: "canonical_shared", label: <>Main unit</> },
                     {
                       value: "alternate_transaction",
-                      label: (
-                        <>
-                          Sold from loose{" "}
-                          {pluralizeUnitName(mainUnitName).toLowerCase()}
-                        </>
-                      ),
+                      label: <>Shared selling unit</>,
                     },
                     {
                       value: "packaged_stock",
-                      label: <>Packed separately</>,
+                      label: <>Independent Packaged Stock</>,
                     },
                   ]}
                 />
                 <Button
+                  appearance="form"
                   size="sm"
                   variant="ghost"
                   disabled={units.length === 1}
@@ -413,6 +405,7 @@ export function UnitConfigurationManager({
 
           <div className="flex flex-wrap gap-2">
             <Button
+              appearance="form"
               variant="outline"
               onClick={() =>
                 setUnits((rows) => [...rows, blankUnit(rows.length)])
@@ -421,6 +414,7 @@ export function UnitConfigurationManager({
               Add unit
             </Button>
             <Button
+              appearance="form"
               disabled={
                 updateDraft.isPending ||
                 units.some(
@@ -433,25 +427,25 @@ export function UnitConfigurationManager({
               }
               onClick={saveDraft}
             >
-              Save draft
+              Save Draft
             </Button>
           </div>
 
           <div className="grid gap-3 border-t border-border pt-4">
             <p className="text-sm text-muted-foreground">
-              Changing what a unit holds while you have stock in it (for example
-              a Tray from 30 to 24) can’t be applied here yet. Count, sell or
-              unpack that stock first. Support may give you a reference to enter
-              below.
+              If balances exist and unit meaning changed, publishing requires
+              the ID of an explicit Stock Transition operation. The server
+              rejects semantic changes without it.
             </p>
             <Input
-              placeholder="Reference from support (only if asked)"
+              placeholder="Stock Transition operation ID, only when required"
               value={stockTransitionOperationId}
               onChange={(event) =>
                 setStockTransitionOperationId(event.target.value)
               }
             />
             <Button
+              appearance="form"
               className="w-fit"
               disabled={publishDraft.isPending}
               onClick={() =>
@@ -462,7 +456,7 @@ export function UnitConfigurationManager({
                 })
               }
             >
-              Start using these units
+              Publish Draft
             </Button>
           </div>
         </>

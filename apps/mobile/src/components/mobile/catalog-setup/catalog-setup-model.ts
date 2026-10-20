@@ -1,6 +1,5 @@
 import type { CatalogUnitRelationDirection } from "@ewatrade/utils"
 import { parseExactDecimal } from "@ewatrade/utils/exact-decimal"
-import type { ProductUsage } from "@ewatrade/utils/product-usage"
 import * as Crypto from "expo-crypto"
 
 export type CatalogItemKind = "product" | "service"
@@ -8,8 +7,6 @@ export type CatalogItemKind = "product" | "service"
 export type CatalogItemCompletion = {
   kind: CatalogItemKind
   name: string
-  /** Products only; Internal use items are not offered for orders. */
-  usage?: ProductUsage
 }
 
 export type SimpleCatalogItemScreenProps = {

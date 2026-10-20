@@ -27,19 +27,9 @@ function LedgerSheet(props: {
   tenantId: string
   customerId?: string
 }) {
-  const {
-    ledgerAction,
-    ledgerAccount,
-    ledgerEntry,
-    ledgerAllocation,
-    close,
-    backToEntry,
-  } = useCustomerLedgerParams()
+  const { ledgerAction, ledgerAccount, ledgerEntry, ledgerAllocation, close } =
+    useCustomerLedgerParams()
   const { locked } = useCustomerLedgerForm()
-  // Undo is a view inside the entry's own sheet, not a sheet of its own.
-  const undoView =
-    (ledgerAction === "release" || ledgerAction === "reverse") &&
-    Boolean(ledgerEntry)
   return (
     <Sheet
       open={Boolean(ledgerAction && ledgerAccount)}
@@ -56,18 +46,8 @@ function LedgerSheet(props: {
       {ledgerAction && ledgerAccount ? (
         <SheetFrame
           title={customerLedgerTitles[ledgerAction]}
-          description="Customer statement"
+          description="Business customer ledger · online financial records"
           closeDisabled={locked}
-          back={
-            undoView
-              ? {
-                  label: "Back to entry",
-                  onClick: () => {
-                    if (!locked) void backToEntry()
-                  },
-                }
-              : undefined
-          }
         >
           <CustomerLedgerContent
             key={`${ledgerAccount}:${ledgerAction}:${ledgerEntry}:${ledgerAllocation}`}

@@ -44,13 +44,9 @@ function SupplierAgingWorkspace({
     <div className="flex min-w-0 flex-col gap-5">
       <div className="flex flex-wrap items-end gap-2">
         <ControlField
-          label="On this day"
+          label="As-of day (UTC)"
           className="w-48"
-          error={
-            invalid
-              ? "Choose a valid day on or after your start date."
-              : undefined
-          }
+          error={invalid ? "Choose a valid day within this Book." : undefined}
         >
           <DateControl
             value={day}
@@ -59,6 +55,7 @@ function SupplierAgingWorkspace({
           />
         </ControlField>
         <Button
+          appearance="form"
           variant="outline"
           onClick={() => {
             if (!isSupplierAgingDay(day, book.startsAt)) {
@@ -70,13 +67,14 @@ function SupplierAgingWorkspace({
             setVersion((value) => value + 1)
           }}
         >
-          Show
+          Apply day
         </Button>
         <Button
+          appearance="form"
           variant="outline"
           onClick={() => setVersion((value) => value + 1)}
         >
-          Refresh
+          Refresh aging
         </Button>
       </div>
       <SupplierAgingPage
@@ -142,16 +140,17 @@ function SupplierAgingPage({
   if (query.isError)
     return (
       <Alert appearance="dashboard" variant="destructive">
-        <AlertTitle>Couldn't load when this is due</AlertTitle>
+        <AlertTitle>Payable aging could not be loaded</AlertTitle>
         <AlertDescription>{query.error.message}</AlertDescription>
         <AlertDescription>
-          Nothing is shown.
+          No aging balances are shown.
           {query.error.message ===
           "Payable aging exceeds the 1000-source limit; a staged report is required."
-            ? " There are too many entries to show here."
+            ? " Histories above the 1,000-source limit require a staged report."
             : null}
         </AlertDescription>
         <Button
+          appearance="form"
           variant="outline"
           className="w-fit"
           onClick={() => void query.refetch()}
@@ -171,23 +170,24 @@ function SupplierAgingPage({
     return (
       <output aria-busy="true" className="text-sm text-muted-foreground">
         {query.fetchStatus === "paused"
-          ? "Waiting for a connection…"
-          : "Loading when this is due…"}
+          ? "Waiting for a connection to verify payable aging…"
+          : "Loading payable aging…"}
       </output>
     )
   }
   if (!matchesSupplierAgingScope(query.data, scope)) {
     return (
       <Alert appearance="dashboard" variant="destructive">
-        <AlertTitle>This no longer matches what you asked for</AlertTitle>
+        <AlertTitle>The aging response no longer matches this view</AlertTitle>
         <AlertDescription>
-          Refresh to check the Supplier and day. Nothing is shown until you do.
+          Refresh aging to verify the supplier, Book, UTC day and snapshot. No
+          balances are shown.
         </AlertDescription>
       </Alert>
     )
   }
   if (snapshotSequence === undefined)
-    return <output aria-busy="true">Loading…</output>
+    return <output aria-busy="true">Pinning payable aging snapshot…</output>
   const aging = query.data
   return (
     <FinanceSupplierAgingView

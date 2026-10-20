@@ -320,6 +320,7 @@ export function PrescriptionRequestWorkspace({
           </p>
           <div className="flex flex-wrap gap-2">
             <Button
+              appearance="form"
               disabled={isPending}
               onClick={() => startTranscription.mutate({ requestId, storeId })}
             >
@@ -337,6 +338,7 @@ export function PrescriptionRequestWorkspace({
               placeholder="Neutral reason for clearer images"
             />
             <Button
+              appearance="form"
               variant="outline"
               disabled={isPending || !clearerReason.trim()}
               onClick={() =>
@@ -374,6 +376,7 @@ export function PrescriptionRequestWorkspace({
               />
             </ControlField>
             <Button
+              appearance="form"
               disabled={isPending || !editableRevisionText.trim()}
               onClick={() =>
                 reviseTranscription.mutate({
@@ -409,6 +412,7 @@ export function PrescriptionRequestWorkspace({
                 />
                 <div className="flex gap-2">
                   <Button
+                    appearance="form"
                     size="sm"
                     disabled={verifyLine.isPending}
                     onClick={() =>
@@ -426,6 +430,7 @@ export function PrescriptionRequestWorkspace({
                     Verify line
                   </Button>
                   <Button
+                    appearance="form"
                     size="sm"
                     variant="outline"
                     disabled={verifyLine.isPending}
@@ -443,6 +448,7 @@ export function PrescriptionRequestWorkspace({
               </div>
             ))}
             <Button
+              appearance="form"
               disabled={isPending}
               onClick={() => submitForPharmacist.mutate({ requestId, storeId })}
             >
@@ -582,12 +588,14 @@ export function PrescriptionRequestWorkspace({
           })}
           <div className="grid gap-2 sm:grid-cols-3">
             <Button
+              appearance="form"
               disabled={isPending}
               onClick={() => setPendingDecision("released")}
             >
               Release for quote
             </Button>
             <Button
+              appearance="form"
               variant="outline"
               disabled={isPending}
               onClick={() => setPendingDecision("needs_clarification")}
@@ -595,6 +603,7 @@ export function PrescriptionRequestWorkspace({
               Request clarification
             </Button>
             <Button
+              appearance="form"
               variant="destructive"
               disabled={isPending}
               onClick={() => setPendingDecision("declined")}
@@ -621,6 +630,7 @@ export function PrescriptionRequestWorkspace({
               </div>
               <div className="flex gap-2">
                 <Button
+                  appearance="form"
                   disabled={pharmacistReview.isPending}
                   onClick={confirmPharmacistDecision}
                 >
@@ -629,6 +639,7 @@ export function PrescriptionRequestWorkspace({
                     : "Confirm decision"}
                 </Button>
                 <Button
+                  appearance="form"
                   disabled={pharmacistReview.isPending}
                   onClick={() => setPendingDecision(null)}
                   variant="outline"
@@ -674,7 +685,7 @@ export function PrescriptionRequestWorkspace({
               )}
             </div>
           ))}
-          <Button disabled={isPending} onClick={quote}>
+          <Button appearance="form" disabled={isPending} onClick={quote}>
             Issue pickup quote
           </Button>
         </section>

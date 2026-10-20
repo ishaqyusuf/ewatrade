@@ -129,11 +129,6 @@ planned("catalog", "B03", [
 formOnly("catalog", "Photo capture and upload belong to the product form.", [
   "catalog.photos.*",
 ])
-formOnly(
-  "catalog",
-  "Whole-item editor payload from the catalog sheet; assistant edits use the narrow price, details, identifier and availability capabilities.",
-  ["catalog.updateItem"],
-)
 
 // Customers
 planned("customers", "E02", ["customerLedger.*"])
@@ -216,15 +211,6 @@ planned("finance", "E05", [
   "finance.*Purchase*",
   "finance.purchase*",
 ])
-excluded(
-  "finance",
-  "Dashboard list projections for Finance pages; the assistant answers these amounts through supplier statements, customer statements and money account balances.",
-  [
-    "finance.owedSummary",
-    "finance.supplierBalances",
-    "finance.customerBalances",
-  ],
-)
 planned("finance", "G01", [
   "finance.journal",
   "finance.supplierPayableAging",

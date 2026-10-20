@@ -109,6 +109,7 @@ export function CatalogPricePromotionForm({ storeId }: { storeId: string }) {
             "Price-promotion impact is unavailable."}
         </FormFeedback>
         <Button
+          appearance="form"
           className="w-fit"
           onClick={() => {
             if (matches.isError) void matches.refetch()

@@ -5,7 +5,6 @@ import {
   type DirectoryRecordDetail,
   DirectoryToolbar,
   SelectionBar,
-  TableToolbarPortal,
   VirtualRow,
   selectColumn,
   useLoadedRowSelection,
@@ -63,8 +62,6 @@ export function InventoryLedgerTable<T extends { id: string }>({
   describeRecord,
   onOpen,
   empty,
-  summary,
-  viewLabel,
 }: {
   rows: T[]
   columns: ColumnDef<T>[]
@@ -78,10 +75,6 @@ export function InventoryLedgerTable<T extends { id: string }>({
   describeRecord: (row: T) => LedgerRecordDescription
   onOpen: (row: T) => void
   empty: React.ReactNode
-  /** Count line, e.g. "12 changes". */
-  summary: string
-  /** Row menu item that opens the record, e.g. "View transfer". */
-  viewLabel?: string
 }) {
   const columns = useMemo(
     () => [selectColumn(getRecordLabel), ...domainColumns],
@@ -137,13 +130,10 @@ export function InventoryLedgerTable<T extends { id: string }>({
         table={table}
         view={view}
         selectAllLabel={`Select all loaded ${label.toLowerCase()}`}
-        summary={summary}
-      />
-      {view === "table" ? (
-        <TableToolbarPortal>
-          <LedgerTableSettings table={table} />
-        </TableToolbarPortal>
-      ) : null}
+        summary={`${rows.length} records in this view`}
+      >
+        {view === "table" ? <LedgerTableSettings table={table} /> : null}
+      </DirectoryToolbar>
       {settings.persistenceError ? (
         <div role="alert" className="flex items-center gap-3">
           <p>{settings.persistenceError}</p>
@@ -166,7 +156,6 @@ export function InventoryLedgerTable<T extends { id: string }>({
               actions={
                 <LedgerRowActions
                   label={getRecordLabel(row.original)}
-                  viewLabel={viewLabel}
                   onOpen={() => onOpen(row.original)}
                 />
               }

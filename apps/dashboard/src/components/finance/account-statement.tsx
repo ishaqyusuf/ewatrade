@@ -43,17 +43,18 @@ export function FinanceAccountStatement({
   return (
     <section className="grid gap-5 border-t border-border pt-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2 className="text-lg font-medium">Money in and out</h2>
+        <h2 className="text-lg font-medium">Account statement</h2>
         <Button
+          appearance="form"
           variant="outline"
           onClick={() => setVersion((value) => value + 1)}
         >
-          Refresh
+          Refresh statement
         </Button>
       </div>
-      <div className="grid gap-2">
+      <div>
         <DateRangeControl
-          label="Date range"
+          label="Account statement date range (UTC)"
           start={from}
           end={through}
           min={start}
@@ -61,9 +62,6 @@ export function FinanceAccountStatement({
             void setRange(range).then(() => setVersion((value) => value + 1))
           }}
         />
-        <p className="text-xs text-muted-foreground">
-          Days run midnight to midnight UTC (1 am in Lagos).
-        </p>
       </div>
       <StatementPages
         key={`${book.id}:${accountId}:${from}:${through}:${version}`}
@@ -124,12 +122,14 @@ function StatementPages({
     scope: String(cursors.at(-1) ?? ""),
     disabled: query.isFetching,
   })
-  if (query.isPending) return <output>Loading…</output>
+  if (query.isPending) return <output>Loading statement…</output>
   if (query.isError)
     return (
       <div role="alert">
         <p>{query.error.message}</p>
-        <Button onClick={() => void query.refetch()}>Try again</Button>
+        <Button appearance="form" onClick={() => void query.refetch()}>
+          Try again
+        </Button>
       </div>
     )
   const statement = query.data
@@ -145,7 +145,8 @@ function StatementPages({
         />
       </div>
       <p className="text-sm text-muted-foreground">
-        Only money recorded in Finance. Refresh to see newer entries.
+        Recorded finance entries only. Sales and customer payments that have not
+        been posted are excluded. Refresh to include newer entries.
       </p>
       <dl
         data-summary-grid
@@ -153,10 +154,10 @@ function StatementPages({
         className="grid grid-cols-2 gap-4 lg:grid-cols-4"
       >
         {[
-          ["At the start", statement.openingBalanceMinor],
+          ["Opening balance", statement.openingBalanceMinor],
           ["Money in", statement.debitMinor],
           ["Money out", statement.creditMinor],
-          ["At the end", statement.closingBalanceMinor],
+          ["Closing balance", statement.closingBalanceMinor],
         ].map(([label, amount]) => (
           <div key={label}>
             <dt className="text-sm text-muted-foreground">{label}</dt>
@@ -165,18 +166,19 @@ function StatementPages({
         ))}
       </dl>
       <p className="text-xs text-muted-foreground">
-        Page {cursors.length} · Balance at the top of this page{" "}
-        {money(statement.pageOpeningBalanceMinor)}
+        Page {cursors.length} · Page opening{" "}
+        {money(statement.pageOpeningBalanceMinor)} · Snapshot{" "}
+        {statement.snapshotSequence}
       </p>
       <InlineSelectionStatus
         selection={selection}
-        note="Export includes every entry"
+        note="Export full statement includes every entry"
       />
       <section
         className="overflow-x-auto border border-border"
         // biome-ignore lint/a11y/noNoninteractiveTabindex: Keyboard users must be able to scroll the wide statement.
         tabIndex={0}
-        aria-label="Money in and out"
+        aria-label="Account statement entries"
       >
         <Table className="w-full min-w-[720px] text-sm">
           <TableHeader>
@@ -184,11 +186,11 @@ function StatementPages({
               <TableHead scope="col" className="w-10 p-3">
                 <InlineSelectAllCheckbox
                   selection={selection}
-                  label="Select all loaded entries"
+                  label="Select all loaded statement entries"
                 />
               </TableHead>
               <TableHead scope="col" className="p-3">
-                Date
+                Date (UTC)
               </TableHead>
               <TableHead scope="col" className="p-3">
                 Description
@@ -227,14 +229,17 @@ function StatementPages({
                   <TableCell className="max-w-sm p-3">
                     <p className="break-words">{entry.description}</p>
                     {entry.reversalOfId ? (
-                      <p className="text-xs text-muted-foreground">Undo</p>
+                      <p className="text-xs text-muted-foreground">
+                        Correction entry
+                      </p>
                     ) : entry.reversedById ? (
                       <p className="text-xs text-muted-foreground">
-                        Undone; original kept in history
+                        Reversed; original retained
                       </p>
                     ) : null}
                     {entry.sourceKind === "EXPENSE_BILL" ? (
                       <Button
+                        appearance="form"
                         variant="ghost"
                         onClick={() =>
                           void setParams({
@@ -254,8 +259,9 @@ function StatementPages({
                     !entry.reversalOfId &&
                     !entry.reversedById ? (
                       <Button
+                        appearance="form"
                         variant="ghost"
-                        aria-label={`Undo ${entry.description}`}
+                        aria-label={`Reverse movement ${entry.description}`}
                         onClick={() =>
                           void setParams({
                             financeSheet: "money-reversal",
@@ -263,7 +269,7 @@ function StatementPages({
                           })
                         }
                       >
-                        Undo
+                        Reverse movement
                       </Button>
                     ) : null}
                   </TableCell>
@@ -284,7 +290,7 @@ function StatementPages({
                   colSpan={6}
                   className="p-6 text-center text-muted-foreground"
                 >
-                  Nothing recorded in this period.
+                  No recorded activity in this period.
                 </TableCell>
               </TableRow>
             )}
@@ -293,6 +299,7 @@ function StatementPages({
       </section>
       <div className="flex gap-2">
         <Button
+          appearance="form"
           variant="outline"
           disabled={cursors.length === 1 || query.isFetching}
           onClick={() => setCursors((value) => value.slice(0, -1))}
@@ -300,6 +307,7 @@ function StatementPages({
           Previous page
         </Button>
         <Button
+          appearance="form"
           variant="outline"
           disabled={
             !statement.nextCursor || snapshot === undefined || query.isFetching

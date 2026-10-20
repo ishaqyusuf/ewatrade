@@ -1,8 +1,13 @@
-import { expect, test } from "bun:test"
-import {
-  revalidateQaClientAuthorization,
-  validateQaDerivedSession,
-} from "../../../db/src/queries/qa-access"
+import { expect, mock, test } from "bun:test"
+const policy = await import("@ewatrade/utils/qa-policy-server")
+// Policy transport is outside this timestamp-attribution regression.
+mock.module("@ewatrade/utils/qa-policy-server", () => ({
+  ...policy,
+  managedQaDomainEnabled: async (domain: string) =>
+    domain === "inert.example.test",
+}))
+const { revalidateQaClientAuthorization, validateQaDerivedSession } =
+  await import("../../../db/src/queries/qa-access")
 
 // Only in-memory delegates are supplied to the actual canonical helpers. No
 // Prisma singleton, profile loader, environment secret or connected client.

@@ -542,11 +542,7 @@ export function useCatalogSetup({
       return
     }
     completed.current = true
-    const result = {
-      kind: request.input.kind,
-      name: request.input.name,
-      usage: "usage" in request.input ? request.input.usage : undefined,
-    }
+    const result = { kind: request.input.kind, name: request.input.name }
     if (mounted.current) setCompletion(result)
     // A successful create stays successful even when follow-up reads fail.
     try {

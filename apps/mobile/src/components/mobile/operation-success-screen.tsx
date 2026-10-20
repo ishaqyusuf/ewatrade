@@ -66,7 +66,6 @@ export function OperationSuccessScreen({
       : "order"
 
   if (kind === "order") return <SaleSuccess params={params} />
-  const internalUse = kind === "product" && params.usage === "INTERNAL_USE"
   return (
     <View className="flex-1 bg-background px-[18px]">
       <View
@@ -76,34 +75,16 @@ export function OperationSuccessScreen({
         }}
       >
         <HeroCard
-          cta={
-            internalUse
-              ? {
-                  icon: "Package",
-                  label: "Open catalog",
-                  onPress: () =>
-                    router.replace("/catalog-items-modal" as never),
-                  testID: "item-success-catalog",
-                }
-              : {
-                  icon: "Receipt",
-                  label: "Take your first order",
-                  onPress: () => router.replace("/create-sale-modal" as never),
-                  testID: "item-success-first-order",
-                }
-          }
+          cta={{
+            icon: "Receipt",
+            label: "Take your first order",
+            onPress: () => router.replace("/create-sale-modal" as never),
+            testID: "item-success-first-order",
+          }}
           done
-          sub={
-            internalUse
-              ? "Hidden from customer orders. Record its stock with Stock in."
-              : "Available in your catalog. You can change it any time."
-          }
+          sub="Available in your catalog. You can change it any time."
           testID="item-success-hero"
-          title={
-            internalUse
-              ? `${params.name || "Your item"} is saved for business use`
-              : `${params.name || "Your item"} is ready to sell`
-          }
+          title={`${params.name || "Your item"} is ready to sell`}
         />
         <QuickActionRow
           actions={[
@@ -125,9 +106,7 @@ export function OperationSuccessScreen({
             },
           ]}
         />
-        {internalUse ? null : (
-          <GhostPreview message="Today’s sales appear on Home after your first order." />
-        )}
+        <GhostPreview message="Today’s sales appear on Home after your first order." />
       </View>
     </View>
   )

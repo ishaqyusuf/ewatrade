@@ -50,11 +50,6 @@ export function CatalogDetailOverview({
     inventoryAllowed: detail.inventoryAllowed,
     canManageUsage: detail.canManageUsage,
   })
-  // Stock consumed inside the business is recorded for Internal use or Both.
-  const canRecordUse =
-    !readOnly &&
-    detail.inventoryAllowed &&
-    (product?.usage === "INTERNAL_USE" || product?.usage === "BOTH")
   const units = product?.currentUnitConfiguration?.units ?? []
   const main =
     units.find((unit) => unit.stockBehavior === "canonical_shared") ??
@@ -149,27 +144,12 @@ export function CatalogDetailOverview({
                         {variant.name}: stock not recorded
                       </p>
                     ))}
-                  <div className="flex flex-wrap items-center gap-3">
-                    {canRecordUse ? (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        render={
-                          <Link
-                            href={`/inventory?inventoryOperation=internal_use&inventoryProduct=${encodeURIComponent(product.id)}&inventoryQuery=${encodeURIComponent(item.name)}`}
-                          />
-                        }
-                      >
-                        Record use
-                      </Button>
-                    ) : null}
-                    <Link
-                      className="text-sm underline underline-offset-4"
-                      href={`/inventory?inventoryProduct=${encodeURIComponent(product.id)}&inventoryQuery=${encodeURIComponent(item.name)}`}
-                    >
-                      View inventory
-                    </Link>
-                  </div>
+                  <Link
+                    className="text-sm underline underline-offset-4"
+                    href={`/inventory?inventoryProduct=${encodeURIComponent(product.id)}&inventoryQuery=${encodeURIComponent(item.name)}`}
+                  >
+                    View inventory
+                  </Link>
                 </>
               ) : (
                 <p className="text-sm text-muted-foreground">
@@ -192,7 +172,7 @@ export function CatalogDetailOverview({
                 await setItemParams({ productUnits: product.id })
               }}
             >
-              Units
+              Configure units
             </Button>
           ) : null}
         </div>

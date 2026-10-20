@@ -3,7 +3,6 @@
 import { ThemeProvider } from "@/components/dashboard/theme-provider"
 import { QaDashboardProvider } from "@/components/qa/qa-quick-fill"
 import { TRPCReactProvider } from "@/trpc/client"
-import { Toaster } from "@ewatrade/ui"
 import { NuqsAdapter } from "nuqs/adapters/next/app"
 
 export function Providers({
@@ -27,7 +26,6 @@ export function Providers({
           ) : (
             children
           )}
-          <Toaster position="bottom-right" />
         </ThemeProvider>
       </TRPCReactProvider>
     </NuqsAdapter>

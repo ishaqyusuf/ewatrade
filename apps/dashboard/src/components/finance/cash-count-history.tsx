@@ -37,17 +37,22 @@ export function FinanceCashCountHistory({ book }: { book: FinanceBook }) {
         </OpenFinanceSheet>
       </div>
       <p className="text-sm text-muted-foreground">
-        Count the cash and compare it with what Finance expects.
+        Compare physical cash with recorded balances. Open a count to check
+        whether later entries changed its history.
       </p>
       {query.isPending ? (
         <output>Loading cash counts…</output>
       ) : query.isError ? (
         <div role="alert">
           <p>{query.error.message}</p>
-          <Button onClick={() => void query.refetch()}>Try again</Button>
+          <Button appearance="form" onClick={() => void query.refetch()}>
+            Try again
+          </Button>
         </div>
       ) : !counts.length ? (
-        <p className="py-6 text-muted-foreground">No cash counts yet.</p>
+        <p className="py-6 text-muted-foreground">
+          No cash counts recorded yet.
+        </p>
       ) : (
         <div className="grid gap-1">
           <InlineSelectionBar
@@ -86,7 +91,7 @@ export function FinanceCashCountHistory({ book }: { book: FinanceBook }) {
                         count.observedBalanceMinor,
                         book.currencyCode,
                       )}{" "}
-                      · Short or over{" "}
+                      · Difference at count{" "}
                       {formatFinanceMoney(
                         count.differenceAtCountMinor,
                         book.currencyCode,
@@ -94,6 +99,7 @@ export function FinanceCashCountHistory({ book }: { book: FinanceBook }) {
                     </p>
                   </div>
                   <Button
+                    appearance="form"
                     variant="outline"
                     aria-label={`View cash count ${count.reference}`}
                     onClick={() =>
@@ -113,11 +119,12 @@ export function FinanceCashCountHistory({ book }: { book: FinanceBook }) {
       )}
       {query.hasNextPage ? (
         <Button
+          appearance="form"
           variant="outline"
           disabled={query.isFetchingNextPage}
           onClick={() => void query.fetchNextPage()}
         >
-          {query.isFetchingNextPage ? "Loading…" : "Load more"}
+          {query.isFetchingNextPage ? "Loading…" : "Load more counts"}
         </Button>
       ) : null}
     </section>

@@ -29,16 +29,7 @@ for (const [
   operation,
   mismatch,
   validationOnly,
-  artifactOnly,
 ] of [
-  [0, "android", "build", "preview", false, true],
-  [1, "android", "build", "preview_attachment", false, true],
-  [1, "android", "build", "preview_artifact_duplicate", false, true],
-  [1, "android", "build", undefined, false, true],
-  [1, "android", "build", "dev", false, true],
-  [1, "ios", "build", "preview", false, true],
-  [1, "android", "submit", "preview", false, true],
-  [1, "android", "update", "preview", false, true],
   [0, "android", "build", undefined, true],
   [1, "android", "build", "api", true],
   [1, "android", "build", "dirty", true],
@@ -105,7 +96,7 @@ for (const [
   [1, "android", "update", "missing_expected_commit"],
   [1, "android", "update", "dirty_after_login"],
 ] as const) {
-  test(`handles ${platform} ${operation} with expected exit ${expectedExitCode}${mismatch ? ` (${mismatch})` : ""}${validationOnly ? " (validation only)" : ""}${artifactOnly ? " (artifact only)" : ""} and isolates EAS authentication`, async () => {
+  test(`handles ${platform} ${operation} with expected exit ${expectedExitCode}${mismatch ? ` (${mismatch})` : ""}${validationOnly ? " (validation only)" : ""} and isolates EAS authentication`, async () => {
     const root = await mkdtemp(path.join(tmpdir(), "ewatrade-eas-test-"))
     runDirs.push(root)
     const cli = path.join(root, "node_modules", "eas-cli")
@@ -231,10 +222,6 @@ for (const [
         operation,
         development ? "--dev" : preview ? "--preview" : "--prod",
         ...(validationOnly ? ["--validation-only"] : []),
-        ...(artifactOnly ? ["--artifact-only"] : []),
-        ...(mismatch === "preview_artifact_duplicate"
-          ? ["--artifact-only"]
-          : []),
         ...(mismatch === "validation_duplicate" ? ["--validation-only"] : []),
         ...(platform !== "android" ? [`--platform=${platform}`] : []),
         ...((operation === "update" ||
@@ -327,17 +314,6 @@ for (const [
     const stderr = await stderrPromise
     expect(exitCode, stderr).toBe(expectedExitCode)
     if (
-      artifactOnly &&
-      (operation !== "build" ||
-        platform !== "android" ||
-        !preview ||
-        mismatch === "preview_artifact_duplicate")
-    ) {
-      for (const file of [capturePath, authCapturePath, preflightCapturePath])
-        await expect(readFile(file)).rejects.toMatchObject({ code: "ENOENT" })
-      return
-    }
-    if (
       validationOnly &&
       (operation !== "build" ||
         platform !== "android" ||
@@ -355,11 +331,7 @@ for (const [
         await expect(readFile(file)).rejects.toMatchObject({ code: "ENOENT" })
       return
     }
-    if (artifactOnly) {
-      await expect(
-        readFile(path.join(root, "preview-publication.txt")),
-      ).rejects.toMatchObject({ code: "ENOENT" })
-    } else if (operation === "build" && mismatch === "preview") {
+    if (operation === "build" && mismatch === "preview") {
       expect(
         await readFile(path.join(root, "preview-publication.txt"), "utf8"),
       ).toBe(reviewedCommit)

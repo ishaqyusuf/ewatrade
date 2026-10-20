@@ -150,7 +150,7 @@ const DASHBOARD_NAV: DashboardNavDefinition[] = [
     canAccess: canManageCatalog,
   },
   {
-    description: "Stock in each store, history and transfers",
+    description: "Stock, inbounds, and movement controls",
     href: "/inventory",
     icon: "inventory",
     label: "Inventory",
@@ -160,16 +160,16 @@ const DASHBOARD_NAV: DashboardNavDefinition[] = [
       {
         href: "/inventory/operations",
         icon: "inventory",
-        label: "Stock history",
-        description: "Every change to your stock",
+        label: "Operations",
+        description: "Stock operation history",
         canAccess: (role, context) =>
           canOperateInventory(role, context.staffAccessMode),
       },
       {
         href: "/inventory/transfers",
         icon: "inventory",
-        label: "Transfers",
-        description: "Stock moving between your stores",
+        label: "Stock transfers",
+        description: "Incoming and outgoing stock transfers",
         canAccess: (role, context) =>
           canOperateInventory(role, context.staffAccessMode),
       },
@@ -200,7 +200,7 @@ const DASHBOARD_NAV: DashboardNavDefinition[] = [
     isVisible: isPharmacyBusiness,
   },
   {
-    description: "Customers, their orders and what they owe",
+    description: "Customer book and follow-up records",
     href: "/customers",
     icon: "customers",
     label: "Customers",
@@ -230,35 +230,28 @@ const DASHBOARD_NAV: DashboardNavDefinition[] = [
     requiresPlanFeature: "finance",
     children: [
       {
-        description: "Your money at a glance",
+        description: "Financial overview",
         href: "/finance",
         icon: "analytics",
         label: "Overview",
         canAccess: canManageTenantRole,
       },
       {
-        description: "What you spent and still have to pay",
+        description: "Review spending records",
         href: "/finance/spending",
         icon: "analytics",
         label: "Spending",
         canAccess: canManageTenantRole,
       },
       {
-        description: "Cash, bank and mobile money",
+        description: "Manage money accounts",
         href: "/finance/accounts",
         icon: "analytics",
-        label: "Money accounts",
+        label: "Accounts",
         canAccess: canManageTenantRole,
       },
       {
-        description: "Check bank lines against your records",
-        href: "/finance/bank",
-        icon: "analytics",
-        label: "Bank",
-        canAccess: canManageTenantRole,
-      },
-      {
-        description: "What you owe Suppliers",
+        description: "Manage supplier balances and bills",
         href: "/finance/suppliers",
         icon: "analytics",
         label: "Suppliers",
@@ -266,18 +259,18 @@ const DASHBOARD_NAV: DashboardNavDefinition[] = [
         requiresPlanFeature: "suppliers",
       },
       {
-        description: "What Customers owe you",
+        description: "Customer statements and collections",
         href: "/customer-ledger",
         icon: "analytics",
-        label: "Customer balances",
+        label: "Customer accounts",
         canAccess: canManageTenantRole,
         requiresPlanFeature: "finance",
       },
       {
-        description: "Profit, money in and out, and exports",
+        description: "Financial reports and exports",
         href: "/finance/reports",
         icon: "analytics",
-        label: "Reports",
+        label: "Finance reports",
         canAccess: canManageTenantRole,
       },
     ],
@@ -565,9 +558,5 @@ export function canAccessDashboardPath(
 }
 
 export function getDashboardRoleLabel(role: string | null | undefined) {
-  const normalized = getNormalizedRole(role)
-  // Owners know Operators as sales reps; the stored role stays OPERATOR.
-  return normalized === "OPERATOR"
-    ? "Sales rep"
-    : getRoleDisplayName(normalized)
+  return getRoleDisplayName(getNormalizedRole(role))
 }

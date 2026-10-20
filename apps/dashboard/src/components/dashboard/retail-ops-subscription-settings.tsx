@@ -49,7 +49,6 @@ const ENTITLEMENT_LABELS: Record<Entitlement["key"], string> = {
   products: "Catalog items",
   reportsHistoryDays: "Report history",
   staff: "Staff",
-  storefrontItems: "Storefront items",
 }
 
 const ENTITLEMENT_ICONS: Record<Entitlement["key"], typeof Store04Icon> = {
@@ -59,7 +58,6 @@ const ENTITLEMENT_ICONS: Record<Entitlement["key"], typeof Store04Icon> = {
   products: Package01Icon,
   reportsHistoryDays: Analytics01Icon,
   staff: UserCircle02Icon,
-  storefrontItems: Store04Icon,
 }
 
 const PLAN_FEATURE_ORDER: RetailOpsPlanFeature[] = [
@@ -348,6 +346,7 @@ function PlanCard({
       {plan.id === "free" ? null : (
         <div className="mt-auto pt-4">
           <Button
+            appearance="form"
             type="button"
             variant={current ? "outline" : "default"}
             size="sm"

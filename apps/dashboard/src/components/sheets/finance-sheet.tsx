@@ -18,8 +18,7 @@ export function FinanceSheet({
   const { financeSheet, close } = useFinanceParams()
   const lockedRef = useRef(false)
   const open = Boolean(financeSheet)
-  // Upload statement is a centred dialog (choose file → map columns → check).
-  const Root = financeSheet === "bank-import" ? Dialog : Sheet
+  const Root = financeSheet === "supplier" ? Dialog : Sheet
   const [closeError, setCloseError] = useState<string | null>(null)
 
   const closeSheet = useCallback(async () => {

@@ -377,7 +377,7 @@ export type SingleBalanceInput = {
   source: string
   storeId: string
   tenantId: string
-  type: "adjustment" | "internal_use" | "receipt" | "return"
+  type: "adjustment" | "receipt" | "return"
   unitCostMinor?: number
 }
 
@@ -423,19 +423,7 @@ function prepareSingleBalanceStockOperation(input: SingleBalanceInput) {
       error instanceof Error ? error.message : "Invalid categories.",
     )
   }
-  if (input.type === "internal_use") {
-    // Consumption only ever removes stock; the note is optional.
-    if (
-      input.direction !== "decrease" ||
-      categories ||
-      input.unitCostMinor !== undefined
-    ) {
-      throw new CatalogError(
-        "INVALID_STOCK_OPERATION",
-        "Internal use only decreases stock, without categories or a unit cost.",
-      )
-    }
-  } else if (
+  if (
     (!categories?.length && !input.reason?.trim()) ||
     (input.type === "return" && (!input.reason?.trim() || categories))
   ) {
@@ -1106,12 +1094,6 @@ async function postSingleBalanceStockOperationInTransactionCore(
     ? await resolveStockCategories(tx, input.tenantId, input.categories)
     : []
   const balance = prepared?.balance ?? (await loadBalance(tx, input))
-  if (input.type === "internal_use" && balance.product.usage === "FOR_SALE") {
-    throw new CatalogError(
-      "INVALID_STOCK_OPERATION",
-      "Set this Product's usage to Internal use or Both before recording use.",
-    )
-  }
   if (balance.revision !== input.expectedBalanceRevision) {
     throw new CatalogError(
       "REVISION_CONFLICT",
@@ -1193,9 +1175,7 @@ async function postSingleBalanceStockOperationInTransactionCore(
           ? StockOperationType.RECEIPT
           : input.type === "return"
             ? StockOperationType.RETURN
-            : input.type === "internal_use"
-              ? StockOperationType.INTERNAL_USE
-              : StockOperationType.ADJUSTMENT,
+            : StockOperationType.ADJUSTMENT,
     },
   })
   if (categoryLinks.length)
@@ -2154,8 +2134,7 @@ function isOrdinaryCorrectionTarget(target: CorrectionTarget) {
   return (
     (target.type === StockOperationType.RECEIPT ||
       target.type === StockOperationType.RETURN ||
-      target.type === StockOperationType.ADJUSTMENT ||
-      target.type === StockOperationType.INTERNAL_USE) &&
+      target.type === StockOperationType.ADJUSTMENT) &&
     target.movements.length === 1 &&
     target.correctionOfOperationId === null &&
     Object.values(target._count).every((count) => count === 0)

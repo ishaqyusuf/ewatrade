@@ -10,8 +10,7 @@ import {
 
 /** Shared with route-contract checks; these are the sheet/form's actual URL parsers. */
 export const catalogItemParamParsers = {
-  catalogItem: parseAsStringEnum(["create", "edit"]),
-  catalogEditItem: parseAsString,
+  catalogItem: parseAsStringEnum(["create"]),
   catalogCreateKind: parseAsStringEnum([...CATALOG_KINDS]),
   catalogCreateMode: parseAsStringEnum(["form", "chat"]),
   catalogCreateName: parseAsString,
@@ -25,8 +24,7 @@ export function useCatalogItemParams() {
   const [params, updateParams] = useQueryStates(catalogItemParamParsers)
   function setParams(
     values: {
-      catalogItem?: "create" | "edit" | null
-      catalogEditItem?: string | null
+      catalogItem?: "create" | null
       catalogCreateKind?: (typeof CATALOG_KINDS)[number] | null
       catalogCreateMode?: "form" | "chat" | null
       catalogCreateName?: string | null
@@ -42,7 +40,6 @@ export function useCatalogItemParams() {
     return updateParams(
       values ?? {
         catalogItem: null,
-        catalogEditItem: null,
         catalogCreateKind: null,
         catalogCreateMode: null,
         catalogCreateName: null,
@@ -62,7 +59,6 @@ export function useCatalogItemParams() {
     catalogCreatePrice: params.catalogCreatePrice,
     catalogConversation: params.catalogConversation,
     catalogItemMode: params.catalogItem,
-    catalogEditItemId: params.catalogEditItem,
     catalogQuery: params.catalogQuery ?? "",
     filter: {
       kind: params.catalogKind,
@@ -73,13 +69,9 @@ export function useCatalogItemParams() {
       params.catalogKind || params.catalogStatus || params.catalogQuery?.trim(),
     ),
     productUnitsId: params.productUnits,
-    /** Opens the item sheet; editing a saved item passes its id. */
-    editCatalogItem: (itemId: string) =>
-      setParams({ catalogItem: "edit", catalogEditItem: itemId }),
     setCatalogItemMode: (mode: "create" | null) =>
       setParams({
         catalogItem: mode,
-        catalogEditItem: null,
         ...(mode === null
           ? {
               catalogCreateKind: null,

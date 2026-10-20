@@ -19,8 +19,6 @@ export type OperationSuccessParams = {
   moneyAccount?: string
   /** A Service order: New sale starts another Service order. */
   saleKind?: "service"
-  /** A saved Product's usage; Internal use skips the first-order prompt. */
-  usage?: "FOR_SALE" | "INTERNAL_USE" | "BOTH"
 }
 
 type ResetAction = ReturnType<typeof CommonActions.reset>

@@ -16,6 +16,7 @@ export function StoreConversationActionMenu({
       size="sm"
       type="button"
       variant="outline"
+      appearance="form"
     >
       Open
     </Button>

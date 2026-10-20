@@ -1,6 +1,5 @@
 "use client"
 
-import { useAssistantDraftJobOpener } from "@/hooks/use-assistant-draft-job-handoff"
 import { useZodForm } from "@/hooks/use-zod-form"
 import { useTRPC } from "@/trpc/client"
 import type { RouterOutputs } from "@ewatrade/api/trpc/routers/_app"
@@ -15,6 +14,7 @@ import { useEffect, useRef, useState } from "react"
 import { Controller, useFieldArray } from "react-hook-form"
 import type { z } from "zod"
 import { StaffAccessWorkloadView } from "./staff-access-workload-view"
+import { useAssistantDraftJobOpener } from "@/hooks/use-assistant-draft-job-handoff"
 
 type Review = RouterOutputs["retailOps"]["staffStoreAccessReview"]
 type Fields = z.infer<typeof staffAccessReviewInput>
@@ -269,7 +269,7 @@ export function GeneralStaffAccessEditorView({
                       disabled={blocked}
                       options={[
                         { value: "CASHIER", label: "Cashier" },
-                        { value: "OPERATOR", label: "Sales rep" },
+                        { value: "OPERATOR", label: "Operator" },
                         { value: "MANAGER", label: "Manager" },
                       ]}
                       onValueChange={(value) => {

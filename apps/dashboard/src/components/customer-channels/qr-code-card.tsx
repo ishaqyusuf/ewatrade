@@ -41,6 +41,7 @@ export function QrCodeCard({ url }: { url: string }) {
         onClick={download}
         type="button"
         variant="outline"
+        appearance="form"
       >
         Download QR
       </Button>

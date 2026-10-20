@@ -55,8 +55,6 @@ type Props = {
   form: { kind: "product" | "service"; unitName: string }
   formGuidance: ReturnType<typeof resolveCatalogFormGuidance>
   hasOpeningStock: boolean
-  /** Saved items change stock through Inventory, so opening stock is create-only. */
-  allowOpeningStock?: boolean
   onBack: () => void
   onConfirmOptions: () => void
   onEnable: () => void
@@ -82,7 +80,6 @@ export function CatalogOptionsEditor({
   form,
   formGuidance,
   hasOpeningStock,
-  allowOpeningStock = true,
   onBack,
   onConfirmOptions,
   onEnable,
@@ -127,6 +124,7 @@ export function CatalogOptionsEditor({
       >
         {!showAdvanced ? (
           <Button
+            appearance="form"
             type="button"
             variant="outline"
             onClick={() => {
@@ -150,6 +148,7 @@ export function CatalogOptionsEditor({
                 </p>
               </div>
               <Button
+                appearance="form"
                 type="button"
                 size="sm"
                 variant="ghost"
@@ -253,6 +252,7 @@ export function CatalogOptionsEditor({
                   </Field>
                   {optionGroups.length > 1 ? (
                     <Button
+                      appearance="form"
                       type="button"
                       size="sm"
                       variant="ghost"
@@ -272,6 +272,7 @@ export function CatalogOptionsEditor({
             })}
 
             <Button
+              appearance="form"
               type="button"
               size="sm"
               variant="outline"
@@ -421,24 +422,22 @@ export function CatalogOptionsEditor({
 
                   {form.kind === "product" ? (
                     <>
-                      {allowOpeningStock ? (
-                        <Field
-                          htmlFor={`catalog-variant-stock-${combination.key}`}
-                          label="Opening stock (optional)"
-                        >
-                          <TextInput
-                            id={`catalog-variant-stock-${combination.key}`}
-                            inputMode="decimal"
-                            placeholder="Enter current stock"
-                            value={draft.quantity}
-                            onChange={(event) =>
-                              updateVariantDraft(combination.key, {
-                                quantity: event.target.value,
-                              })
-                            }
-                          />
-                        </Field>
-                      ) : null}
+                      <Field
+                        htmlFor={`catalog-variant-stock-${combination.key}`}
+                        label="Opening stock (optional)"
+                      >
+                        <TextInput
+                          id={`catalog-variant-stock-${combination.key}`}
+                          inputMode="decimal"
+                          placeholder="Enter current stock"
+                          value={draft.quantity}
+                          onChange={(event) =>
+                            updateVariantDraft(combination.key, {
+                              quantity: event.target.value,
+                            })
+                          }
+                        />
+                      </Field>
                       {additionalUnits.length > 0 ? (
                         <div className="grid gap-3 border-t border-border pt-3">
                           <div>

@@ -1,23 +1,13 @@
 "use client"
 
 import { WorkspaceError } from "@/components/dashboard/workspace-error"
-import { inventoryHistoryViewOptions } from "@/components/inventory/inventory-header"
-import { InventoryLedgerFilters } from "@/components/inventory/inventory-ledger-filters"
-import { InventoryTabs } from "@/components/inventory/inventory-tabs"
 import { NewTransferButton } from "@/components/inventory/new-transfer-button"
-import { PageHeader, PageToolbar } from "@/components/page-header"
+import { PageHeader } from "@/components/page-header"
 import { ScrollableContent } from "@/components/scrollable-content"
 import { InventoryOperationSheet } from "@/components/sheets/inventory-operation-sheet"
-import {
-  TableToolbarSlot,
-  TableToolbarSlotProvider,
-} from "@/components/tables/core"
-import {
-  TransfersDataTable,
-  transferFilters,
-} from "@/components/tables/stock-transfers/data-table"
+import { TransfersDataTable } from "@/components/tables/stock-transfers/data-table"
 import { TransfersSkeleton } from "@/components/tables/stock-transfers/skeleton"
-import { ViewDropdown } from "@/components/view-switcher"
+import { ViewSwitcher, directoryViewOptions } from "@/components/view-switcher"
 import { useDirectoryView } from "@/hooks/use-directory-view"
 import type { DirectoryViewSettings } from "@/utils/directory-view-settings"
 import type { TableSettings } from "@/utils/table-settings"
@@ -41,38 +31,26 @@ export function InventoryTransfersPage({
       queryKey: "transferView",
       initialSettings: initialViewSettings,
     })
-  // Transfers have no grid; a saved Grid choice shows as List.
-  const shownView = view === "cards" ? "list" : view
   return (
-    <TableToolbarSlotProvider>
+    <>
       <ScrollableContent>
         <div className="flex min-w-0 flex-1 flex-col gap-6 pt-6">
-          <PageHeader
-            eyebrow={allStores ? "All stores" : store.name}
-            title="Transfers"
-            description="Stock moving between your stores. It leaves one store when sent and arrives when received."
-          >
-            <PageToolbar
-              actions={
-                <>
-                  <TableToolbarSlot />
-                  <ViewDropdown
-                    label="Transfers view"
-                    value={shownView}
-                    options={inventoryHistoryViewOptions}
-                    onValueChange={setView}
-                  />
-                  <NewTransferButton />
-                </>
-              }
-            >
-              <InventoryLedgerFilters
-                placeholder="Search product or store"
-                filters={transferFilters(!allStores)}
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <PageHeader
+              eyebrow={allStores ? "All stores" : store.name}
+              title="Stock transfers"
+              description="Track stock moving between your stores."
+            />
+            <div className="flex flex-wrap items-center gap-2">
+              <ViewSwitcher
+                label="Stock transfer view"
+                value={view}
+                options={directoryViewOptions}
+                onValueChange={setView}
               />
-            </PageToolbar>
-            <InventoryTabs />
-          </PageHeader>
+              <NewTransferButton />
+            </div>
+          </div>
           {persistenceError ? (
             <Alert appearance="dashboard" role="alert">
               <AlertDescription>{persistenceError}</AlertDescription>
@@ -84,22 +62,19 @@ export function InventoryTransfersPage({
           <ErrorBoundary errorComponent={WorkspaceError}>
             <Suspense
               fallback={
-                <TransfersSkeleton
-                  settings={initialSettings}
-                  view={shownView}
-                />
+                <TransfersSkeleton settings={initialSettings} view={view} />
               }
             >
               <TransfersDataTable
                 storeId={allStores ? undefined : store.id}
                 initialSettings={initialSettings}
-                view={shownView}
+                view={view}
               />
             </Suspense>
           </ErrorBoundary>
         </div>
       </ScrollableContent>
       <InventoryOperationSheet store={store} />
-    </TableToolbarSlotProvider>
+    </>
   )
 }

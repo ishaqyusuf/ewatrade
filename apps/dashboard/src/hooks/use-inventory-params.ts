@@ -7,7 +7,6 @@ export const INVENTORY_OPERATION_MODES = [
   "adjustment",
   "count",
   "custody",
-  "internal_use",
   "receipt",
   "transfer",
   "transformation",

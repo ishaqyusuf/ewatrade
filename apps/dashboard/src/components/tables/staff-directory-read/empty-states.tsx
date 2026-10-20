@@ -2,21 +2,22 @@ export function StaffDirectoryReadEmpty({
   filtered,
   continued,
 }: { filtered: boolean; continued: boolean }) {
-  const hint = continued
-    ? "Go back to the first page."
-    : filtered
-      ? "Try other filters."
-      : null
   return (
     <div className="grid gap-2 py-6 text-sm">
       <p>
         {continued
-          ? "No more staff."
+          ? "No memberships remain after this cursor."
           : filtered
-            ? "No staff match these filters."
-            : "No staff yet."}
+            ? "No memberships match these filters."
+            : "No memberships are available in this business directory."}
       </p>
-      {hint ? <p className="text-xs text-muted-foreground">{hint}</p> : null}
+      <p className="text-xs text-muted-foreground">
+        {continued
+          ? "Return to the first page or refresh; pages reflect current request snapshots."
+          : filtered
+            ? "Clear or change filters to view other current membership records."
+            : "This directory does not reconstruct past staff history."}
+      </p>
     </div>
   )
 }

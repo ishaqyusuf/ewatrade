@@ -72,7 +72,7 @@ export function missingInventoryReceiptOptions(
           needsAvailability: !offering.stores.some(
             (store) => store.storeId === storeId && store.isAvailable,
           ),
-          label: `${item.name}${variant.name && variant.name !== item.name ? ` · ${variant.name}` : ""} — none in stock yet`,
+          label: `${item.name} · ${variant.name} · ${unit.name} (0)`,
         })
       }
     }

@@ -1,9 +1,6 @@
 "use client"
-import { CustomerFormSheet } from "@/components/customers/customer-form-sheet"
 import { ScrollableContent } from "@/components/scrollable-content"
-import { CustomerLedgerEmptyState } from "@/components/tables/customer-ledger/empty-states"
 import { useCustomerLedgerParams } from "@/hooks/use-customer-ledger-params"
-import { useCustomerSheetParams } from "@/hooks/use-customer-sheet-params"
 import { useTRPC } from "@/trpc/client"
 import type { TableSettings } from "@/utils/table-settings"
 import {
@@ -13,54 +10,10 @@ import {
   ControlField,
   SelectControl,
 } from "@ewatrade/ui"
-import { ArrowLeft01Icon } from "@hugeicons/core-free-icons"
-import { HugeiconsIcon } from "@hugeicons/react"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import Link from "next/link"
-import { type ReactNode, useEffect, useRef, useState } from "react"
+import { useState } from "react"
 import { CustomerLedgerStatement } from "./customer-ledger-statement"
-
-type Customer = {
-  id: string
-  name: string
-  phone: string | null
-  email: string | null
-}
-
-function StatementHeader({
-  customer,
-  actions,
-}: {
-  customer?: Customer
-  actions?: ReactNode
-}) {
-  const contact = [customer?.phone, customer?.email].filter(Boolean).join(" · ")
-  return (
-    <header className="grid gap-3">
-      <Link
-        href="/customers"
-        className="inline-flex w-fit items-center gap-1 text-sm text-muted-foreground hover:text-foreground hover:underline"
-      >
-        <HugeiconsIcon icon={ArrowLeft01Icon} className="size-4" />
-        Customers
-      </Link>
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="min-w-0">
-          <h1 className="text-2xl font-semibold tracking-tight">
-            {customer?.name ?? "Customer"}
-          </h1>
-          <p
-            className={`text-sm text-muted-foreground ${contact ? "" : "italic"}`}
-          >
-            {customer ? contact || "No phone or email" : " "}
-          </p>
-        </div>
-        {actions}
-      </div>
-    </header>
-  )
-}
-
 export function CustomerLedgerWorkspace({
   customerId,
   initialSettings,
@@ -70,9 +23,8 @@ export function CustomerLedgerWorkspace({
 }) {
   const trpc = useTRPC()
   const client = useQueryClient()
-  const { ledgerAccount, ledgerAction, setParams } = useCustomerLedgerParams()
+  const { ledgerAccount, setParams } = useCustomerLedgerParams()
   const [createError, setCreateError] = useState<string | null>(null)
-  const customerSheet = useCustomerSheetParams()
   const query = useQuery(
     trpc.customerLedger.accounts.queryOptions(
       { customerId, limit: 50 },
@@ -85,14 +37,10 @@ export function CustomerLedgerWorkspace({
   const ensure = useMutation(
     trpc.customerLedger.ensureAccount.mutationOptions(),
   )
-  const accounts = query.data?.accounts ?? []
   const selected =
-    accounts.find((a) => a.id === ledgerAccount) ??
-    (ledgerAccount ? undefined : accounts[0])
-  const customer = query.data?.customer
-
-  /** The first record opens the customer's account in the book currency. */
-  async function openAccountFor(action: "receipt" | "opening") {
+    query.data?.accounts.find((a) => a.id === ledgerAccount) ??
+    (ledgerAccount ? undefined : query.data?.accounts[0])
+  async function create() {
     if (!book.data || ensure.isPending) return
     setCreateError(null)
     try {
@@ -105,78 +53,50 @@ export function CustomerLedgerWorkspace({
       })
       await setParams({
         ledgerAccount: account.id,
-        ledgerAction: action,
         ledgerSnapshot: null,
         ledgerAfter: null,
       })
-    } catch {
+    } catch (failure) {
       setCreateError(
-        "Couldn’t start this customer’s statement. Check your connection and try again.",
+        failure instanceof Error
+          ? failure.message
+          : "Account could not be opened.",
       )
     }
   }
-
-  // "Record payment" from the Customers list arrives without an account.
-  const routed = useRef(false)
-  useEffect(() => {
-    if (routed.current || !ledgerAction || ledgerAccount || query.isPending)
-      return
-    if (selected) {
-      routed.current = true
-      void setParams({ ledgerAccount: selected.id }, { history: "replace" })
-    } else if (
-      book.data &&
-      (ledgerAction === "receipt" || ledgerAction === "opening")
-    ) {
-      routed.current = true
-      void openAccountFor(ledgerAction)
-    }
-  })
-
-  const editSheet = (
-    <CustomerFormSheet
-      onSaved={() => {
-        void client.invalidateQueries({
-          queryKey: trpc.customerLedger.accounts.pathKey(),
-        })
-      }}
-    />
-  )
-  const bookMissing = !book.data && !book.isPending
-
   return (
     <ScrollableContent>
       <div className="flex min-w-0 flex-col gap-6 py-6">
+        <header>
+          <Link
+            href="/customers"
+            className="text-sm text-muted-foreground hover:underline"
+          >
+            Customers
+          </Link>
+          <h1 className="mt-3 text-2xl font-medium">
+            {query.data?.customer.name ?? "Customer statement"}
+          </h1>
+          <p className="text-sm text-muted-foreground">
+            Business customer account · currencies remain separate
+          </p>
+        </header>
         {query.isPending ? (
-          <>
-            <StatementHeader />
-            <output aria-busy="true" className="text-sm text-muted-foreground">
-              Loading statement…
-            </output>
-          </>
+          <output aria-busy="true">Loading customer accounts…</output>
         ) : query.isError ? (
-          <>
-            <StatementHeader />
-            <Alert appearance="dashboard" variant="destructive">
-              <AlertDescription>
-                Couldn’t load this customer. Check your connection and try
-                again.
-              </AlertDescription>
-              <Button onClick={() => void query.refetch()}>Try again</Button>
-              <Button variant="outline" render={<Link href="/customers" />}>
-                Back to Customers
-              </Button>
-            </Alert>
-          </>
+          <Alert appearance="dashboard" variant="destructive">
+            <AlertDescription>{query.error.message}</AlertDescription>
+            <Button onClick={() => void query.refetch()}>Try again</Button>
+          </Alert>
         ) : (
           <>
-            {accounts.length > 1 ? (
-              <ControlField label="Currency" className="max-w-xs">
+            {query.data.accounts.length ? (
+              <ControlField label="Account currency">
                 <SelectControl
                   value={selected?.id ?? ""}
                   options={[
-                    { value: "", label: "Choose a currency" },
-                    ...accounts.map((a) => ({
+                    { value: "", label: "Choose an account" },
+                    ...query.data.accounts.map((a) => ({
                       value: a.id,
                       label: a.currencyCode,
                     })),
@@ -197,74 +117,51 @@ export function CustomerLedgerWorkspace({
             {ledgerAccount && !selected ? (
               <Alert appearance="dashboard" variant="destructive">
                 <AlertDescription>
-                  This statement belongs to a different customer.
+                  This account does not belong to the selected customer.
                 </AlertDescription>
               </Alert>
             ) : null}
-            {bookMissing ? (
-              <Alert appearance="dashboard">
-                <AlertDescription>
-                  Set up Finance before recording payments.
-                </AlertDescription>
-                <Button variant="outline" render={<Link href="/finance" />}>
-                  Go to Finance
-                </Button>
-              </Alert>
+            {book.data &&
+            !query.data.accounts.some(
+              (a) => a.currencyCode === book.data?.currencyCode,
+            ) ? (
+              <Button
+                appearance="form"
+                variant="outline"
+                className="w-fit"
+                disabled={ensure.isPending}
+                onClick={() => void create()}
+              >
+                Open {book.data.currencyCode} account
+              </Button>
             ) : null}
             {createError ? (
               <Alert appearance="dashboard" variant="destructive">
                 <AlertDescription>{createError}</AlertDescription>
               </Alert>
             ) : null}
+            {!book.data && !book.isPending ? (
+              <Alert appearance="dashboard">
+                <AlertDescription>
+                  {book.error?.message ??
+                    "Start the financial book in Finance before recording customer payments."}
+                </AlertDescription>
+              </Alert>
+            ) : null}
             {selected ? (
               <CustomerLedgerStatement
                 key={selected.id}
                 accountId={selected.id}
-                customerName={customer?.name}
                 initialSettings={initialSettings}
-                onEditCustomer={() => void customerSheet.openEdit(customerId)}
-                renderHeader={(actions) => (
-                  <StatementHeader customer={customer} actions={actions} />
-                )}
               />
             ) : (
-              <>
-                <StatementHeader
-                  customer={customer}
-                  actions={
-                    <Button
-                      variant="outline"
-                      onClick={() => void customerSheet.openEdit(customerId)}
-                    >
-                      Edit customer details
-                    </Button>
-                  }
-                />
-                {accounts.length > 1 ? (
-                  <p className="text-muted-foreground">
-                    Choose a currency to see this statement.
-                  </p>
-                ) : (
-                  <CustomerLedgerEmptyState
-                    customerName={customer?.name}
-                    onRecordPayment={
-                      book.data && !ensure.isPending
-                        ? () => void openAccountFor("receipt")
-                        : undefined
-                    }
-                    onStartingBalance={
-                      book.data && !ensure.isPending
-                        ? () => void openAccountFor("opening")
-                        : undefined
-                    }
-                  />
-                )}
-              </>
+              <p className="text-muted-foreground">
+                No customer ledger account selected.
+              </p>
             )}
           </>
         )}
       </div>
-      {editSheet}
     </ScrollableContent>
   )
 }

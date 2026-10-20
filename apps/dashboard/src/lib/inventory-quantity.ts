@@ -80,21 +80,3 @@ export function inventoryQuantityTotal(
         : enteredQuantity,
   }
 }
-
-/** Typed quantities may use thousands commas or spaces ("1,000"). */
-export function normalizeQuantityInput(value: string) {
-  return value.replace(/[,\s]/g, "")
-}
-
-/** Turns exact-decimal parser messages into words for the quantity field. */
-export function plainQuantityError(message: string, unitPlural: string) {
-  if (/exponent notation/.test(message)) return "Enter a number like 12 or 2.5."
-  if (/negative/.test(message)) return "Enter 0 or more."
-  if (/greater than zero/.test(message)) return "Enter more than 0."
-  const scale = /maximum scale of (\d+)/.exec(message)
-  if (scale)
-    return scale[1] === "0"
-      ? `${unitPlural} must be whole numbers.`
-      : `Use at most ${scale[1]} decimal places.`
-  return "Enter a number like 12 or 2.5."
-}

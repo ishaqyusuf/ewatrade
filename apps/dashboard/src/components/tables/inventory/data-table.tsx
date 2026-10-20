@@ -1,5 +1,6 @@
 "use client"
 
+import { InventoryFilters } from "@/components/inventory/inventory-filters"
 import { InventorySummary } from "@/components/inventory/inventory-summary"
 import { InventoryStoresSheet } from "@/components/sheets/inventory-stores-sheet"
 import { useLoadedRowSelection } from "@/components/tables/core"
@@ -28,9 +29,11 @@ import { InventoryTableView } from "./table-view"
 
 const SORT_COLUMN_IDS = {
   productName: "product",
+  kind: "source",
   onHandQuantity: "onHand",
   reservedQuantity: "reserved",
   availableQuantity: "available",
+  custodyType: "custody",
 } as const
 const getBalanceId = (row: InventoryBalance) => row.balanceSourceId
 
@@ -127,8 +130,8 @@ export function InventoryDataTable({
       <InventorySummary summary={summary} />
       {!storeId ? (
         <p className="text-sm text-muted-foreground">
-          Each product adds up its stores. Open Stores to see each one. Stock on
-          the way is not counted until it is received.
+          Combined by product, variant and unit. Open Stores for individual
+          balances. Stock in transit is separate and unavailable to sell.
         </p>
       ) : null}
       <InventoryStoresSheet
@@ -137,6 +140,7 @@ export function InventoryDataTable({
         }
         onClose={() => void setParams({ inventoryStores: null })}
       />
+      <InventoryFilters />
       <InventoryTableView
         table={table}
         view={view}

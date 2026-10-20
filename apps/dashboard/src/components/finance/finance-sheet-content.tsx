@@ -4,7 +4,7 @@ import { FormFeedback } from "@/components/forms/form-feedback"
 import { FinanceContent } from "@/components/finance/finance-content"
 import { financeSheetTitles } from "@/components/finance/finance-sheet-header"
 import { useFinanceForm } from "@/components/finance/form-context"
-import { FinanceDialogFrame } from "@/components/modals/finance-dialog-frame"
+import { FinanceSupplierModalContent } from "@/components/modals/finance-supplier-modal-content"
 import { SheetFrame } from "@/components/sheets/sheet-frame"
 import { useFinanceInvalidation } from "@/hooks/use-finance-invalidation"
 import { useFinanceParams } from "@/hooks/use-finance-params"
@@ -51,7 +51,6 @@ const commandLabels: Record<string, string> = {
   recordSupplierAdvance: "supplier advance",
   reverseSupplierEntry: "supplier entry reversal",
   reversePurchasePayment: "purchase payment reversal",
-  payPurchase: "supplier payment",
 }
 
 export function FinanceSheetContent({
@@ -301,7 +300,8 @@ export function FinanceSheetContent({
     tenantId,
     trpc,
   ])
-  const Frame = financeSheet === "bank-import" ? FinanceDialogFrame : SheetFrame
+  const Frame =
+    financeSheet === "supplier" ? FinanceSupplierModalContent : SheetFrame
   return (
     <Frame
       title={financeSheet ? financeSheetTitles[financeSheet] : "Finance"}
@@ -312,7 +312,7 @@ export function FinanceSheetContent({
       }
       closeDisabled={locked}
       popupClassName={
-        financeSheet === "bank-statement"
+        financeSheet === "bank-statement" || financeSheet === "bank-import"
           ? "sm:w-[min(900px,100vw)] sm:max-w-[900px]"
           : undefined
       }
@@ -331,6 +331,7 @@ export function FinanceSheetContent({
               <p className="text-destructive">{recoveryNotice}</p>
               {recoveryAcknowledgement ? (
                 <Button
+                  appearance="form"
                   className="w-fit"
                   disabled={locked}
                   onClick={() => void recoveryAcknowledgement()}

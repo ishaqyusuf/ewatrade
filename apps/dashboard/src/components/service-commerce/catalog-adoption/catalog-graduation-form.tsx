@@ -145,6 +145,7 @@ export function CatalogGraduationForm({ storeId }: { storeId: string }) {
           {readiness.error?.message ?? "Graduation readiness is unavailable."}
         </FormFeedback>
         <Button
+          appearance="form"
           className="w-fit"
           onClick={() => void readiness.refetch()}
           variant="outline"
@@ -333,6 +334,7 @@ export function CatalogGraduationForm({ storeId }: { storeId: string }) {
               <Textarea {...form.register("reason")} />
             </Field>
             <Button
+              appearance="form"
               disabled={pending || form.watch("reason").trim().length < 3}
               onClick={() => {
                 publicationId.current ??= crypto.randomUUID()

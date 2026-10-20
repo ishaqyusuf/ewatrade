@@ -8,8 +8,11 @@ import {
   Alert,
   AlertDescription,
   AlertTitle,
+  Button,
   FieldGroup,
+  FormActions,
   Input,
+  SubmitButton,
 } from "@ewatrade/ui"
 import { formatFinanceMoney } from "@ewatrade/utils/finance-money"
 import {
@@ -25,13 +28,7 @@ import {
   bankMatchSelection,
 } from "./bank-match-state"
 import { useFinanceForm } from "./form-context"
-import {
-  FinanceBackTo,
-  FinanceDetails,
-  FinanceField,
-  FinanceFormFooter,
-  FinanceReview,
-} from "./form-fields"
+import { FinanceField, FinanceReview } from "./form-fields"
 import type { FinanceBankStatementDetailData, FinanceBook } from "./types"
 import { useCompleteFinanceForm } from "./use-complete-finance-form"
 
@@ -69,11 +66,7 @@ export function FinanceBankMatchForm({
   const client = useQueryClient()
   const { actorUserId, tenantId, setLocked } = useFinanceForm()
   const command = useFinanceCommand(
-    useCompleteFinanceForm(
-      action.kind === "MATCH"
-        ? `Matched on ${data.statement.reference}.`
-        : "Unmatched. The line is back in To match.",
-    ),
+    useCompleteFinanceForm(),
     book.id,
     action.kind === "MATCH" ? "matchBankStatement" : "unmatchBankStatement",
   )
@@ -110,7 +103,9 @@ export function FinanceBankMatchForm({
     const unsubscribe = onlineManager.subscribe((value) => {
       generation.current++
       setOnline(value)
-      setError("Connection changed. Refresh before confirming.")
+      setError(
+        "Connection changed. Refresh the original review before confirming.",
+      )
     })
     return () => {
       mounted.current = false
@@ -130,7 +125,7 @@ export function FinanceBankMatchForm({
       JSON.stringify(initial.current) !== JSON.stringify(current.current)
     )
       throw new Error(
-        "Your connection or access changed. Open this statement again.",
+        "Your finance scope or connection changed. Reopen this statement.",
       )
   }
   async function authority(token: number) {
@@ -143,7 +138,7 @@ export function FinanceBankMatchForm({
       actual.tenantId !== initial.current.tenantId ||
       !["OWNER", "ADMIN"].includes(actual.role.toUpperCase())
     )
-      throw new Error("Your access changed. Open this statement again.")
+      throw new Error("Your finance authority changed. Reopen this statement.")
   }
   async function fresh<T>(
     key: readonly unknown[],
@@ -157,7 +152,7 @@ export function FinanceBankMatchForm({
     assertCurrent(token)
     const state = client.getQueryState(key)
     if (state?.status !== "success" || state.fetchStatus !== "idle")
-      throw new Error("Latest records aren't available. Check your connection.")
+      throw new Error("Fresh matching evidence is unavailable.")
     return value
   }
   async function sources(token: number) {
@@ -183,7 +178,7 @@ export function FinanceBankMatchForm({
           !account.archivedAt,
       )
     )
-      throw new Error("The money account changed.")
+      throw new Error("The active book or bank account changed.")
     const options = trpc.finance.bankStatements.get.queryOptions(
       { bookId: book.id, statementId: initial.current.statementId },
       { staleTime: 0, retry: false },
@@ -196,7 +191,7 @@ export function FinanceBankMatchForm({
       source.accountId !== data.accountId ||
       source.statement.id !== initial.current.statementId
     )
-      throw new Error("These records belong to another account.")
+      throw new Error("Original matching evidence belongs to another scope.")
     return source
   }
   async function selectedEvidence(
@@ -217,7 +212,7 @@ export function FinanceBankMatchForm({
         ),
         postedRecords: group.journal.map(
           (line) =>
-            `Record ${line.sequence} · ${line.description} · ${money(line.amountMinor)}`,
+            `Entry ${line.sequence} · ${line.description} · ${money(line.amountMinor)}`,
         ),
       }
     }
@@ -241,7 +236,7 @@ export function FinanceBankMatchForm({
       original.kind !== "MATCH" ||
       original.revision !== selected.matchRevision
     )
-      throw new Error("We couldn't check the original match.")
+      throw new Error("The original match could not be verified.")
     const evidence = bankMatchEvidence(original)
     if (
       evidence.bank.some(
@@ -255,7 +250,9 @@ export function FinanceBankMatchForm({
       source.rows.filter((row) => row.activeMatchId === original.id).length !==
         evidence.bank.length
     )
-      throw new Error("This match was already undone or has changed.")
+      throw new Error(
+        "This original group is already released or its evidence changed.",
+      )
     return {
       amountMinor: evidence.amountMinor,
       bankRecords: evidence.bank.map(
@@ -263,7 +260,7 @@ export function FinanceBankMatchForm({
       ),
       postedRecords: evidence.journal.map(
         (line) =>
-          `Record ${line.sequence} · ${money((BigInt(line.debitMinor) - BigInt(line.creditMinor)).toString())}`,
+          `Entry ${line.sequence} · ${line.entryId} · ${money((BigInt(line.debitMinor) - BigInt(line.creditMinor)).toString())}`,
       ),
     }
   }
@@ -297,7 +294,7 @@ export function FinanceBankMatchForm({
           identity.action !== action.kind
         )
           throw new Error(
-            "Only the same action can be retried. Check the saved result first.",
+            "Only the exact original statement action can be retried. Use saved-result recovery first.",
           )
         expectedRevision = saved.expectedBankRevision
         expectedSnapshotSequence = saved.expectedSnapshotSequence
@@ -321,7 +318,8 @@ export function FinanceBankMatchForm({
             matchId: identity.matchId,
             matchRevision: identity.matchRevision,
           }
-        else throw new Error("The saved match is incomplete.")
+        else
+          throw new Error("The saved original matching identity is incomplete.")
       }
       const evidence = await selectedEvidence(source, selected, token)
       await authority(token)
@@ -344,7 +342,7 @@ export function FinanceBankMatchForm({
         setError(
           failure instanceof Error
             ? failure.message
-            : "Couldn't check this match.",
+            : "Matching review unavailable.",
         )
     } finally {
       preparing.current = false
@@ -369,7 +367,7 @@ export function FinanceBankMatchForm({
           : { ...value.payload, matchId: value.action.matchId }
       if (value.generation !== token && !command.uncertain)
         throw new Error(
-          "Connection changed. Go back and check these lines again.",
+          "Connection changed. Go back and review the original group again.",
         )
       const before = await sources(token)
       if (!command.uncertain) {
@@ -415,7 +413,7 @@ export function FinanceBankMatchForm({
             throw new FinanceCommandNotSentError(
               failure instanceof Error
                 ? failure.message
-                : "We couldn't check the original lines.",
+                : "Original review could not be verified.",
             )
           }
           mutationEntered.current = true
@@ -438,7 +436,7 @@ export function FinanceBankMatchForm({
         setError(
           failure instanceof Error
             ? failure.message
-            : "Couldn't confirm this match.",
+            : "Matching could not be confirmed.",
         )
     } finally {
       preparing.current = false
@@ -458,35 +456,37 @@ export function FinanceBankMatchForm({
         backDisabled={busy || (command.uncertain && !review.recoveryReentry)}
         confirmDisabled={busy || !online}
         onConfirm={() => void confirm(review)}
-        confirmLabel={review.action.kind === "MATCH" ? "Match" : "Unmatch"}
-        sentence={
-          review.action.kind === "MATCH" ? (
-            <>
-              This links {review.bankRecords.length} bank line
-              {review.bankRecords.length === 1 ? "" : "s"} to{" "}
-              {review.postedRecords.length} of your records,{" "}
-              <b>{money(review.amountMinor)}</b>. It doesn&apos;t change any
-              money.
-            </>
-          ) : (
-            <>
-              This unlinks <b>{money(review.amountMinor)}</b> of bank lines from
-              your records. Both stay as they are, and the lines go back to To
-              match. No payment is undone.
-            </>
-          )
-        }
       >
-        <FinanceDetails
-          rows={[
-            ["Bank lines", review.bankRecords.join(" · ")],
-            ["Your records", review.postedRecords.join(" · ")],
-            [
-              review.action.kind === "MATCH" ? "Why they match" : "Why",
-              review.payload.reason,
-            ],
-          ]}
-        />
+        <h3 className="font-medium">
+          {review.action.kind === "MATCH"
+            ? "Match selected group"
+            : "Release original group"}
+        </h3>
+        <p className="text-sm">
+          {data.statement.reference} · {money(review.amountMinor)}
+        </p>
+        <section className="grid gap-2 border border-border p-4 text-sm">
+          <h4 className="font-medium">Original bank transactions</h4>
+          {review.bankRecords.map((text, index) => (
+            <p key={`${index}:${text}`}>{text}</p>
+          ))}
+          <h4 className="font-medium">Posted records</h4>
+          {review.postedRecords.map((text, index) => (
+            <p key={`${index}:${text}`}>{text}</p>
+          ))}
+        </section>
+        <p className="break-words text-sm">Reason: {review.payload.reason}</p>
+        <p className="text-xs text-muted-foreground">
+          Bank revision {review.payload.expectedRevision} · Posted snapshot{" "}
+          {review.payload.expectedSnapshotSequence}
+        </p>
+        <Alert appearance="dashboard">
+          <AlertDescription>
+            {review.action.kind === "MATCH"
+              ? "This links the complete records you reviewed. It does not post money or certify full reconciliation."
+              : "This releases the complete original group and retains its evidence and reason in history. It does not reverse any payment."}
+          </AlertDescription>
+        </Alert>
         {error ? (
           <Alert appearance="dashboard" variant="destructive">
             <AlertDescription>{error}</AlertDescription>
@@ -502,32 +502,21 @@ export function FinanceBankMatchForm({
       }}
     >
       <FieldGroup className="gap-5">
-        <FinanceBackTo
-          label="Back to statement"
-          onBack={onBack}
-          title={action.kind === "MATCH" ? "Match bank lines" : "Unmatch"}
-          description={
-            action.kind === "MATCH"
-              ? "Link the bank lines to the records you made. It doesn't move money."
-              : "The lines go back to To match. No payment is undone."
-          }
-        />
+        <h3 className="font-medium">
+          {action.kind === "MATCH"
+            ? "Review matching group"
+            : "Review original match release"}
+        </h3>
         {command.uncertain ? (
           <Alert appearance="dashboard">
-            <AlertTitle>Finish what you started</AlertTitle>
+            <AlertTitle>Resume original submission</AlertTitle>
             <AlertDescription>
-              Enter the same reason again. The lines you picked are kept. If you
-              change anything, start again.
+              Re-enter the original reason. The original IDs, bank revision and
+              posted snapshot are retained; changed details cannot be retried.
             </AlertDescription>
           </Alert>
         ) : null}
-        <FinanceField
-          label={
-            action.kind === "MATCH"
-              ? "Why do they match?"
-              : "Why are you unmatching it?"
-          }
-        >
+        <FinanceField label="Reason">
           <Input
             required
             maxLength={400}
@@ -536,8 +525,8 @@ export function FinanceBankMatchForm({
             onChange={(event) => setReason(event.target.value)}
             placeholder={
               action.kind === "MATCH"
-                ? "Same amount and date"
-                : "Matched to the wrong expense"
+                ? "Explain how these records correspond"
+                : "Explain why the original group is being released"
             }
           />
         </FinanceField>
@@ -546,14 +535,23 @@ export function FinanceBankMatchForm({
             <AlertDescription>{error ?? command.error}</AlertDescription>
           </Alert>
         ) : null}
-        <FinanceFormFooter
-          onCancel={
-            busy || command.pending || command.uncertain ? undefined : onBack
-          }
-          submitLabel="Review"
-          isSubmitting={busy}
-          disabled={busy || !command.ready || !online || command.saved}
-        />
+        <FormActions>
+          <Button
+            type="button"
+            variant="outline"
+            disabled={busy || command.pending || command.uncertain}
+            onClick={onBack}
+          >
+            Back to statement
+          </Button>
+          <SubmitButton
+            type="submit"
+            isSubmitting={busy}
+            disabled={busy || !command.ready || !online || command.saved}
+          >
+            Review {action.kind === "MATCH" ? "match" : "release"}
+          </SubmitButton>
+        </FormActions>
       </FieldGroup>
     </form>
   )

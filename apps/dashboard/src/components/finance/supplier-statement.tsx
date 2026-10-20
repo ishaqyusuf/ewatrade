@@ -28,14 +28,14 @@ import { FinanceSupplierAging } from "./supplier-aging"
 import type { FinanceBook } from "./types"
 
 const entryLabels = {
-  OPENING_PAYABLE: "Owed before you started",
-  OPENING_ADVANCE: "Paid ahead before you started",
-  ADVANCE: "Paid ahead",
-  PURCHASE_BILL: "Bill",
-  PURCHASE_PAYMENT: "Payment",
-  ADVANCE_ALLOCATION: "Paid-ahead money used on a bill",
-  ALLOCATION_RELEASE: "Undo using paid-ahead money",
-  REVERSAL: "Undo",
+  OPENING_PAYABLE: "Opening payable",
+  OPENING_ADVANCE: "Opening advance",
+  ADVANCE: "Paid advance",
+  PURCHASE_BILL: "Purchase bill",
+  PURCHASE_PAYMENT: "Purchase payment",
+  ADVANCE_ALLOCATION: "Advance applied to purchase",
+  ALLOCATION_RELEASE: "Advance allocation released",
+  REVERSAL: "Accounting correction",
 } as const
 
 export function FinanceSupplierStatement({
@@ -63,18 +63,20 @@ function SupplierWorkspace({
     <div className="flex min-w-0 flex-col gap-5">
       <div className="flex flex-wrap gap-2" aria-label="Supplier views">
         <Button
+          appearance="form"
           variant={mode === "statement" ? "secondary" : "outline"}
           aria-pressed={mode === "statement"}
           onClick={() => setMode("statement")}
         >
-          Bills and payments
+          Statement
         </Button>
         <Button
+          appearance="form"
           variant={mode === "aging" ? "secondary" : "outline"}
           aria-pressed={mode === "aging"}
           onClick={() => setMode("aging")}
         >
-          When it's due
+          Payable aging
         </Button>
       </div>
       {mode === "statement" ? (
@@ -163,7 +165,7 @@ function FinanceSupplierHistory({
       setRefreshError(
         failure instanceof Error
           ? failure.message
-          : "We couldn't refresh this.",
+          : "The statement could not be refreshed.",
       )
     } finally {
       setRefreshing(false)
@@ -171,13 +173,14 @@ function FinanceSupplierHistory({
   }
 
   if (query.isPending)
-    return <output aria-busy="true">Loading Supplier…</output>
+    return <output aria-busy="true">Loading supplier statement…</output>
   if (query.isError) {
     return (
       <Alert appearance="dashboard" variant="destructive">
-        <AlertTitle>Couldn't load this Supplier</AlertTitle>
+        <AlertTitle>Supplier statement could not be loaded</AlertTitle>
         <AlertDescription>{query.error.message}</AlertDescription>
         <Button
+          appearance="form"
           variant="outline"
           className="w-fit"
           onClick={() => void query.refetch()}
@@ -186,6 +189,7 @@ function FinanceSupplierHistory({
         </Button>
         {cursors.length > 1 ? (
           <Button
+            appearance="form"
             variant="outline"
             className="w-fit"
             onClick={() => setCursors((value) => value.slice(0, -1))}
@@ -210,8 +214,9 @@ function FinanceSupplierHistory({
       </div>
       <Alert appearance="dashboard">
         <AlertDescription>
-          Bills, payments and money paid ahead. What you owe and what you paid
-          ahead are kept apart.
+          This statement includes recorded opening balances, purchase bills,
+          payments, advances, allocations and their corrections. Payables and
+          advances are shown separately.
         </AlertDescription>
       </Alert>
       <dl
@@ -220,68 +225,65 @@ function FinanceSupplierHistory({
         className="grid gap-4 sm:grid-cols-2"
       >
         <div>
-          <dt className="text-sm text-muted-foreground">You owe</dt>
+          <dt className="text-sm text-muted-foreground">Recorded payable</dt>
           <dd className="font-medium tabular-nums">
             {money(statement.payableMinor)}
           </dd>
         </div>
         <div>
-          <dt className="text-sm text-muted-foreground">Paid ahead</dt>
+          <dt className="text-sm text-muted-foreground">
+            Recorded supplier advance
+          </dt>
           <dd className="font-medium tabular-nums">
             {money(statement.advanceMinor)}
           </dd>
         </div>
       </dl>
       <div className="flex flex-wrap gap-2">
-        {BigInt(statement.payableMinor) > 0n ? (
-          <Button
-            onClick={() =>
-              void setParams({ financeSheet: "pay-supplier", supplierId })
-            }
-          >
-            Pay
-          </Button>
-        ) : null}
         <Button
+          appearance="form"
           variant="outline"
           onClick={() =>
             void setParams({ financeSheet: "supplier-opening", supplierId })
           }
         >
-          Add starting balance
+          Record opening balance
         </Button>
         <Button
+          appearance="form"
           variant="outline"
           onClick={() =>
             void setParams({ financeSheet: "supplier-advance", supplierId })
           }
         >
-          Pay ahead
+          Pay an advance
         </Button>
         <Button
+          appearance="form"
           variant="outline"
           disabled={busy}
           onClick={() => void refresh()}
         >
-          {refreshing ? "Refreshing…" : "Refresh"}
+          {refreshing ? "Refreshing…" : "Refresh statement"}
         </Button>
       </div>
       {refreshError ? (
         <Alert appearance="dashboard" variant="destructive">
           <AlertDescription>
-            {refreshError} What you see is from before.
+            {refreshError} The previous snapshot is retained.
           </AlertDescription>
         </Alert>
       ) : null}
       <p className="text-xs text-muted-foreground">
-        Page {cursors.length}. Refresh to see newer entries.
+        Page {cursors.length} · Snapshot {statement.snapshotSequence}. Refresh
+        to include newer entries or corrections.
       </p>
       <InlineSelectionStatus selection={selection} />
       <section
         className="overflow-x-auto border border-border"
         // biome-ignore lint/a11y/noNoninteractiveTabindex: This wide historical table needs keyboard scrolling.
         tabIndex={0}
-        aria-label="Bills and payments"
+        aria-label="Supplier statement entries"
       >
         <Table className="min-w-[660px]">
           <TableHeader>
@@ -289,16 +291,16 @@ function FinanceSupplierHistory({
               <TableHead scope="col" className="w-10">
                 <InlineSelectAllCheckbox
                   selection={selection}
-                  label="Select all loaded entries"
+                  label="Select all loaded supplier entries"
                 />
               </TableHead>
-              <TableHead scope="col">Date</TableHead>
-              <TableHead scope="col">What</TableHead>
+              <TableHead scope="col">Date (UTC)</TableHead>
+              <TableHead scope="col">Record</TableHead>
               <TableHead scope="col" className="text-right">
-                Paid
+                Debit
               </TableHead>
               <TableHead scope="col" className="text-right">
-                Billed
+                Credit
               </TableHead>
             </TableRow>
           </TableHeader>
@@ -327,17 +329,18 @@ function FinanceSupplierHistory({
                       {entryLabels[entry.kind]} · #{entry.sequence}
                     </p>
                     {entry.reversalOfId ? (
-                      <Badge variant="secondary">Undo</Badge>
+                      <Badge variant="secondary">Correction entry</Badge>
                     ) : entry.reversal ? (
                       <div className="flex flex-col gap-1">
                         <Badge variant="secondary">
-                          Undone; original kept in history
+                          Reversed; original retained
                         </Badge>
                         <p className="break-words text-xs text-muted-foreground">
                           {entry.reversal.description} ·{" "}
                           {new Date(entry.reversal.effectiveAt)
                             .toISOString()
-                            .slice(0, 10)}
+                            .slice(0, 10)}{" "}
+                          UTC
                         </p>
                       </div>
                     ) : null}
@@ -352,7 +355,9 @@ function FinanceSupplierHistory({
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={5}>No bills or payments yet.</TableCell>
+                <TableCell colSpan={5}>
+                  No recorded supplier activity.
+                </TableCell>
               </TableRow>
             )}
           </TableBody>
@@ -360,6 +365,7 @@ function FinanceSupplierHistory({
       </section>
       <div className="flex flex-wrap gap-2">
         <Button
+          appearance="form"
           variant="outline"
           disabled={cursors.length === 1 || busy}
           onClick={() => setCursors((value) => value.slice(0, -1))}
@@ -367,6 +373,7 @@ function FinanceSupplierHistory({
           Previous page
         </Button>
         <Button
+          appearance="form"
           variant="outline"
           disabled={!statement.nextCursor || snapshot === undefined || busy}
           onClick={() => {

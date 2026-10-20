@@ -10,7 +10,18 @@ import {
   DropdownMenuSubContent,
   DropdownMenuSubTrigger,
 } from "@ewatrade/ui"
-import { orderStatusLabels } from "./order-status"
+
+const labels: Record<(typeof ORDER_STATUSES)[number], string> = {
+  CANCELLED: "Cancelled",
+  COMPLETED: "Completed",
+  CONFIRMED: "Confirmed",
+  DRAFT: "Draft",
+  FULFILLING: "Fulfilling",
+  OUT_FOR_DELIVERY: "Out for delivery",
+  PENDING: "Pending",
+  READY_FOR_PICKUP: "Ready for pickup",
+  REFUNDED: "Refunded",
+}
 
 export function OrdersSearchFilter() {
   const { filter, setFilter } = useOrderParams()
@@ -24,7 +35,7 @@ export function OrdersSearchFilter() {
             allLabel: "All statuses",
             options: ORDER_STATUSES.map((value) => ({
               value,
-              label: orderStatusLabels[value],
+              label: labels[value],
             })),
           },
         ],
@@ -45,7 +56,7 @@ export function OrdersSearchFilter() {
           ? [
               {
                 id: "status",
-                label: orderStatusLabels[filter.status],
+                label: labels[filter.status],
                 onRemove: () => void setFilter({ status: null }),
               },
             ]
@@ -70,7 +81,7 @@ export function OrdersSearchFilter() {
                   void setFilter({ status: checked ? status : null })
                 }
               >
-                {orderStatusLabels[status]}
+                {labels[status]}
               </DropdownMenuCheckboxItem>
             ))}
           </DropdownMenuSubContent>

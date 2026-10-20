@@ -2,11 +2,6 @@
 
 import { FormFeedback } from "@/components/forms/form-feedback"
 import { missingInventoryReceiptOptions } from "@/lib/inventory-receipt-options"
-import {
-  formatStockQuantity,
-  getInventoryStatus,
-  inventoryStatusLabels,
-} from "@/lib/inventory-view"
 import { useTRPC } from "@/trpc/client"
 import type { RouterOutputs } from "@ewatrade/api/trpc/routers/_app"
 import {
@@ -23,22 +18,6 @@ import { useMemo, useState } from "react"
 type StockOption = { value: string; label: string; disabled?: boolean }
 
 type BalanceRows = RouterOutputs["inventory"]["balanceReport"]["rows"]
-
-/** "Fresh eggs · Large — 1,230 eggs in stock", plus where it is when not on the shelf. */
-function stockOptionLabel(row: BalanceRows[number]) {
-  const status = getInventoryStatus(row)
-  return [
-    row.productName,
-    row.variantName && row.variantName !== row.productName
-      ? ` · ${row.variantName}`
-      : "",
-    row.kind === "PACKAGED_STOCK" ? ` · Packed: ${row.inventoryUnitName}` : "",
-    ` — ${formatStockQuantity(row.onHandQuantity, row.inventoryUnitName)} in stock`,
-    status === "transit" || status === "staff"
-      ? ` · ${inventoryStatusLabels[status].toLowerCase()}`
-      : "",
-  ].join("")
-}
 
 export function InventoryReceiptSource({
   storeId,
@@ -116,7 +95,7 @@ export function InventoryReceiptSource({
       setError(
         failure instanceof Error
           ? failure.message
-          : "This product couldn’t be selected. Try again.",
+          : "Could not select this stock balance. Try again.",
       )
     } finally {
       setPreparing(null)
@@ -128,17 +107,14 @@ export function InventoryReceiptSource({
     () => [
       ...rows.map((row) => ({
         value: row.balanceSourceId,
-        label: stockOptionLabel(row),
+        label: `${row.productName} · ${row.variantName} · ${row.inventoryUnitName} (${row.onHandQuantity}) · ${row.custodyType.toLowerCase()}`,
       })),
       ...missing.map((option) => ({
         ...option,
         disabled: !allowFirstReceipt,
         label: allowFirstReceipt
           ? option.label
-          : option.label.replace(
-              "none in stock yet",
-              "none in stock yet; use Stock in first",
-            ),
+          : `${option.label} — No stock yet; receive stock first`,
       })),
       ...(catalog.data ?? []).flatMap((item) => {
         if (!item.product) return []
@@ -158,7 +134,7 @@ export function InventoryReceiptSource({
           )
           .map((variant) => ({
             value: `unavailable:${variant.id}`,
-            label: `${item.name}${variant.name && variant.name !== item.name ? ` · ${variant.name}` : ""} — ${item.status !== "active" || variant.status !== "active" ? "not active" : "none in stock yet; use Stock in first"}`,
+            label: `${item.name} · ${variant.name} — ${item.status !== "active" || variant.status !== "active" ? "Inactive" : "No stock yet; receive stock first"}`,
             disabled: true,
           }))
       }),
@@ -185,13 +161,15 @@ export function InventoryReceiptSource({
         }}
       >
         <ComboboxInput
-          aria-label="Product"
-          placeholder="Search products"
+          aria-label="Stock to update"
+          placeholder="Type to search products, variants or units…"
           className="w-full"
           showClear
         />
         <ComboboxContent>
-          <ComboboxEmpty>No product matches. Try another name.</ComboboxEmpty>
+          <ComboboxEmpty>
+            No matching stock. Try another product or variant.
+          </ComboboxEmpty>
           <ComboboxList>
             {(option: StockOption) => (
               <ComboboxItem
@@ -206,7 +184,7 @@ export function InventoryReceiptSource({
         </ComboboxContent>
       </Combobox>
       {preparing ? (
-        <output aria-live="polite">Getting this product ready…</output>
+        <output aria-live="polite">Selecting stock balance…</output>
       ) : null}
       {error || catalog.error ? (
         <FormFeedback appearance="dashboard">

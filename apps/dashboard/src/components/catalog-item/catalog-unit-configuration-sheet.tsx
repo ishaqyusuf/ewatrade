@@ -38,7 +38,7 @@ export function CatalogUnitConfigurationSheet() {
         <SheetFrame
           closeError={closeError}
           popupClassName={themeClass}
-          title="Units"
+          title="Unit configuration"
           description={item?.name ?? "Product"}
         >
           <UnitConfigurationManager

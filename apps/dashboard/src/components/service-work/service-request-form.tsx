@@ -70,7 +70,11 @@ export function ServiceRequestForm({ store }: { store: StoreSummary }) {
             {publicUrl}
           </a>
         </div>
-        <Button variant="outline" onClick={() => setPublicUrl(null)}>
+        <Button
+          appearance="form"
+          variant="outline"
+          onClick={() => setPublicUrl(null)}
+        >
           Create another link
         </Button>
       </FieldGroup>

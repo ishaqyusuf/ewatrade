@@ -46,29 +46,20 @@ export function CustomerDataTable({
   rows,
   view,
   currencyCode,
-  canSeeBalances,
   isLoading,
-  query,
-  onClearSearch,
-  onAddCustomer,
-  onEdit,
+  filtered,
+  selectionScope,
   initialSettings,
 }: {
   rows: DashboardCustomerRow[]
   view: DirectoryView
   currencyCode: string
-  canSeeBalances: boolean
   isLoading: boolean
-  query: string
-  onClearSearch: () => void
-  onAddCustomer?: () => void
-  onEdit: (customerId: string) => void
+  filtered: boolean
+  selectionScope: string
   initialSettings?: Partial<TableSettings>
 }) {
-  const columns = useMemo(
-    () => customerColumns({ currencyCode, canSeeBalances, onEdit }),
-    [currencyCode, canSeeBalances, onEdit],
-  )
+  const columns = useMemo(() => customerColumns(currencyCode), [currencyCode])
   const columnIds = useMemo(() => getColumnIds(columns), [columns])
   const tableSettings = useTableSettings({
     tableId: "customers",
@@ -76,11 +67,11 @@ export function CustomerDataTable({
     columnIds,
     fixedColumnIds: FIXED_COLUMN_IDS,
   })
-  const { sorting } = useSortParams({ fields: customerSortFields })
+  const { sort, sorting } = useSortParams({ fields: customerSortFields })
   const [rowSelection, setRowSelection] = useLoadedRowSelection({
     rows,
     getRowId: getCustomerId,
-    scope: query.trim(),
+    scope: selectionScope,
   })
   const table = useReactTable({
     data: rows,
@@ -124,58 +115,53 @@ export function CustomerDataTable({
     return (
       <CustomerTableSkeleton
         currencyCode={currencyCode}
-        canSeeBalances={canSeeBalances}
         columnVisibility={tableSettings.columnVisibility}
         columnSizing={tableSettings.columnSizing}
         columnOrder={tableSettings.columnOrder}
       />
     )
   }
-  if (!rows.length)
-    return (
-      <CustomerDirectoryEmptyState
-        query={query}
-        onClearSearch={onClearSearch}
-        onAddCustomer={onAddCustomer}
-      />
-    )
-  const search = query.trim()
+  if (!rows.length) return <CustomerDirectoryEmptyState filtered={filtered} />
 
   return (
     <div className="grid gap-3" aria-busy={isLoading}>
       <DirectoryToolbar
         table={table}
         view={view}
-        selectAllLabel="Select all"
+        selectAllLabel="Select all loaded customers"
         disabled={isLoading}
-        summary={`${rows.length} ${rows.length === 1 ? "customer" : "customers"}${
-          search ? ` match “${search}”` : ""
-        }${isLoading ? " · Updating…" : ""}`}
+        summary={`${rows.length} customers${isLoading ? " · Updating…" : ""}${
+          sort
+            ? ` · sorted by ${sort.field} ${sort.direction}`
+            : " · newest activity first"
+        }`}
       >
-        {view === "table" && tableSettings.persistenceError ? (
-          <Button variant="outline" onClick={tableSettings.retryPersistence}>
-            Columns not saved. Try again
-          </Button>
+        {view === "table" ? (
+          <>
+            {tableSettings.persistenceError ? (
+              <Button
+                appearance="form"
+                variant="outline"
+                onClick={tableSettings.retryPersistence}
+              >
+                Retry saving columns
+              </Button>
+            ) : null}
+            <CustomerTableSettings table={table} />
+          </>
         ) : null}
       </DirectoryToolbar>
-      <CustomerTableSettings
-        table={table}
-        showColumns={view === "table"}
-        canSeeBalances={canSeeBalances}
-      />
       {view !== "table" ? (
         <CustomerCollection
           view={view}
           rows={tableRows}
           currencyCode={currencyCode}
-          canSeeBalances={canSeeBalances}
-          onEdit={onEdit}
         />
       ) : (
         <div
           ref={tableScroll.setContainerRef}
           className="max-h-[560px] overflow-auto overscroll-contain border border-border"
-          aria-label="Customers"
+          aria-label="Customer directory"
         >
           <DndContext
             id="customers-directory-dnd"

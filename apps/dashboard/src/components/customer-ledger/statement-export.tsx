@@ -5,14 +5,13 @@ import {
 } from "@/lib/customer-ledger/statement-export"
 import { useTRPC } from "@/trpc/client"
 import { useDashboardWorkflow } from "@ewatrade/events/dashboard-client"
+import { Alert, AlertDescription, Button } from "@ewatrade/ui"
 import { useQueryClient } from "@tanstack/react-query"
 import { useEffect, useRef, useState } from "react"
-/** Downloads the whole statement as CSV for one saved snapshot. */
-export function useCustomerLedgerExport({
+export function CustomerLedgerExport({
   accountId,
   snapshotSequence,
-  customerName,
-}: { accountId: string; snapshotSequence: string; customerName?: string }) {
+}: { accountId: string; snapshotSequence: string }) {
   const workflow = useDashboardWorkflow()
   const trpc = useTRPC()
   const client = useQueryClient()
@@ -47,9 +46,7 @@ export function useCustomerLedgerExport({
         first.accountId !== accountId ||
         first.snapshotSequence !== snapshotSequence
       )
-        throw new Error(
-          "The statement changed while preparing the file. Nothing was downloaded; try again.",
-        )
+        throw new Error("Statement snapshot changed. No file was downloaded.")
       const entries = await collectCustomerLedgerExport(
         first,
         read,
@@ -64,13 +61,7 @@ export function useCustomerLedgerExport({
       )
       const link = document.createElement("a")
       link.href = url
-      const slug = customerName
-        ?.toLowerCase()
-        .replace(/[^a-z0-9]+/g, "-")
-        .replace(/^-|-$/g, "")
-      link.download = slug
-        ? `${slug}-statement.csv`
-        : `customer-statement-${accountId}-snapshot-${snapshotSequence}.csv`
+      link.download = `customer-statement-${accountId}-snapshot-${snapshotSequence}.csv`
       link.click()
       workflow.track("customer_statement_export", "completed", {
         channel: "browser",
@@ -81,15 +72,27 @@ export function useCustomerLedgerExport({
         channel: "browser",
       })
       if (mounted.current)
-        setError(
-          failure instanceof Error
-            ? failure.message
-            : "Couldn’t prepare the file. Try again.",
-        )
+        setError(failure instanceof Error ? failure.message : "Export failed.")
     } finally {
       running.current = false
       if (mounted.current) setBusy(false)
     }
   }
-  return { download, busy, error }
+  return (
+    <div className="flex flex-col gap-2">
+      <Button
+        appearance="form"
+        variant="outline"
+        disabled={busy}
+        onClick={() => void download()}
+      >
+        {busy ? "Preparing snapshot…" : "Export full posted snapshot"}
+      </Button>
+      {error ? (
+        <Alert appearance="dashboard" variant="destructive">
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      ) : null}
+    </div>
+  )
 }

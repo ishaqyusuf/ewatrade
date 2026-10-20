@@ -5,13 +5,14 @@ export function ClassicLoginScreen({
   actions,
   children,
   footer,
+  subtitle = "Use your email. We’ll send a 6-digit code.",
 }: LoginPresentationProps) {
   return (
     <GreenTillAuthScreen
       eyebrow="Welcome back"
       title="Sign in to your business"
+      subtitle={subtitle}
       actions={actions}
-      spacing="grouped"
       testID="green-gate-login"
     >
       {children}

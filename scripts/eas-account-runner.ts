@@ -101,19 +101,6 @@ const buildPlatform = resolveBuildPlatform(operation, actionArgs)
 const iosSimulator = actionArgs.includes("--ios-simulator")
 const iosTestFlight = actionArgs.includes("--ios-testflight")
 const validationOnly = actionArgs.includes("--validation-only")
-const artifactOnly = actionArgs.includes("--artifact-only")
-if (
-  artifactOnly &&
-  (operation !== "build" ||
-    target !== "preview" ||
-    buildPlatform !== "android" ||
-    validationOnly ||
-    actionArgs.filter((arg) => arg === "--artifact-only").length !== 1)
-) {
-  throw new Error(
-    "--artifact-only is available only for a Preview Android build; it cannot submit, publish downloads or publish updates.",
-  )
-}
 if (
   validationOnly &&
   (operation !== "build" ||
@@ -347,10 +334,7 @@ if (
   )
 }
 const publishPreviewBuild =
-  operation === "build" &&
-  target === "preview" &&
-  buildPlatform === "android" &&
-  !artifactOnly
+  operation === "build" && target === "preview" && buildPlatform === "android"
 const previewPublisher = publishPreviewBuild
   ? await import("./release-app-update")
   : null
@@ -950,7 +934,6 @@ function getForwardedArgs(args: string[]): string[] {
         "--ios-simulator",
         "--ios-testflight",
         "--validation-only",
-        "--artifact-only",
       ].includes(arg)
     ) {
       continue
@@ -994,7 +977,6 @@ function toEnvKey(value: string): string {
 function getUsage(): string {
   return [
     "Usage:",
-    "  bun run eas:build --preview --platform android --artifact-only --expected-commit <full-sha> (signed artifact only; no download publication)",
     "  bun run eas:build --prod --platform android --validation-only --expected-commit <full-sha> (artifact only; no store submission)",
     "  bun run eas:build --preview --platform ios --ios-testflight --expected-commit <full-sha>",
     "  bun run eas:submit --preview --platform ios --ios-testflight --id <build-id> --expected-version <version> --expected-commit <full-sha>",

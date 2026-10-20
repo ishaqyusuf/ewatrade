@@ -149,7 +149,7 @@ function SavedPhotoEditor({
       description={item.name}
       closeDisabled={saving}
       footer={
-        <Button disabled={saving} onClick={() => void save()}>
+        <Button appearance="form" disabled={saving} onClick={() => void save()}>
           {saving
             ? "Saving…"
             : attempt.current
@@ -172,6 +172,7 @@ function SavedPhotoEditor({
                 : "Private · image check pending"}
             </p>
             <Button
+              appearance="form"
               variant="outline"
               disabled={locked}
               onClick={() =>

@@ -2,7 +2,7 @@ import { Text } from "@/components/ui/text"
 import { useTRPC } from "@/trpc/client"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useRouter } from "expo-router"
-import { useEffect, useState } from "react"
+import { useState } from "react"
 import { QuietHeader } from "./account-privacy/quiet-settings"
 import { ActionButton } from "./action-button"
 import { FormField } from "./form-field"
@@ -14,21 +14,12 @@ export function AccountPhoneScreen() {
   const trpc = useTRPC()
   const cache = useQueryClient()
   const [code, setCode] = useState("")
-  const [cooldown, setCooldown] = useState(0)
-  useEffect(() => {
-    if (cooldown <= 0) return
-    const timer = setTimeout(() => setCooldown((value) => value - 1), 1000)
-    return () => clearTimeout(timer)
-  }, [cooldown])
   const status = useQuery(
     trpc.auth.accountPhoneStatus.queryOptions(undefined, { retry: false }),
   )
   const request = useMutation(
     trpc.auth.requestAccountPhoneOtp.mutationOptions({
-      onSuccess: () => {
-        setCode("")
-        setCooldown(60)
-      },
+      onSuccess: () => setCode(""),
     }),
   )
   const verify = useMutation(
@@ -44,13 +35,9 @@ export function AccountPhoneScreen() {
   const busy = request.isPending || verify.isPending
   const verified = status.data?.verified === true || verify.isSuccess
   const canSend =
-    status.isSuccess &&
-    status.data.enabled &&
-    status.data.canVerify &&
-    !busy &&
-    !verified &&
-    cooldown === 0
-  const error = request.error?.message ?? verify.error?.message
+    status.data?.enabled === true && status.data.canVerify && !busy && !verified
+  const error =
+    status.error?.message ?? request.error?.message ?? verify.error?.message
   return (
     <MobileScreen contentClassName="gap-5 px-[18px] py-2">
       <QuietHeader
@@ -76,15 +63,6 @@ export function AccountPhoneScreen() {
         <>
           {status.isPending ? (
             <Text>Checking your phone…</Text>
-          ) : status.isError ? (
-            <StatusBanner
-              title="Couldn’t check your phone"
-              message={status.error.message}
-              tone="destructive"
-              actionLabel="Retry"
-              actionDisabled={status.isFetching}
-              onActionPress={() => void status.refetch()}
-            />
           ) : !status.data?.phone ? (
             <StatusBanner message="Your account does not have a phone number. Contact support for help." />
           ) : !status.data.enabled ? (
@@ -101,11 +79,7 @@ export function AccountPhoneScreen() {
               request.mutate({})
             }}
           >
-            {cooldown > 0
-              ? `Send again in ${cooldown}s`
-              : request.isSuccess
-                ? "Send another WhatsApp code"
-                : "Send WhatsApp code"}
+            Send WhatsApp code
           </ActionButton>
           {request.isSuccess ? (
             <>

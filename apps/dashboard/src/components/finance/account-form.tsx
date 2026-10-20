@@ -1,9 +1,8 @@
 "use client"
-import { FieldGroup, Input } from "@ewatrade/ui"
+import { FieldGroup, FormActions, Input, SubmitButton } from "@ewatrade/ui"
 
-import { FormRadioChoices } from "@/components/forms/form-controls"
+import { FormSelectControl } from "@/components/forms/form-controls"
 import { FormFeedback } from "@/components/forms/form-feedback"
-import { useFinanceParams } from "@/hooks/use-finance-params"
 import { useZodForm } from "@/hooks/use-zod-form"
 import { useTRPC } from "@/trpc/client"
 
@@ -15,7 +14,7 @@ import { useMutation } from "@tanstack/react-query"
 import { useEffect, useState } from "react"
 import { Controller } from "react-hook-form"
 import { z } from "zod"
-import { FinanceField, FinanceFormFooter } from "./form-fields"
+import { FinanceField } from "./form-fields"
 import { PaymentMethodChecks } from "./payment-method-checks"
 import { useCompleteFinanceForm } from "./use-complete-finance-form"
 const schema = z.object({
@@ -27,22 +26,14 @@ const schema = z.object({
   purpose: z.enum(["CASH", "BANK", "CLEARING"]),
   paymentMethods: z
     .array(z.enum(ORDER_PAYMENT_METHODS))
-    .min(1, "Choose at least one way to pay."),
+    .min(1, "Choose at least one payment method."),
 })
 export function FinanceAccountForm({
   bookId,
   category = false,
 }: { bookId: string; category?: boolean }) {
   const trpc = useTRPC()
-  const { close } = useFinanceParams()
-  const [savedName, setSavedName] = useState("")
-  const complete = useCompleteFinanceForm(
-    savedName
-      ? category
-        ? `Spending category “${savedName}” added.`
-        : `Money account “${savedName}” added. Add what it holds with Move money → Starting balance.`
-      : undefined,
-  )
+  const complete = useCompleteFinanceForm()
   const [code] = useState(
     () => `${category ? "E" : "M"}_${crypto.randomUUID().slice(0, 12)}`,
   )
@@ -81,43 +72,40 @@ export function FinanceAccountForm({
     <form
       onSubmit={
         category
-          ? form.handleSubmit((values) => {
-              setSavedName(values.name.trim())
-              expense.mutate({ bookId, code, name: values.name })
-            })
-          : form.handleSubmit((values) => {
-              setSavedName(values.name.trim())
-              account.mutate({ bookId, code, ...values })
-            })
+          ? form.handleSubmit((values) =>
+              expense.mutate({ bookId, code, name: values.name }),
+            )
+          : form.handleSubmit((values) =>
+              account.mutate({ bookId, code, ...values }),
+            )
       }
     >
       <FieldGroup className="min-w-0 grid gap-5">
-        <FinanceField label="Name" error={form.formState.errors.name?.message}>
+        <FinanceField
+          label={category ? "Category name" : "Account name"}
+          error={form.formState.errors.name?.message}
+        >
           <Input
             {...form.register("name")}
             placeholder={
-              category ? "Rent, Transport, Fuel…" : "Shop cash, GTBank current…"
+              category
+                ? "Rent, transport, utilities…"
+                : "Shop cash or business bank…"
             }
           />
         </FinanceField>
         {!category ? (
           <>
-            <FinanceField label="Type">
-              <FormRadioChoices
+            <FinanceField label="Account type">
+              <FormSelectControl
                 control={form.control}
-                name="purpose"
-                label="Type"
+                name={"purpose"}
                 options={[
-                  { value: "CASH", label: "Cash", hint: "A till or cash box." },
-                  {
-                    value: "BANK",
-                    label: "Bank or mobile money",
-                    hint: "A bank account, or an OPay, PalmPay or Moniepoint wallet.",
-                  },
+                  { value: "BANK", label: <>Bank account</> },
+                  { value: "CASH", label: <>Cash</> },
                   {
                     value: "CLEARING",
-                    label: "Card and POS money on its way",
-                    hint: "Card and POS payments the provider hasn't paid into your bank yet.",
+                    label: <>POS / payments awaiting settlement</>,
                   },
                 ]}
               />
@@ -140,12 +128,15 @@ export function FinanceAccountForm({
         {error ? (
           <FormFeedback appearance="dashboard">{error.message}</FormFeedback>
         ) : null}
-        <FinanceFormFooter
-          onCancel={() => void close()}
-          submitLabel={category ? "Add category" : "Add account"}
-          isSubmitting={pending}
-          disabled={pending}
-        />
+        <FormActions>
+          <SubmitButton isSubmitting={pending} type="submit" disabled={pending}>
+            {pending
+              ? "Saving…"
+              : category
+                ? "Create category"
+                : "Create account"}
+          </SubmitButton>
+        </FormActions>
       </FieldGroup>
     </form>
   )

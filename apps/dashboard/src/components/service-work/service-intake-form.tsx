@@ -254,6 +254,7 @@ export function ServiceIntakeForm({
         <div className="flex items-center justify-between">
           <h3 className="text-sm font-medium">Items</h3>
           <Button
+            appearance="form"
             type="button"
             variant="outline"
             size="sm"
@@ -316,6 +317,7 @@ export function ServiceIntakeForm({
               }
             />
             <Button
+              appearance="form"
               type="button"
               variant="ghost"
               size="sm"

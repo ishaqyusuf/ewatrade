@@ -35,35 +35,22 @@ export function getCatalogStock(item: CatalogRow) {
     : "—"
 }
 
-// Edits archive replaced choices and units; the list shows only live rows.
-function liveVariants(item: CatalogRow) {
-  return item.variants.filter((variant) => variant.status !== "archived")
-}
-
-function liveOfferings(variant: CatalogRow["variants"][number] | undefined) {
-  return (variant?.offerings ?? []).filter(
-    (offering) => offering.status !== "archived",
-  )
-}
-
 export function primaryOffering(item: CatalogRow) {
-  const variants = liveVariants(item)
   const variant =
-    variants.find((candidate) => candidate.isDefault) ?? variants[0]
-  return liveOfferings(variant)[0] ?? null
+    item.variants.find((candidate) => candidate.isDefault) ?? item.variants[0]
+  return variant?.offerings[0] ?? null
 }
 
 export function itemDetail(item: CatalogRow) {
-  const variants = liveVariants(item)
-  if (variants.length !== 1) {
-    return `${variants.length} variants`
+  if (item.variants.length !== 1) {
+    return `${item.variants.length} variants`
   }
 
-  const variant = variants[0]
+  const variant = item.variants[0]
   const offering = primaryOffering(item)
   return catalogItemDetail({
     itemName: item.name,
-    offeringCount: liveOfferings(variant).length,
+    offeringCount: variant?.offerings.length ?? 0,
     offeringName: offering?.name,
     variantName: variant?.name,
   })
@@ -86,19 +73,12 @@ export function formatPrice(
 export function CatalogItemThumbnail({
   item,
   storeId,
-  className,
 }: {
   item: CatalogRow
   storeId: string
-  className?: string
 }) {
   return (
-    <div
-      className={cn(
-        "flex size-9 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-muted",
-        className,
-      )}
-    >
+    <div className="flex size-9 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-muted">
       {item.photos.find((photo) => photo.storeId === storeId) ? (
         <CatalogPhotoPreview
           compact
@@ -127,10 +107,7 @@ export function CatalogItemThumbnail({
   )
 }
 
-export function CatalogKindBadge({
-  item,
-  className,
-}: { item: CatalogRow; className?: string }) {
+export function CatalogKindBadge({ item }: { item: CatalogRow }) {
   return (
     <Badge
       className={cn(
@@ -138,7 +115,6 @@ export function CatalogKindBadge({
         item.kind === "service"
           ? "bg-accent text-accent-foreground"
           : "bg-secondary text-secondary-foreground",
-        className,
       )}
     >
       {item.kind === "service" ? "Service" : "Product"}
@@ -184,7 +160,7 @@ export function createCatalogColumns(
             >
               {row.original.name}
             </Button>
-            <p className="truncate text-[13.5px] text-muted-foreground">
+            <p className="truncate text-xs text-muted-foreground">
               {itemDetail(row.original)}
               {row.original.product
                 ? ` · ${productUsageLabels[row.original.product.usage ?? "FOR_SALE"]}`

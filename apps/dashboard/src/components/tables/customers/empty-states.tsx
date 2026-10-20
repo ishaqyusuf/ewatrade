@@ -1,37 +1,20 @@
 "use client"
 import { useDashboardEmptyState } from "@ewatrade/events/dashboard-client"
-import { Button } from "@ewatrade/ui"
 export function CustomerDirectoryEmptyState({
-  query,
-  onClearSearch,
-  onAddCustomer,
-}: {
-  query: string
-  onClearSearch: () => void
-  onAddCustomer?: () => void
-}) {
+  filtered,
+}: { filtered: boolean }) {
   useDashboardEmptyState("customers")
-  const search = query.trim()
   return (
-    <div className="grid min-h-40 place-items-center border border-border px-4 py-8 text-center">
-      <div className="grid justify-items-center gap-1">
+    <div className="grid min-h-40 place-items-center border border-border px-4 text-center">
+      <div>
         <p className="font-medium">
-          {search ? `No customers match “${search}”` : "No customers yet"}
+          {filtered ? "No results" : "No customers yet"}
         </p>
-        <p className="text-sm text-muted-foreground">
-          {search
-            ? "Check the spelling, or search by phone number."
-            : "Customers show up here after their first Order, or when you add one."}
+        <p className="mt-1 text-sm text-muted-foreground">
+          {filtered
+            ? "Try another search."
+            : "Customers appear here after their first order."}
         </p>
-        {search ? (
-          <Button variant="outline" className="mt-3" onClick={onClearSearch}>
-            Clear search
-          </Button>
-        ) : onAddCustomer ? (
-          <Button className="mt-3" onClick={onAddCustomer}>
-            Add customer
-          </Button>
-        ) : null}
       </div>
     </div>
   )

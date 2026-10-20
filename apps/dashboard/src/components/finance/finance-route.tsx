@@ -35,7 +35,10 @@ export async function FinanceRoute({
     redirect("/")
   const queryClient = getQueryClient()
   const initialTableSettings =
-    view === "spending" || view === "suppliers" || view === "bank"
+    view === "overview" ||
+    view === "spending" ||
+    view === "suppliers" ||
+    view === "bank"
       ? await getInitialTableSettings(
           view === "bank"
             ? "finance-bank-statements"
@@ -49,15 +52,17 @@ export async function FinanceRoute({
         )
       : undefined
   const directoryPageIds: FinanceDirectoryPageId[] =
-    view === "spending"
-      ? ["expenses"]
-      : view === "accounts"
-        ? ["finance-accounts"]
-        : view === "suppliers"
-          ? ["finance-suppliers"]
-          : view === "bank"
-            ? ["finance-bank-statements"]
-            : []
+    view === "overview"
+      ? ["finance-accounts", "expenses"]
+      : view === "spending"
+        ? ["expenses"]
+        : view === "accounts"
+          ? ["finance-accounts"]
+          : view === "suppliers"
+            ? ["finance-suppliers"]
+            : view === "bank"
+              ? ["finance-bank-statements"]
+              : []
   const initialViewSettings = Object.fromEntries(
     await Promise.all(
       directoryPageIds.map(
@@ -107,7 +112,7 @@ export async function FinanceRoute({
       ),
     )
   }
-  if (book && view === "spending") {
+  if (book && (view === "overview" || view === "spending")) {
     const params = (await searchParams) ?? {}
     const filter = await loadFinanceExpenseFilterParams(params)
     const { sort } = await loadSortParams(params)

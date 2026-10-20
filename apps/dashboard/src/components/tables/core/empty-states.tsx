@@ -12,6 +12,7 @@ export interface EmptyStateProps {
   description: ReactNode
   actionLabel: string
   onAction: () => void
+  appearance?: "default" | "form"
 }
 
 export function EmptyState({
@@ -19,6 +20,7 @@ export function EmptyState({
   description,
   actionLabel,
   onAction,
+  appearance = "default",
 }: EmptyStateProps) {
   useDashboardEmptyState("directory")
   const workflow = useDashboardWorkflow()
@@ -30,6 +32,7 @@ export function EmptyState({
           <p className="text-sm text-muted-foreground">{description}</p>
         </div>
         <Button
+          appearance={appearance}
           type="button"
           variant="outline"
           onClick={() => {
@@ -44,9 +47,13 @@ export function EmptyState({
   )
 }
 
-export function NoResults({ onClear }: { onClear: () => void }) {
+export function NoResults({
+  onClear,
+  appearance = "default",
+}: { onClear: () => void; appearance?: "default" | "form" }) {
   return (
     <EmptyState
+      appearance={appearance}
       title="No results"
       description="Try another search or adjust the filters."
       actionLabel="Clear filters"

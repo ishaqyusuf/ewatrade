@@ -18,6 +18,7 @@ export function FinanceReportPrint({ report }: { report: FinanceReport }) {
   return (
     <>
       <Button
+        appearance="form"
         variant="outline"
         onClick={() => {
           workflow.track("report_print", "started")
@@ -43,6 +44,7 @@ export function FinanceReportPrint({ report }: { report: FinanceReport }) {
               </DialogTitle>
               <div className="flex gap-2">
                 <Button
+                  appearance="form"
                   onClick={() => {
                     if (frame.current?.contentWindow) {
                       frame.current.contentWindow.print()
@@ -52,7 +54,11 @@ export function FinanceReportPrint({ report }: { report: FinanceReport }) {
                 >
                   Print / Save PDF
                 </Button>
-                <Button variant="outline" onClick={() => setPreview(null)}>
+                <Button
+                  appearance="form"
+                  variant="outline"
+                  onClick={() => setPreview(null)}
+                >
                   Close preview
                 </Button>
               </div>

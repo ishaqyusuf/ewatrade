@@ -24,7 +24,6 @@ export function CatalogSellingUnitsEditor({
   active,
   canonicalName,
   currencyCode,
-  lockedReason,
   onBack,
   onChange,
   onError,
@@ -34,8 +33,6 @@ export function CatalogSellingUnitsEditor({
   active: string
   canonicalName: string
   currencyCode: string
-  /** Set when units can only be renamed and repriced, e.g. a saved Product with stock. */
-  lockedReason?: string | null
   onBack: () => void
   onChange: (units: AdvancedUnitDraft[]) => void
   onError: (message: string | null) => void
@@ -65,9 +62,6 @@ export function CatalogSellingUnitsEditor({
         onBack={onBack}
       >
         <FieldGroup className="gap-2">
-          {lockedReason ? (
-            <p className="text-sm text-muted-foreground">{lockedReason}</p>
-          ) : null}
           {units.map((unit) => (
             <CatalogDetailRow
               key={unit.id}
@@ -82,9 +76,9 @@ export function CatalogSellingUnitsEditor({
             </p>
           ) : null}
           <Button
+            appearance="form"
             type="button"
             variant="outline"
-            hidden={Boolean(lockedReason)}
             disabled={units.length >= 47}
             onClick={() => {
               const id = globalThis.crypto.randomUUID()
@@ -149,7 +143,6 @@ export function CatalogSellingUnitsEditor({
                 <SelectControl
                   popupClassName={themeClass}
                   id={`unit-reference-${unit.id}`}
-                  disabled={Boolean(lockedReason)}
                   value={unit.referenceId}
                   options={[
                     { value: "canonical", label: canonicalName || "Main unit" },
@@ -175,7 +168,6 @@ export function CatalogSellingUnitsEditor({
                 <SelectControl
                   popupClassName={themeClass}
                   id={`unit-direction-${unit.id}`}
-                  disabled={Boolean(lockedReason)}
                   value={unit.relationDirection}
                   options={[
                     {
@@ -220,7 +212,6 @@ export function CatalogSellingUnitsEditor({
                 </FieldLabel>
                 <Input
                   id={`unit-count-${unit.id}`}
-                  disabled={Boolean(lockedReason)}
                   inputMode="decimal"
                   value={unit.relationCount}
                   placeholder="e.g. 30"
@@ -253,7 +244,6 @@ export function CatalogSellingUnitsEditor({
                 <SelectControl
                   popupClassName={themeClass}
                   id={`unit-stock-${unit.id}`}
-                  disabled={Boolean(lockedReason)}
                   value={unit.stockBehavior}
                   options={[
                     {
@@ -285,9 +275,9 @@ export function CatalogSellingUnitsEditor({
                 </p>
               ) : null}
               <Button
+                appearance="form"
                 type="button"
                 variant="ghost"
-                hidden={Boolean(lockedReason)}
                 disabled={hasDependents}
                 onClick={() => {
                   onChange(

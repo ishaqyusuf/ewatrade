@@ -6,7 +6,6 @@ import {
   SelectAllCheckbox,
   type TableColumnMeta,
   type TableScrollState,
-  TableToolbarPortal,
   getHeaderLabel,
 } from "@/components/tables/core"
 import { customerSortFields } from "@/components/tables/customers/sort"
@@ -24,15 +23,11 @@ import {
   DropdownMenuCheckboxItem,
   DropdownMenuContent,
   DropdownMenuGroup,
-  DropdownMenuRadioGroup,
-  DropdownMenuRadioItem,
   DropdownMenuTrigger,
   TableHead,
   TableHeader,
   TableRow,
 } from "@ewatrade/ui"
-import { ArrowDown01Icon } from "@hugeicons/core-free-icons"
-import { HugeiconsIcon } from "@hugeicons/react"
 import type { Table } from "@tanstack/react-table"
 import type { CSSProperties } from "react"
 
@@ -126,7 +121,10 @@ export function CustomerTableHeader({
                 )
                 const contents =
                   id === SELECT_COLUMN_ID ? (
-                    <SelectAllCheckbox table={table} label="Select all" />
+                    <SelectAllCheckbox
+                      table={table}
+                      label="Select all loaded customers"
+                    />
                   ) : id === "name" ? (
                     <div className="flex min-w-0 flex-1 items-center justify-between gap-3 overflow-hidden">
                       {sortButton}
@@ -192,140 +190,44 @@ export function CustomerTableHeader({
   )
 }
 
-/** Recent first is the list's default order, so choosing it clears the sort. */
-const CUSTOMER_SORTS = [
-  { value: "lastSeenAt:desc", label: "Recent first", balance: false },
-  { value: "name:asc", label: "Name, A to Z", balance: false },
-  { value: "balance:desc", label: "Owes you the most", balance: true },
-  { value: "totalMinor:desc", label: "Spent the most", balance: false },
-  { value: "orderCount:desc", label: "Most orders", balance: false },
-] as const
-
-const SORT_FIELD_LABELS: Record<(typeof customerSortFields)[number], string> = {
-  balance: "Balance",
-  lastSeenAt: "Last order",
-  name: "Name",
-  orderCount: "Orders",
-  totalMinor: "Total spent",
-}
-
-function ChevronDown() {
-  return (
-    <HugeiconsIcon
-      icon={ArrowDown01Icon}
-      data-icon="inline-end"
-      className="text-muted-foreground"
-      aria-hidden="true"
-    />
-  )
-}
-
-/** Columns (Table view only) and Sort, shown in the page header row. */
 export function CustomerTableSettings({
   table,
-  showColumns,
-  canSeeBalances,
-}: {
-  table: Table<DashboardCustomerRow>
-  showColumns: boolean
-  canSeeBalances: boolean
-}) {
-  const { sort, setParams } = useSortParams({ fields: customerSortFields })
-  const options = CUSTOMER_SORTS.filter(
-    (option) => canSeeBalances || !option.balance,
-  )
-  const current = sort ? `${sort.field}:${sort.direction}` : "lastSeenAt:desc"
-  const label = sort
-    ? (options.find((option) => option.value === current)?.label ??
-      `${SORT_FIELD_LABELS[sort.field]}, ${sort.direction === "asc" ? "ascending" : "descending"}`)
-    : CUSTOMER_SORTS[0].label
+}: { table: Table<DashboardCustomerRow> }) {
   return (
-    <TableToolbarPortal>
-      {showColumns ? (
-        <DropdownMenu>
-          <DropdownMenuTrigger
-            render={
-              <Button type="button" variant="outline" className="rounded-none">
-                Columns
-                <ChevronDown />
-              </Button>
-            }
-          />
-          <DropdownMenuContent
-            appearance="dashboard"
-            align="end"
-            sideOffset={8}
-            className="min-w-48"
-          >
-            <DropdownMenuGroup>
-              {table
-                .getAllLeafColumns()
-                .filter((column) => column.getCanHide())
-                .map((column) => {
-                  const meta = column.columnDef.meta as
-                    | TableColumnMeta
-                    | undefined
-                  return (
-                    <DropdownMenuCheckboxItem
-                      key={column.id}
-                      checked={column.getIsVisible()}
-                      closeOnClick={false}
-                      onCheckedChange={(checked) =>
-                        column.toggleVisibility(checked)
-                      }
-                    >
-                      {meta?.headerLabel ?? getHeaderLabel(column.columnDef)}
-                    </DropdownMenuCheckboxItem>
-                  )
-                })}
-            </DropdownMenuGroup>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      ) : null}
-      <DropdownMenu>
-        <DropdownMenuTrigger
-          render={
-            <Button
-              type="button"
-              variant="outline"
-              className="rounded-none"
-              aria-label={`Sort customers: ${label}`}
-            />
-          }
-        >
-          {label}
-          <ChevronDown />
-        </DropdownMenuTrigger>
-        <DropdownMenuContent
-          appearance="dashboard"
-          align="end"
-          className="min-w-48"
-        >
-          <DropdownMenuRadioGroup
-            aria-label="Sort customers"
-            value={current}
-            onValueChange={(value) => {
-              const [field, direction] = String(value).split(":")
-              void setParams({
-                sort:
-                  value === "lastSeenAt:desc" || !field || !direction
-                    ? null
-                    : [field, direction],
-              })
-            }}
-          >
-            {options.map((option) => (
-              <DropdownMenuRadioItem
-                key={option.value}
-                value={option.value}
-                closeOnClick
-              >
-                {option.label}
-              </DropdownMenuRadioItem>
-            ))}
-          </DropdownMenuRadioGroup>
-        </DropdownMenuContent>
-      </DropdownMenu>
-    </TableToolbarPortal>
+    <DropdownMenu>
+      <DropdownMenuTrigger
+        render={
+          <Button variant="outline" className="rounded-none">
+            Columns
+          </Button>
+        }
+      />
+      <DropdownMenuContent
+        appearance="dashboard"
+        align="end"
+        className="min-w-48"
+      >
+        <DropdownMenuGroup>
+          {table
+            .getAllLeafColumns()
+            .filter((column) => column.getCanHide())
+            .map((column) => {
+              const meta = column.columnDef.meta as TableColumnMeta | undefined
+              return (
+                <DropdownMenuCheckboxItem
+                  key={column.id}
+                  checked={column.getIsVisible()}
+                  closeOnClick={false}
+                  onCheckedChange={(checked) =>
+                    column.toggleVisibility(checked)
+                  }
+                >
+                  {meta?.headerLabel ?? getHeaderLabel(column.columnDef)}
+                </DropdownMenuCheckboxItem>
+              )
+            })}
+        </DropdownMenuGroup>
+      </DropdownMenuContent>
+    </DropdownMenu>
   )
 }

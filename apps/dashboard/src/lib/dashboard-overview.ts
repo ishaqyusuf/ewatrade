@@ -31,16 +31,16 @@ export function getGettingStartedActions(
   if (canManageCatalog) {
     actions.push(
       {
-        description: "Something you sell and keep in stock.",
+        description: "Add a stock-tracked item to your Catalog.",
         catalogCreateKind: "product",
         href: "/?catalogItem=create&catalogCreateKind=product",
-        label: "Add a product",
+        label: "Add Product",
       },
       {
-        description: "Work you do for customers, like a visit or a repair.",
+        description: "Add work that you price and deliver.",
         catalogCreateKind: "service",
         href: "/?catalogItem=create&catalogCreateKind=service",
-        label: "Add a service",
+        label: "Add Service",
       },
     )
   }
@@ -48,11 +48,11 @@ export function getGettingStartedActions(
   if (canCreateOrders) {
     actions.push({
       description: availability.hasActiveSellableItems
-        ? "Sell a product or service you have added."
-        : "Pick items or type a price.",
+        ? "Create an order from an active Product or Service."
+        : "Record a sale — pick catalog items or type a price.",
       disabled: false,
       href: "/sales?orderSheet=create",
-      label: "Create your first order",
+      label: "Create first order",
     })
   }
 
@@ -64,7 +64,7 @@ export function getGettingStartedActions(
       normalizedRole === "ADMIN")
   ) {
     actions.push({
-      description: "Give a team member access to this business.",
+      description: "Invite a team member into this business.",
       href: "/staff?staffSheet=invite",
       label: "Invite staff",
     })

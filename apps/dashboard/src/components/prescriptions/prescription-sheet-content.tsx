@@ -77,7 +77,11 @@ export function PrescriptionSheetContent({
           Complete the pharmacy policy and professional role checks before
           opening the private prescription queue.
         </p>
-        <Button className="w-fit" render={<Link href="/settings/compliance" />}>
+        <Button
+          appearance="form"
+          className="w-fit"
+          render={<Link href="/settings/compliance" />}
+        >
           Continue compliance setup
         </Button>
       </section>
@@ -96,7 +100,11 @@ export function PrescriptionSheetContent({
             : "We could not load this workspace. Try again."}
         </p>
         {accessState === "error" ? (
-          <Button className="mx-auto" onClick={retryWorkspace}>
+          <Button
+            appearance="form"
+            className="mx-auto"
+            onClick={retryWorkspace}
+          >
             Try again
           </Button>
         ) : null}
@@ -184,6 +192,7 @@ function PrescriptionRequestSuccess({
         same media, transcription, and pharmacist gates as every other channel.
       </p>
       <Button
+        appearance="form"
         variant="outline"
         type="button"
         onClick={() => onView(detail.data.status)}

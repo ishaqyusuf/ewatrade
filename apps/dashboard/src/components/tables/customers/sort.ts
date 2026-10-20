@@ -3,9 +3,9 @@ import { createLoader } from "nuqs/server"
 
 export const customerSortFields = [
   "name",
-  "balance",
   "orderCount",
   "totalMinor",
+  "lastOrder",
   "lastSeenAt",
 ] as const
 

@@ -7,9 +7,12 @@ import { useTRPC } from "@/trpc/client"
 import {
   Alert,
   AlertDescription,
-  DatePicker,
+  Button,
+  DateControl,
   FieldGroup,
+  FormActions,
   Input,
+  SubmitButton,
 } from "@ewatrade/ui"
 import { formatFinanceMoney } from "@ewatrade/utils/finance-money"
 import {
@@ -19,14 +22,7 @@ import {
 } from "@tanstack/react-query"
 import { useEffect, useRef, useState } from "react"
 import { useFinanceForm } from "./form-context"
-import {
-  FinanceBackTo,
-  FinanceDetails,
-  FinanceField,
-  FinanceFormFooter,
-  FinanceReview,
-} from "./form-fields"
-import { plainDay } from "./review-changes"
+import { FinanceField, FinanceReview } from "./form-fields"
 import type { FinanceBook } from "./types"
 import { useCompleteFinanceForm } from "./use-complete-finance-form"
 
@@ -58,9 +54,7 @@ export function FinanceBankOwnedCorrectionForm({
   const client = useQueryClient()
   const { actorUserId, tenantId, setLocked } = useFinanceForm()
   const command = useFinanceCommand(
-    useCompleteFinanceForm(
-      "Record undone. Now record what really happened, then match the bank line.",
-    ),
+    useCompleteFinanceForm(),
     book.id,
     target.kind === "SUPPLIER"
       ? "reverseSupplierEntry"
@@ -72,15 +66,12 @@ export function FinanceBankOwnedCorrectionForm({
   const purchaseMutation = useMutation(
     trpc.finance.reversePurchasePayment.mutationOptions(),
   )
+  const label =
+    target.kind === "SUPPLIER" ? "supplier entry" : "purchase payment"
   const [reason, setReason] = useState("")
-  // A day; a payment correction is timed now (today) or at the end of that day.
-  const [day, setDay] = useState(new Date().toISOString().slice(0, 10))
-  const date =
-    target.kind === "SUPPLIER"
-      ? day
-      : day === new Date().toISOString().slice(0, 10)
-        ? new Date().toISOString().slice(0, 23)
-        : `${day}T23:59:59.999`
+  const [date, setDate] = useState(
+    new Date().toISOString().slice(0, target.kind === "SUPPLIER" ? 10 : 23),
+  )
   const [review, setReview] = useState<Review | null>(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -208,7 +199,7 @@ export function FinanceBankOwnedCorrectionForm({
     try {
       const trimmed = reason.trim()
       if (!trimmed || trimmed.length > 400)
-        throw new Error("Say what's wrong, so others understand later.")
+        throw new Error("Enter a reason of 1 to 400 characters.")
       const purchase = target.kind === "PURCHASE_PAYMENT"
       const effectiveAt = new Date(
         purchase ? `${date}Z` : `${date}T00:00:00.000Z`,
@@ -225,7 +216,9 @@ export function FinanceBankOwnedCorrectionForm({
           ? effectiveAt > new Date()
           : date > new Date().toISOString().slice(0, 10))
       )
-        throw new Error("Pick today or an earlier day.")
+        throw new Error(
+          "Choose a valid correction date no later than today (UTC).",
+        )
       const original = await freshSource()
       if (
         !(
@@ -238,21 +231,25 @@ export function FinanceBankOwnedCorrectionForm({
           "Correct this supplier record through its original purchase command.",
         )
       if (original.reversed && !command.uncertain)
-        throw new Error("This record has already been undone.")
+        throw new Error(
+          "This original source record has already been reversed.",
+        )
       const originalAt = new Date(original.effectiveAt)
       if (
         purchase
           ? effectiveAt < originalAt
           : date < originalAt.toISOString().slice(0, 10)
       )
-        throw new Error("Pick the day of the original record or later.")
+        throw new Error(
+          "The correction cannot precede the original source record.",
+        )
       const requestedAt = effectiveAt < originalAt ? originalAt : effectiveAt
       if (
         !command.uncertain &&
         requestedAt < new Date(original.latestEffectiveAt)
       )
         throw new Error(
-          `Pick ${plainDay(new Date(original.latestEffectiveAt).toISOString().slice(0, 10))} or later, after the bill's last change.`,
+          `Choose a correction date at or after the latest original bill activity (${new Date(original.latestEffectiveAt).toISOString()}).`,
         )
       await authority()
       setReview({
@@ -326,31 +323,26 @@ export function FinanceBankOwnedCorrectionForm({
         onBack={() => setReview(null)}
         onConfirm={() => confirm(review)}
         backDisabled={command.uncertain && mutationEntered.current}
-        confirmLabel="Undo record"
-        sentence={
-          <>
-            This undoes{" "}
-            <b>
-              {formatFinanceMoney(review.target.amountMinor, book.currencyCode)}
-            </b>{" "}
-            {review.target.description} in your records. No money moves. The
-            original stays in history, marked Undone. Then record what really
-            happened.
-          </>
-        }
-        note={
-          target.kind === "SUPPLIER"
-            ? "If any of this paid-ahead money was used on a bill, undo that use first."
-            : "The bill it paid will show the amount as still to pay again."
-        }
       >
-        <FinanceDetails
-          rows={[
-            ["Record", review.target.description],
-            ["Date", plainDay(review.effectiveAt.toISOString().slice(0, 10))],
-            ["What's wrong", review.reason],
-          ]}
-        />
+        <h4 className="font-medium">Reverse original {label}</h4>
+        <p className="break-words">
+          {review.target.description} ·{" "}
+          {formatFinanceMoney(review.target.amountMinor, book.currencyCode)}
+        </p>
+        <p className="break-all text-xs text-muted-foreground">
+          Original entry {review.target.id}
+        </p>
+        <p className="text-sm">
+          This corrects the accounting entry and retains its original history.
+          It does not send a payment or refund.{" "}
+          {target.kind === "SUPPLIER"
+            ? "Every consumed part of an advance must be released through its original purchase before reversal."
+            : "This reopens the recorded amount owed on the original supplier bill. The purchase and its original payment remain in history."}
+        </p>
+        <p className="text-sm">
+          Correction date: {review.effectiveAt.toISOString()} · Reason:{" "}
+          {review.reason}
+        </p>
       </FinanceReview>
     )
   return (
@@ -361,44 +353,55 @@ export function FinanceBankOwnedCorrectionForm({
       }}
     >
       <FieldGroup className="gap-5">
-        <FinanceBackTo
-          label="Back to bank line"
-          onBack={onBack}
-          title="Fix the original record"
-          description="The record is wrong. Undo it here, then record what really happened."
-        />
-        <div className="flex justify-between gap-3 border border-border bg-muted/40 px-3 py-2 text-sm">
-          <span className="break-words font-medium">{target.description}</span>
-          <span className="tabular-nums">
-            {formatFinanceMoney(target.amountMinor, book.currencyCode)}
-          </span>
-        </div>
+        <h3 className="font-medium">Correct original {label}</h3>
+        <p className="break-words text-sm">
+          {target.description} ·{" "}
+          {formatFinanceMoney(target.amountMinor, book.currencyCode)}
+        </p>
         {command.uncertain ? (
           <Alert appearance="dashboard">
             <AlertDescription>
-              Enter the same reason and date again to finish what you started.
-              If you change them, it can't be retried.
+              Re-enter the original reason and date to recover the saved
+              submission. Changed details cannot retry it.
             </AlertDescription>
           </Alert>
         ) : null}
-        <FinanceField label="Date">
-          <DatePicker
-            value={day}
+        <FinanceField label="Correction date (UTC)">
+          <DateControl
+            value={date.slice(0, 10)}
             min={
               command.uncertain
                 ? undefined
                 : new Date(target.latestEffectiveAt).toISOString().slice(0, 10)
             }
             max={new Date().toISOString().slice(0, 10)}
-            onValueChange={setDay}
+            onValueChange={(value) =>
+              setDate(
+                target.kind === "SUPPLIER" || !value
+                  ? value
+                  : `${value}T${date.split("T")[1] || "00:00"}`,
+              )
+            }
             disabled={busy || command.pending}
           />
         </FinanceField>
-        <FinanceField label="What's wrong with it?">
+        {target.kind === "PURCHASE_PAYMENT" ? (
+          <FinanceField label="Correction time (UTC)">
+            <Input
+              type="time"
+              step="0.001"
+              value={date.split("T")[1] ?? ""}
+              onChange={(event) =>
+                setDate(`${date.slice(0, 10)}T${event.target.value}`)
+              }
+              disabled={busy || command.pending || !date.slice(0, 10)}
+            />
+          </FinanceField>
+        ) : null}
+        <FinanceField label="Reason for correction">
           <Input
             value={reason}
             maxLength={400}
-            placeholder="Paid to the wrong Supplier"
             onChange={(event) => setReason(event.target.value)}
             disabled={busy || command.pending}
           />
@@ -408,14 +411,23 @@ export function FinanceBankOwnedCorrectionForm({
             <AlertDescription>{error ?? command.error}</AlertDescription>
           </Alert>
         ) : null}
-        <FinanceFormFooter
-          onCancel={
-            busy || command.pending || command.uncertain ? undefined : onBack
-          }
-          submitLabel="Review"
-          isSubmitting={busy}
-          disabled={busy || command.pending || !command.ready}
-        />
+        <FormActions>
+          <Button
+            type="button"
+            variant="outline"
+            disabled={busy || command.pending || command.uncertain}
+            onClick={onBack}
+          >
+            Back to original transaction
+          </Button>
+          <SubmitButton
+            type="submit"
+            isSubmitting={busy}
+            disabled={busy || command.pending || !command.ready}
+          >
+            Review {label} correction
+          </SubmitButton>
+        </FormActions>
       </FieldGroup>
     </form>
   )

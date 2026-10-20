@@ -97,9 +97,12 @@ export function CustomerLedgerTableHeader({
                   "group/header relative flex h-full shrink-0 items-center border-t border-border px-4 text-sm font-normal text-muted-foreground",
                 )
                 const content = isAction ? (
-                  <span className="sr-only">Details</span>
+                  <span>Actions</span>
                 ) : id === SELECT_COLUMN_ID ? (
-                  <SelectAllCheckbox table={table} label="Select all" />
+                  <SelectAllCheckbox
+                    table={table}
+                    label="Select all loaded statement entries"
+                  />
                 ) : (
                   <div className="flex min-w-0 flex-1 items-center justify-between gap-2">
                     <span className="truncate">

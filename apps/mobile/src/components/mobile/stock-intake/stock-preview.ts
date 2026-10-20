@@ -29,7 +29,6 @@ export function stockAfter(
       mode === "count"
         ? q
         : mode === "custody" ||
-            mode === "use" ||
             (mode === "adjustment" && direction === "decrease")
           ? subtractExactDecimals(onHand, q)
           : addExactDecimals(onHand, q)

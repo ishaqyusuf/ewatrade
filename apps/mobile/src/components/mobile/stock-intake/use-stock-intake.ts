@@ -32,7 +32,6 @@ const GENERIC_TARGET: ParsedStockIntakeTarget = { kind: "generic" }
 
 export function useStockIntake({
   onComplete,
-  recordUse = false,
   target = GENERIC_TARGET,
 }: StockIntakeProps) {
   const trpc = useTRPC()
@@ -43,9 +42,7 @@ export function useStockIntake({
     profile?.staffAccessMode,
   )
   const offline = useOperationalModeStore((state) => state.isOfflineMode)
-  const [draft, setDraft] = useState<StockDraft>(() =>
-    recordUse ? { ...INITIAL_STOCK_DRAFT, mode: "use" } : INITIAL_STOCK_DRAFT,
-  )
+  const [draft, setDraft] = useState<StockDraft>(INITIAL_STOCK_DRAFT)
   const draftRef = useRef(draft)
   const [query, setQuery] = useState("")
   const [personQuery, setPersonQuery] = useState("")
@@ -248,9 +245,6 @@ export function useStockIntake({
   const move = useMutation(
     trpc.inventory.moveCustody.mutationOptions({ retry: false }),
   )
-  const recordInternalUse = useMutation(
-    trpc.inventory.recordInternalUse.mutationOptions({ retry: false }),
-  )
   useEffect(() => {
     mounted.current = true
     return () => {
@@ -420,8 +414,6 @@ export function useStockIntake({
         })
       } else if (current.command.kind === "custody")
         result = await move.mutateAsync(current.command.input)
-      else if (current.command.kind === "use")
-        result = await recordInternalUse.mutateAsync(current.command.input)
       else result = await post.mutateAsync(current.command.input)
       complete.current = true
       // Settle privately whatever scope is active now; only the original,
@@ -569,7 +561,6 @@ export function useStockIntake({
   }
   return {
     target,
-    recordUse,
     resolution: resolution.status,
     allStoreName: balances.data?.rows.find((row) => row.storeId === storeId)
       ?.storeName,

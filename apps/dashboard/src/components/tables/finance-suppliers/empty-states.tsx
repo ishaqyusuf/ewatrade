@@ -13,11 +13,17 @@ export function FinanceSupplierEmptyState({
   const { setParams } = useFinanceParams()
 
   if (filtered) {
-    return <NoResults onClear={() => void setParams({ supplierQuery: null })} />
+    return (
+      <NoResults
+        appearance="form"
+        onClear={() => void setParams({ supplierQuery: null })}
+      />
+    )
   }
 
   return (
     <EmptyState
+      appearance="form"
       title="No suppliers yet"
       description="Add the suppliers you buy from to record separate payables and advances."
       actionLabel="Add supplier"

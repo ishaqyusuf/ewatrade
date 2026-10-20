@@ -98,6 +98,7 @@ export function QuoteApprovalForm({
         <FormActions>
           {approval.actions.canApprove ? (
             <Button
+              appearance="form"
               type="button"
               onClick={() => {
                 setSubmissionError(null)
@@ -109,6 +110,7 @@ export function QuoteApprovalForm({
           ) : null}
           {approval.actions.canReject ? (
             <Button
+              appearance="form"
               type="button"
               variant="outline"
               onClick={() => {
@@ -167,6 +169,7 @@ export function QuoteApprovalForm({
               ) : null}
               <FormActions>
                 <Button
+                  appearance="form"
                   disabled={isPending}
                   type="button"
                   variant="outline"
