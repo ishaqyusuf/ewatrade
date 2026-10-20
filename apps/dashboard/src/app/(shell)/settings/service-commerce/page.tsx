@@ -60,7 +60,7 @@ export default async function ServiceCommerceSettingsPage({
       ),
     )
   }
-  void Promise.all(prefetches).catch(() => undefined)
+  await Promise.all(prefetches).catch(() => undefined)
 
   return (
     <HydrateClient>

@@ -16,7 +16,7 @@ export default async function StoresSettingsPage() {
   if (!session || !ctx) redirect("/login")
   const role = normalizeRole(ctx.membership.role)
   if (!role || !canManageTenant(role)) redirect("/")
-  void prefetch(trpc.tenant.stores.queryOptions())
+  await prefetch(trpc.tenant.stores.queryOptions())
   const initialViewSettings = await getInitialDirectoryView("stores", {
     userId: session.user.id,
     tenantId: ctx.tenant.id,

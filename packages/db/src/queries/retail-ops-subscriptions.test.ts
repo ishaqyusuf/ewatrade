@@ -472,6 +472,7 @@ describe("retail ops subscription queries", () => {
       products: 0,
       reportsHistoryDays: 0,
       staff: 0,
+      storefrontItems: 0,
     })
     expect(snapshot.entitlements).toContainEqual({
       isAtLimit: true,

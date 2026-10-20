@@ -42,7 +42,7 @@ export default async function ComplianceSettingsPage({
   const storeId =
     stores.find((store) => store.id === requestedStoreId)?.id ?? activeStore.id
 
-  void Promise.all([
+  await Promise.all([
     prefetch(trpc.prescriptions.setup.queryOptions({ storeId })),
     prefetch(trpc.prescriptions.channelInfo.queryOptions({ storeId })),
     prefetch(trpc.prescriptions.whatsappConnections.queryOptions()),
