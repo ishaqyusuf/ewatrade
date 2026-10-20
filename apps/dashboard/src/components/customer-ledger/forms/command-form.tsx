@@ -31,7 +31,7 @@ import { useMutation, useQuery } from "@tanstack/react-query"
 import { useEffect, useState } from "react"
 import { Controller, useForm } from "react-hook-form"
 import type { LedgerAccount, LedgerRequest } from "../types"
-import { ledgerLabels } from "../types"
+import { ledgerLabels, paymentMethodLabels } from "../types"
 import { useCustomerLedgerForm } from "./form-context"
 const OPERATION_WORDS: Record<string, string> = {
   recordOpening: "starting balance",
@@ -354,7 +354,7 @@ export function CustomerLedgerCommandForm({
         </Button>
       ) : review ? (
         <>
-          <h3 className="text-lg font-medium">Review before recording</h3>
+          <h3 className="text-lg font-medium">Check and save</h3>
           <p className="text-2xl tabular-nums">
             {formatFinanceMoney(
               "amountMinor" in review.payload
@@ -374,25 +374,33 @@ export function CustomerLedgerCommandForm({
             ) : null}
             {"creditEntryId" in review.payload ? (
               <p>
-                Credit:{" "}
-                {credits.data?.sources.find((s) => s.id === creditId)?.sequence
-                  ? `#${credits.data.sources.find((s) => s.id === creditId)?.sequence}`
-                  : "Selected payment"}
+                From {(() => {
+                  const source = credits.data?.sources.find(
+                    (s) => s.id === creditId,
+                  )
+                  return source ? label(source) : "the selected payment"
+                })()}
               </p>
             ) : null}
             {"chargeEntryId" in review.payload ? (
               <p>
-                Charge:{" "}
-                {debits.data?.sources.find((s) => s.id === chargeId)?.order
-                  ?.orderNumber ??
-                  `#${debits.data?.sources.find((s) => s.id === chargeId)?.sequence ?? "selected balance"}`}
+                On {(() => {
+                  const source = debits.data?.sources.find(
+                    (s) => s.id === chargeId,
+                  )
+                  return source?.order
+                    ? `Order ${source.order.orderNumber}`
+                    : source
+                      ? (ledgerLabels[source.kind] ?? "the selected balance")
+                      : "the selected balance"
+                })()}
               </p>
             ) : null}
             {"moneyAccountId" in review.payload ? (
               <p>
-                Money account:{" "}
+                Paid into{" "}
                 {money.data?.accounts.find((a) => a.id === moneyId)?.name} ·{" "}
-                {review.payload.method}
+                {paymentMethodLabels[review.payload.method] ?? "Other"}
               </p>
             ) : (
               <p>
@@ -441,8 +449,8 @@ export function CustomerLedgerCommandForm({
                 </dd>
               </div>
               <p className="text-xs text-muted-foreground">
-                Based on the reviewed account. The server checks current records
-                when confirming.
+                These figures are checked again when you save, in case someone
+                recorded something in the meantime.
               </p>
             </dl>
           ) : null}
@@ -597,11 +605,7 @@ export function CustomerLedgerCommandForm({
               </>
             ) : null}
             {mode !== "apply"
-              ? text(
-                  "reason",
-                  mode === "receipt" ? "Note (optional)" : "Reason",
-                  true,
-                )
+              ? text("reason", mode === "receipt" ? "Note" : "Reason", true)
               : null}
             {mode === "refund" || mode === "reverse"
               ? text("date", "Date and time")

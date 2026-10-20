@@ -79,7 +79,7 @@ function CustomersGrid({
                   />
                 </div>
               </div>
-              {canSeeBalances ? (
+              {canSeeBalances && customer.customerId ? (
                 <BalanceBox customer={customer} currencyCode={currencyCode} />
               ) : null}
               <div className="mt-auto flex items-baseline justify-between gap-2 border-t pt-2.5 text-[13.5px] text-muted-foreground tabular-nums">
