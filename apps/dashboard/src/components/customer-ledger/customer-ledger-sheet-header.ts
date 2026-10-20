@@ -5,6 +5,6 @@ export const customerLedgerTitles: Record<CustomerLedgerMode, string> = {
   apply: "Use on an Order",
   entry: "Entry details",
   release: "Take off this Order",
-  refund: "Refund paid-ahead money",
+  refund: "Return paid-ahead money",
   reverse: "Undo entry",
 }

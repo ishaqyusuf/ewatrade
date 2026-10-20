@@ -16,38 +16,136 @@ import {
   Alert,
   AlertDescription,
   Button,
+  Calendar,
+  Combobox,
+  ComboboxContent,
+  ComboboxEmpty,
+  ComboboxInput,
+  ComboboxItem,
+  ComboboxList,
   ControlField,
   FieldGroup,
   FormActions,
   Input,
   MoneyInput,
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
   SelectControl,
   SubmitButton,
   Textarea,
 } from "@ewatrade/ui"
 import { formatFinanceMoney } from "@ewatrade/utils/finance-money"
 import { zodResolver } from "@hookform/resolvers/zod"
+import { Calendar03Icon } from "@hugeicons/core-free-icons"
+import { HugeiconsIcon } from "@hugeicons/react"
 import { useMutation, useQuery } from "@tanstack/react-query"
 import { useEffect, useState } from "react"
 import { Controller, useForm } from "react-hook-form"
 import type { LedgerAccount, LedgerRequest } from "../types"
-import { ledgerLabels, paymentMethodLabels } from "../types"
+import { formatLedgerDate, ledgerLabels, paymentMethodLabels } from "../types"
 import { useCustomerLedgerForm } from "./form-context"
 const OPERATION_WORDS: Record<string, string> = {
   recordOpening: "starting balance",
   recordReceipt: "payment",
   applyCredit: "use on an Order",
   releaseAllocation: "undo",
-  refundUnusedCredit: "refund",
+  refundUnusedCredit: "return of paid-ahead money",
   reverseEntry: "undo",
 }
 
-/** ISO time to the value a datetime-local field shows, in local time. */
-function toLocalDateTime(iso: string | undefined) {
-  const date = iso ? new Date(iso) : new Date()
-  if (Number.isNaN(date.getTime())) return ""
-  const local = new Date(date.getTime() - date.getTimezoneOffset() * 60_000)
-  return local.toISOString().slice(0, 16)
+type LedgerOption = { value: string; label: string }
+
+/** Day picker for an ISO time; keeps the time of day and blocks future days. */
+function LedgerDatePicker({
+  value,
+  onChange,
+}: {
+  value: string
+  onChange: (iso: string) => void
+}) {
+  const [open, setOpen] = useState(false)
+  const parsed = value ? new Date(value) : undefined
+  const selected =
+    parsed && !Number.isNaN(parsed.getTime()) ? parsed : undefined
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger
+        render={
+          <Button
+            type="button"
+            variant="outline"
+            className="w-full justify-start font-normal"
+          />
+        }
+      >
+        <HugeiconsIcon icon={Calendar03Icon} />
+        {selected ? formatLedgerDate(selected) : "Choose a date"}
+      </PopoverTrigger>
+      <PopoverContent
+        appearance="dashboard"
+        align="start"
+        className="w-auto p-0"
+      >
+        <Calendar
+          mode="single"
+          selected={selected}
+          defaultMonth={selected}
+          autoFocus
+          disabled={{ after: new Date() }}
+          onSelect={(day) => {
+            if (!day) return
+            const time = selected ?? new Date()
+            const next = new Date(day)
+            next.setHours(time.getHours(), time.getMinutes(), time.getSeconds())
+            onChange(next.toISOString())
+            setOpen(false)
+          }}
+        />
+      </PopoverContent>
+    </Popover>
+  )
+}
+
+/** Searchable pick from the loaded page of payments or Orders. */
+function LedgerSourceCombobox({
+  options,
+  value,
+  onChange,
+  placeholder,
+  empty,
+}: {
+  options: LedgerOption[]
+  value: string
+  onChange: (value: string) => void
+  placeholder: string
+  empty: string
+}) {
+  return (
+    <Combobox<LedgerOption>
+      items={options}
+      value={options.find((option) => option.value === value) ?? null}
+      itemToStringLabel={(option) => option.label}
+      isItemEqualToValue={(a, b) => a.value === b.value}
+      autoHighlight
+      onValueChange={(option) => onChange(option?.value ?? "")}
+    >
+      <ComboboxInput
+        placeholder={placeholder}
+        className="w-full rounded-none border-border bg-transparent"
+      />
+      <ComboboxContent className="rounded-none border border-border bg-popover shadow-md ring-0 before:hidden **:data-[slot$=-item]:rounded-none">
+        <ComboboxEmpty>{empty}</ComboboxEmpty>
+        <ComboboxList>
+          {(option: LedgerOption) => (
+            <ComboboxItem key={option.value} value={option}>
+              {option.label}
+            </ComboboxItem>
+          )}
+        </ComboboxList>
+      </ComboboxContent>
+    </Combobox>
+  )
 }
 
 export function CustomerLedgerCommandForm({
@@ -227,39 +325,22 @@ export function CustomerLedgerCommandForm({
   const label = (s: NonNullable<typeof credits.data>["sources"][number]) =>
     `${s.order ? `Order ${s.order.orderNumber}` : (ledgerLabels[s.kind] ?? "Entry")} · ${formatFinanceMoney(s.remainingAmountMinor, account.currencyCode)} left`
   const text = (
-    name: "reason" | "reference" | "date" | "revision",
+    name: "reason" | "reference" | "revision",
     label: string,
     multiline = false,
   ) => (
     <ControlField label={label} error={form.formState.errors[name]?.message}>
       {multiline ? (
         <Textarea {...form.register(name)} maxLength={400} />
-      ) : name === "date" ? (
-        <Input
-          type="datetime-local"
-          value={toLocalDateTime(form.watch("date"))}
-          onChange={(event) => {
-            const parsed = new Date(event.target.value)
-            if (!Number.isNaN(parsed.getTime()))
-              form.setValue("date", parsed.toISOString(), {
-                shouldValidate: true,
-              })
-          }}
-        />
       ) : (
         <Input {...form.register(name)} />
       )}
     </ControlField>
   )
   const select = (
-    name:
-      | "direction"
-      | "method"
-      | "moneyAccountId"
-      | "creditEntryId"
-      | "chargeEntryId",
+    name: "direction" | "method" | "moneyAccountId",
     label: string,
-    options: { value: string; label: string }[],
+    options: LedgerOption[],
   ) => (
     <Controller
       control={form.control}
@@ -270,6 +351,32 @@ export function CustomerLedgerCommandForm({
             value={field.value}
             onValueChange={field.onChange}
             options={options}
+          />
+        </ControlField>
+      )}
+    />
+  )
+  const pick = (
+    name: "creditEntryId" | "chargeEntryId",
+    title: string,
+    placeholder: string,
+    sources: NonNullable<typeof credits.data>["sources"],
+    isFetching: boolean,
+  ) => (
+    <Controller
+      control={form.control}
+      name={name}
+      render={({ field }) => (
+        <ControlField
+          label={title}
+          error={form.formState.errors[name]?.message}
+        >
+          <LedgerSourceCombobox
+            value={field.value}
+            onChange={field.onChange}
+            placeholder={placeholder}
+            empty={isFetching ? "Loading…" : "Nothing matches."}
+            options={sources.map((s) => ({ value: s.id, label: label(s) }))}
           />
         </ControlField>
       )}
@@ -394,7 +501,7 @@ export function CustomerLedgerCommandForm({
             ) : null}
             {"moneyAccountId" in review.payload ? (
               <p>
-                Paid into{" "}
+                {mode === "refund" ? "Paid from" : "Paid into"}{" "}
                 {money.data?.accounts.find((a) => a.id === moneyId)?.name} ·{" "}
                 {paymentMethodLabels[review.payload.method] ?? "Other"}
               </p>
@@ -412,7 +519,7 @@ export function CustomerLedgerCommandForm({
             ) : null}
             {"effectiveAt" in review.payload &&
             review.payload.effectiveAt instanceof Date ? (
-              <p>{review.payload.effectiveAt.toISOString()} UTC</p>
+              <p>{formatLedgerDate(review.payload.effectiveAt)}</p>
             ) : null}
           </div>
           {after ? (
@@ -478,13 +585,13 @@ export function CustomerLedgerCommandForm({
                 ])
               : null}
             {needsCredit
-              ? select("creditEntryId", "Money paid ahead", [
-                  { value: "", label: "Choose a payment" },
-                  ...(credits.data?.sources ?? []).map((s) => ({
-                    value: s.id,
-                    label: label(s),
-                  })),
-                ])
+              ? pick(
+                  "creditEntryId",
+                  "Money paid ahead",
+                  "Search payments",
+                  credits.data?.sources ?? [],
+                  credits.isFetching,
+                )
               : null}
             {needsCredit ? (
               <div className="flex gap-2">
@@ -516,13 +623,13 @@ export function CustomerLedgerCommandForm({
               </div>
             ) : null}
             {mode === "apply"
-              ? select("chargeEntryId", "Unpaid Order", [
-                  { value: "", label: "Choose an Order" },
-                  ...(debits.data?.sources ?? []).map((s) => ({
-                    value: s.id,
-                    label: label(s),
-                  })),
-                ])
+              ? pick(
+                  "chargeEntryId",
+                  "Unpaid Order",
+                  "Search Orders",
+                  debits.data?.sources ?? [],
+                  debits.isFetching,
+                )
               : null}
             {mode === "apply" ? (
               <div className="flex gap-2">
@@ -602,9 +709,25 @@ export function CustomerLedgerCommandForm({
             {mode !== "apply"
               ? text("reason", mode === "receipt" ? "Note" : "Reason", true)
               : null}
-            {mode === "refund" || mode === "reverse"
-              ? text("date", "Date and time")
-              : null}
+            {mode === "refund" || mode === "reverse" ? (
+              <Controller
+                control={form.control}
+                name="date"
+                render={({ field }) => (
+                  <ControlField
+                    label="Date"
+                    error={form.formState.errors.date?.message}
+                  >
+                    <LedgerDatePicker
+                      value={field.value}
+                      onChange={(iso) =>
+                        form.setValue("date", iso, { shouldValidate: true })
+                      }
+                    />
+                  </ControlField>
+                )}
+              />
+            ) : null}
             {command.retained &&
             ["apply", "refund", "reverse", "release"].includes(mode)
               ? text("revision", "Check number from the earlier attempt")
