@@ -18,6 +18,7 @@ import {
   Button,
   ControlField,
   Input,
+  toast,
 } from "@ewatrade/ui"
 import {
   useInfiniteQuery,
@@ -463,6 +464,7 @@ function ExpenseReceiptWorkspace({
         setFile(null)
         operation.current = null
         await query.refetch()
+        toast.success("Receipt added.")
         return
       }
       assertCurrent(activeController.signal)
@@ -630,6 +632,7 @@ function ExpenseReceiptWorkspace({
         receipt.id,
       )
       await query.refetch()
+      toast.success("Receipt added.")
     } catch (failure) {
       let reconciled = false
       try {
@@ -880,8 +883,8 @@ function ExpenseReceiptWorkspace({
         <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end">
           <div className="min-w-0">
             <ControlField
-              label="Receipt file"
-              description="JPEG, PNG, WebP, HEIC, HEIF or PDF · up to 10 MB"
+              label="Add a receipt"
+              description="Photo or PDF, up to 10 MB."
             >
               <Input
                 ref={fileInput}
@@ -928,7 +931,7 @@ function ExpenseReceiptWorkspace({
                   ? "Uploading…"
                   : operation.current?.assetId
                     ? "Try same receipt again"
-                    : "Upload receipt"}
+                    : "Add receipt"}
               </Button>
             ) : null}
           </div>
