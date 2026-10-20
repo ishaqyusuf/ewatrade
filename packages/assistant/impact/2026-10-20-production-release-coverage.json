@@ -1,0 +1,61 @@
+{
+  "version": 1,
+  "id": "2026-10-20-production-release-coverage",
+  "tickets": ["H02", "C03", "E05"],
+  "summary": "Classify accumulated internal stock use mutation and supplier opening balance read before the full production release. Existing merchant permissions and form workflows are unchanged.",
+  "noAssistantImpact": "Classification only: assistant support is planned; no tool, permission, rollout or provider authority is introduced.",
+  "capabilities": [],
+  "procedures": [
+    {
+      "path": "inventory.recordInternalUse",
+      "status": "planned",
+      "ticket": "C03",
+      "reason": "Canonical balance decrease for internal use; assistant adapter and confirmation remain pending."
+    },
+    {
+      "path": "finance.supplierOpeningBalance",
+      "status": "planned",
+      "ticket": "E05",
+      "reason": "Scoped supplier opening balance read; dedicated assistant access remains pending."
+    },
+    {
+      "path": "catalog.updateItem",
+      "status": "form_only",
+      "reason": "Whole-item editor payload from the catalog sheet; assistant edits use narrow existing capabilities."
+    },
+    {
+      "path": "finance.paySupplierOpening",
+      "status": "planned",
+      "ticket": "E05",
+      "reason": "Payment toward supplier opening balance; dedicated assistant adapter remains pending."
+    }
+  ],
+  "docs": [
+    {
+      "topic": "feature",
+      "status": "local_only",
+      "path": ".brain/qa/2026-10-20-full-production-release.md",
+      "note": "Release gate reconciliation; no feature acceptance promotion."
+    },
+    {
+      "topic": "api",
+      "status": "local_only",
+      "path": ".brain/api/contracts.md",
+      "note": "Classifies existing merchant procedures without changing their API contracts."
+    },
+    {
+      "topic": "schema",
+      "status": "local_only",
+      "path": ".brain/database/schema.md",
+      "note": "Accumulated INTERNAL_USE and OPENING_PAYMENT enum values; production DB release applies pending committed schema, no schema edits from release preparation."
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "test",
+      "path": "packages/assistant/src/capabilities/coverage.test.ts",
+      "executed": true,
+      "result": "Assistant gate suite:154 passing tests across24 files before classification repair; rerun scoped coverage after repair."
+    }
+  ]
+}

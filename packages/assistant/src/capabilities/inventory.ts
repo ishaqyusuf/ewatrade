@@ -184,6 +184,7 @@ formOnly(
   "Discarding a saved count draft is a dashboard step with its own confirmation; nothing changes stock. The assistant starts a new count instead.",
   ["inventory.discardStockCount"],
 )
+planned("inventory", "C03", ["inventory.recordInternalUse"])
 planned("inventory", "C05", ["inventory.reconciliationReport"])
 planned("inventory", "G04", [
   "inventory.*Reservation",
@@ -225,6 +226,7 @@ planned("finance", "E05", [
   "finance.*Supplier*",
   "finance.*Purchase*",
   "finance.purchase*",
+  "finance.supplierOpeningBalance",
 ])
 excluded(
   "finance",

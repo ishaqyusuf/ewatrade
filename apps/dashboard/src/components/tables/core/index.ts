@@ -52,8 +52,3 @@ export {
   TALL_TABLE_ROW_HEIGHT,
 } from "./types"
 export { VirtualRow, type VirtualRowProps } from "./virtual-row"
-export {
-  TableToolbarPortal,
-  TableToolbarSlot,
-  TableToolbarSlotProvider,
-} from "./toolbar-slot"

@@ -6,11 +6,11 @@ Tickets refer to the Brain plan `.brain/plans/2026-10-09-assistant-business-oper
 
 ## Summary
 
-- Router procedures: 659 (486 merchant, 173 public/account/internal)
+- Router procedures: 669 (496 merchant, 173 public/account/internal)
 - Merchant supported by a capability: 164
-- Merchant planned: 126
-- Merchant form-only: 142
-- Merchant excluded: 54
+- Merchant planned: 130
+- Merchant form-only: 145
+- Merchant excluded: 57
 - Capabilities: 154 (80 read, 74 write)
 
 ## Capabilities
@@ -347,6 +347,7 @@ track conversational evaluation separately from these source test links.
 | B02 | 5 |
 | B03 | 5 |
 | B05 | 2 |
+| C03 | 1 |
 | C05 | 1 |
 | D01 | 1 |
 | D02 | 1 |
@@ -357,7 +358,8 @@ track conversational evaluation separately from these source test links.
 | E02 | 3 |
 | E03 | 3 |
 | E04 | 1 |
-| G01 | 6 |
+| E05 | 2 |
+| G01 | 7 |
 | G02 | 4 |
 | G03 | 28 |
 | G04 | 3 |
@@ -431,6 +433,7 @@ track conversational evaluation separately from these source test links.
 | `catalog.publishUnitConfiguration` | mutation | catalog | catalog | supported | catalog.units.publish |
 | `catalog.setOfferingAvailability` | mutation | catalog | catalog | supported | catalog.availability.update |
 | `catalog.setProductUsage` | mutation | Owner/Admin only | catalog | planned | B03 |
+| `catalog.updateItem` | mutation | catalog | catalog | form_only | Whole-item editor payload from the catalog sheet; assistant edits use the narrow price, details, identifier and availability capabilities. |
 | `catalog.updatePrice` | mutation | catalog | catalog | supported | catalog.price.update |
 | `catalog.updateProductDetails` | mutation | catalog | catalog | supported | catalog.details.update |
 | `catalog.updateProductIdentifiers` | mutation | catalog | catalog | supported | catalog.identifiers.update |
@@ -496,6 +499,7 @@ track conversational evaluation separately from these source test links.
 | `finance.createExpenseCategory` | mutation | Owner/Admin only | finance | planned | E04 |
 | `finance.createMoneyAccount` | mutation | Owner/Admin only | finance | supported | finance.money_in.record_simple, finance.transfer.record_simple |
 | `finance.createSupplier` | mutation | Owner/Admin only | finance | supported | finance.supplier.create |
+| `finance.customerBalances` | query | Owner/Admin only | finance | excluded | Dashboard list projections for Finance pages; the assistant answers these amounts through supplier statements, customer statements and money account balances. |
 | `finance.expenseCategories` | query | Owner/Admin only | finance | supported | finance.expense_categories.read |
 | `finance.expenseReceipts.attach` | mutation | Owner/Admin only | finance | planned | H04 |
 | `finance.expenseReceipts.createIntent` | mutation | Owner/Admin only | finance | planned | H04 |
@@ -506,8 +510,10 @@ track conversational evaluation separately from these source test links.
 | `finance.journal` | query | Owner/Admin only | finance | planned | G01 |
 | `finance.moneyAccounts` | query | Owner/Admin only | finance | supported | finance.cash_accounts.read, finance.money_accounts.read |
 | `finance.moneyMovement` | query | Owner/Admin only | finance | planned | E03 |
+| `finance.owedSummary` | query | Owner/Admin only | finance | excluded | Dashboard list projections for Finance pages; the assistant answers these amounts through supplier statements, customer statements and money account balances. |
 | `finance.payBill` | mutation | Owner/Admin only | finance | supported | finance.bill.pay |
 | `finance.payPurchase` | mutation | Owner/Admin only | finance | supported | finance.purchase.pay |
+| `finance.paySupplierOpening` | mutation | Owner/Admin only | finance | planned | E05 |
 | `finance.periodAudit` | query | Owner/Admin only | finance | planned | G02 |
 | `finance.periodCloseChecklist` | query | Owner/Admin only | finance | supported | finance.day_close.read |
 | `finance.periods` | query | Owner/Admin only | finance | planned | G02 |
@@ -532,6 +538,8 @@ track conversational evaluation separately from these source test links.
 | `finance.reversePurchaseRecognition` | mutation | Owner/Admin only | finance | supported | finance.purchase.fact.reverse |
 | `finance.reverseSupplierEntry` | mutation | Owner/Admin only | finance | supported | finance.supplier.entry.reverse |
 | `finance.setup` | mutation | Owner/Admin only | finance | form_only | Opening the Book is a guided setup with fiscal choices. |
+| `finance.supplierBalances` | query | Owner/Admin only | finance | excluded | Dashboard list projections for Finance pages; the assistant answers these amounts through supplier statements, customer statements and money account balances. |
+| `finance.supplierOpeningBalance` | query | Owner/Admin only | finance | planned | E05 |
 | `finance.supplierPayableAging` | query | Owner/Admin only | finance | planned | G01 |
 | `finance.suppliers` | query | Owner/Admin only | finance | supported | finance.suppliers.read |
 | `finance.supplierStatement` | query | Owner/Admin only | finance | supported | finance.supplier_statement.read |
@@ -552,6 +560,7 @@ track conversational evaluation separately from these source test links.
 | `inventory.createCloseout` | mutation | reconciliation | inventory | supported | inventory.closeout.create |
 | `inventory.createStockCount` | mutation | stock | inventory | supported | inventory.count.create |
 | `inventory.custodyAssignees` | query | stock | inventory | form_only | Exact protected stock-editor context and Store-eligible custody choices; no standalone model read tool or confirmation authority. Native stock editors and originals remain in A04 scope. |
+| `inventory.discardStockCount` | mutation | Owner/Admin only | inventory | form_only | Discarding a saved count draft is a dashboard step with its own confirmation; nothing changes stock. The assistant starts a new count instead. |
 | `inventory.dispatchTransfer` | mutation | stock | inventory | supported | inventory.transfer.dispatch |
 | `inventory.finalizeCloseout` | mutation | reconciliation | inventory | supported | inventory.closeout.finalize |
 | `inventory.finalizeStockCount` | mutation | stock | inventory | supported | inventory.count.finalize |
@@ -562,9 +571,11 @@ track conversational evaluation separately from these source test links.
 | `inventory.operationHistory` | query | stock | inventory | supported | inventory.operations.history |
 | `inventory.postBalanceOperation` | mutation | stock | inventory | supported | inventory.stock.receive, inventory.stock.adjust |
 | `inventory.reconciliationReport` | query | reconciliation | inventory | planned | C05 |
+| `inventory.recordInternalUse` | mutation | Owner/Admin only | inventory | planned | C03 |
 | `inventory.releaseReservation` | mutation | orders | inventory | planned | G04 |
 | `inventory.reserveOffering` | mutation | orders | inventory | planned | G04 |
 | `inventory.stockCountReview` | query | stock | inventory | supported | inventory.count.read |
+| `inventory.stockCounts` | query | Owner/Admin only | inventory | form_only | Count stock sheet: lists this Store's saved count drafts to finish or discard. The assistant reads a saved count with readStockCount and creates new counts itself. |
 | `inventory.transferReview` | query | stock | inventory | supported | inventory.transfer.read |
 | `inventory.transfers` | query | stock | inventory | supported | inventory.transfer.list |
 | `inventory.transformPackagedStock` | mutation | stock | inventory | supported | inventory.package.transform |
@@ -615,6 +626,7 @@ track conversational evaluation separately from these source test links.
 | `orders.requestChangeApproval` | mutation | orders | sales | planned | D03 |
 | `orders.returnItems` | mutation | orders | sales | planned | D03 |
 | `orders.returnProductLine` | mutation | orders | sales | supported | sales.product.return |
+| `orders.salesReport` | query | Owner/Admin only | sales | planned | G01 |
 | `orders.saveReceiptSettings` | mutation | Owner/Admin only | sales | supported | settings.store.change |
 | `orders.timeline` | query | read | sales | planned | D02 |
 | `orders.updateChangePolicy` | mutation | Owner/Admin only | sales | planned | G05 |
