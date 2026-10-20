@@ -15,10 +15,10 @@ export function ReceiptSettingsPreview({
   return (
     <section
       aria-label="Sample receipt preview"
-      className="border border-border bg-[#edf1ee] p-4 sm:p-6"
+      className="rounded-xl border border-border bg-[#edf1ee] p-4 sm:p-6 dark:bg-muted"
     >
-      <p className="mb-4 text-xs text-[#626d69]">
-        Sample preview · one simple template
+      <p className="mb-4 text-xs text-[#626d69] dark:text-muted-foreground">
+        Preview with a sample order
       </p>
       <div className="mx-auto max-w-[400px] border border-[#dce2df] bg-white p-6 text-[#182420] shadow-sm">
         <div className="border-t-4 border-[#17684f] pt-5">

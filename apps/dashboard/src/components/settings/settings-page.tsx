@@ -161,3 +161,65 @@ export function SettingsNotice({
     </div>
   )
 }
+
+export type SettingsChoiceOption<Value extends string> = {
+  value: Value
+  label: string
+  description?: string
+}
+
+/** A radio choice inside a section: bordered options with a line saying what each does. */
+export function SettingsChoice<Value extends string>({
+  disabled,
+  label,
+  name,
+  onChange,
+  options,
+  saved,
+  value,
+}: {
+  disabled?: boolean
+  label: string
+  name: string
+  onChange: (value: Value) => void
+  options: SettingsChoiceOption<Value>[]
+  saved?: boolean
+  value: Value
+}) {
+  return (
+    <fieldset className="min-w-0 px-4 py-3.5" disabled={disabled}>
+      <legend className="mb-2 flex items-center gap-2.5 text-sm font-medium">
+        {label}
+        {saved ? <SettingsSavedMark /> : null}
+      </legend>
+      <div className="grid gap-2 sm:grid-cols-[repeat(auto-fit,minmax(170px,1fr))]">
+        {options.map((option) => (
+          <label
+            key={option.value}
+            className={cn(
+              "flex cursor-pointer items-start gap-2.5 rounded-lg border border-border px-3 py-2.5",
+              value === option.value && "border-primary bg-primary/5",
+              disabled && "cursor-not-allowed opacity-70",
+            )}
+          >
+            <input
+              type="radio"
+              name={name}
+              className="mt-1 accent-[var(--primary)]"
+              checked={value === option.value}
+              onChange={() => onChange(option.value)}
+            />
+            <span className="grid">
+              <span className="text-sm font-semibold">{option.label}</span>
+              {option.description ? (
+                <span className="text-sm text-muted-foreground">
+                  {option.description}
+                </span>
+              ) : null}
+            </span>
+          </label>
+        ))}
+      </div>
+    </fieldset>
+  )
+}

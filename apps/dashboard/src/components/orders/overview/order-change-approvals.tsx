@@ -5,14 +5,13 @@ import type { RouterOutputs } from "@ewatrade/api/trpc/routers/_app"
 import { Button, Input, cn } from "@ewatrade/ui"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import Link from "next/link"
-import { useEffect, useRef, useState } from "react"
+import { useRef, useState } from "react"
 import { orderMoney } from "../order-draft"
 import { formatOrderTime } from "./order-overview-model"
 
 type ChangeOptions = RouterOutputs["orders"]["changeOptions"]
 type Approval = NonNullable<ChangeOptions["approvals"]["return"]>
 type Pending = RouterOutputs["orders"]["pendingChangeApprovals"][number]
-type Mode = "OFF" | "OPEN" | "APPROVAL_REQUIRED"
 
 /**
  * Keep checking while a request is waiting, or approved but not yet recorded
@@ -407,167 +406,5 @@ export function ChangeApprovalRows({
         </li>
       ))}
     </ul>
-  )
-}
-
-const MODES: Array<{
-  value: Mode
-  label: string
-  returns: string
-  refunds: string
-}> = [
-  {
-    value: "OPEN",
-    label: "Open",
-    returns: "Staff record returns; money back needs a manager.",
-    refunds: "Owners, admins and managers give money back.",
-  },
-  {
-    value: "APPROVAL_REQUIRED",
-    label: "Needs approval",
-    returns: "Staff and managers ask; an owner or admin approves.",
-    refunds: "Managers and staff ask; an owner or admin approves.",
-  },
-  {
-    value: "OFF",
-    label: "Off",
-    returns: "No returns at this store.",
-    refunds: "No money goes back, from refunds or returns.",
-  },
-]
-
-function ModeGroup({
-  name,
-  label,
-  value,
-  disabled,
-  onChange,
-}: {
-  name: "returns" | "refunds"
-  label: string
-  value: Mode
-  disabled: boolean
-  onChange: (mode: Mode) => void
-}) {
-  return (
-    <fieldset className="grid gap-2">
-      <legend className="mb-1 text-sm font-medium">{label}</legend>
-      {MODES.map((mode) => (
-        <label
-          key={mode.value}
-          className={cn(
-            "flex cursor-pointer items-start gap-3 rounded-lg border p-3",
-            value === mode.value && "border-primary bg-primary/5",
-            disabled && "cursor-not-allowed opacity-70",
-          )}
-        >
-          <input
-            type="radio"
-            name={name}
-            className="mt-1 accent-[var(--primary)]"
-            checked={value === mode.value}
-            disabled={disabled}
-            onChange={() => onChange(mode.value)}
-          />
-          <span className="grid">
-            <span className="text-sm font-medium">{mode.label}</span>
-            <span className="text-sm text-muted-foreground">{mode[name]}</span>
-          </span>
-        </label>
-      ))}
-    </fieldset>
-  )
-}
-
-/** Owner/Admin: how the selected Store handles returns and refunds. */
-export function ReturnRefundPolicyForm() {
-  const trpc = useTRPC()
-  const client = useQueryClient()
-  const policy = useQuery(
-    trpc.orders.changePolicy.queryOptions(undefined, { retry: false }),
-  )
-  const [draft, setDraft] = useState<{
-    returnsMode: Mode
-    refundsMode: Mode
-  } | null>(null)
-  const [saved, setSaved] = useState(false)
-  useEffect(() => {
-    if (policy.data)
-      setDraft({
-        refundsMode: policy.data.refundsMode,
-        returnsMode: policy.data.returnsMode,
-      })
-  }, [policy.data])
-  const save = useMutation(
-    trpc.orders.updateChangePolicy.mutationOptions({
-      onSuccess: async () => {
-        setSaved(true)
-        await Promise.allSettled([
-          client.invalidateQueries({
-            queryKey: trpc.orders.changePolicy.queryKey(),
-          }),
-          client.invalidateQueries({
-            queryKey: trpc.orders.changeOptions.pathKey(),
-          }),
-        ])
-      },
-    }),
-  )
-  if (policy.isPending) return <p>Loading…</p>
-  if (policy.isError)
-    return (
-      <p role="alert" className="text-destructive">
-        {policy.error.message}
-      </p>
-    )
-  if (!draft) return null
-  const dirty =
-    draft.returnsMode !== policy.data.returnsMode ||
-    draft.refundsMode !== policy.data.refundsMode
-  const disabled = !policy.data.canEdit || save.isPending
-  const change = (patch: Partial<typeof draft>) => {
-    setSaved(false)
-    setDraft({ ...draft, ...patch })
-  }
-  return (
-    <div className="grid max-w-2xl gap-6">
-      <p className="text-sm text-muted-foreground">
-        For {policy.data.storeName ?? "this store"}. Owners and admins never
-        need approval. Requests show on Home and on the order; an approval lasts
-        until the end of the day and only the person who asked can use it. A
-        return that gives money back also follows the Refunds setting.
-      </p>
-      <ModeGroup
-        name="returns"
-        label="Returns"
-        value={draft.returnsMode}
-        disabled={disabled}
-        onChange={(returnsMode) => change({ returnsMode })}
-      />
-      <ModeGroup
-        name="refunds"
-        label="Refunds"
-        value={draft.refundsMode}
-        disabled={disabled}
-        onChange={(refundsMode) => change({ refundsMode })}
-      />
-      {save.isError ? (
-        <p role="alert" className="text-destructive">
-          {save.error.message}
-        </p>
-      ) : saved && !dirty ? (
-        <output className="block text-sm text-emerald-700 dark:text-emerald-300">
-          Saved. New returns and refunds at this store follow these settings.
-        </output>
-      ) : null}
-      <div>
-        <Button
-          disabled={disabled || !dirty}
-          onClick={() => save.mutate(draft)}
-        >
-          {save.isPending ? "Saving…" : "Save"}
-        </Button>
-      </div>
-    </div>
   )
 }

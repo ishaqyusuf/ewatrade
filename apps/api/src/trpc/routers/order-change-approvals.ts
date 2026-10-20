@@ -67,6 +67,36 @@ function activeStoreId(ctx: {
   return storeId
 }
 
+const policyStoreInput = z.string().trim().min(1).optional()
+
+/** The store a returns/refunds policy belongs to: a chosen store of this business, else the active one. */
+function policyStore(
+  ctx: {
+    tenantContext: {
+      activeStore?: { id: string; name: string } | null
+      stores: Array<{ id: string; name: string }>
+    }
+  },
+  requestedStoreId?: string,
+) {
+  if (!requestedStoreId) {
+    const storeId = activeStoreId(ctx)
+    return {
+      id: storeId,
+      name: ctx.tenantContext.activeStore?.name ?? null,
+    }
+  }
+  const store = ctx.tenantContext.stores.find(
+    (row) => row.id === requestedStoreId,
+  )
+  if (!store)
+    throw new TRPCError({
+      code: "NOT_FOUND",
+      message: "Store not found for this business.",
+    })
+  return { id: store.id, name: store.name }
+}
+
 function mapped(error: unknown): never {
   if (error instanceof CatalogError || error instanceof FinanceError)
     throw orderError(error)
@@ -118,28 +148,41 @@ export const orderChangeApprovalRequestSchema = z.discriminatedUnion("kind", [
  * Owner/Admin decides, the requester records exactly what was approved.
  */
 export const orderChangeApprovalProcedures = {
-  changePolicy: protectedProcedure.query(async ({ ctx }) => {
-    assertCanOperateOrders(ctx.tenantContext.membership.role)
-    const policy = await getCommercialOrderChangePolicy(ctx.db, {
-      storeId: activeStoreId(ctx),
-      tenantId: ctx.tenantContext.tenant.id,
-    })
-    return {
-      ...policy,
-      canEdit: orderChangeActor(ctx.tenantContext.membership.role).isApprover,
-      storeName: ctx.tenantContext.activeStore?.name ?? null,
-    }
-  }),
+  changePolicy: protectedProcedure
+    .input(z.object({ storeId: policyStoreInput }).strict().optional())
+    .query(async ({ ctx, input }) => {
+      assertCanOperateOrders(ctx.tenantContext.membership.role)
+      const store = policyStore(ctx, input?.storeId)
+      const policy = await getCommercialOrderChangePolicy(ctx.db, {
+        storeId: store.id,
+        tenantId: ctx.tenantContext.tenant.id,
+      })
+      return {
+        ...policy,
+        canEdit: orderChangeActor(ctx.tenantContext.membership.role).isApprover,
+        storeId: store.id,
+        storeName: store.name,
+      }
+    }),
 
   updateChangePolicy: protectedProcedure
-    .input(z.object({ returnsMode: mode, refundsMode: mode }).strict())
+    .input(
+      z
+        .object({
+          returnsMode: mode,
+          refundsMode: mode,
+          storeId: policyStoreInput,
+        })
+        .strict(),
+    )
     .mutation(async ({ ctx, input }) => {
       assertApprover(ctx.tenantContext.membership.role)
+      const { storeId, ...modes } = input
       try {
         return await updateCommercialOrderChangePolicy(ctx.db, {
-          ...input,
+          ...modes,
           actorUserId: ctx.session.user.id,
-          storeId: activeStoreId(ctx),
+          storeId: policyStore(ctx, storeId).id,
           tenantId: ctx.tenantContext.tenant.id,
         })
       } catch (error) {

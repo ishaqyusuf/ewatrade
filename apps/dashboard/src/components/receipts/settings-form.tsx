@@ -1,63 +1,100 @@
 "use client"
-import { FormFeedback } from "@/components/forms/form-feedback"
+import {
+  SettingsHeader,
+  SettingsPage,
+  SettingsRow,
+  SettingsSection,
+} from "@/components/settings/settings-page"
+import {
+  ALL_STORES,
+  SettingsStorePicker,
+} from "@/components/settings/settings-store-picker"
+import { useSettingsAutosave } from "@/components/settings/use-settings-autosave"
+import { useSettingsStoreParams } from "@/hooks/use-settings-store-params"
 import { useTRPC } from "@/trpc/client"
 import type { RouterOutputs } from "@ewatrade/api/trpc/routers/_app"
 import type { ReceiptSettings } from "@ewatrade/order-receipts"
-import { Button, Checkbox, Textarea } from "@ewatrade/ui"
+import { Button, Switch, Textarea } from "@ewatrade/ui"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useState } from "react"
-import { useFormContext, useWatch } from "react-hook-form"
-import { ReceiptSettingsFormContext } from "./settings-form-context"
 import { ReceiptSettingsPreview } from "./settings-preview"
 
 type Settings = RouterOutputs["orders"]["receiptSettings"]
+type Store = { id: string; name: string }
 
-export function ReceiptSettingsForm({ storeId }: { storeId: string }) {
+const NOTE_LIMIT = 300
+
+/**
+ * What prints on every receipt, for all stores or one store. Switches save as
+ * they change; the thank-you note has its own Save.
+ */
+export function ReceiptSettingsForm({
+  activeStoreId,
+  stores,
+}: {
+  activeStoreId: string
+  stores: Store[]
+}) {
   const trpc = useTRPC()
-  const query = useQuery(trpc.orders.receiptSettings.queryOptions({ storeId }))
-  const [scope, setScope] = useState<"business" | "store">("business")
-  if (query.isError)
-    return (
-      <div className="grid gap-3">
-        <FormFeedback>{query.error.message}</FormFeedback>
-        <Button variant="outline" onClick={() => void query.refetch()}>
-          Try again
-        </Button>
-      </div>
-    )
-  if (!query.data)
-    return <output aria-live="polite">Loading receipt settings…</output>
+  const { storeId: param, setStoreId } = useSettingsStoreParams()
+  const store = stores.find((option) => option.id === param) ?? null
+  // Business-wide settings are read through the active store.
+  const queryStoreId = store?.id ?? activeStoreId
+  const query = useQuery(
+    trpc.orders.receiptSettings.queryOptions({ storeId: queryStoreId }),
+  )
   return (
-    <ReceiptSettingsFormContext
-      key={`${storeId}:${scope}`}
-      settings={
-        scope === "business" ? query.data.business : query.data.effective
-      }
-    >
-      <ReceiptSettingsEditor
-        scope={scope}
-        setScope={setScope}
-        data={query.data}
+    <SettingsPage>
+      <SettingsHeader
+        title="Receipts"
+        description="Choose what prints on every receipt. Orders use these automatically."
+        actions={
+          <SettingsStorePicker
+            includeAll
+            stores={stores}
+            value={store?.id ?? ALL_STORES}
+            onChange={(next) =>
+              void setStoreId(next === ALL_STORES ? null : next)
+            }
+          />
+        }
       />
-    </ReceiptSettingsFormContext>
+      {query.isError ? (
+        <div role="alert" className="grid justify-items-start gap-2 text-sm">
+          <p>Couldn't load your receipt settings. {query.error.message}</p>
+          <Button variant="outline" onClick={() => void query.refetch()}>
+            Try again
+          </Button>
+        </div>
+      ) : !query.data ? (
+        <output aria-live="polite" className="text-sm text-muted-foreground">
+          Loading receipt settings…
+        </output>
+      ) : (
+        <ReceiptSettingsEditor
+          key={`${queryStoreId}:${store ? "store" : "business"}`}
+          data={query.data}
+          scope={store ? "store" : "business"}
+        />
+      )}
+    </SettingsPage>
   )
 }
 
 function ReceiptSettingsEditor({
   data,
   scope,
-  setScope,
 }: {
   data: Settings
   scope: "business" | "store"
-  setScope: (value: "business" | "store") => void
 }) {
   const trpc = useTRPC()
   const queryClient = useQueryClient()
-  const form = useFormContext<ReceiptSettings>()
-  const watched = useWatch<ReceiptSettings>({ control: form.control })
-  const [inherit, setInherit] = useState(data.override === null)
-  const [saved, setSaved] = useState(false)
+  const autosave = useSettingsAutosave()
+  const inherited = scope === "store" && data.override === null
+  const current: ReceiptSettings =
+    scope === "business" ? data.business : (data.override ?? data.business)
+  const [note, setNote] = useState(current.thankYouNote)
   const mutation = useMutation(
     trpc.orders.saveReceiptSettings.mutationOptions({
       onSuccess: (next) => {
@@ -71,179 +108,173 @@ function ReceiptSettingsEditor({
         void queryClient.invalidateQueries({
           queryKey: trpc.orders.prepareReceipts.queryKey(),
         })
-        form.reset(scope === "business" ? next.business : next.effective)
-        setSaved(true)
       },
     }),
   )
-  const inherited = scope === "store" && inherit
-  const settings: ReceiptSettings = inherited
-    ? data.business
-    : {
-        showCustomerName: watched.showCustomerName ?? true,
-        showPaymentBreakdown: watched.showPaymentBreakdown ?? true,
-        thankYouNote: watched.thankYouNote ?? "",
-      }
+  const save = (
+    key: string,
+    settings: ReceiptSettings | null,
+    message: string,
+    undo?: ReceiptSettings | null,
+  ) =>
+    mutation.mutate(
+      { storeId: data.storeId, scope, settings },
+      {
+        onSuccess: () =>
+          autosave.confirm(
+            key,
+            message,
+            undo === undefined
+              ? undefined
+              : () =>
+                  mutation.mutate({
+                    storeId: data.storeId,
+                    scope,
+                    settings: undo,
+                  }),
+          ),
+      },
+    )
+  const toggle = (field: "showCustomerName" | "showPaymentBreakdown") =>
+    save(
+      field,
+      { ...current, [field]: !current[field] },
+      "Receipt saved.",
+      scope === "store" ? data.override : data.business,
+    )
+  const noteChanged = note !== current.thankYouNote
+  const preview: ReceiptSettings = { ...current, thankYouNote: note }
+  const storeName = data.storeName
+
   return (
-    <div className="grid gap-6">
-      <fieldset
-        className="flex flex-wrap gap-2"
-        aria-label="Receipt settings scope"
+    <div className="grid gap-7">
+      <SettingsSection
+        title={
+          scope === "store"
+            ? `Receipt at ${storeName}`
+            : "What's on the receipt"
+        }
+        description={
+          inherited
+            ? `${storeName} uses the business receipt. Change it under All stores.`
+            : scope === "store"
+              ? `Only for ${storeName}. Other stores aren't changed.`
+              : "Used by every store unless a store has its own."
+        }
       >
-        <Button
-          variant={scope === "business" ? "default" : "outline"}
-          disabled={mutation.isPending}
-          aria-pressed={scope === "business"}
-          onClick={() => setScope("business")}
+        {scope === "store" ? (
+          <SettingsRow
+            label="Use the business receipt"
+            htmlFor="receipt-inherit"
+            description={`Turn off to give ${storeName} its own receipt.`}
+            saved={autosave.saved("inherit")}
+          >
+            <Switch
+              id="receipt-inherit"
+              checked={inherited}
+              disabled={mutation.isPending}
+              onCheckedChange={(value) =>
+                save(
+                  "inherit",
+                  value ? null : data.business,
+                  value
+                    ? `${storeName} uses the business receipt again.`
+                    : `${storeName} now has its own receipt.`,
+                  data.override,
+                )
+              }
+            />
+          </SettingsRow>
+        ) : null}
+        <SettingsRow
+          label="Show customer name"
+          htmlFor="receipt-customer"
+          description="Print the customer's name at the top."
+          disabled={inherited}
+          saved={autosave.saved("showCustomerName")}
         >
-          Business defaults
-        </Button>
-        <Button
-          variant={scope === "store" ? "default" : "outline"}
-          disabled={mutation.isPending}
-          aria-pressed={scope === "store"}
-          onClick={() => setScope("store")}
-        >
-          {data.storeName}
-        </Button>
-      </fieldset>
-      <p className="text-sm text-muted-foreground">
-        {scope === "business"
-          ? "Used across your business unless a Store saves its own settings."
-          : `Settings for ${data.storeName}. Other Stores keep their own defaults.`}
-      </p>
-      <div className="grid items-start gap-6 md:grid-cols-[1fr_1fr]">
-        <form
-          className="grid gap-6"
-          onChange={() => setSaved(false)}
-          onSubmit={form.handleSubmit((values) => {
-            setSaved(false)
-            mutation.mutate({
-              storeId: data.storeId,
-              scope,
-              settings: inherited ? null : values,
-            })
-          })}
-        >
-          {scope === "store" ? (
-            <label
-              htmlFor="receipt-inherit"
-              className="flex items-start gap-3 border-b border-border pb-5"
-            >
-              <Checkbox
-                id="receipt-inherit"
-                aria-label="Use business defaults"
-                checked={inherit}
-                disabled={mutation.isPending}
-                onCheckedChange={(value) => {
-                  setInherit(value)
-                  setSaved(false)
-                }}
-              />
-              <span className="text-sm">Use business defaults</span>
-            </label>
-          ) : null}
-          <fieldset
+          <Switch
+            id="receipt-customer"
+            checked={current.showCustomerName}
             disabled={inherited || mutation.isPending}
-            className="grid gap-6 disabled:opacity-50"
-          >
-            <label
-              htmlFor="receipt-customer"
-              className="flex items-start gap-3"
-            >
-              <Checkbox
-                id="receipt-customer"
-                disabled={inherited || mutation.isPending}
-                aria-label="Show customer name"
-                checked={settings.showCustomerName}
-                onCheckedChange={(value) => {
-                  form.setValue("showCustomerName", value, {
-                    shouldDirty: true,
-                  })
-                  setSaved(false)
-                }}
-              />
-              <span>
-                <span className="block text-sm">Customer name</span>
-                <span className="block pt-1 text-xs text-muted-foreground">
-                  Show the name recorded on the Order.
-                </span>
-              </span>
+            onCheckedChange={() => toggle("showCustomerName")}
+          />
+        </SettingsRow>
+        <SettingsRow
+          label="Show payment details"
+          htmlFor="receipt-payments"
+          description="Show the payment received, balance due and each payment. Paid or unpaid always shows."
+          disabled={inherited}
+          saved={autosave.saved("showPaymentBreakdown")}
+        >
+          <Switch
+            id="receipt-payments"
+            checked={current.showPaymentBreakdown}
+            disabled={inherited || mutation.isPending}
+            onCheckedChange={() => toggle("showPaymentBreakdown")}
+          />
+        </SettingsRow>
+        <div className="grid gap-1.5 px-4 py-3.5">
+          <div className="flex items-baseline justify-between gap-2">
+            <label htmlFor="receipt-thank-you" className="text-sm font-medium">
+              Thank-you note
             </label>
-            <label
-              htmlFor="receipt-payments"
-              className="flex items-start gap-3"
-            >
-              <Checkbox
-                id="receipt-payments"
-                disabled={inherited || mutation.isPending}
-                aria-label="Show payment breakdown"
-                checked={settings.showPaymentBreakdown}
-                onCheckedChange={(value) => {
-                  form.setValue("showPaymentBreakdown", value, {
-                    shouldDirty: true,
-                  })
-                  setSaved(false)
-                }}
-              />
-              <span>
-                <span className="block text-sm">Payment breakdown</span>
-                <span className="block pt-1 text-xs text-muted-foreground">
-                  Show received amount, balance, payments and refunds. Payment
-                  status always appears.
-                </span>
-              </span>
-            </label>
-            <div className="grid gap-2">
-              <label htmlFor="receipt-thank-you" className="text-sm">
-                Thank-you note
-              </label>
-              <Textarea
-                id="receipt-thank-you"
-                rows={4}
-                maxLength={300}
-                {...form.register("thankYouNote")}
-                value={settings.thankYouNote}
-                aria-invalid={Boolean(form.formState.errors.thankYouNote)}
-              />
-              <p className="text-xs text-muted-foreground">
-                Optional · {settings.thankYouNote.length}/300 characters
-              </p>
-              {form.formState.errors.thankYouNote ? (
-                <p role="alert" className="text-xs text-destructive">
-                  {form.formState.errors.thankYouNote.message}
-                </p>
-              ) : null}
+            <span className="text-xs tabular-nums text-muted-foreground">
+              {note.length} / {NOTE_LIMIT}
+            </span>
+          </div>
+          <p className="text-sm text-muted-foreground">
+            Printed at the bottom of every receipt.
+          </p>
+          <Textarea
+            id="receipt-thank-you"
+            rows={3}
+            maxLength={NOTE_LIMIT}
+            placeholder="Thank you for shopping with us."
+            disabled={inherited || mutation.isPending}
+            value={note}
+            onChange={(event) => setNote(event.target.value)}
+          />
+          {noteChanged && !inherited ? (
+            <div className="flex justify-end gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={mutation.isPending}
+                onClick={() => setNote(current.thankYouNote)}
+              >
+                Cancel
+              </Button>
+              <Button
+                size="sm"
+                disabled={mutation.isPending}
+                onClick={() =>
+                  save(
+                    "thankYouNote",
+                    { ...current, thankYouNote: note },
+                    "Thank-you note saved.",
+                  )
+                }
+              >
+                {mutation.isPending ? "Saving…" : "Save"}
+              </Button>
             </div>
-          </fieldset>
-          {mutation.error ? (
-            <FormFeedback appearance="dashboard">
-              {mutation.error.message}
-            </FormFeedback>
           ) : null}
-          {saved ? (
-            <FormFeedback appearance="dashboard" variant="default">
-              Receipt settings saved.
-            </FormFeedback>
-          ) : null}
-          <Button
-            type="submit"
-            disabled={mutation.isPending || !form.formState.isValid}
-          >
-            {mutation.isPending
-              ? "Saving…"
-              : inherited
-                ? "Save business inheritance"
-                : "Save receipt settings"}
-          </Button>
-        </form>
+        </div>
+        {mutation.isError ? (
+          <p role="alert" className="px-4 py-3 text-sm text-destructive">
+            Couldn't save. {mutation.error.message}
+          </p>
+        ) : null}
+      </SettingsSection>
+      <SettingsSection title="Preview" bare>
         <ReceiptSettingsPreview
-          settings={settings}
+          settings={preview}
           businessName={data.businessName}
-          storeName={data.storeName}
+          storeName={storeName}
           currencyCode={data.currencyCode}
         />
-      </div>
+      </SettingsSection>
     </div>
   )
 }
