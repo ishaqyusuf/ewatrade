@@ -12,7 +12,7 @@ import { redirect } from "next/navigation"
 import { Suspense } from "react"
 
 export const metadata: Metadata = {
-  title: "Service Commerce | EwaTrade",
+  title: "Bookings and quotes | EwaTrade",
 }
 
 type Props = {
