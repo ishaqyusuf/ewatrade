@@ -9,8 +9,6 @@ import {
 import { FormField } from "@/components/mobile/form-field"
 import { PhoneField } from "@/components/mobile/phone-field"
 import { StatusBanner } from "@/components/mobile/status-banner"
-import { Pressable } from "@/components/ui/pressable"
-import { Text } from "@/components/ui/text"
 import { View } from "@/components/ui/view"
 import { useAuthContext } from "@/hooks/use-auth"
 import { useMobileAppleAuth } from "@/hooks/use-mobile-apple-auth"
@@ -142,6 +140,11 @@ export function LoginScreen() {
     }),
   )
 
+  const isPending =
+    requestOtpMutation.isPending ||
+    passwordMutation.isPending ||
+    requestPhoneMutation.isPending
+
   const continueWithEmail = () => {
     if (useWhatsApp) {
       requestPhoneMutation.mutate({ phone: fullPhone, mode: "login" })
@@ -217,11 +220,7 @@ export function LoginScreen() {
               ? phone.length < 7
               : !normalizedEmail || (usePassword && !password)
           }
-          isLoading={
-            requestOtpMutation.isPending ||
-            passwordMutation.isPending ||
-            requestPhoneMutation.isPending
-          }
+          isLoading={isPending}
           loadingLabel={usePassword ? "Signing in" : "Sending code"}
           onPress={continueWithEmail}
           trailingIcon="ArrowRight"
@@ -232,39 +231,37 @@ export function LoginScreen() {
               ? "Sign in with password"
               : "Send login code"}
         </AuthActionButton>
-        {phoneAvailability.data?.enabled ? (
-          <AuthMethodButton
-            icon={useWhatsApp ? "Mail" : "WhatsApp"}
-            brandIcon={useWhatsApp ? undefined : "whatsapp"}
-            label={useWhatsApp ? "Use email instead" : "Use WhatsApp instead"}
-            onPress={() => {
-              setUseWhatsApp(!useWhatsApp)
-              setUsePassword(false)
-              setError(null)
-            }}
-            disabled={
-              requestPhoneMutation.isPending ||
-              requestOtpMutation.isPending ||
-              passwordMutation.isPending
-            }
-          />
-        ) : null}
-        {!useWhatsApp ? (
-          <Pressable
-            accessibilityRole="button"
-            className="-my-3 min-h-11 items-center justify-center"
-            onPress={() => {
-              setUsePassword((current) => !current)
-              setError(null)
-            }}
-          >
-            <Text className="text-xs font-extrabold [-rn-line-height:22] text-primary">
-              {usePassword
-                ? "Use a login code instead"
-                : "Use a password instead"}
-            </Text>
-          </Pressable>
-        ) : null}
+        <View className="flex-row gap-3">
+          {phoneAvailability.data?.enabled ? (
+            <View className="flex-1">
+              <AuthMethodButton
+                icon={useWhatsApp ? "Mail" : "WhatsApp"}
+                brandIcon={useWhatsApp ? undefined : "whatsapp"}
+                label={useWhatsApp ? "Use email" : "Use WhatsApp"}
+                variant="sso"
+                onPress={() => {
+                  setUseWhatsApp(!useWhatsApp)
+                  setUsePassword(false)
+                  setError(null)
+                }}
+                disabled={isPending}
+              />
+            </View>
+          ) : null}
+          <View className="flex-1">
+            <AuthMethodButton
+              icon={usePassword ? "Mail" : "Lock"}
+              label={usePassword ? "Use code" : "Use password"}
+              variant="sso"
+              onPress={() => {
+                setUsePassword(!usePassword)
+                setUseWhatsApp(false)
+                setError(null)
+              }}
+              disabled={isPending}
+            />
+          </View>
+        </View>
         {error ? (
           <StatusBanner
             icon="TriangleAlert"
