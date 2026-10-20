@@ -6,47 +6,56 @@ import {
   AlertDialogDescription,
   AlertDialogFooter,
   AlertDialogTitle,
+  Badge,
   Button,
-  CheckboxField,
-  ControlField,
-  FieldGroup,
-  FormActions,
   Input,
-  SubmitButton,
+  Switch,
   Textarea,
+  toast,
 } from "@ewatrade/ui"
 
 import {
-  FormCheckboxControl,
-  FormSelectControl,
-} from "@/components/forms/form-controls"
-
-import { PageHeader, PageToolbar } from "@/components/page-header"
+  ComplianceField,
+  ComplianceSaveRow,
+} from "@/components/compliance/compliance-form-parts"
+import { PharmacyStaffRoles } from "@/components/compliance/pharmacy-staff-roles"
+import {
+  SettingsHeader,
+  SettingsNotice,
+  SettingsRow,
+  SettingsSection,
+} from "@/components/settings/settings-page"
+import { SettingsStorePicker } from "@/components/settings/settings-store-picker"
+import { useSettingsStoreParams } from "@/hooks/use-settings-store-params"
 import { useZodForm } from "@/hooks/use-zod-form"
 import { useTRPC } from "@/trpc/client"
 import {
   PRESCRIPTION_OPERATING_DAYS,
-  type PrescriptionRoleAssignmentFormValues,
   type PrescriptionStoreSettingsFormValues,
   prescriptionOperatingHoursSchema,
-  prescriptionRoleAssignmentFormSchema,
   prescriptionStoreSettingsFormSchema,
 } from "@ewatrade/prescriptions/schemas"
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { useEffect, useState } from "react"
+import { type ReactNode, useEffect, useId, useState } from "react"
+import { Controller } from "react-hook-form"
 import { z } from "zod"
 
 const DAYS = PRESCRIPTION_OPERATING_DAYS
 type PrescriptionSettingsFormValues = PrescriptionStoreSettingsFormValues
-type RoleFormValues = PrescriptionRoleAssignmentFormValues
+
+const DEFAULT_OPENS_AT = "08:00"
+const DEFAULT_CLOSES_AT = "18:00"
+const DEFAULT_CONSENT_VERSION = "2026-08-08"
 
 const defaultHours: PrescriptionSettingsFormValues["operatingHours"] = DAYS.map(
   (day) => ({
-    closesAt: day === "saturday" || day === "sunday" ? undefined : "18:00",
+    closesAt:
+      day === "saturday" || day === "sunday" ? undefined : DEFAULT_CLOSES_AT,
     day,
     isClosed: day === "saturday" || day === "sunday",
-    opensAt: day === "saturday" || day === "sunday" ? undefined : "08:00",
+    opensAt:
+      day === "saturday" || day === "sunday" ? undefined : DEFAULT_OPENS_AT,
   }),
 )
 
@@ -54,461 +63,207 @@ function normalizeHours(value: unknown) {
   const parsed = z.array(prescriptionOperatingHoursSchema).safeParse(value)
   if (!parsed.success) return defaultHours
   const byDay = new Map(parsed.data.map((entry) => [entry.day, entry]))
-  return DAYS.map((day) => byDay.get(day) ?? defaultHours[DAYS.indexOf(day)])
+  return DAYS.map(
+    (day) =>
+      byDay.get(day) ??
+      defaultHours.find((entry) => entry.day === day) ?? {
+        day,
+        isClosed: true,
+      },
+  )
+}
+
+function dayName(day: string) {
+  return day.charAt(0).toUpperCase() + day.slice(1)
 }
 
 const READINESS_LABELS: Record<string, string> = {
-  attendant: "Assign an attendant",
-  contact_policy: "Add the customer contact policy",
-  fulfilment_mode: "Enable pickup or delivery",
-  operating_hours: "Add operating hours",
-  service_policy: "Add the service policy",
-  verified_pharmacist: "Assign a verified pharmacist",
+  attendant: "Add an attendant",
+  contact_policy: "Say when you contact customers",
+  fulfilment_mode: "Turn on pickup, delivery or both",
+  operating_hours: "Set your opening hours",
+  service_policy: "Say how you handle each prescription",
+  verified_pharmacist: "Add a pharmacist whose licence you've checked",
+}
+
+function readinessSteps(missing: string[]) {
+  const steps = missing.map(
+    (key) => READINESS_LABELS[key] ?? "Finish the rest of the setup below",
+  )
+  return [...new Set(steps)]
+}
+
+type StoredSettings = {
+  consentVersion: string | null
+  contactPolicy: string | null
+  deliveryEnabled: boolean
+  operatingHours: unknown
+  pickupEnabled: boolean
+  servicePolicy: string | null
+}
+
+function formValuesFrom(
+  settings: StoredSettings,
+): PrescriptionSettingsFormValues {
+  return {
+    consentVersion: settings.consentVersion ?? DEFAULT_CONSENT_VERSION,
+    contactPolicy: settings.contactPolicy ?? "",
+    deliveryEnabled: settings.deliveryEnabled,
+    operatingHours: normalizeHours(settings.operatingHours),
+    pickupEnabled: settings.pickupEnabled,
+    servicePolicy: settings.servicePolicy ?? "",
+  }
 }
 
 export function PharmacyComplianceSetup({
   storeId,
-  storeName,
+  stores,
 }: {
   storeId: string
-  storeName: string
+  stores: Array<{ id: string; name: string }>
 }) {
   const trpc = useTRPC()
   const queryClient = useQueryClient()
+  const { setStoreId } = useSettingsStoreParams()
   const setupQuery = useQuery(
     trpc.prescriptions.setup.queryOptions({ storeId }, { retry: false }),
   )
-  const [message, setMessage] = useState<string | null>(null)
   const [activationDialogOpen, setActivationDialogOpen] = useState(false)
-  const [revokeTarget, setRevokeTarget] = useState<{
-    id: string
-    name: string
-    role: string
-  } | null>(null)
-  const settingsForm = useZodForm<PrescriptionSettingsFormValues>(
-    prescriptionStoreSettingsFormSchema,
-    {
-      defaultValues: {
-        consentVersion: "2026-08-08",
-        contactPolicy:
-          "Contact customers only for prescription clarification and fulfilment updates.",
-        operatingHours: defaultHours,
-        deliveryEnabled: false,
-        pickupEnabled: true,
-        servicePolicy:
-          "Every request requires attendant verification and pharmacist release before quotation.",
-      },
-    },
-  )
-  const roleForm = useZodForm<RoleFormValues>(
-    prescriptionRoleAssignmentFormSchema,
-    {
-      defaultValues: {
-        credentialReference: "",
-        credentialVerified: false,
-        role: "attendant",
-        userId: "",
-      },
-    },
-  )
-  const selectedRole = roleForm.watch("role")
-
-  useEffect(() => {
-    const settings = setupQuery.data?.settings
-    if (!settings) return
-    settingsForm.reset({
-      consentVersion: settings.consentVersion ?? "2026-08-08",
-      contactPolicy: settings.contactPolicy ?? "",
-      deliveryEnabled: settings.deliveryEnabled,
-      operatingHours: normalizeHours(settings.operatingHours),
-      pickupEnabled: settings.pickupEnabled,
-      servicePolicy: settings.servicePolicy ?? "",
-    })
-  }, [settingsForm, setupQuery.data?.settings])
+  const noticeId = useId()
 
   const invalidateSetup = () =>
     queryClient.invalidateQueries({
       queryKey: trpc.prescriptions.setup.queryKey({ storeId }),
     })
 
-  const settingsMutation = useMutation(
-    trpc.prescriptions.updateSettings.mutationOptions({
-      onError: (error) => setMessage(error.message),
-      onSuccess: async () => {
-        await invalidateSetup()
-        setMessage("Pharmacy compliance settings saved.")
-      },
-    }),
-  )
-  const roleMutation = useMutation(
-    trpc.prescriptions.assignRole.mutationOptions({
-      onError: (error) => setMessage(error.message),
-      onSuccess: async () => {
-        await invalidateSetup()
-        roleForm.reset()
-        setMessage("Prescription role assigned.")
-      },
-    }),
-  )
-  const revokeMutation = useMutation(
-    trpc.prescriptions.revokeRole.mutationOptions({
-      onError: (error) => setMessage(error.message),
-      onSuccess: async () => {
-        await invalidateSetup()
-        setMessage("Prescription role revoked.")
-      },
-    }),
-  )
   const activationMutation = useMutation(
     trpc.prescriptions.setActivation.mutationOptions({
-      onError: (error) => setMessage(error.message),
+      onError: (error) => toast.error(error.message),
       onSuccess: async (result) => {
         await invalidateSetup()
-        setMessage(
+        toast(
           result.settings.status === "active"
-            ? "Pharmacy compliance activated."
-            : "Pharmacy compliance deactivated.",
+            ? "Prescriptions are on. Customers can send them now."
+            : "Prescriptions are off. New ones won't come in.",
         )
       },
     }),
   )
 
+  const header = (actions?: ReactNode) => (
+    <SettingsHeader
+      title="Pharmacy compliance"
+      description="Set how your pharmacy handles prescriptions. Customers can't send one until this is on."
+      actions={
+        <>
+          <SettingsStorePicker
+            stores={stores}
+            value={storeId}
+            onChange={(next) => void setStoreId(next)}
+          />
+          {actions}
+        </>
+      }
+    />
+  )
+
   if (setupQuery.isLoading) {
     return (
-      <div className="grid min-w-0 flex-1 gap-6">
-        <div className="h-24 animate-pulse bg-muted" />
-        <div className="h-96 animate-pulse bg-muted" />
-      </div>
+      <>
+        {header()}
+        <div className="grid gap-7" aria-busy="true">
+          <div className="h-28 animate-pulse rounded-[10px] bg-muted" />
+          <div className="h-96 animate-pulse rounded-[10px] bg-muted" />
+        </div>
+      </>
     )
   }
 
   if (setupQuery.error || !setupQuery.data) {
     return (
-      <div className="grid min-w-0 gap-3">
-        <p className="border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive">
-          {setupQuery.error?.message ?? "Pharmacy compliance is unavailable."}
-        </p>
-        <Button
-          className="w-fit"
-          onClick={() => void setupQuery.refetch()}
-          variant="outline"
+      <>
+        {header()}
+        <SettingsNotice
+          tone="warning"
+          action={
+            <Button
+              onClick={() => void setupQuery.refetch()}
+              size="sm"
+              variant="outline"
+            >
+              Try again
+            </Button>
+          }
         >
-          Try again
-        </Button>
-      </div>
+          Couldn't load pharmacy compliance.
+        </SettingsNotice>
+      </>
     )
   }
 
   const setup = setupQuery.data
   const active = setup.settings.status === "active"
+  const ready = setup.readiness.ready
+  const steps = readinessSteps(setup.readiness.missing)
 
   return (
-    <div className="grid min-w-0 flex-1 gap-6">
-      <PageHeader
-        eyebrow={storeName}
-        title="Pharmacy compliance"
-        description="Configure pharmacy consent, professional roles, and clinical operating controls before accepting prescription requests."
-      >
-        <PageToolbar
-          actions={
-            <>
-              <span
-                className={`rounded-full px-3 py-1 text-xs font-medium ${
-                  active
-                    ? "bg-success text-success-foreground"
-                    : "bg-warning text-warning-foreground"
-                }`}
-              >
-                {active ? "Active" : "Disabled"}
-              </span>
+    <>
+      {header(
+        <>
+          <Badge variant={active ? "default" : "secondary"}>
+            {active ? "On" : "Off"}
+          </Badge>
+          {active ? (
+            <Button
+              disabled={activationMutation.isPending}
+              onClick={() => setActivationDialogOpen(true)}
+              variant="outline"
+            >
+              Turn off
+            </Button>
+          ) : (
+            <span
+              title={ready ? undefined : "Finish the steps below first."}
+              className="inline-flex"
+            >
               <Button
-                className="h-9 rounded-none"
-                disabled={
-                  activationMutation.isPending ||
-                  (!active && !setup.readiness.ready)
-                }
+                aria-describedby={ready ? undefined : noticeId}
+                disabled={activationMutation.isPending || !ready}
                 onClick={() => setActivationDialogOpen(true)}
-                variant={active ? "outline" : "default"}
               >
-                {activationMutation.isPending
-                  ? "Updating…"
-                  : active
-                    ? "Deactivate"
-                    : "Activate"}
+                Turn on
               </Button>
-            </>
-          }
-        />
-      </PageHeader>
-
-      {message ? (
-        <p className="border border-border bg-muted px-4 py-3 text-sm">
-          {message}
-        </p>
-      ) : null}
-
-      {!setup.readiness.ready ? (
-        <section className="rounded-none border border-warning-border bg-warning p-5 text-warning-foreground">
-          <h2 className="font-medium">Activation requirements</h2>
-          <ul className="mt-2 grid gap-1 text-sm">
-            {setup.readiness.missing.map((requirement) => (
-              <li key={requirement}>
-                • {READINESS_LABELS[requirement] ?? requirement}
-              </li>
-            ))}
-          </ul>
-        </section>
-      ) : null}
-
-      <div className="grid gap-6 xl:grid-cols-[minmax(0,1.4fr)_minmax(320px,0.8fr)]">
-        <form
-          className="rounded-none border border-border bg-card p-5"
-          onSubmit={settingsForm.handleSubmit((values) =>
-            settingsMutation.mutate({
-              ...values,
-              storeId,
-            }),
+            </span>
           )}
-        >
-          <FieldGroup className="min-w-0 grid gap-6">
-            <div>
-              <h2 className="font-semibold">Clinical operating policy</h2>
-              <p className="text-sm text-muted-foreground">
-                These settings are store-specific and do not replace pharmacist
-                judgment.
-              </p>
-            </div>
+        </>,
+      )}
 
-            <div className="grid gap-3">
-              <h3 className="text-sm font-medium">Fulfilment options</h3>
-              <div className="grid gap-3 sm:grid-cols-2">
-                <CheckboxField label={<>Customer pickup</>}>
-                  <FormCheckboxControl
-                    control={settingsForm.control}
-                    name="pickupEnabled"
-                  />
-                </CheckboxField>
-                <CheckboxField label={<>Store delivery</>}>
-                  <FormCheckboxControl
-                    control={settingsForm.control}
-                    name="deliveryEnabled"
-                  />
-                </CheckboxField>
-              </div>
-              <p className="text-xs text-muted-foreground">
-                Enable at least one option before activating this pharmacy.
-                Delivery zones and fees are configured in Privacy and Operations
-                below.
-              </p>
-              {settingsForm.formState.errors.pickupEnabled ? (
-                <p className="text-sm text-destructive">
-                  Enable pickup, delivery, or both.
-                </p>
-              ) : null}
-            </div>
+      {!ready ? (
+        <SettingsNotice tone="warning">
+          <div id={noticeId}>
+            <p className="font-semibold">Before you can turn this on</p>
+            <ul className="mt-1.5 grid list-disc gap-0.5 pl-5">
+              {steps.map((step) => (
+                <li key={step}>{step}</li>
+              ))}
+            </ul>
+          </div>
+        </SettingsNotice>
+      ) : null}
 
-            <div className="grid gap-3">
-              <h3 className="text-sm font-medium">Operating hours</h3>
-              {DAYS.map((day, index) => {
-                const closed = settingsForm.watch(
-                  `operatingHours.${index}.isClosed`,
-                )
-                return (
-                  <div
-                    className="grid items-center gap-2 sm:grid-cols-[110px_90px_1fr_1fr]"
-                    key={day}
-                  >
-                    <span className="text-sm capitalize">{day}</span>
-                    <CheckboxField label={<>Closed</>}>
-                      <FormCheckboxControl
-                        control={settingsForm.control}
-                        name={`operatingHours.${index}.isClosed`}
-                      />
-                    </CheckboxField>
-                    <Input
-                      aria-label={`${day} opening time`}
-                      disabled={closed}
-                      type="time"
-                      {...settingsForm.register(
-                        `operatingHours.${index}.opensAt`,
-                      )}
-                    />
-                    <Input
-                      aria-label={`${day} closing time`}
-                      disabled={closed}
-                      type="time"
-                      {...settingsForm.register(
-                        `operatingHours.${index}.closesAt`,
-                      )}
-                    />
-                    <input
-                      type="hidden"
-                      value={day}
-                      {...settingsForm.register(`operatingHours.${index}.day`)}
-                    />
-                  </div>
-                )
-              })}
-              {settingsForm.formState.errors.operatingHours ? (
-                <p className="text-sm text-destructive">
-                  Check each open day's opening and closing times.
-                </p>
-              ) : null}
-            </div>
+      <PharmacyPolicyForm
+        key={storeId}
+        settings={setup.settings}
+        storeId={storeId}
+        onSaved={invalidateSetup}
+      />
 
-            <ControlField label={<>Service policy</>}>
-              <Textarea {...settingsForm.register("servicePolicy")} />
-            </ControlField>
-            <ControlField label={<>Customer contact policy</>}>
-              <Textarea {...settingsForm.register("contactPolicy")} />
-            </ControlField>
-            <ControlField label={<>Consent text version</>}>
-              <Input {...settingsForm.register("consentVersion")} />
-            </ControlField>
-            <FormActions>
-              <SubmitButton
-                isSubmitting={settingsMutation.isPending}
-                disabled={settingsMutation.isPending}
-                type="submit"
-              >
-                {settingsMutation.isPending ? "Saving…" : "Save policy"}
-              </SubmitButton>
-            </FormActions>
-          </FieldGroup>
-        </form>
-
-        <div className="grid content-start gap-6">
-          <form
-            className="rounded-none border border-border bg-card p-5"
-            onSubmit={roleForm.handleSubmit((values) =>
-              roleMutation.mutate({
-                ...values,
-                credentialReference:
-                  values.role === "pharmacist"
-                    ? values.credentialReference?.trim()
-                    : undefined,
-                storeId,
-              }),
-            )}
-          >
-            <FieldGroup className="min-w-0 grid gap-4">
-              <div>
-                <h2 className="font-semibold">Professional roles</h2>
-                <p className="text-sm text-muted-foreground">
-                  Roles apply only to this store.
-                </p>
-              </div>
-              <ControlField
-                label={<>Team member</>}
-                error={roleForm.formState.errors.userId?.message}
-              >
-                <FormSelectControl
-                  control={roleForm.control}
-                  name={"userId"}
-                  options={[
-                    { value: "", label: <>Select a team member</> },
-                    ...(setup.eligibleMembers.map((member) => ({
-                      value: member.id,
-                      label: (
-                        <>
-                          {member.name} · {member.tenantRole}
-                        </>
-                      ),
-                    })) ?? []),
-                  ]}
-                />
-              </ControlField>
-              <ControlField label={<>Prescription role</>}>
-                <FormSelectControl
-                  control={roleForm.control}
-                  name={"role"}
-                  options={[
-                    { value: "attendant", label: <>Attendant</> },
-                    { value: "pharmacist", label: <>Pharmacist</> },
-                  ]}
-                />
-              </ControlField>
-              {selectedRole === "pharmacist" ? (
-                <>
-                  <ControlField
-                    label={<>Credential reference</>}
-                    error={
-                      roleForm.formState.errors.credentialReference?.message
-                    }
-                  >
-                    <Input {...roleForm.register("credentialReference")} />
-                  </ControlField>
-                  <CheckboxField
-                    label={
-                      <>
-                        I confirm this credential was verified outside EwaTrade.
-                      </>
-                    }
-                  >
-                    <FormCheckboxControl
-                      control={roleForm.control}
-                      name={"credentialVerified"}
-                    />
-                  </CheckboxField>
-                </>
-              ) : null}
-              <FormActions>
-                <SubmitButton
-                  isSubmitting={roleMutation.isPending}
-                  disabled={roleMutation.isPending}
-                  type="submit"
-                >
-                  {roleMutation.isPending ? "Assigning…" : "Assign role"}
-                </SubmitButton>
-              </FormActions>
-            </FieldGroup>
-          </form>
-
-          <section className="grid gap-3 rounded-none border border-border bg-card p-5">
-            <h2 className="font-semibold">Assigned roles</h2>
-            {setup.roles.filter((role) => role.status === "active").length ===
-            0 ? (
-              <p className="text-sm text-muted-foreground">
-                No active prescription roles assigned.
-              </p>
-            ) : (
-              setup.roles
-                .filter((role) => role.status === "active")
-                .map((role) => (
-                  <div
-                    className="flex items-start justify-between gap-3 border-t border-border pt-3 first:border-0 first:pt-0"
-                    key={role.id}
-                  >
-                    <div>
-                      <p className="text-sm font-medium">{role.user.name}</p>
-                      <p className="text-xs capitalize text-muted-foreground">
-                        {role.role}
-                        {role.credentialReference
-                          ? ` · ${role.credentialReference}`
-                          : ""}
-                      </p>
-                    </div>
-                    <Button
-                      disabled={revokeMutation.isPending}
-                      onClick={() =>
-                        setRevokeTarget({
-                          id: role.id,
-                          name: role.user.name,
-                          role: role.role,
-                        })
-                      }
-                      size="sm"
-                      type="button"
-                      variant="outline"
-                    >
-                      Revoke
-                    </Button>
-                  </div>
-                ))
-            )}
-          </section>
-        </div>
-      </div>
+      <PharmacyStaffRoles
+        eligibleMembers={setup.eligibleMembers}
+        onChanged={invalidateSetup}
+        roles={setup.roles}
+        storeId={storeId}
+      />
 
       <AlertDialog
         open={activationDialogOpen}
@@ -516,12 +271,12 @@ export function PharmacyComplianceSetup({
       >
         <AlertDialogContent>
           <AlertDialogTitle className="text-lg font-medium">
-            {active ? "Deactivate prescription intake?" : "Activate pharmacy?"}
+            {active ? "Turn off prescriptions?" : "Turn on prescriptions?"}
           </AlertDialogTitle>
           <AlertDialogDescription className="text-sm text-muted-foreground">
             {active
-              ? "New prescription requests will stop entering this Store's queue. Existing requests and records will remain available to authorized staff."
-              : "The Store will begin accepting prescription requests under the configured policy and assigned professional roles."}
+              ? "New prescriptions stop coming in. Requests you already have stay available to your team."
+              : "Customers can send prescriptions to this store. Your team handles them the way you set on this page."}
           </AlertDialogDescription>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
@@ -534,45 +289,249 @@ export function PharmacyComplianceSetup({
               type="button"
               variant={active ? "destructive" : "default"}
             >
-              {active ? "Deactivate intake" : "Activate pharmacy"}
+              {active ? "Turn off" : "Turn on"}
             </Button>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+    </>
+  )
+}
 
-      <AlertDialog
-        open={Boolean(revokeTarget)}
-        onOpenChange={(open) => {
-          if (!open) setRevokeTarget(null)
-        }}
+/**
+ * Pickup and delivery, opening hours and how you work save together: the
+ * settings mutation only accepts the whole policy, so one Save covers them.
+ */
+function PharmacyPolicyForm({
+  onSaved,
+  settings,
+  storeId,
+}: {
+  onSaved: () => Promise<unknown>
+  settings: StoredSettings & { updatedAt: Date | string | null }
+  storeId: string
+}) {
+  const trpc = useTRPC()
+  const ids = useId()
+  const form = useZodForm<PrescriptionSettingsFormValues>(
+    prescriptionStoreSettingsFormSchema,
+    { defaultValues: formValuesFrom(settings) },
+  )
+  const [saveError, setSaveError] = useState<string | null>(null)
+
+  useEffect(() => {
+    form.reset(formValuesFrom(settings))
+  }, [form, settings])
+
+  const saveMutation = useMutation(
+    trpc.prescriptions.updateSettings.mutationOptions({
+      onError: (error) => setSaveError(error.message),
+      onSuccess: async (_result, values) => {
+        const { storeId: _storeId, ...saved } = values
+        form.reset(saved)
+        await onSaved()
+        toast("Saved.")
+      },
+    }),
+  )
+
+  const { errors, isDirty } = form.formState
+  const neverSaved = !settings.updatedAt
+  const hours = form.watch("operatingHours")
+  const fieldError = (present: unknown, message: string) =>
+    present ? message : null
+
+  return (
+    <form
+      className="grid gap-7"
+      noValidate
+      onSubmit={form.handleSubmit(
+        (values) => {
+          setSaveError(null)
+          saveMutation.mutate({ ...values, storeId })
+        },
+        () => setSaveError("Check the highlighted settings."),
+      )}
+    >
+      <SettingsSection
+        title="Pickup and delivery"
+        description="Turn on at least one."
       >
-        <AlertDialogContent>
-          <AlertDialogTitle className="text-lg font-medium">
-            Revoke {revokeTarget?.role} access?
-          </AlertDialogTitle>
-          <AlertDialogDescription className="text-sm text-muted-foreground">
-            {revokeTarget?.name} will lose this Store's {revokeTarget?.role}{" "}
-            role and prescription workspace access. Existing prescription
-            records will remain unchanged.
-          </AlertDialogDescription>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <Button
-              disabled={revokeMutation.isPending}
-              onClick={() => {
-                if (revokeTarget) {
-                  revokeMutation.mutate({ roleId: revokeTarget.id, storeId })
-                }
-                setRevokeTarget(null)
-              }}
-              type="button"
-              variant="destructive"
+        <Controller
+          control={form.control}
+          name="pickupEnabled"
+          render={({ field }) => (
+            <SettingsRow label="Customers can pick up" htmlFor={`${ids}pickup`}>
+              <Switch
+                id={`${ids}pickup`}
+                checked={Boolean(field.value)}
+                onCheckedChange={field.onChange}
+              />
+            </SettingsRow>
+          )}
+        />
+        <Controller
+          control={form.control}
+          name="deliveryEnabled"
+          render={({ field }) => (
+            <SettingsRow
+              label="You deliver"
+              description="Set delivery areas and fees under Delivery areas below."
+              htmlFor={`${ids}delivery`}
             >
-              Revoke role
-            </Button>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-    </div>
+              <Switch
+                id={`${ids}delivery`}
+                checked={Boolean(field.value)}
+                onCheckedChange={field.onChange}
+              />
+            </SettingsRow>
+          )}
+        />
+        {errors.pickupEnabled ? (
+          <p className="px-4 py-3 text-sm text-destructive">
+            Turn on pickup, delivery or both.
+          </p>
+        ) : null}
+      </SettingsSection>
+
+      <SettingsSection title="Opening hours">
+        {DAYS.map((day, index) => {
+          const entry = hours?.[index]
+          const closed = entry?.isClosed ?? false
+          const name = dayName(day)
+          const rowError = errors.operatingHours?.[index]
+          return (
+            <div
+              className="flex min-h-14 flex-wrap items-center gap-x-4 gap-y-2 px-4 py-2.5"
+              key={day}
+            >
+              <span className="w-24 text-sm font-medium">{name}</span>
+              <Switch
+                aria-label={`Open on ${name}`}
+                checked={!closed}
+                onCheckedChange={(open) => {
+                  const options = { shouldDirty: true, shouldValidate: false }
+                  form.setValue(
+                    `operatingHours.${index}.isClosed`,
+                    !open,
+                    options,
+                  )
+                  form.setValue(
+                    `operatingHours.${index}.opensAt`,
+                    open ? entry?.opensAt || DEFAULT_OPENS_AT : undefined,
+                    options,
+                  )
+                  form.setValue(
+                    `operatingHours.${index}.closesAt`,
+                    open ? entry?.closesAt || DEFAULT_CLOSES_AT : undefined,
+                    options,
+                  )
+                }}
+              />
+              {closed ? (
+                <span className="text-sm text-muted-foreground">Closed</span>
+              ) : (
+                <div className="flex flex-wrap items-center gap-2">
+                  <Input
+                    aria-invalid={Boolean(rowError)}
+                    aria-label={`${name} opens`}
+                    className="w-32"
+                    type="time"
+                    {...form.register(`operatingHours.${index}.opensAt`)}
+                  />
+                  <span className="text-sm text-muted-foreground">to</span>
+                  <Input
+                    aria-invalid={Boolean(rowError)}
+                    aria-label={`${name} closes`}
+                    className="w-32"
+                    type="time"
+                    {...form.register(`operatingHours.${index}.closesAt`)}
+                  />
+                </div>
+              )}
+              {rowError ? (
+                <p className="w-full text-sm text-destructive">
+                  Closing time must be after opening time.
+                </p>
+              ) : null}
+            </div>
+          )
+        })}
+      </SettingsSection>
+
+      <SettingsSection title="How you work">
+        <ComplianceField
+          htmlFor={`${ids}service`}
+          label="How you handle each prescription"
+          help="Staff see this. It doesn't replace the pharmacist's judgement."
+          helpId={`${ids}service-help`}
+          error={fieldError(
+            errors.servicePolicy,
+            "Write how you handle each prescription.",
+          )}
+        >
+          <Textarea
+            aria-describedby={`${ids}service-help`}
+            aria-invalid={Boolean(errors.servicePolicy)}
+            id={`${ids}service`}
+            placeholder="For example: An attendant checks every request and a pharmacist approves it before we send a price."
+            rows={3}
+            {...form.register("servicePolicy")}
+          />
+        </ComplianceField>
+        <ComplianceField
+          htmlFor={`${ids}contact`}
+          label="When you contact customers"
+          error={fieldError(
+            errors.contactPolicy,
+            "Write when you contact customers.",
+          )}
+        >
+          <Textarea
+            aria-invalid={Boolean(errors.contactPolicy)}
+            id={`${ids}contact`}
+            placeholder="For example: Only to ask about a prescription or to give an update on their order."
+            rows={3}
+            {...form.register("contactPolicy")}
+          />
+        </ComplianceField>
+        <ComplianceField
+          htmlFor={`${ids}consent`}
+          label="Consent version"
+          help="Saved with each customer's agreement. Change it only when your consent wording changes."
+          helpId={`${ids}consent-help`}
+          error={fieldError(errors.consentVersion, "Enter a consent version.")}
+        >
+          <Input
+            aria-describedby={`${ids}consent-help`}
+            aria-invalid={Boolean(errors.consentVersion)}
+            className="max-w-56"
+            id={`${ids}consent`}
+            {...form.register("consentVersion")}
+          />
+        </ComplianceField>
+      </SettingsSection>
+
+      {isDirty || neverSaved ? (
+        <ComplianceSaveRow
+          sticky
+          error={saveError}
+          isSaving={saveMutation.isPending}
+          message={
+            isDirty
+              ? "You changed pickup and delivery, opening hours or how you work."
+              : "Pickup and delivery, opening hours and how you work aren't saved yet."
+          }
+          onCancel={
+            isDirty
+              ? () => {
+                  setSaveError(null)
+                  form.reset()
+                }
+              : undefined
+          }
+        />
+      ) : null}
+    </form>
   )
 }

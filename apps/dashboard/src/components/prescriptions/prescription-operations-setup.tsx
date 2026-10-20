@@ -2,37 +2,137 @@
 import { useDashboardWorkflow } from "@ewatrade/events/dashboard-client"
 import {
   Button,
-  Checkbox,
-  CheckboxField,
-  ControlField,
-  FieldGroup,
-  FormActions,
   Input,
   MoneyInput,
   SelectControl,
   SubmitButton,
+  Switch,
+  toast,
 } from "@ewatrade/ui"
 
-import { FormFeedback } from "@/components/forms/form-feedback"
-
+import {
+  ComplianceField,
+  ComplianceSaveRow,
+  describeDays,
+} from "@/components/compliance/compliance-form-parts"
+import {
+  SettingsNotice,
+  SettingsRow,
+  SettingsSection,
+} from "@/components/settings/settings-page"
+import { useSettingsAutosave } from "@/components/settings/use-settings-autosave"
 import { useStoreCurrency } from "@/hooks/use-store-currency"
 import { useTRPC } from "@/trpc/client"
 
 import { formatMinorMoney, majorToMinor } from "@ewatrade/utils"
+import { Add01Icon } from "@hugeicons/core-free-icons"
+import { HugeiconsIcon } from "@hugeicons/react"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { useState } from "react"
+import { useId, useState } from "react"
+
+const RETENTION_FIELDS = [
+  {
+    fallback: 30,
+    key: "rawMediaDays",
+    label: "Prescription photos",
+  },
+  {
+    fallback: 90,
+    help: "What staff type up from the photo.",
+    key: "transcriptDays",
+    label: "Typed-up prescriptions",
+  },
+  { fallback: 90, key: "messageDays", label: "Chats and messages" },
+  { fallback: 30, key: "addressDays", label: "Delivery addresses" },
+  {
+    fallback: 2555,
+    help: "Who did what, and when.",
+    key: "auditEvidenceDays",
+    label: "Activity log",
+  },
+  {
+    fallback: 30,
+    help: "Links customers use to follow their request.",
+    key: "secureTokenDays",
+    label: "Private request links",
+  },
+  { fallback: 2555, key: "commercialRecordDays", label: "Sales records" },
+] as const
+
+type RetentionKey = (typeof RETENTION_FIELDS)[number]["key"]
+type RetentionDays = Record<RetentionKey, number>
+
+const MAX_RETENTION_DAYS = 3_650
+
+const PRIVACY_TYPES = [
+  { label: "See their data", value: "access" },
+  { label: "Download their data", value: "export" },
+  { label: "Correct their data", value: "correction" },
+  { label: "Limit how their data is used", value: "restriction" },
+  { label: "Delete their data", value: "erasure" },
+] as const
+type PrivacyType = (typeof PRIVACY_TYPES)[number]["value"]
+
+const PRIVACY_STATUS_LABELS: Record<string, string> = {
+  COMPLETED: "Done",
+  PENDING: "Waiting for an identity check",
+  PROCESSING: "In progress",
+  REJECTED: "Turned down",
+  VERIFIED: "Identity confirmed",
+}
+
+const INCIDENT_TYPES = [
+  {
+    description: "Staff can't work on any request until you resolve it.",
+    label: "Pause all prescription handling",
+    value: "freeze_processing",
+  },
+  {
+    description: "New prescriptions stop coming in.",
+    label: "Stop accepting prescriptions",
+    value: "suspend_commerce",
+  },
+  {
+    description: "Customers can't use them until you resolve it.",
+    label: "Turn off the prescription link and QR code",
+    value: "revoke_public_links",
+  },
+  {
+    description: "No prescription messages go through WhatsApp.",
+    label: "Stop WhatsApp messages",
+    value: "revoke_whatsapp",
+  },
+  {
+    description: "Lets you open private records yourself.",
+    label: "Give me emergency access for 30 minutes",
+    value: "break_glass",
+  },
+] as const
+type IncidentType = (typeof INCIDENT_TYPES)[number]["value"]
+
+const ACCESS_TYPE_LABELS: Record<string, string> = {
+  break_glass_granted: "Emergency access given",
+  break_glass_reviewed: "Emergency access reviewed",
+  break_glass_used: "Emergency access used",
+  credential: "Pharmacist licence",
+  customer_data: "Customer details",
+  pharmacist_decision: "Pharmacist decision",
+  transcript: "Typed-up prescription",
+}
+
+function sentence(value: string) {
+  const text = value.toLowerCase().replaceAll("_", " ")
+  return text.charAt(0).toUpperCase() + text.slice(1)
+}
+
+function placesCovered(value: unknown) {
+  return Array.isArray(value)
+    ? value.filter((item) => typeof item === "string").join(", ")
+    : ""
+}
 
 export function PrescriptionOperationsSetup({ storeId }: { storeId: string }) {
-  const currencyCode = useStoreCurrency(storeId)
-  const workflow = useDashboardWorkflow()
   const trpc = useTRPC()
-  const queryClient = useQueryClient()
-  const [message, setMessage] = useState<string | null>(null)
-  const [exportRequestId, setExportRequestId] = useState("")
-  const [identityVerificationEvidence, setIdentityVerificationEvidence] =
-    useState("")
-  const onMutationError = (error: { message: string }) =>
-    setMessage(error.message)
   const zones = useQuery(
     trpc.prescriptions.deliveryZones.queryOptions({ storeId }),
   )
@@ -45,159 +145,326 @@ export function PrescriptionOperationsSetup({ storeId }: { storeId: string }) {
   const compliance = useQuery(
     trpc.prescriptions.complianceEvents.queryOptions({ storeId }),
   )
-  const privacyResult = useQuery({
-    ...trpc.prescriptions.privacyRequestResult.queryOptions({
-      privacyRequestId: exportRequestId,
-      storeId,
+  const requiredQueries = [zones, retention, manualReviews, compliance]
+  if (requiredQueries.some((query) => query.isLoading)) {
+    return (
+      <div
+        className="h-72 animate-pulse rounded-[10px] bg-muted"
+        aria-busy="true"
+      />
+    )
+  }
+  if (requiredQueries.some((query) => query.error)) {
+    return (
+      <SettingsSection title="Records and delivery">
+        <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3.5">
+          <p className="text-sm">Couldn't load records and delivery.</p>
+          <Button
+            onClick={() =>
+              void Promise.all(requiredQueries.map((query) => query.refetch()))
+            }
+            size="sm"
+            variant="outline"
+          >
+            Try again
+          </Button>
+        </div>
+      </SettingsSection>
+    )
+  }
+  const policy = retention.data
+  const savedDays = Object.fromEntries(
+    RETENTION_FIELDS.map((field) => [
+      field.key,
+      policy?.[field.key] ?? field.fallback,
+    ]),
+  ) as RetentionDays
+
+  return (
+    <>
+      <RetentionSection
+        legalHold={policy?.legalHold ?? false}
+        savedDays={savedDays}
+        storeId={storeId}
+      />
+      <DeliveryAreasSection
+        manualReviews={manualReviews.data ?? []}
+        storeId={storeId}
+        zones={zones.data ?? []}
+      />
+      <PrivacyRequestsSection
+        requests={compliance.data?.privacyRequests ?? []}
+        storeId={storeId}
+      />
+      <EmergencyControlsSection
+        controls={compliance.data?.incidents ?? []}
+        storeId={storeId}
+      />
+      <PrivateDataAccessSection
+        entries={compliance.data?.sensitiveAccess ?? []}
+        storeId={storeId}
+      />
+    </>
+  )
+}
+
+function RetentionSection({
+  legalHold,
+  savedDays,
+  storeId,
+}: {
+  legalHold: boolean
+  savedDays: RetentionDays
+  storeId: string
+}) {
+  const trpc = useTRPC()
+  const queryClient = useQueryClient()
+  const ids = useId()
+  const autosave = useSettingsAutosave()
+  const [drafts, setDrafts] = useState<Partial<Record<RetentionKey, string>>>(
+    {},
+  )
+  const [saveError, setSaveError] = useState<string | null>(null)
+  const invalidate = () =>
+    queryClient.invalidateQueries({
+      queryKey: trpc.prescriptions.retentionPolicy.queryKey({ storeId }),
+    })
+  const saveDays = useMutation(
+    trpc.prescriptions.updateRetentionPolicy.mutationOptions({
+      onError: (error) => setSaveError(error.message),
+      onSuccess: async () => {
+        await invalidate()
+        setDrafts({})
+        toast("Saved.")
+      },
     }),
-    enabled: Boolean(exportRequestId),
-  })
+  )
+  const saveLegalHold = useMutation(
+    trpc.prescriptions.updateRetentionPolicy.mutationOptions({
+      onError: (error) => toast.error(error.message),
+      onSuccess: invalidate,
+    }),
+  )
+
+  const draftValue = (key: RetentionKey) =>
+    drafts[key] ?? String(savedDays[key])
+  const dirty = RETENTION_FIELDS.some(
+    (field) =>
+      drafts[field.key] !== undefined &&
+      drafts[field.key] !== String(savedDays[field.key]),
+  )
+  const setLegalHold = (next: boolean) =>
+    saveLegalHold.mutate(
+      { ...savedDays, legalHold: next, storeId },
+      {
+        onSuccess: () =>
+          autosave.confirm(
+            "legalHold",
+            next
+              ? "Automatic deletion is paused."
+              : "Automatic deletion is on.",
+            () =>
+              saveLegalHold.mutate({
+                ...savedDays,
+                legalHold: !next,
+                storeId,
+              }),
+          ),
+      },
+    )
+
+  return (
+    <SettingsSection
+      title="Records and delivery"
+      description="How long you keep each kind of record before it's deleted."
+    >
+      <form
+        className="divide-y divide-border"
+        noValidate
+        onSubmit={(event) => {
+          event.preventDefault()
+          const next = { ...savedDays }
+          for (const field of RETENTION_FIELDS) {
+            const days = Number(draftValue(field.key))
+            if (
+              !Number.isInteger(days) ||
+              days < 1 ||
+              days > MAX_RETENTION_DAYS
+            ) {
+              setSaveError(
+                `${field.label}: use a whole number of days from 1 to 3,650.`,
+              )
+              return
+            }
+            next[field.key] = days
+          }
+          setSaveError(null)
+          saveDays.mutate({ ...next, legalHold, storeId })
+        }}
+      >
+        {RETENTION_FIELDS.map((field) => {
+          const value = draftValue(field.key)
+          const hint = describeDays(Number(value))
+          return (
+            <SettingsRow
+              description={"help" in field ? field.help : undefined}
+              htmlFor={`${ids}${field.key}`}
+              key={field.key}
+              label={field.label}
+            >
+              {hint ? (
+                <span className="text-sm text-muted-foreground">{hint}</span>
+              ) : null}
+              <div className="flex items-center gap-2">
+                <Input
+                  className="w-24 text-right"
+                  id={`${ids}${field.key}`}
+                  inputMode="numeric"
+                  max={MAX_RETENTION_DAYS}
+                  min={1}
+                  onChange={(event) =>
+                    setDrafts((current) => ({
+                      ...current,
+                      [field.key]: event.target.value,
+                    }))
+                  }
+                  type="number"
+                  value={value}
+                />
+                <span className="text-sm text-muted-foreground">days</span>
+              </div>
+            </SettingsRow>
+          )
+        })}
+        {dirty || saveError ? (
+          <ComplianceSaveRow
+            error={saveError}
+            isSaving={saveDays.isPending}
+            onCancel={() => {
+              setDrafts({})
+              setSaveError(null)
+            }}
+          />
+        ) : null}
+      </form>
+      <SettingsRow
+        description="Use this for a legal hold. Nothing is deleted until you turn it off."
+        htmlFor={`${ids}legal-hold`}
+        label="Pause automatic deletion"
+        saved={autosave.saved("legalHold")}
+      >
+        <Switch
+          checked={legalHold}
+          disabled={saveLegalHold.isPending}
+          id={`${ids}legal-hold`}
+          onCheckedChange={setLegalHold}
+        />
+      </SettingsRow>
+    </SettingsSection>
+  )
+}
+
+type DeliveryZone = {
+  currencyCode: string
+  feePolicy: string
+  fixedFeeMinor: number | null
+  id: string
+  matchValues: unknown
+  name: string
+  promiseText: string
+}
+
+type ManualReview = {
+  id: string
+  promiseText: string | null
+  quoteVersion: { currencyCode: string; totalMinor: number }
+}
+
+function DeliveryAreasSection({
+  manualReviews,
+  storeId,
+  zones,
+}: {
+  manualReviews: ManualReview[]
+  storeId: string
+  zones: DeliveryZone[]
+}) {
+  const trpc = useTRPC()
+  const queryClient = useQueryClient()
+  const currencyCode = useStoreCurrency(storeId)
+  const ids = useId()
+  const [adding, setAdding] = useState(false)
+  const [feePolicy, setFeePolicy] = useState<"fixed" | "manual">("fixed")
+  const [zoneError, setZoneError] = useState<string | null>(null)
+  const [reviewErrors, setReviewErrors] = useState<Record<string, string>>({})
+
   const saveZone = useMutation(
     trpc.prescriptions.upsertDeliveryZone.mutationOptions({
-      onError: onMutationError,
+      onError: (error) => setZoneError(error.message),
       onSuccess: async () => {
         await queryClient.invalidateQueries({
           queryKey: trpc.prescriptions.deliveryZones.queryKey({ storeId }),
         })
-        setMessage("Delivery zone saved.")
-      },
-    }),
-  )
-  const saveRetention = useMutation(
-    trpc.prescriptions.updateRetentionPolicy.mutationOptions({
-      onError: onMutationError,
-      onSuccess: async () => {
-        await queryClient.invalidateQueries({
-          queryKey: trpc.prescriptions.retentionPolicy.queryKey({ storeId }),
-        })
-        setMessage("Retention policy saved.")
+        setAdding(false)
+        setFeePolicy("fixed")
+        toast("Delivery area added.")
       },
     }),
   )
   const approveManualFee = useMutation(
     trpc.prescriptions.approveManualDeliveryFee.mutationOptions({
-      onError: onMutationError,
+      onError: (error, values) =>
+        setReviewErrors((current) => ({
+          ...current,
+          [values.addressId]: error.message,
+        })),
       onSuccess: async () => {
         await queryClient.invalidateQueries({
           queryKey: trpc.prescriptions.manualDeliveryReviews.queryKey({
             storeId,
           }),
         })
-        setMessage(
-          "Manual delivery fee approved and the customer was notified where possible.",
-        )
+        toast("Fee approved. We've told the customer if we could reach them.")
       },
     }),
   )
-  const incident = useMutation(
-    trpc.prescriptions.activateIncident.mutationOptions({
-      onError: onMutationError,
-      onSuccess: async () => {
-        await queryClient.invalidateQueries({
-          queryKey: trpc.prescriptions.complianceEvents.queryKey({ storeId }),
-        })
-        setMessage("Incident control activated and audited.")
-      },
-    }),
-  )
-  const resolveIncident = useMutation(
-    trpc.prescriptions.resolveIncident.mutationOptions({
-      onError: onMutationError,
-      onSuccess: async () => {
-        await queryClient.invalidateQueries({
-          queryKey: trpc.prescriptions.complianceEvents.queryKey({ storeId }),
-        })
-        setMessage(
-          "Incident control resolved. Reactivation remains a separate explicit step.",
-        )
-      },
-    }),
-  )
-  const createPrivacy = useMutation(
-    trpc.prescriptions.createPrivacyRequest.mutationOptions({
-      onError: onMutationError,
-      onSuccess: async () => {
-        await queryClient.invalidateQueries({
-          queryKey: trpc.prescriptions.complianceEvents.queryKey({ storeId }),
-        })
-        setMessage(
-          "Privacy request recorded. Verify identity before processing.",
-        )
-      },
-    }),
-  )
-  const verifyPrivacy = useMutation(
-    trpc.prescriptions.verifyPrivacyRequest.mutationOptions({
-      onError: onMutationError,
-      onSuccess: async () => {
-        await queryClient.invalidateQueries({
-          queryKey: trpc.prescriptions.complianceEvents.queryKey({ storeId }),
-        })
-        setIdentityVerificationEvidence("")
-        setMessage("Identity verified. Privacy processing was queued.")
-      },
-    }),
-  )
-  const requiredQueries = [zones, retention, manualReviews, compliance]
-  if (requiredQueries.some((query) => query.isLoading)) {
-    return <div className="h-72 animate-pulse bg-muted" />
-  }
-  const queryError = requiredQueries.find((query) => query.error)?.error
-  if (queryError) {
-    return (
-      <div className="grid gap-3 rounded-none border border-destructive/30 p-5">
-        <FormFeedback appearance="dashboard">{queryError.message}</FormFeedback>
-        <Button
-          className="w-fit"
-          onClick={() =>
-            void Promise.all(requiredQueries.map((query) => query.refetch()))
-          }
-          variant="outline"
-        >
-          Try again
-        </Button>
-      </div>
-    )
-  }
-  const policy = retention.data
 
   return (
-    <div className="grid gap-6 xl:grid-cols-2">
-      {message ? (
-        <p className="xl:col-span-2 bg-muted px-4 py-3 text-sm">{message}</p>
-      ) : null}
-      <section className="grid content-start gap-4 rounded-none border border-border bg-card p-5">
-        <div>
-          <h2 className="font-semibold">Delivery zones</h2>
-          <p className="text-sm text-muted-foreground">
-            Fixed fees become part of a new immutable Quote version before
-            payment.
-          </p>
-        </div>
-        {zones.data?.map((zone) => (
-          <div className="border border-border p-3 text-sm" key={zone.id}>
-            <p className="font-medium">{zone.name}</p>
-            <p className="text-muted-foreground">
-              {zone.feePolicy.toLowerCase().replaceAll("_", " ")} ·{" "}
-              {zone.promiseText}
-            </p>
-          </div>
-        ))}
+    <SettingsSection
+      title="Delivery areas"
+      description="Where you deliver and what it costs. A fixed fee is added to the customer's price before they pay."
+      action={
+        adding ? null : (
+          <Button
+            onClick={() => {
+              setZoneError(null)
+              setAdding(true)
+            }}
+            size="sm"
+            type="button"
+            variant="outline"
+          >
+            <HugeiconsIcon icon={Add01Icon} className="size-4" />
+            Add an area
+          </Button>
+        )
+      }
+    >
+      {adding ? (
         <form
+          className="grid bg-muted/40"
           onSubmit={(event) => {
             event.preventDefault()
             const data = new FormData(event.currentTarget)
             const fee = majorToMinor(String(data.get("fixedFee") ?? ""))
-            const feePolicy = String(data.get("feePolicy")) as
-              | "fixed"
-              | "manual"
             if (
               feePolicy === "fixed" &&
               (fee === null || fee < 0 || !currencyCode)
             ) {
-              setMessage("Enter the disclosed fixed delivery fee.")
+              setZoneError("Enter the delivery fee.")
               return
             }
+            setZoneError(null)
             saveZone.mutate({
               currencyCode,
               feePolicy,
@@ -214,297 +481,398 @@ export function PrescriptionOperationsSetup({ storeId }: { storeId: string }) {
             })
           }}
         >
-          <FieldGroup className="min-w-0 grid gap-3">
-            <Input name="name" placeholder="Zone name" required />
-            <Input
-              name="matchValues"
-              placeholder="Localities, comma separated"
-              required
-            />
-            <SelectControl
-              name="feePolicy"
-              options={[
-                { value: "fixed", label: <>Fixed disclosed fee</> },
-                { value: "manual", label: <>Authorized manual review</> },
-              ]}
-            />
-            <MoneyInput
-              currencyCode={currencyCode}
-              disabled={!currencyCode}
-              aria-label="Fixed delivery fee"
-              name="fixedFee"
-              placeholder="Fixed delivery fee"
-            />
-            <Input name="promiseText" placeholder="Delivery promise" required />
-            <FormActions>
-              <SubmitButton
-                isSubmitting={saveZone.isPending}
-                disabled={saveZone.isPending}
-                type="submit"
-              >
-                Add delivery zone
-              </SubmitButton>
-            </FormActions>
-          </FieldGroup>
-        </form>
-        {manualReviews.data?.length ? (
-          <div className="grid gap-3 border-t border-border pt-4">
-            <h3 className="text-sm font-medium">Manual delivery fee reviews</h3>
-            {manualReviews.data.map((review) => (
-              <form
-                className="border border-border p-3"
-                key={review.id}
-                onSubmit={(event) => {
-                  event.preventDefault()
-                  const data = new FormData(event.currentTarget)
-                  const feeMinor = majorToMinor(String(data.get("fee") ?? ""))
-                  if (feeMinor === null || feeMinor < 0) {
-                    setMessage("Enter a valid delivery fee.")
-                    return
-                  }
-                  approveManualFee.mutate({
-                    addressId: review.id,
-                    clientDecisionId: crypto.randomUUID(),
-                    feeMinor,
-                    reason: String(data.get("reason") ?? ""),
-                    storeId,
-                  })
-                }}
-              >
-                <FieldGroup className="min-w-0 grid gap-2">
-                  <p className="text-sm">
-                    Current basket:{" "}
-                    {formatMinorMoney(
-                      review.quoteVersion.totalMinor,
-                      review.quoteVersion.currencyCode,
-                    )}{" "}
-                    · {review.promiseText}
-                  </p>
-                  <MoneyInput
-                    currencyCode={review.quoteVersion.currencyCode}
-                    aria-label="Approved delivery fee"
-                    name="fee"
-                    placeholder="Approved delivery fee"
-                    required
-                  />
-                  <Input
-                    name="reason"
-                    placeholder="Required fee decision reason"
-                    required
-                  />
-                  <FormActions>
-                    <SubmitButton
-                      isSubmitting={approveManualFee.isPending}
-                      disabled={approveManualFee.isPending}
-                      size="sm"
-                      type="submit"
-                    >
-                      Approve exact fee
-                    </SubmitButton>
-                  </FormActions>
-                </FieldGroup>
-              </form>
-            ))}
-          </div>
-        ) : null}
-      </section>
-
-      <section className="grid content-start gap-4 rounded-none border border-border bg-card p-5">
-        <div>
-          <h2 className="font-semibold">Privacy and retention</h2>
-          <p className="text-sm text-muted-foreground">
-            Raw clinical artifacts expire independently from justified
-            commercial records.
-          </p>
-        </div>
-        <form
-          onSubmit={(event) => {
-            event.preventDefault()
-            const data = new FormData(event.currentTarget)
-            const days = (key: string, fallback: number) =>
-              Number(data.get(key) || fallback)
-            saveRetention.mutate({
-              addressDays: days("addressDays", 30),
-              auditEvidenceDays: days("auditEvidenceDays", 2555),
-              commercialRecordDays: days("commercialRecordDays", 2555),
-              legalHold: data.get("legalHold") === "yes",
-              messageDays: days("messageDays", 90),
-              rawMediaDays: days("rawMediaDays", 30),
-              secureTokenDays: days("secureTokenDays", 30),
-              storeId,
-              transcriptDays: days("transcriptDays", 90),
-            })
-          }}
-        >
-          <FieldGroup className="min-w-0 grid gap-3 sm:grid-cols-2">
-            {[
-              ["rawMediaDays", "Raw media", policy?.rawMediaDays ?? 30],
-              ["transcriptDays", "Transcripts", policy?.transcriptDays ?? 90],
-              ["messageDays", "Messages", policy?.messageDays ?? 90],
-              ["addressDays", "Addresses", policy?.addressDays ?? 30],
-              [
-                "auditEvidenceDays",
-                "Audit evidence",
-                policy?.auditEvidenceDays ?? 2555,
-              ],
-              [
-                "secureTokenDays",
-                "Secure tokens",
-                policy?.secureTokenDays ?? 30,
-              ],
-              [
-                "commercialRecordDays",
-                "Commercial records",
-                policy?.commercialRecordDays ?? 2555,
-              ],
-            ].map(([name, label, value]) => (
-              <ControlField key={name} label={<>{label} (days)</>}>
-                <Input
-                  defaultValue={Number(value)}
-                  min="1"
-                  name={String(name)}
-                  type="number"
-                />
-              </ControlField>
-            ))}
-            <CheckboxField label={<> Legal hold—pause automated deletion</>}>
-              <Checkbox
-                defaultChecked={policy?.legalHold}
-                name="legalHold"
-                value="yes"
+          <div className="grid sm:grid-cols-2">
+            <ComplianceField htmlFor={`${ids}zone-name`} label="Area name">
+              <Input
+                id={`${ids}zone-name`}
+                name="name"
+                placeholder="For example, Lekki"
+                required
               />
-            </CheckboxField>
-            <FormActions>
-              <SubmitButton
-                isSubmitting={saveRetention.isPending}
-                className="sm:col-span-2"
-                disabled={saveRetention.isPending}
-                type="submit"
+            </ComplianceField>
+            <ComplianceField
+              htmlFor={`${ids}zone-places`}
+              label="Places covered"
+              help="Separate them with commas."
+              helpId={`${ids}zone-places-help`}
+            >
+              <Input
+                aria-describedby={`${ids}zone-places-help`}
+                id={`${ids}zone-places`}
+                name="matchValues"
+                placeholder="Lekki Phase 1, Ajah"
+                required
+              />
+            </ComplianceField>
+            <ComplianceField htmlFor={`${ids}zone-fee-policy`} label="Fee">
+              <SelectControl
+                id={`${ids}zone-fee-policy`}
+                onValueChange={(value) =>
+                  setFeePolicy(value as "fixed" | "manual")
+                }
+                options={[
+                  { label: "Fixed fee", value: "fixed" },
+                  { label: "I set the fee for each order", value: "manual" },
+                ]}
+                value={feePolicy}
+              />
+            </ComplianceField>
+            {feePolicy === "fixed" ? (
+              <ComplianceField htmlFor={`${ids}zone-fee`} label="Delivery fee">
+                <MoneyInput
+                  currencyCode={currencyCode}
+                  disabled={!currencyCode}
+                  id={`${ids}zone-fee`}
+                  name="fixedFee"
+                />
+              </ComplianceField>
+            ) : null}
+            <ComplianceField
+              htmlFor={`${ids}zone-promise`}
+              label="What you promise"
+              help="Customers see this, for example Same day."
+              helpId={`${ids}zone-promise-help`}
+            >
+              <Input
+                aria-describedby={`${ids}zone-promise-help`}
+                id={`${ids}zone-promise`}
+                name="promiseText"
+                required
+              />
+            </ComplianceField>
+          </div>
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-2 px-4 pb-3.5">
+            {zoneError ? (
+              <p
+                role="alert"
+                className="min-w-0 flex-[1_1_220px] text-sm text-destructive"
               >
-                Save retention policy
-              </SubmitButton>
-            </FormActions>
-          </FieldGroup>
-        </form>
-        <form
-          className="border-t border-border pt-4"
-          onSubmit={(event) => {
-            event.preventDefault()
-            const data = new FormData(event.currentTarget)
-            const type = String(data.get("privacyType")) as
-              | "access"
-              | "correction"
-              | "erasure"
-              | "export"
-              | "restriction"
-            const correctedName = String(data.get("correctedName") ?? "").trim()
-            createPrivacy.mutate({
-              reason: String(data.get("privacyReason") ?? ""),
-              requestedChanges:
-                type === "correction"
-                  ? { customerName: correctedName || null }
-                  : undefined,
-              storeId,
-              subjectReference: String(data.get("subjectReference") ?? ""),
-              type,
-            })
-          }}
-        >
-          <FieldGroup className="min-w-0 grid gap-3">
-            <h3 className="text-sm font-medium">Customer privacy request</h3>
-            <SelectControl
-              name="privacyType"
-              options={[
-                { value: "access", label: <>Access</> },
-                { value: "export", label: <>Export</> },
-                { value: "correction", label: <>Correction</> },
-                { value: "restriction", label: <>Restriction</> },
-                { value: "erasure", label: <>Erasure</> },
-              ]}
-            />
-            <Input
-              name="subjectReference"
-              placeholder="Request reference, phone, or email"
-              required
-            />
-            <Input
-              name="correctedName"
-              placeholder="Corrected name (correction only)"
-            />
-            <Input
-              name="privacyReason"
-              placeholder="Structured request reason"
-              required
-            />
-            <FormActions>
-              <SubmitButton
-                isSubmitting={createPrivacy.isPending}
-                disabled={createPrivacy.isPending}
-                type="submit"
+                {zoneError}
+              </p>
+            ) : null}
+            <div className="ml-auto flex items-center gap-2">
+              <Button
+                disabled={saveZone.isPending}
+                onClick={() => {
+                  setAdding(false)
+                  setZoneError(null)
+                  setFeePolicy("fixed")
+                }}
+                size="sm"
+                type="button"
                 variant="outline"
               >
-                Record privacy request
+                Cancel
+              </Button>
+              <SubmitButton isSubmitting={saveZone.isPending} size="sm">
+                Add area
               </SubmitButton>
-            </FormActions>
-          </FieldGroup>
+            </div>
+          </div>
         </form>
-        {compliance.data?.privacyRequests.length ? (
-          <div className="grid gap-2 border-t border-border pt-4">
-            <h3 className="text-sm font-medium">Privacy request queue</h3>
-            {compliance.data.privacyRequests.map((request) => (
-              <div
-                className="flex flex-wrap items-center justify-between gap-2 border border-border p-3 text-sm"
-                key={request.id}
-              >
-                <span>
-                  {request.type.toLowerCase()} · {request.status.toLowerCase()}
-                </span>
-                <div className="flex gap-2">
-                  {request.status === "PENDING" ? (
-                    <div className="grid gap-2">
-                      <Input
-                        aria-label="Identity verification evidence"
-                        placeholder="Verification method and evidence reference"
-                        value={identityVerificationEvidence}
-                        onChange={(event) =>
-                          setIdentityVerificationEvidence(event.target.value)
-                        }
-                      />
-                      <Button
-                        disabled={
-                          verifyPrivacy.isPending ||
-                          !identityVerificationEvidence.trim()
-                        }
-                        onClick={() =>
-                          verifyPrivacy.mutate({
-                            identityVerificationEvidence,
-                            privacyRequestId: request.id,
-                            storeId,
-                          })
-                        }
-                        size="sm"
-                        type="button"
-                        variant="outline"
-                      >
-                        Verify identity & process
-                      </Button>
-                    </div>
-                  ) : null}
-                  {request.status === "COMPLETED" &&
-                  (request.type === "ACCESS" || request.type === "EXPORT") ? (
-                    <Button
-                      onClick={() => setExportRequestId(request.id)}
-                      size="sm"
-                      type="button"
-                      variant="outline"
-                    >
-                      Prepare export
-                    </Button>
-                  ) : null}
+      ) : null}
+
+      {zones.length === 0 && !adding ? (
+        <p className="px-4 py-3.5 text-sm text-muted-foreground">
+          No delivery areas yet.
+        </p>
+      ) : (
+        zones.map((zone) => {
+          const places = placesCovered(zone.matchValues)
+          return (
+            <div className="grid gap-0.5 px-4 py-3" key={zone.id}>
+              <p className="text-sm font-medium">{zone.name}</p>
+              <p className="text-sm text-muted-foreground">
+                {zone.feePolicy === "FIXED"
+                  ? zone.fixedFeeMinor !== null
+                    ? formatMinorMoney(zone.fixedFeeMinor, zone.currencyCode)
+                    : "Fixed fee"
+                  : "You set the fee for each order"}{" "}
+                · {zone.promiseText}
+                {places ? ` · ${places}` : ""}
+              </p>
+            </div>
+          )
+        })
+      )}
+
+      {manualReviews.length ? (
+        <div className="grid gap-3 px-4 py-3.5">
+          <div>
+            <p className="text-sm font-medium">Delivery fees to set</p>
+            <p className="text-sm text-muted-foreground">
+              These orders are in an area where you set the fee yourself.
+            </p>
+          </div>
+          {manualReviews.map((review) => (
+            <form
+              className="grid gap-2 rounded-md border border-border p-3"
+              key={review.id}
+              onSubmit={(event) => {
+                event.preventDefault()
+                const data = new FormData(event.currentTarget)
+                const feeMinor = majorToMinor(String(data.get("fee") ?? ""))
+                if (feeMinor === null || feeMinor < 0) {
+                  setReviewErrors((current) => ({
+                    ...current,
+                    [review.id]: "Enter a delivery fee.",
+                  }))
+                  return
+                }
+                setReviewErrors(({ [review.id]: _removed, ...rest }) => rest)
+                approveManualFee.mutate({
+                  addressId: review.id,
+                  clientDecisionId: crypto.randomUUID(),
+                  feeMinor,
+                  reason: String(data.get("reason") ?? ""),
+                  storeId,
+                })
+              }}
+            >
+              <p className="text-sm">
+                Order total:{" "}
+                {formatMinorMoney(
+                  review.quoteVersion.totalMinor,
+                  review.quoteVersion.currencyCode,
+                )}
+                {review.promiseText ? ` · ${review.promiseText}` : ""}
+              </p>
+              <div className="grid gap-2 sm:grid-cols-2">
+                <div className="grid gap-1.5">
+                  <label
+                    htmlFor={`${ids}${review.id}-fee`}
+                    className="text-sm font-medium"
+                  >
+                    Delivery fee
+                  </label>
+                  <MoneyInput
+                    currencyCode={review.quoteVersion.currencyCode}
+                    id={`${ids}${review.id}-fee`}
+                    name="fee"
+                    required
+                  />
+                </div>
+                <div className="grid gap-1.5">
+                  <label
+                    htmlFor={`${ids}${review.id}-reason`}
+                    className="text-sm font-medium"
+                  >
+                    Why this fee?
+                  </label>
+                  <Input
+                    id={`${ids}${review.id}-reason`}
+                    name="reason"
+                    required
+                  />
                 </div>
               </div>
-            ))}
-            {privacyResult.data ? (
+              <div className="flex flex-wrap items-center gap-3">
+                {reviewErrors[review.id] ? (
+                  <p
+                    role="alert"
+                    className="min-w-0 flex-1 text-sm text-destructive"
+                  >
+                    {reviewErrors[review.id]}
+                  </p>
+                ) : null}
+                <SubmitButton
+                  className="ml-auto"
+                  isSubmitting={
+                    approveManualFee.isPending &&
+                    approveManualFee.variables?.addressId === review.id
+                  }
+                  disabled={approveManualFee.isPending}
+                  size="sm"
+                >
+                  Approve fee
+                </SubmitButton>
+              </div>
+            </form>
+          ))}
+        </div>
+      ) : null}
+    </SettingsSection>
+  )
+}
+
+type PrivacyRequest = { id: string; status: string; type: string }
+
+function PrivacyRequestsSection({
+  requests,
+  storeId,
+}: {
+  requests: PrivacyRequest[]
+  storeId: string
+}) {
+  const trpc = useTRPC()
+  const queryClient = useQueryClient()
+  const workflow = useDashboardWorkflow()
+  const ids = useId()
+  const [type, setType] = useState<PrivacyType>("access")
+  const [exportRequestId, setExportRequestId] = useState("")
+  const [identityVerificationEvidence, setIdentityVerificationEvidence] =
+    useState("")
+  const privacyResult = useQuery({
+    ...trpc.prescriptions.privacyRequestResult.queryOptions({
+      privacyRequestId: exportRequestId,
+      storeId,
+    }),
+    enabled: Boolean(exportRequestId),
+  })
+  const invalidate = () =>
+    queryClient.invalidateQueries({
+      queryKey: trpc.prescriptions.complianceEvents.queryKey({ storeId }),
+    })
+  const createPrivacy = useMutation(
+    trpc.prescriptions.createPrivacyRequest.mutationOptions({
+      onSuccess: async () => {
+        await invalidate()
+        toast("Request saved. Confirm the customer's identity next.")
+      },
+    }),
+  )
+  const verifyPrivacy = useMutation(
+    trpc.prescriptions.verifyPrivacyRequest.mutationOptions({
+      onError: (error) => toast.error(error.message),
+      onSuccess: async () => {
+        await invalidate()
+        setIdentityVerificationEvidence("")
+        toast("Identity confirmed. We've started the request.")
+      },
+    }),
+  )
+  const typeLabel = (value: string) =>
+    PRIVACY_TYPES.find((item) => item.value === value.toLowerCase())?.label ??
+    "Data request"
+
+  return (
+    <SettingsSection
+      title="Customer data requests"
+      description="When a customer asks to see, download, correct, limit or delete their data."
+    >
+      <form
+        className="grid"
+        onSubmit={(event) => {
+          event.preventDefault()
+          const data = new FormData(event.currentTarget)
+          const correctedName = String(data.get("correctedName") ?? "").trim()
+          createPrivacy.mutate({
+            reason: String(data.get("privacyReason") ?? ""),
+            requestedChanges:
+              type === "correction"
+                ? { customerName: correctedName || null }
+                : undefined,
+            storeId,
+            subjectReference: String(data.get("subjectReference") ?? ""),
+            type,
+          })
+        }}
+      >
+        <div className="grid sm:grid-cols-2">
+          <ComplianceField
+            htmlFor={`${ids}privacy-type`}
+            label="What they asked for"
+          >
+            <SelectControl
+              id={`${ids}privacy-type`}
+              onValueChange={(value) => setType(value as PrivacyType)}
+              options={PRIVACY_TYPES.map((item) => ({
+                label: item.label,
+                value: item.value,
+              }))}
+              value={type}
+            />
+          </ComplianceField>
+          <ComplianceField
+            htmlFor={`${ids}privacy-subject`}
+            label="Customer's phone, email or request reference"
+          >
+            <Input
+              id={`${ids}privacy-subject`}
+              name="subjectReference"
+              required
+            />
+          </ComplianceField>
+          {type === "correction" ? (
+            <ComplianceField
+              htmlFor={`${ids}privacy-name`}
+              label="Correct name"
+            >
+              <Input id={`${ids}privacy-name`} name="correctedName" />
+            </ComplianceField>
+          ) : null}
+          <ComplianceField
+            htmlFor={`${ids}privacy-reason`}
+            label="Reason for the request"
+          >
+            <Input id={`${ids}privacy-reason`} name="privacyReason" required />
+          </ComplianceField>
+        </div>
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-2 px-4 pb-3.5">
+          {createPrivacy.error ? (
+            <p
+              role="alert"
+              className="min-w-0 flex-[1_1_220px] text-sm text-destructive"
+            >
+              {createPrivacy.error.message}
+            </p>
+          ) : null}
+          <SubmitButton
+            className="ml-auto"
+            isSubmitting={createPrivacy.isPending}
+            size="sm"
+            variant="outline"
+          >
+            Save request
+          </SubmitButton>
+        </div>
+      </form>
+
+      {requests.map((request) => (
+        <div
+          className="flex flex-wrap items-center justify-between gap-3 px-4 py-3"
+          key={request.id}
+        >
+          <div className="min-w-0">
+            <p className="text-sm font-medium">{typeLabel(request.type)}</p>
+            <p className="text-sm text-muted-foreground">
+              {PRIVACY_STATUS_LABELS[request.status] ?? "In progress"}
+            </p>
+          </div>
+          {request.status === "PENDING" ? (
+            <div className="flex flex-wrap items-center gap-2">
+              <Input
+                aria-label="How you confirmed who they are"
+                className="w-64"
+                onChange={(event) =>
+                  setIdentityVerificationEvidence(event.target.value)
+                }
+                placeholder="How you confirmed who they are"
+                value={identityVerificationEvidence}
+              />
+              <Button
+                disabled={
+                  verifyPrivacy.isPending ||
+                  !identityVerificationEvidence.trim()
+                }
+                onClick={() =>
+                  verifyPrivacy.mutate({
+                    identityVerificationEvidence,
+                    privacyRequestId: request.id,
+                    storeId,
+                  })
+                }
+                size="sm"
+                type="button"
+                variant="outline"
+              >
+                Confirm identity and start
+              </Button>
+            </div>
+          ) : null}
+          {request.status === "COMPLETED" &&
+          (request.type === "ACCESS" || request.type === "EXPORT") ? (
+            exportRequestId === request.id && privacyResult.data ? (
               <Button
                 onClick={() => {
                   workflow.track("prescription_privacy_export", "started")
@@ -520,146 +888,251 @@ export function PrescriptionOperationsSetup({ storeId }: { storeId: string }) {
                   workflow.track("prescription_privacy_export", "completed")
                   URL.revokeObjectURL(url)
                 }}
+                size="sm"
                 type="button"
               >
-                Download verified export
+                Download data file
               </Button>
-            ) : null}
-          </div>
-        ) : null}
+            ) : (
+              <Button
+                disabled={
+                  exportRequestId === request.id && privacyResult.isFetching
+                }
+                onClick={() => setExportRequestId(request.id)}
+                size="sm"
+                type="button"
+                variant="outline"
+              >
+                Prepare data file
+              </Button>
+            )
+          ) : null}
+        </div>
+      ))}
+    </SettingsSection>
+  )
+}
+
+type IncidentControl = { id: string; status: string; type: string }
+
+function EmergencyControlsSection({
+  controls,
+  storeId,
+}: {
+  controls: IncidentControl[]
+  storeId: string
+}) {
+  const trpc = useTRPC()
+  const queryClient = useQueryClient()
+  const ids = useId()
+  const [type, setType] = useState<IncidentType>("freeze_processing")
+  const [resolveErrors, setResolveErrors] = useState<Record<string, string>>({})
+  const invalidate = () =>
+    queryClient.invalidateQueries({
+      queryKey: trpc.prescriptions.complianceEvents.queryKey({ storeId }),
+    })
+  const incident = useMutation(
+    trpc.prescriptions.activateIncident.mutationOptions({
+      onSuccess: async () => {
+        await invalidate()
+        toast("Emergency control is on. This is logged.")
+      },
+    }),
+  )
+  const resolveIncident = useMutation(
+    trpc.prescriptions.resolveIncident.mutationOptions({
+      onError: (error, values) =>
+        setResolveErrors((current) => ({
+          ...current,
+          [values.controlId]: error.message,
+        })),
+      onSuccess: async () => {
+        await invalidate()
+        toast(
+          "Resolved. Turn prescriptions back on yourself when you're ready.",
+        )
+      },
+    }),
+  )
+  const activeControls = controls.filter(
+    (control) => control.status === "ACTIVE",
+  )
+  const typeLabel = (value: string) =>
+    INCIDENT_TYPES.find((item) => item.value === value.toLowerCase())?.label ??
+    sentence(value)
+
+  return (
+    <SettingsSection
+      title="Emergency controls"
+      description="Stop part of the service straight away. Each use is logged."
+    >
+      {activeControls.length ? (
+        <div className="p-3">
+          <SettingsNotice tone="warning">
+            {activeControls.length === 1
+              ? "1 emergency control is on."
+              : `${activeControls.length} emergency controls are on.`}
+          </SettingsNotice>
+        </div>
+      ) : null}
+      {activeControls.map((control) => (
         <form
-          className="border-t border-border pt-4"
+          className="grid gap-2 px-4 py-3.5"
+          key={control.id}
           onSubmit={(event) => {
             event.preventDefault()
             const data = new FormData(event.currentTarget)
-            const type = String(data.get("type")) as
-              | "break_glass"
-              | "freeze_processing"
-              | "revoke_public_links"
-              | "revoke_whatsapp"
-              | "suspend_commerce"
-            incident.mutate({
-              expiresAt:
-                type === "break_glass"
-                  ? new Date(Date.now() + 30 * 60_000)
-                  : undefined,
-              reason: String(data.get("reason") ?? ""),
+            setResolveErrors(({ [control.id]: _removed, ...rest }) => rest)
+            resolveIncident.mutate({
+              controlId: control.id,
+              reviewReason: String(data.get("reviewReason") ?? ""),
               storeId,
-              type,
             })
           }}
         >
-          <FieldGroup className="min-w-0 grid gap-3">
-            <h3 className="text-sm font-medium">Incident controls</h3>
-            <SelectControl
-              name="type"
-              options={[
-                { value: "freeze_processing", label: <>Freeze processing</> },
-                {
-                  value: "suspend_commerce",
-                  label: <>Suspend Prescription Commerce</>,
-                },
-                {
-                  value: "revoke_public_links",
-                  label: <>Revoke public links</>,
-                },
-                {
-                  value: "revoke_whatsapp",
-                  label: <>Suspend WhatsApp routing</>,
-                },
-                {
-                  value: "break_glass",
-                  label: <>Personal emergency access (30 minutes)</>,
-                },
-              ]}
-            />
+          <p className="text-sm font-medium">{typeLabel(control.type)}</p>
+          <label
+            htmlFor={`${ids}${control.id}-review`}
+            className="text-sm text-muted-foreground"
+          >
+            What happened, and what did you check?
+          </label>
+          <div className="flex flex-wrap items-center gap-2">
             <Input
-              name="reason"
-              placeholder="Required incident reason"
+              className="min-w-0 flex-[1_1_240px]"
+              id={`${ids}${control.id}-review`}
+              name="reviewReason"
               required
             />
-            <FormActions>
-              <SubmitButton
-                isSubmitting={incident.isPending}
-                disabled={incident.isPending}
-                type="submit"
-                variant="outline"
-              >
-                Activate control
-              </SubmitButton>
-            </FormActions>
-          </FieldGroup>
-        </form>
-        {compliance.data?.incidents.some(
-          (control) => control.status === "ACTIVE",
-        ) ? (
-          <div className="grid gap-2 border-t border-border pt-4">
-            <h3 className="text-sm font-medium">Active incident controls</h3>
-            {compliance.data.incidents
-              .filter((control) => control.status === "ACTIVE")
-              .map((control) => (
-                <form
-                  className="border border-border p-3 text-sm"
-                  key={control.id}
-                  onSubmit={(event) => {
-                    event.preventDefault()
-                    const data = new FormData(event.currentTarget)
-                    resolveIncident.mutate({
-                      controlId: control.id,
-                      reviewReason: String(data.get("reviewReason") ?? ""),
-                      storeId,
-                    })
-                  }}
-                >
-                  <FieldGroup className="min-w-0 grid gap-2">
-                    <span className="font-medium">
-                      {control.type.toLowerCase().replaceAll("_", " ")}
-                    </span>
-                    <Input
-                      name="reviewReason"
-                      placeholder="Required outcome and post-use review"
-                      required
-                    />
-                    <FormActions>
-                      <SubmitButton
-                        isSubmitting={resolveIncident.isPending}
-                        disabled={resolveIncident.isPending}
-                        size="sm"
-                        type="submit"
-                        variant="outline"
-                      >
-                        Resolve
-                      </SubmitButton>
-                    </FormActions>
-                  </FieldGroup>
-                </form>
-              ))}
+            <SubmitButton
+              isSubmitting={
+                resolveIncident.isPending &&
+                resolveIncident.variables?.controlId === control.id
+              }
+              disabled={resolveIncident.isPending}
+              size="sm"
+              variant="outline"
+            >
+              Mark resolved
+            </SubmitButton>
           </div>
-        ) : null}
-        {compliance.data?.sensitiveAccess.length ? (
-          <details className="border-t border-border pt-4">
-            <summary className="cursor-pointer text-sm font-medium">
-              Sensitive access history
-            </summary>
-            <div className="mt-3 grid gap-2">
-              {compliance.data.sensitiveAccess.map((access) => (
-                <div
-                  className="border border-border p-3 text-xs"
-                  key={access.id}
-                >
-                  <p className="font-medium">
-                    {access.accessType.replaceAll("_", " ")} ·{" "}
-                    {access.actorUserId}
-                  </p>
-                  <p className="mt-1 text-muted-foreground">
-                    {access.effectiveAt.toLocaleString()} · {access.reason}
-                  </p>
-                </div>
-              ))}
+          {resolveErrors[control.id] ? (
+            <p role="alert" className="text-sm text-destructive">
+              {resolveErrors[control.id]}
+            </p>
+          ) : null}
+        </form>
+      ))}
+      <form
+        className="grid"
+        onSubmit={(event) => {
+          event.preventDefault()
+          const data = new FormData(event.currentTarget)
+          incident.mutate({
+            expiresAt:
+              type === "break_glass"
+                ? new Date(Date.now() + 30 * 60_000)
+                : undefined,
+            reason: String(data.get("reason") ?? ""),
+            storeId,
+            type,
+          })
+        }}
+      >
+        <div className="grid sm:grid-cols-2">
+          <ComplianceField htmlFor={`${ids}incident-type`} label="Control">
+            <SelectControl
+              id={`${ids}incident-type`}
+              onValueChange={(value) => setType(value as IncidentType)}
+              options={INCIDENT_TYPES.map((item) => ({
+                description: item.description,
+                label: item.label,
+                value: item.value,
+              }))}
+              value={type}
+            />
+          </ComplianceField>
+          <ComplianceField
+            htmlFor={`${ids}incident-reason`}
+            label="Why are you doing this?"
+          >
+            <Input id={`${ids}incident-reason`} name="reason" required />
+          </ComplianceField>
+        </div>
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-2 px-4 pb-3.5">
+          <p className="min-w-0 flex-[1_1_220px] text-sm text-muted-foreground">
+            {INCIDENT_TYPES.find((item) => item.value === type)?.description}
+          </p>
+          {incident.error ? (
+            <p role="alert" className="w-full text-sm text-destructive">
+              {incident.error.message}
+            </p>
+          ) : null}
+          <SubmitButton
+            className="ml-auto"
+            isSubmitting={incident.isPending}
+            size="sm"
+            variant="outline"
+          >
+            Turn on
+          </SubmitButton>
+        </div>
+      </form>
+    </SettingsSection>
+  )
+}
+
+type SensitiveAccess = {
+  accessType: string
+  actorUserId: string
+  effectiveAt: Date | string
+  id: string
+  reason: string
+}
+
+function PrivateDataAccessSection({
+  entries,
+  storeId,
+}: {
+  entries: SensitiveAccess[]
+  storeId: string
+}) {
+  const trpc = useTRPC()
+  const setup = useQuery(
+    trpc.prescriptions.setup.queryOptions({ storeId }, { retry: false }),
+  )
+  if (!entries.length) return null
+  const names = new Map(
+    setup.data?.eligibleMembers.map((member) => [member.id, member.name]) ?? [],
+  )
+  return (
+    <SettingsSection title="Who viewed private data">
+      <details>
+        <summary className="cursor-pointer px-4 py-3.5 text-sm font-medium">
+          Show {entries.length === 1 ? "1 view" : `${entries.length} views`}
+        </summary>
+        <div className="divide-y divide-border border-t border-border">
+          {entries.map((access) => (
+            <div className="grid gap-0.5 px-4 py-3" key={access.id}>
+              <p className="text-sm font-medium">
+                {ACCESS_TYPE_LABELS[access.accessType] ??
+                  sentence(access.accessType)}{" "}
+                · {names.get(access.actorUserId) ?? "A former team member"}
+              </p>
+              <p className="text-sm text-muted-foreground">
+                {new Date(access.effectiveAt).toLocaleString("en-NG", {
+                  dateStyle: "medium",
+                  timeStyle: "short",
+                })}{" "}
+                ·{" "}
+                {/^[a-z_]+$/.test(access.reason)
+                  ? sentence(access.reason)
+                  : access.reason}
+              </p>
             </div>
-          </details>
-        ) : null}
-      </section>
-    </div>
+          ))}
+        </div>
+      </details>
+    </SettingsSection>
   )
 }

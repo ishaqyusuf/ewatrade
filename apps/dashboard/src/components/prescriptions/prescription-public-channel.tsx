@@ -1,16 +1,17 @@
 "use client"
-import { FormFeedback } from "@/components/forms/form-feedback"
-import { Button, ControlField, Input } from "@ewatrade/ui"
+import { Button, Input, toast } from "@ewatrade/ui"
 
+import { SettingsSection } from "@/components/settings/settings-page"
 import { useTRPC } from "@/trpc/client"
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import QRCode from "qrcode"
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useId, useMemo, useState } from "react"
 
 export function PrescriptionPublicChannel({ storeId }: { storeId: string }) {
   const trpc = useTRPC()
   const queryClient = useQueryClient()
+  const linkId = useId()
   const [qrCode, setQrCode] = useState("")
   const [qrError, setQrError] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
@@ -19,10 +20,12 @@ export function PrescriptionPublicChannel({ storeId }: { storeId: string }) {
   )
   const ensure = useMutation(
     trpc.prescriptions.channel.mutationOptions({
-      onSuccess: () =>
-        queryClient.invalidateQueries({
+      onSuccess: async () => {
+        await queryClient.invalidateQueries({
           queryKey: trpc.prescriptions.channelInfo.queryKey({ storeId }),
-        }),
+        })
+        toast("Prescription link and QR code created.")
+      },
     }),
   )
   const url = useMemo(() => {
@@ -53,28 +56,26 @@ export function PrescriptionPublicChannel({ storeId }: { storeId: string }) {
       .then(setQrCode)
       .catch(() => {
         setQrCode("")
-        setQrError("The intake QR code could not be generated.")
+        setQrError("Couldn't make the QR code.")
       })
   }, [url])
 
   return (
-    <section className="grid gap-4 rounded-none border border-border bg-card p-5">
-      <div>
-        <h2 className="font-semibold">Public intake link and QR</h2>
-        <p className="text-sm text-muted-foreground">
-          This stable Store-specific destination preserves pharmacy attribution.
-        </p>
-      </div>
+    <SettingsSection
+      title="Prescription link and QR code"
+      description="Customers use it to send a prescription to this store. It doesn't change."
+    >
       {channel.isLoading ? (
-        <div className="h-24 animate-pulse bg-muted" aria-busy="true" />
+        <div
+          className="m-4 h-24 animate-pulse rounded-md bg-muted"
+          aria-busy="true"
+        />
       ) : channel.error ? (
-        <div className="grid gap-3">
-          <FormFeedback appearance="dashboard">
-            {channel.error.message}
-          </FormFeedback>
+        <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3.5">
+          <p className="text-sm">Couldn't load your prescription link.</p>
           <Button
-            className="w-fit"
             onClick={() => void channel.refetch()}
+            size="sm"
             type="button"
             variant="outline"
           >
@@ -82,58 +83,61 @@ export function PrescriptionPublicChannel({ storeId }: { storeId: string }) {
           </Button>
         </div>
       ) : !channel.data ? (
-        <div className="grid justify-items-start gap-3">
-          {ensure.error ? (
-            <FormFeedback appearance="dashboard">
-              {ensure.error.message}
-            </FormFeedback>
-          ) : null}
+        <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3.5">
+          <div className="min-w-0 flex-[1_1_220px] text-sm">
+            <p className="text-muted-foreground">
+              You don't have a prescription link yet.
+            </p>
+            {ensure.error ? (
+              <p role="alert" className="text-destructive">
+                {ensure.error.message}
+              </p>
+            ) : null}
+          </div>
           <Button
-            disabled={ensure.isPending || channel.isLoading}
+            disabled={ensure.isPending}
             onClick={() => ensure.mutate({ storeId })}
             type="button"
           >
-            {ensure.isPending ? "Creating…" : "Create secure intake link"}
+            {ensure.isPending ? "Creating…" : "Create link and QR code"}
           </Button>
         </div>
       ) : (
-        <div className="grid gap-4 md:grid-cols-[220px_1fr] md:items-center">
-          <div className="flex size-[220px] items-center justify-center border border-border bg-white p-3">
+        <div className="grid gap-4 px-4 py-4 sm:grid-cols-[180px_1fr] sm:items-center">
+          <div className="flex size-[180px] items-center justify-center rounded-md border border-border bg-white p-3">
             {qrCode ? (
               <img
-                alt="Prescription intake QR code"
+                alt="QR code for your prescription link"
                 className="size-full"
                 src={qrCode}
               />
             ) : (
-              <span className="text-sm text-muted-foreground">
-                {qrError ?? "Generating QR…"}
+              <span className="text-center text-sm text-muted-foreground">
+                {url ? (qrError ?? "Making QR code…") : "No QR code yet"}
               </span>
             )}
           </div>
-          <div className="grid gap-3">
-            <ControlField label={<>Public URL</>}>
-              <Input readOnly value={url} />
-            </ControlField>
+          <div className="grid min-w-0 gap-3">
+            <div className="grid gap-1.5">
+              <label htmlFor={linkId} className="text-sm font-medium">
+                Prescription link
+              </label>
+              <Input id={linkId} readOnly value={url} />
+            </div>
             {!url ? (
-              <FormFeedback appearance="dashboard">
-                The storefront URL is not configured, so this link cannot be
-                shared yet.
-              </FormFeedback>
-            ) : null}
-            {ensure.error ? (
-              <FormFeedback appearance="dashboard">
-                {ensure.error.message}
-              </FormFeedback>
+              <p className="text-sm text-muted-foreground">
+                Your online store address isn't set up yet, so this link can't
+                be shared.
+              </p>
             ) : null}
             {whatsappUrl ? (
               <a
-                className="text-sm font-medium text-primary underline underline-offset-4"
+                className="w-fit text-sm font-medium text-primary underline underline-offset-4"
                 href={whatsappUrl}
                 rel="noreferrer"
                 target="_blank"
               >
-                Test Store-routed WhatsApp intake
+                Test the WhatsApp link
               </a>
             ) : null}
             <div className="flex flex-wrap gap-2">
@@ -145,9 +149,13 @@ export function PrescriptionPublicChannel({ storeId }: { storeId: string }) {
                     window.setTimeout(() => setCopied(false), 2_000)
                   } catch {
                     setCopied(false)
+                    toast.error(
+                      "Couldn't copy the link. Select it and copy it yourself.",
+                    )
                   }
                 }}
                 disabled={!url}
+                size="sm"
                 type="button"
                 variant="outline"
               >
@@ -156,15 +164,16 @@ export function PrescriptionPublicChannel({ storeId }: { storeId: string }) {
               <Button
                 disabled={!url}
                 onClick={() => window.print()}
+                size="sm"
                 type="button"
                 variant="outline"
               >
-                Print QR
+                Print page
               </Button>
             </div>
           </div>
         </div>
       )}
-    </section>
+    </SettingsSection>
   )
 }
