@@ -441,11 +441,24 @@ export const serviceCommerceReportDrilldownOutputSchema = z
   })
   .strict()
 
+export const serviceCommerceReportDaySchema = z
+  .object({
+    date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+    paymentsSucceeded: countSchema,
+    paymentValueMinor: minorAmountSchema,
+    quotesAccepted: countSchema,
+    quotesIssued: countSchema,
+    requests: countSchema,
+  })
+  .strict()
+
 export const serviceCommerceReportOutputSchema = z
   .object({
     catalog: serviceCommerceCatalogReportSchema,
     costs: z.array(serviceCommerceCostSummarySchema),
     currencyCode: currencyCodeSchema,
+    /** One entry per UTC day in the window, quiet days included. */
+    daily: z.array(serviceCommerceReportDaySchema).default([]),
     lifecycle: serviceCommerceLifecycleReportSchema,
     media: serviceCommerceMediaReportSchema,
     observability: z.array(serviceCommerceRedactedObservabilitySchema),

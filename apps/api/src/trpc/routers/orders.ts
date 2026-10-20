@@ -22,6 +22,7 @@ import {
   getCommercialOrderOperationalSummary,
   getCommercialOrderReminderSettings,
   getCommercialOrderReportSummary,
+  getCommercialOrderSalesReport,
   listCommercialOrderPaymentsPage,
   listCommercialOrders,
   listCommercialOrdersPage,
@@ -71,6 +72,7 @@ import {
   commercialOrderReminderSettingsUpdateSchema,
   commercialOrderReportSummarySchema,
   commercialOrderReturnLineSchema,
+  commercialOrderSalesReportSchema,
 } from "../../schemas/orders"
 import { createTRPCRouter, protectedProcedure } from "../init"
 import { orderScope } from "../order-scope"
@@ -338,6 +340,30 @@ export const ordersRouter = createTRPCRouter({
       })
       return {
         ...summary,
+        currencyCode:
+          ctx.tenantContext.stores.find((store) => store.id === storeId)
+            ?.currencyCode ?? ctx.tenantContext.tenant.currencyCode,
+      }
+    }),
+
+  salesReport: protectedProcedure
+    .input(commercialOrderSalesReportSchema)
+    .query(async ({ ctx, input }) => {
+      assertCanOperateOrders(ctx.tenantContext.membership.role)
+      const storeId = input.storeId
+        ? resolveStoreId(
+            ctx.tenantContext.stores,
+            ctx.tenantContext.activeStore,
+            input.storeId,
+          )
+        : undefined
+      const report = await getCommercialOrderSalesReport(ctx.db, {
+        ...(await orderScope(ctx, { storeId })),
+        from: input.from,
+        to: input.to,
+      })
+      return {
+        ...report,
         currencyCode:
           ctx.tenantContext.stores.find((store) => store.id === storeId)
             ?.currencyCode ?? ctx.tenantContext.tenant.currencyCode,

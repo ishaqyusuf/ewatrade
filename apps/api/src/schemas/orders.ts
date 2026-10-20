@@ -159,6 +159,23 @@ export const commercialOrderReportSummarySchema = z
   })
   .strict()
 
+/** Sales by day and top sellers; `to` is exclusive and the window is at most 366 days. */
+export const commercialOrderSalesReportSchema = z
+  .object({
+    from: z.coerce.date(),
+    storeId: z.string().trim().min(1).optional(),
+    to: z.coerce.date(),
+  })
+  .strict()
+  .refine((value) => value.from < value.to, {
+    message: "Report start must be before report end.",
+    path: ["to"],
+  })
+  .refine(
+    (value) => value.to.getTime() - value.from.getTime() <= 366 * 86_400_000,
+    { message: "Choose 366 days or fewer.", path: ["from"] },
+  )
+
 export const commercialOrderListPageSchema = z
   .object({
     mine: z.boolean().optional(),

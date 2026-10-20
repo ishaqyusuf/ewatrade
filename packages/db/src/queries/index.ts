@@ -12,6 +12,7 @@ export * from "./catalog-low-stock"
 export * from "./inventory-operations"
 export * from "./inventory-custody-transfers"
 export * from "./inventory-closeout-review"
+export * from "./commercial-order-sales-report"
 export * from "./commercial-orders"
 export * from "./commercial-order-activity"
 export * from "./attachment-entitlement"
@@ -190,3 +191,5 @@ export * from "./business-notifications"
 export * from "./phone-auth"
 
 export * from "./account-phone-verification"
+
+export { listQaPhoneEntries } from "./qa-access"

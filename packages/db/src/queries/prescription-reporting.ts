@@ -1,5 +1,6 @@
 import type { Prisma, PrismaClient } from "../../generated/prisma/client"
 import type { PrescriptionUsageEventType } from "../../generated/prisma/enums"
+import { countByUtcDay } from "./report-days"
 
 export type PrescriptionUsageAmounts = {
   deliveryCostMinor?: number | null
@@ -328,6 +329,15 @@ export async function getPrescriptionOperationsReport(
   return {
     channelMix,
     costs: summarizePrescriptionUsageAmounts(usage),
+    daily: countByUtcDay(input, {
+      amountPaidMinor: paid.map((intent) => ({
+        amountMinor: intent.amountMinor,
+        at: intent.paidAt,
+      })),
+      paidOrders: paid.map((intent) => ({ at: intent.paidAt })),
+      quotesIssued: quoteVersions.map((version) => ({ at: version.issuedAt })),
+      requests: requests.map((request) => ({ at: request.createdAt })),
+    }),
     currencyCode: tenant.currencyCode,
     conversionRate:
       requests.length > 0

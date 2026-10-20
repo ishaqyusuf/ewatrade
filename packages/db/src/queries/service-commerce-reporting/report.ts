@@ -10,6 +10,7 @@ import {
 
 import type { PrismaClient } from "../../../generated/prisma/client"
 
+import { countByUtcDay } from "../report-days"
 import { authorizeServiceCommerceReportRead } from "./audit"
 import { getStoreConversationReportAggregates } from "./store-conversations"
 import { prescriptionUsageAmountsToServiceCommerce } from "./usage"
@@ -607,6 +608,31 @@ export async function getServiceCommerceReport(
     },
     costs,
     currencyCode: tenant.currencyCode,
+    daily: countByUtcDay(
+      { from: input.start, to: input.end },
+      {
+        paymentsSucceeded: payments
+          .filter((payment) => payment.type === "PAYMENT")
+          .map((payment) => ({ at: payment.recordedAt })),
+        paymentValueMinor: payments
+          .filter((payment) => payment.type === "PAYMENT")
+          .map((payment) => ({
+            amountMinor: payment.amountMinor,
+            at: payment.recordedAt,
+          })),
+        quotesAccepted: quoteVersions.map((version) => ({
+          at: version.acceptedAt,
+        })),
+        quotesIssued: quoteVersions.map((version) => ({
+          at: version.issuedAt,
+        })),
+        requests: [
+          ...serviceRequests.map((request) => ({ at: request.requestedAt })),
+          ...prescriptionReceived.map((event) => ({ at: event.effectiveAt })),
+          ...inquiries.map((inquiry) => ({ at: inquiry.createdAt })),
+        ],
+      },
+    ),
     lifecycle: {
       bookingsCompleted: bookings.filter(
         (booking) =>
