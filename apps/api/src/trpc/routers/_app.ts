@@ -20,7 +20,7 @@ import { ordersRouter } from "./orders"
 import { prescriptionAccessRouter } from "./prescription-access"
 import { prescriptionsRouter } from "./prescriptions"
 import { productAssistantRouter } from "./product-assistant"
-import { qaAccessRouter } from "./qa-access"
+import { qaAccessRouter, qaPhoneAccessRouter } from "./qa-access"
 import { qaMaintenanceRouter } from "./qa-maintenance"
 import { qaToolsRouter } from "./qa-tools"
 import { retailOpsRouter } from "./retail-ops"
@@ -42,7 +42,7 @@ import { tenantRouter } from "./tenant"
 const qaAccessRegistration: { qaAccess: typeof qaAccessRouter } =
   isQaAcceleratorClientMode(process.env.APP_ENV ?? process.env.NODE_ENV)
     ? { qaAccess: qaAccessRouter }
-    : ({} as { qaAccess: typeof qaAccessRouter })
+    : { qaAccess: qaPhoneAccessRouter as typeof qaAccessRouter }
 
 export const appRouter = createTRPCRouter({
   assistantChannels: assistantChannelsRouter,
