@@ -5,14 +5,12 @@ import {
   AlertTitle,
   Button,
   FieldGroup,
-  FormActions,
   Input,
-  Separator,
-  SubmitButton,
 } from "@ewatrade/ui"
 
-import { FormDateControl } from "@/components/forms/form-controls"
+import { FormDatePicker } from "@/components/forms/form-controls"
 import { useFinanceCommand } from "@/hooks/use-finance-command"
+import { useFinanceParams } from "@/hooks/use-finance-params"
 import { useZodForm } from "@/hooks/use-zod-form"
 import { useTRPC } from "@/trpc/client"
 import type { RouterOutputs } from "@ewatrade/api/trpc/routers/_app"
@@ -22,7 +20,20 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useState } from "react"
 import { z } from "zod"
 import { financeSourceLabel } from "./bank-source-detail"
-import { FinanceField, FinanceReview } from "./form-fields"
+import {
+  FinanceDetails,
+  FinanceField,
+  FinanceFormFooter,
+  FinanceReview,
+} from "./form-fields"
+import {
+  balanceChange,
+  changes,
+  dayIn,
+  plainDay,
+  todayIn,
+  useMoneyBalances,
+} from "./review-changes"
 import type { FinanceBook } from "./types"
 import { useCompleteFinanceForm } from "./use-complete-finance-form"
 
@@ -74,15 +85,21 @@ export function FinanceMoneyReversalForm({
     ),
   )
   const mutation = useMutation(trpc.finance.reverseMoney.mutationOptions())
+  const [review, setReview] = useState<Review | null>(null)
+  const balances = useMoneyBalances(book.id)
   const command = useFinanceCommand(
-    useCompleteFinanceForm(),
+    useCompleteFinanceForm(
+      review
+        ? `Movement undone: ${review.source.description}. The original stays in history.`
+        : undefined,
+    ),
     book.id,
     "reverseMoney",
   )
-  const [review, setReview] = useState<Review | null>(null)
   const [preparing, setPreparing] = useState(false)
   const [prepareError, setPrepareError] = useState<string | null>(null)
-  const today = new Date().toISOString().slice(0, 10)
+  const today = todayIn(book.timezone)
+  const { close } = useFinanceParams()
   const form = useZodForm<Values>(schema, {
     defaultValues: { reason: "", date: today },
   })
@@ -203,45 +220,45 @@ export function FinanceMoneyReversalForm({
         </Alert>
         <div className="border border-border p-4 text-sm">
           <p className="font-medium">Undo: {history.description}</p>
-          <p>Dated {new Date(history.effectiveAt).toISOString()}</p>
+          <p>Dated {plainDay(dayIn(history.effectiveAt, book.timezone))}</p>
         </div>
       </FieldGroup>
     )
   }
 
   if (review) {
+    const moved = moneyLines(review.source)
     return (
       <FinanceReview
         command={command}
         onBack={() => setReview(null)}
         onConfirm={() => submit(review)}
+        confirmLabel="Undo movement"
+        sentence={
+          <>
+            This undoes <b>{review.source.description}</b> in your records. It
+            doesn't move real money. The original stays in history, marked
+            Undone.
+          </>
+        }
+        changes={changes(
+          moved.map((line) =>
+            balanceChange(
+              balances,
+              line.accountId,
+              BigInt(line.creditMinor) - BigInt(line.debitMinor),
+              book.currencyCode,
+            ),
+          ),
+        )}
+        note="Move the real money yourself if you need to."
       >
-        <h3 className="font-medium">Undo this movement</h3>
-        <MovementSummary source={review.source} money={money} />
-        <section className="grid gap-2 border border-border p-4">
-          <h4 className="font-medium">What the undo changes</h4>
-          {review.source.lines.map((line) => (
-            <div
-              key={line.accountId}
-              className="flex flex-wrap justify-between gap-2 text-sm"
-            >
-              <span>{line.accountName}</span>
-              <span className="tabular-nums">
-                {lineAmounts(line, line.creditMinor, line.debitMinor, money)}
-              </span>
-            </div>
-          ))}
-        </section>
-        <p className="text-sm">
-          Undo dated {review.effectiveAt.toISOString().slice(0, 10)}.
-        </p>
-        <p className="break-words text-sm">Why: {review.reason}</p>
-        <Alert appearance="dashboard">
-          <AlertDescription>
-            This only changes your records; no money is sent. The original stays
-            in history. Move the real money yourself if you need to.
-          </AlertDescription>
-        </Alert>
+        <FinanceDetails
+          rows={[
+            ["Date", plainDay(review.effectiveAt.toISOString().slice(0, 10))],
+            ["Why", review.reason],
+          ]}
+        />
       </FinanceReview>
     )
   }
@@ -252,19 +269,14 @@ export function FinanceMoneyReversalForm({
       className="grid gap-5"
       onSubmit={form.handleSubmit((values) => void prepare(values))}
     >
-      <h3 className="font-semibold">Undo money movement</h3>
-      <MovementSummary source={source} money={money} />
-      <Alert appearance="dashboard">
-        <AlertDescription>
-          The original stays in history. This adds the exact opposite entry. No
-          money is sent.
-        </AlertDescription>
-      </Alert>
+      <MovementSummary source={source} money={money} timeZone={book.timezone} />
+      <p className="text-sm text-muted-foreground">
+        Undoing takes it back in your records. No real money moves, and the
+        original stays in history.
+      </p>
       <FieldGroup className="gap-4">
         <FinanceField label="Date" error={form.formState.errors.date?.message}>
-          <FormDateControl
-            required
-            type="date"
+          <FormDatePicker
             min={originalDate}
             max={today}
             disabled={preparing}
@@ -273,14 +285,14 @@ export function FinanceMoneyReversalForm({
           />
         </FinanceField>
         <FinanceField
-          label="Why (required)"
+          label="Why are you undoing it?"
           error={form.formState.errors.reason?.message}
         >
           <Input
             required
             maxLength={400}
             autoComplete="off"
-            placeholder="Why are you undoing this?"
+            placeholder="Typed the wrong amount"
             disabled={preparing}
             {...form.register("reason")}
           />
@@ -291,65 +303,53 @@ export function FinanceMoneyReversalForm({
           <AlertDescription>{prepareError}</AlertDescription>
         </Alert>
       ) : null}
-      <FormActions>
-        <SubmitButton
-          isSubmitting={preparing}
-          type="submit"
-          disabled={preparing || !command.ready}
-        >
-          {preparing ? "Refreshing movement…" : "Review undo"}
-        </SubmitButton>
-      </FormActions>
+      <FinanceFormFooter
+        onCancel={() => void close()}
+        submitLabel="Review"
+        isSubmitting={preparing}
+        disabled={preparing || !command.ready}
+      />
     </form>
   )
 }
 
-function lineAmounts(
-  line: { accountKind: string; accountPurpose: string },
-  debit: string,
-  credit: string,
-  money: (minor: string) => string,
-) {
-  const moneyAccount =
-    line.accountKind === "ASSET" &&
-    ["CASH", "BANK", "CLEARING"].includes(line.accountPurpose)
-  return moneyAccount
-    ? `Money in ${money(debit)} · Money out ${money(credit)}`
-    : `Debit ${money(debit)} · Credit ${money(credit)}`
+/** The money-account lines of a movement (cash, bank, clearing). */
+function moneyLines(source: MoneyMovement) {
+  return source.lines.filter(
+    (line) =>
+      line.accountKind === "ASSET" &&
+      ["CASH", "BANK", "CLEARING"].includes(line.accountPurpose),
+  )
 }
 
 function MovementSummary({
   source,
   money,
+  timeZone,
 }: {
   source: MoneyMovement
   money: (minor: string) => string
+  timeZone: string
 }) {
   return (
-    <section className="grid gap-3 border border-border p-4">
+    <section className="grid gap-2 border border-border bg-muted/40 px-3 py-2 text-sm">
       <div>
         <p className="font-medium">{source.description}</p>
-        <p className="text-sm text-muted-foreground">
+        <p className="text-muted-foreground">
           {financeSourceLabel(source.sourceKind)} ·{" "}
-          {new Date(source.effectiveAt).toISOString()}
+          {plainDay(dayIn(source.effectiveAt, timeZone))}
         </p>
       </div>
-      <p className="text-xs text-muted-foreground">
-        Added {new Date(source.recordedAt).toISOString()}
-      </p>
-      <div className="grid gap-2">
-        {source.lines.map((line, index) => (
-          <div key={line.accountId} className="grid gap-2 text-sm">
-            {index > 0 ? <Separator /> : null}
-            <div className="grid gap-1 sm:grid-cols-[1fr_auto]">
-              <span>{line.accountName}</span>
-              <span className="tabular-nums">
-                {lineAmounts(line, line.debitMinor, line.creditMinor, money)}
-              </span>
-            </div>
-          </div>
-        ))}
-      </div>
+      {moneyLines(source).map((line) => (
+        <div key={line.accountId} className="flex justify-between gap-3">
+          <span>{line.accountName}</span>
+          <span className="tabular-nums">
+            {BigInt(line.debitMinor) > BigInt(0)
+              ? `Money in ${money(line.debitMinor)}`
+              : `Money out ${money(line.creditMinor)}`}
+          </span>
+        </div>
+      ))}
     </section>
   )
 }
