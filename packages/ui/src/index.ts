@@ -53,6 +53,7 @@ export {
   formatPickerDay,
 } from "./components/date-picker"
 export { Toaster, toast } from "./components/sonner"
+export { RadioGroup, RadioGroupItem } from "./components/radio-group"
 export * from "./components/popover"
 export { Toggle, toggleVariants } from "./components/toggle"
 export { ToggleGroup, ToggleGroupItem } from "./components/toggle-group"

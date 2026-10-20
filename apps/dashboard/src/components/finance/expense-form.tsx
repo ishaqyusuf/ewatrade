@@ -1,19 +1,16 @@
 "use client"
-import {
-  Button,
-  FieldGroup,
-  FormActions,
-  Input,
-  MoneyInput,
-} from "@ewatrade/ui"
+import { FieldGroup, Input, MoneyInput } from "@ewatrade/ui"
 
 import {
-  FormDateControl,
+  FormCombobox,
+  FormDatePicker,
+  FormRadioChoices,
   FormSelectControl,
 } from "@/components/forms/form-controls"
 import { createExpenseFixture } from "@/components/qa/fixture-recipes"
 import { QaDashboardQuickFill } from "@/components/qa/qa-quick-fill"
 import { useFinanceCommand } from "@/hooks/use-finance-command"
+import { useFinanceParams } from "@/hooks/use-finance-params"
 import { useZodForm } from "@/hooks/use-zod-form"
 import { useTRPC } from "@/trpc/client"
 
@@ -21,10 +18,24 @@ import {
   formatFinanceMoney,
   parseFinanceMoney,
 } from "@ewatrade/utils/finance-money"
-import { useMutation } from "@tanstack/react-query"
+import { useMutation, useQuery } from "@tanstack/react-query"
 import { useRef, useState } from "react"
 import { z } from "zod"
-import { FinanceField, FinanceReview } from "./form-fields"
+import {
+  FinanceDetails,
+  FinanceField,
+  FinanceFormFooter,
+  FinanceReview,
+} from "./form-fields"
+import {
+  balanceChange,
+  changes,
+  dayIn,
+  overdrawWarning,
+  plainDay,
+  todayIn,
+  useMoneyBalances,
+} from "./review-changes"
 import type { FinanceBook } from "./types"
 import { useCompleteFinanceForm } from "./use-complete-finance-form"
 
@@ -35,16 +46,24 @@ const money = z.string().refine((value) => {
   } catch {
     return false
   }
-}, "Enter an amount above zero, with up to two decimal places.")
+}, "Enter an amount above zero, like 85000 or 85000.50.")
 const schema = z
   .object({
-    payee: z.string().trim().min(1).max(160),
-    description: z.string().trim().min(1).max(200),
+    payee: z
+      .string()
+      .trim()
+      .min(1, "Enter who you paid or owe.")
+      .max(160, "Use 160 characters or fewer."),
+    description: z
+      .string()
+      .trim()
+      .min(1, "Say what this expense was for.")
+      .max(200, "Use 200 characters or fewer."),
     amount: money,
-    category: z.string().min(1),
-    date: z.string().min(1),
+    category: z.string().min(1, "Choose a spending category."),
+    date: z.string().min(1, "Pick the date you spent it."),
     dueDate: z.string(),
-    reference: z.string().max(160),
+    reference: z.string().max(160, "Use 160 characters or fewer."),
     paid: z.enum(["unpaid", "paid", "partial"]),
     paymentAccount: z.string(),
     paymentAmount: z.string(),
@@ -54,19 +73,33 @@ const schema = z
       ctx.addIssue({
         code: "custom",
         path: ["paymentAccount"],
-        message: "Choose the money account you paid from.",
+        message: "Choose where the money came from.",
       })
-    if (
-      value.paid === "partial" &&
-      (!money.safeParse(value.paymentAmount).success ||
-        (money.safeParse(value.amount).success &&
-          BigInt(parseFinanceMoney(value.paymentAmount)) >
-            BigInt(parseFinanceMoney(value.amount))))
-    )
+    if (value.paid === "partial") {
+      const part = money.safeParse(value.paymentAmount).success
+      if (!part)
+        ctx.addIssue({
+          code: "custom",
+          path: ["paymentAmount"],
+          message: "Enter the part you paid, like 50000.",
+        })
+      else if (
+        money.safeParse(value.amount).success &&
+        BigInt(parseFinanceMoney(value.paymentAmount)) >=
+          BigInt(parseFinanceMoney(value.amount))
+      )
+        ctx.addIssue({
+          code: "custom",
+          path: ["paymentAmount"],
+          message:
+            "That's the full amount or more. Choose Paid in full instead.",
+        })
+    }
+    if (value.paid !== "paid" && value.dueDate && value.dueDate < value.date)
       ctx.addIssue({
         code: "custom",
-        path: ["paymentAmount"],
-        message: "Enter an amount no more than the expense.",
+        path: ["dueDate"],
+        message: "The due date can't be before the expense date.",
       })
   })
 type Values = z.infer<typeof schema>
@@ -76,10 +109,37 @@ export function FinanceExpenseForm({
   storeId,
 }: { book: FinanceBook; storeId: string }) {
   const trpc = useTRPC()
-  const complete = useCompleteFinanceForm()
+  const [review, setReview] = useState<Values | null>(null)
+  const balances = useMoneyBalances(book.id)
+  const currency = book.currencyCode
+  const totalMinor = review
+    ? BigInt(parseFinanceMoney(review.amount))
+    : BigInt(0)
+  const paidMinor = !review
+    ? BigInt(0)
+    : review.paid === "paid"
+      ? totalMinor
+      : review.paid === "partial"
+        ? BigInt(parseFinanceMoney(review.paymentAmount))
+        : BigInt(0)
+  const paidFrom =
+    review &&
+    review.paid !== "unpaid" &&
+    review.paymentAccount !== "OWNER_CAPITAL"
+      ? review.paymentAccount
+      : undefined
+  const after = paidFrom ? balances.get(paidFrom) : undefined
+  const complete = useCompleteFinanceForm(
+    review
+      ? `Expense added.${after && paidMinor ? ` ${after.name} is now ${formatFinanceMoney((after.balanceMinor - paidMinor).toString(), currency)}.` : ""}`
+      : undefined,
+  )
   const command = useFinanceCommand(complete, book.id, "recordExpense")
   const mutation = useMutation(trpc.finance.recordExpense.mutationOptions())
-  const [review, setReview] = useState<Values | null>(null)
+  const { close } = useFinanceParams()
+  const suppliers = useQuery(
+    trpc.finance.suppliers.queryOptions({ bookId: book.id, limit: 50 }),
+  )
   const categories = book.accounts.filter(
     (account) => account.purpose === "OPERATING_EXPENSE" && !account.archivedAt,
   )
@@ -93,18 +153,22 @@ export function FinanceExpenseForm({
       payee: "",
       description: "",
       amount: "",
-      category: categories[0]?.id ?? "",
-      date: new Date().toISOString().slice(0, 10),
+      category: "",
+      date: todayIn(book.timezone),
       dueDate: "",
       reference: "",
-      paid: "unpaid",
-      paymentAccount: accounts[0]?.id ?? "",
+      paid: "paid",
+      paymentAccount: "",
       paymentAmount: "",
     },
   })
   const quickFillSnapshot = useRef<Values | null>(null)
   const [canUndoQuickFill, setCanUndoQuickFill] = useState(false)
   const paid = form.watch("paid")
+  const accountName = (id: string) =>
+    id === "OWNER_CAPITAL"
+      ? "Owner's own money"
+      : (accounts.find((account) => account.id === id)?.name ?? "")
   function submit(values: Values) {
     const amountMinor = parseFinanceMoney(values.amount)
     const incurredAt = new Date(`${values.date}T00:00:00.000Z`)
@@ -115,9 +179,10 @@ export function FinanceExpenseForm({
       description: values.description,
       reference: values.reference || undefined,
       incurredAt,
-      dueAt: values.dueDate
-        ? new Date(`${values.dueDate}T00:00:00.000Z`)
-        : undefined,
+      dueAt:
+        values.dueDate && values.paid !== "paid"
+          ? new Date(`${values.dueDate}T00:00:00.000Z`)
+          : undefined,
       lines: [
         {
           accountId: values.category,
@@ -149,39 +214,68 @@ export function FinanceExpenseForm({
         mutation.mutateAsync({ ...payload, clientCommandId }),
     })
   }
-  if (review)
+  if (review) {
+    const left = totalMinor - paidMinor
+    const total = formatFinanceMoney(totalMinor.toString(), currency)
+    const category = categories.find((item) => item.id === review.category)
     return (
       <FinanceReview
         command={command}
         onBack={() => setReview(null)}
         onConfirm={() => submit(review)}
+        confirmLabel="Add expense"
+        sentence={
+          <>
+            You're adding <b>{total}</b> spent with <b>{review.payee}</b> for{" "}
+            {review.description}.
+          </>
+        }
+        changes={changes([
+          review.paid !== "unpaid" && review.paymentAccount === "OWNER_CAPITAL"
+            ? {
+                label: "Owner's money",
+                after: `+${formatFinanceMoney(paidMinor.toString(), currency)}`,
+                note: "Counts as money the owner put in.",
+              }
+            : balanceChange(balances, paidFrom, -paidMinor, currency),
+          left > BigInt(0)
+            ? {
+                label: `Still to pay ${review.payee}`,
+                after: formatFinanceMoney(left.toString(), currency),
+              }
+            : null,
+        ])}
+        warning={overdrawWarning(balances, paidFrom, paidMinor, currency)}
       >
-        <dl className="grid gap-3 text-sm">
-          <div>
-            <dt className="text-muted-foreground">Paid to</dt>
-            <dd>{review.payee}</dd>
-          </div>
-          <div>
-            <dt className="text-muted-foreground">Expense</dt>
-            <dd>
-              {review.description} ·{" "}
-              {formatFinanceMoney(
-                parseFinanceMoney(review.amount),
-                book.currencyCode,
-              )}
-            </dd>
-          </div>
-          <div>
-            <dt className="text-muted-foreground">Payment</dt>
-            <dd>
-              {review.paid === "unpaid"
-                ? "Unpaid"
-                : `${formatFinanceMoney(parseFinanceMoney(review.paid === "paid" ? review.amount : review.paymentAmount), book.currencyCode)} from ${review.paymentAccount === "OWNER_CAPITAL" ? "Owner's own money" : accounts.find((account) => account.id === review.paymentAccount)?.name}`}
-            </dd>
-          </div>
-        </dl>
+        <FinanceDetails
+          rows={[
+            ["Paid to", review.payee],
+            [
+              "For",
+              `${review.description}${category ? ` · ${category.name}` : ""}`,
+            ],
+            ["Date", plainDay(review.date)],
+            [
+              "Paid",
+              review.paid === "unpaid"
+                ? "Not yet"
+                : review.paid === "paid"
+                  ? `In full, from ${accountName(review.paymentAccount)}`
+                  : `${formatFinanceMoney(paidMinor.toString(), currency)} from ${accountName(review.paymentAccount)}`,
+            ],
+            left > BigInt(0)
+              ? [
+                  "Still to pay",
+                  `${formatFinanceMoney(left.toString(), currency)}${review.dueDate ? `, due ${plainDay(review.dueDate)}` : ""}`,
+                ]
+              : null,
+            review.reference ? ["Reference", review.reference] : null,
+          ]}
+        />
       </FinanceReview>
     )
+  }
+  const errors = form.formState.errors
   return (
     <form onSubmit={form.handleSubmit(setReview)}>
       <FieldGroup className="min-w-0 grid gap-5">
@@ -213,106 +307,131 @@ export function FinanceExpenseForm({
         />
         <FinanceField
           label="Paid to"
-          error={form.formState.errors.payee?.message}
+          description="Pick a Supplier or type a new name."
+          error={errors.payee?.message}
         >
-          <Input {...form.register("payee")} autoComplete="off" />
-        </FinanceField>
-        <FinanceField
-          label="What was this for?"
-          error={form.formState.errors.description?.message}
-        >
-          <Input {...form.register("description")} />
-        </FinanceField>
-        <FinanceField
-          label="Category"
-          error={form.formState.errors.category?.message}
-        >
-          <FormSelectControl
+          <FormCombobox
             control={form.control}
-            name={"category"}
-            options={[
-              ...(categories.map((category) => ({
-                value: category.id,
-                label: category.name,
-              })) ?? []),
-            ]}
+            name="payee"
+            placeholder="Search or add a name…"
+            createLabel="Add"
+            empty="No Suppliers match. Keep typing to add the name."
+            options={(suppliers.data?.data ?? []).map((supplier) => ({
+              value: supplier.name,
+              label: supplier.name,
+              hint: `Supplier · ${supplier.code}`,
+            }))}
           />
         </FinanceField>
         <FinanceField
-          label={`Total (${book.currencyCode})`}
-          error={form.formState.errors.amount?.message}
+          label="What was it for?"
+          error={errors.description?.message}
         >
+          <Input
+            {...form.register("description")}
+            placeholder="Diesel for generator"
+          />
+        </FinanceField>
+        <FinanceField
+          label="Spending category"
+          error={errors.category?.message}
+        >
+          <FormCombobox
+            control={form.control}
+            name="category"
+            placeholder="Choose a category"
+            empty="No category matches."
+            options={categories.map((category) => ({
+              value: category.id,
+              label: category.name,
+            }))}
+          />
+        </FinanceField>
+        <FinanceField label="Amount" error={errors.amount?.message}>
           <MoneyInput
-            currencyCode={book.currencyCode}
+            currencyCode={currency}
             inputMode="decimal"
+            placeholder="0.00"
             {...form.register("amount")}
           />
         </FinanceField>
-        <div className="grid gap-3 sm:grid-cols-2">
-          <FinanceField
-            label="Expense date"
-            error={form.formState.errors.date?.message}
-          >
-            <FormDateControl type="date" control={form.control} name={"date"} />
-          </FinanceField>
-          <FinanceField label="Due date (optional)">
-            <FormDateControl
-              type="date"
-              control={form.control}
-              name={"dueDate"}
-            />
-          </FinanceField>
-        </div>
-        <FinanceField label="Payment status">
-          <FormSelectControl
+        <FinanceField label="Date" error={errors.date?.message}>
+          <FormDatePicker
             control={form.control}
-            name={"paid"}
+            name="date"
+            min={dayIn(book.startsAt, book.timezone)}
+            max={todayIn(book.timezone)}
+          />
+        </FinanceField>
+        <FinanceField label="Have you paid?">
+          <FormRadioChoices
+            control={form.control}
+            name="paid"
+            label="Have you paid?"
+            inline
             options={[
-              { value: "unpaid", label: <>Unpaid</> },
-              { value: "paid", label: <>Paid in full</> },
-              { value: "partial", label: <>Partly paid</> },
+              { value: "paid", label: "Paid in full" },
+              { value: "partial", label: "Paid part of it" },
+              { value: "unpaid", label: "Not paid yet" },
             ]}
           />
         </FinanceField>
         {paid !== "unpaid" ? (
           <FinanceField
             label="Paid from"
-            error={form.formState.errors.paymentAccount?.message}
+            error={errors.paymentAccount?.message}
           >
             <FormSelectControl
               control={form.control}
-              name={"paymentAccount"}
+              name="paymentAccount"
+              placeholder="Choose an account"
               options={[
+                ...accounts.map((account) => {
+                  const balance = balances.get(account.id)
+                  return {
+                    value: account.id,
+                    label: balance
+                      ? `${account.name} · ${formatFinanceMoney(balance.balanceMinor.toString(), currency)}`
+                      : account.name,
+                  }
+                }),
                 {
                   value: "OWNER_CAPITAL",
-                  label: <>Owner's own money</>,
+                  label: "Owner's own money (they put it in)",
                 },
-                ...(accounts.map((account) => ({
-                  value: account.id,
-                  label: account.name,
-                })) ?? []),
               ]}
             />
           </FinanceField>
         ) : null}
         {paid === "partial" ? (
           <FinanceField
-            label={`Amount paid (${book.currencyCode})`}
-            error={form.formState.errors.paymentAmount?.message}
+            label="Amount paid"
+            error={errors.paymentAmount?.message}
           >
             <MoneyInput
-              currencyCode={book.currencyCode}
+              currencyCode={currency}
               inputMode="decimal"
+              placeholder="0.00"
               {...form.register("paymentAmount")}
             />
           </FinanceField>
         ) : null}
-        <FinanceField label="Receipt or payment reference (optional)">
+        {paid !== "paid" ? (
+          <FinanceField
+            label="Due date (optional)"
+            description="When you need to pay the rest."
+            error={errors.dueDate?.message}
+          >
+            <FormDatePicker control={form.control} name="dueDate" />
+          </FinanceField>
+        ) : null}
+        <FinanceField
+          label="Reference (optional)"
+          description="Receipt number or transfer reference."
+        >
           <Input {...form.register("reference")} />
         </FinanceField>
-        <FormActions>
-          <Button type="submit">Review expense</Button>
-        </FormActions>
+        <FinanceFormFooter onCancel={() => void close()} submitLabel="Review" />
       </FieldGroup>
     </form>
   )

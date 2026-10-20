@@ -12,6 +12,8 @@ import {
   type DateControlProps,
   DatePicker,
   type DatePickerProps,
+  RadioGroup,
+  RadioGroupItem,
   SelectControl,
   type SelectControlProps,
 } from "@ewatrade/ui"
@@ -170,6 +172,47 @@ export function FormCombobox<T extends FieldValues>({
         </ComboboxList>
       </ComboboxContent>
     </Combobox>
+  )
+}
+
+/** shadcn RadioGroup as bordered choices, one per row or wrapped inline. */
+export function FormRadioChoices<T extends FieldValues>({
+  control,
+  name,
+  options,
+  inline,
+  label,
+}: StringField<T> & {
+  options: { value: string; label: string; hint?: string }[]
+  inline?: boolean
+  label: string
+}) {
+  const { field } = useController({ control, name })
+  return (
+    <RadioGroup
+      aria-label={label}
+      value={typeof field.value === "string" ? field.value : ""}
+      onValueChange={(value) => field.onChange(value as string)}
+      className={inline ? "flex flex-wrap gap-2" : undefined}
+    >
+      {options.map((option) => (
+        // biome-ignore lint/a11y/noLabelWithoutControl: the radio is the label's child
+        <label
+          key={option.value}
+          className="flex cursor-pointer items-start gap-2.5 border border-border px-3 py-2 text-sm has-data-checked:border-foreground"
+        >
+          <RadioGroupItem value={option.value} className="mt-0.5" />
+          <span className="grid gap-0.5">
+            <span className="font-medium">{option.label}</span>
+            {option.hint ? (
+              <span className="text-xs text-muted-foreground">
+                {option.hint}
+              </span>
+            ) : null}
+          </span>
+        </label>
+      ))}
+    </RadioGroup>
   )
 }
 

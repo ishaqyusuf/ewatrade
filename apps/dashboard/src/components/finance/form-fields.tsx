@@ -13,10 +13,12 @@ import { useFinanceForm } from "./form-context"
 
 export function FinanceField({
   label,
+  description,
   error,
   children,
 }: {
   label: string
+  description?: string
   error?: string
   children: ReactElement<{
     id?: string
@@ -25,11 +27,47 @@ export function FinanceField({
   }>
 }) {
   return (
-    <ControlField label={label} error={error}>
+    <ControlField label={label} description={description} error={error}>
       {children}
     </ControlField>
   )
 }
+/** Cancel and the primary action, kept in view at the bottom of the sheet. */
+export function FinanceFormFooter({
+  onCancel,
+  submitLabel,
+  isSubmitting = false,
+  disabled = false,
+}: {
+  onCancel?: () => void
+  submitLabel: string
+  isSubmitting?: boolean
+  disabled?: boolean
+}) {
+  return (
+    <FormActions className="sticky bottom-0 bg-background py-4">
+      {onCancel ? (
+        <Button
+          type="button"
+          variant="outline"
+          className="rounded-none"
+          onClick={onCancel}
+          disabled={isSubmitting}
+        >
+          Cancel
+        </Button>
+      ) : null}
+      <SubmitButton
+        type="submit"
+        isSubmitting={isSubmitting}
+        disabled={disabled}
+      >
+        {submitLabel}
+      </SubmitButton>
+    </FormActions>
+  )
+}
+
 /** One row in the "What changes" box: a balance before → after, or a short text. */
 export type FinanceChange = {
   label: string
