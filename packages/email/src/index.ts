@@ -1,3 +1,4 @@
+import { getQaPolicyEnvironment } from "@ewatrade/utils/qa-policy-server"
 import {
   type CommercialOrderFulfillmentReminderEmailInput,
   renderCommercialOrderFulfillmentReminderTemplate,
@@ -155,9 +156,8 @@ export function shouldRouteEmailToTestRecipients(
   env: EmailRoutingEnv = process.env,
 ) {
   return (
-    parseQaDomainRoutes(env.EMAIL_QA_DOMAIN_ROUTES).has(
-      getEmailDomain(recipient),
-    ) || hasExactTestComDomain(recipient)
+    getEmailDomain(recipient).endsWith(".test") ||
+    hasExactTestComDomain(recipient)
   )
 }
 
@@ -556,7 +556,23 @@ export function getDefaultEmailTransport() {
     live && providerKey ? resendEmailTransport : consoleEmailTransport
 
   return {
-    async send(message: EmailMessage) {
+    async send(sourceMessage: EmailMessage) {
+      let message = sourceMessage
+      const original = message.qaOriginalRecipient ?? message.to
+      if (getEmailDomain(original).endsWith(".test")) {
+        const env = await getQaPolicyEnvironment()
+        const destination = parseQaDomainRoutes(env.EMAIL_QA_DOMAIN_ROUTES).get(
+          getEmailDomain(original),
+        )
+        if (!destination)
+          throw new Error("QA email delivery is disabled or unavailable.")
+        message = {
+          ...message,
+          to: destination,
+          qaRouted: true,
+          qaOriginalRecipient: original,
+        }
+      }
       if (message.qaRouted) {
         return resendEmailTransport.send(message)
       }
@@ -595,4 +611,18 @@ export async function dispatchEmailMessages(
       }
     }),
   )
+}
+
+export async function createManagedQaEmailMessages(
+  message: EmailMessage,
+  options: { env?: EmailRoutingEnv } = {},
+) {
+  const env = await getQaPolicyEnvironment({ ...process.env, ...options.env })
+  const domain = getEmailDomain(message.qaOriginalRecipient ?? message.to)
+  if (
+    domain.endsWith(".test") &&
+    !parseQaDomainRoutes(env.EMAIL_QA_DOMAIN_ROUTES).has(domain)
+  )
+    throw new Error("QA email delivery is disabled or not configured.")
+  return createTestRoutedEmailMessages(message, { env })
 }
