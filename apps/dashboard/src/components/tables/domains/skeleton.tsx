@@ -1,19 +1,18 @@
 export function DomainTableSkeleton() {
   return (
     <div
-      className="overflow-x-auto border border-border"
+      className="overflow-x-auto rounded-[10px] border border-border bg-card"
       aria-label="Loading domains"
     >
-      <Table className="w-full min-w-[760px] text-sm">
+      <Table className="w-full min-w-[680px] text-sm">
         <TableHeader>
           <TableRow className="border-b border-border text-left text-muted-foreground">
             {[
-              "Select",
               "Domain",
               "Store",
-              "Registrar",
-              "Connection",
-              "Renewal / expiry",
+              "Status",
+              "Bought from",
+              "Renews",
               "Actions",
             ].map((label) => (
               <TableHead
@@ -32,7 +31,7 @@ export function DomainTableSkeleton() {
               key={row}
               className="border-b border-border last:border-0"
             >
-              {[0, 1, 2, 3, 4, 5, 6].map((cell) => (
+              {[0, 1, 2, 3, 4, 5].map((cell) => (
                 <TableCell key={cell} className="px-4 py-4">
                   <div className="h-4 w-24 animate-pulse rounded bg-muted" />
                 </TableCell>

@@ -1,34 +1,34 @@
-import { selectColumn } from "@/components/tables/core"
-import type { RouterOutputs } from "@ewatrade/api/trpc/routers/_app"
-import { Badge } from "@ewatrade/ui"
+import {
+  DOMAIN_STATUS,
+  DOMAIN_STATUS_TONE,
+  type DomainRow,
+  domainBoughtFrom,
+  domainRenews,
+} from "@/components/domains/domain-status"
+import { cn } from "@ewatrade/ui"
 import type { ColumnDef } from "@tanstack/react-table"
 import { DomainActionsMenu } from "./actions-menu"
 
-export type DomainRow = RouterOutputs["domains"]["list"][number]
-
-export function readableDomainValue(value: string) {
-  return value.toLowerCase().replaceAll("_", " ")
-}
+export type { DomainRow }
 
 export function DomainStatusBadge({ domain }: { domain: DomainRow }) {
+  const status = DOMAIN_STATUS[domain.status]
   return (
-    <Badge variant={domain.status === "ACTIVE" ? "default" : "secondary"}>
-      {readableDomainValue(domain.status)}
-    </Badge>
+    <span
+      className={cn(
+        "inline-flex w-fit shrink-0 rounded-full px-2 py-0.5 text-xs font-medium whitespace-nowrap",
+        DOMAIN_STATUS_TONE[status.tone],
+      )}
+    >
+      {status.label}
+    </span>
   )
-}
-
-export function formatDomainExpiry(domain: DomainRow) {
-  return domain.expiresAt
-    ? new Date(domain.expiresAt).toLocaleDateString()
-    : "External"
 }
 
 export function domainColumns(
   onManage: (domain: DomainRow) => void,
 ): ColumnDef<DomainRow>[] {
   return [
-    selectColumn((domain) => domain.hostname, "Select all listed domains"),
     {
       id: "hostname",
       accessorKey: "hostname",
@@ -37,7 +37,7 @@ export function domainColumns(
         <div>
           <p className="font-medium">{row.original.hostname}</p>
           {row.original.isPrimary ? (
-            <p className="mt-1 text-xs text-muted-foreground">Primary</p>
+            <p className="mt-1 text-xs text-muted-foreground">Main address</p>
           ) : null}
         </div>
       ),
@@ -46,30 +46,45 @@ export function domainColumns(
       id: "storeName",
       accessorFn: (domain) => domain.store.name,
       header: "Store",
-      cell: ({ row }) => row.original.store.name,
-    },
-    {
-      id: "provider",
-      accessorKey: "provider",
-      header: "Registrar",
-      cell: ({ row }) => readableDomainValue(row.original.provider),
+      cell: ({ row }) => (
+        <span className="whitespace-nowrap">{row.original.store.name}</span>
+      ),
     },
     {
       id: "status",
-      accessorKey: "status",
-      header: "Connection",
+      accessorFn: (domain) => DOMAIN_STATUS[domain.status].label,
+      header: "Status",
       cell: ({ row }) => <DomainStatusBadge domain={row.original} />,
+    },
+    {
+      id: "provider",
+      accessorFn: (domain) => domainBoughtFrom(domain),
+      header: "Bought from",
+      cell: ({ row }) => (
+        <span className="whitespace-nowrap">
+          {domainBoughtFrom(row.original)}
+        </span>
+      ),
     },
     {
       id: "expiresAt",
       accessorKey: "expiresAt",
-      header: "Renewal / expiry",
-      cell: ({ row }) => formatDomainExpiry(row.original),
+      header: "Renews",
+      cell: ({ row }) => (
+        <span
+          className={cn(
+            "whitespace-nowrap",
+            !row.original.expiresAt && "text-muted-foreground",
+          )}
+        >
+          {domainRenews(row.original)}
+        </span>
+      ),
     },
     {
       id: "actions",
       enableSorting: false,
-      header: "Actions",
+      header: () => <span className="sr-only">Actions</span>,
       cell: ({ row }) => (
         <DomainActionsMenu domain={row.original} onManage={onManage} />
       ),

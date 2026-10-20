@@ -1,6 +1,8 @@
 "use client"
 
 import { DomainHeader } from "@/components/domains/domain-header"
+import { DomainSearchFilter } from "@/components/domains/domain-search-filter"
+import { SettingsPage } from "@/components/settings/settings-page"
 import { DirectoryCollectionSkeleton } from "@/components/tables/core"
 import { DomainDataTable } from "@/components/tables/domains/data-table"
 import { DomainTableSkeleton } from "@/components/tables/domains/skeleton"
@@ -10,10 +12,8 @@ import { Alert, AlertDescription, Button } from "@ewatrade/ui"
 import { Suspense } from "react"
 
 export function DomainsDirectory({
-  storeName,
   initialViewSettings,
 }: {
-  storeName: string
   initialViewSettings: DirectoryViewSettings
 }) {
   const { view, setView, persistenceError, retryPersistence } =
@@ -23,16 +23,17 @@ export function DomainsDirectory({
       initialSettings: initialViewSettings,
     })
   return (
-    <>
-      <DomainHeader storeName={storeName} view={view} onViewChange={setView} />
+    <SettingsPage>
+      <DomainHeader view={view} onViewChange={setView} />
       {persistenceError ? (
         <Alert appearance="dashboard" role="alert">
           <AlertDescription>{persistenceError}</AlertDescription>
           <Button variant="outline" size="sm" onClick={retryPersistence}>
-            Retry saving view
+            Try again
           </Button>
         </Alert>
       ) : null}
+      <DomainSearchFilter />
       <Suspense
         fallback={
           view === "table" ? (
@@ -44,6 +45,6 @@ export function DomainsDirectory({
       >
         <DomainDataTable view={view} />
       </Suspense>
-    </>
+    </SettingsPage>
   )
 }

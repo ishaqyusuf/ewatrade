@@ -1,10 +1,19 @@
 "use client"
 
-import { useTRPC } from "@/trpc/client"
-import { Button } from "@ewatrade/ui"
-import { useMutation, useQueryClient } from "@tanstack/react-query"
+import { Button, toast } from "@ewatrade/ui"
+import { Copy01Icon } from "@hugeicons/core-free-icons"
+import { HugeiconsIcon } from "@hugeicons/react"
 
 import type { DomainRow } from "./columns"
+
+/** Copies the domain's web address and says so. */
+export function copyDomainAddress(hostname: string) {
+  const address = `https://${hostname}`
+  void navigator.clipboard
+    .writeText(address)
+    .then(() => toast(`Copied ${address}`))
+    .catch(() => toast("Couldn’t copy the address. Try again."))
+}
 
 export function DomainActionsMenu({
   domain,
@@ -13,43 +22,22 @@ export function DomainActionsMenu({
   domain: DomainRow
   onManage: (domain: DomainRow) => void
 }) {
-  const trpc = useTRPC()
-  const queryClient = useQueryClient()
-  const retry = useMutation(
-    trpc.domains.verifyConnection.mutationOptions({
-      onSuccess: async () => {
-        await queryClient.invalidateQueries(trpc.domains.list.queryFilter())
-      },
-    }),
-  )
-
   return (
     <div
       className="flex justify-end gap-1"
       onClick={(event) => event.stopPropagation()}
       onKeyDown={(event) => event.stopPropagation()}
     >
-      <Button size="sm" variant="ghost" onClick={() => onManage(domain)}>
-        Manage
+      <Button size="sm" variant="outline" onClick={() => onManage(domain)}>
+        {domain.status === "OWNERSHIP_PENDING" ? "Finish setup" : "Manage"}
       </Button>
-      {domain.status === "FAILED" || domain.status === "OWNERSHIP_PENDING" ? (
-        <Button
-          disabled={retry.isPending}
-          size="sm"
-          variant="ghost"
-          onClick={() => retry.mutate({ connectionId: domain.id })}
-        >
-          {retry.isPending ? "Retrying…" : "Retry"}
-        </Button>
-      ) : null}
       <Button
-        size="sm"
+        size="icon-sm"
         variant="ghost"
-        onClick={() =>
-          navigator.clipboard.writeText(`https://${domain.hostname}`)
-        }
+        aria-label={`Copy web address for ${domain.hostname}`}
+        onClick={() => copyDomainAddress(domain.hostname)}
       >
-        Copy URL
+        <HugeiconsIcon icon={Copy01Icon} className="size-4" />
       </Button>
     </div>
   )

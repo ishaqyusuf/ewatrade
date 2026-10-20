@@ -5,6 +5,8 @@ import { HydrateClient, prefetch, trpc } from "@/trpc/server"
 import { getInitialDirectoryView } from "@/utils/directory-views"
 import { redirect } from "next/navigation"
 
+export const metadata = { title: "Domains | EwaTrade" }
+
 export default async function DomainsSettingsPage() {
   const session = await getServerSession()
   const ctx = session ? await getActiveTenant(session.user.id) : null
@@ -13,9 +15,7 @@ export default async function DomainsSettingsPage() {
     redirect("/")
   }
 
-  const store = ctx.activeStore ?? ctx.stores[0]
-
-  if (!store) {
+  if (!(ctx.activeStore ?? ctx.stores[0])) {
     redirect("/setup")
   }
 
@@ -30,12 +30,7 @@ export default async function DomainsSettingsPage() {
 
   return (
     <HydrateClient>
-      <div className="flex min-w-0 flex-1 flex-col gap-6">
-        <DomainsDirectory
-          storeName={store.name}
-          initialViewSettings={initialViewSettings}
-        />
-      </div>
+      <DomainsDirectory initialViewSettings={initialViewSettings} />
     </HydrateClient>
   )
 }

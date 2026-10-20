@@ -5,7 +5,12 @@ import { DomainContent } from "@/components/domains/domain-content"
 import { getDomainSheetHeader } from "@/components/domains/domain-sheet-header"
 import { DomainFormProvider } from "@/components/domains/domain/form-context"
 import { SheetFrame } from "@/components/sheets/sheet-frame"
-import type { DomainSheetMode } from "@/hooks/use-domain-params"
+import {
+  type DomainSheetMode,
+  useDomainParams,
+} from "@/hooks/use-domain-params"
+import { useTRPC } from "@/trpc/client"
+import { useQuery } from "@tanstack/react-query"
 
 export function DomainSheetContent({
   closeError,
@@ -16,7 +21,14 @@ export function DomainSheetContent({
   mode: DomainSheetMode | null
   store: { id: string; name: string }
 }) {
-  const header = mode ? getDomainSheetHeader(mode) : null
+  const trpc = useTRPC()
+  const { domainId } = useDomainParams()
+  const domains = useQuery(
+    trpc.domains.list.queryOptions({}, { enabled: mode === "details" }),
+  )
+  const selected =
+    domains.data?.find((domain) => domain.id === domainId) ?? null
+  const header = mode ? getDomainSheetHeader(mode, selected) : null
 
   if (!mode) return null
 

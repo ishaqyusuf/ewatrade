@@ -12,15 +12,18 @@ import {
   DropdownMenuSubContent,
   DropdownMenuSubTrigger,
 } from "@ewatrade/ui"
+import { DOMAIN_STATUS } from "./domain-status"
 
-const statuses = [
-  ["ACTIVE", "Active"],
-  ["OWNERSHIP_PENDING", "Ownership pending"],
-  ["DNS_CONFIGURING", "Configuring DNS"],
-  ["VERIFYING", "Verifying"],
-  ["FAILED", "Needs attention"],
-  ["DISCONNECTED", "Disconnected"],
-] as const
+const statuses = (
+  [
+    "ACTIVE",
+    "OWNERSHIP_PENDING",
+    "DNS_CONFIGURING",
+    "VERIFYING",
+    "FAILED",
+    "DISCONNECTED",
+  ] as const
+).map((status) => [status, DOMAIN_STATUS[status].label] as const)
 
 export function DomainSearchFilter() {
   const {
@@ -41,7 +44,7 @@ export function DomainSearchFilter() {
         groups: [
           {
             id: "status",
-            label: "Connection status",
+            label: "Status",
             multiple: true,
             allLabel: "All statuses",
             options: statuses.map(([value, label]) => ({ value, label })),
@@ -55,7 +58,7 @@ export function DomainSearchFilter() {
               .map(([value]) => value),
           }),
       }}
-      placeholder="Search domains..."
+      placeholder="Search domains…"
       value={query}
       onSearch={(value) => setFilters({ domainQuery: value || null })}
       onClear={() => setFilters({ domainQuery: null, domainStatuses: null })}
@@ -69,7 +72,7 @@ export function DomainSearchFilter() {
     >
       <DropdownMenuGroup>
         <DropdownMenuSub>
-          <DropdownMenuSubTrigger>Connection status</DropdownMenuSubTrigger>
+          <DropdownMenuSubTrigger>Status</DropdownMenuSubTrigger>
           <DropdownMenuSubContent
             appearance="dashboard"
             className="min-w-48 max-w-[calc(100vw-32px)] rounded-none bg-popover p-0 shadow-md before:hidden"
