@@ -47,12 +47,12 @@ const freshRead = {
 } as const
 
 const CONFLICT =
-  "Someone else changed these settings. The latest values are shown; review and save again."
+  "Someone else just changed this. We've loaded the latest. Check it and save again."
 
 function saveError(error: unknown) {
   return error instanceof TRPCClientError && error.data?.code === "CONFLICT"
     ? CONFLICT
-    : "That change wasn't saved. Try again."
+    : "Couldn't save. Check your connection and try again."
 }
 
 /**
@@ -69,9 +69,9 @@ export function BusinessNotificationSettingsPage({
   return (
     <Tabs defaultValue="types" className="grid gap-5" key={scopeKey}>
       <TabsList variant="line">
-        <TabsTrigger value="types">Alert types</TabsTrigger>
-        <TabsTrigger value="recipients">Who gets alerts</TabsTrigger>
-        <TabsTrigger value="mine">My preferences</TabsTrigger>
+        <TabsTrigger value="types">Alerts</TabsTrigger>
+        <TabsTrigger value="recipients">Who gets them</TabsTrigger>
+        <TabsTrigger value="mine">My alerts</TabsTrigger>
       </TabsList>
       <TabsContent value="types">
         <PolicyTab />
@@ -97,7 +97,7 @@ function ReadState({
 }) {
   return state === "refused" ? (
     <div role="alert" className="grid justify-items-start gap-3 text-sm">
-      <p>{label} couldn't load.</p>
+      <p>Couldn't load {label.toLowerCase()}.</p>
       <Button variant="outline" onClick={onRetry}>
         Try again
       </Button>
@@ -131,7 +131,7 @@ function PolicyTab() {
     return (
       <ReadState
         state={read.state}
-        label="Alert types"
+        label="Alerts"
         onRetry={() => void query.refetch()}
       />
     )
@@ -148,8 +148,7 @@ function PolicyTab() {
         />
       ) : (
         <p className="border border-dashed px-4 py-8 text-center text-sm text-muted-foreground">
-          No alert types are available yet. They become available as each type
-          is released.
+          No alerts are available yet. More are coming.
         </p>
       )}
       <Sheet
@@ -227,8 +226,8 @@ function RecipientsTab({
     <div className="grid gap-4">
       <Input
         type="search"
-        aria-label="Search team members"
-        placeholder="Search team members"
+        aria-label="Search staff"
+        placeholder="Search staff"
         className="max-w-sm"
         maxLength={120}
         value={text}
@@ -328,7 +327,7 @@ function RecipientsBody({
     return (
       <ReadState
         state="refused"
-        label="Alert assignments"
+        label="Who gets them"
         onRetry={() => {
           void policy.refetch()
           void subscriptions.refetch()
@@ -338,11 +337,7 @@ function RecipientsBody({
     )
   if (!policy.isSuccess || subscriptions.isPending || !directoryPages.length)
     return (
-      <ReadState
-        state="checking"
-        label="Alert assignments"
-        onRetry={() => {}}
-      />
+      <ReadState state="checking" label="Who gets them" onRetry={() => {}} />
     )
 
   const catalog = policy.data.catalog
@@ -367,7 +362,7 @@ function RecipientsBody({
     <div className="grid gap-4">
       {catalog.length ? null : (
         <p className="border border-dashed px-4 py-3 text-sm text-muted-foreground">
-          No alert types are available yet, so there is nothing to assign.
+          No alerts are available yet, so there is nothing to choose.
         </p>
       )}
       <NotificationSubscriptionContent
@@ -470,7 +465,7 @@ function MemberAlertsContainer({
     return (
       <ReadState
         state={read.state}
-        label="Their alert assignments"
+        label="Their alerts"
         onRetry={() => void query.refetch()}
       />
     )

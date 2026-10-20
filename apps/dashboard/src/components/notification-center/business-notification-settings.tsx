@@ -43,8 +43,8 @@ export function BusinessNotificationPreferencesSheet({
     >
       {isOpen ? (
         <SheetFrame
-          title="My alert preferences"
-          description="Choose which of your assigned alerts you receive."
+          title="My alerts"
+          description="Turn off any alerts you don't want."
         >
           <MyPreferences key={scopeKey} />
         </SheetFrame>
@@ -77,7 +77,7 @@ export function MyPreferences() {
   if (read.state === "refused")
     return (
       <div role="alert" className="grid gap-3 text-sm">
-        <p>Your alert preferences couldn't load.</p>
+        <p>Couldn't load your alerts.</p>
         <Button variant="outline" onClick={() => void query.refetch()}>
           Try again
         </Button>
@@ -106,7 +106,8 @@ export function MyPreferences() {
           update.mutate(
             { type: item.type, preference: { ...item.preference, inApp } },
             {
-              onError: () => setError("That change wasn't saved. Try again."),
+              onError: () =>
+                setError("Couldn't save. Check your connection and try again."),
               onSettled: () => {
                 setPendingType(null)
                 void query.refetch()

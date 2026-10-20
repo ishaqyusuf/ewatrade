@@ -32,8 +32,8 @@ export function NotificationPreferencesContent({
   return (
     <div className="grid gap-3">
       <p className="text-sm text-muted-foreground">
-        Your Owner chooses which alerts can reach you. You decide which of those
-        you receive.
+        Your business chooses which alerts you can get. Turn off any you don't
+        want.
       </p>
       {items.length ? (
         <ul className="border-t">
@@ -43,7 +43,7 @@ export function NotificationPreferencesContent({
             return (
               <li
                 key={item.type}
-                className="grid grid-cols-[1fr_auto] items-center gap-3 border-b py-3"
+                className="grid items-center gap-3 border-b py-3"
               >
                 {canInApp ? (
                   <CheckboxField
@@ -63,14 +63,11 @@ export function NotificationPreferencesContent({
                     <p className="font-medium">{entry?.label ?? item.type}</p>
                     <p className="text-muted-foreground">
                       {item.supports.inApp
-                        ? "Turned off by your Owner"
-                        : "Not available as an in-app alert"}
+                        ? "Turned off by your business"
+                        : "Not available yet"}
                     </p>
                   </div>
                 )}
-                <span className="bg-amber-50 px-1.5 py-0.5 text-xs whitespace-nowrap text-amber-800 dark:bg-amber-950/50 dark:text-amber-300">
-                  Email coming later
-                </span>
               </li>
             )
           })}
@@ -82,12 +79,10 @@ export function NotificationPreferencesContent({
       )}
       <p className="flex items-center gap-2 text-xs text-muted-foreground">
         <HugeiconsIcon icon={Mail01Icon} className="size-4" />
-        Email alerts and daily digests aren't available yet. Nothing is emailed
-        from these settings.
+        Email alerts aren't available yet. Nothing is emailed from here.
       </p>
       <p className="text-xs text-muted-foreground">
-        Turning an alert off only stops your alerts; it doesn't change Activity
-        history.
+        Turning an alert off doesn't remove anything from Activity.
       </p>
     </div>
   )

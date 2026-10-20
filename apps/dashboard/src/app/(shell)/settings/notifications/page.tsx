@@ -1,5 +1,8 @@
-import { PageHeader } from "@/components/page-header"
 import { BusinessNotificationSettingsPage } from "@/components/settings/business-notification-settings-page"
+import {
+  SettingsHeader,
+  SettingsPage,
+} from "@/components/settings/settings-page"
 import { getServerSession } from "@/lib/session"
 import { getActiveTenant } from "@/lib/tenant"
 import { canManageTenant, normalizeRole } from "@ewatrade/auth/roles"
@@ -16,11 +19,10 @@ export default async function NotificationSettingsPage() {
   const role = normalizeRole(ctx.membership.role)
   if (!role || !canManageTenant(role)) redirect("/activity")
   return (
-    <div className="grid gap-6">
-      <PageHeader
+    <SettingsPage>
+      <SettingsHeader
         title="Notifications"
-        eyebrow={ctx.tenant.name}
-        description="Choose which alerts exist and who can get them. Alerts never give anyone access to records they can't already open."
+        description="Choose which alerts are on and who gets them. Alerts never show anyone records they can't already open."
       />
       <BusinessNotificationSettingsPage
         scopeKey={JSON.stringify([
@@ -30,6 +32,6 @@ export default async function NotificationSettingsPage() {
         ])}
         stores={ctx.stores.map((store) => ({ id: store.id, name: store.name }))}
       />
-    </div>
+    </SettingsPage>
   )
 }

@@ -22,14 +22,14 @@ const BLOCKED_REASONS: Record<
   NonNullable<BusinessNotificationSubscriptionView["blockedReason"]>,
   string
 > = {
-  needs_finance_access: "Needs Finance access",
-  needs_staff_management: "Needs staff management access",
-  outside_store_scope: "Outside the Stores they can access",
-  inactive_membership: "Not an active member",
-  unsupported_type: "Not available as an alert",
-  policy_disabled: "Turned off for the Business",
-  subscription_disabled: "Assignment turned off",
-  preference_disabled: "They turned this alert off",
+  needs_finance_access: "needs finance access",
+  needs_staff_management: "needs staff management access",
+  outside_store_scope: "not in a store they work in",
+  inactive_membership: "no longer on your team",
+  unsupported_type: "not available yet",
+  policy_disabled: "turned off for your business",
+  subscription_disabled: "turned off for this person",
+  preference_disabled: "they turned it off",
 }
 
 export function blockedReasonLabel(
@@ -47,10 +47,10 @@ function scopeLabel(
   scope: BusinessNotificationScope,
   stores: Array<{ id: string; name: string }>,
 ) {
-  if (scope.kind === "business") return "Whole Business"
-  if (scope.kind === "accessible_stores") return "All Stores they can access"
+  if (scope.kind === "business") return "All stores"
+  if (scope.kind === "accessible_stores") return "Stores they work in"
   return scope.storeIds
-    .map((id) => stores.find((store) => store.id === id)?.name ?? "A Store")
+    .map((id) => stores.find((store) => store.id === id)?.name ?? "A store")
     .join(", ")
 }
 
@@ -74,8 +74,8 @@ export function NotificationSubscriptionContent({
   return (
     <div className="grid gap-3">
       <p className="text-sm text-muted-foreground">
-        Pick which alert types each person can get. They only receive alerts for
-        records their role and Stores already let them open.
+        Choose which alerts each person gets. People only get alerts for orders
+        and stores they can already open.
       </p>
       <ul className="border-t">
         {members.map((member) => {
@@ -108,10 +108,10 @@ export function NotificationSubscriptionContent({
                 </p>
                 <p className="text-muted-foreground">
                   {!known && !mine.length
-                    ? "Assignments not loaded yet"
+                    ? "Not loaded yet"
                     : mine.length
                       ? `${mine.length}${known ? "" : "+"} alert ${mine.length === 1 ? "type" : "types"} · ${first ? scopeLabel(first.scope, stores) : ""}`
-                      : "No alerts assigned"}
+                      : "No alerts"}
                 </p>
                 {mine.length ? (
                   <p className="truncate text-xs text-muted-foreground">
@@ -126,7 +126,7 @@ export function NotificationSubscriptionContent({
                 ) : null}
                 {blocked.length ? (
                   <p className="text-xs text-muted-foreground">
-                    Not delivered:{" "}
+                    Won't get it:{" "}
                     {[
                       ...new Set(
                         blocked.map((sub) =>
@@ -143,7 +143,7 @@ export function NotificationSubscriptionContent({
                   variant="outline"
                   onClick={(event) => onEdit(member, event.currentTarget)}
                 >
-                  {member.active ? "Edit" : "Remove alerts"}
+                  {member.active ? "Choose alerts" : "Turn off all alerts"}
                 </Button>
               ) : null}
             </li>
@@ -195,7 +195,7 @@ export function MemberAlertsEditor({
       enabledTypes.includes(entry.type),
   )
   const scopes: Array<{ value: string; label: string }> = [
-    { value: "accessible_stores", label: "All Stores they can access" },
+    { value: "accessible_stores", label: "Stores they work in" },
     ...stores.map((store) => ({
       value: `store:${store.id}`,
       label: `${store.name} only`,
@@ -215,8 +215,8 @@ export function MemberAlertsEditor({
     >
       <p className="text-sm text-muted-foreground">
         {removeOnly
-          ? "This person isn't an active member, so alerts can only be turned off."
-          : `${formatRole(member.role) || "Team member"}. Choosing an alert here doesn't change their access; alerts outside their access are not delivered.`}
+          ? "This person is no longer on your team, so you can only turn their alerts off."
+          : `${formatRole(member.role) || "Team member"}. Choosing an alert never gives them new access. They only get alerts for orders and stores they can already open.`}
       </p>
       {removeOnly ? null : (
         <fieldset className="grid gap-1">
@@ -249,10 +249,10 @@ export function MemberAlertsEditor({
         </fieldset>
       )}
       <fieldset className="grid gap-1">
-        <legend className="pb-1.5 text-[13px] font-medium">Alert types</legend>
+        <legend className="pb-1.5 text-[13px] font-medium">Alerts</legend>
         {selectable.length ? null : (
           <p className="text-sm text-muted-foreground">
-            No alert types are available to assign yet.
+            No alerts are available yet.
           </p>
         )}
         {selectable.map((entry) => {
@@ -267,7 +267,7 @@ export function MemberAlertsEditor({
               className="py-1.5"
               label={entry.label}
               description={
-                blocked ? `Not delivered: ${blocked}.` : entry.description
+                blocked ? `Won't get it: ${blocked}.` : entry.description
               }
             >
               <Checkbox

@@ -34,10 +34,11 @@ function roleLabels(roles: string[]) {
 }
 
 function policySummary(policy: BusinessNotificationPolicyView | undefined) {
-  if (!policy?.allowed.inApp) return "Not sent"
+  if (!policy?.allowed.inApp) return "Off. Nobody gets it."
   if (!policy.defaults.inApp || !policy.recipientRoles.length)
-    return "Allowed for people you assign"
-  return `On by default for ${roleLabels(policy.recipientRoles)}`
+    return "Goes only to people you add."
+  const roles = roleLabels(policy.recipientRoles).toLowerCase()
+  return `Goes to ${roles.replace(/, ([^,]*)$/, " and $1")} automatically.`
 }
 
 /**
@@ -75,13 +76,11 @@ export function NotificationPolicyContent({
   return (
     <div className="grid gap-5">
       <p className="text-sm text-muted-foreground">
-        Alert settings don't change your Activity history. They only control
-        whether an alert type is sent, and who gets it by default.
+        Alerts show in the dashboard. Email alerts aren't available yet.
       </p>
       {byCategory.size ? null : (
         <p className="border border-dashed px-4 py-6 text-center text-sm text-muted-foreground">
-          No alert types are available yet. They become available as each type
-          is released.
+          No alerts are available yet. More are coming.
         </p>
       )}
       {[...byCategory].map(([category, entries]) => (
@@ -106,11 +105,7 @@ export function NotificationPolicyContent({
                     <p className="font-medium">{sentenceCase(entry.label)}</p>
                     <p className="text-muted-foreground">{entry.description}</p>
                     <p className="text-xs text-muted-foreground">
-                      {editable
-                        ? `In app: ${policySummary(policy)} · Email coming later`
-                        : entry.availability === "planned"
-                          ? "This alert type isn't available yet."
-                          : "Not available as an in-app alert."}
+                      {editable ? policySummary(policy) : "Not available yet."}
                     </p>
                   </div>
                   {editable ? (
@@ -132,11 +127,11 @@ export function NotificationPolicyContent({
       {planned.length ? (
         <details className="border-t pt-3 text-sm">
           <summary className="cursor-pointer text-muted-foreground">
-            {planned.length} more alert{" "}
-            {planned.length === 1 ? "type" : "types"} coming later
+            {planned.length} more alert{planned.length === 1 ? " is" : "s are"}{" "}
+            coming
           </summary>
           <p className="mt-2 text-xs text-muted-foreground">
-            These alert types aren't available yet.
+            These aren't available yet.
           </p>
           <ul className="mt-2 grid gap-1 text-[13px] text-muted-foreground sm:grid-cols-2">
             {planned.map((entry) => (
@@ -186,8 +181,8 @@ export function PolicyEditor({
     >
       <p className="text-sm text-muted-foreground">{entry.description}</p>
       <CheckboxField
-        label="Allow in-app alerts"
-        description="When off, nobody receives this alert. It doesn't change Activity history."
+        label="Send this alert"
+        description="Turn off to stop everyone getting it. Activity isn't changed."
       >
         <Checkbox
           checked={draft.allowInApp}
@@ -201,8 +196,8 @@ export function PolicyEditor({
         />
       </CheckboxField>
       <CheckboxField
-        label="On by default"
-        description="People in the roles below get it unless they turn it off. Others only get it when you assign it."
+        label="Send it to these roles automatically"
+        description="Other people only get it if you add them under Who gets them."
       >
         <Checkbox
           checked={draft.defaultInApp}
@@ -217,7 +212,7 @@ export function PolicyEditor({
       </CheckboxField>
       <fieldset className="grid gap-1" disabled={!draft.defaultInApp}>
         <legend className="pb-1.5 text-[13px] font-medium">
-          Roles that get it by default
+          Send it automatically to
         </legend>
         {POLICY_ROLES.map((role) => (
           <CheckboxField key={role.value} className="py-1" label={role.label}>
@@ -238,13 +233,10 @@ export function PolicyEditor({
           </CheckboxField>
         ))}
         <p className="text-xs text-muted-foreground">
-          A role default never gives access. People still only receive alerts
-          for records they can already open.
+          This never gives anyone new access. People only get alerts for orders
+          and stores they can already open.
         </p>
       </fieldset>
-      <p className="text-xs text-muted-foreground">
-        Email alerts aren't available yet.
-      </p>
       {error ? (
         <p role="alert" className="text-sm text-destructive">
           {error}
