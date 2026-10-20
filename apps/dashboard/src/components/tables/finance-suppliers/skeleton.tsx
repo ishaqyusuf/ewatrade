@@ -23,7 +23,7 @@ export function FinanceSupplierTableSkeleton({
 }) {
   const normalized = normalizeTableSettings(settings, getColumnIds(columns), [
     "select",
-    "code",
+    "name",
   ])
   if (view !== "table") return <DirectoryCollectionSkeleton label="suppliers" />
 
@@ -35,7 +35,7 @@ export function FinanceSupplierTableSkeleton({
       columnVisibility={normalized.columns}
       columnSizing={normalized.sizing}
       columnOrder={normalized.order}
-      stickyColumnIds={["select", "code"]}
+      stickyColumnIds={["select", "name"]}
     />
   )
 }

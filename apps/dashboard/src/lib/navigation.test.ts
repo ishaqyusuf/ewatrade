@@ -102,7 +102,7 @@ describe("dashboard navigation policy", () => {
       "/settings",
     ])
     expect(adminItems).toEqual(ownerItems)
-    expect(new Set(flatten(ownerItems).map((item) => item.href)).size).toBe(33)
+    expect(new Set(flatten(ownerItems).map((item) => item.href)).size).toBe(34)
   })
 
   test("hides and redirects Website & domain until launch approval", () => {
@@ -135,6 +135,7 @@ describe("dashboard navigation policy", () => {
       "/finance",
       "/finance/spending",
       "/finance/accounts",
+      "/finance/bank",
       "/finance/suppliers",
       "/customer-ledger",
       "/finance/reports",
@@ -371,7 +372,7 @@ describe("dashboard navigation policy", () => {
 
   test("matches the most specific permitted child route", () => {
     expect(getDashboardNavItem("/finance/accounts", "OWNER")?.label).toBe(
-      "Accounts",
+      "Money accounts",
     )
     expect(canAccessDashboardPath("/finance/reports/export", "OWNER")).toBe(
       true,

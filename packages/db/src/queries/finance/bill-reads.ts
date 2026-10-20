@@ -135,6 +135,21 @@ export async function listFinanceBills(
       const totalMinor = totals._sum.totalMinor ?? BigInt(0)
       const paidMinor = totals._sum.paidMinor ?? BigInt(0)
       const page = rows.slice(0, limit)
+      // Attached receipts per expense, so lists can show which still need one.
+      const receiptGroups = page.length
+        ? await tx.financeExpenseReceiptAsset.groupBy({
+            by: ["billId"],
+            where: {
+              bookId: book.id,
+              billId: { in: page.map((bill) => bill.id) },
+              attachmentState: "ATTACHED",
+            },
+            _count: { _all: true },
+          })
+        : []
+      const receiptCounts = new Map(
+        receiptGroups.map((group) => [group.billId, group._count._all]),
+      )
       return {
         currencyCode: book.currencyCode,
         count,
@@ -151,6 +166,7 @@ export async function listFinanceBills(
           outstandingMinor: bill.voidedAt
             ? "0"
             : (bill.totalMinor - bill.paidMinor).toString(),
+          receiptCount: receiptCounts.get(bill.id) ?? 0,
           status: bill.voidedAt
             ? ("VOID" as const)
             : bill.paidMinor === bill.totalMinor

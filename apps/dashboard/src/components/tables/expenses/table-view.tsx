@@ -18,13 +18,12 @@ import type { DirectoryView } from "@/utils/directory-view-settings"
 import { DndContext, closestCenter } from "@dnd-kit/core"
 import type { RouterOutputs } from "@ewatrade/api/trpc/routers/_app"
 import { Button, Table, TableBody } from "@ewatrade/ui"
-import { Badge } from "@ewatrade/ui"
 import { formatFinanceMoney } from "@ewatrade/utils/finance-money"
 import type { Table as ReactTable } from "@tanstack/react-table"
 import { useVirtualizer } from "@tanstack/react-virtual"
 import { AnimatePresence } from "framer-motion"
 import { ExpenseBottomBar } from "./bottom-bar"
-import { expenseStatusLabels, formatExpenseDate } from "./columns"
+import { ExpenseReceipt, ExpenseStatusPill, formatExpenseDate } from "./columns"
 import { ExpenseEmptyState } from "./empty-states"
 import { ExpenseTableSkeleton } from "./skeleton"
 import { ExpenseTableHeader, ExpenseTableSettings } from "./table-header"
@@ -47,7 +46,6 @@ export function ExpenseTableView({
   book,
   table,
   view,
-  sort,
   summary,
   filtered,
   isPending,
@@ -154,13 +152,13 @@ export function ExpenseTableView({
       <div className="grid gap-4 border-y border-border py-5 sm:grid-cols-3">
         {(
           [
-            ["Expenses incurred", summary.summary.incurredMinor],
-            ["Paid against these bills", summary.summary.paidAgainstBillsMinor],
-            ["Outstanding", summary.summary.outstandingMinor],
+            ["Spent", summary.summary.incurredMinor],
+            ["Paid", summary.summary.paidAgainstBillsMinor],
+            ["Still to pay", summary.summary.outstandingMinor],
           ] as const
         ).map(([label, value]) => (
           <div key={label}>
-            <p className="text-xs text-muted-foreground">{label}</p>
+            <p className="text-sm text-muted-foreground">{label}</p>
             <p className="mt-2 text-xl font-semibold tabular-nums">
               {formatFinanceMoney(value, currency)}
             </p>
@@ -189,10 +187,9 @@ export function ExpenseTableView({
         table={table}
         view={view}
         selectAllLabel="Select all loaded expenses"
-        summary={`${summary.count} expenses · ${sortCaption(sort)}`}
-      >
-        {view === "table" ? <ExpenseTableSettings table={table} /> : null}
-      </DirectoryToolbar>
+        summary={`${summary.count} expense${summary.count === 1 ? "" : "s"}`}
+      />
+      <ExpenseTableSettings table={table} showColumns={view === "table"} />
 
       {persistenceError ? (
         <div className="flex items-center justify-between gap-3" role="alert">
@@ -228,17 +225,18 @@ export function ExpenseTableView({
                   book.timezone,
                 )}`}
                 badges={
-                  <Badge variant="outline">
-                    {expenseStatusLabels[bill.status]}
-                  </Badge>
+                  <>
+                    <ExpenseStatusPill status={bill.status} />
+                    <ExpenseReceipt bill={bill} />
+                  </>
                 }
                 highlight={{
-                  label: "Outstanding",
+                  label: "Still to pay",
                   value: formatFinanceMoney(bill.outstandingMinor, currency),
                 }}
                 details={[
                   {
-                    label: "Total",
+                    label: "Amount",
                     value: formatFinanceMoney(bill.totalMinor, currency),
                   },
                   {
@@ -338,16 +336,4 @@ export function ExpenseTableView({
       </AnimatePresence>
     </div>
   )
-}
-
-function sortCaption(sort?: ExpenseSort) {
-  if (!sort) return "newest expense date first"
-  const labels: Record<(typeof expenseSortFields)[number], string> = {
-    incurredAt: "expense date",
-    description: "description",
-    payeeName: "payee",
-    totalMinor: "total amount",
-    paidMinor: "amount paid",
-  }
-  return `sorted by ${labels[sort.field]} ${sort.direction === "asc" ? "ascending" : "descending"}`
 }

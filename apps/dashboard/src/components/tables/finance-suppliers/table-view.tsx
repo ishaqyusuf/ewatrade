@@ -1,6 +1,5 @@
 "use client"
 
-import type { FinanceSupplierRow } from "@/components/finance/types"
 import {
   DirectoryCollection,
   DirectoryRecord,
@@ -16,9 +15,10 @@ import { useTableScroll } from "@/hooks/use-table-scroll"
 import type { DirectoryView } from "@/utils/directory-view-settings"
 import { DndContext, closestCenter } from "@dnd-kit/core"
 import { Alert, AlertDescription, Button, Table, TableBody } from "@ewatrade/ui"
+import { formatFinanceMoney } from "@ewatrade/utils/finance-money"
 import type { Table as ReactTable } from "@tanstack/react-table"
 import { useVirtualizer } from "@tanstack/react-virtual"
-import { ViewSupplierButton } from "./columns"
+import { type FinanceSupplierListRow, ViewSupplierButton } from "./columns"
 import { FinanceSupplierEmptyState } from "./empty-states"
 import { FinanceSupplierTableSkeleton } from "./skeleton"
 import {
@@ -29,14 +29,15 @@ import {
 const ROW_HEIGHT = 57
 const STICKY_COLUMNS = [
   { id: "select", width: 50 },
-  { id: "code", width: 180 },
+  { id: "name", width: 300 },
   { id: "actions", side: "right" as const, width: 96 },
 ]
-const FIXED_COLUMN_IDS = ["select", "code"]
+const FIXED_COLUMN_IDS = ["select", "name"]
 const NON_CLICKABLE_COLUMNS = new Set(["select", "actions"])
 
 export function FinanceSupplierTableView({
   table,
+  currencyCode,
   view,
   filtered,
   isPending,
@@ -52,7 +53,8 @@ export function FinanceSupplierTableView({
   persistenceError,
   retryPersistence,
 }: {
-  table: ReactTable<FinanceSupplierRow>
+  table: ReactTable<FinanceSupplierListRow>
+  currencyCode: string
   view: DirectoryView
   filtered: boolean
   isPending: boolean
@@ -78,6 +80,14 @@ export function FinanceSupplierTableView({
   })
   const tableScroll = useTableScroll({ useColumnWidths: true })
   const rows = table.getRowModel().rows
+  const owedTotal = rows.every((row) => row.original.owedMinor !== undefined)
+    ? rows
+        .reduce(
+          (total, row) => total + BigInt(row.original.owedMinor ?? "0"),
+          0n,
+        )
+        .toString()
+    : null
   const rowVirtualizer = useVirtualizer({
     count: rows.length,
     getScrollElement: () => tableScroll.containerRef.current,
@@ -160,12 +170,9 @@ export function FinanceSupplierTableView({
         table={table}
         view={view}
         selectAllLabel="Select all loaded suppliers"
-        summary={`${rows.length} supplier${rows.length === 1 ? "" : "s"} loaded`}
-      >
-        {view === "table" ? (
-          <FinanceSupplierTableSettings table={table} />
-        ) : null}
-      </DirectoryToolbar>
+        summary={`${rows.length} Supplier${rows.length === 1 ? "" : "s"}${owedTotal === null ? "" : ` · you owe ${formatFinanceMoney(owedTotal, currencyCode)}`}`}
+      />
+      {view === "table" ? <FinanceSupplierTableSettings table={table} /> : null}
 
       {persistenceError ? (
         <Alert
@@ -204,8 +211,30 @@ export function FinanceSupplierTableView({
                 selectLabel={`Select ${supplier.name}`}
                 title={supplier.name}
                 onOpen={open}
-                description={
-                  <span className="font-mono text-xs">{supplier.code}</span>
+                description={supplier.code}
+                highlight={
+                  supplier.owedMinor === undefined
+                    ? undefined
+                    : {
+                        label: "You owe",
+                        value: formatFinanceMoney(
+                          supplier.owedMinor,
+                          currencyCode,
+                        ),
+                      }
+                }
+                details={
+                  supplier.paidAheadMinor && supplier.paidAheadMinor !== "0"
+                    ? [
+                        {
+                          label: "Paid ahead",
+                          value: formatFinanceMoney(
+                            supplier.paidAheadMinor,
+                            currencyCode,
+                          ),
+                        },
+                      ]
+                    : undefined
                 }
                 actions={
                   <ViewSupplierButton supplier={supplier} onOpen={open} />

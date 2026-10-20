@@ -11,18 +11,16 @@ import {
   moneyAccountPaymentMethods,
 } from "@ewatrade/utils/finance-payment-methods"
 import { useQuery } from "@tanstack/react-query"
-import { type ReactNode, useCallback } from "react"
+import { useCallback } from "react"
 import { FinanceAccountStatement } from "./account-statement"
-import { OpenFinanceSheet } from "./open-finance-sheet"
+import { formatFinanceDate } from "./format-date"
 import type { FinanceBook } from "./types"
 export function FinanceAccounts({
   book,
   view,
-  viewSwitcher,
 }: {
   book: FinanceBook
   view: DirectoryView
-  viewSwitcher: ReactNode
 }) {
   const { financeAccountId, setParams } = useFinanceParams()
   const openStatement = useCallback(
@@ -43,24 +41,10 @@ export function FinanceAccounts({
   )
   return (
     <section className="grid gap-5">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2 className="text-lg font-medium">Money accounts</h2>
-        <div className="flex flex-wrap items-center gap-2">
-          {viewSwitcher}
-          <OpenFinanceSheet mode="account" secondary>
-            Add account
-          </OpenFinanceSheet>
-          <OpenFinanceSheet mode="money" secondary>
-            Record movement
-          </OpenFinanceSheet>
-        </div>
-      </div>
       <p className="max-w-2xl text-sm text-muted-foreground">
-        Balances reflect finance entries recorded since{" "}
-        {new Date(book.startsAt).toISOString().slice(0, 10)}, including order
-        payments recorded into an account. Older payments with no receiving
-        account aren't included. Check these amounts against your cash and bank
-        statements.
+        Counts money recorded since{" "}
+        {formatFinanceDate(book.startsAt, book.timezone)}, including order
+        payments. Compare it with your cash and bank statements.
       </p>
       {balances.isPending ? (
         <output>Loading account balances…</output>
@@ -123,9 +107,10 @@ function PaymentMethodGaps({
   if (!missing.length) return null
   return (
     <FormFeedback appearance="dashboard">
-      No available account takes{" "}
+      No account takes{" "}
       {missing.map((method) => ORDER_PAYMENT_METHOD_LABELS[method]).join(", ")}{" "}
-      payments. Staff can't record those payments until one does.
+      payments, so staff can't record them yet. Open Payment settings on an
+      account to fix this.
     </FormFeedback>
   )
 }

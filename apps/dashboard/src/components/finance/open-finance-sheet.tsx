@@ -8,25 +8,27 @@ import { Add01Icon } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
 import type { ReactNode } from "react"
 
+/**
+ * Opens a Finance sheet. `primary` is the page's main action: a filled button
+ * with a plus and its label, so it says what it does.
+ */
 export function OpenFinanceSheet({
   mode,
   billId,
   children,
-  icon = false,
+  primary = false,
 }: {
   mode: FinanceSheetMode
   billId?: string
   children: ReactNode
   secondary?: boolean
-  icon?: boolean
+  primary?: boolean
 }) {
   const { setParams } = useFinanceParams()
   return (
     <Button
-      variant="outline"
-      size={icon ? "icon" : "default"}
-      className={icon ? "size-9 rounded-none" : "h-9 rounded-none"}
-      aria-label={icon && typeof children === "string" ? children : undefined}
+      variant={primary ? "default" : "outline"}
+      className="h-9 rounded-none"
       onClick={() =>
         setParams({
           financeSheet: mode,
@@ -38,11 +40,14 @@ export function OpenFinanceSheet({
         })
       }
     >
-      {icon ? (
-        <HugeiconsIcon icon={Add01Icon} data-icon="inline-start" />
-      ) : (
-        children
-      )}
+      {primary ? (
+        <HugeiconsIcon
+          icon={Add01Icon}
+          data-icon="inline-start"
+          aria-hidden="true"
+        />
+      ) : null}
+      {children}
     </Button>
   )
 }

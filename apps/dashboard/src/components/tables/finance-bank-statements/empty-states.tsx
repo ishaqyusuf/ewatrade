@@ -20,8 +20,8 @@ export function FinanceBankStatementEmptyState({
     <EmptyState
       appearance="form"
       title="No bank statements yet"
-      description="Import an original CSV statement to compare bank transactions with your posted records."
-      actionLabel="Import statement"
+      description="Upload the CSV file from your bank to check each line against what you recorded."
+      actionLabel="Upload statement"
       onAction={() =>
         void setParams({ financeSheet: "bank-import", statementId: null })
       }

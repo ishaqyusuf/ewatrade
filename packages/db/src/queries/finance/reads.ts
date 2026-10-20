@@ -14,7 +14,12 @@ export async function getFinanceAccountBalances(
       })
       if (!book)
         throw new FinanceError("NOT_FOUND", "Financial book not found.")
-      const [accounts, totals] = await Promise.all([
+      // Finance dates are UTC, so "this month" starts at 00:00 UTC on the 1st.
+      const now = new Date()
+      const monthStart = new Date(
+        Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1),
+      )
+      const [accounts, totals, monthTotals] = await Promise.all([
         tx.financeAccount.findMany({
           where: { bookId: book.id },
           orderBy: { code: "asc" },
@@ -27,14 +32,30 @@ export async function getFinanceAccountBalances(
           },
           _sum: { debitMinor: true, creditMinor: true },
         }),
+        tx.financeJournalLine.groupBy({
+          by: ["accountId"],
+          where: {
+            bookId: book.id,
+            entry: {
+              sequence: { lte: book.lastSequence },
+              effectiveAt: { gte: monthStart },
+            },
+          },
+          _sum: { debitMinor: true, creditMinor: true },
+        }),
       ])
       const byAccount = new Map(totals.map((row) => [row.accountId, row._sum]))
+      const monthByAccount = new Map(
+        monthTotals.map((row) => [row.accountId, row._sum]),
+      )
       return {
         snapshotSequence: book.lastSequence.toString(),
         currencyCode: book.currencyCode,
         startsAt: book.startsAt,
+        monthStart,
         accounts: accounts.map((account) => {
           const totals = byAccount.get(account.id)
+          const month = monthByAccount.get(account.id)
           const debitMinor = totals?.debitMinor ?? BigInt(0)
           const creditMinor = totals?.creditMinor ?? BigInt(0)
           const debitNormal =
@@ -43,6 +64,9 @@ export async function getFinanceAccountBalances(
             ...account,
             debitMinor: debitMinor.toString(),
             creditMinor: creditMinor.toString(),
+            // For money (asset) accounts: debits are money in, credits money out.
+            monthDebitMinor: (month?.debitMinor ?? BigInt(0)).toString(),
+            monthCreditMinor: (month?.creditMinor ?? BigInt(0)).toString(),
             balanceMinor: (debitNormal
               ? debitMinor - creditMinor
               : creditMinor - debitMinor

@@ -7,6 +7,7 @@ import {
   SelectAllCheckbox,
   type TableColumnMeta,
   type TableScrollState,
+  TableToolbarPortal,
   getHeaderLabel,
 } from "@/components/tables/core"
 import { DraggableHeader } from "@/components/tables/draggable-header"
@@ -23,11 +24,15 @@ import {
   DropdownMenuCheckboxItem,
   DropdownMenuContent,
   DropdownMenuGroup,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
   DropdownMenuTrigger,
   TableHead,
   TableHeader,
   TableRow,
 } from "@ewatrade/ui"
+import { ArrowDown01Icon } from "@hugeicons/core-free-icons"
+import { HugeiconsIcon } from "@hugeicons/react"
 import type { Table } from "@tanstack/react-table"
 import type { CSSProperties } from "react"
 
@@ -205,47 +210,112 @@ export function ExpenseTableHeader({
   )
 }
 
+const EXPENSE_SORTS = [
+  { label: "Newest first", field: "incurredAt", direction: "desc" },
+  { label: "Oldest first", field: "incurredAt", direction: "asc" },
+  { label: "Biggest amount", field: "totalMinor", direction: "desc" },
+  { label: "Paid to, A–Z", field: "payeeName", direction: "asc" },
+] as const
+
+/** Columns (table only) and Sort, shown in the page header row. */
 export function ExpenseTableSettings({
   table,
+  showColumns = true,
 }: {
   table: Table<FinanceBillRow>
+  showColumns?: boolean
 }) {
+  const { sort, setParams } = useSortParams({ fields: expenseSortFields })
+  const current =
+    EXPENSE_SORTS.find(
+      (option) =>
+        option.field === (sort?.field ?? "incurredAt") &&
+        option.direction === (sort?.direction ?? "desc"),
+    ) ?? null
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger
-        render={
-          <Button type="button" variant="outline" className="rounded-none">
-            Columns
-          </Button>
-        }
-      />
-      <DropdownMenuContent
-        appearance="dashboard"
-        align="end"
-        sideOffset={8}
-        className="min-w-48"
-      >
-        <DropdownMenuGroup>
-          {table
-            .getAllLeafColumns()
-            .filter((column) => column.getCanHide())
-            .map((column) => {
-              const meta = column.columnDef.meta as TableColumnMeta | undefined
-              return (
-                <DropdownMenuCheckboxItem
-                  key={column.id}
-                  checked={column.getIsVisible()}
-                  closeOnClick={false}
-                  onCheckedChange={(checked) =>
-                    column.toggleVisibility(checked)
-                  }
-                >
-                  {meta?.headerLabel ?? getHeaderLabel(column.columnDef)}
-                </DropdownMenuCheckboxItem>
-              )
-            })}
-        </DropdownMenuGroup>
-      </DropdownMenuContent>
-    </DropdownMenu>
+    <TableToolbarPortal>
+      {showColumns ? (
+        <DropdownMenu>
+          <DropdownMenuTrigger
+            render={
+              <Button type="button" variant="outline" className="rounded-none">
+                Columns
+                <HugeiconsIcon
+                  icon={ArrowDown01Icon}
+                  data-icon="inline-end"
+                  className="text-muted-foreground"
+                  aria-hidden="true"
+                />
+              </Button>
+            }
+          />
+          <DropdownMenuContent
+            appearance="dashboard"
+            align="end"
+            sideOffset={8}
+            className="min-w-48"
+          >
+            <DropdownMenuGroup>
+              {table
+                .getAllLeafColumns()
+                .filter((column) => column.getCanHide())
+                .map((column) => {
+                  const meta = column.columnDef.meta as
+                    | TableColumnMeta
+                    | undefined
+                  return (
+                    <DropdownMenuCheckboxItem
+                      key={column.id}
+                      checked={column.getIsVisible()}
+                      closeOnClick={false}
+                      onCheckedChange={(checked) =>
+                        column.toggleVisibility(checked)
+                      }
+                    >
+                      {meta?.headerLabel ?? getHeaderLabel(column.columnDef)}
+                    </DropdownMenuCheckboxItem>
+                  )
+                })}
+            </DropdownMenuGroup>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      ) : null}
+      <DropdownMenu>
+        <DropdownMenuTrigger
+          render={
+            <Button type="button" variant="outline" className="rounded-none">
+              {current?.label ?? "Sort"}
+              <HugeiconsIcon
+                icon={ArrowDown01Icon}
+                data-icon="inline-end"
+                className="text-muted-foreground"
+                aria-hidden="true"
+              />
+            </Button>
+          }
+        />
+        <DropdownMenuContent appearance="dashboard" align="end">
+          <DropdownMenuRadioGroup
+            aria-label="Sort expenses"
+            value={current?.label ?? ""}
+            onValueChange={(label) => {
+              const option = EXPENSE_SORTS.find((item) => item.label === label)
+              if (option)
+                void setParams({ sort: [option.field, option.direction] })
+            }}
+          >
+            {EXPENSE_SORTS.map((option) => (
+              <DropdownMenuRadioItem
+                key={option.label}
+                value={option.label}
+                closeOnClick
+              >
+                {option.label}
+              </DropdownMenuRadioItem>
+            ))}
+          </DropdownMenuRadioGroup>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </TableToolbarPortal>
   )
 }

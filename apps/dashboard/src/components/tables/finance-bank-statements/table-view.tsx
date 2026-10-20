@@ -22,7 +22,11 @@ import { Alert, AlertDescription, Button, Table, TableBody } from "@ewatrade/ui"
 import { formatFinanceMoney } from "@ewatrade/utils/finance-money"
 import type { Table as ReactTable } from "@tanstack/react-table"
 import { useVirtualizer } from "@tanstack/react-virtual"
-import { formatStatementRange, getStatementAccountName } from "./columns"
+import {
+  StatementMatchPill,
+  formatStatementRange,
+  getStatementAccountName,
+} from "./columns"
 import { FinanceBankStatementEmptyState } from "./empty-states"
 import { FinanceBankStatementTableSkeleton } from "./skeleton"
 import {
@@ -84,6 +88,10 @@ export function FinanceBankStatementTableView({
   })
   const tableScroll = useTableScroll({ useColumnWidths: true })
   const rows = table.getRowModel().rows
+  const toMatch = rows.reduce(
+    (total, row) => total + row.original.unmatchedCount,
+    0,
+  )
   const rowVirtualizer = useVirtualizer({
     count: rows.length,
     getScrollElement: () => tableScroll.containerRef.current,
@@ -166,12 +174,11 @@ export function FinanceBankStatementTableView({
         table={table}
         view={view}
         selectAllLabel="Select all loaded bank statements"
-        summary={`${rows.length} statement${rows.length === 1 ? "" : "s"} loaded`}
-      >
-        {view === "table" ? (
-          <FinanceBankStatementTableSettings table={table} />
-        ) : null}
-      </DirectoryToolbar>
+        summary={`${rows.length} statement${rows.length === 1 ? "" : "s"} · ${toMatch} line${toMatch === 1 ? "" : "s"} to match`}
+      />
+      {view === "table" ? (
+        <FinanceBankStatementTableSettings table={table} />
+      ) : null}
 
       {persistenceError ? (
         <Alert
@@ -208,11 +215,12 @@ export function FinanceBankStatementTableView({
                 row={row}
                 view={view}
                 selectLabel={`Select ${statement.reference}`}
-                title={statement.reference}
+                title={`${getStatementAccountName(book, statement)}, ${formatStatementRange(statement)}`}
                 onOpen={open}
-                description={`${getStatementAccountName(book, statement)} · ${formatStatementRange(statement)}`}
+                description={statement.reference}
+                badges={<StatementMatchPill statement={statement} />}
                 highlight={{
-                  label: "Closing balance",
+                  label: "Balance at the end",
                   value: formatFinanceMoney(
                     statement.closingBalanceMinor,
                     statement.currencyCode,
@@ -220,7 +228,7 @@ export function FinanceBankStatementTableView({
                 }}
                 details={[
                   {
-                    label: "Transactions",
+                    label: "Lines",
                     value: (
                       <span className="tabular-nums">{statement.rowCount}</span>
                     ),
@@ -231,10 +239,10 @@ export function FinanceBankStatementTableView({
                     type="button"
                     variant="ghost"
                     size="sm"
-                    aria-label={`Review ${statement.reference}`}
+                    aria-label={`Open ${statement.reference}`}
                     onClick={open}
                   >
-                    Review
+                    Open
                   </Button>
                 }
               />

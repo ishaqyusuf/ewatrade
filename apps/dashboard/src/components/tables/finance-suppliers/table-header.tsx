@@ -1,12 +1,12 @@
 "use client"
 
-import type { FinanceSupplierRow } from "@/components/finance/types"
 import {
   HorizontalPagination,
   SELECT_COLUMN_ID,
   SelectAllCheckbox,
   type TableColumnMeta,
   type TableScrollState,
+  TableToolbarPortal,
   getHeaderLabel,
 } from "@/components/tables/core"
 import { DraggableHeader } from "@/components/tables/draggable-header"
@@ -27,10 +27,13 @@ import {
   TableHeader,
   TableRow,
 } from "@ewatrade/ui"
+import { ArrowDown01Icon } from "@hugeicons/core-free-icons"
+import { HugeiconsIcon } from "@hugeicons/react"
 import type { Table } from "@tanstack/react-table"
 import type { CSSProperties } from "react"
+import type { FinanceSupplierListRow } from "./columns"
 
-const STICKY_COLUMN_IDS = new Set([SELECT_COLUMN_ID, "code", "actions"])
+const STICKY_COLUMN_IDS = new Set([SELECT_COLUMN_ID, "name", "actions"])
 
 export function FinanceSupplierTableHeader({
   table,
@@ -40,7 +43,7 @@ export function FinanceSupplierTableHeader({
   isVisible,
   tableScroll,
 }: {
-  table: Table<FinanceSupplierRow>
+  table: Table<FinanceSupplierListRow>
   sortableColumnIds: string[]
   getStickyStyle: (columnId: string) => CSSProperties
   getStickyClassName: (columnId: string, baseClassName?: string) => string
@@ -108,7 +111,7 @@ export function FinanceSupplierTableHeader({
                     <span className="truncate">
                       {getHeaderLabel(header.column.columnDef)}
                     </span>
-                    {id === "code" && tableScroll.isScrollable ? (
+                    {id === "name" && tableScroll.isScrollable ? (
                       <HorizontalPagination
                         className="hidden shrink-0 md:flex"
                         canScrollLeft={tableScroll.canScrollLeft}
@@ -174,44 +177,54 @@ export function FinanceSupplierTableHeader({
 export function FinanceSupplierTableSettings({
   table,
 }: {
-  table: Table<FinanceSupplierRow>
+  table: Table<FinanceSupplierListRow>
 }) {
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger
-        render={
-          <Button type="button" variant="outline" className="rounded-none">
-            Columns
-          </Button>
-        }
-      />
-      <DropdownMenuContent
-        appearance="dashboard"
-        align="end"
-        sideOffset={8}
-        className="min-w-48"
-      >
-        <DropdownMenuGroup>
-          {table
-            .getAllLeafColumns()
-            .filter((column) => column.getCanHide())
-            .map((column) => {
-              const meta = column.columnDef.meta as TableColumnMeta | undefined
-              return (
-                <DropdownMenuCheckboxItem
-                  key={column.id}
-                  checked={column.getIsVisible()}
-                  closeOnClick={false}
-                  onCheckedChange={(checked) =>
-                    column.toggleVisibility(checked)
-                  }
-                >
-                  {meta?.headerLabel ?? getHeaderLabel(column.columnDef)}
-                </DropdownMenuCheckboxItem>
-              )
-            })}
-        </DropdownMenuGroup>
-      </DropdownMenuContent>
-    </DropdownMenu>
+    <TableToolbarPortal>
+      <DropdownMenu>
+        <DropdownMenuTrigger
+          render={
+            <Button type="button" variant="outline" className="rounded-none">
+              Columns
+              <HugeiconsIcon
+                icon={ArrowDown01Icon}
+                data-icon="inline-end"
+                className="text-muted-foreground"
+                aria-hidden="true"
+              />
+            </Button>
+          }
+        />
+        <DropdownMenuContent
+          appearance="dashboard"
+          align="end"
+          sideOffset={8}
+          className="min-w-48"
+        >
+          <DropdownMenuGroup>
+            {table
+              .getAllLeafColumns()
+              .filter((column) => column.getCanHide())
+              .map((column) => {
+                const meta = column.columnDef.meta as
+                  | TableColumnMeta
+                  | undefined
+                return (
+                  <DropdownMenuCheckboxItem
+                    key={column.id}
+                    checked={column.getIsVisible()}
+                    closeOnClick={false}
+                    onCheckedChange={(checked) =>
+                      column.toggleVisibility(checked)
+                    }
+                  >
+                    {meta?.headerLabel ?? getHeaderLabel(column.columnDef)}
+                  </DropdownMenuCheckboxItem>
+                )
+              })}
+          </DropdownMenuGroup>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </TableToolbarPortal>
   )
 }

@@ -9,7 +9,7 @@ export function FinanceSupplierSearchFilter() {
   return (
     <SearchField
       maxLength={160}
-      placeholder="Search suppliers..."
+      placeholder="Search Suppliers..."
       value={supplierQuery}
       onSearch={(value) =>
         void setParams({ supplierQuery: value.trim() || null })

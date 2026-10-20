@@ -158,12 +158,28 @@ export async function listFinanceBankStatements(
         orderBy: { id: "desc" },
         take: limit + 1,
       })
+      const page = rows.slice(0, limit)
+      // Lines still to match per statement, so the list shows what is left to do.
+      const unmatched = page.length
+        ? await tx.financeBankStatementLine.groupBy({
+            by: ["statementId"],
+            where: {
+              statementId: { in: page.map((row) => row.id) },
+              activeMatchId: null,
+            },
+            _count: { _all: true },
+          })
+        : []
+      const unmatchedCounts = new Map(
+        unmatched.map((group) => [group.statementId, group._count._all]),
+      )
       return {
         bookId: book.id,
         currencyCode: book.currencyCode,
         nextCursor: rows.length > limit ? (rows[limit - 1]?.id ?? null) : null,
-        items: rows.slice(0, limit).map((row) => ({
+        items: page.map((row) => ({
           ...row,
+          unmatchedCount: unmatchedCounts.get(row.id) ?? 0,
           openingBalanceMinor: row.openingBalanceMinor.toString(),
           closingBalanceMinor: row.closingBalanceMinor.toString(),
           importedRevision: row.importedRevision.toString(),

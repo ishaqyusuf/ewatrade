@@ -1,18 +1,53 @@
 "use client"
+import { expensePill } from "@/components/finance/expense-status"
+import { formatFinanceShortDate } from "@/components/finance/format-date"
 import type { FinanceBillRow } from "@/components/finance/types"
+import { Pill } from "@/components/orders/overview/order-overview-parts"
 import { selectColumn } from "@/components/tables/core"
 import { Button } from "@ewatrade/ui"
 import { formatFinanceMoney } from "@ewatrade/utils/finance-money"
+import { File01Icon, FileRemoveIcon } from "@hugeicons/core-free-icons"
+import { HugeiconsIcon } from "@hugeicons/react"
 import type { ColumnDef } from "@tanstack/react-table"
-export const expenseStatusLabels = {
-  PAID: "Paid",
-  PARTIAL: "Partly paid",
-  UNPAID: "Unpaid",
-  VOID: "Cancelled",
-} as const satisfies Record<FinanceBillRow["status"], string>
+
+export { expenseStatusLabels } from "@/components/finance/expense-status"
 
 export function formatExpenseDate(value: Date | string, timezone: string) {
-  return new Date(value).toLocaleDateString("en-NG", { timeZone: timezone })
+  return formatFinanceShortDate(value, timezone)
+}
+
+export function ExpenseStatusPill({
+  status,
+}: { status: FinanceBillRow["status"] }) {
+  const pill = expensePill(status)
+  return <Pill tone={pill.tone}>{pill.label}</Pill>
+}
+
+/** Attached receipts, or a prompt when an open expense has none. */
+export function ExpenseReceipt({ bill }: { bill: FinanceBillRow }) {
+  if (bill.receiptCount > 0)
+    return (
+      <span className="inline-flex items-center gap-1.5 text-sm">
+        <HugeiconsIcon
+          icon={File01Icon}
+          className="size-4"
+          aria-hidden="true"
+        />
+        {bill.receiptCount === 1 ? "Attached" : `${bill.receiptCount} files`}
+      </span>
+    )
+  if (bill.status === "VOID")
+    return <span className="text-muted-foreground">—</span>
+  return (
+    <span className="inline-flex items-center gap-1.5 text-sm text-amber-700 dark:text-amber-300">
+      <HugeiconsIcon
+        icon={FileRemoveIcon}
+        className="size-4"
+        aria-hidden="true"
+      />
+      Missing
+    </span>
+  )
 }
 
 export function expenseColumns(
@@ -65,24 +100,24 @@ export function expenseColumns(
     },
     {
       accessorKey: "payeeName",
-      header: "Payee",
+      header: "Paid to",
       size: 180,
       minSize: 130,
       maxSize: 280,
       meta: {
-        headerLabel: "Payee",
+        headerLabel: "Paid to",
         sortField: "payeeName",
         skeleton: { type: "text" as const, width: "w-24" },
       },
     },
     {
       accessorKey: "totalMinor",
-      header: "Total",
+      header: "Amount",
       size: 150,
       minSize: 120,
       maxSize: 200,
       meta: {
-        headerLabel: "Total",
+        headerLabel: "Amount",
         sortField: "totalMinor",
         skeleton: { type: "text" as const, width: "w-20" },
       },
@@ -103,12 +138,12 @@ export function expenseColumns(
     },
     {
       accessorKey: "outstandingMinor",
-      header: "Outstanding",
+      header: "Still to pay",
       size: 150,
       minSize: 120,
       maxSize: 200,
       meta: {
-        headerLabel: "Outstanding",
+        headerLabel: "Still to pay",
         skeleton: { type: "text" as const, width: "w-20" },
       },
       cell: ({ row }) =>
@@ -124,7 +159,19 @@ export function expenseColumns(
         headerLabel: "Status",
         skeleton: { type: "badge" as const, width: "w-16" },
       },
-      cell: ({ row }) => expenseStatusLabels[row.original.status],
+      cell: ({ row }) => <ExpenseStatusPill status={row.original.status} />,
+    },
+    {
+      id: "receipt",
+      header: "Receipt",
+      size: 120,
+      minSize: 100,
+      maxSize: 160,
+      meta: {
+        headerLabel: "Receipt",
+        skeleton: { type: "text" as const, width: "w-16" },
+      },
+      cell: ({ row }) => <ExpenseReceipt bill={row.original} />,
     },
     {
       id: "actions",

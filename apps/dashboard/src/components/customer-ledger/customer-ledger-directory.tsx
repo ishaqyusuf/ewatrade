@@ -1,20 +1,21 @@
 "use client"
+import { financeViewOptions } from "@/components/finance/finance-directory-view"
+import { FINANCE_MENU_ITEMS } from "@/components/finance/finance-header"
 import { PageHeader, PageToolbar } from "@/components/page-header"
 import { ScrollableContent } from "@/components/scrollable-content"
+import { SearchField } from "@/components/search-field"
+import { SecondaryMenu } from "@/components/secondary-menu"
 import { CustomerAccountsDataTable } from "@/components/tables/customer-accounts/data-table"
-import { ViewSwitcher, directoryViewOptions } from "@/components/view-switcher"
+import { ViewDropdown } from "@/components/view-switcher"
 import { useDirectoryView } from "@/hooks/use-directory-view"
 import { useTRPC } from "@/trpc/client"
 import type { DirectoryViewSettings } from "@/utils/directory-view-settings"
-import {
-  Alert,
-  AlertDescription,
-  Button,
-  ControlField,
-  Input,
-} from "@ewatrade/ui"
+import { Alert, AlertDescription, Button } from "@ewatrade/ui"
 import { useQuery } from "@tanstack/react-query"
 import { parseAsString, useQueryStates } from "nuqs"
+import { useMemo } from "react"
+
+/** Finance pages workshop 01: what each saved Customer owes you. */
 export function CustomerLedgerDirectory({
   initialViewSettings,
 }: {
@@ -34,45 +35,69 @@ export function CustomerLedgerDirectory({
     },
     { history: "push" },
   )
+  const search = params.customerSearch.trim()
   const query = useQuery(
     trpc.customers.listPage.queryOptions(
       {
-        query: params.customerSearch.trim() || undefined,
+        query: search || undefined,
         cursor: params.customerCursor ?? undefined,
         limit: 30,
       },
       { retry: false },
     ),
   )
+  const customerIds = query.data?.items.map((customer) => customer.id) ?? []
+  const balances = useQuery(
+    trpc.finance.customerBalances.queryOptions(
+      { customerIds },
+      { enabled: customerIds.length > 0, retry: false },
+    ),
+  )
+  const rows = useMemo(() => {
+    const byCustomer = new Map(
+      (balances.data?.items ?? []).map((item) => [item.customerId, item]),
+    )
+    const loaded = balances.isSuccess
+    return (query.data?.items ?? []).map((customer) => ({
+      ...customer,
+      owedMinor: loaded
+        ? (byCustomer.get(customer.id)?.owedMinor ?? "0")
+        : undefined,
+      paidAheadMinor: loaded
+        ? (byCustomer.get(customer.id)?.paidAheadMinor ?? "0")
+        : undefined,
+    }))
+  }, [query.data, balances.data, balances.isSuccess])
   return (
     <ScrollableContent>
       <div className="grid gap-6 py-6">
         <PageHeader
-          title="Customer accounts"
-          description="Saved customers only. Historical contacts are not inferred as account owners."
+          eyebrow="Business money"
+          title="Customer balances"
+          description="What each saved Customer owes you."
         >
           <PageToolbar
             actions={
-              <ViewSwitcher
-                label="Customer account view"
+              <ViewDropdown
+                label="Customer balances view"
                 value={view}
-                options={directoryViewOptions}
+                options={financeViewOptions}
                 onValueChange={setView}
               />
             }
           >
-            <ControlField label="Find a saved customer">
-              <Input
-                value={params.customerSearch}
-                onChange={(e) =>
-                  void setParams({
-                    customerSearch: e.target.value,
-                    customerCursor: null,
-                  })
-                }
-              />
-            </ControlField>
+            <SearchField
+              placeholder="Search Customers..."
+              value={params.customerSearch}
+              onSearch={(value) =>
+                void setParams({ customerSearch: value, customerCursor: null })
+              }
+              onClear={() =>
+                void setParams({ customerSearch: "", customerCursor: null })
+              }
+            />
           </PageToolbar>
+          <SecondaryMenu items={FINANCE_MENU_ITEMS} label="Finance" />
         </PageHeader>
         {persistenceError ? (
           <Alert appearance="dashboard" role="alert">
@@ -82,45 +107,73 @@ export function CustomerLedgerDirectory({
             </Button>
           </Alert>
         ) : null}
+        {balances.isError ? (
+          <Alert appearance="dashboard" role="alert">
+            <AlertDescription>
+              Balances couldn&apos;t load. Names are still shown.
+            </AlertDescription>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => void balances.refetch()}
+            >
+              Try again
+            </Button>
+          </Alert>
+        ) : null}
         {query.isPending ? (
-          <output aria-busy="true">Loading saved customers…</output>
+          <output aria-busy="true">Loading Customers…</output>
         ) : query.isError ? (
           <Alert appearance="dashboard" variant="destructive">
-            <AlertDescription>{query.error.message}</AlertDescription>
+            <AlertDescription>
+              We couldn&apos;t load Customers. Check your connection and try
+              again.
+            </AlertDescription>
             <Button onClick={() => void query.refetch()}>Try again</Button>
           </Alert>
         ) : (
           <>
-            {query.data.items.length ? (
+            {rows.length ? (
               <CustomerAccountsDataTable
-                rows={query.data.items}
+                rows={rows}
                 view={view}
                 search={params.customerSearch}
+                currencyCode={balances.data?.currencyCode ?? "NGN"}
               />
+            ) : (
+              <div className="grid justify-items-center gap-2 border-y border-border py-16 text-center">
+                <h3 className="font-medium">
+                  {search ? "Nothing matches" : "No Customers yet"}
+                </h3>
+                <p className="max-w-md text-sm text-muted-foreground">
+                  {search
+                    ? "Change the search to see more."
+                    : "Customers appear here once you save them in Customers."}
+                </p>
+              </div>
+            )}
+            {params.customerCursor || query.data.nextCursor ? (
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  disabled={!params.customerCursor || query.isFetching}
+                  onClick={() => void setParams({ customerCursor: null })}
+                >
+                  First page
+                </Button>
+                <Button
+                  variant="outline"
+                  disabled={!query.data.nextCursor || query.isFetching}
+                  onClick={() =>
+                    void setParams({
+                      customerCursor: query.data.nextCursor ?? null,
+                    })
+                  }
+                >
+                  Next page
+                </Button>
+              </div>
             ) : null}
-            {!query.data.items.length ? (
-              <p>No saved customers match this search.</p>
-            ) : null}
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                disabled={!params.customerCursor || query.isFetching}
-                onClick={() => void setParams({ customerCursor: null })}
-              >
-                First page
-              </Button>
-              <Button
-                variant="outline"
-                disabled={!query.data.nextCursor || query.isFetching}
-                onClick={() =>
-                  void setParams({
-                    customerCursor: query.data.nextCursor ?? null,
-                  })
-                }
-              >
-                Next page
-              </Button>
-            </div>
           </>
         )}
       </div>

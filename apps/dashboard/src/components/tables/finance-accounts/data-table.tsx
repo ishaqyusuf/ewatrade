@@ -29,6 +29,9 @@ export type MoneyAccountRow = {
   name: string
   purpose: string
   balanceMinor: string
+  /** Money in and out since the 1st of this month (UTC); asset accounts only. */
+  monthDebitMinor?: string
+  monthCreditMinor?: string
   paymentMethods: string[]
   paymentsPausedAt: Date | string | null
 }
@@ -59,7 +62,7 @@ const getAccountId = (account: MoneyAccountRow) => account.id
 
 export function moneyAccountPurposeLabel(purpose: string) {
   return purpose === "CLEARING"
-    ? "Awaiting settlement"
+    ? "Card and POS money on its way"
     : purpose === "CASH"
       ? "Cash"
       : "Bank"
@@ -79,10 +82,10 @@ function AccountActions({
       <Button
         appearance="form"
         variant="outline"
-        aria-label={`View ${account.name} statement`}
+        aria-label={`${account.name}: money in and out`}
         onClick={() => onOpen(account.id)}
       >
-        View statement
+        Money in and out
       </Button>
       <Button
         appearance="form"
@@ -135,6 +138,34 @@ export function MoneyAccountsDataTable({
         cell: ({ row }) => <PaymentMethodsTaken account={row.original} />,
       },
       {
+        id: "moneyIn",
+        header: () => (
+          <span className="block text-right">Money in this month</span>
+        ),
+        cell: ({ row }) => (
+          <p className="text-right tabular-nums">
+            {formatFinanceMoney(
+              row.original.monthDebitMinor ?? "0",
+              currencyCode,
+            )}
+          </p>
+        ),
+      },
+      {
+        id: "moneyOut",
+        header: () => (
+          <span className="block text-right">Money out this month</span>
+        ),
+        cell: ({ row }) => (
+          <p className="text-right tabular-nums">
+            {formatFinanceMoney(
+              row.original.monthCreditMinor ?? "0",
+              currencyCode,
+            )}
+          </p>
+        ),
+      },
+      {
         id: "balance",
         header: () => <span className="block text-right">Balance</span>,
         cell: ({ row }) => (
@@ -176,7 +207,15 @@ export function MoneyAccountsDataTable({
         table={table}
         view={view}
         selectAllLabel="Select all money accounts"
-        summary={`${accounts.length} money account${accounts.length === 1 ? "" : "s"}`}
+        summary={`${accounts.length} money account${accounts.length === 1 ? "" : "s"} · ${formatFinanceMoney(
+          accounts
+            .reduce(
+              (total, account) => total + BigInt(account.balanceMinor),
+              0n,
+            )
+            .toString(),
+          currencyCode,
+        )} in total`}
       />
       {view === "table" ? (
         <SimpleDirectoryTable table={table} label="Money accounts" />
@@ -204,6 +243,22 @@ export function MoneyAccountsDataTable({
                   currencyCode,
                 ),
               }}
+              details={[
+                {
+                  label: "Money in this month",
+                  value: formatFinanceMoney(
+                    row.original.monthDebitMinor ?? "0",
+                    currencyCode,
+                  ),
+                },
+                {
+                  label: "Money out this month",
+                  value: formatFinanceMoney(
+                    row.original.monthCreditMinor ?? "0",
+                    currencyCode,
+                  ),
+                },
+              ]}
               actions={
                 <AccountActions
                   account={row.original}

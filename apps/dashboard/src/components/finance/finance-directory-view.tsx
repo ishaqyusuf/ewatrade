@@ -1,6 +1,6 @@
 "use client"
 
-import { ViewSwitcher, directoryViewOptions } from "@/components/view-switcher"
+import { ViewDropdown, type ViewOption } from "@/components/view-switcher"
 import { useDirectoryView } from "@/hooks/use-directory-view"
 import type {
   DirectoryPageId,
@@ -8,32 +8,54 @@ import type {
   DirectoryViewSettings,
 } from "@/utils/directory-view-settings"
 import { Alert, AlertDescription, Button } from "@ewatrade/ui"
+import {
+  GridViewIcon,
+  LayoutTable01Icon,
+  ListViewIcon,
+} from "@hugeicons/core-free-icons"
 import type { ReactNode } from "react"
 
+// The saved value stays "cards" so existing view cookies keep working.
+export const financeViewOptions = [
+  { value: "table", label: "Table", icon: LayoutTable01Icon },
+  { value: "list", label: "List", icon: ListViewIcon },
+  { value: "cards", label: "Grid", icon: GridViewIcon },
+] as const satisfies readonly ViewOption<DirectoryView>[]
+
+/** Bank statements read best as rows, so they offer no grid. */
+export const financeRowViewOptions = financeViewOptions.filter(
+  (option) => option.value !== "cards",
+)
+
 /**
- * Owns one finance directory's Table/List/Cards choice. Finance routes share a
- * workspace and Overview shows two directories, so each section keeps its own.
+ * Owns one finance directory's Table/List/Grid choice and its View dropdown.
+ * A saved view the options don't offer falls back to the first option.
  */
 export function FinanceDirectoryView({
   pageId,
   queryKey,
   label,
   initialSettings,
+  options = financeViewOptions,
   children,
 }: {
   pageId: DirectoryPageId
   queryKey: string
   label: string
   initialSettings: DirectoryViewSettings
-  children: (view: DirectoryView, switcher: ReactNode) => ReactNode
+  options?: readonly ViewOption<DirectoryView>[]
+  children: (view: DirectoryView, viewControl: ReactNode) => ReactNode
 }) {
   const { view, setView, persistenceError, retryPersistence } =
     useDirectoryView({ pageId, queryKey, initialSettings })
-  const switcher = (
-    <ViewSwitcher
+  const shown = options.some((option) => option.value === view)
+    ? view
+    : (options[0]?.value ?? view)
+  const viewControl = (
+    <ViewDropdown
       label={label}
-      value={view}
-      options={directoryViewOptions}
+      value={shown}
+      options={options}
       onValueChange={setView}
     />
   )
@@ -47,7 +69,7 @@ export function FinanceDirectoryView({
           </Button>
         </Alert>
       ) : null}
-      {children(view, switcher)}
+      {children(shown, viewControl)}
     </>
   )
 }

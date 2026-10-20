@@ -1,23 +1,20 @@
 "use client"
 
-import type {
-  FinanceBook,
-  FinanceSupplierRow,
-} from "@/components/finance/types"
+import type { FinanceBook } from "@/components/finance/types"
 import { useLoadedRowSelection } from "@/components/tables/core"
 import { useFinanceParams } from "@/hooks/use-finance-params"
 import { useTableSettings } from "@/hooks/use-table-settings"
 import { useTRPC } from "@/trpc/client"
 import type { DirectoryView } from "@/utils/directory-view-settings"
 import type { TableSettings } from "@/utils/table-settings"
-import { useInfiniteQuery } from "@tanstack/react-query"
+import { useInfiniteQuery, useQueries } from "@tanstack/react-query"
 import { getCoreRowModel, useReactTable } from "@tanstack/react-table"
 import { useDeferredValue, useMemo } from "react"
-import { financeSupplierColumns } from "./columns"
+import { type FinanceSupplierListRow, financeSupplierColumns } from "./columns"
 import { FinanceSupplierTableView } from "./table-view"
 
-const FIXED_COLUMN_IDS = ["select", "code"]
-const getSupplierId = (supplier: FinanceSupplierRow) => supplier.id
+const FIXED_COLUMN_IDS = ["select", "name"]
+const getSupplierId = (supplier: FinanceSupplierListRow) => supplier.id
 
 export function FinanceSupplierDataTable({
   book,
@@ -44,9 +41,34 @@ export function FinanceSupplierDataTable({
       },
     ),
   )
-  const data = useMemo(
-    () => query.data?.pages.flatMap((page) => page.data) ?? [],
-    [query.data],
+  // Balances load per page, apart from the supplier identities.
+  const balancePages = useQueries({
+    queries: (query.data?.pages ?? []).map((page) =>
+      trpc.finance.supplierBalances.queryOptions({
+        bookId: book.id,
+        supplierIds: page.data.map((supplier) => supplier.id),
+      }),
+    ),
+  })
+  const balances = useMemo(
+    () =>
+      new Map(
+        balancePages.flatMap((result) =>
+          (result.data?.items ?? []).map((item) => [item.supplierId, item]),
+        ),
+      ),
+    [balancePages],
+  )
+  const data = useMemo<FinanceSupplierListRow[]>(
+    () =>
+      (query.data?.pages.flatMap((page) => page.data) ?? []).map(
+        (supplier) => ({
+          ...supplier,
+          owedMinor: balances.get(supplier.id)?.owedMinor,
+          paidAheadMinor: balances.get(supplier.id)?.paidAheadMinor,
+        }),
+      ),
+    [query.data, balances],
   )
   const [rowSelection, setRowSelection] = useLoadedRowSelection({
     rows: data,
@@ -61,8 +83,9 @@ export function FinanceSupplierDataTable({
             financeSheet: "supplier-statement",
             supplierId: id,
           }),
+        book.currencyCode,
       ),
-    [setParams],
+    [setParams, book.currencyCode],
   )
   const columnIds = useMemo(
     () =>
@@ -101,6 +124,7 @@ export function FinanceSupplierDataTable({
   return (
     <FinanceSupplierTableView
       table={table}
+      currencyCode={book.currencyCode}
       view={view}
       filtered={Boolean(supplierQuery.trim())}
       isPending={query.isPending}
