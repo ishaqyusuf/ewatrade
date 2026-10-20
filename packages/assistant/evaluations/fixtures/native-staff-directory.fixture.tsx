@@ -12,6 +12,23 @@ function standIn(path: string, value: Record<string, unknown>) {
 const children = ({ children }: { children?: ReactNode }) => (
   <div>{children}</div>
 )
+// Retain the shared search contract while isolating native keyboard furniture.
+standIn("components/mobile/search-footer-scope", {
+  SearchFooterScope: children,
+  SearchFooterSpacer: () => null,
+  SearchFooterField: ({
+    accessibilityLabel,
+    value,
+  }: {
+    accessibilityLabel: string
+    value: string
+  }) => (
+    <label>
+      {accessibilityLabel}
+      <input value={value} readOnly />
+    </label>
+  ),
+})
 standIn("components/ui/view", { View: children })
 standIn("components/ui/text", { Text: children })
 mock.module("react-native", () => ({ ScrollView: children }))

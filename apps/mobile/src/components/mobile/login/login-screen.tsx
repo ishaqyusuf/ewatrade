@@ -244,7 +244,7 @@ export function LoginScreen() {
           <AuthActionButton
             disabled={
               useWhatsApp
-                ? phone.length < 7
+                ? !qaPhone && phone.length < 7
                 : !normalizedEmail || (usePassword && !password)
             }
             isLoading={isPending}

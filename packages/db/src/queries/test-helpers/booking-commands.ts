@@ -125,7 +125,7 @@ export function bookingCommandFixture() {
   const tx = new Proxy(base.tx, {
     get(target, table: string) {
       if (table === "$queryRaw")
-        return async (sql: unknown) => {
+        return async (sql: unknown, ...parameters: unknown[]) => {
           const strings = field(sql, "strings") ?? sql
           const text = Array.isArray(strings)
             ? strings.join(" ")
@@ -140,7 +140,22 @@ export function bookingCommandFixture() {
           ].find((name) => text.includes(`"${name}"`))
           if (!name) throw Error("Unexpected synthetic lock")
           locks.push(name)
-          return controls.loseLock === name ? [] : [{ id: `${name}-lock` }]
+          if (controls.loseLock === name) return []
+          // SELECT * lock evidence must retain the same financial identity as
+          // the preceding scoped Order projection; an ID-only row is not proof.
+          if (name === "CommercialOrder") {
+            const values = Array.isArray(sql)
+              ? parameters
+              : field(sql, "values")
+            if (!Array.isArray(values))
+              throw Error("Missing scoped lock values")
+            return orders
+              .filter(
+                (row) => row.id === values[0] && row.tenantId === values[1],
+              )
+              .map((row) => structuredClone(row))
+          }
+          return [{ id: `${name}-lock` }]
         }
       if (table.startsWith("$"))
         return () => {

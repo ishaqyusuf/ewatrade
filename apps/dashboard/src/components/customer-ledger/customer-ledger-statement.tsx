@@ -151,9 +151,7 @@ export function CustomerLedgerStatement({
   const actions = (
     <div className="flex flex-wrap gap-2">
       {book ? (
-        <Button onClick={() => startAction("receipt")}>
-          Record payment
-        </Button>
+        <Button onClick={() => startAction("receipt")}>Record payment</Button>
       ) : null}
       <DropdownMenu>
         <DropdownMenuTrigger
