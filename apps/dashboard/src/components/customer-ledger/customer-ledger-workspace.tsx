@@ -3,6 +3,7 @@ import { CustomerFormSheet } from "@/components/customers/customer-form-sheet"
 import { ScrollableContent } from "@/components/scrollable-content"
 import { CustomerLedgerEmptyState } from "@/components/tables/customer-ledger/empty-states"
 import { useCustomerLedgerParams } from "@/hooks/use-customer-ledger-params"
+import { useCustomerSheetParams } from "@/hooks/use-customer-sheet-params"
 import { useTRPC } from "@/trpc/client"
 import type { TableSettings } from "@/utils/table-settings"
 import {
@@ -71,7 +72,7 @@ export function CustomerLedgerWorkspace({
   const client = useQueryClient()
   const { ledgerAccount, ledgerAction, setParams } = useCustomerLedgerParams()
   const [createError, setCreateError] = useState<string | null>(null)
-  const [editing, setEditing] = useState(false)
+  const customerSheet = useCustomerSheetParams()
   const query = useQuery(
     trpc.customerLedger.accounts.queryOptions(
       { customerId, limit: 50 },
@@ -134,11 +135,7 @@ export function CustomerLedgerWorkspace({
 
   const editSheet = (
     <CustomerFormSheet
-      open={editing}
-      customerId={editing ? customerId : null}
-      onOpenChange={setEditing}
       onSaved={() => {
-        setEditing(false)
         void client.invalidateQueries({
           queryKey: trpc.customerLedger.accounts.pathKey(),
         })
@@ -225,7 +222,7 @@ export function CustomerLedgerWorkspace({
                 accountId={selected.id}
                 customerName={customer?.name}
                 initialSettings={initialSettings}
-                onEditCustomer={() => setEditing(true)}
+                onEditCustomer={() => void customerSheet.openEdit(customerId)}
                 renderHeader={(actions) => (
                   <StatementHeader customer={customer} actions={actions} />
                 )}
@@ -235,7 +232,10 @@ export function CustomerLedgerWorkspace({
                 <StatementHeader
                   customer={customer}
                   actions={
-                    <Button variant="outline" onClick={() => setEditing(true)}>
+                    <Button
+                      variant="outline"
+                      onClick={() => void customerSheet.openEdit(customerId)}
+                    >
                       Edit customer details
                     </Button>
                   }

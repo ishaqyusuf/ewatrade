@@ -1,6 +1,7 @@
 "use client"
 
 import { SheetFrame } from "@/components/sheets/sheet-frame"
+import { useCustomerSheetParams } from "@/hooks/use-customer-sheet-params"
 import { useTRPC } from "@/trpc/client"
 import {
   Alert,
@@ -57,28 +58,31 @@ function errorCode(failure: unknown) {
 }
 
 /**
- * Add a customer, or edit one when `customerId` is set. Saving closes the
- * sheet and reports the name back so the page can refresh its list.
+ * Add a customer, or edit one, as opened by `useCustomerSheetParams`. Saving
+ * closes the sheet and reports the name back so the page can refresh its list.
  */
 export function CustomerFormSheet({
-  open,
-  customerId,
-  onOpenChange,
   onSaved,
 }: {
-  open: boolean
-  customerId: string | null
-  onOpenChange: (open: boolean) => void
   onSaved: (result: { name: string; created: boolean }) => void
 }) {
+  const { open, customerId, close } = useCustomerSheetParams()
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
+    <Sheet
+      open={open}
+      onOpenChange={(next) => {
+        if (!next) void close()
+      }}
+    >
       {open ? (
         <CustomerFormFrame
           key={customerId ?? "new"}
           customerId={customerId}
-          onClose={() => onOpenChange(false)}
-          onSaved={onSaved}
+          onClose={() => void close()}
+          onSaved={(result) => {
+            void close()
+            onSaved(result)
+          }}
         />
       ) : null}
     </Sheet>

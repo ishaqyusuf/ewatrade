@@ -164,7 +164,8 @@ export function CustomerLedgerCommandForm({
   allocationId?: string
 }) {
   const trpc = useTRPC()
-  const { close, ledgerAllocationAfter } = useCustomerLedgerParams()
+  const { close, backToEntry, ledgerAllocationAfter } =
+    useCustomerLedgerParams()
   const { setLocked } = useCustomerLedgerForm()
   const command = useCustomerLedgerCommand({
     actorUserId,
@@ -454,7 +455,15 @@ export function CustomerLedgerCommandForm({
         <output aria-live="polite">{command.notice}</output>
       ) : null}
       {command.saved ? (
-        <Button onClick={() => void close()}>Done</Button>
+        <Button
+          onClick={() =>
+            void (mode === "release" || mode === "reverse"
+              ? backToEntry()
+              : close())
+          }
+        >
+          {mode === "release" || mode === "reverse" ? "Back to entry" : "Done"}
+        </Button>
       ) : review ? (
         <>
           <h3 className="text-lg font-medium">Check and save</h3>

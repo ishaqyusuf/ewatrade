@@ -26,6 +26,13 @@ export function useCustomerLedgerParams() {
   return {
     ...params,
     setParams,
+    /** Leave an undo view for the entry it belongs to. */
+    backToEntry: () =>
+      setParams({
+        ledgerAction: "entry",
+        ledgerAllocation: null,
+        ledgerAllocationAfter: null,
+      }),
     close: () =>
       setParams({
         ledgerAction: null,

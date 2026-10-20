@@ -9,6 +9,7 @@ import { TableToolbarSlotProvider } from "@/components/tables/core"
 import { describeCustomerBalance } from "@/components/tables/customers/columns"
 import { CustomerDataTable } from "@/components/tables/customers/data-table"
 import { useCustomerDirectoryParams } from "@/hooks/use-customer-directory-params"
+import { useCustomerSheetParams } from "@/hooks/use-customer-sheet-params"
 import { useDirectoryView } from "@/hooks/use-directory-view"
 import type { DashboardCustomerRow } from "@/lib/sales-operations"
 import type { DirectoryViewSettings } from "@/utils/directory-view-settings"
@@ -64,8 +65,8 @@ export function CustomersPage({
   const [customers, setCustomers] = useState(initialCustomers)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [form, setForm] = useState<{ customerId: string | null } | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
+  const { openCreate, openEdit: openEditSheet } = useCustomerSheetParams()
   const lastFilter = useRef(initialQuery.trim())
 
   useEffect(() => {
@@ -131,10 +132,10 @@ export function CustomersPage({
   }, [customers])
 
   const openEdit = useCallback(
-    (customerId: string) => setForm({ customerId }),
-    [],
+    (customerId: string) => void openEditSheet(customerId),
+    [openEditSheet],
   )
-  const openAdd = useCallback(() => setForm({ customerId: null }), [])
+  const openAdd = useCallback(() => void openCreate(), [openCreate])
 
   return (
     <TableToolbarSlotProvider>
@@ -235,13 +236,7 @@ export function CustomersPage({
         </div>
       </ScrollableContent>
       <CustomerFormSheet
-        open={Boolean(form)}
-        customerId={form?.customerId ?? null}
-        onOpenChange={(open) => {
-          if (!open) setForm(null)
-        }}
         onSaved={({ name, created }) => {
-          setForm(null)
           setNotice(created ? `Added ${name}.` : `Saved ${name}’s details.`)
           void reload()
         }}
