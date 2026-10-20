@@ -22,6 +22,7 @@ function fixture(verified = true) {
   let buckets: Bucket[] = []
   let sessions: object[] = []
   let closing = false
+  let qaRevoked = false
   let queue = Promise.resolve()
   const user = {
     id: "owner",
@@ -34,6 +35,27 @@ function fixture(verified = true) {
     createdAt: new Date("2020-01-01"),
   }
   const tx = {
+    qaClientAuthorization: {
+      async findUnique() {
+        return qaRevoked
+          ? null
+          : {
+              id: "qa-auth",
+              status: "ACTIVE",
+              revokedAt: null,
+              expiresAt: new Date(Date.now() + 3_600_000),
+              grant: {
+                qaDomain: "phone.qa.test",
+                status: "ACTIVE",
+                revokedAt: null,
+                expiresAt: new Date(Date.now() + 3_600_000),
+              },
+            }
+      },
+      async update() {
+        return { id: "qa-auth" }
+      },
+    },
     verification: {
       async findFirst({ where }: { where: { identifier: string } }) {
         return rows.find((row) => row.identifier === where.identifier) ?? null
@@ -172,6 +194,9 @@ function fixture(verified = true) {
     get sessions() {
       return sessions
     },
+    revokeQa() {
+      qaRevoked = true
+    },
     setClosing() {
       closing = true
     },
@@ -184,17 +209,35 @@ async function local<T>(action: () => Promise<T>) {
     "NODE_ENV",
     "DEV_PROFILE",
     "BETTER_AUTH_SECRET",
+    "QA_ACCELERATOR_SECRET",
+    "QA_POLICY_URL",
+    "QA_POLICY_READ_KEY",
   ] as const
+  const originalFetch = globalThis.fetch
+  globalThis.fetch = Object.assign(
+    async () =>
+      Response.json({
+        projectId: "ewatrade",
+        revision: 1,
+        environments: { development: true, preview: true, production: false },
+        entries: [],
+      }),
+    { preconnect: originalFetch.preconnect },
+  ) as typeof fetch
   const saved = keys.map((key) => process.env[key])
   Object.assign(process.env, {
     APP_ENV: "local",
     NODE_ENV: "test",
     DEV_PROFILE: "local",
     BETTER_AUTH_SECRET: "test-phone-auth-secret-only",
+    QA_ACCELERATOR_SECRET: "phone-test-secret-at-least-32-characters",
+    QA_POLICY_URL: "https://oversight.example.test/api/qa-policy/v1/ewatrade",
+    QA_POLICY_READ_KEY: crypto.randomUUID(),
   })
   try {
     return await action()
   } finally {
+    globalThis.fetch = originalFetch
     keys.forEach((key, index) => {
       if (saved[index] === undefined) delete process.env[key]
       else process.env[key] = saved[index]
@@ -203,6 +246,61 @@ async function local<T>(action: () => Promise<T>) {
 }
 
 describe("phone authentication security", () => {
+  test("binds selected QA phone to its live grant and rejects swapped phone or later revocation", () =>
+    local(async () => {
+      const store = fixture()
+      const entry = {
+        id: "f3c613c7-2e64-4b73-81b1-21f2c129b388",
+        email: "tester@example.com",
+        qa: "phone.qa.test",
+        phone: store.user.phone,
+        accountId: null,
+        active: true,
+      }
+      const previousFetch = globalThis.fetch
+      globalThis.fetch = Object.assign(
+        async () =>
+          Response.json({
+            projectId: "ewatrade",
+            revision: 1,
+            environments: {
+              development: true,
+              preview: true,
+              production: false,
+            },
+            entries: [entry],
+          }),
+        { preconnect: previousFetch.preconnect },
+      ) as typeof fetch
+      const selected = {
+        mode: "login" as const,
+        phone: store.user.phone,
+        qaEntryId: entry.id,
+        qaToken: "qaa_credential-is-never-in-challenge-json",
+      }
+      await expect(
+        createPhoneOtp(
+          store.db,
+          { ...selected, phone: "+2348111111111" },
+          "test-network",
+        ),
+      ).rejects.toThrow("no longer matches")
+      await createPhoneOtp(store.db, selected, "test-network")
+      expect(store.rows[0]?.value).not.toContain(selected.qaToken)
+      expect(JSON.parse(store.rows[0]?.value ?? "{}")).toMatchObject({
+        qaEntryId: entry.id,
+        qaAuthorizationId: "qa-auth",
+      })
+      store.revokeQa()
+      await expect(
+        verifyPhoneOtp(store.db, {
+          phone: store.user.phone,
+          mode: "login",
+          code: "123456",
+        }),
+      ).rejects.toThrow()
+      expect(store.sessions.length).toBe(0)
+    }))
   test("retains secondary contact in the server challenge without changing login identity", async () =>
     local(async () => {
       const store = fixture()

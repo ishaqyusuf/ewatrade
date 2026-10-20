@@ -2,7 +2,7 @@ import { auth } from "@ewatrade/auth"
 import { prisma } from "@ewatrade/db"
 import {
   createEmailMessage,
-  createTestRoutedEmailMessages,
+  createManagedQaEmailMessages,
   dispatchEmailMessages,
   getTestEmailRouting,
   renderWorkspaceWelcomeTemplate,
@@ -18,6 +18,7 @@ import {
   isSignupAvailableForLegalPublication,
 } from "@ewatrade/utils/legal-approval"
 import { LEGAL_DOCUMENT_VERSION } from "@ewatrade/utils/legal-documents"
+import { getQaPolicyEnvironment } from "@ewatrade/utils/qa-policy-server"
 import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
 import { resolveDashboardUrl } from "../../../lib/dashboard-url"
@@ -121,6 +122,7 @@ export async function POST(request: NextRequest) {
   let workspace: ReturnType<typeof resolveSignupWorkspace>
   try {
     workspace = resolveSignupWorkspace({
+      env: await getQaPolicyEnvironment(),
       slug: requestedSubdomain ?? createSignupWorkspaceSlug(businessName),
       email,
     })
@@ -229,6 +231,7 @@ export async function POST(request: NextRequest) {
     attempt++
   ) {
     subdomain = resolveSignupWorkspace({
+      env: await getQaPolicyEnvironment(),
       slug: createSignupWorkspaceSlug(businessName),
       email,
     }).slug
@@ -575,7 +578,7 @@ export async function POST(request: NextRequest) {
     storefrontHostname,
   })
   const emailDeliveries = await dispatchEmailMessages(
-    createTestRoutedEmailMessages(
+    await createManagedQaEmailMessages(
       createEmailMessage({
         from: getEmailFromAddress(),
         html: emailHtml,

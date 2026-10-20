@@ -1,6 +1,7 @@
 import { LoginForm } from "@/components/auth/login-form"
 import { QaLoginEntry } from "@/components/qa/qa-login-entry"
 import { isQaAcceleratorClientMode } from "@ewatrade/utils/qa-accelerator"
+import { getQaPolicyEnvironment } from "@ewatrade/utils/qa-policy-server"
 import type { Metadata } from "next"
 
 export const metadata: Metadata = {
@@ -17,7 +18,7 @@ export default async function LoginPage({
   const marketingUrl =
     process.env.NEXT_PUBLIC_MARKETING_URL ?? "https://ewatrade.com"
   const qaEnabled =
-    process.env.QA_ACCELERATOR_ENABLED === "true" &&
+    (await getQaPolicyEnvironment()).QA_ACCELERATOR_ENABLED === "true" &&
     isQaAcceleratorClientMode(process.env.APP_ENV ?? process.env.NODE_ENV)
   if (qaEnabled)
     return (

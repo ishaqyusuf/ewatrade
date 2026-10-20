@@ -135,9 +135,22 @@ export function inspectApiPreviewReadiness(root = repoRoot) {
     if (preview[key] !== "false") issues.push(`${key}_NOT_DISABLED`)
   }
 
-  if (preview.QA_ACCELERATOR_ENABLED !== "true")
-    issues.push("QA_ACCELERATOR_NOT_ENABLED")
-  if (preview.QA_TOOLS_ENABLED !== "true") issues.push("QA_TOOLS_NOT_ENABLED")
+  try {
+    const policyUrl = new URL(preview.QA_POLICY_URL ?? "")
+    if (
+      policyUrl.protocol !== "https:" ||
+      policyUrl.pathname !== "/api/qa-policy/v1/ewatrade" ||
+      policyUrl.username ||
+      policyUrl.password ||
+      policyUrl.search ||
+      policyUrl.hash
+    )
+      issues.push("QA_POLICY_URL_INVALID")
+  } catch {
+    issues.push("QA_POLICY_URL_INVALID")
+  }
+  if ((preview.QA_POLICY_READ_KEY?.trim().length ?? 0) < 32)
+    issues.push("QA_POLICY_READ_KEY_MISSING_OR_SHORT")
   if ((preview.QA_ACCELERATOR_SECRET?.trim().length ?? 0) < 32)
     issues.push("QA_ACCELERATOR_SECRET_MISSING_OR_SHORT")
   const qaOrigins = preview.QA_ACCELERATOR_ALLOWED_ORIGINS?.split(",").map(
@@ -148,25 +161,6 @@ export function inspectApiPreviewReadiness(root = repoRoot) {
     qaOrigins.some((origin) => !exactHttpsOrigin(origin))
   )
     issues.push("QA_ACCELERATOR_ORIGINS_INVALID")
-  try {
-    const routes = JSON.parse(preview.EMAIL_QA_DOMAIN_ROUTES ?? "{}")
-    if (
-      !routes ||
-      Array.isArray(routes) ||
-      typeof routes !== "object" ||
-      Object.keys(routes).length === 0 ||
-      Object.entries(routes).some(
-        ([domain, inbox]) =>
-          !domain.endsWith(".test") ||
-          typeof inbox !== "string" ||
-          !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(inbox) ||
-          inbox.endsWith(".test"),
-      )
-    )
-      issues.push("QA_EMAIL_ROUTES_INVALID")
-  } catch {
-    issues.push("QA_EMAIL_ROUTES_INVALID")
-  }
 
   try {
     const link = JSON.parse(

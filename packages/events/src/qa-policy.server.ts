@@ -5,11 +5,12 @@ export function isQaAnalyticsPrincipal(
     qaSession?: boolean
     dataClassification?: string | null
   },
-  routes = process.env.EMAIL_QA_DOMAIN_ROUTES,
+  routes?: string,
 ): boolean {
   if (input.qaSession || input.dataClassification?.toLowerCase() === "qa")
     return true
-  if (!input.email || !routes?.trim()) return false
+  if (!input.email) return false
+  if (!routes?.trim()) return input.email.trim().toLowerCase().endsWith(".test")
   const configured: unknown = JSON.parse(routes)
   if (
     !configured ||

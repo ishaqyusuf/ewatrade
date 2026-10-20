@@ -2,9 +2,9 @@ import { prisma } from "@ewatrade/db"
 import {
   type EmailMessage,
   type MarketingEmailInput,
+  createManagedQaEmailMessages,
   createMarketingEarlyAccessAdminEmail,
   createMarketingEarlyAccessConfirmationEmail,
-  createTestRoutedEmailMessages,
   defaultMarketingEarlyAccessAdminSubject,
   defaultMarketingEarlyAccessConfirmationSubject,
   dispatchEmailMessages,
@@ -23,7 +23,11 @@ export async function deliverEarlyAccessEmails(
       503,
     )
   const deliveries = await dispatchEmailMessages(
-    messages.flatMap((message) => createTestRoutedEmailMessages(message)),
+    (
+      await Promise.all(
+        messages.map((message) => createManagedQaEmailMessages(message)),
+      )
+    ).flat(),
   )
   // Keep provider evidence without returning provider errors or private links to the applicant.
   const lead = await prisma.leadCapture.findUnique({
