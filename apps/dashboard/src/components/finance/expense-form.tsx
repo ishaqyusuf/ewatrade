@@ -2,6 +2,7 @@
 import { FieldGroup, Input, MoneyInput } from "@ewatrade/ui"
 
 import {
+  FormAutocomplete,
   FormCombobox,
   FormDatePicker,
   FormRadioChoices,
@@ -310,12 +311,10 @@ export function FinanceExpenseForm({
           description="Pick a Supplier or type a new name."
           error={errors.payee?.message}
         >
-          <FormCombobox
+          <FormAutocomplete
             control={form.control}
             name="payee"
-            placeholder="Search or add a name…"
-            createLabel="Add"
-            empty="No Suppliers match. Keep typing to add the name."
+            placeholder="Search Suppliers or type a name…"
             options={(suppliers.data?.data ?? []).map((supplier) => ({
               value: supplier.name,
               label: supplier.name,

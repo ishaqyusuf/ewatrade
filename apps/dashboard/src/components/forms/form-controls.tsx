@@ -1,6 +1,7 @@
 "use client"
 
 import {
+  Autocomplete,
   Checkbox,
   Combobox,
   ComboboxContent,
@@ -17,7 +18,7 @@ import {
   SelectControl,
   type SelectControlProps,
 } from "@ewatrade/ui"
-import { type ComponentProps, useState } from "react"
+import type { ComponentProps } from "react"
 import {
   type Control,
   type FieldPathByValue,
@@ -96,82 +97,127 @@ export function FormDatePicker<T extends FieldValues>({
 
 export type ComboOption = { value: string; label: string; hint?: string }
 
-/**
- * Searchable pick (shadcn Combobox). With `createLabel`, typing a name that is
- * not listed offers "Add “name”" and stores the typed text as the value.
- */
+/** Searchable pick from a fixed list (shadcn Combobox). */
 export function FormCombobox<T extends FieldValues>({
   control,
   name,
   options,
   placeholder,
   empty = "No results.",
-  createLabel,
   id,
 }: StringField<T> & {
   options: ComboOption[]
   placeholder?: string
   empty?: string
-  createLabel?: string
   id?: string
 }) {
   const { field, fieldState } = useController({ control, name })
-  const [query, setQuery] = useState("")
   const value = typeof field.value === "string" ? field.value : ""
-  const typed = query.trim()
-  const listed = (text: string) =>
-    options.some((option) => option.label.toLowerCase() === text.toLowerCase())
-  const items: (ComboOption & { created?: boolean })[] =
-    createLabel && typed && !listed(typed)
-      ? [...options, { value: typed, label: typed, created: true }]
-      : options
-  const selected =
-    options.find((option) => option.value === value) ??
-    (value ? { value, label: value } : null)
   return (
-    <Combobox<ComboOption & { created?: boolean }>
-      items={items}
-      value={selected}
+    <Combobox<ComboOption>
+      items={options}
+      value={options.find((option) => option.value === value) ?? null}
       itemToStringLabel={(option) => option.label}
       isItemEqualToValue={(a, b) => a.value === b.value}
       autoHighlight
-      onInputValueChange={setQuery}
       onValueChange={(option) => field.onChange(option?.value ?? "")}
     >
       <ComboboxInput
         id={id}
+        ref={field.ref}
         placeholder={placeholder}
         aria-invalid={fieldState.invalid}
         onBlur={field.onBlur}
         className="w-full rounded-none border-border bg-transparent"
       />
-      <ComboboxContent className="rounded-none border border-border bg-popover shadow-md ring-0 before:hidden **:data-[slot$=-item]:rounded-none">
+      <ComboboxContent className={POPUP}>
         <ComboboxEmpty>{empty}</ComboboxEmpty>
         <ComboboxList>
-          {(option: ComboOption & { created?: boolean }) => (
-            <ComboboxItem
-              key={`${option.created ? "+" : ""}${option.value}`}
-              value={option}
-            >
-              {option.created ? (
-                <span>
-                  {createLabel} “{option.label}”
-                </span>
-              ) : (
-                <span className="grid">
-                  {option.label}
-                  {option.hint ? (
-                    <span className="text-xs font-normal text-muted-foreground">
-                      {option.hint}
-                    </span>
-                  ) : null}
-                </span>
-              )}
+          {(option: ComboOption) => (
+            <ComboboxItem key={option.value} value={option}>
+              <OptionText option={option} />
             </ComboboxItem>
           )}
         </ComboboxList>
       </ComboboxContent>
     </Combobox>
+  )
+}
+
+/**
+ * Free text with suggestions (Base UI Autocomplete): pick a listed name or keep
+ * typing a new one. The field stores the text.
+ */
+export function FormAutocomplete<T extends FieldValues>({
+  control,
+  name,
+  options,
+  placeholder,
+  id,
+}: StringField<T> & {
+  options: ComboOption[]
+  placeholder?: string
+  id?: string
+}) {
+  const { field, fieldState } = useController({ control, name })
+  return (
+    <Autocomplete.Root
+      items={options}
+      value={typeof field.value === "string" ? field.value : ""}
+      onValueChange={(value) => field.onChange(value)}
+      itemToStringValue={(option: ComboOption) => option.label}
+    >
+      <Autocomplete.Input
+        id={id}
+        ref={field.ref}
+        placeholder={placeholder}
+        aria-invalid={fieldState.invalid}
+        onBlur={field.onBlur}
+        autoComplete="off"
+        className={INPUT}
+      />
+      <Autocomplete.Portal>
+        <Autocomplete.Positioner
+          sideOffset={6}
+          align="start"
+          className="isolate z-50"
+        >
+          <Autocomplete.Popup
+            className={`${POPUP} w-(--anchor-width) max-h-72 overflow-y-auto p-1 text-sm text-popover-foreground data-empty:hidden`}
+          >
+            <Autocomplete.List>
+              {(option: ComboOption) => (
+                <Autocomplete.Item
+                  key={option.value}
+                  value={option}
+                  className="flex cursor-default items-center px-3 py-2 outline-hidden select-none data-highlighted:bg-accent"
+                >
+                  <OptionText option={option} />
+                </Autocomplete.Item>
+              )}
+            </Autocomplete.List>
+          </Autocomplete.Popup>
+        </Autocomplete.Positioner>
+      </Autocomplete.Portal>
+    </Autocomplete.Root>
+  )
+}
+
+const POPUP =
+  "rounded-none border border-border bg-popover shadow-md ring-0 before:hidden **:data-[slot$=-item]:rounded-none"
+const INPUT =
+  "h-9 w-full min-w-0 border border-border bg-transparent px-3 text-sm outline-none placeholder:text-muted-foreground focus-visible:ring-1 focus-visible:ring-ring aria-invalid:border-destructive"
+
+function OptionText({ option }: { option: ComboOption }) {
+  return (
+    <span className="grid">
+      {option.label}
+      {option.hint ? (
+        <span className="text-xs font-normal text-muted-foreground">
+          {option.hint}
+        </span>
+      ) : null}
+    </span>
   )
 }
 
