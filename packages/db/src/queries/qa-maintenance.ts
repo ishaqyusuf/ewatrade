@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto"
+import { managedQaIdentity } from "@ewatrade/utils/qa-policy-server"
 import { Prisma, type PrismaClient } from "../../generated/prisma/client"
 import type { DbClient } from "./types"
 
@@ -22,6 +23,10 @@ function configuredQaDomains() {
 export function configuredQaDomainForEmail(email: string) {
   const domain = email.trim().toLowerCase().split("@").pop() ?? ""
   return configuredQaDomains().has(domain) ? domain : null
+}
+
+export async function managedQaDomainForEmail(email: string) {
+  return (await managedQaIdentity({ email }))?.qa ?? null
 }
 
 export async function assertQaTenantIdentity(
@@ -59,9 +64,22 @@ export async function discoverQaTenantCandidates(db: DbClient) {
     orderBy: { createdAt: "desc" },
   })
 
+  const domains = new Map(
+    await Promise.all(
+      tenants.flatMap((t) =>
+        t.users.map(
+          async (m) =>
+            [
+              m.user.email,
+              await managedQaDomainForEmail(m.user.email),
+            ] as const,
+        ),
+      ),
+    ),
+  )
   return tenants.flatMap((tenant) => {
     const qaSourceDomain = tenant.users
-      .map((membership) => configuredQaDomainForEmail(membership.user.email))
+      .map((membership) => domains.get(membership.user.email))
       .find(Boolean)
 
     return qaSourceDomain

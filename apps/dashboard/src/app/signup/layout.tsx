@@ -1,6 +1,7 @@
 import { QaWebAccelerator } from "@ewatrade/onboarding/components/qa/qa-web-accelerator"
 import { getMarketingUrl } from "@ewatrade/onboarding/lib/signup-navigation"
 import { isQaAcceleratorClientMode } from "@ewatrade/utils/qa-accelerator"
+import { getQaPolicyEnvironment } from "@ewatrade/utils/qa-policy-server"
 import type { Metadata } from "next"
 import "@ewatrade/onboarding/styles/signup.css"
 
@@ -9,12 +10,12 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 }
 
-export default function SignupLayout({
+export default async function SignupLayout({
   children,
 }: { children: React.ReactNode }) {
   const marketingUrl = getMarketingUrl()
   const qaEnabled =
-    process.env.QA_ACCELERATOR_ENABLED === "true" &&
+    (await getQaPolicyEnvironment()).QA_ACCELERATOR_ENABLED === "true" &&
     isQaAcceleratorClientMode(process.env.APP_ENV ?? process.env.NODE_ENV)
   const flow = (
     <div className="signup-shell">

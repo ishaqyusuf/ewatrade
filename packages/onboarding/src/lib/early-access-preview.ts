@@ -1,4 +1,5 @@
 import { getEmailDomain, parseQaDomainRoutes } from "@ewatrade/email"
+import { getQaPolicyEnvironment } from "@ewatrade/utils/qa-policy-server"
 
 export type EarlyAccessQaPreview = {
   emailSent?: boolean
@@ -12,11 +13,11 @@ type PreviewEnvironment = {
   EMAIL_QA_DOMAIN_ROUTES?: string
 }
 
-export function shouldPreviewEarlyAccess(input: {
+export async function shouldPreviewEarlyAccess(input: {
   email: string
   env?: PreviewEnvironment
 }) {
-  const env = input.env ?? process.env
+  const env = input.env ?? (await getQaPolicyEnvironment())
   const domain = getEmailDomain(input.email)
   if (!domain.endsWith(".test")) return false
 

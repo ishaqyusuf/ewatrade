@@ -1,16 +1,12 @@
 import { DashboardEventsProvider } from "@/components/analytics/events-provider"
+import { getQaPolicyEnvironment } from "@ewatrade/utils/qa-policy-server"
 import type { Metadata } from "next"
 import "@ewatrade/ui/globals.css"
 import "@/styles/dashboard.css"
 import { cn } from "@/utils"
-import {
-  assertQaAcceleratorStartupSafety,
-  isQaAcceleratorClientMode,
-} from "@ewatrade/utils/qa-accelerator"
+import { isQaAcceleratorClientMode } from "@ewatrade/utils/qa-accelerator"
 import { Figtree } from "next/font/google"
 import { Providers } from "./providers"
-
-assertQaAcceleratorStartupSafety(process.env)
 
 const figtree = Figtree({
   subsets: ["latin"],
@@ -42,11 +38,11 @@ export const metadata: Metadata = {
   },
 }
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   const qaAcceleratorEnabled =
-    process.env.QA_ACCELERATOR_ENABLED === "true" &&
+    (await getQaPolicyEnvironment()).QA_ACCELERATOR_ENABLED === "true" &&
     isQaAcceleratorClientMode(process.env.APP_ENV ?? process.env.NODE_ENV)
 
   return (
