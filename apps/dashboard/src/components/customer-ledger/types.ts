@@ -33,7 +33,7 @@ export const ledgerLabels: Record<string, string> = {
   OPENING_CREDIT: "Starting balance, paid ahead",
   RECEIPT: "Payment",
   ORDER_CHARGE: "Order",
-  REFUND: "Refund",
+  REFUND: "Paid-ahead money returned",
   REVERSAL: "Undo",
 }
 
