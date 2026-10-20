@@ -9,7 +9,7 @@ import {
 import {
   type EmailTransport,
   createEmailMessage,
-  createTestRoutedEmailMessages,
+  createManagedQaEmailMessages,
   getDefaultEmailTransport,
   renderStoreNotificationVerificationTemplate,
 } from "@ewatrade/email"
@@ -97,7 +97,7 @@ export async function runStoreConversationNotificationVerification(
     to: recipient,
   })
   try {
-    const routed = createTestRoutedEmailMessages(message)
+    const routed = await createManagedQaEmailMessages(message)
     for (const email of routed) {
       await dependencies.emailTransport.send(email)
     }

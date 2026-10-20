@@ -1,4 +1,5 @@
 import { prisma } from "@ewatrade/db"
+import { getQaPolicyEnvironment } from "@ewatrade/utils/qa-policy-server"
 import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
 import { z } from "zod"
@@ -27,7 +28,10 @@ async function checkAvailability(input: unknown) {
   }
   let workspace: ReturnType<typeof resolveSignupWorkspace>
   try {
-    workspace = resolveSignupWorkspace(parsed.data)
+    workspace = resolveSignupWorkspace({
+      ...parsed.data,
+      env: await getQaPolicyEnvironment(),
+    })
   } catch {
     return NextResponse.json(
       {

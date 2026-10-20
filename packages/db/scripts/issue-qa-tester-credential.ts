@@ -2,6 +2,7 @@ import {
   isConfiguredQaDomain,
   normalizeQaDomain,
 } from "@ewatrade/utils/qa-accelerator"
+import { getQaPolicyEnvironment } from "@ewatrade/utils/qa-policy-server"
 import { prisma } from "../src/client"
 import { issueQaTesterCredential } from "../src/queries/qa-access"
 
@@ -26,7 +27,8 @@ if (!secret || secret.length < 32) {
 }
 if (
   !isConfiguredQaDomain(qaDomain, {
-    EMAIL_QA_DOMAIN_ROUTES: process.env.EMAIL_QA_DOMAIN_ROUTES,
+    EMAIL_QA_DOMAIN_ROUTES: (await getQaPolicyEnvironment())
+      .EMAIL_QA_DOMAIN_ROUTES,
   })
 ) {
   throw new Error("The QA Domain is not configured for routed QA email.")

@@ -8,7 +8,7 @@ import {
 } from "../../../lib/qa-access-server"
 
 export async function GET(request: NextRequest) {
-  const availability = getQaWebAvailability(
+  const availability = await getQaWebAvailability(
     request,
     QA_ACCELERATOR_CONTRACT_VERSION,
   )

@@ -1,4 +1,8 @@
 import { configuredQaDomains } from "@ewatrade/utils/qa-accelerator"
+import {
+  getQaPolicyEnvironment,
+  managedQaIdentity,
+} from "@ewatrade/utils/qa-policy-server"
 import type { DbClient } from "./types"
 
 type QaToolsSession = {
@@ -22,6 +26,7 @@ type QaToolsMembership = {
 
 // Draft tooling does not grant account switching, membership or provider access.
 export function resolveAuthenticatedQaFixtureContext(input: {
+  verifiedQaDomain?: string
   enabled: boolean
   domainRoutes: string | undefined
   membership: QaToolsMembership | null
@@ -33,7 +38,7 @@ export function resolveAuthenticatedQaFixtureContext(input: {
   if (
     !input.enabled ||
     !session ||
-    !session.user.emailVerified ||
+    (!session.user.emailVerified && !input.verifiedQaDomain) ||
     session.expiresAt <= now ||
     !membership ||
     membership.status !== "ACTIVE"
@@ -42,7 +47,7 @@ export function resolveAuthenticatedQaFixtureContext(input: {
 
   const email = session.user.email.trim().toLowerCase()
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return null
-  const domain = email.slice(email.indexOf("@") + 1)
+  const domain = input.verifiedQaDomain ?? email.slice(email.indexOf("@") + 1)
   const tenant = membership.tenant
   if (
     !domain.endsWith(".test") ||
@@ -84,14 +89,23 @@ export async function getAuthenticatedQaFixtureContext(
   },
   env = process.env,
 ) {
-  if (env.QA_TOOLS_ENABLED !== "true") return null
+  const managedEnv = await getQaPolicyEnvironment(env)
+  if (managedEnv.QA_TOOLS_ENABLED !== "true") return null
   const [session, membership] = await Promise.all([
     db.session.findFirst({
       where: { id: input.sessionId, userId: input.userId },
       select: {
         createdAt: true,
         expiresAt: true,
-        user: { select: { id: true, email: true, emailVerified: true } },
+        user: {
+          select: {
+            id: true,
+            email: true,
+            emailVerified: true,
+            phone: true,
+            phoneVerifiedAt: true,
+          },
+        },
       },
     }),
     db.membership.findFirst({
@@ -120,9 +134,22 @@ export async function getAuthenticatedQaFixtureContext(
       },
     }),
   ])
+  let verifiedQaDomain: string | undefined
+  try {
+    if (session?.user.phoneVerifiedAt)
+      verifiedQaDomain = (
+        await managedQaIdentity({
+          phone: session.user.phone,
+          userId: input.userId,
+        })
+      )?.qa
+  } catch {
+    return null
+  }
   return resolveAuthenticatedQaFixtureContext({
+    verifiedQaDomain,
     enabled: true,
-    domainRoutes: env.EMAIL_QA_DOMAIN_ROUTES,
+    domainRoutes: managedEnv.EMAIL_QA_DOMAIN_ROUTES,
     membership,
     now: new Date(),
     session,

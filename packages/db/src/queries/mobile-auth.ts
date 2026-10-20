@@ -240,7 +240,7 @@ function addDays(date: Date, days: number) {
 
 async function getFirstActiveTenantForUser(
   db: DbClient,
-  input: { userId: string },
+  input: { userId: string; qaDomain?: string },
   options: { includeInvited?: boolean } = {},
 ): Promise<MobileAuthTenantSummary | null> {
   const membershipAccess =
@@ -266,7 +266,16 @@ async function getFirstActiveTenantForUser(
     where: {
       ...membershipAccess,
       userId: input.userId,
-      tenant: { isActive: true },
+      tenant: {
+        isActive: true,
+        ...(input.qaDomain
+          ? {
+              dataClassification: "QA" as const,
+              qaSourceDomain: input.qaDomain,
+              qaPurgeStartedAt: null,
+            }
+          : {}),
+      },
     },
     orderBy: [{ status: "asc" }, { createdAt: "asc" }],
     select: {
@@ -433,6 +442,7 @@ export async function createMobileSessionForVerifiedUser(
   db: DbClient,
   userId: string,
   proof: "email" | "phone" = "email",
+  qaDomain?: string,
 ): Promise<MobileAuthSessionResult> {
   const user = await db.user.findUnique({
     where: { id: userId },
@@ -451,8 +461,10 @@ export async function createMobileSessionForVerifiedUser(
     throw new Error("A verified account is required.")
   const age = await getCustomerAccountAgeStatus(db, user.id)
   const tenant = age.eligible
-    ? await getFirstActiveTenantForUser(db, { userId: user.id })
+    ? await getFirstActiveTenantForUser(db, { userId: user.id, qaDomain })
     : null
+  if (qaDomain && !tenant)
+    throw new Error("No matching QA workspace is available for this account.")
   const accessProfile = age.eligible
     ? await getMobileAccessProfile(db, { userId: user.id })
     : { hasBusinessAccess: false, hasCustomerHistory: false }
