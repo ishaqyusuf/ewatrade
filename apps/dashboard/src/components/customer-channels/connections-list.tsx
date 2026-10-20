@@ -1,122 +1,103 @@
 "use client"
-import { FormFeedback } from "@/components/forms/form-feedback"
 import {
-  InlineRowCheckbox,
-  InlineSelectionBar,
-  useInlineSelection,
-} from "@/components/tables/core"
-
+  SettingsStatusPill,
+  type SettingsStatusTone,
+} from "@/components/service-commerce/settings-status-pill"
+import { SettingsSection } from "@/components/settings/settings-page"
+import { cn } from "@/utils"
 import { Button } from "@ewatrade/ui"
-import { useMemo } from "react"
+import { WhatsappIcon } from "@hugeicons/core-free-icons"
+import { HugeiconsIcon } from "@hugeicons/react"
+
+import {
+  CONNECTION_LIFECYCLE_LABELS,
+  CONNECTION_READINESS_LABELS,
+  connectionStoresLabel,
+} from "./channel-settings-labels"
 import type { CustomerChannelConnection } from "./types"
 
-const readinessTone = {
-  blocked: "bg-destructive/10 text-destructive",
-  configuration_required: "bg-warning text-warning-foreground",
-  ready: "bg-success text-success-foreground",
-  setup_required: "bg-muted text-muted-foreground",
-  test_required: "bg-info text-info-foreground",
-} as const
-
-function label(value: string) {
-  return value.replaceAll("_", " ")
+const readinessTone: Record<
+  CustomerChannelConnection["readiness"],
+  SettingsStatusTone
+> = {
+  blocked: "bad",
+  configuration_required: "warn",
+  ready: "ok",
+  test_required: "warn",
 }
 
 export function ConnectionsList({
   connections,
   onManage,
-  scope,
 }: {
   connections: CustomerChannelConnection[]
   onManage: (connectionId: string) => void
-  /** Selection resets when this changes, e.g. the selected Store. */
-  scope: string
 }) {
-  const connectionIds = useMemo(
-    () => connections.map((connection) => connection.id),
-    [connections],
-  )
-  const selection = useInlineSelection({ ids: connectionIds, scope })
   return (
-    <section className="grid gap-4 rounded-none border border-border bg-card p-5">
-      <div>
-        <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-          Configure and test
-        </p>
-        <h2 className="font-semibold">Connections</h2>
-        <p className="mt-1 text-sm text-muted-foreground">
-          A replacement remains a candidate until every readiness check passes,
-          so a working customer route is never displaced by a failed test.
-        </p>
-      </div>
-
+    <SettingsSection
+      title="WhatsApp numbers"
+      description="If you replace a number, the old one keeps working until the new one passes every check."
+    >
       {connections.length === 0 ? (
-        <div className="rounded-none border border-dashed border-border px-4 py-8 text-center">
-          <p className="font-medium">No connections yet</p>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Start with Connect WhatsApp. Web entry remains a separate channel.
+        <div className="px-4 py-3.5">
+          <p className="text-sm font-medium">No WhatsApp numbers yet</p>
+          <p className="mt-0.5 text-sm text-muted-foreground">
+            Use Connect WhatsApp to add your first number. Chat on your store
+            link works without one.
           </p>
         </div>
       ) : (
-        <div className="grid gap-3">
-          <InlineSelectionBar
-            label="Select all connections"
-            selection={selection}
-          />
-          {connections.map((connection) => (
-            <article
-              className="grid gap-4 rounded-none border border-border p-4 data-[state=selected]:bg-muted/60 lg:grid-cols-[1fr_auto] lg:items-center"
-              data-state={
-                selection.isSelected(connection.id) ? "selected" : undefined
-              }
+        connections.map((connection) => {
+          const ready = connection.readiness === "ready"
+          const name = connection.businessDisplayName
+            ? `${connection.businessDisplayName} · ${connection.displayNumber}`
+            : connection.displayNumber
+          return (
+            <div
+              className="flex flex-wrap items-center gap-x-3 gap-y-2 px-4 py-3.5"
               key={connection.id}
             >
-              <div className="min-w-0">
-                <div className="flex flex-wrap items-center gap-2">
-                  <InlineRowCheckbox
-                    selection={selection}
-                    id={connection.id}
-                    label={`Select ${connection.businessDisplayName || connection.displayNumber}`}
-                  />
-                  <h3 className="font-medium">
-                    {connection.businessDisplayName || connection.displayNumber}
-                  </h3>
-                  <span
-                    className={`rounded-full px-2.5 py-1 text-xs font-medium ${readinessTone[connection.readiness]}`}
-                  >
-                    {label(connection.readiness)}
-                  </span>
-                </div>
-                <p className="mt-1 text-sm text-muted-foreground">
-                  {connection.displayNumber} · {label(connection.lifecycle)}
-                </p>
-                <p className="mt-2 text-xs text-muted-foreground">
-                  {connection.storeAssignments.length > 0
-                    ? connection.storeAssignments
-                        .map((store) => store.name)
-                        .join(", ")
-                    : "No Store assignments"}
+              <span
+                aria-hidden="true"
+                className={cn(
+                  "flex size-8 shrink-0 items-center justify-center rounded-full",
+                  ready
+                    ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-500/15 dark:text-emerald-200"
+                    : "bg-muted text-muted-foreground",
+                )}
+              >
+                <HugeiconsIcon icon={WhatsappIcon} className="size-4" />
+              </span>
+              <div className="min-w-0 flex-[1_1_200px]">
+                <p className="text-sm font-medium">{name}</p>
+                <p className="mt-0.5 text-sm text-muted-foreground">
+                  {CONNECTION_LIFECYCLE_LABELS[connection.lifecycle]} ·{" "}
+                  {connectionStoresLabel(connection.storeAssignments)}
                 </p>
                 {connection.lastTestFailureCode ? (
-                  <FormFeedback appearance="dashboard">
-                    Last test: {label(connection.lastTestFailureCode)}
-                  </FormFeedback>
+                  <p className="mt-0.5 text-sm text-destructive">
+                    The last test failed. Open Manage to test it again.
+                  </p>
                 ) : null}
               </div>
-              <div className="flex flex-wrap gap-2">
+              <div className="ml-auto flex shrink-0 items-center gap-2">
+                <SettingsStatusPill tone={readinessTone[connection.readiness]}>
+                  {CONNECTION_READINESS_LABELS[connection.readiness]}
+                </SettingsStatusPill>
                 <Button
+                  aria-label={`Manage ${connection.displayNumber}`}
                   onClick={() => onManage(connection.id)}
                   size="sm"
                   type="button"
                   variant="outline"
                 >
-                  Manage connection
+                  Manage
                 </Button>
               </div>
-            </article>
-          ))}
-        </div>
+            </div>
+          )
+        })
       )}
-    </section>
+    </SettingsSection>
   )
 }

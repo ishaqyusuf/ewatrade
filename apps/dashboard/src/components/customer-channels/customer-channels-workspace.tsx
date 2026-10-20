@@ -1,11 +1,12 @@
 "use client"
-import { FormFeedback } from "@/components/forms/form-feedback"
+import { SettingsStatusPill } from "@/components/service-commerce/settings-status-pill"
 import {
-  InlineRowCheckbox,
-  InlineSelectionBar,
-  useInlineSelection,
-} from "@/components/tables/core"
-
+  SettingsHeader,
+  SettingsNotice,
+  SettingsPage,
+  SettingsRow,
+  SettingsSection,
+} from "@/components/settings/settings-page"
 import { useServiceCommerceParams } from "@/hooks/use-service-commerce-params"
 import { useTRPC } from "@/trpc/client"
 import type { RouterOutputs } from "@ewatrade/api/trpc/routers/_app"
@@ -13,9 +14,15 @@ import { Button } from "@ewatrade/ui"
 import { useQuery } from "@tanstack/react-query"
 import { useMemo } from "react"
 
-import { ChannelRecommendationCard } from "./channel-recommendation-card"
+import { ChannelRecommendationNote } from "./channel-recommendation-note"
+import {
+  chatHoursSummary,
+  peopleCount,
+  quoteSourceLabel,
+} from "./channel-settings-labels"
 import { ChannelsHeader } from "./channels-header"
 import { ConnectionsList } from "./connections-list"
+import { ConversationModeChoice } from "./conversation-mode-choice"
 import type { CustomerChannelStoreOption } from "./types"
 
 export function CustomerChannelsWorkspace({
@@ -34,24 +41,34 @@ export function CustomerChannelsWorkspace({
         : initialStoreId,
     [initialStoreId, params.storeId, stores],
   )
+  const storeName =
+    stores.find((store) => store.id === selectedStoreId)?.name ?? "your store"
   const workspace = useQuery(
     trpc.serviceCommerce.channelWorkspace.queryOptions(
       { storeId: selectedStoreId },
       { retry: false },
     ),
   )
+  const canManage = Boolean(workspace.data?.access.canManage)
   const releaseSettings = useQuery({
     ...trpc.serviceCommerce.quoteReleaseSettings.queryOptions({
       storeId: selectedStoreId,
     }),
-    enabled: Boolean(workspace.data?.access.canManage),
+    enabled: canManage,
     retry: false,
   })
   const availability = useQuery({
     ...trpc.serviceCommerce.storeConversationAvailabilitySettings.queryOptions({
       storeId: selectedStoreId,
     }),
-    enabled: Boolean(workspace.data?.access.canManage),
+    enabled: canManage,
+    retry: false,
+  })
+  const modeSettings = useQuery({
+    ...trpc.serviceCommerce.storeConversationChannelModeSettings.queryOptions({
+      storeId: selectedStoreId,
+    }),
+    enabled: canManage,
     retry: false,
   })
   const approvals = useQuery(
@@ -63,8 +80,10 @@ export function CustomerChannelsWorkspace({
 
   if (
     workspace.isLoading ||
-    (workspace.data?.access.canManage && availability.isLoading) ||
-    (workspace.data?.access.canManage && releaseSettings.isLoading) ||
+    (canManage &&
+      (availability.isLoading ||
+        releaseSettings.isLoading ||
+        modeSettings.isLoading)) ||
     approvals.isLoading
   ) {
     return <CustomerChannelsSkeleton />
@@ -73,40 +92,60 @@ export function CustomerChannelsWorkspace({
     workspace.error ??
     availability.error ??
     releaseSettings.error ??
+    modeSettings.error ??
     approvals.error
   if (
     error ||
     !workspace.data ||
-    (workspace.data.access.canManage && !availability.data) ||
-    (workspace.data.access.canManage && !releaseSettings.data) ||
+    (canManage &&
+      (!availability.data || !releaseSettings.data || !modeSettings.data)) ||
     !approvals.data
   ) {
     return (
-      <div className="grid min-w-0 gap-3">
-        <FormFeedback appearance="dashboard">
-          {error?.message ?? "Customer channels are unavailable."}
-        </FormFeedback>
-        <Button
-          className="w-fit"
-          onClick={() =>
-            void Promise.all([
-              workspace.refetch(),
-              availability.refetch(),
-              releaseSettings.refetch(),
-              approvals.refetch(),
-            ])
+      <SettingsPage>
+        <SettingsHeader title="Customer channels" />
+        <SettingsNotice
+          tone="warning"
+          action={
+            <Button
+              className="bg-background"
+              onClick={() =>
+                void Promise.all([
+                  workspace.refetch(),
+                  availability.refetch(),
+                  releaseSettings.refetch(),
+                  modeSettings.refetch(),
+                  approvals.refetch(),
+                ])
+              }
+              size="sm"
+              variant="outline"
+            >
+              Try again
+            </Button>
           }
-          variant="outline"
         >
-          Try again
-        </Button>
-      </div>
+          Couldn't load customer channels.
+        </SettingsNotice>
+      </SettingsPage>
     )
   }
 
   const data = workspace.data
+  const openSheet = (
+    serviceCommerceSheet:
+      | "availability"
+      | "conversation_mode"
+      | "quote_policy"
+      | "team",
+  ) => void params.setParams({ serviceCommerceSheet, storeId: selectedStoreId })
+  const activeTeam = data.team.filter((member) => member.status === "active")
+  const linkLive = data.entryPoint?.status === "published"
+  const approverCount =
+    releaseSettings.data?.policy.selectedApproverMembershipIds.length ?? 0
+
   return (
-    <div className="grid min-w-0 flex-1 gap-6">
+    <SettingsPage>
       <ChannelsHeader
         canManage={data.access.canManage}
         onConnect={() =>
@@ -128,7 +167,6 @@ export function CustomerChannelsWorkspace({
       />
 
       <ConnectionsList
-        scope={selectedStoreId ?? "all"}
         connections={data.connections}
         onManage={(connectionId) =>
           void params.setParams({
@@ -139,194 +177,155 @@ export function CustomerChannelsWorkspace({
         }
       />
 
-      {data.recommendation ? (
-        <ChannelRecommendationCard recommendation={data.recommendation} />
+      {modeSettings.data ? (
+        <SettingsSection title={`How customers reach ${storeName}`}>
+          <ConversationModeChoice
+            key={selectedStoreId}
+            onShowDetails={() => openSheet("conversation_mode")}
+            settings={modeSettings.data}
+            storeId={selectedStoreId}
+          />
+        </SettingsSection>
       ) : null}
 
-      <section className="grid gap-4 lg:grid-cols-2 xl:grid-cols-4">
-        {data.access.canManage && data.channelMode ? (
-          <ChannelTaskCard
-            action="Choose channel mode"
-            description={`Desired: ${channelModeLabel(data.channelMode.desiredMode)}. Effective now: ${channelModeLabel(data.channelMode.effectiveMode)}. Readiness is rechecked before customer actions are shown.`}
-            onOpen={() =>
-              void params.setParams({
-                serviceCommerceSheet: "conversation_mode",
-                storeId: selectedStoreId,
-              })
-            }
-            title="Customer conversation mode"
-          />
-        ) : null}
-        {data.access.canManage && availability.data ? (
-          <ChannelTaskCard
-            action="Set availability"
+      <SettingsSection title="Who replies">
+        {availability.data ? (
+          <SettingsRow
+            label="Chat hours"
             description={
               availability.data.manualPaused
-                ? "New customer Chat messages are paused. Existing history and permitted staff replies remain available."
-                : `Chat follows ${availability.data.timezone} service hours and current eligible team coverage.`
+                ? "New chats are paused. Your team can still reply to existing chats."
+                : "Chat is open in these hours when someone is free to reply."
             }
-            onOpen={() =>
-              void params.setParams({
-                serviceCommerceSheet: "availability",
-                storeId: selectedStoreId,
-              })
-            }
-            title="Chat availability"
-          />
+          >
+            <span className="text-sm font-medium">
+              {availability.data.manualPaused
+                ? "Paused"
+                : chatHoursSummary(availability.data.weeklyHours)}
+            </span>
+            <Button
+              onClick={() => openSheet("availability")}
+              size="sm"
+              variant="outline"
+            >
+              Change
+            </Button>
+          </SettingsRow>
         ) : null}
-        <ChannelTaskCard
-          action="Assign attendants"
-          description={`${data.team.filter((member) => member.status === "active").length} active attendants. Route accepted team memberships without granting professional credentials.`}
-          onOpen={() =>
-            void params.setParams({
-              serviceCommerceSheet: "team",
-              storeId: selectedStoreId,
-            })
-          }
-          title="Team & routing"
-        />
-        {data.access.canManage && releaseSettings.data ? (
-          <ChannelTaskCard
-            action="Configure approval"
-            description={
-              releaseSettings.data.policy.mode === "approval_required"
-                ? `${releaseSettings.data.policy.selectedApproverMembershipIds.length} selected approver${releaseSettings.data.policy.selectedApproverMembershipIds.length === 1 ? "" : "s"}. Another selected team member must approve each exact Quote Version.`
-                : "Approval is off. Assigned attendants are trusted to prepare and release quotations."
-            }
-            onOpen={() =>
-              void params.setParams({
-                serviceCommerceSheet: "quote_policy",
-                storeId: selectedStoreId,
-              })
-            }
-            title="Quotation approval"
-          />
+        <SettingsRow
+          label="Team members replying"
+          description="They answer customer chats for this store."
+        >
+          <span className="text-sm font-medium">
+            {peopleCount(activeTeam.length)}
+          </span>
+          <Button onClick={() => openSheet("team")} size="sm" variant="outline">
+            Choose
+          </Button>
+        </SettingsRow>
+        {releaseSettings.data ? (
+          <SettingsRow
+            label="Quotes need approval"
+            description="Another person must approve each quote before the customer sees it."
+          >
+            <span className="text-sm font-medium">
+              {releaseSettings.data.policy.mode === "approval_required"
+                ? `On · ${approverCount === 1 ? "1 approver" : `${approverCount} approvers`}`
+                : "Off"}
+            </span>
+            <Button
+              onClick={() => openSheet("quote_policy")}
+              size="sm"
+              variant="outline"
+            >
+              Change
+            </Button>
+          </SettingsRow>
         ) : null}
-        <ChannelTaskCard
-          action={
-            data.entryPoint?.status === "published"
-              ? "View link & QR"
-              : "Publish link & QR"
-          }
+        <SettingsRow
+          label="Customer link and QR code"
           description={
-            data.entryPoint?.status === "published"
-              ? "The stable Store entry point is published and resolves current allowed channels."
-              : "Publish one revocable Store link after an active attendant and an allowed channel are ready."
+            linkLive
+              ? `Customers use it to message ${storeName}.`
+              : "Create a link and QR code customers can use to message you. You need one team member and one channel ready first."
           }
-          onOpen={() =>
-            void params.setParams({
-              entryPointId: data.entryPoint?.id ?? null,
-              serviceCommerceSheet: "entry_point",
-              storeId: selectedStoreId,
-            })
-          }
-          title="Customer entry point"
-        />
-      </section>
-
-      <section aria-labelledby="pending-approvals-title" className="grid gap-4">
-        <div>
-          <h2 className="font-semibold" id="pending-approvals-title">
-            Pending quotation approvals
-          </h2>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Review the exact immutable version before it becomes visible to the
-            customer.
-          </p>
-        </div>
-        {approvals.data.length > 0 ? (
-          <PendingApprovalCards
-            approvals={approvals.data}
-            onReview={(approval) =>
+        >
+          <SettingsStatusPill tone={linkLive ? "ok" : "muted"}>
+            {linkLive
+              ? "Live"
+              : data.entryPoint?.status === "revoked"
+                ? "Turned off"
+                : "Not created"}
+          </SettingsStatusPill>
+          <Button
+            onClick={() =>
               void params.setParams({
-                quoteApprovalId: approval.id,
-                quoteId: approval.quoteId,
-                serviceCommerceSheet: "quote_approval",
+                entryPointId: data.entryPoint?.id ?? null,
+                serviceCommerceSheet: "entry_point",
                 storeId: selectedStoreId,
               })
             }
-            scope={selectedStoreId ?? "all"}
-          />
+            size="sm"
+            variant="outline"
+          >
+            {linkLive ? "View" : "Create"}
+          </Button>
+        </SettingsRow>
+      </SettingsSection>
+
+      <SettingsSection title="Quotes waiting for approval">
+        {approvals.data.length > 0 ? (
+          approvals.data.map((approval) => (
+            <PendingApprovalRow
+              approval={approval}
+              key={approval.id}
+              onReview={() =>
+                void params.setParams({
+                  quoteApprovalId: approval.id,
+                  quoteId: approval.quoteId,
+                  serviceCommerceSheet: "quote_approval",
+                  storeId: selectedStoreId,
+                })
+              }
+            />
+          ))
         ) : (
-          <p className="rounded-none border border-dashed border-border p-5 text-sm text-muted-foreground">
-            No quotations are waiting for approval.
+          <p className="px-4 py-3.5 text-sm text-muted-foreground">
+            No quotes waiting for approval.
           </p>
         )}
-      </section>
-    </div>
+      </SettingsSection>
+
+      {data.recommendation ? (
+        <ChannelRecommendationNote recommendation={data.recommendation} />
+      ) : null}
+    </SettingsPage>
   )
 }
 
 type PendingApproval =
   RouterOutputs["serviceCommerce"]["pendingQuoteApprovals"][number]
 
-function PendingApprovalCards({
-  approvals,
+function PendingApprovalRow({
+  approval,
   onReview,
-  scope,
 }: {
-  approvals: PendingApproval[]
-  onReview: (approval: PendingApproval) => void
-  scope: string
+  approval: PendingApproval
+  onReview: () => void
 }) {
-  const approvalIds = useMemo(
-    () => approvals.map((approval) => approval.id),
-    [approvals],
-  )
-  const selection = useInlineSelection({ ids: approvalIds, scope })
   return (
-    <div className="grid gap-3">
-      <InlineSelectionBar
-        label="Select all pending approvals"
-        selection={selection}
-      />
-      <div className="grid gap-3 lg:grid-cols-2">
-        {approvals.map((approval) => (
-          <article
-            className="flex flex-col gap-4 rounded-none border border-border bg-card p-5 data-[state=selected]:bg-muted/60"
-            data-state={
-              selection.isSelected(approval.id) ? "selected" : undefined
-            }
-            key={approval.id}
-          >
-            <div className="flex items-start justify-between gap-3">
-              <div className="flex items-start gap-3">
-                <span className="pt-0.5">
-                  <InlineRowCheckbox
-                    selection={selection}
-                    id={approval.id}
-                    label={`Select Quote version ${approval.version}`}
-                  />
-                </span>
-                <div>
-                  <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                    {approval.sourceKind.replace("_", " ")}
-                  </p>
-                  <h3 className="font-semibold">
-                    Quote version {approval.version}
-                  </h3>
-                </div>
-              </div>
-              <p className="font-semibold tabular-nums">
-                {formatMoney(approval.totalMinor, approval.currencyCode)}
-              </p>
-            </div>
-            <p className="text-sm text-muted-foreground">
-              {approval.canApprove || approval.canReject
-                ? "Your selected approver assignment permits a decision."
-                : "Visible for coordination. Another selected approver must decide."}
-            </p>
-            <Button
-              className="mt-auto w-fit"
-              onClick={() => onReview(approval)}
-              variant="outline"
-            >
-              Review exact version
-            </Button>
-          </article>
-        ))}
-      </div>
-    </div>
+    <SettingsRow
+      label={`${quoteSourceLabel(approval.sourceKind)} · ${formatMoney(approval.totalMinor, approval.currencyCode)}`}
+      description={`Quote ${approval.version}. ${
+        approval.canApprove || approval.canReject
+          ? "You can approve this quote."
+          : "Waiting for another approver."
+      }`}
+    >
+      <Button onClick={onReview} size="sm" variant="outline">
+        Review quote
+      </Button>
+    </SettingsRow>
   )
 }
 
@@ -337,46 +336,16 @@ function formatMoney(amount: number, currencyCode: string) {
   }).format(amount / 100)
 }
 
-function channelModeLabel(value: string) {
-  if (value === "ewatrade_chat") return "EwaTrade Chat"
-  if (value === "whatsapp") return "WhatsApp"
-  if (value === "both") return "Both"
-  return "Unavailable"
-}
-
-function ChannelTaskCard({
-  action,
-  description,
-  onOpen,
-  title,
-}: {
-  action: string
-  description: string
-  onOpen: () => void
-  title: string
-}) {
-  return (
-    <article className="grid gap-4 rounded-none border border-border bg-card p-5">
-      <div>
-        <h2 className="font-semibold">{title}</h2>
-        <p className="mt-1 text-sm text-muted-foreground">{description}</p>
-      </div>
-      <Button className="w-fit" onClick={onOpen} variant="outline">
-        {action}
-      </Button>
-    </article>
-  )
-}
-
 export function CustomerChannelsSkeleton() {
   return (
-    <div className="grid min-w-0 flex-1 gap-6">
-      <div className="h-24 animate-pulse rounded-none bg-muted" />
-      <div className="h-72 animate-pulse rounded-none bg-muted" />
-      <div className="grid gap-4 lg:grid-cols-2">
-        <div className="h-48 animate-pulse rounded-none bg-muted" />
-        <div className="h-48 animate-pulse rounded-none bg-muted" />
+    <SettingsPage>
+      <div className="grid gap-2">
+        <div className="h-8 w-56 animate-pulse rounded-md bg-muted" />
+        <div className="h-4 w-80 max-w-full animate-pulse rounded-md bg-muted" />
       </div>
-    </div>
+      <div className="h-24 animate-pulse rounded-[10px] bg-muted" />
+      <div className="h-40 animate-pulse rounded-[10px] bg-muted" />
+      <div className="h-56 animate-pulse rounded-[10px] bg-muted" />
+    </SettingsPage>
   )
 }

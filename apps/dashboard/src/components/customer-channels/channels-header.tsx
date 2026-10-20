@@ -1,7 +1,7 @@
 "use client"
-import { Button, ControlField, SelectControl } from "@ewatrade/ui"
-
-import { PageHeader, PageToolbar } from "@/components/page-header"
+import { SettingsHeader } from "@/components/settings/settings-page"
+import { SettingsStorePicker } from "@/components/settings/settings-store-picker"
+import { Button } from "@ewatrade/ui"
 
 import type { CustomerChannelStoreOption } from "./types"
 
@@ -19,39 +19,29 @@ export function ChannelsHeader({
   stores: CustomerChannelStoreOption[]
 }) {
   return (
-    <PageHeader
-      eyebrow="Customer channels"
-      title="Connect customers to your business"
-      description="Manage web and WhatsApp entry points, location routing and the team handling customer requests."
-    >
-      <PageToolbar
-        actions={
-          <>
-            {stores.length > 1 ? (
-              <ControlField label={<>Store</>}>
-                <SelectControl
-                  aria-label="Customer channels Store"
-                  onValueChange={(value) => onStoreChange(value)}
-                  value={selectedStoreId}
-                  options={[
-                    ...(stores.map((store) => ({
-                      value: store.id,
-                      label: store.name,
-                    })) ?? []),
-                  ]}
-                />
-              </ControlField>
-            ) : null}
-            <Button
-              disabled={!canManage}
-              onClick={onConnect}
-              className="h-9 rounded-none"
-            >
+    <SettingsHeader
+      title="Customer channels"
+      description="Choose how customers reach you, which store gets each chat, and who replies."
+      actions={
+        <>
+          <SettingsStorePicker
+            stores={stores}
+            value={selectedStoreId}
+            onChange={onStoreChange}
+          />
+          <span
+            title={
+              canManage
+                ? undefined
+                : "Only an owner or admin can connect WhatsApp."
+            }
+          >
+            <Button disabled={!canManage} onClick={onConnect} className="h-9">
               Connect WhatsApp
             </Button>
-          </>
-        }
-      />
-    </PageHeader>
+          </span>
+        </>
+      }
+    />
   )
 }

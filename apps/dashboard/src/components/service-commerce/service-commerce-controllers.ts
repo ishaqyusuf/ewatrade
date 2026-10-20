@@ -23,11 +23,10 @@ const unavailable = (title: string): ControllerDefinition => ({
 
 export const SERVICE_COMMERCE_CONTROLLERS = {
   availability: {
-    description:
-      "Configure when this Store accepts new Chat messages and pause or resume customer intake.",
+    description: "Set when customers can start new chats, or pause chat.",
     implemented: true,
     requiredIds: [],
-    title: "Chat availability",
+    title: "Chat hours",
   },
   attachment_review: {
     description:
@@ -37,11 +36,10 @@ export const SERVICE_COMMERCE_CONTROLLERS = {
     title: "Review attachment",
   },
   booking: {
-    description:
-      "Configure Store-scoped availability and create an expiring customer booking capability.",
+    description: "Set open times, or create a booking link for one customer.",
     implemented: true,
     requiredIds: ["offeringId"],
-    title: "Booking and appointments",
+    title: "Appointments",
   },
   catalog_draft: {
     description:
@@ -52,24 +50,22 @@ export const SERVICE_COMMERCE_CONTROLLERS = {
   },
   connection: {
     description:
-      "Connect, configure and test one business-owned WhatsApp sender.",
+      "Connect a WhatsApp number your business owns, choose its stores and test it.",
     implemented: true,
     requiredIds: [],
-    title: "Customer channel",
+    title: "WhatsApp number",
   },
   conversation_mode: {
-    description:
-      "Choose EwaTrade Chat, WhatsApp, or Both while keeping customer-visible readiness server-derived.",
+    description: "Choose where customers can message you.",
     implemented: true,
     requiredIds: [],
-    title: "Customer conversation mode",
+    title: "How customers reach you",
   },
   entry_point: {
-    description:
-      "Publish or revoke this Store's stable customer link and QR code.",
+    description: "Create or turn off your store's customer link and QR code.",
     implemented: true,
     requiredIds: [],
-    title: "Share customer entry point",
+    title: "Customer link and QR code",
   },
   fulfillment: unavailable("Fulfilment"),
   intake: unavailable("New customer request"),
@@ -89,27 +85,26 @@ export const SERVICE_COMMERCE_CONTROLLERS = {
   },
   quote: unavailable("Quotation"),
   quote_approval: {
-    description:
-      "Approve or reject the exact current Quote Version without replacing source-owned professional review.",
+    description: "Approve to send this quote to the customer, or reject it.",
     implemented: true,
     requiredIds: ["quoteApprovalId"],
-    title: "Quotation approval",
+    title: "Review quote",
   },
   quote_policy: {
     description:
-      "Trust assigned attendants to release quotations or require another selected team member.",
+      "Choose whether another person must approve each quote before the customer sees it.",
     implemented: true,
     requiredIds: [],
-    title: "Quotation policy",
+    title: "Quotes need approval",
   },
   request: unavailable("Customer request"),
   setup: unavailable("Service Commerce setup"),
   success: unavailable("Completed"),
   team: {
     description:
-      "Assign accepted active team memberships to customer requests for this Store.",
+      "Choose which team members answer customer chats for this store.",
     implemented: true,
     requiredIds: [],
-    title: "Channel attendants",
+    title: "Team members replying",
   },
 } satisfies Record<ServiceCommerceSheetMode, ControllerDefinition>

@@ -51,6 +51,11 @@ export default async function CustomerChannelsPage({ searchParams }: Props) {
           storeId: store.id,
         }),
       ),
+      prefetch(
+        trpc.serviceCommerce.storeConversationChannelModeSettings.queryOptions({
+          storeId: store.id,
+        }),
+      ),
     )
   }
   void Promise.all(prefetches).catch(() => undefined)
