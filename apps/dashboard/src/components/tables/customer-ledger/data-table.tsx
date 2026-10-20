@@ -33,8 +33,8 @@ import {
 } from "./table-header"
 const STICKY = [
   { id: "select", width: 50 },
-  { id: "date", width: 170 },
-  { id: "actions", width: 96, side: "right" as const },
+  { id: "date", width: 150 },
+  { id: "actions", width: 64, side: "right" as const },
 ]
 const FIXED = ["select", "date"]
 const getEntryId = (entry: LedgerEntry) => entry.id
@@ -168,7 +168,7 @@ function StatementTable({
           className="relative max-h-[520px] overflow-auto overscroll-contain"
           // biome-ignore lint/a11y/useSemanticElements: Shared scroll hook binds a div.
           role="region"
-          aria-label="Customer statement entries"
+          aria-label="Statement"
           // biome-ignore lint/a11y/noNoninteractiveTabindex: Wide statement region needs keyboard scrolling.
           tabIndex={0}
         >

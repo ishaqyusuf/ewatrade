@@ -46,7 +46,7 @@ function LedgerSheet(props: {
       {ledgerAction && ledgerAccount ? (
         <SheetFrame
           title={customerLedgerTitles[ledgerAction]}
-          description="Business customer ledger · online financial records"
+          description="Customer statement"
           closeDisabled={locked}
         >
           <CustomerLedgerContent
