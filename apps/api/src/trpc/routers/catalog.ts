@@ -58,6 +58,7 @@ import {
   catalogUpdateUnitConfigurationDraftSchema,
 } from "../../schemas/catalog"
 import { createTRPCRouter, protectedProcedure } from "../init"
+import { plainUnitConfigurationMessage } from "../inventory-rule-messages"
 
 function catalogRole(role: string): EwaTradeRole {
   const normalized = normalizeRole(role)
@@ -154,6 +155,19 @@ function catalogTRPCError(error: CatalogError) {
       cause: error,
       code: "CONFLICT",
       message: error.message,
+    })
+  }
+
+  // Units sheet rules the person can fix show their reason in plain words.
+  const plainUnitRule =
+    error.code === "INVALID_UNIT_CONFIGURATION"
+      ? plainUnitConfigurationMessage(error.message)
+      : null
+  if (plainUnitRule) {
+    return new TRPCError({
+      cause: ruleRejectedError(new Error(plainUnitRule)),
+      code: "BAD_REQUEST",
+      message: plainUnitRule,
     })
   }
 

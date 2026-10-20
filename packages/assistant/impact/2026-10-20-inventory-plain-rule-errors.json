@@ -1,0 +1,31 @@
+{
+  "version": 1,
+  "id": "2026-10-20-inventory-plain-rule-errors",
+  "tickets": ["H02"],
+  "summary": "Inventory and Units sheet rule refusals now reach the person in plain words. The inventory router and the catalog router's unit-configuration errors pass listed domain rules (not enough free stock, stock with staff or on the way, packs, internal use, transfers, counts, corrections, unit names and codes) through ruleRejectedError as BAD_REQUEST with a plain message. Unlisted errors, revision and configuration conflicts and order reservations keep their fixed text and error class.",
+  "noAssistantImpact": "No procedure, input, permission, capability declaration or prompt authority changes. Only the public error text and class of listed rule refusals change for tRPC clients; assistant tools call domain functions directly and keep their own error handling. Mobile treats the listed refusals as definitive (shown, not retried), which matches nothing having been committed.",
+  "capabilities": [],
+  "procedures": [],
+  "docs": [
+    {
+      "topic": "api",
+      "status": "local_only",
+      "path": ".brain/api/contracts.md",
+      "note": "Inventory and unit-configuration rule refusals: plain public messages, 20 October 2026."
+    },
+    {
+      "topic": "feature",
+      "status": "local_only",
+      "path": ".brain/features/generic-catalog-inventory-units-stock-operations.md",
+      "note": "Real error reasons section, 20 October 2026."
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "test",
+      "path": "apps/api/src/trpc/inventory-rule-messages.test.ts",
+      "executed": true,
+      "result": "With root env: 4 pass (every rewritten rule exists in packages/db queries; listed rules rewritten, others untouched; Units rules keep the unit name; dispatchTransfer refusal becomes public RULE_REJECTED BAD_REQUEST). inventory-finance-errors.test.ts still passes."
+    }
+  ]
+}

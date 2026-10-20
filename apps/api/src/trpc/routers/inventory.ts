@@ -42,6 +42,7 @@ import {
   reserveCatalogOfferingStock,
   transformPackagedStock,
 } from "@ewatrade/db/queries"
+import { ruleRejectedError } from "@ewatrade/errors"
 import { TRPCError } from "@trpc/server"
 
 import {
@@ -78,6 +79,7 @@ import {
   inventoryTransitionTransferSchema,
 } from "../../schemas/inventory"
 import { createTRPCRouter, protectedProcedure } from "../init"
+import { plainInventoryRuleMessage } from "../inventory-rule-messages"
 
 function inventoryRole(role: string): EwaTradeRole {
   const normalized = normalizeRole(role)
@@ -153,9 +155,19 @@ function inventoryError(error: CatalogError | FinanceError) {
       message: error.message,
     })
   }
+  // Rules the person can fix (not enough free stock, stock with staff, packs)
+  // show their reason in plain words. Nothing was committed, so the form stays
+  // editable; changed-while-typing conflicts keep the refresh path below.
+  const plain = plainInventoryRuleMessage(error)
+  if (plain) {
+    return new TRPCError({
+      cause: ruleRejectedError(new Error(plain)),
+      code: "BAD_REQUEST",
+      message: plain,
+    })
+  }
   if (
     error.code === "IDEMPOTENCY_MISMATCH" ||
-    error.code === "INSUFFICIENT_STOCK" ||
     error.code === "OFFERING_UNAVAILABLE" ||
     error.code === "REVISION_CONFLICT" ||
     error.code === "STALE_CONFIGURATION"
