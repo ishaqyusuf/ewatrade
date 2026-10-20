@@ -184,6 +184,36 @@ export function disconnectAssistantWhatsApp(
   now = new Date(),
 ) {
   return runInOwnSerializableTransaction(db, async (tx) => {
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`whatsapp-sender:${input.phoneNumberId}:${input.senderId}`}))`
+    // A late delivery of a pre-STOP app link must not auto-connect a verified
+    // account phone, even when this sender has never had an identity yet.
+    const verifiedOwners = await tx.user.findMany({
+      where: {
+        phone: { in: [input.senderId, `+${input.senderId}`] },
+        phoneVerifiedAt: { not: null, lte: now },
+      },
+      select: { id: true },
+    })
+    if (verifiedOwners.length)
+      await tx.assistantWhatsAppLink.updateMany({
+        where: {
+          phoneNumberId: input.phoneNumberId,
+          userId: { in: verifiedOwners.map((owner) => owner.id) },
+          createdAt: { lte: now },
+          confirmedAt: null,
+          cancelledAt: null,
+        },
+        data: { cancelledAt: now, revision: { increment: 1 } },
+      })
+    await tx.assistantWhatsAppLink.updateMany({
+      where: {
+        phoneNumberId: input.phoneNumberId,
+        claimedSenderId: input.senderId,
+        confirmedAt: null,
+        cancelledAt: null,
+      },
+      data: { cancelledAt: now, revision: { increment: 1 } },
+    })
     await tx.$queryRaw`SELECT id FROM "AssistantWhatsAppIdentity" WHERE "phoneNumberId"=${input.phoneNumberId} AND "senderId"=${input.senderId} FOR UPDATE`
     const identity = await tx.assistantWhatsAppIdentity.findUnique({
       where: { phoneNumberId_senderId: input },

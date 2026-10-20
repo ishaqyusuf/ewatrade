@@ -25,6 +25,7 @@ import {
   revokeAssistantWhatsAppGrant,
   selectAssistantWhatsAppScope,
 } from "@ewatrade/db/assistant-whatsapp"
+import { enqueueAssistantWhatsAppDelivery } from "@ewatrade/jobs/assistant-whatsapp"
 import { TRPCError } from "@trpc/server"
 import { z } from "zod"
 import { requireBrowserIdentity } from "../../assistant/channel-principal"
@@ -196,10 +197,18 @@ export const assistantChannelsRouter = createTRPCRouter({
           ctx.session.user.id,
           ctx.tenantContext.tenant.id,
         )
-        return confirmAssistantWhatsAppLink(ctx.db, actor(ctx), {
-          ...input,
-          phoneNumberId: config.phoneNumberId,
-        })
+        const { welcomeOutboxId, ...connection } =
+          await confirmAssistantWhatsAppLink(ctx.db, actor(ctx), {
+            ...input,
+            phoneNumberId: config.phoneNumberId,
+          })
+        if (welcomeOutboxId)
+          try {
+            await enqueueAssistantWhatsAppDelivery(welcomeOutboxId)
+          } catch {
+            console.error("[assistant] connection welcome deferred to recovery")
+          }
+        return connection
       }),
     ),
   whatsAppConnections: authenticatedProcedure

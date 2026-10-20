@@ -9,6 +9,7 @@ import {
 } from "@ewatrade/assistant/channels/notice"
 import {
   assistantWhatsAppConfigurationValid,
+  assistantWhatsAppUserAllowed,
   isAssistantWhatsAppPilotTenant,
 } from "@ewatrade/assistant/channels/policy"
 import type { Prisma } from "../../../generated/prisma/client"
@@ -76,10 +77,12 @@ export async function stageAssistantWhatsAppQuotaNoticeInTransaction(
     now,
   )
   if (
-    !(process.env.ASSISTANT_WHATSAPP_PILOT_USER_IDS ?? "")
-      .split(",")
-      .map((id) => id.trim())
-      .includes(resolved.scope.userId) ||
+    !assistantWhatsAppUserAllowed(
+      resolved.scope.userId,
+      (process.env.ASSISTANT_WHATSAPP_PILOT_USER_IDS ?? "")
+        .split(",")
+        .map((id) => id.trim()),
+    ) ||
     !isAssistantWhatsAppPilotTenant(resolved.scope.tenantId)
   )
     return undefined

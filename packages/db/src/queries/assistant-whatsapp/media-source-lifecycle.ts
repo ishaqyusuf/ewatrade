@@ -4,6 +4,7 @@ import {
 } from "@ewatrade/assistant/channels/media"
 import {
   assistantWhatsAppConfigurationValid,
+  assistantWhatsAppUserAllowed,
   whatsAppChannelPolicy,
 } from "@ewatrade/assistant/channels/policy"
 import { whatsAppWorkflowEnabled } from "@ewatrade/assistant/channels/workflow"
@@ -218,10 +219,12 @@ export async function assertAssistantWhatsAppMediaProcessingSourceActive(
     process.env.ASSISTANT_WHATSAPP_ENABLED !== "true" ||
     !assistantWhatsAppConfigurationValid() ||
     !whatsAppChannelPolicy().media ||
-    !(process.env.ASSISTANT_WHATSAPP_PILOT_USER_IDS ?? "")
-      .split(",")
-      .map((value) => value.trim())
-      .includes(attachment.actorUserId)
+    !assistantWhatsAppUserAllowed(
+      attachment.actorUserId,
+      (process.env.ASSISTANT_WHATSAPP_PILOT_USER_IDS ?? "")
+        .split(",")
+        .map((value) => value.trim()),
+    )
   )
     throw new AssistantWhatsAppError("UNAVAILABLE")
   const rows = await db.assistantWhatsAppInbox.findMany({

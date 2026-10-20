@@ -97,9 +97,13 @@ export function assistantWhatsAppReadiness(input: {
       .filter((value) => value.length > 0 && value.length <= 128),
   )
   const pilotTenants = assistantWhatsAppPilotTenantIds(env)
+  const publicRollout = env.ASSISTANT_WHATSAPP_ROLLOUT_MODE === "public"
   const checks = {
     environment: environmentSchema.safeParse(env.APP_ENV).success,
     toggles: invalidToggles === 0,
+    rolloutMode: [undefined, "", "pilot", "public"].includes(
+      env.ASSISTANT_WHATSAPP_ROLLOUT_MODE,
+    ),
     sharedOtpSender: /^\d+$/.test(
       env.WHATSAPP_OTP_PHONE_NUMBER_ID?.trim() ?? "",
     ),
@@ -124,8 +128,8 @@ export function assistantWhatsAppReadiness(input: {
     approvalKeyVersion: /^[A-Za-z0-9_-]{1,40}$/.test(
       env.ASSISTANT_APPROVAL_SIGNING_KEY_VERSION ?? "v1",
     ),
-    pilotEnrollment: pilots.size > 0,
-    pilotTenantEnrollment: pilotTenants.length > 0,
+    pilotEnrollment: publicRollout || pilots.size > 0,
+    pilotTenantEnrollment: publicRollout || pilotTenants.length > 0,
     sourceFingerprint: /^[a-f0-9]{64}$/.test(input.sourceFingerprint),
     sourceWorkflowScope:
       policy.localSource ||
@@ -171,6 +175,7 @@ export function assistantWhatsAppReadiness(input: {
           : ("disabled" as const),
       checks,
       invalidToggleCount: invalidToggles,
+      rolloutMode: publicRollout ? ("public" as const) : ("pilot" as const),
       pilotCount: pilots.size,
       pilotTenantCount: pilotTenants.length,
     },

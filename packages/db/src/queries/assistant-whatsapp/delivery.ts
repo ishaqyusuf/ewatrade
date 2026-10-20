@@ -34,7 +34,10 @@ import {
   renderWhatsAppNotice,
   whatsAppNoticeContentSchema,
 } from "@ewatrade/assistant/channels/notice"
-import { whatsAppCapabilityEnabled } from "@ewatrade/assistant/channels/policy"
+import {
+  assistantWhatsAppUserAllowed,
+  whatsAppCapabilityEnabled,
+} from "@ewatrade/assistant/channels/policy"
 import { WHATSAPP_RENDER_VERSION } from "@ewatrade/assistant/channels/render"
 import { WHATSAPP_WORKFLOW_RENDER_VERSION } from "@ewatrade/assistant/channels/workflow"
 import {
@@ -775,7 +778,10 @@ export function beginAssistantWhatsAppDelivery(
       if (
         row.phoneNumberId !== options.phoneNumberId ||
         identity.phoneNumberId !== options.phoneNumberId ||
-        !options.permittedUserIds.includes(identity.userId) ||
+        !assistantWhatsAppUserAllowed(
+          identity.userId,
+          options.permittedUserIds,
+        ) ||
         row.inbox.state !== "COMPLETED" ||
         !row.inbox.executionAuthorityDigest ||
         row.authorityDigest !== row.inbox.executionAuthorityDigest

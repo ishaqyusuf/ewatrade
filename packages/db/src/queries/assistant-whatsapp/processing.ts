@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto"
+import { assistantWhatsAppUserAllowed } from "@ewatrade/assistant/channels/policy"
 import {
   WHATSAPP_TURN_LEASE_MS,
   WHATSAPP_TURN_MAX_ATTEMPTS,
@@ -126,7 +127,12 @@ export function claimAssistantWhatsAppInbox(
     }
     const principal = proof(row)
     try {
-      if (!permittedUserIds.includes(row.binding.identity.userId))
+      if (
+        !assistantWhatsAppUserAllowed(
+          row.binding.identity.userId,
+          permittedUserIds,
+        )
+      )
         throw new AssistantWhatsAppError("UNAUTHORIZED")
       try {
         await resolveAssistantWhatsAppConversation(tx, principal, now)
@@ -298,8 +304,9 @@ export function settleAssistantWhatsAppInbox(
       current.identityId
     )
       return null
-    let authorized = options.permittedUserIds.includes(
+    let authorized = assistantWhatsAppUserAllowed(
       current.binding.identity.userId,
+      options.permittedUserIds,
     )
     let scopeLabel = ""
     let navigationScope: { tenantId: string; storeId: string } | undefined

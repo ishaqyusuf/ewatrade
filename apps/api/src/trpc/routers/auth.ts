@@ -61,6 +61,7 @@ import {
   isSignupAvailableForLegalPublication,
   resolveLegalSignupChoice,
 } from "@ewatrade/utils/legal-approval"
+import { getQaPolicyEnvironment } from "@ewatrade/utils/qa-policy-server"
 import { isValidStoreLink } from "@ewatrade/utils/store-link"
 import { TRPCError } from "@trpc/server"
 import { z } from "zod"
@@ -249,6 +250,8 @@ export const requestPhoneOtpSchema = z
   .object({ ...mobileOwnerAuthShape, ...mobileSignupLegalShape })
   .omit({ email: true, accessToken: true })
   .extend({
+    qaEntryId: z.string().uuid().optional(),
+    qaToken: z.string().min(32).max(160).optional(),
     phone: z
       .string()
       .trim()
@@ -730,9 +733,11 @@ export const authRouter = createTRPCRouter({
       })()
 
       if (!otp.deliverySuppressed && shouldDispatchMobileOwnerOtpEmail()) {
+        const managedEmailEnv = await getQaPolicyEnvironment()
         const emailMessages = (() => {
           try {
             return createMobileOwnerOtpEmailMessages({
+              env: managedEmailEnv,
               code: otp.code,
               email: otp.email,
               expiresAt: otp.expiresAt,

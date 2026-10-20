@@ -1,6 +1,21 @@
 import type { Capability } from "../capabilities/types"
 
 type Environment = Record<string, string | undefined>
+/** Server rollout enrollment only; a canonical identity, consent and scope are still required. */
+export function assistantWhatsAppUserAllowed(
+  userId: string,
+  permittedIds: readonly string[],
+  env: Environment = process.env,
+) {
+  return Boolean(
+    userId &&
+      userId.length <= 128 &&
+      userId.trim() === userId &&
+      (env.ASSISTANT_WHATSAPP_ROLLOUT_MODE === "public" ||
+        permittedIds.includes(userId)),
+  )
+}
+
 /** Independent Tenant enrollment; a User pilot or consent grant cannot enroll a business. */
 export function assistantWhatsAppPilotTenantIds(
   env: Environment = process.env,
@@ -18,8 +33,10 @@ export function isAssistantWhatsAppPilotTenant(
   tenantId: string,
   env: Environment = process.env,
 ) {
-  return Boolean(
-    tenantId && assistantWhatsAppPilotTenantIds(env).includes(tenantId),
+  return assistantWhatsAppUserAllowed(
+    tenantId,
+    assistantWhatsAppPilotTenantIds(env),
+    env,
   )
 }
 /** Configuration shape only; returns no credentials and grants no channel or merchant authority. */
@@ -41,12 +58,28 @@ export function assistantWhatsAppConfigurationValid(
   )
 }
 
+/** Exact server release selection. Wildcards and substrings never select a capability. */
+export function assistantWhatsAppReleasedCapabilityIds(
+  env: Environment = process.env,
+) {
+  return [
+    ...new Set(
+      (env.ASSISTANT_WHATSAPP_RELEASED_CAPABILITY_IDS ?? "")
+        .split(",")
+        .map((id) => id.trim())
+        .filter((id) => id.length > 0 && id.length <= 128),
+    ),
+  ].sort()
+}
+
 export function whatsAppChannelPolicy(env: Environment = process.env) {
   return {
     reads: env.ASSISTANT_WHATSAPP_READS_ENABLED === "true",
     writes: env.ASSISTANT_WHATSAPP_WRITES_ENABLED === "true",
     media: env.ASSISTANT_WHATSAPP_MEDIA_ENABLED === "true",
     localSource: env.APP_ENV === "local" && env.NODE_ENV !== "production",
+    publicRelease: env.ASSISTANT_WHATSAPP_ROLLOUT_MODE === "public",
+    releasedCapabilityIds: assistantWhatsAppReleasedCapabilityIds(env),
   }
 }
 /** Compatibility and rollout are independent of canonical role/scope/Book authority. */
@@ -67,7 +100,10 @@ export function whatsAppCapabilityEnabled(
   return (
     capability.whatsapp.rollout === "pilot" ||
     capability.whatsapp.rollout === "enabled" ||
-    (capability.whatsapp.rollout === "source" && policy.localSource)
+    (capability.whatsapp.rollout === "source" &&
+      (policy.localSource ||
+        (policy.publicRelease &&
+          policy.releasedCapabilityIds.includes(capability.id))))
   )
 }
 /** Stable policy evidence; source-test/doc edits do not invalidate saved replies. */
@@ -76,7 +112,7 @@ export function whatsAppCapabilityPolicyStamp(
   env: Environment = process.env,
 ) {
   return {
-    version: "whatsapp-policy-v1",
+    version: "whatsapp-policy-v2",
     ...whatsAppChannelPolicy(env),
     capabilities: manifest
       .filter((capability) => capability.clients.includes("whatsapp"))

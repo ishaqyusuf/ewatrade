@@ -11,6 +11,7 @@ import {
   whatsAppControlLabel,
 } from "@ewatrade/assistant/channels/controls"
 import type { WhatsAppIngressInput } from "@ewatrade/assistant/channels/ingress"
+import { assistantWhatsAppUserAllowed } from "@ewatrade/assistant/channels/policy"
 import type { WhatsAppTurnResult } from "@ewatrade/assistant/channels/worker"
 import {
   type AssistantWhatsAppIdentity,
@@ -89,7 +90,7 @@ export async function acceptAssistantWhatsAppControlIngress(
     if (
       !identity ||
       identity.revokedAt ||
-      !permittedUserIds.includes(identity.userId)
+      !assistantWhatsAppUserAllowed(identity.userId, permittedUserIds)
     )
       return { kind: "ignored", reason: "unlinked" }
     let primary: Awaited<ReturnType<typeof primaryControlScope>>
@@ -492,7 +493,7 @@ export async function processAssistantWhatsAppControl(
         !identity ||
         row.bindingId ||
         identity.revokedAt ||
-        !permittedUserIds.includes(identity.userId) ||
+        !assistantWhatsAppUserAllowed(identity.userId, permittedUserIds) ||
         identity.generation !== row.identityGeneration ||
         identity.selectionGeneration !== row.selectionGeneration ||
         identity.controlSequence !== row.sequence

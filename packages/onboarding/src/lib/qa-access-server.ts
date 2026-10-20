@@ -1,3 +1,7 @@
+import {
+  getQaPolicyEnvironment,
+  qaPolicyTarget,
+} from "@ewatrade/utils/qa-policy-server"
 import "server-only"
 
 import {
@@ -86,35 +90,35 @@ export function getQaAccessSecret() {
   return secret
 }
 
-export function getQaWebAvailability(
+export async function getQaWebAvailability(
   request: NextRequest,
   clientContractVersion?: number,
 ) {
   return getQaAcceleratorAvailability({
     clientContractVersion,
-    env: process.env,
+    env: await getQaPolicyEnvironment(),
     origin: getQaWebRequestOrigin(request),
     platform: "web",
   })
 }
 
-export function getQaWebMutationAvailability(
+export async function getQaWebMutationAvailability(
   request: NextRequest,
   clientContractVersion?: number,
 ) {
-  const deployment = getQaWebAvailability(request, clientContractVersion)
+  const deployment = await getQaWebAvailability(request, clientContractVersion)
   if (!deployment.available) return deployment
 
   return getQaAcceleratorAvailability({
     clientContractVersion,
-    env: process.env,
+    env: await getQaPolicyEnvironment(),
     origin: request.headers.get("origin"),
     platform: "web",
   })
 }
 
 export function qaAvailabilityResponse(
-  availability: ReturnType<typeof getQaWebAvailability>,
+  availability: Awaited<ReturnType<typeof getQaWebAvailability>>,
 ) {
   if (
     !availability.available &&
@@ -233,7 +237,8 @@ export async function exchangeQaWebCredential(
 ) {
   if (
     !isConfiguredQaDomain(input.qaDomain, {
-      EMAIL_QA_DOMAIN_ROUTES: process.env.EMAIL_QA_DOMAIN_ROUTES,
+      EMAIL_QA_DOMAIN_ROUTES: (await getQaPolicyEnvironment())
+        .EMAIL_QA_DOMAIN_ROUTES,
     })
   ) {
     throw new QaAccessError("authorization_required")
@@ -243,7 +248,7 @@ export async function exchangeQaWebCredential(
       clientId: input.clientId,
       clientPlatform: "web",
       networkSource: getTrustedQaNetworkSource({
-        env: process.env,
+        env: await getQaPolicyEnvironment(),
         getHeader: (name) => request.headers.get(name),
       }),
       qaDomain: input.qaDomain,
@@ -253,7 +258,7 @@ export async function exchangeQaWebCredential(
     clientPlatform: "web",
     credential: input.credential,
     networkSource: getTrustedQaNetworkSource({
-      env: process.env,
+      env: await getQaPolicyEnvironment(),
       getHeader: (name) => request.headers.get(name),
     }),
     qaDomain: input.qaDomain,

@@ -2,6 +2,7 @@ import {
   WHATSAPP_DELIVERY_REQUEST_MS,
   type WhatsAppDeliveryResult,
 } from "@ewatrade/assistant/channels/delivery"
+import { assistantWhatsAppUserAllowed } from "@ewatrade/assistant/channels/policy"
 import {
   DirectMetaWhatsAppProvider,
   WhatsAppProviderSendError,
@@ -87,7 +88,7 @@ export async function processAssistantChannelDelivery(
     Date.now() >= claim.dispatchBefore.getTime() ||
     !current ||
     current.phoneNumberId !== claim.phoneNumberId ||
-    !current.permittedUserIds.includes(claim.userId)
+    !assistantWhatsAppUserAllowed(claim.userId, current.permittedUserIds)
   ) {
     await deps.finish(claim.proof, { kind: "cancelled" })
     return result("cancelled")

@@ -8,10 +8,15 @@ import { FormField } from "@/components/mobile/form-field"
 import { GreenTillAuthScreen } from "@/components/mobile/green-till/auth-screen"
 import { SetupPreviewStage } from "@/components/mobile/green-till/auth-stage"
 import { PhoneField } from "@/components/mobile/phone-field"
+import {
+  QaPhoneEntryPicker,
+  type SelectedQaPhone,
+} from "@/components/mobile/qa-phone-entry-picker"
 import { QaQuickFillButton } from "@/components/mobile/qa-quick-fill-button"
 import { StatusBanner } from "@/components/mobile/status-banner"
 import { WhatsAppMark } from "@/components/mobile/whatsapp-mark"
 import { Pressable } from "@/components/ui/pressable"
+import { Text as QaPhoneText } from "@/components/ui/text"
 import { Text } from "@/components/ui/text"
 import { Toast } from "@/components/ui/toast"
 import { View } from "@/components/ui/view"
@@ -67,6 +72,7 @@ export function OwnerAccountScreen({
   const [name, setName] = useState(continuation?.fullName ?? "")
   const [email, setEmail] = useState(continuation?.email ?? "")
   const [phone, setPhone] = useState("")
+  const [qaPhone, setQaPhone] = useState<SelectedQaPhone | null>(null)
   const [phoneCountry, setPhoneCountry] = useState("NG")
   const [connectWith, setConnectWith] = useState<ConnectWith>("email")
   const [codeByWhatsApp, setCodeByWhatsApp] = useState(true)
@@ -106,9 +112,11 @@ export function OwnerAccountScreen({
       !publication.data.effective ||
       (Boolean(publicLegalUrl("terms")) && terms && privacy))
   const ageBand = age && age !== "UNDER_13" ? age : undefined
-  const phoneValue = phone.trim()
-    ? toInternationalPhone(getCountry(phoneCountry).dialCode, phone)
-    : ""
+  const phoneValue =
+    (useWhatsApp ? qaPhone?.phone : null) ??
+    (phone.trim()
+      ? toInternationalPhone(getCountry(phoneCountry).dialCode, phone)
+      : "")
   const emailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())
   const phoneValid = /^\+[1-9]\d{7,14}$/.test(phoneValue)
   const socialContactReady = !showPhone || !phone.trim() || phoneValid
@@ -140,6 +148,7 @@ export function OwnerAccountScreen({
         name,
         email: showEmail ? email.trim().toLowerCase() : undefined,
         phone: showPhone ? phoneValue || undefined : undefined,
+        qaEntryId: qaPhone?.id,
         channel: useWhatsApp ? "whatsapp" : "email",
         ageBand,
         accessToken: continuation?.accessToken,
@@ -184,6 +193,8 @@ export function OwnerAccountScreen({
       requestPhone.mutate({
         ...profile,
         phone: phoneValue,
+        qaEntryId: qaPhone?.id,
+        qaToken: qaPhone?.token,
         contactEmail: showEmail
           ? email.trim().toLowerCase() || undefined
           : undefined,
@@ -316,15 +327,30 @@ export function OwnerAccountScreen({
             />
           ) : null}
           {showPhone ? (
-            <PhoneField
-              label="WhatsApp number"
-              countryCode={phoneCountry}
-              onCountryChange={setPhoneCountry}
-              value={phone}
-              onChangeText={setPhone}
-              variant="green-gate"
-              editable={!busy}
-            />
+            <View className="gap-3">
+              {useWhatsApp && (
+                <QaPhoneEntryPicker
+                  value={qaPhone}
+                  onChange={setQaPhone}
+                  disabled={busy}
+                />
+              )}
+              {qaPhone && useWhatsApp ? (
+                <QaPhoneText className="rounded-xl border border-border p-4">
+                  {qaPhone.phone}
+                </QaPhoneText>
+              ) : (
+                <PhoneField
+                  label="WhatsApp number"
+                  countryCode={phoneCountry}
+                  onCountryChange={setPhoneCountry}
+                  value={phone}
+                  onChangeText={setPhone}
+                  variant="green-gate"
+                  editable={!busy}
+                />
+              )}
+            </View>
           ) : null}
           {choice === "both" && whatsapp.data?.enabled ? (
             <View style={{ gap: 8 }}>

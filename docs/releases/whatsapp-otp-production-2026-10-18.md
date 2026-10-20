@@ -1,5 +1,28 @@
 # WhatsApp phone-authentication production candidate — 18 October 2026
 
+## API OTP activation complete —20 October2026
+
+Owner-authorized configuration-only activation is complete in Vercel Preview and
+Production (4/4). Public `auth.phoneOtpAvailability` returns enabled:true on both;
+health200 and protected phone/deletion availability401. Production `dpl_5xAPmjmbdvsuckWmCUS5M99BjtXe`
+retains deployed ca7e7a1 source; Preview `dpl_9KSJTQGyMz2KNqAFgdSwa2J9iv6n` retains6361ce96 source and
+includes the coordinated existing three-key email-login repair. Original runtime
+configuration/build settings and Production Sensitive token are retained; Preview
+OTP token is Sensitive. Dashboard aliases and non-OTP project env metadata unchanged.
+Preview machine turn/delivery checks return disabled; full WhatsApp assistant stays
+disabled. No OTP send, account mutation, schema change or mobile publication by this
+lane. The coordinating chat subsequently records normal Android email request,
+fresh mail delivery, verification and protected access/profile200 on this same
+Preview deployment, displaying Jawdah Poultry QA /Owner. Code-entry actor remains
+unobserved; Store/assistant UI, persistence and global non-QA acceptance are unclaimed.
+
+Earlier disabled checkpoints below are history. This does not publish later main
+97cf28d6 source refinements or complete the separate signed-client/Store release and
+fresh-number signup/deletion acceptance. Keep compatible deletion APIs if disabling
+delivery; change only the OTP delivery flag and redeploy compatible source. Renew
+Sensitive sender credentials before13December2026 18:08:22UTC. Detailed local Brain
+record: `.brain/qa/2026-10-20-whatsapp-otp-activation.md`.
+
 ## Feature-specific source completion — 20 October 2026
 
 Current main integration review is complete. Reused the shared explicit-public

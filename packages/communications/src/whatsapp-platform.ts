@@ -1,4 +1,7 @@
-import { assistantWhatsAppConfigurationValid } from "@ewatrade/assistant/channels/policy"
+import {
+  assistantWhatsAppConfigurationValid,
+  assistantWhatsAppUserAllowed,
+} from "@ewatrade/assistant/channels/policy"
 
 type Environment = Record<string, string | undefined>
 
@@ -27,7 +30,7 @@ export function readAssistantWhatsAppConfig(env: Environment = process.env) {
   return { accessToken, phoneNumberId, displayNumber }
 }
 
-/** Empty means nobody is enrolled; public request input cannot add pilots. */
+/** Empty means nobody is enrolled in pilot mode; request input cannot select rollout. */
 export function assistantWhatsAppPilotUserIds(env: Environment = process.env) {
   return [
     ...new Set(
@@ -41,5 +44,9 @@ export function isAssistantWhatsAppPilot(
   userId: string,
   env: Environment = process.env,
 ) {
-  return Boolean(userId && assistantWhatsAppPilotUserIds(env).includes(userId))
+  return assistantWhatsAppUserAllowed(
+    userId,
+    assistantWhatsAppPilotUserIds(env),
+    env,
+  )
 }

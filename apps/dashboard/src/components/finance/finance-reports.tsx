@@ -45,8 +45,9 @@ export function FinanceReports({ book }: { book: FinanceBook }) {
       <div className="border border-border bg-background p-6">
         <h2 className="font-medium">Not your full profit yet</h2>
         <p className="mt-2 text-sm text-muted-foreground">
-          These reports only count money recorded in Finance. Sales and stock
-          costs aren't linked yet, so the totals aren't your full profit.
+          These reports include only entries posted in Finance. Sales, Customer,
+          stock and opening records may be incomplete, so the totals aren't your
+          full profit.
         </p>
       </div>
       <div className="grid gap-2">

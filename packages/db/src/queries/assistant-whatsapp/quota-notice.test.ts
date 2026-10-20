@@ -304,3 +304,33 @@ test("personal control quota anchor skips an unenrolled first grant and still re
   expect(current.output).toEqual([])
   expect(current.queries).toHaveLength(2)
 })
+
+test("public enrollment still refuses revoked canonical grant authority before any output", async () => {
+  const previousRollout = process.env.ASSISTANT_WHATSAPP_ROLLOUT_MODE
+  const previousUsers = process.env.ASSISTANT_WHATSAPP_PILOT_USER_IDS
+  process.env.ASSISTANT_WHATSAPP_ROLLOUT_MODE = "public"
+  process.env.ASSISTANT_WHATSAPP_PILOT_USER_IDS = ""
+  try {
+    const f = fixture({ revoked: true })
+    await expect(
+      stageAssistantWhatsAppQuotaNoticeInTransaction(f.tx, input, now),
+    ).rejects.toMatchObject({ code: "UNAUTHORIZED" })
+    expect(f.notices).toEqual([])
+    expect(f.output).toEqual([])
+    expect(f.queries[0]).toMatchObject({
+      where: {
+        revokedAt: null,
+        expiresAt: { gt: now },
+        idleExpiresAt: { gt: now },
+        generation: principal.grantGeneration,
+      },
+    })
+  } finally {
+    if (previousRollout === undefined)
+      Reflect.deleteProperty(process.env, "ASSISTANT_WHATSAPP_ROLLOUT_MODE")
+    else process.env.ASSISTANT_WHATSAPP_ROLLOUT_MODE = previousRollout
+    if (previousUsers === undefined)
+      Reflect.deleteProperty(process.env, "ASSISTANT_WHATSAPP_PILOT_USER_IDS")
+    else process.env.ASSISTANT_WHATSAPP_PILOT_USER_IDS = previousUsers
+  }
+})

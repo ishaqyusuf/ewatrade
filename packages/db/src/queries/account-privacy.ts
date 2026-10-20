@@ -899,7 +899,11 @@ export async function getAccountPrivacyReview(
 
 export async function recordLegalAcceptance(
   db: DbClient,
-  input: { userId: string; version: string; surface: "mobile" | "web" },
+  input: {
+    userId: string
+    version: string
+    surface: "mobile" | "web" | "whatsapp"
+  },
 ) {
   if (!canAcceptLegalVersion(input.version)) {
     throw new Error(

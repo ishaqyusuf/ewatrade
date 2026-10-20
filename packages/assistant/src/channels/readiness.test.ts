@@ -205,3 +205,29 @@ test("native workflow write toggle is validated, visible and restricted to local
     expect(hosted.flags.workflowNativeWrites).toBe(false)
   }
 })
+
+test("explicit public enrollment needs no pilot lists but preserves every external release gate", () => {
+  const publicEnvironment = {
+    ...environment,
+    ASSISTANT_WHATSAPP_ROLLOUT_MODE: "public",
+    ASSISTANT_WHATSAPP_PILOT_USER_IDS: "",
+    ASSISTANT_WHATSAPP_PILOT_TENANT_IDS: "",
+  }
+  const report = evaluate({ environment: publicEnvironment })
+  expect(report.configuration.status).toBe("configured")
+  expect(report.configuration.rolloutMode).toBe("public")
+  expect(report.configuration.pilotCount).toBe(0)
+  expect(report.configuration.pilotTenantCount).toBe(0)
+  expect(report.externalEvidence.complete).toBe(false)
+  expect(report.release.activationPermitted).toBe(false)
+  for (const mode of ["PUBLIC", "all", "true", ""]) {
+    expect(
+      evaluate({
+        environment: {
+          ...publicEnvironment,
+          ASSISTANT_WHATSAPP_ROLLOUT_MODE: mode,
+        },
+      }).configuration.status,
+    ).toBe("invalid")
+  }
+})

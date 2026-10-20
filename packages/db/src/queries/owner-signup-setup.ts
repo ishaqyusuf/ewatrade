@@ -15,7 +15,7 @@ import {
   createOwnerSignupBusiness,
   requireEligibleOwnerAge,
 } from "./owner-businesses"
-import { configuredQaDomainForEmail } from "./qa-maintenance"
+import { managedQaDomainForEmail } from "./qa-maintenance"
 import { findRetailOpsPlan } from "./retail-ops-subscription-plans"
 import { withOwnerSignupLaunchGrant } from "./retail-ops-subscriptions"
 import { StoreLinkConflictError } from "./store-link-availability"
@@ -209,16 +209,13 @@ export async function completeOwnerSignupSetup(
   await db.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`owner-signup:${userId}`}))`
   const current = await getPendingOwnerSignup(db, userId)
   if (!current) return { completed: true }
+  const qaDomain = await managedQaDomainForEmail(current.ownerEmail)
   const businesses = input.businesses.map((business, index) =>
     index === 0
       ? business
       : {
           ...business,
-          slug: withQaWorkspaceSuffix(
-            business.slug,
-            Boolean(configuredQaDomainForEmail(current.ownerEmail)),
-            40,
-          ),
+          slug: withQaWorkspaceSuffix(business.slug, Boolean(qaDomain), 40),
         },
   )
   if (new Set(businesses.map((b) => b.slug)).size !== businesses.length)

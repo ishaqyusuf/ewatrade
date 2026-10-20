@@ -87,6 +87,19 @@ selected environment and Ready artifact URL. Preview retains its protected smoke
 checks before moving its alias; Production retains its profile/project safeguards.
 The operator commands stay `api:preview:deploy` and `api:deploy`.
 
+For a Preview deployment that must deliver real login emails, explicitly supply
+`RESEND_API_KEY`, `EMAIL_FROM` and `EMAIL_DELIVERY_MODE=live` from the existing
+`.env` plus selected `.env.preview` contract. A sensitive `preview` Git-branch
+variable is not evidence that a CLI deployment without that branch inherited it;
+CLI environment downloads can omit sensitive values. Keep credential values out
+of command arguments and public receipts. Bind the explicit configuration to the
+exact candidate deployment and verify actual delivered-code login. Deployment
+environment-name metadata can omit sensitive overrides and does not independently
+prove their runtime presence or absence. Console transport returning success does
+not prove email delivery; QA-routed recipients require Resend even under console
+mode. This email transport configuration does not enable WhatsApp OTP or assistant
+access.
+
 The working follow-up pins clean committed HEAD before either DB push when an
 API continuation is chosen, then rechecks that revision before upload. It uses
 Node, Bun1.3.9 and a private macOS arm64 build with fresh frozen dependencies.
@@ -102,3 +115,12 @@ actual upload inventory and protected producer provenance remain required. The
 readonly selected-file observer hashes only explicitly requested public artifact
 files; it preserves missing directory children as unknown and never marks complete
 inventory, source verification or release readiness true.
+
+A same-source redeployment must explicitly bind the accepted Preview runtime,
+including isolated database/auth, the candidate machine key, paired QA secret and
+new Preview Trigger key. Matching environment names do not prove matching values:
+a partial redeploy on 20 October returned machine-authentication `401` with the
+accepted worker key before cutover. Preserve that key and restore the configuration;
+do not change the worker to match a fallback project key. Verify protected machine
+access before cutover, then verify delivered-code login through the paired Preview
+client before accepting the repair.

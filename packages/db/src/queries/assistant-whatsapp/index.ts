@@ -10,6 +10,7 @@ export {
 } from "./grants"
 export { expireAssistantWhatsAppGrants } from "./lifecycle"
 export * from "./link"
+export * from "./onboarding"
 export * from "./inbox"
 export * from "./privacy"
 export * from "./processing"

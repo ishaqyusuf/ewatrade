@@ -13,6 +13,7 @@ import {
   isWhatsAppVoiceChoiceIntent,
   parseWhatsAppVoiceChoice,
 } from "@ewatrade/assistant/channels/media"
+import { assistantWhatsAppUserAllowed } from "@ewatrade/assistant/channels/policy"
 import {
   parseWhatsAppTypedWorkflowAction,
   parseWhatsAppWorkflowActionButton,
@@ -215,7 +216,7 @@ export async function acceptAssistantWhatsAppIngress(
       !identity ||
       identity.revokedAt ||
       !identity.activeBindingId ||
-      !permittedUserIds.includes(identity.userId)
+      !assistantWhatsAppUserAllowed(identity.userId, permittedUserIds)
     )
       return { kind: "ignored", reason: "unlinked" }
     const binding = await tx.assistantWhatsAppBinding.findFirst({

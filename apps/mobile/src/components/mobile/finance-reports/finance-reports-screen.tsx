@@ -254,9 +254,9 @@ function ReportWindowView({
             these totals aren’t your full profit or financial position.
           </Text>
           <Text className="text-sm [-rn-line-height:22] text-muted-foreground">
-            Posted finance entries only. Automatic Commerce posting is off.
-            Refresh to include newer entries; changing dates starts a new
-            snapshot.
+            Posted Finance entries only. Sales, Customer, stock and opening
+            records may be incomplete. Refresh to include newer entries;
+            changing dates starts a new snapshot.
           </Text>
           {report ? (
             <Text className="text-xs [-rn-line-height:22] text-muted-foreground">

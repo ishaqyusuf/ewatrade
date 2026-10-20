@@ -83,7 +83,9 @@ export async function primaryControlScope(
   const grant = await db.assistantWhatsAppGrant.findFirst({
     where: {
       identityId: identity.id,
-      tenantId: { in: assistantWhatsAppPilotTenantIds() },
+      ...(process.env.ASSISTANT_WHATSAPP_ROLLOUT_MODE === "public"
+        ? {}
+        : { tenantId: { in: assistantWhatsAppPilotTenantIds() } }),
       ...liveControlGrant(now),
       tenant: {
         isActive: true,

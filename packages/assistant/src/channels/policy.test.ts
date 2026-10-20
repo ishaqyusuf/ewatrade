@@ -3,6 +3,7 @@ import { capabilityManifest } from "../capabilities/manifest"
 import type { Capability } from "../capabilities/types"
 import {
   assistantWhatsAppPilotTenantIds,
+  assistantWhatsAppUserAllowed,
   isAssistantWhatsAppPilotTenant,
   whatsAppCapabilityEnabled,
   whatsAppCapabilityPolicyStamp,
@@ -104,4 +105,111 @@ test("unknown rollout metadata fails closed even when transpilation does not enf
       ASSISTANT_WHATSAPP_READS_ENABLED: "true",
     }),
   ).toBe(false)
+})
+
+test("only explicit server public rollout opens enrollment; pilot remains exact and closed", () => {
+  for (const env of [
+    {},
+    { ASSISTANT_WHATSAPP_ROLLOUT_MODE: "enabled" },
+    { ASSISTANT_WHATSAPP_ROLLOUT_MODE: "PUBLIC" },
+  ]) {
+    expect(assistantWhatsAppUserAllowed("registered", [], env)).toBe(false)
+    expect(isAssistantWhatsAppPilotTenant("business", env)).toBe(false)
+    expect(assistantWhatsAppUserAllowed("pilot", ["pilot"], env)).toBe(true)
+    expect(assistantWhatsAppUserAllowed("pilot", ["superpilot"], env)).toBe(
+      false,
+    )
+  }
+  const env = { ASSISTANT_WHATSAPP_ROLLOUT_MODE: "public" }
+  expect(assistantWhatsAppUserAllowed("registered", [], env)).toBe(true)
+  expect(isAssistantWhatsAppPilotTenant("business", env)).toBe(true)
+  for (const invalid of ["", " ", "x".repeat(129)]) {
+    expect(assistantWhatsAppUserAllowed(invalid, [], env)).toBe(false)
+    expect(isAssistantWhatsAppPilotTenant(invalid, env)).toBe(false)
+  }
+  expect(whatsAppChannelPolicy(env)).toMatchObject({
+    reads: false,
+    writes: false,
+    media: false,
+  })
+})
+
+test("hosted public enrollment alone cannot release native source capabilities", () => {
+  const hosted = {
+    APP_ENV: "production",
+    NODE_ENV: "production",
+    ASSISTANT_WHATSAPP_ROLLOUT_MODE: "public",
+    ASSISTANT_WHATSAPP_READS_ENABLED: "true",
+    ASSISTANT_WHATSAPP_WRITES_ENABLED: "true",
+  }
+  expect(whatsAppCapabilityEnabled(search, hosted)).toBe(false)
+  for (const ids of [
+    "*",
+    "search",
+    "search.records.other",
+    "other.search.records",
+  ])
+    expect(
+      whatsAppCapabilityEnabled(search, {
+        ...hosted,
+        ASSISTANT_WHATSAPP_RELEASED_CAPABILITY_IDS: ids,
+      }),
+    ).toBe(false)
+  const released = {
+    ...hosted,
+    ASSISTANT_WHATSAPP_RELEASED_CAPABILITY_IDS: ` ${search.id},${search.id} `,
+  }
+  expect(whatsAppCapabilityEnabled(search, released)).toBe(true)
+  expect(
+    whatsAppCapabilityEnabled(search, {
+      ...released,
+      ASSISTANT_WHATSAPP_READS_ENABLED: "false",
+    }),
+  ).toBe(false)
+  expect(
+    whatsAppCapabilityEnabled(search, {
+      ...released,
+      ASSISTANT_WHATSAPP_ROLLOUT_MODE: "pilot",
+    }),
+  ).toBe(false)
+  for (const changed of [
+    { ...search, rollout: "planned" as const },
+    {
+      ...search,
+      whatsapp: { mode: "app_review" as const, rollout: "source" as const },
+    },
+    {
+      ...search,
+      whatsapp: { mode: "native" as const, rollout: "planned" as const },
+    },
+  ])
+    expect(whatsAppCapabilityEnabled(changed, released)).toBe(false)
+  expect(whatsAppCapabilityPolicyStamp([search], released)).not.toEqual(
+    whatsAppCapabilityPolicyStamp([search], hosted),
+  )
+})
+
+test("released native source writes still require the exact write gate", () => {
+  const write = capabilityManifest.find(
+    (capability) =>
+      capability.mode === "write" &&
+      capability.whatsapp?.mode === "native" &&
+      capability.whatsapp.rollout === "source" &&
+      capability.rollout !== "planned",
+  )
+  if (!write) throw new Error("Native source write required")
+  const hosted = {
+    APP_ENV: "production",
+    NODE_ENV: "production",
+    ASSISTANT_WHATSAPP_ROLLOUT_MODE: "public",
+    ASSISTANT_WHATSAPP_RELEASED_CAPABILITY_IDS: write.id,
+    ASSISTANT_WHATSAPP_READS_ENABLED: "true",
+  }
+  expect(whatsAppCapabilityEnabled(write, hosted)).toBe(false)
+  expect(
+    whatsAppCapabilityEnabled(write, {
+      ...hosted,
+      ASSISTANT_WHATSAPP_WRITES_ENABLED: "true",
+    }),
+  ).toBe(true)
 })

@@ -102,6 +102,58 @@ export type MobileOwnerOtpResult = {
   expiresAt: Date
 }
 
+/** Internal transport proof; public mobile inputs never select a credential purpose. */
+export type MobileOwnerCredentialContext = {
+  kind: "whatsapp_onboarding"
+  phoneNumberId: string
+  senderId: string
+}
+
+function credentialContextDigest(context: MobileOwnerCredentialContext) {
+  if (
+    context.kind !== "whatsapp_onboarding" ||
+    !/^\d{1,32}$/.test(context.phoneNumberId) ||
+    !/^[1-9]\d{7,14}$/.test(context.senderId)
+  )
+    throw new Error("The verification context is invalid.")
+  const secret = process.env.BETTER_AUTH_SECRET ?? process.env.AUTH_SECRET
+  if (!secret) throw new Error("Authentication secret is required")
+  return createHmac("sha256", secret)
+    .update(
+      `whatsapp-onboarding:v1:${context.phoneNumberId}:${context.senderId}`,
+    )
+    .digest("hex")
+}
+
+/** A WhatsApp email code cannot consume an app login code or another sender's code. */
+export function buildOwnerCredentialIdentifier(
+  input: { email: string; mode: MobileAuthMode },
+  context?: MobileOwnerCredentialContext,
+) {
+  if (!context) return buildMobileOtpIdentifier(input)
+  const secret = process.env.BETTER_AUTH_SECRET ?? process.env.AUTH_SECRET
+  if (!secret) throw new Error("Authentication secret is required")
+  const subject = createHmac("sha256", secret)
+    .update(
+      `${credentialContextDigest(context)}:${input.email.trim().toLowerCase()}`,
+    )
+    .digest("hex")
+  return `whatsapp-onboarding:${input.mode}:${subject}`
+}
+
+function hashOwnerCredential(
+  code: string,
+  input: { email: string; mode: MobileAuthMode },
+  context?: MobileOwnerCredentialContext,
+) {
+  if (!context) return hashOtp(code)
+  const secret = process.env.BETTER_AUTH_SECRET ?? process.env.AUTH_SECRET
+  if (!secret) throw new Error("Authentication secret is required")
+  return createHmac("sha256", secret)
+    .update(`${buildOwnerCredentialIdentifier(input, context)}:${code}`)
+    .digest("hex")
+}
+
 export type MobileGoogleIdentityInput = {
   accessToken?: string
   ageBand?: AccountAgeBand
@@ -240,7 +292,7 @@ function addDays(date: Date, days: number) {
 
 async function getFirstActiveTenantForUser(
   db: DbClient,
-  input: { userId: string },
+  input: { userId: string; qaDomain?: string },
   options: { includeInvited?: boolean } = {},
 ): Promise<MobileAuthTenantSummary | null> {
   const membershipAccess =
@@ -266,7 +318,16 @@ async function getFirstActiveTenantForUser(
     where: {
       ...membershipAccess,
       userId: input.userId,
-      tenant: { isActive: true },
+      tenant: {
+        isActive: true,
+        ...(input.qaDomain
+          ? {
+              dataClassification: "QA" as const,
+              qaSourceDomain: input.qaDomain,
+              qaPurgeStartedAt: null,
+            }
+          : {}),
+      },
     },
     orderBy: [{ status: "asc" }, { createdAt: "asc" }],
     select: {
@@ -433,6 +494,7 @@ export async function createMobileSessionForVerifiedUser(
   db: DbClient,
   userId: string,
   proof: "email" | "phone" = "email",
+  qaDomain?: string,
 ): Promise<MobileAuthSessionResult> {
   const user = await db.user.findUnique({
     where: { id: userId },
@@ -451,8 +513,10 @@ export async function createMobileSessionForVerifiedUser(
     throw new Error("A verified account is required.")
   const age = await getCustomerAccountAgeStatus(db, user.id)
   const tenant = age.eligible
-    ? await getFirstActiveTenantForUser(db, { userId: user.id })
+    ? await getFirstActiveTenantForUser(db, { userId: user.id, qaDomain })
     : null
+  if (qaDomain && !tenant)
+    throw new Error("No matching QA workspace is available for this account.")
   const accessProfile = age.eligible
     ? await getMobileAccessProfile(db, { userId: user.id })
     : { hasBusinessAccess: false, hasCustomerHistory: false }
@@ -568,6 +632,7 @@ export async function createMobileOwnerOtp(
     teamSize?: string | null
   },
   networkSource = "unknown",
+  credentialContext?: MobileOwnerCredentialContext,
 ): Promise<MobileOwnerOtpResult> {
   const ageBand = requireMobileSignupAgeBand(input.mode, input.ageBand)
   const legalPublication =
@@ -576,10 +641,15 @@ export async function createMobileOwnerOtp(
       : null
   await requireMobileApprovedSignup(db, input)
   const email = normalizeEmail(input.email)
-  const code = createOtpCode()
+  const code = credentialContext
+    ? randomInt(0, 1_000_000).toString().padStart(6, "0")
+    : createOtpCode()
   const now = new Date()
   const expiresAt = addMinutes(now, OTP_TTL_MINUTES)
-  const identifier = buildMobileOtpIdentifier({ email, mode: input.mode })
+  const identifier = buildOwnerCredentialIdentifier(
+    { email, mode: input.mode },
+    credentialContext,
+  )
   await consumeOwnerOtpBudget(
     db,
     `network:${networkSource}`,
@@ -623,7 +693,11 @@ export async function createMobileOwnerOtp(
         requestedSlug: input.requestedSlug,
         businessName: cleanText(input.businessName),
         city: cleanText(input.city),
-        codeHash: hashOtp(code),
+        codeHash: hashOwnerCredential(
+          code,
+          { email, mode: input.mode },
+          credentialContext,
+        ),
         attempts: 0,
         countryCode: normalizeCountryCode(input.countryCode),
         region: cleanText(input.region),
@@ -675,9 +749,13 @@ export async function verifyMobileOwnerOtp(
     phone?: string | null
     teamSize?: string | null
   },
+  credentialContext?: MobileOwnerCredentialContext,
 ): Promise<MobileAuthSessionResult> {
   const email = normalizeEmail(input.email)
-  const identifier = buildMobileOtpIdentifier({ email, mode: input.mode })
+  const identifier = buildOwnerCredentialIdentifier(
+    { email, mode: input.mode },
+    credentialContext,
+  )
   const verification = await db.verification.findFirst({
     where: {
       expiresAt: { gt: new Date() },
@@ -735,7 +813,14 @@ export async function verifyMobileOwnerOtp(
     !/^\d{6}$/.test(input.code) ||
     !timingSafeEqual(
       Buffer.from(payload.codeHash, "hex"),
-      Buffer.from(hashOtp(input.code), "hex"),
+      Buffer.from(
+        hashOwnerCredential(
+          input.code,
+          { email, mode: input.mode },
+          credentialContext,
+        ),
+        "hex",
+      ),
     )
   ) {
     const nextAttempts = attempts + 1
@@ -914,7 +999,7 @@ export async function verifyMobileOwnerOtp(
     const acceptance = await recordLegalAcceptance(db, {
       userId: user.id,
       version: legalPublication.version,
-      surface: "mobile",
+      surface: credentialContext ? "whatsapp" : "mobile",
     })
     if (acceptance.documentHash !== legalPublication.documentHash)
       throw new Error("The legal documents changed. Restart signup.")

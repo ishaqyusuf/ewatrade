@@ -136,3 +136,13 @@ test("normalized assistant source preserves reply correlation, list choices and 
     media: { id: "media-1", mediaType: "image/jpeg" },
   })
 })
+
+test("public enrollment still requires valid enabled platform configuration", () => {
+  const env = { ASSISTANT_WHATSAPP_ROLLOUT_MODE: "public" }
+  expect(isAssistantWhatsAppPilot("registered", env)).toBe(true)
+  expect(isAssistantWhatsAppPilot("", env)).toBe(false)
+  expect(readAssistantWhatsAppConfig(env)).toBeNull()
+  expect(() =>
+    readAssistantWhatsAppConfig({ ...env, ASSISTANT_WHATSAPP_ENABLED: "true" }),
+  ).toThrow()
+})

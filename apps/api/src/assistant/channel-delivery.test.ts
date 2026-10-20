@@ -188,3 +188,33 @@ test("a window or grant deadline crossed after admission cancels before the prov
   expect(sends).toEqual([])
   expect(outcomes).toEqual([{ kind: "cancelled" }])
 })
+
+test("public enrollment permits an admitted nonpilot but never bypasses canonical delivery admission", async () => {
+  const previous = process.env.ASSISTANT_WHATSAPP_ROLLOUT_MODE
+  process.env.ASSISTANT_WHATSAPP_ROLLOUT_MODE = "public"
+  try {
+    const { deps, sends } = fixture()
+    const config = deps.config()
+    if (!config) throw Error("Fixture configuration required")
+    const publicDeps = {
+      ...deps,
+      config: () => ({ ...config, permittedUserIds: [] }),
+    }
+    expect(await processAssistantChannelDelivery("out", publicDeps)).toEqual({
+      status: "sent",
+    })
+    expect(sends).toHaveLength(1)
+    sends.length = 0
+    expect(
+      await processAssistantChannelDelivery("out", {
+        ...publicDeps,
+        begin: async () => ({ kind: "idle" as const }),
+      }),
+    ).toEqual({ status: "idle" })
+    expect(sends).toHaveLength(0)
+  } finally {
+    if (previous === undefined)
+      Reflect.deleteProperty(process.env, "ASSISTANT_WHATSAPP_ROLLOUT_MODE")
+    else process.env.ASSISTANT_WHATSAPP_ROLLOUT_MODE = previous
+  }
+})

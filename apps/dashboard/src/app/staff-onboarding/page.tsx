@@ -6,6 +6,7 @@ import {
   currentEffectiveLegalPublication,
   isLegalTestingEnvironment,
 } from "@ewatrade/utils/legal-approval"
+import { getQaPolicyEnvironment } from "@ewatrade/utils/qa-policy-server"
 import { isQaStaffInvitation } from "@ewatrade/utils/staff-invitation-links"
 import type { Metadata } from "next"
 import Link from "next/link"
@@ -38,7 +39,10 @@ export default async function StaffOnboardingPage({
   return (
     <StaffOnboardingForm
       inviteToken={inviteToken ?? ""}
-      qaInvitation={isQaStaffInvitation(invite.email, process.env)}
+      qaInvitation={isQaStaffInvitation(
+        invite.email,
+        await getQaPolicyEnvironment(),
+      )}
       invite={{
         businessName: invite.tenant.name,
         email: invite.email,

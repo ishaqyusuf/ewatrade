@@ -10,6 +10,7 @@ import {
 } from "./account-privacy-profile-policy"
 import { assessAccountPrivacyProfilePrerequisites } from "./account-privacy-profile-prerequisites"
 import { accountPrivacyAdditionalScopeIsResolved } from "./account-privacy-record-scope"
+import { assistantWhatsAppOnboardingPrivateWhere } from "./assistant-whatsapp/onboarding-privacy"
 import { mobileOtpIdentifiersForEmail } from "./mobile-otp-identifier"
 import { runInOwnSerializableTransaction } from "./own-transaction"
 
@@ -115,6 +116,11 @@ export async function processAccountPrivacyProfile(
       subjectId,
       email,
     )
+    const privateWhatsAppWhere =
+      assistantWhatsAppOnboardingPrivateWhere(subjectId)
+    const privateWhatsAppRows = await tx.onboardingSession.count({
+      where: privateWhatsAppWhere,
+    })
     const existing = request.domainOutcomes.find(
       (row) => row.domain === "ACCOUNT_PROFILE",
     )
@@ -158,6 +164,7 @@ export async function processAccountPrivacyProfile(
       inventory.authAccounts === 0 &&
       inventory.sessions === 0 &&
       inventory.verificationRows === 0 &&
+      privateWhatsAppRows === 0 &&
       request.user?.email === targetEmail &&
       !request.user.emailVerified &&
       (policy.legalAcceptanceDisposition === "RETAIN" ||
@@ -233,6 +240,7 @@ export async function processAccountPrivacyProfile(
     await tx.verification.deleteMany({
       where: { identifier: { in: mobileOtpIdentifiersForEmail(email) } },
     })
+    await tx.onboardingSession.deleteMany({ where: privateWhatsAppWhere })
     if (policy.legalAcceptanceDisposition === "ERASE")
       await tx.legalAcceptance.deleteMany({ where: { userId: subjectId } })
     await tx.user.update({
@@ -256,6 +264,9 @@ export async function processAccountPrivacyProfile(
       },
     })
     const after = await getAccountPrivacyProfileInventory(tx, subjectId, email)
+    const privateWhatsAppRowsAfter = await tx.onboardingSession.count({
+      where: privateWhatsAppWhere,
+    })
     const profile = await tx.user.findUnique({
       where: { id: subjectId },
       select: { email: true, emailVerified: true },
@@ -267,6 +278,7 @@ export async function processAccountPrivacyProfile(
       after.authAccounts ||
       after.sessions ||
       after.verificationRows ||
+      privateWhatsAppRowsAfter !== 0 ||
       profile?.email !== targetEmail ||
       profile.emailVerified ||
       (policy.legalAcceptanceDisposition === "ERASE" &&

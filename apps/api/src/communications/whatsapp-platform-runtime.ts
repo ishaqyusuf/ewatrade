@@ -1,6 +1,7 @@
 import { parseWhatsAppLinkMessage } from "@ewatrade/assistant/channels/whatsapp"
 import {
   type NormalizedWhatsAppEvent,
+  type NormalizedWhatsAppMessageEvent,
   type NormalizedWhatsAppStatusEvent,
   assistantWhatsAppPilotUserIds,
   isPlatformWhatsAppNumber,
@@ -8,9 +9,11 @@ import {
 } from "@ewatrade/communications"
 import { prisma } from "@ewatrade/db"
 import {
+  AssistantWhatsAppError,
   type WhatsAppInboxReceipt,
   acceptAssistantWhatsAppIngress,
   acceptAssistantWhatsAppStatus,
+  autoConfirmAssistantWhatsAppLink,
   claimAssistantWhatsAppLink,
   disconnectAssistantWhatsApp,
   nextAssistantWhatsAppOutbox,
@@ -21,6 +24,11 @@ import {
   enqueueAssistantWhatsAppTurn,
 } from "@ewatrade/jobs/assistant-whatsapp"
 
+import {
+  cancelWhatsAppOnboarding,
+  processWhatsAppOnboardingMessage,
+} from "./whatsapp-onboarding-runtime"
+
 type PlatformDependencies = {
   receipt?: (event: NormalizedWhatsAppStatusEvent) => Promise<unknown>
   env: Record<string, string | undefined>
@@ -30,11 +38,20 @@ type PlatformDependencies = {
   ) => Promise<WhatsAppInboxReceipt>
   enqueue: (ingressId: string) => Promise<unknown>
   enqueueDelivery?: (outboxId: string) => Promise<unknown>
+  onboarding?: (
+    event: NormalizedWhatsAppMessageEvent,
+    config: { phoneNumberId: string; accessToken: string },
+  ) => Promise<{ handled: boolean }>
+  cancelOnboarding?: (input: {
+    phoneNumberId: string
+    senderId: string
+  }) => Promise<unknown>
   claim: (input: {
     code: string
     phoneNumberId: string
     senderId: string
     messageId: string
+    providerOccurredAt?: Date
   }) => Promise<boolean>
   disconnect: (input: {
     phoneNumberId: string
@@ -69,9 +86,31 @@ export async function processPlatformWhatsAppEvent(
     },
     enqueue: enqueueAssistantWhatsAppTurn,
     enqueueDelivery: enqueueAssistantWhatsAppDelivery,
+    onboarding: processWhatsAppOnboardingMessage,
+    cancelOnboarding: cancelWhatsAppOnboarding,
     accept: (input, permittedUserIds) =>
       acceptAssistantWhatsAppIngress(prisma, input, permittedUserIds),
-    claim: (input) => claimAssistantWhatsAppLink(prisma, input),
+    claim: async (input) => {
+      const claimed = await claimAssistantWhatsAppLink(prisma, input)
+      try {
+        const connected = await autoConfirmAssistantWhatsAppLink(prisma, input)
+        if (connected?.welcomeOutboxId)
+          try {
+            await enqueueAssistantWhatsAppDelivery(connected.welcomeOutboxId)
+          } catch {
+            console.error("[assistant] connection welcome deferred to recovery")
+          }
+      } catch (error) {
+        if (
+          !(error instanceof AssistantWhatsAppError) ||
+          !["UNAVAILABLE", "UNAUTHORIZED", "CONFLICT", "EXPIRED"].includes(
+            error.code,
+          )
+        )
+          throw error
+      }
+      return claimed
+    },
     disconnect: (input) => disconnectAssistantWhatsApp(prisma, input),
   },
 ) {
@@ -88,10 +127,15 @@ export async function processPlatformWhatsAppEvent(
       event.text?.trim() ?? "",
     )
   ) {
-    await dependencies.disconnect({
+    const address = {
       phoneNumberId: event.phoneNumberId,
       senderId: event.externalCustomerId,
-    })
+    }
+    try {
+      await dependencies.cancelOnboarding?.(address)
+    } finally {
+      await dependencies.disconnect(address)
+    }
     return true
   }
   const config = readAssistantWhatsAppConfig(dependencies.env)
@@ -103,10 +147,16 @@ export async function processPlatformWhatsAppEvent(
       phoneNumberId: event.phoneNumberId,
       senderId: event.externalCustomerId,
       messageId: event.messageId,
+      ...(event.timestamp
+        ? { providerOccurredAt: new Date(Number(event.timestamp) * 1000) }
+        : {}),
     })
     return true
   }
-  // A six-digit amount is valid business input only for a fresh linked pilot binding; it never proves identity.
+  // Verification and registration input must not become ordinary assistant/model history.
+  if ((await dependencies.onboarding?.(event, config))?.handled) return true
+  // A six-digit amount remains ordinary business input for a fresh linked binding.
+
   const receipt = await dependencies.accept(
     {
       phoneNumberId: event.phoneNumberId,
@@ -134,6 +184,6 @@ export async function processPlatformWhatsAppEvent(
       console.error("[assistant] inbox dispatch deferred to recovery")
     }
   }
-  // Durable inbox survives dispatch failure; no model/provider work occurs on the webhook.
+  // Ordinary assistant turns survive dispatch failure; their model and reply work stays in jobs.
   return true
 }

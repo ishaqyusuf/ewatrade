@@ -56,6 +56,7 @@ function fixture(
     failOutcome?: boolean
     wrongSubject?: boolean
     additional?: string
+    whatsappOnboarding?: number
   } = {},
 ) {
   let state = {
@@ -79,6 +80,7 @@ function fixture(
     accounts: 1,
     sessions: options.sessions ?? 0,
     otp: 1,
+    whatsappOnboarding: options.whatsappOnboarding ?? 0,
     acceptances: 2,
     outcomes: [
       ["IDENTITY_ACCESS", "ACCESS_REVOKED"],
@@ -182,6 +184,14 @@ function fixture(
         mutations++
         queries.otp = query
         state.otp = 0
+      },
+    },
+    onboardingSession: {
+      count: async () => state.whatsappOnboarding,
+      deleteMany: async (query: unknown) => {
+        mutations++
+        queries.whatsappOnboarding = query
+        state.whatsappOnboarding = 0
       },
     },
     membership: { count: async () => options.memberships ?? 0 },
@@ -366,4 +376,23 @@ test("review authority rejects missing fields, unknown modes, expiry and mismatc
       ),
     ).toBeNull()
   }
+})
+
+test("profile erasure removes only the subject's private WhatsApp onboarding namespaces and rechecks replay", async () => {
+  enable()
+  const f = fixture({ whatsappOnboarding: 4 })
+  await processAccountPrivacyProfile(f.db, command)
+  expect(f.state().whatsappOnboarding).toBe(0)
+  expect(f.queries.whatsappOnboarding).toEqual({
+    where: {
+      userId: "user-1",
+      OR: ["wa-flow_", "wa-receipt_", "wa-proof_", "wa-app-link_"].map(
+        (prefix) => ({ token: { startsWith: prefix } }),
+      ),
+    },
+  })
+  f.state().whatsappOnboarding = 1
+  await expect(
+    processAccountPrivacyProfile(f.db, command),
+  ).rejects.toMatchObject({ code: "CLAIM_CONFLICT" })
 })

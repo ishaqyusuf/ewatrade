@@ -3,21 +3,23 @@ import {
   authorizeQaDomain,
   exchangeQaTesterCredential,
   listQaAccessProfiles,
+  listQaPhoneEntries,
   revalidateQaClientAuthorization,
   revokeQaClientAuthorization,
   selectQaAccessProfile,
 } from "@ewatrade/db/queries"
 import {
   QA_ACCELERATOR_CONTRACT_VERSION,
-  assertQaAcceleratorStartupSafety,
   getQaAcceleratorAvailability,
   isConfiguredQaDomain,
 } from "@ewatrade/utils/qa-accelerator"
+import {
+  getQaPolicyEnvironment,
+  qaPolicyTarget,
+} from "@ewatrade/utils/qa-policy-server"
 import { TRPCError } from "@trpc/server"
 import { z } from "zod"
 import { createTRPCRouter, protectedProcedure, publicProcedure } from "../init"
-
-assertQaAcceleratorStartupSafety(process.env)
 
 const authorizationTokenSchema = z.string().trim().min(32).max(160)
 const clientIdSchema = z.string().trim().min(8).max(160)
@@ -33,10 +35,10 @@ function getSecret() {
   return secret
 }
 
-function requireAvailability(clientContractVersion?: number) {
+async function requireAvailability(clientContractVersion?: number) {
   const availability = getQaAcceleratorAvailability({
     clientContractVersion,
-    env: process.env,
+    env: await getQaPolicyEnvironment(),
     platform: "mobile",
   })
   if (!availability.available) {
@@ -73,10 +75,11 @@ function mapQaAccessError(error: unknown): never {
 }
 
 /** A malformed domain is a bad request, not a server error. */
-function isAcceptedQaDomain(qaDomain: string) {
+async function isAcceptedQaDomain(qaDomain: string) {
   try {
     return isConfiguredQaDomain(qaDomain, {
-      EMAIL_QA_DOMAIN_ROUTES: process.env.EMAIL_QA_DOMAIN_ROUTES,
+      EMAIL_QA_DOMAIN_ROUTES: (await getQaPolicyEnvironment())
+        .EMAIL_QA_DOMAIN_ROUTES,
     })
   } catch {
     return false
@@ -84,6 +87,21 @@ function isAcceptedQaDomain(qaDomain: string) {
 }
 
 export const qaAccessRouter = createTRPCRouter({
+  phoneCapability: publicProcedure.query(async () => ({
+    enabled: (await getQaPolicyEnvironment()).QA_TOOLS_ENABLED === "true",
+  })),
+  phoneEntries: publicProcedure
+    .input(z.object({ token: authorizationTokenSchema }).strict())
+    .query(async ({ ctx, input }) => {
+      try {
+        return await listQaPhoneEntries(ctx.db, {
+          secret: getSecret(),
+          token: input.token,
+        })
+      } catch (error) {
+        mapQaAccessError(error)
+      }
+    }),
   capability: publicProcedure
     .input(
       z
@@ -91,10 +109,10 @@ export const qaAccessRouter = createTRPCRouter({
         .strict()
         .optional(),
     )
-    .query(({ input }) => {
+    .query(async ({ input }) => {
       const availability = getQaAcceleratorAvailability({
         clientContractVersion: input?.contractVersion,
-        env: process.env,
+        env: await getQaPolicyEnvironment(),
         platform: "mobile",
       })
       if (
@@ -160,8 +178,14 @@ export const qaAccessRouter = createTRPCRouter({
         .strict(),
     )
     .mutation(async ({ ctx, input }) => {
-      requireAvailability(input.contractVersion)
-      if (!isAcceptedQaDomain(input.qaDomain)) {
+      if (qaPolicyTarget() !== "production")
+        await requireAvailability(input.contractVersion)
+      else if (!input.credential)
+        throw new TRPCError({
+          code: "UNAUTHORIZED",
+          message: "A tester access key is required.",
+        })
+      if (!(await isAcceptedQaDomain(input.qaDomain))) {
         throw new TRPCError({
           code: "BAD_REQUEST",
           message: "This domain isn’t set up for QA on this server.",
@@ -198,7 +222,7 @@ export const qaAccessRouter = createTRPCRouter({
         .strict(),
     )
     .query(async ({ ctx, input }) => {
-      requireAvailability(input.contractVersion)
+      await requireAvailability(input.contractVersion)
       try {
         return await revalidateQaClientAuthorization(ctx.db, {
           secret: getSecret(),
@@ -219,7 +243,7 @@ export const qaAccessRouter = createTRPCRouter({
         .strict(),
     )
     .query(async ({ ctx, input }) => {
-      requireAvailability(input.contractVersion)
+      await requireAvailability(input.contractVersion)
       try {
         return await listQaAccessProfiles(ctx.db, {
           secret: getSecret(),
@@ -241,7 +265,7 @@ export const qaAccessRouter = createTRPCRouter({
         .strict(),
     )
     .mutation(async ({ ctx, input }) => {
-      requireAvailability(input.contractVersion)
+      await requireAvailability(input.contractVersion)
       try {
         return await selectQaAccessProfile(ctx.db, {
           profileReference: input.profileReference,
@@ -264,7 +288,6 @@ export const qaAccessRouter = createTRPCRouter({
         .strict(),
     )
     .mutation(async ({ ctx, input }) => {
-      requireAvailability(input.contractVersion)
       return revokeQaClientAuthorization(ctx.db, {
         secret: getSecret(),
         token: input.token,
@@ -272,3 +295,11 @@ export const qaAccessRouter = createTRPCRouter({
     }),
 })
 import { requireBrowserIdentity } from "../../assistant/channel-principal"
+
+/** Production keeps only grant-scoped phone access; profile bypass routes stay absent. */
+export const qaPhoneAccessRouter = createTRPCRouter({
+  phoneCapability: qaAccessRouter.phoneCapability,
+  phoneEntries: qaAccessRouter.phoneEntries,
+  exchange: qaAccessRouter.exchange,
+  revoke: qaAccessRouter.revoke,
+})

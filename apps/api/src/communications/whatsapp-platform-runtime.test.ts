@@ -292,3 +292,70 @@ test("exact bare opt-out aliases revoke before configuration while business stop
   ])
   expect(disconnected).toHaveLength(2)
 })
+
+test("signed linking timestamp is preserved and onboarding verification never enters ordinary ingress", async () => {
+  const claims: unknown[] = []
+  const accepted: unknown[] = []
+  const deps = {
+    env: configured,
+    accept: async (input: unknown) => {
+      accepted.push(input)
+      return { kind: "ignored" as const, reason: "unlinked" as const }
+    },
+    enqueue: async () => {},
+    claim: async (input: unknown) => {
+      claims.push(input)
+      return true
+    },
+    disconnect: async () => {},
+    onboarding: async () => ({ handled: true }),
+  }
+  await processPlatformWhatsAppEvent(
+    {
+      ...message(`Connect to EwaTrade: ${"a".repeat(43)}`),
+      timestamp: "1792050000",
+    },
+    deps,
+  )
+  expect(claims).toEqual([
+    {
+      code: "a".repeat(43),
+      phoneNumberId: "123456789",
+      senderId: "2348000000001",
+      messageId: "test-message",
+      providerOccurredAt: new Date(1792050000 * 1000),
+    },
+  ])
+  await processPlatformWhatsAppEvent(message("123456"), deps)
+  expect(accepted).toEqual([])
+})
+
+test("disabled onboarding stays silent and STOP always revokes even when onboarding cleanup fails", async () => {
+  const operations: string[] = []
+  const deps = {
+    env: { WHATSAPP_OTP_PHONE_NUMBER_ID: "123456789" },
+    accept: async () => ({
+      kind: "ignored" as const,
+      reason: "unlinked" as const,
+    }),
+    enqueue: async () => {},
+    claim: async () => true,
+    disconnect: async () => {
+      operations.push("disconnect")
+    },
+    onboarding: async () => {
+      operations.push("onboard")
+      return { handled: true }
+    },
+    cancelOnboarding: async () => {
+      operations.push("cancel")
+      throw Error("cleanup unavailable")
+    },
+  }
+  await processPlatformWhatsAppEvent(message("Register"), deps)
+  expect(operations).toEqual([])
+  await expect(
+    processPlatformWhatsAppEvent(message("Stop"), deps),
+  ).rejects.toThrow("cleanup unavailable")
+  expect(operations).toEqual(["cancel", "disconnect"])
+})
