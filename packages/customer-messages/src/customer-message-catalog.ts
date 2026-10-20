@@ -62,8 +62,7 @@ const customerMessageEventDefinitions = [
   {
     key: "order.payment_reminder",
     label: "Payment reminder",
-    description:
-      "Remind the customer about the order's current positive balance.",
+    description: "Remind the customer they still owe money on an order.",
     variables: [
       "customer_name",
       "customer_first_name",
@@ -140,7 +139,7 @@ const customerMessageEventDefinitions = [
   {
     key: "payment.refund_recorded",
     label: "Refund recorded",
-    description: "Share the amount and method of a recorded refund.",
+    description: "Tell the customer how much was refunded and how.",
     variables: [
       "customer_name",
       "customer_first_name",
