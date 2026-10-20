@@ -38,6 +38,7 @@ const sourceLabels: Record<string, string> = {
   SUPPLIER_ALLOCATION_RELEASE: "Undo using paid-ahead money",
   SUPPLIER_ENTRY_REVERSAL: "Supplier entry undone",
   SUPPLIER_OPENING_PAYABLE: "Owed before you started",
+  SUPPLIER_OPENING_PAYMENT: "Paid toward starting balance",
   CUSTOMER_RECEIPT: "Customer payment",
   CUSTOMER_HELD_CREDIT_REFUND: "Paid-ahead money returned",
   CUSTOMER_LEDGER_REVERSAL: "Customer entry undone",

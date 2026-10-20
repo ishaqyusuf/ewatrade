@@ -40,7 +40,7 @@ import type { FinanceBook } from "./types"
 import { useCompleteFinanceForm } from "./use-complete-finance-form"
 
 const schema = z.object({
-  billId: z.string().min(1, "Choose the bill you're paying."),
+  billId: z.string().min(1, "Choose what you're paying."),
   amount: z.string().refine((value) => {
     try {
       parseFinanceMoney(value)
@@ -54,6 +54,16 @@ const schema = z.object({
   reference: z.string().max(160, "Use 160 characters or fewer."),
 })
 type Values = z.infer<typeof schema>
+
+/** The starting balance appears in the list beside the bills. */
+const OPENING = "OPENING"
+type Owed = {
+  id: string
+  description: string
+  outstandingMinor: string
+  incurredAt: Date | string
+  dueAt: Date | string | null
+}
 
 /**
  * Pay a Supplier bill (a recorded purchase) from a money account. Same shape as
@@ -78,24 +88,67 @@ export function FinanceSupplierPaymentForm({
       limit: 50,
     }),
   )
-  const mutation = useMutation(trpc.finance.payPurchase.mutationOptions())
-  const [review, setReview] = useState<Values | null>(null)
-  const open = (bills.data?.items ?? []).filter(
-    (bill) => bill.status !== "VOID" && BigInt(bill.outstandingMinor) > 0n,
+  const opening = useQuery(
+    trpc.finance.supplierOpeningBalance.queryOptions({
+      bookId: book.id,
+      supplierId,
+    }),
   )
-  const supplierName = bills.data?.items[0]?.supplier?.name ?? "this Supplier"
+  const supplier = useQuery(
+    trpc.finance.supplierStatement.queryOptions({
+      bookId: book.id,
+      supplierId,
+      limit: 1,
+    }),
+  )
+  const mutation = useMutation(trpc.finance.payPurchase.mutationOptions())
+  const openingMutation = useMutation(
+    trpc.finance.paySupplierOpening.mutationOptions(),
+  )
+  const [review, setReview] = useState<Values | null>(null)
+  // What you owe: the starting balance (if any is left), then open bills.
+  const open: Owed[] = [
+    ...(opening.data && BigInt(opening.data.outstandingMinor) > 0n
+      ? [
+          {
+            id: OPENING,
+            description: "Starting balance",
+            outstandingMinor: opening.data.outstandingMinor,
+            incurredAt: opening.data.effectiveAt,
+            dueAt: null,
+          },
+        ]
+      : []),
+    ...(bills.data?.items ?? [])
+      .filter(
+        (bill) => bill.status !== "VOID" && BigInt(bill.outstandingMinor) > 0n,
+      )
+      .map((bill) => ({
+        id: bill.id,
+        description: bill.description,
+        outstandingMinor: bill.outstandingMinor,
+        incurredAt: bill.incurredAt,
+        dueAt: bill.dueAt,
+      })),
+  ]
+  const supplierName = supplier.data?.supplier.name ?? "this Supplier"
   const chosen = review ? open.find((bill) => bill.id === review.billId) : null
   const paying = review ? minorOf(review.amount) : 0n
   const left = chosen ? BigInt(chosen.outstandingMinor) - paying : 0n
-  const command = useFinanceCommand(
-    useCompleteFinanceForm(
-      chosen
-        ? `Payment recorded. ${chosen.description} ${left === 0n ? "is now paid." : `has ${moneyText(left, currency)} still to pay.`}`
-        : undefined,
-    ),
+  const done = chosen
+    ? `Payment recorded. ${chosen.id === OPENING ? `The starting balance ${left === 0n ? "is now paid." : `has ${moneyText(left, currency)} still to pay.`}` : `${chosen.description} ${left === 0n ? "is now paid." : `has ${moneyText(left, currency)} still to pay.`}`}`
+    : undefined
+  const billCommand = useFinanceCommand(
+    useCompleteFinanceForm(done),
     book.id,
     "payPurchase",
   )
+  const openingCommand = useFinanceCommand(
+    useCompleteFinanceForm(done),
+    book.id,
+    "paySupplierOpening",
+  )
+  const command = chosen?.id === OPENING ? openingCommand : billCommand
   const { close } = useFinanceParams()
   const accounts = moneyAccounts(book.accounts)
   const form = useZodForm<Values>(schema, {
@@ -119,18 +172,20 @@ export function FinanceSupplierPaymentForm({
       form.setValue("amount", amountInput(selected.outstandingMinor))
   }, [selected, form])
 
-  if (bills.isPending) return <output>Loading bills…</output>
-  if (bills.isError)
+  if (bills.isPending || opening.isPending)
+    return <output>Loading what you owe…</output>
+  if (bills.isError || opening.isError)
     return (
       <FormFeedback appearance="dashboard">
-        We couldn't load this Supplier's bills. {bills.error.message}
+        We couldn't load what you owe this Supplier.{" "}
+        {(bills.error ?? opening.error)?.message}
       </FormFeedback>
     )
   if (!open.length)
     return (
       <p className="text-sm text-muted-foreground">
-        Nothing to pay: this Supplier has no bills with money still to pay. To
-        pay before a bill arrives, use Pay ahead.
+        Nothing to pay: you don&apos;t owe this Supplier anything. To pay before
+        a bill arrives, use Pay ahead.
       </p>
     )
 
@@ -141,6 +196,22 @@ export function FinanceSupplierPaymentForm({
       values.date === todayIn(book.timezone)
         ? new Date()
         : new Date(`${values.date}T23:59:59.999Z`)
+    if (values.billId === OPENING) {
+      const toOpening = {
+        bookId: book.id,
+        supplierId,
+        moneyAccountId: values.accountId,
+        amountMinor: parseFinanceMoney(values.amount),
+        description: "Payment toward starting balance",
+        effectiveAt,
+      }
+      void openingCommand.run({
+        payload: toOpening,
+        write: (clientCommandId) =>
+          openingMutation.mutateAsync({ ...toOpening, clientCommandId }),
+      })
+      return
+    }
     const payload = {
       bookId: book.id,
       billId: values.billId,
@@ -150,7 +221,7 @@ export function FinanceSupplierPaymentForm({
       effectiveAt,
       reference: values.reference || undefined,
     }
-    void command.run({
+    void billCommand.run({
       payload,
       write: (clientCommandId) =>
         mutation.mutateAsync({ ...payload, clientCommandId }),
@@ -170,17 +241,28 @@ export function FinanceSupplierPaymentForm({
         sentence={
           <>
             You're paying <b>{supplierName}</b>{" "}
-            <b>{moneyText(paying, currency)}</b> for {chosen.description}, from{" "}
-            {accountName(review.accountId)}.
+            <b>{moneyText(paying, currency)}</b>{" "}
+            {chosen.id === OPENING
+              ? "toward what you owed them before you started using Finance"
+              : `for ${chosen.description}`}
+            , from {accountName(review.accountId)}.
           </>
         }
         changes={changes([
           balanceChange(balances, review.accountId, -paying, currency),
           {
-            label: `You owe ${supplierName} on this bill`,
+            label:
+              chosen.id === OPENING
+                ? `Starting balance owed to ${supplierName}`
+                : `You owe ${supplierName} on this bill`,
             before: moneyText(before, currency),
             after: moneyText(left, currency),
-            note: left === 0n ? "This bill will show as Paid." : undefined,
+            note:
+              left === 0n
+                ? chosen.id === OPENING
+                  ? "The starting balance will be paid off."
+                  : "This bill will show as Paid."
+                : undefined,
           },
         ])}
         warning={overdrawWarning(balances, review.accountId, paying, currency)}
@@ -188,7 +270,7 @@ export function FinanceSupplierPaymentForm({
       >
         <FinanceDetails
           rows={[
-            ["Bill", chosen.description],
+            [chosen.id === OPENING ? "Paying" : "Bill", chosen.description],
             ["Paid from", accountName(review.accountId)],
             ["Date paid", plainDay(review.date)],
             review.reference ? ["Reference", review.reference] : null,
@@ -202,9 +284,12 @@ export function FinanceSupplierPaymentForm({
   const billChoices = open.map((bill) => ({
     value: bill.id,
     label: `${bill.description} · ${moneyText(bill.outstandingMinor, currency)} still to pay`,
-    hint: bill.dueAt
-      ? `Due ${plainDay(dayIn(bill.dueAt, book.timezone))}`
-      : `Bought ${plainDay(dayIn(bill.incurredAt, book.timezone))}`,
+    hint:
+      bill.id === OPENING
+        ? `Owed before you started using Finance on ${plainDay(dayIn(bill.incurredAt, book.timezone))}`
+        : bill.dueAt
+          ? `Due ${plainDay(dayIn(bill.dueAt, book.timezone))}`
+          : `Bought ${plainDay(dayIn(bill.incurredAt, book.timezone))}`,
   }))
   return (
     <form
@@ -212,7 +297,7 @@ export function FinanceSupplierPaymentForm({
         const bill = open.find((item) => item.id === values.billId)
         if (bill && minorOf(values.amount) > BigInt(bill.outstandingMinor)) {
           form.setError("amount", {
-            message: `That's more than the ${moneyText(bill.outstandingMinor, currency)} you owe on this bill.`,
+            message: `That's more than the ${moneyText(bill.outstandingMinor, currency)} you owe on ${bill.id === OPENING ? "the starting balance" : "this bill"}.`,
           })
           return
         }
@@ -221,21 +306,24 @@ export function FinanceSupplierPaymentForm({
     >
       <FieldGroup className="min-w-0 grid gap-5">
         <p className="text-sm text-muted-foreground">
-          Record money you paid {supplierName} for a bill.
+          Record money you paid {supplierName}.
         </p>
-        <FinanceField label="Bill" error={errors.billId?.message}>
+        <FinanceField
+          label="What are you paying?"
+          error={errors.billId?.message}
+        >
           {billChoices.length <= 4 ? (
             <FormRadioChoices
               control={form.control}
               name="billId"
-              label="Bill"
+              label="What are you paying?"
               options={billChoices}
             />
           ) : (
             <FormSelectControl
               control={form.control}
               name="billId"
-              placeholder="Choose a bill"
+              placeholder="Choose what you're paying"
               options={billChoices.map((choice) => ({
                 value: choice.value,
                 label: choice.label,
@@ -274,9 +362,11 @@ export function FinanceSupplierPaymentForm({
               max={todayIn(book.timezone)}
             />
           </FinanceField>
-          <FinanceField label="Reference (optional)">
-            <Input {...form.register("reference")} />
-          </FinanceField>
+          {selectedId === OPENING ? null : (
+            <FinanceField label="Reference (optional)">
+              <Input {...form.register("reference")} />
+            </FinanceField>
+          )}
         </div>
         <FinanceFormFooter onCancel={() => void close()} submitLabel="Review" />
       </FieldGroup>

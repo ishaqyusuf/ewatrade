@@ -33,6 +33,7 @@ const entryLabels = {
   ADVANCE: "Paid ahead",
   PURCHASE_BILL: "Bill",
   PURCHASE_PAYMENT: "Payment",
+  OPENING_PAYMENT: "Paid toward starting balance",
   ADVANCE_ALLOCATION: "Paid-ahead money used on a bill",
   ALLOCATION_RELEASE: "Undo using paid-ahead money",
   REVERSAL: "Undo",

@@ -52,6 +52,7 @@ const commandLabels: Record<string, string> = {
   reverseSupplierEntry: "supplier entry reversal",
   reversePurchasePayment: "purchase payment reversal",
   payPurchase: "supplier payment",
+  paySupplierOpening: "starting balance payment",
 }
 
 export function FinanceSheetContent({

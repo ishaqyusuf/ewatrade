@@ -906,6 +906,7 @@ const SUPPLIER_KIND_LABELS: Record<string, string> = {
   ADVANCE_ALLOCATION: "Advance applied",
   OPENING_ADVANCE: "Opening advance",
   OPENING_PAYABLE: "Opening payable",
+  OPENING_PAYMENT: "Opening payable paid",
   PURCHASE: "Purchase",
   PURCHASE_BILL: "Purchase bill",
   PURCHASE_PAYMENT: "Payment",
