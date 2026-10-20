@@ -1,0 +1,38 @@
+{
+  "version": 1,
+  "id": "2026-10-20-oversight-managed-qa",
+  "tickets": ["H02"],
+  "summary": "Central Oversight QA policy, bounded product reader and grant-scoped phone selection using existing OTP proof; source complete, hosted rollout pending.",
+  "noAssistantImpact": "Internal QA configuration, tester contacts, grants and authentication are excluded from merchant assistant tools. No merchant command, permission, entitlement, prompt authority or assistant access to credentials is added.",
+  "procedures": [],
+  "docs": [
+    {
+      "topic": "feature",
+      "path": ".brain/features/qa-email-domain-routing.md",
+      "status": "local_only"
+    },
+    {
+      "topic": "api",
+      "path": ".brain/api/contracts.md",
+      "status": "local_only"
+    },
+    {
+      "topic": "permissions",
+      "path": ".brain/api/permissions.md",
+      "status": "local_only"
+    },
+    {
+      "topic": "decision",
+      "path": ".brain/decisions/ADR-0051-oversight-managed-qa-policy.md",
+      "status": "local_only"
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "run",
+      "path": ".brain/qa/2026-10-20-oversight-managed-qa-implementation.md",
+      "executed": true,
+      "result": "Local authenticated QA modal, central route authorization and DB owner/revision guards verified. Focused tests pass; full mobile typing and coverage generator have unrelated blockers. No real provider phone/email delivery or hosted deployment claimed."
+    }
+  ]
+}

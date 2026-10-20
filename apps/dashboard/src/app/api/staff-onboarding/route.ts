@@ -9,6 +9,7 @@ import {
   assertLegalVersionHash,
   resolveLegalSignupChoice,
 } from "@ewatrade/utils/legal-approval"
+import { getQaPolicyEnvironment } from "@ewatrade/utils/qa-policy-server"
 import { isQaStaffInvitation } from "@ewatrade/utils/staff-invitation-links"
 import { type NextRequest, NextResponse } from "next/server"
 import { z } from "zod/v4"
@@ -55,7 +56,10 @@ export async function POST(request: NextRequest) {
   try {
     const input = parsed.data
     const invite = await getStaffWebInvitation(input.inviteToken)
-    const qaInvitation = isQaStaffInvitation(invite.email, process.env)
+    const qaInvitation = isQaStaffInvitation(
+      invite.email,
+      await getQaPolicyEnvironment(),
+    )
     if (input.operation === "request-code") {
       if (qaInvitation) return response({ qaReady: true })
       await staffOnboardingAuth.api.sendVerificationOTP({

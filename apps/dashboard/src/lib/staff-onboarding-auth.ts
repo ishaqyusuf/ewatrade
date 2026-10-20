@@ -1,7 +1,7 @@
 import { initStaffOnboardingAuth } from "@ewatrade/auth"
 import {
   createEmailMessage,
-  createTestRoutedEmailMessages,
+  createManagedQaEmailMessages,
   dispatchEmailMessages,
   renderMobileOwnerOtpTemplate,
 } from "@ewatrade/email"
@@ -14,7 +14,7 @@ export const staffOnboardingAuth = initStaffOnboardingAuth(
       mode: "login",
       expiresAtLabel: "in 5 minutes",
     })
-    const messages = createTestRoutedEmailMessages(
+    const messages = await createManagedQaEmailMessages(
       createEmailMessage({
         from: process.env.EMAIL_FROM ?? "EwaTrade <noreply@ewatrade.com>",
         to: email,

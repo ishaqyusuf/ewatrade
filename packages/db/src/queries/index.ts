@@ -192,3 +192,5 @@ export {
   accountPrivacyExternalReceiptSchema,
   getApprovedAccountPrivacyExternalPolicy,
 } from "./account-privacy-external-policy"
+
+export { listQaPhoneEntries } from "./qa-access"

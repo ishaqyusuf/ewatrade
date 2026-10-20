@@ -7,7 +7,7 @@ import {
 export async function GET(request: NextRequest) {
   const value = request.nextUrl.searchParams.get("contractVersion")
   const contractVersion = value ? Number(value) : undefined
-  const availability = getQaWebAvailability(
+  const availability = await getQaWebAvailability(
     request,
     Number.isInteger(contractVersion) ? contractVersion : undefined,
   )

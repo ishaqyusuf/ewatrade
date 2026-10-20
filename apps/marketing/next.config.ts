@@ -16,10 +16,7 @@ applyEwatradeSharedEnv()
 
 function isInternalQaBuild(env = process.env) {
   const variant = (env.APP_ENV ?? env.NODE_ENV ?? "production").toLowerCase()
-  return (
-    env.QA_ACCELERATOR_ENABLED === "true" &&
-    new Set(["local", "dev", "development", "preview"]).has(variant)
-  )
+  return new Set(["local", "dev", "development", "preview"]).has(variant)
 }
 
 const nextConfig: NextConfig = {
