@@ -1,6 +1,7 @@
 "use client"
 
 import { InventoryOperationForm } from "@/components/inventory/inventory-operation-form"
+import { StockCountForm } from "@/components/inventory/stock-count-form"
 import { SheetFrame } from "@/components/sheets/sheet-frame"
 import { useInventoryParams } from "@/hooks/use-inventory-params"
 import { useSheetDismissal } from "@/hooks/use-sheet-dismissal"
@@ -23,7 +24,8 @@ const operationTitles = {
 const operationDescriptions = {
   adjustment:
     "Fix a number that is wrong. To check everything on the shelf, use Count stock.",
-  count: "Type what you find on the shelf. Stock is set to your count.",
+  count:
+    "Count several products at once. Save for later, or finish to set stock to what you counted.",
   custody:
     "Track stock a staff member carries to sell, such as on a van or at a stall.",
   internal_use: "Stock the business used itself, not sold.",
@@ -60,7 +62,11 @@ export function InventoryOperationSheet({
       {operation ? (
         <SheetFrame
           closeError={closeError}
-          popupClassName={popupClassName}
+          popupClassName={
+            operation === "count"
+              ? `${popupClassName ?? ""} sm:w-[min(760px,95vw)] sm:max-w-[760px]`
+              : popupClassName
+          }
           title={
             operation === "adjustment" && preset === "loss"
               ? "Damaged or lost"
@@ -72,7 +78,12 @@ export function InventoryOperationSheet({
               : operationDescriptions[operation]
           }
         >
-          {selectedStore ? (
+          {selectedStore && operation === "count" ? (
+            <StockCountForm
+              key={`${selectedStore.id}:count:${balanceId ?? "all"}`}
+              store={selectedStore}
+            />
+          ) : selectedStore ? (
             <InventoryOperationForm
               key={`${selectedStore.id}:${operation}:${productId ?? "all"}:${balanceId ?? "all"}:${preset ?? "default"}`}
               store={selectedStore}

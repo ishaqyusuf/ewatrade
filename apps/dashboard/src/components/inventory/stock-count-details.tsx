@@ -1,6 +1,9 @@
 "use client"
+import { stockDate } from "@/lib/inventory-labels"
+import { formatStockQuantity } from "@/lib/inventory-view"
 import { useTRPC } from "@/trpc/client"
 import { Button } from "@ewatrade/ui"
+import { compareExactDecimals } from "@ewatrade/utils/exact-decimal"
 import { useQuery } from "@tanstack/react-query"
 export function StockCountDetails({
   storeId,
@@ -29,69 +32,66 @@ export function StockCountDetails({
     <div className="grid gap-6">
       <div className="grid gap-2">
         <p className="text-sm font-medium">
-          {count.status === "DRAFT" ? "Draft count" : "Finalized count"}
+          {count.status === "DRAFT"
+            ? "Saved count, not finished"
+            : count.status === "CANCELLED"
+              ? "Discarded count"
+              : "Finished count"}
         </p>
-        <p className="text-sm text-muted-foreground">
-          {count.reason ?? "No observation note"}
-        </p>
-        <p className="text-xs text-muted-foreground break-all">
-          Count {count.id}
-        </p>
+        {count.reason ? (
+          <p className="text-sm text-muted-foreground">{count.reason}</p>
+        ) : null}
       </div>
       {count.status === "DRAFT" ? (
         <output className="rounded-md border p-3 text-sm">
           {count.canFinalize
-            ? "Observations are current. Ask the assistant to review this count for finalization; a separate confirmation applies the adjustment."
-            : "Stock or units changed. Create and review fresh observations before finalization."}
+            ? "Stock hasn’t changed yet. Open Count stock in Inventory to finish or discard it."
+            : "Stock changed since this count, so it can’t be finished. Open Count stock in Inventory to count again or discard it."}
         </output>
+      ) : count.status === "FINALIZED" ? (
+        <p className="text-sm text-muted-foreground">
+          Finished {count.finalizedAt ? stockDate(count.finalizedAt) : ""}.
+          Stock was set to what was counted.
+        </p>
       ) : (
         <p className="text-sm text-muted-foreground">
-          Finalized{" "}
-          {count.finalizedAt
-            ? new Date(count.finalizedAt).toLocaleString()
-            : ""}
-          . The retained observation and variance below describe that
-          adjustment.
+          Discarded. Stock did not change.
         </p>
       )}
       {!count.lines.length ? (
-        <p>No observations were recorded.</p>
+        <p>Nothing was counted.</p>
       ) : (
         count.lines.map((line) => (
           <section key={line.id} className="grid gap-3 rounded-md border p-4">
             <h3 className="font-medium">
-              {line.productName} · {line.variantName}
+              {line.variantName && line.variantName !== line.productName
+                ? `${line.productName} · ${line.variantName}`
+                : line.productName}
             </h3>
             <dl className="grid grid-cols-2 gap-2 text-sm">
-              <dt>System at count</dt>
+              <dt>Expected</dt>
               <dd>
-                {line.expectedQuantity} {line.unitName}
+                {formatStockQuantity(line.expectedQuantity, line.unitName)}
               </dd>
               <dt>Counted</dt>
               <dd>
-                {line.observedQuantity} {line.unitName}
+                {formatStockQuantity(line.observedQuantity, line.unitName)}
               </dd>
-              <dt>Signed variance</dt>
+              <dt>Difference</dt>
               <dd>
-                {line.varianceQuantity} {line.unitName}
+                {compareExactDecimals(line.varianceQuantity, "0") === 0
+                  ? "Matches"
+                  : `${compareExactDecimals(line.varianceQuantity, "0") > 0 ? "+" : "−"}${formatStockQuantity(line.varianceQuantity.replace(/^-/, ""), line.unitName)}`}
               </dd>
-              <dt>Current on hand</dt>
+              <dt>In stock now</dt>
               <dd>
-                {line.currentQuantity} {line.unitName}
+                {formatStockQuantity(line.currentQuantity, line.unitName)}
               </dd>
-              <dt>Reserved</dt>
+              <dt>Held for orders</dt>
               <dd>
-                {line.reservedQuantity} {line.unitName}
+                {formatStockQuantity(line.reservedQuantity, line.unitName)}
               </dd>
             </dl>
-            <ul className="grid gap-1 text-xs text-muted-foreground">
-              {line.entries.map((entry, index) => (
-                <li key={`${entry.enteredInventoryUnitId}:${index}`}>
-                  {entry.enteredQuantity} {entry.unitName} × {entry.factor} ={" "}
-                  {entry.canonicalQuantity} canonical units
-                </li>
-              ))}
-            </ul>
           </section>
         ))
       )}
@@ -100,7 +100,7 @@ export function StockCountDetails({
         disabled={query.isFetching}
         onClick={() => void query.refetch()}
       >
-        Refresh count
+        Reload
       </Button>
     </div>
   )

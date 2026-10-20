@@ -17,7 +17,7 @@ export function StockCountSheet({ storeId }: { storeId: string }) {
       {stockCountId ? (
         <SheetFrame
           title="Stock count"
-          description="Saved physical observations and their stock adjustment."
+          description="What was counted and what it changed."
           closeError={closeError}
         >
           <StockCountDetails
