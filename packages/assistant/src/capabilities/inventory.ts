@@ -371,7 +371,7 @@ excluded(
 
 planned("services", "D04", ["serviceAssistantIntake.receipt"])
 
-planned("sales", "G01", ["businessReporting.read"])
+planned("sales", "G01", ["businessReporting.read", "orders.salesReport"])
 
 formOnly(
   "platform",

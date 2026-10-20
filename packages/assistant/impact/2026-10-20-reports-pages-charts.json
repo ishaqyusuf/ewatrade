@@ -1,0 +1,50 @@
+{
+  "version": 1,
+  "id": "2026-10-20-reports-pages-charts",
+  "tickets": ["H02", "G01"],
+  "summary": "Reports pages workshop direction 01 on the web dashboard: one date control, previous-period changes, Sales by day, Top sellers, Requests by day and From request to payment above the tabs, plain names and browser-built CSV downloads. Adds the read orders.salesReport and daily counts on serviceCommerce.report and prescriptions.report.",
+  "noAssistantImpact": "No capability declaration, assistant tool, prompt authority or write changes. orders.salesReport is a new aggregate read for the Reports page only; it is classified planned under G01 (authoritative item sales for business reporting), and the assistant keeps answering sales totals through orders.reportSummary. The added daily arrays are additive report fields.",
+  "capabilities": [],
+  "procedures": [
+    {
+      "path": "orders.salesReport",
+      "status": "planned",
+      "ticket": "G01",
+      "reason": "Sales by day and top sellers for the Reports page; G01 adds authoritative item sales reporting to the assistant."
+    }
+  ],
+  "docs": [
+    {
+      "topic": "feature",
+      "status": "local_only",
+      "path": ".brain/features/retail-ops-reporting.md",
+      "note": "Reports pages, workshop direction 01, 20 October 2026."
+    },
+    {
+      "topic": "api",
+      "status": "local_only",
+      "path": ".brain/api/contracts.md",
+      "note": "orders.salesReport and the daily report arrays."
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "test",
+      "path": "packages/db/src/queries/commercial-order-sales-report.test.ts",
+      "executed": true,
+      "result": "Sales window summary, top sellers and UTC day buckets: 6 pass with report-days.test.ts (0 fail)."
+    },
+    {
+      "kind": "test",
+      "path": "apps/dashboard/src/lib/report-range.test.ts",
+      "executed": true,
+      "result": "Report ranges, section builders and CSV builders for all three pages: 56 pass across 11 dashboard files (0 fail)."
+    },
+    {
+      "kind": "run",
+      "path": "apps/dashboard/src/components/dashboard/operations-reports.tsx",
+      "executed": true,
+      "result": "Run on https://ewatrade-dashboard.localhost (Claude Web Test Farms): Overview with real sales, date presets and custom dates, tooltip, table view, CSV captured in-page, Service jobs tab, 375px and light mode; Requests and quotes Store switch, tabs, Back, CSV; Prescriptions empty state and 90 days. No data was changed."
+    }
+  ]
+}
