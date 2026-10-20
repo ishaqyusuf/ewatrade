@@ -10,6 +10,7 @@ import {
   isLocalPhoneAuth,
   verifyAccountPhoneChallenge,
 } from "@ewatrade/db/queries"
+import { ruleRejectedError } from "@ewatrade/errors"
 import { TRPCError } from "@trpc/server"
 import type { TRPCContext } from "../trpc/init"
 
@@ -45,7 +46,10 @@ function configuration() {
 }
 function failure(error: unknown): never {
   if (error instanceof AccountPhoneVerificationError)
-    throw new TRPCError({ code: error.code, message: error.message })
+    throw new TRPCError({
+      code: error.code,
+      cause: ruleRejectedError(new Error(error.message)),
+    })
   if (error instanceof TRPCError) throw error
   throw new TRPCError({
     code: "BAD_REQUEST",

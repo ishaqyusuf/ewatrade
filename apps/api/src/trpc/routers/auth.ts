@@ -447,13 +447,16 @@ export const authRouter = createTRPCRouter({
           throw new TRPCError({ code: "CONFLICT", message: error.message })
         throw new TRPCError({
           code: "BAD_REQUEST",
-          message:
-            error instanceof Error &&
-            /^(Too many codes|Wait one minute|Choose an eligible|The Terms|Review the current)/.test(
-              error.message,
-            )
-              ? error.message
-              : "We could not send the WhatsApp code. Try again later.",
+          cause: ruleRejectedError(
+            new Error(
+              error instanceof Error &&
+                /^(Too many codes|Wait one minute|Choose an eligible|The Terms|Review the current)/.test(
+                  error.message,
+                )
+                ? error.message
+                : "We could not send the WhatsApp code. Try again later.",
+            ),
+          ),
         })
       }
     }),
