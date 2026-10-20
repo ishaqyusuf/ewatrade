@@ -1,5 +1,5 @@
 "use client"
-import { SettingsChoice } from "@/components/service-commerce/settings-choice"
+import { SettingsChoice } from "@/components/settings/settings-choice"
 import { useSettingsAutosave } from "@/components/settings/use-settings-autosave"
 import { useTRPC } from "@/trpc/client"
 import type { RouterOutputs } from "@ewatrade/api/trpc/routers/_app"

@@ -7,6 +7,7 @@ import {
   SettingsRow,
   SettingsSection,
 } from "@/components/settings/settings-page"
+import { SettingsStatusPill } from "@/components/settings/settings-status-pill"
 import { useTRPC } from "@/trpc/client"
 import { cn } from "@/utils"
 import type { RouterOutputs } from "@ewatrade/api/trpc/routers/_app"
@@ -25,7 +26,6 @@ import {
 } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { useMutation, useQuery } from "@tanstack/react-query"
-import type { ReactNode } from "react"
 
 type SubscriptionSnapshot = RouterOutputs["retailOps"]["subscription"]
 type Entitlement = SubscriptionSnapshot["entitlements"][number]
@@ -99,29 +99,6 @@ function statusLabel(status: SubscriptionSnapshot["subscription"]["status"]) {
   return status.charAt(0).toUpperCase() + status.slice(1)
 }
 
-function Pill({
-  children,
-  tone,
-}: {
-  children: ReactNode
-  tone: "ok" | "warn" | "muted"
-}) {
-  return (
-    <span
-      className={cn(
-        "inline-flex shrink-0 items-center rounded-full px-2.5 py-0.5 text-xs font-semibold",
-        tone === "ok" &&
-          "bg-emerald-100 text-emerald-800 dark:bg-emerald-500/15 dark:text-emerald-200",
-        tone === "warn" &&
-          "bg-amber-100 text-amber-900 dark:bg-amber-500/15 dark:text-amber-100",
-        tone === "muted" && "bg-muted text-muted-foreground",
-      )}
-    >
-      {children}
-    </span>
-  )
-}
-
 function UsageRow({ entitlement }: { entitlement: Entitlement }) {
   const full = entitlement.isAtLimit
   const share =
@@ -159,7 +136,9 @@ function UsageRow({ entitlement }: { entitlement: Entitlement }) {
       }
     >
       <span className="text-sm tabular-nums">{usageText(entitlement)}</span>
-      {full ? <Pill tone="warn">Limit reached</Pill> : null}
+      {full ? (
+        <SettingsStatusPill tone="warn">Limit reached</SettingsStatusPill>
+      ) : null}
     </SettingsRow>
   )
 }
@@ -202,7 +181,9 @@ function PlanCard({
     >
       <div className="flex items-center justify-between gap-2">
         <h3 className="text-[15px] font-semibold">{plan.name}</h3>
-        {current ? <Pill tone="ok">Your plan</Pill> : null}
+        {current ? (
+          <SettingsStatusPill tone="ok">Your plan</SettingsStatusPill>
+        ) : null}
       </div>
       <p className="text-sm font-semibold">{plan.priceLabel}</p>
       <p className="text-sm text-muted-foreground">{plan.description}</p>
@@ -356,11 +337,11 @@ export function RetailOpsSubscriptionSettings() {
               </>
             }
           >
-            <Pill
+            <SettingsStatusPill
               tone={snapshot.subscription.status === "active" ? "ok" : "warn"}
             >
               {statusLabel(snapshot.subscription.status)}
-            </Pill>
+            </SettingsStatusPill>
           </SettingsRow>
         ) : (
           <SettingsRow label="Loading your plan…" />

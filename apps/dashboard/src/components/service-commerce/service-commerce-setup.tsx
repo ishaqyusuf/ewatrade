@@ -29,6 +29,8 @@ import { useServiceCommerceSetupParams } from "@/hooks/use-service-commerce-setu
 import { useTRPC } from "@/trpc/client"
 import type { ServiceCommerceProfileConfiguration } from "@ewatrade/service-commerce"
 
+import { SettingsChoice } from "@/components/settings/settings-choice"
+import { SettingsStatusPill } from "@/components/settings/settings-status-pill"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import Link from "next/link"
 import { useId, useMemo, useState } from "react"
@@ -40,8 +42,6 @@ import {
   plainSetupError,
 } from "./service-commerce-setup-labels"
 import { serviceCommerceSetupViewState } from "./service-commerce-setup-state"
-import { SettingsChoice } from "./settings-choice"
-import { SettingsStatusPill } from "./settings-status-pill"
 
 type StoreOption = { id: string; name: string }
 type SettingsValues = Omit<ServiceCommerceProfileConfiguration, "status">

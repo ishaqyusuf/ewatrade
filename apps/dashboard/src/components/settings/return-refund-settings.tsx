@@ -1,8 +1,7 @@
 "use client"
 
+import { SettingsChoice } from "@/components/settings/settings-choice"
 import {
-  SettingsChoice,
-  type SettingsChoiceOption,
   SettingsHeader,
   SettingsPage,
   SettingsSection,
@@ -19,7 +18,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 type Mode = "OFF" | "OPEN" | "APPROVAL_REQUIRED"
 type Field = "returnsMode" | "refundsMode"
 
-const RETURNS: SettingsChoiceOption<Mode>[] = [
+const RETURNS: Array<{ value: Mode; label: string; description?: string }> = [
   {
     value: "OPEN",
     label: "Staff can do it",
@@ -38,7 +37,7 @@ const RETURNS: SettingsChoiceOption<Mode>[] = [
   },
 ]
 
-const REFUNDS: SettingsChoiceOption<Mode>[] = [
+const REFUNDS: Array<{ value: Mode; label: string; description?: string }> = [
   {
     value: "OPEN",
     label: "Managers can do it",
@@ -170,7 +169,6 @@ export function ReturnRefundSettings({
           ) : null}
           <SettingsSection title={`Returns at ${storeName}`}>
             <SettingsChoice
-              name="returns"
               label="Who can take a return"
               options={RETURNS}
               value={policy.data.returnsMode}
@@ -181,7 +179,6 @@ export function ReturnRefundSettings({
           </SettingsSection>
           <SettingsSection title={`Refunds at ${storeName}`}>
             <SettingsChoice
-              name="refunds"
               label="Who can give money back"
               options={REFUNDS}
               value={policy.data.refundsMode}

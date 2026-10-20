@@ -1,5 +1,4 @@
 "use client"
-import { SettingsStatusPill } from "@/components/service-commerce/settings-status-pill"
 import {
   SettingsHeader,
   SettingsNotice,
@@ -7,6 +6,7 @@ import {
   SettingsRow,
   SettingsSection,
 } from "@/components/settings/settings-page"
+import { SettingsStatusPill } from "@/components/settings/settings-status-pill"
 import { useServiceCommerceParams } from "@/hooks/use-service-commerce-params"
 import { useTRPC } from "@/trpc/client"
 import type { RouterOutputs } from "@ewatrade/api/trpc/routers/_app"

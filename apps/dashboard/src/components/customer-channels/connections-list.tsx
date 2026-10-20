@@ -2,7 +2,7 @@
 import {
   SettingsStatusPill,
   type SettingsStatusTone,
-} from "@/components/service-commerce/settings-status-pill"
+} from "@/components/settings/settings-status-pill"
 import { SettingsSection } from "@/components/settings/settings-page"
 import { cn } from "@/utils"
 import { Button } from "@ewatrade/ui"
