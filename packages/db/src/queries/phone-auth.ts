@@ -4,6 +4,10 @@ import {
   currentEffectiveLegalPublication,
   resolveLegalSignupChoice,
 } from "@ewatrade/utils/legal-approval"
+import {
+  getQaPolicy,
+  managedQaIdentity,
+} from "@ewatrade/utils/qa-policy-server"
 import type { PrismaClient } from "../../generated/prisma/client"
 import { AccountAgeBand } from "../../generated/prisma/enums"
 import { recordLegalAcceptance } from "./account-privacy"
@@ -17,16 +21,22 @@ import {
   phoneAuthDigest as digest,
   buildPhoneOtpIdentifier as identifier,
 } from "./phone-otp-identifier"
+import {
+  authorizeQaPhoneEntry,
+  validateQaPhoneAuthorization,
+} from "./qa-access"
 import type { DbClient } from "./types"
 
 export type PhoneOtpRequest = Omit<
   Parameters<typeof createMobileOwnerOtp>[1],
   "email" | "accessToken" | "phone"
-> & { phone: string }
+> & { phone: string; qaEntryId?: string; qaToken?: string }
 type Challenge = {
   attempts: number
   codeHash: string
   draft: PhoneOtpRequest
+  qaAuthorizationId?: string
+  qaEntryId?: string
   legalDocumentHash: string | null
 }
 const transactionOptions = {
@@ -99,6 +109,22 @@ export async function createPhoneOtp(
     input.mode === "sign_up"
       ? resolveLegalSignupChoice(input, currentEffectiveLegalPublication())
       : null
+  if (input.mode === "sign_up") await getQaPolicy()
+  const entry =
+    input.qaEntryId || input.mode === "sign_up"
+      ? await managedQaIdentity({ phone, entryId: input.qaEntryId })
+      : null
+  if (input.qaEntryId && !input.qaToken)
+    throw new Error("QA authorization is required.")
+  const qaAuthorizationId =
+    input.qaEntryId && input.qaToken
+      ? await authorizeQaPhoneEntry(db, {
+          entryId: input.qaEntryId,
+          phone,
+          token: input.qaToken,
+        })
+      : undefined
+  const { qaToken: _qaToken, ...safeDraft } = input
   const id = identifier(phone, input.mode)
   const code = isLocalPhoneAuth()
     ? "123456"
@@ -107,7 +133,9 @@ export async function createPhoneOtp(
   const challenge: Challenge = {
     attempts: 0,
     codeHash: digest(`${id}:${code}`),
-    draft: { ...input, phone },
+    draft: { ...safeDraft, phone },
+    qaEntryId: entry?.id,
+    qaAuthorizationId,
     legalDocumentHash: legal?.documentHash ?? null,
   }
   await db.$transaction(
@@ -177,6 +205,18 @@ export async function verifyPhoneOtp(
         return { error: "The verification code is incorrect." } as const
       }
       const draft = challenge.draft
+      const entry = challenge.qaEntryId
+        ? await managedQaIdentity({ phone, entryId: challenge.qaEntryId })
+        : null
+      if (challenge.qaAuthorizationId) {
+        if (!entry) throw new Error("QA entry is unavailable.")
+        await validateQaPhoneAuthorization(
+          tx,
+          challenge.qaAuthorizationId,
+          entry.qa,
+          now,
+        )
+      }
       const legal =
         draft.mode === "sign_up"
           ? resolveLegalSignupChoice(draft, currentEffectiveLegalPublication())
@@ -187,10 +227,30 @@ export async function verifyPhoneOtp(
         where: { phone },
         select: { id: true, phoneVerifiedAt: true },
       })
+      if (entry && user) {
+        await managedQaIdentity({ phone, userId: user.id, entryId: entry.id })
+        if (
+          await tx.membership.findFirst({
+            where: {
+              userId: user.id,
+              status: "ACTIVE",
+              tenant: { dataClassification: "LIVE" },
+            },
+            select: { id: true },
+          })
+        )
+          throw new Error(
+            "This phone belongs to an existing live account. No accounts were merged or converted.",
+          )
+      }
       if (draft.mode === "login" && !user?.phoneVerifiedAt)
         return {
           error: "Use your existing sign-in method, or create a phone account.",
         } as const
+      if (entry?.accountId && !user)
+        throw new Error(
+          "The QA entry belongs to an existing account. Use its sign-in method.",
+        )
       if (draft.mode === "sign_up") {
         if (user)
           return {
@@ -236,6 +296,7 @@ export async function verifyPhoneOtp(
         tx,
         user.id,
         "phone",
+        entry?.qa,
       )
       return { session } as const
     },

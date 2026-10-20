@@ -1,5 +1,3 @@
-import type { ReactNode } from "react"
-
 export function QaAuthorizationSheet() {
   return null
 }
@@ -12,14 +10,4 @@ export function FloatingQaButton() {
   return null
 }
 
-export function QaQuickFillButton(_props: {
-  canUndo?: boolean
-  children?: ReactNode
-  formId: string
-  isDirty?: boolean
-  label?: string
-  onFill: (...args: never[]) => void
-  onUndo?: () => void
-}) {
-  return null
-}
+export { QaQuickFillButton } from "../components/mobile/qa-quick-fill-button"

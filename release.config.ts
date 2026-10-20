@@ -15,8 +15,6 @@ const featuresOff = [
 const tooling = [
   "APP_UPDATE_BACKEND", // local app-update publisher tooling only
   "APP_UPDATE_PUBLISH_TOKEN", // local app-update publisher credential only
-  "QA_ACCELERATOR_ENABLED", // QA only; must stay off in production
-  "EMAIL_QA_DOMAIN_ROUTES",
   "SENTRY_AUTH_TOKEN", // build-time source map upload
   "DEV_PROFILE", // local env-profile selector
   "DEBUG_PERF", // local performance debugging

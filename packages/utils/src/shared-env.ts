@@ -28,7 +28,8 @@ export const EWATRADE_SHARED_ENV_NAMES = [
   "LOGLY_COLLECTOR_URL",
   "APPLE_CLIENT_IDS",
   "EARLY_ACCESS_LINK_TTL_DAYS",
-  "QA_ACCELERATOR_ENABLED",
+  "QA_POLICY_URL",
+  "QA_POLICY_READ_KEY",
   // Browser-visible values: next.config maps them before Next inlines them.
   "NEXT_PUBLIC_API_URL",
   "NEXT_PUBLIC_DASHBOARD_URL",

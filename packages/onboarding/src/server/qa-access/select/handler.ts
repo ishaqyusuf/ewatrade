@@ -23,7 +23,7 @@ function getDashboardUrl() {
 }
 
 export async function POST(request: NextRequest) {
-  const availability = getQaWebMutationAvailability(
+  const availability = await getQaWebMutationAvailability(
     request,
     QA_ACCELERATOR_CONTRACT_VERSION,
   )

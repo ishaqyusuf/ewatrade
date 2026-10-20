@@ -14,6 +14,7 @@ import {
   updateRetailOpsStaffStoreAccess,
 } from "@ewatrade/db/queries"
 import { enqueueRetailOpsStaffInviteNotification } from "@ewatrade/jobs"
+import { getQaPolicyEnvironment } from "@ewatrade/utils/qa-policy-server"
 import {
   buildStaffInvitationLinks,
   isQaStaffInvitation,
@@ -290,7 +291,10 @@ export async function POST(request: NextRequest) {
         {
           result: hideStaffInviteAcceptanceToken(invitedStaff),
           ...(invitedStaff.invite.acceptanceToken &&
-          isQaStaffInvitation(invitedStaff.staff.email, process.env)
+          isQaStaffInvitation(
+            invitedStaff.staff.email,
+            await getQaPolicyEnvironment(),
+          )
             ? {
                 qaInviteUrl: buildStaffInvitationLinks(
                   process.env,

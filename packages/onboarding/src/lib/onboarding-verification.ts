@@ -82,7 +82,7 @@ export async function issueOnboardingVerification(
     ],
     "verification",
   )
-  if (shouldPreviewEarlyAccess({ email: data.email }))
+  if (await shouldPreviewEarlyAccess({ email: data.email }))
     return {
       message:
         "The verification email was sent to your tester inbox. You can also verify your QA address below.",

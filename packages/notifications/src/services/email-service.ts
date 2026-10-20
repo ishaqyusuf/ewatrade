@@ -9,12 +9,12 @@ import {
   commercialOrderReminderDigestSummary,
   createCommercialOrderFulfillmentReminderEmail,
   createCommercialOrderReminderDigestEmail,
+  createManagedQaEmailMessages,
   createMarketingEarlyAccessAdminEmail,
   createMarketingEarlyAccessConfirmationEmail,
   createMarketingWaitlistAdminEmail,
   createMarketingWaitlistConfirmationEmail,
   createRetailOpsStaffInviteEmail,
-  createTestRoutedEmailMessages,
   defaultCommercialOrderFulfillmentReminderSubject,
   defaultCommercialOrderReminderDigestSubject,
   defaultMarketingEarlyAccessAdminSubject,
@@ -259,13 +259,19 @@ export class EmailService {
         continue
       }
 
-      const routedPlannedMessages = plannedMessages.flatMap((planned) =>
-        createTestRoutedEmailMessages(planned.message).map((message) => ({
-          ...planned,
-          message,
-          recipientEmail: message.to,
-        })),
-      )
+      const routedPlannedMessages = (
+        await Promise.all(
+          plannedMessages.map(async (planned) =>
+            (
+              await createManagedQaEmailMessages(planned.message)
+            ).map((message) => ({
+              ...planned,
+              message,
+              recipientEmail: message.to,
+            })),
+          ),
+        )
+      ).flat()
       const results = await dispatchEmailMessages(
         routedPlannedMessages.map((planned) => planned.message),
         transport,

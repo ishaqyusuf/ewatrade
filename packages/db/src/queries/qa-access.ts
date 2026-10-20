@@ -4,6 +4,11 @@ import {
   isConfiguredQaDomain,
   normalizeQaDomain,
 } from "@ewatrade/utils/qa-accelerator"
+import {
+  getQaPolicy,
+  getQaPolicyEnvironment,
+  managedQaDomainEnabled,
+} from "@ewatrade/utils/qa-policy-server"
 import type { DbClient } from "./types"
 
 const AUTHORIZATION_TTL_HOURS = 12
@@ -284,6 +289,8 @@ export async function exchangeQaTesterCredential(
 ) {
   const now = new Date()
   const qaDomain = normalizeQaDomain(input.qaDomain)
+  if (!(await managedQaDomainEnabled(qaDomain)))
+    throw new QaAccessError("authorization_required")
   const clientId = input.clientId.trim()
   if (!clientId) throw new QaAccessError("authorization_required")
   const clientIdentityDigest = digest(input.secret, "client-identity", clientId)
@@ -349,12 +356,16 @@ export async function authorizeQaDomain(
   },
   env = process.env,
 ) {
-  const availability = getQaAcceleratorAvailability({ env, platform: "mobile" })
+  const managedEnv = await getQaPolicyEnvironment(env)
+  const availability = getQaAcceleratorAvailability({
+    env: managedEnv,
+    platform: "mobile",
+  })
   if (!availability.available) throw new QaAccessError("unavailable")
   const qaDomain = normalizeQaDomain(input.qaDomain)
   if (
     !isConfiguredQaDomain(qaDomain, {
-      EMAIL_QA_DOMAIN_ROUTES: env.EMAIL_QA_DOMAIN_ROUTES,
+      EMAIL_QA_DOMAIN_ROUTES: managedEnv.EMAIL_QA_DOMAIN_ROUTES,
     }) ||
     input.clientId.trim().length < 8
   )
@@ -481,7 +492,8 @@ async function getActiveAuthorization(
     authorization.expiresAt <= now ||
     authorization.grant.status !== "ACTIVE" ||
     authorization.grant.revokedAt ||
-    authorization.grant.expiresAt <= now
+    authorization.grant.expiresAt <= now ||
+    !(await managedQaDomainEnabled(authorization.grant.qaDomain))
   ) {
     throw new QaAccessError("authorization_required")
   }
@@ -844,7 +856,8 @@ export async function validateQaDerivedSession(
       authorization.grant.status === "ACTIVE" &&
       !authorization.grant.revokedAt &&
       authorization.grant.expiresAt > now &&
-      membership,
+      membership &&
+      (await managedQaDomainEnabled(authorization.grant.qaDomain)),
   )
   if (!active) {
     await db.session.deleteMany({ where: { id: sessionId } })
@@ -870,4 +883,58 @@ export async function assertQaDerivedSessionActive(
   sessionId: string,
 ) {
   return (await validateQaDerivedSession(db, sessionId)).active
+}
+
+/** Returns only this existing grant's contacts; never the central directory. */
+export async function listQaPhoneEntries(
+  db: DbClient,
+  input: { secret: string; token: string },
+) {
+  const authorization = await getActiveAuthorization(db, input)
+  const policy = await getQaPolicy()
+  return policy.entries
+    .filter((e) => e.active && e.qa === authorization.grant.qaDomain && e.phone)
+    .flatMap((e) =>
+      e.phone
+        ? [{ id: e.id, name: e.name ?? null, qa: e.qa, phone: e.phone }]
+        : [],
+    )
+}
+export async function authorizeQaPhoneEntry(
+  db: DbClient,
+  input: { entryId: string; phone: string; token: string },
+) {
+  const secret = process.env.QA_ACCELERATOR_SECRET?.trim()
+  if (!secret) throw new QaAccessError("authorization_required")
+  const authorization = await getActiveAuthorization(db, {
+    secret,
+    token: input.token,
+  })
+  const entries = await listQaPhoneEntries(db, { secret, token: input.token })
+  if (!entries.some((e) => e.id === input.entryId && e.phone === input.phone))
+    throw new QaAccessError("authorization_required")
+  return authorization.id
+}
+export async function validateQaPhoneAuthorization(
+  db: DbClient,
+  id: string,
+  domain: string,
+  now: Date,
+) {
+  const a = await db.qaClientAuthorization.findUnique({
+    where: { id },
+    include: { grant: true },
+  })
+  if (
+    !a ||
+    a.status !== "ACTIVE" ||
+    a.revokedAt ||
+    a.expiresAt <= now ||
+    a.grant.status !== "ACTIVE" ||
+    a.grant.revokedAt ||
+    a.grant.expiresAt <= now ||
+    a.grant.qaDomain !== domain ||
+    !(await managedQaDomainEnabled(domain))
+  )
+    throw new QaAccessError("authorization_required")
 }

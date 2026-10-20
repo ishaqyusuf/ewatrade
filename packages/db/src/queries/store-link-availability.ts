@@ -6,7 +6,7 @@ import {
   storeLinkSuggestions,
 } from "@ewatrade/utils/store-link"
 import type { PrismaClient } from "../../generated/prisma/client"
-import { configuredQaDomainForEmail } from "./qa-maintenance"
+import { managedQaDomainForEmail } from "./qa-maintenance"
 
 export class StoreLinkConflictError extends Error {
   constructor(
@@ -51,11 +51,12 @@ export async function checkStoreLinkAvailability(
   network: string | null,
   emailDomain?: string,
 ) {
+  const qaDomain = emailDomain
+    ? await managedQaDomainForEmail(`link-check@${emailDomain}`)
+    : null
   const slug = withQaWorkspaceSuffix(
     normalizeStoreLink(value),
-    Boolean(
-      emailDomain && configuredQaDomainForEmail(`link-check@${emailDomain}`),
-    ),
+    Boolean(qaDomain),
     40,
   )
   const now = new Date()
@@ -74,14 +75,7 @@ export async function checkStoreLinkAvailability(
   const candidates = [
     slug,
     ...storeLinkSuggestions(slug).map((s) =>
-      withQaWorkspaceSuffix(
-        s,
-        Boolean(
-          emailDomain &&
-            configuredQaDomainForEmail(`link-check@${emailDomain}`),
-        ),
-        40,
-      ),
+      withQaWorkspaceSuffix(s, Boolean(qaDomain), 40),
     ),
   ]
   const [taken, hosts] = await Promise.all([
@@ -97,12 +91,7 @@ export async function checkStoreLinkAvailability(
   const unavailable = new Set(taken.map((t) => t.slug))
   const unavailableHosts = new Set(hosts.map((h) => h.hostname))
   const available = (s: string) =>
-    isClaimableStoreLink(
-      s,
-      Boolean(
-        emailDomain && configuredQaDomainForEmail(`link-check@${emailDomain}`),
-      ),
-    ) &&
+    isClaimableStoreLink(s, Boolean(qaDomain)) &&
     !unavailable.has(s) &&
     !storeLinkHostnames([s]).some((host) => unavailableHosts.has(host))
   return {

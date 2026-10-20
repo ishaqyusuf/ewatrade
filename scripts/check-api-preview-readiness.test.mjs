@@ -38,8 +38,8 @@ function fixture(previewDatabase = preview) {
       "BETTER_AUTH_SECRET=preview-only-secret",
       "BETTER_AUTH_URL=https://preview-api.example.test",
       "ALLOWED_API_ORIGINS=https://preview.example.test",
-      "QA_ACCELERATOR_ENABLED=true",
-      "QA_TOOLS_ENABLED=true",
+      "QA_POLICY_URL=https://oversight.example.test/api/qa-policy/v1/ewatrade",
+      "QA_POLICY_READ_KEY=preview-policy-reader-at-least-32-characters",
       "QA_ACCELERATOR_SECRET=preview-qa-signing-secret-at-least-32-characters",
       "QA_ACCELERATOR_ALLOWED_ORIGINS=https://preview.example.test",
       'EMAIL_QA_DOMAIN_ROUTES={"example.qa.test":"tester@example.com"}',
@@ -93,15 +93,20 @@ test("rejects enabled conversation outcome processing in Preview", () => {
   )
 })
 
-test("requires Preview authenticated QA tooling as well as domain entry", () => {
+test("requires the bounded central QA policy reader in Preview", () => {
   const root = fixture()
   const previewPath = path.join(root, ".env.preview")
   const profile = readFileSync(previewPath, "utf8")
   writeFileSync(
     previewPath,
-    profile.replace("QA_TOOLS_ENABLED=true", "QA_TOOLS_ENABLED=false"),
+    profile.replace(
+      "QA_POLICY_READ_KEY=preview-policy-reader-at-least-32-characters",
+      "QA_TOOLS_ENABLED=false",
+    ),
   )
-  expect(inspectApiPreviewReadiness(root)).toContain("QA_TOOLS_NOT_ENABLED")
+  expect(inspectApiPreviewReadiness(root)).toContain(
+    "QA_POLICY_READ_KEY_MISSING_OR_SHORT",
+  )
 })
 
 test("rejects a Preview profile pointed at development through a pooled hostname", () => {
@@ -146,8 +151,8 @@ test("rejects enabled account-deletion processing and a wrong project link", () 
       "BETTER_AUTH_SECRET=preview-only-secret",
       "BETTER_AUTH_URL=https://preview-api.example.test",
       "ALLOWED_API_ORIGINS=https://preview.example.test",
-      "QA_ACCELERATOR_ENABLED=true",
-      "QA_TOOLS_ENABLED=true",
+      "QA_POLICY_URL=https://oversight.example.test/api/qa-policy/v1/ewatrade",
+      "QA_POLICY_READ_KEY=preview-policy-reader-at-least-32-characters",
       "QA_ACCELERATOR_SECRET=preview-qa-signing-secret-at-least-32-characters",
       "QA_ACCELERATOR_ALLOWED_ORIGINS=https://preview.example.test",
       'EMAIL_QA_DOMAIN_ROUTES={"example.qa.test":"tester@example.com"}',

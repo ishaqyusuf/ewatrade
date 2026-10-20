@@ -3,10 +3,10 @@ import type {
   OperatingCurrencyCode,
 } from "@ewatrade/utils"
 import { withQaWorkspaceSuffix } from "@ewatrade/utils"
+import { managedQaIdentity } from "@ewatrade/utils/qa-policy-server"
 import { isClaimableStoreLink } from "@ewatrade/utils/store-link"
 import { Prisma } from "../../generated/prisma/client"
 import { AccountAgeBand } from "../../generated/prisma/enums"
-import { configuredQaDomainForEmail } from "./qa-maintenance"
 import {
   StoreLinkConflictError,
   storeLinkHostnames,
@@ -55,7 +55,7 @@ export class OwnerBusinessAgeError extends Error {
 export async function requireEligibleOwnerAge(db: DbClient, userId: string) {
   const owner = await db.user.findUnique({
     where: { id: userId },
-    select: { ageBand: true, email: true },
+    select: { ageBand: true, email: true, phone: true, phoneVerifiedAt: true },
   })
   if (!owner) throw new Error("Owner account not found.")
   if (
@@ -199,7 +199,34 @@ async function createOwnerBusinessWithSource(
   source: "mobile_owner_business_create" | "mobile_owner_signup",
 ): Promise<OwnerBusinessSummary> {
   const owner = await requireEligibleOwnerAge(db, input.userId)
-  const qaSourceDomain = configuredQaDomainForEmail(owner.email)
+  const qaSourceDomain =
+    (
+      await managedQaIdentity({
+        email: owner.email,
+        phone: owner.phoneVerifiedAt ? owner.phone : null,
+        userId: input.userId,
+      })
+    )?.qa ?? null
+  if (
+    !qaSourceDomain &&
+    (await db.membership.findFirst({
+      where: { userId: input.userId, tenant: { dataClassification: "QA" } },
+      select: { id: true },
+    }))
+  )
+    throw new Error(
+      "The existing QA identity needs an active matching QA entry before creating another business.",
+    )
+  if (
+    qaSourceDomain &&
+    (await db.membership.findFirst({
+      where: { userId: input.userId, tenant: { dataClassification: "LIVE" } },
+      select: { id: true },
+    }))
+  )
+    throw new Error(
+      "An existing live account cannot be automatically adopted as QA.",
+    )
   const tenant = await createUniqueTenant(db, {
     businessName: input.businessName,
     currencyCode: input.currencyCode,

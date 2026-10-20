@@ -8,7 +8,12 @@ import {
 } from "@/components/mobile/auth-header"
 import { FormField } from "@/components/mobile/form-field"
 import { PhoneField } from "@/components/mobile/phone-field"
+import {
+  QaPhoneEntryPicker,
+  type SelectedQaPhone,
+} from "@/components/mobile/qa-phone-entry-picker"
 import { StatusBanner } from "@/components/mobile/status-banner"
+import { Text as QaPhoneText } from "@/components/ui/text"
 import { View } from "@/components/ui/view"
 import { useAuthContext } from "@/hooks/use-auth"
 import { useMobileAppleAuth } from "@/hooks/use-mobile-apple-auth"
@@ -40,11 +45,11 @@ export function LoginScreen() {
   const [usePassword, setUsePassword] = useState(false)
   const [useWhatsApp, setUseWhatsApp] = useState(false)
   const [phone, setPhone] = useState("")
+  const [qaPhone, setQaPhone] = useState<SelectedQaPhone | null>(null)
   const [phoneCountry, setPhoneCountry] = useState("NG")
-  const fullPhone = toInternationalPhone(
-    getCountry(phoneCountry).dialCode,
-    phone,
-  )
+  const fullPhone =
+    qaPhone?.phone ??
+    toInternationalPhone(getCountry(phoneCountry).dialCode, phone)
   const phoneAvailability = useQuery(
     trpc.auth.phoneOtpAvailability.queryOptions(undefined, { retry: false }),
   )
@@ -60,6 +65,7 @@ export function LoginScreen() {
           params: {
             channel: "whatsapp",
             phone: fullPhone,
+            qaEntryId: qaPhone?.id,
             mode: "login",
             returnTo,
           },
@@ -147,7 +153,12 @@ export function LoginScreen() {
 
   const continueWithEmail = () => {
     if (useWhatsApp) {
-      requestPhoneMutation.mutate({ phone: fullPhone, mode: "login" })
+      requestPhoneMutation.mutate({
+        phone: fullPhone,
+        mode: "login",
+        qaEntryId: qaPhone?.id,
+        qaToken: qaPhone?.token,
+      })
       return
     }
     if (!normalizedEmail) return
@@ -183,14 +194,27 @@ export function LoginScreen() {
       <View className="gap-7">
         <View className="gap-2.5">
           {useWhatsApp ? (
-            <PhoneField
-              countryCode={phoneCountry}
-              onCountryChange={setPhoneCountry}
-              onChangeText={setPhone}
-              value={phone}
-              label="WhatsApp number"
-              variant="green-gate"
-            />
+            <View className="gap-3">
+              <QaPhoneEntryPicker
+                value={qaPhone}
+                onChange={setQaPhone}
+                disabled={isPending}
+              />
+              {qaPhone ? (
+                <QaPhoneText className="rounded-xl border border-border p-4">
+                  {qaPhone.phone}
+                </QaPhoneText>
+              ) : (
+                <PhoneField
+                  countryCode={phoneCountry}
+                  onCountryChange={setPhoneCountry}
+                  onChangeText={setPhone}
+                  value={phone}
+                  label="WhatsApp number"
+                  variant="green-gate"
+                />
+              )}
+            </View>
           ) : (
             <FormField
               autoCapitalize="none"

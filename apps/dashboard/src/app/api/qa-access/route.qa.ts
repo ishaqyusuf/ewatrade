@@ -17,6 +17,10 @@ import {
   isConfiguredQaDomain,
 } from "@ewatrade/utils/qa-accelerator"
 import { getTrustedQaNetworkSource } from "@ewatrade/utils/qa-network-source"
+import {
+  getQaPolicyEnvironment,
+  qaPolicyTarget,
+} from "@ewatrade/utils/qa-policy-server"
 import { type NextRequest, NextResponse } from "next/server"
 import { z } from "zod/v4"
 
@@ -38,7 +42,7 @@ const inputSchema = z.discriminatedUnion("action", [
     .strict(),
 ])
 
-function availability(request: NextRequest, mutation = false) {
+async function availability(request: NextRequest, mutation = false) {
   const host =
     request.headers.get("x-forwarded-host")?.split(",", 1)[0]?.trim() ||
     request.headers.get("host")
@@ -52,13 +56,13 @@ function availability(request: NextRequest, mutation = false) {
       : request.nextUrl.origin
   return getQaAcceleratorAvailability({
     clientContractVersion: QA_ACCELERATOR_CONTRACT_VERSION,
-    env: process.env,
+    env: await getQaPolicyEnvironment(),
     origin,
     platform: "web",
   })
 }
 
-function unavailable(result: ReturnType<typeof availability>) {
+function unavailable(result: Awaited<ReturnType<typeof availability>>) {
   return !result.available && result.category === "environment_not_allowed"
     ? new NextResponse(null, { status: 404 })
     : NextResponse.json(
@@ -79,9 +83,14 @@ function secret() {
 function errorResponse(error: unknown) {
   if (!(error instanceof QaAccessError)) {
     // Do not log Prisma messages: they may include SQL, inputs or credentials.
-    const code = error && typeof error === "object" && "code" in error &&
-      typeof error.code === "string" && /^P[0-9]{4}$/.test(error.code)
-      ? error.code : "UNEXPECTED"
+    const code =
+      error &&
+      typeof error === "object" &&
+      "code" in error &&
+      typeof error.code === "string" &&
+      /^P[0-9]{4}$/.test(error.code)
+        ? error.code
+        : "UNEXPECTED"
     console.error("[qa-access] backend request failed", { code })
     return NextResponse.json(
       { message: "QA access is temporarily unavailable. Please try again." },
@@ -121,7 +130,7 @@ async function access(token: string) {
 }
 
 async function getRequest(request: NextRequest) {
-  const result = availability(request)
+  const result = await availability(request)
   if (!result.available) return unavailable(result)
   const token = request.cookies.get(authorizationCookie)?.value
   if (!token) return NextResponse.json({ available: true, access: null })
@@ -133,9 +142,9 @@ async function getRequest(request: NextRequest) {
 }
 
 async function postRequest(request: NextRequest) {
-  const deployment = availability(request)
+  const deployment = await availability(request)
   if (!deployment.available) return unavailable(deployment)
-  const result = availability(request, true)
+  const result = await availability(request, true)
   if (!result.available) return unavailable(result)
   const parsed = inputSchema.safeParse(await request.json().catch(() => null))
   if (!parsed.success)
@@ -147,7 +156,8 @@ async function postRequest(request: NextRequest) {
     if (parsed.data.action === "authorize") {
       if (
         !isConfiguredQaDomain(parsed.data.qaDomain, {
-          EMAIL_QA_DOMAIN_ROUTES: process.env.EMAIL_QA_DOMAIN_ROUTES,
+          EMAIL_QA_DOMAIN_ROUTES: (await getQaPolicyEnvironment())
+            .EMAIL_QA_DOMAIN_ROUTES,
         })
       )
         throw new QaAccessError("authorization_required")
@@ -161,7 +171,7 @@ async function postRequest(request: NextRequest) {
         clientPlatform: "web",
         qaDomain: parsed.data.qaDomain,
         networkSource: getTrustedQaNetworkSource({
-          env: process.env,
+          env: await getQaPolicyEnvironment(),
           getHeader: (name) => request.headers.get(name),
         }),
       })
