@@ -188,3 +188,7 @@ export * from "./business-notifications"
 export * from "./phone-auth"
 
 export * from "./account-phone-verification"
+export {
+  accountPrivacyExternalReceiptSchema,
+  getApprovedAccountPrivacyExternalPolicy,
+} from "./account-privacy-external-policy"
