@@ -138,7 +138,7 @@ export function FinanceSupplierForm({ book }: { book: FinanceBook }) {
           </Alert>
         ) : null}
         <FormActions>
-          <Button appearance="form" type="submit" disabled={!command.ready}>
+          <Button type="submit" disabled={!command.ready}>
             Review Supplier
           </Button>
         </FormActions>

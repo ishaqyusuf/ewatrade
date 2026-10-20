@@ -32,7 +32,6 @@ export function CatalogPhotoPreview({
           This image could not load.
         </output>
         <Button
-          appearance="form"
           variant="outline"
           type="button"
           onClick={() => setFailed(false)}

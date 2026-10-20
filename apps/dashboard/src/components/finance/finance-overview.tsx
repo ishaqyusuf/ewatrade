@@ -112,7 +112,7 @@ function PanelError({ retry }: { retry: () => void }) {
   return (
     <div className="grid justify-items-start gap-2 px-4 py-4" role="alert">
       <p className="text-sm">We couldn&apos;t load this. Try again.</p>
-      <Button appearance="form" variant="outline" size="sm" onClick={retry}>
+      <Button variant="outline" size="sm" onClick={retry}>
         Try again
       </Button>
     </div>

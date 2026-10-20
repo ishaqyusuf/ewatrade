@@ -127,7 +127,6 @@ export function CatalogOptionsEditor({
       >
         {!showAdvanced ? (
           <Button
-            appearance="form"
             type="button"
             variant="outline"
             onClick={() => {
@@ -151,7 +150,6 @@ export function CatalogOptionsEditor({
                 </p>
               </div>
               <Button
-                appearance="form"
                 type="button"
                 size="sm"
                 variant="ghost"
@@ -255,7 +253,6 @@ export function CatalogOptionsEditor({
                   </Field>
                   {optionGroups.length > 1 ? (
                     <Button
-                      appearance="form"
                       type="button"
                       size="sm"
                       variant="ghost"
@@ -275,7 +272,6 @@ export function CatalogOptionsEditor({
             })}
 
             <Button
-              appearance="form"
               type="button"
               size="sm"
               variant="outline"

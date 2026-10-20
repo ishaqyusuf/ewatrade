@@ -110,7 +110,6 @@ export function OrdersTableHeader({
                     />
                   ) : field ? (
                     <Button
-                      appearance="form"
                       type="button"
                       variant="ghost"
                       className="h-auto min-w-0 p-0 text-left font-normal hover:bg-transparent"

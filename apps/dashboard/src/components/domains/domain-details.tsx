@@ -78,7 +78,6 @@ export function DomainDetails({ domain }: { domain: DomainRow | null }) {
         {(domain.status === "FAILED" ||
           domain.status === "OWNERSHIP_PENDING") && (
           <Button
-            appearance="form"
             disabled={retry.isPending}
             variant="outline"
             onClick={() => retry.mutate({ connectionId: domain.id })}
@@ -87,7 +86,6 @@ export function DomainDetails({ domain }: { domain: DomainRow | null }) {
           </Button>
         )}
         <Button
-          appearance="form"
           variant="outline"
           onClick={() =>
             navigator.clipboard.writeText(`https://${domain.hostname}`)

@@ -316,7 +316,6 @@ export function CustomerLedgerCommandForm({
             device.
           </AlertDescription>
           <Button
-            appearance="form"
             variant="outline"
             disabled={command.pending}
             onClick={() => void command.acknowledge()}
@@ -331,7 +330,6 @@ export function CustomerLedgerCommandForm({
             {command.error ?? error ?? dataError}
           </AlertDescription>
           <Button
-            appearance="form"
             variant="outline"
             disabled={command.pending}
             onClick={() => {
@@ -349,9 +347,7 @@ export function CustomerLedgerCommandForm({
         <output aria-live="polite">{command.notice}</output>
       ) : null}
       {command.saved ? (
-        <Button appearance="form" onClick={() => void close()}>
-          Done
-        </Button>
+        <Button onClick={() => void close()}>Done</Button>
       ) : review ? (
         <>
           <h3 className="text-lg font-medium">Check and save</h3>
@@ -456,7 +452,6 @@ export function CustomerLedgerCommandForm({
           ) : null}
           <FormActions>
             <Button
-              appearance="form"
               variant="outline"
               disabled={command.pending}
               onClick={() => setReview(null)}

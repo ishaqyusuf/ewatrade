@@ -21,9 +21,7 @@ export function FinanceCashCountDetail({
     return (
       <div role="alert">
         <p>{query.error.message}</p>
-        <Button appearance="form" onClick={() => void query.refetch()}>
-          Try again
-        </Button>
+        <Button onClick={() => void query.refetch()}>Try again</Button>
       </div>
     )
   const count = query.data
@@ -104,20 +102,12 @@ export function FinanceCashCountDetail({
         </section>
       ) : null}
       {count.status === "DIFFERENCE" && !count.adjustment ? (
-        <Button
-          appearance="form"
-          variant="outline"
-          onClick={() => setAdjusting(true)}
-        >
+        <Button variant="outline" onClick={() => setAdjusting(true)}>
           Fix the difference
         </Button>
       ) : null}
       {count.adjustment && !count.adjustment.reversal ? (
-        <Button
-          appearance="form"
-          variant="outline"
-          onClick={() => setAdjusting(true)}
-        >
+        <Button variant="outline" onClick={() => setAdjusting(true)}>
           Undo the fix
         </Button>
       ) : null}

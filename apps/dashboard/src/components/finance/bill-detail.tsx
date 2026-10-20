@@ -76,17 +76,13 @@ export function FinanceBillDetail({
         </div>
       </dl>
       {BigInt(bill.outstandingMinor) > BigInt(0) ? (
-        <Button
-          appearance="form"
-          onClick={() => setParams({ financeSheet: "pay-bill", billId })}
-        >
+        <Button onClick={() => setParams({ financeSheet: "pay-bill", billId })}>
           Pay
         </Button>
       ) : null}
       {!bill.voidedAt ? (
         <div className="grid gap-2">
           <Button
-            appearance="form"
             variant="outline"
             disabled={bill.payments.some((payment) => !payment.reversedAt)}
             onClick={() =>
@@ -158,7 +154,6 @@ export function FinanceBillDetail({
                 </span>
                 {!payment.reversedAt && !bill.voidedAt ? (
                   <Button
-                    appearance="form"
                     variant="outline"
                     onClick={() =>
                       setCorrection({

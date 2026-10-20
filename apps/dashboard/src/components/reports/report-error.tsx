@@ -13,13 +13,7 @@ export function ReportError({
       <FormFeedback appearance="dashboard">
         This report could not be loaded. Try again.
       </FormFeedback>
-      <Button
-        type="button"
-        variant="outline"
-        appearance="form"
-        className="w-fit"
-        onClick={retry}
-      >
+      <Button type="button" variant="outline" className="w-fit" onClick={retry}>
         Retry report
       </Button>
     </div>

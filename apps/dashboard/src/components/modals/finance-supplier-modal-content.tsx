@@ -38,7 +38,6 @@ export function FinanceSupplierModalContent({
           disabled={closeDisabled}
           render={
             <Button
-              appearance="form"
               aria-label="Close"
               className="m-0 size-auto p-0 hover:bg-transparent"
               size="icon"

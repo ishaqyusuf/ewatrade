@@ -311,9 +311,7 @@ export function FinanceExpenseForm({
           <Input {...form.register("reference")} />
         </FinanceField>
         <FormActions>
-          <Button appearance="form" type="submit">
-            Review expense
-          </Button>
+          <Button type="submit">Review expense</Button>
         </FormActions>
       </FieldGroup>
     </form>

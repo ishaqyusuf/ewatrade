@@ -248,7 +248,6 @@ export function CatalogDetailEditor({
           <>
             <header className="flex flex-col gap-3">
               <Button
-                appearance="form"
                 type="button"
                 variant="ghost"
                 size="sm"

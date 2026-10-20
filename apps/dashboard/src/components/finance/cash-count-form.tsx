@@ -160,9 +160,7 @@ export function FinanceCashCountForm({ book }: { book: FinanceBook }) {
           />
         </FinanceField>
         <FormActions>
-          <Button appearance="form" type="submit">
-            Review cash count
-          </Button>
+          <Button type="submit">Review cash count</Button>
         </FormActions>
       </FieldGroup>
     </form>

@@ -222,7 +222,6 @@ export function PharmacyComplianceSetup({
                 {active ? "Active" : "Disabled"}
               </span>
               <Button
-                appearance="form"
                 className="h-9 rounded-none"
                 disabled={
                   activationMutation.isPending ||
@@ -490,7 +489,6 @@ export function PharmacyComplianceSetup({
                       </p>
                     </div>
                     <Button
-                      appearance="form"
                       disabled={revokeMutation.isPending}
                       onClick={() =>
                         setRevokeTarget({
@@ -528,7 +526,6 @@ export function PharmacyComplianceSetup({
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <Button
-              appearance="form"
               disabled={activationMutation.isPending}
               onClick={() => {
                 activationMutation.mutate({ active: !active, storeId })
@@ -561,7 +558,6 @@ export function PharmacyComplianceSetup({
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <Button
-              appearance="form"
               disabled={revokeMutation.isPending}
               onClick={() => {
                 if (revokeTarget) {

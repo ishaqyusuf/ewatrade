@@ -77,11 +77,7 @@ export function DomainProgress() {
             : "You can close this panel. Setup continues safely in the background."}
         </p>
       )}
-      <Button
-        appearance="form"
-        variant="outline"
-        onClick={() => setParams(null)}
-      >
+      <Button variant="outline" onClick={() => setParams(null)}>
         {complete ? "View domains" : "Close"}
       </Button>
     </div>

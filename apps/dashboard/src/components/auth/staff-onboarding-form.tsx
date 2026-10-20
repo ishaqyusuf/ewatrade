@@ -275,7 +275,6 @@ export function StaffOnboardingForm({
           </FormActions>
           {sent && !qaInvitation ? (
             <Button
-              appearance="form"
               type="button"
               variant="ghost"
               disabled={pending}

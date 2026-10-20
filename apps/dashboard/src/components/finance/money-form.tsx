@@ -245,9 +245,7 @@ export function FinanceMoneyForm({ book }: { book: FinanceBook }) {
           </FinanceField>
         )}
         <FormActions>
-          <Button appearance="form" type="submit">
-            Review
-          </Button>
+          <Button type="submit">Review</Button>
         </FormActions>
       </FieldGroup>
     </form>

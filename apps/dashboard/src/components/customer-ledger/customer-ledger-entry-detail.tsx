@@ -204,7 +204,6 @@ export function CustomerLedgerEntryDetail({
                 account.book &&
                 !detail.reconciliationRequired ? (
                   <Button
-                    appearance="form"
                     variant="outline"
                     className="w-fit"
                     onClick={() =>
@@ -256,7 +255,6 @@ export function CustomerLedgerEntryDetail({
       ) : null}
       {remaining.length === 0 && correctable && account.book ? (
         <Button
-          appearance="form"
           variant="outline"
           className="w-fit"
           onClick={() =>

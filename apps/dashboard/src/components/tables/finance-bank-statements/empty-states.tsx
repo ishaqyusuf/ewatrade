@@ -10,15 +10,9 @@ export function FinanceBankStatementEmptyState({
   useDashboardEmptyState("finance-bank-statements")
   const { setParams } = useFinanceParams()
   if (filtered)
-    return (
-      <NoResults
-        appearance="form"
-        onClear={() => void setParams({ bankAccountId: null })}
-      />
-    )
+    return <NoResults onClear={() => void setParams({ bankAccountId: null })} />
   return (
     <EmptyState
-      appearance="form"
       title="No bank statements yet"
       description="Upload the CSV file from your bank to check each line against what you recorded."
       actionLabel="Upload statement"

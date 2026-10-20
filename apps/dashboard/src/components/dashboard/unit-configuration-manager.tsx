@@ -203,11 +203,7 @@ export function UnitConfigurationManager({
         <FormFeedback appearance="dashboard">
           {configurations.error.message}
         </FormFeedback>
-        <Button
-          appearance="form"
-          variant="outline"
-          onClick={() => void configurations.refetch()}
-        >
+        <Button variant="outline" onClick={() => void configurations.refetch()}>
           Try again
         </Button>
       </div>
@@ -244,7 +240,6 @@ export function UnitConfigurationManager({
 
       {!draft ? (
         <Button
-          appearance="form"
           className="w-fit"
           disabled={createDraft.isPending || !current}
           onClick={() => createDraft.mutate({ productId })}
@@ -380,7 +375,6 @@ export function UnitConfigurationManager({
                   ]}
                 />
                 <Button
-                  appearance="form"
                   size="sm"
                   variant="ghost"
                   disabled={units.length === 1}
@@ -405,7 +399,6 @@ export function UnitConfigurationManager({
 
           <div className="flex flex-wrap gap-2">
             <Button
-              appearance="form"
               variant="outline"
               onClick={() =>
                 setUnits((rows) => [...rows, blankUnit(rows.length)])
@@ -414,7 +407,6 @@ export function UnitConfigurationManager({
               Add unit
             </Button>
             <Button
-              appearance="form"
               disabled={
                 updateDraft.isPending ||
                 units.some(
@@ -445,7 +437,6 @@ export function UnitConfigurationManager({
               }
             />
             <Button
-              appearance="form"
               className="w-fit"
               disabled={publishDraft.isPending}
               onClick={() =>

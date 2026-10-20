@@ -115,12 +115,7 @@ export function StoreBindingForm({
             >
               {isPending ? "Saving…" : "Save Store assignments"}
             </SubmitButton>
-            <Button
-              appearance="form"
-              onClick={onCancel}
-              type="button"
-              variant="outline"
-            >
+            <Button onClick={onCancel} type="button" variant="outline">
               Cancel
             </Button>
           </FormActions>

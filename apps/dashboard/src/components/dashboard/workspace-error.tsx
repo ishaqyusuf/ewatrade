@@ -27,7 +27,7 @@ export function WorkspaceError({
       className={`flex flex-col items-center justify-center space-y-4 ${className}`}
     >
       <h2 className="text-base">{title}</h2>
-      <Button appearance="form" variant="outline" onClick={retry}>
+      <Button variant="outline" onClick={retry}>
         Try again
       </Button>
     </div>

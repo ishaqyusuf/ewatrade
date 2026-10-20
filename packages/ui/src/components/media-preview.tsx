@@ -37,7 +37,7 @@ export function MediaPreview({
       href={url}
       rel="noreferrer"
       target="_blank"
-      className={buttonVariants({ variant: "outline", appearance: "form" })}
+      className={buttonVariants({ variant: "outline" })}
     >
       Open authorized attachment
     </a>

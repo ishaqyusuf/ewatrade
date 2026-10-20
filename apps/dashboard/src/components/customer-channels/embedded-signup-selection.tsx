@@ -97,7 +97,6 @@ export function EmbeddedSignupSelection({
                 }
                 type="button"
                 variant="outline"
-                appearance="form"
               >
                 <span>
                   <span className="block font-medium">

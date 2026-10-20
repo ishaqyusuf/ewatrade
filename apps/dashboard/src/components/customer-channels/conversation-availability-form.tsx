@@ -289,7 +289,6 @@ export function ConversationAvailabilityForm({
                       size="sm"
                       type="button"
                       variant="outline"
-                      appearance="form"
                     >
                       Add hours
                     </Button>
@@ -360,7 +359,6 @@ export function ConversationAvailabilityForm({
                           size="icon"
                           type="button"
                           variant="ghost"
-                          appearance="form"
                         >
                           ×
                         </Button>
@@ -417,7 +415,6 @@ export function ConversationAvailabilityForm({
           onClick={() => void togglePause()}
           type="button"
           variant={settings.manualPaused ? "outline" : "destructive"}
-          appearance="form"
         >
           {setManualPause.isPending
             ? "Updating…"

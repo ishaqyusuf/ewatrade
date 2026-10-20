@@ -107,7 +107,6 @@ export function CatalogCategoryEditor({
           <div className="flex flex-wrap gap-2">
             {recentLabels.map((label) => (
               <Button
-                appearance="form"
                 type="button"
                 variant="outline"
                 size="sm"
@@ -151,7 +150,6 @@ export function CatalogCategoryEditor({
           )
           .map((preset) => (
             <Button
-              appearance="form"
               key={preset.key}
               type="button"
               variant="outline"
@@ -173,7 +171,6 @@ export function CatalogCategoryEditor({
           <div className="flex flex-wrap gap-2">
             <Button
               type="button"
-              appearance="form"
               variant="outline"
               onClick={() => onChange(parent.label)}
             >
@@ -183,7 +180,6 @@ export function CatalogCategoryEditor({
               <Button
                 key={child.key}
                 type="button"
-                appearance="form"
                 variant="outline"
                 onClick={() => onChange(`${parent.label} / ${child.label}`)}
               >
@@ -200,7 +196,6 @@ export function CatalogCategoryEditor({
       ) : null}
       <div className="flex flex-wrap gap-2">
         <Button
-          appearance="form"
           type="button"
           variant="ghost"
           onClick={() => setAll((current) => !current)}
@@ -208,7 +203,6 @@ export function CatalogCategoryEditor({
           {all ? "Suggested for your business" : "All categories"}
         </Button>
         <Button
-          appearance="form"
           type="button"
           variant="ghost"
           onClick={() => {

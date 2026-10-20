@@ -344,7 +344,6 @@ export function StaffInviteContent({
 
       <FormActions>
         <Button
-          appearance="form"
           type="button"
           variant="outline"
           className="rounded-none"

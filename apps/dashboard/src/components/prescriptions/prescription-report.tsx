@@ -115,7 +115,6 @@ export function PrescriptionReport({
             {report.error.message}
           </FormFeedback>
           <Button
-            appearance="form"
             className="w-fit"
             variant="outline"
             onClick={() => void report.refetch()}

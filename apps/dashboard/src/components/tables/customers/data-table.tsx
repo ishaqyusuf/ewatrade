@@ -153,11 +153,7 @@ export function CustomerDataTable({
         }${isLoading ? " · Updating…" : ""}`}
       >
         {view === "table" && tableSettings.persistenceError ? (
-          <Button
-            appearance="form"
-            variant="outline"
-            onClick={tableSettings.retryPersistence}
-          >
+          <Button variant="outline" onClick={tableSettings.retryPersistence}>
             Columns not saved. Try again
           </Button>
         ) : null}

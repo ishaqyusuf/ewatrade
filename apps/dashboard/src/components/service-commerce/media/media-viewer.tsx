@@ -74,7 +74,6 @@ function MediaViewerContent({
           {attachment.error?.message ?? "Attachment is unavailable."}
         </FormFeedback>
         <Button
-          appearance="form"
           className="w-fit"
           onClick={() => void attachment.refetch()}
           variant="outline"

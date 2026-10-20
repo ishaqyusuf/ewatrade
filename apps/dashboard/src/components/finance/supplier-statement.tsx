@@ -63,7 +63,6 @@ function SupplierWorkspace({
     <div className="flex min-w-0 flex-col gap-5">
       <div className="flex flex-wrap gap-2" aria-label="Supplier views">
         <Button
-          appearance="form"
           variant={mode === "statement" ? "secondary" : "outline"}
           aria-pressed={mode === "statement"}
           onClick={() => setMode("statement")}
@@ -71,7 +70,6 @@ function SupplierWorkspace({
           Bills and payments
         </Button>
         <Button
-          appearance="form"
           variant={mode === "aging" ? "secondary" : "outline"}
           aria-pressed={mode === "aging"}
           onClick={() => setMode("aging")}
@@ -180,7 +178,6 @@ function FinanceSupplierHistory({
         <AlertTitle>Couldn't load this Supplier</AlertTitle>
         <AlertDescription>{query.error.message}</AlertDescription>
         <Button
-          appearance="form"
           variant="outline"
           className="w-fit"
           onClick={() => void query.refetch()}
@@ -189,7 +186,6 @@ function FinanceSupplierHistory({
         </Button>
         {cursors.length > 1 ? (
           <Button
-            appearance="form"
             variant="outline"
             className="w-fit"
             onClick={() => setCursors((value) => value.slice(0, -1))}
@@ -238,7 +234,6 @@ function FinanceSupplierHistory({
       </dl>
       <div className="flex flex-wrap gap-2">
         <Button
-          appearance="form"
           variant="outline"
           onClick={() =>
             void setParams({ financeSheet: "supplier-opening", supplierId })
@@ -247,7 +242,6 @@ function FinanceSupplierHistory({
           Add starting balance
         </Button>
         <Button
-          appearance="form"
           variant="outline"
           onClick={() =>
             void setParams({ financeSheet: "supplier-advance", supplierId })
@@ -256,7 +250,6 @@ function FinanceSupplierHistory({
           Pay ahead
         </Button>
         <Button
-          appearance="form"
           variant="outline"
           disabled={busy}
           onClick={() => void refresh()}
@@ -358,7 +351,6 @@ function FinanceSupplierHistory({
       </section>
       <div className="flex flex-wrap gap-2">
         <Button
-          appearance="form"
           variant="outline"
           disabled={cursors.length === 1 || busy}
           onClick={() => setCursors((value) => value.slice(0, -1))}
@@ -366,7 +358,6 @@ function FinanceSupplierHistory({
           Previous page
         </Button>
         <Button
-          appearance="form"
           variant="outline"
           disabled={!statement.nextCursor || snapshot === undefined || busy}
           onClick={() => {

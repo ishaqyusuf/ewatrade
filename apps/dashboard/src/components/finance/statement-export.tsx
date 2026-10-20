@@ -146,7 +146,6 @@ export function FinanceStatementExport({
     <div className="grid gap-2">
       <div className="flex flex-wrap gap-2">
         <Button
-          appearance="form"
           variant="outline"
           disabled={progress !== null}
           onClick={() => void download()}
@@ -157,7 +156,6 @@ export function FinanceStatementExport({
         </Button>
         {progress !== null ? (
           <Button
-            appearance="form"
             variant="ghost"
             onClick={() => {
               cancelled.current = true

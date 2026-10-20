@@ -475,7 +475,7 @@ export function FinancePeriodForm({ book }: { book: FinanceBook }) {
           <FormFeedback appearance="dashboard">{error}</FormFeedback>
         ) : null}
         <FormActions>
-          <Button appearance="form" type="submit" disabled={preparing}>
+          <Button type="submit" disabled={preparing}>
             {preparing
               ? "Checking records…"
               : action === "CLOSE"

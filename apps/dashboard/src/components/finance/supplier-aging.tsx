@@ -59,7 +59,6 @@ function SupplierAgingWorkspace({
           />
         </ControlField>
         <Button
-          appearance="form"
           variant="outline"
           onClick={() => {
             if (!isSupplierAgingDay(day, book.startsAt)) {
@@ -74,7 +73,6 @@ function SupplierAgingWorkspace({
           Show
         </Button>
         <Button
-          appearance="form"
           variant="outline"
           onClick={() => setVersion((value) => value + 1)}
         >
@@ -154,7 +152,6 @@ function SupplierAgingPage({
             : null}
         </AlertDescription>
         <Button
-          appearance="form"
           variant="outline"
           className="w-fit"
           onClick={() => void query.refetch()}

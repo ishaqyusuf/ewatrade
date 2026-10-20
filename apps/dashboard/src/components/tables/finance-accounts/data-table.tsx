@@ -77,7 +77,6 @@ function AccountActions({
 }) {
   return (
     <Button
-      appearance="form"
       variant="outline"
       aria-label={`${account.name} payment settings`}
       onClick={() => onOpenPaymentSettings(account.id)}

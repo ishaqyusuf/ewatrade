@@ -236,7 +236,6 @@ export function FinanceCashAdjustmentReversalForm({
         ) : null}
         <FormActions>
           <Button
-            appearance="form"
             type="button"
             variant="outline"
             onClick={onBack}
@@ -244,11 +243,7 @@ export function FinanceCashAdjustmentReversalForm({
           >
             Back to count
           </Button>
-          <Button
-            appearance="form"
-            type="submit"
-            disabled={preparing || !command.ready}
-          >
+          <Button type="submit" disabled={preparing || !command.ready}>
             {preparing
               ? "Checking current entries…"
               : !command.ready

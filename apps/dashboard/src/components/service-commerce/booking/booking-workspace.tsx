@@ -213,7 +213,6 @@ function BookingWorkspaceContent({ storeId }: { storeId: string }) {
               Create a resource below, then save the configuration.
             </p>
             <Button
-              appearance="form"
               className="w-fit"
               onClick={() => void configuration.refetch()}
               variant="outline"
@@ -528,7 +527,6 @@ function BookingWorkspaceContent({ storeId }: { storeId: string }) {
           <div className="grid gap-2 text-sm text-destructive" role="alert">
             <p>Service requests are unavailable.</p>
             <Button
-              appearance="form"
               className="w-fit"
               onClick={() => void sourceRequests.refetch()}
               size="sm"
@@ -593,7 +591,6 @@ function BookingWorkspaceContent({ storeId }: { storeId: string }) {
             </p>
           </div>
           <Button
-            appearance="form"
             className="w-fit"
             disabled={pending || !configuration.data}
             onClick={() => {
@@ -636,7 +633,6 @@ function BookingWorkspaceContent({ storeId }: { storeId: string }) {
             {createdLink}
           </a>
           <Button
-            appearance="form"
             className="w-fit"
             onClick={() =>
               navigator.clipboard
@@ -851,7 +847,6 @@ function BookingExceptions({
           </p>
         </div>
         <Button
-          appearance="form"
           onClick={() =>
             form.setValue(
               "exceptions",
@@ -950,7 +945,6 @@ function BookingExceptions({
             />
           </Field>
           <Button
-            appearance="form"
             className="w-fit"
             onClick={() =>
               form.setValue(

@@ -30,11 +30,7 @@ export default async function StaffOnboardingPage({
         asideTitle="Work together."
         asideDescription="Join your business workspace with an invitation from its owner."
       >
-        <Button
-          variant="outline"
-          appearance="form"
-          render={<Link href="/login" />}
-        >
+        <Button variant="outline" render={<Link href="/login" />}>
           Back to sign in
         </Button>
       </AuthShell>

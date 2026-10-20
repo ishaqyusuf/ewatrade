@@ -348,7 +348,6 @@ function PlanCard({
       {plan.id === "free" ? null : (
         <div className="mt-auto pt-4">
           <Button
-            appearance="form"
             type="button"
             variant={current ? "outline" : "default"}
             size="sm"

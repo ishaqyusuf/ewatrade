@@ -47,7 +47,6 @@ export function CatalogIllustrationPicker({
         <h4 className="font-medium">Illustration library</h4>
         <Button
           type="button"
-          appearance="form"
           variant="outline"
           disabled={disabled}
           aria-pressed={all}
@@ -79,7 +78,6 @@ export function CatalogIllustrationPicker({
           <Button
             key={illustration.id}
             type="button"
-            appearance="form"
             variant="outline"
             disabled={disabled}
             aria-pressed={selectedId === illustration.id}

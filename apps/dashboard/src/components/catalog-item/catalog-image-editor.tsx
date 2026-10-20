@@ -36,7 +36,6 @@ export function CatalogImageEditor({
           <p className="text-sm font-medium">{illustration.label}</p>
           <Button
             type="button"
-            appearance="form"
             variant="outline"
             disabled={disabled || photo.uploading}
             onClick={() => onIllustrationChange(null)}
@@ -56,7 +55,6 @@ export function CatalogImageEditor({
           </p>
           <Button
             type="button"
-            appearance="form"
             variant="outline"
             disabled={disabled || photo.uploading}
             onClick={() => photo.select(null)}

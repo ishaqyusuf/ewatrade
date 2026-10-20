@@ -127,12 +127,7 @@ export function FinanceSupplierTableView({
         <AlertDescription>
           {errorMessage || "Suppliers could not be loaded."}
         </AlertDescription>
-        <Button
-          appearance="form"
-          type="button"
-          variant="outline"
-          onClick={() => void refetch()}
-        >
+        <Button type="button" variant="outline" onClick={() => void refetch()}>
           Try again
         </Button>
       </Alert>
@@ -154,7 +149,6 @@ export function FinanceSupplierTableView({
                 : "Suppliers could not be refreshed.")}
           </AlertDescription>
           <Button
-            appearance="form"
             type="button"
             variant="outline"
             onClick={() =>
@@ -181,12 +175,7 @@ export function FinanceSupplierTableView({
           className="flex flex-wrap items-center justify-between gap-3"
         >
           <AlertDescription>{persistenceError}</AlertDescription>
-          <Button
-            appearance="form"
-            type="button"
-            variant="outline"
-            onClick={retryPersistence}
-          >
+          <Button type="button" variant="outline" onClick={retryPersistence}>
             Retry saving columns
           </Button>
         </Alert>
@@ -305,7 +294,6 @@ export function FinanceSupplierTableView({
 
       {hasNextPage && !isFetchNextPageError ? (
         <Button
-          appearance="form"
           type="button"
           className="w-fit"
           variant="outline"

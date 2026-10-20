@@ -165,7 +165,6 @@ export function CatalogSetupHelperPickerContent({
           </DialogDescription>
         </div>
         <Button
-          appearance="form"
           type="button"
           aria-label="Close quick setup"
           onClick={onClose}
@@ -247,7 +246,6 @@ export function CatalogSetupHelperPickerContent({
         {businessProfile && !query.trim() ? (
           <div className="px-5 py-4">
             <Button
-              appearance="form"
               type="button"
               variant="outline"
               aria-pressed={showAllExamples}

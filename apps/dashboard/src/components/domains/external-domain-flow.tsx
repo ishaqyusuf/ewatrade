@@ -73,7 +73,6 @@ export function ExternalDomainFlow({
         </p>
         {error ? <p className="text-sm text-destructive">{error}</p> : null}
         <Button
-          appearance="form"
           disabled={verify.isPending}
           onClick={() => verify.mutate({ connectionId: verification.id })}
         >

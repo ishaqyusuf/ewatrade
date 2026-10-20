@@ -115,17 +115,10 @@ export function FinanceBillCorrectionForm({
           <Input maxLength={400} {...form.register("reason")} />
         </FinanceField>
         <FormActions>
-          <Button
-            appearance="form"
-            type="button"
-            variant="outline"
-            onClick={onBack}
-          >
+          <Button type="button" variant="outline" onClick={onBack}>
             Back to expense
           </Button>
-          <Button appearance="form" type="submit">
-            Review correction
-          </Button>
+          <Button type="submit">Review correction</Button>
         </FormActions>
       </FieldGroup>
     </form>

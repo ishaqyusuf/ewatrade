@@ -131,12 +131,7 @@ export function FinanceBankStatementTableView({
         <AlertDescription>
           {errorMessage || "Statements could not be loaded."}
         </AlertDescription>
-        <Button
-          appearance="form"
-          type="button"
-          variant="outline"
-          onClick={() => void refetch()}
-        >
+        <Button type="button" variant="outline" onClick={() => void refetch()}>
           Try again
         </Button>
       </Alert>
@@ -158,7 +153,6 @@ export function FinanceBankStatementTableView({
                 : "Statements could not be refreshed.")}
           </AlertDescription>
           <Button
-            appearance="form"
             type="button"
             variant="outline"
             onClick={() =>
@@ -187,12 +181,7 @@ export function FinanceBankStatementTableView({
           className="flex flex-wrap items-center justify-between gap-3"
         >
           <AlertDescription>{persistenceError}</AlertDescription>
-          <Button
-            appearance="form"
-            type="button"
-            variant="outline"
-            onClick={retryPersistence}
-          >
+          <Button type="button" variant="outline" onClick={retryPersistence}>
             Retry saving columns
           </Button>
         </Alert>
@@ -311,7 +300,6 @@ export function FinanceBankStatementTableView({
 
       {hasNextPage && !isFetchNextPageError ? (
         <Button
-          appearance="form"
           type="button"
           className="w-fit"
           variant="outline"

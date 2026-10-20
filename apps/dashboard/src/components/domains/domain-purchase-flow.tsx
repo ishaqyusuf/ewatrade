@@ -164,7 +164,6 @@ export function DomainPurchaseFlow({ store }: { store: Store }) {
           {error ? <p className="text-sm text-destructive">{error}</p> : null}
           <FormActions className="pt-2">
             <Button
-              appearance="form"
               type="button"
               variant="outline"
               onClick={() =>
@@ -235,7 +234,6 @@ export function DomainPurchaseFlow({ store }: { store: Store }) {
         </CheckboxField>
         {error ? <p className="text-sm text-destructive">{error}</p> : null}
         <Button
-          appearance="form"
           disabled={
             !form.quote ||
             !profileId ||

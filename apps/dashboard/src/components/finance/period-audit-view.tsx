@@ -64,12 +64,7 @@ export function FinancePeriodAuditView({
     return (
       <div className="grid gap-3 pt-3">
         <FormFeedback appearance="dashboard">{error}</FormFeedback>
-        <Button
-          appearance="form"
-          variant="outline"
-          disabled={fetching}
-          onClick={onRefresh}
-        >
+        <Button variant="outline" disabled={fetching} onClick={onRefresh}>
           {fetching ? "Retrying…" : "Try again"}
         </Button>
       </div>
@@ -133,7 +128,6 @@ export function FinancePeriodAuditView({
         <div className="flex flex-wrap gap-2">
           {hasNextPage ? (
             <Button
-              appearance="form"
               variant="outline"
               size="sm"
               disabled={fetching}
@@ -143,7 +137,6 @@ export function FinancePeriodAuditView({
             </Button>
           ) : null}
           <Button
-            appearance="form"
             variant="outline"
             size="sm"
             disabled={fetching}

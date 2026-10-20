@@ -10,7 +10,6 @@ export function CatalogItemSheetHeader() {
   if (!form.kind) return null
   return (
     <Button
-      appearance="form"
       type="button"
       size="sm"
       variant="ghost"

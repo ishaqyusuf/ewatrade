@@ -235,11 +235,7 @@ export function CustomerLedgerWorkspace({
                 <StatementHeader
                   customer={customer}
                   actions={
-                    <Button
-                      appearance="form"
-                      variant="outline"
-                      onClick={() => setEditing(true)}
-                    >
+                    <Button variant="outline" onClick={() => setEditing(true)}>
                       Edit customer details
                     </Button>
                   }

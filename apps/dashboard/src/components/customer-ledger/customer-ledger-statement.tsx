@@ -151,14 +151,14 @@ export function CustomerLedgerStatement({
   const actions = (
     <div className="flex flex-wrap gap-2">
       {book ? (
-        <Button appearance="form" onClick={() => startAction("receipt")}>
+        <Button onClick={() => startAction("receipt")}>
           Record payment
         </Button>
       ) : null}
       <DropdownMenu>
         <DropdownMenuTrigger
           render={
-            <Button appearance="form" variant="outline">
+            <Button variant="outline">
               More
               <HugeiconsIcon
                 icon={ArrowDown01Icon}
@@ -325,7 +325,6 @@ export function CustomerLedgerStatement({
         <div className="flex flex-wrap gap-2">
           {ledgerAfter ? (
             <Button
-              appearance="form"
               variant="outline"
               disabled={busy}
               onClick={() => void setParams({ ledgerAfter: null })}
@@ -335,7 +334,6 @@ export function CustomerLedgerStatement({
           ) : null}
           {statement.nextCursor && ledgerSnapshot ? (
             <Button
-              appearance="form"
               variant="outline"
               disabled={busy}
               onClick={() =>
@@ -346,7 +344,6 @@ export function CustomerLedgerStatement({
             </Button>
           ) : null}
           <Button
-            appearance="form"
             variant="outline"
             disabled={busy}
             onClick={() => void refresh()}

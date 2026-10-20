@@ -305,7 +305,6 @@ export function StoreConversationSheetContent({
             className="mt-3"
             onClick={() => void timeline.refetch()}
             variant="outline"
-            appearance="form"
           >
             Retry
           </Button>
@@ -329,7 +328,6 @@ export function StoreConversationSheetContent({
                 onClick={() => void loadOlderMessages()}
                 type="button"
                 variant="outline"
-                appearance="form"
               >
                 {loadingOlder ? "Loading…" : "Load older messages"}
               </Button>
@@ -405,7 +403,6 @@ export function StoreConversationSheetContent({
                   storeId: resolvedStoreId,
                 })
               }}
-              appearance="form"
             >
               Claim conversation
             </Button>

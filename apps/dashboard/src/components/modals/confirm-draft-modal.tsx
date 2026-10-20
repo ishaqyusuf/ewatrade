@@ -42,7 +42,6 @@ export function ConfirmDraftModal({
           <AlertDialogCancel ref={cancelRef}>Cancel</AlertDialogCancel>
           <Button
             type="button"
-            appearance="form"
             onClick={() => {
               onConfirm()
               onOpenChange(false)

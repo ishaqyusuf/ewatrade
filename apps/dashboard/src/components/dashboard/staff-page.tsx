@@ -289,7 +289,6 @@ export function StaffPage({
               {qaInviteUrl}
             </a>
             <Button
-              appearance="form"
               type="button"
               variant="outline"
               onClick={() => {

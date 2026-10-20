@@ -97,7 +97,6 @@ export function TeamRoutingForm({
                   size="sm"
                   type="button"
                   variant="outline"
-                  appearance="form"
                 >
                   Remove
                 </Button>

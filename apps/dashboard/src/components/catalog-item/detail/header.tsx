@@ -69,7 +69,6 @@ export function CatalogDetailHeader({
       </div>
       {readOnly || item.status === "archived" ? null : (
         <Button
-          appearance="form"
           type="button"
           variant="outline"
           size="sm"

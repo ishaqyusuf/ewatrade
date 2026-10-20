@@ -206,12 +206,7 @@ export function PrescriptionIntakeForm({ storeId }: { storeId: string }) {
           </FormFeedback>
         ) : null}
         <FormActions>
-          <Button
-            appearance="form"
-            type="button"
-            variant="ghost"
-            onClick={() => setParams(null)}
-          >
+          <Button type="button" variant="ghost" onClick={() => setParams(null)}>
             Cancel
           </Button>
           <SubmitButton

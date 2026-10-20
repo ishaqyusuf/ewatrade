@@ -109,7 +109,6 @@ export function ConnectionsList({
                   size="sm"
                   type="button"
                   variant="outline"
-                  appearance="form"
                 >
                   Manage connection
                 </Button>

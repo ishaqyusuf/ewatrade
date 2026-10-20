@@ -54,7 +54,6 @@ export function CatalogItemActions({
           render={
             <Button
               type="button"
-              appearance="form"
               variant="ghost"
               size="icon-sm"
               aria-label={`Actions for ${item.name}`}

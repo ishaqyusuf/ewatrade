@@ -44,9 +44,7 @@ export function FinanceCashCountHistory({ book }: { book: FinanceBook }) {
       ) : query.isError ? (
         <div role="alert">
           <p>{query.error.message}</p>
-          <Button appearance="form" onClick={() => void query.refetch()}>
-            Try again
-          </Button>
+          <Button onClick={() => void query.refetch()}>Try again</Button>
         </div>
       ) : !counts.length ? (
         <p className="py-6 text-muted-foreground">No cash counts yet.</p>
@@ -96,7 +94,6 @@ export function FinanceCashCountHistory({ book }: { book: FinanceBook }) {
                     </p>
                   </div>
                   <Button
-                    appearance="form"
                     variant="outline"
                     aria-label={`View cash count ${count.reference}`}
                     onClick={() =>
@@ -116,7 +113,6 @@ export function FinanceCashCountHistory({ book }: { book: FinanceBook }) {
       )}
       {query.hasNextPage ? (
         <Button
-          appearance="form"
           variant="outline"
           disabled={query.isFetchingNextPage}
           onClick={() => void query.fetchNextPage()}

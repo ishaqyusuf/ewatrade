@@ -29,17 +29,11 @@ export function DomainActionsMenu({
       onClick={(event) => event.stopPropagation()}
       onKeyDown={(event) => event.stopPropagation()}
     >
-      <Button
-        appearance="form"
-        size="sm"
-        variant="ghost"
-        onClick={() => onManage(domain)}
-      >
+      <Button size="sm" variant="ghost" onClick={() => onManage(domain)}>
         Manage
       </Button>
       {domain.status === "FAILED" || domain.status === "OWNERSHIP_PENDING" ? (
         <Button
-          appearance="form"
           disabled={retry.isPending}
           size="sm"
           variant="ghost"
@@ -49,7 +43,6 @@ export function DomainActionsMenu({
         </Button>
       ) : null}
       <Button
-        appearance="form"
         size="sm"
         variant="ghost"
         onClick={() =>

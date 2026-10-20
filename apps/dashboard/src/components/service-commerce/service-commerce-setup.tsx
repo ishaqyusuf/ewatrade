@@ -184,7 +184,6 @@ export function ServiceCommerceSetup({
             "Service Commerce setup is unavailable."}
         </p>
         <Button
-          appearance="form"
           className="w-fit"
           onClick={() => void accessQuery.refetch()}
           variant="outline"
@@ -329,7 +328,6 @@ export function ServiceCommerceSetup({
             ) : null}
             <FormActions>
               <Button
-                appearance="form"
                 type="button"
                 variant="outline"
                 className="rounded-none"
@@ -477,7 +475,6 @@ export function ServiceCommerceSetup({
                   configuring booking.
                 </p>
                 <Button
-                  appearance="form"
                   className="w-fit"
                   onClick={() => void serviceItems.refetch()}
                   size="sm"

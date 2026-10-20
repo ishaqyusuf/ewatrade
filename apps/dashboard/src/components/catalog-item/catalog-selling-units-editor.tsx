@@ -82,7 +82,6 @@ export function CatalogSellingUnitsEditor({
             </p>
           ) : null}
           <Button
-            appearance="form"
             type="button"
             variant="outline"
             hidden={Boolean(lockedReason)}
@@ -286,7 +285,6 @@ export function CatalogSellingUnitsEditor({
                 </p>
               ) : null}
               <Button
-                appearance="form"
                 type="button"
                 variant="ghost"
                 hidden={Boolean(lockedReason)}

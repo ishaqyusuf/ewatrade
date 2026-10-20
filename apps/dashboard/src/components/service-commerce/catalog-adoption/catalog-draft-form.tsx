@@ -147,7 +147,6 @@ export function CatalogDraftForm({ storeId }: { storeId: string }) {
           {matches.error?.message ?? "Catalog matches are unavailable."}
         </FormFeedback>
         <Button
-          appearance="form"
           className="w-fit"
           onClick={() => void matches.refetch()}
           variant="outline"
@@ -234,7 +233,6 @@ export function CatalogDraftForm({ storeId }: { storeId: string }) {
             />
           </ControlField>
           <Button
-            appearance="form"
             disabled={pending || !form.watch("verifiedAlias").trim()}
             onClick={() => {
               linkCommandId.current ??= crypto.randomUUID()
@@ -331,12 +329,7 @@ function PriceSuggestionState({
     )
   if (isError) {
     return (
-      <Button
-        appearance="form"
-        className="w-fit"
-        onClick={onRetry}
-        variant="outline"
-      >
+      <Button className="w-fit" onClick={onRetry} variant="outline">
         Retry price history
       </Button>
     )

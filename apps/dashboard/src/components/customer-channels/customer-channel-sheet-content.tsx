@@ -317,7 +317,6 @@ export function CustomerChannelSheetContent({
             ])
           }
           variant="outline"
-          appearance="form"
         >
           Try again
         </Button>
@@ -420,21 +419,18 @@ export function CustomerChannelSheetContent({
                 retest.mutate({ connectionId: selectedConnection.id, storeId })
               }
               variant="outline"
-              appearance="form"
             >
               Retest connection
             </Button>
             <Button
               onClick={() => setConnectionAction("suspended")}
               variant="outline"
-              appearance="form"
             >
               Suspend
             </Button>
             <Button
               onClick={() => setConnectionAction("revoked")}
               variant="outline"
-              appearance="form"
             >
               Revoke
             </Button>
@@ -542,7 +538,6 @@ export function CustomerChannelSheetContent({
                 Cancel
               </AlertDialogCancel>
               <Button
-                appearance="form"
                 disabled={lifecycle.isPending}
                 onClick={() => {
                   if (!connectionAction) return

@@ -92,11 +92,7 @@ export function InventoryTableView({
       {persistenceError ? (
         <div className="flex items-center justify-between gap-3" role="alert">
           <p className="text-sm text-destructive">{persistenceError}</p>
-          <Button
-            appearance="form"
-            variant="outline"
-            onClick={retryPersistence}
-          >
+          <Button variant="outline" onClick={retryPersistence}>
             Retry saving columns
           </Button>
         </div>

@@ -252,7 +252,6 @@ export function ServiceJobWorkspace({
           {jobQuery.error.message}
         </FormFeedback>
         <Button
-          appearance="form"
           variant="outline"
           className="w-fit"
           onClick={() => void jobQuery.refetch()}
@@ -600,7 +599,6 @@ export function ServiceJobWorkspace({
             entry.uploadStatus === "AVAILABLE" &&
             entry.visibility !== "PUBLISHED" ? (
               <Button
-                appearance="form"
                 size="sm"
                 variant="outline"
                 onClick={() =>
@@ -611,7 +609,6 @@ export function ServiceJobWorkspace({
               </Button>
             ) : canManage && entry.visibility === "PUBLISHED" ? (
               <Button
-                appearance="form"
                 size="sm"
                 variant="ghost"
                 onClick={() =>

@@ -65,7 +65,6 @@ export function FinanceReview({
       ) : null}
       <FormActions className="sticky bottom-0 bg-background py-4">
         <Button
-          appearance="form"
           type="button"
           className="rounded-none"
           variant="outline"

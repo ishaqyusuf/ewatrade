@@ -168,7 +168,6 @@ export function FinanceMoneyReversalForm({
         <AlertTitle>Couldn't load this movement</AlertTitle>
         <AlertDescription>{sourceQuery.error.message}</AlertDescription>
         <Button
-          appearance="form"
           className="w-fit"
           variant="outline"
           onClick={() => void sourceQuery.refetch()}

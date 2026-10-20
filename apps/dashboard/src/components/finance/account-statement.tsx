@@ -45,7 +45,6 @@ export function FinanceAccountStatement({
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 className="text-lg font-medium">Money in and out</h2>
         <Button
-          appearance="form"
           variant="outline"
           onClick={() => setVersion((value) => value + 1)}
         >
@@ -130,9 +129,7 @@ function StatementPages({
     return (
       <div role="alert">
         <p>{query.error.message}</p>
-        <Button appearance="form" onClick={() => void query.refetch()}>
-          Try again
-        </Button>
+        <Button onClick={() => void query.refetch()}>Try again</Button>
       </div>
     )
   const statement = query.data
@@ -238,7 +235,6 @@ function StatementPages({
                     ) : null}
                     {entry.sourceKind === "EXPENSE_BILL" ? (
                       <Button
-                        appearance="form"
                         variant="ghost"
                         onClick={() =>
                           void setParams({
@@ -258,7 +254,6 @@ function StatementPages({
                     !entry.reversalOfId &&
                     !entry.reversedById ? (
                       <Button
-                        appearance="form"
                         variant="ghost"
                         aria-label={`Undo ${entry.description}`}
                         onClick={() =>
@@ -298,7 +293,6 @@ function StatementPages({
       </section>
       <div className="flex gap-2">
         <Button
-          appearance="form"
           variant="outline"
           disabled={cursors.length === 1 || query.isFetching}
           onClick={() => setCursors((value) => value.slice(0, -1))}
@@ -306,7 +300,6 @@ function StatementPages({
           Previous page
         </Button>
         <Button
-          appearance="form"
           variant="outline"
           disabled={
             !statement.nextCursor || snapshot === undefined || query.isFetching

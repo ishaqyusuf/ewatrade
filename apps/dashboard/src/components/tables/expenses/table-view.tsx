@@ -125,11 +125,7 @@ export function ExpenseTableView({
     return (
       <div role="alert" className="grid gap-3 py-6">
         <p>{errorMessage}</p>
-        <Button
-          appearance="form"
-          variant="outline"
-          onClick={() => void refetch()}
-        >
+        <Button variant="outline" onClick={() => void refetch()}>
           Try again
         </Button>
       </div>
@@ -172,7 +168,6 @@ export function ExpenseTableView({
             {errorMessage || "Expenses could not be refreshed."}
           </p>
           <Button
-            appearance="form"
             variant="outline"
             onClick={() =>
               isFetchNextPageError ? retryNextPage() : void refetch()
@@ -194,11 +189,7 @@ export function ExpenseTableView({
       {persistenceError ? (
         <div className="flex items-center justify-between gap-3" role="alert">
           <p className="text-sm text-destructive">{persistenceError}</p>
-          <Button
-            appearance="form"
-            variant="outline"
-            onClick={retryPersistence}
-          >
+          <Button variant="outline" onClick={retryPersistence}>
             Retry saving columns
           </Button>
         </div>
@@ -315,7 +306,6 @@ export function ExpenseTableView({
 
       {hasNextPage && !isFetchNextPageError ? (
         <Button
-          appearance="form"
           className="w-fit"
           variant="outline"
           disabled={isFetchingNextPage}

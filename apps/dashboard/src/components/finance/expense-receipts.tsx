@@ -838,7 +838,6 @@ function ExpenseReceiptWorkspace({
           </p>
         </div>
         <Button
-          appearance="form"
           variant="outline"
           size="sm"
           disabled={query.isFetching}
@@ -848,7 +847,6 @@ function ExpenseReceiptWorkspace({
         </Button>
         {controller.current ? (
           <Button
-            appearance="form"
             variant="outline"
             size="sm"
             onClick={() => controller.current?.abort()}
@@ -872,12 +870,7 @@ function ExpenseReceiptWorkspace({
       {query.isError ? (
         <FormFeedback appearance="dashboard">
           {query.error.message}
-          <Button
-            appearance="form"
-            variant="link"
-            size="sm"
-            onClick={() => void query.refetch()}
-          >
+          <Button variant="link" size="sm" onClick={() => void query.refetch()}>
             Try again
           </Button>
         </FormFeedback>
@@ -915,7 +908,6 @@ function ExpenseReceiptWorkspace({
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <Button
-              appearance="form"
               variant="outline"
               size="sm"
               disabled={
@@ -927,7 +919,6 @@ function ExpenseReceiptWorkspace({
             </Button>
             {file ? (
               <Button
-                appearance="form"
                 size="sm"
                 disabled={Boolean(busyAsset)}
                 onClick={() => void uploadSelectedReceipt()}
@@ -954,7 +945,6 @@ function ExpenseReceiptWorkspace({
       ) : null}
       {isFresh && receipts.length === 0 && !cancelled ? (
         <EmptyState
-          appearance="form"
           title="No receipts yet"
           description="Add a photo or PDF so the receipt is kept with this expense."
           actionLabel="Choose receipt"
@@ -985,7 +975,6 @@ function ExpenseReceiptWorkspace({
       {isFresh && query.hasNextPage ? (
         <div>
           <Button
-            appearance="form"
             variant="outline"
             size="sm"
             disabled={query.isFetchingNextPage}
@@ -1014,7 +1003,6 @@ function ExpenseReceiptWorkspace({
             </AlertDialogCancel>
             {confirmWithdrawal ? (
               <Button
-                appearance="form"
                 variant="destructive"
                 disabled={Boolean(busyAsset)}
                 onClick={() => void withdrawReceipt(confirmWithdrawal)}
@@ -1063,18 +1051,12 @@ function ReceiptRow({
       </div>
       <div className="flex flex-wrap items-center gap-2">
         {allowAttach && canAttachExpenseReceipt(receipt) ? (
-          <Button
-            appearance="form"
-            size="sm"
-            disabled={busy}
-            onClick={onAttach}
-          >
+          <Button size="sm" disabled={busy} onClick={onAttach}>
             {busy ? "Adding…" : "Add to expense"}
           </Button>
         ) : null}
         {canDownloadExpenseReceipt(receipt) ? (
           <Button
-            appearance="form"
             variant="outline"
             size="sm"
             disabled={busy}
@@ -1085,7 +1067,6 @@ function ReceiptRow({
         ) : null}
         {receipt.attachmentState === "ATTACHED" ? (
           <Button
-            appearance="form"
             variant="outline"
             size="sm"
             disabled={busy}

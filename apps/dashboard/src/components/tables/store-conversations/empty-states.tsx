@@ -33,7 +33,6 @@ export function StoreConversationEmptyState({
           onClick={onClearFilters}
           type="button"
           variant="outline"
-          appearance="form"
         >
           Clear filters
         </Button>
@@ -53,11 +52,7 @@ export function StoreConversationAccessState() {
         An active Store attendant assignment is required to access
         conversations. Ask an Owner or Admin to assign you in Customer channels.
       </p>
-      <Button
-        className="mt-1"
-        render={<Link href="/settings/channels" />}
-        appearance="form"
-      >
+      <Button className="mt-1" render={<Link href="/settings/channels" />}>
         Open Customer channels
       </Button>
     </section>
@@ -83,7 +78,6 @@ export function StoreConversationErrorState({ retry }: { retry: () => void }) {
           retry()
         }}
         variant="outline"
-        appearance="form"
       >
         Retry
       </Button>

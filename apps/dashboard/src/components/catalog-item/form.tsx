@@ -1648,7 +1648,6 @@ export function CatalogItemForm({
             this form.
           </p>
           <Button
-            appearance="form"
             type="button"
             variant="outline"
             size="sm"
@@ -1748,7 +1747,6 @@ export function CatalogItemForm({
             Each customer choice has its own opening stock.
           </p>
           <Button
-            appearance="form"
             type="button"
             variant="outline"
             size="sm"
@@ -1966,7 +1964,6 @@ export function CatalogItemForm({
                   </p>
                 </div>
                 <Button
-                  appearance="form"
                   type="button"
                   size="sm"
                   variant="ghost"
@@ -2420,7 +2417,6 @@ export function CatalogItemForm({
                       }}
                     />
                     <Button
-                      appearance="form"
                       type="button"
                       className="w-full justify-center"
                       onClick={() => setHelperPickerOpen(true)}

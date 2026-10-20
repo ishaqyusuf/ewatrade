@@ -116,7 +116,6 @@ export function CustomerRequests({ storeId }: { storeId: string }) {
                   {request.status !== "CONVERTED" &&
                   request.status !== "DECLINED" ? (
                     <Button
-                      appearance="form"
                       size="sm"
                       onClick={() =>
                         setParams({

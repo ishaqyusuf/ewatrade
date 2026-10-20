@@ -196,20 +196,10 @@ export function FinanceSupplierAgingView({
         </Table>
       </section>
       <div className="flex flex-wrap gap-2">
-        <Button
-          appearance="form"
-          variant="outline"
-          disabled={page === 1}
-          onClick={onPrevious}
-        >
+        <Button variant="outline" disabled={page === 1} onClick={onPrevious}>
           Previous page
         </Button>
-        <Button
-          appearance="form"
-          variant="outline"
-          disabled={!aging.nextCursor}
-          onClick={onNext}
-        >
+        <Button variant="outline" disabled={!aging.nextCursor} onClick={onNext}>
           Next page
         </Button>
       </div>

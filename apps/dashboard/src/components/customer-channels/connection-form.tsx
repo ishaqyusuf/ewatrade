@@ -79,7 +79,7 @@ export function ConnectionForm({
             Continue with Meta
           </a>
         ) : embeddedSignupLoading ? (
-          <Button appearance="form" disabled type="button">
+          <Button disabled type="button">
             Checking Meta signup…
           </Button>
         ) : embeddedSignupError ? (
@@ -89,7 +89,6 @@ export function ConnectionForm({
               available.
             </FormFeedback>
             <Button
-              appearance="form"
               disabled={embeddedSignupLoading}
               onClick={onRetryEmbeddedSignup}
               type="button"
@@ -100,7 +99,7 @@ export function ConnectionForm({
           </div>
         ) : (
           <div className="grid gap-2 sm:max-w-64">
-            <Button appearance="form" disabled type="button">
+            <Button disabled type="button">
               Embedded signup unavailable
             </Button>
             <p className="text-xs text-muted-foreground">

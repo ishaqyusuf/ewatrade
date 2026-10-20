@@ -97,7 +97,6 @@ export function ConversationAccountTerms({
               }
             }}
             type="button"
-            appearance="form"
           >
             {accept.isPending ? "Recording…" : "Agree and continue"}
           </Button>

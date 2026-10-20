@@ -29,7 +29,7 @@ export function FinanceReportExport({ report }: { report: Report }) {
   }
   return (
     <div className="flex flex-wrap gap-2">
-      <Button appearance="form" variant="outline" onClick={download}>
+      <Button variant="outline" onClick={download}>
         Export CSV
       </Button>
       <FinanceReportPrint report={report} />

@@ -87,11 +87,7 @@ export function EntryPointCard({
               {url}
             </a>
             <div className="flex flex-wrap gap-2">
-              <Button
-                onClick={() => void copy()}
-                type="button"
-                appearance="form"
-              >
+              <Button onClick={() => void copy()} type="button">
                 {copied ? "Copied" : "Copy link"}
               </Button>
               <Button
@@ -99,7 +95,6 @@ export function EntryPointCard({
                 onClick={onRevoke}
                 type="button"
                 variant="outline"
-                appearance="form"
               >
                 Revoke link
               </Button>
@@ -111,7 +106,6 @@ export function EntryPointCard({
             disabled={!canManage || isPending}
             onClick={onPublish}
             type="button"
-            appearance="form"
           >
             {isPending ? "Publishing…" : "Publish customer entry point"}
           </Button>

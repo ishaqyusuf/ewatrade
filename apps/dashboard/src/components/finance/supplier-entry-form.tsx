@@ -279,7 +279,6 @@ export function FinanceSupplierEntryForm({
         <AlertTitle>Couldn't load this Supplier</AlertTitle>
         <AlertDescription>{supplierQuery.error.message}</AlertDescription>
         <Button
-          appearance="form"
           className="w-fit"
           variant="outline"
           onClick={() => void supplierQuery.refetch()}
@@ -315,7 +314,6 @@ export function FinanceSupplierEntryForm({
         <AlertTitle>Couldn't load money accounts</AlertTitle>
         <AlertDescription>{accountsQuery.error.message}</AlertDescription>
         <Button
-          appearance="form"
           className="w-fit"
           variant="outline"
           onClick={() => void accountsQuery.refetch()}
@@ -335,7 +333,6 @@ export function FinanceSupplierEntryForm({
         <AlertTitle>Couldn't confirm your Finance</AlertTitle>
         <AlertDescription>Reload before paying ahead.</AlertDescription>
         <Button
-          appearance="form"
           className="w-fit"
           variant="outline"
           onClick={() => void accountsQuery.refetch()}
@@ -510,7 +507,6 @@ export function FinanceSupplierEntryForm({
           >
             <AlertDescription>{prepareError}</AlertDescription>
             <Button
-              appearance="form"
               className="w-fit"
               type="button"
               variant="outline"
@@ -524,11 +520,7 @@ export function FinanceSupplierEntryForm({
           </Alert>
         ) : null}
         <FormActions>
-          <Button
-            appearance="form"
-            type="submit"
-            disabled={disabled || noMoneyAccounts}
-          >
+          <Button type="submit" disabled={disabled || noMoneyAccounts}>
             {preparing
               ? "Checking Supplier…"
               : opening

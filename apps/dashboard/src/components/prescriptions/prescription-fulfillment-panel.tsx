@@ -88,7 +88,6 @@ export function PrescriptionFulfillmentPanel({ storeId }: { storeId: string }) {
       <div className="grid gap-3 border border-destructive/30 p-5">
         <FormFeedback appearance="dashboard">{queryError.message}</FormFeedback>
         <Button
-          appearance="form"
           className="w-fit"
           onClick={() =>
             void Promise.all([pickup.refetch(), delivery.refetch()])
@@ -210,7 +209,7 @@ export function PrescriptionFulfillmentPanel({ storeId }: { storeId: string }) {
                         placeholder="Relationship (optional)"
                       />
                       <FormActions>
-                        <Button appearance="form" size="sm" type="submit">
+                        <Button size="sm" type="submit">
                           Record handoff
                         </Button>
                       </FormActions>
@@ -394,7 +393,7 @@ export function PrescriptionFulfillmentPanel({ storeId }: { storeId: string }) {
                         required
                       />
                       <FormActions>
-                        <Button appearance="form" size="sm" type="submit">
+                        <Button size="sm" type="submit">
                           Assign courier
                         </Button>
                       </FormActions>

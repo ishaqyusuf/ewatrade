@@ -331,7 +331,6 @@ export function FinanceSheetContent({
               <p className="text-destructive">{recoveryNotice}</p>
               {recoveryAcknowledgement ? (
                 <Button
-                  appearance="form"
                   className="w-fit"
                   disabled={locked}
                   onClick={() => void recoveryAcknowledgement()}

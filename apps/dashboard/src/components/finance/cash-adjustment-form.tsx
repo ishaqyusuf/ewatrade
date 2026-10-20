@@ -100,15 +100,10 @@ export function FinanceCashAdjustmentForm({
           />
         </FinanceField>
         <FormActions>
-          <Button
-            appearance="form"
-            type="button"
-            variant="outline"
-            onClick={onBack}
-          >
+          <Button type="button" variant="outline" onClick={onBack}>
             Back to count
           </Button>
-          <Button appearance="form" type="submit" disabled={!reason.trim()}>
+          <Button type="submit" disabled={!reason.trim()}>
             Review adjustment
           </Button>
         </FormActions>

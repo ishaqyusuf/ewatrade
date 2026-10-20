@@ -170,9 +170,7 @@ export function FinanceBillPaymentForm({
           <Input {...form.register("reference")} />
         </FinanceField>
         <FormActions>
-          <Button appearance="form" type="submit">
-            Review payment
-          </Button>
+          <Button type="submit">Review payment</Button>
         </FormActions>
       </FieldGroup>
     </form>

@@ -18,7 +18,6 @@ export function CatalogGuidanceSuggestions({
     <fieldset className="flex flex-wrap gap-2" aria-label={label}>
       {values.map((value) => (
         <Button
-          appearance="form"
           key={value}
           type="button"
           size="sm"
