@@ -34,6 +34,8 @@ export type DashboardNavItem = {
   children?: DashboardNavItem[]
   description: string
   end?: boolean
+  /** Settings side list section. */
+  group?: "Business" | "Selling" | "Customers" | "Team" | "Pharmacy"
   href: string
   icon: DashboardNavIcon
   label: string
@@ -321,28 +323,32 @@ const DASHBOARD_NAV: DashboardNavDefinition[] = [
     canAccess: canManageTenantRole,
     children: [
       {
-        description: "General business settings",
+        description: "Business name, currency and who is signed in",
+        group: "Business",
         href: "/settings",
         icon: "settings",
         label: "General",
         canAccess: canManageTenantRole,
       },
       {
-        description: "Manage business Stores",
+        description: "Your shops or branches",
+        group: "Business",
         href: "/settings/stores",
         icon: "settings",
         label: "Stores",
         canAccess: canManageTenantRole,
       },
       {
-        description: "Alert types and who gets them",
-        href: "/settings/notifications",
+        description: "Your plan and what you have used",
+        group: "Business",
+        href: "/settings/billing",
         icon: "settings",
-        label: "Notifications",
+        label: "Plan and billing",
         canAccess: canManageTenantRole,
       },
       {
-        description: "Order receipt defaults and Store overrides",
+        description: "What prints on every receipt",
+        group: "Selling",
         href: "/settings/receipts",
         icon: "settings",
         label: "Receipts",
@@ -350,22 +356,32 @@ const DASHBOARD_NAV: DashboardNavDefinition[] = [
         requiresPlanFeature: "invoices",
       },
       {
-        description:
-          "Whether staff return and refund, ask first, or not at all",
+        description: "Who can take returns and give money back",
+        group: "Selling",
         href: "/settings/returns",
         icon: "settings",
         label: "Returns and refunds",
         canAccess: canManageTenantRole,
       },
       {
-        description: "Saved wording staff send from WhatsApp",
+        description: "Customer requests, quotes and bookings",
+        group: "Selling",
+        href: "/settings/service-commerce",
+        icon: "settings",
+        label: "Bookings and quotes",
+        canAccess: canManageTenantRole,
+      },
+      {
+        description: "Messages staff send from WhatsApp",
+        group: "Customers",
         href: "/settings/whatsapp-messages",
         icon: "settings",
         label: "WhatsApp messages",
         canAccess: canManageTenantRole,
       },
       {
-        description: "Business domain settings",
+        description: "Your online store's web address",
+        group: "Customers",
         href: "/settings/domains",
         icon: "settings",
         label: "Domains",
@@ -374,33 +390,29 @@ const DASHBOARD_NAV: DashboardNavDefinition[] = [
           context.websiteDomainsEnabled === true && canManageTenantRole(role),
       },
       {
-        description: "Customer communication channels",
+        description: "How customers reach you and who replies",
+        group: "Customers",
         href: "/settings/channels",
         icon: "settings",
-        label: "Channels",
+        label: "Customer channels",
         canAccess: canManageTenantRole,
       },
       {
-        description: "Service Commerce setup",
-        href: "/settings/service-commerce",
+        description: "Which alerts are on and who gets them",
+        group: "Team",
+        href: "/settings/notifications",
         icon: "settings",
-        label: "Service Commerce",
+        label: "Notifications",
         canAccess: canManageTenantRole,
       },
       {
-        description: "Pharmacy compliance settings",
+        description: "How your pharmacy handles prescriptions",
+        group: "Pharmacy",
         href: "/settings/compliance",
         icon: "settings",
-        label: "Compliance",
+        label: "Pharmacy compliance",
         canAccess: canManageTenantRole,
         isVisible: isPharmacyBusiness,
-      },
-      {
-        description: "Business and subscription billing",
-        href: "/settings/billing",
-        icon: "settings",
-        label: "Billing",
-        canAccess: canManageTenantRole,
       },
     ],
   },

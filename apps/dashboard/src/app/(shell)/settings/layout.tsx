@@ -30,9 +30,9 @@ export default async function SettingsLayout({
       websiteDomainsEnabled: isWebsiteDomainsLaunchApproved(),
     }).find((item) => item.href === "/settings")?.children ?? []
   return (
-    <div className="w-full min-w-0 max-w-[800px]">
+    <div className="grid w-full min-w-0 gap-6 pt-2 md:grid-cols-[176px_minmax(0,1fr)] md:gap-8 md:pt-6 lg:grid-cols-[196px_minmax(0,720px)] lg:gap-10">
       <SettingsNavigation items={items} />
-      <div className="mt-8">{children}</div>
+      <div className="min-w-0">{children}</div>
     </div>
   )
 }

@@ -148,15 +148,15 @@ describe("dashboard navigation policy", () => {
     expect(settings?.children?.map((item) => item.href)).toEqual([
       "/settings",
       "/settings/stores",
-      "/settings/notifications",
+      "/settings/billing",
       "/settings/receipts",
       "/settings/returns",
+      "/settings/service-commerce",
       "/settings/whatsapp-messages",
       "/settings/domains",
       "/settings/channels",
-      "/settings/service-commerce",
+      "/settings/notifications",
       "/settings/compliance",
-      "/settings/billing",
     ])
     expect(
       flatten(items).some((item) => item.href === "/settings/prescriptions"),
