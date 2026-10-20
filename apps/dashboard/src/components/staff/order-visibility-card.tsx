@@ -83,13 +83,13 @@ export function OrderVisibilityQuestion({
       <div className="min-w-0">
         <p className="font-semibold">Which orders can cashiers see?</p>
         <p className="text-muted-foreground">
-          {storeName} · Applies to cashiers and operators.
+          {storeName} · Applies to cashiers and sales reps.
         </p>
       </div>
       <div className="grid gap-2">
         <div className="flex gap-2">
           <label htmlFor={id} className="sr-only">
-            Cashiers and operators see
+            Cashiers and sales reps see
           </label>
           <Select
             id={id}
@@ -167,7 +167,7 @@ export function OrderVisibilityCard({
       ) : (
         <div className="grid gap-2 sm:max-w-sm">
           <label htmlFor={id} className="text-sm font-medium">
-            Cashiers and operators see
+            Cashiers and sales reps see
           </label>
           <Select
             id={id}

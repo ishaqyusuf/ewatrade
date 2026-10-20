@@ -30,7 +30,7 @@ type Props = {
 }
 const roleOptions = [
   { value: "CASHIER", label: "Cashier" },
-  { value: "OPERATOR", label: "Operator" },
+  { value: "OPERATOR", label: "Sales rep" },
   { value: "MANAGER", label: "Manager" },
 ]
 const inviteFields = z.object({

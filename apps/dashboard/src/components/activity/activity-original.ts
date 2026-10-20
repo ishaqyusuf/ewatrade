@@ -85,7 +85,7 @@ export function activityOriginalOpen(
     return { unavailable: "No original record to open" } as const
   const label = OPEN_LABELS[target.kind]
   const params = activityOriginalParams(target)
-  if (!params) return { unavailable: "Open it from Finance" } as const
+  if (!params) return { unavailable: "Open it in Finance" } as const
   const { access } = context
   const allowed = {
     order: access.sales,
@@ -101,8 +101,7 @@ export function activityOriginalOpen(
     finance_bill: access.finance,
     finance_entry: false,
   }[target.kind]
-  if (!allowed)
-    return { unavailable: "Not available with your access" } as const
+  if (!allowed) return { unavailable: "You can’t open this" } as const
   if (
     STORE_BOUND.has(target.kind) &&
     event.store &&

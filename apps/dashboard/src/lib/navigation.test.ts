@@ -385,6 +385,7 @@ describe("dashboard navigation policy", () => {
   test("formats role labels for the dashboard shell", () => {
     expect(getDashboardRoleLabel("OWNER")).toBe("Owner")
     expect(getDashboardRoleLabel(null)).toBe("Guest")
+    expect(getDashboardRoleLabel("OPERATOR")).toBe("Sales rep")
   })
 })
 

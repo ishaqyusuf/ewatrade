@@ -565,5 +565,9 @@ export function canAccessDashboardPath(
 }
 
 export function getDashboardRoleLabel(role: string | null | undefined) {
-  return getRoleDisplayName(getNormalizedRole(role))
+  const normalized = getNormalizedRole(role)
+  // Owners know Operators as sales reps; the stored role stays OPERATOR.
+  return normalized === "OPERATOR"
+    ? "Sales rep"
+    : getRoleDisplayName(normalized)
 }

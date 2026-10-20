@@ -59,7 +59,7 @@ describe("Activity original record", () => {
         },
         owner,
       ),
-    ).toEqual({ unavailable: "Open it from Finance" })
+    ).toEqual({ unavailable: "Open it in Finance" })
   })
 
   test("opens only with a target, canOpen and registered access", () => {
@@ -87,7 +87,7 @@ describe("Activity original record", () => {
         },
         cashier,
       ),
-    ).toEqual({ unavailable: "Not available with your access" })
+    ).toEqual({ unavailable: "You can’t open this" })
   })
 
   test("Store records open only in their own Store", () => {
