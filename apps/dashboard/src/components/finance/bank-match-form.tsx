@@ -8,11 +8,8 @@ import {
   Alert,
   AlertDescription,
   AlertTitle,
-  Button,
   FieldGroup,
-  FormActions,
   Input,
-  SubmitButton,
 } from "@ewatrade/ui"
 import { formatFinanceMoney } from "@ewatrade/utils/finance-money"
 import {
@@ -28,7 +25,13 @@ import {
   bankMatchSelection,
 } from "./bank-match-state"
 import { useFinanceForm } from "./form-context"
-import { FinanceField, FinanceReview } from "./form-fields"
+import {
+  FinanceBackTo,
+  FinanceDetails,
+  FinanceField,
+  FinanceFormFooter,
+  FinanceReview,
+} from "./form-fields"
 import type { FinanceBankStatementDetailData, FinanceBook } from "./types"
 import { useCompleteFinanceForm } from "./use-complete-finance-form"
 
@@ -66,7 +69,11 @@ export function FinanceBankMatchForm({
   const client = useQueryClient()
   const { actorUserId, tenantId, setLocked } = useFinanceForm()
   const command = useFinanceCommand(
-    useCompleteFinanceForm(),
+    useCompleteFinanceForm(
+      action.kind === "MATCH"
+        ? `Matched on ${data.statement.reference}.`
+        : "Unmatched. The line is back in To match.",
+    ),
     book.id,
     action.kind === "MATCH" ? "matchBankStatement" : "unmatchBankStatement",
   )
@@ -451,39 +458,35 @@ export function FinanceBankMatchForm({
         backDisabled={busy || (command.uncertain && !review.recoveryReentry)}
         confirmDisabled={busy || !online}
         onConfirm={() => void confirm(review)}
+        confirmLabel={review.action.kind === "MATCH" ? "Match" : "Unmatch"}
+        sentence={
+          review.action.kind === "MATCH" ? (
+            <>
+              This links {review.bankRecords.length} bank line
+              {review.bankRecords.length === 1 ? "" : "s"} to{" "}
+              {review.postedRecords.length} of your records,{" "}
+              <b>{money(review.amountMinor)}</b>. It doesn&apos;t change any
+              money.
+            </>
+          ) : (
+            <>
+              This unlinks <b>{money(review.amountMinor)}</b> of bank lines from
+              your records. Both stay as they are, and the lines go back to To
+              match. No payment is undone.
+            </>
+          )
+        }
       >
-        <h3 className="font-medium">
-          {review.action.kind === "MATCH"
-            ? "Match these lines"
-            : "Unmatch these lines"}
-        </h3>
-        <p className="text-sm">
-          {data.statement.reference} · {money(review.amountMinor)}
-        </p>
-        <section className="grid gap-2 border border-border p-4 text-sm">
-          <h4 className="font-medium">Bank lines</h4>
-          {review.bankRecords.map((text, index) => (
-            <p key={`${index}:${text}`}>{text}</p>
-          ))}
-          <h4 className="font-medium">Your records</h4>
-          {review.postedRecords.map((text, index) => (
-            <p key={`${index}:${text}`}>{text}</p>
-          ))}
-        </section>
-        <p className="break-words text-sm">
-          {review.action.kind === "MATCH" ? "Why they match" : "Why unmatch"}:{" "}
-          {review.payload.reason}
-        </p>
-        <p className="text-xs text-muted-foreground">
-          As of the latest records.
-        </p>
-        <Alert appearance="dashboard">
-          <AlertDescription>
-            {review.action.kind === "MATCH"
-              ? "This links the bank lines to your records. It doesn't move any money."
-              : "This unlinks them. The match stays in history. It doesn't undo any payment."}
-          </AlertDescription>
-        </Alert>
+        <FinanceDetails
+          rows={[
+            ["Bank lines", review.bankRecords.join(" · ")],
+            ["Your records", review.postedRecords.join(" · ")],
+            [
+              review.action.kind === "MATCH" ? "Why they match" : "Why",
+              review.payload.reason,
+            ],
+          ]}
+        />
         {error ? (
           <Alert appearance="dashboard" variant="destructive">
             <AlertDescription>{error}</AlertDescription>
@@ -499,11 +502,16 @@ export function FinanceBankMatchForm({
       }}
     >
       <FieldGroup className="gap-5">
-        <h3 className="font-medium">
-          {action.kind === "MATCH"
-            ? "Match these lines"
-            : "Unmatch these lines"}
-        </h3>
+        <FinanceBackTo
+          label="Back to statement"
+          onBack={onBack}
+          title={action.kind === "MATCH" ? "Match bank lines" : "Unmatch"}
+          description={
+            action.kind === "MATCH"
+              ? "Link the bank lines to the records you made. It doesn't move money."
+              : "The lines go back to To match. No payment is undone."
+          }
+        />
         {command.uncertain ? (
           <Alert appearance="dashboard">
             <AlertTitle>Finish what you started</AlertTitle>
@@ -514,7 +522,11 @@ export function FinanceBankMatchForm({
           </Alert>
         ) : null}
         <FinanceField
-          label={action.kind === "MATCH" ? "Why they match" : "Why unmatch"}
+          label={
+            action.kind === "MATCH"
+              ? "Why do they match?"
+              : "Why are you unmatching it?"
+          }
         >
           <Input
             required
@@ -524,8 +536,8 @@ export function FinanceBankMatchForm({
             onChange={(event) => setReason(event.target.value)}
             placeholder={
               action.kind === "MATCH"
-                ? "Say how these lines and records go together"
-                : "Say why you are unmatching them"
+                ? "Same amount and date"
+                : "Matched to the wrong expense"
             }
           />
         </FinanceField>
@@ -534,23 +546,14 @@ export function FinanceBankMatchForm({
             <AlertDescription>{error ?? command.error}</AlertDescription>
           </Alert>
         ) : null}
-        <FormActions>
-          <Button
-            type="button"
-            variant="outline"
-            disabled={busy || command.pending || command.uncertain}
-            onClick={onBack}
-          >
-            Back to statement
-          </Button>
-          <SubmitButton
-            type="submit"
-            isSubmitting={busy}
-            disabled={busy || !command.ready || !online || command.saved}
-          >
-            {action.kind === "MATCH" ? "Match" : "Unmatch"}
-          </SubmitButton>
-        </FormActions>
+        <FinanceFormFooter
+          onCancel={
+            busy || command.pending || command.uncertain ? undefined : onBack
+          }
+          submitLabel="Review"
+          isSubmitting={busy}
+          disabled={busy || !command.ready || !online || command.saved}
+        />
       </FieldGroup>
     </form>
   )
