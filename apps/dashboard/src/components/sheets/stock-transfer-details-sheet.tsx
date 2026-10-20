@@ -46,21 +46,20 @@ export function StockTransferDetailsSheet({ storeId }: { storeId: string }) {
     >
       {transferId ? (
         <SheetFrame
-          title="Stock transfer"
-          description="Saved transfer and acknowledgment history."
+          title="Transfer"
+          description="What was sent and what has arrived."
         >
           {query.isError ? (
             <div role="alert" className="grid gap-3">
               <p>
-                This transfer is unavailable in the selected Store. Check access
-                to both Stores.
+                This transfer couldn’t load. Open it from one of its two stores.
               </p>
               <Button variant="outline" onClick={() => void query.refetch()}>
                 Try again
               </Button>
             </div>
           ) : (
-            <output>Loading saved transfer…</output>
+            <output>Loading transfer…</output>
           )}
         </SheetFrame>
       ) : null}
