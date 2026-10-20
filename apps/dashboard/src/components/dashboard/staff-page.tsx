@@ -5,7 +5,6 @@ import { StaffDirectoryHeader } from "@/components/dashboard/staff-directory-hea
 import { StaffInviteModal } from "@/components/modals/staff-invite-modal"
 import { ScrollableContent } from "@/components/scrollable-content"
 import { CancelInviteAlert } from "@/components/staff/cancel-invite-alert"
-import { ManageStaffAccessModal } from "@/components/staff/manage-staff-access-modal"
 import { OrderVisibilityLine } from "@/components/staff/order-visibility-line"
 import { TableToolbarSlotProvider } from "@/components/tables/core"
 import type { StaffRowActions } from "@/components/tables/staff/actions"
@@ -13,6 +12,7 @@ import { StaffDataTable } from "@/components/tables/staff/data-table"
 import { useDirectoryView } from "@/hooks/use-directory-view"
 import { useStaffDirectoryParams } from "@/hooks/use-staff-directory-params"
 import { useStaffInvitationActions } from "@/hooks/use-staff-invitation-actions"
+import { STAFF_LIST_QUERY_KEY, useStaffList } from "@/hooks/use-staff-list"
 import { useStaffMemberParams } from "@/hooks/use-staff-member-params"
 import { useStaffParams } from "@/hooks/use-staff-params"
 import {
@@ -35,8 +35,9 @@ import {
 } from "@ewatrade/ui"
 import { Cancel01Icon } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
+import { useQueryClient } from "@tanstack/react-query"
 import { useRouter } from "next/navigation"
-import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { useMemo, useState } from "react"
 
 type StaffResponse = {
   staff: StaffMemberRow[]
@@ -91,73 +92,27 @@ export function StaffPage({
       initialSettings: initialViewSettings,
     })
   const router = useRouter()
-  const { setInviteOpen, setAccessUserId } = useStaffParams()
+  const { setInviteOpen } = useStaffParams()
+  const client = useQueryClient()
   const member = useStaffMemberParams()
   const { setParams, staffQuery, staffRole, staffStatus } =
     useStaffDirectoryParams()
   const workflow = useDashboardWorkflow()
   const invitations = useStaffInvitationActions()
-  const [staff, setStaff] = useState(initialStaff)
-  const [isLoading, setIsLoading] = useState(false)
+  const list = useStaffList({
+    search: staffQuery,
+    role: staffRole,
+    initial: { search: initialQuery, role: initialRole, staff: initialStaff },
+  })
+  const staff = list.data ?? []
+  const isLoading = list.isFetching && (list.isPlaceholderData || !list.data)
   const [busyId, setBusyId] = useState<string | null>(null)
   const [notice, setNotice] = useState<Notice | null>(null)
   const [qaInviteUrl, setQaInviteUrl] = useState<string | null>(null)
   const [cancelling, setCancelling] = useState<StaffMemberRow | null>(null)
 
-  // Status is a tab over the loaded list, so only search and role reload it.
-  const lastFilters = useRef({ search: initialQuery, role: initialRole })
-
-  const staffUrl = useCallback(() => {
-    const params = new URLSearchParams()
-    if (staffQuery.trim()) params.set("search", staffQuery.trim())
-    if (staffRole !== "all") params.set("role", staffRole)
-    return `/api/staff?${params.toString()}`
-  }, [staffQuery, staffRole])
-
-  useEffect(() => {
-    const previous = lastFilters.current
-    if (previous.search === staffQuery && previous.role === staffRole) return
-    lastFilters.current = { search: staffQuery, role: staffRole }
-    setNotice(null)
-    setIsLoading(true)
-    const controller = new AbortController()
-    const timeout = setTimeout(async () => {
-      try {
-        const response = await fetch(staffUrl(), { signal: controller.signal })
-        const result = (await response.json()) as
-          | StaffResponse
-          | { error?: string }
-        if (!response.ok)
-          throw new Error(
-            "error" in result && result.error
-              ? result.error
-              : "Couldn’t load staff. Try again.",
-          )
-        setStaff((result as StaffResponse).staff)
-      } catch (fetchError) {
-        if (!controller.signal.aborted)
-          setNotice({
-            error: true,
-            text:
-              fetchError instanceof Error
-                ? fetchError.message
-                : "Couldn’t load staff. Try again.",
-          })
-      } finally {
-        if (!controller.signal.aborted) setIsLoading(false)
-      }
-    }, 250)
-    return () => {
-      clearTimeout(timeout)
-      controller.abort()
-    }
-  }, [staffQuery, staffRole, staffUrl])
-
-  const refreshStaff = useCallback(async () => {
-    const response = await fetch(staffUrl())
-    const result = (await response.json()) as StaffResponse
-    if (response.ok) setStaff(result.staff)
-  }, [staffUrl])
+  const refreshStaff = () =>
+    client.invalidateQueries({ queryKey: STAFF_LIST_QUERY_KEY })
 
   const counts = useMemo(
     () =>
@@ -273,8 +228,8 @@ export function StaffPage({
   }
 
   function runAction(action: StaffAction, target: StaffMemberRow) {
-    if (action === "access") void setAccessUserId(target.user.id)
-    else if (action === "suspend") void updateStatus(target, "suspended")
+    if (action === "access" || action === "suspend")
+      void member.open(target.id, action)
     else if (action === "reactivate") void updateStatus(target, "active")
     else if (action === "resend") void changeInvitation("RESEND", target)
     else setCancelling(target)
@@ -326,6 +281,14 @@ export function StaffPage({
               ))}
             </TabsList>
           </Tabs>
+          {list.isError ? (
+            <div
+              role="alert"
+              className="border border-destructive/20 bg-destructive/10 px-4 py-3 text-sm text-destructive"
+            >
+              Couldn’t load staff. Try again.
+            </div>
+          ) : null}
           {persistenceError ? (
             <Alert appearance="dashboard" role="alert">
               <AlertDescription>{persistenceError}</AlertDescription>
@@ -405,13 +368,6 @@ export function StaffPage({
             actions={actions}
           />
 
-          <ManageStaffAccessModal
-            onSaved={async () => {
-              setNotice({ text: "Access saved." })
-              router.refresh()
-              await refreshStaff()
-            }}
-          />
           <StaffInviteModal storeId={store.id} onInvited={onInvited} />
           <CancelInviteAlert
             name={cancelling ? getStaffDisplayName(cancelling) : ""}

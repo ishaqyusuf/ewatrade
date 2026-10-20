@@ -61,6 +61,7 @@ const updateStaffStatusSchema = z.object({
   staffUserId: z.string().trim().min(1),
   status: z.enum(["active", "suspended"]),
   storeId: z.string().trim().min(1).optional(),
+  reason: z.string().trim().max(500).optional(),
 })
 
 const updateAccessSchema = z.object({
@@ -336,6 +337,7 @@ export async function POST(request: NextRequest) {
       actorUserId: session.user.id,
       staffUserId: parsed.data.staffUserId,
       status: parsed.data.status,
+      reason: parsed.data.reason || undefined,
       tenantId: ctx.tenant.id,
     })
 
