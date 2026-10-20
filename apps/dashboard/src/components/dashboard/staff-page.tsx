@@ -274,7 +274,11 @@ export function StaffPage({
               })
             }
           >
-            <TabsList variant="line" aria-label="Staff status">
+            <TabsList
+              variant="line"
+              aria-label="Staff status"
+              className="max-w-full justify-start overflow-x-auto pb-1.5"
+            >
               {STATUS_TABS.map((tab) => (
                 <TabsTrigger key={tab.value} value={tab.value}>
                   {tab.label}
