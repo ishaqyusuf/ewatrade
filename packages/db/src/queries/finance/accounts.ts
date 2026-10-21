@@ -316,8 +316,8 @@ export async function createFinanceMoneyAccountInTransaction(
 }
 
 /**
- * Sets which payment methods a money account takes and whether it's open to
- * new payments. Takes the book lock that order payments hold while checking
+ * Sets which payment methods a money account takes, whether it's open to new
+ * payments and, for a bank-type account, whether it's mobile money. Takes the book lock that order payments hold while checking
  * their account, so a change can't race a payment.
  */
 export async function updateFinanceMoneyAccountPayments(
@@ -327,6 +327,7 @@ export async function updateFinanceMoneyAccountPayments(
     accountId: string
     paymentMethods: OrderPaymentMethod[]
     availableForPayments: boolean
+    mobileMoney?: boolean
   },
 ) {
   return db.$transaction(
@@ -350,10 +351,16 @@ export async function updateFinanceMoneyAccountPayments(
         paymentMethods: input.paymentMethods,
       }).map(storedPaymentMethod)
       const paused = !input.availableForPayments
-      if (
-        account.paymentMethods.join() === paymentMethods.join() &&
-        (account.paymentsPausedAt !== null) === paused
-      )
+      const mobileMoney = input.mobileMoney ?? account.mobileMoney
+      if (mobileMoney && purpose !== "BANK")
+        throw new FinanceError(
+          "INVALID_JOURNAL",
+          "Only a bank-type account can be mobile money.",
+        )
+      const paymentsChanged =
+        account.paymentMethods.join() !== paymentMethods.join() ||
+        (account.paymentsPausedAt !== null) !== paused
+      if (!paymentsChanged && account.mobileMoney === mobileMoney)
         return account
       const updated = await tx.financeAccount.update({
         where: { id: account.id },
@@ -362,8 +369,11 @@ export async function updateFinanceMoneyAccountPayments(
           paymentsPausedAt: paused
             ? (account.paymentsPausedAt ?? new Date())
             : null,
+          mobileMoney,
         },
       })
+      // Mobile money is a label; only payment changes are audited events.
+      if (!paymentsChanged) return updated
       await tx.financeMoneyAccountPaymentEvent.create({
         data: {
           bookId: input.bookId,

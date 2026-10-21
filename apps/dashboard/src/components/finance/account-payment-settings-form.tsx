@@ -62,6 +62,7 @@ export function FinanceAccountPaymentSettingsForm({
         paymentMethods: account.paymentMethods,
       })}
       initialAvailable={!account.paymentsPausedAt}
+      initialMobileMoney={account.mobileMoney}
     />
   )
 }
@@ -74,6 +75,7 @@ function SettingsFields({
   purpose,
   initialMethods,
   initialAvailable,
+  initialMobileMoney,
 }: {
   accounts: Array<
     Parameters<typeof PaymentMethodGaps>[0]["accounts"][number] & {
@@ -86,11 +88,13 @@ function SettingsFields({
   purpose: MoneyAccountPurpose
   initialMethods: OrderPaymentMethod[]
   initialAvailable: boolean
+  initialMobileMoney: boolean
 }) {
   const trpc = useTRPC()
   const queryClient = useQueryClient()
   const [methods, setMethods] = useState(initialMethods)
   const [available, setAvailable] = useState(initialAvailable)
+  const [mobileMoney, setMobileMoney] = useState(initialMobileMoney)
   const complete = useCompleteFinanceForm(
     `Payment settings saved for ${name}.${available ? "" : " It's paused for new payments."}`,
   )
@@ -119,6 +123,7 @@ function SettingsFields({
           accountId,
           paymentMethods: methods,
           availableForPayments: available,
+          ...(purpose === "BANK" ? { mobileMoney } : {}),
         })
       }}
     >
@@ -148,6 +153,23 @@ function SettingsFields({
             onCheckedChange={(checked) => setAvailable(checked === true)}
           />
         </label>
+        {purpose === "BANK" ? (
+          // biome-ignore lint/a11y/noLabelWithoutControl: the switch is the label's child
+          <label className="flex cursor-pointer items-start justify-between gap-4 border border-border px-3 py-2.5">
+            <span className="grid gap-0.5">
+              <span className="text-sm font-medium">Mobile money</span>
+              <span className="text-xs text-muted-foreground">
+                A mobile money wallet rather than a bank account. Only changes
+                how it's labelled.
+              </span>
+            </span>
+            <Switch
+              checked={mobileMoney}
+              disabled={save.isPending}
+              onCheckedChange={(checked) => setMobileMoney(checked === true)}
+            />
+          </label>
+        ) : null}
         <PaymentMethodGaps
           fix="Choose them here or on another account."
           accounts={accounts.map((row) =>

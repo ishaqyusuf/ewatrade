@@ -28,6 +28,15 @@ export const financeBookSchema = z.object({ bookId: id }).strict()
 export const financeCustomerBalancesSchema = z
   .object({ customerIds: z.array(id).max(50) })
   .strict()
+export const financeCustomerBalanceDirectorySchema = z
+  .object({
+    query: z.string().trim().max(160).optional(),
+    filter: z.enum(["owe", "late", "ahead", "paid"]).optional(),
+    sort: z.enum(["owed", "oldest", "name"]).optional(),
+    cursor: z.string().max(512).optional(),
+    limit: z.number().int().min(1).max(50).default(30),
+  })
+  .strict()
 export const financeSupplierBalancesSchema = financeBookSchema
   .extend({ supplierIds: z.array(id).max(50) })
   .strict()

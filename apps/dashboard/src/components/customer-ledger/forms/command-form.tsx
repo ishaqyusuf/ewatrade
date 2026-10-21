@@ -34,7 +34,12 @@ import { useMutation, useQuery } from "@tanstack/react-query"
 import { useEffect, useState } from "react"
 import { Controller, useForm } from "react-hook-form"
 import type { LedgerAccount, LedgerRequest } from "../types"
-import { formatLedgerDate, ledgerLabels, paymentMethodLabels } from "../types"
+import {
+  formatLedgerDate,
+  ledgerBalanceWords,
+  ledgerLabels,
+  paymentMethodLabels,
+} from "../types"
 import { useCustomerLedgerForm } from "./form-context"
 const OPERATION_WORDS: Record<string, string> = {
   recordOpening: "starting balance",
@@ -482,9 +487,8 @@ export function CustomerLedgerCommandForm({
               <div>
                 <dt className="text-muted-foreground">Balance after this</dt>
                 <dd>
-                  {formatFinanceMoney(
-                    after.netBalanceMinor,
-                    account.currencyCode,
+                  {ledgerBalanceWords(after.netBalanceMinor, (minor) =>
+                    formatFinanceMoney(minor, account.currencyCode),
                   )}
                 </dd>
               </div>
