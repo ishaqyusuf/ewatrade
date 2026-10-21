@@ -6,6 +6,8 @@ import { Button } from "@ewatrade/ui"
 import { formatFinanceMoney } from "@ewatrade/utils/finance-money"
 import { useInfiniteQuery } from "@tanstack/react-query"
 import { useEffect, useRef } from "react"
+import { financeSourceLabel } from "./bank-source-detail"
+import { formatFinanceDate } from "./format-date"
 import { FinanceReportLedgerExport } from "./report-ledger-export"
 import type { FinanceBook } from "./types"
 
@@ -79,7 +81,7 @@ export function FinanceReportAccountLedger({ book }: { book: FinanceBook }) {
       !Number.isFinite(through.getTime()) ||
       !/^\d{1,19}$/.test(reportSnapshot) ? (
         <FormFeedback appearance="dashboard">
-          The account detail link has an invalid date or snapshot.
+          This account link is out of date. Open it again from the report.
         </FormFeedback>
       ) : (
         <LedgerRows
@@ -142,13 +144,12 @@ function LedgerRows({
       <h3 className="font-medium">{first.account.name}</h3>
       <FinanceReportLedgerExport bookId={book.id} ledger={first} />
       <p className="text-xs text-muted-foreground">
-        Posted finance entries only. Unposted Commerce records are excluded.
-        Debit and credit describe accounting sides.
+        Only money recorded in Finance. Debit and credit are the two sides
+        accountants use for every entry.
       </p>
       <p className="text-sm text-muted-foreground">
-        {from.toISOString().slice(0, 10)} to{" "}
-        {through.toISOString().slice(0, 10)} UTC · Snapshot {snapshot}. Positive
-        balances represent the account’s normal {first.normalSide.toLowerCase()}{" "}
+        {formatFinanceDate(from)} to {formatFinanceDate(through)}. A positive
+        balance is on this account’s usual {first.normalSide.toLowerCase()}{" "}
         side.
       </p>
       <p className="text-sm">
@@ -164,21 +165,19 @@ function LedgerRows({
             <li key={entry.id} className="grid gap-2 py-4 text-sm">
               <div className="flex flex-wrap justify-between gap-3">
                 <p className="font-medium">{entry.description}</p>
-                <span>
-                  {new Date(entry.effectiveAt).toISOString().slice(0, 10)}
-                </span>
+                <span>{formatFinanceDate(entry.effectiveAt)}</span>
               </div>
               <p className="tabular-nums">
                 Debit {money(entry.debitMinor)} · Credit{" "}
                 {money(entry.creditMinor)} · Balance {money(entry.balanceMinor)}
               </p>
               <p className="break-all text-xs text-muted-foreground">
-                Source: {entry.sourceKind} · {entry.sourceId}
+                {financeSourceLabel(entry.sourceKind)}
               </p>
               {entry.reversalOfId ? (
-                <p>Correction of entry {entry.reversalOfId}</p>
+                <p>Undo of an earlier entry</p>
               ) : entry.reversedById ? (
-                <p>Reversed; original retained.</p>
+                <p>Undone; original kept in history.</p>
               ) : null}
               {entry.sourceKind === "EXPENSE_BILL" ? (
                 <Button

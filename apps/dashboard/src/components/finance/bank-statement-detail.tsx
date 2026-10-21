@@ -28,6 +28,7 @@ import { FinanceBankMatchHistory } from "./bank-match-history"
 import { bankMatchSelection } from "./bank-match-state"
 import { financeSourceLabel } from "./bank-source-detail"
 import { useFinanceForm } from "./form-context"
+import { formatFinanceDate } from "./format-date"
 import type { FinanceBook } from "./types"
 
 export function FinanceBankStatementDetail({
@@ -165,8 +166,8 @@ export function FinanceBankStatementDetail({
           <h3 className="text-lg font-medium">{data.statement.reference}</h3>
           <p className="text-sm text-muted-foreground">
             {account?.name ?? "Money account"} ·{" "}
-            {new Date(data.statement.startsAt).toISOString().slice(0, 10)} –{" "}
-            {new Date(data.statement.endsAt).toISOString().slice(0, 10)}
+            {formatFinanceDate(data.statement.startsAt)} –{" "}
+            {formatFinanceDate(data.statement.endsAt)}
           </p>
           <p className="mt-1 text-xs text-muted-foreground">
             As of the latest records.
@@ -270,7 +271,7 @@ export function FinanceBankStatementDetail({
                       {row.externalId}
                     </TableCell>
                     <TableCell className="whitespace-nowrap">
-                      {new Date(row.occurredAt).toISOString().slice(0, 10)}
+                      {formatFinanceDate(row.occurredAt)}
                     </TableCell>
                     <TableCell className="max-w-80 whitespace-normal break-words">
                       {row.description || "—"}
@@ -360,7 +361,7 @@ export function FinanceBankStatementDetail({
                       />
                     </TableCell>
                     <TableCell className="whitespace-nowrap">
-                      {new Date(line.effectiveAt).toISOString().slice(0, 10)}
+                      {formatFinanceDate(line.effectiveAt)}
                     </TableCell>
                     <TableCell className="max-w-80 whitespace-normal break-words">
                       {line.description}

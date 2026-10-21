@@ -3,6 +3,7 @@ import { FormFeedback } from "@/components/forms/form-feedback"
 import { useTRPC } from "@/trpc/client"
 import { useQuery } from "@tanstack/react-query"
 import { useState } from "react"
+import { formatFinanceDate } from "./format-date"
 import { OpenFinanceSheet } from "./open-finance-sheet"
 import { FinancePeriodAuditHistory } from "./period-audit-history"
 import type { FinanceBook } from "./types"
@@ -34,7 +35,7 @@ export function FinancePeriodHistory({ book }: { book: FinanceBook }) {
         <>
           <p className="font-medium">
             {query.data.closedThrough
-              ? `Closed up to ${new Date(query.data.closedThrough).toISOString().slice(0, 10)}`
+              ? `Closed up to ${formatFinanceDate(query.data.closedThrough)}`
               : "No month closed yet"}
           </p>
           <details

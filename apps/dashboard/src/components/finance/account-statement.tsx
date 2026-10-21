@@ -24,6 +24,7 @@ import { formatFinanceMoney } from "@ewatrade/utils/finance-money"
 import { financePostingDayStart } from "@ewatrade/utils/finance-posting-date"
 import { useQuery } from "@tanstack/react-query"
 import { useEffect, useMemo, useState } from "react"
+import { formatFinanceDate } from "./format-date"
 import { FinanceStatementExport } from "./statement-export"
 import type { FinanceBook } from "./types"
 
@@ -222,7 +223,7 @@ function StatementPages({
                     />
                   </TableCell>
                   <TableCell className="whitespace-nowrap p-3 align-top">
-                    {new Date(entry.effectiveAt).toISOString().slice(0, 10)}
+                    {formatFinanceDate(entry.effectiveAt)}
                   </TableCell>
                   <TableCell className="max-w-sm p-3">
                     <p className="break-words">{entry.description}</p>

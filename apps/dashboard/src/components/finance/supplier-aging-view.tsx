@@ -17,6 +17,7 @@ import {
 } from "@ewatrade/ui"
 import { formatFinanceMoney } from "@ewatrade/utils/finance-money"
 import { useMemo } from "react"
+import { formatFinanceDate } from "./format-date"
 import {
   type SupplierAging,
   supplierAgingBucketLabels,
@@ -165,14 +166,13 @@ export function FinanceSupplierAgingView({
                       {source.reference ? ` · ${source.reference}` : ""}
                     </p>
                     <p className="text-xs text-muted-foreground">
-                      Billed{" "}
-                      {new Date(source.incurredAt).toISOString().slice(0, 10)}
+                      Billed {formatFinanceDate(source.incurredAt)}
                     </p>
                   </TableCell>
                   <TableCell className="align-top">
                     <p className="whitespace-nowrap">
                       {source.dueAt
-                        ? new Date(source.dueAt).toISOString().slice(0, 10)
+                        ? formatFinanceDate(source.dueAt)
                         : "No due date"}
                     </p>
                     <p className="text-xs text-muted-foreground">

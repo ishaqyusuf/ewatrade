@@ -13,6 +13,7 @@ import { FinanceBankOwnedCorrectionForm } from "./bank-owned-correction-form"
 import { bankOwnedCorrectionTarget } from "./bank-owned-correction-target"
 import { FinanceBankSupplierCorrectionForm } from "./bank-supplier-correction-form"
 import { useFinanceForm } from "./form-context"
+import { formatFinanceDate } from "./format-date"
 import type { FinanceBook } from "./types"
 
 const sourceLabels: Record<string, string> = {
@@ -315,7 +316,7 @@ export function FinanceBankSourceDetail({
         </p>
         <p className="text-xs text-muted-foreground">
           Record {source.posted.sequence} ·{" "}
-          {new Date(source.posted.effectiveAt).toISOString().slice(0, 10)}
+          {formatFinanceDate(source.posted.effectiveAt)}
         </p>
       </div>
       <dl className="grid min-w-0 gap-3 text-sm">
@@ -391,7 +392,7 @@ export function FinanceBankSourceDetail({
               <dd className="break-words">
                 {target.description} ·{" "}
                 {formatFinanceMoney(target.amountMinor, book.currencyCode)} ·{" "}
-                {new Date(target.effectiveAt).toISOString().slice(0, 10)}
+                {formatFinanceDate(target.effectiveAt)}
               </dd>
             </div>
             {target.reversal ? (

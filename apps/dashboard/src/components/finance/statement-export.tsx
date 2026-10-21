@@ -150,9 +150,7 @@ export function FinanceStatementExport({
           disabled={progress !== null}
           onClick={() => void download()}
         >
-          {progress === null
-            ? "Export full statement"
-            : `Preparing ${progress} entries…`}
+          {progress === null ? "Export CSV" : `Preparing ${progress} entries…`}
         </Button>
         {progress !== null ? (
           <Button
