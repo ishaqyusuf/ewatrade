@@ -22,6 +22,9 @@ export function useServiceWorkBatch(
       queryClient.invalidateQueries({
         queryKey: trpc.services.queuePage.queryKey(),
       }),
+      queryClient.invalidateQueries({
+        queryKey: trpc.services.queueStageCounts.queryKey(),
+      }),
     ])
   }
   const notificationMutation = useMutation(

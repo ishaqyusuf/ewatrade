@@ -2080,26 +2080,238 @@ export async function listServiceWorkQueue(
     .filter((job) => !["cancelled", "completed"].includes(job.summary))
 }
 
-export async function listServiceWorkQueuePage(
+export const SERVICE_WORK_STAGES = [
+  "open",
+  "todo",
+  "doing",
+  "stuck",
+  "ready",
+  "done",
+] as const
+
+export type ServiceWorkStage = (typeof SERVICE_WORK_STAGES)[number]
+
+const READY_OR_COMPLETED = [
+  ServiceJobLineStatus.READY_FOR_HANDOFF,
+  ServiceJobLineStatus.COMPLETED,
+]
+const UNFINISHED = [
+  ServiceJobLineStatus.QUEUED,
+  ServiceJobLineStatus.IN_PROGRESS,
+  ServiceJobLineStatus.BLOCKED,
+]
+
+/**
+ * Line conditions for each list stage. They follow derivedJobSummary:
+ * todo = queued, doing = in progress or partly ready, stuck = blocked,
+ * ready = ready for hand-over, done = completed (handed over).
+ */
+export function serviceWorkStageLines(
+  stage: ServiceWorkStage,
+): Prisma.ServiceJobWhereInput {
+  switch (stage) {
+    case "todo":
+      return {
+        AND: [
+          { lines: { some: { status: ServiceJobLineStatus.QUEUED } } },
+          {
+            lines: {
+              none: {
+                status: {
+                  in: [
+                    ...READY_OR_COMPLETED,
+                    ServiceJobLineStatus.BLOCKED,
+                    ServiceJobLineStatus.IN_PROGRESS,
+                  ],
+                },
+              },
+            },
+          },
+        ],
+      }
+    case "doing":
+      return {
+        OR: [
+          {
+            AND: [
+              {
+                lines: { some: { status: ServiceJobLineStatus.IN_PROGRESS } },
+              },
+              {
+                lines: {
+                  none: {
+                    status: {
+                      in: [...READY_OR_COMPLETED, ServiceJobLineStatus.BLOCKED],
+                    },
+                  },
+                },
+              },
+            ],
+          },
+          {
+            AND: [
+              { lines: { some: { status: { in: READY_OR_COMPLETED } } } },
+              { lines: { some: { status: { in: UNFINISHED } } } },
+            ],
+          },
+        ],
+      }
+    case "stuck":
+      return {
+        AND: [
+          { lines: { some: { status: ServiceJobLineStatus.BLOCKED } } },
+          { lines: { none: { status: { in: READY_OR_COMPLETED } } } },
+        ],
+      }
+    case "ready":
+      return {
+        AND: [
+          {
+            lines: {
+              some: { status: ServiceJobLineStatus.READY_FOR_HANDOFF },
+            },
+          },
+          { lines: { none: { status: { in: UNFINISHED } } } },
+        ],
+      }
+    case "done":
+      return {
+        AND: [
+          { lines: { some: { status: ServiceJobLineStatus.COMPLETED } } },
+          {
+            lines: {
+              none: {
+                status: {
+                  in: [...UNFINISHED, ServiceJobLineStatus.READY_FOR_HANDOFF],
+                },
+              },
+            },
+          },
+        ],
+      }
+    default:
+      return {
+        lines: {
+          some: {
+            status: {
+              notIn: [
+                ServiceJobLineStatus.COMPLETED,
+                ServiceJobLineStatus.CANCELLED,
+              ],
+            },
+          },
+        },
+      }
+  }
+}
+
+type ServiceWorkQueueFilter = {
+  assigneeUserId?: string
+  due?: "all" | "overdue" | "today"
+  priority?: "normal" | "urgent"
+  query?: string
+  storeId?: string
+  tenantId: string
+}
+
+/** How many jobs sit in each list stage, for the stage tabs. */
+export async function countServiceWorkQueueStages(
   db: PrismaClient,
-  input: {
-    assigneeUserId?: string
-    cursor?: string
-    due?: "all" | "overdue" | "today"
-    limit?: number
-    priority?: "normal" | "urgent"
-    query?: string
-    sort?: { direction: "asc" | "desc"; field: "createdAt" | "priority" }
-    storeId?: string
-    tenantId: string
-  },
+  input: ServiceWorkQueueFilter,
 ) {
-  const limit = Math.min(Math.max(input.limit ?? 20, 1), 50)
+  const counts = await Promise.all(
+    SERVICE_WORK_STAGES.map((stage) =>
+      db.serviceJob.count({
+        where: serviceWorkQueueWhere({ ...input, stage }),
+      }),
+    ),
+  )
+  return Object.fromEntries(
+    SERVICE_WORK_STAGES.map((stage, index) => [stage, counts[index] ?? 0]),
+  ) as Record<ServiceWorkStage, number>
+}
+
+function serviceWorkQueryMatches(
+  normalizedQuery: string,
+): Prisma.ServiceJobWhereInput[] {
+  return [
+    { clientJobId: { contains: normalizedQuery, mode: "insensitive" } },
+    {
+      commercialOrder: {
+        is: {
+          OR: [
+            {
+              orderNumber: {
+                contains: normalizedQuery,
+                mode: "insensitive",
+              },
+            },
+            {
+              customerName: {
+                contains: normalizedQuery,
+                mode: "insensitive",
+              },
+            },
+            {
+              customerPhone: {
+                contains: normalizedQuery,
+                mode: "insensitive",
+              },
+            },
+            {
+              customerEmail: {
+                contains: normalizedQuery,
+                mode: "insensitive",
+              },
+            },
+          ],
+        },
+      },
+    },
+    {
+      lines: {
+        some: {
+          commercialOrderLine: {
+            snapshot: {
+              is: {
+                OR: [
+                  {
+                    catalogItemName: {
+                      contains: normalizedQuery,
+                      mode: "insensitive",
+                    },
+                  },
+                  {
+                    variantName: {
+                      contains: normalizedQuery,
+                      mode: "insensitive",
+                    },
+                  },
+                  {
+                    offeringName: {
+                      contains: normalizedQuery,
+                      mode: "insensitive",
+                    },
+                  },
+                ],
+              },
+            },
+          },
+        },
+      },
+    },
+  ]
+}
+
+function serviceWorkQueueWhere(
+  input: ServiceWorkQueueFilter & { stage?: ServiceWorkStage },
+): Prisma.ServiceJobWhereInput {
   const now = new Date()
   const endOfToday = new Date(now)
   endOfToday.setHours(23, 59, 59, 999)
   const normalizedQuery = input.query?.trim()
   const baseWhere: Prisma.ServiceJobWhereInput = {
+    AND: [serviceWorkStageLines(input.stage ?? "open")],
     currentAssigneeUserId: input.assigneeUserId,
     dueCommitments:
       input.due && input.due !== "all"
@@ -2113,16 +2325,6 @@ export async function listServiceWorkQueuePage(
             },
           }
         : undefined,
-    lines: {
-      some: {
-        status: {
-          notIn: [
-            ServiceJobLineStatus.COMPLETED,
-            ServiceJobLineStatus.CANCELLED,
-          ],
-        },
-      },
-    },
     priority:
       input.priority === "urgent"
         ? ServicePriority.URGENT
@@ -2132,78 +2334,31 @@ export async function listServiceWorkQueuePage(
     storeId: input.storeId,
     tenantId: input.tenantId,
   }
-  const where: Prisma.ServiceJobWhereInput = normalizedQuery
-    ? {
-        ...baseWhere,
-        OR: [
-          { clientJobId: { contains: normalizedQuery, mode: "insensitive" } },
-          {
-            commercialOrder: {
-              is: {
-                OR: [
-                  {
-                    orderNumber: {
-                      contains: normalizedQuery,
-                      mode: "insensitive",
-                    },
-                  },
-                  {
-                    customerName: {
-                      contains: normalizedQuery,
-                      mode: "insensitive",
-                    },
-                  },
-                  {
-                    customerPhone: {
-                      contains: normalizedQuery,
-                      mode: "insensitive",
-                    },
-                  },
-                  {
-                    customerEmail: {
-                      contains: normalizedQuery,
-                      mode: "insensitive",
-                    },
-                  },
-                ],
-              },
-            },
-          },
-          {
-            lines: {
-              some: {
-                commercialOrderLine: {
-                  snapshot: {
-                    is: {
-                      OR: [
-                        {
-                          catalogItemName: {
-                            contains: normalizedQuery,
-                            mode: "insensitive",
-                          },
-                        },
-                        {
-                          variantName: {
-                            contains: normalizedQuery,
-                            mode: "insensitive",
-                          },
-                        },
-                        {
-                          offeringName: {
-                            contains: normalizedQuery,
-                            mode: "insensitive",
-                          },
-                        },
-                      ],
-                    },
-                  },
-                },
-              },
-            },
-          },
-        ],
-      }
-    : baseWhere
+  if (!normalizedQuery) return baseWhere
+  return {
+    ...baseWhere,
+    OR: serviceWorkQueryMatches(normalizedQuery),
+  }
+}
+
+export async function listServiceWorkQueuePage(
+  db: PrismaClient,
+  input: {
+    assigneeUserId?: string
+    cursor?: string
+    due?: "all" | "overdue" | "today"
+    limit?: number
+    priority?: "normal" | "urgent"
+    query?: string
+    sort?: { direction: "asc" | "desc"; field: "createdAt" | "priority" }
+    stage?: ServiceWorkStage
+    storeId?: string
+    tenantId: string
+  },
+) {
+  const limit = Math.min(Math.max(input.limit ?? 20, 1), 50)
+  const baseWhere = serviceWorkQueueWhere({ ...input, query: undefined })
+  const where = serviceWorkQueueWhere(input)
   const sortFields: Array<{
     direction: "asc" | "desc"
     field: "createdAt" | "priority"

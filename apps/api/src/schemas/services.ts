@@ -287,8 +287,22 @@ export const serviceWorkQueueSchema = z
   })
   .strict()
 
+export const serviceWorkStageSchema = z.enum([
+  "open",
+  "todo",
+  "doing",
+  "stuck",
+  "ready",
+  "done",
+])
+
+export const serviceWorkStageCountsSchema = serviceWorkQueueSchema
+  .omit({ limit: true })
+  .extend({ query: z.string().trim().max(160).optional() })
+
 export const serviceWorkQueuePageSchema = serviceWorkQueueSchema.extend({
   cursor: z.string().trim().min(1).optional(),
+  stage: serviceWorkStageSchema.optional(),
   direction: z.enum(["forward", "backward"]).optional(),
   limit: z.number().int().min(1).max(50).default(20),
   query: z.string().trim().max(160).optional(),

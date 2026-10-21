@@ -626,8 +626,8 @@ export function ServiceIntakeForm({
           />
         </ControlField>
       </SheetSection>
-      <FormActions className="items-center justify-between border-t border-border pt-4">
-        <p className="text-sm text-muted-foreground">
+      <FormActions>
+        <p className="mr-auto text-sm text-muted-foreground">
           {totalMinor > 0 ? (
             <>
               Total{" "}

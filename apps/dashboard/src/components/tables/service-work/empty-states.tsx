@@ -12,12 +12,12 @@ export function ServiceWorkEmptyState({ filtered }: { filtered: boolean }) {
         className="size-6 text-muted-foreground"
       />
       <p className="mt-3 font-medium">
-        {filtered ? "No matching work" : "No active tracked work"}
+        {filtered ? "No jobs match" : "No jobs here"}
       </p>
       <p className="mt-1 text-sm text-muted-foreground">
         {filtered
-          ? "Clear or change your search."
-          : "Charge-only Services remain in Orders."}
+          ? "Clear the search or filters to see every job."
+          : "Jobs show up when an order includes a service you track."}
       </p>
     </div>
   )

@@ -273,7 +273,7 @@ export function ServiceSettingsForm({
           </>
         ) : null}
       </SheetSection>
-      <FormActions className="border-t border-border pt-4">
+      <FormActions>
         <Button
           type="button"
           variant="outline"

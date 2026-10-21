@@ -6,6 +6,7 @@ import {
   batchUpdateServiceJobs,
   captureServiceEvidence,
   confirmServiceIntake,
+  countServiceWorkQueueStages,
   createAndConfirmServiceIntake,
   createAutomaticReadyNotificationIntent,
   createServiceIntakeDraft,
@@ -50,6 +51,7 @@ import {
   serviceSettingsUpdateSchema,
   serviceWorkQueuePageSchema,
   serviceWorkQueueSchema,
+  serviceWorkStageCountsSchema,
 } from "../../schemas/services"
 import { createTRPCRouter, protectedProcedure } from "../init"
 import {
@@ -324,6 +326,16 @@ export const servicesRouter = createTRPCRouter({
     .query(({ ctx, input }) => {
       assertServiceOperator(ctx.tenantContext.membership.role)
       return listServiceWorkQueue(ctx.db, {
+        ...input,
+        tenantId: ctx.tenantContext.tenant.id,
+      })
+    }),
+
+  queueStageCounts: protectedProcedure
+    .input(serviceWorkStageCountsSchema)
+    .query(({ ctx, input }) => {
+      assertServiceOperator(ctx.tenantContext.membership.role)
+      return countServiceWorkQueueStages(ctx.db, {
         ...input,
         tenantId: ctx.tenantContext.tenant.id,
       })

@@ -14,7 +14,15 @@ export function ServiceWorkTableSkeleton({
   initialSettings,
   view = "table",
 }: { initialSettings?: Partial<TableSettings>; view?: DirectoryView }) {
-  const columns = createServiceWorkColumns(() => undefined, "UTC")
+  const columns = createServiceWorkColumns({
+    assigneeName: () => null,
+    canManage: false,
+    isPending: false,
+    openJob: () => undefined,
+    openStep: () => undefined,
+    quickStep: () => undefined,
+    timeZone: "UTC",
+  })
   const normalized = normalizeTableSettings(
     initialSettings,
     getColumnIds(columns),

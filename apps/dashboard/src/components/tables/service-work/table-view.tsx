@@ -18,6 +18,7 @@ import type { Table as ReactTable } from "@tanstack/react-table"
 import { useVirtualizer } from "@tanstack/react-virtual"
 import { ServiceWorkBatchMessage, ServiceWorkBottomBar } from "./bottom-bar"
 import { ServiceWorkCollection } from "./collection"
+import type { ServiceWorkColumnActions } from "./columns"
 import { ServiceWorkEmptyState } from "./empty-states"
 import {
   ServiceWorkTableHeader,
@@ -27,14 +28,14 @@ import type { useServiceWorkBatch } from "./use-batch-actions"
 const FIXED = ["select", "order"]
 const STICKY = [
   { id: "select", width: 50 },
-  { id: "order", width: 280 },
-  { id: "actions", side: "right" as const, width: 80 },
+  { id: "order", width: 210 },
+  { id: "actions", side: "right" as const, width: 170 },
 ]
 export function ServiceWorkTableView({
   table,
   view,
   timeZone,
-  openJob,
+  actions,
   filtered,
   sort,
   batch,
@@ -52,7 +53,7 @@ export function ServiceWorkTableView({
   table: ReactTable<WorkJob>
   view: DirectoryView
   timeZone: string
-  openJob: (jobId: string) => void
+  actions: ServiceWorkColumnActions
   filtered: boolean
   sort?: {
     field: (typeof serviceWorkSortFields)[number]
@@ -98,9 +99,9 @@ export function ServiceWorkTableView({
         table={table}
         view={view}
         selectAllLabel="Select all loaded jobs"
-        summary={`${rows.length} jobs loaded · ${
+        summary={`${rows.length === 1 ? "1 job" : `${rows.length} jobs`} · ${
           sort
-            ? `${sort.field === "priority" ? "priority" : "created date"} ${sort.direction === "asc" ? "ascending" : "descending"}`
+            ? `${sort.field === "priority" ? "urgent" : "newest"} ${sort.direction === "asc" ? "last" : "first"}`
             : "urgent first, then oldest"
         }`}
       >
@@ -141,12 +142,12 @@ export function ServiceWorkTableView({
           view={view}
           rows={rows}
           timeZone={timeZone}
-          openJob={openJob}
+          actions={actions}
         />
       ) : rows.length ? (
         <section
           ref={scroll.setContainerRef}
-          aria-label="Service work records"
+          aria-label="Service jobs"
           className="max-h-[560px] overflow-auto overscroll-contain border border-border"
         >
           <DndContext

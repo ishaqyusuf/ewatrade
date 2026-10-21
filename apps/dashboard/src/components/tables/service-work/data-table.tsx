@@ -1,5 +1,6 @@
 "use client"
 import type { WorkJob } from "@/components/service-work/service-utils"
+import { useJobQuickStep } from "@/components/service-work/use-job-quick-step"
 import { useLoadedRowSelection } from "@/components/tables/core"
 import { serviceWorkSortFields } from "@/hooks/sort-params"
 import { getServiceWorkQueuePageInput } from "@/hooks/use-service-work-filter-params"
@@ -9,10 +10,13 @@ import { useTableSettings } from "@/hooks/use-table-settings"
 import { useTRPC } from "@/trpc/client"
 import type { DirectoryView } from "@/utils/directory-view-settings"
 import { type TableSettings, getColumnIds } from "@/utils/table-settings"
-import { useSuspenseInfiniteQuery } from "@tanstack/react-query"
+import { useQuery, useSuspenseInfiniteQuery } from "@tanstack/react-query"
 import { getCoreRowModel, useReactTable } from "@tanstack/react-table"
 import { useMemo } from "react"
-import { createServiceWorkColumns } from "./columns"
+import {
+  type ServiceWorkColumnActions,
+  createServiceWorkColumns,
+} from "./columns"
 import { ServiceWorkTableView } from "./table-view"
 import { useServiceWorkBatch } from "./use-batch-actions"
 const FIXED = ["select", "order"]
@@ -46,14 +50,34 @@ export function ServiceWorkDataTable({
     () => query.data.pages.flatMap((page) => page.items),
     [query.data],
   )
-  const columns = useMemo(
-    () =>
-      createServiceWorkColumns(
-        (id) => void setParams({ jobId: id, serviceSheet: "job" }),
-        timeZone,
-      ),
-    [setParams, timeZone],
+  const assignees = useQuery(
+    trpc.services.assignees.queryOptions(undefined, {
+      enabled: canManage,
+      retry: false,
+    }),
   )
+  const quick = useJobQuickStep()
+  const assigneeNames = useMemo(
+    () =>
+      new Map((assignees.data ?? []).map((person) => [person.id, person.name])),
+    [assignees.data],
+  )
+  const actions = useMemo<ServiceWorkColumnActions>(
+    () => ({
+      assigneeName: (userId) =>
+        userId ? (assigneeNames.get(userId) ?? null) : null,
+      canManage,
+      isPending: quick.isPending,
+      openJob: (id) =>
+        void setParams({ jobId: id, jobStep: null, serviceSheet: "job" }),
+      openStep: (id, step) =>
+        void setParams({ jobId: id, jobStep: step, serviceSheet: "job" }),
+      quickStep: (job, step) => void quick.run(job, step),
+      timeZone,
+    }),
+    [assigneeNames, canManage, quick, setParams, timeZone],
+  )
+  const columns = useMemo(() => createServiceWorkColumns(actions), [actions])
   const columnIds = useMemo(() => getColumnIds(columns), [columns])
   const settings = useTableSettings({
     tableId: "service-work",
@@ -96,7 +120,7 @@ export function ServiceWorkDataTable({
       table={table}
       view={view}
       timeZone={timeZone}
-      openJob={(id) => void setParams({ jobId: id, serviceSheet: "job" })}
+      actions={actions}
       filtered={hasFilters}
       sort={sort}
       batch={batch}

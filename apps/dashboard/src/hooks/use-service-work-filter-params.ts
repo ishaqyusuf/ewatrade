@@ -7,12 +7,21 @@ import {
 
 export const SERVICE_DUE_FILTERS = ["all", "overdue", "today"] as const
 export const SERVICE_PRIORITY_FILTERS = ["normal", "urgent"] as const
+export const SERVICE_STAGE_FILTERS = [
+  "open",
+  "todo",
+  "doing",
+  "stuck",
+  "ready",
+  "done",
+] as const
 
 export const serviceWorkFilterParams = {
   serviceAssignee: parseAsString,
   serviceDue: parseAsStringEnum([...SERVICE_DUE_FILTERS]),
   servicePriority: parseAsStringEnum([...SERVICE_PRIORITY_FILTERS]),
   serviceQuery: parseAsString,
+  serviceStage: parseAsStringEnum([...SERVICE_STAGE_FILTERS]),
 }
 
 export type ServiceWorkFilters = {
@@ -20,6 +29,7 @@ export type ServiceWorkFilters = {
   due: (typeof SERVICE_DUE_FILTERS)[number] | null
   priority: (typeof SERVICE_PRIORITY_FILTERS)[number] | null
   query: string | null
+  stage: (typeof SERVICE_STAGE_FILTERS)[number] | null
 }
 
 const loadServiceWorkFilterState = createLoader(serviceWorkFilterParams)
@@ -33,6 +43,7 @@ export async function loadServiceWorkFilterParams(
     due: params.serviceDue,
     priority: params.servicePriority,
     query: params.serviceQuery,
+    stage: params.serviceStage,
   }
 }
 
@@ -43,5 +54,20 @@ export function getServiceWorkQueuePageInput(filter: ServiceWorkFilters) {
     limit: 25,
     priority: filter.priority ?? undefined,
     query: filter.query?.trim().slice(0, 160) || undefined,
+    stage: filter.stage && filter.stage !== "open" ? filter.stage : undefined,
   }
+}
+
+/** Same filters as the list, without paging or stage, for the stage tab counts. */
+export function getServiceWorkStageCountsInput(filter: ServiceWorkFilters) {
+  const {
+    cursor: _cursor,
+    limit: _limit,
+    stage: _stage,
+    ...input
+  } = {
+    ...getServiceWorkQueuePageInput(filter),
+    cursor: undefined,
+  }
+  return input
 }

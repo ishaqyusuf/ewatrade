@@ -2,27 +2,34 @@
 
 import {
   type WorkJob,
-  formatDue,
+  formatWhen,
+  jobWhat,
 } from "@/components/service-work/service-utils"
 import {
   type CollectionView,
   DirectoryCollection,
   DirectoryRecord,
 } from "@/components/tables/core"
-import { Button } from "@ewatrade/ui"
 import type { Row } from "@tanstack/react-table"
-import { ServiceWorkStatusBadge, getServiceWorkAssignment } from "./columns"
+import {
+  type ServiceWorkColumnActions,
+  ServiceWorkDue,
+  ServiceWorkMoney,
+  ServiceWorkRowActions,
+  ServiceWorkStatusBadge,
+  getServiceWorkAssignment,
+} from "./columns"
 
 export function ServiceWorkCollection({
   rows,
   view,
   timeZone,
-  openJob,
+  actions,
 }: {
   rows: Row<WorkJob>[]
   view: CollectionView
   timeZone: string
-  openJob: (jobId: string) => void
+  actions: ServiceWorkColumnActions
 }) {
   return (
     <DirectoryCollection view={view} label="Service job">
@@ -34,35 +41,23 @@ export function ServiceWorkCollection({
             row={row}
             view={view}
             selectLabel={`Select job ${job.orderNumber}`}
-            title={job.orderNumber}
-            onOpen={() => openJob(job.id)}
-            description={job.lines
-              .map((line) => line.catalogItemName)
-              .join(", ")}
+            title={job.customerName || "Walk-in customer"}
+            onOpen={() => actions.openJob(job.id)}
+            description={`${job.orderNumber} · ${jobWhat(job)}`}
             badges={<ServiceWorkStatusBadge job={job} />}
             details={[
               {
-                label: "Work",
-                value: `${job.lines.length} line${job.lines.length === 1 ? "" : "s"}`,
+                label: "Who",
+                value: getServiceWorkAssignment(job, actions.assigneeName),
               },
-              { label: "Assignment", value: getServiceWorkAssignment(job) },
               {
-                label: "Promised",
-                value: formatDue(job.dueCommitmentAt, timeZone),
+                label: "Due",
+                value: <ServiceWorkDue job={job} timeZone={timeZone} />,
               },
-              { label: "Created", value: formatDue(job.createdAt, timeZone) },
+              { label: "Money", value: <ServiceWorkMoney job={job} /> },
+              { label: "Added", value: formatWhen(job.createdAt, timeZone) },
             ]}
-            actions={
-              <Button
-                className="rounded-none"
-                size="sm"
-                variant="ghost"
-                aria-label={`Open job ${job.orderNumber}`}
-                onClick={() => openJob(job.id)}
-              >
-                Open
-              </Button>
-            }
+            actions={<ServiceWorkRowActions job={job} actions={actions} />}
           />
         )
       })}

@@ -2,6 +2,7 @@
 
 import { WorkspaceError } from "@/components/dashboard/workspace-error"
 import { ScrollableContent } from "@/components/scrollable-content"
+import { ServiceStageTabs } from "@/components/service-work/service-stage-tabs"
 import { ServiceWorkHeader } from "@/components/service-work/service-work-header"
 import { CustomerRequestSheet } from "@/components/sheets/customer-request-sheet"
 import { ServiceIntakeSheet } from "@/components/sheets/service-intake-sheet"
@@ -60,6 +61,7 @@ export function ServiceJobsPage({
               </Button>
             </Alert>
           ) : null}
+          <ServiceStageTabs storeId={store.id} />
           <ErrorBoundary errorComponent={WorkspaceError}>
             <Suspense
               fallback={

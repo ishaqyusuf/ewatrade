@@ -66,7 +66,7 @@ export function ServiceWorkBottomBar({
                   void batch.updateBatch("delay").catch(() => undefined)
                 }
               >
-                Delay 1 day + notify
+                Due 1 day later, tell customers
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -95,7 +95,7 @@ export function ServiceWorkBatchMessage({ batch }: { batch: BatchActions }) {
         />
         <Input
           aria-label="Message for selected jobs"
-          placeholder="Message; use {order} for the order number"
+          placeholder="Message to each customer. {order} becomes their order number"
           value={batch.message}
           onChange={(event) => batch.setMessage(event.target.value)}
         />

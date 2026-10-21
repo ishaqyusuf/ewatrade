@@ -17,13 +17,13 @@ import {
 import { useQuery } from "@tanstack/react-query"
 
 const dueLabels = {
-  all: "Any due date",
-  overdue: "Overdue",
+  all: "Any time",
+  overdue: "Late",
   today: "Due today",
 } as const
 const priorityLabels = {
-  normal: "Normal priority",
-  urgent: "Urgent priority",
+  normal: "Not urgent",
+  urgent: "Urgent",
 } as const
 
 export function ServiceWorkSearchFilter({
@@ -62,7 +62,7 @@ export function ServiceWorkSearchFilter({
             id: "assignee",
             label:
               assignees.data?.find((item) => item.id === filter.assigneeUserId)
-                ?.name ?? "Assigned user",
+                ?.name ?? "Someone",
             onRemove: () => void setFilter({ assigneeUserId: null }),
           },
         ]
@@ -74,8 +74,8 @@ export function ServiceWorkSearchFilter({
         groups: [
           {
             id: "priority",
-            label: "Priority",
-            allLabel: "Any priority",
+            label: "Urgent",
+            allLabel: "Any",
             options: SERVICE_PRIORITY_FILTERS.map((value) => ({
               value,
               label: priorityLabels[value],
@@ -83,8 +83,8 @@ export function ServiceWorkSearchFilter({
           },
           {
             id: "due",
-            label: "Due date",
-            allLabel: "Any due date",
+            label: "Due",
+            allLabel: "Any time",
             options: SERVICE_DUE_FILTERS.filter((value) => value !== "all").map(
               (value) => ({ value, label: dueLabels[value] }),
             ),
@@ -93,8 +93,8 @@ export function ServiceWorkSearchFilter({
             ? [
                 {
                   id: "assignee",
-                  label: "Assignee",
-                  allLabel: "All assignees",
+                  label: "Who",
+                  allLabel: "Anyone",
                   options: (assignees.data ?? []).map((item) => ({
                     value: item.id,
                     label: item.name,
@@ -125,7 +125,7 @@ export function ServiceWorkSearchFilter({
               : {}),
           }),
       }}
-      placeholder="Search service work..."
+      placeholder="Search customer, order or service"
       value={filter.query ?? ""}
       onSearch={(query) => void setFilter({ query: query || null })}
       onClear={() => void setFilter(null)}
@@ -133,7 +133,7 @@ export function ServiceWorkSearchFilter({
     >
       <DropdownMenuGroup>
         <DropdownMenuSub>
-          <DropdownMenuSubTrigger>Priority</DropdownMenuSubTrigger>
+          <DropdownMenuSubTrigger>Urgent</DropdownMenuSubTrigger>
           <DropdownMenuSubContent
             appearance="dashboard"
             className="min-w-40 max-w-[calc(100vw-32px)] rounded-none bg-popover p-0 shadow-md before:hidden"
@@ -153,7 +153,7 @@ export function ServiceWorkSearchFilter({
           </DropdownMenuSubContent>
         </DropdownMenuSub>
         <DropdownMenuSub>
-          <DropdownMenuSubTrigger>Due date</DropdownMenuSubTrigger>
+          <DropdownMenuSubTrigger>Due</DropdownMenuSubTrigger>
           <DropdownMenuSubContent
             appearance="dashboard"
             className="min-w-40 max-w-[calc(100vw-32px)] rounded-none bg-popover p-0 shadow-md before:hidden"
@@ -174,7 +174,7 @@ export function ServiceWorkSearchFilter({
         </DropdownMenuSub>
         {canManage ? (
           <DropdownMenuSub>
-            <DropdownMenuSubTrigger>Assignee</DropdownMenuSubTrigger>
+            <DropdownMenuSubTrigger>Who</DropdownMenuSubTrigger>
             <DropdownMenuSubContent
               appearance="dashboard"
               className="min-w-40 max-w-[calc(100vw-32px)] rounded-none bg-popover p-0 shadow-md before:hidden"

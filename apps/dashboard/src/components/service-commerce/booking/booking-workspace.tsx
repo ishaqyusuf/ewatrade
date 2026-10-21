@@ -499,7 +499,7 @@ function BookingWorkspaceContent({ storeId }: { storeId: string }) {
                 />
               </div>
             </SheetSection>
-            <FormActions className="border-t border-border pt-4">
+            <FormActions>
               <SubmitButton
                 isSubmitting={updateConfiguration.isPending}
                 disabled={pending}
