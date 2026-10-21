@@ -26,7 +26,7 @@ export function ServiceSettingsSheet({
       {open ? (
         <SheetFrame
           closeError={closeError}
-          description="Configure express turnaround, pricing, reminders, and delivery channels."
+          description="Express service and messages to customers."
           title="Service settings"
         >
           <ServiceSettingsForm

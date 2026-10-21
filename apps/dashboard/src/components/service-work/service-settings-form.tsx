@@ -1,5 +1,6 @@
 "use client"
 import {
+  Button,
   Checkbox,
   CheckboxField,
   ControlField,
@@ -8,11 +9,17 @@ import {
   FormActions,
   Input,
   MoneyInput,
-  SelectControl,
   SubmitButton,
   Field as UiField,
+  toast,
 } from "@ewatrade/ui"
 
+import { FormFeedback } from "@/components/forms/form-feedback"
+import {
+  ChoiceButtons,
+  SheetSection,
+} from "@/components/service-work/choice-buttons"
+import { useServiceWorkParams } from "@/hooks/use-service-work-params"
 import { useTRPC } from "@/trpc/client"
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
@@ -47,6 +54,14 @@ export function ServiceSettingsForm({
   const [autoReminder, setAutoReminder] = useState(false)
   const [reminderHours, setReminderHours] = useState("24")
   const [message, setMessage] = useState<string | null>(null)
+  const [errors, setErrors] = useState<{
+    amount?: string
+    channel?: string
+    hours?: string
+    label?: string
+    reminder?: string
+  }>({})
+  const { setParams } = useServiceWorkParams()
 
   useEffect(() => {
     const settings = settingsQuery.data
@@ -72,45 +87,17 @@ export function ServiceSettingsForm({
     trpc.services.updateSettings.mutationOptions({
       onError: (error) => setMessage(error.message),
       onSuccess: async () => {
-        setMessage("Service settings saved.")
         await queryClient.invalidateQueries({
           queryKey: trpc.services.getSettings.queryKey({ storeId }),
         })
+        toast("Service settings saved.")
+        void setParams(null)
       },
     }),
   )
 
   if (settingsQuery.isLoading) {
-    return <div className="h-56 animate-pulse rounded-lg bg-muted" />
-  }
-
-  function submit() {
-    const numericSurcharge = Number(surchargeValue)
-    const numericTurnaround = Number(turnaroundHours)
-    const numericReminder = Number(reminderHours)
-    if (
-      !Number.isFinite(numericSurcharge) ||
-      numericSurcharge < 0 ||
-      !Number.isFinite(numericTurnaround) ||
-      numericTurnaround <= 0 ||
-      !Number.isFinite(numericReminder) ||
-      numericReminder < 0
-    ) {
-      setMessage("Enter valid express and reminder values.")
-      return
-    }
-    mutation.mutate({
-      autoNotifyReady: autoReady,
-      autoNotifyReminder: autoReminder,
-      defaultNotificationChannel: channel || undefined,
-      expressEnabled,
-      expressLabel,
-      expressSurchargeType: surchargeType,
-      expressSurchargeValue: Math.round(numericSurcharge * 100),
-      expressTurnaroundMinutes: Math.round(numericTurnaround * 60),
-      reminderLeadMinutes: Math.round(numericReminder * 60),
-      storeId,
-    })
+    return <div className="h-56 animate-pulse bg-muted" />
   }
 
   const channelConfigured =
@@ -119,14 +106,63 @@ export function ServiceSettingsForm({
       : channel === "whatsapp"
         ? providerQuery.data?.whatsapp.configured
         : true
+  const channelName = channel === "sms" ? "SMS" : "WhatsApp"
+
+  function submit() {
+    setMessage(null)
+    const numericSurcharge = Number(surchargeValue)
+    const numericTurnaround = Number(turnaroundHours)
+    const numericReminder = Number(reminderHours)
+    const next: typeof errors = {}
+    if (expressEnabled) {
+      if (!expressLabel.trim()) next.label = "Give express a name."
+      if (!Number.isFinite(numericTurnaround) || numericTurnaround <= 0)
+        next.hours = "Enter hours, like 24."
+      if (!Number.isFinite(numericSurcharge) || numericSurcharge < 0)
+        next.amount =
+          surchargeType === "fixed"
+            ? "Enter the extra charge, like 2000."
+            : "Enter a percent, like 20."
+    }
+    if (
+      autoReminder &&
+      (!Number.isFinite(numericReminder) || numericReminder <= 0)
+    )
+      next.reminder = "Enter hours, like 24."
+    if (!channelConfigured)
+      next.channel = `${channelName} isn’t set up yet. Pick another way, or set it up first.`
+    setErrors(next)
+    if (Object.keys(next).length) return
+    mutation.mutate({
+      autoNotifyReady: autoReady,
+      autoNotifyReminder: autoReminder,
+      defaultNotificationChannel: channel || undefined,
+      expressEnabled,
+      expressLabel: expressLabel.trim() || "Express",
+      expressSurchargeType: surchargeType,
+      expressSurchargeValue: Math.round(numericSurcharge * 100),
+      expressTurnaroundMinutes: Math.round(numericTurnaround * 60),
+      reminderLeadMinutes: Math.round(numericReminder * 60),
+      storeId,
+    })
+  }
 
   return (
-    <FieldGroup className="gap-6">
+    <FieldGroup className="gap-5">
       {message ? (
-        <p className="rounded-lg bg-muted px-3 py-2 text-sm">{message}</p>
+        <FormFeedback appearance="dashboard">{message}</FormFeedback>
       ) : null}
-      <section className="grid gap-4">
-        <CheckboxField label={<>Offer express service</>}>
+      <SheetSection title="Express service">
+        <CheckboxField
+          label={
+            <span>
+              <span className="block font-medium">Offer express service</span>
+              <span className="text-muted-foreground">
+                Customers pay more to get it sooner
+              </span>
+            </span>
+          }
+        >
           <Checkbox
             checked={expressEnabled}
             onCheckedChange={(checked) => setExpressEnabled(checked)}
@@ -134,106 +170,121 @@ export function ServiceSettingsForm({
         </CheckboxField>
         {expressEnabled ? (
           <>
-            <ControlField label={<>Customer label</>}>
-              <Input
-                value={expressLabel}
-                onChange={(event) => setExpressLabel(event.target.value)}
-              />
-            </ControlField>
-            <div className="grid grid-cols-2 gap-3">
-              <ControlField label={<>Surcharge type</>}>
-                <SelectControl
-                  value={surchargeType}
-                  onValueChange={(value) =>
-                    setSurchargeType(value as typeof surchargeType)
-                  }
-                  options={[
-                    { value: "percentage", label: <>Percentage</> },
-                    { value: "fixed", label: <>Fixed amount</> },
-                  ]}
+            <div className="grid gap-3 sm:grid-cols-2">
+              <ControlField label="Name customers see" error={errors.label}>
+                <Input
+                  value={expressLabel}
+                  placeholder="Express"
+                  onChange={(event) => setExpressLabel(event.target.value)}
                 />
               </ControlField>
-              <UiField className="grid gap-1.5 text-sm">
-                <FieldLabel htmlFor="service-express-surcharge">
-                  {surchargeType === "percentage"
-                    ? "Percentage"
-                    : `Amount (${currencyCode})`}
-                </FieldLabel>
-                {surchargeType === "fixed" ? (
-                  <MoneyInput
-                    id="service-express-surcharge"
-                    currencyCode={currencyCode}
-                    value={surchargeValue}
-                    onChange={(event) => setSurchargeValue(event.target.value)}
-                  />
-                ) : (
-                  <Input
-                    inputMode="decimal"
-                    id="service-express-surcharge"
-                    value={surchargeValue}
-                    onChange={(event) => setSurchargeValue(event.target.value)}
-                  />
-                )}
-              </UiField>
+              <ControlField label="Ready within (hours)" error={errors.hours}>
+                <Input
+                  inputMode="decimal"
+                  value={turnaroundHours}
+                  onChange={(event) => setTurnaroundHours(event.target.value)}
+                />
+              </ControlField>
             </div>
-            <ControlField label={<>Express turnaround (hours)</>}>
-              <Input
-                inputMode="decimal"
-                value={turnaroundHours}
-                onChange={(event) => setTurnaroundHours(event.target.value)}
+            <ControlField label="Extra charge">
+              <ChoiceButtons
+                label="Extra charge"
+                value={surchargeType}
+                onChange={setSurchargeType}
+                options={[
+                  { value: "fixed", label: "Fixed amount" },
+                  { value: "percentage", label: "Percent of the price" },
+                ]}
               />
             </ControlField>
+            <UiField className="grid gap-1.5 text-sm">
+              <FieldLabel htmlFor="service-express-surcharge">
+                {surchargeType === "percentage" ? "Percent" : "Amount"}
+              </FieldLabel>
+              {surchargeType === "fixed" ? (
+                <MoneyInput
+                  id="service-express-surcharge"
+                  currencyCode={currencyCode}
+                  value={surchargeValue}
+                  onChange={(event) => setSurchargeValue(event.target.value)}
+                />
+              ) : (
+                <Input
+                  inputMode="decimal"
+                  id="service-express-surcharge"
+                  value={surchargeValue}
+                  onChange={(event) => setSurchargeValue(event.target.value)}
+                />
+              )}
+              {errors.amount ? (
+                <p role="alert" className="text-sm text-destructive">
+                  {errors.amount}
+                </p>
+              ) : null}
+            </UiField>
           </>
         ) : null}
-      </section>
-      <section className="grid gap-4 border-t border-border pt-5">
-        <h3 className="font-medium">Customer notifications</h3>
-        <ControlField label={<>Default channel</>}>
-          <SelectControl
-            value={channel}
-            onValueChange={(value) => setChannel(value as typeof channel)}
+      </SheetSection>
+      <SheetSection title="Messages to customers">
+        <ControlField label="Send messages by" error={errors.channel}>
+          <ChoiceButtons
+            label="Send messages by"
+            value={channel || "none"}
+            onChange={(value) => setChannel(value === "none" ? "" : value)}
             options={[
-              { value: "", label: <>No automatic channel</> },
-              { value: "sms", label: <>SMS</> },
-              { value: "whatsapp", label: <>WhatsApp</> },
+              { value: "whatsapp", label: "WhatsApp" },
+              { value: "sms", label: "SMS" },
+              { value: "none", label: "Don’t send" },
             ]}
           />
         </ControlField>
-        {!channelConfigured ? (
-          <p className="rounded-lg bg-warning px-3 py-2 text-sm text-warning-foreground">
-            This provider is not configured. Add its webhook URL and, when
-            required, its token before enabling automatic delivery.
+        {!channelConfigured && !errors.channel ? (
+          <p className="bg-warning px-3 py-2 text-sm text-warning-foreground">
+            {channelName} isn’t set up yet, so messages can’t go out. Pick
+            another way, or set it up first.
           </p>
         ) : null}
-        <CheckboxField label={<>Automatically notify when all work is ready</>}>
-          <Checkbox
-            checked={autoReady}
-            onCheckedChange={(checked) => setAutoReady(checked)}
-          />
-        </CheckboxField>
-        <CheckboxField
-          label={<>Schedule a reminder before the promised pickup time</>}
-        >
-          <Checkbox
-            checked={autoReminder}
-            onCheckedChange={(checked) => setAutoReminder(checked)}
-          />
-        </CheckboxField>
-        {autoReminder ? (
-          <ControlField label={<>Reminder lead time (hours)</>}>
-            <Input
-              inputMode="decimal"
-              value={reminderHours}
-              onChange={(event) => setReminderHours(event.target.value)}
-            />
-          </ControlField>
+        {channel ? (
+          <>
+            <CheckboxField label="Tell the customer when the work is ready">
+              <Checkbox
+                checked={autoReady}
+                onCheckedChange={(checked) => setAutoReady(checked)}
+              />
+            </CheckboxField>
+            <CheckboxField label="Remind the customer before the due time">
+              <Checkbox
+                checked={autoReminder}
+                onCheckedChange={(checked) => setAutoReminder(checked)}
+              />
+            </CheckboxField>
+            {autoReminder ? (
+              <ControlField
+                label="How long before (hours)"
+                error={errors.reminder}
+              >
+                <Input
+                  inputMode="decimal"
+                  value={reminderHours}
+                  onChange={(event) => setReminderHours(event.target.value)}
+                />
+              </ControlField>
+            ) : null}
+          </>
         ) : null}
-      </section>
-      <FormActions>
+      </SheetSection>
+      <FormActions className="border-t border-border pt-4">
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() => void setParams(null)}
+        >
+          Cancel
+        </Button>
         <SubmitButton
           type="button"
           isSubmitting={mutation.isPending}
-          disabled={mutation.isPending || !channelConfigured}
+          disabled={mutation.isPending}
           onClick={submit}
         >
           {mutation.isPending ? "Saving…" : "Save settings"}
