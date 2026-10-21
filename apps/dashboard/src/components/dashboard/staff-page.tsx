@@ -304,7 +304,7 @@ export function StaffPage({
             <TabsList
               variant="line"
               aria-label="Staff status"
-              className="max-w-full justify-start overflow-x-auto pb-1.5"
+              className="max-w-full justify-start overflow-x-auto pb-1.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
             >
               {STATUS_TABS.map((tab) => (
                 <TabsTrigger key={tab.value} value={tab.value}>
