@@ -14,6 +14,7 @@ import { createTRPCOptionsProxy } from "@trpc/tanstack-react-query"
 import { headers } from "next/headers"
 import { cache } from "react"
 import superjson from "superjson"
+import { shouldLogDashboardTrpcOperation } from "./log-operation"
 import { makeQueryClient } from "./query-client"
 
 export const getQueryClient = cache(makeQueryClient)
@@ -99,8 +100,7 @@ export const trpc = createTRPCOptionsProxy<AppRouter>({
       }),
       loggerLink({
         enabled: (opts) =>
-          process.env.NODE_ENV === "development" ||
-          (opts.direction === "down" && opts.result instanceof Error),
+          shouldLogDashboardTrpcOperation(opts, process.env.NODE_ENV),
       }),
     ],
   }),

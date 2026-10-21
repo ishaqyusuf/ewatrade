@@ -235,3 +235,40 @@ test("without an amount, the subject leads the card", () => {
     '<p class="text-base leading-tight font-semibold">Amina Bello<span class="text-sm font-normal text-muted-foreground"> new customer</span></p>',
   )
 })
+
+test("focused disposable reviews expose all lines, table rows and sections before confirmation", () => {
+  const value = proposal("focused", "order_create", {
+    review: Array.from({ length: 12 }, (_, index) => `Exact line ${index + 1}`),
+    approvalToken: "private",
+  })
+  const render = (draft: GeneralProposal) =>
+    renderToStaticMarkup(
+      <GeneralProposalCard
+        proposal={draft}
+        currencyCode="NGN"
+        expanded
+        disabled={false}
+        onConfirm={noop}
+        onCancel={noop}
+        onEdit={noop}
+      />,
+    )
+  expect(render(value)).toContain("Exact line 12")
+  const structured = render({
+    ...value,
+    presentation: {
+      summary: { party: "Egg" },
+      table: {
+        columns: [{ label: "Size" }, { label: "Price" }],
+        preview: 1,
+        rows: Array.from({ length: 8 }, (_, index) => ({
+          cells: [`Egg variant ${index + 1}`, "₦200"],
+        })),
+      },
+      sections: [{ title: "Packs", note: "One carton contains 12 crates" }],
+    },
+  })
+  expect(structured).toContain("Egg variant 8")
+  expect(structured).toContain("One carton contains 12 crates")
+  expect(structured).toContain(">Confirm<")
+})

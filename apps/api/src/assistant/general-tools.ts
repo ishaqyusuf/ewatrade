@@ -26,6 +26,7 @@ import {
 import {
   type GeneralAnswer,
   type GeneralProposalReference,
+  generalActionSchema,
   generalDateRange,
   serviceWorkCompletionDraftInstructions,
   serviceWorkLifecycleDraftInstructions,
@@ -58,11 +59,13 @@ import {
 import { serviceWorkOriginalTargetSchema } from "@ewatrade/assistant/general/service-work-original"
 import {
   canonicalStatedMoneyDraft,
+  statedMoneyFromCanonical,
   statedMoneyIssue,
   statedMoneyJsonSchema,
 } from "@ewatrade/assistant/general/stated-money"
 import {
   canonicalStatedTimeDraft,
+  statedTimeFromCanonical,
   statedTimeJsonSchema,
 } from "@ewatrade/assistant/general/stated-time"
 import { canStaffPerform } from "@ewatrade/auth/store-access"
@@ -92,6 +95,10 @@ import { orderScope } from "../trpc/order-scope"
 import { createBusinessReportingCaller } from "../trpc/routers/business-reporting"
 import { isLinkedAssistantIdentity } from "./channel-principal"
 import {
+  createWhatsAppDraftCorrection,
+  hasCurrentWhatsAppEdit,
+} from "./channel-proposal-edit"
+import {
   generalBillData,
   generalBillInput,
   generalBillsAnswer,
@@ -112,10 +119,12 @@ import {
   type GeneralContext,
   assertCapability,
   assertGeneralActionHandoffAuthority,
+  canDraftGeneralCapability,
   canUseCapability,
   requireGeneralScope,
 } from "./general-context"
 import { generalCountAnswer } from "./general-count-answer"
+import { readCurrentGeneralDraftInTransaction } from "./general-current-draft"
 import {
   generalCustomerAllocationHistoryAnswer,
   generalCustomerAllocationHistoryInput,
@@ -138,6 +147,7 @@ import {
   readGeneralCashCountHistory,
   readGeneralDayClose,
 } from "./general-day-close"
+import { createGeneralDraftCorrection } from "./general-draft-correction"
 import {
   generalInventoryBalanceAnswers,
   generalInventoryBalancesInput,
@@ -161,7 +171,11 @@ import {
   generalOrderReadAnswers,
 } from "./general-order-answer"
 import { generalOrderContactCountAnswer } from "./general-order-contact-count-answer"
-import { draftGeneralProposal } from "./general-proposals"
+import {
+  draftGeneralProposal,
+  draftGeneralProposalInTransaction,
+  inFreshGeneralTransaction,
+} from "./general-proposals"
 import {
   generalPurchaseData,
   generalPurchaseInput,
@@ -358,8 +372,29 @@ export function createGeneralTools(
   conversationId: string,
   onProposal: (proposalId: string, source?: GeneralProposalReference) => void,
   onAnswer: (answer: GeneralAnswer) => void,
+  runId?: string,
 ): ToolSet {
   const scope = requireGeneralScope(ctx)
+  const correction = runId
+    ? createGeneralDraftCorrection({ conversationId, runId })
+    : null
+  const nativeCorrection = createWhatsAppDraftCorrection()
+  let correctionMode: "native" | "natural" | null = null
+  const readCorrection = async (fresh: GeneralContext) => {
+    correctionMode = null
+    if (isLinkedAssistantIdentity(fresh.session)) {
+      const selected = await nativeCorrection.read(fresh)
+      if (selected.status === "editing") {
+        correctionMode = "native"
+        return selected
+      }
+    }
+    const current = correction
+      ? await correction.read(fresh)
+      : { status: "none" as const }
+    if (current.status === "editing") correctionMode = "natural"
+    return current
+  }
   const readOrigin = { tenantId: scope.tenantId, storeId: scope.storeId }
   const timeZone = ctx.tenantContext.tenant.timezone ?? "Africa/Lagos"
   const readCapabilities = new Map<string, Capability>(
@@ -399,7 +434,7 @@ export function createGeneralTools(
       // A draft the business rules refuse says why, so the model can fix it
       // or ask the user (for example which account received a payment).
       if (
-        toolName === "draftAction" &&
+        (toolName === "draftAction" || toolName === "editCurrentAction") &&
         error instanceof TRPCError &&
         (error.code === "CONFLICT" || error.code === "BAD_REQUEST")
       )
@@ -430,7 +465,7 @@ export function createGeneralTools(
     }
   }
   const availableWriteCapabilities = writeCapabilities.filter((capability) =>
-    canUseCapability(ctx, capability),
+    canDraftGeneralCapability(ctx, capability),
   )
   const handoffOrigin =
     process.env.DASHBOARD_URL ??
@@ -440,6 +475,7 @@ export function createGeneralTools(
     (capability) => {
       if (
         !isLinkedAssistantIdentity(ctx.session) ||
+        canDraftGeneralCapability(ctx, capability) ||
         classifyCapabilityAction(capability).kind !== "app_review"
       )
         return false
@@ -2383,6 +2419,7 @@ export function createGeneralTools(
     }),
     draftAction: tool({
       description: [
+        "For WhatsApp, a ready draft that needs the full app review is delivered by the server as an expiring focused review link. The user signs in with their existing EwaTrade account and approves, edits or cancels there; it does not open Assistant chat. Never invent a link or claim a saved effect from drafting. Existing native WhatsApp reviews still require their own explicit confirmation.",
         "Stage an exact new customer, customer detail update, product (with packs, options, prices and opening stock), order or payment proposal. Changes nothing until the user reviews and confirms its card. Never request or supply approval tokens. When purchase_register or supplier_create is available, start with readSuppliers using a supplier name or code; omit bookId on the first read if unknown and preserve the returned Book even when no supplier matches. Never ask the merchant for internal IDs or schema flags. When purchase_register is available, resolve the supplier and existing registrations first to avoid duplicate agreements. Find goods with searchRecords and readInventoryBalances filtered by the exact catalogItemId; use their original source, inventory unit and current configuration IDs in the active Store. Ask about ambiguous goods or units and do not invent an unconfigured source. Require explicit agreed quantities, total cost per line, date and agreementOnly=true. Do not infer invoice, ownership, stock receipt or payment; those are separate operations. Never replace an existing registration by creating another. When supplier_create is available, search existing suppliers first, clarify ambiguous names and ask for the supplier code rather than inventing one. Creating a supplier only adds its identity; it does not record opening balances, purchases, payments, ownership or received stock. When expense_void or bill_payment_reverse is available, inspect the exact bill and original payment first, require a correction date/reason and bookkeepingOnly=true. A payment reversal restores payable and never sends or recovers cash. Void requires no active payments; do not silently reverse payments to permit voiding. Refuse to guess an older payment omitted from bounded history. When bill_payment is available, resolve the existing bill with readExpenseBills and inspect it with readExpenseBill; ask about ambiguity and require paymentAlreadyMade=true. Use readMoneyAccounts for business funding, or explicit owner funding. Never substitute expense_record for paying an existing bill. When expense_record is available, resolve categories with readExpenseCategories and business payment accounts with readMoneyAccounts. Require an already-incurred expense and explicit confirmation for any payment already made. Omit payment for unpaid bills; use OWNER_CAPITAL only when the owner personally paid, never for business cash. Ask about ambiguous category, funding, dates or amounts before drafting. This records bookkeeping and never sends money.",
         purchaseRecognitionDraftInstructions,
         cashCountDraftInstructions,
@@ -2397,11 +2434,46 @@ export function createGeneralTools(
       inputSchema: draftToolSchema(actionSchema, timeZone),
       execute: (input) =>
         wrap("draftAction", async (fresh) => {
-          const result = await draftGeneralProposal(
-            fresh,
-            conversationId,
+          if (
+            isLinkedAssistantIdentity(fresh.session) &&
+            (await hasCurrentWhatsAppEdit(fresh))
+          )
+            throw new TRPCError({
+              code: "BAD_REQUEST",
+              message:
+                "An exact draft is being edited. Read its current payload and use editCurrentAction, or cancel it first.",
+            })
+          const payload = generalActionSchema.parse(
             canonicalDraft(input, timeZone),
           )
+          const result =
+            runId && payload.action === "product_create"
+              ? await inFreshGeneralTransaction(fresh, async (tx) => {
+                  const current = await readCurrentGeneralDraftInTransaction(
+                    tx,
+                    { conversationId, runId },
+                  )
+                  if (
+                    current.status === "unavailable" ||
+                    current.status === "ambiguous" ||
+                    (current.status === "available" &&
+                      current.payload.name.trim().toLocaleLowerCase() ===
+                        payload.name.trim().toLocaleLowerCase())
+                  )
+                    throw new TRPCError({
+                      code: "BAD_REQUEST",
+                      message:
+                        current.status === "available"
+                          ? "This product already has a draft. Use readCurrentDraft then editCurrentAction to correct that same draft."
+                          : "The current draft cannot be selected safely. Select Edit on the intended card; do not create another draft for a correction.",
+                    })
+                  return draftGeneralProposalInTransaction(
+                    tx,
+                    conversationId,
+                    payload,
+                  )
+                })
+              : await draftGeneralProposal(fresh, conversationId, payload)
           onProposal(result.proposalId, {
             proposalId: result.proposalId,
             revision: result.revision,
@@ -2413,6 +2485,82 @@ export function createGeneralTools(
   }
   // List only what the actor may use now; each call rechecks the same rules.
   const listed: ToolSet = {}
+  if (correction && availableWriteActions.has("product_create")) {
+    listed.readCurrentDraft = tool({
+      description:
+        "Read the single current product draft in this conversation before correcting it. The server selects its identity and revision; no approval or identifier is returned. If ambiguous, ask the user to select Edit on the intended card. Never create a second draft to correct this one.",
+      inputSchema: z.object({}).strict(),
+      execute: () =>
+        wrap("readCurrentDraft", async (fresh) => {
+          const current = await readCorrection(fresh)
+          return current.status === "editing"
+            ? {
+                status: current.status,
+                payload: statedTimeFromCanonical(
+                  statedMoneyFromCanonical(current.payload),
+                ),
+              }
+            : current
+        }),
+    })
+  }
+  if (isLinkedAssistantIdentity(ctx.session)) {
+    listed.readCurrentWhatsAppDraft = tool({
+      description:
+        "Read the payload of the exact draft the user selected Edit on. Server selects its binding, proposal and current revision; no credential or approval is returned. Never infer an editing target from the newest proposal.",
+      inputSchema: z.object({}).strict(),
+      execute: () =>
+        wrap("readCurrentWhatsAppDraft", async (fresh) => {
+          const current = await readCorrection(fresh)
+          return current.status === "editing"
+            ? {
+                status: current.status,
+                payload: statedTimeFromCanonical(
+                  statedMoneyFromCanonical(current.payload),
+                ),
+              }
+            : current
+        }),
+    })
+  }
+  if (
+    allowedActions.length &&
+    (isLinkedAssistantIdentity(ctx.session) || correction)
+  )
+    listed.editCurrentAction = tool({
+      description:
+        "Revise the complete payload returned by readCurrentDraft (or an exact WhatsApp Edit), applying only the user's requested changes. Updates the same server-selected draft and invalidates the old review. Cannot choose a proposal or change its action. A fresh exact review and explicit confirmation are required. Never create a replacement draft to correct an existing one.",
+      inputSchema: draftToolSchema(actionSchema, timeZone),
+      execute: (input) =>
+        wrap("editCurrentAction", async (fresh) => {
+          const payload = generalActionSchema.parse(
+            canonicalDraft(input, timeZone),
+          )
+          const mode = correctionMode
+          correctionMode = null
+          const result =
+            mode === "native"
+              ? await nativeCorrection.edit(fresh, payload)
+              : mode === "natural" && correction
+                ? await correction.edit(fresh, payload)
+                : undefined
+          if (!result)
+            throw new TRPCError({
+              code: "CONFLICT",
+              message: "Select Edit on the intended draft first.",
+            })
+          onProposal(result.proposalId, {
+            proposalId: result.proposalId,
+            revision: result.revision,
+            payloadHash: proposalDigest(result.payload),
+          })
+          return {
+            status: result.status,
+            proposalId: result.proposalId,
+            revision: result.revision,
+          }
+        }),
+    })
   for (const [name, capability] of readCapabilities) {
     const read = tools[name]
     if (read && canUseCapability(ctx, capability)) listed[name] = read

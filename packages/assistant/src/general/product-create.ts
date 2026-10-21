@@ -2,12 +2,18 @@ import {
   findCatalogIllustration,
   recommendCatalogIllustration,
 } from "@ewatrade/utils/catalog-illustrations"
+import { isExactDecimal } from "@ewatrade/utils/exact-decimal"
 import { z } from "zod"
 import {
   type SetupProductPayload,
   setupProductPayloadSchema,
 } from "../setup/contracts"
-import { setupProductQuestions, setupProductVariants } from "../setup/variants"
+import {
+  setupNameEqual,
+  setupProductQuestions,
+  setupProductVariants,
+  setupSelectionsEqual,
+} from "../setup/variants"
 
 const setup = setupProductPayloadSchema.shape
 const stock = z
@@ -17,9 +23,9 @@ const stock = z
 /**
  * A new product as the owner described it: packs (Crate = 30 Piece), options
  * (Size: Small, Big), a price per option and unit, and opening stock. Drafted
- * from the first message; anything missing is asked after the card shows.
+ * once selling prices and pack conversions are known; missing facts are asked first.
  */
-export const productCreateAction = z
+const productCreateFields = z
   .object({
     action: z.literal("product_create"),
     name: setup.name,
@@ -36,16 +42,42 @@ export const productCreateAction = z
     photoAssetId: z.string().trim().min(1).max(128).optional(),
   })
   .strict()
-  .superRefine((action, ctx) => {
+
+export type ProductCreateAction = z.infer<typeof productCreateFields>
+export const productCreateAction = productCreateFields.superRefine(
+  (action, ctx) => {
     if (action.options?.length && action.openingStock !== undefined)
       ctx.addIssue({
         code: "custom",
         message: `Stock for ${action.name} is counted per option. Give stock for each option instead of one total.`,
       })
+    for (const [index, pack] of (action.sellingUnits ?? []).entries()) {
+      if (
+        !isExactDecimal(pack.containsQuantity, {
+          allowZero: false,
+          maxScale: 6,
+        })
+      )
+        ctx.addIssue({
+          code: "custom",
+          path: ["sellingUnits", index, "containsQuantity"],
+          message: `How many ${action.canonicalUnitName.toLowerCase()} are in one ${pack.name.toLowerCase()} of ${action.name}?`,
+        })
+    }
     for (const question of setupProductQuestions(productCreatePayload(action)))
       ctx.addIssue({ code: "custom", message: question.question })
-  })
-export type ProductCreateAction = z.infer<typeof productCreateAction>
+    for (const row of productCreateVariants(action)) {
+      const missing = row.sellingUnits.filter(
+        (pack) => pack.priceMinor === undefined,
+      )
+      if (missing.length)
+        ctx.addIssue({
+          code: "custom",
+          message: `What is your selling price for ${row.label} per ${missing.map((pack) => pack.name.toLowerCase()).join(" and ")}? Do not derive an unstated pack price.`,
+        })
+    }
+  },
+)
 
 export function productCreatePayload(
   action: ProductCreateAction,
@@ -63,6 +95,30 @@ export function productCreatePayload(
     // Catalog keeps a photo or an illustration, never both.
     illustrationId: action.photoAssetId ? undefined : action.illustrationId,
   }
+}
+
+/** General drafts use stated pack prices; Setup's optional price derivation stays separate. */
+function productCreateVariants(
+  action: ProductCreateAction,
+): ReturnType<typeof setupProductVariants> {
+  return setupProductVariants(productCreatePayload(action)).map((row) => {
+    const variant = action.variants?.find((candidate) =>
+      setupSelectionsEqual(candidate.selections, row.selections),
+    )
+    return {
+      ...row,
+      sellingUnits: row.sellingUnits.map((pack) => ({
+        ...pack,
+        priceMinor:
+          variant?.sellingUnitPrices?.find((price) =>
+            setupNameEqual(price.unitName, pack.name),
+          )?.priceMinor ??
+          action.sellingUnits?.find((unit) =>
+            setupNameEqual(unit.name, pack.name),
+          )?.priceMinor,
+      })),
+    }
+  })
 }
 
 /** Only name, unit, price and stock: the original single-offering create. */
@@ -94,7 +150,7 @@ export function productCreateDraft(
         }
       : {}
   if (isSimpleProductCreate(action)) return { ...action, ...picture }
-  const rows = setupProductVariants(productCreatePayload(action))
+  const rows = productCreateVariants(action)
   const shared = !action.options?.length
   return {
     ...action,
@@ -141,7 +197,7 @@ export function productCreateSummary(
   const packs = (action.sellingUnits ?? [])
     .map((pack) => `${pack.name} = ${pack.containsQuantity} ${unit}`)
     .join(" · ")
-  const rows = setupProductVariants(productCreatePayload(action)).map((row) => {
+  const rows = productCreateVariants(action).map((row) => {
     const prices = [
       row.priceMinor === undefined
         ? `${unit} price needed`

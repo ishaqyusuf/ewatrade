@@ -6,11 +6,11 @@ Tickets refer to the Brain plan `.brain/plans/2026-10-09-assistant-business-oper
 
 ## Summary
 
-- Router procedures: 669 (496 merchant, 173 public/account/internal)
+- Router procedures: 672 (499 merchant, 173 public/account/internal)
 - Merchant supported by a capability: 164
 - Merchant planned: 130
 - Merchant form-only: 145
-- Merchant excluded: 57
+- Merchant excluded: 60
 - Capabilities: 154 (80 read, 74 write)
 
 ## Capabilities
@@ -381,8 +381,11 @@ track conversational evaluation separately from these source test links.
 | `assistant.conversation` | query | read | assistant | excluded | Assistant transport or a dedicated assistant flow. |
 | `assistant.conversations` | query | read | assistant | excluded | Assistant transport or a dedicated assistant flow. |
 | `assistant.decideProposal` | mutation | read | assistant | excluded | Assistant transport or a dedicated assistant flow. |
+| `assistant.decideReviewLink` | mutation | read | assistant | excluded | Assistant transport or a dedicated assistant flow. |
 | `assistant.editProposal` | mutation | read | assistant | excluded | Assistant transport or a dedicated assistant flow. |
+| `assistant.editReviewLink` | mutation | read | assistant | excluded | Assistant transport or a dedicated assistant flow. |
 | `assistant.pendingProposals` | query | Owner/Admin only | assistant | excluded | Assistant transport or a dedicated assistant flow. |
+| `assistant.reviewLink` | mutation | read | assistant | excluded | Assistant transport or a dedicated assistant flow. |
 | `assistant.saleOptions` | query | Owner/Admin only | sales | supported | sales.order.record_simple |
 | `assistant.simpleExpenseOptions` | query | Owner/Admin only | assistant | excluded | Assistant transport or a dedicated assistant flow. |
 | `assistant.simpleTransferOptions` | query | Owner/Admin only | assistant | excluded | Assistant transport or a dedicated assistant flow. |

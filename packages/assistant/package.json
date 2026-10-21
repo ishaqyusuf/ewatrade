@@ -73,7 +73,8 @@
     "./channels/capability-action-handoff": "./src/channels/capability-action-handoff.ts",
     "./channels/readiness": "./src/channels/readiness.ts",
     "./general/service-message-read": "./src/general/service-message-read.ts",
-    "./general/service-request-read": "./src/general/service-request-read.ts"
+    "./general/service-request-read": "./src/general/service-request-read.ts",
+    "./channels/review-links": "./src/channels/review-links.ts"
   },
   "scripts": {
     "lint": "biome check .",

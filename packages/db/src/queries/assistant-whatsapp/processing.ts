@@ -24,6 +24,7 @@ import { assistantWhatsAppAuthorityDigest } from "./execution"
 import { cancelAssistantWhatsAppPendingMediaInTransaction } from "./media-source-lifecycle"
 import {
   type AssistantWhatsAppStagedReview,
+  type AssistantWhatsAppStagedWebReview,
   type AssistantWhatsAppStagedWorkflowReview,
   stageAssistantWhatsAppOutboxInTransaction,
 } from "./outbox"
@@ -279,6 +280,7 @@ export function settleAssistantWhatsAppInbox(
     permittedUserIds: readonly string[]
     errorCode?: string
     review?: AssistantWhatsAppStagedReview
+    webReview?: AssistantWhatsAppStagedWebReview
     workflowReview?: AssistantWhatsAppStagedWorkflowReview
   },
   now = new Date(),
@@ -374,6 +376,7 @@ export function settleAssistantWhatsAppInbox(
               review: options.workflowReview,
             }
           : undefined,
+        options.webReview,
       )
     if (!authorized)
       await cancelAssistantWhatsAppPendingMediaInTransaction(

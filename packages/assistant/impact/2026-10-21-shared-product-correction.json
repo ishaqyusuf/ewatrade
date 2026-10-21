@@ -1,0 +1,91 @@
+{
+  "version": 1,
+  "id": "2026-10-21-shared-product-correction",
+  "tickets": [
+    "H01",
+    "H02"
+  ],
+  "summary": "Shared General product facts validation and server-selected same-proposal corrections across dashboard and linked WhatsApp, with existing authenticated disposable review dependencies. Narrow Production release authorized; no OTP, schema, native Flow or rollout configuration change.",
+  "capabilities": [
+    {
+      "id": "catalog.product.create",
+      "change": "unchanged",
+      "rollout": "source",
+      "note": "Existing canonical Catalog create and current actor/Store/role/plan authority retained. General parsing now clarifies missing conversion/sale/pack-price facts; corrections edit the same pending ID/revision and require a fresh explicit review. Source rollout label is not a live acceptance claim."
+    }
+  ],
+  "procedures": [
+    {
+      "path": "assistant.decideReviewLink",
+      "status": "excluded",
+      "reason": "Assistant transport or a dedicated assistant flow. Authenticated focused review confirmation/cancellation reuses current actor/scope, exact signed source and canonical confirmation; excluded from ordinary model domain tools."
+    },
+    {
+      "path": "assistant.editReviewLink",
+      "status": "excluded",
+      "reason": "Assistant transport or a dedicated assistant flow. Authenticated focused review same-proposal correction reuses current actor/scope, exact signed source and canonical confirmation; excluded from ordinary model domain tools."
+    },
+    {
+      "path": "assistant.reviewLink",
+      "status": "excluded",
+      "reason": "Assistant transport or a dedicated assistant flow. Authenticated focused review read-only resolution reuses current actor/scope, exact signed source and canonical confirmation; excluded from ordinary model domain tools."
+    }
+  ],
+  "docs": [
+    {
+      "topic": "feature",
+      "status": "local_only",
+      "path": ".brain/features/product-creation-assistant.md"
+    },
+    {
+      "topic": "feature",
+      "status": "local_only",
+      "path": ".brain/features/whatsapp-assistant.md"
+    },
+    {
+      "topic": "api",
+      "status": "local_only",
+      "path": ".brain/api/contracts.md"
+    },
+    {
+      "topic": "permissions",
+      "status": "local_only",
+      "path": ".brain/api/permissions.md"
+    },
+    {
+      "topic": "capability",
+      "status": "updated",
+      "path": "packages/assistant/src/capabilities/COVERAGE.md"
+    },
+    {
+      "topic": "decision",
+      "status": "local_only",
+      "path": ".brain/decisions/2026-10-21-shared-product-facts-and-current-draft-corrections.md"
+    },
+    {
+      "topic": "schema",
+      "status": "not_applicable",
+      "note": "No Prisma schema/database changes; existing tables and identifier-only worker contract reused."
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "test",
+      "path": "packages/assistant/src/general/product-create.test.ts",
+      "executed": true,
+      "result": "Focused parser plus prompt-date baseline 12 tests/45 assertions; no assumed conversions or derived missing pack prices; exact Egg prices/stock."
+    },
+    {
+      "kind": "test",
+      "path": "apps/api/src/assistant/general-current-draft.test.ts",
+      "executed": true,
+      "result": "Nine focused selector tests/37 assertions; current server run, scope, bounded committed provenance and unique legacy fallback; stale or ambiguous refusal."
+    },
+    {
+      "kind": "test",
+      "path": "apps/api/src/assistant/general-draft-correction.test.ts",
+      "executed": true,
+      "result": "Six focused orchestration tests/40 assertions plus new provenance drift case/4 assertions; same ID/new revision and no approval leak. No provider/database calls."
+    }
+  ]
+}

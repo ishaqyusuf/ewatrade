@@ -67,6 +67,16 @@ export function assistantWhatsAppIngressActionContent(
       ? parseWhatsAppTypedAction(event.text, event.replyToMessageId)
       : null)
   if (!command) return null
+  if (command.kind === "edit")
+    return {
+      type: "action_edit" as const,
+      decision: "cancel" as const,
+      decisionDigest: assistantWhatsAppActionDecisionDigest(
+        command.code,
+        "cancel",
+      ),
+      replyToMessageId: command.replyToMessageId,
+    }
   if (command.kind === "invalid_action")
     return { type: "invalid_action" as const }
   return {

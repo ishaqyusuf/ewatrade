@@ -17,6 +17,8 @@ import {
 import { TRPCError } from "@trpc/server"
 import { z } from "zod"
 import { processAssistantWhatsAppAction } from "./channel-action-turn"
+import { processAssistantWhatsAppEditRequest } from "./channel-proposal-edit"
+import { prepareAssistantWhatsAppWebReview } from "./channel-web-review-staging"
 import { prepareAssistantWhatsAppMediaTurn } from "./channel-media-turn"
 import { createLinkedAssistantContext } from "./channel-principal"
 import { prepareAssistantWhatsAppReview } from "./channel-review-staging"
@@ -78,7 +80,12 @@ export function defaultChannelTurnDependencies() {
       lease: Parameters<typeof settleAssistantWhatsAppInbox>[1],
       code: Parameters<typeof settleAssistantWhatsAppNotice>[1]["code"],
     ) => settleAssistantWhatsAppNotice(prisma, { principal, lease, code }),
-    action: processAssistantWhatsAppAction,
+    action: async (
+      ctx: Parameters<typeof processAssistantWhatsAppAction>[0],
+      lease: Parameters<typeof processAssistantWhatsAppAction>[1],
+    ) =>
+      (await processAssistantWhatsAppEditRequest(ctx, lease)) ??
+      processAssistantWhatsAppAction(ctx, lease),
     workflowAction: processAssistantWhatsAppWorkflowAction,
     settle: (
       lease: Parameters<typeof settleAssistantWhatsAppInbox>[1],
@@ -90,6 +97,12 @@ export function defaultChannelTurnDependencies() {
           : await prepareAssistantWhatsAppReview(prisma, lease).catch(
               () => undefined,
             )
+        const webReview =
+          errorCode || review
+            ? undefined
+            : await prepareAssistantWhatsAppWebReview(prisma, lease).catch(
+                () => undefined,
+              )
         const workflowReview = errorCode
           ? undefined
           : await prepareAssistantWhatsAppWorkflowReview(prisma, lease).catch(
@@ -101,6 +114,7 @@ export function defaultChannelTurnDependencies() {
             : [],
           errorCode,
           review,
+          webReview,
           workflowReview,
         })
       })(),

@@ -96,3 +96,26 @@ test.each(["development", "production"])(
     expect(logged).toHaveLength(0)
   },
 )
+
+test.each(["development", "production"])(
+  "disposable review locators and payloads stay unlogged in %s",
+  async (environment) => {
+    const logged: unknown[] = []
+    const client = createTRPCUntypedClient({
+      links: [
+        loggerLink({
+          enabled: (options) =>
+            shouldLogDashboardTrpcOperation(options, environment),
+          logger: (options) => logged.push(options),
+        }),
+        () => () =>
+          observable((observer) => observer.error(Error("private-locator"))),
+      ],
+    })
+    for (const method of ["reviewLink", "decideReviewLink", "editReviewLink"])
+      await expect(
+        client.mutation(`assistant.${method}`, { token: "private-locator" }),
+      ).rejects.toThrow()
+    expect(logged).toHaveLength(0)
+  },
+)
