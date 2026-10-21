@@ -41,6 +41,7 @@
     "./general/service-intake": "./src/general/service-intake.ts",
     "./general/business-report-target": "./src/general/business-report-target.ts",
     "./general/staff-status": "./src/general/staff-status.ts",
+    "./general/staff-removal": "./src/general/staff-removal.ts",
     "./general/staff-access": "./src/general/staff-access.ts",
     "./general/quote-reads": "./src/general/quote-reads.ts",
     "./general/service-work": "./src/general/service-work.ts",

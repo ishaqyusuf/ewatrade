@@ -27,7 +27,7 @@ export async function getStaffStatusReceiptInTransaction(
     where: {
       id: input.eventId,
       tenantId: input.tenantId,
-      type: { in: ["SUSPENDED", "REACTIVATED"] },
+      type: { in: ["SUSPENDED", "REACTIVATED", "REMOVED"] },
     },
     select: {
       id: true,

@@ -103,6 +103,7 @@ import { simpleMoneyInRecord } from "./general-simple-money-in"
 import { simpleSaleRecord } from "./general-simple-sale"
 import { simpleTransferRecord } from "./general-simple-transfer"
 import { staffInvitation } from "./general-staff-invitation"
+import { staffRemoval } from "./general-staff-removal"
 import { staffStatus } from "./general-staff-status"
 import { staffAccess } from "./general-staff-store-access"
 import { stockAdjust, stockCorrect } from "./general-stock-adjustment"
@@ -815,6 +816,7 @@ const adapters: {
   purchase_recognition_reverse: purchaseRecognitionReverse,
   staff_invitation: staffInvitation,
   staff_status: staffStatus,
+  staff_removal: staffRemoval,
   staff_access: staffAccess,
   service_intake: serviceIntake,
   service_job_assign: serviceWorkLifecycle,

@@ -127,6 +127,7 @@ test("planned services, staff, settings, finance and inventory actions remain pl
     "settings.store.change",
     "staff.access.change",
     "staff.invitation.manage",
+    "staff.removal.unaccepted",
     "staff.status.change",
   ]
   expect(

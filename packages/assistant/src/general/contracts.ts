@@ -59,6 +59,7 @@ import { serviceIntakeAction } from "./service-intake"
 import { serviceMessageShareAction } from "./service-message"
 import { serviceManualMessageReceiptSchema } from "./service-message-read"
 import { staffAccessAction } from "./staff-access"
+import { staffRemovalAction } from "./staff-removal"
 import { staffStatusAction } from "./staff-status"
 export {
   staffAccessAction,
@@ -76,6 +77,12 @@ export {
   staffStatusTargetSchema,
 } from "./staff-status"
 export type { GeneralStaffStatusAction } from "./staff-status"
+export {
+  staffRemovalAction,
+  staffRemovalDraftInstructions,
+  staffRemovalReviewInput,
+} from "./staff-removal"
+export type { GeneralStaffRemovalAction } from "./staff-removal"
 export { serviceIntakeDraftInstructions } from "./service-intake"
 import { cashCountAction } from "./cash-count"
 import { catalogArchiveAction, catalogArchiveSummary } from "./catalog-archive"
@@ -465,6 +472,7 @@ export const generalActionSchema = z.discriminatedUnion("action", [
   closeoutFinalizeAction,
   staffInvitationAction,
   staffStatusAction,
+  staffRemovalAction,
   serviceIntakeAction,
   ...serviceWorkEditorActionSchema.options,
   ...quoteDecisionAction.options,
@@ -727,6 +735,8 @@ export function generalActionSummary(
       return `Update staff Store access · ${action.assignments.length} Store assignment(s)`
     case "staff_status":
       return `${action.status === "suspended" ? "Suspend" : "Reactivate"} staff membership`
+    case "staff_removal":
+      return "Remove someone who never joined"
     case "service_job_assign":
       return "Assign saved Service work"
     case "service_job_reschedule":

@@ -25,9 +25,11 @@ import {
   listStaffHistoryPage,
   listStaffInvitations,
   readStaffActivityShown,
+  removeUnacceptedRetailOpsStaff,
   resolveRetailOpsStaffInviteToken,
   reviewStaffInvitation,
   reviewStaffInvitationCommand,
+  reviewStaffRemoval,
   reviewStaffStatusChange,
   staffInvitationReviewInput,
   updateRetailOpsStaffStatus,
@@ -63,6 +65,10 @@ import {
   staffAccessReadInput,
   staffAccessReviewInput,
 } from "../../schemas/staff-access"
+import {
+  retailOpsRemoveUnacceptedStaffSchema,
+  staffRemovalReviewInput,
+} from "../../schemas/staff-removal"
 import {
   staffStatusReadInput,
   staffStatusReviewInput,
@@ -300,6 +306,32 @@ export const retailOpsStaffRouter = createTRPCRouter({
           },
           { administrativeOnly: true },
         ),
+      ),
+    ),
+  staffRemovalReview: protectedProcedure
+    .input(staffRemovalReviewInput)
+    .query(({ ctx, input }) =>
+      staffInvitationCommand(() =>
+        reviewStaffRemoval(
+          ctx.db,
+          {
+            ...input,
+            tenantId: ctx.tenantContext.tenant.id,
+            actorUserId: ctx.session.user.id,
+          },
+          { administrativeOnly: true },
+        ),
+      ),
+    ),
+  removeUnacceptedStaff: protectedProcedure
+    .input(retailOpsRemoveUnacceptedStaffSchema)
+    .mutation(({ ctx, input }) =>
+      staffInvitationCommand(() =>
+        removeUnacceptedRetailOpsStaff(ctx.db, {
+          ...input,
+          tenantId: ctx.tenantContext.tenant.id,
+          actorUserId: ctx.session.user.id,
+        }),
       ),
     ),
   staffStatusReceipt: protectedProcedure

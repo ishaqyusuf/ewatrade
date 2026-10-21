@@ -121,6 +121,8 @@ const domainAccess: Record<CapabilityId, (tenant: TenantContext) => void> = {
   "staff.status.change": assertStaffInvitationAccess,
   "staff.status.review": assertStaffInvitationAccess,
   "staff.status.receipt.read": assertStaffInvitationAccess,
+  "staff.removal.unaccepted": assertStaffInvitationAccess,
+  "staff.removal.review": assertStaffInvitationAccess,
   "staff.invitations.read": assertStaffInvitationAccess,
   "staff.invitation.command.read": assertStaffInvitationAccess,
   "staff.invitation.review": (tenant) => {

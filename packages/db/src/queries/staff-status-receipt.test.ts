@@ -90,7 +90,7 @@ test("original status outcome stays distinct from current directory and membersh
     where: {
       id: "original",
       tenantId: "business",
-      type: { in: ["SUSPENDED", "REACTIVATED"] },
+      type: { in: ["SUSPENDED", "REACTIVATED", "REMOVED"] },
     },
   })
   expect(

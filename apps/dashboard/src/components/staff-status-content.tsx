@@ -43,7 +43,9 @@ export function StaffStatusContent({
         <p>
           {r.eventType === "SUSPENDED"
             ? "Suspended staff can’t sign in to any store."
-            : "They can sign in again."}
+            : r.eventType === "REMOVED"
+              ? "They never joined. Their invite stopped working and their seat was freed."
+              : "They can sign in again."}
         </p>
       </section>
       <section className="grid gap-2 border-t pt-4">

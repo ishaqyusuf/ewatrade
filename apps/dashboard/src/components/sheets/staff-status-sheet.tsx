@@ -25,7 +25,9 @@ function statusTitle(record: {
     ? `${name} was suspended`
     : record.eventType === "REACTIVATED"
       ? `${name} was reactivated`
-      : "Status change"
+      : record.eventType === "REMOVED"
+        ? `${name} was removed`
+        : "Status change"
 }
 
 function statusDescription(

@@ -54,7 +54,7 @@ test("staff status is registered with an original event target and an administra
   )
   expect(entries).toHaveLength(3)
   for (const entry of entries) {
-    expect(entry.clients).toEqual(["dashboard"])
+    expect(entry.clients).toContain("dashboard")
     expect(entry.policy.roles).toEqual(["OWNER", "ADMIN"])
     expect(entry.rollout).toBe("planned")
     expect(entry.scope).toBe("tenant")

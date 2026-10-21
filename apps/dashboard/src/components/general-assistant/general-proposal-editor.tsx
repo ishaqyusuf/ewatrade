@@ -52,6 +52,7 @@ import { GeneralSimpleMoneyInEditor } from "./general-simple-money-in-editor"
 import { GeneralSimpleSaleEditor } from "./general-simple-sale-editor"
 import { GeneralStaffAccessEditor } from "./general-staff-access-editor"
 import { GeneralStaffInvitationEditor } from "./general-staff-invitation-editor"
+import { GeneralStaffRemovalEditor } from "./general-staff-removal-editor"
 import { GeneralStaffStatusEditor } from "./general-staff-status-editor"
 import { GeneralStockAdjustmentEditor } from "./general-stock-adjustment-editor"
 import { GeneralStockCountEditor } from "./general-stock-count-editor"
@@ -164,6 +165,15 @@ export function GeneralProposalEditor(props: {
   if (props.proposal.payload.action === "staff_status")
     return (
       <GeneralStaffStatusEditor
+        initial={props.proposal.payload}
+        disabled={props.disabled}
+        onSave={props.onSave}
+        onCancel={props.onCancel}
+      />
+    )
+  if (props.proposal.payload.action === "staff_removal")
+    return (
+      <GeneralStaffRemovalEditor
         initial={props.proposal.payload}
         disabled={props.disabled}
         onSave={props.onSave}

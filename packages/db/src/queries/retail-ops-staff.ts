@@ -1442,10 +1442,14 @@ async function applyPreparedStaffStatusChange(
 
 export type RemoveUnacceptedRetailOpsStaffInput = {
   actorUserId: string
+  /** Assistant confirmation pins the reviewed access revision. */
+  expectedRevision?: number
   reason?: string
-  staffUserId: string
   tenantId: string
-}
+} & (
+  | { membershipId: string; staffUserId?: never }
+  | { staffUserId: string; membershipId?: never }
+)
 
 /**
  * Remove someone who never joined: revoke their live invite links, cancel
@@ -1466,6 +1470,19 @@ export async function removeUnacceptedRetailOpsStaffInTransaction(
   tx: Prisma.TransactionClient,
   input: RemoveUnacceptedRetailOpsStaffInput,
 ) {
+  return applyStaffRemoval(
+    tx,
+    input,
+    await prepareStaffRemovalInTransaction(tx, input),
+  )
+}
+
+/** Locks, authority and eligibility for removing someone who never joined. */
+async function prepareStaffRemovalInTransaction(
+  tx: Prisma.TransactionClient,
+  input: RemoveUnacceptedRetailOpsStaffInput,
+  options: { administrativeOnly?: boolean } = {},
+) {
   const reason = input.reason?.trim() || null
   if (reason && reason.length > 500)
     throw new StaffStoreAccessError(
@@ -1474,8 +1491,17 @@ export async function removeUnacceptedRetailOpsStaffInTransaction(
     )
   await tx.$queryRaw`SELECT "id" FROM "Tenant" WHERE "id"=${input.tenantId} AND "isActive"=true FOR UPDATE`
   const actor = await assertStaffStatusAuthority(tx, input)
+  if (options.administrativeOnly && !["OWNER", "ADMIN"].includes(actor.role))
+    throw new StaffStoreAccessError(
+      "FORBIDDEN",
+      "Current Owner/Admin authority is required to remove staff through the assistant.",
+    )
+  const target =
+    input.membershipId !== undefined
+      ? Prisma.sql`"id" = ${input.membershipId}`
+      : Prisma.sql`"userId" = ${input.staffUserId}`
   const [locked] = await tx.$queryRaw<Array<{ id: string }>>`
-    SELECT "id" FROM "Membership" WHERE "tenantId"=${input.tenantId} AND "userId"=${input.staffUserId}
+    SELECT "id" FROM "Membership" WHERE "tenantId"=${input.tenantId} AND ${target}
     AND "role" IN ('CASHIER', 'OPERATOR', 'MANAGER') FOR UPDATE
   `
   if (!locked)
@@ -1504,15 +1530,99 @@ export async function removeUnacceptedRetailOpsStaffInTransaction(
     status: membership.status,
     acceptedAt: membership.acceptedAt,
   })
-  const now = new Date()
+  if (
+    input.expectedRevision !== undefined &&
+    input.expectedRevision !== membership.staffAccessRevision
+  )
+    throw new StaffStoreAccessError(
+      "CONFLICT",
+      "Their access changed since the review. Review again.",
+    )
   const links = await tx.retailOpsStaffInviteToken.findMany({
     where: {
       tenantId: input.tenantId,
       membershipId: membership.id,
       status: "ACTIVE",
     },
-    select: { id: true },
+    orderBy: { id: "asc" },
+    select: { id: true, expiresAt: true },
   })
+  return { actor, membership, reason, links }
+}
+
+/** What confirming a removal will do; the hash makes a changed draft stale. */
+export function staffRemovalReviewFromPrepared(
+  prepared: Awaited<ReturnType<typeof prepareStaffRemovalInTransaction>>,
+) {
+  const { membership, reason, links } = prepared
+  const review = {
+    membershipId: membership.id,
+    name: getDisplayName(membership.user),
+    email: membership.user.email,
+    role: membership.role,
+    status: membership.status,
+    invitedAt: membership.invitedAt?.toISOString() ?? null,
+    expectedRevision: membership.staffAccessRevision,
+    liveInviteLinks: links.length,
+    reason,
+    impact:
+      "They never joined. Their invite links stop working, unsent invite emails are cancelled and their staff seat is freed. They leave the staff list and can be invited again later. History keeps this removal.",
+  }
+  return {
+    ...review,
+    reviewHash: createHash("sha256")
+      .update(JSON.stringify(review))
+      .digest("hex"),
+  }
+}
+
+export async function reviewStaffRemovalInTransaction(
+  tx: Prisma.TransactionClient,
+  input: RemoveUnacceptedRetailOpsStaffInput,
+  options: { administrativeOnly?: boolean } = {},
+) {
+  return staffRemovalReviewFromPrepared(
+    await prepareStaffRemovalInTransaction(tx, input, options),
+  )
+}
+
+export async function reviewStaffRemoval(
+  db: PrismaClient,
+  input: RemoveUnacceptedRetailOpsStaffInput,
+  options: { administrativeOnly?: boolean } = {},
+) {
+  return db.$transaction(
+    (tx) => reviewStaffRemovalInTransaction(tx, input, options),
+    { maxWait: 10_000, timeout: 30_000 },
+  )
+}
+
+/** One locked preparation joined to the signed assistant confirmation. */
+export async function prepareReviewedStaffRemovalInTransaction(
+  tx: Prisma.TransactionClient,
+  input: RemoveUnacceptedRetailOpsStaffInput,
+) {
+  if (input.expectedRevision === undefined || !input.reason?.trim())
+    throw new StaffStoreAccessError(
+      "INVALID_INPUT",
+      "Review the current revision and enter a reason before confirming the removal.",
+    )
+  const prepared = await prepareStaffRemovalInTransaction(tx, input, {
+    administrativeOnly: true,
+  })
+  return {
+    review: staffRemovalReviewFromPrepared(prepared),
+    execute: () => applyStaffRemoval(tx, input, prepared),
+  }
+}
+
+async function applyStaffRemoval(
+  tx: Prisma.TransactionClient,
+  input: RemoveUnacceptedRetailOpsStaffInput,
+  prepared: Awaited<ReturnType<typeof prepareStaffRemovalInTransaction>>,
+) {
+  const { actor, membership, reason, links } = prepared
+  const now = new Date()
   if (links.length) {
     await tx.retailOpsStaffInviteToken.updateMany({
       where: { id: { in: links.map((link) => link.id) }, status: "ACTIVE" },
@@ -1577,6 +1687,8 @@ export async function removeUnacceptedRetailOpsStaffInTransaction(
   return {
     id: removed.id,
     lifecycleEventId: event.id,
+    previousStatus: membership.status,
+    reason,
     revokedInvitationIds: links.map((link) => link.id),
     staffAccessRevision: removed.staffAccessRevision,
     status: removed.status,

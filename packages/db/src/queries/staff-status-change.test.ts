@@ -1,7 +1,9 @@
 import { describe, expect, test } from "bun:test"
 import type { Prisma, PrismaClient } from "../../generated/prisma/client"
 import {
+  prepareReviewedStaffRemovalInTransaction,
   prepareReviewedStaffStatusChangeInTransaction,
+  staffRemovalReviewFromPrepared,
   updateRetailOpsStaffStatus,
   updateRetailOpsStaffStatusInTransaction,
 } from "./retail-ops-staff"
@@ -463,5 +465,74 @@ describe("removing someone who never joined", () => {
     expect(() =>
       validateUnacceptedStaffRemoval({ ...base, staffUserId: "owner" }),
     ).toThrow("You can’t remove yourself.")
+  })
+})
+
+describe("staff removal review", () => {
+  const prepared = {
+    actor: {
+      id: "owner-m",
+      status: "ACTIVE",
+      role: "OWNER",
+      staffAccessMode: "LEGACY",
+    },
+    membership: {
+      id: "member",
+      role: "CASHIER" as const,
+      status: "INVITED" as const,
+      acceptedAt: null,
+      invitedAt: new Date("2026-10-18T08:12:00.000Z"),
+      staffAccessRevision: 3,
+      user: {
+        displayName: "Bola",
+        email: "bola@example.test",
+        id: "u",
+        name: "Bola Ahmed",
+      },
+    },
+    reason: "Invited by mistake",
+    links: [{ id: "link", expiresAt: new Date("2026-10-25T08:12:00.000Z") }],
+  }
+  test("states who, the revision and what stops working", () => {
+    const review = staffRemovalReviewFromPrepared(prepared)
+    expect(review).toMatchObject({
+      membershipId: "member",
+      email: "bola@example.test",
+      expectedRevision: 3,
+      liveInviteLinks: 1,
+      reason: "Invited by mistake",
+    })
+    expect(review.impact).toContain("staff seat is freed")
+    expect(review.reviewHash).toMatch(/^[a-f0-9]{64}$/)
+  })
+  test("any change to the reviewed facts changes the review hash", () => {
+    const base = staffRemovalReviewFromPrepared(prepared).reviewHash
+    expect(
+      staffRemovalReviewFromPrepared({ ...prepared, reason: "Other" })
+        .reviewHash,
+    ).not.toBe(base)
+    expect(
+      staffRemovalReviewFromPrepared({ ...prepared, links: [] }).reviewHash,
+    ).not.toBe(base)
+  })
+  test("assistant confirmation needs a reviewed revision and a reason", async () => {
+    const tx = {} as Prisma.TransactionClient
+    await expect(
+      prepareReviewedStaffRemovalInTransaction(tx, {
+        tenantId: "t",
+        actorUserId: "owner",
+        membershipId: "member",
+        reason: "Mistake",
+      }),
+    ).rejects.toThrow("Review the current revision and enter a reason")
+    await expect(
+      prepareReviewedStaffRemovalInTransaction(tx, {
+        tenantId: "t",
+        actorUserId: "owner",
+        membershipId: "member",
+        expectedRevision: 3,
+        reason: " ",
+      }),
+    ).rejects.toThrow("Review the current revision and enter a reason")
   })
 })

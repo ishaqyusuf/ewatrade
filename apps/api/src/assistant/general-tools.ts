@@ -33,6 +33,8 @@ import {
   staffAccessDraftInstructions,
   staffAccessReadInput,
   staffAccessReviewInput,
+  staffRemovalDraftInstructions,
+  staffRemovalReviewInput,
   staffStatusDraftInstructions,
   staffStatusReadInput,
   staffStatusReviewInput,
@@ -711,6 +713,15 @@ export function createGeneralTools(
             )
           return review
         }),
+    }),
+    reviewStaffRemoval: tool({
+      description:
+        "Review removing an exact saved person who never joined (a pending, expired or suspended invite that was never accepted), selected by name/email directory search. Ask for a reason and clarify ambiguous people. The server supplies the current access revision and what removal does. This read changes nothing. Staff who already joined are suspended instead.",
+      inputSchema: staffRemovalReviewInput,
+      execute: (input) =>
+        wrap("reviewStaffRemoval", async (fresh) =>
+          createGeneralDomainCaller(fresh).retailOps.staffRemovalReview(input),
+        ),
     }),
     readStaffStatusReceipt: tool({
       description:
@@ -2389,6 +2400,7 @@ export function createGeneralTools(
         supplierSettlementDraftInstructions,
         staffInvitationDraftInstructions,
         staffStatusDraftInstructions,
+        staffRemovalDraftInstructions,
         staffAccessDraftInstructions,
         serviceIntakeDraftInstructions,
         ...serviceWorkInstructions,
