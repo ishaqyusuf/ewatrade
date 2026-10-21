@@ -6,13 +6,16 @@ import {
 } from "./general-current-draft"
 import { proposalDigest } from "./proposal-security"
 
-const payload = generalActionSchema.parse({
+const parsedProduct = generalActionSchema.parse({
   action: "product_create",
   name: "Egg",
   canonicalUnitName: "Egg",
   priceMinor: 15000,
   openingStock: "25",
 })
+if (parsedProduct.action !== "product_create")
+  throw Error("Product fixture required")
+const payload = parsedProduct
 
 function fixture(): CurrentGeneralDraftSnapshot {
   const row = {
