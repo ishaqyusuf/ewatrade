@@ -11,11 +11,15 @@ import { useState } from "react"
  */
 export function GeneralReviewPresentationBody({
   presentation: p,
+  expanded = false,
 }: {
   presentation: GeneralReviewPresentation
+  expanded?: boolean
 }) {
-  const [allRows, setAllRows] = useState(false)
-  const [open, setOpen] = useState<ReadonlySet<number>>(new Set())
+  const [allRows, setAllRows] = useState(expanded)
+  const [open, setOpen] = useState<ReadonlySet<number>>(
+    () => new Set(expanded ? p.sections?.map((_, index) => index) : []),
+  )
   const table = p.table
   const preview = table?.preview ?? table?.rows.length ?? 0
   const folded = !!table && !allRows && table.rows.length > preview + 1

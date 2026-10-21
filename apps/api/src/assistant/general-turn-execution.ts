@@ -15,6 +15,7 @@ import {
   stepCountIs,
 } from "ai"
 import { isLinkedAssistantIdentity } from "./channel-principal"
+import { hasCurrentWhatsAppEdit } from "./channel-proposal-edit"
 import { streamGeneralReply } from "./general-announced-action"
 import { type GeneralContext, canUseCapability } from "./general-context"
 import { generalProposalReferencePart } from "./general-persistence"
@@ -78,12 +79,11 @@ export async function executeGeneralTurn({
         data: { proposalId },
         transient: true,
       })
-      if (isLinkedAssistantIdentity(ctx.session)) {
-        const reference = generalProposalReferencePart(proposalId, source)
-        if (reference) writer.write(reference)
-      }
+      const reference = generalProposalReferencePart(proposalId, source)
+      if (reference) writer.write(reference)
     },
     (answer) => writer.write({ type: "data-general-answer", data: answer }),
+    runId,
   )
   const balanceRead = tools.readMoneyAccountBalances
   if (
@@ -126,6 +126,7 @@ export async function executeGeneralTurn({
     history: stored,
   }
   const linked = isLinkedAssistantIdentity(ctx.session)
+  const editingWhatsAppDraft = linked && (await hasCurrentWhatsAppEdit(ctx))
   const channelConfirmation =
     linked &&
     /^(?:proceed|confirm|cancel|yes|go ahead|done|save(?: it| sale)?)[.!]*$/i.test(
@@ -142,6 +143,7 @@ export async function executeGeneralTurn({
     if (
       linked &&
       (channelConfirmation ||
+        editingWhatsAppDraft ||
         !canUseCapability(ctx, capabilityForAction(action)))
     )
       continue

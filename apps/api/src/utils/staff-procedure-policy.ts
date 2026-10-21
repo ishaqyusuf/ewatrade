@@ -162,6 +162,9 @@ export function staffProcedureAction(
       "assistant.start",
       "assistant.editProposal",
       "assistant.decideProposal",
+      "assistant.reviewLink",
+      "assistant.decideReviewLink",
+      "assistant.editReviewLink",
       // Personal linking controls; repository rechecks fresh actor and Store authority.
       "assistantChannels.createWhatsAppLink",
       "assistantChannels.confirmWhatsAppLink",

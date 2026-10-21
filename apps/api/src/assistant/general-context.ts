@@ -6,7 +6,10 @@ import type {
   Capability,
   CapabilityRole,
 } from "@ewatrade/assistant/capabilities/types"
-import { whatsAppCapabilityEnabled } from "@ewatrade/assistant/channels/policy"
+import {
+  whatsAppCapabilityEnabled,
+  whatsAppWebReviewDraftEnabled,
+} from "@ewatrade/assistant/channels/policy"
 import type { GeneralActionName } from "@ewatrade/assistant/general/contracts"
 import { canOperatePos, normalizeRole } from "@ewatrade/auth/roles"
 import {
@@ -448,6 +451,38 @@ export function canUseCapability(
 ) {
   try {
     assertCapability(ctx, capability)
+    return true
+  } catch {
+    return false
+  }
+}
+
+/** Draft-only web handoff. This never relaxes native channel execution policy. */
+export function assertGeneralDraftAction(
+  ctx: GeneralScopeContext,
+  action: string,
+) {
+  const capability = capabilityForAction(action)
+  if (!isLinkedAssistantIdentity(ctx.session))
+    return assertCapability(ctx, capability)
+  if (whatsAppCapabilityEnabled(capability))
+    return assertCapability(ctx, capability)
+  if (!ctx.session.inboxLease || !whatsAppWebReviewDraftEnabled(capability))
+    throw new TRPCError({
+      code: "FORBIDDEN",
+      message: "This action needs review in EwaTrade.",
+    })
+  // Existing app compatibility, rollout, role, plan and Store checks all apply.
+  return assertGeneralActionHandoffAuthority(ctx, capability)
+}
+
+export function canDraftGeneralCapability(
+  ctx: GeneralScopeContext,
+  capability: Capability,
+) {
+  if (capability.mode !== "write") return false
+  try {
+    assertGeneralDraftAction(ctx, capability.action)
     return true
   } catch {
     return false

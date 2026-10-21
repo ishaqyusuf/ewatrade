@@ -141,9 +141,14 @@ export function GeneralProposalCard({
   onCancel,
   onEdit,
   onReply,
+  expanded = false,
+  confirmLabel,
 }: {
   proposal: GeneralProposal
   currencyCode: string
+  /** Focused reviews show the complete record before confirmation. */
+  expanded?: boolean
+  confirmLabel?: string
   disabled: boolean
   onConfirm: () => void
   onCancel: () => void
@@ -178,7 +183,7 @@ export function GeneralProposalCard({
       text: choice.text,
     })
   const lines = reviewLines(proposal, currencyCode)
-  const [showAll, setShowAll] = useState(false)
+  const [showAll, setShowAll] = useState(expanded)
   const long = lines.length > COLLAPSE_AFTER
   const lapsed = new Date(proposal.expiresAt).getTime() <= Date.now()
   const pending = proposal.status === "PENDING" && !lapsed
@@ -256,11 +261,15 @@ export function GeneralProposalCard({
             <div className="min-w-0 flex-1">
               <GeneralReviewPresentationBody
                 presentation={proposal.presentation}
+                expanded={expanded}
               />
             </div>
           </div>
         ) : (
-          <GeneralReviewPresentationBody presentation={proposal.presentation} />
+          <GeneralReviewPresentationBody
+            presentation={proposal.presentation}
+            expanded={expanded}
+          />
         )
       ) : (
         <>
@@ -326,11 +335,12 @@ export function GeneralProposalCard({
                 disabled={disabled || !proposal.approvalToken}
                 onClick={onConfirm}
               >
-                {sale
-                  ? "Save sale"
-                  : moneyIn || expense || transfer
-                    ? "Proceed"
-                    : "Confirm"}
+                {confirmLabel ??
+                  (sale
+                    ? "Save sale"
+                    : moneyIn || expense || transfer
+                      ? "Proceed"
+                      : "Confirm")}
               </Button>
             ) : null}
             <Button

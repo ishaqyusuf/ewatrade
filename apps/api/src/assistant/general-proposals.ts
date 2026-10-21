@@ -25,6 +25,7 @@ import {
   getActiveTenantForUser,
   getCustomerAccountAgeStatus,
 } from "@ewatrade/db/queries"
+import type { Prisma } from "@ewatrade/db/types"
 import { TRPCError } from "@trpc/server"
 import {
   isLinkedAssistantIdentity,
@@ -40,6 +41,7 @@ import {
   type GeneralContext,
   assertGeneralAction,
   assertGeneralActionAuthority,
+  assertGeneralDraftAction,
   requireGeneralScope,
 } from "./general-context"
 import { currentGeneralReceipt } from "./general-legacy-receipt"
@@ -94,10 +96,12 @@ export function generalProposalForApp(
 export async function inFreshGeneralTransaction<T>(
   ctx: GeneralContext,
   operation: (fresh: GeneralTransactionContext) => Promise<T>,
+  beforeMembership?: (tx: Prisma.TransactionClient) => Promise<void>,
 ) {
   const scope = requireGeneralScope(ctx)
   return runInOwnSerializableTransaction(ctx.db, async (tx) => {
     const db = tx
+    await beforeMembership?.(tx)
     const linked = isLinkedAssistantIdentity(ctx.session)
       ? await lockLinkedAssistantIdentity(db, ctx.session)
       : null
@@ -173,8 +177,10 @@ async function validateDraft(
   ctx: GeneralTransactionContext,
   action: GeneralAction,
   lock = false,
+  draftOnly = false,
 ) {
-  assertGeneralAction(ctx, action.action)
+  if (draftOnly) assertGeneralDraftAction(ctx, action.action)
+  else assertGeneralAction(ctx, action.action)
   return generalActionAdapter(action).validate(ctx, action, lock)
 }
 export async function draftGeneralProposal(
@@ -182,79 +188,76 @@ export async function draftGeneralProposal(
   conversationId: string,
   raw: unknown,
 ) {
+  return inFreshGeneralTransaction(ctx, (fresh) =>
+    draftGeneralProposalInTransaction(fresh, conversationId, raw),
+  )
+}
+
+/** Composes deterministic channel drafts with their lease/return receipt atomically. */
+export async function draftGeneralProposalInTransaction(
+  fresh: GeneralTransactionContext,
+  conversationId: string,
+  raw: unknown,
+) {
   const parsed = generalActionSchema.parse(raw)
-  return inFreshGeneralTransaction(ctx, async (fresh) => {
-    if (
-      isLinkedAssistantIdentity(fresh.session) &&
-      fresh.assistantConversationId !== conversationId
-    )
-      throw new TRPCError({
-        code: "NOT_FOUND",
-        message: "Conversation unavailable.",
-      })
-    const scope = assertGeneralAction(fresh, parsed.action)
-    const payload = await prepareDraft(fresh, parsed)
-    if (payload.action === "expense_record_simple")
-      await validateExpenseAttachmentConversation(
-        fresh,
-        payload,
-        conversationId,
-      )
-    if (payload.action === "money_transfer_simple")
-      await validateTransferAttachmentConversation(
-        fresh,
-        payload,
-        conversationId,
-      )
-    if (payload.action === "money_in_record")
-      await validateMoneyInAttachmentConversation(
-        fresh,
-        payload,
-        conversationId,
-      )
-    if (payload.action === "sale_record")
-      await validateSaleAttachmentConversation(fresh, payload, conversationId)
-    if (!(await readGeneralConversation(fresh.db, scope, conversationId)))
-      throw new TRPCError({
-        code: "NOT_FOUND",
-        message: "Conversation unavailable.",
-      })
-    const key = `assistant_${randomUUID()}`
-    const target = await validateDraft(fresh, payload)
-    const row = await fresh.db.assistantActionProposal.create({
-      data: {
-        id: randomUUID(),
-        conversationId,
-        tenantId: scope.tenantId,
-        storeId: scope.storeId,
-        actorUserId: scope.userId,
-        action: payload.action,
-        payload,
-        payloadHash: proposalDigest(payload),
-        roleSnapshot: fresh.tenantContext.membership.role,
-        approvalTokenHash: "pending",
-        idempotencyKey: key,
-        expiresAt: new Date(Date.now() + 15 * 60_000),
-        targetRecordId: target?.id,
-        targetRevision: target?.revision,
-      },
+  if (
+    isLinkedAssistantIdentity(fresh.session) &&
+    fresh.assistantConversationId !== conversationId
+  )
+    throw new TRPCError({
+      code: "NOT_FOUND",
+      message: "Conversation unavailable.",
     })
-    await fresh.db.assistantActionProposal.update({
-      where: { id: row.id },
-      data: {
-        approvalTokenHash: proposalDigest(
-          proposalApprovalToken(row, signingKey()),
-        ),
-      },
+  const scope = assertGeneralDraftAction(fresh, parsed.action)
+  const payload = await prepareDraft(fresh, parsed)
+  if (payload.action === "expense_record_simple")
+    await validateExpenseAttachmentConversation(fresh, payload, conversationId)
+  if (payload.action === "money_transfer_simple")
+    await validateTransferAttachmentConversation(fresh, payload, conversationId)
+  if (payload.action === "money_in_record")
+    await validateMoneyInAttachmentConversation(fresh, payload, conversationId)
+  if (payload.action === "sale_record")
+    await validateSaleAttachmentConversation(fresh, payload, conversationId)
+  if (!(await readGeneralConversation(fresh.db, scope, conversationId)))
+    throw new TRPCError({
+      code: "NOT_FOUND",
+      message: "Conversation unavailable.",
     })
-    // Safe model result: no credential or user-facing execution capability.
-    return {
-      proposalId: row.id,
-      revision: row.revision,
+  const key = `assistant_${randomUUID()}`
+  const target = await validateDraft(fresh, payload, false, true)
+  const row = await fresh.db.assistantActionProposal.create({
+    data: {
+      id: randomUUID(),
+      conversationId,
+      tenantId: scope.tenantId,
+      storeId: scope.storeId,
+      actorUserId: scope.userId,
+      action: payload.action,
       payload,
-      status: "needs_user_confirmation",
-    }
+      payloadHash: proposalDigest(payload),
+      roleSnapshot: fresh.tenantContext.membership.role,
+      approvalTokenHash: "pending",
+      idempotencyKey: key,
+      expiresAt: new Date(Date.now() + 15 * 60_000),
+      targetRecordId: target?.id,
+      targetRevision: target?.revision,
+    },
   })
+  await fresh.db.assistantActionProposal.update({
+    where: { id: row.id },
+    data: {
+      approvalTokenHash: proposalDigest(
+        proposalApprovalToken(row, signingKey()),
+      ),
+    },
+  })
+  // Safe model result: no credential or user-facing execution capability.
+  return {
+    proposalId: row.id,
+    revision: row.revision,
+    payload,
+    status: "needs_user_confirmation",
+  }
 }
 export async function decideGeneralProposal(
   ctx: GeneralContext,
@@ -381,81 +384,85 @@ export async function editGeneralProposal(
   ctx: GeneralContext,
   input: { proposalId: string; revision: number; payload: GeneralAction },
 ) {
-  return inFreshGeneralTransaction(ctx, async (fresh) => {
-    const scope = assertGeneralAction(fresh, input.payload.action)
-    const row = await fresh.db.assistantActionProposal.findFirst({
-      where: {
-        ...generalProposalWhere(scope),
-        id: input.proposalId,
-        ...(isLinkedAssistantIdentity(fresh.session)
-          ? { conversationId: fresh.assistantConversationId }
-          : {}),
-      },
-    })
-    if (
-      !row ||
-      row.status !== "PENDING" ||
-      row.revision !== input.revision ||
-      row.action !== input.payload.action
-    )
-      throw conflict("Draft changed. Refresh before editing.")
-    const payload = await prepareDraft(fresh, input.payload)
-    if (payload.action === "expense_record_simple")
-      await validateExpenseAttachmentConversation(
-        fresh,
-        payload,
-        row.conversationId,
-      )
-    if (payload.action === "money_transfer_simple")
-      await validateTransferAttachmentConversation(
-        fresh,
-        payload,
-        row.conversationId,
-      )
-    if (payload.action === "money_in_record")
-      await validateMoneyInAttachmentConversation(
-        fresh,
-        payload,
-        row.conversationId,
-      )
-    if (payload.action === "sale_record")
-      await validateSaleAttachmentConversation(
-        fresh,
-        payload,
-        row.conversationId,
-      )
-    const target = await validateDraft(fresh, payload)
-    const binding = {
-      ...row,
+  return inFreshGeneralTransaction(ctx, (fresh) =>
+    editGeneralProposalInTransaction(fresh, input),
+  )
+}
+
+/** Internal composition: root owns fresh authority, exact source and durable edit receipt. */
+export async function editGeneralProposalInTransaction(
+  fresh: GeneralTransactionContext,
+  input: { proposalId: string; revision: number; payload: GeneralAction },
+) {
+  const scope = assertGeneralDraftAction(fresh, input.payload.action)
+  const row = await fresh.db.assistantActionProposal.findFirst({
+    where: {
+      ...generalProposalWhere(scope),
+      id: input.proposalId,
+      ...(isLinkedAssistantIdentity(fresh.session)
+        ? { conversationId: fresh.assistantConversationId }
+        : {}),
+    },
+  })
+  if (
+    !row ||
+    row.status !== "PENDING" ||
+    row.revision !== input.revision ||
+    row.action !== input.payload.action
+  )
+    throw conflict("Draft changed. Refresh before editing.")
+  const payload = await prepareDraft(fresh, input.payload)
+  if (payload.action === "expense_record_simple")
+    await validateExpenseAttachmentConversation(
+      fresh,
       payload,
-      payloadHash: proposalDigest(payload),
-      revision: row.revision + 1,
-      expiresAt: new Date(Date.now() + 15 * 60_000),
-    }
-    const saved = await fresh.db.assistantActionProposal.updateMany({
-      where: { id: row.id, revision: row.revision, status: "PENDING" },
-      data: {
-        payload: binding.payload,
-        payloadHash: binding.payloadHash,
-        revision: binding.revision,
-        expiresAt: binding.expiresAt,
-        approvalTokenHash: proposalDigest(
-          proposalApprovalToken(binding, signingKey()),
-        ),
-        targetRecordId: target?.id ?? null,
-        targetRevision: target?.revision ?? null,
-      },
-    })
-    if (saved.count !== 1)
-      throw conflict("Draft changed. Refresh before editing.")
-    return generalProposalForApp({
-      ...binding,
-      targetRecordId: target?.id ?? null,
-      targetRevision: target?.revision ?? null,
+      row.conversationId,
+    )
+  if (payload.action === "money_transfer_simple")
+    await validateTransferAttachmentConversation(
+      fresh,
+      payload,
+      row.conversationId,
+    )
+  if (payload.action === "money_in_record")
+    await validateMoneyInAttachmentConversation(
+      fresh,
+      payload,
+      row.conversationId,
+    )
+  if (payload.action === "sale_record")
+    await validateSaleAttachmentConversation(fresh, payload, row.conversationId)
+  const target = await validateDraft(fresh, payload, false, true)
+  const binding = {
+    ...row,
+    payload,
+    payloadHash: proposalDigest(payload),
+    revision: row.revision + 1,
+    expiresAt: new Date(Date.now() + 15 * 60_000),
+  }
+  const saved = await fresh.db.assistantActionProposal.updateMany({
+    where: { id: row.id, revision: row.revision, status: "PENDING" },
+    data: {
+      payload: binding.payload,
+      payloadHash: binding.payloadHash,
+      revision: binding.revision,
+      expiresAt: binding.expiresAt,
       approvalTokenHash: proposalDigest(
         proposalApprovalToken(binding, signingKey()),
       ),
-    })
+      targetRecordId: target?.id ?? null,
+      targetRevision: target?.revision ?? null,
+    },
+  })
+  if (saved.count !== 1)
+    throw conflict("Draft changed. Refresh before editing.")
+  return generalProposalForApp({
+    ...binding,
+    targetRecordId: target?.id ?? null,
+    targetRevision: target?.revision ?? null,
+    approvalTokenHash: proposalDigest(
+      proposalApprovalToken(binding, signingKey()),
+    ),
   })
 }
 

@@ -130,3 +130,24 @@ test("only the deployment's own Vercel Preview host reaches dashboard auth", () 
     else process.env.VERCEL_URL = priorUrl
   }
 })
+
+test("disposable review and sign-in return keep the locator private without opening access", () => {
+  const path = "/assistant-review?token=private-locator"
+  const denied = middleware(request(path))
+  const login = new URL(denied.headers.get("location") ?? "")
+  expect(login.pathname).toBe("/login")
+  expect(login.searchParams.get("next")).toBe(path)
+  for (const response of [
+    denied,
+    middleware(request(path, "better-auth.session_token=fixture")),
+    middleware(request(`${login.pathname}${login.search}`)),
+  ]) {
+    expect(response.headers.get("cache-control")).toBe(
+      "private, no-store, max-age=0",
+    )
+    expect(response.headers.get("referrer-policy")).toBe("no-referrer")
+    expect(response.headers.get("x-robots-tag")).toBe(
+      "noindex, nofollow, noarchive",
+    )
+  }
+})

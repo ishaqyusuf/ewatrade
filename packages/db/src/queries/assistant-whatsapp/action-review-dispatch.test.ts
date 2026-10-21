@@ -149,12 +149,16 @@ test("only dispatch return value contains decision codes; durable source stays u
   )
   expect(interactive?.buttons?.map((button) => button.title)).toEqual([
     "Confirm",
+    "Edit",
     "Cancel",
   ])
   expect(interactive?.buttons?.[0]?.id).toMatch(
     /^ewa-wa-action-v1:[A-Za-z0-9_-]{43}:confirm$/,
   )
   expect(interactive?.buttons?.[1]?.id).toMatch(
+    /^ewa-wa-action-v1:[A-Za-z0-9_-]{43}:edit$/,
+  )
+  expect(interactive?.buttons?.[2]?.id).toMatch(
     /^ewa-wa-action-v1:[A-Za-z0-9_-]{43}:cancel$/,
   )
 })

@@ -79,6 +79,10 @@ export function whatsAppChannelPolicy(env: Environment = process.env) {
     media: env.ASSISTANT_WHATSAPP_MEDIA_ENABLED === "true",
     localSource: env.APP_ENV === "local" && env.NODE_ENV !== "production",
     publicRelease: env.ASSISTANT_WHATSAPP_ROLLOUT_MODE === "public",
+    // Preview pilots retain both finite user and Tenant enrollment in the principal resolver.
+    previewPilotRelease:
+      env.APP_ENV === "preview" &&
+      env.ASSISTANT_WHATSAPP_ROLLOUT_MODE === "pilot",
     releasedCapabilityIds: assistantWhatsAppReleasedCapabilityIds(env),
   }
 }
@@ -102,8 +106,25 @@ export function whatsAppCapabilityEnabled(
     capability.whatsapp.rollout === "enabled" ||
     (capability.whatsapp.rollout === "source" &&
       (policy.localSource ||
-        (policy.publicRelease &&
+        ((policy.publicRelease || policy.previewPilotRelease) &&
           policy.releasedCapabilityIds.includes(capability.id))))
+  )
+}
+
+/** Draft-only web review. App execution and native WhatsApp confirmation stay separate. */
+export function whatsAppWebReviewDraftEnabled(
+  capability: Capability,
+  env: Environment = process.env,
+) {
+  const policy = whatsAppChannelPolicy(env)
+  return (
+    capability.mode === "write" &&
+    capability.clients.includes("dashboard") &&
+    capability.rollout !== "planned" &&
+    policy.writes &&
+    (policy.localSource ||
+      ((policy.publicRelease || policy.previewPilotRelease) &&
+        policy.releasedCapabilityIds.includes(capability.id)))
   )
 }
 /** Stable policy evidence; source-test/doc edits do not invalidate saved replies. */

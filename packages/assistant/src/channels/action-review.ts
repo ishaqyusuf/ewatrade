@@ -39,6 +39,7 @@ export type WhatsAppActionCommand =
       replyToMessageId: string
     }
   | { kind: "invalid_action" }
+  | { kind: "edit"; code: string; replyToMessageId: string }
 
 function quotedReplyId(value: string | undefined) {
   return typeof value === "string" &&
@@ -59,7 +60,7 @@ export function parseWhatsAppTypedAction(
 ): WhatsAppActionCommand | null {
   const value = text?.trim()
   if (!value) return null
-  const match = /^(Confirm|Cancel) ([A-Za-z0-9_-]{43})$/i.exec(value)
+  const match = /^(Confirm|Cancel|Edit) ([A-Za-z0-9_-]{43})$/i.exec(value)
   if (!match) {
     const confirmIntent = /^\/?confirm(?:\b|[.!?:])/i.test(value)
     const bareApproval =
@@ -81,6 +82,8 @@ export function parseWhatsAppTypedAction(
   const quoted = quotedReplyId(replyToMessageId)
   if (!quoted || !whatsAppActionCodeSchema.safeParse(match[2]).success)
     return { kind: "invalid_action" }
+  if (match[1]?.toLowerCase() === "edit")
+    return { kind: "edit", code: match[2] ?? "", replyToMessageId: quoted }
   return {
     kind: "action",
     decision: match[1]?.toLowerCase() as WhatsAppActionDecision,
@@ -90,9 +93,9 @@ export function parseWhatsAppTypedAction(
 }
 export function whatsAppActionButtonId(
   code: string,
-  decision: WhatsAppActionDecision,
+  decision: WhatsAppActionDecision | "edit",
 ) {
-  return `ewa-wa-action-v1:${whatsAppActionCodeSchema.parse(code)}:${z.enum(["confirm", "cancel"]).parse(decision)}`
+  return `ewa-wa-action-v1:${whatsAppActionCodeSchema.parse(code)}:${z.enum(["confirm", "cancel", "edit"]).parse(decision)}`
 }
 /** Sender/binding/proposal/expiry authority is revalidated by the owning transaction, not this parser. */
 export function parseWhatsAppActionButton(
@@ -101,11 +104,12 @@ export function parseWhatsAppActionButton(
 ): WhatsAppActionCommand | null {
   if (!value) return null
   if (!/^ewa-wa-action/i.test(value)) return null
-  const match = /^ewa-wa-action-v1:([A-Za-z0-9_-]{43}):(confirm|cancel)$/.exec(
-    value,
-  )
+  const match =
+    /^ewa-wa-action-v1:([A-Za-z0-9_-]{43}):(confirm|cancel|edit)$/.exec(value)
   const quoted = quotedReplyId(replyToMessageId)
   if (!match || !quoted) return { kind: "invalid_action" }
+  if (match[2] === "edit")
+    return { kind: "edit", code: match[1] ?? "", replyToMessageId: quoted }
   return {
     kind: "action",
     decision: match[2] as WhatsAppActionDecision,
@@ -264,7 +268,7 @@ export function appendWhatsAppActionReviewInstructions(
     "Nothing changes until you explicitly confirm this exact review.",
     `Reply to this message with Confirm ${confirm.data}`,
     `Or reply Cancel ${cancel.data}`,
-    "To edit, open this saved draft in EwaTrade; the edited draft requires a new review.",
+    `Or reply Edit ${cancel.data}. The old Confirm stops working; changes require a fresh review.`,
   ].join("\n\n")
   if (body.length > max) return appReview()
   return { ...review, body }
