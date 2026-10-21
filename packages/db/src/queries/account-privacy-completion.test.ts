@@ -7,6 +7,14 @@ import {
   completeAccountPrivacyRequest,
 } from "./account-privacy-completion"
 import {
+  accountPrivacyExternalEvidence,
+  getApprovedAccountPrivacyExternalPolicy,
+} from "./account-privacy-external-policy"
+import {
+  getApprovedNoticeRetentionPolicy,
+  noticeRetentionEvidence,
+} from "./account-privacy-notice-retention"
+import {
   accountPrivacyProfileEvidence,
   accountPrivacyPseudonymousEmail,
   getApprovedAccountPrivacyProfilePolicy,
@@ -1892,3 +1900,260 @@ describe("account privacy completion transition", () => {
     }
   })
 })
+
+test.each([
+  "PREPARED",
+  "SENT",
+  "DELIVERED",
+  "missing authorization",
+  "changed authorization",
+  "missing send time",
+  "late send time",
+  "changed original review",
+  "expired review",
+])(
+  "canonical completion checks notice provider retention: %s",
+  async (scenario) => {
+    const keys = [
+      "ACCOUNT_PRIVACY_APPROVED_POLICY_VERSION",
+      "ACCOUNT_PRIVACY_PROFILE_POLICY_JSON",
+      "ACCOUNT_PRIVACY_APPROVED_PROFILE_POLICY_SHA256",
+      "ACCOUNT_PRIVACY_EXTERNAL_POLICY_JSON",
+      "ACCOUNT_PRIVACY_APPROVED_EXTERNAL_POLICY_SHA256",
+      "ACCOUNT_PRIVACY_NOTICE_RETENTION_POLICY_JSON",
+      "ACCOUNT_PRIVACY_APPROVED_NOTICE_RETENTION_POLICY_SHA256",
+    ]
+    const before = Object.fromEntries(
+      keys.map((key) => [key, process.env[key]]),
+    )
+    const hash = (value: string) =>
+      createHash("sha256").update(value).digest("hex")
+    const reviewAt = "2026-09-25T13:00:00.000Z"
+    const approvedAt = "2026-09-24T00:00:00.000Z"
+    try {
+      process.env.ACCOUNT_PRIVACY_APPROVED_POLICY_VERSION = policyVersion
+      const profileSource = JSON.stringify({
+        version: policyVersion,
+        approvalReference: "profile-approval",
+        approvedAt,
+        mode: "PSEUDONYMIZE",
+        legalAcceptanceDisposition: "RETAIN",
+        retentionPurpose: "Restricted case evidence",
+        reviewAt,
+      })
+      process.env.ACCOUNT_PRIVACY_PROFILE_POLICY_JSON = profileSource
+      process.env.ACCOUNT_PRIVACY_APPROVED_PROFILE_POLICY_SHA256 =
+        hash(profileSource)
+      const externalSource = JSON.stringify({
+        version: policyVersion,
+        approvalReference: "old-record-review",
+        approvedAt,
+        reviewAt,
+        mode: "REVIEW_PROVIDER_CONFIRMATIONS",
+        providers: [
+          {
+            key: "resend",
+            disposition: "RETENTION_APPROVED",
+            purpose: "Old verification record only",
+            expiresAt: "2026-10-24T00:00:00.000Z",
+          },
+        ],
+      })
+      process.env.ACCOUNT_PRIVACY_EXTERNAL_POLICY_JSON = externalSource
+      process.env.ACCOUNT_PRIVACY_APPROVED_EXTERNAL_POLICY_SHA256 =
+        hash(externalSource)
+      const profilePolicy = getApprovedAccountPrivacyProfilePolicy(
+        process.env,
+        now,
+      )
+      const externalPolicy = getApprovedAccountPrivacyExternalPolicy(
+        process.env,
+        now,
+      )
+      if (!profilePolicy || !externalPolicy)
+        throw Error("Policy fixture missing")
+      const rows = outcomes()
+      const profile = rows.find((row) => row.domain === "ACCOUNT_PROFILE")
+      const external = rows.find((row) => row.domain === "EXTERNAL_PROCESSORS")
+      const notice = rows.find((row) => row.domain === "OUTCOME_NOTICE")
+      if (!profile || !external || !notice)
+        throw Error("Domain fixture missing")
+      profile.processor = "account-privacy-profile-v1"
+      profile.nextReviewAt = new Date(reviewAt)
+      profile.evidenceDigest = accountPrivacyProfileEvidence({
+        requestId: "request-1",
+        subjectId: "user-1",
+        policy: profilePolicy,
+        legalAcceptanceCount: 2,
+      })
+      const receipts = [
+        {
+          provider: "resend",
+          evidenceDigest: digest,
+          confirmedAt: new Date("2026-09-24T12:00:00.000Z"),
+        },
+      ]
+      external.processor = "account-privacy-external-review-v1"
+      external.disposition = "RETENTION_APPROVED"
+      external.nextReviewAt = new Date(reviewAt)
+      external.evidenceDigest = accountPrivacyExternalEvidence({
+        requestId: "request-1",
+        subjectId: "user-1",
+        policy: externalPolicy,
+        receipts,
+        operatorUserId: "operator-1",
+        processedAt: external.processedAt,
+      })
+      const oldReview = {
+        processor: external.processor,
+        policyDigest: externalPolicy.digest,
+        operatorUserId: "operator-1",
+        evidenceDigest:
+          scenario === "changed original review"
+            ? "0".repeat(64)
+            : external.evidenceDigest,
+        providers: externalPolicy.providers,
+        receipts: receipts.map((row) => ({
+          ...row,
+          confirmedAt: row.confirmedAt.toISOString(),
+        })),
+      }
+      const addonSource = JSON.stringify({
+        version: policyVersion,
+        approvalReference: "one-exact-new-email",
+        ownerApprovalDigest: "1".repeat(64),
+        operatorUserId: "operator-1",
+        approvedAt,
+        requestId: "request-1",
+        subjectUserId: "user-1",
+        contentDigest: digest,
+        recipientDigest: digest,
+        provider: "resend",
+        retentionDays: 30,
+        sendBy: "2026-09-25T01:00:00.000Z",
+        retentionUntil: "2026-10-25T01:00:00.000Z",
+        reviewAt,
+      })
+      process.env.ACCOUNT_PRIVACY_NOTICE_RETENTION_POLICY_JSON = addonSource
+      process.env.ACCOUNT_PRIVACY_APPROVED_NOTICE_RETENTION_POLICY_SHA256 =
+        hash(addonSource)
+      const addon = getApprovedNoticeRetentionPolicy(process.env, now)
+      if (!addon) throw Error("Notice policy fixture missing")
+      const preparedAt = new Date("2026-09-24T12:02:00.000Z")
+      const authorization = noticeRetentionEvidence(addon, {
+        requestId: "request-1",
+        subjectUserId: "user-1",
+        attemptId: "attempt-1",
+        contentDigest: digest,
+        recipientDigest: digest,
+        originalExternalEvidenceDigest: external.evidenceDigest,
+        originalExternalPolicyDigest: externalPolicy.digest,
+        profileEvidenceDigest: profile.evidenceDigest,
+        profilePolicyDigest: profilePolicy.digest,
+        operatorUserId: "operator-1",
+        preparedAt: preparedAt.toISOString(),
+      })
+      const delivered =
+        scenario === "DELIVERED" || scenario === "changed original review"
+      notice.processedAt = new Date("2026-09-24T12:04:00.000Z")
+      const email = accountPrivacyPseudonymousEmail("request-1", "user-1")
+      const { db } = fixture(
+        {
+          domainOutcomes: delivered
+            ? rows
+            : rows.filter((row) => row.domain !== "OUTCOME_NOTICE"),
+          user: { email, emailVerified: false },
+          outcome: {
+            externalProcessorReview: oldReview,
+            noticeProviderRetention:
+              scenario === "missing authorization"
+                ? null
+                : scenario === "changed authorization"
+                  ? { ...authorization, evidenceDigest: "0".repeat(64) }
+                  : authorization,
+          },
+          noticeAttempts: [
+            {
+              id: "attempt-1",
+              userId: "user-1",
+              status: delivered
+                ? "DELIVERED"
+                : scenario === "PREPARED"
+                  ? "PREPARED"
+                  : "SENT",
+              policyVersion,
+              contentDigest: digest,
+              recipientDigest: digest,
+              providerMessageId: scenario === "PREPARED" ? null : "message-1",
+              providerEventId: delivered ? "event-1" : null,
+              deliveryEvidenceDigest: delivered ? digest : null,
+              deliveredAt: delivered ? notice.processedAt : null,
+              preparedAt,
+              sentAt:
+                scenario === "PREPARED" || scenario === "missing send time"
+                  ? null
+                  : scenario === "late send time"
+                    ? new Date("2026-09-25T02:00:00.000Z")
+                    : new Date("2026-09-24T12:03:00.000Z"),
+            },
+          ],
+        },
+        {
+          unchangedProfileEmail: 0,
+          linkedAuthAccounts: 0,
+          storedMobileOtp: 0,
+          legalAcceptances: 2,
+          profileFields: {
+            email,
+            name: "",
+            image: null,
+            phone: null,
+            firstName: null,
+            lastName: null,
+            displayName: null,
+            avatarUrl: null,
+            metadata: null,
+            emailVerifiedAt: null,
+            phoneVerifiedAt: null,
+            isPlatformAdmin: false,
+            ageBand: "UNDECLARED",
+            ageDeclaredAt: null,
+          },
+        },
+      )
+      const at =
+        scenario === "late send time"
+          ? new Date("2026-09-25T03:00:00.000Z")
+          : scenario === "expired review"
+            ? new Date(reviewAt)
+            : now
+      const result = await assessAccountPrivacyCompletion(db, "request-1", {
+        approvedPolicyVersion: policyVersion,
+        now: at,
+      })
+      if (["PREPARED", "SENT", "DELIVERED"].includes(scenario)) {
+        expect(result.blockers).toEqual([])
+        expect(result.eligible).toBe(scenario === "DELIVERED")
+        expect(result.missingDomains).toEqual(
+          scenario === "DELIVERED" ? [] : ["OUTCOME_NOTICE"],
+        )
+      } else if (scenario === "changed original review") {
+        expect(result.blockers).toContain(
+          "EXTERNAL_PROCESSOR_REVIEW_UNCONFIRMED",
+        )
+        expect(result.eligible).toBe(false)
+      } else {
+        expect(result.blockers).toContain(
+          "NOTICE_PROVIDER_RETENTION_UNCONFIRMED",
+        )
+        expect(result.eligible).toBe(false)
+      }
+    } finally {
+      for (const key of keys) {
+        const value = before[key]
+        if (value === undefined) delete process.env[key]
+        else process.env[key] = value
+      }
+    }
+  },
+)
