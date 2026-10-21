@@ -1,0 +1,46 @@
+{
+  "version": 1,
+  "id": "2026-10-21-staff-page-remove-never-joined",
+  "tickets": ["H02"],
+  "summary": "Dashboard Staff page redesign (Workshop 02): plain labels (Operator shown as Sales rep), store access and invite expiry on rows, Change access and Suspend as member-sheet views, and a new web action that removes people who never joined (pending or suspended unaccepted invites).",
+  "noAssistantImpact": "No assistant tool, capability, procedure or permission changes. The assistant keeps its existing staff invitation INVITE/RESEND/REVOKE, status and access commands. Removing someone who never joined is web-only for now (excluded from the assistant): it is a POST /api/staff remove operation under the same staff-management authority and tenant lock as status changes, with an explicit alert confirmation in the dashboard. Assistant support can be planned later as a reviewed command.",
+  "capabilities": [],
+  "procedures": [],
+  "docs": [
+    {
+      "topic": "feature",
+      "status": "local_only",
+      "path": ".brain/features/staff-directory-views.md"
+    },
+    {
+      "topic": "api",
+      "status": "local_only",
+      "path": ".brain/api/endpoints.md"
+    },
+    {
+      "topic": "schema",
+      "status": "not_applicable",
+      "note": "No schema change; uses the existing REMOVED membership status and REMOVED lifecycle event."
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "test",
+      "path": "packages/db/src/queries/staff-status-change.test.ts",
+      "executed": true,
+      "result": "15 pass, including removal allowed for pending/suspended unaccepted and refused for joined staff, owners/admins and self."
+    },
+    {
+      "kind": "test",
+      "path": "apps/dashboard/src/app/api/staff/route.test.ts",
+      "executed": true,
+      "result": "Remove and suspend-reason route tests pass; one existing QA invite-link test fails independently after commit d9272280e (central QA policy)."
+    },
+    {
+      "kind": "run",
+      "path": "apps/dashboard/src/components/dashboard/staff-page.tsx",
+      "executed": true,
+      "result": "Local signed-in browser: Resend invite and Cancel invite saved; Remove from row and from member sheet removed two QA test staff, tabs and list updated."
+    }
+  ]
+}
