@@ -1,0 +1,102 @@
+{
+  "version": 1,
+  "id": "2026-10-20-customers-pages",
+  "tickets": ["H02"],
+  "summary": "Dashboard Customers redesign (workshop dashboard/web-app/customers/customers-pages, direction 01), published in b6073f27. The Customers list gains balances for owners and admins, saved customers without orders, Sort and View dropdowns and an Add / Edit customer sheet on the existing customers.create and customers.update. The statement and its sheets use plain words, a date picker and searchable lists. The book query now groups orders by saved customer and reads balances through listCustomerLedgerBalances (the canonical customerLedgerTotalsFromAggregates projection). No tRPC procedure, schema, role, permission, ledger rule or confirmation authority changed, and no assistant capability or rollout changed.",
+  "capabilities": [
+    {
+      "id": "customers.create",
+      "change": "unchanged",
+      "rollout": "source",
+      "note": "The dashboard form calls the existing customers.create with the same input and role check; the assistant command is unchanged."
+    },
+    {
+      "id": "customers.update",
+      "change": "unchanged",
+      "rollout": "source",
+      "note": "The dashboard form calls the existing customers.update with its expected-revision check; the assistant command is unchanged."
+    },
+    {
+      "id": "customers.page",
+      "change": "unchanged",
+      "rollout": "source",
+      "note": "The assistant still reads the saved directory through customers.listPage. The dashboard's own /api/customers book changed (saved customers, balances) but is not an assistant source."
+    },
+    {
+      "id": "customers.statement.read",
+      "change": "unchanged",
+      "rollout": "planned",
+      "note": "Statement layout and wording only; customerLedger.statement and its Owner/Admin gate are unchanged."
+    },
+    {
+      "id": "customers.receipt.record",
+      "change": "unchanged",
+      "rollout": "planned",
+      "note": "Form wording, date picker and searchable lists only; customerLedger.recordReceipt payload, review and confirmation are unchanged."
+    },
+    {
+      "id": "customers.credit.apply",
+      "change": "unchanged",
+      "rollout": "planned",
+      "note": "Label \"Use on an Order\" only; customerLedger.applyCredit is unchanged."
+    },
+    {
+      "id": "customers.credit.refund",
+      "change": "unchanged",
+      "rollout": "planned",
+      "note": "Label \"Return paid-ahead money\" only; customerLedger.refundUnusedCredit is unchanged."
+    },
+    {
+      "id": "customers.allocation.release",
+      "change": "unchanged",
+      "rollout": "planned",
+      "note": "Opens as a view inside the entry sheet with Back to entry; customerLedger.releaseAllocation is unchanged."
+    }
+  ],
+  "procedures": [],
+  "docs": [
+    {
+      "topic": "feature",
+      "status": "local_only",
+      "path": ".brain/features/customer-ledger.md"
+    },
+    {
+      "topic": "api",
+      "status": "local_only",
+      "path": ".brain/api/contracts.md",
+      "note": "Dashboard GET /api/customers rows add customerId, nullable lastOrder and an Owner/Admin-only balance; no tRPC contract changed."
+    },
+    {
+      "topic": "capability",
+      "status": "not_applicable",
+      "path": "packages/assistant/src/capabilities/COVERAGE.md",
+      "note": "No capability, procedure or rollout change; coverage snapshot is current on the squash."
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "test",
+      "path": "packages/db/src/queries/customers.test.ts",
+      "executed": true,
+      "result": "5 tests pass, including linking order customers by phone, adding saved customers without orders and leaving them out of own-sales books."
+    },
+    {
+      "kind": "test",
+      "path": "apps/dashboard/src/components/tables/customers/columns.test.ts",
+      "executed": true,
+      "result": "4 tests pass: exact minor-unit totals, owes / paid-ahead / settled balance wording, and contact fallbacks without identity codes."
+    },
+    {
+      "kind": "test",
+      "path": "apps/dashboard/src/lib/customer-ledger/command-input.test.ts",
+      "executed": true,
+      "result": "Customer-ledger lib and component tests: 21 pass with the plain validation messages."
+    },
+    {
+      "kind": "review",
+      "path": ".brain/features/customer-ledger.md",
+      "executed": true,
+      "result": "Signed-in browser pass on ewatrade-dashboard.localhost: list views with real balances, Add customer validation, statement, entry details and Record payment to the check step without saving."
+    }
+  ]
+}
