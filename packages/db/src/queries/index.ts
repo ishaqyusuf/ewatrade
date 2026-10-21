@@ -193,3 +193,7 @@ export * from "./phone-auth"
 export * from "./account-phone-verification"
 
 export { listQaPhoneEntries } from "./qa-access"
+export {
+  accountPrivacyExternalReceiptSchema,
+  getApprovedAccountPrivacyExternalPolicy,
+} from "./account-privacy-external-policy"

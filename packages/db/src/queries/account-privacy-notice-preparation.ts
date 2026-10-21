@@ -25,7 +25,17 @@ export function accountPrivacyNoticeContentDigest(input: {
   text: string
   html: string
 }) {
-  return createHash("sha256").update(JSON.stringify(input)).digest("hex")
+  return createHash("sha256")
+    .update(
+      JSON.stringify({
+        from: input.from,
+        replyTo: input.replyTo,
+        subject: input.subject,
+        text: input.text,
+        html: input.html,
+      }),
+    )
+    .digest("hex")
 }
 
 /** Reserves a single exact approved message; it does not contact a provider. */

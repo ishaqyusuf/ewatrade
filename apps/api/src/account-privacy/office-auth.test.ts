@@ -86,7 +86,13 @@ test("support can only read the reduced queue; operator mappings require current
   expect(authenticateOfficePrivacy(q.body, q.signature, env, now)?.scope).toBe(
     "read",
   )
-  for (const op of ["workflow", "advance"]) {
+  for (const op of [
+    "workflow",
+    "advance",
+    "review",
+    "externalReview",
+    "sendNotice",
+  ]) {
     const m = message("support", op)
     expect(authenticateOfficePrivacy(m.body, m.signature, env, now)).toBeNull()
   }

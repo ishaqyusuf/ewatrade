@@ -1,0 +1,16 @@
+{
+  "version": 1,
+  "id": "2026-10-21-privacy-release-restoration",
+  "tickets": ["H02"],
+  "summary": "Restore the previously reviewed Office privacy fulfillment interface omitted from the full production release, preserving newer exports and runtime guards.",
+  "noAssistantImpact": "Existing dedicated platform privacy operations only. No merchant or assistant command is exposed. Signed Office actor mapping, process scope, verified platform-admin authority, canonical workflow, policy/evidence and exact approved notice checks remain authoritative.",
+  "capabilities": [],
+  "procedures": [],
+  "docs": [
+    {"topic": "feature", "status": "local_only", "path": ".brain/features/account-privacy.md", "note": "Records accepted fulfillment restoration, bounded real-case review and remaining processing acceptance."},
+    {"topic": "api", "status": "local_only", "path": ".brain/api/contracts.md", "note": "Restores review/externalReview/sendNotice Office operations and exact server-approved notice digest behavior."}
+  ],
+  "evidence": [
+    {"kind": "run", "path": "apps/api/src/account-privacy/office-routes.test.ts", "executed": true, "result": "Signed HTTP regression exercises all three restored operations through actual Hono authentication and routing; read-only actors refuse before database access and missing cases reach canonical domain guards. Independent restoration review passes24tests/106assertions; full API strict typecheck passes."}
+  ]
+}
