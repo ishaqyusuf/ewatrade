@@ -17,6 +17,8 @@ import {
   SubmitButton,
   Field as UiField,
   FieldError as UiFieldError,
+  cn,
+  toast,
 } from "@ewatrade/ui"
 
 import { FormSelectControl } from "@/components/forms/form-controls"
@@ -26,6 +28,7 @@ import {
   ServiceCommerceBookingConfigurationFormProvider,
   type ServiceCommerceBookingConfigurationFormValues,
 } from "@/components/service-commerce/form-context"
+import { SheetSection } from "@/components/service-work/choice-buttons"
 import { useServiceCommerceParams } from "@/hooks/use-service-commerce-params"
 import { useStoreCurrency } from "@/hooks/use-store-currency"
 import { useTRPC } from "@/trpc/client"
@@ -84,6 +87,11 @@ function BookingWorkspaceContent({ storeId }: { storeId: string }) {
   const params = useServiceCommerceParams()
   const form = useFormContext<ServiceCommerceBookingConfigurationFormValues>()
   const [message, setMessage] = useState<string | null>(null)
+  const noticeRef = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    // The save button is at the bottom of a long sheet; bring the reason into view.
+    if (message) noticeRef.current?.scrollIntoView({ block: "nearest" })
+  }, [message])
   const [createdLink, setCreatedLink] = useState<string | null>(null)
   const [createdResources, setCreatedResources] = useState<
     BookingResourceOption[]
@@ -153,7 +161,7 @@ function BookingWorkspaceContent({ storeId }: { storeId: string }) {
           { shouldDirty: true, shouldValidate: true },
         )
         createResourceId.current = null
-        setMessage("Booking resource saved and selected for this offering.")
+        setMessage("Added and ticked. Save open times to keep it.")
       },
     }),
   )
@@ -163,7 +171,8 @@ function BookingWorkspaceContent({ storeId }: { storeId: string }) {
       onSuccess: async () => {
         await invalidateConfiguration()
         updateId.current = null
-        setMessage("Booking availability saved and revalidated.")
+        setMessage(null)
+        toast("Open times saved.")
       },
     }),
   )
@@ -176,14 +185,14 @@ function BookingWorkspaceContent({ storeId }: { storeId: string }) {
         const storefront =
           process.env.NEXT_PUBLIC_STOREFRONT_URL?.replace(/\/$/, "") ?? ""
         setCreatedLink(`${storefront}/booking/${result.accessToken}`)
-        setMessage("Booking link is ready to share with this customer.")
+        setMessage(null)
       },
     }),
   )
 
   if (!offeringId) {
     return (
-      <BookingNotice message="Choose a Service offering before configuring booking. This link is incomplete or stale." />
+      <BookingNotice message="Choose a service first. This link is old or incomplete." />
     )
   }
 
@@ -196,36 +205,37 @@ function BookingWorkspaceContent({ storeId }: { storeId: string }) {
     updateConfiguration.isPending ||
     createCapability.isPending
 
+  const sourceName = eligibleSources.find(
+    (request) => request.id === source?.id,
+  )?.customerName
+
   return (
-    <div className="grid gap-6">
-      <section className="grid gap-4 border border-border bg-background p-4 sm:p-5">
-        <div>
-          <h2 className="font-semibold">Booking availability</h2>
-          <p className="text-sm text-muted-foreground">
-            Store-scoped time, capacity, payment, and cancellation policy.
+    <div className="grid gap-5">
+      <div ref={noticeRef} className="scroll-mt-4 empty:hidden">
+        {message ? <BookingNotice message={message} /> : null}
+      </div>
+      {configuration.isLoading ? <BookingSkeleton /> : null}
+      {configuration.isError ? (
+        <div className="grid gap-3 bg-warning p-4 text-sm text-warning-foreground">
+          <p>
+            Open times aren’t set for this service yet. Add who or what is
+            booked below, then save.
           </p>
+          <Button
+            className="w-fit"
+            onClick={() => void configuration.refetch()}
+            variant="outline"
+          >
+            Try again
+          </Button>
         </div>
-        {configuration.isLoading ? <BookingSkeleton /> : null}
-        {configuration.isError ? (
-          <div className="grid gap-3 border border-warning-border bg-warning p-4 text-sm text-warning-foreground">
-            <p>
-              No active booking configuration is available for this offering.
-              Create a resource below, then save the configuration.
-            </p>
-            <Button
-              className="w-fit"
-              onClick={() => void configuration.refetch()}
-              variant="outline"
-            >
-              Retry configuration
-            </Button>
-          </div>
-        ) : null}
-        {!configuration.isLoading ? (
-          <form
-            onSubmit={form.handleSubmit((values) => {
+      ) : null}
+      {!configuration.isLoading ? (
+        <form
+          onSubmit={form.handleSubmit(
+            (values) => {
               if (values.resources.length === 0) {
-                setMessage("Create at least one booking resource first.")
+                setMessage("Pick at least one person, room or tool below.")
                 return
               }
               updateId.current ??= crypto.randomUUID()
@@ -248,408 +258,455 @@ function BookingWorkspaceContent({ storeId }: { storeId: string }) {
                 offeringId,
                 storeId,
               })
-            })}
-          >
-            <FieldGroup className="min-w-0 grid gap-4">
-              <div className="grid gap-4 sm:grid-cols-2">
-                <Field label="Store timezone">
-                  <Input {...form.register("timezone")} />
-                </Field>
-                <Field label="Appointment duration (minutes)">
+            },
+            (errors) =>
+              setMessage(
+                errors.resources
+                  ? "Pick at least one person, room or tool under Who or what is booked."
+                  : errors.timezone
+                    ? "This store’s time zone is missing. Set it in Settings, then try again."
+                    : errors.holdDurationMinutes
+                      ? "Keep an unpaid time for less time than customers can book ahead."
+                      : "Check the fields marked below.",
+              ),
+          )}
+        >
+          <FieldGroup className="min-w-0 grid gap-5">
+            <SheetSection title="Open times">
+              <FieldSet className="grid gap-2">
+                <FieldLegend variant="label" className="text-sm font-medium">
+                  Open days
+                </FieldLegend>
+                <div className="flex flex-wrap gap-2">
+                  {WEEKDAYS.map(({ label, value }) => {
+                    const rule = currentAvailabilityRule(form)
+                    const selected = rule.daysOfWeek.includes(value)
+                    return (
+                      <CheckboxField
+                        key={value}
+                        label={label}
+                        className="w-auto border border-border px-2.5 py-1.5"
+                      >
+                        <Checkbox
+                          checked={selected}
+                          onCheckedChange={(checked) => {
+                            const current = currentAvailabilityRule(form)
+                            const daysOfWeek = checked
+                              ? [...current.daysOfWeek, value].sort()
+                              : current.daysOfWeek.filter(
+                                  (day) => day !== value,
+                                )
+                            form.setValue(
+                              "availabilityRules",
+                              [{ ...current, daysOfWeek }],
+                              { shouldDirty: true, shouldValidate: true },
+                            )
+                          }}
+                        />
+                      </CheckboxField>
+                    )
+                  })}
+                </div>
+                <FieldError
+                  message={
+                    form.formState.errors.availabilityRules?.[0]?.daysOfWeek
+                      ? "Pick at least one open day."
+                      : undefined
+                  }
+                />
+              </FieldSet>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <Field label="Opens">
                   <Input
-                    min="1"
-                    type="number"
-                    {...form.register("slotDurationMinutes", {
-                      valueAsNumber: true,
-                    })}
-                  />
-                </Field>
-                <Field label="Customer lead time (minutes)">
-                  <Input
-                    min="0"
-                    type="number"
-                    {...form.register("leadTimeMinutes", {
-                      valueAsNumber: true,
-                    })}
-                  />
-                </Field>
-                <Field label="Hold duration (minutes)">
-                  <Input
-                    min="1"
-                    type="number"
-                    {...form.register("holdDurationMinutes", {
-                      valueAsNumber: true,
-                    })}
-                  />
-                </Field>
-                <Field label="Booking horizon (minutes)">
-                  <Input
-                    min="1"
-                    type="number"
-                    {...form.register("bookingHorizonMinutes", {
-                      valueAsNumber: true,
-                    })}
+                    onChange={(event) => {
+                      const current = currentAvailabilityRule(form)
+                      form.setValue(
+                        "availabilityRules",
+                        [{ ...current, startLocalTime: event.target.value }],
+                        { shouldDirty: true, shouldValidate: true },
+                      )
+                    }}
+                    type="time"
+                    value={
+                      form.watch("availabilityRules")[0]?.startLocalTime ??
+                      "09:00"
+                    }
                   />
                   <FieldError
                     message={
-                      form.formState.errors.bookingHorizonMinutes?.message
+                      form.formState.errors.availabilityRules?.[0]
+                        ?.endLocalTime ||
+                      form.formState.errors.availabilityRules?.message
+                        ? "Closing time must be after opening time."
+                        : undefined
                     }
                   />
                 </Field>
-                <Field label="First reminder (minutes before)">
+                <Field label="Closes">
                   <Input
-                    min="0"
-                    type="number"
-                    {...form.register("reminderLeadMinutes", {
-                      valueAsNumber: true,
-                    })}
+                    onChange={(event) => {
+                      const current = currentAvailabilityRule(form)
+                      form.setValue(
+                        "availabilityRules",
+                        [{ ...current, endLocalTime: event.target.value }],
+                        { shouldDirty: true, shouldValidate: true },
+                      )
+                    }}
+                    type="time"
+                    value={
+                      form.watch("availabilityRules")[0]?.endLocalTime ??
+                      "17:00"
+                    }
                   />
                 </Field>
-                <Field label="Cancellation window (minutes before)">
-                  <Input
-                    min="0"
-                    type="number"
-                    {...form.register(
-                      "cancellationPolicy.allowedUntilMinutesBeforeStart",
-                      { valueAsNumber: true },
+                <Field label="Each appointment lasts">
+                  <SelectControl
+                    value={String(form.watch("slotDurationMinutes"))}
+                    onValueChange={(value) =>
+                      form.setValue("slotDurationMinutes", Number(value), {
+                        shouldDirty: true,
+                        shouldValidate: true,
+                      })
+                    }
+                    options={durationOptions(form.watch("slotDurationMinutes"))}
+                  />
+                </Field>
+                <UnitField
+                  form={form}
+                  name="leadTimeMinutes"
+                  label="Book at least"
+                  unit="hours ahead"
+                  minutesPerUnit={60}
+                />
+                <UnitField
+                  form={form}
+                  name="bookingHorizonMinutes"
+                  label="Book up to"
+                  unit="days ahead"
+                  minutesPerUnit={1_440}
+                  error={
+                    form.formState.errors.bookingHorizonMinutes
+                      ? "Enter days, like 30."
+                      : undefined
+                  }
+                />
+                <UnitField
+                  form={form}
+                  name="holdDurationMinutes"
+                  label="Keep an unpaid time for"
+                  unit="minutes"
+                  minutesPerUnit={1}
+                  help="The time is freed if they don’t pay in this time."
+                  error={
+                    form.formState.errors.holdDurationMinutes
+                      ? "Must be shorter than how far ahead customers can book."
+                      : undefined
+                  }
+                />
+              </div>
+            </SheetSection>
+            <BookingExceptions form={form} />
+            <BookingResources
+              options={resourceOptions}
+              selected={form.watch("resources")}
+              onChange={(next) =>
+                form.setValue("resources", next, {
+                  shouldDirty: true,
+                  shouldValidate: true,
+                })
+              }
+            />
+            <ResourceForm
+              isPending={createResource.isPending}
+              onSubmit={(values) => {
+                createResourceId.current ??= crypto.randomUUID()
+                setMessage(null)
+                createResource.mutate({
+                  ...values,
+                  clientOperationId: createResourceId.current,
+                  storeId,
+                })
+              }}
+            />
+            <SheetSection title="Payment and cancelling">
+              <Field label="Payment to book">
+                <SelectControl
+                  value={form.watch("paymentPolicy.requirement")}
+                  onValueChange={(value) =>
+                    form.setValue(
+                      "paymentPolicy.requirement",
+                      value as ServiceCommerceBookingConfigurationFormValues["paymentPolicy"]["requirement"],
+                      { shouldDirty: true, shouldValidate: true },
+                    )
+                  }
+                  options={[
+                    { value: "none", label: <>None</> },
+                    { value: "deposit", label: <>Deposit</> },
+                    { value: "full", label: <>Full price</> },
+                  ]}
+                />
+                <FieldError
+                  message={
+                    form.formState.errors.paymentPolicy
+                      ? "Enter a deposit above ₦0, or pick None or Full price."
+                      : undefined
+                  }
+                />
+              </Field>
+              {form.watch("paymentPolicy.requirement") === "deposit" ? (
+                <Field label="Deposit">
+                  <CurrencyInput
+                    currencyCode={currencyCode}
+                    disabled={!currencyCode}
+                    value={minorToMajorInput(
+                      form.watch("paymentPolicy.depositMinor"),
                     )}
-                  />
-                  <FieldError
-                    message={
-                      form.formState.errors.cancellationPolicy
-                        ?.allowedUntilMinutesBeforeStart?.message
+                    onValueChange={(value) =>
+                      form.setValue(
+                        "paymentPolicy.depositMinor",
+                        majorToMinor(value),
+                        { shouldDirty: true, shouldValidate: true },
+                      )
                     }
                   />
                 </Field>
-                <Field label="Cancellation refund policy">
+              ) : null}
+              <div className="grid gap-3 sm:grid-cols-2">
+                <UnitField
+                  form={form}
+                  name="cancellationPolicy.allowedUntilMinutesBeforeStart"
+                  label="Customers can cancel up to"
+                  unit="hours before"
+                  minutesPerUnit={60}
+                />
+                <Field label="Refund when they cancel in time">
                   <FormSelectControl
                     control={form.control}
                     name={"cancellationPolicy.refundPolicy"}
                     options={[
-                      { value: "manual_review", label: <>Manual review</> },
-                      {
-                        value: "full_before_cutoff",
-                        label: <>Full before cutoff</>,
-                      },
+                      { value: "manual_review", label: <>Decide each time</> },
+                      { value: "full_before_cutoff", label: <>Full refund</> },
                       { value: "none", label: <>No refund</> },
                     ]}
                   />
-                  <FieldError
-                    message={
-                      form.formState.errors.cancellationPolicy?.refundPolicy
-                        ?.message
-                    }
-                  />
                 </Field>
-              </div>
-              <FieldSet className="grid gap-2 border border-border p-4">
-                <FieldLegend
-                  variant="label"
-                  className="px-1 text-sm font-medium"
-                >
-                  Payment policy
-                </FieldLegend>
-                <ControlField label={<>Requirement</>}>
-                  <FormSelectControl
-                    control={form.control}
-                    name={"paymentPolicy.requirement"}
-                    options={[
-                      { value: "none", label: <>No payment required</> },
-                      { value: "deposit", label: <>Deposit required</> },
-                      { value: "full", label: <>Full payment required</> },
-                    ]}
-                  />
-                </ControlField>
-                {form.watch("paymentPolicy.requirement") === "deposit" ? (
-                  <Field label="Deposit">
-                    <CurrencyInput
-                      currencyCode={currencyCode}
-                      disabled={!currencyCode}
-                      value={minorToMajorInput(
-                        form.watch("paymentPolicy.depositMinor"),
-                      )}
-                      onValueChange={(value) =>
-                        form.setValue(
-                          "paymentPolicy.depositMinor",
-                          majorToMinor(value),
-                          { shouldDirty: true, shouldValidate: true },
-                        )
-                      }
-                    />
-                    <FieldError
-                      message={
-                        form.formState.errors.paymentPolicy?.depositMinor
-                          ?.message
-                      }
-                    />
-                  </Field>
-                ) : null}
-                <FieldError
-                  message={form.formState.errors.paymentPolicy?.message}
+                <UnitField
+                  form={form}
+                  name="reminderLeadMinutes"
+                  label="Remind them"
+                  unit="hours before"
+                  minutesPerUnit={60}
                 />
-              </FieldSet>
-              <FieldSet className="grid gap-2 border border-border p-4">
-                <FieldLegend
-                  variant="label"
-                  className="px-1 text-sm font-medium"
-                >
-                  Working hours
-                </FieldLegend>
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <Field label="Starts">
-                    <Input
-                      onChange={(event) => {
-                        const current = currentAvailabilityRule(form)
-                        form.setValue(
-                          "availabilityRules",
-                          [{ ...current, startLocalTime: event.target.value }],
-                          { shouldDirty: true, shouldValidate: true },
-                        )
-                      }}
-                      type="time"
-                      value={
-                        form.watch("availabilityRules")[0]?.startLocalTime ??
-                        "09:00"
-                      }
-                    />
-                  </Field>
-                  <Field label="Ends">
-                    <Input
-                      onChange={(event) => {
-                        const current = currentAvailabilityRule(form)
-                        form.setValue(
-                          "availabilityRules",
-                          [{ ...current, endLocalTime: event.target.value }],
-                          { shouldDirty: true, shouldValidate: true },
-                        )
-                      }}
-                      type="time"
-                      value={
-                        form.watch("availabilityRules")[0]?.endLocalTime ??
-                        "17:00"
-                      }
-                    />
-                  </Field>
-                </div>
-                <FieldSet className="grid gap-2">
-                  <FieldLegend variant="label" className="text-sm font-medium">
-                    Open weekdays
-                  </FieldLegend>
-                  <div className="flex flex-wrap gap-2">
-                    {WEEKDAYS.map(({ label, value }) => {
-                      const rule = currentAvailabilityRule(form)
-                      const selected = rule.daysOfWeek.includes(value)
-                      return (
-                        <CheckboxField key={value} label={label}>
-                          <Checkbox
-                            checked={selected}
-                            onCheckedChange={(checked) => {
-                              const current = currentAvailabilityRule(form)
-                              const daysOfWeek = checked
-                                ? [...current.daysOfWeek, value].sort()
-                                : current.daysOfWeek.filter(
-                                    (day) => day !== value,
-                                  )
-                              form.setValue(
-                                "availabilityRules",
-                                [{ ...current, daysOfWeek }],
-                                { shouldDirty: true, shouldValidate: true },
-                              )
-                            }}
-                          />
-                        </CheckboxField>
-                      )
-                    })}
-                  </div>
-                  <FieldError
-                    message={
-                      form.formState.errors.availabilityRules?.[0]?.daysOfWeek
-                        ?.message
-                    }
-                  />
-                </FieldSet>
-                <p className="text-xs text-muted-foreground">
-                  Weekday hours are applied to each selected resource.
-                  Exceptions remain server-authorized and are never inferred in
-                  the browser.
-                </p>
-              </FieldSet>
-              <BookingExceptions form={form} />
-              <BookingResources
-                options={resourceOptions}
-                selected={form.watch("resources")}
-                onChange={(next) =>
-                  form.setValue("resources", next, {
-                    shouldDirty: true,
-                    shouldValidate: true,
-                  })
-                }
-              />
-              <FormActions>
-                <SubmitButton
-                  isSubmitting={pending}
-                  disabled={pending || form.watch("resources").length === 0}
-                  type="submit"
-                >
-                  {updateConfiguration.isPending
-                    ? "Saving availability…"
-                    : "Save booking availability"}
-                </SubmitButton>
-              </FormActions>
-            </FieldGroup>
-          </form>
-        ) : null}
-      </section>
+              </div>
+            </SheetSection>
+            <FormActions className="border-t border-border pt-4">
+              <SubmitButton
+                isSubmitting={updateConfiguration.isPending}
+                disabled={pending}
+                type="submit"
+              >
+                {updateConfiguration.isPending ? "Saving…" : "Save open times"}
+              </SubmitButton>
+            </FormActions>
+          </FieldGroup>
+        </form>
+      ) : null}
 
-      <ResourceForm
-        isPending={createResource.isPending}
-        onSubmit={(values) => {
-          createResourceId.current ??= crypto.randomUUID()
-          setMessage(null)
-          createResource.mutate({
-            ...values,
-            clientOperationId: createResourceId.current,
-            storeId,
-          })
-        }}
-      />
-
-      <section className="grid gap-3 border border-border bg-background p-4 sm:p-5">
-        <div>
-          <h2 className="font-semibold">Booking source</h2>
-          <p className="text-sm text-muted-foreground">
-            Choose the eligible Service request this appointment belongs to.
-          </p>
-        </div>
+      <SheetSection title="Send a booking link">
+        <p className="text-sm text-muted-foreground">
+          For one customer who asked for this service. They pick a free time.
+        </p>
         {sourceRequests.isLoading ? (
           <div className="h-10 animate-pulse bg-muted" />
         ) : sourceRequests.isError ? (
           <div className="grid gap-2 text-sm text-destructive" role="alert">
-            <p>Service requests are unavailable.</p>
+            <p>Customer requests didn’t load.</p>
             <Button
               className="w-fit"
               onClick={() => void sourceRequests.refetch()}
               size="sm"
               variant="outline"
             >
-              Retry requests
+              Try again
             </Button>
           </div>
         ) : eligibleSources.length === 0 ? (
           <p className="text-sm text-muted-foreground">
-            No active Service request includes this offering yet. Create or open
-            a request first, then return here to issue its booking link.
+            No open customer request asks for this service yet. When one does,
+            you can send that customer a booking link here.
           </p>
         ) : (
-          <ControlField
-            label={<>Service request</>}
-            afterControl=<span
-              className="text-xs text-muted-foreground"
-              id="booking-source-help"
-            >
-              The public link is scoped to this request and cannot be reused for
-              another customer.
-            </span>
-          >
-            <SelectControl
-              aria-describedby="booking-source-help"
-              onValueChange={(value) =>
-                void params.setParams({
-                  sourceId: value || null,
-                  sourceKind: value ? "service" : null,
+          <div className="flex flex-wrap items-end gap-2">
+            <ControlField label="Customer request" className="min-w-56 flex-1">
+              <SelectControl
+                onValueChange={(value) =>
+                  void params.setParams({
+                    sourceId: value || null,
+                    sourceKind: value ? "service" : null,
+                  })
+                }
+                value={source?.id ?? ""}
+                options={[
+                  { value: "", label: <>Choose a request</> },
+                  ...eligibleSources.map((request) => {
+                    const line = request.lines.find(
+                      (item) => item.offeringId === offeringId,
+                    )
+                    return {
+                      value: request.id,
+                      label: (
+                        <>
+                          {request.customerName} ·{" "}
+                          {line?.offeringName ?? "Service"}
+                        </>
+                      ),
+                    }
+                  }),
+                ]}
+              />
+            </ControlField>
+            <Button
+              disabled={!source || pending || !configuration.data}
+              onClick={() => {
+                if (!source) return
+                capabilityId.current ??= crypto.randomUUID()
+                setMessage(null)
+                createCapability.mutate({
+                  clientOperationId: capabilityId.current,
+                  expiresAt: new Date(Date.now() + 7 * 86_400_000),
+                  offeringId,
+                  source,
+                  storeId,
                 })
-              }
-              value={source?.id ?? ""}
-              options={[
-                { value: "", label: <>Choose a request</> },
-                ...(eligibleSources.map((request) => {
-                  const line = request.lines.find(
-                    (item) => item.offeringId === offeringId,
-                  )
-                  return {
-                    value: request.id,
-                    label: (
-                      <>
-                        {request.customerName} ·{" "}
-                        {line?.offeringName ?? "Service"}
-                      </>
-                    ),
-                  }
-                }) ?? []),
-              ]}
-            />
-          </ControlField>
+              }}
+            >
+              {createCapability.isPending ? "Creating…" : "Create link"}
+            </Button>
+          </div>
         )}
-      </section>
-
-      {source ? (
-        <section className="grid gap-3 border border-border bg-background p-4 sm:p-5">
-          <div>
-            <h2 className="font-semibold">Customer booking link</h2>
-            <p className="text-sm text-muted-foreground">
-              Issue one expiring public capability for this eligible source.
+        {createdLink ? (
+          <div className="grid gap-2">
+            <div className="flex items-center gap-3 border border-border px-3 py-2.5">
+              <a
+                className="min-w-0 flex-1 text-sm break-all text-primary underline"
+                href={createdLink}
+                rel="noreferrer"
+                target="_blank"
+              >
+                {createdLink}
+              </a>
+              <Button
+                onClick={() =>
+                  navigator.clipboard
+                    ?.writeText(createdLink)
+                    .then(() => toast("Link copied."))
+                    .catch(() => toast("Select the link to copy it."))
+                }
+                size="sm"
+                type="button"
+                variant="outline"
+              >
+                Copy link
+              </Button>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Works for 7 days{sourceName ? `, for ${sourceName} only` : ""}.
             </p>
           </div>
-          <Button
-            className="w-fit"
-            disabled={pending || !configuration.data}
-            onClick={() => {
-              capabilityId.current ??= crypto.randomUUID()
-              setMessage(null)
-              createCapability.mutate({
-                clientOperationId: capabilityId.current,
-                expiresAt: new Date(Date.now() + 7 * 86_400_000),
-                offeringId,
-                source,
-                storeId,
-              })
-            }}
-          >
-            {createCapability.isPending
-              ? "Creating link…"
-              : "Create booking link"}
-          </Button>
-        </section>
-      ) : (
-        <p className="border border-border bg-muted/40 p-4 text-sm text-muted-foreground">
-          Select an eligible Service request above to issue its customer booking
-          link. Configuration remains Store-scoped.
-        </p>
-      )}
-      {createdLink ? (
-        <section className="grid gap-3 border border-primary/30 bg-primary/5 p-4 sm:p-5">
-          <div>
-            <h2 className="font-semibold">Customer booking link</h2>
-            <p className="text-sm text-muted-foreground">
-              Send this expiring, request-scoped link to the selected customer.
-            </p>
-          </div>
-          <a
-            className="break-all text-sm font-medium text-primary underline"
-            href={createdLink}
-            rel="noreferrer"
-            target="_blank"
-          >
-            {createdLink}
-          </a>
-          <Button
-            className="w-fit"
-            onClick={() =>
-              navigator.clipboard
-                ?.writeText(createdLink)
-                .then(() => setMessage("Booking link copied."))
-                .catch(() => setMessage("Copy the booking link shown above."))
-            }
-            type="button"
-            variant="outline"
-          >
-            Copy link
-          </Button>
-        </section>
-      ) : null}
-      {message ? <BookingNotice message={message} /> : null}
+        ) : null}
+      </SheetSection>
     </div>
   )
+}
+
+/** Minutes stored, hours or days shown. */
+function UnitField({
+  error,
+  form,
+  help,
+  label,
+  minutesPerUnit,
+  name,
+  unit,
+}: {
+  error?: string
+  form: ReturnType<
+    typeof useFormContext<ServiceCommerceBookingConfigurationFormValues>
+  >
+  help?: string
+  label: string
+  minutesPerUnit: number
+  name:
+    | "bookingHorizonMinutes"
+    | "cancellationPolicy.allowedUntilMinutesBeforeStart"
+    | "holdDurationMinutes"
+    | "leadTimeMinutes"
+    | "reminderLeadMinutes"
+  unit: string
+}) {
+  const minutes = form.watch(name)
+  const [text, setText] = useState(() =>
+    Number.isFinite(minutes) ? String(minutes / minutesPerUnit) : "",
+  )
+  useEffect(() => {
+    // Follow loads and resets from the server without fighting the typing.
+    const shown = Number(text)
+    if (!Number.isFinite(minutes)) return
+    if (Math.round(shown * minutesPerUnit) !== minutes)
+      setText(String(Number((minutes / minutesPerUnit).toFixed(2))))
+  }, [minutes, minutesPerUnit, text])
+  const id = useId()
+  return (
+    <UiField data-invalid={Boolean(error)} className="gap-1.5">
+      <FieldLabel htmlFor={id}>{label}</FieldLabel>
+      <div className="flex items-center border border-input bg-background">
+        <Input
+          id={id}
+          inputMode="decimal"
+          className="border-0"
+          aria-invalid={Boolean(error)}
+          value={text}
+          onChange={(event) => {
+            setText(event.target.value)
+            const value = Number(event.target.value)
+            form.setValue(
+              name,
+              Number.isFinite(value) && event.target.value.trim()
+                ? Math.round(value * minutesPerUnit)
+                : Number.NaN,
+              { shouldDirty: true, shouldValidate: true },
+            )
+          }}
+        />
+        <span className="shrink-0 px-3 text-sm text-muted-foreground">
+          {unit}
+        </span>
+      </div>
+      {error ? (
+        <FieldError message={error} />
+      ) : help ? (
+        <p className="text-xs text-muted-foreground">{help}</p>
+      ) : null}
+    </UiField>
+  )
+}
+
+const DURATIONS = [15, 30, 45, 60, 90, 120, 180, 240]
+
+function durationLabel(minutes: number) {
+  if (minutes < 60) return `${minutes} minutes`
+  const hours = minutes / 60
+  return hours === 1 ? "1 hour" : `${hours} hours`
+}
+
+function durationOptions(current: number) {
+  const values = DURATIONS.includes(current)
+    ? DURATIONS
+    : [...DURATIONS, current].filter(Number.isFinite).sort((a, b) => a - b)
+  return values.map((minutes) => ({
+    value: String(minutes),
+    label: <>{durationLabel(minutes)}</>,
+  }))
 }
 
 function ResourceForm({
@@ -665,69 +722,76 @@ function ResourceForm({
 }) {
   const [capacity, setCapacity] = useState(1)
   const [kind, setKind] = useState<"equipment" | "other" | "room" | "staff">(
-    "room",
+    "staff",
   )
   const [name, setName] = useState("")
+  const [error, setError] = useState<string | null>(null)
+  // Lives inside the open-times form, so it adds on click or Enter instead of submitting.
+  const add = () => {
+    if (!name.trim()) {
+      setError("Type a name to add.")
+      return
+    }
+    setError(null)
+    onSubmit({ capacity, kind, name: name.trim() })
+    setName("")
+  }
   return (
-    <form
-      className="border border-border bg-background p-4 sm:p-5"
-      onSubmit={(event) => {
-        event.preventDefault()
-        if (name.trim()) onSubmit({ capacity, kind, name: name.trim() })
-      }}
-    >
-      <FieldGroup className="min-w-0 grid gap-4">
-        <div>
-          <h2 className="font-semibold">Booking resources</h2>
-          <p className="text-sm text-muted-foreground">
-            Create a room, staff member, or equipment resource before assigning
-            it to this Service offering.
-          </p>
-        </div>
-        <div className="grid gap-3 sm:grid-cols-3">
-          <Field label="Resource name">
+    <div>
+      <FieldGroup className="min-w-0 grid gap-3">
+        <p className="text-sm font-medium">Add a person, room or tool</p>
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-[minmax(0,1fr)_120px_110px_auto] sm:items-end">
+          <Field label="Name" className="col-span-2 sm:col-span-1">
             <Input
               onChange={(event) => setName(event.target.value)}
-              required
+              onKeyDown={(event) => {
+                if (event.key !== "Enter") return
+                event.preventDefault()
+                add()
+              }}
+              placeholder="e.g. Dr. Yusuf"
               value={name}
             />
           </Field>
-          <Field label="Type">
+          <Field label="Kind">
             <SelectControl
               onValueChange={(value) =>
                 setKind(value as "equipment" | "other" | "room" | "staff")
               }
               value={kind}
               options={[
+                { value: "staff", label: <>Person</> },
                 { value: "room", label: <>Room</> },
-                { value: "staff", label: <>Staff</> },
-                { value: "equipment", label: <>Equipment</> },
+                { value: "equipment", label: <>Tool</> },
                 { value: "other", label: <>Other</> },
               ]}
             />
           </Field>
-          <Field label="Capacity">
+          <Field label="Bookings at a time">
             <Input
               min="1"
               onChange={(event) => setCapacity(Number(event.target.value) || 1)}
-              required
               type="number"
               value={capacity}
             />
           </Field>
-        </div>
-        <FormActions>
           <SubmitButton
             isSubmitting={isPending}
-            className="w-fit"
+            variant="outline"
             disabled={isPending}
-            type="submit"
+            type="button"
+            onClick={add}
           >
-            {isPending ? "Saving resource…" : "Add resource"}
+            {isPending ? "Adding…" : "Add"}
           </SubmitButton>
-        </FormActions>
+        </div>
+        {error ? (
+          <p role="alert" className="text-sm text-destructive">
+            {error}
+          </p>
+        ) : null}
       </FieldGroup>
-    </form>
+    </div>
   )
 }
 
@@ -766,13 +830,16 @@ function BookingResources({
   selected: BookingResourceOption[]
 }) {
   return (
-    <FieldSet className="grid gap-2 border border-border p-4">
-      <FieldLegend variant="label" className="px-1 text-sm font-medium">
-        Assigned resources
+    <FieldSet className="grid gap-2 border-t border-border pt-4">
+      <FieldLegend
+        variant="label"
+        className="text-xs font-semibold tracking-wide text-muted-foreground uppercase"
+      >
+        Who or what is booked
       </FieldLegend>
       {options.length === 0 ? (
         <p className="text-sm text-muted-foreground">
-          Add a resource below, then select it for this offering.
+          Nobody yet. Add a person, room or tool below, then tick it.
         </p>
       ) : (
         <div className="grid gap-2">
@@ -786,7 +853,9 @@ function BookingResources({
                   <span className="flex flex-wrap items-center justify-between gap-2">
                     <span>{resource.label}</span>
                     <span className="text-xs text-muted-foreground">
-                      Capacity {resource.capacity}
+                      {resource.capacity === 1
+                        ? "1 booking at a time"
+                        : `${resource.capacity} bookings at a time`}
                     </span>
                   </span>
                 }
@@ -835,15 +904,18 @@ function BookingExceptions({
       { shouldDirty: true, shouldValidate: true },
     )
   return (
-    <FieldSet className="grid gap-3 border border-border p-4">
+    <FieldSet className="grid gap-3 border-t border-border pt-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
-          <FieldLegend variant="label" className="text-sm font-medium">
-            Availability exceptions
+          <FieldLegend
+            variant="label"
+            className="text-xs font-semibold tracking-wide text-muted-foreground uppercase"
+          >
+            Days off and extra openings
           </FieldLegend>
           <p className="text-xs text-muted-foreground">
-            Record closures, extra opening hours, or a temporary capacity
-            override.
+            Close for a holiday, open extra hours, or take more or fewer
+            bookings for a while.
           </p>
         </div>
         <Button
@@ -866,7 +938,7 @@ function BookingExceptions({
           type="button"
           variant="outline"
         >
-          Add exception
+          Add a change
         </Button>
       </div>
       {exceptions.map((exception, index) => (
@@ -874,7 +946,7 @@ function BookingExceptions({
           className="grid gap-3 bg-muted/40 p-3 sm:grid-cols-2"
           key={exception.id}
         >
-          <Field label="Type">
+          <Field label="What changes">
             <SelectControl
               onValueChange={(value) => {
                 const kind = value as typeof exception.kind
@@ -900,13 +972,16 @@ function BookingExceptions({
               value={exception.kind}
               options={[
                 { value: "closed", label: <>Closed</> },
-                { value: "open", label: <>Open</> },
-                { value: "capacity_override", label: <>Capacity override</> },
+                { value: "open", label: <>Extra opening</> },
+                {
+                  value: "capacity_override",
+                  label: <>Different number of bookings</>,
+                },
               ]}
             />
           </Field>
           {exception.kind === "capacity_override" ? (
-            <Field label="Temporary capacity">
+            <Field label="Bookings at a time">
               <Input
                 min="1"
                 onChange={(event) =>
@@ -920,7 +995,7 @@ function BookingExceptions({
               />
             </Field>
           ) : null}
-          <Field label="Starts">
+          <Field label="From">
             <DateControl
               onValueChange={(value) =>
                 update(index, {
@@ -932,7 +1007,7 @@ function BookingExceptions({
               value={toLocalDateTime(exception.startAt)}
             />
           </Field>
-          <Field label="Ends">
+          <Field label="To">
             <DateControl
               onValueChange={(value) =>
                 update(index, {
@@ -957,19 +1032,26 @@ function BookingExceptions({
             type="button"
             variant="ghost"
           >
-            Remove exception
+            Remove
           </Button>
         </div>
       ))}
-      <FieldError message={form.formState.errors.exceptions?.message} />
+      <FieldError
+        message={
+          form.formState.errors.exceptions
+            ? "Each change must end after it starts."
+            : undefined
+        }
+      />
     </FieldSet>
   )
 }
 
 function Field({
   children,
+  className,
   label,
-}: { children: React.ReactNode; label: string }) {
+}: { children: React.ReactNode; className?: string; label: string }) {
   const id = useId()
   const [control, ...supplemental] = Children.toArray(children)
   const error = supplemental.flatMap((child) =>
@@ -978,7 +1060,7 @@ function Field({
       : [],
   )[0]
   return (
-    <UiField data-invalid={Boolean(error)} className="gap-1.5">
+    <UiField data-invalid={Boolean(error)} className={cn("gap-1.5", className)}>
       <FieldLabel htmlFor={id}>{label}</FieldLabel>
       {isValidElement<{
         id?: string
