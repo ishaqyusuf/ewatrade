@@ -90,7 +90,7 @@ export function CatalogPricePromotionForm({ storeId }: { storeId: string }) {
         operationId.current = null
         form.reset()
         setMessage(
-          "Reusable Catalog price updated. Existing Quote and Order snapshots were not changed.",
+          "Price saved for next time. Quotes and orders already sent keep their price.",
         )
       },
     }),
@@ -102,11 +102,11 @@ export function CatalogPricePromotionForm({ storeId }: { storeId: string }) {
   if (matches.isError || impact.isError || !impact.data) {
     return (
       <section className="grid gap-3 border-t border-border pt-6">
-        <h3 className="font-medium">Reusable Catalog price</h3>
+        <h3 className="font-medium">Use the quoted price next time?</h3>
         <FormFeedback appearance="dashboard">
           {matches.error?.message ??
             impact.error?.message ??
-            "Price-promotion impact is unavailable."}
+            "This price couldn’t be checked."}
         </FormFeedback>
         <Button
           className="w-fit"
@@ -145,15 +145,15 @@ export function CatalogPricePromotionForm({ storeId }: { storeId: string }) {
     >
       <FieldGroup className="min-w-0 grid gap-4">
         <div>
-          <h3 className="font-medium">Promote quoted price</h3>
+          <h3 className="font-medium">Use the quoted price next time?</h3>
           <p className="text-sm text-muted-foreground">
-            This is separate from the immutable Quote. It changes the reusable
-            Tenant-wide Offering price only after confirmation.
+            Makes the quoted price the catalog price. The quote itself doesn’t
+            change.
           </p>
         </div>
         <dl className="grid grid-cols-2 gap-3 border border-border p-4 text-sm">
           <div>
-            <dt className="text-muted-foreground">Current Catalog price</dt>
+            <dt className="text-muted-foreground">Catalog price</dt>
             <dd className="font-medium">
               {data.currentPriceMinor === null
                 ? "Not set"
@@ -161,14 +161,14 @@ export function CatalogPricePromotionForm({ storeId }: { storeId: string }) {
             </dd>
           </div>
           <div>
-            <dt className="text-muted-foreground">Issued Quote price</dt>
+            <dt className="text-muted-foreground">You quoted</dt>
             <dd className="font-medium">
               {formatMoney(data.quotePriceMinor, data.currencyCode)}
             </dd>
           </div>
         </dl>
         <div className="grid gap-2">
-          <p className="text-sm font-medium">Affected Stores</p>
+          <p className="text-sm font-medium">Changes the price in</p>
           <ul className="grid gap-1 text-sm text-muted-foreground">
             {data.affectedStores.map((store) => (
               <li key={store.id}>• {store.name}</li>
@@ -176,25 +176,29 @@ export function CatalogPricePromotionForm({ storeId }: { storeId: string }) {
           </ul>
         </div>
         <ControlField
-          label={<>Reason</>}
-          error={form.formState.errors.reason?.message}
+          label="Why"
+          error={
+            form.formState.errors.reason
+              ? "Say why the price changes (at least 3 letters)."
+              : undefined
+          }
         >
           <Textarea
-            placeholder="Explain why this Quote price should become reusable"
+            placeholder="e.g. Fuel went up"
             {...form.register("reason")}
           />
         </ControlField>
         <CheckboxField
           label=<span>
-            Confirm this exact price and every Store listed above. Historical
-            Quotes and Orders will remain unchanged.
+            Yes, use this price in every store above. Quotes and orders already
+            sent keep their price.
           </span>
         >
           <FormCheckboxControl control={form.control} name={"confirmed"} />
         </CheckboxField>
         {form.formState.errors.confirmed ? (
           <FormFeedback appearance="dashboard">
-            {form.formState.errors.confirmed.message}
+            Tick the box to confirm the stores.
           </FormFeedback>
         ) : null}
         <FormActions>
@@ -203,7 +207,7 @@ export function CatalogPricePromotionForm({ storeId }: { storeId: string }) {
             disabled={promote.isPending || !form.formState.isValid}
             type="submit"
           >
-            {promote.isPending ? "Updating…" : "Promote quoted price"}
+            {promote.isPending ? "Saving…" : "Use this price"}
           </SubmitButton>
         </FormActions>
         {message ? (

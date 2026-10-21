@@ -1,4 +1,5 @@
 "use client"
+import { formatPrice } from "@/components/service-work/service-utils"
 import {
   Badge,
   Button,
@@ -129,9 +130,7 @@ export function CatalogDraftForm({ storeId }: { storeId: string }) {
             serviceCommerceSheet: "inventory_graduation",
           })
         } else {
-          setMessage(
-            "Verified request line linked. The Offering remains unchanged unless separately configured.",
-          )
+          setMessage("Linked. The catalog price and details stay as they are.")
         }
       },
     }),
@@ -165,8 +164,8 @@ export function CatalogDraftForm({ storeId }: { storeId: string }) {
         <div>
           <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
             {matches.data.sourceLine.evidence.kind === "human_verified"
-              ? "Human-verified source"
-              : "Customer wording — verify before saving"}
+              ? "Customer asked for (checked by you)"
+              : "Customer’s own words. Check before saving"}
           </p>
           <p className="mt-1 text-sm font-medium">
             {matches.data.sourceLine.displayLabel}
@@ -192,20 +191,26 @@ export function CatalogDraftForm({ storeId }: { storeId: string }) {
                 <span className="flex items-center justify-between gap-3">
                   <span className="font-medium">{match.offeringName}</span>
                   <Badge variant="secondary">
-                    {match.isPrivateDraft ? "Private draft" : "Existing"}
+                    {match.isPrivateDraft
+                      ? "Draft, not for sale yet"
+                      : "In your catalog"}
                   </Badge>
                 </span>
                 <span className="text-sm text-muted-foreground">
-                  {match.catalogItemName} · {match.variantName} · Match{" "}
-                  {Math.round(match.score * 100)}%
+                  {match.catalogItemName} · {match.variantName} ·{" "}
+                  {match.score >= 0.85
+                    ? "Close match"
+                    : match.score >= 0.6
+                      ? "Possible match"
+                      : "Weak match"}
                 </span>
               </button>
             ))}
           </div>
         ) : (
           <p className="border border-dashed p-4 text-sm text-muted-foreground">
-            No suitable Offering was found. Create a private draft below; it
-            will not be published or given invented stock.
+            Nothing in your catalog matches. Add it as a draft below. It stays
+            hidden and has no stock until you finish setting it up.
           </p>
         )}
       </section>
@@ -213,11 +218,9 @@ export function CatalogDraftForm({ storeId }: { storeId: string }) {
       {selected ? (
         <section className="grid gap-3 border border-border p-4">
           <div>
-            <h3 className="font-medium">Confirm existing Offering</h3>
+            <h3 className="font-medium">Link to {selected.offeringName}</h3>
             <p className="text-sm text-muted-foreground">
-              Link {selected.offeringName} only after confirming it represents
-              the reviewed request. Customer wording is never saved as a
-              verified Catalog alias automatically.
+              Only if it’s what the customer asked for.
             </p>
           </div>
           <PriceSuggestionState
@@ -226,7 +229,10 @@ export function CatalogDraftForm({ storeId }: { storeId: string }) {
             isLoading={prices.isLoading}
             onRetry={() => void prices.refetch()}
           />
-          <ControlField label={<>Confirmed Catalog alias</>}>
+          <ControlField
+            label="Words customers use for it"
+            description="Saved so the next request like this one matches on its own."
+          >
             <Input
               readOnly={Boolean(verifiedObservation)}
               {...form.register("verifiedAlias")}
@@ -249,7 +255,7 @@ export function CatalogDraftForm({ storeId }: { storeId: string }) {
             }}
             type="button"
           >
-            Confirm link
+            Link to this service
           </Button>
         </section>
       ) : null}
@@ -273,19 +279,30 @@ export function CatalogDraftForm({ storeId }: { storeId: string }) {
       >
         <FieldGroup className="min-w-0 grid gap-3">
           <div>
-            <h3 className="font-medium">Create private Catalog draft</h3>
+            <h3 className="font-medium">None of these? Add a draft</h3>
             <p className="text-sm text-muted-foreground">
-              Review the suggested name and enter a confirmed Catalog alias. Raw
-              customer wording is never treated as verified Catalog truth.
+              The draft is private. Nobody can buy it until you finish setting
+              it up.
             </p>
           </div>
           <ControlField
-            label={<>Catalog name</>}
-            error={form.formState.errors.name?.message}
+            label="Name for the new service"
+            error={
+              form.formState.errors.name
+                ? "Give the service a name."
+                : undefined
+            }
           >
             <Input {...form.register("name")} />
           </ControlField>
-          <ControlField label={<>Confirmed Catalog alias</>}>
+          <ControlField
+            label="Words customers use for it"
+            error={
+              form.formState.errors.verifiedAlias
+                ? "Add the words customers use."
+                : undefined
+            }
+          >
             <Input
               readOnly={Boolean(verifiedObservation)}
               {...form.register("verifiedAlias")}
@@ -297,7 +314,7 @@ export function CatalogDraftForm({ storeId }: { storeId: string }) {
               disabled={pending}
               type="submit"
             >
-              {createDraft.isPending ? "Creating…" : "Create private draft"}
+              {createDraft.isPending ? "Saving…" : "Save draft and set it up"}
             </SubmitButton>
           </FormActions>
         </FieldGroup>
@@ -325,12 +342,12 @@ function PriceSuggestionState({
 }) {
   if (isLoading)
     return (
-      <p className="text-sm text-muted-foreground">Checking price history…</p>
+      <p className="text-sm text-muted-foreground">Checking past prices…</p>
     )
   if (isError) {
     return (
       <Button className="w-fit" onClick={onRetry} variant="outline">
-        Retry price history
+        Try past prices again
       </Button>
     )
   }
@@ -346,16 +363,9 @@ function PriceSuggestionState({
   ) {
     return (
       <div className="space-y-1 text-sm text-muted-foreground">
-        <p>
-          No attributable Store price is available. Enter the current Quote
-          price manually.
-        </p>
+        <p>No past price for this store. Set the price in your quote.</p>
         {hasLegacyCompletedSaleEvidence ? (
-          <p>
-            Some completed sales predate immutable completion timestamps and are
-            excluded from automatic suggestions. Verify the current price
-            manually.
-          </p>
+          <p>Some older sales can’t be used here. Check the price yourself.</p>
         ) : null}
       </div>
     )
@@ -363,19 +373,22 @@ function PriceSuggestionState({
   return (
     <div className="space-y-1 text-sm text-muted-foreground">
       <p>
-        Suggested from {data.suggestion.source.replaceAll("_", " ")}:{" "}
-        {data.suggestion.currencyCode}{" "}
-        {(data.suggestion.priceMinor / 100).toLocaleString(undefined, {
-          minimumFractionDigits: 2,
-        })}
-        . This does not change the reusable Catalog price.
+        {data.suggestion.source === "accepted_quote"
+          ? "Last accepted quote"
+          : data.suggestion.source === "completed_sale"
+            ? "Last sale"
+            : "Price now"}
+        :{" "}
+        <span className="font-medium text-foreground">
+          {formatPrice(
+            data.suggestion.priceMinor,
+            data.suggestion.currencyCode,
+          )}
+        </span>
+        . Use it in your quote; it doesn’t change the catalog.
       </p>
       {hasLegacyCompletedSaleEvidence ? (
-        <p>
-          Some completed sales predate immutable completion timestamps and are
-          excluded from automatic suggestions. Verify the current price
-          manually.
-        </p>
+        <p>Some older sales can’t be used here. Check the price yourself.</p>
       ) : null}
     </div>
   )

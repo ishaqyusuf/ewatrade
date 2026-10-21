@@ -94,7 +94,13 @@ function MediaViewerContent({
             {media.fileName}
           </h3>
           <p className="text-sm text-muted-foreground">
-            Private customer {media.kind}. Viewing is audited.
+            Private{" "}
+            {media.kind === "image"
+              ? "photo"
+              : media.kind === "audio"
+                ? "voice note"
+                : "file"}{" "}
+            from the customer. Opening it is recorded.
           </p>
         </div>
         <MediaStatus lifecycle={media.lifecycle} />
@@ -104,7 +110,7 @@ function MediaViewerContent({
         {usable && grant ? (
           <MediaPreview
             key={grant.url}
-            label={`Authorized private attachment ${media.fileName}`}
+            label={`Customer file ${media.fileName}`}
             url={grant.url}
             onError={() => setFailed(true)}
             mimeType={media.mimeType}
@@ -113,12 +119,12 @@ function MediaViewerContent({
           <div className="grid max-w-sm justify-items-center gap-3 text-center">
             <p className="text-sm text-muted-foreground">
               {failed
-                ? "The private view failed to load. Authorize a new link and try again."
+                ? "It didn’t open. Try again."
                 : grant
-                  ? "The private view expired. Authorize a new short-lived link."
+                  ? "It closed after a few minutes to keep it private. Open it again."
                   : media.lifecycle === "safe"
-                    ? "Authorize a short-lived private view."
-                    : "This attachment cannot be viewed until safety checks permit it."}
+                    ? "Hidden until you open it."
+                    : "You can open it once it passes the safety check."}
             </p>
             <SubmitButton
               isSubmitting={authorize.isPending}
@@ -133,7 +139,11 @@ function MediaViewerContent({
               type="button"
               variant="outline"
             >
-              {authorize.isPending ? "Authorizing…" : "Authorize view"}
+              {authorize.isPending
+                ? "Opening…"
+                : grant || failed
+                  ? "Open again"
+                  : "Show photo"}
             </SubmitButton>
           </div>
         )}

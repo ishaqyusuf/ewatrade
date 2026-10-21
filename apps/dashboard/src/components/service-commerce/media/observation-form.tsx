@@ -70,7 +70,7 @@ export function ObservationForm({ storeId }: { storeId: string }) {
           }>,
           displayLabel: observation.displayLabel,
         })
-        setMessage("Human-verified observation saved.")
+        setMessage("Saved.")
       },
     }),
   )
@@ -94,32 +94,39 @@ export function ObservationForm({ storeId }: { storeId: string }) {
     >
       <FieldGroup className="min-w-0 grid gap-4">
         <div>
-          <h3 className="font-medium">Human-verified observation</h3>
+          <h3 className="font-medium">What does it show?</h3>
           <p className="text-sm text-muted-foreground">
-            Record what you verified, for example “Red small bag”. This does not
-            publish, price, or create inventory automatically.
+            Your words, checked by you, for example “Two layer hens, coughing”.
+            Nothing is priced or added to the catalog yet.
           </p>
         </div>
-        <ControlField label={<>Verified description</>}>
+        <ControlField
+          label="Short description"
+          error={
+            form.formState.errors.displayLabel
+              ? "Describe what the photo shows."
+              : undefined
+          }
+        >
           <Input disabled={!canVerify} {...form.register("displayLabel")} />
         </ControlField>
         <div className="grid gap-2">
           {fields.fields.map((field, index) => (
             <div className="grid grid-cols-[1fr_1fr_auto] gap-2" key={field.id}>
               <Input
-                aria-label={`Attribute ${index + 1} name`}
+                aria-label={`Detail ${index + 1} name`}
                 disabled={!canVerify}
-                placeholder="Colour"
+                placeholder="Detail, e.g. Colour"
                 {...form.register(`attributes.${index}.name`)}
               />
               <Input
-                aria-label={`Attribute ${index + 1} value`}
+                aria-label={`Detail ${index + 1} value`}
                 disabled={!canVerify}
-                placeholder="Red"
+                placeholder="e.g. Brown"
                 {...form.register(`attributes.${index}.value`)}
               />
               <Button
-                aria-label={`Remove attribute ${index + 1}`}
+                aria-label={`Remove detail ${index + 1}`}
                 disabled={!canVerify}
                 onClick={() => fields.remove(index)}
                 type="button"
@@ -136,8 +143,14 @@ export function ObservationForm({ storeId }: { storeId: string }) {
             type="button"
             variant="outline"
           >
-            Add attribute
+            Add a detail
           </Button>
+          {form.formState.errors.attributes ? (
+            <p role="alert" className="text-sm text-destructive">
+              Fill in both boxes for each detail with different names, or remove
+              it.
+            </p>
+          ) : null}
         </div>
         <FormActions>
           <SubmitButton
@@ -145,7 +158,7 @@ export function ObservationForm({ storeId }: { storeId: string }) {
             disabled={!canVerify || verify.isPending}
             type="submit"
           >
-            {verify.isPending ? "Saving…" : "Save verified observation"}
+            {verify.isPending ? "Saving…" : "Save"}
           </SubmitButton>
         </FormActions>
         {attachment.data.observation &&
@@ -162,7 +175,7 @@ export function ObservationForm({ storeId }: { storeId: string }) {
             type="button"
             variant="outline"
           >
-            Match to Catalog
+            Match to your catalog
           </Button>
         ) : null}
         {message ? (

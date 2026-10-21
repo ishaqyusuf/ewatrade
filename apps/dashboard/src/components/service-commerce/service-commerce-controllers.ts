@@ -30,10 +30,10 @@ export const SERVICE_COMMERCE_CONTROLLERS = {
   },
   attachment_review: {
     description:
-      "Review a safety-permitted attachment and record attributable customer-request meaning.",
+      "Note what the customer’s photo or file shows, then match it to your catalog.",
     implemented: true,
     requiredIds: ["attachmentId"],
-    title: "Review attachment",
+    title: "Customer photo",
   },
   booking: {
     description: "Set open times, or create a booking link for one customer.",
@@ -43,10 +43,10 @@ export const SERVICE_COMMERCE_CONTROLLERS = {
   },
   catalog_draft: {
     description:
-      "Match a verified customer request to an existing Offering or create a private draft.",
+      "Link what the customer asked for to a service you sell, or add it as a draft.",
     implemented: true,
     requiredIds: ["sourceKind", "sourceId", "sourceLineId"],
-    title: "Resolve Catalog item",
+    title: "Match to your catalog",
   },
   connection: {
     description:
@@ -71,17 +71,17 @@ export const SERVICE_COMMERCE_CONTROLLERS = {
   intake: unavailable("New customer request"),
   inventory_graduation: {
     description:
-      "Complete verified Product inventory or Service operating facts without publishing implicitly.",
+      "Add what’s missing so you can sell it. It stays hidden until you make it available.",
     implemented: true,
     requiredIds: ["offeringId"],
-    title: "Graduate Catalog offering",
+    title: "Finish setting up",
   },
   media: {
     description:
-      "Inspect private customer media through a short-lived authorized view.",
+      "A private photo or file a customer sent. Opening it is recorded.",
     implemented: true,
     requiredIds: ["attachmentId"],
-    title: "Customer attachment",
+    title: "Customer photo",
   },
   quote: unavailable("Quotation"),
   quote_approval: {

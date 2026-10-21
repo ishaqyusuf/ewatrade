@@ -118,9 +118,7 @@ export function CatalogGraduationForm({ storeId }: { storeId: string }) {
       onSuccess: async () => {
         await invalidate()
         graduationId.current = null
-        setMessage(
-          "Managed-operation facts saved. This Offering is still private until you publish it separately.",
-        )
+        setMessage("Saved. It’s still hidden from customers.")
       },
     }),
   )
@@ -130,7 +128,7 @@ export function CatalogGraduationForm({ storeId }: { storeId: string }) {
       onSuccess: async () => {
         await invalidate()
         publicationId.current = null
-        setMessage("Offering published for this Store.")
+        setMessage("It’s now available to customers.")
       },
     }),
   )
@@ -142,7 +140,7 @@ export function CatalogGraduationForm({ storeId }: { storeId: string }) {
     return (
       <FieldGroup className="grid gap-3">
         <FormFeedback appearance="dashboard">
-          {readiness.error?.message ?? "Graduation readiness is unavailable."}
+          {readiness.error?.message ?? "This service couldn’t be loaded."}
         </FormFeedback>
         <Button
           className="w-fit"
@@ -159,6 +157,8 @@ export function CatalogGraduationForm({ storeId }: { storeId: string }) {
   const draftKind = form.watch("draftKind")
   const pending = graduate.isPending || publish.isPending
 
+  // Product and Service facts share one form; read errors by name across both.
+  const fieldErrors = form.formState.errors as Partial<Record<string, unknown>>
   return (
     <form
       onSubmit={form.handleSubmit((values) => {
@@ -171,30 +171,30 @@ export function CatalogGraduationForm({ storeId }: { storeId: string }) {
         <section className="grid gap-3 border border-border p-4">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <h3 className="font-medium">Graduation readiness</h3>
+              <h3 className="font-medium">What’s still needed</h3>
               <p className="text-sm text-muted-foreground">
-                Complete the missing facts below. Existing request, Quote, Order
-                and price history remain attached.
+                Requests, quotes and orders already linked to it stay linked.
               </p>
             </div>
             <Badge variant={data.isPublished ? "default" : "secondary"}>
               {data.isPublished
-                ? "Published"
+                ? "Available to customers"
                 : data.isGraduated
-                  ? "Ready to publish"
+                  ? "Set up, still hidden"
                   : "Private draft"}
             </Badge>
           </div>
           {data.missingFacts.length ? (
-            <ul className="grid gap-1 text-sm text-muted-foreground">
-              {data.missingFacts.map((fact) => (
-                <li key={fact}>Missing: {fact.replaceAll("_", " ")}</li>
-              ))}
-            </ul>
+            <p className="text-sm text-muted-foreground">
+              Still needed:{" "}
+              {data.missingFacts
+                .map((fact) => missingFactLabel(fact))
+                .join(", ")}
+              .
+            </p>
           ) : (
             <p className="text-sm text-muted-foreground">
-              Managed-operation facts are complete. Publication remains a
-              separate confirmation.
+              Nothing is missing. Make it available when you’re ready.
             </p>
           )}
         </section>
@@ -205,10 +205,10 @@ export function CatalogGraduationForm({ storeId }: { storeId: string }) {
               <Field label="Category">
                 <Input {...form.register("category")} />
               </Field>
-              <Field label="Variant or option">
+              <Field label="Name or option">
                 <Input {...form.register("variantName")} />
               </Field>
-              <Field label={`Reusable price (${data.currencyCode})`}>
+              <Field label="Price">
                 <CurrencyInput
                   currencyCode={data.currencyCode}
                   value={minorToMajorInput(form.watch("fixedPriceMinor"))}
@@ -228,13 +228,13 @@ export function CatalogGraduationForm({ storeId }: { storeId: string }) {
                   <Field label="Barcode">
                     <Input {...form.register("barcode")} />
                   </Field>
-                  <Field label="Canonical unit">
+                  <Field label="Sold in (unit)">
                     <Input {...form.register("canonicalUnitName")} />
                   </Field>
                   <Field label="Unit symbol">
                     <Input {...form.register("canonicalUnitSymbol")} />
                   </Field>
-                  <Field label="Verified opening count">
+                  <Field label="How many you have now">
                     <Input
                       inputMode="decimal"
                       {...form.register("openingStockQuantity")}
@@ -243,7 +243,7 @@ export function CatalogGraduationForm({ storeId }: { storeId: string }) {
                 </>
               ) : (
                 <>
-                  <Field label="Duration (minutes)">
+                  <Field label="Takes about (minutes)">
                     <Input
                       min={1}
                       type="number"
@@ -252,85 +252,118 @@ export function CatalogGraduationForm({ storeId }: { storeId: string }) {
                       })}
                     />
                   </Field>
-                  <Field label="Work policy">
+                  <Field label="After someone orders it">
                     <FormSelectControl
                       control={form.control}
                       name={"workPolicy"}
                       options={[
-                        { value: "charge_only", label: <>Charge only</> },
-                        { value: "tracked", label: <>Tracked work</> },
+                        {
+                          value: "charge_only",
+                          label: <>Just charge for it</>,
+                        },
+                        { value: "tracked", label: <>Track it as a job</> },
                       ]}
                     />
                   </Field>
-                  <Field label="Booking policy">
+                  <Field label="Booking a time">
                     <FormSelectControl
                       control={form.control}
                       name={"bookingPolicy"}
                       options={[
-                        { value: "not_bookable", label: <>Not bookable</> },
+                        {
+                          value: "not_bookable",
+                          label: <>No booking needed</>,
+                        },
                         {
                           value: "request_required",
-                          label: <>Request required</>,
+                          label: <>Customer asks, you confirm</>,
                         },
                         {
                           value: "booking_required",
-                          label: <>Booking required</>,
+                          label: <>Customer must book a time</>,
                         },
                       ]}
                     />
                   </Field>
-                  <Field label="Work authorization">
+                  <Field label="Work can start">
                     <FormSelectControl
                       control={form.control}
                       name={"authorizationPolicy"}
                       options={[
                         {
                           value: "on_order_confirmation",
-                          label: <>On order confirmation</>,
+                          label: <>Right after the order</>,
                         },
                         {
                           value: "after_required_payment",
-                          label: <>After required payment</>,
+                          label: <>After payment</>,
                         },
-                        { value: "manual_release", label: <>Manual release</> },
+                        {
+                          value: "manual_release",
+                          label: <>After a manager approves</>,
+                        },
                       ]}
                     />
                   </Field>
                 </>
               )}
             </div>
-            <Field label="Reason">
-              <Textarea {...form.register("reason")} />
+            <Field label="Note for your records">
+              <Textarea
+                placeholder="e.g. Set up from Ngozi’s request"
+                {...form.register("reason")}
+              />
             </Field>
+            {Object.keys(fieldErrors).length ? (
+              <p role="alert" className="text-sm text-destructive">
+                {fieldErrors.reason
+                  ? "Add a short note (at least 3 letters). "
+                  : ""}
+                {fieldErrors.sku || fieldErrors.barcode
+                  ? "Add a SKU or barcode. "
+                  : ""}
+                {fieldErrors.openingStockQuantity
+                  ? "How many you have must be a whole number. "
+                  : ""}
+                {fieldErrors.category || fieldErrors.variantName
+                  ? "Add a category and a name. "
+                  : ""}
+              </p>
+            ) : null}
             <CheckboxField
-              label=<span>
-                I confirm these operating facts and the opening count. This does
-                not publish the Offering.
-              </span>
+              label={
+                <span>
+                  {draftKind === "product"
+                    ? "These details and the count are right. It stays hidden for now."
+                    : "These details are right. It stays hidden for now."}
+                </span>
+              }
             >
               <FormCheckboxControl control={form.control} name={"confirmed"} />
             </CheckboxField>
             <FormActions>
               <SubmitButton
                 isSubmitting={pending}
-                disabled={pending || !form.formState.isValid}
+                disabled={pending}
                 type="submit"
               >
-                {graduate.isPending ? "Graduating…" : "Graduate offering"}
+                {graduate.isPending ? "Saving…" : "Save"}
               </SubmitButton>
             </FormActions>
           </section>
         ) : !data.isPublished ? (
           <section className="grid gap-4 border border-border p-4">
             <div>
-              <h3 className="font-medium">Publish separately</h3>
+              <h3 className="font-medium">Make it available</h3>
               <p className="text-sm text-muted-foreground">
-                Publishing makes this Offering available to customers. It does
-                not change the verified opening count.
+                Customers can then ask for it and staff can add it to orders.
               </p>
             </div>
-            <Field label="Publication reason">
-              <Textarea {...form.register("reason")} />
+            <Field label="Note for your records">
+              <Textarea
+                placeholder="e.g. Price agreed with the owner"
+                {...form.register("reason")}
+              />
             </Field>
             <Button
               disabled={pending || form.watch("reason").trim().length < 3}
@@ -348,7 +381,7 @@ export function CatalogGraduationForm({ storeId }: { storeId: string }) {
               }}
               type="button"
             >
-              {publish.isPending ? "Publishing…" : "Confirm and publish"}
+              {publish.isPending ? "Saving…" : "Make it available"}
             </Button>
           </section>
         ) : null}
@@ -371,4 +404,20 @@ function Field({
   label: string
 }) {
   return <ControlField label={label}>{children}</ControlField>
+}
+
+const MISSING_FACT_LABELS: Record<string, string> = {
+  category: "a category",
+  variant: "a name or option",
+  reusable_price: "a price",
+  product_unit: "the unit it’s sold in",
+  product_identifier: "a SKU or barcode",
+  opening_count: "how many you have",
+  service_duration: "how long it takes",
+  service_work_policy: "what happens after an order",
+  service_booking_policy: "whether customers book a time",
+}
+
+function missingFactLabel(fact: string) {
+  return MISSING_FACT_LABELS[fact] ?? fact.replaceAll("_", " ")
 }
