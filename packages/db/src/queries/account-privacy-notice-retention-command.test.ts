@@ -127,9 +127,10 @@ test("normal prepare appends exact authorization atomically without changing ear
     completion,
     "assessAccountPrivacyCompletion",
   ).mockResolvedValue({
+    eligible: false,
     blockers: [],
     missingDomains: ["OUTCOME_NOTICE"],
-  } as Awaited<ReturnType<typeof completion.assessAccountPrivacyCompletion>>)
+  })
   try {
     const input = {
       requestId: "case",
@@ -179,9 +180,10 @@ test("a changed authorization or expired send window cannot prepare an attempt",
     completion,
     "assessAccountPrivacyCompletion",
   ).mockResolvedValue({
+    eligible: false,
     blockers: [],
     missingDomains: ["OUTCOME_NOTICE"],
-  } as Awaited<ReturnType<typeof completion.assessAccountPrivacyCompletion>>)
+  })
   try {
     await expect(
       prepareAccountPrivacyNotice(f.db, {
@@ -211,9 +213,10 @@ test("owner-approved recipient cannot drift with changed case contact or policy 
     completion,
     "assessAccountPrivacyCompletion",
   ).mockResolvedValue({
+    eligible: false,
     blockers: [],
     missingDomains: ["OUTCOME_NOTICE"],
-  } as Awaited<ReturnType<typeof completion.assessAccountPrivacyCompletion>>)
+  })
   try {
     await expect(
       prepareAccountPrivacyNotice(f.db, {
