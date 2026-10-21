@@ -7,6 +7,8 @@ import { QaDashboardQuickFill } from "@/components/qa/qa-quick-fill"
 import {
   StaffRolePicker,
   type StaffRolePickerValue,
+  pickerAssignments,
+  pickerHasManager,
 } from "@/components/staff/staff-role-picker"
 import type { StaffInviteRole } from "@/lib/staff-management"
 import {
@@ -50,6 +52,7 @@ export function StaffInviteContent({
     storeIds: [storeId],
     startStoreId: storeId,
     catalogEditor: false,
+    storeRoles: null,
   })
   const [storeAccessReady, setStoreAccessReady] = useState(false)
   useEffect(() => {
@@ -104,10 +107,7 @@ export function StaffInviteContent({
       return
     }
     // The first store sent is where they start.
-    const storeIds = [
-      ...(access.startStoreId ? [access.startStoreId] : []),
-      ...access.storeIds.filter((id) => id !== access.startStoreId),
-    ]
+    const assignments = pickerAssignments(access)
     setIsSaving(true)
 
     try {
@@ -116,13 +116,10 @@ export function StaffInviteContent({
           email: inviteForm.email.trim(),
           name: inviteForm.name.trim() || undefined,
           operation: "invite",
-          role: access.role,
-          storeId: storeIds[0],
-          assignments: storeIds.map((id) => ({
-            storeId: id,
-            role: access.role,
-          })),
-          catalogEditor: access.role === "manager" && access.catalogEditor,
+          role: assignments[0]?.role ?? access.role,
+          storeId: assignments[0]?.storeId,
+          assignments,
+          catalogEditor: pickerHasManager(access) && access.catalogEditor,
         }),
         headers: { "Content-Type": "application/json" },
         method: "POST",

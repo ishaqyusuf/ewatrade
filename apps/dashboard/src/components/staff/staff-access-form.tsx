@@ -10,7 +10,12 @@ import {
 import type { StaffInviteRole } from "@/lib/staff-management"
 import { Button, Checkbox } from "@ewatrade/ui"
 import { useId, useState } from "react"
-import { StaffRolePicker, type StaffRolePickerValue } from "./staff-role-picker"
+import {
+  StaffRolePicker,
+  type StaffRolePickerValue,
+  pickerAssignments,
+  pickerHasManager,
+} from "./staff-role-picker"
 
 /** Change access: a view inside the member sheet. Saves one role across the chosen stores. */
 export function StaffAccessForm({
@@ -77,6 +82,16 @@ function AccessFormBody({
       assignments[0]?.storeId ??
       null,
     catalogEditor: access.catalogEditor,
+    // Keep different roles per store when they already have them.
+    storeRoles:
+      roles.size > 1
+        ? Object.fromEntries(
+            assignments.map((row) => [
+              row.storeId,
+              row.role.toLowerCase() as StaffInviteRole,
+            ]),
+          )
+        : null,
   })
   const [confirmed, setConfirmed] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -96,12 +111,9 @@ function AccessFormBody({
           staffUserId: userId,
           expectedRevision: access.staffAccessRevision,
           confirmLegacyCutover: confirmed,
-          assignments: value.storeIds.map((storeId) => ({
-            storeId,
-            role: value.role,
-          })),
+          assignments: pickerAssignments(value),
           defaultStoreId: value.storeIds.length ? value.startStoreId : null,
-          catalogEditor: value.role === "manager" && value.catalogEditor,
+          catalogEditor: pickerHasManager(value) && value.catalogEditor,
         }),
       })
       const result = (await response.json()) as { error?: string }
@@ -136,7 +148,7 @@ function AccessFormBody({
           They can use every store today. Choose the stores they should keep.
         </p>
       ) : null}
-      {roles.size > 1 ? (
+      {roles.size > 1 && !value.storeRoles ? (
         <FormFeedback appearance="dashboard" variant="default">
           They have different roles in different stores today. Saving gives them
           this role in every store.
