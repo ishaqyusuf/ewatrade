@@ -1,5 +1,6 @@
 "use client"
 
+import { SearchField } from "@/components/search-field"
 import { FinanceBankStatementDataTable } from "@/components/tables/finance-bank-statements/data-table"
 import { useFinanceParams } from "@/hooks/use-finance-params"
 import type { DirectoryView } from "@/utils/directory-view-settings"
@@ -16,7 +17,7 @@ export function FinanceBankStatements({
   initialTableSettings?: TableSettings
   view: DirectoryView
 }) {
-  const { bankAccountId, setParams } = useFinanceParams()
+  const { bankAccountId, bankQuery, setParams } = useFinanceParams()
   const accounts = book.accounts.filter(
     (account) =>
       account.kind === "ASSET" &&
@@ -25,6 +26,12 @@ export function FinanceBankStatements({
   return (
     <section className="grid min-w-0 gap-5">
       <div className="flex flex-wrap items-center gap-3">
+        <SearchField
+          placeholder="Search statements..."
+          value={bankQuery}
+          onSearch={(value) => void setParams({ bankQuery: value || null })}
+          onClear={() => void setParams({ bankQuery: null })}
+        />
         <SelectControl
           aria-label="Filter bank statements by account"
           className="w-full sm:w-72"
@@ -42,7 +49,7 @@ export function FinanceBankStatements({
         />
       </div>
       <FinanceBankStatementDataTable
-        key={`${book.id}:${bankAccountId}`}
+        key={`${book.id}:${bankAccountId}:${bankQuery}`}
         book={book}
         initialSettings={initialTableSettings}
         view={view}

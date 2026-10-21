@@ -29,12 +29,13 @@ export function FinanceBankStatementDataTable({
   view: DirectoryView
 }) {
   const trpc = useTRPC()
-  const { bankAccountId, setParams } = useFinanceParams()
+  const { bankAccountId, bankQuery, setParams } = useFinanceParams()
   const query = useInfiniteQuery(
     trpc.finance.bankStatements.list.infiniteQueryOptions(
       {
         bookId: book.id,
         accountId: bankAccountId || undefined,
+        query: bankQuery.trim() || undefined,
         limit: 30,
       },
       {
@@ -51,7 +52,7 @@ export function FinanceBankStatementDataTable({
   const [rowSelection, setRowSelection] = useLoadedRowSelection({
     rows: data,
     getRowId: getStatementId,
-    scope: JSON.stringify([book.id, bankAccountId]),
+    scope: JSON.stringify([book.id, bankAccountId, bankQuery.trim()]),
   })
   const columns = useMemo(
     () =>
@@ -104,7 +105,7 @@ export function FinanceBankStatementDataTable({
       table={table}
       book={book}
       view={view}
-      filtered={Boolean(bankAccountId.trim())}
+      filtered={Boolean(bankAccountId.trim() || bankQuery.trim())}
       isPending={query.isPending}
       hasData={Boolean(query.data)}
       isInitialError={query.isError && !query.data}

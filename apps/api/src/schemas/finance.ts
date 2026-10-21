@@ -81,6 +81,7 @@ export const financeMoneyAccountPaymentsSchema = financeBookSchema
     accountId: id,
     paymentMethods,
     availableForPayments: z.boolean(),
+    mobileMoney: z.boolean().optional(),
   })
   .strict()
 const money = financeBookSchema.extend({
@@ -190,7 +191,9 @@ export const financeBillsSchema = financeBookSchema
   .extend({
     query: z.string().trim().max(160).optional(),
     storeId: id.optional(),
-    status: z.enum(["UNPAID", "PARTIAL", "PAID", "VOID"]).optional(),
+    status: z
+      .enum(["UNPAID", "PARTIAL", "PAID", "VOID", "OPEN", "NO_RECEIPT"])
+      .optional(),
     cursor: id.optional(),
     limit: z.number().int().min(1).max(50).default(30),
     direction: z.enum(["forward", "backward"]).optional(),

@@ -13,7 +13,8 @@ export async function listFinanceBills(
     bookId: string
     query?: string
     storeId?: string
-    status?: "UNPAID" | "PARTIAL" | "PAID" | "VOID"
+    /** OPEN = still to pay (unpaid or partly paid); NO_RECEIPT = no attached receipt. */
+    status?: "UNPAID" | "PARTIAL" | "PAID" | "VOID" | "OPEN" | "NO_RECEIPT"
     cursor?: string
     limit?: number
     sort?: {
@@ -69,7 +70,15 @@ export async function listFinanceBills(
                     lt: tx.financeBill.fields.totalMinor,
                   },
                 }
-              : {}),
+              : input.status === "OPEN"
+                ? { paidMinor: { lt: tx.financeBill.fields.totalMinor } }
+                : input.status === "NO_RECEIPT"
+                  ? {
+                      expenseReceiptAssets: {
+                        none: { attachmentState: "ATTACHED" },
+                      },
+                    }
+                  : {}),
       }
       const sortFields: Array<{
         direction: "asc" | "desc"

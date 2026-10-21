@@ -7,6 +7,8 @@ export const financeExpenseFilterParams = {
     "PARTIAL",
     "PAID",
     "VOID",
+    "OPEN",
+    "NO_RECEIPT",
   ] as const),
 }
 export const loadFinanceExpenseFilterParams = createLoader(

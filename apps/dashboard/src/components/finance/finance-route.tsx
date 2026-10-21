@@ -80,6 +80,7 @@ export async function FinanceRoute({
         {
           bookId: book.id,
           accountId: filter.bankAccountId || undefined,
+          query: filter.bankQuery.trim() || undefined,
           limit: 30,
         },
         {

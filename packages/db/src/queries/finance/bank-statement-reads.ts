@@ -120,13 +120,21 @@ export async function listFinanceBankStatements(
   supplied: FinanceActor & {
     bookId: string
     accountId?: string
+    /** Matches the statement reference or its account's name. */
+    query?: string
     cursor?: string
     limit?: number
   },
 ) {
   const input = { ...supplied }
   const limit = input.limit ?? 30
-  if (!Number.isInteger(limit) || limit < 1 || limit > 50)
+  const query = input.query?.trim() || undefined
+  if (
+    !Number.isInteger(limit) ||
+    limit < 1 ||
+    limit > 50 ||
+    (query?.length ?? 0) > 160
+  )
     throw new FinanceError(
       "INVALID_JOURNAL",
       "Invalid bank statement page size.",
@@ -134,12 +142,30 @@ export async function listFinanceBankStatements(
   return db.$transaction(
     async (tx) => {
       const book = await bankReadBook(tx, input)
+      const namedAccounts = query
+        ? await tx.financeAccount.findMany({
+            where: {
+              bookId: book.id,
+              name: { contains: query, mode: "insensitive" },
+            },
+            select: { id: true },
+          })
+        : []
+      const search: Prisma.FinanceBankStatementWhereInput = query
+        ? {
+            OR: [
+              { reference: { contains: query, mode: "insensitive" } },
+              { accountId: { in: namedAccounts.map((account) => account.id) } },
+            ],
+          }
+        : {}
       const cursor = input.cursor
         ? await tx.financeBankStatement.findFirst({
             where: {
               id: input.cursor,
               bookId: book.id,
               accountId: input.accountId,
+              ...search,
             },
             select: { id: true },
           })
@@ -153,6 +179,7 @@ export async function listFinanceBankStatements(
         where: {
           bookId: book.id,
           accountId: input.accountId,
+          ...search,
           ...(cursor ? { id: { lt: cursor.id } } : {}),
         },
         orderBy: { id: "desc" },

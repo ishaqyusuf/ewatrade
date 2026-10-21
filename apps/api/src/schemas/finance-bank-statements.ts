@@ -30,6 +30,7 @@ export const financeBankStatementSchema = financeBookSchema
 export const financeBankStatementsSchema = financeBookSchema
   .extend({
     accountId: id.optional(),
+    query: z.string().trim().max(160).optional(),
     cursor: id.optional(),
     direction: pageDirection,
     limit: z.number().int().min(1).max(50).default(30),

@@ -10,10 +10,13 @@ import {
   DropdownMenuSubTrigger,
 } from "@ewatrade/ui"
 
+// Finance pages workshop 01: Still to pay and Missing receipt beside the payment states.
 const statuses = [
+  { id: "OPEN", label: "Still to pay" },
   { id: "UNPAID", label: "Unpaid" },
   { id: "PARTIAL", label: "Partly paid" },
   { id: "PAID", label: "Paid" },
+  { id: "NO_RECEIPT", label: "Missing receipt" },
   { id: "VOID", label: "Cancelled" },
 ] as const
 
@@ -25,8 +28,8 @@ export function ExpenseSearchFilter() {
         groups: [
           {
             id: "status",
-            label: "Payment status",
-            allLabel: "All statuses",
+            label: "Show",
+            allLabel: "All expenses",
             options: statuses.map((item) => ({
               value: item.id,
               label: item.label,
@@ -63,7 +66,7 @@ export function ExpenseSearchFilter() {
     >
       <DropdownMenuGroup>
         <DropdownMenuSub>
-          <DropdownMenuSubTrigger>Payment status</DropdownMenuSubTrigger>
+          <DropdownMenuSubTrigger>Show</DropdownMenuSubTrigger>
           <DropdownMenuSubContent
             appearance="dashboard"
             sideOffset={14}
