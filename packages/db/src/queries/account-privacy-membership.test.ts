@@ -172,6 +172,50 @@ const command = {
 }
 
 describe("account privacy membership access stage", () => {
+  test("resumes committed removals without inventing prior nonapplication or duplicating audit", async () => {
+    const previousPolicy = process.env.ACCOUNT_PRIVACY_APPROVED_POLICY_VERSION
+    process.env.ACCOUNT_PRIVACY_PROCESSING_ENABLED = "true"
+    process.env.ACCOUNT_PRIVACY_MEMBERSHIP_PROCESSING_ENABLED = "true"
+    try {
+      Reflect.deleteProperty(
+        process.env,
+        "ACCOUNT_PRIVACY_APPROVED_POLICY_VERSION",
+      )
+      const current = fixture()
+      const first = await revokeAccountPrivacyMembershipAccess(
+        current.db,
+        command,
+      )
+      expect(first.membershipsRemoved).toBe(1)
+      expect(first.outcomeRecorded).toBe(false)
+      expect(current.outcomes).toHaveLength(0)
+      expect(current.audit).toHaveLength(1)
+      process.env.ACCOUNT_PRIVACY_APPROVED_POLICY_VERSION =
+        "approved-resumption-test-v1"
+      const resumed = await revokeAccountPrivacyMembershipAccess(
+        current.db,
+        command,
+      )
+      expect(resumed.replay).toBe(true)
+      expect(resumed.membershipsRemoved).toBe(0)
+      expect(resumed.staffProfilesRemoved).toBe(0)
+      expect(resumed.invitationsRevoked).toBe(0)
+      expect(resumed.outcomeRecorded).toBe(true)
+      expect(current.audit).toHaveLength(1)
+      expect(current.outcomes).toHaveLength(1)
+      await revokeAccountPrivacyMembershipAccess(current.db, command)
+      expect(current.audit).toHaveLength(1)
+      expect(current.outcomes).toHaveLength(1)
+    } finally {
+      if (previousPolicy === undefined)
+        Reflect.deleteProperty(
+          process.env,
+          "ACCOUNT_PRIVACY_APPROVED_POLICY_VERSION",
+        )
+      else process.env.ACCOUNT_PRIVACY_APPROVED_POLICY_VERSION = previousPolicy
+    }
+  })
+
   test("is disabled by default", async () => {
     process.env.ACCOUNT_PRIVACY_PROCESSING_ENABLED = "false"
     process.env.ACCOUNT_PRIVACY_MEMBERSHIP_PROCESSING_ENABLED = "false"
