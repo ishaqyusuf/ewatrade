@@ -1,0 +1,33 @@
+{
+  "version": 1,
+  "id": "2026-10-21-preview-membership-resumption",
+  "tickets": [
+    "H02"
+  ],
+  "summary": "Expose a bounded Preview-only membership replay authorization proof while preserving unknown prior command outcomes.",
+  "noAssistantImpact": "Dedicated internal privacy administration only. No merchant/assistant command or new processing authority. Production and other stages fail closed; normal canonical processing permissions and evidence remain required.",
+  "capabilities": [],
+  "procedures": [],
+  "docs": [
+    {
+      "topic": "feature",
+      "status": "local_only",
+      "path": ".brain/features/account-privacy.md",
+      "note": "Records isolated Preview membership resumption and unconfirmed prior outcome."
+    },
+    {
+      "topic": "api",
+      "status": "local_only",
+      "path": ".brain/api/contracts.md",
+      "note": "Documents optional server-issued Preview proof and expiry semantics."
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "run",
+      "path": "packages/db/src/queries/account-privacy-membership-resumption.test.ts",
+      "executed": true,
+      "result": "Focused Product20tests99assertions and independent cross-repository24tests160assertions pass, including actual processor replay without duplicated lifecycle events/outcomes. API strict types and seven Office package types/build pass. No live retry or configuration mutation."
+    }
+  ]
+}

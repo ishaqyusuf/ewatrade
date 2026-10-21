@@ -10,6 +10,7 @@ import { revokeAccountPrivacyConversationAccess } from "./account-privacy-conver
 import { confirmNoAccountPrivacyConversations } from "./account-privacy-conversation-outcome"
 import { confirmAccountPrivacyIdentityAccessRevoked } from "./account-privacy-identity-outcome"
 import { revokeAccountPrivacyMembershipAccess } from "./account-privacy-membership"
+import { accountPrivacyMembershipResumption } from "./account-privacy-membership-resumption"
 import { confirmNoAccountPrivacyPrescriptions } from "./account-privacy-prescription-outcome"
 import {
   type AccountPrivacyPrivateMediaPort,
@@ -153,10 +154,16 @@ export async function getAccountPrivacyWorkflow(
     privateAssistantRecords: privateAssistant.total,
     conversationAccessRemains: activeConversationLinks > 0,
   }
+  const nextStep = nextAccountPrivacyWorkflowStep(snapshot)
   return {
     requestId: input.requestId,
     ...snapshot,
-    nextStep: nextAccountPrivacyWorkflowStep(snapshot),
+    nextStep,
+    membershipResumption: accountPrivacyMembershipResumption({
+      requestId: input.requestId,
+      ...snapshot,
+      nextStep,
+    }),
   }
 }
 
