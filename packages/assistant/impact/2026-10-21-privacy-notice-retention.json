@@ -1,0 +1,16 @@
+{
+  "version": 1,
+  "id": "2026-10-21-privacy-notice-retention",
+  "tickets": ["H02"],
+  "summary": "Bind the newly approved outcome notice's provider retention to its exact case, recipient, content, operator and attempt while preserving the original external review and profile evidence.",
+  "noAssistantImpact": "Dedicated internal platform privacy operations only. No merchant capability, assistant tool or new Office operation is exposed. Normal signed Office authentication, platform-admin authority, canonical current-state checks, immutable policy/evidence and recipient-matched signed provider delivery remain required. Uncertain sends are not retried automatically.",
+  "capabilities": [],
+  "procedures": [],
+  "docs": [
+    {"topic": "feature", "status": "local_only", "path": ".brain/features/account-privacy.md", "note": "Records the new-copy retention binding, the exact approved disposable Preview notice, real signed delivery and scoped cleanup; broader mobile acceptance stays open."},
+    {"topic": "api", "status": "local_only", "path": ".brain/api/contracts.md", "note": "The existing sendNotice operation atomically binds approved notice retention during preparation; claim and completion recheck current evidence. No schema or endpoint change."}
+  ],
+  "evidence": [
+    {"kind": "run", "path": "packages/db/src/queries/account-privacy-notice-retention-command.test.ts", "executed": true, "result": "Accepted focused source suite passes 145 tests/374 assertions without database access. Full credential-isolated Recipe5 strict API compilation and bundle passed on current Production base 8c6c2a863. Exact query/test files match independently reviewed Preview source 99e24f7a; the approved single Preview message reached DELIVERED through a real signed recipient-matched Resend callback, with no resend after the Office timeout."}
+  ]
+}
