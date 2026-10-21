@@ -113,7 +113,12 @@ export function getStaffWorkingRoleLabel(staff: StaffMemberRow) {
   return role ? getStaffRoleLabel(role) : "Mixed roles"
 }
 
-export type StaffStatusKey = "active" | "expired" | "invited" | "suspended"
+export type StaffStatusKey =
+  | "active"
+  | "cancelled"
+  | "expired"
+  | "invited"
+  | "suspended"
 
 /** Active, invited, invite expired or suspended; expiry comes from the pending link. */
 export function getStaffStatusKey(
@@ -123,6 +128,8 @@ export function getStaffStatusKey(
   const status = staff.status.trim().toUpperCase()
   if (status === "SUSPENDED") return "suspended"
   if (status !== "INVITED") return "active"
+  // Invited with no live link: the invite was cancelled but they are still listed.
+  if (staff.access && !staff.access.invitationId) return "cancelled"
   const expiresAt = staff.access?.invitationExpiresAt
   return expiresAt && new Date(expiresAt).getTime() <= now
     ? "expired"
@@ -131,6 +138,7 @@ export function getStaffStatusKey(
 
 export const staffStatusKeyLabels: Record<StaffStatusKey, string> = {
   active: "Active",
+  cancelled: "Invite cancelled",
   expired: "Invite expired",
   invited: "Invited",
   suspended: "Suspended",
@@ -140,6 +148,7 @@ export type StaffAction =
   | "access"
   | "cancel"
   | "reactivate"
+  | "remove"
   | "resend"
   | "suspend"
 
@@ -148,9 +157,11 @@ export function getStaffActions(staff: StaffMemberRow): StaffAction[] {
   if (!canUpdateStaffStatus(staff)) return []
   const key = getStaffStatusKey(staff)
   if (key === "active") return ["access", "suspend"]
-  // Only people who finished onboarding can be reactivated.
+  // Only people who finished onboarding can be reactivated; people who never
+  // joined are removed instead (the seat is freed and they can be invited again).
   if (key === "suspended")
-    return staff.acceptedAt ? ["reactivate", "access"] : []
+    return staff.acceptedAt ? ["reactivate", "access"] : ["remove"]
+  if (key === "cancelled") return ["remove"]
   return ["resend", "cancel"]
 }
 

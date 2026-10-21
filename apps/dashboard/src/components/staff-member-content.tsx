@@ -23,6 +23,8 @@ export function memberAsStaffRow(
   member: Member,
   access: StaffAccessResponse | undefined,
   invitation: Invitation | undefined,
+  /** False while the invite link is loading, so status isn't guessed. */
+  invitationKnown = true,
 ): StaffMemberRow {
   const record = access?.access
   return {
@@ -46,24 +48,26 @@ export function memberAsStaffRow(
       avatarUrl: null,
       image: null,
     },
-    access: {
-      allStores:
-        ["OWNER", "ADMIN"].includes(member.role) ||
-        record?.staffAccessMode === "LEGACY",
-      catalogEditor: record?.catalogEditor ?? false,
-      defaultStoreId: record?.retailOpsStaffProfile?.defaultStoreId ?? null,
-      stores: (record?.staffStoreAssignments ?? []).map((row) => ({
-        storeId: row.storeId,
-        role: row.role,
-        storeName:
-          access?.stores.find((store) => store.id === row.storeId)?.name ??
-          "Store no longer available",
-      })),
-      invitationId: invitation?.id ?? null,
-      invitationExpiresAt: invitation?.expiresAt
-        ? new Date(invitation.expiresAt).toISOString()
-        : null,
-    },
+    access: !invitationKnown
+      ? undefined
+      : {
+          allStores:
+            ["OWNER", "ADMIN"].includes(member.role) ||
+            record?.staffAccessMode === "LEGACY",
+          catalogEditor: record?.catalogEditor ?? false,
+          defaultStoreId: record?.retailOpsStaffProfile?.defaultStoreId ?? null,
+          stores: (record?.staffStoreAssignments ?? []).map((row) => ({
+            storeId: row.storeId,
+            role: row.role,
+            storeName:
+              access?.stores.find((store) => store.id === row.storeId)?.name ??
+              "Store no longer available",
+          })),
+          invitationId: invitation?.id ?? null,
+          invitationExpiresAt: invitation?.expiresAt
+            ? new Date(invitation.expiresAt).toISOString()
+            : null,
+        },
   }
 }
 
@@ -97,7 +101,23 @@ export function StaffMemberContent({
           <p>
             <span className="font-medium">Suspended.</span>{" "}
             <span className="text-muted-foreground">
-              They can’t sign in to any store until you reactivate them.
+              {row.acceptedAt
+                ? "They can’t sign in to any store until you reactivate them."
+                : "They never joined. Remove them to free their seat."}
+            </span>
+          </p>
+        </div>
+      ) : key === "cancelled" ? (
+        <div className="flex gap-2.5 bg-muted p-3">
+          <HugeiconsIcon
+            icon={Mail01Icon}
+            className="mt-0.5 size-4 shrink-0"
+            aria-hidden="true"
+          />
+          <p>
+            <span className="font-medium">Invite cancelled.</span>{" "}
+            <span className="text-muted-foreground">
+              They never joined. Remove them to free their seat.
             </span>
           </p>
         </div>

@@ -8,6 +8,7 @@ import {
 import {
   prepareStaffStatusChangeInTransaction,
   reviewStaffStatusChangeInTransaction,
+  validateUnacceptedStaffRemoval,
 } from "./staff-status-change"
 
 const input = {
@@ -433,4 +434,34 @@ test("assistant closure owns one original locked preparation and durable origina
     beforeLocks,
   )
   expect(f.calls.filter((call) => call.kind === "audit")).toHaveLength(1)
+})
+
+describe("removing someone who never joined", () => {
+  const base = {
+    actorUserId: "owner",
+    staffUserId: "staff",
+    role: "CASHIER",
+    status: "INVITED",
+    acceptedAt: null,
+  }
+  test("allows pending and suspended invites that were never accepted", () => {
+    expect(() => validateUnacceptedStaffRemoval(base)).not.toThrow()
+    expect(() =>
+      validateUnacceptedStaffRemoval({ ...base, status: "SUSPENDED" }),
+    ).not.toThrow()
+  })
+  test("refuses people who joined, owners and admins, and yourself", () => {
+    expect(() =>
+      validateUnacceptedStaffRemoval({ ...base, acceptedAt: new Date() }),
+    ).toThrow("Only people who never joined can be removed.")
+    expect(() =>
+      validateUnacceptedStaffRemoval({ ...base, status: "ACTIVE" }),
+    ).toThrow()
+    expect(() =>
+      validateUnacceptedStaffRemoval({ ...base, role: "ADMIN" }),
+    ).toThrow("Owners and admins can’t be removed here.")
+    expect(() =>
+      validateUnacceptedStaffRemoval({ ...base, staffUserId: "owner" }),
+    ).toThrow("You can’t remove yourself.")
+  })
 })

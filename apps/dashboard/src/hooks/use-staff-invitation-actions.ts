@@ -3,11 +3,10 @@
 import { useTRPC } from "@/trpc/client"
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 
-type InvitationCommand = "RESEND" | "REVOKE"
+type InvitationCommand = "RESEND"
 
 const REASON: Record<InvitationCommand, string> = {
   RESEND: "Resent from the Staff page",
-  REVOKE: "Cancelled from the Staff page",
 }
 
 const BLOCKER_MESSAGE: Record<string, string> = {
@@ -18,7 +17,7 @@ const BLOCKER_MESSAGE: Record<string, string> = {
     "Give them a store in Change access before resending.",
 }
 
-/** Resend or cancel one pending invite: review it, then save the reviewed command. */
+/** Resend one pending invite: review it, then save the reviewed command. */
 export function useStaffInvitationActions() {
   const trpc = useTRPC()
   const client = useQueryClient()

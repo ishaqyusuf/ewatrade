@@ -48,6 +48,7 @@ export function staffStatusDetail(member: StaffMemberRow) {
 
 const STATUS_TONE = {
   active: "text-success-foreground",
+  cancelled: "text-muted-foreground",
   expired: "text-warning-foreground",
   invited: "text-foreground",
   suspended: "text-destructive",
@@ -55,6 +56,7 @@ const STATUS_TONE = {
 
 const STATUS_DOT = {
   active: "bg-success-foreground",
+  cancelled: "bg-muted-foreground",
   expired: "bg-warning-foreground",
   invited: "bg-muted-foreground",
   suspended: "bg-destructive",

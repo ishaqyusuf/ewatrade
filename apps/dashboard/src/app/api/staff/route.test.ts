@@ -15,6 +15,11 @@ const invite = mock(async (_db: unknown, input: { email: string }) => ({
 }))
 const updateAccess = mock(async (_db: unknown, _input: unknown) => ({}))
 const notify = mock(async (_input: unknown) => {})
+const remove = mock(async (_db: unknown, _input: unknown) => ({
+  id: "membership",
+  status: "REMOVED",
+}))
+const updateStatus = mock(async (_db: unknown, _input: unknown) => ({}))
 mock.module("@/lib/session", () => ({
   getServerSession: async () => ({
     user: { id: "owner", email: "owner@example.com" },
@@ -35,7 +40,8 @@ mock.module("@ewatrade/db/queries", () => ({
   StaffStoreAccessError: class extends Error {},
   updateRetailOpsStaffStoreAccess: updateAccess,
   inviteRetailOpsStaff: invite,
-  updateRetailOpsStaffStatus: async () => ({}),
+  updateRetailOpsStaffStatus: updateStatus,
+  removeUnacceptedRetailOpsStaff: remove,
   RetailOpsStaffError: class extends Error {},
   RetailOpsSubscriptionError: class extends Error {},
 }))
@@ -151,5 +157,55 @@ test("Owner can remove every Store without suspending the Membership", async () 
       defaultStoreId: null,
       confirmLegacyCutover: true,
     }),
+  )
+})
+
+function post(body: unknown) {
+  return POST(
+    new NextRequest("https://ewatrade-dashboard.localhost/api/staff", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    }),
+  )
+}
+test("Owner can remove someone who never joined, with a reason", async () => {
+  local()
+  const response = await post({
+    operation: "remove",
+    staffUserId: "staff",
+    reason: " Invited by mistake ",
+  })
+  expect(response.status).toBe(200)
+  expect(response.headers.get("Cache-Control")).toBe("no-store")
+  expect(remove).toHaveBeenCalledWith(
+    {},
+    expect.objectContaining({
+      actorUserId: "owner",
+      staffUserId: "staff",
+      reason: "Invited by mistake",
+      tenantId: "tenant",
+    }),
+  )
+})
+test("cashier cannot remove staff", async () => {
+  local()
+  role = "CASHIER"
+  expect(
+    (await post({ operation: "remove", staffUserId: "staff" })).status,
+  ).toBe(403)
+  expect(remove).not.toHaveBeenCalled()
+})
+test("suspend passes the optional reason through", async () => {
+  local()
+  await post({
+    operation: "status",
+    staffUserId: "staff",
+    status: "suspended",
+    reason: "On leave",
+  })
+  expect(updateStatus).toHaveBeenCalledWith(
+    {},
+    expect.objectContaining({ status: "suspended", reason: "On leave" }),
   )
 })

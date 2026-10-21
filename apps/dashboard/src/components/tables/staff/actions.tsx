@@ -17,6 +17,7 @@ import {
 import {
   Cancel01Icon,
   Clock01Icon,
+  Delete02Icon,
   Key01Icon,
   Mail01Icon,
   MoreVerticalIcon,
@@ -39,6 +40,7 @@ const ACTION_LABEL: Record<StaffAction, string> = {
   access: "Change access",
   cancel: "Cancel invite",
   reactivate: "Reactivate",
+  remove: "Remove",
   resend: "Resend invite",
   suspend: "Suspend",
 }
@@ -47,11 +49,12 @@ const ACTION_ICON = {
   access: Key01Icon,
   cancel: Cancel01Icon,
   reactivate: PlayCircleIcon,
+  remove: Delete02Icon,
   resend: Mail01Icon,
   suspend: PauseCircleIcon,
 } as const
 
-const DESTRUCTIVE: StaffAction[] = ["suspend", "cancel"]
+const DESTRUCTIVE: StaffAction[] = ["suspend", "cancel", "remove"]
 
 export function StaffActionsMenu({
   member,

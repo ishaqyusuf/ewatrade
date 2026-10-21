@@ -6,9 +6,10 @@ import {
   StaffMemberContent,
   memberAsStaffRow,
 } from "@/components/staff-member-content"
-import { CancelInviteAlert } from "@/components/staff/cancel-invite-alert"
+import { RemoveStaffAlert } from "@/components/staff/remove-staff-alert"
 import { StaffAccessForm } from "@/components/staff/staff-access-form"
 import { StaffSuspendForm } from "@/components/staff/staff-suspend-form"
+import { useRemoveStaff } from "@/hooks/use-remove-staff"
 import { staffAccessQueryKey, useStaffAccess } from "@/hooks/use-staff-access"
 import { useStaffInvitationActions } from "@/hooks/use-staff-invitation-actions"
 import { useStaffInvitationParams } from "@/hooks/use-staff-invitation-params"
@@ -16,7 +17,7 @@ import { STAFF_LIST_QUERY_KEY } from "@/hooks/use-staff-list"
 import { useStaffMemberParams } from "@/hooks/use-staff-member-params"
 import { type StaffAction, getStaffActions } from "@/lib/staff-management"
 import { useTRPC } from "@/trpc/client"
-import { Button, Sheet } from "@ewatrade/ui"
+import { Button, Sheet, toast } from "@ewatrade/ui"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { useState } from "react"
 import { SheetFrame } from "./sheet-frame"
@@ -25,6 +26,7 @@ const ACTION_LABEL: Record<StaffAction, string> = {
   access: "Change access",
   cancel: "Cancel invite",
   reactivate: "Reactivate",
+  remove: "Remove",
   resend: "Resend invite",
   suspend: "Suspend",
 }
@@ -47,7 +49,8 @@ export function StaffMemberSheet({
     text: string
     error?: boolean
   } | null>(null)
-  const [cancelOpen, setCancelOpen] = useState(false)
+  const [removeMode, setRemoveMode] = useState<"cancel" | "remove" | null>(null)
+  const removeStaff = useRemoveStaff()
   const [busy, setBusy] = useState(false)
   const query = useQuery(
     trpc.retailOps.staffDirectoryMember.queryOptions(
@@ -71,7 +74,14 @@ export function StaffMemberSheet({
     ["ACTIVE", "EXPIRED"].includes(row.status),
   )
   const inviteCommandId = invitation?.commandId ?? null
-  const row = member ? memberAsStaffRow(member, access.data, invitation) : null
+  const row = member
+    ? memberAsStaffRow(
+        member,
+        access.data,
+        invitation,
+        !(historyAllowed && member.status === "INVITED" && invites.isLoading),
+      )
+    : null
   const actions = row
     ? getStaffActions(row).filter(
         (action) =>
@@ -126,20 +136,15 @@ export function StaffMemberSheet({
     }
   }
 
-  async function changeInvite(kind: "RESEND" | "REVOKE") {
+  async function resendInvite() {
     if (!member || !invitation) return
     setBusy(true)
     setNotice(null)
     try {
-      await invitations.run(kind, invitation.id)
+      await invitations.run("RESEND", invitation.id)
       await refreshAll()
       await invites.refetch()
-      setNotice({
-        text:
-          kind === "RESEND"
-            ? `Invite sent again to ${member.email}.`
-            : `Invite cancelled for ${member.email}. The link no longer works.`,
-      })
+      setNotice({ text: `Invite sent again to ${member.email}.` })
     } catch (failure) {
       setNotice({
         error: true,
@@ -150,15 +155,39 @@ export function StaffMemberSheet({
       })
     } finally {
       setBusy(false)
-      setCancelOpen(false)
+    }
+  }
+
+  // They leave the list, so the sheet closes and a toast confirms it.
+  async function confirmRemove() {
+    if (!member || !removeMode) return
+    try {
+      await removeStaff.mutateAsync(member.userId)
+      toast(
+        removeMode === "cancel"
+          ? `Invite cancelled for ${member.email}.`
+          : `${member.name} was removed.`,
+      )
+      setRemoveMode(null)
+      setNotice(null)
+      await close()
+    } catch (failure) {
+      setRemoveMode(null)
+      setNotice({
+        error: true,
+        text:
+          failure instanceof Error && failure.message
+            ? failure.message
+            : "Couldn’t remove them. Try again.",
+      })
     }
   }
 
   function runAction(action: StaffAction) {
     if (action === "access" || action === "suspend") void setView(action)
     else if (action === "reactivate") void reactivate()
-    else if (action === "resend") void changeInvite("RESEND")
-    else setCancelOpen(true)
+    else if (action === "resend") void resendInvite()
+    else setRemoveMode(action === "cancel" ? "cancel" : "remove")
   }
 
   const back = member
@@ -233,12 +262,17 @@ export function StaffMemberSheet({
                 variant={
                   index === 0
                     ? "default"
-                    : action === "suspend" || action === "cancel"
+                    : action === "suspend" ||
+                        action === "cancel" ||
+                        action === "remove"
                       ? "ghost"
                       : "outline"
                 }
                 className={
-                  index > 0 && (action === "suspend" || action === "cancel")
+                  index > 0 &&
+                  (action === "suspend" ||
+                    action === "cancel" ||
+                    action === "remove")
                     ? "text-destructive"
                     : undefined
                 }
@@ -295,14 +329,15 @@ export function StaffMemberSheet({
       }}
     >
       {isOpen ? frame() : null}
-      <CancelInviteAlert
+      <RemoveStaffAlert
+        mode={removeMode ?? "cancel"}
         name={member?.name ?? ""}
-        open={cancelOpen}
-        pending={invitations.isPending}
+        open={Boolean(removeMode)}
+        pending={removeStaff.isPending}
         onOpenChange={(open) => {
-          if (!open && !invitations.isPending) setCancelOpen(false)
+          if (!open && !removeStaff.isPending) setRemoveMode(null)
         }}
-        onConfirm={() => void changeInvite("REVOKE")}
+        onConfirm={() => void confirmRemove()}
       />
     </Sheet>
   )

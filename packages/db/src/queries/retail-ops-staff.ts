@@ -13,10 +13,13 @@ import {
 } from "../../generated/prisma/enums"
 import { assertQaTenantIdentity } from "./qa-maintenance"
 import { assertRetailOpsEntitlementAvailable } from "./retail-ops-subscriptions"
+import { cancelStaffInvitationNotificationsInTransaction } from "./staff-invitation-notifications"
 import {
   type StaffStatusChangeInput,
+  assertStaffStatusAuthority,
   prepareStaffStatusChangeInTransaction,
   staffStatusChangeReviewFromPrepared,
+  validateUnacceptedStaffRemoval,
 } from "./staff-status-change"
 import {
   StaffStoreAccessError,
@@ -544,6 +547,7 @@ async function writeDurableRetailOpsStaffLifecycleEvent(
       | typeof DurableRetailOpsStaffLifecycleEventType.ONBOARDING_COMPLETED
       | typeof DurableRetailOpsStaffLifecycleEventType.REACTIVATED
       | typeof DurableRetailOpsStaffLifecycleEventType.SUSPENDED
+      | typeof DurableRetailOpsStaffLifecycleEventType.REMOVED
   },
 ) {
   return db.retailOpsStaffLifecycleEvent.create({
@@ -1433,6 +1437,149 @@ async function applyPreparedStaffStatusChange(
       id: updatedMembership.user.id,
       name: updatedMembership.user.name,
     },
+  }
+}
+
+export type RemoveUnacceptedRetailOpsStaffInput = {
+  actorUserId: string
+  reason?: string
+  staffUserId: string
+  tenantId: string
+}
+
+/**
+ * Remove someone who never joined: revoke their live invite links, cancel
+ * unsent invite emails, mark the membership Removed (freeing the seat) and
+ * record it in staff history. They can be invited again later.
+ */
+export async function removeUnacceptedRetailOpsStaff(
+  db: PrismaClient,
+  input: RemoveUnacceptedRetailOpsStaffInput,
+) {
+  return db.$transaction(
+    (tx) => removeUnacceptedRetailOpsStaffInTransaction(tx, input),
+    { maxWait: 10_000, timeout: 30_000 },
+  )
+}
+
+export async function removeUnacceptedRetailOpsStaffInTransaction(
+  tx: Prisma.TransactionClient,
+  input: RemoveUnacceptedRetailOpsStaffInput,
+) {
+  const reason = input.reason?.trim() || null
+  if (reason && reason.length > 500)
+    throw new StaffStoreAccessError(
+      "INVALID_INPUT",
+      "Enter a reason of 1–500 characters.",
+    )
+  await tx.$queryRaw`SELECT "id" FROM "Tenant" WHERE "id"=${input.tenantId} AND "isActive"=true FOR UPDATE`
+  const actor = await assertStaffStatusAuthority(tx, input)
+  const [locked] = await tx.$queryRaw<Array<{ id: string }>>`
+    SELECT "id" FROM "Membership" WHERE "tenantId"=${input.tenantId} AND "userId"=${input.staffUserId}
+    AND "role" IN ('CASHIER', 'OPERATOR', 'MANAGER') FOR UPDATE
+  `
+  if (!locked)
+    throw new StaffStoreAccessError(
+      "FORBIDDEN",
+      "Staff member is unavailable in this business.",
+    )
+  const membership = await tx.membership.findFirstOrThrow({
+    where: { id: locked.id, tenantId: input.tenantId },
+    select: {
+      id: true,
+      role: true,
+      status: true,
+      acceptedAt: true,
+      invitedAt: true,
+      staffAccessRevision: true,
+      user: {
+        select: { displayName: true, email: true, id: true, name: true },
+      },
+    },
+  })
+  validateUnacceptedStaffRemoval({
+    actorUserId: input.actorUserId,
+    staffUserId: membership.user.id,
+    role: membership.role,
+    status: membership.status,
+    acceptedAt: membership.acceptedAt,
+  })
+  const now = new Date()
+  const links = await tx.retailOpsStaffInviteToken.findMany({
+    where: {
+      tenantId: input.tenantId,
+      membershipId: membership.id,
+      status: "ACTIVE",
+    },
+    select: { id: true },
+  })
+  if (links.length) {
+    await tx.retailOpsStaffInviteToken.updateMany({
+      where: { id: { in: links.map((link) => link.id) }, status: "ACTIVE" },
+      data: {
+        status: "REVOKED",
+        revokedAt: now,
+        revokedByUserId: input.actorUserId,
+      },
+    })
+    for (const link of links)
+      await cancelStaffInvitationNotificationsInTransaction(tx, {
+        tenantId: input.tenantId,
+        invitationId: link.id,
+        now,
+      })
+  }
+  const removed = await tx.membership.update({
+    where: {
+      id: membership.id,
+      tenantId: input.tenantId,
+      status: membership.status,
+      staffAccessRevision: membership.staffAccessRevision,
+    },
+    data: { status: "REMOVED", staffAccessRevision: { increment: 1 } },
+    select: { id: true, status: true, staffAccessRevision: true },
+  })
+  const displayName = getDisplayName(membership.user)
+  const profile = await upsertDurableRetailOpsStaffProfile(tx, {
+    acceptedAt: null,
+    displayName,
+    invitedAt: membership.invitedAt,
+    membershipId: membership.id,
+    role: membership.role,
+    status: "REMOVED",
+    tenantId: input.tenantId,
+    userId: membership.user.id,
+  })
+  const event = await writeDurableRetailOpsStaffLifecycleEvent(tx, {
+    actorUserId: input.actorUserId,
+    fromRole: membership.role,
+    fromStatus: membership.status,
+    happenedAt: now,
+    membershipId: membership.id,
+    metadata: {
+      retailOps: { source: "retail_ops_staff_remove_unaccepted" },
+    } as Prisma.InputJsonValue,
+    reason,
+    staffProfileId: profile.id,
+    staffUserId: membership.user.id,
+    tenantId: input.tenantId,
+    toRole: membership.role,
+    toStatus: "REMOVED",
+    type: DurableRetailOpsStaffLifecycleEventType.REMOVED,
+  })
+  await releaseStoreConversationsForIneligibleMembership(tx, {
+    actorMembershipId: actor.id,
+    membershipId: membership.id,
+    now,
+    reasonCode: "attendant_revoked",
+    tenantId: input.tenantId,
+  })
+  return {
+    id: removed.id,
+    lifecycleEventId: event.id,
+    revokedInvitationIds: links.map((link) => link.id),
+    staffAccessRevision: removed.staffAccessRevision,
+    status: removed.status,
   }
 }
 

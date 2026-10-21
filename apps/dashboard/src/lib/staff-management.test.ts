@@ -130,7 +130,13 @@ describe("staff management helpers", () => {
     expect(getStaffActions({ ...staff[0], role: "OWNER" })).toEqual([])
     expect(
       getStaffActions({ ...staff[0], status: "SUSPENDED", acceptedAt: null }),
-    ).toEqual([])
+    ).toEqual(["remove"])
+    const cancelled = {
+      ...invited,
+      access: { ...invited.access, invitationId: null },
+    }
+    expect(getStaffStatusKey(cancelled, now)).toBe("cancelled")
+    expect(getStaffActions(cancelled)).toEqual(["remove"])
   })
 
   test("shows the Store role for staff limited to some stores", () => {

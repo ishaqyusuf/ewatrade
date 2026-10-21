@@ -4,12 +4,13 @@ import { useDashboardWorkflow } from "@ewatrade/events/dashboard-client"
 import { StaffDirectoryHeader } from "@/components/dashboard/staff-directory-header"
 import { StaffInviteModal } from "@/components/modals/staff-invite-modal"
 import { ScrollableContent } from "@/components/scrollable-content"
-import { CancelInviteAlert } from "@/components/staff/cancel-invite-alert"
 import { OrderVisibilityLine } from "@/components/staff/order-visibility-line"
+import { RemoveStaffAlert } from "@/components/staff/remove-staff-alert"
 import { TableToolbarSlotProvider } from "@/components/tables/core"
 import type { StaffRowActions } from "@/components/tables/staff/actions"
 import { StaffDataTable } from "@/components/tables/staff/data-table"
 import { useDirectoryView } from "@/hooks/use-directory-view"
+import { useRemoveStaff } from "@/hooks/use-remove-staff"
 import { useStaffDirectoryParams } from "@/hooks/use-staff-directory-params"
 import { useStaffInvitationActions } from "@/hooks/use-staff-invitation-actions"
 import { STAFF_LIST_QUERY_KEY, useStaffList } from "@/hooks/use-staff-list"
@@ -109,7 +110,11 @@ export function StaffPage({
   const [busyId, setBusyId] = useState<string | null>(null)
   const [notice, setNotice] = useState<Notice | null>(null)
   const [qaInviteUrl, setQaInviteUrl] = useState<string | null>(null)
-  const [cancelling, setCancelling] = useState<StaffMemberRow | null>(null)
+  const [removing, setRemoving] = useState<{
+    member: StaffMemberRow
+    mode: "cancel" | "remove"
+  } | null>(null)
+  const removeStaff = useRemoveStaff()
 
   const refreshStaff = () =>
     client.invalidateQueries({ queryKey: STAFF_LIST_QUERY_KEY })
@@ -190,10 +195,7 @@ export function StaffPage({
     }
   }
 
-  async function changeInvitation(
-    kind: "RESEND" | "REVOKE",
-    target: StaffMemberRow,
-  ) {
+  async function resendInvite(target: StaffMemberRow) {
     const invitationId = target.access?.invitationId
     if (!invitationId) {
       setNotice({
@@ -205,14 +207,9 @@ export function StaffPage({
     setNotice(null)
     setBusyId(target.id)
     try {
-      await invitations.run(kind, invitationId)
+      await invitations.run("RESEND", invitationId)
       await refreshStaff()
-      setNotice({
-        text:
-          kind === "RESEND"
-            ? `Invite sent again to ${target.user.email}.`
-            : `Invite cancelled for ${target.user.email}. The link no longer works.`,
-      })
+      setNotice({ text: `Invite sent again to ${target.user.email}.` })
     } catch (failure) {
       setNotice({
         error: true,
@@ -223,7 +220,33 @@ export function StaffPage({
       })
     } finally {
       setBusyId(null)
-      setCancelling(null)
+    }
+  }
+
+  async function confirmRemove() {
+    if (!removing) return
+    const { member: target, mode } = removing
+    setNotice(null)
+    setBusyId(target.id)
+    try {
+      await removeStaff.mutateAsync(target.user.id)
+      setNotice({
+        text:
+          mode === "cancel"
+            ? `Invite cancelled for ${target.user.email}. The link no longer works.`
+            : `${getStaffDisplayName(target)} was removed.`,
+      })
+    } catch (failure) {
+      setNotice({
+        error: true,
+        text:
+          failure instanceof Error && failure.message
+            ? failure.message
+            : "Couldn’t remove them. Try again.",
+      })
+    } finally {
+      setBusyId(null)
+      setRemoving(null)
     }
   }
 
@@ -231,8 +254,12 @@ export function StaffPage({
     if (action === "access" || action === "suspend")
       void member.open(target.id, action)
     else if (action === "reactivate") void updateStatus(target, "active")
-    else if (action === "resend") void changeInvitation("RESEND", target)
-    else setCancelling(target)
+    else if (action === "resend") void resendInvite(target)
+    else
+      setRemoving({
+        member: target,
+        mode: action === "cancel" ? "cancel" : "remove",
+      })
   }
 
   // Columns are rebuilt when actions change, so keep them stable and read
@@ -386,16 +413,15 @@ export function StaffPage({
             storeId={store.id}
             onInvited={onInvited}
           />
-          <CancelInviteAlert
-            name={cancelling ? getStaffDisplayName(cancelling) : ""}
-            open={Boolean(cancelling)}
-            pending={invitations.isPending}
+          <RemoveStaffAlert
+            mode={removing?.mode ?? "cancel"}
+            name={removing ? getStaffDisplayName(removing.member) : ""}
+            open={Boolean(removing)}
+            pending={removeStaff.isPending}
             onOpenChange={(open) => {
-              if (!open && !invitations.isPending) setCancelling(null)
+              if (!open && !removeStaff.isPending) setRemoving(null)
             }}
-            onConfirm={() => {
-              if (cancelling) void changeInvitation("REVOKE", cancelling)
-            }}
+            onConfirm={() => void confirmRemove()}
           />
         </div>
       </TableToolbarSlotProvider>

@@ -10,6 +10,7 @@ import {
   STAFF_STORE_ACCESS_ROLLOUT_READY,
   StaffStoreAccessError,
   inviteRetailOpsStaff,
+  removeUnacceptedRetailOpsStaff,
   updateRetailOpsStaffStatus,
   updateRetailOpsStaffStoreAccess,
 } from "@ewatrade/db/queries"
@@ -76,10 +77,19 @@ const updateAccessSchema = z.object({
   storeId: z.string().trim().min(1).optional(),
 })
 
+// Removes someone who never joined (pending, expired or suspended invite).
+const removeStaffSchema = z.object({
+  operation: z.literal("remove"),
+  staffUserId: z.string().trim().min(1),
+  storeId: z.string().trim().min(1).optional(),
+  reason: z.string().trim().max(500).optional(),
+})
+
 const staffOperationSchema = z.discriminatedUnion("operation", [
   inviteStaffSchema,
   updateStaffStatusSchema,
   updateAccessSchema,
+  removeStaffSchema,
 ])
 
 function getStaffErrorStatus(error: RetailOpsStaffError) {
@@ -330,6 +340,19 @@ export async function POST(request: NextRequest) {
                 ? "OPERATOR"
                 : "MANAGER",
         })),
+      })
+      return NextResponse.json(
+        { result },
+        { headers: { "Cache-Control": "no-store" } },
+      )
+    }
+
+    if (parsed.data.operation === "remove") {
+      const result = await removeUnacceptedRetailOpsStaff(prisma, {
+        actorUserId: session.user.id,
+        staffUserId: parsed.data.staffUserId,
+        reason: parsed.data.reason || undefined,
+        tenantId: ctx.tenant.id,
       })
       return NextResponse.json(
         { result },

@@ -66,7 +66,32 @@ export function validateStaffStatusTransition(input: {
     )
 }
 
-async function assertStaffStatusAuthority(
+/** Removing applies only to someone who never finished joining. */
+export function validateUnacceptedStaffRemoval(input: {
+  actorUserId: string
+  staffUserId: string
+  role: string
+  status: string
+  acceptedAt: Date | null
+}) {
+  if (input.actorUserId === input.staffUserId)
+    throw new StaffStoreAccessError(
+      "INVALID_INPUT",
+      "You can’t remove yourself.",
+    )
+  if (!["CASHIER", "OPERATOR", "MANAGER"].includes(input.role))
+    throw new StaffStoreAccessError(
+      "FORBIDDEN",
+      "Owners and admins can’t be removed here.",
+    )
+  if (input.acceptedAt || !["INVITED", "SUSPENDED"].includes(input.status))
+    throw new StaffStoreAccessError(
+      "INVALID_INPUT",
+      "Only people who never joined can be removed. Suspend staff who already joined.",
+    )
+}
+
+export async function assertStaffStatusAuthority(
   tx: Prisma.TransactionClient,
   input: { tenantId: string; actorUserId: string },
 ) {
