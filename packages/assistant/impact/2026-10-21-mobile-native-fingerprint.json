@@ -1,0 +1,25 @@
+{
+  "version": 1,
+  "id": "2026-10-21-mobile-native-fingerprint",
+  "tickets": ["H02"],
+  "summary": "Keep locally generated Sentry Gradle output out of the Expo native runtime fingerprint, matching a clean EAS installation.",
+  "noAssistantImpact": "Build reproducibility only. Native dependency source, runtime compatibility checks, assistant capabilities, API contracts and publication gates remain unchanged.",
+  "capabilities": [],
+  "procedures": [],
+  "docs": [
+    {
+      "topic": "feature",
+      "status": "local_only",
+      "path": ".brain/features/mobile-production-release.md",
+      "note": "Records exact failed build, fingerprint mismatch diagnosis and narrow generated-output exclusion."
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "run",
+      "path": "apps/mobile/.fingerprintignore",
+      "executed": true,
+      "result": "Actual Expo 0.15.5 directory hashing reproduces the failed local hash d798d6905bb20cdb41180844de61e12125f4e54e. The pinned integrity-verified Sentry 8.20.0 package and local package with only nested expo-handler/build excluded both match the EAS hash 8ab33db7344ac468702fd6d90042546d46c122da. Published source files are byte-identical."
+    }
+  ]
+}

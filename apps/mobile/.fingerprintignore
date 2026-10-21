@@ -1,0 +1,3 @@
+# Sentry's nested Gradle output is generated locally and absent in clean EAS installs.
+# Keep its native source files in the runtime compatibility fingerprint.
+**/node_modules/@sentry/react-native/android/expo-handler/build/**/*
