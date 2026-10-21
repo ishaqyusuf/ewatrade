@@ -151,7 +151,7 @@ function OverviewAccounts({ book }: { book: FinanceBook }) {
             <PanelRow
               key={account.id}
               title={account.name}
-              subtitle={`${moneyAccountPurposeLabel(account.purpose)}${account.paymentsPausedAt ? " · Paused" : ""}`}
+              subtitle={`${moneyAccountPurposeLabel(account.purpose, account.mobileMoney)}${account.paymentsPausedAt ? " · Paused" : ""}`}
               amount={formatFinanceMoney(
                 account.balanceMinor,
                 book.currencyCode,

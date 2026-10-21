@@ -239,7 +239,7 @@ function MoneyWorkspace({ book, actorUserId, tenantId }: FinanceWorkspace) {
             <RecordRow
               stackDetails
               title={item.name}
-              meta={`${PURPOSE_LABELS[item.purpose as keyof typeof PURPOSE_LABELS] ?? "Account"}${item.archivedAt ? " · Archived" : ""}`}
+              meta={`${item.mobileMoney ? "Mobile money" : (PURPOSE_LABELS[item.purpose as keyof typeof PURPOSE_LABELS] ?? "Account")}${item.archivedAt ? " · Archived" : ""}`}
               amount={formatFinanceMoney(item.balanceMinor, book.currencyCode)}
               avatar={{
                 icon:

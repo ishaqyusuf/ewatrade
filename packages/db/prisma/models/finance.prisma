@@ -90,6 +90,9 @@ model FinanceAccount {
   paymentMethods              CommercialPaymentMethod[]            @default([])
   /// Closed to new order payments; balance, history and refunds are unaffected.
   paymentsPausedAt            DateTime?
+  /// A BANK-purpose account that is a mobile money wallet (OPay, PalmPay,
+  /// Moniepoint). Shown as "Mobile money"; posting rules are a bank's.
+  mobileMoney                 Boolean                              @default(false)
   createdAt                   DateTime                             @default(now())
   book                        FinanceBook                          @relation(fields: [bookId], references: [id], onDelete: Restrict)
   lines                       FinanceJournalLine[]

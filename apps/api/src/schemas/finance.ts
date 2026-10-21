@@ -72,6 +72,8 @@ export const financeAccountSchema = financeBookSchema
     name: z.string().trim().min(1).max(100),
     purpose: z.enum(["CASH", "BANK", "CLEARING"]),
     paymentMethods: paymentMethods.optional(),
+    /** A mobile money wallet (BANK purpose only). */
+    mobileMoney: z.boolean().optional(),
   })
   .strict()
 export const financeMoneyAccountPaymentsSchema = financeBookSchema

@@ -275,9 +275,17 @@ export async function createFinanceMoneyAccountInTransaction(
     purpose: MoneyAccountPurpose
     /** Omitted: the account takes its type's default methods. */
     paymentMethods?: OrderPaymentMethod[]
+    /** A mobile money wallet; only for BANK accounts. */
+    mobileMoney?: boolean
   },
 ) {
   const paymentMethods = normalizeFinanceMoneyAccount(input)
+  const mobileMoney = input.mobileMoney === true
+  if (mobileMoney && input.purpose !== "BANK")
+    throw new FinanceError(
+      "INVALID_JOURNAL",
+      "Only a bank-type account can be mobile money.",
+    )
   await lockFinanceBook(tx, input)
   const previous = await tx.financeAccount.findUnique({
     where: { bookId_code: { bookId: input.bookId, code: input.code } },
@@ -286,6 +294,7 @@ export async function createFinanceMoneyAccountInTransaction(
     if (
       previous.name !== input.name.trim() ||
       previous.purpose !== input.purpose ||
+      previous.mobileMoney !== mobileMoney ||
       previous.archivedAt ||
       previous.paymentMethods.join() !== paymentMethods.join()
     ) {
@@ -301,6 +310,7 @@ export async function createFinanceMoneyAccountInTransaction(
       kind: "ASSET",
       purpose: input.purpose,
       paymentMethods,
+      mobileMoney,
     },
   })
 }

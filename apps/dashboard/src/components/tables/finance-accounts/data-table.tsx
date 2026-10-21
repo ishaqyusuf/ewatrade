@@ -34,6 +34,8 @@ export type MoneyAccountRow = {
   monthCreditMinor?: string
   paymentMethods: string[]
   paymentsPausedAt: Date | string | null
+  /** A BANK account that is a mobile money wallet. */
+  mobileMoney?: boolean
 }
 
 function PaymentMethodsTaken({ account }: { account: MoneyAccountRow }) {
@@ -60,12 +62,14 @@ function PausedBadge({ account }: { account: MoneyAccountRow }) {
 
 const getAccountId = (account: MoneyAccountRow) => account.id
 
-export function moneyAccountPurposeLabel(purpose: string) {
+export function moneyAccountPurposeLabel(purpose: string, mobileMoney = false) {
   return purpose === "CLEARING"
     ? "Card and POS money on its way"
     : purpose === "CASH"
       ? "Cash"
-      : "Bank"
+      : mobileMoney
+        ? "Mobile money"
+        : "Bank"
 }
 
 function AccountActions({
@@ -121,7 +125,10 @@ export function MoneyAccountsDataTable({
               <PausedBadge account={row.original} />
             </p>
             <p className="text-xs text-muted-foreground">
-              {moneyAccountPurposeLabel(row.original.purpose)}
+              {moneyAccountPurposeLabel(
+                row.original.purpose,
+                row.original.mobileMoney,
+              )}
             </p>
           </div>
         ),
@@ -220,7 +227,10 @@ export function MoneyAccountsDataTable({
               onOpen={() => onOpenStatement(row.original.id)}
               description={
                 <span className="grid gap-2">
-                  {moneyAccountPurposeLabel(row.original.purpose)}
+                  {moneyAccountPurposeLabel(
+                    row.original.purpose,
+                    row.original.mobileMoney,
+                  )}
                   <PaymentMethodsTaken account={row.original} />
                 </span>
               }

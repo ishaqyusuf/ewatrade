@@ -24,7 +24,8 @@ const schema = z.object({
     .trim()
     .min(1, "Enter a name.")
     .max(100, "Use 100 characters or fewer."),
-  purpose: z.enum(["CASH", "BANK", "CLEARING"]),
+  // MOBILE is a bank-type account marked as mobile money.
+  purpose: z.enum(["CASH", "BANK", "MOBILE", "CLEARING"]),
   paymentMethods: z
     .array(z.enum(ORDER_PAYMENT_METHODS))
     .min(1, "Choose at least one way to pay."),
@@ -72,7 +73,9 @@ export function FinanceAccountForm({
         return
       previous = values.purpose
       form.setValue("paymentMethods", [
-        ...DEFAULT_MONEY_ACCOUNT_PAYMENT_METHODS[values.purpose],
+        ...DEFAULT_MONEY_ACCOUNT_PAYMENT_METHODS[
+          values.purpose === "MOBILE" ? "BANK" : values.purpose
+        ],
       ])
     })
     return () => watching.unsubscribe()
@@ -87,7 +90,14 @@ export function FinanceAccountForm({
             })
           : form.handleSubmit((values) => {
               setSavedName(values.name.trim())
-              account.mutate({ bookId, code, ...values })
+              account.mutate({
+                bookId,
+                code,
+                name: values.name,
+                paymentMethods: values.paymentMethods,
+                purpose: values.purpose === "MOBILE" ? "BANK" : values.purpose,
+                mobileMoney: values.purpose === "MOBILE",
+              })
             })
       }
     >
@@ -111,8 +121,13 @@ export function FinanceAccountForm({
                   { value: "CASH", label: "Cash", hint: "A till or cash box." },
                   {
                     value: "BANK",
-                    label: "Bank or mobile money",
-                    hint: "A bank account, or an OPay, PalmPay or Moniepoint wallet.",
+                    label: "Bank account",
+                    hint: "A current or savings account at a bank.",
+                  },
+                  {
+                    value: "MOBILE",
+                    label: "Mobile money",
+                    hint: "An OPay, PalmPay or Moniepoint wallet.",
                   },
                   {
                     value: "CLEARING",
@@ -127,7 +142,7 @@ export function FinanceAccountForm({
               name="paymentMethods"
               render={({ field, fieldState }) => (
                 <PaymentMethodChecks
-                  purpose={purpose}
+                  purpose={purpose === "MOBILE" ? "BANK" : purpose}
                   value={field.value}
                   onChange={field.onChange}
                   disabled={pending}
