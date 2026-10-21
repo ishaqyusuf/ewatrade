@@ -45,6 +45,18 @@ mock.module("@ewatrade/db/queries", () => ({
   RetailOpsStaffError: class extends Error {},
   RetailOpsSubscriptionError: class extends Error {},
 }))
+// The route reads QA routing from the central QA policy; tests stand it in.
+let qaPolicyEnabled = true
+mock.module("@ewatrade/utils/qa-policy-server", () => ({
+  getQaPolicyEnvironment: async () => ({
+    ...process.env,
+    EMAIL_QA_DOMAIN_ROUTES: JSON.stringify(
+      qaPolicyEnabled ? { "ishaq.qa.test": "tester@example.com" } : {},
+    ),
+    QA_TOOLS_ENABLED: String(qaPolicyEnabled),
+    QA_ACCELERATOR_ENABLED: String(qaPolicyEnabled),
+  }),
+}))
 mock.module("@ewatrade/jobs", () => ({
   enqueueRetailOpsStaffInviteNotification: notify,
 }))
@@ -80,6 +92,7 @@ function request(email: string) {
   })
 }
 afterEach(() => {
+  qaPolicyEnabled = true
   role = "OWNER"
   staffAccessMode = "LEGACY"
   mock.clearAllMocks()
@@ -99,6 +112,13 @@ test("owner QA invitation exposes only a no-store website link with redacted res
     "https://ewatrade-dashboard.localhost/staff-onboarding?inviteToken=secret-token",
   )
   expect(notify).toHaveBeenCalledTimes(1)
+})
+test("no QA link when the central QA policy is unavailable", async () => {
+  local()
+  qaPolicyEnabled = false
+  const body = await (await POST(request("staff@ishaq.qa.test"))).json()
+  expect(body.qaInviteUrl).toBeUndefined()
+  expect(body.result.invite.acceptanceToken).toBeNull()
 })
 test("live email invitation never exposes the secret link", async () => {
   local()
