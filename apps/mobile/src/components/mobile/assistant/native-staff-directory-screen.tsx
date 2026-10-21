@@ -2,6 +2,7 @@ import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
 import { View } from "@/components/ui/view"
 import { useAuthContext } from "@/hooks/use-auth"
+import { getMobileRoleLabel } from "@/lib/mobile-roles"
 import { useTRPC } from "@/trpc/client"
 import {
   type GeneralAnswer,
@@ -166,7 +167,7 @@ function DirectoryPage({ target, onOpen }: Props) {
                 {member.email?.trim() || "Email not recorded"}
               </Text>
               <Text className="text-sm text-muted-foreground">
-                {label(member.role)} · {label(member.status)}
+                {getMobileRoleLabel(member.role)} · {label(member.status)}
               </Text>
               <Text className="text-xs text-muted-foreground">
                 Invited: {utc(member.invitedAt)} UTC
@@ -262,8 +263,8 @@ function FilterControls({ target, onOpen }: Props) {
     <View className="gap-3">
       <Text className="text-sm text-muted-foreground">
         Search: {target.filters.search || "All names and emails"} · Role:{" "}
-        {target.filters.role ? label(target.filters.role) : "All"} · Status:{" "}
-        {target.filters.status ? label(target.filters.status) : "All"}
+        {target.filters.role ? getMobileRoleLabel(target.filters.role) : "All"}{" "}
+        · Status: {target.filters.status ? label(target.filters.status) : "All"}
       </Text>
       {target.filters.assignmentStoreId ? (
         <Text className="text-xs text-muted-foreground">
@@ -299,7 +300,7 @@ function FilterControls({ target, onOpen }: Props) {
             {roles.map((value) => (
               <Choice
                 key={value}
-                label={label(value)}
+                label={getMobileRoleLabel(value)}
                 selected={role === value}
                 onPress={() => setRole(value)}
               />

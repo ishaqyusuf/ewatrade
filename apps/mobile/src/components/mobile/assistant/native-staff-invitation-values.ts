@@ -15,7 +15,7 @@ export type NativeInvitationValues = Extract<
 export type InvitationStore = { id: string; name: string }
 export const invitationRoles = [
   ["CASHIER", "Cashier"],
-  ["OPERATOR", "Operator"],
+  ["OPERATOR", "Sales rep"],
   ["MANAGER", "Manager"],
 ] as const
 

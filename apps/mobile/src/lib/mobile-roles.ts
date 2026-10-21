@@ -46,7 +46,8 @@ export function getMobileRoleLabel(role: string | undefined) {
   const normalizedRole = normalizeMobileRole(role)
 
   if (normalizedRole === "CASHIER") return "Cashier"
-  if (normalizedRole === "OPERATOR") return "Operator"
+  // Owners know Operators as sales reps; the stored role stays OPERATOR.
+  if (normalizedRole === "OPERATOR") return "Sales rep"
   if (normalizedRole === "MANAGER") return "Manager"
   if (normalizedRole === "OWNER") return "Owner"
 

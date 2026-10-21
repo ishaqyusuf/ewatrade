@@ -4,6 +4,7 @@ import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
 import { View } from "@/components/ui/view"
 import { useAuthContext } from "@/hooks/use-auth"
+import { getMobileRoleLabel } from "@/lib/mobile-roles"
 import { useTRPC } from "@/trpc/client"
 import type { RouterOutputs } from "@ewatrade/api/trpc/routers/_app"
 import type { GeneralAction } from "@ewatrade/assistant/general/contracts"
@@ -252,7 +253,7 @@ function StaffAccessEditor({
                 review.before.assignments.map((row) => (
                   <Text key={row.storeId}>
                     {row.storeName ?? "Unavailable Store"} ·{" "}
-                    {row.role.toLowerCase()}
+                    {getMobileRoleLabel(row.role)}
                     {row.storeId === review.before.defaultStoreId
                       ? " · starting Store"
                       : ""}
@@ -295,7 +296,7 @@ function StaffAccessEditor({
                           key={role ?? "none"}
                           disabled={blocked}
                           accessibilityRole="radio"
-                          accessibilityLabel={`${store.name}: ${role ? role.toLowerCase() : "no access"}`}
+                          accessibilityLabel={`${store.name}: ${role ? getMobileRoleLabel(role) : "no access"}`}
                           accessibilityState={{
                             checked: (selected?.role ?? null) === role,
                             disabled: blocked,
@@ -304,9 +305,7 @@ function StaffAccessEditor({
                           onPress={() => setRole(store.id, role)}
                         >
                           <Text>
-                            {role
-                              ? role.charAt(0) + role.slice(1).toLowerCase()
-                              : "No access"}
+                            {role ? getMobileRoleLabel(role) : "No access"}
                             {(selected?.role ?? null) === role ? " ✓" : ""}
                           </Text>
                         </Pressable>

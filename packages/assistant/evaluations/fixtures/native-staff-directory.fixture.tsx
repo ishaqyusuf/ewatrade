@@ -221,7 +221,7 @@ test("same-name memberships remain separate with exact email, role/status, UTC d
   expect(html).toContain("alex.a@example.test")
   expect(html).toContain("alex.b@example.test")
   expect(html).toContain("Cashier · Invited")
-  expect(html).toContain("Operator · Active")
+  expect(html).toContain("Sales rep · Active")
   expect(html).toContain("2026-10-15T12:30:00.000Z UTC")
   expect(html).toContain("Accepted: Not recorded UTC")
   expect(html).toContain("Durable staff profile unavailable")

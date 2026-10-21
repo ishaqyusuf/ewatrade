@@ -169,7 +169,7 @@ test("protected review keeps exact selected person and renders available Stores 
     "Main Shop",
     "Second Store",
     "Cashier",
-    "Operator",
+    "Sales rep",
     "Manager",
     "Starting Store",
     "Allow catalog editing",

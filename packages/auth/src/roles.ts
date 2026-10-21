@@ -70,7 +70,8 @@ export function getRoleDisplayName(role: EwaTradeRole | null | undefined) {
     case "CASHIER":
       return "Cashier"
     case "OPERATOR":
-      return "Operator"
+      // Owners know Operators as sales reps; the stored role stays OPERATOR.
+      return "Sales rep"
     case "SUPPORT":
       return "Support"
     case "MEMBER":

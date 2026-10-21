@@ -594,7 +594,7 @@ function StoreSettingsFields({
         onChange={(visibility) => onChange({ ...change, visibility })}
       />
       <Text className="text-xs text-muted-foreground">
-        Applies to Cashiers and Operators in this Store.
+        Applies to cashiers and sales reps in this store.
       </Text>
     </>
   )

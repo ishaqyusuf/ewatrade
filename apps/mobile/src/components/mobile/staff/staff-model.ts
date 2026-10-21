@@ -44,8 +44,8 @@ export function mapStaffMember(staff: StaffMember): StaffRow {
     staff.user.name?.trim() ||
     staff.user.email
   const roles: Record<string, string> = {
-    cashier: "Sales rep",
-    operator: "Operator",
+    cashier: "Cashier",
+    operator: "Sales rep",
     manager: "Manager",
     owner: "Owner",
     admin: "Admin",
