@@ -393,6 +393,7 @@ export const serviceQuoteIssueSchema = z
   .object({
     clientQuoteId: z.string().trim().min(8).max(160),
     clientVersionId: z.string().trim().min(8).max(160),
+    customerNote: z.string().trim().max(4_000).optional(),
     discountMinor: z.number().int().nonnegative().optional(),
     expiresAt: z.coerce.date().optional(),
     lines: z.array(serviceQuoteLineSchema).min(1).max(100).optional(),

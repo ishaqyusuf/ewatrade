@@ -12,6 +12,10 @@ import {
   SubmitButton,
   Textarea,
 } from "@ewatrade/ui"
+import {
+  serviceWorkStatusLabel,
+  usesCustomerSignOff,
+} from "@ewatrade/utils/service-work-presentation"
 
 import {
   type DraftJobHandoff,
@@ -269,6 +273,10 @@ export function ServiceJobWorkspace({
     )
   }
 
+  const customerSignOff = usesCustomerSignOff(
+    job.lines.map((line) => line.catalogItemName),
+  )
+
   return (
     <div className="grid gap-5">
       {error ? (
@@ -366,7 +374,9 @@ export function ServiceJobWorkspace({
                 clientCommandId: crypto.randomUUID(),
                 expectedRevision: job.revision,
                 jobId: job.id,
-                note: "Collected by customer",
+                note: customerSignOff
+                  ? "Cleaning completed after customer sign-off"
+                  : "Collected by customer",
                 payment:
                   job.balanceDueMinor > 0
                     ? {
@@ -378,17 +388,34 @@ export function ServiceJobWorkspace({
               })
             }
           >
-            {job.balanceDueMinor > 0
-              ? "Collect balance and hand over"
-              : "Mark collected"}
+            {customerSignOff
+              ? "Complete job"
+              : job.balanceDueMinor > 0
+                ? "Collect balance and hand over"
+                : "Mark collected"}
           </SubmitButton>
         ) : job.handedOffAt ? (
           <p className="text-sm text-muted-foreground">
-            Collected {new Date(job.handedOffAt).toLocaleString("en-NG")}.
+            {customerSignOff ? "Completed" : "Collected"}{" "}
+            {new Date(job.handedOffAt).toLocaleString("en-NG")}.
           </p>
         ) : null}
       </section>
       <section className="grid gap-3">
+        {customerSignOff &&
+        job.summary === "ready_for_handoff" &&
+        !job.handedOffAt ? (
+          <div className="border border-border p-4">
+            <h3 className="font-medium">Customer sign-off</h3>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Confirm the customer has reviewed the completed cleaning before
+              completing the job.
+              {job.balanceDueMinor > 0
+                ? " Completing also records the amount received above; the balance must be settled."
+                : ""}
+            </p>
+          </div>
+        ) : null}
         <h3 className="font-medium">Work lines</h3>
         {job.lines.map((line) => (
           <div key={line.id} className="border-b border-border pb-4">
@@ -400,7 +427,7 @@ export function ServiceJobWorkspace({
                 </p>
               </div>
               <Badge className="rounded-full capitalize">
-                {label(line.status)}
+                {serviceWorkStatusLabel(line.status, [line.catalogItemName])}
               </Badge>
             </div>
             {line.authorizationStatus !== "AUTHORIZED" ? (
@@ -441,7 +468,10 @@ export function ServiceJobWorkspace({
                     })
                   }
                 >
-                  {label(action)}
+                  {action === "ready_for_handoff" &&
+                  usesCustomerSignOff([line.catalogItemName])
+                    ? "Ready for customer sign-off"
+                    : label(action)}
                 </SubmitButton>
               ))}
             </div>

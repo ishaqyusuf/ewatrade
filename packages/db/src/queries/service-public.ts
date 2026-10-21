@@ -624,6 +624,7 @@ export async function issueServiceQuote(
     actorUserId: string
     clientQuoteId: string
     clientVersionId: string
+    customerNote?: string
     discountMinor?: number
     expiresAt?: Date
     lines?: Array<{
@@ -675,6 +676,7 @@ export async function issueServiceQuote(
       },
       clientQuoteId: input.clientQuoteId,
       clientVersionId: input.clientVersionId,
+      customerNote: input.customerNote,
       expiresAt: input.expiresAt,
       ...(input.options
         ? {

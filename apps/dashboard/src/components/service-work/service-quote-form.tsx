@@ -8,6 +8,7 @@ import {
   FormActions,
   MoneyInput,
   SubmitButton,
+  Textarea,
   Field as UiField,
 } from "@ewatrade/ui"
 
@@ -46,11 +47,13 @@ export function ServiceQuoteForm({ store }: { store: StoreSummary }) {
   )
   const [prices, setPrices] = useState<Record<string, string>>({})
   const [expiresAt, setExpiresAt] = useState("")
+  const [agreedScope, setAgreedScope] = useState("")
   const [publicUrl, setPublicUrl] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     if (!request) return
+    setAgreedScope(request.details ?? "")
     setPrices(
       Object.fromEntries(
         request.lines.map((line) => [
@@ -108,6 +111,7 @@ export function ServiceQuoteForm({ store }: { store: StoreSummary }) {
     quoteMutation.mutate({
       clientQuoteId: `request-${request.id}`,
       clientVersionId: crypto.randomUUID(),
+      customerNote: agreedScope.trim() || undefined,
       expiresAt: expiresAt ? new Date(expiresAt) : undefined,
       lines,
       requestId: request.id,
@@ -164,6 +168,18 @@ export function ServiceQuoteForm({ store }: { store: StoreSummary }) {
           </UiField>
         </div>
       ))}
+      <ControlField
+        label="Agreed service scope"
+        description="Review the customer's request and confirm what this price covers. This scope is saved with this quote version and shown before acceptance."
+      >
+        <Textarea
+          value={agreedScope}
+          onChange={(event) => setAgreedScope(event.target.value)}
+          maxLength={4_000}
+          rows={6}
+          placeholder="Work included, exclusions, supplies, location and visit window"
+        />
+      </ControlField>
       <ControlField
         label={
           <>

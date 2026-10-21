@@ -106,6 +106,14 @@ export default async function Page({
                 <div className="flex items-start justify-between gap-4">
                   <div>
                     <h3 className="font-semibold">{option.label}</h3>
+                    {option.customerNote ? (
+                      <div className="mt-3">
+                        <h4 className="font-medium">Agreed service scope</h4>
+                        <p className="mt-1 whitespace-pre-wrap text-sm leading-6 text-muted-foreground">
+                          {option.customerNote}
+                        </p>
+                      </div>
+                    ) : null}
                     {option.fulfilmentPromise ? (
                       <p className="text-sm text-muted-foreground">
                         {option.fulfilmentPromise}
@@ -197,6 +205,19 @@ export default async function Page({
             </div>
           </div>
         )}
+        {!quote.requiresSelection && quote.customerNote ? (
+          <section
+            aria-labelledby="agreed-service-scope"
+            className="border border-border p-5"
+          >
+            <h2 className="font-semibold" id="agreed-service-scope">
+              Agreed service scope
+            </h2>
+            <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-muted-foreground">
+              {quote.customerNote}
+            </p>
+          </section>
+        ) : null}
         {!quote.accepted && quote.payable && canAccept ? (
           <form action={accept}>
             <input name="token" type="hidden" value={token} />

@@ -7,6 +7,7 @@ import {
 } from "@/components/service-work/service-utils"
 import { selectColumn } from "@/components/tables/core"
 import { Badge, Button } from "@ewatrade/ui"
+import { serviceWorkStatusLabel } from "@ewatrade/utils/service-work-presentation"
 import type { ColumnDef } from "@tanstack/react-table"
 
 export function getServiceWorkAssignment(job: WorkJob) {
@@ -20,7 +21,10 @@ export function getServiceWorkAssignment(job: WorkJob) {
 export function ServiceWorkStatusBadge({ job }: { job: WorkJob }) {
   return (
     <Badge className={`rounded-none capitalize ${tone(job.summary)}`}>
-      {label(job.summary)}
+      {serviceWorkStatusLabel(
+        job.summary,
+        job.lines.map((line) => line.catalogItemName),
+      )}
     </Badge>
   )
 }

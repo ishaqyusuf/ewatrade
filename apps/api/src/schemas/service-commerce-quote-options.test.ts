@@ -25,6 +25,33 @@ const option = {
 }
 
 describe("Service Commerce Quote Option API contracts", () => {
+  test("bounds and trims agreed service scope while keeping old callers valid", () => {
+    const input = {
+      clientQuoteId: "quote-command-1",
+      clientVersionId: "version-command-1",
+      requestId: "request-1",
+      lines: [
+        {
+          offeringId: "home-cleaning",
+          quantity: "1",
+          unitPriceMinor: 2_500_000,
+        },
+      ],
+    }
+    expect(serviceQuoteIssueSchema.safeParse(input).success).toBe(true)
+    expect(
+      serviceQuoteIssueSchema.parse({
+        ...input,
+        customerNote: "  Kitchen and two bedrooms.\nSupplies included.  ",
+      }).customerNote,
+    ).toBe("Kitchen and two bedrooms.\nSupplies included.")
+    expect(
+      serviceQuoteIssueSchema.safeParse({
+        ...input,
+        customerNote: "x".repeat(4_001),
+      }).success,
+    ).toBe(false)
+  })
   test("accepts mutually exclusive Inquiry Offer Options", () => {
     expect(
       commerceInquiryQuoteIssueSchema.safeParse({
