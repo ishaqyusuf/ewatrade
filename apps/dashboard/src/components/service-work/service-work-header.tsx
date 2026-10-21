@@ -2,12 +2,24 @@
 
 import { PageFab } from "@/components/page-fab/page-fab"
 import { PageHeader, PageToolbar } from "@/components/page-header"
-import { ViewSwitcher, directoryViewOptions } from "@/components/view-switcher"
+import { ViewDropdown, directoryViewOptions } from "@/components/view-switcher"
 import { useServiceWorkParams } from "@/hooks/use-service-work-params"
 import type { DirectoryView } from "@/utils/directory-view-settings"
-import { Button } from "@ewatrade/ui"
-import { Add01Icon } from "@hugeicons/core-free-icons"
+import {
+  Button,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@ewatrade/ui"
+import {
+  Add01Icon,
+  Link01Icon,
+  MoreVerticalIcon,
+  Settings01Icon,
+} from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
+import { ServiceTabs } from "./service-tabs"
 import { ServiceWorkSearchFilter } from "./service-work-search-filter"
 
 export function ServiceWorkHeader({
@@ -26,50 +38,62 @@ export function ServiceWorkHeader({
   return (
     <PageHeader
       eyebrow={storeName}
-      title="Service work"
-      description="Create an order, then track only the work that needs tracking."
+      title="Service jobs"
+      description="Work you do for customers, from order to hand over."
     >
       <PageToolbar
         actions={
           <>
-            <ViewSwitcher
-              label="Service work view"
+            <ViewDropdown
+              label="Service jobs view"
               value={view}
               options={directoryViewOptions}
               onValueChange={onViewChange}
             />
             {canManage ? (
-              <>
-                <Button
-                  className="h-9 rounded-none"
-                  variant="outline"
-                  onClick={() => setParams({ serviceSheet: "settings" })}
+              <DropdownMenu>
+                <DropdownMenuTrigger
+                  render={
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      aria-label="More service options"
+                    />
+                  }
                 >
-                  Settings
-                </Button>
-                <Button
-                  className="h-9 rounded-none"
-                  variant="outline"
-                  onClick={() => setParams({ serviceSheet: "request" })}
-                >
-                  Request link
-                </Button>
-              </>
+                  <HugeiconsIcon icon={MoreVerticalIcon} aria-hidden="true" />
+                </DropdownMenuTrigger>
+                <DropdownMenuContent appearance="dashboard" align="end">
+                  <DropdownMenuItem
+                    onClick={() => setParams({ serviceSheet: "request" })}
+                  >
+                    <HugeiconsIcon icon={Link01Icon} aria-hidden="true" />
+                    Request links
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => setParams({ serviceSheet: "settings" })}
+                  >
+                    <HugeiconsIcon icon={Settings01Icon} aria-hidden="true" />
+                    Service settings
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             ) : null}
-            <Button
-              aria-label="New service"
-              variant="outline"
-              className="size-9 rounded-none max-sm:hidden"
-              onClick={startIntake}
-            >
-              <HugeiconsIcon icon={Add01Icon} className="size-4" />
+            <Button className="max-sm:hidden" onClick={startIntake}>
+              <HugeiconsIcon
+                icon={Add01Icon}
+                data-icon="inline-start"
+                aria-hidden="true"
+              />
+              New job
             </Button>
-            <PageFab label="New service" onClick={startIntake} />
+            <PageFab label="New job" onClick={startIntake} />
           </>
         }
       >
         <ServiceWorkSearchFilter canManage={canManage} />
       </PageToolbar>
+      {canManage ? <ServiceTabs /> : null}
     </PageHeader>
   )
 }

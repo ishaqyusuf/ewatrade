@@ -23,8 +23,8 @@ export function ServiceRequestSheet({ store }: { store: StoreSummary }) {
       {open ? (
         <SheetFrame
           closeError={closeError}
-          title="Customer request link"
-          description="Choose the Services customers may ask you to quote."
+          title="Request links"
+          description="Customers use a link to ask for a service. You reply with a price."
         >
           <ServiceRequestForm key={`${store.id}:request`} store={store} />
         </SheetFrame>

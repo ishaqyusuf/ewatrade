@@ -10,6 +10,7 @@ import {
 } from "./use-service-work-filter-params"
 
 export const SERVICE_SHEET_MODES = [
+  "customer_request",
   "intake",
   "job",
   "quote",

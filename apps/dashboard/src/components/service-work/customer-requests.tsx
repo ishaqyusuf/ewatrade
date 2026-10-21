@@ -1,188 +1,190 @@
 "use client"
 
-import { FormFeedback } from "@/components/forms/form-feedback"
-import { label } from "@/components/service-work/service-utils"
 import {
-  InlineRowCheckbox,
-  InlineSelectionBar,
-  useInlineSelection,
-} from "@/components/tables/core"
+  formatDue,
+  formatPrice,
+  isOpenRequest,
+  requestStatus,
+  toneClass,
+} from "@/components/service-work/service-utils"
 import { useServiceWorkParams } from "@/hooks/use-service-work-params"
 import { useTRPC } from "@/trpc/client"
-import { Badge, Button, SubmitButton } from "@ewatrade/ui"
 import {
-  useMutation,
-  useQueryClient,
-  useSuspenseQuery,
-} from "@tanstack/react-query"
-import { useMemo } from "react"
+  Badge,
+  Button,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+  cn,
+} from "@ewatrade/ui"
+import { MoreVerticalIcon } from "@hugeicons/core-free-icons"
+import { HugeiconsIcon } from "@hugeicons/react"
+import { useSuspenseQuery } from "@tanstack/react-query"
 
-export function CustomerRequests({ storeId }: { storeId: string }) {
+/** What customers asked for through your request links. */
+export function CustomerRequests({
+  storeId,
+  timeZone,
+}: {
+  storeId: string
+  timeZone: string
+}) {
   const trpc = useTRPC()
-  const queryClient = useQueryClient()
   const { setParams } = useServiceWorkParams()
-  const { data: forms } = useSuspenseQuery(
-    trpc.serviceAccess.requestForms.queryOptions({ storeId }, { retry: false }),
-  )
   const { data: requests } = useSuspenseQuery(
     trpc.serviceAccess.requests.queryOptions(
       { limit: 100, storeId },
       { retry: false },
     ),
   )
-  const requestIds = useMemo(
-    () => requests.map((request) => request.id),
-    [requests],
-  )
-  const selection = useInlineSelection({ ids: requestIds, scope: storeId })
-  const dispositionMutation = useMutation(
-    trpc.serviceAccess.updateRequest.mutationOptions({
-      onSuccess: async () => {
-        await queryClient.invalidateQueries({
-          queryKey: trpc.serviceAccess.requests.queryKey(),
-        })
-      },
-    }),
-  )
+  const openRequest = (requestId: string) =>
+    void setParams({ requestId, serviceSheet: "customer_request" })
+  const sendQuote = (requestId: string) =>
+    void setParams({ requestId, serviceSheet: "quote" })
+
+  if (requests.length === 0) {
+    return (
+      <div className="grid justify-items-center gap-2 border border-dashed border-border p-10 text-center">
+        <p className="font-medium">No customer requests yet</p>
+        <p className="max-w-sm text-sm text-muted-foreground">
+          Share a request link. When a customer asks for a service, it shows
+          here and you reply with a price.
+        </p>
+        <Button
+          type="button"
+          variant="outline"
+          className="mt-2"
+          onClick={() => void setParams({ serviceSheet: "request" })}
+        >
+          Make a request link
+        </Button>
+      </div>
+    )
+  }
 
   return (
-    <section className="grid gap-3 border-t border-border pt-6">
-      {dispositionMutation.isError ? (
-        <FormFeedback appearance="dashboard">
-          {dispositionMutation.error.message}
-        </FormFeedback>
-      ) : null}
-      <div className="flex items-end justify-between gap-3">
-        <div>
-          <h2 className="font-semibold">Customer requests</h2>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Requests create no price promise or work until a Quote is accepted.
-          </p>
-        </div>
-        <span className="text-xs text-muted-foreground">
-          {forms.length} active links
-        </span>
-      </div>
-      {requests.length === 0 ? (
-        <p className="border border-dashed border-border p-6 text-sm text-muted-foreground">
-          No customer requests yet.
-        </p>
-      ) : (
-        <div className="grid">
-          <InlineSelectionBar
-            label="Select all loaded customer requests"
-            selection={selection}
-          />
-          {requests.map((request) => (
-            <div
-              className="flex items-start gap-3 border-b border-border py-4"
-              data-state={
-                selection.isSelected(request.id) ? "selected" : undefined
-              }
-              key={request.id}
-            >
-              <span className="pt-0.5">
-                <InlineRowCheckbox
-                  selection={selection}
-                  id={request.id}
-                  label={`Select request from ${request.customerName}`}
-                />
-              </span>
-              <div className="min-w-0 flex-1">
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                  <div>
-                    <p className="font-medium">{request.customerName}</p>
-                    <p className="mt-1 text-sm text-muted-foreground">
-                      {request.lines
-                        .map(
-                          (line) => `${line.quantity} × ${line.offeringName}`,
-                        )
-                        .join(", ")}
+    <div className="overflow-x-auto border border-border">
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Customer</TableHead>
+            <TableHead>Wants</TableHead>
+            <TableHead>Received</TableHead>
+            <TableHead>Status</TableHead>
+            <TableHead className="w-0">
+              <span className="sr-only">Actions</span>
+            </TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {requests.map((request) => {
+            const status = requestStatus(request.status)
+            const contact = [request.customerPhone, request.customerEmail]
+              .filter(Boolean)
+              .join(" · ")
+            return (
+              <TableRow key={request.id}>
+                <TableCell className="max-w-56">
+                  <button
+                    type="button"
+                    className="block max-w-full truncate text-left font-medium hover:underline focus-visible:underline"
+                    onClick={() => openRequest(request.id)}
+                  >
+                    {request.customerName}
+                  </button>
+                  {contact ? (
+                    <p className="truncate text-xs text-muted-foreground">
+                      {contact}
                     </p>
-                    <p className="mt-1 text-xs text-muted-foreground">
-                      From {request.formLabel}
-                    </p>
-                  </div>
-                  <Badge className="w-fit rounded-full capitalize">
-                    {label(request.status)}
-                  </Badge>
-                </div>
-                {request.details ? (
-                  <p className="mt-3 bg-muted px-3 py-2 text-sm">
-                    {request.details}
+                  ) : null}
+                </TableCell>
+                <TableCell className="max-w-80">
+                  <p className="truncate">
+                    {request.lines
+                      .map((line) => `${line.offeringName} · ${line.quantity}`)
+                      .join(", ")}
                   </p>
-                ) : null}
-                <div className="mt-4 flex flex-wrap gap-2">
-                  {request.status !== "CONVERTED" &&
-                  request.status !== "DECLINED" ? (
-                    <Button
-                      size="sm"
-                      onClick={() =>
-                        setParams({
-                          requestId: request.id,
-                          serviceSheet: "quote",
-                        })
-                      }
-                    >
-                      Issue quote
-                    </Button>
+                  {request.details ? (
+                    <p className="truncate text-xs text-muted-foreground">
+                      {request.details}
+                    </p>
                   ) : null}
-                  {request.status === "SUBMITTED" ? (
-                    <SubmitButton
-                      type="button"
-                      isSubmitting={
-                        dispositionMutation.isPending &&
-                        dispositionMutation.variables?.requestId ===
-                          request.id &&
-                        dispositionMutation.variables?.status ===
-                          "needs_information"
-                      }
-                      size="sm"
-                      variant="outline"
-                      disabled={dispositionMutation.isPending}
-                      onClick={() =>
-                        dispositionMutation.mutate({
-                          requestId: request.id,
-                          response:
-                            "Please provide the additional details requested by the business.",
-                          status: "needs_information",
-                        })
-                      }
-                    >
-                      Request information
-                    </SubmitButton>
+                </TableCell>
+                <TableCell className="whitespace-nowrap">
+                  {formatDue(request.createdAt, timeZone)}
+                </TableCell>
+                <TableCell>
+                  <Badge className={cn("rounded-full", toneClass(status.tone))}>
+                    {status.label}
+                  </Badge>
+                  {request.currentQuote ? (
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      {formatPrice(
+                        request.currentQuote.totalMinor,
+                        request.currentQuote.currencyCode,
+                      )}
+                    </p>
                   ) : null}
-                  {request.status !== "CONVERTED" &&
-                  request.status !== "DECLINED" ? (
-                    <SubmitButton
-                      type="button"
-                      isSubmitting={
-                        dispositionMutation.isPending &&
-                        dispositionMutation.variables?.requestId ===
-                          request.id &&
-                        dispositionMutation.variables?.status === "declined"
-                      }
-                      size="sm"
-                      variant="ghost"
-                      disabled={dispositionMutation.isPending}
-                      onClick={() =>
-                        dispositionMutation.mutate({
-                          requestId: request.id,
-                          response:
-                            "The business is unable to quote this request.",
-                          status: "declined",
-                        })
-                      }
-                    >
-                      Decline
-                    </SubmitButton>
-                  ) : null}
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-    </section>
+                </TableCell>
+                <TableCell>
+                  <div className="flex items-center justify-end gap-1">
+                    {request.status === "SUBMITTED" ? (
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        onClick={() => sendQuote(request.id)}
+                      >
+                        Send quote
+                      </Button>
+                    ) : null}
+                    <DropdownMenu>
+                      <DropdownMenuTrigger
+                        render={
+                          <Button
+                            variant="ghost"
+                            size="icon-sm"
+                            aria-label={`More for ${request.customerName}`}
+                          />
+                        }
+                      >
+                        <HugeiconsIcon
+                          icon={MoreVerticalIcon}
+                          aria-hidden="true"
+                        />
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent appearance="dashboard" align="end">
+                        <DropdownMenuItem
+                          onClick={() => openRequest(request.id)}
+                        >
+                          View request
+                        </DropdownMenuItem>
+                        {isOpenRequest(request.status) ||
+                        request.status === "QUOTED" ? (
+                          <DropdownMenuItem
+                            onClick={() => sendQuote(request.id)}
+                          >
+                            {request.status === "QUOTED"
+                              ? "Change the quote"
+                              : "Send quote"}
+                          </DropdownMenuItem>
+                        ) : null}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+                </TableCell>
+              </TableRow>
+            )
+          })}
+        </TableBody>
+      </Table>
+    </div>
   )
 }

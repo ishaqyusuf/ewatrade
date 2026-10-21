@@ -23,7 +23,7 @@ import { redirect } from "next/navigation"
 import { Suspense } from "react"
 
 export const metadata: Metadata = {
-  title: "Service Work | EwaTrade",
+  title: "Service jobs | EwaTrade",
 }
 
 export default async function ServicesRoutePage({

@@ -29,8 +29,8 @@ export function ServiceIntakeSheet({
       {open ? (
         <SheetFrame
           closeError={closeError}
-          title="New service"
-          description="Choose the work first. Customer and timing details are optional."
+          title="New job"
+          description="Pick the work. Everything else can wait."
         >
           <ServiceIntakeForm
             canManage={canManage}

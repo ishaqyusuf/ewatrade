@@ -17,6 +17,11 @@ import {
 } from "@ewatrade/ui"
 
 import { FormFeedback } from "@/components/forms/form-feedback"
+import { OrderCustomerPicker } from "@/components/orders/order-customer-picker"
+import {
+  type OrderCustomerSelection,
+  customerDraftFromSearch,
+} from "@/components/orders/order-customer-search"
 
 import {
   createCustomerFixture,
@@ -24,11 +29,17 @@ import {
 } from "@/components/qa/fixture-recipes"
 import { QaDashboardQuickFill } from "@/components/qa/qa-quick-fill"
 import {
+  ChoiceButtons,
+  SheetSection,
+} from "@/components/service-work/choice-buttons"
+import {
   flattenServiceOfferings,
-  formatMoney,
+  formatPrice,
 } from "@/components/service-work/service-utils"
 import { useServiceWorkParams } from "@/hooks/use-service-work-params"
 import { useTRPC } from "@/trpc/client"
+import { Add01Icon, Cancel01Icon } from "@hugeicons/core-free-icons"
+import { HugeiconsIcon } from "@hugeicons/react"
 
 import {
   useMutation,
@@ -41,10 +52,6 @@ import { useMemo, useRef, useState } from "react"
 
 type StoreSummary = { currencyCode: string; id: string; name: string }
 type IntakeLine = { offeringId: string; quantity: string }
-
-const fieldClass =
-  "h-10 w-full scroll-mt-24 rounded-lg border border-border bg-background px-3 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
-const areaClass = `${fieldClass} min-h-24 py-2`
 
 export function ServiceIntakeForm({
   canManage,
@@ -79,11 +86,14 @@ export function ServiceIntakeForm({
       retry: false,
     }),
   )
-  const [lines, setLines] = useState<IntakeLine[]>([])
+  const [lines, setLines] = useState<IntakeLine[]>([
+    { offeringId: "", quantity: "" },
+  ])
+  const [customer, setCustomer] = useState<OrderCustomerSelection | null>(null)
+  const [newCustomer, setNewCustomer] = useState(false)
   const [customerName, setCustomerName] = useState("")
   const [customerPhone, setCustomerPhone] = useState("")
   const [customerEmail, setCustomerEmail] = useState("")
-  const [requestedAt, setRequestedAt] = useState("")
   const [dueAt, setDueAt] = useState("")
   const [instructions, setInstructions] = useState("")
   const [conditionNote, setConditionNote] = useState("")
@@ -156,14 +166,46 @@ export function ServiceIntakeForm({
           )
       : 0
   const totalMinor = subtotalMinor + serviceChargeMinor
+  const updateLine = (index: number, patch: Partial<IntakeLine>) =>
+    setLines((current) =>
+      current.map((entry, entryIndex) =>
+        entryIndex === index ? { ...entry, ...patch } : entry,
+      ),
+    )
 
   function submit() {
     setError(null)
+    if (lines.some((line) => !line.offeringId)) {
+      setError("Choose a service for each line, or remove the empty line.")
+      return
+    }
     if (
-      lines.length === 0 ||
-      lines.some((line) => !line.offeringId || !line.quantity.trim())
+      lines.some((line) => {
+        const quantity = Number(line.quantity)
+        return (
+          !line.quantity.trim() || !Number.isFinite(quantity) || quantity <= 0
+        )
+      })
     ) {
-      setError("Select at least one Service and enter its quantity.")
+      setError("Enter how many for each service, like 1 or 300.")
+      return
+    }
+    if (
+      amountPaid.trim() &&
+      (!Number.isFinite(Number(amountPaid)) || Number(amountPaid) < 0)
+    ) {
+      setError("Enter the amount paid now like 5000, or leave it empty.")
+      return
+    }
+    if (
+      newCustomer &&
+      !customer &&
+      !customerName.trim() &&
+      !customerPhone.trim()
+    ) {
+      setError(
+        "Enter the new customer’s name or phone, or search saved customers.",
+      )
       return
     }
     intakeMutation.mutate({
@@ -184,12 +226,16 @@ export function ServiceIntakeForm({
       notificationChannel: notificationChannel || undefined,
       priority: urgent ? "urgent" : "normal",
       requestedAssigneeId: assigneeId || undefined,
-      requestedAt: requestedAt ? new Date(requestedAt) : undefined,
       schemaVersion: 1,
       serviceLevel: express ? "express" : "standard",
       storeId: store.id,
     })
   }
+
+  const paidMinor = amountPaid.trim() ? Math.round(Number(amountPaid) * 100) : 0
+  const optional = (
+    <span className="font-normal text-muted-foreground">Optional</span>
+  )
 
   return (
     <FieldGroup className="grid gap-5">
@@ -200,7 +246,7 @@ export function ServiceIntakeForm({
         canUndo={canUndoQuickFill}
         formId="dashboard.service.intake"
         isDirty={
-          lines.length > 0 ||
+          lines.some((line) => line.offeringId) ||
           Boolean(
             customerEmail ||
               customerName ||
@@ -212,9 +258,7 @@ export function ServiceIntakeForm({
         onFill={(context, sequence) => {
           const offering = offerings[0]
           if (!offering) {
-            setError(
-              "Add an eligible fixed-price Service before filling this draft.",
-            )
+            setError("Add a service with a fixed price before filling this.")
             return
           }
           quickFillSnapshot.current = {
@@ -228,6 +272,8 @@ export function ServiceIntakeForm({
           const service = createServiceFixture(context, sequence)
           const customer = createCustomerFixture(context, sequence)
           setLines([{ offeringId: offering.id, quantity: "1" }])
+          setCustomer(null)
+          setNewCustomer(true)
           setCustomerEmail(customer.email)
           setCustomerName(service.customerName)
           setCustomerPhone(service.customerPhone)
@@ -250,228 +296,200 @@ export function ServiceIntakeForm({
           setCanUndoQuickFill(false)
         }}
       />
-      <div className="grid gap-3">
-        <div className="flex items-center justify-between">
-          <h3 className="text-sm font-medium">Items</h3>
+      <SheetSection title="What work?">
+        {lines.map((line, index) => {
+          const offering = offerings.find(
+            (entry) => entry.id === line.offeringId,
+          )
+          const quantity = Number(line.quantity)
+          const amount =
+            offering?.fixedPriceMinor != null &&
+            Number.isFinite(quantity) &&
+            quantity > 0
+              ? offering.fixedPriceMinor * quantity
+              : null
+          return (
+            <div
+              key={`line-${index + 1}`}
+              className="grid grid-cols-[1fr_auto] gap-2 sm:grid-cols-[1fr_110px_100px_auto] sm:items-center"
+            >
+              <SelectControl
+                aria-label={`Service ${index + 1}`}
+                value={line.offeringId}
+                onValueChange={(value) =>
+                  updateLine(index, { offeringId: value })
+                }
+                options={[
+                  { value: "", label: <>Choose a service</> },
+                  ...offerings.map((entry) => ({
+                    value: entry.id,
+                    label: (
+                      <>
+                        {entry.displayName} ·{" "}
+                        {formatPrice(entry.fixedPriceMinor, entry.currencyCode)}
+                      </>
+                    ),
+                  })),
+                ]}
+              />
+              <Input
+                aria-label={`How many, service ${index + 1}`}
+                inputMode="decimal"
+                placeholder="How many"
+                value={line.quantity}
+                onChange={(event) =>
+                  updateLine(index, { quantity: event.target.value })
+                }
+              />
+              <span className="text-right text-sm font-medium tabular-nums max-sm:col-start-1 max-sm:row-start-2 max-sm:text-left">
+                {amount === null
+                  ? "—"
+                  : formatPrice(amount, store.currencyCode)}
+              </span>
+              {lines.length > 1 ? (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  aria-label={`Remove service ${index + 1}`}
+                  onClick={() =>
+                    setLines((current) =>
+                      current.filter((_, entryIndex) => entryIndex !== index),
+                    )
+                  }
+                >
+                  <HugeiconsIcon icon={Cancel01Icon} className="size-4" />
+                </Button>
+              ) : (
+                <span className="hidden sm:block sm:w-8" />
+              )}
+            </div>
+          )
+        })}
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
           <Button
             type="button"
-            variant="outline"
+            variant="ghost"
             size="sm"
+            className="-ml-2 text-primary"
             disabled={offerings.length === 0}
             onClick={() =>
               setLines((current) => [
                 ...current,
-                { offeringId: offerings[0]?.id ?? "", quantity: "1" },
+                { offeringId: "", quantity: "" },
               ])
             }
           >
-            Add item
+            <HugeiconsIcon icon={Add01Icon} className="size-4" />
+            Add another service
           </Button>
+          <p className="text-xs text-muted-foreground">
+            {offerings.length === 0
+              ? "No services with a fixed price yet. Add one in Catalog."
+              : "Services that need a price first start from Customer requests."}
+          </p>
         </div>
-        {lines.map((line, index) => (
-          <div
-            key={`${index}-${line.offeringId}`}
-            className="grid grid-cols-1 gap-2 sm:grid-cols-[1fr_88px_auto]"
-          >
-            <SelectControl
-              aria-label={`Service item ${index + 1}`}
-              value={line.offeringId}
-              onValueChange={(value) =>
-                setLines((current) =>
-                  current.map((entry, entryIndex) =>
-                    entryIndex === index
-                      ? { ...entry, offeringId: value }
-                      : entry,
-                  ),
-                )
-              }
-              options={[
-                { value: "", label: <>Choose Service</> },
-                ...(offerings.map((offering) => ({
-                  value: offering.id,
-                  label: (
-                    <>
-                      {offering.displayName} ·{" "}
-                      {formatMoney(
-                        offering.fixedPriceMinor,
-                        offering.currencyCode,
-                      )}
-                    </>
-                  ),
-                })) ?? []),
-              ]}
-            />
-            <Input
-              aria-label={`Quantity ${index + 1}`}
-              inputMode="decimal"
-              value={line.quantity}
-              onChange={(event) =>
-                setLines((current) =>
-                  current.map((entry, entryIndex) =>
-                    entryIndex === index
-                      ? { ...entry, quantity: event.target.value }
-                      : entry,
-                  ),
-                )
-              }
-            />
+      </SheetSection>
+      <SheetSection title="Customer" optional>
+        {customer ? (
+          <div className="flex items-center justify-between gap-3 border border-border p-3">
+            <div className="min-w-0">
+              <p className="truncate text-sm font-medium">
+                {customer.name || customer.phone}
+              </p>
+              <p className="truncate text-xs text-muted-foreground">
+                {[customer.phone, customer.email].filter(Boolean).join(" · ")}
+              </p>
+            </div>
             <Button
               type="button"
               variant="ghost"
               size="sm"
-              onClick={() =>
-                setLines((current) =>
-                  current.filter((_, entryIndex) => entryIndex !== index),
-                )
-              }
+              onClick={() => setCustomer(null)}
             >
-              Remove
+              Change customer
             </Button>
           </div>
-        ))}
-        {lines.length === 0 ? (
-          <p className="rounded-lg bg-muted px-3 py-4 text-sm text-muted-foreground">
-            Add fixed-price Services. Quote-required work starts from a Request.
-          </p>
-        ) : null}
-      </div>
-      <div className="grid gap-3 sm:grid-cols-3">
-        <ControlField
-          label={
-            <>
-              Customer name{" "}
-              <span className="font-normal text-muted-foreground">
-                Optional
-              </span>
-            </>
-          }
-        >
-          <Input
-            value={customerName}
-            onChange={(event) => setCustomerName(event.target.value)}
-          />
-        </ControlField>
-        <ControlField
-          label={
-            <>
-              Email{" "}
-              <span className="font-normal text-muted-foreground">
-                Optional
-              </span>
-            </>
-          }
-        >
-          <Input
-            onChange={(event) => setCustomerEmail(event.target.value)}
-            type="email"
-            value={customerEmail}
-          />
-        </ControlField>
-        <ControlField
-          label={
-            <>
-              Phone{" "}
-              <span className="font-normal text-muted-foreground">
-                Optional
-              </span>
-            </>
-          }
-        >
-          <Input
-            inputMode="tel"
-            value={customerPhone}
-            onChange={(event) => setCustomerPhone(event.target.value)}
-          />
-        </ControlField>
-      </div>
-      {settingsQuery.data.expressEnabled ? (
-        <CheckboxField
-          label=<span>
-            <span className="block font-medium">
-              {settingsQuery.data.expressLabel}
-            </span>
-            <span className="text-muted-foreground">
-              {settingsQuery.data.expressSurchargeType === "fixed"
-                ? formatMoney(
-                    settingsQuery.data.expressSurchargeValue,
-                    store.currencyCode,
-                  )
-                : `${settingsQuery.data.expressSurchargeValue / 100}% surcharge`}
-            </span>
-          </span>
-        >
-          <Checkbox
-            checked={express}
-            onCheckedChange={(checked) => setExpress(checked)}
-          />
-        </CheckboxField>
-      ) : null}
-      <section className="grid gap-3 border-b border-border pb-5">
-        <div className="flex justify-between text-sm">
-          <span className="text-muted-foreground">Subtotal</span>
-          <span>{formatMoney(subtotalMinor, store.currencyCode)}</span>
-        </div>
-        {serviceChargeMinor > 0 ? (
-          <div className="flex justify-between text-sm">
-            <span className="text-muted-foreground">Express</span>
-            <span>{formatMoney(serviceChargeMinor, store.currencyCode)}</span>
+        ) : newCustomer ? (
+          <div className="grid gap-2">
+            <div className="grid gap-3 sm:grid-cols-2">
+              <ControlField label="Name">
+                <Input
+                  value={customerName}
+                  placeholder="e.g. Ngozi Eze"
+                  onChange={(event) => setCustomerName(event.target.value)}
+                />
+              </ControlField>
+              <ControlField label={<>Phone {optional}</>}>
+                <Input
+                  inputMode="tel"
+                  value={customerPhone}
+                  placeholder="0803 000 0000"
+                  onChange={(event) => setCustomerPhone(event.target.value)}
+                />
+              </ControlField>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              New customer.{" "}
+              <button
+                type="button"
+                className="font-medium text-primary"
+                onClick={() => {
+                  setNewCustomer(false)
+                  setCustomerName("")
+                  setCustomerPhone("")
+                  setCustomerEmail("")
+                }}
+              >
+                Search saved customers instead
+              </button>
+            </p>
           </div>
-        ) : null}
-        <div className="flex justify-between font-medium">
-          <span>Total</span>
-          <span>{formatMoney(totalMinor, store.currencyCode)}</span>
-        </div>
-      </section>
-      <button
-        type="button"
-        className="w-fit text-left text-sm font-medium text-primary"
-        onClick={() => setShowDetails((value) => !value)}
-      >
-        {showDetails ? "Hide details" : "Add timing, instructions, or priority"}
-      </button>
-      {showDetails ? (
-        <div className="grid gap-4 border-t border-border pt-4">
-          <div className="grid gap-3 sm:grid-cols-2">
-            <ControlField label={<>Customer requested</>}>
-              <DateControl
-                type="datetime-local"
-                value={requestedAt}
-                onValueChange={(value) => setRequestedAt(value)}
-              />
-            </ControlField>
-            <ControlField label={<>Promised delivery</>}>
-              <DateControl
-                type="datetime-local"
-                value={dueAt}
-                onValueChange={(value) => setDueAt(value)}
-              />
-            </ControlField>
+        ) : (
+          <div className="grid gap-1.5">
+            <OrderCustomerPicker
+              selected={null}
+              customerDirectory
+              storeId={store.id}
+              onSelect={(selection) => {
+                setCustomer(selection)
+                setCustomerName(selection?.name ?? "")
+                setCustomerPhone(selection?.phone ?? "")
+                setCustomerEmail(selection?.email ?? "")
+              }}
+              onCreate={(search) => {
+                const draft = customerDraftFromSearch(search)
+                setCustomerName(draft.name)
+                setCustomerPhone(draft.phone)
+                setCustomerEmail("")
+                setNewCustomer(true)
+              }}
+            />
+            <p className="text-xs text-muted-foreground">
+              Leave empty for a walk-in customer.
+            </p>
           </div>
-          <ControlField label={<>Instructions</>}>
-            <Textarea
-              value={instructions}
-              onChange={(event) => setInstructions(event.target.value)}
+        )}
+      </SheetSection>
+      <SheetSection title="When and who">
+        <div className="grid gap-3 sm:grid-cols-2">
+          <ControlField
+            label={<>Due {optional}</>}
+            description="When you told the customer it will be done."
+          >
+            <DateControl
+              type="datetime-local"
+              value={dueAt}
+              onValueChange={(value) => setDueAt(value)}
             />
           </ControlField>
-          <ControlField label={<>Condition at intake</>}>
-            <Textarea
-              value={conditionNote}
-              onChange={(event) => setConditionNote(event.target.value)}
-            />
-          </ControlField>
-          <CheckboxField label={<>Mark urgent</>}>
-            <Checkbox
-              checked={urgent}
-              onCheckedChange={(checked) => setUrgent(checked)}
-            />
-          </CheckboxField>
           {canManage ? (
-            <ControlField label={<>Assign to</>}>
+            <ControlField label={<>Who will do it {optional}</>}>
               <SelectControl
                 value={assigneeId}
                 onValueChange={(value) => setAssigneeId(value)}
                 options={[
-                  { value: "", label: <>Leave unassigned</> },
+                  { value: "", label: <>Not assigned yet</> },
                   ...(assigneesQuery.data?.map((person) => ({
                     value: person.id,
                     label: person.name,
@@ -481,18 +499,79 @@ export function ServiceIntakeForm({
             </ControlField>
           ) : null}
         </div>
-      ) : null}
-      <section className="grid gap-4 border-t border-border pt-5">
-        <div>
-          <h3 className="font-medium">Payment</h3>
-          <p className="mt-1 text-xs text-muted-foreground">
-            Leave the amount empty to collect the full balance on delivery.
-          </p>
-        </div>
+        <CheckboxField
+          label={
+            <span>
+              <span className="block font-medium">Urgent</span>
+              <span className="text-muted-foreground">
+                Shows first in the list
+              </span>
+            </span>
+          }
+        >
+          <Checkbox
+            checked={urgent}
+            onCheckedChange={(checked) => setUrgent(checked)}
+          />
+        </CheckboxField>
+        {settingsQuery.data.expressEnabled ? (
+          <CheckboxField
+            label={
+              <span>
+                <span className="block font-medium">
+                  {settingsQuery.data.expressLabel}
+                </span>
+                <span className="text-muted-foreground">
+                  {settingsQuery.data.expressSurchargeType === "fixed"
+                    ? `${formatPrice(
+                        settingsQuery.data.expressSurchargeValue,
+                        store.currencyCode,
+                      )} extra`
+                    : `${settingsQuery.data.expressSurchargeValue / 100}% extra`}
+                </span>
+              </span>
+            }
+          >
+            <Checkbox
+              checked={express}
+              onCheckedChange={(checked) => setExpress(checked)}
+            />
+          </CheckboxField>
+        ) : null}
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          className="-ml-2 w-fit text-primary"
+          aria-expanded={showDetails}
+          onClick={() => setShowDetails((value) => !value)}
+        >
+          {showDetails ? "Hide notes" : "Add notes for the team"}
+        </Button>
+        {showDetails ? (
+          <div className="grid gap-3">
+            <ControlField label={<>What to do {optional}</>}>
+              <Textarea
+                value={instructions}
+                placeholder="e.g. Vaccinate the layer pen first"
+                onChange={(event) => setInstructions(event.target.value)}
+              />
+            </ControlField>
+            <ControlField label={<>How it came in {optional}</>}>
+              <Textarea
+                value={conditionNote}
+                placeholder="e.g. 3 birds look weak"
+                onChange={(event) => setConditionNote(event.target.value)}
+              />
+            </ControlField>
+          </div>
+        ) : null}
+      </SheetSection>
+      <SheetSection title="Payment now">
         <div className="grid gap-3 sm:grid-cols-2">
           <UiField className="gap-1.5">
             <FieldLabel htmlFor={`service-intake-payment-${store.id}`}>
-              Amount paid now ({store.currencyCode})
+              Amount paid now {optional}
             </FieldLabel>
             <MoneyInput
               id={`service-intake-payment-${store.id}`}
@@ -501,8 +580,13 @@ export function ServiceIntakeForm({
               value={amountPaid}
               onChange={(event) => setAmountPaid(event.target.value)}
             />
+            <p className="text-xs text-muted-foreground">
+              {totalMinor > 0
+                ? `Total ${formatPrice(totalMinor, store.currencyCode)}. Leave empty if they pay later.`
+                : "Leave empty if they pay later."}
+            </p>
           </UiField>
-          <ControlField label={<>Method</>}>
+          <ControlField label="Paid by">
             <SelectControl
               value={paymentMethod}
               onValueChange={(value) =>
@@ -518,33 +602,51 @@ export function ServiceIntakeForm({
             />
           </ControlField>
         </div>
-        <Input
-          placeholder="Payment reference (optional)"
-          value={paymentReference}
-          onChange={(event) => setPaymentReference(event.target.value)}
-        />
-      </section>
-      <ControlField label={<>Customer updates</>}>
-        <SelectControl
-          value={notificationChannel}
-          onValueChange={(value) =>
-            setNotificationChannel(value as typeof notificationChannel)
-          }
-          options={[
-            { value: "", label: <>No automatic updates</> },
-            { value: "sms", label: <>SMS</> },
-            { value: "whatsapp", label: <>WhatsApp</> },
-          ]}
-        />
-      </ControlField>
-      <FormActions>
+        {amountPaid.trim() ? (
+          <ControlField label={<>Reference {optional}</>}>
+            <Input
+              placeholder="e.g. bank transfer ID"
+              value={paymentReference}
+              onChange={(event) => setPaymentReference(event.target.value)}
+            />
+          </ControlField>
+        ) : null}
+        <ControlField label="Send the customer updates by">
+          <ChoiceButtons
+            label="Send the customer updates by"
+            value={notificationChannel || "none"}
+            onChange={(value) =>
+              setNotificationChannel(value === "none" ? "" : value)
+            }
+            options={[
+              { value: "whatsapp", label: "WhatsApp" },
+              { value: "sms", label: "SMS" },
+              { value: "none", label: "Don’t send" },
+            ]}
+          />
+        </ControlField>
+      </SheetSection>
+      <FormActions className="items-center justify-between border-t border-border pt-4">
+        <p className="text-sm text-muted-foreground">
+          {totalMinor > 0 ? (
+            <>
+              Total{" "}
+              <span className="font-medium text-foreground">
+                {formatPrice(totalMinor, store.currencyCode)}
+              </span>
+              {paidMinor > 0
+                ? ` · Still to pay ${formatPrice(Math.max(0, totalMinor - paidMinor), store.currencyCode)}`
+                : " · Paid later"}
+            </>
+          ) : null}
+        </p>
         <SubmitButton
           type="button"
           isSubmitting={intakeMutation.isPending}
-          disabled={intakeMutation.isPending || lines.length === 0}
+          disabled={intakeMutation.isPending}
           onClick={submit}
         >
-          {intakeMutation.isPending ? "Creating…" : "Create service order"}
+          {intakeMutation.isPending ? "Creating…" : "Create job"}
         </SubmitButton>
       </FormActions>
     </FieldGroup>

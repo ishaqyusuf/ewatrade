@@ -2,11 +2,10 @@
 
 import { WorkspaceError } from "@/components/dashboard/workspace-error"
 import { ScrollableContent } from "@/components/scrollable-content"
-import { CustomerRequests } from "@/components/service-work/customer-requests"
 import { ServiceWorkHeader } from "@/components/service-work/service-work-header"
+import { CustomerRequestSheet } from "@/components/sheets/customer-request-sheet"
 import { ServiceIntakeSheet } from "@/components/sheets/service-intake-sheet"
 import { ServiceJobSheet } from "@/components/sheets/service-job-sheet"
-import { ServiceQuoteSheet } from "@/components/sheets/service-quote-sheet"
 import { ServiceRequestSheet } from "@/components/sheets/service-request-sheet"
 import { ServiceSettingsSheet } from "@/components/sheets/service-settings-sheet"
 import { ServiceWorkDataTable } from "@/components/tables/service-work/data-table"
@@ -79,20 +78,13 @@ export function ServiceJobsPage({
               />
             </Suspense>
           </ErrorBoundary>
-          {canManage ? (
-            <ErrorBoundary errorComponent={WorkspaceError}>
-              <Suspense fallback={<ServiceWorkTableSkeleton />}>
-                <CustomerRequests storeId={store.id} />
-              </Suspense>
-            </ErrorBoundary>
-          ) : null}
         </div>
       </ScrollableContent>
       <ServiceIntakeSheet canManage={canManage} store={store} />
       {canManage ? (
         <>
           <ServiceRequestSheet store={store} />
-          <ServiceQuoteSheet store={store} />
+          <CustomerRequestSheet store={store} timeZone={timeZone} />
           <ServiceSettingsSheet
             currencyCode={store.currencyCode}
             storeId={store.id}

@@ -12,6 +12,16 @@ export function formatMoney(value: number | null, currencyCode: string) {
   }).format(value / 100)
 }
 
+/** Whole naira without ".00"; kobo only when there are kobo. */
+export function formatPrice(value: number | null, currencyCode: string) {
+  if (value === null) return "Price after quote"
+  return new Intl.NumberFormat("en-NG", {
+    currency: currencyCode,
+    maximumFractionDigits: value % 100 === 0 ? 0 : 2,
+    style: "currency",
+  }).format(value / 100)
+}
+
 export function formatDue(
   value: string | Date | null,
   timeZone = "Africa/Lagos",
@@ -100,4 +110,44 @@ export function flattenServiceOfferings(items: CatalogItem[], storeId: string) {
         })),
     ),
   )
+}
+
+const TONES = {
+  muted: "bg-muted text-muted-foreground",
+  info: "bg-info text-info-foreground",
+  warning: "bg-warning text-warning-foreground",
+  ready: "bg-highlight text-highlight-foreground",
+} as const
+
+export type StatusTone = keyof typeof TONES
+
+export function toneClass(tone: StatusTone) {
+  return TONES[tone]
+}
+
+/** Plain words for a customer request's status. */
+export function requestStatus(status: string): {
+  label: string
+  tone: StatusTone
+} {
+  switch (status) {
+    case "SUBMITTED":
+      return { label: "New", tone: "ready" }
+    case "NEEDS_INFORMATION":
+      return { label: "Waiting for customer", tone: "info" }
+    case "QUOTED":
+      return { label: "Quote sent", tone: "info" }
+    case "CONVERTED":
+      return { label: "Accepted", tone: "ready" }
+    case "DECLINED":
+      return { label: "Declined", tone: "muted" }
+    case "WITHDRAWN":
+      return { label: "Withdrawn", tone: "muted" }
+    default:
+      return { label: label(status), tone: "muted" }
+  }
+}
+
+export function isOpenRequest(status: string) {
+  return status === "SUBMITTED" || status === "NEEDS_INFORMATION"
 }
