@@ -253,7 +253,7 @@ export function CustomerLedgerStatement({
             {money(statement.totals.outstandingDebtMinor)}
           </dd>
           <dd className="text-sm text-muted-foreground">
-            Recorded charges and starting balance
+            Orders and starting balance on this statement
           </dd>
         </div>
         <div className="border border-border p-4">
@@ -287,15 +287,15 @@ export function CustomerLedgerStatement({
               : net < BigInt(0)
                 ? "Paid ahead, minus what they owe"
                 : owed > BigInt(0) || paidAhead > BigInt(0)
-                  ? "No net balance. Charges and paid-ahead money remain separate."
+                  ? "Evens out, but the paid-ahead money hasn’t been used on what they owe yet."
                   : "Nothing owed"}
           </dd>
         </div>
       </dl>
       <p className="text-sm text-muted-foreground">
-        Shows recorded balance entries. Orders not posted to this statement are
-        excluded. A payment is kept as paid ahead until it’s used on a recorded
-        charge.
+        Shows only what’s been added to this statement: Orders, payments and any
+        starting balance. Orders not added here aren’t counted. A payment stays
+        as paid ahead until it’s used on something they owe.
       </p>
       {error || exporter.error ? (
         <Alert appearance="dashboard" variant="destructive">
