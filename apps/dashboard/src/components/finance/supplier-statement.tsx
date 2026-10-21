@@ -24,7 +24,13 @@ import {
 import { formatFinanceMoney } from "@ewatrade/utils/finance-money"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { useEffect, useMemo, useState } from "react"
+import { dayIn, plainDay } from "./review-changes"
 import { FinanceSupplierAging } from "./supplier-aging"
+import {
+  FinanceSupplierEntryUndoForm,
+  type SupplierEntryToUndo,
+  UNDOABLE_SUPPLIER_ENTRIES,
+} from "./supplier-entry-undo-form"
 import type { FinanceBook } from "./types"
 
 const entryLabels = {
@@ -38,6 +44,19 @@ const entryLabels = {
   ALLOCATION_RELEASE: "Undo using paid-ahead money",
   REVERSAL: "Undo",
 } as const
+
+/** Starting balances, payments ahead and starting-balance payments that stand can be undone here. */
+function canUndo(entry: {
+  kind: string
+  reversalOfId: string | null
+  reversal: unknown
+}) {
+  return (
+    (UNDOABLE_SUPPLIER_ENTRIES as readonly string[]).includes(entry.kind) &&
+    !entry.reversalOfId &&
+    !entry.reversal
+  )
+}
 
 export function FinanceSupplierStatement({
   book,
@@ -95,6 +114,7 @@ function FinanceSupplierHistory({
   const client = useQueryClient()
   const { setParams } = useFinanceParams()
   const [snapshot, setSnapshot] = useState<string>()
+  const [undoing, setUndoing] = useState<SupplierEntryToUndo | null>(null)
   const [cursors, setCursors] = useState<Array<string | undefined>>([undefined])
   const [refreshing, setRefreshing] = useState(false)
   const [refreshError, setRefreshError] = useState<string | null>(null)
@@ -201,6 +221,15 @@ function FinanceSupplierHistory({
   const money = (value: string) =>
     formatFinanceMoney(value, statement.currencyCode)
   const busy = refreshing || query.isFetching
+  if (undoing)
+    return (
+      <FinanceSupplierEntryUndoForm
+        book={book}
+        supplierName={statement.supplier.name}
+        entry={undoing}
+        onBack={() => setUndoing(null)}
+      />
+    )
   return (
     <div className="flex min-w-0 flex-col gap-5">
       <div>
@@ -301,6 +330,9 @@ function FinanceSupplierHistory({
               <TableHead scope="col" className="text-right">
                 Billed
               </TableHead>
+              <TableHead scope="col" className="w-20">
+                <span className="sr-only">Actions</span>
+              </TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -320,7 +352,7 @@ function FinanceSupplierHistory({
                     />
                   </TableCell>
                   <TableCell className="whitespace-nowrap align-top">
-                    {new Date(entry.effectiveAt).toISOString().slice(0, 10)}
+                    {plainDay(dayIn(entry.effectiveAt, book.timezone))}
                   </TableCell>
                   <TableCell className="max-w-sm">
                     <p className="break-words">{entry.description}</p>
@@ -336,9 +368,9 @@ function FinanceSupplierHistory({
                         </Badge>
                         <p className="break-words text-xs text-muted-foreground">
                           {entry.reversal.description} ·{" "}
-                          {new Date(entry.reversal.effectiveAt)
-                            .toISOString()
-                            .slice(0, 10)}
+                          {plainDay(
+                            dayIn(entry.reversal.effectiveAt, book.timezone),
+                          )}
                         </p>
                       </div>
                     ) : null}
@@ -349,11 +381,33 @@ function FinanceSupplierHistory({
                   <TableCell className="text-right align-top tabular-nums">
                     {money(entry.side === "CREDIT" ? entry.amountMinor : "0")}
                   </TableCell>
+                  <TableCell className="text-right align-top">
+                    {canUndo(entry) ? (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        disabled={busy}
+                        onClick={() =>
+                          setUndoing({
+                            id: entry.id,
+                            kind: entry.kind as SupplierEntryToUndo["kind"],
+                            label: entryLabels[entry.kind],
+                            description: entry.description,
+                            amountMinor: entry.amountMinor,
+                            effectiveAt: entry.effectiveAt,
+                            moneyAccountId: entry.moneyAccountId,
+                          })
+                        }
+                      >
+                        Undo
+                      </Button>
+                    ) : null}
+                  </TableCell>
                 </TableRow>
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={5}>No bills or payments yet.</TableCell>
+                <TableCell colSpan={6}>No bills or payments yet.</TableCell>
               </TableRow>
             )}
           </TableBody>
