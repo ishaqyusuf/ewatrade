@@ -1,3 +1,4 @@
+import { ASSISTANT_RUNTIME_CONFIGURATION_KEY } from "@ewatrade/ai/runtime-config"
 import { expect, test } from "bun:test"
 import { GENERAL_BUDGET_LIMITS } from "../../assistant/general-allowance"
 import type { CustomerMessageAiInput } from "../../schemas/customer-messages"
@@ -149,7 +150,8 @@ function callerFixture(
       return work(tx as never)
     },
     systemConfiguration: {
-      findUnique: async () => {
+      findUnique: async (args: { where: { key: string } }) => {
+        if (args.where.key !== ASSISTANT_RUNTIME_CONFIGURATION_KEY) return null
         runtimeReads += 1
         events.push("runtime-read")
         return { value: runtime }

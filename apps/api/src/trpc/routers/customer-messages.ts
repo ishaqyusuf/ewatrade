@@ -22,8 +22,8 @@ import {
   starterCustomerMessageDrafts,
 } from "../../assistant/customer-message-drafts"
 import {
-  GENERAL_BUDGET_LIMITS,
   generalBudgetScopeKey,
+  resolveGeneralBudgetLimits,
 } from "../../assistant/general-allowance"
 import { resolveGeneralAssistantModel } from "../../assistant/model-resolution"
 import {
@@ -182,10 +182,16 @@ export const customerMessagesRouter = createTRPCRouter({
             input,
             "AI is unavailable. These are editable starter messages.",
           )
-        const budgetScopeKey = generalBudgetScopeKey(scope)
+        const budgetNow = new Date()
+        const budgetScopeKey = generalBudgetScopeKey(scope, budgetNow)
+        const budgetLimits = await resolveGeneralBudgetLimits(
+          ctx.db,
+          scope,
+          budgetNow,
+        )
         const budget = await reserveAssistantBudget(ctx.db, {
           scopeKey: budgetScopeKey,
-          limits: GENERAL_BUDGET_LIMITS,
+          limits: budgetLimits,
         })
         if (!budget.allowed)
           return starterCustomerMessageDrafts(
