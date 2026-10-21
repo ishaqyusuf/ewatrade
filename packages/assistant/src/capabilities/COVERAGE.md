@@ -6,9 +6,9 @@ Tickets refer to the Brain plan `.brain/plans/2026-10-09-assistant-business-oper
 
 ## Summary
 
-- Router procedures: 669 (496 merchant, 173 public/account/internal)
+- Router procedures: 670 (497 merchant, 173 public/account/internal)
 - Merchant supported by a capability: 164
-- Merchant planned: 130
+- Merchant planned: 131
 - Merchant form-only: 145
 - Merchant excluded: 57
 - Capabilities: 154 (80 read, 74 write)
@@ -353,7 +353,7 @@ track conversational evaluation separately from these source test links.
 | D02 | 1 |
 | D03 | 8 |
 | D04 | 3 |
-| D05 | 3 |
+| D05 | 4 |
 | E01 | 4 |
 | E02 | 3 |
 | E03 | 3 |
@@ -832,6 +832,7 @@ track conversational evaluation separately from these source test links.
 | `services.publishEvidence` | mutation | Owner/Admin only | services | planned | H04 |
 | `services.queue` | query | Owner/Admin only | sales | excluded | Unbounded legacy list; the assistant reads bounded pages. |
 | `services.queuePage` | query | Owner/Admin only | services | supported | services.queue.read |
+| `services.queueStageCounts` | query | Owner/Admin only | services | planned | D05 |
 | `services.recordException` | mutation | Owner/Admin only | services | supported | services.work.exception |
 | `services.rescheduleJob` | mutation | Owner/Admin only | services | supported | services.work.reschedule |
 | `services.revokeEvidence` | mutation | Owner/Admin only | services | planned | H04 |

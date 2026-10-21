@@ -1,0 +1,39 @@
+{
+  "version": 1,
+  "id": "2026-10-21-services-queue-stage-counts",
+  "tickets": ["D05", "H02"],
+  "summary": "Services job table stage tabs (commit 660d62a42) add services.queueStageCounts, a read-only count of jobs per derived stage that backs the dashboard tabs.",
+  "capabilities": [],
+  "procedures": [
+    {
+      "path": "services.queueStageCounts",
+      "status": "planned",
+      "reason": "Dashboard tab counts only. The assistant already reads bounded job pages through services.queue.read (services.queuePage, now stage-filtered); per-stage totals join the work lifecycle reads planned under D05. No write, permission or rollout change; the procedure keeps the existing service operator check."
+    }
+  ],
+  "docs": [
+    {
+      "topic": "feature",
+      "status": "local_only",
+      "path": ".brain/features/service-commerce.md"
+    },
+    {
+      "topic": "api",
+      "status": "local_only",
+      "path": ".brain/api/endpoints.md"
+    },
+    {
+      "topic": "capability",
+      "status": "updated",
+      "path": "packages/assistant/src/capabilities/COVERAGE.md"
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "run",
+      "path": "packages/assistant/src/capabilities/COVERAGE.md",
+      "executed": true,
+      "result": "Regenerated coverage lists services.queueStageCounts as planned under D05 (merchant planned 130 to 131)."
+    }
+  ]
+}
