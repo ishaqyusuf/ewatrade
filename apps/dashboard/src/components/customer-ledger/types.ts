@@ -14,6 +14,7 @@ export type LedgerRequest = {
   [K in
     | "recordOpening"
     | "recordReceipt"
+    | "recordReceiptAndApply"
     | "applyCredit"
     | "releaseAllocation"
     | "refundUnusedCredit"
@@ -24,6 +25,7 @@ export type LedgerRequest = {
 }[
   | "recordOpening"
   | "recordReceipt"
+  | "recordReceiptAndApply"
   | "applyCredit"
   | "releaseAllocation"
   | "refundUnusedCredit"

@@ -19,6 +19,8 @@ export const ledgerFieldsSchema = z.object({
   chargeEntryId: z.string(),
   revision: z.string(),
   date: z.string(),
+  /** Receipt only: use the payment on their unpaid Orders right away. */
+  applyNow: z.boolean(),
 })
 export type LedgerFields = z.infer<typeof ledgerFieldsSchema>
 export function eligibleLedgerMoneyAccounts(
@@ -122,7 +124,10 @@ export function prepareCustomerLedgerCommand({
   }
   if (mode === "receipt")
     return {
-      operation: "recordReceipt",
+      operation:
+        fields.applyNow && BigInt(account.totals.outstandingDebtMinor) > 0
+          ? "recordReceiptAndApply"
+          : "recordReceipt",
       payload: {
         ...base,
         moneyAccountId: fields.moneyAccountId,
@@ -207,6 +212,13 @@ export function customerLedgerReviewTotals(
     case "recordReceipt":
       credit += amount
       break
+    case "recordReceiptAndApply": {
+      // Oldest unpaid charges first; what's left stays paid ahead.
+      const used = amount < debt ? amount : debt
+      debt -= used
+      credit += amount - used
+      break
+    }
     case "applyCredit":
       debt -= amount
       credit -= amount

@@ -11,6 +11,7 @@ import {
   listCustomerLedgerSources,
   recordCustomerLedgerOpening,
   recordCustomerLedgerReceipt,
+  recordCustomerLedgerReceiptAndApply,
   refundCustomerLedgerCredit,
   releaseCustomerLedgerAllocation,
   reverseCustomerLedgerEntry,
@@ -69,6 +70,15 @@ export const customerLedgerRouter = createTRPCRouter({
     .input(customerLedgerReceiptSchema)
     .mutation(({ ctx, input }) =>
       recordCustomerLedgerReceipt(ctx.db, {
+        ...input,
+        ...ctx.financeActor,
+      }),
+    ),
+  /** Record a payment and use it on the oldest unpaid charges in one go. */
+  recordReceiptAndApply: financeProcedure
+    .input(customerLedgerReceiptSchema)
+    .mutation(({ ctx, input }) =>
+      recordCustomerLedgerReceiptAndApply(ctx.db, {
         ...input,
         ...ctx.financeActor,
       }),

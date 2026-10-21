@@ -40,6 +40,7 @@ const fields: LedgerFields = {
   chargeEntryId: "debt",
   revision: "3",
   date: now.toISOString(),
+  applyNow: false,
 }
 const money = (
   id: string,
@@ -236,4 +237,31 @@ test("applying credit preserves net balance while a receipt only increases held 
     availableCreditMinor: "350000",
     netBalanceMinor: "2050000",
   })
+})
+
+test("a receipt used on unpaid Orders right away settles debt first, then pays ahead", () => {
+  const request = prepareCustomerLedgerCommand({
+    mode: "receipt",
+    account,
+    fields: { ...fields, amount: "30000", applyNow: true },
+    moneyAccounts: [money("cash", "CASH")],
+  })
+  expect(request.operation).toBe("recordReceiptAndApply")
+  expect(customerLedgerReviewTotals(account, request)).toEqual({
+    outstandingDebtMinor: "0",
+    availableCreditMinor: "1200000",
+    netBalanceMinor: "-1200000",
+  })
+  const settled = {
+    ...account,
+    totals: { ...account.totals, outstandingDebtMinor: "0" },
+  }
+  expect(
+    prepareCustomerLedgerCommand({
+      mode: "receipt",
+      account: settled,
+      fields: { ...fields, applyNow: true },
+      moneyAccounts: [money("cash", "CASH")],
+    }).operation,
+  ).toBe("recordReceipt")
 })

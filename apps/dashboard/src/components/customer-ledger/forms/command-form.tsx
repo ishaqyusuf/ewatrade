@@ -25,6 +25,7 @@ import {
   MoneyInput,
   SelectControl,
   SubmitButton,
+  Switch,
   Textarea,
 } from "@ewatrade/ui"
 import { formatFinanceMoney } from "@ewatrade/utils/finance-money"
@@ -38,6 +39,7 @@ import { useCustomerLedgerForm } from "./form-context"
 const OPERATION_WORDS: Record<string, string> = {
   recordOpening: "starting balance",
   recordReceipt: "payment",
+  recordReceiptAndApply: "payment",
   applyCredit: "use on an Order",
   releaseAllocation: "undo",
   refundUnusedCredit: "return of paid-ahead money",
@@ -109,8 +111,10 @@ export function CustomerLedgerCommandForm({
       chargeEntryId: "",
       revision: account.revision,
       date: new Date().toISOString(),
+      applyNow: true,
     },
   })
+  const owes = BigInt(account.totals.outstandingDebtMinor) > BigInt(0)
   const needsCredit = mode === "apply" || mode === "refund"
   const needsMoney = mode === "receipt" || mode === "refund"
   const needsDetail = mode === "reverse" || mode === "release"
@@ -161,6 +165,9 @@ export function CustomerLedgerCommandForm({
   )
   const receipt = useMutation(
     trpc.customerLedger.recordReceipt.mutationOptions(),
+  )
+  const receiptAndApply = useMutation(
+    trpc.customerLedger.recordReceiptAndApply.mutationOptions(),
   )
   const apply = useMutation(trpc.customerLedger.applyCredit.mutationOptions())
   const release = useMutation(
@@ -221,6 +228,11 @@ export function CustomerLedgerCommandForm({
           return opening.mutateAsync({ ...attempt.payload, clientCommandId })
         case "recordReceipt":
           return receipt.mutateAsync({ ...attempt.payload, clientCommandId })
+        case "recordReceiptAndApply":
+          return receiptAndApply.mutateAsync({
+            ...attempt.payload,
+            clientCommandId,
+          })
         case "applyCredit":
           return apply.mutateAsync({ ...attempt.payload, clientCommandId })
         case "releaseAllocation":
@@ -310,7 +322,9 @@ export function CustomerLedgerCommandForm({
       <Alert appearance="dashboard">
         <AlertDescription>
           {mode === "receipt"
-            ? "Record money you’ve already received. It’s kept as paid ahead until it’s used on an Order."
+            ? owes
+              ? "Record money you’ve already received. You can use it on what they owe right away; anything left is kept as paid ahead."
+              : "Record money you’ve already received. It’s kept as paid ahead until it’s used on an Order."
             : mode === "apply" || mode === "release"
               ? "This only changes which Order the money counts toward. No money moves and the balance stays the same."
               : mode === "refund"
@@ -413,6 +427,14 @@ export function CustomerLedgerCommandForm({
                       : "the selected balance"
                 })()}
               </p>
+            ) : null}
+            {review.operation === "recordReceiptAndApply" ? (
+              <p>
+                Used on what they owe, oldest first. Anything left stays paid
+                ahead.
+              </p>
+            ) : review.operation === "recordReceipt" ? (
+              <p>Kept as paid ahead.</p>
             ) : null}
             {"moneyAccountId" in review.payload ? (
               <p>
@@ -620,6 +642,36 @@ export function CustomerLedgerCommandForm({
                 )}
                 {text("reference", "Reference (optional)")}
               </>
+            ) : null}
+            {mode === "receipt" && owes ? (
+              <Controller
+                control={form.control}
+                name="applyNow"
+                render={({ field }) => (
+                  // biome-ignore lint/a11y/noLabelWithoutControl: the switch is the label's child
+                  <label className="flex cursor-pointer items-start justify-between gap-4 border border-border px-3 py-2.5">
+                    <span className="grid gap-0.5">
+                      <span className="text-sm font-medium">
+                        Use it on what they owe now
+                      </span>
+                      <span className="text-xs text-muted-foreground">
+                        They owe{" "}
+                        {formatFinanceMoney(
+                          account.totals.outstandingDebtMinor,
+                          account.currencyCode,
+                        )}
+                        . Oldest first; anything left stays paid ahead.
+                      </span>
+                    </span>
+                    <Switch
+                      checked={field.value}
+                      onCheckedChange={(checked) =>
+                        field.onChange(checked === true)
+                      }
+                    />
+                  </label>
+                )}
+              />
             ) : null}
             {mode !== "apply"
               ? text("reason", mode === "receipt" ? "Note" : "Reason", true)
