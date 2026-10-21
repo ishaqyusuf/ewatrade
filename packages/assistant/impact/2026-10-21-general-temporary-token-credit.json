@@ -1,9 +1,18 @@
 {
   "version": 1,
   "id": "2026-10-21-general-temporary-token-credit",
-  "tickets": ["H02"],
+  "tickets": [
+    "H02"
+  ],
   "summary": "Finite, expiring GENERAL token allowance in a separate existing SystemConfiguration entry scoped to the server-derived Tenant and UTC month. The shared display, canonical Assistant/WhatsApp turn, and customer-message draft reservations resolve the same token ceiling. Request limits and all usage counters remain unchanged; no record is created by this source change.",
-  "capabilities": [],
+  "capabilities": [
+    {
+      "id": "catalog.product.create",
+      "change": "unchanged",
+      "rollout": "source",
+      "note": "Existing canonical Catalog create, server-derived permissions and explicit confirmation remain unchanged. This cross-cutting GENERAL model-admission token ceiling is shared by current capabilities and customer-message drafts; it exposes no new capability and promotes no rollout."
+    }
+  ],
   "procedures": [],
   "docs": [
     {
