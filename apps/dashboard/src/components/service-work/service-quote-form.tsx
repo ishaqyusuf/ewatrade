@@ -1,6 +1,8 @@
 "use client"
 import { FormFeedback } from "@/components/forms/form-feedback"
+import { formatPrice } from "@/components/service-work/service-utils"
 import {
+  Button,
   ControlField,
   DateControl,
   FieldGroup,
@@ -10,6 +12,7 @@ import {
   SubmitButton,
   Textarea,
   Field as UiField,
+  toast,
 } from "@ewatrade/ui"
 
 import { useServiceWorkParams } from "@/hooks/use-service-work-params"
@@ -80,10 +83,18 @@ export function ServiceQuoteForm({ store }: { store: StoreSummary }) {
     }),
   )
 
+  const totalMinor = (request?.lines ?? []).reduce((sum, line) => {
+    const price = Number(prices[line.offeringId])
+    const quantity = Number(line.quantity)
+    return Number.isFinite(price) && Number.isFinite(quantity)
+      ? sum + Math.round(price * 100) * quantity
+      : sum
+  }, 0)
+
   if (!request) {
     return (
       <p className="text-sm text-muted-foreground">
-        The selected Request is no longer available.
+        This request is no longer available.
       </p>
     )
   }
@@ -105,7 +116,7 @@ export function ServiceQuoteForm({ store }: { store: StoreSummary }) {
           !Number.isFinite(line.unitPriceMinor) || line.unitPriceMinor < 0,
       )
     ) {
-      setError("Enter a valid price for every quoted line.")
+      setError("Enter a price for each service, like 15000.")
       return
     }
     quoteMutation.mutate({
@@ -121,16 +132,34 @@ export function ServiceQuoteForm({ store }: { store: StoreSummary }) {
 
   if (publicUrl) {
     return (
-      <div className="border border-primary/20 bg-primary/10 px-4 py-3 text-sm">
-        <p className="font-medium">Quote link ready</p>
-        <a
-          className="mt-2 block break-all text-primary underline"
-          href={publicUrl}
-          rel="noreferrer"
-          target="_blank"
-        >
-          {publicUrl}
-        </a>
+      <div className="grid gap-3">
+        <FormFeedback appearance="dashboard" variant="default">
+          Quote ready. Send this link to {request.customerName}; they accept it
+          there.
+        </FormFeedback>
+        <div className="flex items-center gap-3 border border-border px-3 py-2.5">
+          <a
+            className="min-w-0 flex-1 text-sm break-all text-primary underline"
+            href={publicUrl}
+            rel="noreferrer"
+            target="_blank"
+          >
+            {publicUrl}
+          </a>
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            onClick={() =>
+              void navigator.clipboard.writeText(publicUrl).then(
+                () => toast("Link copied."),
+                () => toast("Select the link to copy it."),
+              )
+            }
+          >
+            Copy link
+          </Button>
+        </div>
       </div>
     )
   }
@@ -145,13 +174,13 @@ export function ServiceQuoteForm({ store }: { store: StoreSummary }) {
           <div>
             <p className="font-medium">{line.offeringName}</p>
             <p className="text-sm text-muted-foreground">
-              Quantity {line.quantity}
+              How many: {line.quantity}
               {lineOptionDetail(line.offeringName, line.variantName)}
             </p>
           </div>
           <UiField className="gap-1.5">
             <FieldLabel htmlFor={`service-quote-price-${line.id}`}>
-              Unit price
+              Price each
             </FieldLabel>
             <MoneyInput
               id={`service-quote-price-${line.id}`}
@@ -169,21 +198,21 @@ export function ServiceQuoteForm({ store }: { store: StoreSummary }) {
         </div>
       ))}
       <ControlField
-        label="Agreed service scope"
-        description="Review the customer's request and confirm what this price covers. This scope is saved with this quote version and shown before acceptance."
+        label="What the price covers"
+        description="Check the customer’s words and say what is and isn’t included. They see this with the price before accepting."
       >
         <Textarea
           value={agreedScope}
           onChange={(event) => setAgreedScope(event.target.value)}
           maxLength={4_000}
           rows={6}
-          placeholder="Work included, exclusions, supplies, location and visit window"
+          placeholder="Work, what is not included, supplies, place and time"
         />
       </ControlField>
       <ControlField
         label={
           <>
-            Expires{" "}
+            Price is good until{" "}
             <span className="font-normal text-muted-foreground">Optional</span>
           </>
         }
@@ -198,11 +227,14 @@ export function ServiceQuoteForm({ store }: { store: StoreSummary }) {
         <SubmitButton
           type="button"
           isSubmitting={quoteMutation.isPending}
-          className="rounded-none"
           disabled={quoteMutation.isPending}
           onClick={issueQuote}
         >
-          {quoteMutation.isPending ? "Issuing…" : "Issue quote"}
+          {quoteMutation.isPending
+            ? "Creating…"
+            : totalMinor > 0
+              ? `Create quote · ${formatPrice(totalMinor, store.currencyCode)}`
+              : "Create quote"}
         </SubmitButton>
       </FormActions>
     </FieldGroup>
