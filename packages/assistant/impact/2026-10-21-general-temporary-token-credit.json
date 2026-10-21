@@ -1,0 +1,43 @@
+{
+  "version": 1,
+  "id": "2026-10-21-general-temporary-token-credit",
+  "tickets": ["H02"],
+  "summary": "Finite, expiring GENERAL token allowance in a separate existing SystemConfiguration entry scoped to the server-derived Tenant and UTC month. The shared display, canonical Assistant/WhatsApp turn, and customer-message draft reservations resolve the same token ceiling. Request limits and all usage counters remain unchanged; no record is created by this source change.",
+  "capabilities": [],
+  "procedures": [],
+  "docs": [
+    {
+      "topic": "feature",
+      "status": "local_only",
+      "path": ".brain/features/whatsapp-assistant.md"
+    },
+    {
+      "topic": "api",
+      "status": "local_only",
+      "path": ".brain/api/contracts.md"
+    },
+    {
+      "topic": "permissions",
+      "status": "not_applicable",
+      "note": "Server-derived Tenant/month scope, authentication, business permissions, confirmations and request cap are unchanged. No new endpoint or business capability is exposed."
+    },
+    {
+      "topic": "capability",
+      "status": "not_applicable",
+      "note": "No capability manifest or procedure coverage row changes; only the existing shared spend ceiling can receive a validated temporary credit."
+    },
+    {
+      "topic": "schema",
+      "status": "not_applicable",
+      "note": "Reuses existing SystemConfiguration JSON and AssistantBudget counters; no Prisma schema or migration changes."
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "test",
+      "path": "apps/api/src/assistant/general-allowance.test.ts",
+      "executed": true,
+      "result": "Six focused pure tests/31 assertions pass: hosted/local defaults, exact Tenant/month key, finite token-only credit, expired/foreign/previous-month refusal, malformed/extra-field/ceiling refusal and no lowering of existing ceilings. No database or provider calls."
+    }
+  ]
+}
