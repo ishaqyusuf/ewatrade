@@ -6,12 +6,12 @@ Tickets refer to the Brain plan `.brain/plans/2026-10-09-assistant-business-oper
 
 ## Summary
 
-- Router procedures: 670 (497 merchant, 173 public/account/internal)
-- Merchant supported by a capability: 164
+- Router procedures: 672 (499 merchant, 173 public/account/internal)
+- Merchant supported by a capability: 166
 - Merchant planned: 131
 - Merchant form-only: 145
 - Merchant excluded: 57
-- Capabilities: 154 (80 read, 74 write)
+- Capabilities: 156 (81 read, 75 write)
 
 ## Capabilities
 
@@ -39,6 +39,8 @@ Tickets refer to the Brain plan `.brain/plans/2026-10-09-assistant-business-oper
 | `staff.status.change` | 1 | write (`staff_status`) | `draftAction` | OWNER, ADMIN | Owner/Admin only | dashboard, mobile | planned | `retailOps.updateStaffStatus` |
 | `staff.status.review` | 1 | read | `reviewStaffStatus` | OWNER, ADMIN | Owner/Admin only | dashboard | planned | `retailOps.staffStatusReview` |
 | `staff.status.receipt.read` | 1 | read | `readStaffStatusReceipt` | OWNER, ADMIN | Owner/Admin only | dashboard, mobile | planned | `retailOps.staffStatusReceipt` |
+| `staff.removal.unaccepted` | 1 | write (`staff_removal`) | `draftAction` | OWNER, ADMIN | Owner/Admin only | dashboard | planned | `retailOps.removeUnacceptedStaff` |
+| `staff.removal.review` | 1 | read | `reviewStaffRemoval` | OWNER, ADMIN | Owner/Admin only | dashboard | planned | `retailOps.staffRemovalReview` |
 | `sales.items.report` | 1 | read | `readItemSalesReport` | OWNER, ADMIN, MANAGER, CASHIER, OPERATOR | read | dashboard, mobile | planned | `businessReporting.itemSales` |
 | `sales.collections.report` | 1 | read | `readPaymentCollectionsReport` | OWNER, ADMIN, MANAGER, CASHIER, OPERATOR | read | dashboard, mobile | planned | `businessReporting.paymentCollections` |
 | `customers.debt.report` | 1 | read | `readCustomerDebtReport` | OWNER, ADMIN | Owner/Admin only | dashboard, mobile | planned | `businessReporting.customerDebt` |
@@ -207,6 +209,8 @@ track conversational evaluation separately from these source test links.
 | `staff.status.change` | Suspend Amina's business access because she is on leave | [apps/mobile/src/components/mobile/assistant/native-staff-status-values.test.ts](../../../../apps/mobile/src/components/mobile/assistant/native-staff-status-values.test.ts)<br>[apps/api/src/assistant/general-staff-status.test.ts](../../../../apps/api/src/assistant/general-staff-status.test.ts)<br>[packages/assistant/src/general/staff-status.test.ts](../../../../packages/assistant/src/general/staff-status.test.ts)<br>[packages/db/src/queries/staff-status-change.test.ts](../../../../packages/db/src/queries/staff-status-change.test.ts) |
 | `staff.status.review` | Review reactivating Amina using her current access | [packages/db/src/queries/staff-status-change.test.ts](../../../../packages/db/src/queries/staff-status-change.test.ts) |
 | `staff.status.receipt.read` | Open the original saved staff suspension | [packages/assistant/evaluations/fixtures/native-staff-original.fixture.tsx](../../../../packages/assistant/evaluations/fixtures/native-staff-original.fixture.tsx)<br>[packages/db/src/queries/staff-status-receipt.test.ts](../../../../packages/db/src/queries/staff-status-receipt.test.ts) |
+| `staff.removal.unaccepted` | Remove Bola, she never accepted her invite | [apps/api/src/assistant/general-staff-removal.test.ts](../../../../apps/api/src/assistant/general-staff-removal.test.ts)<br>[packages/assistant/src/general/staff-removal.test.ts](../../../../packages/assistant/src/general/staff-removal.test.ts)<br>[packages/db/src/queries/staff-status-change.test.ts](../../../../packages/db/src/queries/staff-status-change.test.ts) |
+| `staff.removal.review` | Review removing Bola, who never joined | [apps/api/src/assistant/general-staff-removal.test.ts](../../../../apps/api/src/assistant/general-staff-removal.test.ts) |
 | `sales.items.report` | How many crates of eggs did we sell last week? | [packages/assistant/evaluations/fixtures/native-business-report-screen.fixture.tsx](../../../../packages/assistant/evaluations/fixtures/native-business-report-screen.fixture.tsx)<br>[packages/assistant/evaluations/fixtures/native-business-report-content.fixture.tsx](../../../../packages/assistant/evaluations/fixtures/native-business-report-content.fixture.tsx)<br>[apps/mobile/src/components/mobile/assistant/native-business-report-target.test.ts](../../../../apps/mobile/src/components/mobile/assistant/native-business-report-target.test.ts)<br>[packages/db/src/queries/business-reporting/reporting.test.ts](../../../../packages/db/src/queries/business-reporting/reporting.test.ts)<br>[packages/assistant/src/general/business-report-target.test.ts](../../../../packages/assistant/src/general/business-report-target.test.ts) |
 | `sales.collections.report` | How much money did we record today? | [packages/assistant/evaluations/fixtures/native-business-report-screen.fixture.tsx](../../../../packages/assistant/evaluations/fixtures/native-business-report-screen.fixture.tsx)<br>[packages/assistant/evaluations/fixtures/native-business-report-content.fixture.tsx](../../../../packages/assistant/evaluations/fixtures/native-business-report-content.fixture.tsx)<br>[apps/mobile/src/components/mobile/assistant/native-business-report-target.test.ts](../../../../apps/mobile/src/components/mobile/assistant/native-business-report-target.test.ts)<br>[packages/db/src/queries/business-reporting/reporting.test.ts](../../../../packages/db/src/queries/business-reporting/reporting.test.ts)<br>[packages/assistant/src/general/business-report-target.test.ts](../../../../packages/assistant/src/general/business-report-target.test.ts) |
 | `customers.debt.report` | Show current posted customer debt in NGN | [packages/assistant/evaluations/fixtures/native-business-report-screen.fixture.tsx](../../../../packages/assistant/evaluations/fixtures/native-business-report-screen.fixture.tsx)<br>[packages/assistant/evaluations/fixtures/native-business-report-content.fixture.tsx](../../../../packages/assistant/evaluations/fixtures/native-business-report-content.fixture.tsx)<br>[apps/mobile/src/components/mobile/assistant/native-business-report-target.test.ts](../../../../apps/mobile/src/components/mobile/assistant/native-business-report-target.test.ts)<br>[packages/db/src/queries/business-reporting/reporting.test.ts](../../../../packages/db/src/queries/business-reporting/reporting.test.ts)<br>[packages/assistant/src/general/business-report-target.test.ts](../../../../packages/assistant/src/general/business-report-target.test.ts) |
@@ -694,6 +698,7 @@ track conversational evaluation separately from these source test links.
 | `qaTools.fixtureContext` | query | Owner/Admin only | platform | excluded | Internal QA tooling. |
 | `retailOps.createSubscriptionCheckoutIntent` | mutation | Owner/Admin only | platform | form_only | Subscription purchase and verification use the billing checkout. |
 | `retailOps.inviteStaff` | mutation | Owner/Admin only | staff | planned | S02 |
+| `retailOps.removeUnacceptedStaff` | mutation | Owner/Admin only | staff | supported | staff.removal.unaccepted |
 | `retailOps.staff` | query | Owner/Admin only | staff | planned | S01 |
 | `retailOps.staffAccessReceipt` | query | Owner/Admin only | staff | supported | staff.access.receipt.read |
 | `retailOps.staffActivityPage` | query | Owner/Admin only | staff | supported | staff.activity.read |
@@ -706,6 +711,7 @@ track conversational evaluation separately from these source test links.
 | `retailOps.staffInvitationCommandSave` | mutation | Owner/Admin only | staff | supported | staff.invitation.manage |
 | `retailOps.staffInvitationReview` | query | Owner/Admin only | staff | supported | staff.invitation.review |
 | `retailOps.staffInvitations` | query | Owner/Admin only | staff | supported | staff.invitations.read |
+| `retailOps.staffRemovalReview` | query | Owner/Admin only | staff | supported | staff.removal.review |
 | `retailOps.staffStatusReceipt` | query | Owner/Admin only | staff | supported | staff.status.receipt.read |
 | `retailOps.staffStatusReview` | query | Owner/Admin only | staff | supported | staff.status.review |
 | `retailOps.staffStoreAccessReview` | query | Owner/Admin only | staff | supported | staff.access.change, staff.access.review |

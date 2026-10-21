@@ -1,0 +1,74 @@
+{
+  "version": 1,
+  "id": "2026-10-21-staff-removal-assistant",
+  "tickets": ["S04", "H02"],
+  "summary": "Assistant support for removing someone who never joined (pending, expired or suspended invite never accepted), replacing the earlier web-only decision. Reviewed draft with current access revision and reason, separate app confirmation, Owner/Admin only, dashboard client, rollout planned like the staff status commands.",
+  "capabilities": [
+    {
+      "id": "staff.removal.unaccepted",
+      "change": "added",
+      "rollout": "planned",
+      "note": "Write staff_removal; Owner/Admin (administrativeOnly under tenant lock); tenant scope; receipt staff_status (REMOVED lifecycle event); dashboard proposal editor."
+    },
+    {
+      "id": "staff.removal.review",
+      "change": "added",
+      "rollout": "planned",
+      "note": "Read reviewStaffRemoval; returns current revision, live invite links and impact with a review hash; changes nothing."
+    }
+  ],
+  "procedures": [
+    {
+      "path": "retailOps.removeUnacceptedStaff",
+      "status": "supported",
+      "reason": "App mutation using the same canonical removal as the assistant command and the dashboard Staff page."
+    },
+    {
+      "path": "retailOps.staffRemovalReview",
+      "status": "supported",
+      "reason": "Review read backing staff.removal.review and the dashboard proposal editor."
+    }
+  ],
+  "docs": [
+    {
+      "topic": "feature",
+      "status": "local_only",
+      "path": ".brain/features/staff-directory-views.md"
+    },
+    {
+      "topic": "api",
+      "status": "local_only",
+      "path": ".brain/api/endpoints.md"
+    },
+    {
+      "topic": "capability",
+      "status": "updated",
+      "path": "packages/assistant/src/capabilities/COVERAGE.md"
+    },
+    {
+      "topic": "schema",
+      "status": "not_applicable",
+      "note": "No schema change; existing REMOVED membership status and lifecycle event."
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "test",
+      "path": "apps/api/src/assistant/general-staff-removal.test.ts",
+      "executed": true,
+      "result": "Registration (planned, Owner/Admin, dashboard, staff_status receipt) and review wording pass."
+    },
+    {
+      "kind": "test",
+      "path": "packages/db/src/queries/staff-status-change.test.ts",
+      "executed": true,
+      "result": "18 pass including review hash changes and confirmation requiring revision and reason."
+    },
+    {
+      "kind": "test",
+      "path": "packages/assistant/src/general/staff-removal.test.ts",
+      "executed": true,
+      "result": "Strict schema, reason and revision bounds pass."
+    }
+  ]
+}
