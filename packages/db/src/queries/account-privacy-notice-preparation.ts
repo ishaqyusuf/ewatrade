@@ -2,6 +2,14 @@ import { createHash } from "node:crypto"
 import type { PrismaClient } from "../../generated/prisma/client"
 import { assessAccountPrivacyCompletion } from "./account-privacy-completion"
 import { accountPrivacyRecipientDigest } from "./account-privacy-notice"
+import {
+  getApprovedNoticeRetentionPolicy,
+  noticeRetentionEvidence,
+  noticeRetentionIsConfirmed,
+  originalExternalPolicyDigest,
+  originalExternalReviewDigest,
+} from "./account-privacy-notice-retention"
+import { getApprovedAccountPrivacyProfilePolicy } from "./account-privacy-profile-policy"
 
 export type AccountPrivacyNoticePreparationCode =
   | "DISABLED"
@@ -69,6 +77,17 @@ export async function prepareAccountPrivacyNotice(
   )
     throw new AccountPrivacyNoticePreparationError("POLICY_NOT_APPROVED")
   const now = input.now ?? new Date()
+  const noticeRetention = getApprovedNoticeRetentionPolicy(process.env, now)
+  const profilePolicy = getApprovedAccountPrivacyProfilePolicy(process.env, now)
+  if (
+    !noticeRetention ||
+    !profilePolicy ||
+    noticeRetention.requestId !== input.requestId ||
+    noticeRetention.contentDigest !== input.contentDigest.toLowerCase() ||
+    noticeRetention.operatorUserId !== input.operatorUserId ||
+    now > new Date(noticeRetention.sendBy)
+  )
+    throw new AccountPrivacyNoticePreparationError("POLICY_NOT_APPROVED")
   return db.$transaction(
     async (tx) => {
       const operator = await tx.user.findUnique({
@@ -85,6 +104,10 @@ export async function prepareAccountPrivacyNotice(
           contactEmail: true,
           verifiedSubjectUserId: true,
           verifiedAt: true,
+          outcome: true,
+          domainOutcomes: {
+            select: { domain: true, processor: true, evidenceDigest: true },
+          },
         },
       })
       if (!request) throw new AccountPrivacyNoticePreparationError("NOT_FOUND")
@@ -96,10 +119,16 @@ export async function prepareAccountPrivacyNotice(
         request.verifiedSubjectUserId === input.operatorUserId
       )
         throw new AccountPrivacyNoticePreparationError("NOT_READY")
+      const subjectUserId = request.verifiedSubjectUserId
       const recipientDigest = accountPrivacyRecipientDigest(
         request.contactEmail,
         recipientHmacKey,
       )
+      if (
+        noticeRetention.recipientDigest !== recipientDigest ||
+        noticeRetention.subjectUserId !== subjectUserId
+      )
+        throw new AccountPrivacyNoticePreparationError("POLICY_NOT_APPROVED")
       const assessment = await assessAccountPrivacyCompletion(tx, request.id, {
         approvedPolicyVersion: policyVersion,
         now,
@@ -110,6 +139,27 @@ export async function prepareAccountPrivacyNotice(
         assessment.missingDomains[0] !== "OUTCOME_NOTICE"
       )
         throw new AccountPrivacyNoticePreparationError("NOT_READY")
+      const externalDigest = originalExternalReviewDigest(request.outcome)
+      const externalPolicyDigest = originalExternalPolicyDigest(request.outcome)
+      const profileOutcome = request.domainOutcomes.find(
+        (row) =>
+          row.domain === "ACCOUNT_PROFILE" &&
+          row.processor === "account-privacy-profile-v1",
+      )
+      if (!externalDigest || !externalPolicyDigest || !profileOutcome)
+        throw new AccountPrivacyNoticePreparationError("NOT_READY")
+      const binding = (attemptId: string, preparedAt: Date) => ({
+        requestId: request.id,
+        subjectUserId: subjectUserId,
+        attemptId,
+        contentDigest: approvedContentDigest.toLowerCase(),
+        recipientDigest,
+        originalExternalEvidenceDigest: externalDigest,
+        originalExternalPolicyDigest: externalPolicyDigest,
+        profileEvidenceDigest: profileOutcome.evidenceDigest,
+        profilePolicyDigest: profilePolicy.digest,
+        preparedAt: preparedAt.toISOString(),
+      })
       const existing = await tx.accountPrivacyNoticeAttempt.findMany({
         where: { requestId: request.id },
         orderBy: { attemptNumber: "asc" },
@@ -120,6 +170,7 @@ export async function prepareAccountPrivacyNotice(
           contentDigest: true,
           recipientDigest: true,
           idempotencyKey: true,
+          preparedAt: true,
         },
       })
       if (existing.length > 0) {
@@ -129,7 +180,18 @@ export async function prepareAccountPrivacyNotice(
           first?.status === "PREPARED" &&
           first.policyVersion === policyVersion &&
           first.contentDigest === approvedContentDigest.toLowerCase() &&
-          first.recipientDigest === recipientDigest
+          first.recipientDigest === recipientDigest &&
+          noticeRetentionIsConfirmed({
+            policy: noticeRetention,
+            binding: binding(first.id, first.preparedAt),
+            recorded:
+              request.outcome &&
+              typeof request.outcome === "object" &&
+              !Array.isArray(request.outcome)
+                ? request.outcome.noticeProviderRetention
+                : null,
+            now,
+          })
         )
           return {
             attemptId: first.id,
@@ -138,6 +200,18 @@ export async function prepareAccountPrivacyNotice(
           }
         throw new AccountPrivacyNoticePreparationError("CLAIM_CONFLICT")
       }
+      if (
+        request.outcome &&
+        typeof request.outcome === "object" &&
+        !Array.isArray(request.outcome) &&
+        request.outcome.noticeProviderRetention
+      )
+        throw new AccountPrivacyNoticePreparationError("CLAIM_CONFLICT")
+      // Validate scope before creating even a prepared attempt.
+      noticeRetentionEvidence(noticeRetention, {
+        ...binding("planned-attempt", now),
+        operatorUserId: input.operatorUserId,
+      })
       const idempotencyKey = createHash("sha256")
         .update(
           `account-privacy-notice-v1:${request.id}:${policyVersion}:${approvedContentDigest.toLowerCase()}:${recipientDigest}`,
@@ -155,6 +229,24 @@ export async function prepareAccountPrivacyNotice(
           preparedAt: now,
         },
         select: { id: true, idempotencyKey: true },
+      })
+      const previous =
+        request.outcome &&
+        typeof request.outcome === "object" &&
+        !Array.isArray(request.outcome)
+          ? request.outcome
+          : {}
+      await tx.accountPrivacyRequest.update({
+        where: { id: request.id },
+        data: {
+          outcome: {
+            ...previous,
+            noticeProviderRetention: noticeRetentionEvidence(noticeRetention, {
+              ...binding(created.id, now),
+              operatorUserId: input.operatorUserId,
+            }),
+          },
+        },
       })
       return {
         attemptId: created.id,
@@ -197,6 +289,15 @@ export async function claimAccountPrivacyNoticeSend(
   )
     throw new AccountPrivacyNoticePreparationError("POLICY_NOT_APPROVED")
   const now = input.now ?? new Date()
+  const noticeRetention = getApprovedNoticeRetentionPolicy(process.env, now)
+  const profilePolicy = getApprovedAccountPrivacyProfilePolicy(process.env, now)
+  if (
+    !noticeRetention ||
+    !profilePolicy ||
+    noticeRetention.operatorUserId !== input.operatorUserId ||
+    now > new Date(noticeRetention.sendBy)
+  )
+    throw new AccountPrivacyNoticePreparationError("POLICY_NOT_APPROVED")
   return db.$transaction(
     async (tx) => {
       const operator = await tx.user.findUnique({
@@ -216,6 +317,7 @@ export async function claimAccountPrivacyNoticeSend(
           contentDigest: true,
           recipientDigest: true,
           idempotencyKey: true,
+          preparedAt: true,
         },
       })
       if (!attempt) throw new AccountPrivacyNoticePreparationError("NOT_FOUND")
@@ -232,6 +334,10 @@ export async function claimAccountPrivacyNoticeSend(
           contactEmail: true,
           verifiedSubjectUserId: true,
           verifiedAt: true,
+          outcome: true,
+          domainOutcomes: {
+            select: { domain: true, processor: true, evidenceDigest: true },
+          },
         },
       })
       if (
@@ -255,6 +361,41 @@ export async function claimAccountPrivacyNoticeSend(
         assessment.blockers.length !== 0 ||
         assessment.missingDomains.length !== 1 ||
         assessment.missingDomains[0] !== "OUTCOME_NOTICE"
+      )
+        throw new AccountPrivacyNoticePreparationError("NOT_READY")
+      const externalDigest = originalExternalReviewDigest(request.outcome)
+      const externalPolicyDigest = originalExternalPolicyDigest(request.outcome)
+      const profileOutcome = request.domainOutcomes.find(
+        (row) =>
+          row.domain === "ACCOUNT_PROFILE" &&
+          row.processor === "account-privacy-profile-v1",
+      )
+      if (
+        !externalDigest ||
+        !externalPolicyDigest ||
+        !profileOutcome ||
+        !noticeRetentionIsConfirmed({
+          policy: noticeRetention,
+          now,
+          binding: {
+            requestId: attempt.requestId,
+            subjectUserId: attempt.userId,
+            attemptId: attempt.id,
+            contentDigest: attempt.contentDigest,
+            recipientDigest: attempt.recipientDigest,
+            originalExternalEvidenceDigest: externalDigest,
+            originalExternalPolicyDigest: externalPolicyDigest,
+            profileEvidenceDigest: profileOutcome.evidenceDigest,
+            profilePolicyDigest: profilePolicy.digest,
+            preparedAt: attempt.preparedAt.toISOString(),
+          },
+          recorded:
+            request.outcome &&
+            typeof request.outcome === "object" &&
+            !Array.isArray(request.outcome)
+              ? request.outcome.noticeProviderRetention
+              : null,
+        })
       )
         throw new AccountPrivacyNoticePreparationError("NOT_READY")
       const claim = await tx.accountPrivacyNoticeAttempt.updateMany({

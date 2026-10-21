@@ -4,6 +4,11 @@ import { getAccountPrivacyCommercialInventory } from "./account-privacy-commerci
 import { accountPrivacyCommercialRetentionIsConfirmed } from "./account-privacy-commercial-retention"
 import { getAccountPrivacyConversationInventory } from "./account-privacy-conversation-inventory"
 import { accountPrivacyExternalReviewIsConfirmed } from "./account-privacy-external-policy"
+import {
+  getApprovedNoticeRetentionPolicy,
+  noticeRetentionIsConfirmed,
+  originalExternalPolicyDigest,
+} from "./account-privacy-notice-retention"
 import { getAccountPrivacyPrescriptionInventory } from "./account-privacy-prescription-inventory"
 import { getAccountPrivacyProfileInventory } from "./account-privacy-profile-inventory"
 import {
@@ -226,6 +231,9 @@ export async function assessAccountPrivacyCompletion(
       accessRevocation: { select: { status: true, userId: true } },
       noticeAttempts: {
         select: {
+          id: true,
+          preparedAt: true,
+          sentAt: true,
           userId: true,
           status: true,
           policyVersion: true,
@@ -719,6 +727,63 @@ export async function assessAccountPrivacyCompletion(
       })
     )
       blockers.push("EXTERNAL_PROCESSOR_REVIEW_UNCONFIRMED")
+  }
+  if (
+    externalOutcome?.processor === "account-privacy-external-review-v1" &&
+    request.noticeAttempts.length > 0
+  ) {
+    const profileOutcome = outcomes.get("ACCOUNT_PROFILE")
+    const policy = getApprovedNoticeRetentionPolicy(process.env, now)
+    const profilePolicy = getApprovedAccountPrivacyProfilePolicy(
+      process.env,
+      now,
+    )
+    const externalPolicyDigest = originalExternalPolicyDigest(request.outcome)
+    const subjectUserId = request.verifiedSubjectUserId
+    const recorded =
+      request.outcome &&
+      typeof request.outcome === "object" &&
+      !Array.isArray(request.outcome)
+        ? request.outcome.noticeProviderRetention
+        : null
+    if (
+      !policy ||
+      !profilePolicy ||
+      !externalPolicyDigest ||
+      !profileOutcome ||
+      !subjectUserId ||
+      request.noticeAttempts.length !== 1
+    ) {
+      blockers.push("NOTICE_PROVIDER_RETENTION_UNCONFIRMED")
+    } else {
+      const profileEvidenceDigest = profileOutcome.evidenceDigest
+      if (
+        request.noticeAttempts.some(
+          (attempt) =>
+            (["SENT", "DELIVERED", "FAILED"].includes(attempt.status) &&
+              !attempt.sentAt) ||
+            !noticeRetentionIsConfirmed({
+              policy,
+              now,
+              sentAt: attempt.sentAt,
+              recorded,
+              binding: {
+                requestId: request.id,
+                subjectUserId,
+                attemptId: attempt.id,
+                contentDigest: attempt.contentDigest,
+                recipientDigest: attempt.recipientDigest,
+                originalExternalEvidenceDigest: externalOutcome.evidenceDigest,
+                originalExternalPolicyDigest: externalPolicyDigest,
+                profileEvidenceDigest,
+                profilePolicyDigest: profilePolicy.digest,
+                preparedAt: attempt.preparedAt.toISOString(),
+              },
+            }),
+        )
+      )
+        blockers.push("NOTICE_PROVIDER_RETENTION_UNCONFIRMED")
+    }
   }
   const latestDomainOutcomeAt = request.domainOutcomes.reduce<Date | null>(
     (latest, outcome) =>
