@@ -70,7 +70,9 @@ export type WhatsAppButton = { id: string; title: string }
 export interface WhatsAppProvider {
   readonly key: string
   /** Read receipt + transient native typing; no outbound message is created. */
-  sendTyping?(input: WhatsAppCredentials & { messageId: string }): Promise<void>
+  sendTyping?(
+    input: WhatsAppCredentials & { messageId: string },
+  ): Promise<WhatsAppTypingAccepted>
   discover(input: { accessToken: string }): Promise<
     Array<{
       businessDisplayName?: string
@@ -191,6 +193,92 @@ function classifyWhatsAppSendStatus(
   return "OUTCOME_UNKNOWN"
 }
 
+export type WhatsAppTypingAccepted = {
+  outcome: "accepted"
+  httpStatus: number
+}
+export type WhatsAppTypingFailureReason =
+  | "timeout"
+  | "network"
+  | "rejected"
+  | "invalid_success"
+
+function typingNumericCode(value: unknown) {
+  return typeof value === "number" &&
+    Number.isSafeInteger(value) &&
+    value >= 0
+    ? value
+    : undefined
+}
+
+/** Only allowlisted numeric facts cross the transport error boundary. */
+export class WhatsAppTypingError extends Error {
+  readonly httpStatus?: number
+  readonly metaCode?: number
+  readonly metaSubcode?: number
+
+  constructor(
+    readonly reason: WhatsAppTypingFailureReason,
+    facts: {
+      httpStatus?: number
+      metaCode?: number
+      metaSubcode?: number
+    } = {},
+  ) {
+    super("WhatsApp typing is unavailable.")
+    this.name = "WhatsAppTypingError"
+    this.httpStatus =
+      Number.isInteger(facts.httpStatus) &&
+      facts.httpStatus !== undefined &&
+      facts.httpStatus >= 100 &&
+      facts.httpStatus <= 599
+        ? facts.httpStatus
+        : undefined
+    this.metaCode = typingNumericCode(facts.metaCode)
+    this.metaSubcode = typingNumericCode(facts.metaSubcode)
+  }
+}
+
+const WHATSAPP_TYPING_RESPONSE_MAX_BYTES = 4096
+
+/** Discard oversized/malformed bodies; never retain the provider's message or trace. */
+async function readTypingResponse(response: Response): Promise<unknown> {
+  if (!response.body) return null
+  const reader = response.body.getReader()
+  const decoder = new TextDecoder()
+  let bytes = 0
+  let text = ""
+  try {
+    while (true) {
+      const next = await reader.read()
+      if (next.done) break
+      bytes += next.value.byteLength
+      if (bytes > WHATSAPP_TYPING_RESPONSE_MAX_BYTES) {
+        void reader.cancel().catch(() => {})
+        return null
+      }
+      text += decoder.decode(next.value, { stream: true })
+    }
+    text += decoder.decode()
+    try {
+      return JSON.parse(text)
+    } catch {
+      return null
+    }
+  } finally {
+    reader.releaseLock()
+  }
+}
+
+function typingTransportError(error: unknown, signal: AbortSignal) {
+  return new WhatsAppTypingError(
+    signal.aborted ||
+      (error instanceof Error && error.name === "TimeoutError")
+      ? "timeout"
+      : "network",
+  )
+}
+
 export class DirectMetaWhatsAppProvider implements WhatsAppProvider {
   readonly key = "meta-cloud-api"
   readonly #fetch: typeof fetch
@@ -236,40 +324,76 @@ export class DirectMetaWhatsAppProvider implements WhatsAppProvider {
   }
 
   /** Best-effort caller; never changes the existing message/OTP transport. */
-  async sendTyping(input: WhatsAppCredentials & { messageId: string }) {
+  async sendTyping(
+    input: WhatsAppCredentials & { messageId: string },
+  ): Promise<WhatsAppTypingAccepted> {
     if (
       !/^\d+$/.test(input.phoneNumberId) ||
       !isWhatsAppInboundMessageId(input.messageId)
     )
       throw new Error("WhatsApp typing source is invalid.")
-    const response = await this.#fetch(
-      `${META_TYPING_GRAPH_URL}/${input.phoneNumberId}/messages`,
-      {
-        method: "POST",
-        redirect: "error",
-        signal: AbortSignal.timeout(WHATSAPP_TYPING_REQUEST_MS),
-        headers: {
-          Authorization: `Bearer ${input.accessToken}`,
-          "Content-Type": "application/json",
+    const signal = AbortSignal.timeout(WHATSAPP_TYPING_REQUEST_MS)
+    let response: Response
+    try {
+      response = await this.#fetch(
+        `${META_TYPING_GRAPH_URL}/${input.phoneNumberId}/messages`,
+        {
+          method: "POST",
+          redirect: "error",
+          signal,
+          headers: {
+            Authorization: `Bearer ${input.accessToken}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            messaging_product: "whatsapp",
+            status: "read",
+            message_id: input.messageId,
+            typing_indicator: { type: "text" },
+          }),
         },
-        body: JSON.stringify({
-          messaging_product: "whatsapp",
-          status: "read",
-          message_id: input.messageId,
-          typing_indicator: { type: "text" },
-        }),
-      },
-    )
-    // Do not log/retain provider errors, message bodies or credentials.
-    if (!response.ok) throw new Error("WhatsApp typing is unavailable.")
-    const result: unknown = await response.json().catch(() => null)
+      )
+    } catch (error) {
+      throw typingTransportError(error, signal)
+    }
+    let result: unknown
+    try {
+      result = await readTypingResponse(response)
+    } catch (error) {
+      if (!response.ok)
+        throw new WhatsAppTypingError("rejected", {
+          httpStatus: response.status,
+        })
+      throw typingTransportError(error, signal)
+    }
+    // No provider text, trace, credentials or raw error/cause leaves this boundary.
+    if (!response.ok) {
+      const detail =
+        result && typeof result === "object" && "error" in result
+          ? result.error
+          : null
+      throw new WhatsAppTypingError("rejected", {
+        httpStatus: response.status,
+        metaCode:
+          detail && typeof detail === "object" && "code" in detail
+            ? typingNumericCode(detail.code)
+            : undefined,
+        metaSubcode:
+          detail && typeof detail === "object" && "error_subcode" in detail
+            ? typingNumericCode(detail.error_subcode)
+            : undefined,
+      })
+    }
     if (
       !result ||
       typeof result !== "object" ||
       !("success" in result) ||
       result.success !== true
     )
-      throw new Error("WhatsApp typing is unavailable.")
+      throw new WhatsAppTypingError("invalid_success", {
+        httpStatus: response.status,
+      })
+    return { outcome: "accepted", httpStatus: response.status }
   }
 
   async sendText(

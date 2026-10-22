@@ -2,6 +2,7 @@ import { expect, test } from "bun:test"
 import {
   DirectMetaWhatsAppProvider,
   WHATSAPP_TYPING_REQUEST_MS,
+  WhatsAppTypingError,
 } from "./whatsapp"
 
 const credentials = {
@@ -21,7 +22,10 @@ test("native typing sends only bounded read+typing on its dedicated transport", 
       { preconnect: () => undefined },
     ),
   })
-  await provider.sendTyping(credentials)
+  expect(await provider.sendTyping(credentials)).toEqual({
+    outcome: "accepted",
+    httpStatus: 200,
+  })
   expect(requests).toHaveLength(1)
   const request = requests[0]
   if (!request) throw new Error("Missing request")
@@ -64,7 +68,14 @@ test("typing rejects invalid inbound identities before HTTP and hides provider d
       async () => {
         calls++
         return Response.json(
-          { error: { message: "private provider detail" } },
+          {
+            error: {
+              code: 131000,
+              error_subcode: 2494055,
+              message: "private provider detail",
+              fbtrace_id: "private trace",
+            },
+          },
           { status: 400 },
         )
       },
@@ -78,9 +89,17 @@ test("typing rejects invalid inbound identities before HTTP and hides provider d
     provider.sendTyping({ ...credentials, phoneNumberId: "../elsewhere" }),
   ).rejects.toThrow("source is invalid")
   expect(calls).toBe(0)
-  await expect(provider.sendTyping(credentials)).rejects.toThrow(
-    "WhatsApp typing is unavailable.",
+  const rejected = await typingFailure(provider)
+  expect(rejected.reason).toBe("rejected")
+  expect(rejected.httpStatus).toBe(400)
+  expect(rejected.metaCode).toBe(131000)
+  expect(rejected.metaSubcode).toBe(2494055)
+  expect(String(rejected)).toBe(
+    "WhatsAppTypingError: WhatsApp typing is unavailable.",
   )
+  expect(JSON.stringify(rejected)).not.toContain("private")
+  expect(rejected.stack).not.toContain("private provider detail")
+  expect("cause" in rejected).toBe(false)
   expect(calls).toBe(1)
   const malformed = new DirectMetaWhatsAppProvider({
     fetch: Object.assign(
@@ -88,7 +107,75 @@ test("typing rejects invalid inbound identities before HTTP and hides provider d
       { preconnect: () => undefined },
     ),
   })
-  await expect(malformed.sendTyping(credentials)).rejects.toThrow(
-    "WhatsApp typing is unavailable.",
-  )
+  const invalid = await typingFailure(malformed)
+  expect(invalid.reason).toBe("invalid_success")
+  expect(invalid.httpStatus).toBe(200)
+  expect(invalid.metaCode).toBeUndefined()
+})
+
+async function typingFailure(provider: DirectMetaWhatsAppProvider) {
+  try {
+    await provider.sendTyping(credentials)
+  } catch (error) {
+    if (error instanceof WhatsAppTypingError) return error
+    throw error
+  }
+  throw new Error("Expected a sanitized typing failure")
+}
+
+test("typing distinguishes timeout from network without retaining raw errors", async () => {
+  for (const [raw, reason] of [
+    [new DOMException("private timeout token", "TimeoutError"), "timeout"],
+    [new Error("private network token"), "network"],
+    [new DOMException("private generic abort", "AbortError"), "network"],
+  ] as const) {
+    const provider = new DirectMetaWhatsAppProvider({
+      fetch: Object.assign(
+        async () => {
+          throw raw
+        },
+        { preconnect: () => undefined },
+      ),
+    })
+    const error = await typingFailure(provider)
+    expect(error.reason).toBe(reason)
+    expect(error.httpStatus).toBeUndefined()
+    expect(JSON.stringify(error)).not.toContain("private")
+    expect(String(error)).not.toContain("private")
+    expect(error.stack).not.toContain("private")
+    expect("cause" in error).toBe(false)
+  }
+})
+
+test("typing bounds response parsing and accepts only numeric diagnostic codes", async () => {
+  const oversized = new DirectMetaWhatsAppProvider({
+    fetch: Object.assign(
+      async () =>
+        Response.json({ success: true, private: "x".repeat(4096) }),
+      { preconnect: () => undefined },
+    ),
+  })
+  expect((await typingFailure(oversized)).reason).toBe("invalid_success")
+  const rejected = new DirectMetaWhatsAppProvider({
+    fetch: Object.assign(
+      async () =>
+        Response.json(
+          {
+            error: {
+              code: "private-token",
+              error_subcode: -1,
+              message: "private message",
+            },
+          },
+          { status: 401 },
+        ),
+      { preconnect: () => undefined },
+    ),
+  })
+  const error = await typingFailure(rejected)
+  expect(error.reason).toBe("rejected")
+  expect(error.httpStatus).toBe(401)
+  expect(error.metaCode).toBeUndefined()
+  expect(error.metaSubcode).toBeUndefined()
+  expect(JSON.stringify(error)).not.toContain("private")
 })

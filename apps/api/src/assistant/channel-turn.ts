@@ -135,7 +135,10 @@ export type ChannelTurnDependencies = Omit<
   | "prepareMedia"
   | "typing"
 > & {
-  typing?: ReturnType<typeof defaultChannelTurnDependencies>["typing"]
+  typing?: (
+    ctx: Parameters<typeof startAssistantWhatsAppTyping>[0],
+    inbox: Parameters<typeof startAssistantWhatsAppTyping>[1],
+  ) => Promise<unknown>
   control?: ReturnType<typeof defaultChannelTurnDependencies>["control"]
   action?: ReturnType<typeof defaultChannelTurnDependencies>["action"]
   workflowAction?: ReturnType<
