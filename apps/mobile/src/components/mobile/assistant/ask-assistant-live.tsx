@@ -12,6 +12,10 @@ import {
   generalActionSummary,
   simpleSaleStep,
 } from "@ewatrade/assistant/general/contracts"
+import {
+  generalTokenBudgetLine,
+  generalTokenBudgetUsed,
+} from "@ewatrade/assistant/general/allowance"
 import { productCreatePicture } from "@ewatrade/assistant/general/product-create"
 import { readRecordTargetSchema } from "@ewatrade/assistant/general/read-record-target"
 import { BottomSheetScrollView } from "@gorhom/bottom-sheet"
@@ -132,10 +136,7 @@ export function AskAssistantLive() {
       )
     return null
   }
-  const exhausted =
-    !!vm.data &&
-    (vm.data.allowance.remainingRequests <= 0 ||
-      vm.data.allowance.remainingTokens <= 0)
+  const exhausted = !!vm.data && generalTokenBudgetUsed(vm.data.allowance)
   const noAccess = vm.sessionUnavailable
     ? "Active business access is needed to use the assistant."
     : vm.scopeChanged
@@ -301,9 +302,7 @@ export function AskAssistantLive() {
               ) : null}
               {vm.data && !vm.offline ? (
                 <Text className="text-xs text-muted-foreground">
-                  {vm.data.allowance.remainingRequests} requests left this month
-                  · resets{" "}
-                  {new Date(vm.data.allowance.resetsAt).toLocaleDateString()}
+                  {generalTokenBudgetLine(vm.data.allowance)}
                 </Text>
               ) : null}
               {exhausted && !vm.offline ? (

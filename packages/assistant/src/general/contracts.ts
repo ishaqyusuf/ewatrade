@@ -653,7 +653,12 @@ export const generalStoredPartSchema = z.discriminatedUnion("type", [
 ])
 export type GeneralDataParts = {
   "general-answer": GeneralAnswer
-  "general-run": { runId: string; remainingRequests: number }
+  "general-run": {
+    runId: string
+    /** Deprecated numeric token-availability marker for older installed clients. */
+    remainingRequests: number
+    repliesUnlimited?: true
+  }
   "general-proposal": { proposalId: string }
   "general-proposal-reference": GeneralProposalReference
   /** Receipt photo or PDF sent with a user message. */

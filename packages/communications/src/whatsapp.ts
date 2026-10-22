@@ -12,6 +12,12 @@ import { SERVICE_COMMERCE_CUSTOMER_ACTION_TEMPLATE_KEY } from "./service-commerc
 import { type WhatsAppMediaRequest, fetchWhatsAppMedia } from "./whatsapp-media"
 
 const META_GRAPH_URL = "https://graph.facebook.com/v21.0"
+// Native typing uses the current supported transport separately; existing sends/OTP stay on v21.
+const META_TYPING_GRAPH_URL = "https://graph.facebook.com/v25.0"
+export const WHATSAPP_TYPING_REQUEST_MS = 1500
+export function isWhatsAppInboundMessageId(value: string) {
+  return /^wamid\.[A-Za-z0-9+/=_-]{1,506}$/.test(value)
+}
 export const WHATSAPP_SESSION_WINDOW_MS = 24 * 60 * 60_000
 
 export type WhatsAppCredentials = {
@@ -63,6 +69,8 @@ export type WhatsAppButton = { id: string; title: string }
 
 export interface WhatsAppProvider {
   readonly key: string
+  /** Read receipt + transient native typing; no outbound message is created. */
+  sendTyping?(input: WhatsAppCredentials & { messageId: string }): Promise<void>
   discover(input: { accessToken: string }): Promise<
     Array<{
       businessDisplayName?: string
@@ -225,6 +233,43 @@ export class DirectMetaWhatsAppProvider implements WhatsAppProvider {
         "OUTCOME_UNKNOWN",
       )
     }
+  }
+
+  /** Best-effort caller; never changes the existing message/OTP transport. */
+  async sendTyping(input: WhatsAppCredentials & { messageId: string }) {
+    if (
+      !/^\d+$/.test(input.phoneNumberId) ||
+      !isWhatsAppInboundMessageId(input.messageId)
+    )
+      throw new Error("WhatsApp typing source is invalid.")
+    const response = await this.#fetch(
+      `${META_TYPING_GRAPH_URL}/${input.phoneNumberId}/messages`,
+      {
+        method: "POST",
+        redirect: "error",
+        signal: AbortSignal.timeout(WHATSAPP_TYPING_REQUEST_MS),
+        headers: {
+          Authorization: `Bearer ${input.accessToken}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          messaging_product: "whatsapp",
+          status: "read",
+          message_id: input.messageId,
+          typing_indicator: { type: "text" },
+        }),
+      },
+    )
+    // Do not log/retain provider errors, message bodies or credentials.
+    if (!response.ok) throw new Error("WhatsApp typing is unavailable.")
+    const result: unknown = await response.json().catch(() => null)
+    if (
+      !result ||
+      typeof result !== "object" ||
+      !("success" in result) ||
+      result.success !== true
+    )
+      throw new Error("WhatsApp typing is unavailable.")
   }
 
   async sendText(

@@ -1,5 +1,6 @@
 import { ASSISTANT_RUNTIME_CONFIGURATION_KEY } from "@ewatrade/ai/runtime-config"
-import { expect, test } from "bun:test"
+import { expect, spyOn, test } from "bun:test"
+import * as messageDrafts from "../../assistant/customer-message-drafts"
 import { GENERAL_BUDGET_LIMITS } from "../../assistant/general-allowance"
 import type { CustomerMessageAiInput } from "../../schemas/customer-messages"
 import { createCallerFactory } from "../init"
@@ -41,6 +42,7 @@ function callerFixture(
     role?: string
     privacyStatus?: string
     requests?: number
+    tokens?: number
     stores?: Array<{ id: string }>
   } = {},
 ) {
@@ -82,7 +84,7 @@ function callerFixture(
         return [
           {
             requests: options.requests ?? 0,
-            tokens: 0,
+            tokens: options.tokens ?? 0,
             windowStartedAt: new Date(),
           },
         ]
@@ -252,7 +254,10 @@ test("exhausted General allowance returns starters without model generation or u
     DEEPSEEK_API: "test-key-not-used",
   })
   try {
-    const f = callerFixture({ requests: GENERAL_BUDGET_LIMITS.maxRequests })
+    const f = callerFixture({
+      requests: 1_001,
+      tokens: GENERAL_BUDGET_LIMITS.maxTokens,
+    })
     const result = await f.caller.draftWithAi(selected)
     expect(result.source).toBe("starter")
     expect(result.reason).toContain("allowance is used up")
@@ -298,4 +303,45 @@ test("saved wording refuses a Store outside the person's accessible Stores befor
   ).rejects.toMatchObject({ code: "NOT_FOUND" })
   expect(f.transactions()).toBe(0)
   expect(f.events).toEqual([])
+})
+
+test("more than 100 General replies still admit generation and count actual usage while tokens remain", async () => {
+  const restore = withEnvironment({
+    ACCOUNT_PRIVACY_PRIVATE_ASSISTANT_PROCESSING_ENABLED: "false",
+    APP_ENV: "production",
+    ASSISTANT_REHEARSAL_MODE: undefined,
+    DEEPSEEK_API: "test-key-not-used",
+  })
+  const network = spyOn(globalThis, "fetch").mockImplementation(() => {
+    throw Error("Provider access forbidden in budget check")
+  })
+  const generated: messageDrafts.CustomerMessageDraftResult = {
+    source: "ai",
+    reason: null,
+    drafts: selected.eventKeys.map((eventKey) => ({
+      eventKey,
+      body: "Synthetic checked draft",
+      source: "AI_ASSISTED",
+    })),
+    usage: { totalTokens: 7 },
+  }
+  const generation = spyOn(
+    messageDrafts,
+    "generateCustomerMessageDrafts",
+  ).mockResolvedValue(generated)
+  try {
+    const f = callerFixture({
+      requests: 1_001,
+      tokens: GENERAL_BUDGET_LIMITS.maxTokens - 100,
+    })
+    expect((await f.caller.draftWithAi(selected)).source).toBe("ai")
+    expect(generation).toHaveBeenCalledTimes(1)
+    expect(f.budgetUpdates()).toBe(2)
+    expect(f.usageWrites()).toBe(1)
+    expect(network).not.toHaveBeenCalled()
+  } finally {
+    generation.mockRestore()
+    network.mockRestore()
+    restore()
+  }
 })

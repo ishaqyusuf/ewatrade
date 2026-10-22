@@ -1,5 +1,6 @@
 import { expect, test } from "bun:test"
 import {
+  generalAllowanceForUsage,
   generalBudgetLimits,
   generalBudgetLimitsWithCredit,
   generalBudgetScopeKey,
@@ -9,21 +10,19 @@ import {
 test("hosted environments keep the monthly spend guard", () => {
   for (const APP_ENV of ["production", "preview", undefined])
     expect(generalBudgetLimits({ APP_ENV })).toMatchObject({
-      maxRequests: 100,
-      maxTokens: 600_000,
+      maxTokens: 5_000_000,
     })
   // Local overrides never apply outside local dev.
   expect(
     generalBudgetLimits({
       APP_ENV: "production",
       ASSISTANT_LOCAL_MAX_REQUESTS: "999999",
-    }).maxRequests,
-  ).toBe(100)
+    }),
+  ).not.toHaveProperty("maxRequests")
 })
 
 test("local dev gets a higher ceiling that env can tune", () => {
   expect(generalBudgetLimits({ APP_ENV: "local" })).toMatchObject({
-    maxRequests: 2_000,
     maxTokens: 20_000_000,
   })
   expect(
@@ -32,7 +31,13 @@ test("local dev gets a higher ceiling that env can tune", () => {
       ASSISTANT_LOCAL_MAX_REQUESTS: "50",
       ASSISTANT_LOCAL_MAX_TOKENS: "not a number",
     }),
-  ).toMatchObject({ maxRequests: 50, maxTokens: 20_000_000 })
+  ).toMatchObject({ maxTokens: 20_000_000 })
+  expect(
+    generalBudgetLimits({
+      APP_ENV: "local",
+      ASSISTANT_LOCAL_MAX_REQUESTS: "1",
+    }),
+  ).not.toHaveProperty("maxRequests")
 })
 
 const scope = { tenantId: "business-a" }
@@ -48,12 +53,15 @@ test("temporary token credit uses the exact server-derived monthly configuration
   expect(generalTokenAllowanceKey(credit.scopeKey)).toBe(
     "assistant.allowance:assistant:business-a:GENERAL:2026-10",
   )
-  expect(generalBudgetLimitsWithCredit(credit, scope, now, hosted)).toEqual({
-    ...hosted,
+  const lowerBaseline = { ...hosted, maxTokens: 600_000 }
+  expect(
+    generalBudgetLimitsWithCredit(credit, scope, now, lowerBaseline),
+  ).toEqual({
+    ...lowerBaseline,
     maxTokens: 2_000_000,
   })
-  expect(hosted.maxRequests).toBe(100)
-  expect(hosted.maxTokens).toBe(600_000)
+  expect(hosted).not.toHaveProperty("maxRequests")
+  expect(hosted.maxTokens).toBe(5_000_000)
   expect(credit.tokenLimit).toBe(2_000_000)
 })
 
@@ -118,4 +126,24 @@ test("credits never lower existing hosted or local token ceilings", () => {
       hosted,
     ),
   ).toEqual({ ...hosted, maxTokens: 5_000_000 })
+})
+
+test("token-only allowance preserves old numeric clients and UTC monthly reset without a reply cap", () => {
+  const current = generalAllowanceForUsage(600_001, 5_000_000, now)
+  expect(current).toMatchObject({
+    remainingTokens: 4_399_999,
+    remainingRequests: 4_399_999,
+    requestLimit: null,
+    repliesUnlimited: true,
+    tokenLimit: 5_000_000,
+    resetsAt: "2026-11-01T00:00:00.000Z",
+  })
+  expect(generalAllowanceForUsage(5_000_000, 5_000_000, now)).toMatchObject({
+    remainingTokens: 0,
+    remainingRequests: 0,
+    repliesUnlimited: true,
+  })
+  expect(
+    generalAllowanceForUsage(5_000_001, 5_000_000, now).remainingTokens,
+  ).toBe(0)
 })

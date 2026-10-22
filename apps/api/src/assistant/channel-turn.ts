@@ -30,6 +30,7 @@ import { prepareAssistantWhatsAppWorkflowReview } from "./channel-workflow-revie
 import { createChannelWorkflowTurn } from "./channel-workflow-turn"
 import type { GeneralContext } from "./general-context"
 import { createGeneralAssistantTurn } from "./general-turn"
+import { startAssistantWhatsAppTyping } from "./channel-typing"
 import { GeneralTurnError } from "./general-turn-contract"
 import type { GeneralTurnInput } from "./general-turn-contract"
 import { WorkflowTurnError } from "./workflow-turn-contract"
@@ -73,6 +74,7 @@ export function defaultChannelTurnDependencies() {
         },
       ),
     createTurn: createGeneralAssistantTurn,
+    typing: startAssistantWhatsAppTyping,
     createWorkflowTurn: createChannelWorkflowTurn,
     prepareMedia: prepareAssistantWhatsAppMediaTurn,
     notice: (
@@ -131,7 +133,9 @@ export type ChannelTurnDependencies = Omit<
   | "createWorkflowTurn"
   | "notice"
   | "prepareMedia"
+  | "typing"
 > & {
+  typing?: ReturnType<typeof defaultChannelTurnDependencies>["typing"]
   control?: ReturnType<typeof defaultChannelTurnDependencies>["control"]
   action?: ReturnType<typeof defaultChannelTurnDependencies>["action"]
   workflowAction?: ReturnType<
@@ -246,6 +250,8 @@ export async function processAssistantChannelTurn(
         parts,
       },
     }
+    if (claim.purpose === "GENERAL")
+      await deps.typing?.(ctx, claim.inbox).catch(() => {})
     const turn =
       claim.purpose === "GENERAL"
         ? await deps.createTurn(ctx as GeneralContext, input)
