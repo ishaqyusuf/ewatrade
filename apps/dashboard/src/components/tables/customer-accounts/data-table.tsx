@@ -1,5 +1,7 @@
 "use client"
 
+import { formatFinanceShortDate } from "@/components/finance/format-date"
+import { Pill } from "@/components/orders/overview/order-overview-parts"
 import {
   DirectoryCollection,
   DirectoryRecord,
@@ -22,11 +24,7 @@ import { useRouter } from "next/navigation"
 import { useMemo } from "react"
 
 export type CustomerAccount =
-  RouterOutputs["customers"]["listPage"]["items"][number] & {
-    /** Undefined while balances load. */
-    owedMinor?: string
-    paidAheadMinor?: string
-  }
+  RouterOutputs["finance"]["customerBalanceDirectory"]["items"][number]
 
 const getAccountId = (customer: CustomerAccount) => customer.id
 const contact = (customer: CustomerAccount) =>
@@ -66,16 +64,59 @@ function Amount({
   )
 }
 
+/** How long the oldest unpaid charge has waited: amber, red after 30 days. */
+function OwingSince({ customer }: { customer: CustomerAccount }) {
+  if (!customer.owingSince) {
+    if (customer.paidAheadMinor !== "0")
+      return <Pill tone="green">Paid ahead</Pill>
+    return customer.owedMinor === "0" ? <Pill tone="muted">Paid up</Pill> : null
+  }
+  const days = Math.max(
+    0,
+    Math.floor((Date.now() - new Date(customer.owingSince).getTime()) / 864e5),
+  )
+  return (
+    <Pill tone={days > 30 ? "red" : "amber"}>
+      {days === 0
+        ? "Owing since today"
+        : `Owing ${days} day${days === 1 ? "" : "s"}`}
+    </Pill>
+  )
+}
+
+function LastPayment({
+  customer,
+  currency,
+}: {
+  customer: CustomerAccount
+  currency: string
+}) {
+  if (!customer.lastPaymentAt || !customer.lastPaymentMinor)
+    return <span className="text-muted-foreground">—</span>
+  return (
+    <span className="tabular-nums">
+      {formatFinanceMoney(customer.lastPaymentMinor, currency)}{" "}
+      <span className="text-muted-foreground">
+        · {formatFinanceShortDate(customer.lastPaymentAt)}
+      </span>
+    </span>
+  )
+}
+
 export function CustomerAccountsDataTable({
   rows,
   view,
   search,
   currencyCode,
+  count,
+  owedMinor,
 }: {
   rows: CustomerAccount[]
   view: DirectoryView
   search: string
   currencyCode: string
+  count: number
+  owedMinor: string
 }) {
   const router = useRouter()
   const columns = useMemo<ColumnDef<CustomerAccount>[]>(
@@ -110,6 +151,18 @@ export function CustomerAccountsDataTable({
         ),
       },
       {
+        id: "owingSince",
+        header: "Owing since",
+        cell: ({ row }) => <OwingSince customer={row.original} />,
+      },
+      {
+        id: "lastPayment",
+        header: "Last payment",
+        cell: ({ row }) => (
+          <LastPayment customer={row.original} currency={currencyCode} />
+        ),
+      },
+      {
         id: "paidAhead",
         header: () => <span className="block text-right">Paid ahead</span>,
         cell: ({ row }) => (
@@ -137,16 +190,13 @@ export function CustomerAccountsDataTable({
     onRowSelectionChange: setRowSelection,
     state: { rowSelection },
   })
-  const owedTotal = rows.every((row) => row.owedMinor !== undefined)
-    ? rows.reduce((total, row) => total + BigInt(row.owedMinor ?? "0"), 0n)
-    : null
   return (
     <div className="grid min-w-0 gap-3">
       <DirectoryToolbar
         table={table}
         view={view}
         selectAllLabel="Select all loaded Customers"
-        summary={`${rows.length} Customer${rows.length === 1 ? "" : "s"}${owedTotal === null ? "" : ` · they owe you ${formatFinanceMoney(owedTotal.toString(), currencyCode)}`}`}
+        summary={`${count} Customer${count === 1 ? "" : "s"} · they owe you ${formatFinanceMoney(owedMinor, currencyCode)}`}
       />
       {view === "table" ? (
         <SimpleDirectoryTable table={table} label="Customer balances" />
@@ -161,6 +211,7 @@ export function CustomerAccountsDataTable({
               title={row.original.name}
               onOpen={() => router.push(statementHref(row.original))}
               description={contact(row.original)}
+              badges={<OwingSince customer={row.original} />}
               highlight={
                 row.original.owedMinor === undefined
                   ? undefined

@@ -3,7 +3,6 @@ import { financeViewOptions } from "@/components/finance/finance-directory-view"
 import { FINANCE_MENU_ITEMS } from "@/components/finance/finance-header"
 import { PageHeader, PageToolbar } from "@/components/page-header"
 import { ScrollableContent } from "@/components/scrollable-content"
-import { SearchField } from "@/components/search-field"
 import { SecondaryMenu } from "@/components/secondary-menu"
 import { CustomerAccountsDataTable } from "@/components/tables/customer-accounts/data-table"
 import { ViewDropdown } from "@/components/view-switcher"
@@ -11,9 +10,13 @@ import { useDirectoryView } from "@/hooks/use-directory-view"
 import { useTRPC } from "@/trpc/client"
 import type { DirectoryViewSettings } from "@/utils/directory-view-settings"
 import { Alert, AlertDescription, Button } from "@ewatrade/ui"
-import { useQuery } from "@tanstack/react-query"
-import { parseAsString, useQueryStates } from "nuqs"
+import { useInfiniteQuery } from "@tanstack/react-query"
 import { useMemo } from "react"
+import {
+  CustomerBalanceSearch,
+  CustomerBalanceSortMenu,
+  useCustomerBalanceParams,
+} from "./customer-balances-controls"
 
 /** Finance pages workshop 01: what each saved Customer owes you. */
 export function CustomerLedgerDirectory({
@@ -28,46 +31,28 @@ export function CustomerLedgerDirectory({
       initialSettings: initialViewSettings,
     })
   const trpc = useTRPC()
-  const [params, setParams] = useQueryStates(
-    {
-      customerSearch: parseAsString.withDefault(""),
-      customerCursor: parseAsString,
-    },
-    { history: "push" },
-  )
+  const [params] = useCustomerBalanceParams()
   const search = params.customerSearch.trim()
-  const query = useQuery(
-    trpc.customers.listPage.queryOptions(
+  const query = useInfiniteQuery(
+    trpc.finance.customerBalanceDirectory.infiniteQueryOptions(
       {
         query: search || undefined,
-        cursor: params.customerCursor ?? undefined,
+        filter: params.customerFilter ?? undefined,
+        sort: params.customerSort,
         limit: 30,
       },
-      { retry: false },
+      {
+        getNextPageParam: (page) => page.nextCursor ?? undefined,
+        retry: false,
+      },
     ),
   )
-  const customerIds = query.data?.items.map((customer) => customer.id) ?? []
-  const balances = useQuery(
-    trpc.finance.customerBalances.queryOptions(
-      { customerIds },
-      { enabled: customerIds.length > 0, retry: false },
-    ),
+  const rows = useMemo(
+    () => query.data?.pages.flatMap((page) => page.items) ?? [],
+    [query.data],
   )
-  const rows = useMemo(() => {
-    const byCustomer = new Map(
-      (balances.data?.items ?? []).map((item) => [item.customerId, item]),
-    )
-    const loaded = balances.isSuccess
-    return (query.data?.items ?? []).map((customer) => ({
-      ...customer,
-      owedMinor: loaded
-        ? (byCustomer.get(customer.id)?.owedMinor ?? "0")
-        : undefined,
-      paidAheadMinor: loaded
-        ? (byCustomer.get(customer.id)?.paidAheadMinor ?? "0")
-        : undefined,
-    }))
-  }, [query.data, balances.data, balances.isSuccess])
+  const first = query.data?.pages[0]
+  const filtered = Boolean(search || params.customerFilter)
   return (
     <ScrollableContent>
       <div className="grid gap-6 py-6">
@@ -78,24 +63,18 @@ export function CustomerLedgerDirectory({
         >
           <PageToolbar
             actions={
-              <ViewDropdown
-                label="Customer balances view"
-                value={view}
-                options={financeViewOptions}
-                onValueChange={setView}
-              />
+              <>
+                <CustomerBalanceSortMenu />
+                <ViewDropdown
+                  label="Customer balances view"
+                  value={view}
+                  options={financeViewOptions}
+                  onValueChange={setView}
+                />
+              </>
             }
           >
-            <SearchField
-              placeholder="Search Customers..."
-              value={params.customerSearch}
-              onSearch={(value) =>
-                void setParams({ customerSearch: value, customerCursor: null })
-              }
-              onClear={() =>
-                void setParams({ customerSearch: "", customerCursor: null })
-              }
-            />
+            <CustomerBalanceSearch />
           </PageToolbar>
           <SecondaryMenu items={FINANCE_MENU_ITEMS} label="Finance" />
         </PageHeader>
@@ -107,23 +86,9 @@ export function CustomerLedgerDirectory({
             </Button>
           </Alert>
         ) : null}
-        {balances.isError ? (
-          <Alert appearance="dashboard" role="alert">
-            <AlertDescription>
-              Balances couldn&apos;t load. Names are still shown.
-            </AlertDescription>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => void balances.refetch()}
-            >
-              Try again
-            </Button>
-          </Alert>
-        ) : null}
         {query.isPending ? (
           <output aria-busy="true">Loading Customers…</output>
-        ) : query.isError ? (
+        ) : query.isError && !query.data ? (
           <Alert appearance="dashboard" variant="destructive">
             <AlertDescription>
               We couldn&apos;t load Customers. Check your connection and try
@@ -131,50 +96,38 @@ export function CustomerLedgerDirectory({
             </AlertDescription>
             <Button onClick={() => void query.refetch()}>Try again</Button>
           </Alert>
-        ) : (
+        ) : rows.length && first ? (
           <>
-            {rows.length ? (
-              <CustomerAccountsDataTable
-                rows={rows}
-                view={view}
-                search={params.customerSearch}
-                currencyCode={balances.data?.currencyCode ?? "NGN"}
-              />
-            ) : (
-              <div className="grid justify-items-center gap-2 border-y border-border py-16 text-center">
-                <h3 className="font-medium">
-                  {search ? "Nothing matches" : "No Customers yet"}
-                </h3>
-                <p className="max-w-md text-sm text-muted-foreground">
-                  {search
-                    ? "Change the search to see more."
-                    : "Customers appear here once you save them in Customers."}
-                </p>
-              </div>
-            )}
-            {params.customerCursor || query.data.nextCursor ? (
-              <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  disabled={!params.customerCursor || query.isFetching}
-                  onClick={() => void setParams({ customerCursor: null })}
-                >
-                  First page
-                </Button>
-                <Button
-                  variant="outline"
-                  disabled={!query.data.nextCursor || query.isFetching}
-                  onClick={() =>
-                    void setParams({
-                      customerCursor: query.data.nextCursor ?? null,
-                    })
-                  }
-                >
-                  Next page
-                </Button>
-              </div>
+            <CustomerAccountsDataTable
+              rows={rows}
+              view={view}
+              search={`${search}:${params.customerFilter ?? ""}:${params.customerSort}`}
+              currencyCode={first.currencyCode}
+              count={first.count}
+              owedMinor={first.owedMinor}
+            />
+            {query.hasNextPage ? (
+              <Button
+                variant="outline"
+                className="w-fit"
+                disabled={query.isFetchingNextPage}
+                onClick={() => void query.fetchNextPage()}
+              >
+                {query.isFetchingNextPage ? "Loading…" : "Load more"}
+              </Button>
             ) : null}
           </>
+        ) : (
+          <div className="grid justify-items-center gap-2 border-y border-border py-16 text-center">
+            <h3 className="font-medium">
+              {filtered ? "Nothing matches" : "No Customers yet"}
+            </h3>
+            <p className="max-w-md text-sm text-muted-foreground">
+              {filtered
+                ? "Change the search or filter to see more."
+                : "Customers appear here once you save them in Customers."}
+            </p>
+          </div>
         )}
       </div>
     </ScrollableContent>

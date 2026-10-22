@@ -28,6 +28,7 @@ import {
   listFinanceAccountLedger,
   listFinanceBills,
   listFinanceCashCounts,
+  listFinanceCustomerBalanceDirectory,
   listFinanceCustomerBalances,
   listFinanceExpenseCategories,
   listFinanceJournal,
@@ -72,6 +73,7 @@ import {
   financeCashCountsSchema,
   financeCategorySchema,
   financeCommandSchema,
+  financeCustomerBalanceDirectorySchema,
   financeCustomerBalancesSchema,
   financeExpenseCategoriesSchema,
   financeExpenseSchema,
@@ -412,6 +414,14 @@ export const financeRouter = createTRPCRouter({
     .input(financeCustomerBalancesSchema)
     .query(({ ctx, input }) =>
       listFinanceCustomerBalances(ctx.db, { ...input, ...ctx.financeActor }),
+    ),
+  customerBalanceDirectory: financeProcedure
+    .input(financeCustomerBalanceDirectorySchema)
+    .query(({ ctx, input }) =>
+      listFinanceCustomerBalanceDirectory(ctx.db, {
+        ...input,
+        ...ctx.financeActor,
+      }),
     ),
   supplierBalances: financeProcedure
     .input(financeSupplierBalancesSchema)

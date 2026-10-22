@@ -235,6 +235,7 @@ excluded(
     "finance.owedSummary",
     "finance.supplierBalances",
     "finance.customerBalances",
+    "finance.customerBalanceDirectory",
   ],
 )
 planned("finance", "G01", [

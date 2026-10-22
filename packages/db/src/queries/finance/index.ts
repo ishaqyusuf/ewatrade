@@ -56,6 +56,12 @@ export {
   listFinanceSupplierListBalances,
 } from "./owed-reads"
 export {
+  type CustomerBalanceFilter,
+  type CustomerBalanceSort,
+  customerBalanceDirectoryInTransaction,
+  listFinanceCustomerBalanceDirectory,
+} from "./customer-balance-directory"
+export {
   listFinanceAccountActivity,
   listFinanceAccountLedger,
 } from "./account-activity"

@@ -1,7 +1,7 @@
 import { CustomerLedgerDirectory } from "@/components/customer-ledger/customer-ledger-directory"
 import { getServerSession } from "@/lib/session"
 import { getActiveTenant } from "@/lib/tenant"
-import { HydrateClient, getQueryClient, trpc } from "@/trpc/server"
+import { HydrateClient } from "@/trpc/server"
 import { getInitialDirectoryView } from "@/utils/directory-views"
 import { redirect } from "next/navigation"
 
@@ -16,15 +16,10 @@ export default async function Page() {
     !["OWNER", "ADMIN"].includes(tenant.membership.role.toUpperCase())
   )
     redirect("/")
-  const [initialViewSettings] = await Promise.all([
-    getInitialDirectoryView("customer-accounts", {
-      userId: session.user.id,
-      tenantId: tenant.tenant.id,
-    }),
-    getQueryClient().prefetchQuery(
-      trpc.customers.listPage.queryOptions({ limit: 30 }),
-    ),
-  ])
+  const initialViewSettings = await getInitialDirectoryView(
+    "customer-accounts",
+    { userId: session.user.id, tenantId: tenant.tenant.id },
+  )
   return (
     <HydrateClient>
       <CustomerLedgerDirectory

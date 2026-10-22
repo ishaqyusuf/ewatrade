@@ -35,6 +35,7 @@ export const financeCustomerBalanceDirectorySchema = z
     sort: z.enum(["owed", "oldest", "name"]).optional(),
     cursor: z.string().max(512).optional(),
     limit: z.number().int().min(1).max(50).default(30),
+    direction: z.enum(["forward", "backward"]).optional(),
   })
   .strict()
 export const financeSupplierBalancesSchema = financeBookSchema
