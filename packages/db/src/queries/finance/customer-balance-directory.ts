@@ -11,8 +11,8 @@ type Row = {
   name: string
   phone: string | null
   email: string | null
-  owed: string
-  credit: string
+  owedMinor: string
+  creditMinor: string
   owingSince: Date | null
   lastPaidAt: Date | null
   lastPaidMinor: string | null
@@ -181,7 +181,7 @@ export async function customerBalanceDirectoryInTransaction(
     )`
   const [rows, totals] = await Promise.all([
     tx.$queryRaw<Row[]>(Prisma.sql`${rowsSql}
-      SELECT id, name, phone, email, "sortName", owed::text AS owed, credit::text AS credit,
+      SELECT id, name, phone, email, "sortName", owed::text AS "owedMinor", credit::text AS "creditMinor",
         "owingSince", "lastPaidAt", "lastPaidMinor"::text AS "lastPaidMinor"
       FROM rows WHERE TRUE ${filter} ${after} ${order} LIMIT ${limit + 1}`),
     tx.$queryRaw<Array<{ count: string; owed: string }>>(Prisma.sql`${rowsSql}
@@ -198,7 +198,7 @@ export async function customerBalanceDirectoryInTransaction(
       rows.length > limit && last
         ? encodeCursor({
             id: last.id,
-            owed: last.owed,
+            owed: last.owedMinor,
             since: last.owingSince
               ? new Date(last.owingSince).toISOString()
               : null,
@@ -210,8 +210,8 @@ export async function customerBalanceDirectoryInTransaction(
       name: row.name,
       phone: row.phone,
       email: row.email,
-      owedMinor: row.owed,
-      paidAheadMinor: row.credit,
+      owedMinor: row.owedMinor,
+      paidAheadMinor: row.creditMinor,
       owingSince: row.owingSince,
       lastPaymentAt: row.lastPaidAt,
       lastPaymentMinor: row.lastPaidMinor,
