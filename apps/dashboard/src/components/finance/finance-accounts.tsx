@@ -11,9 +11,15 @@ import {
   moneyAccountPaymentMethods,
 } from "@ewatrade/utils/finance-payment-methods"
 import { useQuery } from "@tanstack/react-query"
+import { useQueryState } from "nuqs"
 import { useCallback } from "react"
 import { FinanceAccountStatement } from "./account-statement"
 import { formatFinanceDate } from "./format-date"
+import {
+  MoneyAccountSortMenu,
+  accountSortParam,
+  sortMoneyAccounts,
+} from "./money-account-sort"
 import type { FinanceBook } from "./types"
 export function FinanceAccounts({
   book,
@@ -35,6 +41,7 @@ export function FinanceAccounts({
       }),
     [setParams],
   )
+  const [accountSort] = useQueryState("accountSort", accountSortParam)
   const trpc = useTRPC()
   const balances = useQuery(
     trpc.finance.balances.queryOptions({ bookId: book.id }),
@@ -55,9 +62,13 @@ export function FinanceAccounts({
       ) : (
         <>
           <PaymentMethodGaps accounts={balances.data.accounts} />
+          <MoneyAccountSortMenu />
           <MoneyAccountsDataTable
-            accounts={balances.data.accounts.filter((account) =>
-              ["CASH", "BANK", "CLEARING"].includes(account.purpose),
+            accounts={sortMoneyAccounts(
+              balances.data.accounts.filter((account) =>
+                ["CASH", "BANK", "CLEARING"].includes(account.purpose),
+              ),
+              accountSort,
             )}
             currencyCode={book.currencyCode}
             bookId={book.id}

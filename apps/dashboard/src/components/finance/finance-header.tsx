@@ -71,7 +71,10 @@ export function FinanceHeader({
 }) {
   const [title, description] = FINANCE_PAGE_COPY[view]
   const hasTable =
-    view === "spending" || view === "bank" || view === "suppliers"
+    view === "spending" ||
+    view === "bank" ||
+    view === "suppliers" ||
+    view === "accounts"
   return (
     <PageHeader
       eyebrow="Business money"
