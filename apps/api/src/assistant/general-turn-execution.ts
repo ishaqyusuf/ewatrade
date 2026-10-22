@@ -67,6 +67,7 @@ export async function executeGeneralTurn({
     data: {
       runId,
       remainingRequests: budget.remainingRequests,
+      repliesUnlimited: true,
     },
     transient: true,
   })

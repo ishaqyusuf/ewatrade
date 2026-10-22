@@ -43,8 +43,12 @@ export const generalSnapshotSchema = z.object({
     .default([]),
   activeRunId: z.string().nullable(),
   allowance: z.object({
+    // Numeric compatibility field remains readable by installed clients and old caches.
     remainingRequests: z.number(),
     remainingTokens: z.number(),
+    repliesUnlimited: z.boolean().optional(),
+    requestLimit: z.number().nullable().optional(),
+    tokenLimit: z.number().optional(),
     resetsAt: z.string(),
   }),
   businessName: z.string(),
