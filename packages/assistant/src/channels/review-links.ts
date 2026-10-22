@@ -40,17 +40,32 @@ export const assistantReviewLinkTokenSchema = z
   .max(2048)
   .regex(/^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/)
 
+/** A 128-bit opaque locator; it carries no approval or business identifiers. */
+export const assistantReviewShortLocatorSchema = z
+  .string()
+  .regex(/^r_[A-Za-z0-9_-]{21}[AQgw]$/)
+export const assistantReviewLocatorSchema = z.union([
+  assistantReviewLinkTokenSchema,
+  assistantReviewShortLocatorSchema,
+])
+
+export function assistantReviewPath(locator: string): string | undefined {
+  if (assistantReviewShortLocatorSchema.safeParse(locator).success)
+    return `/r/${locator.slice(2)}`
+  if (assistantReviewLinkTokenSchema.safeParse(locator).success)
+    return `/assistant-review?token=${encodeURIComponent(locator)}`
+  return undefined
+}
+
 /** Trusted configured destination only; a model or business record cannot select the host. */
 export function assistantReviewLink(
   token: string,
   trustedAppOrigin: string,
 ): string | undefined {
-  const parsed = assistantReviewLinkTokenSchema.safeParse(token)
+  const path = assistantReviewPath(token)
   const origin = trustedAssistantAppOrigin(trustedAppOrigin)
-  if (!parsed.success || !origin) return undefined
-  const url = new URL("/assistant-review", origin)
-  url.searchParams.set("token", parsed.data)
-  return url.href
+  if (!path || !origin) return undefined
+  return new URL(path, origin).href
 }
 
 /** Fixed-purpose message: no approval token, chat navigation or claimed completed effect. */

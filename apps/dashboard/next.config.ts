@@ -63,9 +63,25 @@ export function getDashboardApiRewrites(apiOrigin = getApiOrigin()) {
 export const nextConfig: NextConfig = {
   // GENERAL allows 45s after admission; preserve the stream through setup and finalization.
   experimental: { proxyTimeout: 90_000 },
-  logging: { incomingRequests: { ignore: onboardingRequestLogIgnore } },
+  logging: {
+    incomingRequests: {
+      ignore: [
+        ...onboardingRequestLogIgnore,
+        /(?:^|\/)(?:assistant-review|r\/[^/?]+)(?:\/?\?|\/?$)/,
+      ],
+    },
+  },
   async headers() {
-    return [{ source: "/signup", headers: onboardingSignupResponseHeaders }]
+    const reviewHeaders = [
+      { key: "Cache-Control", value: "private, no-store, max-age=0" },
+      { key: "Referrer-Policy", value: "no-referrer" },
+      { key: "X-Robots-Tag", value: "noindex, nofollow, noarchive" },
+    ]
+    return [
+      { source: "/signup", headers: onboardingSignupResponseHeaders },
+      { source: "/assistant-review", headers: reviewHeaders },
+      { source: "/r/:handle", headers: reviewHeaders },
+    ]
   },
   pageExtensions: isInternalQaBuild()
     ? ["qa.ts", "tsx", "ts", "jsx", "js"]

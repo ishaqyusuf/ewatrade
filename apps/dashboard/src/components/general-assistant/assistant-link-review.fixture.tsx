@@ -68,7 +68,7 @@ const proposal = (revision: number): GeneralProposal => ({
   approvalToken: `approval-${revision}`,
 })
 const originalToken = `${"a".repeat(32)}.${"b".repeat(43)}`
-const freshToken = `${"c".repeat(32)}.${"d".repeat(43)}`
+const freshToken = `r_${"c".repeat(21)}A`
 const reads: string[] = []
 const decisions: { token: string; decision: string; approvalToken?: string }[] =
   []
@@ -184,7 +184,7 @@ test("focused review reads without saving, edits to a fresh link, and confirms o
   await act(async () => editor?.onSave({ ...payload, name: "Updated Egg" }))
   expect(edits[0]?.token).toBe(originalToken)
   expect(reads).toEqual([originalToken, freshToken])
-  expect(view.locations).toEqual([`/assistant-review?token=${freshToken}`])
+  expect(view.locations).toEqual([`/r/${freshToken.slice(2)}`])
   await view.press("Approve and save")
   expect(decisions[0]).toEqual({
     token: freshToken,

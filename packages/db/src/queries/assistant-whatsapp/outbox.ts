@@ -17,6 +17,11 @@ import {
   issueAssistantWhatsAppWorkflowReviewInTransaction,
 } from "./workflow-action-reviews"
 import { renderAssistantWhatsAppWorkflowReply } from "./workflow-reply"
+import {
+  assistantReviewShortOutboxId,
+  assistantReviewTokenFromBody,
+  createAssistantReviewShortLocator,
+} from "./web-review-token"
 
 export type AssistantWhatsAppStagedReview = {
   source: { proposalId: string; revision: number; payloadHash: string }
@@ -140,7 +145,20 @@ export async function stageAssistantWhatsAppOutboxInTransaction(
                 chunks: [review.body],
               }
             : ordinary))
+  const signedReviewToken =
+    rendered.kind === "web_review"
+      ? assistantReviewTokenFromBody(rendered.chunks[0] ?? "")
+      : undefined
+  if (rendered.kind === "web_review" && !signedReviewToken)
+    throw new AssistantWhatsAppError("UNAVAILABLE")
   const chunks = rendered.chunks.map((content, chunkIndex) => ({
+    ...(signedReviewToken
+      ? {
+          id: assistantReviewShortOutboxId(
+            createAssistantReviewShortLocator(signedReviewToken),
+          ),
+        }
+      : {}),
     inboxId: inbox.id,
     phoneNumberId: inbox.phoneNumberId,
     runId: run.id,

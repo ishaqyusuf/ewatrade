@@ -16,7 +16,11 @@ import type { Prisma } from "../../../generated/prisma/client"
 import type { DbClient } from "../types"
 import { assistantWhatsAppActionPayloadDigest } from "./action-reviews"
 import { AssistantWhatsAppError } from "./authority"
-import { createAssistantReviewLinkToken } from "./web-review-token"
+import {
+  assistantReviewShortOutboxId,
+  createAssistantReviewLinkToken,
+  createAssistantReviewShortLocator,
+} from "./web-review-token"
 
 /** Provenance lookup only. Browser/channel authorization is mandatory before exposing its result. */
 export async function readAssistantWhatsAppWebReviewSource(
@@ -153,6 +157,8 @@ export async function stageAssistantWhatsAppWebReviewRenewalInTransaction(
   )
     throw new AssistantWhatsAppError("CONFLICT")
   const token = createAssistantReviewLinkToken(input.source)
+  const locator = createAssistantReviewShortLocator(token)
+  const shortOutboxId = assistantReviewShortOutboxId(locator)
   const body = renderWhatsAppWebReview({
     token,
     trustedAppOrigin: input.trustedAppOrigin,
@@ -173,10 +179,14 @@ export async function stageAssistantWhatsAppWebReviewRenewalInTransaction(
       existing.renderKind !== "web_review"
     )
       throw new AssistantWhatsAppError("CONFLICT")
-    return { token, outboxId: existing.id }
+    return {
+      token: existing.id === shortOutboxId ? locator : token,
+      outboxId: existing.id,
+    }
   }
   const row = await db.assistantWhatsAppOutbox.create({
     data: {
+      id: shortOutboxId,
       inboxId: saved.inbox.id,
       phoneNumberId: saved.inbox.phoneNumberId,
       runId: saved.run.id,
@@ -194,7 +204,7 @@ export async function stageAssistantWhatsAppWebReviewRenewalInTransaction(
       ),
     },
   })
-  return { token, outboxId: row.id }
+  return { token: locator, outboxId: row.id }
 }
 
 /** Root canonical decision and this outbox append commit together; no provider effect here. */

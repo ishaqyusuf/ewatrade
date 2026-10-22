@@ -7,7 +7,7 @@ import {
 import {
   assistantReviewLinkMatchesProposal,
   assistantWhatsAppAuthorityDigest,
-  readAssistantReviewLinkToken,
+  readAssistantReviewLinkLocator,
   readAssistantWhatsAppWebReviewSource,
   stageAssistantWhatsAppWebReviewOutcomeInTransaction,
   stageAssistantWhatsAppWebReviewRenewalInTransaction,
@@ -116,7 +116,8 @@ export async function readAssistantReviewLink(
   ctx: GeneralContext,
   token: string,
 ): Promise<AssistantReviewLinkResult> {
-  const source = readAssistantReviewLinkToken(token)
+  requireBrowserIdentity(ctx.session)
+  const source = await readAssistantReviewLinkLocator(ctx.db, token)
   if (!source) return { status: "unavailable" }
   if (source.expiresAt <= Date.now()) return { status: "expired" }
   try {
@@ -156,7 +157,8 @@ export async function decideAssistantReviewLink(
     approvalToken?: string
   },
 ) {
-  const source = readAssistantReviewLinkToken(input.token)
+  requireBrowserIdentity(ctx.session)
+  const source = await readAssistantReviewLinkLocator(ctx.db, input.token)
   if (!source || source.expiresAt <= Date.now()) return unavailable()
   // Prevent another signed-in account from acquiring source locks using a forwarded link.
   if ((await resolveReview(ctx, source)).status !== "ready")
@@ -196,7 +198,8 @@ export async function editAssistantReviewLink(
   ctx: GeneralContext,
   input: { token: string; payload: GeneralAction },
 ) {
-  const source = readAssistantReviewLinkToken(input.token)
+  requireBrowserIdentity(ctx.session)
+  const source = await readAssistantReviewLinkLocator(ctx.db, input.token)
   if (!source || source.expiresAt <= Date.now()) return unavailable()
   if ((await resolveReview(ctx, source)).status !== "ready")
     return unavailable()

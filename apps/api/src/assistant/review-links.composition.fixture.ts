@@ -1,13 +1,21 @@
 /** Isolated ports: exercises the actual web-review service without a database or provider. */
 import { mock } from "bun:test"
 import assert from "node:assert/strict"
+import { createHash } from "node:crypto"
+import {
+  WHATSAPP_WEB_REVIEW_VERSION,
+  renderWhatsAppWebReview,
+} from "@ewatrade/assistant/channels/review-links"
 import { TRPCError } from "@trpc/server"
 import { assistantWhatsAppActionPayloadDigest } from "../../../../packages/db/src/queries/assistant-whatsapp/action-reviews"
 import { assistantReviewLinkMatchesProposal } from "../../../../packages/db/src/queries/assistant-whatsapp/web-review-outcome"
 import {
   createAssistantReviewLinkToken,
+  createAssistantReviewShortLocator,
+  assistantReviewShortOutboxId,
   readAssistantReviewLinkToken,
 } from "../../../../packages/db/src/queries/assistant-whatsapp/web-review-token"
+import { readAssistantReviewLinkLocator } from "../../../../packages/db/src/queries/assistant-whatsapp/web-review-locator"
 
 process.env.ASSISTANT_APPROVAL_SIGNING_KEY =
   "isolated-service-test-key-at-least-thirty-two-bytes"
@@ -35,6 +43,24 @@ const source = {
   expiresAt: proposal.expiresAt.getTime(),
 }
 const token = createAssistantReviewLinkToken(source)
+const shortLocator = createAssistantReviewShortLocator(token)
+const privateBody = renderWhatsAppWebReview({
+  token,
+  trustedAppOrigin: "https://dash.ewatrade.com",
+  scopeLabel: "Business · Main",
+})
+if (!privateBody) throw Error("Expected private review fixture")
+const shortRow = {
+  id: assistantReviewShortOutboxId(shortLocator),
+  inboxId: source.inboxId,
+  content: privateBody,
+  contentDigest: createHash("sha256").update(privateBody).digest("hex"),
+  renderKind: "web_review",
+  rendererVersion: WHATSAPP_WEB_REVIEW_VERSION,
+  chunkIndex: 0,
+  chunkCount: 1,
+  expiresAt: proposal.expiresAt,
+}
 const ctx = {
   session: browser,
   tenantContext: {
@@ -46,7 +72,12 @@ const ctx = {
     tenantId: proposal.tenantId,
     storeId: proposal.storeId,
   },
-  db: {},
+  db: {
+    assistantWhatsAppOutbox: {
+      findUnique: async (input: { where: { id: string } }) =>
+        input.where.id === shortRow.id ? shortRow : null,
+    },
+  },
 }
 const saved = {
   proposal,
@@ -91,6 +122,7 @@ const generalProposal = () => ({
 })
 
 mock.module("@ewatrade/db/assistant-whatsapp", () => ({
+  readAssistantReviewLinkLocator,
   readAssistantReviewLinkToken,
   assistantReviewLinkMatchesProposal,
   readAssistantWhatsAppWebReviewSource: async () => saved,
@@ -194,6 +226,9 @@ const result = await service.readAssistantReviewLink(context, token)
 assert.equal(result.status, "ready")
 assert.equal(events.includes("canonical"), false)
 assert.equal(events.includes("enqueue"), false)
+const compact = await service.readAssistantReviewLink(context, shortLocator)
+assert.equal(compact.status, "ready")
+assert.equal(JSON.stringify(compact).includes(token), false)
 proposal.actorUserId = "foreign-actor"
 assert.equal(
   (await service.readAssistantReviewLink(context, token)).status,
