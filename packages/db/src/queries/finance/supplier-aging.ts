@@ -8,6 +8,99 @@ import {
   supplierAgingSequence,
 } from "./supplier-aging-rules"
 
+/** The supplier entry fields the payable aging calculator reads. */
+export const supplierAgingSourceSelect = {
+  id: true,
+  bookId: true,
+  supplierId: true,
+  kind: true,
+  side: true,
+  amountMinor: true,
+  effectiveAt: true,
+  actorUserId: true,
+  description: true,
+  billId: true,
+  paymentId: true,
+  moneyAccountId: true,
+  reversalOfId: true,
+  bill: {
+    select: {
+      id: true,
+      bookId: true,
+      supplierId: true,
+      kind: true,
+      totalMinor: true,
+      incurredAt: true,
+      dueAt: true,
+      storeId: true,
+      actorUserId: true,
+      description: true,
+      reference: true,
+    },
+  },
+  payment: {
+    select: {
+      id: true,
+      bookId: true,
+      billId: true,
+      accountId: true,
+      amountMinor: true,
+      effectiveAt: true,
+      actorUserId: true,
+    },
+  },
+  settledAllocation: {
+    select: {
+      id: true,
+      bookId: true,
+      supplierId: true,
+      billId: true,
+      advanceEntryId: true,
+      amountMinor: true,
+      effectiveAt: true,
+      actorUserId: true,
+    },
+  },
+  releasedAllocation: {
+    select: {
+      id: true,
+      bookId: true,
+      supplierId: true,
+      amountMinor: true,
+      effectiveAt: true,
+      actorUserId: true,
+      allocation: {
+        select: { id: true, billId: true, supplierEntryId: true },
+      },
+    },
+  },
+  journalEntry: {
+    select: {
+      id: true,
+      bookId: true,
+      sequence: true,
+      sourceKind: true,
+      sourceId: true,
+      effectiveAt: true,
+      actorUserId: true,
+      storeId: true,
+      reversalOfId: true,
+      lines: {
+        take: 101,
+        select: {
+          bookId: true,
+          accountId: true,
+          debitMinor: true,
+          creditMinor: true,
+          account: {
+            select: { bookId: true, purpose: true, kind: true },
+          },
+        },
+      },
+    },
+  },
+} satisfies Prisma.FinanceSupplierEntrySelect
+
 export type FinanceSupplierPayableAgingInput = FinanceActor & {
   bookId: string
   supplierId: string
@@ -128,97 +221,7 @@ export async function getFinanceSupplierPayableAgingInTransaction(
     where: sourceScope,
     orderBy: { journalEntry: { sequence: "asc" } },
     take: MAX_SUPPLIER_AGING_SOURCES + 1,
-    select: {
-      id: true,
-      bookId: true,
-      supplierId: true,
-      kind: true,
-      side: true,
-      amountMinor: true,
-      effectiveAt: true,
-      actorUserId: true,
-      description: true,
-      billId: true,
-      paymentId: true,
-      moneyAccountId: true,
-      reversalOfId: true,
-      bill: {
-        select: {
-          id: true,
-          bookId: true,
-          supplierId: true,
-          kind: true,
-          totalMinor: true,
-          incurredAt: true,
-          dueAt: true,
-          storeId: true,
-          actorUserId: true,
-          description: true,
-          reference: true,
-        },
-      },
-      payment: {
-        select: {
-          id: true,
-          bookId: true,
-          billId: true,
-          accountId: true,
-          amountMinor: true,
-          effectiveAt: true,
-          actorUserId: true,
-        },
-      },
-      settledAllocation: {
-        select: {
-          id: true,
-          bookId: true,
-          supplierId: true,
-          billId: true,
-          advanceEntryId: true,
-          amountMinor: true,
-          effectiveAt: true,
-          actorUserId: true,
-        },
-      },
-      releasedAllocation: {
-        select: {
-          id: true,
-          bookId: true,
-          supplierId: true,
-          amountMinor: true,
-          effectiveAt: true,
-          actorUserId: true,
-          allocation: {
-            select: { id: true, billId: true, supplierEntryId: true },
-          },
-        },
-      },
-      journalEntry: {
-        select: {
-          id: true,
-          bookId: true,
-          sequence: true,
-          sourceKind: true,
-          sourceId: true,
-          effectiveAt: true,
-          actorUserId: true,
-          storeId: true,
-          reversalOfId: true,
-          lines: {
-            take: 101,
-            select: {
-              bookId: true,
-              accountId: true,
-              debitMinor: true,
-              creditMinor: true,
-              account: {
-                select: { bookId: true, purpose: true, kind: true },
-              },
-            },
-          },
-        },
-      },
-    },
+    select: supplierAgingSourceSelect,
   })
   if (sources.length > MAX_SUPPLIER_AGING_SOURCES) {
     throw new FinanceError(

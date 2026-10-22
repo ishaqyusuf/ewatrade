@@ -36,6 +36,7 @@ import {
   listFinancePeriodAudit,
   listFinancePurchaseBills,
   listFinancePurchaseRecognitions,
+  listFinanceSupplierDirectory,
   listFinanceSupplierListBalances,
   listFinanceSuppliers,
   payFinanceBill,
@@ -90,6 +91,7 @@ import {
   financeReverseBillPaymentSchema,
   financeSetupSchema,
   financeSupplierBalancesSchema,
+  financeSupplierDirectorySchema,
   financeVoidExpenseSchema,
 } from "../../schemas/finance"
 import { financePeriodAuditSchema } from "../../schemas/finance-period-audit"
@@ -422,6 +424,11 @@ export const financeRouter = createTRPCRouter({
         ...input,
         ...ctx.financeActor,
       }),
+    ),
+  supplierDirectory: financeProcedure
+    .input(financeSupplierDirectorySchema)
+    .query(({ ctx, input }) =>
+      listFinanceSupplierDirectory(ctx.db, { ...input, ...ctx.financeActor }),
     ),
   supplierBalances: financeProcedure
     .input(financeSupplierBalancesSchema)

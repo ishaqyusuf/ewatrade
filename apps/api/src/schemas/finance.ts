@@ -38,6 +38,19 @@ export const financeCustomerBalanceDirectorySchema = z
     direction: z.enum(["forward", "backward"]).optional(),
   })
   .strict()
+export const financeSupplierDirectorySchema = financeBookSchema
+  .extend({
+    query: z.string().trim().max(160).optional(),
+    filter: z.enum(["owe", "overdue", "ahead", "paid"]).optional(),
+    sort: z.enum(["owed", "name"]).optional(),
+    cursor: z
+      .string()
+      .regex(/^\d{1,6}$/)
+      .optional(),
+    limit: z.number().int().min(1).max(50).default(30),
+    direction: z.enum(["forward", "backward"]).optional(),
+  })
+  .strict()
 export const financeSupplierBalancesSchema = financeBookSchema
   .extend({ supplierIds: z.array(id).max(50) })
   .strict()

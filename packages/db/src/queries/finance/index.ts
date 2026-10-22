@@ -62,6 +62,11 @@ export {
   listFinanceCustomerBalanceDirectory,
 } from "./customer-balance-directory"
 export {
+  type SupplierDirectoryFilter,
+  type SupplierDirectorySort,
+  listFinanceSupplierDirectory,
+} from "./supplier-directory"
+export {
   listFinanceAccountActivity,
   listFinanceAccountLedger,
 } from "./account-activity"

@@ -136,7 +136,13 @@ export async function listFinanceSuppliers(
  */
 export async function listFinanceSupplierBalances(
   db: Pick<Prisma.TransactionClient, "$queryRaw">,
-  input: { bookId: string; snapshot: bigint; supplierIds: string[] },
+  input: {
+    bookId: string
+    snapshot: bigint
+    supplierIds: string[]
+    /** Only entries dated before this instant (payable aging's as-of day). */
+    endsBefore?: Date
+  },
 ) {
   const balances = new Map<
     string,
@@ -156,6 +162,7 @@ export async function listFinanceSupplierBalances(
     WHERE se."bookId" = ${input.bookId}
       AND se."supplierId" IN (${Prisma.join(input.supplierIds)})
       AND e.sequence <= ${input.snapshot}
+      ${input.endsBefore ? Prisma.sql`AND e."effectiveAt" < ${input.endsBefore}` : Prisma.empty}
       AND a.purpose IN ('PAYABLE', 'SUPPLIER_ADVANCE')
     GROUP BY se."supplierId"
   `)

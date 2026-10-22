@@ -11,6 +11,7 @@ import {
 } from "@/components/tables/core"
 import { DraggableHeader } from "@/components/tables/draggable-header"
 import { ResizeHandle } from "@/components/tables/resize-handle"
+import { useFinanceParams } from "@/hooks/use-finance-params"
 import { cn } from "@/utils"
 import {
   SortableContext,
@@ -22,6 +23,8 @@ import {
   DropdownMenuCheckboxItem,
   DropdownMenuContent,
   DropdownMenuGroup,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
   DropdownMenuTrigger,
   TableHead,
   TableHeader,
@@ -174,18 +177,75 @@ export function FinanceSupplierTableHeader({
   )
 }
 
+const SUPPLIER_SORTS = [
+  { id: "owed", label: "Most owed" },
+  { id: "name", label: "Name A–Z" },
+] as const
+
+/** Columns (table only) and Sort, shown in the page header row. */
 export function FinanceSupplierTableSettings({
   table,
+  showColumns = true,
 }: {
   table: Table<FinanceSupplierListRow>
+  showColumns?: boolean
 }) {
+  const { supplierSort, setParams } = useFinanceParams()
+  const current =
+    SUPPLIER_SORTS.find((item) => item.id === supplierSort) ?? SUPPLIER_SORTS[0]
   return (
     <TableToolbarPortal>
+      {showColumns ? (
+        <DropdownMenu>
+          <DropdownMenuTrigger
+            render={
+              <Button type="button" variant="outline" className="rounded-none">
+                Columns
+                <HugeiconsIcon
+                  icon={ArrowDown01Icon}
+                  data-icon="inline-end"
+                  className="text-muted-foreground"
+                  aria-hidden="true"
+                />
+              </Button>
+            }
+          />
+          <DropdownMenuContent
+            appearance="dashboard"
+            align="end"
+            sideOffset={8}
+            className="min-w-48"
+          >
+            <DropdownMenuGroup>
+              {table
+                .getAllLeafColumns()
+                .filter((column) => column.getCanHide())
+                .map((column) => {
+                  const meta = column.columnDef.meta as
+                    | TableColumnMeta
+                    | undefined
+                  return (
+                    <DropdownMenuCheckboxItem
+                      key={column.id}
+                      checked={column.getIsVisible()}
+                      closeOnClick={false}
+                      onCheckedChange={(checked) =>
+                        column.toggleVisibility(checked)
+                      }
+                    >
+                      {meta?.headerLabel ?? getHeaderLabel(column.columnDef)}
+                    </DropdownMenuCheckboxItem>
+                  )
+                })}
+            </DropdownMenuGroup>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      ) : null}
       <DropdownMenu>
         <DropdownMenuTrigger
           render={
             <Button type="button" variant="outline" className="rounded-none">
-              Columns
+              {current.label}
               <HugeiconsIcon
                 icon={ArrowDown01Icon}
                 data-icon="inline-end"
@@ -195,34 +255,21 @@ export function FinanceSupplierTableSettings({
             </Button>
           }
         />
-        <DropdownMenuContent
-          appearance="dashboard"
-          align="end"
-          sideOffset={8}
-          className="min-w-48"
-        >
-          <DropdownMenuGroup>
-            {table
-              .getAllLeafColumns()
-              .filter((column) => column.getCanHide())
-              .map((column) => {
-                const meta = column.columnDef.meta as
-                  | TableColumnMeta
-                  | undefined
-                return (
-                  <DropdownMenuCheckboxItem
-                    key={column.id}
-                    checked={column.getIsVisible()}
-                    closeOnClick={false}
-                    onCheckedChange={(checked) =>
-                      column.toggleVisibility(checked)
-                    }
-                  >
-                    {meta?.headerLabel ?? getHeaderLabel(column.columnDef)}
-                  </DropdownMenuCheckboxItem>
-                )
-              })}
-          </DropdownMenuGroup>
+        <DropdownMenuContent appearance="dashboard" align="end">
+          <DropdownMenuRadioGroup
+            aria-label="Sort Suppliers"
+            value={current.id}
+            onValueChange={(value) => {
+              const option = SUPPLIER_SORTS.find((item) => item.id === value)
+              if (option) void setParams({ supplierSort: option.id })
+            }}
+          >
+            {SUPPLIER_SORTS.map((item) => (
+              <DropdownMenuRadioItem key={item.id} value={item.id} closeOnClick>
+                {item.label}
+              </DropdownMenuRadioItem>
+            ))}
+          </DropdownMenuRadioGroup>
         </DropdownMenuContent>
       </DropdownMenu>
     </TableToolbarPortal>

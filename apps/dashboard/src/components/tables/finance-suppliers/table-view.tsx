@@ -18,7 +18,11 @@ import { Alert, AlertDescription, Button, Table, TableBody } from "@ewatrade/ui"
 import { formatFinanceMoney } from "@ewatrade/utils/finance-money"
 import type { Table as ReactTable } from "@tanstack/react-table"
 import { useVirtualizer } from "@tanstack/react-virtual"
-import { type FinanceSupplierListRow, ViewSupplierButton } from "./columns"
+import {
+  type FinanceSupplierListRow,
+  SupplierDuePill,
+  ViewSupplierButton,
+} from "./columns"
 import { FinanceSupplierEmptyState } from "./empty-states"
 import { FinanceSupplierTableSkeleton } from "./skeleton"
 import {
@@ -38,6 +42,8 @@ const NON_CLICKABLE_COLUMNS = new Set(["select", "actions"])
 export function FinanceSupplierTableView({
   table,
   currencyCode,
+  count,
+  owedMinor,
   view,
   filtered,
   isPending,
@@ -55,6 +61,8 @@ export function FinanceSupplierTableView({
 }: {
   table: ReactTable<FinanceSupplierListRow>
   currencyCode: string
+  count: number
+  owedMinor: string
   view: DirectoryView
   filtered: boolean
   isPending: boolean
@@ -80,14 +88,6 @@ export function FinanceSupplierTableView({
   })
   const tableScroll = useTableScroll({ useColumnWidths: true })
   const rows = table.getRowModel().rows
-  const owedTotal = rows.every((row) => row.original.owedMinor !== undefined)
-    ? rows
-        .reduce(
-          (total, row) => total + BigInt(row.original.owedMinor ?? "0"),
-          0n,
-        )
-        .toString()
-    : null
   const rowVirtualizer = useVirtualizer({
     count: rows.length,
     getScrollElement: () => tableScroll.containerRef.current,
@@ -164,9 +164,12 @@ export function FinanceSupplierTableView({
         table={table}
         view={view}
         selectAllLabel="Select all loaded suppliers"
-        summary={`${rows.length} Supplier${rows.length === 1 ? "" : "s"}${owedTotal === null ? "" : ` · you owe ${formatFinanceMoney(owedTotal, currencyCode)}`}`}
+        summary={`${count} Supplier${count === 1 ? "" : "s"} · you owe ${formatFinanceMoney(owedMinor, currencyCode)}`}
       />
-      {view === "table" ? <FinanceSupplierTableSettings table={table} /> : null}
+      <FinanceSupplierTableSettings
+        table={table}
+        showColumns={view === "table"}
+      />
 
       {persistenceError ? (
         <Alert
@@ -201,6 +204,7 @@ export function FinanceSupplierTableView({
                 title={supplier.name}
                 onOpen={open}
                 description={supplier.code}
+                badges={<SupplierDuePill supplier={supplier} />}
                 highlight={
                   supplier.owedMinor === undefined
                     ? undefined

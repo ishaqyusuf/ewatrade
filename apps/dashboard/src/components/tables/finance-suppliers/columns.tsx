@@ -1,15 +1,34 @@
 "use client"
 
+import { formatFinanceShortDate } from "@/components/finance/format-date"
 import type { FinanceSupplierRow } from "@/components/finance/types"
+import { Pill } from "@/components/orders/overview/order-overview-parts"
 import { type TableColumnMeta, selectColumn } from "@/components/tables/core"
+import type { RouterOutputs } from "@ewatrade/api/trpc/routers/_app"
 import { Button } from "@ewatrade/ui"
 import { formatFinanceMoney } from "@ewatrade/utils/finance-money"
 import type { ColumnDef } from "@tanstack/react-table"
 
-/** A supplier row with its balances; undefined while they load. */
-export type FinanceSupplierListRow = FinanceSupplierRow & {
-  owedMinor?: string
-  paidAheadMinor?: string
+export type FinanceSupplierListRow =
+  RouterOutputs["finance"]["supplierDirectory"]["items"][number]
+
+/** Overdue is red, a coming due date amber; nothing owed shows Paid up or Paid ahead. */
+export function SupplierDuePill({
+  supplier,
+}: { supplier: FinanceSupplierListRow }) {
+  if (supplier.owedMinor === "0")
+    return supplier.paidAheadMinor !== "0" ? (
+      <Pill tone="green">Paid ahead</Pill>
+    ) : (
+      <Pill tone="muted">Paid up</Pill>
+    )
+  if (!supplier.nextDueAt) return <Pill tone="amber">No due date</Pill>
+  const day = formatFinanceShortDate(supplier.nextDueAt)
+  return supplier.overdue ? (
+    <Pill tone="red">Overdue · {day}</Pill>
+  ) : (
+    <Pill tone="amber">Due {day}</Pill>
+  )
 }
 
 function Amount({
@@ -82,6 +101,18 @@ export function financeSupplierColumns(
       cell: ({ row }) => (
         <Amount value={row.original.owedMinor} currency={currency} strong />
       ),
+    },
+    {
+      id: "nextDue",
+      header: "Next due",
+      size: 170,
+      minSize: 140,
+      maxSize: 240,
+      meta: {
+        headerLabel: "Next due",
+        skeleton: { type: "badge", width: "w-24" },
+      } satisfies TableColumnMeta,
+      cell: ({ row }) => <SupplierDuePill supplier={row.original} />,
     },
     {
       id: "paidAhead",

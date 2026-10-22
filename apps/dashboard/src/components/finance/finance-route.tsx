@@ -95,10 +95,12 @@ export async function FinanceRoute({
       (await searchParams) ?? {},
     )
     void queryClient.prefetchInfiniteQuery(
-      trpc.finance.suppliers.infiniteQueryOptions(
+      trpc.finance.supplierDirectory.infiniteQueryOptions(
         {
           bookId: book.id,
           query: filter.supplierQuery.trim() || undefined,
+          filter: filter.supplierFilter ?? undefined,
+          sort: filter.supplierSort,
           limit: 30,
         },
         {
