@@ -1,0 +1,54 @@
+{
+  "version": 1,
+  "id": "2026-10-22-finance-directories",
+  "tickets": ["H02"],
+  "summary": "Dashboard list reads for the Finance pages: Customer balances (owed, paid ahead, owing since, last payment, filters and sorts) and Suppliers (owed, paid ahead, next due and overdue from payable aging, filters and sorts). Also optional filters on existing reads: bills status OPEN and NO_RECEIPT, and a bank statement search. Roles, permissions and assistant rollout are unchanged.",
+  "noAssistantImpact": "No assistant tool, prompt authority, capability declaration or write is added. The two new reads are dashboard projections under the existing Owner/Admin financeProcedure; the assistant answers these amounts through customer statements, supplier statements and payable aging. finance.suppliers stays identity-only, so assistant supplier answers remain amount-free. The bills and bank statement filters are optional inputs that assistant callers do not send.",
+  "capabilities": [],
+  "procedures": [
+    {
+      "path": "finance.customerBalanceDirectory",
+      "status": "excluded",
+      "reason": "Dashboard Customer balances list projection; the assistant reads customer statements for these amounts."
+    },
+    {
+      "path": "finance.supplierDirectory",
+      "status": "excluded",
+      "reason": "Dashboard Supplier list projection; the supplier statement and payable aging reads already carry these amounts and dates for the assistant."
+    }
+  ],
+  "docs": [
+    {
+      "topic": "feature",
+      "status": "local_only",
+      "path": ".brain/features/merchant-finance.md",
+      "note": "Follow-ups, 21-22 October 2026."
+    },
+    {
+      "topic": "api",
+      "status": "local_only",
+      "path": ".brain/api/endpoints.md",
+      "note": "customerBalanceDirectory and supplierDirectory rows; bills and bank list inputs."
+    },
+    {
+      "topic": "capability",
+      "status": "updated",
+      "path": "packages/assistant/src/capabilities/inventory.ts",
+      "note": "Both procedures classified excluded."
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "test",
+      "path": "packages/db/src/queries/finance/supplier-aging-rules.test.ts",
+      "executed": true,
+      "result": "Supplier aging and supplier read tests: 12 pass after sharing the aging source select."
+    },
+    {
+      "kind": "test",
+      "path": "apps/api/src/trpc/routers/finance-suppliers.test.ts",
+      "executed": true,
+      "result": "API finance router and supplier answer tests: 40 pass with root env; dashboard finance and table tests 44 pass; dashboard tsc has no Finance errors."
+    }
+  ]
+}
