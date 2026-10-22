@@ -2,7 +2,10 @@
 
 import { useTRPCClient } from "@/trpc/client"
 import type { RouterOutputs } from "@ewatrade/api/trpc/routers/_app"
-import { assistantReviewLinkTokenSchema } from "@ewatrade/assistant/channels/review-links"
+import {
+  assistantReviewLocatorSchema,
+  assistantReviewPath,
+} from "@ewatrade/assistant/channels/review-links"
 import type {
   GeneralAction,
   GeneralProposal,
@@ -55,7 +58,7 @@ export function AssistantLinkReview({
       setLoading(true)
       setNotice(null)
       setReview(null)
-      if (!assistantReviewLinkTokenSchema.safeParse(locator).success) {
+      if (!assistantReviewLocatorSchema.safeParse(locator).success) {
         setReview({ status: "unavailable" })
         setLoading(false)
         return
@@ -103,7 +106,9 @@ export function AssistantLinkReview({
   }, [review])
 
   function replaceLocator(locator?: string) {
-    const path = `/assistant-review${locator ? `?token=${encodeURIComponent(locator)}` : ""}`
+    const path = locator
+      ? (assistantReviewPath(locator) ?? "/assistant-review")
+      : "/assistant-review"
     window.history.replaceState(window.history.state, "", path)
   }
 

@@ -39,4 +39,5 @@ export * from "./workflow-action-reviews"
 export * from "./workflow-terminal"
 
 export * from "./web-review-token"
+export * from "./web-review-locator"
 export * from "./web-review-outcome"

@@ -777,6 +777,7 @@ export function beginAssistantWhatsAppDelivery(
               tx,
               {
                 content: body,
+                outboxId: row.id,
                 inboxId: row.inbox.id,
                 bindingId: binding.id,
                 conversationId: resolved.conversation.id,

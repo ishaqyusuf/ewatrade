@@ -1,0 +1,32 @@
+{
+  "version": 1,
+  "id": "2026-10-21-whatsapp-short-review-urls",
+  "tickets": ["H02"],
+  "summary": "Local branded /r/<128-bit opaque handle> navigation for disposable WhatsApp web reviews. New immutable outboxes retain the original signed locator privately; authenticated lookup verifies the exact outbox ID, content digest, signed source and deadline before existing browser identity, scope, revision and decision checks. Provider dispatch renders the compact URL only for matching new rows. Legacy signed links remain supported. No deployment, provider call, schema, environment, OTP or approval-policy change.",
+  "capabilities": [
+    {
+      "id": "catalog.product.create",
+      "change": "unchanged",
+      "rollout": "source",
+      "note": "Only the review URL transport changes. Existing canonical proposal, product validation, actor/Store scope, draft expiry and explicit confirmation remain authoritative; no new product availability is claimed. Other eligible General reviews reuse the same unchanged decision authority."
+    }
+  ],
+  "procedures": [
+    {"path": "assistant.reviewLink", "status": "excluded", "reason": "Existing protected read-only review transport internally resolves a short locator or legacy signed token. No new merchant command or permission."},
+    {"path": "assistant.editReviewLink", "status": "excluded", "reason": "Existing protected edit and canonical revision transition; new durable renewals return compact locators without exposing the signed locator."},
+    {"path": "assistant.decideReviewLink", "status": "excluded", "reason": "Existing protected explicit confirm/cancel and durable outcome composition; a handle never grants decision authority."}
+  ],
+  "docs": [
+    {"topic": "feature", "status": "local_only", "path": ".brain/plans/2026-10-21-whatsapp-short-review-urls.md"},
+    {"topic": "api", "status": "local_only", "path": ".brain/api/contracts.md", "note": "Existing token field accepts a compact locator; original signed-token compatibility is retained. New /r/:handle page is navigation only."},
+    {"topic": "permissions", "status": "local_only", "path": ".brain/api/permissions.md", "note": "Authenticated browser identity and all canonical review checks remain mandatory; no public resolver or arbitrary redirect."},
+    {"topic": "capability", "status": "not_applicable", "path": "packages/assistant/src/capabilities/COVERAGE.md", "note": "No capability, procedure schema, role or rollout change."},
+    {"topic": "decision", "status": "local_only", "path": ".brain/decisions/2026-10-21-short-whatsapp-review-locators.md"}
+  ],
+  "evidence": [
+    {"kind": "test", "path": "packages/db/src/queries/assistant-whatsapp/web-review-locator.test.ts", "executed": true, "result": "Focused locator, dispatch and existing security set: 11 passed, 83 assertions; no database connection or provider call. Validates 128-bit deterministic handles, exact durable provenance, tamper/rotation rejection, compact provider URL, renewal and legacy compatibility."},
+    {"kind": "fixture", "path": "apps/api/src/assistant/review-links.composition.fixture.ts", "executed": true, "result": "Actual review service passed isolated read, compact read without signed-token exposure, wrong actor, scope mismatch, revocation, rollback, decision, replay and renewal checks; zero DB connections/provider calls."},
+    {"kind": "test", "path": "apps/dashboard/src/middleware.test.ts", "executed": true, "result": "Only disposable-review cases: 2 passed, 22 assertions, 9 unrelated cases filtered; both URL formats preserve sign-in return and private/no-store/no-referrer/noindex headers."},
+    {"kind": "test", "path": "apps/dashboard/src/components/general-assistant/assistant-link-review.test.ts", "executed": true, "result": "Existing focused mounted composition passed with legacy initial locator and compact renewal URL; review/editor and decision remain shared. Synthetic RPC/browser ports; not live browser or WhatsApp acceptance."}
+  ]
+}

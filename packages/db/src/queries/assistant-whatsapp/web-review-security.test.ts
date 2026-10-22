@@ -10,6 +10,7 @@ import {
   webReviewResponseRevision,
 } from "./web-review-outcome"
 import {
+  createAssistantReviewShortLocator,
   createAssistantReviewLinkToken,
   readAssistantReviewLinkToken,
 } from "./web-review-token"
@@ -254,7 +255,12 @@ test("a canonical edit rotates revision and durably stages the replacement locat
       },
       now,
     )
-    expect(readAssistantReviewLinkToken(staged.token, secret)).toEqual(renewed)
+    expect(staged.token).toBe(
+      createAssistantReviewShortLocator(
+        createAssistantReviewLinkToken(renewed, secret),
+        secret,
+      ),
+    )
     expect(assistantReviewLinkMatchesProposal(source, f.proposal)).toBe(false)
     expect(f.outbox).toHaveLength(1)
     expect(f.outbox[0]?.renderKind).toBe("web_review")

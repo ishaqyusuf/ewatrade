@@ -2,7 +2,11 @@ import { expect, test } from "bun:test"
 import { renderWhatsAppWebReview } from "@ewatrade/assistant/channels/review-links"
 import { assistantWhatsAppActionPayloadDigest } from "./action-reviews"
 import { resolveAssistantWhatsAppWebReviewDispatch } from "./web-review-dispatch"
-import { createAssistantReviewLinkToken } from "./web-review-token"
+import {
+  assistantReviewShortOutboxId,
+  createAssistantReviewLinkToken,
+  createAssistantReviewShortLocator,
+} from "./web-review-token"
 
 const now = new Date("2026-10-21T16:00:00Z")
 const payload = { action: "product_create", name: "Egg" }
@@ -96,6 +100,37 @@ test("focused review dispatch has exact committed source and no native approval 
     expect(content).not.toContain("/assistant/c/")
     expect(content).not.toContain("approvalToken")
     expect(content).toContain("Nothing is saved until you approve")
+  } finally {
+    if (old === undefined)
+      Reflect.deleteProperty(process.env, "ASSISTANT_APPROVAL_SIGNING_KEY")
+    else process.env.ASSISTANT_APPROVAL_SIGNING_KEY = old
+  }
+})
+
+test("new durable short handles send only the compact branded URL", async () => {
+  const old = process.env.ASSISTANT_APPROVAL_SIGNING_KEY
+  process.env.ASSISTANT_APPROVAL_SIGNING_KEY = signingKey
+  try {
+    const locator = createAssistantReviewShortLocator(token, signingKey)
+    const outboxId = assistantReviewShortOutboxId(locator)
+    const sent = await resolveAssistantWhatsAppWebReviewDispatch(database(), {
+      ...options,
+      content,
+      outboxId,
+    })
+    expect(sent?.body).toContain(
+      `https://dash.ewatrade.com/r/${locator.slice(2)}`,
+    )
+    expect(sent?.body).not.toContain(token)
+    expect(sent?.body).not.toContain("?token=")
+    expect(sent?.expiresAt).toBe(source.expiresAt)
+    expect(
+      await resolveAssistantWhatsAppWebReviewDispatch(database(), {
+        ...options,
+        content,
+        outboxId: "wa-review_wrong",
+      }),
+    ).toBeUndefined()
   } finally {
     if (old === undefined)
       Reflect.deleteProperty(process.env, "ASSISTANT_APPROVAL_SIGNING_KEY")

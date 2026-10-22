@@ -3,6 +3,7 @@ import {
   type AssistantReviewLinkSource,
   assistantReviewLinkSourceSchema,
   assistantReviewLinkTokenSchema,
+  assistantReviewShortLocatorSchema,
 } from "@ewatrade/assistant/channels/review-links"
 
 const domain = "ewatrade.assistant.whatsapp.web-review.v1\n"
@@ -51,5 +52,39 @@ export function readAssistantReviewLinkToken(
     return parsed.success ? parsed.data : undefined
   } catch {
     return
+  }
+}
+
+/** Domain-separated, deterministic 128-bit handle for one immutable signed locator. */
+export function createAssistantReviewShortLocator(
+  token: string,
+  secret = signingKey(),
+) {
+  if (!readAssistantReviewLinkToken(token, secret))
+    throw Error("Assistant review locator is invalid")
+  const handle = createHmac("sha256", secret)
+    .update("ewatrade.assistant.whatsapp.short-review.v1\n")
+    .update(token)
+    .digest()
+    .subarray(0, 16)
+    .toString("base64url")
+  return assistantReviewShortLocatorSchema.parse(`r_${handle}`)
+}
+
+export function assistantReviewShortOutboxId(locator: string) {
+  return `wa-review_${assistantReviewShortLocatorSchema.parse(locator).slice(2)}`
+}
+
+/** The signed source stays in private durable content, never in the short browser URL. */
+export function assistantReviewTokenFromBody(content: string) {
+  const href = content.match(/^Review draft: (\S+)$/m)?.[1]
+  if (!href) return undefined
+  try {
+    const parsed = assistantReviewLinkTokenSchema.safeParse(
+      new URL(href).searchParams.get("token"),
+    )
+    return parsed.success ? parsed.data : undefined
+  } catch {
+    return undefined
   }
 }

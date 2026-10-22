@@ -43,8 +43,12 @@ const PUBLIC_BRAND_ASSET_PATHS = new Set([
 export function middleware(request: NextRequest) {
   const reviewContext =
     request.nextUrl.pathname === "/assistant-review" ||
+    request.nextUrl.pathname.startsWith("/r/") ||
     (request.nextUrl.pathname === "/login" &&
-      request.nextUrl.searchParams.get("next")?.startsWith("/assistant-review"))
+      (request.nextUrl.searchParams
+        .get("next")
+        ?.startsWith("/assistant-review") ||
+        request.nextUrl.searchParams.get("next")?.startsWith("/r/")))
   const withReviewPrivacy = (response: NextResponse) => {
     if (reviewContext) {
       response.headers.set("Cache-Control", "private, no-store, max-age=0")

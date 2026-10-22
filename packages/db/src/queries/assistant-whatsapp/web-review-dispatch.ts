@@ -5,13 +5,18 @@ import {
 import { generalStoredPartSchema } from "@ewatrade/assistant/general/contracts"
 import type { DbClient } from "../types"
 import { assistantWhatsAppActionPayloadDigest } from "./action-reviews"
-import { readAssistantReviewLinkToken } from "./web-review-token"
+import {
+  assistantReviewShortOutboxId,
+  createAssistantReviewShortLocator,
+  readAssistantReviewLinkToken,
+} from "./web-review-token"
 
 /** Dispatch rechecks the exact current draft; expired/edited/cancelled links are never sent as fresh reviews. */
 export async function resolveAssistantWhatsAppWebReviewDispatch(
   db: DbClient,
   input: {
     content: string
+    outboxId?: string
     inboxId: string
     bindingId: string
     conversationId: string
@@ -94,7 +99,19 @@ export async function resolveAssistantWhatsAppWebReviewDispatch(
     trustedAppOrigin: input.trustedAppOrigin,
     scopeLabel: input.scopeLabel,
   })
-  return body === input.content
-    ? { body, expiresAt: source.expiresAt }
-    : undefined
+  if (body !== input.content) return undefined
+  if (input.outboxId?.startsWith("wa-review_")) {
+    const locator = createAssistantReviewShortLocator(token)
+    if (input.outboxId !== assistantReviewShortOutboxId(locator))
+      return undefined
+    const shortBody = renderWhatsAppWebReview({
+      token: locator,
+      trustedAppOrigin: input.trustedAppOrigin,
+      scopeLabel: input.scopeLabel,
+    })
+    return shortBody
+      ? { body: shortBody, expiresAt: source.expiresAt }
+      : undefined
+  }
+  return { body, expiresAt: source.expiresAt }
 }
