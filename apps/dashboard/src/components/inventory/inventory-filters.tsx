@@ -6,6 +6,7 @@ import { Button } from "@ewatrade/ui"
 
 const filters = [
   { id: "all", label: "All stock" },
+  { id: "low", label: "Running low" },
   { id: "reserved", label: "Held for orders" },
   { id: "out", label: "Out of stock" },
 ] as const

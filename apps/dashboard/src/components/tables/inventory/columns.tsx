@@ -27,8 +27,9 @@ export const inventorySortFields = [
 
 const statusTone: Record<InventoryStockStatus, string> = {
   in_stock: "bg-primary/10 text-primary",
+  low: "bg-amber-500/15 text-amber-700 dark:text-amber-300",
   out: "bg-destructive/10 text-destructive",
-  transit: "bg-amber-500/15 text-amber-700 dark:text-amber-300",
+  transit: "bg-sky-500/15 text-sky-700 dark:text-sky-300",
   staff: "bg-muted text-foreground",
 }
 

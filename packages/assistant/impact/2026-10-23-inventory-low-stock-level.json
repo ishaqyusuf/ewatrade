@@ -1,0 +1,49 @@
+{
+  "version": 1,
+  "id": "2026-10-23-inventory-low-stock-level",
+  "tickets": ["H02"],
+  "summary": "Each Product can have a low-stock level in its main unit (CatalogProduct.lowStockLevel, nullable). inventory.setLowStockLevel saves or clears it; balance rows carry it; the dashboard Inventory page shows Running low (status, tile, filter) and a Low-stock level sheet from the row menu.",
+  "noAssistantImpact": "Display setting only: it never blocks a sale or changes stock. The assistant keeps reading low stock through lowStockPage with its own threshold; balance answers ignore the new field. inventory.setLowStockLevel is classified form_only.",
+  "capabilities": [],
+  "procedures": [
+    {
+      "path": "inventory.setLowStockLevel",
+      "status": "form_only",
+      "reason": "Running low display setting on the Inventory page; no stock change."
+    }
+  ],
+  "docs": [
+    {
+      "topic": "schema",
+      "status": "local_only",
+      "path": ".brain/database/schema.md",
+      "note": "CatalogProduct.lowStockLevel; migration 20261023202451_catalog_product_low_stock_level."
+    },
+    {
+      "topic": "api",
+      "status": "local_only",
+      "path": ".brain/api/endpoints.md",
+      "note": "inventory.setLowStockLevel; balance rows include lowStockLevel."
+    },
+    {
+      "topic": "capability",
+      "status": "updated",
+      "path": "packages/assistant/src/capabilities/inventory.ts",
+      "note": "inventory.setLowStockLevel classified form_only."
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "test",
+      "path": "packages/db/src/queries/catalog-low-stock-level.test.ts",
+      "executed": true,
+      "result": "Save, clear, negative refused, other tenant not found: pass."
+    },
+    {
+      "kind": "test",
+      "path": "apps/dashboard/src/lib/inventory-view.test.ts",
+      "executed": true,
+      "result": "Running low at or below the level, loose stock only, summary and filter: pass."
+    }
+  ]
+}

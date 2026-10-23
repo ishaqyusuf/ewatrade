@@ -13,6 +13,7 @@ import {
 } from "@ewatrade/ui"
 import {
   Add01Icon,
+  AlertDiamondIcon,
   ArrowDown01Icon,
   MoreVerticalIcon,
   ViewIcon,
@@ -89,6 +90,16 @@ export function InventoryOperationMenu({
             >
               <HugeiconsIcon icon={ViewIcon} aria-hidden="true" />
               View product
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={(event) => {
+                event.stopPropagation()
+                onAction?.()
+                void setParams({ inventoryLevel: balance.balanceSourceId })
+              }}
+            >
+              <HugeiconsIcon icon={AlertDiamondIcon} aria-hidden="true" />
+              Low-stock level
             </DropdownMenuItem>
             <DropdownMenuSeparator />
           </>

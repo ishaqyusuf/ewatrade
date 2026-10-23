@@ -42,6 +42,7 @@ import {
   receiveOrCancelStockTransfer,
   releaseCatalogStockReservation,
   reserveCatalogOfferingStock,
+  setCatalogProductLowStockLevel,
   transformPackagedStock,
 } from "@ewatrade/db/queries"
 import { ruleRejectedError } from "@ewatrade/errors"
@@ -75,6 +76,7 @@ import {
   inventoryRecordInternalUseSchema,
   inventoryReleaseReservationSchema,
   inventoryReserveOfferingSchema,
+  inventorySetLowStockLevelSchema,
   inventorySingleBalanceOperationSchema,
   inventoryStockCountReviewSchema,
   inventoryStockCountsSchema,
@@ -518,6 +520,22 @@ export const inventoryRouter = createTRPCRouter({
           tenantId: ctx.tenantContext.tenant.id,
           storeId,
           stockCountId: input.stockCountId,
+        })
+      } catch (error) {
+        if (error instanceof CatalogError) throw inventoryError(error)
+        throw error
+      }
+    }),
+
+  setLowStockLevel: protectedProcedure
+    .input(inventorySetLowStockLevelSchema)
+    .mutation(async ({ ctx, input }) => {
+      assertCanManageInventory(ctx.tenantContext)
+      try {
+        return await setCatalogProductLowStockLevel(ctx.db, {
+          tenantId: ctx.tenantContext.tenant.id,
+          productId: input.productId,
+          level: input.lowStockLevel,
         })
       } catch (error) {
         if (error instanceof CatalogError) throw inventoryError(error)

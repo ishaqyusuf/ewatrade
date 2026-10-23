@@ -185,6 +185,11 @@ formOnly(
   ["inventory.discardStockCount"],
 )
 planned("inventory", "C03", ["inventory.recordInternalUse"])
+formOnly(
+  "inventory",
+  "Display setting for Running low on the Inventory page; it never changes stock or blocks a sale. The assistant reads low stock with lowStockPage and its own threshold.",
+  ["inventory.setLowStockLevel"],
+)
 planned("inventory", "C05", ["inventory.reconciliationReport"])
 planned("inventory", "G04", [
   "inventory.*Reservation",

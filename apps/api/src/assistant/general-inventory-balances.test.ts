@@ -67,6 +67,7 @@ test("long source units stay within saved answer schema without rounding exact q
     typeof generalInventoryBalanceAnswers
   >[0]["rows"][number] = {
     availableQuantity: "9007199254740993.125",
+    lowStockLevel: null,
     balanceSourceId: "source",
     catalogItemId: "item",
     custodyReferenceId: "transfer",

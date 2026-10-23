@@ -2,6 +2,7 @@
 
 import { InventorySummary } from "@/components/inventory/inventory-summary"
 import { InventoryStoresSheet } from "@/components/sheets/inventory-stores-sheet"
+import { LowStockLevelSheet } from "@/components/sheets/low-stock-level-sheet"
 import { useLoadedRowSelection } from "@/components/tables/core"
 import { useCatalogDetailParams } from "@/hooks/use-catalog-detail-params"
 import { useInventoryParams } from "@/hooks/use-inventory-params"
@@ -43,7 +44,7 @@ export function InventoryDataTable({
   initialSettings?: Partial<TableSettings>
   view: DirectoryView
 }) {
-  const { storesDetail, setParams } = useInventoryParams()
+  const { storesDetail, levelBalanceId, setParams } = useInventoryParams()
   const setStoreDetail = useCallback(
     (row: InventoryBalance) => {
       void setParams({ inventoryStores: row.balanceSourceId })
@@ -131,6 +132,13 @@ export function InventoryDataTable({
           the way is not counted until it is received.
         </p>
       ) : null}
+      <LowStockLevelSheet
+        record={
+          balances.rows.find((row) => row.balanceSourceId === levelBalanceId) ??
+          null
+        }
+        onClose={() => void setParams({ inventoryLevel: null })}
+      />
       <InventoryStoresSheet
         record={
           scopedRows.find((row) => row.balanceSourceId === storesDetail) ?? null

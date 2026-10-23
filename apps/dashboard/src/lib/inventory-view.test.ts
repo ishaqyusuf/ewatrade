@@ -40,7 +40,7 @@ describe("inventory ledger view", () => {
         },
         { ...base, productId: "feed", custodyType: "TRANSIT" },
       ]),
-    ).toEqual({ products: 2, sellable: 1, held: 1, out: 1 })
+    ).toEqual({ products: 2, sellable: 1, held: 1, low: 0, out: 1 })
   })
   test("names each line's status in plain words", () => {
     expect(getInventoryStatus(base)).toBe("in_stock")
@@ -49,6 +49,22 @@ describe("inventory ledger view", () => {
       "transit",
     )
     expect(getInventoryStatus({ ...base, custodyType: "STAFF" })).toBe("staff")
+    const eggs = { ...base, availableQuantity: "300", lowStockLevel: "360" }
+    expect(getInventoryStatus(eggs)).toBe("low")
+    expect(getInventoryStatus({ ...eggs, availableQuantity: "360" })).toBe(
+      "low",
+    )
+    expect(getInventoryStatus({ ...eggs, availableQuantity: "361" })).toBe(
+      "in_stock",
+    )
+    expect(getInventoryStatus({ ...eggs, kind: "PACKAGED_STOCK" })).toBe(
+      "in_stock",
+    )
+    expect(getInventoryStatus({ ...eggs, availableQuantity: "0" })).toBe("out")
+    expect(
+      summarizeInventory([eggs, { ...base, productId: "feed" }]),
+    ).toMatchObject({ low: 1, sellable: 2 })
+    expect(filterInventory([eggs, base], "", "low")).toEqual([eggs])
   })
   test("puts the unit after the number, in the plural when needed", () => {
     expect(formatStockQuantity("1230", "Egg")).toBe("1,230 eggs")

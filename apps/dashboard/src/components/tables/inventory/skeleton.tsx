@@ -21,9 +21,9 @@ export function InventoryTableSkeleton({
         aria-label="Loading inventory summary"
         data-summary-grid
         data-summary-skeleton
-        className="grid h-32 grid-cols-3 divide-x divide-border border border-border"
+        className="grid h-32 grid-cols-2 divide-x divide-border border border-border lg:grid-cols-4"
       >
-        {[0, 1, 2].map((id) => (
+        {[0, 1, 2, 3].map((id) => (
           <div
             key={id}
             className="m-5 animate-pulse bg-muted motion-reduce:animate-none"

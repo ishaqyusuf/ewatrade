@@ -5,6 +5,8 @@
  * fixed public text. Keys are the exact domain message, lower-cased.
  */
 const RULES: Record<string, string> = {
+  "enter the low-stock level as 0 or more.":
+    "Enter the low-stock level as 0 or more.",
   // Not enough stock free (INSUFFICIENT_STOCK).
   "the operation would leave on-hand below reserved stock.":
     "Not enough free stock for this. Some of it is held for orders.",

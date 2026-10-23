@@ -23,9 +23,13 @@ const inventoryParams = {
   inventoryStores: parseAsString,
   inventoryBalance: parseAsString,
   inventoryPreset: parseAsStringEnum(["loss"]),
-  inventoryFilter: parseAsStringEnum(["all", "reserved", "out"]).withDefault(
+  inventoryFilter: parseAsStringEnum([
     "all",
-  ),
+    "reserved",
+    "out",
+    "low",
+  ]).withDefault("all"),
+  inventoryLevel: parseAsString,
 }
 
 export function useInventoryParams() {
@@ -43,7 +47,8 @@ export function useInventoryParams() {
         inventoryProduct?: string | null
         inventoryBalance?: string | null
         inventoryPreset?: "loss" | null
-        inventoryFilter?: "all" | "reserved" | "out" | null
+        inventoryFilter?: "all" | "reserved" | "out" | "low" | null
+        inventoryLevel?: string | null
       } | null,
     ) => {
       return setParams(
@@ -76,6 +81,7 @@ export function useInventoryParams() {
     balanceId: params.inventoryBalance,
     preset: params.inventoryPreset,
     stockFilter: params.inventoryFilter,
+    levelBalanceId: params.inventoryLevel,
     query,
     setParams: updateParams,
   }

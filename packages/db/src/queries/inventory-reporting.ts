@@ -50,6 +50,7 @@ function serializeInventoryBalanceRow(
     inventoryUnitName: balance.inventoryUnit.name,
     inventoryUnitTransactionScale: balance.inventoryUnit.transactionScale,
     kind: balance.kind,
+    lowStockLevel: balance.product.lowStockLevel?.toFixed() ?? null,
     onHandQuantity: balance.onHandQuantity.toFixed(),
     productId: balance.productId,
     productName: balance.product.catalogItem.name,

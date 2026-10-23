@@ -1,8 +1,15 @@
 import { compareExactDecimals } from "@ewatrade/utils/exact-decimal"
 
-export type InventoryStockFilter = "all" | "reserved" | "out"
-export type InventoryStockStatus = "in_stock" | "out" | "transit" | "staff"
+export type InventoryStockFilter = "all" | "reserved" | "out" | "low"
+export type InventoryStockStatus =
+  | "in_stock"
+  | "low"
+  | "out"
+  | "transit"
+  | "staff"
 type Balance = {
+  kind?: string
+  lowStockLevel?: string | null
   storeName?: string
   productId: string
   productName: string
@@ -22,6 +29,7 @@ export function summarizeInventory(rows: readonly Balance[]) {
   const products = new Set<string>()
   const sellable = new Set<string>()
   const held = new Set<string>()
+  const low = new Set<string>()
   for (const row of rows) {
     if (row.custodyType !== "STORE") continue
     products.add(row.productId)
@@ -29,11 +37,13 @@ export function summarizeInventory(rows: readonly Balance[]) {
       sellable.add(row.productId)
     if (compareExactDecimals(row.reservedQuantity, "0") > 0)
       held.add(row.productId)
+    if (getInventoryStatus(row) === "low") low.add(row.productId)
   }
   return {
     products: products.size,
     sellable: sellable.size,
     held: held.size,
+    low: low.size,
     out: products.size - sellable.size,
   }
 }
@@ -49,7 +59,7 @@ export function filterInventory<T extends Balance>(
       (filter === "all" ||
         (filter === "reserved"
           ? compareExactDecimals(row.reservedQuantity, "0") > 0
-          : getInventoryStatus(row) === "out")) &&
+          : getInventoryStatus(row) === filter)) &&
       (!normalized ||
         [row.productName, row.storeName, row.variantName, row.inventoryUnitName]
           .join(" ")
@@ -58,21 +68,33 @@ export function filterInventory<T extends Balance>(
   )
 }
 
-/** What a shop owner needs from one stock line: can it be sold, or where is it. */
+/**
+ * What a shop owner needs from one stock line: can it be sold, is it running
+ * low, or where is it. The Product's low-stock level is in its main unit, so
+ * it applies to loose stock (shared pool), not to packs kept separately.
+ */
 export function getInventoryStatus(row: {
   custodyType: string
   availableQuantity: string
+  kind?: string
+  lowStockLevel?: string | null
 }): InventoryStockStatus {
   if (row.custodyType === "TRANSIT") return "transit"
   if (row.custodyType === "STAFF" || row.custodyType === "SESSION")
     return "staff"
-  return compareExactDecimals(row.availableQuantity, "0") > 0
-    ? "in_stock"
-    : "out"
+  if (compareExactDecimals(row.availableQuantity, "0") <= 0) return "out"
+  if (
+    row.lowStockLevel != null &&
+    row.kind !== "PACKAGED_STOCK" &&
+    compareExactDecimals(row.availableQuantity, row.lowStockLevel) <= 0
+  )
+    return "low"
+  return "in_stock"
 }
 
 export const inventoryStatusLabels: Record<InventoryStockStatus, string> = {
   in_stock: "In stock",
+  low: "Running low",
   out: "Out of stock",
   transit: "On the way",
   staff: "With staff",

@@ -209,6 +209,13 @@ export const inventoryStockCountReviewSchema = z
   })
   .strict()
 
+export const inventorySetLowStockLevelSchema = z
+  .object({
+    productId: z.string().trim().min(1).max(128),
+    lowStockLevel: z.string().trim().min(1).max(64).nullable(),
+  })
+  .strict()
+
 export const inventoryStockCountsSchema = z
   .object({
     limit: z.number().int().min(1).max(50).optional(),

@@ -11,6 +11,14 @@ export function InventorySummary({
       detail: "Have stock that is not held for orders",
     },
     {
+      label: "Running low",
+      value: summary.low,
+      detail:
+        summary.low === 1
+          ? "1 product is at or under its low-stock level"
+          : `${summary.low} products are at or under their low-stock level`,
+    },
+    {
       label: "Held for orders",
       value: summary.held,
       detail:
@@ -31,7 +39,7 @@ export function InventorySummary({
     <section
       aria-label="Inventory summary"
       data-summary-grid
-      className="grid grid-cols-1 divide-y divide-border border border-border sm:grid-cols-3 sm:divide-x sm:divide-y-0"
+      className="grid grid-cols-1 divide-y divide-border border border-border sm:grid-cols-2 sm:divide-x lg:grid-cols-4 lg:divide-y-0"
     >
       {cards.map((card) => (
         <div key={card.label} className="px-5 py-4">

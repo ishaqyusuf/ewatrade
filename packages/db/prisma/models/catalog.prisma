@@ -45,6 +45,8 @@ model CatalogProduct {
   id                                String                     @id @default(cuid())
   catalogItemId                     String                     @unique
   usage                             ProductUsage               @default(FOR_SALE)
+  /// "Running low" at or below this many main units free to sell; null = no level.
+  lowStockLevel                     Decimal?                   @db.Decimal(38, 18)
   currentUnitConfigurationVersionId String?                    @unique
   createdAt                         DateTime                   @default(now())
   updatedAt                         DateTime                   @updatedAt
