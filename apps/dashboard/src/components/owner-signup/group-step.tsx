@@ -7,6 +7,7 @@ import {
   StoreLinkField,
 } from "@ewatrade/onboarding/components/signup/signup-flow"
 import { Input, SelectControl } from "@ewatrade/ui"
+import { getStorefrontDomain } from "@ewatrade/utils"
 import type { OwnerSetupDraft } from "@ewatrade/utils/owner-signup"
 import { moveOwnerBusinessType } from "@ewatrade/utils/owner-signup"
 import { normalizeStoreLink } from "@ewatrade/utils/store-link"
@@ -18,6 +19,10 @@ import {
   ownerPlanForBusinessCount,
   typeLabel,
 } from "./model"
+
+const storefrontDomain = getStorefrontDomain(
+  process.env.NEXT_PUBLIC_PLATFORM_DOMAIN ?? "ewatrade.com",
+)
 
 export function OwnerGroupStep({
   draft,
@@ -195,7 +200,9 @@ export function OwnerGroupStep({
                 {index === 0 ? (
                   <>
                     <b>{business.name}</b>
-                    <small>{business.slug}.ewatrade.com</small>
+                    <small>
+                      {business.slug}.{storefrontDomain}
+                    </small>
                   </>
                 ) : (
                   <Input

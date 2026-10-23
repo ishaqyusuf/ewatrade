@@ -37,6 +37,9 @@
         "@ewatrade/prescriptions": "workspace:*",
         "@ewatrade/private-media": "workspace:*",
         "@ewatrade/service-commerce": "workspace:*",
+        "@ewatrade/storefront-contracts": "workspace:*",
+        "@ewatrade/storefront-runtime": "workspace:*",
+        "@ewatrade/storefront-templates": "workspace:*",
         "@ewatrade/utils": "workspace:*",
         "@hono/trpc-server": "^0.4.2",
         "@hono/zod-openapi": "^1.4.0",
@@ -85,6 +88,9 @@
         "@ewatrade/order-receipts": "workspace:*",
         "@ewatrade/prescriptions": "workspace:*",
         "@ewatrade/service-commerce": "workspace:*",
+        "@ewatrade/storefront-contracts": "workspace:*",
+        "@ewatrade/storefront-runtime": "workspace:*",
+        "@ewatrade/storefront-templates": "workspace:*",
         "@ewatrade/ui": "workspace:*",
         "@ewatrade/utils": "workspace:*",
         "@hookform/resolvers": "^5.2.2",
@@ -345,6 +351,9 @@
         "@ewatrade/payments": "workspace:*",
         "@ewatrade/prescriptions": "workspace:*",
         "@ewatrade/service-commerce": "workspace:*",
+        "@ewatrade/storefront-contracts": "workspace:*",
+        "@ewatrade/storefront-runtime": "workspace:*",
+        "@ewatrade/storefront-templates": "workspace:*",
         "@ewatrade/ui": "workspace:*",
         "@ewatrade/utils": "workspace:*",
         "@hugeicons/core-free-icons": "^4.1.1",
@@ -381,6 +390,7 @@
         "@ai-sdk/deepseek": "2.0.26",
         "@ai-sdk/openai": "3.0.48",
         "@ai-sdk/provider": "3.0.8",
+        "@ewatrade/storefront-contracts": "workspace:*",
         "ai": "6.0.141",
         "zod": "catalog:",
       },
@@ -571,6 +581,9 @@
         "@ewatrade/prescriptions": "workspace:*",
         "@ewatrade/private-media": "workspace:*",
         "@ewatrade/service-commerce": "workspace:*",
+        "@ewatrade/storefront-contracts": "workspace:*",
+        "@ewatrade/storefront-runtime": "workspace:*",
+        "@ewatrade/storefront-templates": "workspace:*",
         "@ewatrade/utils": "workspace:*",
         "@sentry/node": "^10.72.0",
         "@trigger.dev/build": "4.5.16",
@@ -735,6 +748,65 @@
         "@ewatrade/tsconfig": "workspace:*",
         "@types/bun": "latest",
         "typescript": "catalog:",
+      },
+    },
+    "packages/storefront-components": {
+      "name": "@ewatrade/storefront-components",
+      "version": "1.0.0",
+      "dependencies": {
+        "@ewatrade/storefront-contracts": "workspace:*",
+        "react": "19.1.0",
+        "react-dom": "19.1.0",
+        "scheduler": "0.26.0",
+        "typescript": "5.9.3",
+        "zod": "catalog:",
+      },
+      "devDependencies": {
+        "@ewatrade/tsconfig": "workspace:*",
+        "@types/bun": "latest",
+        "@types/react": "^19.1.13",
+        "@types/react-dom": "^19.1.9",
+      },
+    },
+    "packages/storefront-contracts": {
+      "name": "@ewatrade/storefront-contracts",
+      "version": "1.0.0",
+      "dependencies": {
+        "zod": "catalog:",
+      },
+      "devDependencies": {
+        "@ewatrade/tsconfig": "workspace:*",
+      },
+    },
+    "packages/storefront-runtime": {
+      "name": "@ewatrade/storefront-runtime",
+      "version": "1.0.0",
+      "dependencies": {
+        "@ewatrade/storefront-contracts": "workspace:*",
+        "@ewatrade/ui": "workspace:*",
+        "@ewatrade/utils": "workspace:*",
+        "react": "catalog:",
+      },
+      "devDependencies": {
+        "@ewatrade/tsconfig": "workspace:*",
+      },
+    },
+    "packages/storefront-templates": {
+      "name": "@ewatrade/storefront-templates",
+      "version": "1.0.0",
+      "dependencies": {
+        "@ewatrade/events": "workspace:*",
+        "@ewatrade/storefront-components": "workspace:*",
+        "@ewatrade/storefront-contracts": "workspace:*",
+        "@ewatrade/storefront-runtime": "workspace:*",
+        "@ewatrade/ui": "workspace:*",
+        "@hugeicons/core-free-icons": "^4.1.1",
+        "@hugeicons/react": "^1.1.6",
+        "next": "catalog:",
+        "react": "catalog:",
+      },
+      "devDependencies": {
+        "@ewatrade/tsconfig": "workspace:*",
       },
     },
     "packages/tenant-url": {
@@ -1267,6 +1339,14 @@
     "@ewatrade/service-commerce": ["@ewatrade/service-commerce@workspace:packages/service-commerce"],
 
     "@ewatrade/storefront": ["@ewatrade/storefront@workspace:apps/storefront"],
+
+    "@ewatrade/storefront-components": ["@ewatrade/storefront-components@workspace:packages/storefront-components"],
+
+    "@ewatrade/storefront-contracts": ["@ewatrade/storefront-contracts@workspace:packages/storefront-contracts"],
+
+    "@ewatrade/storefront-runtime": ["@ewatrade/storefront-runtime@workspace:packages/storefront-runtime"],
+
+    "@ewatrade/storefront-templates": ["@ewatrade/storefront-templates@workspace:packages/storefront-templates"],
 
     "@ewatrade/tenant-url": ["@ewatrade/tenant-url@workspace:packages/tenant-url"],
 

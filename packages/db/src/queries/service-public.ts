@@ -271,6 +271,7 @@ export async function listServiceRequests(
       customerPhone: request.customerPhone,
       details: request.details,
       formLabel: request.requestForm.label,
+      revision: request.revision,
       id: request.id,
       lines: request.lines.map((line) => ({
         details: line.details,
@@ -390,147 +391,151 @@ export async function submitPublicServiceRequest(
       : {}),
   })
   try {
-    return await db.$transaction(async (tx) => {
-      const form = await tx.serviceRequestForm.findFirst({
-        include: {
-          offerings: {
-            include: {
-              offering: {
-                include: {
-                  serviceOffering: true,
-                  variant: {
-                    include: {
-                      selections: { include: { group: true, value: true } },
+    return await db.$transaction(
+      async (tx) => {
+        const form = await tx.serviceRequestForm.findFirst({
+          include: {
+            offerings: {
+              include: {
+                offering: {
+                  include: {
+                    serviceOffering: true,
+                    variant: {
+                      include: {
+                        selections: { include: { group: true, value: true } },
+                      },
                     },
                   },
                 },
               },
             },
           },
-        },
-        where: {
-          AND: [
-            { OR: [{ activeFrom: null }, { activeFrom: { lte: now } }] },
-            { OR: [{ expiresAt: null }, { expiresAt: { gt: now } }] },
-          ],
-          ...(input.formId
-            ? {
-                id: input.formId,
-                storeId: input.expectedScope.storeId,
-                tenantId: input.expectedScope.tenantId,
-              }
-            : { publicTokenDigest: digest(input.formToken ?? "") }),
-          status: ServiceRequestFormStatus.ACTIVE,
-        },
-      })
-      if (!form) {
-        throw new CatalogError(
-          "PUBLIC_TOKEN_INVALID",
-          "This Service Request Form is unavailable.",
-        )
-      }
-      if (
-        input.expectedScope &&
-        (form.storeId !== input.expectedScope.storeId ||
-          form.tenantId !== input.expectedScope.tenantId)
-      ) {
-        throw new CatalogError(
-          "PUBLIC_TOKEN_INVALID",
-          "This Service Request Form is unavailable for the selected Store.",
-        )
-      }
-      await assertServiceCommerceIntakeContextInTransaction(tx, {
-        context: input.intakeContext,
-        storeId: form.storeId,
-        tenantId: form.tenantId,
-        vertical: "service",
-      })
-      await assertServiceCommercePolicyAllowedInTransaction(tx, {
-        actorUserId:
-          input.actorUserId ?? `public_service_request_${channelOrigin}`,
-        channel: channelOrigin,
-        purpose: "public_service_request_intake",
-        storeId: form.storeId,
-        subject: "intake",
-        tenantId: form.tenantId,
-        vertical: "service",
-      })
-      const previous = await tx.serviceRequest.findFirst({
-        where: {
-          OR: [
-            { clientRequestId: input.clientRequestId },
-            ...(providerEventId ? [{ providerEventId }] : []),
-          ],
-          tenantId: form.tenantId,
-        },
-      })
-      if (previous) {
-        if (previous.payloadHash !== payloadHash) {
-          throw new CatalogError(
-            "IDEMPOTENCY_MISMATCH",
-            "This request command was already used with different details.",
-          )
-        }
-        await options?.onRequest?.(tx, previous)
-        return { ...previous, created: false as const }
-      }
-      const allowed = new Map(
-        form.offerings.map((row) => [row.offeringId, row.offering]),
-      )
-      const normalizedLines = input.lines.map((line) => {
-        const offering = allowed.get(line.offeringId)
-        if (!offering?.serviceOffering) {
-          throw new CatalogError(
-            "OFFERING_UNAVAILABLE",
-            "Request selected an Offering outside this Form.",
-          )
-        }
-        const requestedQuantity = parseExactDecimal(line.quantity, {
-          allowZero: false,
-          maxScale: offering.serviceOffering.quantityScale,
-        })
-        return { line, offering, requestedQuantity }
-      })
-      const request = await tx.serviceRequest.create({
-        data: {
-          clientRequestId: input.clientRequestId,
-          channelOrigin: intakeChannelOriginMap[channelOrigin],
-          consentVersion: input.consent?.privacyNoticeVersion,
-          contactOptIn: input.consent?.contactOptIn ?? false,
-          createdByUserId: channelOrigin === "staff" ? input.actorUserId : null,
-          payloadHash,
-          providerEventId,
-          customerEmail: input.customerEmail?.trim() || null,
-          customerName: input.customerName.trim(),
-          customerPhone: input.customerPhone?.trim() || null,
-          details: input.details?.trim() || null,
-          requestFormId: form.id,
-          requestedAt: input.requestedAt,
-          storeId: form.storeId,
-          tenantId: form.tenantId,
-        },
-      })
-      for (const { line, offering, requestedQuantity } of normalizedLines) {
-        await tx.serviceRequestLine.create({
-          data: {
-            details: line.details?.trim() || null,
-            offeringId: offering.id,
-            offeringName: offering.name,
-            optionSelections: json(
-              offering.variant.selections.map((selection) => ({
-                group: selection.group.name,
-                value: selection.value.label,
-              })),
-            ),
-            requestId: request.id,
-            requestedQuantity,
-            variantName: offering.variant.name,
+          where: {
+            AND: [
+              { OR: [{ activeFrom: null }, { activeFrom: { lte: now } }] },
+              { OR: [{ expiresAt: null }, { expiresAt: { gt: now } }] },
+            ],
+            ...(input.formId
+              ? {
+                  id: input.formId,
+                  storeId: input.expectedScope.storeId,
+                  tenantId: input.expectedScope.tenantId,
+                }
+              : { publicTokenDigest: digest(input.formToken ?? "") }),
+            status: ServiceRequestFormStatus.ACTIVE,
           },
         })
-      }
-      await options?.onRequest?.(tx, request)
-      return { ...request, created: true as const }
-    })
+        if (!form) {
+          throw new CatalogError(
+            "PUBLIC_TOKEN_INVALID",
+            "This Service Request Form is unavailable.",
+          )
+        }
+        if (
+          input.expectedScope &&
+          (form.storeId !== input.expectedScope.storeId ||
+            form.tenantId !== input.expectedScope.tenantId)
+        ) {
+          throw new CatalogError(
+            "PUBLIC_TOKEN_INVALID",
+            "This Service Request Form is unavailable for the selected Store.",
+          )
+        }
+        await assertServiceCommerceIntakeContextInTransaction(tx, {
+          context: input.intakeContext,
+          storeId: form.storeId,
+          tenantId: form.tenantId,
+          vertical: "service",
+        })
+        await assertServiceCommercePolicyAllowedInTransaction(tx, {
+          actorUserId:
+            input.actorUserId ?? `public_service_request_${channelOrigin}`,
+          channel: channelOrigin,
+          purpose: "public_service_request_intake",
+          storeId: form.storeId,
+          subject: "intake",
+          tenantId: form.tenantId,
+          vertical: "service",
+        })
+        const previous = await tx.serviceRequest.findFirst({
+          where: {
+            OR: [
+              { clientRequestId: input.clientRequestId },
+              ...(providerEventId ? [{ providerEventId }] : []),
+            ],
+            tenantId: form.tenantId,
+          },
+        })
+        if (previous) {
+          if (previous.payloadHash !== payloadHash) {
+            throw new CatalogError(
+              "IDEMPOTENCY_MISMATCH",
+              "This request command was already used with different details.",
+            )
+          }
+          await options?.onRequest?.(tx, previous)
+          return { ...previous, created: false as const }
+        }
+        const allowed = new Map(
+          form.offerings.map((row) => [row.offeringId, row.offering]),
+        )
+        const normalizedLines = input.lines.map((line) => {
+          const offering = allowed.get(line.offeringId)
+          if (!offering?.serviceOffering) {
+            throw new CatalogError(
+              "OFFERING_UNAVAILABLE",
+              "Request selected an Offering outside this Form.",
+            )
+          }
+          const requestedQuantity = parseExactDecimal(line.quantity, {
+            allowZero: false,
+            maxScale: offering.serviceOffering.quantityScale,
+          })
+          return { line, offering, requestedQuantity }
+        })
+        const request = await tx.serviceRequest.create({
+          data: {
+            clientRequestId: input.clientRequestId,
+            channelOrigin: intakeChannelOriginMap[channelOrigin],
+            consentVersion: input.consent?.privacyNoticeVersion,
+            contactOptIn: input.consent?.contactOptIn ?? false,
+            createdByUserId:
+              channelOrigin === "staff" ? input.actorUserId : null,
+            payloadHash,
+            providerEventId,
+            customerEmail: input.customerEmail?.trim() || null,
+            customerName: input.customerName.trim(),
+            customerPhone: input.customerPhone?.trim() || null,
+            details: input.details?.trim() || null,
+            requestFormId: form.id,
+            requestedAt: input.requestedAt,
+            storeId: form.storeId,
+            tenantId: form.tenantId,
+          },
+        })
+        for (const { line, offering, requestedQuantity } of normalizedLines) {
+          await tx.serviceRequestLine.create({
+            data: {
+              details: line.details?.trim() || null,
+              offeringId: offering.id,
+              offeringName: offering.name,
+              optionSelections: json(
+                offering.variant.selections.map((selection) => ({
+                  group: selection.group.name,
+                  value: selection.value.label,
+                })),
+              ),
+              requestId: request.id,
+              requestedQuantity,
+              variantName: offering.variant.name,
+            },
+          })
+        }
+        await options?.onRequest?.(tx, request)
+        return { ...request, created: true as const }
+      },
+      { maxWait: 10_000, timeout: 30_000 },
+    )
   } catch (error) {
     if (
       !(
@@ -567,7 +572,10 @@ export async function submitPublicServiceRequest(
     }
     const onRequest = options?.onRequest
     if (onRequest) {
-      await db.$transaction((tx) => onRequest(tx, replay))
+      await db.$transaction((tx) => onRequest(tx, replay), {
+        maxWait: 10_000,
+        timeout: 30_000,
+      })
     }
     return { ...replay, created: false as const }
   }
@@ -576,6 +584,8 @@ export async function submitPublicServiceRequest(
 export async function updateServiceRequestDisposition(
   db: PrismaClient,
   input: {
+    expectedRevision?: number
+    storeId?: string
     response: string
     requestId: string
     status: "declined" | "needs_information"
@@ -583,7 +593,11 @@ export async function updateServiceRequestDisposition(
   },
 ) {
   const request = await db.serviceRequest.findFirst({
-    where: { id: input.requestId, tenantId: input.tenantId },
+    where: {
+      id: input.requestId,
+      tenantId: input.tenantId,
+      storeId: input.storeId,
+    },
   })
   if (!request) {
     throw new CatalogError(
@@ -591,7 +605,17 @@ export async function updateServiceRequestDisposition(
       "Service Request not found.",
     )
   }
-  return db.serviceRequest.update({
+  if (
+    !input.response.trim() ||
+    (request.status !== ServiceRequestStatus.SUBMITTED &&
+      request.status !== ServiceRequestStatus.NEEDS_INFORMATION)
+  ) {
+    throw new CatalogError(
+      "REVISION_CONFLICT",
+      "This request can no longer be changed. Reload the requests.",
+    )
+  }
+  const updated = await db.serviceRequest.updateMany({
     data: {
       revision: { increment: 1 },
       staffResponse: input.response.trim(),
@@ -600,8 +624,25 @@ export async function updateServiceRequestDisposition(
           ? ServiceRequestStatus.DECLINED
           : ServiceRequestStatus.NEEDS_INFORMATION,
     },
-    where: { id: request.id },
+    where: {
+      id: request.id,
+      tenantId: input.tenantId,
+      storeId: input.storeId,
+      revision: input.expectedRevision ?? request.revision,
+      status: {
+        in: [
+          ServiceRequestStatus.SUBMITTED,
+          ServiceRequestStatus.NEEDS_INFORMATION,
+        ],
+      },
+    },
   })
+  if (updated.count !== 1)
+    throw new CatalogError(
+      "REVISION_CONFLICT",
+      "This request changed. Reload before replying.",
+    )
+  return { id: request.id }
 }
 
 function mapCommerceQuoteError(error: CommerceQuoteError) {

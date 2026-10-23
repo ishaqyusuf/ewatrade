@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test"
 
 import {
+  buildInternalTenantHostname,
   buildPlatformSurfaceHostname,
   extractTenantSlugFromPlatformHostname,
   inferTenantSurfaceFromHostname,
@@ -91,4 +92,87 @@ test("legacy dashboard origin remains a global dashboard", () => {
       platformDomain: "ewatrade.com",
     }),
   ).toMatchObject({ surface: "dashboard", tenantSlug: null })
+})
+
+describe("Portless storefront addresses", () => {
+  test("builds a tenant subdomain of the one storefront app, including legacy caller options", () => {
+    for (const localProjectSlug of [undefined, "sample-shop"]) {
+      expect(
+        buildInternalTenantHostname({
+          tenantSlug: "sample-shop",
+          surface: "storefront",
+          platformDomain: "localhost",
+          localProjectSlug,
+        }),
+      ).toBe("sample-shop.ewatrade-storefront.localhost")
+    }
+    expect(
+      buildInternalTenantHostname({
+        tenantSlug: "sample-shop",
+        surface: "storefront",
+        platformDomain: "ewatrade.com",
+      }),
+    ).toBe("sample-shop.ewatrade.com")
+  })
+  test("resolves local tenant storefronts without treating global apps or sibling products as tenants", () => {
+    expect(
+      resolveTenantDomain("sample-shop.ewatrade-storefront.localhost", {
+        platformDomain: "localhost",
+      }),
+    ).toMatchObject({
+      surface: "storefront",
+      tenantSlug: "sample-shop",
+      isCustomDomain: false,
+      isLocalhost: true,
+    })
+    for (const host of [
+      "ewatrade-storefront.localhost",
+      "ewatrade-dashboard.localhost",
+      "sample-shop.localhost",
+      "sample-shop.other-storefront.localhost",
+    ]) {
+      expect(
+        resolveTenantDomain(host, { platformDomain: "localhost" }).tenantSlug,
+      ).toBeNull()
+    }
+  })
+})
+
+test("local QA storefront preview requires the exact local dev environment and canonical host", async () => {
+  const { isLocalStorefrontPreviewHost } = await import("./domain")
+  const env = {
+    NODE_ENV: "development",
+    APP_ENV: "local",
+    DEV_PROFILE: "local",
+    EWATRADE_ENV_MODE: "local",
+    NEXT_PUBLIC_PLATFORM_DOMAIN: "localhost",
+  }
+  const host = "sample-shop-qa.ewatrade-storefront.localhost"
+  expect(isLocalStorefrontPreviewHost(host, env)).toBe(true)
+  for (const key of [
+    "NODE_ENV",
+    "APP_ENV",
+    "DEV_PROFILE",
+    "EWATRADE_ENV_MODE",
+  ] as const) {
+    for (const value of ["production", "preview", undefined]) {
+      expect(isLocalStorefrontPreviewHost(host, { ...env, [key]: value })).toBe(
+        false,
+      )
+    }
+  }
+  for (const hostname of [
+    "sample-shop-qa.ewatrade.com",
+    "sample-shop-qa.localhost",
+    "ewatrade-storefront.localhost",
+    "sample-shop-qa.ewatrade-storefront.localhost.attacker.com",
+  ]) {
+    expect(isLocalStorefrontPreviewHost(hostname, env)).toBe(false)
+  }
+  expect(
+    isLocalStorefrontPreviewHost(host, {
+      ...env,
+      NEXT_PUBLIC_PLATFORM_DOMAIN: "ewatrade.com",
+    }),
+  ).toBe(false)
 })

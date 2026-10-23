@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test"
-import type { NormalizedWhatsAppEvent } from "@ewatrade/communications"
+import type { NormalizedWhatsAppMessageEvent } from "@ewatrade/communications"
 import { processPlatformWhatsAppEvent } from "./whatsapp-platform-runtime"
 
 const configured = {
@@ -11,7 +11,7 @@ const configured = {
 const message = (
   text: string,
   phoneNumberId = "123456789",
-): NormalizedWhatsAppEvent => ({
+): NormalizedWhatsAppMessageEvent => ({
   kind: "message",
   phoneNumberId,
   messageId: "test-message",
@@ -128,6 +128,7 @@ test("assistant webhook commits normalized private ingress and leaves dispatch t
         quickActionId: undefined,
         replyToMessageId: undefined,
         media: undefined,
+        flowResponse: undefined,
       },
       users: ["pilot-1", "pilot-2"],
     },
@@ -358,4 +359,148 @@ test("disabled onboarding stays silent and STOP always revokes even when onboard
     processPlatformWhatsAppEvent(message("Stop"), deps),
   ).rejects.toThrow("cleanup unavailable")
   expect(operations).toEqual(["cancel", "disconnect"])
+})
+
+function hybridHarness() {
+  const operations: string[] = []
+  const deps = {
+    env: configured,
+    accept: async () => {
+      operations.push("accept")
+      return { kind: "ignored" as const, reason: "unlinked" as const }
+    },
+    enqueue: async () => {
+      operations.push("enqueue")
+    },
+    claim: async () => {
+      operations.push("claim")
+      return true
+    },
+    disconnect: async () => {
+      operations.push("disconnect")
+    },
+    onboarding: async () => {
+      operations.push("onboarding")
+      return { handled: true }
+    },
+    registrationFlow: async () => {
+      operations.push("registration-launch")
+      return false
+    },
+    registrationFlowReturn: async () => {
+      operations.push("registration-return")
+      return false
+    },
+    cancelRegistrationFlow: async () => {
+      operations.push("cancel-registration")
+    },
+    cancelBusinessFlows: async () => {
+      operations.push("cancel-business")
+      return { count: 0 }
+    },
+    cancelOnboarding: async () => {
+      operations.push("cancel-onboarding")
+    },
+    credentialNotice: async () => {
+      operations.push("credential-notice")
+    },
+  }
+  return { deps, operations }
+}
+
+test("native Flow replies stay structured and never enter onboarding or link parsing", async () => {
+  const h = hybridHarness()
+  const event = {
+    ...message(`Connect to EwaTrade: ${"a".repeat(43)}`),
+    type: "interactive" as const,
+    flowResponse: {
+      status: "valid" as const,
+      flowToken: "native-test-token-12345",
+      data: { form_kind: "sale", form_version: "1" },
+    },
+  }
+  await processPlatformWhatsAppEvent(event, h.deps)
+  expect(h.operations).toEqual(["registration-return", "accept"])
+  h.operations.length = 0
+  await processPlatformWhatsAppEvent(
+    { ...event, flowResponse: { status: "invalid" } },
+    h.deps,
+  )
+  expect(h.operations).toEqual(["registration-return", "accept"])
+  h.operations.length = 0
+  await processPlatformWhatsAppEvent(event, {
+    ...h.deps,
+    registrationFlowReturn: async () => {
+      h.operations.push("registration-return")
+      return true
+    },
+  })
+  expect(h.operations).toEqual(["registration-return"])
+})
+
+test("credential-shaped messages never reach private onboarding, bound ingress or model dispatch", async () => {
+  const h = hybridHarness()
+  for (const input of [
+    "my password is private-do-not-persist",
+    "api key: sk-proj-testcredential1234567890",
+    "verification code is 123456",
+    "-----BEGIN PRIVATE KEY-----",
+  ]) {
+    await processPlatformWhatsAppEvent(message(input), h.deps)
+    expect(h.operations).toEqual(["credential-notice"])
+    h.operations.length = 0
+  }
+})
+
+test("enabled DISCONNECT bypasses active onboarding and enters the bound confirmation control", async () => {
+  const h = hybridHarness()
+  await processPlatformWhatsAppEvent(message("DISCONNECT"), h.deps)
+  expect(h.operations).toContain("accept")
+  expect(h.operations).not.toContain("onboarding")
+  expect(h.operations).not.toContain("disconnect")
+  expect(h.operations).not.toContain("claim")
+})
+
+test("STOP cancels form authority before email proof and revokes immediately even while enabled", async () => {
+  const h = hybridHarness()
+  await processPlatformWhatsAppEvent(message("STOP"), h.deps)
+  expect(h.operations).toEqual([
+    "cancel-registration",
+    "cancel-business",
+    "cancel-onboarding",
+    "disconnect",
+  ])
+})
+
+test("CANCEL and REGISTER CHAT invalidate native authority before typed onboarding runs", async () => {
+  for (const input of ["CANCEL", "REGISTER CHAT"]) {
+    const h = hybridHarness()
+    await processPlatformWhatsAppEvent(message(input), h.deps)
+    expect(h.operations.slice(0, 2)).toEqual([
+      "cancel-registration",
+      "cancel-business",
+    ])
+    expect(h.operations.at(-1)).toBe("onboarding")
+    expect(h.operations).not.toContain("accept")
+    expect(h.operations).not.toContain("disconnect")
+  }
+})
+
+test("STOP still attempts typed-proof cancellation when native cleanup fails", async () => {
+  const h = hybridHarness()
+  await expect(
+    processPlatformWhatsAppEvent(message("STOP"), {
+      ...h.deps,
+      cancelRegistrationFlow: async () => {
+        h.operations.push("cancel-registration")
+        throw Error("native cleanup unavailable")
+      },
+    }),
+  ).rejects.toThrow("native cleanup unavailable")
+  expect(h.operations).toEqual([
+    "cancel-registration",
+    "cancel-business",
+    "cancel-onboarding",
+    "disconnect",
+  ])
 })

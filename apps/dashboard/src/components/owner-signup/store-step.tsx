@@ -7,6 +7,7 @@ import {
   SignupUseLocation,
 } from "@ewatrade/onboarding/components/signup/signup-flow"
 import { Input, SelectControl, Textarea } from "@ewatrade/ui"
+import { getStorefrontDomain } from "@ewatrade/utils"
 import {
   OPERATING_CURRENCIES,
   isOperatingCurrencyCode,
@@ -46,6 +47,10 @@ const offers = [
     description: "Both, like a salon that also sells hair products",
   },
 ] as const
+
+const storefrontDomain = getStorefrontDomain(
+  process.env.NEXT_PUBLIC_PLATFORM_DOMAIN ?? "ewatrade.com",
+)
 
 export function OwnerStoreStep({
   draft,
@@ -133,7 +138,7 @@ export function OwnerStoreStep({
         <div>
           <b>{business.name}</b>
           <small>
-            {business.slug}.ewatrade.com · {types}
+            {business.slug}.{storefrontDomain} · {types}
           </small>
         </div>
         <button type="button" className="owner-ref-lnk" onClick={onBack}>
@@ -351,7 +356,9 @@ export function OwnerStoreStep({
         <OwnerSignupIcon name="store" />
         <div>
           <b>Your free store link works right away</b>
-          <b>{business.slug}.ewatrade.com</b>
+          <b>
+            {business.slug}.{storefrontDomain}
+          </b>
           {upgraded ? (
             `On ${draft.planId === "growth" ? "Growth" : "Pro"} it can list all your items. Customer messages are included once your store chat is set up.`
           ) : (

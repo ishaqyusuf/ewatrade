@@ -1,0 +1,27 @@
+{
+  "name": "@ewatrade/storefront-runtime",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./seo": "./src/seo.ts",
+    ".": "./src/index.ts",
+    "./server": "./src/server.ts",
+    "./react": "./src/react.tsx",
+    "./presentation": "./src/presentation.ts",
+    "./primitives": "./src/primitives.tsx",
+    "./links": "./src/links.ts",
+    "./projection": "./src/projection.ts",
+    "./share": "./src/share.ts",
+    "./design-assets": "./src/design-assets.ts"
+  },
+  "dependencies": {
+    "@ewatrade/storefront-contracts": "workspace:*",
+    "react": "catalog:",
+    "@ewatrade/ui": "workspace:*",
+    "@ewatrade/utils": "workspace:*"
+  },
+  "devDependencies": {
+    "@ewatrade/tsconfig": "workspace:*"
+  }
+}

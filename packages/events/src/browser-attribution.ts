@@ -20,6 +20,7 @@ type Event = AnalyticsBatch["events"][number] & { analyticsContext?: string }
 
 /** In-memory queue: identity is copied on capture, never supplied at flush time. */
 export function createAttributedBrowserAnalytics(options: {
+  project?: "ewatrade-dashboard" | "ewatrade-storefront"
   storage: {
     getItem(key: string): string | null
     setItem(key: string, value: string): void
@@ -34,7 +35,7 @@ export function createAttributedBrowserAnalytics(options: {
 }) {
   const now = options.now ?? Date.now
   const createId = options.createId ?? (() => crypto.randomUUID())
-  const project = "ewatrade-dashboard"
+  const project = options.project ?? "ewatrade-dashboard"
   const storageKey = `logly:${project}:attributed-visitor`
   let visitor:
     | {
@@ -141,7 +142,11 @@ export function createAttributedBrowserAnalytics(options: {
       properties:
         name === "site_visit"
           ? {}
-          : safeEventMetadata({ surface: "dashboard", ...properties }),
+          : safeEventMetadata({
+              surface:
+                project === "ewatrade-storefront" ? "storefront" : "dashboard",
+              ...properties,
+            }),
       ...(context ? { analyticsContext: context.token } : {}),
     })
     if (visitor.lastDay !== day) {

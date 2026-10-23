@@ -1,5 +1,6 @@
 import { catalogFreeLineDescriptionError } from "@ewatrade/utils/catalog-free-lines"
 import { z } from "zod"
+import { collectedDetailsText } from "./collected-details"
 import { statedAmountToMinor } from "./stated-money"
 
 const name = z.string().trim().min(1).max(160)
@@ -128,7 +129,8 @@ function textAmount(value: string) {
   )
 }
 /** Reads owner text only; never takes file bytes or extraction. */
-export function saleFactsFromText(text: string): Partial<SimpleSale> {
+export function saleFactsFromText(input: string): Partial<SimpleSale> {
+  const text = collectedDetailsText(input)
   const facts: Partial<SimpleSale> = {}
   if (/\bfully paid\b/i.test(text)) facts.partial = false
   if (/\bpart(?:ly)?[ -]?paid|\bpartial payment/i.test(text))
@@ -156,6 +158,10 @@ export function saleFactsFromText(text: string): Partial<SimpleSale> {
     )?.[1]
     ?.trim()
   if (customer) facts.customerName = customer
+  const description = text
+    .match(/^(?:description|items?|sold)\s*:\s*([^\n]+)$/im)?.[1]
+    ?.trim()
+  if (description) facts.description = description
   if (/\bkobo\b/i.test(text)) return facts
   const total = text.match(
     new RegExp(

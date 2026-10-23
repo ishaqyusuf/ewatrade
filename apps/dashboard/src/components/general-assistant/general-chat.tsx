@@ -458,7 +458,11 @@ export function GeneralThread({
                       </Streamdown>
                     ) : null}
                     {answers.map((answer) => (
-                      <GeneralAnswerCard key={answer.id} answer={answer} />
+                      <GeneralAnswerCard
+                        key={answer.id}
+                        answer={answer}
+                        messageId={message.id}
+                      />
                     ))}
                   </div>
                 </div>

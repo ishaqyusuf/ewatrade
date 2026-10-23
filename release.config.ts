@@ -132,6 +132,35 @@ export default {
       },
     },
     {
+      // Isolated Preview is CLI-managed (no Git link). Production stays outside
+      // this pilot component until its own explicit rollout is prepared.
+      name: "storefront",
+      app: "apps/storefront",
+      environments: ["preview"],
+      paths: [
+        "scripts/deploy-storefront-preview.mjs",
+        "scripts/storefront-preview-guards.mjs",
+      ],
+      vercel: {
+        team,
+        projects: ["prj_jkmPCKSdIpnGYQnFS32WcNgBni2a"],
+        gitDeploy: false,
+      },
+      deploy: {
+        preview: "node scripts/deploy-storefront-preview.mjs --deploy",
+      },
+      env: {
+        ignore: [
+          ...notNeeded,
+          ...apiOnly,
+          ...loglyMarketing,
+          "VERCEL_STOREFRONT_PROJECT_ID",
+          "VERCEL_API_TOKEN",
+        ],
+        ignoreIn: { preview: previewOnly },
+      },
+    },
+    {
       // Vercel builds the API from the Git push too (scripts/build-api-vercel.mjs);
       // the release waits until Ready. Preview serves preview-api.ewatrade.com.
       name: "api",

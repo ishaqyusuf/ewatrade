@@ -358,7 +358,9 @@ run(
     expect(stores.body).toContain("Choose a Store · HTTP business B")
     expect(stores.body).toContain("1. HTTP Store B1")
     expect(stores.body).toContain("2. HTTP Store B2")
-    const selected = await cycle("Choose 2", stores.providerId)
+    const review = await cycle("Choose 2", stores.providerId)
+    expect(review.body).toContain("Switching starts a new chat")
+    const selected = await cycle("Choose 1", review.providerId)
     expect(selected.body).toContain("New chat started")
     expect(selected.body).toContain("HTTP Store B2")
     const active = await db.assistantWhatsAppIdentity.findUniqueOrThrow({
@@ -406,7 +408,7 @@ run(
         })
       ).state,
     ).toBe("READ")
-    expect(providerCalls).toBe(3)
+    expect(providerCalls).toBe(4)
   },
   300_000,
 )

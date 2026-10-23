@@ -12,6 +12,34 @@ Append through the CLI; preserve history and never impersonate the other agent.
 Messages coordinate existing work and do not authorize deployment, provider actions
 or changes to human approval boundaries.
 
+## Workshop model preference
+
+Use Claude Opus 5.5 with high effort for Workshop work (owner instruction,
+21 October 2026). In T3, discover the current catalog and delegate using
+`providerInstanceId: "claudeAgent"`, `model: "claude-opus-5-5"`, and
+`target.options: { "effort": "high" }` when those IDs remain available.
+Verify the returned model/options. Do not silently substitute another model or
+effort level; report a capability mismatch. This preference does not itself
+start a Workshop or change existing design/implementation ownership.
+
+Owner fallback instruction, 21 October 2026: when Claude is unavailable (including
+API rate limits), Codex should do the Workshop work directly and finish the
+authorized deliverable. Report the fallback; do not keep retrying or ask for a
+model override. Preserve the same review, history and implementation boundaries.
+
+## Storefront template design lifecycle
+
+Use `https://workshop.localhost/ewatrade/storefront/template-library` as the
+canonical Factory template design and review space (owner instruction,
+23 October 2026). Keep all current and future templates there, using stable
+template direction keys and immutable revisions for updates. Preview and refine
+in that same space before applying or implementing product changes; record the
+owner-approved exact revision before implementation and verified evidence after.
+Keep earlier Storefront Studio/Retail/Service/Catalog choices and history intact.
+Workshop is the design/review authority; the product registry and canonical
+save/release commands retain runtime and publication authority. An archived
+preview or selection does not authorize deployment/provider actions.
+
 ## Mobile search presentation
 
 Always reuse the exact floating search footer from the mobile Global Search
@@ -26,6 +54,23 @@ Reuse the existing shared-component verification. Do not add or repeat device,
 large-text, viewport or per-screen test passes simply to adopt this component.
 For the 18 October 2026 migration, the owner explicitly requested no additional
 tests after implementation; finish with a source review and documentation.
+
+## WhatsApp design and implementation lifecycle
+
+Use `.brain/plans/whatsapp-system-design/implementation-standard.md` for WhatsApp
+feature work. Workshop `ewatrade/assistant/whatsapp-system` is the canonical design;
+the existing private WhatsApp review Site is its mobile mirror. Preserve stable
+case IDs, append case versions for changed conversations, and retain old replays.
+Link implementation, focused checks, human approval and target release to the
+exact case version with evidence; source presence or a local review mark is not
+live availability. Update Workshop first and the matching Site in the same
+authorized design/feature delivery. Keep existing URLs and private audience.
+
+Follow Midday-style thin route/channel orchestration and the existing EwaTrade
+assistant/domain commands, server-derived permissions/scope, durable jobs/results
+and explicit confirmations. Keep identity/proof/control and OTP handling separate
+from ordinary model input. Design selection/history never authorizes live changes;
+preserve current human deployment/provider approval boundaries.
 
 ## Brain Protocol
 

@@ -4,11 +4,15 @@ import {
   WHATSAPP_CONTROL_PAGE_SIZE,
   WHATSAPP_CONTROL_RENDER_VERSION,
   type WhatsAppControlAction,
+  type WhatsAppControlCapability,
+  type WhatsAppControlCategory,
   type WhatsAppControlMenu,
   parseWhatsAppControl,
+  parseWhatsAppControlButton,
   renderWhatsAppControl,
   whatsAppControlContentSchema,
   whatsAppControlLabel,
+  whatsAppControlTaskStarter,
 } from "@ewatrade/assistant/channels/controls"
 import type { WhatsAppIngressInput } from "@ewatrade/assistant/channels/ingress"
 import { assistantWhatsAppUserAllowed } from "@ewatrade/assistant/channels/policy"
@@ -28,7 +32,11 @@ import {
   primaryControlScope,
   readControlScope,
 } from "./control-authority"
-import { resolveAssistantWhatsAppConversation } from "./conversations"
+import { enqueueAssistantWhatsAppControlTaskInTransaction } from "./control-task"
+import {
+  disconnectAssistantWhatsAppInTransaction,
+  resolveAssistantWhatsAppConversation,
+} from "./conversations"
 import { touchAssistantWhatsAppActivity } from "./grants"
 import type { WhatsAppInboxReceipt } from "./inbox"
 import { selectAssistantWhatsAppScopeForIdentityInTransaction } from "./scope-controls"
@@ -43,9 +51,11 @@ export async function acceptAssistantWhatsAppControlIngress(
   now: Date,
 ): Promise<WhatsAppInboxReceipt | null> {
   const command =
-    event.type === "text"
-      ? parseWhatsAppControl(event.text, event.replyToMessageId)
-      : null
+    event.type === "interactive"
+      ? parseWhatsAppControlButton(event.quickActionId, event.replyToMessageId)
+      : event.type === "text"
+        ? parseWhatsAppControl(event.text, event.replyToMessageId)
+        : null
   if (!command) return null
   const providerOccurredAt = new Date(Number(event.timestamp) * 1000)
   if (
@@ -201,6 +211,25 @@ async function selectedScope(
     throw error
   }
 }
+
+export type WhatsAppControlOptions = {
+  cancelDraft?: (
+    selected: NonNullable<Awaited<ReturnType<typeof selectedScope>>>,
+    db: Prisma.TransactionClient,
+    requestId: string,
+  ) => Promise<string>
+  /** API-owned domain assertions avoid a second permission matrix in the channel. */
+  helpExamples?: (
+    selected: NonNullable<Awaited<ReturnType<typeof selectedScope>>>,
+    db: Prisma.TransactionClient,
+  ) => readonly string[] | Promise<readonly string[]>
+  menuCapabilities?: (
+    selected: NonNullable<Awaited<ReturnType<typeof selectedScope>>>,
+    db: Prisma.TransactionClient,
+  ) =>
+    | readonly WhatsAppControlCapability[]
+    | Promise<readonly WhatsAppControlCapability[]>
+}
 function menuBase(
   identity: AssistantWhatsAppIdentity,
   primary: Scope,
@@ -240,17 +269,101 @@ async function buildControlMenu(
   primary: Scope,
   action: WhatsAppControlAction | { kind: "help" },
   now: Date,
+  options: WhatsAppControlOptions = {},
+  requestId = "",
 ): Promise<WhatsAppControlMenu> {
+  if (action.kind === "disconnect_confirm")
+    throw new AssistantWhatsAppError("CONFLICT")
+  if (action.kind === "cancel") {
+    const selected = await selectedScope(tx, identity, now)
+    const menu = await buildControlMenu(
+      tx,
+      identity,
+      primary,
+      { kind: "help" },
+      now,
+      options,
+    )
+    menu.detail =
+      selected && options.cancelDraft
+        ? await options.cancelDraft(selected, tx, requestId)
+        : "There is no current accessible draft to cancel here. Your WhatsApp connection stays active. Choose the draft's original business, Store and chat to cancel it."
+    return menu
+  }
+  if (action.kind === "privacy") {
+    const menu = menuBase(
+      identity,
+      primary,
+      "WhatsApp assistant privacy",
+      "I use messages you send to this EwaTrade number and business records your current access allows. I cannot read your other WhatsApp chats, contacts or email inbox. Verification codes are handled separately from ordinary assistant requests. Review assistant data in EwaTrade. Send DISCONNECT for confirmation or STOP to disconnect immediately; phone sign-in codes keep working.",
+    )
+    menu.choices = [
+      { label: "Help", action: { kind: "help" } },
+      { label: "Disconnect", action: { kind: "disconnect" } },
+    ]
+    return menu
+  }
+  if (action.kind === "disconnect") {
+    const menu = menuBase(
+      identity,
+      primary,
+      "Disconnect WhatsApp?",
+      "This disconnects this WhatsApp number from all connected businesses. Your EwaTrade account, business records and saved chats stay in EwaTrade. STOP disconnects immediately at any time.",
+    )
+    menu.choices = [
+      { label: "Disconnect", action: { kind: "disconnect_confirm" } },
+      { label: "Stay connected", action: { kind: "help" } },
+    ]
+    return menu
+  }
   if (action.kind === "help") {
     const selected = await selectedScope(tx, identity, now)
     const menu = menuBase(
       identity,
       primary,
       "EwaTrade assistant",
-      "Send Business to choose a business, Store to change Store, New chat, or Continue chat. Business records keep their original scope. Send Disconnect to revoke this channel.",
+      "Send Menu for operations, Business, Store, New chat or Continue chat. Chats and drafts keep their original business and Store. Send Disconnect for confirmation, or STOP to disconnect immediately.",
     )
     menu.support = true
     if (selected) {
+      const examples = ((await options.helpExamples?.(selected, tx)) ?? [])
+        .slice(0, 6)
+        .map((example) => label(example, 75))
+      menu.detail = [
+        `Current access: ${selected.tenantContext.membership.role}.`,
+        examples.length
+          ? `Try: ${examples.join("; ")}.`
+          : "Ask about the records available with your current access. Some operations continue in EwaTrade.",
+        menu.detail,
+      ].join("\n")
+      menu.choices = [
+        {
+          label: "Main menu",
+          action: {
+            kind: "menu",
+            grantId: selected.grant.id,
+            grantGeneration: selected.grant.generation,
+            storeId: selected.scope.storeId,
+          },
+        },
+        {
+          label: "Switch Store",
+          action: {
+            kind: "stores",
+            grantId: selected.grant.id,
+            grantGeneration: selected.grant.generation,
+          },
+        },
+        {
+          label: "Saved chats",
+          action: {
+            kind: "chats",
+            grantId: selected.grant.id,
+            grantGeneration: selected.grant.generation,
+            storeId: selected.scope.storeId,
+          },
+        },
+      ]
       menu.title = label(
         `${selected.tenantContext.tenant.name} · ${selected.tenantContext.activeStore?.name ?? "Store"}`,
         500,
@@ -342,6 +455,160 @@ async function buildControlMenu(
     "",
   )
   addScope(menu, resolved.proof)
+  if (
+    action.kind === "menu" ||
+    action.kind === "category" ||
+    action.kind === "capability_hint"
+  ) {
+    const selected = await selectedScope(tx, identity, now)
+    if (
+      !selected ||
+      selected.scope.tenantId !== resolved.scope.tenantId ||
+      selected.scope.storeId !== resolved.scope.storeId
+    )
+      throw new AssistantWhatsAppError("CONFLICT")
+    const capabilities = (await options.menuCapabilities?.(selected, tx)) ?? []
+    const proof = resolved.proof
+    const main = { kind: "menu" as const, ...proof }
+    if (selected.conversation.purpose === "GENERAL")
+      menu.conversationTarget = {
+        conversationId: selected.conversation.id,
+        purpose: "GENERAL",
+        origin: {
+          tenantId: selected.scope.tenantId,
+          storeId: selected.scope.storeId,
+        },
+      }
+    const matchesCategory = (
+      capability: WhatsAppControlCapability,
+      category: WhatsAppControlCategory,
+    ) =>
+      category === "reports"
+        ? /report|summary/.test(capability.id)
+        : capability.domain === category
+    if (action.kind === "capability_hint") {
+      const capability = capabilities.find(
+        (capability) => capability.id === action.capabilityId,
+      )
+      menu.title = label(capability?.title ?? "Option unavailable", 500)
+      const starter = capability
+        ? whatsAppControlTaskStarter(capability)
+        : undefined
+      if (starter) {
+        menu.taskStarter = starter
+        menu.detail =
+          "Preparing the entry form for this business and Store. If forms are unavailable, I will show the supported typed or app path. No business change has been made; the completed draft still needs a separate review and confirmation."
+        menu.choices = [{ label: "Main menu", action: main }]
+        return menu
+      }
+      menu.detail = capability
+        ? capability.availability === "native"
+          ? `Send: ${label(capability.example, 300)}\nThis opens the normal assistant request or structured entry. Nothing has been changed. Any write still needs its complete review and explicit confirmation.`
+          : `Send: ${label(capability.example, 300)}\nOr continue this saved chat in EwaTrade for ${label(capability.title, 160)}. Final review happens in the app. No draft or business change was created by choosing this option.`
+        : "This option is unavailable with your current access or channel release. Open a fresh Menu to see current choices."
+      menu.choices = [{ label: "Main menu", action: main }]
+      return menu
+    }
+    if (action.kind === "category" && action.category === "settings") {
+      menu.title = "Help & settings"
+      menu.detail =
+        "Your connection controls. Account and business settings continue in EwaTrade."
+      const settingsChoices: WhatsAppControlMenu["choices"] = [
+        { label: "Help", action: { kind: "help" } },
+        { label: "Privacy", action: { kind: "privacy" } },
+        { label: "Contact support", action: { kind: "help" } },
+        { label: "Disconnect", action: { kind: "disconnect" } },
+      ]
+      const offset = (action.page ?? 0) * 2
+      menu.choices = settingsChoices.slice(offset, offset + 2)
+      menu.choices.push(
+        offset + 2 < settingsChoices.length
+          ? {
+              label: "More options",
+              action: { ...action, page: (action.page ?? 0) + 1 },
+            }
+          : { label: "Main menu", action: main },
+      )
+      return menu
+    }
+    if (action.kind === "menu") {
+      const categories: Array<[WhatsAppControlCategory, string]> = [
+        ["sales", "Sales"],
+        ["inventory", "Stock"],
+        ["customers", "Customers & suppliers"],
+        ["finance", "Money"],
+        ["catalog", "Products & prices"],
+        ["services", "Services"],
+        ["reports", "Reports"],
+        ["scope", "Business & Store"],
+        ["chats", "Chats"],
+        ["settings", "Help & settings"],
+      ]
+      const choices = categories.filter(
+        ([category]) =>
+          ["scope", "chats", "settings"].includes(category) ||
+          capabilities.some((capability) =>
+            matchesCategory(capability, category),
+          ),
+      )
+      const offset = (action.page ?? 0) * 2
+      menu.title = label(
+        `Main menu · ${resolved.context.tenant.name} · ${resolved.context.activeStore?.name}`,
+        500,
+      )
+      menu.detail =
+        "Only current operations your access allows are shown. Some require a complete review in EwaTrade. Choose a category; nothing is saved by opening a menu."
+      menu.choices = choices
+        .slice(offset, offset + 2)
+        .map<WhatsAppControlMenu["choices"][number]>(([category, title]) => ({
+          label: title,
+          action:
+            category === "scope"
+              ? { kind: "businesses" }
+              : category === "chats"
+                ? { kind: "chats", ...proof }
+                : { kind: "category", ...proof, category },
+        }))
+      if (offset + 2 < choices.length)
+        menu.choices.push({
+          label: "More categories",
+          action: { ...main, page: (action.page ?? 0) + 1 },
+        })
+      else if (offset > 0)
+        menu.choices.push({ label: "First categories", action: main })
+      return menu
+    }
+    const available = capabilities.filter((capability) =>
+      matchesCategory(capability, action.category),
+    )
+    const offset = (action.page ?? 0) * 2
+    menu.title = label(
+      `${action.category} · ${resolved.context.tenant.name} · ${resolved.context.activeStore?.name}`,
+      500,
+    )
+    menu.detail = available.length
+      ? "Choose an operation for instructions. App review is labelled; a menu never grants permission or confirms a write."
+      : "No operation in this category is currently available with your access and channel release. Continue in EwaTrade for other features."
+    menu.choices = available
+      .slice(offset, offset + 2)
+      .map<WhatsAppControlMenu["choices"][number]>((capability) => ({
+        label: label(
+          `${capability.title}${capability.availability === "app_review" ? " · app review" : ""}`,
+        ),
+        action: {
+          kind: "capability_hint",
+          ...proof,
+          capabilityId: capability.id,
+        },
+      }))
+    if (offset + 2 < available.length)
+      menu.choices.push({
+        label: "More operations",
+        action: { ...action, page: (action.page ?? 0) + 1 },
+      })
+    else menu.choices.push({ label: "Main menu", action: main })
+    return menu
+  }
   if (action.kind === "stores") {
     menu.title = label(`Choose a Store · ${resolved.context.tenant.name}`, 500)
     menu.detail =
@@ -357,7 +624,7 @@ async function buildControlMenu(
       menu.choices.push({
         label: label(store.name),
         action: {
-          kind: "new",
+          kind: "select_review",
           grantId: resolved.grant.id,
           grantGeneration: resolved.grant.generation,
           storeId: store.id,
@@ -380,6 +647,25 @@ async function buildControlMenu(
           cursor,
         },
       })
+    return menu
+  }
+  if (action.kind === "select_review") {
+    const current = await selectedScope(tx, identity, now)
+    if (current)
+      addScope(menu, {
+        grantId: current.grant.id,
+        grantGeneration: current.grant.generation,
+        storeId: current.scope.storeId,
+      })
+    menu.title = label(
+      `Use ${resolved.context.tenant.name} · ${resolved.context.activeStore?.name}?`,
+      500,
+    )
+    menu.detail = `${current ? `You are currently using ${label(current.tenantContext.tenant.name, 160)} · ${label(current.tenantContext.activeStore?.name ?? "Store", 160)}. ` : ""}Switching starts a new chat here. Earlier chats and drafts stay in their original business and Store. Nothing is moved or saved by switching.`
+    menu.choices = [
+      { label: "Use this Store", action: { kind: "new", ...resolved.proof } },
+      { label: "Keep current scope", action: { kind: "help" } },
+    ]
     return menu
   }
   if (action.kind !== "chats") throw new AssistantWhatsAppError("UNAUTHORIZED")
@@ -438,9 +724,19 @@ export async function processAssistantWhatsAppControl(
   inboxId: string,
   permittedUserIds: readonly string[],
   now = new Date(),
+  options: WhatsAppControlOptions = {},
 ): Promise<WhatsAppTurnResult | null> {
   const execute = (refusal: boolean) =>
     runInOwnSerializableTransaction(db, async (tx) => {
+      // Match STOP/linking's sender-before-identity lock order before any revocation.
+      const address = await tx.assistantWhatsAppInbox.findUnique({
+        where: { id: inboxId },
+        select: {
+          identity: { select: { phoneNumberId: true, senderId: true } },
+        },
+      })
+      if (address?.identity)
+        await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`whatsapp-sender:${address.identity.phoneNumberId}:${address.identity.senderId}`}))`
       await tx.$queryRaw`SELECT i.id FROM "AssistantWhatsAppIdentity" i JOIN "AssistantWhatsAppInbox" q ON q."identityId"=i.id WHERE q.id=${inboxId} FOR UPDATE OF i`
       const row = await tx.assistantWhatsAppInbox.findUnique({
         where: { id: inboxId },
@@ -449,6 +745,20 @@ export async function processAssistantWhatsAppControl(
       if (!row || row.kind !== "CONTROL") return null
       const identity = row.identity
       const next = async () => {
+        const task = await tx.assistantWhatsAppInbox.findUnique({
+          where: {
+            phoneNumberId_providerMessageId: {
+              phoneNumberId: row.phoneNumberId,
+              providerMessageId: `control-task:${row.id}`,
+            },
+          },
+          select: { id: true, kind: true, state: true },
+        })
+        if (
+          task?.kind === "TURN" &&
+          ["PENDING", "PROCESSING"].includes(task.state)
+        )
+          return { nextIngressId: task.id }
         const next = identity
           ? await tx.assistantWhatsAppInbox.findFirst({
               where: {
@@ -469,6 +779,10 @@ export async function processAssistantWhatsAppControl(
             row.state === "COMPLETED"
               ? ("completed" as const)
               : ("idle" as const),
+          ...(row.state === "COMPLETED" &&
+          row.errorCode === "CHANNEL_DISCONNECTED"
+            ? { disconnectedControlId: row.id }
+            : {}),
           ...(await next()),
         }
       const cancel = async (state: "CANCELLED" | "EXPIRED") => {
@@ -539,6 +853,8 @@ export async function processAssistantWhatsAppControl(
           menuOutput.inbox.identityId !== identity.id ||
           menuOutput.inbox.bindingId ||
           menuOutput.inbox.state !== "COMPLETED" ||
+          (command.menuId !== undefined &&
+            command.menuId !== menuOutput.inbox.id) ||
           menuOutput.inbox.sequence !== row.sequence - 1 ||
           menuOutput.inbox.expiresAt <= now ||
           !content.success ||
@@ -569,7 +885,13 @@ export async function processAssistantWhatsAppControl(
         if (!choice) throw new AssistantWhatsAppError("CONFLICT")
         action = choice.action
         consumed = { id: menuOutput.inbox.id, content: content.data }
-      } else if (command.kind === "businesses" || command.kind === "help")
+      } else if (
+        command.kind === "businesses" ||
+        command.kind === "help" ||
+        command.kind === "privacy" ||
+        command.kind === "cancel" ||
+        command.kind === "disconnect"
+      )
         action = { kind: command.kind }
       else {
         const selected = await selectedScope(tx, identity, now)
@@ -584,6 +906,33 @@ export async function processAssistantWhatsAppControl(
       }
       let current = identity
       let menu: WhatsAppControlMenu
+      if (action.kind === "disconnect_confirm") {
+        if (!consumed) throw new AssistantWhatsAppError("CONFLICT")
+        await tx.assistantWhatsAppInbox.update({
+          where: { id: consumed.id },
+          data: { content: { ...consumed.content, consumedBy: row.id } },
+        })
+        await disconnectAssistantWhatsAppInTransaction(
+          tx,
+          {
+            phoneNumberId: identity.phoneNumberId,
+            senderId: identity.senderId,
+          },
+          now,
+        )
+        // Revocation deliberately cancels all queued replies; it cannot authorize a
+        // merchant outbox after disconnect. No model, business command or saved draft runs.
+        await tx.assistantWhatsAppInbox.update({
+          where: { id: row.id },
+          data: {
+            state: "COMPLETED",
+            content: Prisma.DbNull,
+            errorCode: "CHANNEL_DISCONNECTED",
+            completedAt: now,
+          },
+        })
+        return { status: "completed" as const, disconnectedControlId: row.id }
+      }
       if (action.kind === "new" || action.kind === "resume") {
         const result =
           await selectAssistantWhatsAppScopeForIdentityInTransaction(
@@ -620,12 +969,22 @@ export async function processAssistantWhatsAppControl(
           primary,
           { kind: "help" },
           now,
+          options,
         )
         menu.detail =
           result.purpose === "GENERAL"
             ? `${action.kind === "new" ? "New chat started" : "Saved chat selected"}. Send your question. Other chats and drafts keep their original scope.`
             : "Saved workflow selected. WhatsApp steps use this saved draft. Continue rich or unavailable steps in the exact EwaTrade workflow. Nothing is added without a complete review and explicit confirmation."
-      } else menu = await buildControlMenu(tx, current, primary, action, now)
+      } else
+        menu = await buildControlMenu(
+          tx,
+          current,
+          primary,
+          action,
+          now,
+          options,
+          row.requestId,
+        )
       if (!refusal && command.kind !== "invalid_choice") {
         const touched =
           "grantId" in action
@@ -651,6 +1010,29 @@ export async function processAssistantWhatsAppControl(
       if (refusal || command.kind === "invalid_choice")
         menu.detail =
           "That menu changed, expired or was not quoted. Send Business, Store or Continue chat for a fresh menu, then reply to that exact message with Choose 1 (or another listed number)."
+      if (menu.taskStarter) {
+        if (!consumed || action.kind !== "capability_hint")
+          throw new AssistantWhatsAppError("CONFLICT")
+        const selected = await selectedScope(tx, current, now)
+        if (
+          !selected ||
+          selected.scope.storeId !== action.storeId ||
+          selected.grant.id !== action.grantId
+        )
+          throw new AssistantWhatsAppError("CONFLICT")
+        const task = await enqueueAssistantWhatsAppControlTaskInTransaction(
+          tx,
+          selected,
+          row,
+          menu.taskStarter,
+          now,
+        )
+        if (task.kind === "rate_limited") {
+          menu.taskStarter = undefined
+          menu.detail =
+            "This connection has reached its message limit. No form or business action was started. Try again later or continue in EwaTrade."
+        }
+      }
       const authorityDigest = await assistantWhatsAppControlAuthorityDigest(
         tx,
         current,

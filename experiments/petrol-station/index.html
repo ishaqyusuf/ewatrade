@@ -1,0 +1,3473 @@
+<!doctype html>
+<html lang="en-NG">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light">
+<title>How a petrol station's machines work</title>
+<!-- Built by build.mjs from model.mjs and src/. Edit those files, then rebuild. -->
+<style>
+:root {
+  --paper: #f3e9d2;
+  --card: #fbf6ea;
+  --ink: #1d2a44;
+  --ink-2: #4b5772;
+  --ink-3: #6f7890;
+  --red: #d23c2f;
+  --red-dark: #a92a20;
+  --green: #1f8a5b;
+  --green-dark: #166544;
+  --amber: #f0ac2a;
+  --focus: #1b6fd8;
+  --shadow: 4px 4px 0 rgba(29, 42, 68, 0.14);
+  font-family: ui-rounded, "SF Pro Rounded", "Avenir Next", "Segoe UI", system-ui, -apple-system, sans-serif;
+  color: var(--ink);
+  background: var(--paper);
+  line-height: 1.4;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html { -webkit-text-size-adjust: 100%; }
+body { margin: 0; background: var(--paper); overflow-x: hidden; }
+button, input, select { font: inherit; color: inherit; }
+h1, h2, h3, p { margin: 0; }
+:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+.app { max-width: 1500px; margin: 0 auto; padding: 14px 20px 32px; }
+.top { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 8px 24px; }
+h1 { font-size: clamp(1.3rem, 2.3vw, 2rem); font-weight: 800; letter-spacing: -0.02em; line-height: 1.15; }
+.lede { color: var(--ink-2); font-size: 0.95rem; margin-top: 2px; }
+.sim-badge { padding: 5px 12px; border: 2px dashed var(--red); border-radius: 999px; color: var(--red-dark); font-size: 0.82rem; }
+
+/* lesson picker */
+.lessons { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0; }
+.lessons button { display: inline-flex; align-items: center; gap: 8px; min-height: 46px; padding: 6px 14px 6px 8px; border: 2px solid var(--ink); border-radius: 999px; background: var(--card); font-weight: 800; cursor: pointer; box-shadow: var(--shadow); }
+.lessons button .n { width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; background: var(--amber); border: 2px solid var(--ink); font-size: 0.9rem; }
+.lessons button[aria-current="true"] { background: var(--ink); color: var(--paper); }
+.lessons .back { margin-left: auto; padding-left: 14px; background: #fff; }
+
+/* stage + panel */
+.layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(300px, 380px); gap: 16px; align-items: start; }
+/* The machine stays in view beside every control (sticky on desktop and phone). */
+.stage { position: sticky; top: 12px; z-index: 5; border: 2px solid var(--ink); border-radius: 22px; overflow: hidden; background: var(--paper); box-shadow: 6px 6px 0 rgba(29, 42, 68, 0.12); }
+.stage .scene-svg { max-height: calc(100vh - 32px); }
+.stage .flag { position: absolute; top: 10px; left: 10px; background: var(--ink); color: var(--paper); font-weight: 800; font-size: 0.8rem; padding: 4px 10px; border-radius: 999px; }
+.panel { display: grid; gap: 12px; }
+.card { background: var(--card); border: 2px solid var(--ink); border-radius: 16px; padding: 14px; }
+.card h2 { font-size: 1.25rem; margin-bottom: 6px; }
+.card p + p { margin-top: 8px; }
+.note { font-size: 0.82rem; color: var(--ink-2); }
+
+.controls { display: grid; gap: 8px; }
+.row { display: flex; flex-wrap: wrap; gap: 8px; }
+.btn { min-height: 46px; padding: 8px 14px; border: 2px solid var(--ink); border-radius: 12px; background: #fff; font-weight: 800; cursor: pointer; box-shadow: var(--shadow); text-align: left; }
+.btn.primary { background: var(--amber); }
+.btn.danger { background: #fde4df; border-color: var(--red-dark); color: var(--red-dark); }
+.btn[aria-pressed="true"] { background: var(--ink); color: var(--paper); }
+.btn[aria-disabled="true"] { background: transparent; color: var(--ink-3); border-style: dashed; border-color: rgba(29, 42, 68, 0.35); box-shadow: none; cursor: not-allowed; }
+.btn:active:not([aria-disabled="true"]) { transform: translate(2px, 2px); box-shadow: none; }
+.why { font-size: 0.8rem; color: var(--ink-2); min-height: 1.1em; }
+.field { display: grid; gap: 4px; border: 0; padding: 0; margin: 0; min-width: 0; }
+.field label, .field legend { font-size: 0.85rem; font-weight: 700; padding: 0; }
+.field input { min-height: 46px; border: 2px solid var(--ink); border-radius: 10px; padding: 6px 10px; background: #fff; width: 100%; font-variant-numeric: tabular-nums; }
+.field input[aria-invalid="true"] { border-color: var(--red); background: #fff4f2; }
+.choice { display: flex; flex-wrap: wrap; gap: 6px 16px; }
+.choice label { display: inline-flex; align-items: center; gap: 6px; min-height: 36px; font-weight: 700; }
+.choice input { width: 18px; height: 18px; accent-color: var(--ink); }
+
+.readings { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.reading { background: #fff; border: 2px solid var(--ink); border-radius: 12px; padding: 6px 10px; min-width: 0; }
+.reading .k { display: block; font-size: 0.72rem; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-2); }
+.reading .v { display: block; font-size: 1.15rem; font-weight: 900; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.reading.wide { grid-column: span 2; }
+.check { font-weight: 800; color: var(--green-dark); }
+.equation { font-size: 1.05rem; font-weight: 800; font-variant-numeric: tabular-nums; background: #fff; border: 2px dashed var(--ink); border-radius: 12px; padding: 8px 10px; overflow-wrap: anywhere; }
+
+table.compare { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; font-size: 0.92rem; }
+.compare th, .compare td { text-align: right; padding: 4px 6px; border-bottom: 1px solid rgba(29, 42, 68, 0.2); }
+.compare th:first-child, .compare td:first-child { text-align: left; }
+
+.playback { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.playback select { min-height: 46px; border: 2px solid var(--ink); border-radius: 10px; background: #fff; padding: 0 8px; }
+
+.overview-list { margin: 8px 0 0; padding-left: 0; list-style: none; display: grid; gap: 8px; }
+.overview-list li { display: flex; gap: 10px; align-items: flex-start; }
+.overview-list .n { flex: none; width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; background: var(--amber); border: 2px solid var(--ink); font-weight: 900; font-size: 0.85rem; }
+
+.sources { margin-top: 16px; font-size: 0.85rem; }
+.sources summary { cursor: pointer; font-weight: 700; min-height: 32px; }
+.sources li { margin: 4px 0; overflow-wrap: anywhere; }
+
+@media (max-width: 920px) {
+  .layout { grid-template-columns: minmax(0, 1fr); }
+  .stage .scene-svg { max-height: 55vh; }
+}
+@media (max-width: 600px) {
+  .app { padding: 10px 10px 28px; }
+  .lede { display: none; }
+  .lessons { gap: 6px; }
+  .lessons button { flex: 1 1 calc(50% - 6px); font-size: 0.92rem; }
+  .lessons .back { margin-left: 0; flex-basis: 100%; justify-content: center; }
+  .stage { margin: 0 -10px; border-radius: 0; border-left: 0; border-right: 0; top: 0; }
+  .stage .scene-svg { max-height: 50vh; }
+  .readings { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { transition: none !important; animation: none !important; }
+}
+
+/* Station drawing (scene.mjs) */
+.scene-svg { font-family: inherit; display: block; width: 100%; height: auto; }
+.scene-svg .ink polygon, .scene-svg .ink rect, .scene-svg .ink path, .scene-svg .ink circle,
+.scene-svg polygon.ink, .scene-svg rect.ink, .scene-svg circle.ink, .scene-svg path.ink {
+  stroke: var(--ink); stroke-width: 1.6; stroke-linejoin: round;
+}
+.scene-svg .ink-thin { stroke: var(--ink); stroke-width: 1.1; stroke-linejoin: round; }
+.scene-svg .plane-text { font-weight: 800; letter-spacing: 0.02em; }
+.scene-svg .lcd { fill: #b6f5a3; }
+.scene-svg .sign-digits { fill: #ffcf5a; }
+.scene-svg .joint { stroke: rgba(29, 42, 68, 0.12); stroke-width: 1; fill: none; }
+.scene-svg .kerb { stroke: var(--ink); stroke-width: 2.4; fill: none; stroke-linejoin: round; }
+.scene-svg .shade { stroke: none; }
+.scene-svg .pipe-outer { stroke: var(--ink); stroke-width: 9; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+.scene-svg .pipe-inner { stroke: #b9c3cd; stroke-width: 5; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+.scene-svg .probe { stroke: var(--ink); stroke-width: 3; fill: none; }
+.scene-svg .hose { stroke: #20242c; stroke-width: 6; fill: none; stroke-linecap: round; }
+.scene-svg .fuel-line { stroke: #fff3c4; stroke-width: 2.4; fill: none; }
+.scene-svg .flow { stroke: #ffe066; stroke-width: 4.5; fill: none; stroke-linecap: round; stroke-dasharray: 3 13; opacity: 0; transition: opacity 0.3s; }
+.scene-svg.flow-delivery #ps-flow-delivery, .scene-svg.flow-delivery #ps-flow-fill,
+.scene-svg.flow-dispense #ps-flow-product, .scene-svg.flow-dispense #ps-flow-hose,
+.scene-svg.flow-dispense #ps-stp-glow { opacity: 1; }
+.scene-svg .light-pool { fill: #ffe7a3; opacity: 0; transition: opacity 0.6s; }
+.scene-svg.power-on .light-pool { opacity: 0.55; }
+.scene-svg .canopy-strip { stroke: #6f6a60; stroke-width: 3; }
+.scene-svg.power-on .canopy-strip { stroke: #fff2b8; }
+.scene-svg .vehicle { transition: transform 0.9s cubic-bezier(.3, .7, .2, 1), opacity 0.6s; }
+.scene-svg:not(.has-tanker) #ps-tanker { opacity: 0; transform: translate(-220px, -127px); }
+.scene-svg:not(.hose-on) #ps-delivery-hose { opacity: 0; }
+.scene-svg:not(.has-car) #ps-car { opacity: 0; transform: translate(-110px, 64px); }
+.scene-svg.estop #ps-estop-lamp { fill: #ff4a3a; }
+
+/* The lesson build replaces the old operations callouts with pins and plates. */
+.scene-svg #ps-labels, .scene-svg #ps-meter-callout, .scene-svg #ps-tank-gauge,
+.scene-svg #ps-closed-stamp, .scene-svg #ps-tanker-chip, .scene-svg #ps-car-chip { display: none; }
+
+/* lesson pins on the station overview */
+.scene-svg .pin { transition: opacity 0.4s; }
+.scene-svg .pin-tail { fill: var(--ink); }
+.scene-svg .pin-head { fill: var(--amber); stroke: var(--ink); stroke-width: 3; }
+.scene-svg .pin-text { font-size: 24px; font-weight: 900; fill: var(--ink); }
+.scene-svg .pin-label rect { fill: #fffaf0; stroke: var(--ink); stroke-width: 2; }
+.scene-svg .pin-label text { font-size: 19px; font-weight: 800; fill: var(--ink); }
+.scene-svg.zoomed .pin { opacity: 0; }
+
+/* ---------------------------------------------------------------- plates */
+.scene-svg .plate { opacity: 0; visibility: hidden; transition: opacity 0.45s ease, visibility 0s linear 0.45s; }
+.scene-svg.revealed .plate.active { opacity: 1; visibility: visible; transition: opacity 0.45s ease; }
+.scene-svg .pl-frame { fill: #f7efdc; stroke: var(--ink); stroke-width: 5; }
+.scene-svg .pl-soil { fill: #b9784f; }
+.scene-svg .pl-backfill { fill: #dcc28c; opacity: 0.85; }
+.scene-svg .pl-concrete { fill: #d6ccb7; stroke: var(--ink); stroke-width: 3; }
+.scene-svg .pl-strata { fill: none; stroke: #8f5a3b; stroke-width: 4; opacity: 0.6; }
+.scene-svg .pl-cab { fill: var(--red); stroke: var(--ink); stroke-width: 5; stroke-linejoin: round; }
+.scene-svg .pl-glass { fill: #2a3d5e; stroke: var(--ink); stroke-width: 4; }
+.scene-svg .pl-chassis { fill: #3a4152; stroke: var(--ink); stroke-width: 4; }
+.scene-svg .pl-tyre { fill: #232a36; stroke: var(--ink); stroke-width: 4; }
+.scene-svg .pl-hub { fill: #c9d1d8; stroke: var(--ink); stroke-width: 4; }
+.scene-svg .pl-steel { fill: #c9d1d8; stroke: var(--ink); stroke-width: 4; }
+.scene-svg .pl-inside { fill: #4a5a74; stroke: none; }
+.scene-svg .pl-shell { fill: none; stroke: var(--ink); stroke-width: 9; }
+.scene-svg .pl-fuel { fill: var(--amber); }
+.scene-svg .pl-fuel-top { fill: #fff0b0; }
+.scene-svg .pl-pipe { fill: none; stroke: var(--ink); stroke-width: 22; stroke-linejoin: round; }
+.scene-svg .pl-pipe.thin { stroke-width: 14; }
+.scene-svg .pl-pipe.fuel { stroke: #c98a12; stroke-width: 20; }
+.scene-svg .pl-hose { fill: none; stroke: #20242c; stroke-width: 20; stroke-linecap: round; }
+.scene-svg .pl-flow { fill: none; stroke: #ffe066; stroke-width: 9; stroke-linecap: round; stroke-dasharray: 6 26; opacity: 0; }
+.scene-svg .flowing .pl-flow { opacity: 1; }
+.scene-svg .pl-air { fill: none; stroke: #bfe4ff; stroke-width: 6; stroke-linecap: round; stroke-dasharray: 4 16; opacity: 0; }
+.scene-svg .flowing #pl1-air { opacity: 1; }
+.scene-svg .pl-valve-body { fill: #c9d1d8; stroke: var(--ink); stroke-width: 5; }
+.scene-svg .pl-valve-port { fill: #4a5a74; stroke: var(--ink); stroke-width: 3; }
+.scene-svg .pl-valve-handle, .scene-svg .pl-valve-grip { fill: var(--red); stroke: var(--ink); stroke-width: 3; }
+.scene-svg .pl-turn { transform: rotate(90deg); transition: transform 0.5s ease; }
+.scene-svg .pl-turn.open { transform: rotate(0deg); }
+.scene-svg #pl3-trigger { transform: rotate(7deg); }
+.scene-svg #pl3-trigger.open { transform: rotate(-5deg); }
+.scene-svg .pl-move { transition: transform 0.35s ease; }
+.scene-svg #pl3-poppet.open { transform: translateY(-18px); }
+.scene-svg #pl3-latch.tripped { transform: translateY(-26px); }
+.scene-svg .pl-head.off { opacity: 0; }
+.scene-svg .pl-dim { fill: none; stroke: var(--ink); stroke-width: 3; stroke-dasharray: 10 8; }
+.scene-svg .pl-dim-arrow { fill: none; stroke: var(--green-dark); stroke-width: 6; marker-start: none; }
+
+.scene-svg .pl-pill rect { fill: #fffaf0; stroke: var(--ink); stroke-width: 4; }
+.scene-svg .pl-pill text { font-size: 30px; font-weight: 800; fill: var(--ink); }
+.scene-svg .pl-pill.small text { font-size: 28px; }
+.scene-svg .pl-leader { fill: none; stroke: var(--ink); stroke-width: 3; }
+.scene-svg .pl-dot { fill: var(--ink); }
+.scene-svg .pl-big { font-size: 46px; font-weight: 900; fill: var(--ink); }
+.scene-svg .pl-mid { font-size: 34px; font-weight: 800; fill: var(--ink); }
+.scene-svg .pl-mid.strong { font-weight: 900; }
+.scene-svg .pl-small { font-size: 26px; font-weight: 700; fill: var(--ink); }
+.scene-svg .pl-tiny { font-size: 22px; font-weight: 700; fill: var(--ink-2); }
+.scene-svg .halo { paint-order: stroke; stroke: #fffaf0; stroke-width: 10px; stroke-linejoin: round; }
+
+.scene-svg .pl-cabinet { fill: #e9e1cd; stroke: var(--ink); stroke-width: 6; }
+.scene-svg .pl-cabinet-head { fill: var(--red); stroke: var(--ink); stroke-width: 6; }
+.scene-svg .pl-head-text { font-size: 26px; font-weight: 900; fill: #fff; letter-spacing: 0.06em; }
+.scene-svg .pl-display { fill: #1f3328; stroke: var(--ink); stroke-width: 6; }
+.scene-svg .pl-lcd-k { font-size: 22px; font-weight: 800; fill: #9fd496; letter-spacing: 0.06em; }
+.scene-svg .pl-lcd-k.ink { fill: var(--ink-2); }
+.scene-svg .pl-lcd { font-size: 32px; font-weight: 800; fill: #c8f7b6; }
+.scene-svg .pl-lcd.big { font-size: 50px; }
+.scene-svg .pl-cpu { fill: #2c3a58; stroke: var(--ink); stroke-width: 5; }
+.scene-svg .pl-cpu-text { font-size: 24px; font-weight: 900; fill: #e3e8f2; letter-spacing: 0.08em; }
+.scene-svg .pl-wire { fill: none; stroke: #2f7de1; stroke-width: 6; stroke-dasharray: 2 10; stroke-linecap: round; }
+.scene-svg .pl-pulse { fill: none; stroke: #9cd0ff; stroke-width: 12; stroke-linecap: round; stroke-dasharray: 1 30; opacity: 0; }
+.scene-svg .flowing .pl-pulse { opacity: 1; }
+.scene-svg .pl-barrier { stroke: var(--ink); stroke-width: 5; stroke-dasharray: 18 10; }
+.scene-svg .pl-meter { fill: #c9d1d8; stroke: var(--ink); stroke-width: 7; }
+.scene-svg .pl-vane { fill: #8794a6; stroke: var(--ink); stroke-width: 3; }
+.scene-svg .pl-shaft { stroke: var(--ink); stroke-width: 10; }
+.scene-svg .pl-disc { fill: #e9e1cd; stroke: var(--ink); stroke-width: 5; }
+.scene-svg .pl-slot { fill: var(--ink); }
+.scene-svg .pl-sensor { fill: #2f7de1; stroke: var(--ink); stroke-width: 4; }
+.scene-svg .pl-card { fill: #fffaf0; stroke: var(--ink); stroke-width: 4; }
+.scene-svg .pl-rule { stroke: var(--ink); stroke-width: 3; }
+.scene-svg .pl-car { fill: #3a77a6; stroke: var(--ink); stroke-width: 5; }
+.scene-svg .pl-filler { fill: #1d2a44; }
+.scene-svg .pl-nozzle { fill: var(--green); stroke: var(--ink); stroke-width: 4; }
+
+.scene-svg .pl-neck { fill: none; stroke: #c9d1d8; stroke-width: 64; stroke-linejoin: round; }
+.scene-svg .pl-neck-fuel { fill: none; stroke: var(--amber); stroke-width: 50; stroke-linejoin: round; transition: stroke-dasharray 0.3s; }
+.scene-svg .pl-nozzle-body { fill: #2e9a68; stroke: var(--ink); stroke-width: 6; stroke-linejoin: round; }
+.scene-svg .pl-channel { fill: none; stroke: #f6dc9a; stroke-width: 18; stroke-linejoin: round; }
+.scene-svg .flowing .pl-channel { stroke: var(--amber); }
+.scene-svg .pl-seat { stroke: var(--ink); stroke-width: 6; }
+.scene-svg .pl-poppet { fill: #c9d1d8; stroke: var(--ink); stroke-width: 4; }
+.scene-svg .pl-spring { fill: none; stroke: var(--ink); stroke-width: 4; }
+.scene-svg .pl-stem { stroke: var(--ink); stroke-width: 7; stroke-linecap: round; }
+.scene-svg .pl-tube { fill: none; stroke: #2bb5b0; stroke-width: 6; stroke-linejoin: round; }
+.scene-svg .pl-tube.vacuum { stroke: var(--red); }
+.scene-svg #pl3-air { stroke: #d6fffd; }
+.scene-svg .flowing #pl3-air { opacity: 1; }
+.scene-svg .pl-port { fill: #fffaf0; stroke: #2bb5b0; stroke-width: 5; }
+.scene-svg .pl-port.covered { fill: var(--amber); stroke: var(--red); }
+.scene-svg .pl-chamber { fill: #c9d1d8; stroke: var(--ink); stroke-width: 5; }
+.scene-svg .pl-diaphragm { fill: none; stroke: var(--red); stroke-width: 7; transition: d 0.35s ease; }
+.scene-svg .pl-roller { fill: #c9d1d8; stroke: var(--ink); stroke-width: 4; }
+.scene-svg .pl-trigger { fill: #39414f; stroke: var(--ink); stroke-width: 4; stroke-linejoin: round; }
+.scene-svg .pl-guard { fill: none; stroke: #2e9a68; stroke-width: 12; stroke-linecap: round; }
+.scene-svg .pl-trip { opacity: 0; transition: opacity 0.4s; }
+.scene-svg .pl-trip.on { opacity: 1; }
+.scene-svg .pl-badge { fill: var(--red); stroke: var(--ink); stroke-width: 3; }
+.scene-svg .pl-badge-text { font-size: 24px; font-weight: 900; fill: #fff; }
+
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="top">
+    <div>
+      <h1>How a petrol station's machines work</h1>
+      <p class="lede">Open a valve. Follow the fuel. Look inside the meter and the nozzle.</p>
+    </div>
+    <p class="sim-badge" role="note"><strong>Simulated example</strong> · sizes, speeds and prices are illustrative</p>
+  </header>
+
+  <nav class="lessons" aria-label="Machine lessons">
+    <button type="button" data-lesson="delivery" aria-current="false"><span class="n">1</span>Tanker to storage</button>
+    <button type="button" data-lesson="pricing" aria-current="false"><span class="n">2</span>Litres to price</button>
+    <button type="button" data-lesson="nozzle" aria-current="false"><span class="n">3</span>Customer and nozzle</button>
+    <button type="button" class="back" id="back-btn" hidden>← Back to station</button>
+  </nav>
+
+  <main class="layout">
+    <div class="stage" id="stage"></div>
+    <div class="panel" id="panel"></div>
+  </main>
+
+  <details class="sources">
+    <summary>Sources and assumptions</summary>
+    <ul>
+      <li><a href="https://www.veeder.com/us/blog/how-does-fuel-get-your-nozzle" target="_blank" rel="noreferrer">Veeder-Root: how fuel gets to your nozzle</a> — the tank's submersible pump moves fuel to the dispenser.</li>
+      <li><a href="https://www.gilbarco.com/eu/our-solutions/fuel-dispensers/endura" target="_blank" rel="noreferrer">Gilbarco Endura dispenser</a> — meter encoder, electronic calibration, price and volume display.</li>
+      <li><a href="https://www.gilbarco.com/sea/sites/gilbarco.com.sea/files/pdfs/577014-339%20-%20Application%20Guide.pdf" target="_blank" rel="noreferrer">Gilbarco application guide 577014-339</a> — pulses per unit volume (example calibration only).</li>
+      <li><a href="https://pei.org/wiki_pei/automatic-nozzle/" target="_blank" rel="noreferrer">PEI: automatic nozzle</a> — sensing hole, passages, vacuum and diaphragm.</li>
+      <li><a href="https://www.opwglobal.com/docs/libraries/retail-fueling/retail-fueling/above-ground/12vw_troubleshooting_instructions_english_h15892pae.pdf?Status=Master&amp;sfvrsn=e8b0f570_0" target="_blank" rel="noreferrer">OPW 12VW troubleshooting instructions</a> — liquid covering the tip shut-off port.</li>
+      <li>Not to scale. Flow rates, pulse counts, rotor shape, prices and tank sizes are illustrative, not manufacturer or market figures, and this is not an operating procedure.</li>
+    </ul>
+  </details>
+  <div class="sr-only" id="announcer" aria-live="polite" aria-atomic="true"></div>
+  <noscript><p>This lesson needs JavaScript (it uses no network).</p></noscript>
+</div>
+<script>
+(() => {
+"use strict";
+const __modules = {};
+__modules["model"] = (() => {
+// Petrol station simulator — pure deterministic model.
+//
+// Units (integers only):
+//   volume  millilitres (ml)          1 L = 1,000 ml
+//   money   kobo                      ₦1 = 100 kobo
+//   price   kobo per litre
+//   time    simulated milliseconds
+//
+// Rounding rule (the only one): a charge is volume × price rounded half-up to
+// the nearest kobo, i.e. floor((ml × koboPerLitre + 500) / 1000). A naira
+// budget converts to the largest whole-millilitre volume whose exact value does
+// not exceed it, floor(budget × 1000 / price); because that exact value is at
+// most the budget, its half-up rounded charge is too.
+//
+// Every function here is pure: inputs are never mutated and the same inputs
+// always produce the same outputs. Rendering and playback read this model only.
+
+const MODEL_VERSION = 1;
+const ML_PER_LITRE = 1000;
+const KOBO_PER_NAIRA = 100;
+
+const DEFAULT_CONFIG = Object.freeze({
+  product: "PMS",
+  productName: "Petrol (PMS)",
+  tankCapacityMl: 30_000_000, // 30,000 L underground tank
+  openingStockMl: 6_000_000, // 6,000 L in the tank at the start of the day
+  tankerLoadMl: 20_000_000, // 20,000 L on the tanker
+  tankerProduct: "PMS",
+  tankerCostPerLitreKobo: 92_000, // ₦920/L example purchase cost
+  defaultRetailPriceKobo: 100_000, // ₦1,000/L example pump price
+  dischargeRateMlPerMin: 600_000, // 600 L/min gravity drop
+  dispenseRateMlPerMin: 40_000, // 40 L/min nozzle flow
+  vehicleCapacityMl: 50_000, // 50 L car tank
+  vehicleStartFuelMl: 8_000, // car arrives with 8 L
+  vehicleProduct: "PMS",
+  dispenserProduct: "PMS",
+});
+
+const LIMITS = Object.freeze({
+  priceKobo: [100, 10_000_000], // ₦1 – ₦100,000 per litre
+  amountKobo: [5_000, 100_000_000], // ₦50 – ₦1,000,000
+  volumeMl: [100, 1_000_000], // 0.1 L – 1,000 L
+  tankerLoadMl: [1_000_000, 45_000_000], // 1,000 L – 45,000 L
+});
+
+const SCENARIOS = Object.freeze({
+  standard: { label: "Standard day", overrides: {} },
+  "low-stock": {
+    label: "Low stock (12 L left)",
+    overrides: { openingStockMl: 12_000 },
+  },
+  empty: { label: "Empty tank", overrides: { openingStockMl: 0 } },
+  "nearly-full": {
+    label: "Nearly full tank (26,000 L)",
+    overrides: { openingStockMl: 26_000_000 },
+  },
+});
+
+const STEPS = Object.freeze([
+  { id: 1, title: "Tanker arrives" },
+  { id: 2, title: "Receive the delivery" },
+  { id: 3, title: "Open the station" },
+  { id: 4, title: "Serve the customer" },
+  { id: 5, title: "Dispense" },
+  { id: 6, title: "Pay and receipt" },
+  { id: 7, title: "Close and reconcile" },
+]);
+
+// ---------------------------------------------------------------------------
+// Integer arithmetic
+
+function assertNonNegInt(value, name) {
+  if (!Number.isSafeInteger(value) || value < 0) {
+    throw new RangeError(`${name} must be a non-negative safe integer`);
+  }
+}
+
+/** floor((a × b + d/2) / d) for non-negative integers, exact via BigInt. */
+function mulDivRoundHalfUp(a, b, d) {
+  assertNonNegInt(a, "a");
+  assertNonNegInt(b, "b");
+  if (!Number.isSafeInteger(d) || d <= 0) throw new RangeError("d must be positive");
+  const big = (BigInt(a) * BigInt(b) * 2n + BigInt(d)) / (BigInt(d) * 2n);
+  return Number(big);
+}
+
+/** floor(a × b / d) for non-negative integers, exact via BigInt. */
+function mulDivFloor(a, b, d) {
+  assertNonNegInt(a, "a");
+  assertNonNegInt(b, "b");
+  if (!Number.isSafeInteger(d) || d <= 0) throw new RangeError("d must be positive");
+  return Number((BigInt(a) * BigInt(b)) / BigInt(d));
+}
+
+/** Charge in kobo for a volume at a per-litre price, rounded half-up. */
+function chargeFor(volumeMl, priceKobo) {
+  return mulDivRoundHalfUp(volumeMl, priceKobo, ML_PER_LITRE);
+}
+
+/** Largest whole-millilitre volume whose charge cannot exceed the budget. */
+function maxVolumeForAmount(amountKobo, priceKobo) {
+  if (!(priceKobo > 0)) return 0;
+  return mulDivFloor(amountKobo, ML_PER_LITRE, priceKobo);
+}
+
+// ---------------------------------------------------------------------------
+// Parsing and formatting (strings ↔ integers, no floating point)
+
+function parseDecimal(text, maxDecimals, scale) {
+  if (typeof text !== "string" && typeof text !== "number") return null;
+  const clean = String(text).trim().replace(/[,\s₦]/g, "");
+  const match = /^(\d+)(?:\.(\d*))?$/.exec(clean);
+  if (!match) return null;
+  const fraction = match[2] ?? "";
+  if (fraction.length > maxDecimals) return null;
+  const whole = Number(match[1]);
+  const part = Number(fraction.padEnd(maxDecimals, "0") || "0");
+  const value = whole * scale + part;
+  return Number.isSafeInteger(value) ? value : null;
+}
+
+/** "1,000.50" → 100050 kobo; null when not a valid naira amount. */
+function parseNairaToKobo(text) {
+  return parseDecimal(text, 2, KOBO_PER_NAIRA);
+}
+
+/** "12.5" → 12500 ml; null when not a valid litre amount. */
+function parseLitresToMl(text) {
+  return parseDecimal(text, 3, ML_PER_LITRE);
+}
+
+function groupThousands(n) {
+  return String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+}
+
+/** 123456 kobo → "₦1,234.56". */
+function formatKobo(kobo, { symbol = true } = {}) {
+  const sign = kobo < 0 ? "−" : "";
+  const abs = Math.abs(kobo);
+  const naira = Math.floor(abs / KOBO_PER_NAIRA);
+  const rest = String(abs % KOBO_PER_NAIRA).padStart(2, "0");
+  return `${sign}${symbol ? "₦" : ""}${groupThousands(naira)}.${rest}`;
+}
+
+/** 12345 ml → "12.345 L" (decimals: 0–3). */
+function formatMl(ml, decimals = 2, { unit = true } = {}) {
+  const sign = ml < 0 ? "−" : "";
+  const abs = Math.abs(ml);
+  const factor = 10 ** (3 - decimals);
+  const scaled = Math.floor(abs / factor); // truncate: meters never round up
+  const whole = Math.floor(scaled / 10 ** decimals);
+  const frac = decimals ? `.${String(scaled % 10 ** decimals).padStart(decimals, "0")}` : "";
+  return `${sign}${groupThousands(whole)}${frac}${unit ? " L" : ""}`;
+}
+
+/** Simulated duration → "1h 02m 05s" / "2m 05s" / "45s". */
+function formatDuration(ms) {
+  const total = Math.floor(ms / 1000);
+  const h = Math.floor(total / 3600);
+  const m = Math.floor((total % 3600) / 60);
+  const s = total % 60;
+  const pad = (v) => String(v).padStart(2, "0");
+  if (h) return `${h}h ${pad(m)}m ${pad(s)}s`;
+  if (m) return `${m}m ${pad(s)}s`;
+  return `${s}s`;
+}
+
+// ---------------------------------------------------------------------------
+// State
+
+function validateConfig(config) {
+  const ints = [
+    "tankCapacityMl",
+    "openingStockMl",
+    "tankerLoadMl",
+    "tankerCostPerLitreKobo",
+    "defaultRetailPriceKobo",
+    "dischargeRateMlPerMin",
+    "dispenseRateMlPerMin",
+    "vehicleCapacityMl",
+    "vehicleStartFuelMl",
+  ];
+  for (const key of ints) assertNonNegInt(config[key], key);
+  if (config.openingStockMl > config.tankCapacityMl) {
+    throw new RangeError("openingStockMl exceeds tankCapacityMl");
+  }
+  if (config.vehicleStartFuelMl > config.vehicleCapacityMl) {
+    throw new RangeError("vehicleStartFuelMl exceeds vehicleCapacityMl");
+  }
+  if (config.dischargeRateMlPerMin <= 0 || config.dispenseRateMlPerMin <= 0) {
+    throw new RangeError("flow rates must be positive");
+  }
+}
+
+function createState(overrides = {}) {
+  const config = { ...DEFAULT_CONFIG, ...overrides };
+  validateConfig(config);
+  return {
+    version: MODEL_VERSION,
+    config,
+    clockMs: 0,
+    tank: { stockMl: config.openingStockMl },
+    station: {
+      powerOn: false,
+      powerCause: "switched-off", // "switched-on" | "switched-off" | "power-cut"
+      open: false,
+      estop: false,
+      priceKobo: null,
+      closedForDay: false,
+    },
+    dispenser: { nozzle: "holstered", totaliserMl: 0 },
+    delivery: null,
+    sale: null,
+    ledger: {
+      openingStockMl: config.openingStockMl,
+      deliveries: [],
+      sales: [],
+      receipts: [],
+    },
+    closing: null,
+    counters: { delivery: 1, sale: 1, receipt: 1, event: 1 },
+    events: [],
+  };
+}
+
+function createScenario(name, extra = {}) {
+  const scenario = SCENARIOS[name] ?? SCENARIOS.standard;
+  return createState({ ...scenario.overrides, ...extra });
+}
+
+function clone(state) {
+  return structuredClone(state);
+}
+
+function logEvent(draft, type, detail = {}) {
+  draft.events.push({ seq: draft.counters.event++, t: draft.clockMs, type, ...detail });
+}
+
+const HOSE_CONNECTED = new Set(["connected", "discharging", "halted", "complete"]);
+
+function deliveryHoseConnected(state) {
+  return Boolean(state.delivery && HOSE_CONNECTED.has(state.delivery.status));
+}
+
+function ullage(state) {
+  return state.config.tankCapacityMl - state.tank.stockMl;
+}
+
+function vehicleSpace(sale) {
+  return sale ? sale.vehicle.capacityMl - sale.vehicle.fuelMl : 0;
+}
+
+/** Highest cumulative volume this delivery may reach right now. */
+function deliveryLimit(state) {
+  const d = state.delivery;
+  return d.receivedMl + Math.min(d.tankerMl, ullage(state));
+}
+
+/** Cumulative dispense limit and the constraint that binds it. */
+function saleLimit(state) {
+  const sale = state.sale;
+  const candidates = [
+    ["target", sale.targetMl],
+    ["vehicle-full", sale.deliveredMl + vehicleSpace(sale)],
+    ["tank-empty", sale.deliveredMl + state.tank.stockMl],
+  ];
+  let best = candidates[0];
+  for (const c of candidates) if (c[1] < best[1]) best = c;
+  return { limitMl: best[1], reason: best[0] };
+}
+
+// ---------------------------------------------------------------------------
+// Actions: each has a check (returns a learner-facing reason or null) and a
+// run that mutates a private draft. `apply` is the only way state changes.
+
+const SALE_ACTIVE = new Set(["preset", "nozzle", "dispensing", "stopped", "returned"]);
+
+function dayClosed(state) {
+  return state.station.closedForDay ? "The day is closed. Reset to run another day." : null;
+}
+
+const ACTIONS = {
+  arriveTanker: {
+    label: "Tanker arrives",
+    check(s, p = {}) {
+      if (s.delivery) return "A tanker is already on site.";
+      const load = p.loadMl ?? s.config.tankerLoadMl;
+      if (!Number.isSafeInteger(load) || load < LIMITS.tankerLoadMl[0] || load > LIMITS.tankerLoadMl[1]) {
+        return "Tanker load must be between 1,000 L and 45,000 L.";
+      }
+      return dayClosed(s);
+    },
+    run(d, p = {}) {
+      const load = p.loadMl ?? d.config.tankerLoadMl;
+      d.delivery = {
+        no: d.counters.delivery++,
+        product: d.config.tankerProduct,
+        status: "arrived",
+        tankerStartMl: load,
+        tankerMl: load,
+        costPerLitreKobo: d.config.tankerCostPerLitreKobo,
+        receivedMl: 0,
+        activeMs: 0,
+        dipBeforeMl: null,
+        spaceMl: null,
+        stopReason: null,
+      };
+      logEvent(d, "tanker-arrived", { loadMl: load });
+    },
+  },
+
+  checkTank: {
+    label: "Dip tank and check space",
+    check(s) {
+      if (!s.delivery) return "No tanker on site yet.";
+      if (s.delivery.status !== "arrived") return "The tank has already been checked for this delivery.";
+      return null;
+    },
+    run(d) {
+      const del = d.delivery;
+      del.status = "checked";
+      del.dipBeforeMl = d.tank.stockMl;
+      del.spaceMl = ullage(d);
+      logEvent(d, "tank-checked", { stockMl: d.tank.stockMl, spaceMl: del.spaceMl });
+    },
+  },
+
+  connectDelivery: {
+    label: "Connect delivery hose",
+    check(s) {
+      const del = s.delivery;
+      if (!del) return "No tanker on site yet.";
+      if (del.status === "arrived") return "Dip the tank and check space before connecting.";
+      if (del.status !== "checked") return "The delivery hose is already connected.";
+      if (del.product !== s.config.product) return "Tanker product does not match this tank.";
+      if (ullage(s) === 0) return "The tank is full — there is no space to receive fuel.";
+      if (s.sale?.status === "dispensing") return "The pump is running. Wait for the current sale to stop.";
+      return null;
+    },
+    run(d) {
+      d.delivery.status = "connected";
+      logEvent(d, "delivery-connected");
+    },
+  },
+
+  startDischarge: {
+    label: "Start discharge",
+    check(s) {
+      const del = s.delivery;
+      if (!del) return "No tanker on site yet.";
+      if (del.status === "discharging") return "Fuel is already flowing into the tank.";
+      if (del.status === "complete") return "This delivery has finished. Disconnect the tanker.";
+      if (del.status !== "connected" && del.status !== "halted") return "Connect the delivery hose first.";
+      if (s.station.estop) return "Emergency stop is latched. Reset it first.";
+      if (del.tankerMl === 0) return "The tanker is empty.";
+      if (ullage(s) === 0) return "The tank is full.";
+      return null;
+    },
+    run(d) {
+      const resumed = d.delivery.status === "halted";
+      d.delivery.status = "discharging";
+      d.delivery.stopReason = null;
+      logEvent(d, resumed ? "discharge-resumed" : "discharge-started");
+    },
+  },
+
+  haltDischarge: {
+    label: "Halt discharge",
+    check(s) {
+      if (s.delivery?.status !== "discharging") return "No delivery is flowing.";
+      return null;
+    },
+    run(d) {
+      d.delivery.status = "halted";
+      d.delivery.stopReason = "manual";
+      logEvent(d, "discharge-halted", { receivedMl: d.delivery.receivedMl, reason: "manual" });
+    },
+  },
+
+  finishDelivery: {
+    label: "Finish and disconnect",
+    check(s) {
+      if (!s.delivery) return "No tanker on site.";
+      if (s.delivery.status === "discharging") return "Fuel is still flowing. Wait for it to finish or halt it.";
+      return null;
+    },
+    run(d) {
+      const del = d.delivery;
+      const record = {
+        no: del.no,
+        product: del.product,
+        tankerStartMl: del.tankerStartMl,
+        acceptedMl: del.receivedMl,
+        returnedMl: del.tankerMl,
+        costPerLitreKobo: del.costPerLitreKobo,
+        costKobo: chargeFor(del.receivedMl, del.costPerLitreKobo),
+        dipBeforeMl: del.dipBeforeMl,
+        dipAfterMl: d.tank.stockMl,
+        stopReason: del.stopReason ?? (del.receivedMl === 0 ? "not-discharged" : "complete"),
+      };
+      d.ledger.deliveries.push(record);
+      d.delivery = null;
+      logEvent(d, "delivery-recorded", { acceptedMl: record.acceptedMl, costKobo: record.costKobo });
+    },
+  },
+
+  powerOn: {
+    label: "Switch power on",
+    check(s) {
+      if (s.station.powerOn) return "Power is already on.";
+      return null;
+    },
+    run(d) {
+      const restored = d.station.powerCause === "power-cut";
+      d.station.powerOn = true;
+      d.station.powerCause = "switched-on";
+      logEvent(d, restored ? "power-restored" : "power-on");
+    },
+  },
+
+  powerOff: {
+    label: "Switch power off",
+    check(s) {
+      if (!s.station.powerOn) return "Power is already off.";
+      return null;
+    },
+    run(d) {
+      cutPower(d, "switched-off");
+    },
+  },
+
+  powerCut: {
+    label: "Power cut",
+    check(s) {
+      if (!s.station.powerOn) return "Power is already off.";
+      return null;
+    },
+    run(d) {
+      cutPower(d, "power-cut");
+    },
+  },
+
+  setPrice: {
+    label: "Set pump price",
+    check(s, p = {}) {
+      const price = p.priceKobo;
+      if (!Number.isSafeInteger(price)) return "Enter a price per litre.";
+      if (price < LIMITS.priceKobo[0] || price > LIMITS.priceKobo[1]) {
+        return "Price must be between ₦1 and ₦100,000 per litre.";
+      }
+      if (price === s.station.priceKobo) return "That price is already set.";
+      return dayClosed(s);
+    },
+    run(d, p) {
+      const from = d.station.priceKobo;
+      d.station.priceKobo = p.priceKobo;
+      logEvent(d, "price-set", { fromKobo: from, priceKobo: p.priceKobo });
+    },
+  },
+
+  openStation: {
+    label: "Open for service",
+    check(s) {
+      if (s.station.closedForDay) return dayClosed(s);
+      if (s.station.open) return "The station is already open.";
+      if (!s.station.powerOn) return "Switch power on first — pumps cannot serve without it.";
+      if (s.station.priceKobo == null) return "Set a pump price first.";
+      if (s.station.estop) return "Emergency stop is latched. Reset it first.";
+      return null;
+    },
+    run(d) {
+      d.station.open = true;
+      logEvent(d, "station-opened");
+    },
+  },
+
+  customerArrives: {
+    label: "Customer arrives",
+    check(s) {
+      if (s.station.closedForDay) return dayClosed(s);
+      if (s.sale) return "A customer is already at the pump.";
+      if (!s.station.open) return "The station is closed for service.";
+      return null;
+    },
+    run(d) {
+      d.sale = {
+        no: d.counters.sale++,
+        status: "arrived",
+        vehicle: {
+          product: d.config.vehicleProduct,
+          capacityMl: d.config.vehicleCapacityMl,
+          startFuelMl: d.config.vehicleStartFuelMl,
+          fuelMl: d.config.vehicleStartFuelMl,
+        },
+        mode: null,
+        amountKobo: null,
+        volumeMl: null,
+        priceKobo: null,
+        targetMl: 0,
+        deliveredMl: 0,
+        activeMs: 0,
+        rateMlPerMin: d.config.dispenseRateMlPerMin,
+        stopReason: null,
+        receiptNo: null,
+        method: null,
+      };
+      logEvent(d, "customer-arrived", { saleNo: d.sale.no });
+    },
+  },
+
+  setPreset: {
+    label: "Authorise preset",
+    check(s, p = {}) {
+      const sale = s.sale;
+      if (!sale) return "No customer at the pump.";
+      if (sale.status !== "arrived" && sale.status !== "preset") {
+        return "The preset is locked once the nozzle is lifted.";
+      }
+      if (!s.station.powerOn) return "No power — the dispenser keypad is dark.";
+      if (s.station.priceKobo == null && sale.priceKobo == null) return "Set a pump price first.";
+      const price = sale.priceKobo ?? s.station.priceKobo;
+      if (p.mode === "amount") {
+        const a = p.amountKobo;
+        if (!Number.isSafeInteger(a) || a < LIMITS.amountKobo[0] || a > LIMITS.amountKobo[1]) {
+          return "Amount must be between ₦50 and ₦1,000,000.";
+        }
+        if (maxVolumeForAmount(a, price) === 0) return "That amount buys less than 1 ml.";
+        return null;
+      }
+      if (p.mode === "volume") {
+        const v = p.volumeMl;
+        if (!Number.isSafeInteger(v) || v < LIMITS.volumeMl[0] || v > LIMITS.volumeMl[1]) {
+          return "Litres must be between 0.1 L and 1,000 L.";
+        }
+        return null;
+      }
+      return "Choose naira or litres.";
+    },
+    run(d, p) {
+      const sale = d.sale;
+      // The unit price is locked the first time the sale is authorised.
+      if (sale.priceKobo == null) sale.priceKobo = d.station.priceKobo;
+      sale.mode = p.mode;
+      if (p.mode === "amount") {
+        sale.amountKobo = p.amountKobo;
+        sale.volumeMl = null;
+        sale.targetMl = maxVolumeForAmount(p.amountKobo, sale.priceKobo);
+      } else {
+        sale.volumeMl = p.volumeMl;
+        sale.amountKobo = null;
+        sale.targetMl = p.volumeMl;
+      }
+      sale.status = "preset";
+      logEvent(d, "preset-authorised", {
+        saleNo: sale.no,
+        mode: sale.mode,
+        priceKobo: sale.priceKobo,
+        targetMl: sale.targetMl,
+      });
+    },
+  },
+
+  liftNozzle: {
+    label: "Lift nozzle into car",
+    check(s) {
+      const sale = s.sale;
+      if (!sale) return "No customer at the pump.";
+      if (sale.status === "arrived") return "Authorise a naira or litre preset first.";
+      if (sale.status !== "preset") return "The nozzle is already out.";
+      if (sale.vehicle.product !== s.config.dispenserProduct) {
+        return "Wrong nozzle: this dispenser does not match the car's fuel.";
+      }
+      return null;
+    },
+    run(d) {
+      d.sale.status = "nozzle";
+      d.dispenser.nozzle = "in-vehicle";
+      logEvent(d, "nozzle-lifted", { saleNo: d.sale.no });
+    },
+  },
+
+  startPump: {
+    label: "Start pump",
+    check(s) {
+      const sale = s.sale;
+      if (!sale) return "No customer at the pump.";
+      if (sale.status === "dispensing") return "Fuel is already flowing.";
+      if (sale.status === "arrived") return "Authorise a naira or litre preset first.";
+      if (sale.status === "preset") return "Lift the nozzle into the car's filler first.";
+      if (sale.status !== "nozzle") {
+        return "This sale has stopped. Return the nozzle and settle it; more fuel needs a new sale.";
+      }
+      if (s.dispenser.nozzle !== "in-vehicle") return "The nozzle is not in the car.";
+      if (sale.vehicle.product !== s.config.dispenserProduct) return "Wrong nozzle for this car.";
+      if (s.station.estop) return "Emergency stop is latched. Reset it first.";
+      if (!s.station.powerOn) return "No power — the pump motor and meter need electricity.";
+      if (!s.station.open) return "The station is closed for service.";
+      if (deliveryHoseConnected(s)) return "The tank is taking a delivery. Finish and disconnect first.";
+      if (s.tank.stockMl === 0) return "The tank is empty.";
+      if (vehicleSpace(sale) === 0) return "The car's tank is already full.";
+      return null;
+    },
+    run(d) {
+      d.sale.status = "dispensing";
+      logEvent(d, "pump-started", { saleNo: d.sale.no });
+    },
+  },
+
+  stopPump: {
+    label: "Stop pump",
+    check(s) {
+      if (s.sale?.status !== "dispensing") return "The pump is not running.";
+      return null;
+    },
+    run(d) {
+      stopSale(d, "manual");
+    },
+  },
+
+  returnNozzle: {
+    label: "Return nozzle",
+    check(s) {
+      const sale = s.sale;
+      if (!sale || s.dispenser.nozzle !== "in-vehicle") return "The nozzle is already in its holster.";
+      if (sale.status === "dispensing") return "Stop the pump before hanging up the nozzle.";
+      return null;
+    },
+    run(d) {
+      const sale = d.sale;
+      d.dispenser.nozzle = "holstered";
+      sale.status = sale.deliveredMl > 0 ? "returned" : "cancelled";
+      logEvent(d, "nozzle-returned", { saleNo: sale.no, deliveredMl: sale.deliveredMl });
+    },
+  },
+
+  recordPayment: {
+    label: "Record payment",
+    check(s, p = {}) {
+      const sale = s.sale;
+      if (!sale) return "No sale to pay for.";
+      if (sale.status === "paid") return `Already paid — receipt ${receiptLabel(sale.receiptNo)}.`;
+      if (sale.status === "unpaid") return "This sale was left unpaid.";
+      if (sale.status === "cancelled") return "Nothing was dispensed, so nothing is due.";
+      if (sale.status !== "returned") return "Return the nozzle first so the meter settles.";
+      if (!["cash", "transfer", "card"].includes(p.method ?? "cash")) return "Choose cash, transfer or card.";
+      return null;
+    },
+    run(d, p = {}) {
+      const sale = d.sale;
+      const method = p.method ?? "cash";
+      const receipt = {
+        no: d.counters.receipt++,
+        saleNo: sale.no,
+        product: d.config.productName,
+        volumeMl: sale.deliveredMl,
+        priceKobo: sale.priceKobo,
+        chargeKobo: chargeFor(sale.deliveredMl, sale.priceKobo),
+        paidKobo: chargeFor(sale.deliveredMl, sale.priceKobo),
+        method,
+        mode: sale.mode,
+        requestKobo: sale.amountKobo,
+        requestMl: sale.volumeMl,
+        stopReason: sale.stopReason,
+        t: d.clockMs,
+      };
+      d.ledger.receipts.push(receipt);
+      sale.status = "paid";
+      sale.receiptNo = receipt.no;
+      sale.method = method;
+      logEvent(d, "payment-recorded", { saleNo: sale.no, receiptNo: receipt.no, paidKobo: receipt.paidKobo });
+    },
+  },
+
+  leaveUnpaid: {
+    label: "Leave unpaid",
+    check(s) {
+      const sale = s.sale;
+      if (!sale) return "No sale to settle.";
+      if (sale.status === "paid") return "This sale is already paid.";
+      if (sale.status === "unpaid") return "Already recorded as unpaid.";
+      if (sale.status !== "returned") return "Return the nozzle first so the meter settles.";
+      return null;
+    },
+    run(d) {
+      d.sale.status = "unpaid";
+      logEvent(d, "sale-unpaid", { saleNo: d.sale.no, dueKobo: chargeFor(d.sale.deliveredMl, d.sale.priceKobo) });
+    },
+  },
+
+  customerLeaves: {
+    label: "Customer leaves",
+    check(s) {
+      const sale = s.sale;
+      if (!sale) return "No customer at the pump.";
+      if (sale.status === "returned") return "Settle the sale first — record payment.";
+      if (s.dispenser.nozzle === "in-vehicle") return "Return the nozzle first.";
+      return null;
+    },
+    run(d) {
+      const sale = d.sale;
+      const status = sale.status === "arrived" || sale.status === "preset" ? "cancelled" : sale.status;
+      d.ledger.sales.push({
+        no: sale.no,
+        status,
+        mode: sale.mode,
+        amountKobo: sale.amountKobo,
+        volumeMl: sale.volumeMl,
+        priceKobo: sale.priceKobo,
+        deliveredMl: sale.deliveredMl,
+        chargeKobo: sale.priceKobo == null ? 0 : chargeFor(sale.deliveredMl, sale.priceKobo),
+        paidKobo: status === "paid" ? chargeFor(sale.deliveredMl, sale.priceKobo) : 0,
+        stopReason: sale.stopReason,
+        receiptNo: sale.receiptNo,
+        method: sale.method,
+      });
+      d.sale = null;
+      logEvent(d, "customer-left", { saleNo: sale.no, status });
+    },
+  },
+
+  emergencyStop: {
+    label: "Emergency stop",
+    check(s) {
+      if (s.station.estop) return "Emergency stop is already latched.";
+      return null;
+    },
+    run(d) {
+      d.station.estop = true;
+      if (d.sale?.status === "dispensing") stopSale(d, "estop");
+      if (d.delivery?.status === "discharging") {
+        d.delivery.status = "halted";
+        d.delivery.stopReason = "estop";
+        logEvent(d, "discharge-halted", { receivedMl: d.delivery.receivedMl, reason: "estop" });
+      }
+      logEvent(d, "emergency-stop");
+    },
+  },
+
+  resetEmergency: {
+    label: "Reset emergency stop",
+    check(s) {
+      if (!s.station.estop) return "Emergency stop is not latched.";
+      return null;
+    },
+    run(d) {
+      d.station.estop = false;
+      logEvent(d, "emergency-reset");
+    },
+  },
+
+  closeStation: {
+    label: "Close station",
+    check(s) {
+      if (s.station.closedForDay) return dayClosed(s);
+      if (!s.station.open) return "The station is not open.";
+      if (s.sale) return "Finish the current sale and let the customer leave first.";
+      if (s.delivery) return "Finish and disconnect the delivery first.";
+      return null;
+    },
+    run(d) {
+      d.station.open = false;
+      d.station.closedForDay = true;
+      d.closing = reconcile(d);
+      logEvent(d, "station-closed", { closingStockMl: d.tank.stockMl });
+    },
+  },
+};
+
+function cutPower(d, cause) {
+  d.station.powerOn = false;
+  d.station.powerCause = cause;
+  if (d.sale?.status === "dispensing") stopSale(d, "power");
+  logEvent(d, cause === "power-cut" ? "power-cut" : "power-off");
+}
+
+function stopSale(d, reason) {
+  d.sale.status = "stopped";
+  d.sale.stopReason = reason;
+  logEvent(d, "pump-stopped", { saleNo: d.sale.no, deliveredMl: d.sale.deliveredMl, reason });
+}
+
+const ACTION_TYPES = Object.freeze(Object.keys(ACTIONS));
+
+function actionLabel(type) {
+  return ACTIONS[type]?.label ?? type;
+}
+
+function receiptLabel(no) {
+  return no == null ? "—" : `R-${String(no).padStart(4, "0")}`;
+}
+
+/** Whether an action is allowed now, and if not, why. */
+function can(state, action) {
+  const def = ACTIONS[action?.type];
+  if (!def) return { ok: false, reason: "Unknown action." };
+  const reason = def.check(state, action.payload);
+  return reason ? { ok: false, reason } : { ok: true, reason: null };
+}
+
+/** Apply one action. Rejected actions return the same state object unchanged. */
+function apply(state, action) {
+  const verdict = can(state, action);
+  if (!verdict.ok) return { state, ok: false, reason: verdict.reason };
+  const draft = clone(state);
+  ACTIONS[action.type].run(draft, action.payload);
+  return { state: draft, ok: true, reason: null };
+}
+
+// ---------------------------------------------------------------------------
+// Time. Flow volume is a function of cumulative active time, so the result is
+// identical however the elapsed time is split into ticks.
+
+function isFlowing(state) {
+  return state.delivery?.status === "discharging" || state.sale?.status === "dispensing";
+}
+
+function tick(state, dtMs) {
+  if (!Number.isSafeInteger(dtMs) || dtMs < 0) throw new RangeError("dtMs must be a non-negative integer");
+  if (dtMs === 0 || !isFlowing(state)) return state;
+  // Consume only the time the flow still needs, so the clock is also
+  // independent of how elapsed time was split into ticks.
+  const used = Math.min(dtMs, timeToFlowEnd(state));
+  const d = clone(state);
+  d.clockMs += used;
+
+  if (d.delivery?.status === "discharging") {
+    const del = d.delivery;
+    del.activeMs += used;
+    const limit = deliveryLimit(d);
+    const cumulative = Math.min(
+      mulDivFloor(d.config.dischargeRateMlPerMin, del.activeMs, 60_000),
+      limit,
+    );
+    const step = cumulative - del.receivedMl;
+    del.receivedMl += step;
+    del.tankerMl -= step;
+    d.tank.stockMl += step;
+    if (del.receivedMl === limit) {
+      del.status = "complete";
+      del.stopReason = del.tankerMl === 0 ? "tanker-empty" : "tank-full";
+      logEvent(d, "discharge-complete", { receivedMl: del.receivedMl, reason: del.stopReason });
+    }
+  }
+
+  if (d.sale?.status === "dispensing") {
+    const sale = d.sale;
+    sale.activeMs += used;
+    const { limitMl, reason } = saleLimit(d);
+    const cumulative = Math.min(mulDivFloor(sale.rateMlPerMin, sale.activeMs, 60_000), limitMl);
+    const step = cumulative - sale.deliveredMl;
+    sale.deliveredMl += step;
+    sale.vehicle.fuelMl += step;
+    d.tank.stockMl -= step;
+    d.dispenser.totaliserMl += step;
+    if (sale.deliveredMl === limitMl) stopSale(d, reason);
+  }
+
+  return d;
+}
+
+/** Simulated time left until the active flow stops by itself (null if none). */
+function timeToFlowEnd(state) {
+  // Active time at which floor(rate × activeMs / 60,000) first reaches the limit.
+  const remaining = (limitMl, rate, activeMs) => {
+    const needed = Number((BigInt(limitMl) * 60_000n + BigInt(rate) - 1n) / BigInt(rate));
+    return Math.max(0, needed - activeMs);
+  };
+  const ends = [];
+  if (state.delivery?.status === "discharging") {
+    const del = state.delivery;
+    ends.push(remaining(deliveryLimit(state), state.config.dischargeRateMlPerMin, del.activeMs));
+  }
+  if (state.sale?.status === "dispensing") {
+    const sale = state.sale;
+    ends.push(remaining(saleLimit(state).limitMl, sale.rateMlPerMin, sale.activeMs));
+  }
+  return ends.length ? Math.max(...ends) : null;
+}
+
+// ---------------------------------------------------------------------------
+// Derived readings
+
+function reconcile(state) {
+  const receivedMl = state.ledger.deliveries.reduce((sum, d) => sum + d.acceptedMl, 0)
+    + (state.delivery?.receivedMl ?? 0);
+  const archived = state.ledger.sales;
+  const soldMl = archived.reduce((sum, s) => sum + s.deliveredMl, 0) + (state.sale?.deliveredMl ?? 0);
+  const salesKobo = archived.reduce((sum, s) => sum + s.chargeKobo, 0)
+    + (state.sale?.priceKobo != null ? chargeFor(state.sale.deliveredMl, state.sale.priceKobo) : 0);
+  const collectedKobo = state.ledger.receipts.reduce((sum, r) => sum + r.paidKobo, 0);
+  const purchaseKobo = state.ledger.deliveries.reduce((sum, d) => sum + d.costKobo, 0);
+  const expectedClosingMl = state.ledger.openingStockMl + receivedMl - soldMl;
+  return {
+    openingMl: state.ledger.openingStockMl,
+    receivedMl,
+    soldMl,
+    expectedClosingMl,
+    measuredMl: state.tank.stockMl,
+    varianceMl: state.tank.stockMl - expectedClosingMl,
+    salesKobo,
+    collectedKobo,
+    outstandingKobo: salesKobo - collectedKobo,
+    purchaseKobo,
+    salesCount: archived.filter((s) => s.deliveredMl > 0).length + (state.sale?.deliveredMl > 0 ? 1 : 0),
+    unpaidCount: archived.filter((s) => s.status === "unpaid").length,
+  };
+}
+
+function read(state) {
+  const { config, tank, sale, delivery, station } = state;
+  const lastSale = state.ledger.sales.at(-1) ?? null;
+  const meterSource = sale && sale.priceKobo != null ? sale : lastSale;
+  return {
+    tank: {
+      stockMl: tank.stockMl,
+      capacityMl: config.tankCapacityMl,
+      ullageMl: config.tankCapacityMl - tank.stockMl,
+      fraction: tank.stockMl / config.tankCapacityMl,
+    },
+    tanker: delivery
+      ? {
+          present: true,
+          status: delivery.status,
+          ml: delivery.tankerMl,
+          startMl: delivery.tankerStartMl,
+          fraction: delivery.tankerMl / delivery.tankerStartMl,
+          hoseConnected: HOSE_CONNECTED.has(delivery.status),
+          receivedMl: delivery.receivedMl,
+          spaceMl: delivery.spaceMl,
+        }
+      : { present: false, hoseConnected: false },
+    vehicle: sale
+      ? {
+          present: true,
+          fuelMl: sale.vehicle.fuelMl,
+          capacityMl: sale.vehicle.capacityMl,
+          fraction: sale.vehicle.fuelMl / sale.vehicle.capacityMl,
+        }
+      : { present: false },
+    meter: {
+      live: Boolean(sale && sale.priceKobo != null),
+      volumeMl: meterSource?.deliveredMl ?? 0,
+      chargeKobo:
+        meterSource && meterSource.priceKobo != null
+          ? chargeFor(meterSource.deliveredMl, meterSource.priceKobo)
+          : 0,
+      priceKobo: sale?.priceKobo ?? station.priceKobo,
+      lockedPriceKobo: sale?.priceKobo ?? null,
+      targetMl: sale?.targetMl ?? null,
+      totaliserMl: state.dispenser.totaliserMl,
+    },
+    flows: {
+      delivery: delivery?.status === "discharging",
+      dispense: sale?.status === "dispensing",
+    },
+    nozzle: state.dispenser.nozzle,
+    station: { ...station },
+    totals: reconcile(state),
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Guidance: the next recommended action. Guided mode highlights it; Auto mode
+// dispatches it through `apply`, so both share the same transitions.
+
+const DEFAULT_INPUTS = Object.freeze({
+  priceKobo: DEFAULT_CONFIG.defaultRetailPriceKobo,
+  presetMode: "amount",
+  amountKobo: 2_000_000, // ₦20,000
+  volumeMl: 25_000, // 25 L
+  method: "cash",
+  tankerLoadMl: DEFAULT_CONFIG.tankerLoadMl,
+});
+
+function act(type, payload) {
+  return payload === undefined ? { type } : { type, payload };
+}
+
+/** Guided step for the current state, with instruction and next action. */
+function guide(state, inputs = DEFAULT_INPUTS) {
+  const s = state;
+  const del = s.delivery;
+  const sale = s.sale;
+  const delivered = s.ledger.deliveries.length > 0;
+  const served = s.ledger.sales.length > 0;
+  const g = (step, instruction, next = null, waiting = null) => ({
+    step,
+    title: STEPS[step - 1].title,
+    instruction,
+    next,
+    waiting,
+    done: false,
+  });
+
+  if (s.station.closedForDay) {
+    return { ...g(7, "Day closed. Opening stock + received − sold = closing stock."), done: true };
+  }
+  if (s.station.estop) {
+    return g(sale ? 5 : del ? 2 : 3, "Emergency stop is latched. Check it is safe, then reset it. Nothing restarts by itself.", act("resetEmergency"));
+  }
+
+  // 1–2: delivery
+  if (del) {
+    switch (del.status) {
+      case "arrived":
+        return g(2, "Dip the tank: confirm the product and how much space it has before any hose goes on.", act("checkTank"));
+      case "checked":
+        return del.spaceMl === 0
+          ? g(2, "No space in the tank. Send the tanker away.", act("finishDelivery"))
+          : g(2, "Connect the tanker's hose to the tank fill point.", act("connectDelivery"));
+      case "connected":
+        return g(2, "Open the tanker valve. Fuel drops by gravity into the tank.", act("startDischarge"));
+      case "discharging":
+        return g(2, "Discharging. The tanker falls as the tank rises; it stops at the tank's free space.", null, "delivery");
+      case "halted":
+        return g(2, "Discharge halted. Resume it, or finish and record what was received.", act("startDischarge"));
+      case "complete":
+        return g(3, "Delivery finished. Disconnect and record the litres actually received.", act("finishDelivery"));
+    }
+  }
+  if (!delivered && !served && !s.station.open) {
+    return g(1, "A tanker brings petrol. Let it in to start the day's delivery.", act("arriveTanker", { loadMl: inputs.tankerLoadMl }));
+  }
+
+  // 3: open
+  if (!sale) {
+    if (!s.station.powerOn) return g(3, "Switch power on. Pump motors, meters and lights need it.", act("powerOn"));
+    if (s.station.priceKobo == null) {
+      return g(3, "Set the pump price per litre. Each sale locks the price it starts with.", act("setPrice", { priceKobo: inputs.priceKobo }));
+    }
+    if (!s.station.open) {
+      if (served) return g(7, "The station is closed for service.", null);
+      return g(3, "Open for service. Power is on, but customers wait until you open.", act("openStation"));
+    }
+    if (!served) return g(4, "A customer pulls up to the pump.", act("customerArrives"));
+    return g(7, "Sale settled. Close the station and reconcile the day.", act("closeStation"));
+  }
+
+  // 4–6: sale
+  switch (sale.status) {
+    case "arrived": {
+      const payload = inputs.presetMode === "volume"
+        ? { mode: "volume", volumeMl: inputs.volumeMl }
+        : { mode: "amount", amountKobo: inputs.amountKobo };
+      return g(4, "Ask the customer: a naira amount or a number of litres? Authorise that preset.", act("setPreset", payload));
+    }
+    case "preset":
+      return g(4, "Lift the petrol nozzle and place it in the car's filler.", act("liftNozzle"));
+    case "nozzle":
+      return g(5, "Start the pump. It stops by itself at the preset, a full car or an empty tank.", act("startPump"));
+    case "dispensing":
+      return g(5, "Pumping. The tank falls, the car rises and the meter counts together.", null, "dispense");
+    case "stopped":
+      return g(6, "Flow stopped. Hang up the nozzle so the sale settles.", act("returnNozzle"));
+    case "returned":
+      return g(6, "Charge for the litres delivered, not the litres asked for.", act("recordPayment", { method: inputs.method }));
+    case "paid":
+    case "unpaid":
+    case "cancelled":
+      return g(6, "Sale settled. The customer drives off.", act("customerLeaves"));
+  }
+  return g(1, "Ready.");
+}
+
+/** The automatic journey uses guide(); this helper runs it to completion. */
+function runJourney(state, inputs = DEFAULT_INPUTS, { tickMs = 1000, maxSteps = 100_000 } = {}) {
+  let s = state;
+  for (let i = 0; i < maxSteps; i++) {
+    const g = guide(s, inputs);
+    if (g.done) return s;
+    if (g.waiting) {
+      s = tick(s, tickMs);
+      continue;
+    }
+    if (!g.next) return s;
+    const result = apply(s, g.next);
+    if (!result.ok) throw new Error(`Journey stuck at ${g.next.type}: ${result.reason}`);
+    s = result.state;
+  }
+  throw new Error("Journey did not finish");
+}
+
+return { MODEL_VERSION, ML_PER_LITRE, KOBO_PER_NAIRA, DEFAULT_CONFIG, LIMITS, SCENARIOS, STEPS, mulDivRoundHalfUp, mulDivFloor, chargeFor, maxVolumeForAmount, parseNairaToKobo, parseLitresToMl, formatKobo, formatMl, formatDuration, createState, createScenario, ACTION_TYPES, actionLabel, receiptLabel, can, apply, isFlowing, tick, timeToFlowEnd, reconcile, read, DEFAULT_INPUTS, guide, runJourney };
+})();
+
+__modules["scene"] = (() => {
+// Isometric station illustration. Builds one inline SVG and returns an
+// `update(view)` function that only reflects model readings — the scene keeps
+// no inventory or money of its own.
+//
+// World units are metres (not to scale: the tank and people are enlarged for
+// legibility). x runs to the lower right, y to the lower left, z up.
+
+const { formatKobo, formatMl } = __modules["model"];
+
+const VIEW = Object.freeze({ w: 1200, h: 900 });
+
+// Camera crops used on narrow screens, keyed by guided step.
+const CAMERAS = Object.freeze({
+  full: [0, 0, 1200, 900],
+  delivery: [40, 110, 600, 600],
+  station: [300, 0, 900, 640],
+  dispense: [330, 300, 620, 560],
+  close: [0, 0, 1200, 900],
+});
+
+const S = 19;
+const OX = 465;
+const OY = 70;
+const C = Math.cos(Math.PI / 6);
+const H = 0.5;
+
+const INK = "#1d2a44";
+const PAL = {
+  paper: "#f3e9d2",
+  concreteTop: "#e4dccb",
+  concreteSide: "#cfc5b0",
+  slab: "#d6ccb7",
+  soil: "#b9784f",
+  soilDark: "#9a5f3d",
+  soilDeep: "#7f4c31",
+  backfill: "#e2c995",
+  red: "#d23c2f",
+  redDark: "#a92a20",
+  green: "#1f8a5b",
+  greenDark: "#166544",
+  cream: "#fbf6ea",
+  steel: "#a9b4bf",
+  steelLight: "#d5dce2",
+  glass: "#2a3d5e",
+  glassLight: "#4f6b93",
+  fuel: "#f0ac2a",
+  fuelDeep: "#d98a14",
+  fuelTop: "#f8d26a",
+  car: "#3a77a6",
+  tyre: "#232a36",
+  yellow: "#f2c230",
+  shadow: "rgba(120, 70, 30, 0.2)",
+};
+
+// ---------------------------------------------------------------------------
+// projection and drawing helpers
+
+function P(x, y, z = 0) {
+  return [OX + (x - y) * C * S, OY + (x + y) * H * S - z * S];
+}
+const r1 = (n) => Math.round(n * 10) / 10;
+const pt = ([a, b]) => `${r1(a)},${r1(b)}`;
+const pts3 = (list) => list.map((q) => pt(P(...q))).join(" ");
+const poly = (list, fill, extra = "") => `<polygon points="${pts3(list)}" fill="${fill}" ${extra}/>`;
+const poly2 = (list, fill, extra = "") => `<polygon points="${list.map(pt).join(" ")}" fill="${fill}" ${extra}/>`;
+
+function hexToRgb(hex) {
+  const n = Number.parseInt(hex.slice(1), 16);
+  return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+}
+function mix(a, b, t) {
+  const A = hexToRgb(a);
+  const B = hexToRgb(b);
+  const c = A.map((v, i) => Math.round(v + (B[i] - v) * t));
+  return `#${c.map((v) => v.toString(16).padStart(2, "0")).join("")}`;
+}
+function shades(base) {
+  return { top: mix(base, "#ffffff", 0.22), front: base, side: mix(base, INK, 0.2) };
+}
+
+/** Solid box with its three visible faces (+z top, +y front, +x side). */
+function box(x, y, z, w, d, h, color, extra = "") {
+  const c = typeof color === "string" ? shades(color) : color;
+  const top = [[x, y, z + h], [x + w, y, z + h], [x + w, y + d, z + h], [x, y + d, z + h]];
+  const front = [[x, y + d, z], [x + w, y + d, z], [x + w, y + d, z + h], [x, y + d, z + h]];
+  const side = [[x + w, y, z], [x + w, y + d, z], [x + w, y + d, z + h], [x + w, y, z + h]];
+  return `<g class="ink" ${extra}>${poly(front, c.front)}${poly(side, c.side)}${poly(top, c.top)}</g>`;
+}
+
+/** Short warm shadow: footprint swept toward +x/+y on the ground. */
+function shadow(x, y, w, d, len = 0.9) {
+  const corners = [];
+  for (const [a, b] of [[x, y], [x + w, y], [x + w, y + d], [x, y + d]]) {
+    corners.push(P(a, b, 0), P(a + len * 0.6, b + len, 0));
+  }
+  return poly2(hull(corners), PAL.shadow, 'class="shade"');
+}
+
+function hull(points) {
+  const p = [...points].sort((a, b) => a[0] - b[0] || a[1] - b[1]);
+  const cross = (o, a, b) => (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0]);
+  const lower = [];
+  for (const q of p) {
+    while (lower.length >= 2 && cross(lower.at(-2), lower.at(-1), q) <= 0) lower.pop();
+    lower.push(q);
+  }
+  const upper = [];
+  for (const q of p.reverse()) {
+    while (upper.length >= 2 && cross(upper.at(-2), upper.at(-1), q) <= 0) upper.pop();
+    upper.push(q);
+  }
+  return lower.slice(0, -1).concat(upper.slice(0, -1));
+}
+
+function ring(axis, c, r, from = 0, to = Math.PI * 2, n = 36) {
+  const out = [];
+  for (let i = 0; i <= n; i++) {
+    const t = from + ((to - from) * i) / n;
+    const a = r * Math.cos(t);
+    const b = r * Math.sin(t);
+    if (axis === "x") out.push([c[0], c[1] + a, c[2] + b]);
+    else if (axis === "y") out.push([c[0] + a, c[1], c[2] + b]);
+    else out.push([c[0] + a, c[1] + b, c[2]]);
+  }
+  return out;
+}
+
+/** Cylinder between two centres; the cap facing the viewer is drawn last. */
+function cylinder(axis, c0, c1, r, color, extra = "") {
+  const c = typeof color === "string" ? shades(color) : color;
+  const body = hull([...ring(axis, c0, r), ...ring(axis, c1, r)].map((q) => P(...q)));
+  return `<g class="ink" ${extra}>${poly2(body, c.front)}${poly(ring(axis, c1, r), c.top)}</g>`;
+}
+
+/** Band on a cylinder's surface between two angles (for stripes/highlights). */
+function band(axis, c0, c1, r, from, to, fill, extra = "") {
+  const a = ring(axis, c0, r, from, to, 12);
+  const b = ring(axis, c1, r, from, to, 12).reverse();
+  return poly([...a, ...b], fill, extra);
+}
+
+function plane(kind, x0, y0, z0) {
+  const [e, f] = P(x0, y0, z0);
+  const m = {
+    front: [C * S, H * S, 0, S], // u → +x, w → −z
+    side: [C * S, -H * S, 0, S], // u → −y, w → −z
+    top: [C * S, H * S, -C * S, H * S], // u → +x, w → +y
+  }[kind];
+  return `matrix(${m.map(r1).join(" ")} ${r1(e)} ${r1(f)})`;
+}
+
+function polyline3(list) {
+  return list.map((q, i) => `${i ? "L" : "M"}${pt(P(...q))}`).join(" ");
+}
+
+function cubic3(a, b, c, d) {
+  return `M${pt(P(...a))} C${pt(P(...b))} ${pt(P(...c))} ${pt(P(...d))}`;
+}
+
+function pipe(d, cls = "") {
+  return `<path class="pipe-outer ${cls}" d="${d}"/><path class="pipe-inner ${cls}" d="${d}"/>`;
+}
+
+function label(text, anchor, at, { id = "", align = "middle" } = {}) {
+  const [ax, ay] = anchor;
+  const [lx, ly] = at;
+  const w = text.length * 8.6 + 20;
+  const x = align === "start" ? lx : align === "end" ? lx - w : lx - w / 2;
+  return `<g class="callout" ${id ? `id="${id}"` : ""}>
+    <path class="leader" d="M${r1(ax)},${r1(ay)} L${r1(lx)},${r1(ly)}"/>
+    <circle class="leader-dot" cx="${r1(ax)}" cy="${r1(ay)}" r="3"/>
+    <rect class="tag" x="${r1(x)}" y="${r1(ly - 13)}" width="${r1(w)}" height="26" rx="13"/>
+    <text class="tag-text" x="${r1(x + w / 2)}" y="${r1(ly + 5)}" text-anchor="middle">${text}</text>
+  </g>`;
+}
+
+// ---------------------------------------------------------------------------
+// geometry constants shared by drawing and updates
+
+const SLAB = { w: 40, d: 24, depth: 8 };
+const CUT_Y = SLAB.d; // the front face is the cutaway plane
+const TANK = { x0: 2.5, x1: 18.5, zc: -4.1, r: 2.25, head: 1.1 };
+const TANKER = { barrel0: [1.7, 13.9, 2.45], barrel1: [9.4, 13.9, 2.45], r: 1.3 };
+const FILL = [4.5, 23.55, 0];
+const ATG_X = 9.2;
+const STP_X = 15.9;
+const RISER_X = 27;
+const DISP = { x: 26.4, y: 18.5, w: 1.2, d: 3.1, z: 0.28, h: 2.47 };
+const CAR = { x: 29, y: 17.6, w: 2, d: 4.6 };
+const HOSE_OUT = [27.62, 21.25, 2.5];
+const HOLSTER = [27.78, 19.15, 1.3];
+const FILLER = [29.35, 22.24, 0.95];
+
+/** Liquid height in a horizontal cylinder holding a volume fraction. */
+function liquidHeight(fraction, r) {
+  const f = Math.min(1, Math.max(0, fraction));
+  const area = (h) => r * r * Math.acos((r - h) / r) - (r - h) * Math.sqrt(Math.max(0, 2 * r * h - h * h));
+  const total = Math.PI * r * r;
+  let lo = 0;
+  let hi = 2 * r;
+  for (let i = 0; i < 40; i++) {
+    const mid = (lo + hi) / 2;
+    if (area(mid) / total < f) lo = mid;
+    else hi = mid;
+  }
+  return (lo + hi) / 2;
+}
+
+// ---------------------------------------------------------------------------
+// static drawing
+
+function defs() {
+  const capsule = `<rect x="${TANK.x0}" y="${-(TANK.zc + TANK.r)}" width="${TANK.x1 - TANK.x0}" height="${TANK.r * 2}" rx="${TANK.head}" ry="${TANK.r}" transform="${plane("front", 0, CUT_Y, 0)}"/>`;
+  return `<defs>
+    <pattern id="ps-gravel" width="14" height="10" patternUnits="userSpaceOnUse">
+      <rect width="14" height="10" fill="${PAL.backfill}"/>
+      <circle cx="3" cy="3" r="1.6" fill="#cfae74"/><circle cx="10" cy="7" r="1.3" fill="#c9a66b"/>
+      <circle cx="9" cy="2" r="0.8" fill="#f1dcaa"/>
+    </pattern>
+    <pattern id="ps-soil" width="40" height="22" patternUnits="userSpaceOnUse">
+      <rect width="40" height="22" fill="${PAL.soil}"/>
+      <path d="M0 15 Q10 11 20 15 T40 15" stroke="${PAL.soilDark}" stroke-width="1.4" fill="none" opacity="0.6"/>
+      <circle cx="30" cy="6" r="1.4" fill="${PAL.soilDark}" opacity="0.6"/>
+      <circle cx="8" cy="5" r="0.9" fill="#d29a6f"/>
+    </pattern>
+    <pattern id="ps-hazard" width="10" height="10" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+      <rect width="10" height="10" fill="${PAL.yellow}"/><rect width="5" height="10" fill="${INK}"/>
+    </pattern>
+    <pattern id="ps-paper" width="6" height="6" patternUnits="userSpaceOnUse">
+      <rect width="6" height="6" fill="${PAL.paper}"/><circle cx="1.5" cy="1.5" r="0.6" fill="#e8dbbd"/>
+    </pattern>
+    <linearGradient id="ps-tank-wall" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#3a4a66"/><stop offset="0.55" stop-color="#56677f"/><stop offset="1" stop-color="#34445e"/>
+    </linearGradient>
+    <linearGradient id="ps-glow" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#fff2c4" stop-opacity="0.9"/><stop offset="1" stop-color="#ffd36b" stop-opacity="0"/>
+    </linearGradient>
+    <clipPath id="ps-tank-clip" clipPathUnits="userSpaceOnUse">${capsule}</clipPath>
+  </defs>`;
+}
+
+function ground() {
+  const { w, d, depth } = SLAB;
+  const top = [[0, 0, 0], [w, 0, 0], [w, d, 0], [0, d, 0]];
+  const side = [[w, 0, 0], [w, d, 0], [w, d, -depth], [w, 0, -depth]];
+  const front = [[0, d, 0], [w, d, 0], [w, d, -depth], [0, d, -depth]];
+
+  // forecourt joints
+  let joints = "";
+  for (let x = 4; x < w; x += 4) joints += `<path class="joint" d="${polyline3([[x, 0, 0], [x, d, 0]])}"/>`;
+  for (let y = 4; y < d; y += 4) joints += `<path class="joint" d="${polyline3([[0, y, 0], [w, y, 0]])}"/>`;
+
+  // cut face strata, drawn flat then mapped onto the y = d plane
+  const strata = `<g transform="${plane("front", 0, d, 0)}" class="plane">
+    <rect x="0" y="0" width="${w}" height="${depth}" fill="url(#ps-soil)"/>
+    <rect x="0" y="${depth - 1.1}" width="${w}" height="1.1" fill="${PAL.soilDeep}" opacity="0.55"/>
+    <path d="M${TANK.x0 - 1.1} 0.9 L${TANK.x1 + 1.1} 0.9 L${TANK.x1 + 1.5} ${depth - 1.2} L${TANK.x0 - 1.5} ${depth - 1.2} Z" fill="url(#ps-gravel)"/>
+    <rect x="0" y="0" width="${w}" height="0.45" fill="${PAL.slab}"/>
+    <rect x="0" y="0.45" width="${w}" height="0.45" fill="#bfae8d"/>
+    <rect x="${STP_X - 1}" y="0" width="2" height="${-(TANK.zc + TANK.r)}" fill="#c9bfa9" stroke="${INK}" stroke-width="0.06"/>
+    <rect x="${STP_X - 0.88}" y="0.12" width="1.76" height="${-(TANK.zc + TANK.r) - 0.12}" fill="#8f8572"/>
+    <rect x="${RISER_X - 0.8}" y="0" width="1.6" height="0.9" fill="#c9bfa9" stroke="${INK}" stroke-width="0.06"/>
+  </g>`;
+  return `<g id="ps-ground">
+    <g class="ink">${poly(side, "url(#ps-soil)")}${poly(side, "rgba(29,42,68,0.22)")}</g>
+    ${strata}
+    <g class="ink">${poly(front, "none")}</g>
+    <g class="ink">${poly(top, PAL.concreteTop)}</g>
+    ${joints}
+    <path class="kerb" d="${polyline3([[0, d, 0], [w, d, 0], [w, 0, 0]])}"/>
+  </g>`;
+}
+
+function tankCutaway() {
+  const { x0, x1, zc, r } = TANK;
+  const capsule = `<rect x="${x0}" y="${-(zc + r)}" width="${x1 - x0}" height="${r * 2}" rx="${TANK.head}" ry="${r}"/>`;
+  const bottom = zc - r;
+  const top = zc + r;
+  const fillTop = -0.05;
+  // pipes in the cut plane (screen space)
+  const fillPipe = polyline3([[FILL[0], CUT_Y, fillTop], [FILL[0], CUT_Y, top], [FILL[0], CUT_Y, bottom + 0.35]]);
+  const vent = polyline3([[x0 + 0.7, CUT_Y, top - 0.1], [x0 + 0.7, CUT_Y, -1.25], [0.8, CUT_Y, -1.25], [0.8, CUT_Y, 0]]);
+  const probe = polyline3([[ATG_X, CUT_Y, -0.05], [ATG_X, CUT_Y, bottom + 0.12]]);
+  const stpColumn = polyline3([[STP_X, CUT_Y, -1.2], [STP_X, CUT_Y, bottom + 1.0]]);
+  const product = polyline3([[STP_X, CUT_Y, -1.2], [RISER_X, CUT_Y, -1.2], [RISER_X, CUT_Y, -0.05]]);
+  return `<g id="ps-tank">
+    <g clip-path="url(#ps-tank-clip)">
+      <g transform="${plane("front", 0, CUT_Y, 0)}"><rect x="${x0}" y="${-top}" width="${x1 - x0}" height="${2 * r}" fill="url(#ps-tank-wall)"/>
+        ${[0.25, 0.5, 0.75].map((k) => `<path d="M${x0} ${-(bottom + 2 * r * k)} L${x1} ${-(bottom + 2 * r * k)}" stroke="#6b7c95" stroke-width="0.05" fill="none" opacity="0.6"/>`).join("")}
+      </g>
+      <polygon id="ps-fuel-surface" fill="${PAL.fuelTop}" points=""/>
+      <polygon id="ps-fuel-section" fill="${PAL.fuel}" points=""/>
+      <path id="ps-fuel-line" class="fuel-line" d=""/>
+    </g>
+    <g transform="${plane("front", 0, CUT_Y, 0)}" class="plane">
+      ${capsule.replace("/>", ` fill="none" stroke="${INK}" stroke-width="0.34"/>`)}
+      ${capsule.replace("/>", ` fill="none" stroke="#7d8b9e" stroke-width="0.18"/>`)}
+    </g>
+    ${pipe(vent)}
+    ${pipe(fillPipe)}
+    <path class="probe" d="${probe}"/>
+    <g id="ps-atg-float">${(() => {
+      const [a, b] = P(ATG_X, CUT_Y, 0);
+      return `<rect class="ink" x="${r1(a - 7)}" y="${r1(b - 4)}" width="14" height="8" rx="3" fill="${PAL.red}"/>`;
+    })()}</g>
+    ${pipe(stpColumn)}
+    ${pipe(product)}
+    <g id="ps-stp">${(() => {
+      const [a, b] = P(STP_X, CUT_Y, bottom + 0.55);
+      return `<rect class="ink" x="${r1(a - 9)}" y="${r1(b - 16)}" width="18" height="28" rx="5" fill="${PAL.steel}"/>
+        <rect x="${r1(a - 9)}" y="${r1(b + 6)}" width="18" height="5" fill="${INK}" opacity="0.65"/>
+        <circle id="ps-stp-glow" cx="${r1(a)}" cy="${r1(b - 3)}" r="5" fill="${PAL.green}" opacity="0"/>`;
+    })()}${(() => {
+      const [a, b] = P(STP_X, CUT_Y, -1.2);
+      return `<rect class="ink" x="${r1(a - 12)}" y="${r1(b - 10)}" width="24" height="17" rx="3" fill="${PAL.steelLight}"/>`;
+    })()}</g>
+    <path id="ps-flow-fill" class="flow" d="${polyline3([[FILL[0], CUT_Y, fillTop], [FILL[0], CUT_Y, bottom + 0.35]])}"/>
+    <path id="ps-flow-product" class="flow" d="${polyline3([[STP_X, CUT_Y, bottom + 0.9], [STP_X, CUT_Y, -1.2], [RISER_X, CUT_Y, -1.2], [RISER_X, CUT_Y, -0.05]])}"/>
+  </g>`;
+}
+
+function manholes() {
+  const cover = (x, y, col = "#9a9182") => {
+    const pts = ring("z", [x, y, 0.02], 0.55).map((q) => P(...q));
+    return `<polygon class="ink" points="${pts.map(pt).join(" ")}" fill="${col}"/>`;
+  };
+  return `<g id="ps-covers">${cover(FILL[0], FILL[1], PAL.green)}${cover(ATG_X, 23.4)}${cover(STP_X, 23.4)}</g>`;
+}
+
+function shop() {
+  const x = 2;
+  const y = 1;
+  const w = 10;
+  const d = 5;
+  const h = 3.6;
+  const face = `<g transform="${plane("front", x, y + d, h)}" class="plane">
+    <rect x="0" y="0.2" width="${w}" height="0.62" fill="${PAL.red}"/>
+    <text x="${w / 2}" y="0.68" class="plane-text" font-size="0.48" text-anchor="middle" fill="#fff">SHOP · LUBES</text>
+    <rect x="0.7" y="1.25" width="3.2" height="1.4" fill="${PAL.glass}" stroke="${INK}" stroke-width="0.06"/>
+    <rect x="0.8" y="1.35" width="1.2" height="1.2" fill="${PAL.glassLight}" opacity="0.6"/>
+    <rect x="4.5" y="1.25" width="1.5" height="${h - 1.25}" fill="${PAL.green}" stroke="${INK}" stroke-width="0.06"/>
+    <rect x="6.6" y="1.25" width="2.7" height="1.4" fill="${PAL.glass}" stroke="${INK}" stroke-width="0.06"/>
+    <rect x="6.7" y="1.35" width="1" height="1.2" fill="${PAL.glassLight}" opacity="0.6"/>
+  </g>`;
+  return `<g id="ps-shop">${shadow(x, y, w, d, 1.1)}${box(x, y, 0, w, d, h, PAL.cream)}${face}
+    ${box(x - 0.25, y - 0.25, h, w + 0.5, d + 0.5, 0.45, PAL.green)}</g>`;
+}
+
+function powerHouse() {
+  return `<g id="ps-power">
+    ${shadow(13.5, 2, 2.6, 2.2, 0.8)}
+    ${box(13.5, 2, 0, 2.6, 2.2, 1.5, "#c9b98e")}
+    ${cylinder("z", [14.2, 2.6, 1.5], [14.2, 2.6, 2.3], 0.1, INK)}
+    <g transform="${plane("front", 13.5, 4.2, 1.5)}" class="plane"><rect x="0.25" y="0.25" width="2.1" height="0.9" fill="#a99a70" stroke="${INK}" stroke-width="0.05"/>
+      <text x="1.3" y="0.9" class="plane-text" font-size="0.42" text-anchor="middle" fill="${INK}">GEN</text></g>
+    ${cylinder("z", [17.4, 3.6, 0], [17.4, 3.6, 1.4], 0.09, INK)}
+    ${box(16.9, 3.3, 1.4, 1.0, 0.55, 1.15, PAL.steel)}
+    <g transform="${plane("front", 16.9, 3.85, 2.55)}" class="plane">
+      <circle id="ps-power-lamp" cx="0.5" cy="0.42" r="0.24" fill="#7a7f88" stroke="${INK}" stroke-width="0.05"/>
+      <rect x="0.2" y="0.78" width="0.6" height="0.22" fill="${INK}"/>
+    </g>
+  </g>`;
+}
+
+function canopyColumns(which) {
+  const cols = which === "back" ? [[22, 12], [34, 12]] : [[22, 19.6], [34, 19.6]];
+  return cols.map(([x, y]) => `${shadow(x - 0.22, y - 0.22, 0.44, 0.44, 0.6)}${box(x - 0.22, y - 0.22, 0, 0.44, 0.44, 6.4, PAL.steelLight)}`).join("");
+}
+
+function canopyRoof() {
+  const x = 21;
+  const y = 11;
+  const w = 14;
+  const d = 9.6;
+  const z = 6.4;
+  const h = 0.9;
+  const fascia = `<g transform="${plane("front", x, y + d, z + h)}" class="plane">
+    <rect x="0" y="0" width="${w}" height="${h}" fill="${PAL.red}"/>
+    <rect x="0" y="${h - 0.2}" width="${w}" height="0.2" fill="${PAL.green}"/>
+    <text x="${w / 2}" y="0.56" class="plane-text" font-size="0.46" text-anchor="middle" fill="#fff">PETROL · FILLING STATION</text>
+  </g>
+  <g transform="${plane("side", x + w, y + d, z + h)}" class="plane">
+    <rect x="0" y="0" width="${d}" height="${h}" fill="${PAL.redDark}"/>
+    <rect x="0" y="${h - 0.2}" width="${d}" height="0.2" fill="${PAL.greenDark}"/>
+  </g>`;
+  const light = (cx, cy) => {
+    const pts = ring("z", [cx, cy, 0.01], 3.3).map((q) => P(...q));
+    return `<polygon class="light-pool" points="${pts.map(pt).join(" ")}"/>`;
+  };
+  return {
+    pools: `<g id="ps-light-pools">${light(27.2, 18.4)}${light(31.5, 17.6)}</g>`,
+    roof: `<g id="ps-canopy">${box(x, y, z, w, d, h, { top: "#ebe5d8", front: PAL.red, side: PAL.redDark })}${fascia}
+      <path id="ps-canopy-strip" class="canopy-strip" d="${polyline3([[x + 0.4, y + d, z], [x + w - 0.4, y + d, z]])}"/></g>`,
+  };
+}
+
+function tanker() {
+  const [b0, b1, r] = [TANKER.barrel0, TANKER.barrel1, TANKER.r];
+  const wheel = (x) => {
+    const tyre = ring("y", [x, 15.12, 0.52], 0.52).map((q) => P(...q));
+    const hub = ring("y", [x, 15.14, 0.52], 0.24).map((q) => P(...q));
+    return `<polygon class="ink" points="${tyre.map(pt).join(" ")}" fill="${PAL.tyre}"/><polygon points="${hub.map(pt).join(" ")}" fill="${PAL.steel}"/>`;
+  };
+  const domes = [3.1, 5.5, 7.9].map((x) => cylinder("z", [x, 13.9, 3.65], [x, 13.9, 3.95], 0.42, PAL.steelLight)).join("");
+  const sight = `<g transform="${plane("front", 6.3, 15.22, 3.25)}" class="plane">
+    <rect x="0" y="0" width="0.8" height="1.9" rx="0.12" fill="${PAL.glass}" stroke="${INK}" stroke-width="0.08"/>
+    <rect id="ps-tanker-level" x="0.1" y="0.1" width="0.6" height="1.7" fill="${PAL.fuel}"/>
+    <path d="M0.1 0.525 h0.25 M0.1 0.95 h0.35 M0.1 1.375 h0.25" stroke="${INK}" stroke-width="0.05"/>
+  </g>`;
+  const lettering = `<g transform="${plane("front", 1.9, 15.2, 2.85)}" class="plane">
+    <text x="0" y="0" class="plane-text" font-size="0.62" fill="${INK}">PETROL</text>
+    <text x="0" y="0.62" class="plane-text" font-size="0.36" fill="${PAL.redDark}">PMS · FLAMMABLE</text>
+  </g>`;
+  const cabFace = `<g transform="${plane("side", 12.6, 15.1, 3.3)}" class="plane">
+    <rect x="0.3" y="0.25" width="1.8" height="0.95" rx="0.1" fill="${PAL.glass}" stroke="${INK}" stroke-width="0.06"/>
+    <rect x="0.45" y="0.35" width="0.6" height="0.75" fill="${PAL.glassLight}" opacity="0.6"/>
+    <rect x="0.35" y="1.9" width="1.7" height="0.35" fill="${INK}" opacity="0.8"/>
+    <circle cx="0.35" cy="2.05" r="0.15" fill="${PAL.yellow}"/><circle cx="2.05" cy="2.05" r="0.15" fill="${PAL.yellow}"/>
+  </g>
+  <g transform="${plane("front", 9.8, 15.1, 3.3)}" class="plane">
+    <rect x="0.4" y="0.25" width="1.5" height="0.9" rx="0.1" fill="${PAL.glass}" stroke="${INK}" stroke-width="0.06"/>
+    <rect x="0.3" y="1.5" width="2.2" height="0.08" fill="${INK}" opacity="0.5"/>
+  </g>`;
+  return `<g id="ps-tanker" class="vehicle">
+    ${shadow(1.4, 12.6, 11.4, 2.7, 1.0)}
+    ${box(1.4, 13.15, 0.8, 10.6, 1.5, 0.32, "#3a4152")}
+    ${wheel(2.6)}${wheel(3.75)}${wheel(10.9)}
+    ${cylinder("x", b0, b1, r, { front: "#e9ecef", top: "#f6f7f8" })}
+    ${band("x", b0, b1, r, -0.7, -0.35, PAL.red, 'class="ink-thin"')}
+    ${band("x", b0, b1, r, 0.9, 1.25, "#ffffff", 'opacity="0.75"')}
+    ${domes}
+    ${lettering}
+    ${sight}
+    ${box(1.8, 14.9, 0.75, 0.7, 0.45, 0.5, PAL.steel)}
+    ${box(4.2, 14.85, 0.85, 3.4, 0.35, 0.28, "#2d3340")}
+    ${box(9.8, 12.7, 0.9, 2.8, 2.4, 2.4, PAL.red)}
+    ${box(9.75, 12.65, 3.3, 2.9, 2.5, 0.2, PAL.redDark)}
+    ${cabFace}
+  </g>`;
+}
+
+function tankerChip() {
+  const [x, y] = P(6.4, 13.9, 5.1);
+  return `<g id="ps-tanker-chip" class="chip vehicle">
+    <rect x="${r1(x - 78)}" y="${r1(y - 26)}" width="156" height="44" rx="10"/>
+    <text class="chip-k" x="${r1(x)}" y="${r1(y - 9)}" text-anchor="middle">TANKER LOAD</text>
+    <text class="chip-v" id="ps-tanker-text" x="${r1(x)}" y="${r1(y + 11)}" text-anchor="middle">—</text>
+  </g>`;
+}
+
+function island() {
+  const { x, y, w, d, z, h } = DISP;
+  const display = `<g transform="${plane("side", x + w, y + d, z + h)}" class="plane">
+    <rect x="0.25" y="0.18" width="2.6" height="1.05" rx="0.08" fill="${INK}"/>
+    <rect id="ps-disp-screen" x="0.33" y="0.25" width="2.44" height="0.9" rx="0.05" fill="#24402f"/>
+    <text id="ps-disp-amount" x="2.68" y="0.55" class="plane-text lcd" font-size="0.26" text-anchor="end">0.00</text>
+    <text id="ps-disp-litres" x="2.68" y="0.85" class="plane-text lcd" font-size="0.26" text-anchor="end">0.000</text>
+    <text id="ps-disp-price" x="2.68" y="1.08" class="plane-text lcd" font-size="0.17" text-anchor="end">—</text>
+    <rect x="0.5" y="1.5" width="0.9" height="0.6" rx="0.05" fill="#d7d0bf" stroke="${INK}" stroke-width="0.04"/>
+    ${[0, 1, 2].map((i) => [0, 1].map((j) => `<rect x="${0.58 + i * 0.27}" y="${1.57 + j * 0.25}" width="0.2" height="0.18" fill="${INK}" opacity="0.55"/>`).join("")).join("")}
+    <rect x="0" y="${h - 0.5}" width="${d}" height="0.5" fill="${PAL.red}"/>
+  </g>
+  <g transform="${plane("front", x, y + d, z + h)}" class="plane">
+    <rect x="0" y="${h - 0.5}" width="${w}" height="0.5" fill="${PAL.red}"/>
+    <rect x="0.15" y="0.3" width="${w - 0.3}" height="0.5" fill="${PAL.green}"/>
+  </g>
+  <g transform="${plane("side", x + w + 0.05, y + d + 0.05, z + h + 0.4)}" class="plane">
+    <text x="${d / 2}" y="0.3" class="plane-text" font-size="0.3" text-anchor="middle" fill="#fff">PETROL · PMS</text>
+  </g>`;
+  return `<g id="ps-island">
+    ${shadow(26.2, 17, 1.6, 6.4, 0.5)}
+    ${box(26.2, 17, 0, 1.6, 6.4, 0.28, { top: "#efe9dc", front: "url(#ps-hazard)", side: "#cfc5b0" })}
+    ${shadow(x, y, w, d, 0.8)}
+    ${box(x, y, z, w, d, h, { top: "#fffdf7", front: PAL.cream, side: "#e6dfcf" })}
+    ${box(x - 0.05, y - 0.05, z + h, w + 0.1, d + 0.1, 0.4, PAL.red)}
+    ${display}
+    ${box(27.6, 18.95, 1.1, 0.25, 0.4, 0.35, "#5a6476")}
+  </g>`;
+}
+
+function eStop() {
+  const [x, y] = P(22.22, 19.82, 1.6);
+  return `<g id="ps-estop">
+    <rect class="ink" x="${r1(x - 8)}" y="${r1(y - 9)}" width="16" height="18" rx="2" fill="${PAL.yellow}"/>
+    <circle id="ps-estop-lamp" class="ink" cx="${r1(x)}" cy="${r1(y)}" r="5.5" fill="${PAL.red}"/>
+  </g>`;
+}
+
+function car() {
+  const { x, y, w, d } = CAR;
+  const wheel = (wy) => {
+    const tyre = ring("x", [x + w + 0.02, wy, 0.38], 0.38).map((q) => P(...q));
+    const hub = ring("x", [x + w + 0.04, wy, 0.38], 0.17).map((q) => P(...q));
+    return `<polygon class="ink" points="${tyre.map(pt).join(" ")}" fill="${PAL.tyre}"/><polygon points="${hub.map(pt).join(" ")}" fill="${PAL.steelLight}"/>`;
+  };
+  const cab = { x0: x + 0.15, x1: x + w - 0.15, yb0: y + 1.0, yb1: y + 4.0, yt0: y + 1.55, yt1: y + 3.6, z0: 1.0, z1: 1.6 };
+  const c = shades(PAL.car);
+  const rear = [[cab.x0, cab.yb1, cab.z0], [cab.x1, cab.yb1, cab.z0], [cab.x1, cab.yt1, cab.z1], [cab.x0, cab.yt1, cab.z1]];
+  const side = [[cab.x1, cab.yb0, cab.z0], [cab.x1, cab.yb1, cab.z0], [cab.x1, cab.yt1, cab.z1], [cab.x1, cab.yt0, cab.z1]];
+  const roof = [[cab.x0, cab.yt0, cab.z1], [cab.x1, cab.yt0, cab.z1], [cab.x1, cab.yt1, cab.z1], [cab.x0, cab.yt1, cab.z1]];
+  const sideGlass = [[cab.x1, cab.yb0 + 0.25, cab.z0 + 0.06], [cab.x1, cab.yb1 - 0.15, cab.z0 + 0.06], [cab.x1, cab.yt1 - 0.06, cab.z1 - 0.07], [cab.x1, cab.yt0 + 0.12, cab.z1 - 0.07]];
+  const rearFace = `<g transform="${plane("front", x, y + d, 1.0)}" class="plane">
+    <rect x="0.12" y="0.12" width="0.4" height="0.18" fill="${PAL.red}" stroke="${INK}" stroke-width="0.04"/>
+    <rect x="${w - 0.52}" y="0.12" width="0.4" height="0.18" fill="${PAL.red}" stroke="${INK}" stroke-width="0.04"/>
+    <rect x="0.7" y="0.3" width="0.6" height="0.2" fill="#f4f0e6" stroke="${INK}" stroke-width="0.04"/>
+    <rect x="0.18" y="-0.02" width="0.34" height="0.22" rx="0.04" fill="${c.side}" stroke="${INK}" stroke-width="0.04"/>
+  </g>`;
+  return `<g id="ps-car" class="vehicle">
+    ${shadow(x, y, w, d, 0.7)}
+    ${box(x, y, 0.3, w, d, 0.7, PAL.car)}
+    ${wheel(y + 0.85)}${wheel(y + 3.7)}
+    <g class="ink">${poly(rear, PAL.glass)}${poly(side, c.side)}${poly(sideGlass, PAL.glassLight)}${poly(roof, c.top)}</g>
+    <path class="ink-thin" d="${polyline3([[cab.x1, cab.yb0 + 1.6, cab.z0 + 0.06], [cab.x1, cab.yb0 + 1.5, cab.z1 - 0.07]])}" stroke="${c.side}" stroke-width="2.5"/>
+    ${rearFace}
+  </g>`;
+}
+
+function carChip() {
+  const [x, y] = P(30, 19.9, 3.4);
+  return `<g id="ps-car-chip" class="chip vehicle">
+    <rect x="${r1(x - 74)}" y="${r1(y - 30)}" width="148" height="52" rx="10"/>
+    <text class="chip-k" x="${r1(x)}" y="${r1(y - 13)}" text-anchor="middle">CAR TANK</text>
+    <rect class="bar-bg" x="${r1(x - 58)}" y="${r1(y - 5)}" width="116" height="9" rx="4.5"/>
+    <rect id="ps-car-bar" class="bar-fill" x="${r1(x - 58)}" y="${r1(y - 5)}" width="0" height="9" rx="4.5"/>
+    <text class="chip-v small" id="ps-car-text" x="${r1(x)}" y="${r1(y + 18)}" text-anchor="middle">—</text>
+  </g>`;
+}
+
+function attendant() {
+  const [x, y] = P(28.55, 23.55, 0);
+  return `<g id="ps-attendant" transform="translate(${r1(x)} ${r1(y)})">
+    <ellipse cx="4" cy="1" rx="10" ry="3" fill="${PAL.shadow}"/>
+    <path class="ink" d="M-4 0 L-3 -15 L1 -15 L0 0 Z" fill="${INK}"/>
+    <path class="ink" d="M1 0 L2 -15 L6 -15 L5 0 Z" fill="#2c3a58"/>
+    <path class="ink" d="M-6 -14 Q-6 -29 1 -29 Q8 -29 8 -14 Z" fill="${PAL.green}"/>
+    <path d="M-5 -20 H7" stroke="${PAL.yellow}" stroke-width="2.4"/>
+    <path class="ink" d="M7 -26 Q13 -21 12 -15" fill="none" stroke-width="3.4"/>
+    <path class="ink" d="M7 -26 Q13 -21 12 -15" fill="none" stroke="${PAL.green}" stroke-width="1.6"/>
+    <circle class="ink" cx="1" cy="-34" r="5.2" fill="#8a5a3c"/>
+    <path class="ink" d="M-4.5 -36 Q1 -43 6.5 -36 Z" fill="${PAL.red}"/>
+    <path d="M5 -36.5 h4" stroke="${PAL.red}" stroke-width="2" stroke-linecap="round"/>
+  </g>`;
+}
+
+function priceSign() {
+  const px = 37.6;
+  const py = 20.6;
+  const panel = { x: 36, y: 20.4, w: 3.2, d: 0.42, z: 4.1, h: 3.9 };
+  const face = `<g transform="${plane("front", panel.x, panel.y + panel.d, panel.z + panel.h)}" class="plane">
+    <rect id="ps-sign-face" x="0.12" y="0.12" width="${panel.w - 0.24}" height="${panel.h - 0.24}" fill="${PAL.cream}"/>
+    <rect x="0.12" y="0.12" width="${panel.w - 0.24}" height="0.8" fill="${PAL.green}"/>
+    <text x="${panel.w / 2}" y="0.68" class="plane-text" font-size="0.5" text-anchor="middle" fill="#fff">PETROL</text>
+    <text x="${panel.w / 2}" y="1.32" class="plane-text" font-size="0.3" text-anchor="middle" fill="${INK}">PMS · per litre</text>
+    <rect x="0.3" y="1.5" width="${panel.w - 0.6}" height="1.1" rx="0.08" fill="${INK}"/>
+    <text id="ps-sign-price" x="${panel.w / 2}" y="2.32" class="plane-text sign-digits" font-size="0.72" text-anchor="middle">— — —</text>
+    <rect id="ps-open-plate" x="0.3" y="2.85" width="${panel.w - 0.6}" height="0.75" rx="0.08" fill="#7a7f88"/>
+    <text id="ps-open-text" x="${panel.w / 2}" y="3.38" class="plane-text" font-size="0.42" text-anchor="middle" fill="#fff">CLOSED</text>
+  </g>`;
+  return `<g id="ps-sign">
+    ${shadow(px - 0.4, py - 0.3, 0.8, 0.6, 1.4)}
+    ${box(px - 0.45, py - 0.3, 0, 0.9, 0.6, 0.5, "#d2c8b4")}
+    ${cylinder("z", [px - 0.7, py, 0.5], [px - 0.7, py, panel.z], 0.13, PAL.steel)}
+    ${cylinder("z", [px + 0.7, py, 0.5], [px + 0.7, py, panel.z], 0.13, PAL.steel)}
+    ${box(panel.x, panel.y, panel.z, panel.w, panel.d, panel.h, { top: "#ffffff", front: PAL.red, side: PAL.redDark })}
+    ${face}
+  </g>`;
+}
+
+function ventRiser() {
+  return `<g id="ps-vent">${cylinder("z", [0.8, 23.6, 0], [0.8, 23.6, 5.0], 0.1, PAL.steel)}
+    ${cylinder("z", [0.8, 23.6, 5.0], [0.8, 23.6, 5.3], 0.28, PAL.green)}</g>`;
+}
+
+function hoses() {
+  const holstered = cubic3(HOSE_OUT, [28.5, 21.6, 0.7], [28.3, 19.4, 0.6], HOLSTER);
+  const toCar = cubic3(HOSE_OUT, [28.3, 22.6, 0.4], [28.9, 23.0, 0.4], FILLER);
+  const tankerValve = [2.15, 15.35, 0.95];
+  const delivery = cubic3(tankerValve, [2.2, 19.2, 0.05], [4.1, 20.8, 0.05], [FILL[0], FILL[1] - 0.1, 0.1]);
+  const [hx, hy] = P(...HOLSTER);
+  const [fx, fy] = P(...FILLER);
+  return {
+    dispenser: `<g id="ps-hose">
+      <path id="ps-hose-path" class="hose" d="${holstered}" data-holstered="${holstered}" data-car="${toCar}"/>
+      <path id="ps-flow-hose" class="flow" d="${toCar}"/>
+      <g id="ps-nozzle" data-holstered="${r1(hx)},${r1(hy)}" data-car="${r1(fx)},${r1(fy)}" transform="translate(${r1(hx)} ${r1(hy)})">
+        <path class="ink" d="M-3 -6 L6 -6 L9 2 L3 2 Z" fill="${PAL.green}"/>
+        <path class="ink" d="M6 -4 L13 -1" stroke-width="3.2"/>
+      </g>
+    </g>`,
+    delivery: `<g id="ps-delivery-hose" class="vehicle">
+      <path class="hose" d="${delivery}"/>
+      <path id="ps-flow-delivery" class="flow" d="${delivery}"/>
+    </g>`,
+  };
+}
+
+function meterCallout() {
+  const x = 878;
+  const y = 34;
+  const anchor = P(27.62, 20.1, 2.2);
+  return `<g id="ps-meter-callout">
+    <path class="leader long" d="M${r1(anchor[0])},${r1(anchor[1])} C${r1(anchor[0] + 120)},${r1(anchor[1] - 40)} ${x - 60},${y + 220} ${x + 30},${y + 196}"/>
+    <circle class="leader-dot" cx="${r1(anchor[0])}" cy="${r1(anchor[1])}" r="4"/>
+    <rect class="meter-frame" x="${x}" y="${y}" width="292" height="200" rx="16"/>
+    <rect class="meter-head" x="${x}" y="${y}" width="292" height="34" rx="16"/>
+    <rect x="${x}" y="${y + 18}" width="292" height="16" fill="${PAL.red}"/>
+    <text class="meter-title" x="${x + 16}" y="${y + 23}">PUMP 1 · PETROL</text>
+    <text id="ps-meter-state" class="meter-state" x="${x + 276}" y="${y + 23}" text-anchor="end">IDLE</text>
+    <g id="ps-meter-screen">
+      <rect class="meter-glass" x="${x + 14}" y="${y + 44}" width="264" height="142" rx="8"/>
+      <text class="meter-k" x="${x + 26}" y="${y + 70}">AMOUNT ₦</text>
+      <text id="ps-meter-amount" class="meter-v big" x="${x + 266}" y="${y + 82}" text-anchor="end">0.00</text>
+      <text class="meter-k" x="${x + 26}" y="${y + 116}">LITRES</text>
+      <text id="ps-meter-litres" class="meter-v big" x="${x + 266}" y="${y + 128}" text-anchor="end">0.000</text>
+      <text class="meter-k" x="${x + 26}" y="${y + 158}">PRICE ₦/L</text>
+      <text id="ps-meter-price" class="meter-v" x="${x + 266}" y="${y + 164}" text-anchor="end">—</text>
+      <text id="ps-meter-lock" class="meter-lock" x="${x + 26}" y="${y + 178}"></text>
+    </g>
+  </g>`;
+}
+
+function tankGauge() {
+  const x = 26;
+  const y = 642;
+  const anchor = P(ATG_X, CUT_Y, TANK.zc - TANK.r + 0.12);
+  return `<g id="ps-tank-gauge">
+    <path class="leader" d="M${r1(anchor[0])},${r1(anchor[1])} L${r1(anchor[0] - 20)},${y}"/>
+    <circle class="leader-dot" cx="${r1(anchor[0])}" cy="${r1(anchor[1])}" r="4"/>
+    <rect class="gauge-frame" x="${x}" y="${y}" width="300" height="168" rx="16"/>
+    <text class="gauge-title" x="${x + 18}" y="${y + 28}">TANK GAUGE · PETROL</text>
+    <text id="ps-gauge-litres" class="gauge-big" x="${x + 18}" y="${y + 72}">—</text>
+    <text id="ps-gauge-pct" class="gauge-pct" x="${x + 282}" y="${y + 72}" text-anchor="end">—</text>
+    <rect class="bar-bg" x="${x + 18}" y="${y + 86}" width="264" height="16" rx="8"/>
+    <rect id="ps-gauge-bar" class="bar-fill fuel" x="${x + 18}" y="${y + 86}" width="0" height="16" rx="8"/>
+    <text id="ps-gauge-space" class="gauge-small" x="${x + 18}" y="${y + 126}">—</text>
+    <text id="ps-gauge-cap" class="gauge-small muted" x="${x + 18}" y="${y + 150}">—</text>
+  </g>`;
+}
+
+function labels() {
+  return `<g id="ps-labels">
+    ${label("Vent", P(0.8, 23.6, 5.3), [70, 300])}
+    ${label("Fill point", P(FILL[0], FILL[1], 0), [96, 360], { align: "end" })}
+    ${label("Underground tank", P(TANK.x0 + 0.3, CUT_Y, TANK.zc - 1.2), [104, 560], { align: "middle" })}
+    ${label("Gauge probe", P(ATG_X, CUT_Y, -0.6), [300, 392], { align: "middle" })}
+    ${label("Submersible pump", P(STP_X, CUT_Y, TANK.zc - TANK.r + 0.8), [420, 680], { align: "start" })}
+    ${label("Product line", P(22, CUT_Y, -1.2), [560, 640], { align: "start" })}
+    ${label("Nozzle", P(...HOLSTER), [652, 418], { align: "start" })}
+    ${label("Price sign", P(37.6, 20.6, 8), [850, 420], { align: "start" })}
+    ${label("Power", P(17.4, 3.85, 2.2), [790, 120], { align: "start" })}
+    ${label("Emergency stop", P(22.22, 19.82, 1.6), [418, 470], { align: "end" })}
+    ${label("Attendant", P(28.55, 23.55, 1.4), [700, 712], { align: "start" })}
+    ${label("Delivery hose", P(2.9, 19.6, 0.05), [70, 420], { align: "start" })}
+  </g>`;
+}
+
+function stamp() {
+  return `<g id="ps-closed-stamp" opacity="0">
+    <g transform="translate(980 760) rotate(-8)">
+      <rect x="-150" y="-44" width="300" height="88" rx="12" fill="none" stroke="${PAL.red}" stroke-width="5"/>
+      <text x="0" y="-4" text-anchor="middle" class="stamp-big">DAY CLOSED</text>
+      <text x="0" y="26" text-anchor="middle" class="stamp-small">stock reconciled · see summary</text>
+    </g>
+  </g>`;
+}
+
+/** Full static markup. Dynamic attributes are filled by update(). */
+function sceneMarkup() {
+  const canopy = canopyRoof();
+  const hose = hoses();
+  return `<svg class="scene-svg" viewBox="${CAMERAS.full.join(" ")}" role="img" aria-labelledby="ps-scene-title ps-scene-desc" xmlns="http://www.w3.org/2000/svg">
+    <title id="ps-scene-title">Cutaway petrol station</title>
+    <desc id="ps-scene-desc">An isometric filling station with the ground cut open to show the underground tank, pipes and submersible pump. A tanker, dispenser, car, attendant and price sign sit on the forecourt.</desc>
+    ${defs()}
+    <rect x="-400" y="-400" width="2000" height="1700" fill="url(#ps-paper)"/>
+    ${ground()}
+    ${tankCutaway()}
+    ${manholes()}
+    ${canopy.pools}
+    ${shop()}
+    ${powerHouse()}
+    ${canopyColumns("back")}
+    ${tanker()}
+    ${hose.delivery}
+    ${ventRiser()}
+    ${island()}
+    ${car()}
+    ${hose.dispenser}
+    ${attendant()}
+    ${canopyColumns("front")}
+    ${eStop()}
+    ${canopy.roof}
+    ${priceSign()}
+    ${labels()}
+    ${tankerChip()}
+    ${carChip()}
+    ${meterCallout()}
+    ${tankGauge()}
+    ${stamp()}
+  </svg>`;
+}
+
+// ---------------------------------------------------------------------------
+// dynamic updates
+
+function setAttr(el, name, value) {
+  if (el && el.getAttribute(name) !== String(value)) el.setAttribute(name, value);
+}
+function setText(el, value) {
+  if (el && el.textContent !== value) el.textContent = value;
+}
+
+/** Bind to a rendered SVG; returns update(view) and a flow animator. */
+function bindScene(svg) {
+  const $ = (id) => svg.querySelector(`#ps-${id}`);
+  const el = Object.fromEntries(
+    [
+      "fuel-surface", "fuel-section", "fuel-line", "atg-float", "stp-glow",
+      "flow-fill", "flow-product", "flow-hose", "flow-delivery",
+      "tanker", "tanker-chip", "tanker-text", "tanker-level", "delivery-hose",
+      "car", "car-chip", "car-bar", "car-text", "hose-path", "nozzle",
+      "power-lamp", "light-pools", "canopy-strip", "sign-face", "sign-price", "open-plate", "open-text",
+      "disp-screen", "disp-amount", "disp-litres", "disp-price",
+      "meter-state", "meter-amount", "meter-litres", "meter-price", "meter-lock", "meter-screen",
+      "gauge-litres", "gauge-pct", "gauge-bar", "gauge-space", "gauge-cap",
+      "estop-lamp", "closed-stamp",
+    ].map((k) => [k, $(k)]),
+  );
+  const flows = ["flow-fill", "flow-product", "flow-hose", "flow-delivery"];
+
+  function update(v) {
+    const { tank, tanker, vehicle, meter, flows: flowing, station, nozzle } = v;
+
+    // underground tank liquid (height from volume in a horizontal cylinder)
+    const h = liquidHeight(tank.fraction, TANK.r);
+    const zf = TANK.zc - TANK.r + h;
+    const dz = zf - TANK.zc;
+    const halfChord = Math.sqrt(Math.max(0, TANK.r * TANK.r - dz * dz));
+    const inset = TANK.head * (1 - Math.sqrt(Math.max(0, 1 - (dz / TANK.r) ** 2)));
+    const xa = TANK.x0 + inset;
+    const xb = TANK.x1 - inset;
+    const empty = tank.stockMl === 0;
+    setAttr(el["fuel-surface"], "points", empty ? "" : pts3([[xa, CUT_Y, zf], [xb, CUT_Y, zf], [xb, CUT_Y - halfChord, zf], [xa, CUT_Y - halfChord, zf]]));
+    setAttr(el["fuel-section"], "points", empty ? "" : pts3([[TANK.x0, CUT_Y, TANK.zc - TANK.r - 0.1], [TANK.x1, CUT_Y, TANK.zc - TANK.r - 0.1], [TANK.x1, CUT_Y, zf], [TANK.x0, CUT_Y, zf]]));
+    setAttr(el["fuel-line"], "d", empty ? "" : polyline3([[xa, CUT_Y, zf], [xb, CUT_Y, zf]]));
+    const [, floatY] = P(ATG_X, CUT_Y, Math.max(zf, TANK.zc - TANK.r + 0.15));
+    const [, baseY] = P(ATG_X, CUT_Y, 0);
+    setAttr(el["atg-float"], "transform", `translate(0 ${r1(floatY - baseY)})`);
+
+    setText(el["gauge-litres"], formatMl(tank.stockMl, 0));
+    setText(el["gauge-pct"], `${Math.floor(tank.fraction * 1000) / 10}%`);
+    setAttr(el["gauge-bar"], "width", r1(264 * tank.fraction));
+    setText(el["gauge-space"], `Space for ${formatMl(tank.ullageMl, 0)}`);
+    setText(el["gauge-cap"], `Capacity ${formatMl(tank.capacityMl, 0)} · not to scale`);
+
+    // tanker
+    svg.classList.toggle("has-tanker", tanker.present);
+    svg.classList.toggle("hose-on", tanker.hoseConnected);
+    if (tanker.present) {
+      setText(el["tanker-text"], formatMl(tanker.ml, 0));
+      const full = 1.7;
+      const level = full * tanker.fraction;
+      setAttr(el["tanker-level"], "y", r1(0.1 + full - level));
+      setAttr(el["tanker-level"], "height", Math.max(0, level).toFixed(3));
+    }
+
+    // car
+    svg.classList.toggle("has-car", vehicle.present);
+    if (vehicle.present) {
+      setAttr(el["car-bar"], "width", r1(116 * vehicle.fraction));
+      setText(el["car-text"], `${formatMl(vehicle.fuelMl, 1, { unit: false })} of ${formatMl(vehicle.capacityMl, 0)}`);
+    }
+    const inCar = nozzle === "in-vehicle";
+    setAttr(el["hose-path"], "d", el["hose-path"].dataset[inCar ? "car" : "holstered"]);
+    setAttr(el.nozzle, "transform", `translate(${el.nozzle.dataset[inCar ? "car" : "holstered"].replace(",", " ")})`);
+
+    // power, open, e-stop
+    const power = station.powerOn;
+    svg.classList.toggle("power-on", power);
+    svg.classList.toggle("power-cut", station.powerCause === "power-cut");
+    setAttr(el["power-lamp"], "fill", power ? "#34c27a" : station.powerCause === "power-cut" ? PAL.red : "#7a7f88");
+    setAttr(el["sign-face"], "fill", power ? "#fffbea" : "#e6dccb");
+    setText(el["sign-price"], station.priceKobo == null ? "— — —" : formatKobo(station.priceKobo));
+    const open = station.open;
+    setAttr(el["open-plate"], "fill", open ? PAL.green : station.closedForDay ? PAL.redDark : "#7a7f88");
+    setText(el["open-text"], open ? (power ? "OPEN" : "OPEN · NO POWER") : "CLOSED");
+    svg.classList.toggle("estop", station.estop);
+    setAttr(el["closed-stamp"], "opacity", station.closedForDay ? 1 : 0);
+
+    // meter (dispenser face and callout read the same values)
+    const amount = formatKobo(meter.chargeKobo, { symbol: false });
+    // Three decimals (whole millilitres) so the shown volume always explains the charge.
+    const litres = formatMl(meter.volumeMl, 3, { unit: false });
+    const price = meter.priceKobo == null ? "—" : formatKobo(meter.priceKobo, { symbol: false });
+    setText(el["disp-amount"], power ? amount : "");
+    setText(el["disp-litres"], power ? litres : "");
+    setText(el["disp-price"], power ? `₦${price}/L` : "");
+    setAttr(el["disp-screen"], "fill", power ? "#24402f" : "#1c2433");
+    svg.classList.toggle("meter-off", !power);
+    setText(el["meter-amount"], power ? amount : "");
+    setText(el["meter-litres"], power ? litres : "");
+    setText(el["meter-price"], power ? price : "");
+    const lockNote = meter.lockedPriceKobo != null && meter.lockedPriceKobo !== station.priceKobo
+      ? `Sale locked at ₦${formatKobo(meter.lockedPriceKobo, { symbol: false })} · sign now ₦${formatKobo(station.priceKobo, { symbol: false })}`
+      : meter.lockedPriceKobo != null ? "Price locked for this sale" : "";
+    setText(el["meter-lock"], power ? lockNote : "");
+    const meterState = !power ? "NO POWER" : station.estop ? "E-STOP" : flowing.dispense ? "PUMPING" : v.saleStatus === "stopped" ? "STOPPED" : meter.live ? "READY" : "IDLE";
+    setText(el["meter-state"], meterState);
+
+    // flow markers only on connected paths while the model is transferring
+    svg.classList.toggle("flow-delivery", flowing.delivery);
+    svg.classList.toggle("flow-dispense", flowing.dispense);
+  }
+
+  /** Advance dash markers; `phase` is real-time ms accumulated while flowing. */
+  function animateFlow(phase) {
+    const offset = r1(-(phase / 18) % 1000);
+    for (const id of flows) setAttr(el[id], "stroke-dashoffset", offset);
+  }
+
+  return { update, animateFlow };
+}
+
+return { VIEW, CAMERAS, P, liquidHeight, sceneMarkup, bindScene };
+})();
+
+__modules["plates"] = (() => {
+// Enlarged machine cutaways ("plates") revealed after the camera zooms in.
+// Each plate is drawn in a local 1000 × 750 space and placed inside its
+// lesson's camera rectangle, so it appears where the machine physically is.
+// Plates only draw model readings; they keep no fuel or money of their own.
+
+const { chargeFor: chargeOf, formatKobo, formatMl } = __modules["model"];
+const { P, liquidHeight } = __modules["scene"];
+
+// Camera rectangles (all 4:3, like the full view, so the stage never resizes).
+const CAMERA = Object.freeze({
+  station: [0, 0, 1200, 900],
+  delivery: [20, 120, 640, 480],
+  pricing: [420, 318, 320, 240],
+  nozzle: [442, 437, 280, 210],
+});
+
+const INSET = 0.03; // the zoomed station stays visible as a thin frame
+
+function placement(rect) {
+  const [x, y, w] = rect;
+  const s = (w * (1 - 2 * INSET)) / 1000;
+  return `translate(${x + w * INSET} ${y + rect[3] * INSET}) scale(${s.toFixed(5)})`;
+}
+
+const INK = "#1d2a44";
+const FUEL = "#f0ac2a";
+const FUEL_TOP = "#f8d26a";
+
+function pill(text, x, y, { anchor = "start", to = null, cls = "" } = {}) {
+  const w = text.length * 16.5 + 30;
+  const x0 = anchor === "middle" ? x - w / 2 : anchor === "end" ? x - w : x;
+  const leader = to ? `<path class="pl-leader" d="M${to[0]},${to[1]} L${anchor === "end" ? x0 + w : anchor === "middle" ? x : x0},${y}"/><circle class="pl-dot" cx="${to[0]}" cy="${to[1]}" r="6"/>` : "";
+  return `<g class="pl-pill ${cls}">${leader}<rect x="${x0}" y="${y - 24}" width="${w}" height="48" rx="24"/><text x="${x0 + w / 2}" y="${y + 10}" text-anchor="middle">${text}</text></g>`;
+}
+
+function frame() {
+  return `<rect class="pl-frame" x="0" y="0" width="1000" height="750" rx="28"/>`;
+}
+
+// ---------------------------------------------------------------------------
+// Lesson 1 — tanker to underground storage (side section)
+
+const L1 = {
+  ground: 440,
+  barrel: { x: 160, y: 170, w: 430, h: 170, rx: 70 },
+  tank: { x: 620, y: 540, w: 350, h: 180, rx: 80 },
+  valve: [540, 392],
+  headX: 880,
+};
+const DELIVERY_PATH = "M500,338 L500,392 L600,392 C650,394 662,434 702,434 L750,434 L750,700";
+
+function deliveryPlate() {
+  const { ground, barrel: b, tank: t, valve: [vx, vy] } = L1;
+  return `<g class="plate" id="plate-delivery" transform="${placement(CAMERA.delivery)}">
+    <defs>
+      <clipPath id="pl1-barrel"><rect x="${b.x}" y="${b.y}" width="${b.w}" height="${b.h}" rx="${b.rx}"/></clipPath>
+      <clipPath id="pl1-tank"><rect x="${t.x}" y="${t.y}" width="${t.w}" height="${t.h}" rx="${t.rx}"/></clipPath>
+    </defs>
+    ${frame()}
+    <path class="pl-soil" d="M0,${ground} H1000 V722 Q1000,750 972,750 H28 Q0,750 0,722 Z"/>
+    <path class="pl-backfill" d="M590,500 H1000 V722 Q1000,750 972,750 H590 Z"/>
+    <rect x="0" y="${ground}" width="1000" height="18" class="pl-concrete"/>
+    <path class="pl-strata" d="M0,560 Q120,548 240,562 T480,560 M0,660 Q140,650 280,664 T560,660"/>
+
+    <!-- tanker -->
+    <path class="pl-cab" d="M30,${ground - 30} V300 L62,250 H150 V${ground - 30} Z"/>
+    <path class="pl-glass" d="M46,300 L70,264 H138 V300 Z"/>
+    <rect class="pl-chassis" x="150" y="346" width="455" height="26" rx="4"/>
+    ${[90, 230, 312, 525].map((x) => `<circle class="pl-tyre" cx="${x}" cy="${ground - 34}" r="34"/><circle class="pl-hub" cx="${x}" cy="${ground - 34}" r="13"/>`).join("")}
+    ${[240, 375, 505].map((x) => `<rect class="pl-steel" x="${x - 26}" y="${b.y - 22}" width="52" height="24" rx="6"/>`).join("")}
+    <rect class="pl-inside" x="${b.x}" y="${b.y}" width="${b.w}" height="${b.h}" rx="${b.rx}"/>
+    <g clip-path="url(#pl1-barrel)">
+      <rect id="pl1-tanker-fuel" class="pl-fuel" x="${b.x}" y="${b.y + b.h}" width="${b.w}" height="0"/>
+      <rect id="pl1-tanker-surface" class="pl-fuel-top" x="${b.x}" y="${b.y + b.h}" width="${b.w}" height="6"/>
+    </g>
+    <rect class="pl-shell" x="${b.x}" y="${b.y}" width="${b.w}" height="${b.h}" rx="${b.rx}"/>
+    <text id="pl1-tanker-reading" class="pl-big halo" x="${b.x + b.w / 2}" y="${b.y + b.h / 2 + 16}" text-anchor="middle">—</text>
+
+    <!-- outlet, valve and hose -->
+    <path class="pl-pipe" d="M500,338 V392 H${vx - 24} M${vx + 24},392 H600"/>
+    <g id="pl1-valve" class="pl-valve">
+      <circle class="pl-valve-body" cx="${vx}" cy="${vy}" r="26"/>
+      <g id="pl1-valve-ball" class="pl-turn" style="transform-origin:${vx}px ${vy}px">
+        <rect class="pl-valve-port" x="${vx - 20}" y="${vy - 7}" width="40" height="14" rx="3"/>
+        <rect class="pl-valve-handle" x="${vx - 4}" y="${vy - 70}" width="8" height="44" rx="4"/>
+        <rect class="pl-valve-grip" x="${vx - 34}" y="${vy - 80}" width="68" height="16" rx="8"/>
+      </g>
+    </g>
+    <path class="pl-hose" d="M600,392 C650,394 662,434 702,434 L730,434"/>
+    <rect class="pl-steel" x="718" y="${ground - 6}" width="64" height="44" rx="6"/>
+    <path class="pl-pipe" d="M750,${ground + 30} V${t.y + 6}"/>
+
+    <!-- underground tank -->
+    <rect class="pl-inside" x="${t.x}" y="${t.y}" width="${t.w}" height="${t.h}" rx="${t.rx}"/>
+    <g clip-path="url(#pl1-tank)">
+      <rect id="pl1-tank-fuel" class="pl-fuel" x="${t.x}" y="${t.y + t.h}" width="${t.w}" height="0"/>
+      <rect id="pl1-tank-surface" class="pl-fuel-top" x="${t.x}" y="${t.y + t.h}" width="${t.w}" height="6"/>
+    </g>
+    <path class="pl-pipe thin" d="M750,${t.y + 6} V700"/>
+    <rect class="pl-shell" x="${t.x}" y="${t.y}" width="${t.w}" height="${t.h}" rx="${t.rx}"/>
+    <text id="pl1-tank-reading" class="pl-big halo" x="${t.x + t.w / 2}" y="${t.y + t.h / 2 + 16}" text-anchor="middle">—</text>
+
+    <!-- vent (air only) -->
+    <path class="pl-pipe thin" d="M955,${t.y + 4} V120"/>
+    <rect class="pl-steel" x="935" y="96" width="40" height="26" rx="8"/>
+    <path id="pl1-air" class="pl-air" d="M955,${t.y + 30} V112 M955,96 C955,70 930,60 900,58"/>
+
+    <!-- fuel path markers (only while the model transfers) -->
+    <path id="pl1-flow" class="pl-flow" d="${DELIVERY_PATH}"/>
+
+    <!-- head: the height difference between the two fuel surfaces -->
+    <g id="pl1-head" class="pl-head">
+      <path id="pl1-head-top" class="pl-dim" d=""/>
+      <path id="pl1-head-arrow" class="pl-dim-arrow" d=""/>
+      <text id="pl1-head-text" class="pl-mid" x="${L1.headX - 18}" y="300" text-anchor="end">head</text>
+    </g>
+
+    <text id="pl1-moved" class="pl-mid halo" x="690" y="330" text-anchor="middle">moved 0 L</text>
+    ${pill("Tanker compartment", 160, 112)}
+    ${pill("Outlet valve", 380, 480, { to: [vx, vy + 26] })}
+    ${pill("Fill pipe", 790, 498, { to: [752, 498] })}
+    ${pill("Underground tank", 300, 640, { to: [t.x + 10, 640] })}
+    ${pill("Vent: air out", 895, 40, { anchor: "end" })}
+  </g>`;
+}
+
+function updateDelivery(root, s) {
+  const { barrel: b, tank: t, headX } = L1;
+  const del = s.delivery;
+  const tankerMl = del?.tankerMl ?? 0;
+  const tankerFrac = del ? tankerMl / del.tankerStartMl : 0;
+  const tankFrac = s.tank.stockMl / s.config.tankCapacityMl;
+  const fuelH = b.h * tankerFrac;
+  const tankerTop = b.y + b.h - fuelH;
+  const tankTop = t.y + t.h - (liquidHeight(tankFrac, t.h / 2) / (t.h / 2)) * (t.h / 2);
+  set(root, "pl1-tanker-fuel", { y: tankerTop, height: fuelH });
+  set(root, "pl1-tanker-surface", { y: tankerTop - 3, height: fuelH > 0 ? 6 : 0 });
+  set(root, "pl1-tank-fuel", { y: tankTop, height: t.y + t.h - tankTop });
+  set(root, "pl1-tank-surface", { y: tankTop - 3, height: s.tank.stockMl > 0 ? 6 : 0 });
+  // Numeric only: the pills name the parts, and "30,000 L" fits inside either vessel.
+  text(root, "pl1-tanker-reading", del ? formatMl(tankerMl, 0) : "—");
+  text(root, "pl1-tank-reading", formatMl(s.tank.stockMl, 0));
+  text(root, "pl1-moved", `moved ${formatMl(del?.receivedMl ?? 0, 0)}`);
+  const open = del?.status === "discharging";
+  root.querySelector("#pl1-valve-ball").classList.toggle("open", open);
+  const showHead = Boolean(del) && tankerMl > 0;
+  root.querySelector("#pl1-head").classList.toggle("off", !showHead);
+  if (showHead) {
+    set(root, "pl1-head-top", { d: `M590,${tankerTop} H${headX + 30}` });
+    set(root, "pl1-head-arrow", { d: `M${headX},${tankerTop + 8} V${tankTop - 8}` });
+    set(root, "pl1-head-text", { y: (tankerTop + tankTop) / 2 + 10 });
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Lesson 2 — how litres become a price (open dispenser)
+
+const METER = [230, 575];
+const ENCODER = [420, 575];
+
+function pricingPlate() {
+  const [mx, my] = METER;
+  const [ex, ey] = ENCODER;
+  const vanes = [0, 45, 90, 135].map((a) => `<rect class="pl-vane" x="${mx - 66}" y="${my - 9}" width="132" height="18" rx="6" transform="rotate(${a} ${mx} ${my})"/>`).join("");
+  const slots = Array.from({ length: 12 }, (_, i) => `<rect class="pl-slot" x="${ex - 5}" y="${ey - 52}" width="10" height="16" rx="2" transform="rotate(${i * 30} ${ex} ${ey})"/>`).join("");
+  return `<g class="plate" id="plate-pricing" transform="${placement(CAMERA.pricing)}">
+    ${frame()}
+    <!-- cabinet with its front panel removed -->
+    <rect class="pl-cabinet" x="40" y="24" width="520" height="700" rx="22"/>
+    <rect class="pl-cabinet-head" x="40" y="24" width="520" height="54" rx="22"/>
+    <text class="pl-head-text" x="300" y="62" text-anchor="middle">PUMP 1 · OPENED UP</text>
+
+    <rect class="pl-display" x="74" y="98" width="452" height="232" rx="14"/>
+    <text class="pl-lcd-k" x="96" y="140">AMOUNT ₦</text>
+    <text id="pl2-amount" class="pl-lcd big" x="504" y="182" text-anchor="end">0.00</text>
+    <text class="pl-lcd-k" x="96" y="222">LITRES</text>
+    <text id="pl2-litres" class="pl-lcd big" x="504" y="264" text-anchor="end">0.000</text>
+    <text class="pl-lcd-k" x="96" y="306">PRICE ₦/L</text>
+    <text id="pl2-price" class="pl-lcd" x="504" y="310" text-anchor="end">—</text>
+
+    <rect class="pl-cpu" x="120" y="368" width="300" height="70" rx="10"/>
+    <text class="pl-cpu-text" x="270" y="412" text-anchor="middle">CALCULATOR</text>
+    <path class="pl-wire" d="M270,368 V330"/>
+    <path class="pl-barrier" d="M40,470 H560"/>
+    <text class="pl-tiny" x="548" y="462" text-anchor="end">electronics ▲</text>
+    <text class="pl-tiny" x="548" y="496" text-anchor="end">fuel ▼</text>
+
+    <!-- fuel path: inlet → meter → outlet hose -->
+    <path class="pl-pipe fuel" d="M${mx},724 V${my + 80} M${mx},${my - 80} V520 H560"/>
+    <path id="pl2-flow" class="pl-flow" d="M${mx},750 V${my + 80} M${mx},${my - 80} V520 H560 C640,520 660,600 760,612"/>
+    <text class="pl-tiny" x="${mx + 18}" y="712">from tank pump</text>
+
+    <circle class="pl-meter" cx="${mx}" cy="${my}" r="80"/>
+    <g id="pl2-rotor">${vanes}<circle class="pl-hub" cx="${mx}" cy="${my}" r="18"/></g>
+    <path class="pl-shaft" d="M${mx + 80},${my} H${ex - 52}"/>
+    <circle class="pl-disc" cx="${ex}" cy="${ey}" r="52"/>
+    <g id="pl2-encoder">${slots}</g>
+    <rect class="pl-sensor" x="${ex - 24}" y="${ey - 76}" width="48" height="34" rx="6"/>
+    <path class="pl-wire" d="M${ex},${ey - 76} V438 H420"/>
+    <path id="pl2-pulses" class="pl-pulse" d="M${ex},${ey - 76} V438 H420"/>
+
+    <path class="pl-hose" d="M560,520 C640,520 660,600 760,612"/>
+    <path class="pl-car" d="M740,560 H1000 V722 Q1000,750 972,750 H740 Z"/>
+    <circle class="pl-filler" cx="770" cy="614" r="16"/>
+    <path class="pl-nozzle" d="M730,594 L790,604 L786,624 L726,616 Z"/>
+
+    <!-- the equation, fed by the calculator -->
+    <rect class="pl-card" x="588" y="98" width="392" height="246" rx="16"/>
+    <text class="pl-lcd-k ink" x="610" y="138">MEASURED LITRES</text>
+    <text id="pl2-eq-litres" class="pl-mid strong" x="958" y="178" text-anchor="end">0.000 L</text>
+    <text class="pl-lcd-k ink" x="610" y="214">× PRICE PER LITRE</text>
+    <text id="pl2-eq-price" class="pl-mid strong" x="958" y="254" text-anchor="end">—</text>
+    <path class="pl-rule" d="M610,272 H958"/>
+    <text class="pl-lcd-k ink" x="610" y="304">= AMOUNT</text>
+    <text id="pl2-eq-amount" class="pl-mid strong" x="958" y="330" text-anchor="end">₦0.00</text>
+
+    <rect class="pl-card" x="588" y="364" width="392" height="120" rx="16"/>
+    <text class="pl-lcd-k ink" x="610" y="402">PULSES COUNTED</text>
+    <text id="pl2-pulse-count" class="pl-big" x="958" y="452" text-anchor="end">0</text>
+    <text class="pl-tiny" x="610" y="474">illustrative: 100 pulses = 1 L</text>
+
+    <g class="pl-legend">
+      <path class="pl-pipe fuel" d="M600,520 H650"/><text class="pl-tiny" x="662" y="528">fuel</text>
+      <path class="pl-wire" d="M760,520 H810"/><text class="pl-tiny" x="822" y="528">electric pulses</text>
+    </g>
+    ${pill("Meter", 70, 690, { to: [mx - 56, my + 56] })}
+    ${pill("Pulse encoder", 330, 690, { to: [ex, ey + 52] })}
+  </g>`;
+}
+
+function updatePricing(root, s) {
+  const sale = s.sale;
+  const last = s.ledger.sales.at(-1);
+  const src = sale && sale.priceKobo != null ? sale : last;
+  const ml = src?.deliveredMl ?? 0;
+  const price = src?.priceKobo ?? s.station.priceKobo;
+  const amount = price == null ? 0 : chargeOf(ml, price);
+  // Rotor turns with the dispenser totaliser: no flow, no movement (1 turn = 1 L, illustrative).
+  const angle = ((s.dispenser.totaliserMl % 1000) / 1000) * 360;
+  root.querySelector("#pl2-rotor").setAttribute("transform", `rotate(${angle.toFixed(2)} ${METER[0]} ${METER[1]})`);
+  root.querySelector("#pl2-encoder").setAttribute("transform", `rotate(${angle.toFixed(2)} ${ENCODER[0]} ${ENCODER[1]})`);
+  text(root, "pl2-amount", formatKobo(amount, { symbol: false }));
+  text(root, "pl2-litres", formatMl(ml, 3, { unit: false }));
+  text(root, "pl2-price", price == null ? "—" : formatKobo(price, { symbol: false }));
+  text(root, "pl2-eq-litres", formatMl(ml, 3));
+  text(root, "pl2-eq-price", price == null ? "—" : `${formatKobo(price)}/L`);
+  text(root, "pl2-eq-amount", formatKobo(amount));
+  text(root, "pl2-pulse-count", String(Math.floor(ml / 10)));
+}
+
+// ---------------------------------------------------------------------------
+// Lesson 3 — customer preset, trigger and automatic stopping (nozzle cutaway)
+
+const NECK = "M600,345 L880,474 L880,530";
+const NECK_LEN = Math.hypot(280, 129) + 56;
+const TRIGGER_PIVOT = [170, 392];
+
+function nozzlePlate() {
+  return `<g class="plate" id="plate-nozzle" transform="${placement(CAMERA.nozzle)}">
+    <defs><clipPath id="pl3-tank"><rect x="700" y="520" width="280" height="200" rx="40"/></clipPath></defs>
+    ${frame()}
+    <!-- car: filler neck and tank in section -->
+    <path class="pl-car" d="M560,300 H1000 V722 Q1000,750 972,750 H560 Z"/>
+    <path class="pl-neck" d="${NECK}"/>
+    <path id="pl3-neck-fuel" class="pl-neck-fuel" d="M880,530 L880,474 L740,409" stroke-dasharray="0 2000"/>
+    <rect class="pl-inside" x="700" y="520" width="280" height="200" rx="40"/>
+    <g clip-path="url(#pl3-tank)">
+      <rect id="pl3-car-fuel" class="pl-fuel" x="700" y="720" width="280" height="0"/>
+    </g>
+    <rect class="pl-shell" x="700" y="520" width="280" height="200" rx="40"/>
+    <text id="pl3-car-reading" class="pl-mid halo" x="840" y="640" text-anchor="middle">—</text>
+
+    <!-- hose into the nozzle -->
+    <path class="pl-hose" d="M0,250 C60,250 80,305 120,305"/>
+
+    <!-- nozzle body in section -->
+    <path class="pl-nozzle-body" d="M110,268 H400 Q420,268 430,250 H500 Q522,250 522,272 V300 L772,414 L764,438 L522,338 V352 Q522,368 500,368 H110 Z"/>
+    <path id="pl3-channel" class="pl-channel" d="M112,306 H292 M316,306 H520 L760,420"/>
+    <path id="pl3-flow" class="pl-flow" d="M112,306 H520 L760,420"/>
+    <!-- main valve: poppet lifts off its seat when the trigger pushes the stem -->
+    <path class="pl-seat" d="M290,284 V328 M318,284 V328"/>
+    <g id="pl3-poppet" class="pl-move">
+      <path class="pl-spring" d="M304,282 l-14,-6 l28,-8 l-28,-8 l28,-8 l-14,-6"/>
+      <rect class="pl-poppet" x="286" y="282" width="36" height="20" rx="5"/>
+      <path class="pl-stem" d="M304,302 V384"/>
+    </g>
+    <!-- sensing port and tube back to the diaphragm -->
+    <path id="pl3-tube" class="pl-tube" d="M752,428 L520,326 H470 V246"/>
+    <path id="pl3-air" class="pl-air" d="M752,428 L520,326 H470 V246"/>
+    <circle id="pl3-port" class="pl-port" cx="752" cy="430" r="9"/>
+    <!-- diaphragm chamber and latch -->
+    <path class="pl-chamber" d="M420,250 Q420,196 470,196 Q520,196 520,250 Z"/>
+    <path id="pl3-diaphragm" class="pl-diaphragm" d="M424,236 Q470,250 516,236"/>
+    <g id="pl3-latch" class="pl-move">
+      <path class="pl-stem" d="M470,244 V392"/>
+      <circle class="pl-roller" cx="470" cy="396" r="12"/>
+    </g>
+    <!-- trigger lever -->
+    <g id="pl3-trigger" class="pl-turn" style="transform-origin:${TRIGGER_PIVOT[0]}px ${TRIGGER_PIVOT[1]}px">
+      <path class="pl-trigger" d="M${TRIGGER_PIVOT[0]},${TRIGGER_PIVOT[1]} L470,406 Q486,410 482,424 L170,412 Z"/>
+    </g>
+    <circle class="pl-hub" cx="${TRIGGER_PIVOT[0]}" cy="${TRIGGER_PIVOT[1]}" r="10"/>
+    <path class="pl-guard" d="M120,368 Q100,470 210,470 H470 Q520,470 520,430"/>
+
+    <!-- numbered trip sequence (vehicle-full stop only) -->
+    <g id="pl3-trip" class="pl-trip">
+      ${[[752, 470, 1], [620, 340, 2], [470, 176, 3], [508, 400, 4]].map(([x, y, n]) => `<circle class="pl-badge" cx="${x}" cy="${y}" r="20"/><text class="pl-badge-text" x="${x}" y="${y + 8}" text-anchor="middle">${n}</text>`).join("")}
+    </g>
+
+    <!-- dispenser readout -->
+    <rect class="pl-display" x="24" y="20" width="400" height="200" rx="14"/>
+    <text id="pl3-target" class="pl-lcd-k" x="44" y="60">NO PRESET</text>
+    <text class="pl-lcd-k" x="44" y="112">₦</text>
+    <text id="pl3-amount" class="pl-lcd big" x="404" y="118" text-anchor="end">0.00</text>
+    <text class="pl-lcd-k" x="44" y="176">L</text>
+    <text id="pl3-litres" class="pl-lcd big" x="404" y="182" text-anchor="end">0.000</text>
+    <text id="pl3-valve" class="pl-lcd-k" x="44" y="208">CONTROL VALVE CLOSED</text>
+
+    <!-- stop explanation -->
+    <rect class="pl-card" x="24" y="500" width="520" height="226" rx="16"/>
+    <text id="pl3-why-title" class="pl-mid strong" x="46" y="546">Waiting</text>
+    ${[0, 1, 2, 3].map((i) => `<text id="pl3-why-${i}" class="pl-small" x="46" y="${590 + i * 34}"></text>`).join("")}
+
+    ${pill("Trigger", 230, 488, { to: [330, 412], anchor: "middle", cls: "small" })}
+    ${pill("Valve + spring", 450, 160, { to: [304, 262], anchor: "start", cls: "small" })}
+    ${pill("Sensing port", 990, 462, { to: [760, 432], anchor: "end", cls: "small" })}
+    ${pill("Diaphragm + latch", 990, 210, { to: [516, 236], anchor: "end", cls: "small" })}
+  </g>`;
+}
+
+// Box text area is about 476 units wide: titles ≤ 25 characters at 34 units,
+// lines ≤ 30 characters at 26 units, at most four lines.
+const WHY = {
+  idle: ["Choose naira or litres", ["Your request becomes a", "preset: naira ÷ price per", "litre = target litres.", "The price locks for the sale."]],
+  ready: ["Ready to pump", ["Squeeze: the stem lifts the", "main valve off its seat,", "against the spring.", "Release any time to stop."]],
+  flowing: ["Fuel is flowing", ["The meter counts each mL.", "Air enters the sensing port", "while the tip is in open air."]],
+  target: ["Stopped: preset reached", ["The dispenser closed its", "own valve upstream at the", "target. The nozzle did not", "trip: release the trigger."]],
+  "vehicle-full": ["Stopped: car tank full", ["1 Fuel covers sensing port.", "2 Air stops: tube suction.", "3 The diaphragm lifts.", "4 Latch lets go: valve shuts."]],
+  released: ["Released after preset", ["Dispenser valve shut first;", "now the nozzle spring has", "closed its valve too.", "Next: hang up and pay."]],
+  manual: ["Trigger released", ["The spring closed the main", "valve. You pay only for the", "litres that flowed."]],
+  paid: ["Paid", ["You paid for exactly the", "litres the meter measured.", "Authorise a new preset for", "the next customer."]],
+  cancelled: ["Nothing dispensed", ["The nozzle was hung up", "before any fuel flowed,", "so nothing is due."]],
+  "tank-empty": ["Station tank empty", ["No fuel reaches the pump.", "The sale settles for what", "was delivered."]],
+  power: ["Stopped: no power", ["Pump and meter need power.", "The sale settles for what", "was delivered."]],
+  estop: ["Emergency stop", ["All flow stopped.", "The sale settles for what", "was delivered."]],
+};
+
+/** `view.triggerHeld` is the learner's hand (UI-only); the model knows only flow. */
+function updateNozzle(root, s, view = {}) {
+  const sale = s.sale;
+  const fuel = sale?.vehicle.fuelMl ?? s.config.vehicleStartFuelMl;
+  const cap = sale?.vehicle.capacityMl ?? s.config.vehicleCapacityMl;
+  const frac = fuel / cap;
+  const h = 200 * frac;
+  set(root, "pl3-car-fuel", { y: 720 - h, height: h });
+  text(root, "pl3-car-reading", `Car ${formatMl(fuel, 1)} / ${formatMl(cap, 0)}`);
+
+  const stop = sale?.stopReason ?? null;
+  const tripped = stop === "vehicle-full";
+  const neck = tripped ? 1 : Math.max(0, Math.min(1, (frac - 0.96) / 0.04));
+  set(root, "pl3-neck-fuel", { "stroke-dasharray": `${(NECK_LEN * neck).toFixed(1)} 2000` });
+
+  const flowing = sale?.status === "dispensing";
+  // The nozzle valve follows the hand on the trigger; only a sensing trip closes it by itself.
+  const nozzleOpen = Boolean(view.triggerHeld) && !tripped;
+  root.querySelector("#pl3-trigger").classList.toggle("open", nozzleOpen);
+  root.querySelector("#pl3-poppet").classList.toggle("open", nozzleOpen);
+  root.querySelector("#pl3-latch").classList.toggle("tripped", tripped);
+  root.querySelector("#pl3-trip").classList.toggle("on", tripped);
+  root.querySelector("#pl3-port").classList.toggle("covered", tripped);
+  root.querySelector("#pl3-tube").classList.toggle("vacuum", tripped);
+  set(root, "pl3-diaphragm", { d: tripped ? "M424,236 Q470,206 516,236" : "M424,236 Q470,250 516,236" });
+
+  const price = sale?.priceKobo;
+  const ml = sale?.deliveredMl ?? 0;
+  // Concise LCD line; the full budget ÷ price equation lives in the HTML panel.
+  text(root, "pl3-target", sale?.mode ? `TARGET ${formatMl(sale.targetMl, 3)}` : "NO PRESET");
+  text(root, "pl3-amount", formatKobo(price == null ? 0 : chargeOf(ml, price), { symbol: false }));
+  text(root, "pl3-litres", formatMl(ml, 3, { unit: false }));
+  text(root, "pl3-valve", flowing ? "DISPENSER VALVE OPEN" : "DISPENSER VALVE CLOSED");
+
+  let key = "idle";
+  // Settled states first, so a paid sale never shows a stale "pay" instruction.
+  if (sale?.status === "paid" || sale?.status === "cancelled") key = sale.status;
+  else if (sale?.status === "dispensing") key = "flowing";
+  else if (stop === "target") key = view.triggerHeld ? "target" : "released";
+  else if (stop) key = stop;
+  else if (sale?.status === "nozzle" || sale?.status === "preset") key = "ready";
+  const [title, lines] = WHY[key] ?? WHY.idle;
+  text(root, "pl3-why-title", title);
+  for (let i = 0; i < 4; i++) text(root, `pl3-why-${i}`, lines[i] ?? "");
+}
+
+// ---------------------------------------------------------------------------
+// station pins and shared helpers
+
+function pinsMarkup() {
+  const pins = [
+    ["delivery", 1, P(6.4, 13.9, 5.6), "Tanker to storage", -1],
+    ["pricing", 2, P(27, 20, 4.4), "Litres to price", -1],
+    ["nozzle", 3, P(30.6, 22.4, 2.4), "Customer and nozzle", 1],
+  ];
+  return `<g id="lesson-pins" aria-hidden="true">${pins.map(([id, n, [x, y], name, side]) => {
+    const w = name.length * 10.5 + 24;
+    const lx = side > 0 ? 28 : -28 - w;
+    return `<g class="pin" data-pin="${id}" transform="translate(${x.toFixed(1)} ${y.toFixed(1)})">
+      <path class="pin-tail" d="M0,0 L-9,-22 H9 Z"/><circle class="pin-head" cx="0" cy="-36" r="22"/><text class="pin-text" x="0" y="-28" text-anchor="middle">${n}</text>
+      <g class="pin-label"><rect x="${lx}" y="-52" width="${w}" height="32" rx="16"/><text x="${lx + w / 2}" y="-30" text-anchor="middle">${name}</text></g></g>`;
+  }).join("")}</g>`;
+}
+
+function platesMarkup() {
+  return `${deliveryPlate()}${pricingPlate()}${nozzlePlate()}`;
+}
+
+const updatePlate = { delivery: updateDelivery, pricing: updatePricing, nozzle: updateNozzle };
+
+function set(root, id, attrs) {
+  const el = root.querySelector(`#${id}`);
+  for (const [k, v] of Object.entries(attrs)) {
+    const value = typeof v === "number" ? v.toFixed(1) : v;
+    if (el.getAttribute(k) !== value) el.setAttribute(k, value);
+  }
+}
+
+function text(root, id, value) {
+  const el = root.querySelector(`#${id}`);
+  if (el.textContent !== value) el.textContent = value;
+}
+
+return { CAMERA, pinsMarkup, platesMarkup, updatePlate };
+})();
+
+__modules["lessons"] = (() => {
+// Lesson controller: station overview, reversible SVG camera zoom and three
+// machine lessons. Each lesson owns one model state; every reading, plate and
+// station drawing is derived from it through the shared pure model.
+
+const { apply, can, chargeFor, createState, formatDuration, formatKobo, formatMl, isFlowing, maxVolumeForAmount, parseLitresToMl, parseNairaToKobo, read, receiptLabel, tick } = __modules["model"];
+const { CAMERA, pinsMarkup, platesMarkup, updatePlate } = __modules["plates"];
+const { bindScene, sceneMarkup } = __modules["scene"];
+
+const doc = typeof document === "undefined" ? null : document;
+const $ = (sel, root = doc) => root.querySelector(sel);
+const reducedMotion = typeof matchMedia === "function" ? matchMedia("(prefers-reduced-motion: reduce)") : { matches: true };
+const ZOOM_MS = 1000;
+const DEMO_GAP_MS = 1000;
+
+/** Apply several model actions in order; stops at the first refusal. */
+function run(state, actions) {
+  let s = state;
+  for (const a of actions) {
+    const r = apply(s, a);
+    if (!r.ok) return { ok: false, state, reason: r.reason };
+    s = r.state;
+  }
+  return { ok: true, state: s, reason: null };
+}
+
+/** Escape typed text for an HTML attribute; the literal text is preserved. */
+function escAttr(value) {
+  return String(value).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+}
+
+const A = (type, payload) => (payload === undefined ? { type } : { type, payload });
+
+// A station picture for the overview: tanker on site, car at the pump, power on.
+function overviewState() {
+  return run(createState(), [A("powerOn"), A("setPrice", { priceKobo: 100_000 }), A("openStation"), A("customerArrives"), A("arriveTanker", { loadMl: 12_000_000 })]).state;
+}
+
+// ---------------------------------------------------------------------------
+// lessons
+
+const LESSONS = {
+  delivery: {
+    number: 1,
+    title: "Tanker to storage",
+    speed: 100, // simulated seconds per real second
+    speedNote: "Shown at 100× real time: 12,000 L at an illustrative 600 L/min drop.",
+    setup: () =>
+      run(createState(), [A("arriveTanker", { loadMl: 12_000_000 }), A("checkTank"), A("connectDelivery")]).state,
+    intro: [
+      "The tanker's fuel sits higher than the fuel in the underground tank. Open the outlet valve and gravity drains it down the hose and fill pipe — this is a gravity drop, so no station pump is involved.",
+      "Watch the two readings: the tanker loses exactly what the tank gains. The air the fuel pushes out of the tank leaves through the vent; fuel does not.",
+    ],
+    note: "Illustration only, not a discharge procedure. Other delivery set-ups exist. The station's electric pump is a separate machine (lesson 2).",
+    controls: {
+      open: {
+        label: (s) => (s.delivery?.status === "halted" ? "Re-open outlet valve" : "Open outlet valve"),
+        primary: true,
+        actions: () => [A("startDischarge")],
+      },
+      close: { label: () => "Close outlet valve", actions: () => [A("haltDischarge")] },
+    },
+    readings: (s) => {
+      const d = s.delivery;
+      const gained = s.tank.stockMl - s.config.openingStockMl;
+      // Three decimals (whole ml) so learners can verify exact conservation.
+      return [
+        ["Tanker", d ? formatMl(d.tankerMl, 3) : "gone"],
+        ["Underground tank", formatMl(s.tank.stockMl, 3)],
+        ["Tanker lost", formatMl(d ? d.tankerStartMl - d.tankerMl : 0, 3)],
+        ["Tank gained", formatMl(gained, 3)],
+        ["Space left in tank", formatMl(s.config.tankCapacityMl - s.tank.stockMl, 3), "wide"],
+      ];
+    },
+    check: (s) => {
+      const d = s.delivery;
+      if (!d) return "";
+      const lost = d.tankerStartMl - d.tankerMl;
+      const gained = s.tank.stockMl - s.config.openingStockMl;
+      return lost === gained ? `✓ Lost = gained (${formatMl(lost, 3)})` : `⚠ ${formatMl(lost - gained, 3)} unaccounted`;
+    },
+    status: (s) => {
+      const d = s.delivery;
+      if (!d) return "";
+      if (d.status === "discharging") return "Valve open: fuel is draining by gravity.";
+      if (d.status === "complete") return d.stopReason === "tank-full" ? "Tank full — the rest stays on the tanker." : "Tanker empty — nothing left above the valve.";
+      if (d.status === "halted") return "Valve closed: flow and readings stop.";
+      return "Hose connected. The valve is closed.";
+    },
+    demo: [(s) => (s.delivery?.status === "connected" || s.delivery?.status === "halted" ? "open" : null)],
+  },
+
+  pricing: {
+    number: 2,
+    title: "Litres to price",
+    speed: 1,
+    speedNote: "Shown in real time: 5 L at an illustrative 40 L/min takes 7.5 s.",
+    setup: () => run(createState(), [A("powerOn"), A("setPrice", { priceKobo: 100_000 }), A("openStation")]).state,
+    intro: [
+      "The tank's pump pushes fuel through the meter. The meter turns once for each fixed volume, and the encoder on its shaft sends electric pulses to the calculator.",
+      "The calculator counts the pulses as litres and multiplies them by the price per litre. A new price changes the money, not the fuel or the flow speed.",
+    ],
+    note: "Pulses per litre and rotor shape are illustrative, not a manufacturer's calibration. Each run is a new sale: the price is locked when it starts.",
+    extra: () => `<div class="field"><label for="price-input">Price per litre (₦)</label>
+        <input id="price-input" data-form="price" inputmode="decimal" autocomplete="off" value="${escAttr(ui.form.price)}"></div>
+      <div class="row">
+        <button type="button" class="btn" data-set='{"price":"1000"}'>₦1,000/L</button>
+        <button type="button" class="btn" data-set='{"price":"1250"}'>₦1,250/L</button>
+      </div>`,
+    controls: {
+      run5: {
+        label: () => "Pump 5 L at this price",
+        primary: true,
+        actions: (s, inp) => {
+          if (inp.priceKobo == null) return { error: "Enter a price like 1000 or 1250." };
+          const settle = settleSale(s);
+          if (settle.error) return settle;
+          const price = s.station.priceKobo === inp.priceKobo ? [] : [A("setPrice", { priceKobo: inp.priceKobo })];
+          return [...settle, ...price, A("customerArrives"), A("setPreset", { mode: "volume", volumeMl: 5_000 }), A("liftNozzle"), A("startPump")];
+        },
+      },
+      stop: { label: () => "Stop pump", danger: true, actions: () => [A("stopPump")] },
+      sign: {
+        label: () => "Change price mid-sale",
+        actions: (s, inp) => {
+          if (inp.priceKobo == null) return { error: "Enter a price like 1000 or 1250." };
+          if (s.sale?.status !== "dispensing") return { error: "Use this while fuel is flowing to see the locked price." };
+          return [A("setPrice", { priceKobo: inp.priceKobo })];
+        },
+      },
+    },
+    readings: (s) => {
+      const sale = s.sale;
+      const ml = sale?.deliveredMl ?? 0;
+      return [
+        ["Measured", formatMl(ml, 3)],
+        ["Price locked for sale", sale?.priceKobo != null ? `${formatKobo(sale.priceKobo)}/L` : "—"],
+        ["Amount", sale?.priceKobo != null ? formatKobo(chargeFor(ml, sale.priceKobo)) : "—"],
+        ["Pulses (illustrative)", String(Math.floor(ml / 10))],
+        ["Price on the sign now", s.station.priceKobo != null ? `${formatKobo(s.station.priceKobo)}/L` : "—", "wide"],
+      ];
+    },
+    check: (s) => {
+      const sale = s.sale;
+      if (!sale || sale.priceKobo == null) return "";
+      return `${formatMl(sale.deliveredMl, 3)} × ${formatKobo(sale.priceKobo)}/L = ${formatKobo(chargeFor(sale.deliveredMl, sale.priceKobo))}`;
+    },
+    status: (s) => {
+      const sale = s.sale;
+      if (!sale) return "Choose a price, then pump 5 L.";
+      if (sale.status === "dispensing") {
+        return sale.priceKobo !== s.station.priceKobo
+          ? "The sign changed, but this sale keeps its locked price."
+          : "Measuring: the rotor turns only while fuel flows.";
+      }
+      if (sale.stopReason === "target") return "5 L measured. Change the price and pump 5 L again to compare.";
+      if (sale.stopReason) return `Stopped (${sale.stopReason}). The charge is for the litres measured.`;
+      return "";
+    },
+    after: (s) => compareTable(s),
+    demoSetup: () => setForm({ price: "1000" }),
+    demo: [
+      () => "run5",
+      () => {
+        setForm({ price: "1250" });
+        return "run5";
+      },
+    ],
+  },
+
+  nozzle: {
+    number: 3,
+    title: "Customer and nozzle",
+    speed: 3,
+    speedNote: "Shown at 3× real time; the nozzle flow is an illustrative 40 L/min.",
+    setup: () =>
+      run(createState(ui.scenario === "fill" ? { vehicleStartFuelMl: 44_000 } : {}), [
+        A("powerOn"),
+        A("setPrice", { priceKobo: 100_000 }),
+        A("openStation"),
+        A("customerArrives"),
+      ]).state,
+    intro: [
+      "The customer asks for naira or litres; the dispenser turns that into a target. Squeezing the trigger lifts a stem that opens the nozzle's main valve against its spring.",
+      "Two different things can stop the flow automatically: the dispenser closes its own valve at the preset, or a full car covers the nozzle's sensing port and the nozzle trips itself shut.",
+    ],
+    note: "Simplified mechanism for learning, not exact component physics. You only pay for the litres that actually flowed.",
+    extra: () => `<div class="row" role="group" aria-label="Car">
+        <button type="button" class="btn" data-scenario="room" aria-pressed="${ui.scenario === "room"}">Car with room (8 of 50 L)</button>
+        <button type="button" class="btn" data-scenario="fill" aria-pressed="${ui.scenario === "fill"}">Nearly full car (44 of 50 L)</button>
+      </div>
+      <fieldset class="field"><legend>Customer asks for</legend>
+        <div class="choice">
+          <label><input type="radio" name="req-mode" data-form="mode" value="amount"${ui.form.mode === "amount" ? " checked" : ""}> Naira</label>
+          <label><input type="radio" name="req-mode" data-form="mode" value="volume"${ui.form.mode === "volume" ? " checked" : ""}> Litres</label>
+        </div>
+        <label for="request-input" id="request-label">${ui.form.mode === "volume" ? "Litres" : "Naira amount (₦)"}</label>
+        <input id="request-input" data-form="request" inputmode="decimal" autocomplete="off" value="${escAttr(ui.form.request)}">
+      </fieldset>
+      <p class="equation" id="request-eq"></p>`,
+    controls: {
+      authorise: {
+        label: () => "Authorise preset",
+        actions: (s, inp) => {
+          const payload = inp.mode === "volume"
+            ? inp.volumeMl == null ? null : { mode: "volume", volumeMl: inp.volumeMl }
+            : inp.amountKobo == null ? null : { mode: "amount", amountKobo: inp.amountKobo };
+          if (!payload) return { error: inp.mode === "volume" ? "Enter litres like 20 or 12.5." : "Enter naira like 10000." };
+          const sale = s.sale;
+          if (sale && !["arrived", "preset"].includes(sale.status)) {
+            if (["paid", "unpaid", "cancelled"].includes(sale.status)) return [A("customerLeaves"), A("customerArrives"), A("setPreset", payload)];
+            return { error: "Finish this sale first: release the trigger, then hang up and pay." };
+          }
+          return [A("setPreset", payload)];
+        },
+      },
+      insert: { label: () => "Put nozzle in filler", actions: () => [A("liftNozzle")] },
+      squeeze: {
+        label: () => "Squeeze trigger",
+        primary: true,
+        actions: () => [A("startPump")],
+        onPress: () => {
+          ui.triggerHeld = true;
+        },
+      },
+      release: {
+        label: () => "Release trigger",
+        danger: true,
+        // While flowing, releasing stops the sale; after a preset stop it only closes the nozzle.
+        actions: (s) => (s.sale?.status === "dispensing" ? [A("stopPump")] : ui.triggerHeld ? [] : { error: "Your hand is not on the trigger." }),
+        emptyOk: () => ui.triggerHeld,
+        onPress: () => {
+          ui.triggerHeld = false;
+        },
+      },
+      pay: {
+        label: () => "Hang up and pay",
+        actions: (s) => {
+          const sale = s.sale;
+          if (!sale || s.dispenser.nozzle !== "in-vehicle") return { error: "Put the nozzle in the filler and pump first." };
+          if (sale.status === "dispensing" || ui.triggerHeld) return { error: "Release the trigger first." };
+          return sale.deliveredMl > 0 ? [A("returnNozzle"), A("recordPayment", { method: "cash" })] : [A("returnNozzle")];
+        },
+      },
+    },
+    readings: (s) => {
+      const sale = s.sale;
+      const ml = sale?.deliveredMl ?? 0;
+      const ask = !sale?.mode ? "—" : sale.mode === "amount" ? formatKobo(sale.amountKobo) : formatMl(sale.volumeMl, 3);
+      return [
+        ["Asked for", ask],
+        ["Target", sale?.mode ? formatMl(sale.targetMl, 3) : "—"],
+        ["Delivered", formatMl(ml, 3)],
+        ["Charge", sale?.priceKobo != null ? formatKobo(chargeFor(ml, sale.priceKobo)) : "—"],
+        ["Car tank", sale ? `${formatMl(sale.vehicle.fuelMl, 3)} of ${formatMl(sale.vehicle.capacityMl, 0)}` : "—", "wide"],
+      ];
+    },
+    check: (s) => {
+      const r = s.ledger.receipts.at(-1);
+      if (!r || s.sale?.receiptNo !== r.no) return "";
+      return `Receipt ${receiptLabel(r.no)}: ${formatMl(r.volumeMl, 3)} × ${formatKobo(r.priceKobo)}/L = ${formatKobo(r.chargeKobo)} paid`;
+    },
+    status: (s) => {
+      const sale = s.sale;
+      if (!sale) return "";
+      const why = {
+        target: ui.triggerHeld
+          ? "Preset reached: the dispenser closed its own valve upstream. The nozzle did not trip — release the trigger."
+          : "Preset reached and trigger released. Hang up and pay for the litres measured.",
+        "vehicle-full": "Car full: fuel covered the sensing port, suction lifted the diaphragm and the latch let the valve snap shut.",
+        manual: "Trigger released: the spring closed the valve. You pay for exactly what flowed.",
+        "tank-empty": "The station tank ran out. You pay for what flowed.",
+      };
+      // Settled states first, so a paid sale never repeats the pay instruction.
+      if (sale.status === "paid") return "Paid for exactly the litres measured. Authorise a new preset for the next customer.";
+      if (sale.status === "cancelled") return "Hung up with nothing dispensed — nothing is due.";
+      if (sale.status === "dispensing") return "Trigger squeezed: fuel flows while air is drawn in through the sensing port.";
+      if (sale.stopReason) return why[sale.stopReason] ?? "Stopped.";
+      if (sale.status === "nozzle") return "Nozzle in the filler. Squeeze the trigger.";
+      if (sale.status === "preset") return "Preset authorised and price locked. Put the nozzle in the filler.";
+      return "Choose naira or litres, then authorise.";
+    },
+    equation: (s, inp) => {
+      const sale = s.sale;
+      if (sale?.mode === "amount") {
+        return `${formatKobo(sale.amountKobo)} ÷ ${formatKobo(sale.priceKobo)}/L = ${formatMl(sale.targetMl, 3)} target`;
+      }
+      if (sale?.mode === "volume") {
+        return `${formatMl(sale.targetMl, 3)} × ${formatKobo(sale.priceKobo)}/L = up to ${formatKobo(chargeFor(sale.targetMl, sale.priceKobo))}`;
+      }
+      const price = s.station.priceKobo;
+      if (inp.mode === "amount" && inp.amountKobo != null) {
+        return `${formatKobo(inp.amountKobo)} ÷ ${formatKobo(price)}/L = ${formatMl(maxVolumeForAmount(inp.amountKobo, price), 3)} target`;
+      }
+      if (inp.mode === "volume" && inp.volumeMl != null) {
+        return `${formatMl(inp.volumeMl, 3)} × ${formatKobo(price)}/L = up to ${formatKobo(chargeFor(inp.volumeMl, price))}`;
+      }
+      return "Enter the customer's request.";
+    },
+    demoSetup: () => {
+      ui.scenario = "room";
+      setForm({ mode: "amount", request: "5000" });
+    },
+    demo: [
+      () => "authorise",
+      () => "insert",
+      () => "squeeze",
+      () => "release",
+      () => "pay",
+      () => () => {
+        ui.scenario = "fill";
+        setForm({ mode: "volume", request: "20" });
+        resetLessonState();
+      },
+      () => "authorise",
+      () => "insert",
+      () => "squeeze",
+      () => "pay",
+    ],
+  },
+};
+
+/** Actions that finish the previous sale before a fresh one starts. */
+function settleSale(s) {
+  const sale = s.sale;
+  if (!sale) return [];
+  if (sale.status === "dispensing") return { error: "Wait for this 5 L to finish, or stop the pump." };
+  const out = [];
+  if (s.dispenser.nozzle === "in-vehicle") out.push(A("returnNozzle"));
+  const willBeReturned = sale.status === "returned" || (s.dispenser.nozzle === "in-vehicle" && sale.deliveredMl > 0);
+  if (willBeReturned) out.push(A("recordPayment", { method: "cash" }));
+  out.push(A("customerLeaves"));
+  return out;
+}
+
+function compareTable(s) {
+  const rows = s.ledger.sales.filter((x) => x.deliveredMl > 0).map((x) => ({ ...x, now: false }));
+  if (s.sale?.priceKobo != null && s.sale.deliveredMl > 0) rows.push({ ...s.sale, chargeKobo: chargeFor(s.sale.deliveredMl, s.sale.priceKobo), now: true });
+  if (!rows.length) return `<p class="note">Completed runs appear here for comparison.</p>`;
+  const rate = s.config.dispenseRateMlPerMin;
+  const body = rows.slice(-4).map((r) => `<tr><td>${formatKobo(r.priceKobo)}${r.now ? " (now)" : ""}</td><td>${formatMl(r.deliveredMl, 3)}</td><td>${(r.deliveredMl * 60 / rate).toFixed(1)} s</td><td>${formatKobo(r.chargeKobo)}</td></tr>`).join("");
+  const done = rows.filter((r) => !r.now && r.deliveredMl === 5_000);
+  const prices = new Set(done.map((r) => r.priceKobo));
+  const lesson = prices.size > 1 ? `<p class="check">Same 5.000 L and the same 7.5 s of flow — only the money changed.</p>` : "";
+  return `<table class="compare"><thead><tr><th>Price/L</th><th>Litres</th><th>Flow</th><th>Amount</th></tr></thead><tbody>${body}</tbody></table>${lesson}`;
+}
+
+// ---------------------------------------------------------------------------
+// state
+
+const SCENARIO_FORM = {
+  room: { mode: "amount", request: "10000" },
+  fill: { mode: "volume", request: "20" },
+};
+const ui = {
+  lesson: null,
+  paused: false,
+  speed: 1,
+  revealed: false,
+  scenario: "room",
+  triggerHeld: false, // the learner's hand on the nozzle (not part of the fuel model)
+  form: { price: "1000", ...SCENARIO_FORM.room },
+};
+let state = overviewState();
+let scene;
+let svg;
+let raf = 0;
+let last = 0;
+let carry = 0;
+let phase = 0;
+let cam = { from: [...CAMERA.station], to: [...CAMERA.station], start: 0, now: [...CAMERA.station], done: null };
+let demo = null;
+let lastEvents = 0;
+
+// ---------------------------------------------------------------------------
+// camera
+
+function flyTo(rect, done) {
+  cam = { from: [...cam.now], to: [...rect], start: performance.now(), now: [...cam.now], done };
+  if (reducedMotion.matches) {
+    cam.now = [...rect];
+    applyViewBox();
+    cam.done = null;
+    done?.();
+    return;
+  }
+  loop();
+}
+
+function camMoving() {
+  return cam.now.some((v, i) => v !== cam.to[i]);
+}
+
+function stepCamera(now) {
+  if (!camMoving()) return;
+  const t = Math.min(1, (now - cam.start) / ZOOM_MS);
+  const e = t < 0.5 ? 4 * t * t * t : 1 - (-2 * t + 2) ** 3 / 2; // ease in-out
+  // Interpolate the visible width geometrically so the zoom feels uniform.
+  const w = cam.from[2] * (cam.to[2] / cam.from[2]) ** e;
+  const k = (w - cam.from[2]) / (cam.to[2] - cam.from[2] || 1);
+  const cx = cam.from[0] + cam.from[2] / 2 + (cam.to[0] + cam.to[2] / 2 - cam.from[0] - cam.from[2] / 2) * k;
+  const cy = cam.from[1] + cam.from[3] / 2 + (cam.to[1] + cam.to[3] / 2 - cam.from[1] - cam.from[3] / 2) * k;
+  const h = (w * 3) / 4;
+  cam.now = t >= 1 ? [...cam.to] : [cx - w / 2, cy - h / 2, w, h];
+  applyViewBox();
+  if (t >= 1 && cam.done) {
+    const done = cam.done;
+    cam.done = null;
+    done();
+  }
+}
+
+function applyViewBox() {
+  svg.setAttribute("viewBox", cam.now.map((v) => v.toFixed(1)).join(" "));
+}
+
+// ---------------------------------------------------------------------------
+// lesson flow
+
+function openLesson(id, { focus = true } = {}) {
+  if (!LESSONS[id]) return;
+  stopDemo();
+  ui.lesson = id;
+  ui.paused = false;
+  ui.triggerHeld = false;
+  carry = 0;
+  state = LESSONS[id].setup();
+  lastEvents = state.events.length;
+  hidePlate();
+  svg.classList.add("zoomed");
+  renderPanel();
+  update();
+  flyTo(CAMERA[id], () => {
+    showPlate(id);
+    if (focus) $("#lesson-title")?.focus();
+  });
+}
+
+function backToStation() {
+  stopDemo();
+  ui.lesson = null;
+  hidePlate();
+  state = overviewState();
+  renderPanel();
+  update();
+  svg.classList.remove("zoomed");
+  flyTo(CAMERA.station, () => $(`[data-lesson]`)?.focus());
+}
+
+function replay() {
+  if (ui.lesson) openLessonInPlace();
+}
+
+/** Fresh lesson state without moving the camera. */
+function openLessonInPlace() {
+  stopDemo();
+  resetLessonState();
+  announce("Lesson reset.");
+}
+
+function resetLessonState() {
+  ui.paused = false;
+  ui.triggerHeld = false;
+  carry = 0;
+  phase = 0;
+  state = LESSONS[ui.lesson].setup();
+  lastEvents = state.events.length;
+  renderPanel();
+  update();
+}
+
+function showPlate(id) {
+  ui.revealed = true;
+  for (const p of svg.querySelectorAll(".plate")) {
+    const on = p.id === `plate-${id}`;
+    p.classList.toggle("active", on);
+    p.setAttribute("aria-hidden", String(!on));
+  }
+  svg.classList.add("revealed");
+  update();
+}
+
+function hidePlate() {
+  ui.revealed = false;
+  svg.classList.remove("revealed");
+  for (const p of svg.querySelectorAll(".plate")) {
+    p.classList.remove("active");
+    p.setAttribute("aria-hidden", "true");
+  }
+}
+
+function press(key) {
+  const lesson = LESSONS[ui.lesson];
+  const ctl = lesson?.controls[key];
+  if (!ctl) return false;
+  const verdict = availability(ctl);
+  if (!verdict.ok) {
+    announce(verdict.reason);
+    return false;
+  }
+  state = verdict.state;
+  ctl.onPress?.(state);
+  update();
+  return true;
+}
+
+function availability(ctl) {
+  const actions = ctl.actions(state, inputs());
+  if (!actions) return { ok: false, reason: "Not available now.", state };
+  if (actions.error) return { ok: false, reason: actions.error, state };
+  if (!actions.length) return ctl.emptyOk?.(state) ? { ok: true, state, reason: null } : { ok: false, reason: "Nothing to do.", state };
+  if (actions.length === 1) {
+    const v = can(state, actions[0]);
+    if (!v.ok) return { ok: false, reason: v.reason, state };
+  }
+  return run(state, actions);
+}
+
+// ---------------------------------------------------------------------------
+// demo (auto lesson): presses the same controls with a pause between steps
+
+function startDemo() {
+  if (!ui.lesson) return;
+  stopDemo();
+  LESSONS[ui.lesson].demoSetup?.();
+  resetLessonState();
+  demo = { i: 0, timer: 0 };
+  ui.paused = false;
+  scheduleDemo();
+  renderControls();
+}
+
+function stopDemo() {
+  if (demo) clearTimeout(demo.timer);
+  demo = null;
+}
+
+function scheduleDemo() {
+  if (!demo || demo.timer || ui.paused || isFlowing(state)) return;
+  const steps = LESSONS[ui.lesson].demo;
+  if (demo.i >= steps.length) {
+    stopDemo();
+    renderControls();
+    return;
+  }
+  demo.timer = setTimeout(() => {
+    demo.timer = 0;
+    if (!demo || ui.paused || isFlowing(state)) return;
+    const step = steps[demo.i++];
+    const key = step(state);
+    if (typeof key === "function") key();
+    else if (key) press(key);
+    update();
+  }, reducedMotion.matches ? 500 : DEMO_GAP_MS);
+}
+
+// ---------------------------------------------------------------------------
+// frames
+
+function loop() {
+  if (!raf) {
+    last = performance.now();
+    raf = requestAnimationFrame(frame);
+  }
+}
+
+function frame(now) {
+  raf = 0;
+  const dt = Math.min(100, Math.max(0, now - last));
+  last = now;
+  const lesson = LESSONS[ui.lesson];
+  if (lesson && !ui.paused && isFlowing(state)) {
+    const exact = dt * lesson.speed * ui.speed + carry;
+    const sim = Math.floor(exact);
+    carry = exact - sim;
+    if (sim > 0) state = tick(state, sim);
+    phase += dt * Math.min(2, ui.speed);
+  }
+  stepCamera(now);
+  update();
+  if (camMoving() || (lesson && !ui.paused && isFlowing(state))) loop();
+}
+
+// ---------------------------------------------------------------------------
+// rendering
+
+function announce(text) {
+  const el = $("#announcer");
+  el.textContent = "";
+  requestAnimationFrame(() => {
+    el.textContent = text;
+  });
+}
+
+function inputs() {
+  const f = ui.form;
+  return {
+    priceKobo: parseNairaToKobo(f.price),
+    mode: f.mode,
+    amountKobo: f.mode === "amount" ? parseNairaToKobo(f.request) : null,
+    volumeMl: f.mode === "volume" ? parseLitresToMl(f.request) : null,
+  };
+}
+
+function setForm(patch) {
+  Object.assign(ui.form, patch);
+  for (const [k, v] of Object.entries(patch)) {
+    const el = doc.querySelector(`[data-form="${k}"]:not([type="radio"])`);
+    if (el && el.value !== v) el.value = v;
+    for (const r of doc.querySelectorAll(`input[type="radio"][data-form="${k}"]`)) r.checked = r.value === v;
+  }
+  const label = doc.querySelector("#request-label");
+  if (label) label.textContent = ui.form.mode === "volume" ? "Litres" : "Naira amount (₦)";
+  update();
+}
+
+function renderPanel() {
+  const panel = $("#panel");
+  const lesson = LESSONS[ui.lesson];
+  for (const b of doc.querySelectorAll("[data-lesson]")) b.setAttribute("aria-current", String(b.dataset.lesson === ui.lesson));
+  $("#back-btn").hidden = !lesson;
+  if (!lesson) {
+    panel.innerHTML = `<section class="card">
+      <h2 id="lesson-title" tabindex="-1">Pick a machine to look inside</h2>
+      <p>Fuel arrives by tanker, waits underground, then a pump and meter deliver it to the car. The numbered pins show where each machine lives.</p>
+      <ol class="overview-list">
+        <li><span class="n">1</span><span><strong>Tanker to storage</strong> — how gravity moves fuel down into the tank.</span></li>
+        <li><span class="n">2</span><span><strong>Litres to price</strong> — how the meter turns measured litres into money.</span></li>
+        <li><span class="n">3</span><span><strong>Customer and nozzle</strong> — presets, the trigger and the two automatic stops.</span></li>
+      </ol>
+    </section>`;
+    return;
+  }
+  panel.innerHTML = `<section class="card" aria-labelledby="lesson-title">
+      <h2 id="lesson-title" tabindex="-1">${lesson.number} · ${lesson.title}</h2>
+      ${lesson.intro.map((p) => `<p>${p}</p>`).join("")}
+    </section>
+    <section class="card controls" aria-label="Try it">
+      ${lesson.extra ? lesson.extra() : ""}
+      <div class="row" id="ctl-row">${Object.entries(lesson.controls)
+        .map(([k, c]) => `<button type="button" class="btn${c.primary ? " primary" : ""}${c.danger ? " danger" : ""}" data-ctl="${k}" aria-describedby="why-${k}"></button>`)
+        .join("")}</div>
+      ${Object.keys(lesson.controls).map((k) => `<p class="why" id="why-${k}"></p>`).join("")}
+      <p class="check" id="lesson-check"></p>
+      <p id="lesson-status"></p>
+    </section>
+    <section class="card" aria-label="Readings">
+      <div class="readings" id="readings"></div>
+      ${lesson.after ? `<div id="lesson-after">${lesson.after(state)}</div>` : ""}
+    </section>
+    <section class="card controls" aria-label="Playback">
+      <div class="playback">
+        <button type="button" class="btn" id="pause-btn" aria-pressed="false">Pause</button>
+        <button type="button" class="btn" id="replay-btn">Replay</button>
+        <button type="button" class="btn" id="demo-btn">Play demo</button>
+        <label>Speed <select id="speed-select">${[0.5, 1, 2]
+          .map((v) => `<option value="${v}"${v === ui.speed ? " selected" : ""}>${v === 0.5 ? "½" : v}×</option>`)
+          .join("")}</select></label>
+      </div>
+      <p class="note">${lesson.speedNote} Flow time so far: <span id="sim-time">0s</span>.</p>
+      <p class="note">${lesson.note}</p>
+    </section>`;
+  for (const b of panel.querySelectorAll("[data-ctl]")) {
+    b.addEventListener("click", () => (demo ? announce("The demo is running — stop it to take over.") : press(b.dataset.ctl)));
+  }
+  $("#pause-btn", panel).addEventListener("click", () => {
+    ui.paused = !ui.paused;
+    if (!ui.paused) {
+      scheduleDemo();
+      loop();
+    }
+    renderControls();
+  });
+  $("#replay-btn", panel).addEventListener("click", replay);
+  $("#demo-btn", panel).addEventListener("click", () => (demo ? (stopDemo(), renderControls()) : startDemo()));
+  $("#speed-select", panel).addEventListener("change", (e) => {
+    ui.speed = Number(e.target.value);
+  });
+  for (const el of panel.querySelectorAll("[data-form]")) {
+    el.addEventListener(el.type === "radio" ? "change" : "input", () => {
+      const patch = { [el.dataset.form]: el.value };
+      if (el.dataset.form === "mode") patch.request = el.value === "volume" ? "20" : "10000";
+      setForm(patch);
+    });
+  }
+  for (const b of panel.querySelectorAll("[data-set]")) {
+    b.addEventListener("click", () => setForm(JSON.parse(b.dataset.set)));
+  }
+  for (const b of panel.querySelectorAll("[data-scenario]")) {
+    b.addEventListener("click", () => {
+      stopDemo();
+      ui.scenario = b.dataset.scenario;
+      setForm(SCENARIO_FORM[ui.scenario]);
+      resetLessonState();
+      announce(b.textContent);
+    });
+  }
+}
+
+function renderControls() {
+  const lesson = LESSONS[ui.lesson];
+  if (!lesson) return;
+  const panel = $("#panel");
+  for (const b of panel.querySelectorAll("[data-ctl]")) {
+    const ctl = lesson.controls[b.dataset.ctl];
+    const label = ctl.label(state);
+    if (b.textContent !== label) b.textContent = label;
+    const v = demo ? { ok: false, reason: "The demo is running — stop it to take over." } : availability(ctl);
+    b.setAttribute("aria-disabled", String(!v.ok));
+    const why = $(`#why-${b.dataset.ctl}`, panel);
+    // After a settled nozzle sale, show one neutral next step instead of stale stop reasons.
+    const settled = !demo && ui.lesson === "nozzle" && ["paid", "cancelled"].includes(state.sale?.status);
+    const reason = v.ok ? "" : settled ? "Authorise a new preset first." : v.reason;
+    if (why.textContent !== reason) why.textContent = reason;
+  }
+  const pause = $("#pause-btn", panel);
+  pause.textContent = ui.paused ? "Resume" : "Pause";
+  pause.setAttribute("aria-pressed", String(ui.paused));
+  $("#demo-btn", panel).textContent = demo ? "Stop demo" : "Play demo";
+  stageFlag();
+}
+
+function renderReadings() {
+  const lesson = LESSONS[ui.lesson];
+  if (!lesson) return;
+  const html = lesson.readings(state, inputs())
+    .map(([k, v, cls = ""]) => `<div class="reading ${cls}"><span class="k">${k}</span><span class="v">${v}</span></div>`)
+    .join("");
+  const box = $("#readings");
+  if (box.innerHTML !== html) box.innerHTML = html;
+  const setText = (id, value) => {
+    const el = $(id);
+    if (el && el.textContent !== value) el.textContent = value;
+  };
+  setText("#lesson-check", lesson.check?.(state) ?? "");
+  setText("#lesson-status", lesson.status?.(state) ?? "");
+  setText("#sim-time", formatDuration(state.clockMs));
+  if (lesson.equation) setText("#request-eq", lesson.equation(state, inputs()));
+  if (lesson.after) {
+    const after = lesson.after(state);
+    const el = $("#lesson-after");
+    if (el.innerHTML !== after) el.innerHTML = after;
+  }
+}
+
+function stageFlag() {
+  const flag = $("#stage .flag");
+  flag.hidden = !ui.paused || !ui.lesson;
+}
+
+function update() {
+  scene.update({ ...read(state), saleStatus: state.sale?.status ?? null });
+  scene.animateFlow(reducedMotion.matches ? 0 : phase);
+  const flowing = isFlowing(state);
+  // A sensing-port trip releases the latch: the hand no longer holds the valve open.
+  if (ui.triggerHeld && state.sale?.stopReason === "vehicle-full") ui.triggerHeld = false;
+  if (ui.lesson && ui.revealed) {
+    const plate = svg.querySelector(`#plate-${ui.lesson}`);
+    updatePlate[ui.lesson](plate, state, { triggerHeld: ui.triggerHeld });
+    plate.classList.toggle("flowing", flowing && !ui.paused);
+    const offset = reducedMotion.matches ? "0" : (-phase * 0.08).toFixed(1);
+    for (const el of plate.querySelectorAll(".pl-flow, .pl-air, .pl-pulse")) el.style.strokeDashoffset = offset;
+  }
+  if (state.events.length !== lastEvents) {
+    const fresh = state.events.slice(lastEvents);
+    lastEvents = state.events.length;
+    const text = LESSONS[ui.lesson]?.status?.(state);
+    if (text && fresh.length) announce(text);
+    renderControls();
+  }
+  renderReadings();
+  renderControls();
+  scheduleDemo();
+  if (flowing && !ui.paused && ui.lesson) loop();
+}
+
+// ---------------------------------------------------------------------------
+// boot
+
+function boot() {
+  const stage = $("#stage");
+  stage.innerHTML = sceneMarkup().replace("</svg>", `${pinsMarkup()}${platesMarkup()}</svg>`);
+  const flag = doc.createElement("div");
+  flag.className = "flag";
+  flag.textContent = "Paused";
+  flag.hidden = true;
+  stage.append(flag);
+  svg = stage.querySelector("svg");
+  svg.querySelector("title").textContent = "Petrol station with zoomable machine cutaways";
+  scene = bindScene(svg);
+  hidePlate();
+  applyViewBox();
+
+  for (const b of doc.querySelectorAll("[data-lesson]")) {
+    b.addEventListener("click", () => (ui.lesson === b.dataset.lesson ? null : openLesson(b.dataset.lesson)));
+  }
+  $("#back-btn").addEventListener("click", backToStation);
+  doc.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && ui.lesson) backToStation();
+  });
+  renderPanel();
+  update();
+  // First impression is a machine, not the wide station: zoom into lesson 1.
+  openLesson("delivery", { focus: false });
+}
+
+if (doc) {
+  if (doc.readyState === "loading") doc.addEventListener("DOMContentLoaded", boot);
+  else boot();
+}
+
+return { LESSONS };
+})();
+})();
+</script>
+</body>
+</html>

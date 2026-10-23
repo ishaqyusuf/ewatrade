@@ -138,11 +138,11 @@ export function DayTimeline() {
       <div className="gg-wrap" ref={ref}>
         <div className="gg-split-head">
           <h2 className="gg-h2" id="show-h">
-            One day at Mama Bisi Farms.
+            One day at Al-Jawdah Agro-Biz.
           </h2>
           <p className="gg-lead">
             From the first crate counted to the last naira counted. Six moments
-            from a sample day in Ibadan,{" "}
+            from a sample day in Ilorin,{" "}
             {platform === "web"
               ? "on the web dashboard."
               : "on the mobile app screens."}
@@ -225,7 +225,7 @@ export function DayTimeline() {
               />
               <div className="gg-dayclock">
                 <span>
-                  <small>Mama Bisi Farms · sample day</small>
+                  <small>Al-Jawdah Agro-Biz · sample day</small>
                   <b>
                     <Digits time={time} />
                   </b>

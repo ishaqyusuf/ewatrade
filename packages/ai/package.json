@@ -9,7 +9,8 @@
     "./rehearsal-model": "./src/rehearsal-model.ts",
     "./runtime-config": "./src/runtime-config.ts",
     "./transcription": "./src/transcription/router.ts",
-    "./transcription-contracts": "./src/transcription/contracts.ts"
+    "./transcription-contracts": "./src/transcription/contracts.ts",
+    "./storefront-design": "./src/storefront-design.ts"
   },
   "scripts": {
     "lint": "biome check .",
@@ -21,7 +22,8 @@
     "@ai-sdk/openai": "3.0.48",
     "@ai-sdk/provider": "3.0.8",
     "ai": "6.0.141",
-    "zod": "catalog:"
+    "zod": "catalog:",
+    "@ewatrade/storefront-contracts": "workspace:*"
   },
   "devDependencies": {
     "@biomejs/biome": "^1.9.4",

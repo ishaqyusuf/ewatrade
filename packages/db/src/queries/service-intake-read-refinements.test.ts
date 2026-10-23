@@ -357,3 +357,21 @@ test("standalone confirmation still rejects a wrong scoped persisted graph", asy
   expect(f.intakeReads()).toBe(1)
   expect(f.jobQueries).toHaveLength(0)
 })
+
+test("confirmed intake replay never adds a second name-only customer", async () => {
+  const f = fixture()
+  const original = await createAndConfirmServiceIntakeInTransaction(
+    f.tx,
+    command,
+  )
+  const named = {
+    ...command,
+    saveNewCustomer: true,
+    customerName: "Ishaq Yusuf",
+  }
+  f.intake.payloadHash = serviceIntakeReviewRevision(named)
+  // This fixture has no Customer delegate: a repeated customer operation fails.
+  expect(await createAndConfirmServiceIntakeInTransaction(f.tx, named)).toEqual(
+    original,
+  )
+})

@@ -9,8 +9,8 @@ import { whatsAppSupportHandoff } from "./support"
 import { whatsAppLinkIdSchema } from "./whatsapp"
 
 export const WHATSAPP_CONTROL_LIFETIME_MS = 5 * 60_000
-export const WHATSAPP_CONTROL_PAGE_SIZE = 4
-export const WHATSAPP_CONTROL_RENDER_VERSION = "whatsapp-control-v1"
+export const WHATSAPP_CONTROL_PAGE_SIZE = 2
+export const WHATSAPP_CONTROL_RENDER_VERSION = "whatsapp-control-v2"
 export function whatsAppControlLabel(value: string, max = 160) {
   const text = whatsAppPlainText(value).replace(/\s+/g, " ").trim()
   let result = ""
@@ -29,10 +29,14 @@ export const whatsAppControlCommandSchema = z.discriminatedUnion("kind", [
     .object({
       kind: z.enum([
         "help",
+        "menu",
+        "privacy",
+        "cancel",
         "businesses",
         "stores",
         "new",
         "chats",
+        "disconnect",
         "invalid_choice",
       ]),
     })
@@ -42,6 +46,7 @@ export const whatsAppControlCommandSchema = z.discriminatedUnion("kind", [
       kind: z.literal("choose"),
       index: z.number().int().min(1).max(5),
       replyToMessageId: z.string().min(1).max(256),
+      menuId: whatsAppLinkIdSchema.optional(),
     })
     .strict(),
 ])
@@ -60,8 +65,12 @@ export function parseWhatsAppControl(
     .replace(/^\//, "")
     .replace(/\s+/g, " ")
   if (!value) return null
-  if (["help", "menu", "support", "contact support"].includes(value))
+  if (["help", "support", "contact support"].includes(value))
     return { kind: "help" }
+  if (["menu", "main menu"].includes(value)) return { kind: "menu" }
+  if (["privacy", "my data", "assistant data"].includes(value))
+    return { kind: "privacy" }
+  if (value === "cancel") return { kind: "cancel" }
   if (
     ["business", "businesses", "switch business", "change business"].includes(
       value,
@@ -73,6 +82,8 @@ export function parseWhatsAppControl(
   if (["new chat", "new conversation"].includes(value)) return { kind: "new" }
   if (["continue chat", "continue conversation", "chats"].includes(value))
     return { kind: "chats" }
+  if (["disconnect", "disconnect ewatrade"].includes(value))
+    return { kind: "disconnect" }
   if (/^choose(?:\s+[0-9]+(?:\s.*)?|)$/.test(value)) {
     const match = /^choose ([1-5])$/.exec(value)
     return match && replyToMessageId && replyToMessageId.length <= 256
@@ -82,10 +93,103 @@ export function parseWhatsAppControl(
   return null
 }
 
+/** A native button still needs the exact provider reply context. IDs carry no authority. */
+export function parseWhatsAppControlButton(
+  value: string | undefined,
+  replyToMessageId?: string,
+): WhatsAppControlCommand | null {
+  if (!value?.startsWith("wa-control:")) return null
+  const match = /^wa-control:([A-Za-z0-9_-]{1,128}):([1-5])$/.exec(value)
+  return match && replyToMessageId && replyToMessageId.length <= 256
+    ? {
+        kind: "choose",
+        menuId: match[1],
+        index: Number(match[2]),
+        replyToMessageId,
+      }
+    : { kind: "invalid_choice" }
+}
+
+/** At most three native reply buttons; all numbered choices retain typed fallback. */
+export function whatsAppControlButtons(
+  menu: WhatsAppControlMenu,
+  menuId: string,
+) {
+  if (!/^[A-Za-z0-9_-]{1,128}$/.test(menuId))
+    throw Error("Invalid saved control identity.")
+  return whatsAppControlMenuSchema
+    .parse(menu)
+    .choices.slice(0, 3)
+    .map((choice, index) => ({
+      id: `wa-control:${menuId}:${index + 1}`,
+      title: whatsAppControlLabel(`${index + 1}. ${choice.label}`, 20),
+    }))
+}
+
 const scope = z
   .object({ grantId: id, grantGeneration: generation, storeId: id })
   .strict()
+export const whatsAppControlCategorySchema = z.enum([
+  "sales",
+  "inventory",
+  "customers",
+  "finance",
+  "catalog",
+  "services",
+  "reports",
+  "scope",
+  "chats",
+  "settings",
+])
+export type WhatsAppControlCategory = z.infer<
+  typeof whatsAppControlCategorySchema
+>
+export type WhatsAppControlCapability = {
+  id: string
+  domain:
+    | "search"
+    | "catalog"
+    | "inventory"
+    | "sales"
+    | "services"
+    | "customers"
+    | "finance"
+    | "staff"
+  title: string
+  example: string
+  availability: "native" | "app_review"
+}
+export const whatsAppControlTaskStarterSchema = z.enum([
+  "Record sale",
+  "Add customer",
+  "Add product",
+  "Record expense",
+  "Receive stock",
+])
+export function whatsAppControlTaskStarter(
+  capability: WhatsAppControlCapability,
+) {
+  const starters: Record<
+    string,
+    z.infer<typeof whatsAppControlTaskStarterSchema>
+  > = {
+    "sales.order.record_simple": "Record sale",
+    "customers.create": "Add customer",
+    "catalog.product.create": "Add product",
+    "finance.expense.record_simple": "Record expense",
+    "inventory.stock.receive": "Receive stock",
+  }
+  return capability.availability === "native" ||
+    capability.id === "inventory.stock.receive"
+    ? starters[capability.id]
+    : undefined
+}
 export const whatsAppControlActionSchema = z.discriminatedUnion("kind", [
+  z.object({ kind: z.literal("help") }).strict(),
+  z.object({ kind: z.literal("privacy") }).strict(),
+  z.object({ kind: z.literal("cancel") }).strict(),
+  z.object({ kind: z.literal("disconnect") }).strict(),
+  z.object({ kind: z.literal("disconnect_confirm") }).strict(),
   z.object({ kind: z.literal("businesses"), cursor: id.optional() }).strict(),
   z
     .object({
@@ -105,6 +209,20 @@ export const whatsAppControlActionSchema = z.discriminatedUnion("kind", [
     })
     .strict(),
   scope.extend({ kind: z.literal("new") }),
+  scope.extend({ kind: z.literal("select_review") }),
+  scope.extend({
+    kind: z.literal("menu"),
+    page: z.number().int().min(0).max(100).optional(),
+  }),
+  scope.extend({
+    kind: z.literal("category"),
+    category: whatsAppControlCategorySchema,
+    page: z.number().int().min(0).max(100).optional(),
+  }),
+  scope.extend({
+    kind: z.literal("capability_hint"),
+    capabilityId: z.string().min(1).max(160),
+  }),
   scope.extend({
     kind: z.literal("resume"),
     conversationId: id,
@@ -123,6 +241,7 @@ export const whatsAppControlMenuSchema = z
     detail: z.string().max(800),
     conversationTarget: generalConversationTargetSchema.optional(),
     support: z.literal(true).optional(),
+    taskStarter: whatsAppControlTaskStarterSchema.optional(),
     choices: z
       .array(
         z
@@ -165,7 +284,7 @@ export function renderWhatsAppControl(
         `${i + 1}. ${whatsAppPlainText(choice.label).replace(/\s+/g, " ")}`,
     ),
     parsed.choices.length
-      ? "Reply to this message with Choose 1 (or another listed number). This menu is valid for up to 5 minutes."
+      ? "Use an option button, or reply to this message with Choose 1 (or another listed number). This menu is valid for up to 5 minutes."
       : "Send Help, Business, Store, New chat or Continue chat.",
     parsed.conversationTarget
       ? link

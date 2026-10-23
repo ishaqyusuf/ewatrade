@@ -23,7 +23,7 @@ import { redirect } from "next/navigation"
 import { Suspense } from "react"
 
 export const metadata: Metadata = {
-  title: "Service jobs | EwaTrade",
+  title: "Services | EwaTrade",
 }
 
 export default async function ServicesRoutePage({
@@ -71,7 +71,11 @@ export default async function ServicesRoutePage({
       : []),
     queryClient.prefetchInfiniteQuery(
       trpc.services.queuePage.infiniteQueryOptions(
-        { ...getServiceWorkQueuePageInput(filter), storeId: store.id, sort },
+        {
+          ...getServiceWorkQueuePageInput(filter),
+          storeId: store.id,
+          sort: sort ?? { field: "createdAt", direction: "desc" },
+        },
         {
           getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
           retry: false,

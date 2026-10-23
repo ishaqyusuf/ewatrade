@@ -1,0 +1,61 @@
+{
+  "version": 1,
+  "id": "2026-10-21-storefront-catalog-design",
+  "tickets": ["S04", "H02"],
+  "summary": "Implement owner-selected Catalog v4, safe public read projection, product WhatsApp enquiry drafts and shop/item share images. Add strictly local stock-photo QA fixtures and deduplicate service option labels.",
+  "noAssistantImpact": "Anonymous browser public-safe display/query/OG reads and user-controlled share/copy/WhatsApp navigation only. Existing merchant Catalog/stock/domain commands and assistant tools/capabilities are unchanged. Product WhatsApp opens a draft addressed only to eligible LIVE selected Store support contact; no auto-send, assistant connection/grant/provider call, request/order creation or permission/entitlement expansion. QA preview never exposes a recipient or sends. Public read DTO/API and authority changes are documented separately; they are not merchant assistant commands. Local licensed stock-photo fixtures are browser-review-only, have no CatalogPhotoAsset upload/approval or provider writes, and never broaden public merchant media access.",
+  "capabilities": [],
+  "procedures": [],
+  "docs": [
+    {
+      "topic": "feature",
+      "status": "local_only",
+      "path": ".brain/features/product-sharing-public-storefront.md"
+    },
+    {
+      "topic": "api",
+      "status": "local_only",
+      "path": ".brain/api/contracts.md"
+    },
+    {
+      "topic": "permissions",
+      "status": "local_only",
+      "path": ".brain/api/permissions.md"
+    },
+    {
+      "topic": "schema",
+      "status": "not_applicable",
+      "note": "No database/schema/migration change."
+    },
+    {
+      "topic": "capability",
+      "status": "not_applicable",
+      "note": "Browser-only public share/copy and presentation; no assistant capability/procedure changes."
+    },
+    {
+      "topic": "decision",
+      "status": "local_only",
+      "path": ".brain/decisions/2026-10-21-public-storefront-commerce-projection.md"
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "test",
+      "path": "apps/storefront/src/components/storefront/storefront-metadata.test.ts",
+      "executed": true,
+      "result": "bun test packages/db/src/queries/public-storefront-display.test.ts packages/db/src/queries/public-storefront-commerce.test.ts packages/db/src/queries/public-storefront.test.ts apps/storefront/src/components/storefront/storefront-share.test.ts apps/storefront/src/components/storefront/storefront-metadata.test.ts: 21 pass, 84 assertions; six files including exact-host/runtime/path-traversal fixture guards and option-label deduplication; in-memory only"
+    },
+    {
+      "kind": "review",
+      "path": ".brain/qa/2026-10-21-storefront-catalog-v4-implementation.md",
+      "executed": true,
+      "result": ".brain/qa/2026-10-21-storefront-catalog-v4-implementation.md: actual QA root/detail/copy/deep-link metadata and rendered shop/item PNG evidence; no real WhatsApp message or public-host acceptance Real-photo grid/detail and both share PNGs reviewed; no merchant photo upload claimed."
+    },
+    {
+      "kind": "review",
+      "path": "apps/storefront/src/app/page.tsx",
+      "executed": true,
+      "result": "Full storefront typecheck: unrelated existing assistant-whatsapp/inbox.ts:363 Prisma JSON error; no storefront diagnostic"
+    }
+  ]
+}

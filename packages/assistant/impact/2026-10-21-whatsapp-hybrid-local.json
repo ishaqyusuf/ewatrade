@@ -1,0 +1,108 @@
+{
+  "version": 1,
+  "id": "2026-10-21-whatsapp-hybrid-local",
+  "tickets": [
+    "H01",
+    "H02"
+  ],
+  "summary": "Implement local Hybrid WhatsApp channel adapters: scoped native menus, email-verified signup forms, five business-entry forms and deterministic saved Orders pagination. Existing merchant commands, roles, client release decisions and confirmation authorities remain canonical. No deployment, Meta publication, schema, OTP or phone change.",
+  "capabilities": [
+    {
+      "id": "sales.order.record_simple",
+      "change": "unchanged",
+      "rollout": "source",
+      "note": "Transport/input/read-navigation adapter only. Existing canonical domain, Store, role, rollout and explicit confirmation retained; stock receive continues as saved request/app review, never native execution."
+    },
+    {
+      "id": "customers.create",
+      "change": "unchanged",
+      "rollout": "source",
+      "note": "Transport/input/read-navigation adapter only. Existing canonical domain, Store, role, rollout and explicit confirmation retained; stock receive continues as saved request/app review, never native execution."
+    },
+    {
+      "id": "catalog.product.create",
+      "change": "unchanged",
+      "rollout": "source",
+      "note": "Transport/input/read-navigation adapter only. Existing canonical domain, Store, role, rollout and explicit confirmation retained; stock receive continues as saved request/app review, never native execution."
+    },
+    {
+      "id": "finance.expense.record_simple",
+      "change": "unchanged",
+      "rollout": "source",
+      "note": "Transport/input/read-navigation adapter only. Existing canonical domain, Store, role, rollout and explicit confirmation retained; stock receive continues as saved request/app review, never native execution."
+    },
+    {
+      "id": "inventory.stock.receive",
+      "change": "unchanged",
+      "rollout": "source",
+      "note": "Transport/input/read-navigation adapter only. Existing canonical domain, Store, role, rollout and explicit confirmation retained; stock receive continues as saved request/app review, never native execution."
+    },
+    {
+      "id": "sales.orders.read",
+      "change": "unchanged",
+      "rollout": "source",
+      "note": "Transport/input/read-navigation adapter only. Existing canonical domain, Store, role, rollout and explicit confirmation retained; stock receive continues as saved request/app review, never native execution."
+    }
+  ],
+  "procedures": [],
+  "docs": [
+    {
+      "topic": "feature",
+      "status": "local_only",
+      "path": ".brain/features/whatsapp-assistant.md"
+    },
+    {
+      "topic": "api",
+      "status": "local_only",
+      "path": ".brain/api/contracts.md"
+    },
+    {
+      "topic": "permissions",
+      "status": "local_only",
+      "path": ".brain/api/permissions.md"
+    },
+    {
+      "topic": "decision",
+      "status": "local_only",
+      "path": ".brain/decisions/2026-10-21-whatsapp-hybrid-channel-adapters.md"
+    },
+    {
+      "topic": "capability",
+      "status": "not_applicable",
+      "path": "packages/assistant/src/capabilities/COVERAGE.md",
+      "note": "Regenerated current coverage; byte-identical inventory, zero capability/procedure changes."
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "test",
+      "path": "apps/api/src/communications/whatsapp-platform-runtime.test.ts",
+      "executed": true,
+      "result": "14 tests pass, including structured-return isolation, credential suppression and STOP cleanup/revocation ordering."
+    },
+    {
+      "kind": "test",
+      "path": "apps/api/src/assistant/channel-flow-state.test.ts",
+      "executed": true,
+      "result": "4 tests pass: sender/binding/policy/expiry/single-use denial, exclusive bounded structured input, exact commands and provider option bounds."
+    },
+    {
+      "kind": "test",
+      "path": "apps/api/src/assistant/channel-hybrid-turn.test.ts",
+      "executed": true,
+      "result": "4 tests pass with injected effects: native forms and pagination bypass model/media; ordinary text uses shared assistant. No database/provider I/O."
+    },
+    {
+      "kind": "test",
+      "path": "packages/communications/src/whatsapp-flows.test.ts",
+      "executed": true,
+      "result": "Authenticated native protocol, no default IDs, bounded untrusted input, encryption/tamper checks pass. Meta publication unverified."
+    },
+    {
+      "kind": "review",
+      "path": ".brain/plans/whatsapp-system-design/hybrid-case-implementation-map.json",
+      "executed": true,
+      "result": "122 exact case versions mapped to actual source, app continuation, designed unavailable and explicit local gaps. Source audit is not live acceptance."
+    }
+  ]
+}

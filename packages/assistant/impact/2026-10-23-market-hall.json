@@ -1,0 +1,35 @@
+{
+  "version": 1,
+  "id": "2026-10-23-market-hall",
+  "tickets": [
+    "H01",
+    "H02"
+  ],
+  "summary": "Implement user-selected Market hall as an additional exact template pin using the existing Factory catalog, editor and runtime. Configure existing Jawdah QA through normal local Owner controls. No new merchant procedure, provider authority or deployment.",
+  "noAssistantImpact": "Market hall is another active registered composition available to existing dashboard Owner/Admin storefront.design.read/generate/accept commands and signed design review under unchanged Store/Site scope, CAS, permissions and entitlements. initialize/saveDraft/publish/rollback remain explicit form-only commands. WhatsApp/mobile design writes and provider configuration remain excluded. Catalog inspection and customer actions reuse current canonical resource/action contracts; no new model tool or expanded authority.",
+  "capabilities": [],
+  "procedures": [],
+  "docs": [
+    {
+      "topic": "feature",
+      "status": "local_only",
+      "path": ".brain/features/storefront-template-factory.md",
+      "note": "Market hall version, local qualification, exact Workshop selection and Jawdah acceptance scope."
+    },
+    {
+      "topic": "capability",
+      "status": "updated",
+      "path": "packages/assistant/src/capabilities/COVERAGE.md",
+      "note": "H01 regenerated from existing procedure inventory; no Market hall tool added."
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "run",
+      "path": ".brain/qa/2026-10-23-market-hall-jawdah.md",
+      "note": "Final scoped29tests350assertions, JSX typecheck,11exact pins, local QA setup/artwork/browser readback, independent ship review; historical33/404 combined pass and current parallel Concierge test/H02 limits linked.",
+      "executed": true,
+      "result": "29 pass / 0 fail / 350 assertions; JSX typecheck and all11 exact pins pass. Local Jawdah QA artwork/flows verified; independent review ship and documentation complete. Broader concurrent Concierge test failures and5foreign H02 gaps documented separately."
+    }
+  ]
+}

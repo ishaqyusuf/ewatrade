@@ -1,4 +1,9 @@
 import {
+  WHATSAPP_ASSISTANT_PROMPT_VERSION,
+  whatsAppCollectionInstructions,
+  whatsAppPresentationInstructions,
+} from "@ewatrade/assistant/channels/instructions"
+import {
   PRODUCT_ASSISTANT_PROMPT_VERSION,
   productAssistantInstructions,
   productWorkflowContextSchema,
@@ -128,7 +133,11 @@ const ATTACHMENT_REFUSALS: Record<string, string> = {
 export async function createWorkflowAssistantTurn(
   deps: WorkflowTurnDependencies,
   input: unknown,
-  options: { purpose?: "SETUP" | "PRODUCT_CREATE"; signal?: AbortSignal } = {},
+  options: {
+    purpose?: "SETUP" | "PRODUCT_CREATE"
+    signal?: AbortSignal
+    channel?: "whatsapp"
+  } = {},
 ): Promise<GeneralTurn> {
   const parsed = workflowTurnInputSchema.safeParse(input)
   if (!parsed.success)
@@ -228,9 +237,13 @@ export async function createWorkflowAssistantTurn(
         actorUserId: scope.userId,
         conversationId: conversation.id,
         model: model.modelId,
-        promptVersion: productMode
-          ? PRODUCT_ASSISTANT_PROMPT_VERSION
-          : SETUP_ASSISTANT_PROMPT_VERSION,
+        promptVersion:
+          (productMode
+            ? PRODUCT_ASSISTANT_PROMPT_VERSION
+            : SETUP_ASSISTANT_PROMPT_VERSION) +
+          (options.channel === "whatsapp"
+            ? `+${WHATSAPP_ASSISTANT_PROMPT_VERSION}`
+            : ""),
         provider: model.provider,
         requestId: body.requestId,
         userMessage,
@@ -396,9 +409,14 @@ export async function createWorkflowAssistantTurn(
           : setupTools
         const agent = new ToolLoopAgent({
           model: model.model,
-          instructions: productMode
-            ? productAssistantInstructions(business)
-            : buildSetupAssistantInstructions(business),
+          instructions:
+            (productMode
+              ? productAssistantInstructions(business)
+              : buildSetupAssistantInstructions(business)) +
+            (options.channel === "whatsapp"
+              ? whatsAppPresentationInstructions() +
+                whatsAppCollectionInstructions()
+              : ""),
           tools,
           stopWhen: stepCountIs(8),
           maxOutputTokens: 2_000,

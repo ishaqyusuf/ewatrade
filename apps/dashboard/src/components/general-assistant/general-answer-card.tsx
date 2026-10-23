@@ -18,18 +18,31 @@ import { OpenStaffStatusSheet } from "@/components/open-staff-status-sheet"
 import type { GeneralAnswer } from "@ewatrade/assistant/general/contracts"
 import { useSyncExternalStore } from "react"
 import { GeneralMoneyAccountsAnswer } from "./general-money-accounts-answer"
+import { GeneralServiceJobCard } from "./general-service-job-card"
+import { OpenMissingCatalogItem } from "./open-missing-catalog-item"
 
 const subscribe = () => () => {}
 const clientSnapshot = () => true
 const serverSnapshot = () => false
 
-export function GeneralAnswerCard({ answer }: { answer: GeneralAnswer }) {
+export function GeneralAnswerCard({
+  answer,
+  messageId,
+}: { answer: GeneralAnswer; messageId?: string }) {
   const hydrated = useSyncExternalStore(
     subscribe,
     clientSnapshot,
     serverSnapshot,
   )
   const asOf = new Date(answer.asOf)
+  if (answer.serviceDraft)
+    return (
+      <GeneralServiceJobCard
+        draft={answer.serviceDraft}
+        answerId={answer.id}
+        messageId={messageId}
+      />
+    )
   if (answer.accounts)
     return (
       <GeneralMoneyAccountsAnswer
@@ -76,7 +89,11 @@ export function GeneralAnswerCard({ answer }: { answer: GeneralAnswer }) {
           </time>
         </p>
       </div>
-      {answer.target ? (
+      {answer.catalogCreate ? (
+        <div className="shrink-0">
+          <OpenMissingCatalogItem handoff={answer.catalogCreate} />
+        </div>
+      ) : answer.target ? (
         <div className="shrink-0">
           {answer.target.kind === "service_request" ? (
             <OpenAssistantServiceRequestSheet target={answer.target} />

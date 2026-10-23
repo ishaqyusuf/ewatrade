@@ -32,10 +32,10 @@ type SampleData = {
 }
 export const data: SampleData = {
   business: {
-    name: "Mama Bisi Farms",
-    city: "Ibadan",
-    owner: "Bisi",
-    initials: "MB",
+    name: "Al-Jawdah Agro-Biz",
+    city: "Ilorin",
+    owner: "Owner",
+    initials: "AJ",
   },
   today: { sales: 184500, orders: 23, owed: 42000, cash: 126000 },
   sale: {
@@ -79,8 +79,8 @@ export const data: SampleData = {
     {
       key: "poultry",
       label: "Poultry & feed",
-      name: "Mama Bisi Farms",
-      city: "Ibadan",
+      name: "Al-Jawdah Agro-Biz",
+      city: "Ilorin",
       lines: [
         "Crate of eggs, 5500, 120 crates",
         "Live broiler, 8000, 40 birds",

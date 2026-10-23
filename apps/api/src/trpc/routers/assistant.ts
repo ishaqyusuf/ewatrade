@@ -32,9 +32,39 @@ import { simpleExpenseOptions } from "../../assistant/general-simple-expense"
 import { simpleSaleOptions } from "../../assistant/general-simple-sale"
 import { simpleTransferOptions } from "../../assistant/general-simple-transfer"
 import { assistantMediaAvailability } from "../../assistant/media-availability"
+import {
+  decideAssistantReviewLink,
+  editAssistantReviewLink,
+  readAssistantReviewLink,
+} from "../../assistant/review-links"
 import { createTRPCRouter, protectedProcedure } from "../init"
 const id = z.string().min(1).max(128)
 export const assistantRouter = createTRPCRouter({
+  // Locator resolves through POST, keeping it out of tRPC query URLs and access logs.
+  reviewLink: protectedProcedure
+    .input(z.object({ token: z.string().min(1).max(2048) }).strict())
+    .mutation(({ ctx, input }) => readAssistantReviewLink(ctx, input.token)),
+  decideReviewLink: protectedProcedure
+    .input(
+      z
+        .object({
+          token: z.string().min(1).max(2048),
+          decision: z.enum(["confirm", "cancel"]),
+          approvalToken: z.string().max(128).optional(),
+        })
+        .strict(),
+    )
+    .mutation(({ ctx, input }) => decideAssistantReviewLink(ctx, input)),
+  editReviewLink: protectedProcedure
+    .input(
+      z
+        .object({
+          token: z.string().min(1).max(2048),
+          payload: generalActionSchema,
+        })
+        .strict(),
+    )
+    .mutation(({ ctx, input }) => editAssistantReviewLink(ctx, input)),
   simpleTransferOptions: protectedProcedure
     .input(z.object({}).strict())
     .query(async ({ ctx }) => {

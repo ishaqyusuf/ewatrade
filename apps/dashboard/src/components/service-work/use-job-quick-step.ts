@@ -1,5 +1,7 @@
 "use client"
 
+import { invalidateServiceJobLists } from "@/components/service-work/invalidate-service-job-lists"
+
 import type { WorkJob } from "@/components/service-work/service-utils"
 import { useTRPC } from "@/trpc/client"
 import { toast } from "@ewatrade/ui"
@@ -19,7 +21,7 @@ export function useJobQuickStep() {
       (line) =>
         line.authorizationStatus === "AUTHORIZED" &&
         (step === "start"
-          ? line.status === "QUEUED"
+          ? line.status === "QUEUED" || line.status === "READY_FOR_HANDOFF"
           : line.status === "QUEUED" || line.status === "IN_PROGRESS"),
     )
     if (lines.length === 0) {
@@ -50,15 +52,7 @@ export function useJobQuickStep() {
       )
     } finally {
       await Promise.all([
-        queryClient.invalidateQueries({
-          queryKey: trpc.services.queuePage.queryKey(),
-        }),
-        queryClient.invalidateQueries({
-          queryKey: trpc.services.queue.queryKey(),
-        }),
-        queryClient.invalidateQueries({
-          queryKey: trpc.services.queueStageCounts.queryKey(),
-        }),
+        invalidateServiceJobLists(queryClient, trpc),
         queryClient.invalidateQueries({
           queryKey: trpc.services.getJob.queryKey({ jobId: job.id }),
         }),

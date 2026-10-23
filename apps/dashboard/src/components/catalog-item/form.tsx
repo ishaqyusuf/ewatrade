@@ -191,6 +191,7 @@ export function CatalogItemForm({
   const {
     setCatalogItemMode,
     catalogCreateMode,
+    catalogCreateWork,
     catalogConversation,
     setParams,
   } = useCatalogItemParams()
@@ -229,7 +230,9 @@ export function CatalogItemForm({
   const [canonicalTransactionScale, setCanonicalTransactionScale] = useState(
     DEFAULT_UNIT_TRANSACTION_SCALE,
   )
-  const [trackServiceWork, setTrackServiceWork] = useState(false)
+  const [trackServiceWork, setTrackServiceWork] = useState(
+    !editItem && catalogCreateWork === "tracked",
+  )
   const [defaultQuoteRequired, setDefaultQuoteRequired] = useState(false)
   const [serviceAuthorization, setServiceAuthorization] = useState<
     "after_required_payment" | "manual_release" | "on_order_confirmation"

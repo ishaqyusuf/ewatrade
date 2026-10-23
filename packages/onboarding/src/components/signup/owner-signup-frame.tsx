@@ -1,5 +1,6 @@
 "use client"
 
+import { getStorefrontDomain } from "@ewatrade/utils"
 import {
   BUSINESS_TYPE_GROUPS,
   findBusinessType,
@@ -8,6 +9,10 @@ import { type ReactNode, useEffect, useState } from "react"
 import { getMarketingUrl } from "../../lib/signup-navigation"
 import { OwnerBusinessAvatar, OwnerSignupIcon } from "./owner-signup-artwork"
 import "../../styles/owner-signup-reference.css"
+
+const storefrontDomain = getStorefrontDomain(
+  process.env.NEXT_PUBLIC_PLATFORM_DOMAIN ?? "ewatrade.com",
+)
 
 export function OwnerSignupFrame({
   children,
@@ -134,7 +139,7 @@ export function OwnerSignupFrame({
                   <span className="owner-ref-sf-url">
                     <OwnerSignupIcon name="lock" />
                     <span>
-                      <b>{slug || "your-business"}</b>.ewatrade.com
+                      <b>{slug || "your-business"}</b>.{storefrontDomain}
                     </span>
                   </span>
                 </div>

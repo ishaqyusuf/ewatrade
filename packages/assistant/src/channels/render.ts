@@ -10,9 +10,25 @@ import {
   type GeneralConversationTarget,
   conversationAppLink,
 } from "./conversation-links"
+import {
+  chunkWhatsAppFormattedReply,
+  whatsAppBold,
+  whatsAppDataText,
+  whatsAppField,
+  whatsAppHeading,
+  whatsAppLiteralText,
+  whatsAppModelText,
+} from "./presentation"
 import { readRecordAppLink } from "./read-record-links"
 
-export const WHATSAPP_RENDER_VERSION = "whatsapp-reply-v2"
+export const WHATSAPP_RENDER_VERSION = "whatsapp-reply-v3"
+export function supportedWhatsAppReplyRenderer(version: string) {
+  return [
+    "whatsapp-reply-v1",
+    "whatsapp-reply-v2",
+    WHATSAPP_RENDER_VERSION,
+  ].includes(version)
+}
 // Conservative product limit; current provider/version limits remain a release verification gate.
 export const WHATSAPP_REPLY_CHUNK_UNITS = 3000
 export const WHATSAPP_REPLY_MAX_CHUNKS = 16
@@ -64,14 +80,18 @@ type ReadLinkOptions = {
   trustedAppOrigin?: string
   currentScope?: ReadRecordOrigin
   conversation?: GeneralConversationTarget
+  includeContext?: boolean
 }
 function answerText(answer: GeneralAnswer, options: ReadLinkOptions) {
-  const lines = [answer.title, answer.value]
+  const lines = [
+    whatsAppHeading(whatsAppDataText(answer.title)),
+    whatsAppBold(whatsAppDataText(answer.value)),
+  ]
   if (answer.records) {
     lines.push(
       ...answer.records.rows.map(
         (row, i) =>
-          `${i + 1}. ${row.title} (${row.type})${row.subtitle ? ` — ${row.subtitle}` : ""}`,
+          `${i + 1}. ${whatsAppLiteralText(whatsAppDataText(row.title))} (${row.type.replace(/_/g, " ")})${row.subtitle ? ` — ${whatsAppLiteralText(whatsAppDataText(row.subtitle))}` : ""}`,
       ),
     )
     lines.push(answer.detail)
@@ -93,10 +113,21 @@ function answerText(answer: GeneralAnswer, options: ReadLinkOptions) {
         "More accounts are not shown; this page is not a complete list.",
       )
   } else lines.push(answer.detail)
-  lines.push(`${answer.scope} · as of ${answer.asOf}`)
+  if (options.includeContext !== false)
+    lines.push(
+      whatsAppField("Scope", whatsAppDataText(answer.scope)),
+      whatsAppField("As of", answer.asOf),
+    )
+  if (answer.chatChoices?.length)
+    lines.push(
+      ...answer.chatChoices.map(
+        (choice, index) => `${index + 1}. ${choice.title}`,
+      ),
+      "Use an option button, or reply to this message with Choice 1 (or another listed choice). Choices expire after 10 minutes.",
+    )
   if (answer.target)
     lines.push("Open the saved record in EwaTrade for its full review.")
-  const text = whatsAppPlainText(lines.join("\n"))
+  const text = whatsAppDataText(lines.join("\n\n"))
   const { trustedAppOrigin, currentScope } = options
   if (!trustedAppOrigin || !currentScope) return text
   const targets = [
@@ -111,14 +142,14 @@ function answerText(answer: GeneralAnswer, options: ReadLinkOptions) {
       trustedAppOrigin,
       currentScope,
     })
-    return link ? [`${prefix}${link.label}: ${link.href}`] : []
+    return link ? [`${prefix}${link.label}:\n${link.href}`] : []
   })
   if (answer.handoff) {
     const handoff = capabilityActionHandoffLink(answer.handoff, {
       trustedAppOrigin,
       currentScope,
     })
-    if (handoff) links.push(`${handoff.label}: ${handoff.href}`)
+    if (handoff) links.push(`${handoff.label}:\n${handoff.href}`)
   }
   return links.length
     ? `${text}\nSelect the original business and Store shown above when opening EwaTrade.\n${[...new Set(links)].join("\n")}`
@@ -171,7 +202,7 @@ function savedConversationLink(options: ReadLinkOptions) {
     currentScope: options.currentScope,
   })
   return link
-    ? `\nSelect the original business and Store shown above.\n${link.label}: ${link.href}`
+    ? `\n\nSelect the original business and Store shown above.\n${link.label}:\n${link.href}`
     : ""
 }
 const appReview = (
@@ -199,7 +230,7 @@ export function renderWhatsAppFinalReply(
     return appReview()
   if (!Array.isArray(parts) || !parts.length || parts.length > 80)
     return appReview(scopeLabel, options)
-  const answers: string[] = []
+  const answers: GeneralAnswer[] = []
   const texts: string[] = []
   for (const part of parts) {
     const parsed = generalStoredPartSchema.safeParse(part)
@@ -216,12 +247,20 @@ export function renderWhatsAppFinalReply(
         ],
       }
     if (parsed.data.type === "data-general-answer")
-      answers.push(answerText(parsed.data.data, options))
-    else texts.push(whatsAppPlainText(parsed.data.text))
+      answers.push(parsed.data.data)
+    else texts.push(whatsAppModelText(parsed.data.text))
   }
   // Server-built facts supersede model narration; all precise money remains authoritative strings.
+  const formattedAnswers = answers.map((answer, index) =>
+    answerText(answer, {
+      ...options,
+      includeContext:
+        answer.scope !== answers[index + 1]?.scope ||
+        answer.asOf !== answers[index + 1]?.asOf,
+    }),
+  )
   const body =
-    (answers.length ? answers : texts).filter(Boolean).join("\n\n") +
+    (answers.length ? formattedAnswers : texts).filter(Boolean).join("\n\n") +
     savedConversationLink(options)
   if (
     !body ||
@@ -229,8 +268,8 @@ export function renderWhatsAppFinalReply(
   )
     return appReview(scopeLabel, options)
   try {
-    const scopePrefix = scopeLabel ? `${scopeLabel}\n\n` : ""
-    const pieces = chunkWhatsAppReply(
+    const scopePrefix = scopeLabel ? `${whatsAppBold(scopeLabel)}\n\n` : ""
+    const pieces = chunkWhatsAppFormattedReply(
       body,
       WHATSAPP_REPLY_CHUNK_UNITS - scopePrefix.length - 12,
     )

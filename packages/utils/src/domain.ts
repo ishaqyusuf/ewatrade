@@ -168,6 +168,47 @@ export function getTenantSurfaceLabel(surface: TenantSurface) {
   }
 }
 
+/** Root registered once with Portless; each business is a wildcard subdomain. */
+export function getStorefrontDomain(platformDomain: string) {
+  const domain = normalizeHostname(platformDomain)
+  return isLocalHostname(domain)
+    ? getLocalSurfaceHostname({
+        surface: "storefront",
+        platformDomain: domain,
+        localProjectSlug: "ewatrade",
+      })
+    : domain
+}
+
+export function isLocalStorefrontPreviewHost(
+  host: string,
+  env: {
+    NODE_ENV?: string
+    APP_ENV?: string
+    DEV_PROFILE?: string
+    EWATRADE_ENV_MODE?: string
+    NEXT_PUBLIC_PLATFORM_DOMAIN?: string
+  },
+) {
+  if (
+    env.NODE_ENV !== "development" ||
+    env.APP_ENV !== "local" ||
+    env.DEV_PROFILE !== "local" ||
+    env.EWATRADE_ENV_MODE !== "local"
+  )
+    return false
+  const platformDomain = env.NEXT_PUBLIC_PLATFORM_DOMAIN ?? ""
+  if (!isLocalHostname(platformDomain)) return false
+  const resolution = resolveTenantDomain(host, { platformDomain })
+  return (
+    resolution.kind === "tenant" &&
+    resolution.surface === "storefront" &&
+    resolution.isLocalhost &&
+    !resolution.isCustomDomain &&
+    Boolean(resolution.tenantSlug)
+  )
+}
+
 export function buildInternalTenantHostname(params: {
   tenantSlug: string
   surface: TenantSurface
@@ -177,6 +218,10 @@ export function buildInternalTenantHostname(params: {
   const tenantSlug = params.tenantSlug.trim().toLowerCase()
   const platformDomain = normalizeHostname(params.platformDomain)
 
+  if (params.surface === "storefront") {
+    return `${tenantSlug}.${getStorefrontDomain(platformDomain)}`
+  }
+
   if (isLocalHostname(platformDomain)) {
     return getLocalSurfaceHostname({
       surface: params.surface,
@@ -185,10 +230,6 @@ export function buildInternalTenantHostname(params: {
         .trim()
         .toLowerCase(),
     })
-  }
-
-  if (params.surface === "storefront") {
-    return `${tenantSlug}.${platformDomain}`
   }
 
   return `${tenantSlug}${SURFACE_SUFFIX_BY_KIND[params.surface]}.${platformDomain}`
@@ -293,7 +334,15 @@ export function extractTenantSlugFromPlatformHostname(
   const normalizedPlatformDomain = stripPort(platformDomain)
 
   if (isLocalHostname(normalizedPlatformDomain)) {
-    return null
+    const storefrontRoot = stripPort(
+      getStorefrontDomain(normalizedPlatformDomain),
+    )
+    const suffix = `.${storefrontRoot}`
+    if (!normalizedHostname.endsWith(suffix)) return null
+    const slug = normalizedHostname.slice(0, -suffix.length)
+    return slug.length <= 40 && /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug)
+      ? slug
+      : null
   }
 
   if (

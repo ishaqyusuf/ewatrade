@@ -1,0 +1,68 @@
+{
+  "version": 1,
+  "id": "2026-10-22-public-assistant-signup",
+  "tickets": ["H02"],
+  "summary": "Public website assistant uses the configured model without merchant tools. Embedded Dashboard-owned chat registration reuses canonical OTP/account creation after exact review, age/legal choice and explicit Verify & create business. Credentials/proof stay in isolated deterministic fields; no new authenticated merchant command or permission. Local source only.",
+  "noAssistantImpact": "No new merchant domain capability or tRPC procedure is introduced. Public Q&A is read-only public product guidance. Business/account registration is an explicit form inside chat, using existing auth.requestMobileOwnerOtp and auth.verifyMobileOwnerOtp authority, not a model tool. The model cannot create accounts, read private data or bypass proof/consent. Existing merchant assistant and WhatsApp cases are unchanged.",
+  "capabilities": [],
+  "procedures": [],
+  "docs": [
+    {
+      "topic": "feature",
+      "path": ".brain/features/marketing-public-assistant.md",
+      "status": "local_only"
+    },
+    {
+      "topic": "api",
+      "path": ".brain/api/contracts.md",
+      "status": "local_only"
+    },
+    {
+      "topic": "permissions",
+      "path": ".brain/api/permissions.md",
+      "status": "local_only"
+    },
+    {
+      "topic": "capability",
+      "path": ".brain/features/assistant-business-operations.md",
+      "status": "local_only"
+    },
+    {
+      "topic": "decision",
+      "path": ".brain/decisions/2026-10-22-public-assistant-chat-registration.md",
+      "status": "local_only"
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "test",
+      "path": "apps/api/src/assistant/public-chat-route.test.ts",
+      "executed": true,
+      "result": "Configured answer seam, proof exclusion, origin/body/schema limits, explicit failures and public admission pass."
+    },
+    {
+      "kind": "test",
+      "path": "apps/dashboard/src/app/api/owner-signup/route.test.ts",
+      "executed": true,
+      "result": "Three bridge tests16assertions pass with transport fixtures only; canonical OTP then verify/create, HttpOnly cookie exchange and no bearer in response, cross-origin/age/legal rejection."
+    },
+    {
+      "kind": "test",
+      "path": "packages/onboarding/src/lib/signup-chat.test.ts",
+      "executed": true,
+      "result": "Details/eligible age/link constraints, exact origin/source and strict presentation/progress envelopes pass."
+    },
+    {
+      "kind": "fixture",
+      "path": "packages/onboarding/src/components/signup/signup-chat.tsx",
+      "executed": true,
+      "result": "Actual mounted component with isolated fetch stand-ins: review/consent, code request, wrong-code rejection, explicit verify/create success and uncertain outcome recovery pass. Temporary fixture removed; no real account/email."
+    },
+    {
+      "kind": "screenshot",
+      "path": ".brain/design/evidence/2026-10-22-marketing-ai-whatsapp-workshop.json",
+      "executed": true,
+      "result": "One actual local configured-provider bakery answer and real embedded registration form observed. No OTP request, account, message or legal acceptance on actual endpoints."
+    }
+  ]
+}

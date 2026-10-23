@@ -1,0 +1,146 @@
+.signup-shell:has(.signup-chat) {
+  min-height: 0;
+  padding: 0;
+  background: transparent;
+}
+.signup-shell:has(.signup-chat) > .signup-header,
+.signup-shell:has(.signup-chat) > .signup-footer {
+  display: none;
+}
+.signup-chat {
+  --chat-bg: #fbfaf6;
+  --chat-card: #fff;
+  --chat-fg: #182420;
+  --chat-line: #dce4df;
+  --chat-muted: #5f6a63;
+  min-height: 100vh;
+  padding: 12px;
+  margin: 0;
+  background: var(--chat-bg);
+  color: var(--chat-fg);
+  font: 14px / 1.5 system-ui, sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  .signup-chat {
+    --chat-bg: #0f1513;
+    --chat-card: #1a2320;
+    --chat-fg: #eef3f0;
+    --chat-line: #26312d;
+    --chat-muted: #a3aea8;
+  }
+}
+.signup-chat-card {
+  display: grid;
+  gap: 14px;
+  padding: 14px;
+  border: 1px solid var(--chat-line);
+  border-radius: 12px;
+  background: var(--chat-card);
+}
+.signup-chat h2 {
+  margin: 0;
+  font-size: 19px;
+  font-weight: 650;
+  line-height: 1.3;
+  outline: none;
+}
+.signup-chat p {
+  margin: 0;
+}
+.signup-chat form {
+  display: grid;
+  gap: 12px;
+}
+.signup-chat label {
+  display: grid;
+  gap: 5px;
+  font-weight: 500;
+}
+.signup-chat input,
+.signup-chat select {
+  width: 100%;
+  min-height: 44px;
+  border: 1px solid var(--chat-line);
+  border-radius: 8px;
+  padding: 9px 10px;
+  color: var(--chat-fg);
+  background: var(--chat-bg);
+  font-size: 16px;
+}
+.signup-chat input:focus-visible,
+.signup-chat select:focus-visible {
+  outline: 2px solid #49b98d;
+  outline-offset: 2px;
+}
+.signup-chat .signup-chat-consent {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+.signup-chat-consent [data-slot="checkbox"] {
+  flex-shrink: 0;
+  margin-top: 3px;
+}
+.signup-chat a {
+  text-decoration: underline;
+}
+.signup-chat .signup-chat-primary {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 46px;
+  border-radius: 10px;
+  padding: 10px;
+  background: #17684f;
+  color: white;
+  text-decoration: none;
+  text-align: center;
+  white-space: normal;
+}
+.signup-chat dl {
+  margin: 0;
+  display: grid;
+  gap: 9px;
+}
+.signup-chat dl div {
+  display: grid;
+  grid-template-columns: 1fr 1.6fr;
+  gap: 8px;
+}
+.signup-chat dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.signup-chat .signup-chat-error {
+  color: #dd5750;
+}
+.signup-chat .signup-chat-note {
+  color: var(--chat-muted);
+  font-size: 11px;
+}
+.signup-chat-consent [data-slot="checkbox"] {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border: 1px solid var(--chat-muted);
+  border-radius: 4px;
+}
+.signup-chat-consent [data-slot="checkbox"][data-checked] {
+  background: #17684f;
+  color: white;
+}
+.signup-chat-consent [data-slot="checkbox"] svg {
+  width: 16px;
+  height: 16px;
+}
+.signup-chat a:not(.signup-chat-primary) {
+  color: var(--chat-fg);
+}
+
+/* Embedded registration keeps development chrome outside its small viewport. */
+body:has(.signup-chat) nextjs-portal {
+  display: none;
+}

@@ -1,0 +1,18 @@
+{
+  "version": 1,
+  "id": "2026-10-21-storefront-basic-service-request",
+  "tickets": ["S04", "H02"],
+  "summary": "Selected Restrained v5 standalone storefront service request and confirmation, with general eligible service navigation and WhatsApp-only enquiries.",
+  "noAssistantImpact": "Customer-only structured form. submitStorefrontServiceRequest composes canonical submitPublicServiceRequest after verified Host, current published Site/Store/plan/catalog/form checks and text screening; it rechecks and locks current authority before commit and replay. No conversation, guest identity, age declaration, chat Terms, assistant capability, provider send or new merchant permission. Merchant Service Request handling commands remain unchanged. Assistant initiation is excluded because a model cannot manufacture a customer's request. This is local source, not deployment or public Site publication.",
+  "capabilities": [],
+  "procedures": [],
+  "docs": [
+    { "topic": "feature", "status": "local_only", "path": ".brain/features/storefront-basic-customer-flow.md" },
+    { "topic": "api", "status": "local_only", "path": ".brain/api/contracts.md" },
+    { "topic": "schema", "status": "not_applicable", "note": "Existing ServiceRequest/Form/Line models; no schema or migration." }
+  ],
+  "evidence": [
+    { "kind": "test", "path": "packages/db/src/queries/storefront-service-intake.test.ts", "executed": true, "result": "Focused in-memory canonical create/replay, foreign scope and quantity refusal, publication withdrawal rollback and rejected text checks pass; no connected/provider effects." },
+    { "kind": "test", "path": "packages/storefront-runtime/src/links.test.ts", "executed": true, "result": "General service names/multiple options use the standalone storefront path; product and foreign option refuse." }
+  ]
+}

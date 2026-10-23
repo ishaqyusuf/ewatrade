@@ -117,6 +117,7 @@ import {
 } from "./general-stock-transfer"
 import { stockPackageTransform } from "./general-stock-transform"
 import { storeSettingsUpdate } from "./general-store-settings-change"
+import { storefrontDesignAdapters } from "./general-storefront-design"
 import { supplierAllocationRelease } from "./general-supplier-allocation-release"
 import { supplierCreate } from "./general-supplier-create"
 import { supplierEntryReverse } from "./general-supplier-entry-reversal"
@@ -872,6 +873,8 @@ const adapters: {
   product_unit_configuration_publish: productUnitConfigurationPublish,
   product_availability_update: productAvailabilityUpdate,
   store_settings_update: storeSettingsUpdate,
+  storefront_design_generate: storefrontDesignAdapters.generate,
+  storefront_design_accept: storefrontDesignAdapters.accept,
   catalog_archive: catalogArchive,
   product_price_update: productPriceUpdate,
   product_details_update: productDetailsUpdate,

@@ -116,7 +116,7 @@ test("search renders only authorized display rows with page, scope and time boun
   ])
   expect(rendered.kind).toBe("reply")
   expect(rendered.chunks.join("")).toContain("1. Amina (customer)")
-  expect(rendered.chunks.join("")).toContain("2. Eggs (catalog_item)")
+  expect(rendered.chunks.join("")).toContain("2. Eggs (catalog item)")
   expect(rendered.chunks.join("")).toContain("Limited page, not a total")
   expect(rendered.chunks.join("")).toContain(asOf)
   expect(rendered.chunks.join("")).not.toContain(answer.id)
@@ -124,7 +124,7 @@ test("search renders only authorized display rows with page, scope and time boun
     renderWhatsAppFinalReply([{ type: "data-general-answer", data: answer }], {
       scopeLabel: "Amina business · Main Store",
     }).chunks[0],
-  ).toStartWith("Amina business · Main Store")
+  ).toStartWith("*Amina business · Main Store*")
 })
 test("plain rendering strips dashboard-only links, unverified URLs, tables and display controls", () => {
   const text = whatsAppPlainText(

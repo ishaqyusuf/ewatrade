@@ -1,3 +1,4 @@
+import { whatsAppDraftCollectionReply } from "@ewatrade/assistant/channels/collection"
 import {
   type SimpleSale,
   isNonSaleMoneyIntent,
@@ -127,6 +128,9 @@ export async function handleSimpleSaleChat(
   // edits and the existing choice/confirmation commands keep their meanings.
   const fieldEdit =
     amountFieldEdit.test(text) ||
+    /(?:^|\n)[\t ]*(?:\d+[.)][\t ]+)?(?:amount|received|total|account|customer|description|items?|sold)[\t ]*:/i.test(
+      text,
+    ) ||
     /^(?:fully paid|part(?:ly)?[ -]?paid|partial payment)$/i.test(text) ||
     /^(?:account(?:\s+is|:)|customer(?:\s+is|:)|(?:paid|transfer(?:red)?)\s+(?:to|into|by)\b|(?:to|into|in)\s+.+\s+account\b)/i.test(
       text,
@@ -279,7 +283,9 @@ export async function handleSimpleSaleChat(
     "payload" in result ? result.payload : parsed.data,
   )
   return {
-    text: simpleSaleQuestions[simpleSaleStep(prepared)],
+    text: isLinkedAssistantIdentity(ctx.session)
+      ? whatsAppDraftCollectionReply(prepared)
+      : simpleSaleQuestions[simpleSaleStep(prepared)],
     proposalId,
     proposalSource: {
       proposalId,

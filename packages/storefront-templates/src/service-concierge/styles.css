@@ -1,0 +1,443 @@
+/* Service concierge (Workshop v5, 2e72dbdf). Scoped to this template's markup. */
+@font-face {
+  font-family: Manrope;
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("./fonts/manrope-400.ttf") format("truetype");
+}
+@font-face {
+  font-family: Manrope;
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("./fonts/manrope-500.ttf") format("truetype");
+}
+@font-face {
+  font-family: Manrope;
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("./fonts/manrope-600.ttf") format("truetype");
+}
+@font-face {
+  font-family: Manrope;
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("./fonts/manrope-700.ttf") format("truetype");
+}
+
+.cv-site[data-template="service-concierge"] {
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* ---------- header and footer ---------- */
+
+.cv-header.sc-header .cv-wrap {
+  flex-wrap: wrap;
+  column-gap: 20px;
+  row-gap: 10px;
+  padding-block: 12px;
+}
+.sc-brand {
+  margin: 0 auto 0 0;
+  font-size: 16px;
+  font-weight: 650;
+  letter-spacing: -0.02em;
+}
+.cv-header.sc-header nav {
+  gap: 4px;
+}
+/* Hand the nav anchors back to the shared Button styles (canvas styles target plain links). */
+.cv-header.sc-header nav a,
+.cv-header.sc-header nav a[aria-current="page"] {
+  color: revert-layer;
+  padding-bottom: revert-layer;
+  border-bottom: revert-layer;
+  text-decoration: none;
+}
+.cv-site[data-template="service-concierge"] .cv-footer .cv-wrap {
+  flex-wrap: wrap;
+  padding-block: 14px;
+}
+
+/* The section element also carries .cv-contact; keep it a block so its wrap spans the row. */
+.cv-site[data-template="service-concierge"] .cv-section.cv-contact {
+  display: block;
+}
+
+/* ---------- home: task, services and enquiry overview ---------- */
+
+.sc-concierge {
+  display: grid;
+  gap: 40px;
+  padding-block: 12px 24px;
+}
+.sc-task,
+.sc-overview {
+  min-width: 0;
+}
+.cv-section .sc-task h1 {
+  max-width: 17ch;
+  font-size: clamp(2rem, 1.35rem + 2.1cqi, 3rem);
+  line-height: 1.06;
+  font-weight: 600;
+  letter-spacing: -0.035em;
+  text-wrap: balance;
+}
+.sc-task .cv-lede {
+  font-size: 17px;
+  line-height: 1.6;
+  max-width: 48ch;
+}
+.sc-choices {
+  margin-top: 36px;
+  gap: 12px;
+}
+.sc-choices [data-slot="field-label"] {
+  width: 100%;
+  min-width: 0;
+  cursor: pointer;
+}
+.sc-choices [data-slot="field"] {
+  min-width: 0;
+  gap: 12px;
+}
+.sc-choices [data-slot="field-content"] {
+  min-width: 0;
+}
+.sc-choices [data-slot="field-description"] {
+  overflow-wrap: anywhere;
+}
+.sc-price {
+  display: grid;
+  justify-items: end;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+}
+.sc-availability {
+  color: #737373;
+  font-size: 12px;
+  font-weight: 400;
+}
+.sc-art {
+  width: 48px;
+  flex: 0 0 48px;
+}
+.sc-art .sf-tile {
+  aspect-ratio: 1;
+  border-radius: 12px;
+}
+.sc-art .sf-tile-badge {
+  display: none;
+}
+.sc-overview {
+  align-self: start;
+}
+.sc-overview [data-slot="card"] {
+  border-radius: var(--cv-radius);
+  box-shadow: none;
+}
+.sc-overview-body {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+.sc-facts {
+  margin: 0;
+  display: grid;
+  gap: 12px;
+}
+.sc-facts > div {
+  display: grid;
+  grid-template-columns: 7.5rem minmax(0, 1fr);
+  gap: 12px;
+  font-size: 14px;
+}
+.sc-facts dt {
+  color: #737373;
+}
+.sc-facts dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.sc-selection {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.sc-selection h3,
+.sc-next h3 {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+}
+.sc-selection .sc-facts > div {
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+.sc-selection .sc-facts dd {
+  text-align: right;
+  font-size: 16px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.sc-next h3 {
+  margin-bottom: 8px;
+}
+.sc-next ol {
+  display: grid;
+  gap: 6px;
+  padding-left: 1.25em;
+  margin: 0;
+  list-style: decimal;
+  color: #525252;
+  font-size: 14px;
+}
+.sc-next li::marker {
+  color: #171717;
+  font-variant-numeric: tabular-nums;
+}
+.sc-next > p {
+  color: #525252;
+  font-size: 14px;
+}
+.sc-overview-actions {
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.sc-overview-actions .tf-help,
+.sc-selection .tf-help {
+  display: block;
+  color: #737373;
+  font-size: 13px;
+  line-height: 1.5;
+}
+.sc-overview-actions .tf-help {
+  flex-basis: 100%;
+  margin-top: 4px;
+}
+.sc-notice {
+  display: block;
+  margin-top: 16px;
+  font-size: 14px;
+}
+
+/* ---------- product shelf ---------- */
+
+.sc-shelf {
+  border-top: 1px solid #e5e5e5;
+  padding-top: 48px;
+  margin-top: 48px;
+}
+.cv-section .sc-shelf h2 {
+  font-size: 20px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+.sc-shelf ul {
+  display: grid;
+  gap: 4px;
+  padding: 0;
+  list-style: none;
+  margin: 20px 0 0;
+}
+.sc-shelf-price {
+  align-self: center;
+}
+
+/* ---------- detail dialog (portalled outside .cv-site) ---------- */
+
+.sc-dialog[data-slot="dialog-content"] {
+  font-family: "Manrope", "Geist", system-ui, sans-serif;
+  max-height: 88dvh;
+  overflow-y: auto;
+}
+/* The shared DialogContent has no padding and uses the primary text colour; this layer frames the content. */
+.sc-dialog-inner {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 24px;
+  color: #171717;
+  font-size: 15px;
+  line-height: 1.5;
+}
+.sc-detail-head {
+  padding-right: 36px;
+}
+.sc-detail-head [data-slot="dialog-description"] {
+  color: #737373;
+  font-size: 14px;
+}
+.sc-detail-title {
+  font-size: 22px;
+  line-height: 1.2;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+.sc-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+}
+.sc-detail > .sf-tile {
+  aspect-ratio: 16 / 9;
+  border-radius: 16px;
+}
+.sc-detail-price {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.sc-detail-copy {
+  margin: 0;
+  max-width: 60ch;
+  line-height: 1.6;
+}
+.sc-detail .tf-help {
+  color: #737373;
+  font-size: 13px;
+}
+.sc-detail-actions {
+  flex-wrap: wrap;
+}
+
+/* ---------- About: one reading column ---------- */
+
+.cv-site[data-template="service-concierge"][data-page="about"] main .cv-wrap {
+  max-width: 736px;
+  padding-block: 22px;
+}
+.cv-site[data-template="service-concierge"][data-page="about"]
+  .cv-section
+  + .cv-section {
+  border-top: 0;
+}
+.cv-site[data-template="service-concierge"][data-page="about"]
+  main
+  > .cv-section:first-child
+  .cv-wrap {
+  padding-top: 56px;
+}
+.cv-site[data-template="service-concierge"][data-page="about"]
+  main
+  > .cv-section:last-child
+  .cv-wrap {
+  padding-bottom: 72px;
+}
+.cv-site[data-template="service-concierge"][data-page="about"] .cv-faq-layout {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 24px;
+}
+.sc-about {
+  display: grid;
+  gap: 44px;
+}
+.sc-about-story {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.cv-section .sc-about h1 {
+  max-width: 20ch;
+  font-size: clamp(1.75rem, 1.35rem + 1.3cqi, 2.5rem);
+  line-height: 1.1;
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  text-wrap: balance;
+}
+.sc-about-story .cv-lede {
+  max-width: 62ch;
+  margin-top: 6px !important;
+}
+.sc-about-facts {
+  display: grid;
+  margin: 0;
+  border-top: 1px solid #171717;
+}
+.sc-about-facts > div {
+  display: grid;
+  grid-template-columns: 8rem minmax(0, 1fr);
+  gap: 12px;
+  padding-block: 12px;
+  border-bottom: 1px solid #e5e5e5;
+  font-size: 14px;
+}
+.sc-about-facts dt {
+  color: #737373;
+}
+.sc-about-facts dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.sc-faq {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.cv-section .sc-faq h2 {
+  font-size: 20px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+.sc-faq [data-slot="accordion-content"] p {
+  color: #525252;
+  white-space: pre-wrap;
+}
+
+@container storefront (min-width: 720px) {
+  .sc-shelf ul {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 4px 24px;
+  }
+}
+@container storefront (min-width: 960px) {
+  .sc-concierge {
+    grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+    gap: 72px;
+    padding-block: 32px 48px;
+  }
+  .sc-overview {
+    position: sticky;
+    top: 24px;
+  }
+  .sc-shelf ul {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  .cv-site[data-template="service-concierge"][data-page="about"]
+    main
+    > .cv-section:first-child
+    .cv-wrap {
+    padding-top: 80px;
+  }
+  .cv-site[data-template="service-concierge"][data-page="about"]
+    main
+    > .cv-section:last-child
+    .cv-wrap {
+    padding-bottom: 96px;
+  }
+}
+@container storefront (max-width: 440px) {
+  .sc-choices .sc-price {
+    white-space: normal;
+    text-align: right;
+  }
+  .sc-facts > div {
+    grid-template-columns: 6rem minmax(0, 1fr);
+  }
+  .sc-about-facts > div {
+    grid-template-columns: 6.5rem minmax(0, 1fr);
+  }
+}
+@container storefront (max-width: 359px) {
+  .sc-choices .sc-art {
+    display: none;
+  }
+}

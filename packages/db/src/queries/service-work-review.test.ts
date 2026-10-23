@@ -1,15 +1,16 @@
 import { expect, test } from "bun:test"
 import { Prisma, type PrismaClient } from "../../generated/prisma/client"
-import { prepareReviewedServiceWorkInTransaction } from "./service-work-review"
 import {
   assignServiceJob,
   assignServiceJobInTransaction,
+  getServiceJob,
   prepareServiceJobLineTransition,
   rescheduleServiceJob,
   rescheduleServiceJobInTransaction,
   transitionServiceJobLine,
   transitionServiceJobLineInTransaction,
 } from "./service-work"
+import { prepareReviewedServiceWorkInTransaction } from "./service-work-review"
 
 const scope = { tenantId: "tenant", storeId: "store", actorUserId: "actor" }
 const now = new Date("2026-10-12T10:00:00.123Z")
@@ -84,6 +85,7 @@ function fixture() {
     dueCommitments: [] as Array<Record<string, unknown>>,
     lines: [line],
     evidence: [],
+    events: state.events,
     exceptions: [],
     notes: [],
     notificationIntents: [],
@@ -460,4 +462,36 @@ test("clinical source, pickup, delivery and payment markers refuse before commer
       }),
     ).rejects.toMatchObject({ code: "CONFLICT" })
   }
+})
+
+test("job history projects recorded status facts without raw event payloads or actor IDs", async () => {
+  const f = fixture()
+  f.job.events.push({
+    id: "status-history",
+    type: "STATUS_CHANGED",
+    serviceJobLineId: "line",
+    fromStatus: "QUEUED",
+    toStatus: "IN_PROGRESS",
+    reason: "Washing started",
+    effectiveAt: now,
+    createdAt: now,
+    actorUserId: "private-actor",
+    payload: { private: "not-for-projection" },
+  })
+  const result = await getServiceJob(f.tx as unknown as PrismaClient, {
+    jobId: "job",
+    tenantId: "tenant",
+  })
+  expect(result?.events).toEqual([
+    {
+      id: "status-history",
+      type: "STATUS_CHANGED",
+      lineId: "line",
+      fromStatus: "QUEUED",
+      toStatus: "IN_PROGRESS",
+      reason: "Washing started",
+      effectiveAt: now,
+      createdAt: now,
+    },
+  ])
 })

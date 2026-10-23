@@ -24,10 +24,16 @@ import { assistantWhatsAppAuthorityDigest } from "./execution"
 import { cancelAssistantWhatsAppPendingMediaInTransaction } from "./media-source-lifecycle"
 import {
   type AssistantWhatsAppStagedReview,
+  type AssistantWhatsAppStagedWebReview,
   type AssistantWhatsAppStagedWorkflowReview,
   stageAssistantWhatsAppOutboxInTransaction,
 } from "./outbox"
+import {
+  assistantWhatsAppBurstText,
+  assistantWhatsAppTextBurst,
+} from "./text-burst"
 import { resolveAssistantWhatsAppWorkflowActionReceiptScope } from "./workflow-terminal"
+export { waitForAssistantWhatsAppTextBurst } from "./text-burst"
 
 const terminal = ["COMPLETED", "CANCELLED", "FAILED", "EXPIRED"]
 const include = {
@@ -204,10 +210,81 @@ export function claimAssistantWhatsAppInbox(
       })
       return { kind: "failed" as const, bindingId: row.bindingId }
     }
+    // The identity lock and FIFO fence bind every fragment to this exact turn.
+    // Retried/started runs are immutable and never absorb a later message.
+    let burst =
+      row.kind === "TURN" &&
+      row.state === "PENDING" &&
+      row.attempts === 0 &&
+      assistantWhatsAppBurstText(row.content)
+        ? assistantWhatsAppTextBurst(
+            row,
+            await tx.assistantWhatsAppInbox.findMany({
+              where: {
+                bindingId: row.bindingId,
+                sequence: { gt: row.sequence },
+              },
+              orderBy: { sequence: "asc" },
+              take: 4,
+            }),
+            now,
+          )
+        : null
+    // Controls have a separate identity sequence, so binding adjacency alone
+    // cannot prove that a HELP/CANCEL/scope change did not interrupt the burst.
+    if (
+      burst &&
+      (await tx.assistantWhatsAppInbox.findFirst({
+        where: {
+          identityId: row.binding.identityId,
+          kind: "CONTROL",
+          receivedAt: { gte: row.receivedAt, lte: now },
+        },
+        select: { id: true },
+      }))
+    )
+      burst = null
+    if (burst) {
+      const merged = await tx.assistantWhatsAppInbox.updateMany({
+        where: {
+          id: { in: burst.members.map((member) => member.id) },
+          bindingId: row.bindingId,
+          kind: "TURN",
+          identityId: null,
+          state: "PENDING",
+          attempts: 0,
+        },
+        data: {
+          state: "CANCELLED",
+          errorCode: "TEXT_BURST_MERGED",
+          completedAt: now,
+        },
+      })
+      if (merged.count !== burst.members.length)
+        throw Error("WhatsApp burst changed")
+    }
     const owner = randomUUID()
     const claimed = await tx.assistantWhatsAppInbox.update({
       where: { id: row.id },
       data: {
+        ...(burst
+          ? {
+              content: {
+                type: "text",
+                text: burst.text,
+                burst: {
+                  originalText: burst.originalText,
+                  sourceIds: burst.members.map((member) => member.id),
+                },
+              },
+              expiresAt: new Date(
+                Math.min(
+                  row.expiresAt.getTime(),
+                  ...burst.members.map((member) => member.expiresAt.getTime()),
+                ),
+              ),
+            }
+          : {}),
         state: "PROCESSING",
         attempts: { increment: 1 },
         leaseGeneration: { increment: 1 },
@@ -279,6 +356,7 @@ export function settleAssistantWhatsAppInbox(
     permittedUserIds: readonly string[]
     errorCode?: string
     review?: AssistantWhatsAppStagedReview
+    webReview?: AssistantWhatsAppStagedWebReview
     workflowReview?: AssistantWhatsAppStagedWorkflowReview
   },
   now = new Date(),
@@ -374,6 +452,7 @@ export function settleAssistantWhatsAppInbox(
               review: options.workflowReview,
             }
           : undefined,
+        options.webReview,
       )
     if (!authorized)
       await cancelAssistantWhatsAppPendingMediaInTransaction(

@@ -62,10 +62,10 @@ describe("jobStage and jobNextStep", () => {
     expect(jobNextStep(gated, false)).toBeNull()
   })
 
-  test("ready work hands over, and cleaning keeps its sign-off words", () => {
+  test("ready work completes independently of collection", () => {
     expect(
       jobNextStep(job("ready_for_handoff", [line("READY_FOR_HANDOFF")]), false),
-    ).toEqual({ action: "handover", label: "Hand over" })
+    ).toEqual({ action: "complete", label: "Complete job" })
     const cleaning = job("ready_for_handoff", [
       line("READY_FOR_HANDOFF", "AUTHORIZED", "Home cleaning"),
     ])

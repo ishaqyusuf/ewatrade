@@ -37,10 +37,7 @@ model Store {
   updatedAt                                         DateTime                                             @updatedAt
   tenant                                            Tenant                                               @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   retailOpsStaffProfiles                            RetailOpsStaffProfile[]
-  pages                                             Page[]
   sites                                             Site[]
-  themes                                            Theme[]
-  templates                                         Template[]
   offlineDevices                                    OfflineDevice[]
   offlineCommands                                   OfflineCommand[]
   serviceIntakes                                    ServiceIntake[]

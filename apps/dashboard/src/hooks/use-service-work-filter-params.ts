@@ -8,12 +8,14 @@ import {
 export const SERVICE_DUE_FILTERS = ["all", "overdue", "today"] as const
 export const SERVICE_PRIORITY_FILTERS = ["normal", "urgent"] as const
 export const SERVICE_STAGE_FILTERS = [
+  "all",
   "open",
   "todo",
   "doing",
   "stuck",
   "ready",
   "done",
+  "cancelled",
 ] as const
 
 export const serviceWorkFilterParams = {
@@ -54,7 +56,8 @@ export function getServiceWorkQueuePageInput(filter: ServiceWorkFilters) {
     limit: 25,
     priority: filter.priority ?? undefined,
     query: filter.query?.trim().slice(0, 160) || undefined,
-    stage: filter.stage && filter.stage !== "open" ? filter.stage : undefined,
+    stage: filter.stage ?? "all",
+    sort: { field: "createdAt" as const, direction: "desc" as const },
   }
 }
 
@@ -64,6 +67,7 @@ export function getServiceWorkStageCountsInput(filter: ServiceWorkFilters) {
     cursor: _cursor,
     limit: _limit,
     stage: _stage,
+    sort: _sort,
     ...input
   } = {
     ...getServiceWorkQueuePageInput(filter),

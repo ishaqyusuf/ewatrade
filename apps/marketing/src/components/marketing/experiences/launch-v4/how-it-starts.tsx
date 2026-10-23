@@ -2,6 +2,10 @@
 import { getDashboardLoginUrl } from "@/lib/auth-navigation"
 import { getCreateStoreCta } from "@/lib/create-store-url"
 import {
+  type MarketingCategory,
+  marketingAttrs,
+} from "@/lib/marketing-interactions"
+import {
   PlatformSwitch,
   usePlatform,
 } from "@ewatrade/onboarding/components/product-preview/platform"
@@ -75,7 +79,7 @@ export function HowItStarts() {
                   <h3>{"Create your store"}</h3>
                   <p>
                     {
-                      "Your name, your business name and an email address, in any browser. The Free plan needs no card."
+                      "Start in WhatsApp or any browser. Your assistant guides setup and account checks. The Free plan needs no card."
                     }
                   </p>
                 </div>
@@ -116,6 +120,11 @@ export function HowItStarts() {
                         aria-controls="assistPanel"
                         aria-selected={index === i}
                         tabIndex={index === i ? 0 : -1}
+                        {...marketingAttrs(
+                          "business",
+                          "businesses",
+                          b.key as MarketingCategory,
+                        )}
                         onClick={() => setIndex(i)}
                         onKeyDown={(e) => {
                           if (

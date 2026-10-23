@@ -1,0 +1,55 @@
+{
+  "version": 1,
+  "id": "2026-10-22-storefront-v7-canvas",
+  "tickets": ["H01", "H02"],
+  "summary": "Implement owner-selected Workshop01v7 in local dashboard Storefront editor: full-screen canvas,28 source-pinned blueprint excerpts/rendered previews, inline copy, pages, fixed shell/order, brand, phrases and guarded exit. New exact2.0.0 pins preserve old versions. Promptv3 deduplicates reviewed declarations within existing quota; no provider activation or call. Exact source/version policy is enforced on manual writes and runtime reads.",
+  "noAssistantImpact": "Manual canvas editing and Save remain form-only under existing Owner/Admin storefront.saveDraft and normal CAS. Existing dashboard design read/generate/accept capability ceiling is unchanged; the prompt serializes the larger reviewed catalog and requires exact section source pins. No new procedure/tool/publish/rollback/configuration authority.",
+  "capabilities": [],
+  "procedures": [],
+  "docs": [
+    {
+      "topic": "feature",
+      "status": "local_only",
+      "path": ".brain/features/storefront-template-factory.md",
+      "note": "Exactv7 local editor implementation and19focused tests/211assertions."
+    },
+    {
+      "topic": "api",
+      "status": "local_only",
+      "path": ".brain/api/contracts.md",
+      "note": "2.0 composition/source metadata; existing endpoint/permission ceiling."
+    },
+    {
+      "topic": "schema",
+      "status": "local_only",
+      "path": ".brain/database/schema.md",
+      "note": "Validated JSON shape only; no Prisma schema/migration or row rewrite."
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "test",
+      "path": "packages/storefront-templates/src/canvas/canvas.test.tsx",
+      "executed": true,
+      "result": "17template/runtime tests,177assertions pass; source pins/runtime blocking, copies/pages/fixed shell and SSR covered."
+    },
+    {
+      "kind": "test",
+      "path": "apps/api/src/storefront/site-commands.local.test.ts",
+      "executed": true,
+      "result": "Offline canonical lifecycle1test/28assertions passes; network forbidden, no DB client."
+    },
+    {
+      "kind": "test",
+      "path": "packages/ai/src/storefront-design.test.ts",
+      "executed": true,
+      "result": "1test/6assertions;9template manifests fit64,000byte limit and exact provenance/default-page instructions remain."
+    },
+    {
+      "kind": "review",
+      "path": ".brain/qa/2026-10-22-storefront-v7-implementation.md",
+      "executed": true,
+      "result": "Normal local browser checks pass; test edits discarded. No Preview testing, DB writes, deployment or provider action. Whole-workspace types retain documented pre-existing shared errors."
+    }
+  ]
+}

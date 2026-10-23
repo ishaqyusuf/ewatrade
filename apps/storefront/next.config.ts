@@ -28,6 +28,9 @@ const nextConfig: NextConfig = {
     ]
   },
   transpilePackages: [
+    "@ewatrade/storefront-contracts",
+    "@ewatrade/storefront-runtime",
+    "@ewatrade/storefront-templates",
     "@ewatrade/events",
     "@ewatrade/api",
     "@ewatrade/db",

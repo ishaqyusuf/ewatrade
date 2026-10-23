@@ -3,6 +3,7 @@ import {
   type WhatsAppDeliveryResult,
 } from "@ewatrade/assistant/channels/delivery"
 import { assistantWhatsAppUserAllowed } from "@ewatrade/assistant/channels/policy"
+import { presentWhatsAppMessage } from "@ewatrade/assistant/channels/presentation"
 import {
   DirectMetaWhatsAppProvider,
   WhatsAppProviderSendError,
@@ -99,7 +100,12 @@ export async function processAssistantChannelDelivery(
       accessToken: current.accessToken,
       phoneNumberId: claim.phoneNumberId,
       to: claim.senderId,
-      body: claim.body,
+      // Presentation follows all immutable-body and authority validation. Legacy
+      // queued reviews retain their exact canonical content and renderer version.
+      body: presentWhatsAppMessage(claim.body, {
+        family: claim.presentationFamily,
+        maxUnits: claim.buttons?.length ? 1024 : 4096,
+      }),
       callbackData: claim.callbackData,
     }
     sent =

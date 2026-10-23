@@ -1,0 +1,52 @@
+/* ServiceOptionPicker layout. Shared controls keep their own styles; these classes set layout only. */
+.so-picker {
+  gap: 8px;
+}
+.so-list {
+  width: 100%;
+  margin-top: 4px;
+}
+.so-list [data-slot="toggle-group-item"] {
+  justify-content: flex-start;
+  gap: 10px;
+  height: auto;
+  min-height: 40px;
+  padding-block: 8px;
+  text-align: left;
+  white-space: normal;
+}
+.so-tick {
+  flex-shrink: 0;
+  opacity: 0;
+}
+[aria-pressed="true"] > .so-tick {
+  opacity: 1;
+}
+.so-name {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.so-meta {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 10px;
+  margin-left: auto;
+}
+.so-availability {
+  color: var(--muted-foreground, #737373);
+  font-size: 12px;
+  white-space: nowrap;
+}
+.so-price {
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.so-chips {
+  width: 100%;
+  min-height: 40px;
+}
+.so-row {
+  gap: 12px;
+}

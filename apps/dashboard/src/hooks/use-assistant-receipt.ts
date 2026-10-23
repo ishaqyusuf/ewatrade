@@ -3,6 +3,7 @@ import type { GeneralReceipt } from "@ewatrade/assistant/general/contracts"
 import { quoteDecisionReceiptTarget } from "@ewatrade/assistant/general/quote-decision"
 import { serviceManualMessageReceiptTarget } from "@ewatrade/assistant/general/service-message-read"
 import { serviceWorkOriginalTargetSchema } from "@ewatrade/assistant/general/service-work-original"
+import { useRouter } from "next/navigation"
 import { parseAsString, useQueryStates } from "nuqs"
 
 export const assistantObjectParams = {
@@ -95,6 +96,7 @@ export const closedAssistantObjectParams = {
 
 /** Open registered record overlays without leaving the current workspace/chat. */
 export function useAssistantReceipt() {
+  const router = useRouter()
   const [, setParams] = useQueryStates(assistantObjectParams, {
     history: "push",
     shallow: true,
@@ -197,6 +199,11 @@ export function useAssistantReceipt() {
         return setParams({ ...closed, inventoryCloseout: receipt.recordId })
       case "stock_transfer":
         return setParams({ ...closed, stockTransfer: receipt.recordId })
+      case "storefront_design_run":
+      case "storefront_design_draft":
+        return router.push(
+          `/storefront?designRun=${encodeURIComponent(receipt.recordId)}`,
+        )
       case "store_receipt_settings":
       case "store_reminder_settings":
       case "store_order_visibility":

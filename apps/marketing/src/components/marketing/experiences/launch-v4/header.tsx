@@ -1,9 +1,15 @@
 "use client"
 import { getDashboardLoginUrl } from "@/lib/auth-navigation"
 import { getCreateStoreCta } from "@/lib/create-store-url"
+import {
+  type MarketingCategory,
+  marketingAttrs,
+} from "@/lib/marketing-interactions"
 import { useEffect, useRef, useState } from "react"
+import { WhatsAppCta } from "./cta"
 const links = [
-  ["Product", "product"],
+  ["Assistant", "assistant"],
+  ["Features", "features"],
   ["Businesses", "businesses"],
   ["Pricing", "pricing"],
   ["FAQ", "faq"],
@@ -58,36 +64,63 @@ export function Header({
   )
   return (
     <>
-      <a className="launch-skip" href="#main">
+      <a
+        className="launch-skip"
+        href="#main"
+        {...marketingAttrs("navigation", "header", "home")}
+      >
         Skip to content
       </a>
       <header className={`gg-header${scrolled ? " is-scrolled" : ""}`}>
         <div className="gg-wrap">
-          <a className="gg-home" href="#top" aria-label="ẸwáTrade home">
+          <a
+            className="gg-home"
+            href="#top"
+            aria-label="ẸwáTrade home"
+            {...marketingAttrs("navigation", "header", "home")}
+          >
             {logo}
           </a>
           <nav className="gg-nav" aria-label="Main">
             <ul>
               {links.map(([label, id]) => (
                 <li key={id}>
-                  <a href={`#${id}`}>{label}</a>
+                  <a
+                    href={`#${id}`}
+                    {...marketingAttrs(
+                      "navigation",
+                      "header",
+                      id as MarketingCategory,
+                    )}
+                  >
+                    {label}
+                  </a>
                 </li>
               ))}
             </ul>
           </nav>
           <div className="gg-head-actions">
             <div className="gg-head-right">
-              <a className="gg-signin" href={getDashboardLoginUrl()}>
+              <a
+                className="gg-signin"
+                href={getDashboardLoginUrl()}
+                {...marketingAttrs("login", "header")}
+              >
                 Sign in
               </a>
-              <a className="gg-btn gg-btn--cream gg-btn--sm" href={cta.href}>
-                {cta.label}
+              <a
+                className="gg-btn gg-btn--cream gg-btn--sm"
+                href={cta.href}
+                {...marketingAttrs(cta.kind, "header")}
+              >
+                {signupEnabled ? "Create your free store" : cta.label}
               </a>
             </div>
             <button
               className="gg-theme-toggle"
               type="button"
               onClick={onToggleTheme}
+              {...marketingAttrs("theme", "header", dark ? "light" : "dark")}
               aria-label={
                 dark ? "Switch to light theme" : "Switch to dark theme"
               }
@@ -120,6 +153,7 @@ export function Header({
               aria-controls="launch-menu"
               aria-label="Open menu"
               onClick={() => setOpen(true)}
+              {...marketingAttrs("menu_open", "header")}
             >
               <svg
                 viewBox="0 0 24 24"
@@ -166,6 +200,7 @@ export function Header({
             type="button"
             aria-label="Close menu"
             onClick={() => setOpen(false)}
+            {...marketingAttrs("menu_close", "menu")}
           >
             ×
           </button>
@@ -174,7 +209,15 @@ export function Header({
           <ul>
             {links.map(([label, id]) => (
               <li key={id}>
-                <a href={`#${id}`} onClick={() => setOpen(false)}>
+                <a
+                  href={`#${id}`}
+                  onClick={() => setOpen(false)}
+                  {...marketingAttrs(
+                    "navigation",
+                    "menu",
+                    id as MarketingCategory,
+                  )}
+                >
                   {label}
                 </a>
               </li>
@@ -182,10 +225,16 @@ export function Header({
           </ul>
         </nav>
         <div className="gg-sheet-foot">
-          <a className="gg-btn gg-btn--gold gg-btn--block" href={cta.href}>
-            {cta.label}
-          </a>
           <a
+            className="gg-btn gg-btn--gold gg-btn--block"
+            href={cta.href}
+            {...marketingAttrs(cta.kind, "menu")}
+          >
+            {signupEnabled ? "Create your free store" : cta.label}
+          </a>
+          <WhatsAppCta channel="menu" block />
+          <a
+            {...marketingAttrs("login", "menu")}
             className="gg-btn gg-btn--ghost gg-btn--block"
             href={getDashboardLoginUrl()}
           >

@@ -37,7 +37,10 @@
     "@ewatrade/ai": "workspace:*",
     "@ewatrade/assistant": "workspace:*",
     "@ewatrade/events": "workspace:*",
-    "@ewatrade/private-media": "workspace:*"
+    "@ewatrade/private-media": "workspace:*",
+    "@ewatrade/storefront-contracts": "workspace:*",
+    "@ewatrade/storefront-templates": "workspace:*",
+    "@ewatrade/storefront-runtime": "workspace:*"
   },
   "devDependencies": {
     "@ewatrade/tsconfig": "workspace:*",

@@ -1,3 +1,4 @@
+import { whatsAppDraftCollectionReply } from "@ewatrade/assistant/channels/collection"
 import {
   generalMoney,
   isNonSaleMoneyIntent,
@@ -199,8 +200,9 @@ export async function handleSimpleMoneyInChat(
   const prepared = simpleMoneyInAction.parse(result.payload)
   const next = simpleMoneyInStep(prepared)
   return {
-    text:
-      next === "amount"
+    text: isLinkedAssistantIdentity(ctx.session)
+      ? whatsAppDraftCollectionReply(prepared)
+      : next === "amount"
         ? "How much?"
         : next === "account"
           ? "Which account?"

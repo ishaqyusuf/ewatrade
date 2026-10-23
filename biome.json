@@ -23,5 +23,20 @@
       "build",
       "**/next-env.d.ts"
     ]
-  }
+  },
+  "overrides": [
+    {
+      "include": [
+        "packages/storefront-templates/src/generated/**/component.tsx"
+      ],
+      "organizeImports": { "enabled": false }
+    },
+    {
+      "include": [
+        "packages/storefront-templates/src/generated/**/manifest.json",
+        "packages/storefront-templates/src/generated/**/styles.css"
+      ],
+      "formatter": { "enabled": false }
+    }
+  ]
 }

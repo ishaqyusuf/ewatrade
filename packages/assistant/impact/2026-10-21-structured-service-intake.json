@@ -1,0 +1,21 @@
+{
+  "version": 1,
+  "id": "2026-10-21-structured-service-intake",
+  "tickets": ["S04", "H02"],
+  "summary": "Let a consented eligible guest start a structured Service Request without first posting free-form chat; handle expected token refusals and preserve bounded Quote/conversation transaction retries across Prisma constructor identity and options mutation.",
+  "noAssistantImpact": "Deliberately web-form-only customer intake. startStoreConversationServiceRequest requires the caller's server-held WEB_DEVICE credential, exact guest Terms, age, Store entry policy and availability, current block/moderation authority, scoped canonical Service Request and atomic system event/link. No assistant tool can synthesize that customer consent or credential. Existing merchant quote/job command interfaces and assistant rollout are unchanged. Error identity/options repairs preserve the existing two-attempt bound, isolation and fresh authorization; they add no assistant capability or permission.",
+  "capabilities": [],
+  "procedures": [],
+  "docs": [
+    { "topic": "feature", "status": "local_only", "path": ".brain/features/service-commerce.md" },
+    { "topic": "permissions", "status": "local_only", "path": ".brain/api/permissions.md" },
+    { "topic": "decision", "status": "local_only", "path": ".brain/decisions/2026-10-21-structured-service-intake.md" }
+  ],
+  "evidence": [
+    { "kind": "test", "path": "packages/db/src/queries/store-conversation-service-start.test.ts", "executed": true, "result": "Rejects unsafe details before transactions; missing Terms, undeclared age, empty lines and missing contact before writes. Focused aggregate: 17 tests, 92 assertions." },
+    { "kind": "test", "path": "packages/db/src/queries/store-conversation-service-start-transaction.test.ts", "executed": true, "result": "Actual command/canonical helper chain with in-memory Prisma persistence: atomic success, identical replay, changed replay rejection, and channel/entry/form membership/offering availability revoked while lock waits roll back staged business writes. No global/module mocks or connected DB; not PostgreSQL concurrency acceptance." },
+    { "kind": "test", "path": "apps/storefront/src/lib/public-service-errors.test.ts", "executed": true, "result": "Observed red then green for expected policy refusal; unexpected infrastructure errors remain failures." },
+    { "kind": "test", "path": "packages/db/src/queries/transaction-conflict-identity.test.ts", "executed": true, "result": "Observed red→green for alternate Prisma error identity and mutated transaction options across retry/later operations.22tests/66assertions; unknown errors propagate; original isolation/timeouts and retry count retained. No connected DB or real concurrency claim." },
+    { "kind": "run", "path": ".brain/qa/2026-10-21-services-owner-storefront-walkthrough.md", "executed": true, "result": "Actual IAB guest approval, structured Request→Quotev1₦450→acceptance→ORD-002→work→settled450cash/0due and customer trackingCompleted.17laundry choices verified. Aggregate80tests/284assertions; full types only existing unrelated assistant-whatsapp/inbox.ts JSON error.9/9local walkthrough, release0/6unchanged; exact live SSI cycle/simultaneous polling reliability not certified." }
+  ]
+}

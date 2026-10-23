@@ -1,0 +1,20 @@
+{
+  "name": "@ewatrade/storefront-contracts",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./manifest": "./src/manifest.ts",
+    "./resources": "./src/resources.ts",
+    "./actions": "./src/actions.ts",
+    "./design": "./src/design.ts",
+    "./availability": "./src/availability.ts"
+  },
+  "dependencies": {
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@ewatrade/tsconfig": "workspace:*"
+  }
+}

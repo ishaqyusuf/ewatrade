@@ -1,4 +1,5 @@
 import { createHash, randomUUID } from "node:crypto"
+import { z } from "zod"
 import {
   parseWhatsAppActionButton,
   parseWhatsAppTypedAction,
@@ -14,6 +15,8 @@ import {
   parseWhatsAppVoiceChoice,
 } from "@ewatrade/assistant/channels/media"
 import { assistantWhatsAppUserAllowed } from "@ewatrade/assistant/channels/policy"
+import { parseWhatsAppReadPageIntent } from "@ewatrade/assistant/channels/read-pagination"
+import { parseWhatsAppReplyChoiceIntent } from "@ewatrade/assistant/channels/reply-choices"
 import {
   parseWhatsAppTypedWorkflowAction,
   parseWhatsAppWorkflowActionButton,
@@ -67,6 +70,16 @@ export function assistantWhatsAppIngressActionContent(
       ? parseWhatsAppTypedAction(event.text, event.replyToMessageId)
       : null)
   if (!command) return null
+  if (command.kind === "edit")
+    return {
+      type: "action_edit" as const,
+      decision: "cancel" as const,
+      decisionDigest: assistantWhatsAppActionDecisionDigest(
+        command.code,
+        "cancel",
+      ),
+      replyToMessageId: command.replyToMessageId,
+    }
   if (command.kind === "invalid_action")
     return { type: "invalid_action" as const }
   return {
@@ -139,9 +152,16 @@ export async function acceptAssistantWhatsAppIngress(
   if (control) return control
   const voiceIntent =
     event.type === "text" && isWhatsAppVoiceChoiceIntent(event.text)
-  const action = voiceIntent
+  const readPage = event.flowResponse
     ? null
-    : assistantWhatsAppIngressActionContent(event)
+    : parseWhatsAppReadPageIntent(event)
+  const replyChoice = event.flowResponse
+    ? null
+    : parseWhatsAppReplyChoiceIntent(event)
+  const action =
+    voiceIntent || readPage || replyChoice
+      ? null
+      : assistantWhatsAppIngressActionContent(event)
   const voiceChoice = voiceIntent
     ? parseWhatsAppVoiceChoice(event.text, event.replyToMessageId)
     : null
@@ -151,7 +171,35 @@ export async function acceptAssistantWhatsAppIngress(
       ? { type: "invalid_voice_choice" as const }
       : null
   const inboxKind = action ? "ACTION" : "TURN"
-  const content = action ??
+  const flowData =
+    event.flowResponse?.status === "valid"
+      ? z.record(z.string().max(128), z.json()).safeParse(event.flowResponse.data)
+      : null
+  if (flowData && !flowData.success)
+    return { kind: "ignored", reason: "invalid" }
+  const flow = event.flowResponse
+    ? event.flowResponse.status === "valid" && flowData?.success
+      ? {
+          type: "native_flow" as const,
+          tokenDigest: createHash("sha256")
+            .update(event.flowResponse.flowToken)
+            .digest("hex"),
+          data: flowData.data,
+        }
+      : { type: "invalid_native_flow" as const }
+    : null
+  const content = flow ??
+    (readPage
+      ? readPage.kind === "read_page"
+        ? { type: "read_page" as const, command: readPage }
+        : { type: "invalid_read_page" as const }
+      : null) ??
+    (replyChoice
+      ? replyChoice.kind === "reply_choice"
+        ? { type: "reply_choice" as const, command: replyChoice }
+        : { type: "invalid_reply_choice" as const }
+      : null) ??
+    action ??
     voice ?? {
       type: event.type,
       ...(event.text !== undefined ? { text: event.text } : {}),

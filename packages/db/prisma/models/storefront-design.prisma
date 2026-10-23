@@ -1,0 +1,52 @@
+enum SiteDesignRunStatus {
+  QUEUED
+  RUNNING
+  VALIDATING
+  READY
+  FAILED
+  CANCELLED
+}
+
+/// Durable generation intent. Frozen public input and version pins; never a live design writer.
+model SiteDesignRun {
+  id                       String              @id @default(cuid())
+  tenantId                 String
+  storeId                  String
+  siteId                   String
+  actorUserId              String
+  clientRequestId          String
+  requestHash              String
+  inputHash                String
+  baseDraftRevision        Int
+  brief                    Json
+  manifests                Json
+  configuration            Json
+  provider                 String
+  model                    String
+  promptVersion            String
+  status                   SiteDesignRunStatus @default(QUEUED)
+  attempts                 Int                 @default(0)
+  leaseToken               String?
+  leaseUntil               DateTime?
+  providerStartedAt        DateTime?
+  budgetScopeKey           String
+  reservedTokens           Int
+  actualTokens             Int?
+  usageSettledAt           DateTime?
+  durationMs               Int?
+  output                   Json?
+  outputHash               String?
+  errorCode                String?
+  acceptedDirectionId      String?
+  acceptedById             String?
+  acceptedDraftRevision    Int?
+  acceptedAt               DateTime?
+  createdAt                DateTime            @default(now())
+  updatedAt                DateTime            @updatedAt
+  completedAt              DateTime?
+  site                     Site                @relation(fields: [siteId], references: [id], onDelete: Cascade)
+
+  @@unique([siteId, actorUserId, clientRequestId])
+  @@index([status, leaseUntil, createdAt])
+  @@index([tenantId, storeId, siteId, createdAt])
+}

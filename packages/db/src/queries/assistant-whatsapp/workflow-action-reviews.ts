@@ -50,7 +50,7 @@ const sha256 = (value: string) =>
 const equal = (left: string, right: string) =>
   Buffer.byteLength(left) === Buffer.byteLength(right) &&
   timingSafeEqual(Buffer.from(left), Buffer.from(right))
-const digest = assistantWhatsAppActionPayloadDigest
+const digest = (value: unknown) => assistantWhatsAppActionPayloadDigest(value)
 export const whatsAppWorkflowActionIngressContentSchema = z
   .object({
     type: z.literal("workflow_action"),

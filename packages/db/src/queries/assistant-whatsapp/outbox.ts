@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto"
 import { WHATSAPP_ACTION_REVIEW_VERSION } from "@ewatrade/assistant/channels/action-review"
 import { renderWhatsAppFinalReply } from "@ewatrade/assistant/channels/render"
+import { WHATSAPP_WEB_REVIEW_VERSION } from "@ewatrade/assistant/channels/review-links"
 import {
   WHATSAPP_WORKFLOW_ACTION_REVIEW_VERSION,
   type WhatsAppWorkflowActionSource,
@@ -16,10 +17,20 @@ import {
   issueAssistantWhatsAppWorkflowReviewInTransaction,
 } from "./workflow-action-reviews"
 import { renderAssistantWhatsAppWorkflowReply } from "./workflow-reply"
+import {
+  assistantReviewShortOutboxId,
+  assistantReviewTokenFromBody,
+  createAssistantReviewShortLocator,
+} from "./web-review-token"
 
 export type AssistantWhatsAppStagedReview = {
   source: { proposalId: string; revision: number; payloadHash: string }
   targetRevision: string | null
+  body: string
+  expiresAt: Date
+}
+export type AssistantWhatsAppStagedWebReview = {
+  source: { proposalId: string; revision: number; payloadHash: string }
   body: string
   expiresAt: Date
 }
@@ -50,6 +61,7 @@ export async function stageAssistantWhatsAppOutboxInTransaction(
     actorUserId: string
     review?: AssistantWhatsAppStagedWorkflowReview
   },
+  webReview?: AssistantWhatsAppStagedWebReview,
 ) {
   if (!run.assistantMessageId || !run.assistantMessage)
     throw new AssistantWhatsAppError("UNAUTHORIZED")
@@ -83,6 +95,16 @@ export async function stageAssistantWhatsAppOutboxInTransaction(
     references[0]?.payloadHash === review.source.payloadHash &&
     review.body.length <= 2500 &&
     review.expiresAt > new Date()
+  const exactWebReview =
+    webReview &&
+    principal &&
+    !workflow &&
+    references.length === 1 &&
+    references[0]?.proposalId === webReview.source.proposalId &&
+    references[0]?.revision === webReview.source.revision &&
+    references[0]?.payloadHash === webReview.source.payloadHash &&
+    webReview.body.length <= 3000 &&
+    webReview.expiresAt > new Date()
   const workflowReply =
     workflow && navigationScope
       ? await renderAssistantWhatsAppWorkflowReply(db, {
@@ -110,14 +132,33 @@ export async function stageAssistantWhatsAppOutboxInTransaction(
           chunks: [workflowReview.body],
         }
       : (workflowReply ??
-        (exactReview
+        (exactWebReview
           ? {
-              version: WHATSAPP_ACTION_REVIEW_VERSION,
-              kind: "action_review",
-              chunks: [review.body],
+              version: WHATSAPP_WEB_REVIEW_VERSION,
+              kind: "web_review",
+              chunks: [webReview.body],
             }
-          : ordinary))
+          : exactReview
+            ? {
+                version: WHATSAPP_ACTION_REVIEW_VERSION,
+                kind: "action_review",
+                chunks: [review.body],
+              }
+            : ordinary))
+  const signedReviewToken =
+    rendered.kind === "web_review"
+      ? assistantReviewTokenFromBody(rendered.chunks[0] ?? "")
+      : undefined
+  if (rendered.kind === "web_review" && !signedReviewToken)
+    throw new AssistantWhatsAppError("UNAVAILABLE")
   const chunks = rendered.chunks.map((content, chunkIndex) => ({
+    ...(signedReviewToken
+      ? {
+          id: assistantReviewShortOutboxId(
+            createAssistantReviewShortLocator(signedReviewToken),
+          ),
+        }
+      : {}),
     inboxId: inbox.id,
     phoneNumberId: inbox.phoneNumberId,
     runId: run.id,
@@ -130,7 +171,8 @@ export async function stageAssistantWhatsAppOutboxInTransaction(
     authorityDigest,
     content,
     contentDigest: createHash("sha256").update(content).digest("hex"),
-    expiresAt: inbox.expiresAt,
+    expiresAt:
+      exactWebReview && webReview ? webReview.expiresAt : inbox.expiresAt,
   }))
   const prior = await db.assistantWhatsAppOutbox.findMany({
     where: { inboxId: inbox.id, responseRevision: 1 },
@@ -178,7 +220,7 @@ export async function stageAssistantWhatsAppOutboxInTransaction(
       projectCommand: workflowReview.projectCommand,
     })
   }
-  if (exactReview && review && principal) {
+  if (rendered.kind === "action_review" && exactReview && review && principal) {
     const staged = await db.assistantWhatsAppOutbox.findFirstOrThrow({
       where: { inboxId: inbox.id, responseRevision: 1, chunkIndex: 0 },
     })

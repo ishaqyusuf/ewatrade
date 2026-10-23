@@ -1,0 +1,352 @@
+{
+  "version": 1,
+  "id": "2026-10-21-whatsapp-disposable-review-links",
+  "tickets": [
+    "H01",
+    "H02"
+  ],
+  "summary": "Local disposable focused web reviews reuse existing Dashboard GeneralAction adapters, login/UI, canonical decisions and durable WhatsApp outcomes. Draft-only local or explicit-release channel authority; native confirmations unchanged. No live deployment, schema, OTP or phone change.",
+  "capabilities": [
+    {
+      "id": "finance.purchase.fact.reverse",
+      "change": "unchanged",
+      "rollout": "source",
+      "note": "Existing canonical command, role/Store/plan and UI remain authoritative. Eligible General drafts may use authenticated focused web review under local source or explicit exact release; this is not native execution enrollment or live availability. Separate workflow/original editors retain existing continuations."
+    },
+    {
+      "id": "finance.purchase.payment.reverse",
+      "change": "unchanged",
+      "rollout": "source",
+      "note": "Existing canonical command, role/Store/plan and UI remain authoritative. Eligible General drafts may use authenticated focused web review under local source or explicit exact release; this is not native execution enrollment or live availability. Separate workflow/original editors retain existing continuations."
+    },
+    {
+      "id": "finance.supplier.allocation.release",
+      "change": "unchanged",
+      "rollout": "source",
+      "note": "Existing canonical command, role/Store/plan and UI remain authoritative. Eligible General drafts may use authenticated focused web review under local source or explicit exact release; this is not native execution enrollment or live availability. Separate workflow/original editors retain existing continuations."
+    },
+    {
+      "id": "finance.supplier.advance",
+      "change": "unchanged",
+      "rollout": "source",
+      "note": "Existing canonical command, role/Store/plan and UI remain authoritative. Eligible General drafts may use authenticated focused web review under local source or explicit exact release; this is not native execution enrollment or live availability. Separate workflow/original editors retain existing continuations."
+    },
+    {
+      "id": "finance.supplier.advance.allocate",
+      "change": "unchanged",
+      "rollout": "source",
+      "note": "Existing canonical command, role/Store/plan and UI remain authoritative. Eligible General drafts may use authenticated focused web review under local source or explicit exact release; this is not native execution enrollment or live availability. Separate workflow/original editors retain existing continuations."
+    },
+    {
+      "id": "finance.purchase.pay",
+      "change": "unchanged",
+      "rollout": "source",
+      "note": "Existing canonical command, role/Store/plan and UI remain authoritative. Eligible General drafts may use authenticated focused web review under local source or explicit exact release; this is not native execution enrollment or live availability. Separate workflow/original editors retain existing continuations."
+    },
+    {
+      "id": "finance.purchase.recognize",
+      "change": "unchanged",
+      "rollout": "source",
+      "note": "Existing canonical command, role/Store/plan and UI remain authoritative. Eligible General drafts may use authenticated focused web review under local source or explicit exact release; this is not native execution enrollment or live availability. Separate workflow/original editors retain existing continuations."
+    },
+    {
+      "id": "finance.purchase.register",
+      "change": "unchanged",
+      "rollout": "source",
+      "note": "Existing canonical command, role/Store/plan and UI remain authoritative. Eligible General drafts may use authenticated focused web review under local source or explicit exact release; this is not native execution enrollment or live availability. Separate workflow/original editors retain existing continuations."
+    },
+    {
+      "id": "finance.supplier.create",
+      "change": "unchanged",
+      "rollout": "source",
+      "note": "Existing canonical command, role/Store/plan and UI remain authoritative. Eligible General drafts may use authenticated focused web review under local source or explicit exact release; this is not native execution enrollment or live availability. Separate workflow/original editors retain existing continuations."
+    },
+    {
+      "id": "finance.expense.record",
+      "change": "unchanged",
+      "rollout": "enabled",
+      "note": "Existing canonical command, role/Store/plan and UI remain authoritative. Eligible General drafts may use authenticated focused web review under local source or explicit exact release; this is not native execution enrollment or live availability. Separate workflow/original editors retain existing continuations."
+    },
+    {
+      "id": "finance.expense.record_simple",
+      "change": "unchanged",
+      "rollout": "source",
+      "note": "Existing canonical command, role/Store/plan and UI remain authoritative. Eligible General drafts may use authenticated focused web review under local source or explicit exact release; this is not native execution enrollment or live availability. Separate workflow/original editors retain existing continuations."
+    },
+    {
+      "id": "finance.money_in.record_simple",
+      "change": "unchanged",
+      "rollout": "source",
+      "note": "Existing canonical command, role/Store/plan and UI remain authoritative. Eligible General drafts may use authenticated focused web review under local source or explicit exact release; this is not native execution enrollment or live availability. Separate workflow/original editors retain existing continuations."
+    },
+    {
+      "id": "finance.transfer.record_simple",
+      "change": "unchanged",
+      "rollout": "source",
+      "note": "Existing canonical command, role/Store/plan and UI remain authoritative. Eligible General drafts may use authenticated focused web review under local source or explicit exact release; this is not native execution enrollment or live availability. Separate workflow/original editors retain existing continuations."
+    },
+    {
+      "id": "finance.money_movement.record",
+      "change": "unchanged",
+      "rollout": "enabled",
+      "note": "Existing canonical command, role/Store/plan and UI remain authoritative. Eligible General drafts may use authenticated focused web review under local source or explicit exact release; this is not native execution enrollment or live availability. Separate workflow/original editors retain existing continuations."
+    },
+    {
+      "id": "sales.products.fulfill",
+      "change": "unchanged",
+      "rollout": "source",
+      "note": "Existing canonical command, role/Store/plan and UI remain authoritative. Eligible General drafts may use authenticated focused web review under local source or explicit exact release; this is not native execution enrollment or live availability. Separate workflow/original editors retain existing continuations."
+    },
+    {
+      "id": "sales.product.fulfill",
+      "change": "unchanged",
+      "rollout": "source",
+      "note": "Existing canonical command, role/Store/plan and UI remain authoritative. Eligible General drafts may use authenticated focused web review under local source or explicit exact release; this is not native execution enrollment or live availability. Separate workflow/original editors retain existing continuations."
+    },
+    {
+      "id": "sales.service.authorize",
+      "change": "unchanged",
+      "rollout": "source",
+      "note": "Existing canonical command, role/Store/plan and UI remain authoritative. Eligible General drafts may use authenticated focused web review under local source or explicit exact release; this is not native execution enrollment or live availability. Separate workflow/original editors retain existing continuations."
+    },
+    {
+      "id": "sales.service.fulfill",
+      "change": "unchanged",
+      "rollout": "source",
+      "note": "Existing canonical command, role/Store/plan and UI remain authoritative. Eligible General drafts may use authenticated focused web review under local source or explicit exact release; this is not native execution enrollment or live availability. Separate workflow/original editors retain existing continuations."
+    },
+    {
+      "id": "sales.order.cancel",
+      "change": "unchanged",
+      "rollout": "source",
+      "note": "Existing canonical command, role/Store/plan and UI remain authoritative. Eligible General drafts may use authenticated focused web review under local source or explicit exact release; this is not native execution enrollment or live availability. Separate workflow/original editors retain existing continuations."
+    },
+    {
+      "id": "sales.order.metadata.update",
+      "change": "unchanged",
+      "rollout": "source",
+      "note": "Existing canonical command, role/Store/plan and UI remain authoritative. Eligible General drafts may use authenticated focused web review under local source or explicit exact release; this is not native execution enrollment or live availability. Separate workflow/original editors retain existing continuations."
+    },
+    {
+      "id": "sales.order.replace",
+      "change": "unchanged",
+      "rollout": "source",
+      "note": "Existing canonical command, role/Store/plan and UI remain authoritative. Eligible General drafts may use authenticated focused web review under local source or explicit exact release; this is not native execution enrollment or live availability. Separate workflow/original editors retain existing continuations."
+    },
+    {
+      "id": "sales.order.attachment.add",
+      "change": "unchanged",
+      "rollout": "source",
+      "note": "Existing canonical command, role/Store/plan and UI remain authoritative. Eligible General drafts may use authenticated focused web review under local source or explicit exact release; this is not native execution enrollment or live availability. Separate workflow/original editors retain existing continuations."
+    },
+    {
+      "id": "customers.create",
+      "change": "unchanged",
+      "rollout": "source",
+      "note": "Existing canonical command, role/Store/plan and UI remain authoritative. Eligible General drafts may use authenticated focused web review under local source or explicit exact release; this is not native execution enrollment or live availability. Separate workflow/original editors retain existing continuations."
+    },
+    {
+      "id": "catalog.product.create",
+      "change": "unchanged",
+      "rollout": "source",
+      "note": "Existing canonical command, role/Store/plan and UI remain authoritative. Eligible General drafts may use authenticated focused web review under local source or explicit exact release; this is not native execution enrollment or live availability. Separate workflow/original editors retain existing continuations. Preview acceptance may select this exact capability in pilot mode; APP_ENV=preview, finite independent User/Tenant enrollment and write gates remain required. Registry rollout stays source; this assessment is not a hosted acceptance receipt."
+    },
+    {
+      "id": "sales.order.record_simple",
+      "change": "unchanged",
+      "rollout": "source",
+      "note": "Existing canonical command, role/Store/plan and UI remain authoritative. Eligible General drafts may use authenticated focused web review under local source or explicit exact release; this is not native execution enrollment or live availability. Separate workflow/original editors retain existing continuations."
+    },
+    {
+      "id": "sales.order.create",
+      "change": "unchanged",
+      "rollout": "source",
+      "note": "Existing canonical command, role/Store/plan and UI remain authoritative. Eligible General drafts may use authenticated focused web review under local source or explicit exact release; this is not native execution enrollment or live availability. Separate workflow/original editors retain existing continuations."
+    },
+    {
+      "id": "sales.payment.record",
+      "change": "unchanged",
+      "rollout": "source",
+      "note": "Existing canonical command, role/Store/plan and UI remain authoritative. Eligible General drafts may use authenticated focused web review under local source or explicit exact release; this is not native execution enrollment or live availability. Separate workflow/original editors retain existing continuations."
+    },
+    {
+      "id": "customers.update",
+      "change": "unchanged",
+      "rollout": "source",
+      "note": "Existing canonical command, role/Store/plan and UI remain authoritative. Eligible General drafts may use authenticated focused web review under local source or explicit exact release; this is not native execution enrollment or live availability. Separate workflow/original editors retain existing continuations."
+    },
+    {
+      "id": "catalog.price.update",
+      "change": "unchanged",
+      "rollout": "source",
+      "note": "Existing canonical command, role/Store/plan and UI remain authoritative. Eligible General drafts may use authenticated focused web review under local source or explicit exact release; this is not native execution enrollment or live availability. Separate workflow/original editors retain existing continuations."
+    },
+    {
+      "id": "catalog.details.update",
+      "change": "unchanged",
+      "rollout": "source",
+      "note": "Existing canonical command, role/Store/plan and UI remain authoritative. Eligible General drafts may use authenticated focused web review under local source or explicit exact release; this is not native execution enrollment or live availability. Separate workflow/original editors retain existing continuations."
+    },
+    {
+      "id": "catalog.identifiers.update",
+      "change": "unchanged",
+      "rollout": "source",
+      "note": "Existing canonical command, role/Store/plan and UI remain authoritative. Eligible General drafts may use authenticated focused web review under local source or explicit exact release; this is not native execution enrollment or live availability. Separate workflow/original editors retain existing continuations."
+    },
+    {
+      "id": "catalog.availability.update",
+      "change": "unchanged",
+      "rollout": "source",
+      "note": "Existing canonical command, role/Store/plan and UI remain authoritative. Eligible General drafts may use authenticated focused web review under local source or explicit exact release; this is not native execution enrollment or live availability. Separate workflow/original editors retain existing continuations."
+    },
+    {
+      "id": "catalog.units.draft",
+      "change": "unchanged",
+      "rollout": "source",
+      "note": "Existing canonical command, role/Store/plan and UI remain authoritative. Eligible General drafts may use authenticated focused web review under local source or explicit exact release; this is not native execution enrollment or live availability. Separate workflow/original editors retain existing continuations."
+    },
+    {
+      "id": "catalog.units.publish",
+      "change": "unchanged",
+      "rollout": "source",
+      "note": "Existing canonical command, role/Store/plan and UI remain authoritative. Eligible General drafts may use authenticated focused web review under local source or explicit exact release; this is not native execution enrollment or live availability. Separate workflow/original editors retain existing continuations."
+    },
+    {
+      "id": "inventory.stock.receive",
+      "change": "unchanged",
+      "rollout": "source",
+      "note": "Existing canonical command, role/Store/plan and UI remain authoritative. Eligible General drafts may use authenticated focused web review under local source or explicit exact release; this is not native execution enrollment or live availability. Separate workflow/original editors retain existing continuations."
+    },
+    {
+      "id": "inventory.stock.adjust",
+      "change": "unchanged",
+      "rollout": "source",
+      "note": "Existing canonical command, role/Store/plan and UI remain authoritative. Eligible General drafts may use authenticated focused web review under local source or explicit exact release; this is not native execution enrollment or live availability. Separate workflow/original editors retain existing continuations."
+    },
+    {
+      "id": "inventory.stock.correct",
+      "change": "unchanged",
+      "rollout": "source",
+      "note": "Existing canonical command, role/Store/plan and UI remain authoritative. Eligible General drafts may use authenticated focused web review under local source or explicit exact release; this is not native execution enrollment or live availability. Separate workflow/original editors retain existing continuations."
+    },
+    {
+      "id": "inventory.count.create",
+      "change": "unchanged",
+      "rollout": "source",
+      "note": "Existing canonical command, role/Store/plan and UI remain authoritative. Eligible General drafts may use authenticated focused web review under local source or explicit exact release; this is not native execution enrollment or live availability. Separate workflow/original editors retain existing continuations."
+    },
+    {
+      "id": "inventory.count.finalize",
+      "change": "unchanged",
+      "rollout": "source",
+      "note": "Existing canonical command, role/Store/plan and UI remain authoritative. Eligible General drafts may use authenticated focused web review under local source or explicit exact release; this is not native execution enrollment or live availability. Separate workflow/original editors retain existing continuations."
+    },
+    {
+      "id": "inventory.closeout.create",
+      "change": "unchanged",
+      "rollout": "source",
+      "note": "Existing canonical command, role/Store/plan and UI remain authoritative. Eligible General drafts may use authenticated focused web review under local source or explicit exact release; this is not native execution enrollment or live availability. Separate workflow/original editors retain existing continuations."
+    },
+    {
+      "id": "inventory.closeout.finalize",
+      "change": "unchanged",
+      "rollout": "source",
+      "note": "Existing canonical command, role/Store/plan and UI remain authoritative. Eligible General drafts may use authenticated focused web review under local source or explicit exact release; this is not native execution enrollment or live availability. Separate workflow/original editors retain existing continuations."
+    },
+    {
+      "id": "inventory.transfer.dispatch",
+      "change": "unchanged",
+      "rollout": "source",
+      "note": "Existing canonical command, role/Store/plan and UI remain authoritative. Eligible General drafts may use authenticated focused web review under local source or explicit exact release; this is not native execution enrollment or live availability. Separate workflow/original editors retain existing continuations."
+    },
+    {
+      "id": "inventory.transfer.receive",
+      "change": "unchanged",
+      "rollout": "source",
+      "note": "Existing canonical command, role/Store/plan and UI remain authoritative. Eligible General drafts may use authenticated focused web review under local source or explicit exact release; this is not native execution enrollment or live availability. Separate workflow/original editors retain existing continuations."
+    },
+    {
+      "id": "inventory.transfer.cancel",
+      "change": "unchanged",
+      "rollout": "source",
+      "note": "Existing canonical command, role/Store/plan and UI remain authoritative. Eligible General drafts may use authenticated focused web review under local source or explicit exact release; this is not native execution enrollment or live availability. Separate workflow/original editors retain existing continuations."
+    }
+  ],
+  "procedures": [
+    {
+      "path": "assistant.reviewLink",
+      "status": "excluded",
+      "reason": "User-driven authenticated web review control, deliberately excluded from model tools. It composes existing canonical Assistant General proposals under browser Session/current actor/scope; no new merchant command or live deployment."
+    },
+    {
+      "path": "assistant.decideReviewLink",
+      "status": "excluded",
+      "reason": "User-driven authenticated web review control, deliberately excluded from model tools. It composes existing canonical Assistant General proposals under browser Session/current actor/scope; no new merchant command or live deployment."
+    },
+    {
+      "path": "assistant.editReviewLink",
+      "status": "excluded",
+      "reason": "User-driven authenticated web review control, deliberately excluded from model tools. It composes existing canonical Assistant General proposals under browser Session/current actor/scope; no new merchant command or live deployment."
+    }
+  ],
+  "docs": [
+    {
+      "topic": "feature",
+      "status": "local_only",
+      "path": ".brain/features/whatsapp-assistant.md"
+    },
+    {
+      "topic": "api",
+      "status": "local_only",
+      "path": ".brain/api/contracts.md"
+    },
+    {
+      "topic": "permissions",
+      "status": "local_only",
+      "path": ".brain/api/permissions.md"
+    },
+    {
+      "topic": "decision",
+      "status": "local_only",
+      "path": ".brain/decisions/2026-10-21-whatsapp-disposable-review-links.md"
+    },
+    {
+      "topic": "capability",
+      "status": "updated",
+      "path": "packages/assistant/src/capabilities/COVERAGE.md",
+      "note": "Current canonical inventory; three explicit authenticated review control procedures assessed."
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "test",
+      "path": "packages/assistant/src/channels/policy.test.ts",
+      "executed": true,
+      "result": "Focused web draft policy1test/11assertions,8oldfiltered; native execution remains refused, hosted exact release+write gates, planned/client denials."
+    },
+    {
+      "kind": "run",
+      "path": "apps/api/src/assistant/review-links.composition.fixture.ts",
+      "executed": true,
+      "result": "Actual service with isolated ports checks read-no-effect, actor/scope/revocation denial, browser principal, source lock ordering, atomic canonical/outbox composition, rollback/replay and edited link renewal; no real DB or provider."
+    },
+    {
+      "kind": "test",
+      "path": "packages/db/src/queries/assistant-whatsapp/web-review-security.test.ts",
+      "executed": true,
+      "result": "Focused locator/provenance/outcome/renewal checks passed; no DB/provider I/O."
+    },
+    {
+      "kind": "test",
+      "path": "apps/dashboard/src/components/general-assistant/assistant-link-review.fixture.tsx",
+      "executed": true,
+      "result": "Actual focused page/shared card composition1case/14assertions; read/edit/renew/approve/cancel, full details, malformed token no RPC."
+    },
+    {
+      "kind": "review",
+      "path": "packages/assistant/src/channels/policy.ts",
+      "executed": true,
+      "result": "Source-only assessment: Preview pilot may use exact released capability IDs for native eligibility and disposable web-review drafts without public rollout. Current principal still requires independent finite User and Tenant enrollment; canonical scope/role/plan/write checks remain. Production pilot gains no source-release path; native app_review remains excluded. No deployment or provider acceptance claimed."
+    }
+  ]
+}

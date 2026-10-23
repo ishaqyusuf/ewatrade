@@ -985,12 +985,6 @@ enum SiteStatus {
   ARCHIVED
 }
 
-enum PageStatus {
-  DRAFT
-  PUBLISHED
-  ARCHIVED
-}
-
 enum ConversationChannel {
   WHATSAPP
   SMS

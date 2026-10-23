@@ -23,6 +23,7 @@ const handoff: DraftJobHandoff = {
 let pathname = "/assistant/c/synthetic-conversation"
 let url = {
   jobId: "owned-job" as string | null,
+  jobStep: null as string | null,
   serviceSheet: "job" as string | null,
   requestId: "keep-request",
   serviceQuery: "keep-filter",
@@ -86,6 +87,11 @@ mock.module("@/hooks/use-sheet-dismissal", () => ({
 }))
 mock.module("@/trpc/client", () => ({
   useTRPC: () => ({
+    services: {
+      getJob: {
+        queryOptions: () => ({ queryKey: ["job-title"], enabled: false }),
+      },
+    },
     retailOps: { staffStoreAccessReview: { queryKey: () => reviewKey } },
   }),
   useTRPCClient: () => ({
@@ -99,7 +105,8 @@ mock.module("@/trpc/client", () => ({
   }),
 }))
 mock.module("@tanstack/react-query", () => ({
-  useQuery: (options: { enabled: boolean }) => {
+  useQuery: (options: { enabled: boolean; queryKey?: unknown[] }) => {
+    if (options.queryKey?.[0] === "job-title") return { data: null }
     readsEnabled.push(options.enabled)
     // Deliberately warm authorized cache even after factory access is revoked.
     return {
@@ -154,6 +161,7 @@ mock.module("@/components/sheets/sheet-frame", () => ({
   ),
 }))
 mock.module("@/components/service-work/service-job-workspace", () => ({
+  parseJobStep: () => null,
   ServiceJobWorkspace: () => <p>PRIVATE CACHED JOB FACTS</p>,
 }))
 
@@ -166,6 +174,7 @@ for (const [path, name] of [
   ],
   ["@/components/catalog-item/catalog-item-sheet", "CatalogItemSheet"],
   ["./service-intake-receipt-sheet", "ServiceIntakeReceiptSheet"],
+  ["./customer-request-sheet", "CustomerRequestSheet"],
   ["./service-work-original-sheet", "ServiceWorkOriginalSheet"],
   ["./assistant-cash-count-sheet", "AssistantCashCountSheet"],
   ["./assistant-quote-approval-sheet", "AssistantQuoteApprovalSheet"],
@@ -220,12 +229,29 @@ mock.module("./assistant-service-request-sheet", () => ({
     return null
   },
 }))
+let nativeIntakeMounts: Array<{ canManage: boolean; store: { id: string } }> =
+  []
+mock.module("./service-intake-sheet", () => ({
+  ServiceIntakeSheet: (props: {
+    canManage: boolean
+    store: { id: string }
+  }) => {
+    nativeIntakeMounts.push(props)
+    return <output>NATIVE INTAKE</output>
+  },
+}))
 const { GlobalSheets } = await import("./global-sheets")
-function render(serviceIntake: boolean) {
+function render(
+  serviceIntake: boolean,
+  serviceJobs = false,
+  manageServiceJobs = false,
+) {
   return renderToStaticMarkup(
     <GlobalSheets
       access={{
         serviceIntake,
+        serviceJobs,
+        manageServiceJobs,
         sales: false,
         finance: false,
         prescriptions: false,
@@ -251,6 +277,7 @@ beforeEach(() => {
   pathname = "/assistant/c/synthetic-conversation"
   url = {
     jobId: "owned-job",
+    jobStep: null,
     serviceSheet: "job",
     requestId: "keep-request",
     serviceQuery: "keep-filter",
@@ -264,6 +291,22 @@ beforeEach(() => {
   urlUpdates = []
   invalidations = 0
   releaseSawInvalidation = false
+  nativeIntakeMounts = []
+})
+
+test("native intake is registered once on Catalog and Services with independent operator and manager access", () => {
+  handoffs.release(handoff.token)
+  pathname = "/catalog"
+  expect(render(false, true)).toContain("NATIVE INTAKE")
+  expect(nativeIntakeMounts).toHaveLength(1)
+  expect(nativeIntakeMounts[0]?.canManage).toBe(false)
+  expect(nativeIntakeMounts[0]?.store.id).toBe("store")
+  pathname = "/services"
+  expect(render(false, true, true)).toContain("NATIVE INTAKE")
+  expect(nativeIntakeMounts).toHaveLength(2)
+  expect(nativeIntakeMounts[1]?.canManage).toBe(true)
+  expect(render(false)).not.toContain("NATIVE INTAKE")
+  expect(nativeIntakeMounts).toHaveLength(2)
 })
 
 test("granted then revoked factory keeps unavailable Close; successful Close releases only owned Job state", async () => {
@@ -279,9 +322,12 @@ test("granted then revoked factory keeps unavailable Close; successful Close rel
   expect(sheetChange).toBeDefined()
   sheetChange?.(false)
   await closePromise
-  expect(urlUpdates).toEqual([{ jobId: null, serviceSheet: null }])
+  expect(urlUpdates).toEqual([
+    { jobId: null, jobStep: null, serviceSheet: null },
+  ])
   expect(url).toEqual({
     jobId: null,
+    jobStep: null,
     serviceSheet: null,
     requestId: "keep-request",
     serviceQuery: "keep-filter",

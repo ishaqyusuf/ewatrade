@@ -68,6 +68,7 @@ function fixture(
   options: {
     previous?: Record<string, unknown>
     paused?: boolean
+    orderStatus?: string
     uniqueFailure?: Error
     concurrentPayment?: Record<string, unknown>
   } = {},
@@ -81,7 +82,7 @@ function fixture(
     totalMinor: 1000,
     amountPaidMinor: options.previous ? 1000 : 0,
     paymentStatus: options.previous ? "PAID" : "PENDING",
-    status: "CONFIRMED",
+    status: options.orderStatus ?? "CONFIRMED",
     payments: options.previous ? [{ ...options.previous }] : [],
   }
   const calls = {
@@ -283,4 +284,25 @@ test("payment cannot reuse another transaction's authentic lock", async () => {
   expect(other.calls.keys).toHaveLength(0)
   expect(other.calls.raw).toHaveLength(0)
   expect(other.calls.creates).toHaveLength(0)
+})
+
+test("late payment settles an already completed Order without changing work or fulfillment status", async () => {
+  const f = fixture({ orderStatus: "COMPLETED" })
+  const held = await f.lock()
+  if (!held) throw Error("Missing authentic lock")
+  const result = await recordCommercialOrderPaymentInTransaction(
+    f.tx,
+    input,
+    held,
+  )
+  expect(result).toMatchObject({
+    amountPaidMinor: 1000,
+    balanceDueMinor: 0,
+    paymentStatus: "paid",
+  })
+  expect(f.calls.updates).toEqual([
+    { amountPaidMinor: 1000, paymentStatus: "PAID" },
+  ])
+  expect(f.payments).toHaveLength(1)
+  expect(downstream).toEqual({ posted: 1, reconciled: 1 })
 })

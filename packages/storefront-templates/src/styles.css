@@ -1,0 +1,13 @@
+@import "./catalog-v4/styles.css";
+@import "./shared/editorial.css";
+@import "./generated/public-intro/styles.css";
+@import "./canvas/styles.css";
+@import "./market-hall/styles.css";
+@import "./shared/service-option-picker.css";
+@import "./service-concierge/styles.css";
+
+.sf-template-viewport {
+  container: storefront / inline-size;
+  min-width: 0;
+  width: 100%;
+}

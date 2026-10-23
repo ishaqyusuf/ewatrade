@@ -1,4 +1,6 @@
-import { createHmac, randomBytes } from "node:crypto"
+import { createHmac, randomBytes, timingSafeEqual } from "node:crypto"
+import { WHATSAPP_DELIVERY_REQUEST_MS } from "@ewatrade/assistant/channels/delivery"
+import { presentWhatsAppMessage } from "@ewatrade/assistant/channels/presentation"
 import {
   DirectMetaWhatsAppProvider,
   type NormalizedWhatsAppMessageEvent,
@@ -17,12 +19,15 @@ import {
   type WhatsAppOnboardingAdapters,
   type WhatsAppOnboardingAddress,
   type WhatsAppOnboardingResult,
+  type WhatsAppOnboardingSignup,
   advanceWhatsAppOnboarding,
+  whatsAppOnboardingButtons,
 } from "./whatsapp-onboarding"
 import {
   issueWhatsAppOnboardingEmail,
   verifyWhatsAppOnboardingEmail,
 } from "./whatsapp-onboarding-auth"
+import { whatsAppRegistrationEntry } from "./whatsapp-onboarding-details"
 
 const flowLifetimeMs = 30 * 60_000
 const receiptLifetimeMs = 24 * 60 * 60_000
@@ -92,6 +97,8 @@ const flowSchema = z
     kind: z.literal(flowKind),
     state: stateSchema.nullable(),
     count: z.number().int().min(0).max(60),
+    promptId: z.string().max(256).optional(),
+    promptExpiresAt: z.number().optional(),
     lease: z
       .object({
         nonce: z.string(),
@@ -121,13 +128,31 @@ const receiptSchema = z
 type Flow = z.infer<typeof flowSchema>
 type Dependencies = {
   db: PrismaClient
-  provider: Pick<WhatsAppProvider, "sendText">
+  provider: Pick<WhatsAppProvider, "sendText"> &
+    Partial<Pick<WhatsAppProvider, "sendButtons">>
   env: Record<string, string | undefined>
   now(): Date
   adapters?: (
     event: NormalizedWhatsAppMessageEvent,
     lease: { token: string; nonce: string },
   ) => WhatsAppOnboardingAdapters
+}
+
+/** Bound only onboarding replies; OTP keeps its existing provider and policy. */
+export function createWhatsAppOnboardingProvider(
+  requestFetch: typeof fetch = fetch,
+) {
+  return new DirectMetaWhatsAppProvider({
+    fetch: Object.assign(
+      (url: Parameters<typeof fetch>[0], init?: Parameters<typeof fetch>[1]) =>
+        requestFetch(url, {
+          ...init,
+          redirect: "error",
+          signal: AbortSignal.timeout(WHATSAPP_DELIVERY_REQUEST_MS),
+        }),
+      { preconnect: requestFetch.preconnect },
+    ),
+  })
 }
 
 const json = (value: unknown): Prisma.InputJsonValue =>
@@ -140,6 +165,41 @@ function digest(env: Dependencies["env"], value: string) {
     .update(`whatsapp-onboarding-runtime:v1:${value}`)
     .digest("hex")
 }
+/** IDs bind the exact persisted prompt, sender/recipient and expiry, without exposing account identifiers. */
+function onboardingButtonId(
+  token: string,
+  promptId: string,
+  command: string,
+  env: Record<string, string | undefined>,
+) {
+  return `waonb:${Buffer.from(command).toString("base64url")}:${digest(env, `${token}:${promptId}:${command}`)}`
+}
+
+function readOnboardingButton(
+  id: string,
+  token: string,
+  flow: Flow,
+  env: Record<string, string | undefined>,
+  now: number,
+): string | null {
+  const parts = /^waonb:([A-Za-z0-9_-]{1,64}):([a-f0-9]{64})$/.exec(id)
+  if (
+    !parts ||
+    !flow.promptId ||
+    !flow.promptExpiresAt ||
+    flow.promptExpiresAt <= now
+  )
+    return null
+  const command = Buffer.from(parts[1]!, "base64url").toString()
+  const expected = onboardingButtonId(token, flow.promptId, command, env)
+  if (
+    id.length !== expected.length ||
+    !timingSafeEqual(Buffer.from(id), Buffer.from(expected))
+  )
+    return null
+  return command
+}
+
 function flowToken(
   address: WhatsAppOnboardingAddress,
   env: Dependencies["env"],
@@ -166,25 +226,31 @@ async function cleanExpired(tx: Prisma.TransactionClient, now: Date) {
     })
 }
 
+/** Shared effective publication for native registration and the typed interview. */
+export function getWhatsAppOnboardingLegal(
+  env: Record<string, string | undefined> = process.env,
+): WhatsAppOnboardingAdapters["legal"] {
+  const publication = currentEffectiveLegalPublication()
+  if (!publication) return null
+  const origin = new URL(
+    env.MARKETING_URL ??
+      env.NEXT_PUBLIC_MARKETING_URL ??
+      "https://ewatrade.com",
+  ).origin
+  return {
+    version: publication.version,
+    termsUrl: `${origin}/terms`,
+    privacyUrl: `${origin}/privacy`,
+  }
+}
+
 function productionAdapters(
   dependencies: Dependencies,
   lease: { token: string; nonce: string },
   occurredAt: Date,
 ): WhatsAppOnboardingAdapters {
-  const publication = currentEffectiveLegalPublication()
-  const marketing =
-    dependencies.env.MARKETING_URL ??
-    dependencies.env.NEXT_PUBLIC_MARKETING_URL ??
-    "https://ewatrade.com"
-  const origin = new URL(marketing).origin
   return {
-    legal: publication
-      ? {
-          version: publication.version,
-          termsUrl: `${origin}/terms`,
-          privacyUrl: `${origin}/privacy`,
-        }
-      : null,
+    legal: getWhatsAppOnboardingLegal(dependencies.env),
     requestEmail: async ({ operationId: _, ...input }) => {
       const issued = await issueWhatsAppOnboardingEmail(dependencies.db, input)
       await issued.deliver()
@@ -249,7 +315,13 @@ export async function cancelWhatsAppOnboarding(
     await tx.onboardingSession.update({
       where: { token },
       data: {
-        formData: json({ ...parsed.data, state: null, lease: null }),
+        formData: json({
+          ...parsed.data,
+          state: null,
+          lease: null,
+          promptId: undefined,
+          promptExpiresAt: undefined,
+        }),
         completed: true,
         userId: null,
       },
@@ -262,6 +334,10 @@ export async function processWhatsAppOnboardingMessage(
   event: NormalizedWhatsAppMessageEvent,
   config: { phoneNumberId: string; accessToken: string },
   injected?: Dependencies,
+  structured?: {
+    signupForm: WhatsAppOnboardingSignup & { email: string }
+    registrationToken?: string
+  },
 ): Promise<{
   handled: boolean
   outcome?: "sent" | "unknown" | "failed" | "duplicate" | "limited"
@@ -270,7 +346,7 @@ export async function processWhatsAppOnboardingMessage(
     db: prisma,
     env: process.env,
     now: () => new Date(),
-    provider: new DirectMetaWhatsAppProvider(),
+    provider: createWhatsAppOnboardingProvider(),
   }
   const now = dependencies.now()
   if (!event.messageId || event.messageId.length > 256) return { handled: true }
@@ -296,7 +372,13 @@ export async function processWhatsAppOnboardingMessage(
   )
     return { handled: true }
   const text = event.text?.trim() ?? ""
-  const explicit = /^(?:connect|register)$/i.test(text)
+  const explicit =
+    whatsAppRegistrationEntry(text) !== null ||
+    /^(?:connect|register|register chat|register form|open registration form|create account|add business|i want to add another business|keep)$/i.test(
+      text,
+    ) ||
+    Boolean(event.quickActionId?.startsWith("waonb:")) ||
+    Boolean(structured)
   const token = flowToken(address, dependencies.env)
   const messageToken = `wa-receipt_${digest(dependencies.env, `${token}:${event.messageId}`)}`
   const nonce = randomBytes(24).toString("base64url")
@@ -309,6 +391,26 @@ export async function processWhatsAppOnboardingMessage(
         where: { token: messageToken },
       })
       if (existingReceipt) return { kind: "duplicate" as const }
+      if (structured?.registrationToken) {
+        const registrationToken = structured.registrationToken
+        if (!registrationToken.startsWith("wa-flow_native_"))
+          return { kind: "duplicate" as const }
+        await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${registrationToken}))`
+        const registration = await tx.onboardingSession.findUnique({
+          where: { token: registrationToken },
+        })
+        const guard = z
+          .object({
+            kind: z.literal("native-registration-flow-v1"),
+            senderId: z.literal(address.senderId),
+            phoneNumberId: z.literal(address.phoneNumberId),
+            status: z.literal("RETURN_PENDING"),
+            returnMessageId: z.literal(event.messageId),
+          })
+          .safeParse(registration?.formData)
+        if (!guard.success || !registration || registration.expiresAt <= now)
+          return { kind: "duplicate" as const }
+      }
       const row = await tx.onboardingSession.findUnique({ where: { token } })
       const parsed = flowSchema.safeParse(row?.formData)
       const prior: Flow =
@@ -319,18 +421,25 @@ export async function processWhatsAppOnboardingMessage(
         prior.state &&
         prior.state.stage !== "complete" &&
         prior.state.expiresAt > now.getTime()
-      if (!active && !explicit) {
-        const grant = await tx.assistantWhatsAppGrant.findFirst({
-          where: {
-            revokedAt: null,
-            expiresAt: { gt: now },
-            idleExpiresAt: { gt: now },
-            identity: { ...address, revokedAt: null },
-          },
-          select: { id: true },
-        })
-        if (grant) return { kind: "linked" as const }
-      }
+      const grant = await tx.assistantWhatsAppGrant.findFirst({
+        where: {
+          revokedAt: null,
+          expiresAt: { gt: now },
+          idleExpiresAt: { gt: now },
+          identity: { ...address, revokedAt: null },
+        },
+        select: { id: true, identity: { select: { userId: true } } },
+      })
+      if (!active && !explicit && grant) return { kind: "linked" as const }
+      const nativeAction = event.quickActionId?.startsWith("waonb:")
+        ? readOnboardingButton(
+            event.quickActionId,
+            token,
+            prior,
+            dependencies.env,
+            now.getTime(),
+          )
+        : undefined
       if (prior.lease && prior.lease.expiresAt > now.getTime())
         throw new Error(
           "WhatsApp connection is processing another message. Retry this webhook later.",
@@ -340,6 +449,8 @@ export async function processWhatsAppOnboardingMessage(
         kind: flowKind,
         state: active ? prior.state : null,
         count: prior.count + 1,
+        promptId: prior.promptId,
+        promptExpiresAt: prior.promptExpiresAt,
         lease: {
           nonce,
           receiptToken: messageToken,
@@ -369,7 +480,13 @@ export async function processWhatsAppOnboardingMessage(
           expiresAt: new Date(now.getTime() + receiptLifetimeMs),
         },
       })
-      return { kind: "claimed" as const, state: flow.state }
+      return {
+        kind: "claimed" as const,
+        state: flow.state,
+        linked: Boolean(grant),
+        connectedUserId: grant?.identity?.userId,
+        nativeAction,
+      }
     },
   )
   if (claimed.kind === "linked") return { handled: false }
@@ -380,16 +497,32 @@ export async function processWhatsAppOnboardingMessage(
     const adapters =
       dependencies.adapters?.(event, { token, nonce }) ??
       productionAdapters(dependencies, { token, nonce }, occurredAt)
-    advanced = await advanceWhatsAppOnboarding(
-      claimed.state,
-      {
-        ...address,
-        messageId: event.messageId,
-        text: text.length <= 4096 ? text : "",
-        now: now.getTime(),
-      },
-      adapters,
-    )
+    // Invalid native payloads are consumed here, never interpreted as a name, code or model input.
+    advanced =
+      claimed.nativeAction === null
+        ? {
+            state: claimed.state,
+            reply:
+              "That option expired or belongs to an earlier step. Use the current options, type your answer, or send CONNECT to start again.",
+            connected: false,
+            buttons: whatsAppOnboardingButtons(claimed.state),
+          }
+        : await advanceWhatsAppOnboarding(
+            claimed.state,
+            {
+              ...address,
+              messageId: event.messageId,
+              text: claimed.nativeAction ?? (text.length <= 4096 ? text : ""),
+              ...(structured ? { signupForm: structured.signupForm } : {}),
+              now: now.getTime(),
+            },
+            {
+              ...adapters,
+              connected: claimed.linked || adapters.connected,
+              connectedUserId:
+                claimed.connectedUserId ?? adapters.connectedUserId,
+            },
+          )
   } catch {
     await runInOwnSerializableTransaction(dependencies.db, async (tx) => {
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${token}))`
@@ -441,7 +574,15 @@ export async function processWhatsAppOnboardingMessage(
       await tx.onboardingSession.update({
         where: { token },
         data: {
-          formData: json({ ...flow.data, state }),
+          formData: json({
+            ...flow.data,
+            state,
+            promptId: event.messageId,
+            promptExpiresAt: Math.min(
+              advanced.state?.expiresAt ?? now.getTime() + flowLifetimeMs,
+              now.getTime() + flowLifetimeMs,
+            ),
+          }),
           completed: !state,
           userId,
         },
@@ -500,13 +641,28 @@ export async function processWhatsAppOnboardingMessage(
   let outcome: "sent" | "failed" | "unknown" = "unknown"
   let providerMessageId: string | undefined
   try {
-    const sent = await dependencies.provider.sendText({
+    const payload = {
       phoneNumberId: config.phoneNumberId,
       accessToken: config.accessToken,
       to: address.senderId,
-      body: advanced.reply,
+      body: presentWhatsAppMessage(advanced.reply, { family: "account" }),
       callbackData: `wa-onboarding:${digest(dependencies.env, messageToken)}`,
-    })
+    }
+    const buttons = advanced.buttons?.slice(0, 3).map((button) => ({
+      id: onboardingButtonId(
+        token,
+        event.messageId,
+        button.command,
+        dependencies.env,
+      ),
+      title: button.title,
+    }))
+    const sent =
+      buttons?.length &&
+      payload.body.length <= 1024 &&
+      dependencies.provider.sendButtons
+        ? await dependencies.provider.sendButtons({ ...payload, buttons })
+        : await dependencies.provider.sendText(payload)
     providerMessageId = sent.messageId
     outcome = "sent"
   } catch (error) {

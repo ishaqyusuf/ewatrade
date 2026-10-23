@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto"
-import { withQaWorkspaceSuffix } from "@ewatrade/utils"
+import { getStorefrontDomain, withQaWorkspaceSuffix } from "@ewatrade/utils"
 import {
   isClaimableStoreLink,
   normalizeStoreLink,
@@ -38,10 +38,10 @@ export function storeLinkHostnames(slugs: string[]) {
             .split("/")[0]
             ?.split(":")[0],
       )
-      .filter(Boolean),
+      .filter((domain): domain is string => Boolean(domain)),
   )
   return slugs.flatMap((slug) =>
-    [...domains].map((domain) => `${slug}.${domain}`),
+    [...domains].map((domain) => `${slug}.${getStorefrontDomain(domain)}`),
   )
 }
 /** One atomic budget per trusted network/minute; public checks never write draft data. */

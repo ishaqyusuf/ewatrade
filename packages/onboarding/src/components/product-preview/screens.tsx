@@ -574,7 +574,7 @@ export const screens = {
           <div className={"a-line"}>
             <span className={"a-om"}>
               <b>{"Counted"}</b>
-              <small>{"By Bisi · 18:40"}</small>
+              <small>{"By Owner · 18:40"}</small>
             </span>
             <b className={"ew-num"}>{money(125500)}</b>
           </div>
@@ -787,7 +787,7 @@ export const webViews = {
       })
     return {
       title: "Overview",
-      sub: `${data.business.name} · Ibadan store · Today`,
+      sub: `${data.business.name} · Ilorin store · Today`,
       action: "+ New order",
       body: (
         <>
@@ -870,7 +870,7 @@ export const webViews = {
       title: s.created ? `Order #${data.sale.id}` : "New order",
       sub: s.created
         ? `${data.sale.customer} · just now`
-        : "Ibadan store · Bisi",
+        : "Ilorin store · Owner",
       action: s.created ? "Share receipt" : "Save draft",
       body: (
         <>
@@ -958,7 +958,7 @@ export const webViews = {
     ] as const
     return {
       title: "Stock",
-      sub: "Ibadan store · 4 items tracked",
+      sub: "Ilorin store · 4 items tracked",
       action: "Record stock",
       body: (
         <>
@@ -1082,13 +1082,13 @@ export const webViews = {
   },
   team() {
     const rows = [
-      ["Bisi Adebayo", "Owner", "t-mint", 98500, "All orders"],
+      ["Owner", "Owner", "t-mint", 98500, "All orders"],
       ["Halima Musa", "Sales rep", "t-lilac", 61000, "Only their own sales"],
       ["Chidi Okafor", "Sales rep", "t-sky", 36000, "Only their own sales"],
     ] as const
     return {
       title: "Staff",
-      sub: "Ibadan store · 3 people",
+      sub: "Ilorin store · 3 people",
       action: "+ Invite",
       body: (
         <>
@@ -1140,7 +1140,7 @@ export const webViews = {
   closeday() {
     return {
       title: "Close the day",
-      sub: "Thursday · Ibadan store",
+      sub: "Thursday · Ilorin store",
       action: "Close today",
       body: (
         <>
@@ -1155,7 +1155,7 @@ export const webViews = {
               </div>
               {"\n            "}
               <div className={"ew-kv"}>
-                <span>{"Counted by Bisi · 18:40"}</span>
+                <span>{"Counted by Owner · 18:40"}</span>
                 <b className={"ew-num"}>{money(125500)}</b>
               </div>
               {"\n            "}

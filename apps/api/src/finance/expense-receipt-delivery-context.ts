@@ -1,4 +1,7 @@
-import { createFinanceExpenseReceiptDeliveryRepository } from "@ewatrade/db/finance-expense-receipt-delivery"
+import {
+  createFinanceExpenseReceiptDeliveryRepository,
+  createFinanceExpenseReceiptThumbnailRepository,
+} from "@ewatrade/db/finance-expense-receipt-delivery"
 import type { ExpenseReceiptContentType } from "@ewatrade/private-media/expense-receipts"
 import { createVercelPrivateObjectPort } from "@ewatrade/private-media/vercel-blob"
 import { TRPCError } from "@trpc/server"
@@ -31,6 +34,10 @@ export const prepareFinanceExpenseReceiptDelivery: PrepareExpenseReceiptDelivery
     const sessionId = session.session.id
     return {
       repository: createFinanceExpenseReceiptDeliveryRepository(ctx.db, {
+        ...source,
+        ...actor,
+      }),
+      thumbnails: createFinanceExpenseReceiptThumbnailRepository(ctx.db, {
         ...source,
         ...actor,
       }),

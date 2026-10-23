@@ -41,6 +41,31 @@ const PUBLIC_BRAND_ASSET_PATHS = new Set([
  * the auth utilities once they are implemented.
  */
 export function middleware(request: NextRequest) {
+  const signupChat = request.nextUrl.pathname === "/signup/chat"
+  const reviewContext =
+    request.nextUrl.pathname === "/assistant-review" ||
+    request.nextUrl.pathname.startsWith("/r/") ||
+    request.nextUrl.pathname === "/storefront-preview" ||
+    request.nextUrl.pathname === "/storefront" ||
+    (request.nextUrl.pathname === "/login" &&
+      (request.nextUrl.searchParams
+        .get("next")
+        ?.startsWith("/assistant-review") ||
+        request.nextUrl.searchParams.get("next")?.startsWith("/r/")))
+  const withReviewPrivacy = (response: NextResponse) => {
+    if (signupChat) {
+      response.headers.set(
+        "Content-Security-Policy",
+        `frame-ancestors 'self' ${new URL(MARKETING_URL).origin}`,
+      )
+    }
+    if (reviewContext || signupChat) {
+      response.headers.set("Cache-Control", "private, no-store, max-age=0")
+      response.headers.set("Referrer-Policy", "no-referrer")
+      response.headers.set("X-Robots-Tag", "noindex, nofollow, noarchive")
+    }
+    return response
+  }
   const hostname = request.headers.get("host") ?? ""
   const result = resolveTenantDomain(hostname, {
     platformDomain: PLATFORM_DOMAIN,
@@ -58,7 +83,7 @@ export function middleware(request: NextRequest) {
   ) {
     // Allow localhost through in dev
     if (!result.isLocalhost) {
-      return NextResponse.redirect(new URL(MARKETING_URL))
+      return withReviewPrivacy(NextResponse.redirect(new URL(MARKETING_URL)))
     }
   }
 
@@ -80,7 +105,7 @@ export function middleware(request: NextRequest) {
     !hasSessionCookie &&
     !isPublicBrandAsset &&
     !isPublicAppAssociation &&
-    !["/login", "/signup", "/staff-onboarding"].includes(
+    !["/login", "/signup", "/signup/chat", "/staff-onboarding"].includes(
       request.nextUrl.pathname,
     )
   ) {
@@ -89,7 +114,7 @@ export function middleware(request: NextRequest) {
       "next",
       request.nextUrl.pathname + request.nextUrl.search,
     )
-    return NextResponse.redirect(loginUrl)
+    return withReviewPrivacy(NextResponse.redirect(loginUrl))
   }
 
   // Pass tenant and path context to route handlers.
@@ -102,11 +127,13 @@ export function middleware(request: NextRequest) {
   requestHeaders.set("x-is-custom-domain", result.isCustomDomain ? "1" : "0")
   requestHeaders.set("x-pathname", request.nextUrl.pathname)
 
-  return NextResponse.next({
-    request: {
-      headers: requestHeaders,
-    },
-  })
+  return withReviewPrivacy(
+    NextResponse.next({
+      request: {
+        headers: requestHeaders,
+      },
+    }),
+  )
 }
 
 export const config = {

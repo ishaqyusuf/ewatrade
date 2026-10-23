@@ -46,6 +46,15 @@ export const whatsAppActionReviewIngressContentSchema = z
     replyToMessageId: z.string().min(1).max(256),
   })
   .strict()
+/** Edit borrows only the least-authority cancel proof; it is never an approval decision. */
+export const whatsAppActionEditReviewIngressContentSchema = z
+  .object({
+    type: z.literal("action_edit"),
+    decision: z.literal("cancel"),
+    decisionDigest: hashSchema,
+    replyToMessageId: z.string().min(1).max(256),
+  })
+  .strict()
 const sha256 = (value: string) =>
   createHash("sha256").update(value).digest("hex")
 
@@ -350,9 +359,12 @@ export async function consumeAssistantWhatsAppActionReviewInTransaction(
     },
     include: { inbox: true },
   })
-  const acceptedContent = whatsAppActionReviewIngressContentSchema.safeParse(
-    ingress?.content,
-  )
+  const acceptedContent = z
+    .union([
+      whatsAppActionReviewIngressContentSchema,
+      whatsAppActionEditReviewIngressContentSchema,
+    ])
+    .safeParse(ingress?.content)
   if (
     !ingress ||
     !acceptedContent.success ||

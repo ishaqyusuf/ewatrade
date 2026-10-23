@@ -80,3 +80,45 @@ describe("service work queue page search", () => {
     })
   })
 })
+
+test("Dashboard all-status listing keeps Store scope and sorts by creation date without urgent-first grouping", async () => {
+  const calls: unknown[] = []
+  const db = {
+    serviceJob: {
+      findMany: async (query: unknown) => {
+        calls.push(query)
+        return []
+      },
+      count: async (query: unknown) => {
+        calls.push(query)
+        return 0
+      },
+    },
+  } as unknown as PrismaClient
+  await listServiceWorkQueuePage(db, {
+    tenantId: "tenant",
+    storeId: "main",
+    stage: "all",
+    sort: { field: "createdAt", direction: "desc" },
+  })
+  expect(calls[0]).toMatchObject({
+    where: { tenantId: "tenant", storeId: "main", AND: [{}] },
+    orderBy: [{ createdAt: "desc" }, { id: "asc" }],
+  })
+  expect(calls[1]).toMatchObject({
+    where: { tenantId: "tenant", storeId: "main", AND: [{}] },
+  })
+  calls.length = 0
+  await listServiceWorkQueuePage(db, {
+    tenantId: "tenant",
+    storeId: "main",
+    stage: "cancelled",
+  })
+  expect(calls[0]).toMatchObject({
+    where: {
+      tenantId: "tenant",
+      storeId: "main",
+      AND: [{ lines: { some: {}, every: { status: "CANCELLED" } } }],
+    },
+  })
+})

@@ -19,6 +19,7 @@ import {
   Settings01Icon,
 } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
+import { ServiceRequestSearchFilter } from "./service-request-search-filter"
 import { ServiceTabs } from "./service-tabs"
 import { ServiceWorkSearchFilter } from "./service-work-search-filter"
 
@@ -33,23 +34,26 @@ export function ServiceWorkHeader({
   view: DirectoryView
   onViewChange: (view: DirectoryView) => void
 }) {
-  const { setParams } = useServiceWorkParams()
+  const { tab, setParams } = useServiceWorkParams()
+  const requests = canManage && tab === "requests"
   const startIntake = () => setParams({ serviceSheet: "intake" })
   return (
     <PageHeader
       eyebrow={storeName}
-      title="Service jobs"
-      description="Work you do for customers, from order to hand over."
+      title="Services"
+      description="Orders, work and customer requests."
     >
       <PageToolbar
         actions={
           <>
-            <ViewDropdown
-              label="Service jobs view"
-              value={view}
-              options={directoryViewOptions}
-              onValueChange={onViewChange}
-            />
+            {!requests ? (
+              <ViewDropdown
+                label="Service jobs view"
+                value={view}
+                options={directoryViewOptions}
+                onValueChange={onViewChange}
+              />
+            ) : null}
             {canManage ? (
               <DropdownMenu>
                 <DropdownMenuTrigger
@@ -91,7 +95,11 @@ export function ServiceWorkHeader({
           </>
         }
       >
-        <ServiceWorkSearchFilter canManage={canManage} />
+        {requests ? (
+          <ServiceRequestSearchFilter />
+        ) : (
+          <ServiceWorkSearchFilter canManage={canManage} />
+        )}
       </PageToolbar>
       {canManage ? <ServiceTabs /> : null}
     </PageHeader>

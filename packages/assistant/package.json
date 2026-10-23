@@ -4,11 +4,16 @@
   "private": true,
   "type": "module",
   "exports": {
+    "./channels/collection": "./src/channels/collection.ts",
+    "./channels/presentation": "./src/channels/presentation.ts",
     "./channels/policy": "./src/channels/policy.ts",
     "./channels/delivery": "./src/channels/delivery.ts",
     "./channels/render": "./src/channels/render.ts",
     "./channels/worker": "./src/channels/worker.ts",
     "./channels/ingress": "./src/channels/ingress.ts",
+    "./channels/reply-choices": "./src/channels/reply-choices.ts",
+    "./channels/read-pagination": "./src/channels/read-pagination.ts",
+    "./channels/flows": "./src/channels/flows/index.ts",
     "./channels/whatsapp": "./src/channels/whatsapp.ts",
     "./channels/instructions": "./src/channels/instructions.ts",
     "./product/contracts": "./src/product/contracts.ts",
@@ -29,6 +34,7 @@
     "./setup/vision": "./src/setup/vision.ts",
     "./general/search-answer": "./src/general/search-answer.ts",
     "./general/contracts": "./src/general/contracts.ts",
+    "./general/allowance": "./src/general/allowance.ts",
     "./general/product-create": "./src/general/product-create.ts",
     "./general/prompt": "./src/general/prompt.ts",
     "./general/rehearsal": "./src/general/rehearsal.ts",
@@ -64,6 +70,7 @@
     "./general/read-record-target": "./src/general/read-record-target.ts",
     "./channels/read-record-links": "./src/channels/read-record-links.ts",
     "./channels/conversation-links": "./src/channels/conversation-links.ts",
+    "./channels/review-links": "./src/channels/review-links.ts",
     "./channels/action-review": "./src/channels/action-review.ts",
     "./channels/action-result": "./src/channels/action-result.ts",
     "./channels/media": "./src/channels/media.ts",
@@ -74,7 +81,9 @@
     "./channels/capability-action-handoff": "./src/channels/capability-action-handoff.ts",
     "./channels/readiness": "./src/channels/readiness.ts",
     "./general/service-message-read": "./src/general/service-message-read.ts",
-    "./general/service-request-read": "./src/general/service-request-read.ts"
+    "./general/service-request-read": "./src/general/service-request-read.ts",
+    "./public/contracts": "./src/public/contracts.ts",
+    "./public/prompt": "./src/public/prompt.ts"
   },
   "scripts": {
     "lint": "biome check .",

@@ -16,7 +16,7 @@ import {
   ServiceWorkDue,
   ServiceWorkMoney,
   ServiceWorkRowActions,
-  ServiceWorkStatusBadge,
+  ServiceWorkStatusMenu,
   getServiceWorkAssignment,
 } from "./columns"
 
@@ -44,7 +44,7 @@ export function ServiceWorkCollection({
             title={job.customerName || "Walk-in customer"}
             onOpen={() => actions.openJob(job.id)}
             description={`${job.orderNumber} · ${jobWhat(job)}`}
-            badges={<ServiceWorkStatusBadge job={job} />}
+            badges={<ServiceWorkStatusMenu job={job} actions={actions} />}
             details={[
               {
                 label: "Who",

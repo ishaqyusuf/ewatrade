@@ -1,8 +1,10 @@
-import { expect, test } from "bun:test"
+import { expect, spyOn, test } from "bun:test"
+import { WHATSAPP_DELIVERY_REQUEST_MS } from "@ewatrade/assistant/channels/delivery"
 import type { PrismaClient } from "@ewatrade/db"
 import type { WhatsAppOnboardingAdapters } from "./whatsapp-onboarding"
 import {
   cancelWhatsAppOnboarding,
+  createWhatsAppOnboardingProvider,
   processWhatsAppOnboardingMessage,
 } from "./whatsapp-onboarding-runtime"
 
@@ -25,6 +27,7 @@ function harness(unknownSend = false, linked = false) {
   const rows = new Map<string, Row>()
   let inTransaction = false
   let sent = 0
+  let lastButtons: { id: string; title: string }[] = []
   let sequence = 0
   const db = {
     $transaction: async <T>(run: (tx: unknown) => Promise<T>) => {
@@ -111,6 +114,15 @@ function harness(unknownSend = false, linked = false) {
     now: () => now,
     adapters: () => adapters,
     provider: {
+      sendButtons: async ({
+        buttons,
+      }: { buttons: { id: string; title: string }[] }) => {
+        expect(inTransaction).toBe(false)
+        lastButtons = buttons
+        sent++
+        if (unknownSend) throw new Error("transport lost")
+        return { messageId: `outbound-${sent}` }
+      },
       sendText: async () => {
         expect(inTransaction).toBe(false)
         sent++
@@ -132,6 +144,9 @@ function harness(unknownSend = false, linked = false) {
     rows,
     dependencies,
     message,
+    get lastButtons() {
+      return lastButtons
+    },
     get sent() {
       return sent
     },
@@ -162,6 +177,80 @@ test("ambiguous send stays UNKNOWN and replay cannot send again", async () => {
   ).toMatchObject({ status: "UNKNOWN" })
 })
 
+for (const nativeButtons of [true, false]) {
+  test(`typed CONNECT bounds stalled ${nativeButtons ? "button" : "text"} transport and never resends an unknown result`, async () => {
+    const h = harness()
+    const controller = new AbortController()
+    const durations: number[] = []
+    let attempts = 0
+    let requestInit: RequestInit | undefined
+    const timeout = spyOn(AbortSignal, "timeout").mockImplementation(
+      (duration) => {
+        durations.push(duration)
+        return controller.signal
+      },
+    )
+    const requestFetch: typeof fetch = Object.assign(
+      async (
+        _url: Parameters<typeof fetch>[0],
+        init?: Parameters<typeof fetch>[1],
+      ): Promise<Response> => {
+        attempts++
+        requestInit = init
+        // A bounded inert probe also fails promptly when the signal is absent.
+        const signal = init?.signal
+        if (!signal) throw new Error("Missing request deadline")
+        return new Promise((_resolve, reject) => {
+          signal.addEventListener("abort", () =>
+            reject(new DOMException("Simulated timeout", "TimeoutError")),
+          )
+          queueMicrotask(() => controller.abort())
+        })
+      },
+      { preconnect: fetch.preconnect },
+    )
+    const provider = createWhatsAppOnboardingProvider(requestFetch)
+    const dependencies = {
+      ...h.dependencies,
+      provider: {
+        sendText: provider.sendText.bind(provider),
+        ...(nativeButtons
+          ? { sendButtons: provider.sendButtons.bind(provider) }
+          : {}),
+      },
+    }
+    const incoming = h.message("CONNECT", "stalled-typed-connect")
+    try {
+      expect(
+        await processWhatsAppOnboardingMessage(incoming, config, dependencies),
+      ).toEqual({ handled: true, outcome: "unknown" })
+      expect(durations).toEqual([WHATSAPP_DELIVERY_REQUEST_MS])
+      expect(requestInit?.redirect).toBe("error")
+      expect(requestInit?.signal).toBe(controller.signal)
+      expect(JSON.parse(String(requestInit?.body))).toMatchObject({
+        type: nativeButtons ? "interactive" : "text",
+      })
+      expect(
+        [...h.rows.values()].find((row) => row.token.startsWith("wa-receipt_"))
+          ?.formData,
+      ).toMatchObject({ status: "UNKNOWN" })
+      expect(
+        [...h.rows.values()].find((row) => row.token.startsWith("wa-flow_"))
+          ?.formData,
+      ).toMatchObject({ lease: null, state: { stage: "email" } })
+      expect(
+        await processWhatsAppOnboardingMessage(incoming, config, dependencies),
+      ).toEqual({ handled: true, outcome: "duplicate" })
+      expect(attempts).toBe(1)
+      expect(JSON.stringify([...h.rows.values()])).not.toContain(
+        config.accessToken,
+      )
+    } finally {
+      timeout.mockRestore()
+    }
+  })
+}
+
 test("verified state associates privacy owner, completed connection clears private dialogue fields", async () => {
   const h = harness()
   await h.send("owner@example.com")
@@ -188,6 +277,10 @@ test("STOP clears private flow and stale events never open a messaging window", 
     [...h.rows.values()].find((row) => row.token.startsWith("wa-flow_"))
       ?.formData,
   ).toMatchObject({ state: null, lease: null })
+  expect(
+    [...h.rows.values()].find((row) => row.token.startsWith("wa-flow_"))
+      ?.formData,
+  ).not.toHaveProperty("promptId")
   const stale = h.message("Hi")
   stale.timestamp = String(now.getTime() / 1000 - 24 * 60 * 60)
   expect(
@@ -200,5 +293,97 @@ test("linked ordinary six-digit amount bypasses onboarding without persistence o
   const h = harness(false, true)
   expect(await h.send("123456")).toEqual({ handled: false })
   expect(h.rows.size).toBe(0)
+  expect(h.sent).toBe(0)
+})
+
+test("native onboarding actions bind sender and the current prompt; stale REGISTER cannot change email proof", async () => {
+  const h = harness()
+  await h.send("Hi")
+  const oldRegister = h.lastButtons.find(
+    (button) => button.title === "Create account",
+  )!.id
+  await h.send("owner@example.com")
+  const stale = {
+    ...h.message("Create account"),
+    type: "interactive" as const,
+    quickActionId: oldRegister,
+  }
+  await processWhatsAppOnboardingMessage(stale, config, h.dependencies)
+  const flow = [...h.rows.values()].find((row) =>
+    row.token.startsWith("wa-flow_"),
+  )!
+  expect(flow.formData).toMatchObject({
+    state: { stage: "code", mode: "login" },
+  })
+  const cancel = h.lastButtons.find((button) => button.title === "Cancel")!.id
+  const otherSender = {
+    ...h.message("Cancel"),
+    externalCustomerId: "2348000000002",
+    type: "interactive" as const,
+    quickActionId: cancel,
+  }
+  await processWhatsAppOnboardingMessage(otherSender, config, h.dependencies)
+  expect(flow.formData).toMatchObject({ state: { stage: "code" } })
+  const currentCancel = {
+    ...h.message("Cancel"),
+    type: "interactive" as const,
+    quickActionId: cancel,
+  }
+  await processWhatsAppOnboardingMessage(currentCancel, config, h.dependencies)
+  expect(
+    [...h.rows.values()].find((row) => row.token === flow.token)?.formData,
+  ).toMatchObject({ state: null })
+})
+
+test("connected REGISTER never opens signup even while re-verifying another business", async () => {
+  const h = harness(false, true)
+  await h.send("CONNECT")
+  await h.send("owner@example.com")
+  await h.send("REGISTER")
+  const flow = [...h.rows.values()].find((row) =>
+    row.token.startsWith("wa-flow_"),
+  )!
+  expect(flow.formData).toMatchObject({ state: null })
+  expect(h.lastButtons.map((button) => button.title)).toContain(
+    "Add a business",
+  )
+})
+
+test("a cancelled native form cannot start a new email-proof workflow after cancellation", async () => {
+  const h = harness()
+  const token = "wa-flow_native_cancelled"
+  h.rows.set(token, {
+    id: "native",
+    token,
+    expiresAt: new Date(now.getTime() + 60_000),
+    formData: {
+      kind: "native-registration-flow-v1",
+      senderId: address.senderId,
+      phoneNumberId: address.phoneNumberId,
+      status: "CANCELLED",
+      returnMessageId: "return",
+    },
+  })
+  const result = await processWhatsAppOnboardingMessage(
+    h.message("", "return"),
+    config,
+    h.dependencies,
+    {
+      registrationToken: token,
+      signupForm: {
+        name: "Owner",
+        businessName: "Business",
+        ageBand: "ADULT",
+        countryCode: "NG",
+        currencyCode: "NGN",
+        email: "new@example.com",
+        legalVersion: "v1",
+        acceptedTerms: true,
+        acknowledgedPrivacyNotice: true,
+      },
+    },
+  )
+  expect(result).toEqual({ handled: true, outcome: "duplicate" })
+  expect(h.rows.size).toBe(1)
   expect(h.sent).toBe(0)
 })

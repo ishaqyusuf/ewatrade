@@ -33,7 +33,7 @@ export interface VirtualRowProps<TData> {
 
 const DEFAULT_NON_CLICKABLE_COLUMNS = new Set(["select", "actions"])
 const INTERACTIVE_TARGET =
-  "a, button, input, select, textarea, summary, [contenteditable='true'], [role='button'], [role='checkbox'], [role='combobox'], [data-row-interactive='true']"
+  "a, button, input, select, textarea, summary, [contenteditable='true'], [role='button'], [role='checkbox'], [role='combobox'], [role='menuitem'], [role='menuitemcheckbox'], [role='menuitemradio'], [data-row-interactive='true']"
 
 function VirtualRowInner<TData>({
   row,

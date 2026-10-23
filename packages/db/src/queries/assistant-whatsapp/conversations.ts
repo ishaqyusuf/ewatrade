@@ -183,77 +183,86 @@ export function disconnectAssistantWhatsApp(
   input: { phoneNumberId: string; senderId: string },
   now = new Date(),
 ) {
-  return runInOwnSerializableTransaction(db, async (tx) => {
-    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`whatsapp-sender:${input.phoneNumberId}:${input.senderId}`}))`
-    // A late delivery of a pre-STOP app link must not auto-connect a verified
-    // account phone, even when this sender has never had an identity yet.
-    const verifiedOwners = await tx.user.findMany({
-      where: {
-        phone: { in: [input.senderId, `+${input.senderId}`] },
-        phoneVerifiedAt: { not: null, lte: now },
-      },
-      select: { id: true },
-    })
-    if (verifiedOwners.length)
-      await tx.assistantWhatsAppLink.updateMany({
-        where: {
-          phoneNumberId: input.phoneNumberId,
-          userId: { in: verifiedOwners.map((owner) => owner.id) },
-          createdAt: { lte: now },
-          confirmedAt: null,
-          cancelledAt: null,
-        },
-        data: { cancelledAt: now, revision: { increment: 1 } },
-      })
-    await tx.assistantWhatsAppLink.updateMany({
-      where: {
-        phoneNumberId: input.phoneNumberId,
-        claimedSenderId: input.senderId,
-        confirmedAt: null,
-        cancelledAt: null,
-      },
-      data: { cancelledAt: now, revision: { increment: 1 } },
-    })
-    await tx.$queryRaw`SELECT id FROM "AssistantWhatsAppIdentity" WHERE "phoneNumberId"=${input.phoneNumberId} AND "senderId"=${input.senderId} FOR UPDATE`
-    const identity = await tx.assistantWhatsAppIdentity.findUnique({
-      where: { phoneNumberId_senderId: input },
-    })
-    if (!identity) return { disconnected: true as const }
-    if (!identity.revokedAt) {
-      await tx.assistantWhatsAppIdentity.update({
-        where: { id: identity.id },
-        data: {
-          revokedAt: now,
-          generation: { increment: 1 },
-          selectionGeneration: { increment: 1 },
-          controlSequence: { increment: 1 },
-          activeBindingId: null,
-        },
-      })
-      await tx.assistantWhatsAppGrant.updateMany({
-        where: { identityId: identity.id, revokedAt: null },
-        data: { revokedAt: now, generation: { increment: 1 } },
-      })
-    }
-    await cancelAssistantWhatsAppQueuedWorkInTransaction(
-      tx,
-      identity.id,
-      null,
-      now,
-      {
-        includeControls: true,
-        reason: "CHANNEL_DISCONNECTED",
-      },
-    )
-    await tx.assistantWhatsAppLink.updateMany({
-      where: {
-        phoneNumberId: input.phoneNumberId,
-        userId: identity.userId,
-        confirmedAt: null,
-        cancelledAt: null,
-      },
-      data: { cancelledAt: now, revision: { increment: 1 } },
-    })
-    return { disconnected: true as const }
+  return runInOwnSerializableTransaction(db, (tx) =>
+    disconnectAssistantWhatsAppInTransaction(tx, input, now),
+  )
+}
+
+/** Internal canonical revocation for callers already holding the sender identity lock. */
+export async function disconnectAssistantWhatsAppInTransaction(
+  tx: Prisma.TransactionClient,
+  input: { phoneNumberId: string; senderId: string },
+  now: Date,
+) {
+  await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`whatsapp-sender:${input.phoneNumberId}:${input.senderId}`}))`
+  // A late delivery of a pre-STOP app link must not auto-connect a verified
+  // account phone, even when this sender has never had an identity yet.
+  const verifiedOwners = await tx.user.findMany({
+    where: {
+      phone: { in: [input.senderId, `+${input.senderId}`] },
+      phoneVerifiedAt: { not: null, lte: now },
+    },
+    select: { id: true },
   })
+  if (verifiedOwners.length)
+    await tx.assistantWhatsAppLink.updateMany({
+      where: {
+        phoneNumberId: input.phoneNumberId,
+        userId: { in: verifiedOwners.map((owner) => owner.id) },
+        createdAt: { lte: now },
+        confirmedAt: null,
+        cancelledAt: null,
+      },
+      data: { cancelledAt: now, revision: { increment: 1 } },
+    })
+  await tx.assistantWhatsAppLink.updateMany({
+    where: {
+      phoneNumberId: input.phoneNumberId,
+      claimedSenderId: input.senderId,
+      confirmedAt: null,
+      cancelledAt: null,
+    },
+    data: { cancelledAt: now, revision: { increment: 1 } },
+  })
+  await tx.$queryRaw`SELECT id FROM "AssistantWhatsAppIdentity" WHERE "phoneNumberId"=${input.phoneNumberId} AND "senderId"=${input.senderId} FOR UPDATE`
+  const identity = await tx.assistantWhatsAppIdentity.findUnique({
+    where: { phoneNumberId_senderId: input },
+  })
+  if (!identity) return { disconnected: true as const }
+  if (!identity.revokedAt) {
+    await tx.assistantWhatsAppIdentity.update({
+      where: { id: identity.id },
+      data: {
+        revokedAt: now,
+        generation: { increment: 1 },
+        selectionGeneration: { increment: 1 },
+        controlSequence: { increment: 1 },
+        activeBindingId: null,
+      },
+    })
+    await tx.assistantWhatsAppGrant.updateMany({
+      where: { identityId: identity.id, revokedAt: null },
+      data: { revokedAt: now, generation: { increment: 1 } },
+    })
+  }
+  await cancelAssistantWhatsAppQueuedWorkInTransaction(
+    tx,
+    identity.id,
+    null,
+    now,
+    {
+      includeControls: true,
+      reason: "CHANNEL_DISCONNECTED",
+    },
+  )
+  await tx.assistantWhatsAppLink.updateMany({
+    where: {
+      phoneNumberId: input.phoneNumberId,
+      userId: identity.userId,
+      confirmedAt: null,
+      cancelledAt: null,
+    },
+    data: { cancelledAt: now, revision: { increment: 1 } },
+  })
+  return { disconnected: true as const }
 }

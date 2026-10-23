@@ -1,19 +1,59 @@
 import { StorefrontContent } from "@/components/storefront/storefront-content"
+import { storefrontMetadata } from "@/components/storefront/storefront-metadata"
+import { loadFactoryStorefront } from "@/lib/storefront-factory"
 import { prisma } from "@ewatrade/db"
-import { getPublicStorefrontForHost } from "@ewatrade/db/queries"
+import { catalogQuerySchema } from "@ewatrade/storefront-contracts/resources"
+import { storefrontIndexingEnabled } from "@ewatrade/storefront-runtime/seo"
+import type { Metadata } from "next"
 import { headers } from "next/headers"
 import { notFound } from "next/navigation"
+import { cache } from "react"
 
-export default async function HomePage({
+type Props = {
+  searchParams: Promise<{ after?: string; category?: string; item?: string }>
+}
+export const dynamic = "force-dynamic"
+// Metadata and page rendering share the same request-scoped safe projection.
+const loadStorefront = cache(
+  async (after?: string, category?: string, item?: string) => {
+    if (!catalogQuerySchema.safeParse({ after, category, item }).success)
+      notFound()
+    const requestHeaders = await headers()
+    const host = requestHeaders.get("host") ?? ""
+    const result = await loadFactoryStorefront(prisma, host, {
+      after,
+      category,
+      item,
+    })
+    if (item && !result.storefront?.highlightedItem) notFound()
+    return result
+  },
+)
+
+export async function generateMetadata({
   searchParams,
-}: { searchParams: Promise<{ after?: string }> }) {
-  const requestHeaders = await headers()
-  const { after } = await searchParams
-  const store = await getPublicStorefrontForHost(
-    prisma,
-    requestHeaders.get("host") ?? "",
+}: Props): Promise<Metadata> {
+  const { after, category, item } = await searchParams
+  const { load, storefront: store } = await loadStorefront(
     after,
+    category,
+    item,
   )
-  if (!store) notFound()
-  return <StorefrontContent store={store} />
+  return load.status === "ready" && store
+    ? storefrontMetadata(
+        store,
+        process.env.NEXT_PUBLIC_PLATFORM_DOMAIN ?? "ewatrade.com",
+        { after, category, indexable: storefrontIndexingEnabled(process.env) },
+      )
+    : {
+        title: "Shop unavailable | ẸwáTrade",
+        robots: { index: false, follow: false },
+      }
+}
+
+export default async function HomePage({ searchParams }: Props) {
+  const { after, category, item } = await searchParams
+  const { load } = await loadStorefront(after, category, item)
+  if (load.status !== "ready") notFound()
+  return <StorefrontContent snapshot={load.snapshot} after={after} />
 }

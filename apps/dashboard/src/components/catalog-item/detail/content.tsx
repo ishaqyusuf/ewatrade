@@ -12,12 +12,14 @@ export function CatalogDetailContent({
   storeId,
   readOnly,
   readScope,
+  canCreateServiceJob,
   error,
 }: {
   detail: CatalogDetail
   storeId: string
   readOnly: boolean
   readScope: CatalogDetailReadScope
+  canCreateServiceJob: boolean
   error?: { message: string; retry: () => void }
 }) {
   const { catalogDetailTab, setParams } = useCatalogDetailParams()
@@ -54,6 +56,7 @@ export function CatalogDetailContent({
             storeId={storeId}
             readOnly={readOnly}
             readScope={readScope}
+            canCreateServiceJob={canCreateServiceJob}
           />
         </TabsContent>
         <TabsContent value="orders">

@@ -13,7 +13,9 @@
     "./internal-api": "./src/internal-api.ts",
     "./store-conversation-attachment-viewer": "./src/service-commerce/conversation-attachment-viewer.ts",
     "./store-conversation-attachments": "./src/service-commerce/conversation-attachments.ts",
-    "./trpc/routers/_app": "./src/trpc/routers/_app.ts"
+    "./trpc/routers/_app": "./src/trpc/routers/_app.ts",
+    "./public-assistant": "./src/assistant/public-chat-route.ts",
+    "./public-assistant-contracts": "./src/assistant/public-chat-contracts.ts"
   },
   "dependencies": {
     "@ewatrade/customer-messages": "workspace:*",
@@ -52,7 +54,10 @@
     "@ewatrade/order-receipts": "workspace:*",
     "@ewatrade/ai": "workspace:*",
     "@ewatrade/assistant": "workspace:*",
-    "@ewatrade/oversight": "workspace:*"
+    "@ewatrade/oversight": "workspace:*",
+    "@ewatrade/storefront-contracts": "workspace:*",
+    "@ewatrade/storefront-templates": "workspace:*",
+    "@ewatrade/storefront-runtime": "workspace:*"
   },
   "devDependencies": {
     "@biomejs/biome": "^1.9.4",

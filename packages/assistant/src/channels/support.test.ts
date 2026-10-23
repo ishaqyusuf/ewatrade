@@ -7,14 +7,9 @@ import {
 import { whatsAppSupportHandoff } from "./support"
 
 test("support aliases use deterministic Help and only the approved fixed public contact is rendered", () => {
-  for (const alias of [
-    "Support",
-    " /support ",
-    "Contact support",
-    "HELP",
-    "menu",
-  ])
+  for (const alias of ["Support", " /support ", "Contact support", "HELP"])
     expect(parseWhatsAppControl(alias)).toEqual({ kind: "help" })
+  expect(parseWhatsAppControl("menu")).toEqual({ kind: "menu" })
   for (const work of [
     "support my cash sale",
     "contact support for account 123",
@@ -27,7 +22,7 @@ test("support aliases use deterministic Help and only the approved fixed public 
     storeId: "private-store",
   }
   const menu: WhatsAppControlMenu = {
-    version: "whatsapp-control-v1",
+    version: "whatsapp-control-v2",
     identityGeneration: 1,
     selectionGeneration: 1,
     quotaScope: scope,

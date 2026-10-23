@@ -1,4 +1,5 @@
 import { z } from "zod"
+import { collectedDetailsText } from "./collected-details"
 import { saleFactsFromText } from "./simple-sale"
 const name = z.string().trim().min(1).max(200)
 const id = z.string().trim().min(1).max(128)
@@ -43,7 +44,8 @@ export function isSimpleTransferIntent(text: string) {
     text.trim(),
   )
 }
-export function transferFactsFromText(text: string): Partial<SimpleTransfer> {
+export function transferFactsFromText(input: string): Partial<SimpleTransfer> {
+  const text = collectedDetailsText(input)
   const facts: Partial<SimpleTransfer> = {}
   const amount = text.match(
     /(?:^|\b(?:move|moved|transfer|transferred|amount))\s*[:=]?\s*[₦N]?\s*((?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d{1,2})?(?:\s*(?:k|thousand|m|million))?)(?![\d.\p{L}]|,\d)/iu,
@@ -54,13 +56,20 @@ export function transferFactsFromText(text: string): Partial<SimpleTransfer> {
     ["from", "fromAccountName"],
     ["to", "toAccountName"],
   ] as const) {
-    const match = text
-      .match(
+    const match = (
+      text.match(
+        new RegExp(
+          `^(?:${word === "from" ? "source|from" : "destination|to"})(?: account)?(?: is|:)?[\\t ]+([^\\n]+)$`,
+          "im",
+        ),
+      )?.[1] ??
+      text.match(
         new RegExp(
           `\\b${word}\\s+([\\p{L}][\\p{L}\\p{N} .’'-]*?)(?=\\s+(?:from|to|today|yesterday|on|by|with|at|note)\\b|[,;.!?\\n]|$)`,
           "iu",
         ),
       )?.[1]
+    )
       ?.trim()
       .replace(/\s+account$/i, "")
     if (match) facts[field] = match

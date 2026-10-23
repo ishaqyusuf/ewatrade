@@ -1,0 +1,274 @@
+{
+  "version": 1,
+  "id": "2026-10-21-storefront-template-factory-foundation",
+  "tickets": ["S04", "H01", "H02"],
+  "summary": "Storefront factory TF01–TF10 accepted locally:28/28 tickets,84/84 items,10/10 milestones. Owner stopped Preview testing and made local tests sufficient. Added bounded injected-only component generator/artifact pipeline, actual isolated offline normalbuild/3fixtureSSR, strict inert preview gate/local browser review, exact static public-intro1.0.0 in opt-in component-editorial1.0.0, version retirement/blocking/replacement/migration and bounded support projection/runbook. Default Catalog/authority/assistant ceiling unchanged. Existing dashboard read/generate/accept may use active registered compositions through same canonical commands and signed review; generation/promotion/localops are developer-only and excluded from assistant/merchant APIs. No new provider activation, DB operation, Preview testing, publication or deployment; remote4c history separate and source local WIP.",
+  "capabilities": [
+    {
+      "id": "storefront.design.read",
+      "change": "added",
+      "rollout": "source",
+      "note": "Dashboard-only Owner/Admin ceiling, exact active Store/Site/base/run binding. Read is non-mutating; writes stage through existing signed review and execute canonical transaction commands after explicit confirmation. No WhatsApp/mobile/publish/provider-configuration authority. Focused3tests/32assertions passed."
+    },
+    {
+      "id": "storefront.design.generate",
+      "change": "added",
+      "rollout": "source",
+      "note": "Dashboard-only Owner/Admin ceiling, exact active Store/Site/base/run binding. Read is non-mutating; writes stage through existing signed review and execute canonical transaction commands after explicit confirmation. No WhatsApp/mobile/publish/provider-configuration authority. Focused3tests/32assertions passed."
+    },
+    {
+      "id": "storefront.design.accept",
+      "change": "added",
+      "rollout": "source",
+      "note": "Dashboard-only Owner/Admin ceiling, exact active Store/Site/base/run binding. Read is non-mutating; writes stage through existing signed review and execute canonical transaction commands after explicit confirmation. No WhatsApp/mobile/publish/provider-configuration authority. Focused3tests/32assertions passed."
+    }
+  ],
+  "procedures": [
+    {
+      "path": "storefront.draft",
+      "status": "supported",
+      "reason": "Source dashboard Owner/Admin storefront.design capability through the same canonical command path and current active Store/Site checks. Read only or existing signed human review/confirmation before intent reservation/draft replacement. No publication or provider-configuration authority."
+    },
+    {
+      "path": "storefront.preview",
+      "status": "form_only",
+      "reason": "Explicit Owner/Admin studio form for preview, editing, cancellation, publication or rollback. No assistant publication/rollback/provider configuration authority."
+    },
+    {
+      "path": "storefront.readiness",
+      "status": "form_only",
+      "reason": "Explicit Owner/Admin studio form for preview, editing, cancellation, publication or rollback. No assistant publication/rollback/provider configuration authority."
+    },
+    {
+      "path": "storefront.history",
+      "status": "form_only",
+      "reason": "Explicit Owner/Admin studio form for preview, editing, cancellation, publication or rollback. No assistant publication/rollback/provider configuration authority."
+    },
+    {
+      "path": "storefront.initialize",
+      "status": "form_only",
+      "reason": "Explicit Owner/Admin studio form for preview, editing, cancellation, publication or rollback. No assistant publication/rollback/provider configuration authority."
+    },
+    {
+      "path": "storefront.saveDraft",
+      "status": "form_only",
+      "reason": "Explicit Owner/Admin studio form for preview, editing, cancellation, publication or rollback. No assistant publication/rollback/provider configuration authority."
+    },
+    {
+      "path": "storefront.publish",
+      "status": "form_only",
+      "reason": "Explicit Owner/Admin studio form for preview, editing, cancellation, publication or rollback. No assistant publication/rollback/provider configuration authority."
+    },
+    {
+      "path": "storefront.rollback",
+      "status": "form_only",
+      "reason": "Explicit Owner/Admin studio form for preview, editing, cancellation, publication or rollback. No assistant publication/rollback/provider configuration authority."
+    },
+    {
+      "path": "storefront.previewSession",
+      "status": "form_only",
+      "reason": "Explicit Owner/Admin studio form for preview, editing, cancellation, publication or rollback. No assistant publication/rollback/provider configuration authority."
+    },
+    {
+      "path": "storefront.generation",
+      "status": "supported",
+      "reason": "Source dashboard Owner/Admin storefront.design capability through the same canonical command path and current active Store/Site checks. Read only or existing signed human review/confirmation before intent reservation/draft replacement. No publication or provider-configuration authority."
+    },
+    {
+      "path": "storefront.generations",
+      "status": "supported",
+      "reason": "Source dashboard Owner/Admin storefront.design capability through the same canonical command path and current active Store/Site checks. Read only or existing signed human review/confirmation before intent reservation/draft replacement. No publication or provider-configuration authority."
+    },
+    {
+      "path": "storefront.generate",
+      "status": "supported",
+      "reason": "Source dashboard Owner/Admin storefront.design capability through the same canonical command path and current active Store/Site checks. Read only or existing signed human review/confirmation before intent reservation/draft replacement. No publication or provider-configuration authority."
+    },
+    {
+      "path": "storefront.cancelGeneration",
+      "status": "form_only",
+      "reason": "Explicit Owner/Admin studio form for preview, editing, cancellation, publication or rollback. No assistant publication/rollback/provider configuration authority."
+    },
+    {
+      "path": "storefront.acceptDesign",
+      "status": "supported",
+      "reason": "Source dashboard Owner/Admin storefront.design capability through the same canonical command path and current active Store/Site checks. Read only or existing signed human review/confirmation before intent reservation/draft replacement. No publication or provider-configuration authority."
+    }
+  ],
+  "docs": [
+    {
+      "topic": "feature",
+      "status": "local_only",
+      "path": ".brain/features/storefront-template-factory.md"
+    },
+    {
+      "topic": "api",
+      "status": "local_only",
+      "path": ".brain/api/contracts.md"
+    },
+    {
+      "topic": "permissions",
+      "status": "local_only",
+      "path": ".brain/api/permissions.md"
+    },
+    {
+      "topic": "schema",
+      "status": "local_only",
+      "path": ".brain/database/schema.md"
+    },
+    {
+      "topic": "capability",
+      "status": "updated",
+      "path": "packages/assistant/src/capabilities/COVERAGE.md"
+    },
+    {
+      "topic": "decision",
+      "status": "local_only",
+      "path": ".brain/decisions/2026-10-21-storefront-factory-single-site-release.md"
+    },
+    {
+      "topic": "feature",
+      "status": "local_only",
+      "path": ".brain/qa/2026-10-21-storefront-tf05-tf07-source.md"
+    },
+    {
+      "topic": "feature",
+      "status": "local_only",
+      "path": ".brain/qa/2026-10-21-storefront-factory-preview-pilot.md"
+    },
+    {
+      "topic": "api",
+      "path": ".brain/api/contracts.md",
+      "status": "local_only",
+      "note": "Optional exact initialize.templateVersion and version availability intent; existing canonical authority unchanged."
+    },
+    {
+      "topic": "permissions",
+      "path": ".brain/api/permissions.md",
+      "status": "local_only",
+      "note": "Trusted static version policy, developer pipeline/diagnostics excluded from assistant authority."
+    },
+    {
+      "topic": "feature",
+      "path": ".brain/runbooks/storefront-template-factory.md",
+      "status": "local_only",
+      "note": "Safe bounded console projections, unknown usage/cost/delivery, direct recovery and expansion limits."
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "run",
+      "path": "apps/api/src/storefront/site-commands.ts",
+      "executed": true,
+      "result": "One temporary in-memory command smoke: 1 pass, 36 assertions (21 October 2026). Actual repositories/audit writers exercised with a stub Prisma client: draft CAS/current conflict, consent refusal, exact publish/replay/key conflicts, pointer rollback with no copied release, audit and durable outbox, private preview destinations removed and revoked-role refusal. Temporary harness removed. No connected DB writes, typecheck, broad suite or provider action."
+    },
+    {
+      "kind": "test",
+      "path": "packages/storefront-templates/src/catalog-v4/render.smoke.test.tsx",
+      "executed": true,
+      "result": "Earlier focused source-parity SSR check: 2 tests/13 assertions passed; default Catalog v4 plus saved settings/order/contact placement and single main element. Reused evidence, not rerun for API wiring."
+    },
+    {
+      "kind": "review",
+      "path": "apps/storefront/src/app/page.tsx",
+      "executed": true,
+      "result": "Public page/metadata/share-image use verified Host to unique primary published Site to scoped immutable active release and its Store. Hash/pin checks; unpublished or incompatible source refuses; no oldest Store fallback or auto-publication. Pre-launch no-store; private session preview separate."
+    },
+    {
+      "kind": "run",
+      "path": "apps/api/src/storefront/preview-session.ts",
+      "executed": true,
+      "result": "Offline token/fence smoke: 8 assertions passed for five-minute issuance, exact actor/Tenant/revision, expired token refusal and missing Site/false-consent input refusal. Existing renderer 2tests/13assertions rerun and pass after shared stylesheet/inline preview edits. No typecheck."
+    },
+    {
+      "kind": "review",
+      "path": "apps/dashboard/src/components/storefront/storefront-studio.tsx",
+      "executed": true,
+      "result": "Selected three-pane Studio01 source reviewed; authenticated real empty state and draft200 observed. Actual populated component rendered7563bytes in one temporary offline SSR fixture, removed. No populated browser interactions or visual acceptance claimed. Image-selection leaf stays open; no merchant draft/save/publication for verification. Normal local schema cleanup/push/generate succeeded; migration reset request due drift refused."
+    },
+    {
+      "kind": "run",
+      "path": "packages/storefront-templates/src/render.tsx",
+      "executed": true,
+      "result": "Focused offline35assertions passed across actual retail/service populated/empty/unavailable SSR, resources, no fictional defaults, service filtering and required/first-section constraints; factory4pins and existing Catalog2tests/13assertions pass. Selected Workshop desktop/mobile reviewed in native Chrome. Product populated browser flow unverified; T3 snapshot timeout and own Studio Loading observed. No connected merchant fixture/provider/deployment."
+    },
+    {
+      "kind": "run",
+      "path": "packages/storefront-contracts/src/design.ts",
+      "executed": true,
+      "result": "Offline11assertions passed: explicit public brief without contact/price fields,3 structurally distinct compositions and exact cited copy accepted; invented facts/private asset/stale base/recolors/private reference/authority fields refused. Pure schema/internal command preparation only, no new endpoint or provider execution."
+    },
+    {
+      "kind": "run",
+      "path": "packages/jobs/src/handlers/storefront-design.ts",
+      "executed": true,
+      "result": "One temporary in-memory smoke25assertions passed using actual budget/run repositories and worker with injected authority/provider: reservation/replay/key conflict/budget cap, pre-call refund, once-only settlement, in-flight cancellation discarding result, and ambiguous provider failure holding reservation with no second call. No real DB/provider/network. Harness removed. Local normal db:push16.57s and generate12.16s plus alignment succeeded; migrate stalled after datasource and was interrupted without reset/manual ledger."
+    },
+    {
+      "kind": "run",
+      "path": "apps/api/src/storefront/site-commands.ts",
+      "executed": true,
+      "result": "One temporary offline acceptance/private-comparison harness passed28 assertions: exact draft save/replay, different direction/actor conflict, stale/corrupt/cancelled/cross-Site/revoked permission refusal, operational-copy guard, and three independently filtered private snapshots from one catalog read. In-memory repositories/adapters, no real DB/provider; harness removed. UI source not visually accepted; Claude Opus5.5/high redesign pending."
+    },
+    {
+      "kind": "run",
+      "path": "packages/storefront-contracts/src/design.ts",
+      "executed": true,
+      "result": "Focused offline21assertions passed for bounded styling guidance excluded from factual sources, invented-copy refusal, exact composition changes and all3 actual renderer SSR outputs. New named width-container responsiveness reuses real templates in readable phone-width comparison. Existing Catalog2tests/13assertions pass after renderer/container change. Temporary harness removed."
+    },
+    {
+      "kind": "test",
+      "path": "apps/api/src/assistant/general-storefront-design.test.ts",
+      "executed": true,
+      "result": "Focused3tests/32assertions passed with injected canonical commands and a dummy offline DB URL (no DB/provider queries): dashboard Owner/Admin capability ceiling, strict actor/provider/publication field refusal, staging without effects, exact transaction command inputs/receipts, stale Store/base/used run refusal and changed-output review digest. Existing generic signed approval lifecycle is reused, not rerun as a broad suite."
+    },
+    {
+      "kind": "review",
+      "path": "apps/dashboard/src/components/storefront/storefront-proposals.tsx",
+      "executed": true,
+      "result": "Claude Opus5.5/high T3 options verified. Exact selected Workshop01v4 1870fa2b-286e-43d3-8538-eed53e71326a: child archived central flow/focus/stale/refine/discard/reset checks and root Chrome visual review. Product uses real template content/pins and exact supported deltas rather than mock-only copy/settings. Source/local acceptance only; populated connected product browser/pilot unverified."
+    },
+    {
+      "kind": "run",
+      "path": "scripts/storefront-preview-guards.mjs",
+      "executed": true,
+      "result": "Release config/exact-source guard7 offline assertions passed. Read-only Vercel identity and system HTTPS HEAD observations recorded in the pilot packet. No new artifact build/deployment, alias/provider mutation or heavy typecheck."
+    },
+    {
+      "kind": "review",
+      "path": ".brain/qa/2026-10-21-storefront-factory-preview-pilot.md",
+      "executed": true,
+      "result": "Owner authorized any existing business/Store. Bounded read-only Preview lookups selected active Jawdah Poultry QA, no Site. No active LIVE merchant/Store candidate returned; Site lacks draftComposition/draftRevision/activeReleaseId. Exact credentials never emitted, target distinct from local/Production, no fixtures/publication/DDL/AI call. Private pilot selected; positive public delivery and full TF08-02 unverified."
+    },
+    {
+      "kind": "review",
+      "path": ".brain/qa/2026-10-21-storefront-preview-source-review.json",
+      "executed": true,
+      "result": "Final impact/documentation review:73 focused source hashes match; shared HEAD advanced through unrelated commits, initial base retained and candidateSha remains null. Current assistant impact gate reports2 unrelated procedure gaps: customerLedger.recordReceiptAndApply and inventory.setLowStockLevel. No Storefront gap; prior5-gap snapshot is historical. No typecheck/broad tests/build/deployment repeated."
+    },
+    {
+      "kind": "test",
+      "path": "packages/storefront-components/src/operations.test.ts",
+      "executed": true,
+      "result": "Final focused aggregate19tests/130assertions across8files pass, including strict bounded safe metrics and unknown usage/delivery semantics; separate canonical local1/28 passes. Package types/scoped lint pass. No broad API typecheck or external test."
+    },
+    {
+      "kind": "review",
+      "path": "packages/storefront-templates/src/generated/registry.ts",
+      "executed": true,
+      "result": "Independent exact source/CSS/manifest/artifact/provenance review passes; static source only, no runtimebundle evaluation. Template/component availability and fresh authority/replay intent review pass. Targeted browserbundle21modules82.14KB and5manifestchecks pass."
+    },
+    {
+      "kind": "run",
+      "path": ".brain/qa/2026-10-22-storefront-components-local.md",
+      "executed": true,
+      "result": "Actual cached pinned local compiler+separate SSR3fixtures and independent hashes pass; IAB desktop+320px/nativeinertContact review pass. FIFO boundedreader refusal0.269s passes. Local-only acceptance28/28,84/84,10/10; no realmodel/deployment/publicdelivery claim."
+    },
+    {
+      "kind": "review",
+      "path": ".brain/qa/2026-10-22-storefront-components-local.md",
+      "executed": true,
+      "result": "Final checklist84checked/0open/28tickets. H01 coverage regenerated successfully; whole-working-tree H02 still reports4 unrelated finance/inventory procedure gaps, no Storefront gap. Globalgate notclaimedpassed; unrelated WIP preserved. All factory code/source/local acceptance complete."
+    }
+  ]
+}

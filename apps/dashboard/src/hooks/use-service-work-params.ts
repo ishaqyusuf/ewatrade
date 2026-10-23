@@ -22,6 +22,7 @@ export const SERVICE_SHEET_MODES = [
 export type ServiceSheetMode = (typeof SERVICE_SHEET_MODES)[number]
 
 const serviceWorkParams = {
+  serviceTab: parseAsStringEnum(["work", "requests"]).withDefault("work"),
   jobId: parseAsString,
   /** A step inside the job sheet, e.g. "pay" or "split:<lineId>". */
   jobStep: parseAsString,
@@ -45,6 +46,7 @@ export function useServiceWorkParams() {
       jobId?: string | null
       jobStep?: string | null
       requestId?: string | null
+      serviceTab?: "work" | "requests" | null
       serviceQuery?: string | null
       serviceAssignee?: string | null
       serviceDue?: (typeof SERVICE_DUE_FILTERS)[number] | null
@@ -65,6 +67,7 @@ export function useServiceWorkParams() {
   }
 
   return {
+    tab: params.serviceTab,
     jobId: params.jobId,
     jobStep: params.jobStep,
     query: params.serviceQuery ?? "",
@@ -80,12 +83,14 @@ export function useServiceWorkParams() {
       updateParams(
         values === null
           ? {
+              serviceStage: null,
               serviceAssignee: null,
               serviceDue: null,
               servicePriority: null,
               serviceQuery: null,
             }
           : {
+              serviceStage: values.stage,
               serviceAssignee: values.assigneeUserId,
               serviceDue: values.due,
               servicePriority: values.priority,

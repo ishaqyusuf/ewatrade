@@ -14,7 +14,7 @@ import {
   InputGroupInput,
   InputGroupText,
 } from "@ewatrade/ui"
-import { withQaWorkspaceSuffix } from "@ewatrade/utils"
+import { getStorefrontDomain, withQaWorkspaceSuffix } from "@ewatrade/utils"
 import {
   Alert01Icon,
   CheckmarkCircle01Icon,
@@ -176,12 +176,8 @@ export function StepWorkspace({
                 className="signup-address-suffix"
               >
                 <InputGroupText>
-                  {isQa && !subdomain.endsWith("-qa") ? "-qa" : ""}
-                  {PLATFORM_DOMAIN === "localhost" ||
-                  PLATFORM_DOMAIN.endsWith(".localhost")
-                    ? "-storefront"
-                    : ""}
-                  .{PLATFORM_DOMAIN}
+                  {isQa && !subdomain.endsWith("-qa") ? "-qa" : ""}.
+                  {getStorefrontDomain(PLATFORM_DOMAIN)}
                 </InputGroupText>
               </InputGroupAddon>
             </InputGroup>

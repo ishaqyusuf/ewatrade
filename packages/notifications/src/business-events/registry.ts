@@ -106,6 +106,38 @@ function defineHandler<Schema extends z.ZodType>(handler: Handler<Schema>) {
 }
 
 export const implementedBusinessEventHandlers = {
+  "settings.storefront_changed": defineHandler({
+    label: "Storefront changed",
+    description:
+      "An attributed storefront draft or exact design activation; not a delivery claim.",
+    category: "settings",
+    schema: z
+      .object({
+        siteId: id,
+        action: z.enum([
+          "initialized",
+          "saved",
+          "published",
+          "rolled_back",
+          "generation_requested",
+          "generation_cancelled",
+          "design_accepted",
+        ]),
+        draftRevision: z.number().int().nonnegative(),
+        releaseId: id.nullable(),
+        baseReleaseId: id.nullable(),
+        requestHash: z.string().regex(/^[a-f0-9]{64}$/),
+      })
+      .strict(),
+    present: (payload, actor) => ({
+      summary: `${actor} ${payload.action === "rolled_back" ? "restored" : payload.action === "generation_requested" ? "requested a design for" : payload.action === "generation_cancelled" ? "cancelled a design run for" : payload.action === "design_accepted" ? "accepted a design for" : payload.action} the storefront${payload.action === "saved" || payload.action === "design_accepted" ? " draft" : ""}`,
+      detail: `Draft revision ${payload.draftRevision}`,
+      subject: null,
+      amount: null,
+      statusAtEvent: null,
+      target: null,
+    }),
+  }),
   "order.recorded": defineHandler({
     label: "Order recorded",
     description:

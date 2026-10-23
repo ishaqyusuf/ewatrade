@@ -2,7 +2,7 @@ import type {
   BusinessOperatingModel,
   OperatingCurrencyCode,
 } from "@ewatrade/utils"
-import { withQaWorkspaceSuffix } from "@ewatrade/utils"
+import { getStorefrontDomain, withQaWorkspaceSuffix } from "@ewatrade/utils"
 import { managedQaIdentity } from "@ewatrade/utils/qa-policy-server"
 import { isClaimableStoreLink } from "@ewatrade/utils/store-link"
 import { Prisma } from "../../generated/prisma/client"
@@ -127,7 +127,7 @@ async function createUniqueTenant(
       await db.tenantHostname.create({
         data: {
           tenantId: tenant.id,
-          hostname: `${requestedSlug}.${process.env.NEXT_PUBLIC_PLATFORM_DOMAIN ?? "ewatrade.com"}`,
+          hostname: `${requestedSlug}.${getStorefrontDomain(process.env.NEXT_PUBLIC_PLATFORM_DOMAIN ?? "ewatrade.com")}`,
           surface: "STOREFRONT",
           isPrimary: true,
           isCustom: false,

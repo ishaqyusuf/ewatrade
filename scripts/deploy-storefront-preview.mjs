@@ -14,14 +14,18 @@ import { tmpdir } from "node:os"
 import path from "node:path"
 import { fileURLToPath } from "node:url"
 import { readEnvironmentFile } from "./environment-profile.mjs"
+import { parseVercelDeploymentOutput } from "./release-vercel-deployment-output.mjs"
 import {
   STOREFRONT_PREVIEW,
   assertStorefrontPreviewAlias,
+  assertStorefrontPreviewAsset,
   assertStorefrontPreviewDeployment,
   assertStorefrontPreviewMode,
   assertStorefrontPreviewProjectLink,
   assertStorefrontPreviewSmoke,
+  assertStorefrontPreviewSource,
   assertStorefrontPreviewUrl,
+  storefrontPreviewAssetPath,
 } from "./storefront-preview-guards.mjs"
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..")
@@ -29,7 +33,7 @@ const mode = process.argv[2]
 
 if (mode === "--help" || mode === "-h") {
   console.log(
-    "Usage: node scripts/deploy-storefront-preview.mjs --prepare-only|--verify-only|--deploy|--verify-deployment URL|--promote-existing URL",
+    "Usage: node scripts/deploy-storefront-preview.mjs --prepare-only|--verify-only|--deploy|--verify-deployment URL|--promote-existing URL\nDeploy and promote-existing require RELEASE_SHA matching clean committed HEAD. Read-only verification uses factory checks when RELEASE_SHA is supplied; otherwise it uses historical surface checks.",
   )
   process.exit(0)
 }
@@ -45,6 +49,19 @@ function run(command, args, cwd, step) {
   if (result.error || result.status !== 0)
     throw new Error(`${step} failed (exit ${result.status ?? "unknown"}).`)
   return result.stdout
+}
+
+function exactReleaseSource() {
+  return assertStorefrontPreviewSource({
+    expectedRevision: process.env.RELEASE_SHA,
+    head: run("git", ["rev-parse", "HEAD"], root, "Storefront release source"),
+    dirty: run(
+      "git",
+      ["status", "--porcelain", "--untracked-files=all"],
+      root,
+      "Storefront source cleanliness",
+    ),
+  })
 }
 
 function vercelJson(args, cwd, step) {
@@ -81,7 +98,7 @@ function inspect(url, cwd) {
     identity.readyState !== deployment.readyState
   )
     throw new Error("Storefront Preview identity sources disagree.")
-  return { ...deployment, projectId: identity.projectId }
+  return { ...deployment, projectId: identity.projectId, meta: identity.meta }
 }
 
 function protectedGet(route, deployment, cwd, headers = false) {
@@ -102,8 +119,9 @@ function protectedGet(route, deployment, cwd, headers = false) {
   )
 }
 
-function verify(url, cwd) {
-  const id = assertStorefrontPreviewDeployment(inspect(url, cwd))
+function verify(url, cwd, expectedRevision) {
+  const deployment = inspect(url, cwd)
+  const id = assertStorefrontPreviewDeployment(deployment, expectedRevision)
   const rootResponse = protectedGet("/", url, cwd, true)
   const legal = JSON.parse(
     protectedGet(
@@ -136,11 +154,18 @@ function verify(url, cwd) {
     invalidTokenResponse,
     associationResponse,
     androidAssociationResponse,
+    rootMode:
+      expectedRevision === undefined ? "historical" : "factory-unavailable",
     expectedSurface:
       url === `https://${STOREFRONT_PREVIEW.alias}`
         ? "customer-chat"
         : "storefront",
   })
+  if (expectedRevision !== undefined) {
+    assertStorefrontPreviewAsset(
+      protectedGet(storefrontPreviewAssetPath(rootResponse), url, cwd, true),
+    )
+  }
   return id
 }
 
@@ -240,6 +265,10 @@ if (
   mode === "--verify-deployment" ||
   mode === "--promote-existing"
 ) {
+  const expectedRevision =
+    mode === "--promote-existing"
+      ? exactReleaseSource()
+      : process.env.RELEASE_SHA
   const linked = mkdtempSync(path.join(tmpdir(), "ewatrade-storefront-verify-"))
   try {
     mkdirSync(path.join(linked, ".vercel"))
@@ -255,8 +284,9 @@ if (
       mode === "--verify-only"
         ? `https://${STOREFRONT_PREVIEW.alias}`
         : assertStorefrontPreviewUrl(process.argv[3])
-    const id = verify(url, linked)
+    const id = verify(url, linked, expectedRevision)
     if (mode === "--promote-existing") {
+      exactReleaseSource()
       run(
         "vercel",
         [
@@ -273,8 +303,9 @@ if (
       assertStorefrontPreviewAlias(
         inspect(`https://${STOREFRONT_PREVIEW.alias}`, linked),
         id,
+        expectedRevision,
       )
-      verify(`https://${STOREFRONT_PREVIEW.alias}`, linked)
+      verify(`https://${STOREFRONT_PREVIEW.alias}`, linked, expectedRevision)
       console.log(
         `Storefront Preview ${id} passed checks and serves the alias.`,
       )
@@ -285,13 +316,9 @@ if (
     rmSync(linked, { recursive: true, force: true })
   }
 } else {
-  console.log("Checking Storefront TypeScript on main...")
-  run(
-    "bun",
-    ["run", "--cwd", "apps/storefront", "typecheck"],
-    root,
-    "Storefront TypeScript check",
-  )
+  // Owner's pre-launch instruction: focused source checks, no heavy typecheck gate.
+  // Vercel still performs the actual app artifact build.
+  const expectedRevision = mode === "--deploy" ? exactReleaseSource() : null
   const stage = mkdtempSync(path.join(tmpdir(), "ewatrade-storefront-preview-"))
   try {
     prepareStage(stage)
@@ -325,27 +352,34 @@ if (
       const previewEnv = readEnvironmentFile(previewEnvPath)
       if (previewEnv.APP_ENV !== "preview")
         throw new Error("Pulled Storefront environment is not Preview.")
-      const deployed = vercelJson(
-        [
-          "deploy",
-          stage,
-          "--project",
-          STOREFRONT_PREVIEW.projectId,
-          "--target=preview",
-          "--scope",
-          STOREFRONT_PREVIEW.scope,
-          "--yes",
-          "--format=json",
-        ],
-        root,
-        "Storefront Preview deployment",
+      exactReleaseSource()
+      const deployed = parseVercelDeploymentOutput(
+        run(
+          "vercel",
+          [
+            "deploy",
+            stage,
+            "--project",
+            STOREFRONT_PREVIEW.projectId,
+            "--target=preview",
+            "--meta",
+            `githubCommitSha=${expectedRevision}`,
+            "--scope",
+            STOREFRONT_PREVIEW.scope,
+            "--yes",
+            "--format=json",
+          ],
+          root,
+          "Storefront Preview deployment",
+        ),
       )
       const url = assertStorefrontPreviewUrl(
         deployed.url?.startsWith("https://")
           ? deployed.url
           : `https://${deployed.url ?? ""}`,
       )
-      const id = verify(url, stage)
+      const id = verify(url, stage, expectedRevision)
+      exactReleaseSource()
       run(
         "vercel",
         [
@@ -362,8 +396,9 @@ if (
       assertStorefrontPreviewAlias(
         inspect(`https://${STOREFRONT_PREVIEW.alias}`, stage),
         id,
+        expectedRevision,
       )
-      verify(`https://${STOREFRONT_PREVIEW.alias}`, stage)
+      verify(`https://${STOREFRONT_PREVIEW.alias}`, stage, expectedRevision)
       console.log(
         `Storefront Preview ${id} passed checks and serves the alias.`,
       )

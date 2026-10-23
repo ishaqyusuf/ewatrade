@@ -130,3 +130,42 @@ test("only the deployment's own Vercel Preview host reaches dashboard auth", () 
     else process.env.VERCEL_URL = priorUrl
   }
 })
+
+test.each([
+  "/assistant-review?token=private-locator",
+  "/r/AAAAAAAAAAAAAAAAAAAAAA",
+])(
+  "disposable review and sign-in return keep %s private without opening access",
+  (path) => {
+    const denied = middleware(request(path))
+    const login = new URL(denied.headers.get("location") ?? "")
+    expect(login.pathname).toBe("/login")
+    expect(login.searchParams.get("next")).toBe(path)
+    for (const response of [
+      denied,
+      middleware(request(path, "better-auth.session_token=fixture")),
+      middleware(request(`${login.pathname}${login.search}`)),
+    ]) {
+      expect(response.headers.get("cache-control")).toBe(
+        "private, no-store, max-age=0",
+      )
+      expect(response.headers.get("referrer-policy")).toBe("no-referrer")
+      expect(response.headers.get("x-robots-tag")).toBe(
+        "noindex, nofollow, noarchive",
+      )
+    }
+  },
+)
+
+test("only the exact embedded signup route is public and restricted to the configured marketing frame", () => {
+  const response = middleware(request("/signup/chat"))
+  expect(response.headers.get("location")).toBeNull()
+  expect(response.headers.get("content-security-policy")).toContain(
+    "frame-ancestors 'self'",
+  )
+  expect(response.headers.get("content-security-policy")).not.toContain("*")
+  expect(response.headers.get("referrer-policy")).toBe("no-referrer")
+  expect(
+    middleware(request("/signup/chat/private")).headers.get("location"),
+  ).toContain("/login")
+})

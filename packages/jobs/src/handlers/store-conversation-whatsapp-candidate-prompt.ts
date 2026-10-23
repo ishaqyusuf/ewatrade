@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto"
+import { presentWhatsAppMessage } from "@ewatrade/assistant/channels/presentation"
 
 import {
   DirectMetaWhatsAppProvider,
@@ -93,7 +94,10 @@ export async function runStoreConversationWhatsAppCandidatePrompt(
   try {
     const sent = await dependencies.provider.sendButtons({
       accessToken: dependencies.resolveCredential(claim.credentialReference),
-      body: prompt.message,
+      body: presentWhatsAppMessage(prompt.message, {
+        family: "customer",
+        maxUnits: 1024,
+      }),
       buttons: prompt.actions.map(({ action, label }) => ({
         id: dependencies.deriveActionToken({
           action,

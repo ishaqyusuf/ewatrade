@@ -1,0 +1,14 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "jsx": "react-jsx",
+    "incremental": false
+  },
+  "include": [
+    "src/**/*.ts",
+    "src/market-hall/**/*.tsx",
+    "src/canvas/*.tsx",
+    "src/shared/commerce.tsx",
+    "src/render.tsx"
+  ]
+}

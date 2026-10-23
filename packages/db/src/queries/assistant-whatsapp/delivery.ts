@@ -6,10 +6,14 @@ import type {
 } from "@ewatrade/assistant/capabilities/types"
 import {
   WHATSAPP_ACTION_DISABLED_REPLY,
+  WHATSAPP_ACTION_EDIT_RESULT_VERSION,
   WHATSAPP_ACTION_INVALID_REPLY,
   WHATSAPP_ACTION_RESULT_VERSION,
+  renderWhatsAppActionEditResult,
   renderWhatsAppActionResult,
+  whatsAppActionEditResultContentSchema,
   whatsAppActionResultContentSchema,
+  whatsAppEditIntentStateSchema,
 } from "@ewatrade/assistant/channels/action-result"
 import {
   WHATSAPP_ACTION_REVIEW_VERSION,
@@ -19,6 +23,7 @@ import {
 import {
   WHATSAPP_CONTROL_RENDER_VERSION,
   renderWhatsAppControl,
+  whatsAppControlButtons,
   whatsAppControlContentSchema,
 } from "@ewatrade/assistant/channels/controls"
 import { conversationAppLink } from "@ewatrade/assistant/channels/conversation-links"
@@ -38,8 +43,16 @@ import {
   assistantWhatsAppUserAllowed,
   whatsAppCapabilityEnabled,
 } from "@ewatrade/assistant/channels/policy"
-import { WHATSAPP_RENDER_VERSION } from "@ewatrade/assistant/channels/render"
-import { WHATSAPP_WORKFLOW_RENDER_VERSION } from "@ewatrade/assistant/channels/workflow"
+import type { WhatsAppMessageFamily } from "@ewatrade/assistant/channels/presentation"
+import { supportedWhatsAppReplyRenderer } from "@ewatrade/assistant/channels/render"
+import {
+  WHATSAPP_WEB_REVIEW_RESULT_VERSION,
+  WHATSAPP_WEB_REVIEW_VERSION,
+} from "@ewatrade/assistant/channels/review-links"
+import {
+  WHATSAPP_WORKFLOW_LEGACY_RENDER_VERSION,
+  WHATSAPP_WORKFLOW_RENDER_VERSION,
+} from "@ewatrade/assistant/channels/workflow"
 import {
   WHATSAPP_WORKFLOW_ACTION_DISABLED_REPLY,
   WHATSAPP_WORKFLOW_ACTION_INVALID_REPLY,
@@ -76,7 +89,11 @@ import { resolveAssistantWhatsAppConversation } from "./conversations"
 import type { WhatsAppConversationPrincipal } from "./conversations"
 import { assistantWhatsAppAuthorityDigest } from "./execution"
 import { validateAssistantWhatsAppVoiceReview } from "./media-review"
+import { assistantWhatsAppReadPaginationButtons } from "./read-pagination"
+import { assistantWhatsAppReplyChoiceButtons } from "./reply-choices"
 import { reserveAssistantWhatsAppTransportInTransaction } from "./usage"
+import { resolveAssistantWhatsAppWebReviewDispatch } from "./web-review-dispatch"
+import { resolveAssistantWhatsAppWebReviewOutcome } from "./web-review-outcome"
 import {
   prepareAssistantWhatsAppWorkflowReviewDispatch,
   resolveAssistantWhatsAppWorkflowReceipt,
@@ -247,6 +264,10 @@ export function assistantWhatsAppActionReviewDispatch(
                     title: "Confirm",
                   },
                   {
+                    id: whatsAppActionButtonId(cancelCode, "edit"),
+                    title: "Edit",
+                  },
+                  {
                     id: whatsAppActionButtonId(cancelCode, "cancel"),
                     title: "Cancel",
                   },
@@ -389,6 +410,10 @@ export function beginAssistantWhatsAppDelivery(
         )
         if (row.authorityDigest !== authority.digest)
           throw new AssistantWhatsAppError("UNAUTHORIZED")
+        providerButtons =
+          body.length <= 1024
+            ? whatsAppControlButtons(content.data.menu, row.inbox.id)
+            : undefined
         usageScope = authority.quota.scope
         classifications = authority.classifications
         dispatchBefore = Math.min(
@@ -442,7 +467,86 @@ export function beginAssistantWhatsAppDelivery(
           bindingId: binding.id,
           identityId: null,
         }
-        if (row.renderKind === "workflow_action_result") {
+        if (row.renderKind === "action_edit_result") {
+          const parsed = whatsAppActionEditResultContentSchema.safeParse(
+            row.inbox.content,
+          )
+          if (
+            row.inbox.kind !== "ACTION" ||
+            row.runId ||
+            row.messageId ||
+            row.inbox.runId ||
+            row.actionReview ||
+            row.rendererVersion !== WHATSAPP_ACTION_EDIT_RESULT_VERSION ||
+            row.chunkCount !== 1 ||
+            row.chunkIndex !== 0 ||
+            !parsed.success ||
+            renderWhatsAppActionEditResult(parsed.data) !== body
+          )
+            return cancel("cancelled", "SAVED_RESULT_CHANGED")
+          if (parsed.data.type === "action_edit_result") {
+            const reference = parsed.data
+            const intent = await tx.onboardingSession.findFirst({
+              where: {
+                id: reference.intentId,
+                userId: resolved.scope.userId,
+                tenantId: resolved.scope.tenantId,
+                completed: false,
+                expiresAt: { gt: now },
+              },
+            })
+            const state = whatsAppEditIntentStateSchema.safeParse(
+              intent?.formData,
+            )
+            const review = await tx.assistantWhatsAppActionReview.findFirst({
+              where: {
+                id: reference.reviewId,
+                bindingId: binding.id,
+                state: "CONSUMED",
+                decision: "cancel",
+                completedAt: { not: null },
+                resultRef: { equals: reference },
+              },
+            })
+            if (
+              !intent ||
+              !state.success ||
+              !review ||
+              state.data.bindingId !== binding.id ||
+              state.data.proposalId !== reference.proposalId ||
+              state.data.revision !== reference.revision ||
+              state.data.identityGeneration !== binding.identityGeneration ||
+              state.data.grantGeneration !== binding.grantGeneration ||
+              state.data.selectionGeneration !== binding.selectionGeneration ||
+              state.data.scopeDigest !== row.authorityDigest
+            )
+              return cancel("cancelled", "EDIT_CHANGED")
+            const proposal = await tx.assistantActionProposal.findFirst({
+              where: {
+                id: reference.proposalId,
+                revision: reference.revision,
+                status: "PENDING",
+                payloadHash: state.data.payloadHash,
+                actorUserId: resolved.scope.userId,
+                tenantId: resolved.scope.tenantId,
+                storeId: resolved.scope.storeId,
+                conversationId: resolved.conversation.id,
+                expiresAt: { gt: now },
+              },
+            })
+            if (
+              !proposal ||
+              assistantWhatsAppActionPayloadDigest(proposal.payload) !==
+                state.data.payloadHash
+            )
+              return cancel("cancelled", "EDIT_CHANGED")
+            dispatchBefore = Math.min(
+              dispatchBefore,
+              intent.expiresAt.getTime(),
+              proposal.expiresAt.getTime(),
+            )
+          }
+        } else if (row.renderKind === "workflow_action_result") {
           const parsed = whatsAppWorkflowActionResultContentSchema.safeParse(
             row.inbox.content,
           )
@@ -671,8 +775,61 @@ export function beginAssistantWhatsAppDelivery(
                   select: { id: true },
                 })
               : null
-          if (!run) return cancel("cancelled", "SAVED_REPLY_CHANGED")
-          if (row.renderKind === "workflow_action_review") {
+          if (!run || !row.messageId)
+            return cancel("cancelled", "SAVED_REPLY_CHANGED")
+          if (row.renderKind === "web_review") {
+            if (
+              row.rendererVersion !== WHATSAPP_WEB_REVIEW_VERSION ||
+              row.chunkCount !== 1 ||
+              row.chunkIndex !== 0
+            )
+              return cancel("cancelled", "SAVED_REVIEW_CHANGED")
+            const dispatch = await resolveAssistantWhatsAppWebReviewDispatch(
+              tx,
+              {
+                content: body,
+                outboxId: row.id,
+                inboxId: row.inbox.id,
+                bindingId: binding.id,
+                conversationId: resolved.conversation.id,
+                actorUserId: resolved.scope.userId,
+                tenantId: resolved.scope.tenantId,
+                storeId: resolved.scope.storeId,
+                scopeLabel: `${resolved.tenantContext.tenant.name} · ${resolved.tenantContext.activeStore?.name ?? "Store"}`,
+                messageId: row.messageId,
+                trustedAppOrigin:
+                  process.env.DASHBOARD_URL ??
+                  process.env.NEXT_PUBLIC_DASHBOARD_URL ??
+                  "https://dash.ewatrade.com",
+                now,
+              },
+            )
+            if (!dispatch) return cancel("cancelled", "WEB_REVIEW_UNAVAILABLE")
+            providerBody = dispatch.body
+            dispatchBefore = Math.min(dispatchBefore, dispatch.expiresAt)
+          } else if (row.renderKind === "web_review_result") {
+            if (
+              row.rendererVersion !== WHATSAPP_WEB_REVIEW_RESULT_VERSION ||
+              row.chunkCount !== 1 ||
+              row.chunkIndex !== 0
+            )
+              return cancel("cancelled", "SAVED_RESULT_CHANGED")
+            const outcome = await resolveAssistantWhatsAppWebReviewOutcome(tx, {
+              content: body,
+              inboxId: row.inbox.id,
+              bindingId: binding.id,
+              runId: run.id,
+              messageId: row.messageId,
+              actorUserId: resolved.scope.userId,
+              tenantId: resolved.scope.tenantId,
+              storeId: resolved.scope.storeId,
+              authorityDigest: row.authorityDigest,
+              now,
+            })
+            if (!outcome)
+              return cancel("cancelled", "CANONICAL_RESULT_UNAVAILABLE")
+            providerBody = outcome.body
+          } else if (row.renderKind === "workflow_action_review") {
             if (
               row.rendererVersion !== WHATSAPP_WORKFLOW_ACTION_REVIEW_VERSION ||
               row.chunkCount !== 1 ||
@@ -741,7 +898,10 @@ export function beginAssistantWhatsAppDelivery(
               review.expiresAt.getTime(),
               review.proposal.expiresAt.getTime(),
             )
-          } else if (row.rendererVersion === WHATSAPP_WORKFLOW_RENDER_VERSION) {
+          } else if (
+            row.rendererVersion === WHATSAPP_WORKFLOW_RENDER_VERSION ||
+            row.rendererVersion === WHATSAPP_WORKFLOW_LEGACY_RENDER_VERSION
+          ) {
             if (
               binding.purpose !== "SETUP" &&
               binding.purpose !== "PRODUCT_CREATE"
@@ -754,6 +914,7 @@ export function beginAssistantWhatsAppDelivery(
               tenantId: resolved.scope.tenantId,
               storeId: resolved.scope.storeId,
               purpose: binding.purpose,
+              rendererVersion: row.rendererVersion,
               trustedAppOrigin:
                 process.env.DASHBOARD_URL ??
                 process.env.NEXT_PUBLIC_DASHBOARD_URL ??
@@ -767,12 +928,38 @@ export function beginAssistantWhatsAppDelivery(
             )
               return cancel("cancelled", "SAVED_REPLY_CHANGED")
           } else if (
-            !["whatsapp-reply-v1", WHATSAPP_RENDER_VERSION].includes(
-              row.rendererVersion,
-            ) ||
+            !supportedWhatsAppReplyRenderer(row.rendererVersion) ||
             !["reply", "app_review"].includes(row.renderKind)
           )
             return cancel("cancelled", "SAVED_REPLY_CHANGED")
+          if (
+            row.renderKind === "reply" &&
+            resolved.conversation.purpose === "GENERAL" &&
+            row.messageId &&
+            row.chunkIndex === row.chunkCount - 1
+          ) {
+            providerButtons = await assistantWhatsAppReadPaginationButtons(tx, {
+              outboxId: row.id,
+              bindingId: binding.id,
+              sequence: row.inbox.sequence,
+              messageId: row.messageId,
+              conversationId: resolved.conversation.id,
+              userId: resolved.scope.userId,
+              authorityDigest: row.authorityDigest,
+              now,
+            })
+            if (providerButtons.length) {
+              providerBody = `${body}\n\nReply to this message with ${providerButtons.map((button) => button.title).join(" or ")}. Page choices expire after 10 minutes.`
+              if (providerBody.length > 1024) providerButtons = undefined
+            } else if (body.length <= 1024) {
+              providerButtons = await assistantWhatsAppReplyChoiceButtons(tx, {
+                outboxId: row.id,
+                messageId: row.messageId,
+                conversationId: resolved.conversation.id,
+                userId: resolved.scope.userId,
+              })
+            }
+          }
         }
       }
       if (
@@ -872,11 +1059,36 @@ export function beginAssistantWhatsAppDelivery(
         errorCode: null,
       },
     })
+    const presentation: { presentationFamily?: WhatsAppMessageFamily } = {
+      presentationFamily:
+        row.renderKind === "control"
+          ? "menu"
+          : ["action_review", "workflow_action_review", "web_review"].includes(
+                row.renderKind,
+              )
+            ? "review"
+            : [
+                  "action_result",
+                  "workflow_action_result",
+                  "web_review_result",
+                ].includes(row.renderKind)
+              ? "result"
+              : row.renderKind === "action_edit_result"
+                ? "edit"
+                : row.renderKind === "voice_review"
+                  ? "transcript"
+                  : row.renderKind === "app_review"
+                    ? "handoff"
+                    : row.renderKind === "notice"
+                      ? "notice"
+                      : "reply",
+    }
     return {
       kind: "started" as const,
       proof: { outboxId, attemptId: attempt.id, owner, generation },
       callbackData,
       body: providerBody ?? body,
+      ...presentation,
       ...(providerButtons ? { buttons: providerButtons } : {}),
       phoneNumberId: row.phoneNumberId,
       senderId: identity.senderId,

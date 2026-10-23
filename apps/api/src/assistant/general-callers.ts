@@ -11,6 +11,7 @@ import { serviceAssistantRequestsRouter } from "../trpc/routers/service-assistan
 import { serviceAssistantWorkRouter } from "../trpc/routers/service-assistant-work"
 import { serviceCommunicationsRouter } from "../trpc/routers/service-communications"
 import { servicesRouter } from "../trpc/routers/services"
+import { storefrontRouter } from "../trpc/routers/storefront"
 import { tenantRouter } from "../trpc/routers/tenant"
 
 // As with createBusinessReportingCaller, keep canonical paths for all permission middleware.
@@ -28,6 +29,7 @@ const assistantDomainRouter = createTRPCRouter({
   serviceCommunications: serviceCommunicationsRouter,
   services: servicesRouter,
   tenant: tenantRouter,
+  storefront: storefrontRouter,
 })
 
 export function createGeneralDomainCaller(ctx: TRPCContext) {

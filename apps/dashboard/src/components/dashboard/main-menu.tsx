@@ -33,7 +33,7 @@ export function MainMenu({ navItems, isExpanded, onNavigate }: Props) {
   return (
     <nav
       aria-label="Main navigation"
-      className="min-h-0 flex-1 overflow-y-auto py-4"
+      className="scrollbar-hide min-h-0 flex-1 overflow-y-auto py-4"
     >
       <ul className="flex flex-col gap-2">
         {navItems.map((item) => {

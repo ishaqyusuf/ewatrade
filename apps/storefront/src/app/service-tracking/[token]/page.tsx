@@ -1,7 +1,12 @@
 import { prisma } from "@ewatrade/db"
-import { CatalogError, getPublicServiceTracking } from "@ewatrade/db/queries"
+import { getPublicServiceTracking } from "@ewatrade/db/queries"
+import {
+  isCleaningServiceName,
+  usesCustomerSignOff,
+} from "@ewatrade/utils/service-work-presentation"
 import { notFound } from "next/navigation"
 
+import { isPublicServiceUnavailable } from "@/lib/public-service-errors"
 import { publicServiceDetail } from "@/lib/service-display"
 
 export const dynamic = "force-dynamic"
@@ -10,7 +15,7 @@ async function load(token: string) {
   try {
     return await getPublicServiceTracking(prisma, { trackingToken: token })
   } catch (error) {
-    if (error instanceof CatalogError) notFound()
+    if (isPublicServiceUnavailable(error)) notFound()
     throw error
   }
 }
@@ -31,7 +36,10 @@ export default async function Page({
           <p className="text-sm text-muted-foreground">Service tracking</p>
           <h1 className="mt-3 text-4xl font-semibold">{job.orderNumber}</h1>
           <p className="mt-3 capitalize text-muted-foreground">
-            {label(job.milestone)}
+            {job.milestone === "ready" &&
+            usesCustomerSignOff(job.lines.map((line) => line.item))
+              ? "Customer sign-off"
+              : label(job.milestone)}
           </p>
         </div>
       </section>
@@ -51,7 +59,13 @@ export default async function Page({
                 </p>
               </div>
               <span className="text-sm text-muted-foreground">
-                {line.ready ? "Ready" : "In progress"}
+                {isCleaningServiceName(line.item) && line.ready
+                  ? job.milestone === "completed"
+                    ? "Completed"
+                    : "Customer sign-off"
+                  : line.ready
+                    ? "Ready"
+                    : "In progress"}
               </span>
             </div>
           ))}

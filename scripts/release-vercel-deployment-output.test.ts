@@ -366,6 +366,8 @@ describe("deploy wrapper boundary", () => {
         "QA_TOOLS_ENABLED=true",
         "QA_ACCELERATOR_SECRET=FAKE_PREVIEW_SIGNING_SECRET_32_CHARACTERS",
         "QA_ACCELERATOR_ALLOWED_ORIGINS=https://preview.example.test",
+        "QA_POLICY_URL=https://oversight.example.test/api/qa-policy/v1/ewatrade",
+        "QA_POLICY_READ_KEY=FAKE_PREVIEW_QA_POLICY_READ_KEY_32_CHARACTERS",
         'EMAIL_QA_DOMAIN_ROUTES={"example.qa.test":"tester@example.com"}',
         ...[
           "ACCOUNT_PRIVACY_PROCESSING_ENABLED",

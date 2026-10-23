@@ -8,7 +8,9 @@ import { useServiceWorkParams } from "@/hooks/use-service-work-params"
 import { Button } from "@ewatrade/ui"
 import { usePathname } from "next/navigation"
 import { useState } from "react"
+import { CustomerRequestSheet } from "./customer-request-sheet"
 import { ServiceIntakeReceiptSheet } from "./service-intake-receipt-sheet"
+import { ServiceIntakeSheet } from "./service-intake-sheet"
 import { ServiceJobSheet } from "./service-job-sheet"
 import { ServiceWorkOriginalSheet } from "./service-work-original-sheet"
 
@@ -48,6 +50,9 @@ import { StoreConversationSheet } from "./store-conversation-sheet"
 import { StoreSettingsSheet } from "./store-settings-sheet"
 
 export type GlobalSheetAccess = {
+  /** Existing native Service Jobs operator/manager access, independent of assistant intake. */
+  serviceJobs?: boolean
+  manageServiceJobs?: boolean
   serviceIntake?: boolean
   /** Website & domain launch gate and role; the sheet mounts only when true. */
   domains?: boolean
@@ -130,6 +135,7 @@ export function GlobalSheets({
           store={store}
           readOnly={!access.catalog}
           accessKey={access.catalogReadAccessKey}
+          canCreateServiceJob={Boolean(access.serviceJobs)}
         />
       ) : null}
       {access.sales ? (
@@ -147,6 +153,21 @@ export function GlobalSheets({
       {access.serviceIntake ? (
         <ServiceIntakeReceiptSheet
           key={`service-intake:${objectScope}`}
+          timeZone={timeZone}
+        />
+      ) : null}
+      {access.serviceJobs ? (
+        <ServiceIntakeSheet
+          key={`new-service-job:${objectScope}:${Boolean(access.manageServiceJobs)}`}
+          tenantId={tenantId}
+          canManage={Boolean(access.manageServiceJobs)}
+          store={store}
+        />
+      ) : null}
+      {access.serviceJobs && access.manageServiceJobs ? (
+        <CustomerRequestSheet
+          key={`native-service-request:${objectScope}`}
+          store={store}
           timeZone={timeZone}
         />
       ) : null}

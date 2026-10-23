@@ -1,0 +1,147 @@
+/* Station drawing (scene.mjs) */
+.scene-svg { font-family: inherit; display: block; width: 100%; height: auto; }
+.scene-svg .ink polygon, .scene-svg .ink rect, .scene-svg .ink path, .scene-svg .ink circle,
+.scene-svg polygon.ink, .scene-svg rect.ink, .scene-svg circle.ink, .scene-svg path.ink {
+  stroke: var(--ink); stroke-width: 1.6; stroke-linejoin: round;
+}
+.scene-svg .ink-thin { stroke: var(--ink); stroke-width: 1.1; stroke-linejoin: round; }
+.scene-svg .plane-text { font-weight: 800; letter-spacing: 0.02em; }
+.scene-svg .lcd { fill: #b6f5a3; }
+.scene-svg .sign-digits { fill: #ffcf5a; }
+.scene-svg .joint { stroke: rgba(29, 42, 68, 0.12); stroke-width: 1; fill: none; }
+.scene-svg .kerb { stroke: var(--ink); stroke-width: 2.4; fill: none; stroke-linejoin: round; }
+.scene-svg .shade { stroke: none; }
+.scene-svg .pipe-outer { stroke: var(--ink); stroke-width: 9; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+.scene-svg .pipe-inner { stroke: #b9c3cd; stroke-width: 5; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+.scene-svg .probe { stroke: var(--ink); stroke-width: 3; fill: none; }
+.scene-svg .hose { stroke: #20242c; stroke-width: 6; fill: none; stroke-linecap: round; }
+.scene-svg .fuel-line { stroke: #fff3c4; stroke-width: 2.4; fill: none; }
+.scene-svg .flow { stroke: #ffe066; stroke-width: 4.5; fill: none; stroke-linecap: round; stroke-dasharray: 3 13; opacity: 0; transition: opacity 0.3s; }
+.scene-svg.flow-delivery #ps-flow-delivery, .scene-svg.flow-delivery #ps-flow-fill,
+.scene-svg.flow-dispense #ps-flow-product, .scene-svg.flow-dispense #ps-flow-hose,
+.scene-svg.flow-dispense #ps-stp-glow { opacity: 1; }
+.scene-svg .light-pool { fill: #ffe7a3; opacity: 0; transition: opacity 0.6s; }
+.scene-svg.power-on .light-pool { opacity: 0.55; }
+.scene-svg .canopy-strip { stroke: #6f6a60; stroke-width: 3; }
+.scene-svg.power-on .canopy-strip { stroke: #fff2b8; }
+.scene-svg .vehicle { transition: transform 0.9s cubic-bezier(.3, .7, .2, 1), opacity 0.6s; }
+.scene-svg:not(.has-tanker) #ps-tanker { opacity: 0; transform: translate(-220px, -127px); }
+.scene-svg:not(.hose-on) #ps-delivery-hose { opacity: 0; }
+.scene-svg:not(.has-car) #ps-car { opacity: 0; transform: translate(-110px, 64px); }
+.scene-svg.estop #ps-estop-lamp { fill: #ff4a3a; }
+
+/* The lesson build replaces the old operations callouts with pins and plates. */
+.scene-svg #ps-labels, .scene-svg #ps-meter-callout, .scene-svg #ps-tank-gauge,
+.scene-svg #ps-closed-stamp, .scene-svg #ps-tanker-chip, .scene-svg #ps-car-chip { display: none; }
+
+/* lesson pins on the station overview */
+.scene-svg .pin { transition: opacity 0.4s; }
+.scene-svg .pin-tail { fill: var(--ink); }
+.scene-svg .pin-head { fill: var(--amber); stroke: var(--ink); stroke-width: 3; }
+.scene-svg .pin-text { font-size: 24px; font-weight: 900; fill: var(--ink); }
+.scene-svg .pin-label rect { fill: #fffaf0; stroke: var(--ink); stroke-width: 2; }
+.scene-svg .pin-label text { font-size: 19px; font-weight: 800; fill: var(--ink); }
+.scene-svg.zoomed .pin { opacity: 0; }
+
+/* ---------------------------------------------------------------- plates */
+.scene-svg .plate { opacity: 0; visibility: hidden; transition: opacity 0.45s ease, visibility 0s linear 0.45s; }
+.scene-svg.revealed .plate.active { opacity: 1; visibility: visible; transition: opacity 0.45s ease; }
+.scene-svg .pl-frame { fill: #f7efdc; stroke: var(--ink); stroke-width: 5; }
+.scene-svg .pl-soil { fill: #b9784f; }
+.scene-svg .pl-backfill { fill: #dcc28c; opacity: 0.85; }
+.scene-svg .pl-concrete { fill: #d6ccb7; stroke: var(--ink); stroke-width: 3; }
+.scene-svg .pl-strata { fill: none; stroke: #8f5a3b; stroke-width: 4; opacity: 0.6; }
+.scene-svg .pl-cab { fill: var(--red); stroke: var(--ink); stroke-width: 5; stroke-linejoin: round; }
+.scene-svg .pl-glass { fill: #2a3d5e; stroke: var(--ink); stroke-width: 4; }
+.scene-svg .pl-chassis { fill: #3a4152; stroke: var(--ink); stroke-width: 4; }
+.scene-svg .pl-tyre { fill: #232a36; stroke: var(--ink); stroke-width: 4; }
+.scene-svg .pl-hub { fill: #c9d1d8; stroke: var(--ink); stroke-width: 4; }
+.scene-svg .pl-steel { fill: #c9d1d8; stroke: var(--ink); stroke-width: 4; }
+.scene-svg .pl-inside { fill: #4a5a74; stroke: none; }
+.scene-svg .pl-shell { fill: none; stroke: var(--ink); stroke-width: 9; }
+.scene-svg .pl-fuel { fill: var(--amber); }
+.scene-svg .pl-fuel-top { fill: #fff0b0; }
+.scene-svg .pl-pipe { fill: none; stroke: var(--ink); stroke-width: 22; stroke-linejoin: round; }
+.scene-svg .pl-pipe.thin { stroke-width: 14; }
+.scene-svg .pl-pipe.fuel { stroke: #c98a12; stroke-width: 20; }
+.scene-svg .pl-hose { fill: none; stroke: #20242c; stroke-width: 20; stroke-linecap: round; }
+.scene-svg .pl-flow { fill: none; stroke: #ffe066; stroke-width: 9; stroke-linecap: round; stroke-dasharray: 6 26; opacity: 0; }
+.scene-svg .flowing .pl-flow { opacity: 1; }
+.scene-svg .pl-air { fill: none; stroke: #bfe4ff; stroke-width: 6; stroke-linecap: round; stroke-dasharray: 4 16; opacity: 0; }
+.scene-svg .flowing #pl1-air { opacity: 1; }
+.scene-svg .pl-valve-body { fill: #c9d1d8; stroke: var(--ink); stroke-width: 5; }
+.scene-svg .pl-valve-port { fill: #4a5a74; stroke: var(--ink); stroke-width: 3; }
+.scene-svg .pl-valve-handle, .scene-svg .pl-valve-grip { fill: var(--red); stroke: var(--ink); stroke-width: 3; }
+.scene-svg .pl-turn { transform: rotate(90deg); transition: transform 0.5s ease; }
+.scene-svg .pl-turn.open { transform: rotate(0deg); }
+.scene-svg #pl3-trigger { transform: rotate(7deg); }
+.scene-svg #pl3-trigger.open { transform: rotate(-5deg); }
+.scene-svg .pl-move { transition: transform 0.35s ease; }
+.scene-svg #pl3-poppet.open { transform: translateY(-18px); }
+.scene-svg #pl3-latch.tripped { transform: translateY(-26px); }
+.scene-svg .pl-head.off { opacity: 0; }
+.scene-svg .pl-dim { fill: none; stroke: var(--ink); stroke-width: 3; stroke-dasharray: 10 8; }
+.scene-svg .pl-dim-arrow { fill: none; stroke: var(--green-dark); stroke-width: 6; marker-start: none; }
+
+.scene-svg .pl-pill rect { fill: #fffaf0; stroke: var(--ink); stroke-width: 4; }
+.scene-svg .pl-pill text { font-size: 30px; font-weight: 800; fill: var(--ink); }
+.scene-svg .pl-pill.small text { font-size: 28px; }
+.scene-svg .pl-leader { fill: none; stroke: var(--ink); stroke-width: 3; }
+.scene-svg .pl-dot { fill: var(--ink); }
+.scene-svg .pl-big { font-size: 46px; font-weight: 900; fill: var(--ink); }
+.scene-svg .pl-mid { font-size: 34px; font-weight: 800; fill: var(--ink); }
+.scene-svg .pl-mid.strong { font-weight: 900; }
+.scene-svg .pl-small { font-size: 26px; font-weight: 700; fill: var(--ink); }
+.scene-svg .pl-tiny { font-size: 22px; font-weight: 700; fill: var(--ink-2); }
+.scene-svg .halo { paint-order: stroke; stroke: #fffaf0; stroke-width: 10px; stroke-linejoin: round; }
+
+.scene-svg .pl-cabinet { fill: #e9e1cd; stroke: var(--ink); stroke-width: 6; }
+.scene-svg .pl-cabinet-head { fill: var(--red); stroke: var(--ink); stroke-width: 6; }
+.scene-svg .pl-head-text { font-size: 26px; font-weight: 900; fill: #fff; letter-spacing: 0.06em; }
+.scene-svg .pl-display { fill: #1f3328; stroke: var(--ink); stroke-width: 6; }
+.scene-svg .pl-lcd-k { font-size: 22px; font-weight: 800; fill: #9fd496; letter-spacing: 0.06em; }
+.scene-svg .pl-lcd-k.ink { fill: var(--ink-2); }
+.scene-svg .pl-lcd { font-size: 32px; font-weight: 800; fill: #c8f7b6; }
+.scene-svg .pl-lcd.big { font-size: 50px; }
+.scene-svg .pl-cpu { fill: #2c3a58; stroke: var(--ink); stroke-width: 5; }
+.scene-svg .pl-cpu-text { font-size: 24px; font-weight: 900; fill: #e3e8f2; letter-spacing: 0.08em; }
+.scene-svg .pl-wire { fill: none; stroke: #2f7de1; stroke-width: 6; stroke-dasharray: 2 10; stroke-linecap: round; }
+.scene-svg .pl-pulse { fill: none; stroke: #9cd0ff; stroke-width: 12; stroke-linecap: round; stroke-dasharray: 1 30; opacity: 0; }
+.scene-svg .flowing .pl-pulse { opacity: 1; }
+.scene-svg .pl-barrier { stroke: var(--ink); stroke-width: 5; stroke-dasharray: 18 10; }
+.scene-svg .pl-meter { fill: #c9d1d8; stroke: var(--ink); stroke-width: 7; }
+.scene-svg .pl-vane { fill: #8794a6; stroke: var(--ink); stroke-width: 3; }
+.scene-svg .pl-shaft { stroke: var(--ink); stroke-width: 10; }
+.scene-svg .pl-disc { fill: #e9e1cd; stroke: var(--ink); stroke-width: 5; }
+.scene-svg .pl-slot { fill: var(--ink); }
+.scene-svg .pl-sensor { fill: #2f7de1; stroke: var(--ink); stroke-width: 4; }
+.scene-svg .pl-card { fill: #fffaf0; stroke: var(--ink); stroke-width: 4; }
+.scene-svg .pl-rule { stroke: var(--ink); stroke-width: 3; }
+.scene-svg .pl-car { fill: #3a77a6; stroke: var(--ink); stroke-width: 5; }
+.scene-svg .pl-filler { fill: #1d2a44; }
+.scene-svg .pl-nozzle { fill: var(--green); stroke: var(--ink); stroke-width: 4; }
+
+.scene-svg .pl-neck { fill: none; stroke: #c9d1d8; stroke-width: 64; stroke-linejoin: round; }
+.scene-svg .pl-neck-fuel { fill: none; stroke: var(--amber); stroke-width: 50; stroke-linejoin: round; transition: stroke-dasharray 0.3s; }
+.scene-svg .pl-nozzle-body { fill: #2e9a68; stroke: var(--ink); stroke-width: 6; stroke-linejoin: round; }
+.scene-svg .pl-channel { fill: none; stroke: #f6dc9a; stroke-width: 18; stroke-linejoin: round; }
+.scene-svg .flowing .pl-channel { stroke: var(--amber); }
+.scene-svg .pl-seat { stroke: var(--ink); stroke-width: 6; }
+.scene-svg .pl-poppet { fill: #c9d1d8; stroke: var(--ink); stroke-width: 4; }
+.scene-svg .pl-spring { fill: none; stroke: var(--ink); stroke-width: 4; }
+.scene-svg .pl-stem { stroke: var(--ink); stroke-width: 7; stroke-linecap: round; }
+.scene-svg .pl-tube { fill: none; stroke: #2bb5b0; stroke-width: 6; stroke-linejoin: round; }
+.scene-svg .pl-tube.vacuum { stroke: var(--red); }
+.scene-svg #pl3-air { stroke: #d6fffd; }
+.scene-svg .flowing #pl3-air { opacity: 1; }
+.scene-svg .pl-port { fill: #fffaf0; stroke: #2bb5b0; stroke-width: 5; }
+.scene-svg .pl-port.covered { fill: var(--amber); stroke: var(--red); }
+.scene-svg .pl-chamber { fill: #c9d1d8; stroke: var(--ink); stroke-width: 5; }
+.scene-svg .pl-diaphragm { fill: none; stroke: var(--red); stroke-width: 7; transition: d 0.35s ease; }
+.scene-svg .pl-roller { fill: #c9d1d8; stroke: var(--ink); stroke-width: 4; }
+.scene-svg .pl-trigger { fill: #39414f; stroke: var(--ink); stroke-width: 4; stroke-linejoin: round; }
+.scene-svg .pl-guard { fill: none; stroke: #2e9a68; stroke-width: 12; stroke-linecap: round; }
+.scene-svg .pl-trip { opacity: 0; transition: opacity 0.4s; }
+.scene-svg .pl-trip.on { opacity: 1; }
+.scene-svg .pl-badge { fill: var(--red); stroke: var(--ink); stroke-width: 3; }
+.scene-svg .pl-badge-text { font-size: 24px; font-weight: 900; fill: #fff; }

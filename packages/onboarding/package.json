@@ -65,7 +65,9 @@
     "./components/product-preview/sample-data": "./src/components/product-preview/sample-data.ts",
     "./components/product-preview/screens": "./src/components/product-preview/screens.tsx",
     "./components/product-preview/use-preview-motion": "./src/components/product-preview/use-preview-motion.ts",
-    "./styles/product-preview.css": "./src/components/product-preview/product-preview.css"
+    "./styles/product-preview.css": "./src/components/product-preview/product-preview.css",
+    "./components/signup/signup-chat": "./src/components/signup/signup-chat.tsx",
+    "./lib/signup-chat": "./src/lib/signup-chat.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",

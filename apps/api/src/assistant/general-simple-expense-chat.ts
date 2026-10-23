@@ -1,3 +1,4 @@
+import { whatsAppDraftCollectionReply } from "@ewatrade/assistant/channels/collection"
 import {
   expenseFactsFromText,
   generalMoney,
@@ -232,8 +233,9 @@ export async function handleSimpleExpenseChat(
   const prepared = simpleExpenseAction.parse(result.payload)
   const next = simpleExpenseStep(prepared)
   return {
-    text:
-      next === "amount"
+    text: isLinkedAssistantIdentity(ctx.session)
+      ? whatsAppDraftCollectionReply(prepared)
+      : next === "amount"
         ? "How much?"
         : next === "description"
           ? "What was it for?"

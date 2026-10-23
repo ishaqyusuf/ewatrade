@@ -1,3 +1,7 @@
+import {
+  storefrontAcceptAction,
+  storefrontGenerateAction,
+} from "./storefront-design"
 export {
   generalMoneyAccountBalancesPage,
   isPlainAccountBalanceRequest,
@@ -479,6 +483,8 @@ export const generalActionSchema = z.discriminatedUnion("action", [
   staffAccessAction,
   cashCountAction,
   storeSettingsUpdateAction,
+  storefrontGenerateAction,
+  storefrontAcceptAction,
   catalogArchiveAction,
   simpleSaleAction,
   simpleMoneyInAction,
@@ -524,6 +530,8 @@ const generalRecordReceiptSchema = z
       "stock_transfer",
       "inventory_closeout",
       ...storeSettingsReceiptKinds,
+      "storefront_design_run",
+      "storefront_design_draft",
     ]),
     recordId: id,
     bookId: id.optional(),
@@ -597,8 +605,31 @@ export const generalProposalSchema = z
   .strict()
 export type GeneralProposal = z.infer<typeof generalProposalSchema>
 import { capabilityActionHandoffSchema } from "../channels/capability-action-handoff"
+import { whatsAppChatChoicesSchema } from "../channels/reply-choices"
+import { catalogCreateHandoffSchema } from "./catalog-create-handoff"
+import { serviceJobDraftSchema } from "./service-job-draft"
+export {
+  serviceJobRequestSchema,
+  serviceJobDraftSchema,
+  serviceJobCreatedSchema,
+  serviceTreatmentLabels,
+  serviceNameKey,
+  resolveServiceJobLines,
+} from "./service-job-draft"
+export type {
+  ServiceJobDraft,
+  ServiceJobRequest,
+  ServiceJobCreated,
+  ServiceJobChoice,
+} from "./service-job-draft"
 import { generalReadContinuationSchema } from "./read-continuation"
 import { generalSearchRecordsSchema } from "./search-answer"
+export {
+  catalogCreateHandoffSchema,
+  catalogCreateScopeMatches,
+  missingCatalogItemAnswer,
+} from "./catalog-create-handoff"
+export type { CatalogCreateHandoff } from "./catalog-create-handoff"
 export const generalAnswerSchema = z
   .object({
     id,
@@ -607,10 +638,16 @@ export const generalAnswerSchema = z
     scope: z.string().max(500),
     asOf: z.string().datetime(),
     detail: z.string().max(1000),
+    /** Plain suggested user replies only; never authority, targets or confirmations. */
+    chatChoices: whatsAppChatChoicesSchema.optional().catch(undefined),
     target: generalAnswerTargetSchema.optional(),
     /** Structured rows for a money accounts read; `detail` stays the fallback. */
     accounts: generalMoneyAccountsSchema.optional(),
     records: generalSearchRecordsSchema.optional(),
+    /** Server-observed missing catalog search; opens the existing reviewed form. */
+    catalogCreate: catalogCreateHandoffSchema.optional().catch(undefined),
+    /** One editable native-form handoff; no job, customer or catalog write. */
+    serviceDraft: serviceJobDraftSchema.optional().catch(undefined),
     /** Server-saved read hints only; never grants authority or executes a request. */
     continuation: generalReadContinuationSchema.optional().catch(undefined),
     /** Saved continuation instruction only; the app independently rechecks action authority. */
@@ -892,6 +929,10 @@ export function generalActionSummary(
       return `${amount(action.amountMinor)} · ${action.method.replaceAll("_", " ")} · order ${action.orderId}${action.note ? `\n${action.note}` : ""}`
     case "order_attachment_add":
       return `${action.attachmentId ? `Attach file ${action.attachmentId} to` : "Note on"} order ${action.orderId}${action.note ? `\n${action.note}` : ""}`
+    case "storefront_design_generate":
+      return `Generate three storefront designs from draft rev ${action.expectedRevision} · ${action.desiredJourney}${action.refinement ? `\nStyling guidance: ${action.refinement}` : ""}\nUses design allowance; does not save or publish a design.`
+    case "storefront_design_accept":
+      return `Use storefront direction ${action.directionId} from the reviewed run as draft rev ${action.expectedRevision + 1}. Live content stays unchanged.`
     case "store_settings_update":
       return storeSettingsSummary(action)
     case "catalog_archive":

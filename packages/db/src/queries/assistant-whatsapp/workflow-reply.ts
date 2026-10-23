@@ -1,4 +1,6 @@
 import {
+  type WHATSAPP_WORKFLOW_LEGACY_RENDER_VERSION,
+  type WHATSAPP_WORKFLOW_RENDER_VERSION,
   renderWhatsAppWorkflowReply,
   whatsAppWorkflowEnabled,
   whatsAppWorkflowPurposeSchema,
@@ -25,6 +27,9 @@ export async function renderAssistantWhatsAppWorkflowReply(
     storeId: string
     purpose: "SETUP" | "PRODUCT_CREATE"
     trustedAppOrigin: string
+    rendererVersion?:
+      | typeof WHATSAPP_WORKFLOW_RENDER_VERSION
+      | typeof WHATSAPP_WORKFLOW_LEGACY_RENDER_VERSION
   },
 ) {
   if (!whatsAppWorkflowEnabled(input.purpose)) return undefined
@@ -141,6 +146,7 @@ export async function renderAssistantWhatsAppWorkflowReply(
       currentScope: { tenantId: input.tenantId, storeId: input.storeId },
       scopeLabel: `${conversation.tenant.name} · ${conversation.store.name}`,
       trustedAppOrigin: input.trustedAppOrigin,
+      rendererVersion: input.rendererVersion,
     },
   )
 }

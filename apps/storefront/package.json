@@ -31,7 +31,10 @@
     "react-dom": "catalog:",
     "server-only": "^0.0.1",
     "superjson": "^2.2.6",
-    "@ewatrade/events": "workspace:*"
+    "@ewatrade/events": "workspace:*",
+    "@ewatrade/storefront-runtime": "workspace:*",
+    "@ewatrade/storefront-templates": "workspace:*",
+    "@ewatrade/storefront-contracts": "workspace:*"
   },
   "devDependencies": {
     "@ewatrade/tsconfig": "workspace:*",

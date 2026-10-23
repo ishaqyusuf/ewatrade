@@ -1,4 +1,4 @@
-import { EventsProvider } from "@ewatrade/events/client"
+import { StorefrontAnalytics } from "@/components/storefront/storefront-analytics"
 import type { Metadata } from "next"
 import "@ewatrade/ui/globals.css"
 import { cn } from "@/utils"
@@ -10,6 +10,7 @@ const geist = Geist({
 })
 
 export const metadata: Metadata = {
+  robots: { index: false, follow: false },
   title: "ewatrade Storefront",
   description:
     "Storefront application for merchant-branded customer experiences.",
@@ -20,7 +21,9 @@ export default function RootLayout({
 }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en" className={cn("font-sans", geist.variable)}>
-      <body><EventsProvider>{children}</EventsProvider></body>
+      <body>
+        <StorefrontAnalytics>{children}</StorefrontAnalytics>
+      </body>
     </html>
   )
 }

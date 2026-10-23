@@ -97,6 +97,7 @@ export {
   getStoreEntryServiceRequestForm,
   submitStoreConversationServiceRequest,
 } from "./store-conversation-service-intake"
+export { startStoreConversationServiceRequest } from "./store-conversation-service-start"
 export {
   getAccountStoreConversationMessagesAfter,
   acknowledgeStoreConversationStaffRead,

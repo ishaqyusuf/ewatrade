@@ -34,7 +34,7 @@ type StoreSummary = { currencyCode: string; id: string; name: string }
 type Step = "quote" | "info" | "decline" | null
 
 const STEP_TITLE: Record<Exclude<Step, null>, string> = {
-  quote: "Send quote",
+  quote: "Prepare quote",
   info: "Ask for more details",
   decline: "Decline this request?",
 }
@@ -50,7 +50,7 @@ export function CustomerRequestSheet({
   store: StoreSummary
   timeZone: string
 }) {
-  const { requestId, setParams, sheet } = useServiceWorkParams()
+  const { requestId, jobStep, setParams, sheet } = useServiceWorkParams()
   const open =
     (sheet === "customer_request" || sheet === "quote") && Boolean(requestId)
   const { closeError, requestClose } = useSheetDismissal(() => setParams(null))
@@ -64,9 +64,17 @@ export function CustomerRequestSheet({
     >
       {open && requestId ? (
         <CustomerRequestContent
-          key={`${store.id}:${requestId}`}
+          key={`${store.id}:${requestId}:${jobStep ?? "record"}`}
           closeError={closeError}
-          initialStep={sheet === "quote" ? "quote" : null}
+          initialStep={
+            sheet === "quote" || jobStep === "quote"
+              ? "quote"
+              : jobStep === "ask" || jobStep === "info"
+                ? "info"
+                : jobStep === "decline"
+                  ? "decline"
+                  : null
+          }
           requestId={requestId}
           store={store}
           timeZone={timeZone}
@@ -118,7 +126,7 @@ function CustomerRequestContent({
           onDone()
           return
         }
-        setNotice(`Message sent to ${request?.customerName ?? "the customer"}.`)
+        setNotice(`Reply saved for ${request?.customerName ?? "the customer"}.`)
         goTo(null)
       },
     }),
@@ -133,7 +141,11 @@ function CustomerRequestContent({
       )
     if (next === "decline") setMessage("")
     // Keep the URL on the record so a refresh reopens the request, not the step.
-    void setParams({ requestId, serviceSheet: "customer_request" })
+    void setParams({
+      requestId,
+      jobStep: next,
+      serviceSheet: "customer_request",
+    })
   }
 
   if (!request) {
@@ -177,9 +189,7 @@ function CustomerRequestContent({
 
   if (step === "info" || step === "decline") {
     const decline = step === "decline"
-    const response = decline
-      ? message.trim() || "Sorry, we can’t take this request."
-      : message.trim()
+    const response = message.trim()
     return (
       <SheetFrame
         closeError={closeError}
@@ -192,23 +202,8 @@ function CustomerRequestContent({
             <FormFeedback appearance="dashboard">{error}</FormFeedback>
           ) : null}
           <ControlField
-            label={
-              decline ? (
-                <>
-                  Message to {request.customerName}{" "}
-                  <span className="font-normal text-muted-foreground">
-                    Optional
-                  </span>
-                </>
-              ) : (
-                <>Message to {request.customerName}</>
-              )
-            }
-            description={
-              decline
-                ? "Leave empty to send: “Sorry, we can’t take this request.”"
-                : `Sent to ${contact || "the customer"}. The request waits until they reply.`
-            }
+            label={<>Message to {request.customerName}</>}
+            description="Saved on this request. Nothing is sent automatically."
           >
             <Textarea
               rows={5}
@@ -235,13 +230,15 @@ function CustomerRequestContent({
                   return
                 }
                 update.mutate({
+                  expectedRevision: request.revision,
+                  storeId: store.id,
                   requestId,
                   response,
                   status: decline ? "declined" : "needs_information",
                 })
               }}
             >
-              {decline ? "Decline request" : "Send message"}
+              {decline ? "Decline request" : "Save reply"}
             </SubmitButton>
           </FormActions>
         </div>
@@ -271,7 +268,7 @@ function CustomerRequestContent({
               : request.status === "NEEDS_INFORMATION"
                 ? "You asked for more details. Waiting for the customer."
                 : request.status === "QUOTED" && quote
-                  ? `Quote of ${formatPrice(quote.totalMinor, quote.currencyCode)} sent${quote.expiresAt ? `. Good until ${formatDue(quote.expiresAt, timeZone)}` : ""}.`
+                  ? `Quote of ${formatPrice(quote.totalMinor, quote.currencyCode)} prepared${quote.expiresAt ? `. Good until ${formatDue(quote.expiresAt, timeZone)}` : ""}.`
                   : request.status === "CONVERTED"
                     ? "Accepted. The job was created for you."
                     : request.status === "DECLINED"
@@ -283,7 +280,7 @@ function CustomerRequestContent({
               <Button type="button" onClick={() => goTo("quote")}>
                 {request.status === "QUOTED"
                   ? "Change the quote"
-                  : "Send quote"}
+                  : "Prepare quote"}
               </Button>
               {request.status === "SUBMITTED" ? (
                 <Button
@@ -294,13 +291,15 @@ function CustomerRequestContent({
                   Ask for more details
                 </Button>
               ) : null}
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => goTo("decline")}
-              >
-                Decline
-              </Button>
+              {open ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => goTo("decline")}
+                >
+                  Decline
+                </Button>
+              ) : null}
             </div>
           ) : null}
         </div>

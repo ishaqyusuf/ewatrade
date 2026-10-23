@@ -1,11 +1,15 @@
 "use client"
 import {
+  ServiceStatusSquare,
+  serviceStatusChoices,
+} from "@/components/service-work/service-status"
+import {
   type JobStep,
   type WorkJob,
   formatPrice,
   formatWhen,
   isJobLate,
-  jobNextStep,
+  jobGate,
   jobStage,
   jobWhat,
   toneClass,
@@ -17,10 +21,12 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
   DropdownMenuTrigger,
   cn,
 } from "@ewatrade/ui"
-import { MoreVerticalIcon } from "@hugeicons/core-free-icons"
+import { ArrowDown01Icon, MoreVerticalIcon } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
 import type { ColumnDef } from "@tanstack/react-table"
 
@@ -97,83 +103,162 @@ export function ServiceWorkMoney({ job }: { job: WorkJob }) {
   return <span className="text-muted-foreground">Paid</span>
 }
 
+export function ServiceWorkStatusMenu({
+  job,
+  actions,
+}: { job: WorkJob; actions: ServiceWorkColumnActions }) {
+  const choices = serviceStatusChoices(job)
+  const stage = jobStage(job)
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger
+        render={
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={actions.isPending}
+            aria-label={`Update status for ${job.orderNumber}`}
+            data-row-interactive="true"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <ServiceStatusSquare status={job.summary} />
+            {stage.label}
+            <HugeiconsIcon
+              icon={ArrowDown01Icon}
+              className="size-3"
+              aria-hidden="true"
+            />
+          </Button>
+        }
+      />
+      <DropdownMenuContent appearance="dashboard" align="end">
+        <DropdownMenuRadioGroup
+          value={job.summary}
+          onValueChange={(value) => {
+            const choice = choices.find((item) => item.value === value)
+            if (!choice?.enabled || !choice.step || value === job.summary)
+              return
+            if (choice.step === "start" || choice.step === "ready")
+              actions.quickStep(job, choice.step)
+            else actions.openStep(job.id, choice.step)
+          }}
+        >
+          {choices.map((choice) => (
+            <DropdownMenuRadioItem
+              key={choice.value}
+              value={choice.value}
+              disabled={!choice.enabled && choice.value !== job.summary}
+            >
+              <ServiceStatusSquare status={choice.value} />
+              {choice.value === job.summary ? stage.label : choice.label}
+            </DropdownMenuRadioItem>
+          ))}
+        </DropdownMenuRadioGroup>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  )
+}
+
 export function ServiceWorkRowActions({
   job,
   actions,
-}: {
-  job: WorkJob
-  actions: ServiceWorkColumnActions
-}) {
-  const next = jobNextStep(job, actions.canManage)
+}: { job: WorkJob; actions: ServiceWorkColumnActions }) {
   const open = job.summary !== "completed" && job.summary !== "cancelled"
+  const gate = jobGate(job)
   return (
-    <div className="flex items-center justify-end gap-1">
-      {next ? (
-        <Button
-          size="sm"
-          variant="outline"
-          disabled={actions.isPending}
-          data-row-interactive="true"
-          onClick={(event) => {
-            event.stopPropagation()
-            if (next.action === "start" || next.action === "ready")
-              actions.quickStep(job, next.action)
-            else actions.openStep(job.id, next.action)
-          }}
-        >
-          {next.label}
-        </Button>
-      ) : null}
-      <DropdownMenu>
-        <DropdownMenuTrigger
-          render={
-            <Button
-              variant="ghost"
-              size="icon-sm"
-              aria-label={`More for ${job.orderNumber}`}
-              data-row-interactive="true"
-              onClick={(event) => event.stopPropagation()}
+    <DropdownMenu>
+      <DropdownMenuTrigger
+        render={
+          <Button
+            variant="ghost"
+            size="icon"
+            disabled={actions.isPending}
+            aria-label={`Actions for ${job.orderNumber}`}
+            data-row-interactive="true"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <HugeiconsIcon
+              icon={MoreVerticalIcon}
+              className="size-4"
+              aria-hidden="true"
             />
-          }
-        >
-          <HugeiconsIcon icon={MoreVerticalIcon} aria-hidden="true" />
-        </DropdownMenuTrigger>
-        <DropdownMenuContent appearance="dashboard" align="end">
-          <DropdownMenuItem onClick={() => actions.openJob(job.id)}>
-            Open job
+          </Button>
+        }
+      />
+      <DropdownMenuContent appearance="dashboard" align="end">
+        <DropdownMenuItem onClick={() => actions.openJob(job.id)}>
+          Open job
+        </DropdownMenuItem>
+        {!job.handedOffAt &&
+        ["ready_for_handoff", "completed"].includes(job.summary) ? (
+          <DropdownMenuItem
+            onClick={() => actions.openStep(job.id, "handover")}
+          >
+            Hand over to customer
           </DropdownMenuItem>
-          {open && actions.canManage ? (
-            <>
-              <DropdownMenuItem
-                onClick={() => actions.openStep(job.id, "assign")}
-              >
-                Change who is doing it
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => actions.openStep(job.id, "due")}>
-                Change due date
-              </DropdownMenuItem>
-            </>
-          ) : null}
-          {open ? (
-            <DropdownMenuItem onClick={() => actions.openStep(job.id, "note")}>
-              Add a note
+        ) : null}
+        {job.balanceDueMinor > 0 ? (
+          <DropdownMenuItem onClick={() => actions.openStep(job.id, "pay")}>
+            Take payment
+          </DropdownMenuItem>
+        ) : null}
+        {open &&
+        actions.canManage &&
+        (gate === "PENDING_RELEASE" || gate === "REVOKED") ? (
+          <DropdownMenuItem onClick={() => actions.openStep(job.id, "approve")}>
+            Approve start
+          </DropdownMenuItem>
+        ) : null}
+        <DropdownMenuItem onClick={() => actions.openStep(job.id, "note")}>
+          Add a note
+        </DropdownMenuItem>
+        {open ? (
+          <>
+            <DropdownMenuItem
+              onClick={() => actions.openStep(job.id, "problem")}
+            >
+              Report a problem
             </DropdownMenuItem>
-          ) : null}
-          {job.balanceDueMinor > 0 ? (
-            <DropdownMenuItem onClick={() => actions.openStep(job.id, "pay")}>
-              Take payment
+            <DropdownMenuItem onClick={() => actions.openStep(job.id, "photo")}>
+              Add a photo
             </DropdownMenuItem>
-          ) : null}
-          {actions.canManage ? (
+          </>
+        ) : null}
+        {actions.canManage ? (
+          <>
+            {open ? (
+              <>
+                <DropdownMenuItem
+                  onClick={() => actions.openStep(job.id, "assign")}
+                >
+                  Change who is doing it
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => actions.openStep(job.id, "due")}
+                >
+                  Change due date
+                </DropdownMenuItem>
+              </>
+            ) : null}
             <DropdownMenuItem
               onClick={() => actions.openStep(job.id, "message")}
             >
-              Message the customer
+              Message customer
             </DropdownMenuItem>
-          ) : null}
-        </DropdownMenuContent>
-      </DropdownMenu>
-    </div>
+            <DropdownMenuItem onClick={() => actions.openStep(job.id, "track")}>
+              Tracking link
+            </DropdownMenuItem>
+            {open ? (
+              <DropdownMenuItem
+                onClick={() => actions.openStep(job.id, "cancel")}
+              >
+                Cancel work
+              </DropdownMenuItem>
+            ) : null}
+          </>
+        ) : null}
+      </DropdownMenuContent>
+    </DropdownMenu>
   )
 }
 
@@ -268,22 +353,17 @@ export function createServiceWorkColumns(
       minSize: 130,
       maxSize: 240,
       meta: { headerLabel: "Status", skeleton: { type: "badge" } },
-      cell: ({ row }) => <ServiceWorkStatusBadge job={row.original} />,
+      cell: ({ row }) => (
+        <ServiceWorkStatusMenu job={row.original} actions={actions} />
+      ),
     },
     {
       id: "actions",
-      size: 170,
-      minSize: 160,
-      maxSize: 240,
+      size: 80,
+      minSize: 72,
+      maxSize: 120,
       enableHiding: false,
-      enableResizing: false,
-      meta: {
-        headerLabel: "Actions",
-        sticky: true,
-        className: "z-20 bg-background group-hover:bg-muted/40",
-        reorderable: false,
-        skeleton: { type: "icon" },
-      },
+      meta: { headerLabel: "Actions", skeleton: { type: "text" } },
       cell: ({ row }) => (
         <ServiceWorkRowActions job={row.original} actions={actions} />
       ),

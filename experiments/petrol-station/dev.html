@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en-NG">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light">
+<title>How a petrol station's machines work</title>
+<link rel="stylesheet" href="src/lessons.css">
+<link rel="stylesheet" href="src/scene.css">
+</head>
+<body>
+<div class="app">
+  <header class="top">
+    <div>
+      <h1>How a petrol station's machines work</h1>
+      <p class="lede">Open a valve. Follow the fuel. Look inside the meter and the nozzle.</p>
+    </div>
+    <p class="sim-badge" role="note"><strong>Simulated example</strong> · sizes, speeds and prices are illustrative</p>
+  </header>
+
+  <nav class="lessons" aria-label="Machine lessons">
+    <button type="button" data-lesson="delivery" aria-current="false"><span class="n">1</span>Tanker to storage</button>
+    <button type="button" data-lesson="pricing" aria-current="false"><span class="n">2</span>Litres to price</button>
+    <button type="button" data-lesson="nozzle" aria-current="false"><span class="n">3</span>Customer and nozzle</button>
+    <button type="button" class="back" id="back-btn" hidden>← Back to station</button>
+  </nav>
+
+  <main class="layout">
+    <div class="stage" id="stage"></div>
+    <div class="panel" id="panel"></div>
+  </main>
+
+  <details class="sources">
+    <summary>Sources and assumptions</summary>
+    <ul>
+      <li><a href="https://www.veeder.com/us/blog/how-does-fuel-get-your-nozzle" target="_blank" rel="noreferrer">Veeder-Root: how fuel gets to your nozzle</a> — the tank's submersible pump moves fuel to the dispenser.</li>
+      <li><a href="https://www.gilbarco.com/eu/our-solutions/fuel-dispensers/endura" target="_blank" rel="noreferrer">Gilbarco Endura dispenser</a> — meter encoder, electronic calibration, price and volume display.</li>
+      <li><a href="https://www.gilbarco.com/sea/sites/gilbarco.com.sea/files/pdfs/577014-339%20-%20Application%20Guide.pdf" target="_blank" rel="noreferrer">Gilbarco application guide 577014-339</a> — pulses per unit volume (example calibration only).</li>
+      <li><a href="https://pei.org/wiki_pei/automatic-nozzle/" target="_blank" rel="noreferrer">PEI: automatic nozzle</a> — sensing hole, passages, vacuum and diaphragm.</li>
+      <li><a href="https://www.opwglobal.com/docs/libraries/retail-fueling/retail-fueling/above-ground/12vw_troubleshooting_instructions_english_h15892pae.pdf?Status=Master&amp;sfvrsn=e8b0f570_0" target="_blank" rel="noreferrer">OPW 12VW troubleshooting instructions</a> — liquid covering the tip shut-off port.</li>
+      <li>Not to scale. Flow rates, pulse counts, rotor shape, prices and tank sizes are illustrative, not manufacturer or market figures, and this is not an operating procedure.</li>
+    </ul>
+  </details>
+  <div class="sr-only" id="announcer" aria-live="polite" aria-atomic="true"></div>
+  <noscript><p>This lesson needs JavaScript (it uses no network).</p></noscript>
+</div>
+<script type="module" src="src/lessons.mjs"></script>
+</body>
+</html>

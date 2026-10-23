@@ -16,6 +16,7 @@ export type CapabilityDomain =
   | "customers"
   | "finance"
   | "staff"
+  | "storefront"
 export type CapabilityClient = "dashboard" | "mobile" | "whatsapp"
 export type CapabilityRollout = "planned" | "source" | "pilot" | "enabled"
 /** `book` and `provider` are reserved for finance and external-money phases. */

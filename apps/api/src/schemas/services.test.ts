@@ -4,6 +4,7 @@ import {
   serviceBatchNotificationIntentSchema,
   serviceBatchUpdateSchema,
   serviceIntakeCreateSchema,
+  serviceJobCompleteSchema,
   serviceJobHandoffSchema,
   serviceWorkQueuePageSchema,
 } from "./services"
@@ -74,4 +75,22 @@ describe("service commerce completion schemas", () => {
       }),
     ).toThrow()
   })
+})
+
+test("work completion carries no payment or caller-owned authority fields", () => {
+  const input = {
+    clientCommandId: "complete-command-001",
+    expectedRevision: 3,
+    jobId: "job-1",
+  }
+  expect(serviceJobCompleteSchema.parse(input)).toEqual(input)
+  for (const extra of [
+    { payment: { amountMinor: 1000, method: "cash" } },
+    { tenantId: "foreign" },
+    { storeId: "foreign" },
+    { actorUserId: "foreign" },
+  ])
+    expect(
+      serviceJobCompleteSchema.safeParse({ ...input, ...extra }).success,
+    ).toBe(false)
 })

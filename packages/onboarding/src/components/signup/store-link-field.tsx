@@ -1,6 +1,7 @@
 "use client"
 
 import { Input } from "@ewatrade/ui"
+import { getStorefrontDomain } from "@ewatrade/utils"
 import {
   isValidStoreLink,
   normalizeStoreLink,
@@ -8,6 +9,10 @@ import {
 } from "@ewatrade/utils/store-link"
 import { useEffect, useId, useRef, useState } from "react"
 import { OwnerSignupIcon } from "./owner-signup-artwork"
+
+const storefrontDomain = getStorefrontDomain(
+  process.env.NEXT_PUBLIC_PLATFORM_DOMAIN ?? "ewatrade.com",
+)
 
 export type StoreLinkCheck = {
   slug: string
@@ -136,7 +141,7 @@ export function StoreLinkField({
               }}
               onBlur={() => onChange(normalizeStoreLink(value))}
             />
-            <span>.ewatrade.com</span>
+            <span>.{storefrontDomain}</span>
           </span>
         </label>
       )}
@@ -155,7 +160,7 @@ export function StoreLinkField({
           <>
             <span className="owner-ref-spin" />
             <span>
-              Checking <b>{value}</b>.ewatrade.com…
+              Checking <b>{value}</b>.{storefrontDomain}…
             </span>
           </>
         ) : error ? (
@@ -164,23 +169,23 @@ export function StoreLinkField({
           <>
             <OwnerSignupIcon name="check" />
             <span>
-              <b>{check.slug}</b>.ewatrade.com is available
+              <b>{check.slug}</b>.{storefrontDomain} is available
             </span>
           </>
         ) : check ? (
           <>
             <OwnerSignupIcon name="alert" />
             <span>
-              <b>{check.slug}</b>.ewatrade.com is taken. The name is fine; pick
-              a different link:
+              <b>{check.slug}</b>.{storefrontDomain} is taken. The name is fine;
+              pick a different link:
             </span>
           </>
         ) : reserved ? (
           <>
             <OwnerSignupIcon name="alert" />
             <span>
-              <b>{value}</b>.ewatrade.com is reserved. The name is fine; pick a
-              different link:
+              <b>{value}</b>.{storefrontDomain} is reserved. The name is fine;
+              pick a different link:
             </span>
           </>
         ) : value ? (
@@ -188,7 +193,7 @@ export function StoreLinkField({
         ) : (
           <span>
             Your store gets its own free link, like{" "}
-            <b>your-business.ewatrade.com</b>
+            <b>your-business.{storefrontDomain}</b>
           </span>
         )}
         {value && !editing && (

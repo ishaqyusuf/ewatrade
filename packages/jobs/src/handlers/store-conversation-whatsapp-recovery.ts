@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto"
+import { presentWhatsAppMessage } from "@ewatrade/assistant/channels/presentation"
 
 import {
   DirectMetaWhatsAppProvider,
@@ -70,7 +71,7 @@ function defaultDependencies(): Dependencies {
 
 function recoveryMessage(storefrontOrigin: string, publicToken: string) {
   const url = `${storefrontOrigin}/r/${encodeURIComponent(publicToken)}`
-  return `We couldn't safely match this message to one conversation. Continue securely on EwaTrade: ${url}`
+  return `We couldn't safely match this message to one conversation.\n\nContinue securely on EwaTrade:\n${url}`
 }
 
 export async function runStoreConversationWhatsAppRecovery(
@@ -85,7 +86,10 @@ export async function runStoreConversationWhatsAppRecovery(
   try {
     const sent = await dependencies.provider.sendText({
       accessToken: dependencies.resolveCredential(claim.credentialReference),
-      body: recoveryMessage(dependencies.storefrontOrigin, claim.publicToken),
+      body: presentWhatsAppMessage(
+        recoveryMessage(dependencies.storefrontOrigin, claim.publicToken),
+        { family: "customer" },
+      ),
       phoneNumberId: claim.phoneNumberId,
       to: claim.externalCustomerId,
     })

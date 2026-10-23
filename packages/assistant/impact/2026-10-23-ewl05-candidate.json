@@ -1,0 +1,79 @@
+{
+  "version": 1,
+  "id": "2026-10-23-ewl05-candidate",
+  "tickets": [
+    "H01",
+    "H02"
+  ],
+  "summary": "Local exact-candidate preparation: bound existing typed WhatsApp onboarding transport, correctly type existing provider options, and reconcile existing transitive procedure coverage without exposing new assistant actions.",
+  "noAssistantImpact": "Existing typed CONNECT state/receipt/UNKNOWN semantics and OTP/proof/consent remain unchanged; only the existing outbound request gets the ordinary 20-second abort/redirect policy. Existing provider factory advertises the SDK JSON provider-options contract. Listed merchant procedures already exist; their present support classifications are retained, not newly enabled by this ticket.",
+  "capabilities": [],
+  "procedures": [
+    {
+      "path": "customerLedger.recordReceiptAndApply",
+      "status": "planned",
+      "reason": "Existing canonical Owner/Admin Finance receipt-plus-credit allocation remains planned E02 for assistant access. EWL payment continuation selects the exact existing Order/account; this is not a new chat tool."
+    },
+    {
+      "path": "finance.customerBalanceDirectory",
+      "status": "excluded",
+      "reason": "Existing Dashboard projection; assistant uses scoped customer statements. Reconciles the previously committed finance-directory record with regenerated coverage."
+    },
+    {
+      "path": "finance.supplierDirectory",
+      "status": "excluded",
+      "reason": "Existing Dashboard projection; assistant uses supplier statements/payable aging. No new assistant supplier amounts or client change."
+    },
+    {
+      "path": "inventory.setLowStockLevel",
+      "status": "form_only",
+      "reason": "Existing Owner/Admin Inventory display setting only; canonical command changes no stock or sale. Assistant lowStockPage retains its existing threshold."
+    }
+  ],
+  "docs": [
+    {
+      "topic": "feature",
+      "status": "local_only",
+      "path": ".brain/qa/2026-10-23-ewl05-release-candidate.md",
+      "note": "Exact candidate selection, focused checks, external build/acceptance gates and operating packet."
+    },
+    {
+      "topic": "api",
+      "status": "local_only",
+      "path": ".brain/api/contracts.md",
+      "note": "Existing typed-onboarding reply transport deadline/UNKNOWN contract; no new endpoint or role."
+    },
+    {
+      "topic": "permissions",
+      "status": "local_only",
+      "path": ".brain/api/permissions.md",
+      "note": "Unchanged OTP/proof/scope/consent and no provider/release authorization."
+    },
+    {
+      "topic": "schema",
+      "status": "not_applicable",
+      "path": ".brain/database/schema.md",
+      "note": "No schema edit or database operation in EWL05; retained selected pre-existing schema WIP separately fingerprinted."
+    },
+    {
+      "topic": "capability",
+      "status": "updated",
+      "path": "packages/assistant/src/capabilities/COVERAGE.md",
+      "note": "H01 regenerated; four existing support rows reconciled with actual source/current rollout."
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "test",
+      "path": "apps/api/src/communications/whatsapp-onboarding-runtime.test.ts",
+      "executed": true,
+      "result": "Inert full typed CONNECT text/buttons regression: deadline20s, redirect refusal, persisted UNKNOWN, lease clear, one send and duplicate suppression. Adjacent runtime/state checks28pass196assertions."
+    },
+    {
+      "kind": "test",
+      "path": "packages/ai/src/storefront-design.test.ts",
+      "executed": true,
+      "result": "Existing inert design parser/provider boundary1pass18assertions; packages/ai typecheck passes. No provider call."
+    }
+  ]
+}

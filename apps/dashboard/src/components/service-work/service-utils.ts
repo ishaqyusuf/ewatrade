@@ -103,6 +103,7 @@ export function flattenServiceOfferings(items: CatalogItem[], storeId: string) {
         )
         .map((offering) => ({
           ...offering,
+          catalogItemName: item.name,
           displayName: catalogOfferingDisplayName(
             item.name,
             variant.name,
@@ -217,7 +218,7 @@ export function jobStage(job: JobLike): { label: string; tone: StatusTone } {
         tone: "ready",
       }
     case "completed":
-      return { label: signOff ? "Completed" : "Handed over", tone: "muted" }
+      return { label: "Completed", tone: "ready" }
     default:
       return { label: "Cancelled", tone: "muted" }
   }
@@ -239,13 +240,14 @@ export function lineStage(
     case "READY_FOR_HANDOFF":
       return { label: signOff ? "Customer sign-off" : "Ready", tone: "ready" }
     case "COMPLETED":
-      return { label: signOff ? "Completed" : "Handed over", tone: "muted" }
+      return { label: "Completed", tone: "ready" }
     default:
       return { label: "Cancelled", tone: "muted" }
   }
 }
 
 export type JobStep =
+  | "complete"
   | "pay"
   | "handover"
   | "stuck"
@@ -263,6 +265,7 @@ export type JobStep =
   | "redo"
 
 export const JOB_STEP_TITLES: Record<JobStep, string> = {
+  complete: "Complete job",
   pay: "Take payment",
   handover: "Hand over to the customer",
   stuck: "Mark stuck",
@@ -308,8 +311,8 @@ export function jobNextStep(
       return { action: "resume", label: "Continue work" }
     case "ready_for_handoff":
       return {
-        action: "handover",
-        label: signOff ? "Complete job" : "Hand over",
+        action: "complete",
+        label: "Complete job",
       }
     default:
       return null

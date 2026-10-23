@@ -29,7 +29,7 @@ const FIXED = ["select", "order"]
 const STICKY = [
   { id: "select", width: 50 },
   { id: "order", width: 210 },
-  { id: "actions", side: "right" as const, width: 170 },
+  { id: "status", side: "right" as const, width: 150 },
 ]
 export function ServiceWorkTableView({
   table,
@@ -102,7 +102,7 @@ export function ServiceWorkTableView({
         summary={`${rows.length === 1 ? "1 job" : `${rows.length} jobs`} · ${
           sort
             ? `${sort.field === "priority" ? "urgent" : "newest"} ${sort.direction === "asc" ? "last" : "first"}`
-            : "urgent first, then oldest"
+            : "newest first"
         }`}
       >
         {view === "table" ? <ServiceWorkTableSettings table={table} /> : null}
@@ -134,7 +134,7 @@ export function ServiceWorkTableView({
       {batch.error && selectedCount === 0 ? (
         <FormFeedback appearance="dashboard">{batch.error}</FormFeedback>
       ) : null}
-      {canManage && selectedCount > 0 ? (
+      {canManage && selectedCount > 0 && batch.showMessage ? (
         <ServiceWorkBatchMessage batch={batch} />
       ) : null}
       {rows.length && view !== "table" ? (
@@ -186,6 +186,7 @@ export function ServiceWorkTableView({
                       columnOrder={table.getState().columnOrder}
                       columnVisibility={table.getState().columnVisibility}
                       isSelected={row.getIsSelected()}
+                      onRowOpen={(row) => actions.openJob(row.original.id)}
                     />
                   ) : null
                 })}
@@ -208,6 +209,10 @@ export function ServiceWorkTableView({
       ) : null}
       {canManage ? (
         <ServiceWorkBottomBar
+          key={table
+            .getSelectedRowModel()
+            .rows.map((row) => `${row.id}:${row.original.revision}`)
+            .join(",")}
           count={selectedCount}
           deselect={() => table.resetRowSelection()}
           batch={batch}

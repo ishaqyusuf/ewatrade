@@ -88,13 +88,22 @@ test("transfer requires stock authority at both Stores, including saved transfer
   ).rejects.toMatchObject({ code: "FORBIDDEN" })
 })
 test("transfer review checks both Stores and keeps the selected Store scope", async () => {
-  await expect(scopeStaffRequest(context(), "inventory.transferReview", "query", { transferId: "saved" })).rejects.toMatchObject({ code: "FORBIDDEN" })
+  await expect(
+    scopeStaffRequest(context(), "inventory.transferReview", "query", {
+      transferId: "saved",
+    }),
+  ).rejects.toMatchObject({ code: "FORBIDDEN" })
   const ctx = context()
-  if (ctx.tenantContext?.staffAccess) ctx.tenantContext.staffAccess.assignments = [
-    { storeId: "a", role: "MANAGER", status: "ACTIVE" },
-    { storeId: "b", role: "OPERATOR", status: "ACTIVE" },
-  ]
-  expect(await scopeStaffRequest(ctx, "inventory.transferReview", "query", { transferId: "saved" })).toEqual({ transferId: "saved", storeId: "a" })
+  if (ctx.tenantContext?.staffAccess)
+    ctx.tenantContext.staffAccess.assignments = [
+      { storeId: "a", role: "MANAGER", status: "ACTIVE" },
+      { storeId: "b", role: "OPERATOR", status: "ACTIVE" },
+    ]
+  expect(
+    await scopeStaffRequest(ctx, "inventory.transferReview", "query", {
+      transferId: "saved",
+    }),
+  ).toEqual({ transferId: "saved", storeId: "a" })
 })
 test("revoked assignments, catalog writes, staff admin and unknown paths fail closed", async () => {
   const ctx = context()
@@ -105,6 +114,7 @@ test("revoked assignments, catalog writes, staff admin and unknown paths fail cl
   ).rejects.toMatchObject({ code: "FORBIDDEN" })
   for (const path of [
     "catalog.createItem",
+    "catalog.addServiceChoice",
     "retailOps.inviteStaff",
     "finance.post",
     "tenant.createStore",
@@ -143,11 +153,28 @@ test("exact order-number lookup cannot bypass assigned Store boundaries", async 
 })
 
 test("closeout reads retain manager reconciliation authority and record scope", async () => {
-  await expect(scopeStaffRequest(context(), "inventory.closeouts", "query", {})).rejects.toMatchObject({ code: "FORBIDDEN" })
+  await expect(
+    scopeStaffRequest(context(), "inventory.closeouts", "query", {}),
+  ).rejects.toMatchObject({ code: "FORBIDDEN" })
   const ctx = context()
-  if (ctx.tenantContext?.staffAccess) ctx.tenantContext.staffAccess.assignments = [{ storeId: "a", role: "MANAGER", status: "ACTIVE" }]
-  expect(await scopeStaffRequest(ctx, "inventory.closeouts", "query", {})).toEqual({ storeId: "a" })
-  await expect(scopeStaffRequest(ctx, "inventory.closeoutReview", "query", { closeoutId: "foreign" })).rejects.toMatchObject({ code: "FORBIDDEN" })
-  ctx.db.inventoryCloseout.findFirst = (async () => ({ storeId: "a" })) as typeof ctx.db.inventoryCloseout.findFirst
-  expect(await scopeStaffRequest(ctx, "inventory.closeoutReview", "query", { closeoutId: "saved" })).toEqual({ closeoutId: "saved", storeId: "a" })
+  if (ctx.tenantContext?.staffAccess)
+    ctx.tenantContext.staffAccess.assignments = [
+      { storeId: "a", role: "MANAGER", status: "ACTIVE" },
+    ]
+  expect(
+    await scopeStaffRequest(ctx, "inventory.closeouts", "query", {}),
+  ).toEqual({ storeId: "a" })
+  await expect(
+    scopeStaffRequest(ctx, "inventory.closeoutReview", "query", {
+      closeoutId: "foreign",
+    }),
+  ).rejects.toMatchObject({ code: "FORBIDDEN" })
+  ctx.db.inventoryCloseout.findFirst = (async () => ({
+    storeId: "a",
+  })) as typeof ctx.db.inventoryCloseout.findFirst
+  expect(
+    await scopeStaffRequest(ctx, "inventory.closeoutReview", "query", {
+      closeoutId: "saved",
+    }),
+  ).toEqual({ closeoutId: "saved", storeId: "a" })
 })

@@ -1,3 +1,4 @@
+import { presentWhatsAppMessage } from "@ewatrade/assistant/channels/presentation"
 import {
   type ConversationStateStore,
   DirectMetaWhatsAppProvider,
@@ -137,7 +138,10 @@ export async function runPrescriptionCommunicationDispatch(
     if (inSession && actions.length) {
       sent = await dependencies.provider.sendButtons({
         ...credentials,
-        body: neutralCopy[claim.type] ?? "Your pharmacy has an update.",
+        body: presentWhatsAppMessage(
+          neutralCopy[claim.type] ?? "Your pharmacy has an update.",
+          { family: "customer", maxUnits: 1024 },
+        ),
         buttons: actions.slice(0, 3),
         to: claim.recipientReference,
       })
@@ -145,7 +149,10 @@ export async function runPrescriptionCommunicationDispatch(
       const secureUrl = String(intentPayload.secureUrl ?? "")
       sent = await dependencies.provider.sendText({
         ...credentials,
-        body: `${neutralCopy[claim.type] ?? "Your pharmacy has an update."}${secureUrl.startsWith("https://") ? `\n\n${secureUrl}` : ""}`,
+        body: presentWhatsAppMessage(
+          `${neutralCopy[claim.type] ?? "Your pharmacy has an update."}${secureUrl.startsWith("https://") ? `\n\n${secureUrl}` : ""}`,
+          { family: "customer" },
+        ),
         to: claim.recipientReference,
       })
     } else {

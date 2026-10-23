@@ -73,6 +73,13 @@ export const serviceIntakeCreateSchema = z
   })
   .strict()
 
+export const serviceIntakeCompleteSchema = serviceIntakeCreateSchema.extend({
+  sourceAnswerId: z.string().trim().min(1).max(160).optional(),
+  sourceMessageId: z.string().trim().min(1).max(160).optional(),
+  customerId: z.string().trim().min(1).max(160).optional(),
+  saveNewCustomer: z.boolean().optional(),
+})
+
 export const serviceIntakeConfirmSchema = z
   .object({
     intakeId: z.string().trim().min(1),
@@ -154,6 +161,10 @@ export const serviceJobHandoffSchema = z
       .optional(),
   })
   .strict()
+
+export const serviceJobCompleteSchema = serviceJobHandoffSchema.omit({
+  payment: true,
+})
 
 export const serviceBatchUpdateSchema = z
   .object({
@@ -288,6 +299,8 @@ export const serviceWorkQueueSchema = z
   .strict()
 
 export const serviceWorkStageSchema = z.enum([
+  "all",
+  "cancelled",
   "open",
   "todo",
   "doing",
@@ -375,6 +388,8 @@ export const publicServiceRequestFormSchema = z
 
 export const serviceRequestDispositionSchema = z
   .object({
+    expectedRevision: z.number().int().positive().optional(),
+    storeId: z.string().trim().min(1).optional(),
     requestId: z.string().trim().min(1),
     response: z.string().trim().min(1).max(2_000),
     status: z.enum(["declined", "needs_information"]),
@@ -387,6 +402,24 @@ const serviceQuoteLineSchema = z
     quantity: exactServiceQuantitySchema,
     sourceLineId: z.string().trim().min(1).optional(),
     unitPriceMinor: z.number().int().nonnegative().max(100_000_000),
+  })
+  .strict()
+
+export const staffServiceQuoteSchema = z
+  .object({
+    clientQuoteId: z.string().trim().min(8).max(160),
+    clientVersionId: z.string().trim().min(8).max(160),
+    customerId: z.string().trim().min(1).optional(),
+    customerName: z.string().trim().min(1).max(160).optional(),
+    customerEmail: z.string().trim().email().max(320).optional(),
+    customerPhone: z.string().trim().max(40).optional(),
+    saveNewCustomer: z.boolean().optional(),
+    customerNote: z.string().trim().min(1).max(4000),
+    storeId: z.string().trim().min(1).optional(),
+    lines: z
+      .array(serviceQuoteLineSchema.omit({ sourceLineId: true }))
+      .min(1)
+      .max(100),
   })
   .strict()
 
@@ -556,4 +589,12 @@ export const serviceReportSchema = z
 
 export const serviceAuditExportSchema = z
   .object({ storeId: z.string().trim().min(1).optional() })
+  .strict()
+
+export const assistantServiceJobCardSchema = z
+  .object({
+    sourceAnswerId: z.string().trim().min(1).max(160),
+    sourceMessageId: z.string().trim().min(1).max(160),
+    storeId: z.string().trim().min(1),
+  })
   .strict()

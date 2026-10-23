@@ -1,4 +1,6 @@
 "use client"
+import { captureMarketingClick } from "@/lib/marketing-interactions"
+import { useEvents } from "@ewatrade/events/client"
 import {
   PlatformProvider,
   PlatformSwitch,
@@ -7,7 +9,10 @@ import {
 import { useEffect, useState } from "react"
 import { preload } from "react-dom"
 import type { MarketingExperienceProps } from "../../marketing-experience-contract"
+import { AssistantFab } from "./assistant-fab"
+import { AssistantSection } from "./assistant-section"
 import { DayTimeline } from "./day-timeline"
+import { Features } from "./features"
 import { Header } from "./header"
 import { Hero } from "./hero"
 import { HowItStarts } from "./how-it-starts"
@@ -15,8 +20,10 @@ import { LaunchPricing } from "./pricing"
 import { Availability, Closing, Faq } from "./static-sections"
 import "@ewatrade/onboarding/styles/product-preview.css"
 import "../launch-v4.css"
+import "./assistant.css"
 function Landing({ signupEnabled }: MarketingExperienceProps) {
   const { platform } = usePlatform()
+  const { track } = useEvents()
   const [theme, setTheme] = useState<"light" | "dark">()
   const [systemDark, setSystemDark] = useState(false)
   useEffect(() => {
@@ -100,6 +107,7 @@ function Landing({ signupEnabled }: MarketingExperienceProps) {
       data-platform={platform}
       data-theme={theme}
       id="top"
+      onClickCapture={(event) => captureMarketingClick(track, event.target)}
     >
       <Header
         signupEnabled={signupEnabled}
@@ -110,6 +118,8 @@ function Landing({ signupEnabled }: MarketingExperienceProps) {
         <main id="main">
           <Hero signupEnabled={signupEnabled} />
           <div className="gg-paper">
+            <AssistantSection />
+            <Features />
             <HowItStarts />
             <DayTimeline />
             <Availability signupEnabled={signupEnabled} />
@@ -119,6 +129,7 @@ function Landing({ signupEnabled }: MarketingExperienceProps) {
         </main>
         <Closing signupEnabled={signupEnabled} />
       </div>
+      <AssistantFab signupEnabled={signupEnabled} dark={dark} />
       <div className={`b-float${floating ? " is-on" : ""}`} inert={!floating}>
         <span className="b-float-label">Showing</span>
         <PlatformSwitch />

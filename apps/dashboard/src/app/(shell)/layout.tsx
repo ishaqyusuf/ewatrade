@@ -8,7 +8,10 @@ import {
   canAccessDashboardPath,
   getDashboardNavigation,
 } from "@/lib/navigation"
-import { canUseSalesOperations } from "@/lib/sales-operations"
+import {
+  canManageSalesReports,
+  canUseSalesOperations,
+} from "@/lib/sales-operations"
 import { getServerSession } from "@/lib/session"
 import { getActiveTenant } from "@/lib/tenant"
 import { canManageTenant, normalizeRole } from "@ewatrade/auth/roles"
@@ -114,6 +117,8 @@ export default async function ShellLayout({
         >
           <GlobalSheetsProvider
             access={{
+              serviceJobs: canUseSalesOperations(ctx.membership.role),
+              manageServiceJobs: canManageSalesReports(ctx.membership.role),
               catalogReadAccessKey: catalogDetailAccessFingerprint({
                 membership: ctx.membership,
                 staffAccess: ctx.staffAccess,

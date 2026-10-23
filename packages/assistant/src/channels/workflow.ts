@@ -6,9 +6,11 @@ import {
   setupOpenQuestionSchema,
 } from "../setup/contracts"
 import { trustedAssistantAppOrigin } from "./conversation-links"
+import { chunkWhatsAppFormattedReply, whatsAppModelText } from "./presentation"
 import { chunkWhatsAppReply, whatsAppPlainText } from "./render"
 
-export const WHATSAPP_WORKFLOW_RENDER_VERSION = "whatsapp-workflow-v1"
+export const WHATSAPP_WORKFLOW_RENDER_VERSION = "whatsapp-workflow-v2"
+export const WHATSAPP_WORKFLOW_LEGACY_RENDER_VERSION = "whatsapp-workflow-v1"
 export const whatsAppWorkflowPurposeSchema = z.enum(["SETUP", "PRODUCT_CREATE"])
 export type WhatsAppWorkflowPurpose = z.infer<
   typeof whatsAppWorkflowPurposeSchema
@@ -75,7 +77,9 @@ export const whatsAppWorkflowReplySchema = z
   .strict()
 export type WhatsAppWorkflowReply = z.infer<typeof whatsAppWorkflowReplySchema>
 export type WhatsAppWorkflowRenderedReply = {
-  version: typeof WHATSAPP_WORKFLOW_RENDER_VERSION
+  version:
+    | typeof WHATSAPP_WORKFLOW_RENDER_VERSION
+    | typeof WHATSAPP_WORKFLOW_LEGACY_RENDER_VERSION
   kind: "reply" | "app_review"
   chunks: string[]
 }
@@ -215,10 +219,16 @@ export function renderWhatsAppWorkflowReply(
     currentScope: { tenantId: string; storeId: string }
     scopeLabel: string
     trustedAppOrigin: string
+    rendererVersion?:
+      | typeof WHATSAPP_WORKFLOW_RENDER_VERSION
+      | typeof WHATSAPP_WORKFLOW_LEGACY_RENDER_VERSION
   },
 ): WhatsAppWorkflowRenderedReply {
+  const version = options.rendererVersion ?? WHATSAPP_WORKFLOW_RENDER_VERSION
+  const legacy = version === WHATSAPP_WORKFLOW_LEGACY_RENDER_VERSION
+  const narrationText = legacy ? whatsAppPlainText : whatsAppModelText
   const fallback = (savedLink?: string): WhatsAppWorkflowRenderedReply => ({
-    version: WHATSAPP_WORKFLOW_RENDER_VERSION,
+    version,
     kind: "app_review",
     chunks: [
       `This workflow reply is unavailable. Open the original business and Store in EwaTrade to continue your saved draft. Nothing was confirmed in WhatsApp.${savedLink ? `\n\nOpen this saved workflow in EwaTrade:\n${savedLink}` : ""}`,
@@ -250,7 +260,7 @@ export function renderWhatsAppWorkflowReply(
     )
       return fallback(link)
     if (part.type === "text" && "text" in part && typeof part.text === "string")
-      narration.push(whatsAppPlainText(part.text))
+      narration.push(narrationText(part.text))
     else if (
       part.type !== "step-start" &&
       !(
@@ -314,12 +324,14 @@ export function renderWhatsAppWorkflowReply(
     link,
   )
   // Canonical draft facts must fit exactly. Refuse rather than truncate quantities, units or prices.
-  const plain = `${lines.slice(0, -1).map(whatsAppPlainText).join("\n\n")}\n\n${link}`
+  const plain = `${lines.slice(0, -1).map(narrationText).join("\n\n")}\n\n${link}`
   try {
     return {
-      version: WHATSAPP_WORKFLOW_RENDER_VERSION,
+      version,
       kind: "reply",
-      chunks: chunkWhatsAppReply(plain),
+      chunks: legacy
+        ? chunkWhatsAppReply(plain)
+        : chunkWhatsAppFormattedReply(plain, 3000),
     }
   } catch {
     return fallback(link)

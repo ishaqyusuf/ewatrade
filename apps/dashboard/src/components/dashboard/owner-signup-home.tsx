@@ -3,7 +3,10 @@
 import { OWNER_PLAN_LIMITS } from "@/components/owner-signup/model"
 import { useTRPC } from "@/trpc/client"
 import { Button, Skeleton, buttonVariants } from "@ewatrade/ui"
-import { buildInternalTenantHostname } from "@ewatrade/utils"
+import {
+  buildInternalTenantHostname,
+  getStorefrontDomain,
+} from "@ewatrade/utils"
 import {
   Copy01Icon,
   LinkSquare02Icon,
@@ -21,7 +24,6 @@ function storefrontUrl(slug: string) {
     tenantSlug: slug,
     surface: "storefront",
     platformDomain: process.env.NEXT_PUBLIC_PLATFORM_DOMAIN ?? "ewatrade.com",
-    localProjectSlug: slug,
   })
   return `https://${hostname}`
 }
@@ -64,6 +66,10 @@ function useStoreLinkShare() {
  * Overview: the online store link as a slim strip. Mounted only for the
  * current server-resolved Owner/Admin membership.
  */
+const storefrontDomain = getStorefrontDomain(
+  process.env.NEXT_PUBLIC_PLATFORM_DOMAIN ?? "ewatrade.com",
+)
+
 export function OnlineStoreStrip({
   tenant,
   hasCatalogItems,
@@ -276,7 +282,7 @@ export function OwnerBusinesses() {
               rel="noreferrer"
               className="break-all text-sm text-primary underline underline-offset-4"
             >
-              {business.slug}.ewatrade.com
+              {business.slug}.{storefrontDomain}
             </a>
             <Button
               variant="outline"
@@ -308,7 +314,7 @@ export function OwnerBusinesses() {
                 {business.name}
               </h3>
               <p className="break-all text-sm text-muted-foreground">
-                {business.slug}.ewatrade.com
+                {business.slug}.{storefrontDomain}
               </p>
               <p className="flex flex-wrap items-center gap-2 text-sm">
                 <span className="rounded-full bg-amber-500/15 px-2.5 py-0.5 text-xs font-medium text-amber-700 dark:text-amber-300">

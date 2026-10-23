@@ -38,3 +38,5 @@ packages/jobs/.trigger/
 # Expo CLI local state
 .expo/
 apps/wapi/.cache/
+# Downloaded stock photos for explicitly local QA storefront visual reviews.
+apps/storefront/.qa-storefront-photos/

@@ -1,4 +1,5 @@
 import { z } from "zod"
+import { collectedDetailsText } from "./collected-details"
 import { moneyInFactsFromText } from "./simple-money-in"
 export const simpleExpenseAction = z
   .object({
@@ -50,7 +51,8 @@ export function isSimpleExpenseIntent(text: string) {
     text,
   )
 }
-export function expenseFactsFromText(text: string): Partial<SimpleExpense> {
+export function expenseFactsFromText(input: string): Partial<SimpleExpense> {
+  const text = collectedDetailsText(input)
   const facts: Partial<SimpleExpense> = {}
   const amount = text.match(
     /(?:^|\b(?:spent|spend|paid|expense|expenses|cost|amount))(?:\s+(?:is|to))?\s*[:=]?\s*[₦N]?\s*((?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d{1,2})?(?:\s*(?:k|thousand|m|million))?)(?![\d.\p{L}]|,\d)/iu,
@@ -63,7 +65,7 @@ export function expenseFactsFromText(text: string): Partial<SimpleExpense> {
         /\b(?:on|for)\s+([\p{L}][\p{L}\p{N} .’'-]*?)(?=\s+(?:from|using|via|today|yesterday|on|paid|unpaid|to|category)\b|[,;.!?\n]|$)/iu,
       )?.[1]
       ?.trim() ??
-    text.match(/^(?:description|purpose)(?: is|:)?\s+(.+)$/i)?.[1]?.trim()
+    text.match(/^(?:description|purpose)(?: is|:)?\s+([^\n]+)$/im)?.[1]?.trim()
   if (description) facts.description = description
   const account =
     text
@@ -72,10 +74,10 @@ export function expenseFactsFromText(text: string): Partial<SimpleExpense> {
       )?.[1]
       ?.trim()
       .replace(/\s+account$/i, "") ??
-    text.match(/^account(?: is|:)?\s+(.+)$/i)?.[1]?.trim()
+    text.match(/^account(?: is|:)?\s+([^\n]+)$/im)?.[1]?.trim()
   if (account) facts.accountName = account
   if (
-    /\b(?:unpaid|not paid|haven't paid|have not paid|still owed|on credit)\b/i.test(
+    /\b(?:unpaid|not paid|haven't paid|have not paid|still owed|on credit)\b|^paid\s*:\s*(?:no|false)\b/im.test(
       text,
     )
   )
@@ -86,10 +88,10 @@ export function expenseFactsFromText(text: string): Partial<SimpleExpense> {
   )
     facts.paid = true
   const category = text
-    .match(/\bcategory(?: is|:)?\s+([^,;.!?\n]+)$/i)?.[1]
+    .match(/\bcategory(?: is|:)?\s+([^,;.!?\n]+)$/im)?.[1]
     ?.trim()
   if (category) facts.categoryName = category
-  const payee = text.match(/\bpayee(?: is|:)?\s+([^,;.!?\n]+)$/i)?.[1]?.trim()
+  const payee = text.match(/\bpayee(?: is|:)?\s+([^,;.!?\n]+)$/im)?.[1]?.trim()
   if (payee) facts.payeeName = payee
   const date = moneyInFactsFromText(text).effectiveAt
   if (date) facts.effectiveAt = date

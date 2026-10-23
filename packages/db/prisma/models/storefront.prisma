@@ -13,79 +13,45 @@ model Site {
   updatedAt         DateTime           @updatedAt
   tenant            Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   store             Store              @relation(fields: [storeId], references: [id], onDelete: Cascade)
-  pages             Page[]
   managedDomains    ManagedDomain[]
   domainConnections DomainConnection[]
+  /// The single editable draft; every write must match draftRevision (CAS).
+  draftComposition  Json?
+  draftRevision     Int                @default(0)
+  draftUpdatedById  String?
+  draftUpdatedAt    DateTime?
+  /// Authoritative live pointer; public reads use only this release.
+  activeReleaseId   String?            @unique
+  activeRelease     SiteRelease?       @relation("SiteActiveRelease", fields: [activeReleaseId], references: [id], onDelete: Restrict)
+  releases          SiteRelease[]      @relation("SiteReleases")
+  designRuns        SiteDesignRun[]
 
   @@unique([storeId, slug])
   @@unique([domain])
   @@index([tenantId, status])
 }
 
-model Page {
-  id             String        @id @default(cuid())
-  storeId        String
-  siteId         String
-  slug           String
-  title          String
-  status         PageStatus    @default(DRAFT)
-  isHomepage     Boolean       @default(false)
-  seoTitle       String?
-  seoDescription String?
-  publishedAt    DateTime?
-  createdAt      DateTime      @default(now())
-  updatedAt      DateTime      @updatedAt
-  store          Store         @relation(fields: [storeId], references: [id], onDelete: Cascade)
-  site           Site          @relation(fields: [siteId], references: [id], onDelete: Cascade)
-  sections       PageSection[]
-
-  @@unique([siteId, slug])
-  @@index([storeId, status])
-}
-
-model PageSection {
-  id        String   @id @default(cuid())
-  pageId    String
-  type      String
-  label     String?
-  sortOrder Int
-  config    Json?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  page      Page     @relation(fields: [pageId], references: [id], onDelete: Cascade)
-
-  @@unique([pageId, sortOrder])
-  @@index([pageId])
-}
-
-model Theme {
-  id          String     @id @default(cuid())
-  storeId     String
-  name        String
-  description String?
-  tokens      Json?
-  isActive    Boolean    @default(false)
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
-  store       Store      @relation(fields: [storeId], references: [id], onDelete: Cascade)
-  templates   Template[]
-
-  @@index([storeId, isActive])
-}
-
-model Template {
+/// Immutable frozen composition. Rows are never updated; rollback moves Site.activeReleaseId.
+model SiteRelease {
   id              String   @id @default(cuid())
+  tenantId        String
+  siteId          String
   storeId         String
-  themeId         String?
-  name            String
-  category        String?
-  previewImageUrl String?
-  definition      Json?
-  isDefault       Boolean  @default(false)
+  draftRevision   Int
+  contentHash     String
+  templateKey     String
+  templateVersion String
+  runtimeVersion  Int
+  composition     Json
+  idempotencyKey  String
+  /// Active release this publish replaced (null for first publication); immutable audit/replay base.
+  baseReleaseId   String?
+  createdById     String
   createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-  store           Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
-  theme           Theme?   @relation(fields: [themeId], references: [id], onDelete: SetNull)
+  site            Site     @relation("SiteReleases", fields: [siteId], references: [id], onDelete: Cascade)
+  activeFor       Site?    @relation("SiteActiveRelease")
 
-  @@index([storeId, category])
+  @@unique([siteId, idempotencyKey])
+  @@index([siteId, createdAt])
+  @@index([tenantId, storeId])
 }

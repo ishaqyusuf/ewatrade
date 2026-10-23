@@ -69,7 +69,7 @@ describe("Store Conversation WhatsApp recovery", () => {
         complete: async (input) => writes.push(input),
         provider: provider(async (input) => {
           expect(input.body).toBe(
-            "We couldn't safely match this message to one conversation. Continue securely on EwaTrade: https://chat.ewatrade.com/r/entry_private",
+            "💬 *EwaTrade*\n\nWe couldn't safely match this message to one conversation.\n\nContinue securely on EwaTrade:\nhttps://chat.ewatrade.com/r/entry_private",
           )
           expect(JSON.stringify(input)).not.toMatch(
             /prescription|quote|amount|conversation_\d|request_\d/i,

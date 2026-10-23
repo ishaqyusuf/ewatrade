@@ -6,6 +6,7 @@ import {
   type OpenAILanguageModelResponsesOptions,
   createOpenAI,
 } from "@ai-sdk/openai"
+import type { SharedV3ProviderOptions } from "@ai-sdk/provider"
 import type { LanguageModel } from "ai"
 import type { AssistantRuntimeConfiguration } from "./runtime-config"
 
@@ -28,7 +29,7 @@ export type AssistantLanguageModel = {
   model: LanguageModel
   provider: string
   modelId: string
-  providerOptions: Record<string, Record<string, unknown>>
+  providerOptions: SharedV3ProviderOptions
 }
 
 /** Client input never selects a provider, model, credential or endpoint. */

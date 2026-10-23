@@ -8,6 +8,11 @@ import {
   issueFinanceExpenseReceiptGrantInTransaction,
 } from "./expense-receipt-lifecycle"
 import type { FinanceExpenseReceiptScope } from "./expense-receipt-rules"
+import {
+  type FinanceExpenseReceiptThumbnail,
+  getFinanceExpenseReceiptThumbnailAuthorityInTransaction,
+  recordFinanceExpenseReceiptThumbnailInTransaction,
+} from "./expense-receipt-thumbnails"
 import { FinanceError } from "./rules"
 
 export { FinanceError } from "./rules"
@@ -111,4 +116,46 @@ export function createFinanceExpenseReceiptDeliveryRepository(
 
 export type ExpenseReceiptDeliveryRepository = ReturnType<
   typeof createFinanceExpenseReceiptDeliveryRepository
+>
+
+/** Thumbnail reads and records (ADR-0051): current authority, no grants. */
+export function createFinanceExpenseReceiptThumbnailRepository(
+  db: PrismaClient,
+  input: FinanceExpenseReceiptScope & { assetId: string },
+) {
+  const scope = {
+    tenantId: input.tenantId,
+    bookId: input.bookId,
+    billId: input.billId,
+    actorUserId: input.actorUserId,
+    assetId: input.assetId,
+  }
+  const bounds = { maxWait: 10_000, timeout: 30_000 }
+  return {
+    inspect: () =>
+      db.$transaction(
+        (tx) =>
+          getFinanceExpenseReceiptThumbnailAuthorityInTransaction(tx, scope),
+        bounds,
+      ),
+    record: (
+      originalDigest: string,
+      thumbnail: FinanceExpenseReceiptThumbnail,
+    ) => {
+      const held = structuredClone(thumbnail)
+      return db.$transaction(
+        (tx) =>
+          recordFinanceExpenseReceiptThumbnailInTransaction(tx, {
+            ...scope,
+            originalDigest,
+            thumbnail: held,
+          }),
+        bounds,
+      )
+    },
+  }
+}
+
+export type ExpenseReceiptThumbnailRepository = ReturnType<
+  typeof createFinanceExpenseReceiptThumbnailRepository
 >

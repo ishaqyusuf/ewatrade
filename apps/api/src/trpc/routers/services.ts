@@ -5,12 +5,15 @@ import {
   authorizeServiceJobLine,
   batchUpdateServiceJobs,
   captureServiceEvidence,
+  completeAssistantServiceJobCard,
+  completeServiceJob,
   confirmServiceIntake,
   countServiceWorkQueueStages,
   createAndConfirmServiceIntake,
   createAutomaticReadyNotificationIntent,
   createServiceIntakeDraft,
   createServiceRework,
+  getAssistantServiceJobCard,
   getServiceJob,
   getServiceStoreSettings,
   listServiceAssignees,
@@ -30,14 +33,17 @@ import { enqueueServiceNotificationIntent } from "@ewatrade/jobs"
 import { TRPCError } from "@trpc/server"
 
 import {
+  assistantServiceJobCardSchema,
   serviceBatchUpdateSchema,
   serviceEvidenceCaptureSchema,
   serviceEvidencePublishSchema,
   serviceEvidenceRevokeSchema,
   serviceEvidenceUploadSchema,
+  serviceIntakeCompleteSchema,
   serviceIntakeConfirmSchema,
   serviceIntakeCreateSchema,
   serviceJobAssignSchema,
+  serviceJobCompleteSchema,
   serviceJobExceptionSchema,
   serviceJobGetSchema,
   serviceJobHandoffSchema,
@@ -53,7 +59,9 @@ import {
   serviceWorkQueueSchema,
   serviceWorkStageCountsSchema,
 } from "../../schemas/services"
+import { scopeStaffRequest } from "../../utils/staff-request-access"
 import { createTRPCRouter, protectedProcedure } from "../init"
+import { assertCanUseCustomers } from "./customers"
 import {
   assertServiceManager,
   assertServiceOperator,
@@ -209,22 +217,75 @@ export const servicesRouter = createTRPCRouter({
       return result
     }),
 
-  createAndConfirmIntake: protectedProcedure
-    .input(serviceIntakeCreateSchema)
-    .mutation(async ({ ctx, input }) => {
-      assertServiceOperator(ctx.tenantContext.membership.role)
+  assistantJobCard: protectedProcedure
+    .input(assistantServiceJobCardSchema)
+    .query(({ ctx, input }) => {
+      assertServiceManager(ctx.tenantContext.membership.role)
       const storeId = resolveServiceStoreId(
         ctx.tenantContext.stores,
         ctx.tenantContext.activeStore,
         input.storeId,
       )
-      const result = await run(() =>
-        createAndConfirmServiceIntake(ctx.db, {
+      if (ctx.tenantContext.activeStore?.id !== storeId)
+        throw new TRPCError({
+          code: "PRECONDITION_FAILED",
+          message: "Select the original Store to view this job card.",
+        })
+      return run(() =>
+        getAssistantServiceJobCard(ctx.db, {
           actorUserId: ctx.session.user.id,
-          ...input,
-          storeId,
           tenantId: ctx.tenantContext.tenant.id,
+          storeId,
+          sourceAnswerId: input.sourceAnswerId,
+          sourceMessageId: input.sourceMessageId,
         }),
+      )
+    }),
+
+  createAndConfirmIntake: protectedProcedure
+    .input(serviceIntakeCompleteSchema)
+    .mutation(async ({ ctx, input }) => {
+      assertServiceOperator(ctx.tenantContext.membership.role)
+      if (input.saveNewCustomer || input.customerId)
+        assertCanUseCustomers(ctx.tenantContext.membership.role)
+      if (input.saveNewCustomer)
+        await scopeStaffRequest(ctx, "customers.create", "mutation", {
+          storeId: input.storeId,
+        })
+      if (input.customerId)
+        await scopeStaffRequest(ctx, "customers.getById", "query", {
+          storeId: input.storeId,
+        })
+      const storeId = resolveServiceStoreId(
+        ctx.tenantContext.stores,
+        ctx.tenantContext.activeStore,
+        input.storeId,
+      )
+      const { sourceAnswerId, sourceMessageId, ...nativeInput } = input
+      if (Boolean(sourceAnswerId) !== Boolean(sourceMessageId))
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "The original job card message is required.",
+        })
+      if (sourceAnswerId && ctx.tenantContext.activeStore?.id !== storeId)
+        throw new TRPCError({
+          code: "PRECONDITION_FAILED",
+          message: "Select the original Store to create this job.",
+        })
+      const command = {
+        actorUserId: ctx.session.user.id,
+        ...nativeInput,
+        storeId,
+        tenantId: ctx.tenantContext.tenant.id,
+      }
+      const result = await run(() =>
+        sourceAnswerId
+          ? completeAssistantServiceJobCard(ctx.db, {
+              ...command,
+              sourceAnswerId,
+              sourceMessageId: sourceMessageId ?? "",
+            })
+          : createAndConfirmServiceIntake(ctx.db, command),
       )
       for (const job of result.jobs) {
         for (const intent of job.notificationIntents) {
@@ -290,6 +351,24 @@ export const servicesRouter = createTRPCRouter({
       return run(() =>
         getServiceStoreSettings(ctx.db, {
           storeId,
+          tenantId: ctx.tenantContext.tenant.id,
+        }),
+      )
+    }),
+
+  completeJob: protectedProcedure
+    .input(serviceJobCompleteSchema)
+    .mutation(({ ctx, input }) => {
+      assertServiceOperator(ctx.tenantContext.membership.role)
+      const storeId = resolveServiceStoreId(
+        ctx.tenantContext.stores,
+        ctx.tenantContext.activeStore,
+      )
+      return run(() =>
+        completeServiceJob(ctx.db, {
+          ...input,
+          storeId,
+          actorUserId: ctx.session.user.id,
           tenantId: ctx.tenantContext.tenant.id,
         }),
       )

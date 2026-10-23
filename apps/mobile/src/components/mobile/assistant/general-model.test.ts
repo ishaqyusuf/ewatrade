@@ -1,5 +1,9 @@
 import { expect, test } from "bun:test"
 import {
+  generalTokenBudgetLine,
+  generalTokenBudgetUsed,
+} from "@ewatrade/assistant/general/allowance"
+import {
   generalAnswerRoute,
   generalAnswers,
   generalReceiptRoute,
@@ -38,6 +42,30 @@ const data = readGeneralSnapshot({
   currencyCode: "NGN",
 })
 if (!data) throw new Error("Invalid General snapshot fixture")
+test("allowance parsing retains token metadata and supports old installed-client snapshots", () => {
+  expect(readGeneralSnapshot(data)?.allowance.tokenLimit).toBeUndefined()
+  const snapshot = readGeneralSnapshot({
+    ...data,
+    allowance: {
+      remainingRequests: 0,
+      remainingTokens: 3_873_128,
+      repliesUnlimited: true,
+      requestLimit: null,
+      tokenLimit: 5_000_000,
+      resetsAt: "2026-11-01T00:00:00Z",
+    },
+  })
+  if (!snapshot) throw new Error("Invalid token allowance snapshot")
+  expect(snapshot.allowance.repliesUnlimited).toBe(true)
+  expect(snapshot.allowance.requestLimit).toBeNull()
+  expect(snapshot.allowance.remainingRequests).toBe(0)
+  expect(snapshot.allowance.tokenLimit).toBe(5_000_000)
+  expect(generalTokenBudgetUsed(snapshot.allowance)).toBe(false)
+  expect(generalTokenBudgetLine(snapshot.allowance)).toContain(
+    `${(3_873_128).toLocaleString()} of ${(5_000_000).toLocaleString()} tokens left`,
+  )
+  expect(generalSavedSnapshot(snapshot).allowance).toEqual(snapshot.allowance)
+})
 test("offline snapshot never persists approval tokens or active execution state", () => {
   const saved = generalSavedSnapshot(data)
   expect(JSON.stringify(saved)).not.toContain("secret")

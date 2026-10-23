@@ -36,6 +36,7 @@ import { serviceReportingRouter } from "./service-reporting"
 import { servicesRouter } from "./services"
 import { setupAssistantRouter } from "./setup-assistant"
 import { storeSubscriptionsRouter } from "./store-subscriptions"
+import { storefrontRouter } from "./storefront"
 import { storesRouter } from "./stores"
 import { tenantRouter } from "./tenant"
 
@@ -83,6 +84,7 @@ export const appRouter = createTRPCRouter({
   assistant: assistantRouter,
   tenant: tenantRouter,
   stores: storesRouter,
+  storefront: storefrontRouter,
 })
 
 export type AppRouter = typeof appRouter

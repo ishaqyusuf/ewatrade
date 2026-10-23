@@ -1,13 +1,16 @@
+import { randomUUID } from "node:crypto"
 import { notFound } from "next/navigation"
 
 import { prisma } from "@ewatrade/db"
-import {
-  CatalogError,
-  getStoreEntryServiceRequestForm,
-} from "@ewatrade/db/queries"
+import { getStoreEntryServiceRequestForm } from "@ewatrade/db/queries"
 import { formatMinorMoney } from "@ewatrade/utils"
 
+import { isPublicServiceUnavailable } from "@/lib/public-service-errors"
 import { publicServiceDisplayName } from "@/lib/service-display"
+import {
+  selectedRequestOffering,
+  serviceRequestFormHref,
+} from "@/lib/service-request-selection"
 
 import { submitStoreConversationServiceAction } from "./actions"
 
@@ -17,8 +20,10 @@ type Props = {
   params: Promise<{ token: string }>
   searchParams: Promise<{
     conversationId?: string
+    clientOperationId?: string
     error?: string
     messageId?: string
+    serviceOfferingId?: string
   }>
 }
 
@@ -31,7 +36,7 @@ async function loadForm(publicToken: string) {
   try {
     return await getStoreEntryServiceRequestForm(prisma, { publicToken })
   } catch (error) {
-    if (error instanceof CatalogError) notFound()
+    if (isPublicServiceUnavailable(error)) notFound()
     throw error
   }
 }
@@ -44,8 +49,15 @@ export default async function StoreConversationServicePage({
   const query = await searchParams
   const conversationId = opaqueId(query.conversationId)
   const messageId = opaqueId(query.messageId)
-  if (!conversationId || !messageId) notFound()
+  if (!conversationId) notFound()
+  const clientOperationId = opaqueId(query.clientOperationId) ?? randomUUID()
   const form = await loadForm(token)
+  const selectedOffering = selectedRequestOffering(
+    form.offerings,
+    query.serviceOfferingId,
+  )
+  if (query.serviceOfferingId && !selectedOffering) notFound()
+  const offerings = selectedOffering ? [selectedOffering] : form.offerings
   const error =
     query.error === "items"
       ? "Choose at least one service and enter a quantity."
@@ -69,10 +81,12 @@ export default async function StoreConversationServicePage({
             {form.store.name}
           </p>
           <h1 className="mt-2 text-3xl font-semibold tracking-tight">
-            {form.label}
+            {selectedOffering
+              ? `Request ${selectedOffering.catalogItemName}`
+              : form.label}
           </h1>
           <p className="mt-2 text-sm text-muted-foreground">
-            Choose the service for this message. The Store can clarify details
+            Choose your services and quantities. The Store can clarify details
             or send a Quote next.
           </p>
         </div>
@@ -92,10 +106,20 @@ export default async function StoreConversationServicePage({
         >
           <input name="publicToken" type="hidden" value={token} />
           <input name="conversationId" type="hidden" value={conversationId} />
-          <input name="messageId" type="hidden" value={messageId} />
+          <input name="messageId" type="hidden" value={messageId ?? ""} />
+          <input
+            name="serviceOfferingId"
+            type="hidden"
+            value={selectedOffering?.id ?? ""}
+          />
+          <input
+            name="clientOperationId"
+            type="hidden"
+            value={clientOperationId}
+          />
           <section className="grid border border-border">
             <h2 className="p-5 font-semibold">Services</h2>
-            {form.offerings.map((offering) => (
+            {offerings.map((offering) => (
               <div
                 className="grid gap-3 border-t border-border p-5 sm:grid-cols-[1fr_110px] sm:items-center"
                 key={offering.id}
@@ -124,15 +148,29 @@ export default async function StoreConversationServicePage({
                   ) : null}
                 </div>
                 <input
-                  aria-label={`${offering.catalogItemName} quantity`}
+                  aria-label={`${publicServiceDisplayName(offering.catalogItemName, offering.variantName, offering.name)} quantity`}
                   className="h-11 border border-border bg-background px-3 text-sm"
                   inputMode="decimal"
                   name={`quantity:${offering.id}`}
                   placeholder="Quantity"
+                  defaultValue={
+                    selectedOffering?.id === offering.id ? "1" : undefined
+                  }
                 />
               </div>
             ))}
           </section>
+          {selectedOffering ? (
+            <a
+              className="text-sm underline underline-offset-4"
+              href={serviceRequestFormHref({
+                publicToken: token,
+                conversationId,
+              })}
+            >
+              Choose another service
+            </a>
+          ) : null}
           <section className="grid gap-4 border border-border p-5">
             <h2 className="font-semibold">Contact details</h2>
             <input

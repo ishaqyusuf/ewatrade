@@ -1,5 +1,6 @@
 import {
   isCustomerChatRequestHost,
+  isLocalStorefrontPreviewHost,
   resolveCustomerChatOrigin,
   resolveTenantDomain,
 } from "@ewatrade/utils"
@@ -30,6 +31,8 @@ export function middleware(request: NextRequest) {
   if (isCustomerChatRequestHost(hostname, CUSTOMER_CHAT_ORIGIN)) {
     const response = NextResponse.next()
     response.headers.set("x-tenant-surface", "customer-chat")
+    response.headers.set("X-Robots-Tag", "noindex, nofollow")
+    response.headers.set("Cache-Control", "private, no-store")
     response.headers.set("Referrer-Policy", "no-referrer")
     return response
   }
@@ -41,11 +44,29 @@ export function middleware(request: NextRequest) {
   // Allow the request if it resolves to a tenant storefront
   if (result.kind === "tenant" && result.surface === "storefront") {
     const response = NextResponse.next()
+    if (
+      process.env.APP_ENV !== "production" ||
+      process.env.VERCEL_ENV === "preview" ||
+      !["/", "/about", "/share-image", "/robots.txt", "/sitemap.xml"].includes(
+        request.nextUrl.pathname,
+      )
+    )
+      response.headers.set("X-Robots-Tag", "noindex, nofollow")
+    // Pre-launch: each render rechecks release, plan and catalog; no stale shared pages.
+    response.headers.set("Cache-Control", "private, no-store")
+    if (request.nextUrl.pathname === "/service-request") {
+      response.headers.set("Referrer-Policy", "no-referrer")
+      response.headers.set("X-Robots-Tag", "noindex, nofollow")
+    }
 
     if (result.tenantSlug) {
       response.headers.set("x-tenant-slug", result.tenantSlug)
     }
     response.headers.set("x-tenant-surface", "storefront")
+    if (isLocalStorefrontPreviewHost(hostname, process.env)) {
+      response.headers.set("Cache-Control", "no-store")
+      response.headers.set("X-Robots-Tag", "noindex, nofollow")
+    }
     response.headers.set(
       "x-is-custom-domain",
       result.isCustomDomain ? "1" : "0",

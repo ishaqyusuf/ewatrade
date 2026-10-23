@@ -2,8 +2,10 @@ import { expect, test } from "bun:test"
 import {
   type WhatsAppControlMenu,
   parseWhatsAppControl,
+  parseWhatsAppControlButton,
   renderWhatsAppControl,
   serializeWhatsAppControlMenu,
+  whatsAppControlButtons,
   whatsAppControlContentSchema,
   whatsAppControlLabel,
 } from "./controls"
@@ -11,10 +13,14 @@ import {
 test("only explicit navigation commands bypass model input; amounts and ordinary work descriptions remain text", () => {
   for (const [text, kind] of [
     [" /HELP ", "help"],
+    ["Menu", "menu"],
+    ["Privacy", "privacy"],
+    ["Cancel", "cancel"],
     ["Switch business", "businesses"],
     ["Store", "stores"],
     ["New chat", "new"],
     ["Continue chat", "chats"],
+    ["Disconnect", "disconnect"],
   ] as const)
     expect(parseWhatsAppControl(text)?.kind).toBe(kind)
   for (const text of [
@@ -27,7 +33,6 @@ test("only explicit navigation commands bypass model input; amounts and ordinary
     "choose customer Amina",
     "Confirm",
     "Connect to EwaTrade: abc",
-    "Disconnect",
   ])
     expect(parseWhatsAppControl(text)).toBeNull()
   expect(parseWhatsAppControl("Choose 2", "provider-menu")).toEqual({
@@ -53,7 +58,7 @@ test("menu labels preserve whole emoji at their size bound and omit unsafe link/
 test("control authority serialization survives database JSON key ordering and action validation", () => {
   const proof = { grantId: "grant", grantGeneration: 1, storeId: "store" }
   const before: WhatsAppControlMenu = {
-    version: "whatsapp-control-v1",
+    version: "whatsapp-control-v2",
     identityGeneration: 1,
     selectionGeneration: 1,
     quotaScope: proof,
@@ -78,7 +83,7 @@ test("server menu rendering shows bounded choices without exposing scope identif
     storeId: "private-store-id",
   }
   const menu: WhatsAppControlMenu = {
-    version: "whatsapp-control-v1",
+    version: "whatsapp-control-v2",
     identityGeneration: 1,
     selectionGeneration: 2,
     quotaScope: proof,
@@ -94,7 +99,7 @@ test("server menu rendering shows bounded choices without exposing scope identif
   }
   const body = renderWhatsAppControl(menu)
   expect(body).toContain("1. Business [link omitted]")
-  expect(body).toContain("Reply to this message with Choose 1")
+  expect(body).toContain("reply to this message with Choose 1")
   expect(body).not.toContain("private-grant-id")
   expect(body).not.toContain("private-store-id")
   expect(body).not.toContain("https://")
@@ -114,10 +119,53 @@ test("server menu rendering shows bounded choices without exposing scope identif
   ).toThrow()
 })
 
+test("native control buttons retain exact saved menu and quoted provider context; unrelated or forged inputs grant nothing", () => {
+  const proof = { grantId: "grant", grantGeneration: 1, storeId: "store" }
+  const menu: WhatsAppControlMenu = {
+    version: "whatsapp-control-v2",
+    identityGeneration: 1,
+    selectionGeneration: 1,
+    quotaScope: proof,
+    scopes: [proof],
+    title: "Choose",
+    detail: "Your Stores",
+    choices: Array.from({ length: 5 }, (_, index) => ({
+      label: `Store ${index + 1}`,
+      action: { kind: "select_review" as const, ...proof },
+    })),
+  }
+  const buttons = whatsAppControlButtons(menu, "wa-control_saved-id")
+  expect(buttons).toHaveLength(3)
+  expect(buttons[0]).toEqual({
+    id: "wa-control:wa-control_saved-id:1",
+    title: "1. Store 1",
+  })
+  expect(
+    parseWhatsAppControlButton(buttons[0]?.id, "original-provider-id"),
+  ).toEqual({
+    kind: "choose",
+    menuId: "wa-control_saved-id",
+    index: 1,
+    replyToMessageId: "original-provider-id",
+  })
+  for (const token of [
+    buttons[0]?.id,
+    "wa-control:saved:0",
+    "wa-control:saved:6",
+    "wa-control:saved:1:extra",
+  ])
+    expect(parseWhatsAppControlButton(token)).toEqual({
+      kind: "invalid_choice",
+    })
+  expect(parseWhatsAppControlButton("other-control", "provider")).toBeNull()
+  expect(parseWhatsAppControl("YES", "provider")).toBeNull()
+  expect(renderWhatsAppControl(menu)).toContain("5. Store 5")
+})
+
 test("selected GENERAL chat link uses only trusted static app origin and saved exact scope", () => {
   const proof = { grantId: "grant", grantGeneration: 1, storeId: "store" }
   const menu: WhatsAppControlMenu = {
-    version: "whatsapp-control-v1",
+    version: "whatsapp-control-v2",
     identityGeneration: 1,
     selectionGeneration: 2,
     quotaScope: proof,

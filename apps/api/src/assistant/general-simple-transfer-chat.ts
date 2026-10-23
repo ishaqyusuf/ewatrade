@@ -1,3 +1,4 @@
+import { whatsAppDraftCollectionReply } from "@ewatrade/assistant/channels/collection"
 import {
   generalMoney,
   isSimpleTransferIntent,
@@ -214,8 +215,9 @@ export async function handleSimpleTransferChat(
   const prepared = simpleTransferAction.parse(result.payload)
   const next = simpleTransferStep(prepared)
   return {
-    text:
-      next === "amount"
+    text: isLinkedAssistantIdentity(ctx.session)
+      ? whatsAppDraftCollectionReply(prepared)
+      : next === "amount"
         ? "How much?"
         : next === "from"
           ? "Which account is it moving from?"

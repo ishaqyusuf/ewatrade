@@ -16,6 +16,7 @@ export const catalogItemParamParsers = {
   catalogCreateMode: parseAsStringEnum(["form", "chat"]),
   catalogCreateName: parseAsString,
   catalogCreatePrice: parseAsString,
+  catalogCreateWork: parseAsStringEnum(["tracked", "charge_only"]),
   catalogConversation: parseAsString,
   ...catalogFilterParams,
 }
@@ -31,6 +32,7 @@ export function useCatalogItemParams() {
       catalogCreateName?: string | null
       /** Starting price in minor units. */
       catalogCreatePrice?: string | null
+      catalogCreateWork?: "tracked" | "charge_only" | null
       catalogConversation?: string | null
       catalogKind?: (typeof CATALOG_KINDS)[number] | null
       catalogStatus?: (typeof CATALOG_STATUSES)[number] | null
@@ -45,6 +47,7 @@ export function useCatalogItemParams() {
         catalogCreateMode: null,
         catalogCreateName: null,
         catalogCreatePrice: null,
+        catalogCreateWork: null,
         catalogConversation: null,
       },
       { history: "push" },
@@ -57,6 +60,7 @@ export function useCatalogItemParams() {
     catalogCreateMode: params.catalogCreateMode,
     catalogCreateName: params.catalogCreateName,
     catalogCreatePrice: params.catalogCreatePrice,
+    catalogCreateWork: params.catalogCreateWork,
     catalogConversation: params.catalogConversation,
     catalogItemMode: params.catalogItem,
     catalogEditItemId: params.catalogEditItem,
@@ -82,6 +86,7 @@ export function useCatalogItemParams() {
               catalogCreateMode: null,
               catalogCreateName: null,
               catalogCreatePrice: null,
+              catalogCreateWork: null,
               catalogConversation: null,
             }
           : {}),

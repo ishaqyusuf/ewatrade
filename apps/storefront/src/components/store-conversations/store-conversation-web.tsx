@@ -1,9 +1,11 @@
 "use client"
 
+import { serviceRequestFormHref } from "@/lib/service-request-selection"
 import {
   projectStoreConversationWhatsAppAction,
   storeConversationWhatsAppObservedStatusLabel,
 } from "@ewatrade/service-commerce"
+import { useRouter } from "next/navigation"
 import { useCallback, useEffect, useState } from "react"
 import { OpenInAppButton } from "./open-in-app-button"
 import { StoreConversationAccountInvitation } from "./store-conversation-account-invitation"
@@ -39,12 +41,15 @@ export function StoreConversationWeb({
   initialResetGuest,
   publicToken,
   storeName,
+  serviceOfferingId,
 }: {
   entryAgeBand?: "AGE_13_TO_15" | "AGE_16_TO_17" | "ADULT"
   initialResetGuest?: boolean
   publicToken: string
   storeName: string
+  serviceOfferingId?: string
 }) {
+  const router = useRouter()
   const [attachmentMenuOpen, setAttachmentMenuOpen] = useState(false)
   const [reportMessageId, setReportMessageId] = useState<string | null>(null)
   const [guestTermsAllowed, setGuestTermsAllowed] = useState(false)
@@ -96,6 +101,26 @@ export function StoreConversationWeb({
     !state.conversation.customerBlocked &&
     ageAllowed &&
     (state.access === "account" ? accountTermsAllowed : guestTermsAllowed)
+  const serviceRequestHref =
+    state.kind === "ready"
+      ? serviceRequestFormHref({
+          publicToken,
+          conversationId: state.conversation.id,
+          offeringId: serviceOfferingId,
+        })
+      : null
+  const canOpenService =
+    state.kind === "ready" &&
+    state.availableRequestKinds.includes("service") &&
+    (state.access === "account" ? accountTermsAllowed : guestTermsAllowed) &&
+    state.channelMode.composerEnabled &&
+    !state.conversation.customerBlocked &&
+    state.conversation.moderation.state !== "restricted"
+  useEffect(() => {
+    if (serviceOfferingId && canOpenService && serviceRequestHref) {
+      router.replace(serviceRequestHref)
+    }
+  }, [serviceOfferingId, canOpenService, serviceRequestHref, router])
   const voiceCanRecord = Boolean(
     state.kind === "ready" &&
       state.conversation.state === "active" &&
@@ -392,6 +417,26 @@ export function StoreConversationWeb({
                 onAllowedChange={setAccountTermsAllowed}
               />
             )}
+            {state.availableRequestKinds.includes("service") ? (
+              <div className="mx-auto mb-3 max-w-3xl">
+                {canOpenService && serviceRequestHref ? (
+                  <a
+                    className="inline-flex min-h-11 items-center rounded-full border border-border px-5 text-sm font-medium"
+                    href={serviceRequestHref}
+                  >
+                    Request a service
+                  </a>
+                ) : (
+                  <button
+                    className="min-h-11 rounded-full border border-border px-5 text-sm opacity-50"
+                    disabled
+                    type="button"
+                  >
+                    Request a service
+                  </button>
+                )}
+              </div>
+            ) : null}
             {state.conversation.customerBlocked ? (
               <aside
                 aria-live="polite"

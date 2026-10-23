@@ -18,48 +18,59 @@ import {
   resolveStoreConversationGuestCredential,
 } from "./store-conversations-core"
 import { attachStoreConversationTypedRequestInTransaction } from "./store-conversations-requests"
+import type { DbClient } from "./types"
 
 export async function getStoreEntryServiceRequestForm(
   db: PrismaClient,
   input: { publicToken: string },
 ) {
-  return db.$transaction(async (tx) => {
-    const entry = await resolveCustomerEntryPointContextInTransaction(tx, input)
-    if (!entry.requestKinds.includes("service")) {
-      throw new CatalogError(
-        "PUBLIC_TOKEN_INVALID",
-        "Service requests are unavailable for this Store.",
-      )
-    }
-    const now = new Date()
-    const form = await tx.serviceRequestForm.findFirst({
-      include: publicServiceRequestFormInclude,
-      orderBy: { createdAt: "desc" },
-      where: {
-        AND: [
-          { OR: [{ activeFrom: null }, { activeFrom: { lte: now } }] },
-          { OR: [{ expiresAt: null }, { expiresAt: { gt: now } }] },
-        ],
-        offerings: { some: {} },
-        status: ServiceRequestFormStatus.ACTIVE,
-        storeId: entry.storeId,
-        tenantId: entry.tenantId,
-      },
-    })
-    if (!form) {
-      throw new CatalogError(
-        "PUBLIC_TOKEN_INVALID",
-        "Service requests are unavailable for this Store.",
-      )
-    }
-    return {
-      ...projectPublicServiceRequestForm(form),
-      entryPointId: entry.entryPointId,
-      entryPointRevision: entry.entryPointRevision,
+  return db.$transaction((tx) =>
+    getStoreEntryServiceRequestFormInTransaction(tx, input),
+  )
+}
+
+export async function getStoreEntryServiceRequestFormInTransaction(
+  tx: DbClient,
+  input: { publicToken: string; requireComposerEnabled?: boolean },
+) {
+  const entry = await resolveCustomerEntryPointContextInTransaction(tx, input)
+  if (
+    !entry.requestKinds.includes("service") ||
+    (input.requireComposerEnabled && !entry.channelMode.composerEnabled)
+  ) {
+    throw new CatalogError(
+      "PUBLIC_TOKEN_INVALID",
+      "Service requests are unavailable for this Store.",
+    )
+  }
+  const now = new Date()
+  const form = await tx.serviceRequestForm.findFirst({
+    include: publicServiceRequestFormInclude,
+    orderBy: { createdAt: "desc" },
+    where: {
+      AND: [
+        { OR: [{ activeFrom: null }, { activeFrom: { lte: now } }] },
+        { OR: [{ expiresAt: null }, { expiresAt: { gt: now } }] },
+      ],
+      offerings: { some: {} },
+      status: ServiceRequestFormStatus.ACTIVE,
       storeId: entry.storeId,
       tenantId: entry.tenantId,
-    }
+    },
   })
+  if (!form) {
+    throw new CatalogError(
+      "PUBLIC_TOKEN_INVALID",
+      "Service requests are unavailable for this Store.",
+    )
+  }
+  return {
+    ...projectPublicServiceRequestForm(form),
+    entryPointId: entry.entryPointId,
+    entryPointRevision: entry.entryPointRevision,
+    storeId: entry.storeId,
+    tenantId: entry.tenantId,
+  }
 }
 
 export async function submitStoreConversationServiceRequest(

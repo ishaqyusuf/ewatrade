@@ -1,0 +1,148 @@
+.sr-page {
+  min-height: 100vh;
+  background: var(--background);
+  color: var(--foreground);
+  font-family: "Manrope", var(--font-sans), sans-serif;
+  font-size: 15px;
+  line-height: 1.5;
+}
+.sr-wrap {
+  max-width: 1120px;
+  margin-inline: auto;
+  padding-inline: 20px;
+}
+.sr-top {
+  border-bottom: 1px solid var(--border);
+}
+.sr-top-in {
+  min-height: 64px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+.sr-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  font-weight: 600;
+  text-decoration: none;
+}
+.sr-mark {
+  display: grid;
+  place-items: center;
+  background: var(--foreground);
+  color: var(--background);
+  width: 30px;
+  height: 30px;
+  flex-shrink: 0;
+  font-size: 12px;
+}
+.sr-small {
+  color: var(--muted-foreground);
+  font-size: 12px;
+}
+.sr-main {
+  max-width: 680px;
+  padding-block: 32px;
+}
+.sr-main h1 {
+  font-size: clamp(30px, 4vw, 38px);
+  font-weight: 600;
+  letter-spacing: -.035em;
+  line-height: 1.12;
+  margin-block: 20px 12px;
+}
+.sr-lede {
+  color: var(--muted-foreground);
+  max-width: 54ch;
+  margin-bottom: 28px;
+}
+.sr-back {
+  display: inline-flex;
+  align-items: center;
+  min-height: 40px;
+  font-size: 13px;
+  text-decoration: none;
+}
+.sr-section {
+  border-top: 1px solid var(--border);
+  padding-block: 24px;
+  margin: 0;
+  min-width: 0;
+}
+.sr-section h2 {
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 20px;
+}
+.sr-field-error,
+.sr-error {
+  color: var(--destructive);
+}
+.sr-error {
+  padding-block: 16px;
+}
+.sr-field-error,
+.sr-help {
+  font-size: 13px;
+}
+.sr-help {
+  margin-block: 20px;
+  color: var(--muted-foreground);
+}
+.sr-request-line + .sr-request-line {
+  margin-top: 24px;
+  padding-top: 24px;
+  border-top: 1px solid var(--border);
+}
+.sr-facts {
+  margin: 0;
+}
+.sr-facts > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+  padding-block: 8px;
+  font-size: 14px;
+}
+.sr-facts dt {
+  color: var(--muted-foreground);
+}
+.sr-facts dd {
+  margin: 0;
+  text-align: right;
+  max-width: 65%;
+  overflow-wrap: anywhere;
+}
+.sr-total dd {
+  font-weight: 600;
+}
+.sr-footer {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  border-top: 1px solid var(--border);
+  padding-block: 24px;
+  color: var(--muted-foreground);
+  font-size: 13px;
+}
+.sr-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-block: 24px;
+}
+.sr-note p {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.sr-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+}

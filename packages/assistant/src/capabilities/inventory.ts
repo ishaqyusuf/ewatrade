@@ -50,6 +50,11 @@ formOnly(
 )
 formOnly(
   "platform",
+  "Owner/Admin Store contact settings require explicit form review and current saved contact fields; no assistant configuration mutation or message send.",
+  ["stores.contact", "stores.updateContact"],
+)
+formOnly(
+  "platform",
   "Subscription purchase and verification use the billing checkout.",
   [
     "retailOps.subscription",
@@ -61,6 +66,11 @@ formOnly(
   "platform",
   "Domain purchase and DNS use registrar checkout and verification.",
   ["domains.*"],
+)
+formOnly(
+  "platform",
+  "Storefront preview/edit/cancel/publish/rollback use the studio. Only the registered dashboard design read/generate/accept capabilities use shared commands and explicit confirmation.",
+  ["storefront.*"],
 )
 
 // Catalog
@@ -131,8 +141,8 @@ formOnly("catalog", "Photo capture and upload belong to the product form.", [
 ])
 formOnly(
   "catalog",
-  "Whole-item editor payload from the catalog sheet; assistant edits use the narrow price, details, identifier and availability capabilities.",
-  ["catalog.updateItem"],
+  "Explicit native Catalog sheet/menu commands; assistant model tools cannot invoke these writes. Assistant edits use the narrow price, details, identifier and availability capabilities.",
+  ["catalog.updateItem", "catalog.addServiceChoice"],
 )
 
 // Customers
@@ -201,6 +211,11 @@ formOnly("inventory", "Bulk file export; download it from the page.", [
 ])
 
 // Services
+formOnly(
+  "services",
+  "Native Assistant card completion receipt; no model creation or channel grant.",
+  ["services.assistantJobCard"],
+)
 planned("services", "D04", ["services.*Intake*"])
 planned("services", "D05", ["services.*"])
 planned("services", "G05", ["services.*Settings"])
@@ -278,6 +293,11 @@ planned("staff", "S01", ["retailOps.staff"])
 planned("staff", "S02", ["retailOps.inviteStaff"])
 
 // Service commerce, communications and regulated workflows
+formOnly(
+  "commerce",
+  "Dashboard manager-reviewed staff quote cart. No assistant write or channel activation is added; existing canonical quote authority and customer acceptance remain required.",
+  ["serviceAccess.createStaffQuote"],
+)
 planned("commerce", "G03", ["serviceAssistantBookings.availability"])
 planned("commerce", "G03", [
   "serviceAccess.*",
@@ -386,4 +406,10 @@ formOnly(
   "platform",
   "Owner signup and storefront preview are explicit forms; no assistant setup, plan selection or public publishing authority.",
   ["tenant.ownerSignupSummary", "tenant.storefrontPreview"],
+)
+
+formOnly(
+  "services",
+  "Native work completion independently of payment; no model-executable command or WhatsApp/mobile rollout added.",
+  ["services.completeJob"],
 )

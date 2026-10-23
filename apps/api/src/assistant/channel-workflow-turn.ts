@@ -440,6 +440,6 @@ export async function createChannelWorkflowTurn(
       activeRuns,
     },
     parsed.data,
-    { purpose: linked.purpose, signal },
+    { purpose: linked.purpose, signal, channel: "whatsapp" },
   )
 }

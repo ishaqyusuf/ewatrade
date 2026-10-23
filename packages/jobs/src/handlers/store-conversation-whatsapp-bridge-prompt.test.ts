@@ -189,7 +189,9 @@ describe("Store Conversation WhatsApp bridge prompt", () => {
       fail: async () => undefined,
       issueClaimToken: () => "claim_2",
       provider: provider(async (input) => {
-        expect(input.body).toBe("Choose the type of request you want to start.")
+        expect(input.body).toBe(
+          "💬 *EwaTrade*\n\nChoose the type of request you want to start.",
+        )
         expect(input.buttons).toEqual([
           { id: "intent:product", title: "Product request" },
         ])

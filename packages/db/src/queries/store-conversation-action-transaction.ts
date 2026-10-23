@@ -1,4 +1,5 @@
 import { Prisma, type PrismaClient } from "../../generated/prisma/client"
+import { isPrismaTransactionWriteConflict } from "../utils/prisma-transaction-conflict"
 import { CUSTOMER_ACTION_TRANSACTION_OPTIONS } from "./service-commerce-actions/shared"
 import { StoreConversationError } from "./store-conversations-core"
 
@@ -11,8 +12,9 @@ function objectProperty(value: unknown, property: string) {
 export function isRetryableStoreConversationActionTransactionError(
   error: unknown,
 ) {
+  if (isPrismaTransactionWriteConflict(error)) return true
   if (!(error instanceof Prisma.PrismaClientKnownRequestError)) return false
-  if (error.code === "P2002" || error.code === "P2034") return true
+  if (error.code === "P2002") return true
   if (error.code !== "P2010") return false
 
   const metadataCode = objectProperty(error.meta, "code")
@@ -31,11 +33,15 @@ export async function runStoreConversationActionTransaction<Result>(
   execute: (tx: Prisma.TransactionClient) => Promise<Result>,
 ) {
   try {
-    return await db.$transaction(execute, CUSTOMER_ACTION_TRANSACTION_OPTIONS)
+    return await db.$transaction(execute, {
+      ...CUSTOMER_ACTION_TRANSACTION_OPTIONS,
+    })
   } catch (error) {
     if (!isRetryableStoreConversationActionTransactionError(error)) throw error
     try {
-      return await db.$transaction(execute, CUSTOMER_ACTION_TRANSACTION_OPTIONS)
+      return await db.$transaction(execute, {
+        ...CUSTOMER_ACTION_TRANSACTION_OPTIONS,
+      })
     } catch (retryError) {
       if (isRetryableStoreConversationActionTransactionError(retryError)) {
         throw new StoreConversationError(

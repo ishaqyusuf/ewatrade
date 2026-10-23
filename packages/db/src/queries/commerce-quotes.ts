@@ -31,6 +31,7 @@ import {
   ServiceRequestStatus,
   StoreConversationRequestKind,
 } from "../../generated/prisma/enums"
+import { isPrismaTransactionWriteConflict } from "../utils/prisma-transaction-conflict"
 import {
   getCatalogOfferingAvailability,
   getConfiguredCatalogOfferingAvailability,
@@ -109,11 +110,11 @@ async function runCommerceQuoteDecisionTransaction<T>(
 ) {
   for (let attempt = 0; attempt < 2; attempt += 1) {
     try {
-      return await db.$transaction(callback, COMMERCE_QUOTE_TRANSACTION_OPTIONS)
+      return await db.$transaction(callback, {
+        ...COMMERCE_QUOTE_TRANSACTION_OPTIONS,
+      })
     } catch (error) {
-      const retryable =
-        error instanceof Prisma.PrismaClientKnownRequestError &&
-        error.code === "P2034"
+      const retryable = isPrismaTransactionWriteConflict(error)
       if (retryable && attempt === 0) continue
       if (retryable) {
         throw new CommerceQuoteError(

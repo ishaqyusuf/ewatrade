@@ -1,0 +1,207 @@
+{
+  "version": 1,
+  "id": "2026-10-23-assistant-laundry-job-drafts",
+  "tickets": ["H01", "H02", "D04"],
+  "summary": "Prepare one Dashboard laundry job card through saved garment/treatment and customer reads, asking only missing prices. Native Create menu lists separate Service first, or explicitly saves one priced choice under an existing Service without a form; saved choice resolves the same card/native intake. No model Catalog write or signed intake activation. Durable same-card Created/Open job receipt after native completion; all-status/date-sorted Services, colored progress controls separate from Actions, canonical overview history. Owner correction: native work completion is independent of payment; late collection remains Actions.",
+  "capabilities": [
+    {
+      "id": "services.job.prepare",
+      "change": "added",
+      "rollout": "source",
+      "note": "Dashboard read/form handoff only under current service manager and canonical catalog/customer authority. Emits no intermediate read cards, at most one final card per turn. No business writes or WhatsApp/mobile exposure."
+    },
+    {
+      "id": "catalog.page",
+      "change": "unchanged",
+      "rollout": "source",
+      "note": "An empty first named all-status catalog search may show a form-only add card; bounded/filtered/continuation pages cannot establish absence. The existing source read and canonical create permissions remain unchanged."
+    },
+    {
+      "id": "services.intake.create",
+      "change": "unchanged",
+      "rollout": "planned",
+      "note": "Original signed GENERAL service_intake remains planned and unaccepted. This feature uses the normal native form for final confirmation."
+    }
+  ],
+  "procedures": [
+    {
+      "path": "catalog.listItemsPage",
+      "status": "supported",
+      "reason": "Existing protected saved garment/variant/offering search reused for preparation and missing-item recheck."
+    },
+    {
+      "path": "customers.listPage",
+      "status": "supported",
+      "reason": "Existing protected exact-name resolution; multiple matches require clarification, no mandatory phone for a genuinely new name."
+    },
+    {
+      "path": "services.createAndConfirmIntake",
+      "status": "supported",
+      "reason": "Signed assistant execution remains planned. Normal native form completion gains optional customer selection or reviewed directory creation under canonical customer role/scoped policy, within the owning intake transaction. Form navigation is not an assistant write or acceptance promotion. Optional original message/answer binding saves Created receipt in the same canonical transaction and deterministically replays the same saved intake."
+    },
+    {
+      "path": "catalog.addServiceChoice",
+      "status": "form_only",
+      "reason": "Explicit native Create-menu selection only. Existing Catalog management/scoped policy and exact origin/current Store fence; locked fresh parent item composes canonical update, adds only stated combination/price, reuses equivalent duplicates and refuses conflicts. No model write tool."
+    },
+    {
+      "path": "catalog.updateItem",
+      "status": "form_only",
+      "reason": "Existing native whole-item Catalog command reused inside addServiceChoice under a fresh item lock. Existing manual editor behavior and model execution ceiling remain unchanged."
+    },
+    {
+      "path": "services.assistantJobCard",
+      "status": "form_only",
+      "reason": "Exact owned GENERAL message/answer and current Store read receipt. Native replay is deterministic and canonical; no model create or WhatsApp grant."
+    },
+    {
+      "path": "services.queuePage",
+      "status": "supported",
+      "reason": "Existing services.queue.read source read; adds all/cancelled filtering and explicit Dashboard creation-date sorting without changing omitted inputs or write rollout."
+    },
+    {
+      "path": "services.getJob",
+      "status": "planned",
+      "reason": "Existing native protected Job read now projects recorded allowlisted work history. Existing planned assistant access classification retained; no model/channel activation."
+    },
+    {
+      "path": "services.transitionLine",
+      "status": "supported",
+      "reason": "Native Status and cancellation actions reuse canonical revision-guarded line transitions. Signed assistant services.work.transition remains planned; no rollout or authorization change."
+    },
+    {
+      "path": "services.handoff",
+      "status": "supported",
+      "reason": "Existing customer handoff remains separate from new native work completion. Existing settlement/readiness/revision and allocation checks retained; prior completedAt preserved. Signed assistant services.work.handoff remains planned."
+    },
+    {
+      "path": "services.completeJob",
+      "status": "form_only",
+      "reason": "New explicit native work completion under existing operator/current Store, canonical locks/revision/ready authorization and exact allocation fulfillment. Preserves paid/unpaid state and customer collection fields; no model/WhatsApp/mobile write rollout."
+    }
+  ],
+  "docs": [
+    {
+      "topic": "feature",
+      "status": "local_only",
+      "path": ".brain/features/assistant-laundry-job-drafts.md",
+      "note": "7/7 local delivery, direct parent-choice correction,50 focused tests/236 assertions and actual save/reload/native-form evidence."
+    },
+    {
+      "topic": "feature",
+      "status": "local_only",
+      "path": ".brain/features/generic-service-operations.md",
+      "note": "Native form handoff and optional directory customer completion."
+    },
+    {
+      "topic": "api",
+      "status": "local_only",
+      "path": ".brain/api/contracts.md",
+      "note": "Complete-only optional customerId/saveNewCustomer, original two-step inputs unchanged."
+    },
+    {
+      "topic": "permissions",
+      "status": "local_only",
+      "path": ".brain/api/permissions.md",
+      "note": "Fresh source read scope and canonical customer policy, without scoped grant expansion."
+    },
+    {
+      "topic": "capability",
+      "status": "updated",
+      "path": "packages/assistant/src/capabilities/COVERAGE.md",
+      "note": "Regenerated H01 source coverage."
+    },
+    {
+      "topic": "decision",
+      "status": "local_only",
+      "path": ".brain/decisions/2026-10-23-assistant-service-job-form-handoff.md",
+      "note": "One read-only preparation card into existing native confirmation."
+    },
+    {
+      "topic": "feature",
+      "status": "local_only",
+      "path": ".brain/qa/2026-10-23-service-unpaid-completion.md",
+      "note": "Independent completion and deferred payment3/3 local delivery; no schema/provider/release changes."
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "test",
+      "path": "packages/assistant/src/general/service-job-draft.test.ts",
+      "executed": true,
+      "result": "Mixed saved prices, missing socks only, split quantities, stated new price, no saved-price override, ambiguity and exact currency checks pass."
+    },
+    {
+      "kind": "test",
+      "path": "packages/assistant/src/general/catalog-create-handoff.test.ts",
+      "executed": true,
+      "result": "Exhaustive absence versus filtered/continuation/variant matches, exact origin, strict prefill and malformed saved metadata checks pass."
+    },
+    {
+      "kind": "test",
+      "path": "packages/db/src/queries/service-intake-customer.test.ts",
+      "executed": true,
+      "result": "3 tests/12 assertions: name-only canonical transaction creation, reuse/ambiguity refusal, tenant-bound existing identity and no implicit directory write."
+    },
+    {
+      "kind": "test",
+      "path": "packages/db/src/queries/service-intake-read-refinements.test.ts",
+      "executed": true,
+      "result": "7 tests/29 assertions including unchanged canonical results/refusals and confirmed-intake replay with no second customer operation."
+    },
+    {
+      "kind": "test",
+      "path": "apps/api/src/assistant/general-service-job-access.test.ts",
+      "executed": true,
+      "result": "Dashboard owner sees the preparer; mobile receives no new preparation tool. Existing signed intake rollout remains unchanged."
+    },
+    {
+      "kind": "test",
+      "path": "apps/dashboard/src/components/general-assistant/general-service-job-card.fixture.tsx",
+      "executed": true,
+      "result": "Single final multi-line/new-customer/missing-service review and fresh exact-scope form handoff pass in an isolated runtime."
+    },
+    {
+      "kind": "review",
+      "path": ".brain/features/assistant-laundry-job-drafts.md",
+      "executed": true,
+      "result": "Actual FreshCare Jalabia20 \u2192 one8000NGN card and native form. Mixed40/5/5/5 \u2192 only missing socks price, then one9750NGN card. Owner price100NGN; Create \u2192 Laundry saves Socks under existing parent, updates same card without form/message, retains3 Services/18 active Laundry choices/7 archived originals. Reopen reconciles; native form all4 saved IDs and Paid later/Don\u2019t send verified. No final job/customer/payment submission or deployment. Compiler retains unrelated budget/provider/Finance errors."
+    },
+    {
+      "kind": "test",
+      "path": "packages/db/src/queries/catalog-service-choice.test.ts",
+      "executed": true,
+      "result": "5 tests: exact one-choice append, existing prices/policies/sparse matrix preserved, duplicate/archived/Store conflicts and foreign-record refusal; no invented treatment price."
+    },
+    {
+      "kind": "test",
+      "path": "apps/dashboard/src/components/general-assistant/create-service-choice.fixture.tsx",
+      "executed": true,
+      "result": "3 mounted cases: separate-Service-first order, direct parent save/no form, same-card callback/cache invalidation, reload no write, changed-scope refusal and separate form-only handoff."
+    },
+    {
+      "kind": "test",
+      "path": "packages/db/src/queries/assistant-service-job-card.test.ts",
+      "executed": true,
+      "result": "4 tests cover exact message/answer locking, receipt/replay, actor/Tenant/Store refusal, canonical failure and guarded exact existing-job link. Current focused aggregate53tests/286assertions pass, including status/history/handoff checks."
+    },
+    {
+      "kind": "review",
+      "path": ".brain/qa/2026-10-23-service-status-and-created-card.md",
+      "executed": true,
+      "result": "Actual local Created/Open job survives reload, opens ORD006, all8Jobs newest-first, colored selected statuses/filter, separate Actions and activity. Completed opens canonical readiness/payment review; no status/payment submitted. WhatsApp laundry remains pending; no release."
+    },
+    {
+      "kind": "test",
+      "path": "packages/db/src/queries/service-commerce-lock-order.test.ts",
+      "executed": true,
+      "result": "Independent completion preserves paid0/400/1000, balance, event/collection distinction and replay; split/canonical refusal/later handoff timestamp checks. Current focused aggregate47tests/223assertions passes."
+    },
+    {
+      "kind": "review",
+      "path": ".brain/qa/2026-10-23-service-unpaid-completion.md",
+      "executed": true,
+      "result": "Actual ready unpaid ORD008 review shows enabled Complete job, balance600 and no payment input. No saved job/payment mutation; original ORD006 overview restored. Completed-unpaid Actions/payment-helper fixture verifies late settlement."
+    }
+  ]
+}

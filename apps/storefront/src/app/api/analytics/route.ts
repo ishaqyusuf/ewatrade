@@ -1,1 +1,2 @@
-export { POST } from "@ewatrade/events/route"
+import { storefrontAnalytics } from "@/lib/storefront-analytics"
+export const POST = storefrontAnalytics.POST

@@ -1,4 +1,5 @@
 import { z } from "zod"
+import { collectedDetailsText } from "./collected-details"
 import { saleFactsFromText } from "./simple-sale"
 export const simpleMoneyInAction = z
   .object({
@@ -43,7 +44,8 @@ export function isSimpleMoneyInIntent(text: string) {
     /\b(?:owner contribution|owner funds|capital contribution)\b/i.test(text)
   )
 }
-export function moneyInFactsFromText(text: string): Partial<SimpleMoneyIn> {
+export function moneyInFactsFromText(input: string): Partial<SimpleMoneyIn> {
+  const text = collectedDetailsText(input)
   const facts: Partial<SimpleMoneyIn> = {}
   const amount = text.match(
     /(?:^|\b(?:put|drop|add|deposit|amount|contribution|received|money))(?:\s+(?:is|to))?\s*[:=]?\s*[₦N]?\s*((?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d{1,2})?(?:\s*(?:k|thousand|m|million))?)(?![\d.\p{L}]|,\d)/iu,
@@ -58,7 +60,7 @@ export function moneyInFactsFromText(text: string): Partial<SimpleMoneyIn> {
       ?.trim()
       .replace(/\s+account$/i, "") ??
     text
-      .match(/^account(?: is|:)?\s+([\p{L}][\p{L}\p{N} .’'-]*)$/iu)?.[1]
+      .match(/^account(?: is|:)?\s+([\p{L}][\p{L}\p{N} .’'-]*)$/imu)?.[1]
       ?.trim()
   if (name) facts.accountName = name
   const note = text.match(/\b(?:description|note)\s*:\s*([^\n]+)/i)?.[1]?.trim()

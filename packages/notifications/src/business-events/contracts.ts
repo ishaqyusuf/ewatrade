@@ -76,6 +76,7 @@ export const businessEventTypes = [
   "communication.manual_message_recorded",
   "communication.delivery_changed",
   "settings.store_changed",
+  "settings.storefront_changed",
   "settings.business_changed",
   "settings.team_policy_changed",
   "settings.channel_changed",

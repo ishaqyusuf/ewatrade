@@ -51,7 +51,7 @@ function fixture() {
   }
   return { deps, outcomes, sends }
 }
-test("delivery uses only admitted saved body/recipient and returns metadata", async () => {
+test("delivery formats admitted legacy content without changing recipient, callback or effect ledger", async () => {
   const { deps, outcomes, sends } = fixture()
   expect(await processAssistantChannelDelivery("out", deps)).toEqual({
     status: "sent",
@@ -61,7 +61,7 @@ test("delivery uses only admitted saved body/recipient and returns metadata", as
       accessToken: "synthetic",
       phoneNumberId: "123456789",
       to: "2348000000001",
-      body: "Business · Store\n\nExact saved reply",
+      body: "📋 *Business · Store*\n\nExact saved reply",
       callbackData: "ewa-wa-v1:00000000-0000-4000-8000-000000000000",
     },
   ])
@@ -95,7 +95,7 @@ test("review buttons use the same admitted body, callback and effect ledger", as
       accessToken: "synthetic",
       phoneNumberId: "123456789",
       to: "2348000000001",
-      body: "Business · Store\n\nExact saved reply",
+      body: "📋 *Business · Store*\n\nExact saved reply",
       callbackData: "ewa-wa-v1:00000000-0000-4000-8000-000000000000",
       buttons,
     },

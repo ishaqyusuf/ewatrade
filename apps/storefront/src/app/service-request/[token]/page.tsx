@@ -1,8 +1,9 @@
 import { prisma } from "@ewatrade/db"
-import { CatalogError, getPublicServiceRequestForm } from "@ewatrade/db/queries"
+import { getPublicServiceRequestForm } from "@ewatrade/db/queries"
 import { notFound, redirect } from "next/navigation"
 
 import { findPublishedEntryForLegacyServiceForm } from "@/lib/legacy-service-intake"
+import { isPublicServiceUnavailable } from "@/lib/public-service-errors"
 
 export const dynamic = "force-dynamic"
 
@@ -16,7 +17,7 @@ export default async function Page({ params }: Props) {
   try {
     form = await getPublicServiceRequestForm(prisma, { formToken: token })
   } catch (error) {
-    if (error instanceof CatalogError) notFound()
+    if (isPublicServiceUnavailable(error)) notFound()
     throw error
   }
   const entry = await findPublishedEntryForLegacyServiceForm(

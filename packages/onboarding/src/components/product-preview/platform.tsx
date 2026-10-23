@@ -54,6 +54,7 @@ export function PlatformSwitch({
           key={value}
           type="button"
           aria-pressed={selected === value}
+          data-preview-platform={value}
           onClick={() => pick(value)}
           onKeyDown={(event) => {
             if (
@@ -76,10 +77,11 @@ export function PlatformSwitch({
                   : value === "web"
                     ? "mobile"
                     : "web"
-            pick(next)
             const buttons =
               event.currentTarget.parentElement?.querySelectorAll("button")
-            buttons?.[next === "web" ? 0 : 1]?.focus()
+            const button = buttons?.[next === "web" ? 0 : 1]
+            button?.focus()
+            button?.click()
           }}
         >
           <span>{value === "web" ? "Web" : "Mobile"}</span>

@@ -94,6 +94,16 @@ test("stock, reconciliation and business catalog grants are distinct", () => {
     "reconciliation",
   )
   expect(staffProcedureAction("catalog.createItem", "mutation")).toBe("catalog")
+  expect(staffProcedureAction("catalog.addServiceChoice", "mutation")).toBe(
+    "catalog",
+  )
+  expect(staffProcedureAction("catalog.addServiceChoice", "query")).toBeNull()
+  expect(staffProcedureAction("services.assistantJobCard", "query")).toBe(
+    "read",
+  )
+  expect(
+    staffProcedureAction("services.assistantJobCard", "mutation"),
+  ).toBeNull()
   expect(staffProcedureAction("orders.listPage", "query")).toBe("read")
 })
 

@@ -3,6 +3,7 @@ import { getMarketingUrl } from "@ewatrade/onboarding/lib/signup-navigation"
 import { isQaAcceleratorClientMode } from "@ewatrade/utils/qa-accelerator"
 import { getQaPolicyEnvironment } from "@ewatrade/utils/qa-policy-server"
 import type { Metadata } from "next"
+import { headers } from "next/headers"
 import "@ewatrade/onboarding/styles/signup.css"
 
 export const metadata: Metadata = {
@@ -14,7 +15,9 @@ export default async function SignupLayout({
   children,
 }: { children: React.ReactNode }) {
   const marketingUrl = getMarketingUrl()
+  const embeddedChat = (await headers()).get("x-pathname") === "/signup/chat"
   const qaEnabled =
+    !embeddedChat &&
     (await getQaPolicyEnvironment()).QA_ACCELERATOR_ENABLED === "true" &&
     isQaAcceleratorClientMode(process.env.APP_ENV ?? process.env.NODE_ENV)
   const flow = (

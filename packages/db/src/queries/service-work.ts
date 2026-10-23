@@ -62,6 +62,7 @@ import {
   cancelOutstandingDueReminders,
   replaceDueReminder,
 } from "./service-due-reminders"
+import { resolveServiceIntakeCustomer } from "./service-intake-customer"
 import { calculateServiceChargeMinor } from "./service-settings"
 import {
   DEFAULT_SERVICE_WORK_QUEUE_ID_DIRECTION,
@@ -80,6 +81,7 @@ export type CreateServiceIntakeInput = {
   clientIntakeId: string
   conditionNote?: string
   customerId?: string
+  saveNewCustomer?: boolean
   customerEmail?: string
   customerName?: string
   customerPhone?: string
@@ -233,6 +235,7 @@ function serializeJob(job: JobGraph) {
       reason: assignment.reason,
     })),
     commercialOrderId: job.commercialOrderId,
+    completedAt: job.completedAt,
     currencyCode: job.commercialOrder.currencyCode,
     amountPaidMinor,
     balanceDueMinor: Math.max(
@@ -251,6 +254,16 @@ function serializeJob(job: JobGraph) {
       promisedAt: commitment.promisedAt,
       reason: commitment.reason,
       supersededAt: commitment.supersededAt,
+    })),
+    events: job.events.map((event) => ({
+      id: event.id,
+      type: event.type,
+      lineId: event.serviceJobLineId,
+      fromStatus: event.fromStatus,
+      toStatus: event.toStatus,
+      reason: event.reason,
+      effectiveAt: event.effectiveAt,
+      createdAt: event.createdAt,
     })),
     evidence: job.evidence.map((evidence) => ({
       capturedAt: evidence.capturedAt,
@@ -947,12 +960,16 @@ export async function createAndConfirmServiceIntakeInTransaction(
   input: CreateServiceIntakeInput,
 ) {
   const draft = await createServiceIntakeDraftInTransaction(tx, input)
+  const customerId =
+    draft.status === ServiceIntakeStatus.CONFIRMED
+      ? input.customerId
+      : await resolveServiceIntakeCustomer(tx, input)
   return confirmPersistedServiceIntakeInTransaction(
     tx,
     {
       actorUserId: input.actorUserId,
       intakeId: draft.id,
-      customerId: input.customerId,
+      customerId,
       schemaVersion: input.schemaVersion,
       tenantId: input.tenantId,
     },
@@ -2107,9 +2124,15 @@ const UNFINISHED = [
  * ready = ready for hand-over, done = completed (handed over).
  */
 export function serviceWorkStageLines(
-  stage: ServiceWorkStage,
+  stage: ServiceWorkStage | "all" | "cancelled",
 ): Prisma.ServiceJobWhereInput {
   switch (stage) {
+    case "all":
+      return {}
+    case "cancelled":
+      return {
+        lines: { some: {}, every: { status: ServiceJobLineStatus.CANCELLED } },
+      }
     case "todo":
       return {
         AND: [
@@ -2304,7 +2327,9 @@ function serviceWorkQueryMatches(
 }
 
 function serviceWorkQueueWhere(
-  input: ServiceWorkQueueFilter & { stage?: ServiceWorkStage },
+  input: ServiceWorkQueueFilter & {
+    stage?: ServiceWorkStage | "all" | "cancelled"
+  },
 ): Prisma.ServiceJobWhereInput {
   const now = new Date()
   const endOfToday = new Date(now)
@@ -2351,7 +2376,7 @@ export async function listServiceWorkQueuePage(
     priority?: "normal" | "urgent"
     query?: string
     sort?: { direction: "asc" | "desc"; field: "createdAt" | "priority" }
-    stage?: ServiceWorkStage
+    stage?: ServiceWorkStage | "all" | "cancelled"
     storeId?: string
     tenantId: string
   },
@@ -2579,14 +2604,26 @@ export function assertServiceHandoffReady(
   }
 }
 
-export async function recordServiceHandoffInTransaction(
+export type CompleteServiceJobInput = Omit<
+  RecordServiceHandoffInput,
+  "payment"
+> & { storeId: string }
+
+/** Shared locked fulfillment path; completing work never records collection or payment. */
+async function finishServiceJobInTransaction(
   tx: Prisma.TransactionClient,
-  input: RecordServiceHandoffInput,
+  input: RecordServiceHandoffInput & { storeId?: string },
+  operation: "complete" | "handoff",
   onEvent?: ServiceWorkEventReceiptObserver,
 ) {
+  const isHandoff = operation === "handoff"
   const discoveredJob = await tx.serviceJob.findFirst({
     select: { commercialOrderId: true, id: true, storeId: true },
-    where: { id: input.jobId, tenantId: input.tenantId },
+    where: {
+      id: input.jobId,
+      tenantId: input.tenantId,
+      ...(input.storeId ? { storeId: input.storeId } : {}),
+    },
   })
   if (!discoveredJob) {
     throw new CatalogError("SERVICE_JOB_NOT_FOUND", "Service Job not found.")
@@ -2631,7 +2668,9 @@ export async function recordServiceHandoffInTransaction(
       "Service Job Order linkage changed. Reload the Service Job before retrying.",
     )
   }
-  if (job.handedOffAt) {
+  if (!isHandoff && derivedJobSummary(job.lines) === "completed")
+    return serializeJob(job)
+  if (isHandoff && job.handedOffAt) {
     const original = job.events.filter(
       (event) => event.type === ServiceWorkEventType.REMOTE_HANDOFF,
     )
@@ -2641,48 +2680,60 @@ export async function recordServiceHandoffInTransaction(
   if (!isCommercialOrderFulfillmentAllowed(financialOrder.order.status))
     throw new CatalogError(
       "INVALID_ORDER",
-      "This Order cannot be handed over in its current state.",
+      isHandoff
+        ? "This Order cannot be handed over in its current state."
+        : "This Order cannot be completed in its current state.",
     )
   if (job.revision !== input.expectedRevision) {
     throw new CatalogError(
       "REVISION_CONFLICT",
-      "Service Job changed before customer collection.",
+      isHandoff
+        ? "Service Job changed before customer collection."
+        : "Service Job changed. Reload before completing the work.",
     )
   }
   assertServiceHandoffReady(job.lines)
-  if (input.payment) {
-    await recordCommercialOrderPaymentInTransaction(tx, {
-      actorUserId: input.actorUserId,
-      amountMinor: input.payment.amountMinor,
-      clientPaymentId: `${input.clientCommandId}:collection-payment`,
-      method: input.payment.method,
-      orderId: job.commercialOrderId,
-      reference: input.payment.reference,
-      tenantId: input.tenantId,
+  let paymentStatus = financialOrder.order.paymentStatus
+  if (isHandoff) {
+    if (input.payment) {
+      await recordCommercialOrderPaymentInTransaction(tx, {
+        actorUserId: input.actorUserId,
+        amountMinor: input.payment.amountMinor,
+        clientPaymentId: `${input.clientCommandId}:collection-payment`,
+        method: input.payment.method,
+        orderId: job.commercialOrderId,
+        reference: input.payment.reference,
+        tenantId: input.tenantId,
+      })
+    }
+    const settledOrder = await tx.commercialOrder.findUniqueOrThrow({
+      include: { payments: { select: { id: true } } },
+      where: { id: job.commercialOrderId },
     })
+    paymentStatus = settledOrder.paymentStatus
+    const settledAmountPaidMinor = effectiveCommercialAmountPaid({
+      amountPaidMinor: settledOrder.amountPaidMinor,
+      paymentCount: settledOrder.payments.length,
+      paymentStatus: settledOrder.paymentStatus,
+      totalMinor: settledOrder.totalMinor,
+    })
+    if (settledAmountPaidMinor < settledOrder.totalMinor) {
+      throw new CatalogError(
+        "INVALID_ORDER",
+        "Collect the outstanding balance before handing over this order.",
+      )
+    }
   }
-  const settledOrder = await tx.commercialOrder.findUniqueOrThrow({
-    include: { payments: { select: { id: true } } },
-    where: { id: job.commercialOrderId },
-  })
-  const settledAmountPaidMinor = effectiveCommercialAmountPaid({
-    amountPaidMinor: settledOrder.amountPaidMinor,
-    paymentCount: settledOrder.payments.length,
-    paymentStatus: settledOrder.paymentStatus,
-    totalMinor: settledOrder.totalMinor,
-  })
-  if (settledAmountPaidMinor < settledOrder.totalMinor) {
-    throw new CatalogError(
-      "INVALID_ORDER",
-      "Collect the outstanding balance before handing over this order.",
-    )
-  }
-  const handedOffAt = new Date()
+  const finishedAt = new Date()
+  const reason =
+    input.note?.trim() ||
+    (isHandoff ? "Collected by customer" : "Service work completed")
+  const source = isHandoff ? "customer_handoff" : "work_completion"
   for (const line of job.lines) {
     if (line.status !== ServiceJobLineStatus.READY_FOR_HANDOFF) continue
     await tx.serviceJobLine.update({
       data: {
-        completedAt: handedOffAt,
+        completedAt: finishedAt,
         revision: { increment: 1 },
         status: ServiceJobLineStatus.COMPLETED,
       },
@@ -2693,10 +2744,10 @@ export async function recordServiceHandoffInTransaction(
         actorUserId: input.actorUserId,
         clientCommandId: `${input.clientCommandId}:line:${line.id}`,
         fromStatus: line.status,
-        reason: input.note?.trim() || "Collected by customer",
+        reason,
         serviceJobId: job.id,
         serviceJobLineId: line.id,
-        source: "customer_handoff",
+        source,
         tenantId: input.tenantId,
         toStatus: ServiceJobLineStatus.COMPLETED,
         type: ServiceWorkEventType.STATUS_CHANGED,
@@ -2707,21 +2758,32 @@ export async function recordServiceHandoffInTransaction(
     data: {
       actorUserId: input.actorUserId,
       clientCommandId: input.clientCommandId,
-      payload: json({ paymentStatus: settledOrder.paymentStatus }),
-      reason: input.note?.trim() || "Collected by customer",
+      ...(isHandoff
+        ? { payload: json({ paymentStatus }) }
+        : {
+            fromStatus: ServiceJobLineStatus.READY_FOR_HANDOFF,
+            toStatus: ServiceJobLineStatus.COMPLETED,
+          }),
+      reason,
       serviceJobId: job.id,
-      source: "customer_handoff",
+      source,
       tenantId: input.tenantId,
-      type: ServiceWorkEventType.REMOTE_HANDOFF,
+      type: isHandoff
+        ? ServiceWorkEventType.REMOTE_HANDOFF
+        : ServiceWorkEventType.STATUS_CHANGED,
     },
   })
   onEvent?.(event)
   await tx.serviceJob.update({
     data: {
-      completedAt: handedOffAt,
-      handedOffAt,
-      handedOffByUserId: input.actorUserId,
-      handoffNote: input.note?.trim() || null,
+      completedAt: job.completedAt ?? finishedAt,
+      ...(isHandoff
+        ? {
+            handedOffAt: finishedAt,
+            handedOffByUserId: input.actorUserId,
+            handoffNote: input.note?.trim() || null,
+          }
+        : {}),
       revision: { increment: 1 },
     },
     where: { id: job.id },
@@ -2734,7 +2796,7 @@ export async function recordServiceHandoffInTransaction(
   await tx.commercialOrder.update({
     data: {
       completedAt: orderComplete
-        ? (financialOrder.order.completedAt ?? handedOffAt)
+        ? (financialOrder.order.completedAt ?? finishedAt)
         : undefined,
       status: orderComplete ? OrderStatus.COMPLETED : OrderStatus.FULFILLING,
     },
@@ -2745,6 +2807,30 @@ export async function recordServiceHandoffInTransaction(
     await loadJob(tx, { jobId: job.id, tenantId: input.tenantId }),
   )
 }
+export function recordServiceHandoffInTransaction(
+  tx: Prisma.TransactionClient,
+  input: RecordServiceHandoffInput,
+  onEvent?: ServiceWorkEventReceiptObserver,
+) {
+  return finishServiceJobInTransaction(tx, input, "handoff", onEvent)
+}
+
+export function completeServiceJobInTransaction(
+  tx: Prisma.TransactionClient,
+  input: CompleteServiceJobInput,
+) {
+  return finishServiceJobInTransaction(tx, input, "complete")
+}
+
+export function completeServiceJob(
+  db: PrismaClient,
+  input: CompleteServiceJobInput,
+) {
+  return runInOwnTransaction(db, (tx) =>
+    completeServiceJobInTransaction(tx, input),
+  )
+}
+
 export async function recordServiceHandoff(
   db: PrismaClient,
   input: RecordServiceHandoffInput,

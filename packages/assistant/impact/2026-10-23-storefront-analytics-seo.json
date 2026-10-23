@@ -1,0 +1,49 @@
+{
+  "version": 1,
+  "id": "2026-10-23-storefront-analytics-seo",
+  "tickets": ["H01", "H02"],
+  "summary": "Owner-requested local storefront analytics, backlinks, sitemap/robots, crawlable item links and SEO metadata. No new merchant procedure, assistant tool, publication or rollout.",
+  "noAssistantImpact": "Anonymous public telemetry and search discovery are deliberately excluded from model tools. Verified Host/live release/plan/QA authority remains server-derived. Existing storefront design commands and form-only publication are unchanged. No new protected business API, model write, entitlement, credential control or analytics reporting capability.",
+  "capabilities": [],
+  "procedures": [],
+  "docs": [
+    {
+      "topic": "feature",
+      "status": "local_only",
+      "path": ".brain/features/storefront-analytics-seo.md",
+      "note": "Local scope, completed checklist, exact public URL policy, telemetry privacy and deployment limits."
+    },
+    {
+      "topic": "api",
+      "status": "local_only",
+      "path": ".brain/api/contracts.md",
+      "note": "Public context/ingest and sitemap/robots contracts."
+    },
+    {
+      "topic": "permissions",
+      "status": "local_only",
+      "path": ".brain/api/permissions.md",
+      "note": "Verified host/public release, QA exclusion and deliberately absent assistant authority."
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "test",
+      "path": "packages/events/src/storefront.test.ts",
+      "executed": true,
+      "result": "Injected collector verifies exact gates/origins, safe merchant HMACs, separate browser storage and denial; no live provider."
+    },
+    {
+      "kind": "test",
+      "path": "packages/storefront-runtime/src/seo.test.ts",
+      "executed": true,
+      "result": "Canonical/structured data/public pagination/QA exclusion and native modified-click semantics verified offline."
+    },
+    {
+      "kind": "test",
+      "path": "packages/storefront-templates/src/discovery.test.tsx",
+      "executed": true,
+      "result": "All qualified registered template versions render actual public item anchors and branded footer backlinks via SSR."
+    }
+  ]
+}

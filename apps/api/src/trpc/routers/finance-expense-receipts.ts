@@ -1,3 +1,4 @@
+import { createFinanceExpenseReceiptThumbnailRepository } from "@ewatrade/db/finance-expense-receipt-delivery"
 import {
   attachFinanceExpenseReceipt,
   createFinanceExpenseReceipt,
@@ -5,6 +6,8 @@ import {
   listFinanceExpenseReceipts,
   withdrawFinanceExpenseReceipt,
 } from "@ewatrade/db/queries"
+import { financeExpenseReceiptDeliveryStorage } from "../../finance/expense-receipt-delivery-context"
+import { makeFinanceExpenseReceiptThumbnail } from "../../finance/expense-receipt-thumbnail-workflow"
 import {
   financeExpenseReceiptAssetSchema,
   financeExpenseReceiptAttachSchema,
@@ -17,9 +20,27 @@ import { createTRPCRouter } from "../init"
 export const financeExpenseReceiptsRouter = createTRPCRouter({
   attach: financeProcedure
     .input(financeExpenseReceiptAttachSchema)
-    .mutation(({ ctx, input }) =>
-      attachFinanceExpenseReceipt(ctx.db, { ...input, ...ctx.financeActor }),
-    ),
+    .mutation(async ({ ctx, input }) => {
+      const attached = await attachFinanceExpenseReceipt(ctx.db, {
+        ...input,
+        ...ctx.financeActor,
+      })
+      // ADR-0051: make the private thumbnail now, best effort and bounded. No
+      // bytes leave here; the thumbnail route re-checks the live session.
+      await makeFinanceExpenseReceiptThumbnail({
+        repository: createFinanceExpenseReceiptThumbnailRepository(ctx.db, {
+          tenantId: ctx.financeActor.tenantId,
+          actorUserId: ctx.financeActor.actorUserId,
+          bookId: input.bookId,
+          billId: input.billId,
+          assetId: input.assetId,
+        }),
+        checkSession: async () => {},
+        storage: financeExpenseReceiptDeliveryStorage,
+        signal: AbortSignal.timeout(20_000),
+      })
+      return attached
+    }),
   withdraw: financeProcedure
     .input(financeExpenseReceiptAttachSchema)
     .mutation(({ ctx, input }) =>

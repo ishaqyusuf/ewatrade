@@ -18,14 +18,15 @@ function PopoverContent({
   sideOffset = 4,
   anchor,
   appearance = "default",
+  keepMounted = false,
   ...props
 }: PopoverPrimitive.Popup.Props &
   Pick<
     PopoverPrimitive.Positioner.Props,
     "align" | "alignOffset" | "side" | "sideOffset" | "anchor"
-  > & { appearance?: "default" | "dashboard" }) {
+  > & { appearance?: "default" | "dashboard"; keepMounted?: boolean }) {
   return (
-    <PopoverPrimitive.Portal>
+    <PopoverPrimitive.Portal keepMounted={keepMounted}>
       <PopoverPrimitive.Positioner
         anchor={anchor}
         align={align}

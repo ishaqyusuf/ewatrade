@@ -6,9 +6,16 @@ import {
   randomBytes,
   timingSafeEqual,
 } from "node:crypto"
+import { presentWhatsAppMessage } from "@ewatrade/assistant/channels/presentation"
 import { type RedisClientType, createClient } from "redis"
 
 import { SERVICE_COMMERCE_CUSTOMER_ACTION_TEMPLATE_KEY } from "./service-commerce-action-capability"
+import {
+  type WhatsAppFlowResponse,
+  type WhatsAppFlowSendInput,
+  parseWhatsAppFlowResponse,
+  whatsAppFlowMessage,
+} from "./whatsapp-flows"
 import { type WhatsAppMediaRequest, fetchWhatsAppMedia } from "./whatsapp-media"
 
 const META_GRAPH_URL = "https://graph.facebook.com/v21.0"
@@ -22,6 +29,7 @@ export type WhatsAppCredentials = {
 export type NormalizedWhatsAppMessageEvent = {
   externalCustomerId: string
   kind: "message"
+  flowResponse?: WhatsAppFlowResponse
   media?: {
     id: string
     mediaType: string
@@ -63,6 +71,9 @@ export type WhatsAppButton = { id: string; title: string }
 
 export interface WhatsAppProvider {
   readonly key: string
+  sendFlow?(
+    input: WhatsAppCredentials & WhatsAppFlowSendInput,
+  ): Promise<{ messageId: string }>
   discover(input: { accessToken: string }): Promise<
     Array<{
       businessDisplayName?: string
@@ -252,6 +263,19 @@ export class DirectMetaWhatsAppProvider implements WhatsAppProvider {
     })
   }
 
+  sendFlow(input: WhatsAppCredentials & WhatsAppFlowSendInput) {
+    let body: Record<string, unknown>
+    try {
+      body = whatsAppFlowMessage(input)
+    } catch {
+      throw new WhatsAppProviderSendError(
+        "PROVIDER_REJECTED",
+        "DEFINITE_FAILURE",
+      )
+    }
+    return this.#send(input, body)
+  }
+
   sendButtons(
     input: WhatsAppCredentials & {
       callbackData?: string
@@ -326,7 +350,10 @@ export class DirectMetaWhatsAppProvider implements WhatsAppProvider {
       ? Boolean(
           await this.sendText({
             ...input,
-            body: "EwaTrade connection test. No customer information is included.",
+            body: presentWhatsAppMessage(
+              "EwaTrade connection test.\n\nNo customer information is included.",
+              { family: "notice" },
+            ),
             to: input.testRecipient,
           }),
         )
@@ -515,6 +542,15 @@ export function parseMetaWhatsAppEvents(value: unknown) {
           typeof interactive.button_reply === "object"
             ? (interactive.button_reply as Record<string, unknown>)
             : {}
+        const nativeFlow =
+          interactive.type === "nfm_reply" ||
+          interactive.nfm_reply !== undefined
+        const flowReply =
+          nativeFlow &&
+          interactive.nfm_reply &&
+          typeof interactive.nfm_reply === "object"
+            ? (interactive.nfm_reply as Record<string, unknown>)
+            : {}
         const replyContext =
           item.context && typeof item.context === "object"
             ? (item.context as Record<string, unknown>)
@@ -547,6 +583,13 @@ export function parseMetaWhatsAppEvents(value: unknown) {
         events.push({
           externalCustomerId: String(item.from ?? ""),
           kind: "message",
+          ...(nativeFlow
+            ? {
+                flowResponse: parseWhatsAppFlowResponse(
+                  flowReply.response_json,
+                ),
+              }
+            : {}),
           media: validMedia
             ? {
                 id: String(validMedia.id),
@@ -566,13 +609,16 @@ export function parseMetaWhatsAppEvents(value: unknown) {
             : undefined,
           messageId: String(item.id ?? ""),
           phoneNumberId,
-          quickActionId: String(button.id ?? list.id ?? "") || undefined,
+          quickActionId: nativeFlow
+            ? undefined
+            : String(button.id ?? list.id ?? "") || undefined,
           replyToMessageId: String(replyContext.id ?? "") || undefined,
-          text:
-            text ??
-            (validMedia?.caption !== undefined
-              ? String(validMedia.caption)
-              : undefined),
+          text: nativeFlow
+            ? undefined
+            : (text ??
+              (validMedia?.caption !== undefined
+                ? String(validMedia.caption)
+                : undefined)),
           timestamp: String(item.timestamp ?? "") || undefined,
           type:
             type === "text"

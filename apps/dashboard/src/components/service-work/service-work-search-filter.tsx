@@ -4,6 +4,7 @@ import { SearchFilter } from "@/components/search-filter"
 import {
   SERVICE_DUE_FILTERS,
   SERVICE_PRIORITY_FILTERS,
+  SERVICE_STAGE_FILTERS,
 } from "@/hooks/use-service-work-filter-params"
 import { useServiceWorkParams } from "@/hooks/use-service-work-params"
 import { useTRPC } from "@/trpc/client"
@@ -15,6 +16,7 @@ import {
   DropdownMenuSubTrigger,
 } from "@ewatrade/ui"
 import { useQuery } from "@tanstack/react-query"
+import { ServiceStatusSquare } from "./service-status"
 
 const dueLabels = {
   all: "Any time",
@@ -24,6 +26,28 @@ const dueLabels = {
 const priorityLabels = {
   normal: "Not urgent",
   urgent: "Urgent",
+} as const
+
+const stageLabels = {
+  all: "All statuses",
+  open: "Open",
+  todo: "Not started",
+  doing: "In progress",
+  stuck: "Stuck",
+  ready: "Ready for customer",
+  done: "Completed",
+  cancelled: "Cancelled",
+} as const
+
+const stageColors = {
+  all: "all",
+  open: "open",
+  todo: "queued",
+  doing: "in_progress",
+  stuck: "blocked",
+  ready: "ready_for_handoff",
+  done: "completed",
+  cancelled: "cancelled",
 } as const
 
 export function ServiceWorkSearchFilter({
@@ -38,6 +62,15 @@ export function ServiceWorkSearchFilter({
     enabled: canManage,
   })
   const chips = [
+    ...(filter.stage && filter.stage !== "all"
+      ? [
+          {
+            id: "stage",
+            label: stageLabels[filter.stage],
+            onRemove: () => void setFilter({ stage: null }),
+          },
+        ]
+      : []),
     ...(filter.priority
       ? [
           {
@@ -73,6 +106,14 @@ export function ServiceWorkSearchFilter({
       mobileFilters={{
         groups: [
           {
+            id: "stage",
+            label: "Status",
+            allLabel: "All statuses",
+            options: SERVICE_STAGE_FILTERS.filter(
+              (value) => value !== "all",
+            ).map((value) => ({ value, label: stageLabels[value] })),
+          },
+          {
             id: "priority",
             label: "Urgent",
             allLabel: "Any",
@@ -107,12 +148,17 @@ export function ServiceWorkSearchFilter({
             : []),
         ],
         values: {
+          stage: filter.stage && filter.stage !== "all" ? [filter.stage] : [],
           priority: filter.priority ? [filter.priority] : [],
           due: filter.due && filter.due !== "all" ? [filter.due] : [],
           assignee: filter.assigneeUserId ? [filter.assigneeUserId] : [],
         },
         onApply: (draft) =>
           setFilter({
+            stage:
+              SERVICE_STAGE_FILTERS.find(
+                (value) => value === draft.stage?.[0],
+              ) ?? null,
             priority:
               SERVICE_PRIORITY_FILTERS.find(
                 (value) => value === draft.priority?.[0],
@@ -132,6 +178,29 @@ export function ServiceWorkSearchFilter({
       filters={chips}
     >
       <DropdownMenuGroup>
+        <DropdownMenuSub>
+          <DropdownMenuSubTrigger>Status</DropdownMenuSubTrigger>
+          <DropdownMenuSubContent
+            appearance="dashboard"
+            className="min-w-40 max-w-[calc(100vw-32px)] rounded-none bg-popover p-0 shadow-md before:hidden"
+          >
+            {SERVICE_STAGE_FILTERS.map((stage) => (
+              <DropdownMenuCheckboxItem
+                key={stage}
+                checked={(filter.stage ?? "all") === stage}
+                closeOnClick={false}
+                onCheckedChange={(checked) =>
+                  void setFilter({
+                    stage: checked && stage !== "all" ? stage : null,
+                  })
+                }
+              >
+                <ServiceStatusSquare status={stageColors[stage]} />
+                {stageLabels[stage]}
+              </DropdownMenuCheckboxItem>
+            ))}
+          </DropdownMenuSubContent>
+        </DropdownMenuSub>
         <DropdownMenuSub>
           <DropdownMenuSubTrigger>Urgent</DropdownMenuSubTrigger>
           <DropdownMenuSubContent

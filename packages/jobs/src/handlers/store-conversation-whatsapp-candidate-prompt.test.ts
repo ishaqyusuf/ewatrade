@@ -55,7 +55,7 @@ describe("Store Conversation WhatsApp candidate prompt", () => {
       issueClaimToken: () => "claim_1",
       provider: provider(async (input) => {
         expect(input.body).toBe(
-          "A recent EwaTrade conversation may be available for this Store. Choose how to continue.",
+          "💬 *EwaTrade*\n\nA recent EwaTrade conversation may be available for this Store. Choose how to continue.",
         )
         expect(input.buttons).toEqual([
           { id: "token:continue", title: "Continue that conversation" },

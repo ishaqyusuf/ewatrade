@@ -1,0 +1,99 @@
+{
+  "version": 1,
+  "id": "2026-10-22-whatsapp-batched-collection",
+  "tickets": ["H01", "H02"],
+  "summary": "Local grouped WhatsApp registration/business collection, bundled deterministic simple facts, same-proposal linked corrections and bounded durable ordinary-text bursts. Existing merchant commands, schema, scope, rollout, confirmation and review-link authorities remain canonical. No deployment, provider, OTP or phone change.",
+  "capabilities": [
+    {
+      "id": "catalog.product.create",
+      "change": "unchanged",
+      "rollout": "source",
+      "note": "Shared channel collection/current draft only; existing product schema, units, prices, authority and explicit review retained."
+    },
+    {
+      "id": "customers.create",
+      "change": "unchanged",
+      "rollout": "source",
+      "note": "Shared grouping guidance and current pending-draft correction only. Existing channel eligibility and confirmation unchanged."
+    },
+    {
+      "id": "sales.order.record_simple",
+      "change": "unchanged",
+      "rollout": "source",
+      "note": "Existing deterministic partial facts and canonical staging; grouped known gaps and preserved bundled input, no payment inference or direct save."
+    },
+    {
+      "id": "finance.expense.record_simple",
+      "change": "unchanged",
+      "rollout": "source",
+      "note": "Existing partial draft and canonical validation; grouped missing fields, optional data does not block."
+    },
+    {
+      "id": "finance.money_in.record_simple",
+      "change": "unchanged",
+      "rollout": "source",
+      "note": "Existing owner-funds partial draft/authority; grouped missing amount/account and retained supplied facts."
+    },
+    {
+      "id": "finance.transfer.record_simple",
+      "change": "unchanged",
+      "rollout": "source",
+      "note": "Existing transfer partial draft/authority; grouped required account/amount clarification with no new effects."
+    }
+  ],
+  "procedures": [],
+  "docs": [
+    {
+      "topic": "feature",
+      "status": "local_only",
+      "path": ".brain/features/whatsapp-assistant.md"
+    },
+    {
+      "topic": "api",
+      "status": "local_only",
+      "path": ".brain/api/contracts.md"
+    },
+    {
+      "topic": "permissions",
+      "status": "local_only",
+      "path": ".brain/api/permissions.md"
+    },
+    {
+      "topic": "decision",
+      "status": "local_only",
+      "path": ".brain/decisions/2026-10-22-whatsapp-grouped-collection-and-bursts.md"
+    },
+    {
+      "topic": "capability",
+      "status": "not_applicable",
+      "path": "packages/assistant/src/capabilities/COVERAGE.md",
+      "note": "H01 current snapshot; no merchant capability/procedure/role/rollout expansion. Structured native forms and unsupported/app-only operations retain their existing availability."
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "test",
+      "path": "packages/db/src/queries/assistant-whatsapp/text-burst.test.ts",
+      "executed": true,
+      "result": "6 tests/33 assertions: bounded consecutive text, scope/retry/expiry/action barriers and wait exclusions. No DB/provider."
+    },
+    {
+      "kind": "test",
+      "path": "packages/db/src/queries/assistant-whatsapp/text-burst-claim.test.ts",
+      "executed": true,
+      "result": "3 tests/22 assertions: actual injected claim honors identity CONTROL barrier, preserves original ingress attribution/minimum expiry and cannot reassemble a retry."
+    },
+    {
+      "kind": "test",
+      "path": "apps/api/src/assistant/channel-hybrid-turn.test.ts",
+      "executed": true,
+      "result": "7 tests/132 assertions: actual injected channel orchestration uses one ordinary combined turn without private burst metadata; deterministic forms/pages/choices retained."
+    },
+    {
+      "kind": "review",
+      "path": ".brain/qa/2026-10-22-whatsapp-batched-collection.md",
+      "executed": true,
+      "result": "Independent registration, claim and business collector/source-authority review; local receipts and exact limitations recorded separately from future release/model/channel acceptance."
+    }
+  ]
+}

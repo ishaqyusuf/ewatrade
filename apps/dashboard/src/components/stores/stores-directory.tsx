@@ -40,6 +40,7 @@ import { HugeiconsIcon } from "@hugeicons/react"
 import { useQuery } from "@tanstack/react-query"
 import { useId } from "react"
 import { CreateStoreModal } from "./create-store-modal"
+import { StoreContactRow } from "./store-contact-row"
 
 const storeViewOptions = [
   { value: "table", label: "Table", icon: LayoutTable01Icon },
@@ -202,6 +203,20 @@ export function StoresDirectory({
           <StoresDataTable stores={stores.data} view={view} />
         </div>
       )}
+      {stores.data?.length ? (
+        <SettingsSection
+          title="Customer contact"
+          description="Set the phone number customers use to reach each store."
+        >
+          {stores.data.map((store) => (
+            <StoreContactRow
+              key={store.id}
+              storeId={store.id}
+              storeName={store.name}
+            />
+          ))}
+        </SettingsSection>
+      ) : null}
       {stores.data?.length ? (
         <SettingsSection
           title="What cashiers and sales reps can see"

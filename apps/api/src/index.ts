@@ -154,10 +154,15 @@ app.use("/api/trpc/*", async (c, next) => {
 
   if (
     procedures.includes("search.global") ||
-    procedures.some((path) => path.startsWith("customerMessages."))
+    procedures.some(
+      (path) =>
+        path.startsWith("customerMessages.") || path.startsWith("storefront."),
+    )
   ) {
     c.header("Cache-Control", "private, no-store")
   }
+  if (procedures.some((path) => path.startsWith("storefront.")))
+    c.header("X-Robots-Tag", "noindex, nofollow")
 
   c.header(
     "Server-Timing",

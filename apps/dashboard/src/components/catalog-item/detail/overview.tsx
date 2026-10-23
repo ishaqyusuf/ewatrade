@@ -6,6 +6,7 @@ import {
   useInlineSelection,
 } from "@/components/tables/core"
 import { useCatalogDetailParams } from "@/hooks/use-catalog-detail-params"
+import { useServiceWorkParams } from "@/hooks/use-service-work-params"
 import {
   Button,
   Card,
@@ -34,13 +35,16 @@ export function CatalogDetailOverview({
   storeId,
   readOnly,
   readScope,
+  canCreateServiceJob,
 }: {
   detail: CatalogDetail
   storeId: string
   readOnly: boolean
   readScope: CatalogDetailReadScope
+  canCreateServiceJob: boolean
 }) {
-  const { setParams, setView } = useCatalogDetailParams()
+  const { close, setParams, setView } = useCatalogDetailParams()
+  const serviceWork = useServiceWorkParams()
   const { item, lastOrder } = detail
   const product = item.product
   const affordances = catalogDetailAffordances({
@@ -70,6 +74,32 @@ export function CatalogDetailOverview({
   })
   return (
     <div className="grid gap-6">
+      {item.kind === "service" && canCreateServiceJob ? (
+        <Card size="sm">
+          <CardHeader>
+            <CardTitle>Service jobs</CardTitle>
+            <CardDescription>
+              Create and track customer work from intake to handover.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button
+              size="sm"
+              onClick={async () => {
+                await close()
+                await serviceWork.setParams({
+                  serviceSheet: "intake",
+                  jobId: null,
+                  jobStep: null,
+                  requestId: null,
+                })
+              }}
+            >
+              Create service job
+            </Button>
+          </CardContent>
+        </Card>
+      ) : null}
       {product ? (
         <ProductUsageForm
           key={`${item.id}:${product.updatedAt}`}

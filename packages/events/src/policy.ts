@@ -39,6 +39,7 @@ const routeNames = new Set([
   "sales",
   "finance",
   "services",
+  "service-request",
   "conversations",
   "prescriptions",
   "onboarding",

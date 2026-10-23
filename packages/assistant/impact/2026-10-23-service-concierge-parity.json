@@ -1,0 +1,52 @@
+{
+  "version": 1,
+  "id": "2026-10-23-service-concierge-parity",
+  "tickets": ["S04", "H02"],
+  "summary": "Workshop Concierge v5 shell and shared multi-option selection with atomic standalone customer quote requests.",
+  "noAssistantImpact": "Customer-only storefront selection/form. Existing submitPublicServiceRequest(lines[]) remains the one atomic idempotent command; no merchant procedure or assistant capability changes. Every option is derived from current published Host/Site/Store/item/form authority and rechecked under bounded locks before create/replay. Models cannot manufacture customer requests. No booking/payment, provider send, OTP, identity or permission changes. QA preview guard remains active; local FreshCare publication is separately owner-authorized.",
+  "capabilities": [],
+  "procedures": [],
+  "docs": [
+    {
+      "topic": "feature",
+      "status": "local_only",
+      "path": ".brain/features/storefront-template-factory.md"
+    },
+    {
+      "topic": "api",
+      "status": "local_only",
+      "path": ".brain/api/contracts.md"
+    },
+    {
+      "topic": "schema",
+      "status": "not_applicable",
+      "note": "Existing ServiceRequest/Form/Line models and multi-line domain command; no Prisma changes."
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "test",
+      "path": "packages/db/src/queries/storefront-service-intake.test.ts",
+      "executed": true,
+      "result": "In-memory create/replay, later-line quantity conflict, foreign/duplicate/invalid line refusal, complete rollback on later-line withdrawal, fixed/quote receipt checks pass."
+    },
+    {
+      "kind": "test",
+      "path": "packages/storefront-runtime/src/links.test.ts",
+      "executed": true,
+      "result": "All distinct selected IDs carried as repeated query params; empty, duplicate, foreign and primary mismatch refuse whole navigation."
+    },
+    {
+      "kind": "test",
+      "path": "packages/service-commerce/src/schemas/storefront-request.test.ts",
+      "executed": true,
+      "result": "Legacy singleton preserved; bounded distinct multi-line inputs and primary hints checked."
+    },
+    {
+      "kind": "test",
+      "path": "packages/storefront-templates/src/service-concierge/render.test.tsx",
+      "executed": true,
+      "result": "Independent combined focused run28tests271assertions passes; list/combobox threshold, quoted price, default font, shell, About facts/FAQ and empty/scope/source boundaries covered."
+    }
+  ]
+}

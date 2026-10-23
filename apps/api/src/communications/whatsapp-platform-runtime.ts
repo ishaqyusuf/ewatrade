@@ -24,10 +24,20 @@ import {
   enqueueAssistantWhatsAppTurn,
 } from "@ewatrade/jobs/assistant-whatsapp"
 
+import { cancelWhatsAppBusinessFlows } from "./whatsapp-business-flow-lifecycle"
+import {
+  isWhatsAppCredentialSubmission,
+  sendWhatsAppCredentialNotice,
+} from "./whatsapp-credential-guard"
 import {
   cancelWhatsAppOnboarding,
   processWhatsAppOnboardingMessage,
 } from "./whatsapp-onboarding-runtime"
+import {
+  cancelWhatsAppRegistrationFlow,
+  handleWhatsAppRegistrationFlowReturn,
+  tryLaunchWhatsAppRegistrationFlow,
+} from "./whatsapp-registration-flow"
 
 type PlatformDependencies = {
   receipt?: (event: NormalizedWhatsAppStatusEvent) => Promise<unknown>
@@ -46,6 +56,11 @@ type PlatformDependencies = {
     phoneNumberId: string
     senderId: string
   }) => Promise<unknown>
+  registrationFlow?: typeof tryLaunchWhatsAppRegistrationFlow
+  registrationFlowReturn?: typeof handleWhatsAppRegistrationFlowReturn
+  cancelRegistrationFlow?: typeof cancelWhatsAppRegistrationFlow
+  credentialNotice?: typeof sendWhatsAppCredentialNotice
+  cancelBusinessFlows?: typeof cancelWhatsAppBusinessFlows
   claim: (input: {
     code: string
     phoneNumberId: string
@@ -88,6 +103,11 @@ export async function processPlatformWhatsAppEvent(
     enqueueDelivery: enqueueAssistantWhatsAppDelivery,
     onboarding: processWhatsAppOnboardingMessage,
     cancelOnboarding: cancelWhatsAppOnboarding,
+    registrationFlow: tryLaunchWhatsAppRegistrationFlow,
+    registrationFlowReturn: handleWhatsAppRegistrationFlowReturn,
+    cancelRegistrationFlow: cancelWhatsAppRegistrationFlow,
+    credentialNotice: sendWhatsAppCredentialNotice,
+    cancelBusinessFlows: cancelWhatsAppBusinessFlows,
     accept: (input, permittedUserIds) =>
       acceptAssistantWhatsAppIngress(prisma, input, permittedUserIds),
     claim: async (input) => {
@@ -122,25 +142,53 @@ export async function processPlatformWhatsAppEvent(
     await dependencies.receipt?.(event)
     return true
   }
+  const config = readAssistantWhatsAppConfig(dependencies.env)
   if (
-    /^(?:disconnect(?: ewatrade)?|stop|unsubscribe)$/i.test(
-      event.text?.trim() ?? "",
-    )
+    /^(?:stop|unsubscribe)$/i.test(event.text?.trim() ?? "") ||
+    (!config &&
+      /^(?:disconnect(?: ewatrade)?)$/i.test(event.text?.trim() ?? ""))
   ) {
     const address = {
       phoneNumberId: event.phoneNumberId,
       senderId: event.externalCustomerId,
     }
     try {
-      await dependencies.cancelOnboarding?.(address)
+      try {
+        await dependencies.cancelRegistrationFlow?.(address)
+      } finally {
+        try {
+          await dependencies.cancelBusinessFlows?.(address)
+        } finally {
+          await dependencies.cancelOnboarding?.(address)
+        }
+      }
     } finally {
       await dependencies.disconnect(address)
     }
     return true
   }
-  const config = readAssistantWhatsAppConfig(dependencies.env)
   if (!config) return true
-  const code = parseWhatsAppLinkMessage(event.text)
+  if (isWhatsAppCredentialSubmission(event.text)) {
+    await dependencies.credentialNotice?.(event, config)
+    return true
+  }
+  if (/^(?:cancel|register chat)$/i.test(event.text?.trim() ?? "")) {
+    await dependencies.cancelRegistrationFlow?.({
+      phoneNumberId: event.phoneNumberId,
+      senderId: event.externalCustomerId,
+    })
+    await dependencies.cancelBusinessFlows?.({
+      phoneNumberId: event.phoneNumberId,
+      senderId: event.externalCustomerId,
+    })
+  }
+  if (event.flowResponse) {
+    if (await dependencies.registrationFlowReturn?.(event, config)) return true
+    // All other structured returns enter the bound durable inbox, never onboarding/model text.
+  } else if (await dependencies.registrationFlow?.(event, config)) return true
+  const code = event.flowResponse
+    ? undefined
+    : parseWhatsAppLinkMessage(event.text)
   if (code) {
     await dependencies.claim({
       code,
@@ -154,7 +202,12 @@ export async function processPlatformWhatsAppEvent(
     return true
   }
   // Verification and registration input must not become ordinary assistant/model history.
-  if ((await dependencies.onboarding?.(event, config))?.handled) return true
+  if (
+    !event.flowResponse &&
+    !/^disconnect(?: ewatrade)?$/i.test(event.text?.trim() ?? "") &&
+    (await dependencies.onboarding?.(event, config))?.handled
+  )
+    return true
   // A six-digit amount remains ordinary business input for a fresh linked binding.
 
   const receipt = await dependencies.accept(
@@ -168,6 +221,7 @@ export async function processPlatformWhatsAppEvent(
       quickActionId: event.quickActionId,
       replyToMessageId: event.replyToMessageId,
       media: event.media,
+      flowResponse: event.flowResponse,
     },
     assistantWhatsAppPilotUserIds(dependencies.env),
   )

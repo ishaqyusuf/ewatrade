@@ -7,6 +7,10 @@ import { useOperationalModeStore } from "@/store/operationalModeStore"
 import { getDataCacheGeneration } from "@/trpc/client"
 import { capabilityForAction } from "@ewatrade/assistant/capabilities/manifest"
 import {
+  generalTokenBudgetLine,
+  generalTokenBudgetUsed,
+} from "@ewatrade/assistant/general/allowance"
+import {
   type GeneralAnswer,
   type GeneralProposal,
   generalActionSummary,
@@ -132,10 +136,7 @@ export function AskAssistantLive() {
       )
     return null
   }
-  const exhausted =
-    !!vm.data &&
-    (vm.data.allowance.remainingRequests <= 0 ||
-      vm.data.allowance.remainingTokens <= 0)
+  const exhausted = !!vm.data && generalTokenBudgetUsed(vm.data.allowance)
   const noAccess = vm.sessionUnavailable
     ? "Active business access is needed to use the assistant."
     : vm.scopeChanged
@@ -301,14 +302,13 @@ export function AskAssistantLive() {
               ) : null}
               {vm.data && !vm.offline ? (
                 <Text className="text-xs text-muted-foreground">
-                  {vm.data.allowance.remainingRequests} requests left this month
-                  · resets{" "}
-                  {new Date(vm.data.allowance.resetsAt).toLocaleDateString()}
+                  {generalTokenBudgetLine(vm.data.allowance)}
+                  {"\n"}Shared by this business across Assistant and WhatsApp.
                 </Text>
               ) : null}
               {exhausted && !vm.offline ? (
                 <StatusBanner
-                  title="Monthly allowance used"
+                  title="Monthly token allowance used"
                   tone="warning"
                   message="You can still review and confirm saved drafts. Ask again after the allowance resets."
                 />

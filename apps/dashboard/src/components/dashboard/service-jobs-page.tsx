@@ -2,16 +2,15 @@
 
 import { WorkspaceError } from "@/components/dashboard/workspace-error"
 import { ScrollableContent } from "@/components/scrollable-content"
-import { ServiceStageTabs } from "@/components/service-work/service-stage-tabs"
+import { CustomerRequests } from "@/components/service-work/customer-requests"
 import { ServiceWorkHeader } from "@/components/service-work/service-work-header"
-import { CustomerRequestSheet } from "@/components/sheets/customer-request-sheet"
-import { ServiceIntakeSheet } from "@/components/sheets/service-intake-sheet"
 import { ServiceJobSheet } from "@/components/sheets/service-job-sheet"
 import { ServiceRequestSheet } from "@/components/sheets/service-request-sheet"
 import { ServiceSettingsSheet } from "@/components/sheets/service-settings-sheet"
 import { ServiceWorkDataTable } from "@/components/tables/service-work/data-table"
 import { ServiceWorkTableSkeleton } from "@/components/tables/service-work/skeleton"
 import { useDirectoryView } from "@/hooks/use-directory-view"
+import { useServiceWorkParams } from "@/hooks/use-service-work-params"
 import type { DirectoryViewSettings } from "@/utils/directory-view-settings"
 import type { TableSettings } from "@/utils/table-settings"
 import { Alert, AlertDescription, Button } from "@ewatrade/ui"
@@ -37,6 +36,8 @@ export function ServiceJobsPage({
   initialSettings?: Partial<TableSettings>
   initialViewSettings: DirectoryViewSettings
 }) {
+  const { tab } = useServiceWorkParams()
+  const showRequests = canManage && tab === "requests"
   const { view, setView, persistenceError, retryPersistence } =
     useDirectoryView({
       pageId: "service-work",
@@ -61,7 +62,6 @@ export function ServiceJobsPage({
               </Button>
             </Alert>
           ) : null}
-          <ServiceStageTabs storeId={store.id} />
           <ErrorBoundary errorComponent={WorkspaceError}>
             <Suspense
               fallback={
@@ -71,22 +71,24 @@ export function ServiceJobsPage({
                 />
               }
             >
-              <ServiceWorkDataTable
-                initialSettings={initialSettings}
-                canManage={canManage}
-                storeId={store.id}
-                timeZone={timeZone}
-                view={view}
-              />
+              {showRequests ? (
+                <CustomerRequests storeId={store.id} timeZone={timeZone} />
+              ) : (
+                <ServiceWorkDataTable
+                  initialSettings={initialSettings}
+                  canManage={canManage}
+                  storeId={store.id}
+                  timeZone={timeZone}
+                  view={view}
+                />
+              )}
             </Suspense>
           </ErrorBoundary>
         </div>
       </ScrollableContent>
-      <ServiceIntakeSheet canManage={canManage} store={store} />
       {canManage ? (
         <>
           <ServiceRequestSheet store={store} />
-          <CustomerRequestSheet store={store} timeZone={timeZone} />
           <ServiceSettingsSheet
             currencyCode={store.currencyCode}
             storeId={store.id}

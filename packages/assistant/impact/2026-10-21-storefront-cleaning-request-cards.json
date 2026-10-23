@@ -1,0 +1,43 @@
+{
+  "version": 1,
+  "id": "2026-10-21-storefront-cleaning-request-cards",
+  "tickets": [
+    "S04",
+    "H02"
+  ],
+  "summary": "Direct cleaning card actions select the canonical current service request form, with guest or server-derived account authority.",
+  "noAssistantImpact": "Customer-only storefront navigation and structured form handoff. No assistant tool/capability/permission is added. A server-derived signed-in account may use the same canonical structured request command only with existing current Terms, eligible age and exact active conversation access, rechecked under lock. Offering query hints are never authority or consent; canonical policy, scope and idempotency remain. No provider or rollout change.",
+  "capabilities": [],
+  "procedures": [],
+  "docs": [
+    {
+      "topic": "feature",
+      "status": "local_only",
+      "path": ".brain/features/service-commerce.md"
+    },
+    {
+      "topic": "api",
+      "status": "local_only",
+      "path": ".brain/api/contracts.md"
+    },
+    {
+      "topic": "schema",
+      "status": "not_applicable",
+      "note": "No schema or migration; reuse canonical service request and conversation access models."
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "run",
+      "path": ".brain/qa/2026-10-21-storefront-cleaning-request-cards.md",
+      "executed": true,
+      "result": "Actual local IAB Home and Event card clicks open only selected service, quantity1, with Choose another service; screenshots98\u2013100. No request/order/provider writes needed."
+    },
+    {
+      "kind": "test",
+      "path": "packages/db/src/queries/store-conversation-service-start-transaction.test.ts",
+      "executed": true,
+      "result": "Focused aggregate33pass/172assertions includes current form selection, public scope/QA, guest safety, account success/replay/foreign access and authority revocation under lock. In-memory persistence; no live concurrency claim."
+    }
+  ]
+}

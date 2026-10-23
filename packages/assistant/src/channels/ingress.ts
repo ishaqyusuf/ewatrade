@@ -16,11 +16,35 @@ export const whatsAppIngressSchema = z
     quickActionId: z.string().min(1).max(256).optional(),
     replyToMessageId: z.string().min(1).max(256).optional(),
     media: whatsAppMediaSchema.optional(),
+    // Only the signature-verified provider adapter supplies this structured input.
+    // It is never ordinary model text, an approval or a caller-selected scope.
+    flowResponse: z
+      .discriminatedUnion("status", [
+        z.object({ status: z.literal("invalid") }).strict(),
+        z
+          .object({
+            status: z.literal("valid"),
+            flowToken: z.string().regex(/^[A-Za-z0-9:_-]{16,512}$/),
+            data: z.record(z.string().max(128), z.unknown()),
+          })
+          .strict(),
+      ])
+      .optional(),
   })
   .strict()
+  .refine(
+    (value) =>
+      !value.flowResponse ||
+      (value.type === "interactive" &&
+        !value.text &&
+        !value.quickActionId &&
+        !value.media &&
+        JSON.stringify(value.flowResponse).length <= 32768),
+  )
   .refine((value) => {
     if (value.type === "text") return Boolean(value.text?.trim())
-    if (value.type === "interactive") return Boolean(value.quickActionId)
+    if (value.type === "interactive")
+      return Boolean(value.quickActionId || value.flowResponse)
     if (value.type === "media") return Boolean(value.media)
     return true
   })

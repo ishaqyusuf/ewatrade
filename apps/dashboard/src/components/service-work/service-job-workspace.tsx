@@ -1,5 +1,7 @@
 "use client"
+
 import { FormFeedback } from "@/components/forms/form-feedback"
+import { invalidateServiceJobLists } from "@/components/service-work/invalidate-service-job-lists"
 import { useAttachmentAccess } from "@/hooks/use-attachment-access"
 import { useServiceWorkParams } from "@/hooks/use-service-work-params"
 import {
@@ -31,6 +33,8 @@ import {
   Wallet01Icon,
 } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
+import { serviceActivityEvents } from "./service-activity"
+import { ServiceStatusSquare } from "./service-status"
 
 import {
   type DraftJobHandoff,
@@ -147,16 +151,8 @@ export function ServiceJobWorkspace({
 
   const refresh = async () => {
     await Promise.all([
+      invalidateServiceJobLists(queryClient, trpc),
       queryClient.invalidateQueries({ queryKey: jobKey }),
-      queryClient.invalidateQueries({
-        queryKey: trpc.services.queue.queryKey(),
-      }),
-      queryClient.invalidateQueries({
-        queryKey: trpc.services.queuePage.queryKey(),
-      }),
-      queryClient.invalidateQueries({
-        queryKey: trpc.services.queueStageCounts.queryKey(),
-      }),
     ])
   }
   const goTo = (next: string | null) =>
@@ -336,9 +332,7 @@ function JobSummary({
       }`
       break
     case "completed":
-      nextText = `${signOff ? "Completed" : "Handed over"}${
-        job.handedOffAt ? ` ${formatWhen(job.handedOffAt).toLowerCase()}` : ""
-      }.`
+      nextText = `Completed${job.completedAt ? ` ${formatWhen(job.completedAt).toLowerCase()}` : ""}.${job.balanceDueMinor > 0 ? ` ${formatPrice(job.balanceDueMinor, job.currencyCode)} still to pay.` : ""}`
       break
     default:
       nextText = "This work was cancelled."
@@ -396,6 +390,7 @@ function JobSummary({
     <div className="grid gap-5">
       <div className="flex flex-wrap items-center gap-2">
         <Badge className={cn("rounded-full", toneClass(stage.tone))}>
+          <ServiceStatusSquare status={job.summary} />
           {stage.label}
         </Badge>
         {late ? (
@@ -490,7 +485,7 @@ function JobSummary({
         </dl>
       </SummarySection>
 
-      <SummarySection title="Notes and updates">
+      <SummarySection title="Activity history">
         <div className="flex flex-wrap gap-2">
           <ToolButton icon={Note01Icon} onClick={() => goTo("note")}>
             Add note
@@ -664,6 +659,18 @@ function JobActivity({
   onRevoke: (evidenceId: string) => void
 }) {
   const entries: ActivityEntry[] = [
+    ...serviceActivityEvents(job).map((event) => ({
+      at: event.at,
+      icon: Note01Icon,
+      body: (
+        <>
+          <span className="font-medium">{event.title}</span>
+          {event.detail ? (
+            <p className="text-xs text-muted-foreground">{event.detail}</p>
+          ) : null}
+        </>
+      ),
+    })),
     ...job.notes.map((note) => ({
       at: new Date(note.createdAt),
       icon: Note01Icon,
@@ -737,17 +744,21 @@ function JobActivity({
           <span className="font-medium">
             {formatPrice(payment.amountMinor, job.currencyCode)}
           </span>{" "}
-          paid by {METHOD_LABEL[payment.method.toLowerCase()] ?? "other"}
+          {payment.type === "REFUND" ? "refunded by" : "paid by"}{" "}
+          {METHOD_LABEL[payment.method.toLowerCase()] ?? "other"}
           {payment.reference ? ` · ${payment.reference}` : ""}
         </>
       ),
     })),
-  ].sort((a, b) => b.at.getTime() - a.at.getTime())
+  ].sort((a, b) => a.at.getTime() - b.at.getTime())
 
   if (entries.length === 0)
     return <p className="text-sm text-muted-foreground">Nothing yet.</p>
   return (
-    <ul className="grid gap-3">
+    <ol
+      aria-label="Service activity history"
+      className="grid gap-3 border-l border-border pl-4"
+    >
       {entries.map((entry, index) => (
         <li
           key={`${entry.at.getTime()}-${index}`}
@@ -766,7 +777,7 @@ function JobActivity({
           </div>
         </li>
       ))}
-    </ul>
+    </ol>
   )
 }
 
@@ -823,6 +834,9 @@ function JobStepView({
 
   const recordPayment = useMutation(
     trpc.orders.recordPayment.mutationOptions({ onError: fail }),
+  )
+  const complete = useMutation(
+    trpc.services.completeJob.mutationOptions({ onError: fail }),
   )
   const handoff = useMutation(
     trpc.services.handoff.mutationOptions({ onError: fail }),
@@ -1010,8 +1024,45 @@ function JobStepView({
           : null
       break
     }
+    case "complete": {
+      const ready = job.summary === "ready_for_handoff"
+      body = (
+        <>
+          <p className="text-sm">Confirm the service work is finished.</p>
+          {moneyList}
+          {balance > 0 ? (
+            <p className="text-sm text-muted-foreground">
+              {formatPrice(balance, job.currencyCode)} remains outstanding. Take
+              payment later from Actions.
+            </p>
+          ) : null}
+          {!ready ? (
+            <FormFeedback appearance="dashboard">
+              Every part must be ready before completing the job.
+            </FormFeedback>
+          ) : null}
+        </>
+      )
+      primary = ready
+        ? {
+            label: "Complete job",
+            onClick: () =>
+              void save({}, async () => {
+                await complete.mutateAsync({
+                  clientCommandId: crypto.randomUUID(),
+                  expectedRevision: job.revision,
+                  jobId: job.id,
+                })
+                return "Job completed."
+              }),
+          }
+        : null
+      break
+    }
     case "handover": {
-      const ready = job.summary === "ready_for_handoff" && !job.handedOffAt
+      const ready =
+        ["ready_for_handoff", "completed"].includes(job.summary) &&
+        !job.handedOffAt
       body = (
         <>
           <p className="text-sm">
@@ -1171,7 +1222,12 @@ function JobStepView({
       break
     }
     case "cancel": {
-      const lines = activeLines(["BLOCKED"])
+      const lines = activeLines([
+        "QUEUED",
+        "IN_PROGRESS",
+        "BLOCKED",
+        "READY_FOR_HANDOFF",
+      ])
       body = (
         <>
           <FormFeedback appearance="dashboard">
@@ -1195,9 +1251,7 @@ function JobStepView({
           void save(
             {
               why: !why.trim() && "Say why the work is cancelled.",
-              lines:
-                lines.length === 0 &&
-                "Only stuck work can be cancelled. Mark it stuck first.",
+              lines: lines.length === 0 && "No active work remains to cancel.",
             },
             async () => {
               for (const entry of lines) {

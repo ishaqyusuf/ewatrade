@@ -1,8 +1,13 @@
 "use client"
 
 import { OwnerBusinessAvatar } from "@ewatrade/onboarding/components/signup/signup-flow"
+import { getStorefrontDomain } from "@ewatrade/utils"
 import type { OwnerSetupDraft } from "@ewatrade/utils/owner-signup"
 import { OWNER_PLAN_LIMITS, businessLabel, typeLabel } from "./model"
+
+const storefrontDomain = getStorefrontDomain(
+  process.env.NEXT_PUBLIC_PLATFORM_DOMAIN ?? "ewatrade.com",
+)
 
 export function OwnerSetupRail({ draft }: { draft: OwnerSetupDraft }) {
   const first = draft.businesses[0]
@@ -29,7 +34,9 @@ export function OwnerSetupRail({ draft }: { draft: OwnerSetupDraft }) {
             />
             <div>
               <b>{first?.name || "Your business"}</b>
-              <small>{first?.slug}.ewatrade.com</small>
+              <small>
+                {first?.slug}.{storefrontDomain}
+              </small>
             </div>
           </div>
           <div className="owner-ref-rl-sec">Picked · {selected.length}</div>
@@ -64,7 +71,7 @@ export function OwnerSetupRail({ draft }: { draft: OwnerSetupDraft }) {
                   <b>{businessLabel(business, index)}</b>
                   <small>
                     {business.slug
-                      ? `${business.slug}.ewatrade.com`
+                      ? `${business.slug}.${storefrontDomain}`
                       : "Store link appears as you type"}
                   </small>
                   <div className="owner-ref-gtypes">

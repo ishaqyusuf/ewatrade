@@ -1,0 +1,39 @@
+{
+  "name": "@ewatrade/storefront-components",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./contracts": "./src/contracts.ts",
+    "./sdk": "./src/sdk.tsx",
+    "./host": "./src/host.tsx",
+    "./source-policy": "./src/source-policy.ts",
+    "./isolation": "./src/isolation.ts",
+    "./generation": "./src/generation.ts",
+    "./artifacts": "./src/artifacts.ts",
+    "./pipeline": "./src/pipeline.ts",
+    "./offline-sample": "./src/offline-sample.ts",
+    "./operations": "./src/operations.ts"
+  },
+  "scripts": {
+    "test": "bun test src",
+    "check:isolation": "bun scripts/check-isolation.ts",
+    "typecheck": "tsc --noEmit",
+    "lint": "biome check ."
+  },
+  "dependencies": {
+    "@ewatrade/storefront-contracts": "workspace:*",
+    "react": "19.1.0",
+    "react-dom": "19.1.0",
+    "scheduler": "0.26.0",
+    "typescript": "5.9.3",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@ewatrade/tsconfig": "workspace:*",
+    "@types/bun": "latest",
+    "@types/react": "^19.1.13",
+    "@types/react-dom": "^19.1.9"
+  }
+}

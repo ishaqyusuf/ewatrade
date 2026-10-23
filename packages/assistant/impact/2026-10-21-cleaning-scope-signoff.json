@@ -1,0 +1,52 @@
+{
+  "version": 1,
+  "id": "2026-10-21-cleaning-scope-signoff",
+  "tickets": ["S04", "H02"],
+  "summary": "Expose owner-reviewed agreed scope on Service Quote versions and use customer sign-off/completion presentation for Home Cleaning and Event Cleaning.",
+  "noAssistantImpact": "The existing manager-only serviceAccess.issueQuote accepts optional customerNote, forwarded to the canonical issueCommerceQuote immutable version and existing text screening/Terms/approval checks. The new dashboard scope editor is form-only; existing general assistant Quote notes already use the canonical command and no tool, capability, permission, entitlement, release or assistant schema is expanded. Cleaning wording is presentation only, based on the two named service snapshots; existing transition and revision-guarded handoff/payment commands remain authoritative. This is operator-confirmed customer sign-off wording, not a new customer identity/consent receipt or a bypass of settled balance and readiness.",
+  "capabilities": [],
+  "procedures": [],
+  "docs": [
+    {
+      "topic": "feature",
+      "status": "local_only",
+      "path": ".brain/features/service-commerce.md"
+    },
+    {
+      "topic": "api",
+      "status": "local_only",
+      "path": ".brain/api/contracts.md"
+    },
+    {
+      "topic": "schema",
+      "status": "not_applicable",
+      "note": "Reuse existing immutable Commerce Quote customerNote; no database schema or migration."
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "run",
+      "path": ".brain/qa/2026-10-21-cleaning-scope-signoff.md",
+      "executed": true,
+      "result": "Actual local IAB saved scope before/after Quotev1 acceptance, ORD-005 created once, manual release, Customer sign-off, balance guard and Complete job recording25,000cash/0due; owner/customer job+lineCompleted.3/3local delivery; release0/6unchanged. Hung Next process recovered with canonical local storefront-only restart; same quote HTTP timeout→200in3.912s. No provider/schema/rollout."
+    },
+    {
+      "kind": "test",
+      "path": "packages/db/src/queries/service-quote-scope.test.ts",
+      "executed": true,
+      "result": "Unsafe scope is rejected by canonical Quote screening before persistence. Focused aggregate37pass/119assertions with existing Quote version/authority/replay invariants."
+    },
+    {
+      "kind": "test",
+      "path": "packages/utils/src/service-work-presentation.test.ts",
+      "executed": true,
+      "result": "Both cleaning names use sign-off; empty, dry cleaning, laundry, mixed and name-lookalike inputs preserve existing handoff wording."
+    },
+    {
+      "kind": "test",
+      "path": "apps/api/src/schemas/service-commerce-quote-options.test.ts",
+      "executed": true,
+      "result": "Optional scope trims and caps4000characters, old callers remain valid."
+    }
+  ]
+}

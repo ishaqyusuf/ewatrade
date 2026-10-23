@@ -13,13 +13,25 @@ import {
   retryAssistantWhatsAppInbox,
   settleAssistantWhatsAppInbox,
   settleAssistantWhatsAppNotice,
+  waitForAssistantWhatsAppTextBurst,
 } from "@ewatrade/db/assistant-whatsapp"
 import { TRPCError } from "@trpc/server"
 import { z } from "zod"
 import { processAssistantWhatsAppAction } from "./channel-action-turn"
+import { sendAssistantWhatsAppDisconnectNotice } from "./channel-disconnect-notice"
+import { cancelAssistantWhatsAppCurrentDraft } from "./channel-draft-controls"
+import { processAssistantWhatsAppFlowTurn } from "./channel-flow-turn"
+import {
+  assistantWhatsAppHelpExamples,
+  assistantWhatsAppMenuCapabilities,
+} from "./channel-help"
 import { prepareAssistantWhatsAppMediaTurn } from "./channel-media-turn"
 import { createLinkedAssistantContext } from "./channel-principal"
+import { processAssistantWhatsAppEditRequest } from "./channel-proposal-edit"
+import { processAssistantWhatsAppReadPageTurn } from "./channel-read-page-turn"
+import { processAssistantWhatsAppReplyChoiceTurn } from "./channel-reply-choice-turn"
 import { prepareAssistantWhatsAppReview } from "./channel-review-staging"
+import { prepareAssistantWhatsAppWebReview } from "./channel-web-review-staging"
 import {
   createAssistantWhatsAppWorkflowReceiptContext,
   processAssistantWhatsAppWorkflowAction,
@@ -37,19 +49,47 @@ const textContent = z
     type: z.literal("text"),
     text: z.string().min(1).max(8000),
     replyToMessageId: z.string().optional(),
+    burst: z
+      .object({
+        originalText: z.string().min(1).max(8000),
+        sourceIds: z.array(z.string().min(1).max(128)).min(1).max(4),
+      })
+      .strict()
+      .optional(),
   })
   .strict()
 export function defaultChannelTurnDependencies() {
   return {
     enabled: () => Boolean(readAssistantWhatsAppConfig()),
-    control: (id: string) =>
-      processAssistantWhatsAppControl(
+    control: async (id: string) => {
+      const result = await processAssistantWhatsAppControl(
         prisma,
         id,
         assistantWhatsAppPilotUserIds(),
-      ),
-    claim: (id: string) =>
-      claimAssistantWhatsAppInbox(prisma, id, assistantWhatsAppPilotUserIds()),
+        new Date(),
+        {
+          helpExamples: assistantWhatsAppHelpExamples,
+          menuCapabilities: assistantWhatsAppMenuCapabilities,
+          cancelDraft: cancelAssistantWhatsAppCurrentDraft,
+        },
+      )
+      const receipt = result?.disconnectedControlId
+      if (receipt)
+        try {
+          await sendAssistantWhatsAppDisconnectNotice(receipt)
+        } catch {
+          console.error("[assistant] disconnect receipt outcome unavailable")
+        }
+      return result
+    },
+    claim: async (id: string) => {
+      await waitForAssistantWhatsAppTextBurst(prisma, id)
+      return claimAssistantWhatsAppInbox(
+        prisma,
+        id,
+        assistantWhatsAppPilotUserIds(),
+      )
+    },
     recover: (lease: Parameters<typeof recoverAssistantWhatsAppInboxRun>[1]) =>
       recoverAssistantWhatsAppInboxRun(prisma, lease),
     context: (
@@ -71,6 +111,9 @@ export function defaultChannelTurnDependencies() {
         },
       ),
     createTurn: createGeneralAssistantTurn,
+    flow: processAssistantWhatsAppFlowTurn,
+    readPage: processAssistantWhatsAppReadPageTurn,
+    replyChoice: processAssistantWhatsAppReplyChoiceTurn,
     createWorkflowTurn: createChannelWorkflowTurn,
     prepareMedia: prepareAssistantWhatsAppMediaTurn,
     notice: (
@@ -78,7 +121,12 @@ export function defaultChannelTurnDependencies() {
       lease: Parameters<typeof settleAssistantWhatsAppInbox>[1],
       code: Parameters<typeof settleAssistantWhatsAppNotice>[1]["code"],
     ) => settleAssistantWhatsAppNotice(prisma, { principal, lease, code }),
-    action: processAssistantWhatsAppAction,
+    action: async (
+      ctx: Parameters<typeof processAssistantWhatsAppAction>[0],
+      lease: Parameters<typeof processAssistantWhatsAppAction>[1],
+    ) =>
+      (await processAssistantWhatsAppEditRequest(ctx, lease)) ??
+      processAssistantWhatsAppAction(ctx, lease),
     workflowAction: processAssistantWhatsAppWorkflowAction,
     settle: (
       lease: Parameters<typeof settleAssistantWhatsAppInbox>[1],
@@ -90,6 +138,12 @@ export function defaultChannelTurnDependencies() {
           : await prepareAssistantWhatsAppReview(prisma, lease).catch(
               () => undefined,
             )
+        const webReview =
+          errorCode || review
+            ? undefined
+            : await prepareAssistantWhatsAppWebReview(prisma, lease).catch(
+                () => undefined,
+              )
         const workflowReview = errorCode
           ? undefined
           : await prepareAssistantWhatsAppWorkflowReview(prisma, lease).catch(
@@ -101,12 +155,16 @@ export function defaultChannelTurnDependencies() {
             : [],
           errorCode,
           review,
+          webReview,
           workflowReview,
         })
       })(),
     retry: (lease: Parameters<typeof retryAssistantWhatsAppInbox>[1]) =>
       retryAssistantWhatsAppInbox(prisma, lease),
-    next: (bindingId: string) => nextAssistantWhatsAppInbox(prisma, bindingId),
+    next: (
+      bindingId: string,
+    ): Promise<Awaited<ReturnType<typeof nextAssistantWhatsAppInbox>>> =>
+      nextAssistantWhatsAppInbox(prisma, bindingId),
   }
 }
 export type ChannelTurnDependencies = Omit<
@@ -117,6 +175,9 @@ export type ChannelTurnDependencies = Omit<
   | "createWorkflowTurn"
   | "notice"
   | "prepareMedia"
+  | "flow"
+  | "readPage"
+  | "replyChoice"
 > & {
   control?: ReturnType<typeof defaultChannelTurnDependencies>["control"]
   action?: ReturnType<typeof defaultChannelTurnDependencies>["action"]
@@ -130,6 +191,9 @@ export type ChannelTurnDependencies = Omit<
   prepareMedia?: ReturnType<
     typeof defaultChannelTurnDependencies
   >["prepareMedia"]
+  flow?: ReturnType<typeof defaultChannelTurnDependencies>["flow"]
+  readPage?: ReturnType<typeof defaultChannelTurnDependencies>["readPage"]
+  replyChoice?: ReturnType<typeof defaultChannelTurnDependencies>["replyChoice"]
 }
 
 /** Internal worker operation. Service auth never substitutes for current linked merchant authority. */
@@ -201,17 +265,37 @@ export async function processAssistantChannelTurn(
         : (prior.errorCode ?? "TURN_FAILED"),
     )
   }
-  const parsed = textContent.safeParse(claim.inbox.content)
   try {
     const ctx = await deps.context(
       claim.principal,
       claim.inbox.requestId,
       claim.lease,
     )
+    const replyChoice = await deps.replyChoice?.(
+      ctx as GeneralContext,
+      claim.lease,
+      claim.inbox,
+    )
+    if (replyChoice?.kind === "completed") return finish()
+    const inputInbox =
+      replyChoice?.kind === "input"
+        ? { ...claim.inbox, content: { type: "text", text: replyChoice.text } }
+        : claim.inbox
+    const parsed = textContent.safeParse(inputInbox.content)
+    if (
+      deps.readPage &&
+      (await deps.readPage(ctx as GeneralContext, claim.lease, claim.inbox))
+    )
+      return finish()
+    if (
+      deps.flow &&
+      (await deps.flow(ctx as GeneralContext, claim.lease, inputInbox))
+    )
+      return finish()
     let parts: GeneralTurnInput["message"]["parts"] = parsed.success
       ? [{ type: "text", text: parsed.data.text }]
       : []
-    if (!parsed.success && deps.prepareMedia) {
+    if (!parts.length && !parsed.success && deps.prepareMedia) {
       const prepared = await deps.prepareMedia(
         ctx as GeneralContext,
         claim.lease,

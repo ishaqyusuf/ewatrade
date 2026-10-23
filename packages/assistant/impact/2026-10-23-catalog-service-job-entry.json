@@ -1,0 +1,43 @@
+{
+  "version": 1,
+  "id": "2026-10-23-catalog-service-job-entry",
+  "tickets": ["H01", "H02"],
+  "summary": "Register native New job once in GlobalSheets under existing operator/manager access; Catalog opens it in place. Shared path-key invalidation refreshes regular/infinite job queues and stage totals after intake/work changes.",
+  "noAssistantImpact": "Navigation/cache freshness only. Existing services.createAndConfirmIntake and services lifecycle commands retain server-derived tenant/store/operator authority. Existing assistant service intake and work-lifecycle support is unchanged; this adds no procedure, tool, grant or prompt write.",
+  "capabilities": [],
+  "procedures": [],
+  "docs": [
+    {
+      "topic": "feature",
+      "status": "local_only",
+      "path": ".brain/features/generic-service-operations.md",
+      "note": "Catalog entry and local lifecycle verification."
+    },
+    {
+      "topic": "feature",
+      "status": "local_only",
+      "path": ".brain/features/product-service-catalog-items.md",
+      "note": "Service-only navigation from Catalog overview; no item mutation via navigation."
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "test",
+      "path": "apps/dashboard/src/components/service-work/invalidate-service-job-lists.test.ts",
+      "executed": true,
+      "result": "Real QueryClient regression red before pathKey repair, green1test/6assertions after; regular/infinite variants invalidated, unrelated data retained."
+    },
+    {
+      "kind": "test",
+      "path": "apps/dashboard/src/components/sheets/assistant-draft-job-revocation.fixture.tsx",
+      "executed": true,
+      "result": "Isolated direct fixture5tests/45assertions pass including actual GlobalSheets single intake registration and existing revocation boundaries. Existing wrapper subprocess failed without diagnostics in this host; direct fixture is authoritative execution."
+    },
+    {
+      "kind": "review",
+      "path": ".brain/qa/2026-10-23-heritage-service-jobs.md",
+      "executed": true,
+      "result": "Local normal UI creates exactly5Heritage QA jobs:4handed over,1line-derived work cancellation. Catalog pathname retained with one intake sheet; payment/readiness/reason guards, blocked/resume, assignment, due/time and note checks pass. Scoped read-only receipt verifies retained source records and0notification intents. No Preview/provider/deployment/real funds."
+    }
+  ]
+}

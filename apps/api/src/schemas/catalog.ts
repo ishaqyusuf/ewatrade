@@ -538,3 +538,15 @@ export const catalogUpdateProductIdentifiersSchema = z
     (v) => v.sku !== undefined || v.barcode !== undefined,
     "Choose an identifier to update.",
   )
+
+/** Explicit native Create-menu choice, never a model write tool. */
+export const catalogAddServiceChoiceSchema = z
+  .object({
+    itemId: z.string().trim().min(1).max(128),
+    originTenantId: z.string().trim().min(1).max(128),
+    storeId: z.string().trim().min(1).max(128),
+    clientOperationId: z.string().trim().min(8).max(160),
+    name: z.string().trim().min(1).max(160),
+    priceMinor: catalogPriceMinorSchema,
+  })
+  .strict()

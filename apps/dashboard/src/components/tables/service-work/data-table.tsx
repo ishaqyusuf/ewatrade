@@ -39,7 +39,11 @@ export function ServiceWorkDataTable({
   const { sort } = useSortParams({ fields: serviceWorkSortFields })
   const query = useSuspenseInfiniteQuery(
     trpc.services.queuePage.infiniteQueryOptions(
-      { ...getServiceWorkQueuePageInput(filter), storeId, sort },
+      {
+        ...getServiceWorkQueuePageInput(filter),
+        storeId,
+        sort: sort ?? { field: "createdAt", direction: "desc" },
+      },
       {
         getNextPageParam: (page) => page.nextCursor ?? undefined,
         retry: false,

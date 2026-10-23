@@ -330,10 +330,16 @@ suite("native deterministic controls on guarded local Neon", () => {
       "Store B",
       "Store B2",
     ])
-    const selected = await talk(
-      choice(stores.menu, "Store B2"),
-      stores.messageId,
-    )
+    const review = await talk(choice(stores.menu, "Store B2"), stores.messageId)
+    expect(review.begin.body).toContain("Switching starts a new chat")
+    expect(
+      (
+        await db.assistantWhatsAppIdentity.findUniqueOrThrow({
+          where: { id: identityId },
+        })
+      ).activeBindingId,
+    ).toBeNull()
+    const selected = await talk("Choose 1", review.messageId)
     expect(selected.begin.body).toContain("New chat started")
     const active = await db.assistantWhatsAppIdentity.findUniqueOrThrow({
       where: { id: identityId },
@@ -430,11 +436,18 @@ suite("native deterministic controls on guarded local Neon", () => {
       choice(businesses.menu, "Synthetic business A"),
       businesses.messageId,
     )
-    expect(stores.menu.choices).toHaveLength(5)
-    expect(stores.menu.choices[4]?.label).toBe("More Stores")
-    const more = await talk("Choose 5", stores.messageId)
+    expect(stores.menu.choices).toHaveLength(3)
+    expect(stores.menu.choices[2]?.label).toBe("More Stores")
+    const middle = await talk("Choose 3", stores.messageId)
+    expect(middle.menu.choices.map((c) => c.label)).toEqual([
+      "Store A2",
+      "Store A3",
+      "More Stores",
+    ])
+    const more = await talk("Choose 3", middle.messageId)
     expect(more.menu.choices.map((c) => c.label)).toEqual(["Store A4"])
-    const select = await talk("Choose 1", more.messageId)
+    const review = await talk("Choose 1", more.messageId)
+    const select = await talk("Choose 1", review.messageId)
     expect(select.begin.body).toContain("New chat started")
     const before = await db.assistantConversation.count({
       where: { ownerUserId: userId },
@@ -541,7 +554,15 @@ suite("native deterministic controls on guarded local Neon", () => {
         })
       ).storeId,
     ).toBe(storeB)
-    const chosen = await talk("Choose 1", stores.messageId)
+    const review = await talk("Choose 1", stores.messageId)
+    expect(
+      (
+        await db.assistantWhatsAppGrant.findUniqueOrThrow({
+          where: { id: grantB },
+        })
+      ).storeId,
+    ).toBe(storeB)
+    const chosen = await talk("Choose 1", review.messageId)
     expect(chosen.begin.body).toContain("Store B2")
     expect(
       (

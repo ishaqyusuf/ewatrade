@@ -311,3 +311,114 @@ export function createVercelExpenseReceiptStorage(env: PrivateBlobEnvironment) {
     createVercelPrivateObjectPort<ExpenseReceiptContentType>(env),
   )
 }
+
+/** Private 320 px WebP derivative of an attached SAFE image receipt (ADR-0051). */
+export const EXPENSE_RECEIPT_THUMBNAIL_MAX_BYTES = 2 * 1024 * 1024
+
+export type ExpenseReceiptThumbnailObject =
+  PrivateObjectDescriptor<"image/webp"> & {
+    tenantId: string
+    bookId: string
+    billId: string
+    assetId: string
+  }
+
+/** Derivatives live apart from originals and are named by their own digest. */
+export function expenseReceiptThumbnailPath(
+  target: Pick<
+    ExpenseReceiptThumbnailObject,
+    "tenantId" | "bookId" | "billId" | "assetId" | "contentDigest"
+  >,
+) {
+  for (const value of [
+    target.tenantId,
+    target.bookId,
+    target.billId,
+    target.assetId,
+  ])
+    id(value)
+  if (!/^[a-f0-9]{64}$/.test(target.contentDigest))
+    throw new ExpenseReceiptStorageError("INVALID_RECEIPT")
+  return `finance/expense-receipts/thumbnails/${target.tenantId}/${target.bookId}/${target.billId}/${target.assetId}/${target.contentDigest}.webp`
+}
+
+function validateThumbnailBytes(bytes: Uint8Array) {
+  const header = Buffer.from(bytes.subarray(0, 12)).toString("latin1")
+  if (
+    bytes.byteLength < 12 ||
+    bytes.byteLength > EXPENSE_RECEIPT_THUMBNAIL_MAX_BYTES ||
+    !header.startsWith("RIFF") ||
+    header.slice(8, 12) !== "WEBP"
+  )
+    throw new PrivateObjectStorageError("INTEGRITY_MISMATCH")
+}
+
+/**
+ * Thumbnail storage. Same private store, QA/LIVE guard and verified read-back
+ * as originals; repositories still own current actor and attachment checks.
+ */
+export function createExpenseReceiptThumbnailStorage(input: {
+  port: PrivateObjectPort<ExpenseReceiptContentType>
+  configured: () => boolean
+  storeId: string | null
+  providerMode?: "live" | "test"
+}) {
+  const originals = createExpenseReceiptStorage(input)
+  const objects = createPrivateObjectStorage<"image/webp">({
+    port: input.port as PrivateObjectPort<"image/webp">,
+    configured: input.configured,
+    maxBytes: EXPENSE_RECEIPT_THUMBNAIL_MAX_BYTES,
+    validateBytes: validateThumbnailBytes,
+  })
+  function scoped(
+    scope: ExpenseReceiptStorageScope,
+    object: ExpenseReceiptThumbnailObject,
+  ) {
+    originals.assertAvailable(scope)
+    if (
+      object.tenantId !== scope.tenantId ||
+      object.bookId !== scope.bookId ||
+      object.billId !== scope.billId ||
+      object.contentType !== "image/webp" ||
+      object.storagePath !== expenseReceiptThumbnailPath(object)
+    )
+      throw new ExpenseReceiptStorageError("RECEIPT_SCOPE_MISMATCH")
+  }
+  return {
+    async write(request: {
+      scope: ExpenseReceiptStorageScope
+      object: ExpenseReceiptThumbnailObject
+      bytes: Uint8Array
+      abortSignal?: AbortSignal
+    }) {
+      scoped(request.scope, request.object)
+      const signal = privateObjectOperationSignal(request.abortSignal)
+      try {
+        await objects.write({
+          object: request.object,
+          bytes: request.bytes,
+          abortSignal: signal,
+        })
+        // A successful put is not enough: prove every stored byte.
+        await objects.read({ object: request.object, abortSignal: signal })
+      } catch (error) {
+        failure(error)
+      }
+    },
+    async read(request: {
+      scope: ExpenseReceiptStorageScope
+      object: ExpenseReceiptThumbnailObject
+      abortSignal?: AbortSignal
+    }) {
+      scoped(request.scope, request.object)
+      try {
+        return await objects.read({
+          object: request.object,
+          abortSignal: request.abortSignal,
+        })
+      } catch (error) {
+        failure(error)
+      }
+    },
+  }
+}

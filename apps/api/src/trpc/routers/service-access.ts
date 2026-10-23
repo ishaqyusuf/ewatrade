@@ -1,9 +1,11 @@
 import {
   CatalogError,
+  CommerceQuoteError,
   ServiceCommercePolicyError,
   acceptServiceQuote,
   createCustomerTrackingAccess,
   createServiceRequestForm,
+  createStaffServiceQuote,
   getPublicServiceQuote,
   getPublicServiceRequestForm,
   getPublicServiceTracking,
@@ -15,7 +17,7 @@ import {
   submitPublicServiceRequest,
   updateServiceRequestDisposition,
 } from "@ewatrade/db/queries"
-import { AppError } from "@ewatrade/errors"
+import { AppError, ruleRejectedError } from "@ewatrade/errors"
 import { TRPCError } from "@trpc/server"
 
 import {
@@ -32,6 +34,7 @@ import {
   serviceRequestListSchema,
   serviceTrackingCreateSchema,
   serviceTrackingRevokeSchema,
+  staffServiceQuoteSchema,
 } from "../../schemas/services"
 import { createTRPCRouter, protectedProcedure, publicProcedure } from "../init"
 import {
@@ -55,12 +58,36 @@ function isPublicFailure(error: unknown) {
 
 function mapProtectedPolicyError(error: unknown): never {
   if (error instanceof ServiceCommercePolicyError) {
-    throw new TRPCError({ code: "FORBIDDEN", message: error.message })
+    throw new TRPCError({ code: "FORBIDDEN", cause: ruleRejectedError(error) })
   }
+  if (error instanceof CommerceQuoteError || error instanceof CatalogError)
+    throw new TRPCError({
+      code: "BAD_REQUEST",
+      cause: ruleRejectedError(error),
+    })
   throw error
 }
 
 export const serviceAccessRouter = createTRPCRouter({
+  createStaffQuote: protectedProcedure
+    .input(staffServiceQuoteSchema)
+    .mutation(async ({ ctx, input }) => {
+      assertServiceManager(ctx.tenantContext.membership.role)
+      try {
+        return await createStaffServiceQuote(ctx.db, {
+          ...input,
+          actorUserId: ctx.session.user.id,
+          tenantId: ctx.tenantContext.tenant.id,
+          storeId: resolveServiceStoreId(
+            ctx.tenantContext.stores,
+            ctx.tenantContext.activeStore,
+            input.storeId,
+          ),
+        })
+      } catch (error) {
+        mapProtectedPolicyError(error)
+      }
+    }),
   quote: publicProcedure
     .input(publicServiceQuoteSchema)
     .query(async ({ ctx, input }) => {
@@ -220,6 +247,11 @@ export const serviceAccessRouter = createTRPCRouter({
       assertServiceManager(ctx.tenantContext.membership.role)
       return updateServiceRequestDisposition(ctx.db, {
         ...input,
+        storeId: resolveServiceStoreId(
+          ctx.tenantContext.stores,
+          ctx.tenantContext.activeStore,
+          input.storeId,
+        ),
         tenantId: ctx.tenantContext.tenant.id,
       })
     }),

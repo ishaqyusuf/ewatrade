@@ -32,6 +32,7 @@ const reads = new Set([
   "assistant.allowance",
   "tenant.current",
   "services.getSettings",
+  "services.assistantJobCard",
   "services.assignees",
   "serviceAssistantIntake.receipt",
   "tenant.stores",
@@ -148,6 +149,7 @@ const catalog = new Set([
   "catalog.updateProductDetails",
   "catalog.updateProductIdentifiers",
   "catalog.updateItem",
+  "catalog.addServiceChoice",
 ])
 export function staffProcedureAction(
   path: string,
@@ -162,6 +164,9 @@ export function staffProcedureAction(
       "assistant.start",
       "assistant.editProposal",
       "assistant.decideProposal",
+      "assistant.reviewLink",
+      "assistant.decideReviewLink",
+      "assistant.editReviewLink",
       // Personal linking controls; repository rechecks fresh actor and Store authority.
       "assistantChannels.createWhatsAppLink",
       "assistantChannels.confirmWhatsAppLink",

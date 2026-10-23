@@ -37,6 +37,8 @@ import { runStoreConversationMediaSafetySweep } from "./store-conversation-media
 import { runStoreConversationNotificationSchedule } from "./store-conversation-notification-schedule"
 import { runStoreConversationWhatsAppBridgeSchedule } from "./store-conversation-whatsapp-bridge-schedule"
 import { runStoreConversationWhatsAppRecoverySchedule } from "./store-conversation-whatsapp-recovery-schedule"
+import { recoverStorefrontDesignRuns } from "./storefront-design"
+import { runStorefrontReleaseChecks } from "./storefront-release-check"
 
 type CadenceTask = {
   id: string
@@ -95,6 +97,10 @@ export const SCHEDULED_CADENCES = {
   "schedules.every-5-minutes": {
     cron: "*/5 * * * *",
     steps: [
+      sweep("storefront.release-source-check", () =>
+        runStorefrontReleaseChecks(),
+      ),
+      sweep("storefront.design.recovery", recoverStorefrontDesignRuns),
       sweep("assistant.whatsapp.recovery", () =>
         Promise.all([
           recoverAssistantWhatsAppTurns(),

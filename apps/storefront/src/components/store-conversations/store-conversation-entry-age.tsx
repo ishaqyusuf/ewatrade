@@ -16,9 +16,11 @@ const choices: Array<{ label: string; value: AgeBand | "UNDER_13" }> = [
 export function StoreConversationEntryAge({
   publicToken,
   storeName,
+  serviceOfferingId,
 }: {
   publicToken: string
   storeName: string
+  serviceOfferingId?: string
 }) {
   const [access, setAccess] = useState<Access | null>(null)
   const [readyBand, setReadyBand] = useState<AgeBand | null>(null)
@@ -99,6 +101,7 @@ export function StoreConversationEntryAge({
         initialResetGuest={access === "new_guest"}
         publicToken={publicToken}
         storeName={storeName}
+        serviceOfferingId={serviceOfferingId}
       />
     )
 

@@ -3,7 +3,7 @@
 import { usePreviewMotion } from "@ewatrade/onboarding/components/product-preview/use-preview-motion"
 import { useEffect, useState } from "react"
 
-const words = ["shop", "business", "pharmacy", "workshop"]
+const words = ["business", "shop", "pharmacy", "farm"]
 
 export function HeroHeadline({
   paused,

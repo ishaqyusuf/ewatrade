@@ -11,6 +11,33 @@ import {
 const code = "a".repeat(43)
 const quote = "wamid.exact-original-review"
 
+test("native and quoted Edit are least-authority digest-only navigation, never confirmation", () => {
+  const text = assistantWhatsAppIngressActionContent({
+    type: "text",
+    text: `Edit ${code}`,
+    replyToMessageId: quote,
+  })
+  const button = assistantWhatsAppIngressActionContent({
+    type: "interactive",
+    quickActionId: whatsAppActionButtonId(code, "edit"),
+    replyToMessageId: quote,
+  })
+  expect(text).toEqual({
+    type: "action_edit",
+    decision: "cancel",
+    decisionDigest: assistantWhatsAppActionDecisionDigest(code, "cancel"),
+    replyToMessageId: quote,
+  })
+  expect(button).toEqual(text)
+  expect(JSON.stringify(text)).not.toContain(code)
+  expect(
+    assistantWhatsAppIngressActionContent({
+      type: "interactive",
+      quickActionId: whatsAppActionButtonId(code, "edit"),
+    }),
+  ).toEqual({ type: "invalid_action" })
+})
+
 test("typed and interactive actions normalize to identical digest-only intent without source credentials", () => {
   for (const decision of ["confirm", "cancel"] as const) {
     const typed = assistantWhatsAppIngressActionContent({

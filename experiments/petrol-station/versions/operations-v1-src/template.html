@@ -1,0 +1,187 @@
+<!doctype html>
+<html lang="en-NG">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light">
+<title>Petrol station, opened up — simulator</title>
+<!--STYLE-->
+</head>
+<body>
+<a class="skip" href="#panel">Skip to controls</a>
+<div class="app">
+  <header class="top">
+    <div class="brand">
+      <svg class="mark" viewBox="0 0 40 40" aria-hidden="true"><rect x="7" y="6" width="18" height="28" rx="3" fill="#d23c2f" stroke="#1d2a44" stroke-width="2.4"/><rect x="11" y="10" width="10" height="7" rx="1.5" fill="#fbf6ea" stroke="#1d2a44" stroke-width="2"/><path d="M25 14 h4 q3 0 3 3 v11 q0 3 -2.5 3 t-2.5 -3 v-5" fill="none" stroke="#1d2a44" stroke-width="2.4" stroke-linecap="round"/><rect x="4" y="32" width="24" height="4" rx="1" fill="#1f8a5b" stroke="#1d2a44" stroke-width="2"/></svg>
+      <div>
+        <h1>Petrol station, opened up</h1>
+        <p class="lede">Tanker → underground tank → pump → car. One model drives every reading.</p>
+      </div>
+    </div>
+    <p class="sim-badge" role="note"><strong>Simulated example</strong> · prices, sizes and flow rates are illustrative, not market data</p>
+  </header>
+
+  <div class="toolbar" role="toolbar" aria-label="Simulation controls">
+    <div class="segmented" role="group" aria-label="Mode">
+      <button type="button" data-mode="guided" aria-pressed="true">Guided</button>
+      <button type="button" data-mode="auto" aria-pressed="false">Auto</button>
+      <button type="button" data-mode="explore" aria-pressed="false">Explore</button>
+    </div>
+    <div class="playback">
+      <button type="button" id="pause-btn" class="ghost" aria-pressed="false">Pause</button>
+      <button type="button" id="reset-btn" class="ghost">Reset</button>
+      <label class="speed">Playback
+        <select id="speed-select">
+          <option value="0.5">½×</option>
+          <option value="1" selected>1×</option>
+          <option value="2">2×</option>
+          <option value="4">4×</option>
+        </select>
+      </label>
+    </div>
+    <p class="clock" id="clock" aria-live="off">Simulated flow time 0s</p>
+  </div>
+
+  <main class="layout">
+    <div class="scene" id="scene" aria-describedby="speed-note"></div>
+
+    <section class="readouts" aria-label="Readings from the model">
+      <div class="reading"><span class="k">Underground tank</span><span class="v" id="r-tank">—</span><span class="s" id="r-tank-s">—</span></div>
+      <div class="reading"><span class="k">Tanker</span><span class="v" id="r-tanker">—</span><span class="s" id="r-tanker-s">—</span></div>
+      <div class="reading"><span class="k">Car tank</span><span class="v" id="r-car">—</span><span class="s" id="r-car-s">—</span></div>
+      <div class="reading meter"><span class="k">Pump meter</span><span class="v" id="r-meter">—</span><span class="s" id="r-meter-s">—</span></div>
+      <div class="reading"><span class="k">Money</span><span class="v" id="r-money">—</span><span class="s" id="r-money-s">—</span></div>
+    </section>
+
+    <section class="info">
+      <p class="takeaway"><strong>Takeaway:</strong> the meter's litres set the money — every naira on a receipt traces back to fuel that left the tank, and the tank dip must agree.</p>
+      <p class="speed-note" id="speed-note">Playback: delivery runs at 100× and the pump at 5× real time (then × the playback setting). Flow rates are 600 L/min (tanker drop) and 40 L/min (nozzle). Drawing not to scale.</p>
+    </section>
+
+    <aside class="panel" id="panel" aria-label="Station actions" tabindex="-1">
+      <section class="now" aria-labelledby="now-title">
+        <p class="now-step"><span id="now-num">Step 1 of 7</span></p>
+        <h2 id="now-title">Tanker arrives</h2>
+        <p class="now-text" id="now-text"></p>
+        <p class="now-why" id="now-why"></p>
+        <button type="button" class="primary" id="next-btn">Next</button>
+      </section>
+
+      <ol class="steps" id="steps">
+        <li class="step" data-step="1">
+          <h3><span class="num">1</span><span class="t">Tanker arrives</span><span class="tick" aria-hidden="true"></span></h3>
+          <div class="body">
+            <div class="act" data-act="arriveTanker"></div>
+          </div>
+        </li>
+        <li class="step" data-step="2">
+          <h3><span class="num">2</span><span class="t">Receive the delivery</span><span class="tick" aria-hidden="true"></span></h3>
+          <div class="body">
+            <div class="act" data-act="checkTank"></div>
+            <div class="act" data-act="connectDelivery"></div>
+            <div class="act" data-act="startDischarge"></div>
+            <div class="act explore-only" data-act="haltDischarge"></div>
+          </div>
+        </li>
+        <li class="step" data-step="3">
+          <h3><span class="num">3</span><span class="t">Open the station</span><span class="tick" aria-hidden="true"></span></h3>
+          <div class="body">
+            <div class="act" data-act="finishDelivery"></div>
+            <div class="act" data-act="powerOn"></div>
+            <div class="field">
+              <label for="price-input">Pump price (₦ per litre)</label>
+              <input id="price-input" inputmode="decimal" autocomplete="off" value="1000">
+              <p class="field-error" id="price-error" role="alert"></p>
+            </div>
+            <div class="act" data-act="setPrice"></div>
+            <div class="act" data-act="openStation"></div>
+          </div>
+        </li>
+        <li class="step" data-step="4">
+          <h3><span class="num">4</span><span class="t">Serve the customer</span><span class="tick" aria-hidden="true"></span></h3>
+          <div class="body">
+            <div class="act" data-act="customerArrives"></div>
+            <fieldset class="field">
+              <legend>Customer asks for</legend>
+              <div class="choice">
+                <label><input type="radio" name="preset-mode" value="amount" checked> Naira amount</label>
+                <label><input type="radio" name="preset-mode" value="volume"> Litres</label>
+              </div>
+              <label for="preset-input" id="preset-label">Amount (₦)</label>
+              <input id="preset-input" inputmode="decimal" autocomplete="off" value="20000">
+              <p class="field-error" id="preset-error" role="alert"></p>
+            </fieldset>
+            <div class="act" data-act="setPreset"></div>
+            <div class="act" data-act="liftNozzle"></div>
+          </div>
+        </li>
+        <li class="step" data-step="5">
+          <h3><span class="num">5</span><span class="t">Dispense</span><span class="tick" aria-hidden="true"></span></h3>
+          <div class="body">
+            <div class="act" data-act="startPump"></div>
+            <div class="act" data-act="stopPump"></div>
+          </div>
+        </li>
+        <li class="step" data-step="6">
+          <h3><span class="num">6</span><span class="t">Pay and receipt</span><span class="tick" aria-hidden="true"></span></h3>
+          <div class="body">
+            <div class="act" data-act="returnNozzle"></div>
+            <div class="field">
+              <label for="method-select">Payment method (simulated)</label>
+              <select id="method-select">
+                <option value="cash">Cash</option>
+                <option value="transfer">Bank transfer</option>
+                <option value="card">Card</option>
+              </select>
+            </div>
+            <div class="act" data-act="recordPayment"></div>
+            <div class="act explore-only" data-act="leaveUnpaid"></div>
+            <div class="act" data-act="customerLeaves"></div>
+            <div class="receipt" id="receipt" hidden></div>
+          </div>
+        </li>
+        <li class="step" data-step="7">
+          <h3><span class="num">7</span><span class="t">Close and reconcile</span><span class="tick" aria-hidden="true"></span></h3>
+          <div class="body">
+            <div class="act" data-act="closeStation"></div>
+            <div class="summary" id="summary" hidden></div>
+          </div>
+        </li>
+      </ol>
+
+      <section class="explore-panel" id="explore-panel" aria-labelledby="explore-title" hidden>
+        <h2 id="explore-title">Explore: try a fault</h2>
+        <div class="field">
+          <label for="scenario-select">Starting scenario</label>
+          <div class="inline">
+            <select id="scenario-select"></select>
+            <button type="button" id="scenario-btn" class="ghost">Load</button>
+          </div>
+        </div>
+        <div class="field">
+          <label for="tanker-input">Tanker load (litres) for the next arrival</label>
+          <input id="tanker-input" inputmode="decimal" autocomplete="off" value="20000">
+          <p class="field-error" id="tanker-error" role="alert"></p>
+        </div>
+        <div class="grid2">
+          <div class="act" data-act="powerCut"></div>
+          <div class="act" data-act="powerOnRestore"></div>
+          <div class="act" data-act="emergencyStop"></div>
+          <div class="act" data-act="resetEmergency"></div>
+          <div class="act" data-act="powerOff"></div>
+        </div>
+        <p class="hint">Recovery is always explicit: restoring power or resetting the emergency stop never restarts a pump. A stopped sale settles for what was delivered.</p>
+      </section>
+
+      <details class="log">
+        <summary>Event log <span id="log-count">(0)</span></summary>
+        <ol id="log" reversed></ol>
+      </details>
+    </aside>
+  </main>
+  <div class="sr-only" id="announcer" aria-live="polite" aria-atomic="true"></div>
+  <noscript><p class="noscript">This simulator needs JavaScript (no network access is used).</p></noscript>
+</div>
+<!--SCRIPT-->
+</body>
+</html>

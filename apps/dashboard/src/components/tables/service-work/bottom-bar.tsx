@@ -5,15 +5,23 @@ import { QaDashboardQuickFill } from "@/components/qa/qa-quick-fill"
 import { BottomBar } from "@/components/tables/core"
 import {
   Button,
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
   Input,
   SelectControl,
+  Textarea,
 } from "@ewatrade/ui"
 
 import { AnimatePresence } from "framer-motion"
+import { useState } from "react"
 import type { useServiceWorkBatch } from "./use-batch-actions"
 
 type BatchActions = ReturnType<typeof useServiceWorkBatch>
@@ -22,59 +30,110 @@ export function ServiceWorkBottomBar({
   deselect,
   batch,
 }: { count: number; deselect: () => void; batch: BatchActions }) {
+  const [resumeOpen, setResumeOpen] = useState(false)
+  const [reason, setReason] = useState("")
   const busy =
-    batch.batchMutation.isPending || batch.notificationMutation.isPending
+    batch.working ||
+    batch.batchMutation.isPending ||
+    batch.notificationMutation.isPending
   return (
-    <AnimatePresence>
-      {count > 0 ? (
-        <BottomBar selectedCount={count} onDeselect={deselect}>
-          <DropdownMenu>
-            <DropdownMenuTrigger
-              render={
-                <Button
-                  className="rounded-none"
-                  variant="outline"
-                  size="sm"
-                  disabled={busy}
+    <>
+      <AnimatePresence>
+        {count > 0 ? (
+          <BottomBar selectedCount={count} onDeselect={deselect}>
+            <DropdownMenu>
+              <DropdownMenuTrigger
+                render={
+                  <Button variant="outline" size="sm" disabled={busy}>
+                    Update status
+                  </Button>
+                }
+              />
+              <DropdownMenuContent appearance="dashboard" align="end">
+                <DropdownMenuItem
+                  disabled={busy || !batch.eligibleCount("mark_in_progress")}
+                  onClick={() =>
+                    void batch
+                      .updateBatch("mark_in_progress")
+                      .catch(() => undefined)
+                  }
                 >
-                  Actions
-                </Button>
-              }
-            />
-            <DropdownMenuContent appearance="dashboard" align="end">
-              <DropdownMenuItem
-                disabled={busy}
-                onClick={() =>
-                  void batch
-                    .updateBatch("mark_in_progress")
-                    .catch(() => undefined)
-                }
-              >
-                Start work
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                disabled={busy}
-                onClick={() =>
-                  void batch.updateBatch("mark_ready").catch(() => undefined)
-                }
-              >
-                Mark ready
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                disabled={busy}
-                onClick={() =>
-                  void batch.updateBatch("delay").catch(() => undefined)
-                }
-              >
-                Due 1 day later, tell customers
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </BottomBar>
-      ) : null}
-    </AnimatePresence>
+                  Start work ({batch.eligibleCount("mark_in_progress")})
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  disabled={busy || !batch.eligibleCount("mark_ready")}
+                  onClick={() =>
+                    void batch.updateBatch("mark_ready").catch(() => undefined)
+                  }
+                >
+                  Mark ready ({batch.eligibleCount("mark_ready")})
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  disabled={busy || !batch.eligibleCount("resume")}
+                  onClick={() => {
+                    setReason("")
+                    setResumeOpen(true)
+                  }}
+                >
+                  Continue work ({batch.eligibleCount("resume")})
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={busy}
+              onClick={() => batch.setShowMessage(!batch.showMessage)}
+            >
+              Message
+            </Button>
+          </BottomBar>
+        ) : null}
+      </AnimatePresence>
+      <Dialog open={resumeOpen && count > 0} onOpenChange={setResumeOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Continue selected work</DialogTitle>
+            <DialogDescription>
+              {batch.eligibleCount("resume")} eligible jobs. Other selected jobs
+              stay unchanged.
+            </DialogDescription>
+          </DialogHeader>
+          <label htmlFor="batch-resume-reason" className="text-sm font-medium">
+            Reason for continuing
+          </label>
+          <Textarea
+            id="batch-resume-reason"
+            maxLength={500}
+            value={reason}
+            onChange={(event) => setReason(event.target.value)}
+          />
+          {batch.error ? (
+            <FormFeedback appearance="dashboard">{batch.error}</FormFeedback>
+          ) : null}
+          <DialogFooter>
+            <Button
+              variant="outline"
+              disabled={busy}
+              onClick={() => setResumeOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              disabled={busy || !reason.trim()}
+              onClick={async () => {
+                if (await batch.resumeBatch(reason)) setResumeOpen(false)
+              }}
+            >
+              Continue work
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   )
 }
+
 export function ServiceWorkBatchMessage({ batch }: { batch: BatchActions }) {
   return (
     <section

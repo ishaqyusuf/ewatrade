@@ -8,6 +8,7 @@ import { canStaffPerform } from "@ewatrade/auth/store-access"
 import { CatalogPhotoError } from "@ewatrade/db/catalog-photos"
 import {
   CatalogError,
+  addServiceChoiceInTransaction,
   archiveCatalogOffering,
   archiveCatalogVariant,
   countCatalogItems,
@@ -38,6 +39,7 @@ import { catalogDetailRouter } from "./catalog-detail"
 import { catalogPhotoTRPCError, catalogPhotosRouter } from "./catalog-photos"
 
 import {
+  catalogAddServiceChoiceSchema,
   catalogArchiveOfferingSchema,
   catalogArchiveVariantSchema,
   catalogCountSchema,
@@ -179,6 +181,43 @@ function catalogTRPCError(error: CatalogError) {
 }
 
 export const catalogRouter = createTRPCRouter({
+  addServiceChoice: protectedProcedure
+    .input(catalogAddServiceChoiceSchema)
+    .mutation(async ({ ctx, input }) => {
+      assertCanManageCatalog(ctx.tenantContext)
+      const scope = catalogPhotoActorScope(ctx, input.storeId)
+      if (
+        scope.tenantId !== input.originTenantId ||
+        ctx.tenantContext.activeStore?.id !== input.storeId
+      )
+        throw new TRPCError({
+          code: "PRECONDITION_FAILED",
+          message: "Select the original business and Store, then try again.",
+        })
+      try {
+        return await ctx.db.$transaction(
+          (tx) =>
+            addServiceChoiceInTransaction(tx, {
+              ...scope,
+              itemId: input.itemId,
+              name: input.name,
+              priceMinor: input.priceMinor,
+              clientOperationId: input.clientOperationId,
+            }),
+          { maxWait: 10_000, timeout: 60_000 },
+        )
+      } catch (error) {
+        if (error instanceof CatalogError) {
+          const mapped = catalogTRPCError(error)
+          throw new TRPCError({
+            code: mapped.code,
+            message: error.message,
+            cause: ruleRejectedError(error, "catalog.addServiceChoice"),
+          })
+        }
+        throw error
+      }
+    }),
   updateItem: protectedProcedure
     .input(catalogUpdateItemSchema)
     .mutation(async ({ ctx, input }) => {

@@ -30,12 +30,14 @@ export function CatalogItemDetailModal({
   store,
   readOnly,
   accessKey,
+  canCreateServiceJob = false,
 }: {
   actorUserId: string
   tenantId: string
   store: { id: string; name: string }
   readOnly: boolean
   accessKey: string
+  canCreateServiceJob?: boolean
 }) {
   const { catalogDetail, catalogDetailView, close, setView } =
     useCatalogDetailParams()
@@ -147,6 +149,7 @@ export function CatalogItemDetailModal({
                 storeId={store.id}
                 readOnly={readOnly}
                 readScope={readScope}
+                canCreateServiceJob={canCreateServiceJob}
                 error={
                   query.isError
                     ? {

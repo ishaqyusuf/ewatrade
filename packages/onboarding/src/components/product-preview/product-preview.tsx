@@ -14,7 +14,7 @@ export function ProductPreview({
   platform = "web",
   view = "overview",
   state = {},
-  label = "Sample business · Mama Bisi Farms, Ibadan",
+  label = "Sample business · Al-Jawdah Agro-Biz, Ilorin",
 }: {
   platform?: "web" | "mobile"
   view?: PreviewView

@@ -144,21 +144,44 @@ export async function listFinanceBills(
       const totalMinor = totals._sum.totalMinor ?? BigInt(0)
       const paidMinor = totals._sum.paidMinor ?? BigInt(0)
       const page = rows.slice(0, limit)
-      // Attached receipts per expense, so lists can show which still need one.
-      const receiptGroups = page.length
-        ? await tx.financeExpenseReceiptAsset.groupBy({
-            by: ["billId"],
+      // Attached receipts per expense, so lists can show which still need one,
+      // and the newest SAFE image to preview in the grid (ADR-0051).
+      const attached = page.length
+        ? await tx.financeExpenseReceiptAsset.findMany({
             where: {
               bookId: book.id,
               billId: { in: page.map((bill) => bill.id) },
               attachmentState: "ATTACHED",
             },
-            _count: { _all: true },
+            orderBy: [{ attachedAt: "desc" }, { id: "desc" }],
+            select: {
+              id: true,
+              billId: true,
+              contentType: true,
+              safetyState: true,
+            },
           })
         : []
-      const receiptCounts = new Map(
-        receiptGroups.map((group) => [group.billId, group._count._all]),
-      )
+      const receiptCounts = new Map<string, number>()
+      const receiptPreviews = new Map<
+        string,
+        { assetId: string; contentType: string }
+      >()
+      for (const asset of attached) {
+        receiptCounts.set(
+          asset.billId,
+          (receiptCounts.get(asset.billId) ?? 0) + 1,
+        )
+        if (
+          !receiptPreviews.has(asset.billId) &&
+          asset.safetyState === "SAFE" &&
+          asset.contentType.startsWith("image/")
+        )
+          receiptPreviews.set(asset.billId, {
+            assetId: asset.id,
+            contentType: asset.contentType,
+          })
+      }
       return {
         currencyCode: book.currencyCode,
         count,
@@ -176,6 +199,7 @@ export async function listFinanceBills(
             ? "0"
             : (bill.totalMinor - bill.paidMinor).toString(),
           receiptCount: receiptCounts.get(bill.id) ?? 0,
+          receiptPreview: receiptPreviews.get(bill.id) ?? null,
           status: bill.voidedAt
             ? ("VOID" as const)
             : bill.paidMinor === bill.totalMinor

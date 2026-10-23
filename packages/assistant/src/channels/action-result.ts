@@ -3,6 +3,43 @@ import { trustedAssistantAppOrigin } from "./conversation-links"
 import { whatsAppPlainText } from "./render"
 
 export const WHATSAPP_ACTION_RESULT_VERSION = "whatsapp-action-result-v1"
+export const WHATSAPP_ACTION_EDIT_RESULT_VERSION =
+  "whatsapp-action-edit-result-v1"
+export const WHATSAPP_EDIT_INTENT_KIND = "whatsapp_proposal_edit_v1"
+export const whatsAppEditIntentStateSchema = z
+  .object({
+    kind: z.literal(WHATSAPP_EDIT_INTENT_KIND),
+    bindingId: z.string().min(1).max(128),
+    proposalId: z.string().min(1).max(128),
+    revision: z.number().int().positive(),
+    payloadHash: z.string().regex(/^[a-f0-9]{64}$/),
+    scopeDigest: z.string().regex(/^[a-f0-9]{64}$/),
+    identityGeneration: z.number().int().positive(),
+    grantGeneration: z.number().int().positive(),
+    selectionGeneration: z.number().int().positive(),
+  })
+  .strict()
+export const whatsAppActionEditResultContentSchema = z.discriminatedUnion(
+  "type",
+  [
+    z
+      .object({
+        type: z.literal("action_edit_result"),
+        reviewId: z.string().min(1).max(128),
+        intentId: z.string().min(1).max(160),
+        proposalId: z.string().min(1).max(128),
+        revision: z.number().int().positive(),
+      })
+      .strict(),
+    z.object({ type: z.literal("action_edit_refusal") }).strict(),
+  ],
+)
+export function renderWhatsAppActionEditResult(input: unknown) {
+  const parsed = whatsAppActionEditResultContentSchema.parse(input)
+  return parsed.type === "action_edit_result"
+    ? "What would you like to change in this draft? The older Confirm and Cancel options no longer work. Describe the changes here; I will show a fresh review before you confirm. No business record was changed."
+    : "That edit option expired, changed or was already used. Ask for a fresh review or open this saved draft in EwaTrade. No business record was changed."
+}
 export const WHATSAPP_ACTION_INVALID_REPLY =
   "That confirmation is unavailable or changed. Open the exact saved draft in EwaTrade, or ask for a fresh review. Nothing was changed by this message."
 export const WHATSAPP_ACTION_DISABLED_REPLY =

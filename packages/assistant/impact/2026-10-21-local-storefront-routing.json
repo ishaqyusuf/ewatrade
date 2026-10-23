@@ -1,0 +1,46 @@
+{
+  "version": 1,
+  "id": "2026-10-21-local-storefront-routing",
+  "tickets": ["S04", "H02"],
+  "summary": "Repair environment-aware storefront addresses and canonical Portless tenant routing, with a strictly local development QA safe-view boundary.",
+  "noAssistantImpact": "URL presentation and local read-only QA inspection only. Existing signup/setup and storefront preview remain form-only/excluded; no merchant command, tool, procedure, role, entitlement or assistant rollout is added. Public getPublicStorefront stays LIVE-only; QA preview requires exact local runtime/host and cannot send customer messages.",
+  "capabilities": [],
+  "procedures": [],
+  "docs": [
+    {
+      "topic": "feature",
+      "status": "local_only",
+      "path": ".brain/features/product-sharing-public-storefront.md"
+    },
+    {
+      "topic": "permissions",
+      "status": "local_only",
+      "path": ".brain/api/permissions.md"
+    },
+    {
+      "topic": "decision",
+      "status": "local_only",
+      "path": ".brain/decisions/2026-10-21-portless-storefront-hosts-and-local-qa-preview.md"
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "test",
+      "path": "packages/utils/src/domain.test.ts",
+      "executed": true,
+      "result": "Regression reproduced before fix; canonical generation/resolution and exact environment/host QA denials pass."
+    },
+    {
+      "kind": "test",
+      "path": "packages/db/src/queries/public-storefront.test.ts",
+      "executed": true,
+      "result": "Real repository predicates/projection retain public QA refusal; local QA empty view and production/sibling denial and claim-host candidates pass. Combined focused suite18tests/57assertions."
+    },
+    {
+      "kind": "run",
+      "path": "apps/storefront/package.json",
+      "executed": true,
+      "result": "Full Storefront TypeScript check passes; real local browser shows the existing QA business empty storefront at its canonical wildcard URL."
+    }
+  ]
+}

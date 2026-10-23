@@ -21,6 +21,8 @@ export const whatsAppTurnResultSchema = z
       "retry",
     ]),
     nextIngressId: z.string().min(1).max(128).optional(),
+    /** Completed identity-control receipt only; never a merchant/outbox authorization. */
+    disconnectedControlId: z.string().min(1).max(128).optional(),
   })
   .strict()
 export type WhatsAppTurnResult = z.infer<typeof whatsAppTurnResultSchema>

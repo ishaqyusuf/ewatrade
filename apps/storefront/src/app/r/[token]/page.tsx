@@ -1,4 +1,5 @@
 import { StoreConversationEntryAge } from "@/components/store-conversations/store-conversation-entry-age"
+import { serviceOfferingHint } from "@/lib/service-request-selection"
 import { prisma } from "@ewatrade/db"
 import {
   CustomerChannelsError,
@@ -9,7 +10,10 @@ import { notFound } from "next/navigation"
 
 export const dynamic = "force-dynamic"
 
-type Props = { params: Promise<{ token: string }> }
+type Props = {
+  params: Promise<{ token: string }>
+  searchParams: Promise<{ serviceOfferingId?: string }>
+}
 
 async function loadEntryPoint(token: string) {
   try {
@@ -33,13 +37,20 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     : { title: "Customer entry unavailable | EwaTrade" }
 }
 
-export default async function CustomerEntryPage({ params }: Props) {
+export default async function CustomerEntryPage({
+  params,
+  searchParams,
+}: Props) {
   const { token } = await params
   const entryPoint = await loadEntryPoint(token)
+  const query = await searchParams
+  const selectedOfferingId = serviceOfferingHint(query.serviceOfferingId)
+  if (query.serviceOfferingId && !selectedOfferingId) notFound()
   return (
     <StoreConversationEntryAge
       publicToken={token}
       storeName={entryPoint.storeName}
+      serviceOfferingId={selectedOfferingId ?? undefined}
     />
   )
 }

@@ -1,0 +1,72 @@
+{
+  "version": 1,
+  "id": "2026-10-23-store-contact-update",
+  "tickets": ["H01", "H02"],
+  "summary": "Restore explicit Store customer-contact editing in Settings through protected contact read/update procedures and canonical fresh-authority contact commands. No schema or provider change.",
+  "noAssistantImpact": "Store contact and jurisdiction editing is form-only for Owner/Admin. Existing server-derived Tenant/Store and locked active membership checks, expected-original contact CAS and normal phone normalization remain canonical. No model tool, WhatsApp/mobile write or provider-send authority is added. Public storefront eligibility/QA and Service Commerce policies are unchanged.",
+  "capabilities": [],
+  "procedures": [
+    {
+      "path": "stores.contact",
+      "status": "form_only",
+      "reason": "Owner/Admin Store-settings read only; exact accessible Store, fresh active membership/business/Store and no purge. No model contact read capability."
+    },
+    {
+      "path": "stores.updateContact",
+      "status": "form_only",
+      "reason": "Explicit settings form; fresh locked Owner/Admin authority, normalized contact-only update, expected original field CAS, safe repeat after authority and normal errors. No send, policy override or automatic publication."
+    }
+  ],
+  "docs": [
+    {
+      "topic": "feature",
+      "status": "local_only",
+      "path": ".brain/features/store-management.md",
+      "note": "Contact edit behavior and local QA verification."
+    },
+    {
+      "topic": "api",
+      "status": "local_only",
+      "path": ".brain/api/contracts.md",
+      "note": "Contact DTO/update expected-original contract and canonical command."
+    },
+    {
+      "topic": "permissions",
+      "status": "local_only",
+      "path": ".brain/api/permissions.md",
+      "note": "Fresh manager/scope/CAS and unchanged public policy boundary."
+    },
+    {
+      "topic": "capability",
+      "status": "updated",
+      "path": "packages/assistant/src/capabilities/COVERAGE.md",
+      "note": "Both procedures explicitly form_only; regenerated H01."
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "test",
+      "path": "apps/api/src/trpc/routers/stores-contact.test.ts",
+      "executed": true,
+      "result": "Missing contact route red; route/domain9tests58assertions pass. Wrong roles/Store, stale originals, invalid values, safe repeat and revoked access refuse correctly."
+    },
+    {
+      "kind": "test",
+      "path": "packages/db/src/queries/store-contact.test.ts",
+      "executed": true,
+      "result": "Direct command current authority, unchanged value no-write and final-CAS conflict preserve fields."
+    },
+    {
+      "kind": "run",
+      "path": ".brain/qa/evidence/2026-10-23-ewl04-repair/selected-contacts-configured.json",
+      "executed": true,
+      "result": "Only existing selected local QA Stores configured from archived fliers through canonical commands; Heritage Main actual native form save readback. No messages sent or real ownership/consent claim."
+    },
+    {
+      "kind": "test",
+      "path": "apps/dashboard/src/components/stores/store-contact-row.test.ts",
+      "executed": true,
+      "result": "Actual mounted UI and wrapper6pass24assertions after genuine dismissed-callback red; unmount/generation/reload/late completion and current StrictMode submission verified."
+    }
+  ]
+}

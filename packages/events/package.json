@@ -4,6 +4,8 @@
   "private": true,
   "type": "module",
   "exports": {
+    "./storefront-server": "./src/storefront-server.ts",
+    "./storefront-client": "./src/storefront-client.tsx",
     "./client": "./src/client.tsx",
     "./route": "./src/route.ts",
     "./policy": "./src/policy.ts",

@@ -46,6 +46,33 @@ const base: WhatsAppWorkflowReply = {
 const body = (input: unknown) =>
   renderWhatsAppWorkflowReply(input, options).chunks.join("\n")
 
+test("formatted workflow replies retain a byte-compatible legacy renderer for pending deliveries", () => {
+  const input = {
+    ...base,
+    requestText: "Review draft product:eggs",
+    parts: [
+      {
+        type: "text",
+        text: "**Missing price**\n\nWhat is the _price per piece_?",
+      },
+    ],
+  }
+  const current = renderWhatsAppWorkflowReply(input, options)
+  const legacy = renderWhatsAppWorkflowReply(input, {
+    ...options,
+    rendererVersion: "whatsapp-workflow-v1",
+  })
+  expect(current.version).toBe("whatsapp-workflow-v2")
+  expect(legacy.version).toBe("whatsapp-workflow-v1")
+  expect(current.chunks.join("\n")).toContain("*Missing price*")
+  expect(legacy.chunks.join("\n")).toContain(
+    "Assistant draft guidance:\n\nMissing price",
+  )
+  expect(legacy.chunks.join("\n")).not.toContain("*Missing price*")
+  expect(current.chunks.join("\n")).toContain("_price per piece_")
+  expect(current.chunks.join("\n")).toContain("12.125")
+})
+
 test("workflow source gates are explicit, independently default off and forbidden in production", () => {
   expect(whatsAppWorkflowEnabled("SETUP", {})).toBe(false)
   const local = {

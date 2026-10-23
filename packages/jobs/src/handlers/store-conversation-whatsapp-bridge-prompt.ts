@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto"
+import { presentWhatsAppMessage } from "@ewatrade/assistant/channels/presentation"
 
 import {
   DirectMetaWhatsAppProvider,
@@ -107,10 +108,12 @@ export async function runStoreConversationWhatsAppBridgePrompt(
         : claim.choices.map(storeConversationWhatsAppBridgeRequestKindAction)
     const sent = await dependencies.provider.sendButtons({
       accessToken: dependencies.resolveCredential(claim.credentialReference),
-      body:
+      body: presentWhatsAppMessage(
         claim.promptKind === "bridge_choice"
           ? "Your EwaTrade conversation is connected. Choose how to continue."
           : "Choose the type of request you want to start.",
+        { family: "customer", maxUnits: 1024 },
+      ),
       buttons,
       phoneNumberId: claim.phoneNumberId,
       to: dependencies.resolveRecipient(claim.externalCustomerIdCiphertext),

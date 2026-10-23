@@ -1,0 +1,62 @@
+{
+  "version": 1,
+  "id": "2026-10-23-service-work-direction04",
+  "tickets": ["G03", "H02"],
+  "summary": "Implement selected Service work Workshop04v2 with shared tables/search, inline fixed and quoted service cart, canonical private staff quote source and eligibility-aware status/batch actions.",
+  "noAssistantImpact": "The new staff cart is a dashboard manager-reviewed form only. It does not add a model tool or assistant channel write. Existing assistant ServiceJobDraft and missing-catalog handoff remain intact. Quote issuance retains current manager, Store, policy, legal, screening, release approval and customer acceptance gates. Existing jobs/request commands retain their authority and optimistic revisions; request dispositions now also check Store and current status. No provider activation or automatic customer messaging.",
+  "capabilities": [],
+  "procedures": [
+    {
+      "path": "serviceAccess.createStaffQuote",
+      "status": "form_only",
+      "reason": "Reviewed dashboard cart creates a private STAFF request and canonical Commerce Quote atomically. No assistant tool/proposal is added."
+    }
+  ],
+  "docs": [
+    {
+      "topic": "feature",
+      "status": "local_only",
+      "path": ".brain/features/generic-service-operations.md"
+    },
+    {
+      "topic": "api",
+      "status": "local_only",
+      "path": ".brain/api/contracts.md"
+    },
+    {
+      "topic": "permissions",
+      "status": "local_only",
+      "path": ".brain/api/permissions.md"
+    },
+    {
+      "topic": "schema",
+      "status": "not_applicable",
+      "note": "No Prisma schema or migration change."
+    },
+    {
+      "topic": "capability",
+      "status": "updated",
+      "path": "packages/assistant/src/capabilities/inventory.ts"
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "test",
+      "path": "packages/db/src/queries/staff-service-quote.test.ts",
+      "executed": true,
+      "result": "Private attributed/idempotent source; changed payload, unavailable choices, invalid quantities, foreign customer, revoked policy and revoked manager refuse."
+    },
+    {
+      "kind": "test",
+      "path": "packages/db/src/queries/service-request-disposition.test.ts",
+      "executed": true,
+      "result": "Store/revision/status CAS and stale/converted refusal pass."
+    },
+    {
+      "kind": "test",
+      "path": "apps/dashboard/src/components/sheets/assistant-draft-job-revocation.test.ts",
+      "executed": true,
+      "result": "Existing isolated assistant/native sheet registration and revocation regression passes."
+    }
+  ]
+}
