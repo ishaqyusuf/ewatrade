@@ -26,4 +26,6 @@ apps/desktop/
 **/dist/
 **/build/
 **/generated/
+# Promoted storefront templates are committed source, not build output.
+!packages/storefront-templates/src/generated/
 **/*.tsbuildinfo
