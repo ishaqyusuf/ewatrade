@@ -67,11 +67,6 @@ export {
   listFinanceSupplierDirectory,
 } from "./supplier-directory"
 export {
-  type FinanceExpenseReceiptThumbnail,
-  getFinanceExpenseReceiptThumbnailAuthorityInTransaction,
-  recordFinanceExpenseReceiptThumbnailInTransaction,
-} from "./expense-receipt-thumbnails"
-export {
   listFinanceAccountActivity,
   listFinanceAccountLedger,
 } from "./account-activity"

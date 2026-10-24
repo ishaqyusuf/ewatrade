@@ -81,12 +81,6 @@ function fixture() {
       if (controls.prepareError) throw controls.prepareError
       return {
         repository,
-        thumbnails: {
-          inspect: async () =>
-            Promise.reject(new FinanceError("FORBIDDEN", "Not in this test.")),
-          record: async () =>
-            Promise.reject(new FinanceError("FORBIDDEN", "Not in this test.")),
-        },
         sessionId: "owned_session",
         checkSession: async () => undefined,
       }

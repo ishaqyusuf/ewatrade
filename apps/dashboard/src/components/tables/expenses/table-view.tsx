@@ -25,7 +25,6 @@ import { AnimatePresence } from "framer-motion"
 import { ExpenseBottomBar } from "./bottom-bar"
 import { ExpenseReceipt, ExpenseStatusPill, formatExpenseDate } from "./columns"
 import { ExpenseEmptyState } from "./empty-states"
-import { ExpenseReceiptGrid } from "./receipt-grid"
 import { ExpenseTableSkeleton } from "./skeleton"
 import { ExpenseTableHeader, ExpenseTableSettings } from "./table-header"
 
@@ -198,14 +197,6 @@ export function ExpenseTableView({
 
       {!rows.length ? (
         <ExpenseEmptyState filtered={filtered} />
-      ) : view === "cards" ? (
-        <ExpenseReceiptGrid
-          rows={rows}
-          bookId={book.id}
-          timezone={book.timezone}
-          currency={currency}
-          onOpen={(billId) => void setParams({ financeSheet: "bill", billId })}
-        />
       ) : view !== "table" ? (
         <DirectoryCollection view={view} label="Expense">
           {rows.map((row) => {

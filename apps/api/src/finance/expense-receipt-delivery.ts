@@ -13,10 +13,6 @@ import {
   downloadFinanceExpenseReceiptOriginal,
   issueFinanceExpenseReceiptDownload,
 } from "./expense-receipt-delivery-workflow"
-import {
-  type ExpenseReceiptThumbnailContext,
-  readFinanceExpenseReceiptThumbnail,
-} from "./expense-receipt-thumbnail-workflow"
 
 type ReceiptSource = { bookId: string; billId: string; assetId: string }
 export type PrepareExpenseReceiptDelivery = (
@@ -26,7 +22,7 @@ export type PrepareExpenseReceiptDelivery = (
   Pick<
     ExpenseReceiptDeliveryContext,
     "repository" | "sessionId" | "checkSession"
-  > & { thumbnails: ExpenseReceiptThumbnailContext["repository"] }
+  >
 >
 
 const privateHeaders = {
@@ -141,38 +137,6 @@ export function registerFinanceExpenseReceiptDeliveryRoutes(
         return errorResponse(error)
       }
     }
-  // Thumbnails (ADR-0051): same authenticated, persisted-session authority as
-  // originals, no download grant, inline WebP that is never cached.
-  async function thumbnail(context: Context) {
-    try {
-      const selected = source(context)
-      if (!selected)
-        return Response.json(
-          { error: "Invalid private receipt access details." },
-          { status: 400, headers: privateHeaders },
-        )
-      const authenticated = await adapters.prepare(context, selected)
-      const preview = await readFinanceExpenseReceiptThumbnail({
-        repository: authenticated.thumbnails,
-        checkSession: authenticated.checkSession,
-        storage: adapters.storage,
-        signal: context.req.raw.signal,
-      })
-      return new Response(Buffer.from(preview.bytes), {
-        headers: {
-          ...privateHeaders,
-          "Content-Type": "image/webp",
-          "Content-Length": String(preview.bytes.length),
-          "Content-Disposition": `inline; filename="${preview.fileName}"`,
-          "Content-Security-Policy": "default-src 'none'; sandbox",
-          "Cross-Origin-Resource-Policy": "same-origin",
-        },
-      })
-    } catch (error) {
-      return errorResponse(error)
-    }
-  }
-  app.get("/api/finance/expense-receipts/:assetId/thumbnail", thumbnail)
   app.post(
     "/api/finance/expense-receipts/:assetId/download-grant",
     handler("issue"),
