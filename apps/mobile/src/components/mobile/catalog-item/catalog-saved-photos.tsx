@@ -180,7 +180,7 @@ export function CatalogSavedPhotos({
               includeFontPadding: false,
             }}
           >
-            {service ? "Service" : "Product"}
+            {service ? "Service" : "Goods"}
           </NativeText>
         </View>
         {pending ? (

@@ -97,7 +97,7 @@ export function GeneralStockBalanceEditor({
         : balance.custodyType !== "STORE"
           ? "This stock is not in Store custody, so it can't be received or adjusted here."
           : !unit
-            ? "The drafted unit is no longer part of this product's current unit setup. Ask in chat for a fresh draft."
+            ? "The drafted unit is no longer part of this item's current unit setup. Ask in chat for a fresh draft."
             : null
   const ready = state === "ready" && !blocked && balance && unit
   const busy = disabled || !ready

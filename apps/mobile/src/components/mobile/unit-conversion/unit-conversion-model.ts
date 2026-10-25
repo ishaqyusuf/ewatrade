@@ -89,7 +89,7 @@ export function projectConversion(
     return {
       value: null,
       error:
-        "Choose different packaged balances for the same Store, Product, variant and configuration.",
+        "Choose different packaged balances for the same Store, item, variant and configuration.",
     }
   if (sourceValue.length > 40 || targetValue.length > 40)
     return {

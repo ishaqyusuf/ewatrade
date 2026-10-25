@@ -88,7 +88,7 @@ const contracts = [
   {
     file: "src/lib/admin-create-actions.ts",
     markers: [
-      'label: "Product"',
+      'label: "Goods"',
       'label: "Service"',
       "statusLabel: availability.hasProductItems",
     ],
@@ -148,7 +148,7 @@ const contracts = [
     file: "src/lib/admin-navigation.ts",
     markers: [
       'AdminTabKey = "home" | "orders" | "catalog" | "more"',
-      'AdminCatalogTabLabel = "Products" | "Services" | "Catalog"',
+      "(typeof MOBILE_CATALOG_LABELS)[keyof typeof MOBILE_CATALOG_LABELS]",
       'normalizedRole === "MANAGER"',
       'routeName: "catalog"',
       'label: "App theme"',

@@ -1052,7 +1052,7 @@ export function useCreateSale({
     if (submissionPending.current || submitted.current) return
     const offering = getSelectableSaleItemChoices(allRows)[0]
     if (!offering) {
-      setError("Add an eligible Product or Service before filling this draft.")
+      setError("Add an eligible item or service before filling this draft.")
       return
     }
     quickFillSnapshot.current = {

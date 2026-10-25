@@ -477,7 +477,7 @@ function ClassicConversionBody({ model }: { model: ConversionModel }) {
               targetPicker.dismiss()
             }}
             onPageChange={() => {}}
-            emptyMessage="No compatible unit for this product. Configure another packaged unit first."
+            emptyMessage="No compatible unit for this item. Configure another packaged unit first."
           />
         </BottomSheetScrollView>
       </Modal>

@@ -32,7 +32,7 @@ function useDrafts(model: CatalogSetupModel) {
             model.makeDefaultVariantDraft()
           ).enabled,
       )
-    : [{ key: "default", name: model.name.trim() || "This product" }]
+    : [{ key: "default", name: model.name.trim() || "This item" }]
   const draft = (key: string) =>
     model.variantDrafts[key] ?? model.makeDefaultVariantDraft()
   const update = (key: string, change: Partial<CatalogVariantDraft>) => {
@@ -117,7 +117,11 @@ function MiniInput({
     >
       {prefix ? (
         <NativeText
-          style={{ color: colors.mutedForeground, fontSize: 16, fontWeight: "800" }}
+          style={{
+            color: colors.mutedForeground,
+            fontSize: 16,
+            fontWeight: "800",
+          }}
         >
           {prefix}
         </NativeText>
@@ -350,7 +354,7 @@ export function ClassicOpeningStock({ model }: { model: CatalogSetupModel }) {
       <StatusBanner
         icon="Info"
         tone="primary"
-        message="Saved as opening stock when you save the product. Later changes go through Stock in or a count."
+        message="Saved as opening stock when you save the item. Later changes go through Stock in or a count."
       />
     </View>
   )
@@ -475,7 +479,7 @@ export function ClassicCodes({ model }: { model: CatalogSetupModel }) {
       <StatusBanner
         icon="Info"
         tone="primary"
-        message="Scanning a barcode in New sale adds this product straight away."
+        message="Scanning a barcode in New sale adds this item straight away."
       />
     </View>
   )
@@ -579,7 +583,7 @@ export function ClassicPricing({ model }: { model: CatalogSetupModel }) {
         ) : (
           <Row first>
             <Text className="min-w-0 flex-1 text-sm font-bold text-foreground">
-              {model.name.trim() || "This product"}
+              {model.name.trim() || "This item"}
             </Text>
             <MiniInput
               accessibilityLabel="Selling price"

@@ -84,7 +84,7 @@ export function getOrderDetailDispatchDocketPresentation(
       summary.productLineCount === 0
         ? summary.serviceLineCount > 0
           ? "Service order"
-          : "No product lines"
+          : "No item lines"
         : summary.fulfilledProductLineCount === summary.productLineCount
           ? "Fulfilled"
           : deliveryIsScheduled

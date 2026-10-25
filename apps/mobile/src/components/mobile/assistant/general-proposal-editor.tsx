@@ -457,7 +457,7 @@ function GeneralRecordEditor({
         {payload.action === "order_create" ? (
           <>
             <Text className="text-sm text-muted-foreground">
-              Use the sale form to change products or customer. Here you can
+              Use the sale form to change items or the customer. Here you can
               adjust quantities, notes and what each typed-price line was for.
             </Text>
             {payload.lines.map((line, index) =>

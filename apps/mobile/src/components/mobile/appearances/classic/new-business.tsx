@@ -1,3 +1,4 @@
+import { mobileCatalogSystemCopy } from "@/lib/catalog-wording"
 import {
   BUSINESS_SETUP_STEPS,
   BUSINESS_SETUP_TITLES,
@@ -76,7 +77,7 @@ export function BusinessProfileRow({
     >
       <Text className="font-bold text-foreground">{profile.title}</Text>
       <Text className="text-xs text-muted-foreground [-rn-line-height:22]">
-        {profile.description}
+        {mobileCatalogSystemCopy(profile.description)}
       </Text>
     </Pressable>
   )

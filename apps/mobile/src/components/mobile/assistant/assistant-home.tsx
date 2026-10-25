@@ -51,9 +51,9 @@ export function assistantSuggestions(role?: string): AssistantSuggestion[] {
       {
         icon: "Package",
         tint: "sky",
-        title: "Add a product",
+        title: "Add an item",
         sub: "Price, unit and stock",
-        prompt: "Add a product: ",
+        prompt: "Add an item to my goods: ",
         send: false,
       },
     ]

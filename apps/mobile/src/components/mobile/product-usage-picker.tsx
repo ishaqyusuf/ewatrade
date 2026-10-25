@@ -22,10 +22,10 @@ export function ProductUsagePicker({
   return (
     <View className="gap-2">
       <Text className="text-xs font-bold uppercase tracking-[1.4px] text-muted-foreground">
-        Product usage
+        Item usage
       </Text>
       <View
-        accessibilityLabel="Product usage"
+        accessibilityLabel="Item usage"
         accessibilityRole="radiogroup"
         className="flex-row flex-wrap gap-2"
       >

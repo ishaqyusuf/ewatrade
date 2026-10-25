@@ -180,7 +180,7 @@ export function ClassicOrderDetailContent({
       {fulfillmentScheduledForFuture && !closed ? (
         <StatusBanner
           icon="Calendar"
-          message={`Product fulfillment becomes available at ${formatCommerceDateTime(
+          message={`Goods fulfillment becomes available at ${formatCommerceDateTime(
             order.deliveryDueAt ?? new Date(),
           )}.`}
           title="Delivery is scheduled"

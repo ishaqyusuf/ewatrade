@@ -33,7 +33,7 @@ export const SEARCH_GROUP_ORDER: SearchResult["type"][] = [
   "staff",
 ]
 export function resultGroupLabel(type: SearchResult["type"]) {
-  if (type === "catalog_item") return "Products & services"
+  if (type === "catalog_item") return "Goods & services"
   if (type === "service_job") return "Service work"
   if (type === "staff") return "Staff"
   return `${type.charAt(0).toUpperCase()}${type.slice(1)}s`

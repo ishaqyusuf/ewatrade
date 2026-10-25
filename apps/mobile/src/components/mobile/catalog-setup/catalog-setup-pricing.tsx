@@ -38,7 +38,7 @@ export function CatalogSetupPricing({
           <View className="gap-1">
             <Text className="text-lg font-extrabold text-foreground">
               {kind === "product"
-                ? "Product stock & pricing"
+                ? "Item stock & pricing"
                 : "Price each choice"}
             </Text>
             <Text className="text-xs [-rn-line-height:22] text-muted-foreground">

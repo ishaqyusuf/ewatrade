@@ -82,7 +82,7 @@ export function NativeServiceRequestPageContent({
             this Store · checked {serviceRequestUtc(page.asOf)}
           </Text>
           <Text className="text-xs text-muted-foreground">
-            Generic Service Requests only — not Product Inquiries or clinical
+            Generic Service Requests only — not Item Inquiries or clinical
             requests. Each page is a fresh read; pages are never added together.
           </Text>
         </View>
@@ -96,7 +96,7 @@ export function NativeServiceRequestPageContent({
                 : "No Service Requests match these filters in this Store."}
             </Text>
             <Text className="text-xs text-muted-foreground">
-              This does not cover Product Inquiries or clinical requests.
+              This does not cover Item Inquiries or clinical requests.
             </Text>
           </View>
         </ListCard>

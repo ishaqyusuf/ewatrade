@@ -34,6 +34,7 @@ import {
   ResultCard,
   UnavailableProposalCard,
 } from "./assistant-cards"
+import { mobileAssistantSystemTitle } from "./assistant-wording"
 import { AssistantChatBox } from "./assistant-chat-box"
 import { AssistantChatRow, AssistantHome } from "./assistant-home"
 import { isAssistantSessionCurrent } from "./assistant-scope"
@@ -418,7 +419,7 @@ export function AskAssistantLive() {
                 <View key={proposal.id} className="gap-3">
                   {proposal.receipt ? (
                     <ResultCard
-                      title={proposal.receipt.title}
+                      title={mobileAssistantSystemTitle(proposal.receipt.title)}
                       detail={proposal.receipt.detail}
                       media={
                         proposal.payload.action === "order_attachment_add" &&
@@ -452,9 +453,9 @@ export function AskAssistantLive() {
                       proposal.status === "PENDING" &&
                       simpleSaleStep(proposal.payload) !== "review" ? null : (
                         <ProposalCard
-                          title={
-                            capabilityForAction(proposal.payload.action).title
-                          }
+                          title={mobileAssistantSystemTitle(
+                            capabilityForAction(proposal.payload.action).title,
+                          )}
                           media={
                             proposal.payload.action === "product_create" ? (
                               <GeneralProductThumb payload={proposal.payload} />

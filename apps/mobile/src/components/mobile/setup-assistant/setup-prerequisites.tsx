@@ -59,7 +59,7 @@ function SetupTerms({
         Accept the ẸwáTrade Terms
       </Text>
       <Text className="text-xs text-tint-sky-foreground">
-        Products and services require the current Terms. Customers can still be
+        Goods and services require the current Terms. Customers can still be
         added.
       </Text>
       {version ? (

@@ -63,7 +63,7 @@ describe("Order action sheet fulfilment confirmation", () => {
       orderLineId: "line-rice",
       summaryLabel: "OFADA RICE · PREMIUM",
       summaryValue: "5 × 25 kg bag",
-      title: "Fulfil product line",
+      title: "Fulfil item line",
       warning:
         "This records the stock movement and updates the Order. Confirm only when the items are ready.",
     })
@@ -72,8 +72,8 @@ describe("Order action sheet fulfilment confirmation", () => {
   test("summarizes every ready Product line without counting Service work", () => {
     expect(getOrderFulfilmentConfirmation(ORDER, { kind: "all" })).toEqual({
       actionLabel: "Fulfil all ready",
-      detail: "Commits every active Product reservation in this Order.",
-      detailTitle: "2 Product lines",
+      detail: "Commits every active goods reservation in this Order.",
+      detailTitle: "2 goods lines",
       kind: "all",
       orderLineId: null,
       summaryLabel: "READY TO FULFIL",

@@ -165,7 +165,7 @@ export function GeneralProductPictureField({
               source={{ uri: picture.image.uri }}
               style={{ width: "100%", height: "100%" }}
               contentFit="cover"
-              accessibilityLabel="New product photo"
+              accessibilityLabel="New item photo"
             />
           ) : picture.keptPhoto ? (
             <Text className="px-1 text-center text-xs text-muted-foreground">

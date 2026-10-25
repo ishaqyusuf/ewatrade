@@ -161,7 +161,7 @@ export function buildCommercialOrderActivity(
         detail: `${formatCommerceQuantity(fulfilment.quantity)} × ${commerceLineTitle(line)} fulfilled from reserved stock.`,
         key: `fulfilment:${fulfilment.id}`,
         occurredAt: fulfilment.createdAt,
-        label: "Product fulfilled",
+        label: "Item fulfilled",
         time: fulfilment.createdAt
           ? formatCommerceDateTime(fulfilment.createdAt)
           : "Time unavailable",
@@ -180,7 +180,7 @@ export function buildCommercialOrderActivity(
         detail: `${formatCommerceQuantity(productReturn.quantity)} × ${commerceLineTitle(line)} returned · ${commerceStatusLabel(productReturn.disposition)}.`,
         key: `return:${productReturn.id}`,
         occurredAt: productReturn.createdAt,
-        label: "Product returned",
+        label: "Item returned",
         time: productReturn.createdAt
           ? formatCommerceDateTime(productReturn.createdAt)
           : "Time unavailable",

@@ -98,7 +98,7 @@ export function ClassicCatalogChoices({
         onPress={onAddProduct}
         tone="soft"
       >
-        Add a Product
+        Add an item
       </ActionButton>
       <Text className="text-xs text-muted-foreground">
         Goods you stock, count and sell
@@ -133,7 +133,7 @@ export function ClassicCatalogFirstItemGate(props: CatalogChoiceProps) {
             onPress={props.onAddProduct}
             tone="cream"
           >
-            Add a Product
+            Add an item
           </ActionButton>
           <ActionButton
             disabled={props.disabled}

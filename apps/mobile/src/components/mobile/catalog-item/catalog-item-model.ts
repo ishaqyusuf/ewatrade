@@ -31,7 +31,7 @@ export function catalogItemUnavailable({
         ? "Loading overview"
         : "Overview unavailable",
     message: isOffline
-      ? "Reconnect to load this Product or Service."
+      ? "Reconnect to load this item or service."
       : isPending
         ? "Loading the latest Catalog details."
         : (errorMessage ?? "Catalog item not found."),

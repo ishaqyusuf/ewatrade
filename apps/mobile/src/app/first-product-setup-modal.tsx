@@ -24,7 +24,7 @@ export default function FirstProductSetupModalRoute() {
       closeLabel="Close item setup"
       title={
         initialKind === "product"
-          ? "Add product"
+          ? "Add item"
           : initialKind === "service"
             ? "Add service"
             : "Add item"

@@ -137,14 +137,14 @@ export function CatalogSetupEssentials({
       {!focused && kind === "product" ? (
         <View className="mt-1 border-t border-border pt-4">
           <Text className="text-lg font-extrabold text-foreground">
-            Optional product details
+            Optional item details
           </Text>
           <Text className="mb-1 text-xs [-rn-line-height:22] text-muted-foreground">
             Add starting quantity or customer-facing context only when needed.
           </Text>
           {!showAdvanced && !showOpeningStock ? (
             <OptionalDetailAction
-              description="Record the quantity available when this Product is saved."
+              description="Record the quantity available when this Item is saved."
               icon="Warehouse"
               label="Opening stock"
               onPress={() => setShowOpeningStock(true)}

@@ -22,7 +22,7 @@ export const ONBOARDING_STEPS = [
     title: "Set up your business",
   },
   {
-    body: "Add products and services, with prices, options and units only when you need them.",
+    body: "Add goods and services, with prices, options and units only when you need them.",
     icon: "Warehouse",
     tasks: [
       { icon: "ReceiptText", label: "Create your first item" },

@@ -243,7 +243,7 @@ export function WhatsAppScopePicker({
         <>
           <Text className="text-sm text-muted-foreground">
             A new chat starts a separate General conversation. Continue a saved
-            Setup chat here, or open its saved Product chat on the web. Keep the
+            Setup chat here, or open its saved item chat on the web. Keep the
             original business and Store selected.
           </Text>
           <ActionButton
@@ -266,7 +266,7 @@ export function WhatsAppScopePicker({
                       ? "General chat"
                       : chat.purpose === "SETUP"
                         ? "Setup chat"
-                        : "Product chat · web continuation"
+                        : "Item chat · web continuation"
                   }
                   meta={`Updated ${new Date(chat.updatedAt).toLocaleString()}`}
                   onPress={

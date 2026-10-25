@@ -17,7 +17,7 @@ export function getSaleFulfillmentOption({
     return {
       canFulfillNow: false,
       fulfillNow: false,
-      reason: "Only Product lines use stock fulfillment.",
+      reason: "Only goods lines use stock fulfillment.",
     }
   }
   if (deliveryDueAt.getTime() > now.getTime()) {

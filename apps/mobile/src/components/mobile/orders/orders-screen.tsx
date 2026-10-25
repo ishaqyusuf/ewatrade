@@ -329,7 +329,7 @@ export function OrdersScreen() {
                       ? "Reconnect to refresh Orders from your workspace."
                       : query || filter !== "all" || dateFilter !== "all"
                         ? "Try another date, search, or status filter."
-                        : "New Product and Service Orders will appear here."
+                        : "New orders for goods and services will appear here."
                   }
                   title={
                     isOffline

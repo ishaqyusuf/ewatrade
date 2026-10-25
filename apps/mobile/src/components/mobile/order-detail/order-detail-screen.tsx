@@ -184,7 +184,7 @@ export function OrderDetailScreen({ orderId }: { orderId: string }) {
       },
       onSuccess: async () => {
         setError(null)
-        setNotice("Product fulfilment recorded.")
+        setNotice("Item fulfilment recorded.")
         fulfilLineModal.dismiss()
         setSelectedFulfilmentLineId(null)
         await refreshOrderQueries()

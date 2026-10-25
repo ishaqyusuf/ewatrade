@@ -112,9 +112,7 @@ export function commerceLineOption(line: CommercialOrderLine) {
   if (line.customLine)
     return catalogFreeLineDisplay(line.customLine).detail ?? "Typed price"
   if (line.kind === "product") {
-    return (
-      line.snapshot?.variantName ?? line.snapshot?.offeringName ?? "Product"
-    )
+    return line.snapshot?.variantName ?? line.snapshot?.offeringName ?? "Item"
   }
   const labels = [
     line.snapshot?.variantName,

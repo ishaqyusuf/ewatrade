@@ -598,7 +598,7 @@ export function AssistantWhatsAppScreen() {
           ) : (
             <ActionButton onPress={() => void continueSelectedChat()}>
               {selectedChat.purpose === "PRODUCT_CREATE"
-                ? "Open saved Product chat on web"
+                ? "Open saved item chat on web"
                 : selectedChat.purpose === "SETUP"
                   ? "Continue saved Setup chat"
                   : "Continue saved chat in EwaTrade"}

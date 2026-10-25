@@ -82,7 +82,7 @@ const ENTITLEMENT_COPY: Record<string, { icon: IconKeys; title: string }> = {
   businesses: { icon: "Building2", title: "Businesses" },
   offlineDevices: { icon: "WifiOff", title: "Offline devices" },
   ordersPerMonth: { icon: "ReceiptText", title: "Orders this month" },
-  products: { icon: "Package", title: "Products" },
+  products: { icon: "Package", title: "Goods" },
   reportsHistoryDays: { icon: "Clock", title: "Report history" },
   staff: { icon: "Users", title: "Staff" },
 }
@@ -113,7 +113,7 @@ function planLimitsLine(plan: RetailOpsPlan) {
       ? `unlimited ${many}`
       : `${value} ${value === 1 ? one : many}`
   return [
-    part(products, "product", "products"),
+    part(products, "goods item", "goods items"),
     part(staff, "staff", "staff"),
     part(businesses, "business", "businesses"),
   ].join(" · ")

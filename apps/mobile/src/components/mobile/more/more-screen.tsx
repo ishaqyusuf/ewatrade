@@ -379,7 +379,7 @@ function MoreContent({
                       ? themeOverride.charAt(0).toUpperCase() +
                         themeOverride.slice(1)
                       : item.id === "inventory" && item.disabled
-                        ? "Add a Product to enable inventory"
+                        ? "Add an item to enable inventory"
                         : item.id === "sync-offline"
                           ? `${offlineSettings.data ? (offlineSettings.data.approvalRequired ? "Staff approval on" : "Staff approval off") : "Approval settings unavailable"} · ${offlineRecords.data ? `${stagedRecords.length} waiting` : "Review count unavailable"}`
                           : undefined)

@@ -483,7 +483,7 @@ export function CatalogEssentialsFields({
     <>
       <FormField
         autoCapitalize="words"
-        label={kind === "product" ? "Product name" : "Service name"}
+        label={kind === "product" ? "Item name" : "Service name"}
         maxLength={160}
         onChangeText={onNameChange}
         onBlur={onNameBlur}
@@ -511,7 +511,7 @@ export function CatalogEssentialsFields({
             editable={!multiplePriceOptions}
             helper={
               multiplePriceOptions
-                ? "Set prices in Product stock & pricing below."
+                ? "Set prices in Item stock & pricing below."
                 : undefined
             }
             label="Selling price"
@@ -662,8 +662,7 @@ export function CatalogLivePreview({
               opacity: trimmedName ? 1 : 0.6,
             }}
           >
-            {trimmedName ||
-              (kind === "service" ? "Your service" : "Your product")}
+            {trimmedName || (kind === "service" ? "Your service" : "Your item")}
           </NativeText>
           <NativeText
             style={{
@@ -707,7 +706,7 @@ export function ProductOptionsSectionHeader({
         }
       >
         <Text className="text-lg font-extrabold text-foreground">
-          Product options
+          Item options
         </Text>
         <Text
           className={
@@ -753,7 +752,7 @@ export function ProductFirstOptionAction({
   return (
     <View className="gap-3 border-b border-border pb-4">
       <Pressable
-        accessibilityLabel="Add first Product option"
+        accessibilityLabel="Add first item option"
         className={
           largeTextLayout
             ? "-mx-2 min-h-16 flex-row items-start gap-3 rounded-2xl px-3 py-3 active:bg-muted"
@@ -790,7 +789,7 @@ export function ProductFirstOptionAction({
       </Pressable>
       <View className="border-l-2 border-primary bg-muted px-3 py-3">
         <Text className="text-xs [-rn-line-height:22] text-muted-foreground">
-          After you add values, Product stock &amp; pricing will create every
+          After you add values, Item stock &amp; pricing will create every
           combination for you.
         </Text>
       </View>
@@ -849,8 +848,8 @@ export function ProductFirstOptionValueAction({
       </Pressable>
       <View className="border-l-2 border-primary bg-muted px-3 py-3">
         <Text className="text-xs [-rn-line-height:22] text-muted-foreground">
-          Product stock &amp; pricing appears after every option has at least
-          one value.
+          Item stock &amp; pricing appears after every option has at least one
+          value.
         </Text>
       </View>
     </>
@@ -866,7 +865,7 @@ export function ProductUseOnePriceAction({
 
   return (
     <Pressable
-      accessibilityLabel="Use one price instead and clear Product options"
+      accessibilityLabel="Use one price instead and clear item options"
       className={
         largeTextLayout
           ? "-mx-2 min-h-16 flex-row items-start gap-3 rounded-2xl px-3 py-3 active:bg-destructive/10"
@@ -889,7 +888,7 @@ export function ProductUseOnePriceAction({
           Use one price instead
         </Text>
         <Text className="text-xs [-rn-line-height:22] text-muted-foreground">
-          Clear option setup and return to one Product price.
+          Clear option setup and return to one item price.
         </Text>
       </View>
       <Icon

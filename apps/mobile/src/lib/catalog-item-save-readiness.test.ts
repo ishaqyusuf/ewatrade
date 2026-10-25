@@ -15,7 +15,7 @@ describe("catalog item save readiness", () => {
       }),
     ).toEqual({
       canSave: false,
-      hint: "Enter a product name to continue.",
+      hint: "Enter an item name to continue.",
     })
   })
 

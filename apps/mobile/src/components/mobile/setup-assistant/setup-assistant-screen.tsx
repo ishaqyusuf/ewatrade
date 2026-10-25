@@ -78,7 +78,7 @@ export function SetupAssistantScreen() {
     return (
       <SetupUnavailable
         title="Choose a Store"
-        message="Open your active Store before setting up its products, services and customers."
+        message="Open your active Store before setting up its goods, services and customers."
       />
     )
   return (

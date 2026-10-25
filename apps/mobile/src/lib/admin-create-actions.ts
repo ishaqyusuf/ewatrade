@@ -32,7 +32,7 @@ export function buildAdminCreateActions(
       disabled: isOffline,
       emphasis: "catalog",
       icon: "FolderPlus",
-      label: "Product",
+      label: "Goods",
       route: "/first-product-setup-modal?kind=product",
       statusLabel: isOffline ? "Online only" : undefined,
     },
@@ -63,7 +63,7 @@ export function buildAdminCreateActions(
     },
     {
       detail: availability.hasActiveSellableItems
-        ? "Create an order from active Products or Services."
+        ? "Create an order from active goods or services."
         : "Record a sale — pick catalog items or type a price.",
       disabled: false,
       emphasis: "standard",
@@ -74,13 +74,13 @@ export function buildAdminCreateActions(
     {
       detail: availability.hasProductItems
         ? "Receive, count, adjust, or assign stock."
-        : "Add a Product to unlock stock.",
+        : "Add an item to unlock stock.",
       disabled: !availability.hasProductItems,
       emphasis: "standard",
       icon: "Warehouse",
       label: "Stock Entry",
       route: "/stock-intake-modal",
-      statusLabel: availability.hasProductItems ? undefined : "Product",
+      statusLabel: availability.hasProductItems ? undefined : "Goods",
     },
   ]
   if (!profile) return actions
@@ -88,7 +88,7 @@ export function buildAdminCreateActions(
     profile.staffAccessMode === "SCOPED" &&
     !["OWNER", "ADMIN"].includes(normalizeMobileRole(profile.role))
   return actions.filter((action) => {
-    if (action.label === "Product" || action.label === "Service")
+    if (action.label === "Goods" || action.label === "Service")
       return canEditMobileCatalog(profile)
     if (action.label === "Staff") return canManageMobileStaff(profile)
     if (action.label === "Customer") return !scopedStaff

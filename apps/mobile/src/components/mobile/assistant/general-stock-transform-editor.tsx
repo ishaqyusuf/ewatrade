@@ -87,7 +87,7 @@ export function GeneralStockTransformEditor({
             source.variantId !== target.variantId ||
             source.configurationVersionId !== target.configurationVersionId ||
             source.balanceSourceId === target.balanceSourceId
-          ? "These balances are no longer two pack sizes of the same product setup."
+          ? "These balances are no longer two pack sizes of the same item setup."
           : null
   const busy = disabled || state !== "ready" || Boolean(blocked)
   const [sourceQuantity, setSourceQuantity, sourceQuantityLive] = useStockField(

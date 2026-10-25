@@ -51,6 +51,12 @@ describe("Catalog Shelf List", () => {
     expect(
       filterCatalogShelf(rows, { query: "bag" }).map((row) => row.id),
     ).toEqual(["feed"])
+    expect(
+      filterCatalogShelf(rows, { query: "goods" }).map((row) => row.id),
+    ).toEqual(["eggs", "feed"])
+    expect(
+      filterCatalogShelf(rows, { query: "product" }).map((row) => row.id),
+    ).toEqual(["eggs", "feed"])
     expect(filterCatalogShelf(rows, { query: "missing" })).toEqual([])
     expect(filterCatalogShelf(rows, { query: "" })).toHaveLength(3)
     expect(rows).toHaveLength(3)
@@ -66,8 +72,8 @@ describe("Catalog Shelf List", () => {
     ).toEqual([])
     expect(filterCatalogShelf(rows, { attention: "not_counted" })).toEqual([])
   })
-  test("only settled product-only businesses use the Products title", () => {
-    expect(catalogShelfTitle(true, false)).toBe("Products")
+  test("only settled goods-only businesses use the Goods title", () => {
+    expect(catalogShelfTitle(true, false)).toBe("Goods")
     expect(catalogShelfTitle(true, true)).toBe("Catalog")
     expect(catalogShelfTitle(true, undefined)).toBe("Catalog")
     expect(catalogShelfTitle(false, true)).toBe("Services")
@@ -78,7 +84,7 @@ describe("Catalog Shelf List", () => {
     const counts = catalogShelfCounts(rows, rows.length)
     expect(counts).toMatchObject({ out_of_stock: 1, service: 1 })
     expect(counts && catalogCountLabel(counts)).toBe(
-      `${rows.length} items · ${rows.length - 1} products, 1 service`,
+      `${rows.length} items · ${rows.length - 1} goods items, 1 service`,
     )
     expect(
       catalogCountLabel({
@@ -87,7 +93,7 @@ describe("Catalog Shelf List", () => {
         product: 2,
         service: 0,
       }),
-    ).toBe("2 products")
+    ).toBe("2 goods items")
   })
 
   test("gives services sky and products a stable tint", () => {

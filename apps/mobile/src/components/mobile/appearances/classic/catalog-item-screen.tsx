@@ -129,8 +129,8 @@ export function ClassicCatalogItemOverview({
   }
   const reason = internalUse
     ? canManageUsage
-      ? "Internal use Products are hidden from customer orders. Change its usage below to sell it."
-      : "Internal use Products are hidden from customer orders."
+      ? "This internal-use item is hidden from customer orders. Change its usage below to sell it."
+      : "Internal-use goods are hidden from customer orders."
     : !offerings.length
       ? "Add an active option with a price before this item can be ordered."
       : offerings.every(
@@ -370,7 +370,7 @@ export function ClassicCatalogItemOverview({
             border={Boolean(item.description || item.category)}
             icon={product ? "Package" : "Wrench"}
             tint={product ? "sky" : "lilac"}
-            title={product ? "Stock-tracked product" : "Service"}
+            title={product ? "Stock-tracked item" : "Service"}
             sub={
               product
                 ? "Stock moves when orders are fulfilled"
@@ -620,7 +620,7 @@ function KindPill({ service }: { service: boolean }) {
           textAlignVertical: "center",
         }}
       >
-        {service ? "Service" : "Product"}
+        {service ? "Service" : "Goods"}
       </NativeText>
     </View>
   )

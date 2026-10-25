@@ -1,3 +1,4 @@
+import { MOBILE_CATALOG_LABELS, goodsItemCount } from "@/lib/catalog-wording"
 import { rankBySearch } from "@ewatrade/utils/search-rank"
 import type { CatalogKindFilter, CatalogRow } from "./catalog-presentation"
 
@@ -24,7 +25,7 @@ export function filterCatalogShelf(
   return rankBySearch(scoped, query, (row) => [
     { text: row.name },
     { text: row.unitName, weight: 0.8 },
-    { text: row.kind, weight: 0.6 },
+    { text: `${row.kind} ${MOBILE_CATALOG_LABELS[row.kind]}`, weight: 0.6 },
   ])
 }
 
@@ -86,15 +87,17 @@ export function catalogCountLabel(
 ) {
   const plural = (n: number, word: string) =>
     `${n} ${word}${n === 1 ? "" : "s"}`
-  if (!counts.service) return plural(counts.product, "product")
+  if (!counts.service) return goodsItemCount(counts.product)
   if (!counts.product) return plural(counts.service, "service")
-  return `${plural(counts.all, "item")} · ${plural(counts.product, "product")}, ${plural(counts.service, "service")}`
+  return `${plural(counts.all, "item")} · ${goodsItemCount(counts.product)}, ${plural(counts.service, "service")}`
 }
 
 export function catalogShelfTitle(
   hasProducts?: boolean,
   hasServices?: boolean,
 ) {
-  if (hasServices && hasProducts === false) return "Services"
-  return hasProducts && hasServices === false ? "Products" : "Catalog"
+  if (hasServices && hasProducts === false) return MOBILE_CATALOG_LABELS.service
+  return hasProducts && hasServices === false
+    ? MOBILE_CATALOG_LABELS.product
+    : MOBILE_CATALOG_LABELS.mixed
 }

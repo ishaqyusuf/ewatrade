@@ -75,7 +75,7 @@ export function ClassicHomeJourney(props: HomeJourneyPresentationProps) {
   const unfinished = journey.catalog === "unfinished"
   const catalogLabel = unfinished
     ? "Finish item setup"
-    : "Add a Product or Service"
+    : "Add an item or service"
   const catalogAction = unfinished ? props.onCatalog : props.onAddItem
   return (
     <View className="gap-5" testID="classic-home-journey">

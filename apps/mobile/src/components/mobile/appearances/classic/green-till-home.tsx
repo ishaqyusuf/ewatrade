@@ -322,7 +322,7 @@ function SetupHome(props: GreenTillOwnerHomeProps) {
       key: "catalog",
       onPress: first ? undefined : props.onAddItem,
       state: first ? "done" : "now",
-      sub: first ? "Ready to sell" : "A product or service with a price",
+      sub: first ? "Ready to sell" : "An item or service with a price",
       title: "Add what you sell",
     },
     {
@@ -349,7 +349,7 @@ function SetupHome(props: GreenTillOwnerHomeProps) {
       <HeroCard
         cta={{
           icon: first ? "Receipt" : "Plus",
-          label: first ? "Take your first order" : "Add a product or service",
+          label: first ? "Take your first order" : "Add an item or service",
           onPress: first ? props.onNewSale : props.onAddItem,
           testID: "home-setup-cta",
         }}

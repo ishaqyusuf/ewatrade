@@ -1,3 +1,4 @@
+import { mobileCatalogSystemCopy } from "@/lib/catalog-wording"
 import {
   AuthListCard,
   AuthListRow,
@@ -54,7 +55,7 @@ export function ClassicSignUpCategories({
     <AuthListCard>
       {profiles.map((profile) => (
         <AuthListRow
-          accessibilityLabel={`${profile.title}. ${profile.description}`}
+          accessibilityLabel={`${profile.title}. ${mobileCatalogSystemCopy(profile.description)}`}
           accessibilityRole="radio"
           control={<AuthRadio selected={selectedKey === profile.key} />}
           key={profile.key}

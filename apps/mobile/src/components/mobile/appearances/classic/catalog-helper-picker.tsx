@@ -1,3 +1,4 @@
+import { mobileCatalogSystemCopy } from "@/lib/catalog-wording"
 import type { HelperRowProps } from "@/components/mobile/catalog-setup/catalog-helper-model"
 import { Icon } from "@/components/ui/icon"
 import { Pressable } from "@/components/ui/pressable"
@@ -50,7 +51,7 @@ export function ClassicHelperRow({
       <View className="min-w-0 flex-1 gap-1">
         <Text className="font-extrabold text-foreground">{helper.title}</Text>
         <Text className="text-xs [-rn-line-height:22] text-muted-foreground">
-          {helper.description}
+          {mobileCatalogSystemCopy(helper.description)}
         </Text>
         {largeTextLayout && badgeLabel ? (
           <View

@@ -108,7 +108,7 @@ export function GeneralStockCountCreateEditor({
       : !balancesReady
         ? "A counted stock source is unavailable in the current Store. Ask in chat for a fresh count."
         : units.some((line) => line.some((unit) => !unit))
-          ? "A counted unit is no longer part of its product's current unit setup. Ask in chat for a fresh count."
+          ? "A counted unit is no longer part of its item's current unit setup. Ask in chat for a fresh count."
           : null
   const busy = disabled || state !== "ready" || Boolean(blocked)
 

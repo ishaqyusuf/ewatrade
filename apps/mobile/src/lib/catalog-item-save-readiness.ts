@@ -1,3 +1,4 @@
+import { catalogItemNoun } from "./catalog-wording"
 import { majorToMinor } from "@ewatrade/utils"
 
 type CatalogItemSaveReadinessInput = {
@@ -25,7 +26,7 @@ export function getCatalogItemSaveReadiness({
   if (!name.trim()) {
     return {
       canSave: false,
-      hint: `Enter a ${kind} name to continue.`,
+      hint: `Enter ${kind === "service" ? "a" : "an"} ${catalogItemNoun(kind)} name to continue.`,
     }
   }
 

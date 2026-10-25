@@ -446,8 +446,8 @@ export function OwnerSetupScreen() {
       subtitle={
         step === "type"
           ? multi
-            ? "Tick every type you run. We use them to suggest products, categories and tips."
-            : "Pick the closest one. We use it to suggest products, categories and tips."
+            ? "Tick every type you run. We use them to suggest goods, categories and tips."
+            : "Pick the closest one. We use it to suggest goods, categories and tips."
           : step === "group"
             ? "Types in the same card are one business. Drag a type to another card, or onto “New business” to run it separately."
             : "Almost done. You can change all of this later."

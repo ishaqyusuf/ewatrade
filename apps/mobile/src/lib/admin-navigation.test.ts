@@ -46,7 +46,7 @@ describe("admin mobile navigation", () => {
     expect(getAdminCatalogTabLabel(availability)).toBe("Catalog")
     expect(
       getAdminCatalogTabLabel({ ...availability, hasProductItems: true }),
-    ).toBe("Products")
+    ).toBe("Goods")
     expect(
       getAdminCatalogTabLabel({ ...availability, hasServiceItems: true }),
     ).toBe("Services")
@@ -60,11 +60,11 @@ describe("admin mobile navigation", () => {
   })
 
   test("keeps the requested five-position dock order", () => {
-    expect(getAdminDockLabels("Products")).toEqual([
+    expect(getAdminDockLabels("Goods")).toEqual([
       "Home",
       "Orders",
       "+",
-      "Products",
+      "Goods",
       "More",
     ])
   })

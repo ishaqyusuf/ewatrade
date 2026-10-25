@@ -272,7 +272,7 @@ export function ClassicSaleItems({
               </Text>
               <Text className="text-center text-xs text-muted-foreground">
                 {choicesLoading
-                  ? "Loading available products and services."
+                  ? "Loading available goods and services."
                   : search
                     ? "Check the spelling, or search by unit."
                     : itemKind === "service"

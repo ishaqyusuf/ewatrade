@@ -44,7 +44,7 @@ export function getOrderFulfilmentConfirmation(
     )
     if (!line || !canFulfillCommercialOrderLine(line)) return null
 
-    const itemName = line.snapshot?.catalogItemName ?? "Product"
+    const itemName = line.snapshot?.catalogItemName ?? "Item"
     const option = commerceLineOption(line)
     const unit = line.snapshot?.inventoryUnitName ?? "item"
 
@@ -56,7 +56,7 @@ export function getOrderFulfilmentConfirmation(
       orderLineId: line.id,
       summaryLabel: `${itemName} · ${option}`.toUpperCase(),
       summaryValue: `${formatCommerceQuantity(line.quantity)} × ${unit}`,
-      title: "Fulfil product line",
+      title: "Fulfil item line",
       warning:
         "This records the stock movement and updates the Order. Confirm only when the items are ready.",
     }
@@ -85,9 +85,9 @@ export function getOrderFulfilmentConfirmation(
   return {
     actionLabel: "Fulfil all ready",
     detail: catalogFreeLines.length
-      ? "Commits every active Product reservation and marks typed-price lines done."
-      : "Commits every active Product reservation in this Order.",
-    detailTitle: `${readyLines.length} ${catalogFreeLines.length ? "" : "Product "}${lineLabel}`,
+      ? "Commits every active goods reservation and marks typed-price lines done."
+      : "Commits every active goods reservation in this Order.",
+    detailTitle: `${readyLines.length} ${catalogFreeLines.length ? "" : "goods "}${lineLabel}`,
     kind: "all",
     orderLineId: null,
     summaryLabel: "READY TO FULFIL",

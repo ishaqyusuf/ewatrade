@@ -500,7 +500,7 @@ export function ClassicSaleCheckout({
                 </Text>
               </View>
               <Switch
-                accessibilityLabel="Fulfill Product stock when this order is confirmed"
+                accessibilityLabel="Fulfill goods stock when this order is confirmed"
                 checked={fulfillmentOption.fulfillNow}
                 disabled={
                   model.actionsLocked || !fulfillmentOption.canFulfillNow

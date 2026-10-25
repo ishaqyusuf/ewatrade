@@ -74,7 +74,7 @@ export function ConversionBalanceChoices({
             setQuery(value)
             setPage(0)
           }}
-          placeholder="Product, variant, unit, custody"
+          placeholder="Item, variant, unit, custody"
         />
       ) : null}
       {pageCount > 1 ? (

@@ -171,7 +171,7 @@ export function CatalogSetupView({ model }: { model: CatalogSetupModel }) {
             <Classic.KindChoice
               description="Something you keep and sell. Tracks stock."
               icon="Package"
-              label="Product"
+              label="Goods"
               tint="mint"
               onPress={() => setKind("product")}
               recommendation={
@@ -384,7 +384,7 @@ export function CatalogSetupView({ model }: { model: CatalogSetupModel }) {
             {isOffline && !submitError ? (
               <StatusBanner
                 icon="Lock"
-                message="Product and Service setup is online-only."
+                message="Goods and services setup is online-only."
                 title="Online connection required"
                 tone="warning"
               />
@@ -438,7 +438,7 @@ export function CatalogSetupView({ model }: { model: CatalogSetupModel }) {
                 : model.hasAttempt
                   ? "Retry same item"
                   : kind === "product"
-                    ? "Review product"
+                    ? "Review item"
                     : "Review service"}
             </ActionButton>
           </BottomSearchFooter>

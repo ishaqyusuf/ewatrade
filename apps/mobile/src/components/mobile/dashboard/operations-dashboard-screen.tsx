@@ -354,7 +354,7 @@ export function OperationsDashboardSurface({
     {
       detail: "Add a stock-tracked item to your catalog.",
       disabled: isOffline,
-      label: "Product",
+      label: "Goods",
       onPress: () => openCreateRoute("/first-product-setup-modal?kind=product"),
     },
     {
@@ -374,7 +374,7 @@ export function OperationsDashboardSurface({
       : []),
     {
       detail: hasSellableCatalogItem
-        ? "Create an order from active Products or Services."
+        ? "Create an order from active goods or services."
         : "Record a sale — pick catalog items or type a price.",
       label: "Order",
       onPress: () => openCreateRoute("/create-sale-modal"),
@@ -382,7 +382,7 @@ export function OperationsDashboardSurface({
     {
       detail: hasProduct
         ? "Receive, count, adjust, or assign stock."
-        : "Add a Product to enable stock management.",
+        : "Add an item to enable stock management.",
       disabled: !hasProduct,
       label: "Stock Entry",
       onPress: () => openCreateRoute("/stock-intake-modal"),
@@ -394,7 +394,7 @@ export function OperationsDashboardSurface({
     },
   ]
   const createActions = allCreateActions.filter((action) => {
-    if (["Product", "Service"].includes(action.label)) return canEditCatalog
+    if (["Goods", "Service"].includes(action.label)) return canEditCatalog
     if (action.label === "Staff") return canManageMobileStaff(profile)
     if (action.label === "Customer") return !scopedStaff
     if (action.label === "Stock Entry")
@@ -434,7 +434,7 @@ export function OperationsDashboardSurface({
     {
       disabled: isOffline,
       icon: "FolderPlus",
-      label: "Add a product",
+      label: "Add an item",
       onPress: () =>
         router.push("/first-product-setup-modal?kind=product" as never),
       tone: "success",
@@ -465,7 +465,7 @@ export function OperationsDashboardSurface({
   const homeActions = allHomeActions.filter(
     (action) =>
       !scopedStaff ||
-      (action.label === "Add a product" || action.label === "Add a service"
+      (action.label === "Add an item" || action.label === "Add a service"
         ? canEditCatalog
         : action !== operationalAction || hasProduct),
   )

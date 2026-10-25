@@ -284,7 +284,7 @@ export function CatalogItemsContent({
                     <ClassicCatalogFilter
                       active={kindFilter === "product"}
                       count={counts?.product}
-                      label="Products"
+                      label="Goods"
                       onPress={() => setKindFilter("product")}
                     />
                   ) : null}
@@ -438,7 +438,7 @@ export function CatalogItemsContent({
                     : "Reconnect to load your Catalog."
                   : query || attention || kindFilter !== "all"
                     ? "Try another search or item type."
-                    : "Add a Product or Service to start your Catalog."
+                    : "Add an item or service to start your Catalog."
               }
             />
           ) : null

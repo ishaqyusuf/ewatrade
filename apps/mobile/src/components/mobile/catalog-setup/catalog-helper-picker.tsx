@@ -88,7 +88,7 @@ export function CatalogSetupHelperPicker({
     ...group("patterns", "Common setups", patterns, false),
     ...group("examples", "Examples", examples, false),
   ]
-  const kindLabel = kind === "product" ? "Product" : "Service"
+  const kindLabel = kind === "product" ? "Goods" : "Service"
   const showSearch = shouldShowListSearch(allHelpers.length)
   function group(
     key: string,
@@ -238,7 +238,7 @@ export function CatalogSetupHelperPicker({
                 </View>
                 <Text className="text-xs [-rn-line-height:22] text-muted-foreground">
                   {kind === "product"
-                    ? "Enter the Product, units, and options yourself."
+                    ? "Enter the item, units, and options yourself."
                     : "Enter the Service and work settings yourself."}
                 </Text>
               </Pressable>

@@ -276,7 +276,7 @@ function StockChooserSearch(props: BottomSheetFooterProps) {
           maxLength={160}
           onChangeText={context.setQuery}
           onHeightChange={context.onHeight}
-          placeholder="Product, variant, unit, custody"
+          placeholder="Item, variant, unit, custody"
           position="relative"
           totalCount={0}
           value={context.query}

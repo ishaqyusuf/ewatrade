@@ -1,3 +1,7 @@
+import {
+  mobileCatalogGuidance,
+  mobileCatalogSystemCopy,
+} from "@/lib/catalog-wording"
 import type { KeyboardInlineComposerPill } from "@/components/mobile/keyboard-inline-composer"
 import { useModal } from "@/components/ui/modal"
 import { useAuthContext } from "@/hooks/use-auth"
@@ -335,11 +339,13 @@ export function useCatalogSetup({
   }
   const formGuidance = useMemo(
     () =>
-      resolveCatalogFormGuidance({
-        businessProfileKey,
-        kind: kind ?? "product",
-        selectedHelperKey,
-      }),
+      mobileCatalogGuidance(
+        resolveCatalogFormGuidance({
+          businessProfileKey,
+          kind: kind ?? "product",
+          selectedHelperKey,
+        }),
+      ),
     [businessProfileKey, kind, selectedHelperKey],
   )
   const selectedHelper = selectedHelperKey
@@ -693,7 +699,7 @@ export function useCatalogSetup({
     setOptionGroups(groups)
     setShowAdvanced(groups.length > 0)
     if (!name.trim() && application.suggestedName)
-      setName(application.suggestedName)
+      setName(mobileCatalogSystemCopy(application.suggestedName))
 
     if (application.kind === "product") {
       setUnitName(application.canonicalUnit.name)
@@ -943,7 +949,7 @@ export function useCatalogSetup({
     if (itemKind === "product") {
       const canonicalUnitName = unitName.trim()
       if (!canonicalUnitName) {
-        setSubmitError("Enter the Product's main unit.")
+        setSubmitError("Enter the item's main unit.")
         return
       }
 
@@ -1104,7 +1110,7 @@ export function useCatalogSetup({
     }
     if (isOffline) {
       setSubmitError(
-        "Products and Services cannot be created offline. Reconnect before saving this item.",
+        "Goods and services cannot be created offline. Reconnect before saving this item.",
       )
       return
     }
@@ -1177,7 +1183,7 @@ export function useCatalogSetup({
       if (kind === "product") {
         const canonicalUnitName = unitName.trim()
         if (!canonicalUnitName) {
-          setSubmitError("Enter the Product's main unit.")
+          setSubmitError("Enter the item's main unit.")
           return
         }
 
@@ -1873,7 +1879,7 @@ export function useCatalogSetup({
         showAdvanced,
         unitName,
       })
-    : { canSave: false, hint: "Choose a Product or Service." }
+    : { canSave: false, hint: "Choose an item or service." }
   const saveReadiness = imageDraft.selecting
     ? { canSave: false, hint: "Finish choosing your image." }
     : imageUrl.trim()

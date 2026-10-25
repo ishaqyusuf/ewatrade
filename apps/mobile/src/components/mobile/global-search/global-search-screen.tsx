@@ -88,8 +88,8 @@ export function GlobalSearchScreen() {
               detail: "Add a stock-tracked catalog item.",
               icon: "Warehouse" as const,
               id: "create-product",
-              label: "Create product",
-              short: "Product",
+              label: "Create item",
+              short: "Goods",
               onPress: () =>
                 router.push("/first-product-setup-modal?kind=product"),
             },

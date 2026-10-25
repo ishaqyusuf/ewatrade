@@ -1,3 +1,4 @@
+import { mobileOperatingModelLabel } from "@/lib/catalog-wording"
 import { ActionButton } from "@/components/mobile/action-button"
 import { ClassicLoginScreen } from "@/components/mobile/appearances/classic/login-screen"
 import { ClassicOnboardingScreen } from "@/components/mobile/appearances/classic/onboarding-screen"
@@ -400,7 +401,11 @@ function AuthQa() {
                 {(options as typeof BUSINESS_OPERATING_MODELS).map((option) => (
                   <SignUpChoice
                     key={option.key}
-                    label={option.label}
+                    label={
+                      index === 0
+                        ? mobileOperatingModelLabel(option.key)
+                        : option.label
+                    }
                     selected={choices.includes(option.key)}
                     multiple={index === 1}
                     onPress={() =>

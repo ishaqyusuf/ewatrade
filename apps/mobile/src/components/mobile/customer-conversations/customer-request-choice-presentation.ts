@@ -37,7 +37,7 @@ export function resolveCustomerRequestChoicePresentation(input: {
     options.push({
       description: "Start a separate request",
       key: "new_commerce_inquiry",
-      label: "New product request",
+      label: "New item request",
       primary: true,
       target: { kind: "new_commerce_inquiry" },
     })

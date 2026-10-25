@@ -413,7 +413,7 @@ function ClassicStockHero({
         label="Record stock"
         pill={{ label: "Online", tone: "synced" }}
         title="No stock balance for this item"
-        sub={`Nothing for this item is tracked in ${storeName ?? "this Store"}. Other products' stock isn't offered here.`}
+        sub={`Nothing for this item is tracked in ${storeName ?? "this Store"}. Stock for other items isn't offered here.`}
         cta={{
           icon: "ArrowLeft",
           label: "Back to item",
@@ -430,8 +430,8 @@ function ClassicStockHero({
           tone: offline ? "offline" : "synced",
         }}
         title="Nothing to record yet"
-        sub="Add a product that tracks stock. Its balance will show here with what you hold and what is available."
-        cta={{ icon: "Plus", label: "Add a product", onPress: onAddProduct }}
+        sub="Add an item that tracks stock. Its balance will show here with what you hold and what is available."
+        cta={{ icon: "Plus", label: "Add an item", onPress: onAddProduct }}
       />
     )
   if (!selected)

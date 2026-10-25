@@ -68,7 +68,7 @@ export function AskAssistantQa({
     view === "payment"
       ? "Record a payment"
       : view === "product"
-        ? "Add this product"
+        ? "Add this item"
         : "Create this order"
   return (
     <View style={{ flex: 1, paddingTop: insets.top }}>
@@ -134,7 +134,7 @@ export function AskAssistantQa({
                         : "Who owes me money?",
                     "answer",
                   ],
-                  ["Add a product", "product"],
+                  ["Add an item", "product"],
                   ["What can I do?", "refusal"],
                 ].map(([label, next]) => (
                   <Pressable
@@ -223,7 +223,7 @@ export function AskAssistantQa({
               }
               reason={
                 rep
-                  ? "You can see your own sales and the catalog, and start a sale. Customer accounts and new products require owner or admin access."
+                  ? "You can see your own sales and the catalog, and start a sale. Customer accounts and new goods require owner or admin access."
                   : "Stock that has not been counted stays unknown. Nothing is estimated or written."
               }
               alternative="Start a sale preview"

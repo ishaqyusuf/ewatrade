@@ -1,3 +1,5 @@
+import { MOBILE_CATALOG_LABELS } from "./catalog-wording"
+
 import type { IconKeys } from "@/components/ui/icon"
 import type { LinkProps } from "expo-router"
 
@@ -6,7 +8,8 @@ import type { RetailOpsPlanFeature } from "./retail-ops-subscription"
 import type { MobileWorkspaceFeatureAvailability } from "./workspace-feature-availability"
 
 export type AdminTabKey = "home" | "orders" | "catalog" | "more"
-export type AdminCatalogTabLabel = "Products" | "Services" | "Catalog"
+export type AdminCatalogTabLabel =
+  (typeof MOBILE_CATALOG_LABELS)[keyof typeof MOBILE_CATALOG_LABELS]
 export type AdminManagementRole = "OWNER" | "ADMIN" | "MANAGER"
 
 export type AdminTabDefinition = {
@@ -73,12 +76,12 @@ export function getAdminCatalogTabLabel(
   availability: MobileWorkspaceFeatureAvailability,
 ): AdminCatalogTabLabel {
   if (availability.hasProductItems && !availability.hasServiceItems) {
-    return "Products"
+    return MOBILE_CATALOG_LABELS.product
   }
   if (availability.hasServiceItems && !availability.hasProductItems) {
-    return "Services"
+    return MOBILE_CATALOG_LABELS.service
   }
-  return "Catalog"
+  return MOBILE_CATALOG_LABELS.mixed
 }
 
 export function getAdminTabDefinitions(

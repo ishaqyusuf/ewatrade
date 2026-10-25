@@ -328,7 +328,7 @@ export function DashboardStoreSetup({
         <Text className="text-sm [-rn-line-height:22] text-muted-foreground">
           {catalogReady
             ? "Your catalog is ready. Take one order to turn on your trading overview."
-            : "Take your first order now, or add a Product or Service for stock and faster sales."}
+            : "Take your first order now, or add an item or service for stock and faster sales."}
         </Text>
         <View className="h-1.5 overflow-hidden rounded-full bg-muted">
           <View
@@ -349,7 +349,7 @@ export function DashboardStoreSetup({
               : "Name it, price it, and save it."
           }
           icon={catalogReady ? "CheckCircle2" : "FolderPlus"}
-          label={catalogReady ? "Catalog is ready" : "Add a Product or Service"}
+          label={catalogReady ? "Catalog is ready" : "Add an item or service"}
           onPress={catalogReady ? undefined : onAddItemPress}
           step="01"
         />

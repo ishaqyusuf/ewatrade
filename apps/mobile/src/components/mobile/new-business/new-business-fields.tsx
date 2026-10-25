@@ -7,6 +7,7 @@ import { FormField } from "@/components/mobile/form-field"
 import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
 import { useCurrentAddress } from "@/hooks/use-current-address"
+import { mobileOperatingModelLabel } from "@/lib/catalog-wording"
 import { useLargeTextLayout } from "@/hooks/use-large-text-layout"
 import {
   BUSINESS_OPERATING_MODELS,
@@ -34,7 +35,7 @@ export function NewBusinessProfile({ model }: FieldsProps) {
     <View className="gap-7">
       <BusinessSection
         title="Selected business type"
-        description={`${model.selectedProfile?.title ?? "Your selection"} suggestions will appear first when you add Products or Services.`}
+        description={`${model.selectedProfile?.title ?? "Your selection"} suggestions will appear first when you add goods or services.`}
       >
         {draft.businessProfileKey === "other-mixed-business" ? (
           <FormField
@@ -45,7 +46,7 @@ export function NewBusinessProfile({ model }: FieldsProps) {
             onChangeText={(otherBusinessDescription) =>
               updateDraft({ otherBusinessDescription })
             }
-            placeholder="Describe the products or services"
+            placeholder="Describe the goods or services"
           />
         ) : null}
       </BusinessSection>
@@ -57,7 +58,7 @@ export function NewBusinessProfile({ model }: FieldsProps) {
           {BUSINESS_OPERATING_MODELS.map((item) => (
             <BusinessChoice
               key={item.key}
-              label={item.label}
+              label={mobileOperatingModelLabel(item.key)}
               selected={draft.operatingModel === item.key}
               disabled={locked}
               onPress={() => updateDraft({ operatingModel: item.key })}
@@ -272,7 +273,7 @@ export function NewBusinessReview({ model }: FieldsProps) {
             sub:
               draft.businessProfileKey === "other-mixed-business"
                 ? draft.otherBusinessDescription.trim()
-                : label(BUSINESS_OPERATING_MODELS, draft.operatingModel),
+                : mobileOperatingModelLabel(draft.operatingModel),
           },
           {
             main: draft.orderChannels

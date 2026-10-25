@@ -31,7 +31,7 @@ const offers: {
 }[] = [
   {
     key: "products",
-    label: "I sell",
+    label: "I sell goods",
     example: "Things customers buy, like eggs, phones or clothes",
     icon: "Package",
   },
@@ -43,8 +43,8 @@ const offers: {
   },
   {
     key: "products_and_services",
-    label: "I sell and offer services",
-    example: "Both, like a salon that also sells hair products",
+    label: "I sell goods and offer services",
+    example: "Both, like a salon that also sells shampoo and hair oil",
     icon: "Store",
   },
 ]
