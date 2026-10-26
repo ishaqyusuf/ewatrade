@@ -2583,6 +2583,8 @@ export type RecordServiceHandoffInput = {
   payment?: {
     amountMinor: number
     method: CommercialPaymentMethodValue
+    /** Where the collected money lands; required once Finance is set up. */
+    moneyAccountId?: string
     reference?: string
   }
   tenantId: string
@@ -2712,6 +2714,7 @@ async function finishServiceJobInTransaction(
         amountMinor: input.payment.amountMinor,
         clientPaymentId: `${input.clientCommandId}:collection-payment`,
         method: input.payment.method,
+        moneyAccountId: input.payment.moneyAccountId,
         orderId: job.commercialOrderId,
         reference: input.payment.reference,
         tenantId: input.tenantId,

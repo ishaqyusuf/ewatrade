@@ -1,0 +1,37 @@
+{
+  "version": 1,
+  "id": "2026-10-27-service-payment-receiving-account",
+  "tickets": ["H02"],
+  "summary": "Service handover payments can name the receiving money account, like other Order payments, so the collected balance posts Dr money account / Cr 2200 once (Finance roadmap F3.8.05). The dashboard service job Take payment and Hand over steps and the mobile service payment sheet and Order Record payment sheet now choose the account the same way checkout does. Roles, permissions and assistant rollout are unchanged.",
+  "noAssistantImpact": "No assistant tool, prompt authority, capability declaration or write is added. services.handoff gains only an optional payment.moneyAccountId input; the planned assistant service handoff capability does not send it and keeps its existing behaviour and rollout.",
+  "capabilities": [],
+  "procedures": [],
+  "docs": [
+    {
+      "topic": "feature",
+      "status": "local_only",
+      "path": ".brain/features/merchant-finance.md",
+      "note": "Follow-ups, 27 October 2026: service handover receiving account."
+    },
+    {
+      "topic": "api",
+      "status": "local_only",
+      "path": ".brain/api/endpoints.md",
+      "note": "services.handoff payment.moneyAccountId."
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "test",
+      "path": "packages/db/src/queries/finance/service-handoff-collection.integration.test.ts",
+      "executed": true,
+      "result": "1 pass, 9 assertions on the Neon development database with an isolated QA Tenant: a cash account refuses a bank transfer and rolls the handoff back; the chosen bank account receives 1000 once, a retry replays, cash stays 0."
+    },
+    {
+      "kind": "run",
+      "path": "apps/mobile",
+      "executed": true,
+      "result": "db, api and mobile tsc clean; dashboard tsc has no errors in the changed service-work file."
+    }
+  ]
+}

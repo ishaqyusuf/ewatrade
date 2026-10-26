@@ -47,6 +47,8 @@ export const OrderPaymentSheet = forwardRef<
     onReferenceChange: (value: string) => void
     paymentMethod: OrderPaymentMethod
     quickFill?: ReactNode
+    /** Where the money lands (Into row), under the method. */
+    accountField?: ReactNode
     reference: string
   }
 >(function OrderPaymentSheet(
@@ -65,6 +67,7 @@ export const OrderPaymentSheet = forwardRef<
     onReferenceChange,
     paymentMethod,
     quickFill,
+    accountField,
     reference,
   },
   ref,
@@ -141,6 +144,7 @@ export const OrderPaymentSheet = forwardRef<
                   />
                 ))}
               </View>
+              {accountField}
             </View>
             <FormField
               label="Reference"

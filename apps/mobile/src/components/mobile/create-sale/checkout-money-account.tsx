@@ -47,7 +47,8 @@ export function CheckoutMoneyAccountField({
   disabled: boolean
   onChoose: (account: CheckoutMoneyAccount) => void
   onRetry: () => void
-  onRecordPending: () => void
+  /** Checkout only: offer recording the sale as Payment pending instead. */
+  onRecordPending?: () => void
 }) {
   const chooser = useModal()
   const router = useRouter()
@@ -60,10 +61,12 @@ export function CheckoutMoneyAccountField({
       Into
     </Text>
   )
-  const pendingAction = {
-    actionLabel: "Record as pending",
-    onActionPress: onRecordPending,
-  }
+  const pendingAction = onRecordPending
+    ? { actionLabel: "Record as pending", onActionPress: onRecordPending }
+    : {}
+  const orPending = onRecordPending
+    ? ", or record this sale as Payment pending"
+    : ""
   if (state.kind === "loading")
     return (
       <View>
@@ -94,7 +97,7 @@ export function CheckoutMoneyAccountField({
           icon="Lock"
           tone="warning"
           title="You can't record payments into accounts"
-          message="Ask your owner for access, or record this sale as Payment pending."
+          message={`Ask your owner for access${orPending}.`}
           {...pendingAction}
         />
       </View>
@@ -123,8 +126,8 @@ export function CheckoutMoneyAccountField({
           title={`No account takes ${lower} payments yet`}
           message={
             canSetUp
-              ? "Set one up in Money Accounts, or record this sale as Payment pending."
-              : "Ask your owner to add one, or record this sale as Payment pending."
+              ? `Set one up in Money Accounts${orPending}.`
+              : `Ask your owner to add one${orPending}.`
           }
           {...pendingAction}
           linkLabel={canSetUp ? "Set up account" : undefined}
