@@ -21,7 +21,11 @@ function nameWords(name: string) {
     name
       .toLocaleLowerCase()
       .split(/[^\p{L}\p{N}]+/u)
-      .filter((word) => word.length >= 3),
+      .filter((word) => word.length >= 3)
+      // "eggs" and "egg" are the same item word.
+      .map((word) =>
+        word.length > 3 && word.endsWith("s") ? word.slice(0, -1) : word,
+      ),
   )
 }
 

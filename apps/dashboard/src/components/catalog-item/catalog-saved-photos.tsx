@@ -350,10 +350,7 @@ function SavedPhotoEditor({
             </Button>
           </div>
         ) : (
-          <ul
-            aria-label="Photos"
-            className="grid grid-cols-3 gap-2 sm:grid-cols-4"
-          >
+          <ul aria-label="Photos" className="grid grid-cols-3 gap-2">
             {tiles.map((tile, index) => (
               <li
                 key={tile.key}

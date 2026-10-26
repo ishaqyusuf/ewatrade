@@ -190,6 +190,19 @@ describeWithServiceCommerceDatabase("Catalog My images gallery", () => {
         ),
       ).toBe(false)
 
+      // A copy still waiting for its image check already counts as on the item.
+      const halfCopy = await photo(at(lekki.id), "half-copy", eggs)
+      await attach(at(lekki.id), half.id, [halfCopy])
+      expect(
+        (
+          await listCatalogPhotoGallery(db, {
+            ...at(lekki.id),
+            storeIds: [lekki.id],
+            target: { storeId: lekki.id, catalogItemId: half.id },
+          })
+        ).entries[0]?.onTargetItem,
+      ).toBe(true)
+
       const search = await listCatalogPhotoGallery(db, {
         ...at(lekki.id),
         storeIds: [lekki.id, ikeja.id],

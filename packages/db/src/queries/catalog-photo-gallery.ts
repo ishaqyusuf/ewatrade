@@ -42,7 +42,7 @@ export async function listCatalogPhotoGallery(
   const storeIds = [...new Set(input.storeIds)]
   if (!storeIds.length) return { entries: [], truncated: false }
   const limit = Math.min(Math.max(input.limit ?? 60, 1), 120)
-  const rows = await db.$transaction(async (tx) => {
+  const { rows, targetDigests } = await db.$transaction(async (tx) => {
     // Re-check current membership and each Store under the transaction.
     for (const storeId of storeIds)
       await authorizeCatalogPhotoScope(tx, {
@@ -50,7 +50,7 @@ export async function listCatalogPhotoGallery(
         tenantId: input.tenantId,
         storeId,
       })
-    return tx.catalogPhotoAsset.findMany({
+    const rows = await tx.catalogPhotoAsset.findMany({
       where: {
         tenantId: input.tenantId,
         storeId: { in: storeIds },
@@ -71,6 +71,22 @@ export async function listCatalogPhotoGallery(
       orderBy: [{ attachedAt: "desc" }, { id: "asc" }],
       take: maxScannedPhotos + 1,
     })
+    // Copies still waiting for their image check are already on the item too.
+    const target = input.target?.catalogItemId
+      ? await tx.catalogPhotoAsset.findMany({
+          where: {
+            tenantId: input.tenantId,
+            storeId: input.target.storeId,
+            catalogItemId: input.target.catalogItemId,
+            state: { in: ["PENDING_REVIEW", "APPROVED"] },
+          },
+          select: { contentDigest: true },
+        })
+      : []
+    return {
+      rows,
+      targetDigests: new Set(target.map((row) => row.contentDigest)),
+    }
   }, transactionOptions)
   const truncatedScan = rows.length > maxScannedPhotos
   const groups = new Map<string, CatalogPhotoGalleryEntry>()
@@ -83,7 +99,7 @@ export async function listCatalogPhotoGallery(
         storeId: row.storeId,
         items: [],
         storeIds: [],
-        onTargetItem: false,
+        onTargetItem: targetDigests.has(row.contentDigest),
         attachedAt: row.attachedAt,
       }
       groups.set(row.contentDigest, entry)
@@ -101,12 +117,6 @@ export async function listCatalogPhotoGallery(
         storeId: row.storeId,
       })
     if (!entry.storeIds.includes(row.storeId)) entry.storeIds.push(row.storeId)
-    if (
-      input.target?.catalogItemId &&
-      row.catalogItem.id === input.target.catalogItemId &&
-      row.storeId === input.target.storeId
-    )
-      entry.onTargetItem = true
   }
   const query = input.query?.trim().toLocaleLowerCase()
   const all = [...groups.values()].filter(
