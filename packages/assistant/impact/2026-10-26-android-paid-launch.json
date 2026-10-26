@@ -1,0 +1,79 @@
+{
+  "version": 1,
+  "id": "2026-10-26-android-paid-launch",
+  "tickets": ["A04", "A05"],
+  "summary": "Prepare Android native billing, platform-scoped readiness and strict paid subscription lifetime checks in an isolated worktree. Production remains disabled; owner-wide separate-business coverage is approved but not implemented by this Tenant-bound preparation.",
+  "noAssistantImpact": "No new model capability, tool, business enrollment or purchase authority. Catalog and verifyPurchase remain explicit Owner/Admin form-only billing procedures. Existing assistant commands retain canonical domain permission and current entitlement checks; saved expired store/reviewer plan keys no longer confer paid authority. Billing-owner authority and owner-wide coverage require the documented persistence/cutover work before activation.",
+  "capabilities": [],
+  "procedures": [
+    {
+      "path": "storeSubscriptions.catalog",
+      "status": "form_only",
+      "reason": "Optional store filter scopes readiness and products; actor/Tenant scope, legal gate and receipt-binding authority remain server-derived."
+    },
+    {
+      "path": "storeSubscriptions.verifyPurchase",
+      "status": "form_only",
+      "reason": "Existing explicit native purchase/restore receipt verification; no assistant purchase tool or prompt grant."
+    }
+  ],
+  "docs": [
+    {
+      "topic": "feature",
+      "path": ".brain/features/native-store-billing.md",
+      "status": "local_only"
+    },
+    {
+      "topic": "api",
+      "path": ".brain/api/contracts.md",
+      "status": "local_only"
+    },
+    {
+      "topic": "permissions",
+      "path": ".brain/api/permissions.md",
+      "status": "local_only"
+    },
+    {
+      "topic": "capability",
+      "path": ".brain/features/assistant-business-operations.md",
+      "status": "local_only"
+    },
+    {
+      "topic": "decision",
+      "path": ".brain/decisions/2026-10-26-owner-wide-paid-subscriptions.md",
+      "status": "local_only"
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "test",
+      "path": "apps/api/src/billing/store-checkout-readiness.test.ts",
+      "executed": true,
+      "result": "Android accepts complete Play setup without Apple credentials and refuses missing verifier, identity, notification, release or refund-operation gates. Focused readiness/reconciliation/disclosure set22 passes; no live provider proof."
+    },
+    {
+      "kind": "test",
+      "path": "packages/db/src/queries/retail-ops-subscriptions.test.ts",
+      "executed": true,
+      "result": "Expired/suspended store and bounded reviewer keys deny paid features even with paid metadata fallback; expired snapshots remove features and retain zero-limit policy; manual grants unchanged."
+    },
+    {
+      "kind": "test",
+      "path": "packages/db/src/queries/attachment-entitlement.test.ts",
+      "executed": true,
+      "result": "Fresh expired Play state refuses attachment admission without falling back to paid metadata. Final focused set75 tests/268 expectations passes using in-memory adapters and an unusable DB sentinel."
+    },
+    {
+      "kind": "test",
+      "path": "packages/jobs/src/handlers/commercial-order-reminders.test.ts",
+      "executed": true,
+      "result": "Five pure reminder tests pass, including expired/suspended store refusal, with unusable offline DB sentinel and no connection/provider call."
+    },
+    {
+      "kind": "run",
+      "path": "apps/mobile/app.config.ts",
+      "executed": true,
+      "result": "Production Expo introspection includes Billing; actual autolinking includes IAP on Android and excludes it on iOS. Android Hermes export passes. No signed native UI/money/16KB acceptance claimed."
+    }
+  ]
+}
