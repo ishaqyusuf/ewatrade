@@ -977,6 +977,8 @@ function mapDurableRetailOpsTenantSubscription(
   return {
     plan: {
       ...mappedPlan,
+      // A historical paid plan key is not current capability authority.
+      features: timeBoundAccess === false ? [] : mappedPlan.features,
       limits:
         timeBoundAccess === false
           ? {
@@ -2245,10 +2247,28 @@ export async function getRetailOpsTenantPlan(
  */
 export function resolveRetailOpsPlanId(input: {
   metadata: unknown
-  subscriptionPlanKey?: string | null
+  subscription?: {
+    plan: { key: string }
+    provider?: string
+    status?: string
+    billingSubscriptionId?: string | null
+    currentPeriodEndsAt?: Date | null
+  } | null
 }): RetailOpsPlanId {
+  if (input.subscription) {
+    const access = {
+      ...input.subscription,
+      status: input.subscription.status ?? "",
+      currentPeriodEndsAt: input.subscription.currentPeriodEndsAt ?? null,
+    }
+    if (
+      projectDurableStoreAccess(access) === false ||
+      projectDurableReviewerAccess(access) === false
+    )
+      return "free"
+  }
   return (
-    normalizePlanId(input.subscriptionPlanKey) ??
+    normalizePlanId(input.subscription?.plan.key) ??
     metadataSubscriptionPlanId(input.metadata) ??
     RETAIL_OPS_LAUNCH_DEFAULT_PLAN_ID
   )
@@ -2299,7 +2319,7 @@ export async function assertRetailOpsOrderAllowance(
 }
 
 /**
- * Only the Free plan's product cap is enforced. Paid-tier product caps were
+ * Free and explicit zero-access caps are enforced. Paid-tier product caps were
  * never re-wired after the catalog rebuild, and enforcing them now could
  * block launch tenants already past 25 items (see the Free plan decision).
  */
@@ -2309,7 +2329,7 @@ export async function assertRetailOpsProductAllowance(
 ) {
   const { plan } = await getRetailOpsTenantPlan(db, input)
 
-  if (plan.id !== "free") return
+  if (plan.id !== "free" && plan.limits.products !== 0) return
 
   // All Catalog creation paths call this inside their write transaction.
   // Per-command locks alone cannot serialize different product creations.

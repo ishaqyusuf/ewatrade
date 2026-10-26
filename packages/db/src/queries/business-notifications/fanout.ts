@@ -75,7 +75,15 @@ export async function fanoutBusinessNotificationsInTransaction(
         select: {
           isActive: true,
           metadata: true,
-          subscription: { select: { plan: { select: { key: true } } } },
+          subscription: {
+            select: {
+              plan: { select: { key: true } },
+              provider: true,
+              status: true,
+              billingSubscriptionId: true,
+              currentPeriodEndsAt: true,
+            },
+          },
         },
       },
     },
@@ -93,7 +101,7 @@ export async function fanoutBusinessNotificationsInTransaction(
     assertRetailOpsPlanIdFeature(
       resolveRetailOpsPlanId({
         metadata: event.tenant.metadata,
-        subscriptionPlanKey: event.tenant.subscription?.plan.key,
+        subscription: event.tenant.subscription,
       }),
       "finance",
     )

@@ -10,12 +10,15 @@ test("signup launch provenance uses canonical entitlement metadata with billing 
     "growth",
     new Date("2026-10-18T00:00:00Z"),
   )
-  expect(metadata.keep).toBe(true)
+  expect(metadata).toMatchObject({ keep: true })
   expect(metadata.retailOps.subscription.source).toBe("owner_signup_launch")
   expect(resolveRetailOpsPlanId({ metadata })).toBe("growth")
-  expect(resolveRetailOpsPlanId({ metadata, subscriptionPlanKey: "pro" })).toBe(
-    "pro",
-  )
+  expect(
+    resolveRetailOpsPlanId({
+      metadata,
+      subscription: { plan: { key: "pro" } },
+    }),
+  ).toBe("pro")
   expect(
     resolveRetailOpsPlanId({
       metadata: {

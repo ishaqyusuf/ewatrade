@@ -49,12 +49,18 @@ export function isCommercialOrderReminderRecipientRole(role: string) {
 /** Order reminder emails are a paid-plan feature; Free businesses get none. */
 export function tenantSendsOrderReminders(tenant: {
   metadata: unknown
-  subscription?: { plan: { key: string } } | null
+  subscription?: {
+    plan: { key: string }
+    provider?: string
+    status?: string
+    billingSubscriptionId?: string | null
+    currentPeriodEndsAt?: Date | null
+  } | null
 }) {
   const plan = findRetailOpsPlan(
     resolveRetailOpsPlanId({
       metadata: tenant.metadata,
-      subscriptionPlanKey: tenant.subscription?.plan.key,
+      subscription: tenant.subscription,
     }),
   )
   return !!plan && planHasFeature(plan, "orderReminders")
@@ -333,7 +339,15 @@ export async function commercialOrderRemindersHandler(
           id: true,
           metadata: true,
           name: true,
-          subscription: { select: { plan: { select: { key: true } } } },
+          subscription: {
+            select: {
+              plan: { select: { key: true } },
+              provider: true,
+              status: true,
+              billingSubscriptionId: true,
+              currentPeriodEndsAt: true,
+            },
+          },
           timezone: true,
         },
       },

@@ -160,7 +160,7 @@ export async function lockStorefrontAuthorityInTransaction(
   const plan = findRetailOpsPlan(
     resolveRetailOpsPlanId({
       metadata: tenant.metadata,
-      subscriptionPlanKey: tenant.subscription?.plan.key,
+      subscription: tenant.subscription,
     }),
   )
   if (!plan) return { ok: false, reason: "plan-unavailable" }

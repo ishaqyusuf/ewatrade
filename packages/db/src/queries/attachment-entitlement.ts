@@ -13,13 +13,21 @@ export async function assertAttachmentEntitlement(
     where: { id: input.tenantId },
     select: {
       metadata: true,
-      subscription: { select: { plan: { select: { key: true } } } },
+      subscription: {
+        select: {
+          plan: { select: { key: true } },
+          provider: true,
+          status: true,
+          billingSubscriptionId: true,
+          currentPeriodEndsAt: true,
+        },
+      },
     },
   })
   return assertRetailOpsPlanIdFeature(
     resolveRetailOpsPlanId({
       metadata: tenant.metadata,
-      subscriptionPlanKey: tenant.subscription?.plan.key,
+      subscription: tenant.subscription,
     }),
     "attachments",
   )

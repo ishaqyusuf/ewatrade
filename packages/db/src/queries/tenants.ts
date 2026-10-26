@@ -96,7 +96,15 @@ export async function getActiveTenantForUser(
           timezone: true,
           qaPurgeStartedAt: true,
           metadata: true,
-          subscription: { select: { plan: { select: { key: true } } } },
+          subscription: {
+            select: {
+              plan: { select: { key: true } },
+              provider: true,
+              status: true,
+              billingSubscriptionId: true,
+              currentPeriodEndsAt: true,
+            },
+          },
           stores: {
             where: { status: { not: "ARCHIVED" } },
             select: {
@@ -188,7 +196,7 @@ export async function getActiveTenantForUser(
       qaPurgeStartedAt: membership.tenant.qaPurgeStartedAt,
       retailOpsPlanId: resolveRetailOpsPlanId({
         metadata: membership.tenant.metadata,
-        subscriptionPlanKey: membership.tenant.subscription?.plan.key,
+        subscription: membership.tenant.subscription,
       }),
     },
     stores,

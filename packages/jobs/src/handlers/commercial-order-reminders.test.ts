@@ -80,4 +80,23 @@ describe("commercial Order reminder classification", () => {
       tenantSendsOrderReminders({ metadata: null, subscription: null }),
     ).toBe(true)
   })
+
+  test("expired or suspended store subscriptions cannot send paid reminder emails", () => {
+    for (const [status, currentPeriodEndsAt] of [
+      ["ACTIVE", new Date("2020-01-01T00:00:00Z")],
+      ["PAST_DUE", new Date(Date.now() + 86_400_000)],
+    ] as const) {
+      expect(
+        tenantSendsOrderReminders({
+          metadata: { retailOps: { subscription: { planId: "pro" } } },
+          subscription: {
+            plan: { key: "growth" },
+            provider: "PLAY_STORE",
+            status,
+            currentPeriodEndsAt,
+          },
+        }),
+      ).toBe(false)
+    }
+  })
 })

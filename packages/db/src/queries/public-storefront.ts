@@ -206,7 +206,7 @@ async function readStorefront(
     return null
   const planId = resolveRetailOpsPlanId({
     metadata: tenant.metadata,
-    subscriptionPlanKey: tenant.subscription?.plan.key,
+    subscription: tenant.subscription,
   })
   const plan = findRetailOpsPlan(planId)
   if (!plan) return null
@@ -511,7 +511,7 @@ export async function assertStorefrontCustomerMessages(
   })
   const planId = resolveRetailOpsPlanId({
     metadata: tenant?.metadata,
-    subscriptionPlanKey: tenant?.subscription?.plan.key,
+    subscription: tenant?.subscription,
   })
   const plan = findRetailOpsPlan(planId)
   if (

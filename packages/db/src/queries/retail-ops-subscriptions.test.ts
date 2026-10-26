@@ -465,6 +465,7 @@ describe("retail ops subscription queries", () => {
     })
 
     expect(snapshot.subscription.status).toBe("cancelled")
+    expect(snapshot.plan.features).toEqual([])
     expect(snapshot.plan.limits).toEqual({
       businesses: 0,
       offlineDevices: 0,
@@ -597,6 +598,7 @@ describe("retail ops subscription queries", () => {
 
 function createPlanDb(input: {
   durablePlan?: Record<string, unknown>
+  subscription?: Record<string, unknown>
   metadata?: unknown
   orders?: number
   products?: number
@@ -632,6 +634,7 @@ function createPlanDb(input: {
               plan: input.durablePlan,
               planId: "plan_row",
               status: "ACTIVE",
+              ...input.subscription,
               trialEndsAt: null,
               updatedAt: new Date("2026-10-01T00:00:00.000Z"),
             }
@@ -689,12 +692,15 @@ describe("Free plan and launch default", () => {
     expect(
       resolveRetailOpsPlanId({
         metadata: FREE_METADATA,
-        subscriptionPlanKey: "growth",
+        subscription: { plan: { key: "growth" } },
       }),
     ).toBe("growth")
     expect(resolveRetailOpsPlanId({ metadata: FREE_METADATA })).toBe("free")
     expect(
-      resolveRetailOpsPlanId({ metadata: {}, subscriptionPlanKey: "legacy" }),
+      resolveRetailOpsPlanId({
+        metadata: {},
+        subscription: { plan: { key: "legacy" } },
+      }),
     ).toBe("starter")
   })
 
@@ -792,5 +798,69 @@ describe("Free plan and launch default", () => {
     expect(
       getRetailOpsOrderPeriodStart(new Date("2026-02-28T10:00:00Z")),
     ).toEqual(new Date("2026-02-01T00:00:00.000Z"))
+  })
+
+  test("expired paid plans cannot bypass the zero-access Catalog admission limit", async () => {
+    const fixture = createPlanDb({
+      durablePlan: createGrowthPlanRow(),
+      subscription: {
+        provider: "PLAY_STORE",
+        currentPeriodEndsAt: new Date("2020-01-01T00:00:00Z"),
+      },
+    })
+    await expect(
+      assertRetailOpsProductAllowance(fixture.client, {
+        tenantId: "tenant_123",
+      }),
+    ).rejects.toMatchObject({
+      code: "ENTITLEMENT_LIMIT_REACHED",
+      entitlement: { key: "products", limit: 0 },
+    })
+  })
+
+  test("saved paid keys cannot grant features after store or reviewer access ends", () => {
+    const future = new Date(Date.now() + 86_400_000)
+    const past = new Date("2020-01-01T00:00:00Z")
+    for (const provider of ["PLAY_STORE", "APP_STORE", "MANUAL"]) {
+      const subscription = {
+        provider,
+        status: "ACTIVE",
+        billingSubscriptionId:
+          provider === "MANUAL" ? "play-review:fixture" : "fixture",
+        currentPeriodEndsAt: future,
+        plan: { key: "growth" },
+      }
+      expect(resolveRetailOpsPlanId({ metadata: {}, subscription })).toBe(
+        "growth",
+      )
+      for (const change of [
+        { currentPeriodEndsAt: past },
+        { currentPeriodEndsAt: null },
+        { status: "CANCELLED" },
+        { status: "PAST_DUE" },
+      ]) {
+        const id = resolveRetailOpsPlanId({
+          metadata: { retailOps: { subscription: { planId: "pro" } } },
+          subscription: { ...subscription, ...change },
+        })
+        expect(id).toBe("free")
+        expect(() => assertRetailOpsPlanIdFeature(id, "finance")).toThrow(
+          RetailOpsSubscriptionError,
+        )
+      }
+    }
+    // Unbounded, explicit manual grants retain their existing authority.
+    expect(
+      resolveRetailOpsPlanId({
+        metadata: {},
+        subscription: {
+          provider: "MANUAL",
+          status: "ACTIVE",
+          currentPeriodEndsAt: null,
+          billingSubscriptionId: "owner-grant",
+          plan: { key: "growth" },
+        },
+      }),
+    ).toBe("growth")
   })
 })

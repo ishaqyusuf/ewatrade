@@ -4,7 +4,12 @@ import { RetailOpsSubscriptionError } from "./retail-ops-subscriptions"
 
 function tenantReader(initial: {
   metadata: unknown
-  subscription: { plan: { key: string } } | null
+  subscription: {
+    plan: { key: string }
+    provider?: string
+    status?: string
+    currentPeriodEndsAt?: Date | null
+  } | null
 }) {
   let tenant = initial
   const calls: unknown[] = []
@@ -48,7 +53,15 @@ test("explicit Free refuses attachment entitlement with server upgrade text", as
       where: { id: "tenant-a" },
       select: {
         metadata: true,
-        subscription: { select: { plan: { select: { key: true } } } },
+        subscription: {
+          select: {
+            plan: { select: { key: true } },
+            provider: true,
+            status: true,
+            billingSubscriptionId: true,
+            currentPeriodEndsAt: true,
+          },
+        },
       },
     },
   ])
@@ -98,4 +111,23 @@ test("a failed fresh plan read propagates instead of using launch fallback", asy
   await expect(
     assertAttachmentEntitlement(db, { tenantId: "tenant-a" }),
   ).rejects.toBe(failure)
+})
+
+test("an expired Play subscription cannot admit an attachment using its saved paid key", async () => {
+  const fixture = tenantReader({
+    metadata: { retailOps: { subscription: { planId: "pro" } } },
+    subscription: {
+      plan: { key: "growth" },
+      provider: "PLAY_STORE",
+      status: "ACTIVE",
+      currentPeriodEndsAt: new Date("2020-01-01T00:00:00Z"),
+    },
+  })
+  await expect(
+    assertAttachmentEntitlement(fixture.db, { tenantId: "tenant-a" }),
+  ).rejects.toMatchObject({
+    code: "PLAN_FEATURE_UNAVAILABLE",
+    feature: "attachments",
+  })
+  expect(fixture.calls).toHaveLength(1)
 })

@@ -32,7 +32,15 @@ export async function businessActivityScope(
         select: {
           timezone: true,
           metadata: true,
-          subscription: { select: { plan: { select: { key: true } } } },
+          subscription: {
+            select: {
+              plan: { select: { key: true } },
+              provider: true,
+              status: true,
+              billingSubscriptionId: true,
+              currentPeriodEndsAt: true,
+            },
+          },
         },
       },
       staffStoreAssignments: {
@@ -80,7 +88,7 @@ export async function businessActivityScope(
       assertRetailOpsPlanIdFeature(
         resolveRetailOpsPlanId({
           metadata: member.tenant.metadata,
-          subscriptionPlanKey: member.tenant.subscription?.plan.key,
+          subscription: member.tenant.subscription,
         }),
         "finance",
       )
