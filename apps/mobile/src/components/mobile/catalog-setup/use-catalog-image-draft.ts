@@ -13,6 +13,13 @@ export type CatalogImageDraft = {
   source: "photos" | "camera"
 }
 
+/** A My images photo picked instead of a device image; copied on save. */
+export type CatalogReusedImage = {
+  assetId: string
+  storeId: string
+  name: string
+}
+
 export const CATALOG_IMAGE_MAX_BYTES = 10 * 1024 * 1024
 
 /** Only device-local selection here; a preview URI is never a Catalog URL. */
@@ -22,6 +29,7 @@ export function useCatalogImageDraft(input: {
 }) {
   const [image, setImage] = useState<CatalogImageDraft | null>(null)
   const [illustrationId, setIllustrationId] = useState<string | null>(null)
+  const [reused, setReused] = useState<CatalogReusedImage | null>(null)
   const [selecting, setSelecting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const generation = useRef(0)
@@ -37,6 +45,7 @@ export function useCatalogImageDraft(input: {
     picking.current = false
     setImage(null)
     setIllustrationId(null)
+    setReused(null)
     setError(null)
     return () => {
       generation.current += 1
@@ -103,6 +112,7 @@ export function useCatalogImageDraft(input: {
         return
       }
       setIllustrationId(null)
+      setReused(null)
       setImage({
         id: Crypto.randomUUID(),
         uri: asset.uri,
@@ -129,6 +139,14 @@ export function useCatalogImageDraft(input: {
   return {
     image,
     illustrationId,
+    reused,
+    chooseReused: (source: CatalogReusedImage) => {
+      if (!current.current.canEdit() || picking.current) return
+      setImage(null)
+      setIllustrationId(null)
+      setReused(source)
+      setError(null)
+    },
     chooseIllustration: (id: string) => {
       if (
         !current.current.canEdit() ||
@@ -137,6 +155,7 @@ export function useCatalogImageDraft(input: {
       )
         return
       setImage(null)
+      setReused(null)
       setIllustrationId(id)
       setError(null)
     },
@@ -147,6 +166,7 @@ export function useCatalogImageDraft(input: {
       if (!current.current.canEdit() || picking.current) return
       setImage(null)
       setIllustrationId(null)
+      setReused(null)
       setError(null)
     },
   }
