@@ -74,6 +74,7 @@ export const serviceIntakeCreateSchema = z
   .strict()
 
 export const serviceIntakeCompleteSchema = serviceIntakeCreateSchema.extend({
+  initialPaymentMoneyAccountId: z.string().trim().min(1).max(128).optional(),
   sourceAnswerId: z.string().trim().min(1).max(160).optional(),
   sourceMessageId: z.string().trim().min(1).max(160).optional(),
   customerId: z.string().trim().min(1).max(160).optional(),

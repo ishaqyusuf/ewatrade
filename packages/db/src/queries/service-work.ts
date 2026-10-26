@@ -90,6 +90,8 @@ export type CreateServiceIntakeInput = {
   lines: ServiceIntakeLineInput[]
   initialPaymentMethod?: CommercialPaymentMethodValue
   initialPaymentMinor?: number
+  /** Where the initial payment lands; part of the replay payload, not stored on the Intake. */
+  initialPaymentMoneyAccountId?: string
   initialPaymentReference?: string
   notificationChannel?: "sms" | "whatsapp"
   priority?: "normal" | "urgent"
@@ -702,6 +704,7 @@ type ConfirmServiceIntakeInput = {
   actorUserId: string
   intakeId: string
   customerId?: string
+  initialPaymentMoneyAccountId?: string
   schemaVersion: number
   tenantId: string
 }
@@ -791,6 +794,7 @@ async function confirmPersistedServiceIntakeInTransaction(
       actorUserId: input.actorUserId,
       amountMinor: intake.initialPaymentMinor,
       clientPaymentId: `${intake.clientIntakeId}:initial-payment`,
+      moneyAccountId: input.initialPaymentMoneyAccountId,
       method:
         intake.initialPaymentMethod === CommercialPaymentMethod.BANK_TRANSFER
           ? "bank_transfer"
@@ -980,6 +984,7 @@ export async function createAndConfirmServiceIntakeInTransaction(
       actorUserId: input.actorUserId,
       intakeId: draft.id,
       customerId,
+      initialPaymentMoneyAccountId: input.initialPaymentMoneyAccountId,
       schemaVersion: input.schemaVersion,
       tenantId: input.tenantId,
     },

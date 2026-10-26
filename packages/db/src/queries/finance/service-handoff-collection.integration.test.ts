@@ -2,12 +2,15 @@ import { randomUUID } from "node:crypto"
 
 import { expect, test } from "bun:test"
 import { describeWithServiceCommerceDatabase } from "../acceptance/service-commerce/database"
-import { recordServiceHandoff } from "../service-work"
+import {
+  createAndConfirmServiceIntake,
+  recordServiceHandoff,
+} from "../service-work"
 import { createFinanceBook, createFinanceMoneyAccount } from "./accounts"
 import { getFinanceAccountBalances } from "./reads"
 
-describeWithServiceCommerceDatabase("service handoff receiving account", () => {
-  test("the collected balance lands in the chosen account once; a wrong-method account rolls the handoff back", async () => {
+describeWithServiceCommerceDatabase("service payment receiving account", () => {
+  test("intake and handoff payments land in the chosen account once; a wrong-method account rolls back", async () => {
     const { prisma: db } = await import("../../client")
     const suffix = randomUUID()
     const user = await db.user.create({
@@ -61,7 +64,7 @@ describeWithServiceCommerceDatabase("service handoff receiving account", () => {
           kind: "SERVICE",
           name: "Laundry",
           slug: `laundry-${suffix}`,
-          status: "DRAFT",
+          status: "ACTIVE",
           tenantId: tenant.id,
           service: { create: {} },
         },
@@ -72,7 +75,7 @@ describeWithServiceCommerceDatabase("service handoff receiving account", () => {
           isDefault: true,
           key: "default",
           name: "Laundry",
-          status: "DRAFT",
+          status: "ACTIVE",
         },
       })
       const offering = await db.sellableOffering.create({
@@ -84,7 +87,7 @@ describeWithServiceCommerceDatabase("service handoff receiving account", () => {
           kind: "SERVICE",
           name: "Laundry",
           pricingPolicy: "FIXED",
-          status: "DRAFT",
+          status: "ACTIVE",
           tenantId: tenant.id,
           variantId: variant.id,
           serviceOffering: {
@@ -92,6 +95,9 @@ describeWithServiceCommerceDatabase("service handoff receiving account", () => {
               authorizationPolicy: "ON_ORDER_CONFIRMATION",
               workPolicy: "TRACKED",
             },
+          },
+          storeAvailability: {
+            create: { storeId: store.id, isAvailable: true },
           },
         },
       })
@@ -188,11 +194,45 @@ describeWithServiceCommerceDatabase("service handoff receiving account", () => {
         where: { orderId: order.id },
       })
       expect(payment.moneyAccountId).toBe(palm.id)
+
+      // An intake paid in part now: the deposit lands in the chosen account.
+      const intake = {
+        ...actor,
+        clientIntakeId: `intake:${suffix}`,
+        customerName: "Amina",
+        initialPaymentMethod: "bank_transfer" as const,
+        initialPaymentMinor: 400,
+        initialPaymentMoneyAccountId: palm.id,
+        lines: [{ offeringId: offering.id, quantity: "1" }],
+        schemaVersion: 1,
+        storeId: store.id,
+      }
+      await expect(
+        createAndConfirmServiceIntake(db, {
+          ...intake,
+          clientIntakeId: `intake-cash:${suffix}`,
+          initialPaymentMoneyAccountId: cash.id,
+        }),
+      ).rejects.toThrow()
+      expect(await collections()).toBe(1)
+      const confirmed = await createAndConfirmServiceIntake(db, intake)
+      expect((await createAndConfirmServiceIntake(db, intake)).orderId).toBe(
+        confirmed.orderId,
+      )
+      await expect(
+        createAndConfirmServiceIntake(db, {
+          ...intake,
+          initialPaymentMoneyAccountId: cash.id,
+        }),
+      ).rejects.toThrow()
+      expect(await collections()).toBe(2)
+      expect(await balance(palm.id)).toBe("1400")
     } finally {
       if (tenantId)
         await db.$transaction(
           async (tx) => {
             await tx.serviceJob.deleteMany({ where: { tenantId } })
+            await tx.serviceIntake.deleteMany({ where: { tenantId } })
             await tx.commercialOrderPayment.deleteMany({ where: { tenantId } })
             await tx.commercialServiceFulfillment.deleteMany({
               where: { tenantId },

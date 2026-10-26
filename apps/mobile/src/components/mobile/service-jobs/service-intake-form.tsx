@@ -1,5 +1,6 @@
 import { ServiceHeader as Header } from "@/components/mobile/appearances/classic/service-jobs"
 import { AttachmentLockSheet } from "@/components/mobile/attachment-lock-sheet"
+import { CheckoutMoneyAccountField } from "@/components/mobile/create-sale/checkout-money-account"
 import { FormField } from "@/components/mobile/form-field"
 import { MoneyField } from "@/components/mobile/money-field"
 import { QaQuickFillButton } from "@/components/mobile/qa-quick-fill-button"
@@ -10,11 +11,19 @@ import { Text } from "@/components/ui/text"
 import { View } from "@/components/ui/view"
 import { useAttachmentEntitlement } from "@/hooks/use-attachment-entitlement"
 import { trackMobileActivity } from "@/runtime/analytics-runtime"
-import { formatMinorMoney } from "@ewatrade/utils"
+import { formatMinorMoney, majorToMinor } from "@ewatrade/utils"
 import { ServiceAction as ActionButton } from "./service-action"
 import { discardRetainedEvidence } from "./service-evidence-files"
 import { ServiceOfferingChoices } from "./service-offering-choices"
 import type { ServiceJobsModel } from "./use-service-jobs"
+
+const PAYMENT_METHOD_LABELS = {
+  cash: "Cash",
+  bank_transfer: "Transfer",
+  pos: "POS",
+  card: "Card",
+  other: "Other",
+} as const
 
 export function ServiceIntakeForm({
   model,
@@ -55,6 +64,7 @@ export function ServiceIntakeForm({
     setPaymentMethod,
     paymentReference,
     setPaymentReference,
+    intakeAccount,
     notificationChannel,
     setNotificationChannel,
     showDetails,
@@ -222,6 +232,21 @@ export function ServiceIntakeForm({
               </Pressable>
             ))}
           </View>
+          <CheckoutMoneyAccountField
+            accounts={intakeAccount.list}
+            disabled={false}
+            method={paymentMethod}
+            methodLabel={PAYMENT_METHOD_LABELS[paymentMethod]}
+            onChoose={intakeAccount.choose}
+            onRetry={intakeAccount.retry}
+            receivedLabel={formatMinorMoney(
+              amountPaid.trim()
+                ? Math.max(0, majorToMinor(amountPaid) ?? 0)
+                : 0,
+              currencyCode,
+            )}
+            state={intakeAccount.state}
+          />
           <FormField
             variant="filled"
             label="Payment reference"
