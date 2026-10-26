@@ -1,5 +1,10 @@
+import {
+  canReadBusinessInForeground,
+  qaContextPollInterval,
+} from "@/lib/background-query-policy"
 import { currentQaToolingFacts } from "@/lib/qa-tooling-state"
 import { getSession } from "@/lib/session-store"
+import { useOperationalModeStore } from "@/store/operationalModeStore"
 import { useTRPC } from "@/trpc/client"
 import { useQuery } from "@tanstack/react-query"
 import { useEffect, useState } from "react"
@@ -11,16 +16,22 @@ export function useAuthenticatedQaTools() {
   const trpc = useTRPC()
   const [appState, setAppState] = useState(AppState.currentState)
   const [now, setNow] = useState(Date.now())
+  const offline = useOperationalModeStore((state) => state.isOfflineMode)
+  const enabled = canReadBusinessInForeground({
+    active: appState === "active",
+    authenticated: auth.isAuthenticated,
+    businessId: auth.profile?.businessId,
+    offline,
+  })
   const options = trpc.qaTools.fixtureContext.queryOptions({
     scopeKey: `${auth.profile?.id ?? ""}:${auth.profile?.businessId ?? ""}:${auth.profile?.storeId ?? ""}`,
   })
   const query = useQuery({
     ...options,
-    enabled:
-      auth.isAuthenticated &&
-      Boolean(auth.profile?.businessId) &&
-      appState === "active",
-    refetchInterval: 45_000,
+    enabled,
+    refetchInterval: (query) =>
+      qaContextPollInterval(enabled, Boolean(query.state.data)),
+    refetchIntervalInBackground: false,
     retry: false,
     staleTime: 0,
   })
@@ -29,26 +40,21 @@ export function useAuthenticatedQaTools() {
     const subscription = AppState.addEventListener("change", (state) => {
       setAppState(state)
       setNow(Date.now())
-      if (
-        state === "active" &&
-        auth.isAuthenticated &&
-        auth.profile?.businessId
-      )
-        void query.refetch()
+      // Re-enabling the stale query performs one foreground discovery read.
     })
     return () => subscription.remove()
-  }, [auth.isAuthenticated, auth.profile?.businessId, query.refetch])
+  }, [])
 
   useEffect(() => {
-    if (!query.data) return
+    if (!query.data || !enabled) return
     const timer = setInterval(() => setNow(Date.now()), 1000)
     return () => clearInterval(timer)
-  }, [query.data])
+  }, [query.data, enabled])
 
   function currentFacts(data: typeof query.data) {
     const session = getSession()
     return currentQaToolingFacts({
-      active: AppState.currentState === "active",
+      active: !offline && AppState.currentState === "active",
       businessId: auth.profile?.businessId,
       data,
       failed: false,
@@ -70,6 +76,8 @@ export function useAuthenticatedQaTools() {
       query.isError || query.isFetching ? null : currentFacts(query.data),
     isLoading: query.isFetching,
     async refreshFixtureContext() {
+      // refetch bypasses React Query's enabled option; guard manual requests too.
+      if (!enabled || AppState.currentState !== "active") return null
       const result = await query.refetch()
       return result.isError ? null : currentFacts(result.data)
     },

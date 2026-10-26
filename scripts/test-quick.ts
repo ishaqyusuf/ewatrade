@@ -19,6 +19,7 @@ export const suites = {
   mobile: [
     "apps/mobile/src/lib/qa-runtime-identity.test.ts",
     "apps/mobile/src/lib/quantity.test.ts",
+    "apps/mobile/src/lib/background-query-policy.test.ts",
     "apps/mobile/scripts/prepare-android-dev.test.ts",
   ],
   domain: [
@@ -26,6 +27,8 @@ export const suites = {
     "packages/utils/src/currency.test.ts",
     "packages/errors/src/error-system.test.ts",
     "packages/service-commerce/src/contracts.test.ts",
+    "packages/jobs/src/schedule-policy.test.ts",
+    "apps/api/src/health-routes.test.ts",
   ],
 }
 type Suite = keyof typeof suites
@@ -119,7 +122,7 @@ export function selectQuickPlan(files: string[]) {
       groups.add("mobile")
       groups.add("domain")
     } else if (
-      /^(apps\/api|packages\/(db|assistant|utils|payments|catalog|errors|service-commerce|storefront-runtime))\//.test(
+      /^(apps\/api|packages\/(db|assistant|utils|payments|catalog|errors|jobs|service-commerce|storefront-runtime))\//.test(
         file,
       )
     ) {

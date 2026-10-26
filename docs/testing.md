@@ -52,7 +52,7 @@ The explicit mapping in `scripts/test-quick.ts` selects a small reviewed set:
 | Documentation / QA scripts | QA workflow and environment/isolation tests |
 | Dashboard, marketing, storefront | Core + web + domain smoke |
 | Mobile | Core + mobile + domain smoke |
-| API, DB, assistant and mapped shared contracts | All client/domain smoke groups |
+| API, DB, jobs, assistant and mapped shared contracts | All client/domain smoke groups |
 | Root package/lock/config or workspace manifests | All smoke groups |
 | Unmapped source/config | Exit 2 with paths; review and extend the mapping |
 
@@ -77,6 +77,10 @@ selection. Tests are never automatically removed or retried to hide a failure.
 
 ## UI and evidence
 
+The optional repository recipe `docs/verification/verify-ewatrade/SKILL.md` applies
+the selected pstack verification pattern to these existing commands. It adds no
+runner, daily live sweep or deployment authority.
+
 Pure logic/tooling changes normally need no UI session. For UI changes, finish
 the slice, then run one focused session with a representative success and relevant
 failure/back path. Sample theme/font/keyboard changes when affected. Browser mobile
@@ -90,6 +94,32 @@ Reuse valid receipts for unchanged relevant source and dependencies. Repeat only
 for failures, relevant changes, concrete uncertainty or required checks. Environment
 and signed-build differences need their own proof; a source pass does not transfer
 automatically to a different deployment/runtime.
+
+Use one stable dated run ID for an execution. Record start/end, relevant path
+SHA-256 hashes and lockfile hash alongside the commit (dirty work needs hashes).
+For connected checks also record the profile, provider project/branch/endpoint
+identity, invariant and cleanup result without credentials. One chat owns a
+connected acceptance window on a shared target; others should reuse the receipt.
+Unchanged checks can be linked from multiple feature/task summaries without
+being counted as independent executions. A meaningful scope/dependency/target
+change invalidates that part of the proof; repeat that part only.
+
+## Idle compute and probes
+
+`/live` and `/api/live` are database-free API liveness. Use them for routine
+uptime checks after the candidate containing them is deployed. A success proves
+only that the API can respond. `/health` and `/api/health` retain database readiness
+and its existing account-count response. The doctor/release readiness checks
+still use `/health`; don't replace rollout readiness with liveness.
+
+No profile, service, monitor or provider schedule changes automatically when
+source checks run. Jobs default to existing cadence. The optional
+`JOB_SCHEDULE_MODE=prelaunch` changes five- and fifteen-minute recovery groups to
+thirty minutes while retaining hourly/daily groups. It delays physical OTP
+cleanup, reminders and recovery as well as optional work; expiry at point of use
+remains enforced. Review that tradeoff and separately authorize the target before
+setting/deploying it. Revert to `standard` (or unset) and redeploy to restore the
+original cadence. Preview remains unscheduled and local scheduling opt-in.
 
 ## Release
 

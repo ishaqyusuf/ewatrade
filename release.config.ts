@@ -24,6 +24,7 @@ const tooling = [
   "*_QA_*", // QA fixture ids and switches (D05_QA_…, S03_QA_…)
 ]
 const optional = [
+  "JOB_SCHEDULE_MODE", // standard by default; reviewed prelaunch cadence is opt-in
   "LOGLY_COLLECTOR_URL", // Logly logging stays off without these
   "LOGLY_PROJECT_KEY",
   "LOGLY_MOBILE_PROJECT_KEY",

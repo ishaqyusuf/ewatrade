@@ -57,6 +57,8 @@ describe("scheduled cadences", () => {
       "store-conversation.whatsapp-recovery-schedule": "*/5 * * * * sweep",
       "store-conversations.escalations": "*/15 * * * * sweep",
       "store-conversations.media-safety-recovery": "*/5 * * * * sweep",
+      "storefront.design.recovery": "*/5 * * * * sweep",
+      "storefront.release-source-check": "*/5 * * * * sweep",
     })
   })
 
@@ -69,24 +71,35 @@ describe("scheduled cadences", () => {
         triggered.push(id)
       },
     })
-    // A failed work check fails open so the task can report its own error.
-    const outcome = await runCadenceSteps([
-      { hasWork: () => false, id: "off", kind: "task", task: fakeTask("off") },
-      {
-        hasWork: async () => {
-          throw new Error("db down")
+    // A failed DB probe must not amplify the outage with another task/retry.
+    let swept = 0
+    await expect(
+      runCadenceSteps([
+        {
+          hasWork: () => false,
+          id: "off",
+          kind: "task",
+          task: fakeTask("off"),
         },
-        id: "probe-fails",
-        kind: "task",
-        task: fakeTask("probe-fails"),
-      },
-      { id: "sweep", kind: "sweep", run: async () => ({ queued: 0 }) },
-    ])
-    expect(triggered).toEqual(["probe-fails"])
-    expect(outcome).toEqual({
-      off: "idle",
-      "probe-fails": "started",
-      sweep: "swept",
-    })
+        {
+          hasWork: async () => {
+            throw new Error("db down")
+          },
+          id: "probe-fails",
+          kind: "task",
+          task: fakeTask("probe-fails"),
+        },
+        {
+          id: "sweep",
+          kind: "sweep",
+          run: async () => {
+            swept++
+            return { queued: 0 }
+          },
+        },
+      ]),
+    ).rejects.toThrow("probe-fails")
+    expect(triggered).toEqual([])
+    expect(swept).toBe(1)
   })
 })

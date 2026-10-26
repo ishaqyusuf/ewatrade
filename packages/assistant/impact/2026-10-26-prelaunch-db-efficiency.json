@@ -1,0 +1,51 @@
+{
+  "version": 1,
+  "id": "2026-10-26-prelaunch-db-efficiency",
+  "tickets": ["H02"],
+  "summary": "Prepare opt-in prelaunch job cadence, avoid failed-probe child amplification, separate DB-free liveness and bound foreground mobile polling; reuse the existing sanitized QA workflow and dated receipts.",
+  "noAssistantImpact": "Operational efficiency only. No new merchant capability, command, model tool, proposal, role, entitlement or confirmation path. Existing assistant tasks retain their domain authority. An explicit prelaunch schedule mode can delay recovery/reminders/physical expiry cleanup to 30 minutes; point-of-use expiry, hourly/daily groups and runtime permissions remain authoritative. No activation or deployment has occurred.",
+  "capabilities": [],
+  "procedures": [],
+  "docs": [
+    {
+      "topic": "feature",
+      "status": "local_only",
+      "path": ".brain/features/prelaunch-db-efficiency.md"
+    },
+    {
+      "topic": "api",
+      "status": "local_only",
+      "path": ".brain/api/endpoints.md"
+    },
+    {
+      "topic": "permissions",
+      "status": "local_only",
+      "path": ".brain/api/permissions.md"
+    },
+    {
+      "topic": "decision",
+      "status": "local_only",
+      "path": ".brain/decisions/2026-10-26-prelaunch-db-efficiency.md"
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "test",
+      "path": "apps/api/src/health-routes.test.ts",
+      "executed": true,
+      "result": "Injected requests prove both liveness aliases never read DB during outage, and readiness retains its response and fails when the injected DB fails."
+    },
+    {
+      "kind": "test",
+      "path": "apps/mobile/src/lib/background-query-policy.test.ts",
+      "executed": true,
+      "result": "Foreground/scope/offline guards, manager/staff and absent QA policies pass; actual QueryObserver resumes a stale query once without direct-refetch scope bypass."
+    },
+    {
+      "kind": "test",
+      "path": "packages/jobs/src/tasks/scheduled-cadences.test.ts",
+      "executed": true,
+      "result": "Failed work probe refuses the child while independent sweeps run; existing cadence membership is retained, including two previously omitted storefront entries."
+    }
+  ]
+}

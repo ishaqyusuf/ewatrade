@@ -7,6 +7,7 @@ import * as SplashScreen from "expo-splash-screen"
 import { useEffect, useMemo, useState } from "react"
 import { useReducedMotion } from "react-native-reanimated"
 import "@/styles/global.css"
+import { useAppActive } from "@/hooks/use-app-active"
 import { AppLockProvider } from "@/hooks/use-app-lock"
 import {
   AuthProvider,
@@ -28,6 +29,7 @@ import { OrderVisibilityReconciler } from "@/hooks/use-order-visibility"
 import { QaAcceleratorProvider } from "@/hooks/use-qa-accelerator"
 import { canAccessAdminTabs } from "@/lib/admin-navigation"
 import { isCustomerShellPath } from "@/lib/app-lock-route"
+import { canReadBusinessInForeground } from "@/lib/background-query-policy"
 import {
   canEditMobileCatalog,
   isInvitedStaffProfile,
@@ -359,6 +361,7 @@ const InitialLayout = ({
 }
 
 function OfflinePolicyReconciler() {
+  const active = useAppActive()
   const customerShell = isCustomerShellPath(useSegments())
   const { isAuthenticated, profile } = useAuthContext()
   const trpc = useTRPC()
@@ -379,9 +382,15 @@ function OfflinePolicyReconciler() {
       enabled:
         !scopedStaff &&
         !customerShell &&
-        isAuthenticated &&
-        Boolean(profile?.businessId),
-      refetchInterval: 30_000,
+        canReadBusinessInForeground({
+          active,
+          authenticated: isAuthenticated,
+          businessId: profile?.businessId,
+          offline: isOfflineMode,
+        }),
+      // Preserve permission freshness during active use; no background wake loop.
+      refetchInterval: active && !isOfflineMode ? 30_000 : false,
+      staleTime: 0,
       refetchIntervalInBackground: false,
       retry: false,
     }),

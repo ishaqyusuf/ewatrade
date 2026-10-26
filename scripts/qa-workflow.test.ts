@@ -33,6 +33,9 @@ describe("fast workflow scope", () => {
     const payments = selectQuickPlan(["packages/payments/src/payment-link.ts"])
     expect(payments.unknown).toEqual([])
     expect(payments.groups).toEqual(["core", "domain", "web", "mobile"])
+    const jobs = selectQuickPlan(["packages/jobs/src/schedule-policy.ts"])
+    expect(jobs.unknown).toEqual([])
+    expect(jobs.tests).toContain("packages/jobs/src/schedule-policy.test.ts")
   })
   test("reports unsupported source and deleted tests instead of inventing coverage", () => {
     expect(

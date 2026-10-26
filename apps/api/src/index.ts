@@ -14,7 +14,6 @@ import { toPublicErrorEnvelope } from "@ewatrade/errors"
 import { trpcServer } from "@hono/trpc-server"
 import { OpenAPIHono } from "@hono/zod-openapi"
 import { Hono } from "hono"
-import type { Context } from "hono"
 import { cors } from "hono/cors"
 import { HTTPException } from "hono/http-exception"
 import { secureHeaders } from "hono/secure-headers"
@@ -40,6 +39,7 @@ import {
   prepareFinanceExpenseReceiptDelivery,
 } from "./finance/expense-receipt-delivery-context"
 import { registerFinanceExpenseReceiptUploadRoutes } from "./finance/expense-receipt-upload"
+import { registerHealthRoutes } from "./health-routes"
 import { captureApiError } from "./observability/sentry"
 import { registerOrderAttachmentRoutes } from "./orders/order-attachment-routes"
 import { registerPrescriptionMediaDeliveryRoutes } from "./prescriptions/media-delivery"
@@ -186,18 +186,7 @@ app.use("/api/trpc/*", async (c, next) => {
 app.get("/favicon.ico", (c) => c.body(null, 204))
 app.get("/robots.txt", (c) => c.body(null, 204))
 
-const healthHandler = async (c: Context) => {
-  const start = performance.now()
-  const accounts = await prisma.account.count({})
-
-  c.header("Server-Timing", `app;dur=${(performance.now() - start).toFixed(2)}`)
-  c.header("X-Server-Timestamp", Date.now().toString())
-
-  return c.json({ status: "ok", database: { accounts } }, 200)
-}
-
-app.get("/health", healthHandler)
-app.get("/api/health", healthHandler)
+registerHealthRoutes(app, { countAccounts: () => prisma.account.count({}) })
 
 registerAppUpdateRoutes(app, appUpdateDependencies)
 registerBillingProviderEventRoutes(app)

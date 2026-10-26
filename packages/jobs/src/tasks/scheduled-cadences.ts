@@ -204,12 +204,12 @@ async function shouldStart(step: Extract<CadenceStep, { kind: "task" }>) {
   try {
     return await step.hasWork()
   } catch (error) {
-    // Fail open: the task reports its own failure with its own retries.
-    logger.warn("Cadence work check failed; starting task", {
-      error: error instanceof Error ? error.message : String(error),
+    logger.warn("Cadence work check failed; child task not started", {
       task: step.id,
     })
-    return true
+    throw new Error(`Cadence work check unavailable: ${step.id}`, {
+      cause: error,
+    })
   }
 }
 
