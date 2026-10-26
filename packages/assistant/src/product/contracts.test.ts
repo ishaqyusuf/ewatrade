@@ -325,3 +325,45 @@ describe("read-only business allowance", () => {
     ).toBe(true)
   })
 })
+
+test("prepared phone choices return to the form with only supplied combinations enabled", () => {
+  const snapshot = productSnapshot()
+  snapshot.category = "My custom category"
+  const result = productHandbackSnapshot(snapshot, {
+    kind: "product",
+    name: "Samsung S24 Ultra",
+    unitName: "Piece",
+    categoryKey: "electronics:phones",
+    categorySuggested: true,
+    variantMode: "explicit",
+    options: [
+      { name: "Storage", values: ["256 GB", "512 GB"] },
+      { name: "RAM", values: ["12 GB", "16 GB"] },
+    ],
+    variants: [
+      {
+        selections: [
+          { optionName: "Storage", value: "256 GB" },
+          { optionName: "RAM", value: "16 GB" },
+        ],
+        openingStock: "3",
+        priceMinor: 50000000,
+      },
+    ],
+  })
+  expect(result.category).toBe("My custom category")
+  expect(result.optionGroups.map((group) => group.values)).toEqual([
+    "256 GB, 512 GB",
+    "12 GB, 16 GB",
+  ])
+  expect(Object.values(result.variantDrafts)).toHaveLength(4)
+  const enabled = Object.values(result.variantDrafts).filter(
+    (row) => row.enabled,
+  )
+  expect(enabled).toHaveLength(1)
+  expect(enabled[0]?.quantity).toBe("3")
+  expect(enabled[0]?.price).toBe("500000")
+  expect(result.form.openingStockQuantity).toBe("")
+  expect(productFormSnapshotSchema.safeParse(result).success).toBe(true)
+  expect(productRequiresForm(result)).toBe(true)
+})

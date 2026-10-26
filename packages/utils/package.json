@@ -45,6 +45,7 @@
     "./legal-approval": "./src/legal-approval.ts",
     "./account-privacy-intake": "./src/account-privacy-intake.ts",
     "./catalog-category-presets": "./src/catalog-category-presets.ts",
+    "./catalog-options": "./src/catalog-options.ts",
     "./catalog-illustrations": "./src/catalog-illustrations.ts",
     "./catalog-illustration-artwork": "./src/catalog-illustration-artwork.ts",
     "./finance-bank-statement": "./src/finance-bank-statement.ts",
