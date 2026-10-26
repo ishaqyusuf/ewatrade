@@ -3,9 +3,10 @@
 import type { useCatalogPhoto } from "@/hooks/use-catalog-photo"
 import { Button, Field, FieldLabel, Input } from "@ewatrade/ui"
 import { findCatalogIllustration } from "@ewatrade/utils/catalog-illustrations"
-import { useId } from "react"
+import { useId, useState } from "react"
 import { CatalogIllustrationPicker } from "./catalog-illustration-picker"
 import { CatalogIllustrationPreview } from "./catalog-illustration-preview"
+import { CatalogPhotoGalleryDialog } from "./catalog-photo-gallery-dialog"
 
 export function CatalogImageEditor({
   photo,
@@ -16,6 +17,7 @@ export function CatalogImageEditor({
   category,
   kind,
   allowPhoto = true,
+  gallery,
 }: {
   photo: ReturnType<typeof useCatalogPhoto>
   disabled: boolean
@@ -25,8 +27,15 @@ export function CatalogImageEditor({
   category?: string | null
   kind: "product" | "service"
   allowPhoto?: boolean
+  /** Offer My images (approved photos on other items) for a new item. */
+  gallery?: {
+    storeId: string
+    itemName: string
+    stores: Array<{ id: string; name: string }>
+  }
 }) {
   const id = useId()
+  const [galleryOpen, setGalleryOpen] = useState(false)
   const illustration = findCatalogIllustration(illustrationId)
   return (
     <div className="space-y-5">
@@ -51,7 +60,9 @@ export function CatalogImageEditor({
             className="h-60 w-full rounded-xl border bg-muted object-contain"
           />
           <p className="break-words text-sm text-muted-foreground">
-            {photo.file?.name}
+            {photo.reused
+              ? `From My images · ${photo.reused.name}`
+              : photo.file?.name}
           </p>
           <Button
             type="button"
@@ -84,6 +95,38 @@ export function CatalogImageEditor({
             }}
           />
         </Field>
+      ) : null}
+      {allowPhoto && gallery ? (
+        <>
+          <Button
+            type="button"
+            variant="outline"
+            disabled={disabled || photo.uploading}
+            onClick={() => setGalleryOpen(true)}
+          >
+            Choose from My images
+          </Button>
+          <CatalogPhotoGalleryDialog
+            open={galleryOpen}
+            onOpenChange={setGalleryOpen}
+            storeId={gallery.storeId}
+            item={{ id: "", name: gallery.itemName || "this item" }}
+            stores={gallery.stores}
+            available={1}
+            pickedAssetIds={photo.reused ? [photo.reused.assetId] : []}
+            onAdd={([entry]) => {
+              if (
+                entry &&
+                photo.reuse({
+                  assetId: entry.assetId,
+                  storeId: entry.storeId,
+                  name: entry.items[0]?.name ?? "",
+                })
+              )
+                onIllustrationChange(null)
+            }}
+          />
+        </>
       ) : null}
       <p className="text-sm text-muted-foreground">
         Your photo uploads when you save. It remains private until its image

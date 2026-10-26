@@ -128,7 +128,7 @@ function GalleryPicker({
     trpc.catalog.photos.gallery.queryOptions(
       {
         storeId,
-        catalogItemId: item.id,
+        catalogItemId: item.id || undefined,
         scope,
         query: query || undefined,
       },

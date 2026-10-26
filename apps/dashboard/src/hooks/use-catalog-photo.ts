@@ -14,7 +14,14 @@ export function useCatalogPhoto(storeId: string) {
   const createIntent = useMutation(
     trpc.catalog.photos.createIntent.mutationOptions(),
   )
+  const reuse = useMutation(trpc.catalog.photos.reuse.mutationOptions())
   const [file, setFile] = useState<File | null>(null)
+  // A My images photo picked instead of a file; copied onto the item on save.
+  const [reused, setReused] = useState<{
+    assetId: string
+    storeId: string
+    name: string
+  } | null>(null)
   const [preview, setPreview] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [uploading, setUploading] = useState(false)
@@ -51,6 +58,7 @@ export function useCatalogPhoto(storeId: string) {
       return false
     }
     setFile(next)
+    setReused(null)
     restoredAssets.current = []
     setError(null)
     asset.current = null
@@ -58,6 +66,7 @@ export function useCatalogPhoto(storeId: string) {
     return true
   }
   async function upload(clientOperationId: string) {
+    if (!file && reused) return [await reuseSource(clientOperationId, reused)]
     if (!file) return restoredAssets.current
     if (busy.current) throw new Error("Your photo is still uploading.")
     const originalStore = storeId
@@ -141,9 +150,59 @@ export function useCatalogPhoto(storeId: string) {
       if (current.current.mounted) setUploading(false)
     }
   }
+  async function reuseSource(
+    clientOperationId: string,
+    source: NonNullable<typeof reused>,
+  ) {
+    if (busy.current) throw new Error("Your photo is still uploading.")
+    if (asset.current) return asset.current
+    const originalStore = storeId
+    busy.current = true
+    setUploading(true)
+    setError(null)
+    try {
+      const copy = await reuse.mutateAsync({
+        storeId: originalStore,
+        sourceAssetId: source.assetId,
+        sourceStoreId: source.storeId,
+        clientOperationId: `${clientOperationId}:reuse:${source.assetId}`,
+      })
+      if (!current.current.mounted || current.current.storeId !== originalStore)
+        throw new Error(
+          "The active Store changed. Reopen this item before saving.",
+        )
+      asset.current = copy.assetId
+      return copy.assetId
+    } catch (error) {
+      if (current.current.mounted)
+        setError(
+          error instanceof Error
+            ? error.message
+            : "This image could not be added. Your draft is unchanged.",
+        )
+      throw error
+    } finally {
+      busy.current = false
+      if (current.current.mounted) setUploading(false)
+    }
+  }
   return {
     file,
-    preview,
+    reused,
+    /** Pick a My images photo instead of a file. */
+    reuse: (source: NonNullable<typeof reused>) => {
+      if (busy.current) return false
+      setFile(null)
+      setReused(source)
+      restoredAssets.current = []
+      setError(null)
+      asset.current = null
+      operation.current = null
+      return true
+    },
+    preview: reused
+      ? `/api/catalog/photos/${encodeURIComponent(reused.assetId)}/preview?storeId=${encodeURIComponent(reused.storeId)}`
+      : preview,
     error,
     uploading,
     select,
@@ -151,6 +210,6 @@ export function useCatalogPhoto(storeId: string) {
     restore: (ids: string[]) => {
       restoredAssets.current = ids
     },
-    hasPhoto: Boolean(file || restoredAssets.current.length),
+    hasPhoto: Boolean(file || reused || restoredAssets.current.length),
   }
 }
