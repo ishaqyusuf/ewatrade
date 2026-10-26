@@ -7,7 +7,18 @@
     "strict": true,
     "skipLibCheck": true,
     "noEmit": true,
-    "allowImportingTsExtensions": true
+    "allowImportingTsExtensions": true,
+    "allowJs": true,
+    "checkJs": true
   },
-  "files": ["qa-doctor.ts", "test-quick.ts", "qa-workflow.test.ts"]
+  "files": [
+    "qa-doctor.ts",
+    "test-quick.ts",
+    "qa-workflow.test.ts",
+    "qa-smoke.ts",
+    "qa-release.ts",
+    "qa-release.test.ts",
+    "qa-smoke.browser.test.mjs",
+    "qa-web-smoke.mjs"
+  ]
 }

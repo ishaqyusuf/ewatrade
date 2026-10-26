@@ -7,6 +7,7 @@ import { resolve } from "node:path"
 export const suites = {
   core: [
     "scripts/qa-workflow.test.ts",
+    "scripts/qa-release.test.ts",
     "scripts/environment-profile.test.ts",
     "scripts/database-profile.test.ts",
   ],
@@ -16,6 +17,7 @@ export const suites = {
     "apps/storefront/src/lib/service-display.test.ts",
   ],
   mobile: [
+    "apps/mobile/src/lib/qa-runtime-identity.test.ts",
     "apps/mobile/src/lib/quantity.test.ts",
     "apps/mobile/scripts/prepare-android-dev.test.ts",
   ],
@@ -98,6 +100,7 @@ export function selectQuickPlan(files: string[]) {
         "bun.lockb",
         "turbo.json",
         "biome.json",
+        "qa.smoke.example.json",
       ].includes(file) ||
       /^(release\.config\.|tooling\/)/.test(file) ||
       /^(apps|packages)\/[^/]+\/package\.json$/.test(file)
@@ -105,7 +108,8 @@ export function selectQuickPlan(files: string[]) {
       for (const group of Object.keys(suites) as Suite[]) groups.add(group)
     } else if (
       /^scripts\//.test(file) ||
-      file === ".github/workflows/fast-checks.yml"
+      file === ".github/workflows/fast-checks.yml" ||
+      file === ".maestro/smoke.yaml"
     )
       groups.add("core")
     else if (/^apps\/(dashboard|marketing|storefront)\//.test(file)) {

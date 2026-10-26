@@ -4,8 +4,11 @@ import { Text } from "@/components/ui/text"
 import { View } from "@/components/ui/view"
 import { useAuthContext } from "@/hooks/use-auth"
 import { useQaAccelerator } from "@/hooks/use-qa-accelerator"
+import { qaRuntimeIdentity } from "@/lib/qa-runtime-identity"
 import { BottomSheetScrollView } from "@gorhom/bottom-sheet"
+import Constants from "expo-constants"
 import { useRouter } from "expo-router"
+import * as Updates from "expo-updates"
 import { useEffect, useRef } from "react"
 import { StatusBanner } from "./status-banner"
 
@@ -109,6 +112,18 @@ export function QaDomainIntro({ qaDomain }: { qaDomain: string }) {
   return (
     <View className="gap-1">
       <Text className="text-sm font-semibold text-foreground">{qaDomain}</Text>
+      <Text
+        testID="qa-runtime-identity"
+        className="text-xs text-muted-foreground"
+      >
+        {qaRuntimeIdentity({
+          enabled: Updates.isEnabled,
+          embedded: Updates.isEmbeddedLaunch,
+          emergency: Updates.isEmergencyLaunch,
+          updateId: Updates.updateId,
+          build: Constants.platform?.android?.versionCode?.toString() ?? null,
+        })}
+      </Text>
       <Text className="text-xs text-muted-foreground">
         Selecting a business creates a normal app session. No password is
         exposed or filled.

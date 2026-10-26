@@ -17,6 +17,14 @@ concurrency, native compatibility and release-specific checks remain required.
 Fast smoke success is not full feature/type/UI/release acceptance. Unsupported
 change mappings must remain visible. No deployment is implied by QA success.
 
+For UI smoke use the existing-data `qa:smoke` command from `docs/testing.md`.
+Do not submit a sale/payment or create fixtures to manufacture a passing result.
+Root `release` retains the shared executor and now uses its clean-copy verification
+hook. Preview smoke must match the Production candidate before rollout. Local,
+stale, wrong-runtime or failed receipts do not qualify. Retry failed testing with
+`qa:smoke`, not another deployment. Preserve the explicit no-deployment boundary
+whenever the owner requests implementation/testing only.
+
 ## Codex / Claude communication
 
 Use the root `AGENT_CHAT.md` for shared assistant-operation messages. Codex is the
