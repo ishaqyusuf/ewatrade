@@ -59,7 +59,9 @@ export function HowItStarts() {
                 "Three steps, in your own words. Pick a business below to see the setup assistant at work"
               }
               <span className={"b-only-web"}>{" on the web dashboard"}</span>
-              <span className={"b-only-mobile"}>{" in the mobile app"}</span>
+              <span className={"b-only-mobile"}>
+                {" in a preview of the mobile app, which is coming soon"}
+              </span>
               {"."}
             </p>
             {"\n          "}
@@ -175,7 +177,7 @@ export function HowItStarts() {
                     </span>
                     <span className={"b-only-mobile"}>
                       {
-                        "Tap Sell, pick the item and the customer, choose how they paid."
+                        "When the app arrives, tap Sell, pick the item and the customer, choose how they paid."
                       }
                     </span>
                     {" Stock and today’s total update on their own."}
@@ -217,6 +219,7 @@ export function HowItStarts() {
             <p className="gg-astage-cap">
               Typed by the owner. Drafts are checked before they’re added.
               Sample business.
+              {platform === "mobile" && " Mobile app preview, coming soon."}
             </p>
           </div>
           {"\n      "}
