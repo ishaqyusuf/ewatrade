@@ -23,6 +23,8 @@
   },
   "workspaces": ["apps/*", "packages/*", "tooling/*"],
   "scripts": {
+    "qa:doctor": "bun --env-file=/dev/null scripts/qa-doctor.ts",
+    "test:quick": "bun --env-file=/dev/null scripts/test-quick.ts",
     "agent:chat": "bun --env-file=/dev/null scripts/agent-chat.ts",
     "db:seed:category-suggestion-config": "node ./scripts/with-workspace-env.mjs bun run --cwd packages/db seed:category-suggestion-config",
     "build": "turbo build",

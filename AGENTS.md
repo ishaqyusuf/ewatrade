@@ -1,5 +1,22 @@
 # Agent Instructions
 
+## Fast verification workflow
+
+Use `docs/testing.md` as the current testing/release entrypoint. Reuse the root
+dev launcher, QA Accelerator and existing release tool. Start with
+`bun run qa:doctor --offline`, then select only the needed runtime services.
+Run `bun run test:quick --plan` to inspect the fast source smoke scope; use
+`--files <owned paths...>` when concurrent work must be excluded, and disclose
+that narrower scope. Existing assistant CI gates still apply.
+
+Complete focused verification once when the change is ready. Reuse valid
+source/platform-specific evidence; repeat for a relevant change, failure,
+concrete uncertainty or required release check. Do not multiply ordinary UI
+checks across every theme, font, viewport and environment. Money, permission,
+concurrency, native compatibility and release-specific checks remain required.
+Fast smoke success is not full feature/type/UI/release acceptance. Unsupported
+change mappings must remain visible. No deployment is implied by QA success.
+
 ## Codex / Claude communication
 
 Use the root `AGENT_CHAT.md` for shared assistant-operation messages. Codex is the
