@@ -245,7 +245,6 @@ function SavedPhotoEditor({
   }
   const tiles: Array<{
     key: string
-    label: string
     image: ReactNode
     note?: string
     remove(): void
@@ -255,7 +254,6 @@ function SavedPhotoEditor({
         item.photos.find((p) => p.assetId === id)?.state !== "APPROVED"
       return {
         key: id,
-        label: `${item.name} photo`,
         image: (
           <CatalogPhotoPreview
             compact
@@ -274,7 +272,6 @@ function SavedPhotoEditor({
     }),
     ...picked.map((entry) => ({
       key: `picked:${entry.assetId}`,
-      label: `${entry.items[0]?.name ?? "My images"} photo`,
       image: (
         <CatalogPhotoPreview
           compact
@@ -294,7 +291,6 @@ function SavedPhotoEditor({
       ? [
           {
             key: "new-upload",
-            label: photo.file?.name ?? "New photo",
             image: (
               <img
                 src={photo.preview}
@@ -372,7 +368,7 @@ function SavedPhotoEditor({
                   size="icon-xs"
                   variant="secondary"
                   disabled={locked || photo.uploading}
-                  aria-label={`Remove ${tile.label}`}
+                  aria-label={`Remove photo ${index + 1} of ${tiles.length}`}
                   onClick={tile.remove}
                   className="absolute top-1.5 right-1.5 rounded-full bg-black/60 text-white hover:bg-black/75"
                 >

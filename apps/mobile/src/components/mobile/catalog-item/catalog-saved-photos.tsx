@@ -463,14 +463,12 @@ function SavedPhotoEditor({
   }
   const tiles: Array<{
     key: string
-    label: string
     image: ReactNode
     note?: string
     remove(): void
   }> = [
     ...ids.map((id) => ({
       key: id,
-      label: `${item.name} photo`,
       image: (
         <SavedPhotoPreview
           assetId={id}
@@ -490,7 +488,6 @@ function SavedPhotoEditor({
     })),
     ...picked.map((entry) => ({
       key: `picked:${entry.assetId}`,
-      label: `${entry.items[0]?.name ?? "My images"} photo`,
       image: (
         <SavedPhotoPreview
           assetId={entry.assetId}
@@ -509,7 +506,6 @@ function SavedPhotoEditor({
       ? [
           {
             key: `new:${draft.image.id}`,
-            label: "new photo",
             image: (
               <Image
                 source={{ uri: draft.image.uri }}
@@ -569,7 +565,7 @@ function SavedPhotoEditor({
               ) : null}
               <Pressable
                 accessibilityRole="button"
-                accessibilityLabel={`Remove ${tile.label}`}
+                accessibilityLabel={`Remove photo ${index + 1} of ${tiles.length}`}
                 disabled={disabled}
                 hitSlop={8}
                 onPress={tile.remove}
