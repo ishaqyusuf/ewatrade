@@ -243,6 +243,11 @@ describeWithServiceCommerceDatabase("Catalog My images gallery", () => {
         assetId: lekkiEggs,
       })
       expect(source.photo.contentDigest).toBe(eggs)
+      // The verdict a byte-identical copy may carry over.
+      expect(source.review).toEqual({
+        displayDigest: "f".repeat(64),
+        policyVersion: "v1",
+      })
       await expect(
         getCatalogPhotoReuseSource(db, {
           ...at(lekki.id),

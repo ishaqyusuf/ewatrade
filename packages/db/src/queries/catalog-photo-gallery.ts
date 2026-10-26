@@ -151,12 +151,22 @@ export async function getCatalogPhotoReuseSource(
       contentDigest: target.photo.contentDigest,
       storagePath: target.photo.storagePath,
     },
-    select: { id: true },
+    select: { id: true, reviewDisplayDigest: true, reviewPolicyVersion: true },
   })
   if (!asset)
     throw new CatalogPhotoError(
       "PHOTO_NOT_READY",
       "This image is no longer available to reuse. Choose another one.",
     )
-  return target
+  return {
+    ...target,
+    /** The approved verdict a byte-identical copy may carry over. */
+    review:
+      asset.reviewDisplayDigest && asset.reviewPolicyVersion
+        ? {
+            displayDigest: asset.reviewDisplayDigest,
+            policyVersion: asset.reviewPolicyVersion,
+          }
+        : null,
+  }
 }

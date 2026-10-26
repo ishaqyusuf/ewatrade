@@ -3,6 +3,7 @@ import { createVercelCatalogPhotoStorage } from "@ewatrade/catalog/photo-storage
 import { uploadCatalogPhoto } from "@ewatrade/catalog/photo-upload"
 import type { PrismaClient } from "@ewatrade/db"
 import { getCatalogPhotoReuseSource } from "@ewatrade/db/catalog-photo-gallery"
+import { recordCatalogPhotoVerdict } from "@ewatrade/db/catalog-photo-lifecycle"
 import {
   createCatalogPhotoIntent,
   getCatalogPhotoUploadTarget,
@@ -13,9 +14,11 @@ import { enqueueCatalogPhotoReview } from "@ewatrade/jobs/catalog-photo-review"
 
 /**
  * Copies an approved photo from one Item onto a new private draft for another
- * Item. The draft goes through the same intent, byte verification, processing
- * and image check as an upload, so the copy has its own lifecycle: removing it
- * later never touches the source Item's photo.
+ * Item. The draft goes through the same intent, byte verification and
+ * processing as an upload, so the copy has its own lifecycle: removing it
+ * later never touches the source Item's photo. When the copy's processed
+ * display bytes match the ones the source was approved on, the server carries
+ * that verdict over instead of running a second image check.
  */
 export async function reuseCatalogPhoto(
   db: PrismaClient,
@@ -44,6 +47,7 @@ export async function reuseCatalogPhoto(
     photo: source.photo,
     abortSignal: input.signal,
   })
+  let displayDigest: string | null = null
   const target = await getCatalogPhotoUploadTarget(db, {
     ...input.target,
     assetId: intent.assetId,
@@ -61,11 +65,30 @@ export async function reuseCatalogPhoto(
     target,
     storage,
     validate: async (photo) => {
-      await processCatalogPhoto(photo)
+      displayDigest = (await processCatalogPhoto(photo)).display.contentDigest
     },
     complete: (photo) =>
       recordVerifiedCatalogPhotoUpload(db, input.target, photo),
   })
+  if (
+    source.review &&
+    displayDigest !== null &&
+    displayDigest === source.review.displayDigest
+  ) {
+    try {
+      return await recordCatalogPhotoVerdict(db, {
+        ...input.target,
+        assetId: intent.assetId,
+        sourceDigest: source.photo.contentDigest,
+        displayDigest,
+        provider: `reuse.${source.photo.assetId}`,
+        policyVersion: source.review.policyVersion,
+        verdict: "APPROVED",
+      })
+    } catch {
+      // A review worker already leased the copy; let the normal check finish.
+    }
+  }
   await enqueueCatalogPhotoReview(intent.assetId).catch(() => undefined)
   return result
 }
