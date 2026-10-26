@@ -103,7 +103,7 @@ export function Hero({ signupEnabled }: { signupEnabled: boolean }) {
             {"\n        "}
             <p className={"gg-hero-sub"}>
               {
-                "Record a sale, count your stock and see who owes you. Manage your business from a computer or phone."
+                "Record a sale, count your stock and see who owes you on the web, in any browser on your computer or phone. Our mobile app is coming soon."
               }
             </p>
             {"\n        "}
@@ -176,7 +176,7 @@ export function Hero({ signupEnabled }: { signupEnabled: boolean }) {
                   />
                   {"\n              "}
                   <span className={"b-soon-tag"} aria-hidden={"true"}>
-                    {"Mobile app"}
+                    {"App preview · Coming soon"}
                   </span>
                   {"\n            "}
                 </div>
@@ -189,7 +189,7 @@ export function Hero({ signupEnabled }: { signupEnabled: boolean }) {
                   tabIndex={-1}
                   aria-hidden={"true"}
                 >
-                  <span>{"Mobile app"}</span>
+                  <span>{"App preview · Coming soon"}</span>
                 </button>
                 {"\n          "}
               </div>
@@ -237,6 +237,7 @@ export function Hero({ signupEnabled }: { signupEnabled: boolean }) {
             <div className={"gg-loopbar"}>
               {"\n          "}
               <p className="gg-caption" aria-live="off">
+                {active === "mobile" && "App preview · "}
                 {captions[step]}{" "}
                 <span className="sample-note">Sample business.</span>
               </p>

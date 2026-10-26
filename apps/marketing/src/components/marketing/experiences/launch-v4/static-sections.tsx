@@ -25,7 +25,7 @@ export function Availability({ signupEnabled }: { signupEnabled: boolean }) {
           <div className={"gg-split-head"}>
             {"\n          "}
             <h2 className={"gg-h2 ew-reveal is-in"} id={"dash-h"}>
-              {"The web for the back office. The phone for the counter."}
+              {"The web for the counter and the back office."}
             </h2>
             {"\n          "}
             <p
@@ -33,7 +33,7 @@ export function Availability({ signupEnabled }: { signupEnabled: boolean }) {
               style={{ "--d": "80ms" } as CSSProperties}
             >
               {
-                "Sales, stock, customers, staff and finance on your computer or phone."
+                "Sales, stock, customers, staff and finance in any browser on your computer or phone. A mobile app for the counter is coming soon."
               }
             </p>
             {"\n        "}
@@ -95,11 +95,12 @@ export function Availability({ signupEnabled }: { signupEnabled: boolean }) {
               {"\n            "}
               <div className={"b-av-copy"}>
                 {"\n              "}
+                <span className="b-av-tag b-av-tag--soon">Coming soon</span>
                 <h3 id={"av-app"}>{"Mobile app"}</h3>
                 {"\n              "}
                 <p>
                   {
-                    "Made for the counter. Sales save on the phone when there’s no signal and sync when it’s back. Same business, same numbers as the web."
+                    "Made for the counter. Sales will save on the phone when there’s no signal and sync when it’s back, with the same numbers as the web. Until it’s ready, open ẸwáTrade in your phone’s browser."
                   }
                 </p>
                 {"\n              "}
@@ -160,7 +161,7 @@ export function Faq() {
               {"\n            "}
               <p>
                 {
-                  "The mobile app brings your sales, stock and customer balances together on your phone. You can also use ẸwáTrade in any browser."
+                  "It’s coming soon, with offline sales for the counter. Today, use ẸwáTrade in any browser on your phone or computer."
                 }
               </p>
               {"\n          "}
@@ -205,7 +206,7 @@ export function Faq() {
               {"\n            "}
               <p>
                 {
-                  "The web dashboard needs a connection. On mobile, sales save on the phone, show “Waiting to sync” and sync when you’re back online."
+                  "Not yet. The web dashboard needs a connection. Offline sales are coming with the mobile app: sales will save on the phone, show “Waiting to sync” and sync when you’re back online."
                 }
               </p>
               {"\n          "}
