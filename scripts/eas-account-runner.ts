@@ -277,7 +277,11 @@ if (
     ])
   }
   for (const [label, script] of checks) {
-    const code = await runCommand(["bun", script], {
+    const platformArgs =
+      label === "store billing" && buildPlatform !== "all"
+        ? ["--platform", buildPlatform]
+        : []
+    const code = await runCommand(["bun", script, ...platformArgs], {
       cwd: REPO_DIR,
       env,
       stdio: "inherit",

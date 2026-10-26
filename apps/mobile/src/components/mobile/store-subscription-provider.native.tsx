@@ -34,7 +34,7 @@ function useStoreBillingController() {
   const processing = useRef(new Set<string>())
   const store = Platform.OS === "ios" ? "app_store" : "play_store"
   const catalog = useQuery(
-    trpc.storeSubscriptions.catalog.queryOptions(undefined, { retry: false }),
+    trpc.storeSubscriptions.catalog.queryOptions({ store }, { retry: false }),
   )
   const verification = useMutation(
     trpc.storeSubscriptions.verifyPurchase.mutationOptions(),
@@ -323,7 +323,7 @@ export function StoreSubscriptionProvider({
   )
     return children
   return (
-    <ActiveStoreBillingProvider key={businessId}>
+    <ActiveStoreBillingProvider key={`${auth.profile?.id}:${businessId}`}>
       {children}
     </ActiveStoreBillingProvider>
   )

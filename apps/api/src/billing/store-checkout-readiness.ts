@@ -57,6 +57,7 @@ export function isNewStoreCheckoutConfigured(
   products: StoreProducts,
   config: NodeJS.ProcessEnv = process.env,
   fileExists: (file: string) => boolean = hasFile,
+  store?: "app_store" | "play_store",
 ) {
   const environment = config.STORE_BILLING_ENVIRONMENT
   const profile = config.DEV_PROFILE
@@ -70,37 +71,41 @@ export function isNewStoreCheckoutConfigured(
     profile === "prod" &&
     productionOperationsConfigured(config)
   if (!sandbox && !production) return false
-  if (
-    !products.some((product) => product.store === "app_store") ||
-    !products.some((product) => product.store === "play_store")
-  )
+  // Older clients request the combined catalog. Keep its both-store gate;
+  // a platform-specific client needs only its own verifier and products.
+  const stores = store ? [store] : ["app_store", "play_store"]
+  if (stores.some((required) => !products.some((p) => p.store === required)))
     return false
   try {
-    requireAppleStoreIdentity(
-      config.APPLE_BUNDLE_ID ?? "",
-      production ? Number(config.APPLE_APP_ID) : undefined,
-      production,
-    )
-    requirePlayStorePackage(config.PLAY_PACKAGE_NAME)
-    const key = createPrivateKey(
-      (config.APPLE_IAP_PRIVATE_KEY ?? "").replaceAll("\\n", "\n"),
-    )
-    if (
-      key.asymmetricKeyType !== "ec" ||
-      key.asymmetricKeyDetails?.namedCurve !== "prime256v1"
-    )
-      return false
-    appleRootCertificates()
+    if (stores.includes("app_store")) {
+      requireAppleStoreIdentity(
+        config.APPLE_BUNDLE_ID ?? "",
+        production ? Number(config.APPLE_APP_ID) : undefined,
+        production,
+      )
+      const key = createPrivateKey(
+        (config.APPLE_IAP_PRIVATE_KEY ?? "").replaceAll("\\n", "\n"),
+      )
+      if (
+        key.asymmetricKeyType !== "ec" ||
+        key.asymmetricKeyDetails?.namedCurve !== "prime256v1" ||
+        !present(config.APPLE_IAP_KEY_ID) ||
+        !present(config.APPLE_IAP_ISSUER_ID)
+      )
+        return false
+      appleRootCertificates()
+    }
+    if (stores.includes("play_store")) {
+      requirePlayStorePackage(config.PLAY_PACKAGE_NAME)
+      if (
+        !present(config.PLAY_NOTIFICATION_AUDIENCE) ||
+        !present(config.PLAY_NOTIFICATION_SERVICE_EMAIL) ||
+        !isPlayPublisherCredentialConfigured(config, fileExists)
+      )
+        return false
+    }
   } catch {
     return false
   }
-  if (
-    !present(config.APPLE_IAP_KEY_ID) ||
-    !present(config.APPLE_IAP_ISSUER_ID) ||
-    !present(config.PLAY_NOTIFICATION_AUDIENCE) ||
-    !present(config.PLAY_NOTIFICATION_SERVICE_EMAIL) ||
-    !isPlayPublisherCredentialConfigured(config, fileExists)
-  )
-    return false
   return true
 }

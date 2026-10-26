@@ -17,7 +17,7 @@ import { useTRPC } from "@/trpc/client"
 import type { BottomSheetModal } from "@gorhom/bottom-sheet"
 import { useQuery } from "@tanstack/react-query"
 import { forwardRef } from "react"
-import { Linking } from "react-native"
+import { Linking, Platform } from "react-native"
 import { View } from "react-native"
 import { KeyboardAwareScrollView } from "react-native-keyboard-controller"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
@@ -29,6 +29,7 @@ import {
   StatusPill,
 } from "./green-till/kit"
 import { SettingsScreen } from "./settings-screen"
+import { StoreSubscriptionPanel } from "./store-subscription-panel"
 import {
   SUBSCRIPTION_SCREEN_COPY,
   getSubscriptionUsagePresentation,
@@ -183,6 +184,7 @@ export function SubscriptionPlanContent({
     | undefined
   const verified = productionSnapshot
   const supportUrl = publicLegalUrl("support")
+  const usesPlayBilling = Platform.OS === "android"
   const plans = verified?.plans.filter((plan) => plan.id !== "free") ?? []
   const currentIndex = plans.findIndex((plan) => plan.id === verified?.plan.id)
   const nextPlan = currentIndex >= 0 ? plans[currentIndex + 1] : undefined
@@ -272,7 +274,9 @@ export function SubscriptionPlanContent({
             </View>
           </View>
         ) : null}
-        {plans.length ? (
+        {usesPlayBilling ? (
+          <StoreSubscriptionPanel />
+        ) : plans.length ? (
           <View>
             <SectionHeader title="Plans" />
             <ListCard>
@@ -307,7 +311,7 @@ export function SubscriptionPlanContent({
     </View>
   )
   const pinned =
-    nextPlan && supportUrl && !isOfflineMode ? (
+    !usesPlayBilling && nextPlan && supportUrl && !isOfflineMode ? (
       <View className="border-t border-border bg-background px-[18px] pt-3">
         <ActionButton icon="ArrowUp" onPress={request}>
           {`Request ${nextPlan.name}`}

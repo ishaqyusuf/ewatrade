@@ -52,6 +52,43 @@ test("complete release billing settings pass the local shape preflight", () => {
   assert.deepEqual(storeBillingReadinessFailures(ready, fixtureFileExists), [])
 })
 
+test("Android readiness requires Play products and credentials without Apple setup", () => {
+  const androidOnly = {
+    ...ready,
+    APPLE_BUNDLE_ID: "",
+    APPLE_APP_ID: "",
+    APPLE_IAP_KEY_ID: "",
+    APPLE_IAP_ISSUER_ID: "",
+    APPLE_IAP_PRIVATE_KEY: "",
+    STORE_SUBSCRIPTION_PRODUCTS: JSON.stringify([
+      { store: "play_store", productId: "growth.play", planId: "growth" },
+    ]),
+  }
+  assert.deepEqual(
+    storeBillingReadinessFailures(androidOnly, fixtureFileExists, "play_store"),
+    [],
+  )
+  assert(
+    storeBillingReadinessFailures(androidOnly, fixtureFileExists).length > 0,
+  )
+  for (const [name, value] of [
+    ["PLAY_PACKAGE_NAME", "com.other.app"],
+    ["GOOGLE_APPLICATION_CREDENTIALS", ""],
+    ["PLAY_NOTIFICATION_AUDIENCE", ""],
+    ["STORE_BILLING_PRODUCTION_CHECKOUT_ENABLED", "false"],
+    ["PLAY_REFUND_REVIEW_INTAKE_ENABLED", "false"],
+  ]) {
+    assert(
+      storeBillingReadinessFailures(
+        { ...androidOnly, [name]: value },
+        fixtureFileExists,
+        "play_store",
+      ).length > 0,
+      `${name} must still be required for Android`,
+    )
+  }
+})
+
 test("serverless Play service-account JSON passes without a credential file", () => {
   assert.deepEqual(
     storeBillingReadinessFailures(

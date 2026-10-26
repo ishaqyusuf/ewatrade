@@ -14,7 +14,7 @@ const PROJECT = {
 }
 const { id: PROJECT_ID, slug: SLUG, owner: OWNER } = PROJECT
 const { resolveAppVariant } = require("./app-variant.cjs") as {
-  resolveAppVariant: (env: NodeJS.ProcessEnv) => string
+  resolveAppVariant: (env: Partial<NodeJS.ProcessEnv>) => string
 }
 const normalizedAppVariant = resolveAppVariant({
   APP_ENV: process.env.APP_ENV,
@@ -205,7 +205,6 @@ const config: ExpoConfig = {
     blockedPermissions: [
       "android.permission.FOREGROUND_SERVICE",
       "android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK",
-      "com.android.vending.BILLING",
       // Location is only used while the app is open, to fill an address.
       "android.permission.ACCESS_BACKGROUND_LOCATION",
       ...(!isDevelopmentBuild
@@ -253,6 +252,7 @@ const config: ExpoConfig = {
     favicon: "./assets/images/precision-rise-favicon.png",
   },
   plugins: [
+    "expo-iap",
     "./plugins/with-variant-link-schemes.cjs",
     "./plugins/with-app-update.cjs",
     "./plugins/with-foreground-audio-only.cjs",

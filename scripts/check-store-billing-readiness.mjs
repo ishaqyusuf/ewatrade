@@ -53,7 +53,7 @@ function validPlayPublisherJson(value) {
   }
 }
 
-function productFailures(source) {
+function productFailures(source, store) {
   let products
   try {
     products = JSON.parse(source ?? "")
@@ -81,13 +81,19 @@ function productFailures(source) {
     identities.add(identity)
     stores.add(product.store)
   }
-  return ["app_store", "play_store"]
+  return (store ? [store] : ["app_store", "play_store"])
     .filter((store) => !stores.has(store))
     .map((store) => `STORE_SUBSCRIPTION_PRODUCTS needs a ${store} mapping.`)
 }
 
-export function storeBillingReadinessFailures(config, hasFile = fileExists) {
+export function storeBillingReadinessFailures(
+  config,
+  hasFile = fileExists,
+  store = undefined,
+) {
   const failures = []
+  if (store !== undefined && store !== "app_store" && store !== "play_store")
+    return ["Unknown billing store."]
   if (config.APP_ENV !== "production" || config.DEV_PROFILE !== "prod")
     failures.push("Run with the production environment profile.")
   if (config.STORE_BILLING_ENABLED !== "true")
@@ -96,54 +102,58 @@ export function storeBillingReadinessFailures(config, hasFile = fileExists) {
     failures.push("STORE_BILLING_PRODUCTION_CHECKOUT_ENABLED is not enabled.")
   if (config.STORE_BILLING_ENVIRONMENT !== "production")
     failures.push("STORE_BILLING_ENVIRONMENT must be production.")
-  failures.push(...productFailures(config.STORE_SUBSCRIPTION_PRODUCTS))
+  failures.push(...productFailures(config.STORE_SUBSCRIPTION_PRODUCTS, store))
 
-  if (config.APPLE_BUNDLE_ID !== releasePackage)
-    failures.push("APPLE_BUNDLE_ID must match the registered release bundle.")
-  if (config.APPLE_APP_ID !== releaseAppleAppId)
-    failures.push("APPLE_APP_ID must match the App Store Connect app.")
-  for (const name of ["APPLE_IAP_KEY_ID", "APPLE_IAP_ISSUER_ID"]) {
-    if (!present(config[name])) failures.push(`${name} is missing.`)
-  }
-  try {
-    const key = createPrivateKey(
-      (config.APPLE_IAP_PRIVATE_KEY ?? "").replaceAll("\\n", "\n"),
-    )
-    if (
-      key.asymmetricKeyType !== "ec" ||
-      key.asymmetricKeyDetails?.namedCurve !== "prime256v1"
-    )
-      throw new Error("wrong key type")
-  } catch {
-    failures.push("APPLE_IAP_PRIVATE_KEY must be a P-256 private key.")
-  }
-  try {
-    verifyBundledAppleRoots()
-  } catch {
-    failures.push("Bundled Apple root certificates are invalid.")
+  if (store !== "play_store") {
+    if (config.APPLE_BUNDLE_ID !== releasePackage)
+      failures.push("APPLE_BUNDLE_ID must match the registered release bundle.")
+    if (config.APPLE_APP_ID !== releaseAppleAppId)
+      failures.push("APPLE_APP_ID must match the App Store Connect app.")
+    for (const name of ["APPLE_IAP_KEY_ID", "APPLE_IAP_ISSUER_ID"]) {
+      if (!present(config[name])) failures.push(`${name} is missing.`)
+    }
+    try {
+      const key = createPrivateKey(
+        (config.APPLE_IAP_PRIVATE_KEY ?? "").replaceAll("\\n", "\n"),
+      )
+      if (
+        key.asymmetricKeyType !== "ec" ||
+        key.asymmetricKeyDetails?.namedCurve !== "prime256v1"
+      )
+        throw new Error("wrong key type")
+    } catch {
+      failures.push("APPLE_IAP_PRIVATE_KEY must be a P-256 private key.")
+    }
+    try {
+      verifyBundledAppleRoots()
+    } catch {
+      failures.push("Bundled Apple root certificates are invalid.")
+    }
   }
 
-  if (config.PLAY_PACKAGE_NAME !== releasePackage)
-    failures.push(
-      "PLAY_PACKAGE_NAME must match the registered release package.",
+  if (store !== "app_store") {
+    if (config.PLAY_PACKAGE_NAME !== releasePackage)
+      failures.push(
+        "PLAY_PACKAGE_NAME must match the registered release package.",
+      )
+    for (const name of [
+      "PLAY_NOTIFICATION_AUDIENCE",
+      "PLAY_NOTIFICATION_SERVICE_EMAIL",
+    ]) {
+      if (!present(config[name])) failures.push(`${name} is missing.`)
+    }
+    const inlinePlayKey = config.PLAY_PUBLISHER_SERVICE_ACCOUNT_JSON
+    if (inlinePlayKey !== undefined && inlinePlayKey !== "") {
+      if (!validPlayPublisherJson(inlinePlayKey))
+        failures.push("PLAY_PUBLISHER_SERVICE_ACCOUNT_JSON is invalid.")
+    } else if (
+      !present(config.GOOGLE_APPLICATION_CREDENTIALS) ||
+      !hasFile(config.GOOGLE_APPLICATION_CREDENTIALS)
     )
-  for (const name of [
-    "PLAY_NOTIFICATION_AUDIENCE",
-    "PLAY_NOTIFICATION_SERVICE_EMAIL",
-  ]) {
-    if (!present(config[name])) failures.push(`${name} is missing.`)
+      failures.push(
+        "Play Publisher needs an inline service account or local ADC file.",
+      )
   }
-  const inlinePlayKey = config.PLAY_PUBLISHER_SERVICE_ACCOUNT_JSON
-  if (inlinePlayKey !== undefined && inlinePlayKey !== "") {
-    if (!validPlayPublisherJson(inlinePlayKey))
-      failures.push("PLAY_PUBLISHER_SERVICE_ACCOUNT_JSON is invalid.")
-  } else if (
-    !present(config.GOOGLE_APPLICATION_CREDENTIALS) ||
-    !hasFile(config.GOOGLE_APPLICATION_CREDENTIALS)
-  )
-    failures.push(
-      "Play Publisher needs an inline service account or local ADC file.",
-    )
   if (config.PLAY_REFUND_REVIEW_ALERTS_ENABLED !== "true")
     failures.push("PLAY_REFUND_REVIEW_ALERTS_ENABLED is not enabled.")
   if (config.PLAY_REFUND_REVIEW_INTAKE_ENABLED !== "true")
@@ -192,7 +202,20 @@ if (
   process.argv[1] &&
   path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)
 ) {
-  const failures = storeBillingReadinessFailures(process.env)
+  const args = process.argv.slice(2)
+  const platform =
+    args.length === 2 && args[0] === "--platform" ? args[1] : undefined
+  const invalidArguments =
+    args.length > 0 && !["android", "ios", "all"].includes(platform)
+  const store =
+    platform === "android"
+      ? "play_store"
+      : platform === "ios"
+        ? "app_store"
+        : undefined
+  const failures = invalidArguments
+    ? ["Use --platform android, ios or all."]
+    : storeBillingReadinessFailures(process.env, fileExists, store)
   if (failures.length) {
     console.error("Store billing configuration is not ready:")
     for (const failure of failures) console.error(`- ${failure}`)

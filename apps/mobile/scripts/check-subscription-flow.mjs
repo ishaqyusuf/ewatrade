@@ -93,17 +93,14 @@ const CONTRACTS = [
       "SUBSCRIPTION_SCREEN_COPY",
       "Current plan",
       "StoreSubscriptionPanel",
+      'usesPlayBilling = Platform.OS === "android"',
       "() => void subscriptionQuery.refetch()",
       'testID="subscription-scroll"',
       "contentContainerStyle={{ paddingBottom: 40 }}",
     ],
-    forbiddenMarkers: [
-      "createSubscriptionCheckoutIntent",
-      "Linking.openURL",
-      "PlanCard",
-    ],
+    forbiddenMarkers: ["createSubscriptionCheckoutIntent", "PlanCard"],
     reason:
-      "mobile plans retain snapshot/usage state and delegate software purchases to native stores",
+      "mobile plans retain snapshot/usage state; Android purchases use the native panel while other platforms retain their informational support route",
   },
   {
     file: join(
@@ -143,7 +140,7 @@ const CONTRACTS = [
       "publicLegalUrl",
       'AppState.addEventListener("change"',
       "reconcileRef.current",
-      "key={businessId}",
+      "key={`${auth.profile?.id}:${businessId}`}",
     ],
     reason:
       "purchase verification and foreground recovery must outlive the billing screen and remain business scoped",

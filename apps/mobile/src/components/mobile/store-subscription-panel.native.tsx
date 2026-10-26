@@ -65,8 +65,8 @@ export function StoreSubscriptionPanel() {
         </View>
       ) : productIds && (!catalog.data?.purchaseAvailable || !hasLegalPages) ? (
         <Text className="text-muted-foreground">
-          New subscriptions are paused until the public terms and privacy notice
-          are available and effective. Existing purchases can still be restored.
+          New subscriptions are temporarily unavailable. Existing purchases can
+          still be restored.
         </Text>
       ) : null}
       {iap.subscriptions

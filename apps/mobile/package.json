@@ -179,7 +179,9 @@
   },
   "expo": {
     "autolinking": {
-      "exclude": ["expo-iap"]
+      "ios": {
+        "exclude": ["expo-iap"]
+      }
     },
     "install": {
       "exclude": ["@sentry/react-native"]

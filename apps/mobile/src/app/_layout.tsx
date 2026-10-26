@@ -21,6 +21,7 @@ import { AppLockGate } from "@/components/mobile/app-lock-gate"
 import { FloatingQaButton } from "@/components/mobile/floating-qa-button"
 import { QaAuthorizationSheet } from "@/components/mobile/qa-authorization-sheet"
 import { StartupSplashGate } from "@/components/mobile/startup-splash-gate"
+import { StoreSubscriptionProvider } from "@/components/mobile/store-subscription-provider"
 import { ToastProviderWithViewport } from "@/components/ui/toast"
 import { applyThemeOverride, useColorScheme } from "@/hooks/use-color"
 import { useOfflineReplay } from "@/hooks/use-offline-replay"
@@ -493,51 +494,53 @@ function RootLayoutNav() {
               <AuthProvider value={auth}>
                 <TRPCReactProvider>
                   <AccountAgeStartupGate>
-                    <QaAcceleratorProvider>
-                      <AppLockProvider>
-                        <ToastProviderWithViewport>
-                          <BottomSheetModalProvider>
-                            <View
-                              className="flex-1"
-                              accessibilityElementsHidden={
-                                !hasPresentedStartupSplash
-                              }
-                              importantForAccessibility={
-                                hasPresentedStartupSplash
-                                  ? "auto"
-                                  : "no-hide-descendants"
-                              }
-                              pointerEvents={
-                                hasPresentedStartupSplash ? "auto" : "none"
-                              }
-                            >
-                              <InitialLayout
-                                startupVisible={!hasPresentedStartupSplash}
-                              />
-                            </View>
-                            {hasPresentedStartupSplash ? (
-                              <>
-                                <FlashMessage position="top" />
-                                <AppLockGate />
-                                <AppAutoUpdateModal />
-                                <FloatingQaButton />
-                              </>
-                            ) : (
+                    <StoreSubscriptionProvider>
+                      <QaAcceleratorProvider>
+                        <AppLockProvider>
+                          <ToastProviderWithViewport>
+                            <BottomSheetModalProvider>
                               <View
-                                style={StyleSheet.absoluteFill}
-                                accessibilityViewIsModal
+                                className="flex-1"
+                                accessibilityElementsHidden={
+                                  !hasPresentedStartupSplash
+                                }
+                                importantForAccessibility={
+                                  hasPresentedStartupSplash
+                                    ? "auto"
+                                    : "no-hide-descendants"
+                                }
+                                pointerEvents={
+                                  hasPresentedStartupSplash ? "auto" : "none"
+                                }
                               >
-                                <StartupSplashGate
-                                  onComplete={() =>
-                                    setHasPresentedStartupSplash(true)
-                                  }
+                                <InitialLayout
+                                  startupVisible={!hasPresentedStartupSplash}
                                 />
                               </View>
-                            )}
-                          </BottomSheetModalProvider>
-                        </ToastProviderWithViewport>
-                      </AppLockProvider>
-                    </QaAcceleratorProvider>
+                              {hasPresentedStartupSplash ? (
+                                <>
+                                  <FlashMessage position="top" />
+                                  <AppLockGate />
+                                  <AppAutoUpdateModal />
+                                  <FloatingQaButton />
+                                </>
+                              ) : (
+                                <View
+                                  style={StyleSheet.absoluteFill}
+                                  accessibilityViewIsModal
+                                >
+                                  <StartupSplashGate
+                                    onComplete={() =>
+                                      setHasPresentedStartupSplash(true)
+                                    }
+                                  />
+                                </View>
+                              )}
+                            </BottomSheetModalProvider>
+                          </ToastProviderWithViewport>
+                        </AppLockProvider>
+                      </QaAcceleratorProvider>
+                    </StoreSubscriptionProvider>
                   </AccountAgeStartupGate>
                 </TRPCReactProvider>
               </AuthProvider>

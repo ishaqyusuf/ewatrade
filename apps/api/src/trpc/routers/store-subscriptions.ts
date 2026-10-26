@@ -93,36 +93,53 @@ export const storeSubscriptionsRouter = createTRPCRouter({
         throw error
       }
     }),
-  catalog: protectedProcedure.query(async ({ ctx }) => {
-    assertManager(ctx.tenantContext.membership.role)
-    const billingEnabled = process.env.STORE_BILLING_ENABLED === "true"
-    const products = billingEnabled ? getStoreProducts() : []
-    const checkoutConfigured =
-      billingEnabled && isNewStoreCheckoutConfigured(products)
-    const { purchaseAvailable, legalAcceptanceRequired } =
-      await getStoreCheckoutLegalGate(
-        ctx.db,
-        ctx.session.user.id,
-        checkoutConfigured,
-      )
-    // A disabled or unmapped catalog is informational. Do not create a
-    // purchase-binding account merely because a manager opens billing.
-    const account =
-      billingEnabled && products.length > 0
-        ? await getStoreBillingAccount(ctx.db, ctx.tenantContext.tenant.id)
-        : null
-    const billingState = await getCurrentStoreBillingState(
-      ctx.db,
-      ctx.tenantContext.tenant.id,
+  catalog: protectedProcedure
+    .input(
+      z
+        .object({ store: z.enum(["app_store", "play_store"]) })
+        .strict()
+        .optional(),
     )
-    return {
-      products,
-      purchaseAvailable,
-      legalAcceptanceRequired,
-      accountToken: account?.id ?? null,
-      ...billingState,
-    }
-  }),
+    .query(async ({ ctx, input }) => {
+      assertManager(ctx.tenantContext.membership.role)
+      const billingEnabled = process.env.STORE_BILLING_ENABLED === "true"
+      const products = billingEnabled
+        ? getStoreProducts().filter(
+            (product) => !input?.store || product.store === input.store,
+          )
+        : []
+      const checkoutConfigured =
+        billingEnabled &&
+        isNewStoreCheckoutConfigured(
+          products,
+          process.env,
+          undefined,
+          input?.store,
+        )
+      const { purchaseAvailable, legalAcceptanceRequired } =
+        await getStoreCheckoutLegalGate(
+          ctx.db,
+          ctx.session.user.id,
+          checkoutConfigured,
+        )
+      // A disabled or unmapped catalog is informational. Do not create a
+      // purchase-binding account merely because a manager opens billing.
+      const account =
+        billingEnabled && products.length > 0
+          ? await getStoreBillingAccount(ctx.db, ctx.tenantContext.tenant.id)
+          : null
+      const billingState = await getCurrentStoreBillingState(
+        ctx.db,
+        ctx.tenantContext.tenant.id,
+      )
+      return {
+        products,
+        purchaseAvailable,
+        legalAcceptanceRequired,
+        accountToken: account?.id ?? null,
+        ...billingState,
+      }
+    }),
   verifyPurchase: protectedProcedure
     .input(
       z

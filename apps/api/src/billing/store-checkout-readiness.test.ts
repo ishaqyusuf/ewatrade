@@ -235,3 +235,63 @@ test("Production checkout needs the explicit release switch and monitored refund
       ),
     ).toBe(false)
 })
+
+test("Android checkout does not require Apple products or Apple private credentials", () => {
+  const playProducts = products.filter(
+    (product) => product.store === "play_store",
+  )
+  const playConfig = {
+    ...productionConfig,
+    APPLE_BUNDLE_ID: undefined,
+    APPLE_APP_ID: undefined,
+    APPLE_IAP_KEY_ID: undefined,
+    APPLE_IAP_ISSUER_ID: undefined,
+    APPLE_IAP_PRIVATE_KEY: undefined,
+  }
+  expect(
+    isNewStoreCheckoutConfigured(
+      playProducts,
+      playConfig,
+      hasFixtureFile,
+      "play_store",
+    ),
+  ).toBe(true)
+  // The same configuration must not advertise an Apple or legacy combined checkout.
+  expect(
+    isNewStoreCheckoutConfigured(
+      playProducts,
+      playConfig,
+      hasFixtureFile,
+      "app_store",
+    ),
+  ).toBe(false)
+  expect(
+    isNewStoreCheckoutConfigured(playProducts, playConfig, hasFixtureFile),
+  ).toBe(false)
+
+  for (const changed of [
+    { STORE_BILLING_ENABLED: "false" },
+    { STORE_BILLING_PRODUCTION_CHECKOUT_ENABLED: "false" },
+    { PLAY_PACKAGE_NAME: "com.other.app" },
+    { PLAY_NOTIFICATION_AUDIENCE: "" },
+    { PLAY_NOTIFICATION_SERVICE_EMAIL: "" },
+    { GOOGLE_APPLICATION_CREDENTIALS: undefined },
+    { PLAY_REFUND_REVIEW_ALERTS_ENABLED: "false" },
+    { PLAY_REFUND_REVIEW_ACK_ENABLED: "false" },
+    { PLAY_REFUND_REVIEW_INTAKE_ENABLED: "false" },
+    { PLAY_REFUND_REVIEW_PRODUCTION_SUBMISSION_ENABLED: "false" },
+    { APP_ENV: "preview" },
+    { STORE_BILLING_ENVIRONMENT: "sandbox" },
+  ])
+    expect(
+      isNewStoreCheckoutConfigured(
+        playProducts,
+        { ...playConfig, ...changed },
+        hasFixtureFile,
+        "play_store",
+      ),
+    ).toBe(false)
+  expect(
+    isNewStoreCheckoutConfigured([], playConfig, hasFixtureFile, "play_store"),
+  ).toBe(false)
+})
