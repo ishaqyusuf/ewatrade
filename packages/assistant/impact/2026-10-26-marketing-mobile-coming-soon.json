@@ -1,0 +1,24 @@
+{
+  "version": 1,
+  "id": "2026-10-26-marketing-mobile-coming-soon",
+  "tickets": ["H02"],
+  "summary": "Apply the owner-approved native mobile Coming soon availability treatment to marketing, retaining labelled previews and connected web access on phone/computer browsers.",
+  "noAssistantImpact": "Marketing and shared onboarding preview presentation only. No merchant assistant capability, command, permission, rollout, signup/auth behavior, pricing entitlement, download or native publication authority changes. Production retains its earlier marketing baseline; the separate local AI/WhatsApp/registration redesign is not included.",
+  "capabilities": [],
+  "procedures": [],
+  "docs": [
+    {
+      "topic": "feature",
+      "status": "local_only",
+      "path": ".brain/features/marketing-launch-v4.md"
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "run",
+      "path": "apps/marketing/src/components/marketing/experiences/launch-v4/hero.tsx",
+      "executed": true,
+      "result": "23 existing marketing tests / 64 assertions, strict scoped TypeScript for all six touched files, six-file Biome and whitespace pass. Production build passes under existing Vercel configuration. Independent code/design/plan/coverage review has no findings. Normal full app types retain inherited API/early-access/pricing-fixture diagnostics outside touched files. Hosted availability/FAQ/CTA verification follows release."
+    }
+  ]
+}
