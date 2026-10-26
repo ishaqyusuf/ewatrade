@@ -2,7 +2,6 @@ import { ActionButton } from "@/components/mobile/action-button"
 import { StatusPill } from "@/components/mobile/green-till/kit"
 import { StatusBanner } from "@/components/mobile/status-banner"
 import { Icon } from "@/components/ui/icon"
-import { Modal, useModal } from "@/components/ui/modal"
 import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
 import { useAuthContext } from "@/hooks/use-auth"
@@ -12,12 +11,12 @@ import { GREEN_TILL_THEME } from "@/lib/green-till-theme"
 import { canEditMobileCatalog } from "@/lib/mobile-roles"
 import { useOperationalModeStore } from "@/store/operationalModeStore"
 import { useTRPC } from "@/trpc/client"
-import { BottomSheetView } from "@gorhom/bottom-sheet"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import * as Crypto from "expo-crypto"
 import { Image } from "expo-image"
 import { type ReactNode, useEffect, useRef, useState } from "react"
-import { Text as NativeText, View } from "react-native"
+import { Text as NativeText, Modal as RNModal, View } from "react-native"
+import { useSafeAreaInsets } from "react-native-safe-area-context"
 import {
   CatalogIllustrationLibrary,
   CatalogIllustrationPreview,
@@ -321,6 +320,8 @@ function SavedPhotoEditor({
   storeId,
   close,
 }: { item: CatalogItem; storeId: string; close(): void }) {
+  const { colorScheme } = useColorScheme()
+  const palette = GREEN_TILL_THEME[colorScheme]
   const trpc = useTRPC()
   const client = useQueryClient()
   const { profile } = useAuthContext()
@@ -496,7 +497,7 @@ function SavedPhotoEditor({
           variant="thumbnail"
         />
       ),
-      note: "From My images",
+      note: "My images",
       remove: () =>
         setPicked((value) =>
           value.filter((other) => other.assetId !== entry.assetId),
@@ -545,22 +546,51 @@ function SavedPhotoEditor({
             >
               {tile.image}
               {index === 0 ? (
-                <View className="absolute left-1.5 top-1.5 rounded-md bg-black/60 px-1.5 py-0.5">
+                <View
+                  style={{
+                    backgroundColor: palette.overlayChip,
+                    borderRadius: 6,
+                    left: 6,
+                    paddingHorizontal: 6,
+                    paddingVertical: 2,
+                    position: "absolute",
+                    top: 6,
+                  }}
+                >
                   <NativeText
-                    style={{ color: "#fff", fontSize: 11, fontWeight: "700" }}
+                    style={{
+                      color: palette.overlayForeground,
+                      fontSize: 11,
+                      fontWeight: "700",
+                    }}
                   >
                     Cover
                   </NativeText>
                 </View>
               ) : null}
               {tile.note ? (
-                <View className="absolute inset-x-1.5 bottom-1.5 rounded-md bg-background/90 px-1.5 py-0.5">
-                  <Text
+                <View
+                  style={{
+                    backgroundColor: palette.overlayChip,
+                    borderRadius: 6,
+                    bottom: 6,
+                    left: 6,
+                    paddingHorizontal: 6,
+                    paddingVertical: 2,
+                    position: "absolute",
+                    right: 6,
+                  }}
+                >
+                  <NativeText
                     numberOfLines={1}
-                    className="text-[11px] font-bold text-foreground"
+                    style={{
+                      color: palette.overlayForeground,
+                      fontSize: 11,
+                      fontWeight: "700",
+                    }}
                   >
                     {tile.note}
-                  </Text>
+                  </NativeText>
                 </View>
               ) : null}
               <Pressable
@@ -569,9 +599,23 @@ function SavedPhotoEditor({
                 disabled={disabled}
                 hitSlop={8}
                 onPress={tile.remove}
-                className="absolute right-1.5 top-1.5 size-7 items-center justify-center rounded-full bg-black/60"
+                style={{
+                  alignItems: "center",
+                  backgroundColor: palette.overlayChip,
+                  borderRadius: 999,
+                  height: 28,
+                  justifyContent: "center",
+                  position: "absolute",
+                  right: 6,
+                  top: 6,
+                  width: 28,
+                }}
               >
-                <Icon className="size-[14px]" color="#fff" name="X" />
+                <Icon
+                  className="size-[14px]"
+                  color={palette.overlayForeground}
+                  name="X"
+                />
               </Pressable>
             </View>
           ))}
@@ -584,7 +628,12 @@ function SavedPhotoEditor({
               className="aspect-square w-[31%] items-center justify-center gap-1 rounded-[14px] border-[1.5px] border-dashed border-primary bg-primary/10"
             >
               <Icon className="size-[22px] text-primary" name="Plus" />
-              <Text className="text-xs font-bold text-primary">Add photo</Text>
+              <Text
+                numberOfLines={2}
+                className="px-1 text-center text-xs font-bold text-primary"
+              >
+                Add photo
+              </Text>
             </Pressable>
           ) : null}
         </View>
@@ -687,11 +736,8 @@ function AddPhotoSheet({
   onClose(): void
   onChoose(choice: "camera" | "photos" | "gallery" | "illustrations"): void
 }) {
-  const modal = useModal()
-  useEffect(() => {
-    if (open) modal.present()
-    else modal.dismiss()
-  }, [open, modal.present, modal.dismiss])
+  const insets = useSafeAreaInsets()
+  const colors = useColors()
   const options = [
     ["camera", "Take a photo", "Camera"],
     [
@@ -702,16 +748,47 @@ function AddPhotoSheet({
     ["gallery", "My images", "LayoutGrid"],
     ["illustrations", "Illustration library", "Sparkles"],
   ] as const
+  // A plain native modal: the item screen's bottom-sheet host does not show
+  // sheets presented from inside this editor.
   return (
-    <Modal
-      ref={modal.ref}
-      title="Add photo"
-      enableDynamicSizing
-      onDismiss={onClose}
+    <RNModal
+      animationType="fade"
+      transparent
+      visible={open}
+      onRequestClose={onClose}
+      statusBarTranslucent
+      navigationBarTranslucent
     >
-      <BottomSheetView
-        style={{ gap: 4, paddingBottom: 24, paddingHorizontal: 12 }}
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel="Close Add photo"
+        onPress={onClose}
+        noRipple
+        transition={false}
+        style={{ backgroundColor: colors.overlay, flex: 1 }}
+      />
+      <View
+        accessibilityViewIsModal
+        style={{
+          backgroundColor: colors.card,
+          borderTopLeftRadius: 24,
+          borderTopRightRadius: 24,
+          bottom: 0,
+          gap: 4,
+          left: 0,
+          paddingBottom: 16 + insets.bottom,
+          paddingHorizontal: 12,
+          paddingTop: 16,
+          position: "absolute",
+          right: 0,
+        }}
       >
+        <Text
+          accessibilityRole="header"
+          className="px-3 pb-2 text-base font-extrabold text-foreground"
+        >
+          Add photo
+        </Text>
         {options.map(([choice, label, icon]) => (
           <Pressable
             key={choice}
@@ -732,7 +809,10 @@ function AddPhotoSheet({
             </View>
           </Pressable>
         ))}
-      </BottomSheetView>
-    </Modal>
+        <ActionButton variant="outline" onPress={onClose}>
+          Cancel
+        </ActionButton>
+      </View>
+    </RNModal>
   )
 }

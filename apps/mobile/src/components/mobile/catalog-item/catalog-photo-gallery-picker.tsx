@@ -1,6 +1,9 @@
 import { ActionButton } from "@/components/mobile/action-button"
 import { MobileWorkflowChrome } from "@/components/mobile/appearances/workflow-chrome"
-import { SearchFooterField } from "@/components/mobile/search-footer-scope"
+import {
+  SearchFooterField,
+  SearchFooterSpacer,
+} from "@/components/mobile/search-footer-scope"
 import { StatusBanner } from "@/components/mobile/status-banner"
 import { Pressable } from "@/components/ui/pressable"
 import { Text } from "@/components/ui/text"
@@ -10,7 +13,6 @@ import type { RouterOutputs } from "@ewatrade/api/trpc/routers/_app"
 import { keepPreviousData, useQuery } from "@tanstack/react-query"
 import { useEffect, useState } from "react"
 import { Modal, ScrollView, View, useWindowDimensions } from "react-native"
-import { useSafeAreaInsets } from "react-native-safe-area-context"
 import { SavedPhotoPreview } from "./saved-photo-preview"
 
 export type CatalogGalleryEntry =
@@ -100,7 +102,6 @@ function GalleryPicker({
   onAdd(entries: CatalogGalleryEntry[]): void
 }) {
   const trpc = useTRPC()
-  const insets = useSafeAreaInsets()
   const colors = useColors()
   const { width } = useWindowDimensions()
   const [scope, setScope] = useState<"store" | "all">("store")
@@ -134,7 +135,11 @@ function GalleryPicker({
   const rest = query
     ? entries
     : entries.filter((entry) => !matches.includes(entry))
-  const tileSize = Math.floor((Math.min(width, 640) - 32 - 16) / 3)
+  // Measured grid width; the window width misses the chrome's own insets.
+  const [gridWidth, setGridWidth] = useState(0)
+  const tileSize = Math.floor(
+    ((gridWidth || Math.min(width, 640) - 32) - 2 * 8) / 3 - 0.5,
+  )
   const count = selected.length
 
   function toggle(entry: CatalogGalleryEntry) {
@@ -219,7 +224,14 @@ function GalleryPicker({
             {title}
           </Text>
         ) : null}
-        <View className="flex-row flex-wrap gap-2">{list.map(tile)}</View>
+        <View
+          className="flex-row flex-wrap gap-2"
+          onLayout={(event) =>
+            setGridWidth(Math.floor(event.nativeEvent.layout.width))
+          }
+        >
+          {list.map(tile)}
+        </View>
       </View>
     ) : null
 
@@ -235,17 +247,41 @@ function GalleryPicker({
       backLabel="Back to Images"
       onBack={onClose}
       onClose={onClose}
+      trailing={
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={
+            count ? `Add ${count} photo${count > 1 ? "s" : ""}` : "Add photos"
+          }
+          accessibilityState={{ disabled: !count }}
+          disabled={!count}
+          onPress={() => onAdd(selected)}
+          className={`h-11 min-w-11 items-center justify-center rounded-full px-4 ${
+            count ? "bg-primary" : "bg-muted"
+          }`}
+        >
+          <Text
+            className={`text-sm font-extrabold ${
+              count ? "text-primary-foreground" : "text-muted-foreground"
+            }`}
+          >
+            {count ? `Add ${count}` : "Add"}
+          </Text>
+        </Pressable>
+      }
     >
       <ScrollView
         keyboardShouldPersistTaps="handled"
         contentContainerStyle={{
           gap: 14,
-          paddingBottom: 120 + insets.bottom,
+          paddingBottom: 24,
           paddingHorizontal: 16,
         }}
       >
         <Text className="text-sm text-muted-foreground">
-          Photos already on your items. Pick up to {available} for {item.name}.
+          {count
+            ? `${count} selected · up to ${available} for ${item.name}`
+            : `Photos already on your items. Pick up to ${available} for ${item.name}.`}
         </Text>
         <SearchFooterField
           localSearch
@@ -325,31 +361,8 @@ function GalleryPicker({
             ) : null}
           </>
         )}
+        <SearchFooterSpacer />
       </ScrollView>
-      <View
-        style={{
-          alignItems: "center",
-          backgroundColor: colors.background,
-          borderTopColor: colors.border,
-          borderTopWidth: 1,
-          bottom: 0,
-          flexDirection: "row",
-          gap: 12,
-          left: 0,
-          paddingBottom: 12 + insets.bottom,
-          paddingHorizontal: 16,
-          paddingTop: 12,
-          position: "absolute",
-          right: 0,
-        }}
-      >
-        <Text className="flex-1 text-sm text-muted-foreground">
-          {count ? `${count} selected` : "Tap images to add"}
-        </Text>
-        <ActionButton disabled={!count} onPress={() => onAdd(selected)}>
-          {count ? `Add ${count} photo${count > 1 ? "s" : ""}` : "Add"}
-        </ActionButton>
-      </View>
     </MobileWorkflowChrome>
   )
 }
