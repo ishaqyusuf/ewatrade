@@ -11,6 +11,43 @@ import { FinanceError } from "./rules"
 import { addQuantities } from "./valuation-math"
 import { calculatePurchaseReceiptValuation } from "./valuation-receipt-impact"
 
+type ReceiptGoodsLine = {
+  lineId: string
+  description: string
+  amountMinor: string
+  enteredInventoryUnitId: string
+  enteredQuantity: string
+  enteredUnitName: string
+  balanceSourceId: string
+  configurationVersionId: string
+  stock: Awaited<ReturnType<typeof previewOrdinaryStockReceipt>>
+  categories: Array<{
+    categoryNameId: number | null
+    name: string
+    willCreate: boolean
+  }>
+  valuation: {
+    status: ReturnType<typeof calculatePurchaseReceiptValuation>["status"]
+    sourceCostMinor: string
+    quantityBefore: string
+    canonicalEffect: string
+    quantityAfter: string
+    valueBeforeMinor: string | null
+    valueDeltaMinor: string | null
+    valueAfterMinor: string | null
+    unknownReason: ReturnType<
+      typeof calculatePurchaseReceiptValuation
+    >["unknownReason"]
+    nextSequence: string
+    poolId: string | null
+    poolSequence: string | null
+    poolMovementCount: string | null
+    poolStockRevision: number | null
+    poolLatestEffectiveAt: string | null
+    observedMovementCount: number
+  }
+}
+
 /** Advisory whole-agreement physical receipt. It never creates categories, stock or value. */
 export async function getFinancePurchaseReceiptReview(
   tx: Prisma.TransactionClient,
@@ -109,7 +146,7 @@ export async function composePurchaseReceiptReview(
       "CONFLICT",
       "Confirm every original goods line exactly once.",
     )
-  const goods = []
+  const goods: ReceiptGoodsLine[] = []
   for (const line of [...document.lines].sort(
     (a, b) => a.costBillLine.position - b.costBillLine.position,
   )) {

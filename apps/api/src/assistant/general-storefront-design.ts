@@ -32,9 +32,20 @@ const defaults = {
   accept: acceptStorefrontDesignInTransaction,
   run: findSiteDesignRunInTransaction,
 }
+type DesignRun = Pick<
+  NonNullable<Awaited<ReturnType<typeof findSiteDesignRunInTransaction>>>,
+  "id" | "status" | "acceptedAt" | "baseDraftRevision" | "output" | "outputHash"
+>
+type DesignCommands = Omit<typeof defaults, "run"> & {
+  run: (
+    ...args: Parameters<typeof findSiteDesignRunInTransaction>
+  ) => Promise<DesignRun | null>
+}
 
 /** GENERAL approval and canonical draft mutation share the same transaction. No provider call in the adapter. */
-export function createStorefrontDesignAdapters(commands = defaults) {
+export function createStorefrontDesignAdapters(
+  commands: DesignCommands = defaults,
+) {
   const target = async (
     ctx: GeneralTransactionContext,
     payload: Generate | Accept,

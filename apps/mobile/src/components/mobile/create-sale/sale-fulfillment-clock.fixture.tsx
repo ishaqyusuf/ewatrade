@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, mock, test } from "bun:test"
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs"
+import { fileURLToPath } from "node:url"
 import { DOMParser } from "@xmldom/xmldom"
 import { act, createElement } from "react"
 
@@ -28,7 +29,7 @@ const plain = (await import("./use-sale-fulfillment")).useSaleFulfillment
 async function compiledHook() {
   const { transformAsync } = await import("@babel/core")
   const hookPath = new URL("./use-sale-fulfillment.ts", import.meta.url)
-  const source = readFileSync(hookPath, "utf8").replace(
+  const source = readFileSync(fileURLToPath(hookPath.href), "utf8").replace(
     "@/components/mobile/sale-checkout-model",
     new URL("../sale-checkout-model.ts", import.meta.url).pathname,
   )
@@ -46,9 +47,9 @@ async function compiledHook() {
     "../../../../node_modules/.cache/sale-fulfillment/",
     import.meta.url,
   )
-  mkdirSync(dir, { recursive: true })
+  mkdirSync(fileURLToPath(dir.href), { recursive: true })
   const file = new URL(`use-sale-fulfillment-${process.pid}.mjs`, dir)
-  writeFileSync(file, output.code)
+  writeFileSync(fileURLToPath(file.href), output.code)
   return (await import(file.pathname)).useSaleFulfillment as typeof plain
 }
 const compiled = await compiledHook()

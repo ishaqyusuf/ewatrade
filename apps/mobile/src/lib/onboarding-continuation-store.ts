@@ -1,6 +1,7 @@
 import Constants from "expo-constants"
 import * as SecureStore from "expo-secure-store"
 import { getBaseUrl } from "./base-url"
+import type { LinkConfiguration } from "./onboarding-continuation-link"
 
 export type PendingOnboarding = {
   kind: "setup" | "verification"
@@ -20,7 +21,7 @@ function serializedStorage<T>(operation: () => Promise<T>): Promise<T> {
   return result
 }
 
-export function onboardingLinkConfiguration() {
+export function onboardingLinkConfiguration(): LinkConfiguration {
   const value =
     Constants.expoConfig?.extra?.appVariant ??
     process.env.EXPO_PUBLIC_APP_VARIANT

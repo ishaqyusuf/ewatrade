@@ -456,7 +456,17 @@ export async function prepareServiceIntakeInTransaction(
     offerings.map((offering) => [offering.id, offering]),
   )
   let subtotalMinor = 0
-  const resolvedLines = []
+  const resolvedLines: Array<{
+    offeringId: string
+    offeringName: string
+    itemName: string
+    variantName: string
+    quantity: ReturnType<typeof parseExactDecimal>
+    unitPriceMinor: number
+    totalMinor: number
+    workPolicy: ServiceWorkPolicy
+    authorizationPolicy: WorkAuthorizationPolicy
+  }> = []
   for (const line of input.lines) {
     const quantity = parseExactDecimal(line.quantity, {
       allowZero: false,
@@ -2674,7 +2684,8 @@ async function finishServiceJobInTransaction(
     const original = job.events.filter(
       (event) => event.type === ServiceWorkEventType.REMOTE_HANDOFF,
     )
-    if (original.length === 1) onEvent?.(original[0]!)
+    const [event] = original
+    if (original.length === 1 && event) onEvent?.(event)
     return serializeJob(job)
   }
   if (!isCommercialOrderFulfillmentAllowed(financialOrder.order.status))

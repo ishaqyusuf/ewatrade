@@ -1,4 +1,4 @@
-type LinkConfiguration = {
+export type LinkConfiguration = {
   variant: "production" | "preview" | "development"
   dashboardUrl?: string
 }

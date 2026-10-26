@@ -325,7 +325,9 @@ export async function returnCommercialOrderItemsInTransaction(
   })
   if (orderLines.length !== input.lines.length)
     throw new CatalogError("ORDER_NOT_FOUND", "Order item not found.")
-  const returns = []
+  const returns: Array<
+    Awaited<ReturnType<typeof returnCommercialOrderProductLineInTransaction>>
+  > = []
   for (const line of input.lines)
     returns.push(
       await returnCommercialOrderProductLineInTransaction(

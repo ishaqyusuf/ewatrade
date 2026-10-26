@@ -448,7 +448,7 @@ export function auditPriorCostReviewTopology(input: {
         successors.set(previous.id, a)
       }
     }
-    let current = roots[0]
+    let current: (typeof roots)[number] | undefined = roots[0]
     const visited = new Set<string>()
     while (current) {
       if (visited.has(current.id)) conflict("resolution chain is cyclic.")

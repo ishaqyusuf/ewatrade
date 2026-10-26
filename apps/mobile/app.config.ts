@@ -14,7 +14,15 @@ const PROJECT = {
 }
 const { id: PROJECT_ID, slug: SLUG, owner: OWNER } = PROJECT
 const { resolveAppVariant } = require("./app-variant.cjs") as {
-  resolveAppVariant: (env: NodeJS.ProcessEnv) => string
+  resolveAppVariant: (
+    env: Pick<
+      NodeJS.ProcessEnv,
+      | "APP_ENV"
+      | "APP_VARIANT"
+      | "EXPO_PUBLIC_APP_VARIANT"
+      | "EAS_BUILD_PROFILE"
+    >,
+  ) => string
 }
 const normalizedAppVariant = resolveAppVariant({
   APP_ENV: process.env.APP_ENV,

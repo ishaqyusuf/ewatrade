@@ -88,7 +88,11 @@ export async function minimizeAccountPrivacyCustomers(
         receipt.evidenceDigest === evidenceDigest &&
         receipt.policyDigest === policy.digest,
     )
-    const receipts = []
+    const receipts: Array<{
+      customerId: string
+      tenantId: string
+      controllerEvidenceDigest: string
+    }> = []
     for (const item of input.customers) {
       const customer = await tx.customer.findUnique({
         where: { id: item.customerId },

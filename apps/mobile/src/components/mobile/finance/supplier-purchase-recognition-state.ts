@@ -6,6 +6,33 @@ import {
 } from "@ewatrade/utils/finance-command-identity"
 import { parseFinanceMoney } from "@ewatrade/utils/finance-money"
 import type { StockCategoryDraft } from "@ewatrade/utils/inventory-categories"
+
+/** A missing/unknown result never becomes a confirmed source identity. */
+export function committedPurchaseResultId(response: {
+  status: string
+  result?: unknown
+}) {
+  const result = response.status === "COMMITTED" ? response.result : null
+  return result &&
+    typeof result === "object" &&
+    "id" in result &&
+    typeof result.id === "string"
+    ? result.id
+    : undefined
+}
+
+/** Saved JSON can contain ID selectors or malformed historical values. */
+export function purchaseSourceCategoryNames(value: unknown): string[] {
+  if (!Array.isArray(value)) return []
+  return value.flatMap((category) =>
+    category &&
+    typeof category === "object" &&
+    !Array.isArray(category) &&
+    typeof category.name === "string"
+      ? [category.name]
+      : [],
+  )
+}
 import {
   collectStockCategoryDraft,
   stockCategorySelectors,

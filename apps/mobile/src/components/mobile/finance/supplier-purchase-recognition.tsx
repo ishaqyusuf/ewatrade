@@ -36,9 +36,11 @@ import {
   buildPurchaseRegistrationLine,
   canConfirmRetainedPurchaseCommand,
   canReversePurchaseRecognitionEvent,
+  committedPurchaseResultId,
   matchPurchaseBalance,
   matchesPurchaseRestartRetryAuthorization,
   purchaseReceiptRecoveryMetadata,
+  purchaseSourceCategoryNames,
   retainedPurchaseReceiptConfirmations,
   snapshotPurchaseRestartRetryIdentity,
 } from "./supplier-purchase-recognition-state"
@@ -58,16 +60,16 @@ type DraftLine = {
 }
 type RegistrationPayload = Omit<
   RouterInputs["finance"]["registerPurchase"],
-  "clientCommandId"
->
+  "clientCommandId" | "agreedAt"
+> & { agreedAt: Date }
 type StagePayload = Omit<
   RouterInputs["finance"]["recognizePurchase"],
-  "clientCommandId"
->
+  "clientCommandId" | "effectiveAt" | "dueAt"
+> & { effectiveAt: Date; dueAt?: Date }
 type ReversalPayload = Omit<
   RouterInputs["finance"]["reversePurchaseRecognition"],
-  "clientCommandId"
->
+  "clientCommandId" | "effectiveAt"
+> & { effectiveAt: Date }
 
 class PurchaseSourceScopeMismatch extends Error {}
 
@@ -780,13 +782,7 @@ export function SupplierPurchaseRegistrationForm({
         }
         return
       }
-      const returnedId =
-        result.result &&
-        typeof result.result === "object" &&
-        "id" in result.result &&
-        typeof result.result.id === "string"
-          ? result.result.id
-          : undefined
+      const returnedId = committedPurchaseResultId(result)
       if (!returnedId)
         throw new Error(
           "The saved registration result did not contain its source identity.",
@@ -1489,13 +1485,7 @@ export function SupplierPurchaseRecognitionPanel({
         }
         return
       }
-      const committedEventId =
-        status.result &&
-        typeof status.result === "object" &&
-        "id" in status.result &&
-        typeof status.result.id === "string"
-          ? status.result.id
-          : undefined
+      const committedEventId = committedPurchaseResultId(status)
       if (!committedEventId)
         throw new Error(
           "The saved purchase action did not return its source event identity.",
@@ -2021,7 +2011,7 @@ export function SupplierPurchaseRecognitionPanel({
               </Text>
               <Text className="text-xs text-muted-foreground">
                 Categories:{" "}
-                {line.categories.map((category) => category.name).join(", ")}
+                {purchaseSourceCategoryNames(line.categories).join(", ")}
               </Text>
               {line.receipt ? (
                 <Text className="text-xs text-muted-foreground">

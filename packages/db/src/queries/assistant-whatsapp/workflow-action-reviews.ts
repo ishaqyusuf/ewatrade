@@ -237,7 +237,15 @@ async function currentSource(
         source.workflowContextHash !== digest(conversation.workflowContext)))
   )
     throw new AssistantWhatsAppError("CONFLICT")
-  const records = []
+  const records: Array<
+    (typeof source.selection)[number] & {
+      payload: z.infer<typeof setupEntityPayloadSchema>
+      openQuestions: (typeof draft.entities)[number]["openQuestions"]
+      errorCode: (typeof draft.entities)[number]["errorCode"]
+      committedRecordId: (typeof draft.entities)[number]["committedRecordId"]
+      categoryLabel?: string
+    }
+  > = []
   for (const selected of source.selection) {
     const entity = draft.entities.find(
       (row) => row.id === selected.entityId && row.key === selected.key,

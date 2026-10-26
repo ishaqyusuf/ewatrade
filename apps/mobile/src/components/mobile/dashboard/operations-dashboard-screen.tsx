@@ -157,6 +157,10 @@ export function OperationsDashboardSurface({
       { enabled: salesQueryEnabled, retry: false },
     ),
   )
+  const unpaidSummary =
+    recentUnpaid.data && "outstandingCount" in recentUnpaid.data
+      ? recentUnpaid.data
+      : undefined
   const toDeliver = useQuery(
     trpc.orders.listPage.queryOptions(
       { limit: 50, statuses: ["READY_FOR_PICKUP", "OUT_FOR_DELIVERY"] },
@@ -552,15 +556,15 @@ export function OperationsDashboardSurface({
                   },
                 ]
               : []),
-            ...((recentUnpaid.data?.outstandingCount ?? 0) > 0
+            ...((unpaidSummary?.outstandingCount ?? 0) > 0
               ? [
                   {
                     icon: "Wallet" as const,
                     key: "unpaid",
                     onPress: () => router.push("/orders" as never),
-                    sub: `${homeMoney(recentUnpaid.data?.outstandingMinor ?? 0, currency)} to collect`,
+                    sub: `${homeMoney(unpaidSummary?.outstandingMinor ?? 0, currency)} to collect`,
                     tint: "amber" as const,
-                    title: `${recentUnpaid.data?.outstandingCount} unpaid ${recentUnpaid.data?.outstandingCount === 1 ? "order" : "orders"}`,
+                    title: `${unpaidSummary?.outstandingCount} unpaid ${unpaidSummary?.outstandingCount === 1 ? "order" : "orders"}`,
                   },
                 ]
               : []),
