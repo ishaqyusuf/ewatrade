@@ -53,7 +53,6 @@ export { getFinanceBill, listFinanceBills } from "./bill-reads"
 export {
   getFinanceOwedSummary,
   listFinanceCustomerBalances,
-  listFinanceSupplierListBalances,
 } from "./owed-reads"
 export {
   type CustomerBalanceFilter,

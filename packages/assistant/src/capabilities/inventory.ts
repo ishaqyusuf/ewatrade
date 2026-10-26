@@ -253,7 +253,6 @@ excluded(
   "Dashboard list projections for Finance pages; the assistant answers these amounts through supplier statements, customer statements and money account balances.",
   [
     "finance.owedSummary",
-    "finance.supplierBalances",
     "finance.customerBalances",
     "finance.customerBalanceDirectory",
     "finance.supplierDirectory",

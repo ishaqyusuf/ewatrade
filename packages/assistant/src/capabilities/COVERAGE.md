@@ -556,7 +556,6 @@ track conversational evaluation separately from these source test links.
 | `finance.reversePurchaseRecognition` | mutation | Owner/Admin only | finance | supported | finance.purchase.fact.reverse |
 | `finance.reverseSupplierEntry` | mutation | Owner/Admin only | finance | supported | finance.supplier.entry.reverse |
 | `finance.setup` | mutation | Owner/Admin only | finance | form_only | Opening the Book is a guided setup with fiscal choices. |
-| `finance.supplierBalances` | query | Owner/Admin only | finance | excluded | Dashboard list projections for Finance pages; the assistant answers these amounts through supplier statements, customer statements and money account balances. |
 | `finance.supplierDirectory` | query | Owner/Admin only | finance | excluded | Dashboard list projections for Finance pages; the assistant answers these amounts through supplier statements, customer statements and money account balances. |
 | `finance.supplierOpeningBalance` | query | Owner/Admin only | finance | planned | E05 |
 | `finance.supplierPayableAging` | query | Owner/Admin only | finance | planned | G01 |
