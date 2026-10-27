@@ -1,0 +1,99 @@
+model ManualPaymentAlertSetting {
+  accountId        String @id
+  tenantId         String
+  revision         Int @default(1)
+  selectedPolicyRevision Int @default(0)
+  channel          String
+  effectiveChannel String?
+  recipientUserIds String[]
+  updatedByUserId  String
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  account          FinanceAccount @relation(fields: [accountId], references: [id], onDelete: Restrict)
+  tenant           Tenant @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  @@index([tenantId])
+}
+
+model PaymentNotificationPolicyCommand {
+  id        String @id
+  actorId   String
+  digest    String
+  revision  Int
+  reason    String
+  before    Json
+  result    Json
+  createdAt DateTime @default(now())
+}
+
+model PaymentNotificationPolicyChange {
+  revision       Int @id
+  before         Json
+  after          Json
+  status         String @default("PENDING")
+  cursor         String?
+  claimId        String?
+  claimExpiresAt DateTime?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  @@index([status, revision])
+}
+
+model PaymentNotificationQuota {
+  tenantId    String
+  channel     String
+  periodStart DateTime
+  used        Int @default(0)
+  reserved    Int @default(0)
+  tenant      Tenant @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  @@id([tenantId, channel, periodStart])
+}
+
+model PaymentNotificationIntent {
+  id                  String @id @default(cuid())
+  tenantId            String
+  reportId            String
+  recipientUserId     String
+  membershipId        String
+  channel             String
+  periodStart         DateTime
+  policyRevision      Int
+  settingRevision     Int
+  status              String @default("RESERVED")
+  claimId             String?
+  sendStartedAt       DateTime?
+  providerMessageId   String?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+  tenant              Tenant @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  report              ManualPaymentReport @relation(fields: [reportId], references: [id], onDelete: Restrict)
+  membership          Membership @relation(fields: [membershipId, tenantId], references: [id, tenantId], onDelete: Restrict)
+  @@unique([tenantId, reportId, recipientUserId])
+  @@index([tenantId, channel, periodStart])
+  @@index([status, createdAt])
+}
+
+model PaymentNotificationNotice {
+  id            String @id @default(cuid())
+  tenantId      String
+  policyRevision Int
+  kind          String
+  title         String
+  description   String
+  accountIds    String[]
+  createdAt     DateTime @default(now())
+  tenant        Tenant @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  reads         PaymentNotificationNoticeRead[]
+  @@unique([tenantId, id])
+  @@unique([tenantId, policyRevision])
+  @@index([tenantId, createdAt, id])
+}
+
+model PaymentNotificationNoticeRead {
+  noticeId     String
+  tenantId     String
+  membershipId String
+  readAt       DateTime @default(now())
+  notice       PaymentNotificationNotice @relation(fields: [tenantId, noticeId], references: [tenantId, id], onDelete: Cascade)
+  membership   Membership @relation(fields: [membershipId, tenantId], references: [id, tenantId], onDelete: Restrict)
+  @@id([noticeId, membershipId])
+}

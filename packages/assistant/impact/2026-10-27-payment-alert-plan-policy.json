@@ -1,0 +1,38 @@
+{
+  "version": 1,
+  "id": "2026-10-27-payment-alert-plan-policy",
+  "tickets": ["H02"],
+  "summary": "Oversight plan policy, server-derived payment-alert eligibility, atomic per-Business UTC-month reservations and durable policy-change notices. Local source only; live providers and deployment remain disabled.",
+  "noAssistantImpact": "Oversight plan edits are privileged office configuration excluded from merchant assistant tools. Recipient/channel setup remains form-only in the owning banking change. This package adds internal quota/policy/notice commands, no model tool, prompt authority or new payment-review permission. Generic Activity delivery stays disabled.",
+  "procedures": [],
+  "docs": [
+    {
+      "topic": "feature",
+      "path": ".brain/features/payment-report-notification-policy.md",
+      "status": "local_only"
+    },
+    {
+      "topic": "api",
+      "path": ".brain/api/contracts.md",
+      "status": "local_only"
+    },
+    {
+      "topic": "permissions",
+      "path": ".brain/api/permissions.md",
+      "status": "local_only"
+    },
+    {
+      "topic": "decision",
+      "path": ".brain/decisions/2026-10-27-payment-report-notification-policy.md",
+      "status": "local_only"
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "run",
+      "path": ".brain/qa/2026-10-27-payment-report-notification-policy-implementation.md",
+      "executed": true,
+      "result": "Real SQL2session quota/replay/outcome/month-group/policy-notice tests pass1/45; global policy unchanged and fixture cleanup verified. Pure6/35, service auth3/8, sibling owner/audit2/16 and UI helpers6/27 pass. Oversight7workspace types pass. Local UI and final source checks recorded in receipt; no actual provider delivery or deployment."
+    }
+  ]
+}

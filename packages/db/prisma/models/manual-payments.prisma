@@ -34,6 +34,7 @@ model ManualPaymentLink {
 
 /// Unverified customer evidence. Only merchant confirmation posts a payment.
 model ManualPaymentReport {
+  notificationIntents PaymentNotificationIntent[]
   id                  String                    @id @default(cuid())
   linkId              String
   clientReportId      String

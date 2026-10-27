@@ -1,3 +1,5 @@
 import { prisma } from "@ewatrade/db"
 import { createOversightRoutes } from "@ewatrade/oversight"
-export const oversightRoutes = createOversightRoutes(() => prisma)
+export const oversightRoutes = createOversightRoutes(() => prisma, {
+  allowNotificationPolicyWrites: true,
+})

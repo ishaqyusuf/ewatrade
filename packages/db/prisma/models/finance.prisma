@@ -67,6 +67,7 @@ model FinanceBook {
 }
 
 model FinanceAccount {
+  manualPaymentAlertSetting ManualPaymentAlertSetting?
   manualPaymentLinks          ManualPaymentLink[]
   payoutIntents PayoutIntent[]
   commercialPayments CommercialOrderPayment[]

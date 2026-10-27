@@ -1,15 +1,26 @@
-import { validOversightKey } from "./verify-key"
 import type { PrismaClient } from "@ewatrade/db"
 import {
-  oversightSummary,
   oversightBusinesses,
-  oversightUsers,
   oversightRecords,
+  oversightSummary,
+  oversightUsers,
 } from "@ewatrade/db/oversight"
 import { Hono } from "hono"
 import { z } from "zod"
-export function createOversightRoutes(getDb: () => PrismaClient) {
+import { createPaymentNotificationOversightRoutes } from "./payment-notifications"
+import { validOversightKey } from "./verify-key"
+export function createOversightRoutes(
+  getDb: () => PrismaClient,
+  options: { allowNotificationPolicyWrites?: boolean } = {},
+) {
   const oversightRoutes = new Hono()
+  oversightRoutes.route(
+    "/payment-notifications",
+    createPaymentNotificationOversightRoutes(
+      getDb,
+      options.allowNotificationPolicyWrites,
+    ),
+  )
   oversightRoutes.use("*", async (c, next) => {
     c.header("Cache-Control", "no-store")
     if (
@@ -42,7 +53,9 @@ export function createOversightRoutes(getDb: () => PrismaClient) {
     oversightRoutes.get(`/${path}`, async (c) => {
       const parsed = list.safeParse(c.req.query())
       if (!parsed.success) return c.json({ error: "Invalid filters" }, 400)
-      return c.json(await query(getDb(), parsed.data.search, parsed.data.cursor))
+      return c.json(
+        await query(getDb(), parsed.data.search, parsed.data.cursor),
+      )
     })
   }
 

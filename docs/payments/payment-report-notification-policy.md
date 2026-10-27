@@ -1,244 +1,159 @@
-# Payment-report notification plan policy
+# Payment-report notification plan controls
 
-27 October 2026. Design and integration proposal; **not an implemented API**.
-Owning chat: `01a17da9-5333-74b2-b9c2-181c2ec4cd20`.
-Bank account/report/delivery owner: `01a17856-d3d7-7301-9205-4d041e5117eb`.
-Design selection is required before product UI implementation. No deployment,
-provider activation, real send or existing Business configuration change follows
-from this document.
+27 October 2026. Local implementation; no deployment or live delivery.
+Oversight direction **01 v3** selected by the owner:
+`c48516ad-f623-4eaa-b814-cf5cf95ab3d9` at
+https://workshop.localhost/oversight/plans/payment-notifications.
+Owning chat `01a17da9-5333-74b2-b9c2-181c2ec4cd20` owns policy/quota/schema and
+Oversight UI. Banking chat `01a17856-d3d7-7301-9205-4d041e5117eb` owns bank
+recipients, report submission, transport/jobs and bank UI integration.
 
-## Existing authority and reuse
+## Configuration authority
 
-- Plan keys are `free`, `starter`, `growth`, `pro` in
-  `packages/db/src/queries/retail-ops-subscription-plans.ts`. Do not add a tier,
-  price, or infer payment-notification eligibility from `customerMessages`.
-- `getRetailOpsTenantPlan` and `resolveRetailOpsPlanId` in
-  `packages/db/src/queries/retail-ops-subscriptions.ts` own current effective plan,
-  existing launch/manual grants and paid lifetime projections. Owner-wide billing
-  is staged, without a live adapter; it is not a new entitlement authority here.
-- The existing order period helper uses UTC calendar months; limits convention
-  is explicit `null` unlimited and zero no allowance. Use the same convention.
-- `packages/db/prisma/models/system-configuration.prisma` has revisioned JSON
-  configuration; `billing.prisma` has durable plans. Neither is an existing
-  payment notification quota ledger. Do not use a JSON counter for concurrency.
-- Sibling Oversight `packages/db/src/queries/qa-policy.ts` demonstrates fresh
-  active-owner/EwaTrade access checks inside the save transaction, revision
-  comparison and atomic audit. Preserve that pattern and its unrelated changes.
-- EwaTrade `packages/oversight/src/routes.ts` is read-only portfolio access.
-  Its read key must not authorize new configuration writes. Existing
-  `packages/utils/src/qa-policy-server.ts` is a server-only policy read example;
-  its stale-success grace must not silently become dispatch authorization.
-- Existing Activity tables and notification transports are not proof that their
-  broader rollout is enabled. This feature must not enable generic Activity,
-  campaigns, customer messages, reminders or the ordinary WhatsApp assistant.
+Existing tiers are Free, Starter, Growth and Pro. Each has independent Email and
+WhatsApp enabled flags and monthly caps. The default is disabled/0 for every
+channel/tier. Missing, invalid or unavailable policy never grants sending.
+Explicit `null` is unlimited; zero blocks even when enabled. Values must be
+nonnegative safe integers. No prices or broader notification features are added.
 
-## Scope and configuration
+EwaTrade `SystemConfiguration` key `payment-report-notifications:v1` owns the
+revisioned whole-tier policy. Existing plan/subscription resolution owns effective
+plan, lifetime and launch/manual grants; owner-wide billing remains independently
+staged. No client-supplied plan, Tenant or usage grants authority.
 
-Configure both channels independently for **each** existing tier. The initial
-valid policy is all four tiers with Email disabled/0 and WhatsApp disabled/0.
-No missing-row, parse-error, unavailable-service or unknown-plan path grants
-sending. Missing numeric fields never mean unlimited. Require an explicit
-Unlimited choice to write `null`, otherwise a nonnegative safe integer.
+Oversight requires a current active owner assigned EwaTrade. A shared-locked
+employee check binds an audited command to actor, reason, expected revision and
+canonical digest before remote I/O. The unchanged command ID recovers the original
+result after an unknown HTTP outcome. Stale revision conflicts require review.
+EwaTrade atomically saves policy, durable audit command and ordered change job.
 
-Limits apply per Business (`Tenant`), per channel, per UTC calendar month. One
-external recipient delivery consumes one unit; a report with three selected
-staff needs three units. A tier edit, plan change, fallback or cap reduction
-never resets that Business's period usage/reservations. Lowering a cap below
-used plus reserved blocks new reservations while preserving history. New month
-starts a new period row; no destructive reset or usage-reset button.
+Existing service configuration is reused without enabling/changing credentials:
+Oversight `EWATRADE_OPS_URL`, `EWATRADE_OPS_READ_KEY`, `EWATRADE_OPS_WRITE_KEY`,
+`EWATRADE_OPS_ENABLED`; product `OVERSIGHT_READ_KEY` and independent
+`OVERSIGHT_WRITE_KEY`. Writes require a distinct key and the main API's explicit
+write opt-in. The standalone read-only Oversight service rejects PUT. Pointing at
+a read-only service yields an unavailable write, never a false successful save.
 
-Policy save requires a reason, current revision and fresh active owner assigned
-to EwaTrade. Audit actor, old/new values, revision and command id atomically.
-Reject stale revisions; preserve drafts until latest policy has been reviewed.
-Support/viewer/privacy roles and other project owners cannot change this policy.
-Credentials remain server-only. Schema/storage and cross-repository propagation
-must be agreed before edits; no new transport key is activated by this task.
+## Source and endpoints
 
-## Proposed integration surface
+- `packages/utils/src/payment-report-notification-policy.ts` exports strict
+  policy/write schemas, UTC periods and `PaymentReportNotificationEligibility`
+  through `@ewatrade/utils/payment-report-notification-policy`.
+- `@ewatrade/db/payment-report-notifications` exports policy, eligibility,
+  reservation/outcome, ordered fanout and authorized notice primitives.
+- `packages/oversight/src/payment-notifications.ts` serves GET/PUT
+  `/api/oversight/v1/payment-notifications`, GET `/businesses` and
+  `/usage/:tenantId`. GET uses the read credential; PUT uses the write credential.
+- Sibling Oversight `office.paymentNotificationPolicy`,
+  `savePaymentNotificationPolicy`, `paymentNotificationBusinesses` and
+  `paymentNotificationUsage` call the service through owner-gated operations.
+  Selected UI lives at `/payment-notifications?project=ewatrade` and reuses
+  standard table, modal, forms, tRPC and loading/error components.
+- Parent banking integration owns `businessBanking.notificationEligibility`,
+  settings, notices and retry routes. Their acceptance is recorded in that chat.
 
-Proposed files owned here (not present yet):
+The eligibility response has `schemaVersion:1`, `scope:'payment_report'`, server
+`policyRevision`, current `planId`, UTC `startsAt/resetsAt` and per-channel
+`available/enabled`, discriminated budget (`limited`, `unlimited`, `unknown`),
+nullable `used/reserved/remaining` and reason (`available`, `policy_missing`,
+`policy_invalid`, `plan_disabled`, `quota_exhausted`, `unavailable`). Null usage is
+unknown, never zero. Null remaining is unlimited only with an available explicit
+unlimited budget. UI must require `available === true` and fail closed while
+loading or unavailable. Save and dispatch repeat authority and quota checks.
 
-- `packages/utils/src/payment-report-notification-policy.ts`: pure strict policy
-  and versioned public read types, no database/provider import.
-- `packages/db/src/queries/payment-report-notifications/eligibility.ts`:
-  server-derived plan, membership and monthly ledger projection.
-- `packages/db/src/queries/payment-report-notifications/quota.ts`: root and
-  explicit `InTransaction` reservation/settlement commands.
-- `packages/db/src/queries/payment-report-notifications/policy-changes.ts`:
-  revision application, affected-Business enumeration, deduplicated notices.
+## Atomic admission and recovery
 
-Parent owns `businessBanking.notificationEligibility` in
-`apps/api/src/trpc/routers/business-banking.ts`, alongside existing report routes. Query accepts no client tenant, plan, cap,
-usage or policy revision as authority. Derive Tenant and actor from current
-session/context and revalidate current Finance/bank settings management access.
-Selected bank account input, if later needed, must be resolved in that Tenant.
+Caps apply per Business (Tenant), channel and UTC calendar month. Each recipient
+delivery consumes one unit. A three-person report reserves three units together;
+insufficient capacity never silently picks staff. Tier/cap changes retain usage
+and reservations. Lower caps block new admission/start while preserving history.
 
-```ts
-type Channel = "email" | "whatsapp"
-type ChannelEligibility = {
-  available: boolean
-  enabled: boolean
-  budget:
-    | { kind: "limited"; limit: number }
-    | { kind: "unlimited"; limit: null }
-    | { kind: "unknown"; limit: null }
-  used: number | null
-  reserved: number | null
-  remaining: number | null
-  reason:
-    | "available" | "policy_missing" | "policy_invalid"
-    | "plan_disabled" | "quota_exhausted" | "unavailable"
-}
-type PaymentReportNotificationEligibility = {
-  schemaVersion: 1
-  scope: "payment_report"
-  policyRevision: number | null
-  planId: "free" | "starter" | "growth" | "pro" | null
-  period: { startsAt: string; resetsAt: string; timeZone: "UTC" }
-  channels: Record<Channel, ChannelEligibility>
-}
-```
+The unique logical intent is Tenant/report/recipient, excluding channel. The
+first reservation binds channel and original recipient identities; report replay
+and later settings edits cannot add another send or switch an existing intent.
+Reserve only during the initial report submission. Blocked reports remain in-app;
+there is no later scan that retroactively sends old reports after plan activation.
 
-An unauthorized caller receives the normal authorization error, never another
-Business's usage. `null` usage means unavailable, never zero. `null` remaining
-means unlimited only when budget kind is explicitly `unlimited` and the response
-is available; otherwise it is unknown. Parent UI adds local loading state and
-requires `available === true`, never just a nonzero cap. Show loading,
-plan-disabled, exhausted and unavailable reasons. Availability is advisory;
-revalidate at bank settings save, reservation and immediately before dispatch.
+`reservePaymentNotificationGroupInTransaction(tx,{tenantId,reportId,now?})`
+derives settings, recipients and channel; returns reserved/existing/blocked plus
+intent IDs. Missing/invalid policy returns blocked before writes. The root wrapper
+is `reservePaymentNotificationGroup`. Current verified contacts and ordinary
+Store/order creator visibility are required for the whole selected group.
 
-## Reservation and outcome contract
+`startPaymentNotificationDispatch(db,{tenantId,intentId,claimId,
+expectedDestination,now?})` repeats policy, scope, saved channel and contact checks.
+A destination mismatch cancels before I/O and releases its reservation. Only a
+fresh RESERVED→SENDING transition returns `maySend:true`. Existing SENDING,
+UNKNOWN or finished intents never restart. Provider I/O stays outside transactions.
 
-Persistence must enforce a unique **logical recipient delivery** keyed by
-Tenant/report/current recipient identity and notification purpose. Channel is
-bound on its first authorized reservation: putting channel in the only unique
-key would permit a second send after fallback/channel change. Report replay,
-worker retry and changed contact details must recover the same logical intent,
-not manufacture another quota unit or another channel delivery.
+Before start, all unstarted siblings crossing a UTC month reserve the new month
+as one group or none. Their old reservations move atomically. After start,
+settlement always uses that admission bucket, even if the provider responds later.
+Accepted moves reserved→used once; definitive rejection releases once. Unknown or
+crashed started sends retain capacity and require reconciliation. Contradictory
+outcomes refuse. `markStalePaymentNotificationsUnknown` cannot free/resend.
 
-Under a consistent Tenant/channel/UTC-month lock, resolve fresh effective policy
-and authority, validate bank/report/recipient relations, lock/recover intent,
-and atomically reserve capacity only when `used + reserved + requested <= cap`
-(or explicit unlimited). Reserve the complete eligible recipient group before
-starting dispatch; insufficient group capacity does not silently pick staff.
-Use the original reservation period for settlement across a month boundary.
+`cancelPaymentNotificationReservation` affects RESERVED only.
+`retryPaymentNotificationDispatch` accepts only definitive REJECTED, binds the
+same intent/channel, reserves current capacity and requires fresh Owner/Admin
+`actorUserId` under a shared membership lock. No UNKNOWN retry or channel fallback.
 
-States distinguish reserved-not-started, dispatching, accepted, definitively
-rejected, cancelled-before-start and unknown-outcome. A durable fenced claim must
-precede provider I/O, which runs outside database transactions. Provider acceptance
-moves reserved to used exactly once; duplicate settlement is a no-op. Only
-provable nonacceptance/cancellation before I/O can release a unit. Timeout, worker
-crash after starting, lost response or expired worker lease retains capacity and
-requires provider reconciliation; never blindly release and resend. A safe retry
-uses the same logical intent/provider idempotency binding. A completed intent
-never switches channel. Membership removal and current review permissions are
-rechecked; an alert grants no new payment-review access.
+## Policy notices and bank choices
 
-Use the bounded existing own-transaction helpers. Serialization retry repeats
-only rolled-back database work, never transport calls. SQL multi-session tests
-must prove the cap and uniqueness; memory tests cannot certify SQL concurrency.
+Durable revision jobs process in order, with resumable claims/cursors. Notice
+insertion and cursor progress share a transaction; one notice is unique per
+Business/revision, with per-membership read receipts. Generic Activity stays
+unreleased. Parent jobs must process in-app policy work independently of the
+external-delivery activation flag; providers remain separately gated.
 
-## Policy revision notices and fallback
+Only active Businesses already using configured bank alerts are affected:
+settings `createdAt <= change.createdAt`. Compare old/new effective current-plan
+entitlements, including enabled flags and caps. `selectedPolicyRevision` records
+the policy a person explicitly reviewed; an older job cannot overwrite a later
+human choice. Automatic `updatedAt` is not a human-review marker.
 
-Every effective policy change must create one durable in-app Business notice per
-`(tenantId, policyRevision)` for each affected active Business already using bank
-payment alerts. This means a Business with configured bank alert recipients,
-including one currently blocked by cap/policy; no generic promotional campaign.
-Compare old/new **effective** entitlements at application time using current plan,
-not the tier label alone. Include cap changes even when both states stay enabled.
-An unchanged effective entitlement produces no notice. Keep prior reservations.
+Policy-disabled WhatsApp can derive Email only for eligible new intents when
+Email is enabled, the complete group has verified email and sufficient capacity
+can be reserved. Saved preference remains WhatsApp. Quota exhaustion alone never
+switches channels. Disabling Email pauses effective Email without a WhatsApp
+fallback. A paused effective channel remains null until explicit review; enabling
+a plan never automatically reactivates it or switches it back to WhatsApp.
 
-Enumerate affected Businesses with a durable cursor and resumable change job;
-policy application and durable job creation must be atomic in their authority.
-Do not rely on the browser remaining open or on a provider delivery to fan out.
-Cross-database desired/applied revisions and propagation status must be explicit:
-a failed sync is pending/failed, not a completed notification claim. Process each
-committed revision in order, deduplicate replay, and do not drop intermediate
-change notices. A freshly disabled policy blocks dispatch on refresh failure;
-there is no indefinite stale grant. An already accepted/in-flight external send
-cannot be recalled by a later policy edit; UI must not promise that it can.
+New WhatsApp availability invites configuration. Notices report actual enabled
+and cap changes without promising delivery before eligibility. They reach current
+Owner/Admin or selected staff whose current bank-linked report/order scope permits
+reading. Cashier/operator creator filters apply. Return only authorized account
+IDs and a `bookId` when unambiguous. Revoked/foreign members are refused; alert
+selection grants neither payment-review nor Finance administration permission.
 
-Notice audience: current Business Owner/Admin; selected current bank alert staff
-may read the notice only within their current Business/Store/payment-review
-scope. One Business event may have per-member read receipts; that is not duplicate
-Business notices. Removed/revoked members and other Businesses cannot read it.
-Do not grant Finance administration merely to deliver a notice. Read-time access
-checks remain required even if recipients were eligible when the event was saved.
+## Verification and remaining acceptance
 
-A newly enabled WhatsApp entitlement says “You can now configure WhatsApp payment
-notifications.” It does not auto-enable or change saved channel preference.
+- [x] Source-backed discovery and checkout/file ownership.
+- [x] Three canonical directions published/reviewed; old history retained.
+- [x] Exact owner selection and API/schema split recorded.
+- [x] Policy, quota, fanout and selected Oversight UI implemented.
+- [ ] Finish authenticated UI acceptance and final verification record.
+- [ ] Commit owned changes and link completed implementation evidence.
 
-If a bank selected WhatsApp and policy disables it, preserve saved preference and
-show effective delivery separately. Email fallback is allowed only when Email is
-currently enabled, sufficient capacity can be reserved for the whole selected
-current authorized group, and **every** selected recipient has a valid verified
-email. At most one channel is bound to each logical delivery. Once an intent has
-started/unknown/accepted WhatsApp, it cannot be retried via Email. If any fallback
-precondition fails, keep in-app review/action required; never promise Email or
-partially split a group. Quota exhaustion alone does not authorize a channel switch.
+Current evidence: pure policy6/35; service credential/auth3/8; Oversight owner and
+audit2/16; UI helpers6/27; strict owned graph and all7 Oversight workspace types;
+154 scoped fast tests/741 assertions; H01/H02 pass. Real SQL2-session quota suite
+1/45 and late-policy fence suite1/11 pass with exact fixture cleanup/rollback.
+Actual global policy remains unchanged. Narrow fast scope excludes unrelated
+working changes; it is not release/full-feature acceptance.
 
-Example notices reflect eligibility truth: “WhatsApp payment notifications are
-no longer available. Eligible new alerts will use Email.” versus “WhatsApp payment
-notifications are paused. Review bank notification settings.” A global plan save
-cannot guarantee future per-send capacity, so avoid unconditional “will be sent”.
+Prisma generated `20261027151308_payment_report_notifications` and
+`20261027153554_payment_alert_policy_selection`. An initial migrate/push overlap
+caused CREATE-existing failure, disclosed and recovered after zero schema diff
+using official resolve, then successful sequential canonical migrate/push. No
+reset, handwritten migration or old157SQL changes. Only the verified local Neon
+target was used. Product auth redirects correctly to local Oversight login;
+authenticated modal/save/usage acceptance awaits the owner's sign-in. No live
+configuration, real transport, deployment, push or merchant payment mutation.
 
-## Assistant impact
-
-Oversight plan policy edits are privileged office configuration and excluded from
-merchant assistant tools. Bank recipient/channel setup remains form-only. The
-eligibility reader is an authenticated app integration, not a new prompt tool.
-Policy notices do not grant an assistant or a recipient new payment permissions.
-The parent payment-link/report capabilities retain their existing canonical
-commands and review boundary. This proposal changes no manifest or runtime
-capability; implementation must record H02 and run the existing H01/H02 gates.
-
-## Acceptance checklist
-
-- [x] Inspect current authority and preserve checkout/other owners' work.
-- [x] Publish and verify three Oversight design directions with change notices.
-- [ ] Record the owner's exact selected revision and agree schema/router seams.
-- [ ] Implement audited policy, eligibility, quota and durable change notices.
-- [ ] Verify permissions, missing/invalid config, all tiers, reset/cap reductions,
-  current membership, fallback group/contacts, retries/unknown outcomes, revision
-  replay and real SQL concurrency with test transports only.
-- [ ] Complete scoped types/source checks, assistant-impact/Brain records and
-  local commits; record implementation evidence against the selected revision.
-
-Progress here is 2/6 milestones; no product or release acceptance. Product
-runtime checks have not run. `qa:doctor --offline` passes setup only. Whole-checkout `test:quick --plan`
-currently reports unmapped unrelated onboarding preview paths; do not report green
-or change their mapping under this task. No provider or database action performed.
-
-
-## Published design checkpoint
-
-Canonical review: https://workshop.localhost/oversight/plans/payment-notifications.
-All v1/v2 history is retained. Owner selection and implementation are unset.
-Current exact immutable revisions (all v3):
-
-| Direction | Revision | Tradeoff |
-| --- | --- | --- |
-| 01 Table + edit modal (recommended) | `c48516ad-f623-4eaa-b814-cf5cf95ab3d9` | Four-tier overview with focused audited edits. |
-| 02 Tier rail + channel detail | `1fa01938-51a4-491c-8905-0f7b94c12a65` | Inspect and edit one tier at a time. |
-| 03 Channel matrix + review panel | `944bb9f0-45cf-4fe3-b0c5-ec5ed4dd10c4` | Compare all channels/tiers while editing. |
-
-The separate Claude Opus5.5/high CLI request (session
-`0f49fd6f-bc07-4f23-b382-c97f07c3843e`) produced no output after more than ten
-minutes and was terminated (exit143). No other model was substituted. Codex
-used the owner's standing fallback to author the previews. The requested flags
-were exact; no returned model/output verification was possible. Parent banking
-Claude session and Workshop were untouched.
-
-Focused archived-preview browser review: all three directions render; table edit,
-negative-cap refusal, required-reason refusal, actual-draft notice, simulated save
-and retained usage, tier switching, explicit Unlimited, matrix change summary,
-Escape/reset, quota exhausted246used+4reserved/250, unknown loading/unavailable
-values, conflict refusal, owner-access refusal and four change-notice examples
-were exercised. Fanout completion is simulated only. No real API/provider calls
-or merchant changes are part of these artifacts. Shared viewer remains running.
-
-Documentation-only fast checks pass45tests/175assertions and QA tooling types.
-This is the explicit owned-document scope, not feature/SQL/full-checkout proof.
-JavaScript syntax and bundled relative assets were checked. API, atomic SQL,
-actual policy propagation, recipient permission, provider outcome/reconciliation,
-app UI and release acceptance remain future implementation checks.
+Initial design used the authorized Codex fallback after a separate Claude request
+returned no output in ten minutes. Selected UI implementation was delegated to a
+new verified Claude Opus5.5/high session `96cd5af8-1255-4317-b769-c330989d2a67`.
+It staged new files only; root reviewed/applied them without bank UI overlap.
+Office policy is excluded from merchant assistant tools; bank setup remains
+form-only. H02 impact record preserves that classification.

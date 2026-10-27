@@ -31,6 +31,10 @@ export const suites = {
     "apps/mobile/scripts/prepare-android-dev.test.ts",
   ],
   domain: [
+    "packages/email/templates/manual-payment-report.test.ts",
+    "packages/db/src/queries/manual-payment-alert-rules.test.ts",
+    "packages/utils/src/payment-report-notification-policy.test.ts",
+    "packages/oversight/src/payment-notifications.test.ts",
     "packages/utils/src/finance-money.test.ts",
     "packages/utils/src/currency.test.ts",
     "packages/errors/src/error-system.test.ts",
@@ -131,7 +135,7 @@ export function selectQuickPlan(files: string[]) {
       groups.add("mobile")
       groups.add("domain")
     } else if (
-      /^(apps\/api|packages\/(db|assistant|utils|payments|catalog|errors|jobs|service-commerce|storefront-runtime|storefront-contracts|storefront-templates))\//.test(
+      /^(apps\/api|packages\/(db|assistant|utils|payments|catalog|errors|email|jobs|oversight|service-commerce|storefront-runtime|storefront-contracts|storefront-templates))\//.test(
         file,
       )
     ) {

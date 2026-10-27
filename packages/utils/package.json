@@ -4,6 +4,7 @@
   "private": true,
   "main": "src/index.ts",
   "exports": {
+    "./payment-report-notification-policy": "./src/payment-report-notification-policy.ts",
     "./service-work-presentation": "./src/service-work-presentation.ts",
     "./product-usage": "./src/product-usage.ts",
     "./catalog-free-lines": "./src/catalog-free-lines.ts",

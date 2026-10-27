@@ -33,6 +33,22 @@ describe("fast workflow scope", () => {
     const payments = selectQuickPlan(["packages/payments/src/payment-link.ts"])
     expect(payments.unknown).toEqual([])
     expect(payments.groups).toEqual(["core", "domain", "web", "mobile"])
+    const oversight = selectQuickPlan([
+      "packages/oversight/src/payment-notifications.ts",
+    ])
+    expect(oversight.unknown).toEqual([])
+    expect(oversight.groups).toEqual(["core", "domain", "web", "mobile"])
+    expect(oversight.tests).toContain(
+      "packages/oversight/src/payment-notifications.test.ts",
+    )
+    const email = selectQuickPlan([
+      "packages/email/templates/manual-payment-report.ts",
+    ])
+    expect(email.unknown).toEqual([])
+    expect(email.groups).toEqual(["core", "domain", "web", "mobile"])
+    expect(email.tests).toContain(
+      "packages/email/templates/manual-payment-report.test.ts",
+    )
     const jobs = selectQuickPlan(["packages/jobs/src/schedule-policy.ts"])
     expect(jobs.unknown).toEqual([])
     expect(jobs.tests).toContain("packages/jobs/src/schedule-policy.test.ts")
