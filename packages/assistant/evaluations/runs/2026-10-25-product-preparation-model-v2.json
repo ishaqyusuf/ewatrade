@@ -1,0 +1,500 @@
+[
+  {
+    "mode": "focused",
+    "case": "eggs",
+    "provider": "deepseek",
+    "model": "deepseek-flash",
+    "firstDraftMs": 7011,
+    "totalMs": 8005,
+    "toolSteps": 5,
+    "text": "Ready to review in the form.",
+    "payload": {
+      "kind": "product",
+      "name": "Eggs",
+      "description": "Fresh eggs sold big or small, individually, by crate or by carton. A carton contains 12 crates.",
+      "unitName": "Piece",
+      "categoryKey": "poultry:eggs",
+      "preparationVersion": "product-v1",
+      "categorySuggested": false,
+      "variantMode": "explicit",
+      "sellingUnits": [
+        {
+          "name": "Crate",
+          "containsQuantity": "30",
+          "priceMinor": 600000
+        },
+        {
+          "name": "Carton",
+          "containsQuantity": "360",
+          "referenceUnitName": "Crate",
+          "referenceQuantity": "12",
+          "priceMinor": 7200000
+        }
+      ],
+      "options": [
+        {
+          "name": "Size",
+          "values": ["Big", "Small"]
+        }
+      ],
+      "variants": [
+        {
+          "selections": [
+            {
+              "optionName": "Size",
+              "value": "Big"
+            }
+          ],
+          "priceMinor": 20000,
+          "sellingUnitPrices": [
+            {
+              "unitName": "Crate",
+              "priceMinor": 600000
+            },
+            {
+              "unitName": "Carton",
+              "priceMinor": 7200000
+            }
+          ],
+          "openingStock": "72300",
+          "stockByUnit": [
+            {
+              "unitName": "Carton",
+              "quantity": "200"
+            },
+            {
+              "unitName": "Crate",
+              "quantity": "10"
+            }
+          ]
+        },
+        {
+          "selections": [
+            {
+              "optionName": "Size",
+              "value": "Small"
+            }
+          ],
+          "priceMinor": 10000,
+          "sellingUnitPrices": [
+            {
+              "unitName": "Crate",
+              "priceMinor": 550000
+            },
+            {
+              "unitName": "Carton",
+              "priceMinor": 7200000
+            }
+          ],
+          "openingStock": "36300",
+          "stockByUnit": [
+            {
+              "unitName": "Carton",
+              "quantity": "100"
+            },
+            {
+              "unitName": "Crate",
+              "quantity": "10"
+            }
+          ]
+        }
+      ],
+      "illustrationId": "ill-egg"
+    },
+    "usage": {
+      "inputTokens": 26636,
+      "inputTokenDetails": {
+        "noCacheTokens": 6156,
+        "cacheReadTokens": 20480
+      },
+      "outputTokens": 1040,
+      "outputTokenDetails": {
+        "textTokens": 1040,
+        "reasoningTokens": 0
+      },
+      "totalTokens": 27676,
+      "reasoningTokens": 0,
+      "cachedInputTokens": 20480
+    }
+  },
+  {
+    "mode": "focused",
+    "case": "phone",
+    "provider": "deepseek",
+    "model": "deepseek-flash",
+    "firstDraftMs": 4312,
+    "totalMs": 5065,
+    "toolSteps": 4,
+    "text": "Ready to review in the form.",
+    "payload": {
+      "kind": "product",
+      "name": "Samsung S24 Ultra",
+      "description": "Samsung S24 Ultra — 256 GB storage, 16 GB RAM.",
+      "unitName": "Piece",
+      "categoryKey": "electronics:phones",
+      "preparationVersion": "product-v1",
+      "categorySuggested": false,
+      "variantMode": "explicit",
+      "options": [
+        {
+          "name": "Storage",
+          "values": ["256 GB"]
+        },
+        {
+          "name": "RAM",
+          "values": ["16 GB"]
+        }
+      ],
+      "variants": [
+        {
+          "selections": [
+            {
+              "optionName": "Storage",
+              "value": "256 GB"
+            },
+            {
+              "optionName": "RAM",
+              "value": "16 GB"
+            }
+          ],
+          "sellingUnitPrices": []
+        }
+      ]
+    },
+    "usage": {
+      "inputTokens": 19915,
+      "inputTokenDetails": {
+        "noCacheTokens": 1227,
+        "cacheReadTokens": 18688
+      },
+      "outputTokens": 389,
+      "outputTokenDetails": {
+        "textTokens": 389,
+        "reasoningTokens": 0
+      },
+      "totalTokens": 20304,
+      "reasoningTokens": 0,
+      "cachedInputTokens": 18688
+    }
+  },
+  {
+    "mode": "focused",
+    "case": "shirts",
+    "provider": "deepseek",
+    "model": "deepseek-flash",
+    "firstDraftMs": 3746,
+    "totalMs": 4944,
+    "toolSteps": 4,
+    "text": "Ready to review in the form.",
+    "payload": {
+      "kind": "product",
+      "name": "T-shirt",
+      "description": "T-shirts available in blue and red.",
+      "unitName": "Piece",
+      "categoryKey": "clothing:t-shirts",
+      "preparationVersion": "product-v1",
+      "categorySuggested": false,
+      "variantMode": "explicit",
+      "options": [
+        {
+          "name": "Colour",
+          "values": ["Blue", "Red"]
+        }
+      ],
+      "variants": [
+        {
+          "selections": [
+            {
+              "optionName": "Colour",
+              "value": "Blue"
+            }
+          ],
+          "sellingUnitPrices": [],
+          "openingStock": "30",
+          "stockByUnit": [
+            {
+              "unitName": "Piece",
+              "quantity": "30"
+            }
+          ]
+        },
+        {
+          "selections": [
+            {
+              "optionName": "Colour",
+              "value": "Red"
+            }
+          ],
+          "sellingUnitPrices": [],
+          "openingStock": "50",
+          "stockByUnit": [
+            {
+              "unitName": "Piece",
+              "quantity": "50"
+            }
+          ]
+        }
+      ],
+      "illustrationId": "ill-shirt"
+    },
+    "usage": {
+      "inputTokens": 19223,
+      "inputTokenDetails": {
+        "noCacheTokens": 1175,
+        "cacheReadTokens": 18048
+      },
+      "outputTokens": 378,
+      "outputTokenDetails": {
+        "textTokens": 378,
+        "reasoningTokens": 0
+      },
+      "totalTokens": 19601,
+      "reasoningTokens": 0,
+      "cachedInputTokens": 18048
+    }
+  },
+  {
+    "mode": "setup",
+    "case": "eggs",
+    "provider": "deepseek",
+    "model": "deepseek-flash",
+    "firstDraftMs": 6332,
+    "totalMs": 7532,
+    "toolSteps": 4,
+    "text": "Eggs are ready to review in the form.",
+    "payload": {
+      "kind": "product",
+      "name": "Eggs",
+      "unitName": "Piece",
+      "categoryKey": "poultry:eggs",
+      "quickSetupKey": "farm-eggs-tray",
+      "preparationVersion": "product-v1",
+      "categorySuggested": false,
+      "variantMode": "explicit",
+      "sellingUnits": [
+        {
+          "name": "Crate",
+          "containsQuantity": "30",
+          "quantityDefault": "egg-crate-30"
+        },
+        {
+          "name": "Carton",
+          "containsQuantity": "360",
+          "referenceUnitName": "Crate",
+          "referenceQuantity": "12"
+        }
+      ],
+      "options": [
+        {
+          "name": "Size",
+          "values": ["Big", "Small"]
+        }
+      ],
+      "variants": [
+        {
+          "selections": [
+            {
+              "optionName": "Size",
+              "value": "Big"
+            }
+          ],
+          "priceMinor": 20000,
+          "sellingUnitPrices": [
+            {
+              "unitName": "Crate",
+              "priceMinor": 600000
+            },
+            {
+              "unitName": "Carton",
+              "priceMinor": 7200000,
+              "derivedFromUnit": "Crate"
+            }
+          ],
+          "openingStock": "72300",
+          "stockByUnit": [
+            {
+              "unitName": "Carton",
+              "quantity": "200"
+            },
+            {
+              "unitName": "Crate",
+              "quantity": "10"
+            }
+          ]
+        },
+        {
+          "selections": [
+            {
+              "optionName": "Size",
+              "value": "Small"
+            }
+          ],
+          "priceMinor": 10000,
+          "sellingUnitPrices": [
+            {
+              "unitName": "Crate",
+              "priceMinor": 550000
+            },
+            {
+              "unitName": "Carton",
+              "priceMinor": 6600000,
+              "derivedFromUnit": "Crate"
+            }
+          ],
+          "openingStock": "36300",
+          "stockByUnit": [
+            {
+              "unitName": "Carton",
+              "quantity": "100"
+            },
+            {
+              "unitName": "Crate",
+              "quantity": "10"
+            }
+          ]
+        }
+      ],
+      "usage": "FOR_SALE",
+      "illustrationId": "ill-egg"
+    },
+    "usage": {
+      "inputTokens": 28369,
+      "inputTokenDetails": {
+        "noCacheTokens": 7633,
+        "cacheReadTokens": 20736
+      },
+      "outputTokens": 926,
+      "outputTokenDetails": {
+        "textTokens": 926,
+        "reasoningTokens": 0
+      },
+      "totalTokens": 29295,
+      "reasoningTokens": 0,
+      "cachedInputTokens": 20736
+    }
+  },
+  {
+    "mode": "setup",
+    "case": "phone",
+    "provider": "deepseek",
+    "model": "deepseek-flash",
+    "firstDraftMs": 3017,
+    "totalMs": 4131,
+    "toolSteps": 3,
+    "text": "Ready to review in the form.\n\nThe price and how many pieces you have are still empty there, and you can fill them in the form or tell me here.",
+    "payload": {
+      "kind": "product",
+      "name": "Samsung S24 Ultra",
+      "description": "256 GB storage, 16 GB RAM",
+      "unitName": "Piece",
+      "categoryKey": "electronics:phones",
+      "quickSetupKey": "phone-storage-colour",
+      "preparationVersion": "product-v1",
+      "categorySuggested": false,
+      "variantMode": "explicit",
+      "options": [
+        {
+          "name": "Storage",
+          "values": ["256 GB"]
+        },
+        {
+          "name": "RAM",
+          "values": ["16 GB"]
+        }
+      ],
+      "variants": [
+        {
+          "selections": [
+            {
+              "optionName": "Storage",
+              "value": "256 GB"
+            },
+            {
+              "optionName": "RAM",
+              "value": "16 GB"
+            }
+          ],
+          "sellingUnitPrices": []
+        }
+      ]
+    },
+    "usage": {
+      "inputTokens": 19889,
+      "inputTokenDetails": {
+        "noCacheTokens": 1201,
+        "cacheReadTokens": 18688
+      },
+      "outputTokens": 391,
+      "outputTokenDetails": {
+        "textTokens": 391,
+        "reasoningTokens": 0
+      },
+      "totalTokens": 20280,
+      "reasoningTokens": 0,
+      "cachedInputTokens": 18688
+    }
+  },
+  {
+    "mode": "setup",
+    "case": "shirts",
+    "provider": "deepseek",
+    "model": "deepseek-flash",
+    "firstDraftMs": 2669,
+    "totalMs": 3736,
+    "toolSteps": 3,
+    "text": "Ready to review in the form.\n\nThe prices for blue and red are still blank — you can fill them in the form.",
+    "payload": {
+      "kind": "product",
+      "name": "T-shirts",
+      "unitName": "Piece",
+      "categoryKey": "clothing:t-shirts",
+      "preparationVersion": "product-v1",
+      "categorySuggested": false,
+      "variantMode": "explicit",
+      "options": [
+        {
+          "name": "Colour",
+          "values": ["Blue", "Red"]
+        }
+      ],
+      "variants": [
+        {
+          "selections": [
+            {
+              "optionName": "Colour",
+              "value": "Blue"
+            }
+          ],
+          "sellingUnitPrices": [],
+          "openingStock": "30"
+        },
+        {
+          "selections": [
+            {
+              "optionName": "Colour",
+              "value": "Red"
+            }
+          ],
+          "sellingUnitPrices": [],
+          "openingStock": "50"
+        }
+      ],
+      "illustrationId": "ill-shirt"
+    },
+    "usage": {
+      "inputTokens": 19724,
+      "inputTokenDetails": {
+        "noCacheTokens": 1164,
+        "cacheReadTokens": 18560
+      },
+      "outputTokens": 326,
+      "outputTokenDetails": {
+        "textTokens": 326,
+        "reasoningTokens": 0
+      },
+      "totalTokens": 20050,
+      "reasoningTokens": 0,
+      "cachedInputTokens": 18560
+    }
+  }
+]

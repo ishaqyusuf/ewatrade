@@ -10,6 +10,10 @@ export const catalogProductShareSchema = z
   .object({ itemId: z.string().regex(/^[A-Za-z0-9_-]{1,128}$/) })
   .strict()
 
+export const catalogProductCategorySearchSchema = z
+  .object({ query: z.string().trim().min(1).max(160) })
+  .strict()
+
 const catalogKeySchema = z
   .string()
   .trim()
@@ -184,7 +188,7 @@ const catalogItemFields = {
     .max(128)
     .regex(/^[a-zA-Z0-9_-]+$/)
     .optional(),
-  category: z.string().trim().max(120).optional(),
+  category: z.string().trim().max(500).optional(),
   clientOperationId: z.string().trim().min(8).max(160),
   description: z.string().trim().max(2_000).optional(),
   imageLinks: z.array(catalogImageUrlSchema).max(8).default([]),
@@ -364,7 +368,7 @@ export const catalogUpdateItemSchema = z
     kind: z.enum(["product", "service"]),
     name: z.string().trim().min(1).max(160),
     description: z.string().trim().max(2_000).optional(),
-    category: z.string().trim().max(120).optional(),
+    category: z.string().trim().max(500).optional(),
     categoryId: catalogItemFields.categoryId,
     subcategoryId: catalogItemFields.subcategoryId,
     usage: z.enum(["FOR_SALE", "INTERNAL_USE", "BOTH"]).optional(),
@@ -519,7 +523,7 @@ export const catalogUpdateProductDetailsSchema = z
     expectedUpdatedAt: z.string().datetime(),
     name: z.string().trim().min(1).max(160).optional(),
     description: z.string().trim().max(2_000).nullable().optional(),
-    category: z.string().trim().max(120).nullable().optional(),
+    category: z.string().trim().max(500).nullable().optional(),
   })
   .strict()
   .refine(

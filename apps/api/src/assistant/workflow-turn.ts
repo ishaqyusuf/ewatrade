@@ -42,6 +42,14 @@ import {
 } from "./chat-attachments"
 import type { AssistantChatRepository } from "./chat-repository"
 import type { ResolvedAssistantModel } from "./model-resolution"
+import {
+  commercePreparationEnabled,
+  recordPreparation,
+} from "./preparation-observability"
+import {
+  prepareProductCategory,
+  searchProductCategories,
+} from "./product-category"
 import { SETUP_BUDGET_LIMITS } from "./setup-context"
 import { AssistantLimitError, type AssistantStreamGuard } from "./stream-guard"
 
@@ -366,6 +374,32 @@ export async function createWorkflowAssistantTurn(
           transient: true,
         })
         const setupTools = createSetupAssistantTools({
+          productPreparationEnabled: commercePreparationEnabled(),
+          resolveProductCategory: commercePreparationEnabled()
+            ? prepareProductCategory
+            : undefined,
+          searchProductCategories: commercePreparationEnabled()
+            ? searchProductCategories
+            : undefined,
+          onProductPrepared: (payload, stats) =>
+            recordPreparation({
+              purpose: productMode ? "product" : "setup",
+              kind: "product",
+              durationMs: stats.durationMs,
+              lineCount: payload.variants?.length ?? 1,
+              unresolvedCount: stats.requiredIssues,
+              defaultCount: payload.sellingUnits?.filter(
+                (unit) => unit.quantityDefault,
+              ).length,
+              derivedPriceCount: payload.variants?.reduce(
+                (sum, row) =>
+                  sum +
+                  (row.sellingUnitPrices?.filter(
+                    (price) => price.derivedFromUnit,
+                  ).length ?? 0),
+                0,
+              ),
+            }),
           productOnly: productMode,
           productSeed: productSnapshot?.form,
           context: business,

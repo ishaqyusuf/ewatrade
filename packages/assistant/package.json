@@ -16,6 +16,8 @@
     "./channels/flows": "./src/channels/flows/index.ts",
     "./channels/whatsapp": "./src/channels/whatsapp.ts",
     "./channels/instructions": "./src/channels/instructions.ts",
+    "./product/preparation": "./src/product/preparation.ts",
+    "./product/knowledge": "./src/product/knowledge.ts",
     "./product/contracts": "./src/product/contracts.ts",
     "./product/allowance": "./src/product/allowance.ts",
     "./files/pdf-text": "./src/files/pdf-text.ts",
@@ -83,7 +85,8 @@
     "./general/service-message-read": "./src/general/service-message-read.ts",
     "./general/service-request-read": "./src/general/service-request-read.ts",
     "./public/contracts": "./src/public/contracts.ts",
-    "./public/prompt": "./src/public/prompt.ts"
+    "./public/prompt": "./src/public/prompt.ts",
+    "./general/order-preparation": "./src/general/order-preparation.ts"
   },
   "scripts": {
     "lint": "biome check .",

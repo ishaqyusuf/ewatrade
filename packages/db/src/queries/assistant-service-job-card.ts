@@ -246,7 +246,7 @@ export async function linkExistingAssistantServiceJobCardInTransaction(
     )
   const receipt = await readCreated(tx, scope, scope.intakeId)
   const signature = (
-    lines: Array<{ name: string; quantity: string; unitPriceMinor: number }>,
+    lines: Array<{ name: string; quantity: string; unitPriceMinor?: number }>,
   ) =>
     lines
       .map((line) =>
@@ -259,6 +259,7 @@ export async function linkExistingAssistantServiceJobCardInTransaction(
       .sort()
       .join("|")
   if (
+    card.draft.totalMinor === undefined ||
     receipt.currencyCode !== card.draft.currencyCode ||
     receipt.totalMinor !== card.draft.totalMinor ||
     (receipt.customerName ?? "").trim().toLowerCase() !==

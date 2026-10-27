@@ -207,6 +207,7 @@
         "wholesale-distribution"
       ],
       "subcategories": [
+        { "key": "clothing:t-shirts", "label": "T-shirts" },
         {
           "key": "clothing:womenswear",
           "label": "Womenswear"

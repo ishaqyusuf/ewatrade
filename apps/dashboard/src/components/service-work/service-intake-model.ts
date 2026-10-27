@@ -11,6 +11,7 @@ export type IntakeLine = {
   quoteAmount?: string
   missingName?: string
   missingPrice?: number
+  blockedIssue?: string
 }
 export function quoteAmountMinor(value: string | undefined) {
   if (!value || !/^\d+(?:\.\d{1,2})?$/.test(value.trim())) return null

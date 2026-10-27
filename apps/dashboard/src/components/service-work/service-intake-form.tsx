@@ -112,6 +112,12 @@ export function ServiceIntakeForm({
     initialDraft?.lines.map((line) => ({
       offeringId: line.offeringId ?? "",
       quantity: line.quantity,
+      ...(line.resolution && line.resolution !== "missing"
+        ? { blockedIssue: line.issue }
+        : {}),
+      ...(line.quoteRequired && line.unitPriceMinor !== undefined
+        ? { quoteAmount: String(line.unitPriceMinor / 100) }
+        : {}),
       ...(!line.offeringId
         ? { missingName: line.name, missingPrice: line.unitPriceMinor }
         : {}),
@@ -119,7 +125,7 @@ export function ServiceIntakeForm({
   )
   // A service added from the draft card or form becomes available after normal catalog invalidation.
   const lines = draftLines.map((line) => {
-    if (line.offeringId || !line.missingName) return line
+    if (line.offeringId || !line.missingName || line.blockedIssue) return line
     const key = serviceNameKey(line.missingName)
     const matches = offerings.filter((entry) => {
       const name = serviceNameKey(entry.displayName)
@@ -273,6 +279,10 @@ export function ServiceIntakeForm({
     if (submitting.current) return
     if (!lines.length) {
       setError("Add at least one service.")
+      return
+    }
+    if (initialDraft?.customerIssue && !customer?.id) {
+      setError(initialDraft.customerIssue)
       return
     }
     if (summary.error) {
@@ -674,7 +684,15 @@ export function ServiceIntakeForm({
                           />
                         </ControlField>
                       ) : null}
-                      {!choice && line.missingName && initialDraft ? (
+                      {!choice && line.blockedIssue ? (
+                        <p className="text-xs text-muted-foreground">
+                          {line.blockedIssue}
+                        </p>
+                      ) : null}
+                      {!choice &&
+                      line.missingName &&
+                      !line.blockedIssue &&
+                      initialDraft ? (
                         <OpenMissingCatalogItem
                           handoff={{
                             kind: "service",

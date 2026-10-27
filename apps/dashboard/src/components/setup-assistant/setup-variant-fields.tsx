@@ -46,7 +46,17 @@ export function setupEditedVariants(
         const priceMinor = majorToMinor(unit.price)
         return priceMinor === null
           ? []
-          : [{ unitName: unit.unitName, priceMinor }]
+          : [
+              {
+                unitName: unit.unitName,
+                priceMinor,
+                derivedFromUnit: previous?.sellingUnitPrices?.find(
+                  (price) =>
+                    price.unitName === unit.unitName &&
+                    price.priceMinor === priceMinor,
+                )?.derivedFromUnit,
+              },
+            ]
       }),
       ...(stockChanged
         ? {

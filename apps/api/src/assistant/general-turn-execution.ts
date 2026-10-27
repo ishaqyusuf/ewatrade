@@ -1,6 +1,7 @@
 import { capabilityForAction } from "@ewatrade/assistant/capabilities/manifest"
 import { whatsAppAssistantInstructions } from "@ewatrade/assistant/channels/instructions"
 import { isPlainAccountBalanceRequest } from "@ewatrade/assistant/general/contracts"
+import { isCatalogOrderPreparationIntent } from "@ewatrade/assistant/general/order-preparation"
 import {
   generalInstructions,
   generalLocalNow,
@@ -138,6 +139,11 @@ export async function executeGeneralTurn({
     ["money_in_record", handleSimpleMoneyInChat],
     ["sale_record", handleSimpleSaleChat],
   ] as const
+  const catalogOrder =
+    !body.saleChoice &&
+    !attachments.length &&
+    !!tools.prepareOrder &&
+    isCatalogOrderPreparationIntent(simpleInput.text)
   // Link requests use scoped lookup/proposal tools, even if a money collector
   // has an unfinished draft. Explicit choices and directed sale edits retain
   // their existing draft ownership.
@@ -145,7 +151,9 @@ export async function executeGeneralTurn({
     !body.saleChoice &&
     !/^Continue sale [^:]+:/u.test(simpleInput.text) &&
     /\bpayment[\s-]+links?\b/iu.test(simpleInput.text)
-  for (const [action, handler] of paymentLinkRequest ? [] : handlers) {
+  for (const [action, handler] of catalogOrder || paymentLinkRequest
+    ? []
+    : handlers) {
     // Channel confirmations must be correlated to an exact server-issued review outside the model turn.
     if (
       linked &&

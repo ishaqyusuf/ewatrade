@@ -14,8 +14,9 @@ import {
 import { SetupPrerequisites } from "@/components/setup-assistant/setup-prerequisites"
 import { useTRPC } from "@/trpc/client"
 import type { RouterOutputs } from "@ewatrade/api/trpc/routers/_app"
+import { productPreparationNotes } from "@ewatrade/assistant/product/preparation"
 import { setupProductPayloadSchema } from "@ewatrade/assistant/setup/contracts"
-import { setupPackPrice } from "@ewatrade/assistant/setup/variants"
+import { setupProductVariants } from "@ewatrade/assistant/setup/variants"
 import { Button, cn } from "@ewatrade/ui"
 import { formatMinorMoney } from "@ewatrade/utils/currency"
 import { ArrowLeft01Icon } from "@hugeicons/core-free-icons"
@@ -225,29 +226,25 @@ export function ProductChat({
                 : "For sale"}
           </dd>
         </div>
-        {payload?.usage !== "INTERNAL_USE" && !card ? (
-          <div>
-            <dt className="text-muted-foreground">Price per stock unit</dt>
-            <dd>{money(payload?.priceMinor)}</dd>
-          </div>
-        ) : null}
-        {(card ? undefined : payload?.sellingUnits)?.map((unit) => (
-          <div key={unit.name}>
-            <dt className="text-muted-foreground">
-              {unit.name} · {unit.containsQuantity} {payload?.unitName}
-            </dt>
-            <dd>
-              {money(
-                unit.priceMinor ??
-                  setupPackPrice(payload?.priceMinor, unit.containsQuantity),
-              )}
-            </dd>
-          </div>
-        ))}
-        <div>
-          <dt className="text-muted-foreground">Opening stock</dt>
-          <dd>{payload?.openingStock ?? "Not supplied"}</dd>
-        </div>
+        {payload
+          ? setupProductVariants(payload).map((row) => (
+              <div key={row.label}>
+                <dt className="text-muted-foreground">{row.label}</dt>
+                <dd>
+                  {payload.usage !== "INTERNAL_USE"
+                    ? [
+                        `${money(row.priceMinor)} / ${payload.unitName}`,
+                        ...row.sellingUnits.map(
+                          (unit) =>
+                            `${money(unit.priceMinor)} / ${unit.name} (${unit.containsQuantity || "count needed"} ${payload.unitName})`,
+                        ),
+                      ].join(" · ")
+                    : null}
+                  {` · Stock: ${row.openingStock ?? payload.openingStock ?? "Not supplied"}`}
+                </dd>
+              </div>
+            ))
+          : null}
         {payload?.description && !card ? (
           <div>
             <dt className="text-muted-foreground">Description</dt>
@@ -261,6 +258,13 @@ export function ProductChat({
           </div>
         ) : null}
       </dl>
+      {payload ? (
+        <ul className="mt-3 space-y-1 text-xs text-muted-foreground">
+          {productPreparationNotes(payload).map((note) => (
+            <li key={note}>{note}</li>
+          ))}
+        </ul>
+      ) : null}
       {card ? null : (
         <p className="mt-5 text-xs text-muted-foreground">
           Review these details before creating. Nothing is added until you press
@@ -278,7 +282,7 @@ export function ProductChat({
             card ? "mt-2 text-xs text-muted-foreground" : "mt-3 text-sm",
           )}
         >
-          Continue the chat to complete the missing details.
+          Use Back to form to complete the missing details, or add them here.
         </p>
       ) : null}
       {create.error ? (

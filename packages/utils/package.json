@@ -5,6 +5,7 @@
   "main": "src/index.ts",
   "exports": {
     "./payment-report-notification-policy": "./src/payment-report-notification-policy.ts",
+    "./catalog-options": "./src/catalog-options.ts",
     "./service-work-presentation": "./src/service-work-presentation.ts",
     "./product-usage": "./src/product-usage.ts",
     "./catalog-free-lines": "./src/catalog-free-lines.ts",
@@ -50,13 +51,13 @@
     "./legal-approval": "./src/legal-approval.ts",
     "./account-privacy-intake": "./src/account-privacy-intake.ts",
     "./catalog-category-presets": "./src/catalog-category-presets.ts",
-    "./catalog-options": "./src/catalog-options.ts",
     "./catalog-illustrations": "./src/catalog-illustrations.ts",
     "./catalog-illustration-artwork": "./src/catalog-illustration-artwork.ts",
     "./finance-bank-statement": "./src/finance-bank-statement.ts",
     "./app-update": "./src/app-update.ts",
     "./qa-policy": "./src/qa-policy.ts",
-    "./qa-policy-server": "./src/qa-policy-server.ts"
+    "./qa-policy-server": "./src/qa-policy-server.ts",
+    "./product-taxonomy": "./src/product-taxonomy.ts"
   },
   "sideEffects": false,
   "scripts": {

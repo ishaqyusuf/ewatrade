@@ -40,7 +40,10 @@ export function isSimpleMoneyInIntent(text: string) {
   )
     return false
   return (
-    /\b(?:put|drop|add|deposit)\b[\s\S]*\b(?:into|to|in)\b/i.test(text) ||
+    /\b(?:put|drop|add|deposit)\s+(?:(?:some\s+)?(?:money|cash|funds)|[₦N]?\s*(?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d{1,2})?(?:\s*(?:k|thousand|m|million|naira|NGN))?)\s+(?:into|to|in)\b/i.test(
+      text,
+    ) ||
+    /\bdeposit\s+(?:into|to|in)\s+.+\b(?:account|cash|bank)\b/i.test(text) ||
     /\b(?:owner contribution|owner funds|capital contribution)\b/i.test(text)
   )
 }

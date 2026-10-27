@@ -5,7 +5,9 @@ import { setServiceIntakeDraft } from "@/hooks/use-service-intake-draft"
 import { useServiceWorkParams } from "@/hooks/use-service-work-params"
 import { getDataCacheGeneration, useTRPC, useTRPCClient } from "@/trpc/client"
 import type { ServiceJobDraft } from "@ewatrade/assistant/general/contracts"
-import { Button } from "@ewatrade/ui"
+import { Button, MoneyInput } from "@ewatrade/ui"
+import { majorToMinor } from "@ewatrade/utils/currency"
+import { multiplyExactDecimals } from "@ewatrade/utils/exact-decimal"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { useState } from "react"
 import { OpenMissingCatalogItem } from "./open-missing-catalog-item"
@@ -33,25 +35,43 @@ export function GeneralServiceJobCard({
   )
   const created = receipt.data ?? draft.created
   const checking = Boolean(sourceAnswerId) && receipt.isPending
-  const displayLines = created?.lines ?? draft.lines
   const { setParams } = useServiceWorkParams()
   const [added, setAdded] = useState<
     Record<number, { offeringId: string; itemName: string }>
   >({})
+  const [prices, setPrices] = useState<Record<number, string>>({})
+  const resolvedLines = draft.lines.map((line, index) => {
+    const price =
+      line.unitPriceMinor ?? majorToMinor(prices[index] ?? "") ?? undefined
+    const total =
+      price === undefined
+        ? undefined
+        : Number(multiplyExactDecimals(line.quantity, String(price)))
+    return {
+      ...line,
+      unitPriceMinor: price,
+      totalMinor: Number.isSafeInteger(total) ? total : undefined,
+      ...(added[index] ? { offeringId: added[index]?.offeringId } : {}),
+    }
+  })
   const resolvedDraft = {
     ...draft,
-    lines: draft.lines.map((line, index) =>
-      added[index] ? { ...line, offeringId: added[index]?.offeringId } : line,
-    ),
+    lines: resolvedLines,
+    totalMinor: resolvedLines.every((line) => line.totalMinor !== undefined)
+      ? resolvedLines.reduce((sum, line) => sum + (line.totalMinor ?? 0), 0)
+      : undefined,
   }
+  const displayLines = created?.lines ?? resolvedLines
   const [pending, setPending] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const money = (minor: number) =>
-    new Intl.NumberFormat("en-NG", {
-      style: "currency",
-      currency: created?.currencyCode ?? draft.currencyCode,
-      maximumFractionDigits: 2,
-    }).format(minor / 100)
+  const money = (minor: number | undefined) =>
+    minor === undefined
+      ? "Price needed"
+      : new Intl.NumberFormat("en-NG", {
+          style: "currency",
+          currency: created?.currencyCode ?? draft.currencyCode,
+          maximumFractionDigits: 2,
+        }).format(minor / 100)
   async function open() {
     setPending(true)
     setError(null)
@@ -117,7 +137,7 @@ export function GeneralServiceJobCard({
     <div className="grid gap-3 rounded-lg border p-4 [overflow-wrap:anywhere]">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <p className="text-sm font-medium">Laundry job</p>
+          <p className="text-sm font-medium">Service job</p>
           <p className="text-xs text-muted-foreground">
             {created
               ? (created.customerName ?? "Walk-in customer")
@@ -128,7 +148,9 @@ export function GeneralServiceJobCard({
           </p>
         </div>
         <p className="font-semibold tabular-nums">
-          {money(created?.totalMinor ?? draft.totalMinor)}
+          {(created?.totalMinor ?? resolvedDraft.totalMinor) === undefined
+            ? "Total incomplete"
+            : money(created?.totalMinor ?? resolvedDraft.totalMinor)}
         </p>
       </div>
       {created ? (
@@ -155,11 +177,29 @@ export function GeneralServiceJobCard({
                 Added to {added[index]?.itemName}
               </p>
             ) : null}
-            {!created && !line.offeringId && !added[index] ? (
+            {!created &&
+            !line.offeringId &&
+            !added[index] &&
+            (!draft.lines[index]?.resolution ||
+              draft.lines[index]?.resolution === "missing") ? (
               <>
                 <p className="text-xs text-muted-foreground">
                   Not listed · Unit price {money(line.unitPriceMinor)}
                 </p>
+                {draft.lines[index]?.unitPriceMinor === undefined ? (
+                  <MoneyInput
+                    aria-label={`Price per ${line.name}`}
+                    currencyCode={draft.currencyCode}
+                    value={prices[index] ?? ""}
+                    disabled={pending || checking}
+                    onChange={(event) =>
+                      setPrices((current) => ({
+                        ...current,
+                        [index]: event.target.value,
+                      }))
+                    }
+                  />
+                ) : null}
                 <OpenMissingCatalogItem
                   handoff={{
                     kind: "service",
@@ -176,6 +216,15 @@ export function GeneralServiceJobCard({
           </li>
         ))}
       </ul>
+      {!created &&
+        draft.issues?.map((issue) => (
+          <p key={issue} className="text-xs text-muted-foreground">
+            {issue}
+          </p>
+        ))}
+      {!created && draft.customerIssue ? (
+        <p className="text-xs text-muted-foreground">{draft.customerIssue}</p>
+      ) : null}
       {!created &&
         draft.assumptions.map((note) => (
           <p key={note} className="text-xs text-muted-foreground">

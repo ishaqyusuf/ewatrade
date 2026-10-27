@@ -33,6 +33,7 @@ import {
 import type { Prisma } from "@ewatrade/db/types"
 import { enqueueCatalogPhotoReview } from "@ewatrade/jobs/catalog-photo-review"
 import { findCatalogCategoryPreset } from "@ewatrade/utils/catalog-category-presets"
+import { trustedProductCategoryLabel } from "./product-category"
 import {
   OPENING_BALANCE_FAILED,
   OPENING_BALANCE_NEEDS_FINANCE,
@@ -97,8 +98,8 @@ type OptionGroup = {
 /** Option Groups and every value combination, first combination as the default. */
 export function setupProductOptionGrid(payload: SetupProductPayload) {
   const questions = setupProductQuestions(payload)
-  if (questions.length)
-    throw new CatalogError("INVALID_CATALOG_ITEM", questions[0]!.question)
+  if (questions[0])
+    throw new CatalogError("INVALID_CATALOG_ITEM", questions[0].question)
   const groupKeys = new Set<string>()
   const optionGroups: OptionGroup[] = (payload.options ?? []).map((group) => {
     const valueKeys = new Set<string>()
@@ -123,6 +124,18 @@ export function setupProductOptionGrid(payload: SetupProductPayload) {
     combinations = combinations.flatMap((combination) =>
       group.values.map((value) => [...combination, { group, ...value }]),
     )
+  if (payload.variantMode === "explicit")
+    combinations = combinations.filter((combination) =>
+      payload.variants?.some((variant) =>
+        setupSelectionsEqual(
+          variant.selections,
+          combination.map((value) => ({
+            optionName: value.group.name,
+            value: value.label,
+          })),
+        ),
+      ),
+    )
   if (combinations.length > MAX_SETUP_VARIANTS)
     throw new CatalogError(
       "INVALID_CATALOG_ITEM",
@@ -140,6 +153,12 @@ export function setupProductOptionGrid(payload: SetupProductPayload) {
 /** Category vocabulary is stored by label; the catalog repository materializes presets. */
 export function setupCategoryLabel(categoryKey: string | undefined) {
   if (!categoryKey) return undefined
+  if (categoryKey.startsWith("shopify:")) {
+    const label = trustedProductCategoryLabel(categoryKey)
+    if (!label)
+      throw new CatalogError("INVALID_CATALOG_ITEM", "Choose a valid category.")
+    return label
+  }
   const key = categoryKey.replace(/^preset:/, "")
   const root = findCatalogCategoryPreset(key.split(":")[0])
   if (!root) return undefined
@@ -249,7 +268,12 @@ export function catalogCommandForSetupEntity(
             value: value.label,
           })),
         ),
-      )!
+      )
+      if (!row)
+        throw new CatalogError(
+          "INVALID_CATALOG_ITEM",
+          "Variant choices do not match the draft.",
+        )
       // Offering keys are unique across the item, so option variants prefix them.
       const variantKey =
         combination.length === 0

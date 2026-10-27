@@ -11,6 +11,8 @@ import {
   generalOrderDescriptionError,
   generalReceiptSchema,
 } from "@ewatrade/assistant/general/contracts"
+import { orderPreparationIssues } from "@ewatrade/assistant/general/order-preparation"
+import { productCreateIssues } from "@ewatrade/assistant/general/product-create"
 import { isAccountPrivacyAccessBlocked } from "@ewatrade/db/account-privacy-access"
 import {
   generalProposalWhere,
@@ -50,6 +52,7 @@ import { validateExpenseAttachmentConversation } from "./general-simple-expense"
 import { validateMoneyInAttachmentConversation } from "./general-simple-money-in"
 import { validateSaleAttachmentConversation } from "./general-simple-sale"
 import { validateTransferAttachmentConversation } from "./general-simple-transfer"
+import { recordPreparation } from "./preparation-observability"
 import {
   isProposalApprovalValid,
   proposalApprovalToken,
@@ -66,16 +69,19 @@ export function generalProposalForApp(
   const payload = generalActionSchema.parse(row.payload)
   const pending = row.status === "PENDING" && row.expiresAt > new Date()
   const ready =
-    payload.action === "money_transfer_simple"
-      ? simpleTransferStep(payload) === "review"
-      : payload.action === "expense_record_simple"
-        ? simpleExpenseStep(payload) === "review"
-        : payload.action === "money_in_record"
-          ? simpleMoneyInStep(payload) === "review"
-          : payload.action === "order_create"
-            ? !generalOrderDescriptionError(payload)
-            : payload.action !== "sale_record" ||
-              simpleSaleStep(payload) === "review"
+    payload.action === "product_create"
+      ? productCreateIssues(payload).length === 0
+      : payload.action === "money_transfer_simple"
+        ? simpleTransferStep(payload) === "review"
+        : payload.action === "expense_record_simple"
+          ? simpleExpenseStep(payload) === "review"
+          : payload.action === "money_in_record"
+            ? simpleMoneyInStep(payload) === "review"
+            : payload.action === "order_create"
+              ? !generalOrderDescriptionError(payload) &&
+                orderPreparationIssues(payload).length === 0
+              : payload.action !== "sale_record" ||
+                simpleSaleStep(payload) === "review"
   const token =
     pending && ready ? proposalApprovalToken(row, signingKey()) : undefined
   return {
@@ -394,6 +400,7 @@ export async function editGeneralProposalInTransaction(
   fresh: GeneralTransactionContext,
   input: { proposalId: string; revision: number; payload: GeneralAction },
 ) {
+  const editStartedAt = Date.now()
   const scope = assertGeneralDraftAction(fresh, input.payload.action)
   const row = await fresh.db.assistantActionProposal.findFirst({
     where: {
@@ -456,6 +463,20 @@ export async function editGeneralProposalInTransaction(
   })
   if (saved.count !== 1)
     throw conflict("Draft changed. Refresh before editing.")
+  if (payload.action === "product_create" || payload.action === "order_create")
+    recordPreparation({
+      kind: payload.action === "product_create" ? "product" : "order",
+      durationMs: Date.now() - editStartedAt,
+      lineCount:
+        payload.action === "order_create"
+          ? payload.lines.length
+          : (payload.variants?.length ?? 1),
+      unresolvedCount:
+        payload.action === "order_create"
+          ? orderPreparationIssues(payload).length
+          : productCreateIssues(payload).length,
+      correction: true,
+    })
   return generalProposalForApp({
     ...binding,
     targetRecordId: target?.id ?? null,

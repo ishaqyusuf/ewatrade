@@ -2,8 +2,12 @@ import {
   findCatalogIllustration,
   recommendCatalogIllustration,
 } from "@ewatrade/utils/catalog-illustrations"
-import { isExactDecimal } from "@ewatrade/utils/exact-decimal"
 import { z } from "zod"
+import { productCategoryLabel } from "../product/knowledge"
+import {
+  prepareProductPayload,
+  productPreparationNotes,
+} from "../product/preparation"
 import {
   type SetupProductPayload,
   setupProductPayloadSchema,
@@ -23,13 +27,20 @@ const stock = z
 /**
  * A new product as the owner described it: packs (Crate = 30 Piece), options
  * (Size: Small, Big), a price per option and unit, and opening stock. Drafted
- * once selling prices and pack conversions are known; missing facts are asked first.
+ * as soon as named; unresolved save requirements remain editable.
  */
 const productCreateFields = z
   .object({
     action: z.literal("product_create"),
     name: setup.name,
     description: setup.description,
+    categoryKey: setup.categoryKey,
+    categoryLabel: setup.categoryLabel,
+    categorySuggested: setup.categorySuggested,
+    categorySuggestionName: setup.categorySuggestionName,
+    reviewRequirements: setup.reviewRequirements,
+    preparationVersion: setup.preparationVersion,
+    variantMode: setup.variantMode,
     canonicalUnitName: z.string().trim().min(1).max(80),
     priceMinor: setup.priceMinor,
     openingStock: stock.optional(),
@@ -44,40 +55,30 @@ const productCreateFields = z
   .strict()
 
 export type ProductCreateAction = z.infer<typeof productCreateFields>
-export const productCreateAction = productCreateFields.superRefine(
-  (action, ctx) => {
-    if (action.options?.length && action.openingStock !== undefined)
-      ctx.addIssue({
-        code: "custom",
-        message: `Stock for ${action.name} is counted per option. Give stock for each option instead of one total.`,
-      })
-    for (const [index, pack] of (action.sellingUnits ?? []).entries()) {
-      if (
-        !isExactDecimal(pack.containsQuantity, {
-          allowZero: false,
-          maxScale: 6,
-        })
-      )
-        ctx.addIssue({
-          code: "custom",
-          path: ["sellingUnits", index, "containsQuantity"],
-          message: `How many ${action.canonicalUnitName.toLowerCase()} are in one ${pack.name.toLowerCase()} of ${action.name}?`,
-        })
-    }
-    for (const question of setupProductQuestions(productCreatePayload(action)))
-      ctx.addIssue({ code: "custom", message: question.question })
-    for (const row of productCreateVariants(action)) {
-      const missing = row.sellingUnits.filter(
-        (pack) => pack.priceMinor === undefined,
-      )
-      if (missing.length)
-        ctx.addIssue({
-          code: "custom",
-          message: `What is your selling price for ${row.label} per ${missing.map((pack) => pack.name.toLowerCase()).join(" and ")}? Do not derive an unstated pack price.`,
-        })
-    }
-  },
-)
+export const productCreateAction = productCreateFields
+
+/** Save requirements are separate from the shape of an editable draft. */
+export function productCreateIssues(action: ProductCreateAction): string[] {
+  const issues = setupProductQuestions(productCreatePayload(action)).map(
+    (question) => question.question,
+  )
+  if (action.options?.length && action.openingStock !== undefined)
+    issues.push(
+      `Stock for ${action.name} is counted per option. Give stock for each option instead of one total.`,
+    )
+  if (
+    action.categoryKey &&
+    !productCategoryLabel(action.categoryKey, action.categoryLabel)
+  )
+    issues.push("Choose a valid product category and subcategory.")
+  for (const row of productCreateVariants(action))
+    for (const unit of row.sellingUnits)
+      if (unit.priceMinor === undefined)
+        issues.push(
+          `Enter the selling price for ${row.label} per ${unit.name}.`,
+        )
+  return [...new Set(issues)]
+}
 
 export function productCreatePayload(
   action: ProductCreateAction,
@@ -86,6 +87,13 @@ export function productCreatePayload(
     kind: "product",
     name: action.name,
     description: action.description,
+    categoryKey: action.categoryKey,
+    categoryLabel: action.categoryLabel,
+    categorySuggested: action.categorySuggested,
+    categorySuggestionName: action.categorySuggestionName,
+    reviewRequirements: action.reviewRequirements,
+    preparationVersion: action.preparationVersion,
+    variantMode: action.variantMode,
     unitName: action.canonicalUnitName,
     priceMinor: action.priceMinor,
     openingStock: action.openingStock,
@@ -97,8 +105,8 @@ export function productCreatePayload(
   }
 }
 
-/** General drafts use stated pack prices; Setup's optional price derivation stays separate. */
-function productCreateVariants(
+/** Read the explicit prices and disclosed suggestions stored in this draft. */
+export function productCreateVariants(
   action: ProductCreateAction,
 ): ReturnType<typeof setupProductVariants> {
   return setupProductVariants(productCreatePayload(action)).map((row) => {
@@ -137,8 +145,26 @@ export function isSimpleProductCreate(action: ProductCreateAction) {
  * pack prices, and stock counted in the main unit.
  */
 export function productCreateDraft(
-  action: ProductCreateAction,
+  input: ProductCreateAction,
+  currencyCode = "",
 ): ProductCreateAction {
+  const prepared = prepareProductPayload(
+    productCreatePayload(input),
+    currencyCode,
+  )
+  const action = {
+    ...input,
+    categoryKey: prepared.categoryKey,
+    categoryLabel: prepared.categoryLabel,
+    categorySuggested: prepared.categorySuggested,
+    categorySuggestionName: prepared.categorySuggestionName,
+    reviewRequirements: prepared.reviewRequirements,
+    preparationVersion: prepared.preparationVersion,
+    variantMode: prepared.variantMode,
+    openingStock: prepared.openingStock,
+    sellingUnits: prepared.sellingUnits,
+    variants: prepared.variants,
+  }
   const picture: Partial<ProductCreateAction> = action.photoAssetId
     ? { illustrationId: undefined }
     : action.illustrationId === undefined
@@ -149,25 +175,7 @@ export function productCreateDraft(
           })?.id,
         }
       : {}
-  if (isSimpleProductCreate(action)) return { ...action, ...picture }
-  const rows = productCreateVariants(action)
-  const shared = !action.options?.length
-  return {
-    ...action,
-    ...picture,
-    openingStock: undefined,
-    variants: rows.map((row) => ({
-      selections: row.selections,
-      priceMinor: row.priceMinor,
-      sellingUnitPrices: row.sellingUnits.flatMap((unit) =>
-        unit.priceMinor === undefined
-          ? []
-          : [{ unitName: unit.name, priceMinor: unit.priceMinor }],
-      ),
-      openingStock:
-        row.openingStock ?? (shared ? action.openingStock : undefined),
-    })),
-  }
+  return { ...action, ...picture }
 }
 
 /** "Photo added" or "Picture: Egg tray"; null when there is neither. */
@@ -185,12 +193,15 @@ export function productCreateSummary(
   const unit = action.canonicalUnitName
   const picture = productCreatePicture(action)
   const stockText = (quantity: string | undefined) =>
-    quantity === undefined ? "no opening stock" : `stock ${quantity} ${unit}`
+    quantity === undefined
+      ? "opening stock not supplied"
+      : `stock ${quantity} ${unit}`
   if (isSimpleProductCreate(action))
     return [
       `${action.name} · ${action.priceMinor === undefined ? "price needed" : `${money(action.priceMinor)} per ${unit}`}`,
       action.openingStock === undefined ? null : stockText(action.openingStock),
       picture,
+      ...productPreparationNotes(productCreatePayload(action)),
     ]
       .filter(Boolean)
       .join("\n")
@@ -215,5 +226,6 @@ export function productCreateSummary(
     `${action.name} · counted in ${unit}${packs ? ` · ${packs}` : ""}`,
     ...rows,
     ...(picture ? [picture] : []),
+    ...productPreparationNotes(productCreatePayload(action)),
   ].join("\n")
 }

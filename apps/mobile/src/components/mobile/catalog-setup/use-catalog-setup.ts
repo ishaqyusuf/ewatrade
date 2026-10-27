@@ -1,7 +1,3 @@
-import {
-  mobileCatalogGuidance,
-  mobileCatalogSystemCopy,
-} from "@/lib/catalog-wording"
 import type { KeyboardInlineComposerPill } from "@/components/mobile/keyboard-inline-composer"
 import { useModal } from "@/components/ui/modal"
 import { useAuthContext } from "@/hooks/use-auth"
@@ -9,6 +5,10 @@ import { createCatalogFixture } from "@/internal-tooling/fixture-recipes"
 import { getCatalogItemSaveReadiness } from "@/lib/catalog-item-save-readiness"
 import { resolveCatalogOptionUnitPriceMinor } from "@/lib/catalog-option-pricing"
 import { uploadMobileCatalogPhoto } from "@/lib/catalog-photo-upload"
+import {
+  mobileCatalogGuidance,
+  mobileCatalogSystemCopy,
+} from "@/lib/catalog-wording"
 import { canEditMobileCatalog } from "@/lib/mobile-roles"
 import { useOperationalModeStore } from "@/store/operationalModeStore"
 import { useTRPC } from "@/trpc/client"
@@ -1174,8 +1174,8 @@ export function useCatalogSetup({
         return
       }
     }
-    if (category.trim().length > 120) {
-      setSubmitError("Use a category name of 120 characters or fewer.")
+    if (category.trim().length > 500) {
+      setSubmitError("Use a category name of 500 characters or fewer.")
       return
     }
     const invalidEnteredPrice =

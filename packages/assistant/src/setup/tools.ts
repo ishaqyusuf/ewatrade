@@ -4,6 +4,7 @@ import { recommendCatalogIllustration } from "@ewatrade/utils/catalog-illustrati
 import { listCatalogSetupHelpers } from "@ewatrade/utils/catalog-setup-helpers"
 import { tool } from "ai"
 import { z } from "zod"
+import { prepareProductPayload } from "../product/preparation"
 import {
   SETUP_AREAS,
   type SetupArea,
@@ -17,6 +18,7 @@ import {
   type SetupEntityPayload,
   type SetupEntitySource,
   type SetupOpenQuestion,
+  type SetupProductPayload,
   deriveSetupEntityState,
   majorAmountToMinor,
   normalizeQuantity,
@@ -31,10 +33,10 @@ import {
   setupServicePayloadSchema,
 } from "./contracts"
 import {
-  setupNameEqual,
-  setupSelectionsEqual,
-  setupProductVariants,
   type SetupVariant,
+  setupNameEqual,
+  setupProductVariants,
+  setupSelectionsEqual,
 } from "./variants"
 
 export type SetupBusinessContext = {
@@ -80,6 +82,13 @@ export type SetupKnownAttachment = {
 }
 
 export type SetupToolDependencies = {
+  productPreparationEnabled?: boolean
+  onProductPrepared?: (
+    payload: SetupProductPayload,
+    stats: { durationMs: number; requiredIssues: number },
+  ) => void
+  resolveProductCategory?: (payload: SetupProductPayload) => SetupProductPayload
+  searchProductCategories?: (query: string) => unknown[]
   productOnly?: boolean
   productSeed?: unknown
   context: SetupBusinessContext
@@ -188,6 +197,8 @@ const itemInputSchema = z.object({
       "Products only: quantity in unitName units for a product without options. With options use variants stockByUnit/openingStock instead. Send null to clear a previous shared total. Omitted fields retain existing facts.",
     ),
   categoryKey: z.string().max(120).optional(),
+  categorySuggested: z.boolean().optional(),
+  reviewRequirements: setupProductPayloadSchema.shape.reviewRequirements,
   quickSetupKey: z.string().max(120).optional(),
   sellingUnits: z
     .array(
@@ -199,6 +210,8 @@ const itemInputSchema = z.object({
           .optional()
           .describe("How many unitName units are in one of this selling unit."),
         price: z.string().max(32).optional(),
+        referenceUnitName: z.string().max(80).optional(),
+        referenceQuantity: z.string().max(32).optional(),
       }),
     )
     .max(5)
@@ -213,7 +226,7 @@ const itemInputSchema = z.object({
     .max(3)
     .optional()
     .describe(
-      "Products only: choices the customer picks, e.g. Size: Small, Large. Every combination becomes its own variant (at most 36). Use variants for different prices and stock.",
+      "Products only: choices the customer picks, e.g. Size: Small, Large. Only supplied combinations become variants (at most 36). Use variants for different prices and stock.",
     ),
   variants: z
     .array(
@@ -259,7 +272,7 @@ const itemInputSchema = z.object({
           .max(6)
           .optional()
           .describe(
-            "Owner's counts per selling unit for this variant, e.g. Big has 10 Crate and 20 Piece. Server converts only using confirmed pack sizes. Omit unknown counts; do not guess.",
+            "Owner's counts per selling unit for this variant, e.g. Big has 10 Crate and 20 Piece. Server converts using supplied pack sizes or visible category defaults. Omit unknown counts; do not guess.",
           ),
       }),
     )
@@ -391,25 +404,33 @@ function itemPayload(
     openingStock,
     categoryKey: input.categoryKey,
     quickSetupKey: input.quickSetupKey,
-    sellingUnits: input.sellingUnits?.flatMap((unit) => {
+    sellingUnits: input.sellingUnits?.map((unit) => {
       const containsQuantity = normalizeQuantity(unit.containsQuantity)
-      if (!containsQuantity || Number(containsQuantity) <= 0) {
-        warnings.push(`Selling unit ${unit.name} needs a positive quantity.`)
-        return []
+      const old = prior?.sellingUnits?.find((entry) =>
+        setupNameEqual(entry.name, unit.name),
+      )
+      return {
+        name: unit.name,
+        containsQuantity: containsQuantity ?? old?.containsQuantity ?? "",
+        referenceUnitName:
+          unit.referenceUnitName ??
+          (unit.containsQuantity === undefined
+            ? old?.referenceUnitName
+            : undefined),
+        referenceQuantity:
+          unit.referenceQuantity ??
+          (unit.containsQuantity === undefined
+            ? old?.referenceQuantity
+            : undefined),
+        quantityDefault:
+          unit.containsQuantity === undefined
+            ? old?.quantityDefault
+            : undefined,
+        priceMinor: majorAmountToMinor(unit.price) ?? old?.priceMinor,
       }
-      return [
-        {
-          name: unit.name,
-          containsQuantity,
-          priceMinor:
-            majorAmountToMinor(unit.price) ??
-            prior?.sellingUnits?.find((old) =>
-              setupNameEqual(old.name, unit.name),
-            )?.priceMinor,
-        },
-      ]
     }),
     options: input.options,
+    reviewRequirements: input.reviewRequirements,
     photoAttachmentId: input.photoAttachmentId,
     usage:
       input.usage === "use"
@@ -491,6 +512,9 @@ function itemPayload(
       ? { sellingUnits: input.sellingUnits.length ? sellingUnits : [] }
       : {}),
     ...(input.openingStock === null ? { openingStock: undefined } : {}),
+    ...(input.categoryKey !== undefined
+      ? { categorySuggested: input.categorySuggested ?? true }
+      : {}),
     ...(input.variants !== undefined || prior?.variants
       ? { variants: input.variants?.length === 0 ? [] : variants }
       : {}),
@@ -669,8 +693,16 @@ export function createSetupAssistantTools(deps: SetupToolDependencies) {
             current.some((entity) => entity.key === candidate.key)
           ? candidate.key
           : setupEntityKey(candidate.payload.kind, candidate.payload.name)
+      const preparationStartedAt = Date.now()
+      const prepared =
+        candidate.payload.kind === "product" &&
+        deps.productPreparationEnabled !== false
+          ? prepareProductPayload(candidate.payload, deps.context.currencyCode)
+          : candidate.payload
       const payload = illustrated(
-        candidate.payload,
+        prepared.kind === "product" && deps.resolveProductCategory
+          ? deps.resolveProductCategory(prepared)
+          : prepared,
         current.find((entity) => entity.key === key)?.payload,
         deps.context.businessProfile?.key ?? null,
       )
@@ -681,6 +713,13 @@ export function createSetupAssistantTools(deps: SetupToolDependencies) {
           required: false,
         })),
       )
+      if (payload.kind === "product")
+        deps.onProductPrepared?.(payload, {
+          durationMs: Date.now() - preparationStartedAt,
+          requiredIssues: derived.questions.filter(
+            (question) => question.required,
+          ).length,
+        })
       writes.push({
         key,
         kind: setupEntityKind(payload),
@@ -863,18 +902,23 @@ export function createSetupAssistantTools(deps: SetupToolDependencies) {
         })
         return {
           status: "success",
-          data: presets.slice(0, 8).flatMap((preset) => [
-            {
-              categoryKey: preset.key,
-              label: preset.label,
-              emoji: catalogCategoryEmoji(preset.key),
-            },
-            ...preset.subcategories.slice(0, 8).map((child) => ({
-              categoryKey: child.key,
-              label: `${preset.label} › ${child.label}`,
-              emoji: catalogCategoryEmoji(child.key),
-            })),
-          ]),
+          data: [
+            ...(kind === "product" && query && deps.searchProductCategories
+              ? deps.searchProductCategories(query)
+              : []),
+            ...presets.slice(0, 8).flatMap((preset) => [
+              {
+                categoryKey: preset.key,
+                label: preset.label,
+                emoji: catalogCategoryEmoji(preset.key),
+              },
+              ...preset.subcategories.slice(0, 8).map((child) => ({
+                categoryKey: child.key,
+                label: `${preset.label} › ${child.label}`,
+                emoji: catalogCategoryEmoji(child.key),
+              })),
+            ]),
+          ],
           warnings: [],
         }
       },
@@ -889,16 +933,11 @@ export function createSetupAssistantTools(deps: SetupToolDependencies) {
       execute: async ({ items, finishedArea }) => {
         if (
           deps.productOnly &&
-          (items.length !== 1 ||
-            items[0]?.kind !== "product" ||
-            items[0]?.options?.length ||
-            items[0]?.variants?.length)
+          (items.length !== 1 || items[0]?.kind !== "product")
         )
           return {
             status: "failed" as const,
-            warnings: [
-              "Stage exactly one product. Advanced options require Back to form.",
-            ],
+            warnings: ["Stage exactly one product."],
           }
         if (deps.productOnly)
           items = items.map((item) => ({ ...item, key: "product" }))

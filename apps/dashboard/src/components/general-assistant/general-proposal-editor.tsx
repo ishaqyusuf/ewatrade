@@ -1,4 +1,6 @@
 "use client"
+
+import { GeneralOrderPreparationEditor } from "./general-order-preparation-editor"
 import { GeneralSimpleTransferEditor } from "./general-simple-transfer-editor"
 
 import {
@@ -83,6 +85,20 @@ export function GeneralProposalEditor(props: {
   onSave: (payload: GeneralAction) => void
   onCancel: () => void
 }) {
+  if (
+    props.proposal.payload.action === "order_create" &&
+    props.proposal.payload.preparation
+  )
+    return (
+      <GeneralOrderPreparationEditor
+        key={`${props.proposal.id}:${props.proposal.revision}`}
+        initial={props.proposal.payload}
+        currencyCode={props.currencyCode}
+        disabled={props.disabled}
+        onSave={props.onSave}
+        onCancel={props.onCancel}
+      />
+    )
   if (props.proposal.payload.action === "payment_links_create")
     return (
       <GeneralPaymentLinksEditor

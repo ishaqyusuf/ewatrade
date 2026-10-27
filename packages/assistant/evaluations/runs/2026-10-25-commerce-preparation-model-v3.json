@@ -1,0 +1,138 @@
+[
+  {
+    "case": "pidgin-apparel",
+    "promptVersion": "general-v32",
+    "model": "deepseek-flash",
+    "provider": "deepseek",
+    "firstDraftMs": 2208,
+    "totalMs": 3365,
+    "text": "Ready to review in the form.",
+    "product": {
+      "kind": "product",
+      "name": "Polo Shirt",
+      "categoryKey": "shopify:aa-1",
+      "categoryLabel": "Apparel & Accessories / Clothing",
+      "categorySuggested": true,
+      "preparationVersion": "product-v1",
+      "variantMode": "explicit",
+      "unitName": "Piece",
+      "priceMinor": 350000,
+      "options": [
+        {
+          "name": "Colour",
+          "values": ["Blue", "Red"]
+        }
+      ],
+      "variants": [
+        {
+          "selections": [
+            {
+              "optionName": "Colour",
+              "value": "Blue"
+            }
+          ],
+          "priceMinor": 350000,
+          "stockByUnit": [
+            {
+              "unitName": "Piece",
+              "quantity": "20"
+            }
+          ],
+          "sellingUnitPrices": [],
+          "openingStock": "20"
+        },
+        {
+          "selections": [
+            {
+              "optionName": "Colour",
+              "value": "Red"
+            }
+          ],
+          "priceMinor": 350000,
+          "stockByUnit": [
+            {
+              "unitName": "Piece",
+              "quantity": "5"
+            }
+          ],
+          "sellingUnitPrices": [],
+          "openingStock": "5"
+        }
+      ],
+      "illustrationId": "ill-shirt"
+    },
+    "usage": {
+      "inputTokens": 20261,
+      "inputTokenDetails": {
+        "noCacheTokens": 421,
+        "cacheReadTokens": 19840
+      },
+      "outputTokens": 316,
+      "outputTokenDetails": {
+        "textTokens": 316,
+        "reasoningTokens": 0
+      },
+      "totalTokens": 20577,
+      "reasoningTokens": 0,
+      "cachedInputTokens": 19840
+    }
+  },
+  {
+    "case": "phone",
+    "promptVersion": "general-v32",
+    "model": "deepseek-flash",
+    "provider": "deepseek",
+    "firstDraftMs": 2091,
+    "totalMs": 3541,
+    "text": "Ready to review in the form.",
+    "product": {
+      "kind": "product",
+      "name": "Samsung Galaxy S24 Ultra",
+      "categoryKey": "electronics:phones",
+      "categorySuggested": false,
+      "preparationVersion": "product-v1",
+      "variantMode": "explicit",
+      "unitName": "Piece",
+      "options": [
+        {
+          "name": "Storage",
+          "values": ["256GB"]
+        },
+        {
+          "name": "RAM",
+          "values": ["16GB"]
+        }
+      ],
+      "variants": [
+        {
+          "selections": [
+            {
+              "optionName": "Storage",
+              "value": "256GB"
+            },
+            {
+              "optionName": "RAM",
+              "value": "16GB"
+            }
+          ],
+          "sellingUnitPrices": []
+        }
+      ]
+    },
+    "usage": {
+      "inputTokens": 20124,
+      "inputTokenDetails": {
+        "noCacheTokens": 412,
+        "cacheReadTokens": 19712
+      },
+      "outputTokens": 275,
+      "outputTokenDetails": {
+        "textTokens": 275,
+        "reasoningTokens": 0
+      },
+      "totalTokens": 20399,
+      "reasoningTokens": 0,
+      "cachedInputTokens": 19712
+    }
+  }
+]

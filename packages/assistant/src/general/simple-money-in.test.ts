@@ -32,6 +32,9 @@ test("other money owners are not silently capital contributions", () => {
     "transfer between accounts",
     "opening balance 20k into cash",
     "refund 20k into cash",
+    "Add eggs to my goods. Big eggs cost 200 naira each; we have 200 cartons in stock.",
+    "Add 30 blue T-shirts to my catalog at 3500 each",
+    "Put 12 bags of rice in inventory",
   ])
     expect(isSimpleMoneyInIntent(text)).toBe(false)
   expect(isSimpleMoneyInIntent("put 20k into cash, no sale")).toBe(true)

@@ -248,6 +248,13 @@ export async function readGeneralOrderReview(
         pricingPolicy: true,
         kind: true,
         catalogItem: { select: { name: true } },
+        variant: {
+          select: {
+            name: true,
+            isDefault: true,
+            _count: { select: { selections: true } },
+          },
+        },
         productUnitOffering: {
           select: {
             inventoryUnit: { select: { configurationVersionId: true } },
@@ -274,17 +281,26 @@ export async function readGeneralOrderReview(
       fixedPriceMinor: offering.fixedPriceMinor,
     })
     totalMinor += price.totalMinor
+    const detail = [
+      offering.variant &&
+      (!offering.variant.isDefault || offering.variant._count.selections > 0)
+        ? offering.variant.name
+        : undefined,
+      offering.name,
+    ]
+      .filter(Boolean)
+      .join(" · ")
     rows.push({
       title: offering.catalogItem.name,
-      detail: offering.name,
+      detail,
       quantity: line.quantity,
       unitPriceMinor: price.unitPriceMinor,
       totalMinor: price.totalMinor,
     })
     lines.push(
       price.unitPriceMinor === null
-        ? `${offering.catalogItem.name} · ${offering.name} · quantity ${line.quantity} · entered item total ${money(price.totalMinor)}`
-        : `${offering.catalogItem.name} · ${offering.name} · ${line.quantity} × ${money(price.unitPriceMinor)} = ${money(price.totalMinor)}`,
+        ? `${offering.catalogItem.name} · ${detail} · quantity ${line.quantity} · entered item total ${money(price.totalMinor)}`
+        : `${offering.catalogItem.name} · ${detail} · ${line.quantity} × ${money(price.unitPriceMinor)} = ${money(price.totalMinor)}`,
     )
   }
   if (!Number.isSafeInteger(totalMinor) || totalMinor > 100_000_000)

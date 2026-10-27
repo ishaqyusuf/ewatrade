@@ -112,7 +112,11 @@ test("a product with options and packs reads as an options table", () => {
   )
   expect(p.summary.context).toBe("Counted in Piece · Tray = 30 Piece")
   expect(p.facts).toEqual([{ value: "2 options" }, { value: "1 pack size" }])
-  expect(p.table?.rows[0]?.cells).toEqual(["Small", "₦80.00 / Piece", "None"])
+  expect(p.table?.rows[0]?.cells).toEqual([
+    "Small",
+    "₦80.00 / Piece",
+    "Not supplied",
+  ])
   expect(p.table?.rows[0]?.detail).toBe("₦2,400.00 / Tray")
 })
 
@@ -196,4 +200,30 @@ test("a unit configuration lists proposed units and folds the rest", () => {
     "Affected selling offerings",
     "Stock sources",
   ])
+})
+
+test("Product cards keep useful field context and expose blockers directly without Review notes", () => {
+  const p = valid(
+    productCreatePresentation(
+      {
+        action: "product_create",
+        name: "Eggs",
+        canonicalUnitName: "Egg",
+        categoryKey: "poultry:eggs",
+        sellingUnits: [
+          { name: "Egg", containsQuantity: "1" },
+          {
+            name: "Crate",
+            containsQuantity: "30",
+            quantityDefault: "egg-crate-30",
+          },
+        ],
+      },
+      "NGN",
+    ),
+  )
+  expect(p.sections).toBeUndefined()
+  expect(p.summary.context).toBe("Counted in Egg · Crate = 30 Egg (default)")
+  expect(p.facts?.some((fact) => fact.label === "Category")).toBe(true)
+  expect(p.note).toContain("selling price")
 })

@@ -1,0 +1,419 @@
+{
+  "version": 1,
+  "baseCommit": "8a33662cf76f03e04926a2bf9111f24d6c768dfb",
+  "commit": null,
+  "deployment": null,
+  "capturedAt": "2026-10-26T14:02:39.674042+00:00",
+  "scope": "Uncommitted commerce source plus actual local Dashboard QA saves and recovery; historical model fingerprints preserved separately.",
+  "files": [
+    {
+      "path": "apps/api/src/assistant/catalog-review-presentations.test.ts",
+      "sha256": "f9d1fdf584a39bd1b70ce83581fc5bd92c5c29c0d01c597b0c62d8e706077fa1"
+    },
+    {
+      "path": "apps/api/src/assistant/catalog-review-presentations.ts",
+      "sha256": "5cf4597f06e3c49200be455ba512bbc667f19cdd6bc7926b81e78b01dd66ad2e"
+    },
+    {
+      "path": "apps/api/src/assistant/general-actions.ts",
+      "sha256": "f993318dbf786754babbdf85eb47dea20505e24c8a79b3509f1ea4f67b27fa63"
+    },
+    {
+      "path": "apps/api/src/assistant/general-context.ts",
+      "sha256": "f5d52d5604d21fc0a46cbcee76e69cfacd4ea405da2dae460a44923769618296"
+    },
+    {
+      "path": "apps/api/src/assistant/general-order-preparation.ts",
+      "sha256": "1b9f1e1d74964efdb4dc75f3125f0e11abe4a2bc4512d31031aa9468306a5156"
+    },
+    {
+      "path": "apps/api/src/assistant/general-proposal-history.test.ts",
+      "sha256": "d866414fc0d8b5556b5bc876261040d490dc8694342110c584a8263edbbb8b49"
+    },
+    {
+      "path": "apps/api/src/assistant/general-proposals.ts",
+      "sha256": "9d786414b7b30959a5bb9bc758e2909ba1cf7344b03c1e6c671ad1fe5938cdbb"
+    },
+    {
+      "path": "apps/api/src/assistant/general-rollout.ts",
+      "sha256": "8f4888abdb5123bce282c4ff930ccccdf2aab168120fbbf6dfbc360508672587"
+    },
+    {
+      "path": "apps/api/src/assistant/general-service-job-access.test.ts",
+      "sha256": "0131a57f9da9daa92cde53b6b89ed27357c14f7343dc30c5adf893f8864f3b7b"
+    },
+    {
+      "path": "apps/api/src/assistant/general-service-job-draft.ts",
+      "sha256": "300e7d1f65e99d881446c006d8b9416b82dec5762380e10b0edaa6ed4fe93dac"
+    },
+    {
+      "path": "apps/api/src/assistant/general-simple-sale-composition.test.ts",
+      "sha256": "97cdab7e0902fcefa8c73e14d62308c12c62382e1312077f603ac9b7e4108f20"
+    },
+    {
+      "path": "apps/api/src/assistant/general-tools.ts",
+      "sha256": "b1a212d9afff53c5bc0b93b06e7853bdbcd77825ade1c239925c47ad1a03f7c1"
+    },
+    {
+      "path": "apps/api/src/assistant/general-turn-execution.ts",
+      "sha256": "31175a5d42169bf50ac07f76f23a548f60f3baafab2f4661e1fa7b2b9e4664dd"
+    },
+    {
+      "path": "apps/api/src/assistant/preparation-observability.test.ts",
+      "sha256": "48e9a7a77d338e3d3fdd39daee6d169b7d757f5a8212cca5e6fa814e1612d34c"
+    },
+    {
+      "path": "apps/api/src/assistant/preparation-observability.ts",
+      "sha256": "22beeb43837a5c58bffcf5fa678bae73e4adf6d62a5c5d31fc4c7865c8e10c67"
+    },
+    {
+      "path": "apps/api/src/assistant/product-category.test.ts",
+      "sha256": "67a309b2b2c2d64adb824c9f4f606a24777f92ae5fdb21c3643378fa0cacaf79"
+    },
+    {
+      "path": "apps/api/src/assistant/product-category.ts",
+      "sha256": "9fbb32416d16763c44bb28f628ac603c95ec7dcdf9e34679e0ea2dda7368c1bd"
+    },
+    {
+      "path": "apps/api/src/assistant/product-preparation.test.ts",
+      "sha256": "8b5a768bf5dc05d529d79894892bfa9db9200c8cf85b41359be159ff4d1be44d"
+    },
+    {
+      "path": "apps/api/src/assistant/setup-commit.ts",
+      "sha256": "bb16632cbc28a7d26d2e9a3ac80e852a583f5b474d123bf2df399ee053e93afc"
+    },
+    {
+      "path": "apps/api/src/assistant/workflow-turn.ts",
+      "sha256": "b8f0cc5faca7e001d9e87a28afbaf7d1fb14f87fd42256359080b98423709fcd"
+    },
+    {
+      "path": "apps/api/src/schemas/catalog.ts",
+      "sha256": "2767c49b76c8bd9cea5f7d361b494b9d84ab8e8483b22d47e016368c76031633"
+    },
+    {
+      "path": "apps/api/src/trpc/routers/catalog.ts",
+      "sha256": "7fe3dd08a02adc6f1dee32bdce32d932b118a4ecdad447ea1dd43ced887b4897"
+    },
+    {
+      "path": "apps/api/src/trpc/routers/product-assistant.ts",
+      "sha256": "d07858ece3bb4286ee9c9c986b9c4fa3203fd8719dd90ad6fa003bf6b0df79fe"
+    },
+    {
+      "path": "apps/api/src/trpc/routers/setup-assistant.ts",
+      "sha256": "8d16fc3e6b68afe46279769fc7e7eecd85f69d7d13165b6e7661f1df250f75cd"
+    },
+    {
+      "path": "apps/api/src/utils/staff-procedure-policy.test.ts",
+      "sha256": "97255531a52446a6c06021a129f47b3321b18bbd39b3de13f0b56799727b0477"
+    },
+    {
+      "path": "apps/api/src/utils/staff-procedure-policy.ts",
+      "sha256": "03d45b0638c5cdc6018862f49012ce024e127e217ea900cfa58cfe9fc5a5abab"
+    },
+    {
+      "path": "apps/dashboard/src/components/general-assistant/general-order-preparation-editor.tsx",
+      "sha256": "289cda065ae04db36eba04dc2e27d145c6b7b91d937785bab67f08a349bf7121"
+    },
+    {
+      "path": "apps/dashboard/src/components/general-assistant/general-product-create-editor.tsx",
+      "sha256": "4fd88e5005f230a81c801b5a011ee2c6deb1aca9d25778612623d6359597a7d7"
+    },
+    {
+      "path": "apps/dashboard/src/components/general-assistant/general-proposal-editor.tsx",
+      "sha256": "87ba55b9e04d505728f73460cf239544cd366ea819df496c636a64f366040593"
+    },
+    {
+      "path": "apps/dashboard/src/components/general-assistant/general-service-job-card.fixture.tsx",
+      "sha256": "011d7d56a5108aa5226cf841e32c9077f2b47b15f9ddfd5b6e5dbb44faaf25b7"
+    },
+    {
+      "path": "apps/dashboard/src/components/general-assistant/general-service-job-card.test.ts",
+      "sha256": "addd99734fc69e56bce683b78117e75e418ba87d9b0e180fe9b61675a2f3616f"
+    },
+    {
+      "path": "apps/dashboard/src/components/general-assistant/general-service-job-card.tsx",
+      "sha256": "36ac538eb58a781e85b1447a93f45438031e64ce42735606c8042a9eff46f6c2"
+    },
+    {
+      "path": "apps/dashboard/src/components/general-assistant/open-missing-catalog-item.tsx",
+      "sha256": "90ea3d8dc504c67bc2a662e5d32252a1fc8f2339a0473db667ec6299a8fe73b9"
+    },
+    {
+      "path": "apps/dashboard/src/components/general-assistant/order-preparation-editor.fixture.tsx",
+      "sha256": "0f0598cbb4e731b82b0bbbf3d1d8604b06f9e5221489f146fde8160350445622"
+    },
+    {
+      "path": "apps/dashboard/src/components/general-assistant/order-preparation-editor.test.ts",
+      "sha256": "644cfc760cab822d295ce291c042c612052fb9e4ce237d0305b0e0e524a15e0c"
+    },
+    {
+      "path": "apps/dashboard/src/components/general-assistant/product-preparation-editor.fixture.tsx",
+      "sha256": "5c22cb8b3fda66f7e7af1deaf65cc9643d15f159ca29d1d221da2abc2f3b103f"
+    },
+    {
+      "path": "apps/dashboard/src/components/general-assistant/product-preparation-editor.test.ts",
+      "sha256": "516b1dbea4b72fc893aace8d0d67e7b797a6fc1ebf3db865dd31d365c4bc90ff"
+    },
+    {
+      "path": "apps/dashboard/src/components/product-assistant/product-chat.tsx",
+      "sha256": "dd20c0d96be441d305163f276343a88a111c22c567eac1e6f76b4d8685b053d8"
+    },
+    {
+      "path": "apps/dashboard/src/components/service-work/service-intake-form.tsx",
+      "sha256": "0302e16c3ff510b54f7ae4d71cfbc90c3fb4c37a1dc3a22775bfca72827240da"
+    },
+    {
+      "path": "apps/dashboard/src/components/service-work/service-intake-model.ts",
+      "sha256": "0c1f069d9924ad8ad395c32af46493ecde69625a26ea5765247bda2ecf1d538a"
+    },
+    {
+      "path": "apps/dashboard/src/components/setup-assistant/setup-draft-card.tsx",
+      "sha256": "233c0801b192ef73e4017048fa2c6d4717a31bd806f51319e236dc254bd427e0"
+    },
+    {
+      "path": "apps/dashboard/src/components/setup-assistant/setup-draft-panel.tsx",
+      "sha256": "455b74f0aabfd6cb4e445cd863939cd89f7e723fe5508fbc2516ba2443120292"
+    },
+    {
+      "path": "apps/dashboard/src/components/setup-assistant/setup-format.ts",
+      "sha256": "525f55c18ff8bdf2b1198703772a50b97a09df80d0bc7c5bf9abf8f3375007c2"
+    },
+    {
+      "path": "apps/dashboard/src/components/setup-assistant/setup-variant-fields.tsx",
+      "sha256": "8b3030648029467b4a673a85af140a91a4d82ae2693414c542449443fc1c1fe2"
+    },
+    {
+      "path": "apps/mobile/src/components/mobile/assistant/general-product-create-rows.tsx",
+      "sha256": "eee6ebb86aa98c5ada5ab5a82eff73847c33179f88d046efb2180254420265f4"
+    },
+    {
+      "path": "apps/mobile/src/components/mobile/assistant/general-proposal-editor.tsx",
+      "sha256": "18cc229f3ef436ec265b1c4e8bbff68ed2bef15d990c6f88107857a42905a5c6"
+    },
+    {
+      "path": "apps/mobile/src/components/mobile/catalog-setup/use-catalog-setup.ts",
+      "sha256": "8ba28c78c02c4516e3f7fa9855abcaf7a8dc983a4a96dda08c0a512c9f6349b7"
+    },
+    {
+      "path": "biome.json",
+      "sha256": "3fbbf2117337025e5be71f8e6d83d5f380946ba4b72e2fa0a30882ac4bb8cca8"
+    },
+    {
+      "path": "packages/assistant/evaluations/commerce-preparation-smoke.ts",
+      "sha256": "6a565ae1417a08f60deb005726ad2d5499588264c319d7e50bd18d06627c5136"
+    },
+    {
+      "path": "packages/assistant/evaluations/product-preparation-smoke.ts",
+      "sha256": "3c460055df278be16a78c319dcd5edf002246a34bfeb82f80b1428e958b6b452"
+    },
+    {
+      "path": "packages/assistant/evaluations/runs/2026-10-26-commerce-client.md",
+      "sha256": "d25f6c96655a0aed5cf2c8688f18dfd3c249ec5687b498039f5bcef1c7a1a35f"
+    },
+    {
+      "path": "packages/assistant/package.json",
+      "sha256": "ea3f66e5719163844f9ab2d7ff4187698b416ad03c220d72e35785b40024529c"
+    },
+    {
+      "path": "packages/assistant/src/capabilities/manifest.ts",
+      "sha256": "92b9509f1fbb7a1cb596019530cfe8d2c23689b66beee189e47fe50cefc57243"
+    },
+    {
+      "path": "packages/assistant/src/general/contracts.ts",
+      "sha256": "df18b0678b222c32c8d64d33d5aed92b6ece2f740e427065f46e5389878f2fc8"
+    },
+    {
+      "path": "packages/assistant/src/general/order-preparation.test.ts",
+      "sha256": "043a7c0b14fa9ba3d91889e1c1bed8ff4bc3c473334be2fd65abc0f7de5ff79f"
+    },
+    {
+      "path": "packages/assistant/src/general/order-preparation.ts",
+      "sha256": "86737a03af19b185a75c0873e9667ec88981b69c933a629c6552bceca19dfc75"
+    },
+    {
+      "path": "packages/assistant/src/general/product-create.test.ts",
+      "sha256": "8d1b22db01ca1ff339b3c88c9c0183aeab1462b20ee037234b2ec101ae7ccc27"
+    },
+    {
+      "path": "packages/assistant/src/general/product-create.ts",
+      "sha256": "40ca903fa02afc871a5d1b3f6c246889e753a59f24f81110a07ed32192e469ae"
+    },
+    {
+      "path": "packages/assistant/src/general/prompt.ts",
+      "sha256": "470f3731c815d14a3fb5f381a72ae2412c37ac19119f02efc67802dd283776f0"
+    },
+    {
+      "path": "packages/assistant/src/general/service-job-draft.test.ts",
+      "sha256": "f45621fe4a3d885d1871a856e17d976e0a225413748afbf134aa1d6f8a417737"
+    },
+    {
+      "path": "packages/assistant/src/general/service-job-draft.ts",
+      "sha256": "7a2000b00034ede0300b4622daa90438386cbcec72e0dc04f7978f06f7622356"
+    },
+    {
+      "path": "packages/assistant/src/general/simple-money-in.test.ts",
+      "sha256": "fbadc41f096e1ef6c7e9fc1ace1574434e7676ebf706df8e262e759ec013f7f3"
+    },
+    {
+      "path": "packages/assistant/src/general/simple-money-in.ts",
+      "sha256": "3dcccfbb34f402d5d9101c75389f774da237bf21d0c47a84383966443013e677"
+    },
+    {
+      "path": "packages/assistant/src/product/SHOPIFY-TAXONOMY-LICENSE.txt",
+      "sha256": "3b6977041f50c678f94fc2f66a99d2ed82a5ca5467b86a3c9a019386bf7bee2f"
+    },
+    {
+      "path": "packages/assistant/src/product/contracts.test.ts",
+      "sha256": "0c79dfa37061e4f9e8c4c272b251d74b4de7041a3795c3b8e41887c6b55c0c90"
+    },
+    {
+      "path": "packages/assistant/src/product/contracts.ts",
+      "sha256": "9343731e2e1d3ed0a0f852cd342e9debce060b7df77c359782d531210d0290c6"
+    },
+    {
+      "path": "packages/assistant/src/product/knowledge.ts",
+      "sha256": "602911475c1a99ba45144e1d879ee66bc6ed35bdafaa6a45dc1a402e8e600752"
+    },
+    {
+      "path": "packages/assistant/src/product/preparation.test.ts",
+      "sha256": "5f625f9875161d5328c8010e6ee0de042d489f78ee240b2beb9c6cdd1312ca2e"
+    },
+    {
+      "path": "packages/assistant/src/product/preparation.ts",
+      "sha256": "2c3c21a51bf6e1272e305192376db5ad1bba5bdd9aca890c17ddccbf3b959369"
+    },
+    {
+      "path": "packages/assistant/src/setup/contracts.ts",
+      "sha256": "2dcba2f21b350ca2bc1ac1f2a72a0953caf92ee12a79f5bbf4d5cca783816f88"
+    },
+    {
+      "path": "packages/assistant/src/setup/prompt.ts",
+      "sha256": "2102a0e04caf26de9d91584cc671f8b229187f17c6bea3e932121ba9fc28b498"
+    },
+    {
+      "path": "packages/assistant/src/setup/tools.ts",
+      "sha256": "650c002a96831c89f2d0ff529a66c64a5d41fbf2ae0d219f76bf9529352175ad"
+    },
+    {
+      "path": "packages/assistant/src/setup/variants.ts",
+      "sha256": "4c15e4e03ef67fb186f063e2ac7266a5d1d708c539c4edcd3cd9b71e1f8e6164"
+    },
+    {
+      "path": "packages/db/src/queries/assistant-general-review.test.ts",
+      "sha256": "f64410af8bcf0666a9a4b7282ed56700ac66cee2eb23c57526856d078c09bba5"
+    },
+    {
+      "path": "packages/db/src/queries/assistant-general.ts",
+      "sha256": "22c1a23a790c2f9e1b0dc509ee74c24d3c6507e70afef0bc779ae52d5cd3c28c"
+    },
+    {
+      "path": "packages/db/src/queries/assistant-service-job-card.ts",
+      "sha256": "4a94be6c8bd76dc623268725035202838cc0dab54155365e8207bc17c7537c46"
+    },
+    {
+      "path": "packages/db/src/queries/catalog-categories.ts",
+      "sha256": "2ffc4a5de452068e1de3f3b7cd5fe721ffa4a0db08dd4c41a576ab35318ff74a"
+    },
+    {
+      "path": "packages/db/src/queries/catalog-category-identity.ts",
+      "sha256": "cb557b3fefea0a3eadb93d0b8cfa31632a35e8bda4ce98ac6686b36a2bde1056"
+    },
+    {
+      "path": "packages/db/src/queries/catalog.ts",
+      "sha256": "149c1f938ba04d528b232825415a5a42b3dd217b481fcac80c568e738bf33f48"
+    },
+    {
+      "path": "packages/db/src/queries/customers.ts",
+      "sha256": "798e0de52421456567a5a303829d0a81db242e4fb33e0159d5adcc77b10d10c0"
+    },
+    {
+      "path": "packages/utils/package.json",
+      "sha256": "f037711735a5c061a89ff8a74b5f7ec3d0b79330beac94e733108ad137293f00"
+    },
+    {
+      "path": "packages/utils/src/catalog-category-presets.json",
+      "sha256": "b190b99a9c1c1b60046c74f198133229d9a107e5f4c56f4a942848fdee29f33c"
+    },
+    {
+      "path": "packages/utils/src/product-taxonomy.test.ts",
+      "sha256": "722d4b9dbd0efde5df0923cf400d6f88ccc4a45c606346996366611545f72446"
+    },
+    {
+      "path": "packages/utils/src/product-taxonomy.ts",
+      "sha256": "a7f44c76dead863a6599dd43bd52825714ccf7d0c720890c1ed027e7cf4366fd"
+    },
+    {
+      "path": "packages/utils/src/product-taxonomy/LICENSE.txt",
+      "sha256": "7e0c4f8155b78f750829a6a8096004970b75e82b2c25639c0b8a1444231e4c04"
+    },
+    {
+      "path": "packages/utils/src/product-taxonomy/attributes.json",
+      "sha256": "daa6fc5044a98aeb1a2955233419417156f8b527ab2babe076001b3a4d620927"
+    },
+    {
+      "path": "packages/utils/src/product-taxonomy/categories.json",
+      "sha256": "cdb2bfe59f5463c88b16fbd4d76184019cfc6a7d1187598ae93432ce7674dd1d"
+    },
+    {
+      "path": "packages/utils/src/product-taxonomy/manifest.json",
+      "sha256": "591fa3fc3c7d69612b2f334327747fea90ed3df308c1320a8ea4e123bbe4c8ff"
+    },
+    {
+      "path": "scripts/import-product-taxonomy.ts",
+      "sha256": "479c643440c5cc226127168e6e90e45b8f2881b3a735457c23ff6a49a2f2ad32"
+    }
+  ],
+  "localArtifacts": [
+    {
+      "path": ".brain/qa/evidence/2026-10-26-commerce-client.json",
+      "sha256": "cf7058aa084e523d4b853d590eca8b8d529043d28453c0d07b3db75dd86c63bb"
+    },
+    {
+      "path": ".brain/qa/evidence/2026-10-26-commerce-workshop-publication.json",
+      "sha256": "d58fcfb48db4af8b8a674fd243055479eda9254ce56f74cad354aec3ff03f24d"
+    },
+    {
+      "path": ".brain/qa/evidence/2026-10-26-commerce-review-site-mirror.tar.gz",
+      "sha256": "23a24f7e93143b9d0e5f64cf9371294bc03aeaa1b0681d7b0d652f516c6ca370"
+    },
+    {
+      "path": ".brain/qa/evidence/2026-10-26-product-saved.png",
+      "sha256": "7d631064049c518aed532fda66d6c9d88155a38009051768ebaf3f340ac089c9"
+    },
+    {
+      "path": ".brain/qa/evidence/2026-10-26-phone-saved.png",
+      "sha256": "62cdb72d01c7af9badeffba6f8358388aafe11bf1220266ec815e3715d8cba21"
+    },
+    {
+      "path": ".brain/qa/evidence/2026-10-26-shirt-saved.png",
+      "sha256": "34b100da652bb993a4e7feaa9e0f57e35e72f8998e5614bf0a703a561eee2373"
+    },
+    {
+      "path": ".brain/qa/evidence/2026-10-26-order-saved.png",
+      "sha256": "d73c4acf46b56cfb4dfbe3b4f50c18de2b85da5d95233a48f5fdcbc003afbb7c"
+    },
+    {
+      "path": ".brain/qa/evidence/2026-10-26-order-continuation.png",
+      "sha256": "2f20487d0264190f7098c6ddfc7b71ef1c8d5efd2c58815e01d657dc6eb21df0"
+    },
+    {
+      "path": ".brain/qa/evidence/2026-10-26-service-saved.png",
+      "sha256": "79fd20f1b1a4a4cd33c6a0f72185a7a78f2e271999a8b369ed478094e14e4778"
+    },
+    {
+      "path": ".brain/qa/evidence/2026-10-26-service-recovered.png",
+      "sha256": "854613e8d8ed0f82b77a2a0623a42fef9799e72fa407aa4752d358ede7fb4474"
+    },
+    {
+      "path": ".brain/qa/evidence/2026-10-26-commerce-workshop-review.png",
+      "sha256": "3761890dd4af6b67cf3346ae2dd9f327f763003fc6497e69bf4743585a61e416"
+    }
+  ],
+  "limits": [
+    "No native/WhatsApp release or pilot claim",
+    "Global H01 blocked by two unrelated Banking classifications",
+    "API/Dashboard/assistant unrelated type diagnostics8/7/7",
+    "Completed retry concurrency verified; unchanged pending-lock coverage reused",
+    "Final H02 blocked by missing schema documentation decision for concurrent external Prisma work; earlier pass superseded"
+  ]
+}

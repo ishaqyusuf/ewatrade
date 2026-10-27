@@ -25,7 +25,7 @@ export const serviceJobRequestSchema = z
         z
           .object({
             name: z.string().trim().min(1).max(80),
-            treatment: z.enum(["wash_and_iron", "iron_only", "wash_only"]),
+            treatment: z.string().trim().min(1).max(80).optional(),
             quantity,
             /** Stated price for a missing service only, in major currency units. */
             unitPrice: z
@@ -94,15 +94,33 @@ export const serviceJobDraftSchema = z
             name: z.string().min(1).max(160),
             offeringId: z.string().min(1).optional(),
             quantity,
-            unitPriceMinor: z.number().int().nonnegative().max(100_000_000),
-            totalMinor: z.number().int().nonnegative().safe(),
+            quoteRequired: z.boolean().optional(),
+            resolution: z
+              .enum([
+                "missing",
+                "ambiguous",
+                "unavailable",
+                "incomplete_search",
+                "price_needed",
+              ])
+              .optional(),
+            issue: z.string().max(300).optional(),
+            unitPriceMinor: z
+              .number()
+              .int()
+              .nonnegative()
+              .max(100_000_000)
+              .optional(),
+            totalMinor: z.number().int().nonnegative().safe().optional(),
           })
           .strict(),
       )
       .min(1)
       .max(20),
-    totalMinor: z.number().int().nonnegative().safe(),
+    totalMinor: z.number().int().nonnegative().safe().optional(),
     notes: z.string().max(1000).optional(),
+    issues: z.array(z.string().max(300)).max(25).optional(),
+    customerIssue: z.string().max(300).optional(),
     assumptions: z.array(z.string().max(200)).max(3),
   })
   .strict()
@@ -127,7 +145,9 @@ export function serviceNameKey(name: string) {
 export type ServiceJobChoice = {
   offeringId: string
   name: string
-  unitPriceMinor: number
+  unitPriceMinor?: number
+  requiresQuote?: boolean
+  aliases?: string[]
   available?: boolean
 }
 
@@ -135,44 +155,85 @@ export type ServiceJobChoice = {
 export function resolveServiceJobLines(
   request: ServiceJobRequest,
   choices: ServiceJobChoice[],
+  complete = true,
 ) {
   const lines: ServiceJobDraft["lines"] = []
   const questions: string[] = []
   for (const line of request.lines) {
-    const name = `${line.name} · ${serviceTreatmentLabels[line.treatment]}`
+    const treatment =
+      line.treatment &&
+      serviceNameKey(line.treatment) !== serviceNameKey(line.name)
+        ? (Object.entries(serviceTreatmentLabels).find(
+            ([key]) => key === line.treatment,
+          )?.[1] ?? line.treatment)
+        : undefined
+    const name = treatment ? `${line.name} · ${treatment}` : line.name
     const wanted = serviceNameKey(name)
-    const matches = choices.filter(
-      (choice) =>
-        serviceNameKey(choice.name) === wanted ||
-        serviceNameKey(choice.name).endsWith(` ${wanted}`),
+    const matches = choices.filter((choice) =>
+      [choice.name, ...(choice.aliases ?? [])].some(
+        (name) =>
+          serviceNameKey(name) === wanted ||
+          serviceNameKey(name).endsWith(` ${wanted}`),
+      ),
     )
+    const base = { name, quantity: line.quantity }
+    if (!complete) {
+      lines.push({
+        ...base,
+        resolution: "incomplete_search",
+        issue:
+          "Catalog search is incomplete. Select the exact saved service in the form.",
+      })
+      continue
+    }
     if (matches.length > 1) {
-      questions.push(`Which saved ${name} service should I use?`)
+      const issue = `Which saved ${name} service should I use?`
+      questions.push(issue)
+      lines.push({ ...base, resolution: "ambiguous", issue })
       continue
     }
     const match = matches[0]
     if (match?.available === false) {
-      questions.push(
-        `${name} is saved but unavailable at a fixed price in this Store. Check its catalog settings.`,
-      )
+      const issue = `${name} is saved but unavailable in this Store. Check its catalog settings.`
+      questions.push(issue)
+      lines.push({
+        ...base,
+        offeringId: match.offeringId,
+        resolution: "unavailable",
+        issue,
+      })
       continue
     }
-    if (!match && line.unitPrice === undefined) {
-      questions.push(
-        `What is the price per ${line.name.toLowerCase()} for ${serviceTreatmentLabels[line.treatment].toLowerCase()}?`,
-      )
+    if (
+      (!match || match.requiresQuote || match.unitPriceMinor === undefined) &&
+      line.unitPrice === undefined
+    ) {
+      const issue = match
+        ? `Enter the quote price for ${name} in the form.`
+        : `Enter the ${treatment ? `${treatment.toLowerCase()} ` : ""}price per ${line.name.toLowerCase()} in the form.`
+      lines.push({
+        ...base,
+        ...(match ? { offeringId: match.offeringId } : {}),
+        resolution: match ? "price_needed" : "missing",
+        issue,
+      })
       continue
     }
     const minor =
-      match?.unitPriceMinor ??
+      (match?.requiresQuote ? undefined : match?.unitPriceMinor) ??
       Number(multiplyExactDecimals(line.unitPrice ?? "0", "100"))
     const totalMinor = Number(
       multiplyExactDecimals(line.quantity, String(minor)),
     )
     if (!Number.isSafeInteger(totalMinor)) {
-      questions.push(
-        `Use a quantity for ${name} that gives an exact currency amount.`,
-      )
+      const issue = `Use a quantity for ${name} that gives an exact currency amount.`
+      questions.push(issue)
+      lines.push({
+        ...base,
+        ...(match ? { offeringId: match.offeringId } : {}),
+        resolution: "price_needed",
+        issue,
+      })
       continue
     }
     lines.push({
@@ -181,6 +242,7 @@ export function resolveServiceJobLines(
       unitPriceMinor: minor,
       totalMinor,
       ...(match ? { offeringId: match.offeringId } : {}),
+      ...(match?.requiresQuote ? { quoteRequired: true } : {}),
     })
   }
   return { lines, questions }

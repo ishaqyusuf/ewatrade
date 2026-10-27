@@ -1461,7 +1461,7 @@ export async function countCatalogItems(
 }
 
 export async function listCatalogItemsPage(
-  db: PrismaClient,
+  db: Pick<PrismaClient, "catalogItem">,
   input: ListCatalogItemsPageInput,
 ) {
   const limit = Math.min(Math.max(input.limit ?? 20, 1), 50)
@@ -1628,7 +1628,7 @@ function catalogSearchFields(
  * paged by position ("rank:20"). Candidates are capped so ranking stays fast.
  */
 async function listRankedCatalogItemsPage(
-  db: PrismaClient,
+  db: Pick<PrismaClient, "catalogItem">,
   input: ListCatalogItemsPageInput,
   where: Prisma.CatalogItemWhereInput,
 ) {

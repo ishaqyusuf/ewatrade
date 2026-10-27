@@ -66,6 +66,7 @@ describe("dashboard navigation policy", () => {
       "/inventory",
       "/sales",
       "/services",
+      "/website-requests",
       "/customers",
       "/activity",
       "/staff",
@@ -96,6 +97,7 @@ describe("dashboard navigation policy", () => {
       "/sales",
       "/services",
       "/prescriptions",
+      "/website-requests",
       "/customers",
       "/activity",
       "/staff",
@@ -104,7 +106,7 @@ describe("dashboard navigation policy", () => {
       "/settings",
     ])
     expect(adminItems).toEqual(ownerItems)
-    expect(new Set(flatten(ownerItems).map((item) => item.href)).size).toBe(36)
+    expect(new Set(flatten(ownerItems).map((item) => item.href)).size).toBe(37)
   })
 
   test("hides and redirects Website & domain until launch approval", () => {
@@ -289,6 +291,7 @@ describe("dashboard navigation policy", () => {
       "/conversations",
       "/sales",
       "/services",
+      "/website-requests",
       "/customers",
       "/activity",
     ])

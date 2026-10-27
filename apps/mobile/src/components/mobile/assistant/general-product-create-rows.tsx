@@ -53,7 +53,18 @@ export function GeneralProductCreateRows({
             const priceMinor = minor[j + 1]
             return priceMinor === undefined
               ? []
-              : [{ unitName: pack.name, priceMinor }]
+              : [
+                  {
+                    unitName: pack.name,
+                    priceMinor,
+                    derivedFromUnit:
+                      i === index && j + 1 === at
+                        ? undefined
+                        : variant.sellingUnitPrices?.find(
+                            (price) => price.unitName === pack.name,
+                          )?.derivedFromUnit,
+                  },
+                ]
           }),
         }
       }),
@@ -84,14 +95,18 @@ export function GeneralProductCreateRows({
           <FormField
             label={`Opening stock (${unit})`}
             value={variant.openingStock ?? ""}
-            placeholder="None"
+            placeholder="Not supplied"
             editable={!disabled}
             keyboardType="decimal-pad"
             onChangeText={(text) =>
               onChange(
                 variants.map((current, i) =>
                   i === index
-                    ? { ...current, openingStock: text.trim() || undefined }
+                    ? {
+                        ...current,
+                        stockByUnit: undefined,
+                        openingStock: text.trim() || undefined,
+                      }
                     : current,
                 ),
               )

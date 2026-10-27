@@ -1,0 +1,254 @@
+{
+  "version": 1,
+  "id": "2026-10-25-commerce-preparation",
+  "tickets": ["B02", "H01", "H02"],
+  "summary": "FCA01–27 local source/evidence expansion: full pinned Shopify taxonomy and protected reference query; persistent partial order preparation, exact scoped units/prices/stock, reviewed existing atomic payment/full-fulfillment composition; partial/generic service cards, same-form continuations, count-only diagnostics and rollback. No deployment, hosted Site publication, provider action or full28-ticket/target-client acceptance claim. Legacy B02/H01/H02 gate IDs link to the canonical FCA checkpoint. Other coverage rows explicitly retain prior snapshot-only synchronization. 26 October: actual Dashboard Product/Order/Service saves and recovery verified; client directives, routing, compatible Product action v1, canonical aliases, exact Catalog handoff and choice review labels fixed. Owner removed separate Product Review notes. No rollout change; global H01 has an unrelated Banking classification gap.",
+  "capabilities": [
+    {
+      "id": "storefront.design.read",
+      "change": "unchanged",
+      "rollout": "source",
+      "note": "Coverage snapshot synchronization for pre-existing source already at HEAD; this Product slice neither implements nor enables this capability. Rollout remains source and no new acceptance is claimed."
+    },
+    {
+      "id": "storefront.design.generate",
+      "change": "unchanged",
+      "rollout": "source",
+      "note": "Coverage snapshot synchronization for pre-existing source already at HEAD; this Product slice neither implements nor enables this capability. Rollout remains source and no new acceptance is claimed."
+    },
+    {
+      "id": "storefront.design.accept",
+      "change": "unchanged",
+      "rollout": "source",
+      "note": "Coverage snapshot synchronization for pre-existing source already at HEAD; this Product slice neither implements nor enables this capability. Rollout remains source and no new acceptance is claimed."
+    },
+    {
+      "id": "catalog.product.create",
+      "change": "unchanged",
+      "rollout": "source",
+      "note": "Coverage metadata is unchanged against HEAD; this classification describes the coverage row, not runtime behavior. Shared draft-first Product policy, exact raw counts and sparse choices, full pinned server taxonomy with trusted labels, advanced stock/tracking requirements and strict confirmation readiness. Source only; native/WhatsApp receipt acceptance pending."
+    },
+    {
+      "id": "catalog.categories.suggest",
+      "change": "added",
+      "rollout": "source",
+      "note": "New bounded read/source reference capability backed by protected catalog.searchProductCategories and full pinned taxonomy2026-08. Existing Catalog/staff read authority; no merchant record scan, scope input or category/product write."
+    },
+    {
+      "id": "sales.order.prepare",
+      "change": "added",
+      "rollout": "source",
+      "note": "New Dashboard read/source preparation tool stages the existing durable order_create proposal under fresh sales/Catalog/customer authority. Payment/fulfillment require existing canonical review/authority; incomplete/historical/partial delivery drafts remain unconfirmable. No mobile/WhatsApp preparation grant."
+    },
+    {
+      "id": "services.job.prepare",
+      "change": "unchanged",
+      "rollout": "source",
+      "note": "Existing Dashboard form-only read preparer now retains partial/generic/quote service lines. Coverage row was already present in source before this expansion; snapshot synchronization does not mean a new service write/channel capability."
+    }
+  ],
+  "procedures": [
+    {
+      "path": "assistant.decideReviewLink",
+      "status": "excluded",
+      "reason": "Coverage snapshot synchronization from the existing manifest and router inventory already at HEAD. Retains its existing excluded decision; Product preparation adds no invocation or authority for this procedure."
+    },
+    {
+      "path": "assistant.editReviewLink",
+      "status": "excluded",
+      "reason": "Coverage snapshot synchronization from the existing manifest and router inventory already at HEAD. Retains its existing excluded decision; Product preparation adds no invocation or authority for this procedure."
+    },
+    {
+      "path": "assistant.reviewLink",
+      "status": "excluded",
+      "reason": "Coverage snapshot synchronization from the existing manifest and router inventory already at HEAD. Retains its existing excluded decision; Product preparation adds no invocation or authority for this procedure."
+    },
+    {
+      "path": "catalog.addServiceChoice",
+      "status": "form_only",
+      "reason": "Coverage snapshot synchronization from the existing manifest and router inventory already at HEAD. Retains its existing form_only decision; Product preparation adds no invocation or authority for this procedure."
+    },
+    {
+      "path": "catalog.listItemsPage",
+      "status": "supported",
+      "reason": "Existing scoped canonical read reused by new Dashboard Order/Service preparation. Transaction-compatible read-only delegates preserve exact Tenant/Store filtering; no extra mutation or permission."
+    },
+    {
+      "path": "catalog.searchProductCategories",
+      "status": "supported",
+      "reason": "Protected bounded reference-only read; strict query, trusted pinned category/attribute identities, no merchant IDs/data/write, Catalog and scoped staff read authority. Source capability catalog.categories.suggest."
+    },
+    {
+      "path": "catalog.updateItem",
+      "status": "form_only",
+      "reason": "Coverage snapshot synchronization from the existing manifest and router inventory already at HEAD. Retains its existing form_only decision; Product preparation adds no invocation or authority for this procedure."
+    },
+    {
+      "path": "customerLedger.recordReceiptAndApply",
+      "status": "planned",
+      "reason": "Coverage snapshot synchronization from the existing manifest and router inventory already at HEAD. Retains its existing planned decision; Product preparation adds no invocation or authority for this procedure."
+    },
+    {
+      "path": "customers.listPage",
+      "status": "supported",
+      "reason": "Existing scoped canonical read reused by new Dashboard Order/Service preparation. Transaction-compatible read-only delegates preserve exact Tenant/Store filtering; no extra mutation or permission."
+    },
+    {
+      "path": "finance.customerBalanceDirectory",
+      "status": "excluded",
+      "reason": "Coverage snapshot synchronization from the existing manifest and router inventory already at HEAD. Retains its existing excluded decision; Product preparation adds no invocation or authority for this procedure."
+    },
+    {
+      "path": "finance.supplierDirectory",
+      "status": "excluded",
+      "reason": "Coverage snapshot synchronization from the existing manifest and router inventory already at HEAD. Retains its existing excluded decision; Product preparation adds no invocation or authority for this procedure."
+    },
+    {
+      "path": "inventory.setLowStockLevel",
+      "status": "form_only",
+      "reason": "Coverage snapshot synchronization from the existing manifest and router inventory already at HEAD. Retains its existing form_only decision; Product preparation adds no invocation or authority for this procedure."
+    },
+    {
+      "path": "serviceAccess.createStaffQuote",
+      "status": "form_only",
+      "reason": "Coverage snapshot synchronization from the existing manifest and router inventory already at HEAD. Retains its existing form_only decision; Product preparation adds no invocation or authority for this procedure."
+    },
+    {
+      "path": "services.assistantJobCard",
+      "status": "form_only",
+      "reason": "Coverage snapshot synchronization from the existing manifest and router inventory already at HEAD. Retains its existing form_only decision; Product preparation adds no invocation or authority for this procedure."
+    },
+    {
+      "path": "services.completeJob",
+      "status": "form_only",
+      "reason": "Coverage snapshot synchronization from the existing manifest and router inventory already at HEAD. Retains its existing form_only decision; Product preparation adds no invocation or authority for this procedure."
+    },
+    {
+      "path": "storefront.acceptDesign",
+      "status": "supported",
+      "reason": "Coverage snapshot synchronization from the existing manifest and router inventory already at HEAD. Retains its existing supported decision; Product preparation adds no invocation or authority for this procedure."
+    },
+    {
+      "path": "storefront.cancelGeneration",
+      "status": "form_only",
+      "reason": "Coverage snapshot synchronization from the existing manifest and router inventory already at HEAD. Retains its existing form_only decision; Product preparation adds no invocation or authority for this procedure."
+    },
+    {
+      "path": "storefront.draft",
+      "status": "supported",
+      "reason": "Coverage snapshot synchronization from the existing manifest and router inventory already at HEAD. Retains its existing supported decision; Product preparation adds no invocation or authority for this procedure."
+    },
+    {
+      "path": "storefront.generate",
+      "status": "supported",
+      "reason": "Coverage snapshot synchronization from the existing manifest and router inventory already at HEAD. Retains its existing supported decision; Product preparation adds no invocation or authority for this procedure."
+    },
+    {
+      "path": "storefront.generation",
+      "status": "supported",
+      "reason": "Coverage snapshot synchronization from the existing manifest and router inventory already at HEAD. Retains its existing supported decision; Product preparation adds no invocation or authority for this procedure."
+    },
+    {
+      "path": "storefront.generations",
+      "status": "supported",
+      "reason": "Coverage snapshot synchronization from the existing manifest and router inventory already at HEAD. Retains its existing supported decision; Product preparation adds no invocation or authority for this procedure."
+    },
+    {
+      "path": "storefront.history",
+      "status": "form_only",
+      "reason": "Coverage snapshot synchronization from the existing manifest and router inventory already at HEAD. Retains its existing form_only decision; Product preparation adds no invocation or authority for this procedure."
+    },
+    {
+      "path": "storefront.initialize",
+      "status": "form_only",
+      "reason": "Coverage snapshot synchronization from the existing manifest and router inventory already at HEAD. Retains its existing form_only decision; Product preparation adds no invocation or authority for this procedure."
+    },
+    {
+      "path": "storefront.preview",
+      "status": "form_only",
+      "reason": "Coverage snapshot synchronization from the existing manifest and router inventory already at HEAD. Retains its existing form_only decision; Product preparation adds no invocation or authority for this procedure."
+    },
+    {
+      "path": "storefront.previewSession",
+      "status": "form_only",
+      "reason": "Coverage snapshot synchronization from the existing manifest and router inventory already at HEAD. Retains its existing form_only decision; Product preparation adds no invocation or authority for this procedure."
+    },
+    {
+      "path": "storefront.publish",
+      "status": "form_only",
+      "reason": "Coverage snapshot synchronization from the existing manifest and router inventory already at HEAD. Retains its existing form_only decision; Product preparation adds no invocation or authority for this procedure."
+    },
+    {
+      "path": "storefront.readiness",
+      "status": "form_only",
+      "reason": "Coverage snapshot synchronization from the existing manifest and router inventory already at HEAD. Retains its existing form_only decision; Product preparation adds no invocation or authority for this procedure."
+    },
+    {
+      "path": "storefront.rollback",
+      "status": "form_only",
+      "reason": "Coverage snapshot synchronization from the existing manifest and router inventory already at HEAD. Retains its existing form_only decision; Product preparation adds no invocation or authority for this procedure."
+    },
+    {
+      "path": "storefront.saveDraft",
+      "status": "form_only",
+      "reason": "Coverage snapshot synchronization from the existing manifest and router inventory already at HEAD. Retains its existing form_only decision; Product preparation adds no invocation or authority for this procedure."
+    },
+    {
+      "path": "stores.contact",
+      "status": "form_only",
+      "reason": "Coverage snapshot synchronization from the existing manifest and router inventory already at HEAD. Retains its existing form_only decision; Product preparation adds no invocation or authority for this procedure."
+    },
+    {
+      "path": "stores.updateContact",
+      "status": "form_only",
+      "reason": "Coverage snapshot synchronization from the existing manifest and router inventory already at HEAD. Retains its existing form_only decision; Product preparation adds no invocation or authority for this procedure."
+    }
+  ],
+  "docs": [
+    {
+      "topic": "feature",
+      "status": "local_only",
+      "path": ".brain/features/frictionless-commerce-assistant.md"
+    },
+    {
+      "topic": "api",
+      "status": "local_only",
+      "path": ".brain/api/contracts.md"
+    },
+    {
+      "topic": "permissions",
+      "status": "local_only",
+      "path": ".brain/api/permissions.md"
+    },
+    {
+      "topic": "decision",
+      "status": "local_only",
+      "path": ".brain/decisions/2026-10-25-commerce-preparation-and-taxonomy.md"
+    },
+    {
+      "topic": "capability",
+      "status": "updated",
+      "path": "packages/assistant/src/capabilities/COVERAGE.md"
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "run",
+      "path": "packages/assistant/evaluations/runs/2026-10-25-commerce-preparation.md",
+      "executed": true,
+      "result": "Focused integration61/285 and compatibility51/246 pass; named late fixes have targeted checks.10 unique synthetic General model scenarios accepted with diagnostics retained. Actual mounted editors and synthetic Workshop preview verified. Existing unrelated package type errors and target/channel/save acceptance gaps disclosed; no deployment."
+    },
+    {
+      "kind": "run",
+      "path": "packages/assistant/evaluations/runs/2026-10-25-commerce-preparation-model-summary.json",
+      "executed": true,
+      "result": "10 declared synthetic scenarios, real configured model, in-memory tools only. Accepted rows and prompt versions pinned separately; no database/domain write or send, no production SLA/accuracy claim."
+    },
+    {
+      "kind": "run",
+      "path": "packages/assistant/evaluations/runs/2026-10-26-commerce-client.md",
+      "executed": true,
+      "result": "Verified local QA actual Dashboard saves:3 assistant Products, one explicit native Catalog dependency, paid/delivered Order with one payment/fulfillment, resumed same Order and partial Service intake. Rich pre-receipt rollback/stale/completed concurrent retry and full-reload saved job proof retained. API/Dashboard types retain8/7 unrelated diagnostics;2 unrelated Banking routes block global H01. No deploy or channel/pilot claim."
+    }
+  ]
+}

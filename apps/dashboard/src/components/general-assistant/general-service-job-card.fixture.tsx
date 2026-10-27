@@ -49,6 +49,7 @@ mock.module("./open-missing-catalog-item", () => ({
   OpenMissingCatalogItem: () => <button type="button">Add service</button>,
 }))
 mock.module("@ewatrade/ui", () => ({
+  MoneyInput: () => null,
   Button: ({
     children,
     onClick,
@@ -88,7 +89,7 @@ test("one final review contains all lines, optional new customer and missing-ser
       messageId="message"
     />,
   )
-  expect(html.match(/Laundry job/g)).toHaveLength(1)
+  expect(html.match(/Service job/g)).toHaveLength(1)
   expect(html).toContain("40 × Shirt")
   expect(html).toContain("5 × Socks")
   expect(html).toContain("New customer")
@@ -131,10 +132,16 @@ test("a saved receipt replaces Review job with Open job and never stages another
     totalMinor: 850_000,
     customerName: "Saved customer",
     createdAt: "2026-10-23T12:00:00.000Z",
-    lines: draft.lines.map((line) => ({
-      ...line,
-      offeringId: line.offeringId ?? "socks",
-    })),
+    lines: draft.lines.map((line) => {
+      if (line.unitPriceMinor === undefined || line.totalMinor === undefined)
+        throw Error("Priced receipt fixture expected")
+      return {
+        ...line,
+        offeringId: line.offeringId ?? "socks",
+        unitPriceMinor: line.unitPriceMinor,
+        totalMinor: line.totalMinor,
+      }
+    }),
   }
   opened.length = 0
   handed.length = 0
@@ -156,4 +163,26 @@ test("a saved receipt replaces Review job with Open job and never stages another
   expect(opened).toEqual([
     { serviceSheet: "job", jobId: "saved-job", jobStep: null },
   ])
+})
+
+test("a missing price remains on the useful card without a fabricated total or payment question", () => {
+  receipt = null
+  const partial: ServiceJobDraft = {
+    ...draft,
+    totalMinor: undefined,
+    lines: [
+      ...draft.lines.slice(0, 1),
+      {
+        name: "Socks · Wash & iron",
+        quantity: "5",
+        resolution: "missing",
+        issue: "Enter the price in the form.",
+      },
+    ],
+  }
+  const html = renderToStaticMarkup(<GeneralServiceJobCard draft={partial} />)
+  expect(html).toContain("Total incomplete")
+  expect(html).toContain("5 × Socks")
+  expect(html).toContain("Price needed")
+  expect(html).toContain("Review job")
 })

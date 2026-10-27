@@ -115,6 +115,12 @@ test("stock, reconciliation and business catalog grants are distinct", () => {
     staffProcedureAction("services.assistantJobCard", "mutation"),
   ).toBeNull()
   expect(staffProcedureAction("orders.listPage", "query")).toBe("read")
+  expect(staffProcedureAction("catalog.searchProductCategories", "query")).toBe(
+    "read",
+  )
+  expect(
+    staffProcedureAction("catalog.searchProductCategories", "mutation"),
+  ).toBeNull()
 })
 
 test("assistant staging delegates decisions to scoped action checks; stock inspection is read-only", () => {

@@ -6,12 +6,12 @@ Tickets refer to the Brain plan `.brain/plans/2026-10-09-assistant-business-oper
 
 ## Summary
 
-- Router procedures: 732 (555 merchant, 177 public/account/internal)
-- Merchant supported by a capability: 173
-- Merchant planned: 133
+- Router procedures: 735 (558 merchant, 177 public/account/internal)
+- Merchant supported by a capability: 174
+- Merchant planned: 135
 - Merchant form-only: 188
 - Merchant excluded: 61
-- Capabilities: 162 (84 read, 78 write)
+- Capabilities: 164 (86 read, 78 write)
 
 ## Capabilities
 
@@ -157,7 +157,9 @@ Tickets refer to the Brain plan `.brain/plans/2026-10-09-assistant-business-oper
 | `customers.count` | 1 | read | `readCustomerCount` | OWNER, ADMIN, MANAGER | Owner/Admin only | dashboard, mobile, whatsapp | source | `customers.count` |
 | `stores.count` | 1 | read | `readStoreCount` | OWNER, ADMIN, MANAGER, CASHIER, OPERATOR | read | dashboard, mobile, whatsapp | source | `tenant.stores` |
 | `customers.page` | 1 | read | `readCustomers` | OWNER, ADMIN, MANAGER | Owner/Admin only | dashboard, mobile, whatsapp | source | `customers.listPage` |
+| `catalog.categories.suggest` | 1 | read | `searchProductCategories` | OWNER, ADMIN, MANAGER, CASHIER, OPERATOR | read | dashboard, mobile, whatsapp | source | `catalog.searchProductCategories` |
 | `catalog.page` | 1 | read | `readCatalogPage` | OWNER, ADMIN, MANAGER, CASHIER, OPERATOR | read | dashboard, mobile, whatsapp | source | `catalog.listItemsPage` |
+| `sales.order.prepare` | 1 | read | `prepareOrder` | OWNER, ADMIN, MANAGER | read, Owner/Admin only | dashboard | source | `catalog.listItemsPage`, `customers.listPage` |
 | `services.job.prepare` | 1 | read | `prepareServiceJob` | OWNER, ADMIN, MANAGER | read, Owner/Admin only | dashboard | source | `catalog.listItemsPage`, `customers.listPage` |
 | `sales.orders.lookup` | 1 | read | `lookupOpenOrders` | OWNER, ADMIN, MANAGER, CASHIER, OPERATOR | read | dashboard, mobile, whatsapp | source | `orders.lookupOpenPage` |
 | `inventory.stock.receive` | 1 | write (`stock_receive`) | `draftAction` | OWNER, ADMIN, MANAGER | stock, stock | dashboard, mobile, whatsapp | source | `inventory.postBalanceOperation`, `inventory.categorySuggestions` |
@@ -314,7 +316,7 @@ track conversational evaluation separately from these source test links.
 | `customers.accounts.read` | How much does Amina owe? | [apps/api/src/assistant/channel-finance-reads.integration.test.ts](../../../../apps/api/src/assistant/channel-finance-reads.integration.test.ts) |
 | `customers.read` | What is Amina's phone number? | [apps/api/src/assistant/channel-principal.integration.test.ts](../../../../apps/api/src/assistant/channel-principal.integration.test.ts)<br>[apps/api/src/assistant/channel-principal.test.ts](../../../../apps/api/src/assistant/channel-principal.test.ts)<br>[apps/api/src/assistant/general-access.test.ts](../../../../apps/api/src/assistant/general-access.test.ts) |
 | `customers.create` | Add Amina, 0803 000 0000 | [apps/api/src/assistant/general-proposals.integration.test.ts](../../../../apps/api/src/assistant/general-proposals.integration.test.ts)<br>[packages/assistant/src/general/contracts.test.ts](../../../../packages/assistant/src/general/contracts.test.ts) |
-| `catalog.product.create` | Add Eggs at ₦200 per piece | [apps/api/src/assistant/general-proposals.integration.test.ts](../../../../apps/api/src/assistant/general-proposals.integration.test.ts)<br>[packages/assistant/src/general/contracts.test.ts](../../../../packages/assistant/src/general/contracts.test.ts)<br>[apps/api/src/assistant/channel-product-confirmation.integration.test.ts](../../../../apps/api/src/assistant/channel-product-confirmation.integration.test.ts) |
+| `catalog.product.create` | Add Eggs at ₦200 per piece | [apps/api/src/assistant/general-proposals.integration.test.ts](../../../../apps/api/src/assistant/general-proposals.integration.test.ts)<br>[packages/assistant/src/general/contracts.test.ts](../../../../packages/assistant/src/general/contracts.test.ts)<br>[apps/api/src/assistant/channel-product-confirmation.integration.test.ts](../../../../apps/api/src/assistant/channel-product-confirmation.integration.test.ts)<br>[packages/assistant/src/product/preparation.test.ts](../../../../packages/assistant/src/product/preparation.test.ts)<br>[apps/api/src/assistant/product-preparation.test.ts](../../../../apps/api/src/assistant/product-preparation.test.ts)<br>[apps/dashboard/src/components/general-assistant/product-preparation-editor.test.ts](../../../../apps/dashboard/src/components/general-assistant/product-preparation-editor.test.ts) |
 | `sales.order.record_simple` | Sales Receipt<br>Part paid by Salman | [packages/assistant/src/general/simple-sale.test.ts](../../../../packages/assistant/src/general/simple-sale.test.ts)<br>[apps/api/src/assistant/general-simple-sale.test.ts](../../../../apps/api/src/assistant/general-simple-sale.test.ts)<br>[apps/api/src/assistant/general-simple-new-account-review.test.ts](../../../../apps/api/src/assistant/general-simple-new-account-review.test.ts)<br>[apps/api/src/assistant/channel-proposal-review.test.ts](../../../../apps/api/src/assistant/channel-proposal-review.test.ts)<br>[apps/api/src/assistant/general-simple-sale-composition.test.ts](../../../../apps/api/src/assistant/general-simple-sale-composition.test.ts)<br>[apps/api/src/assistant/channel-sale-confirmation.integration.test.ts](../../../../apps/api/src/assistant/channel-sale-confirmation.integration.test.ts) |
 | `sales.order.create` | Sell two crates of eggs to Amina | [apps/api/src/assistant/general-proposals.integration.test.ts](../../../../apps/api/src/assistant/general-proposals.integration.test.ts)<br>[packages/assistant/src/general/contracts.test.ts](../../../../packages/assistant/src/general/contracts.test.ts) |
 | `sales.payment.record` | Amina paid ₦300 cash for order 1042 | [apps/api/src/assistant/general-proposals.integration.test.ts](../../../../apps/api/src/assistant/general-proposals.integration.test.ts)<br>[packages/assistant/src/general/contracts.test.ts](../../../../packages/assistant/src/general/contracts.test.ts) |
@@ -333,7 +335,9 @@ track conversational evaluation separately from these source test links.
 | `customers.count` | Count saved customers | [apps/api/src/assistant/channel-principal.integration.test.ts](../../../../apps/api/src/assistant/channel-principal.integration.test.ts)<br>[apps/api/src/assistant/channel-principal.test.ts](../../../../apps/api/src/assistant/channel-principal.test.ts)<br>[apps/api/src/assistant/general-counts.test.ts](../../../../apps/api/src/assistant/general-counts.test.ts)<br>[apps/api/src/assistant/general-proposals.integration.test.ts](../../../../apps/api/src/assistant/general-proposals.integration.test.ts)<br>[packages/assistant/src/general/contracts.test.ts](../../../../packages/assistant/src/general/contracts.test.ts) |
 | `stores.count` | Count accessible Stores | [apps/api/src/assistant/general-counts.test.ts](../../../../apps/api/src/assistant/general-counts.test.ts)<br>[apps/api/src/assistant/general-proposals.integration.test.ts](../../../../apps/api/src/assistant/general-proposals.integration.test.ts)<br>[packages/assistant/src/general/contracts.test.ts](../../../../packages/assistant/src/general/contracts.test.ts) |
 | `customers.page` | Find customers named Amina and show the next page | [apps/api/src/assistant/channel-principal.integration.test.ts](../../../../apps/api/src/assistant/channel-principal.integration.test.ts)<br>[apps/api/src/assistant/channel-principal.test.ts](../../../../apps/api/src/assistant/channel-principal.test.ts)<br>[apps/api/src/assistant/general-lookup-inputs.test.ts](../../../../apps/api/src/assistant/general-lookup-inputs.test.ts)<br>[apps/api/src/assistant/general-proposals.integration.test.ts](../../../../apps/api/src/assistant/general-proposals.integration.test.ts)<br>[packages/assistant/src/general/contracts.test.ts](../../../../packages/assistant/src/general/contracts.test.ts) |
+| `catalog.categories.suggest` | Categorize a rechargeable standing fan | [packages/utils/src/product-taxonomy.test.ts](../../../../packages/utils/src/product-taxonomy.test.ts) |
 | `catalog.page` | Find eggs and show the next page | [apps/api/src/assistant/channel-principal.integration.test.ts](../../../../apps/api/src/assistant/channel-principal.integration.test.ts)<br>[apps/api/src/assistant/channel-principal.test.ts](../../../../apps/api/src/assistant/channel-principal.test.ts)<br>[apps/api/src/assistant/general-lookup-inputs.test.ts](../../../../apps/api/src/assistant/general-lookup-inputs.test.ts)<br>[apps/api/src/assistant/general-proposals.integration.test.ts](../../../../apps/api/src/assistant/general-proposals.integration.test.ts)<br>[packages/assistant/src/general/contracts.test.ts](../../../../packages/assistant/src/general/contracts.test.ts) |
+| `sales.order.prepare` | New order, paid and delivered: 10 crates of big eggs | [packages/assistant/src/general/order-preparation.test.ts](../../../../packages/assistant/src/general/order-preparation.test.ts) |
 | `services.job.prepare` | Laundry: 40 shirts, 10 trousers and 5 socks, wash and iron | [packages/assistant/src/general/service-job-draft.test.ts](../../../../packages/assistant/src/general/service-job-draft.test.ts) |
 | `sales.orders.lookup` | Find this customer's open orders | [apps/api/src/assistant/channel-principal.integration.test.ts](../../../../apps/api/src/assistant/channel-principal.integration.test.ts)<br>[apps/api/src/assistant/channel-principal.test.ts](../../../../apps/api/src/assistant/channel-principal.test.ts)<br>[apps/api/src/assistant/general-open-order.test.ts](../../../../apps/api/src/assistant/general-open-order.test.ts)<br>[apps/api/src/assistant/general-proposals.integration.test.ts](../../../../apps/api/src/assistant/general-proposals.integration.test.ts)<br>[packages/assistant/src/general/contracts.test.ts](../../../../packages/assistant/src/general/contracts.test.ts) |
 | `inventory.stock.receive` | Receive three crates into this Store | [apps/mobile/src/components/mobile/assistant/native-parity.test.ts](../../../../apps/mobile/src/components/mobile/assistant/native-parity.test.ts)<br>[packages/assistant/evaluations/fixtures/native-stock-save-fence.fixture.tsx](../../../../packages/assistant/evaluations/fixtures/native-stock-save-fence.fixture.tsx)<br>[apps/api/src/assistant/general-stock-receipt.integration-check.ts](../../../../apps/api/src/assistant/general-stock-receipt.integration-check.ts) |
@@ -377,7 +381,7 @@ track conversational evaluation separately from these source test links.
 | E05 | 2 |
 | G01 | 7 |
 | G02 | 4 |
-| G03 | 28 |
+| G03 | 30 |
 | G04 | 4 |
 | G05 | 28 |
 | H04 | 10 |
@@ -421,8 +425,8 @@ track conversational evaluation separately from these source test links.
 | `businessBanking.notificationSettings` | query | Owner/Admin only | sales | form_only | Manual bank instructions, customer reports and merchant receipt confirmation use the payment-link/review forms. Customer evidence never authorizes a payment; no model or WhatsApp payment approval is enabled. |
 | `businessBanking.pendingReports` | query | read | sales | form_only | Manual bank instructions, customer reports and merchant receipt confirmation use the payment-link/review forms. Customer evidence never authorizes a payment; no model or WhatsApp payment approval is enabled. |
 | `businessBanking.report` | query | read | sales | form_only | Manual bank instructions, customer reports and merchant receipt confirmation use the payment-link/review forms. Customer evidence never authorizes a payment; no model or WhatsApp payment approval is enabled. |
-| `businessBanking.reviewReport` | mutation | orders | sales | form_only | Manual bank instructions, customer reports and merchant receipt confirmation use the payment-link/review forms. Customer evidence never authorizes a payment; no model or WhatsApp payment approval is enabled. |
 | `businessBanking.retryAlert` | mutation | Owner/Admin only | sales | form_only | Manual bank instructions, customer reports and merchant receipt confirmation use the payment-link/review forms. Customer evidence never authorizes a payment; no model or WhatsApp payment approval is enabled. |
+| `businessBanking.reviewReport` | mutation | orders | sales | form_only | Manual bank instructions, customer reports and merchant receipt confirmation use the payment-link/review forms. Customer evidence never authorizes a payment; no model or WhatsApp payment approval is enabled. |
 | `businessBanking.saveBankDetails` | mutation | Owner/Admin only | sales | form_only | Manual bank instructions, customer reports and merchant receipt confirmation use the payment-link/review forms. Customer evidence never authorizes a payment; no model or WhatsApp payment approval is enabled. |
 | `businessNotifications.archive` | mutation | read | platform | form_only | Own alert preferences and receipt state stay in the personal inbox until a dedicated confirmed assistant flow is built. |
 | `businessNotifications.listMine` | query | read | platform | planned | S05 |
@@ -457,7 +461,7 @@ track conversational evaluation separately from these source test links.
 | `catalog.detail.overview` | query | read | catalog | supported | catalog.item.read |
 | `catalog.getItem` | query | read | catalog | form_only | Generic item editor payload; assistant uses active-Store detail.overview with stock permission filtering. |
 | `catalog.listItems` | query | read | catalog | excluded | Unbounded legacy list; assistant uses stable listItemsPage continuation. |
-| `catalog.listItemsPage` | query | read | services | supported | services.intake.options.read, catalog.page, services.job.prepare |
+| `catalog.listItemsPage` | query | read | services | supported | services.intake.options.read, catalog.page, sales.order.prepare, services.job.prepare |
 | `catalog.listUnitConfigurations` | query | read | catalog | planned | B03 |
 | `catalog.listUnitDefinitions` | query | read | catalog | planned | B03 |
 | `catalog.photos.createIntent` | mutation | catalog | catalog | form_only | Photo capture and upload belong to the product form. |
@@ -468,6 +472,7 @@ track conversational evaluation separately from these source test links.
 | `catalog.photos.reuse` | mutation | Owner/Admin only | catalog | form_only | Photo capture and upload belong to the product form. |
 | `catalog.productShare` | query | read | catalog | form_only | Dashboard Product Share reads an already public product link for explicit browser Share/Copy; no publishing, provider or model authority. |
 | `catalog.publishUnitConfiguration` | mutation | catalog | catalog | supported | catalog.units.publish |
+| `catalog.searchProductCategories` | query | read | catalog | supported | catalog.categories.suggest |
 | `catalog.setOfferingAvailability` | mutation | catalog | catalog | supported | catalog.availability.update |
 | `catalog.setProductUsage` | mutation | Owner/Admin only | catalog | planned | B03 |
 | `catalog.updateItem` | mutation | catalog | catalog | form_only | Explicit native Catalog sheet/menu commands; assistant model tools cannot invoke these writes. Assistant edits use the narrow price, details, identifier and availability capabilities. |
@@ -503,7 +508,7 @@ track conversational evaluation separately from these source test links.
 | `customers.count` | query | Owner/Admin only | customers | supported | customers.count |
 | `customers.create` | mutation | Owner/Admin only | customers | supported | customers.create |
 | `customers.getById` | query | read | customers | supported | customers.read |
-| `customers.listPage` | query | Owner/Admin only | customers | supported | customers.page, services.job.prepare |
+| `customers.listPage` | query | Owner/Admin only | customers | supported | customers.page, sales.order.prepare, services.job.prepare |
 | `customers.update` | mutation | Owner/Admin only | customers | supported | customers.update |
 | `domains.availability` | query | Owner/Admin only | platform | form_only | Domain purchase and DNS use registrar checkout and verification. |
 | `domains.checkAvailability` | mutation | Owner/Admin only | platform | form_only | Domain purchase and DNS use registrar checkout and verification. |
@@ -836,7 +841,9 @@ track conversational evaluation separately from these source test links.
 | `serviceCommerce.setCustomerChannelConnectionLifecycle` | mutation | Owner/Admin only | commerce | form_only | Messaging channel connection uses provider sign-up and credentials. |
 | `serviceCommerce.setPolicyDecision` | mutation | Owner/Admin only | privacy | form_only | Policy decisions are compliance controls. |
 | `serviceCommerce.setStoreConversationManualPause` | mutation | Owner/Admin only | commerce | planned | G05 |
+| `serviceCommerce.sourceBookings` | query | Owner/Admin only | commerce | planned | G03 |
 | `serviceCommerce.sourceProjection` | query | Owner/Admin only | commerce | planned | G03 |
+| `serviceCommerce.staffBookingSlots` | query | Owner/Admin only | commerce | planned | G03 |
 | `serviceCommerce.storeConversationAvailabilitySettings` | query | Owner/Admin only | commerce | planned | G05 |
 | `serviceCommerce.storeConversationChannelModeSettings` | query | Owner/Admin only | commerce | planned | G05 |
 | `serviceCommerce.storeConversationMessagesAfter` | query | Owner/Admin only | commerce | planned | G05 |

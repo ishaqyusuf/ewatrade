@@ -1,0 +1,158 @@
+[
+  {
+    "case": "rice",
+    "promptVersion": "general-v31",
+    "model": "deepseek-flash",
+    "provider": "deepseek",
+    "firstDraftMs": 3228,
+    "totalMs": 4254,
+    "text": "Ready to review: MamaGold Rice 50kg — ₦75,000.00 per bag, 12 bags in stock.",
+    "product": {
+      "kind": "product",
+      "name": "MamaGold Rice 50kg",
+      "description": "MamaGold rice, 50kg bag.",
+      "categoryKey": "shopify:fb-2-11-9",
+      "categoryLabel": "Food, Beverages & Tobacco / Food Items / Grains, Rice & Cereal / Rice",
+      "categorySuggested": true,
+      "preparationVersion": "product-v1",
+      "variantMode": "explicit",
+      "unitName": "Bag",
+      "priceMinor": 7500000,
+      "openingStock": "12",
+      "sellingUnits": [
+        {
+          "name": "Bag",
+          "containsQuantity": "50",
+          "referenceUnitName": "kg"
+        }
+      ],
+      "variants": [
+        {
+          "selections": [],
+          "priceMinor": 7500000,
+          "sellingUnitPrices": [],
+          "openingStock": "12"
+        }
+      ]
+    },
+    "usage": {
+      "inputTokens": 34287,
+      "inputTokenDetails": {
+        "noCacheTokens": 12271,
+        "cacheReadTokens": 22016
+      },
+      "outputTokens": 360,
+      "outputTokenDetails": {
+        "textTokens": 360,
+        "reasoningTokens": 0
+      },
+      "totalTokens": 34647,
+      "reasoningTokens": 0,
+      "cachedInputTokens": 22016
+    }
+  },
+  {
+    "case": "fan",
+    "promptVersion": "general-v31",
+    "model": "deepseek-flash",
+    "provider": "deepseek",
+    "firstDraftMs": 2807,
+    "totalMs": 3925,
+    "text": "Ready to review in the form.",
+    "product": {
+      "kind": "product",
+      "name": "Atlas Rechargeable Standing Fan",
+      "categoryKey": "shopify:hg-9-1-6",
+      "categoryLabel": "Home & Garden / Household Appliances / Climate Control Appliances / Fans",
+      "categorySuggested": true,
+      "preparationVersion": "product-v1",
+      "variantMode": "explicit",
+      "unitName": "Piece",
+      "priceMinor": 3500000,
+      "openingStock": "4",
+      "sellingUnits": [
+        {
+          "name": "Piece",
+          "containsQuantity": "",
+          "priceMinor": 3500000
+        }
+      ],
+      "variants": [
+        {
+          "selections": [],
+          "priceMinor": 3500000,
+          "sellingUnitPrices": [
+            {
+              "unitName": "Piece",
+              "priceMinor": 3500000
+            }
+          ],
+          "openingStock": "4"
+        }
+      ]
+    },
+    "usage": {
+      "inputTokens": 33549,
+      "inputTokenDetails": {
+        "noCacheTokens": 2445,
+        "cacheReadTokens": 31104
+      },
+      "outputTokens": 306,
+      "outputTokenDetails": {
+        "textTokens": 306,
+        "reasoningTokens": 0
+      },
+      "totalTokens": 33855,
+      "reasoningTokens": 0,
+      "cachedInputTokens": 31104
+    }
+  },
+  {
+    "case": "paid-delivered",
+    "promptVersion": "general-v31",
+    "model": "deepseek-flash",
+    "provider": "deepseek",
+    "firstDraftMs": 1563,
+    "totalMs": 3181,
+    "text": "Ready to review — 10 crates of Big Eggs plus a ₦1,500.00 delivery charge, marked delivered. Payment is noted in the order notes but not recorded as a payment, since no method or receiving account was given; add those in the form if you want it on the books.",
+    "order": {
+      "lines": [
+        {
+          "name": "Eggs",
+          "quantity": "10",
+          "unitName": "Crate",
+          "choices": [
+            {
+              "optionName": "Size",
+              "value": "Big"
+            }
+          ]
+        }
+      ],
+      "extraCharges": [
+        {
+          "name": "Delivery",
+          "amount": "1500"
+        }
+      ],
+      "customerName": "Walk-in",
+      "delivered": true,
+      "notes": "Customer says the order was already paid in full."
+    },
+    "usage": {
+      "inputTokens": 19575,
+      "inputTokenDetails": {
+        "noCacheTokens": 375,
+        "cacheReadTokens": 19200
+      },
+      "outputTokens": 197,
+      "outputTokenDetails": {
+        "textTokens": 197,
+        "reasoningTokens": 0
+      },
+      "totalTokens": 19772,
+      "reasoningTokens": 0,
+      "cachedInputTokens": 19200
+    }
+  }
+]

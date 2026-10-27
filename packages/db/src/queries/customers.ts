@@ -546,7 +546,7 @@ export async function listCustomerBook(
 }
 
 export async function listCustomersPage(
-  db: PrismaClient,
+  db: Pick<PrismaClient, "customer">,
   input: {
     cursor?: string
     limit?: number

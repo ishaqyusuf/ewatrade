@@ -1,0 +1,45 @@
+{
+  "version": 1,
+  "id": "2026-10-27-commit-readiness",
+  "tickets": ["G03", "H01", "H02"],
+  "summary": "Complete source commit readiness by classifying the existing protected staff booking reads under the same G03 planned assistant policy as canonical booking operations. Reconcile the handoff expectation for already present storefront design actions; no runtime permission, action or rollout changes. Repair existing type-only test/client mismatches and await the existing managed-QA preview eligibility check in the legacy marketing approval route; ordinary recipients retain the ordinary emailed continuation.",
+  "noAssistantImpact": "Coverage metadata and regression expectation only. The staff booking UI retains service-operator checks, server-derived Tenant/Store scope and existing canonical transaction authority. Neither booking read is exposed as a new model tool; assistant access remains planned under G03. Legacy approval now awaits its existing QA decision before choosing preview presentation; no assistant, signup authority or QA admission rule changes.",
+  "capabilities": [],
+  "procedures": [
+    {
+      "path": "serviceCommerce.sourceBookings",
+      "status": "planned",
+      "reason": "G03: protected staff booking form read; assistant support remains planned, matching existing canonical booking procedures. No new model/channel invocation."
+    },
+    {
+      "path": "serviceCommerce.staffBookingSlots",
+      "status": "planned",
+      "reason": "G03: protected staff booking form read; assistant support remains planned, matching existing canonical booking procedures. No new model/channel invocation."
+    }
+  ],
+  "docs": [
+    {
+      "topic": "feature",
+      "status": "local_only",
+      "path": ".brain/features/frictionless-commerce-assistant.md"
+    },
+    {
+      "topic": "api",
+      "status": "local_only",
+      "path": ".brain/api/contracts.md"
+    },
+    {
+      "topic": "permissions",
+      "status": "local_only",
+      "path": ".brain/api/permissions.md"
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "run",
+      "path": "packages/assistant/src/capabilities/COVERAGE.md",
+      "executed": true,
+      "result": "H01 regeneration succeeded after explicit classifications; final check and H02 are recorded in the commit readiness receipt."
+    }
+  ]
+}

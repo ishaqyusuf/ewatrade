@@ -33,7 +33,7 @@ const options = {
   currentScope: scope,
 }
 
-test("current native seven and all 37 other eligible writes receive explicit honest classifications", () => {
+test("current native actions and other eligible writes receive explicit honest classifications", () => {
   const native = writeCapabilities.filter(
     (capability) =>
       classifyCapabilityAction(capability, environment).kind ===
@@ -45,6 +45,7 @@ test("current native seven and all 37 other eligible writes receive explicit hon
     "expense_record_simple",
     "money_in_record",
     "money_transfer_simple",
+    "payment_links_create",
     "product_create",
     "sale_record",
   ])
@@ -52,7 +53,7 @@ test("current native seven and all 37 other eligible writes receive explicit hon
     (capability) =>
       classifyCapabilityAction(capability, environment).kind === "app_review",
   )
-  expect(app.map((capability) => capability.id).sort()).toEqual(
+  expect(app.map((capability): string => capability.id).sort()).toEqual(
     [
       "catalog.availability.update",
       "catalog.details.update",
@@ -91,6 +92,8 @@ test("current native seven and all 37 other eligible writes receive explicit hon
       "sales.products.fulfill",
       "sales.service.authorize",
       "sales.service.fulfill",
+      "storefront.design.accept",
+      "storefront.design.generate",
     ].sort(),
   )
   expect(app.every((capability) => capability.rollout !== "planned")).toBe(true)
@@ -133,7 +136,7 @@ test("planned services, staff, settings, finance and inventory actions remain pl
   expect(
     writeCapabilities
       .filter((capability) => capability.rollout === "planned")
-      .map((capability) => capability.id)
+      .map((capability): string => capability.id)
       .sort(),
   ).toEqual(plannedIds.sort())
   for (const capability of writeCapabilities.filter((entry) =>

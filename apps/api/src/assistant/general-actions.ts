@@ -11,11 +11,14 @@ import type {
   GeneralReceipt,
   GeneralReviewPresentation,
 } from "@ewatrade/assistant/general/contracts"
+import { orderPreparationIssues } from "@ewatrade/assistant/general/order-preparation"
 import {
   isSimpleProductCreate,
   productCreateDraft,
+  productCreateIssues,
   productCreatePayload,
 } from "@ewatrade/assistant/general/product-create"
+import { majorAmountToMinor } from "@ewatrade/assistant/setup/contracts"
 import {
   lockGeneralPaymentOrder,
   readGeneralOrderReview,
@@ -73,6 +76,7 @@ import {
   orderReplace,
 } from "./general-order-amendment"
 import { orderAttachmentAdd } from "./general-order-attachment"
+import { prepareGeneralOrder } from "./general-order-preparation"
 import { paymentLinksCreate } from "./general-payment-links"
 import { productAvailabilityUpdate } from "./general-product-availability"
 import { productBatchFulfill } from "./general-product-batch-fulfillment"
@@ -128,6 +132,14 @@ import {
   supplierAdvance,
   supplierAdvanceAllocate,
 } from "./general-supplier-settlement"
+import {
+  commercePreparationEnabled,
+  recordPreparation,
+} from "./preparation-observability"
+import {
+  prepareProductCategory,
+  trustedProductCategoryLabel,
+} from "./product-category"
 import { proposalDigest } from "./proposal-security"
 import { saleReviewPresentation } from "./review-presentations"
 import { catalogCommandForSetupEntity } from "./setup-commit"
@@ -439,9 +451,48 @@ const customerCreate: GeneralActionAdapter<Action<"customer_create">> = {
 const productCreate: GeneralActionAdapter<Action<"product_create">> = {
   // Pack prices, pack-counted stock and the picture are written out, so the
   // card is exact.
-  prepare: async (_ctx, payload) => productCreateDraft(payload),
+  prepare: async (ctx, payload) => {
+    if (!commercePreparationEnabled())
+      return {
+        ...payload,
+        categoryLabel: trustedProductCategoryLabel(payload.categoryKey),
+      }
+    const startedAt = Date.now()
+    const draft = productCreateDraft(payload, currency(ctx))
+    const category = prepareProductCategory(productCreatePayload(draft))
+    recordPreparation({
+      kind: "product",
+      durationMs: Date.now() - startedAt,
+      lineCount: draft.variants?.length ?? 1,
+      unresolvedCount: productCreateIssues({
+        ...draft,
+        categoryKey: category.categoryKey,
+        categoryLabel: category.categoryLabel,
+      }).length,
+      defaultCount: category.sellingUnits?.filter(
+        (unit) => unit.quantityDefault,
+      ).length,
+      derivedPriceCount: category.variants?.reduce(
+        (sum, row) =>
+          sum +
+          (row.sellingUnitPrices?.filter((price) => price.derivedFromUnit)
+            .length ?? 0),
+        0,
+      ),
+    })
+    return {
+      ...draft,
+      categoryKey: category.categoryKey,
+      categoryLabel: category.categoryLabel,
+      categorySuggested: category.categorySuggested,
+      categorySuggestionName: category.categorySuggestionName,
+    }
+  },
+  // Incomplete preparation can be edited, but cannot pass the execution boundary.
   // An uploaded photo must still be this business's, finished and unattached.
-  async validate(ctx, payload) {
+  async validate(ctx, payload, lock) {
+    const issue = lock ? productCreateIssues(payload)[0] : undefined
+    if (issue) throw new TRPCError({ code: "BAD_REQUEST", message: issue })
     if (!payload.photoAssetId) return null
     const scope = requireGeneralScope(ctx)
     const photo = await ctx.db.catalogPhotoAsset.findFirst({
@@ -477,7 +528,8 @@ const productCreate: GeneralActionAdapter<Action<"product_create">> = {
     const plain =
       isSimpleProductCreate(payload) &&
       !payload.illustrationId &&
-      !payload.photoAssetId
+      !payload.photoAssetId &&
+      !payload.categoryKey
     const result = plain
       ? await createSimpleCatalogItemInTransaction(ctx.db, {
           ...catalogCreateSimpleItemSchema.parse({
@@ -519,6 +571,126 @@ export const orderCreate: GeneralActionAdapter<Action<"order_create">> = {
   // Bind each product unit's current configuration version, so a conversion
   // change after review still rejects Confirm. Catalog reads do not expose it.
   async prepare(ctx, payload) {
+    if (payload.preparation) {
+      const prepared = await prepareGeneralOrder(ctx, payload.preparation)
+      const lines: Action<"order_create">["lines"] = prepared.lines.flatMap<
+        Action<"order_create">["lines"][number]
+      >((line) => {
+        if (
+          line.status === "resolved" &&
+          line.offeringId &&
+          line.unitPriceMinor !== undefined
+        )
+          return [
+            {
+              offeringId: line.offeringId,
+              quantity: line.quantity,
+              expectedConfigurationVersionId: line.configurationVersionId,
+              ...(line.pricingPolicy === "order_total"
+                ? { enteredTotalMinor: line.totalMinor }
+                : { expectedFixedPriceMinor: line.unitPriceMinor }),
+            },
+          ]
+        if (
+          line.status === "order_only" &&
+          line.totalMinor !== undefined &&
+          line.totalMinor > 0
+        )
+          return [
+            {
+              custom: "quick_sale" as const,
+              amountMinor: line.totalMinor,
+              description:
+                `${line.quantity} ${line.unitName ?? ""} ${line.name}`
+                  .trim()
+                  .slice(0, 200),
+            },
+          ]
+        return []
+      })
+      for (const charge of payload.preparation.extraCharges ?? []) {
+        const amountMinor = majorAmountToMinor(charge.amount)
+        if (amountMinor !== null && amountMinor > 0)
+          lines.push({
+            custom: "additional_cost",
+            amountMinor,
+            description: charge.name,
+          })
+      }
+      const payment = payload.preparation.payment
+      const amountMinor = payment?.amount
+        ? majorAmountToMinor(payment.amount)
+        : prepared.totalMinor
+      let moneyAccountId = payment?.moneyAccountId
+      if (
+        payment?.method &&
+        amountMinor !== null &&
+        amountMinor !== undefined &&
+        amountMinor > 0
+      ) {
+        try {
+          assertGeneralAction(ctx, "payment_record")
+          const { book, accounts } = await listOrderPaymentAccounts(ctx.db, {
+            tenantId: requireGeneralScope(ctx).tenantId,
+            currencyCode: currency(ctx),
+          })
+          if (book) {
+            const eligible = accounts.filter(
+              (account) =>
+                !account.paused &&
+                account.paymentMethods.includes(payment.method ?? "cash"),
+            )
+            if (!moneyAccountId && eligible.length === 1) {
+              moneyAccountId = eligible[0]?.id
+              prepared.paymentAccountSuggested = true
+            }
+            if (
+              !moneyAccountId ||
+              !eligible.some((account) => account.id === moneyAccountId)
+            )
+              prepared.issues.push(
+                "Choose the active account that received this payment.",
+              )
+          } else if (moneyAccountId)
+            prepared.issues.push(
+              "Set up Finance before choosing a receiving account.",
+            )
+        } catch {
+          prepared.issues.push(
+            "Payment recording is unavailable for the current access or setup. Complete it through the authorized payment workflow.",
+          )
+        }
+      }
+      return {
+        ...payload,
+        prepared,
+        lines,
+        customerId: prepared.customer?.id,
+        customerName: prepared.customer?.name,
+        notes: payload.preparation.notes,
+        fulfillNow:
+          (payload.preparation.delivered &&
+            !payload.preparation.stockAlreadyRecorded &&
+            !payload.preparation.partialDelivery &&
+            !payload.preparation.lines.some(
+              (line) => line.deliveredQuantity !== undefined,
+            ) &&
+            !payload.preparation.occurredAt) ||
+          undefined,
+        initialPayment:
+          payment?.method &&
+          amountMinor !== null &&
+          amountMinor !== undefined &&
+          Number.isSafeInteger(amountMinor) &&
+          amountMinor > 0
+            ? {
+                amountMinor,
+                method: payment.method,
+                moneyAccountId,
+              }
+            : undefined,
+      }
+    }
     const scope = requireGeneralScope(ctx)
     const lines = await Promise.all(
       payload.lines.map(async (line) => {
@@ -540,10 +712,16 @@ export const orderCreate: GeneralActionAdapter<Action<"order_create">> = {
           : line
       }),
     )
-    return { ...payload, lines }
+    return { ...payload, prepared: undefined, lines }
   },
   async validate(ctx, payload, lock) {
     const scope = requireGeneralScope(ctx)
+    const preparationIssue = orderPreparationIssues(payload)[0]
+    if (preparationIssue) {
+      if (lock)
+        throw new TRPCError({ code: "BAD_REQUEST", message: preparationIssue })
+      return null
+    }
     if (lock) {
       const error = generalOrderDescriptionError(payload)
       if (error) throw new TRPCError({ code: "BAD_REQUEST", message: error })
@@ -592,6 +770,47 @@ export const orderCreate: GeneralActionAdapter<Action<"order_create">> = {
     return null
   },
   async review(ctx, payload) {
+    const issues = orderPreparationIssues(payload)
+    if (issues.length) {
+      const rows = payload.prepared?.lines ?? []
+      return {
+        target: null,
+        lines: [
+          "Order draft",
+          ...rows.map(
+            (line) =>
+              `${line.quantity} ${line.unitName ?? ""} ${line.name}: ${line.status.replaceAll("_", " ")}`,
+          ),
+          ...issues,
+        ],
+        presentation: {
+          summary: {
+            party: "Order draft",
+            context: "Complete the editable fields before saving.",
+          },
+          sections: [
+            {
+              title: "Items",
+              rows: rows.map((line) => ({
+                label:
+                  `${line.quantity} ${line.unitName ?? ""} ${line.name}`.slice(
+                    0,
+                    160,
+                  ),
+                value: line.issue ?? line.status.replaceAll("_", " "),
+              })),
+            },
+            {
+              title: "Needs review",
+              rows: issues.map((value) => ({
+                label: "",
+                value: value.slice(0, 240),
+              })),
+            },
+          ],
+        },
+      }
+    }
     const scope = requireGeneralScope(ctx)
     const review = await readGeneralOrderReview(
       ctx.db,
@@ -622,8 +841,19 @@ export const orderCreate: GeneralActionAdapter<Action<"order_create">> = {
         rows: review.rows,
         totalMinor: review.totalMinor,
         currencyCode: currency(ctx),
-        customerName: customer?.name ?? "Walk-in",
-        notes: payload.notes,
+        customerName: customer?.name ?? payload.customerName ?? "Walk-in",
+        notes:
+          [
+            payload.notes,
+            payload.fulfillNow
+              ? "Records delivery and deducts product stock from this Store."
+              : undefined,
+            payload.prepared?.paymentAccountSuggested
+              ? "Receiving account suggested from the only available account for this payment method; editable before saving."
+              : undefined,
+          ]
+            .filter(Boolean)
+            .join("\n") || undefined,
         payment: payload.initialPayment
           ? {
               amountMinor: payload.initialPayment.amountMinor,
@@ -636,7 +866,7 @@ export const orderCreate: GeneralActionAdapter<Action<"order_create">> = {
       lines: [
         ...review.lines,
         `Total: ${generalMoney(review.totalMinor, currency(ctx))}`,
-        `Customer: ${customer?.name ?? "Walk-in"}`,
+        `Customer: ${customer?.name ?? payload.customerName ?? "Walk-in"}`,
         ...(payload.initialPayment
           ? [
               `Record received: ${generalMoney(payload.initialPayment.amountMinor, currency(ctx))} · ${payload.initialPayment.method.replaceAll("_", " ")}`,
@@ -668,7 +898,13 @@ export const orderCreate: GeneralActionAdapter<Action<"order_create">> = {
 }
 
 const simpleSaleOrderSchema = generalOrderActionSchema
-  .omit({ notes: true })
+  .omit({
+    notes: true,
+    preparation: true,
+    prepared: true,
+    fulfillNow: true,
+    customerName: true,
+  })
   .extend({
     lines: z.tuple([
       orderCustomLine.extend({
@@ -713,7 +949,12 @@ async function executeCanonicalOrder(
   const descriptionError = generalOrderDescriptionError(payload)
   if (descriptionError)
     throw new TRPCError({ code: "BAD_REQUEST", message: descriptionError })
-  const { action: _, ...input } = payload
+  const {
+    action: _,
+    preparation: _preparation,
+    prepared: _prepared,
+    ...input
+  } = payload
   const customer = payload.customerId
     ? await ctx.db.customer.findFirst({
         where: { id: payload.customerId, tenantId: scope.tenantId },

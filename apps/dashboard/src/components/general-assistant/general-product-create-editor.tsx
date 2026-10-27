@@ -1,13 +1,16 @@
 "use client"
+
 import { CatalogIllustrationPicker } from "@/components/catalog-item/catalog-illustration-picker"
 import { CatalogIllustrationPreview } from "@/components/catalog-item/catalog-illustration-preview"
 import { CatalogPhotoPreview } from "@/components/catalog-item/catalog-photo-preview"
+import { useCatalogItemParams } from "@/hooks/use-catalog-item-params"
 import { useCatalogPhoto } from "@/hooks/use-catalog-photo"
 import {
   type GeneralAction,
   generalActionSchema,
 } from "@ewatrade/assistant/general/contracts"
 import { isSimpleProductCreate } from "@ewatrade/assistant/general/product-create"
+import { isCanonicalUnitAlias } from "@ewatrade/assistant/setup/variants"
 import { CATALOG_PHOTO_CONTENT_TYPES } from "@ewatrade/catalog/photo-contracts"
 import {
   Button,
@@ -16,8 +19,10 @@ import {
   FieldLabel,
   Input,
   MoneyInput,
+  SelectControl,
 } from "@ewatrade/ui"
 import { majorToMinor, minorToMajorInput } from "@ewatrade/utils"
+import { getCatalogCategoryPresets } from "@ewatrade/utils/catalog-category-presets"
 import { findCatalogIllustration } from "@ewatrade/utils/catalog-illustrations"
 import { Image01Icon } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
@@ -42,8 +47,19 @@ export function GeneralProductCreateEditor({
   onSave: (payload: GeneralAction) => void
   onCancel: () => void
 }) {
+  const catalog = useCatalogItemParams()
   const simple = isSimpleProductCreate(initial)
-  const packs = initial.sellingUnits ?? []
+  const [packs, setPacks] = useState(
+    (initial.sellingUnits ?? []).filter(
+      (pack) =>
+        !isCanonicalUnitAlias(
+          pack,
+          initial.canonicalUnitName,
+          initial.priceMinor,
+        ),
+    ),
+  )
+  const [categoryKey, setCategoryKey] = useState(initial.categoryKey ?? "")
   const variants = initial.variants ?? []
   const storeId = useAssistantStoreId()
   const photo = useCatalogPhoto(storeId ?? "")
@@ -99,6 +115,7 @@ export function GeneralProductCreateEditor({
       const priced = rows.map((row, index) => ({
         minor: row.prices.map((price, at) => {
           const value = majorToMinor(price)
+          if (!price.trim()) return undefined
           if (value === null)
             throw Error(`Enter a price for ${label(index)} per ${units[at]}.`)
           return value
@@ -122,6 +139,12 @@ export function GeneralProductCreateEditor({
         ...initial,
         name,
         canonicalUnitName: unit,
+        categoryKey,
+        categorySuggested:
+          categoryKey === initial.categoryKey
+            ? initial.categorySuggested
+            : false,
+        sellingUnits: packs,
         illustrationId: photoAssetId ? undefined : illustrationId,
         photoAssetId,
         ...(simple
@@ -130,14 +153,35 @@ export function GeneralProductCreateEditor({
               openingStock: priced[0]?.stock,
             }
           : {
+              priceMinor: undefined,
+              openingStock: undefined,
               variants: priced.map((row, index) => ({
+                ...variants[index],
+                stockByUnit:
+                  row.stock === variants[index]?.openingStock
+                    ? variants[index]?.stockByUnit
+                    : undefined,
                 selections: variants[index]?.selections ?? [],
                 priceMinor: row.minor[0],
                 sellingUnitPrices: packs.flatMap((pack, at) => {
                   const priceMinor = row.minor[at + 1]
                   return priceMinor === undefined
                     ? []
-                    : [{ unitName: pack.name, priceMinor }]
+                    : [
+                        {
+                          unitName: pack.name,
+                          priceMinor,
+                          derivedFromUnit:
+                            priceMinor ===
+                            variants[index]?.sellingUnitPrices?.find(
+                              (price) => price.unitName === pack.name,
+                            )?.priceMinor
+                              ? variants[index]?.sellingUnitPrices?.find(
+                                  (price) => price.unitName === pack.name,
+                                )?.derivedFromUnit
+                              : undefined,
+                        },
+                      ]
                 }),
                 openingStock: row.stock,
               })),
@@ -163,6 +207,33 @@ export function GeneralProductCreateEditor({
         void save()
       }}
     >
+      {initial.reviewRequirements?.length ? (
+        <div className="grid justify-items-start gap-2">
+          <p className="text-sm text-muted-foreground">
+            Special stock or tracking details need the advanced product form.
+            Your supplied facts remain in this draft.
+          </p>
+          <Button
+            type="button"
+            variant="outline"
+            disabled={busy}
+            onClick={() =>
+              void catalog.setParams({
+                catalogItem: "create",
+                catalogCreateKind: "product",
+                catalogCreateMode: "form",
+                catalogCreateName: initial.name,
+                catalogCreatePrice:
+                  initial.priceMinor === undefined
+                    ? null
+                    : String(initial.priceMinor),
+              })
+            }
+          >
+            Open advanced product form
+          </Button>
+        </div>
+      ) : null}
       <FieldGroup>
         <div className="grid gap-3 sm:grid-cols-2">
           <Field>
@@ -186,6 +257,66 @@ export function GeneralProductCreateEditor({
             />
           </Field>
         </div>
+        <Field>
+          <FieldLabel htmlFor="product-create-category">
+            Category / subcategory
+          </FieldLabel>
+          <SelectControl
+            id="product-create-category"
+            disabled={busy}
+            value={categoryKey}
+            onValueChange={setCategoryKey}
+            options={[
+              ...(initial.categoryKey?.startsWith("shopify:")
+                ? [
+                    {
+                      value: initial.categoryKey,
+                      label: initial.categoryLabel ?? initial.categoryKey,
+                    },
+                  ]
+                : []),
+              { value: "", label: "Uncategorized" },
+              ...getCatalogCategoryPresets({
+                kind: "product",
+                all: true,
+              }).flatMap((category) => [
+                { value: category.key, label: category.label },
+                ...category.subcategories.map((child) => ({
+                  value: child.key,
+                  label: `${category.label} / ${child.label}`,
+                })),
+              ]),
+            ]}
+          />
+        </Field>
+        {packs.map((pack, index) => (
+          <Field key={pack.name}>
+            <FieldLabel htmlFor={`product-create-pack-${index}`}>
+              {pack.referenceUnitName || unit} per {pack.name}
+            </FieldLabel>
+            <Input
+              id={`product-create-pack-${index}`}
+              inputMode="decimal"
+              disabled={busy}
+              value={pack.referenceQuantity ?? pack.containsQuantity}
+              onChange={(event) =>
+                setPacks((current) =>
+                  current.map((entry, at) =>
+                    at !== index
+                      ? entry
+                      : {
+                          ...entry,
+                          ...(entry.referenceUnitName
+                            ? { referenceQuantity: event.target.value }
+                            : { containsQuantity: event.target.value }),
+                          quantityDefault: undefined,
+                        },
+                  ),
+                )
+              }
+            />
+          </Field>
+        ))}
         {rows.map((row, index) => (
           <fieldset
             // biome-ignore lint/suspicious/noArrayIndexKey: rows follow the saved option order
@@ -222,7 +353,7 @@ export function GeneralProductCreateEditor({
                   id={`product-create-${index}-stock`}
                   inputMode="decimal"
                   value={row.stock}
-                  placeholder="None"
+                  placeholder="Not supplied"
                   disabled={busy}
                   onChange={(event) =>
                     setRow(index, { stock: event.target.value })

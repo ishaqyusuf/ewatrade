@@ -1,3 +1,4 @@
+import { prepareProductPayload } from "@ewatrade/assistant/product/preparation"
 import { summarizeSetupAreas } from "@ewatrade/assistant/setup/areas"
 import { SETUP_ATTACHMENT_EXPIRED } from "@ewatrade/assistant/setup/attachments"
 import {
@@ -34,6 +35,7 @@ import { z } from "zod"
 import { assistantAnalyticsContext } from "../../assistant/analytics"
 import { withExpiredAttachments } from "../../assistant/chat-attachments"
 import { assistantMediaAvailability } from "../../assistant/media-availability"
+import { prepareProductCategory } from "../../assistant/product-category"
 import {
   commitSetupDraft,
   describeCommitError,
@@ -382,7 +384,18 @@ export const setupAssistantRouter = createTRPCRouter({
           code: "BAD_REQUEST",
           message: "A record cannot change type.",
         })
-      const { payload } = sanitizeVocabulary(input.payload)
+      const sanitized = sanitizeVocabulary(input.payload).payload
+      const payload =
+        sanitized.kind === "product"
+          ? prepareProductCategory(
+              prepareProductPayload(
+                sanitized,
+                ctx.tenantContext?.activeStore?.currencyCode ??
+                  ctx.tenantContext?.tenant.currencyCode ??
+                  "",
+              ),
+            )
+          : sanitized
       const previous = z
         .array(setupOpenQuestionSchema)
         .catch([])

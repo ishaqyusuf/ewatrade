@@ -1,7 +1,10 @@
 "use client"
 
 import { useTRPC } from "@/trpc/client"
-import { deriveSetupEntityState } from "@ewatrade/assistant/setup/contracts"
+import {
+  deriveSetupEntityState,
+  setupEntityPayloadSchema,
+} from "@ewatrade/assistant/setup/contracts"
 import { Button } from "@ewatrade/ui"
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { useRouter } from "next/navigation"
@@ -68,7 +71,7 @@ export function SetupDraftPanel({
       onMutate: ({ key, payload }) =>
         patch([key], (entity) => {
           const derived = deriveSetupEntityState(
-            payload,
+            setupEntityPayloadSchema.parse(payload),
             entityQuestions(entity).filter((question) => !question.required),
           )
           return {

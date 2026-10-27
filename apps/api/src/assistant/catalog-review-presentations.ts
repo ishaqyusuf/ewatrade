@@ -5,9 +5,15 @@ import {
 import {
   type ProductCreateAction,
   isSimpleProductCreate,
+  productCreateIssues,
   productCreatePayload,
+  productCreateVariants,
 } from "@ewatrade/assistant/general/product-create"
-import { setupProductVariants } from "@ewatrade/assistant/setup/variants"
+import { productCategoryLabel } from "@ewatrade/assistant/product/knowledge"
+import {
+  isCanonicalUnitAlias,
+  setupSelectionsEqual,
+} from "@ewatrade/assistant/setup/variants"
 
 /**
  * Structured card reviews for the accepted customer (B01), product (B02) and
@@ -89,9 +95,18 @@ export function productCreatePresentation(
   currencyCode: string,
 ): GeneralReviewPresentation {
   const money = (minor: number) => generalMoney(minor, currencyCode)
+  const issues = productCreateIssues(action)
+  const note = issues.length ? clip(issues.join(" "), 800) : undefined
+  const category = productCategoryLabel(
+    action.categoryKey,
+    action.categoryLabel,
+  )
+  const categoryFacts = category
+    ? [{ label: "Category", value: clip(category, 160) }]
+    : []
   const unit = action.canonicalUnitName
   const stock = (quantity: string | undefined) =>
-    quantity === undefined ? "None" : `${quantity} ${unit}`
+    quantity === undefined ? "Not supplied" : `${quantity} ${unit}`
   if (isSimpleProductCreate(action))
     return {
       summary: {
@@ -102,18 +117,27 @@ export function productCreatePresentation(
             : money(action.priceMinor),
         amountLabel: `per ${unit}`,
       },
-      facts: [{ label: "Opening stock", value: stock(action.openingStock) }],
+      facts: [
+        ...categoryFacts,
+        { label: "Opening stock", value: stock(action.openingStock) },
+      ],
+      note,
     }
-  const packs = (action.sellingUnits ?? []).map(
-    (pack) => `${pack.name} = ${pack.containsQuantity} ${unit}`,
-  )
-  const rows = setupProductVariants(productCreatePayload(action))
+  const packs = (action.sellingUnits ?? [])
+    .filter((pack) => !isCanonicalUnitAlias(pack, unit, action.priceMinor))
+    .map(
+      (pack) =>
+        `${pack.name} = ${pack.containsQuantity} ${unit}${pack.quantityDefault ? " (default)" : ""}`,
+    )
+  const rows = productCreateVariants(action)
   return {
     summary: {
       party: clip(action.name, 240),
       context: [`Counted in ${unit}`, ...packs].join(" · "),
     },
+    note,
     facts: [
+      ...categoryFacts,
       { value: plural(rows.length, "option", "options") },
       ...(packs.length
         ? [{ value: plural(packs.length, "pack size", "pack sizes") }]
@@ -137,7 +161,7 @@ export function productCreatePresentation(
           .map((pack) =>
             pack.priceMinor === undefined
               ? `${pack.name} price needed`
-              : `${money(pack.priceMinor)} / ${pack.name}`,
+              : `${money(pack.priceMinor)} / ${pack.name}${action.variants?.find((variant) => setupSelectionsEqual(variant.selections, row.selections))?.sellingUnitPrices?.some((price) => price.unitName === pack.name && price.derivedFromUnit) ? " (suggested)" : ""}`,
           )
           .join(" · "),
       })),

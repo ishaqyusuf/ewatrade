@@ -21,7 +21,9 @@
       ".turbo",
       "dist",
       "build",
-      "**/next-env.d.ts"
+      "**/next-env.d.ts",
+      "packages/utils/src/product-taxonomy/categories.json",
+      "packages/utils/src/product-taxonomy/attributes.json"
     ]
   },
   "overrides": [

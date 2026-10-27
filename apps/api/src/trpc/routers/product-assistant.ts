@@ -177,8 +177,12 @@ export const productAssistantRouter = createTRPCRouter({
         possibleMatches,
         runFailure: lastRun?.status === "FAILED" ? lastRun.errorCode : null,
         requiresForm:
+          !!setupProductPayloadSchema.safeParse(entity?.payload).data
+            ?.reviewRequirements?.length ||
           productRequiresForm(snapshot) ||
           !!setupProductPayloadSchema.safeParse(entity?.payload).data?.options
+            ?.length ||
+          !!setupProductPayloadSchema.safeParse(entity?.payload).data?.variants
             ?.length,
         ready:
           !running &&

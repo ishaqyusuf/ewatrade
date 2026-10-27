@@ -1,0 +1,358 @@
+[
+  {
+    "case": "rice",
+    "promptVersion": "general-v32",
+    "model": "deepseek-flash",
+    "provider": "deepseek",
+    "firstDraftMs": 1917,
+    "totalMs": 3001,
+    "text": "Ready to review in the form.",
+    "product": {
+      "kind": "product",
+      "name": "MamaGold Rice 50kg",
+      "categoryKey": "shopify:fb-2-11-9",
+      "categoryLabel": "Food, Beverages & Tobacco / Food Items / Grains, Rice & Cereal / Rice",
+      "categorySuggested": true,
+      "preparationVersion": "product-v1",
+      "unitName": "Bag",
+      "priceMinor": 7500000,
+      "openingStock": "12"
+    },
+    "usage": {
+      "inputTokens": 19986,
+      "inputTokenDetails": {
+        "noCacheTokens": 10002,
+        "cacheReadTokens": 9984
+      },
+      "outputTokens": 143,
+      "outputTokenDetails": {
+        "textTokens": 143,
+        "reasoningTokens": 0
+      },
+      "totalTokens": 20129,
+      "reasoningTokens": 0,
+      "cachedInputTokens": 9984
+    }
+  },
+  {
+    "case": "fan",
+    "promptVersion": "general-v32",
+    "model": "deepseek-flash",
+    "provider": "deepseek",
+    "firstDraftMs": 3518,
+    "totalMs": 4453,
+    "text": "Ready to review in the form.",
+    "product": {
+      "kind": "product",
+      "name": "Atlas Rechargeable Standing Fan",
+      "description": "Atlas rechargeable standing fan with built-in rechargeable battery for use during power outages.",
+      "categoryKey": "shopify:hg-9-1-6",
+      "categoryLabel": "Home & Garden / Household Appliances / Climate Control Appliances / Fans",
+      "categorySuggested": true,
+      "preparationVersion": "product-v1",
+      "variantMode": "explicit",
+      "unitName": "Piece",
+      "priceMinor": 3500000,
+      "openingStock": "4",
+      "sellingUnits": [
+        {
+          "name": "Piece",
+          "containsQuantity": "",
+          "priceMinor": 3500000
+        }
+      ],
+      "variants": [
+        {
+          "selections": [],
+          "sellingUnitPrices": [
+            {
+              "unitName": "Piece",
+              "priceMinor": 3500000
+            }
+          ],
+          "openingStock": "4",
+          "priceMinor": 3500000
+        }
+      ]
+    },
+    "usage": {
+      "inputTokens": 34178,
+      "inputTokenDetails": {
+        "noCacheTokens": 2562,
+        "cacheReadTokens": 31616
+      },
+      "outputTokens": 399,
+      "outputTokenDetails": {
+        "textTokens": 399,
+        "reasoningTokens": 0
+      },
+      "totalTokens": 34577,
+      "reasoningTokens": 0,
+      "cachedInputTokens": 31616
+    }
+  },
+  {
+    "case": "paid-delivered",
+    "promptVersion": "general-v32",
+    "model": "deepseek-flash",
+    "provider": "deepseek",
+    "firstDraftMs": 1598,
+    "totalMs": 2469,
+    "text": "Ready to review.",
+    "order": {
+      "lines": [
+        {
+          "name": "Eggs",
+          "quantity": "10",
+          "unitName": "Crate",
+          "choices": [
+            {
+              "optionName": "Size",
+              "value": "Big"
+            }
+          ]
+        }
+      ],
+      "extraCharges": [
+        {
+          "name": "Delivery",
+          "amount": "1500"
+        }
+      ],
+      "payment": {
+        "paid": true
+      },
+      "delivered": true
+    },
+    "usage": {
+      "inputTokens": 19883,
+      "inputTokenDetails": {
+        "noCacheTokens": 427,
+        "cacheReadTokens": 19456
+      },
+      "outputTokens": 119,
+      "outputTokenDetails": {
+        "textTokens": 119,
+        "reasoningTokens": 0
+      },
+      "totalTokens": 20002,
+      "reasoningTokens": 0,
+      "cachedInputTokens": 19456
+    }
+  },
+  {
+    "case": "missing-shirts",
+    "promptVersion": "general-v32",
+    "model": "deepseek-flash",
+    "provider": "deepseek",
+    "firstDraftMs": 1809,
+    "totalMs": 2906,
+    "text": "Ready to review the order draft card.",
+    "order": {
+      "lines": [
+        {
+          "name": "T-shirts",
+          "quantity": "20",
+          "unitName": "Piece",
+          "choices": [
+            {
+              "optionName": "Size",
+              "value": "Small"
+            },
+            {
+              "optionName": "Colour",
+              "value": "Blue"
+            }
+          ]
+        },
+        {
+          "name": "T-shirts",
+          "quantity": "5",
+          "unitName": "Piece",
+          "choices": [
+            {
+              "optionName": "Size",
+              "value": "Large"
+            },
+            {
+              "optionName": "Colour",
+              "value": "Red"
+            }
+          ]
+        }
+      ],
+      "extraCharges": [
+        {
+          "name": "Packing charge",
+          "amount": "500"
+        }
+      ]
+    },
+    "usage": {
+      "inputTokens": 19935,
+      "inputTokenDetails": {
+        "noCacheTokens": 479,
+        "cacheReadTokens": 19456
+      },
+      "outputTokens": 177,
+      "outputTokenDetails": {
+        "textTokens": 177,
+        "reasoningTokens": 0
+      },
+      "totalTokens": 20112,
+      "reasoningTokens": 0,
+      "cachedInputTokens": 19456
+    }
+  },
+  {
+    "case": "partial-laundry",
+    "promptVersion": "general-v32",
+    "model": "deepseek-flash",
+    "provider": "deepseek",
+    "firstDraftMs": 1707,
+    "totalMs": 2821,
+    "text": "Ready to review.",
+    "service": {
+      "customerName": "Ishaq Yusuf",
+      "lines": [
+        {
+          "name": "Shirts",
+          "treatment": "wash_and_iron",
+          "quantity": "40"
+        },
+        {
+          "name": "Trousers",
+          "treatment": "wash_and_iron",
+          "quantity": "5"
+        },
+        {
+          "name": "Trousers",
+          "treatment": "iron_only",
+          "quantity": "5"
+        },
+        {
+          "name": "Socks",
+          "treatment": "wash_and_iron",
+          "quantity": "5"
+        }
+      ],
+      "assumptions": [
+        "5 trousers set to iron only; you can change this in the form."
+      ]
+    },
+    "usage": {
+      "inputTokens": 19950,
+      "inputTokenDetails": {
+        "noCacheTokens": 494,
+        "cacheReadTokens": 19456
+      },
+      "outputTokens": 191,
+      "outputTokenDetails": {
+        "textTokens": 191,
+        "reasoningTokens": 0
+      },
+      "totalTokens": 20141,
+      "reasoningTokens": 0,
+      "cachedInputTokens": 19456
+    }
+  },
+  {
+    "case": "generic-quote",
+    "promptVersion": "general-v32",
+    "model": "deepseek-flash",
+    "provider": "deepseek",
+    "firstDraftMs": 1447,
+    "totalMs": 2959,
+    "text": "Ready to review.",
+    "service": {
+      "customerName": "Bola",
+      "lines": [
+        {
+          "name": "Haircut",
+          "treatment": "haircut",
+          "quantity": "2",
+          "unitPrice": "500"
+        }
+      ]
+    },
+    "usage": {
+      "inputTokens": 19826,
+      "inputTokenDetails": {
+        "noCacheTokens": 498,
+        "cacheReadTokens": 19328
+      },
+      "outputTokens": 89,
+      "outputTokenDetails": {
+        "textTokens": 89,
+        "reasoningTokens": 0
+      },
+      "totalTokens": 19915,
+      "reasoningTokens": 0,
+      "cachedInputTokens": 19328
+    }
+  },
+  {
+    "case": "pidgin-apparel",
+    "promptVersion": "general-v32",
+    "model": "deepseek-flash",
+    "provider": "deepseek",
+    "firstDraftMs": 4350,
+    "totalMs": 5384,
+    "text": "Ready to review in the form.",
+    "product": {
+      "kind": "product",
+      "name": "Polo Shirts",
+      "categorySuggested": false,
+      "preparationVersion": "product-v1",
+      "variantMode": "explicit",
+      "unitName": "Piece",
+      "priceMinor": 350000,
+      "options": [
+        {
+          "name": "Colour",
+          "values": ["Blue", "Red"]
+        }
+      ],
+      "variants": [
+        {
+          "selections": [
+            {
+              "optionName": "Colour",
+              "value": "Blue"
+            }
+          ],
+          "priceMinor": 350000,
+          "openingStock": "20",
+          "sellingUnitPrices": []
+        },
+        {
+          "selections": [
+            {
+              "optionName": "Colour",
+              "value": "Red"
+            }
+          ],
+          "priceMinor": 350000,
+          "openingStock": "5",
+          "sellingUnitPrices": []
+        }
+      ],
+      "illustrationId": "ill-shirt"
+    },
+    "usage": {
+      "inputTokens": 38668,
+      "inputTokenDetails": {
+        "noCacheTokens": 4748,
+        "cacheReadTokens": 33920
+      },
+      "outputTokens": 376,
+      "outputTokenDetails": {
+        "textTokens": 376,
+        "reasoningTokens": 0
+      },
+      "totalTokens": 39044,
+      "reasoningTokens": 0,
+      "cachedInputTokens": 33920
+    }
+  }
+]

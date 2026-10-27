@@ -32,6 +32,7 @@ import {
 } from "@ewatrade/db/queries"
 import type { TenantContext } from "@ewatrade/db/tenant-context"
 import { ruleRejectedError } from "@ewatrade/errors"
+import { searchProductTaxonomy } from "@ewatrade/utils/product-taxonomy"
 import { TRPCError } from "@trpc/server"
 import { catalogDetailScope } from "../../catalog/detail-access"
 import { catalogPhotoActorScope } from "../../catalog/photo-access"
@@ -51,6 +52,7 @@ import {
   catalogGetItemSchema,
   catalogListItemsPageSchema,
   catalogListItemsSchema,
+  catalogProductCategorySearchSchema,
   catalogProductShareSchema,
   catalogProductUnitConfigurationsSchema,
   catalogPublishUnitConfigurationSchema,
@@ -506,6 +508,15 @@ export const catalogRouter = createTRPCRouter({
             ? ctx.tenantContext.stores.map((store) => store.id)
             : undefined,
       })
+    }),
+
+  searchProductCategories: protectedProcedure
+    .input(catalogProductCategorySearchSchema)
+    .query(({ ctx, input }) => {
+      assertCanReadCatalog(ctx.tenantContext.membership.role)
+      return searchProductTaxonomy(input.query).map(
+        ({ score, completeNameMatch, ...category }) => category,
+      )
     }),
 
   listItemsPage: protectedProcedure

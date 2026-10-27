@@ -26,11 +26,11 @@ const request = serviceJobRequestSchema.parse({
   ],
 })
 
-test("mixed laundry resolves saved prices and asks only the missing socks price", () => {
+test("mixed laundry preserves all lines and leaves missing price editable", () => {
   const result = resolveServiceJobLines(request, choices)
-  expect(result.questions).toEqual([
-    "What is the price per socks for wash & iron?",
-  ])
+  expect(result.questions).toEqual([])
+  expect(result.lines[3]?.resolution).toBe("missing")
+  expect(result.lines[3]?.unitPriceMinor).toBeUndefined()
   expect(
     result.lines.map((line) => [
       line.offeringId,
@@ -41,6 +41,7 @@ test("mixed laundry resolves saved prices and asks only the missing socks price"
     ["shirt", "40", 800_000],
     ["trousers-wash", "5", 75_000],
     ["trousers-iron", "5", 50_000],
+    [undefined, "5", undefined],
   ])
   expect(JSON.stringify(result)).not.toMatch(/payment|phone|due date/i)
 })
@@ -62,9 +63,9 @@ test("stated missing price completes the whole job; it does not override saved p
     unitPriceMinor: 10_000,
     totalMinor: 50_000,
   })
-  expect(result.lines.reduce((sum, line) => sum + line.totalMinor, 0)).toBe(
-    975_000,
-  )
+  expect(
+    result.lines.reduce((sum, line) => sum + (line.totalMinor ?? 0), 0),
+  ).toBe(975_000)
 })
 
 test("same-name offerings are clarified, and quantity must produce exact currency", () => {
@@ -99,4 +100,33 @@ test("same-name offerings are clarified, and quantity must produce exact currenc
       lines: [{ ...request.lines[0], quantity: "0" }],
     }).success,
   ).toBe(false)
+})
+
+test("generic and quote services retain supplied work and incomplete results never prove absence", () => {
+  const request = serviceJobRequestSchema.parse({
+    lines: [{ name: "Haircut", treatment: "haircut", quantity: "2" }],
+  })
+  const draft = resolveServiceJobLines(request, [
+    { offeringId: "hair", name: "Haircut", requiresQuote: true },
+  ])
+  expect(draft.lines[0]?.offeringId).toBe("hair")
+  expect(draft.lines[0]?.resolution).toBe("price_needed")
+  expect(draft.lines[0]?.totalMinor).toBeUndefined()
+  const quoted = resolveServiceJobLines(
+    {
+      lines: [
+        {
+          name: "Haircut",
+          quantity: request.lines[0]?.quantity ?? "2",
+          unitPrice: "500",
+        },
+      ],
+    },
+    [{ offeringId: "hair", name: "Haircut", requiresQuote: true }],
+  )
+  expect(quoted.lines[0]?.quoteRequired).toBe(true)
+  expect(quoted.lines[0]?.totalMinor).toBe(100000)
+  const partial = resolveServiceJobLines(request, [], false)
+  expect(partial.lines[0]?.resolution).toBe("incomplete_search")
+  expect(partial.lines[0]?.offeringId).toBeUndefined()
 })

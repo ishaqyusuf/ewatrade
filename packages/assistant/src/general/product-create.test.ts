@@ -3,6 +3,7 @@ import { generalActionSchema, generalActionSummary } from "./contracts"
 import {
   isSimpleProductCreate,
   productCreateDraft,
+  productCreateIssues,
   productCreatePayload,
 } from "./product-create"
 
@@ -39,13 +40,15 @@ test("complete facts draft exact stated crate prices and convert stock to pieces
       selections: [{ optionName: "Size", value: "Small" }],
       priceMinor: 15000,
       sellingUnitPrices: [{ unitName: "Crate", priceMinor: 400000 }],
-      openingStock: expect.stringMatching(/^750(\.0+)?$/),
+      stockByUnit: [{ unitName: "Crate", quantity: "25" }],
+      openingStock: "750",
     },
     {
       selections: [{ optionName: "Size", value: "Big" }],
       priceMinor: 20000,
       sellingUnitPrices: [{ unitName: "Crate", priceMinor: 550000 }],
-      openingStock: expect.stringMatching(/^15000(\.0+)?$/),
+      stockByUnit: [{ unitName: "Crate", quantity: "500" }],
+      openingStock: "15000",
     },
   ])
   expect(generalActionSchema.safeParse(draft).success).toBe(true)
@@ -72,7 +75,7 @@ test("a stated pack price remains independent of the individual price", () => {
   ])
 })
 
-test("missing selling prices and ambiguous total stock block the card", () => {
+test("missing selling prices and ambiguous total stock allow a draft but block saving", () => {
   const noPrice = generalActionSchema.safeParse({
     ...eggs,
     variants: [
@@ -80,13 +83,22 @@ test("missing selling prices and ambiguous total stock block the card", () => {
       eggs.variants[1],
     ],
   })
-  expect(noPrice.success).toBe(false)
-  expect(noPrice.error?.issues[0]?.message).toContain("selling price for Small")
+  expect(noPrice.success).toBe(true)
+  if (!noPrice.success || noPrice.data.action !== "product_create")
+    throw Error("Product required")
+  expect(productCreateIssues(noPrice.data).join(" ")).toContain(
+    "selling price for Small",
+  )
   const sharedStock = generalActionSchema.safeParse({
     ...eggs,
     openingStock: "900",
   })
-  expect(sharedStock.success).toBe(false)
+  expect(sharedStock.success).toBe(true)
+  if (!sharedStock.success || sharedStock.data.action !== "product_create")
+    throw Error("Product required")
+  expect(productCreateIssues(sharedStock.data).join(" ")).toContain(
+    "per option",
+  )
 })
 
 test("a simple product keeps its single-price draft", () => {
@@ -99,7 +111,7 @@ test("a simple product keeps its single-price draft", () => {
   })
   if (parsed.action !== "product_create") throw Error("wrong action")
   expect(isSimpleProductCreate(parsed)).toBe(true)
-  expect(productCreateDraft(parsed)).toEqual(parsed)
+  expect(productCreateDraft(parsed)).toMatchObject(parsed)
   expect(generalActionSummary(parsed, "NGN")).toBe(
     "Indomie · ₦250.00 per Pack\nstock 40 Pack",
   )
@@ -110,15 +122,11 @@ test("a draft gets a matching library picture; a photo replaces it", () => {
   if (parsed.action !== "product_create") throw Error("wrong action")
   const draft = productCreateDraft(parsed)
   expect(draft.illustrationId).toBe("ill-egg")
-  expect(generalActionSummary(draft, "NGN").split("\n").at(-1)).toBe(
-    "Picture: Egg",
-  )
+  expect(generalActionSummary(draft, "NGN")).toContain("Picture: Egg")
   const photo = productCreateDraft({ ...draft, photoAssetId: "asset_1" })
   expect(photo.illustrationId).toBeUndefined()
   expect(productCreatePayload(photo).illustrationId).toBeUndefined()
-  expect(generalActionSummary(photo, "NGN").split("\n").at(-1)).toBe(
-    "Photo added",
-  )
+  expect(generalActionSummary(photo, "NGN")).toContain("Photo added")
   // Removing the picture is kept; it is not picked again.
   expect(
     productCreateDraft({ ...draft, illustrationId: null }).illustrationId,
@@ -129,45 +137,46 @@ test("a draft gets a matching library picture; a photo replaces it", () => {
   ).toBe(false)
 })
 
-test("missing or invalid crate conversions cannot become a product proposal", () => {
+test("unresolved conversions remain editable and cannot be saved", () => {
   for (const sellingUnits of [
     undefined,
     [{ name: "Crate", containsQuantity: "" }],
     [{ name: "Crate", containsQuantity: "0" }],
   ]) {
     const result = generalActionSchema.safeParse({ ...eggs, sellingUnits })
-    expect(result.success).toBe(false)
+    expect(result.success).toBe(true)
+    if (!result.success || result.data.action !== "product_create")
+      throw Error("Product required")
     expect(
-      result.error?.issues.some((issue) =>
-        /crate|pack sizes/i.test(issue.message),
+      productCreateIssues(result.data).some((issue) =>
+        /crate|pack sizes/i.test(issue),
       ),
     ).toBe(true)
   }
 })
 
-test("General never supplies an unstated pack price during validation, normalization or review", () => {
-  const input = {
+test("unstated pack prices are visible derived suggestions, not altered stated prices", () => {
+  const parsed = generalActionSchema.parse({
     ...eggs,
     variants: eggs.variants.map((variant) => ({
       ...variant,
       sellingUnitPrices: undefined,
     })),
-  }
-  const result = generalActionSchema.safeParse(input)
-  expect(result.success).toBe(false)
+  })
+  if (parsed.action !== "product_create") throw Error("Product required")
+  const draft = productCreateDraft(parsed)
   expect(
-    result.error?.issues.some((issue) => issue.message.includes("per crate")),
-  ).toBe(true)
-  const direct = productCreateDraft(input)
-  expect(direct.variants?.map((variant) => variant.sellingUnitPrices)).toEqual([
-    [],
-    [],
+    draft.variants?.map((variant) => variant.sellingUnitPrices?.[0]),
+  ).toEqual([
+    { unitName: "Crate", priceMinor: 450000, derivedFromUnit: "Piece" },
+    { unitName: "Crate", priceMinor: 600000, derivedFromUnit: "Piece" },
   ])
-  expect(generalActionSummary(direct, "NGN")).toContain("Crate price needed")
-  expect(generalActionSummary(direct, "NGN")).not.toContain("₦4,500.00")
+  expect(generalActionSummary(draft, "NGN")).toContain(
+    "suggested from Piece price",
+  )
 })
 
-test("Carton packaging stays descriptive and an unpriced carton cannot be enrolled for sale", () => {
+test("packaging-only cartons stay descriptive; explicitly sold cartons can receive a reviewed suggestion", () => {
   const input = {
     ...eggs,
     description: "Carton packaging: 12 crates; not sold",
@@ -189,12 +198,19 @@ test("Carton packaging stays descriptive and an unpriced carton cannot be enroll
       { name: "Carton", containsQuantity: "360" },
     ],
   })
-  expect(unpriced.success).toBe(false)
+  expect(unpriced.success).toBe(true)
+  if (!unpriced.success || unpriced.data.action !== "product_create")
+    throw Error("Product required")
+  const proposed = productCreateDraft(unpriced.data)
   expect(
-    unpriced.error?.issues.some((issue) =>
-      issue.message.includes("per carton"),
+    proposed.variants?.[0]?.sellingUnitPrices?.find(
+      (price) => price.unitName === "Carton",
     ),
-  ).toBe(true)
+  ).toEqual({
+    unitName: "Carton",
+    priceMinor: 4800000,
+    derivedFromUnit: "Crate",
+  })
 })
 
 test("explicit shared and zero pack prices are preserved without deriving a replacement", () => {

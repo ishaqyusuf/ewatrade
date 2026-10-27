@@ -1,0 +1,59 @@
+[
+  {
+    "case": "sealed-stock",
+    "promptVersion": "general-v34",
+    "model": "deepseek-flash",
+    "provider": "deepseek",
+    "firstDraftMs": 3658,
+    "totalMs": 4865,
+    "text": "Ready to review in the form.",
+    "product": {
+      "kind": "product",
+      "name": "Eggs - Sealed Crate of 30",
+      "description": "Eggs sold only as sealed crates of 30. Crates are never opened and stock is not pooled into loose single eggs.",
+      "categoryKey": "shopify:fb-2-12-1-4",
+      "categoryLabel": "Food, Beverages & Tobacco / Food Items / Meat, Seafood & Eggs / Eggs / Whole Eggs",
+      "categorySuggested": false,
+      "reviewRequirements": ["sealed_stock"],
+      "preparationVersion": "product-v1",
+      "variantMode": "explicit",
+      "unitName": "Crate",
+      "sellingUnits": [
+        {
+          "name": "Crate",
+          "containsQuantity": "30",
+          "referenceUnitName": "Egg",
+          "priceMinor": 600000
+        }
+      ],
+      "variants": [
+        {
+          "selections": [],
+          "priceMinor": 600000,
+          "stockByUnit": [
+            {
+              "unitName": "Crate",
+              "quantity": "10"
+            }
+          ]
+        }
+      ],
+      "illustrationId": "ill-egg"
+    },
+    "usage": {
+      "inputTokens": 36553,
+      "inputTokenDetails": {
+        "noCacheTokens": 7753,
+        "cacheReadTokens": 28800
+      },
+      "outputTokens": 425,
+      "outputTokenDetails": {
+        "textTokens": 425,
+        "reasoningTokens": 0
+      },
+      "totalTokens": 36978,
+      "reasoningTokens": 0,
+      "cachedInputTokens": 28800
+    }
+  }
+]

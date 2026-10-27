@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto"
-import { CATALOG_CATEGORY_PRESETS } from "@ewatrade/utils/catalog-category-presets"
 import type { Prisma, PrismaClient } from "../../generated/prisma/client"
+import { catalogCategoryIdentity } from "./catalog-category-identity"
 import {
   type CatalogPhotoActorScope,
   CatalogPhotoError,
@@ -55,21 +55,12 @@ export async function resolveCatalogCategorySelection(
       subcategoryId: child?.id ?? null,
     }
   }
-  if (!label || label.length > 120)
+  if (!label || label.length > 500)
     throw new CatalogPhotoError(
       "INVALID_PHOTO",
-      "Use a category of 120 characters or fewer.",
+      "Use a category of 500 characters or fewer.",
     )
-  const preset = CATALOG_CATEGORY_PRESETS.find(
-    (entry) =>
-      normalized(entry.label) === normalized(label) ||
-      normalized(label).startsWith(`${normalized(entry.label)} / `),
-  )
-  const rootLabel = preset?.label ?? label
-  const childLabel =
-    preset && label.includes(" / ")
-      ? label.slice(label.indexOf(" / ") + 3).trim()
-      : null
+  const { preset, rootLabel, childLabel } = catalogCategoryIdentity(label)
   const rootKey = preset
     ? `preset:${preset.key}`
     : `custom:${customKey(rootLabel)}`
@@ -149,16 +140,7 @@ export async function previewCatalogCategoryLabel(
 ) {
   const label = category?.trim()
   if (!label) return null
-  const preset = CATALOG_CATEGORY_PRESETS.find(
-    (entry) =>
-      normalized(entry.label) === normalized(label) ||
-      normalized(label).startsWith(`${normalized(entry.label)} / `),
-  )
-  const rootLabel = preset?.label ?? label
-  const childLabel =
-    preset && label.includes(" / ")
-      ? label.slice(label.indexOf(" / ") + 3).trim()
-      : null
+  const { preset, rootLabel, childLabel } = catalogCategoryIdentity(label)
   const rootKey = preset
     ? `preset:${preset.key}`
     : `custom:${customKey(rootLabel)}`

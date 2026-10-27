@@ -46,6 +46,11 @@ import {
   missingCatalogItemAnswer,
   serviceJobRequestSchema,
 } from "@ewatrade/assistant/general/contracts"
+import {
+  orderPreparationIssues,
+  orderPreparationRequestSchema,
+} from "@ewatrade/assistant/general/order-preparation"
+import { productCreateIssues } from "@ewatrade/assistant/general/product-create"
 import { quoteDecisionAction } from "@ewatrade/assistant/general/quote-decision"
 import {
   generalPendingQuoteApprovalsInput,
@@ -125,6 +130,7 @@ import { readGeneralCatalogItem } from "./general-catalog-item"
 import {
   type GeneralContext,
   assertCapability,
+  assertGeneralAction,
   assertGeneralActionHandoffAuthority,
   canDraftGeneralCapability,
   canUseCapability,
@@ -255,6 +261,8 @@ import {
   generalSuppliersInput,
 } from "./general-supplier-reads"
 import { recoverableToolFailure } from "./general-tool-recovery"
+import { recordPreparation } from "./preparation-observability"
+import { searchProductCategories } from "./product-category"
 import { proposalDigest } from "./proposal-security"
 import {
   catalogItemReadAnswers,
@@ -317,7 +325,7 @@ function canonicalDraft(input: unknown, timeZone: string) {
  * the validated value back into the model's history and a converted copy
  * there gets imitated on the next call; `execute` converts it again.
  */
-function draftToolSchema<T>(schema: z.ZodType<T>, timeZone: string) {
+export function draftToolSchema<T>(schema: z.ZodType<T>, timeZone: string) {
   const base = objectToolSchema(schema)
   return jsonSchema<unknown>(
     async () =>
@@ -382,6 +390,23 @@ export function createGeneralTools(
   onAnswer: (answer: GeneralAnswer) => void,
   runId?: string,
 ): ToolSet {
+  const toolsStartedAt = Date.now()
+  let firstDraftObserved = false
+  const observeFirstDraft = (
+    kind: "product" | "order" | "service",
+    lineCount: number,
+    unresolvedCount = 0,
+  ) => {
+    if (firstDraftObserved) return
+    firstDraftObserved = true
+    recordPreparation({
+      kind,
+      durationMs: Date.now() - toolsStartedAt,
+      lineCount,
+      unresolvedCount,
+      phase: "first_draft",
+    })
+  }
   const scope = requireGeneralScope(ctx)
   const correction = runId
     ? createGeneralDraftCorrection({ conversationId, runId })
@@ -1207,9 +1232,92 @@ export function createGeneralTools(
           return result.page
         }),
     }),
+    searchProductCategories: tool({
+      description:
+        "Search all categories in the pinned Shopify reference and retrieve relevant attribute names. Pass the product type or description. Use returned category keys only; attributes guide mapping supplied facts, never fabricate variants, prices, specifications or stock. Does not read merchant catalog or write records.",
+      inputSchema: z
+        .object({ query: z.string().trim().min(2).max(160) })
+        .strict(),
+      execute: ({ query }) =>
+        wrap("searchProductCategories", async () => ({
+          version: "2026-08",
+          categories: searchProductCategories(query),
+        })),
+    }),
+    prepareOrder: tool({
+      description:
+        "Prepare one persistent editable order draft from product names, exact quantities, selling units and supplied choices. Keep extra charges separate. For already paid set request.payment:{paid:true} even if method and amount are unknown. This preserves an owner fact without recording payment. Never move it into notes. Retain delivered:true; leave unknown payment method/account unset. Missing items offer order-only or Catalog addition. No business records are created. Use updateCurrent only for a correction to the current pending order; never for a separate new order.",
+      inputSchema: z
+        .object({
+          request: orderPreparationRequestSchema,
+          updateCurrent: z.boolean().default(false),
+        })
+        .strict(),
+      execute: ({ request, updateCurrent }) =>
+        wrap("prepareOrder", async (fresh) => {
+          assertGeneralAction(fresh, "order_create")
+          const payload = generalActionSchema.parse({
+            action: "order_create",
+            lines: [],
+            preparation: request,
+          })
+          if (updateCurrent) {
+            if (!correction)
+              throw new TRPCError({
+                code: "CONFLICT",
+                message: "Open the current draft to correct it.",
+              })
+            const current = await correction.read(fresh)
+            if (
+              current.status !== "editing" ||
+              current.payload.action !== "order_create"
+            )
+              throw new TRPCError({
+                code: "CONFLICT",
+                message: "Select the current order draft before correcting it.",
+              })
+            const result = await correction.edit(fresh, {
+              ...current.payload,
+              preparation: request,
+            })
+            onProposal(result.proposalId, {
+              proposalId: result.proposalId,
+              revision: result.revision,
+              payloadHash: proposalDigest(result.payload),
+            })
+            return {
+              status: "card_ready",
+              instruction:
+                "The same order draft is updated. Say Ready to review and stop. No order, payment or stock movement is saved.",
+            }
+          }
+          const result = await draftGeneralProposal(
+            fresh,
+            conversationId,
+            payload,
+          )
+          observeFirstDraft(
+            "order",
+            request.lines.length,
+            result.payload.action === "order_create"
+              ? orderPreparationIssues(result.payload).length
+              : 0,
+          )
+          onProposal(result.proposalId, {
+            proposalId: result.proposalId,
+            revision: result.revision,
+            payloadHash: proposalDigest(result.payload),
+          })
+          return {
+            status: "card_ready",
+            instruction:
+              "One persistent editable order draft is shown. Say Ready to review and stop. No order, payment or stock movement is saved.",
+          }
+        }),
+    }),
     prepareServiceJob: tool({
       description:
-        "Prepare one editable laundry/service job card using saved garment/treatment prices and saved customer lookup. Use this FIRST for laundry requests instead of separate catalog/customer reads, which clutter the chat. Pass each garment, treatment and exact quantity; split treatments into separate lines. A missing service asks only its unit price (major units). On follow-up, include all earlier facts and the stated missing price. Payment is not requested or recorded; customer phone, due date and assignment are optional in the form. A named new customer needs only a name. With no name use Walk-in. No job, customer or catalog write. The final card opens the native job form and includes a Create menu for missing choices: separate Service first, or add directly under a selected existing Service such as Laundry.",
+        "Prepare one editable laundry/service job card using saved garment/treatment prices and saved customer lookup. Use this FIRST for laundry requests instead of separate catalog/customer reads, which clutter the chat. Pass each garment, treatment and exact quantity; split treatments into separate lines. Missing prices remain blank on the useful editable card and can be completed in the form. On follow-up, include all earlier facts and any supplied missing price. Payment is not requested or recorded; customer phone, due date and assignment are optional in the form. A named new customer needs only a name. With no name use Walk-in. No job, customer or catalog write. The final card opens the native job form and includes a Create menu for missing choices: separate Service first, or add directly under a selected existing Service such as Laundry.",
       inputSchema: serviceJobRequestSchema,
       execute: (input) =>
         wrap("prepareServiceJob", async (fresh) => {
@@ -1222,13 +1330,21 @@ export function createGeneralTools(
           const result = await prepareGeneralServiceJob(fresh, input)
           if (result.status !== "ready") return result
           serviceJobCardShown = true
+          observeFirstDraft(
+            "service",
+            result.draft.lines.length,
+            result.draft.issues?.length ?? 0,
+          )
           onAnswer({
             id: `service_draft_${crypto.randomUUID()}`,
-            title: "Laundry job",
-            value: new Intl.NumberFormat("en-NG", {
-              style: "currency",
-              currency: result.draft.currencyCode,
-            }).format(result.draft.totalMinor / 100),
+            title: "Service job",
+            value:
+              result.draft.totalMinor === undefined
+                ? "Total incomplete"
+                : new Intl.NumberFormat("en-NG", {
+                    style: "currency",
+                    currency: result.draft.currencyCode,
+                  }).format(result.draft.totalMinor / 100),
             detail: "Review and edit the job before saving.",
             scope: fresh.tenantContext.activeStore?.name ?? "Current Store",
             asOf: new Date().toISOString(),
@@ -2611,6 +2727,12 @@ export function createGeneralTools(
                   )
                 })
               : await draftGeneralProposal(fresh, conversationId, payload)
+          if (result.payload.action === "product_create")
+            observeFirstDraft(
+              "product",
+              result.payload.variants?.length ?? 1,
+              productCreateIssues(result.payload).length,
+            )
           onProposal(result.proposalId, {
             proposalId: result.proposalId,
             revision: result.revision,

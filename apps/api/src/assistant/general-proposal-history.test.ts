@@ -1,7 +1,7 @@
 import { expect, test } from "bun:test"
 import {
-  generalActionSchema,
   type GeneralProposal,
+  generalActionSchema,
 } from "@ewatrade/assistant/general/contracts"
 import { projectGeneralProposalHistory } from "./general-proposal-history"
 const payload = { action: "customer_create", name: "History QA customer" }
@@ -112,4 +112,41 @@ test("auth/database failures from valid projection remain failures", async () =>
       },
     }),
   ).rejects.toThrow("FRESH_ACCESS_DENIED")
+})
+
+test("a current rich Product draft still uses the existing v1 save protocol and survives history recovery", async () => {
+  const product = {
+    action: "product_create" as const,
+    name: "Eggs",
+    canonicalUnitName: "Egg",
+    categoryKey: "poultry:eggs",
+    categorySuggested: true,
+    categorySuggestionName: "Eggs",
+    preparationVersion: "product-v1" as const,
+    priceMinor: 20000,
+    sellingUnits: [
+      {
+        name: "Crate",
+        containsQuantity: "30",
+        quantityDefault: "egg-crate-30" as const,
+        priceMinor: 600000,
+      },
+    ],
+  }
+  const saved = {
+    ...row("product"),
+    action: "product_create",
+    payload: product,
+  }
+  const history = await projectGeneralProposalHistory([saved], {
+    supports: () => true,
+    read: async (current) => ({
+      ...proposal(current.id),
+      payload: generalActionSchema.parse(product),
+    }),
+  })
+  expect(history.unavailableProposals).toEqual([])
+  expect(history.proposals[0]?.payload).toEqual(
+    generalActionSchema.parse(product),
+  )
 })

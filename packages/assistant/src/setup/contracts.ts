@@ -5,7 +5,7 @@ import { isExactDecimal } from "@ewatrade/utils/exact-decimal"
 import { z } from "zod"
 import { setupProductQuestions } from "./variants"
 
-export const SETUP_ASSISTANT_PROMPT_VERSION = "ewatrade-setup-assistant-v11"
+export const SETUP_ASSISTANT_PROMPT_VERSION = "ewatrade-setup-assistant-v13"
 export const SETUP_DRAFT_MAX_ENTITIES = 200
 
 /** Model-facing money is a major-unit decimal; storage is integer minor units. */

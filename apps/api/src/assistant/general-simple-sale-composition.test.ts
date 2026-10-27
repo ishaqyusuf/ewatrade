@@ -10,6 +10,8 @@ import {
   assertGeneralAction,
   assertGeneralCompositeDependency,
 } from "./general-context"
+import { generalProposalForApp } from "./general-proposals"
+import { proposalApprovalToken, proposalDigest } from "./proposal-security"
 
 const oldKey = process.env.ASSISTANT_APPROVAL_SIGNING_KEY
 beforeAll(() => {
@@ -140,6 +142,11 @@ test("internal sale execution refuses non-generated order shapes before canonica
     { ...order, lines: [...order.lines, ...order.lines] },
     { ...order, lines: [{ offeringId: "catalog-offering", quantity: "1" }] },
     { ...order, notes: "not a simple-sale generated field" },
+    { ...order, fulfillNow: true },
+    {
+      ...order,
+      preparation: { lines: [{ name: "Rice", quantity: "1", choices: [] }] },
+    },
     { ...order, initialPayment: { ...order.initialPayment, method: "card" } },
     {
       ...order,
@@ -162,6 +169,46 @@ test("internal sale execution refuses non-generated order shapes before canonica
       executeSimpleSaleOrder(ctx, payload, "synthetic-key"),
     ).rejects.toThrow("Review the exact simple sale again")
   expect(touched).toEqual([])
+})
+
+test("partial order drafts stay editable and cannot acquire confirmation or touch business records", async () => {
+  const { ctx, touched } = context()
+  const payload = {
+    action: "order_create" as const,
+    lines: [],
+    preparation: {
+      lines: [{ name: "Eggs", quantity: "10", choices: [] }],
+      payment: { paid: true as const },
+      delivered: true,
+    },
+  }
+  expect(await orderCreate.validate(ctx, payload, false)).toBeNull()
+  await expect(orderCreate.validate(ctx, payload, true)).rejects.toMatchObject({
+    code: "BAD_REQUEST",
+  })
+  expect(touched).toEqual([])
+  const row = {
+    id: "partial-order",
+    revision: 1,
+    payload,
+    status: "PENDING",
+    expiresAt: new Date(Date.now() + 60000),
+    createdAt: new Date(),
+    executedResult: null,
+    tenantId: "tenant",
+    storeId: "store",
+    actorUserId: "actor",
+    sessionId: "browser-session",
+    payloadHash: proposalDigest(payload),
+    approvalTokenHash: "",
+  } as unknown as Parameters<typeof generalProposalForApp>[0]
+  row.approvalTokenHash = proposalDigest(
+    proposalApprovalToken(
+      row,
+      process.env.ASSISTANT_APPROVAL_SIGNING_KEY ?? "",
+    ),
+  )
+  expect(generalProposalForApp(row).approvalToken).toBeUndefined()
 })
 
 test("standalone initial-payment execution and composite execution still refuse a disallowed parent actor", async () => {

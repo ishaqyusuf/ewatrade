@@ -322,6 +322,8 @@ planned("commerce", "G03", ["serviceAssistantBookings.availability"])
 planned("commerce", "G03", [
   "serviceAccess.*",
   "serviceCommerce.*Booking",
+  "serviceCommerce.sourceBookings",
+  "serviceCommerce.staffBookingSlots",
   "serviceCommerce.holdBookingSlot",
   "serviceCommerce.*CatalogOffering",
   "serviceCommerce.attestCatalogAvailability",

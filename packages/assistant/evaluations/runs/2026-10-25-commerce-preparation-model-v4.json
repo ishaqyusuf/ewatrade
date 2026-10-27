@@ -1,0 +1,93 @@
+[
+  {
+    "case": "partial-delivery",
+    "promptVersion": "general-v33",
+    "model": "deepseek-flash",
+    "provider": "deepseek",
+    "firstDraftMs": 1309,
+    "totalMs": 2457,
+    "text": "Ready to review: 10 crates of Big Eggs (3 delivered), with the ₦5,000 bank transfer recorded as payment.",
+    "order": {
+      "lines": [
+        {
+          "name": "Eggs",
+          "quantity": "10",
+          "deliveredQuantity": "3",
+          "unitName": "Crate",
+          "choices": [
+            {
+              "optionName": "Size",
+              "value": "Big"
+            }
+          ]
+        }
+      ],
+      "payment": {
+        "paid": true,
+        "amount": "5000",
+        "method": "bank_transfer"
+      },
+      "partialDelivery": true
+    },
+    "usage": {
+      "inputTokens": 20139,
+      "inputTokenDetails": {
+        "noCacheTokens": 10155,
+        "cacheReadTokens": 9984
+      },
+      "outputTokens": 151,
+      "outputTokenDetails": {
+        "textTokens": 151,
+        "reasoningTokens": 0
+      },
+      "totalTokens": 20290,
+      "reasoningTokens": 0,
+      "cachedInputTokens": 9984
+    }
+  },
+  {
+    "case": "sealed-stock",
+    "promptVersion": "general-v33",
+    "model": "deepseek-flash",
+    "provider": "deepseek",
+    "firstDraftMs": 1899,
+    "totalMs": 3031,
+    "text": "Product draft ready to review in the form (10 sealed crates of 30 at ₦6,000 per crate, sealed stock — no crates opened or pooled).",
+    "product": {
+      "kind": "product",
+      "name": "Eggs",
+      "categoryKey": "poultry:eggs",
+      "categorySuggested": true,
+      "categorySuggestionName": "Eggs",
+      "reviewRequirements": ["sealed_stock"],
+      "preparationVersion": "product-v1",
+      "variantMode": "explicit",
+      "unitName": "Crate",
+      "openingStock": "10",
+      "sellingUnits": [
+        {
+          "name": "Crate",
+          "containsQuantity": "30",
+          "referenceUnitName": "Egg",
+          "priceMinor": 600000
+        }
+      ],
+      "illustrationId": "ill-egg"
+    },
+    "usage": {
+      "inputTokens": 20398,
+      "inputTokenDetails": {
+        "noCacheTokens": 430,
+        "cacheReadTokens": 19968
+      },
+      "outputTokens": 295,
+      "outputTokenDetails": {
+        "textTokens": 295,
+        "reasoningTokens": 0
+      },
+      "totalTokens": 20693,
+      "reasoningTokens": 0,
+      "cachedInputTokens": 19968
+    }
+  }
+]

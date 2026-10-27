@@ -70,26 +70,25 @@ export function OpenMissingCatalogItem({
             : handoff.name.split(" · ")[0],
         kind: handoff.kind,
         searchOrder: "stable",
-        limit: priceMinor === undefined ? 1 : 50,
+        limit: 50,
       })
       if (generation !== getDataCacheGeneration()) return
-      const existingItem =
-        priceMinor === undefined
-          ? page.items[0]
-          : page.items.find((item) => {
-              const wanted = serviceNameKey(handoff.name)
-              return [
-                item.name,
-                ...item.variants.flatMap((variant) => [
-                  variant.name,
-                  ...variant.offerings.map((offering) => offering.name),
-                ]),
-              ].some((name) => serviceNameKey(name) === wanted)
-            })
+      const existingItem = page.items.find((item) => {
+        const wanted = serviceNameKey(handoff.name)
+        return [
+          item.name,
+          ...item.variants.flatMap((variant) => [
+            variant.name,
+            ...variant.offerings.map((offering) => offering.name),
+          ]),
+        ].some((name) => serviceNameKey(name) === wanted)
+      })
       if (existingItem || page.nextCursor) {
         setExisting(existingItem?.id ?? null)
         setError(
-          "This search now has a saved match. Check it before adding another item.",
+          existingItem
+            ? "This search now has a saved match. Check it before adding another item."
+            : "This search is incomplete. Check the Catalog before adding another item.",
         )
         return
       }

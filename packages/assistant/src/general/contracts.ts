@@ -1,4 +1,8 @@
 import {
+  orderPreparationDraftSchema,
+  orderPreparationRequestSchema,
+} from "./order-preparation"
+import {
   storefrontAcceptAction,
   storefrontGenerateAction,
 } from "./storefront-design"
@@ -237,6 +241,10 @@ export const generalActionSchema = z.discriminatedUnion("action", [
   z
     .object({
       action: z.literal("order_create"),
+      fulfillNow: z.boolean().optional(),
+      customerName: z.string().trim().min(1).max(160).optional(),
+      preparation: orderPreparationRequestSchema.optional(),
+      prepared: orderPreparationDraftSchema.optional(),
       initialPayment: z
         .object({
           amountMinor: money.refine(
@@ -275,7 +283,7 @@ export const generalActionSchema = z.discriminatedUnion("action", [
             orderCustomLine,
           ]),
         )
-        .min(1)
+        .min(0)
         .max(30),
     })
     .strict(),

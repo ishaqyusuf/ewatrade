@@ -1,6 +1,15 @@
 "use client"
 
-import { Badge, Button, Input, MoneyInput, cn } from "@ewatrade/ui"
+import { getCatalogCategoryPresets } from "@ewatrade/utils/catalog-category-presets"
+
+import {
+  Badge,
+  Button,
+  Input,
+  MoneyInput,
+  SelectControl,
+  cn,
+} from "@ewatrade/ui"
 import { majorToMinor, minorToMajorInput } from "@ewatrade/utils/currency"
 import Link from "next/link"
 import { type ReactNode, useId, useState } from "react"
@@ -331,6 +340,12 @@ function RecordEditor({
   const perVariant =
     payload.kind === "product" &&
     Boolean(payload.options?.length || payload.variants?.length)
+  const [packs, setPacks] = useState(
+    payload.kind === "product" ? (payload.sellingUnits ?? []) : [],
+  )
+  const [categoryKey, setCategoryKey] = useState(
+    payload.kind === "product" ? (payload.categoryKey ?? "") : "",
+  )
   const [variantRows, setVariantRows] = useState(() =>
     payload.kind === "product" ? setupVariantEditorRows(payload) : [],
   )
@@ -365,10 +380,14 @@ function RecordEditor({
       priceMinor: perVariant ? undefined : priceMinor,
       usage: usage === "FOR_SALE" && !payload.usage ? undefined : usage,
       unitName: unit.trim() || payload.unitName,
+      sellingUnits: packs,
+      categoryKey,
+      categorySuggested:
+        categoryKey === payload.categoryKey ? payload.categorySuggested : false,
       ...(perVariant
         ? {
             variants: setupEditedVariants(payload, variantRows),
-            sellingUnits: payload.sellingUnits?.map((unit) => ({
+            sellingUnits: packs.map((unit) => ({
               ...unit,
               priceMinor: undefined,
             })),
@@ -467,6 +486,66 @@ function RecordEditor({
           ) : null}
           {payload.kind === "product" ? (
             <>
+              <EditorField
+                id={`${id}-category`}
+                label="Category / subcategory"
+                wide
+              >
+                <SelectControl
+                  id={`${id}-category`}
+                  value={categoryKey}
+                  onValueChange={setCategoryKey}
+                  options={[
+                    ...(payload.categoryKey?.startsWith("shopify:")
+                      ? [
+                          {
+                            value: payload.categoryKey,
+                            label: payload.categoryLabel ?? payload.categoryKey,
+                          },
+                        ]
+                      : []),
+                    { value: "", label: "Uncategorized" },
+                    ...getCatalogCategoryPresets({
+                      kind: "product",
+                      all: true,
+                    }).flatMap((category) => [
+                      { value: category.key, label: category.label },
+                      ...category.subcategories.map((child) => ({
+                        value: child.key,
+                        label: `${category.label} / ${child.label}`,
+                      })),
+                    ]),
+                  ]}
+                />
+              </EditorField>
+              {packs.map((pack, index) => (
+                <EditorField
+                  key={pack.name}
+                  id={`${id}-pack-${index}`}
+                  label={`${pack.referenceUnitName || unit} per ${pack.name}`}
+                >
+                  <Input
+                    id={`${id}-pack-${index}`}
+                    value={pack.referenceQuantity ?? pack.containsQuantity}
+                    inputMode="decimal"
+                    onChange={(event) =>
+                      setPacks((current) =>
+                        current.map((entry, at) =>
+                          index !== at
+                            ? entry
+                            : {
+                                ...entry,
+                                quantityDefault: undefined,
+                                ...(entry.referenceUnitName
+                                  ? { referenceQuantity: event.target.value }
+                                  : { containsQuantity: event.target.value }),
+                              },
+                        ),
+                      )
+                    }
+                  />
+                </EditorField>
+              ))}
               {perVariant ? (
                 <SetupVariantFields
                   rows={variantRows}

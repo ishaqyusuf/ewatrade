@@ -1,0 +1,375 @@
+[
+  {
+    "mode": "focused",
+    "case": "eggs",
+    "provider": "deepseek",
+    "model": "deepseek-flash",
+    "firstDraftMs": 4026,
+    "totalMs": 6585,
+    "toolSteps": 3,
+    "text": "Eggs are drafted as one product with Big and Small sizes.\n\n**What's in the draft**\n- **Category:** Poultry › Eggs 🥚\n- **Counting unit:** Piece (eggs sold one by one)\n- **Selling units:** Crate (set to 30 eggs — the usual default, since you didn't say), Carton = 12 Crate\n- **Big eggs:** ₦200 each, ₦6,000 per crate — stock: 200 Carton + 10 Crate\n- **Small eggs:** ₦100 each, ₦5,500 per crate — stock: 100 Carton + 10 Crate\n- Carton prices (₦72,000 big / ₦66,000 small) were calculated by the server as crate price × 12 — you can override them in the form.\n\n**One thing worth confirming:** your crate prices aren't 30 × the egg price (₦6,000 vs ₦6,000 for big — that matches; small is ₦5,500 vs ₦3,000, so small eggs by crate are priced above 30 individual eggs). I kept both prices exactly as you gave them; just check the small crate price if that wasn't intended.\n\nTwo optional extras, not required to save: confirm how many eggs are in a crate, and whether you'd like to note anything else about the eggs. Nothing is created yet — the draft returns to the normal form for you to review and create.",
+    "payload": {
+      "kind": "product",
+      "name": "Eggs",
+      "description": "Fresh eggs sold individually, by crate and by carton. Available in big and small sizes.",
+      "unitName": "Piece",
+      "categoryKey": "poultry:eggs",
+      "preparationVersion": "product-v1",
+      "categorySuggested": false,
+      "variantMode": "explicit",
+      "sellingUnits": [
+        {
+          "name": "Crate",
+          "containsQuantity": "30",
+          "quantityDefault": "egg-crate-30"
+        },
+        {
+          "name": "Carton",
+          "containsQuantity": "360",
+          "referenceUnitName": "Crate",
+          "referenceQuantity": "12"
+        }
+      ],
+      "options": [
+        {
+          "name": "Size",
+          "values": ["Big", "Small"]
+        }
+      ],
+      "variants": [
+        {
+          "selections": [
+            {
+              "optionName": "Size",
+              "value": "Big"
+            }
+          ],
+          "priceMinor": 20000,
+          "sellingUnitPrices": [
+            {
+              "unitName": "Crate",
+              "priceMinor": 600000
+            },
+            {
+              "unitName": "Carton",
+              "priceMinor": 7200000,
+              "derivedFromUnit": "Crate"
+            }
+          ],
+          "openingStock": "72300",
+          "stockByUnit": [
+            {
+              "unitName": "Carton",
+              "quantity": "200"
+            },
+            {
+              "unitName": "Crate",
+              "quantity": "10"
+            }
+          ]
+        },
+        {
+          "selections": [
+            {
+              "optionName": "Size",
+              "value": "Small"
+            }
+          ],
+          "priceMinor": 10000,
+          "sellingUnitPrices": [
+            {
+              "unitName": "Crate",
+              "priceMinor": 550000
+            },
+            {
+              "unitName": "Carton",
+              "priceMinor": 6600000,
+              "derivedFromUnit": "Crate"
+            }
+          ],
+          "openingStock": "36300",
+          "stockByUnit": [
+            {
+              "unitName": "Carton",
+              "quantity": "100"
+            },
+            {
+              "unitName": "Crate",
+              "quantity": "10"
+            }
+          ]
+        }
+      ],
+      "illustrationId": "ill-egg"
+    },
+    "usage": {
+      "inputTokens": 15004,
+      "inputTokenDetails": {
+        "noCacheTokens": 1436,
+        "cacheReadTokens": 13568
+      },
+      "outputTokens": 902,
+      "outputTokenDetails": {
+        "textTokens": 902,
+        "reasoningTokens": 0
+      },
+      "totalTokens": 15906,
+      "reasoningTokens": 0,
+      "cachedInputTokens": 13568
+    }
+  },
+  {
+    "mode": "focused",
+    "case": "phone",
+    "provider": "deepseek",
+    "model": "deepseek-flash",
+    "firstDraftMs": 3806,
+    "totalMs": 5229,
+    "toolSteps": 4,
+    "text": "I've drafted the product in your setup draft (nothing is created yet):\n\n**Samsung S24 Ultra**\n- Category: Electronics › Phones\n- Counting unit: Piece\n- Options: Storage **256GB**, RAM **16GB** — one variant for 256GB / 16GB\n- Price: not set\n- Stock: not set\n\nStill open: selling price, stock count, and an optional photo. You can fill those in the form, and when you're ready you can confirm to create it.",
+    "payload": {
+      "kind": "product",
+      "name": "Samsung S24 Ultra",
+      "description": "Samsung S24 Ultra smartphone.",
+      "unitName": "Piece",
+      "categoryKey": "electronics:phones",
+      "preparationVersion": "product-v1",
+      "categorySuggested": false,
+      "variantMode": "explicit",
+      "options": [
+        {
+          "name": "Storage",
+          "values": ["256GB"]
+        },
+        {
+          "name": "RAM",
+          "values": ["16GB"]
+        }
+      ],
+      "variants": [
+        {
+          "selections": [
+            {
+              "optionName": "Storage",
+              "value": "256GB"
+            },
+            {
+              "optionName": "RAM",
+              "value": "16GB"
+            }
+          ],
+          "sellingUnitPrices": []
+        }
+      ]
+    },
+    "usage": {
+      "inputTokens": 18904,
+      "inputTokenDetails": {
+        "noCacheTokens": 1112,
+        "cacheReadTokens": 17792
+      },
+      "outputTokens": 509,
+      "outputTokenDetails": {
+        "textTokens": 509,
+        "reasoningTokens": 0
+      },
+      "totalTokens": 19413,
+      "reasoningTokens": 0,
+      "cachedInputTokens": 17792
+    }
+  },
+  {
+    "mode": "focused",
+    "case": "shirts",
+    "provider": "deepseek",
+    "model": "deepseek-flash",
+    "firstDraftMs": 4601,
+    "totalMs": 6034,
+    "toolSteps": 4,
+    "text": "I staged a draft T-shirt product with two colour options:\n\n- **Blue** — 30 pieces in stock\n- **Red** — 50 pieces in stock\n- Counting unit: Piece · Category: Clothing › T-shirts\n\nStill open (can be filled in the form): selling price for Blue and Red, and a photo. Nothing is created yet — review it and confirm when ready.\n\nOne optional thing: if you'd like, you can add an apparel size option (e.g. S/M/L) — I haven't split your blue/red stock by size since you didn't mention sizes.",
+    "payload": {
+      "kind": "product",
+      "name": "T-shirt",
+      "description": "T-shirts available in Blue and Red.",
+      "unitName": "Piece",
+      "categoryKey": "clothing:t-shirts",
+      "preparationVersion": "product-v1",
+      "categorySuggested": false,
+      "variantMode": "explicit",
+      "options": [
+        {
+          "name": "Colour",
+          "values": ["Blue", "Red"]
+        }
+      ],
+      "variants": [
+        {
+          "selections": [
+            {
+              "optionName": "Colour",
+              "value": "Blue"
+            }
+          ],
+          "sellingUnitPrices": [],
+          "openingStock": "30",
+          "stockByUnit": [
+            {
+              "unitName": "Piece",
+              "quantity": "30"
+            }
+          ]
+        },
+        {
+          "selections": [
+            {
+              "optionName": "Colour",
+              "value": "Red"
+            }
+          ],
+          "sellingUnitPrices": [],
+          "openingStock": "50",
+          "stockByUnit": [
+            {
+              "unitName": "Piece",
+              "quantity": "50"
+            }
+          ]
+        }
+      ],
+      "illustrationId": "ill-shirt"
+    },
+    "usage": {
+      "inputTokens": 19198,
+      "inputTokenDetails": {
+        "noCacheTokens": 1406,
+        "cacheReadTokens": 17792
+      },
+      "outputTokens": 523,
+      "outputTokenDetails": {
+        "textTokens": 523,
+        "reasoningTokens": 0
+      },
+      "totalTokens": 19721,
+      "reasoningTokens": 0,
+      "cachedInputTokens": 17792
+    }
+  },
+  {
+    "mode": "setup",
+    "case": "eggs",
+    "provider": "deepseek",
+    "model": "deepseek-flash",
+    "firstDraftMs": 6340,
+    "totalMs": 8492,
+    "toolSteps": 5,
+    "text": "Eggs are staged. Here's what's in your setup list:\n\n**Eggs** — sold as single pieces, by Crate and by Carton (1 carton = 12 crates, 1 crate = 30 pieces)\n- Big: 200 per piece, 6,000 per crate, 7,200,000 per carton — stock 200 cartons + 10 crates\n- Small: 100 per piece, 5,500 per crate, 6,600,000 per carton — stock 100 cartons + 10 crates\n\nThe carton prices were worked out from the crate prices (12 crates per carton), so check them and change anything that doesn't match how you sell. You can edit every detail in the setup list and press Add to my business when ready.\n\nDo you sell anything else — other goods or any services? Feel free to describe everything in one message. Nothing is compulsory, and you can continue later from the dashboard or here in the chat.",
+    "payload": {
+      "kind": "product",
+      "name": "Eggs",
+      "unitName": "Piece",
+      "categoryKey": "poultry:eggs",
+      "preparationVersion": "product-v1",
+      "categorySuggested": false,
+      "variantMode": "explicit",
+      "sellingUnits": [
+        {
+          "name": "Crate",
+          "containsQuantity": "30",
+          "quantityDefault": "egg-crate-30"
+        },
+        {
+          "name": "Carton",
+          "containsQuantity": "360",
+          "referenceUnitName": "Crate",
+          "referenceQuantity": "12"
+        }
+      ],
+      "options": [
+        {
+          "name": "Size",
+          "values": ["Big", "Small"]
+        }
+      ],
+      "variants": [
+        {
+          "selections": [
+            {
+              "optionName": "Size",
+              "value": "Big"
+            }
+          ],
+          "priceMinor": 20000,
+          "sellingUnitPrices": [
+            {
+              "unitName": "Crate",
+              "priceMinor": 600000
+            },
+            {
+              "unitName": "Carton",
+              "priceMinor": 7200000,
+              "derivedFromUnit": "Crate"
+            }
+          ],
+          "openingStock": "72300",
+          "stockByUnit": [
+            {
+              "unitName": "Carton",
+              "quantity": "200"
+            },
+            {
+              "unitName": "Crate",
+              "quantity": "10"
+            }
+          ]
+        },
+        {
+          "selections": [
+            {
+              "optionName": "Size",
+              "value": "Small"
+            }
+          ],
+          "priceMinor": 10000,
+          "sellingUnitPrices": [
+            {
+              "unitName": "Crate",
+              "priceMinor": 550000
+            },
+            {
+              "unitName": "Carton",
+              "priceMinor": 6600000,
+              "derivedFromUnit": "Crate"
+            }
+          ],
+          "openingStock": "36300",
+          "stockByUnit": [
+            {
+              "unitName": "Carton",
+              "quantity": "100"
+            },
+            {
+              "unitName": "Crate",
+              "quantity": "10"
+            }
+          ]
+        }
+      ],
+      "illustrationId": "ill-egg"
+    },
+    "usage": {
+      "inputTokens": 34320,
+      "inputTokenDetails": {
+        "noCacheTokens": 7696,
+        "cacheReadTokens": 26624
+      },
+      "outputTokens": 1008,
+      "outputTokenDetails": {
+        "textTokens": 1008,
+        "reasoningTokens": 0
+      },
+      "totalTokens": 35328,
+      "reasoningTokens": 0,
+      "cachedInputTokens": 26624
+    }
+  }
+]

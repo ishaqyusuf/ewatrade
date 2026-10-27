@@ -250,7 +250,8 @@ function GeneralRecordEditor({
     const amount = majorToMinor(price)
     if (
       ((payload.action === "product_create" &&
-        isSimpleProductCreate(payload)) ||
+        isSimpleProductCreate(payload) &&
+        price.trim() !== "") ||
         payload.action === "payment_record") &&
       amount === null
     ) {
@@ -282,8 +283,8 @@ function GeneralRecordEditor({
       ...media,
       ...(payload.action === "product_create"
         ? isSimpleProductCreate(payload)
-          ? { priceMinor: amount }
-          : {}
+          ? { priceMinor: amount ?? undefined }
+          : { priceMinor: undefined, openingStock: undefined }
         : payload.action === "payment_record"
           ? { amountMinor: amount }
           : payload.action === "customer_create"
@@ -419,6 +420,32 @@ function GeneralRecordEditor({
             />
           </>
         ) : null}
+        {payload.action === "product_create"
+          ? payload.sellingUnits?.map((unit, index) => (
+              <FormField
+                key={unit.name}
+                label={`${unit.referenceUnitName || payload.canonicalUnitName} per ${unit.name}`}
+                value={unit.referenceQuantity ?? unit.containsQuantity}
+                editable={!disabled}
+                keyboardType="decimal-pad"
+                onChangeText={(value) =>
+                  patch({
+                    sellingUnits: payload.sellingUnits?.map((entry, at) =>
+                      index !== at
+                        ? entry
+                        : {
+                            ...entry,
+                            quantityDefault: undefined,
+                            ...(entry.referenceUnitName
+                              ? { referenceQuantity: value }
+                              : { containsQuantity: value }),
+                          },
+                    ),
+                  })
+                }
+              />
+            ))
+          : null}
         {payload.action === "product_create" &&
         !isSimpleProductCreate(payload) ? (
           <GeneralProductCreateRows

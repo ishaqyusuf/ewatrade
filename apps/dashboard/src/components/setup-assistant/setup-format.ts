@@ -1,3 +1,4 @@
+import { productPreparationNotes } from "@ewatrade/assistant/product/preparation"
 import type {
   SetupEntityPayload,
   SetupMoneyAccountPayload,
@@ -187,7 +188,9 @@ export function entitySummary(payload: SetupCardPayload, currencyCode: string) {
         .filter(Boolean)
         .join(" · ")
     })
-    return [usage, ...rows].filter(Boolean).join("; ")
+    return [usage, ...rows, ...productPreparationNotes(payload)]
+      .filter(Boolean)
+      .join("; ")
   }
   // Items the business only uses have no selling price.
   const price =
@@ -203,7 +206,9 @@ export function entitySummary(payload: SetupCardPayload, currencyCode: string) {
   const units = payload.sellingUnits?.length
     ? `Also sold by ${payload.sellingUnits.map((unit) => `${unit.name.toLowerCase()} (${unit.containsQuantity})`).join(", ")}`
     : null
-  return [usage, price, stock, units].filter(Boolean).join(" · ")
+  return [usage, price, stock, units, ...productPreparationNotes(payload)]
+    .filter(Boolean)
+    .join(" · ")
 }
 
 export const ENTITY_GROUPS = [

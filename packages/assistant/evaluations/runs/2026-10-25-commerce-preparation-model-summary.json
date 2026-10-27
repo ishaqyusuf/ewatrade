@@ -1,0 +1,113 @@
+{
+  "version": 1,
+  "scope": "Synthetic General extraction with actual prompt/schema and in-memory tools; not DB/channel acceptance",
+  "acceptedCases": [
+    {
+      "case": "rice",
+      "evidence": "2026-10-25-commerce-preparation-model-v2.json",
+      "promptVersion": "general-v32",
+      "model": "deepseek-flash",
+      "provider": "deepseek",
+      "firstDraftMs": 1917,
+      "totalMs": 3001
+    },
+    {
+      "case": "fan",
+      "evidence": "2026-10-25-commerce-preparation-model-v2.json",
+      "promptVersion": "general-v32",
+      "model": "deepseek-flash",
+      "provider": "deepseek",
+      "firstDraftMs": 3518,
+      "totalMs": 4453
+    },
+    {
+      "case": "paid-delivered",
+      "evidence": "2026-10-25-commerce-preparation-model-v2.json",
+      "promptVersion": "general-v32",
+      "model": "deepseek-flash",
+      "provider": "deepseek",
+      "firstDraftMs": 1598,
+      "totalMs": 2469
+    },
+    {
+      "case": "missing-shirts",
+      "evidence": "2026-10-25-commerce-preparation-model-v2.json",
+      "promptVersion": "general-v32",
+      "model": "deepseek-flash",
+      "provider": "deepseek",
+      "firstDraftMs": 1809,
+      "totalMs": 2906
+    },
+    {
+      "case": "partial-laundry",
+      "evidence": "2026-10-25-commerce-preparation-model-v2.json",
+      "promptVersion": "general-v32",
+      "model": "deepseek-flash",
+      "provider": "deepseek",
+      "firstDraftMs": 1707,
+      "totalMs": 2821
+    },
+    {
+      "case": "generic-quote",
+      "evidence": "2026-10-25-commerce-preparation-model-v2.json",
+      "promptVersion": "general-v32",
+      "model": "deepseek-flash",
+      "provider": "deepseek",
+      "firstDraftMs": 1447,
+      "totalMs": 2959
+    },
+    {
+      "case": "pidgin-apparel",
+      "evidence": "2026-10-25-commerce-preparation-model-v3.json",
+      "promptVersion": "general-v32",
+      "model": "deepseek-flash",
+      "provider": "deepseek",
+      "firstDraftMs": 2208,
+      "totalMs": 3365
+    },
+    {
+      "case": "phone",
+      "evidence": "2026-10-25-commerce-preparation-model-v3.json",
+      "promptVersion": "general-v32",
+      "model": "deepseek-flash",
+      "provider": "deepseek",
+      "firstDraftMs": 2091,
+      "totalMs": 3541
+    },
+    {
+      "case": "partial-delivery",
+      "evidence": "2026-10-25-commerce-preparation-model-v5.json",
+      "promptVersion": "general-v34",
+      "model": "deepseek-flash",
+      "provider": "deepseek",
+      "firstDraftMs": 1469,
+      "totalMs": 2576
+    },
+    {
+      "case": "sealed-stock",
+      "evidence": "2026-10-25-commerce-preparation-model-v6.json",
+      "promptVersion": "general-v34",
+      "model": "deepseek-flash",
+      "provider": "deepseek",
+      "firstDraftMs": 3658,
+      "totalMs": 4865
+    }
+  ],
+  "firstDraftMs": {
+    "min": 1447,
+    "max": 3658
+  },
+  "totalMs": {
+    "min": 2469,
+    "max": 4865
+  },
+  "clarificationMarkerCount": 0,
+  "prohibitedBusinessEffectClaims": 0,
+  "diagnosticRunsRetained": [
+    "model.json",
+    "model-v2.json (last Polo row excluded)",
+    "model-v4.json",
+    "model-v5.json (sealed row excluded)"
+  ],
+  "noWrites": true
+}
