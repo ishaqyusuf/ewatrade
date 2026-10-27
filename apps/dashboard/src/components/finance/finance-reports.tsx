@@ -35,6 +35,7 @@ import {
 } from "./report-account-ledger"
 import { FinanceReportExport } from "./report-export"
 import type { FinanceBook } from "./types"
+import { FinanceYearEnd } from "./year-end-section"
 
 export function FinanceReports({ book }: { book: FinanceBook }) {
   const start = new Date(book.startsAt).toISOString().slice(0, 10)
@@ -65,6 +66,7 @@ export function FinanceReports({ book }: { book: FinanceBook }) {
         </p>
       </div>
       <FinancePeriodHistory book={book} />
+      <FinanceYearEnd book={book} />
       <FinanceReportAccountLedger book={book} />
       <ReportResults
         key={`${book.id}:${from}:${through}:${revision}`}
