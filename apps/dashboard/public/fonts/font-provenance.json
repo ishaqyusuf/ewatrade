@@ -1,0 +1,40 @@
+{
+  "purpose": "Server-side fonts for the payment-link social preview image (src/components/public-payment/payment-preview-font.ts). Read from disk at render time; no runtime font request.",
+  "faces": [
+    {
+      "family": "Figtree",
+      "weight": 500,
+      "file": "figtree-500.ttf",
+      "origin": "https://github.com/erikdkennedy/figtree/blob/032dfa7fe219ef3a02890d6d3add84eacc9aebfe/fonts/ttf/Figtree-Medium.ttf",
+      "sha256": "358a4de79ae6c3fd7c6a54fcd778c1101ba376af75b8463e715df6988387bc19"
+    },
+    {
+      "family": "Figtree",
+      "weight": 600,
+      "file": "figtree-600.ttf",
+      "origin": "https://github.com/erikdkennedy/figtree/blob/032dfa7fe219ef3a02890d6d3add84eacc9aebfe/fonts/ttf/Figtree-SemiBold.ttf",
+      "sha256": "35fc4508d627f8402a7d5ae91d842d1adb36846eea902c0a849642afecd0ac74"
+    },
+    {
+      "family": "Figtree",
+      "weight": 700,
+      "file": "figtree-700.ttf",
+      "origin": "https://github.com/erikdkennedy/figtree/blob/032dfa7fe219ef3a02890d6d3add84eacc9aebfe/fonts/ttf/Figtree-Bold.ttf",
+      "sha256": "71a35e2bd92a05427e2dc9897bab41f8a865800e148238007735b5934508198a"
+    },
+    {
+      "family": "Figtree",
+      "weight": 800,
+      "file": "figtree-800.ttf",
+      "origin": "https://github.com/erikdkennedy/figtree/blob/032dfa7fe219ef3a02890d6d3add84eacc9aebfe/fonts/ttf/Figtree-ExtraBold.ttf",
+      "sha256": "c86cc3d813f6af7723474ff78ba1d1351254d1f4d4bfeedf58d9e8ed389b1dc4"
+    },
+    {
+      "family": "Inter",
+      "weight": 400,
+      "file": "../shop-v3/inter-regular.ttf",
+      "note": "Existing asset, used only for the Naira sign (Figtree has no U+20A6): rendered as its own text run and stroked to match the 800 digits."
+    }
+  ],
+  "license": "Figtree: SIL Open Font License 1.1 (figtree-OFL.txt, from the same commit). Inter: SIL Open Font License 1.1."
+}

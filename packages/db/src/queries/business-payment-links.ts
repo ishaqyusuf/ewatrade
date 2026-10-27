@@ -349,6 +349,7 @@ export async function getBusinessPaymentLink(
           : link.expiresAt <= input.now
             ? ("expired" as const)
             : ("active" as const),
+    amountRequestedMinor: link.amountMinor,
     amountPrefilledMinor: Math.min(link.amountMinor, balanceMinor),
     totalMinor: order.totalMinor,
     paidMinor,
