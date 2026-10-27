@@ -719,7 +719,11 @@ and provider evaluation are settled. Receipt extraction is the smaller component
 safe money allocation, custody accounting, refunds and concurrency are the larger
 engineering scope.
 
-## 11. Workshop review candidate — 27 October 2026
+## 11. Earlier Workshop candidate — superseded after owner review
+
+The v13 candidate below is historical. The owner rejected its parallel payment
+screens because they departed from the existing manual-transfer design. Use the
+integrated MB-01 review in section 12 for all subsequent design implementation.
 
 The requested updated design is published in the existing
 [Business banking Workshop](https://workshop.localhost/ewatrade/finance/business-banking).
@@ -757,3 +761,77 @@ identity, financial, AI-accuracy or release acceptance.
 Workshop design delivery **4/4 complete**; planning **4/4 complete**; proposed
 product implementation **0/8 started**. New receipt/reference/credit/refund behavior
 still requires an exact owner design selection before implementation.
+
+## 12. Integrated manual-banking update MB-01 — 27 October 2026
+
+The correction extends the accepted **Banking02 v9** screens and shared rendering
+functions. It preserves the payment hero, bank/name/amount/narration copy buttons,
+inline editable-name “I have paid” reveal, merchant inbox/review pane, confirmation
+bar, Copy payment summary, Copy link, Copy message and WhatsApp draft controls.
+New balances/refunds views use the existing Finance and mobile shells.
+
+Review [Banking02 v18 — integrated screens](https://workshop.localhost/ewatrade/finance/business-banking/directions/02?rev=9a15dd1d-5612-4d02-8835-e7547d0d6d8e&screen=index.html),
+[all scenario screenshots](https://workshop.localhost/ewatrade/finance/business-banking/directions/02?rev=9a15dd1d-5612-4d02-8835-e7547d0d6d8e&screen=screenshots.html),
+and the [version/implementation tracker](https://workshop.localhost/ewatrade/finance/business-banking/directions/02?rev=9a15dd1d-5612-4d02-8835-e7547d0d6d8e&screen=updates.html).
+Exact immutable revision: `9a15dd1d-5612-4d02-8835-e7547d0d6d8e`.
+The prior v9 selection, four directions and two implementation records remain;
+this correction is unselected and its changed design deltas are not implemented.
+
+### Screen and scenario inventory
+
+**143 updated scenario images across 16 screen groups; 80 unchanged scenarios
+retained.** The gallery contains one full-content JPEG per updated scenario and
+links each image to its stable scenario ID. CSV and JSON inventories are included
+in the same archived revision. Counts describe scenarios, not distinct screens.
+
+| Surface | Updated screen groups | Scenarios |
+| --- | --- | ---: |
+| Customer payment page | Order (37), service (3) | 40 |
+| Dashboard | Link (9), review (23), Order (2), balances (2), refunds (7), inbox (2), service link (3) | 48 |
+| Mobile app | Link (9), review (23), Order (2), balances (2), refunds (7), assistant (6) | 49 |
+| Dashboard assistant | Chat results and payment review handoffs (6) | 6 |
+
+Coverage includes receipt checking/consistent fields/old date/wrong recipient/
+amount mismatch/reuse/unavailable, larger partial allocation, excess credit or
+refund preference, bank-field validation, pending reports, confirmation stamps,
+reference match/missing/different, duplicate/stale review refusal, positive/zero
+business balances, customer verification, partial/full/stale/reserved credit,
+refund review/details/approval/reservation/recorded return and mixed sources.
+Existing sharing, no-phone, terminal, retry and service scenarios remain visible.
+Future bank automation remains the provider-neutral engineering contract in this
+plan; it is not simulated settlement authority.
+
+### Tracking during design implementation
+
+`MB-01` is the stable **design update ID**, independent of Workshop catalog v18.
+For example, `pub:order:receipt-old` and `dash:review:confirm` identify specific
+screen/scenario deltas. Each inventory row records its baseline catalog version,
+design version, delta status, screenshot path/hash and implementation evidence.
+An existing implemented screen can therefore have a pending MB-01 change without
+losing its earlier baseline evidence or claiming that the changed design is live.
+
+When implementation starts, bind the owner-approved exact catalog revision and
+stable scenario ID to `implementedDesignVersion`, `implementationCommit` and
+`verificationReceipt`. Promote only the verified delta; retain prior designs,
+screenshots and implementation history. Source presence, a preview checkbox or
+an older implementation badge cannot complete that transition.
+
+### Design verification and handoff
+
+All 143 images were captured from archived v17
+`7a40808c-0793-4188-ab36-1ffe42cff14b`; v18 adds their JPEG assets and the completed
+gallery/inventory, with the screen renderer unchanged. Full-content export shows
+the entire long form; the original device-viewport mode remains available for
+interaction review. Focused browser checks cover bank acknowledgement before
+confirmation, preserved confirmation-bar copy, recorded business stamp, partial
+credit (₦3,000 leaves ₦12,000), full credit (₦20,000 leaves ₦5,000), excess refund
+validation/submission and config navigation/theme/size/collapse preferences.
+All captures have nonempty screen text; focused scenario assertions pass, and
+the captured browser console reports no errors. Copy buttons in this inherited
+Workshop remain local simulations; actual OS clipboard bytes are not verified.
+
+Design correction **5/5 complete**: baseline mapping, integrated screens, immutable
+publication, complete screenshots, version/implementation inventory. The original
+planning checklist remains **4/4**; proposed product implementation remains **0/8**.
+This is HTML design proof, not native-device, identity, AI accuracy, money-command
+or release acceptance. No product code, provider settings or deployment changed.
