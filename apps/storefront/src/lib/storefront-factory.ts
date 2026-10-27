@@ -1,9 +1,14 @@
 import {
+  countPublicStorefrontOfferings,
   loadLiveStorefrontForHost,
   siteContentHash,
 } from "@ewatrade/db/queries"
 import { storefrontActionSchema } from "@ewatrade/storefront-contracts/actions"
 import { STOREFRONT_RUNTIME_VERSION } from "@ewatrade/storefront-contracts/manifest"
+import {
+  ORDERING_TEMPLATE_KEYS,
+  orderingFulfilmentMethods,
+} from "@ewatrade/storefront-contracts/orders"
 import { catalogQuerySchema } from "@ewatrade/storefront-contracts/resources"
 import {
   itemWhatsAppUrl,
@@ -20,6 +25,7 @@ import {
   resolveCustomerChatOrigin,
 } from "@ewatrade/utils"
 import { withLocalQaStorefrontPhotos } from "./local-qa-storefront-photos"
+import { storefrontOtpAdapter } from "./storefront-commerce"
 
 type Db = Parameters<typeof loadLiveStorefrontForHost>[0]
 
@@ -73,7 +79,52 @@ function factoryDependencies(db: Db, host: string, query: unknown) {
     loadResources: async () => {
       const value = await current
       if (!value) throw new Error("Storefront is unavailable.")
-      return publicStorefrontResources(value.storefront)
+      const store = value.storefront as typeof value.storefront & {
+        customerRequestsAllowed?: boolean
+        hasBusinessContact?: boolean
+        storefrontItems?: number | null
+      }
+      const adaptive = ORDERING_TEMPLATE_KEYS.includes(
+        value.site.release.templateKey,
+      )
+      const offeringCounts = adaptive
+        ? await countPublicStorefrontOfferings(db, {
+            tenantId: value.site.release.tenantId,
+            storeId: value.site.storeId,
+            storefrontItems: store.storefrontItems ?? null,
+          })
+        : undefined
+      // Presentation hints only; every write re-derives these facts on the server.
+      const ordering =
+        ORDERING_TEMPLATE_KEYS.includes(value.site.release.templateKey) &&
+        Boolean(store.customerRequestsAllowed)
+      const otp = ordering
+        ? storefrontOtpAdapter({ qaTenant: Boolean(store.isQaPreview) })
+        : null
+      return publicStorefrontResources({
+        ...value.storefront,
+        ...(offeringCounts ? { offeringCounts } : {}),
+        ...(ORDERING_TEMPLATE_KEYS.includes(value.site.release.templateKey)
+          ? {
+              commerce: {
+                orderRequests: ordering
+                  ? { available: (offeringCounts?.products ?? 0) > 0 }
+                  : { available: false, reason: "Not taking order requests." },
+                customerAccounts: otp
+                  ? { available: true, channels: otp.channels }
+                  : {
+                      available: false,
+                      reason: "Login isn't available.",
+                      channels: [],
+                    },
+                fulfilment: orderingFulfilmentMethods(
+                  value.site.release.composition,
+                ),
+                hasContact: Boolean(store.hasBusinessContact),
+              },
+            }
+          : {}),
+      })
     },
   }
 }

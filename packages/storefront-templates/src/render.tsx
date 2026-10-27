@@ -4,6 +4,14 @@ import { validateComposition } from "../../storefront-contracts/src/manifest"
 import { isCanvasManifest } from "./canvas/catalog"
 import { type CanvasEditing, CanvasStorefront } from "./canvas/render"
 import { CatalogV4 } from "./catalog-v4/render"
+import type {
+  StorefrontCommerceAdapter,
+  StorefrontCustomerView,
+} from "./commerce-studio/commerce"
+import {
+  CommerceStudio,
+  type CommerceStudioRoute,
+} from "./commerce-studio/render"
 import { getTemplateManifest } from "./registry"
 import { RetailEditorial } from "./retail-editorial/render"
 import { ServiceDesk } from "./service-desk/render"
@@ -21,11 +29,16 @@ function TemplateBody(props: {
   onPageChange?: (key: string) => void
   /** Storefront host only: item details may push ?item= history. Embedded previews omit it. */
   syncUrl?: boolean
+  /** Commerce studio only: host commerce adapter, customer session view and domain route. */
+  commerce?: StorefrontCommerceAdapter
+  customer?: StorefrontCustomerView
+  route?: CommerceStudioRoute
 }) {
   const { snapshot } = props
   const manifest = getTemplateManifest(snapshot.composition, "render")
   validateComposition(snapshot.composition, manifest)
   validateDesignAssets(snapshot.composition, manifest)
+  if (manifest.key === "commerce-studio") return <CommerceStudio {...props} />
   if (isCanvasManifest(manifest)) return <CanvasStorefront {...props} />
   if (manifest.key === "component-editorial" && manifest.version === "1.0.0")
     return <RetailEditorial {...props} />

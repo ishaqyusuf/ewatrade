@@ -11,6 +11,7 @@ import {
   publicItemAvailability,
   publicOptionPrice,
   publicStockAvailability,
+  publicStockState,
   publicStorefrontOptionName,
   publicStorefrontWhatsAppPhone,
 } from "./public-storefront-display"
@@ -159,6 +160,57 @@ export async function getScopedStorefrontDesignPreview(
     : null
 }
 
+/** Public offering eligibility for one Store. Shared by reads and purchase rechecks. */
+export function publicOfferingWhere(tenantId: string, storeId: string) {
+  return {
+    tenantId,
+    status: "ACTIVE" as const,
+    archivedAt: null,
+    variant: { status: "ACTIVE" as const, archivedAt: null },
+    storeAvailability: { some: { storeId, isAvailable: true } },
+  } satisfies Prisma.SellableOfferingWhereInput
+}
+
+/** Public catalog item eligibility (before any plan cap). */
+export function publicCatalogItemWhere(tenantId: string, storeId: string) {
+  return {
+    ...saleEligibleCatalogItem,
+    tenantId,
+    status: "ACTIVE" as const,
+    archivedAt: null,
+    offerings: { some: publicOfferingWhere(tenantId, storeId) },
+  } satisfies Prisma.CatalogItemWhereInput
+}
+
+/**
+ * Mode facts for templates that adapt to the business: every currently public
+ * offering (respecting the plan cap), never order history. Called only by hosts
+ * that need it, so other templates' reads are unchanged.
+ */
+export async function countPublicStorefrontOfferings(
+  db: DbClient,
+  input: { tenantId: string; storeId: string; storefrontItems: number | null },
+) {
+  const where = publicCatalogItemWhere(input.tenantId, input.storeId)
+  if (input.storefrontItems === null) {
+    const [products, services] = await Promise.all([
+      db.catalogItem.count({ where: { AND: [where, { kind: "PRODUCT" }] } }),
+      db.catalogItem.count({ where: { AND: [where, { kind: "SERVICE" }] } }),
+    ])
+    return { products, services }
+  }
+  const capped = await db.catalogItem.findMany({
+    where,
+    orderBy: [{ createdAt: "asc" }, { id: "asc" }],
+    take: input.storefrontItems,
+    select: { kind: true },
+  })
+  return {
+    products: capped.filter((item) => item.kind === "PRODUCT").length,
+    services: capped.filter((item) => item.kind === "SERVICE").length,
+  }
+}
+
 async function readStorefront(
   db: DbClient,
   slug: string,
@@ -220,13 +272,7 @@ async function readStorefront(
   })
   const plan = findRetailOpsPlan(planId)
   if (!plan) return null
-  const offeringWhere = {
-    tenantId: tenant.id,
-    status: "ACTIVE" as const,
-    archivedAt: null,
-    variant: { status: "ACTIVE" as const, archivedAt: null },
-    storeAvailability: { some: { storeId: store.id, isAvailable: true } },
-  }
+  const offeringWhere = publicOfferingWhere(tenant.id, store.id)
   const limit = plan.limits.storefrontItems ?? 50
   const paidListing = plan.limits.storefrontItems === null
   const validId = (value: unknown): value is string =>
@@ -234,13 +280,7 @@ async function readStorefront(
   const category =
     paidListing && validId(options.category) ? options.category : null
   const listing = normalizePublicListing(options)
-  const eligibleWhere = {
-    ...saleEligibleCatalogItem,
-    tenantId: tenant.id,
-    status: "ACTIVE" as const,
-    archivedAt: null,
-    offerings: { some: offeringWhere },
-  } satisfies Prisma.CatalogItemWhereInput
+  const eligibleWhere = publicCatalogItemWhere(tenant.id, store.id)
   const baseWhere = {
     ...eligibleWhere,
     ...(category ? { categoryId: category } : {}),
@@ -261,6 +301,7 @@ async function readStorefront(
       take: 1,
       select: { illustrationId: true },
     },
+    product: { select: { lowStockLevel: true } },
     offerings: {
       where: offeringWhere,
       orderBy: [{ sortOrder: "asc" as const }, { id: "asc" as const }],
@@ -270,6 +311,14 @@ async function readStorefront(
         fixedPriceMinor: true,
         currencyCode: true,
         pricingPolicy: true,
+        productUnitOffering: {
+          select: {
+            inventoryUnit: { select: { name: true, transactionScale: true } },
+          },
+        },
+        serviceOffering: {
+          select: { quantityScale: true, durationMinutes: true },
+        },
         variant: {
           select: {
             id: true,
@@ -308,6 +357,36 @@ async function readStorefront(
         item.kind === "SERVICE"
           ? null
           : publicStockAvailability(offering.variant.stockBalanceSources),
+      ...(item.kind === "SERVICE"
+        ? {
+            unit: {
+              label: null,
+              scale: Math.min(6, offering.serviceOffering?.quantityScale ?? 0),
+            },
+            durationMinutes: offering.serviceOffering?.durationMinutes ?? null,
+          }
+        : {
+            stock: publicStockState(
+              offering.variant.stockBalanceSources,
+              item.product?.lowStockLevel,
+            ),
+            ...(offering.productUnitOffering
+              ? {
+                  unit: {
+                    label:
+                      offering.productUnitOffering.inventoryUnit.name.slice(
+                        0,
+                        40,
+                      ),
+                    scale: Math.min(
+                      6,
+                      offering.productUnitOffering.inventoryUnit
+                        .transactionScale,
+                    ),
+                  },
+                }
+              : {}),
+          }),
     }))
     return {
       id: item.id,
@@ -628,6 +707,14 @@ async function readStorefront(
     hasHiddenItems,
     nextCursor,
     items,
+    /**
+     * Customer-initiated requests reuse the existing customerMessages entitlement
+     * (as service intake does). QA data accepts requests only under local QA preview.
+     */
+    customerRequestsAllowed:
+      planHasFeature(plan, "customerMessages") &&
+      (!isQaPreview || localQaPreview),
+    hasBusinessContact: Boolean(store.supportPhone?.trim()),
   }
 }
 

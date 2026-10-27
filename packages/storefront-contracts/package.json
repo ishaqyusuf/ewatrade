@@ -9,7 +9,8 @@
     "./resources": "./src/resources.ts",
     "./actions": "./src/actions.ts",
     "./design": "./src/design.ts",
-    "./availability": "./src/availability.ts"
+    "./availability": "./src/availability.ts",
+    "./orders": "./src/orders.ts"
   },
   "dependencies": {
     "zod": "catalog:"

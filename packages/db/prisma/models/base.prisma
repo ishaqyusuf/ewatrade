@@ -1,4 +1,11 @@
 model Tenant {
+  storefrontOrderRequests                           StorefrontOrderRequest[]
+  storefrontServiceRequestContexts                  StorefrontServiceRequestContext[]
+  storefrontRequestMessages                         StorefrontRequestMessage[]
+  storefrontMerchantAlerts                          StorefrontMerchantAlert[]
+  storefrontCustomers                               StorefrontCustomer[]
+  storefrontCustomerOtpChallenges                   StorefrontCustomerOtpChallenge[]
+  storefrontCustomerSessions                        StorefrontCustomerSession[]
   manualPaymentLinks                                ManualPaymentLink[]
   assistantWhatsAppUsage AssistantWhatsAppUsageBucket[]
   assistantWhatsAppLinks AssistantWhatsAppLink[]

@@ -75,6 +75,10 @@ const reads = new Set([
   "orders.payments",
   "inventory.offeringAvailability",
   "inventory.configuredOfferingAvailability",
+  // Storefront requests: repository rechecks the member's current Store scope.
+  "storefrontRequests.counts",
+  "storefrontRequests.orders",
+  "storefrontRequests.order",
 ])
 const orders = new Set([
   "businessBanking.createPaymentLink",
@@ -96,6 +100,9 @@ const orders = new Set([
   "inventory.reserveOffering",
   "inventory.releaseReservation",
   "inventory.commitReservation",
+  "storefrontRequests.confirmOrder",
+  "storefrontRequests.respondOrder",
+  "storefrontRequests.retryAlert",
 ])
 const stockReads = new Set([
   "inventory.balanceSource",

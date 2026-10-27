@@ -33,8 +33,9 @@ const faq = required(
 
 test("library derives every portable blueprint with exact source names, excluding fixed shell", () => {
   const library = buildSectionLibrary()
-  expect(library).toHaveLength(31)
-  expect(library.filter((entry) => entry.kind === "faq")).toHaveLength(4)
+  // 31 canvas/hall blueprints + 8 Commerce studio library sections (header/footer fixed).
+  expect(library).toHaveLength(39)
+  expect(library.filter((entry) => entry.kind === "faq")).toHaveLength(5)
   for (const entry of library) {
     expect(entry.title).toBe(
       `${entry.definition.label} • ${entry.template.name}`,

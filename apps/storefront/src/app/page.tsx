@@ -1,6 +1,7 @@
 import { StorefrontContent } from "@/components/storefront/storefront-content"
 import { storefrontMetadata } from "@/components/storefront/storefront-metadata"
 import { loadFactoryStorefront } from "@/lib/storefront-factory"
+import { customerView, loadCustomerSession } from "@/lib/storefront-pages"
 import { prisma } from "@ewatrade/db"
 import {
   type CatalogQuery,
@@ -85,5 +86,16 @@ export default async function HomePage({ searchParams }: Props) {
     sort,
   )
   if (load.status !== "ready") notFound()
-  return <StorefrontContent snapshot={load.snapshot} after={after} />
+  const customer =
+    load.snapshot.composition.template.key === "commerce-studio"
+      ? customerView(await loadCustomerSession())
+      : undefined
+  return (
+    <StorefrontContent
+      snapshot={load.snapshot}
+      after={after}
+      customer={customer}
+      route={customer ? { kind: "page" } : undefined}
+    />
+  )
 }

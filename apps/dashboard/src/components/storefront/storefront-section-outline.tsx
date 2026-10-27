@@ -19,7 +19,10 @@ import type {
   SectionInstance,
   TemplateManifest,
 } from "@ewatrade/storefront-contracts/manifest"
-import { portableTemplateName } from "@ewatrade/storefront-templates"
+import {
+  portableTemplateName,
+  sectionPolicy,
+} from "@ewatrade/storefront-templates"
 
 function SectionRow({
   section,
@@ -115,6 +118,59 @@ function SectionRow({
     </li>
   )
 }
+function LockedRow({
+  fallback,
+  sections,
+  manifest,
+  selectedId,
+  onSelect,
+}: {
+  fallback: string
+  sections: SectionInstance[]
+  manifest: TemplateManifest
+  selectedId: string
+  onSelect: (id: string) => void
+}) {
+  // Templates without a fixed section of their own still show where the shared
+  // header or footer sits.
+  if (sections.length === 0)
+    return (
+      <li className="sf-outline-locked">
+        <span aria-hidden="true">⌑</span> {fallback} <small>Locked</small>
+      </li>
+    )
+  return (
+    <>
+      {sections.map((section) => {
+        const definition = manifest.sections.find(
+          (entry) => entry.key === section.type,
+        )
+        const label = definition?.label ?? fallback
+        if (!definition?.fields.length)
+          return (
+            <li key={section.id} className="sf-outline-locked">
+              <span aria-hidden="true">⌑</span> {label} <small>Locked</small>
+            </li>
+          )
+        return (
+          <li key={section.id} className="sf-outline-locked">
+            <button
+              type="button"
+              className="sf-outline-label"
+              aria-pressed={selectedId === section.id}
+              onClick={() => onSelect(section.id)}
+              title={label}
+            >
+              <span aria-hidden="true">⌑</span> {label}
+            </button>
+            <small>Locked</small>
+          </li>
+        )
+      })}
+    </>
+  )
+}
+
 export function StorefrontSectionOutline({
   sections,
   manifest,
@@ -144,8 +200,14 @@ export function StorefrontSectionOutline({
       coordinateGetter: sortableKeyboardCoordinates,
     }),
   )
+  const leading = sections.filter(
+    (section) => sectionPolicy(manifest, section.type).fixedFirst,
+  )
+  const trailing = sections.filter(
+    (section) => sectionPolicy(manifest, section.type).fixedLast,
+  )
   const interior = sections.filter(
-    (section) => !["studio-header", "studio-footer"].includes(section.type),
+    (section) => !leading.includes(section) && !trailing.includes(section),
   )
   const names = interior.map((section) => {
     const definition = manifest.sections.find(
@@ -164,9 +226,13 @@ export function StorefrontSectionOutline({
       }}
     >
       <ol className="sf-section-outline">
-        <li className="sf-outline-locked">
-          <span aria-hidden="true">⌑</span> Header <small>Locked</small>
-        </li>
+        <LockedRow
+          fallback="Header"
+          sections={leading}
+          manifest={manifest}
+          selectedId={selectedId}
+          onSelect={onSelect}
+        />
         <SortableContext
           items={interior.map((section) => section.id)}
           strategy={verticalListSortingStrategy}
@@ -197,9 +263,13 @@ export function StorefrontSectionOutline({
             ＋ Add section
           </button>
         </li>
-        <li className="sf-outline-locked">
-          <span aria-hidden="true">⌑</span> Footer <small>Locked</small>
-        </li>
+        <LockedRow
+          fallback="Footer"
+          sections={trailing}
+          manifest={manifest}
+          selectedId={selectedId}
+          onSelect={onSelect}
+        />
       </ol>
     </DndContext>
   )

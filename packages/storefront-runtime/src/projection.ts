@@ -2,6 +2,7 @@ import type {
   CatalogQuery,
   PublicCatalogItem,
   StorefrontCapabilities,
+  StorefrontCommerceResource,
   StorefrontResources,
 } from "../../storefront-contracts/src/resources"
 import { storefrontDesignResources } from "./design-assets"
@@ -22,6 +23,9 @@ export type PublicStorefrontProjection = {
   chatToken: string | null
   whatsAppPhone: string | null
   serviceRequestEntry?: { formId: string; offeringIds: readonly string[] }
+  offeringCounts?: { products: number; services: number }
+  /** Prepared by the host from server facts; presentation only. */
+  commerce?: StorefrontCommerceResource
 }
 
 /** Explicit projection keeps extra repository metadata out of client snapshots. */
@@ -48,6 +52,9 @@ export function publicStorefrontResources(store: PublicStorefrontProjection): {
         nextCursor: store.nextCursor,
         hasHiddenItems: store.hasHiddenItems,
         ...(store.query ? { query: store.query } : {}),
+        ...(store.offeringCounts
+          ? { offeringCounts: store.offeringCounts }
+          : {}),
       },
       contact: {
         chatToken: store.chatToken,
@@ -57,6 +64,7 @@ export function publicStorefrontResources(store: PublicStorefrontProjection): {
           : {}),
       },
       assets: storefrontDesignResources(),
+      ...(store.commerce ? { commerce: store.commerce } : {}),
     },
     capabilities: {
       catalog: { available: true },

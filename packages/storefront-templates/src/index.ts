@@ -16,3 +16,8 @@ export {
 } from "./catalog-v4/manifest"
 export { retailEditorialManifest } from "./retail-editorial/manifest"
 export { serviceDeskManifest } from "./service-desk/manifest"
+export {
+  commerceStudioManifest,
+  commerceStudioSections,
+  commerceStudioVersion,
+} from "./commerce-studio/manifest"

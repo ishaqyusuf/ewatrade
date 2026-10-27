@@ -117,7 +117,11 @@ export function insertSectionExcerpt(
     source: structuredClone(excerpt.definition.source),
   }
   const footer = page.sections.findIndex(
-    (entry) => entry.type === "studio-footer",
+    (entry) =>
+      entry.type === "studio-footer" ||
+      manifest.sections.some(
+        (definition) => definition.key === entry.type && definition.fixedLast,
+      ),
   )
   if (footer < 0) throw new Error("This page needs its fixed footer.")
   page.sections.splice(footer, 0, section)

@@ -17,8 +17,16 @@ if (!databaseUrl) {
   )
 }
 
+// Development keeps one client across hot reloads. After `db:generate` the module is
+// re-evaluated with a new PrismaClient class; a cached instance of the old class lacks
+// newly generated models, so it is replaced rather than reused.
+const cached =
+  globalThis.__ewatradePrisma__ instanceof PrismaClient
+    ? globalThis.__ewatradePrisma__
+    : undefined
+
 export const prisma =
-  globalThis.__ewatradePrisma__ ??
+  cached ??
   new PrismaClient({
     adapter:
       process.env.PERFORMANCE_TRACE === "true"

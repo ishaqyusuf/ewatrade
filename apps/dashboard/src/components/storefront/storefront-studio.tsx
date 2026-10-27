@@ -31,6 +31,7 @@ import {
   Sheet,
   SheetContent,
   SheetTitle,
+  Textarea,
 } from "@ewatrade/ui"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useRouter } from "next/navigation"
@@ -258,6 +259,8 @@ function StudioEditor({
   const definition = manifest.sections.find(
     (section) => section.key === selected?.type,
   )
+  // Commerce studio edits copy in Section options; canvas templates edit it in place.
+  const inlineTextEditing = manifest.key !== "commerce-studio"
   const edit = useCallback(
     (change: (next: StorefrontComposition) => void) => {
       if (busyRef.current) return false
@@ -767,11 +770,15 @@ function StudioEditor({
                       >
                         Aa
                       </span>
-                      {font === "serif"
-                        ? "Georgia"
-                        : composition.template.key === "service-concierge"
-                          ? "Manrope"
-                          : "Geist"}
+                      {composition.template.key === "commerce-studio"
+                        ? font === "serif"
+                          ? "Instrument Serif"
+                          : "DM Sans"
+                        : font === "serif"
+                          ? "Georgia"
+                          : composition.template.key === "service-concierge"
+                            ? "Manrope"
+                            : "Geist"}
                     </button>
                   ))}
                 </div>
@@ -822,6 +829,46 @@ function StudioEditor({
                     <option value="rounded">Rounded</option>
                   </select>
                 </label>
+                {manifest.themeControls?.includes("width") ? (
+                  <label>
+                    Page width
+                    <select
+                      disabled={blocked}
+                      value={composition.theme.width ?? "standard"}
+                      onChange={(event) =>
+                        edit((next) => {
+                          next.theme.width = event.target.value as
+                            | "narrow"
+                            | "standard"
+                            | "wide"
+                        })
+                      }
+                    >
+                      <option value="narrow">Narrow</option>
+                      <option value="standard">Standard</option>
+                      <option value="wide">Wide</option>
+                    </select>
+                  </label>
+                ) : null}
+                {manifest.themeControls?.includes("density") ? (
+                  <label>
+                    Spacing
+                    <select
+                      disabled={blocked}
+                      value={composition.theme.density ?? "comfortable"}
+                      onChange={(event) =>
+                        edit((next) => {
+                          next.theme.density = event.target.value as
+                            | "comfortable"
+                            | "compact"
+                        })
+                      }
+                    >
+                      <option value="comfortable">Comfortable</option>
+                      <option value="compact">Compact</option>
+                    </select>
+                  </label>
+                ) : null}
                 <p className="sf-config-hint">
                   Applies to every page and section.
                 </p>
@@ -829,14 +876,20 @@ function StudioEditor({
             </details>
             {selected &&
             definition?.fields.some(
-              (field) => field.kind === "asset" || field.kind === "boolean",
+              (field) =>
+                field.kind === "asset" ||
+                field.kind === "boolean" ||
+                !inlineTextEditing,
             ) ? (
               <details open>
                 <summary>Section options</summary>
                 {definition.fields
                   .filter(
                     (field) =>
-                      field.kind === "asset" || field.kind === "boolean",
+                      field.kind === "asset" ||
+                      field.kind === "boolean" ||
+                      // Templates without in-preview text editing edit every field here.
+                      !inlineTextEditing,
                   )
                   .map((field) => (
                     <ManifestField
@@ -852,8 +905,10 @@ function StudioEditor({
             <div className="sf-config-editing">
               <strong>Editing text</strong>
               <p>
-                Click text in the preview to edit it. Prices, stock and business
-                details stay connected to Catalog.
+                {inlineTextEditing
+                  ? "Click text in the preview to edit it."
+                  : "Select a section in the preview, then edit its text in Section options."}{" "}
+                Prices, stock and business details stay connected to Catalog.
               </p>
             </div>
             <div className="sf-config-suggestions">
@@ -1173,6 +1228,20 @@ function ManifestField({
         <span>
           Decorative illustration. Catalog photos stay in your catalog.
         </span>
+      </label>
+    )
+  if (field.maxLength > 160)
+    return (
+      <label htmlFor={fieldId}>
+        {field.label}
+        <Textarea
+          id={fieldId}
+          rows={field.maxLength > 600 ? 6 : 3}
+          disabled={disabled}
+          maxLength={field.maxLength}
+          value={typeof value === "string" ? value : ""}
+          onChange={(event) => onChange(event.target.value)}
+        />
       </label>
     )
   return (

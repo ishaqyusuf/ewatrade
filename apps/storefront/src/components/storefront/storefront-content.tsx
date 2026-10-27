@@ -1,3 +1,16 @@
+import {
+  checkStorefrontBag,
+  declineStorefrontQuote,
+  linkStorefrontReceipt,
+  linkVerifiedStorefrontHistory,
+  logoutStorefrontCustomer,
+  replyToStorefrontRequest,
+  requestStorefrontLoginCode,
+  submitStorefrontOrder,
+  submitStorefrontService,
+  verifyStorefrontLoginCode,
+  withdrawStorefrontRequest,
+} from "@/app/storefront-commerce-actions"
 import { formatStorefrontPrice } from "@ewatrade/storefront-runtime/presentation"
 import {
   serializeStorefrontStructuredData,
@@ -5,15 +18,44 @@ import {
   storefrontStructuredData,
 } from "@ewatrade/storefront-runtime/seo"
 import type { StorefrontClientSnapshot } from "@ewatrade/storefront-runtime/server"
+import type {
+  CommerceStudioRoute,
+  StorefrontCommerceAdapter,
+  StorefrontCustomerView,
+} from "@ewatrade/storefront-templates/commerce-studio"
 import { StorefrontTemplate } from "@ewatrade/storefront-templates/render"
 import { getStorefrontDomain, resolveCustomerChatOrigin } from "@ewatrade/utils"
 import "@ewatrade/storefront-templates/styles.css"
+
+/** Server actions only; each re-derives Host scope and session before any effect. */
+const commerceAdapter = {
+  mode: "live",
+  checkBag: checkStorefrontBag,
+  submitOrder: submitStorefrontOrder,
+  submitService: submitStorefrontService,
+  reply: replyToStorefrontRequest,
+  withdraw: withdrawStorefrontRequest,
+  declineQuote: declineStorefrontQuote,
+  requestCode: requestStorefrontLoginCode,
+  verifyCode: verifyStorefrontLoginCode,
+  logout: logoutStorefrontCustomer,
+  linkVerified: linkVerifiedStorefrontHistory,
+  linkReceipt: linkStorefrontReceipt,
+} as unknown as StorefrontCommerceAdapter
 
 export function StorefrontContent({
   snapshot,
   after,
   pageKey,
-}: { snapshot: StorefrontClientSnapshot; after?: string; pageKey?: string }) {
+  route,
+  customer,
+}: {
+  snapshot: StorefrontClientSnapshot
+  after?: string
+  pageKey?: string
+  route?: CommerceStudioRoute
+  customer?: StorefrontCustomerView
+}) {
   const { resources } = snapshot
   const store = {
     ...resources.business,
@@ -79,6 +121,9 @@ export function StorefrontContent({
         pageKey={pageKey}
         customerChatOrigin={customerChatOrigin}
         syncUrl
+        {...(snapshot.composition.template.key === "commerce-studio"
+          ? { commerce: commerceAdapter, customer: customer ?? null, route }
+          : {})}
       />
     </>
   )

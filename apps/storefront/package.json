@@ -14,6 +14,7 @@
     "@ewatrade/auth": "workspace:*",
     "@ewatrade/communications": "workspace:*",
     "@ewatrade/db": "workspace:*",
+    "@ewatrade/email": "workspace:*",
     "@ewatrade/errors": "workspace:*",
     "@ewatrade/jobs": "workspace:*",
     "@ewatrade/observability": "workspace:*",

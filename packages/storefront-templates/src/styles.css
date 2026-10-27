@@ -5,6 +5,7 @@
 @import "./market-hall/styles.css";
 @import "./shared/service-option-picker.css";
 @import "./service-concierge/styles.css";
+@import "./commerce-studio/styles.css";
 
 .sf-template-viewport {
   container: storefront / inline-size;

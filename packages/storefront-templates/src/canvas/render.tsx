@@ -12,6 +12,7 @@ import {
   useState,
 } from "react"
 import type { SectionInstance } from "../../../storefront-contracts/src/manifest"
+import { CommerceStudioSectionPreview } from "../commerce-studio/render"
 import {
   MarketHallCounter,
   MarketHallDetail,
@@ -556,6 +557,10 @@ export function CanvasSectionPreview({
   section,
   snapshot,
 }: { section: SectionInstance; snapshot: StorefrontClientSnapshot }) {
+  if (section.type.startsWith("commerce-studio-"))
+    return (
+      <CommerceStudioSectionPreview section={section} snapshot={snapshot} />
+    )
   const minimal = {
     ...snapshot,
     mode: "preview" as const,

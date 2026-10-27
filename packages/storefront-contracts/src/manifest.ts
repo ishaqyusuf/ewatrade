@@ -7,7 +7,10 @@ export const storefrontRoutes = [
   "/about",
   "/contact",
   "/services",
+  "/shop",
 ] as const
+/** Optional theme controls a template may declare; others must not carry them. */
+export const themeControlSchema = z.enum(["width", "density"])
 export const storefrontCapabilitySchema = z.enum([
   "catalog",
   "services",
@@ -124,6 +127,7 @@ export const templateManifestSchema = z
       .max(4),
     sections: z.array(sectionDefinitionSchema).min(1).max(32),
     blocks: z.array(blockDefinitionSchema).max(32),
+    themeControls: z.array(themeControlSchema).max(2).optional(),
   })
   .strict()
 export type TemplateManifest = z.infer<typeof templateManifestSchema>
@@ -141,6 +145,10 @@ export const themeSchema = z
       .regex(/^#[0-9a-fA-F]{6}$/)
       .default("#ffffff"),
     radius: z.enum(["none", "small", "rounded"]).default("small"),
+    /** Only for templates declaring the `width` theme control. Absent = template default. */
+    width: z.enum(["narrow", "standard", "wide"]).optional(),
+    /** Only for templates declaring the `density` theme control. */
+    density: z.enum(["comfortable", "compact"]).optional(),
   })
   .strict()
 const settings = z.record(key, z.union([text, z.boolean(), z.null()]))
@@ -312,6 +320,12 @@ export function validateComposition(
   ) {
     throw new Error("Template version is unavailable.")
   }
+  for (const control of themeControlSchema.options)
+    if (
+      value.theme[control] !== undefined &&
+      !manifest.themeControls?.includes(control)
+    )
+      throw new Error(`This template has no ${control} setting.`)
   unique(
     value.pages.map((page) => page.key),
     "composition page",

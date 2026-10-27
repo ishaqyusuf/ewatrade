@@ -1,4 +1,5 @@
 model CommercialOrder {
+  storefrontOrderRequest         StorefrontOrderRequest?
   manualPaymentLinks             ManualPaymentLink[]
   collectionIntents CollectionIntent[]
   customerId                     String?

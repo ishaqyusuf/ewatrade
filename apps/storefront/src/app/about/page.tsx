@@ -1,6 +1,7 @@
 import { StorefrontContent } from "@/components/storefront/storefront-content"
 import { storefrontMetadata } from "@/components/storefront/storefront-metadata"
 import { loadFactoryStorefront } from "@/lib/storefront-factory"
+import { customerView, loadCustomerSession } from "@/lib/storefront-pages"
 import { prisma } from "@ewatrade/db"
 import { storefrontIndexingEnabled } from "@ewatrade/storefront-runtime/seo"
 import { headers } from "next/headers"
@@ -34,5 +35,15 @@ export default async function AboutPage() {
     )
   )
     notFound()
-  return <StorefrontContent snapshot={load.snapshot} pageKey="about" />
+  const customer =
+    load.snapshot.composition.template.key === "commerce-studio"
+      ? customerView(await loadCustomerSession())
+      : undefined
+  return (
+    <StorefrontContent
+      snapshot={load.snapshot}
+      pageKey="about"
+      customer={customer}
+    />
+  )
 }

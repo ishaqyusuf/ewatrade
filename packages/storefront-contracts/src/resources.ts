@@ -21,6 +21,17 @@ export type StorefrontCapabilities = Record<
 export type PublicAsset = { id: string; url: string; alt: string }
 
 const availability = z.enum(["OUT_OF_STOCK", "MADE_TO_ORDER"]).nullable()
+/**
+ * Coarse public stock fact for one product option. `unknown` means no tracked
+ * balance exists: it must never be presented as confirmed stock. Quantities stay private.
+ */
+export const publicStockStateSchema = z.enum([
+  "in_stock",
+  "low_stock",
+  "out_of_stock",
+  "unknown",
+])
+export type PublicStockState = z.infer<typeof publicStockStateSchema>
 export const publicCatalogOptionSchema = z
   .object({
     id: z.string(),
@@ -28,6 +39,19 @@ export const publicCatalogOptionSchema = z
     priceMinor: z.number().int().nonnegative().nullable(),
     currencyCode: z.string(),
     availability,
+    /** Products only. Absent for services and older loaders. */
+    stock: publicStockStateSchema.optional(),
+    /** Selling unit and allowed decimal places for quantity entry. */
+    unit: z
+      .object({
+        /** Merchant unit name; null when the business has not named one. */
+        label: z.string().min(1).max(40).nullable(),
+        scale: z.number().int().min(0).max(6),
+      })
+      .strict()
+      .optional(),
+    /** Services only: merchant-entered typical duration. */
+    durationMinutes: z.number().int().positive().nullable().optional(),
   })
   .strict()
 export const publicCatalogItemSchema = z
@@ -62,6 +86,11 @@ export type StorefrontResources = {
     hasHiddenItems: boolean
     /** Listing state only; item/after stay navigation hints, never resource authority. */
     query?: Pick<CatalogQuery, "q" | "availability" | "sort">
+    /**
+     * Eligible public offerings across the whole Store (not just this page). Templates
+     * use it to choose Shop/Services presentation; history never decides the mode.
+     */
+    offeringCounts?: { products: number; services: number }
   }
   contact: {
     chatToken: string | null
@@ -69,6 +98,24 @@ export type StorefrontResources = {
     serviceRequestEntry?: { formId: string; offeringIds: readonly string[] }
   }
   assets: Record<string, PublicAsset>
+  /**
+   * Presentation hints for the storefront commerce routes. The server re-derives
+   * every fact before any write; these flags never authorize anything.
+   */
+  commerce?: StorefrontCommerceResource
+}
+
+export type StorefrontCommerceResource = {
+  /** Product order requests (cart → pending request awaiting business review). */
+  orderRequests: CapabilityState
+  /** Optional customer login. Guest ordering never depends on it. */
+  customerAccounts: CapabilityState & {
+    channels: readonly ("email" | "whatsapp")[]
+  }
+  /** Fulfilment methods the business offers for product requests. */
+  fulfilment: readonly ("pickup" | "delivery")[]
+  /** Business has a public contact for follow-up (never the number itself here). */
+  hasContact: boolean
 }
 
 export const catalogQuerySchema = z

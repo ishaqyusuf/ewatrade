@@ -1,0 +1,254 @@
+/// Customer-submitted storefront product request. It is a pending request awaiting
+/// business review: it has no stock reservation, payment or reporting effect. Only an
+/// authorized staff confirmation converts it, exactly once, into a canonical
+/// CommercialOrder (which reserves stock through the existing writer).
+enum StorefrontOrderRequestStatus {
+  SUBMITTED
+  NEEDS_INFORMATION
+  CONFIRMED
+  DECLINED
+  WITHDRAWN
+}
+
+enum StorefrontFulfilmentMethod {
+  PICKUP
+  DELIVERY
+}
+
+/// Public availability observed when the customer submitted. Evidence only.
+enum StorefrontObservedAvailability {
+  IN_STOCK
+  LOW_STOCK
+  UNKNOWN
+}
+
+enum StorefrontRequestKind {
+  ORDER
+  SERVICE
+}
+
+enum StorefrontRequestMessageAuthor {
+  CUSTOMER
+  STAFF
+}
+
+enum StorefrontMerchantAlertStatus {
+  PENDING
+  SENT
+  FAILED
+  SKIPPED
+}
+
+enum StorefrontCustomerIdentifierKind {
+  EMAIL
+  WHATSAPP
+}
+
+enum StorefrontCustomerOtpStatus {
+  PENDING
+  VERIFIED
+  EXPIRED
+  LOCKED
+}
+
+model StorefrontOrderRequest {
+  id                    String                       @id @default(cuid())
+  tenantId              String
+  storeId               String
+  siteId                String
+  releaseId             String
+  /// Customer-facing reference, unique per business.
+  reference             String
+  clientRequestId       String
+  payloadHash           String
+  status                StorefrontOrderRequestStatus @default(SUBMITTED)
+  /// Compare-and-set revision for every staff or customer transition.
+  revision              Int                          @default(1)
+  customerName          String
+  customerPhone         String
+  customerEmail         String?
+  /// Set only when a verified storefront customer session submitted or explicitly linked it.
+  customerId            String?
+  fulfilment            StorefrontFulfilmentMethod
+  deliveryAddress       String?
+  notes                 String?
+  currencyCode          String
+  observedSubtotalMinor Int
+  /// Decline reason or further-information question shown to the customer.
+  staffResponse         String?
+  deliveryFeeMinor      Int?
+  confirmedOrderId      String?                      @unique
+  confirmedAt           DateTime?
+  confirmedByUserId     String?
+  decidedAt             DateTime?
+  decidedByUserId       String?
+  /// SHA-256 digest of the guest receipt capability; the raw token is never stored.
+  receiptTokenDigest    String                       @unique
+  createdAt             DateTime                     @default(now())
+  updatedAt             DateTime                     @updatedAt
+  tenant                Tenant                       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  store                 Store                        @relation(fields: [storeId], references: [id], onDelete: Restrict)
+  customer              StorefrontCustomer?          @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  confirmedOrder        CommercialOrder?             @relation(fields: [confirmedOrderId], references: [id], onDelete: Restrict)
+  lines                 StorefrontOrderRequestLine[]
+  messages              StorefrontRequestMessage[]
+  alerts                StorefrontMerchantAlert[]
+
+  @@unique([tenantId, clientRequestId])
+  @@unique([tenantId, reference])
+  @@index([tenantId, storeId, status, createdAt])
+  @@index([customerId, createdAt])
+}
+
+model StorefrontOrderRequestLine {
+  id                     String                         @id @default(cuid())
+  requestId              String
+  position               Int
+  offeringId             String
+  catalogItemId          String
+  itemName               String
+  optionName             String
+  unitLabel              String?
+  quantity               Decimal                        @db.Decimal(38, 6)
+  /// Price the customer saw. Evidence only; confirmation re-reads current prices.
+  observedUnitPriceMinor Int
+  currencyCode           String
+  observedAvailability   StorefrontObservedAvailability
+  request                StorefrontOrderRequest         @relation(fields: [requestId], references: [id], onDelete: Cascade)
+
+  @@unique([requestId, position])
+  @@index([offeringId])
+}
+
+/// Storefront-only facts for a canonical ServiceRequest submitted through the flagship template.
+model StorefrontServiceRequestContext {
+  id                 String                     @id @default(cuid())
+  tenantId           String
+  serviceRequestId   String                     @unique
+  siteId             String
+  reference          String
+  receiptTokenDigest String                     @unique
+  customerId         String?
+  collectionAddress  String?
+  /// Latest quote version issued from the storefront inbox and its acceptance
+  /// capability, encrypted at rest, so the receipt holder opens the canonical quote page.
+  quoteVersionId        String?
+  quoteAccessCiphertext String?
+  createdAt          DateTime                   @default(now())
+  tenant             Tenant                     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  serviceRequest     ServiceRequest             @relation(fields: [serviceRequestId], references: [id], onDelete: Cascade)
+  customer           StorefrontCustomer?        @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  messages           StorefrontRequestMessage[]
+  alerts             StorefrontMerchantAlert[]
+
+  @@unique([tenantId, reference])
+  @@index([customerId, createdAt])
+}
+
+/// Customer replies and staff questions on a storefront request. Plain text only.
+model StorefrontRequestMessage {
+  id               String                           @id @default(cuid())
+  tenantId         String
+  kind             StorefrontRequestKind
+  orderRequestId   String?
+  serviceContextId String?
+  author           StorefrontRequestMessageAuthor
+  authorUserId     String?
+  body             String
+  clientMessageId  String
+  createdAt        DateTime                         @default(now())
+  tenant           Tenant                           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  orderRequest     StorefrontOrderRequest?          @relation(fields: [orderRequestId], references: [id], onDelete: Cascade)
+  serviceContext   StorefrontServiceRequestContext? @relation(fields: [serviceContextId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, clientMessageId])
+  @@index([orderRequestId, createdAt])
+  @@index([serviceContextId, createdAt])
+}
+
+/// Durable new-request alert for the business, written in the same transaction as
+/// the request. Delivery happens after commit, with deduplication and retries; a
+/// provider outage leaves the request intact and the alert visibly FAILED/SKIPPED.
+model StorefrontMerchantAlert {
+  id                String                           @id @default(cuid())
+  tenantId          String
+  storeId           String
+  kind              StorefrontRequestKind
+  orderRequestId    String?
+  serviceContextId  String?
+  channel           String                           @default("WHATSAPP")
+  dedupeKey         String                           @unique
+  status            StorefrontMerchantAlertStatus    @default(PENDING)
+  attemptCount      Int                              @default(0)
+  nextAttemptAt     DateTime                         @default(now())
+  claimId           String?
+  claimExpiresAt    DateTime?
+  lastError         String?
+  sentAt            DateTime?
+  providerMessageId String?
+  createdAt         DateTime                         @default(now())
+  updatedAt         DateTime                         @updatedAt
+  tenant            Tenant                           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  orderRequest      StorefrontOrderRequest?          @relation(fields: [orderRequestId], references: [id], onDelete: Cascade)
+  serviceContext    StorefrontServiceRequestContext? @relation(fields: [serviceContextId], references: [id], onDelete: Cascade)
+
+  @@index([status, nextAttemptAt])
+  @@index([tenantId, storeId, createdAt])
+}
+
+/// Storefront shopper identity, scoped to one business. Separate from staff User/Session.
+model StorefrontCustomer {
+  id              String                            @id @default(cuid())
+  tenantId        String
+  emailNormalized String?
+  phoneE164       String?
+  displayName     String?
+  lastLoginAt     DateTime?
+  createdAt       DateTime                          @default(now())
+  tenant          Tenant                            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  sessions        StorefrontCustomerSession[]
+  orderRequests   StorefrontOrderRequest[]
+  serviceContexts StorefrontServiceRequestContext[]
+
+  @@unique([tenantId, emailNormalized])
+  @@unique([tenantId, phoneE164])
+}
+
+model StorefrontCustomerOtpChallenge {
+  id               String                           @id @default(cuid())
+  tenantId         String
+  kind             StorefrontCustomerIdentifierKind
+  /// Normalized email or E.164 phone; erased when the challenge ends.
+  identifier       String?
+  identifierDigest String
+  codeHash         String
+  status           StorefrontCustomerOtpStatus      @default(PENDING)
+  attempts         Int                              @default(0)
+  maxAttempts      Int                              @default(5)
+  sendCount        Int                              @default(1)
+  lastSentAt       DateTime                         @default(now())
+  expiresAt        DateTime
+  networkDigest    String?
+  deliveryAdapter  String
+  createdAt        DateTime                         @default(now())
+  updatedAt        DateTime                         @updatedAt
+  tenant           Tenant                           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, identifierDigest, createdAt])
+  @@index([tenantId, networkDigest, createdAt])
+}
+
+model StorefrontCustomerSession {
+  id          String             @id @default(cuid())
+  tenantId    String
+  customerId  String
+  tokenDigest String             @unique
+  expiresAt   DateTime
+  revokedAt   DateTime?
+  lastSeenAt  DateTime           @default(now())
+  createdAt   DateTime           @default(now())
+  tenant      Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  customer    StorefrontCustomer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@index([customerId, createdAt])
+}

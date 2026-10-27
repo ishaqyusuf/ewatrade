@@ -8,6 +8,7 @@
     "./catalog-v4": "./src/catalog-v4/render.tsx",
     "./catalog-v4/styles.css": "./src/catalog-v4/styles.css",
     "./render": "./src/render.tsx",
+    "./commerce-studio": "./src/commerce-studio/index.ts",
     "./canvas": "./src/canvas/render.tsx",
     "./service-options": "./src/shared/service-option-picker.tsx",
     "./service-options.css": "./src/shared/service-option-picker.css",
@@ -22,6 +23,7 @@
     "@hugeicons/react": "^1.1.6",
     "next": "catalog:",
     "react": "catalog:",
+    "zod": "catalog:",
     "@ewatrade/storefront-components": "workspace:*"
   },
   "devDependencies": {

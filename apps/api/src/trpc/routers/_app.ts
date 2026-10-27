@@ -38,6 +38,7 @@ import { servicesRouter } from "./services"
 import { setupAssistantRouter } from "./setup-assistant"
 import { storeSubscriptionsRouter } from "./store-subscriptions"
 import { storefrontRouter } from "./storefront"
+import { storefrontRequestsRouter } from "./storefront-requests"
 import { storesRouter } from "./stores"
 import { tenantRouter } from "./tenant"
 
@@ -71,6 +72,7 @@ export const appRouter = createTRPCRouter({
   qaTools: qaToolsRouter,
   ...qaAccessRegistration,
   serviceAccess: serviceAccessRouter,
+  storefrontRequests: storefrontRequestsRouter,
   serviceCommerce: serviceCommerceRouter,
   serviceCommunications: serviceCommunicationsRouter,
   services: servicesRouter,

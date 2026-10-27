@@ -128,3 +128,9 @@ export * from "./components/button-group"
 export * from "./components/empty"
 export * from "./components/skeleton"
 export * from "./components/daily-bar-chart"
+export {
+  InputOTP,
+  InputOTPGroup,
+  InputOTPSeparator,
+  InputOTPSlot,
+} from "./components/input-otp"

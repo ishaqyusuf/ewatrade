@@ -359,6 +359,7 @@ model ServiceRequest {
   currentQuote    ServiceQuote?                      @relation("ServiceRequestCurrentQuote", fields: [currentQuoteId], references: [id], onDelete: SetNull)
   lines           ServiceRequestLine[]
   quotes          ServiceQuote[]                     @relation("ServiceRequestQuotes")
+  storefrontContext StorefrontServiceRequestContext?
 
   @@unique([tenantId, clientRequestId])
   @@unique([tenantId, providerEventId])

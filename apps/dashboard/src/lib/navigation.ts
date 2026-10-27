@@ -209,6 +209,13 @@ const DASHBOARD_NAV: DashboardNavDefinition[] = [
     isVisible: isPharmacyBusiness,
   },
   {
+    description: "Orders and service requests from your website",
+    href: "/website-requests",
+    icon: "sales",
+    label: "Website requests",
+    canAccess: canUseRetailOps,
+  },
+  {
     description: "Customers, their orders and what they owe",
     href: "/customers",
     icon: "customers",
@@ -485,6 +492,8 @@ function scopedPageAllowed(
     "/sales",
     // Payment claims; the API limits them to the person's Store scope.
     "/finance/payments",
+    // Website requests; the API limits them to the person's Store scope.
+    "/website-requests",
     "/customers",
     "/inventory",
     "/inventory/operations",

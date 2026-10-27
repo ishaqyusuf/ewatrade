@@ -36,6 +36,44 @@ export function publicStockAvailability(
     : "OUT_OF_STOCK"
 }
 
+export type PublicStockState =
+  | "in_stock"
+  | "low_stock"
+  | "out_of_stock"
+  | "unknown"
+
+/**
+ * Coarse public stock state. No balance history is `unknown` (never presented as
+ * stock). A business low-stock level marks `low_stock`; quantities stay private.
+ */
+export function publicStockState(
+  balances: Balance[],
+  lowStockLevel: { toString(): string } | null | undefined,
+): PublicStockState {
+  if (!balances.length) return "unknown"
+  if (publicStockAvailability(balances) === "OUT_OF_STOCK")
+    return "out_of_stock"
+  if (lowStockLevel === null || lowStockLevel === undefined) return "in_stock"
+  const level = lowStockLevel.toString()
+  if (compareExactDecimals(level, "0") <= 0) return "in_stock"
+  const free = new Map<string, string>()
+  for (const balance of balances)
+    free.set(
+      balance.inventoryUnitId,
+      addExactDecimals(
+        free.get(balance.inventoryUnitId) ?? "0",
+        subtractExactDecimals(
+          balance.onHandQuantity.toString(),
+          balance.reservedQuantity.toString(),
+        ),
+      ),
+    )
+  const most = [...free.values()].reduce((max, value) =>
+    compareExactDecimals(value, max) > 0 ? value : max,
+  )
+  return compareExactDecimals(most, level) <= 0 ? "low_stock" : "in_stock"
+}
+
 export function publicItemAvailability(
   options: { availability: PublicAvailability }[],
 ): PublicAvailability {

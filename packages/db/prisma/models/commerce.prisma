@@ -1,4 +1,5 @@
 model Store {
+  storefrontOrderRequests                           StorefrontOrderRequest[]
   assistantWhatsAppLinks AssistantWhatsAppLink[]
   assistantWhatsAppGrants AssistantWhatsAppGrant[]
   customerMessageTemplates CustomerMessageTemplate[]

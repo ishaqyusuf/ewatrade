@@ -17,6 +17,7 @@ import {
   catalogV4LegacyManifest,
   catalogV4Manifest,
 } from "./catalog-v4/manifest"
+import { commerceStudioManifest } from "./commerce-studio/manifest"
 import { componentEditorialManifest } from "./generated/manifest"
 import { reviewedComponentRegistry } from "./generated/registry"
 import { marketHallManifest } from "./market-hall/manifest"
@@ -77,6 +78,18 @@ export const templateRegistry: readonly TemplateEntry[] = [
     availability: { state: "active" },
     source: "packages/storefront-templates/src/market-hall",
     // Workshop market-hall v4 rev 22301b16-713d-4035-b215-101d55037e6f. Local qualification only; no live-release claim.
+    status: {
+      registration: "runtime-registered",
+      qualification: "qualified",
+      release: "not-live",
+    },
+  },
+  {
+    manifest: commerceStudioManifest,
+    availability: { state: "active" },
+    source: "packages/storefront-templates/src/commerce-studio",
+    // Workshop commerce-studio v7 rev 5da7748c-cecd-49a0-90bb-222bed599859 (owner-requested
+    // implementation, 27 Oct 2026). Local qualification only; no live-release claim.
     status: {
       registration: "runtime-registered",
       qualification: "qualified",

@@ -85,6 +85,12 @@ formOnly(
   ["businessBanking.*"],
 )
 
+formOnly(
+  "sales",
+  "Website requests inbox: staff review of customer-submitted storefront order and service requests. Confirmation composes the canonical Commercial Order writer with the authenticated staff actor; quotes reuse canonical service quote commands. Customer intent comes only from the storefront form; no model authority.",
+  ["storefrontRequests.*"],
+)
+
 planned("platform", "G05", [
   "customerMessages.preview",
   "customerMessages.catalog",

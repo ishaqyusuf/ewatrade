@@ -42,6 +42,9 @@ function source(): Source {
         priceMinor: 1850000,
         currencyCode: "NGN",
         availability: null,
+        stock: "unknown" as const,
+        unit: { label: null, scale: 0 },
+        durationMinutes: null,
       },
     ],
   }
@@ -71,6 +74,8 @@ function source(): Source {
       planId: "starter",
       storefrontItems: 3,
       customerMessages: false,
+      customerRequestsAllowed: false,
+      hasBusinessContact: false,
       chatToken: null,
       whatsAppPhone: null,
       hasHiddenItems: false,

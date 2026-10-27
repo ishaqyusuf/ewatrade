@@ -73,6 +73,15 @@ export async function submitStorefrontServiceRequest(
   db: PrismaClient,
   input: unknown,
   host: string,
+  extras: {
+    /** Customer's preferred date. A request only; never a booking. */
+    requestedAt?: Date
+    /** Runs inside the canonical transaction after scope rechecks (create and replay). */
+    onSaved?: (
+      tx: Prisma.TransactionClient,
+      saved: { id: string; tenantId: string; storeId: string; siteId: string },
+    ) => Promise<void>
+  } = {},
 ) {
   const value = storefrontServiceRequestSchema.parse(input)
   const current = await getStorefrontServiceIntake(db, host, value.itemId)
@@ -117,6 +126,7 @@ export async function submitStorefrontServiceRequest(
       },
       formId: current.form.formId,
       lines,
+      ...(extras.requestedAt ? { requestedAt: extras.requestedAt } : {}),
     },
     {
       onRequest: async (tx, saved) => {
@@ -158,6 +168,12 @@ export async function submitStorefrontServiceRequest(
           select: { id: true },
         })
         if (!ownRequest) unavailable()
+        await extras.onSaved?.(tx, {
+          id: saved.id,
+          tenantId: scope.tenantId,
+          storeId: scope.storeId,
+          siteId: scope.id,
+        })
       },
     },
   )

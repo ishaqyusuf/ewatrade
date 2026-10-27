@@ -1,0 +1,91 @@
+{
+  "version": 1,
+  "id": "2026-10-27-storefront-commerce-studio",
+  "tickets": ["H02"],
+  "summary": "Commerce studio flagship storefront: pending storefront product order requests, storefront service request receipts, optional storefront customer OTP sessions, and a staff Website requests inbox.",
+  "noAssistantImpact": "Customer-initiated structured storefront requests and a staff review UI. Customer writes are server actions that re-derive Host, publication, plan, prices and availability; the assistant cannot manufacture customer intent. Staff confirmation composes the existing canonical Commercial Order writer with the authenticated staff actor; quotes reuse issueServiceQuote/acceptServiceQuote. No assistant capability, tool, proposal, provider send or rollout change is added; storefrontRequests.* are staff UI procedures with existing role and Store scope checks.",
+  "capabilities": [],
+  "procedures": [
+    {
+      "path": "storefrontRequests.counts",
+      "status": "form_only",
+      "reason": "Website requests inbox staff form; canonical Order/quote commands with the authenticated staff actor; no model authority."
+    },
+    {
+      "path": "storefrontRequests.orders",
+      "status": "form_only",
+      "reason": "Website requests inbox staff form; canonical Order/quote commands with the authenticated staff actor; no model authority."
+    },
+    {
+      "path": "storefrontRequests.order",
+      "status": "form_only",
+      "reason": "Website requests inbox staff form; canonical Order/quote commands with the authenticated staff actor; no model authority."
+    },
+    {
+      "path": "storefrontRequests.confirmOrder",
+      "status": "form_only",
+      "reason": "Website requests inbox staff form; canonical Order/quote commands with the authenticated staff actor; no model authority."
+    },
+    {
+      "path": "storefrontRequests.respondOrder",
+      "status": "form_only",
+      "reason": "Website requests inbox staff form; canonical Order/quote commands with the authenticated staff actor; no model authority."
+    },
+    {
+      "path": "storefrontRequests.retryAlert",
+      "status": "form_only",
+      "reason": "Website requests inbox staff form; canonical Order/quote commands with the authenticated staff actor; no model authority."
+    },
+    {
+      "path": "storefrontRequests.services",
+      "status": "form_only",
+      "reason": "Website requests inbox staff form; canonical Order/quote commands with the authenticated staff actor; no model authority."
+    },
+    {
+      "path": "storefrontRequests.respondService",
+      "status": "form_only",
+      "reason": "Website requests inbox staff form; canonical Order/quote commands with the authenticated staff actor; no model authority."
+    },
+    {
+      "path": "storefrontRequests.issueServiceQuote",
+      "status": "form_only",
+      "reason": "Website requests inbox staff form; canonical Order/quote commands with the authenticated staff actor; no model authority."
+    },
+    {
+      "path": "storefrontRequests.recordServiceQuoteAcceptance",
+      "status": "form_only",
+      "reason": "Website requests inbox staff form; canonical Order/quote commands with the authenticated staff actor; no model authority."
+    }
+  ],
+  "docs": [
+    {
+      "topic": "feature",
+      "status": "local_only",
+      "path": ".brain/features/storefront-commerce-studio.md"
+    },
+    {
+      "topic": "api",
+      "status": "local_only",
+      "path": ".brain/api/endpoints.md"
+    },
+    {
+      "topic": "schema",
+      "status": "local_only",
+      "path": ".brain/database/schema.md"
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "test",
+      "path": "packages/storefront-templates/src/commerce-studio/commerce-studio.test.tsx",
+      "executed": true,
+      "result": "Registry/manifest, mode adaptation, stock wording, quantities, bag storage and order contract checks pass offline."
+    },
+    {
+      "kind": "test",
+      "path": "scripts/storefront-flagship.integration.test.ts",
+      "executed": true,
+      "result": "Connected local QA acceptance of submit/replay/revalidation, concurrent confirmation, dispositions, alerts, service quotes and OTP sessions; see QA receipt."
+    }
+  ]
+}

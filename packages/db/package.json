@@ -100,6 +100,7 @@
     "@ewatrade/catalog": "workspace:*",
     "@ewatrade/prescriptions": "workspace:*",
     "@ewatrade/service-commerce": "workspace:*",
+    "@ewatrade/storefront-contracts": "workspace:*",
     "@ewatrade/utils": "workspace:*",
     "@ewatrade/notifications": "workspace:*",
     "@prisma/adapter-pg": "7.6.0",
