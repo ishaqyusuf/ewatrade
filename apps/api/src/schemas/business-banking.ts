@@ -3,6 +3,20 @@ const id = z.string().trim().min(1).max(128)
 const token = z.string().min(1).max(220)
 const operationId = z.string().regex(/^[a-zA-Z0-9_-]{8,120}$/)
 const amount = z.number().int().positive().max(100_000_000)
+export const paymentAlertsSchema = z
+  .object({
+    recipientUserIds: z
+      .array(id)
+      .min(1)
+      .max(20)
+      .refine(
+        (ids) => new Set(ids).size === ids.length,
+        "Choose different staff.",
+      ),
+    channel: z.enum(["email", "whatsapp"]),
+    expectedRevision: z.number().int().nonnegative(),
+  })
+  .strict()
 export const manualBankDetailsSchema = z
   .object({
     bookId: id,
@@ -13,6 +27,7 @@ export const manualBankDetailsSchema = z
       .trim()
       .regex(/^\d{10}$/),
     accountHolder: z.string().trim().min(1).max(160),
+    paymentAlerts: paymentAlertsSchema.optional(),
   })
   .strict()
 export const createManualBankAccountSchema = manualBankDetailsSchema

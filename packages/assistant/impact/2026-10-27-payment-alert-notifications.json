@@ -1,0 +1,102 @@
+{
+  "version": 1,
+  "id": "2026-10-27-payment-alert-notifications",
+  "tickets": ["H02", "F01"],
+  "summary": "Per-bank current Business staff recipients and one Email or WhatsApp channel, fresh per-plan eligibility, durable recipient intents/quota, policy change notices and private review continuation. App-only configuration and receipt checking; unverified reports never post money. Source implementation without deployment/provider activation.",
+  "noAssistantImpact": "Notification administration is app-only; no assistant policy-edit, bank-setting, payment approval or automatic transfer tool is added. Existing assistant payment-link capabilities and explicit canonical confirmation remain unchanged.",
+  "capabilities": [],
+  "procedures": [
+    {
+      "path": "businessBanking.notificationEligibility",
+      "status": "form_only",
+      "reason": "Bank alert settings/retry require Finance Owner/Admin; notice reads/self-read receipts repeat current Business/Store/payment scope. No model authority, arbitrary recipients, public report proof, or message from a payment claim. Canonical unverified report and merchant payment review retain their existing boundaries."
+    },
+    {
+      "path": "businessBanking.notificationSettings",
+      "status": "form_only",
+      "reason": "Bank alert settings/retry require Finance Owner/Admin; notice reads/self-read receipts repeat current Business/Store/payment scope. No model authority, arbitrary recipients, public report proof, or message from a payment claim. Canonical unverified report and merchant payment review retain their existing boundaries."
+    },
+    {
+      "path": "businessBanking.notificationChanges",
+      "status": "form_only",
+      "reason": "Bank alert settings/retry require Finance Owner/Admin; notice reads/self-read receipts repeat current Business/Store/payment scope. No model authority, arbitrary recipients, public report proof, or message from a payment claim. Canonical unverified report and merchant payment review retain their existing boundaries."
+    },
+    {
+      "path": "businessBanking.markNotificationChangesRead",
+      "status": "form_only",
+      "reason": "Bank alert settings/retry require Finance Owner/Admin; notice reads/self-read receipts repeat current Business/Store/payment scope. No model authority, arbitrary recipients, public report proof, or message from a payment claim. Canonical unverified report and merchant payment review retain their existing boundaries."
+    },
+    {
+      "path": "businessBanking.retryAlert",
+      "status": "form_only",
+      "reason": "Bank alert settings/retry require Finance Owner/Admin; notice reads/self-read receipts repeat current Business/Store/payment scope. No model authority, arbitrary recipients, public report proof, or message from a payment claim. Canonical unverified report and merchant payment review retain their existing boundaries."
+    },
+    {
+      "path": "businessBanking.accounts",
+      "status": "form_only",
+      "reason": "Bank alert settings/retry require Finance Owner/Admin; notice reads/self-read receipts repeat current Business/Store/payment scope. No model authority, arbitrary recipients, public report proof, or message from a payment claim. Canonical unverified report and merchant payment review retain their existing boundaries."
+    },
+    {
+      "path": "businessBanking.createBankAccount",
+      "status": "form_only",
+      "reason": "Bank alert settings/retry require Finance Owner/Admin; notice reads/self-read receipts repeat current Business/Store/payment scope. No model authority, arbitrary recipients, public report proof, or message from a payment claim. Canonical unverified report and merchant payment review retain their existing boundaries."
+    },
+    {
+      "path": "businessBanking.saveBankDetails",
+      "status": "form_only",
+      "reason": "Bank alert settings/retry require Finance Owner/Admin; notice reads/self-read receipts repeat current Business/Store/payment scope. No model authority, arbitrary recipients, public report proof, or message from a payment claim. Canonical unverified report and merchant payment review retain their existing boundaries."
+    },
+    {
+      "path": "businessBanking.report",
+      "status": "form_only",
+      "reason": "Bank alert settings/retry require Finance Owner/Admin; notice reads/self-read receipts repeat current Business/Store/payment scope. No model authority, arbitrary recipients, public report proof, or message from a payment claim. Canonical unverified report and merchant payment review retain their existing boundaries."
+    }
+  ],
+  "docs": [
+    {
+      "topic": "feature",
+      "status": "local_only",
+      "path": ".brain/features/manual-payment-confirmation.md"
+    },
+    {
+      "topic": "api",
+      "status": "local_only",
+      "path": ".brain/api/contracts.md"
+    },
+    {
+      "topic": "permissions",
+      "status": "local_only",
+      "path": ".brain/api/permissions.md"
+    },
+    {
+      "topic": "schema",
+      "status": "local_only",
+      "path": ".brain/database/schema.md"
+    },
+    {
+      "topic": "decision",
+      "status": "local_only",
+      "path": ".brain/decisions/2026-10-27-payment-notification-routing.md"
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "test",
+      "path": "packages/jobs/src/handlers/manual-payment-alert-provider.test.ts",
+      "executed": true,
+      "result": "Fake transport provider tests pass, including all-disabled no-send, configured WhatsApp template, definitive versus ambiguous failure and single Email destination/idempotency. No real provider calls."
+    },
+    {
+      "kind": "test",
+      "path": "apps/api/src/utils/payment-notification-procedure-policy.test.ts",
+      "executed": true,
+      "result": "Exact scoped notice read/self-receipt only; bank settings/eligibility/retry remain Owner/Admin. Existing manual report and cadence checks9pass/82assertions."
+    },
+    {
+      "kind": "run",
+      "path": ".brain/qa/2026-10-27-payment-alert-notifications-implementation.md",
+      "executed": true,
+      "result": "Local scoped acceptance: 175source tests/850assertions, strict backend and Dashboard graphs pass, guarded existing-QA-bank settings SQL rollback1/13, reused quotaSQLtwo-sessions1/45 and late-policy-fence11assertions, privacy189/451. Anonymous APIs401 and private login continuation pass. Actual browser checks default-off settings, valid unsaved bank draft without alerts/cancel and existing confirmed report. Native source/types only; no device or real provider/deployment acceptance."
+    }
+  ]
+}

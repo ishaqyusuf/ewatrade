@@ -6,6 +6,7 @@ const reads = new Set([
   "businessBanking.linkCandidates",
   "businessBanking.pendingReports",
   "businessBanking.report",
+  "businessBanking.notificationChanges",
   "assistantChannels.availability",
   "assistantChannels.whatsAppLink",
   "assistantChannels.whatsAppConnections",
@@ -198,6 +199,7 @@ export function staffProcedureAction(
   return null
 }
 export const businessNotificationSelfMutations = new Set([
+  "businessBanking.markNotificationChangesRead",
   "businessNotifications.markRead",
   "businessNotifications.archive",
   "businessNotifications.markAllRead",

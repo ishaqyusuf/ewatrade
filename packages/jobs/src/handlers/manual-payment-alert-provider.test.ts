@@ -133,3 +133,49 @@ test("only definitive WhatsApp refusal is mapped to a safe rejection", async () 
     }
   }
 })
+
+test("Email uses one verified destination and stable intent idempotency without WhatsApp", async () => {
+  const messages: Array<{ to: string; idempotencyKey?: string }> = []
+  const adapter = createManualPaymentAlertProvider({
+    env: {
+      PAYMENT_REPORT_ALERTS_ENABLED: "true",
+      EMAIL_DELIVERY_MODE: "live",
+      RESEND_API_KEY: "test-not-a-key",
+      EMAIL_FROM: "EwaTrade <notifications@example.com>",
+      QA_POLICY_URL: "",
+      QA_POLICY_READ_KEY: "",
+      TEST_EMAIL: "",
+      TEST_EMAILS: "",
+    },
+    email: {
+      send: async (message) => {
+        messages.push(message)
+        return { provider: "resend", providerMessageId: "email-id" }
+      },
+    },
+    whatsapp: {
+      sendTemplate: async () => {
+        throw Error("WhatsApp must not send")
+      },
+    },
+    assertProviderAllowed: async (input) => {
+      expect(input.operation).toBe("email")
+      expect(input.qaEmailRouted).toBe(false)
+    },
+  })
+  const emailClaim = {
+    ...claim,
+    channel: "email" as const,
+    destination: "owner@example.com",
+  }
+  await adapter.assertProviderAllowed(emailClaim)
+  expect(
+    await adapter.send({
+      ...emailClaim,
+      ...renderManualPaymentReportAlert(claim.content),
+    }),
+  ).toEqual({ providerMessageId: "email-id" })
+  expect(messages).toHaveLength(1)
+  expect(messages[0]?.to).toBe("owner@example.com")
+  expect(messages[0]?.idempotencyKey).toBe(claim.providerIdempotencyKey)
+})

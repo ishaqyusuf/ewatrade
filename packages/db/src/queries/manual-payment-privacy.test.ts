@@ -17,6 +17,9 @@ test("manual-payment attribution fails closed on missing/invalid counts and reta
           manualPaymentLinks: 0,
           manualPaymentReviews: -1,
           manualPaymentReceiptAssets: 0,
+          manualPaymentAlertSettings: 0,
+          manualPaymentAlertIntents: 0,
+          manualPaymentAlertNoticeReads: 0,
         },
       ]),
       "subject",
@@ -29,6 +32,9 @@ test("manual-payment attribution fails closed on missing/invalid counts and reta
           manualPaymentLinks: 2,
           manualPaymentReviews: 1,
           manualPaymentReceiptAssets: 1,
+          manualPaymentAlertSettings: 1,
+          manualPaymentAlertIntents: 3,
+          manualPaymentAlertNoticeReads: 2,
         },
       ]),
       "subject",
@@ -37,5 +43,8 @@ test("manual-payment attribution fails closed on missing/invalid counts and reta
     manualPaymentLinks: 2,
     manualPaymentReviews: 1,
     manualPaymentReceiptAssets: 1,
+    manualPaymentAlertSettings: 1,
+    manualPaymentAlertIntents: 3,
+    manualPaymentAlertNoticeReads: 2,
   })
 })

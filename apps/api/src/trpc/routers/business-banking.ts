@@ -1,4 +1,11 @@
 import {
+  PaymentNotificationError,
+  listPaymentNotificationChanges,
+  markPaymentNotificationChangesRead,
+  paymentNotificationEligibility,
+  retryPaymentNotificationDispatch,
+} from "@ewatrade/db/payment-report-notifications"
+import {
   CatalogError,
   FinanceError,
   createBusinessPaymentLink,
@@ -16,6 +23,11 @@ import {
   shortManualPaymentLinkIdentity,
   submitManualPaymentReport,
 } from "@ewatrade/db/queries"
+import {
+  manualPaymentAlertDeliveries,
+  readManualPaymentAlertSettings,
+} from "@ewatrade/db/queries"
+import { enqueueManualPaymentAlerts } from "@ewatrade/jobs"
 import {
   createPaymentLinkToken,
   paymentLinkPreview,
@@ -57,6 +69,11 @@ async function mapped<T>(operation: () => Promise<T>): Promise<T> {
   try {
     return await operation()
   } catch (error) {
+    if (error instanceof PaymentNotificationError)
+      throw new TRPCError({
+        code: error.code === "UNAVAILABLE" ? "PRECONDITION_FAILED" : error.code,
+        message: error.message,
+      })
     if (error instanceof ManualPaymentError)
       throw new TRPCError({ code: error.code, message: error.message })
     if (error instanceof CatalogError || error instanceof FinanceError)
@@ -73,6 +90,86 @@ const actor = (ctx: {
 })
 
 export const businessBankingRouter = createTRPCRouter({
+  retryAlert: financeProcedure
+    .input(
+      z
+        .object({
+          reportId: z.string().min(1).max(128),
+          recipientUserId: z.string().min(1).max(128),
+        })
+        .strict(),
+    )
+    .mutation(async ({ ctx, input }) =>
+      mapped(async () => {
+        if (process.env.PAYMENT_REPORT_ALERTS_ENABLED !== "true")
+          throw new TRPCError({
+            code: "PRECONDITION_FAILED",
+            message: "Payment alert delivery is unavailable.",
+          })
+        await readManualPaymentReport(ctx.db, {
+          reportId: input.reportId,
+          scope: await orderScope(ctx),
+        })
+        const intent = await ctx.db.paymentNotificationIntent.findFirst({
+          where: {
+            tenantId: ctx.tenantContext.tenant.id,
+            reportId: input.reportId,
+            recipientUserId: input.recipientUserId,
+          },
+          select: { id: true },
+        })
+        if (!intent)
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Payment alert not found.",
+          })
+        const retried = await retryPaymentNotificationDispatch(ctx.db, {
+          tenantId: ctx.tenantContext.tenant.id,
+          actorUserId: ctx.session.user.id,
+          intentId: intent.id,
+        })
+        await enqueueManualPaymentAlerts({
+          tenantId: ctx.tenantContext.tenant.id,
+          intentIds: [retried.id],
+        })
+        return { queued: true }
+      }),
+    ),
+  notificationChanges: protectedProcedure
+    .input(manualReportPageSchema)
+    .query(({ ctx, input }) =>
+      mapped(() =>
+        listPaymentNotificationChanges(ctx.db, { ...actor(ctx), ...input }),
+      ),
+    ),
+  markNotificationChangesRead: protectedProcedure
+    .input(
+      z
+        .object({ ids: z.array(z.string().min(1).max(128)).min(1).max(50) })
+        .strict(),
+    )
+    .mutation(({ ctx, input }) =>
+      mapped(() =>
+        markPaymentNotificationChangesRead(ctx.db, { ...actor(ctx), ...input }),
+      ),
+    ),
+  notificationEligibility: financeProcedure.query(({ ctx }) =>
+    mapped(() => paymentNotificationEligibility(ctx.db, actor(ctx))),
+  ),
+  notificationSettings: financeProcedure
+    .input(
+      z
+        .object({
+          bookId: z.string().min(1).max(128),
+          accountId: z.string().min(1).max(128).optional(),
+        })
+        .strict(),
+    )
+    .query(({ ctx, input }) =>
+      mapped(() =>
+        readManualPaymentAlertSettings(ctx.db, { ...actor(ctx), ...input }),
+      ),
+    ),
   linkCandidates: protectedProcedure
     .input(
       z
@@ -219,7 +316,17 @@ export const businessBankingRouter = createTRPCRouter({
     .input(manualReportTokenSchema)
     .mutation(async ({ ctx, input }) => {
       const proof = manualReportIdentity(input.reportToken)
-      await mapped(() => submitManualPaymentReport(ctx.db, proof))
+      const submission = await mapped(() =>
+        submitManualPaymentReport(ctx.db, {
+          ...proof,
+          notificationDeliveryEnabled:
+            process.env.PAYMENT_REPORT_ALERTS_ENABLED === "true",
+        }),
+      )
+      await enqueueManualPaymentAlerts({
+        tenantId: submission.notificationTenantId,
+        intentIds: submission.notificationIntentIds,
+      })
       await publishManualPaymentStatus(proof.reportId)
       return mapped(() => manualPaymentReportStatus(ctx.db, proof.reportId))
     }),
@@ -261,6 +368,14 @@ export const businessBankingRouter = createTRPCRouter({
       })
       return {
         reportId: row.id,
+        alertDeliveries: await manualPaymentAlertDeliveries(ctx.db, {
+          tenantId: ctx.tenantContext.tenant.id,
+          reportId: row.id,
+          storeId: row.link.order.storeId,
+          allowRetry:
+            ["OWNER", "ADMIN"].includes(ctx.tenantContext.membership.role) &&
+            process.env.PAYMENT_REPORT_ALERTS_ENABLED === "true",
+        }),
         revision: row.revision,
         status: row.status,
         payerName: row.payerName,

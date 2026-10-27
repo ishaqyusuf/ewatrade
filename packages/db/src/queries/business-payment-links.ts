@@ -20,7 +20,10 @@ import { lockCommerceFinancialOrder } from "./customer-ledger/commerce-locks"
 import { assertFinanceManager, lockFinanceBook } from "./finance/access"
 import { createFinanceMoneyAccountInTransaction } from "./finance/accounts"
 import { assertOrderPaymentAccountInTransaction } from "./finance/order-payment-accounts"
+import type { PaymentAlertSelection } from "./manual-payment-alert-rules"
+import { saveManualPaymentAlertsInTransaction } from "./manual-payment-alert-settings"
 import { runInOwnTransaction } from "./own-transaction"
+import { reservePaymentNotificationGroupInTransaction } from "./payment-report-notifications/quota"
 
 type Actor = { tenantId: string; actorUserId: string }
 type Proof = { linkId: string; expiresAt: Date }
@@ -91,6 +94,7 @@ export async function saveManualBankDetails(
     bankName: string
     accountNumber: string
     accountHolder: string
+    paymentAlerts?: PaymentAlertSelection
   },
 ) {
   const details = manualBankDetails(input)
@@ -106,6 +110,11 @@ export async function saveManualBankDetails(
       },
     })
     if (!account) throw unavailable()
+    if (input.paymentAlerts)
+      await saveManualPaymentAlertsInTransaction(tx, {
+        ...input,
+        paymentAlerts: input.paymentAlerts,
+      })
     return tx.financeAccount.update({
       where: { id: account.id },
       data: details,
@@ -121,6 +130,7 @@ export async function createManualBankAccount(
     bankName: string
     accountNumber: string
     accountHolder: string
+    paymentAlerts?: PaymentAlertSelection
   },
 ) {
   const details = manualBankDetails(input)
@@ -141,6 +151,13 @@ export async function createManualBankAccount(
         "CONFLICT",
         "This account request was already saved with different bank details.",
       )
+    if (input.paymentAlerts)
+      await saveManualPaymentAlertsInTransaction(tx, {
+        ...input,
+        accountId: account.id,
+        paymentAlerts: input.paymentAlerts,
+        allowCreateReplay: true,
+      })
     return tx.financeAccount.update({
       where: { id: account.id },
       data: details,
@@ -157,7 +174,7 @@ export async function listManualBankAccounts(
       where: { id: input.bookId, tenantId: input.tenantId },
     })
     if (!book) throw unavailable()
-    return tx.financeAccount.findMany({
+    const accounts = await tx.financeAccount.findMany({
       where: {
         bookId: book.id,
         kind: "ASSET",
@@ -171,9 +188,51 @@ export async function listManualBankAccounts(
         bankAccountNumber: true,
         bankAccountHolder: true,
         paymentsPausedAt: true,
+        manualPaymentAlertSetting: true,
       },
       orderBy: { code: "asc" },
     })
+    const recipientIds = [
+      ...new Set(
+        accounts.flatMap(
+          (account) =>
+            account.manualPaymentAlertSetting?.recipientUserIds ?? [],
+        ),
+      ),
+    ]
+    const members = recipientIds.length
+      ? await tx.membership.findMany({
+          where: {
+            tenantId: input.tenantId,
+            userId: { in: recipientIds },
+            status: "ACTIVE",
+          },
+          select: { userId: true, user: { select: { name: true } } },
+        })
+      : []
+    return accounts.map(
+      ({ manualPaymentAlertSetting: settings, ...account }) => ({
+        ...account,
+        paymentAlerts: settings
+          ? {
+              revision: settings.revision,
+              recipientNames: settings.recipientUserIds.flatMap((id) => {
+                const member = members.find((m) => m.userId === id)
+                return member ? [member.user.name] : []
+              }),
+              channel:
+                settings.channel === "email" || settings.channel === "whatsapp"
+                  ? settings.channel
+                  : null,
+              effectiveChannel:
+                settings.effectiveChannel === "email" ||
+                settings.effectiveChannel === "whatsapp"
+                  ? settings.effectiveChannel
+                  : null,
+            }
+          : null,
+      }),
+    )
   })
 }
 
@@ -516,7 +575,7 @@ export async function prepareManualPaymentReport(
 
 export async function submitManualPaymentReport(
   db: PrismaClient,
-  input: { reportId: string },
+  input: { reportId: string; notificationDeliveryEnabled?: boolean },
 ) {
   return runInOwnTransaction(db, async (tx) => {
     const report = await tx.manualPaymentReport.findUnique({
@@ -531,7 +590,24 @@ export async function submitManualPaymentReport(
       },
     })
     if (!report || !report.link.tenant.isActive) throw unavailable()
-    if (report.status !== "DRAFT") return { report, replay: true }
+    if (report.status !== "DRAFT") {
+      const intents = input.notificationDeliveryEnabled
+        ? await tx.paymentNotificationIntent.findMany({
+            where: {
+              reportId: report.id,
+              tenantId: report.link.tenantId,
+              status: "RESERVED",
+            },
+            select: { id: true },
+          })
+        : []
+      return {
+        report,
+        replay: true,
+        notificationTenantId: report.link.tenantId,
+        notificationIntentIds: intents.map((intent) => intent.id),
+      }
+    }
     const link = report.link
     if (
       link.closedAt ||
@@ -558,11 +634,21 @@ export async function submitManualPaymentReport(
         revision: { increment: 1 },
       },
     })
+    // Missing/closed policy is an in-app-only report. Never backfill old claims
+    // when an account is configured or a channel is enabled at a later date.
+    const alerts = input.notificationDeliveryEnabled
+      ? await reservePaymentNotificationGroupInTransaction(tx, {
+          tenantId: link.tenantId,
+          reportId: report.id,
+        })
+      : { intentIds: [] }
     return {
       report: await tx.manualPaymentReport.findUniqueOrThrow({
         where: { id: report.id },
       }),
       replay: !changed.count,
+      notificationTenantId: link.tenantId,
+      notificationIntentIds: alerts.intentIds,
     }
   })
 }

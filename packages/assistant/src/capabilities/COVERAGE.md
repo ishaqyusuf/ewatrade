@@ -6,10 +6,10 @@ Tickets refer to the Brain plan `.brain/plans/2026-10-09-assistant-business-oper
 
 ## Summary
 
-- Router procedures: 727 (550 merchant, 177 public/account/internal)
+- Router procedures: 732 (555 merchant, 177 public/account/internal)
 - Merchant supported by a capability: 173
 - Merchant planned: 133
-- Merchant form-only: 183
+- Merchant form-only: 188
 - Merchant excluded: 61
 - Capabilities: 162 (84 read, 78 write)
 
@@ -415,9 +415,14 @@ track conversational evaluation separately from these source test links.
 | `businessBanking.createBankAccount` | mutation | Owner/Admin only | sales | form_only | Manual bank instructions, customer reports and merchant receipt confirmation use the payment-link/review forms. Customer evidence never authorizes a payment; no model or WhatsApp payment approval is enabled. |
 | `businessBanking.createPaymentLink` | mutation | orders | sales | supported | sales.payment_links.create |
 | `businessBanking.linkCandidates` | query | read | sales | supported | sales.payment_links.read |
+| `businessBanking.markNotificationChangesRead` | mutation | read | sales | form_only | Manual bank instructions, customer reports and merchant receipt confirmation use the payment-link/review forms. Customer evidence never authorizes a payment; no model or WhatsApp payment approval is enabled. |
+| `businessBanking.notificationChanges` | query | read | sales | form_only | Manual bank instructions, customer reports and merchant receipt confirmation use the payment-link/review forms. Customer evidence never authorizes a payment; no model or WhatsApp payment approval is enabled. |
+| `businessBanking.notificationEligibility` | query | Owner/Admin only | sales | form_only | Manual bank instructions, customer reports and merchant receipt confirmation use the payment-link/review forms. Customer evidence never authorizes a payment; no model or WhatsApp payment approval is enabled. |
+| `businessBanking.notificationSettings` | query | Owner/Admin only | sales | form_only | Manual bank instructions, customer reports and merchant receipt confirmation use the payment-link/review forms. Customer evidence never authorizes a payment; no model or WhatsApp payment approval is enabled. |
 | `businessBanking.pendingReports` | query | read | sales | form_only | Manual bank instructions, customer reports and merchant receipt confirmation use the payment-link/review forms. Customer evidence never authorizes a payment; no model or WhatsApp payment approval is enabled. |
 | `businessBanking.report` | query | read | sales | form_only | Manual bank instructions, customer reports and merchant receipt confirmation use the payment-link/review forms. Customer evidence never authorizes a payment; no model or WhatsApp payment approval is enabled. |
 | `businessBanking.reviewReport` | mutation | orders | sales | form_only | Manual bank instructions, customer reports and merchant receipt confirmation use the payment-link/review forms. Customer evidence never authorizes a payment; no model or WhatsApp payment approval is enabled. |
+| `businessBanking.retryAlert` | mutation | Owner/Admin only | sales | form_only | Manual bank instructions, customer reports and merchant receipt confirmation use the payment-link/review forms. Customer evidence never authorizes a payment; no model or WhatsApp payment approval is enabled. |
 | `businessBanking.saveBankDetails` | mutation | Owner/Admin only | sales | form_only | Manual bank instructions, customer reports and merchant receipt confirmation use the payment-link/review forms. Customer evidence never authorizes a payment; no model or WhatsApp payment approval is enabled. |
 | `businessNotifications.archive` | mutation | read | platform | form_only | Own alert preferences and receipt state stay in the personal inbox until a dedicated confirmed assistant flow is built. |
 | `businessNotifications.listMine` | query | read | platform | planned | S05 |
