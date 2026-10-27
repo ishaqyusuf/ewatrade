@@ -58,7 +58,7 @@ function caller(overrides?: { attendant?: boolean; sourceId?: string }) {
     calls,
     client: createCaller({
       db,
-      session: { user: { id: "attendant-1" } },
+      session: { session: { id: "session-1" }, user: { id: "attendant-1" } },
       tenantContext: {
         activeStore: { id: "store-1" },
         membership: { role: "OWNER" },
