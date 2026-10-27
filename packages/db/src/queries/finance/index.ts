@@ -84,6 +84,10 @@ export {
   getFinancePeriodCloseChecklist,
   getFinancePeriodCloseChecklistInTransaction,
 } from "./period-close-checklist"
+export {
+  getFinanceInventoryReconciliation,
+  getFinanceInventoryReconciliationInTransaction,
+} from "./inventory-reconciliation"
 export { listAssistantCashAccountsInTransaction } from "./assistant-cash-count-reads"
 export { getFinanceYearEndPreview } from "./year-end-preview"
 export {

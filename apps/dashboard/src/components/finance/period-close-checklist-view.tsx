@@ -1,8 +1,10 @@
 "use client"
 
+import { useTRPC } from "@/trpc/client"
 import type { RouterOutputs } from "@ewatrade/api/trpc/routers/_app"
 import { Alert, AlertDescription, AlertTitle, Badge } from "@ewatrade/ui"
 import { formatFinanceMoney } from "@ewatrade/utils/finance-money"
+import { useQuery } from "@tanstack/react-query"
 import { plainDay } from "./review-changes"
 
 type Checklist = RouterOutputs["finance"]["periodCloseChecklist"]
@@ -227,6 +229,49 @@ function CheckRow({
           ? `Money in and out adds up: ${formatFinanceMoney(checklist.trialBalance.debitMinor, checklist.currencyCode)} each way.`
           : PLAIN_CHECKS[check.id]?.[1] || check.explanation}
       </p>
+      {check.id === "INVENTORY_RECONCILIATION" ? (
+        <StockValueToday bookId={checklist.bookId} />
+      ) : null}
     </li>
+  )
+}
+
+/** Today's stock pool value against the Inventory account (not at the cutoff). */
+function StockValueToday({ bookId }: { bookId: string }) {
+  const trpc = useTRPC()
+  const query = useQuery(
+    trpc.finance.inventoryReconciliation.queryOptions(
+      { bookId },
+      { retry: false },
+    ),
+  )
+  if (!query.data)
+    return query.isError ? (
+      <p className="text-sm text-muted-foreground">
+        Today&apos;s stock value couldn&apos;t load.
+      </p>
+    ) : null
+  const r = query.data
+  const money = (minor: string) => formatFinanceMoney(minor, r.currencyCode)
+  const notes = [
+    r.differenceMinor !== "0"
+      ? `Difference ${money(r.differenceMinor)}.`
+      : null,
+    r.pools.unknownCount
+      ? `${r.pools.unknownCount} ${r.pools.unknownCount === 1 ? "item has" : "items have"} no known cost.`
+      : null,
+    r.uncoveredStockCount
+      ? `${r.uncoveredStockCount} ${r.uncoveredStockCount === 1 ? "item in stock was" : "items in stock were"} never valued.`
+      : null,
+    r.ledger.inTransitMinor !== "0"
+      ? `${money(r.ledger.inTransitMinor)} of goods are on the way.`
+      : null,
+  ].filter(Boolean)
+  return (
+    <p className="text-sm text-muted-foreground">
+      Today: stock is valued at {money(r.pools.knownValueMinor)} and the
+      Inventory account shows {money(r.ledger.onHandMinor)}.
+      {notes.length ? ` ${notes.join(" ")}` : " They match."}
+    </p>
   )
 }

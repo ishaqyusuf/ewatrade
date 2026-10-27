@@ -279,6 +279,7 @@ formOnly(
     "finance.configureFiscalCalendar",
     "finance.fiscalCalendar",
     "finance.yearEndPreview",
+    "finance.inventoryReconciliation",
   ],
 )
 formOnly(

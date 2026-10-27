@@ -6,10 +6,10 @@ Tickets refer to the Brain plan `.brain/plans/2026-10-09-assistant-business-oper
 
 ## Summary
 
-- Router procedures: 699 (526 merchant, 173 public/account/internal)
+- Router procedures: 700 (527 merchant, 173 public/account/internal)
 - Merchant supported by a capability: 171
 - Merchant planned: 132
-- Merchant form-only: 161
+- Merchant form-only: 162
 - Merchant excluded: 62
 - Capabilities: 160 (83 read, 77 write)
 
@@ -525,6 +525,7 @@ track conversational evaluation separately from these source test links.
 | `finance.expenseReceipts.list` | query | Owner/Admin only | finance | planned | H04 |
 | `finance.expenseReceipts.withdraw` | mutation | Owner/Admin only | finance | planned | H04 |
 | `finance.fiscalCalendar` | query | Owner/Admin only | finance | form_only | Period close, reopen and fiscal calendar changes are privileged Finance actions. |
+| `finance.inventoryReconciliation` | query | Owner/Admin only | finance | form_only | Period close, reopen and fiscal calendar changes are privileged Finance actions. |
 | `finance.journal` | query | Owner/Admin only | finance | planned | G01 |
 | `finance.moneyAccounts` | query | Owner/Admin only | finance | supported | finance.cash_accounts.read, finance.money_accounts.read |
 | `finance.moneyMovement` | query | Owner/Admin only | finance | planned | E03 |
