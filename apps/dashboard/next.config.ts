@@ -68,7 +68,12 @@ export function getDashboardApiRewrites(apiOrigin = getApiOrigin()) {
 
 export const nextConfig: NextConfig = {
   // GENERAL allows 45s after admission; preserve the stream through setup and finalization.
-  experimental: { proxyTimeout: 90_000 },
+  experimental: {
+    proxyTimeout: 90_000,
+    // Next 16 sends development Flight debug data over HMR. Public-link QA
+    // must hydrate through a restricted proxy without exposing that socket.
+    reactDebugChannel: false,
+  },
   logging: {
     incomingRequests: {
       ignore: [
