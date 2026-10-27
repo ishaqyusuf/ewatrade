@@ -14,7 +14,6 @@ import {
   ToggleGroup,
   ToggleGroupItem,
   buttonVariants,
-  toast,
 } from "@ewatrade/ui"
 import {
   ArrowLeft01Icon,
@@ -142,7 +141,7 @@ export function ProductDetail({ item }: { item: PublicCatalogItem }) {
       return
     }
     setError(null)
-    toast.success(`${item.name} added to your bag`)
+    // The bag sheet opens with focus on its title; a toast would cover that header.
     setBagOpen(true)
   }
   return (

@@ -354,17 +354,57 @@ export function issueMessage(
   }
 }
 
-/** Readable text on an accent colour (WCAG relative luminance). */
-export function readableOn(hex: string) {
+function hexChannels(hex: string) {
   const value = /^#([0-9a-f]{6})$/i.exec(hex)?.[1]
-  if (!value) return "#ffffff"
-  const channel = (index: number) => {
-    const c = Number.parseInt(value.slice(index, index + 2), 16) / 255
+  if (!value) return null
+  return [0, 2, 4].map((index) =>
+    Number.parseInt(value.slice(index, index + 2), 16),
+  ) as [number, number, number]
+}
+
+function luminance([r, g, b]: [number, number, number]) {
+  const channel = (value: number) => {
+    const c = value / 255
     return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4
   }
-  const luminance =
-    0.2126 * channel(0) + 0.7152 * channel(2) + 0.0722 * channel(4)
-  return luminance > 0.45 ? "#1c211e" : "#ffffff"
+  return 0.2126 * channel(r) + 0.7152 * channel(g) + 0.0722 * channel(b)
+}
+
+/** WCAG contrast ratio between two #rrggbb colours (1 when either is invalid). */
+export function contrastRatio(a: string, b: string) {
+  const first = hexChannels(a)
+  const second = hexChannels(b)
+  if (!first || !second) return 1
+  const [light, dark] = [luminance(first), luminance(second)].sort(
+    (x, y) => y - x,
+  ) as [number, number]
+  return (light + 0.05) / (dark + 0.05)
+}
+
+/** Readable text on an accent colour: whichever of light or dark text contrasts more. */
+export function readableOn(hex: string) {
+  if (!hexChannels(hex)) return "#ffffff"
+  return contrastRatio(hex, "#ffffff") >= contrastRatio(hex, "#1c211e")
+    ? "#ffffff"
+    : "#1c211e"
+}
+
+/**
+ * The accent as a foreground on the page background (links, icons, focus rings,
+ * progress): the merchant's colour, darkened or lightened just enough for 4.5:1.
+ */
+export function accentInk(accent: string, paper: string) {
+  const from = hexChannels(accent)
+  const background = hexChannels(paper)
+  if (!from || !background) return accent
+  const toHex = (rgb: number[]) =>
+    `#${rgb.map((c) => Math.round(c).toString(16).padStart(2, "0")).join("")}`
+  const target = luminance(background) > 0.18 ? 0 : 255
+  for (let step = 0; step <= 20; step++) {
+    const mixed = toHex(from.map((c) => c + (target - c) * (step / 20)))
+    if (contrastRatio(mixed, paper) >= 4.5) return mixed
+  }
+  return target === 0 ? "#000000" : "#ffffff"
 }
 
 export const newClientId = () =>

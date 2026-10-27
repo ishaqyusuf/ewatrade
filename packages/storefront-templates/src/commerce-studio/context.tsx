@@ -18,6 +18,7 @@ import {
   type BagState,
   type StorefrontCommerceAdapter,
   type StorefrontCustomerView,
+  accentInk,
   addBagLine,
   previewCommerceAdapter,
   readBag,
@@ -61,6 +62,7 @@ export function commerceThemeStyle(
   return {
     "--cs-accent": theme.accent,
     "--cs-on-accent": readableOn(theme.accent),
+    "--cs-accent-ink": accentInk(theme.accent, theme.background),
     "--cs-paper": theme.background,
     "--cs-radius":
       theme.radius === "none"

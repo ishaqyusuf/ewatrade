@@ -120,7 +120,11 @@ function SignIn({
     return (
       <Empty className="cs-empty">
         <EmptyHeader>
-          <EmptyTitle>Login isn't available right now</EmptyTitle>
+          <EmptyTitle>
+            <h1 className="cs-empty__heading">
+              Login isn't available right now
+            </h1>
+          </EmptyTitle>
           <EmptyDescription>
             You can still order as a guest. Your receipt link keeps track of
             your request.

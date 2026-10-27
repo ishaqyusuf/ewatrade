@@ -30,7 +30,10 @@
   /* shadcn tokens follow the merchant's theme inside the template */
   --primary: var(--cs-accent);
   --primary-foreground: var(--cs-on-accent);
-  --ring: var(--cs-accent);
+  --ring: var(--cs-accent-ink, var(--cs-accent));
+  /* shadcn's defaults fall below 4.5:1 on the warm paper; use the template's own */
+  --muted-foreground: var(--cs-muted);
+  --destructive: #b42318;
   --radius: var(--cs-radius);
   --background: var(--cs-paper);
   --popover: var(--cs-paper);
@@ -68,8 +71,11 @@
 .cs-store a {
   color: inherit;
 }
-.cs-store :focus-visible {
-  outline: 2px solid var(--cs-accent);
+/* One visible focus ring (3:1+ on the page), also over shadcn's faint ring-ring/30. */
+.cs-store :focus-visible,
+.cs-portal:focus-visible,
+.cs-portal :focus-visible {
+  outline: 2px solid var(--cs-accent-ink, var(--cs-accent)) !important;
   outline-offset: 2px;
 }
 .cs-wrap {
@@ -307,7 +313,7 @@
 }
 .cs-nav__link[aria-current="page"] {
   color: var(--cs-ink);
-  border-bottom-color: var(--cs-accent);
+  border-bottom-color: var(--cs-accent-ink, var(--cs-accent));
 }
 .cs-header__actions {
   display: flex;
@@ -421,7 +427,7 @@
   height: 20px;
   flex: none;
   margin-top: 2px;
-  color: var(--cs-accent);
+  color: var(--cs-accent-ink, var(--cs-accent));
 }
 .cs-hero__media {
   display: block;
@@ -482,7 +488,7 @@
   height: 100%;
   font-family: var(--cs-display);
   font-size: 3rem;
-  color: var(--cs-accent);
+  color: var(--cs-accent-ink, var(--cs-accent));
 }
 .cs-category__label {
   font-weight: 600;
@@ -714,7 +720,7 @@
 .cs-contact__body svg {
   width: 20px;
   height: 20px;
-  color: var(--cs-accent);
+  color: var(--cs-accent-ink, var(--cs-accent));
   flex: none;
 }
 
@@ -826,6 +832,24 @@
   width: min(440px, 100vw);
   max-width: 100vw;
   font-family: "CS Sans", system-ui, sans-serif;
+}
+.cs-bag-sheet__header {
+  flex-direction: row;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+.cs-sheet-title {
+  font-family: var(--cs-display);
+  font-size: 1.375rem;
+  font-weight: 600;
+  line-height: 1.2;
+}
+.cs-bag-sheet__close {
+  flex: none;
+  margin: -8px -8px 0 0;
+  min-width: 44px;
+  min-height: 44px;
 }
 .cs-bag-sheet__body {
   flex: 1;
@@ -984,7 +1008,7 @@
   min-height: 44px;
 }
 .cs-summary__toggle:focus-visible {
-  outline: 2px solid var(--cs-accent);
+  outline: 2px solid var(--cs-accent-ink, var(--cs-accent));
   outline-offset: 2px;
 }
 .cs-summary__body {
@@ -1082,14 +1106,14 @@
   padding-top: 8px;
 }
 .cs-progress li[data-done] {
-  border-top-color: var(--cs-accent);
+  border-top-color: var(--cs-accent-ink, var(--cs-accent));
   color: var(--cs-ink);
   font-weight: 600;
 }
 .cs-progress__dot svg {
   width: 18px;
   height: 18px;
-  color: var(--cs-accent);
+  color: var(--cs-accent-ink, var(--cs-accent));
 }
 .cs-summary-lines {
   list-style: none;
@@ -1237,7 +1261,7 @@
     color-mix(in oklab, var(--cs-accent) 50%, transparent);
 }
 .cs-editable[data-selected="true"] {
-  box-shadow: inset 0 0 0 2px var(--cs-accent);
+  box-shadow: inset 0 0 0 2px var(--cs-accent-ink, var(--cs-accent));
 }
 
 /* ---------- responsive (container = storefront viewport) ---------- */
@@ -1346,6 +1370,11 @@
   }
 }
 @container storefront (max-width: 599px) {
+  /* The product page has its own sticky action bar; the bag dock would sit on top of
+     it. The header's bag button (with count) stays available. */
+  .cs-store:has(.cs-product__actions) .cs-dock {
+    display: none;
+  }
   .cs-product__actions {
     position: sticky;
     bottom: 0;
@@ -1370,6 +1399,81 @@
   }
   .cs-card:hover .cs-card__media .sf-tile {
     transform: none;
+  }
+  /* Sheets, dialogs, toasts and spinners from @ewatrade/ui animate by default. */
+  .cs-store *,
+  .cs-store *::before,
+  .cs-store *::after,
+  .cs-portal,
+  .cs-portal *,
+  .cs-portal *::before,
+  .cs-portal *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+.cs-empty__heading {
+  font: inherit;
+  margin: 0;
+}
+.cs-sheet-title:focus {
+  outline: none !important;
+}
+
+/* ---------- keyboard focus clear of the sticky header and bottom bars ---------- */
+html:has(.cs-store:not([data-preview])) {
+  scroll-padding-block: 140px 96px;
+}
+/* Short viewports (landscape phones, 400% zoom): bars would cover most of the page. */
+@media (max-height: 520px) {
+  .cs-header,
+  .cs-product__actions,
+  .cs-dock {
+    position: static !important;
+  }
+  html:has(.cs-store:not([data-preview])) {
+    scroll-padding-block: 16px;
+  }
+}
+
+/* ---------- touch targets (44px) on touch screens ---------- */
+@media (pointer: coarse) {
+  .cs-store .group\/button,
+  .cs-portal .group\/button,
+  .cs-store [data-slot="input"],
+  .cs-portal [data-slot="input"],
+  .cs-store [data-slot="select-trigger"],
+  .cs-portal [data-slot="tabs-trigger"],
+  .cs-store [data-slot="tabs-trigger"] {
+    min-height: 44px;
+  }
+  .cs-stepper .group\/button {
+    min-width: 44px;
+  }
+  .cs-store [data-slot="input-otp-slot"] {
+    width: 44px;
+    height: 48px;
+    font-size: 1.125rem;
+  }
+  .cs-wordmark,
+  .cs-back {
+    min-height: 44px;
+  }
+  .cs-nav a,
+  .cs-footer__links a,
+  .cs-card__name a,
+  .cs-service__name a,
+  .cs-breadcrumb a {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+  }
+  .cs-card__name a,
+  .cs-service__name a {
+    margin-block: -10px;
   }
 }
 

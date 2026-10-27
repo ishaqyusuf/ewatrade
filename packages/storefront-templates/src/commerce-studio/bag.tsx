@@ -11,6 +11,7 @@ import {
   EmptyMedia,
   EmptyTitle,
   Sheet,
+  SheetClose,
   SheetContent,
   SheetDescription,
   SheetFooter,
@@ -18,8 +19,13 @@ import {
   SheetTitle,
   buttonVariants,
 } from "@ewatrade/ui"
-import { Delete02Icon, ShoppingBag01Icon } from "@hugeicons/core-free-icons"
+import {
+  Cancel01Icon,
+  Delete02Icon,
+  ShoppingBag01Icon,
+} from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
+import { useRef } from "react"
 import {
   type BagLine,
   bagTotals,
@@ -127,6 +133,8 @@ export function BagSheet() {
     ordering,
     themeStyle,
   } = useCommerceStudio()
+  // Open on the title, not the first quantity input: phones would raise the keyboard.
+  const titleRef = useRef<HTMLHeadingElement>(null)
   if (!ordering) return null
   const totals = bagTotals(bag.lines)
   const currency = bag.lines[0]?.currencyCode ?? snapshot.currencyCode
@@ -140,14 +148,27 @@ export function BagSheet() {
         className="cs-portal cs-bag-sheet"
         data-font={snapshot.composition.theme.font}
         style={themeStyle}
+        initialFocus={titleRef}
       >
-        <SheetHeader>
-          <SheetTitle>Your bag</SheetTitle>
-          <SheetDescription>
-            {bag.lines.length
-              ? `${totals.count} ${totals.count === 1 ? "item" : "items"} from ${snapshot.resources.business.name}`
-              : "Add items to send an order request."}
-          </SheetDescription>
+        <SheetHeader className="cs-bag-sheet__header">
+          <div>
+            <SheetTitle ref={titleRef} tabIndex={-1} className="cs-sheet-title">
+              Your bag
+            </SheetTitle>
+            <SheetDescription>
+              {bag.lines.length
+                ? `${totals.count} ${totals.count === 1 ? "item" : "items"} from ${snapshot.resources.business.name}`
+                : "Add items to send an order request."}
+            </SheetDescription>
+          </div>
+          {/* Full-screen on phones: touch users need a visible way back. */}
+          <SheetClose
+            render={<Button variant="ghost" size="icon-lg" />}
+            aria-label="Close bag"
+            className="cs-bag-sheet__close"
+          >
+            <HugeiconsIcon icon={Cancel01Icon} strokeWidth={1.8} />
+          </SheetClose>
         </SheetHeader>
         <div className="cs-bag-sheet__body">
           {bag.persistence === "memory" ? (
