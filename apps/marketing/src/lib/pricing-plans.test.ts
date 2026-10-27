@@ -34,6 +34,7 @@ test("limits read as plain labels", () => {
         products: 2,
         reportsHistoryDays: 30,
         staff: 0,
+        storefrontItems: 2,
       },
     }).map((limit) => limit.label),
   ).toEqual(["1 business", "2 catalog items", "Just you", "30 orders a month"])
@@ -47,6 +48,7 @@ test("limits read as plain labels", () => {
         products: 150,
         reportsHistoryDays: 180,
         staff: 10,
+        storefrontItems: 150,
       },
     }).map((limit) => limit.label),
   ).toEqual([

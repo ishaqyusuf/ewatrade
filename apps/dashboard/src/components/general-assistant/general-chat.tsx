@@ -646,7 +646,7 @@ type GeneralBudget = {
   remainingRequests: number
   remainingTokens: number
   resetsAt: string
-  requestLimit?: number
+  requestLimit?: number | null
 }
 
 /** Replies stop when either the message count or the token budget runs out. */

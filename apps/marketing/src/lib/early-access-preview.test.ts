@@ -12,14 +12,14 @@ const input = {
 }
 
 describe("QA early-access email preview", () => {
-  test("allows the exact configured QA namespace, including uppercase", () => {
-    expect(shouldPreviewEarlyAccess(input)).toBe(true)
+  test("allows the exact configured QA namespace, including uppercase", async () => {
+    expect(await shouldPreviewEarlyAccess(input)).toBe(true)
     expect(
-      shouldPreviewEarlyAccess({ ...input, email: "QA@ISHAQ.QA.TEST" }),
+      await shouldPreviewEarlyAccess({ ...input, email: "QA@ISHAQ.QA.TEST" }),
     ).toBe(true)
   })
 
-  test("configured QA addresses are independent of runtime environment", () => {
+  test("configured QA addresses are independent of runtime environment", async () => {
     for (const env of [
       { EMAIL_QA_DOMAIN_ROUTES: input.env.EMAIL_QA_DOMAIN_ROUTES },
       { ...input.env, NODE_ENV: "production" },
@@ -30,11 +30,11 @@ describe("QA early-access email preview", () => {
       { ...input.env, VERCEL_ENV: "production" },
       { ...input.env, VERCEL_ENV: "preview" },
     ]) {
-      expect(shouldPreviewEarlyAccess({ ...input, env })).toBe(true)
+      expect(await shouldPreviewEarlyAccess({ ...input, env })).toBe(true)
     }
   })
 
-  test("ordinary addresses and unconfigured namespaces keep the delivery flow", () => {
+  test("ordinary addresses and unconfigured namespaces keep the delivery flow", async () => {
     for (const email of [
       "owner@example.com",
       "owner@test.com",
@@ -43,11 +43,11 @@ describe("QA early-access email preview", () => {
       "owner@sub.ishaq.qa.test",
       "owner@ishaq.qa.test.example.com",
     ]) {
-      expect(shouldPreviewEarlyAccess({ ...input, email })).toBe(false)
+      expect(await shouldPreviewEarlyAccess({ ...input, email })).toBe(false)
     }
   })
 
-  test("missing, malformed or invalid QA routes cannot expose a continuation", () => {
+  test("missing, malformed or invalid QA routes cannot expose a continuation", async () => {
     for (const routes of [
       undefined,
       "",
@@ -55,7 +55,7 @@ describe("QA early-access email preview", () => {
       '{"ishaq.qa.test":"bad"}',
     ]) {
       expect(
-        shouldPreviewEarlyAccess({
+        await shouldPreviewEarlyAccess({
           ...input,
           env: { ...input.env, EMAIL_QA_DOMAIN_ROUTES: routes },
         }),

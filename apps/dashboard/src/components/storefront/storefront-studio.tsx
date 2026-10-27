@@ -342,13 +342,13 @@ function StudioEditor({
       return false
     }
     setSaved({ composition: next, revision: result.draft.revision })
-    queryClient.setQueryData(trpc.storefront.draft.queryKey(), {
+    queryClient.setQueryData(trpc.storefront.draft.queryKey(), () => ({
       siteId: result.siteId,
       storeId: result.storeId,
       status: result.status,
       activeReleaseId: result.activeReleaseId,
       draft: result.draft,
-    })
+    }))
     setUndo([])
     setConflict(null)
     setStatus(`Saved revision ${result.draft.revision}`)

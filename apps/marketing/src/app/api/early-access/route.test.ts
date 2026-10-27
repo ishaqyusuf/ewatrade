@@ -1,6 +1,8 @@
 import { afterEach, beforeEach, expect, mock, test } from "bun:test"
 import { NextRequest } from "next/server"
 
+const originalFetch = globalThis.fetch
+
 const realEmail = await import("@ewatrade/email")
 const dispatch = mock(
   async (
@@ -103,6 +105,8 @@ const keys = [
   "NEXT_PUBLIC_DASHBOARD_URL",
   "MARKETING_INBOX_EMAILS",
   "EMAIL_REPLY_TO",
+  "QA_POLICY_URL",
+  "QA_POLICY_READ_KEY",
 ] as const
 const previous = Object.fromEntries(keys.map((key) => [key, process.env[key]]))
 beforeEach(() => {
@@ -117,6 +121,31 @@ beforeEach(() => {
   process.env.NEXT_PUBLIC_DASHBOARD_URL = "https://ewatrade.com/dashboard"
   process.env.MARKETING_INBOX_EMAILS = "review@example.com"
   process.env.EMAIL_QA_DOMAIN_ROUTES = '{"ishaq.qa.test":"tester@example.com"}'
+  process.env.QA_POLICY_URL =
+    "https://oversight.example.test/api/qa-policy/v1/ewatrade"
+  process.env.QA_POLICY_READ_KEY = crypto.randomUUID()
+  globalThis.fetch = Object.assign(
+    async (input: string | URL | Request) => {
+      if (String(input) !== process.env.QA_POLICY_URL)
+        throw new Error("Unexpected outbound request in early-access fixture")
+      return Response.json({
+        projectId: "ewatrade",
+        revision: 1,
+        environments: { development: true, preview: true, production: true },
+        entries: [
+          {
+            id: "57da5d46-6b28-44ef-8be7-d29eb6171f3f",
+            qa: "ishaq.qa.test",
+            email: "tester@example.com",
+            phone: "+2348000000000",
+            accountId: null,
+            active: true,
+          },
+        ],
+      })
+    },
+    { preconnect: originalFetch.preconnect },
+  ) as typeof fetch
   dispatch.mockImplementation(async (messages) =>
     messages.map((message) => ({
       message,
@@ -126,6 +155,7 @@ beforeEach(() => {
   )
 })
 afterEach(() => {
+  globalThis.fetch = originalFetch
   for (const key of keys) {
     const value = previous[key]
     if (value === undefined) Reflect.deleteProperty(process.env, key)
@@ -203,7 +233,9 @@ test("new early access requests are retired without writes or email", async () =
 })
 test("approval issues a recipient-bound setup link; retry reuses it without renewing expiry", async () => {
   await submit()
-  expect((await approvePending()).status).toBe(200)
+  const response = await approvePending()
+  expect(response.status).toBe(200)
+  expect(await response.text()).not.toContain("QA early access approved")
   expect(sessions.size).toBe(2)
   expect(pending().completed).toBe(true)
   const token = approved().token
@@ -320,21 +352,22 @@ test("delivery failure is surfaced and approval delivery can retry the same setu
   expect(approved().token).toBe(token)
 })
 
-test("Preview rejects request, approval, verification and verify before any writes", async () => {
+test("invalid legacy approval links remain invalid in Preview without writes", async () => {
+  process.env.APP_ENV = "preview"
   process.env.VERCEL_ENV = "preview"
   expect(
     (await approve(request("/api/early-access/approve?token=x"))).status,
-  ).toBe(503)
+  ).toBe(404)
   expect(
     (
       await verification(
         request("/api/early-access/verification", { accessToken: "x" }),
       )
     ).status,
-  ).toBe(503)
+  ).toBe(404)
   expect(
     (await verify(request("/api/early-access/verify?token=x"))).status,
-  ).toBe(503)
+  ).toBe(404)
   expect(writes).toBe(0)
   expect(dispatch).not.toHaveBeenCalled()
 })

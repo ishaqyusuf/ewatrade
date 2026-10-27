@@ -13,7 +13,7 @@ test("stock times cross the native Date boundary without rounding an instant", (
     ["2026-10-15T09:00:00.123000000Z", "2026-10-15T09:00:00.123Z"],
     ["2024-02-29T23:59:59.999000Z", "2024-02-29T23:59:59.999Z"],
     ["0000-01-01T00:00:00Z", "0000-01-01T00:00:00.000Z"],
-  ]) {
+  ] as const) {
     expect(parseStockEffectiveTime(raw).toISOString()).toBe(expected)
   }
 })

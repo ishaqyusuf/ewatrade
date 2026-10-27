@@ -1,4 +1,5 @@
 import { expect, test } from "bun:test"
+import type { z } from "zod"
 import {
   renderWhatsAppWorkflowActionResult,
   whatsAppWorkflowActionResultContentSchema,
@@ -39,7 +40,7 @@ const result = {
       name: "Amina",
     },
   ],
-}
+} satisfies z.input<typeof whatsAppWorkflowActionResultSchema>
 test("workflow receipts render immutable canonical outcome names, exact selection and safe purpose-aware continuation", () => {
   const body = renderWhatsAppWorkflowActionResult(source, result, {
     trustedAppOrigin: "https://dash.example.test",
@@ -94,7 +95,7 @@ test("queued workflow result content has exact proof identity and refuses creden
     type: "workflow_action_result",
     reviewId: "review",
     resultRef: result,
-  }
+  } satisfies z.input<typeof whatsAppWorkflowActionResultContentSchema>
   expect(whatsAppWorkflowActionResultContentSchema.parse(content)).toEqual(
     content,
   )

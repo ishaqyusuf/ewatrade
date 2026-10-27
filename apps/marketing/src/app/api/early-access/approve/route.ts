@@ -47,7 +47,7 @@ export async function GET(request: NextRequest) {
       [earlyAccessApprovedEmail(input)],
       "approval",
     )
-    if (shouldPreviewEarlyAccess({ email: lead.email }))
+    if (await shouldPreviewEarlyAccess({ email: lead.email }))
       return earlyAccessHtml({
         title: "QA early access approved",
         message:

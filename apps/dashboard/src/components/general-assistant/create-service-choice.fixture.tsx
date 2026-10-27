@@ -142,7 +142,7 @@ async function mount() {
     removeEventListener() {},
   })
   const create = document.createElement.bind(document)
-  document.createElement = (name) =>
+  document.createElement = (name: string) =>
     Object.assign(create(name), {
       style: {},
       addEventListener() {},

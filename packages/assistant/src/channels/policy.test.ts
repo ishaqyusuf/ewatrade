@@ -79,7 +79,7 @@ test("Preview pilot release stays finite without opening Production or bypassing
 
 test("web review drafts never enroll native execution or bypass exact hosted release and write gates", () => {
   const action = capabilityManifest.find(
-    (capability) =>
+    (capability: Capability) =>
       capability.mode === "write" &&
       capability.whatsapp?.mode === "app_review" &&
       capability.clients.includes("dashboard") &&
@@ -302,7 +302,7 @@ test("hosted public enrollment alone cannot release native source capabilities",
 
 test("released native source writes still require the exact write gate", () => {
   const write = capabilityManifest.find(
-    (capability) =>
+    (capability: Capability) =>
       capability.mode === "write" &&
       capability.whatsapp?.mode === "native" &&
       capability.whatsapp.rollout === "source" &&
