@@ -71,6 +71,21 @@ test("all supplier procedures deny Manager before database access", async () => 
         reason: "Entered in error",
         effectiveAt,
       }),
+    () =>
+      caller.paySupplierOpening({
+        bookId: "book-1",
+        clientCommandId: "opening-payment-1",
+        supplierId: "supplier-1",
+        moneyAccountId: "cash-1",
+        amountMinor: "1000",
+        description: "Pay starting balance",
+        effectiveAt,
+      }),
+    () =>
+      caller.supplierOpeningBalance({
+        bookId: "book-1",
+        supplierId: "supplier-1",
+      }),
     () => caller.suppliers({ bookId: "book-1" }),
     () =>
       caller.supplierStatement({ bookId: "book-1", supplierId: "supplier-1" }),
