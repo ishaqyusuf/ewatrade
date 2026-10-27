@@ -41,6 +41,39 @@ const production = {
 }
 
 describe("Trigger jobs selected deployment profile", () => {
+  test("schedule mode is selected-file owned, synchronized explicitly and reset to standard when omitted", () => {
+    const selected = { ...production, JOB_SCHEDULE_MODE: "prelaunch" }
+    const result = selectedTriggerDeployEnvironment(
+      production,
+      selected,
+      production,
+    )
+    expect(syncedTriggerJobEnvironment(result).JOB_SCHEDULE_MODE).toBe(
+      "prelaunch",
+    )
+    const reset = selectedTriggerDeployEnvironment(
+      { ...production, JOB_SCHEDULE_MODE: "prelaunch" },
+      production,
+      production,
+    )
+    expect(syncedTriggerJobEnvironment(reset).JOB_SCHEDULE_MODE).toBe(
+      "standard",
+    )
+    expect(() =>
+      syncedTriggerJobEnvironment({
+        ...production,
+        JOB_SCHEDULE_MODE: "pre-launch",
+      }),
+    ).toThrow("JOB_SCHEDULE_MODE")
+    const previewResult = selectedTriggerDeployEnvironment(
+      { ...preview, JOB_SCHEDULE_MODE: "prelaunch" },
+      preview,
+      production,
+    )
+    expect(syncedTriggerJobEnvironment(previewResult).JOB_SCHEDULE_MODE).toBe(
+      "standard",
+    )
+  })
   test("pins migrated Preview ownership and refuses retired or Production project refs", () => {
     expect(EWATRADE_TRIGGER_TARGETS.organizationId).toBe(
       "cmv56r6n3001vmw0i4y43rqtv",

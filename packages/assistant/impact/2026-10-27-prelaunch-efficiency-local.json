@@ -1,0 +1,57 @@
+{
+  "version": 1,
+  "id": "2026-10-27-prelaunch-efficiency-local",
+  "tickets": ["H02"],
+  "summary": "Reduce avoidable database wake probes, consolidate prelaunch recovery parents with safe schedule-mode sync, and bound mobile QA revalidation by app lifecycle and operational mode. Local source only, free plans, no deployment.",
+  "noAssistantImpact": "Operational efficiency only. No merchant command, assistant tool, permission, entitlement, confirmation, financial invariant, retention duration or Prisma schema change. Both recovery groups remain under one half-hourly parent in explicit prelaunch mode; hourly/daily retention and standard schedules are preserved. Release/smoke readiness remains database-backed. Future runtime activation and measured savings require separate target authorization.",
+  "capabilities": [],
+  "procedures": [],
+  "docs": [
+    {
+      "topic": "feature",
+      "status": "local_only",
+      "path": ".brain/features/prelaunch-db-efficiency.md"
+    },
+    {
+      "topic": "api",
+      "status": "local_only",
+      "path": ".brain/api/endpoints.md"
+    },
+    {
+      "topic": "permissions",
+      "status": "local_only",
+      "path": ".brain/api/permissions.md"
+    },
+    {
+      "topic": "decision",
+      "status": "local_only",
+      "path": ".brain/decisions/2026-10-27-prelaunch-recovery-consolidation.md"
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "test",
+      "path": "scripts/qa-workflow.test.ts",
+      "executed": true,
+      "result": "Injected HTTP requests prove routine API discovery reaches only /live; explicit database and QA readiness retain connected failures and environment checks."
+    },
+    {
+      "kind": "test",
+      "path": "scripts/trigger-deploy-profile.test.ts",
+      "executed": true,
+      "result": "Selected profile owns schedule mode; sync includes it, defaults explicitly to standard when omitted, rejects invalid mode and removes inherited parent values."
+    },
+    {
+      "kind": "test",
+      "path": "packages/jobs/src/tasks/scheduled-cadences.test.ts",
+      "executed": true,
+      "result": "All recovery steps run exactly once across active prelaunch parents; hourly/daily memberships retained; retired fifteen-minute parent has zero steps; failed work probe does not dispatch child."
+    },
+    {
+      "kind": "test",
+      "path": "apps/mobile/src/lib/qa-polling-lifecycle.test.ts",
+      "executed": true,
+      "result": "Isolated child mounts real provider with real QueryObservers: minute polling stops in background/offline, retained refreshes cannot bypass live-state guard, resume revalidates once, no authorization or Production client creates no QA poll."
+    }
+  ]
+}

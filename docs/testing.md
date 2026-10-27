@@ -1,6 +1,6 @@
 # Fast testing and release workflow
 
-Current entrypoint, 26 October 2026. This consolidates the existing focused
+Current entrypoint, 27 October 2026. This consolidates the existing focused
 verification policy; it does not replace domain authorization or release gates.
 
 ## Ordinary development
@@ -20,7 +20,13 @@ verification policy; it does not replace domain authorization or release gates.
    Supported: api, dashboard, mobile (Metro), marketing, storefront. Profiles:
    local (default), dev, preview. HTTP probes use local named hosts, never hosted
    Preview/Production. Trust the Portless certificate; do not disable TLS checks.
-   API health performs the existing health read.
+   `--require-qa` retains the SQL-backed API health read and QA capability check.
+   For routine API process discovery, use `bun run qa:doctor --services api`:
+   it probes SQL-free `/live` and skips QA capability discovery. Add `--database`
+   for SQL-backed `/health` readiness without QA discovery. A liveness pass does
+   not prove database availability, schema parity or QA access; other requested
+   surfaces and explicit Android diagnostics may still perform connected work.
+   Release/smoke readiness remains SQL-backed.
 5. For an explicitly assigned Android device, add `--device emulator-5556`.
    This reuses the existing helper with `--no-launch`: it installs reverse
    mappings and probes transport, but does not force-stop/open the app. It runs

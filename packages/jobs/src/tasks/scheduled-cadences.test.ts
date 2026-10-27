@@ -1,13 +1,70 @@
 import { describe, expect, test } from "bun:test"
 import { readFileSync, readdirSync } from "node:fs"
 import { join } from "node:path"
-import { SCHEDULED_CADENCES } from "./scheduled-cadences"
+import {
+  SCHEDULED_CADENCES,
+  resolveScheduledCadence,
+} from "./scheduled-cadences"
 
 const TASKS_DIR = import.meta.dir
 // The Trigger.dev plan allows 10 declared schedules; keep headroom.
 const MAX_DECLARED_SCHEDULES = 6
 
 describe("scheduled cadences", () => {
+  test("prelaunch runs every recovery step exactly once on one timer and preserves retention", () => {
+    const identifiers = Object.keys(SCHEDULED_CADENCES) as Array<
+      keyof typeof SCHEDULED_CADENCES
+    >
+    const resolve = (mode: string) =>
+      identifiers.map((id) => ({
+        id,
+        ...resolveScheduledCadence(id, {
+          APP_ENV: "production",
+          JOB_SCHEDULE_MODE: mode,
+        }),
+      }))
+    const standard = resolve("standard")
+    const prelaunch = resolve("prelaunch")
+    const active = prelaunch.filter((cadence) => cadence.cron)
+    expect(active.map(({ id, cron }) => [id, cron])).toEqual([
+      ["schedules.every-5-minutes", "*/30 * * * *"],
+      ["schedules.hourly", "0 * * * *"],
+      ["schedules.daily", "15 2 * * *"],
+    ])
+    const stepIds = active.flatMap(({ steps }) => steps.map(({ id }) => id))
+    expect(new Set(stepIds).size).toBe(stepIds.length)
+    expect(stepIds.sort()).toEqual(
+      standard.flatMap(({ steps }) => steps.map(({ id }) => id)).sort(),
+    )
+    expect(
+      resolveScheduledCadence("schedules.every-15-minutes", {
+        APP_ENV: "production",
+        JOB_SCHEDULE_MODE: "prelaunch",
+      }).steps,
+    ).toEqual([])
+    for (const id of ["schedules.hourly", "schedules.daily"] as const) {
+      expect(
+        resolveScheduledCadence(id, {
+          APP_ENV: "production",
+          JOB_SCHEDULE_MODE: "prelaunch",
+        }).steps,
+      ).toBe(SCHEDULED_CADENCES[id].steps)
+    }
+    for (const id of identifiers) {
+      expect(
+        resolveScheduledCadence(id, {
+          APP_ENV: "preview",
+          JOB_SCHEDULE_MODE: "prelaunch",
+        }).cron,
+      ).toBeUndefined()
+      expect(
+        resolveScheduledCadence(id, {
+          APP_ENV: "local",
+          JOB_SCHEDULE_MODE: "prelaunch",
+        }).cron,
+      ).toBeUndefined()
+    }
+  })
   test("only the cadence file declares schedules, within the plan limit", () => {
     const declaring = readdirSync(TASKS_DIR)
       .filter((file) => file.endsWith(".ts") && !file.endsWith(".test.ts"))

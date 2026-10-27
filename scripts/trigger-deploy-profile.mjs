@@ -30,6 +30,7 @@ const assistantWhatsAppFlags = [
 
 export const TRIGGER_JOB_ENV_KEYS = [
   "APP_ENV",
+  "JOB_SCHEDULE_MODE",
   "API_URL",
   "INTERNAL_API_KEY",
   ...assistantWhatsAppFlags,
@@ -167,6 +168,10 @@ export function triggerProjectForEnv(env) {
 }
 
 export function assertTriggerDeployProfile(env) {
+  const scheduleMode = env.JOB_SCHEDULE_MODE?.trim()
+  if (scheduleMode && !["standard", "prelaunch"].includes(scheduleMode)) {
+    throw new Error("JOB_SCHEDULE_MODE must be standard or prelaunch.")
+  }
   if (env.APP_ENV !== "preview" && env.APP_ENV !== "production") {
     throw new Error(
       "Jobs deployment requires an explicit Preview or Production profile.",
@@ -313,6 +318,8 @@ export function syncedTriggerJobEnvironment(env) {
       return value ? [[key, value]] : []
     }),
   )
+  // Always overwrite a previously deployed opt-in when the selected file unsets it.
+  result.JOB_SCHEDULE_MODE = env.JOB_SCHEDULE_MODE?.trim() || "standard"
   if (
     env.APP_ENV === "preview" &&
     env.ASSISTANT_WHATSAPP_ENABLED?.trim() !== "true"

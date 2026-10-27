@@ -259,11 +259,38 @@ export async function runCadenceSteps(steps: readonly CadenceStep[]) {
   return outcome
 }
 
-function cadenceSchedule(id: keyof typeof SCHEDULED_CADENCES) {
+/** Keep both recovery groups on one wake window without dropping either group. */
+export function resolveScheduledCadence(
+  id: keyof typeof SCHEDULED_CADENCES,
+  environment: Readonly<Record<string, string | undefined>> = process.env,
+) {
   const cadence = SCHEDULED_CADENCES[id]
+  let steps: readonly CadenceStep[] = cadence.steps
+  if (environment.JOB_SCHEDULE_MODE === "prelaunch") {
+    if (id === "schedules.every-5-minutes")
+      steps = [
+        ...cadence.steps,
+        ...SCHEDULED_CADENCES["schedules.every-15-minutes"].steps,
+      ]
+    // Also refuse SQL if an old provider timer/manual invocation survives cutover.
+    if (id === "schedules.every-15-minutes") steps = []
+  }
+  return {
+    cron: automaticJobCron(
+      cadence.cron,
+      environment.APP_ENV,
+      environment.TRIGGER_DEV_SCHEDULES,
+      environment.JOB_SCHEDULE_MODE,
+    ),
+    steps,
+  }
+}
+
+function cadenceSchedule(id: keyof typeof SCHEDULED_CADENCES) {
+  const cadence = resolveScheduledCadence(id)
   return schedules.task({
     id,
-    cron: automaticJobCron(cadence.cron),
+    cron: cadence.cron,
     maxDuration: 180,
     // The next tick is the retry; retrying would rerun every sweep.
     retry: { maxAttempts: 1 },

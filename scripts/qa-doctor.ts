@@ -12,6 +12,7 @@ export type DoctorOptions = {
   services: string[]
   offline: boolean
   requireQa: boolean
+  database: boolean
   device?: string
   help: boolean
 }
@@ -29,8 +30,10 @@ const origins: Record<string, string> = {
 const usage = `Usage: bun run qa:doctor [--profile local|dev|preview] [--services api,dashboard,mobile]
   --offline       Configuration checks only; no HTTP or Android calls
   --require-qa    Require enabled QA access (does not prove populated profiles)
+  --database      Also probe database readiness (wakes the selected Neon database)
   --device SERIAL Run existing Android connection diagnostics with --no-launch
 Default services: api,dashboard. Named URLs refer to locally running services.
+The default API check is SQL-free liveness; --require-qa also checks database readiness.
 No services are started, database changes applied, or provider settings changed.
 Android diagnostics install reverse mappings on the explicitly selected device.`
 
@@ -40,6 +43,7 @@ export function parseDoctorArgs(args: string[]): DoctorOptions {
     services: ["api", "dashboard"],
     offline: false,
     requireQa: false,
+    database: false,
     help: false,
   }
   for (let i = 0; i < args.length; i++) {
@@ -67,6 +71,7 @@ export function parseDoctorArgs(args: string[]): DoctorOptions {
         )
     } else if (arg === "--offline") options.offline = true
     else if (arg === "--require-qa") options.requireQa = true
+    else if (arg === "--database") options.database = true
     else if (arg === "--device") options.device = value()
     else if (arg === "--help" || arg === "-h") options.help = true
     else throw new Error(`Unknown argument: ${arg}`)
@@ -76,7 +81,9 @@ export function parseDoctorArgs(args: string[]): DoctorOptions {
       "Android diagnostics require --profile local without --offline.",
     )
   if (
-    (options.requireQa || options.services.includes("mobile")) &&
+    (options.database ||
+      options.requireQa ||
+      options.services.includes("mobile")) &&
     !options.services.includes("api")
   )
     options.services.push("api")
@@ -179,15 +186,24 @@ export async function inspectDoctorServices(
             (await r.text()).includes("packager-status:running"),
         )
       } else if (name === "api") {
+        const database = options.database || options.requireQa
         await probe(
-          "API health",
-          `${origins.api}/health`,
+          database ? "API database readiness" : "API liveness",
+          `${origins.api}/${database ? "health" : "live"}`,
           async (r) => r.status === 200 && (await r.json()).status === "ok",
         )
+        if (!options.requireQa) {
+          checks.push({
+            name: "QA capability",
+            status: "skip",
+            detail:
+              "Not requested; use --require-qa for connected QA readiness.",
+          })
+          return
+        }
         const input = encodeURIComponent(
           JSON.stringify({ json: { contractVersion: 1 } }),
         )
-        let disabled = false
         await probe(
           "QA capability",
           `${origins.api}/api/trpc/qaAccess.capability?input=${input}`,
@@ -202,21 +218,9 @@ export async function inspectDoctorServices(
                   : ["local", "development"]
             if (capability?.available === true)
               return environments.includes(capability.environment)
-            disabled =
-              !options.requireQa &&
-              capability?.available === false &&
-              capability.category === "disabled"
-            return disabled
+            return false
           },
         )
-        if (disabled) {
-          const check = checks.find((item) => item.name === "QA capability")
-          if (check) {
-            check.status = "skip"
-            check.detail =
-              "QA access disabled; ordinary login only. Use --require-qa to require the chooser."
-          }
-        }
       } else {
         await probe(
           name,

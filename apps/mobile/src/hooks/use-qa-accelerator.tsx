@@ -1,3 +1,4 @@
+import { useAppActive } from "@/hooks/use-app-active"
 import { getAppVariant } from "@/lib/app-variant"
 import {
   classifyQaRevalidation,
@@ -16,6 +17,7 @@ import {
   setStoredQaDomain,
 } from "@/lib/qa-authorization-store"
 import type { MobileSession } from "@/lib/session-store"
+import { useOperationalModeStore } from "@/store/operationalModeStore"
 import { clearMobileDataCache, useTRPC } from "@/trpc/client"
 import {
   QA_ACCELERATOR_CONTRACT_VERSION,
@@ -94,6 +96,8 @@ export function QaAcceleratorProvider({ children }: { children: ReactNode }) {
   const trpc = useTRPC()
   const auth = useAuthContext()
   const authenticatedTools = useAuthenticatedQaTools()
+  const active = useAppActive()
+  const offline = useOperationalModeStore((state) => state.isOfflineMode)
   const [authorization, setAuthorization] =
     useState<StoredQaAuthorization | null>(() => getStoredQaAuthorization())
   const [authorizationError, setAuthorizationError] = useState<string | null>(
@@ -107,11 +111,21 @@ export function QaAcceleratorProvider({ children }: { children: ReactNode }) {
   )
   const renewedToken = useRef<string | null>(null)
   const clientEnabled = isQaAcceleratorClientMode(getAppVariant())
+  const canRead = clientEnabled && active && !offline
+  // Manual refetch bypasses React Query's enabled flag. Recheck live state even
+  // when a caller retained a callback from before a background/offline transition.
+  const canReadNow = useCallback(
+    () =>
+      clientEnabled &&
+      AppState.currentState === "active" &&
+      !useOperationalModeStore.getState().isOfflineMode,
+    [clientEnabled],
+  )
 
   const capability = useQuery(
     trpc.qaAccess.capability.queryOptions(
       { contractVersion: QA_ACCELERATOR_CONTRACT_VERSION },
-      { enabled: clientEnabled, retry: false, staleTime: 5 * 60_000 },
+      { enabled: canRead, retry: false, staleTime: 5 * 60_000 },
     ),
   )
   const revalidation = useQuery(
@@ -121,8 +135,13 @@ export function QaAcceleratorProvider({ children }: { children: ReactNode }) {
         token: authorization?.token ?? "",
       },
       {
-        enabled: capability.data?.available === true && Boolean(authorization),
-        refetchInterval: 60_000,
+        enabled:
+          canRead &&
+          capability.data?.available === true &&
+          Boolean(authorization),
+        refetchInterval: canRead ? 60_000 : false,
+        refetchIntervalInBackground: false,
+        staleTime: 0,
         retry: false,
       },
     ),
@@ -134,7 +153,10 @@ export function QaAcceleratorProvider({ children }: { children: ReactNode }) {
         token: authorization?.token ?? "",
       },
       {
-        enabled: capability.data?.available === true && Boolean(authorization),
+        enabled:
+          canRead &&
+          capability.data?.available === true &&
+          Boolean(authorization),
         retry: false,
       },
     ),
@@ -142,9 +164,11 @@ export function QaAcceleratorProvider({ children }: { children: ReactNode }) {
   const fixtureContextQuery = useQuery(
     trpc.qaAccess.fixtureContext.queryOptions(undefined, {
       enabled:
+        canRead &&
         capability.data?.available === true &&
         Boolean(authorization) &&
         auth.isAuthenticated,
+      staleTime: 0,
       retry: false,
     }),
   )
@@ -204,7 +228,7 @@ export function QaAcceleratorProvider({ children }: { children: ReactNode }) {
   // QA tokens expire daily. Renew once, silently, with the saved domain
   // instead of asking the tester to set QA up again.
   useEffect(() => {
-    if (revalidationOutcome !== "renew" || !authorization) return
+    if (!canRead || revalidationOutcome !== "renew" || !authorization) return
     if (renewedToken.current === authorization.token) return
     renewedToken.current = authorization.token
     setIsAuthorizing(true)
@@ -216,15 +240,7 @@ export function QaAcceleratorProvider({ children }: { children: ReactNode }) {
         setAuthorization(null)
       })
       .finally(() => setIsAuthorizing(false))
-  }, [authorization, exchangeDomain, revalidationOutcome])
-
-  useEffect(() => {
-    if (!clientEnabled || !authorization) return
-    const subscription = AppState.addEventListener("change", (state) => {
-      if (state === "active") void revalidation.refetch()
-    })
-    return () => subscription.remove()
-  }, [authorization, clientEnabled, revalidation.refetch])
+  }, [authorization, canRead, exchangeDomain, revalidationOutcome])
 
   const clearQaData = useCallback(async () => {
     const token = authorization?.token
@@ -306,15 +322,20 @@ export function QaAcceleratorProvider({ children }: { children: ReactNode }) {
       profiles: profilesQuery.data ?? [],
       rememberedDomain,
       async retryCapability() {
+        if (!canReadNow()) return
         await capability.refetch()
       },
       async refreshProfiles() {
+        if (!canReadNow() || !authorization || !capability.data?.available)
+          return
         await profilesQuery.refetch()
       },
       async refreshFixtureContext() {
+        if (!canReadNow()) return null
         const ordinary = await authenticatedTools.refreshFixtureContext()
         if (ordinary) return ordinary
         if (
+          !canReadNow() ||
           !authorization ||
           !capability.data?.available ||
           revalidationOutcome !== "valid"
@@ -339,6 +360,7 @@ export function QaAcceleratorProvider({ children }: { children: ReactNode }) {
       capability.data,
       capability.isError,
       clientEnabled,
+      canReadNow,
       capability.isLoading,
       capability.refetch,
       clearQaData,

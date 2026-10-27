@@ -24,7 +24,7 @@ describe("automatic job schedules", () => {
     ).toBe("*/30 * * * *")
     expect(
       automaticJobCron("*/15 * * * *", "production", undefined, "prelaunch"),
-    ).toBe("*/30 * * * *")
+    ).toBeUndefined()
     for (const pattern of ["0 * * * *", "15 2 * * *"])
       expect(
         automaticJobCron(pattern, "production", undefined, "prelaunch"),

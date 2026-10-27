@@ -13,12 +13,12 @@ export function automaticJobCron(
   if (appEnv !== "production" && devSchedules !== "true") return undefined
   if (scheduleMode && !["standard", "prelaunch"].includes(scheduleMode))
     throw new Error("JOB_SCHEDULE_MODE must be standard or prelaunch.")
-  // Explicit opt-in only: permit idle compute between recovery sweeps.
+  // The five-minute parent owns both recovery groups in prelaunch mode.
+  // Registering a second half-hourly parent only adds another billed run.
   // Hourly/daily retention remains registered at its existing cadence.
-  if (
-    scheduleMode === "prelaunch" &&
-    ["*/5 * * * *", "*/15 * * * *"].includes(pattern)
-  )
-    return "*/30 * * * *"
+  if (scheduleMode === "prelaunch") {
+    if (pattern === "*/5 * * * *") return "*/30 * * * *"
+    if (pattern === "*/15 * * * *") return undefined
+  }
   return pattern
 }

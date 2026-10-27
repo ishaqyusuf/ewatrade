@@ -113,7 +113,10 @@ describe("fast workflow scope", () => {
   test("Git comparison includes committed, dirty and untracked paths; a missing base refuses", () => {
     const root = mkdtempSync(join(tmpdir(), "ewatrade-quick-"))
     const git = (...args: string[]) => {
-      const result = spawnSync("git", args, { cwd: root, encoding: "utf8" })
+      const result = spawnSync("git", args, {
+        cwd: root,
+        encoding: "utf8",
+      })
       if (result.status !== 0) throw new Error(result.stderr)
       return result.stdout.trim()
     }
@@ -145,6 +148,38 @@ describe("fast workflow scope", () => {
 })
 
 describe("readiness boundaries", () => {
+  test("routine API discovery performs one SQL-free liveness request; database and QA checks are explicit", async () => {
+    const seen: string[] = []
+    const request = async (url: string) => {
+      seen.push(url)
+      if (!url.endsWith("/live"))
+        throw new Error("Unexpected connected request")
+      return Response.json({ status: "ok" })
+    }
+    const checks = await inspectDoctorServices(
+      parseDoctorArgs(["--services", "api"]),
+      {},
+      request,
+    )
+    expect(seen).toEqual(["https://ewatrade-api.localhost/live"])
+    expect(checks.find((c) => c.name === "API liveness")?.status).toBe("pass")
+    expect(checks.find((c) => c.name === "QA capability")?.status).toBe("skip")
+    const database = parseDoctorArgs(["--services", "dashboard", "--database"])
+    expect(database.services).toContain("api")
+    const readinessSeen: string[] = []
+    const readiness = await inspectDoctorServices(
+      { ...database, services: ["api"] },
+      {},
+      async (url) => {
+        readinessSeen.push(url)
+        return new Response("unavailable", { status: 503 })
+      },
+    )
+    expect(readinessSeen).toEqual(["https://ewatrade-api.localhost/health"])
+    expect(
+      readiness.find((c) => c.name === "API database readiness")?.status,
+    ).toBe("fail")
+  })
   test("requires explicit local Android selection and avoids devices in offline mode", () => {
     expect(parseDoctorArgs(["--device", "emulator-5556"]).device).toBe(
       "emulator-5556",
@@ -254,7 +289,8 @@ describe("readiness boundaries", () => {
       {},
       request,
     )
-    expect(checks.every((c) => c.status === "fail")).toBe(true)
+    expect(checks.find((c) => c.name === "API liveness")?.status).toBe("fail")
+    expect(checks.find((c) => c.name === "QA capability")?.status).toBe("skip")
     expect(JSON.stringify(checks)).not.toContain("private token")
   })
   test("disabled QA is explicit and fails when QA access is required", async () => {
