@@ -594,3 +594,18 @@ test("replacing a width/density draft keeps only theme controls the target decla
     composition.theme,
   )
 })
+
+test("pins past the loaded page render from catalog.pinnedItems without joining the listing", () => {
+  const composition = canvasDefaults(commerceStudioManifest)
+  featuredSection(composition).settings.pinned = ["late", "a"]
+  const value = {
+    ...snapshot({
+      items: [item("a", "PRODUCT"), item("b", "PRODUCT")],
+      pinnedItems: [item("late", "PRODUCT")],
+    }),
+    composition: validateComposition(composition, commerceStudioManifest),
+  }
+  expect(featuredNames(render(value))).toEqual(["late", "a", "b"])
+  // The shop listing is only the loaded page.
+  expect(render(value, "shop")).not.toContain("?item=late")
+})

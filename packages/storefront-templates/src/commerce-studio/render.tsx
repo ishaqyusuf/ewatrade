@@ -677,7 +677,11 @@ function Featured({ section }: { section: SectionInstance }) {
         ? 8
         : 4
   const items = featuredItems(
-    snapshot.resources.catalog.items,
+    // Pinned public items past this page arrive separately; they are never listed.
+    [
+      ...snapshot.resources.catalog.items,
+      ...(snapshot.resources.catalog.pinnedItems ?? []),
+    ],
     section.settings.pinned,
     String(section.settings.lead ?? "available"),
   ).slice(0, count)

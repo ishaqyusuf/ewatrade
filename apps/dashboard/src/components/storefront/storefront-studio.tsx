@@ -931,7 +931,12 @@ function StudioEditor({
                       field={field}
                       value={selected.settings[field.key]}
                       disabled={blocked}
-                      publicItems={snapshot?.resources.catalog.items ?? null}
+                      // Only a complete public list can say a pin is off the website.
+                      publicItems={
+                        snapshot && !snapshot.resources.catalog.nextCursor
+                          ? snapshot.resources.catalog.items
+                          : null
+                      }
                       onChange={(value) => fieldChange(field.key, value)}
                     />
                   ))}
