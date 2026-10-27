@@ -195,7 +195,7 @@ capability; implementation must record H02 and run the existing H01/H02 gates.
 ## Acceptance checklist
 
 - [x] Inspect current authority and preserve checkout/other owners' work.
-- [ ] Publish and verify three Oversight design directions with change notices.
+- [x] Publish and verify three Oversight design directions with change notices.
 - [ ] Record the owner's exact selected revision and agree schema/router seams.
 - [ ] Implement audited policy, eligibility, quota and durable change notices.
 - [ ] Verify permissions, missing/invalid config, all tiers, reset/cap reductions,
@@ -204,7 +204,41 @@ capability; implementation must record H02 and run the existing H01/H02 gates.
 - [ ] Complete scoped types/source checks, assistant-impact/Brain records and
   local commits; record implementation evidence against the selected revision.
 
-Progress here is 1/6 milestones; no release acceptance. Runtime checks have not
-run. `qa:doctor --offline` passes setup only. Whole-checkout `test:quick --plan`
+Progress here is 2/6 milestones; no product or release acceptance. Product
+runtime checks have not run. `qa:doctor --offline` passes setup only. Whole-checkout `test:quick --plan`
 currently reports unmapped unrelated onboarding preview paths; do not report green
 or change their mapping under this task. No provider or database action performed.
+
+
+## Published design checkpoint
+
+Canonical review: https://workshop.localhost/oversight/plans/payment-notifications.
+All v1/v2 history is retained. Owner selection and implementation are unset.
+Current exact immutable revisions (all v3):
+
+| Direction | Revision | Tradeoff |
+| --- | --- | --- |
+| 01 Table + edit modal (recommended) | `c48516ad-f623-4eaa-b814-cf5cf95ab3d9` | Four-tier overview with focused audited edits. |
+| 02 Tier rail + channel detail | `1fa01938-51a4-491c-8905-0f7b94c12a65` | Inspect and edit one tier at a time. |
+| 03 Channel matrix + review panel | `944bb9f0-45cf-4fe3-b0c5-ec5ed4dd10c4` | Compare all channels/tiers while editing. |
+
+The separate Claude Opus5.5/high CLI request (session
+`0f49fd6f-bc07-4f23-b382-c97f07c3843e`) produced no output after more than ten
+minutes and was terminated (exit143). No other model was substituted. Codex
+used the owner's standing fallback to author the previews. The requested flags
+were exact; no returned model/output verification was possible. Parent banking
+Claude session and Workshop were untouched.
+
+Focused archived-preview browser review: all three directions render; table edit,
+negative-cap refusal, required-reason refusal, actual-draft notice, simulated save
+and retained usage, tier switching, explicit Unlimited, matrix change summary,
+Escape/reset, quota exhausted246used+4reserved/250, unknown loading/unavailable
+values, conflict refusal, owner-access refusal and four change-notice examples
+were exercised. Fanout completion is simulated only. No real API/provider calls
+or merchant changes are part of these artifacts. Shared viewer remains running.
+
+Documentation-only fast checks pass45tests/175assertions and QA tooling types.
+This is the explicit owned-document scope, not feature/SQL/full-checkout proof.
+JavaScript syntax and bundled relative assets were checked. API, atomic SQL,
+actual policy propagation, recipient permission, provider outcome/reconciliation,
+app UI and release acceptance remain future implementation checks.
