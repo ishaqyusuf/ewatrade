@@ -32,6 +32,7 @@ export const suites = {
   ],
   domain: [
     "packages/email/templates/manual-payment-report.test.ts",
+    "packages/utils/src/payment-alerts-view.test.ts",
     "packages/db/src/queries/manual-payment-alert-rules.test.ts",
     "packages/utils/src/payment-report-notification-policy.test.ts",
     "packages/oversight/src/payment-notifications.test.ts",
