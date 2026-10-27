@@ -186,7 +186,11 @@ export function CommerceCheckout() {
         <div className="cs-wrap cs-narrow">
           <Empty className="cs-empty">
             <EmptyHeader>
-              <EmptyTitle>Ordering isn't available here</EmptyTitle>
+              <EmptyTitle>
+                <h1 className="cs-empty__heading">
+                  Ordering isn't available here
+                </h1>
+              </EmptyTitle>
               <EmptyDescription>
                 This shop isn't taking order requests on this site right now.
               </EmptyDescription>
@@ -209,7 +213,9 @@ export function CommerceCheckout() {
         <div className="cs-wrap cs-narrow">
           <Empty className="cs-empty">
             <EmptyHeader>
-              <EmptyTitle>Your bag is empty</EmptyTitle>
+              <EmptyTitle>
+                <h1 className="cs-empty__heading">Your bag is empty</h1>
+              </EmptyTitle>
               <EmptyDescription>
                 Add items from the shop to send an order request.
               </EmptyDescription>

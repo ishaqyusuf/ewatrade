@@ -116,18 +116,21 @@ export function CommerceStudio(props: CommerceStudioProps) {
         style={style}
       >
         {snapshot.mode === "preview" && !preview ? (
-          <p className="cs-qa-banner" role="note">
+          <aside className="cs-qa-banner" aria-label="Preview notice">
             Local QA preview · test data · requests are saved to the QA database
             and no messages are sent
-          </p>
+          </aside>
         ) : null}
         <StoreHeader
           current={
-            !props.editing && snapshot.resources.catalog.highlightedItem
-              ? snapshot.resources.catalog.highlightedItem.kind === "SERVICE"
-                ? "services"
-                : "shop"
-              : (props.pageKey ?? "home")
+            // Checkout, receipts and the account aren't nav pages: mark none current.
+            props.route && props.route.kind !== "page"
+              ? props.route.kind
+              : !props.editing && snapshot.resources.catalog.highlightedItem
+                ? snapshot.resources.catalog.highlightedItem.kind === "SERVICE"
+                  ? "services"
+                  : "shop"
+                : (props.pageKey ?? "home")
           }
         />
         <main id="cs-main" className="cs-main" tabIndex={-1}>
@@ -824,6 +827,8 @@ function Catalog({ section }: { section: SectionInstance }) {
             label="Search the shop"
           />
         ) : null}
+        {/* Product cards use h3; keep the outline h1 → h2 → h3. */}
+        <h2 className="cs-visually-hidden">Products</h2>
         {products.length === 1 && products[0] && !filtered ? (
           <FeatureItem item={products[0]} />
         ) : products.length ? (
@@ -982,6 +987,9 @@ function Services({
             {sectionText(section, "intro")}
           </p>
         </div>
+        {standalone ? (
+          <h2 className="cs-visually-hidden">All services</h2>
+        ) : null}
         {services.length ? (
           <ul className="cs-service-list">
             {services.map((service) => (
@@ -1105,13 +1113,14 @@ function Faq({ section }: { section: SectionInstance }) {
     }))
     .filter((pair) => pair.q && pair.a)
   if (!pairs.length) return null
+  const headingId = `cs-faq-${section.id}`
   return (
     <section className="cs-section">
       <div className="cs-wrap cs-faq">
-        <h2 className="cs-title">
+        <h2 className="cs-title" id={headingId}>
           {sectionText(section, "heading", "How ordering works")}
         </h2>
-        <Accordion className="cs-faq__list">
+        <Accordion className="cs-faq__list" aria-labelledby={headingId}>
           {pairs.map((pair) => (
             <AccordionItem key={pair.q} value={pair.q}>
               <AccordionTrigger>{pair.q}</AccordionTrigger>

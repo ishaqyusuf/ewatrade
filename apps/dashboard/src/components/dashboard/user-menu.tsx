@@ -61,7 +61,7 @@ export function UserMenu({
           {user.avatarUrl ? (
             <AvatarImage src={user.avatarUrl} alt={displayName} />
           ) : null}
-          <AvatarFallback className="text-xs font-medium">
+          <AvatarFallback className="text-xs font-medium text-foreground">
             {getUserInitials(user)}
           </AvatarFallback>
         </Avatar>
