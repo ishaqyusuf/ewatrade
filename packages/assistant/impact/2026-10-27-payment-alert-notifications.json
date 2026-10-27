@@ -109,6 +109,12 @@
       "path": "artifacts/manual-payments/2026-10-27/notifications/actual-plan-disabled.png",
       "executed": true,
       "result": "Actual in-app browser on existing QA bank: current policy default off, meaningful in-app fallback copy, no selection/provider bypass. Valid new bank draft can save without alerts, then cancelled with8accountsunchanged; no bank/order/report submitted. Existing confirmed report still2000paid/0due. Native runtime and real providers remain unverified."
+    },
+    {
+      "kind": "test",
+      "path": "packages/jobs/src/handlers/manual-payment-alert-jobs.test.ts",
+      "executed": true,
+      "result": "Provider-disabled sweep still processes in-app policy notices; external queue stays gated. Claims retain identity across bounded three-page continuations and no-claim work skips. Focused jobs/provider/dev checks34/90 and strict jobs import graph pass. Actual authenticated Oversight table/edit/review/cancel/search/usage passes after sibling filter fixfe10373. No policy save, real provider call, native review or deployment."
     }
   ]
 }

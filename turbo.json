@@ -9,6 +9,11 @@
   ],
   "ui": "tui",
   "tasks": {
+    "@ewatrade/api#dev": {
+      "cache": false,
+      "persistent": true,
+      "passThroughEnv": ["OVERSIGHT_READ_KEY"]
+    },
     "@ewatrade/wapi#dev": {
       "cache": false,
       "persistent": true,

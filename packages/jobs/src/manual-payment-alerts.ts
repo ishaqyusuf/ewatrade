@@ -18,6 +18,10 @@ import {
   runManualPaymentAlertDispatch,
 } from "./handlers/manual-payment-alert-dispatch"
 import {
+  runManualPaymentAlertJobs,
+  runManualPaymentPolicyChange,
+} from "./handlers/manual-payment-alert-jobs"
+import {
   createManualPaymentAlertProvider,
   manualPaymentAlertsEnabled,
 } from "./handlers/manual-payment-alert-provider"
@@ -161,48 +165,52 @@ export async function enqueueManualPaymentAlerts(input: {
 
 /** Existing cadence safety net, no scan/resend of old reports or completed intents. */
 export async function runManualPaymentAlertSweep() {
-  if (!manualPaymentAlertsEnabled()) return { enabled: false }
-  const change = await prisma.paymentNotificationPolicyChange.findFirst({
-    where: { status: { not: "COMPLETED" } },
-    select: { revision: true },
-    orderBy: { revision: "asc" },
+  return runManualPaymentAlertJobs({
+    externalDeliveryEnabled: manualPaymentAlertsEnabled(),
+    queuePolicyChange: async () => {
+      const change = await prisma.paymentNotificationPolicyChange.findFirst({
+        where: { status: { not: "COMPLETED" } },
+        select: { revision: true },
+        orderBy: { revision: "asc" },
+      })
+      if (change)
+        await triggerJob(
+          "manual-payment.policy-change",
+          async (payload: { revision?: number; claimId?: string }) => {
+            await manualPaymentPolicyChangeHandler(payload)
+          },
+          {},
+          { maxAttempts: 1 },
+        )
+      return !!change
+    },
+    queueExternalAlerts: async () => {
+      // A killed worker is uncertain, never a new send opportunity; keep capacity.
+      await markStalePaymentNotificationsUnknown(prisma, {
+        before: new Date(Date.now() - 5 * 60_000),
+        limit: 20,
+      })
+      const due = await prisma.paymentNotificationIntent.findMany({
+        where: { status: "RESERVED", tenant: { isActive: true } },
+        select: { id: true, tenantId: true },
+        orderBy: { createdAt: "asc" },
+        take: 50,
+      })
+      const results = await Promise.allSettled(
+        due.map((row) =>
+          enqueueManualPaymentAlerts({
+            tenantId: row.tenantId,
+            intentIds: [row.id],
+          }),
+        ),
+      )
+      return results.reduce(
+        (count, result) =>
+          count + (result.status === "fulfilled" ? result.value.queued : 0),
+        0,
+      )
+    },
   })
-  if (change)
-    await triggerJob(
-      "manual-payment.policy-change",
-      async (payload: { revision?: number; claimId?: string }) => {
-        await manualPaymentPolicyChangeHandler(payload)
-      },
-      {},
-      { maxAttempts: 1 },
-    )
-  // A killed worker is uncertain, never a new send opportunity; keep capacity.
-  await markStalePaymentNotificationsUnknown(prisma, {
-    before: new Date(Date.now() - 5 * 60_000),
-    limit: 20,
-  })
-  const due = await prisma.paymentNotificationIntent.findMany({
-    where: { status: "RESERVED", tenant: { isActive: true } },
-    select: { id: true, tenantId: true },
-    orderBy: { createdAt: "asc" },
-    take: 50,
-  })
-  const results = await Promise.allSettled(
-    due.map((row) =>
-      enqueueManualPaymentAlerts({
-        tenantId: row.tenantId,
-        intentIds: [row.id],
-      }),
-    ),
-  )
-  return {
-    policyPending: !!change,
-    queued: results.reduce(
-      (count, result) =>
-        count + (result.status === "fulfilled" ? result.value.queued : 0),
-      0,
-    ),
-  }
 }
 
 /** Bounded continuation chain only while a committed revision has real work. */
@@ -210,27 +218,17 @@ export async function manualPaymentPolicyChangeHandler(input: {
   revision?: number
   claimId?: string
 }) {
-  if (!manualPaymentAlertsEnabled()) return { enabled: false }
-  const change =
-    input.revision && input.claimId
-      ? { revision: input.revision, claimId: input.claimId }
-      : await claimPaymentNotificationPolicyChange(prisma)
-  if (!change?.claimId) return { skipped: true }
-  for (let page = 0; page < 3; page++) {
-    const result = await processPaymentNotificationPolicyChange(prisma, {
-      revision: change.revision,
-      claimId: change.claimId,
-      limit: 5,
-    })
-    if (result.completed) return result
-  }
-  await triggerJob(
-    "manual-payment.policy-change",
-    async (payload) => {
-      await manualPaymentPolicyChangeHandler(payload)
-    },
-    { revision: change.revision, claimId: change.claimId },
-    { maxAttempts: 1 },
-  )
-  return { continued: true, revision: change.revision }
+  return runManualPaymentPolicyChange(input, {
+    claim: () => claimPaymentNotificationPolicyChange(prisma),
+    process: (claim) => processPaymentNotificationPolicyChange(prisma, claim),
+    continue: (claim) =>
+      triggerJob(
+        "manual-payment.policy-change",
+        async (payload) => {
+          await manualPaymentPolicyChangeHandler(payload)
+        },
+        claim,
+        { maxAttempts: 1 },
+      ),
+  })
 }

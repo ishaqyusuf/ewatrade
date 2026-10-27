@@ -103,8 +103,10 @@ same intent/channel, reserves current capacity and requires fresh Owner/Admin
 Durable revision jobs process in order, with resumable claims/cursors. Notice
 insertion and cursor progress share a transaction; one notice is unique per
 Business/revision, with per-membership read receipts. Generic Activity stays
-unreleased. Parent jobs must process in-app policy work independently of the
-external-delivery activation flag; providers remain separately gated.
+unreleased. The existing cadence queues in-app policy work independently of the
+external-delivery activation flag; bounded claim/continuation workers also run
+without that flag. External intent dispatch and provider I/O remain separately
+gated. Disabling sending cannot suppress Business configuration-change notices.
 
 Only active Businesses already using configured bank alerts are affected:
 settings `createdAt <= change.createdAt`. Compare old/new effective current-plan
@@ -132,8 +134,8 @@ selection grants neither payment-review nor Finance administration permission.
 - [x] Three canonical directions published/reviewed; old history retained.
 - [x] Exact owner selection and API/schema split recorded.
 - [x] Policy, quota, fanout and selected Oversight UI implemented.
-- [ ] Finish authenticated UI acceptance and final verification record.
-- [ ] Commit owned changes and link completed implementation evidence.
+- [x] Finish authenticated table, edit/review/cancel and Business usage acceptance.
+- [x] Commit owned source; final Workshop receipt is linked in the Brain evidence.
 
 Current evidence: pure policy6/35; service credential/auth3/8; Oversight owner and
 audit2/16; UI helpers6/27; strict owned graph and all7 Oversight workspace types;
@@ -148,8 +150,12 @@ caused CREATE-existing failure, disclosed and recovered after zero schema diff
 using official resolve, then successful sequential canonical migrate/push. No
 reset, handwritten migration or old157SQL changes. Only the verified local Neon
 target was used. Product auth redirects correctly to local Oversight login;
-authenticated modal/save/usage acceptance awaits the owner's sign-in. No live
-configuration, real transport, deployment, push or merchant payment mutation.
+authenticated local table, modal validation/review/Back/cancel, explicit Unlimited
+and existing Business usage are verified in the in-app browser. The existing owner
+session was reused without password lookup/reset. A missing-filter serialization
+regression was fixed in sibling Oversight commit `fe10373`. Actual Save changes,
+live policy fanout and real transport remain deliberately unexercised: policy
+revision stays 0, all channels off/0. No deployment, push or merchant mutation.
 
 Initial design used the authorized Codex fallback after a separate Claude request
 returned no output in ten minutes. Selected UI implementation was delegated to a
@@ -157,3 +163,18 @@ new verified Claude Opus5.5/high session `96cd5af8-1255-4317-b769-c330989d2a67`.
 It staged new files only; root reviewed/applied them without bank UI overlap.
 Office policy is excluded from merchant assistant tools; bank setup remains
 form-only. H02 impact record preserves that classification.
+
+## Local acceptance follow-up — 27 October 2026
+
+The API-only dev task passes the existing runtime operations read key through
+Turbo strict filtering. The local read-only bridge uses saved service configuration
+without editing env files, setting a write key, changing policy or weakening TLS.
+The local UI now reads current source instead of the older hosted endpoint.
+
+Focused job/provider/dev checks: 34 tests / 90 assertions. Owned strict jobs graph
+and owned-path source smoke: 175 tests / 850 assertions, tooling types and Biome
+pass. These scoped checks exclude concurrent assistant/catalog/Maestro edits.
+The source-only fix separates in-app policy processing from external activation;
+existing SQL atomicity/audience evidence is reused unchanged. Native review is
+reserved for the owner. Live configuration, provider activation/delivery and
+release acceptance remain separate from this completed local UI check.
