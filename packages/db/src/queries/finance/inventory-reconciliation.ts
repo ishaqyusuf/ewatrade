@@ -28,16 +28,15 @@ export async function getFinanceInventoryReconciliationInTransaction(
     orderBy: { code: "asc" },
   })
   const [sums, known, unknown, uncoveredStockCount] = await Promise.all([
-    accounts.length
-      ? tx.financeJournalLine.groupBy({
-          by: ["accountId"],
-          where: {
-            bookId: book.id,
-            accountId: { in: accounts.map((account) => account.id) },
-          },
-          _sum: { debitMinor: true, creditMinor: true },
-        })
-      : [],
+    // An empty account list matches no lines.
+    tx.financeJournalLine.groupBy({
+      by: ["accountId"],
+      where: {
+        bookId: book.id,
+        accountId: { in: accounts.map((account) => account.id) },
+      },
+      _sum: { debitMinor: true, creditMinor: true },
+    }),
     tx.financeInventoryPool.aggregate({
       where: { bookId: book.id, valueMinor: { not: null } },
       _sum: { valueMinor: true },
