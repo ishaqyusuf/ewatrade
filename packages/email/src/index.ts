@@ -88,6 +88,7 @@ type ResendEmailResponse = {
   id?: string
 }
 
+export * from "../templates/manual-payment-report"
 export * from "../defaults"
 export * from "../templates/marketing-early-access-admin"
 export * from "../templates/early-access-verification"
