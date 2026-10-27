@@ -24,6 +24,8 @@ export type PublicStorefrontProjection = {
   whatsAppPhone: string | null
   serviceRequestEntry?: { formId: string; offeringIds: readonly string[] }
   offeringCounts?: { products: number; services: number }
+  /** Pinned public items beyond this page; never a second listing. */
+  pinnedItems?: PublicCatalogItem[]
   /** Prepared by the host from server facts; presentation only. */
   commerce?: StorefrontCommerceResource
 }
@@ -54,6 +56,9 @@ export function publicStorefrontResources(store: PublicStorefrontProjection): {
         ...(store.query ? { query: store.query } : {}),
         ...(store.offeringCounts
           ? { offeringCounts: store.offeringCounts }
+          : {}),
+        ...(store.pinnedItems?.length
+          ? { pinnedItems: store.pinnedItems }
           : {}),
       },
       contact: {

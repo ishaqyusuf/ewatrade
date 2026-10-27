@@ -12,6 +12,7 @@ import {
 import { storefrontDesignAssets } from "@ewatrade/storefront-runtime/design-assets"
 import type { StorefrontClientSnapshot } from "@ewatrade/storefront-runtime/server"
 import {
+  availableDraftUpgrade,
   canvasPage,
   canvasSection,
   getTemplateManifest,
@@ -21,6 +22,7 @@ import {
   replaceDraftTemplate,
   sectionPolicy,
   upgradeCanvasDraft,
+  upgradeDraftVersion,
 } from "@ewatrade/storefront-templates"
 import {
   Button,
@@ -261,6 +263,7 @@ function StudioEditor({
   const definition = manifest.sections.find(
     (section) => section.key === selected?.type,
   )
+  const versionUpgrade = availableDraftUpgrade(composition)
   // Commerce studio edits copy in Section options; canvas templates edit it in place.
   const inlineTextEditing = manifest.key !== "commerce-studio"
   const edit = useCallback(
@@ -655,6 +658,7 @@ function StudioEditor({
               <div>
                 <small>Template</small>
                 <strong>{manifest.name}</strong>
+                <small>Version {manifest.version}</small>
                 <span>
                   {manifest.businessTypes.includes(fit) ||
                   (fit === "mixed" && manifest.businessTypes.length > 1)
@@ -671,6 +675,32 @@ function StudioEditor({
                 Change
               </Button>
             </div>
+            {versionUpgrade ? (
+              <div className="sf-config-upgrade">
+                <p>
+                  <strong>
+                    Version {versionUpgrade.version} is available.
+                  </strong>{" "}
+                  {versionUpgrade.summary} Your copy and brand stay the same.
+                </p>
+                <Button
+                  size="sm"
+                  disabled={blocked}
+                  onClick={() => {
+                    if (
+                      edit((next) =>
+                        Object.assign(next, upgradeDraftVersion(next)),
+                      )
+                    )
+                      setStatus(
+                        `Draft updated to version ${versionUpgrade.version}. Save draft to keep it; your live site changes only when you publish.`,
+                      )
+                  }}
+                >
+                  Update to version {versionUpgrade.version}
+                </Button>
+              </div>
+            ) : null}
             <details open>
               <summary>Pages</summary>
               <nav className="sf-canvas-pages" aria-label="Editor pages">

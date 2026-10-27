@@ -211,6 +211,184 @@ export async function countPublicStorefrontOfferings(
   }
 }
 
+type PublicItemRow<S extends Prisma.CatalogItemSelect> =
+  Prisma.CatalogItemGetPayload<{ select: S }>
+
+/** The one public item select + projection, shared by every public catalog read. */
+function publicItemReader(
+  tenantId: string,
+  store: { id: string; currencyCode: string },
+  offeringWhere: Prisma.SellableOfferingWhereInput,
+) {
+  const select = {
+    id: true,
+    name: true,
+    kind: true,
+    description: true,
+    categoryRecord: { select: { id: true, label: true } },
+    illustrations: {
+      where: { tenantId: tenantId, storeId: store.id },
+      take: 1,
+      select: { illustrationId: true },
+    },
+    product: { select: { lowStockLevel: true } },
+    offerings: {
+      where: offeringWhere,
+      orderBy: [{ sortOrder: "asc" as const }, { id: "asc" as const }],
+      select: {
+        id: true,
+        name: true,
+        fixedPriceMinor: true,
+        currencyCode: true,
+        pricingPolicy: true,
+        productUnitOffering: {
+          select: {
+            inventoryUnit: { select: { name: true, transactionScale: true } },
+          },
+        },
+        serviceOffering: {
+          select: { quantityScale: true, durationMinutes: true },
+        },
+        variant: {
+          select: {
+            id: true,
+            name: true,
+            isDefault: true,
+            stockBalanceSources: {
+              where: {
+                tenantId: tenantId,
+                storeId: store.id,
+                custodyType: "STORE" as const,
+              },
+              select: {
+                inventoryUnitId: true,
+                onHandQuantity: true,
+                reservedQuantity: true,
+              },
+            },
+          },
+        },
+      },
+    },
+  } satisfies Prisma.CatalogItemSelect
+  const projectItem = (
+    item: Prisma.CatalogItemGetPayload<{ select: typeof select }>,
+  ) => {
+    const itemOptions = item.offerings.map((offering) => ({
+      id: offering.id,
+      name: publicStorefrontOptionName(
+        offering.variant.name,
+        offering.name,
+        offering.variant.isDefault,
+      ),
+      priceMinor:
+        offering.pricingPolicy === "FIXED" ? offering.fixedPriceMinor : null,
+      currencyCode: offering.currencyCode,
+      availability:
+        item.kind === "SERVICE"
+          ? null
+          : publicStockAvailability(offering.variant.stockBalanceSources),
+      ...(item.kind === "SERVICE"
+        ? {
+            unit: {
+              label: null,
+              scale: Math.min(6, offering.serviceOffering?.quantityScale ?? 0),
+            },
+            durationMinutes: offering.serviceOffering?.durationMinutes ?? null,
+          }
+        : {
+            stock: publicStockState(
+              offering.variant.stockBalanceSources,
+              item.product?.lowStockLevel,
+            ),
+            ...(offering.productUnitOffering
+              ? {
+                  unit: {
+                    label:
+                      offering.productUnitOffering.inventoryUnit.name.slice(
+                        0,
+                        40,
+                      ),
+                    scale: Math.min(
+                      6,
+                      offering.productUnitOffering.inventoryUnit
+                        .transactionScale,
+                    ),
+                  },
+                }
+              : {}),
+          }),
+    }))
+    return {
+      id: item.id,
+      name: item.name,
+      kind: item.kind,
+      description: item.description,
+      category: item.categoryRecord
+        ? { id: item.categoryRecord.id, name: item.categoryRecord.label }
+        : null,
+      illustrationId:
+        item.illustrations[0]?.illustrationId ??
+        (item.kind === "SERVICE"
+          ? "ill-generic-service"
+          : "ill-generic-product"),
+      ...publicOptionPrice(itemOptions, store.currencyCode),
+      availability: publicItemAvailability(itemOptions),
+      options: itemOptions,
+    }
+  }
+  return { select, projectItem }
+}
+
+/**
+ * Pinned IDs published sections name, loaded beyond the current page (≤ 32: four
+ * sections of up to 8). Uses the
+ * same public eligibility; on capped plans only entries inside the cap qualify. Never
+ * returns a hidden, archived, off-Store or over-cap item; unknown IDs are dropped.
+ */
+export async function loadPublicStorefrontPinnedItems(
+  db: DbClient,
+  input: {
+    tenantId: string
+    store: { id: string; currencyCode: string }
+    ids: readonly string[]
+    storefrontItems: number | null
+  },
+) {
+  const ids = [
+    ...new Set(input.ids.filter((id) => /^[A-Za-z0-9_-]{1,128}$/.test(id))),
+  ].slice(0, 32)
+  if (!ids.length) return []
+  const eligible = publicCatalogItemWhere(input.tenantId, input.store.id)
+  let allowed = ids
+  if (input.storefrontItems !== null) {
+    // The included plan shows the first N eligible entries only.
+    const capped = await db.catalogItem.findMany({
+      where: eligible,
+      orderBy: [{ createdAt: "asc" }, { id: "asc" }],
+      take: input.storefrontItems,
+      select: { id: true },
+    })
+    const inside = new Set(capped.map((row) => row.id))
+    allowed = ids.filter((id) => inside.has(id))
+    if (!allowed.length) return []
+  }
+  const { select, projectItem } = publicItemReader(
+    input.tenantId,
+    input.store,
+    publicOfferingWhere(input.tenantId, input.store.id),
+  )
+  const rows = await db.catalogItem.findMany({
+    where: { AND: [eligible, { id: { in: allowed } }] },
+    take: allowed.length,
+    select,
+  })
+  return allowed.flatMap((id) => {
+    const row = rows.find((entry) => entry.id === id)
+    return row ? [projectItem(row)] : []
+  })
+}
+
 async function readStorefront(
   db: DbClient,
   slug: string,
@@ -290,122 +468,12 @@ async function readStorefront(
     paidListing && listing.terms.length
       ? { AND: [baseWhere, ...publicListingSearchWhere(listing.terms)] }
       : baseWhere
-  const select = {
-    id: true,
-    name: true,
-    kind: true,
-    description: true,
-    categoryRecord: { select: { id: true, label: true } },
-    illustrations: {
-      where: { tenantId: tenant.id, storeId: store.id },
-      take: 1,
-      select: { illustrationId: true },
-    },
-    product: { select: { lowStockLevel: true } },
-    offerings: {
-      where: offeringWhere,
-      orderBy: [{ sortOrder: "asc" as const }, { id: "asc" as const }],
-      select: {
-        id: true,
-        name: true,
-        fixedPriceMinor: true,
-        currencyCode: true,
-        pricingPolicy: true,
-        productUnitOffering: {
-          select: {
-            inventoryUnit: { select: { name: true, transactionScale: true } },
-          },
-        },
-        serviceOffering: {
-          select: { quantityScale: true, durationMinutes: true },
-        },
-        variant: {
-          select: {
-            id: true,
-            name: true,
-            isDefault: true,
-            stockBalanceSources: {
-              where: {
-                tenantId: tenant.id,
-                storeId: store.id,
-                custodyType: "STORE" as const,
-              },
-              select: {
-                inventoryUnitId: true,
-                onHandQuantity: true,
-                reservedQuantity: true,
-              },
-            },
-          },
-        },
-      },
-    },
-  } satisfies Prisma.CatalogItemSelect
-  type Row = Prisma.CatalogItemGetPayload<{ select: typeof select }>
-  const projectItem = (item: Row) => {
-    const itemOptions = item.offerings.map((offering) => ({
-      id: offering.id,
-      name: publicStorefrontOptionName(
-        offering.variant.name,
-        offering.name,
-        offering.variant.isDefault,
-      ),
-      priceMinor:
-        offering.pricingPolicy === "FIXED" ? offering.fixedPriceMinor : null,
-      currencyCode: offering.currencyCode,
-      availability:
-        item.kind === "SERVICE"
-          ? null
-          : publicStockAvailability(offering.variant.stockBalanceSources),
-      ...(item.kind === "SERVICE"
-        ? {
-            unit: {
-              label: null,
-              scale: Math.min(6, offering.serviceOffering?.quantityScale ?? 0),
-            },
-            durationMinutes: offering.serviceOffering?.durationMinutes ?? null,
-          }
-        : {
-            stock: publicStockState(
-              offering.variant.stockBalanceSources,
-              item.product?.lowStockLevel,
-            ),
-            ...(offering.productUnitOffering
-              ? {
-                  unit: {
-                    label:
-                      offering.productUnitOffering.inventoryUnit.name.slice(
-                        0,
-                        40,
-                      ),
-                    scale: Math.min(
-                      6,
-                      offering.productUnitOffering.inventoryUnit
-                        .transactionScale,
-                    ),
-                  },
-                }
-              : {}),
-          }),
-    }))
-    return {
-      id: item.id,
-      name: item.name,
-      kind: item.kind,
-      description: item.description,
-      category: item.categoryRecord
-        ? { id: item.categoryRecord.id, name: item.categoryRecord.label }
-        : null,
-      illustrationId:
-        item.illustrations[0]?.illustrationId ??
-        (item.kind === "SERVICE"
-          ? "ill-generic-service"
-          : "ill-generic-product"),
-      ...publicOptionPrice(itemOptions, store.currencyCode),
-      availability: publicItemAvailability(itemOptions),
-      options: itemOptions,
-    }
-  }
+  const { select, projectItem } = publicItemReader(
+    tenant.id,
+    store,
+    offeringWhere,
+  )
+  type Row = PublicItemRow<typeof select>
   // Paid pagination has two stable buckets, so sold-out items remain last across pages.
   // Aggregate only eligible Store stock, keeping quantities in the repository.
   let outVariantIds: string[] = []

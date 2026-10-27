@@ -213,6 +213,17 @@ export function listSelectableTemplates(
     })
 }
 
+/** The theme a template accepts: optional controls it doesn't declare are dropped. */
+export function themeForTemplate(
+  theme: StorefrontComposition["theme"],
+  manifest: TemplateManifest,
+): StorefrontComposition["theme"] {
+  const next = { ...theme }
+  for (const control of ["width", "density"] as const)
+    if (!manifest.themeControls?.includes(control)) delete next[control]
+  return next
+}
+
 /** Explicit replacement affects only an unsaved draft and preserves its theme. */
 export function replaceDraftTemplate(
   current: StorefrontComposition,
@@ -220,7 +231,10 @@ export function replaceDraftTemplate(
 ) {
   const manifest = getTemplateManifest({ template: target }, "new-use")
   return validateComposition(
-    { ...defaultComposition(manifest), theme: current.theme },
+    {
+      ...defaultComposition(manifest),
+      theme: themeForTemplate(current.theme, manifest),
+    },
     manifest,
   )
 }
@@ -283,6 +297,88 @@ export function migrateCommerceStudioFeaturedDraft(
         section.settings.pinned = []
       }
   return validateComposition(next, manifest)
+}
+
+/**
+ * Item IDs a composition pins through manifest `catalog-items` fields, in page order.
+ * Empty for templates that declare no such field, so their loads never change.
+ */
+export function pinnedCatalogItemIds(composition: StorefrontComposition) {
+  let manifest: TemplateManifest
+  try {
+    manifest = getTemplateManifest(composition, "render")
+  } catch {
+    // The release load refuses unavailable pins itself; pinning never decides that.
+    return []
+  }
+  const ids: string[] = []
+  for (const page of composition.pages)
+    for (const section of page.sections) {
+      if (!section.visible) continue
+      const definition = manifest.sections.find(
+        (entry) => entry.key === section.type,
+      )
+      for (const field of definition?.fields ?? [])
+        if (field.kind === "catalog-items") {
+          const value = section.settings[field.key]
+          if (Array.isArray(value)) ids.push(...value)
+        }
+    }
+  return [...new Set(ids)]
+}
+
+type DraftUpgrade = {
+  from: { key: string; version: string }
+  to: string
+  /** Plain-language change, shown next to the version in Studio. */
+  summary: string
+  migrate: (current: StorefrontComposition) => StorefrontComposition
+}
+/** Every named, explicit draft migration between versions of one template. */
+export const draftUpgrades: readonly DraftUpgrade[] = [
+  {
+    from: { key: "catalog-v4", version: "1.0.0" },
+    to: "1.1.0",
+    summary: "Adds an optional cover illustration.",
+    migrate: migrateCatalogCoverDraft,
+  },
+  {
+    from: { key: "commerce-studio", version: "1.0.0" },
+    to: "1.1.0",
+    summary: "Adds pinned featured products.",
+    migrate: migrateCommerceStudioFeaturedDraft,
+  },
+]
+
+/** The newer version this draft can explicitly move to, when its target is selectable. */
+export function availableDraftUpgrade(current: StorefrontComposition) {
+  const upgrade = draftUpgrades.find(
+    (entry) =>
+      entry.from.key === current.template.key &&
+      entry.from.version === current.template.version,
+  )
+  if (!upgrade) return null
+  try {
+    getTemplateManifest(
+      { template: { key: upgrade.from.key, version: upgrade.to } },
+      "new-use",
+    )
+  } catch {
+    return null
+  }
+  return { version: upgrade.to, summary: upgrade.summary }
+}
+
+/** Draft-only: returns an unsaved copy; the caller saves it through the CAS draft command. */
+export function upgradeDraftVersion(current: StorefrontComposition) {
+  const upgrade = draftUpgrades.find(
+    (entry) =>
+      entry.from.key === current.template.key &&
+      entry.from.version === current.template.version,
+  )
+  if (!upgrade || !availableDraftUpgrade(current))
+    throw new Error("No newer version is available for this design.")
+  return upgrade.migrate(current)
 }
 
 export function sectionPolicy(manifest: TemplateManifest, type: string) {

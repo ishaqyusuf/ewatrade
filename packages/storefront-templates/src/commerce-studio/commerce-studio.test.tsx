@@ -16,10 +16,16 @@ import {
 } from "../canvas/library"
 import { fixture } from "../fixtures"
 import {
+  availableDraftUpgrade,
+  draftUpgrades,
   getTemplateManifest,
   listSelectableTemplates,
   migrateCommerceStudioFeaturedDraft,
+  pinnedCatalogItemIds,
+  replaceDraftTemplate,
   templateRegistry,
+  themeForTemplate,
+  upgradeDraftVersion,
 } from "../registry"
 import { StorefrontTemplate } from "../render"
 import {
@@ -507,4 +513,84 @@ test("Featured shows pins first in order, skips non-public pins, then fills auto
       (entry) => entry.id,
     ),
   ).toEqual(["a", "b", "c", "d"])
+})
+
+test("Studio version update is explicit, generic and draft-only; pinned IDs come only from catalog-items fields", () => {
+  const legacy = getTemplateManifest(
+    { template: { key: "commerce-studio", version: "1.0.0" } },
+    "render",
+  )
+  const old = canvasDefaults(legacy)
+  featuredSection(old).settings.heading = "Merchant copy"
+  const before = JSON.stringify(old)
+  expect(availableDraftUpgrade(old)).toEqual({
+    version: "1.1.0",
+    summary: "Adds pinned featured products.",
+  })
+  const next = upgradeDraftVersion(old)
+  expect(JSON.stringify(old)).toBe(before)
+  expect(next.template.version).toBe("1.1.0")
+  expect(featuredSection(next).settings).toMatchObject({
+    heading: "Merchant copy",
+    pinned: [],
+  })
+  expect(availableDraftUpgrade(next)).toBeNull()
+  expect(() => upgradeDraftVersion(next)).toThrow()
+  // Every registered migration starts from a registered pin and lands on a selectable one.
+  for (const upgrade of draftUpgrades) {
+    expect(
+      getTemplateManifest({ template: upgrade.from }, "render").version,
+    ).toBe(upgrade.from.version)
+    expect(
+      getTemplateManifest(
+        { template: { key: upgrade.from.key, version: upgrade.to } },
+        "new-use",
+      ).version,
+    ).toBe(upgrade.to)
+  }
+  // One selectable entry per key leads with the newest version (dialog shows one card).
+  const keys = listSelectableTemplates().map((entry) => entry.manifest.key)
+  expect(keys.indexOf("commerce-studio")).toBe(
+    listSelectableTemplates().findIndex(
+      (entry) =>
+        entry.manifest.key === "commerce-studio" &&
+        entry.manifest.version === "1.1.0",
+    ),
+  )
+  featuredSection(next).settings.pinned = ["b", "a"]
+  const shop = next.pages.find((page) => page.key === "shop")
+  shop?.sections.splice(1, 0, {
+    ...structuredClone(featuredSection(next)),
+    id: "shop-featured",
+    settings: { ...featuredSection(next).settings, pinned: ["a", "c"] },
+  })
+  expect(pinnedCatalogItemIds(next)).toEqual(["b", "a", "c"])
+  const hidden = structuredClone(next)
+  featuredSection(hidden).visible = false
+  expect(pinnedCatalogItemIds(hidden)).toEqual(["a", "c"])
+  expect(pinnedCatalogItemIds(old)).toEqual([])
+})
+
+test("replacing a width/density draft keeps only theme controls the target declares", () => {
+  const composition = canvasDefaults(commerceStudioManifest)
+  composition.theme = {
+    ...composition.theme,
+    accent: "#8b4b35",
+    width: "wide",
+    density: "compact",
+  }
+  const marketHall = listSelectableTemplates().find(
+    (entry) => entry.manifest.key === "market-hall",
+  )?.manifest
+  if (!marketHall) throw new Error("market hall missing")
+  const replaced = replaceDraftTemplate(composition, marketHall)
+  expect(replaced.theme).toEqual({
+    font: "system",
+    accent: "#8b4b35",
+    background: "#ffffff",
+    radius: "small",
+  })
+  expect(themeForTemplate(composition.theme, commerceStudioManifest)).toEqual(
+    composition.theme,
+  )
 })

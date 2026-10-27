@@ -91,6 +91,11 @@ export type StorefrontResources = {
      * use it to choose Shop/Services presentation; history never decides the mode.
      */
     offeringCounts?: { products: number; services: number }
+    /**
+     * Public items that published `catalog-items` fields pin but this page didn't load.
+     * Same eligibility and plan cap as `items`; never listed as catalog entries.
+     */
+    pinnedItems?: PublicCatalogItem[]
   }
   contact: {
     chatToken: string | null

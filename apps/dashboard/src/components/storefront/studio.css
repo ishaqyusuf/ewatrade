@@ -425,6 +425,9 @@
 .sf-config-template { display:flex; align-items:center; justify-content:space-between; padding:16px; gap:8px; border-bottom:1px solid var(--border); }
 .sf-config-template>div { display:flex; flex-direction:column; gap:4px; }
 .sf-config-template small,.sf-config-template span { color:var(--muted-foreground); font-size:11px; }
+.sf-config-upgrade { display:flex; flex-direction:column; align-items:start; gap:8px; margin:12px 16px 0; padding:12px; border:1px solid var(--border); border-radius:4px; font-size:12px; line-height:1.5; }
+.sf-config-upgrade p { margin:0; color:var(--muted-foreground); }
+.sf-config-upgrade strong { color:var(--foreground); font-weight:600; }
 .sf-canvas-config details { border-bottom:1px solid var(--border); padding:16px 12px; }
 .sf-canvas-config summary { cursor:pointer; font-size:12px; font-weight:600; margin-bottom:12px; }
 .sf-canvas-config summary small { float:right; font-weight:400; color:var(--muted-foreground); }

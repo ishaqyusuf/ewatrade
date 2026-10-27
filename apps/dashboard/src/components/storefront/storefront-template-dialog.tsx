@@ -6,6 +6,7 @@ import {
   canvasDefaults,
   isCanvasManifest,
   listSelectableTemplates,
+  themeForTemplate,
 } from "@ewatrade/storefront-templates"
 import { StorefrontTemplate } from "@ewatrade/storefront-templates/render"
 import {
@@ -38,8 +39,15 @@ export function StorefrontTemplateDialog({
     version: string
     name: string
   } | null>(null)
-  const entries = listSelectableTemplates().filter((entry) =>
-    isCanvasManifest(entry.manifest),
+  // One card per template: the selectable list orders each key's newest version first.
+  const entries = listSelectableTemplates().filter(
+    (entry, index, all) =>
+      isCanvasManifest(entry.manifest) &&
+      all.findIndex(
+        (other) =>
+          isCanvasManifest(other.manifest) &&
+          other.manifest.key === entry.manifest.key,
+      ) === index,
   )
   const rank = (types: string[]) =>
     fit === "mixed"
@@ -144,7 +152,10 @@ export function StorefrontTemplateDialog({
                             mode: "preview",
                             composition: {
                               ...canvasDefaults(manifest),
-                              theme: composition.theme,
+                              theme: themeForTemplate(
+                                composition.theme,
+                                manifest,
+                              ),
                             },
                           }}
                           domain={`${snapshot.resources.business.slug}.ewatrade.com`}

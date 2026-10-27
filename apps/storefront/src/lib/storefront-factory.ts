@@ -1,6 +1,7 @@
 import {
   countPublicStorefrontOfferings,
   loadLiveStorefrontForHost,
+  loadPublicStorefrontPinnedItems,
   siteContentHash,
 } from "@ewatrade/db/queries"
 import { storefrontActionSchema } from "@ewatrade/storefront-contracts/actions"
@@ -19,7 +20,10 @@ import {
   handleStorefrontAction,
   loadStorefront,
 } from "@ewatrade/storefront-runtime/server"
-import { templateRegistry } from "@ewatrade/storefront-templates"
+import {
+  pinnedCatalogItemIds,
+  templateRegistry,
+} from "@ewatrade/storefront-templates"
 import {
   buildCustomerChatEntryUrl,
   resolveCustomerChatOrigin,
@@ -94,6 +98,23 @@ function factoryDependencies(db: Db, host: string, query: unknown) {
             storefrontItems: store.storefrontItems ?? null,
           })
         : undefined
+      // Only compositions with catalog-items fields pin; others make no extra read.
+      const pins = pinnedCatalogItemIds(
+        value.site.release.composition as Parameters<
+          typeof pinnedCatalogItemIds
+        >[0],
+      ).filter((id) => !value.storefront.items.some((item) => item.id === id))
+      const pinnedItems = pins.length
+        ? await loadPublicStorefrontPinnedItems(db, {
+            tenantId: value.site.release.tenantId,
+            store: {
+              id: value.site.storeId,
+              currencyCode: value.storefront.currencyCode,
+            },
+            ids: pins,
+            storefrontItems: store.storefrontItems ?? null,
+          })
+        : []
       // Presentation hints only; every write re-derives these facts on the server.
       const ordering =
         ORDERING_TEMPLATE_KEYS.includes(value.site.release.templateKey) &&
@@ -104,6 +125,7 @@ function factoryDependencies(db: Db, host: string, query: unknown) {
       return publicStorefrontResources({
         ...value.storefront,
         ...(offeringCounts ? { offeringCounts } : {}),
+        ...(pinnedItems.length ? { pinnedItems } : {}),
         ...(ORDERING_TEMPLATE_KEYS.includes(value.site.release.templateKey)
           ? {
               commerce: {
