@@ -17,6 +17,20 @@ export type PaymentView =
       outcome: { state: ReportOutcome; status: PublicReportStatus } | null
     }
 
+/**
+ * What a decided report offers next. The result itself is the page; a new form starts only when
+ * the customer picks this. A full payment, or a link that no longer takes payments, offers nothing.
+ */
+export function outcomeNextStep(
+  outcome: ReportOutcome,
+  input: { linkState: PublicPaymentLink["state"]; balanceMinor: number },
+): "pay_remaining" | "tell_again" | null {
+  if (input.linkState !== "active" || input.balanceMinor <= 0) return null
+  if (outcome === "partially_paid") return "pay_remaining"
+  if (outcome === "not_received") return "tell_again"
+  return null
+}
+
 export function resolvePaymentView(input: {
   link: PublicPaymentLink | undefined
   linkError: "not_found" | "error" | null

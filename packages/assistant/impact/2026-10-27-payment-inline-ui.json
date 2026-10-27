@@ -1,0 +1,30 @@
+{
+  "version": 1,
+  "id": "2026-10-27-payment-inline-ui",
+  "tickets": ["H02", "F01"],
+  "summary": "Owner-selected Banking02v6 replaces the public payment name sheet with an editable inline reveal, saved customer-name prefill and explicit second submission. Decided reports show status and remaining balance with deliberate next-payment/retry entry; fully paid orders have no payment or copy controls. Amount and receipt controls lock during sending. Existing report proof, canonical review and recovery stay intact. No deployment.",
+  "noAssistantImpact": "Public customer page only. No assistant capability, tool, prompt, scope, rollout or WhatsApp sending authority changes. The customerName projection is separately recorded in 2026-10-27-payment-inline-name.json.",
+  "capabilities": [],
+  "procedures": [],
+  "docs": [
+    {
+      "topic": "feature",
+      "status": "local_only",
+      "path": ".brain/features/manual-payment-confirmation.md"
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "test",
+      "path": "apps/dashboard/src/components/public-payment/payer-name.test.ts",
+      "executed": true,
+      "result": "Claude focused public-payment suite23pass/87assertions, Biome clean and strict scoped types0; includes saved/unknown/placeholder/unfinished/finished-name rules, partial/notreceived/full next actions, private name excluded from image model."
+    },
+    {
+      "kind": "run",
+      "path": ".brain/qa/2026-10-27-manual-payment-external-flow.md",
+      "executed": true,
+      "result": "Root IAB exact Workshop89c01d79 and actualngrok: firstclick inlineform, no dialog; unknownnameblank, requirednamevalidation, Cancel/reopenpreserves edit; partial500confirmation hides bank/copy/form until explicitPayremaining1500. Second500reportwithsyntheticPDF submitted fromnewinlineform; socket upstream opened and authenticatedstatushint captured. Furtherdecision/reject/full checks pending."
+    }
+  ]
+}

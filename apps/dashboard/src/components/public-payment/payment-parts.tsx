@@ -413,6 +413,7 @@ export function AmountField({
   currencySymbol,
   error,
   inputRef,
+  disabled = false,
 }: {
   value: string
   onChange: (value: string) => void
@@ -421,6 +422,8 @@ export function AmountField({
   currencySymbol: string
   error: string | null
   inputRef: RefObject<HTMLInputElement | null>
+  /** Held while a report is sending, so the amount can't change after it was captured. */
+  disabled?: boolean
 }) {
   const id = useId()
   return (
@@ -444,6 +447,7 @@ export function AmountField({
           autoComplete="off"
           value={value}
           onChange={(event) => onChange(event.target.value)}
+          disabled={disabled}
           aria-invalid={error ? true : undefined}
           aria-describedby={`${id}-hint`}
           className="h-full min-w-0 flex-1 bg-transparent text-2xl font-extrabold tabular-nums outline-none"

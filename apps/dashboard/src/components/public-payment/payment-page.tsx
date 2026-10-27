@@ -9,8 +9,16 @@ import {
   minorToMajorInput,
 } from "@ewatrade/utils/currency"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
-import { useCallback, useEffect, useRef, useState } from "react"
-import { ClaimSheet } from "./claim-sheet"
+import {
+  type ReactNode,
+  useCallback,
+  useEffect,
+  useId,
+  useRef,
+  useState,
+} from "react"
+import { ClaimReveal } from "./claim-reveal"
+import { initialPayerName } from "./payer-name"
 import {
   type PublicPaymentLink,
   type PublicReportStatus,
@@ -36,7 +44,11 @@ import {
   cardClass,
   primaryButtonClass,
 } from "./payment-parts"
-import { type ReportOutcome, resolvePaymentView } from "./payment-view"
+import {
+  type ReportOutcome,
+  outcomeNextStep,
+  resolvePaymentView,
+} from "./payment-view"
 import type { PickedReceipt } from "./receipt-file"
 import {
   type StoredReport,
@@ -151,8 +163,7 @@ function OutcomeCard({
         title={`${received} confirmed`}
         footer={<UpdatedAt at={updatedAt} />}
       >
-        {businessName} confirmed they received {received}.{short}{" "}
-        {money(status.balanceMinor, currencyCode)} is still to pay.
+        {businessName} confirmed they received {received}.{short}
       </StatusCard>
     )
   return (
@@ -339,10 +350,19 @@ export function PaymentPage({
     amountText ?? formatCurrencyInput(minorToMajorInput(dueMinor))
 
   const [receipt, setReceipt] = useState<PickedReceipt | null>(null)
-  const [sheetOpen, setSheetOpen] = useState(false)
+  // "I have paid" opens the name step in place; a second explicit submit reports.
+  const [revealed, setRevealed] = useState(false)
+  // Set once when the step first opens, so refetches never replace what the customer typed.
+  const [payerName, setPayerName] = useState<string | null>(null)
   const [step, setStep] = useState<SendStep | null>(null)
   const [flowError, setFlowError] = useState<string | null>(null)
   const sendingRef = useRef(false)
+  const revealId = useId()
+  const paidButtonRef = useRef<HTMLButtonElement>(null)
+  // A decided report stays the whole page until the customer explicitly starts a new one.
+  const [newReportAfter, setNewReportAfter] = useState<string | null>(null)
+  const newFormRef = useRef<HTMLElement>(null)
+  const focusNewForm = useRef(false)
 
   const finishing = view.kind === "unfinished" && Boolean(record?.reportToken)
   const claimMinor = finishing
@@ -351,29 +371,49 @@ export function PaymentPage({
       ? (majorToMinor(shownAmountText) ?? 0)
       : dueMinor
 
-  // The link closed or expired while the sheet was open.
+  // The link closed or expired while the name step was open.
   useEffect(() => {
     if (link && link.state !== "active" && step === null && !finishing)
-      setSheetOpen(false)
+      setRevealed(false)
   }, [link, step, finishing])
+
+  useEffect(() => {
+    if (!newReportAfter || !focusNewForm.current) return
+    focusNewForm.current = false
+    newFormRef.current?.focus()
+  }, [newReportAfter])
+
+  const amountIsValid = () => {
+    if (finishing || !link?.allowPartial) return true
+    const value = majorToMinor(shownAmountText)
+    const problem =
+      value === null || value <= 0
+        ? "Enter the amount you sent."
+        : value > dueMinor
+          ? `Enter up to ${money(dueMinor, link.currencyCode)}.`
+          : null
+    setAmountError(problem)
+    if (problem) amountRef.current?.focus()
+    return !problem
+  }
 
   const openClaim = () => {
     setFlowError(null)
-    if (!finishing && link?.allowPartial) {
-      const value = majorToMinor(shownAmountText)
-      const problem =
-        value === null || value <= 0
-          ? "Enter the amount you sent."
-          : value > dueMinor
-            ? `Enter up to ${money(dueMinor, link.currencyCode)}.`
-            : null
-      setAmountError(problem)
-      if (problem) {
-        amountRef.current?.focus()
-        return
-      }
-    }
-    setSheetOpen(true)
+    if (!link || !amountIsValid()) return
+    setPayerName(
+      (current) =>
+        current ??
+        (finishing
+          ? (record?.payerName ?? "")
+          : initialPayerName({ record, customerName: link.customerName })),
+    )
+    setRevealed(true)
+  }
+
+  const closeClaim = () => {
+    setRevealed(false)
+    setFlowError(null)
+    requestAnimationFrame(() => paidButtonRef.current?.focus())
   }
 
   const recoverConflict = useCallback(
@@ -467,7 +507,8 @@ export function PaymentPage({
       }
       writeStoredReport(token, attempt)
       setRecord(attempt)
-      setSheetOpen(false)
+      setRevealed(false)
+      setPayerName(null)
       setReceipt(null)
       setAmountText(null)
     } catch (error) {
@@ -479,7 +520,7 @@ export function PaymentPage({
       }
       if (error.kind === "conflict") {
         if (await recoverConflict(attempt)) {
-          setSheetOpen(false)
+          setRevealed(false)
           return
         }
         if (/different details/i.test(error.message)) {
@@ -521,23 +562,23 @@ export function PaymentPage({
     if (reportToken) reloadStatus()
   }
 
-  const sheet =
-    link && (link.state === "active" || finishing) ? (
-      <ClaimSheet
-        open={sheetOpen}
-        onOpenChange={(open) => {
-          setSheetOpen(open)
-          if (!open) setFlowError(null)
-        }}
+  const nameLocked = finishing && Boolean(record?.payerName)
+  const claimStep = (receiptSlot?: ReactNode) =>
+    link && revealed && (link.state === "active" || finishing) ? (
+      <ClaimReveal
+        id={revealId}
         link={link}
         amountMinor={claimMinor}
-        initialName={finishing ? (record?.payerName ?? "") : ""}
-        detailsLocked={finishing && Boolean(record?.payerName)}
-        receipt={receipt}
-        onReceiptChange={setReceipt}
+        name={nameLocked ? (record?.payerName ?? "") : (payerName ?? "")}
+        onNameChange={setPayerName}
+        nameLocked={nameLocked}
+        receipt={receiptSlot}
         step={step}
         error={flowError}
-        onConfirm={(name) => void confirm(name)}
+        onConfirm={(name) => {
+          if (amountIsValid()) void confirm(name)
+        }}
+        onCancel={closeClaim}
       />
     ) : null
 
@@ -576,17 +617,14 @@ export function PaymentPage({
   const viewLink = view.link
   if (view.kind === "waiting")
     return (
-      <>
-        <WaitingView
-          link={viewLink}
-          status={view.status}
-          record={record}
-          connection={connection}
-          onReload={reloadStatus}
-          canRecover={hasPersistedReport(token, reportToken)}
-        />
-        {sheet}
-      </>
+      <WaitingView
+        link={viewLink}
+        status={view.status}
+        record={record}
+        connection={connection}
+        onReload={reloadStatus}
+        canRecover={hasPersistedReport(token, reportToken)}
+      />
     )
 
   if (view.kind === "unfinished")
@@ -600,13 +638,18 @@ export function PaymentPage({
           tone="wait"
           title="You haven't finished telling them"
           footer={
-            <button
-              type="button"
-              className={`${primaryButtonClass} mt-3`}
-              onClick={openClaim}
-            >
-              Finish telling them
-            </button>
+            revealed ? null : (
+              <button
+                ref={paidButtonRef}
+                type="button"
+                className={`${primaryButtonClass} mt-3`}
+                aria-expanded={false}
+                aria-controls={revealId}
+                onClick={openClaim}
+              >
+                Finish telling them
+              </button>
+            )
           }
         >
           Your report didn't reach {viewLink.businessName} yet. Send it again so
@@ -633,7 +676,19 @@ export function PaymentPage({
             ]}
           />
         ) : null}
-        {sheet}
+        {revealed ? (
+          <section className={`${cardClass} flex flex-col p-4`}>
+            {claimStep(
+              viewLink.receiptAllowed ? (
+                <ReceiptPicker
+                  receipt={receipt}
+                  onChange={setReceipt}
+                  disabled={step !== null}
+                />
+              ) : null,
+            )}
+          </section>
+        ) : null}
       </PaymentShell>
     )
 
@@ -653,6 +708,34 @@ export function PaymentPage({
     />
   )
 
+  // What the business confirmed and what is still due, from the decided report.
+  const outcomeAmounts =
+    outcome && outcome.state !== "not_received" ? (
+      <DetailList
+        rows={[
+          {
+            label: "Received",
+            value: (
+              <b className="tabular-nums">
+                {money(
+                  outcome.status.receivedAmountMinor ?? 0,
+                  viewLink.currencyCode,
+                )}
+              </b>
+            ),
+          },
+          {
+            label: "Still to pay",
+            value: (
+              <b className="tabular-nums">
+                {money(outcome.status.balanceMinor, viewLink.currencyCode)}
+              </b>
+            ),
+          },
+        ]}
+      />
+    ) : null
+
   if (viewLink.state === "paid")
     return (
       <PaymentShell>
@@ -663,6 +746,7 @@ export function PaymentPage({
             {viewLink.businessName}.
           </StatusCard>
         )}
+        {outcomeAmounts}
         <OrderSummary link={viewLink} />
       </PaymentShell>
     )
@@ -690,11 +774,56 @@ export function PaymentPage({
       </PaymentShell>
     )
 
-  const again = outcome?.state === "not_received"
+  const next = outcome
+    ? outcomeNextStep(outcome.state, {
+        linkState: viewLink.state,
+        balanceMinor: outcome.status.balanceMinor,
+      })
+    : null
+  const outcomeKey = outcome
+    ? `${outcome.status.reportId}:${outcome.status.revision}`
+    : null
+  if (outcome && !(next && newReportAfter === outcomeKey)) {
+    // What a new report would ask for: this link's amount, up to what is still due.
+    const nextMinor = Math.min(
+      viewLink.amountRequestedMinor,
+      outcome.status.balanceMinor,
+    )
+    return (
+      <PaymentShell>
+        {header}
+        {outcomeCard}
+        {outcomeAmounts}
+        {next ? (
+          <button
+            type="button"
+            className={primaryButtonClass}
+            onClick={() => {
+              focusNewForm.current = true
+              setNewReportAfter(outcomeKey)
+            }}
+          >
+            {next === "tell_again"
+              ? "Tell them again"
+              : nextMinor < outcome.status.balanceMinor
+                ? `Pay ${money(nextMinor, viewLink.currencyCode)} more`
+                : `Pay remaining ${money(nextMinor, viewLink.currencyCode)}`}
+          </button>
+        ) : null}
+        <OrderSummary link={viewLink} />
+      </PaymentShell>
+    )
+  }
+
+  const again = next === "tell_again"
   return (
     <PaymentShell hero={<PaymentHero link={viewLink} />}>
-      {outcomeCard}
-      <section className={`${cardClass} flex flex-col gap-3 p-4`}>
+      <section
+        ref={newFormRef}
+        tabIndex={-1}
+        aria-label="Pay by bank transfer"
+        className={`${cardClass} flex flex-col gap-3 p-4 outline-none`}
+      >
         {viewLink.allowPartial ? (
           <AmountField
             value={shownAmountText}
@@ -707,6 +836,7 @@ export function PaymentPage({
             currencySymbol={getCurrencySymbol(viewLink.currencyCode)}
             error={amountError}
             inputRef={amountRef}
+            disabled={step !== null}
           />
         ) : outcome ? (
           <FixedAmount
@@ -719,19 +849,29 @@ export function PaymentPage({
           amountMinor={viewLink.allowPartial ? null : dueMinor}
         />
         {viewLink.receiptAllowed ? (
-          <ReceiptPicker receipt={receipt} onChange={setReceipt} />
+          <ReceiptPicker
+            receipt={receipt}
+            onChange={setReceipt}
+            disabled={step !== null}
+          />
         ) : null}
-        <div className="sticky bottom-0 -mx-4 -mb-4 rounded-b-2xl bg-card px-4 pt-1 pb-[max(1rem,env(safe-area-inset-bottom))]">
-          <button
-            type="button"
-            className={primaryButtonClass}
-            onClick={openClaim}
-          >
-            {again ? "I have paid · tell them again" : "I have paid"}
-          </button>
-        </div>
+        {revealed ? (
+          claimStep()
+        ) : (
+          <div className="sticky bottom-0 -mx-4 -mb-4 rounded-b-2xl bg-card px-4 pt-1 pb-[max(1rem,env(safe-area-inset-bottom))]">
+            <button
+              ref={paidButtonRef}
+              type="button"
+              className={primaryButtonClass}
+              aria-expanded={false}
+              aria-controls={revealId}
+              onClick={openClaim}
+            >
+              {again ? "I have paid · tell them again" : "I have paid"}
+            </button>
+          </div>
+        )}
       </section>
-      {sheet}
     </PaymentShell>
   )
 }

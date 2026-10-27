@@ -9,6 +9,7 @@ import {
 function link(over: Partial<PublicPaymentLink> = {}): PublicPaymentLink {
   return {
     businessName: "Jawdah Poultry QA",
+    customerName: "Ishaq Yusuf",
     orderNumber: "ORD-059",
     orderStatus: "CONFIRMED",
     state: "active",
@@ -138,4 +139,5 @@ test("no bank account, holder or customer data reaches the preview", () => {
   expect(serialized).not.toContain("0012345678")
   expect(serialized).not.toContain("ManualQA")
   expect(serialized).not.toContain("GTBank")
+  expect(serialized).not.toContain("Ishaq")
 })
