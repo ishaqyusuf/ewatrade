@@ -66,11 +66,12 @@ board (`.brain/tasks/green-till-batch-board.md`).
 - **Type (native size/weight):** hero amount 36/800; hero or screen title
   22–23/800; header business name 17/800; section header 16/800; primary row
   information16/700; body16/400; supporting labels, metadata, dates, tile labels,
-  helpers, empty states and pills **at least16**. Use22line height for screen
-  copy. Money and counts use tabular numbers. This larger scale is the app-wide
-  standard (owner direction,19October2026; supersedes the14px supporting floor).
-- **Type tokens:** `src/styles/global.css` owns `text-xs`/`text-sm`/`text-base` =16
-  with22line height; hierarchy uses weight, colour and larger headings. Font tokens use explicit
+  helpers and pills14 with20line height. Body copy uses22line height. Money and
+  counts use tabular numbers. Owner direction,27October2026 restores the14px
+  supporting scale and supersedes the19October16px minimum.
+- **Type tokens:** `src/styles/global.css` owns `text-xs`/`text-sm` =14/20 and
+  `text-base` =16/22; primary shared record titles/amounts use the body scale.
+  Hierarchy uses size, weight, colour and larger headings. Font tokens use explicit
   native units: NativeWind's 14-unit `rem` must not silently shrink typography.
   Keep spacing/rem settings independent. Explicit native text styles follow
   the same minimum; use larger primary text where the information needs it.

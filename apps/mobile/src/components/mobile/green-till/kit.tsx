@@ -231,8 +231,8 @@ function AttentionCard({ item }: { item: AttentionItem }) {
           <NativeText
             style={{
               color: tint.fg,
-              fontSize: 16,
-              lineHeight: 22,
+              fontSize: 14,
+              lineHeight: 20,
               opacity: 0.85,
             }}
           >
@@ -356,7 +356,7 @@ export function RecordRow({
       <View className={stackDetails && largeText ? "w-full" : "min-w-0 flex-1"}>
         <Text
           className={cn(
-            "text-sm font-bold [-rn-line-height:22]",
+            "text-base font-bold [-rn-line-height:22]",
             danger ? "text-destructive" : "text-foreground",
           )}
           numberOfLines={lines}
@@ -366,7 +366,7 @@ export function RecordRow({
         {(Array.isArray(meta) ? meta : meta ? [meta] : []).map((line) => (
           <Text
             key={line}
-            className="text-xs [-rn-line-height:22] text-muted-foreground"
+            className="text-xs [-rn-line-height:20] text-muted-foreground"
             numberOfLines={lines}
           >
             {line}
@@ -378,7 +378,7 @@ export function RecordRow({
           className={stackDetails && largeText ? "items-start" : "items-end"}
         >
           {amount ? (
-            <Text className="text-sm font-bold tabular-nums text-foreground">
+            <Text className="text-base font-bold tabular-nums text-foreground">
               {amount}
             </Text>
           ) : null}
@@ -443,17 +443,17 @@ export function StatusPill({
           maxFontSizeMultiplier={1.4}
           style={{
             color: fg,
-            fontSize: 16,
+            fontSize: 14,
             fontWeight: "700",
             includeFontPadding: false,
-            lineHeight: 22,
+            lineHeight: 20,
             textAlignVertical: "center",
           }}
         >
           {label}
         </NativeText>
       ) : (
-        <Text className="text-xs font-bold [-rn-line-height:22] [-rn-include-font-padding:false] [-rn-text-align-vertical:center] text-muted-foreground">
+        <Text className="text-xs font-bold [-rn-line-height:20] [-rn-include-font-padding:false] [-rn-text-align-vertical:center] text-muted-foreground">
           {label}
         </Text>
       )}

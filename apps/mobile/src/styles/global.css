@@ -8,12 +8,11 @@
 
 @theme inline {
   /* Screen typography uses native units, independent of NativeWind's 14px rem.
-     All screen copy has a 16px floor, including helpers and metadata.
-     Weight, colour and larger headings preserve hierarchy. */
-  --text-xs: 16px;
-  --text-xs--line-height: calc(22 / 16);
-  --text-sm: 16px;
-  --text-sm--line-height: calc(22 / 16);
+     Labels and metadata use 14px; body copy keeps its 16px scale. */
+  --text-xs: 14px;
+  --text-xs--line-height: calc(20 / 14);
+  --text-sm: 14px;
+  --text-sm--line-height: calc(20 / 14);
   --text-base: 16px;
   --text-base--line-height: calc(22 / 16);
   --text-lg: 18px;
