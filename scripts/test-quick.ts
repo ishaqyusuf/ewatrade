@@ -41,6 +41,7 @@ export const suites = {
     "packages/errors/src/error-system.test.ts",
     "packages/service-commerce/src/contracts.test.ts",
     "packages/jobs/src/schedule-policy.test.ts",
+    "packages/communications/src/whatsapp-typing.test.ts",
     "apps/api/src/health-routes.test.ts",
     "packages/db/src/queries/public-storefront-listing.test.ts",
   ],
@@ -139,7 +140,7 @@ export function selectQuickPlan(files: string[]) {
       groups.add("mobile")
       groups.add("domain")
     } else if (
-      /^(apps\/api|packages\/(db|assistant|utils|payments|catalog|errors|email|jobs|oversight|service-commerce|storefront-runtime|storefront-contracts|storefront-templates))\//.test(
+      /^(apps\/api|packages\/(db|assistant|communications|utils|payments|catalog|errors|email|jobs|oversight|service-commerce|storefront-runtime|storefront-contracts|storefront-templates))\//.test(
         file,
       )
     ) {

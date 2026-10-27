@@ -643,7 +643,7 @@ suite("actual linked principal and canonical domain callers", () => {
     await db.assistantRun.delete({ where: { id: active.id } })
     await db.assistantBudget.update({
       where: { scopeKey: budgetKey },
-      data: { requests: GENERAL_BUDGET_LIMITS.maxRequests },
+      data: { tokens: GENERAL_BUDGET_LIMITS.maxTokens },
     })
     await expect(
       createGeneralAssistantTurn(ctx, {
@@ -666,11 +666,11 @@ suite("actual linked principal and canonical domain callers", () => {
         await db.assistantBudget.findUniqueOrThrow({
           where: { scopeKey: budgetKey },
         })
-      ).requests,
-    ).toBe(GENERAL_BUDGET_LIMITS.maxRequests)
+      ).tokens,
+    ).toBe(GENERAL_BUDGET_LIMITS.maxTokens)
     await db.assistantBudget.update({
       where: { scopeKey: budgetKey },
-      data: { requests: 2 },
+      data: { requests: 2, tokens: 0 },
     })
     await db.membership.update({
       where: { id: membershipId },

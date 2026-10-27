@@ -31,6 +31,7 @@ import { processAssistantWhatsAppEditRequest } from "./channel-proposal-edit"
 import { processAssistantWhatsAppReadPageTurn } from "./channel-read-page-turn"
 import { processAssistantWhatsAppReplyChoiceTurn } from "./channel-reply-choice-turn"
 import { prepareAssistantWhatsAppReview } from "./channel-review-staging"
+import { startAssistantWhatsAppTyping } from "./channel-typing"
 import { prepareAssistantWhatsAppWebReview } from "./channel-web-review-staging"
 import {
   createAssistantWhatsAppWorkflowReceiptContext,
@@ -114,6 +115,7 @@ export function defaultChannelTurnDependencies() {
     flow: processAssistantWhatsAppFlowTurn,
     readPage: processAssistantWhatsAppReadPageTurn,
     replyChoice: processAssistantWhatsAppReplyChoiceTurn,
+    typing: startAssistantWhatsAppTyping,
     createWorkflowTurn: createChannelWorkflowTurn,
     prepareMedia: prepareAssistantWhatsAppMediaTurn,
     notice: (
@@ -178,7 +180,12 @@ export type ChannelTurnDependencies = Omit<
   | "flow"
   | "readPage"
   | "replyChoice"
+  | "typing"
 > & {
+  typing?: (
+    ctx: Parameters<typeof startAssistantWhatsAppTyping>[0],
+    inbox: Parameters<typeof startAssistantWhatsAppTyping>[1],
+  ) => Promise<unknown>
   control?: ReturnType<typeof defaultChannelTurnDependencies>["control"]
   action?: ReturnType<typeof defaultChannelTurnDependencies>["action"]
   workflowAction?: ReturnType<
@@ -316,6 +323,12 @@ export async function processAssistantChannelTurn(
         parts,
       },
     }
+    if (
+      claim.purpose === "GENERAL" &&
+      "session" in ctx &&
+      "tenantContext" in ctx
+    )
+      await deps.typing?.(ctx, claim.inbox).catch(() => {})
     const turn =
       claim.purpose === "GENERAL"
         ? await deps.createTurn(ctx as GeneralContext, input)

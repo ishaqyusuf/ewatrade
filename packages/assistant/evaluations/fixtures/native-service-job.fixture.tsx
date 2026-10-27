@@ -188,6 +188,7 @@ function data(name: string) {
   if (name === "tenant.featureAvailability")
     return { storeId: "WRONG_CACHED_STORE" }
   if (name === "catalog.listItems") return []
+  if (name === "orders.paymentAccounts") return { book: null, accounts: [] }
   return undefined
 }
 function procedure(name: string) {
@@ -225,6 +226,7 @@ standIn("trpc/client", {
     },
     catalog: { listItems: procedure("catalog.listItems") },
     orders: {
+      paymentAccounts: procedure("orders.paymentAccounts"),
       list: procedure("orders.list"),
       listPage: procedure("orders.listPage"),
       customerCount: procedure("orders.customerCount"),

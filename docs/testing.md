@@ -61,7 +61,7 @@ The explicit mapping in `scripts/test-quick.ts` selects a small reviewed set:
 | Documentation / QA scripts | QA workflow and environment/isolation tests |
 | Dashboard, marketing, storefront | Core + web + domain smoke |
 | Mobile | Core + mobile + domain smoke |
-| API, DB, jobs, assistant and mapped shared contracts | All client/domain smoke groups |
+| API, DB, jobs, assistant, communications and mapped shared contracts | All client/domain smoke groups |
 | Root package/lock/config or workspace manifests | All smoke groups |
 | Unmapped source/config | Exit 2 with paths; review and extend the mapping |
 

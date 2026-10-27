@@ -1,0 +1,57 @@
+{
+  "version": 1,
+  "id": "2026-10-22-whatsapp-native-typing",
+  "tickets": ["H02"],
+  "summary": "Optional native WhatsApp read+typing before a new ordinary GENERAL turn, after current server-issued linked authority. LIVE only, exact inbox/binding/recipient/lease, valid inbound WAMID and unexpired customer window. One best-effort request, 1.5 second abort budget; failure cannot block the reply. This new method explicitly uses Graph v25 separately from all unchanged v21 OTP/outbound sends. No refresh loop, schema, environment, provider-setting, worker, permission or canonical command change. Source and fake-network checks are not live WhatsApp acceptance.",
+  "capabilities": [
+    {
+      "id": "catalog.product.create",
+      "change": "unchanged",
+      "rollout": "source",
+      "note": "Transient authenticated channel UX only; existing model/domain tools, exact review, confirmation, current scope and product command remain unchanged."
+    }
+  ],
+  "procedures": [],
+  "docs": [
+    {
+      "topic": "feature",
+      "status": "local_only",
+      "path": ".brain/features/whatsapp-assistant.md",
+      "note": "Coordinator records native typing placement/protocol and separately gated live acceptance in Brain/Workshop/mobile mirror."
+    },
+    {
+      "topic": "api",
+      "status": "not_applicable",
+      "note": "No inbound HTTP/tRPC contract change. Communications has an optional server-only provider method; Graph v25 read+typing is isolated from existing v21 sends."
+    },
+    {
+      "topic": "permissions",
+      "status": "not_applicable",
+      "note": "Existing private linked identity, LIVE classification, current grant/Store and rollout remain mandatory. QA/control/OTP/workflow/recovered turns do not trigger typing."
+    },
+    {
+      "topic": "capability",
+      "status": "not_applicable",
+      "note": "No domain capability, tool, confirmation or rollout enrollment change."
+    },
+    {
+      "topic": "schema",
+      "status": "not_applicable",
+      "note": "No schema or durable job/outbox contracts change; typing is nonpersistent optional provider UX."
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "test",
+      "path": "packages/communications/src/whatsapp-typing.test.ts",
+      "executed": true,
+      "result": "Two new fake-network provider cases plus two authenticated guard/failure cases in channel-typing.test.ts passed 4 tests / 35 assertions. Exact read+typing payload, separate v25 endpoint, existing text v21, no redirects, abort signal, invalid source no HTTP, generic error, LIVE/current lease/enrollment eligibility, QA/control/workflow/stale rejection and failure continuation. No actual provider or DB calls."
+    },
+    {
+      "kind": "review",
+      "path": "apps/api/src/assistant/channel-turn.ts",
+      "executed": true,
+      "result": "Thin optional hook is after current linked context and usable ordinary input, before new GENERAL turn. Earlier deterministic ACTION/control and recovered-run returns exclude typing. Midday runtime.ts uses best-effort thread.startTyping after linked user resolution. Native protocol checked against Meta-owned Postman Send typing indicator and read receipt collection; direct Meta documentation 429, current first-party Chat SDK docs/source establish v25 default and 25-second native lifetime. Actual Meta/client acceptance remains pending release."
+    }
+  ]
+}

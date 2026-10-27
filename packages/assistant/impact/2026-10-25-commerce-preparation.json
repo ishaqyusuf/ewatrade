@@ -2,25 +2,25 @@
   "version": 1,
   "id": "2026-10-25-commerce-preparation",
   "tickets": ["B02", "H01", "H02"],
-  "summary": "FCA01–27 local source/evidence expansion: full pinned Shopify taxonomy and protected reference query; persistent partial order preparation, exact scoped units/prices/stock, reviewed existing atomic payment/full-fulfillment composition; partial/generic service cards, same-form continuations, count-only diagnostics and rollback. No deployment, hosted Site publication, provider action or full28-ticket/target-client acceptance claim. Legacy B02/H01/H02 gate IDs link to the canonical FCA checkpoint. Other coverage rows explicitly retain prior snapshot-only synchronization. 26 October: actual Dashboard Product/Order/Service saves and recovery verified; client directives, routing, compatible Product action v1, canonical aliases, exact Catalog handoff and choice review labels fixed. Owner removed separate Product Review notes. No rollout change; global H01 has an unrelated Banking classification gap.",
+  "summary": "FCA01\u201327 local source/evidence expansion: full pinned Shopify taxonomy and protected reference query; persistent partial order preparation, exact scoped units/prices/stock, reviewed existing atomic payment/full-fulfillment composition; partial/generic service cards, same-form continuations, count-only diagnostics and rollback. No deployment, hosted Site publication, provider action or full28-ticket/target-client acceptance claim. Legacy B02/H01/H02 gate IDs link to the canonical FCA checkpoint. Other coverage rows explicitly retain prior snapshot-only synchronization. 26 October: actual Dashboard Product/Order/Service saves and recovery verified; client directives, routing, compatible Product action v1, canonical aliases, exact Catalog handoff and choice review labels fixed. Owner removed separate Product Review notes. No rollout change; global H01 has an unrelated Banking classification gap.",
   "capabilities": [
     {
       "id": "storefront.design.read",
-      "change": "unchanged",
+      "change": "added",
       "rollout": "source",
-      "note": "Coverage snapshot synchronization for pre-existing source already at HEAD; this Product slice neither implements nor enables this capability. Rollout remains source and no new acceptance is claimed."
+      "note": "Added relative to Production baseline 708b9d874; rollout remains source. Coverage snapshot synchronization for pre-existing source already at HEAD; this Product slice neither implements nor enables this capability. Rollout remains source and no new acceptance is claimed."
     },
     {
       "id": "storefront.design.generate",
-      "change": "unchanged",
+      "change": "added",
       "rollout": "source",
-      "note": "Coverage snapshot synchronization for pre-existing source already at HEAD; this Product slice neither implements nor enables this capability. Rollout remains source and no new acceptance is claimed."
+      "note": "Added relative to Production baseline 708b9d874; rollout remains source. Coverage snapshot synchronization for pre-existing source already at HEAD; this Product slice neither implements nor enables this capability. Rollout remains source and no new acceptance is claimed."
     },
     {
       "id": "storefront.design.accept",
-      "change": "unchanged",
+      "change": "added",
       "rollout": "source",
-      "note": "Coverage snapshot synchronization for pre-existing source already at HEAD; this Product slice neither implements nor enables this capability. Rollout remains source and no new acceptance is claimed."
+      "note": "Added relative to Production baseline 708b9d874; rollout remains source. Coverage snapshot synchronization for pre-existing source already at HEAD; this Product slice neither implements nor enables this capability. Rollout remains source and no new acceptance is claimed."
     },
     {
       "id": "catalog.product.create",
@@ -42,9 +42,9 @@
     },
     {
       "id": "services.job.prepare",
-      "change": "unchanged",
+      "change": "added",
       "rollout": "source",
-      "note": "Existing Dashboard form-only read preparer now retains partial/generic/quote service lines. Coverage row was already present in source before this expansion; snapshot synchronization does not mean a new service write/channel capability."
+      "note": "Added relative to Production baseline 708b9d874; rollout remains source. Existing Dashboard form-only read preparer now retains partial/generic/quote service lines. Coverage row was already present in source before this expansion; snapshot synchronization does not mean a new service write/channel capability."
     }
   ],
   "procedures": [

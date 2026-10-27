@@ -10,6 +10,10 @@ import { accountPrivacyPrivateWritesAllowed } from "./account-privacy-private-wr
 export { accountPrivacyPrivateWritesAllowed } from "./account-privacy-private-write"
 import { claimAssistantAttachmentsForMessage } from "./assistant-attachments"
 import {
+  type AssistantBudgetLimits,
+  assistantBudgetAdmission,
+} from "./assistant-budget-policy"
+import {
   type CreateCatalogItemInput,
   createCatalogItemInTransaction,
 } from "./catalog"
@@ -19,6 +23,7 @@ import {
   runInOwnTransaction,
 } from "./own-transaction"
 import type { DbClient } from "./types"
+export type { AssistantBudgetLimits } from "./assistant-budget-policy"
 
 export type AssistantScope = {
   tenantId: string
@@ -541,12 +546,6 @@ export async function completeAssistantRun(
   )
 }
 
-export type AssistantBudgetLimits = {
-  maxRequests: number
-  maxTokens: number
-  windowMs: number
-}
-
 export function assistantBudgetScopeKey(tenantId: string, purpose: string) {
   return hash(`assistant:${purpose}:${tenantId}`)
 }
@@ -865,11 +864,11 @@ export async function reserveAssistantBudgetInTransaction(
       now.getTime() - budget.windowStartedAt.getTime() >= input.limits.windowMs
     const requests = reset ? 0 : budget.requests
     const tokens = reset ? 0 : budget.tokens
-    if (
-      requests >= input.limits.maxRequests ||
-      tokens >= input.limits.maxTokens
+    const admission = assistantBudgetAdmission(
+      { requests, tokens },
+      input.limits,
     )
-      return { allowed: false as const, remainingRequests: 0 }
+    if (!admission.allowed) return admission
     await tx.assistantBudget.update({
       where: { scopeKey: input.scopeKey },
       data: reset
@@ -882,10 +881,7 @@ export async function reserveAssistantBudgetInTransaction(
           }
         : { requests: { increment: 1 } },
     })
-    return {
-      allowed: true as const,
-      remainingRequests: input.limits.maxRequests - requests - 1,
-    }
+    return admission
   }
   return reserve(db)
 }

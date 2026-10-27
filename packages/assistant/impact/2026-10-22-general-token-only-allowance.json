@@ -1,0 +1,74 @@
+{
+  "version": 1,
+  "id": "2026-10-22-general-token-only-allowance",
+  "tickets": ["H02"],
+  "summary": "Owner-selected GENERAL allowance is five million model tokens per Tenant/UTC month with no reply-count cutoff, shared by browser/mobile/WhatsApp and customer-message generation. Actual request and token usage continue to be recorded; existing counted SETUP/Product budgets and security rate limits remain unchanged. Current clients show token balance and unlimited replies. Numeric remainingRequests remains a deprecated token-availability compatibility marker for installed clients; old binaries can still mislabel its units until updated. No schema, provider, environment, hosted credit or OTP changes in this source patch.",
+  "capabilities": [
+    {
+      "id": "catalog.product.create",
+      "change": "unchanged",
+      "rollout": "source",
+      "note": "Cross-cutting GENERAL model admission changes only. Existing canonical product validation, current permission/Store scope, exact review, explicit confirmation and capability rollout remain unchanged. The same token budget covers other existing General capabilities."
+    }
+  ],
+  "procedures": [
+    {
+      "path": "assistant.allowance",
+      "status": "excluded",
+      "reason": "Existing protected transport returns token-only availability with additive unlimited-replies metadata and numeric legacy fields; no new command or authority."
+    },
+    {
+      "path": "assistant.conversation",
+      "status": "excluded",
+      "reason": "Existing protected saved conversation retains numeric snapshot compatibility and adds token-only allowance metadata."
+    },
+    {
+      "path": "customerMessages.draftWithAi",
+      "status": "form_only",
+      "reason": "Existing Owner/Admin reviewed customer-message generation shares GENERAL token admission; it gains no send or template-write authority."
+    }
+  ],
+  "docs": [
+    {
+      "topic": "feature",
+      "status": "local_only",
+      "path": ".brain/features/whatsapp-assistant.md",
+      "note": "Local source readiness and deployed acceptance remain separately recorded by the release coordinator."
+    },
+    {
+      "topic": "api",
+      "status": "local_only",
+      "path": ".brain/api/contracts.md",
+      "note": "remainingRequests is numeric token-availability compatibility metadata, requestLimit null, repliesUnlimited true. Old mobile label units remain a documented limitation; no mobile OTA or device action is implied."
+    },
+    {
+      "topic": "permissions",
+      "status": "not_applicable",
+      "note": "Current auth/scope/consent and security rate limits unchanged; only the General spend policy changes."
+    },
+    {
+      "topic": "capability",
+      "status": "not_applicable",
+      "note": "No capability/procedure enrollment or rollout change."
+    },
+    {
+      "topic": "schema",
+      "status": "not_applicable",
+      "note": "Existing AssistantBudget requests/tokens and monthly scope key unchanged; no migration or hosted mutation."
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "test",
+      "path": "packages/db/src/queries/assistant-budget-policy.test.ts",
+      "executed": true,
+      "result": "Focused admission/allowance/shared-label/actual isolated customer-message route set passed12tests60assertions with4unrelated tests filtered. Admission after1001requests succeeds while tokens remain, exact5m token ceiling refuses, counted workflows still refuse their count limit. Model generation mocked and fetch forbidden; no DB connection/provider call."
+    },
+    {
+      "kind": "test",
+      "path": "apps/mobile/src/components/mobile/assistant/general-model.test.ts",
+      "executed": true,
+      "result": "Only additive token-only/legacy numeric snapshot compatibility case:1pass5assertions,9unrelated tests filtered. No phone, emulator, app build or OTA action."
+    }
+  ]
+}

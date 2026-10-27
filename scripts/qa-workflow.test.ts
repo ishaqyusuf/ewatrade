@@ -62,6 +62,15 @@ describe("fast workflow scope", () => {
       selectQuickPlan(["apps/mobile/src/lib/quantity.test.ts"]).tests,
     ).toContain("apps/mobile/src/lib/quantity.test.ts")
   })
+  test("communications changes include reviewed fake-network typing coverage", () => {
+    const plan = selectQuickPlan(["packages/communications/src/whatsapp.ts"])
+    expect(plan.unknown).toEqual([])
+    expect(plan.groups).toEqual(["core", "domain", "web", "mobile"])
+    expect(plan.tests).toContain(
+      "packages/communications/src/whatsapp-typing.test.ts",
+    )
+  })
+
   test("shared onboarding previews select web and domain checks", () => {
     const plan = selectQuickPlan([
       "packages/onboarding/src/components/product-preview/platform.tsx",

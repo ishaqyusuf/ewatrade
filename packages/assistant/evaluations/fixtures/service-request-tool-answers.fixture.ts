@@ -48,7 +48,22 @@ function unrelated(path: string, functions: string[], schemas: string[] = []) {
 }
 unrelated("trpc/order-scope", ["orderScope"])
 unrelated("trpc/routers/business-reporting", ["createBusinessReportingCaller"])
-unrelated("assistant/general-proposals", ["draftGeneralProposal"])
+unrelated("assistant/general-proposals", [
+  "draftGeneralProposal",
+  "draftGeneralProposalInTransaction",
+  "inFreshGeneralTransaction",
+])
+unrelated("assistant/general-current-draft", [
+  "readCurrentGeneralDraftInTransaction",
+])
+unrelated("assistant/general-draft-correction", [
+  "createGeneralDraftCorrection",
+])
+// Construction alone is inert; every unrelated correction operation fails closed.
+mock.module(at("assistant/channel-proposal-edit"), () => ({
+  createWhatsAppDraftCorrection: () => ({ read: forbidden, edit: forbidden }),
+  hasCurrentWhatsAppEdit: forbidden,
+}))
 unrelated("assistant/general-quote-decision", ["reviewGeneralQuoteDecision"])
 unrelated("assistant/general-business-reporting", [
   "generalBusinessReportAnswer",
@@ -130,11 +145,14 @@ mock.module(at("assistant/general-context"), () => ({
   }),
   canUseCapability: (_ctx: unknown, capability: Capability) =>
     capability.mode === "read" && names.has(capability.tool),
+  canDraftGeneralCapability: () => false,
   assertCapability: (current: unknown, capability: Capability) => {
     checks.push({ capabilityId: capability.id, current })
     if (refuse) throw Error("Fixture fresh authority refused")
   },
   assertGeneralActionHandoffAuthority: forbidden,
+  assertGeneralActionAuthority: forbidden,
+  assertGeneralAction: forbidden,
 }))
 
 function original(name = "Saved customer"): ServiceRequestOriginal {

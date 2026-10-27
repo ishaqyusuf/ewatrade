@@ -1,4 +1,5 @@
 "use client"
+
 import {
   AssistantDraftJobHandoffProvider,
   useAssistantDraftJobHandoff,
@@ -6,6 +7,10 @@ import {
 import { useAssistantReceipt } from "@/hooks/use-assistant-receipt"
 import { useQuickChatParam } from "@/hooks/use-quick-chat-param"
 import { useTRPC } from "@/trpc/client"
+import {
+  generalTokenBudgetLine as generalBudgetLine,
+  generalTokenBudgetUsed as generalBudgetUsed,
+} from "@ewatrade/assistant/general/allowance"
 import { simpleTransferStep } from "@ewatrade/assistant/general/contracts"
 import { simpleExpenseStep } from "@ewatrade/assistant/general/contracts"
 import { simpleMoneyInStep } from "@ewatrade/assistant/general/contracts"
@@ -648,26 +653,13 @@ type GeneralBudget = {
   resetsAt: string
   requestLimit?: number | null
 }
+export { generalBudgetUsed, generalBudgetLine }
 
-/** Replies stop when either the message count or the token budget runs out. */
-export function generalBudgetUsed(budget: GeneralBudget) {
-  return budget.remainingRequests <= 0 || budget.remainingTokens <= 0
-}
-
-export function generalBudgetResets(budget: GeneralBudget) {
+export function generalBudgetResets(budget: { resetsAt: string }) {
   return new Date(budget.resetsAt).toLocaleDateString(undefined, {
     day: "numeric",
     month: "short",
   })
-}
-
-/** Footer line; never shows messages left once the token budget is spent. */
-export function generalBudgetLine(budget: GeneralBudget) {
-  const resets = generalBudgetResets(budget)
-  if (generalBudgetUsed(budget)) return `Reply budget used · resets ${resets}`
-  return budget.requestLimit
-    ? `${budget.remainingRequests} of ${budget.requestLimit} chat messages left · resets ${resets}`
-    : `${budget.remainingRequests} messages left · resets ${resets}`
 }
 
 export function allowanceLine(vm: GeneralAssistantVM) {

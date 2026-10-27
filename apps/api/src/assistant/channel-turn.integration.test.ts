@@ -676,10 +676,10 @@ suite("actual durable worker and shared GENERAL turn", () => {
         create: {
           scopeKey: budgetKey,
           windowStartedAt: new Date(),
-          requests: GENERAL_BUDGET_LIMITS.maxRequests - 1,
-          tokens: 0,
+          requests: 0,
+          tokens: GENERAL_BUDGET_LIMITS.maxTokens - 1,
         },
-        update: { requests: GENERAL_BUDGET_LIMITS.maxRequests - 1, tokens: 0 },
+        update: { requests: 0, tokens: GENERAL_BUDGET_LIMITS.maxTokens - 1 },
       })
     const received = await incoming(9)
     const claim = await claimAssistantWhatsAppInbox(db, received.id, [userId])
@@ -735,8 +735,8 @@ suite("actual durable worker and shared GENERAL turn", () => {
         await db.assistantBudget.findUniqueOrThrow({
           where: { scopeKey: budgetKey },
         })
-      ).requests,
-    ).toBe(GENERAL_BUDGET_LIMITS.maxRequests)
+      ).tokens,
+    ).toBeGreaterThanOrEqual(GENERAL_BUDGET_LIMITS.maxTokens)
     expect(
       await db.assistantWhatsAppOutbox.count({
         where: { inboxId: received.id },
@@ -774,8 +774,8 @@ suite("actual durable worker and shared GENERAL turn", () => {
         await db.assistantBudget.findUniqueOrThrow({
           where: { scopeKey: budgetKey },
         })
-      ).requests,
-    ).toBe(GENERAL_BUDGET_LIMITS.maxRequests)
+      ).tokens,
+    ).toBeGreaterThanOrEqual(GENERAL_BUDGET_LIMITS.maxTokens)
     expect(
       (
         await db.assistantWhatsAppOutbox.findUniqueOrThrow({

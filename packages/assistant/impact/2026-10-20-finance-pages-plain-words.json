@@ -13,8 +13,8 @@
     },
     {
       "path": "finance.supplierBalances",
-      "status": "excluded",
-      "reason": "Dashboard Supplier list projection; the supplier statement read already carries payable and advance totals for the assistant."
+      "status": "removed",
+      "reason": "Dashboard Supplier list projection; the supplier statement read already carries payable and advance totals for the assistant. Removed in the complete pending release; existing scoped supplier directory/statement reads retain payable and advance projections. No assistant invocation or replacement authority."
     },
     {
       "path": "finance.customerBalances",

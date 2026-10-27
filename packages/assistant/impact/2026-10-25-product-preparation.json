@@ -2,25 +2,25 @@
   "version": 1,
   "id": "2026-10-25-product-preparation",
   "tickets": ["B02", "H01", "H02"],
-  "summary": "Local draft-first Product slice: shared defaults and exact pack calculations, editable category/subcategory, sparse choices, and strict confirmation readiness. No deployment or rollout change. Coverage refresh also synchronizes previously stale rows for source already present at HEAD. New plan linkage: FCA-02,05–07,09–12,25–27 Product portions; legacy gate ticket IDs retain B02/H01/H02.",
+  "summary": "Local draft-first Product slice: shared defaults and exact pack calculations, editable category/subcategory, sparse choices, and strict confirmation readiness. No deployment or rollout change. Coverage refresh also synchronizes previously stale rows for source already present at HEAD. New plan linkage: FCA-02,05\u201307,09\u201312,25\u201327 Product portions; legacy gate ticket IDs retain B02/H01/H02.",
   "capabilities": [
     {
       "id": "storefront.design.read",
-      "change": "unchanged",
+      "change": "added",
       "rollout": "source",
-      "note": "Coverage snapshot synchronization for pre-existing source already at HEAD; this Product slice neither implements nor enables this capability. Rollout remains source and no new acceptance is claimed."
+      "note": "Added relative to Production baseline 708b9d874; rollout remains source. Coverage snapshot synchronization for pre-existing source already at HEAD; this Product slice neither implements nor enables this capability. Rollout remains source and no new acceptance is claimed."
     },
     {
       "id": "storefront.design.generate",
-      "change": "unchanged",
+      "change": "added",
       "rollout": "source",
-      "note": "Coverage snapshot synchronization for pre-existing source already at HEAD; this Product slice neither implements nor enables this capability. Rollout remains source and no new acceptance is claimed."
+      "note": "Added relative to Production baseline 708b9d874; rollout remains source. Coverage snapshot synchronization for pre-existing source already at HEAD; this Product slice neither implements nor enables this capability. Rollout remains source and no new acceptance is claimed."
     },
     {
       "id": "storefront.design.accept",
-      "change": "unchanged",
+      "change": "added",
       "rollout": "source",
-      "note": "Coverage snapshot synchronization for pre-existing source already at HEAD; this Product slice neither implements nor enables this capability. Rollout remains source and no new acceptance is claimed."
+      "note": "Added relative to Production baseline 708b9d874; rollout remains source. Coverage snapshot synchronization for pre-existing source already at HEAD; this Product slice neither implements nor enables this capability. Rollout remains source and no new acceptance is claimed."
     },
     {
       "id": "catalog.product.create",
@@ -30,9 +30,9 @@
     },
     {
       "id": "services.job.prepare",
-      "change": "unchanged",
+      "change": "added",
       "rollout": "source",
-      "note": "Coverage snapshot synchronization for pre-existing source already at HEAD; this Product slice neither implements nor enables this capability. Rollout remains source and no new acceptance is claimed."
+      "note": "Added relative to Production baseline 708b9d874; rollout remains source. Coverage snapshot synchronization for pre-existing source already at HEAD; this Product slice neither implements nor enables this capability. Rollout remains source and no new acceptance is claimed."
     }
   ],
   "procedures": [

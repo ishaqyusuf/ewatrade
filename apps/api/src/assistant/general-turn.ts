@@ -41,8 +41,8 @@ import {
   withAttachmentText,
 } from "./chat-attachments"
 import {
-  GENERAL_BUDGET_LIMITS,
   generalBudgetScopeKey,
+  resolveGeneralBudgetLimits,
 } from "./general-allowance"
 import { type GeneralContext, requireGeneralScope } from "./general-context"
 import { generalPersistentParts } from "./general-persistence"
@@ -104,7 +104,13 @@ export async function createGeneralAssistantTurn(
       "ASSISTANT_UNAVAILABLE",
       "The assistant is unavailable. Your saved answers and proposals are still here.",
     )
-  const budgetScopeKey = generalBudgetScopeKey(scope)
+  const budgetNow = new Date()
+  const budgetScopeKey = generalBudgetScopeKey(scope, budgetNow)
+  const budgetLimits = await resolveGeneralBudgetLimits(
+    ctx.db,
+    scope,
+    budgetNow,
+  )
   const textParts = body.message.parts.filter(
     (part): part is { type: "text"; text: string } => part.type === "text",
   )
@@ -174,7 +180,7 @@ export async function createGeneralAssistantTurn(
     )
   const budget = await reserveAssistantBudget(ctx.db, {
     scopeKey: budgetScopeKey,
-    limits: GENERAL_BUDGET_LIMITS,
+    limits: budgetLimits,
   })
   if (!budget.allowed) {
     await completeAssistantRun(ctx.db, {

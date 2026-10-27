@@ -6,15 +6,15 @@
   "capabilities": [
     {
       "id": "sales.payment_links.read",
-      "change": "unchanged",
+      "change": "added",
       "rollout": "source",
-      "note": "Assistant payment-link creation/read scope, confirmation rules and rollout unchanged; public-page customer name is editable convenience only."
+      "note": "Added relative to Production baseline 708b9d874; rollout remains source. Assistant payment-link creation/read scope, confirmation rules and rollout unchanged; public-page customer name is editable convenience only."
     },
     {
       "id": "sales.payment_links.create",
-      "change": "unchanged",
+      "change": "added",
       "rollout": "source",
-      "note": "Assistant payment-link creation/read scope, confirmation rules and rollout unchanged; public-page customer name is editable convenience only."
+      "note": "Added relative to Production baseline 708b9d874; rollout remains source. Assistant payment-link creation/read scope, confirmation rules and rollout unchanged; public-page customer name is editable convenience only."
     }
   ],
   "procedures": [],

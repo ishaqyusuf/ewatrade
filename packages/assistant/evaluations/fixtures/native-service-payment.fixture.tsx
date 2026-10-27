@@ -50,6 +50,25 @@ standIn("components/ui/modal", {
     dismiss: () => {},
   }),
 })
+// This fixture exercises raw amount and permission boundaries with no Finance
+// book. Account selection has its own shared model/hook coverage.
+standIn("components/mobile/create-sale/checkout-money-account", {
+  CheckoutMoneyAccountField: () => null,
+})
+standIn("hooks/use-order-payment-account", {
+  useOrderPaymentAccount: () => ({
+    state: { kind: "not_needed" },
+    list: [],
+    ready: true,
+    chosen: null,
+    choose: () => {
+      throw Error("No account selection in raw amount fixture")
+    },
+    retry: () => {
+      throw Error("No account transport in raw amount fixture")
+    },
+  }),
+})
 let amountField:
   | {
       value: string

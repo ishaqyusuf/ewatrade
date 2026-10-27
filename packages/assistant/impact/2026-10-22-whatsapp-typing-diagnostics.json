@@ -1,0 +1,57 @@
+{
+  "version": 1,
+  "id": "2026-10-22-whatsapp-typing-diagnostics",
+  "tickets": ["H02"],
+  "summary": "Repair silent native typing outcomes with bounded sanitized provider results and content-free request-correlated accepted/skipped/failed reports. Preserve all identity/lease/LIVE/enrollment guards, ordinary GENERAL hook placement, original v25 payload, 1500ms deadline and existing v21 message/OTP transport. No domain capability, public API, worker, schema, permission or rollout change. This makes a future owner check diagnosable; it is not proof of native typing display.",
+  "capabilities": [
+    {
+      "id": "catalog.product.create",
+      "change": "unchanged",
+      "rollout": "source",
+      "note": "Transport diagnostics only; shared assistant/domain authority, review, confirmation and business commands unchanged."
+    }
+  ],
+  "procedures": [],
+  "docs": [
+    {
+      "topic": "feature",
+      "status": "local_only",
+      "path": ".brain/features/whatsapp-assistant.md",
+      "note": "Native observation and diagnostic release tracked separately; owner explicitly omits hosted Site update and requests local Workshop."
+    },
+    {
+      "topic": "api",
+      "status": "not_applicable",
+      "note": "Only optional internal provider return/error types changed; no HTTP/tRPC caller contract."
+    },
+    {
+      "topic": "permissions",
+      "status": "not_applicable",
+      "note": "All existing guards retained; numeric status/code/subcode and internal request correlation only; no raw body, text, token, phone or provider IDs logged."
+    },
+    {
+      "topic": "capability",
+      "status": "not_applicable",
+      "note": "No merchant operation or entitlement change."
+    },
+    {
+      "topic": "schema",
+      "status": "not_applicable",
+      "note": "No schema, durable result, outbox or job contract change."
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "test",
+      "path": "packages/communications/src/whatsapp-typing.test.ts",
+      "executed": true,
+      "result": "Combined provider/channel focused run:8tests137assertions pass. Accepted protocol/v21 preservation, rejected numeric-only details, timeout/network, malformed/oversized response, guard reasons/privacy and failed reporter do not block reply. Fake network only; no repeat of broad suites/types."
+    },
+    {
+      "kind": "review",
+      "path": "apps/api/src/assistant/channel-typing.ts",
+      "executed": true,
+      "result": "Coordinator compares original guard order and requirements, unchanged hook/payload/deadline/OTP path, safe typed diagnostics and no logged provider data; separate independent privacy/guard review passes with no actionable findings. Actual prior ordinary response passed but no native header text; direct existing-message Meta request accepted separately and does not establish automatic display."
+    }
+  ]
+}

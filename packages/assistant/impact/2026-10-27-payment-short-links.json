@@ -6,15 +6,15 @@
   "capabilities": [
     {
       "id": "sales.payment_links.read",
-      "change": "unchanged",
+      "change": "added",
       "rollout": "source",
-      "note": "Existing exact-scope commands and rollout unchanged; newly created links and WhatsApp forwardable chunks accept only canonical short references on the configured trusted public origin."
+      "note": "Added relative to Production baseline 708b9d874; rollout remains source. Existing exact-scope commands and rollout unchanged; newly created links and WhatsApp forwardable chunks accept only canonical short references on the configured trusted public origin."
     },
     {
       "id": "sales.payment_links.create",
-      "change": "unchanged",
+      "change": "added",
       "rollout": "source",
-      "note": "Existing exact-scope commands and rollout unchanged; newly created links and WhatsApp forwardable chunks accept only canonical short references on the configured trusted public origin."
+      "note": "Added relative to Production baseline 708b9d874; rollout remains source. Existing exact-scope commands and rollout unchanged; newly created links and WhatsApp forwardable chunks accept only canonical short references on the configured trusted public origin."
     }
   ],
   "procedures": [],

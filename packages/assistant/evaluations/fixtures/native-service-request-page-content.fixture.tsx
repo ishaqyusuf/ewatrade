@@ -135,7 +135,7 @@ test("count, coverage, filters and bounded rows show only list facts; opening pa
     "matching",
     "Needs information · Customer contains “ada”",
     "2026-10-15T15:20:00.000Z (UTC)",
-    "Generic Service Requests only — not Product Inquiries or clinical requests.",
+    "Generic Service Requests only — not Item Inquiries or clinical requests.",
     "pages are never added together",
     "Adaeze Okafor",
     "AO",
@@ -182,9 +182,7 @@ test("an empty first page and an empty later page say different, honest things",
   expect(first).toContain(
     "No Service Requests match these filters in this Store.",
   )
-  expect(first).toContain(
-    "does not cover Product Inquiries or clinical requests",
-  )
+  expect(first).toContain("does not cover Item Inquiries or clinical requests")
   const later = render(page([]), { onRestart: () => {} })
   expect(later).toContain(
     "No requests on this page. Start again from the first page.",

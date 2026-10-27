@@ -384,3 +384,22 @@ test("activity Opens stay in the event's own Store", async () => {
     ),
   ).toEqual({ unavailable: "Open this record on the dashboard." })
 })
+
+test("General snapshots accept old cache and additive token-only allowance without nullable legacy counters", () => {
+  expect(readGeneralSnapshot(data)).not.toBeNull()
+  const snapshot = readGeneralSnapshot({
+    ...data,
+    allowance: {
+      remainingRequests: 4_399_999,
+      remainingTokens: 4_399_999,
+      repliesUnlimited: true,
+      requestLimit: null,
+      tokenLimit: 5_000_000,
+      resetsAt: "2026-11-01T00:00:00Z",
+    },
+  })
+  expect(snapshot?.allowance.repliesUnlimited).toBe(true)
+  expect(typeof snapshot?.allowance.remainingRequests).toBe("number")
+  expect(snapshot?.allowance.remainingRequests).toBeGreaterThan(0)
+  expect(snapshot?.allowance.requestLimit).toBeNull()
+})
