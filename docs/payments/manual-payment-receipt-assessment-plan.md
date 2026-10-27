@@ -7,6 +7,9 @@ review, duplicate-transfer protection, larger partial payments, business credit,
 later-order credit application and refunds. Owner scope expanded on 27 October
 2026 to include business-managed customer balances, positive-balance display on
 Orders/payment links, explicit credit use and future automated banking adapters.
+Further owner refinement adds a customer-copyable payment reference, fast merchant
+matching/review and a verified stamp with explicit confirmation provenance. The
+existing Banking02 Workshop is the review authority for the updated design.
 This remains one planning deliverable with eight proposed delivery milestones;
 their scope is expanded below, implementation remains 0/8. It does not authorize
 implementation, model calls with customer data, account lookups, fund movement or
@@ -117,6 +120,59 @@ Customer receipt/check status, order payment status, credit availability and ref
 status remain separate. “Order paid; refund requested” is a valid combined result.
 After submission or confirmation, later AI results can add evidence but cannot
 change money, decisions or allocation automatically.
+
+### Payment references and the verified stamp
+
+Issue a short, readable, non-secret payment reference such as `EWA-7K4P9D2Q` with
+the saved payment request/attempt. Display it beside the amount and receiving-bank
+instructions with **Copy reference** and **Paste this reference into your bank
+app's narration or description**. Use a copy-friendly alphabet and bounded length
+tested against supported bank narration fields; generate randomly, enforce
+business-scoped uniqueness with collision retry, and include no customer PII.
+Do not encode authorization, business balances or bearer tokens in this reference.
+
+Keep the requested reference distinct from Order number, public link code and the
+bank transaction/session identifier. A refresh/copy/forward of the same active
+attempt preserves its saved reference. A subsequent installment/new payment
+attempt receives its own stable reference through an explicit idempotent command;
+retain earlier attempt/transfer/reference history. No mutation on ordinary page
+GET. Clarify the current attempt when recovering a submitted or decided report.
+
+Extract visible narration from the receipt independently and compare the actual
+bank record on merchant review. Conservative case/spacing normalization preserves
+raw text. Missing/truncated/altered narration is **Needs bank check**, not automatic
+failure: banks do not uniformly preserve narration and an actual transfer must
+remain reportable. One customer reference can appear on multiple actual transfers;
+it is a matching hint, never a unique bank transfer or proof of settled funds.
+Strong duplicate-consumption protection still uses validated transfer identity.
+
+The merchant inbox and review show reference, claim, expected account/amount,
+date and receipt findings, with **Reference matched** as supporting evidence.
+**Mark received** opens a concise review with the actual receiving account,
+amount/date, available bank reference, allocation and an explicit bank-check
+attestation. Confirmation is idempotent, permission-checked and stale/duplicate-
+safe. Discrepancies require normal review; there is no bulk blind approval or
+silent model confirmation. Existing management authority applies to excess/refunds.
+
+Use distinct labels throughout public and merchant screens:
+
+| Label | Evidence / authority |
+| --- | --- |
+| Reference matched | Observed narration agrees with this saved request; no money recorded |
+| Receipt checked | Supported fields appear consistent under the assessment rules; still unverified funds |
+| Payment reported / awaiting confirmation | Customer claim saved, waiting for actual bank check |
+| Payment verified · Confirmed by business | Authorized merchant confirmed actual received amount; canonical financial transaction committed, with actor/time |
+| Bank reconciled (future) | Independently authenticated bank/provider event matched the canonical transfer; retain source/time |
+
+No green verified/funds-received stamp is awarded solely for an AI reading,
+matching narration, upload, customer checkbox or a printed success status. Partial
+verification states the confirmed amount and remaining Order due. Credit-only
+settlement says **Paid with customer credit**, with no new bank-transfer claim.
+Public projections show the customer their own reference and safe verification
+provenance, never another person's account history or internal staff identifiers.
+Later reversal/correction updates the authoritative status rather than retaining
+a misleading verified stamp. Verification is a payment fact, not bank-account or
+business-identity certification.
 
 ### Business customer-balance management
 
@@ -570,7 +626,7 @@ not a recalculation of the Finance roadmap or older manual-payment acceptance.
 | 2. Provider evaluation | Purpose-specific schema and controlled test corpus; comparable OpenAI/DeepSeek measurements; data-processing decision, model selection and cost/latency budgets; no live customer receipts without approved admission |
 | 3. Safe upload and assessment | Reused private ingress, bounded rendering, durable job/generation/budget/recovery, validated extractor and deterministic findings; timeout/manual fallback works |
 | 4. Duplicate protection | Exact-file handling, semantic candidates, verified transfer registry, historical coverage and all relevant entry paths; atomic competing confirmations cannot double-consume a transfer |
-| 5. Extended report and balance UI/contracts | Larger claims, receipt/entered mismatch, explicit apply-more/credit/refund preference, no-receipt/manual fallback; business balance management and authorized positive-credit-only Order/payment-link display, current financial snapshot and reload recovery |
+| 5. Extended report and balance UI/contracts | Saved copyable payment references, evidence-specific matching/verified stamps and concise merchant confirmation; larger claims, receipt/entered mismatch, explicit apply-more/credit/refund preference, manual fallback; positive-credit-only Order/payment-link display, current financial snapshot and reload recovery |
 | 6. Canonical excess and existing-credit allocation | Single receipt conserves R=A+E; reuse customer ledger, effective dates and source linkage; customer-authorized credit-only/mixed payments and installment attribution; no double cash; authority/closed-period/concurrency checks pass |
 | 7. Refund management and automation seams | Unused-credit/excess and ordinary eligible Order refund sources; encrypted destination, identity review, reservation, mixed-tender restoration, controlled completion/cancellation/reversal; reusable manual/provider adapter contracts, no automatic payout; spend/refund races preserve held funds |
 | 8. Acceptance and staged release | Focused source/types, money/permission/concurrency SQL and representative public/dashboard/native checks, H01/H02 and Brain impact; shadow pilot then advisory flags; exact candidate/Preview/Production release handled only when separately authorized |
@@ -624,6 +680,12 @@ Required financial cases include:
   financial identity; duplicate provider events never create another receipt or
   allocation. Provider refunds preserve approved source/destination/version and
   idempotent dispatch/reconciliation semantics.
+- Reference issuance collision/replay, stable refresh/copy, new installment history,
+  omitted/truncated narration, wrong reference and different real transfers sharing
+  narration; reference never acts as an auth token or replaces bank transfer identity.
+  Matching receipt/reference cannot show Payment verified until canonical merchant
+  confirmation; stale/revoked/duplicate confirmation refuses safely, partial and
+  reversed/corrected outcomes display the current truth.
 - Scope revoked before dispatch/read/write; foreign report/artifact/destination;
   prompt injection; unsafe/decompression-bomb PDF; stale generation; deleted
   receipt during inference; missing entitlement; provider quota/timeout/outage.
@@ -656,3 +718,42 @@ No reliable date estimate is assigned before the product/identity/refund choices
 and provider evaluation are settled. Receipt extraction is the smaller component;
 safe money allocation, custody accounting, refunds and concurrency are the larger
 engineering scope.
+
+## 11. Workshop review candidate — 27 October 2026
+
+The requested updated design is published in the existing
+[Business banking Workshop](https://workshop.localhost/ewatrade/finance/business-banking).
+Review **Banking02 v13**, exact revision
+`3e354a8b-85f7-4577-908b-a9382b406e9c`, through its
+[saved review link](https://workshop.localhost/ewatrade/finance/business-banking/directions/02?rev=3e354a8b-85f7-4577-908b-a9382b406e9c).
+It is unselected and marked Not implemented. Existing v9 owner selection
+`a541f574-c656-4f72-86e2-a2259a0d1534`, two implementation records and other
+directions remain intact; intermediate v10–12 previews are retained.
+
+The proposed screens cover copyable payment references, receipt findings,
+Reference matched versus business-confirmed Payment verified, concise Mark
+received review, larger partial/excess preferences, refund detail collection,
+customer balances and explicit later-Order credit use, plus refund management.
+The floating config panel navigates public, dashboard and mobile HTML studies,
+their states, theme and phone size. Earlier bank/notification/assistant flows
+remain available. These are isolated sample interactions, not new runtime features.
+
+Exact Claude Opus5.5/high was attempted with the installed CLI and the returned
+model verified. That owned pass produced no design files in its extended run and
+was stopped; Codex completed the artifact directly under the owner fallback. No
+quota rejection or substitute model is claimed.
+
+Focused archived-preview checks cover copy fallback, inline payer reveal,
+matched-before-confirmed separation, bank-check acknowledgement, partial/full
+credit, zero-credit hiding, excess refund validation/submission, refund approval
+versus completion, screen/theme/size changes, collapse/reopen and reset. Phone
+reference wrapping, notch clearance and stale preview toast were corrected in
+immutable follow-up revisions. Final archived inline JavaScript parses and the
+final page console has no captured errors. The sandbox denies automatic clipboard
+write; the reference becomes selected text for manual copy, so actual OS clipboard
+bytes are not accepted evidence. This is browser/HTML mock proof, not native,
+identity, financial, AI-accuracy or release acceptance.
+
+Workshop design delivery **4/4 complete**; planning **4/4 complete**; proposed
+product implementation **0/8 started**. New receipt/reference/credit/refund behavior
+still requires an exact owner design selection before implementation.
