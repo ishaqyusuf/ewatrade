@@ -17,6 +17,7 @@
     "./collection-intent": "./src/collection-intent.ts",
     "./customer-ledger-statement-export": "./src/customer-ledger-statement-export.ts",
     "./manual-payments": "./src/manual-payments.ts",
+    "./payment-alerts-view": "./src/payment-alerts-view.ts",
     "./countries": "./src/countries.ts",
     "./geo-address": "./src/geo-address.ts",
     "./search-rank": "./src/search-rank.ts",

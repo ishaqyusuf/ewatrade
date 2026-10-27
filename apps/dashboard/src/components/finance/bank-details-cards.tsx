@@ -3,10 +3,17 @@ import { spacedAccountNumber } from "@/components/business-banking/business-bank
 import { FormFeedback } from "@/components/forms/form-feedback"
 import { Badge, Button, toast } from "@ewatrade/ui"
 import {
+  type AccountAlertsSummary,
+  accountAlertsRow,
+} from "@ewatrade/utils/payment-alerts-view"
+import {
   Add01Icon,
+  Alert02Icon,
   BankIcon,
   Copy01Icon,
+  Mail01Icon,
   PencilEdit02Icon,
+  WhatsappIcon,
 } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
 
@@ -17,6 +24,7 @@ export type BankDetailsAccount = {
   bankAccountNumber: string | null
   bankAccountHolder: string | null
   paymentsPausedAt: Date | string | null
+  paymentAlerts?: AccountAlertsSummary | null
 }
 
 export function hasBankDetails(account: BankDetailsAccount) {
@@ -147,6 +155,38 @@ function BankDetailsCard({
           {account.bankAccountHolder}
         </span>
       </div>
+      <AlertsRow summary={account.paymentAlerts ?? null} />
     </article>
+  )
+}
+
+/** Who gets payment alerts for this account, read-only. Nothing when never set up. */
+function AlertsRow({ summary }: { summary: AccountAlertsSummary | null }) {
+  const row = accountAlertsRow(summary)
+  if (!row) return null
+  return (
+    <div className="grid gap-0.5">
+      <span className="text-xs text-muted-foreground">Payment alerts</span>
+      <span className="flex items-start gap-1.5">
+        <HugeiconsIcon
+          icon={
+            row.icon === "email"
+              ? Mail01Icon
+              : row.icon === "whatsapp"
+                ? WhatsappIcon
+                : Alert02Icon
+          }
+          className="mt-0.5 size-4 shrink-0"
+          aria-hidden
+        />
+        <span className="min-w-0 break-words">
+          <b className="font-medium">{row.label}</b>
+          {row.names ? ` · ${row.names}` : ""}
+        </span>
+      </span>
+      {row.previous ? (
+        <span className="text-xs text-muted-foreground">{row.previous}</span>
+      ) : null}
+    </div>
   )
 }

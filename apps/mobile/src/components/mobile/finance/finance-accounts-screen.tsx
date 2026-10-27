@@ -9,6 +9,7 @@ import { useOperationalModeStore } from "@/store/operationalModeStore"
 import { useTRPC } from "@/trpc/client"
 import type { RouterOutputs } from "@ewatrade/api/trpc/routers/_app"
 import { formatFinanceMoney } from "@ewatrade/utils/finance-money"
+import { accountAlertsRow } from "@ewatrade/utils/payment-alerts-view"
 import { useQuery } from "@tanstack/react-query"
 import { type Href, useRouter } from "expo-router"
 import { useState } from "react"
@@ -31,6 +32,7 @@ import {
   type FinanceWorkspace,
   FinanceWorkspaceGate,
 } from "./finance-workspace-gate"
+import { PaymentPlanNotices } from "./payment-plan-notices"
 import { useMobileFinanceCommand } from "./use-mobile-finance-command"
 
 const PURPOSE_LABELS = {
@@ -96,6 +98,14 @@ function BankDetailsSection({
                 account.bankAccountNumber &&
                 account.bankAccountHolder,
             )
+            // Who hears about reported transfers, read-only. Nothing when never set up.
+            const alerts = accountAlertsRow(account.paymentAlerts ?? null)
+            const alertLines = alerts
+              ? [
+                  `Payment alerts: ${alerts.label}${alerts.names ? ` · ${alerts.names}` : ""}`,
+                  ...(alerts.previous ? [alerts.previous] : []),
+                ]
+              : []
             return (
               <View key={account.id} className="px-3.5">
                 <RecordRow
@@ -106,8 +116,9 @@ function BankDetailsSection({
                       ? [
                           `${account.bankName} · ${spacedAccountNumber(account.bankAccountNumber ?? "")}`,
                           account.bankAccountHolder ?? "",
+                          ...alertLines,
                         ]
-                      : "No bank details yet"
+                      : ["No bank details yet", ...alertLines]
                   }
                   avatar={{ icon: "Building2", tint: ready ? "sky" : "muted" }}
                   status={
@@ -231,6 +242,15 @@ function MoneyWorkspace({ book, actorUserId, tenantId }: FinanceWorkspace) {
       ListHeaderComponent={
         <View className="gap-4 pb-1">
           {feedback}
+          <PaymentPlanNotices
+            bookId={book.id}
+            onReview={(accountId) =>
+              router.push({
+                pathname: "/finance-bank-details-modal",
+                params: { accountId },
+              } as Href)
+            }
+          />
           {balances.isError ? (
             <StatusBanner
               title="Balances unavailable"

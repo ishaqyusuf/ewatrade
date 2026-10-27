@@ -1,5 +1,6 @@
 "use client"
 import { FormFeedback } from "@/components/forms/form-feedback"
+import { PaymentPlanNotices } from "@/components/notification-center/payment-plan-notices"
 import { MoneyAccountsDataTable } from "@/components/tables/finance-accounts/data-table"
 import { useFinanceParams } from "@/hooks/use-finance-params"
 import { useTRPC } from "@/trpc/client"
@@ -66,6 +67,11 @@ export function FinanceAccounts({
   )
   return (
     <section className="grid gap-5">
+      <PaymentPlanNotices
+        appearance="page"
+        timeZone={book.timezone}
+        bookId={book.id}
+      />
       <BankDetailsCards
         accounts={bankAccounts.data ?? []}
         isPending={bankAccounts.isPending}

@@ -37,6 +37,10 @@ import {
   receivedLine,
 } from "./business-banking-model"
 import { CustomerMessageEditor } from "./customer-message-editor"
+import {
+  PaymentAlertDeliveries,
+  type PaymentAlertDelivery,
+} from "./payment-alert-deliveries"
 
 type Step = "check" | "confirm" | "not-received"
 
@@ -164,6 +168,8 @@ export function PaymentReportReview({
 
 type Report = {
   reportId: string
+  /** Missing from an older server's report. */
+  alertDeliveries?: PaymentAlertDelivery[]
   revision: number
   status: string
   payerName: string
@@ -859,6 +865,10 @@ function ClaimFacts({
         </p>
       )}
       <p className="text-xs text-muted-foreground">{claim.note}</p>
+      <PaymentAlertDeliveries
+        reportId={report.reportId}
+        deliveries={report.alertDeliveries}
+      />
     </section>
   )
 }

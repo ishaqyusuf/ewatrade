@@ -4,10 +4,18 @@ import {
   bankAccountNumberProblem,
   newOperationId,
 } from "@/components/business-banking/business-banking-model"
+import { PaymentAlertsEditor } from "@/components/business-banking/payment-alerts-editor"
 import { FormFeedback } from "@/components/forms/form-feedback"
 import { useFinanceParams } from "@/hooks/use-finance-params"
 import { useTRPC } from "@/trpc/client"
 import { FieldGroup, Input } from "@ewatrade/ui"
+import {
+  type AlertDraft,
+  alertSettingsFrom,
+  alertsSubmission,
+  channelName,
+  initialDraft,
+} from "@ewatrade/utils/payment-alerts-view"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useId, useState } from "react"
 import { FinanceField, FinanceFormFooter } from "./form-fields"
@@ -92,11 +100,47 @@ function BankDetailsFields({
   const [tried, setTried] = useState(false)
   // Stable for this form: a retry after a lost response can't add twice.
   const [clientAccountId] = useState(() => newOperationId("bank"))
+  // Fresh each time the form opens: who can get alerts and what the plan allows now.
+  const alertSettings = useQuery(
+    trpc.businessBanking.notificationSettings.queryOptions(
+      { bookId, accountId: account?.id },
+      {
+        retry: false,
+        staleTime: 0,
+        gcTime: 0,
+        refetchOnMount: "always",
+        select: alertSettingsFrom,
+      },
+    ),
+  )
+  // Once edited, the draft keeps the revision it started from; refetches never move it.
+  const [editedDraft, setDraft] = useState<AlertDraft | null>(null)
+  const draft =
+    editedDraft ??
+    (alertSettings.isSuccess ? initialDraft(alertSettings.data) : null)
+  const alerts = alertsSubmission({
+    settings: alertSettings.data ?? null,
+    draft,
+    loading: alertSettings.isPending,
+  })
+  // Only alerts someone has set up can hold the save; bank details never wait on them.
+  const alertsBlocked = alerts.problem !== null
   const saved = account?.name ?? name.trim()
+  const alertsNote =
+    alerts.send && alertSettings.data
+      ? ` Alerts go by ${channelName(alerts.payload.channel)} to ${alerts.payload.recipientUserIds
+          .map(
+            (id) =>
+              alertSettings.data.recipients.find((row) => row.userId === id)
+                ?.name,
+          )
+          .filter(Boolean)
+          .join(", ")}.`
+      : ""
   const complete = useCompleteFinanceForm(
     account
-      ? `Bank details saved for ${saved}.`
-      : `Bank account “${saved}” added with its bank details.`,
+      ? `Bank details saved for ${saved}.${alertsNote}`
+      : `Bank account “${saved}” added with its bank details.${alertsNote}`,
   )
   const onSuccess = async () => {
     await queryClient.invalidateQueries({
@@ -107,11 +151,20 @@ function BankDetailsFields({
     })
     await complete()
   }
+  // The server rechecks people, contacts and the plan. Any refusal keeps the draft and
+  // reloads what changed so the form shows why.
+  const onError = () => void alertSettings.refetch()
   const create = useMutation(
-    trpc.businessBanking.createBankAccount.mutationOptions({ onSuccess }),
+    trpc.businessBanking.createBankAccount.mutationOptions({
+      onSuccess,
+      onError,
+    }),
   )
   const save = useMutation(
-    trpc.businessBanking.saveBankDetails.mutationOptions({ onSuccess }),
+    trpc.businessBanking.saveBankDetails.mutationOptions({
+      onSuccess,
+      onError,
+    }),
   )
   const pending = create.isPending || save.isPending
   const error = create.error ?? save.error
@@ -137,12 +190,13 @@ function BankDetailsFields({
       onSubmit={(event) => {
         event.preventDefault()
         setTried(true)
-        if (invalid || pending) return
+        if (invalid || alertsBlocked || pending) return
         const details = {
           bookId,
           bankName: bankName.trim(),
           accountNumber: accountNumber.trim(),
           accountHolder: accountHolder.trim(),
+          ...(alerts.send ? { paymentAlerts: alerts.payload } : {}),
         }
         if (account) save.mutate({ ...details, accountId: account.id })
         else create.mutate({ ...details, name: name.trim(), clientAccountId })
@@ -226,6 +280,17 @@ function BankDetailsFields({
           EwaTrade doesn't connect to this bank. Links already sent keep the
           details they were created with. You confirm each payment yourself.
         </p>
+        <PaymentAlertsEditor
+          settings={alertSettings.data}
+          isPending={alertSettings.isPending}
+          error={alertSettings.isError ? alertSettings.error.message : null}
+          draft={draft}
+          onDraft={setDraft}
+          onUseSaved={() => setDraft(null)}
+          problem={tried ? alerts.problem : null}
+          disabled={pending}
+          onRetry={() => void alertSettings.refetch()}
+        />
         {error ? (
           <FormFeedback appearance="dashboard">{error.message}</FormFeedback>
         ) : null}

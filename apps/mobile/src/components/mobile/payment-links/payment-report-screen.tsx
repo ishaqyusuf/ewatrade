@@ -3,6 +3,7 @@ import { ClassicCustomerBookFilter } from "@/components/mobile/appearances/class
 import { FinanceBankDateField } from "@/components/mobile/finance/finance-bank-date-field"
 import { FinanceFormBody } from "@/components/mobile/finance/finance-form-body"
 import { FinanceChoice } from "@/components/mobile/finance/finance-ledger-layout"
+import { PaymentAlertDeliveries } from "@/components/mobile/finance/payment-alert-deliveries"
 import { FormField } from "@/components/mobile/form-field"
 import { HeroCard } from "@/components/mobile/green-till/hero-card"
 import { SectionHeader, StatusPill } from "@/components/mobile/green-till/kit"
@@ -277,6 +278,10 @@ function ReviewFlow({
               ? "The customer hasn't finished sending this. Nothing is recorded."
               : "This is what the customer told us. Nothing is recorded until you confirm."}
       </Text>
+      <PaymentAlertDeliveries
+        reportId={report.reportId}
+        deliveries={report.alertDeliveries}
+      />
     </View>
   )
   const orderFacts: Fact[] = [
