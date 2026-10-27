@@ -3,9 +3,14 @@
 Date: 27 October 2026. Status: proposed engineering plan; implementation not started.
 
 This plan covers the customer “I have paid” form, receipt assessment, merchant
-review, duplicate-transfer protection, larger partial payments, business credit
-and excess-payment refund requests. It does not authorize implementation, model
-calls with customer data, account lookups, fund movement or deployment. Provider
+review, duplicate-transfer protection, larger partial payments, business credit,
+later-order credit application and refunds. Owner scope expanded on 27 October
+2026 to include business-managed customer balances, positive-balance display on
+Orders/payment links, explicit credit use and future automated banking adapters.
+This remains one planning deliverable with eight proposed delivery milestones;
+their scope is expanded below, implementation remains 0/8. It does not authorize
+implementation, model calls with customer data, account lookups, fund movement or
+deployment. Provider
 capabilities below were checked against current official documentation.
 
 ## 1. Recommendation
@@ -50,6 +55,7 @@ Reviewed in the current main checkout at planning baseline `7beecf387`:
 | `packages/db/src/queries/customer-ledger/receipts.ts` | Canonical held-money receipt with customer-advance accounting | Candidate building block for confirmed excess; currently uses recording time, so effective-date support needs explicit design and checks |
 | `packages/db/src/queries/customer-ledger/receipt-and-apply.ts` | Applies receipts to oldest unpaid charges | Do not use this default for a payment intended for the specific linked order |
 | `packages/db/src/queries/customer-ledger/refunds.ts` | Owner/Admin command returns unused held credit and records money already returned; no provider transfer | Reuse financial provenance and authority, while adding a separate customer request/reservation lifecycle |
+| `packages/db/src/queries/customer-ledger/allocations.ts` and `credit-review.ts` | Reviewed, revision-bound source allocations settle eligible Order charges through `CUSTOMER_CREDIT`, without another bank collection; current commands require Finance management authority | Reuse financial invariants; add a separately authorized customer-credit use path without impersonating a merchant or relaxing management commands |
 | `packages/db/src/queries/customer-ledger/commerce-locks.ts` | Finance Book → Customer account → Order lock order | Extend consistently for report, transfer and excess records; no nested transactions or network calls while holding locks |
 
 Source presence is not evidence of current native, channel or deployed availability.
@@ -111,6 +117,111 @@ Customer receipt/check status, order payment status, credit availability and ref
 status remain separate. “Order paid; refund requested” is a valid combined result.
 After submission or confirmation, later AI results can add evidence but cannot
 change money, decisions or allocation automatically.
+
+### Business customer-balance management
+
+The module owns the balance/refund experience and orchestration, using the existing
+customer-ledger domain as financial authority. Each business manages each canonical
+Customer's currency-specific credit, allocations, refund holds, refunds and immutable
+statement. Bank accounts retain receipt/payout provenance; they do not create
+separate customer wallets or duplicate the credit when more than one bank is used.
+Cross-business/cross-currency spending is excluded. Cross-Store use follows the
+business's existing customer/Book policy and current operator scope.
+
+Available credit is the sum of eligible, unreversed, unallocated source funds
+minus active refund and applicable review reservations, never below zero. Prevent
+double subtraction by giving every allocation/reservation an exact source and
+lifecycle. Update all consuming commands, including existing merchant credit
+application and refunds, to honor the same reservations. Display total held,
+reserved and available separately in management; customer checkout uses available.
+
+On a saved Customer's Order, show an actionable credit row only when the authorized
+available credit is positive. Hide it at a known zero balance. Unlinked customers,
+unavailable data and insufficient permission are distinct from zero: show an
+appropriate loading/recovery state or an authorized resolution action without
+inventing a number or leaking credit existence. Keep amount still owed on the
+Order distinct from credit available; do not show a net figure as spendable funds.
+
+Finance Owner/Admin can view source entries, record actual receipts, apply eligible
+credit to exact Orders, review refunds and use existing reasoned corrections.
+Opening balances/adjustments remain controlled canonical commands with source
+kind, permission and audit; there is no unrestricted “edit customer balance” field.
+Scoped Order staff do not gain access to the customer's full financial statement
+or management actions merely because they can view an Order.
+
+### Later Orders and customer payment links
+
+The link remains an Order payment page. After appropriate customer verification,
+read the current same-business/currency credit and show **You have ₦X credit with
+this business — apply to this order** only if spendable credit is positive. Known
+zero credit produces no balance card. A link preview, social metadata, initial
+unauthenticated HTML/cache, URL, notification or forwarded message must not carry
+the balance, statement, credit-source IDs or identity proof.
+
+Possession of the ordinary shareable payment link does not prove customer identity
+or authorize balance disclosure/spend/refund. Use the existing supported signed-in
+customer identity where it establishes this exact canonical Customer, or introduce
+a purpose-bound verification flow through an already trusted saved contact. Do not
+send proof to a contact supplied on the public form. A generic “Use customer
+credit” entry can start verification without disclosing whether credit exists.
+Proof is short-lived and bound to customer, business, currency, exact Order and
+session/purpose; it cannot retarget another Order or approve a refund. Step-up
+checks and contact-change recovery reuse canonical identity infrastructure. No OTP
+provider or message send is authorized by this planning update.
+
+Customer chooses **Apply credit** and reviews the amount, credit remaining and
+new transfer amount. Default the proposal to the maximum eligible credit up to
+the chosen payable target, with an explicit option to use less if policy allows.
+Never automatically deduct credit when creating or opening a link. Track customer
+consent, quote revision, stable operation identity and resulting allocation IDs.
+
+At confirmation, a customer-specific canonical command rechecks business policy,
+fresh verified principal, Customer/Order ownership, currency, current available
+sources, refund reservations, Order status and current due under the existing
+Book → Customer → Order locks. Its financial core shares existing source-review,
+allocation/posting and credit-settlement logic. Current manager commands retain
+their authority: do not fabricate an Owner/Admin actor or simply expose the
+existing protected mutation to public callers. The new customer authority seam
+requires explicit API/permissions/assistant coverage review before activation.
+
+Allocate exact eligible source credits once to this Order; deterministic source
+ordering is acceptable, but no sweep of unrelated debts. Multi-source allocation
+is bounded and atomic. Existing source activation and an eligible Order charge
+must be proven; never invent billing entries or bypass source eligibility just to
+enable a button. A stale quote asks the customer to review the new amount rather
+than silently spending a different amount. A repeated confirmed operation recovers
+the original result. Competing Orders, merchant allocations, refunds and customer
+tabs cannot consume the same credit twice.
+
+After canonical credit application, refresh the financial snapshot on customer
+and merchant surfaces. Full coverage settles the Order without a bank-transfer
+claim or receipt; partial coverage shows **Credit applied ₦X; transfer ₦Y** and the
+existing bank-payment flow for the remainder. Do not represent credit use as “I
+have paid by bank transfer.” Credit application is settlement of money already
+held; it increases no bank balance and creates no second receipt.
+
+For installment links, retain the historical requested amount but calculate the
+remaining requested collection explicitly. Example: requested installment ₦20,000,
+Order due ₦50,000, credit applied to that installment ₦10,000 → transfer ₦10,000,
+Order due after credit ₦40,000. Link-attributed allocations/receipts and releases
+determine remaining collection; do not just cap the original request against the
+new Order balance or subtract the same credit twice. Applying more than the
+installment is an explicit policy-permitted action with a new review.
+
+Credit can be committed before a later bank transfer; if the customer abandons
+the page, committed credit remains applied to the Order. Any optional short review
+reservation expires without money effects; it is not a completed payment. An
+Order cancellation/amendment uses explicit canonical allocation-release/refund
+rules, not automatic reversal on browser close or link expiry. If a bank transfer
+arrives for the old amount after credit was used, confirm its actual amount and
+route resulting excess through the existing credit/refund-resolution workflow.
+
+| New Order due | Available credit | Customer confirms | Remaining transfer / credit |
+| --- | --- | --- | --- |
+| ₦25,000 | ₦10,000 | Apply ₦10,000 | ₦15,000 transfer; no credit left |
+| ₦25,000 | ₦30,000 | Apply ₦25,000 | No transfer; ₦5,000 credit remains |
+| ₦25,000 | ₦10,000 | Do not apply | ₦25,000 transfer; credit unchanged |
+| ₦25,000 | ₦0 | No credit action displayed | Ordinary payment flow |
 
 ## 4. Checks and disposition rules
 
@@ -228,6 +339,20 @@ confirmation. Never invent a customer or discard an excess just to satisfy a for
 
 ## 6. Refund request lifecycle
 
+Refund management is first-class module scope, covering unused customer credit,
+excess transfers and ordinary eligible Order refunds. Keep their source contracts
+distinct: unused held funds use the existing credit-refund command; paid-Order
+returns/cancellations/refunds use the existing Commerce refund and commercial
+credit rules. A source cannot be paid out twice or relabeled to bypass its limits.
+For credit-funded or mixed-tender Orders, source-aware review determines credit
+restoration versus an actual cash return; do not restore credit and pay out the
+same value. Merchant refund entry and customer refund requests share source and
+reservation invariants with their respective authentication/permission boundaries.
+
+The sequence below describes newly reported excess. For existing confirmed credit
+or an eligible paid-Order refund, begin with that source's review and reservation;
+do not require another receipt report or incoming-funds confirmation.
+
 1. Customer chooses refund and supplies destination intent before merchant review.
    This creates a request only. No credit or outgoing payment exists yet.
 2. On funds confirmation, reserve the eligible excess atomically against its exact
@@ -295,6 +420,7 @@ Proposed additive logical records, finalized during schema design:
 | Confirmed transfer identity | Business/currency/receiving account, human/bank-validated reference namespace, actual amount/date, source evidence, consumed canonical decision |
 | Allocation decision | Report revision, intended and actual allocations, canonical payment/held-receipt IDs, consent snapshot, actor, payload digest, replay result |
 | Excess resolution/refund request | Exact held-credit source, amount/reservation, eligibility/identity state, encrypted destination version, review/dispatch/completion history |
+| Credit-use review/decision | Verified customer proof binding, business/currency/Order, current account/Order revisions, exact eligible source allocations, installment attribution, explicit consent, expiry, stable replay identity and canonical result |
 
 No separate wallet-balance column: derive available credit and reserved amounts
 from authoritative ledger/reservations. Prefer small explicit records over an
@@ -326,6 +452,32 @@ authorized analysis projection; clients cannot request arbitrary reports by ID.
 Throttle checking-state refetch, stop on terminal states/background and recover on
 reconnect. Tokens remain purpose-separated. Return only the customer's own safe
 findings; exact merchant duplicate history and encrypted refund fields are private.
+
+### Future automated banking adapter boundary
+
+Keep collection/credit/refund commands independent of the bank provider and AI.
+Manual verification produces a canonical confirmed-receipt instruction with a
+merchant actor and audited evidence. A future authenticated bank/provider adapter
+validates its own signature/credentials, event/reference namespace, receiving
+account, amount/currency, settlement status and replay identity before producing
+the corresponding instruction under a narrow service principal. AI extraction
+cannot produce trusted settlement instructions. Reuse one transfer identity,
+receipt-allocation and journal engine regardless of the evidence source.
+
+Define separate boundaries for receipt extraction, incoming-funds reconciliation,
+account-name lookup and refund execution. Document processing never receives payout
+authority. Persist provider event inbox/outbox records, external IDs, verification
+provenance, duplicate identities and unknown outcomes through existing durable
+infrastructure. Later provider reconciliation must match an already merchant-
+confirmed transfer rather than record it again. Bind refunds to approved source,
+destination version and dispatch identity; reconcile uncertain provider outcomes.
+
+Design task-level commands around review/confirm receipt and allocation,
+read/review/apply customer credit, request/review/complete refund, and reconcile
+provider events. These are conceptual contracts, not existing public APIs. Each
+actor adapter supplies its own verified authority to shared financial invariants.
+Automation then replaces evidence/dispatch adapters while retaining customer
+balances, Order settlement, reservations, audit history and user-visible states.
 
 ## 8. Providers and selection
 
@@ -414,13 +566,13 @@ not a recalculation of the Finance roadmap or older manual-payment acceptance.
 
 | Milestone | Concrete deliverable and exit criteria |
 | --- | --- |
-| 1. Product contracts and design | Confirm installment/overpayment policy, identity and unresolved-funds handling, date thresholds and refund behavior; compare/refine in the existing canonical Banking/Finance Workshop, retaining history; record exact owner-selected revision before UI implementation |
+| 1. Product contracts and design | Confirm installment/overpayment policy, business/customer balance scope, positive-only display, verified customer disclosure/spend, unresolved-funds handling, date thresholds and all refund sources; compare/refine in the existing canonical Banking/Finance Workshop, retaining history; record exact owner-selected revision before UI implementation |
 | 2. Provider evaluation | Purpose-specific schema and controlled test corpus; comparable OpenAI/DeepSeek measurements; data-processing decision, model selection and cost/latency budgets; no live customer receipts without approved admission |
 | 3. Safe upload and assessment | Reused private ingress, bounded rendering, durable job/generation/budget/recovery, validated extractor and deterministic findings; timeout/manual fallback works |
 | 4. Duplicate protection | Exact-file handling, semantic candidates, verified transfer registry, historical coverage and all relevant entry paths; atomic competing confirmations cannot double-consume a transfer |
-| 5. Extended report UI/contracts | Larger claims, receipt/entered mismatch, explicit apply-more/credit/refund preference, no-receipt/manual fallback and safe reload recovery across public form and merchant review |
-| 6. Canonical excess allocation | Single decision conserves R=A+E, scoped customer credit or reviewed unresolved liability, correct effective dates and source linkage, no double cash; authority/closed-period/concurrency checks pass |
-| 7. Refund requests | Encrypted versioned destination, identity review, source reservation, controlled completion/cancellation/reversal, no automatic payout; spend/refund races preserve held funds |
+| 5. Extended report and balance UI/contracts | Larger claims, receipt/entered mismatch, explicit apply-more/credit/refund preference, no-receipt/manual fallback; business balance management and authorized positive-credit-only Order/payment-link display, current financial snapshot and reload recovery |
+| 6. Canonical excess and existing-credit allocation | Single receipt conserves R=A+E; reuse customer ledger, effective dates and source linkage; customer-authorized credit-only/mixed payments and installment attribution; no double cash; authority/closed-period/concurrency checks pass |
+| 7. Refund management and automation seams | Unused-credit/excess and ordinary eligible Order refund sources; encrypted destination, identity review, reservation, mixed-tender restoration, controlled completion/cancellation/reversal; reusable manual/provider adapter contracts, no automatic payout; spend/refund races preserve held funds |
 | 8. Acceptance and staged release | Focused source/types, money/permission/concurrency SQL and representative public/dashboard/native checks, H01/H02 and Brain impact; shadow pilot then advisory flags; exact candidate/Preview/Production release handled only when separately authorized |
 
 Keep the extraction/rule engine separate from the excess-money commands so each
@@ -458,6 +610,20 @@ Required financial cases include:
 - Refund reservation racing with spend, another refund or correction; duplicate
   completion; destination change after approval; incoming reversal; closed Book
   date and any failed child command roll back the whole decision.
+- Known-zero credit hides its row/card; positive authorized credit shows current
+  available amount; loading/error/unlinked/unauthorized are not misreported as zero.
+  Public HTML/metadata/caches and forwarded links reveal no customer credit before
+  proof; forged/expired/retargeted proofs cannot read or spend balances.
+- Credit-only and mixed-credit/transfer Orders; amount above/below available;
+  multiple credit sources; fixed installment credit attribution; two customer tabs
+  or two Orders competing with a refund/merchant allocation; stale consent requires
+  re-review. Page close does not undo committed credit; cancellation releases it
+  only through canonical correction. Returning mixed tender cannot restore credit
+  and pay cash for the same source value.
+- Later bank reconciliation of a manually confirmed receipt links to its existing
+  financial identity; duplicate provider events never create another receipt or
+  allocation. Provider refunds preserve approved source/destination/version and
+  idempotent dispatch/reconciliation semantics.
 - Scope revoked before dispatch/read/write; foreign report/artifact/destination;
   prompt injection; unsafe/decompression-bomb PDF; stale generation; deleted
   receipt during inference; missing entitlement; provider quota/timeout/outage.
