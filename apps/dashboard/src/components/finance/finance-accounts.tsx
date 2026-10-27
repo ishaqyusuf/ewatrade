@@ -14,6 +14,7 @@ import { useQuery } from "@tanstack/react-query"
 import { useQueryState } from "nuqs"
 import { useCallback } from "react"
 import { FinanceAccountStatement } from "./account-statement"
+import { BankDetailsCards } from "./bank-details-cards"
 import { formatFinanceDate } from "./format-date"
 import {
   MoneyAccountSortMenu,
@@ -41,17 +42,42 @@ export function FinanceAccounts({
       }),
     [setParams],
   )
+  const openBankDetails = useCallback(
+    (accountId: string | null) =>
+      void setParams({
+        financeSheet: "bank-details",
+        paymentAccountId: accountId,
+      }),
+    [setParams],
+  )
   const [accountSort] = useQueryState("accountSort", accountSortParam)
   const trpc = useTRPC()
   const balances = useQuery(
     trpc.finance.balances.queryOptions({ bookId: book.id }),
   )
+  const bankAccounts = useQuery(
+    trpc.businessBanking.accounts.queryOptions(
+      { bookId: book.id },
+      { retry: false },
+    ),
+  )
+  const bankDetails = new Map(
+    (bankAccounts.data ?? []).map((account) => [account.id, account]),
+  )
   return (
     <section className="grid gap-5">
+      <BankDetailsCards
+        accounts={bankAccounts.data ?? []}
+        isPending={bankAccounts.isPending}
+        error={bankAccounts.isError ? bankAccounts.error.message : null}
+        onEdit={openBankDetails}
+        onAdd={() => openBankDetails(null)}
+      />
       <p className="max-w-2xl text-sm text-muted-foreground">
         Counts money recorded since{" "}
         {formatFinanceDate(book.startsAt, book.timezone)}, including order
-        payments. Compare it with your cash and bank statements.
+        payments. Balances are what you recorded in EwaTrade, not a live balance
+        from your bank. Compare them with your cash and bank statements.
       </p>
       {balances.isPending ? (
         <output>Loading account balances…</output>
@@ -69,12 +95,27 @@ export function FinanceAccounts({
                 ["CASH", "BANK", "CLEARING"].includes(account.purpose),
               ),
               accountSort,
-            )}
+            ).map((account) => {
+              const bank = bankDetails.get(account.id)
+              return bank
+                ? {
+                    ...account,
+                    bankDetails: {
+                      bankName: bank.bankName,
+                      accountNumber: bank.bankAccountNumber,
+                      accountHolder: bank.bankAccountHolder,
+                    },
+                  }
+                : account
+            })}
             currencyCode={book.currencyCode}
             bookId={book.id}
             view={view}
             onOpenStatement={openStatement}
             onOpenPaymentSettings={openPaymentSettings}
+            onOpenBankDetails={
+              bankAccounts.isSuccess ? openBankDetails : undefined
+            }
           />
         </>
       )}

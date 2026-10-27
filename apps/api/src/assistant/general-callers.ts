@@ -1,4 +1,5 @@
 import { type TRPCContext, createTRPCRouter } from "../trpc/init"
+import { businessBankingRouter } from "../trpc/routers/business-banking"
 import { catalogRouter } from "../trpc/routers/catalog"
 import { customerLedgerRouter } from "../trpc/routers/customer-ledger"
 import { customersRouter } from "../trpc/routers/customers"
@@ -16,6 +17,7 @@ import { tenantRouter } from "../trpc/routers/tenant"
 
 // As with createBusinessReportingCaller, keep canonical paths for all permission middleware.
 const assistantDomainRouter = createTRPCRouter({
+  businessBanking: businessBankingRouter,
   catalog: catalogRouter,
   customerLedger: customerLedgerRouter,
   customers: customersRouter,

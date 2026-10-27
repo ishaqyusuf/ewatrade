@@ -34,7 +34,6 @@ import {
   ResultCard,
   UnavailableProposalCard,
 } from "./assistant-cards"
-import { mobileAssistantSystemTitle } from "./assistant-wording"
 import { AssistantChatBox } from "./assistant-chat-box"
 import { AssistantChatRow, AssistantHome } from "./assistant-home"
 import { isAssistantSessionCurrent } from "./assistant-scope"
@@ -45,6 +44,7 @@ import {
   AssistantThinking,
   assistantAsOf,
 } from "./assistant-ui"
+import { mobileAssistantSystemTitle } from "./assistant-wording"
 import { ChatPhotoThumb, ChatSentFile } from "./chat-photo"
 import {
   generalAnswerRoute,
@@ -52,8 +52,10 @@ import {
   generalPlainText,
   generalReceiptRoute,
 } from "./general-model"
+import { PaymentLinksResult } from "./general-payment-links"
 import { GeneralProductThumb } from "./general-product-picture"
 import { GeneralProposalEditor } from "./general-proposal-editor"
+import { paymentLinksReviewLine } from "./native-payment-links-values"
 import { useAssistantPrefillFocus } from "./use-assistant-prefill"
 import { useGeneralAssistant } from "./use-general-assistant"
 export function AskAssistantLive() {
@@ -417,7 +419,12 @@ export function AskAssistantLive() {
               ))}
               {vm.data?.proposals.map((proposal) => (
                 <View key={proposal.id} className="gap-3">
-                  {proposal.receipt ? (
+                  {proposal.receipt?.kind === "payment_links" ? (
+                    <PaymentLinksResult
+                      receipt={proposal.receipt}
+                      businessName={vm.data?.businessName}
+                    />
+                  ) : proposal.receipt ? (
                     <ResultCard
                       title={mobileAssistantSystemTitle(proposal.receipt.title)}
                       detail={proposal.receipt.detail}
@@ -486,6 +493,11 @@ export function AskAssistantLive() {
                                 proposal.payload.action !== "product_create" ||
                                 !proposal.payload.illustrationId ||
                                 line !== productCreatePicture(proposal.payload),
+                            )
+                            .map((line) =>
+                              proposal.payload.action === "payment_links_create"
+                                ? paymentLinksReviewLine(line, proposal.payload)
+                                : line,
                             )
                             .join("\n")}
                           state={

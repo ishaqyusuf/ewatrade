@@ -138,7 +138,14 @@ export async function executeGeneralTurn({
     ["money_in_record", handleSimpleMoneyInChat],
     ["sale_record", handleSimpleSaleChat],
   ] as const
-  for (const [action, handler] of handlers) {
+  // Link requests use scoped lookup/proposal tools, even if a money collector
+  // has an unfinished draft. Explicit choices and directed sale edits retain
+  // their existing draft ownership.
+  const paymentLinkRequest =
+    !body.saleChoice &&
+    !/^Continue sale [^:]+:/u.test(simpleInput.text) &&
+    /\bpayment[\s-]+links?\b/iu.test(simpleInput.text)
+  for (const [action, handler] of paymentLinkRequest ? [] : handlers) {
     // Channel confirmations must be correlated to an exact server-issued review outside the model turn.
     if (
       linked &&

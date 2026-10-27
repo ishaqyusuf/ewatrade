@@ -7,6 +7,7 @@ import { useColorScheme, useColors } from "@/hooks/use-color"
 import { GREEN_TILL_THEME, type GreenTillTint } from "@/lib/green-till-theme"
 import { trackMobileActivity } from "@/runtime/analytics-runtime"
 import { formatMinorMoney } from "@ewatrade/utils"
+import { useRouter } from "expo-router"
 import { useEffect, useRef } from "react"
 import { Text as NativeText } from "react-native"
 import { ActionButton } from "../action-button"
@@ -51,6 +52,7 @@ export function ClassicServiceJobWorkspace({
   const palette = GREEN_TILL_THEME[colorScheme]
   const job = model.selectedJob
   const setHeader = useSetServiceChromeHeader()
+  const router = useRouter()
   const access = useAttachmentEntitlement({
     surface: "service",
     track: trackMobileActivity,
@@ -180,6 +182,22 @@ export function ClassicServiceJobWorkspace({
           </View>
         ) : null}
       </HeroCard>
+      {job.balanceDueMinor > 0 && job.currencyCode === "NGN" ? (
+        <InfoCard
+          icon="Link"
+          tint="amber"
+          title="Payment link"
+          detail="Customer pays by bank transfer · you confirm"
+          actionLabel="Create"
+          actionDisabled={!canAct}
+          onAction={() =>
+            router.push({
+              pathname: "/payment-link/[orderId]",
+              params: { orderId: job.commercialOrderId },
+            } as never)
+          }
+        />
+      ) : null}
       {job.summary === "blocked" ? (
         <StatusBanner
           tone="destructive"

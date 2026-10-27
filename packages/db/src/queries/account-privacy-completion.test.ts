@@ -1646,6 +1646,9 @@ describe("account privacy completion assessment", () => {
 })
 
 test.each([
+  "manualPaymentLinks",
+  "manualPaymentReviews",
+  "manualPaymentReceiptAssets",
   "assistantWhatsAppIdentities",
   "assistantWhatsAppLinks",
   "assistantWhatsAppGrants",

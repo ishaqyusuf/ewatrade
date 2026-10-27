@@ -31,6 +31,7 @@ import { View } from "@/components/ui/view"
 import { useSalesValueMotion } from "@/hooks/use-sales-value-motion"
 import type { GreenTillTint } from "@/lib/green-till-theme"
 import { useIsFocused } from "@react-navigation/native"
+import type { ReactNode } from "react"
 
 export type HomeRecentOrder = {
   amount: string
@@ -78,6 +79,7 @@ export type GreenTillOwnerHomeProps = {
   onStockIn: () => void
   onSync: () => void
   pendingCommandCount: number
+  paymentNotifications?: ReactNode
   recentOrders: HomeRecentOrder[]
   recentState: "empty" | "loaded" | "loading" | "unavailable"
   sales: HomeSales
@@ -227,6 +229,8 @@ function EverydayHome(props: GreenTillOwnerHomeProps) {
           <AttentionRail items={props.attention} />
         </>
       ) : null}
+
+      {props.isOffline ? null : props.paymentNotifications}
 
       <SectionHeader
         actionLabel="See all"
@@ -378,6 +382,7 @@ function SetupHome(props: GreenTillOwnerHomeProps) {
         </View>
       ) : null}
       <SetupSteps steps={steps} />
+      {props.isOffline ? null : props.paymentNotifications}
       <GhostPreview message="Today’s sales will appear here after your first order." />
     </View>
   )
@@ -438,6 +443,7 @@ export type GreenTillRepHomeProps = {
   onStockIn?: () => void
   onSync: () => void
   pendingCommandCount: number
+  paymentNotifications?: ReactNode
   recentOrders: HomeRecentOrder[]
   recentState: GreenTillOwnerHomeProps["recentState"]
   sales: HomeSales
@@ -512,6 +518,7 @@ export function GreenTillRepHome(props: GreenTillRepHomeProps) {
         />
       ) : null}
       <QuickActionRow actions={tiles} />
+      {props.isOffline ? null : props.paymentNotifications}
       <NudgeCard
         actionLabel="Start"
         icon="Clock"

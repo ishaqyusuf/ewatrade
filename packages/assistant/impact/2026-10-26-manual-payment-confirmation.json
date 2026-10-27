@@ -1,0 +1,132 @@
+{
+  "version": 1,
+  "id": "2026-10-26-manual-payment-confirmation",
+  "tickets": ["H02", "F01"],
+  "summary": "Manual bank-transfer payment instructions, unverified customer reports, authenticated merchant confirmation via canonical Order payment, private receipts, scoped realtime status, and assistant/WhatsApp payment-link lookup/creation. No automated payment or provider action.",
+  "capabilities": [
+    {
+      "id": "sales.payment_links.read",
+      "change": "added",
+      "rollout": "source",
+      "note": "New source capability reuses current Store/role checks and shared canonical manual-link command; customer evidence never authorizes payment, no messages sent. WhatsApp rollout remains separately gated."
+    },
+    {
+      "id": "sales.payment_links.create",
+      "change": "added",
+      "rollout": "source",
+      "note": "New source capability reuses current Store/role checks and shared canonical manual-link command; customer evidence never authorizes payment, no messages sent. WhatsApp rollout remains separately gated."
+    }
+  ],
+  "procedures": [
+    {
+      "path": "businessBanking.accounts",
+      "status": "form_only",
+      "reason": "Manual payment domain: canonical current Tenant/Store authority; only link lookup/create have assistant capability; account setup/report review require app forms. Customer routes use purpose-separated signed bearer proofs."
+    },
+    {
+      "path": "businessBanking.availability",
+      "status": "form_only",
+      "reason": "Manual payment domain: canonical current Tenant/Store authority; only link lookup/create have assistant capability; account setup/report review require app forms. Customer routes use purpose-separated signed bearer proofs."
+    },
+    {
+      "path": "businessBanking.createBankAccount",
+      "status": "form_only",
+      "reason": "Manual payment domain: canonical current Tenant/Store authority; only link lookup/create have assistant capability; account setup/report review require app forms. Customer routes use purpose-separated signed bearer proofs."
+    },
+    {
+      "path": "businessBanking.createPaymentLink",
+      "status": "supported",
+      "reason": "Manual payment domain: canonical current Tenant/Store authority; only link lookup/create have assistant capability; account setup/report review require app forms. Customer routes use purpose-separated signed bearer proofs."
+    },
+    {
+      "path": "businessBanking.linkCandidates",
+      "status": "supported",
+      "reason": "Manual payment domain: canonical current Tenant/Store authority; only link lookup/create have assistant capability; account setup/report review require app forms. Customer routes use purpose-separated signed bearer proofs."
+    },
+    {
+      "path": "businessBanking.pendingReports",
+      "status": "form_only",
+      "reason": "Manual payment domain: canonical current Tenant/Store authority; only link lookup/create have assistant capability; account setup/report review require app forms. Customer routes use purpose-separated signed bearer proofs."
+    },
+    {
+      "path": "businessBanking.report",
+      "status": "form_only",
+      "reason": "Manual payment domain: canonical current Tenant/Store authority; only link lookup/create have assistant capability; account setup/report review require app forms. Customer routes use purpose-separated signed bearer proofs."
+    },
+    {
+      "path": "businessBanking.reviewReport",
+      "status": "form_only",
+      "reason": "Manual payment domain: canonical current Tenant/Store authority; only link lookup/create have assistant capability; account setup/report review require app forms. Customer routes use purpose-separated signed bearer proofs."
+    },
+    {
+      "path": "businessBanking.saveBankDetails",
+      "status": "form_only",
+      "reason": "Manual payment domain: canonical current Tenant/Store authority; only link lookup/create have assistant capability; account setup/report review require app forms. Customer routes use purpose-separated signed bearer proofs."
+    }
+  ],
+  "docs": [
+    {
+      "topic": "feature",
+      "status": "local_only",
+      "path": ".brain/features/manual-payment-confirmation.md"
+    },
+    {
+      "topic": "capability",
+      "status": "updated",
+      "path": "packages/assistant/src/capabilities/COVERAGE.md"
+    },
+    {
+      "topic": "api",
+      "status": "local_only",
+      "path": ".brain/api/contracts.md"
+    },
+    {
+      "topic": "permissions",
+      "status": "local_only",
+      "path": ".brain/api/permissions.md"
+    },
+    {
+      "topic": "schema",
+      "status": "local_only",
+      "path": ".brain/database/schema.md"
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "test",
+      "path": "packages/db/src/queries/business-payment-links.integration.test.ts",
+      "executed": true,
+      "result": "Guarded isolated Development, one rollback fixture, 1 pass/21 assertions: no-money claims/rejection; wrong Tenant/account/stale refusal; confirmed actual amount/date, partial/full, exact replay. Does not establish simultaneous multi-session concurrency."
+    },
+    {
+      "kind": "test",
+      "path": "apps/api/src/banking/status-socket.test.ts",
+      "executed": true,
+      "result": "2 real local WebSocket transport tests/6 assertions; report-purpose binding, isolated invalidation-only payload, unsigned/oversized internal hints refused. No deployed socket target."
+    },
+    {
+      "kind": "test",
+      "path": "apps/api/src/assistant/general-payment-links.test.ts",
+      "executed": true,
+      "result": "3 tests/11 assertions under unusable offline DB sentinel: bounded exact targets, server review/current scope and stale balance target, duplicate/paid/unavailable refusal. No actual model or live WhatsApp acceptance."
+    },
+    {
+      "kind": "test",
+      "path": "packages/db/src/queries/manual-payment-privacy.test.ts",
+      "executed": true,
+      "result": "Fail-closed attribution counters, 1 test/3 assertions; wider privacy profile/completion suite passed after shared fixture count update."
+    },
+    {
+      "kind": "test",
+      "path": "packages/db/src/queries/manual-payment-concurrency.integration.test.ts",
+      "executed": true,
+      "result": "Guarded isolated Development, 1 pass/6 assertions: two distinct live SQL backend sessions released together; one canonical payment, one replay with identical payment ID; run-owned synthetic fixture cleanup verified. No provider or live funds."
+    },
+    {
+      "kind": "test",
+      "path": "apps/api/src/assistant/manual-payment-link-routing.test.ts",
+      "executed": true,
+      "result": "Real executeGeneralTurn + all four collectors/classifiers: original red1pass2fail reproduced wrong sale draft/Howmuch for singular existing Order/service link; fixed explicit payment-link routing now10pass/10asserts, including unrelated pending collectors and preserved structured/directed sale ownership. Isolated offline sentinel; no model/provider/DB. Actual browser original named-service request subsequently reached correct payment-links review."
+    }
+  ]
+}

@@ -91,6 +91,39 @@ function completeFacts(
   )
     return false
   switch (payload.action) {
+    case "payment_links_create":
+      return (
+        currencyCode === "NGN" &&
+        payload.orderIds.length <= 5 &&
+        presentation.table?.rows.length === payload.orderIds.length &&
+        presentation.table.columns.map((column) => column.label).join(",") ===
+          "Order,Due" &&
+        presentation.table.rows.every(
+          (row) => row.cells.length === 2 && row.cells.every(Boolean),
+        ) &&
+        presentation.facts?.some(
+          (fact) => fact.label === "Receiving account" && Boolean(fact.value),
+        ) === true &&
+        presentation.facts?.some(
+          (fact) => fact.label === "Bank" && /ending \d{4}$/.test(fact.value),
+        ) === true &&
+        presentation.facts?.some(
+          (fact) => fact.label === "Account holder" && Boolean(fact.value),
+        ) === true &&
+        presentation.facts?.some(
+          (fact) =>
+            fact.label === "Link lifetime" &&
+            fact.value === `${payload.lifetimeMinutes} minutes`,
+        ) === true &&
+        presentation.facts?.some(
+          (fact) =>
+            fact.label === "Amount" &&
+            fact.value ===
+              (payload.allowPartial ? "Customer may pay part" : "Fixed amount"),
+        ) === true &&
+        shown.includes("no payment is recorded") &&
+        shown.includes("All links are created together")
+      )
     case "customer_create":
       return has(payload.name) && has(payload.phone) && has(payload.email)
     case "customer_update":
@@ -185,6 +218,7 @@ function completeFacts(
   }
 }
 const titles: Partial<Record<GeneralAction["action"], string>> = {
+  payment_links_create: "Create payment links",
   customer_create: "Add saved customer",
   customer_update: "Update saved customer",
   product_create: "Add simple product",

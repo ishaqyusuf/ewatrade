@@ -35,6 +35,13 @@ test("proxies catalog private photo transport through the existing authenticated
   })
 })
 
+test("proxies manual payment receipts to the API for same-origin review", () => {
+  expect(getDashboardApiRewrites("https://api.example.test")).toContainEqual({
+    source: "/api/manual-payments/:path*",
+    destination: "https://api.example.test/api/manual-payments/:path*",
+  })
+})
+
 test("proxies the streaming setup assistant chat to the API", () => {
   expect(getDashboardApiRewrites("https://api.example.test")).toContainEqual({
     source: "/api/assistant/:path*",

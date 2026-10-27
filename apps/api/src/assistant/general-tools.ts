@@ -608,6 +608,33 @@ export function createGeneralTools(
     ? z.discriminatedUnion("action", [firstAction, ...otherActions])
     : z.never()
   const tools: Record<string, Tool> = {
+    readPaymentLinkOrders: tool({
+      description:
+        "Resolve actual unpaid sale/service Orders and configured receiving bank identities in the current Store before drafting payment_links_create. Use period=today for Orders created today in the BUSINESS timezone, not UTC or all overdue debt; all for a named Order/service lookup. query matches Order number/customer/service label or saved service Job ID/code. Clarify ambiguous matches, missing bank details and service work with no payable linked Order. Follow nextCursor using beforeId; never claim a bounded page is every unpaid Order. Draft at most five exact selected Orders per review; create further batches explicitly if more exist. Drafting prepares a review only. Explicit confirmation creates the copyable payment links, without sending any message or recording payment. Sharing is always a separate manual Copy/Share/WhatsApp action, even after confirmation. Never imply that confirming sends the links.",
+      inputSchema: z
+        .object({
+          period: z.enum(["today", "all"]).default("all"),
+          query: z.string().trim().min(1).max(160).optional(),
+          beforeId: z.string().min(1).max(128).optional(),
+        })
+        .strict(),
+      execute: (input) =>
+        wrap("readPaymentLinkOrders", async (fresh) => {
+          const page =
+            await createGeneralDomainCaller(
+              fresh,
+            ).businessBanking.linkCandidates(input)
+          onAnswer({
+            id: `payment_link_orders_${crypto.randomUUID()}`,
+            title: "Unpaid orders for payment links",
+            value: `${page.items.length} in this page`,
+            scope: fresh.tenantContext.activeStore?.name ?? "Store",
+            asOf: new Date().toISOString(),
+            detail: `${page.period === "today" ? `Orders created today in ${page.timezone}. ` : "Matching unpaid orders. "}${page.accounts.length} configured receiving account(s). ${page.nextCursor ? "More orders are available; continue with the same filters." : "End of this lookup."} No links created or payments recorded.`,
+          })
+          return page
+        }),
+    }),
     reviewQuoteDecision: tool({
       description:
         "Pure-review an exact original quotation decision and stated reason. Approval includes complete commercial release effects and native Terms/screening requirements; rejection stays private. This never confirms, screens or executes the decision.",

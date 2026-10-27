@@ -20,6 +20,7 @@ import {
 } from "@ewatrade/ui"
 import Link from "next/link"
 import { useCallback, useEffect, useRef, useState } from "react"
+import { GeneralPaymentLinksReceipt } from "./general-payment-links"
 import { GeneralProposalCard } from "./general-proposal-card"
 import { GeneralProposalEditor } from "./general-proposal-editor"
 
@@ -203,7 +204,12 @@ export function AssistantLinkReview({
                       ? "Review your WhatsApp draft"
                       : "Review link"}
           </h1>
-          {result ? (
+          {completed && result?.receipt?.kind === "payment_links" ? (
+            <GeneralPaymentLinksReceipt
+              receipt={result.receipt}
+              heading={false}
+            />
+          ) : result ? (
             <p className="text-sm text-muted-foreground">
               {completed
                 ? (result?.receipt?.detail ??

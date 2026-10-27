@@ -18,7 +18,7 @@ import {
   toLocalPhone,
 } from "@ewatrade/utils/countries"
 import { majorToMinor, minorToMajorInput } from "@ewatrade/utils/currency"
-import { useState } from "react"
+import { useRef, useState } from "react"
 import { ActionButton } from "../action-button"
 import { CountrySelect } from "../country-select"
 import { FormField } from "../form-field"
@@ -28,6 +28,7 @@ import { GeneralCashCountEditor } from "./general-cash-count-editor"
 import { GeneralChangeEditor } from "./general-change-editor"
 import { GeneralMoneyOperationEditor } from "./general-money-operation-editor"
 import { GeneralOrderOperationEditor } from "./general-order-operation-editor"
+import { GeneralPaymentLinksEditor } from "./general-payment-links-editor"
 import { GeneralProductCreateRows } from "./general-product-create-rows"
 import {
   GeneralProductPictureField,
@@ -54,6 +55,16 @@ export function GeneralProposalEditor(props: {
   onSave: (payload: GeneralAction) => void
 }) {
   const initial = props.proposal.payload
+  if (initial.action === "payment_links_create")
+    return (
+      <GeneralPaymentLinksEditor
+        key={`${props.proposal.id}:${props.proposal.revision}`}
+        initial={initial}
+        review={props.proposal.review}
+        disabled={props.disabled}
+        onSave={props.onSave}
+      />
+    )
   if (initial.action === "service_message_share")
     return (
       <GeneralServiceMessageEditor
@@ -180,6 +191,19 @@ export function GeneralProposalEditor(props: {
     <GeneralRecordEditor {...props} />
   )
 }
+let draftLineKeySequence = 0
+/**
+ * React keys for an order draft's lines. Lines carry no id in the action
+ * contract, so each row gets one key when it first appears and keeps it for
+ * this editor; keys are never regenerated on render.
+ */
+function useDraftLineKeys(count: number) {
+  const keys = useRef<string[]>([])
+  while (keys.current.length < count)
+    keys.current.push(`draft-line-${++draftLineKeySequence}`)
+  return keys.current
+}
+
 function GeneralRecordEditor({
   proposal,
   disabled,
@@ -214,6 +238,9 @@ function GeneralRecordEditor({
   // Per custom line: a Quick sale must say what was sold; Additional cost
   // descriptions stay optional. Older drafts still open for repair.
   const [lineErrors, setLineErrors] = useState<Record<number, string>>({})
+  const lineKeys = useDraftLineKeys(
+    payload.action === "order_create" ? payload.lines.length : 0,
+  )
   const patch = (value: Record<string, unknown>) =>
     setPayload((current) => ({ ...current, ...value }) as GeneralAction)
   const picture = useProductPicture(initial, disabled)
@@ -463,7 +490,7 @@ function GeneralRecordEditor({
             {payload.lines.map((line, index) =>
               "custom" in line ? (
                 <FormField
-                  key={`custom:${index}`}
+                  key={lineKeys[index]}
                   label={
                     line.custom === "quick_sale"
                       ? `What was sold? · line ${index + 1}`

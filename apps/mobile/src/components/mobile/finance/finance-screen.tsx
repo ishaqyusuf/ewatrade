@@ -33,6 +33,7 @@ import {
   SectionHeader,
   StatusPill,
 } from "../green-till/kit"
+import { PaymentsToCheckNudge } from "../payment-links/payment-notifications"
 import { FinanceBankDateField } from "./finance-bank-date-field"
 import { FinanceCommandFeedback } from "./finance-command-feedback"
 import { FinanceChoice } from "./finance-ledger-layout"
@@ -271,6 +272,7 @@ function SpendingWorkspace({
               },
             ]}
           />
+          {offline ? null : <PaymentsToCheckNudge />}
         </>
       ) : null}
       <FinanceCommandFeedback

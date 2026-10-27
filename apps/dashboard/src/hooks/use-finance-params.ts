@@ -20,6 +20,7 @@ export const financeSheetModes = [
   "money-reversal",
   "account",
   "account-payments",
+  "bank-details",
   "category",
   "cash-count",
   "cash-count-detail",

@@ -1,4 +1,5 @@
 import { z } from "zod"
+import { generalReceiptSchema } from "../general/contracts"
 import { trustedAssistantAppOrigin } from "./conversation-links"
 import { whatsAppPlainText } from "./render"
 
@@ -102,4 +103,62 @@ export function renderWhatsAppActionResult(
   if (text && text.length <= 2500) return `Saved in EwaTrade.\n\n${text}`
   const link = savedChatLink(appLink)
   return `Saved in EwaTrade. Open the saved chat for the complete original receipt.${link ? `\n${link}` : ""}`
+}
+
+/** Payment links are separate forwardable messages, never a cross-customer draft. */
+export function renderWhatsAppActionResultChunks(
+  proposal: Parameters<typeof renderWhatsAppActionResult>[0],
+  appLink?: string,
+  options: { paymentOrigin?: string; appOrigin?: string } = {},
+) {
+  const receipt = generalReceiptSchema.safeParse(proposal.receipt)
+  if (
+    proposal.status !== "COMPLETED" ||
+    !receipt.success ||
+    receipt.data.kind !== "payment_links" ||
+    receipt.data.links.length > 5 ||
+    receipt.data.links.some((link) => !link.copyText?.trim())
+  )
+    return [renderWhatsAppActionResult(proposal, appLink)]
+  const links = receipt.data.links
+  const origin = options.paymentOrigin
+    ? trustedAssistantAppOrigin(options.paymentOrigin)
+    : undefined
+  const validUrl = (value: string) => {
+    try {
+      const url = new URL(value)
+      return (
+        origin &&
+        url.origin === origin &&
+        !url.username &&
+        !url.password &&
+        !url.search &&
+        !url.hash &&
+        /^\/pay\/[a-zA-Z0-9_.-]{1,220}$/.test(url.pathname) &&
+        value === url.href
+      )
+    } catch {
+      return false
+    }
+  }
+  if (links.some((link) => !validUrl(link.url)))
+    return [renderWhatsAppActionResult(proposal, appLink)]
+  const appOrigin = options.appOrigin
+    ? trustedAssistantAppOrigin(options.appOrigin)
+    : undefined
+  const app = savedChatLink(appLink)
+  const sharingLink =
+    app && appOrigin && new URL(app).origin === appOrigin ? app : ""
+  const summary = whatsAppPlainText(
+    `${receipt.data.title}\n\n${links.map((link) => `${link.orderNumber}${link.customerName ? ` · ${link.customerName}` : ""}`).join("\n")}\n\nNothing was sent to customers and no payment was recorded. Forward each separate payment message to its customer.`,
+  )
+  return [
+    `${summary}${sharingLink ? `\nSharing options in EwaTrade: ${sharingLink}` : ""}`,
+    ...links.map((link) => {
+      // Only this canonical URL survives; model/record URLs in other text stay stripped.
+      const pieces = (link.copyText ?? "").split(link.url)
+      const text = pieces.map(whatsAppPlainText).join(`\n${link.url}\n`)
+      return pieces.length > 1 ? text.trim() : `${text}\n${link.url}`
+    }),
+  ]
 }

@@ -5,6 +5,7 @@ import { accountPrivacyRouter } from "./account-privacy"
 import { activityRouter } from "./activity"
 import { assistantRouter } from "./assistant"
 import { authRouter } from "./auth"
+import { businessBankingRouter } from "./business-banking"
 import { businessNotificationsRouter } from "./business-notifications"
 import { businessReportingRouter } from "./business-reporting"
 import { catalogRouter } from "./catalog"
@@ -50,6 +51,7 @@ export const appRouter = createTRPCRouter({
   activity: activityRouter,
   businessNotifications: businessNotificationsRouter,
   businessReporting: businessReportingRouter,
+  businessBanking: businessBankingRouter,
   auth: authRouter,
   storeSubscriptions: storeSubscriptionsRouter,
   accountPrivacy: accountPrivacyRouter,

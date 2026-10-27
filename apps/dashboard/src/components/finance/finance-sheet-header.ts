@@ -12,6 +12,7 @@ export const financeSheetTitles: Record<FinanceSheetMode, string> = {
   "money-reversal": "Undo money movement",
   account: "Add money account",
   "account-payments": "Payment settings",
+  "bank-details": "Bank details for payment links",
   category: "New spending category",
   "cash-count": "Count cash",
   "cash-count-detail": "Cash count",

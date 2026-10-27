@@ -60,6 +60,7 @@ function fixture(
     consumed?: boolean
     pendingRecovery?: boolean
     refuse?: boolean
+    receipt?: GeneralProposal["receipt"]
   } = {},
 ) {
   const session = {
@@ -168,7 +169,9 @@ function fixture(
     expect(input.proposalId).toBe("proposal")
     if (options.consumed) expect(input.approvalToken).toBeUndefined()
     else expect(input.approvalToken).toBeString()
-    return completed
+    return options.receipt
+      ? { ...completed, receipt: options.receipt }
+      : completed
   }
   deps.complete = async (tx) => {
     expect(tx).toBe(fresh.db)
@@ -296,4 +299,50 @@ test("receipt presentation preserves canonical text or gives bounded fixed hando
   ).toBe(
     "Saved in EwaTrade. Open the saved chat for the complete original receipt.\nhttps://dash.ewatrade.com/assistant/c/chat",
   )
+})
+
+test("payment-link confirmation stages separate forwardable messages under the same canonical result", async () => {
+  const previousOrigin = process.env.PAYMENT_LINK_PUBLIC_ORIGIN
+  process.env.PAYMENT_LINK_PUBLIC_ORIGIN = "https://dash.ewatrade.com"
+  const previous = process.env.ASSISTANT_APPROVAL_SIGNING_KEY
+  process.env.ASSISTANT_APPROVAL_SIGNING_KEY =
+    "synthetic-action-key-000000000000000000"
+  try {
+    const links = Array.from({ length: 5 }, (_, index) => ({
+      orderId: `order${index}`,
+      orderNumber: `ORD-${index}`,
+      customerName: `Customer ${index}`,
+      url: `https://dash.ewatrade.com/pay/token${index}`,
+      copyText: `Pay order ORD-${index}:\nhttps://dash.ewatrade.com/pay/token${index}`,
+      whatsappUrl: null,
+      amountMinor: 10000,
+      currencyCode: "NGN",
+      expiresAt: new Date(Date.now() + 3600000).toISOString(),
+    }))
+    const f = fixture({
+      receipt: {
+        kind: "payment_links",
+        recordId: "saved-command",
+        title: "5 payment links created",
+        detail: "Five saved links. Nothing sent.",
+        links,
+      },
+    })
+    await processAssistantWhatsAppAction(f.ctx, lease, f.deps)
+    const chunks = f.writes.filter((row) => "chunkIndex" in row)
+    expect(chunks).toHaveLength(6)
+    expect(chunks.map((row) => row.chunkIndex)).toEqual([0, 1, 2, 3, 4, 5])
+    expect(chunks.every((row) => row.chunkCount === 6)).toBe(true)
+    for (const [index, link] of links.entries())
+      expect(chunks[index + 1]?.content).toBe(link.copyText)
+    expect(f.calls.filter((call) => call === "decide")).toHaveLength(1)
+    expect(f.calls.filter((call) => call === "complete-review")).toHaveLength(1)
+  } finally {
+    if (previousOrigin === undefined)
+      Reflect.deleteProperty(process.env, "PAYMENT_LINK_PUBLIC_ORIGIN")
+    else process.env.PAYMENT_LINK_PUBLIC_ORIGIN = previousOrigin
+    if (previous === undefined)
+      Reflect.deleteProperty(process.env, "ASSISTANT_APPROVAL_SIGNING_KEY")
+    else process.env.ASSISTANT_APPROVAL_SIGNING_KEY = previous
+  }
 })

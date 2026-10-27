@@ -270,6 +270,10 @@ const InitialLayout = ({
           <Stack.Screen name="finance-accounts-modal" options={modalOptions} />
           <Stack.Screen name="finance-bank-modal" options={modalOptions} />
           <Stack.Screen
+            name="finance-bank-details-modal"
+            options={modalOptions}
+          />
+          <Stack.Screen
             name="finance-bank-import-modal"
             options={{ ...modalOptions, gestureEnabled: false }}
           />
@@ -327,6 +331,12 @@ const InitialLayout = ({
         <Stack.Protected guard={isAuthenticated && !isInvitedStaff}>
           <Stack.Screen name="business-switch-modal" options={modalOptions} />
           <Stack.Screen name="order-receipts-modal" options={modalOptions} />
+          <Stack.Screen name="payments-to-check-modal" options={modalOptions} />
+          <Stack.Screen name="payment-link/[orderId]" options={modalOptions} />
+          <Stack.Screen
+            name="payment-report/[reportId]"
+            options={modalOptions}
+          />
           <Stack.Screen name="customer-message-modal" options={modalOptions} />
           <Stack.Screen name="app-lock-modal" options={modalOptions} />
           <Stack.Screen name="updates" options={{ headerShown: false }} />

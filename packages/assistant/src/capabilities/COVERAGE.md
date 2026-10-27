@@ -6,17 +6,19 @@ Tickets refer to the Brain plan `.brain/plans/2026-10-09-assistant-business-oper
 
 ## Summary
 
-- Router procedures: 703 (530 merchant, 173 public/account/internal)
-- Merchant supported by a capability: 171
+- Router procedures: 716 (539 merchant, 177 public/account/internal)
+- Merchant supported by a capability: 173
 - Merchant planned: 133
-- Merchant form-only: 165
+- Merchant form-only: 172
 - Merchant excluded: 61
-- Capabilities: 160 (83 read, 77 write)
+- Capabilities: 162 (84 read, 78 write)
 
 ## Capabilities
 
 | ID | v | Mode | Tool | Roles | Scoped staff | Clients | Rollout | Procedures |
 |---|---|---|---|---|---|---|---|---|
+| `sales.payment_links.read` | 1 | read | `readPaymentLinkOrders` | OWNER, ADMIN, MANAGER, CASHIER, OPERATOR | read | dashboard, mobile, whatsapp | source | `businessBanking.linkCandidates` |
+| `sales.payment_links.create` | 1 | write (`payment_links_create`) | `draftAction` | OWNER, ADMIN, MANAGER, CASHIER, OPERATOR | orders | dashboard, mobile, whatsapp | source | `businessBanking.createPaymentLink` |
 | `storefront.design.read` | 1 | read | `readStorefrontDesigns` | OWNER, ADMIN | Owner/Admin only, Owner/Admin only, Owner/Admin only | dashboard | source | `storefront.draft`, `storefront.generations`, `storefront.generation` |
 | `storefront.design.generate` | 1 | write (`storefront_design_generate`) | `draftAction` | OWNER, ADMIN | Owner/Admin only | dashboard | source | `storefront.generate` |
 | `storefront.design.accept` | 1 | write (`storefront_design_accept`) | `draftAction` | OWNER, ADMIN | Owner/Admin only | dashboard | source | `storefront.acceptDesign` |
@@ -191,6 +193,8 @@ track conversational evaluation separately from these source test links.
 
 | Capability | Example requests | Registered regression tests |
 |---|---|---|
+| `sales.payment_links.read` | Create payment links for unpaid orders today<br>Find the order for service ABC | [apps/api/src/assistant/general-payment-links.test.ts](../../../../apps/api/src/assistant/general-payment-links.test.ts) |
+| `sales.payment_links.create` | Create a payment link for order XYZ<br>Create payment links for these unpaid orders | [apps/api/src/assistant/general-payment-links.test.ts](../../../../apps/api/src/assistant/general-payment-links.test.ts) |
 | `storefront.design.read` | Show the saved storefront draft and design proposals | [apps/api/src/assistant/general-storefront-design.test.ts](../../../../apps/api/src/assistant/general-storefront-design.test.ts) |
 | `storefront.design.generate` | Suggest three storefront designs with a quieter layout | [apps/api/src/assistant/general-storefront-design.test.ts](../../../../apps/api/src/assistant/general-storefront-design.test.ts) |
 | `storefront.design.accept` | Use the second reviewed design as our draft | [apps/api/src/assistant/general-storefront-design.test.ts](../../../../apps/api/src/assistant/general-storefront-design.test.ts) |
@@ -406,6 +410,15 @@ track conversational evaluation separately from these source test links.
 | `assistantChannels.confirmWhatsAppLink` | mutation | read | assistant | excluded | Assistant transport or a dedicated assistant flow. |
 | `assistantChannels.createWhatsAppLink` | mutation | read | assistant | excluded | Assistant transport or a dedicated assistant flow. |
 | `assistantChannels.whatsAppLink` | query | read | assistant | excluded | Assistant transport or a dedicated assistant flow. |
+| `businessBanking.accounts` | query | Owner/Admin only | sales | form_only | Manual bank instructions, customer reports and merchant receipt confirmation use the payment-link/review forms. Customer evidence never authorizes a payment; no model or WhatsApp payment approval is enabled. |
+| `businessBanking.availability` | query | read | sales | form_only | Manual bank instructions, customer reports and merchant receipt confirmation use the payment-link/review forms. Customer evidence never authorizes a payment; no model or WhatsApp payment approval is enabled. |
+| `businessBanking.createBankAccount` | mutation | Owner/Admin only | sales | form_only | Manual bank instructions, customer reports and merchant receipt confirmation use the payment-link/review forms. Customer evidence never authorizes a payment; no model or WhatsApp payment approval is enabled. |
+| `businessBanking.createPaymentLink` | mutation | orders | sales | supported | sales.payment_links.create |
+| `businessBanking.linkCandidates` | query | read | sales | supported | sales.payment_links.read |
+| `businessBanking.pendingReports` | query | read | sales | form_only | Manual bank instructions, customer reports and merchant receipt confirmation use the payment-link/review forms. Customer evidence never authorizes a payment; no model or WhatsApp payment approval is enabled. |
+| `businessBanking.report` | query | read | sales | form_only | Manual bank instructions, customer reports and merchant receipt confirmation use the payment-link/review forms. Customer evidence never authorizes a payment; no model or WhatsApp payment approval is enabled. |
+| `businessBanking.reviewReport` | mutation | orders | sales | form_only | Manual bank instructions, customer reports and merchant receipt confirmation use the payment-link/review forms. Customer evidence never authorizes a payment; no model or WhatsApp payment approval is enabled. |
+| `businessBanking.saveBankDetails` | mutation | Owner/Admin only | sales | form_only | Manual bank instructions, customer reports and merchant receipt confirmation use the payment-link/review forms. Customer evidence never authorizes a payment; no model or WhatsApp payment approval is enabled. |
 | `businessNotifications.archive` | mutation | read | platform | form_only | Own alert preferences and receipt state stay in the personal inbox until a dedicated confirmed assistant flow is built. |
 | `businessNotifications.listMine` | query | read | platform | planned | S05 |
 | `businessNotifications.markAllRead` | mutation | read | platform | form_only | Own alert preferences and receipt state stay in the personal inbox until a dedicated confirmed assistant flow is built. |

@@ -62,6 +62,7 @@ export function ClassicOrderDetailContent({
   onCall,
   onChange,
   onMessage,
+  onPaymentLink,
   whatsApp,
   messageFollowUp,
   error,
@@ -146,6 +147,17 @@ export function ClassicOrderDetailContent({
                 onPress: onMessage ?? (() => undefined),
                 disabled: !order.customerPhone || !onMessage,
               },
+          ...(onPaymentLink
+            ? [
+                {
+                  label: "Payment link",
+                  icon: "Link" as const,
+                  onPress: onPaymentLink,
+                  disabled: isOffline,
+                  testID: "order-payment-link-action",
+                },
+              ]
+            : []),
         ]}
       />
 

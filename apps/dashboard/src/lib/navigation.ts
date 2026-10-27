@@ -260,6 +260,14 @@ const DASHBOARD_NAV: DashboardNavDefinition[] = [
         canAccess: canManageTenantRole,
       },
       {
+        description: "Customers who say they paid by bank transfer",
+        href: "/finance/payments",
+        icon: "analytics",
+        label: "Payments to check",
+        // Staff who take payments open it from their notifications too.
+        canAccess: canUseRetailOps,
+      },
+      {
         description: "Check bank lines against your records",
         href: "/finance/bank",
         icon: "analytics",
@@ -475,6 +483,8 @@ function scopedPageAllowed(
     // Server reads re-derive each person's own Store/record scope.
     "/activity",
     "/sales",
+    // Payment claims; the API limits them to the person's Store scope.
+    "/finance/payments",
     "/customers",
     "/inventory",
     "/inventory/operations",

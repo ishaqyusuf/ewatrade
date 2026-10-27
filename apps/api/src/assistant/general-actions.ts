@@ -73,6 +73,7 @@ import {
   orderReplace,
 } from "./general-order-amendment"
 import { orderAttachmentAdd } from "./general-order-attachment"
+import { paymentLinksCreate } from "./general-payment-links"
 import { productAvailabilityUpdate } from "./general-product-availability"
 import { productBatchFulfill } from "./general-product-batch-fulfillment"
 import {
@@ -802,6 +803,7 @@ const paymentRecord: GeneralActionAdapter<Action<"payment_record">> = {
 const adapters: {
   [Name in GeneralActionName]: GeneralActionAdapter<Action<Name>>
 } = {
+  payment_links_create: paymentLinksCreate,
   customer_receipt: customerReceipt,
   money_movement: moneyMovement,
   money_transfer_simple: simpleTransferRecord,

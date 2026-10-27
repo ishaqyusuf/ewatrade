@@ -32,6 +32,7 @@ export const nativeEditorActions: ReadonlySet<GeneralActionName> = new Set([
   "commerce_quote_reject",
   ...nativeServiceWorkActions,
   "order_attachment_add",
+  "payment_links_create",
   ...nativeChangeActions,
   ...nativeOrderActions,
   ...nativeMoneyActions,
@@ -65,6 +66,13 @@ export const nativeReceiptKinds: ReadonlySet<GeneralReceipt["kind"]> = new Set([
   "inventory_closeout",
 ])
 
+/**
+ * Receipt kinds the chat card shows completely, with their own actions, and
+ * that have no saved object to open (payment links are copied or shared).
+ */
+export const nativeInlineReceiptKinds: ReadonlySet<GeneralReceipt["kind"]> =
+  new Set(["payment_links"])
+
 /** Manifest receipt labels whose capability saves one of several kinds. */
 const receiptFamilies: Record<string, readonly string[]> = {
   store_settings: [
@@ -89,8 +97,10 @@ export function nativeParityGaps(manifest: readonly Capability[]) {
       missing.push("editor")
     const kinds = receiptFamilies[capability.receipt] ?? [capability.receipt]
     if (
-      !kinds.every((kind) =>
-        nativeReceiptKinds.has(kind as GeneralReceipt["kind"]),
+      !kinds.every(
+        (kind) =>
+          nativeReceiptKinds.has(kind as GeneralReceipt["kind"]) ||
+          nativeInlineReceiptKinds.has(kind as GeneralReceipt["kind"]),
       )
     )
       missing.push("receipt")

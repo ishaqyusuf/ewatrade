@@ -3,6 +3,7 @@ import {
   WHATSAPP_ACTION_INVALID_REPLY,
   WHATSAPP_ACTION_RESULT_VERSION,
   renderWhatsAppActionResult,
+  renderWhatsAppActionResultChunks,
   whatsAppActionOutcomeSchema,
 } from "@ewatrade/assistant/channels/action-result"
 export {
@@ -27,6 +28,7 @@ import {
 } from "@ewatrade/db/assistant-whatsapp"
 import { TRPCError } from "@trpc/server"
 import { z } from "zod"
+import { paymentLinkOrigin } from "../banking/config"
 import { isLinkedAssistantIdentity } from "./channel-principal"
 import type { GeneralContext } from "./general-context"
 import {
@@ -104,6 +106,7 @@ export async function processAssistantWhatsAppAction(
           ? WHATSAPP_ACTION_DISABLED_REPLY
           : WHATSAPP_ACTION_INVALID_REPLY
       let resultRef: z.infer<typeof outcomeSchema> | undefined
+      let bodies: string[] | undefined
       if (!refusal && !malformed && parsed.success && enabled) {
         const consumed = await deps.consume(fresh.db, {
           principal,
@@ -188,22 +191,38 @@ export async function processAssistantWhatsAppAction(
           },
         )
         body = assistantWhatsAppActionResultText(proposal, link?.href)
+        bodies = renderWhatsAppActionResultChunks(proposal, link?.href, {
+          appOrigin:
+            process.env.DASHBOARD_URL ??
+            process.env.NEXT_PUBLIC_DASHBOARD_URL ??
+            "https://dash.ewatrade.com",
+          paymentOrigin:
+            proposal.receipt?.kind === "payment_links"
+              ? paymentLinkOrigin()
+              : undefined,
+        })
       }
-      const outbox = await fresh.db.assistantWhatsAppOutbox.create({
-        data: {
-          inboxId: inbox.id,
-          phoneNumberId: inbox.phoneNumberId,
-          chunkIndex: 0,
-          chunkCount: 1,
-          rendererVersion: WHATSAPP_ACTION_RESULT_VERSION,
-          renderKind: "action_result",
-          authorityDigest,
-          content: body,
-          contentDigest: digest(body),
-          expiresAt: inbox.expiresAt,
-        },
-        select: { id: true },
-      })
+      const chunks = bodies ?? [body]
+      let firstOutboxId: string | undefined
+      for (const [chunkIndex, content] of chunks.entries()) {
+        const outbox = await fresh.db.assistantWhatsAppOutbox.create({
+          data: {
+            inboxId: inbox.id,
+            phoneNumberId: inbox.phoneNumberId,
+            chunkIndex,
+            chunkCount: chunks.length,
+            rendererVersion: WHATSAPP_ACTION_RESULT_VERSION,
+            renderKind: "action_result",
+            authorityDigest,
+            content,
+            contentDigest: digest(content),
+            expiresAt: inbox.expiresAt,
+          },
+          select: { id: true },
+        })
+        firstOutboxId ??= outbox.id
+      }
+      if (!firstOutboxId) throw new AssistantWhatsAppError("CONFLICT")
       await fresh.db.assistantWhatsAppInbox.update({
         where: { id: inbox.id },
         data: {
@@ -219,7 +238,7 @@ export async function processAssistantWhatsAppAction(
           errorCode: null,
         },
       })
-      return { status: "completed" as const, outboxId: outbox.id }
+      return { status: "completed" as const, outboxId: firstOutboxId }
     })
   try {
     return await execute()

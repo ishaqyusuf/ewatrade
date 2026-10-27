@@ -13,6 +13,7 @@ import {
 import { ClassicCounterHeader } from "@/components/mobile/appearances/classic/home-counter-parts"
 import { DashboardActionRow } from "@/components/mobile/dashboard-kit"
 import { HomeSkeleton } from "@/components/mobile/loading-skeletons"
+import { PaymentNotificationsSection } from "@/components/mobile/payment-links/payment-notifications"
 import { QueryRefreshControl } from "@/components/mobile/query-refresh-control"
 import { SecondaryOperationalRow } from "@/components/mobile/secondary-operations"
 import { OrderVisibilityCard } from "@/components/mobile/staff/order-visibility-card"
@@ -542,6 +543,7 @@ export function OperationsDashboardSurface({
 
       {isClassicOwner ? (
         <GreenTillOwnerHome
+          paymentNotifications={<PaymentNotificationsSection />}
           attention={[
             ...((changeApprovals.data?.length ?? 0) > 0
               ? [
@@ -695,6 +697,7 @@ export function OperationsDashboardSurface({
         />
       ) : isAttendant ? (
         <GreenTillRepHome
+          paymentNotifications={<PaymentNotificationsSection />}
           isOffline={isOffline}
           onCloseout={() => router.push("/closeout-modal" as never)}
           onCustomers={
@@ -831,6 +834,8 @@ export function OperationsDashboardSurface({
             }
             syncTone={isOffline ? "attention" : "ready"}
           />
+
+          {isOffline ? null : <PaymentNotificationsSection />}
 
           <View>
             <ClassicDashboardSectionHeader title="Today’s work" />

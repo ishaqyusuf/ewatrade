@@ -1,5 +1,6 @@
 "use client"
 
+import { PaymentLinkDialog } from "@/components/business-banking/payment-link-dialog"
 import { useCanCreateCatalogItems } from "@/components/catalog-item/catalog-create-access"
 import {
   MessageFollowUp,
@@ -36,6 +37,7 @@ import {
   Cancel02Icon,
   CreditCardIcon,
   Invoice01Icon,
+  Link01Icon,
   PackageIcon,
   PackageReceiveIcon,
   PencilEdit02Icon,
@@ -87,7 +89,7 @@ import { useOrderRefresh } from "./use-order-refresh"
 
 type OpenDialog =
   | { kind: "customer" | "details" | "items" | "cancel" }
-  | { kind: "payment" | "refund" }
+  | { kind: "payment" | "refund" | "paymentLink" }
   | { kind: "return"; lineId?: string }
   | { kind: "fulfil"; lineId?: string }
 
@@ -263,6 +265,15 @@ export function OrderOverview({
         <Button onClick={() => setDialog({ kind: "payment" })}>
           <HugeiconsIcon icon={CreditCardIcon} className="size-4" />
           Record payment
+        </Button>
+      ) : null}
+      {!closed && order.balanceDueMinor > 0 ? (
+        <Button
+          variant="outline"
+          onClick={() => setDialog({ kind: "paymentLink" })}
+        >
+          <HugeiconsIcon icon={Link01Icon} className="size-4" />
+          Payment link
         </Button>
       ) : null}
       {ready.length ? (
@@ -584,6 +595,14 @@ export function OrderOverview({
           onClose={close}
           onDone={done}
           onRecorded={recorded}
+        />
+      ) : null}
+      {dialog?.kind === "paymentLink" ? (
+        <PaymentLinkDialog
+          order={order}
+          kind="sale"
+          timeZone={timeZone}
+          onClose={close}
         />
       ) : null}
       {dialog?.kind === "refund" ? (

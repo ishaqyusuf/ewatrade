@@ -61,6 +61,7 @@ for (const name of [
   "change",
   "money-operation",
   "order-operation",
+  "payment-links",
   "quote-decision",
   "service-intake",
   "service-message",

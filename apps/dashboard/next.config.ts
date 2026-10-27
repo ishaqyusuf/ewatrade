@@ -57,6 +57,12 @@ export function getDashboardApiRewrites(apiOrigin = getApiOrigin()) {
       source: "/api/service-commerce/media/:path*",
       destination: `${apiOrigin}/api/service-commerce/media/:path*`,
     },
+    {
+      // Payment-claim receipts: the merchant review opens them same-origin
+      // with the dashboard session.
+      source: "/api/manual-payments/:path*",
+      destination: `${apiOrigin}/api/manual-payments/:path*`,
+    },
   ]
 }
 

@@ -21,7 +21,7 @@ import {
   CATALOG_FREE_LINE_LABELS,
   catalogFreeLineDescriptionError,
 } from "@ewatrade/utils/catalog-free-lines"
-import { useState } from "react"
+import { useRef, useState } from "react"
 import {
   OrderPaymentAccount,
   useOrderPaymentAccountChoice,
@@ -37,6 +37,7 @@ import { GeneralExpenseEditor } from "./general-expense-editor"
 import { GeneralHeldCreditRefundEditor } from "./general-held-credit-refund-editor"
 import { GeneralMoneyMovementEditor } from "./general-money-movement-editor"
 import { GeneralOrderAmendmentEditor } from "./general-order-amendment-editor"
+import { GeneralPaymentLinksEditor } from "./general-payment-links-editor"
 import { GeneralProductCreateEditor } from "./general-product-create-editor"
 import { GeneralProductReturnEditor } from "./general-product-return-editor"
 import { GeneralPurchaseRecognitionEditor } from "./general-purchase-recognition-editor"
@@ -82,6 +83,17 @@ export function GeneralProposalEditor(props: {
   onSave: (payload: GeneralAction) => void
   onCancel: () => void
 }) {
+  if (props.proposal.payload.action === "payment_links_create")
+    return (
+      <GeneralPaymentLinksEditor
+        key={`${props.proposal.id}:${props.proposal.revision}`}
+        proposal={props.proposal}
+        initial={props.proposal.payload}
+        disabled={props.disabled}
+        onSave={props.onSave}
+        onCancel={props.onCancel}
+      />
+    )
   if (props.proposal.payload.action === "money_transfer_simple")
     return (
       <GeneralSimpleTransferEditor
@@ -501,6 +513,19 @@ export function GeneralProposalEditor(props: {
 }
 
 /** Edits create a new revision; the owner reviews the refreshed card before confirming. */
+let draftLineKeySequence = 0
+/**
+ * React keys for an order draft's lines. Lines carry no id in the action
+ * contract, so each row gets one key when it first appears and keeps it for
+ * this editor; keys are never regenerated on render.
+ */
+function useDraftLineKeys(count: number) {
+  const keys = useRef<string[]>([])
+  while (keys.current.length < count)
+    keys.current.push(`draft-line-${++draftLineKeySequence}`)
+  return keys.current
+}
+
 function GeneralProposalFields({
   proposal,
   currencyCode,
@@ -537,6 +562,9 @@ function GeneralProposalFields({
         : initial.action === "order_create" && initial.initialPayment
           ? minorToMajorInput(initial.initialPayment.amountMinor)
           : "",
+  )
+  const lineKeys = useDraftLineKeys(
+    payload.action === "order_create" ? payload.lines.length : 0,
   )
   const [lineTotals, setLineTotals] = useState(
     initial.action === "order_create"
@@ -1037,7 +1065,7 @@ function GeneralProposalFields({
             ) : null}
             {payload.lines.map((line, index) =>
               "custom" in line ? (
-                <Field key={`custom:${index}`}>
+                <Field key={lineKeys[index]}>
                   <FieldLabel htmlFor={field(`total-${index}`)}>
                     {CATALOG_FREE_LINE_LABELS[line.custom]} · line {index + 1}
                   </FieldLabel>

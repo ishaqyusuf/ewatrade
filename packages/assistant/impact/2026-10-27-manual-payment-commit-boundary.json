@@ -1,0 +1,39 @@
+{
+  "version": 1,
+  "id": "2026-10-27-manual-payment-commit-boundary",
+  "tickets": ["H01", "H02"],
+  "summary": "Bounded manual-payment commit: regenerate the assistant coverage snapshot from the isolated candidate. This also synchronizes two already-committed photo gallery/reuse procedures absent from the previous snapshot; no photo implementation, permission, assistant capability or rollout changes are included.",
+  "capabilities": [],
+  "procedures": [
+    {
+      "path": "catalog.photos.gallery",
+      "status": "form_only",
+      "reason": "Coverage snapshot synchronization for the existing committed photo gallery form procedure. Manual payments do not implement, invoke or grant authority for this procedure; existing form-only classification is retained."
+    },
+    {
+      "path": "catalog.photos.reuse",
+      "status": "form_only",
+      "reason": "Coverage snapshot synchronization for the existing committed photo reuse form procedure. Manual payments do not implement, invoke or grant authority for this procedure; existing form-only classification is retained."
+    }
+  ],
+  "docs": [
+    {
+      "topic": "feature",
+      "status": "local_only",
+      "path": ".brain/qa/2026-10-27-manual-payment-commit.md"
+    },
+    {
+      "topic": "capability",
+      "status": "updated",
+      "path": "packages/assistant/src/capabilities/COVERAGE.md"
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "run",
+      "path": ".brain/qa/2026-10-27-manual-payment-commit.md",
+      "executed": true,
+      "result": "Isolated manual-payment candidate source and generated coverage reviewed. Existing gallery/reuse implementations remain at HEAD; only missing snapshot classifications are synchronized. Commit verification and preservation evidence are recorded in the local receipt; no deployment or native acceptance."
+    }
+  ]
+}

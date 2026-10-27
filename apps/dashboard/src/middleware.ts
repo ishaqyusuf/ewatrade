@@ -42,6 +42,9 @@ const PUBLIC_BRAND_ASSET_PATHS = new Set([
  */
 export function middleware(request: NextRequest) {
   const signupChat = request.nextUrl.pathname === "/signup/chat"
+  const paymentPage = /^\/pay\/[^/]+(?:\/image)?\/?$/.test(
+    request.nextUrl.pathname,
+  )
   const reviewContext =
     request.nextUrl.pathname === "/assistant-review" ||
     request.nextUrl.pathname.startsWith("/r/") ||
@@ -59,7 +62,7 @@ export function middleware(request: NextRequest) {
         `frame-ancestors 'self' ${new URL(MARKETING_URL).origin}`,
       )
     }
-    if (reviewContext || signupChat) {
+    if (reviewContext || signupChat || paymentPage) {
       response.headers.set("Cache-Control", "private, no-store, max-age=0")
       response.headers.set("Referrer-Policy", "no-referrer")
       response.headers.set("X-Robots-Tag", "noindex, nofollow, noarchive")
@@ -105,6 +108,7 @@ export function middleware(request: NextRequest) {
     !hasSessionCookie &&
     !isPublicBrandAsset &&
     !isPublicAppAssociation &&
+    !paymentPage &&
     !["/login", "/signup", "/signup/chat", "/staff-onboarding"].includes(
       request.nextUrl.pathname,
     )

@@ -1,4 +1,5 @@
 model CommercialOrder {
+  manualPaymentLinks             ManualPaymentLink[]
   collectionIntents CollectionIntent[]
   customerId                     String?
   customer                       Customer?                           @relation(fields: [tenantId, customerId], references: [tenantId, id], onDelete: Restrict)

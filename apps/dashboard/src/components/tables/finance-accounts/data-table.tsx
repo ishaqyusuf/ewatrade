@@ -1,5 +1,6 @@
 "use client"
 
+import { spacedAccountNumber } from "@/components/business-banking/business-banking-model"
 import {
   DirectoryCollection,
   DirectoryRecord,
@@ -36,6 +37,24 @@ export type MoneyAccountRow = {
   paymentsPausedAt: Date | string | null
   /** A BANK account that is a mobile money wallet. */
   mobileMoney?: boolean
+  /** Present on BANK accounts the Owner/Admin may give payment-link details. */
+  bankDetails?: {
+    bankName: string | null
+    accountNumber: string | null
+    accountHolder: string | null
+  }
+}
+
+/** "GTBank · 012 345 6789 · MAMA ADA LTD" under a bank account's name. */
+function BankDetailsLine({ account }: { account: MoneyAccountRow }) {
+  const bank = account.bankDetails
+  if (!bank?.bankName || !bank.accountNumber || !bank.accountHolder) return null
+  return (
+    <p className="text-xs text-muted-foreground">
+      {bank.bankName} · {spacedAccountNumber(bank.accountNumber)} ·{" "}
+      {bank.accountHolder}
+    </p>
+  )
 }
 
 function PaymentMethodsTaken({ account }: { account: MoneyAccountRow }) {
@@ -75,18 +94,33 @@ export function moneyAccountPurposeLabel(purpose: string, mobileMoney = false) {
 function AccountActions({
   account,
   onOpenPaymentSettings,
+  onOpenBankDetails,
 }: {
   account: MoneyAccountRow
   onOpenPaymentSettings: (accountId: string) => void
+  onOpenBankDetails?: (accountId: string) => void
 }) {
   return (
-    <Button
-      variant="outline"
-      aria-label={`${account.name} payment settings`}
-      onClick={() => onOpenPaymentSettings(account.id)}
-    >
-      Payment settings
-    </Button>
+    <div className="flex flex-wrap gap-2">
+      {onOpenBankDetails && account.bankDetails ? (
+        <Button
+          variant="outline"
+          aria-label={`${account.name} bank details`}
+          onClick={() => onOpenBankDetails(account.id)}
+        >
+          {account.bankDetails.accountNumber
+            ? "Bank details"
+            : "Add bank details"}
+        </Button>
+      ) : null}
+      <Button
+        variant="outline"
+        aria-label={`${account.name} payment settings`}
+        onClick={() => onOpenPaymentSettings(account.id)}
+      >
+        Payment settings
+      </Button>
+    </div>
   )
 }
 
@@ -97,6 +131,7 @@ export function MoneyAccountsDataTable({
   view,
   onOpenStatement,
   onOpenPaymentSettings,
+  onOpenBankDetails,
 }: {
   accounts: MoneyAccountRow[]
   currencyCode: string
@@ -104,6 +139,7 @@ export function MoneyAccountsDataTable({
   view: DirectoryView
   onOpenStatement: (accountId: string) => void
   onOpenPaymentSettings: (accountId: string) => void
+  onOpenBankDetails?: (accountId: string) => void
 }) {
   const columns = useMemo<ColumnDef<MoneyAccountRow>[]>(
     () => [
@@ -130,6 +166,7 @@ export function MoneyAccountsDataTable({
                 row.original.mobileMoney,
               )}
             </p>
+            <BankDetailsLine account={row.original} />
           </div>
         ),
       },
@@ -178,11 +215,12 @@ export function MoneyAccountsDataTable({
           <AccountActions
             account={row.original}
             onOpenPaymentSettings={onOpenPaymentSettings}
+            onOpenBankDetails={onOpenBankDetails}
           />
         ),
       },
     ],
-    [currencyCode, onOpenStatement, onOpenPaymentSettings],
+    [currencyCode, onOpenStatement, onOpenPaymentSettings, onOpenBankDetails],
   )
   const [rowSelection, setRowSelection] = useLoadedRowSelection({
     rows: accounts,
@@ -235,6 +273,7 @@ export function MoneyAccountsDataTable({
                     row.original.purpose,
                     row.original.mobileMoney,
                   )}
+                  <BankDetailsLine account={row.original} />
                   <PaymentMethodsTaken account={row.original} />
                 </span>
               }
@@ -266,6 +305,7 @@ export function MoneyAccountsDataTable({
                 <AccountActions
                   account={row.original}
                   onOpenPaymentSettings={onOpenPaymentSettings}
+                  onOpenBankDetails={onOpenBankDetails}
                 />
               }
             />
