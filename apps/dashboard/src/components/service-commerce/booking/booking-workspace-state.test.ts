@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test"
 
 import {
+  bookingSourceLabel,
   eligibleBookingSources,
   mergeBookingResources,
 } from "./booking-workspace-state"
@@ -65,5 +66,31 @@ describe("booking workspace state", () => {
         "service-a",
       ).map((request) => request.id),
     ).toEqual(["eligible", "converted", "quoted"])
+  })
+})
+
+describe("booking link picker labels", () => {
+  const request = {
+    createdAt: new Date("2026-10-26T23:30:00.000Z"),
+    customerName: "Ada",
+    id: "cmrequest000abc123",
+    lines: [{ offeringId: "hem", offeringName: "Trouser hem" }],
+    status: "CONVERTED",
+  }
+
+  test("tells apart requests from one customer by reference and date", () => {
+    expect(
+      bookingSourceLabel(
+        { ...request, reference: "S-9PQB9K" },
+        "hem",
+        "Africa/Lagos",
+      ),
+    ).toBe("Ada · Trouser hem · S-9PQB9K · 27 Oct")
+  })
+
+  test("falls back to a short id when the request has no storefront reference", () => {
+    expect(
+      bookingSourceLabel({ ...request, reference: null }, "hem", "UTC"),
+    ).toBe("Ada · Trouser hem · #abc123 · 26 Oct")
   })
 })

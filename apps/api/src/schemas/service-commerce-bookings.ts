@@ -259,3 +259,28 @@ export const serviceCommercePublicBookingReviseSchema = z
 export const serviceCommercePublicBookingDetailSchema = z
   .object({ accessToken: capabilityTokenSchema })
   .strict()
+
+export const serviceCommerceStaffSourceBookingsSchema = z
+  .object({ ...storeScopeSchema, offeringId: idSchema, sourceId: idSchema })
+  .strict()
+
+/** Open times staff may move a booking to; the server owns the clock and rules. */
+export const serviceCommerceStaffBookingSlotsSchema = z
+  .object({
+    ...storeScopeSchema,
+    offeringId: idSchema,
+    resourceId: idSchema,
+    sourceId: idSchema,
+    from: z.coerce.date(),
+    to: z.coerce.date(),
+  })
+  .strict()
+  .superRefine((input, context) => {
+    if (input.to <= input.from) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Pick a window that ends after it starts.",
+        path: ["to"],
+      })
+    }
+  })

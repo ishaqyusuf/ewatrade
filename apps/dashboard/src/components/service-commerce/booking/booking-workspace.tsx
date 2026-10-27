@@ -46,8 +46,10 @@ import {
   useState,
 } from "react"
 import { useFormContext } from "react-hook-form"
+import { BookingAppointments } from "./booking-appointments"
 import {
   type BookingResourceOption,
+  bookingSourceLabel,
   eligibleBookingSources,
   mergeBookingResources,
 } from "./booking-workspace-state"
@@ -552,20 +554,18 @@ function BookingWorkspaceContent({ storeId }: { storeId: string }) {
                 value={source?.id ?? ""}
                 options={[
                   { value: "", label: <>Choose a request</> },
-                  ...eligibleSources.map((request) => {
-                    const line = request.lines.find(
-                      (item) => item.offeringId === offeringId,
-                    )
-                    return {
-                      value: request.id,
-                      label: (
-                        <>
-                          {request.customerName} ·{" "}
-                          {line?.offeringName ?? "Service"}
-                        </>
-                      ),
-                    }
-                  }),
+                  ...eligibleSources.map((request) => ({
+                    value: request.id,
+                    label: (
+                      <>
+                        {bookingSourceLabel(
+                          request,
+                          offeringId,
+                          configuration.data?.timezone,
+                        )}
+                      </>
+                    ),
+                  })),
                 ]}
               />
             </ControlField>
@@ -617,6 +617,14 @@ function BookingWorkspaceContent({ storeId }: { storeId: string }) {
               Works for 7 days{sourceName ? `, for ${sourceName} only` : ""}.
             </p>
           </div>
+        ) : null}
+        {source ? (
+          <BookingAppointments
+            key={source.id}
+            offeringId={offeringId}
+            sourceId={source.id}
+            storeId={storeId}
+          />
         ) : null}
       </SheetSection>
     </div>

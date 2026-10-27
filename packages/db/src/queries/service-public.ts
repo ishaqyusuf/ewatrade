@@ -233,6 +233,7 @@ export async function listServiceRequests(
         },
       },
       requestForm: { select: { label: true } },
+      storefrontContext: { select: { reference: true } },
     },
     orderBy: { createdAt: "desc" },
     take: Math.min(Math.max(input.limit ?? 100, 1), 200),
@@ -282,6 +283,8 @@ export async function listServiceRequests(
         quantity: line.requestedQuantity.toString(),
         variantName: line.variantName,
       })),
+      // Storefront receipt reference (S-…); null for requests from other channels.
+      reference: request.storefrontContext?.reference ?? null,
       requestedAt: request.requestedAt,
       staffResponse: request.staffResponse,
       status: request.status,

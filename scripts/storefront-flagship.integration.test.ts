@@ -25,6 +25,7 @@ import {
   issueStorefrontServiceQuote,
   linkVerifiedStorefrontRequests,
   listLinkableStorefrontRequests,
+  listServiceRequests,
   listStorefrontCustomerOrders,
   openQuoteAccess,
   replyToStorefrontOrderRequest,
@@ -37,6 +38,7 @@ import {
   verifyStorefrontCustomerOtp,
   withdrawStorefrontOrderRequest,
 } from "@ewatrade/db/queries"
+import { listStaffSourceBookingsInTransaction } from "@ewatrade/db/service-booking-read"
 
 const enabled = process.env.RUN_DATABASE_INTEGRATION_TESTS === "1"
 const suite = enabled ? describe : describe.skip
@@ -1045,6 +1047,57 @@ suite("commerce studio storefront (connected)", () => {
         where: { tenantId: ctx.tenantId, sourceId: requestId },
       }),
     ).toBe(2)
+    // Staff see both bookings with the revision their next command needs.
+    const staffList = await prisma.$transaction((tx) =>
+      listStaffSourceBookingsInTransaction(tx, {
+        ...scope,
+        offeringId: small.id,
+        sourceId: requestId,
+      }),
+    )
+    expect(
+      staffList.map(({ id, status, revision, startAt }) => ({
+        id,
+        status,
+        revision,
+        startAt,
+      })),
+    ).toEqual([
+      {
+        id: booking.id,
+        status: "cancelled",
+        revision: 2,
+        startAt: moved.start.toISOString(),
+      },
+      {
+        id: second.id,
+        status: "confirmed",
+        revision: 0,
+        startAt: rebooked.start.toISOString(),
+      },
+    ])
+    // Another Offering on the same request lists nothing.
+    const other = Object.values(ctx.offerings).find(
+      (offering) => offering?.id !== small.id,
+    )
+    if (other)
+      expect(
+        await prisma.$transaction((tx) =>
+          listStaffSourceBookingsInTransaction(tx, {
+            ...scope,
+            offeringId: other.id,
+            sourceId: requestId,
+          }),
+        ),
+      ).toEqual([])
+    // The booking-link picker can tell this request apart by its reference.
+    const requests = await listServiceRequests(prisma, {
+      tenantId: ctx.tenantId,
+      storeId: ctx.storeId,
+    })
+    expect(requests.find((row) => row.id === requestId)?.reference).toBe(
+      submitted.reference,
+    )
     // Another business's host never sees this receipt or its appointment.
     expect(
       await getStorefrontServiceReceipt(prisma, {

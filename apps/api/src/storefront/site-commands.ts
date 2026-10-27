@@ -23,6 +23,7 @@ import {
   listSiteDesignRunsInTransaction,
   listSiteReleases,
   listTenantStorefrontHostnames,
+  loadPublicStorefrontPinnedItems,
   lockSiteDesignRunInTransaction,
   lockSiteInTransaction,
   lockStorefrontAuthorityInTransaction,
@@ -62,6 +63,7 @@ import {
 import {
   defaultComposition,
   listSelectableTemplates,
+  pinnedCatalogItemIds,
   templateRegistry,
 } from "@ewatrade/storefront-templates"
 import { TRPCError } from "@trpc/server"
@@ -295,10 +297,35 @@ export function previewStorefrontDraft(
         code: "PRECONDITION_FAILED",
         message: "The preview catalog is unavailable.",
       })
-    const projected = publicStorefrontResources(store)
+    const storefrontItems =
+      (store as typeof store & { storefrontItems?: number | null })
+        .storefrontItems ?? null
+    // Featured pins beyond the first page: the same bounded, eligibility-checked
+    // read the live storefront makes, per composition being previewed.
+    const previewResources = async (composition: unknown) => {
+      let pins: string[]
+      try {
+        pins = pinnedCatalogItemIds(composition as StorefrontComposition)
+      } catch {
+        pins = []
+      }
+      pins = pins.filter((id) => !store.items.some((item) => item.id === id))
+      const pinnedItems = pins.length
+        ? await loadPublicStorefrontPinnedItems(tx, {
+            tenantId: scope.tenantId,
+            store: { id: scope.storeId, currencyCode: store.currencyCode },
+            ids: pins,
+            storefrontItems,
+          })
+        : []
+      return publicStorefrontResources(
+        pinnedItems.length ? { ...store, pinnedItems } : store,
+      )
+    }
     // Load once from existing scoped queries, then independently filter each design.
-    const renderPreview = (composition: unknown) =>
-      loadStorefront(
+    const renderPreview = async (composition: unknown) => {
+      const projected = await previewResources(composition)
+      return loadStorefront(
         {
           registry: templateRegistry,
           resolveSite: async () => ({
@@ -324,6 +351,7 @@ export function previewStorefrontDraft(
         },
         parsed,
       )
+    }
     const load = await renderPreview(site.draftComposition)
     if (load.status !== "ready")
       throw new TRPCError({

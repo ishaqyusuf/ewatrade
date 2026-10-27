@@ -1,5 +1,6 @@
 import type { Prisma } from "../../generated/prisma/client"
 import { CommerceQuoteSourceType } from "../../generated/prisma/enums"
+import { assertStaffBookingCommandScopeInTransaction } from "./service-commerce-bookings/booking-command-authority"
 import {
   ServiceCommerceBookingError,
   assertBookingMember,
@@ -257,4 +258,77 @@ export async function getAssistantServiceBookingInTransaction(
     },
     capacityAssessment: "not_checked" as const,
   }
+}
+
+export type StaffSourceBookingsInput = {
+  actorUserId: string
+  tenantId: string
+  storeId: string
+  sourceId: string
+  offeringId: string
+}
+
+/**
+ * Bookings staff can reschedule or cancel for one Service request and Offering.
+ * Same accepted Store scope as the staff booking commands; returns only what the
+ * command needs (id and revision) plus what staff recognise (time and resource).
+ */
+export async function listStaffSourceBookingsInTransaction(
+  tx: Prisma.TransactionClient,
+  input: StaffSourceBookingsInput,
+) {
+  await assertStaffBookingCommandScopeInTransaction(tx, input)
+  await assertBookingRuntimeReady(tx, input)
+  await assertServiceCommercePolicyAllowedReadOnlyInTransaction(tx, {
+    ...input,
+    channel: "staff",
+    subject: "booking",
+    vertical: "service",
+    purpose: "staff_source_bookings_read",
+  })
+  await assertBookingSource(tx, {
+    ...input,
+    source: { id: input.sourceId, kind: "service" },
+  })
+  const bookings = await tx.serviceBooking.findMany({
+    where: {
+      tenantId: input.tenantId,
+      storeId: input.storeId,
+      sourceId: input.sourceId,
+      sourceType: CommerceQuoteSourceType.SERVICE_REQUEST,
+      offeringConfig: {
+        offeringId: input.offeringId,
+        tenantId: input.tenantId,
+        storeId: input.storeId,
+      },
+    },
+    orderBy: [{ startAt: "desc" }, { id: "desc" }],
+    take: 20,
+    select: {
+      id: true,
+      status: true,
+      revision: true,
+      startAt: true,
+      endAt: true,
+      timezoneSnapshot: true,
+      resource: {
+        select: { id: true, name: true, tenantId: true, storeId: true },
+      },
+    },
+  })
+  return bookings
+    .filter(
+      (booking) =>
+        booking.resource.tenantId === input.tenantId &&
+        booking.resource.storeId === input.storeId,
+    )
+    .map((booking) => ({
+      id: booking.id,
+      status: booking.status.toLowerCase(),
+      revision: booking.revision,
+      startAt: booking.startAt.toISOString(),
+      endAt: booking.endAt.toISOString(),
+      timezone: booking.timezoneSnapshot,
+      resource: { id: booking.resource.id, label: booking.resource.name },
+    }))
 }

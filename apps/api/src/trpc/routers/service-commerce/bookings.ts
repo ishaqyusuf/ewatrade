@@ -13,6 +13,8 @@ import {
   reviseServiceCommerceBooking,
   updateServiceCommerceBookingConfiguration,
 } from "@ewatrade/db/queries"
+import { readStaffServiceCommerceBookingAvailabilityInTransaction } from "@ewatrade/db/service-booking-availability"
+import { listStaffSourceBookingsInTransaction } from "@ewatrade/db/service-booking-read"
 import { enqueueServiceCommerceBookingNotificationDispatch } from "@ewatrade/jobs"
 import { TRPCError } from "@trpc/server"
 import { readGeneralBooking } from "../../../assistant/general-booking-read"
@@ -31,6 +33,8 @@ import {
   serviceCommerceStaffBookingConfirmSchema,
   serviceCommerceStaffBookingHoldSchema,
   serviceCommerceStaffBookingReviseSchema,
+  serviceCommerceStaffBookingSlotsSchema,
+  serviceCommerceStaffSourceBookingsSchema,
 } from "../../../schemas/service-commerce-bookings"
 import { issueServiceCommerceBookingCapabilityToken } from "../../../service-commerce/booking-capability"
 import {
@@ -238,6 +242,62 @@ export const serviceCommerceBookingsRouter = createTRPCRouter({
           storeId: resolvedStoreId,
           tenantId: ctx.tenantContext.tenant.id,
         })
+      } catch (error) {
+        mapBookingError(error)
+      }
+    }),
+
+  // Staff reschedule/cancel reads. Same operator role and Store scope as
+  // reviseBooking; neither is admitted for scoped staff.
+  sourceBookings: protectedProcedure
+    .input(serviceCommerceStaffSourceBookingsSchema)
+    .query(async ({ ctx, input }) => {
+      try {
+        assertServiceOperator(ctx.tenantContext.membership.role)
+        const { storeId: requested, ...rest } = input
+        const resolvedStoreId = storeId(ctx.tenantContext, requested)
+        return await ctx.db.$transaction(
+          (tx) =>
+            listStaffSourceBookingsInTransaction(tx, {
+              ...rest,
+              actorUserId: ctx.session.user.id,
+              storeId: resolvedStoreId,
+              tenantId: ctx.tenantContext.tenant.id,
+            }),
+          {
+            isolationLevel: "RepeatableRead",
+            maxWait: 10_000,
+            timeout: 30_000,
+          },
+        )
+      } catch (error) {
+        mapBookingError(error)
+      }
+    }),
+
+  staffBookingSlots: protectedProcedure
+    .input(serviceCommerceStaffBookingSlotsSchema)
+    .query(async ({ ctx, input }) => {
+      try {
+        assertServiceOperator(ctx.tenantContext.membership.role)
+        const { sourceId, storeId: requested, ...rest } = input
+        const resolvedStoreId = storeId(ctx.tenantContext, requested)
+        return await ctx.db.$transaction(
+          (tx) =>
+            readStaffServiceCommerceBookingAvailabilityInTransaction(tx, {
+              ...rest,
+              actorUserId: ctx.session.user.id,
+              limit: 100,
+              source: { id: sourceId, kind: "service" },
+              storeId: resolvedStoreId,
+              tenantId: ctx.tenantContext.tenant.id,
+            }),
+          {
+            isolationLevel: "RepeatableRead",
+            maxWait: 10_000,
+            timeout: 30_000,
+          },
+        )
       } catch (error) {
         mapBookingError(error)
       }
