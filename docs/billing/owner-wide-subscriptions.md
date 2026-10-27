@@ -34,6 +34,8 @@ packs, trials and annual offers are not introduced here.
 - Only current, unexpired, ACTIVE verified store subscription facts in the
   expected environment authorize new coverage. Expired/suspended/cancelled
   subscriptions confer no paid plan. A renewal can reuse saved coverage.
+  Use existing `projectStoreEntitlement` when mapping provider state: turning off
+  auto-renewal alone preserves access through the verified paid period.
 - Coverage requires current ownership at projection time. Ownership removal does
   not transfer the subscription or erase coverage history. Stale coverage does
   not consume an eligible business slot; another account cannot silently take it.
