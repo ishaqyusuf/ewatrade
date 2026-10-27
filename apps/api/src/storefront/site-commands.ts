@@ -55,7 +55,10 @@ import {
 import { catalogQuerySchema } from "@ewatrade/storefront-contracts/resources"
 import { validateDesignAssets } from "@ewatrade/storefront-runtime/design-assets"
 import { publicStorefrontResources } from "@ewatrade/storefront-runtime/projection"
-import { loadStorefront } from "@ewatrade/storefront-runtime/server"
+import {
+  type StorefrontClientSnapshot,
+  loadStorefront,
+} from "@ewatrade/storefront-runtime/server"
 import {
   defaultComposition,
   listSelectableTemplates,
@@ -327,7 +330,7 @@ export function previewStorefrontDraft(
         code: "PRECONDITION_FAILED",
         message: "This draft cannot be previewed yet.",
       })
-    const designSnapshots = []
+    const designSnapshots: StorefrontClientSnapshot[] = []
     for (const input of parsedInput.designs ?? []) {
       const checked = checkComposition(input, "new-use")
       if (!checked.ok)

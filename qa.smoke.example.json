@@ -1,0 +1,17 @@
+{
+  "qaDomain": "example.qa.test",
+  "web": {
+    "origin": "https://ewatrade-dashboard.localhost",
+    "profileLabel": "owner@example.qa.test · Existing QA Business · OWNER",
+    "catalogItem": "Existing QA item",
+    "expectedTotal": "₦500"
+  },
+  "android": {
+    "device": "emulator-5556",
+    "appId": "com.ewatrade.dev",
+    "profileLabel": "Open Existing QA Business, Existing QA Store, as OWNER",
+    "catalogItem": "Existing QA item",
+    "offeringLabel": "Add Existing QA item",
+    "expectedTotal": "₦500"
+  }
+}

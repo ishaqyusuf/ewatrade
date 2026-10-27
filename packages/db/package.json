@@ -22,6 +22,7 @@
     "./finance-expense-receipt-delivery": "./src/queries/finance/expense-receipt-delivery-entrypoints.ts",
     "./catalog-photos": "./src/queries/catalog-photos.ts",
     "./catalog-photo-derivatives": "./src/queries/catalog-photo-derivatives.ts",
+    "./catalog-photo-gallery": "./src/queries/catalog-photo-gallery.ts",
     "./catalog-photo-deletion": "./src/queries/catalog-photo-deletion.ts",
     "./catalog-photo-lifecycle": "./src/queries/catalog-photo-lifecycle.ts",
     "./catalog-photo-review": "./src/queries/catalog-photo-review.ts",

@@ -216,7 +216,11 @@ export function MoneyAccountsDataTable({
       {view === "table" ? (
         <SimpleDirectoryTable table={table} label="Money accounts" />
       ) : (
-        <DirectoryCollection view={view} label="Money account">
+        <DirectoryCollection
+          view={view}
+          label="Money account"
+          cardColumns="md2-lg3"
+        >
           {table.getRowModel().rows.map((row) => (
             <DirectoryRecord
               key={row.id}

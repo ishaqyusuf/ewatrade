@@ -201,7 +201,7 @@ export function CustomerAccountsDataTable({
       {view === "table" ? (
         <SimpleDirectoryTable table={table} label="Customer balances" />
       ) : (
-        <DirectoryCollection view={view} label="Customer">
+        <DirectoryCollection view={view} label="Customer" cardColumns="md2-lg3">
           {table.getRowModel().rows.map((row) => (
             <DirectoryRecord
               key={row.id}

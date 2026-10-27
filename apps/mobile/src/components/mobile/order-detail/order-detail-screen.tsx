@@ -9,6 +9,7 @@ import {
   useAskAssistant,
 } from "@/components/mobile/assistant/use-ask-assistant"
 import { buildCommercialOrderActivity } from "@/components/mobile/commerce/commercial-order-overview-model"
+import { CheckoutMoneyAccountField } from "@/components/mobile/create-sale/checkout-money-account"
 import type { MessageFollowUpTarget } from "@/components/mobile/customer-messages/use-order-message"
 import {
   OrderWhatsAppButton,
@@ -23,6 +24,7 @@ import { MotionView } from "@/components/ui/motion"
 import { Skeleton, SkeletonGroup } from "@/components/ui/skeleton"
 import { View } from "@/components/ui/view"
 import { useAuthContext } from "@/hooks/use-auth"
+import { useOrderPaymentAccount } from "@/hooks/use-order-payment-account"
 import {
   canRecordOrderPayment,
   isClosedOrder,
@@ -35,6 +37,7 @@ import {
   majorToMinor,
   minorToMajorInput,
 } from "@ewatrade/utils"
+import { ORDER_PAYMENT_METHOD_LABELS } from "@ewatrade/utils/finance-payment-methods"
 import { createQaPaymentFixture } from "@ewatrade/utils/qa-quick-fill"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import * as Crypto from "expo-crypto"
@@ -103,6 +106,13 @@ export function OrderDetailScreen({ orderId }: { orderId: string }) {
     cachedOrders.data?.find((candidate) => candidate.id === orderId) ??
     null
   const [followUp, setFollowUp] = useState<MessageFollowUpTarget | null>(null)
+  const paymentAccount = useOrderPaymentAccount({
+    enabled: !isOffline && Boolean(order && canRecordOrderPayment(order)),
+    owner: orderId,
+    currencyCode: order?.currencyCode ?? "",
+    method: paymentMethod,
+    receivedMinor: Math.max(0, majorToMinor(amountPaid) ?? 0),
+  })
   const changes = useOrderChanges({
     isOffline,
     onChanged: refreshOrderQueries,
@@ -283,10 +293,15 @@ export function OrderDetailScreen({ orderId }: { orderId: string }) {
       setError("Payment cannot exceed the balance due.")
       return
     }
+    if (!paymentAccount.ready) {
+      setError("Choose the account that received the payment.")
+      return
+    }
     paymentMutation.mutate({
       amountMinor,
       clientPaymentId: `payment-${Crypto.randomUUID()}`,
       method: paymentMethod,
+      moneyAccountId: paymentAccount.chosen?.id,
       orderId: order.id,
       reference: paymentReference.trim() || undefined,
     })
@@ -535,6 +550,21 @@ export function OrderDetailScreen({ orderId }: { orderId: string }) {
         onPaymentMethodChange={setPaymentMethod}
         onReferenceChange={setPaymentReference}
         paymentMethod={paymentMethod}
+        accountField={
+          <CheckoutMoneyAccountField
+            accounts={paymentAccount.list}
+            disabled={paymentMutation.isPending}
+            method={paymentMethod}
+            methodLabel={ORDER_PAYMENT_METHOD_LABELS[paymentMethod]}
+            onChoose={paymentAccount.choose}
+            onRetry={paymentAccount.retry}
+            receivedLabel={formatMinorMoney(
+              Math.max(0, majorToMinor(amountPaid) ?? 0),
+              order.currencyCode,
+            )}
+            state={paymentAccount.state}
+          />
+        }
         quickFill={
           <QaQuickFillButton
             canUndo={canUndoPaymentQuickFill}

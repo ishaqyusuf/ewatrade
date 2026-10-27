@@ -40,7 +40,14 @@ export async function readCommercialOrderReplacementReview(
       replacementQuantity: string
     }
   >()
-  const offerings = []
+  const offerings: Array<
+    Prisma.SellableOfferingGetPayload<{
+      include: {
+        productUnitOffering: { include: { inventoryUnit: true } }
+        serviceOffering: true
+      }
+    }>
+  > = []
   for (const line of terms.lines) {
     const source = review.source.lines.find(
       (row) => row.id === line.orderLineId,

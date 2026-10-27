@@ -7,14 +7,44 @@ import {
   buildPurchaseRegistrationLine,
   canConfirmRetainedPurchaseCommand,
   canReversePurchaseRecognitionEvent,
+  committedPurchaseResultId,
   matchPurchaseBalance,
   matchesPurchaseRestartRetryAuthorization,
   purchaseRecognitionPagesAreComplete,
   purchaseRecognitionPagesMatchScope,
+  purchaseSourceCategoryNames,
   snapshotPurchaseRestartRetryIdentity,
 } from "./supplier-purchase-recognition-state"
 
 describe("supplier purchase recognition state", () => {
+  it("only recovers a source identity from a committed structured result", () => {
+    expect(
+      committedPurchaseResultId({
+        status: "COMMITTED",
+        result: { id: "source" },
+      }),
+    ).toBe("source")
+    for (const response of [
+      { status: "NOT_FOUND", result: { id: "untrusted" } },
+      { status: "COMMITTED", result: null },
+      { status: "COMMITTED", result: { id: 123 } },
+      { status: "NOT_FOUND" },
+    ])
+      expect(committedPurchaseResultId(response)).toBeUndefined()
+  })
+  it("reads category names safely from saved JSON without inventing labels for ID selectors", () => {
+    expect(
+      purchaseSourceCategoryNames([
+        { name: "Feed" },
+        { categoryNameId: 7 },
+        null,
+        "invalid",
+        { name: 3 },
+      ]),
+    ).toEqual(["Feed"])
+    for (const value of [null, true, "invalid", { name: "Feed" }])
+      expect(purchaseSourceCategoryNames(value)).toEqual([])
+  })
   it("authorizes restart re-entry only for the exact retained purchase identity and scope", () => {
     const scope = {
       actorUserId: "owner",

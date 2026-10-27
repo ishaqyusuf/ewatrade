@@ -15,6 +15,8 @@ type Draft = {
   instructions: string
   express: boolean
   payment: ServicePaymentFields
+  /** False while money is received now but no receiving account is settled. */
+  accountReady: boolean
   notificationChannel: "" | "sms" | "whatsapp"
   evidenceCount: number
 }
@@ -61,6 +63,11 @@ export function prepareServiceIntake(
       error:
         "Enter a non-negative payment within the supported limit and order total.",
     }
+  if (initialPaymentMinor > 0 && !draft.accountReady)
+    return {
+      value: null,
+      error: "Choose the account that received the payment.",
+    }
   if (draft.notificationChannel && !draft.customerPhone.trim())
     return { value: null, error: "Customer updates require a phone number." }
   const input: IntakeInput = {
@@ -75,6 +82,8 @@ export function prepareServiceIntake(
     instructions: draft.instructions.trim() || undefined,
     initialPaymentMinor,
     initialPaymentMethod: initialPaymentMinor > 0 ? payment.method : undefined,
+    initialPaymentMoneyAccountId:
+      initialPaymentMinor > 0 ? payment.moneyAccountId : undefined,
     initialPaymentReference: payment.reference.trim() || undefined,
     notificationChannel: draft.notificationChannel || undefined,
     serviceLevel: draft.express ? "express" : "standard",
@@ -105,7 +114,7 @@ export function prepareServiceIntake(
           value:
             formatMinorMoney(initialPaymentMinor, projection.currencyCode) +
             (initialPaymentMinor > 0
-              ? ` · ${payment.method}`
+              ? ` · ${payment.method}${payment.moneyAccountName ? ` into ${payment.moneyAccountName}` : ""}`
               : " · Collect later"),
         },
         {

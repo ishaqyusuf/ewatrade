@@ -1,6 +1,10 @@
 "use client"
 
 import { FormFeedback } from "@/components/forms/form-feedback"
+import {
+  OrderPaymentAccount,
+  useOrderPaymentAccountChoice,
+} from "@/components/orders/order-payment-account"
 import { invalidateServiceJobLists } from "@/components/service-work/invalidate-service-job-lists"
 import { useAttachmentAccess } from "@/hooks/use-attachment-access"
 import { useServiceWorkParams } from "@/hooks/use-service-work-params"
@@ -884,6 +888,11 @@ function JobStepView({
 
   const balance = job.balanceDueMinor
   const amountMinor = amount.trim() ? Math.round(Number(amount) * 100) : null
+  const account = useOrderPaymentAccountChoice({
+    method,
+    enabled: balance > 0,
+  })
+  const accountError = balance > 0 && account.book ? account.problem : null
   const moneyError = (full: boolean) => {
     if (balance <= 0) return null
     if (amountMinor === null) return "Enter the amount received."
@@ -954,6 +963,12 @@ function JobStepView({
             />
           </ControlField>
         </div>
+        <OrderPaymentAccount choice={account} disabled={pending} />
+        {fieldErrors.account && account.eligible.length ? (
+          <FormFeedback appearance="dashboard">
+            {fieldErrors.account}
+          </FormFeedback>
+        ) : null}
         <ControlField
           label={
             <>
@@ -1010,16 +1025,20 @@ function JobStepView({
                   ? `Record ${formatPrice(amountMinor, job.currencyCode)}`
                   : "Record payment",
               onClick: () =>
-                void save({ amount: moneyError(false) }, async () => {
-                  await recordPayment.mutateAsync({
-                    amountMinor: amountMinor ?? 0,
-                    clientPaymentId: crypto.randomUUID(),
-                    method,
-                    orderId: job.commercialOrderId,
-                    reference: reference.trim() || undefined,
-                  })
-                  return `${formatPrice(amountMinor ?? 0, job.currencyCode)} recorded.`
-                }),
+                void save(
+                  { amount: moneyError(false), account: accountError },
+                  async () => {
+                    await recordPayment.mutateAsync({
+                      amountMinor: amountMinor ?? 0,
+                      clientPaymentId: crypto.randomUUID(),
+                      method,
+                      moneyAccountId: account.payloadAccountId,
+                      orderId: job.commercialOrderId,
+                      reference: reference.trim() || undefined,
+                    })
+                    return `${formatPrice(amountMinor ?? 0, job.currencyCode)} recorded.`
+                  },
+                ),
             }
           : null
       break
@@ -1093,27 +1112,31 @@ function JobStepView({
                 ? `Collect ${formatPrice(amountMinor && amountMinor > 0 ? amountMinor : balance, job.currencyCode)} and hand over`
                 : "Hand over",
             onClick: () =>
-              void save({ amount: moneyError(true) }, async () => {
-                await handoff.mutateAsync({
-                  clientCommandId: crypto.randomUUID(),
-                  expectedRevision: job.revision,
-                  jobId: job.id,
-                  note: signOff
-                    ? "Cleaning completed after customer sign-off"
-                    : "Collected by customer",
-                  payment:
-                    balance > 0
-                      ? {
-                          amountMinor: amountMinor ?? 0,
-                          method,
-                          reference: reference.trim() || undefined,
-                        }
-                      : undefined,
-                })
-                return signOff
-                  ? "Job completed."
-                  : `Handed over to ${job.customerName || "the customer"}.`
-              }),
+              void save(
+                { amount: moneyError(true), account: accountError },
+                async () => {
+                  await handoff.mutateAsync({
+                    clientCommandId: crypto.randomUUID(),
+                    expectedRevision: job.revision,
+                    jobId: job.id,
+                    note: signOff
+                      ? "Cleaning completed after customer sign-off"
+                      : "Collected by customer",
+                    payment:
+                      balance > 0
+                        ? {
+                            amountMinor: amountMinor ?? 0,
+                            method,
+                            moneyAccountId: account.payloadAccountId,
+                            reference: reference.trim() || undefined,
+                          }
+                        : undefined,
+                  })
+                  return signOff
+                    ? "Job completed."
+                    : `Handed over to ${job.customerName || "the customer"}.`
+                },
+              ),
           }
         : null
       break

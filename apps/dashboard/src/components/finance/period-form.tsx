@@ -66,12 +66,17 @@ export function FinancePeriodForm({ book }: { book: FinanceBook }) {
   const query = useQuery(trpc.finance.periods.queryOptions({ bookId: book.id }))
   const mutation = useMutation(trpc.finance.changePeriod.mutationOptions())
   const [action, setAction] = useState<"CLOSE" | "REOPEN">("CLOSE")
-  // Close a whole month by default: the last day of last month.
+  // Close a whole month by default: the last day of last month. A book that
+  // started this month has no whole month yet, so start from yesterday.
   const [date, setDate] = useState(() => {
     const now = new Date()
-    return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 0))
-      .toISOString()
-      .slice(0, 10)
+    const lastMonthEnd = new Date(
+      Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 0),
+    )
+    const day = (value: Date) => value.toISOString().slice(0, 10)
+    return day(lastMonthEnd) < day(new Date(book.startsAt))
+      ? day(new Date(now.getTime() - 86_400_000))
+      : day(lastMonthEnd)
   })
   const [done, setDone] = useState("")
   const command = useFinanceCommand(

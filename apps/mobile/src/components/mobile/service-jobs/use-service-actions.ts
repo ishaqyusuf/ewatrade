@@ -221,6 +221,7 @@ export function useServiceActions({
       amountMinor,
       clientPaymentId: "payment-" + Crypto.randomUUID(),
       method: fields.method,
+      moneyAccountId: fields.moneyAccountId,
       orderId: job.commercialOrderId,
       reference: fields.reference.trim() || undefined,
     }
@@ -235,6 +236,9 @@ export function useServiceActions({
           value: formatMinorMoney(amountMinor, job.currencyCode),
         },
         { label: "Method", value: fields.method },
+        ...(fields.moneyAccountName
+          ? [{ label: "Into", value: fields.moneyAccountName }]
+          : []),
         { label: "Reference", value: input.reference ?? "Not provided" },
       ],
       execute: async () => {
@@ -269,6 +273,7 @@ export function useServiceActions({
           ? {
               amountMinor,
               method: fields.method,
+              moneyAccountId: fields.moneyAccountId,
               reference: fields.reference.trim() || undefined,
             }
           : undefined,
@@ -287,6 +292,9 @@ export function useServiceActions({
         ...(amountMinor > 0
           ? [
               { label: "Method", value: fields.method },
+              ...(fields.moneyAccountName
+                ? [{ label: "Into", value: fields.moneyAccountName }]
+                : []),
               {
                 label: "Reference",
                 value: fields.reference.trim() || "Not provided",

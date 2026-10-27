@@ -1,4 +1,9 @@
+import { useAppActive } from "@/hooks/use-app-active"
 import { useAuthContext } from "@/hooks/use-auth"
+import {
+  canReadBusinessInForeground,
+  orderVisibilityPollInterval,
+} from "@/lib/background-query-policy"
 import {
   purgeOrderVisibilityCache,
   visibilityTightened,
@@ -7,22 +12,31 @@ import { useOperationalModeStore } from "@/store/operationalModeStore"
 import { useTRPC } from "@/trpc/client"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useEffect, useRef } from "react"
-import { AppState } from "react-native"
 
 export function useOrderVisibility() {
-  const { profile } = useAuthContext()
+  const { profile, isAuthenticated } = useAuthContext()
+  const active = useAppActive()
   const trpc = useTRPC()
   const client = useQueryClient()
   const isOffline = useOperationalModeStore((state) => state.isOfflineMode)
   const storeId = profile?.storeId
   const canManage = ["OWNER", "ADMIN"].includes(profile?.role ?? "")
+  const enabled =
+    Boolean(storeId) &&
+    canReadBusinessInForeground({
+      active,
+      authenticated: isAuthenticated,
+      businessId: profile?.businessId,
+      offline: isOffline,
+    })
   const query = useQuery(
     trpc.stores.orderVisibility.queryOptions(
       { storeId },
       {
-        enabled: Boolean(storeId) && !isOffline,
+        enabled,
         staleTime: 0,
-        refetchInterval: isOffline ? false : 30_000,
+        refetchInterval: orderVisibilityPollInterval(enabled, canManage),
+        refetchIntervalInBackground: false,
         refetchOnReconnect: "always",
         retry: false,
       },
@@ -69,11 +83,7 @@ export function OrderVisibilityReconciler() {
     if (visibilityTightened(last, current))
       void purgeOrderVisibilityCache(client)
   }, [client, isOffline, query.data?.salesRepOrderVisibility, scope])
-  useEffect(() => {
-    const subscription = AppState.addEventListener("change", (state) => {
-      if (state === "active" && !isOffline) void query.refetch()
-    })
-    return () => subscription.remove()
-  }, [isOffline, query.refetch])
+  // useOrderVisibility re-enables its stale query on foreground, after scope
+  // and offline checks. Direct refetch here would bypass those checks.
   return null
 }

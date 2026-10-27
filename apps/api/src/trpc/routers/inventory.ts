@@ -42,6 +42,7 @@ import {
   receiveOrCancelStockTransfer,
   releaseCatalogStockReservation,
   reserveCatalogOfferingStock,
+  reverseStockTransformation,
   setCatalogProductLowStockLevel,
   transformPackagedStock,
 } from "@ewatrade/db/queries"
@@ -76,6 +77,7 @@ import {
   inventoryRecordInternalUseSchema,
   inventoryReleaseReservationSchema,
   inventoryReserveOfferingSchema,
+  inventoryReverseTransformationSchema,
   inventorySetLowStockLevelSchema,
   inventorySingleBalanceOperationSchema,
   inventoryStockCountReviewSchema,
@@ -818,6 +820,23 @@ export const inventoryRouter = createTRPCRouter({
           ...input,
           actorUserId: ctx.session.user.id,
           storeId,
+          tenantId: ctx.tenantContext.tenant.id,
+        })
+      } catch (error) {
+        if (error instanceof CatalogError || error instanceof FinanceError)
+          throw inventoryError(error)
+        throw error
+      }
+    }),
+
+  reverseTransformation: protectedProcedure
+    .input(inventoryReverseTransformationSchema)
+    .mutation(async ({ ctx, input }) => {
+      assertCanManageInventory(ctx.tenantContext)
+      try {
+        return await reverseStockTransformation(ctx.db, {
+          ...input,
+          actorUserId: ctx.session.user.id,
           tenantId: ctx.tenantContext.tenant.id,
         })
       } catch (error) {

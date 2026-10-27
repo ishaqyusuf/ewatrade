@@ -1,4 +1,5 @@
 import { z } from "zod"
+import type { CapabilityDomain } from "../capabilities/types"
 import type { ReadRecordOrigin } from "../general/read-record-target"
 import {
   conversationAppLink,
@@ -146,15 +147,7 @@ export type WhatsAppControlCategory = z.infer<
 >
 export type WhatsAppControlCapability = {
   id: string
-  domain:
-    | "search"
-    | "catalog"
-    | "inventory"
-    | "sales"
-    | "services"
-    | "customers"
-    | "finance"
-    | "staff"
+  domain: CapabilityDomain
   title: string
   example: string
   availability: "native" | "app_review"

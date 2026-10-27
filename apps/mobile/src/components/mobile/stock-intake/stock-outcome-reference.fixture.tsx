@@ -117,6 +117,7 @@ const balance: StockBalance = {
   inventoryUnitName: "bag",
   inventoryUnitTransactionScale: 0,
   kind: "SHARED_POOL",
+  lowStockLevel: null,
   onHandQuantity: "60",
   productId: "rice",
   productName: "Rice",

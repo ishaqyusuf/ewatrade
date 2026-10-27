@@ -261,7 +261,7 @@ export async function getCommercialOrderTimeline(
       },
     }),
   ])
-  const operationById = new Map(operations.map((row) => [row.id, row]))
+  const operationById = new Map(operations.map((row) => [row.id, row] as const))
   // Batch fulfil writes one operation per line, named "<command>:<lineId>".
   const commandFor = (clientOperationId: string | undefined) =>
     clientOperationId

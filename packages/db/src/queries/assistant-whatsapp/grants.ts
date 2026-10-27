@@ -46,7 +46,12 @@ export async function listAssistantWhatsAppScopes(
     take: 11,
     include: { identity: { select: { generation: true } } },
   })
-  const choices = []
+  const choices: Array<{
+    principal: WhatsAppGrantPrincipal
+    businessName: string
+    storeName: string
+    storeId: string
+  }> = []
   for (const grant of grants.slice(0, 10)) {
     const principal: WhatsAppGrantPrincipal = {
       kind: "linked_whatsapp",

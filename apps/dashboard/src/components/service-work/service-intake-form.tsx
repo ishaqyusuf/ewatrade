@@ -1,5 +1,9 @@
 "use client"
 
+import {
+  OrderPaymentAccount,
+  useOrderPaymentAccountChoice,
+} from "@/components/orders/order-payment-account"
 import { invalidateServiceJobLists } from "@/components/service-work/invalidate-service-job-lists"
 import {
   Button,
@@ -156,6 +160,11 @@ export function ServiceIntakeForm({
     "bank_transfer" | "card" | "cash" | "other" | "pos"
   >("cash")
   const [paymentReference, setPaymentReference] = useState("")
+  const paysNow = Boolean(amountPaid.trim()) && Number(amountPaid) > 0
+  const account = useOrderPaymentAccountChoice({
+    method: paymentMethod,
+    enabled: paysNow,
+  })
   const [notificationChannel, setNotificationChannel] = useState<
     "" | "sms" | "whatsapp"
   >(initialDraft ? "" : (settingsQuery.data.defaultNotificationChannel ?? ""))
@@ -303,6 +312,10 @@ export function ServiceIntakeForm({
       setError("The amount paid cannot exceed the order total.")
       return
     }
+    if (paysNow && account.book && account.problem) {
+      setError(account.problem)
+      return
+    }
     if (
       newCustomer &&
       !customer &&
@@ -379,6 +392,9 @@ export function ServiceIntakeForm({
       initialPaymentMinor: amountPaid.trim()
         ? Math.round(Number(amountPaid) * 100)
         : 0,
+      initialPaymentMoneyAccountId: paysNow
+        ? account.payloadAccountId
+        : undefined,
       initialPaymentReference: paymentReference.trim() || undefined,
       lines: lines.map(({ offeringId, quantity }) => ({
         offeringId,
@@ -918,6 +934,7 @@ export function ServiceIntakeForm({
                 />
               </ControlField>
             </div>
+            {paysNow ? <OrderPaymentAccount choice={account} /> : null}
             {amountPaid.trim() ? (
               <ControlField label={<>Reference {optional}</>}>
                 <Input

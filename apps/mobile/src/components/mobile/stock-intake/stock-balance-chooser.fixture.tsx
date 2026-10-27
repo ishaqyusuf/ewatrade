@@ -149,6 +149,7 @@ const balance = (index: number): StockBalance => ({
   inventoryUnitName: "Bird",
   inventoryUnitTransactionScale: 0,
   kind: "SHARED_POOL",
+  lowStockLevel: null,
   onHandQuantity: "5",
   productId: "product",
   productName: `Broilers ${index}`,

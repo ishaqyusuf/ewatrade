@@ -1,8 +1,10 @@
 "use client"
 
+import { useTRPC } from "@/trpc/client"
 import type { RouterOutputs } from "@ewatrade/api/trpc/routers/_app"
 import { Alert, AlertDescription, AlertTitle, Badge } from "@ewatrade/ui"
 import { formatFinanceMoney } from "@ewatrade/utils/finance-money"
+import { useQuery } from "@tanstack/react-query"
 import { plainDay } from "./review-changes"
 
 type Checklist = RouterOutputs["finance"]["periodCloseChecklist"]
@@ -227,6 +229,110 @@ function CheckRow({
           ? `Money in and out adds up: ${formatFinanceMoney(checklist.trialBalance.debitMinor, checklist.currencyCode)} each way.`
           : PLAIN_CHECKS[check.id]?.[1] || check.explanation}
       </p>
+      {check.id === "INVENTORY_RECONCILIATION" ? (
+        <StockValueToday bookId={checklist.bookId} />
+      ) : null}
+      {check.id === "OPENING_AND_ADJUSTMENTS" ? (
+        <StartingBalancesToday bookId={checklist.bookId} />
+      ) : null}
     </li>
+  )
+}
+
+const OPENING_SOURCE_WORDS: Record<string, string> = {
+  OPENING_BALANCE: "money accounts",
+  CUSTOMER_LEDGER_OPENING: "Customers",
+  CUSTOMER_LEDGER_REVERSAL: "undone Customer balances",
+  SUPPLIER_OPENING_PAYABLE: "what you owed Suppliers",
+  SUPPLIER_OPENING_ADVANCE: "Supplier prepayments",
+  SUPPLIER_ENTRY_REVERSAL: "undone Supplier balances",
+}
+
+/** What makes up opening equity today, and what can't be in it yet. */
+function StartingBalancesToday({ bookId }: { bookId: string }) {
+  const trpc = useTRPC()
+  const query = useQuery(
+    trpc.finance.openingEquityReconciliation.queryOptions(
+      { bookId },
+      { retry: false },
+    ),
+  )
+  if (!query.data)
+    return query.isError ? (
+      <p className="text-sm text-muted-foreground">
+        Starting balances couldn&apos;t load.
+      </p>
+    ) : null
+  const r = query.data
+  const money = (minor: string) => formatFinanceMoney(minor, r.currencyCode)
+  const parts = r.sources.map(
+    (row) =>
+      `${OPENING_SOURCE_WORDS[row.sourceKind] ?? row.sourceKind.toLowerCase().replaceAll("_", " ")} ${money(row.netMinor)}`,
+  )
+  const stock = r.openingStock
+  return (
+    <div className="grid gap-1 text-sm text-muted-foreground">
+      <p>
+        Starting balances add up to {money(r.openingEquityMinor)}
+        {parts.length ? `: ${parts.join(", ")}.` : "."}
+      </p>
+      {stock.knownCount || stock.unknownCostCount ? (
+        <p>
+          {stock.knownCount
+            ? `Starting stock worth ${money(stock.knownValueMinor)} isn't in these balances yet.`
+            : ""}
+          {stock.unknownCostCount
+            ? ` ${stock.unknownCostCount} starting stock ${stock.unknownCostCount === 1 ? "item has" : "items have"} no known cost.`
+            : ""}
+        </p>
+      ) : null}
+      {r.unexpectedSourceKinds.length ? (
+        <p>Other records also changed starting balances. Look at them.</p>
+      ) : null}
+      <p>
+        Equipment, loans, tax, prepayments and bills you owe can&apos;t be added
+        as starting balances yet.
+      </p>
+    </div>
+  )
+}
+
+/** Today's stock pool value against the Inventory account (not at the cutoff). */
+function StockValueToday({ bookId }: { bookId: string }) {
+  const trpc = useTRPC()
+  const query = useQuery(
+    trpc.finance.inventoryReconciliation.queryOptions(
+      { bookId },
+      { retry: false },
+    ),
+  )
+  if (!query.data)
+    return query.isError ? (
+      <p className="text-sm text-muted-foreground">
+        Today&apos;s stock value couldn&apos;t load.
+      </p>
+    ) : null
+  const r = query.data
+  const money = (minor: string) => formatFinanceMoney(minor, r.currencyCode)
+  const notes = [
+    r.differenceMinor !== "0"
+      ? `Difference ${money(r.differenceMinor)}.`
+      : null,
+    r.pools.unknownCount
+      ? `${r.pools.unknownCount} ${r.pools.unknownCount === 1 ? "item has" : "items have"} no known cost.`
+      : null,
+    r.uncoveredStockCount
+      ? `${r.uncoveredStockCount} ${r.uncoveredStockCount === 1 ? "item in stock was" : "items in stock were"} never valued.`
+      : null,
+    r.ledger.inTransitMinor !== "0"
+      ? `${money(r.ledger.inTransitMinor)} of goods are on the way.`
+      : null,
+  ].filter(Boolean)
+  return (
+    <p className="text-sm text-muted-foreground">
+      Today: stock is valued at {money(r.pools.knownValueMinor)} and the
+      Inventory account shows {money(r.ledger.onHandMinor)}.
+      {notes.length ? ` ${notes.join(" ")}` : " They match."}
+    </p>
   )
 }

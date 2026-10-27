@@ -64,7 +64,7 @@ function harness() {
       retailEditorialManifest,
       serviceDeskManifest,
     ].map((manifest, i) => ({
-      id: ["01", "02", "03"][i],
+      id: String(i + 1).padStart(2, "0"),
       composition: defaultComposition(manifest),
       rationale: ["collection-first"],
       missingAssets: [],
@@ -93,9 +93,7 @@ function harness() {
   } as unknown as GeneralTransactionContext
   const adapters = createStorefrontDesignAdapters({
     read: async () => site,
-    run: (async () => run) as NonNullable<
-      Parameters<typeof createStorefrontDesignAdapters>[0]
-    >["run"],
+    run: async () => run,
     generate: async (tx, actor, input) => {
       expect(tx).toBe(ctx.db)
       expect(actor).toEqual({ tenantId: "tenant1", actorUserId: "owner1" })
@@ -140,9 +138,8 @@ test("Storefront assistant actions have a dashboard Owner/Admin ceiling and stri
   for (const capability of capabilities) {
     expect(capability.clients).toEqual(["dashboard"])
     expect(capability.policy.roles).toEqual(["OWNER", "ADMIN"])
-    expect(
-      capability.procedures.some((path) => path === "storefront.publish"),
-    ).toBe(false)
+    const procedures: readonly string[] = capability.procedures
+    expect(procedures.includes("storefront.publish")).toBe(false)
   }
   for (const extra of [
     { tenantId: "another" },
@@ -198,7 +195,9 @@ test("review stages no effect, execution uses the canonical command in the exist
 test("changed Store, draft, output and used set are refused before a command can execute", async () => {
   const h = harness()
   const original = await h.adapters.accept.validate(h.ctx, accept, false)
-  h.run.output.directions[1].composition.theme.accent = "#ff0000"
+  const direction = h.run.output.directions[1]
+  if (!direction) throw new Error("Expected the second design fixture")
+  direction.composition.theme.accent = "#ff0000"
   h.run.outputHash = siteContentHash(h.run.output)
   const changed = await h.adapters.accept.validate(h.ctx, accept, false)
   expect(changed?.revision).not.toBe(original?.revision)

@@ -1,0 +1,43 @@
+{
+  "version": 1,
+  "id": "2026-10-27-finance-inventory-reconciliation",
+  "tickets": ["H02"],
+  "summary": "Read-only Finance check of today's stock pool values against the posted Inventory balance at one snapshot (Finance roadmap F4.3.04): known pool value, Inventory (1300) and goods-in-transit (1310) balances, the difference, pools with unknown cost by reason, and stock on hand that was never valued. The dashboard closing checklist shows it under Stock. Roles, permissions and assistant rollout are unchanged.",
+  "noAssistantImpact": "No assistant tool, prompt authority, capability declaration or write is added. finance.inventoryReconciliation is an Owner/Admin financeProcedure read classified form-only with the other period close reviews.",
+  "capabilities": [],
+  "procedures": [
+    {
+      "path": "finance.inventoryReconciliation",
+      "status": "form_only",
+      "reason": "Period close, reopen and fiscal calendar changes are privileged Finance actions."
+    }
+  ],
+  "docs": [
+    {
+      "topic": "feature",
+      "status": "local_only",
+      "path": ".brain/features/merchant-finance.md",
+      "note": "Follow-ups, 27 October 2026: inventory reconciliation read."
+    },
+    {
+      "topic": "api",
+      "status": "local_only",
+      "path": ".brain/api/endpoints.md",
+      "note": "finance.inventoryReconciliation."
+    },
+    {
+      "topic": "capability",
+      "status": "updated",
+      "path": "packages/assistant/src/capabilities/inventory.ts",
+      "note": "Classified form-only with period close reviews; COVERAGE.md row added."
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "test",
+      "path": "packages/db/src/queries/finance/purchase-recognition.integration.test.ts",
+      "executed": true,
+      "result": "1 pass on the Neon development database: after receipt and invoice, pools and Inventory both read 1700 with no unknown pools and a zero difference."
+    }
+  ]
+}

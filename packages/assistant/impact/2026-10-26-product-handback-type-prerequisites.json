@@ -1,0 +1,40 @@
+{
+  "version": 1,
+  "id": "2026-10-26-product-handback-type-prerequisites",
+  "tickets": ["B03", "H02"],
+  "summary": "Commit the sparse saved-variant lookup type repair together with the Product handback source it depends on; keep the broader commerce preparation and UI work separate.",
+  "capabilities": [
+    {
+      "id": "catalog.product.create",
+      "change": "unchanged",
+      "rollout": "source",
+      "note": "Existing source capability only. Product/Setup handback carries supplied choices and exact prices/stock into the existing form, preserves saved advanced edits and requires advanced review for unsupported work. This is the minimum prerequisite slice for the typed missing-variant lookup; no new save tool, authority, native acceptance or rollout. Broader preparation/orchestration/UI remains separately uncommitted."
+    }
+  ],
+  "procedures": [],
+  "docs": [
+    {
+      "topic": "feature",
+      "status": "local_only",
+      "path": ".brain/features/product-handback-commit-boundary.md"
+    },
+    {
+      "topic": "permissions",
+      "status": "not_applicable",
+      "note": "Existing form/save and assistant role/scope/confirmation/entitlement gates are unchanged; no new procedure or grant."
+    },
+    {
+      "topic": "schema",
+      "status": "not_applicable",
+      "note": "Draft payload Zod compatibility fields only; no Prisma model, migration or database operation."
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "test",
+      "path": "packages/assistant/src/product/contracts.test.ts",
+      "executed": true,
+      "result": "9 tests/45 assertions pass in the isolated source candidate, including existing advanced fields and supplied-only phone combinations; sanitized environment."
+    }
+  ]
+}

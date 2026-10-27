@@ -202,6 +202,19 @@ export const inventoryTransformationSchema = z
   })
   .strict()
 
+/** Source-owned undo of one packaged transformation at its original values. */
+export const inventoryReverseTransformationSchema = z
+  .object({
+    clientOperationId: z.string().trim().min(8).max(160),
+    expectedSourceBalanceRevision: z.number().int().nonnegative(),
+    expectedTargetBalanceRevision: z.number().int().nonnegative(),
+    operationId: z.string().trim().min(1).max(128),
+    reason: z.string().trim().min(1).max(500),
+    schemaVersion: z.literal(1),
+    source: z.string().trim().min(1).max(80),
+  })
+  .strict()
+
 export const inventoryStockCountReviewSchema = z
   .object({
     stockCountId: z.string().trim().min(1).max(128),

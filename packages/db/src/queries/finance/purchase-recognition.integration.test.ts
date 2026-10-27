@@ -5,6 +5,7 @@ import { randomUUID } from "node:crypto"
 import { describeWithServiceCommerceDatabase } from "../acceptance/service-commerce/database"
 import { createFinanceBook } from "./accounts"
 import { getFinanceBill } from "./bill-reads"
+import { getFinanceInventoryReconciliation } from "./inventory-reconciliation"
 import { recordFinanceMoneyMovement } from "./money"
 import {
   getFinancePurchaseBill,
@@ -463,6 +464,16 @@ describeWithServiceCommerceDatabase(
           "1300": "1700",
           "2050": "0",
           "2000": "-1400",
+        })
+        expect(
+          await getFinanceInventoryReconciliation(db, {
+            ...actor,
+            bookId: book.id,
+          }),
+        ).toMatchObject({
+          ledger: { onHandMinor: "1700", inTransitMinor: "0" },
+          pools: { knownValueMinor: "1700", unknownCount: 0 },
+          differenceMinor: "0",
         })
         expect(
           await db.financeInventoryPool.findUniqueOrThrow({

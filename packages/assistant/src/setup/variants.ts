@@ -9,6 +9,23 @@ export const setupNameEqual = (left: string, right: string) =>
   left.trim().toLowerCase() === right.trim().toLowerCase()
 export type SetupVariant = NonNullable<SetupProductPayload["variants"]>[number]
 
+/** Naming the counting unit again adds no pack conversion. Explicit conflicting factors stay invalid. */
+export function isCanonicalUnitAlias(
+  unit: NonNullable<SetupProductPayload["sellingUnits"]>[number],
+  canonicalName: string,
+  canonicalPriceMinor?: number,
+) {
+  return (
+    setupNameEqual(unit.name, canonicalName) &&
+    (!unit.containsQuantity || /^1(?:\.0+)?$/.test(unit.containsQuantity)) &&
+    (canonicalPriceMinor === undefined ||
+      unit.priceMinor === undefined ||
+      canonicalPriceMinor === unit.priceMinor) &&
+    !unit.referenceUnitName &&
+    unit.referenceQuantity === undefined
+  )
+}
+
 export function setupSelectionsEqual(
   left: SetupVariant["selections"],
   right: SetupVariant["selections"],
@@ -43,6 +60,12 @@ export function setupProductVariants(payload: SetupProductPayload) {
       ]),
     )
   }
+  if (payload.variantMode === "explicit" && payload.options?.length)
+    combinations = combinations.filter((selections) =>
+      payload.variants?.some((variant) =>
+        setupSelectionsEqual(variant.selections, selections),
+      ),
+    )
   return combinations.map((selections) => {
     const override = payload.variants?.find((variant) =>
       setupSelectionsEqual(variant.selections, selections),
@@ -67,8 +90,7 @@ export function setupProductVariants(payload: SetupProductPayload) {
       sellingUnits: (payload.sellingUnits ?? [])
         .filter(
           (unit) =>
-            !setupNameEqual(unit.name, payload.unitName) &&
-            unit.containsQuantity !== "1",
+            !isCanonicalUnitAlias(unit, payload.unitName, payload.priceMinor),
         )
         .map((unit) => ({
           ...unit,
@@ -77,7 +99,9 @@ export function setupProductVariants(payload: SetupProductPayload) {
               setupNameEqual(price.unitName, unit.name),
             )?.priceMinor ??
             unit.priceMinor ??
-            setupPackPrice(priceMinor, unit.containsQuantity),
+            (payload.preparationVersion
+              ? undefined
+              : setupPackPrice(priceMinor, unit.containsQuantity)),
         })),
       openingStock: setupVariantStock(payload, override),
     }
@@ -139,7 +163,35 @@ export function setupProductQuestions(
   const questions: SetupOpenQuestion[] = []
   const need = (field: SetupOpenQuestion["field"], question: string) =>
     questions.push({ field, question: question.slice(0, 240), required: true })
+  for (const requirement of payload.reviewRequirements ?? [])
+    need(
+      "other",
+      `Review ${requirement.replaceAll("_", " ")} in the existing advanced Catalog form before creating this product.`,
+    )
   const rows = setupProductVariants(payload)
+  const unitNames = [
+    payload.unitName,
+    ...(payload.sellingUnits ?? [])
+      .filter(
+        (unit) =>
+          !isCanonicalUnitAlias(unit, payload.unitName, payload.priceMinor),
+      )
+      .map((unit) => unit.name),
+  ]
+  if (
+    new Set(unitNames.map((name) => name.trim().toLowerCase())).size !==
+    unitNames.length
+  )
+    need("unit", "Give each selling unit a different name.")
+  for (const unit of payload.sellingUnits ?? [])
+    if (
+      !isCanonicalUnitAlias(unit, payload.unitName, payload.priceMinor) &&
+      !isExactDecimal(unit.containsQuantity, { allowZero: false, maxScale: 6 })
+    )
+      need(
+        "unit",
+        `Enter how many ${payload.unitName} are in one ${unit.name}.`,
+      )
   if (
     new Set(payload.options?.map((group) => group.name.trim().toLowerCase()))
       .size !== (payload.options?.length ?? 0)

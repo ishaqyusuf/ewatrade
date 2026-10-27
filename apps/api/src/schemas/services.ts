@@ -74,6 +74,7 @@ export const serviceIntakeCreateSchema = z
   .strict()
 
 export const serviceIntakeCompleteSchema = serviceIntakeCreateSchema.extend({
+  initialPaymentMoneyAccountId: z.string().trim().min(1).max(128).optional(),
   sourceAnswerId: z.string().trim().min(1).max(160).optional(),
   sourceMessageId: z.string().trim().min(1).max(160).optional(),
   customerId: z.string().trim().min(1).max(160).optional(),
@@ -155,6 +156,7 @@ export const serviceJobHandoffSchema = z
       .object({
         amountMinor: z.number().int().positive().max(100_000_000),
         method: commercialPaymentMethodSchema,
+        moneyAccountId: z.string().trim().min(1).max(128).optional(),
         reference: z.string().trim().max(160).optional(),
       })
       .strict()

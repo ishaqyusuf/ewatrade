@@ -5,6 +5,9 @@ export type ServicePaymentFields = {
   amount: string
   method: RouterInputs["orders"]["recordPayment"]["method"]
   reference: string
+  /** Where money received now lands; unset when Finance isn't set up. */
+  moneyAccountId?: string
+  moneyAccountName?: string
 }
 export type ServicePaymentKind = "payment" | "handoff"
 export type ServicePaymentDraft = ServicePaymentFields & {

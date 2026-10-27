@@ -17,4 +17,32 @@ describe("automatic job schedules", () => {
       expect(automaticJobCron(pattern, "dev", "true")).toBe(pattern)
     }
   })
+
+  test("prelaunch opt-in slows recovery while preserving hourly and daily retention", () => {
+    expect(
+      automaticJobCron("*/5 * * * *", "production", undefined, "prelaunch"),
+    ).toBe("*/30 * * * *")
+    expect(
+      automaticJobCron("*/15 * * * *", "production", undefined, "prelaunch"),
+    ).toBe("*/30 * * * *")
+    for (const pattern of ["0 * * * *", "15 2 * * *"])
+      expect(
+        automaticJobCron(pattern, "production", undefined, "prelaunch"),
+      ).toBe(pattern)
+    expect(
+      automaticJobCron("*/5 * * * *", "production", undefined, "standard"),
+    ).toBe("*/5 * * * *")
+    expect(
+      automaticJobCron("*/5 * * * *", "preview", "true", "prelaunch"),
+    ).toBeUndefined()
+    expect(
+      automaticJobCron("*/5 * * * *", "local", undefined, "prelaunch"),
+    ).toBeUndefined()
+  })
+
+  test("a mistyped active schedule mode refuses rather than silently changing timers", () => {
+    expect(() =>
+      automaticJobCron("*/5 * * * *", "production", undefined, "pre-launch"),
+    ).toThrow("JOB_SCHEDULE_MODE")
+  })
 })

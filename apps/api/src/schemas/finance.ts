@@ -51,9 +51,6 @@ export const financeSupplierDirectorySchema = financeBookSchema
     direction: z.enum(["forward", "backward"]).optional(),
   })
   .strict()
-export const financeSupplierBalancesSchema = financeBookSchema
-  .extend({ supplierIds: z.array(id).max(50) })
-  .strict()
 export const financeMoneyAccountsSchema = financeBookSchema
   .extend({
     afterCode: z

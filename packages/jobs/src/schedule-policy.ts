@@ -7,8 +7,18 @@ export function automaticJobCron(
   pattern: string,
   appEnv = process.env.APP_ENV,
   devSchedules = process.env.TRIGGER_DEV_SCHEDULES,
+  scheduleMode = process.env.JOB_SCHEDULE_MODE,
 ): string | undefined {
-  if (appEnv === "production") return pattern
   if (appEnv === "preview") return undefined
-  return devSchedules === "true" ? pattern : undefined
+  if (appEnv !== "production" && devSchedules !== "true") return undefined
+  if (scheduleMode && !["standard", "prelaunch"].includes(scheduleMode))
+    throw new Error("JOB_SCHEDULE_MODE must be standard or prelaunch.")
+  // Explicit opt-in only: permit idle compute between recovery sweeps.
+  // Hourly/daily retention remains registered at its existing cadence.
+  if (
+    scheduleMode === "prelaunch" &&
+    ["*/5 * * * *", "*/15 * * * *"].includes(pattern)
+  )
+    return "*/30 * * * *"
+  return pattern
 }

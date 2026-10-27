@@ -176,3 +176,74 @@ test("count finalization rejects Cashier and supplied source authority before da
   ).rejects.toMatchObject({ code: "BAD_REQUEST" })
   expect(databaseEffects).toBe(0)
 })
+
+const reverseInput = {
+  clientOperationId: "transform-reverse-001",
+  expectedSourceBalanceRevision: 4,
+  expectedTargetBalanceRevision: 6,
+  operationId: "transform-operation-1",
+  reason: "Opened the wrong crate",
+  schemaVersion: 1,
+  source: "operator",
+} as const
+
+test("transformation reversal keeps Manager authority and session Tenant scope", async () => {
+  let receivedScope: { id: string; tenantId: string } | undefined
+  const db = {
+    $transaction: async (callback: (tx: unknown) => Promise<unknown>) =>
+      callback({
+        stockOperation: {
+          findFirst: async (args: {
+            where: { id: string; tenantId: string }
+          }) => {
+            receivedScope = args.where
+            throw new FinanceError("CONFLICT", "Target value is UNKNOWN.")
+          },
+        },
+      }),
+  }
+  await expect(
+    createCaller(context("MANAGER", db) as never).reverseTransformation(
+      reverseInput,
+    ),
+  ).rejects.toMatchObject({
+    code: "CONFLICT",
+    message: "Target value is UNKNOWN.",
+  })
+  expect(receivedScope).toEqual({
+    id: "transform-operation-1",
+    tenantId: "session-tenant",
+  })
+})
+
+test("transformation reversal rejects Cashier, supplied authority and invalid input before database access", async () => {
+  let databaseEffects = 0
+  const db = new Proxy(
+    {},
+    {
+      get() {
+        databaseEffects += 1
+        throw new Error("database should not be reached")
+      },
+    },
+  )
+  await expect(
+    createCaller(context("CASHIER", db) as never).reverseTransformation(
+      reverseInput,
+    ),
+  ).rejects.toMatchObject({ code: "FORBIDDEN" })
+  const manager = createCaller(context("MANAGER", db) as never)
+  for (const input of [
+    { ...reverseInput, actorUserId: "caller-actor" },
+    { ...reverseInput, tenantId: "caller-tenant" },
+    { ...reverseInput, reason: "" },
+    { ...reverseInput, reason: "x".repeat(501) },
+    { ...reverseInput, schemaVersion: 2 },
+    { ...reverseInput, expectedTargetBalanceRevision: -1 },
+    { ...reverseInput, clientOperationId: "short" },
+  ])
+    await expect(
+      manager.reverseTransformation(input as never),
+    ).rejects.toMatchObject({ code: "BAD_REQUEST" })
+  expect(databaseEffects).toBe(0)
+})

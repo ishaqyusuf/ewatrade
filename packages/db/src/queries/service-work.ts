@@ -90,6 +90,8 @@ export type CreateServiceIntakeInput = {
   lines: ServiceIntakeLineInput[]
   initialPaymentMethod?: CommercialPaymentMethodValue
   initialPaymentMinor?: number
+  /** Where the initial payment lands; part of the replay payload, not stored on the Intake. */
+  initialPaymentMoneyAccountId?: string
   initialPaymentReference?: string
   notificationChannel?: "sms" | "whatsapp"
   priority?: "normal" | "urgent"
@@ -456,7 +458,17 @@ export async function prepareServiceIntakeInTransaction(
     offerings.map((offering) => [offering.id, offering]),
   )
   let subtotalMinor = 0
-  const resolvedLines = []
+  const resolvedLines: Array<{
+    offeringId: string
+    offeringName: string
+    itemName: string
+    variantName: string
+    quantity: ReturnType<typeof parseExactDecimal>
+    unitPriceMinor: number
+    totalMinor: number
+    workPolicy: ServiceWorkPolicy
+    authorizationPolicy: WorkAuthorizationPolicy
+  }> = []
   for (const line of input.lines) {
     const quantity = parseExactDecimal(line.quantity, {
       allowZero: false,
@@ -692,6 +704,7 @@ type ConfirmServiceIntakeInput = {
   actorUserId: string
   intakeId: string
   customerId?: string
+  initialPaymentMoneyAccountId?: string
   schemaVersion: number
   tenantId: string
 }
@@ -781,6 +794,7 @@ async function confirmPersistedServiceIntakeInTransaction(
       actorUserId: input.actorUserId,
       amountMinor: intake.initialPaymentMinor,
       clientPaymentId: `${intake.clientIntakeId}:initial-payment`,
+      moneyAccountId: input.initialPaymentMoneyAccountId,
       method:
         intake.initialPaymentMethod === CommercialPaymentMethod.BANK_TRANSFER
           ? "bank_transfer"
@@ -970,6 +984,7 @@ export async function createAndConfirmServiceIntakeInTransaction(
       actorUserId: input.actorUserId,
       intakeId: draft.id,
       customerId,
+      initialPaymentMoneyAccountId: input.initialPaymentMoneyAccountId,
       schemaVersion: input.schemaVersion,
       tenantId: input.tenantId,
     },
@@ -2573,6 +2588,8 @@ export type RecordServiceHandoffInput = {
   payment?: {
     amountMinor: number
     method: CommercialPaymentMethodValue
+    /** Where the collected money lands; required once Finance is set up. */
+    moneyAccountId?: string
     reference?: string
   }
   tenantId: string
@@ -2674,7 +2691,8 @@ async function finishServiceJobInTransaction(
     const original = job.events.filter(
       (event) => event.type === ServiceWorkEventType.REMOTE_HANDOFF,
     )
-    if (original.length === 1) onEvent?.(original[0]!)
+    const [event] = original
+    if (original.length === 1 && event) onEvent?.(event)
     return serializeJob(job)
   }
   if (!isCommercialOrderFulfillmentAllowed(financialOrder.order.status))
@@ -2701,6 +2719,7 @@ async function finishServiceJobInTransaction(
         amountMinor: input.payment.amountMinor,
         clientPaymentId: `${input.clientCommandId}:collection-payment`,
         method: input.payment.method,
+        moneyAccountId: input.payment.moneyAccountId,
         orderId: job.commercialOrderId,
         reference: input.payment.reference,
         tenantId: input.tenantId,

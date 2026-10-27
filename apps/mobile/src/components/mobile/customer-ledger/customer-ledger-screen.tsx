@@ -8,11 +8,16 @@ import { useColorScheme } from "@/hooks/use-color"
 import { GREEN_TILL_THEME } from "@/lib/green-till-theme"
 import { useOperationalModeStore } from "@/store/operationalModeStore"
 import { useTRPC } from "@/trpc/client"
+import {
+  collectCustomerLedgerExport,
+  customerLedgerCsv,
+} from "@ewatrade/utils/customer-ledger-statement-export"
 import { formatFinanceMoney } from "@ewatrade/utils/finance-money"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { type Href, useFocusEffect, useRouter } from "expo-router"
 import { useCallback, useEffect, useRef, useState } from "react"
 import { FlatList, Text as NativeText, View } from "react-native"
+import { ReportExportActions } from "../finance-reports/report-export-actions"
 import { HeroCard } from "../green-till/hero-card"
 import {
   ListCard,
@@ -161,6 +166,14 @@ function statementDay(value: string | Date, now = new Date()) {
   })
 }
 
+function statementFilename(customerName: string, snapshot: string) {
+  const slug = customerName
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "")
+  return slug ? `${slug}-statement.csv` : `customer-statement-${snapshot}.csv`
+}
+
 function Statement({
   accountId,
   customerName,
@@ -249,6 +262,40 @@ function Statement({
     } finally {
       setRefreshing(false)
     }
+  }
+  /** Whole statement at this screen's snapshot; refused unless it reconciles. */
+  async function exportStatement(
+    first: NonNullable<typeof query.data>,
+    cancelled: () => boolean,
+  ) {
+    const read = (afterSequence?: string) =>
+      client.fetchQuery(
+        trpc.customerLedger.statement.queryOptions(
+          {
+            accountId,
+            snapshotSequence: first.snapshotSequence,
+            afterSequence,
+            limit: 50,
+          },
+          { staleTime: Number.POSITIVE_INFINITY, retry: false },
+        ),
+      )
+    const start = await read()
+    if (
+      start.accountId !== accountId ||
+      start.snapshotSequence !== first.snapshotSequence
+    )
+      throw new Error(
+        "The statement changed while preparing the file. Nothing was shared; try again.",
+      )
+    const entries = await collectCustomerLedgerExport(
+      start,
+      read,
+      10000,
+      cancelled,
+    )
+    // The share helper adds its own byte-order mark.
+    return customerLedgerCsv(start, entries).replace(/^\uFEFF/, "")
   }
   // Coming back from a payment or correction: show it without a manual Refresh.
   const refreshRef = useRef(refresh)
@@ -381,6 +428,12 @@ function Statement({
               onApply={() => open("apply")}
             />
           ) : null}
+          {offline ? null : (
+            <ReportExportActions
+              filename={statementFilename(customerName, s.snapshotSequence)}
+              build={(cancelled) => exportStatement(s, cancelled)}
+            />
+          )}
           {error ? <StatusBanner message={error} tone="destructive" /> : null}
           <SectionHeader
             title="Activity"

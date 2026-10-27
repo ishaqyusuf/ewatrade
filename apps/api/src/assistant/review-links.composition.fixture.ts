@@ -8,14 +8,14 @@ import {
 } from "@ewatrade/assistant/channels/review-links"
 import { TRPCError } from "@trpc/server"
 import { assistantWhatsAppActionPayloadDigest } from "../../../../packages/db/src/queries/assistant-whatsapp/action-reviews"
+import { readAssistantReviewLinkLocator } from "../../../../packages/db/src/queries/assistant-whatsapp/web-review-locator"
 import { assistantReviewLinkMatchesProposal } from "../../../../packages/db/src/queries/assistant-whatsapp/web-review-outcome"
 import {
+  assistantReviewShortOutboxId,
   createAssistantReviewLinkToken,
   createAssistantReviewShortLocator,
-  assistantReviewShortOutboxId,
   readAssistantReviewLinkToken,
 } from "../../../../packages/db/src/queries/assistant-whatsapp/web-review-token"
-import { readAssistantReviewLinkLocator } from "../../../../packages/db/src/queries/assistant-whatsapp/web-review-locator"
 
 process.env.ASSISTANT_APPROVAL_SIGNING_KEY =
   "isolated-service-test-key-at-least-thirty-two-bytes"
@@ -100,6 +100,7 @@ let grantBlocked = false
 let failOutbox = false
 let renewalSource: unknown
 const transactionDb = {
+  assistantWhatsAppOutbox: ctx.db.assistantWhatsAppOutbox,
   $queryRaw: async (strings: TemplateStringsArray) => {
     events.push(
       strings.join("?").includes("AssistantWhatsAppIdentity")

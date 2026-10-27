@@ -86,12 +86,32 @@ export const setupProductPayloadSchema = z
     priceMinor: z.number().int().min(0).max(100_000_000).optional(),
     openingStock: z.string().optional(),
     categoryKey: z.string().max(120).optional(),
+    categorySuggestionName: z.string().max(160).optional(),
+    categoryLabel: z.string().max(500).optional(),
     quickSetupKey: z.string().max(120).optional(),
+    preparationVersion: z.literal("product-v1").optional(),
+    categorySuggested: z.boolean().optional(),
+    reviewRequirements: z
+      .array(
+        z.enum([
+          "sealed_stock",
+          "bundle_components",
+          "batch_tracking",
+          "serial_tracking",
+          "regulated_workflow",
+        ]),
+      )
+      .max(5)
+      .optional(),
+    variantMode: z.literal("explicit").optional(),
     sellingUnits: z
       .array(
         z.object({
           name: z.string().trim().min(1).max(80),
-          containsQuantity: z.string(),
+          containsQuantity: z.string().max(32).default(""),
+          referenceUnitName: z.string().trim().min(1).max(80).optional(),
+          referenceQuantity: z.string().max(32).optional(),
+          quantityDefault: z.literal("egg-crate-30").optional(),
           priceMinor: z.number().int().min(0).max(100_000_000).optional(),
         }),
       )
@@ -118,6 +138,7 @@ export const setupProductPayloadSchema = z
               z.object({
                 unitName: name,
                 priceMinor: z.number().int().min(0).max(100_000_000),
+                derivedFromUnit: z.string().max(80).optional(),
               }),
             )
             .max(5)
@@ -216,9 +237,10 @@ export function sanitizeVocabulary<T extends object>(payload: T) {
     const key = next.categoryKey.replace(/^preset:/, "")
     const preset = findCatalogCategoryPreset(key.split(":")[0])
     if (
-      !preset ||
-      (key !== preset.key &&
-        !preset.subcategories.some((entry) => entry.key === key))
+      !/^shopify:[a-z0-9-]+$/.test(key) &&
+      (!preset ||
+        (key !== preset.key &&
+          !preset.subcategories.some((entry) => entry.key === key)))
     ) {
       warnings.push(`Unknown category ${next.categoryKey} was ignored.`)
       next.categoryKey = undefined
@@ -267,6 +289,11 @@ export function deriveSetupEntityState(
     ...derived,
     ...questions.filter(
       (question) =>
+        !(
+          payload.kind === "product" &&
+          payload.preparationVersion &&
+          !question.required
+        ) &&
         !derived.some((entry) => entry.field === question.field) &&
         !answered(payload, question.field) &&
         // Only products are counted; a service never has stock to ask about.

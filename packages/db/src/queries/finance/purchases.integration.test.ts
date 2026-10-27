@@ -345,7 +345,10 @@ describeWithServiceCommerceDatabase(
               },
             ],
           }),
-        ).rejects.toMatchObject({ code: "REVISION_CONFLICT" })
+        ).rejects.toMatchObject({
+          code: "CONFLICT",
+          message: "Refresh the purchase stock configuration and revision.",
+        })
         expect(
           await Promise.all([
             db.financeJournalEntry.count({ where: { bookId: book.id } }),

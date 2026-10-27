@@ -1,0 +1,30 @@
+appId: ${APP_ID}
+name: QA catalog and sale draft
+---
+# Do not clear app data/offline queues or change permissions.
+- openLink: ${APP_SCHEME}://login
+- runFlow:
+    when:
+      visible: Set up QA
+    commands:
+      - tapOn: Set up QA
+      - tapOn: QA domain, like name.qa.test
+      - inputText: ${QA_DOMAIN}
+      - tapOn: Load QA businesses
+- tapOn: Open [0-9]+ QA businesses
+- assertVisible: ${EXPECTED_RUNTIME}
+- tapOn: ${PROFILE_LABEL}
+- openLink: ${APP_SCHEME}://catalog-items-modal
+- assertVisible: ${CATALOG_ITEM}
+- openLink: ${APP_SCHEME}://create-sale-modal
+- assertVisible: New sale
+- tapOn: ${OFFERING_LABEL}
+- tapOn:
+    id: sale-next-step
+- tapOn: Continue with walk-in
+- assertVisible: Checkout
+- assertVisible: ${EXPECTED_TOTAL}
+- tapOn: Close create sale
+- assertNotVisible: Checkout
+- tapOn: Open [0-9]+ QA businesses
+- assertVisible: ${EXPECTED_RUNTIME}

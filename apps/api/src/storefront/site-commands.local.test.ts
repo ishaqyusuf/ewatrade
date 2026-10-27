@@ -19,9 +19,10 @@ mock.module("@ewatrade/db/queries", () => ({
 
 const previousFetch = globalThis.fetch
 const previousSecret = process.env.BETTER_AUTH_SECRET
-globalThis.fetch = (() => {
+const forbidNetwork = () => {
   throw new Error("Network is forbidden in storefront local command tests.")
-}) as typeof fetch
+}
+globalThis.fetch = Object.assign(forbidNetwork, { preconnect: forbidNetwork })
 process.env.BETTER_AUTH_SECRET =
   "local-only-storefront-signing-fixture-32-characters"
 afterAll(() => {
@@ -366,7 +367,10 @@ test("offline reviewed-component draft, signed preview, publication, replay and 
     }),
   ).toMatchObject({ ok: true, releaseId: "release-2" })
   const releasesBeforeRollback = clone(fixture.state().releases)
-  const draftBeforeRollback = clone(fixture.state().sites[0].draftComposition)
+  const siteBeforeRollback = fixture.state().sites[0]
+  if (!siteBeforeRollback)
+    throw new Error("Expected the initialized Site fixture")
+  const draftBeforeRollback = clone(siteBeforeRollback.draftComposition)
   const rollback = {
     expectedSiteId: siteId,
     releaseId: "release-1",
@@ -384,7 +388,9 @@ test("offline reviewed-component draft, signed preview, publication, replay and 
     activeReleaseId: "release-1",
   })
   expect(fixture.state().releases).toEqual(releasesBeforeRollback)
-  expect(fixture.state().sites[0].draftComposition).toEqual(draftBeforeRollback)
+  expect(fixture.state().sites[0]?.draftComposition).toEqual(
+    draftBeforeRollback,
+  )
   expect(
     fixture
       .state()

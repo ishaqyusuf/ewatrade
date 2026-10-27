@@ -54,3 +54,22 @@ export const catalogPhotoReplacementSchema = z
     (input) => !input.illustrationId || input.assetIds.length === 0,
     "Choose an illustration or photos, exclusively.",
   )
+
+export const catalogPhotoGallerySchema = z
+  .object({
+    storeId: identifier.optional(),
+    catalogItemId: identifier.optional(),
+    scope: z.enum(["store", "all"]).default("store"),
+    query: z.string().trim().max(80).optional(),
+  })
+  .strict()
+
+export const catalogPhotoReuseSchema = z
+  .object({
+    /** Store of the Item that will show the copy. */
+    storeId: identifier.optional(),
+    sourceAssetId: identifier,
+    sourceStoreId: identifier,
+    clientOperationId: z.string().trim().min(8).max(160),
+  })
+  .strict()

@@ -1,5 +1,12 @@
 # Database preparation and application release
 
+> Historical checkpoint. Current commands and policy are in
+> [Fast testing and release](../testing.md). Root scripts now expose `bun run
+> release`, not the `release:*` aliases below. Do not recreate the old mandatory
+> database-push sequence for every app change. The current configuration selects
+> the guarded database component when its source changes. Existing schema,
+> target isolation, Production confirmation and release gates remain authoritative.
+
 Use the existing `local-infra-kit` database commands before application release.
 
 ```sh

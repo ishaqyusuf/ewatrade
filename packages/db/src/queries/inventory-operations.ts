@@ -291,7 +291,7 @@ async function previewLoadedOrdinaryStockAdjustment(
       balance.kind === StockBalanceKind.PACKAGED_STOCK
         ? balance.inventoryUnit.name
         : canonicalUnits.length === 1
-          ? canonicalUnits[0]!.name
+          ? (canonicalUnits[0]?.name ?? "canonical units")
           : "canonical units",
     before,
     after,
@@ -305,6 +305,9 @@ async function previewLoadedOrdinaryStockAdjustment(
     currencyCode: balance.store.currencyCode,
   }
 }
+
+/** Stable stock command result, shared with source-owned stock writers. */
+export { serializeOperation as serializeStockOperation }
 
 function serializeOperation(
   operation: Prisma.StockOperationGetPayload<{
@@ -789,14 +792,16 @@ export async function preparePurchaseStockReceiptsInTransaction(
           }
         })
         .sort((a, b) => a.balance.id.localeCompare(b.balance.id))
-      const first = entries[0]!.posting
+      const first = entries[0]?.posting
+      const firstEffectiveAt = first?.effectiveAt
       if (
-        !first.effectiveAt ||
-        !Number.isFinite(first.effectiveAt.getTime()) ||
+        !first ||
+        !firstEffectiveAt ||
+        !Number.isFinite(firstEffectiveAt.getTime()) ||
         entries.some(
           ({ posting }) =>
             posting.actorUserId !== first.actorUserId ||
-            posting.effectiveAt?.getTime() !== first.effectiveAt!.getTime(),
+            posting.effectiveAt?.getTime() !== firstEffectiveAt.getTime(),
         )
       )
         throw new CatalogError(
@@ -810,7 +815,8 @@ export async function preparePurchaseStockReceiptsInTransaction(
           "The prepared stock receipt command changed.",
         )
       confirmedHash = payloadHash
-      return (execution ??= postPreparedPurchaseStockBatch(tx, entries))
+      execution ??= postPreparedPurchaseStockBatch(tx, entries)
+      return execution
     },
   }
 }
@@ -838,13 +844,14 @@ function prepareLoadedPurchaseStockReceipt(
           "The prepared stock receipt command changed.",
         )
       confirmedHash = payloadHash
-      return (execution ??= postSingleBalanceStockOperationInTransactionCore(
+      execution ??= postSingleBalanceStockOperationInTransactionCore(
         tx,
         posting,
         payloadHash,
         false,
         { balance, unit },
-      ))
+      )
+      return execution
     },
   }
 }
@@ -896,7 +903,12 @@ async function postPreparedPurchaseStockBatch(
       ReturnType<typeof preparePurchaseStockReceiptPosting>
   >,
 ) {
-  const first = entries[0]!.posting
+  const first = entries[0]?.posting
+  if (!first)
+    throw new CatalogError(
+      "INVALID_STOCK_OPERATION",
+      "Purchase receipt sources are unavailable.",
+    )
   if (
     await tx.stockOperation.count({
       where: {
@@ -943,17 +955,25 @@ async function postPreparedPurchaseStockBatch(
           "INSUFFICIENT_STOCK",
           "The operation would reduce on-hand below reserved stock.",
         )
+      const categories = categoryGroups[index]
+      const effectiveAt = posting.effectiveAt
+      if (!categories || !effectiveAt)
+        throw new CatalogError(
+          "INVALID_STOCK_OPERATION",
+          "Purchase receipt categories or date are unavailable.",
+        )
       return {
         balance,
         unit,
         posting,
+        effectiveAt,
         payloadHash,
         enteredQuantity,
         canonicalQuantity,
         resultingOnHand,
         operationId: randomUUID(),
         movementId: randomUUID(),
-        categories: categoryGroups[index]!,
+        categories,
       }
     },
   )
@@ -978,19 +998,21 @@ async function postPreparedPurchaseStockBatch(
       "The Balance Source changed while posting this operation.",
     )
   await tx.stockOperation.createMany({
-    data: prepared.map(({ posting, payloadHash, operationId }) => ({
-      id: operationId,
-      tenantId: posting.tenantId,
-      storeId: posting.storeId,
-      actorUserId: posting.actorUserId,
-      clientOperationId: posting.clientOperationId,
-      effectiveAt: posting.effectiveAt!,
-      payloadHash,
-      linkedOperationId: posting.linkedOperationId,
-      reason: posting.reason?.trim(),
-      source: posting.source,
-      type: "RECEIPT",
-    })),
+    data: prepared.map(
+      ({ posting, payloadHash, operationId, effectiveAt }) => ({
+        id: operationId,
+        tenantId: posting.tenantId,
+        storeId: posting.storeId,
+        actorUserId: posting.actorUserId,
+        clientOperationId: posting.clientOperationId,
+        effectiveAt,
+        payloadHash,
+        linkedOperationId: posting.linkedOperationId,
+        reason: posting.reason?.trim(),
+        source: posting.source,
+        type: "RECEIPT",
+      }),
+    ),
   })
   const categories = prepared.flatMap(({ categories, operationId }) =>
     categories.map((category) => ({
@@ -1051,8 +1073,7 @@ async function postPreparedPurchaseStockBatch(
       operation.actorUserId !== entry.posting.actorUserId ||
       operation.source !== "finance_purchase" ||
       operation.type !== "RECEIPT" ||
-      operation.effectiveAt.getTime() !==
-        entry.posting.effectiveAt!.getTime() ||
+      operation.effectiveAt.getTime() !== entry.effectiveAt.getTime() ||
       operation.movements.length !== 1 ||
       !movement ||
       movement.id !== entry.movementId ||
@@ -1067,7 +1088,7 @@ async function postPreparedPurchaseStockBatch(
       operation.categories.length !== entry.categories.length ||
       operation.categories.some(
         (category, index) =>
-          category.categoryNameId !== entry.categories[index]!.categoryNameId ||
+          category.categoryNameId !== entry.categories[index]?.categoryNameId ||
           category.position !== index,
       ) ||
       movement.enteredQuantity.toFixed() !== entry.enteredQuantity ||
@@ -1523,7 +1544,29 @@ export async function previewStockCountCreation(
       "INVALID_STOCK_OPERATION",
       "Choose each counted stock source once.",
     )
-  const lines = []
+  const lines: Array<{
+    balanceSourceId: string
+    catalogItemId: string
+    productName: string
+    variantName: string
+    custodyType: BalanceGraph["custodyType"]
+    custodyReferenceId: BalanceGraph["custodyReferenceId"]
+    unitName: string
+    configurationVersionId: string
+    expectedRevision: number
+    expectedQuantity: string
+    observedQuantity: string
+    varianceQuantity: string
+    reservedQuantity: string
+    entries: Array<
+      Omit<
+        Awaited<
+          ReturnType<typeof resolveStockCountObservation>
+        >["entries"][number],
+        "factor"
+      > & { factor: string }
+    >
+  }> = []
   for (const line of input.lines) {
     const balance = await loadBalance(tx, {
       ...input,

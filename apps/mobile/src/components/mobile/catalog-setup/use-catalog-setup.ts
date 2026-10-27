@@ -70,6 +70,7 @@ import {
 } from "./selling-unit-relations"
 import {
   type CatalogImageDraft,
+  type CatalogReusedImage,
   useCatalogImageDraft,
 } from "./use-catalog-image-draft"
 import { useCategorySuggestions } from "./use-category-suggestions"
@@ -91,6 +92,7 @@ type SetupAttempt = SetupCommand & {
   userId: string
   storeId: string
   photo?: CatalogImageDraft
+  reused?: CatalogReusedImage
   photoAssetId?: string
 }
 
@@ -457,6 +459,9 @@ export function useCatalogSetup({
   const createPhotoIntentMutation = useMutation(
     trpc.catalog.photos.createIntent.mutationOptions(),
   )
+  const reusePhotoMutation = useMutation(
+    trpc.catalog.photos.reuse.mutationOptions(),
+  )
   const defaultStoreId = stores.find(
     (store) => store.id === draftScope.current.storeId,
   )?.id
@@ -518,6 +523,29 @@ export function useCatalogSetup({
             createIntent: (input) =>
               createPhotoIntentMutation.mutateAsync(input),
           })
+        request.input = {
+          ...request.input,
+          photoAssetIds: [request.photoAssetId],
+        }
+      }
+      if (request.reused && !request.photo && request.mode === "advanced") {
+        if (!request.photoAssetId)
+          request.photoAssetId = (
+            await reusePhotoMutation.mutateAsync({
+              storeId: request.storeId,
+              sourceAssetId: request.reused.assetId,
+              sourceStoreId: request.reused.storeId,
+              clientOperationId: `${request.input.clientOperationId}:reuse:${request.reused.assetId}`,
+            })
+          ).assetId
+        if (
+          !mounted.current ||
+          currentScope.current.offline ||
+          !attemptScopeMatches(request)
+        )
+          throw new Error(
+            "Reconnect in the original account, business and Store before saving.",
+          )
         request.input = {
           ...request.input,
           photoAssetIds: [request.photoAssetId],
@@ -608,6 +636,7 @@ export function useCatalogSetup({
       userId,
       storeId: defaultStoreId,
       ...(imageDraft.image ? { photo: { ...imageDraft.image } } : {}),
+      ...(imageDraft.reused ? { reused: { ...imageDraft.reused } } : {}),
     })
   }
   const dispatchSimple = (input: RouterInputs["catalog"]["createSimpleItem"]) =>
@@ -1170,6 +1199,7 @@ export function useCatalogSetup({
         quoteOnlyService ||
         imageDraft.illustrationId ||
         imageDraft.image ||
+        imageDraft.reused ||
         imageUrl.trim() ||
         category.trim() ||
         Object.values(variantDrafts).some(
@@ -1856,6 +1886,7 @@ export function useCatalogSetup({
         imageUrl ||
         imageDraft.illustrationId ||
         imageDraft.image ||
+        imageDraft.reused ||
         category ||
         optionGroups.length ||
         additionalUnits.length ||
@@ -2027,6 +2058,8 @@ export function useCatalogSetup({
     setSubmitError: guardEdit(setSubmitError),
     currencyCode,
     stores,
+    /** The Store this item is created in (My images reads from it). */
+    storeId: defaultStoreId,
     isEditingUnit,
     businessProfileKey,
     businessProfile,

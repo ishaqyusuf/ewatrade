@@ -75,6 +75,7 @@ const balance: StockBalance = {
   inventoryUnitName: "Bag",
   inventoryUnitTransactionScale: 2,
   kind: "SHARED_POOL",
+  lowStockLevel: null,
   onHandQuantity: "10",
   productId: "layer-feed",
   productName: "Layer feed",

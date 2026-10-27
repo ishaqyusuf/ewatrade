@@ -6,17 +6,20 @@ Tickets refer to the Brain plan `.brain/plans/2026-10-09-assistant-business-oper
 
 ## Summary
 
-- Router procedures: 672 (499 merchant, 173 public/account/internal)
-- Merchant supported by a capability: 166
-- Merchant planned: 131
-- Merchant form-only: 145
-- Merchant excluded: 57
-- Capabilities: 156 (81 read, 75 write)
+- Router procedures: 703 (530 merchant, 173 public/account/internal)
+- Merchant supported by a capability: 171
+- Merchant planned: 133
+- Merchant form-only: 165
+- Merchant excluded: 61
+- Capabilities: 160 (83 read, 77 write)
 
 ## Capabilities
 
 | ID | v | Mode | Tool | Roles | Scoped staff | Clients | Rollout | Procedures |
 |---|---|---|---|---|---|---|---|---|
+| `storefront.design.read` | 1 | read | `readStorefrontDesigns` | OWNER, ADMIN | Owner/Admin only, Owner/Admin only, Owner/Admin only | dashboard | source | `storefront.draft`, `storefront.generations`, `storefront.generation` |
+| `storefront.design.generate` | 1 | write (`storefront_design_generate`) | `draftAction` | OWNER, ADMIN | Owner/Admin only | dashboard | source | `storefront.generate` |
+| `storefront.design.accept` | 1 | write (`storefront_design_accept`) | `draftAction` | OWNER, ADMIN | Owner/Admin only | dashboard | source | `storefront.acceptDesign` |
 | `services.work.original.read` | 1 | read | `readOriginalServiceWork` | OWNER, ADMIN, MANAGER | read | dashboard, mobile | planned | `serviceAssistantWork.original` |
 | `services.work.rework` | 1 | write (`service_work_rework`) | `draftAction` | OWNER, ADMIN, MANAGER | Owner/Admin only | dashboard, mobile | planned | `services.createRework` |
 | `services.work.handoff` | 1 | write (`service_work_handoff`) | `draftAction` | OWNER, ADMIN, MANAGER | Owner/Admin only | dashboard, mobile | planned | `services.handoff` |
@@ -153,6 +156,7 @@ Tickets refer to the Brain plan `.brain/plans/2026-10-09-assistant-business-oper
 | `stores.count` | 1 | read | `readStoreCount` | OWNER, ADMIN, MANAGER, CASHIER, OPERATOR | read | dashboard, mobile, whatsapp | source | `tenant.stores` |
 | `customers.page` | 1 | read | `readCustomers` | OWNER, ADMIN, MANAGER | Owner/Admin only | dashboard, mobile, whatsapp | source | `customers.listPage` |
 | `catalog.page` | 1 | read | `readCatalogPage` | OWNER, ADMIN, MANAGER, CASHIER, OPERATOR | read | dashboard, mobile, whatsapp | source | `catalog.listItemsPage` |
+| `services.job.prepare` | 1 | read | `prepareServiceJob` | OWNER, ADMIN, MANAGER | read, Owner/Admin only | dashboard | source | `catalog.listItemsPage`, `customers.listPage` |
 | `sales.orders.lookup` | 1 | read | `lookupOpenOrders` | OWNER, ADMIN, MANAGER, CASHIER, OPERATOR | read | dashboard, mobile, whatsapp | source | `orders.lookupOpenPage` |
 | `inventory.stock.receive` | 1 | write (`stock_receive`) | `draftAction` | OWNER, ADMIN, MANAGER | stock, stock | dashboard, mobile, whatsapp | source | `inventory.postBalanceOperation`, `inventory.categorySuggestions` |
 | `inventory.stock.adjust` | 1 | write (`stock_adjust`) | `draftAction` | OWNER, ADMIN, MANAGER | stock | dashboard, mobile, whatsapp | source | `inventory.postBalanceOperation` |
@@ -187,6 +191,9 @@ track conversational evaluation separately from these source test links.
 
 | Capability | Example requests | Registered regression tests |
 |---|---|---|
+| `storefront.design.read` | Show the saved storefront draft and design proposals | [apps/api/src/assistant/general-storefront-design.test.ts](../../../../apps/api/src/assistant/general-storefront-design.test.ts) |
+| `storefront.design.generate` | Suggest three storefront designs with a quieter layout | [apps/api/src/assistant/general-storefront-design.test.ts](../../../../apps/api/src/assistant/general-storefront-design.test.ts) |
+| `storefront.design.accept` | Use the second reviewed design as our draft | [apps/api/src/assistant/general-storefront-design.test.ts](../../../../apps/api/src/assistant/general-storefront-design.test.ts) |
 | `services.work.original.read` | Open the original saved work event, private note or exception | [packages/assistant/evaluations/fixtures/native-service-original.fixture.tsx](../../../../packages/assistant/evaluations/fixtures/native-service-original.fixture.tsx)<br>[packages/db/src/queries/service-work-original.test.ts](../../../../packages/db/src/queries/service-work-original.test.ts)<br>[packages/assistant/src/general/service-work-original.test.ts](../../../../packages/assistant/src/general/service-work-original.test.ts)<br>[apps/dashboard/src/components/service-work-original-state.test.ts](../../../../apps/dashboard/src/components/service-work-original-state.test.ts) |
 | `services.work.rework` | Redo the completed washing line in Amina's saved job | [packages/assistant/evaluations/fixtures/native-service-work-editor.fixture.tsx](../../../../packages/assistant/evaluations/fixtures/native-service-work-editor.fixture.tsx)<br>[packages/assistant/src/general/service-work-completion.test.ts](../../../../packages/assistant/src/general/service-work-completion.test.ts)<br>[packages/db/src/queries/service-work-completion-review.test.ts](../../../../packages/db/src/queries/service-work-completion-review.test.ts) |
 | `services.work.handoff` | Record Amina collecting her ready work after payment | [packages/assistant/evaluations/fixtures/native-service-work-editor.fixture.tsx](../../../../packages/assistant/evaluations/fixtures/native-service-work-editor.fixture.tsx)<br>[packages/assistant/src/general/service-work-completion.test.ts](../../../../packages/assistant/src/general/service-work-completion.test.ts)<br>[packages/db/src/queries/service-work-completion-review.test.ts](../../../../packages/db/src/queries/service-work-completion-review.test.ts) |
@@ -323,6 +330,7 @@ track conversational evaluation separately from these source test links.
 | `stores.count` | Count accessible Stores | [apps/api/src/assistant/general-counts.test.ts](../../../../apps/api/src/assistant/general-counts.test.ts)<br>[apps/api/src/assistant/general-proposals.integration.test.ts](../../../../apps/api/src/assistant/general-proposals.integration.test.ts)<br>[packages/assistant/src/general/contracts.test.ts](../../../../packages/assistant/src/general/contracts.test.ts) |
 | `customers.page` | Find customers named Amina and show the next page | [apps/api/src/assistant/channel-principal.integration.test.ts](../../../../apps/api/src/assistant/channel-principal.integration.test.ts)<br>[apps/api/src/assistant/channel-principal.test.ts](../../../../apps/api/src/assistant/channel-principal.test.ts)<br>[apps/api/src/assistant/general-lookup-inputs.test.ts](../../../../apps/api/src/assistant/general-lookup-inputs.test.ts)<br>[apps/api/src/assistant/general-proposals.integration.test.ts](../../../../apps/api/src/assistant/general-proposals.integration.test.ts)<br>[packages/assistant/src/general/contracts.test.ts](../../../../packages/assistant/src/general/contracts.test.ts) |
 | `catalog.page` | Find eggs and show the next page | [apps/api/src/assistant/channel-principal.integration.test.ts](../../../../apps/api/src/assistant/channel-principal.integration.test.ts)<br>[apps/api/src/assistant/channel-principal.test.ts](../../../../apps/api/src/assistant/channel-principal.test.ts)<br>[apps/api/src/assistant/general-lookup-inputs.test.ts](../../../../apps/api/src/assistant/general-lookup-inputs.test.ts)<br>[apps/api/src/assistant/general-proposals.integration.test.ts](../../../../apps/api/src/assistant/general-proposals.integration.test.ts)<br>[packages/assistant/src/general/contracts.test.ts](../../../../packages/assistant/src/general/contracts.test.ts) |
+| `services.job.prepare` | Laundry: 40 shirts, 10 trousers and 5 socks, wash and iron | [packages/assistant/src/general/service-job-draft.test.ts](../../../../packages/assistant/src/general/service-job-draft.test.ts) |
 | `sales.orders.lookup` | Find this customer's open orders | [apps/api/src/assistant/channel-principal.integration.test.ts](../../../../apps/api/src/assistant/channel-principal.integration.test.ts)<br>[apps/api/src/assistant/channel-principal.test.ts](../../../../apps/api/src/assistant/channel-principal.test.ts)<br>[apps/api/src/assistant/general-open-order.test.ts](../../../../apps/api/src/assistant/general-open-order.test.ts)<br>[apps/api/src/assistant/general-proposals.integration.test.ts](../../../../apps/api/src/assistant/general-proposals.integration.test.ts)<br>[packages/assistant/src/general/contracts.test.ts](../../../../packages/assistant/src/general/contracts.test.ts) |
 | `inventory.stock.receive` | Receive three crates into this Store | [apps/mobile/src/components/mobile/assistant/native-parity.test.ts](../../../../apps/mobile/src/components/mobile/assistant/native-parity.test.ts)<br>[packages/assistant/evaluations/fixtures/native-stock-save-fence.fixture.tsx](../../../../packages/assistant/evaluations/fixtures/native-stock-save-fence.fixture.tsx)<br>[apps/api/src/assistant/general-stock-receipt.integration-check.ts](../../../../apps/api/src/assistant/general-stock-receipt.integration-check.ts) |
 | `inventory.stock.adjust` | Adjust stock or record waste | [apps/mobile/src/components/mobile/assistant/native-parity.test.ts](../../../../apps/mobile/src/components/mobile/assistant/native-parity.test.ts)<br>[packages/assistant/evaluations/fixtures/native-stock-save-fence.fixture.tsx](../../../../packages/assistant/evaluations/fixtures/native-stock-save-fence.fixture.tsx)<br>[packages/assistant/src/general/stock-adjustment.test.ts](../../../../packages/assistant/src/general/stock-adjustment.test.ts) |
@@ -359,14 +367,14 @@ track conversational evaluation separately from these source test links.
 | D04 | 3 |
 | D05 | 4 |
 | E01 | 4 |
-| E02 | 3 |
+| E02 | 4 |
 | E03 | 3 |
 | E04 | 1 |
 | E05 | 2 |
 | G01 | 7 |
 | G02 | 4 |
 | G03 | 28 |
-| G04 | 3 |
+| G04 | 4 |
 | G05 | 28 |
 | H04 | 10 |
 | S01 | 1 |
@@ -385,8 +393,11 @@ track conversational evaluation separately from these source test links.
 | `assistant.conversation` | query | read | assistant | excluded | Assistant transport or a dedicated assistant flow. |
 | `assistant.conversations` | query | read | assistant | excluded | Assistant transport or a dedicated assistant flow. |
 | `assistant.decideProposal` | mutation | read | assistant | excluded | Assistant transport or a dedicated assistant flow. |
+| `assistant.decideReviewLink` | mutation | read | assistant | excluded | Assistant transport or a dedicated assistant flow. |
 | `assistant.editProposal` | mutation | read | assistant | excluded | Assistant transport or a dedicated assistant flow. |
+| `assistant.editReviewLink` | mutation | read | assistant | excluded | Assistant transport or a dedicated assistant flow. |
 | `assistant.pendingProposals` | query | Owner/Admin only | assistant | excluded | Assistant transport or a dedicated assistant flow. |
+| `assistant.reviewLink` | mutation | read | assistant | excluded | Assistant transport or a dedicated assistant flow. |
 | `assistant.saleOptions` | query | Owner/Admin only | sales | supported | sales.order.record_simple |
 | `assistant.simpleExpenseOptions` | query | Owner/Admin only | assistant | excluded | Assistant transport or a dedicated assistant flow. |
 | `assistant.simpleTransferOptions` | query | Owner/Admin only | assistant | excluded | Assistant transport or a dedicated assistant flow. |
@@ -413,6 +424,7 @@ track conversational evaluation separately from these source test links.
 | `businessReporting.read` | query | read | sales | planned | G01 |
 | `businessReporting.stock` | query | stock | inventory | supported | inventory.stock.report |
 | `businessReporting.supplierAging` | query | Owner/Admin only | finance | supported | finance.supplier_aging.report |
+| `catalog.addServiceChoice` | mutation | catalog | catalog | form_only | Explicit native Catalog sheet/menu commands; assistant model tools cannot invoke these writes. Assistant edits use the narrow price, details, identifier and availability capabilities. |
 | `catalog.archiveOffering` | mutation | catalog | catalog | supported | catalog.archive |
 | `catalog.archiveVariant` | mutation | catalog | catalog | supported | catalog.archive |
 | `catalog.categories.list` | query | read | catalog | planned | B02 |
@@ -427,17 +439,19 @@ track conversational evaluation separately from these source test links.
 | `catalog.detail.overview` | query | read | catalog | supported | catalog.item.read |
 | `catalog.getItem` | query | read | catalog | form_only | Generic item editor payload; assistant uses active-Store detail.overview with stock permission filtering. |
 | `catalog.listItems` | query | read | catalog | excluded | Unbounded legacy list; assistant uses stable listItemsPage continuation. |
-| `catalog.listItemsPage` | query | read | services | supported | services.intake.options.read, catalog.page |
+| `catalog.listItemsPage` | query | read | services | supported | services.intake.options.read, catalog.page, services.job.prepare |
 | `catalog.listUnitConfigurations` | query | read | catalog | planned | B03 |
 | `catalog.listUnitDefinitions` | query | read | catalog | planned | B03 |
 | `catalog.photos.createIntent` | mutation | catalog | catalog | form_only | Photo capture and upload belong to the product form. |
+| `catalog.photos.gallery` | query | Owner/Admin only | catalog | form_only | Photo capture and upload belong to the product form. |
 | `catalog.photos.getMetadata` | query | catalog | catalog | form_only | Photo capture and upload belong to the product form. |
 | `catalog.photos.remove` | mutation | catalog | catalog | form_only | Photo capture and upload belong to the product form. |
 | `catalog.photos.replace` | mutation | catalog | catalog | form_only | Photo capture and upload belong to the product form. |
+| `catalog.photos.reuse` | mutation | Owner/Admin only | catalog | form_only | Photo capture and upload belong to the product form. |
 | `catalog.publishUnitConfiguration` | mutation | catalog | catalog | supported | catalog.units.publish |
 | `catalog.setOfferingAvailability` | mutation | catalog | catalog | supported | catalog.availability.update |
 | `catalog.setProductUsage` | mutation | Owner/Admin only | catalog | planned | B03 |
-| `catalog.updateItem` | mutation | catalog | catalog | form_only | Whole-item editor payload from the catalog sheet; assistant edits use the narrow price, details, identifier and availability capabilities. |
+| `catalog.updateItem` | mutation | catalog | catalog | form_only | Explicit native Catalog sheet/menu commands; assistant model tools cannot invoke these writes. Assistant edits use the narrow price, details, identifier and availability capabilities. |
 | `catalog.updatePrice` | mutation | catalog | catalog | supported | catalog.price.update |
 | `catalog.updateProductDetails` | mutation | catalog | catalog | supported | catalog.details.update |
 | `catalog.updateProductIdentifiers` | mutation | catalog | catalog | supported | catalog.identifiers.update |
@@ -452,6 +466,7 @@ track conversational evaluation separately from these source test links.
 | `customerLedger.receivables` | query | Owner/Admin only | customers | supported | customers.receivables.read |
 | `customerLedger.recordOpening` | mutation | Owner/Admin only | customers | form_only | Opening debt is captured by Setup and the ledger form; it is not new money. |
 | `customerLedger.recordReceipt` | mutation | Owner/Admin only | finance | supported | customers.receipt.record |
+| `customerLedger.recordReceiptAndApply` | mutation | Owner/Admin only | customers | planned | E02 |
 | `customerLedger.refundUnusedCredit` | mutation | Owner/Admin only | finance | supported | customers.credit.refund |
 | `customerLedger.releaseAllocation` | mutation | Owner/Admin only | finance | supported | customers.allocation.release |
 | `customerLedger.reverseEntry` | mutation | Owner/Admin only | customers | planned | E02 |
@@ -469,7 +484,7 @@ track conversational evaluation separately from these source test links.
 | `customers.count` | query | Owner/Admin only | customers | supported | customers.count |
 | `customers.create` | mutation | Owner/Admin only | customers | supported | customers.create |
 | `customers.getById` | query | read | customers | supported | customers.read |
-| `customers.listPage` | query | Owner/Admin only | customers | supported | customers.page |
+| `customers.listPage` | query | Owner/Admin only | customers | supported | customers.page, services.job.prepare |
 | `customers.update` | mutation | Owner/Admin only | customers | supported | customers.update |
 | `domains.availability` | query | Owner/Admin only | platform | form_only | Domain purchase and DNS use registrar checkout and verification. |
 | `domains.checkAvailability` | mutation | Owner/Admin only | platform | form_only | Domain purchase and DNS use registrar checkout and verification. |
@@ -503,6 +518,7 @@ track conversational evaluation separately from these source test links.
 | `finance.createExpenseCategory` | mutation | Owner/Admin only | finance | planned | E04 |
 | `finance.createMoneyAccount` | mutation | Owner/Admin only | finance | supported | finance.money_in.record_simple, finance.transfer.record_simple |
 | `finance.createSupplier` | mutation | Owner/Admin only | finance | supported | finance.supplier.create |
+| `finance.customerBalanceDirectory` | query | Owner/Admin only | finance | excluded | Dashboard list projections for Finance pages; the assistant answers these amounts through supplier statements, customer statements and money account balances. |
 | `finance.customerBalances` | query | Owner/Admin only | finance | excluded | Dashboard list projections for Finance pages; the assistant answers these amounts through supplier statements, customer statements and money account balances. |
 | `finance.expenseCategories` | query | Owner/Admin only | finance | supported | finance.expense_categories.read |
 | `finance.expenseReceipts.attach` | mutation | Owner/Admin only | finance | planned | H04 |
@@ -511,9 +527,11 @@ track conversational evaluation separately from these source test links.
 | `finance.expenseReceipts.list` | query | Owner/Admin only | finance | planned | H04 |
 | `finance.expenseReceipts.withdraw` | mutation | Owner/Admin only | finance | planned | H04 |
 | `finance.fiscalCalendar` | query | Owner/Admin only | finance | form_only | Period close, reopen and fiscal calendar changes are privileged Finance actions. |
+| `finance.inventoryReconciliation` | query | Owner/Admin only | finance | form_only | Period close, reopen and fiscal calendar changes are privileged Finance actions. |
 | `finance.journal` | query | Owner/Admin only | finance | planned | G01 |
 | `finance.moneyAccounts` | query | Owner/Admin only | finance | supported | finance.cash_accounts.read, finance.money_accounts.read |
 | `finance.moneyMovement` | query | Owner/Admin only | finance | planned | E03 |
+| `finance.openingEquityReconciliation` | query | Owner/Admin only | finance | form_only | Period close, reopen and fiscal calendar changes are privileged Finance actions. |
 | `finance.owedSummary` | query | Owner/Admin only | finance | excluded | Dashboard list projections for Finance pages; the assistant answers these amounts through supplier statements, customer statements and money account balances. |
 | `finance.payBill` | mutation | Owner/Admin only | finance | supported | finance.bill.pay |
 | `finance.payPurchase` | mutation | Owner/Admin only | finance | supported | finance.purchase.pay |
@@ -542,7 +560,7 @@ track conversational evaluation separately from these source test links.
 | `finance.reversePurchaseRecognition` | mutation | Owner/Admin only | finance | supported | finance.purchase.fact.reverse |
 | `finance.reverseSupplierEntry` | mutation | Owner/Admin only | finance | supported | finance.supplier.entry.reverse |
 | `finance.setup` | mutation | Owner/Admin only | finance | form_only | Opening the Book is a guided setup with fiscal choices. |
-| `finance.supplierBalances` | query | Owner/Admin only | finance | excluded | Dashboard list projections for Finance pages; the assistant answers these amounts through supplier statements, customer statements and money account balances. |
+| `finance.supplierDirectory` | query | Owner/Admin only | finance | excluded | Dashboard list projections for Finance pages; the assistant answers these amounts through supplier statements, customer statements and money account balances. |
 | `finance.supplierOpeningBalance` | query | Owner/Admin only | finance | planned | E05 |
 | `finance.supplierPayableAging` | query | Owner/Admin only | finance | planned | G01 |
 | `finance.suppliers` | query | Owner/Admin only | finance | supported | finance.suppliers.read |
@@ -578,6 +596,8 @@ track conversational evaluation separately from these source test links.
 | `inventory.recordInternalUse` | mutation | Owner/Admin only | inventory | planned | C03 |
 | `inventory.releaseReservation` | mutation | orders | inventory | planned | G04 |
 | `inventory.reserveOffering` | mutation | orders | inventory | planned | G04 |
+| `inventory.reverseTransformation` | mutation | Owner/Admin only | inventory | planned | G04 |
+| `inventory.setLowStockLevel` | mutation | Owner/Admin only | inventory | form_only | Display setting for Running low on the Inventory page; it never changes stock or blocks a sale. The assistant reads low stock with lowStockPage and its own threshold. |
 | `inventory.stockCountReview` | query | stock | inventory | supported | inventory.count.read |
 | `inventory.stockCounts` | query | Owner/Admin only | inventory | form_only | Count stock sheet: lists this Store's saved count drafts to finish or discard. The assistant reads a saved count with readStockCount and creates new counts itself. |
 | `inventory.transferReview` | query | stock | inventory | supported | inventory.transfer.read |
@@ -719,6 +739,7 @@ track conversational evaluation separately from these source test links.
 | `retailOps.updateStaffStatus` | mutation | Owner/Admin only | staff | supported | staff.status.change |
 | `search.global` | query | read | search | supported | search.records |
 | `serviceAccess.createRequestForm` | mutation | Owner/Admin only | commerce | planned | G03 |
+| `serviceAccess.createStaffQuote` | mutation | Owner/Admin only | commerce | form_only | Dashboard manager-reviewed staff quote cart. No assistant write or channel activation is added; existing canonical quote authority and customer acceptance remain required. |
 | `serviceAccess.createTracking` | mutation | Owner/Admin only | commerce | planned | G03 |
 | `serviceAccess.issueQuote` | mutation | Owner/Admin only | commerce | planned | G03 |
 | `serviceAccess.requestForms` | query | Owner/Admin only | commerce | planned | G03 |
@@ -825,9 +846,11 @@ track conversational evaluation separately from these source test links.
 | `services.addNote` | mutation | Owner/Admin only | services | supported | services.work.note |
 | `services.assignees` | query | read | services | supported | services.intake.options.read |
 | `services.assignJob` | mutation | Owner/Admin only | services | supported | services.work.assign |
+| `services.assistantJobCard` | query | read | services | form_only | Native Assistant card completion receipt; no model creation or channel grant. |
 | `services.authorizeLine` | mutation | Owner/Admin only | services | planned | D05 |
 | `services.batchUpdate` | mutation | Owner/Admin only | services | form_only | Bulk queue updates stay in the queue view. |
 | `services.captureEvidence` | mutation | Owner/Admin only | services | planned | H04 |
+| `services.completeJob` | mutation | Owner/Admin only | services | form_only | Native work completion independently of payment; no model-executable command or WhatsApp/mobile rollout added. |
 | `services.confirmIntake` | mutation | Owner/Admin only | services | planned | D04 |
 | `services.createAndConfirmIntake` | mutation | Owner/Admin only | services | supported | services.intake.create |
 | `services.createIntakeDraft` | mutation | Owner/Admin only | services | planned | D04 |
@@ -863,7 +886,23 @@ track conversational evaluation separately from these source test links.
 | `setupAssistant.state` | query | Owner/Admin only | assistant | excluded | Assistant transport or a dedicated assistant flow. |
 | `setupAssistant.updateEntity` | mutation | Owner/Admin only | assistant | excluded | Assistant transport or a dedicated assistant flow. |
 | `setupAssistant.visit` | mutation | Owner/Admin only | assistant | excluded | Assistant transport or a dedicated assistant flow. |
+| `storefront.acceptDesign` | mutation | Owner/Admin only | storefront | supported | storefront.design.accept |
+| `storefront.cancelGeneration` | mutation | Owner/Admin only | platform | form_only | Storefront preview/edit/cancel/publish/rollback use the studio. Only the registered dashboard design read/generate/accept capabilities use shared commands and explicit confirmation. |
+| `storefront.draft` | query | Owner/Admin only | storefront | supported | storefront.design.read |
+| `storefront.generate` | mutation | Owner/Admin only | storefront | supported | storefront.design.generate |
+| `storefront.generation` | query | Owner/Admin only | storefront | supported | storefront.design.read |
+| `storefront.generations` | query | Owner/Admin only | storefront | supported | storefront.design.read |
+| `storefront.history` | query | Owner/Admin only | platform | form_only | Storefront preview/edit/cancel/publish/rollback use the studio. Only the registered dashboard design read/generate/accept capabilities use shared commands and explicit confirmation. |
+| `storefront.initialize` | mutation | Owner/Admin only | platform | form_only | Storefront preview/edit/cancel/publish/rollback use the studio. Only the registered dashboard design read/generate/accept capabilities use shared commands and explicit confirmation. |
+| `storefront.preview` | query | Owner/Admin only | platform | form_only | Storefront preview/edit/cancel/publish/rollback use the studio. Only the registered dashboard design read/generate/accept capabilities use shared commands and explicit confirmation. |
+| `storefront.previewSession` | mutation | Owner/Admin only | platform | form_only | Storefront preview/edit/cancel/publish/rollback use the studio. Only the registered dashboard design read/generate/accept capabilities use shared commands and explicit confirmation. |
+| `storefront.publish` | mutation | Owner/Admin only | platform | form_only | Storefront preview/edit/cancel/publish/rollback use the studio. Only the registered dashboard design read/generate/accept capabilities use shared commands and explicit confirmation. |
+| `storefront.readiness` | query | Owner/Admin only | platform | form_only | Storefront preview/edit/cancel/publish/rollback use the studio. Only the registered dashboard design read/generate/accept capabilities use shared commands and explicit confirmation. |
+| `storefront.rollback` | mutation | Owner/Admin only | platform | form_only | Storefront preview/edit/cancel/publish/rollback use the studio. Only the registered dashboard design read/generate/accept capabilities use shared commands and explicit confirmation. |
+| `storefront.saveDraft` | mutation | Owner/Admin only | platform | form_only | Storefront preview/edit/cancel/publish/rollback use the studio. Only the registered dashboard design read/generate/accept capabilities use shared commands and explicit confirmation. |
+| `stores.contact` | query | Owner/Admin only | platform | form_only | Owner/Admin Store contact settings require explicit form review and current saved contact fields; no assistant configuration mutation or message send. |
 | `stores.orderVisibility` | query | read | sales | supported | settings.store.read |
+| `stores.updateContact` | mutation | Owner/Admin only | platform | form_only | Owner/Admin Store contact settings require explicit form review and current saved contact fields; no assistant configuration mutation or message send. |
 | `stores.updateOrderVisibility` | mutation | Owner/Admin only | sales | supported | settings.store.change |
 | `storeSubscriptions.catalog` | query | Owner/Admin only | platform | form_only | Subscription purchase and verification use the billing checkout. |
 | `storeSubscriptions.verifyPurchase` | mutation | Owner/Admin only | platform | form_only | Subscription purchase and verification use the billing checkout. |

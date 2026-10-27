@@ -187,7 +187,7 @@ export function FinanceSupplierTableView({
       {!rows.length ? (
         <FinanceSupplierEmptyState filtered={filtered} />
       ) : view !== "table" ? (
-        <DirectoryCollection view={view} label="Supplier">
+        <DirectoryCollection view={view} label="Supplier" cardColumns="md2-lg3">
           {rows.map((row) => {
             const supplier = row.original
             const open = () =>

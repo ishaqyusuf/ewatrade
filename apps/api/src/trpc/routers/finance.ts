@@ -13,7 +13,9 @@ import {
   getFinanceCashCount,
   getFinanceCommandStatus,
   getFinanceFiscalCalendar,
+  getFinanceInventoryReconciliation,
   getFinanceMoneyMovement,
+  getFinanceOpeningEquityReconciliation,
   getFinanceOwedSummary,
   getFinancePeriodCloseChecklist,
   getFinancePeriods,
@@ -37,7 +39,6 @@ import {
   listFinancePurchaseBills,
   listFinancePurchaseRecognitions,
   listFinanceSupplierDirectory,
-  listFinanceSupplierListBalances,
   listFinanceSuppliers,
   payFinanceBill,
   payFinancePurchaseBill,
@@ -90,7 +91,6 @@ import {
   financeReportsSchema,
   financeReverseBillPaymentSchema,
   financeSetupSchema,
-  financeSupplierBalancesSchema,
   financeSupplierDirectorySchema,
   financeVoidExpenseSchema,
 } from "../../schemas/finance"
@@ -286,6 +286,22 @@ export const financeRouter = createTRPCRouter({
     .query(({ ctx, input }) =>
       getFinancePeriodCloseChecklist(ctx.db, { ...input, ...ctx.financeActor }),
     ),
+  inventoryReconciliation: financeProcedure
+    .input(financeBookSchema)
+    .query(({ ctx, input }) =>
+      getFinanceInventoryReconciliation(ctx.db, {
+        ...input,
+        ...ctx.financeActor,
+      }),
+    ),
+  openingEquityReconciliation: financeProcedure
+    .input(financeBookSchema)
+    .query(({ ctx, input }) =>
+      getFinanceOpeningEquityReconciliation(ctx.db, {
+        ...input,
+        ...ctx.financeActor,
+      }),
+    ),
   changePeriod: financeProcedure
     .input(financePeriodSchema)
     .mutation(({ ctx, input }) =>
@@ -429,14 +445,6 @@ export const financeRouter = createTRPCRouter({
     .input(financeSupplierDirectorySchema)
     .query(({ ctx, input }) =>
       listFinanceSupplierDirectory(ctx.db, { ...input, ...ctx.financeActor }),
-    ),
-  supplierBalances: financeProcedure
-    .input(financeSupplierBalancesSchema)
-    .query(({ ctx, input }) =>
-      listFinanceSupplierListBalances(ctx.db, {
-        ...input,
-        ...ctx.financeActor,
-      }),
     ),
   journal: financeProcedure
     .input(financeJournalPageSchema)

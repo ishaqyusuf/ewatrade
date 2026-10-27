@@ -1,9 +1,11 @@
+import { buildCatalogVariantCombinations } from "@ewatrade/utils/catalog-options"
 import { z } from "zod"
 import {
   deriveSetupEntityState,
   majorAmountToMinor,
   setupProductPayloadSchema,
 } from "../setup/contracts"
+import { setupProductVariants } from "../setup/variants"
 
 const text = z.string().max(2000)
 const amount = z.string().max(40)
@@ -142,20 +144,119 @@ export function productHandbackSnapshot(
           }
         })
       : snapshot.additionalUnits
+  const usedGroupIds = new Set<string>()
+  const priorGroupIds = new Set(snapshot.optionGroups.map((group) => group.id))
+  const optionGroups =
+    payload.options?.map((group, index) => {
+      const previous = snapshot.optionGroups.find(
+        (prior) =>
+          prior.name.trim().toLowerCase() === group.name.trim().toLowerCase(),
+      )
+      let id = previous?.id ?? `chat-option-${index}`
+      let suffix = 1
+      while (usedGroupIds.has(id) || (!previous && priorGroupIds.has(id)))
+        id = `chat-option-${index}-${suffix++}`
+      usedGroupIds.add(id)
+      return { id, name: group.name, values: group.values.join(", ") }
+    }) ?? snapshot.optionGroups
+  // New choice combinations may have no previously saved variant draft.
+  const priorDrafts: Partial<ProductFormSnapshot["variantDrafts"]> =
+    snapshot.variantDrafts
+  const variantDrafts: ProductFormSnapshot["variantDrafts"] = payload.options
+    ? {}
+    : { ...snapshot.variantDrafts }
+  if (payload.options?.length && payload.variants) {
+    const groups = optionGroups.map((group, index) => ({
+      id: group.id,
+      key: `group-${index + 1}`,
+      name: group.name,
+      values: group.values
+        .split(",")
+        .map((label, at) => ({ key: `value-${at + 1}`, label: label.trim() })),
+    }))
+    const rows = payload.reviewRequirements?.length
+      ? []
+      : setupProductVariants(payload)
+    for (const combination of buildCatalogVariantCombinations(groups)) {
+      const selections = combination.selections.map((selection) => {
+        const group = groups.find((entry) => entry.key === selection.groupKey)
+        const value = group?.values.find(
+          (entry) => entry.key === selection.valueKey,
+        )
+        if (!group || !value)
+          throw Error("Catalog combination references an unknown choice")
+        return {
+          optionName: group.name,
+          value: value.label,
+          id: group.id,
+        }
+      })
+      // Same stable choice identity as the existing Catalog form, including
+      // disabled unmentioned combinations so the form cannot manufacture stock.
+      const key = JSON.stringify(
+        selections
+          .map((entry) => [entry.id, entry.value.toLowerCase()])
+          .sort((a, b) => String(a[0]).localeCompare(String(b[0]))),
+      )
+      const row = rows.find((entry) =>
+        selections.every((selection) =>
+          entry.selections.some(
+            (value) =>
+              value.optionName === selection.optionName &&
+              value.value === selection.value,
+          ),
+        ),
+      )
+      const prior = priorDrafts[key]
+      variantDrafts[key] = {
+        barcode: "",
+        sku: "",
+        quoteRequired: false,
+        storeIds: [snapshot.storeId],
+        price: "",
+        quantity: "",
+        ...prior,
+        enabled: !!row,
+        ...(row?.priceMinor === undefined
+          ? {}
+          : { price: String(row.priceMinor / 100) }),
+        ...(row?.openingStock === undefined
+          ? {}
+          : { quantity: row.openingStock }),
+        unitPrices: {
+          ...prior?.unitPrices,
+          ...Object.fromEntries(
+            (row?.sellingUnits ?? []).flatMap((unit) => {
+              const id = additionalUnits.find(
+                (entry) => entry.name === unit.name,
+              )?.id
+              return id && unit.priceMinor !== undefined
+                ? [[id, String(unit.priceMinor / 100)]]
+                : []
+            }),
+          ),
+        },
+      }
+    }
+  }
   return {
     ...snapshot,
+    optionGroups,
+    variantDrafts,
+    showAdvanced: snapshot.showAdvanced || !!payload.options?.length,
     form: {
       ...snapshot.form,
       name: payload.name,
       unitName: payload.unitName,
       usage: payload.usage ?? snapshot.form.usage,
+      ...(payload.options?.length ? { openingStockQuantity: "" } : {}),
       ...(payload.description !== undefined
         ? { description: payload.description }
         : {}),
       ...(payload.priceMinor !== undefined
         ? { price: String(payload.priceMinor / 100) }
         : {}),
-      ...(payload.openingStock !== undefined
+      ...(!payload.options?.length && payload.openingStock !== undefined
         ? { openingStockQuantity: payload.openingStock }
         : {}),
     },

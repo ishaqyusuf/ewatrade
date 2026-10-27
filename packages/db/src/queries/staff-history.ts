@@ -1,16 +1,16 @@
 import type { Prisma, PrismaClient } from "../../generated/prisma/client"
+import { projectStaffAccessSnapshot } from "./staff-access-history-snapshot"
 import { StaffDirectoryError } from "./staff-directory"
 import {
-  staffHistoryPageInput,
-  lifecycleTypes,
+  type StaffHistoryPageInput,
   accessTypes,
-  keyFor,
-  cursorPosition,
   afterPosition,
   compareEvents,
-  type StaffHistoryPageInput,
+  cursorPosition,
+  keyFor,
+  lifecycleTypes,
+  staffHistoryPageInput,
 } from "./staff-history-input"
-import { projectStaffAccessSnapshot } from "./staff-access-history-snapshot"
 export {
   staffHistoryPageInput,
   staffHistoryFiltersInput,
@@ -49,8 +49,8 @@ export async function listStaffHistoryPageInTransaction(
     cursor: input.cursor,
     limit: input.limit,
   })
-  const key = keyFor({ ...input, ...parsed }),
-    after = cursorPosition(parsed.cursor, key)
+  const key = keyFor({ ...input, ...parsed })
+  const after = cursorPosition(parsed.cursor, key)
   const actor = await tx.membership.findFirst({
     where: {
       tenantId: input.tenantId,
@@ -99,6 +99,7 @@ export async function listStaffHistoryPageInTransaction(
     (SELECT count(*)=12 FROM pg_attribute WHERE attrelid=to_regclass('"RetailOpsStaffLifecycleEvent"') AND NOT attisdropped AND attname=ANY(ARRAY['id','tenantId','membershipId','staffUserId','actorUserId','type','fromStatus','toStatus','fromRole','toRole','happenedAt','reason'])) AS lifecycle,
     (SELECT count(*)=9 FROM pg_attribute WHERE attrelid=to_regclass('"StaffAccessAuditEvent"') AND NOT attisdropped AND attname=ANY(ARRAY['id','tenantId','membershipId','actorUserId','operation','revision','before','after','createdAt'])) AS access,
     (SELECT count(*)=4 FROM pg_attribute WHERE attrelid=to_regclass('"RetailOpsStaffProfile"') AND NOT attisdropped AND attname=ANY(ARRAY['tenantId','userId','displayName','id'])) AS profiles`
+  if (!tables) throw new Error("Staff history table metadata is unavailable.")
   const wantsLifecycle =
     !parsed.storeId &&
     parsed.stream !== "STORE_ACCESS" &&
@@ -167,7 +168,7 @@ export async function listStaffHistoryPageInTransaction(
       : {}),
   }
   const [lifecycle, access, lifecycleCount, accessCount] = await Promise.all([
-    wantsLifecycle && tables!.lifecycle
+    wantsLifecycle && tables.lifecycle
       ? tx.retailOpsStaffLifecycleEvent.findMany({
           where: {
             AND: [
@@ -192,7 +193,7 @@ export async function listStaffHistoryPageInTransaction(
           },
         })
       : [],
-    wantsAccess && tables!.access
+    wantsAccess && tables.access
       ? tx.staffAccessAuditEvent.findMany({
           where: {
             AND: [
@@ -214,10 +215,10 @@ export async function listStaffHistoryPageInTransaction(
           },
         })
       : [],
-    wantsLifecycle && tables!.lifecycle
+    wantsLifecycle && tables.lifecycle
       ? tx.retailOpsStaffLifecycleEvent.count({ where: lifecycleWhere })
       : 0,
-    wantsAccess && tables!.access
+    wantsAccess && tables.access
       ? tx.staffAccessAuditEvent.count({ where: accessWhere })
       : 0,
   ])
@@ -267,7 +268,7 @@ export async function listStaffHistoryPageInTransaction(
         user: { select: { name: true, displayName: true, email: true } },
       },
     }),
-    tables!.profiles
+    tables.profiles
       ? tx.retailOpsStaffProfile.findMany({
           where: { tenantId: input.tenantId, userId: { in: userIds } },
           select: {
@@ -284,8 +285,8 @@ export async function listStaffHistoryPageInTransaction(
         })
       : [],
   ])
-  const byMembership = new Map<string, Identity>(),
-    byUser = new Map<string, Identity>()
+  const byMembership = new Map<string, Identity>()
+  const byUser = new Map<string, Identity>()
   for (const m of members) {
     const identity: Identity = {
       coverage: "available",
@@ -306,7 +307,9 @@ export async function listStaffHistoryPageInTransaction(
         name: p.displayName || p.user.name,
         email: p.user.email,
       })
-  const storeNames = new Map(stores.map((store) => [store.id, store.name]))
+  const storeNames = new Map(
+    stores.map((store) => [store.id, store.name] as const),
+  )
   const data = page.map((event) => {
     const subject =
       (event.row.membershipId
@@ -350,9 +353,9 @@ export async function listStaffHistoryPageInTransaction(
       after: projectStaffAccessSnapshot(event.row.after, storeNames),
     }
   })
-  const last = page.at(-1),
-    incompleteTables =
-      (wantsLifecycle && !tables!.lifecycle) || (wantsAccess && !tables!.access)
+  const last = page.at(-1)
+  const incompleteTables =
+    (wantsLifecycle && !tables.lifecycle) || (wantsAccess && !tables.access)
   return {
     data,
     total: incompleteTables ? null : lifecycleCount + accessCount,
@@ -376,12 +379,12 @@ export async function listStaffHistoryPageInTransaction(
       history: "partial" as const,
       lifecycle: !wantsLifecycle
         ? ("not_requested" as const)
-        : tables!.lifecycle
+        : tables.lifecycle
           ? ("available" as const)
           : ("unavailable" as const),
       access: !wantsAccess
         ? ("not_requested" as const)
-        : tables!.access
+        : tables.access
           ? ("available" as const)
           : ("unavailable" as const),
       identities: data.some(

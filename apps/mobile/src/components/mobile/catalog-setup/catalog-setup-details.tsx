@@ -12,6 +12,8 @@ import { getCatalogIllustrations } from "@ewatrade/utils/catalog-illustrations"
 import { Image } from "expo-image"
 import { useState } from "react"
 import { Text as NativeText, View } from "react-native"
+import { CatalogPhotoGalleryPicker } from "../catalog-item/catalog-photo-gallery-picker"
+import { SavedPhotoPreview } from "../catalog-item/saved-photo-preview"
 import { CatalogIllustrationPreview } from "./catalog-illustration-library"
 import { catalogIllustrationCategoryKey } from "./catalog-illustration-library"
 import {
@@ -128,7 +130,10 @@ function ClassicDetailRows({
     choiceKeys.some((key) => choiceDraft(key).storeIds.includes(store.id)),
   ).length
   const hasImage = Boolean(
-    model.imageDraft.illustrationId || model.imageDraft.image || model.imageUrl,
+    model.imageDraft.illustrationId ||
+      model.imageDraft.image ||
+      model.imageDraft.reused ||
+      model.imageUrl,
   )
   const rows: Array<{
     key: CatalogEditorKey
@@ -145,7 +150,9 @@ function ClassicDetailRows({
       value: hasImage
         ? model.imageDraft.illustrationId
           ? "Illustration selected"
-          : "1 photo · uploads when you save"
+          : model.imageDraft.reused
+            ? "1 photo · from My images"
+            : "1 photo · uploads when you save"
         : "Add a photo or illustration",
       set: hasImage,
       icon: "Image",
@@ -406,7 +413,8 @@ function ClassicPhotosEditor({
   const { colorScheme } = useColorScheme()
   const colors = useColors()
   const palette = GREEN_TILL_THEME[colorScheme]
-  const { illustrationId, selecting, error, select } = model.imageDraft
+  const { illustrationId, reused, selecting, error, select } = model.imageDraft
+  const [galleryOpen, setGalleryOpen] = useState(false)
   const kind = model.kind === "service" ? "service" : "product"
   const strip = getCatalogIllustrations({
     kind,
@@ -415,7 +423,7 @@ function ClassicPhotosEditor({
   })
     .filter((entry) => entry.recommended)
     .slice(0, 4)
-  const hasImage = Boolean(illustrationId || uri)
+  const hasImage = Boolean(illustrationId || reused || uri)
   const tile = { aspectRatio: 1, borderRadius: 16, width: "31.4%" } as const
   return (
     <View className="gap-3.5">
@@ -438,6 +446,13 @@ function ClassicPhotosEditor({
           >
             {illustrationId ? (
               <CatalogIllustrationPreview id={illustrationId} size={78} />
+            ) : reused ? (
+              <SavedPhotoPreview
+                assetId={reused.assetId}
+                storeId={reused.storeId}
+                name={reused.name}
+                variant="thumbnail"
+              />
             ) : (
               <Image
                 source={{ uri }}
@@ -500,17 +515,24 @@ function ClassicPhotosEditor({
           [
             ["camera", "Take photo", "Camera"],
             ["photos", "Choose", "Image"],
+            ["gallery", "My images", "LayoutGrid"],
           ] as const
         ).map(([source, label, icon]) => (
           <Pressable
             key={source}
             accessibilityLabel={
-              source === "camera" ? "Take a photo" : "Choose a photo"
+              source === "camera"
+                ? "Take a photo"
+                : source === "photos"
+                  ? "Choose a photo"
+                  : "Choose from My images"
             }
             accessibilityRole="button"
             disabled={disabled}
             haptic
-            onPress={() => void select(source)}
+            onPress={() =>
+              source === "gallery" ? setGalleryOpen(true) : void select(source)
+            }
             style={[
               tile,
               {
@@ -544,10 +566,34 @@ function ClassicPhotosEditor({
           message="The preview could not load. Choose another photo."
         />
       ) : null}
-      {uri && !illustrationId ? (
+      {reused ? (
+        <Text className="text-xs text-muted-foreground">
+          From My images · {reused.name}. Added to this item when you save.
+        </Text>
+      ) : uri && !illustrationId ? (
         <Text className="text-xs text-muted-foreground">
           Uploads when you save. It stays private until its image check passes.
         </Text>
+      ) : null}
+      {model.storeId ? (
+        <CatalogPhotoGalleryPicker
+          open={galleryOpen}
+          storeId={model.storeId}
+          item={{ id: "", name: model.name.trim() || "this item" }}
+          stores={model.stores}
+          available={1}
+          pickedAssetIds={reused ? [reused.assetId] : []}
+          onClose={() => setGalleryOpen(false)}
+          onAdd={([entry]) => {
+            if (!entry) return
+            model.imageDraft.chooseReused({
+              assetId: entry.assetId,
+              storeId: entry.storeId,
+              name: entry.items[0]?.name ?? "",
+            })
+            model.setImageUrl("")
+          }}
+        />
       ) : null}
       <View className="mt-2 flex-row items-baseline justify-between">
         <Text className="text-base font-extrabold text-foreground">

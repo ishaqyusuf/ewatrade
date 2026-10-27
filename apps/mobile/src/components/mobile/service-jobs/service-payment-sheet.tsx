@@ -1,10 +1,12 @@
 import { AppBottomSheetBackdrop } from "@/components/app/bottom-sheet-backdrop"
 import { ServiceChoice as Choice } from "@/components/mobile/appearances/classic/service-jobs"
+import { CheckoutMoneyAccountField } from "@/components/mobile/create-sale/checkout-money-account"
 import { FormField } from "@/components/mobile/form-field"
 import { BottomSheetKeyboardAwareScrollView } from "@/components/ui/bottom-sheet-keyboard-aware-scroll-view"
 import { Modal, useModal } from "@/components/ui/modal"
 import { Text } from "@/components/ui/text"
 import { View } from "@/components/ui/view"
+import { useOrderPaymentAccount } from "@/hooks/use-order-payment-account"
 import { formatMinorMoney, getCurrencySymbol } from "@ewatrade/utils"
 import {
   BottomSheetFooter,
@@ -87,6 +89,14 @@ export function useServicePaymentEditor(
 }
 type Editor = ReturnType<typeof useServicePaymentEditor>
 
+const METHOD_LABELS = {
+  cash: "Cash",
+  bank_transfer: "Transfer",
+  pos: "POS",
+  card: "Card",
+  other: "Other",
+} as const
+
 export function ServicePaymentSheet({
   editor,
   allowed,
@@ -98,7 +108,21 @@ export function ServicePaymentSheet({
   const projection = draft
     ? projectServicePayment(draft.job, draft.kind, draft)
     : null
-  const disabled = !allowed || !projection || Boolean(projection.error)
+  const account = useOrderPaymentAccount({
+    enabled: Boolean(draft && draft.job.balanceDueMinor > 0),
+    owner: draft?.job.id ?? "",
+    currencyCode: draft?.job.currencyCode ?? "",
+    method: draft?.method ?? "cash",
+    receivedMinor: projection?.amountMinor ?? 0,
+  })
+  const disabled =
+    !allowed || !projection || Boolean(projection.error) || !account.ready
+  const chosen = account.chosen
+  const review = useCallback(() => {
+    // The sole eligible account is preselected without a tap; send what shows.
+    editor.edit({ moneyAccountId: chosen?.id, moneyAccountName: chosen?.name })
+    editor.review()
+  }, [chosen?.id, chosen?.name, editor])
   const footer = useCallback(
     (props: BottomSheetFooterProps) => (
       <BottomSheetFooter {...props}>
@@ -106,7 +130,7 @@ export function ServicePaymentSheet({
           onLayout={(event) => setFooterHeight(event.nativeEvent.layout.height)}
           className="gap-2 border-t border-border bg-card px-5 pb-5 pt-3"
         >
-          <ServiceAction disabled={disabled} onPress={editor.review}>
+          <ServiceAction disabled={disabled} onPress={review}>
             Review {draft?.kind === "handoff" ? "collection" : "payment"}
           </ServiceAction>
           <ServiceAction variant="outline" onPress={editor.modal.dismiss}>
@@ -115,7 +139,7 @@ export function ServicePaymentSheet({
         </View>
       </BottomSheetFooter>
     ),
-    [disabled, draft?.kind, editor],
+    [disabled, draft?.kind, editor, review],
   )
   const ink = "text-foreground"
   return (
@@ -199,6 +223,19 @@ export function ServicePaymentSheet({
                         />
                       ))}
                     </View>
+                    <CheckoutMoneyAccountField
+                      accounts={account.list}
+                      disabled={!allowed}
+                      method={draft.method}
+                      methodLabel={METHOD_LABELS[draft.method]}
+                      onChoose={account.choose}
+                      onRetry={account.retry}
+                      receivedLabel={formatMinorMoney(
+                        projection?.amountMinor ?? 0,
+                        draft.job.currencyCode,
+                      )}
+                      state={account.state}
+                    />
                     <FormField
                       variant="filled"
                       label="Payment reference (optional)"

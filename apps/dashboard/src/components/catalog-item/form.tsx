@@ -1677,6 +1677,7 @@ export function CatalogItemForm({
         >
           <CatalogImageEditor
             photo={photo}
+            gallery={{ storeId, itemName: form.name.trim(), stores }}
             illustrationId={illustrationId}
             onIllustrationChange={setIllustrationId}
             businessProfileKey={businessProfileKey}

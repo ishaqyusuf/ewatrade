@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Smoke driver fixture</title></head>
+<body><main id="app"></main><script>
+const app = document.getElementById("app")
+if (location.pathname === "/login") {
+  app.innerHTML = `<button aria-label="QA Quick Fill">QA</button><dialog><label>QA domain<input id="domain"></label><button id="load">Load QA accounts</button></dialog><button role="combobox" aria-label="Email address" hidden>Choose</button><button role="option" hidden>Owner · Fixture · OWNER</button><button id="signin" hidden>Sign in</button>`
+  const dialog = document.querySelector("dialog")
+  document.querySelector("[aria-label='QA Quick Fill']").onclick = () => dialog.showModal()
+  document.getElementById("load").onclick = () => { dialog.close(); document.querySelector("[role=combobox]").hidden = false }
+  document.querySelector("[role=combobox]").onclick = () => document.querySelector("[role=option]").hidden = false
+  document.querySelector("[role=option]").onclick = () => { document.querySelector("[role=option]").hidden = true; document.getElementById("signin").hidden = false }
+  document.getElementById("signin").onclick = () => location.href = "/"
+} else if (location.pathname === "/catalog") {
+  app.innerHTML = "<h1>Catalog</h1><p>Fixture item</p>"
+  if (location.hash === "#mutation") fetch("/api/commerce/write", { method: "POST" }).catch(() => {})
+} else if (location.pathname === "/sales") {
+  app.innerHTML = `<section id="sheet"><h1>New order</h1><input role="combobox" aria-label="Add catalog item"><button role="option" hidden>Fixture item</button><div id="line" hidden><label>Fixture item item 1 quantity<input value="1"></label><p>₦500</p></div><button aria-label="Close">Close</button></section>`
+  document.querySelector("[role=combobox]").oninput = () => document.querySelector("[role=option]").hidden = false
+  document.querySelector("[role=option]").onclick = () => { document.getElementById("line").hidden = false; document.querySelector("[role=option]").hidden = true }
+  document.querySelector("[aria-label=Close]").onclick = () => document.getElementById("sheet").hidden = true
+} else app.innerHTML = "<h1>Fixture workspace</h1>"
+</script></body></html>

@@ -1,4 +1,5 @@
 import { useAuthContext } from "@/hooks/use-auth"
+import { useOrderPaymentAccount } from "@/hooks/use-order-payment-account"
 import {
   createMessageFixture,
   createServiceFixture,
@@ -8,6 +9,7 @@ import { canManageMobileOperations, isSalesRepRole } from "@/lib/mobile-roles"
 import { useOperationalModeStore } from "@/store/operationalModeStore"
 import { useTRPC } from "@/trpc/client"
 import type { RouterInputs } from "@ewatrade/api/trpc/routers/_app"
+import { majorToMinor } from "@ewatrade/utils"
 import type { QaFixtureContext } from "@ewatrade/utils/qa-fixtures"
 import {
   useInfiniteQuery,
@@ -214,6 +216,17 @@ export function useServiceJobs(focusedJob?: FocusedServiceJob) {
   const subtotalMinor = intakeProjection.value?.subtotalMinor ?? 0
   const serviceChargeMinor = intakeProjection.value?.serviceChargeMinor ?? 0
   const totalMinor = intakeProjection.value?.totalMinor ?? 0
+  const intakePaidMinor = amountPaid.trim()
+    ? Math.max(0, majorToMinor(amountPaid) ?? 0)
+    : 0
+  const intakeAccount = useOrderPaymentAccount({
+    enabled: creating && !isOfflineMode && intakePaidMinor > 0,
+    owner: "service-intake",
+    currencyCode:
+      intakeProjection.value?.currencyCode ?? offerings[0]?.currencyCode ?? "",
+    method: paymentMethod,
+    receivedMinor: intakePaidMinor,
+  })
   const history = useServiceHistory()
   function openHistory(kind: ServiceHistoryKind) {
     if (
@@ -544,7 +557,10 @@ export function useServiceJobs(focusedJob?: FocusedServiceJob) {
         amount: amountPaid,
         method: paymentMethod,
         reference: paymentReference,
+        moneyAccountId: intakeAccount.chosen?.id,
+        moneyAccountName: intakeAccount.chosen?.name,
       },
+      accountReady: intakeAccount.ready,
       notificationChannel,
       evidenceCount: pendingIntakeEvidence.length,
     })
@@ -799,6 +815,7 @@ export function useServiceJobs(focusedJob?: FocusedServiceJob) {
     setPaymentMethod,
     paymentReference,
     setPaymentReference,
+    intakeAccount,
     notificationChannel,
     setNotificationChannel,
     customerMessage,

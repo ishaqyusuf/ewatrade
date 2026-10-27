@@ -147,7 +147,7 @@ export async function resolveAssistantWhatsAppControlAuthority(
     )
   )
     throw new AssistantWhatsAppError("UNAUTHORIZED")
-  const stamps = []
+  const stamps: string[] = []
   const classifications = new Set<"QA" | "LIVE">()
   let quota: Awaited<ReturnType<typeof readControlScope>> | undefined
   let dispatchBefore = Number.POSITIVE_INFINITY

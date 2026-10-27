@@ -1,5 +1,7 @@
 "use client"
 
+import { cn } from "@/utils"
+
 import {
   Card,
   CardAction,
@@ -71,16 +73,22 @@ export function DirectoryToolbar<TData>({
 export function DirectoryCollection({
   view,
   label,
+  cardColumns = "md2-xl3",
   children,
 }: {
   view: CollectionView
   label: string
+  /** Fixed card columns per page design; Finance pages use 1 / 2 / 3 from lg. */
+  cardColumns?: "md2-xl3" | "md2-lg3"
   children: ReactNode
 }) {
   return view === "cards" ? (
     <ul
       aria-label={`${label} cards`}
-      className="grid min-w-0 gap-4 md:grid-cols-2 xl:grid-cols-3"
+      className={cn(
+        "grid min-w-0 gap-4 md:grid-cols-2",
+        cardColumns === "md2-lg3" ? "lg:grid-cols-3" : "xl:grid-cols-3",
+      )}
     >
       {children}
     </ul>

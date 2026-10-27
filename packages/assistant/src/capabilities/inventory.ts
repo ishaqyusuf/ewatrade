@@ -205,6 +205,8 @@ planned("inventory", "G04", [
   "inventory.*Reservation",
   "inventory.reserveOffering",
 ])
+// Source-owned undo of a packing transform (F4.3.03); no assistant draft yet.
+planned("inventory", "G04", ["inventory.reverseTransformation"])
 formOnly("inventory", "Bulk file export; download it from the page.", [
   "inventory.auditExport",
   "serviceReporting.auditExport",
@@ -253,7 +255,6 @@ excluded(
   "Dashboard list projections for Finance pages; the assistant answers these amounts through supplier statements, customer statements and money account balances.",
   [
     "finance.owedSummary",
-    "finance.supplierBalances",
     "finance.customerBalances",
     "finance.customerBalanceDirectory",
     "finance.supplierDirectory",
@@ -280,6 +281,8 @@ formOnly(
     "finance.configureFiscalCalendar",
     "finance.fiscalCalendar",
     "finance.yearEndPreview",
+    "finance.inventoryReconciliation",
+    "finance.openingEquityReconciliation",
   ],
 )
 formOnly(
