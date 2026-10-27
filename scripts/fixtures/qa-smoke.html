@@ -3,7 +3,7 @@
 <body><main id="app"></main><script>
 const app = document.getElementById("app")
 if (location.pathname === "/login") {
-  app.innerHTML = `<button aria-label="QA Quick Fill">QA</button><dialog><label>QA domain<input id="domain"></label><button id="load">Load QA accounts</button></dialog><button role="combobox" aria-label="Email address" hidden>Choose</button><button role="option" hidden>Owner · Fixture · OWNER</button><button id="signin" hidden>Sign in</button>`
+  app.innerHTML = `<button aria-label="QA Quick Fill">QA</button><dialog><label>QA domain<input id="domain"></label><button id="load">Load QA accounts</button></dialog><button role="combobox" aria-label="QA profile" hidden>Choose</button><button role="option" hidden>Owner · Fixture · OWNER</button><button id="signin" hidden>Sign in</button>`
   const dialog = document.querySelector("dialog")
   document.querySelector("[aria-label='QA Quick Fill']").onclick = () => dialog.showModal()
   document.getElementById("load").onclick = () => { dialog.close(); document.querySelector("[role=combobox]").hidden = false }

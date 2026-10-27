@@ -12,7 +12,10 @@ name: QA catalog and sale draft
       - inputText: ${QA_DOMAIN}
       - tapOn: Load QA businesses
 - tapOn: Open [0-9]+ QA businesses
+- tapOn: QA domain options
+- tapOn: Build details
 - assertVisible: ${EXPECTED_RUNTIME}
+- tapOn: Back to QA businesses
 - tapOn: ${PROFILE_LABEL}
 - openLink: ${APP_SCHEME}://catalog-items-modal
 - assertVisible: ${CATALOG_ITEM}
@@ -27,4 +30,7 @@ name: QA catalog and sale draft
 - tapOn: Close create sale
 - assertNotVisible: Checkout
 - tapOn: Open [0-9]+ QA businesses
+- tapOn: QA domain options
+- tapOn: Build details
 - assertVisible: ${EXPECTED_RUNTIME}
+- tapOn: Back to QA businesses

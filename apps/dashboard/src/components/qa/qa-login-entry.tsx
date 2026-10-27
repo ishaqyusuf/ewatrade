@@ -132,7 +132,7 @@ export function QaLoginEntry(props: {
   }
 
   async function signIn() {
-    if (!selected || !access) throw new Error("Choose a QA email address.")
+    if (!selected || !access) throw new Error("Choose a QA profile.")
     operationPending.current = true
     generation.current += 1
     setSigningIn(true)
@@ -168,10 +168,14 @@ export function QaLoginEntry(props: {
         accountEntry={
           access
             ? {
+                label: "QA profile",
                 canSignIn: Boolean(selected) && !pending && !signingIn,
                 signIn,
                 emailField: (
                   <QaProfileSelect
+                    qaDomain={access.qaDomain}
+                    onRefresh={() => void refresh()}
+                    onChangeDomain={() => setOpen(true)}
                     profiles={access.profiles}
                     selected={selectedProfile}
                     disabled={pending || signingIn}

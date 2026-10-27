@@ -23,8 +23,8 @@ mock.module("@gorhom/bottom-sheet", () => ({
   BottomSheetScrollView: () => null,
 }))
 mock.module("expo-router", () => ({ useRouter: () => ({}) }))
-mock.module("expo-constants", () => ({
-  default: { platform: { android: { versionCode: 35 } } },
+mock.module("expo", () => ({
+  requireOptionalNativeModule: () => ({ nativeBuildVersion: "35" }),
 }))
 mock.module("expo-updates", () => ({
   isEnabled: true,
@@ -32,13 +32,16 @@ mock.module("expo-updates", () => ({
   isEmergencyLaunch: false,
   updateId: "candidate-update",
 }))
+mock.module("@/components/mobile/qa-domain-options", () => ({
+  QaDomainOptions: () => null,
+}))
 mock.module("@/components/mobile/status-banner", () => ({
   StatusBanner: () => null,
 }))
 
 afterAll(() => mock.restore())
 
-test("the actual QA chooser view renders the installed runtime identity", async () => {
+test("the main chooser keeps runtime proof out of the list", async () => {
   const { QaDomainIntro } = await import(
     "../components/mobile/qa-account-chooser"
   )
@@ -46,6 +49,15 @@ test("the actual QA chooser view renders the installed runtime identity", async 
     createElement(QaDomainIntro, { qaDomain: "fixture.qa.test" }),
   )
   expect(html).toContain("fixture.qa.test")
+  expect(html).not.toContain("qa-runtime-identity")
+  expect(html).not.toContain("QA runtime")
+})
+
+test("Build details renders actual installed runtime identity", async () => {
+  const { QaBuildDetails } = await import(
+    "../components/mobile/qa-build-details"
+  )
+  const html = renderToStaticMarkup(createElement(QaBuildDetails))
   expect(html).toContain('data-testid="qa-runtime-identity"')
   expect(html).toContain("QA runtime candidate-update · build 35")
 })

@@ -42,7 +42,7 @@ export async function webJourney(page, config) {
     .getByRole("button", { name: "Load QA accounts", exact: true })
     .click()
   await page
-    .getByRole("combobox", { name: "Email address", exact: true })
+    .getByRole("combobox", { name: "QA profile", exact: true })
     .click()
   await page
     .getByRole("option", { name: config.web.profileLabel, exact: true })

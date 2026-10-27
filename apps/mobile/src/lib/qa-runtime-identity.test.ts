@@ -10,6 +10,9 @@ test("QA runtime distinguishes development, embedded, active OTA and emergency f
     build: "35",
   }
   expect(qaRuntimeIdentity(base)).toBe("QA runtime update-1 · build 35")
+  expect(qaRuntimeIdentity({ ...base, development: true })).toBe(
+    "QA runtime development",
+  )
   expect(qaRuntimeIdentity({ ...base, embedded: true })).toBe(
     "QA runtime embedded · build 35",
   )

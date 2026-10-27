@@ -8,6 +8,10 @@ import {
   CommandInput,
   CommandItem,
   CommandList,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
   Popover,
   PopoverContent,
   PopoverTrigger,
@@ -17,21 +21,28 @@ import {
   filterQaProfiles,
   formatQaCount,
   groupQaProfiles,
+  qaProfileDisplayName,
   qaProfileLabel,
 } from "@ewatrade/utils/qa-profiles"
 import { useMemo, useState } from "react"
 
-/** Midday's account combobox composition, grouped by the authorized business ID. */
+/** Midday account-combobox ownership; flat business sections from Workshop02v5. */
 export function QaProfileSelect({
   profiles,
   selected,
+  qaDomain,
   disabled,
   onSelect,
+  onRefresh,
+  onChangeDomain,
 }: {
   profiles: QaProfile[]
   selected?: QaProfile
+  qaDomain: string
   disabled: boolean
   onSelect(profile: QaProfile): void
+  onRefresh(): void
+  onChangeDomain(): void
 }) {
   const [open, setOpen] = useState(false)
   const [search, setSearch] = useState("")
@@ -53,7 +64,7 @@ export function QaProfileSelect({
         // biome-ignore lint/a11y/useSemanticElements: Searchable Popover/Command account picker requires a combobox trigger.
         role="combobox"
         aria-haspopup="listbox"
-        aria-label="Email address"
+        aria-label="QA profile"
         aria-expanded={open && !disabled}
         disabled={disabled}
         className="h-auto min-h-11 w-full justify-between gap-3 whitespace-normal text-left"
@@ -61,36 +72,81 @@ export function QaProfileSelect({
         <span className="min-w-0 break-words">
           {selected ? (
             <>
-              <span className="block">{selected.identity.email}</span>
-              <span className="mt-0.5 block text-xs text-muted-foreground">
+              <span className="block text-base">
+                {qaProfileDisplayName(selected)}
+              </span>
+              <span className="mt-0.5 block text-sm text-muted-foreground">
                 {selected.business.name} · {selected.store.name} ·{" "}
                 {selected.membership.role}
               </span>
             </>
           ) : (
-            "Choose a QA email address"
+            "Choose a QA profile"
           )}
         </span>
-        <span aria-hidden="true" className="text-muted-foreground">
-          ⌄
-        </span>
+        <svg
+          aria-hidden="true"
+          width="18"
+          height="18"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.8"
+        >
+          <path d="m6 9 6 6 6-6" />
+        </svg>
       </PopoverTrigger>
       <PopoverContent
         align="start"
-        className="w-[420px] max-w-[calc(100vw-32px)] gap-0 rounded-2xl border border-border bg-background p-2"
+        className="w-[460px] max-w-[calc(100vw-32px)] gap-0 border border-border bg-background p-0"
       >
+        <div className="flex items-center justify-between gap-3 px-5 pb-2 pt-4">
+          <div className="min-w-0">
+            <h3 className="text-lg font-semibold">QA businesses</h3>
+            <p className="break-words text-sm text-muted-foreground">
+              {qaDomain}
+            </p>
+          </div>
+          <DropdownMenu>
+            <DropdownMenuTrigger
+              render={<Button type="button" variant="ghost" size="icon" />}
+              aria-label="QA domain options"
+            >
+              <svg
+                aria-hidden="true"
+                width="22"
+                height="22"
+                viewBox="0 0 24 24"
+                fill="currentColor"
+              >
+                <circle cx="5" cy="12" r="1.5" />
+                <circle cx="12" cy="12" r="1.5" />
+                <circle cx="19" cy="12" r="1.5" />
+              </svg>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={onRefresh}>
+                Refresh list
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => {
+                  setOpen(false)
+                  onChangeDomain()
+                }}
+              >
+                Change QA domain
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
         <Command shouldFilter={false}>
           <CommandInput
             aria-label="Search QA businesses"
-            placeholder="Search businesses, Stores or people"
+            placeholder="Search businesses or people"
             value={search}
             onValueChange={setSearch}
-            className="px-3"
+            className="border-b border-border px-5"
           />
-          <p className="px-3 pb-2 text-xs text-muted-foreground">
-            Services are included in catalog items. Orders are per Store. —
-            means unavailable.
-          </p>
           <CommandList
             className="max-h-[min(480px,60vh)]"
             aria-label="QA profiles"
@@ -103,23 +159,15 @@ export function QaProfileSelect({
             {groups.map((group) => (
               <CommandGroup
                 key={group.business.id}
-                className="mb-2 overflow-hidden rounded-xl border border-border p-0 [&_[cmdk-group-heading]]:p-0"
+                className="p-0 [&_[cmdk-group-heading]]:p-0"
                 heading={
-                  <div className="space-y-3 bg-muted/30 p-4 normal-case tracking-normal">
-                    <div className="flex items-center gap-3">
-                      <span
-                        aria-hidden="true"
-                        className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-sm font-bold text-primary"
-                      >
-                        {group.business.name.trim().slice(0, 1).toUpperCase()}
-                      </span>
-                      <span className="min-w-0 break-words text-sm font-semibold text-foreground">
-                        {group.business.name}
-                      </span>
+                  <div className="border-b border-border px-5 pb-3 pt-6 font-sans normal-case tracking-normal">
+                    <div className="break-words text-base font-semibold text-foreground">
+                      {group.business.name}
                     </div>
                     <div
-                      className="flex gap-6"
-                      title="Business counts. Services are included in catalog items."
+                      className="mt-2 flex flex-wrap gap-x-5 gap-y-1"
+                      title="Services are included in Catalog items. Orders are per Store. — means unavailable."
                     >
                       <Count
                         label="Catalog items"
@@ -144,26 +192,23 @@ export function QaProfileSelect({
                       setOpen(false)
                       setSearch("")
                     }}
-                    className="block cursor-pointer space-y-1 rounded-none border-t border-border px-4 py-3"
+                    className="block min-h-20 cursor-pointer space-y-2 rounded-none border-b border-border px-5 py-4"
                   >
                     <div className="flex items-start justify-between gap-3">
-                      <span className="min-w-0 break-words font-semibold">
+                      <span className="min-w-0 break-words text-base font-semibold">
                         {profile.store.name}
                       </span>
-                      <span className="shrink-0 rounded-full bg-muted px-2 py-0.5 text-[10px] font-semibold text-muted-foreground">
+                      <span className="shrink-0 text-sm font-normal text-muted-foreground">
                         {profile.membership.role}
                       </span>
                     </div>
-                    <div className="flex items-start justify-between gap-3 text-xs text-muted-foreground">
+                    <div className="flex items-start justify-between gap-3 text-sm font-normal text-muted-foreground">
                       <span className="min-w-0 break-words">
-                        {profile.identity.name}
+                        {qaProfileDisplayName(profile)}
                       </span>
-                      <span className="shrink-0 font-semibold tabular-nums text-primary">
+                      <span className="shrink-0 tabular-nums text-primary">
                         {formatQaCount(profile.counts?.orders)} orders
                       </span>
-                    </div>
-                    <div className="break-words text-xs text-muted-foreground">
-                      {profile.identity.email}
                     </div>
                     {selected?.profileReference === profile.profileReference ? (
                       <span className="sr-only">Selected</span>
@@ -181,11 +226,14 @@ export function QaProfileSelect({
 
 function Count({ label, value }: { label: string; value?: number | null }) {
   return (
-    <div aria-label={`${label}: ${value == null ? "unavailable" : value}`}>
-      <div className="text-base font-bold tabular-nums text-foreground">
+    <div
+      className="flex items-baseline gap-1.5 text-sm font-normal"
+      aria-label={`${label}: ${value == null ? "unavailable" : value}`}
+    >
+      <span className="font-semibold tabular-nums text-foreground">
         {formatQaCount(value)}
-      </div>
-      <div className="text-xs font-normal text-muted-foreground">{label}</div>
+      </span>
+      <span className="text-muted-foreground">{label}</span>
     </div>
   )
 }

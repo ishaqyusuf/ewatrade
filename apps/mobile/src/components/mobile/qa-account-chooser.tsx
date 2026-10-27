@@ -4,17 +4,16 @@ import { Text } from "@/components/ui/text"
 import { View } from "@/components/ui/view"
 import { useAuthContext } from "@/hooks/use-auth"
 import { useQaAccelerator } from "@/hooks/use-qa-accelerator"
-import { qaRuntimeIdentity } from "@/lib/qa-runtime-identity"
 import {
   filterQaProfiles,
   formatQaCount,
   groupQaProfiles,
+  qaProfileDisplayName,
 } from "@ewatrade/utils/qa-profiles"
 import { BottomSheetScrollView } from "@gorhom/bottom-sheet"
-import Constants from "expo-constants"
 import { useRouter } from "expo-router"
-import * as Updates from "expo-updates"
 import { useEffect, useRef } from "react"
+import { QaDomainOptions } from "./qa-domain-options"
 import { StatusBanner } from "./status-banner"
 
 /** Up to this many businesses fit a compact sheet; more open the full list. */
@@ -76,15 +75,14 @@ export function QaAccountChooser() {
         title="QA businesses"
       >
         <BottomSheetScrollView contentContainerStyle={{ paddingBottom: 24 }}>
-          <View className="gap-4 px-5 pb-5">
+          <View className="pb-5">
             <QaDomainIntro
               qaDomain={qa.authorization.qaDomain}
-              refreshing={qa.profilesLoading}
-              onRefresh={() => void qa.refreshProfiles()}
+              onLeave={modal.dismiss}
             />
             {qaProfilesState(qa) ??
               (qa.profiles.length ? (
-                <View className="gap-2">
+                <View>
                   {groups.map((group) => (
                     <QaBusinessGroup
                       key={group.business.id}
@@ -96,7 +94,6 @@ export function QaAccountChooser() {
               ) : (
                 <QaProfilesEmpty qa={qa} />
               ))}
-            <QaDomainActions qa={qa} onLeave={modal.dismiss} />
           </View>
         </BottomSheetScrollView>
       </Modal>
@@ -106,45 +103,14 @@ export function QaAccountChooser() {
 
 export function QaDomainIntro({
   qaDomain,
-  refreshing,
-  onRefresh,
-}: {
-  qaDomain: string
-  refreshing?: boolean
-  onRefresh?: () => void
-}) {
+  onLeave,
+}: { qaDomain: string; onLeave?: () => void }) {
   return (
-    <View className="gap-1">
-      <View className="flex-row items-center justify-between gap-3">
-        <Text className="min-w-0 flex-1 text-sm font-semibold text-foreground">
-          {qaDomain}
-        </Text>
-        {onRefresh ? (
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Refresh QA list"
-            disabled={refreshing}
-            onPress={onRefresh}
-            className="min-h-11 justify-center px-2"
-          >
-            <Text className="text-xs font-bold text-primary">
-              {refreshing ? "Refreshing…" : "Refresh"}
-            </Text>
-          </Pressable>
-        ) : null}
-      </View>
-      <Text
-        testID="qa-runtime-identity"
-        className="text-xs text-muted-foreground"
-      >
-        {qaRuntimeIdentity({
-          enabled: Updates.isEnabled,
-          embedded: Updates.isEmbeddedLaunch,
-          emergency: Updates.isEmergencyLaunch,
-          updateId: Updates.updateId,
-          build: Constants.platform?.android?.versionCode?.toString() ?? null,
-        })}
+    <View className="flex-row items-center justify-between gap-3 px-5 pb-3">
+      <Text className="min-w-0 flex-1 text-[14px] [-rn-line-height:20] text-muted-foreground">
+        {qaDomain}
       </Text>
+      <QaDomainOptions onLeave={onLeave} />
     </View>
   )
 }
@@ -187,7 +153,7 @@ export function QaProfilesEmpty({ qa }: { qa: Qa }) {
   )
 }
 
-/** Catalog counts belong to the business; Store rows keep their own Orders. */
+/** One flat business section; only its Store/profile rows are interactive. */
 export function QaBusinessGroup({
   profiles,
   qa,
@@ -195,20 +161,13 @@ export function QaBusinessGroup({
   const profile = profiles[0]
   if (!profile) return null
   return (
-    <View className="overflow-hidden rounded-2xl border border-border bg-card">
-      <View className="gap-3 px-4 py-4">
-        <View className="flex-row items-center gap-3">
-          <View className="size-10 items-center justify-center rounded-xl bg-primary/10">
-            <Text className="font-black text-primary">
-              {profile.business.name.trim().slice(0, 1).toUpperCase()}
-            </Text>
-          </View>
-          <Text className="min-w-0 flex-1 font-bold text-foreground">
-            {profile.business.name}
-          </Text>
-        </View>
+    <View>
+      <View className="gap-2 border-b border-border px-5 pb-3 pt-6">
+        <Text className="text-[17px] [-rn-line-height:24] font-bold text-foreground">
+          {profile.business.name}
+        </Text>
         <View
-          className="flex-row gap-6"
+          className="flex-row flex-wrap gap-x-5 gap-y-1"
           accessibilityLabel="Business counts. Services are included in catalog items."
         >
           <QaCount label="Catalog items" value={profile.counts?.catalogItems} />
@@ -225,13 +184,15 @@ export function QaBusinessGroup({
 function QaCount({ label, value }: { label: string; value?: number | null }) {
   return (
     <View
-      className="gap-0.5"
+      className="flex-row items-baseline gap-1.5"
       accessibilityLabel={`${label}: ${value == null ? "unavailable" : value}`}
     >
-      <Text className="text-base font-bold tabular-nums text-foreground">
+      <Text className="text-[14px] [-rn-line-height:20] font-semibold tabular-nums text-foreground">
         {formatQaCount(value)}
       </Text>
-      <Text className="text-xs text-muted-foreground">{label}</Text>
+      <Text className="text-[14px] [-rn-line-height:20] text-muted-foreground">
+        {label}
+      </Text>
     </View>
   )
 }
@@ -241,68 +202,33 @@ export function QaProfileRow({ profile, qa }: { profile: QaProfile; qa: Qa }) {
     qa.isSelecting && qa.selectingProfileReference === profile.profileReference
   return (
     <Pressable
-      accessibilityHint={`Signs in through the ordinary app session. ${formatQaCount(profile.counts?.orders)} orders in this Store.`}
+      accessibilityHint={`${qaProfileDisplayName(profile)}. Signs in through the ordinary app session. ${profile.counts?.orders == null ? "Order count unavailable" : `${profile.counts.orders} orders in this Store`}.`}
       accessibilityLabel={`Open ${profile.business.name}, ${profile.store.name}, as ${profile.membership.role}`}
       accessibilityRole="button"
       accessibilityState={{ disabled: qa.isSelecting, busy: opening }}
-      className="min-h-20 gap-1 border-t border-border px-4 py-3 active:bg-accent"
+      className="min-h-20 gap-2 border-b border-border px-5 py-4 active:bg-accent"
       disabled={qa.isSelecting}
       haptic
       onPress={() => qa.selectProfile(profile.profileReference)}
       transition
     >
-      <View className="flex-row items-center justify-between gap-3">
-        <Text className="min-w-0 flex-1 text-sm font-semibold text-foreground">
+      <View className="flex-row items-start justify-between gap-3">
+        <Text className="min-w-0 flex-1 text-[16px] [-rn-line-height:22] font-semibold text-foreground">
           {profile.store.name}
         </Text>
-        <View className="rounded-full bg-muted px-2.5 py-1">
-          <Text className="text-xs font-bold uppercase text-muted-foreground">
-            {opening ? "Opening…" : profile.membership.role}
-          </Text>
-        </View>
+        <Text className="text-[14px] [-rn-line-height:20] uppercase text-muted-foreground">
+          {opening ? "Opening…" : profile.membership.role}
+        </Text>
       </View>
       <View className="flex-row items-start justify-between gap-3">
-        <Text className="min-w-0 flex-1 text-xs text-muted-foreground">
-          {profile.identity.name}
+        <Text className="min-w-0 flex-1 text-[14px] [-rn-line-height:20] text-muted-foreground">
+          {qaProfileDisplayName(profile)}
         </Text>
-        <Text className="text-xs font-semibold tabular-nums text-primary">
+        <Text className="text-[14px] [-rn-line-height:20] tabular-nums text-primary">
           {formatQaCount(profile.counts?.orders)} orders
         </Text>
       </View>
     </Pressable>
-  )
-}
-
-/** Clear QA data / Change QA Domain; onLeave closes the chooser first. */
-export function QaDomainActions({
-  qa,
-  onLeave,
-}: {
-  qa: Qa
-  onLeave: () => void
-}) {
-  return (
-    <View className="flex-row justify-between gap-3 border-t border-border pt-3">
-      <Pressable
-        accessibilityRole="button"
-        className="min-h-11 justify-center px-1"
-        onPress={() => {
-          onLeave()
-          void qa.clearQaData().then(qa.openAuthorizationSheet)
-        }}
-      >
-        <Text className="text-sm font-bold text-destructive">
-          Clear QA data
-        </Text>
-      </Pressable>
-      <Pressable
-        accessibilityRole="button"
-        className="min-h-11 justify-center px-1"
-        onPress={() => void qa.clearQaData()}
-      >
-        <Text className="text-sm font-bold text-primary">Change QA Domain</Text>
-      </Pressable>
-    </View>
   )
 }
 

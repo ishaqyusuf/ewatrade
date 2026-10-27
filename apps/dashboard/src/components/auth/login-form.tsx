@@ -31,6 +31,7 @@ export function LoginForm({
   initialError?: string
   marketingUrl: string
   accountEntry?: {
+    label?: string
     emailField: ReactNode
     canSignIn: boolean
     signIn(): Promise<void>
@@ -110,7 +111,7 @@ export function LoginForm({
             {/* Email */}
             <Field className="flex flex-col gap-1.5">
               <FieldLabel htmlFor="email" className="text-sm font-medium">
-                Email address
+                {accountEntry?.label ?? "Email address"}
               </FieldLabel>
               {accountEntry?.emailField ?? (
                 <Input

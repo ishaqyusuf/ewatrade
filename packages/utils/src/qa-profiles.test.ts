@@ -4,6 +4,7 @@ import {
   filterQaProfiles,
   formatQaCount,
   groupQaProfiles,
+  qaProfileDisplayName,
   qaProfileKey,
   qaProfileLabel,
 } from "./qa-profiles"
@@ -60,4 +61,14 @@ test("zero stays zero; missing, failed and invalid counts never become zero", ()
   expect(formatQaCount(1234)).toBe("1,234")
   for (const value of [null, undefined, -1, Number.NaN, 1.5])
     expect(formatQaCount(value)).toBe("—")
+})
+
+test("visible person fallback does not show QA emails", () => {
+  expect(qaProfileDisplayName(profile)).toBe("Amina")
+  expect(
+    qaProfileDisplayName({
+      ...profile,
+      identity: { ...profile.identity, name: profile.identity.email },
+    }),
+  ).toBe("Tester u1")
 })

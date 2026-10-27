@@ -34,6 +34,14 @@ export function qaProfileLabel(profile: QaProfile) {
   ].join(" · ")
 }
 
+/** Avoid showing an email when an older profile uses it as the name fallback. */
+export function qaProfileDisplayName(profile: QaProfile) {
+  const name = profile.identity.name.trim()
+  return name && !name.includes("@")
+    ? name
+    : `Tester ${profile.identity.id.slice(-6)}`
+}
+
 export function filterQaProfiles<T extends QaProfile>(
   profiles: T[],
   search: string,
