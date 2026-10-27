@@ -128,10 +128,14 @@ function BookingWorkspaceContent({ storeId }: { storeId: string }) {
     ? selectedSource
     : null
 
+  // Reset only when the saved configuration changes. The form context object is
+  // rebuilt on every form-state change (including the one reset causes), so keying
+  // this on `form` reset again after each reset and looped the sheet.
+  const { reset } = form
   useEffect(() => {
     if (!configuration.data) return
-    form.reset(toFormValues(configuration.data))
-  }, [configuration.data, form])
+    reset(toFormValues(configuration.data))
+  }, [configuration.data, reset])
 
   const invalidateConfiguration = () =>
     queryClient.invalidateQueries({

@@ -156,7 +156,9 @@ export default async function ReceiptPage({ params }: Props) {
         ? {
             status: service.appointment.status,
             startsAt: service.appointment.startsAt,
+            endsAt: service.appointment.endsAt,
             timezone: service.appointment.timezone,
+            serviceName: service.appointment.serviceName,
           }
         : null,
       order: service.order

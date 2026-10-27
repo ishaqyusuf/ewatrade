@@ -21,7 +21,7 @@ describe("booking workspace state", () => {
     ])
   })
 
-  test("offers only active Service requests containing the selected offering", () => {
+  test("offers every bookable Service request for the selected offering, as the server allows", () => {
     expect(
       eligibleBookingSources(
         [
@@ -43,9 +43,27 @@ describe("booking workspace state", () => {
             lines: [{ offeringId: "service-a", offeringName: "Cut" }],
             status: "DECLINED",
           },
+          {
+            customerName: "Dayo",
+            id: "withdrawn",
+            lines: [{ offeringId: "service-a", offeringName: "Cut" }],
+            status: "WITHDRAWN",
+          },
+          {
+            customerName: "Efe",
+            id: "converted",
+            lines: [{ offeringId: "service-a", offeringName: "Cut" }],
+            status: "CONVERTED",
+          },
+          {
+            customerName: "Femi",
+            id: "quoted",
+            lines: [{ offeringId: "service-a", offeringName: "Cut" }],
+            status: "QUOTED",
+          },
         ],
         "service-a",
       ).map((request) => request.id),
-    ).toEqual(["eligible"])
+    ).toEqual(["eligible", "converted", "quoted"])
   })
 })

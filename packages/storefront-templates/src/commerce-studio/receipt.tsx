@@ -21,7 +21,7 @@ import {
 } from "@ewatrade/ui"
 import { CheckmarkCircle02Icon, WhatsappIcon } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
-import { useId, useRef, useState } from "react"
+import { useEffect, useId, useRef, useState } from "react"
 import { formatMoney, newClientId } from "./commerce"
 import { useCommerceStudio } from "./context"
 
@@ -300,6 +300,12 @@ export function CommerceReceipt({ receipt }: { receipt: ReceiptView }) {
     text: string
   } | null>(null)
   const replyId = useRef(newClientId())
+  const headingRef = useRef<HTMLHeadingElement>(null)
+  // Arriving from checkout or a request form, move focus to the status heading
+  // once so screen readers announce it ("Request received"). Not on re-renders.
+  useEffect(() => {
+    headingRef.current?.focus()
+  }, [])
   const ids = { reply: useId(), decline: useId() }
   const run = async (
     key: string,
@@ -343,7 +349,7 @@ export function CommerceReceipt({ receipt }: { receipt: ReceiptView }) {
           {receipt.kind === "order" ? "Order request" : "Service request"} ·{" "}
           {receipt.reference}
         </p>
-        <h1 className="cs-title cs-title--page" tabIndex={-1}>
+        <h1 className="cs-title cs-title--page" tabIndex={-1} ref={headingRef}>
           {copy.title}
         </h1>
         <p className="cs-lead">{copy.next}</p>
