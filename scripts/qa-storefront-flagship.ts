@@ -10,6 +10,9 @@
  *   restore <slug>      Re-activate the business's original release (or remove a Site this
  *                       script created), using canonical rollback where one existed.
  *   dispose-fixtures    Delete every fixture business created by `fixtures`.
+ *   enable-bookings <slug>
+ *                       Turn on appointment booking (one resource, Mon–Sat open times)
+ *                       for a fixture business's services, via canonical commands.
  *   status              Print ledger and fixture state.
  *
  * Guards: verified local profile only (DEV_PROFILE=local, APP_ENV=local, Neon local
@@ -21,9 +24,12 @@ import { join } from "node:path"
 import { prisma } from "@ewatrade/db"
 import {
   createCatalogItem,
+  createServiceCommerceBookingResource,
   createServiceRequestForm,
   getCatalogOfferingAvailability,
   reserveCatalogOfferingStock,
+  setServiceCommerceStoreProfileActivation,
+  updateServiceCommerceBookingConfiguration,
   updateServiceCommerceStoreProfile,
 } from "@ewatrade/db/queries"
 import {
@@ -682,6 +688,123 @@ export async function disposeFixtures(only?: string) {
   }
 }
 
+/**
+ * Turn on appointment booking for a fixture business through the canonical commands:
+ * Service Commerce settings (bookings on), activation, one bookable resource and open
+ * times (Mon–Sat 09:00–18:00 Lagos, 30-minute slots, no payment to book) for every
+ * service offering. Idempotent: an offering that already has open times is kept.
+ */
+export async function enableFixtureBookings(tenantId: string) {
+  const actorUserId = await ownerOf(tenantId)
+  const store = await prisma.store.findFirstOrThrow({
+    where: { tenantId, tenant: { qaSourceDomain: FIXTURE_DOMAIN } },
+    select: { id: true },
+  })
+  const scope = { actorUserId, storeId: store.id, tenantId }
+  const profile = await prisma.serviceCommerceStoreProfile.findUniqueOrThrow({
+    where: { storeId: store.id },
+    select: { revision: true, status: true, bookingEnabled: true },
+  })
+  let revision = profile.revision
+  if (!profile.bookingEnabled) {
+    await updateServiceCommerceStoreProfile(prisma, {
+      ...scope,
+      expectedRevision: revision,
+      reason: "Storefront flagship appointment QA",
+      settings: {
+        capabilities: {
+          attachments: false,
+          booking: true,
+          delivery: true,
+          intake: true,
+          payment: true,
+          pickup: true,
+          progressive_catalog: true,
+          quote: true,
+          service_completion: false,
+          staff: true,
+          web: true,
+          whatsapp: false,
+        },
+        catalogAdoptionMode: "progressive",
+        procureToOrderEnabled: false,
+      },
+    } as Parameters<typeof updateServiceCommerceStoreProfile>[1])
+    revision = (
+      await prisma.serviceCommerceStoreProfile.findUniqueOrThrow({
+        where: { storeId: store.id },
+        select: { revision: true },
+      })
+    ).revision
+  }
+  if (profile.status !== "ACTIVE")
+    await setServiceCommerceStoreProfileActivation(prisma, {
+      ...scope,
+      active: true,
+      expectedRevision: revision,
+      reason: "Storefront flagship appointment QA",
+    })
+  const offerings = await prisma.sellableOffering.findMany({
+    where: { tenantId, catalogItem: { kind: "SERVICE" } },
+    select: { id: true, name: true },
+    take: 20,
+  })
+  const configured = new Set(
+    (
+      await prisma.serviceBookingOfferingConfig.findMany({
+        where: { tenantId, storeId: store.id },
+        select: { offeringId: true },
+      })
+    ).map((row) => row.offeringId),
+  )
+  let resource: { id: string; label: string; capacity: number } | null = null
+  for (const offering of offerings) {
+    if (configured.has(offering.id)) continue
+    if (!resource) {
+      const created = await createServiceCommerceBookingResource(prisma, {
+        ...scope,
+        capacity: 1,
+        clientOperationId: `flagship-resource-${tenantId}`,
+        kind: "other",
+        name: "Fitting table",
+      })
+      resource = {
+        id: created.id,
+        label: created.name,
+        capacity: created.capacity,
+      }
+    }
+    await updateServiceCommerceBookingConfiguration(prisma, {
+      ...scope,
+      clientOperationId: `flagship-booking-${offering.id}`,
+      expectedRevision: 0,
+      offeringId: offering.id,
+      availabilityRules: [
+        {
+          id: `flagship-open-${offering.id}`,
+          daysOfWeek: [1, 2, 3, 4, 5, 6],
+          startLocalTime: "09:00",
+          endLocalTime: "18:00",
+        },
+      ],
+      exceptions: [],
+      bookingHorizonMinutes: 30 * 24 * 60,
+      cancellationPolicy: {
+        allowedUntilMinutesBeforeStart: 0,
+        refundPolicy: "none",
+      },
+      holdDurationMinutes: 10,
+      leadTimeMinutes: 0,
+      paymentPolicy: { depositMinor: null, requirement: "none" },
+      reminderLeadMinutes: 0,
+      resources: [resource],
+      slotDurationMinutes: 30,
+      timezone: "Africa/Lagos",
+    })
+  }
+  return { storeId: store.id, offerings: offerings.length }
+}
+
 async function main() {
   guard()
   const [command, slug] = process.argv.slice(2)
@@ -754,6 +877,14 @@ async function main() {
     }
     delete ledger[slug]
     writeLedger(ledger)
+    return
+  }
+  if (command === "enable-bookings" && slug) {
+    const tenant = await prisma.tenant.findFirstOrThrow({
+      where: { slug, qaSourceDomain: FIXTURE_DOMAIN },
+      select: { id: true },
+    })
+    console.log(JSON.stringify(await enableFixtureBookings(tenant.id)))
     return
   }
   if (command === "restyle" && slug) {

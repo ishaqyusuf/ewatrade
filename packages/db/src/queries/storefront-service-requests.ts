@@ -299,21 +299,69 @@ async function latestQuote(db: DbClient, tenantId: string, requestId: string) {
               outcome: true,
             },
           },
-          serviceBookings: {
-            orderBy: { createdAt: "desc" },
-            take: 1,
-            select: {
-              status: true,
-              startAt: true,
-              endAt: true,
-              timezoneSnapshot: true,
-            },
-          },
         },
       },
     },
   })
   return quote?.versions[0] ?? null
+}
+
+const liveBookingStatuses = new Set([
+  "SCHEDULED",
+  "CONFIRMED",
+  "ARRIVED",
+  "IN_SERVICE",
+])
+
+/**
+ * The appointment the customer should see for a service request. Every canonical
+ * booking (staff-made or customer-picked from a booking link) keeps the Service
+ * request as its source, whether or not it was tied to the quote or Order. The
+ * next live appointment wins; otherwise the latest one, so a cancellation shows.
+ */
+async function requestAppointment(
+  db: DbClient,
+  input: { tenantId: string; storeId: string; requestId: string },
+) {
+  const bookings = await db.serviceBooking.findMany({
+    where: {
+      tenantId: input.tenantId,
+      storeId: input.storeId,
+      sourceType: "SERVICE_REQUEST",
+      sourceId: input.requestId,
+    },
+    orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+    take: 10,
+    select: {
+      status: true,
+      startAt: true,
+      endAt: true,
+      timezoneSnapshot: true,
+      offeringConfig: {
+        select: {
+          offering: {
+            select: { name: true, catalogItem: { select: { name: true } } },
+          },
+        },
+      },
+    },
+  })
+  const live = bookings
+    .filter((booking) => liveBookingStatuses.has(booking.status))
+    .sort((a, b) => a.startAt.getTime() - b.startAt.getTime())
+  const booking = live[0] ?? bookings[0]
+  if (!booking) return null
+  const offering = booking.offeringConfig.offering
+  return {
+    status: booking.status,
+    startsAt: booking.startAt.toISOString(),
+    endsAt: booking.endAt.toISOString(),
+    timezone: booking.timezoneSnapshot,
+    serviceName:
+      offering.name && offering.name !== offering.catalogItem.name
+        ? `${offering.catalogItem.name} · ${offering.name}`
+        : offering.catalogItem.name,
+  }
 }
 
 /** Guest service receipt, scoped to the business behind the Host. */
@@ -350,7 +398,14 @@ async function projectServiceReceipt(
   quoteSecret?: string,
 ) {
   const request = row.serviceRequest
-  const quote = await latestQuote(db, request.tenantId, request.id)
+  const [quote, appointment] = await Promise.all([
+    latestQuote(db, request.tenantId, request.id),
+    requestAppointment(db, {
+      tenantId: request.tenantId,
+      storeId: request.storeId,
+      requestId: request.id,
+    }),
+  ])
   const order = quote?.acceptedOrderId
     ? await db.commercialOrder.findFirst({
         where: { id: quote.acceptedOrderId, tenantId: request.tenantId },
@@ -388,7 +443,6 @@ async function projectServiceReceipt(
     quote.status === "ISSUED"
       ? openQuoteAccess(row.quoteAccessCiphertext, quoteSecret)
       : null
-  const booking = quote?.serviceBookings[0] ?? null
   const link = order?.manualPaymentLinks[0]
   return {
     kind: "service" as const,
@@ -452,14 +506,7 @@ async function projectServiceReceipt(
             })),
         }
       : null,
-    appointment: booking
-      ? {
-          status: booking.status,
-          startsAt: booking.startAt.toISOString(),
-          endsAt: booking.endAt.toISOString(),
-          timezone: booking.timezoneSnapshot,
-        }
-      : null,
+    appointment,
     order: order
       ? {
           orderNumber: order.orderNumber,

@@ -8,13 +8,15 @@
  * domain commands and disposes it. No provider, message or payment effect.
  */
 import { afterAll, beforeAll, describe, expect, test } from "bun:test"
-import { randomUUID } from "node:crypto"
+import { createHmac, randomUUID } from "node:crypto"
 import { prisma } from "@ewatrade/db"
 import {
   type StorefrontCustomerError,
   type StorefrontOrderError,
   acceptServiceQuote,
+  confirmServiceCommerceBooking,
   confirmStorefrontOrderRequest,
+  createServiceCommerceBookingHold,
   declineStorefrontServiceQuote,
   dispatchStorefrontMerchantAlerts,
   getStorefrontCustomerSession,
@@ -27,6 +29,7 @@ import {
   openQuoteAccess,
   replyToStorefrontOrderRequest,
   requestStorefrontCustomerOtp,
+  reviseServiceCommerceBooking,
   revokeStorefrontCustomerSession,
   submitStorefrontOrderRequest,
   submitStorefrontServiceRequestWithReceipt,
@@ -815,6 +818,240 @@ suite("commerce studio storefront (connected)", () => {
     expect(receipt?.stage).toBe("confirmed")
     expect(receipt?.order?.totalMinor).toBe(300000 + 800000 + 100000)
     expect((accepted as { orderId: string }).orderId).toBeTruthy()
+  }, 240_000)
+
+  test("appointments: scheduled, rescheduled and cancelled bookings show on the receipt; a preferred date stays a preference", async () => {
+    const form = await prisma.serviceRequestForm.findFirstOrThrow({
+      where: { tenantId: ctx.tenantId, status: "ACTIVE" },
+    })
+    const small = ctx.offerings["Small repair"]
+    if (!small) throw new Error("fixture services missing")
+    const preferred = new Date(Date.now() + 5 * 86_400_000)
+      .toISOString()
+      .slice(0, 10)
+    const submitted = await submitStorefrontServiceRequestWithReceipt(
+      prisma,
+      {
+        request: {
+          clientRequestId: randomUUID(),
+          formId: form.id,
+          itemId: small.itemId,
+          offeringId: small.id,
+          quantity: "1",
+          lines: [{ offeringId: small.id, quantity: "1" }],
+          customerName: "Appointment Customer",
+          customerPhone: "08035550177",
+          details: "Hem two trousers",
+        },
+        extras: { preferredDate: preferred },
+      },
+      { host, receiptSecret: SECRET },
+    )
+    const read = () =>
+      getStorefrontServiceReceipt(prisma, {
+        host,
+        token: submitted.receiptToken,
+        quoteSecret: SECRET,
+      })
+    // A preferred date alone is never an appointment.
+    expect(await read()).toMatchObject({
+      preferredDate: preferred,
+      appointment: null,
+    })
+
+    const context =
+      await prisma.storefrontServiceRequestContext.findFirstOrThrow({
+        where: { reference: submitted.reference, tenantId: ctx.tenantId },
+        select: { serviceRequestId: true },
+      })
+    const requestId = context.serviceRequestId
+    await issueStorefrontServiceQuote(prisma, {
+      tenantId: ctx.tenantId,
+      storeId: ctx.storeId,
+      actorUserId: ctx.ownerId,
+      requestId,
+      clientQuoteId: `it-${randomUUID()}`,
+      lines: [{ offeringId: small.id, quantity: "1", unitPriceMinor: 300000 }],
+      feeMinor: 0,
+      quoteSecret: SECRET,
+    })
+    const quoted =
+      await prisma.storefrontServiceRequestContext.findFirstOrThrow({
+        where: { serviceRequestId: requestId },
+      })
+    const accepted = (await acceptServiceQuote(prisma, {
+      acceptanceToken: openQuoteAccess(
+        quoted.quoteAccessCiphertext as string,
+        SECRET,
+      ) as string,
+      actorUserId: ctx.ownerId,
+      clientAcceptanceId: `it-${randomUUID()}`,
+    })) as { orderId: string }
+    let receipt = await read()
+    expect(receipt?.stage).toBe("confirmed")
+    expect(receipt?.appointment).toBeNull()
+
+    const { enableFixtureBookings } = await import("./qa-storefront-flagship")
+    await enableFixtureBookings(ctx.tenantId)
+    const config = await prisma.serviceBookingOfferingConfig.findFirstOrThrow({
+      where: { tenantId: ctx.tenantId, offeringId: small.id },
+      select: {
+        revision: true,
+        resources: { select: { resourceId: true }, take: 1 },
+      },
+    })
+    const resourceId = config.resources[0]?.resourceId as string
+    const scope = {
+      actorUserId: ctx.ownerId,
+      storeId: ctx.storeId,
+      tenantId: ctx.tenantId,
+    }
+    const source = { kind: "service" as const, id: requestId }
+    const issueCapabilityToken = (input: object) =>
+      createHmac("sha256", SECRET)
+        .update(JSON.stringify(input))
+        .digest("base64url")
+    // Open Mon–Sat 09:00–18:00 Lagos (UTC+1, no DST); 30-minute slots.
+    const slot = (daysAhead: number, lagosHour: number) => {
+      let day = new Date(Date.now() + daysAhead * 86_400_000)
+      if (day.getUTCDay() === 0) day = new Date(day.getTime() + 86_400_000)
+      const start = new Date(
+        Date.UTC(
+          day.getUTCFullYear(),
+          day.getUTCMonth(),
+          day.getUTCDate(),
+          lagosHour - 1,
+        ),
+      )
+      return { start, end: new Date(start.getTime() + 30 * 60_000) }
+    }
+    const book = async (
+      at: { start: Date; end: Date },
+      relationships: { quoteVersionId?: string; commercialOrderId?: string },
+    ) => {
+      const hold = await createServiceCommerceBookingHold(prisma, {
+        ...scope,
+        clientOperationId: `it-hold-${randomUUID()}`,
+        expectedConfigurationRevision: config.revision,
+        issueCapabilityToken,
+        offeringId: small.id,
+        quantity: 1,
+        resourceId,
+        slotEndAt: at.end,
+        slotStartAt: at.start,
+        source,
+      })
+      return confirmServiceCommerceBooking(prisma, {
+        ...scope,
+        ...relationships,
+        clientOperationId: `it-confirm-${randomUUID()}`,
+        holdId: hold.id,
+        issueCapabilityToken,
+        protectRecipient: (value) => `protected:${value.length}`,
+        source,
+      })
+    }
+
+    // Staff schedule the accepted job against its quote and Order.
+    const first = slot(2, 10)
+    const booking = await book(first, {
+      quoteVersionId: quoted.quoteVersionId as string,
+      commercialOrderId: accepted.orderId,
+    })
+    receipt = await read()
+    expect(receipt?.appointment).toEqual({
+      status: "CONFIRMED",
+      startsAt: first.start.toISOString(),
+      endsAt: first.end.toISOString(),
+      timezone: "Africa/Lagos",
+      serviceName: "Repair · Small repair",
+    })
+    // The preference is kept as the customer's words, separate from the booking.
+    expect(receipt?.preferredDate).toBe(preferred)
+    expect(receipt?.appointment?.startsAt.slice(0, 10)).not.toBe(preferred)
+    const stored = await prisma.serviceBooking.findUniqueOrThrow({
+      where: { id: booking.id },
+      select: {
+        sourceId: true,
+        quoteVersionId: true,
+        commercialOrderId: true,
+        status: true,
+        revision: true,
+      },
+    })
+    expect(stored).toEqual({
+      sourceId: requestId,
+      quoteVersionId: quoted.quoteVersionId,
+      commercialOrderId: accepted.orderId,
+      status: "CONFIRMED",
+      revision: 0,
+    })
+
+    // Rescheduling moves the same booking; the receipt follows.
+    const moved = slot(3, 14)
+    await reviseServiceCommerceBooking(prisma, {
+      ...scope,
+      bookingId: booking.id,
+      clientOperationId: `it-move-${randomUUID()}`,
+      expectedRevision: 0,
+      issueCapabilityToken,
+      newSlotEndAt: moved.end,
+      newSlotStartAt: moved.start,
+      operation: "reschedule",
+      reasonCode: "customer_request",
+      resourceId,
+    })
+    receipt = await read()
+    expect(receipt?.appointment).toMatchObject({
+      status: "CONFIRMED",
+      startsAt: moved.start.toISOString(),
+      endsAt: moved.end.toISOString(),
+    })
+
+    // Cancelling is shown as cancelled, never as still booked.
+    await reviseServiceCommerceBooking(prisma, {
+      ...scope,
+      bookingId: booking.id,
+      clientOperationId: `it-cancel-${randomUUID()}`,
+      expectedRevision: 1,
+      issueCapabilityToken,
+      operation: "cancel",
+      reasonCode: "customer_request",
+    })
+    receipt = await read()
+    expect(receipt?.appointment).toMatchObject({
+      status: "CANCELLED",
+      startsAt: moved.start.toISOString(),
+    })
+    expect(receipt?.preferredDate).toBe(preferred)
+
+    // A new time booked from a booking link carries only the request as its
+    // source (no quote or Order link). The live booking wins over the cancelled one.
+    const rebooked = slot(2, 11)
+    const second = await book(rebooked, {})
+    expect(
+      await prisma.serviceBooking.findUniqueOrThrow({
+        where: { id: second.id },
+        select: { quoteVersionId: true, commercialOrderId: true },
+      }),
+    ).toEqual({ quoteVersionId: null, commercialOrderId: null })
+    receipt = await read()
+    expect(receipt?.appointment).toMatchObject({
+      status: "CONFIRMED",
+      startsAt: rebooked.start.toISOString(),
+    })
+    expect(
+      await prisma.serviceBooking.count({
+        where: { tenantId: ctx.tenantId, sourceId: requestId },
+      }),
+    ).toBe(2)
+    // Another business's host never sees this receipt or its appointment.
+    expect(
+      await getStorefrontServiceReceipt(prisma, {
+        host: otherHost,
+        token: submitted.receiptToken,
+      }),
+    ).toBeNull()
   }, 240_000)
 
   test("customer OTP: wrong codes, lockout, resend limit, expiry, sessions and explicit linking", async () => {
