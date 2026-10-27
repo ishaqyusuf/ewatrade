@@ -1,0 +1,30 @@
+{
+  "version": 1,
+  "id": "2026-10-27-payment-balance-consistency",
+  "tickets": ["H02", "F01"],
+  "summary": "Decided public payment reports use their canonical order money snapshot consistently for confirmation, order summary, remaining-payment prefill and validation while the separate link read refreshes. Existing link availability, scope, identity and metadata stay intact. Prevents briefly showing zero due beside an older outstanding balance after realtime confirmation. No money write or rollout change.",
+  "noAssistantImpact": "Display/view-model consistency only; assistant commands, capabilities, scope and rollout unchanged.",
+  "capabilities": [],
+  "procedures": [],
+  "docs": [
+    {
+      "topic": "feature",
+      "status": "local_only",
+      "path": ".brain/features/manual-payment-confirmation.md"
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "test",
+      "path": "apps/dashboard/src/components/public-payment/payment-view.test.ts",
+      "executed": true,
+      "result": "Regression first: original stale-link/fresh-status model7pass3fail, fixed10pass/43assertions. Actual scenarios partial500prior+400confirmed=>paid900/due1100; final900prior+1100confirmed=>paid2000/due0; requested amount cap, availability gates and report error/recovery preserved. Parent corrected NOT_RECEIVED enum in test fixture before final strict validation."
+    },
+    {
+      "kind": "run",
+      "path": ".brain/qa/2026-10-27-manual-payment-external-flow.md",
+      "executed": true,
+      "result": "Actual ngrok flow with verified socket hint: owner500,root400, rejected100(no money), final1100; canonical Order paid2000/due0 with3payments; customer and terminal merchant reload pass. Race reproduced during live final confirmation; post-fix regression and reload used rather than new financial fixtures."
+    }
+  ]
+}

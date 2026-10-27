@@ -337,7 +337,10 @@ export function PaymentPage({
   })
 
   // Amount: fixed, or editable up to the amount due when the business allows it.
-  const dueMinor = link?.amountPrefilledMinor ?? 0
+  const dueMinor =
+    view.kind === "link"
+      ? view.link.amountPrefilledMinor
+      : (link?.amountPrefilledMinor ?? 0)
   const [amountText, setAmountText] = useState<string | null>(null)
   const [amountError, setAmountError] = useState<string | null>(null)
   const amountRef = useRef<HTMLInputElement>(null)

@@ -31,6 +31,29 @@ export function outcomeNextStep(
   return null
 }
 
+/**
+ * A decided report and the link are separate reads, and the link is read again only after the
+ * decision arrives. Until then the page shows the report's order money as one snapshot, so the
+ * summary and the next amount agree with "Still to pay". Everything else, including whether the
+ * link still takes payments, stays the link's. A link read after the report is not detected:
+ * its money waits for the next report read (focus or Reload).
+ */
+function withReportMoney(
+  link: PublicPaymentLink,
+  status: PublicReportStatus,
+): PublicPaymentLink {
+  return {
+    ...link,
+    totalMinor: status.totalMinor,
+    paidMinor: status.paidMinor,
+    balanceMinor: status.balanceMinor,
+    amountPrefilledMinor: Math.min(
+      link.amountRequestedMinor,
+      status.balanceMinor,
+    ),
+  }
+}
+
 export function resolvePaymentView(input: {
   link: PublicPaymentLink | undefined
   linkError: "not_found" | "error" | null
@@ -51,7 +74,11 @@ export function resolvePaymentView(input: {
       return status.status === "DRAFT"
         ? { kind: "unfinished", link }
         : { kind: "waiting", link, status }
-    return { kind: "link", link, outcome: { state: status.state, status } }
+    return {
+      kind: "link",
+      link: withReportMoney(link, status),
+      outcome: { state: status.state, status },
+    }
   }
   if (input.hasReportToken && input.statusError === "error")
     return { kind: "error" }
