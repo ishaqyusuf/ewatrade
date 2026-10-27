@@ -315,6 +315,7 @@ export async function readManualPaymentLink(
       order: {
         include: {
           ...orderInclude,
+          customer: { select: { name: true } },
           store: { select: { name: true } },
           lines: {
             take: 100,
@@ -356,6 +357,10 @@ export async function getBusinessPaymentLink(
   }
   return {
     businessName: order.store.name,
+    customerName:
+      order.customerName?.trim().slice(0, 160) ||
+      order.customer?.name.trim().slice(0, 160) ||
+      null,
     orderNumber: order.orderNumber,
     orderStatus: order.status,
     state:
