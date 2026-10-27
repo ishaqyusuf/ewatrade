@@ -10,6 +10,7 @@ if (location.pathname === "/login") {
   document.querySelector("[role=combobox]").onclick = () => document.querySelector("[role=option]").hidden = false
   document.querySelector("[role=option]").onclick = () => { document.querySelector("[role=option]").hidden = true; document.getElementById("signin").hidden = false }
   document.getElementById("signin").onclick = () => location.href = "/"
+  fetch("/api/qa-access").catch(() => {})
 } else if (location.pathname === "/catalog") {
   app.innerHTML = "<h1>Catalog</h1><p>Fixture item</p>"
   if (location.hash === "#mutation") fetch("/api/commerce/write", { method: "POST" }).catch(() => {})

@@ -35,15 +35,23 @@ export async function webJourney(page, config) {
         "Dashboard redirected away from the selected smoke target.",
       )
   }
+  // The server renders this button before hydration. The existing mount-time QA
+  // capability response proves its client handlers are attached before clicking.
+  const qaReady = page.waitForResponse(
+    (response) =>
+      new URL(response.url()).pathname === "/api/qa-access" &&
+      response.request().method() === "GET" &&
+      response.status() === 200,
+    { timeout: 30000 },
+  )
   await go("/login")
+  await qaReady
   await page.getByRole("button", { name: "QA Quick Fill", exact: true }).click()
   await page.getByLabel("QA domain", { exact: true }).fill(config.qaDomain)
   await page
     .getByRole("button", { name: "Load QA accounts", exact: true })
     .click()
-  await page
-    .getByRole("combobox", { name: "QA profile", exact: true })
-    .click()
+  await page.getByRole("combobox", { name: "QA profile", exact: true }).click()
   await page
     .getByRole("option", { name: config.web.profileLabel, exact: true })
     .click()

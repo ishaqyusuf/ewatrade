@@ -62,6 +62,18 @@ describe("fast workflow scope", () => {
       selectQuickPlan(["apps/mobile/src/lib/quantity.test.ts"]).tests,
     ).toContain("apps/mobile/src/lib/quantity.test.ts")
   })
+  test("shared onboarding previews select web and domain checks", () => {
+    const plan = selectQuickPlan([
+      "packages/onboarding/src/components/product-preview/platform.tsx",
+      "packages/onboarding/src/components/product-preview/product-preview.tsx",
+    ])
+    expect(plan.unknown).toEqual([])
+    expect(plan.groups).toEqual(["core", "web", "domain"])
+    expect(plan.tests).toContain("apps/marketing/src/lib/signup-phone.test.ts")
+    expect(
+      selectQuickPlan(["packages/onboarding/src/unknown-contract.ts"]).unknown,
+    ).toEqual(["packages/onboarding/src/unknown-contract.ts"])
+  })
   test("storefront packages map to shared smoke and exercise their public contracts", () => {
     for (const path of [
       "packages/storefront-contracts/src/actions.ts",

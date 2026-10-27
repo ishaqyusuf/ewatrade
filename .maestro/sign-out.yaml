@@ -1,0 +1,19 @@
+appId: ${APP_ID}
+---
+# Ordinary session sign-out only. Never clears app data or offline queues.
+- openLink: ${APP_SCHEME}://account
+- runFlow:
+    when:
+      visible: Account
+    commands:
+      - scrollUntilVisible:
+          element: Sign out
+          direction: DOWN
+          timeout: 20000
+          centerElement: true
+      - tapOn: Sign out
+      - assertVisible: Sign out\?
+      - tapOn:
+          text: Sign out
+          below: Sign out\?
+      - assertVisible: Sign in to your business

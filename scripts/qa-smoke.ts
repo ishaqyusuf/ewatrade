@@ -117,6 +117,7 @@ export function smokeToolingClean(repo: string) {
     "scripts/qa-web-smoke.mjs",
     "scripts/qa-release.ts",
     ".maestro/smoke.yaml",
+    ".maestro/sign-out.yaml",
   ]
   return (
     files.every((file) => git(repo, ["ls-files", "--", file]) === file) &&
@@ -353,6 +354,28 @@ async function androidJourney(
         resolve(process.env.HOME || "", "Library/Android/sdk"),
       "platform-tools/adb",
     )
+  if (target === "local") {
+    const ready = spawnSync(
+      "node",
+      [
+        "apps/mobile/scripts/prepare-android-dev.mjs",
+        "--device",
+        value.device,
+        "--no-launch",
+        "--require-qa",
+      ],
+      {
+        cwd: repo,
+        stdio: "inherit",
+        timeout: 30000,
+        env: { ...process.env, ANDROID_ADB_PATH: adb },
+      },
+    )
+    if (ready.error || ready.status !== 0)
+      throw new Error(
+        "Local Android API/Metro transport is not ready; the existing connection helper did not pass.",
+      )
+  }
   const installed = spawnSync(
     adb,
     ["-s", value.device, "shell", "dumpsys", "package", value.appId],
@@ -449,15 +472,18 @@ async function androidJourney(
   const result = spawnSync(process.env.MAESTRO_BIN || "maestro", args, {
     cwd: repo,
     stdio: "inherit",
-    timeout: 180000,
+    // Maestro also discovers adb itself when reconnecting its driver. The runner
+    // already resolved this SDK binary; do not require a separate shell setup.
+    env: { ...process.env, PATH: `${dirname(adb)}:${process.env.PATH || ""}` },
+    timeout: 240000,
   })
-  if (
-    result.error ||
-    result.status !== 0 ||
-    !existsSync(resolve(artifacts, "report.xml"))
-  )
+  if (result.error)
     throw new Error(
-      "Maestro did not complete successfully; install Maestro and connect the explicit QA device.",
+      "Maestro could not run or timed out; check the installed CLI and explicit QA device.",
+    )
+  if (result.status !== 0 || !existsSync(resolve(artifacts, "report.xml")))
+    throw new Error(
+      "Android smoke did not pass; inspect the private Maestro report and artifacts. No passing receipt was recorded.",
     )
   assertMaestroReport(readFileSync(resolve(artifacts, "report.xml"), "utf8"))
   return {

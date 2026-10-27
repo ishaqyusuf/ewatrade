@@ -27,6 +27,9 @@ verification policy; it does not replace domain authorization or release gates.
    not prove database availability, schema parity or QA access; other requested
    surfaces and explicit Android diagnostics may still perform connected work.
    Release/smoke readiness remains SQL-backed.
+   If Bun does not inherit the trusted Portless CA, run with
+   `NODE_EXTRA_CA_CERTS="$HOME/.portless/ca.pem"`; this trusts the existing local
+   CA without disabling certificate validation.
 5. For an explicitly assigned Android device, add `--device emulator-5556`.
    This reuses the existing helper with `--no-launch`: it installs reverse
    mappings and probes transport, but does not force-stop/open the app. It runs
@@ -161,6 +164,13 @@ through Checkout and cancellation without Confirm. It preserves app data,
 offline queues and permissions. Native smoke is not a complete persistence or
 money/authorization integration test.
 
+Android uses normal sign-out before selection and after draft cancellation,
+because the QA selector is intentionally available only at signed-out login.
+It preserves app data/offline queues and leaves the client signed out. Scroll
+targets are centered away from the floating footer; the hidden next action is
+revealed before continuing. Choose an existing unique sellable offering and the
+exact total displayed by each platform (native may omit `.00`).
+
 1. Copy `qa.smoke.example.json` into the main checkout's ignored
    `.scratch/qa-release/smoke-local.json`. Replace sample values with an existing
    QA domain, exact account option/profile label, visible item and expected total.
@@ -172,6 +182,19 @@ money/authorization integration test.
    explicitly named device and use an already-installed EwaTrade Dev/Preview app.
    `MAESTRO_BIN` and `ANDROID_ADB_PATH` can select existing binaries. The runner
    never installs an APK, starts an emulator or clears app state.
+   Local Android smoke automatically reuses the no-launch connection helper to
+   check API/Metro/QA and restore USB reverse mappings. Maestro also receives the
+   resolved SDK ADB path. The native flow has a four-minute timeout.
+   The standard local CLI install is `~/.maestro/bin/maestro`; expose it on PATH
+   or set `MAESTRO_BIN` to that executable. The local setup verified on 26 October
+   uses Maestro 2.12.0 with existing Java 17 and the `EwaTrade_Assistant_QA` AVD.
+   If that AVD's host graphics renderer crashes, launch it with
+   `-gpu swiftshader -feature -Vulkan -no-snapshot-load -no-snapshot-save`.
+   Reuse its app data and verify the explicit serial with `adb devices -l`.
+   If ADB has restarted and the Dev app retains a stale connection, reconnect
+   once with `bun run mobile:android:connect --device SERIAL --require-qa`.
+   That existing launcher force-stops/reopens the Dev app without clearing data.
+   A host-side doctor pass alone does not prove the running phone has reconnected.
 4. Prepare a separate `smoke-preview.json` in that same directory: use
    `https://preview-dashboard.ewatrade.com`, `com.ewatrade.preview`, its exact QA
    profile and the installed EAS `buildId`. For an OTA candidate also set

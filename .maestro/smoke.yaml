@@ -2,6 +2,9 @@ appId: ${APP_ID}
 name: QA catalog and sale draft
 ---
 # Do not clear app data/offline queues or change permissions.
+# The QA picker intentionally lives on signed-out login only. Use ordinary
+# sign-out when reusing a client that already completed an earlier journey.
+- runFlow: sign-out.yaml
 - openLink: ${APP_SCHEME}://login
 - runFlow:
     when:
@@ -16,12 +19,40 @@ name: QA catalog and sale draft
 - tapOn: Build details
 - assertVisible: ${EXPECTED_RUNTIME}
 - tapOn: Back to QA businesses
+# An ADB reconnect can leave the chooser's previous request error cached. Use
+# its normal recovery once; a continuing network failure still fails selection.
+- runFlow:
+    when:
+      visible: Businesses unavailable
+    commands:
+      - tapOn: Try again
+- scrollUntilVisible:
+    element: ${PROFILE_LABEL}
+    direction: DOWN
+    timeout: 20000
+    centerElement: true
 - tapOn: ${PROFILE_LABEL}
+- assertNotVisible: QA businesses
 - openLink: ${APP_SCHEME}://catalog-items-modal
+- scrollUntilVisible:
+    element: ${CATALOG_ITEM}
+    direction: DOWN
+    timeout: 20000
+    centerElement: true
 - assertVisible: ${CATALOG_ITEM}
 - openLink: ${APP_SCHEME}://create-sale-modal
 - assertVisible: New sale
+- scrollUntilVisible:
+    element: ${OFFERING_LABEL}
+    direction: DOWN
+    timeout: 20000
+    centerElement: true
 - tapOn: ${OFFERING_LABEL}
+- scrollUntilVisible:
+    element:
+      id: sale-next-step
+    direction: UP
+    timeout: 20000
 - tapOn:
     id: sale-next-step
 - tapOn: Continue with walk-in
@@ -29,8 +60,10 @@ name: QA catalog and sale draft
 - assertVisible: ${EXPECTED_TOTAL}
 - tapOn: Close create sale
 - assertNotVisible: Checkout
+- runFlow: sign-out.yaml
 - tapOn: Open [0-9]+ QA businesses
 - tapOn: QA domain options
 - tapOn: Build details
 - assertVisible: ${EXPECTED_RUNTIME}
 - tapOn: Back to QA businesses
+- tapOn: Close QA businesses

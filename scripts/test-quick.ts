@@ -126,10 +126,13 @@ export function selectQuickPlan(files: string[]) {
     } else if (
       /^scripts\//.test(file) ||
       file === ".github/workflows/fast-checks.yml" ||
-      file === ".maestro/smoke.yaml"
+      /^\.maestro\/.+\.yaml$/.test(file)
     )
       groups.add("core")
-    else if (/^apps\/(dashboard|marketing|storefront)\//.test(file)) {
+    else if (
+      /^apps\/(dashboard|marketing|storefront)\//.test(file) ||
+      /^packages\/onboarding\/src\/components\/product-preview\//.test(file)
+    ) {
       groups.add("web")
       groups.add("domain")
     } else if (/^apps\/mobile\//.test(file)) {
