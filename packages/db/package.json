@@ -5,6 +5,7 @@
   "type": "module",
   "files": ["src", "generated", "prisma", "prisma.config.ts"],
   "exports": {
+    "./owner-billing": "./src/queries/owner-billing/index.ts",
     "./assistant-whatsapp": "./src/queries/assistant-whatsapp/index.ts",
     "./customer-messages": "./src/queries/customer-messages/index.ts",
     "./performance-tracing": "./src/performance-tracing.ts",

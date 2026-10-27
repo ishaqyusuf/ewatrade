@@ -1,0 +1,45 @@
+{
+  "version": 1,
+  "id": "2026-10-27-android-branch-reconciliation",
+  "tickets": ["A05", "H01"],
+  "summary": "Reconcile Android paid preparation with pinned local main and refresh generated coverage from that combined source. Preserve billing configuration and main's narrower environment-selector type.",
+  "noAssistantImpact": "No new assistant capability or permission is introduced by this merge. Regenerated gallery/reuse form-only rows reflect already-present main source; source typing, smoke and coverage checks do not establish native or live billing acceptance.",
+  "capabilities": [],
+  "procedures": [
+    {
+      "path": "catalog.photos.gallery",
+      "status": "form_only",
+      "reason": "Generated snapshot correction for already-present main photo form source; no assistant tool or gallery permission change in this reconciliation."
+    },
+    {
+      "path": "catalog.photos.reuse",
+      "status": "form_only",
+      "reason": "Generated snapshot correction for already-present main photo form source; no prompt-driven upload/reuse authority is added."
+    }
+  ],
+  "docs": [
+    {
+      "topic": "feature",
+      "path": ".brain/features/native-store-billing.md",
+      "status": "local_only"
+    },
+    {
+      "topic": "api",
+      "path": ".brain/api/contracts.md",
+      "status": "local_only"
+    },
+    {
+      "topic": "capability",
+      "path": ".brain/features/assistant-business-operations.md",
+      "status": "local_only"
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "run",
+      "path": "apps/mobile/app.config.ts",
+      "executed": true,
+      "result": "Full API/mobile TypeScript and subscription source check pass after merge; scoped billing-difference fast selection passes 110 tests / 466 assertions plus tooling types/Biome. H01 regenerated and current with network refusal. No signed-native, provider or rollout proof."
+    }
+  ]
+}

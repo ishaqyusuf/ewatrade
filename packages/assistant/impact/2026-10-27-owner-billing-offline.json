@@ -1,0 +1,39 @@
+{
+  "version": 1,
+  "id": "2026-10-27-owner-billing-offline",
+  "tickets": ["A05"],
+  "summary": "Prepare owner-wide coverage, verified purchase binding and separate per-business allowance policy, plus enrollment/release commands behind a transactional port. No live adapter, endpoint, catalog cutover or activation.",
+  "noAssistantImpact": "No new assistant tool, model authority, merchant grant or runtime entitlement change. Prepared billing commands require the active paying owner and fresh business ownership; software-plan configuration/purchase stays form-only. Persistence, canonical provider/event reconciliation and domain integration remain required before these staged functions can authorize paid access.",
+  "capabilities": [],
+  "procedures": [],
+  "docs": [
+    {
+      "topic": "feature",
+      "path": ".brain/features/owner-wide-billing.md",
+      "status": "local_only"
+    },
+    {
+      "topic": "api",
+      "path": ".brain/api/contracts.md",
+      "status": "local_only"
+    },
+    {
+      "topic": "permissions",
+      "path": ".brain/api/permissions.md",
+      "status": "local_only"
+    },
+    {
+      "topic": "decision",
+      "path": ".brain/decisions/2026-10-26-owner-wide-paid-subscriptions.md",
+      "status": "local_only"
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "test",
+      "path": "packages/db/src/queries/owner-billing/owner-billing.test.ts",
+      "executed": true,
+      "result": "31 tests / 107 assertions pass with a minimal environment, dead DB sentinel and socket/fetch refusal. Covers authority, 1/3/10 business caps, per-business allowances, expiry/refund state, downgrade/legacy preservation, exact receipt/linked binding, duplicate purchase, retry and serialized in-memory port conflicts/rollback. Strict module/test types pass; no PostgreSQL/provider/native acceptance claimed."
+    }
+  ]
+}
