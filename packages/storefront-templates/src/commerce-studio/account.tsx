@@ -111,6 +111,7 @@ function SignIn({
   const [wait, setWait] = useState(0)
   const ids = { identifier: useId(), code: useId(), error: useId() }
   const codeRef = useRef<HTMLInputElement>(null)
+  const identifierRef = useRef<HTMLInputElement>(null)
   useEffect(() => {
     if (wait <= 0) return
     const timer = window.setTimeout(() => setWait((value) => value - 1), 1000)
@@ -178,7 +179,8 @@ function SignIn({
       })
       if (!result.ok) {
         setError(result.message)
-        setCode("")
+        // Keep digits the customer typed while this code was being checked.
+        setCode((current) => (current === value ? "" : current))
         requestAnimationFrame(() => codeRef.current?.focus())
         return
       }
@@ -237,6 +239,7 @@ function SignIn({
             </FieldLabel>
             <Input
               id={ids.identifier}
+              ref={identifierRef}
               type={channel === "email" ? "email" : "tel"}
               inputMode={channel === "email" ? "email" : "tel"}
               autoComplete={channel === "email" ? "email" : "tel"}
@@ -335,6 +338,7 @@ function SignIn({
                 setChallenge(null)
                 setCode("")
                 setError(null)
+                requestAnimationFrame(() => identifierRef.current?.focus())
               }}
             >
               Use a different {channel === "email" ? "email" : "number"}
@@ -352,6 +356,12 @@ function SignedIn({
   const { adapter, href } = useCommerceStudio()
   const [pending, setPending] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const headingRef = useRef<HTMLHeadingElement>(null)
+  // Arriving from login, nothing is focused: start at the heading once so screen
+  // readers announce "Your account". Never steals focus the visitor already moved.
+  useEffect(() => {
+    if (document.activeElement === document.body) headingRef.current?.focus()
+  }, [])
   const act = async (
     key: string,
     run: () => Promise<{ ok: boolean; message?: string }>,
@@ -373,7 +383,13 @@ function SignedIn({
     <div className="cs-account">
       <div className="cs-section__head">
         <div>
-          <h1 className="cs-title cs-title--page">Your account</h1>
+          <h1
+            className="cs-title cs-title--page"
+            tabIndex={-1}
+            ref={headingRef}
+          >
+            Your account
+          </h1>
           <p className="cs-muted">Logged in with {account.label}</p>
         </div>
         <Button
