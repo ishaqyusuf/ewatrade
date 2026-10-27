@@ -15,8 +15,12 @@ import {
 export function isCanvasComposition(value: StorefrontComposition) {
   return isCanvasManifest(value.template)
 }
-export function canvasManifest(key: string) {
-  const manifest = canvasEditableManifests.find((entry) => entry.key === key)
+/** Exact pin when a version is given; otherwise the current version of that key. */
+export function canvasManifest(key: string, version?: string) {
+  const manifest = canvasEditableManifests.find(
+    (entry) =>
+      entry.key === key && (version === undefined || entry.version === version),
+  )
   if (!manifest) throw new Error("Canvas template unavailable.")
   return manifest
 }
@@ -61,7 +65,12 @@ export function buildSectionLibrary(
   manifests: readonly TemplateManifest[] = canvasEditableManifests,
 ) {
   const seen = new Set<string>()
-  return manifests.flatMap((manifest) =>
+  // One version per template key: callers list the current version first.
+  const listed = manifests.filter(
+    (manifest, index) =>
+      manifests.findIndex((entry) => entry.key === manifest.key) === index,
+  )
+  return listed.flatMap((manifest) =>
     manifest.pages.flatMap((page) =>
       (page.defaultSections ?? page.allowedSections).flatMap((type) => {
         const definition = manifest.sections.find((entry) => entry.key === type)
@@ -104,17 +113,21 @@ export function insertSectionExcerpt(
 ) {
   const next = structuredClone(composition)
   const page = next.pages.find((entry) => entry.key === pageKey)
-  const manifest = canvasManifest(next.template.key)
+  const manifest = canvasManifest(next.template.key, next.template.version)
   if (!page || page.sections.length >= 32)
     throw new Error("This page has reached its section limit.")
+  // The draft's exact pin declares the version it accepts for this section.
+  const definition =
+    manifest.sections.find((entry) => entry.key === excerpt.definition.key) ??
+    excerpt.definition
   const section: SectionInstance = {
     id,
-    type: excerpt.definition.key,
-    version: excerpt.definition.version,
+    type: definition.key,
+    version: definition.version,
     visible: true,
-    settings: defaultSettings(excerpt.definition.fields),
+    settings: defaultSettings(definition.fields),
     blocks: [],
-    source: structuredClone(excerpt.definition.source),
+    source: structuredClone(definition.source),
   }
   const footer = page.sections.findIndex(
     (entry) =>

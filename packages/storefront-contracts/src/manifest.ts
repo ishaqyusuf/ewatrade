@@ -24,6 +24,8 @@ const key = z.string().regex(/^[a-z][a-z0-9-]{0,63}$/)
 const version = z.number().int().positive()
 const label = z.string().trim().min(1).max(120)
 const reference = z.string().regex(/^[A-Za-z0-9_-]{1,128}$/)
+/** Upper bound for any `catalog-items` field; a manifest may declare fewer. */
+export const catalogItemsMax = 8
 const executable =
   /<\s*\/?\s*(script|iframe|object|embed|style)\b|javascript:|data:text\/html|\bon[a-z]+\s*=/i
 /** Editable copy is plain text; markup and script-like content is refused at write time. */
@@ -66,6 +68,20 @@ export const editableFieldSchema = z.discriminatedUnion("kind", [
       label,
       kind: z.literal("asset"),
       default: reference.nullable(),
+    })
+    .strict(),
+  /**
+   * Ordered references to the business's own catalog items. Only IDs are stored;
+   * names, prices and stock always come from the published load at render.
+   */
+  z
+    .object({
+      key,
+      label,
+      kind: z.literal("catalog-items"),
+      maxItems: z.number().int().min(1).max(catalogItemsMax),
+      itemKind: z.enum(["PRODUCT", "SERVICE"]).optional(),
+      default: z.array(reference).length(0),
     })
     .strict(),
 ])
@@ -151,7 +167,16 @@ export const themeSchema = z
     density: z.enum(["comfortable", "compact"]).optional(),
   })
   .strict()
-const settings = z.record(key, z.union([text, z.boolean(), z.null()]))
+const settings = z.record(
+  key,
+  z.union([
+    text,
+    z.boolean(),
+    z.null(),
+    z.array(reference).max(catalogItemsMax),
+  ]),
+)
+export type SettingValue = z.infer<typeof settings>[string]
 const blockInstanceSchema = z
   .object({
     id: reference,
@@ -284,7 +309,7 @@ export function defineTemplate(input: unknown): TemplateManifest {
 }
 
 function validateSettings(
-  values: Record<string, string | boolean | null>,
+  values: Record<string, SettingValue>,
   definitions: EditableField[],
 ) {
   for (const fieldKey of Object.keys(values)) {
@@ -303,7 +328,12 @@ function validateSettings(
           ? typeof value === "boolean"
           : field.kind === "asset"
             ? value === null || reference.safeParse(value).success
-            : field.options.some((option) => option.value === value)
+            : field.kind === "catalog-items"
+              ? Array.isArray(value) &&
+                value.length <= field.maxItems &&
+                new Set(value).size === value.length &&
+                value.every((id) => reference.safeParse(id).success)
+              : field.options.some((option) => option.value === value)
     if (!valid) throw new Error(`Invalid value for ${field.key}.`)
   }
 }

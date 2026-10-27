@@ -11,7 +11,9 @@ import {
  * 27 October 2026). Business facts, prices and stock always come from the runtime
  * load; settings hold only merchant-written copy and presentation choices.
  */
-export const commerceStudioVersion = "1.0.0"
+export const commerceStudioLegacyVersion = "1.0.0"
+/** 1.1.0 adds pinned products to Featured; every other section keeps its 1.0.0 source. */
+export const commerceStudioVersion = "1.1.0"
 export type CommerceStudioKind =
   | "header"
   | "hero"
@@ -37,7 +39,7 @@ const toggle = (
 ): EditableField => ({ key, label, kind: "boolean", default: fallback })
 const source = (sectionKey: string) => ({
   templateKey: "commerce-studio",
-  templateVersion: commerceStudioVersion,
+  templateVersion: commerceStudioLegacyVersion,
   sectionKey,
   sectionVersion: 1,
 })
@@ -59,7 +61,7 @@ const section = (
 })
 
 /** Empty copy falls back to current business facts at render; nothing is invented. */
-export const commerceStudioSections: readonly SectionDefinition[] = [
+export const commerceStudioLegacySections: readonly SectionDefinition[] = [
   section(
     "header",
     "Header and business details",
@@ -158,14 +160,15 @@ export const commerceStudioSections: readonly SectionDefinition[] = [
   }),
 ]
 
-const keys = commerceStudioSections.map((entry) => entry.key)
+const keys = commerceStudioLegacySections.map((entry) => entry.key)
 const k = (kind: CommerceStudioKind) => `commerce-studio-${kind}`
 
-export const commerceStudioManifest = defineTemplate({
+/** Exact 1.0.0 contract, kept registered so releases pinned to it still render. */
+export const commerceStudioLegacyManifest = defineTemplate({
   schemaVersion: 1,
   runtimeVersion: 1,
   key: "commerce-studio",
-  version: commerceStudioVersion,
+  version: commerceStudioLegacyVersion,
   name: "Commerce studio",
   description:
     "A complete shop and services storefront: product grid with bag and order requests, service requests with preferred dates, receipts, and optional customer login.",
@@ -211,8 +214,40 @@ export const commerceStudioManifest = defineTemplate({
       defaultSections: [k("header"), k("story"), k("contact"), k("footer")],
     },
   ],
-  sections: commerceStudioSections,
+  sections: commerceStudioLegacySections,
   blocks: [],
+})
+
+export const commerceStudioPinnedField: EditableField = {
+  key: "pinned",
+  label: "Pinned products",
+  kind: "catalog-items",
+  maxItems: 8,
+  itemKind: "PRODUCT",
+  default: [],
+}
+
+export const commerceStudioSections: readonly SectionDefinition[] =
+  commerceStudioLegacySections.map((entry) =>
+    entry.key === k("featured")
+      ? {
+          ...entry,
+          version: 2,
+          source: {
+            templateKey: "commerce-studio",
+            templateVersion: commerceStudioVersion,
+            sectionKey: entry.key,
+            sectionVersion: 2,
+          },
+          fields: [...entry.fields, commerceStudioPinnedField],
+        }
+      : entry,
+  )
+
+export const commerceStudioManifest = defineTemplate({
+  ...commerceStudioLegacyManifest,
+  version: commerceStudioVersion,
+  sections: commerceStudioSections,
 })
 
 export function commerceStudioSectionKind(

@@ -17,7 +17,10 @@ import {
   catalogV4LegacyManifest,
   catalogV4Manifest,
 } from "./catalog-v4/manifest"
-import { commerceStudioManifest } from "./commerce-studio/manifest"
+import {
+  commerceStudioLegacyManifest,
+  commerceStudioManifest,
+} from "./commerce-studio/manifest"
 import { componentEditorialManifest } from "./generated/manifest"
 import { reviewedComponentRegistry } from "./generated/registry"
 import { marketHallManifest } from "./market-hall/manifest"
@@ -86,6 +89,17 @@ export const templateRegistry: readonly TemplateEntry[] = [
   },
   {
     manifest: commerceStudioManifest,
+    availability: { state: "active" },
+    source: "packages/storefront-templates/src/commerce-studio",
+    // 1.1.0: Featured section v2 adds pinned products (IDs only). Local qualification only.
+    status: {
+      registration: "runtime-registered",
+      qualification: "qualified",
+      release: "not-live",
+    },
+  },
+  {
+    manifest: commerceStudioLegacyManifest,
     availability: { state: "active" },
     source: "packages/storefront-templates/src/commerce-studio",
     // Workshop commerce-studio v7 rev 5da7748c-cecd-49a0-90bb-222bed599859 (owner-requested
@@ -230,6 +244,43 @@ export function migrateCatalogCoverDraft(current: StorefrontComposition) {
       if (section.type === "catalog-header") {
         section.version = 2
         section.settings.cover = null
+      }
+  return validateComposition(next, manifest)
+}
+
+/** Named direct migration to 1.1.0: copy kept, Featured gains an empty pin list. */
+export function migrateCommerceStudioFeaturedDraft(
+  current: StorefrontComposition,
+) {
+  if (
+    current.template.key !== commerceStudioLegacyManifest.key ||
+    current.template.version !== commerceStudioLegacyManifest.version
+  )
+    throw new Error(
+      "Featured pinning migration requires commerce-studio@1.0.0.",
+    )
+  validateComposition(current, getTemplateManifest(current))
+  const manifest = getTemplateManifest(
+    {
+      template: {
+        key: commerceStudioManifest.key,
+        version: commerceStudioManifest.version,
+      },
+    },
+    "new-use",
+  )
+  const featured = manifest.sections.find(
+    (section) => section.key === "commerce-studio-featured",
+  )
+  if (!featured?.source) throw new Error("Featured section unavailable.")
+  const next = structuredClone(current)
+  next.template.version = manifest.version
+  for (const page of next.pages)
+    for (const section of page.sections)
+      if (section.type === featured.key) {
+        section.version = featured.version
+        section.source = structuredClone(featured.source)
+        section.settings.pinned = []
       }
   return validateComposition(next, manifest)
 }

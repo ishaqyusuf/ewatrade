@@ -18,6 +18,7 @@ import { fixture } from "../fixtures"
 import {
   getTemplateManifest,
   listSelectableTemplates,
+  migrateCommerceStudioFeaturedDraft,
   templateRegistry,
 } from "../registry"
 import { StorefrontTemplate } from "../render"
@@ -35,6 +36,7 @@ import {
   writeBag,
 } from "./commerce"
 import { commerceStudioManifest } from "./manifest"
+import { featuredItems } from "./render"
 
 const item = (
   id: string,
@@ -411,4 +413,98 @@ test("merchant settings render; copy stays plain text; storefront mode counts pu
   ).toBe("services")
   expect(readableOn("#ffffff")).toBe("#1c211e")
   expect(readableOn("#8b4b35")).toBe("#ffffff")
+})
+
+const featuredSection = (composition: ReturnType<typeof canvasDefaults>) => {
+  const section = composition.pages[0]?.sections.find(
+    (entry) => entry.type === "commerce-studio-featured",
+  )
+  if (!section) throw new Error("featured missing")
+  return section
+}
+const featuredNames = (html: string) => {
+  const start = html.indexOf("New in the shop")
+  const end = html.indexOf("</section>", start)
+  return [...html.slice(start, end).matchAll(/Item ([a-z]+)</g)]
+    .map((match) => match[1])
+    .filter((name, index, all) => all.indexOf(name) === index)
+}
+
+test("1.1.0 keeps 1.0.0 registered and pins only IDs on Featured", () => {
+  const legacy = getTemplateManifest(
+    { template: { key: "commerce-studio", version: "1.0.0" } },
+    "render",
+  )
+  expect(commerceStudioManifest.version).toBe("1.1.0")
+  const old = canvasDefaults(legacy)
+  expect(featuredSection(old).settings.pinned).toBeUndefined()
+  // An old release stays valid against its exact pin and refuses the new field.
+  expect(validateComposition(old, legacy).template.version).toBe("1.0.0")
+  const smuggled = structuredClone(old)
+  featuredSection(smuggled).settings.pinned = ["a"]
+  expect(() => validateComposition(smuggled, legacy)).toThrow(
+    "Unknown editable field pinned",
+  )
+  const migrated = migrateCommerceStudioFeaturedDraft(old)
+  expect(migrated.template.version).toBe("1.1.0")
+  expect(featuredSection(migrated)).toMatchObject({
+    version: 2,
+    settings: { pinned: [], heading: "New in the shop" },
+  })
+  expect(() => migrateCommerceStudioFeaturedDraft(migrated)).toThrow()
+  // Old-version drafts still render through their exact pin.
+  const html = render({
+    ...snapshot({ items: [item("a", "PRODUCT"), item("b", "PRODUCT")] }),
+    composition: old,
+  })
+  expect(featuredNames(html)).toEqual(["a", "b"])
+  // Library lists one Featured (current), and inserts follow the draft's exact pin.
+  const library = buildSectionLibrary(
+    listSelectableTemplates().map((entry) => entry.manifest),
+  )
+  const featured = library.filter(
+    (entry) => entry.definition.key === "commerce-studio-featured",
+  )
+  expect(featured.map((entry) => entry.definition.version)).toEqual([2])
+  const [current] = featured
+  if (!current) throw new Error("featured excerpt missing")
+  const inserted = insertSectionExcerpt(old, "shop", current, "shop-featured")
+  expect(
+    inserted.pages
+      .find((page) => page.key === "shop")
+      ?.sections.find((entry) => entry.id === "shop-featured")?.version,
+  ).toBe(1)
+})
+
+test("Featured shows pins first in order, skips non-public pins, then fills automatically", () => {
+  const composition = canvasDefaults(commerceStudioManifest)
+  featuredSection(composition).settings.pinned = ["d", "hidden", "s", "b"]
+  featuredSection(composition).settings.count = "three"
+  const value = {
+    ...snapshot({
+      items: [
+        item("a", "PRODUCT"),
+        item("b", "PRODUCT"),
+        item("c", "PRODUCT"),
+        item("d", "PRODUCT"),
+        item("s", "SERVICE"),
+      ],
+    }),
+    composition: validateComposition(composition, commerceStudioManifest),
+  }
+  // "hidden" (archived, off-Store or over the plan cap) is absent from the public
+  // load and the service isn't a product; both are skipped without an error.
+  const html = render(value)
+  expect(featuredNames(html)).toEqual(["d", "b", "a"])
+  expect(html).not.toContain("?item=hidden")
+  expect(
+    featuredItems(value.resources.catalog.items, ["c"], "price-low").map(
+      (entry) => entry.id,
+    ),
+  ).toEqual(["c", "a", "b", "d"])
+  expect(
+    featuredItems(value.resources.catalog.items, null, "available").map(
+      (entry) => entry.id,
+    ),
+  ).toEqual(["a", "b", "c", "d"])
 })

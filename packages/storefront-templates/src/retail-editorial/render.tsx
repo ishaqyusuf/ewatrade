@@ -56,7 +56,13 @@ export function RetailEditorial({
                   <ReviewedIntroduction
                     key={section.id}
                     snapshot={snapshot}
-                    settings={section.settings}
+                    // public-intro declares no catalog-items field; validated composition and component input both enforce it.
+                    settings={
+                      section.settings as Record<
+                        string,
+                        string | boolean | null
+                      >
+                    }
                   />
                 )
               if (section.type === "retail-intro") {

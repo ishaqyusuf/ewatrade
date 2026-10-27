@@ -5,6 +5,7 @@ import { getDataCacheGeneration, useTRPC, useTRPCClient } from "@/trpc/client"
 import type { RouterOutputs } from "@ewatrade/api/trpc/routers/_app"
 import {
   type EditableField,
+  type SettingValue,
   type StorefrontComposition,
   validateComposition,
 } from "@ewatrade/storefront-contracts/manifest"
@@ -37,6 +38,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useRouter } from "next/navigation"
 import { useCallback, useEffect, useId, useRef, useState } from "react"
 import { StorefrontCanvasPreview } from "./storefront-canvas-preview"
+import { StorefrontCatalogItemsField } from "./storefront-catalog-items-field"
 import { StorefrontPhrasesPopover } from "./storefront-phrases-popover"
 import { StorefrontProposals } from "./storefront-proposals"
 import { StorefrontSectionDialog } from "./storefront-section-dialog"
@@ -373,7 +375,7 @@ function StudioEditor({
         list[index + direction] = from
       }
     })
-  const fieldChange = (key: string, value: string | boolean | null) =>
+  const fieldChange = (key: string, value: SettingValue) =>
     edit((next) => {
       const section = canvasPage(next, pageKey).sections.find(
         (section) => section.id === sectionId,
@@ -879,6 +881,7 @@ function StudioEditor({
               (field) =>
                 field.kind === "asset" ||
                 field.kind === "boolean" ||
+                field.kind === "catalog-items" ||
                 !inlineTextEditing,
             ) ? (
               <details open>
@@ -888,6 +891,7 @@ function StudioEditor({
                     (field) =>
                       field.kind === "asset" ||
                       field.kind === "boolean" ||
+                      field.kind === "catalog-items" ||
                       // Templates without in-preview text editing edit every field here.
                       !inlineTextEditing,
                   )
@@ -897,6 +901,7 @@ function StudioEditor({
                       field={field}
                       value={selected.settings[field.key]}
                       disabled={blocked}
+                      publicItems={snapshot?.resources.catalog.items ?? null}
                       onChange={(value) => fieldChange(field.key, value)}
                     />
                   ))}
@@ -1173,13 +1178,25 @@ function ManifestField({
   value,
   onChange,
   disabled,
+  publicItems,
 }: {
   field: EditableField
   value: unknown
-  onChange: (value: string | boolean | null) => void
+  onChange: (value: SettingValue) => void
   disabled: boolean
+  publicItems: readonly { id: string; name: string }[] | null
 }) {
   const fieldId = useId()
+  if (field.kind === "catalog-items")
+    return (
+      <StorefrontCatalogItemsField
+        field={field}
+        value={value}
+        disabled={disabled}
+        publicItems={publicItems}
+        onChange={onChange}
+      />
+    )
   if (field.kind === "boolean")
     return (
       <label>

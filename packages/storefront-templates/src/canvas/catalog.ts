@@ -1,6 +1,7 @@
 import type { SectionDefinition } from "../../../storefront-contracts/src/manifest"
 import {
   type CommerceStudioKind,
+  commerceStudioLegacyManifest,
   commerceStudioManifest,
   commerceStudioSectionKind,
   commerceStudioSections,
@@ -22,12 +23,14 @@ import {
 /**
  * Explicit catalog seam: every canvas-editable exact pin and every section declaration
  * the shared canvas renderer/editor understands. Pinned canvas manifests stay as declared;
- * later templates add their own declarations here instead.
+ * later templates add their own declarations here instead. Newer versions of a key come
+ * first, so key-only lookups resolve to the current version.
  */
 export const canvasEditableManifests = [
   ...canvasManifests,
   marketHallManifest,
   commerceStudioManifest,
+  commerceStudioLegacyManifest,
 ]
 export const portableSections: readonly SectionDefinition[] = [
   ...canvasSections,

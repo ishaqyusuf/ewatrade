@@ -641,6 +641,29 @@ function leadItems(items: readonly PublicCatalogItem[], lead: string) {
   )
 }
 
+/**
+ * Pinned products first, in the merchant's order, then the automatic lead. Pins resolve
+ * only against the public load, so hidden, archived, off-Store or over-cap items and
+ * services are skipped silently.
+ */
+export function featuredItems(
+  items: readonly PublicCatalogItem[],
+  pinned: unknown,
+  lead: string,
+) {
+  const ids = Array.isArray(pinned) ? pinned : []
+  const chosen = ids.flatMap((id) => {
+    const item = items.find(
+      (entry) => entry.id === id && entry.kind === "PRODUCT",
+    )
+    return item ? [item] : []
+  })
+  return [
+    ...chosen,
+    ...leadItems(items, lead).filter((item) => !chosen.includes(item)),
+  ]
+}
+
 function Featured({ section }: { section: SectionInstance }) {
   const { snapshot, facts, href } = useCommerceStudio()
   if (!facts.products) return null
@@ -650,8 +673,9 @@ function Featured({ section }: { section: SectionInstance }) {
       : section.settings.count === "eight"
         ? 8
         : 4
-  const items = leadItems(
+  const items = featuredItems(
     snapshot.resources.catalog.items,
+    section.settings.pinned,
     String(section.settings.lead ?? "available"),
   ).slice(0, count)
   const heading = sectionText(section, "heading", "New in the shop")
