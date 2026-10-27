@@ -1,4 +1,5 @@
 import { createHmac, timingSafeEqual } from "node:crypto"
+import { manualPaymentLinkPath } from "@ewatrade/utils/manual-payments"
 
 export type PaymentLinkIdentity = { intentId: string; expiresAt: Date }
 const signature = (
@@ -65,7 +66,7 @@ export function paymentLinkUrl(origin: string, token: string) {
     throw new Error(
       "Configure a secure public payment origin without a path or port.",
     )
-  return new URL(`/pay/${encodeURIComponent(token)}`, base).href
+  return new URL(manualPaymentLinkPath(token), base).href
 }
 
 /** Opens the customer's chat with an editable draft; never sends a message. */

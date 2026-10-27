@@ -169,3 +169,82 @@ test("only the exact embedded signup route is public and restricted to the confi
     middleware(request("/signup/chat/private")).headers.get("location"),
   ).toContain("/login")
 })
+
+test("only an exact short payment code and its image are public, with payment privacy", () => {
+  const code = "AbCdEfGhIjKlMnOpQr_-12"
+  for (const path of [`/p/${code}`, `/p/${code}/image`, "/pay/signed.token"]) {
+    const response = middleware(request(path))
+    expect(response.headers.get("location")).toBeNull()
+    expect(response.headers.get("cache-control")).toBe(
+      "private, no-store, max-age=0",
+    )
+    expect(response.headers.get("referrer-policy")).toBe("no-referrer")
+    expect(response.headers.get("x-robots-tag")).toBe(
+      "noindex, nofollow, noarchive",
+    )
+  }
+  for (const path of [
+    "/p",
+    "/p/short",
+    `/p/${code}x`,
+    `/p/${code.slice(1)}.`,
+    `/p/${code}/private`,
+    `/p/${code}/image/extra`,
+  ])
+    expect(middleware(request(path)).headers.get("location")).toContain(
+      "/login",
+    )
+})
+
+test("the configured payment-link host serves only public payment paths", () => {
+  const prior = process.env.PAYMENT_LINK_PUBLIC_ORIGIN
+  const code = "AbCdEfGhIjKlMnOpQr_-12"
+  const req = (hostname: string, path: string) =>
+    new NextRequest(`https://${hostname}${path}`, {
+      headers: { host: hostname },
+    })
+  const sentToMarketing = (hostname: string, path: string) => {
+    const location = middleware(req(hostname, path)).headers.get("location")
+    expect(location).not.toBeNull()
+    const url = new URL(location ?? "")
+    expect(url.host).not.toBe(hostname)
+    expect(url.pathname).toBe("/")
+  }
+  try {
+    process.env.PAYMENT_LINK_PUBLIC_ORIGIN = "https://app.ewatrade.com"
+    for (const path of [`/p/${code}`, `/p/${code}/image`, "/pay/v1.token"]) {
+      const response = middleware(req("app.ewatrade.com", path))
+      expect(response.headers.get("location")).toBeNull()
+      expect(response.headers.get("x-robots-tag")).toBe(
+        "noindex, nofollow, noarchive",
+      )
+      // That host names no tenant.
+      expect(
+        response.headers.get("x-middleware-request-x-tenant-slug"),
+      ).toBeNull()
+    }
+    // Other paths on that host, and other hosts, keep the normal host rules.
+    for (const [hostname, path] of [
+      ["app.ewatrade.com", "/assistant"],
+      ["app.ewatrade.com", "/login"],
+      ["app.ewatrade.com", "/p/short"],
+      ["evil.example", `/p/${code}`],
+      ["app.ewatrade.com.evil.example", `/p/${code}`],
+    ] as const)
+      sentToMarketing(hostname, path)
+    // A malformed configured origin opens nothing.
+    for (const origin of [
+      "http://app.ewatrade.com",
+      "https://app.ewatrade.com/pay",
+      "https://user@app.ewatrade.com",
+      "app.ewatrade.com",
+    ]) {
+      process.env.PAYMENT_LINK_PUBLIC_ORIGIN = origin
+      sentToMarketing("app.ewatrade.com", `/p/${code}`)
+    }
+  } finally {
+    if (prior === undefined)
+      Reflect.deleteProperty(process.env, "PAYMENT_LINK_PUBLIC_ORIGIN")
+    else process.env.PAYMENT_LINK_PUBLIC_ORIGIN = prior
+  }
+})

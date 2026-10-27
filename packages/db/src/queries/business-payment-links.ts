@@ -1,9 +1,11 @@
-import { createHash } from "node:crypto"
+import { createHash, randomBytes } from "node:crypto"
 import {
+  MANUAL_PAYMENT_SHORT_ID_PREFIX,
   MANUAL_RECEIPT_MAX_BYTES,
   ManualPaymentError,
   manualBankDetails,
   manualPaymentAmount,
+  manualPaymentLinkId,
   manualPaymentOutcome,
   manualReceiptTypes,
 } from "@ewatrade/utils/manual-payments"
@@ -266,6 +268,7 @@ export async function createBusinessPaymentLinkInTransaction(
     )
   const link = await tx.manualPaymentLink.create({
     data: {
+      id: `${MANUAL_PAYMENT_SHORT_ID_PREFIX}${randomBytes(16).toString("base64url")}`,
       tenantId: input.tenantId,
       orderId: order.id,
       bankAccountId: account.id,
@@ -281,6 +284,20 @@ export async function createBusinessPaymentLinkInTransaction(
     },
   })
   return { link, replay: false }
+}
+
+/** Indexed lookup of a deliberately public handle, never an unsigned legacy link/report ID. */
+export async function shortManualPaymentLinkIdentity(
+  db: Pick<PrismaClient, "manualPaymentLink">,
+  code: string,
+): Promise<Proof | null> {
+  const id = manualPaymentLinkId(code)
+  if (!id) return null
+  const link = await db.manualPaymentLink.findFirst({
+    where: { id, tenant: { isActive: true } },
+    select: { id: true, expiresAt: true },
+  })
+  return link ? { linkId: link.id, expiresAt: link.expiresAt } : null
 }
 
 export async function readManualPaymentLink(

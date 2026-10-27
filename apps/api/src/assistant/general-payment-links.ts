@@ -16,6 +16,7 @@ import {
   paymentLinkUrl,
 } from "@ewatrade/payments"
 import { moneyAccountPaymentMethods } from "@ewatrade/utils/finance-payment-methods"
+import { manualPaymentShortCode } from "@ewatrade/utils/manual-payments"
 import { TRPCError } from "@trpc/server"
 import { paymentLinkOrigin, paymentLinkSigningKey } from "../banking/config"
 import type {
@@ -176,10 +177,11 @@ async function execute(
     })
     const url = paymentLinkUrl(
       origin,
-      createPaymentLinkToken(
-        { intentId: result.link.id, expiresAt: result.link.expiresAt },
-        secret,
-      ),
+      manualPaymentShortCode(result.link.id) ??
+        createPaymentLinkToken(
+          { intentId: result.link.id, expiresAt: result.link.expiresAt },
+          secret,
+        ),
     )
     links.push({
       orderId: order.id,

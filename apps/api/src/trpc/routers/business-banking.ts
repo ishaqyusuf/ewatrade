@@ -13,6 +13,7 @@ import {
   readManualPaymentReport,
   reviewManualPaymentReport,
   saveManualBankDetails,
+  shortManualPaymentLinkIdentity,
   submitManualPaymentReport,
 } from "@ewatrade/db/queries"
 import {
@@ -21,13 +22,16 @@ import {
   paymentLinkSharing,
   paymentLinkUrl,
 } from "@ewatrade/payments"
-import { ManualPaymentError } from "@ewatrade/utils/manual-payments"
+import {
+  ManualPaymentError,
+  manualPaymentShortCode,
+} from "@ewatrade/utils/manual-payments"
 import { TRPCError } from "@trpc/server"
 import { z } from "zod"
 import { paymentLinkOrigin, paymentLinkSigningKey } from "../../banking/config"
 import {
-  manualLinkIdentity,
   manualReportIdentity,
+  resolveManualLinkIdentity,
 } from "../../banking/manual-payment-tokens"
 import {
   manualPaymentStatusSocketUrl,
@@ -139,10 +143,12 @@ export const businessBankingRouter = createTRPCRouter({
           expiresAt: new Date(now.getTime() + input.lifetimeMinutes * 60_000),
         }),
       )
-      const token = createPaymentLinkToken(
-        { intentId: result.link.id, expiresAt: result.link.expiresAt },
-        secret,
-      )
+      const token =
+        manualPaymentShortCode(result.link.id) ??
+        createPaymentLinkToken(
+          { intentId: result.link.id, expiresAt: result.link.expiresAt },
+          secret,
+        )
       const url = paymentLinkUrl(origin, token)
       const sharing = paymentLinkSharing({
         phone: order.customerPhone,
@@ -165,9 +171,13 @@ export const businessBankingRouter = createTRPCRouter({
   paymentLink: publicProcedure
     .input(publicBusinessPaymentLinkSchema)
     .query(async ({ ctx, input }) => {
+      const identity = await resolveManualLinkIdentity(input.token, {
+        allowExpired: true,
+        readShortLink: (code) => shortManualPaymentLinkIdentity(ctx.db, code),
+      })
       const page = await mapped(() =>
         getBusinessPaymentLink(ctx.db, {
-          ...manualLinkIdentity(input.token, true),
+          ...identity,
           now: new Date(),
         }),
       )
@@ -176,10 +186,13 @@ export const businessBankingRouter = createTRPCRouter({
   reportPayment: publicProcedure
     .input(prepareManualPaymentReportSchema)
     .mutation(async ({ ctx, input }) => {
+      const identity = await resolveManualLinkIdentity(input.token, {
+        readShortLink: (code) => shortManualPaymentLinkIdentity(ctx.db, code),
+      })
       const result = await mapped(() =>
         prepareManualPaymentReport(ctx.db, {
           ...input,
-          ...manualLinkIdentity(input.token),
+          ...identity,
         }),
       )
       const reportToken = createPaymentLinkToken(

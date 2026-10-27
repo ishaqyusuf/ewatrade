@@ -41,6 +41,12 @@ test("payment origin cannot redirect to insecure or credential-bearing paths", (
   ])
     expect(() => paymentLinkUrl(origin, "token")).toThrow()
 })
+test("random payment handles use the short path on the configured public origin", () => {
+  const code = "Ab3x9Kp7Lm2Qv8Ts4Wy6ZA"
+  expect(paymentLinkUrl("https://app.ewatrade.com", code)).toBe(
+    `https://app.ewatrade.com/p/${code}`,
+  )
+})
 test("WhatsApp uses international phone and encoded human-send draft", () => {
   const result = new URL(
     paymentLinkWhatsApp({

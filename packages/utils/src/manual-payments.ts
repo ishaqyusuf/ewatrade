@@ -1,3 +1,5 @@
+export * from "./manual-payment-short-link"
+
 export class ManualPaymentError extends Error {
   constructor(
     readonly code: "BAD_REQUEST" | "FORBIDDEN" | "NOT_FOUND" | "CONFLICT",

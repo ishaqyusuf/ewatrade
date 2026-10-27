@@ -34,4 +34,17 @@ describe("EwaTrade shared env aliases", () => {
     expect(env.DATABASE_URL).toBeUndefined()
     expect(EWATRADE_SHARED_ENV_NAMES).not.toContain("DATABASE_URL")
   })
+
+  test("the dedicated payment origin supports shared configuration while plain configuration wins", () => {
+    const env: Record<string, string | undefined> = {
+      EWATRADE_PAYMENT_LINK_PUBLIC_ORIGIN: "https://app.ewatrade.com",
+    }
+    expect(applyEwatradeSharedEnv(env)).toEqual(["PAYMENT_LINK_PUBLIC_ORIGIN"])
+    expect(env.PAYMENT_LINK_PUBLIC_ORIGIN).toBe("https://app.ewatrade.com")
+    env.PAYMENT_LINK_PUBLIC_ORIGIN = "https://ewatrade-dashboard.localhost"
+    expect(applyEwatradeSharedEnv(env)).toEqual([])
+    expect(env.PAYMENT_LINK_PUBLIC_ORIGIN).toBe(
+      "https://ewatrade-dashboard.localhost",
+    )
+  })
 })

@@ -1,6 +1,7 @@
 import { PaymentPage } from "@/components/public-payment/payment-page"
 import { PAYMENT_PREVIEW_VERSION } from "@/components/public-payment/payment-preview-model"
 import { PaymentProvider } from "@/components/public-payment/payment-provider"
+import { manualPaymentLinkPath } from "@ewatrade/utils/manual-payments"
 import type { Metadata } from "next"
 import { publicPaymentOrigin, readPublicPayment } from "./payment-data"
 
@@ -17,8 +18,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     "View your payment details and report a bank transfer for the business to confirm."
   let image: string | undefined
   try {
-    if (token.length <= 220)
-      image = `${publicPaymentOrigin()}/pay/${encodeURIComponent(token)}/image?v=${PAYMENT_PREVIEW_VERSION}`
+    // A short code's image lives under /p/<code>, a signed token's under /pay/<token>.
+    if (token && token.length <= 220)
+      image = `${publicPaymentOrigin()}${manualPaymentLinkPath(token)}/image?v=${PAYMENT_PREVIEW_VERSION}`
   } catch {
     /* No untrusted request-origin fallback. */
   }

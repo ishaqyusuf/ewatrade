@@ -67,6 +67,31 @@ test("five canonical merchant sharing drafts become one overview and five isolat
   }
 })
 
+test("short payment paths retain isolated forwardable chunks without admitting arbitrary app routes", () => {
+  const saved = receipt()
+  const link = saved.links[0]
+  if (!link) throw new Error("Missing link")
+  const code = "Ab3x9Kp7Lm2Qv8Ts4Wy6ZA"
+  const short = `${origin}/p/${code}`
+  link.copyText = link.copyText?.replace(link.url, short)
+  link.url = short
+  expect(
+    renderWhatsAppActionResultChunks(
+      { status: "COMPLETED", receipt: saved },
+      chat,
+      { paymentOrigin: origin, appOrigin: origin },
+    )[1],
+  ).toBe(link.copyText ?? "")
+  link.url = `${origin}/p/too-short`
+  const refused = renderWhatsAppActionResultChunks(
+    { status: "COMPLETED", receipt: saved },
+    chat,
+    { paymentOrigin: origin, appOrigin: origin },
+  )
+  expect(refused).toHaveLength(1)
+  expect(refused[0]).not.toContain("/p/too-short")
+})
+
 test("record text cannot add executable URLs or expose the saved customer phone in a forwardable message", () => {
   const saved = receipt("Merchant https://attacker.test/private?secret=1")
   const chunks = renderWhatsAppActionResultChunks(

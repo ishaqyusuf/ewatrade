@@ -1,4 +1,5 @@
 import { resolveTenantDomain } from "@ewatrade/utils"
+import { isManualPaymentShortCode } from "@ewatrade/utils/manual-payments"
 import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
 
@@ -29,6 +30,30 @@ const PUBLIC_BRAND_ASSET_PATHS = new Set([
 ])
 
 /**
+ * Host of the dedicated public payment-link origin (PAYMENT_LINK_PUBLIC_ORIGIN), only when it is
+ * configured as a bare HTTPS origin; anything else fails closed.
+ */
+function paymentLinkPublicHost() {
+  const value = process.env.PAYMENT_LINK_PUBLIC_ORIGIN
+  if (!value) return null
+  try {
+    const url = new URL(value)
+    if (
+      url.protocol !== "https:" ||
+      url.username ||
+      url.password ||
+      url.pathname !== "/" ||
+      url.search ||
+      url.hash
+    )
+      return null
+    return url.host
+  } catch {
+    return null
+  }
+}
+
+/**
  * Dashboard middleware.
  *
  * 1. Validates the hostname resolves to the dashboard surface.
@@ -42,9 +67,14 @@ const PUBLIC_BRAND_ASSET_PATHS = new Set([
  */
 export function middleware(request: NextRequest) {
   const signupChat = request.nextUrl.pathname === "/signup/chat"
-  const paymentPage = /^\/pay\/[^/]+(?:\/image)?\/?$/.test(
+  // Short payment links are public only for an exact short code, never other /p/* paths.
+  const shortPaymentCode = /^\/p\/([^/]+)(?:\/image)?\/?$/.exec(
     request.nextUrl.pathname,
-  )
+  )?.[1]
+  const paymentPage =
+    /^\/pay\/[^/]+(?:\/image)?\/?$/.test(request.nextUrl.pathname) ||
+    (shortPaymentCode !== undefined &&
+      isManualPaymentShortCode(shortPaymentCode))
   const reviewContext =
     request.nextUrl.pathname === "/assistant-review" ||
     request.nextUrl.pathname.startsWith("/r/") ||
@@ -77,10 +107,14 @@ export function middleware(request: NextRequest) {
     process.env.VERCEL_ENV === "preview" &&
     Boolean(process.env.VERCEL_URL) &&
     hostname.toLowerCase() === process.env.VERCEL_URL?.toLowerCase()
+  // The dedicated payment-link host serves only the public payment page and image.
+  const isPaymentLinkHost =
+    paymentPage && hostname.toLowerCase() === paymentLinkPublicHost()
 
   // Non-dashboard hostnames redirect to marketing.
   if (
     !isOwnPreviewHostname &&
+    !isPaymentLinkHost &&
     result.kind === "tenant" &&
     result.surface !== "dashboard"
   ) {
@@ -124,7 +158,8 @@ export function middleware(request: NextRequest) {
   // Pass tenant and path context to route handlers.
   const requestHeaders = new Headers(request.headers)
 
-  if (result.kind === "tenant" && result.tenantSlug) {
+  // The payment-link host names no tenant.
+  if (!isPaymentLinkHost && result.kind === "tenant" && result.tenantSlug) {
     requestHeaders.set("x-tenant-slug", result.tenantSlug)
   }
   requestHeaders.set("x-tenant-surface", "dashboard")

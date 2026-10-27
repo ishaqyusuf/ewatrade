@@ -1,0 +1,46 @@
+{
+  "version": 1,
+  "id": "2026-10-27-payment-short-links",
+  "tickets": ["H02", "F01"],
+  "summary": "New manual payment links use reserved 128-bit random public handles at /p/<code>. Existing signed links remain valid. Public page, selected amount-ticket image, report authority, canonical payment review, roles and rollout remain unchanged. No third-party shortening service, schema migration, automatic payment or deployment.",
+  "capabilities": [
+    {
+      "id": "sales.payment_links.read",
+      "change": "unchanged",
+      "rollout": "source",
+      "note": "Existing exact-scope commands and rollout unchanged; newly created links and WhatsApp forwardable chunks accept only canonical short references on the configured trusted public origin."
+    },
+    {
+      "id": "sales.payment_links.create",
+      "change": "unchanged",
+      "rollout": "source",
+      "note": "Existing exact-scope commands and rollout unchanged; newly created links and WhatsApp forwardable chunks accept only canonical short references on the configured trusted public origin."
+    }
+  ],
+  "procedures": [],
+  "docs": [
+    {
+      "topic": "feature",
+      "status": "local_only",
+      "path": ".brain/features/manual-payment-confirmation.md"
+    },
+    {
+      "topic": "api",
+      "status": "local_only",
+      "path": ".brain/api/contracts.md"
+    },
+    {
+      "topic": "capability",
+      "status": "local_only",
+      "path": ".brain/qa/2026-10-27-payment-short-links.md"
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "test",
+      "path": "apps/api/src/banking/manual-payment-tokens.test.ts",
+      "executed": true,
+      "result": "Combined focused short-link regression: 40 pass, 0 fail, 352 assertions across 8 files; exact reserved identity, expiry, signed legacy/report-purpose separation, trusted origin/channel allowlist, route metadata, privacy and dedicated-host boundaries."
+    }
+  ]
+}

@@ -134,7 +134,8 @@ export function renderWhatsAppActionResultChunks(
         !url.password &&
         !url.search &&
         !url.hash &&
-        /^\/pay\/[a-zA-Z0-9_.-]{1,220}$/.test(url.pathname) &&
+        (/^\/pay\/[a-zA-Z0-9_.-]{1,220}$/.test(url.pathname) ||
+          /^\/p\/[A-Za-z0-9_-]{22}$/.test(url.pathname)) &&
         value === url.href
       )
     } catch {
