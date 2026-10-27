@@ -144,7 +144,7 @@ function CatalogGrid({ rows, storeId, openDetail }: CollectionProps) {
                   <RowSelectCheckbox row={row} label={`Select ${item.name}`} />
                 </div>
                 <div className="absolute top-2 right-2 rounded-md bg-background ring-1 ring-border">
-                  <CatalogItemActions item={item} />
+                  <CatalogItemActions item={item} storeId={storeId} />
                 </div>
               </div>
               <div className="flex min-w-0 flex-1 flex-col gap-1 px-3.5 pt-3 pb-3.5">
@@ -198,7 +198,7 @@ function CatalogList({ rows, storeId, openDetail }: CollectionProps) {
             <ListFigure label="Price" value={getCatalogPrice(item)} />
             <ListFigure label="Stock" value={getCatalogStock(item)} />
             <div className="max-md:col-start-4 max-md:row-start-1">
-              <CatalogItemActions item={item} />
+              <CatalogItemActions item={item} storeId={storeId} />
             </div>
           </li>
         )

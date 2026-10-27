@@ -15,9 +15,11 @@ export function ServiceDesk({
   customerChatOrigin,
   onTaglineChange,
   draftPreview,
+  syncUrl = false,
 }: {
   snapshot: StorefrontClientSnapshot
   draftPreview?: boolean
+  syncUrl?: boolean
   domain: string
   after?: string
   customerChatOrigin: string
@@ -79,6 +81,7 @@ export function ServiceDesk({
               if (section.type === "service-offerings")
                 return (
                   <CommerceCollection
+                    syncUrl={syncUrl && !draftPreview}
                     domain={domain}
                     key={section.id}
                     kind="services"

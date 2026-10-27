@@ -54,7 +54,18 @@ import {
 } from "@ewatrade/ui"
 import Link from "next/link"
 import { type ReactNode, useEffect, useId, useState } from "react"
-import { TemplateActions, useNavigation } from "../shared/commerce"
+import { CatalogListingControls } from "../shared/catalog-controls"
+import {
+  LISTING_NO_RESULTS,
+  catalogListingFiltered,
+  catalogListingHref,
+  catalogListingQuery,
+} from "../shared/catalog-listing"
+import {
+  TemplateActions,
+  enquirySelection,
+  useNavigation,
+} from "../shared/commerce"
 import {
   SERVICE_PRICE_ON_REQUEST,
   ServiceOptionPicker,
@@ -157,11 +168,10 @@ export function ServiceConciergeCollection({
     setDetailId(highlighted?.id ?? "")
   }, [highlighted?.id, highlighted?.kind])
   const service = services.find((item) => item.id === serviceId) ?? services[0]
+  const rawSelectedFor = (item: PublicCatalogItem) =>
+    chosen[item.id] ?? defaultOptionIds(item)
   const selectedFor = (item: PublicCatalogItem) =>
-    orderServiceOptionIds(
-      item.options,
-      chosen[item.id] ?? defaultOptionIds(item),
-    )
+    orderServiceOptionIds(item.options, rawSelectedFor(item))
   const choose = (item: PublicCatalogItem, next: string[]) =>
     setChosen((current) => ({ ...current, [item.id]: next }))
   const formIds = contact.serviceRequestEntry?.offeringIds ?? []
@@ -213,18 +223,18 @@ export function ServiceConciergeCollection({
   const selected = service ? selectedFor(service) : []
   const canRequest = service ? requestable(service) : false
   const request = service && canRequest ? requestFor(service, selected) : null
+  // Every current pick travels as public IDs; a cleared selection stays generic.
+  const serviceEnquiry = service
+    ? enquirySelection(service, service.options, rawSelectedFor(service)).action
+    : null
   const enquiry =
-    service && action.allowed({ type: "whatsappEnquiry", itemId: service.id })
-      ? { type: "whatsappEnquiry" as const, itemId: service.id }
-      : null
+    serviceEnquiry && action.allowed(serviceEnquiry) ? serviceEnquiry : null
   const noticeKey = (item: PublicCatalogItem) =>
     `${item.id}:${selectedFor(item).join(",")}`
-  const listing = (cursor?: string | null) => {
-    const params = new URLSearchParams()
-    if (catalog.category) params.set("category", catalog.category)
-    if (cursor) params.set("after", cursor)
-    return params.size ? `/?${params}` : "/"
-  }
+  const query = catalogListingQuery(catalog.query)
+  const filtered = catalogListingFiltered(query)
+  const listing = (cursor?: string | null) =>
+    catalogListingHref(catalog.category, cursor, query)
   const detailIds = detail?.kind === "SERVICE" ? selectedFor(detail) : []
   const detailRequest =
     detail?.kind === "SERVICE" && requestable(detail)
@@ -236,6 +246,13 @@ export function ServiceConciergeCollection({
         <div className="sc-task">
           <h1>{headline}</h1>
           <p className="cv-lede">{description}</p>
+          {catalog.items.length || filtered || query.sort || after ? (
+            <CatalogListingControls
+              category={catalog.category}
+              query={query}
+              label="Search services"
+            />
+          ) : null}
           {services.length ? (
             <RadioGroup
               className="sc-choices"
@@ -268,6 +285,18 @@ export function ServiceConciergeCollection({
                 </FieldLabel>
               ))}
             </RadioGroup>
+          ) : filtered ? (
+            <div className="tf-empty">
+              <h2>{LISTING_NO_RESULTS.title}</h2>
+              <p>{LISTING_NO_RESULTS.description}</p>
+              <Link
+                prefetch={false}
+                scroll={false}
+                href={catalogListingHref(catalog.category)}
+              >
+                {LISTING_NO_RESULTS.reset}
+              </Link>
+            </div>
           ) : (
             <div className="tf-empty">
               <h2>No services listed yet</h2>
@@ -526,6 +555,13 @@ export function ServiceConciergeCollection({
                   key={detail.id}
                   domain={domain}
                   item={detail}
+                  selectedOptions={
+                    enquirySelection(
+                      detail,
+                      detail.options,
+                      detail.kind === "SERVICE" ? rawSelectedFor(detail) : [],
+                    ).selectedOptions
+                  }
                 />
                 {mode === "preview" ? (
                   <p className="tf-help">Private preview. Nothing is sent.</p>

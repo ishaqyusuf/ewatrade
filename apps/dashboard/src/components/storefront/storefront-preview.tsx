@@ -5,15 +5,16 @@ import {
   type StorefrontComposition,
   validateComposition,
 } from "@ewatrade/storefront-contracts/manifest"
-import {
-  type CatalogQuery,
-  catalogQuerySchema,
-} from "@ewatrade/storefront-contracts/resources"
+import type { CatalogQuery } from "@ewatrade/storefront-contracts/resources"
 import { validateDesignAssets } from "@ewatrade/storefront-runtime/design-assets"
 import { getTemplateManifest } from "@ewatrade/storefront-templates"
 import { StorefrontTemplate } from "@ewatrade/storefront-templates/render"
 import { useQuery } from "@tanstack/react-query"
 import { useEffect, useState } from "react"
+import {
+  storefrontPreviewFormQuery,
+  storefrontPreviewQuery,
+} from "./storefront-preview-navigation"
 import { StorefrontCanvasSkeleton } from "./storefront-skeleton"
 
 export function StorefrontPreview({ session }: { session: string }) {
@@ -111,24 +112,35 @@ export function StorefrontPreview({ session }: { session: string }) {
   const { business } = snapshot.resources
   return (
     <div
+      onSubmitCapture={(event) => {
+        event.preventDefault()
+        event.stopPropagation()
+        const form = event.target
+        const next =
+          form instanceof HTMLFormElement
+            ? storefrontPreviewFormQuery(
+                form.action,
+                form.method,
+                new FormData(form),
+                location.origin,
+              )
+            : null
+        if (next) {
+          setQuery(next)
+          setNotice("")
+        } else setNotice("Preview only — no request or navigation was sent.")
+      }}
       onClickCapture={(event) => {
         const anchor = (event.target as HTMLElement).closest("a")
         if (anchor) {
           if (anchor.getAttribute("href")?.startsWith("#")) return
           event.preventDefault()
           event.stopPropagation()
-          const url = new URL(anchor.href, location.origin)
-          if (url.origin === location.origin && url.pathname === "/") {
-            const next = catalogQuerySchema.safeParse({
-              category: url.searchParams.get("category") ?? undefined,
-              after: url.searchParams.get("after") ?? undefined,
-              item: url.searchParams.get("item") ?? undefined,
-            })
-            if (next.success) {
-              setQuery(next.data)
-              setNotice("")
-              return
-            }
+          const next = storefrontPreviewQuery(anchor.href, location.origin)
+          if (next) {
+            setQuery(next)
+            setNotice("")
+            return
           }
           setNotice("Preview only — no request or navigation was sent.")
         }

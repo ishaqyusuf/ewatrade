@@ -43,6 +43,7 @@ const reads = new Set([
   "tenant.storeContext",
   "tenant.featureAvailability",
   "catalog.getItem",
+  "catalog.productShare",
   "catalog.listItems",
   "catalog.count",
   "catalog.listItemsPage",

@@ -13,7 +13,13 @@ export const serviceOfferingIdsSchema = z
 export const storefrontActionSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("openItem"), itemId: id }).strict(),
   z.object({ type: z.literal("openConversation") }).strict(),
-  z.object({ type: z.literal("whatsappEnquiry"), itemId: id }).strict(),
+  z
+    .object({
+      type: z.literal("whatsappEnquiry"),
+      itemId: id,
+      optionIds: serviceOfferingIdsSchema.optional(),
+    })
+    .strict(),
   z
     .object({
       type: z.literal("openServiceRequest"),

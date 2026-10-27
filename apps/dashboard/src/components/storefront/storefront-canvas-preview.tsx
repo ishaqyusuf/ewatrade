@@ -2,16 +2,17 @@
 
 import { getDataCacheGeneration, useTRPC, useTRPCClient } from "@/trpc/client"
 import type { StorefrontComposition } from "@ewatrade/storefront-contracts/manifest"
-import {
-  type CatalogQuery,
-  catalogQuerySchema,
-} from "@ewatrade/storefront-contracts/resources"
+import type { CatalogQuery } from "@ewatrade/storefront-contracts/resources"
 import type { StorefrontClientSnapshot } from "@ewatrade/storefront-runtime/server"
 import { canvasDefaults, canvasManifest } from "@ewatrade/storefront-templates"
 import type { CanvasEditing } from "@ewatrade/storefront-templates/canvas"
 import { StorefrontTemplate } from "@ewatrade/storefront-templates/render"
 import { useQuery } from "@tanstack/react-query"
 import { useEffect, useState } from "react"
+import {
+  storefrontPreviewFormQuery,
+  storefrontPreviewQuery,
+} from "./storefront-preview-navigation"
 import { StorefrontCanvasSkeleton } from "./storefront-skeleton"
 import "@ewatrade/storefront-templates/styles.css"
 
@@ -130,6 +131,19 @@ export function StorefrontCanvasPreview({
         <span>Private draft</span>
       </div>
       <div
+        onSubmitCapture={(event) => {
+          event.preventDefault()
+          event.stopPropagation()
+          const form = event.target
+          if (!(form instanceof HTMLFormElement)) return
+          const next = storefrontPreviewFormQuery(
+            form.action,
+            form.method,
+            new FormData(form),
+            location.origin,
+          )
+          if (next) setQuery(next)
+        }}
         onClickCapture={(event) => {
           const link = (event.target as HTMLElement).closest("a")
           if (link && !link.getAttribute("href")?.startsWith("#")) {
@@ -141,15 +155,8 @@ export function StorefrontCanvasPreview({
               )
               return
             }
-            const url = new URL(link.href, location.origin)
-            if (url.origin === location.origin && url.pathname === "/") {
-              const next = catalogQuerySchema.safeParse({
-                category: url.searchParams.get("category") ?? undefined,
-                item: url.searchParams.get("item") ?? undefined,
-                after: url.searchParams.get("after") ?? undefined,
-              })
-              if (next.success) setQuery(next.data)
-            }
+            const next = storefrontPreviewQuery(link.href, location.origin)
+            if (next) setQuery(next)
           }
         }}
       >

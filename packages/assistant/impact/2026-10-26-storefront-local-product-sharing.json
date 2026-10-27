@@ -1,0 +1,61 @@
+{
+  "version": 1,
+  "id": "2026-10-26-storefront-local-product-sharing",
+  "tickets": [
+    "H01",
+    "H02"
+  ],
+  "summary": "Local service-request coverage reconciliation, selected public option labels in WhatsApp enquiry drafts, and dashboard Catalog Product Share. No deployment/publication/provider effects.",
+  "noAssistantImpact": "Product Share is an explicit browser share/copy action over a protected read of an already public product. It grants no publishing authority and is intentionally form-only. Public customer enquiry selection is not a model tool. Existing assistant capabilities and confirmation rules are unchanged.",
+  "capabilities": [],
+  "procedures": [
+    {
+      "path": "catalog.productShare",
+      "status": "form_only",
+      "reason": "Dashboard Product Share dialog only. Authenticated Catalog readers in the current authorized Store may read an existing public product link; no publish, unpublish, consent, entitlement, provider or model authority."
+    }
+  ],
+  "docs": [
+    {
+      "topic": "feature",
+      "status": "local_only",
+      "path": ".brain/features/storefront-local-product-sharing.md"
+    },
+    {
+      "topic": "api",
+      "status": "local_only",
+      "path": ".brain/api/contracts.md"
+    },
+    {
+      "topic": "permissions",
+      "status": "local_only",
+      "path": ".brain/api/permissions.md"
+    },
+    {
+      "topic": "capability",
+      "status": "updated",
+      "path": "packages/assistant/src/capabilities/COVERAGE.md",
+      "note": "Classifies the new catalog.productShare procedure as form-only; no model capability or publishing authority."
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "test",
+      "path": "apps/api/src/catalog/product-share.test.ts",
+      "executed": true,
+      "result": "Injected current-source, runtime and read-scope checks pass without DB/provider calls."
+    },
+    {
+      "kind": "test",
+      "path": "packages/db/src/queries/catalog-product-share.test.ts",
+      "executed": true,
+      "result": "Actual public loader reuses published Store and plan cap; QA, unpublished and foreign Store cases refuse with an injected repository."
+    },
+    {
+      "kind": "test",
+      "path": "packages/storefront-runtime/src/links.test.ts",
+      "executed": true,
+      "result": "Current option label/order/encoding and unknown/duplicate option refusal pass offline."
+    }
+  ]
+}

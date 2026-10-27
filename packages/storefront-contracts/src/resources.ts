@@ -14,31 +14,41 @@ export type StorefrontScope = {
   currencyCode: string
 }
 export type CapabilityState = { available: boolean; reason?: string }
-export type StorefrontCapabilities = Record<StorefrontCapability, CapabilityState>
+export type StorefrontCapabilities = Record<
+  StorefrontCapability,
+  CapabilityState
+>
 export type PublicAsset = { id: string; url: string; alt: string }
 
 const availability = z.enum(["OUT_OF_STOCK", "MADE_TO_ORDER"]).nullable()
-export const publicCatalogOptionSchema = z.object({
-  id: z.string(),
-  name: z.string(),
-  priceMinor: z.number().int().nonnegative().nullable(),
-  currencyCode: z.string(),
-  availability,
-}).strict()
-export const publicCatalogItemSchema = z.object({
-  id: z.string(),
-  name: z.string(),
-  kind: z.enum(["PRODUCT", "SERVICE"]),
-  description: z.string().nullable(),
-  category: z.object({ id: z.string(), name: z.string() }).strict().nullable(),
-  illustrationId: z.string(),
-  photoUrl: z.string().optional(),
-  currencyCode: z.string(),
-  priceMinor: z.number().int().nonnegative().nullable(),
-  isFromPrice: z.boolean(),
-  availability,
-  options: z.array(publicCatalogOptionSchema),
-}).strict()
+export const publicCatalogOptionSchema = z
+  .object({
+    id: z.string(),
+    name: z.string(),
+    priceMinor: z.number().int().nonnegative().nullable(),
+    currencyCode: z.string(),
+    availability,
+  })
+  .strict()
+export const publicCatalogItemSchema = z
+  .object({
+    id: z.string(),
+    name: z.string(),
+    kind: z.enum(["PRODUCT", "SERVICE"]),
+    description: z.string().nullable(),
+    category: z
+      .object({ id: z.string(), name: z.string() })
+      .strict()
+      .nullable(),
+    illustrationId: z.string(),
+    photoUrl: z.string().optional(),
+    currencyCode: z.string(),
+    priceMinor: z.number().int().nonnegative().nullable(),
+    isFromPrice: z.boolean(),
+    availability,
+    options: z.array(publicCatalogOptionSchema),
+  })
+  .strict()
 export type PublicCatalogItem = z.infer<typeof publicCatalogItemSchema>
 
 export type StorefrontResources = {
@@ -50,6 +60,8 @@ export type StorefrontResources = {
     category: string | null
     nextCursor: string | null
     hasHiddenItems: boolean
+    /** Listing state only; item/after stay navigation hints, never resource authority. */
+    query?: Pick<CatalogQuery, "q" | "availability" | "sort">
   }
   contact: {
     chatToken: string | null
@@ -59,18 +71,58 @@ export type StorefrontResources = {
   assets: Record<string, PublicAsset>
 }
 
-export const catalogQuerySchema = z.object({
-  category: z.string().regex(/^[A-Za-z0-9_-]{1,128}$/).optional(),
-  item: z.string().regex(/^[A-Za-z0-9_-]{1,128}$/).optional(),
-  after: z.string().regex(/^(?:[ao]:)?[A-Za-z0-9_-]{1,128}$/).optional(),
-}).strict()
+export const catalogQuerySchema = z
+  .object({
+    category: z
+      .string()
+      .regex(/^[A-Za-z0-9_-]{1,128}$/)
+      .optional(),
+    item: z
+      .string()
+      .regex(/^[A-Za-z0-9_-]{1,128}$/)
+      .optional(),
+    after: z
+      .string()
+      .regex(/^(?:(?:[ao]:)?[A-Za-z0-9_-]{1,128}|s:[A-Za-z0-9_-]{1,1536})$/)
+      .optional(),
+    q: z.string().trim().max(120).optional(),
+    availability: z
+      .union([
+        z.enum(["available", "out_of_stock"]),
+        z.literal("").transform(() => undefined),
+      ])
+      .optional(),
+    sort: z
+      .union([
+        z.enum(["name_asc", "name_desc", "price_asc", "price_desc"]),
+        z.literal("").transform(() => undefined),
+      ])
+      .optional(),
+  })
+  .strict()
 export type CatalogQuery = z.infer<typeof catalogQuerySchema>
 
-export function storefrontQueryKey(scope: StorefrontScope, input: CatalogQuery = {}) {
+export function storefrontQueryKey(
+  scope: StorefrontScope,
+  input: CatalogQuery = {},
+) {
   const query = catalogQuerySchema.parse(input)
-  return ["storefront", scope.tenantId, scope.siteId, scope.storeId, scope.mode,
-    scope.releaseId, scope.locale, scope.currencyCode,
-    query.category ?? "", query.item ?? "", query.after ?? ""] as const
+  return [
+    "storefront",
+    scope.tenantId,
+    scope.siteId,
+    scope.storeId,
+    scope.mode,
+    scope.releaseId,
+    scope.locale,
+    scope.currencyCode,
+    query.category ?? "",
+    query.item ?? "",
+    query.after ?? "",
+    query.q ?? "",
+    query.availability ?? "",
+    query.sort ?? "",
+  ] as const
 }
 
 export function sectionResources(
@@ -100,9 +152,20 @@ export const STOREFRONT_RESOURCE_LIMITS = {
 export type StorefrontResourceLoader = (
   scope: StorefrontScope,
   query: CatalogQuery,
-) => Promise<{ resources: StorefrontResources; capabilities: StorefrontCapabilities }>
+) => Promise<{
+  resources: StorefrontResources
+  capabilities: StorefrontCapabilities
+}>
 
-export function unavailableCapabilities(reason = "Not available yet."): StorefrontCapabilities {
+export function unavailableCapabilities(
+  reason = "Not available yet.",
+): StorefrontCapabilities {
   const off = { available: false, reason }
-  return { catalog: off, services: off, conversation: off, whatsappEnquiry: off, serviceRequest: off }
+  return {
+    catalog: off,
+    services: off,
+    conversation: off,
+    whatsappEnquiry: off,
+    serviceRequest: off,
+  }
 }

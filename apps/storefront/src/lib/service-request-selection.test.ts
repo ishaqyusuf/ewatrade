@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test"
-import { cleaningServiceRequestUrl } from "@ewatrade/storefront-runtime/links"
+import { serviceRequestUrl } from "@ewatrade/storefront-runtime/links"
 import {
   selectedRequestOffering,
   serviceOfferingHint,
@@ -7,48 +7,54 @@ import {
 } from "./service-request-selection"
 
 const entry = {
-  publicToken: "published entry",
+  formId: "published-form",
   offeringIds: ["home-1", "event-1"],
 }
 const home = {
+  id: "home-cleaning",
   kind: "SERVICE",
   name: "Home Cleaning",
   options: [{ id: "home-1" }],
 }
 
-test("cleaning cards hand off the exact current form offering on the configured chat origin", () => {
+test("service cards hand off the exact current offering to the standalone storefront form", () => {
   expect(
-    cleaningServiceRequestUrl(
-      "https://chat.ewatrade-storefront.localhost",
+    serviceRequestUrl(
+      "https://shop.ewatrade-storefront.localhost",
       entry,
       home,
     ),
   ).toBe(
-    "https://chat.ewatrade-storefront.localhost/r/published%20entry?serviceOfferingId=home-1",
+    "https://shop.ewatrade-storefront.localhost/service-request?item=home-cleaning&serviceOfferingId=home-1",
   )
   const event = {
     ...home,
     name: "Event Cleaning",
     options: [{ id: "event-1" }],
   }
-  expect(
-    cleaningServiceRequestUrl("https://chat.example.com", entry, event),
-  ).toContain("serviceOfferingId=event-1")
+  expect(serviceRequestUrl("https://shop.example.com", entry, event)).toContain(
+    "serviceOfferingId=event-1",
+  )
 })
 
-test("no request action without a current eligible entry or an unambiguous in-form cleaning offering", () => {
+test("request navigation refuses missing forms, products and foreign options, without restricting service names", () => {
   expect(
-    cleaningServiceRequestUrl("https://chat.example.com", undefined, home),
+    serviceRequestUrl("https://shop.example.com", undefined, home),
   ).toBeNull()
   for (const item of [
     { ...home, kind: "PRODUCT" },
-    { ...home, name: "Laundry" },
     { ...home, options: [{ id: "other-store-offering" }] },
-    { ...home, options: [{ id: "home-1" }, { id: "event-1" }] },
   ])
     expect(
-      cleaningServiceRequestUrl("https://chat.example.com", entry, item),
+      serviceRequestUrl("https://shop.example.com", entry, item),
     ).toBeNull()
+  const laundry = { ...home, name: "Laundry" }
+  expect(
+    serviceRequestUrl("https://shop.example.com", entry, laundry),
+  ).toContain("/service-request?item=home-cleaning&serviceOfferingId=home-1")
+  expect(
+    serviceRequestUrl("https://shop.example.com", entry, home, "foreign"),
+  ).toBeNull()
 })
 
 test("the destination selects only current form members and preserves selection in its canonical URL", () => {

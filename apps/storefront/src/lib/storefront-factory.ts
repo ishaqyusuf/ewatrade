@@ -6,7 +6,7 @@ import { storefrontActionSchema } from "@ewatrade/storefront-contracts/actions"
 import { STOREFRONT_RUNTIME_VERSION } from "@ewatrade/storefront-contracts/manifest"
 import { catalogQuerySchema } from "@ewatrade/storefront-contracts/resources"
 import {
-  productWhatsAppUrl,
+  itemWhatsAppUrl,
   serviceRequestUrl,
 } from "@ewatrade/storefront-runtime/links"
 import { publicStorefrontResources } from "@ewatrade/storefront-runtime/projection"
@@ -158,10 +158,11 @@ export async function handleFactoryStorefrontAction(
         }
         const page = new URL(`https://${host}/`)
         page.searchParams.set("item", item.id)
-        const href = productWhatsAppUrl(
+        const href = itemWhatsAppUrl(
           store.whatsAppPhone,
-          item.name,
+          item,
           page.toString(),
+          requested.optionIds,
         )
         return href ? { status: "navigate" as const, href } : unavailable
       },

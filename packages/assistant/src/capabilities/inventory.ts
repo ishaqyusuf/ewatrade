@@ -75,6 +75,11 @@ formOnly(
 
 // Catalog
 formOnly(
+  "catalog",
+  "Dashboard Product Share reads an already public product link for explicit browser Share/Copy; no publishing, provider or model authority.",
+  ["catalog.productShare"],
+)
+formOnly(
   "sales",
   "Manual bank instructions, customer reports and merchant receipt confirmation use the payment-link/review forms. Customer evidence never authorizes a payment; no model or WhatsApp payment approval is enabled.",
   ["businessBanking.*"],

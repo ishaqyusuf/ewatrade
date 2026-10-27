@@ -48,6 +48,7 @@ function TemplateBody(props: {
       after={props.after}
       customerChatOrigin={props.customerChatOrigin}
       onTaglineChange={props.onTaglineChange}
+      syncUrl={props.syncUrl}
     />
   )
 }

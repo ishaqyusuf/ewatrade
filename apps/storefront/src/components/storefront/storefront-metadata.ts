@@ -1,3 +1,4 @@
+import type { CatalogQuery } from "@ewatrade/storefront-contracts/resources"
 import { storefrontUrl } from "@ewatrade/storefront-runtime/links"
 import { formatStorefrontPrice } from "@ewatrade/storefront-runtime/presentation"
 import { storefrontPageUrl } from "@ewatrade/storefront-runtime/seo"
@@ -31,6 +32,9 @@ export function storefrontMetadata(
     after?: string
     category?: string | null
     indexable?: boolean
+    q?: string
+    availability?: CatalogQuery["availability"]
+    sort?: CatalogQuery["sort"]
   } = {},
 ): Metadata {
   const item = query.page === "about" ? null : store.highlightedItem
@@ -78,7 +82,9 @@ export function storefrontMetadata(
       images: images.map((image) => image.url),
     },
     robots:
-      store.isQaPreview || query.indexable === false
+      store.isQaPreview ||
+      query.indexable === false ||
+      (!item && !!(query.q?.trim() || query.availability || query.sort))
         ? { index: false, follow: false }
         : { index: true, follow: true },
   }

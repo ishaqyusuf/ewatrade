@@ -58,11 +58,14 @@ import {
 } from "react"
 import type { SectionInstance } from "../../../storefront-contracts/src/manifest"
 import type { PublicCatalogItem } from "../../../storefront-contracts/src/resources"
+import { CatalogListingControls } from "../shared/catalog-controls"
 import {
-  TemplateActions,
+  LISTING_NO_RESULTS,
+  catalogListingFiltered,
   catalogListingHref,
-  useCommerceDetail,
-} from "../shared/commerce"
+  catalogListingQuery,
+} from "../shared/catalog-listing"
+import { TemplateActions, useCommerceDetail } from "../shared/commerce"
 
 type Copy = (field: string, fallback?: string, multiline?: boolean) => ReactNode
 
@@ -241,6 +244,8 @@ export function MarketHallFloor({
   const [root, wide] = useWide<HTMLDivElement>(960)
   const { floor } = marketHallSplit(catalog.items)
   const feature = marketHallFeature(floor)
+  const query = catalogListingQuery(catalog.query)
+  const filtered = catalogListingFiltered(query)
   const active = catalog.category ?? "all"
   const showCategories =
     section.settings["show-categories"] === true &&
@@ -271,15 +276,26 @@ export function MarketHallFloor({
           ) : null}
           {showCategories ? (
             <TabsList aria-label="Categories" className="mh-tabs">
-              {tab("all", copy("all-label", "All items"), catalogListingHref())}
+              {tab(
+                "all",
+                copy("all-label", "All items"),
+                catalogListingHref(null, null, query),
+              )}
               {catalog.categories.map((category) =>
                 tab(
                   category.id,
                   category.name,
-                  catalogListingHref(category.id),
+                  catalogListingHref(category.id, null, query),
                 ),
               )}
             </TabsList>
+          ) : null}
+          {catalog.items.length || filtered || query.sort || after ? (
+            <CatalogListingControls
+              category={catalog.category}
+              query={query}
+              stacked={wide}
+            />
           ) : null}
         </div>
         <TabsContent value={active} className="mh-floor">
@@ -344,6 +360,30 @@ export function MarketHallFloor({
                 </ul>
               </section>
             </>
+          ) : filtered ? (
+            <Empty className="mh-empty">
+              <EmptyHeader>
+                <EmptyTitle>{LISTING_NO_RESULTS.title}</EmptyTitle>
+                <EmptyDescription>
+                  {LISTING_NO_RESULTS.description}
+                </EmptyDescription>
+              </EmptyHeader>
+              <EmptyContent>
+                <Button
+                  variant="outline"
+                  nativeButton={false}
+                  render={
+                    <Link
+                      prefetch={false}
+                      scroll={false}
+                      href={catalogListingHref(catalog.category)}
+                    />
+                  }
+                >
+                  {LISTING_NO_RESULTS.reset}
+                </Button>
+              </EmptyContent>
+            </Empty>
           ) : (
             <Empty className="mh-empty">
               <EmptyHeader>
@@ -388,6 +428,7 @@ export function MarketHallFloor({
                   href={catalogListingHref(
                     catalog.category,
                     catalog.nextCursor,
+                    query,
                   )}
                 />
               }
@@ -402,7 +443,7 @@ export function MarketHallFloor({
               render={
                 <Link
                   prefetch={false}
-                  href={catalogListingHref(catalog.category)}
+                  href={catalogListingHref(catalog.category, null, query)}
                 />
               }
             >
@@ -598,6 +639,7 @@ function ItemSheet({
                 key={selected.id}
                 domain={domain}
                 item={selected}
+                selectedOptions={detail.selectedOptions}
               />
               {action.notice ? (
                 <output className="mh-help">{action.notice}</output>

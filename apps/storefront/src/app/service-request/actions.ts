@@ -1,6 +1,7 @@
 "use server"
 
 import { isPublicServiceUnavailable } from "@/lib/public-service-errors"
+import { storefrontRequestResult } from "@/lib/storefront-request-result"
 import { prisma } from "@ewatrade/db"
 import {
   StoreConversationError,
@@ -68,25 +69,15 @@ export async function sendStorefrontServiceRequest(
         ]),
       ),
     }
-  try {
-    return {
-      kind: "received",
-      receipt: await submitStorefrontServiceRequest(
+  return storefrontRequestResult(
+    async () =>
+      submitStorefrontServiceRequest(
         prisma,
         parsed.data,
         (await headers()).get("host") ?? "",
       ),
-    }
-  } catch (error) {
-    if (
+    (error) =>
       isPublicServiceUnavailable(error) ||
-      error instanceof StoreConversationError
-    )
-      return {
-        kind: "error",
-        message:
-          "We couldn’t send this request. The service may have changed. Refresh to check availability, or enquire with the business on WhatsApp.",
-      }
-    throw error
-  }
+      error instanceof StoreConversationError,
+  )
 }

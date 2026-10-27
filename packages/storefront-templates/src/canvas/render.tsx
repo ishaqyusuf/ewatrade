@@ -204,6 +204,7 @@ export function CanvasSection({
   after,
   editing,
   thumbnail = false,
+  syncUrl = false,
 }: {
   section: SectionInstance
   snapshot: StorefrontClientSnapshot
@@ -212,6 +213,7 @@ export function CanvasSection({
   after?: string
   editing?: CanvasEditing
   thumbnail?: boolean
+  syncUrl?: boolean
 }) {
   const kind = portableSectionKind(section.type)
   const source =
@@ -323,6 +325,7 @@ export function CanvasSection({
   } else if (kind === "collection")
     body = (
       <CommerceCollection
+        syncUrl={syncUrl && !editing && !thumbnail}
         domain={domain}
         kind={family === "desk" ? "services" : "retail"}
         heading={String(section.settings.heading)}
@@ -503,6 +506,7 @@ export function CanvasStorefront({
           .map((section) => (
             <CanvasSection
               key={section.id}
+              syncUrl={syncUrl && !editing && !onPageChange}
               section={section}
               snapshot={snapshot}
               domain={domain}

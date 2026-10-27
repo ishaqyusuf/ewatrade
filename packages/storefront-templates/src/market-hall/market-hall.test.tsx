@@ -274,9 +274,9 @@ test("mixed catalog renders the floor, every board item, the services counter an
   )
   expect(html).toContain("Fixture Store")
   expect(html).toContain('role="tablist"')
-  expect(html).toContain('href="?category=cat-a"')
+  expect(html).toContain('href="/?category=cat-a"')
   expect(html).toMatch(
-    /aria-selected="true"[^>]*href="\?category=cat-b"|href="\?category=cat-b"[^>]*aria-selected="true"/,
+    /aria-selected="true"[^>]*href="\/\?category=cat-b"|href="\/\?category=cat-b"[^>]*aria-selected="true"/,
   )
   expect(html).toContain("Prices in this collection")
   expect(html).toContain('href="/?item=p1"')
@@ -312,9 +312,58 @@ test("empty and paged catalogs show honest states and keep server pagination", (
     }),
     { after: "a:item-0" },
   )
-  expect(paged).toContain('href="?category=cat-a&amp;after=a%3Aitem-2"')
+  expect(paged).toContain('href="/?category=cat-a&amp;after=a%3Aitem-2"')
   expect(paged).toContain("Back to start")
   expect(paged).toContain("A selection of this shop’s items is shown.")
+})
+
+test("listing controls keep search, availability and sort across category, pagination and first-page links", () => {
+  const html = render(
+    snapshot({
+      categories: [
+        { id: "cat-a", name: "Baskets" },
+        { id: "cat-b", name: "Trays" },
+      ],
+      category: "cat-a",
+      query: { q: "  raffia  ", availability: "available", sort: "name_desc" },
+      nextCursor: "s:cursor-2",
+    }),
+    { after: "s:cursor-1", syncUrl: true },
+  )
+  expect(html).toContain('role="search"')
+  expect(html).toContain('name="category" value="cat-a"')
+  expect(html).toContain('value="raffia"')
+  expect(html).toMatch(/<option value="available" selected="">Not out of stock/)
+  expect(html).toMatch(/<option value="name_desc" selected="">Name Z–A/)
+  // Category tabs keep the controls and drop the cursor.
+  expect(html).toContain(
+    'href="/?category=cat-b&amp;q=raffia&amp;availability=available&amp;sort=name_desc"',
+  )
+  expect(html).toContain(
+    'href="/?q=raffia&amp;availability=available&amp;sort=name_desc"',
+  )
+  // Pagination and Back to start keep every control.
+  expect(html).toContain(
+    'href="/?category=cat-a&amp;q=raffia&amp;availability=available&amp;sort=name_desc&amp;after=s%3Acursor-2"',
+  )
+  expect(html).toContain(
+    'href="/?category=cat-a&amp;q=raffia&amp;availability=available&amp;sort=name_desc">Back to start',
+  )
+  // Clear filters resets category, search, filter, sort and cursor together.
+  expect(html).toMatch(/href="\/"[^>]*>Clear filters/)
+})
+
+test("a narrowed listing with no matches says so and offers the reset, not the empty-shop copy", () => {
+  const html = render(
+    snapshot({ items: [], query: { availability: "out_of_stock" } }),
+  )
+  expect(html).toContain("No matching items")
+  expect(html).toMatch(/href="\/"[^>]*>Clear search/)
+  expect(html).not.toContain("The collection is being prepared")
+  // A sort alone never hides items, so a truly empty shop keeps its own copy.
+  const sorted = render(snapshot({ items: [], query: { sort: "price_asc" } }))
+  expect(sorted).toContain("The collection is being prepared")
+  expect(sorted).toContain('role="search"')
 })
 
 test("About page reuses portable sections with real business facts; copy stays escaped", () => {

@@ -1,4 +1,7 @@
-import type { PublicCatalogItem } from "@ewatrade/storefront-contracts/resources"
+import type {
+  CatalogQuery,
+  PublicCatalogItem,
+} from "@ewatrade/storefront-contracts/resources"
 import { storefrontUrl } from "./links"
 
 export type StorefrontSeoStore = {
@@ -32,6 +35,9 @@ export function storefrontPageUrl(
     category?: string | null
     after?: string
     item?: string
+    q?: string
+    availability?: CatalogQuery["availability"]
+    sort?: CatalogQuery["sort"]
   } = {},
 ) {
   const url = new URL(storefrontUrl(store.slug, platformDomain, query.item))
@@ -41,6 +47,10 @@ export function storefrontPageUrl(
   } else if (!query.item) {
     if (query.category) url.searchParams.set("category", query.category)
     if (query.after) url.searchParams.set("after", query.after)
+    if (query.q?.trim()) url.searchParams.set("q", query.q.trim())
+    if (query.availability)
+      url.searchParams.set("availability", query.availability)
+    if (query.sort) url.searchParams.set("sort", query.sort)
   }
   return url.toString()
 }
@@ -52,6 +62,9 @@ export function storefrontStructuredData(
     page?: "home" | "about"
     category?: string | null
     after?: string
+    q?: string
+    availability?: CatalogQuery["availability"]
+    sort?: CatalogQuery["sort"]
   } = {},
 ) {
   const home = storefrontUrl(store.slug, platformDomain)

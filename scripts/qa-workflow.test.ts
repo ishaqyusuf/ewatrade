@@ -46,6 +46,30 @@ describe("fast workflow scope", () => {
       selectQuickPlan(["apps/mobile/src/lib/quantity.test.ts"]).tests,
     ).toContain("apps/mobile/src/lib/quantity.test.ts")
   })
+  test("storefront packages map to shared smoke and exercise their public contracts", () => {
+    for (const path of [
+      "packages/storefront-contracts/src/actions.ts",
+      "packages/storefront-runtime/src/links.ts",
+      "packages/storefront-templates/src/shared/commerce.tsx",
+      "packages/storefront-templates/src/market-hall/render.tsx",
+    ]) {
+      const plan = selectQuickPlan([path])
+      expect(plan.unknown).toEqual([])
+      expect(plan.groups).toEqual(["core", "domain", "web", "mobile"])
+      expect(plan.tests).toContain(
+        "packages/storefront-runtime/src/links.test.ts",
+      )
+      expect(plan.tests).toContain(
+        "packages/storefront-templates/src/shared/enquiry-selection.test.ts",
+      )
+      expect(plan.tests).toContain(
+        "apps/storefront/src/lib/service-request-selection.test.ts",
+      )
+    }
+    expect(
+      selectQuickPlan(["packages/storefront-other/src/a.ts"]).unknown,
+    ).toEqual(["packages/storefront-other/src/a.ts"])
+  })
   test("deduplicates paths and refuses traversal/flag injection", () => {
     expect(normalizeQuickPaths(["./package.json", "package.json"])).toEqual([
       "package.json",

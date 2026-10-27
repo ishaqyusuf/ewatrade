@@ -15,6 +15,14 @@ export const suites = {
     "apps/dashboard/src/lib/inventory-quantity.test.ts",
     "apps/marketing/src/lib/signup-phone.test.ts",
     "apps/storefront/src/lib/service-display.test.ts",
+    "apps/storefront/src/lib/service-request-selection.test.ts",
+    "apps/storefront/src/lib/storefront-request-result.test.ts",
+    "apps/dashboard/src/components/storefront/storefront-preview-navigation.test.ts",
+    "packages/storefront-contracts/src/resources.test.ts",
+    "packages/storefront-runtime/src/links.test.ts",
+    "packages/storefront-runtime/src/share.test.ts",
+    "packages/storefront-templates/src/shared/enquiry-selection.test.ts",
+    "packages/storefront-templates/src/shared/detail-history.test.ts",
   ],
   mobile: [
     "apps/mobile/src/lib/qa-runtime-identity.test.ts",
@@ -29,6 +37,7 @@ export const suites = {
     "packages/service-commerce/src/contracts.test.ts",
     "packages/jobs/src/schedule-policy.test.ts",
     "apps/api/src/health-routes.test.ts",
+    "packages/db/src/queries/public-storefront-listing.test.ts",
   ],
 }
 type Suite = keyof typeof suites
@@ -122,7 +131,7 @@ export function selectQuickPlan(files: string[]) {
       groups.add("mobile")
       groups.add("domain")
     } else if (
-      /^(apps\/api|packages\/(db|assistant|utils|payments|catalog|errors|jobs|service-commerce|storefront-runtime))\//.test(
+      /^(apps\/api|packages\/(db|assistant|utils|payments|catalog|errors|jobs|service-commerce|storefront-runtime|storefront-contracts|storefront-templates))\//.test(
         file,
       )
     ) {

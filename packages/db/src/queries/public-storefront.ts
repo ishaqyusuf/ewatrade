@@ -14,6 +14,16 @@ import {
   publicStorefrontOptionName,
   publicStorefrontWhatsAppPhone,
 } from "./public-storefront-display"
+import {
+  type PublicStorefrontQuery,
+  applyCappedListing,
+  decodePublicListingCursor,
+  encodePublicListingCursor,
+  normalizePublicListing,
+  publicListingBinding,
+  publicListingSearchWhere,
+  publicPriceSortedIdsSql,
+} from "./public-storefront-listing"
 import { getStorefrontServiceRequestEntry } from "./public-storefront-service-request"
 import {
   findRetailOpsPlan,
@@ -31,7 +41,7 @@ export async function getPublicStorefrontForHost(
   db: DbClient,
   host: string,
   after?: string,
-  options: { category?: string; item?: string } = {},
+  options: PublicStorefrontQuery = {},
 ) {
   const authority = await resolveStorefrontHostAuthority(db, host)
   if (!authority) return null
@@ -81,7 +91,7 @@ export async function getPublicStorefront(
   db: DbClient,
   slug: string,
   after?: string,
-  options: { category?: string; item?: string } = {},
+  options: PublicStorefrontQuery = {},
 ) {
   return readStorefront(db, slug, after, false, options)
 }
@@ -96,7 +106,7 @@ export async function getPublicStorefrontForSite<T extends { storeId: string }>(
   host: string,
   resolveSite: (tenantId: string) => Promise<T | null>,
   after?: string,
-  options: { category?: string; item?: string } = {},
+  options: PublicStorefrontQuery = {},
 ) {
   const authority = await resolveStorefrontHostAuthority(db, host)
   if (!authority) return null
@@ -131,7 +141,7 @@ export async function getPublicStorefrontForSite<T extends { storeId: string }>(
 export async function getScopedStorefrontDesignPreview(
   db: DbClient,
   scope: { tenantId: string; storeId: string },
-  options: { after?: string; category?: string; item?: string } = {},
+  options: PublicStorefrontQuery & { after?: string } = {},
 ) {
   const tenant = await db.tenant.findUnique({
     where: { id: scope.tenantId },
@@ -154,7 +164,7 @@ async function readStorefront(
   slug: string,
   after: string | undefined,
   localQaPreview: boolean,
-  options: { category?: string; item?: string },
+  options: PublicStorefrontQuery,
   /** Factory loader only: the Site's trusted Store. No oldest-Store fallback. */
   trustedStoreId?: string,
 ) {
@@ -223,14 +233,23 @@ async function readStorefront(
     typeof value === "string" && /^[A-Za-z0-9_-]{1,128}$/.test(value)
   const category =
     paidListing && validId(options.category) ? options.category : null
-  const baseWhere = {
+  const listing = normalizePublicListing(options)
+  const eligibleWhere = {
     ...saleEligibleCatalogItem,
     tenantId: tenant.id,
     status: "ACTIVE" as const,
     archivedAt: null,
     offerings: { some: offeringWhere },
+  } satisfies Prisma.CatalogItemWhereInput
+  const baseWhere = {
+    ...eligibleWhere,
     ...(category ? { categoryId: category } : {}),
   } satisfies Prisma.CatalogItemWhereInput
+  // Search narrows only paid listings here; included plans filter after their cap.
+  const listWhere: Prisma.CatalogItemWhereInput =
+    paidListing && listing.terms.length
+      ? { AND: [baseWhere, ...publicListingSearchWhere(listing.terms)] }
+      : baseWhere
   const select = {
     id: true,
     name: true,
@@ -311,14 +330,16 @@ async function readStorefront(
   // Paid pagination has two stable buckets, so sold-out items remain last across pages.
   // Aggregate only eligible Store stock, keeping quantities in the repository.
   let outVariantIds: string[] = []
-  if (paidListing) {
+  const priceSort = listing.sort?.startsWith("price") ?? false
+  const nameSort = listing.sort?.startsWith("name") ?? false
+  if (paidListing && (!(nameSort || priceSort) || listing.availability)) {
     const balances = await db.stockBalanceSource.groupBy({
       by: ["variantId", "inventoryUnitId"],
       where: {
         tenantId: tenant.id,
         storeId: store.id,
         custodyType: "STORE",
-        variant: { catalogItem: baseWhere },
+        variant: { catalogItem: listWhere },
       },
       _sum: { onHandQuantity: true, reservedQuantity: true },
     })
@@ -352,74 +373,198 @@ async function readStorefront(
     },
   } satisfies Prisma.CatalogItemWhereInput
   const orderBy = [{ createdAt: "asc" as const }, { id: "asc" as const }]
-  let cursorId: string | null = null
-  let outPage = false
-  if (paidListing && after) {
-    const raw = after.replace(/^[ao]:/, "")
-    if (!validId(raw)) return null
-    const cursorItem = await db.catalogItem.findFirst({
-      where: { AND: [baseWhere, { id: raw }] },
-      select,
-    })
-    if (!cursorItem) return null
-    cursorId = cursorItem.id
-    outPage = projectItem(cursorItem).availability === "OUT_OF_STOCK"
-    if (
-      (after.startsWith("o:") && !outPage) ||
-      (after.startsWith("a:") && outPage)
-    )
-      return null
-  }
-  let rows: Row[]
-  if (!paidListing) {
-    // The included plan keeps the first three eligible entries, independent of filters/stock.
-    rows = await db.catalogItem.findMany({
-      where: baseWhere,
-      orderBy,
-      take: limit + 1,
-      select,
-    })
-  } else {
-    rows = outPage
-      ? []
-      : await db.catalogItem.findMany({
-          where: {
-            AND: [
-              baseWhere,
-              ...(outVariantIds.length ? [{ NOT: outWhere }] : []),
-            ],
-          },
-          orderBy,
-          take: limit + 1,
-          ...(cursorId ? { cursor: { id: cursorId }, skip: 1 } : {}),
-          select,
-        })
-    if (outVariantIds.length && rows.length <= limit) {
+  const take = limit + 1
+  const readBuckets = async (
+    where: Prisma.CatalogItemWhereInput,
+    cursorId: string | null,
+    outPage: boolean,
+    only?: "a" | "o",
+  ) => {
+    const rows: Row[] =
+      outPage || only === "o"
+        ? []
+        : await db.catalogItem.findMany({
+            where: {
+              AND: [
+                where,
+                ...(outVariantIds.length ? [{ NOT: outWhere }] : []),
+              ],
+            },
+            orderBy,
+            take,
+            ...(cursorId ? { cursor: { id: cursorId }, skip: 1 } : {}),
+            select,
+          })
+    if (only !== "a" && outVariantIds.length && rows.length <= limit) {
       rows.push(
         ...(await db.catalogItem.findMany({
-          where: { AND: [baseWhere, outWhere] },
+          where: { AND: [where, outWhere] },
           orderBy,
-          take: limit + 1 - rows.length,
+          take: take - rows.length,
           ...(outPage && cursorId ? { cursor: { id: cursorId }, skip: 1 } : {}),
           select,
         })),
       )
     }
+    return rows
   }
-  const items = rows.slice(0, limit).map(projectItem)
-  if (!paidListing)
-    items.sort(
-      (a, b) =>
-        Number(a.availability === "OUT_OF_STOCK") -
-        Number(b.availability === "OUT_OF_STOCK"),
-    )
-  const requestedItem = validId(options.item) ? options.item : null
-  let highlightedItem = items.find((item) => item.id === requestedItem) ?? null
-  if (paidListing && requestedItem && !highlightedItem) {
-    const row = await db.catalogItem.findFirst({
-      where: { AND: [baseWhere, { id: requestedItem }] },
+  const cursorRow = (where: Prisma.CatalogItemWhereInput, id: string) =>
+    db.catalogItem.findFirst({ where: { AND: [where, { id }] }, select })
+  const bucketOf = (item: { availability: string | null }) =>
+    item.availability === "OUT_OF_STOCK" ? ("o" as const) : ("a" as const)
+  const binding = publicListingBinding({ storeId: store.id, category, listing })
+  let items: ReturnType<typeof projectItem>[]
+  let cappedItems: ReturnType<typeof projectItem>[] = []
+  let hasHiddenItems = false
+  let nextCursor: string | null = null
+  if (!paidListing) {
+    // The included plan keeps the first N eligible entries; search/filter/sort only
+    // narrow or reorder those, so they can never reveal an entry beyond the cap.
+    const rows = await db.catalogItem.findMany({
+      where: baseWhere,
+      orderBy,
+      take,
       select,
     })
+    hasHiddenItems = rows.length > limit
+    cappedItems = rows.slice(0, limit).map(projectItem)
+    items = applyCappedListing([...cappedItems], listing, store.currencyCode)
+  } else if (!listing.advanced) {
+    // Unchanged default listing with legacy `(a:|o:)?ID` bucket cursors.
+    let cursorId: string | null = null
+    let outPage = false
+    if (after) {
+      const raw = after.replace(/^[ao]:/, "")
+      if (!validId(raw)) return null
+      const cursorItem = await cursorRow(baseWhere, raw)
+      if (!cursorItem) return null
+      cursorId = cursorItem.id
+      outPage = projectItem(cursorItem).availability === "OUT_OF_STOCK"
+      if (
+        (after.startsWith("o:") && !outPage) ||
+        (after.startsWith("a:") && outPage)
+      )
+        return null
+    }
+    const rows = await readBuckets(baseWhere, cursorId, outPage)
+    items = rows.slice(0, limit).map(projectItem)
+    const last = items.at(-1)
+    nextCursor =
+      rows.length > limit && last ? `${bucketOf(last)}:${last.id}` : null
+  } else {
+    // Advanced listing accepts only `s:` cursors bound to this exact query state.
+    const cursor = after
+      ? decodePublicListingCursor(after, binding, listing.sort)
+      : null
+    if (after && !cursor) return null
+    const only =
+      listing.availability === "out_of_stock"
+        ? ("o" as const)
+        : listing.availability === "available"
+          ? ("a" as const)
+          : undefined
+    if (!listing.sort) {
+      let outPage = false
+      if (cursor?.m === "d") {
+        const row = await cursorRow(listWhere, cursor.id)
+        if (!row) return null
+        outPage = bucketOf(projectItem(row)) === "o"
+        if ((outPage ? "o" : "a") !== cursor.b || (only && only !== cursor.b))
+          return null
+      }
+      const rows = await readBuckets(
+        listWhere,
+        cursor?.id ?? null,
+        outPage,
+        only,
+      )
+      items = rows.slice(0, limit).map(projectItem)
+      const last = items.at(-1)
+      nextCursor =
+        rows.length > limit && last
+          ? encodePublicListingCursor(binding, {
+              m: "d",
+              b: bucketOf(last),
+              id: last.id,
+            })
+          : null
+    } else {
+      const noOutStock = only === "o" && !outVariantIds.length
+      const filteredWhere: Prisma.CatalogItemWhereInput = {
+        AND: [
+          listWhere,
+          ...(only === "o" ? [outWhere] : []),
+          ...(only === "a" && outVariantIds.length ? [{ NOT: outWhere }] : []),
+        ],
+      }
+      const direction = listing.sort.endsWith("_asc") ? "asc" : "desc"
+      if (nameSort) {
+        if (cursor && !(await cursorRow(filteredWhere, cursor.id))) return null
+        const rows = noOutStock
+          ? []
+          : await db.catalogItem.findMany({
+              where: filteredWhere,
+              orderBy: [{ name: direction }, { id: "asc" }],
+              take,
+              ...(cursor ? { cursor: { id: cursor.id }, skip: 1 } : {}),
+              select,
+            })
+        items = rows.slice(0, limit).map(projectItem)
+        const last = items.at(-1)
+        nextCursor =
+          rows.length > limit && last
+            ? encodePublicListingCursor(binding, { m: "n", id: last.id })
+            : null
+      } else {
+        // The database orders computed prices; the exact Prisma predicate re-reads the page.
+        const page = noOutStock
+          ? []
+          : await db.$queryRaw<{ id: string; price: number | null }[]>(
+              publicPriceSortedIdsSql({
+                tenantId: tenant.id,
+                storeId: store.id,
+                currencyCode: store.currencyCode,
+                category,
+                terms: listing.terms,
+                availability: listing.availability,
+                outVariantIds,
+                direction,
+                after: cursor?.m === "p" ? cursor : null,
+                take,
+              }),
+            )
+        const ids = page.slice(0, limit).map((row) => row.id)
+        const found = ids.length
+          ? await db.catalogItem.findMany({
+              where: { AND: [filteredWhere, { id: { in: ids } }] },
+              select,
+            })
+          : []
+        const rowsById = new Map(found.map((row) => [row.id, row]))
+        items = ids.flatMap((id) => {
+          const row = rowsById.get(id)
+          return row ? [projectItem(row)] : []
+        })
+        const last = page[limit - 1]
+        nextCursor =
+          page.length > limit && last
+            ? encodePublicListingCursor(binding, {
+                m: "p",
+                p: last.price === null ? null : Number(last.price),
+                id: last.id,
+              })
+            : null
+      }
+    }
+  }
+  // Deep links ignore listing filters but never reach beyond the public cap.
+  const requestedItem = validId(options.item) ? options.item : null
+  let highlightedItem =
+    (paidListing ? items : cappedItems).find(
+      (item) => item.id === requestedItem,
+    ) ?? null
+  if (paidListing && requestedItem && !highlightedItem) {
+    const row = await cursorRow(eligibleWhere, requestedItem)
     highlightedItem = row ? projectItem(row) : null
   }
   const categories = paidListing
@@ -479,11 +624,9 @@ async function readStorefront(
       messagesEnabled,
       isQaPreview,
     }),
-    hasHiddenItems: plan.limits.storefrontItems !== null && rows.length > limit,
-    nextCursor:
-      paidListing && rows.length > limit && items.length
-        ? `${items.at(-1)?.availability === "OUT_OF_STOCK" ? "o" : "a"}:${items.at(-1)?.id}`
-        : null,
+    ...(listing.advanced ? { query: listing.query } : {}),
+    hasHiddenItems,
+    nextCursor,
     items,
   }
 }

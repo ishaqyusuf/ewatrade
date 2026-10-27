@@ -6,10 +6,10 @@ Tickets refer to the Brain plan `.brain/plans/2026-10-09-assistant-business-oper
 
 ## Summary
 
-- Router procedures: 716 (539 merchant, 177 public/account/internal)
+- Router procedures: 717 (540 merchant, 177 public/account/internal)
 - Merchant supported by a capability: 173
 - Merchant planned: 133
-- Merchant form-only: 172
+- Merchant form-only: 173
 - Merchant excluded: 61
 - Capabilities: 162 (84 read, 78 write)
 
@@ -461,6 +461,7 @@ track conversational evaluation separately from these source test links.
 | `catalog.photos.remove` | mutation | catalog | catalog | form_only | Photo capture and upload belong to the product form. |
 | `catalog.photos.replace` | mutation | catalog | catalog | form_only | Photo capture and upload belong to the product form. |
 | `catalog.photos.reuse` | mutation | Owner/Admin only | catalog | form_only | Photo capture and upload belong to the product form. |
+| `catalog.productShare` | query | read | catalog | form_only | Dashboard Product Share reads an already public product link for explicit browser Share/Copy; no publishing, provider or model authority. |
 | `catalog.publishUnitConfiguration` | mutation | catalog | catalog | supported | catalog.units.publish |
 | `catalog.setOfferingAvailability` | mutation | catalog | catalog | supported | catalog.availability.update |
 | `catalog.setProductUsage` | mutation | Owner/Admin only | catalog | planned | B03 |

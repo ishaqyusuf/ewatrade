@@ -42,6 +42,7 @@ export function StorefrontContent({
                   page: pageKey === "about" ? "about" : "home",
                   after,
                   category: store.category,
+                  ...store.query,
                 },
               ),
             ),

@@ -19,11 +19,15 @@ import {
   MoreVerticalIcon,
   PencilEdit02Icon,
   RulerIcon,
+  Share01Icon,
 } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
+import { useState } from "react"
 import { useCatalogThemeClass } from "../catalog-appearance"
 import { CatalogIllustrationPreview } from "../catalog-illustration-preview"
 import { CatalogPhotoPreview } from "../catalog-photo-preview"
+import { canShareCatalogProduct } from "../catalog-product-share"
+import { CatalogProductShareDialog } from "../catalog-product-share-dialog"
 import type { CatalogDetail } from "./display"
 import { catalogDetailAffordances } from "./read-access"
 export function CatalogDetailHeader({
@@ -44,6 +48,7 @@ export function CatalogDetailHeader({
     inventoryAllowed: detail.inventoryAllowed,
     canManageUsage: detail.canManageUsage,
   })
+  const [sharing, setSharing] = useState(false)
   return (
     <SheetHeader className="shrink-0 flex-row items-start gap-4 px-6 pt-[max(1.5rem,env(safe-area-inset-top))] pb-6">
       <div className="flex size-16 shrink-0 items-center justify-center overflow-hidden bg-muted">
@@ -96,6 +101,26 @@ export function CatalogDetailHeader({
             Edit
           </Button>
         )}
+        {canShareCatalogProduct(item) ? (
+          <>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setSharing(true)}
+            >
+              <HugeiconsIcon icon={Share01Icon} data-icon="inline-start" />
+              Share
+            </Button>
+            <CatalogProductShareDialog
+              itemId={item.id}
+              itemName={item.name}
+              storeId={store.id}
+              open={sharing}
+              onOpenChange={setSharing}
+            />
+          </>
+        ) : null}
         {affordances.privatePhotos ? (
           <DropdownMenu>
             <DropdownMenuTrigger

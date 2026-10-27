@@ -33,7 +33,15 @@ import {
 import { Share08Icon } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
 import Link from "next/link"
-import { Fragment, type ReactNode, useEffect, useRef, useState } from "react"
+import { Fragment, type ReactNode, useEffect, useState } from "react"
+import { CatalogListingControls } from "../shared/catalog-controls"
+import {
+  LISTING_NO_RESULTS,
+  catalogListingFiltered,
+  catalogListingHref,
+  catalogListingQuery,
+} from "../shared/catalog-listing"
+import { useDetailHistory } from "../shared/detail-history"
 import type { CatalogV4Layout } from "./layout"
 import type { CatalogV4Item, CatalogV4Store } from "./types"
 
@@ -44,6 +52,7 @@ export function StorefrontCatalog({
   customerChatOrigin,
   layout,
   staticParts,
+  syncUrl = false,
 }: {
   store: CatalogV4Store
   domain: string
@@ -51,49 +60,44 @@ export function StorefrontCatalog({
   customerChatOrigin: string
   layout: CatalogV4Layout
   staticParts: { brand: ReactNode; hero: ReactNode; footer: ReactNode }
+  /** Storefront host only: opening details pushes ?item= so Back closes them. Previews never touch the URL. */
+  syncUrl?: boolean
 }) {
-  const [selected, setSelected] = useState<CatalogV4Item | null>(
-    store.highlightedItem,
-  )
+  const detail = useDetailHistory({
+    initial: store.highlightedItem,
+    items: store.highlightedItem
+      ? [...store.items, store.highlightedItem]
+      : store.items,
+    history: syncUrl ? "push" : "none",
+    siteName: store.name,
+  })
+  const { selected } = detail
   const events = useStorefrontEvents()
   useStorefrontItemView(selected)
   const [feedback, setFeedback] = useState("")
   const [manualLink, setManualLink] = useState<string | null>(null)
   const [sharing, setSharing] = useState(false)
-  const opener = useRef<HTMLElement | null>(null)
   const shopUrl = `https://${domain}/`
   const chatUrl = productWhatsAppUrl(
     store.whatsAppPhone,
     "your products and services",
     shopUrl,
   )
-  const listingUrl = (category?: string | null, cursor?: string | null) => {
-    const params = new URLSearchParams()
-    if (category) params.set("category", category)
-    if (cursor) params.set("after", cursor)
-    return params.size ? `?${params}` : "/"
-  }
+  const query = catalogListingQuery(store.query)
+  const filtered = catalogListingFiltered(query)
+  const listingUrl = (category?: string | null, cursor?: string | null) =>
+    catalogListingHref(category, cursor, query)
   const itemUrl = (item: CatalogV4Item) =>
     `${shopUrl}?item=${encodeURIComponent(item.id)}`
   function openItem(item: CatalogV4Item, trigger: HTMLElement) {
     setFeedback("")
     setManualLink(null)
-    opener.current = trigger
-    setSelected(item)
-    document.title = `${item.name} | ${store.name}`
-    const url = new URL(window.location.href)
-    url.searchParams.set("item", item.id)
-    window.history.replaceState(null, "", url)
+    detail.open(item, trigger)
   }
   function closeItem() {
-    setSelected(null)
-    document.title = `${store.name} | ẸwáTrade`
     setFeedback("")
     setManualLink(null)
-    const url = new URL(window.location.href)
-    url.searchParams.delete("item")
-    window.history.replaceState(null, "", url)
-    opener.current?.focus()
+    detail.close()
   }
   async function share(item?: CatalogV4Item, copyOnly = false) {
     if (store.isDraftPreview) {
@@ -227,7 +231,7 @@ export function StorefrontCatalog({
         <nav aria-label="Categories" className="sf-chips">
           <Link
             prefetch={false}
-            href="/"
+            href={listingUrl()}
             aria-current={!store.category ? "page" : undefined}
           >
             All
@@ -243,6 +247,9 @@ export function StorefrontCatalog({
             </Link>
           ))}
         </nav>
+      ) : null}
+      {store.items.length || filtered || query.sort || after ? (
+        <CatalogListingControls category={store.category} query={query} />
       ) : null}
       {store.items.length ? (
         <div
@@ -279,6 +286,32 @@ export function StorefrontCatalog({
             </article>
           ))}
         </div>
+      ) : filtered ? (
+        <Empty className="sf-empty">
+          <EmptyHeader>
+            <EmptyTitle>{LISTING_NO_RESULTS.title}</EmptyTitle>
+            <EmptyDescription>
+              {LISTING_NO_RESULTS.description}
+            </EmptyDescription>
+          </EmptyHeader>
+          <EmptyContent>
+            <div className="sf-empty-actions">
+              <Button
+                variant="outline"
+                nativeButton={false}
+                render={
+                  <Link
+                    prefetch={false}
+                    scroll={false}
+                    href={catalogListingHref(store.category)}
+                  />
+                }
+              >
+                {LISTING_NO_RESULTS.reset}
+              </Button>
+            </div>
+          </EmptyContent>
+        </Empty>
       ) : (
         <Empty className="sf-empty">
           <EmptyHeader>

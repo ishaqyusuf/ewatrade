@@ -17,9 +17,11 @@ export function RetailEditorial({
   customerChatOrigin,
   onTaglineChange,
   draftPreview,
+  syncUrl = false,
 }: {
   snapshot: StorefrontClientSnapshot
   draftPreview?: boolean
+  syncUrl?: boolean
   domain: string
   after?: string
   customerChatOrigin: string
@@ -108,6 +110,7 @@ export function RetailEditorial({
               if (section.type === "retail-collection")
                 return (
                   <CommerceCollection
+                    syncUrl={syncUrl && !draftPreview}
                     domain={domain}
                     key={section.id}
                     kind="retail"

@@ -1,4 +1,5 @@
 import { getPublicStorefrontForSite } from "./public-storefront"
+import type { PublicStorefrontQuery } from "./public-storefront-listing"
 import { getLiveSiteRelease } from "./storefront-sites"
 import type { DbClient } from "./types"
 
@@ -7,7 +8,7 @@ export function loadLiveStorefrontForHost(
   db: DbClient,
   host: string,
   after?: string,
-  options: { category?: string; item?: string } = {},
+  options: PublicStorefrontQuery = {},
 ) {
   return getPublicStorefrontForSite(
     db,

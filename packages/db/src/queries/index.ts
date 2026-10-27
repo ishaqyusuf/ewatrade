@@ -1,4 +1,5 @@
 export * from "./public-storefront"
+export * from "./catalog-product-share"
 export * from "./storefront-service-intake"
 export * from "./owner-signup-setup"
 export * from "./store-link-availability"

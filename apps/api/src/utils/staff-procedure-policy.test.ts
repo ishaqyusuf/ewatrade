@@ -4,6 +4,16 @@ import {
   staffProcedureStoreInput,
 } from "./staff-procedure-policy"
 
+test("product sharing admits only the audited Catalog read, never publication or mutation", () => {
+  expect(staffProcedureAction("catalog.productShare", "query")).toBe("read")
+  expect(staffProcedureAction("catalog.productShare", "mutation")).toBeNull()
+  expect(
+    staffProcedureAction("catalog.productShare", "subscription"),
+  ).toBeNull()
+  expect(staffProcedureAction("catalog.productShareUnsafe", "query")).toBeNull()
+  expect(staffProcedureStoreInput.has("catalog.productShare")).toBe(false)
+})
+
 test("exact stock editor reads require stock authority and remain query-only", () => {
   for (const path of [
     "inventory.balanceSource",

@@ -24,6 +24,8 @@ export function CatalogV4({
   after?: string
   customerChatOrigin: string
   onTaglineChange?: (value: string) => void
+  /** Storefront host only: item details push ?item= history. Embedded previews omit it. */
+  syncUrl?: boolean
 }) {
   const layout = resolveCatalogV4Layout(
     validateComposition(

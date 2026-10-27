@@ -97,7 +97,12 @@ test("concierge renders current service/option facts and a preview-safe scoped r
   )
   // Short lists are a multi toggle list; the first listed option starts selected.
   expect(html).toContain('data-slot="toggle-group"')
-  expect(html).not.toContain("<select")
+  // The only native selects are the shared listing controls, never the option picker.
+  expect(
+    html
+      .match(/<select[^>]*>/g)
+      ?.map((tag) => tag.match(/name="([a-z]+)"/)?.[1]),
+  ).toEqual(["availability", "sort"])
   expect(html).toMatch(/aria-pressed="true"[^>]*>.*?Shirt cleaning/)
   expect(html).toContain("Price on request")
   expect(html).not.toContain("Price not listed")
@@ -126,6 +131,29 @@ test("unlisted prices, absent capability, mismatched offering and no-service sta
   const empty = render(data)
   expect(empty).toContain("No services listed yet")
   expect(empty).not.toContain("Your enquiry")
+})
+
+test("concierge listing controls echo the server query, keep it on pagination and reset to no results honestly", () => {
+  const data = snapshot()
+  data.resources.catalog.category = "cat-1"
+  data.resources.catalog.query = { q: "shirt", sort: "price_desc" }
+  data.resources.catalog.nextCursor = "s:next-page"
+  const html = render(data)
+  expect(html).toContain('role="search"')
+  expect(html).toContain('aria-label="Search services"')
+  expect(html).toContain('name="category" value="cat-1"')
+  expect(html).toContain('value="shirt"')
+  expect(html).toMatch(/<option value="price_desc" selected="">/)
+  expect(html).toContain(
+    'href="/?category=cat-1&amp;q=shirt&amp;sort=price_desc&amp;after=s%3Anext-page"',
+  )
+  data.resources.catalog.items = []
+  data.resources.catalog.nextCursor = null
+  data.resources.catalog.query = { q: "nothing", availability: "out_of_stock" }
+  const empty = render(data)
+  expect(empty).toContain("No matching items")
+  expect(empty).toContain('href="/?category=cat-1">Clear search</a>')
+  expect(empty).not.toContain("No services listed yet")
 })
 
 test("new portable section fits the new pin without silently modifying older manifests", () => {

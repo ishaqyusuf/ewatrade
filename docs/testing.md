@@ -69,11 +69,15 @@ calls belong in the smoke suites. Inspect new suites before adding them. Each st
 has a three-minute timeout and reports elapsed time. This is a budget to measure,
 not a claim about runtime. The existing assistant workflow remains independent.
 
-Initial baseline limitation: the existing storefront service-request-selection
-test imports `cleaningServiceRequestUrl`, absent from the committed runtime links
-module. That unrelated test is not in this initial smoke selection; it remains an
-open storefront issue. The selected storefront display tests do not prove request
-selection. Tests are never automatically removed or retried to hide a failure.
+Storefront source smoke explicitly covers current standalone service-request
+navigation, listing query contracts, safe link construction/share fallback and
+selected public-option enquiries, query-bound public pagination/price policy,
+preview navigation, request failure results and detail-history decisions.
+Contracts/runtime/templates map to all existing client/domain groups. These are offline helpers/contract checks, not actual
+browser, native or public delivery acceptance. `test:quick` passes explicit `./`
+test paths to Bun; use that form for focused commands too, so Bun does not treat
+them as recursive filters and accidentally discover archived copies. Unknown
+packages still fail visibly. Tests are never removed or skipped to hide a failure.
 
 ## UI and evidence
 

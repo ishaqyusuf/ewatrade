@@ -10,6 +10,7 @@ const store: PublicStorefront = {
   name: "Everyday Store",
   slug: "everyday",
   description: "Thoughtful essentials.",
+  currencyCode: "NGN",
   isQaPreview: true,
   planId: "starter",
   storefrontItems: 3,
@@ -107,4 +108,17 @@ test("About and pagination have page-specific canonicals/social metadata; local 
   expect(
     storefrontMetadata(live, "localhost", { indexable: false }).robots,
   ).toEqual({ index: false, follow: false })
+})
+
+test("filtered listing canonicals retain query state without indexing search permutations; item canonicals remain stable", () => {
+  const live = { ...store, isQaPreview: false }
+  const metadata = storefrontMetadata(live, "ewatrade.com", {
+    q: "Rice & beans",
+    availability: "available",
+    sort: "price_asc",
+  })
+  expect(metadata.alternates?.canonical).toBe(
+    "https://everyday.ewatrade.com/?q=Rice+%26+beans&availability=available&sort=price_asc",
+  )
+  expect(metadata.robots).toEqual({ index: false, follow: false })
 })

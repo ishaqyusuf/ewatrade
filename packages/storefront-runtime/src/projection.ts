@@ -1,4 +1,5 @@
 import type {
+  CatalogQuery,
   PublicCatalogItem,
   StorefrontCapabilities,
   StorefrontResources,
@@ -17,6 +18,7 @@ export type PublicStorefrontProjection = {
   category: string | null
   nextCursor: string | null
   hasHiddenItems: boolean
+  query?: Pick<CatalogQuery, "q" | "availability" | "sort">
   chatToken: string | null
   whatsAppPhone: string | null
   serviceRequestEntry?: { formId: string; offeringIds: readonly string[] }
@@ -45,6 +47,7 @@ export function publicStorefrontResources(store: PublicStorefrontProjection): {
         category: store.category,
         nextCursor: store.nextCursor,
         hasHiddenItems: store.hasHiddenItems,
+        ...(store.query ? { query: store.query } : {}),
       },
       contact: {
         chatToken: store.chatToken,

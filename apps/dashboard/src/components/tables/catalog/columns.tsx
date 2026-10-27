@@ -263,7 +263,9 @@ export function createCatalogColumns(
         className: "z-20 border-l bg-background md:sticky",
         skeleton: { type: "icon" },
       },
-      cell: ({ row }) => <CatalogItemActions item={row.original} />,
+      cell: ({ row }) => (
+        <CatalogItemActions item={row.original} storeId={storeId} />
+      ),
     },
   ]
 }

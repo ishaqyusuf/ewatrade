@@ -33,7 +33,9 @@ import {
 import type { TenantContext } from "@ewatrade/db/tenant-context"
 import { ruleRejectedError } from "@ewatrade/errors"
 import { TRPCError } from "@trpc/server"
+import { catalogDetailScope } from "../../catalog/detail-access"
 import { catalogPhotoActorScope } from "../../catalog/photo-access"
+import { readCatalogProductShare } from "../../catalog/product-share"
 import { catalogCategoriesRouter } from "./catalog-categories"
 import { catalogDetailRouter } from "./catalog-detail"
 import { catalogPhotoTRPCError, catalogPhotosRouter } from "./catalog-photos"
@@ -49,6 +51,7 @@ import {
   catalogGetItemSchema,
   catalogListItemsPageSchema,
   catalogListItemsSchema,
+  catalogProductShareSchema,
   catalogProductUnitConfigurationsSchema,
   catalogPublishUnitConfigurationSchema,
   catalogSetOfferingAvailabilitySchema,
@@ -181,6 +184,22 @@ function catalogTRPCError(error: CatalogError) {
 }
 
 export const catalogRouter = createTRPCRouter({
+  productShare: protectedProcedure
+    .input(catalogProductShareSchema)
+    .query(({ ctx, input }) => {
+      assertCanReadCatalog(ctx.tenantContext.membership.role)
+      const storeId = ctx.tenantContext.activeStore?.id
+      if (!storeId)
+        throw new TRPCError({
+          code: "PRECONDITION_FAILED",
+          message: "Select a Store before sharing a product.",
+        })
+      const scope = catalogDetailScope(
+        { itemId: input.itemId, storeId },
+        ctx.tenantContext,
+      )
+      return readCatalogProductShare(ctx.db, scope)
+    }),
   addServiceChoice: protectedProcedure
     .input(catalogAddServiceChoiceSchema)
     .mutation(async ({ ctx, input }) => {

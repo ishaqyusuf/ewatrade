@@ -1,0 +1,35 @@
+{
+  "version": 1,
+  "id": "2026-10-26-storefront-local-discovery",
+  "tickets": ["H01", "H02"],
+  "summary": "Local anonymous storefront discovery, safe preview navigation and retained request failure state; fast source smoke mappings repaired. No deployment or provider effects.",
+  "noAssistantImpact": "These browser query controls and typed request-error presentation reuse existing public/session projections and the canonical idempotent submission command. No model capability, protected procedure, write authority or confirmation policy changes.",
+  "capabilities": [],
+  "procedures": [],
+  "docs": [
+    {
+      "topic": "feature",
+      "status": "local_only",
+      "path": ".brain/features/storefront-local-discovery.md"
+    },
+    {
+      "topic": "api",
+      "status": "local_only",
+      "path": ".brain/api/contracts.md"
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "test",
+      "path": "packages/db/src/queries/public-storefront-listing.test.ts",
+      "executed": true,
+      "result": "Injected public cap, query binding, pagination and price policy checks pass offline."
+    },
+    {
+      "kind": "test",
+      "path": "apps/dashboard/src/components/storefront/storefront-preview-navigation.test.ts",
+      "executed": true,
+      "result": "Full strict preview query/form state, foreign origin/scope and mutation refusal pass offline."
+    }
+  ]
+}

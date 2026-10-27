@@ -42,6 +42,14 @@ import {
   storefrontActionResultSchema,
 } from "../../../storefront-contracts/src/actions"
 import type { PublicCatalogItem } from "../../../storefront-contracts/src/resources"
+import { CatalogListingControls } from "./catalog-controls"
+import {
+  LISTING_NO_RESULTS,
+  catalogListingFiltered,
+  catalogListingHref,
+  catalogListingQuery,
+} from "./catalog-listing"
+import { type DetailHistory, useDetailHistory } from "./detail-history"
 
 /** Host route retains scope and authority; the templates request typed navigation only. */
 export function TemplateHost({
@@ -112,19 +120,26 @@ export function useNavigation() {
 export function TemplateActions({
   domain,
   item,
-}: { domain: string; item?: PublicCatalogItem }) {
+  selectedOptions,
+}: {
+  domain: string
+  item?: PublicCatalogItem
+  /** Option labels currently picked in the item detail; enquiry text only, never authority. */
+  selectedOptions?: readonly { name: string }[] | null
+}) {
   const { mode, business } = useStorefrontContext()
   const events = useStorefrontEvents()
   const action = useNavigation()
   const contact = useStorefrontContact()
   const enquiryHref =
-    mode === "live"
+    mode === "live" && selectedOptions !== null
       ? productWhatsAppUrl(
           contact.whatsAppPhone,
           item?.name ?? "your products and services",
           item
             ? `https://${domain}${storefrontItemHref(item.id)}`
             : `https://${domain}/`,
+          item ? selectedOptions : undefined,
         )
       : null
   const [sharing, setSharing] = useState(false)
@@ -198,16 +213,40 @@ export function TemplateActions({
   )
 }
 
-/** Same-page catalog listing link; category and cursor stay server-loaded so no item is dropped. */
-export function catalogListingHref(
-  category?: string | null,
-  after?: string | null,
+/**
+ * The customer's current option picks for a WhatsApp enquiry: public IDs for the
+ * server action (it re-resolves them) and the matching labels for the wa.me text.
+ * No picks stays the generic item enquiry; more than the contract allows is no action.
+ */
+export function enquirySelection(
+  item: { id: string },
+  options: readonly { id: string; name: string }[],
+  optionIds: readonly string[],
 ) {
-  const params = new URLSearchParams()
-  if (category) params.set("category", category)
-  if (after) params.set("after", after)
-  return params.size ? `?${params}` : "/"
+  const selectedOptions = options.filter((option) =>
+    optionIds.includes(option.id),
+  )
+  if (
+    optionIds.length > 20 ||
+    new Set(optionIds).size !== optionIds.length ||
+    selectedOptions.length !== optionIds.length
+  )
+    return { action: null, selectedOptions: null }
+  return {
+    action: {
+      type: "whatsappEnquiry" as const,
+      itemId: item.id,
+      ...(selectedOptions.length
+        ? { optionIds: selectedOptions.map((option) => option.id) }
+        : {}),
+    },
+    selectedOptions,
+  }
 }
+
+export { catalogListingHref } from "./catalog-listing"
+
+export { detailHistoryChange } from "./detail-history"
 
 /**
  * One item-detail state for every layout: selection, option, ?item= URL, focus return,
@@ -221,74 +260,29 @@ export function useCommerceDetail({
 }: {
   domain: string
   initial: PublicCatalogItem | null
-  history?: "replace" | "push" | "none"
+  history?: DetailHistory
 }) {
   const catalog = useStorefrontCatalog()
   const contact = useStorefrontContact()
   const { business } = useStorefrontContext()
   const action = useNavigation()
-  const [selected, setSelected] = useState<PublicCatalogItem | null>(initial)
+  const { selected, open, close } = useDetailHistory({
+    initial,
+    items: catalog.highlightedItem
+      ? [...catalog.items, catalog.highlightedItem]
+      : catalog.items,
+    history,
+    siteName: business.name,
+  })
   useStorefrontItemView(selected)
-  const [optionId, setOptionId] = useState("")
-  const opener = useRef<HTMLElement | null>(null)
-  const pushed = useRef(false)
+  // An option pick belongs to one item; any other open item starts at its first option.
+  const [picked, setPicked] = useState({ itemId: "", optionId: "" })
+  const optionId = picked.itemId === selected?.id ? picked.optionId : ""
+  const setOptionId = (id: string) =>
+    setPicked({ itemId: selected?.id ?? "", optionId: id })
   const options = useOfferingOptions(selected?.id ?? "")
   const currentOption =
     options.find((option) => option.id === optionId) ?? options[0]
-  useEffect(() => {
-    setSelected(initial)
-    setOptionId("")
-  }, [initial])
-  useEffect(() => {
-    if (history !== "push") return
-    const sync = () => {
-      pushed.current = false
-      const id = new URL(window.location.href).searchParams.get("item")
-      const item =
-        (id &&
-          [
-            ...catalog.items,
-            ...(catalog.highlightedItem ? [catalog.highlightedItem] : []),
-          ].find((entry) => entry.id === id)) ||
-        null
-      setSelected(item)
-      setOptionId(item?.options[0]?.id ?? "")
-      document.title = item
-        ? `${item.name} | ${business.name}`
-        : `${business.name} | ẸwáTrade`
-      if (!item) opener.current?.focus()
-    }
-    window.addEventListener("popstate", sync)
-    return () => window.removeEventListener("popstate", sync)
-  }, [history, catalog, business.name])
-  const open = (item: PublicCatalogItem, trigger: HTMLElement) => {
-    opener.current = trigger
-    setSelected(item)
-    setOptionId(item.options[0]?.id ?? "")
-    if (history === "none") return
-    document.title = `${item.name} | ${business.name}`
-    const url = new URL(window.location.href)
-    url.searchParams.set("item", item.id)
-    if (history === "push" && !pushed.current) {
-      window.history.pushState(null, "", url)
-      pushed.current = true
-    } else window.history.replaceState(null, "", url)
-  }
-  const close = () => {
-    setSelected(null)
-    if (history !== "none") {
-      document.title = `${business.name} | ẸwáTrade`
-      if (pushed.current) {
-        pushed.current = false
-        window.history.back()
-      } else {
-        const url = new URL(window.location.href)
-        url.searchParams.delete("item")
-        window.history.replaceState(null, "", url)
-      }
-    }
-    opener.current?.focus()
-  }
   // Existing entrypoint owns request scope/intake. No second request form or booking promise.
   const requestHref = selected
     ? serviceRequestUrl(
@@ -317,14 +311,19 @@ export function useCommerceDetail({
           offeringId: currentOption.id,
         }
       : null
-  const itemAction =
-    selected && action.allowed({ type: "whatsappEnquiry", itemId: selected.id })
-      ? { type: "whatsappEnquiry" as const, itemId: selected.id }
-      : null
+  const { action: enquiry, selectedOptions } = selected
+    ? enquirySelection(
+        selected,
+        options,
+        currentOption ? [currentOption.id] : [],
+      )
+    : { action: null, selectedOptions: [] }
+  const itemAction = enquiry && action.allowed(enquiry) ? enquiry : null
   return {
     selected,
     options,
     currentOption,
+    selectedOptions,
     setOptionId,
     open,
     close,
@@ -344,6 +343,7 @@ export function CommerceCollection({
   customerChatOrigin,
   domain,
   after,
+  syncUrl = false,
 }: {
   kind: "retail" | "services"
   heading: string
@@ -354,6 +354,7 @@ export function CommerceCollection({
   customerChatOrigin: string
   domain: string
   after?: string
+  syncUrl?: boolean
 }) {
   const catalog = useStorefrontCatalog()
   const { mode, business } = useStorefrontContext()
@@ -370,14 +371,22 @@ export function CommerceCollection({
     selected,
     options,
     currentOption,
+    selectedOptions,
     setOptionId,
     open,
     close,
     requestAction,
     itemAction,
     action,
-  } = useCommerceDetail({ domain, initial: highlighted })
-  const listing = catalogListingHref
+  } = useCommerceDetail({
+    domain,
+    initial: highlighted,
+    history: syncUrl ? "push" : "none",
+  })
+  const query = catalogListingQuery(catalog.query)
+  const filtered = catalogListingFiltered(query)
+  const listing = (category?: string | null, cursor?: string | null) =>
+    catalogListingHref(category, cursor, query)
   return (
     <section
       className={`tf-collection tf-${kind}`}
@@ -390,7 +399,7 @@ export function CommerceCollection({
           <nav aria-label="Categories">
             <Link
               prefetch={false}
-              href="/"
+              href={listing()}
               aria-current={!catalog.category ? "page" : undefined}
             >
               All
@@ -410,6 +419,13 @@ export function CommerceCollection({
           </nav>
         ) : null}
       </div>
+      {items.length || filtered || query.sort || after ? (
+        <CatalogListingControls
+          category={catalog.category}
+          query={query}
+          label={kind === "services" ? "Search services" : "Search items"}
+        />
+      ) : null}
       <div className={kind === "services" ? "tf-directory" : undefined}>
         {items.length ? (
           <div className={kind === "services" ? "tf-service-list" : "tf-grid"}>
@@ -476,6 +492,18 @@ export function CommerceCollection({
                 </article>
               ),
             )}
+          </div>
+        ) : filtered ? (
+          <div className="tf-empty">
+            <h3>{LISTING_NO_RESULTS.title}</h3>
+            <p>{LISTING_NO_RESULTS.description}</p>
+            <Link
+              prefetch={false}
+              scroll={false}
+              href={catalogListingHref(catalog.category)}
+            >
+              {LISTING_NO_RESULTS.reset}
+            </Link>
           </div>
         ) : (
           <div className="tf-empty">
@@ -656,6 +684,7 @@ export function CommerceCollection({
                 key={selected.id}
                 domain={domain}
                 item={selected}
+                selectedOptions={selectedOptions}
               />
               {action.notice ? <output>{action.notice}</output> : null}
             </>

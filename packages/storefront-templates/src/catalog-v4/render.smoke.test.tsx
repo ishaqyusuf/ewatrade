@@ -3,6 +3,7 @@ import { renderToString } from "react-dom/server"
 import { validateComposition } from "../../../storefront-contracts/src/manifest"
 import { fixture } from "../fixtures"
 import { defaultComposition } from "../registry"
+import { StorefrontTemplate } from "../render"
 import { catalogV4Manifest } from "./manifest"
 import { CatalogV4 } from "./render"
 
@@ -32,6 +33,69 @@ test("default composition keeps accepted Catalog v4 output", () => {
   expect(html.indexOf("<h1>")).toBeLessThan(
     html.indexOf("storefront-catalog-heading"),
   )
+})
+
+test("listing controls echo the server query into category, pagination and no-results links", () => {
+  const listed = {
+    ...store,
+    category: "cat-1",
+    query: { q: "tote", availability: "available", sort: "price_asc" } as const,
+    nextCursor: "s:page-2",
+  }
+  const html = renderToString(
+    <CatalogV4
+      composition={defaultComposition(catalogV4Manifest)}
+      store={listed}
+      domain="fixture-store.ewatrade.com"
+      customerChatOrigin="https://chat.example"
+      after="s:page-1"
+    />,
+  )
+  const controls = "q=tote&amp;availability=available&amp;sort=price_asc"
+  expect(html).toContain('role="search"')
+  expect(html).toContain(`href="/?category=cat-2&amp;${controls}"`)
+  expect(html).toContain(`href="/?${controls}"`)
+  expect(html).toContain(
+    `href="/?category=cat-1&amp;${controls}&amp;after=s%3Apage-2"`,
+  )
+  expect(html).toContain(
+    `href="/?category=cat-1&amp;${controls}">Back to start`,
+  )
+  const empty = renderToString(
+    <CatalogV4
+      composition={defaultComposition(catalogV4Manifest)}
+      store={{ ...listed, items: [], nextCursor: null }}
+      domain="fixture-store.ewatrade.com"
+      customerChatOrigin="https://chat.example"
+    />,
+  )
+  expect(empty).toContain("No matching items")
+  expect(empty).toMatch(/href="\/\?category=cat-1"[^>]*>Clear search/)
+  expect(empty).not.toContain("New items are on the way")
+})
+
+// The portalled detail Dialog is not in SSR markup; open/Back/focus need the browser session.
+test("host (syncUrl) and embedded renders both keep canonical item hrefs for new-tab/modified clicks", () => {
+  const base = fixture("populated")
+  const snapshot = {
+    ...base,
+    composition: defaultComposition(catalogV4Manifest),
+    mode: "live" as const,
+    locale: "en-NG",
+    currencyCode: "NGN",
+  }
+  for (const syncUrl of [true, false, undefined]) {
+    const html = renderToString(
+      <StorefrontTemplate
+        snapshot={snapshot}
+        domain="fixture-store.ewatrade.com"
+        customerChatOrigin=""
+        syncUrl={syncUrl}
+      />,
+    )
+    expect(html, String(syncUrl)).toContain('href="/?item=item-1"')
+    expect(html, String(syncUrl)).toContain('href="/?item=item-2"')
+  }
 })
 
 test("saved order, visibility and settings change the output", () => {
