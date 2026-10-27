@@ -306,6 +306,9 @@ async function previewLoadedOrdinaryStockAdjustment(
   }
 }
 
+/** Stable stock command result, shared with source-owned stock writers. */
+export { serializeOperation as serializeStockOperation }
+
 function serializeOperation(
   operation: Prisma.StockOperationGetPayload<{
     include: { movements: true; categories: typeof stockOperationCategoryGraph }

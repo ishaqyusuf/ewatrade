@@ -6,9 +6,9 @@ Tickets refer to the Brain plan `.brain/plans/2026-10-09-assistant-business-oper
 
 ## Summary
 
-- Router procedures: 701 (528 merchant, 173 public/account/internal)
+- Router procedures: 702 (529 merchant, 173 public/account/internal)
 - Merchant supported by a capability: 171
-- Merchant planned: 132
+- Merchant planned: 133
 - Merchant form-only: 163
 - Merchant excluded: 62
 - Capabilities: 160 (83 read, 77 write)
@@ -374,7 +374,7 @@ track conversational evaluation separately from these source test links.
 | G01 | 7 |
 | G02 | 4 |
 | G03 | 28 |
-| G04 | 3 |
+| G04 | 4 |
 | G05 | 28 |
 | H04 | 10 |
 | S01 | 1 |
@@ -594,6 +594,7 @@ track conversational evaluation separately from these source test links.
 | `inventory.recordInternalUse` | mutation | Owner/Admin only | inventory | planned | C03 |
 | `inventory.releaseReservation` | mutation | orders | inventory | planned | G04 |
 | `inventory.reserveOffering` | mutation | orders | inventory | planned | G04 |
+| `inventory.reverseTransformation` | mutation | Owner/Admin only | inventory | planned | G04 |
 | `inventory.setLowStockLevel` | mutation | Owner/Admin only | inventory | form_only | Display setting for Running low on the Inventory page; it never changes stock or blocks a sale. The assistant reads low stock with lowStockPage and its own threshold. |
 | `inventory.stockCountReview` | query | stock | inventory | supported | inventory.count.read |
 | `inventory.stockCounts` | query | Owner/Admin only | inventory | form_only | Count stock sheet: lists this Store's saved count drafts to finish or discard. The assistant reads a saved count with readStockCount and creates new counts itself. |

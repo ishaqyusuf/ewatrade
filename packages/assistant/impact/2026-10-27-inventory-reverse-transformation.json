@@ -1,0 +1,46 @@
+{
+  "version": 1,
+  "id": "2026-10-27-inventory-reverse-transformation",
+  "tickets": [
+    "G04"
+  ],
+  "summary": "Source-owned undo of a packaged-stock transformation (Finance roadmap F4.3.03). inventory.reverseTransformation writes one linked TRANSFORMATION correction with reversing movements at the exact original quantities and moves the exact original values back between the two stock pools (PACKAGED_TRANSFORMATION_RESTORATION). It refuses stale revisions or configuration, insufficient stock, pools whose value can no longer be restored exactly, closed periods and double reversal. No journal and no schema change. Roles are unchanged: the same inventory management guard as the forward transformation.",
+  "noAssistantImpact": "No assistant tool, prompt authority, capability declaration or write is added. The new mutation is classified planned under G04 with no assistant draft yet; scoped staff cannot call it until the staff procedure policy lists it.",
+  "capabilities": [],
+  "procedures": [
+    {
+      "path": "inventory.reverseTransformation",
+      "status": "planned",
+      "ticket": "G04",
+      "reason": "Source-owned stock correction; an assistant draft is not built yet."
+    }
+  ],
+  "docs": [
+    {
+      "topic": "feature",
+      "status": "local_only",
+      "path": ".brain/features/merchant-finance.md",
+      "note": "Follow-ups, 27 October 2026: transformation undo."
+    },
+    {
+      "topic": "capability",
+      "status": "updated",
+      "path": "packages/assistant/src/capabilities/inventory.ts",
+      "note": "Planned under G04; COVERAGE.md row added."
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "test",
+      "path": "packages/db/src/queries/finance/transformation-reversal.integration.test.ts",
+      "executed": true,
+      "result": "1 pass, 33 assertions on the Neon development database: exact restoration of both balances and pools, replay, mismatch, double reversal, reversing a reversal, wrong target, stale revision, insufficient target and unknown-pool refusal; no journals; full cleanup."
+    },
+    {
+      "kind": "test",
+      "path": "apps/api/src/trpc/routers/inventory-finance-errors.test.ts",
+      "executed": true,
+      "result": "Router role guard and strict schema: 7 pass, 29 assertions; valuation unit tests 3 pass, 8 assertions."
+    }
+  ]
+}
