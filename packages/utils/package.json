@@ -38,6 +38,7 @@
     "./inventory-categories": "./src/inventory-categories.ts",
     "./exact-decimal": "./src/exact-decimal.ts",
     "./insurance-documents": "./src/insurance-documents.ts",
+    "./qa-profiles": "./src/qa-profiles.ts",
     "./qa-accelerator": "./src/qa-accelerator.ts",
     "./qa-fixtures": "./src/qa-fixtures.ts",
     "./qa-network-source": "./src/qa-network-source.ts",

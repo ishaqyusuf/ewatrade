@@ -1,14 +1,15 @@
 import { View } from "@/components/ui/view"
 import { useAuthContext } from "@/hooks/use-auth"
 import { useQaAccelerator } from "@/hooks/use-qa-accelerator"
+import { groupQaProfiles } from "@ewatrade/utils/qa-profiles"
 import { useRouter } from "expo-router"
 import { useEffect, useMemo, useRef, useState } from "react"
 import { FlatList } from "react-native"
 import { BottomSearchFooter } from "./bottom-search-footer"
 import {
+  QaBusinessGroup,
   QaDomainActions,
   QaDomainIntro,
-  QaProfileRow,
   QaProfilesEmpty,
   filterQaProfiles,
   qaProfilesState,
@@ -27,7 +28,7 @@ export function QaBusinessesScreen({ onClose }: { onClose: () => void }) {
   const [footerHeight, setFooterHeight] = useState(140)
   const lastToken = useRef(token)
   const profiles = useMemo(
-    () => filterQaProfiles(qa.profiles, search),
+    () => groupQaProfiles(filterQaProfiles(qa.profiles, search)),
     [qa.profiles, search],
   )
 
@@ -56,18 +57,24 @@ export function QaBusinessesScreen({ onClose }: { onClose: () => void }) {
         data={state ? [] : profiles}
         keyboardDismissMode="interactive"
         keyboardShouldPersistTaps="handled"
-        keyExtractor={(profile) => profile.profileReference}
+        keyExtractor={(group) => group.business.id}
         ListEmptyComponent={state ?? <QaProfilesEmpty qa={qa} />}
         ListHeaderComponent={
           <View className="pb-2">
-            <QaDomainIntro qaDomain={qa.authorization.qaDomain} />
+            <QaDomainIntro
+              qaDomain={qa.authorization.qaDomain}
+              refreshing={qa.profilesLoading}
+              onRefresh={() => void qa.refreshProfiles()}
+            />
             <QaDomainActions
               qa={qa}
               onLeave={() => (router.canGoBack() ? router.back() : onClose())}
             />
           </View>
         }
-        renderItem={({ item }) => <QaProfileRow profile={item} qa={qa} />}
+        renderItem={({ item }) => (
+          <QaBusinessGroup profiles={item.profiles} qa={qa} />
+        )}
       />
       <BottomSearchFooter
         accessibilityLabel="Search QA businesses"
@@ -77,7 +84,7 @@ export function QaBusinessesScreen({ onClose }: { onClose: () => void }) {
         maxLength={160}
         onChangeText={setSearch}
         onHeightChange={setFooterHeight}
-        placeholder="Search businesses"
+        placeholder="Search businesses, Stores or people"
         totalCount={qa.profiles.length}
         value={search}
       />

@@ -23,6 +23,7 @@ import {
   QA_ACCELERATOR_CONTRACT_VERSION,
   isQaAcceleratorClientMode,
 } from "@ewatrade/utils/qa-accelerator"
+import type { QaProfileCounts } from "@ewatrade/utils/qa-profiles"
 import { useMutation, useQuery } from "@tanstack/react-query"
 import * as Crypto from "expo-crypto"
 import {
@@ -40,6 +41,7 @@ import { useAuthContext } from "./use-auth"
 import { useAuthenticatedQaTools } from "./use-authenticated-qa-tools"
 
 type QaProfile = {
+  counts?: QaProfileCounts
   business: {
     currencyCode: string
     id: string

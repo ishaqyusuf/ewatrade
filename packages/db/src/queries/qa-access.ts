@@ -9,6 +9,7 @@ import {
   getQaPolicyEnvironment,
   managedQaDomainEnabled,
 } from "@ewatrade/utils/qa-policy-server"
+import { loadQaProfileCounts } from "./qa-profile-counts"
 import type { DbClient } from "./types"
 
 const AUTHORIZATION_TTL_HOURS = 12
@@ -632,7 +633,15 @@ export async function listQaAccessProfiles(
   if (profileSelections.length > 0) {
     await db.qaAccessProfileSelection.createMany({ data: profileSelections })
   }
-  return profiles
+  const counts = await loadQaProfileCounts(
+    db,
+    profiles,
+    authorization.grant.qaDomain,
+  )
+  return profiles.map((profile) => ({
+    ...profile,
+    counts: counts.get(profile.profileReference),
+  }))
 }
 
 export async function selectQaAccessProfile(

@@ -13,32 +13,15 @@ import {
   Field,
   FieldLabel,
   Input,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectRoot,
-  SelectTrigger,
-  SelectValue,
 } from "@ewatrade/ui"
+import {
+  type QaProfile as Profile,
+  qaProfileKey as profileKey,
+} from "@ewatrade/utils/qa-profiles"
 import { useCallback, useEffect, useRef, useState } from "react"
+import { QaProfileSelect } from "./qa-profile-select"
 
-type Profile = {
-  business: { id: string; name: string }
-  identity: { id: string; email: string; name: string }
-  membership: { role: string }
-  store: { id: string; name: string }
-  profileReference: string
-}
 type AccessState = { qaDomain: string; expiresAt: string; profiles: Profile[] }
-
-function profileKey(profile: Profile) {
-  return JSON.stringify([
-    profile.business.id,
-    profile.identity.id,
-    profile.store.id,
-    profile.membership.role,
-  ])
-}
 
 export function QaLoginEntry(props: {
   next?: string
@@ -178,19 +161,6 @@ export function QaLoginEntry(props: {
     }
   }
 
-  const items =
-    access?.profiles.map((profile) => ({
-      value: profile.profileReference,
-      label: [
-        profile.identity.email,
-        profile.business.name,
-        ...(profile.store.name !== profile.business.name
-          ? [profile.store.name]
-          : []),
-        profile.membership.role,
-      ].join(" · "),
-    })) ?? []
-
   return (
     <>
       <LoginForm
@@ -201,40 +171,12 @@ export function QaLoginEntry(props: {
                 canSignIn: Boolean(selected) && !pending && !signingIn,
                 signIn,
                 emailField: (
-                  <SelectRoot
-                    items={items}
-                    value={selected || null}
-                    onValueChange={(value) => {
-                      const profile = access.profiles.find(
-                        (item) => item.profileReference === value,
-                      )
-                      setChoice(profile ? profileKey(profile) : "")
-                    }}
-                  >
-                    <SelectTrigger
-                      id="email"
-                      aria-label="Email address"
-                      appearance="form"
-                      disabled={pending || signingIn}
-                    >
-                      <SelectValue placeholder="Choose a QA email address">
-                        {selectedProfile?.identity.email}
-                      </SelectValue>
-                    </SelectTrigger>
-                    <SelectContent alignItemWithTrigger={false}>
-                      <SelectGroup>
-                        {items.map((item) => (
-                          <SelectItem
-                            key={item.value}
-                            value={item.value}
-                            className="whitespace-normal break-words"
-                          >
-                            {item.label}
-                          </SelectItem>
-                        ))}
-                      </SelectGroup>
-                    </SelectContent>
-                  </SelectRoot>
+                  <QaProfileSelect
+                    profiles={access.profiles}
+                    selected={selectedProfile}
+                    disabled={pending || signingIn}
+                    onSelect={(profile) => setChoice(profileKey(profile))}
+                  />
                 ),
               }
             : undefined
