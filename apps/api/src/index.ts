@@ -25,6 +25,7 @@ import { registerAssistantChannelTurnRoute } from "./assistant/channel-turn-rout
 import { registerAssistantChatRoutes } from "./assistant/chat-route"
 import { registerGeneralAssistantChatRoutes } from "./assistant/general-chat-route"
 import { registerVoiceGatewayRoutes } from "./assistant/voice-gateway"
+import { registerManualPaymentReceiptRoutes } from "./banking/manual-payment-receipts"
 import { registerBillingProviderEventRoutes } from "./billing/provider-events"
 import { registerStoreNotificationRoutes } from "./billing/store-notifications"
 import { registerCatalogPhotoPreviewRoutes } from "./catalog/photo-preview"
@@ -203,6 +204,7 @@ registerFinanceExpenseReceiptDeliveryRoutes(app, {
   secret: () => process.env.RECEIPT_DOWNLOAD_SECRET,
 })
 registerDomainPaystackWebhook(app)
+registerManualPaymentReceiptRoutes(app)
 registerSelfServiceStoreDetectionRoutes(app)
 registerAssistantChatRoutes(app)
 registerAssistantAttachmentRoutes(app)

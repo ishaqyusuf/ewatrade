@@ -19,7 +19,12 @@ import {
   RecordRow,
   RowDivider,
   SectionHeader,
+  StatusPill,
 } from "../green-till/kit"
+import {
+  accountSuffix,
+  spacedAccountNumber,
+} from "../payment-links/payment-link-model"
 import { FinanceCommandFeedback } from "./finance-command-feedback"
 import { FinanceMoneyForm } from "./finance-money-form"
 import {
@@ -33,6 +38,99 @@ const PURPOSE_LABELS = {
   CASH: "Cash",
   CLEARING: "Clearing",
 } as const
+
+type ManualBankAccount = RouterOutputs["businessBanking"]["accounts"][number]
+
+/** Bank money accounts and the details customers see on payment links. */
+function BankDetailsSection({
+  accounts,
+  error,
+  loading,
+  offline,
+  onRetry,
+}: {
+  accounts: ManualBankAccount[] | undefined
+  error: string | null
+  loading: boolean
+  offline: boolean
+  onRetry: () => void
+}) {
+  const router = useRouter()
+  const openDetails = (accountId?: string) =>
+    router.push(
+      (accountId
+        ? {
+            pathname: "/finance-bank-details-modal",
+            params: { accountId },
+          }
+        : "/finance-bank-details-modal") as Href,
+    )
+  return (
+    <View>
+      <SectionHeader
+        actionLabel={offline ? undefined : "Add bank account"}
+        onAction={() => openDetails()}
+        title="Bank details for payment links"
+      />
+      {error ? (
+        <StatusBanner
+          title="Bank details unavailable"
+          message={error}
+          tone="destructive"
+          actionLabel="Try again"
+          onActionPress={onRetry}
+        />
+      ) : loading ? (
+        <Skeleton className="h-20 rounded-[20px]" />
+      ) : !accounts?.length ? (
+        <StatusBanner
+          icon="Building2"
+          message="Add a bank account so customers can pay by transfer through a payment link. You confirm each payment yourself."
+          tone="muted"
+        />
+      ) : (
+        <View className="overflow-hidden rounded-[20px] bg-card shadow-sm">
+          {accounts.map((account, index) => {
+            const ready = Boolean(
+              account.bankName &&
+                account.bankAccountNumber &&
+                account.bankAccountHolder,
+            )
+            return (
+              <View key={account.id} className="px-3.5">
+                <RecordRow
+                  stackDetails
+                  title={account.name}
+                  meta={
+                    ready
+                      ? [
+                          `${account.bankName} · ${spacedAccountNumber(account.bankAccountNumber ?? "")}`,
+                          account.bankAccountHolder ?? "",
+                        ]
+                      : "No bank details yet"
+                  }
+                  avatar={{ icon: "Building2", tint: ready ? "sky" : "muted" }}
+                  status={
+                    account.paymentsPausedAt ? (
+                      <StatusPill label="Paused" tone="muted" />
+                    ) : (
+                      <StatusPill
+                        label={ready ? "Edit" : "Add details"}
+                        tone={ready ? "info" : "warn"}
+                      />
+                    )
+                  }
+                  onPress={offline ? undefined : () => openDetails(account.id)}
+                />
+                {index === accounts.length - 1 ? null : <RowDivider />}
+              </View>
+            )
+          })}
+        </View>
+      )}
+    </View>
+  )
+}
 
 export type FinanceMoneyAccount =
   RouterOutputs["finance"]["balances"]["accounts"][number]
@@ -63,6 +161,15 @@ function MoneyWorkspace({ book, actorUserId, tenantId }: FinanceWorkspace) {
       { bookId: book.id },
       { retry: false, enabled: !offline },
     ),
+  )
+  const bankDetails = useQuery(
+    trpc.businessBanking.accounts.queryOptions(
+      { bookId: book.id },
+      { retry: false, enabled: !offline },
+    ),
+  )
+  const bankById = new Map(
+    (bankDetails.data ?? []).map((account) => [account.id, account]),
   )
   const command = useMobileFinanceCommand({
     bookId: book.id,
@@ -198,6 +305,13 @@ function MoneyWorkspace({ book, actorUserId, tenantId }: FinanceWorkspace) {
               },
             ]}
           />
+          <BankDetailsSection
+            accounts={bankDetails.data}
+            error={bankDetails.isError ? bankDetails.error.message : null}
+            loading={bankDetails.isPending && !offline}
+            offline={offline}
+            onRetry={() => void bankDetails.refetch()}
+          />
           {accounts.length ? <SectionHeader title="Your accounts" /> : null}
         </View>
       }
@@ -220,6 +334,7 @@ function MoneyWorkspace({ book, actorUserId, tenantId }: FinanceWorkspace) {
             name="Info"
           />
           <Text className="min-w-0 flex-1 text-xs text-muted-foreground">
+            Balances are what you recorded here, not a live bank balance.
             Unposted sales and payments are excluded. Recording a movement does
             not send money.
           </Text>
@@ -227,6 +342,11 @@ function MoneyWorkspace({ book, actorUserId, tenantId }: FinanceWorkspace) {
       }
       renderItem={({ item, index }) => {
         const last = index === accounts.length - 1
+        const bank = bankById.get(item.id)
+        const purpose = item.mobileMoney
+          ? "Mobile money"
+          : (PURPOSE_LABELS[item.purpose as keyof typeof PURPOSE_LABELS] ??
+            "Account")
         return (
           <View
             className={cn(
@@ -239,7 +359,7 @@ function MoneyWorkspace({ book, actorUserId, tenantId }: FinanceWorkspace) {
             <RecordRow
               stackDetails
               title={item.name}
-              meta={`${item.mobileMoney ? "Mobile money" : (PURPOSE_LABELS[item.purpose as keyof typeof PURPOSE_LABELS] ?? "Account")}${item.archivedAt ? " · Archived" : ""}`}
+              meta={`${bank?.bankName && bank.bankAccountNumber ? `${bank.bankName} · ${accountSuffix(bank.bankAccountNumber)}` : purpose}${item.archivedAt ? " · Archived" : ""}`}
               amount={formatFinanceMoney(item.balanceMinor, book.currencyCode)}
               avatar={{
                 icon:

@@ -67,6 +67,7 @@ model FinanceBook {
 }
 
 model FinanceAccount {
+  manualPaymentLinks          ManualPaymentLink[]
   payoutIntents PayoutIntent[]
   commercialPayments CommercialOrderPayment[]
   bankAccountStates FinanceBankAccountState[]
@@ -93,6 +94,10 @@ model FinanceAccount {
   /// A BANK-purpose account that is a mobile money wallet (OPay, PalmPay,
   /// Moniepoint). Shown as "Mobile money"; posting rules are a bank's.
   mobileMoney                 Boolean                              @default(false)
+  /// Merchant-entered receiving instructions; never provider-verified or bank-synced.
+  bankName                    String?
+  bankAccountNumber           String?
+  bankAccountHolder           String?
   createdAt                   DateTime                             @default(now())
   book                        FinanceBook                          @relation(fields: [bookId], references: [id], onDelete: Restrict)
   lines                       FinanceJournalLine[]

@@ -62,6 +62,7 @@ describe("dashboard navigation policy", () => {
       "/",
       "/conversations",
       "/catalog",
+      "/storefront",
       "/inventory",
       "/sales",
       "/services",
@@ -90,6 +91,7 @@ describe("dashboard navigation policy", () => {
       "/",
       "/conversations",
       "/catalog",
+      "/storefront",
       "/inventory",
       "/sales",
       "/services",
@@ -102,7 +104,7 @@ describe("dashboard navigation policy", () => {
       "/settings",
     ])
     expect(adminItems).toEqual(ownerItems)
-    expect(new Set(flatten(ownerItems).map((item) => item.href)).size).toBe(34)
+    expect(new Set(flatten(ownerItems).map((item) => item.href)).size).toBe(36)
   })
 
   test("hides and redirects Website & domain until launch approval", () => {
@@ -135,6 +137,7 @@ describe("dashboard navigation policy", () => {
       "/finance",
       "/finance/spending",
       "/finance/accounts",
+      "/finance/payments",
       "/finance/bank",
       "/finance/suppliers",
       "/customer-ledger",
@@ -421,6 +424,12 @@ test("scoped roles expose orders and stock without catalog or staff administrati
   expect(
     canAccessDashboardPath("/sales/orders/order-1", "CASHIER", scope),
   ).toBe(true)
+  // Payment claims open for staff who take payments; the rest of Finance doesn't.
+  expect(canAccessDashboardPath("/finance/payments", "CASHIER", scope)).toBe(
+    true,
+  )
+  expect(canAccessDashboardPath("/finance/payments", "MANAGER")).toBe(true)
+  expect(canAccessDashboardPath("/finance/accounts", "MANAGER")).toBe(false)
 })
 
 test("Free plan hides and blocks finance, staff, suppliers and receipt settings", () => {

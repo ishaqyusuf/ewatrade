@@ -146,6 +146,8 @@ async function recordCommercialOrderPaymentCore(
     note?: string
     orderId: string
     reference?: string
+    /** Actual receipt date for a merchant-confirmed manual payment. */
+    effectiveAt?: Date
     tenantId: string
     type?: "payment" | "refund"
   },
@@ -156,6 +158,15 @@ async function recordCommercialOrderPaymentCore(
   options: PaymentOptions = {},
 ) {
   assertPaymentAmount(input.amountMinor)
+  if (
+    input.effectiveAt &&
+    (!Number.isFinite(input.effectiveAt.getTime()) ||
+      input.effectiveAt > new Date())
+  )
+    throw new CatalogError(
+      "INVALID_ORDER",
+      "Choose a valid payment date that is not in the future.",
+    )
   if (heldOrder) assertHeldCommerceFinancialOrder(tx, heldOrder, input)
   const financialOrder =
     heldOrder ?? (await lockCommerceFinancialOrder(tx, input))
@@ -195,6 +206,8 @@ async function recordCommercialOrderPaymentCore(
   ) {
     if (
       previous.orderId !== input.orderId ||
+      (input.effectiveAt !== undefined &&
+        previous.recordedAt.getTime() !== input.effectiveAt.getTime()) ||
       previous.amountMinor !== input.amountMinor ||
       previous.method !== expectedMethod ||
       previous.moneyAccountId !== (moneyAccountId ?? null) ||
@@ -354,6 +367,7 @@ async function recordCommercialOrderPaymentCore(
       type: expectedType,
       customerAllocationId: creditSource?.allocationId,
       customerAllocationReleaseId: creditSource?.releaseId,
+      ...(input.effectiveAt ? { recordedAt: input.effectiveAt } : {}),
     },
   })
   if (moneyAccountId) {

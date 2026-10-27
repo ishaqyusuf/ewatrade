@@ -10,7 +10,7 @@ import {
   WHATSAPP_ACTION_INVALID_REPLY,
   WHATSAPP_ACTION_RESULT_VERSION,
   renderWhatsAppActionEditResult,
-  renderWhatsAppActionResult,
+  renderWhatsAppActionResultChunks,
   whatsAppActionEditResultContentSchema,
   whatsAppActionResultContentSchema,
   whatsAppEditIntentStateSchema,
@@ -670,8 +670,10 @@ export function beginAssistantWhatsAppDelivery(
             row.messageId ||
             row.inbox.runId ||
             row.actionReview ||
-            row.chunkCount !== 1 ||
-            row.chunkIndex !== 0 ||
+            row.chunkCount < 1 ||
+            row.chunkCount > 6 ||
+            row.chunkIndex < 0 ||
+            row.chunkIndex >= row.chunkCount ||
             row.renderKind !== "action_result" ||
             row.rendererVersion !== WHATSAPP_ACTION_RESULT_VERSION ||
             resolved.conversation.purpose !== "GENERAL"
@@ -684,6 +686,8 @@ export function beginAssistantWhatsAppDelivery(
             return cancel("cancelled", "SAVED_RESULT_CHANGED")
           if (result.data.type === "action_refusal") {
             if (
+              row.chunkCount !== 1 ||
+              row.chunkIndex !== 0 ||
               ![
                 WHATSAPP_ACTION_INVALID_REPLY,
                 WHATSAPP_ACTION_DISABLED_REPLY,
@@ -745,14 +749,25 @@ export function beginAssistantWhatsAppDelivery(
                 currentScope,
               },
             )
+            const chunks = renderWhatsAppActionResultChunks(
+              {
+                status: reference.status,
+                receipt: receipt?.success ? receipt.data : null,
+              },
+              link?.href,
+              {
+                paymentOrigin:
+                  process.env.PAYMENT_LINK_PUBLIC_ORIGIN ??
+                  process.env.NEXT_PUBLIC_DASHBOARD_URL,
+                appOrigin:
+                  process.env.DASHBOARD_URL ??
+                  process.env.NEXT_PUBLIC_DASHBOARD_URL ??
+                  "https://dash.ewatrade.com",
+              },
+            )
             if (
-              renderWhatsAppActionResult(
-                {
-                  status: reference.status,
-                  receipt: receipt?.success ? receipt.data : null,
-                },
-                link?.href,
-              ) !== body
+              chunks.length !== row.chunkCount ||
+              chunks[row.chunkIndex] !== body
             )
               return cancel("cancelled", "SAVED_RESULT_CHANGED")
           }

@@ -1,0 +1,69 @@
+enum ManualPaymentReportStatus {
+  DRAFT
+  SUBMITTED
+  CONFIRMED
+  NOT_RECEIVED
+}
+
+/// Public payment instructions for an existing Order, including service Orders.
+/// This is not a provider CollectionIntent and never reserves/settles funds.
+model ManualPaymentLink {
+  id                String                @id @default(cuid())
+  tenantId          String
+  orderId           String
+  bankAccountId     String
+  clientLinkId      String
+  amountMinor       Int
+  currencyCode      String
+  allowPartial      Boolean               @default(false)
+  bankName          String
+  bankAccountNumber String
+  bankAccountHolder String
+  createdByUserId   String
+  expiresAt         DateTime
+  closedAt          DateTime?
+  createdAt         DateTime              @default(now())
+  tenant            Tenant                @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  order             CommercialOrder       @relation(fields: [tenantId, orderId], references: [tenantId, id], onDelete: Restrict)
+  bankAccount       FinanceAccount        @relation(fields: [bankAccountId], references: [id], onDelete: Restrict)
+  reports           ManualPaymentReport[]
+
+  @@unique([tenantId, clientLinkId])
+  @@index([tenantId, orderId, createdAt])
+}
+
+/// Unverified customer evidence. Only merchant confirmation posts a payment.
+model ManualPaymentReport {
+  id                  String                    @id @default(cuid())
+  linkId              String
+  clientReportId      String
+  status              ManualPaymentReportStatus @default(DRAFT)
+  claimedAmountMinor  Int
+  payerName           String
+  customerPhone       String?
+  receiptContentType  String?
+  receiptDigest       String?
+  receiptSizeBytes    Int?
+  receiptStoragePath  String?
+  receiptProvider     String?
+  receiptStoreId      String?
+  receiptUploadedAt   DateTime?
+  submittedAt         DateTime?
+  decidedAt           DateTime?
+  decidedByUserId     String?
+  receivedAmountMinor Int?
+  receivedAccountId   String?
+  receivedAt          DateTime?
+  bankReference       String?
+  decisionNote        String?
+  decisionDigest      String?
+  canonicalPaymentId  String?                   @unique
+  revision            Int                       @default(1)
+  createdAt           DateTime                  @default(now())
+  updatedAt           DateTime                  @updatedAt
+  link                ManualPaymentLink         @relation(fields: [linkId], references: [id], onDelete: Restrict)
+
+  @@unique([linkId, clientReportId])
+  @@index([linkId, status, createdAt])
+  @@index([status, submittedAt, id])
+}

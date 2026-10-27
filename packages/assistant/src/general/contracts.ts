@@ -490,6 +490,15 @@ export const generalActionSchema = z.discriminatedUnion("action", [
   simpleMoneyInAction,
   simpleExpenseAction,
   simpleTransferAction,
+  z
+    .object({
+      action: z.literal("payment_links_create"),
+      orderIds: z.array(id).min(1).max(5),
+      bankAccountId: id,
+      allowPartial: z.boolean().default(false),
+      lifetimeMinutes: z.number().int().min(10).max(4320).default(1440),
+    })
+    .strict(),
 ])
 export const generalOrderActionSchema = generalActionSchema.options[2]
 export type GeneralAction = z.infer<typeof generalActionSchema>
@@ -564,6 +573,32 @@ const generalRecordReceiptSchema = z
     },
   )
 export const generalReceiptSchema = z.union([
+  z
+    .object({
+      kind: z.literal("payment_links"),
+      recordId: id,
+      title: z.string(),
+      detail: z.string(),
+      links: z
+        .array(
+          z
+            .object({
+              orderId: id,
+              orderNumber: z.string(),
+              customerName: z.string().nullable().optional(),
+              url: z.string().url(),
+              copyText: z.string().max(2000).optional(),
+              whatsappUrl: z.string().url().max(4096).nullable().optional(),
+              amountMinor: z.number().int().positive(),
+              currencyCode: z.string(),
+              expiresAt: z.string().datetime(),
+            })
+            .strict(),
+        )
+        .min(1)
+        .max(20),
+    })
+    .strict(),
   serviceManualMessageReceiptSchema,
   generalRecordReceiptSchema,
   serviceWorkLifecycleReceipt,
@@ -768,6 +803,8 @@ export function generalActionSummary(
 ) {
   const amount = (minor: number) => generalMoney(minor, currencyCode)
   switch (action.action) {
+    case "payment_links_create":
+      return `Create payment links for ${action.orderIds.length} unpaid order(s)`
     case "staff_access":
       return `Update staff Store access · ${action.assignments.length} Store assignment(s)`
     case "staff_status":

@@ -1,0 +1,29 @@
+{
+  "version": 1,
+  "id": "2026-10-26-local-migration-reconciliation",
+  "tickets": ["H01", "H02"],
+  "summary": "Prisma-generated Storefront and manual-payment history catchups, rehearsed on an empty disposable local database and recorded as already applied only after exact local schema/object checks. Existing 155 migration files remain unchanged. Storefront catchup contains historical legacy-table removals: other targets require separate data/retention and unique-index preflight, never blind deployment. No application deployment or channel activation.",
+  "noAssistantImpact": "This repairs migration history for schema already represented in the existing canonical capabilities and already present on the guarded local QA database. It changes no assistant command, permission, public input, confirmation boundary or rollout classification. Existing manual-payment and Storefront source/target acceptance records remain separate; generated DDL does not authorize applying or resolving anything on another target.",
+  "capabilities": [],
+  "procedures": [],
+  "docs": [
+    {
+      "topic": "feature",
+      "status": "local_only",
+      "path": ".brain/features/manual-payment-confirmation.md"
+    },
+    {
+      "topic": "schema",
+      "status": "local_only",
+      "path": ".brain/database/migrations.md"
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "run",
+      "path": ".brain/qa/2026-10-26-manual-payment-migration-repair.md",
+      "executed": true,
+      "result": "All155 original migrations replayed unchanged and both Prisma-generated catchups applied to the owned disposable database; full schema diff empty. Independent Claude SQL review passed. LocalQA parity/object checks preceded official Prisma resolve for both already-present changes; normal root db:migrate/db:push and final status/diff passed. All157 prior ledger rows and existing QA Order/payment/report sample are unchanged; only two new applied ledger records. Owned disposable DB removed without force. H01/H02 and140-path fast source checks passed. No deployment or native acceptance."
+    }
+  ]
+}

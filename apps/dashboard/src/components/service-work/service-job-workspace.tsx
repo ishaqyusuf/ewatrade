@@ -1,5 +1,6 @@
 "use client"
 
+import { PaymentLinkDialog } from "@/components/business-banking/payment-link-dialog"
 import { FormFeedback } from "@/components/forms/form-feedback"
 import {
   OrderPaymentAccount,
@@ -265,6 +266,7 @@ function JobSummary({
 }) {
   const trpc = useTRPC()
   const quick = useJobQuickStep()
+  const [paymentLinkOpen, setPaymentLinkOpen] = useState(false)
   const stage = jobStage(job)
   const next = jobNextStep(job, canManage)
   const signOff = usesCustomerSignOff(
@@ -485,8 +487,26 @@ function JobSummary({
             {job.balanceDueMinor > 0 ? (
               <LinkButton onClick={() => goTo("pay")}>Take payment</LinkButton>
             ) : null}
+            {job.balanceDueMinor > 0 && job.summary !== "cancelled" ? (
+              <LinkButton onClick={() => setPaymentLinkOpen(true)}>
+                Payment link
+              </LinkButton>
+            ) : null}
           </dd>
         </dl>
+        {paymentLinkOpen ? (
+          <PaymentLinkDialog
+            kind="service"
+            order={{
+              id: job.commercialOrderId,
+              orderNumber: job.orderNumber,
+              customerName: job.customerName,
+              balanceDueMinor: job.balanceDueMinor,
+              currencyCode: job.currencyCode,
+            }}
+            onClose={() => setPaymentLinkOpen(false)}
+          />
+        ) : null}
       </SummarySection>
 
       <SummarySection title="Activity history">

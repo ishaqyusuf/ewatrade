@@ -237,6 +237,7 @@ export function GeneralThread({
             heading={heading}
             proposals={outcomes}
             currencyCode={currencyCode}
+            businessName={vm.data?.businessName}
             onOpenReceipt={(proposal) =>
               proposal.receipt && openReceipt(proposal.receipt)
             }

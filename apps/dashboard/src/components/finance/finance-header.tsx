@@ -54,6 +54,7 @@ export const FINANCE_MENU_ITEMS = [
   { path: "/finance", label: "Overview" },
   { path: "/finance/spending", label: "Spending" },
   { path: "/finance/accounts", label: "Money accounts" },
+  { path: "/finance/payments", label: "Payments to check" },
   { path: "/finance/bank", label: "Bank" },
   { path: "/finance/suppliers", label: "Suppliers" },
   { path: "/customer-ledger", label: "Customer balances" },

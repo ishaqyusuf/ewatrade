@@ -74,6 +74,12 @@ formOnly(
 )
 
 // Catalog
+formOnly(
+  "sales",
+  "Manual bank instructions, customer reports and merchant receipt confirmation use the payment-link/review forms. Customer evidence never authorizes a payment; no model or WhatsApp payment approval is enabled.",
+  ["businessBanking.*"],
+)
+
 planned("platform", "G05", [
   "customerMessages.preview",
   "customerMessages.catalog",

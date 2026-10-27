@@ -2,6 +2,7 @@
 import type { FinanceSheetMode } from "@/hooks/use-finance-params"
 import { FinanceAccountForm } from "./account-form"
 import { FinanceAccountPaymentSettingsForm } from "./account-payment-settings-form"
+import { FinanceBankDetailsForm } from "./bank-details-form"
 import { FinanceBankImportForm } from "./bank-import-form"
 import { FinanceBankSourceDetail } from "./bank-source-detail"
 import { FinanceBankStatementDetail } from "./bank-statement-detail"
@@ -117,6 +118,8 @@ export function FinanceContent({
         accountId={paymentAccountId}
       />
     )
+  if (mode === "bank-details")
+    return <FinanceBankDetailsForm book={book} accountId={paymentAccountId} />
   if (mode === "account" || mode === "category")
     return (
       <FinanceAccountForm bookId={book.id} category={mode === "category"} />

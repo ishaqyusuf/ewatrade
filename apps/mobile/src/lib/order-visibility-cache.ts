@@ -4,7 +4,9 @@ export function isOrderVisibilityQuery(key: QueryKey) {
   const path = key[0]
   return (
     Array.isArray(path) &&
-    ["orders", "search", "customers", "catalog"].includes(path[0])
+    ["orders", "search", "customers", "catalog", "businessBanking"].includes(
+      path[0],
+    )
   )
 }
 

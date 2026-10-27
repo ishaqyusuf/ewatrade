@@ -17,6 +17,11 @@ import { HugeiconsIcon } from "@hugeicons/react"
 import { useState } from "react"
 import { GeneralChatPhotoThumb } from "./general-chat-photo"
 import { GeneralMoneyInReview } from "./general-money-in-review"
+import {
+  GeneralPaymentLinksReceipt,
+  GeneralPaymentLinksReview,
+  paymentLinksConfirmLabel,
+} from "./general-payment-links"
 import { GeneralProductPicture } from "./general-product-picture"
 import { GeneralReviewPresentationBody } from "./general-review-presentation"
 import { GeneralSaleReview } from "./general-sale-review"
@@ -174,6 +179,8 @@ export function GeneralProposalCard({
     proposal.payload.action === "money_transfer_simple"
       ? proposal.payload
       : null
+  const paymentLinks =
+    proposal.payload.action === "payment_links_create" ? proposal.payload : null
   // Quick chat records: compact review, plain buttons, no status badge.
   const quick = !!sale || !!moneyIn || !!expense || !!transfer
   const reply = (choice: { label: string; text: string }) =>
@@ -246,6 +253,11 @@ export function GeneralProposalCard({
           choices={pending ? proposal.choices : undefined}
           disabled={disabled}
           onChoice={reply}
+        />
+      ) : paymentLinks ? (
+        <GeneralPaymentLinksReview
+          payload={paymentLinks}
+          review={proposal.review}
         />
       ) : proposal.presentation ? (
         product || filed ? (
@@ -340,7 +352,9 @@ export function GeneralProposalCard({
                     ? "Save sale"
                     : moneyIn || expense || transfer
                       ? "Proceed"
-                      : "Confirm")}
+                      : paymentLinks
+                        ? paymentLinksConfirmLabel(paymentLinks)
+                        : "Confirm")}
               </Button>
             ) : null}
             <Button
@@ -384,10 +398,13 @@ export function GeneralOutcomeList({
   currencyCode,
   onOpenReceipt,
   heading = true,
+  businessName,
 }: {
   proposals: GeneralProposal[]
   currencyCode: string
   onOpenReceipt: (proposal: GeneralProposal) => void
+  /** Names the business in a prepared payment link message. */
+  businessName?: string
   /** The "In this chat" header with counts; off under a single reply. */
   heading?: boolean
 }) {
@@ -427,6 +444,29 @@ export function GeneralOutcomeList({
       <ul className="divide-y">
         {proposals.map((proposal) => {
           const { receipt } = proposal
+          // Links are copied and shared here; there is no record to open.
+          if (receipt?.kind === "payment_links")
+            return (
+              <li
+                key={proposal.id}
+                id={`general-proposal-${proposal.id}`}
+                className="flex gap-3 py-3 pr-4 pl-4"
+              >
+                <span
+                  role="img"
+                  aria-label="Done"
+                  className="flex size-5 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary"
+                >
+                  <HugeiconsIcon icon={Tick02Icon} className="size-3" />
+                </span>
+                <div className="min-w-0 flex-1">
+                  <GeneralPaymentLinksReceipt
+                    receipt={receipt}
+                    businessName={businessName}
+                  />
+                </div>
+              </li>
+            )
           if (receipt) {
             const filed = filedAttachment(proposal)
             return (

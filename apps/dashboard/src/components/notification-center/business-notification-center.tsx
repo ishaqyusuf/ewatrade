@@ -19,6 +19,10 @@ import {
   type InboxTab,
 } from "./business-notification-inbox"
 import { useAlertPreferencesParams } from "./business-notification-settings"
+import {
+  PaymentReportNotifications,
+  usePendingPaymentReports,
+} from "./payment-report-notifications"
 
 /** Fresh, mount-owned reads: never joined across user, Business or Store. */
 const freshRead = {
@@ -58,7 +62,10 @@ export function BusinessNotificationCenter({
       mount,
     ),
   )
-  const unread = count.isSuccess ? count.data.count : 0
+  const alerts = count.isSuccess ? count.data.count : 0
+  // Customer payment claims waiting for a check also light the bell.
+  const payments = usePendingPaymentReports()
+  const unread = alerts + (payments.isSuccess ? payments.data.items.length : 0)
 
   return (
     <Popover
@@ -93,6 +100,12 @@ export function BusinessNotificationCenter({
         className="flex max-h-[min(560px,calc(100dvh-96px))] w-[420px] max-w-[calc(100vw-16px)] gap-0 p-0"
       >
         <p className="px-3.5 pt-3 text-[15px] font-medium">My notifications</p>
+        {open ? (
+          <PaymentReportNotifications
+            timeZone={timeZone}
+            onNavigate={() => setOpen(false)}
+          />
+        ) : null}
         {open ? (
           <ActivityViewerProvider membershipId={viewerMembershipId}>
             <InboxPanel

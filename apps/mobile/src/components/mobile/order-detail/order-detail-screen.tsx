@@ -444,6 +444,15 @@ export function OrderDetailScreen({ orderId }: { orderId: string }) {
               : changes.openApproval(banner.target.kind)
           }
           onChange={() => changes.open("menu")}
+          onPaymentLink={
+            hasBalanceDue && order.currencyCode === "NGN"
+              ? () =>
+                  router.push({
+                    pathname: "/payment-link/[orderId]",
+                    params: { orderId: order.id },
+                  } as never)
+              : undefined
+          }
           assistant={
             assistant.enabled
               ? {

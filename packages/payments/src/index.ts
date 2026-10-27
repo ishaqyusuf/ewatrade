@@ -4,6 +4,8 @@ import { HostedCheckoutProviderError } from "./hosted-checkout-errors"
 
 export * from "./collection-intent"
 export * from "./payout-intent"
+export * from "./paystack-banking"
+export * from "./payment-link"
 export * from "./hosted-checkout-errors"
 export * from "./prescription-checkout-handoff"
 

@@ -20,6 +20,8 @@ export type OrderDetailContentProps = {
   messageFollowUp?: ReactNode
   /** Opens the Change sheet; absent while the order cannot load its options. */
   onChange?: () => void
+  /** Opens the bank-transfer Payment link page; absent with nothing due. */
+  onPaymentLink?: () => void
   /** Ask AI about this order; absent when the business has no assistant. */
   assistant?: { disabled: boolean; onPress: () => void }
   error: string | null

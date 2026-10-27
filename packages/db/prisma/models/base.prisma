@@ -1,4 +1,5 @@
 model Tenant {
+  manualPaymentLinks                                ManualPaymentLink[]
   assistantWhatsAppUsage AssistantWhatsAppUsageBucket[]
   assistantWhatsAppLinks AssistantWhatsAppLink[]
   assistantWhatsAppGrants AssistantWhatsAppGrant[]
