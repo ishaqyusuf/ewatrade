@@ -145,7 +145,7 @@ export function DayTimeline() {
             from a sample day in Ilorin,{" "}
             {platform === "web"
               ? "on the web dashboard."
-              : "on the mobile app screens."}
+              : "previewed in the mobile app, which is coming soon."}
           </p>
         </div>
         <div className="gg-day">
@@ -181,7 +181,7 @@ export function DayTimeline() {
                       </h3>
                       <p>
                         {offline
-                          ? "Sales save on the phone and show Waiting to sync. When the signal comes back, they sync on their own."
+                          ? "When the app arrives, sales will save on the phone and show Waiting to sync. When the signal comes back, they’ll sync on their own."
                           : m.copy}
                       </p>
                       <div className="gg-pills">
@@ -232,7 +232,9 @@ export function DayTimeline() {
                 </span>
               </div>
               <span className="b-stage-tag">
-                {platform === "web" ? "Web dashboard" : "Mobile app"}
+                {platform === "web"
+                  ? "Web dashboard"
+                  : "App preview · Coming soon"}
               </span>
               <div
                 className={platform === "web" ? "b-day-web" : "gg-day-phone"}

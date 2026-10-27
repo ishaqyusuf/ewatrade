@@ -11,12 +11,12 @@ export function Availability({ signupEnabled }: { signupEnabled: boolean }) {
       <div className="gg-wrap">
         <div className="gg-split-head">
           <h2 className="gg-h2" id="dash-h">
-            The web for the back office. The phone for the counter. The chat for
-            everywhere else.
+            The web for the counter and the back office. The chat for everywhere
+            else.
           </h2>
           <p className="gg-lead">
-            One business and one set of numbers, whichever screen is in your
-            hand.
+            One business and one set of numbers, in any browser on your computer
+            or phone. A mobile app for the counter is coming soon.
           </p>
         </div>
         <div className="b-avail w-avail">
@@ -38,11 +38,12 @@ export function Availability({ signupEnabled }: { signupEnabled: boolean }) {
           </article>
           <article className="b-av b-av--app w-av-app">
             <div className="b-av-copy">
+              <span className="b-av-tag b-av-tag--soon">Coming soon</span>
               <h3>Mobile app</h3>
               <p>
-                Made for the counter. Sales save on the phone when there’s no
-                signal and sync when it’s back. Same business, same numbers as
-                the web.
+                Made for the counter. Sales will save on the phone when there’s
+                no signal and sync when it’s back, with the same numbers as the
+                web. Until it’s ready, open ẸwáTrade in your phone’s browser.
               </p>
             </div>
             <div className="b-av-phone">
@@ -88,13 +89,13 @@ const faqs: {
   {
     question: "What’s included on the Free plan?",
     answer:
-      "One business, 10 catalog items and 50 orders a month, for one owner. The in-app assistant and merchant WhatsApp assistant are included, with a shared monthly AI allowance.",
+      "One business, 10 catalog items and 50 orders a month, for one owner. The web dashboard assistant and merchant WhatsApp assistant are included, with a shared monthly AI allowance.",
     category: "free",
   },
   {
     question: "How does the monthly AI allowance work?",
     answer:
-      "Every plan includes an allowance shared between the assistant in the app and on WhatsApp. When it’s used up, sales, stock, orders and everything else in ẸwáTrade keep working as normal.",
+      "Every plan includes an allowance shared between the assistant on the web dashboard and on WhatsApp. When it’s used up, sales, stock, orders and everything else in ẸwáTrade keep working as normal.",
     category: "assistant",
   },
   {
@@ -130,7 +131,7 @@ const faqs: {
   {
     question: "Is there a mobile app?",
     answer:
-      "Yes. The mobile app brings your sales, stock and customer balances together on your phone. You can also use ẸwáTrade in any browser.",
+      "It’s coming soon, with offline sales for the counter. Today, use ẸwáTrade in any browser on your phone or computer, or ask your assistant on WhatsApp.",
     category: "mobile",
   },
   {
@@ -148,7 +149,7 @@ const faqs: {
   {
     question: "Does it work without internet?",
     answer:
-      "The web dashboard and assistant need a connection. In the mobile app, sales save on the phone, show ‘Waiting to sync’ and sync when you’re back online. Offline works for recording sales.",
+      "Not yet. The web dashboard and the assistant need a connection. Offline sales are coming with the mobile app: sales will save on the phone, show ‘Waiting to sync’ and sync when you’re back online.",
     category: "web",
   },
   {

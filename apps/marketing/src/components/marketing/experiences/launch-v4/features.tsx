@@ -40,14 +40,14 @@ const features = [
   [
     "chat",
     "Assistant and WhatsApp",
-    "Ask in the app or on WhatsApp. Answers stay in the chat; changes come back to you to review and confirm.",
+    "Ask on the web dashboard or on WhatsApp. Answers stay in the chat; changes come back to you to review and confirm.",
     "",
   ],
   [
     "cloudoff",
     "Mobile app, offline sales",
-    "Sell at the counter. When the signal drops, sales save on the phone and sync when it’s back.",
-    "Offline works for recording sales",
+    "Made for the counter. When the signal drops, sales will save on the phone and sync when it’s back. Today, ẸwáTrade on the web needs a connection.",
+    "Coming soon",
   ],
 ]
 export function Features() {
@@ -60,8 +60,8 @@ export function Features() {
           </h2>
           <p className="gg-lead">
             Catalog, orders, stock, customers and money, with your team and your
-            assistant beside you. The same numbers on the web, the phone and in
-            the chat.
+            assistant beside you. The same numbers on the web and in the chat.
+            The mobile app is coming soon.
           </p>
         </div>
         <ul className="w-feats">

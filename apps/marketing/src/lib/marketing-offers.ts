@@ -15,7 +15,7 @@ export const MARKETING_OFFERS = [
       "Sales, orders, stock and customer balances",
       "Simple sales for money received",
       "Public storefront, up to 10 items",
-      "Mobile app with offline sales",
+      "Mobile app with offline sales · Coming soon",
     ],
   },
   {
@@ -48,7 +48,7 @@ export const MARKETING_OFFERS = [
     staff: 10,
     included: [
       "Customer messages",
-      "Offline sales on 5 devices",
+      "Offline sales on 5 devices · Coming soon",
       "Priority support",
     ],
   },
@@ -61,7 +61,10 @@ export const MARKETING_OFFERS = [
     items: null,
     orders: null,
     staff: 50,
-    included: ["Offline sales on 20 devices", "Dedicated support"],
+    included: [
+      "Offline sales on 20 devices · Coming soon",
+      "Dedicated support",
+    ],
   },
 ] as const
 export type MarketingPlanId = (typeof MARKETING_OFFERS)[number]["id"]

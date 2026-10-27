@@ -61,14 +61,15 @@ export function Hero({ signupEnabled }: { signupEnabled: boolean }) {
         <div className="gg-hero-copy">
           <p className="w-eyebrow">
             <span>Web</span>
-            <span>Mobile</span>
             <span className="w-eyebrow-wa">WhatsApp assistant</span>
+            <span className="w-eyebrow-soon">Mobile app · Coming soon</span>
           </p>
           <HeroHeadline paused={paused} replay={replay} />
           <p className="gg-hero-sub">
-            Sell, count stock and see who owes you on the web or the mobile app.
-            Or ask your AI assistant on WhatsApp: it answers from your numbers
-            and sends every change back for you to confirm.
+            Sell, count stock and see who owes you on the web, in any browser on
+            your computer or phone. Or ask your AI assistant on WhatsApp: it
+            answers from your numbers and sends every change back for you to
+            confirm. Our mobile app is coming soon.
           </p>
           <div className="gg-ctas w-ctas">
             <WebSignupCta signupEnabled={signupEnabled} channel="hero" />
@@ -144,6 +145,12 @@ export function Hero({ signupEnabled }: { signupEnabled: boolean }) {
                         ? "Mobile"
                         : "WhatsApp"}
                   </span>
+                  {value === "mobile" && (
+                    <>
+                      <span className="ew-sr"> app preview, coming </span>
+                      <span className="b-soon">Soon</span>
+                    </>
+                  )}
                 </button>
               ))}
             </fieldset>
@@ -177,8 +184,8 @@ export function Hero({ signupEnabled }: { signupEnabled: boolean }) {
                   }}
                   label="Al-Jawdah Agro-Biz in Ilorin, sample mobile app"
                 />
-                <span className="b-soon-tag w-tag" aria-hidden="true">
-                  Mobile app
+                <span className="b-soon-tag" aria-hidden="true">
+                  App preview · Coming soon
                 </span>
               </div>
             </div>
@@ -233,7 +240,7 @@ export function Hero({ signupEnabled }: { signupEnabled: boolean }) {
             <p className="gg-caption" aria-live="off">
               {whatsapp
                 ? "Your assistant, right in the chat."
-                : captions[selectedStep]}{" "}
+                : `${active === "mobile" ? "App preview · " : ""}${captions[selectedStep]}`}{" "}
               <span className="sample-note">Sample business.</span>
             </p>
             <button

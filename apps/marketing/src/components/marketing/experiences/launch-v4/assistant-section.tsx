@@ -39,7 +39,7 @@ export function AssistantSection() {
       <div className="gg-wrap">
         <p className="w-kicker">
           <span className="w-kdot" aria-hidden="true" />
-          Your assistant, in the app and on WhatsApp
+          Your assistant, on the web and on WhatsApp
         </p>
         <h2 className="w-ai-h" id="ai-h">
           <span className="w-ai-l1">Your AI assistant.</span>

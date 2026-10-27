@@ -2103,3 +2103,6 @@
   margin: 0;
   min-width: 0;
 }
+
+.launch-v4 .w-eyebrow .w-eyebrow-soon { background: var(--ew-amber); color: var(--ew-amber-fg); box-shadow: none; }
+@media (max-width: 400px) { .launch-v4 .b-stage .b-switch button { padding: 0 10px; gap: 6px; } .launch-v4 .b-switch .b-soon { padding: 0 6px; } }

@@ -12,7 +12,7 @@ export function LaunchPricing({ signupEnabled }: { signupEnabled: boolean }) {
           </h2>
           <p className="gg-lead">
             Free stays free forever. Paid plans are monthly. Every plan includes
-            your assistant, in the app and on WhatsApp.
+            your assistant, on the web and on WhatsApp.
           </p>
         </div>
         <div className="gg-plans">
@@ -58,7 +58,7 @@ export function LaunchPricing({ signupEnabled }: { signupEnabled: boolean }) {
                 <div className="w-plan-ai">
                   <span aria-hidden="true">{icons.chat ?? icons.check}</span>
                   <span>
-                    <b>Assistant in the app and on WhatsApp</b>
+                    <b>Assistant on the web and on WhatsApp</b>
                     <small>Included monthly AI allowance</small>
                   </span>
                 </div>
@@ -94,9 +94,9 @@ export function LaunchPricing({ signupEnabled }: { signupEnabled: boolean }) {
             <div>
               <h3>Your assistant, on every plan</h3>
               <p>
-                Ask in the app or on WhatsApp. Both share your plan’s included
-                monthly AI allowance. When you reach it, everything else in
-                ẸwáTrade keeps working.
+                Ask on the web dashboard or on WhatsApp. Both share your plan’s
+                included monthly AI allowance. When you reach it, everything
+                else in ẸwáTrade keeps working.
               </p>
             </div>
           </div>
@@ -190,7 +190,7 @@ export function LaunchPricing({ signupEnabled }: { signupEnabled: boolean }) {
                     "Included",
                   ],
                   ["Customer messages", "—", "—", "Included", "Included"],
-                  ["Offline sales devices", "1", "1", "5", "20"],
+                  ["Offline sales devices · Coming soon", "1", "1", "5", "20"],
                 ].map(([label, ...values]) => (
                   <tr key={label}>
                     <th scope="row">{label}</th>

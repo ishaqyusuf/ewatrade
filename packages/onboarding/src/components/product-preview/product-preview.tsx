@@ -49,7 +49,11 @@ export function ProductPreview({
   if (platform === "mobile") {
     const name = view === "overview" || view === "team" ? "home" : view
     return (
-      <div className="ew-phone" role="img" aria-label={label}>
+      <div
+        className="ew-phone"
+        role="img"
+        aria-label={`${label}. Mobile app preview, coming soon.`}
+      >
         <div className="ew-phone-screen" ref={outer} aria-hidden="true">
           <div className="ew-island" />
           <div className="ew-app" ref={inner}>
