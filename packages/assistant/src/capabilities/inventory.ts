@@ -280,6 +280,7 @@ formOnly(
     "finance.fiscalCalendar",
     "finance.yearEndPreview",
     "finance.inventoryReconciliation",
+    "finance.openingEquityReconciliation",
   ],
 )
 formOnly(

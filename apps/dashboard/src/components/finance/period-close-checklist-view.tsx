@@ -232,7 +232,68 @@ function CheckRow({
       {check.id === "INVENTORY_RECONCILIATION" ? (
         <StockValueToday bookId={checklist.bookId} />
       ) : null}
+      {check.id === "OPENING_AND_ADJUSTMENTS" ? (
+        <StartingBalancesToday bookId={checklist.bookId} />
+      ) : null}
     </li>
+  )
+}
+
+const OPENING_SOURCE_WORDS: Record<string, string> = {
+  OPENING_BALANCE: "money accounts",
+  CUSTOMER_LEDGER_OPENING: "Customers",
+  CUSTOMER_LEDGER_REVERSAL: "undone Customer balances",
+  SUPPLIER_OPENING_PAYABLE: "what you owed Suppliers",
+  SUPPLIER_OPENING_ADVANCE: "Supplier prepayments",
+  SUPPLIER_ENTRY_REVERSAL: "undone Supplier balances",
+}
+
+/** What makes up opening equity today, and what can't be in it yet. */
+function StartingBalancesToday({ bookId }: { bookId: string }) {
+  const trpc = useTRPC()
+  const query = useQuery(
+    trpc.finance.openingEquityReconciliation.queryOptions(
+      { bookId },
+      { retry: false },
+    ),
+  )
+  if (!query.data)
+    return query.isError ? (
+      <p className="text-sm text-muted-foreground">
+        Starting balances couldn&apos;t load.
+      </p>
+    ) : null
+  const r = query.data
+  const money = (minor: string) => formatFinanceMoney(minor, r.currencyCode)
+  const parts = r.sources.map(
+    (row) =>
+      `${OPENING_SOURCE_WORDS[row.sourceKind] ?? row.sourceKind.toLowerCase().replaceAll("_", " ")} ${money(row.netMinor)}`,
+  )
+  const stock = r.openingStock
+  return (
+    <div className="grid gap-1 text-sm text-muted-foreground">
+      <p>
+        Starting balances add up to {money(r.openingEquityMinor)}
+        {parts.length ? `: ${parts.join(", ")}.` : "."}
+      </p>
+      {stock.knownCount || stock.unknownCostCount ? (
+        <p>
+          {stock.knownCount
+            ? `Starting stock worth ${money(stock.knownValueMinor)} isn't in these balances yet.`
+            : ""}
+          {stock.unknownCostCount
+            ? ` ${stock.unknownCostCount} starting stock ${stock.unknownCostCount === 1 ? "item has" : "items have"} no known cost.`
+            : ""}
+        </p>
+      ) : null}
+      {r.unexpectedSourceKinds.length ? (
+        <p>Other records also changed starting balances. Look at them.</p>
+      ) : null}
+      <p>
+        Equipment, loans, tax, prepayments and bills you owe can&apos;t be added
+        as starting balances yet.
+      </p>
+    </div>
   )
 }
 

@@ -88,6 +88,10 @@ export {
   getFinanceInventoryReconciliation,
   getFinanceInventoryReconciliationInTransaction,
 } from "./inventory-reconciliation"
+export {
+  getFinanceOpeningEquityReconciliation,
+  getFinanceOpeningEquityReconciliationInTransaction,
+} from "./opening-equity-reconciliation"
 export { listAssistantCashAccountsInTransaction } from "./assistant-cash-count-reads"
 export { getFinanceYearEndPreview } from "./year-end-preview"
 export {

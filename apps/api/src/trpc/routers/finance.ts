@@ -13,9 +13,10 @@ import {
   getFinanceCashCount,
   getFinanceCommandStatus,
   getFinanceFiscalCalendar,
-  getFinanceMoneyMovement,
-  getFinanceOwedSummary,
   getFinanceInventoryReconciliation,
+  getFinanceMoneyMovement,
+  getFinanceOpeningEquityReconciliation,
+  getFinanceOwedSummary,
   getFinancePeriodCloseChecklist,
   getFinancePeriods,
   getFinancePurchaseBill,
@@ -289,6 +290,14 @@ export const financeRouter = createTRPCRouter({
     .input(financeBookSchema)
     .query(({ ctx, input }) =>
       getFinanceInventoryReconciliation(ctx.db, {
+        ...input,
+        ...ctx.financeActor,
+      }),
+    ),
+  openingEquityReconciliation: financeProcedure
+    .input(financeBookSchema)
+    .query(({ ctx, input }) =>
+      getFinanceOpeningEquityReconciliation(ctx.db, {
         ...input,
         ...ctx.financeActor,
       }),
