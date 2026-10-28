@@ -13,17 +13,16 @@ import {
 } from "@ewatrade/storefront-runtime/presentation"
 import { StorefrontAttribution } from "@ewatrade/storefront-runtime/primitives"
 import { ServiceOptionPicker } from "@ewatrade/storefront-templates/service-options"
+import { Button } from "@ewatrade/ui/button"
 import {
-  Button,
   Field,
   FieldDescription,
   FieldGroup,
   FieldLabel,
-  Input,
-  RadioGroup,
-  RadioGroupItem,
-  Textarea,
-} from "@ewatrade/ui"
+} from "@ewatrade/ui/field"
+import { Input } from "@ewatrade/ui/input"
+import { RadioGroup, RadioGroupItem } from "@ewatrade/ui/radio-group"
+import { Textarea } from "@ewatrade/ui/textarea"
 import { multiplyExactDecimals } from "@ewatrade/utils/exact-decimal"
 import { useActionState, useEffect, useId, useRef, useState } from "react"
 import "@ewatrade/storefront-templates/styles.css"

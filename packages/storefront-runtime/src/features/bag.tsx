@@ -2,15 +2,16 @@
 
 import { CommerceLink } from "../commerce/navigation"
 
+import { Alert, AlertDescription } from "@ewatrade/ui/alert"
+import { Button, buttonVariants } from "@ewatrade/ui/button"
 import {
-  Alert,
-  AlertDescription,
-  Button,
   Empty,
   EmptyDescription,
   EmptyHeader,
   EmptyMedia,
   EmptyTitle,
+} from "@ewatrade/ui/empty"
+import {
   Sheet,
   SheetClose,
   SheetContent,
@@ -18,8 +19,7 @@ import {
   SheetFooter,
   SheetHeader,
   SheetTitle,
-  buttonVariants,
-} from "@ewatrade/ui"
+} from "@ewatrade/ui/sheet"
 import {
   Cancel01Icon,
   Delete02Icon,
@@ -39,7 +39,7 @@ import {
 import { useStorefrontCommerce } from "../commerce/provider"
 import { storefrontItemHref } from "../links"
 import { StorefrontArtwork } from "../primitives"
-import { QuantityStepper } from "./product"
+import { QuantityStepper } from "./quantity-stepper"
 
 /** One note when a bag mixes items for now with items requested ahead. */
 export function BagIntentNote({ lines }: { lines: BagLine[] }) {

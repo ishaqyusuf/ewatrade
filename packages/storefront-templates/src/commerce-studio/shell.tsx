@@ -2,7 +2,8 @@
 
 import { StorefrontAttribution } from "@ewatrade/storefront-runtime/primitives"
 import type { StorefrontClientSnapshot } from "@ewatrade/storefront-runtime/server"
-import { Button, Toaster, buttonVariants } from "@ewatrade/ui"
+import { Button, buttonVariants } from "@ewatrade/ui/button"
+import { Toaster } from "@ewatrade/ui/sonner"
 import {
   ArrowRight01Icon,
   ShoppingBag01Icon,

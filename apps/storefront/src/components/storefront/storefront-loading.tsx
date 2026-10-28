@@ -1,4 +1,4 @@
-import { Skeleton } from "@ewatrade/ui"
+import { Skeleton } from "@ewatrade/ui/skeleton"
 
 export function StorefrontLoading({
   label = "page",

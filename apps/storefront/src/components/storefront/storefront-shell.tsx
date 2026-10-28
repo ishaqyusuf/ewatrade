@@ -4,16 +4,14 @@ import type { StorefrontCommerceAdapter } from "@ewatrade/storefront-contracts/c
 
 import type { StorefrontPresentation } from "@/lib/storefront-presentation"
 import { StorefrontCommerceProvider } from "@ewatrade/storefront-runtime/commerce/provider"
-import {
-  CommerceStudioProvider,
-  CommerceStudioShell,
-  StorefrontViewport,
-} from "@ewatrade/storefront-templates/commerce-studio"
+import { CommerceStudioProvider } from "@ewatrade/storefront-templates/commerce-studio/context"
+import { CommerceStudioShell } from "@ewatrade/storefront-templates/commerce-studio/shell"
 import {
   storefrontFeaturePresentation,
   storefrontUsesFeaturePage,
 } from "@ewatrade/storefront-templates/feature-presentation"
 import { StorefrontFeatureShell } from "@ewatrade/storefront-templates/feature-shell"
+import { StorefrontViewport } from "@ewatrade/storefront-templates/viewport"
 import { usePathname } from "next/navigation"
 import {
   type ReactNode,

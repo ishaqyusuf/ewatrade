@@ -12,25 +12,21 @@ import { StorefrontFeatureFrame } from "../frame"
 import { CommerceLink } from "../../commerce/navigation"
 import { storefrontItemHref } from "../../links"
 
+import { Alert, AlertDescription, AlertTitle } from "@ewatrade/ui/alert"
 import {
-  Alert,
-  AlertDescription,
   AlertDialog,
   AlertDialogCancel,
   AlertDialogContent,
   AlertDialogDescription,
   AlertDialogFooter,
   AlertDialogTitle,
-  AlertTitle,
-  Badge,
-  Button,
-  Field,
-  FieldLabel,
-  Separator,
-  Spinner,
-  Textarea,
-  buttonVariants,
-} from "@ewatrade/ui"
+} from "@ewatrade/ui/alert-dialog"
+import { Badge } from "@ewatrade/ui/badge"
+import { Button, buttonVariants } from "@ewatrade/ui/button"
+import { Field, FieldLabel } from "@ewatrade/ui/field"
+import { Separator } from "@ewatrade/ui/separator"
+import { Spinner } from "@ewatrade/ui/spinner"
+import { Textarea } from "@ewatrade/ui/textarea"
 import { CheckmarkCircle02Icon, WhatsappIcon } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { useEffect, useId, useRef, useState } from "react"

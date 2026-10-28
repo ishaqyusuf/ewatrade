@@ -1,6 +1,6 @@
 "use client"
 
-import { Button, buttonVariants } from "@ewatrade/ui"
+import { Button, buttonVariants } from "@ewatrade/ui/button"
 import { CommerceLink } from "../commerce/navigation"
 import { useStorefrontCommerce } from "../commerce/provider"
 

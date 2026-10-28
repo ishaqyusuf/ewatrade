@@ -60,7 +60,7 @@ explicit evidence-based decision if changing them would add cost or weaken polic
 - [x] S3 Read pipeline: remove redundant work and overlap independent reads;
   retain plan cap, query-bound cursors, stock/price semantics and public DTO bounds.
   Add indexes/read models only if measured evidence requires them.
-- [ ] S4 Delivery: narrow measured package imports and split optional feature code
+- [x] S4 Delivery: narrow measured package imports and split optional feature code
   while preserving renderer pins, SSR, template previews and persistent state.
 - [ ] S5 Navigation policy: bounded intent prefetch and useful pending feedback;
   retain URL ownership, privacy/no-store and photo-revocation/fallback semantics.
@@ -144,6 +144,16 @@ H01/H02 gates remain separate from source smoke. No deployment is implied.
   export avoids editing the concurrently owned query barrel. Index/read-model
   changes are deferred: removing entire unused reads is proven; no query plan yet
   justifies schema/compute changes on the constrained shared database.
+
+- S4: explicit UI subpath exports adopted in14 owned storefront modules; public
+  exports remain compatible. Commerce editorial body is separate from the legacy
+  full renderer. Live shell/context use narrow exports and selected account,
+  checkout, receipt and detail journeys use SSR-enabled dynamic imports. The bag's
+  quantity control no longer imports the whole Product journey. Existing template
+  static rendering/pin/parity/shell/feature tests pass (33/241, then23/151 after
+  control extraction), Storefront types and full production build pass; optimized
+  compilation6.2s. No comparative bundle-byte improvement is claimed yet. Existing
+  middleware deprecation remains. Foreign shared-feature edits preserved.
 
 ## Midday migration contract and conformance checklist
 

@@ -1,27 +1,23 @@
 "use client"
 
+import { Alert, AlertDescription, AlertTitle } from "@ewatrade/ui/alert"
+import { Button } from "@ewatrade/ui/button"
 import {
-  Alert,
-  AlertDescription,
-  AlertTitle,
-  Button,
   Empty,
   EmptyDescription,
   EmptyHeader,
   EmptyTitle,
+} from "@ewatrade/ui/empty"
+import {
   Field,
   FieldDescription,
   FieldError,
   FieldLabel,
-  Input,
-  InputOTP,
-  InputOTPGroup,
-  InputOTPSlot,
-  Spinner,
-  Tabs,
-  TabsList,
-  TabsTrigger,
-} from "@ewatrade/ui"
+} from "@ewatrade/ui/field"
+import { Input } from "@ewatrade/ui/input"
+import { InputOTP, InputOTPGroup, InputOTPSlot } from "@ewatrade/ui/input-otp"
+import { Spinner } from "@ewatrade/ui/spinner"
+import { Tabs, TabsList, TabsTrigger } from "@ewatrade/ui/tabs"
 import { Mail01Icon, WhatsappIcon } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { useEffect, useId, useRef, useState } from "react"

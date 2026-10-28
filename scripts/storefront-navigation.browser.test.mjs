@@ -24,6 +24,7 @@ test(
     )
     assert.equal(target.port, "")
     const samples = []
+    const responses = []
     let writes = 0
     let documents = 0
     const errors = []
@@ -37,6 +38,16 @@ test(
       const page = await context.newPage()
       page.setDefaultTimeout(45000)
       page.on("pageerror", (error) => errors.push(error.message))
+      page.on("requestfinished", (request) => {
+        if (request.headers().rsc === "1") {
+          const timing = request.timing()
+          responses.push({
+            path: new URL(request.url()).pathname,
+            milliseconds: Math.round(timing.responseEnd),
+            firstByteMilliseconds: Math.round(timing.responseStart),
+          })
+        }
+      })
       page.on("request", (request) => {
         if (
           request.isNavigationRequest() &&
@@ -83,6 +94,20 @@ test(
         documents,
         writes,
         errors,
+        responses,
+        browserResources: await page.evaluate(() => {
+          const entries = performance.getEntriesByType("resource")
+          const scripts = entries.filter(
+            (entry) => entry.initiatorType === "script",
+          )
+          return {
+            scripts: scripts.length,
+            scriptBytes: scripts.reduce(
+              (sum, entry) => sum + entry.encodedBodySize,
+              0,
+            ),
+          }
+        }),
       }
       writeFileSync(
         resolve(artifacts, "performance.json"),

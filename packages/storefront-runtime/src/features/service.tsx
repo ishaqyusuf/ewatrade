@@ -5,12 +5,10 @@ import { StorefrontFeatureFrame } from "./frame"
 import { CommerceLink } from "../commerce/navigation"
 
 import type { PublicCatalogItem } from "@ewatrade/storefront-contracts/resources"
+import { Alert, AlertDescription, AlertTitle } from "@ewatrade/ui/alert"
+import { Button, buttonVariants } from "@ewatrade/ui/button"
+import { Checkbox } from "@ewatrade/ui/checkbox"
 import {
-  Alert,
-  AlertDescription,
-  AlertTitle,
-  Button,
-  Checkbox,
   Field,
   FieldDescription,
   FieldError,
@@ -18,17 +16,18 @@ import {
   FieldLabel,
   FieldLegend,
   FieldSet,
-  Input,
+} from "@ewatrade/ui/field"
+import { Input } from "@ewatrade/ui/input"
+import {
   SelectContent,
   SelectGroup,
   SelectItem,
   SelectRoot,
   SelectTrigger,
   SelectValue,
-  Spinner,
-  Textarea,
-  buttonVariants,
-} from "@ewatrade/ui"
+} from "@ewatrade/ui/select-menu"
+import { Spinner } from "@ewatrade/ui/spinner"
+import { Textarea } from "@ewatrade/ui/textarea"
 import {
   ArrowLeft01Icon,
   Clock01Icon,
@@ -51,7 +50,7 @@ import {
 } from "../commerce/model"
 import { useStorefrontCommerce } from "../commerce/provider"
 import { CommerceGallery, galleryPhotos } from "./gallery"
-import { QuantityStepper } from "./product"
+import { QuantityStepper } from "./quantity-stepper"
 
 export function ServiceDetail({ item }: { item: PublicCatalogItem }) {
   return (

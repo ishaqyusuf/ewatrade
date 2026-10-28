@@ -5,26 +5,18 @@ import { StorefrontFeatureFrame } from "./frame"
 import { CommerceLink } from "../commerce/navigation"
 
 import type { PublicCatalogItem } from "@ewatrade/storefront-contracts/resources"
+import { Button, buttonVariants } from "@ewatrade/ui/button"
 import {
-  Button,
-  ButtonGroup,
   Field,
   FieldDescription,
   FieldError,
   FieldLabel,
   FieldLegend,
   FieldSet,
-  Input,
-  ToggleGroup,
-  ToggleGroupItem,
-  buttonVariants,
-} from "@ewatrade/ui"
-import {
-  ArrowLeft01Icon,
-  MinusSignIcon,
-  PlusSignIcon,
-  WhatsappIcon,
-} from "@hugeicons/core-free-icons"
+} from "@ewatrade/ui/field"
+import { Input } from "@ewatrade/ui/input"
+import { ToggleGroup, ToggleGroupItem } from "@ewatrade/ui/toggle-group"
+import { ArrowLeft01Icon, WhatsappIcon } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { useId, useRef, useState } from "react"
 import {
@@ -37,69 +29,13 @@ import {
   offeringAvailability,
   preorderDates,
   quantityProblem,
-  stepQuantity,
   stockWording,
 } from "../commerce/model"
 import { useStorefrontCommerce } from "../commerce/provider"
 import { CommerceGallery } from "./gallery"
 
-export function QuantityStepper({
-  id,
-  value,
-  scale,
-  onChange,
-  label,
-  invalid,
-  describedBy,
-  max,
-}: {
-  id: string
-  value: string
-  scale: number
-  onChange: (value: string) => void
-  label: string
-  invalid?: boolean
-  describedBy?: string
-  max?: number
-}) {
-  const atMax = max !== undefined && Number(value) >= max
-  return (
-    <ButtonGroup className="sf-feature-stepper" aria-label={label}>
-      <Button
-        type="button"
-        variant="outline"
-        size="icon-lg"
-        aria-label={`Decrease ${label.toLowerCase()}`}
-        disabled={Number(value) <= 1}
-        onClick={() => onChange(stepQuantity(value, -1, scale))}
-      >
-        <HugeiconsIcon icon={MinusSignIcon} strokeWidth={2} />
-      </Button>
-      <Input
-        id={id}
-        className="sf-feature-stepper__input"
-        value={value}
-        inputMode={scale > 0 ? "decimal" : "numeric"}
-        aria-label={label}
-        aria-invalid={invalid || undefined}
-        aria-describedby={describedBy}
-        onChange={(event) =>
-          onChange(event.target.value.replace(/[^\d.]/g, "").slice(0, 11))
-        }
-      />
-      <Button
-        type="button"
-        variant="outline"
-        size="icon-lg"
-        aria-label={`Increase ${label.toLowerCase()}`}
-        disabled={atMax}
-        onClick={() => onChange(stepQuantity(value, 1, scale))}
-      >
-        <HugeiconsIcon icon={PlusSignIcon} strokeWidth={2} />
-      </Button>
-    </ButtonGroup>
-  )
-}
+export { QuantityStepper } from "./quantity-stepper"
+import { QuantityStepper } from "./quantity-stepper"
 
 export function ProductDetail({ item }: { item: PublicCatalogItem }) {
   return (

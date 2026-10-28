@@ -1,14 +1,10 @@
 "use client"
 
-import {
-  Button,
-  Field,
-  FieldDescription,
-  FieldLabel,
-  Input,
-  Select,
-  cn,
-} from "@ewatrade/ui"
+import { Button } from "@ewatrade/ui/button"
+import { cn } from "@ewatrade/ui/cn"
+import { Field, FieldDescription, FieldLabel } from "@ewatrade/ui/field"
+import { Input } from "@ewatrade/ui/input"
+import { Select } from "@ewatrade/ui/select"
 import Form from "next/form"
 import Link from "next/link"
 import { useEffect, useId, useRef } from "react"

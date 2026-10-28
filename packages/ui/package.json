@@ -3,22 +3,40 @@
   "version": "1.0.0",
   "private": true,
   "sideEffects": false,
-  "files": [
-    "src",
-    "postcss.config.mjs"
-  ],
+  "files": ["src", "postcss.config.mjs"],
   "typesVersions": {
     "*": {
-      "*": [
-        "src/*"
-      ]
+      "*": ["src/*"]
     }
   },
   "exports": {
     ".": "./src/index.ts",
     "./globals.css": "./src/styles/globals.css",
     "./styles.css": "./src/styles/globals.css",
-    "./postcss.config": "./postcss.config.mjs"
+    "./postcss.config": "./postcss.config.mjs",
+    "./alert": "./src/components/alert.tsx",
+    "./button": "./src/components/button.tsx",
+    "./empty": "./src/components/empty.tsx",
+    "./field": "./src/components/field.tsx",
+    "./input": "./src/components/input.tsx",
+    "./input-otp": "./src/components/input-otp.tsx",
+    "./spinner": "./src/components/spinner.tsx",
+    "./tabs": "./src/components/tabs.tsx",
+    "./sheet": "./src/components/sheet.tsx",
+    "./badge": "./src/components/badge.tsx",
+    "./radio-group": "./src/components/radio-group.tsx",
+    "./textarea": "./src/components/textarea.tsx",
+    "./button-group": "./src/components/button-group.tsx",
+    "./toggle-group": "./src/components/toggle-group.tsx",
+    "./alert-dialog": "./src/components/alert-dialog.tsx",
+    "./separator": "./src/components/separator.tsx",
+    "./checkbox": "./src/components/checkbox.tsx",
+    "./select-menu": "./src/components/select-menu.tsx",
+    "./accordion": "./src/components/accordion.tsx",
+    "./cn": "./src/lib/utils.ts",
+    "./sonner": "./src/components/sonner.tsx",
+    "./skeleton": "./src/components/skeleton.tsx",
+    "./select": "./src/components/select.tsx"
   },
   "scripts": {
     "lint": "biome check .",

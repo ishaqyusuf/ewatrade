@@ -1,4 +1,4 @@
-import { Badge } from "@ewatrade/ui"
+import { Badge } from "@ewatrade/ui/badge"
 import { getCatalogIllustrationSvg } from "@ewatrade/utils/catalog-illustration-artwork"
 import type { PublicCatalogItem } from "../../storefront-contracts/src/resources"
 

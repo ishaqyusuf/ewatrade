@@ -1,7 +1,7 @@
 "use client"
 
 import type { PublicCatalogItem } from "@ewatrade/storefront-contracts/resources"
-import { Button } from "@ewatrade/ui"
+import { Button } from "@ewatrade/ui/button"
 import { ArrowLeft01Icon, ArrowRight01Icon } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { type KeyboardEvent, useEffect, useRef, useState } from "react"
