@@ -375,10 +375,10 @@ test(
       assert.equal(hero.sideBySide, true)
       // A bag held only in memory proves provider lifetime, rather than storage rehydration.
       await page.locator(".cs-card h3 a").first().click()
-      await page.locator(".cs-product__grid").waitFor()
+      await page.locator(".sf-feature-product__grid").waitFor()
       assert.equal(
         await page
-          .locator(".cs-product__grid")
+          .locator(".sf-feature-product__grid")
           .evaluate(
             (node) =>
               getComputedStyle(node).gridTemplateColumns.split(" ").length,

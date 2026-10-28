@@ -62,7 +62,7 @@ explicit evidence-based decision if changing them would add cost or weaken polic
   Add indexes/read models only if measured evidence requires them.
 - [x] S4 Delivery: narrow measured package imports and split optional feature code
   while preserving renderer pins, SSR, template previews and persistent state.
-- [ ] S5 Navigation policy: bounded intent prefetch and useful pending feedback;
+- [x] S5 Navigation policy: bounded intent prefetch and useful pending feedback;
   retain URL ownership, privacy/no-store and photo-revocation/fallback semantics.
   Media/shared caching changes require evidence and an explicit freshness contract.
 - [ ] S6 Acceptance: focused source/security/types/build, existing-data browser/smoke,
@@ -154,6 +154,21 @@ H01/H02 gates remain separate from source smoke. No deployment is implied.
   control extraction), Storefront types and full production build pass; optimized
   compilation6.2s. No comparative bundle-byte improvement is claimed yet. Existing
   middleware deprecation remains. Foreign shared-feature edits preserved.
+
+- S3 measured follow-up: verified Host now resolves the primary Site, exact Store,
+  Tenant/subscription and active release in one joined query instead of3 sequential
+  reads. Explicit relation ownership, duplicate-primary, hash/pin/runtime and plan
+  checks retained. Focused scope/cap/detail/source tests27/159 and types pass.
+- S5: selected-link pending feedback uses Next useLinkStatus with no layout shift;
+  production intent prefetch is capped at2 unique public item URLs per visit,
+  disabled for data-saving/2G and development, and excludes receipt/account/private
+  URLs. Policy/navigation tests4/23 and types pass. No shared page/media caching or
+  provider change: current evidence does not justify weakening revocation/freshness.
+- Storefront browser acceptance after delivery/join:9 timed transitions plus
+  retained-shell/in-memory-bag/Back/loading/responsive session passed,0 writes/errors.
+  Warm Shop1823–1824/About810–824/Home1860–2358 ms. About meets the initial goal;
+  listings/Home do not. Source/remote database/streaming costs remain explicit;
+  no production speedup or statistically reliable tail percentile is claimed.
 
 ## Midday migration contract and conformance checklist
 
