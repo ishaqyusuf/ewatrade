@@ -2,6 +2,7 @@ import { auth } from "@ewatrade/auth"
 import { prisma } from "@ewatrade/db"
 import { isLegalSignupSessionBlocked } from "@ewatrade/db/legal-session-access"
 import { headers } from "next/headers"
+import { cache } from "react"
 export { getUserInitials } from "./user-display"
 
 export type SessionUser = {
@@ -20,7 +21,7 @@ export type AuthSession = {
   expiresAt: Date
 }
 
-export async function getServerSession(): Promise<AuthSession | null> {
+export const getServerSession = cache(async (): Promise<AuthSession | null> => {
   const session = await auth.api.getSession({
     headers: await headers(),
   })
@@ -49,4 +50,4 @@ export async function getServerSession(): Promise<AuthSession | null> {
     sessionId: session.session.id,
     expiresAt: session.session.expiresAt,
   }
-}
+})

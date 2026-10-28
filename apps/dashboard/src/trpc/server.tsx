@@ -1,7 +1,6 @@
 import "server-only"
 
 import type { AppRouter } from "@ewatrade/api/trpc/routers/_app"
-import { resolveTenantDomain } from "@ewatrade/utils"
 import {
   type FetchQueryOptions,
   HydrationBoundary,
@@ -16,53 +15,16 @@ import { cache } from "react"
 import superjson from "superjson"
 import { shouldLogDashboardTrpcOperation } from "./log-operation"
 import { makeQueryClient } from "./query-client"
+import {
+  buildDashboardRequestContext,
+  dashboardReadSignal,
+} from "./request-context-headers"
 
 export const getQueryClient = cache(makeQueryClient)
 
-async function getRequestOrigin() {
-  const requestHeaders = await headers()
-  const host =
-    requestHeaders.get("x-forwarded-host") ?? requestHeaders.get("host")
-  const protocol =
-    requestHeaders.get("x-forwarded-proto") ??
-    (host?.includes("localhost") ? "http" : "https")
-
-  if (!host) {
-    return null
-  }
-
-  return `${protocol}://${host}`
-}
-
-async function getTenantSlugFromRequest() {
-  const requestHeaders = await headers()
-  const existingTenantSlug = requestHeaders.get("x-tenant-slug")
-
-  if (existingTenantSlug) {
-    return existingTenantSlug
-  }
-
-  const host =
-    requestHeaders.get("x-forwarded-host") ?? requestHeaders.get("host")
-
-  if (!host) {
-    return null
-  }
-
-  const result = resolveTenantDomain(host, {
-    platformDomain:
-      process.env.NEXT_PUBLIC_PLATFORM_DOMAIN ??
-      process.env.PLATFORM_DOMAIN ??
-      "ewatrade.com",
-  })
-
-  if (result.kind === "tenant" && result.tenantSlug) {
-    return result.tenantSlug
-  }
-
-  // Forward remembered selection as a cookie so the API can recover stale membership.
-  return null
-}
+const getServerRequestContext = cache(async () =>
+  buildDashboardRequestContext(await headers(), process.env),
+)
 
 export const trpc = createTRPCOptionsProxy<AppRouter>({
   queryClient: getQueryClient,
@@ -72,30 +34,24 @@ export const trpc = createTRPCOptionsProxy<AppRouter>({
         url: "/api/trpc",
         transformer: superjson,
         async fetch(input, init) {
-          const origin = await getRequestOrigin()
+          const context = await getServerRequestContext()
           const url =
             typeof input === "string"
               ? input
               : input instanceof URL
                 ? input.toString()
                 : input.url
-          const resolvedUrl =
-            url.startsWith("http") || !origin ? url : `${origin}${url}`
+          const resolvedUrl = url.startsWith("http")
+            ? url
+            : `${context.apiOrigin}${url}`
 
-          return fetch(resolvedUrl, init)
+          return fetch(resolvedUrl, {
+            ...init,
+            signal: dashboardReadSignal(init?.signal),
+          })
         },
         async headers() {
-          const requestHeaders = await headers()
-          const tenantSlug = await getTenantSlugFromRequest()
-          const cookie = requestHeaders.get("cookie")
-          const authorization = requestHeaders.get("authorization")
-
-          return {
-            "x-trpc-source": "rsc",
-            ...(cookie ? { cookie } : {}),
-            ...(authorization ? { authorization } : {}),
-            ...(tenantSlug ? { "x-tenant-slug": tenantSlug } : {}),
-          }
+          return (await getServerRequestContext()).headers
         },
       }),
       loggerLink({

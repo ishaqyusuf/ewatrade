@@ -73,8 +73,7 @@ function getTenantSlugFromHost(host: string | null) {
 
 export const getActiveTenant = cache(
   async (userId: string): Promise<TenantContext | null> => {
-    const headersList = await headers()
-    const cookieStore = await cookies()
+    const [headersList, cookieStore] = await Promise.all([headers(), cookies()])
     const hostSlug = getTenantSlugFromHost(
       headersList.get("x-forwarded-host") ?? headersList.get("host"),
     )
