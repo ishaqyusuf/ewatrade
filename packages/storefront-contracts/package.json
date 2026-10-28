@@ -10,7 +10,11 @@
     "./actions": "./src/actions.ts",
     "./design": "./src/design.ts",
     "./availability": "./src/availability.ts",
-    "./orders": "./src/orders.ts"
+    "./orders": "./src/orders.ts",
+    "./commerce": "./src/commerce.ts",
+    "./customer": "./src/customer.ts",
+    "./receipt": "./src/receipt.ts",
+    "./routes": "./src/routes.ts"
   },
   "dependencies": {
     "zod": "catalog:"

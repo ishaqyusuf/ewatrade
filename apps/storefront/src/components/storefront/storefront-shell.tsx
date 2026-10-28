@@ -1,10 +1,11 @@
 "use client"
 
+import type { StorefrontCommerceAdapter } from "@ewatrade/storefront-contracts/commerce"
+
 import type { StorefrontPresentation } from "@/lib/storefront-presentation"
 import {
   CommerceStudioProvider,
   CommerceStudioShell,
-  type StorefrontCommerceAdapter,
   StorefrontViewport,
 } from "@ewatrade/storefront-templates/commerce-studio"
 import { usePathname } from "next/navigation"

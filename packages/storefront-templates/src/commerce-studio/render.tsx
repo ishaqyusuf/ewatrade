@@ -59,12 +59,8 @@ import { CommerceReceipt, type ReceiptView } from "./receipt"
 import { ServiceDetail } from "./service"
 import { CommerceStudioShell, aboutHasContent } from "./shell"
 
-/** Domain-owned routes the storefront app renders inside this template's shell. */
-export type CommerceStudioRoute =
-  | { kind: "page" }
-  | { kind: "checkout" }
-  | { kind: "receipt"; receipt: ReceiptView }
-  | { kind: "account"; account: AccountView }
+import type { StorefrontRoute as CommerceStudioRoute } from "@ewatrade/storefront-contracts/routes"
+export type { StorefrontRoute as CommerceStudioRoute } from "@ewatrade/storefront-contracts/routes"
 
 export type CommerceStudioProps = {
   snapshot: StorefrontClientSnapshot

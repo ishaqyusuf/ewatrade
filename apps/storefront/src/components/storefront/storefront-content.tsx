@@ -1,4 +1,6 @@
 import { storefrontPresentation } from "@/lib/storefront-presentation"
+import type { StorefrontCustomerView } from "@ewatrade/storefront-contracts/customer"
+import type { StorefrontRoute as CommerceStudioRoute } from "@ewatrade/storefront-contracts/routes"
 import { formatStorefrontPrice } from "@ewatrade/storefront-runtime/presentation"
 import {
   serializeStorefrontStructuredData,
@@ -6,10 +8,6 @@ import {
   storefrontStructuredData,
 } from "@ewatrade/storefront-runtime/seo"
 import type { StorefrontClientSnapshot } from "@ewatrade/storefront-runtime/server"
-import type {
-  CommerceStudioRoute,
-  StorefrontCustomerView,
-} from "@ewatrade/storefront-templates/commerce-studio"
 import { StorefrontTemplate } from "@ewatrade/storefront-templates/render"
 import { getStorefrontDomain, resolveCustomerChatOrigin } from "@ewatrade/utils"
 import { CommerceStudioPage } from "./storefront-commerce-page"

@@ -10,14 +10,14 @@ import {
   maskStorefrontIdentifier,
   storefrontReceiptToken,
 } from "@ewatrade/db/queries"
+import type {
+  AccountView,
+  StorefrontCustomerView,
+} from "@ewatrade/storefront-contracts/customer"
 import {
   type CatalogQuery,
   catalogQuerySchema,
 } from "@ewatrade/storefront-contracts/resources"
-import type {
-  AccountView,
-  StorefrontCustomerView,
-} from "@ewatrade/storefront-templates/commerce-studio"
 import { headers } from "next/headers"
 import { notFound } from "next/navigation"
 import { cache } from "react"

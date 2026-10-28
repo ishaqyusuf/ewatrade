@@ -12,7 +12,7 @@ import {
   verifyStorefrontLoginCode,
   withdrawStorefrontRequest,
 } from "@/app/storefront-commerce-actions"
-import type { StorefrontCommerceAdapter } from "@ewatrade/storefront-templates/commerce-studio"
+import type { StorefrontCommerceAdapter } from "@ewatrade/storefront-contracts/commerce"
 
 /** Server actions only; each re-derives Host scope and session before any effect. */
 export const commerceAdapter = {
@@ -29,4 +29,4 @@ export const commerceAdapter = {
   linkVerified: linkVerifiedStorefrontHistory,
   linkReceipt: linkStorefrontReceipt,
   findRequest: findStorefrontRequest,
-} as unknown as StorefrontCommerceAdapter
+} satisfies StorefrontCommerceAdapter

@@ -65,9 +65,9 @@ already exist and must be reused.
 - [x] P0.3 Record architecture and migration contract with existing design anchors.
 
 ### Phase 1 — neutral contracts
-- [ ] P1.1 Extract commerce/customer/receipt contracts.
-- [ ] P1.2 Migrate host imports and type-check the action adapter.
-- [ ] P1.3 Keep forwarding exports and verify dependency direction.
+- [x] P1.1 Extract commerce/customer/receipt contracts.
+- [x] P1.2 Migrate host imports and type-check the action adapter.
+- [x] P1.3 Keep forwarding exports and verify dependency direction.
 
 ### Phase 2 — runtime infrastructure
 - [ ] P2.1 Extract persistent bag/context, separate from fresh route data.
@@ -156,3 +156,16 @@ already-published composition version. This task never deploys.
 
 Phase 0 validation: offline doctor passes; planning/source inspection only. Later
 phase receipts record exact commands, scope, limitations and commit hashes.
+
+Phase 1: neutral contracts and forwarding exports extracted; host adapter now uses
+`satisfies` without a blanket assertion. Work-start profile/preorder edits remain
+uncommitted and preserved at their new contract location. Focused UI helper checks
+31 pass; one pre-existing optional-delivery-address contract assertion is stale
+against the unchanged work-start schema and remains reported. Full app types and
+fast source verification are recorded in the phase handoff.
+
+Phase 1 verification: owned candidate storefront application graph has zero
+TypeScript diagnostics (HEAD plus owned-file overlay, excluding concurrent edits).
+Scoped fast source smoke: 182 tests / 917 assertions pass. Current shared working
+graph also exposed an in-flight foreign ProductDetail missing artwork import;
+that is not claimed as green or included in this phase commit.

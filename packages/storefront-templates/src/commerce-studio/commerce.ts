@@ -1,80 +1,27 @@
+import type { StorefrontOrderLineIssue } from "@ewatrade/storefront-contracts/orders"
 import { z } from "zod"
-import type { StorefrontOrderLineIssue } from "../../../storefront-contracts/src/orders"
 import type {
   PublicCatalogItem,
   PublicStockState,
 } from "../../../storefront-contracts/src/resources"
 
-/**
- * Host-supplied commerce boundary. The storefront app passes server actions; Studio
- * previews pass `previewCommerceAdapter`, which never writes. Every result is plain
- * serializable data and the server re-derives all authority.
- */
-export type CommerceFailure = {
-  ok: false
-  message: string
-  field?: string
-  fields?: Record<string, string>
-  issues?: StorefrontOrderLineIssue[]
-  retryAfterSeconds?: number
-}
-export type CommerceResult<T> = ({ ok: true } & T) | CommerceFailure
-
-export type BagCheckLine = {
-  offeringId: string
-  available: boolean
-  priceMinor: number | null
-  stock: PublicStockState
-  enough: boolean
-}
-
-export type StorefrontCommerceAdapter = {
-  mode: "live" | "preview"
-  checkBag(lines: BagLine[]): Promise<CommerceResult<{ lines: BagCheckLine[] }>>
-  submitOrder(input: unknown): Promise<CommerceResult<{ receiptPath: string }>>
-  submitService(input: {
-    request: unknown
-    extras: unknown
-  }): Promise<CommerceResult<{ receiptPath: string }>>
-  reply(input: {
-    token: string
-    kind: "order" | "service"
-    reply: unknown
-  }): Promise<CommerceResult<Record<string, never>>>
-  withdraw(input: {
-    token: string
-    kind: "order" | "service"
-    expectedRevision: number
-  }): Promise<CommerceResult<Record<string, never>>>
-  declineQuote(input: {
-    token: string
-    versionId: string
-    reason: string
-    clientMessageId: string
-  }): Promise<CommerceResult<Record<string, never>>>
-  requestCode(identifier: {
-    channel: "email" | "whatsapp"
-    identifier: string
-  }): Promise<
-    CommerceResult<{
-      challengeId: string
-      destination: string
-      resendAfterSeconds: number
-      testCode?: string
-    }>
-  >
-  verifyCode(input: {
-    challengeId: string
-    code: string
-  }): Promise<CommerceResult<Record<string, never>>>
-  logout(): Promise<CommerceResult<Record<string, never>>>
-  linkVerified(): Promise<CommerceResult<{ linked: number }>>
-  linkReceipt(token: string): Promise<CommerceResult<Record<string, never>>>
-  /** After WhatsApp OTP: open one of the verified number's own requests by reference. */
-  findRequest(input: {
-    reference: string
-  }): Promise<CommerceResult<{ receiptPath: string }>>
-}
+import type {
+  BagCheckLine,
+  BagLine,
+  CommerceFailure,
+  CommerceResult,
+  StorefrontCommerceAdapter,
+} from "@ewatrade/storefront-contracts/commerce"
+import { bagLineSchema } from "@ewatrade/storefront-contracts/commerce"
+export { bagLineSchema } from "@ewatrade/storefront-contracts/commerce"
+export type {
+  BagCheckLine,
+  BagLine,
+  CommerceFailure,
+  CommerceResult,
+  StorefrontCommerceAdapter,
+} from "@ewatrade/storefront-contracts/commerce"
+export type { StorefrontCustomerView } from "@ewatrade/storefront-contracts/customer"
 
 const previewFailure: CommerceFailure = {
   ok: false,
@@ -105,32 +52,8 @@ export const previewCommerceAdapter: StorefrontCommerceAdapter = {
   findRequest: async () => previewFailure,
 }
 
-/** Customer session facts the host may pass to the template. Never staff identity. */
-export type StorefrontCustomerView = {
-  signedIn: boolean
-  label?: string
-  channel?: "email" | "whatsapp"
-} | null
-
 // ---------------------------------------------------------------- Bag store
 
-/** Non-personal bag line. Prices are display hints; the server is authority. */
-export const bagLineSchema = z
-  .object({
-    itemId: z.string().regex(/^[A-Za-z0-9_-]{1,128}$/),
-    offeringId: z.string().regex(/^[A-Za-z0-9_-]{1,128}$/),
-    quantity: z.string().regex(/^\d{1,4}(?:\.\d{1,6})?$/),
-    priceMinor: z.number().int().nonnegative().nullable(),
-    currencyCode: z.string().min(3).max(3),
-    itemName: z.string().max(160),
-    optionName: z.string().max(160),
-    unitLabel: z.string().max(40).nullable(),
-    scale: z.number().int().min(0).max(6),
-    photoUrl: z.string().max(2048).nullable(),
-    illustrationId: z.string().max(128),
-  })
-  .strict()
-export type BagLine = z.infer<typeof bagLineSchema>
 const bagSchema = z
   .object({ version: z.literal(1), lines: z.array(bagLineSchema).max(20) })
   .strict()

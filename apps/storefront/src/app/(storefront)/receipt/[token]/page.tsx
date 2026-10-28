@@ -11,7 +11,7 @@ import {
   getStorefrontServiceReceipt,
   storefrontReceiptDigest,
 } from "@ewatrade/db/queries"
-import type { ReceiptView } from "@ewatrade/storefront-templates/commerce-studio"
+import type { ReceiptView } from "@ewatrade/storefront-contracts/receipt"
 import type { Metadata } from "next"
 import { headers } from "next/headers"
 import { notFound } from "next/navigation"

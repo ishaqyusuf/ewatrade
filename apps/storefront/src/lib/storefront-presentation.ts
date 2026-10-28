@@ -1,9 +1,7 @@
 import { createHash } from "node:crypto"
+import type { StorefrontCustomerView } from "@ewatrade/storefront-contracts/customer"
+import type { StorefrontRoute as CommerceStudioRoute } from "@ewatrade/storefront-contracts/routes"
 import type { StorefrontClientSnapshot } from "@ewatrade/storefront-runtime/server"
-import type {
-  CommerceStudioRoute,
-  StorefrontCustomerView,
-} from "@ewatrade/storefront-templates/commerce-studio"
 
 export type StorefrontPresentation = {
   snapshot: StorefrontClientSnapshot
