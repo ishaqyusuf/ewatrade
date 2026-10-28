@@ -6,6 +6,7 @@ import { storefrontFeatureTokens } from "../feature-theme"
 import { publicStorefrontResources } from "../projection"
 import type { StorefrontClientSnapshot } from "../server"
 import { StorefrontAccount } from "./account/account"
+import { StorefrontCheckout } from "./checkout"
 import { StorefrontReceipt } from "./receipt/receipt"
 
 const snapshot: StorefrontClientSnapshot = {
@@ -128,4 +129,19 @@ test("a shared request receipt never upgrades a received request to a paid or bo
   expect(html).not.toContain("See payment details")
   expect(html).not.toContain("The business booked this time")
   expect(html).not.toContain("commerce-studio")
+})
+
+test("checkout renders from the neutral host and refuses unavailable intake", () => {
+  const html = renderToStaticMarkup(
+    <StorefrontCommerceProvider
+      snapshot={snapshot}
+      presentation={presentation}
+      preview
+    >
+      <StorefrontCheckout />
+    </StorefrontCommerceProvider>,
+  )
+  expect(html).toContain("sf-feature-root")
+  expect(html).not.toContain("commerce-studio")
+  expect(html).not.toContain("Send request</button>")
 })

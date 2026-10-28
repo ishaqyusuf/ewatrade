@@ -15,15 +15,27 @@ export const ORDERING_TEMPLATE_KEYS: readonly string[] = ["commerce-studio"]
  * the browser) so the server enforces the merchant's header settings.
  */
 export function orderingFulfilmentMethods(composition: unknown) {
-  return (
-    readStorefrontFeatureConfig(
-      composition &&
-        typeof composition === "object" &&
-        !("schemaVersion" in composition)
-        ? { ...composition, schemaVersion: 1 }
-        : composition,
-    )?.orders.fulfilment ?? []
-  )
+  if (
+    composition &&
+    typeof composition === "object" &&
+    !("schemaVersion" in composition)
+  ) {
+    // Compatibility for older pure presentation callers. Domain writers validate
+    // the complete published composition before using this projection.
+    const value = composition as {
+      pages?: {
+        sections?: { type?: string; settings?: Record<string, unknown> }[]
+      }[]
+    }
+    const header = value.pages
+      ?.flatMap((page) => page.sections ?? [])
+      .find((section) => section.type === "commerce-studio-header")
+    const methods: ("pickup" | "delivery")[] = []
+    if (header?.settings?.["offer-pickup"] !== false) methods.push("pickup")
+    if (header?.settings?.["offer-delivery"] === true) methods.push("delivery")
+    return methods
+  }
+  return readStorefrontFeatureConfig(composition)?.orders.fulfilment ?? []
 }
 
 export {

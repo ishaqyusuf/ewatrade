@@ -21,7 +21,12 @@
     "./feature-theme": "./src/feature-theme.ts",
     "./features/account": "./src/features/account/account.tsx",
     "./features/receipt": "./src/features/receipt/receipt.tsx",
-    "./features/styles.css": "./src/features/styles.css"
+    "./features/styles.css": "./src/features/styles.css",
+    "./features/bag": "./src/features/bag.tsx",
+    "./features/checkout": "./src/features/checkout.tsx",
+    "./features/product": "./src/features/product.tsx",
+    "./features/service": "./src/features/service.tsx",
+    "./features/gallery": "./src/features/gallery.tsx"
   },
   "dependencies": {
     "@ewatrade/storefront-contracts": "workspace:*",

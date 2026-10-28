@@ -90,9 +90,9 @@ already exist and must be reused.
 - [x] P5.3 Add explicit Studio draft migration and settings controls.
 
 ### Phase 6 — bag, checkout, service request
-- [ ] P6.1 Extract bag UI and shared purchase controls.
-- [ ] P6.2 Extract checkout, validation and retry/recovery interaction.
-- [ ] P6.3 Share applicable service form behavior across current entry paths.
+- [x] P6.1 Extract bag UI and shared purchase controls.
+- [x] P6.2 Extract checkout, validation and retry/recovery interaction.
+- [x] P6.3 Share applicable service form behavior across current entry paths.
 
 ### Phase 7 — template adoption
 - [ ] P7.1 Add trusted presentation adapters and feature-page framing.
@@ -223,3 +223,12 @@ case after that run; focused final receipt accompanies the phase commit. H01 wit
 APP_ENV=local is current (the earlier unset-environment warning was not staleness).
 Phases0–5 source complete:18/27 (66.7%). Runtime, race and full adoption acceptance
 remain open. No push or deployment.
+
+### Phase6 source delivery
+Bag, checkout and retry/recovery, purchase quantities/options and service-request
+form/gallery moved to runtime with neutral CSS and portal tokens. Template source
+forwards compatible exports. Stable storage/idempotency/guest/preorder/preferred
+time behavior retained. No new domain writer/provider. Existing commerce suite plus
+shared features41/274 and Storefront full types pass; final focused receipt and
+fast scope accompany commit. Phases0–6 source21/27 (77.8%); actual cross-template
+product wiring and final UI/race acceptance still open.
