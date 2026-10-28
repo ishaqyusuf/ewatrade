@@ -16,6 +16,7 @@ import {
   commercialOrderReturnLabel,
   getCommercialOrderOverviewSummary,
 } from "@/components/mobile/commerce/commercial-order-overview-model"
+import { OrderCustomerCredit } from "@/components/mobile/customer-ledger/order-customer-credit"
 import { recordAvatar } from "@/components/mobile/dashboard/green-till-home-model"
 import { HeroCard } from "@/components/mobile/green-till/hero-card"
 import { QuickActionRow } from "@/components/mobile/green-till/kit"
@@ -296,6 +297,7 @@ export function ClassicOrderDetailContent({
           value={formatMinorMoney(order.balanceDueMinor, order.currencyCode)}
         />
       </OrderOverviewSection>
+      <OrderCustomerCredit orderId={order.id} />
 
       <OrderOverviewSection title="Details">
         <OrderInfoRow

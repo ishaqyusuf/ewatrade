@@ -418,6 +418,12 @@ function Statement({
                   disabled: offline,
                   onPress: () => open("opening"),
                 },
+                {
+                  label: "Refund requests",
+                  icon: "ClipboardList",
+                  disabled: offline,
+                  onPress: () => open("refund-requests"),
+                },
               ]}
             />
           ) : null}

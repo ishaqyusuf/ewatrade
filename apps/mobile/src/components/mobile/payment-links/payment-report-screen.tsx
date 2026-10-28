@@ -28,10 +28,18 @@ import {
   minorToMajorInput,
 } from "@ewatrade/utils"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { useRouter } from "expo-router"
+import { type Href, useRouter } from "expo-router"
 import { useState } from "react"
 import { ClaimReceipt } from "./claim-receipt"
 import { CustomerMessageEditor } from "./customer-message-editor"
+import {
+  type SavedAllocationOutcome,
+  customerPreferenceFacts,
+  excessSplit,
+  excessTreatmentText,
+  savedAllocationOutcome,
+  usableFundsReview,
+} from "./excess-allocation-model"
 import {
   NOT_RECEIVED_REASONS,
   NOT_RECEIVED_REASON_MAX,
@@ -53,6 +61,7 @@ import {
   PaymentReferenceCard,
   VerifiedStamp,
 } from "./payment-link-parts"
+import { ReceiptCheck } from "./receipt-check"
 
 type Report = RouterOutputs["businessBanking"]["report"]
 type Decision = RouterOutputs["businessBanking"]["reviewReport"]
@@ -128,6 +137,7 @@ export function PaymentReportScreen({ reportId }: { reportId: string }) {
       key={`${report.data.reportId}:${report.data.revision}`}
       report={report.data}
       onReload={() => void report.refetch()}
+      reloading={report.isRefetching}
     />
   )
 }
@@ -135,9 +145,11 @@ export function PaymentReportScreen({ reportId }: { reportId: string }) {
 function ReviewFlow({
   report,
   onReload,
+  reloading,
 }: {
   report: Report
   onReload: () => void
+  reloading: boolean
 }) {
   const trpc = useTRPC()
   const router = useRouter()
@@ -186,16 +198,48 @@ function ReviewFlow({
     (eligible.length === 1 ? eligible[0] : undefined)
   const receivedMinor = majorToMinor(amount)
   const today = localDay(new Date())
+  // More than the balance is only possible with the Finance-only snapshot.
+  const fundsReview = pending ? usableFundsReview(report) : null
+  const excess = excessSplit(receivedMinor, fundsReview)
   const amountValid =
     receivedMinor !== null &&
     receivedMinor > 0 &&
-    receivedMinor <= report.balanceMinor
+    (receivedMinor <= report.balanceMinor || excess !== null)
   const dayValid = /^\d{4}-\d{2}-\d{2}$/.test(day) && day <= today
   const canConfirm =
     pending && amountValid && Boolean(account) && dayValid && bankChecked
   const nibssReference = isNibssSessionId(reference)
-  const verified = verifiedPayment(report.verification)
-  const left = amountValid ? report.balanceMinor - (receivedMinor ?? 0) : null
+  const verified = verifiedPayment(
+    report.verification,
+    report.customerReceiptId,
+  )
+  const left = amountValid
+    ? Math.max(0, report.balanceMinor - (receivedMinor ?? 0))
+    : null
+  const preferenceFacts = customerPreferenceFacts(report, report.currencyCode)
+  const fundsAccountId =
+    report.customerFundsReview?.expectedCustomerFundsAccountId ?? null
+  // Opens the saved refund request in the customer record, when both IDs exist.
+  const refundLink = (requestId: string | null) => {
+    if (!requestId || !fundsAccountId) return undefined
+    return () =>
+      router.push({
+        pathname: "/customer-ledger-action/[accountId]",
+        params: {
+          accountId: fundsAccountId,
+          mode: "refund-request",
+          entryId: requestId,
+        },
+      } as Href)
+  }
+  const receiptCheck = (
+    <ReceiptCheck
+      assessment={report.receiptAssessment}
+      extraction={report.receiptExtraction}
+      onRefresh={pending ? onReload : undefined}
+      refreshing={reloading}
+    />
+  )
 
   const review = useMutation(
     trpc.businessBanking.reviewReport.mutationOptions({
@@ -230,6 +274,17 @@ function ReviewFlow({
           queryClient.invalidateQueries(
             trpc.businessBanking.linkCandidates.pathFilter(),
           ),
+          // Extra kept as credit (or a refund request) changes customer funds.
+          ...(result.customerReceiptId
+            ? [
+                queryClient.invalidateQueries({
+                  queryKey: trpc.customerLedger.pathKey(),
+                }),
+                queryClient.invalidateQueries({
+                  queryKey: trpc.finance.pathKey(),
+                }),
+              ]
+            : []),
         ])
       },
     }),
@@ -295,6 +350,7 @@ function ReviewFlow({
             label: "Link pays into",
             value: `${report.bank.name} ${accountSuffix(report.bank.accountNumber)} · ${report.bank.accountHolder}`,
           },
+          ...preferenceFacts,
         ]}
       />
       <ClaimReceipt
@@ -354,21 +410,26 @@ function ReviewFlow({
         ? `Part paid · ${money(decision.balanceMinor)} still to pay.`
         : "Paid in full."
     const bankReference = received ? reference.trim() : ""
+    // The saved breakdown from the server, not the split that was sent.
+    const saved = savedAllocationOutcome(
+      received ? decision.confirmedAllocation : null,
+      report.orderNumber,
+      decision.currencyCode,
+    )
+    const recorded = `${money(decision.receivedAmountMinor ?? 0)} recorded ${saved.recordedOn}`
     return (
       <FinanceFormBody>
-        {received && verifiedPayment(decision.verification) ? (
+        {received &&
+        verifiedPayment(decision.verification, decision.customerReceiptId) ? (
           <VerifiedStamp
             verification={decision.verification}
-            message={`${money(decision.receivedAmountMinor ?? 0)} recorded on ${report.orderNumber}. ${balanceLine}`}
+            customerReceiptId={decision.customerReceiptId}
+            message={`${recorded}. ${balanceLine}`}
           />
         ) : (
           <StatusBanner
             icon={received ? "CircleCheck" : "XCircle"}
-            title={
-              received
-                ? `${money(decision.receivedAmountMinor ?? 0)} recorded on ${report.orderNumber}`
-                : "Not received"
-            }
+            title={received ? recorded : "Not received"}
             message={
               received
                 ? balanceLine
@@ -412,6 +473,12 @@ function ReviewFlow({
             },
           ]}
         />
+        {received ? (
+          <FundsOutcome
+            outcome={saved}
+            onOpenRefund={refundLink(decision.customerFundsRefundRequestId)}
+          />
+        ) : null}
         <View>
           <SectionHeader title={`Tell ${report.payerName}`} />
           <CustomerMessageEditor
@@ -485,6 +552,7 @@ function ReviewFlow({
       note,
       bankChecked,
       nibssSession,
+      excess,
     })
     return (
       <FinanceFormBody>
@@ -506,6 +574,22 @@ function ReviewFlow({
               numeric: true,
               strong: true,
             },
+            ...(excess
+              ? [
+                  {
+                    label: `Applied to ${report.orderNumber}`,
+                    value: money(excess.orderAmountMinor),
+                    numeric: true,
+                  },
+                  {
+                    label: "Kept as customer credit",
+                    value: money(excess.excessMinor),
+                    numeric: true,
+                    strong: true,
+                  },
+                  ...preferenceFacts,
+                ]
+              : []),
             { label: "Into", value: account.name },
             {
               label: "Date",
@@ -544,10 +628,16 @@ function ReviewFlow({
             },
           ]}
         />
-        <InfoNote>
-          This records one payment on the order, the same as Record payment. It
-          can't be recorded twice.
-        </InfoNote>
+        {excess ? (
+          <InfoNote>
+            {`This records the receipt once. ${excessTreatmentText(report.allocationPreference, money(excess.excessMinor))} It can't be recorded twice.`}
+          </InfoNote>
+        ) : (
+          <InfoNote>
+            This records one payment on the order, the same as Record payment.
+            It can't be recorded twice.
+          </InfoNote>
+        )}
         {problemBanner}
         <View className="flex-row gap-3">
           <View className="flex-1">
@@ -566,7 +656,8 @@ function ReviewFlow({
               isLoading={review.isPending}
               loadingLabel="Recording…"
               onPress={() => {
-                if (decisionInput) review.mutate(decisionInput)
+                if (!decisionInput) return
+                review.mutate(decisionInput)
               }}
             >
               {`Record ${money(receivedMinor)}`}
@@ -648,13 +739,22 @@ function ReviewFlow({
     )
   }
 
-  if (!pending)
+  if (!pending) {
+    const saved = savedAllocationOutcome(
+      report.status === "CONFIRMED" ? report.confirmedAllocation : null,
+      report.orderNumber,
+      report.currencyCode,
+    )
+    const recordedOn = saved.recordedOn
+    const nothingMore =
+      saved.known && !saved.actionNeeded ? " Nothing more to do." : ""
     return (
       <FinanceFormBody>
         {report.status === "CONFIRMED" && verified ? (
           <VerifiedStamp
             verification={report.verification}
-            message={`${money(report.receivedAmountMinor ?? 0)} is recorded once on ${report.orderNumber}. Nothing more to do.`}
+            customerReceiptId={report.customerReceiptId}
+            message={`${money(report.receivedAmountMinor ?? 0)} is recorded once ${recordedOn}.${nothingMore}`}
           />
         ) : (
           <StatusBanner
@@ -668,7 +768,7 @@ function ReviewFlow({
             }
             message={
               report.status === "CONFIRMED"
-                ? `${money(report.receivedAmountMinor ?? 0)} was confirmed ${shortDateTime(report.decidedAt)}. It is recorded once on ${report.orderNumber}. Nothing more to do.`
+                ? `${money(report.receivedAmountMinor ?? 0)} was confirmed ${shortDateTime(report.decidedAt)}. It is recorded once ${recordedOn}.${nothingMore}`
                 : report.status === "NOT_RECEIVED"
                   ? `Marked ${shortDateTime(report.decidedAt)}.${report.decisionNote ? ` Reason: ${report.decisionNote}` : ""}`
                   : "The customer hasn't finished sending this payment notification."
@@ -677,6 +777,7 @@ function ReviewFlow({
           />
         )}
         {claim}
+        {receiptCheck}
         {referenceCard}
         <FactCard
           facts={
@@ -688,34 +789,51 @@ function ReviewFlow({
               : orderFacts
           }
         />
+        {report.status === "CONFIRMED" ? (
+          <FundsOutcome
+            outcome={saved}
+            onOpenRefund={refundLink(report.customerFundsRefundRequestId)}
+          />
+        ) : null}
         <ActionButton variant="outline" onPress={openOrder}>
           View order
         </ActionButton>
       </FinanceFormBody>
     )
+  }
 
   const liveLine =
     receivedMinor === null || receivedMinor <= 0
       ? { tone: "muted", text: "Enter what you can see in your bank app." }
-      : receivedMinor > report.balanceMinor
+      : excess
         ? {
-            tone: "error",
-            text: `That's more than the ${money(report.balanceMinor)} balance.`,
+            tone: "warn",
+            text: `More than the ${money(report.balanceMinor)} balance. ${money(excess.orderAmountMinor)} goes to ${report.orderNumber} and ${money(excess.excessMinor)} is kept as customer credit.`,
           }
-        : receivedMinor < report.claimedAmountMinor
+        : receivedMinor > report.balanceMinor
           ? {
-              tone: "warn",
-              text: `Records ${money(receivedMinor)}. That's ${money(report.claimedAmountMinor - receivedMinor)} less than the customer said. ${left ? `${money(left)} still to pay.` : "Paid in full."}`,
+              tone: "error",
+              text: fundsReview
+                ? "That's more than one payment can record."
+                : report.customerFundsReview
+                  ? `That's more than the ${money(report.balanceMinor)} balance, and the Order changed. Refresh before recording the extra.`
+                  : `That's more than the ${money(report.balanceMinor)} balance. Only an owner or admin can keep extra as customer credit, on an Order with a customer.`,
             }
-          : {
-              tone: "ok",
-              text: `Records ${money(receivedMinor)}. ${left ? `${money(left)} still to pay.` : "Paid in full."}`,
-            }
+          : receivedMinor < report.claimedAmountMinor
+            ? {
+                tone: "warn",
+                text: `Records ${money(receivedMinor)}. That's ${money(report.claimedAmountMinor - receivedMinor)} less than the customer said. ${left ? `${money(left)} still to pay.` : "Paid in full."}`,
+              }
+            : {
+                tone: "ok",
+                text: `Records ${money(receivedMinor)}. ${left ? `${money(left)} still to pay.` : "Paid in full."}`,
+              }
   const minimumDay = localDay(new Date(Date.now() - 90 * 86_400_000))
   return (
     <FinanceFormBody>
       {problemBanner}
       {claim}
+      {receiptCheck}
       <FactCard facts={orderFacts} />
       <View className="gap-3">
         <SectionHeader title="What arrived in your account" />
@@ -747,6 +865,48 @@ function ReviewFlow({
         >
           {liveLine.text}
         </Text>
+        {excess ? (
+          <>
+            <FactCard
+              facts={[
+                {
+                  label: "You received",
+                  value: money(excess.receivedMinor),
+                  numeric: true,
+                },
+                {
+                  label: `Applied to ${report.orderNumber}`,
+                  value: money(excess.orderAmountMinor),
+                  numeric: true,
+                },
+                {
+                  label: "Kept as customer credit",
+                  value: money(excess.excessMinor),
+                  numeric: true,
+                  strong: true,
+                },
+              ]}
+            />
+            <InfoNote>
+              {excessTreatmentText(
+                report.allocationPreference,
+                money(excess.excessMinor),
+              )}
+            </InfoNote>
+          </>
+        ) : report.customerFundsReview &&
+          !fundsReview &&
+          receivedMinor !== null &&
+          receivedMinor > report.balanceMinor ? (
+          <ActionButton
+            disabled={reloading}
+            icon="RefreshCw"
+            variant="outline"
+            onPress={onReload}
+          >
+            Refresh
+          </ActionButton>
+        ) : null}
         <Text className="mt-1 text-sm font-bold text-foreground">
           Received into
         </Text>
@@ -848,5 +1008,43 @@ function ReviewFlow({
         </View>
       </View>
     </FinanceFormBody>
+  )
+}
+
+/**
+ * The saved customer-funds outcome of a confirmed payment, from the server's
+ * projection for this report. A refund request is only a request: nothing is
+ * sent until Finance records the return.
+ */
+function FundsOutcome({
+  outcome,
+  onOpenRefund,
+}: {
+  outcome: SavedAllocationOutcome
+  onOpenRefund?: () => void
+}) {
+  if (!outcome.known)
+    return (
+      <InfoNote>
+        The saved breakdown for this payment isn't available. Check the Order's
+        payments.
+      </InfoNote>
+    )
+  if (!outcome.hasExtra) return null
+  return (
+    <View className="gap-3">
+      <SectionHeader title="Extra money" />
+      <FactCard facts={outcome.facts} />
+      {outcome.note ? <InfoNote>{outcome.note}</InfoNote> : null}
+      {outcome.canOpenRefund && onOpenRefund ? (
+        <ActionButton
+          icon="ArrowRight"
+          variant="outline"
+          onPress={onOpenRefund}
+        >
+          Open refund request
+        </ActionButton>
+      ) : null}
+    </View>
   )
 }

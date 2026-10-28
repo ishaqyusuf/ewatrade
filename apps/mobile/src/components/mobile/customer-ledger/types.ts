@@ -45,3 +45,18 @@ export type CustomerLedgerMode =
   | "release"
   | "refund"
   | "reverse"
+  | RefundRequestMode
+
+/**
+ * Refund-request lifecycle on the shared action route. For `refund-request`
+ * the route's `entryId` param carries a CustomerFundsRefundRequest id, not a
+ * ledger entry id.
+ */
+export type RefundRequestMode =
+  | "refund-requests"
+  | "refund-request"
+  | "request-refund"
+export type CustomerLedgerCommandMode = Exclude<
+  CustomerLedgerMode,
+  "entry" | RefundRequestMode
+>

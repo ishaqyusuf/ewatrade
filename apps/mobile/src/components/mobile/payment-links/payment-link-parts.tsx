@@ -106,12 +106,14 @@ export function PaymentReferenceCard({
 /** "Payment verified", only for a saved bank-check confirmation. */
 export function VerifiedStamp({
   verification,
+  customerReceiptId,
   message,
 }: {
   verification: PaymentVerification | null | undefined
+  customerReceiptId?: string | null
   message: string
 }) {
-  const verified = verifiedPayment(verification)
+  const verified = verifiedPayment(verification, customerReceiptId)
   if (!verified) return null
   return (
     <StatusBanner

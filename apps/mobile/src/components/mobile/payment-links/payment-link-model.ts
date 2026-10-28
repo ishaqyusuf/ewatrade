@@ -1,6 +1,7 @@
 import { formatMinorMoney } from "@ewatrade/utils"
 import { toInternationalPhone } from "@ewatrade/utils/countries"
 import { parsePhoneNumberFromString } from "libphonenumber-js"
+import type { ExcessSplit } from "./excess-allocation-model"
 
 /** How long a new payment link works (server accepts 10 minutes to 72 hours). */
 export const PAYMENT_LINK_LIFETIMES = [
@@ -176,16 +177,18 @@ export type PaymentVerification = {
 
 /**
  * The saved bank-check confirmation, or null. Only a confirmation the server
- * recorded as one Order payment counts; a receipt or a matching reference
- * never does.
+ * recorded as an Order payment, or as a customer receipt when the whole
+ * amount went to customer credit, counts; a receipt check or a matching
+ * reference never does.
  */
 export function verifiedPayment(
   verification: PaymentVerification | null | undefined,
+  customerReceiptId?: string | null,
 ) {
   if (
     verification?.state !== "confirmed" ||
     verification.source !== "merchant_bank_check" ||
-    !verification.canonicalPaymentId
+    !(verification.canonicalPaymentId || customerReceiptId)
   )
     return null
   return {
@@ -203,7 +206,8 @@ export function isNibssSessionId(reference: string) {
 /**
  * The "received" decision. The merchant's bank check is required; the NIBSS
  * namespace is only sent when they marked a 30-digit reference as one, so the
- * server can refuse the same transfer twice.
+ * server can refuse the same transfer twice. An amount above the balance
+ * carries the reviewed customer-funds snapshot unchanged.
  */
 export function receivedDecision(input: {
   reportId: string
@@ -215,6 +219,7 @@ export function receivedDecision(input: {
   note: string
   bankChecked: boolean
   nibssSession: boolean
+  excess?: ExcessSplit | null
 }) {
   if (!input.bankChecked) return null
   const reference = input.reference.trim()
@@ -231,6 +236,9 @@ export function receivedDecision(input: {
     bankCheckAttested: true as const,
     ...(input.nibssSession && isNibssSessionId(reference)
       ? { transferReferenceNamespace: "nibss_session_id" as const }
+      : {}),
+    ...(input.excess && input.excess.receivedMinor === input.receivedAmountMinor
+      ? { allocationReview: input.excess.allocationReview }
       : {}),
   }
 }

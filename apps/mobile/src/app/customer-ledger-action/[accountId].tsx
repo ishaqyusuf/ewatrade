@@ -15,6 +15,9 @@ export default function CustomerLedgerActionRoute() {
     opening: "Opening balance",
     receipt: "Record payment",
     refund: "Return credit",
+    "refund-requests": "Refund requests",
+    "refund-request": "Refund request",
+    "request-refund": "Request refund",
     release: "Release allocation",
     reverse: "Correct entry",
   }

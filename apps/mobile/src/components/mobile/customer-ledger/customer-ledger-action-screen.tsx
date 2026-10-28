@@ -5,7 +5,10 @@ import { useQuery } from "@tanstack/react-query"
 import { CustomerLedgerCommandForm } from "./customer-ledger-command-form"
 import { CustomerLedgerEntryDetail } from "./customer-ledger-entry-detail"
 import { CustomerLedgerGate } from "./customer-ledger-gate"
-import type { CustomerLedgerMode } from "./types"
+import { CustomerRefundDetail } from "./customer-refund-detail"
+import { CustomerRefundRequestForm } from "./customer-refund-request-form"
+import { CustomerRefundRequests } from "./customer-refund-requests"
+import type { CustomerLedgerCommandMode, CustomerLedgerMode } from "./types"
 const modes: CustomerLedgerMode[] = [
   "opening",
   "receipt",
@@ -14,6 +17,9 @@ const modes: CustomerLedgerMode[] = [
   "release",
   "refund",
   "reverse",
+  "refund-requests",
+  "refund-request",
+  "request-refund",
 ]
 export function CustomerLedgerActionScreen(props: {
   accountId: string
@@ -86,12 +92,34 @@ function Action({
     return (
       <StatusBanner message="Start a matching currency book on the dashboard before recording customer activity." />
     )
+  if (mode === "refund-requests")
+    return <CustomerRefundRequests account={query.data} />
+  // Adapter: on this shared route `entryId` carries the refund request id.
+  if (mode === "refund-request")
+    return entryId ? (
+      <CustomerRefundDetail
+        account={query.data}
+        actorUserId={actorUserId}
+        tenantId={tenantId}
+        requestId={entryId}
+      />
+    ) : (
+      <StatusBanner message="Choose a refund request from the list." />
+    )
+  if (mode === "request-refund")
+    return (
+      <CustomerRefundRequestForm
+        account={query.data}
+        actorUserId={actorUserId}
+        tenantId={tenantId}
+      />
+    )
   return (
     <CustomerLedgerCommandForm
       account={query.data}
       actorUserId={actorUserId}
       tenantId={tenantId}
-      mode={mode as Exclude<CustomerLedgerMode, "entry">}
+      mode={mode as CustomerLedgerCommandMode}
       entryId={entryId}
       allocationId={allocationId}
       allocationAfter={allocationAfter}

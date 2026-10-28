@@ -25,7 +25,7 @@ import { HeroCard } from "../green-till/hero-card"
 import { ListCard, SectionHeader } from "../green-till/kit"
 import { LedgerEffectiveTimeField } from "./ledger-effective-time-field"
 import {
-  type CustomerLedgerMode,
+  type CustomerLedgerCommandMode,
   type LedgerAccount,
   type LedgerRequest,
   ledgerLabels,
@@ -43,7 +43,7 @@ export function CustomerLedgerCommandForm({
   account: LedgerAccount
   actorUserId: string
   tenantId: string
-  mode: Exclude<CustomerLedgerMode, "entry">
+  mode: CustomerLedgerCommandMode
   entryId?: string
   allocationId?: string
   allocationAfter?: string
@@ -777,7 +777,7 @@ export function CustomerLedgerCommandForm({
     </FinanceFormBody>
   )
 }
-function Choice({
+export function Choice({
   label,
   selected,
   onPress,
@@ -799,7 +799,7 @@ function Choice({
   )
 }
 
-function FieldLabel({ children }: { children: string }) {
+export function FieldLabel({ children }: { children: string }) {
   return (
     <Text className="mx-0.5 mt-1 text-xs font-extrabold text-muted-foreground">
       {children}
@@ -807,7 +807,7 @@ function FieldLabel({ children }: { children: string }) {
   )
 }
 
-function ChoiceChip({
+export function ChoiceChip({
   icon,
   label,
   onPress,
@@ -851,7 +851,7 @@ function ChoiceChip({
   )
 }
 
-function ReviewRow({
+export function ReviewRow({
   before,
   label,
   value,

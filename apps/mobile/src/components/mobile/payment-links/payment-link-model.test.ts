@@ -1,4 +1,5 @@
 import { expect, test } from "bun:test"
+import { excessSplit } from "./excess-allocation-model"
 import {
   isNibssSessionId,
   receivedDecision,
@@ -63,6 +64,18 @@ test("only a saved bank-check confirmation counts as verified", () => {
   expect(verifiedPayment(null)).toBeNull()
 })
 
+test("a confirmed receipt-only funds record also counts as verified", () => {
+  const receiptOnly = { ...confirmed, canonicalPaymentId: null }
+  expect(verifiedPayment(receiptOnly, "rcpt_1")?.receivedAmountMinor).toBe(
+    500_000,
+  )
+  expect(verifiedPayment(receiptOnly, null)).toBeNull()
+  // A receipt id never upgrades an unconfirmed server state.
+  expect(
+    verifiedPayment({ ...receiptOnly, state: "unverified" }, "rcpt_1"),
+  ).toBeNull()
+})
+
 const decision = {
   reportId: "r1",
   expectedRevision: 2,
@@ -81,6 +94,32 @@ test("a received decision needs the bank check and attests it", () => {
   expect(sent?.bankCheckAttested).toBe(true)
   expect(sent?.reference).toBeUndefined()
   expect(sent && "transferReferenceNamespace" in sent).toBe(false)
+})
+
+test("the reviewed allocation is sent only for the amount it was made for", () => {
+  const review = {
+    expectedCustomerFundsAccountId: "acct_1",
+    expectedCustomerFundsRevision: "7",
+    expectedOrderUpdatedAt: new Date("2026-10-27T09:00:00.000Z"),
+    expectedOrderTotalMinor: 1_500_000,
+    expectedOrderPaidMinor: 1_000_000,
+  }
+  const excess = excessSplit(800_000, review)
+  const sent = receivedDecision({
+    ...decision,
+    receivedAmountMinor: 800_000,
+    excess,
+  })
+  expect(sent?.bankCheckAttested).toBe(true)
+  expect(sent?.allocationReview).toEqual({
+    orderAmountMinor: 500_000,
+    ...review,
+  })
+  expect(
+    receivedDecision({ ...decision, receivedAmountMinor: 900_000, excess })
+      ?.allocationReview,
+  ).toBeUndefined()
+  expect(receivedDecision(decision)?.allocationReview).toBeUndefined()
 })
 
 test("the NIBSS namespace is sent only for a marked 30-digit session ID", () => {
