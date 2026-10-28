@@ -1,5 +1,9 @@
 import { expect, test } from "bun:test"
-import { resolveStorefrontCustomerScope } from "./storefront-customer-scope"
+import {
+  resolveStorefrontCustomerScope,
+  storefrontCustomerScopeFromContext,
+} from "./storefront-customer-scope"
+import { getStorefrontCustomerSession } from "./storefront-customers"
 import {
   loadStorefrontContextForHost,
   loadStorefrontResourcesForContext,
@@ -227,4 +231,48 @@ test("lightweight scope still refuses an unpublished or mismatched release", asy
     ).toBeNull()
     expect(reads).not.toContain("catalog")
   }
+})
+
+test("a valid render session reuses current authority and expired/foreign sessions still fail", async () => {
+  const { db, reads } = repository()
+  const context = await loadStorefrontContextForHost(
+    db,
+    "merchant.ewatrade.com",
+  )
+  const session = {
+    id: "session-a",
+    tenantId: "tenant-a",
+    expiresAt: new Date(Date.now() + 60_000),
+    revokedAt: null,
+    lastSeenAt: new Date(),
+    customer: {
+      id: "customer-a",
+      tenantId: "tenant-a",
+      emailNormalized: "customer@example.test",
+      phoneE164: null,
+      displayName: "Customer",
+    },
+  }
+  Object.assign(db, {
+    storefrontCustomerSession: { findUnique: async () => session },
+  })
+  let scopeReads = 0
+  const resolve = async () => {
+    scopeReads++
+    return storefrontCustomerScopeFromContext(context)
+  }
+  const input = { host: "merchant.ewatrade.com", token: "a".repeat(40) }
+  expect(await getStorefrontCustomerSession(db, input, resolve)).toMatchObject({
+    tenantId: "tenant-a",
+    storeId: "store-a",
+  })
+  expect(reads).toEqual(["tenant", "site", "tenant"])
+  expect(scopeReads).toBe(1)
+  session.expiresAt = new Date(0)
+  expect(await getStorefrontCustomerSession(db, input, resolve)).toBeNull()
+  expect(scopeReads).toBe(1)
+  session.expiresAt = new Date(Date.now() + 60_000)
+  session.tenantId = "foreign"
+  session.customer.tenantId = "foreign"
+  expect(await getStorefrontCustomerSession(db, input, resolve)).toBeNull()
 })

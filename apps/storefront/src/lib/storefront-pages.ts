@@ -11,6 +11,7 @@ import {
   maskStorefrontIdentifier,
   storefrontReceiptToken,
 } from "@ewatrade/db/queries"
+import { storefrontCustomerScopeFromContext } from "@ewatrade/db/storefront-customer-scope"
 import type {
   AccountView,
   StorefrontCustomerView,
@@ -102,10 +103,12 @@ export function loadStorefrontFrame(
 
 export const loadCustomerSession = cache(async () => {
   const host = (await headers()).get("host") ?? ""
-  return getStorefrontCustomerSession(prisma, {
-    host,
-    token: await customerSessionToken(),
-  })
+  return getStorefrontCustomerSession(
+    prisma,
+    { host, token: await customerSessionToken() },
+    async () =>
+      storefrontCustomerScopeFromContext((await loadRequestContext()).context),
+  )
 })
 
 export function customerView(

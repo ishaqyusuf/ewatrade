@@ -408,6 +408,9 @@ export async function verifyStorefrontCustomerOtp(
 export async function getStorefrontCustomerSession(
   db: DbClient,
   input: { host: string; token: string | undefined | null },
+  /** Only server renderers supply request-local scope reuse. All command callers re-resolve. */
+  resolveScope: () => ReturnType<typeof accountScope> = () =>
+    accountScope(db, input.host),
 ) {
   if (!input.token || !/^[A-Za-z0-9_-]{40,64}$/.test(input.token)) return null
   const session = await db.storefrontCustomerSession.findUnique({
@@ -436,7 +439,7 @@ export async function getStorefrontCustomerSession(
     session.customer.tenantId !== session.tenantId
   )
     return null
-  const scope = await accountScope(db, input.host)
+  const scope = await resolveScope()
   if (!scope || scope.tenantId !== session.tenantId) return null
   if (Date.now() - session.lastSeenAt.getTime() > 10 * 60_000)
     await db.storefrontCustomerSession

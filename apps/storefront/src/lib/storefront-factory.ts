@@ -31,6 +31,7 @@ import {
   buildCustomerChatEntryUrl,
   resolveCustomerChatOrigin,
 } from "@ewatrade/utils"
+import { cache } from "react"
 import {
   withLocalQaPinnedPhotos,
   withLocalQaStorefrontPhotos,
@@ -38,6 +39,11 @@ import {
 import { storefrontOtpAdapter } from "./storefront-commerce"
 
 type Db = Parameters<typeof loadLiveStorefrontForHost>[0]
+// Presentation facts only, shared by shell/page/metadata in one render request.
+const loadOfferingCounts = cache(
+  (db: Db, tenantId: string, storeId: string, storefrontItems: number | null) =>
+    countPublicStorefrontOfferings(db, { tenantId, storeId, storefrontItems }),
+)
 type PageSelection = {
   pageKey?: string
   context?: Awaited<ReturnType<typeof loadStorefrontContextForHost>>
@@ -122,13 +128,14 @@ function factoryDependencies(
           features.orders.enabled ||
           (value.site.release.composition as { schemaVersion?: unknown })
             .schemaVersion === 2)
-      const offeringCounts = adaptive
-        ? await countPublicStorefrontOfferings(db, {
-            tenantId: value.site.release.tenantId,
-            storeId: value.site.storeId,
-            storefrontItems: store.storefrontItems ?? null,
-          })
-        : undefined
+      const counts = adaptive
+        ? loadOfferingCounts(
+            db,
+            value.site.release.tenantId,
+            value.site.storeId,
+            store.storefrontItems ?? null,
+          )
+        : Promise.resolve(undefined)
       // Only compositions with catalog-items fields pin; others make no extra read.
       const pins = pinnedCatalogItemIds(
         value.site.release.composition as Parameters<
@@ -140,8 +147,8 @@ function factoryDependencies(
       const lowStockCounts = publicLowStockCountsEnabled(
         value.site.release.composition,
       )
-      const pinnedItems = pins.length
-        ? await withLocalQaPinnedPhotos(
+      const pinned = pins.length
+        ? withLocalQaPinnedPhotos(
             value.storefront,
             host,
             await loadPublicStorefrontPinnedItems(db, {
@@ -155,7 +162,8 @@ function factoryDependencies(
               projection: { lowStockCounts },
             }),
           )
-        : []
+        : Promise.resolve([])
+      const [offeringCounts, pinnedItems] = await Promise.all([counts, pinned])
       // Presentation hints only; every write re-derives these facts on the server.
       const otp =
         features?.accounts.enabled && store.customerRequestsAllowed

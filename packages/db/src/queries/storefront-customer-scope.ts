@@ -84,3 +84,18 @@ export function resolveStorefrontCustomerScope(db: DbClient, host: string) {
       }),
   })(host)
 }
+
+/** Render-only reuse of this request's verified context; commands use the fresh resolver above. */
+export function storefrontCustomerScopeFromContext(
+  current: Awaited<ReturnType<typeof loadStorefrontContextForHost>>,
+) {
+  return createStorefrontCustomerScopeResolver({
+    loadCurrent: async () => current,
+    findActiveStore: async ({ tenantId, storeId }) =>
+      current &&
+      current.business.tenant.id === tenantId &&
+      current.business.store.id === storeId
+        ? { countryCode: current.business.store.countryCode }
+        : null,
+  })("")
+}

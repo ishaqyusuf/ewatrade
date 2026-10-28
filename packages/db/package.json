@@ -5,6 +5,7 @@
   "type": "module",
   "files": ["src", "generated", "prisma", "prisma.config.ts"],
   "exports": {
+    "./storefront-customer-scope": "./src/queries/storefront-customer-scope.ts",
     "./payment-report-notifications": "./src/queries/payment-report-notifications/index.ts",
     "./owner-billing": "./src/queries/owner-billing/index.ts",
     "./assistant-whatsapp": "./src/queries/assistant-whatsapp/index.ts",

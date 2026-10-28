@@ -57,7 +57,7 @@ explicit evidence-based decision if changing them would add cost or weaken polic
   scope without listing/stock/category reads; preserve all eligibility checks.
 - [x] S2 Route projections: shell/about/account/checkout/receipt/detail request only
   their needed resources; share request context and metadata reads.
-- [ ] S3 Read pipeline: remove redundant work and overlap independent reads;
+- [x] S3 Read pipeline: remove redundant work and overlap independent reads;
   retain plan cap, query-bound cursors, stock/price semantics and public DTO bounds.
   Add indexes/read models only if measured evidence requires them.
 - [ ] S4 Delivery: narrow measured package imports and split optional feature code
@@ -136,6 +136,14 @@ H01/H02 gates remain separate from source smoke. No deployment is implied.
   frames omit listings, paid detail reads only the eligible item, capped detail
   checks bounded ID membership, and photo pins follow the requested page. Release
   integrity is checked before resources. Focused34/271 and Storefront types pass.
+
+- S3: render sessions reuse current request authority without another Tenant/Site/
+  Store chain; all command callers retain the fresh default resolver. Presentation
+  counts are request-memoized with primitive scope keys, and counts/pins overlap.
+  New session/cap/detail/scope tests10/39 and Storefront types pass. Narrow DB scope
+  export avoids editing the concurrently owned query barrel. Index/read-model
+  changes are deferred: removing entire unused reads is proven; no query plan yet
+  justifies schema/compute changes on the constrained shared database.
 
 ## Midday migration contract and conformance checklist
 
