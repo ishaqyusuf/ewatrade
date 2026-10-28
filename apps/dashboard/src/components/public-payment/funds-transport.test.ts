@@ -28,7 +28,7 @@ function recordingClient() {
   return { client, sent }
 }
 
-test("only the two exact funds procedures carry the session cookie", () => {
+test("only the three exact customer procedures carry the session cookie", () => {
   expect(
     isCustomerFundsOperation({
       path: "businessBanking.customerFunds",
@@ -38,6 +38,12 @@ test("only the two exact funds procedures carry the session cookie", () => {
   expect(
     isCustomerFundsOperation({
       path: "businessBanking.applyCustomerCredit",
+      type: "mutation",
+    }),
+  ).toBe(true)
+  expect(
+    isCustomerFundsOperation({
+      path: "businessBanking.reportPaymentWithRefund",
       type: "mutation",
     }),
   ).toBe(true)
@@ -54,6 +60,11 @@ test("only the two exact funds procedures carry the session cookie", () => {
     { path: "businessBanking.reportPayment", type: "mutation" },
     { path: "businessBanking.submitReport", type: "mutation" },
     { path: "businessBanking.nextPaymentAttempt", type: "mutation" },
+    { path: "businessBanking.reportPaymentWithRefund", type: "query" },
+    { path: "businessBanking.reportPaymentWithRefunds", type: "mutation" },
+    { path: "businessBanking.reportpaymentwithrefund", type: "mutation" },
+    { path: "reportPaymentWithRefund", type: "mutation" },
+    { path: "businessBanking.retryReceiptAssessment", type: "mutation" },
   ]) {
     expect(isCustomerFundsOperation(op)).toBe(false)
   }
@@ -71,26 +82,37 @@ test("funds and public operations never share a batch or credentials", async () 
     ),
     client.query("businessBanking.reportStatus", { reportToken: "rt" }),
     client.mutation("businessBanking.reportPayment", { token: "link-secret" }),
+    client.mutation("businessBanking.reportPaymentWithRefund", {
+      token: "link-secret",
+    }),
     client.mutation("businessBanking.applyCustomerCredit", {
       token: "link-secret",
       clientCommandId: "cc_1",
     }),
     // Same name, wrong procedure type: stays on the public transport.
     client.mutation("businessBanking.customerFunds", { token: "link-secret" }),
+    client.query("businessBanking.reportPaymentWithRefund", {
+      token: "link-secret",
+    }),
   ])
 
   const byCredentials = (credentials: string) =>
     sent
       .filter((request) => request.init?.credentials === credentials)
       .map((request) => request.paths)
+  // Queries and mutations batch separately; each authenticated request holds only allowlisted ops.
   expect(byCredentials("same-origin")).toEqual([
     ["businessBanking.customerFunds"],
-    ["businessBanking.applyCustomerCredit"],
+    [
+      "businessBanking.reportPaymentWithRefund",
+      "businessBanking.applyCustomerCredit",
+    ],
   ])
   expect(byCredentials("omit").flat().sort()).toEqual([
     "businessBanking.customerFunds",
     "businessBanking.paymentLink",
     "businessBanking.reportPayment",
+    "businessBanking.reportPaymentWithRefund",
     "businessBanking.reportStatus",
   ])
   expect(sent).toHaveLength(4)

@@ -10,6 +10,7 @@ import { useTRPC } from "@/trpc/client"
 import { useQuery } from "@tanstack/react-query"
 import { useRouter } from "expo-router"
 import {
+  type OrderCreditIdentity,
   canSeeOrderCustomerCredit,
   orderCustomerCreditView,
 } from "./order-customer-credit-model"
@@ -18,7 +19,7 @@ import {
  * The Order customer's available credit (holds already taken off by the
  * server). Owners and admins only; read while the Order is on screen.
  */
-export function OrderCustomerCredit({ orderId }: { orderId: string }) {
+export function OrderCustomerCredit({ order }: { order: OrderCreditIdentity }) {
   const router = useRouter()
   const trpc = useTRPC()
   const allowed = canSeeOrderCustomerCredit(useAuthContext().profile?.role)
@@ -26,9 +27,9 @@ export function OrderCustomerCredit({ orderId }: { orderId: string }) {
   const active = usePaymentScreenActive()
   const funds = useQuery(
     trpc.businessBanking.orderCustomerFunds.queryOptions(
-      { orderId },
+      { orderId: order.id },
       {
-        enabled: allowed && !offline && active,
+        enabled: allowed && Boolean(order.customerId) && !offline && active,
         retry: false,
         staleTime: 0,
         refetchOnMount: "always",
@@ -36,9 +37,11 @@ export function OrderCustomerCredit({ orderId }: { orderId: string }) {
     ),
   )
   const view = orderCustomerCreditView({
+    order,
     allowed,
     offline,
     status: funds.status,
+    fetching: funds.isFetching,
     data: funds.data,
   })
   if (view.kind === "hidden") return null
@@ -90,12 +93,12 @@ export function OrderCustomerCredit({ orderId }: { orderId: string }) {
         variant="outline"
         onPress={() =>
           router.push({
-            pathname: "/customer-ledger-action/[accountId]",
-            params: { accountId: view.accountId, mode: "apply" },
+            pathname: "/customer-ledger/[customerId]",
+            params: { customerId: view.customerId },
           })
         }
       >
-        Use credit
+        View customer balance
       </ActionButton>
     </View>
   )

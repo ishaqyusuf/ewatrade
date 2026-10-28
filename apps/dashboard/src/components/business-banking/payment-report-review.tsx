@@ -4,6 +4,7 @@ import { FormFeedback } from "@/components/forms/form-feedback"
 import { orderMoney } from "@/components/orders/order-draft"
 import { useOrderPaymentAccounts } from "@/components/orders/order-payment-account"
 import { useTRPC } from "@/trpc/client"
+import type { RouterOutputs } from "@ewatrade/api/trpc/routers/_app"
 import {
   Badge,
   Button,
@@ -28,7 +29,7 @@ import {
 import { HugeiconsIcon } from "@hugeicons/react"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import Link from "next/link"
-import { type ReactNode, useId, useState } from "react"
+import { type ReactNode, useId, useRef, useState } from "react"
 import {
   NOT_RECEIVED_NOTE_MAX,
   NOT_RECEIVED_REASONS,
@@ -41,9 +42,25 @@ import {
 } from "./business-banking-model"
 import { CustomerMessageEditor } from "./customer-message-editor"
 import {
+  ConfirmedAllocationFacts,
+  CustomerPreferenceNote,
+  ExcessLine,
+} from "./excess-allocation"
+import {
+  allocationPreferenceWords,
+  excessPlan,
+  fundsSnapshotKey,
+  nibssSessionIdProblem,
+} from "./excess-allocation-model"
+import {
   PaymentAlertDeliveries,
   type PaymentAlertDelivery,
 } from "./payment-alert-deliveries"
+import { ReceiptEvidence } from "./receipt-evidence"
+import { receiptCheckPoll } from "./receipt-evidence-model"
+import { reviewFailure } from "./review-failure-model"
+
+type MerchantReport = RouterOutputs["businessBanking"]["report"]
 
 type Step = "check" | "confirm" | "not-received"
 
@@ -70,6 +87,12 @@ type ReviewResult = {
   /** Missing from an older server. */
   paymentReference?: string | null
   verification?: Verification
+  /** Saved links for a payment recorded through customer funds. */
+  customerReceiptId?: string | null
+  customerCreditEntryId?: string | null
+  customerFundsRefundRequestId?: string | null
+  /** This payment's saved split; missing from an older server. */
+  confirmedAllocation?: MerchantReport["confirmedAllocation"]
 }
 
 export function formatReportTime(
@@ -120,10 +143,34 @@ export function PaymentReportReview({
   onClose: () => void
 }) {
   const trpc = useTRPC()
+  const receiptPoll = useRef<{ reportId: string; startedAt: number | null }>({
+    reportId,
+    startedAt: null,
+  })
   const report = useQuery(
     trpc.businessBanking.report.queryOptions(
       { reportId },
-      { retry: false, staleTime: 0 },
+      {
+        retry: false,
+        staleTime: 0,
+        refetchIntervalInBackground: false,
+        refetchInterval: (query) => {
+          const poll = receiptCheckPoll({
+            state: query.state.data?.receiptAssessment?.state,
+            startedAt:
+              receiptPoll.current.reportId === reportId
+                ? receiptPoll.current.startedAt
+                : null,
+            now: Date.now(),
+            visible:
+              typeof document !== "undefined" &&
+              document.visibilityState === "visible",
+            failed: query.state.status === "error",
+          })
+          receiptPoll.current = { reportId, startedAt: poll.startedAt }
+          return poll.interval
+        },
+      },
     ),
   )
   if (report.isPending)
@@ -134,7 +181,7 @@ export function PaymentReportReview({
         </output>
       </Pane>
     )
-  if (report.isError) {
+  if (!report.data) {
     const code = errorCode(report.error)
     return (
       <Pane
@@ -169,8 +216,9 @@ export function PaymentReportReview({
   }
   return (
     <ReviewFlow
-      key={report.data.reportId}
+      key={`${report.data.reportId}:${report.data.revision}`}
       report={report.data}
+      readFailed={report.isError}
       timeZone={timeZone}
       onRefresh={async () => {
         await Promise.all([report.refetch(), onReviewed()])
@@ -198,6 +246,19 @@ type Report = {
   /** The saved reference customers were asked to use; missing from an older server. */
   paymentReference?: string | null
   verification?: Verification
+  /** Saved receipt check and what it read; evidence only. */
+  receiptAssessment?: MerchantReport["receiptAssessment"]
+  receiptExtraction?: MerchantReport["receiptExtraction"]
+  /** The customer's proposal for any extra; never an approved outcome. */
+  allocationPreference?: string | null
+  requestedApplyMinor?: string | null
+  /** Current Finance-only snapshot for recording extra; null when unavailable. */
+  customerFundsReview?: MerchantReport["customerFundsReview"]
+  customerReceiptId?: string | null
+  customerCreditEntryId?: string | null
+  customerFundsRefundRequestId?: string | null
+  /** This payment's saved split once confirmed; never the customer's balance. */
+  confirmedAllocation?: MerchantReport["confirmedAllocation"]
   receivedAccountId: string | null
   currencyCode: string
   orderId: string
@@ -218,12 +279,14 @@ type Report = {
 
 function ReviewFlow({
   report,
+  readFailed,
   timeZone,
   onRefresh,
   onReviewed,
   onClose,
 }: {
   report: Report
+  readFailed: boolean
   timeZone: string
   onRefresh: () => Promise<void>
   onReviewed: () => Promise<unknown> | undefined
@@ -237,6 +300,10 @@ function ReviewFlow({
   const [chosenAccount, setChosenAccount] = useState("")
   const [day, setDay] = useState(() => businessToday(timeZone))
   const [reference, setReference] = useState("")
+  // A NIBSS session ID only when the merchant says so; never read from a receipt.
+  const [referenceKind, setReferenceKind] = useState<
+    "bank" | "nibss_session_id"
+  >("bank")
   // The merchant's own check of the real bank account, saved as the exact
   // facts they checked (see bankCheckKey). A receipt or matching reference
   // never stands in for it.
@@ -287,6 +354,16 @@ function ReviewFlow({
           : !accountId
             ? "Choose the account the money arrived in."
             : null
+  // More than the balance: the server's split against its current snapshot.
+  const plan = excessPlan({
+    receivedMinor,
+    order: report,
+    snapshot: report.customerFundsReview,
+  })
+  const nibssProblem =
+    referenceKind === "nibss_session_id"
+      ? nibssSessionIdProblem(reference)
+      : null
   const currentKey = bankCheckKey({
     reportId: report.reportId,
     revision: report.revision,
@@ -294,15 +371,27 @@ function ReviewFlow({
     accountId,
     day,
     reference,
+    referenceKind,
+    fundsSnapshot:
+      plan.kind === "excess"
+        ? fundsSnapshotKey(report.customerFundsReview)
+        : "none",
   })
   // Only a check of the current report revision and current facts counts.
   const bankChecked = currentKey !== null && checkedKey === currentKey
   const canConfirm =
-    line.kind === "records" &&
+    !readFailed &&
+    (line.kind === "records" || plan.kind === "excess") &&
     !accountProblem &&
     !dayProblem &&
+    !nibssProblem &&
     !!receivedMinor &&
     bankChecked
+  const preference = allocationPreferenceWords(
+    report.allocationPreference ?? null,
+    report.requestedApplyMinor ?? null,
+    money,
+  )
 
   const review = useMutation(
     trpc.businessBanking.reviewReport.mutationOptions({
@@ -318,14 +407,13 @@ function ReviewFlow({
     }),
   )
   const failure = review.error
-  const conflict = errorCode(failure) === "CONFLICT"
-  const failureMessage = !failure
-    ? null
-    : conflict
-      ? "This payment was already reviewed, or it changed while you were checking."
-      : errorCode(failure) === "FORBIDDEN"
-        ? "Only staff who can take payments can confirm or decline it."
-        : failure.message
+  const refusal = reviewFailure(
+    failure ? { code: errorCode(failure), message: failure.message } : null,
+  )
+  const conflict = refusal?.refresh ?? false
+  const failureMessage = readFailed
+    ? "Payment details couldn’t refresh. Refresh before recording a decision."
+    : (refusal?.message ?? null)
 
   const decided =
     report.status === "CONFIRMED" || report.status === "NOT_RECEIVED"
@@ -364,7 +452,9 @@ function ReviewFlow({
           tone={recorded ? "ok" : "bad"}
           title={
             recorded
-              ? `${money(result.receivedAmountMinor ?? 0)} recorded on ${report.orderNumber}`
+              ? result.customerReceiptId
+                ? `${money(result.receivedAmountMinor ?? 0)} recorded from ${report.payerName}`
+                : `${money(result.receivedAmountMinor ?? 0)} recorded on ${report.orderNumber}`
               : "Not received"
           }
           detail={
@@ -390,6 +480,16 @@ function ReviewFlow({
         <PaymentReferenceRow
           reference={result.paymentReference ?? report.paymentReference}
         />
+        {recorded ? (
+          result.confirmedAllocation ? (
+            <ConfirmedAllocationFacts
+              allocation={result.confirmedAllocation}
+              money={money}
+            />
+          ) : (
+            <SavedCustomerFunds saved={result} />
+          )
+        ) : null}
         {result.replay ? (
           <p className="text-xs text-muted-foreground">
             This decision was already saved. Nothing was recorded twice.
@@ -432,7 +532,9 @@ function ReviewFlow({
           tone={report.status === "CONFIRMED" ? "ok" : "bad"}
           title={
             report.status === "CONFIRMED"
-              ? `Confirmed: ${money(report.receivedAmountMinor ?? 0)} recorded once on ${report.orderNumber}`
+              ? report.customerReceiptId
+                ? `Confirmed: ${money(report.receivedAmountMinor ?? 0)} recorded once from ${report.payerName}`
+                : `Confirmed: ${money(report.receivedAmountMinor ?? 0)} recorded once on ${report.orderNumber}`
               : report.status === "NOT_RECEIVED"
                 ? "Marked not received"
                 : "The customer hasn't finished sending this yet"
@@ -446,10 +548,20 @@ function ReviewFlow({
           }
         />
         {report.status === "CONFIRMED" ? (
-          <VerifiedStamp
-            verification={report.verification}
-            timeZone={timeZone}
-          />
+          <>
+            <VerifiedStamp
+              verification={report.verification}
+              timeZone={timeZone}
+            />
+            {report.confirmedAllocation ? (
+              <ConfirmedAllocationFacts
+                allocation={report.confirmedAllocation}
+                money={money}
+              />
+            ) : (
+              <SavedCustomerFunds saved={report} />
+            )}
+          </>
         ) : null}
         <ClaimFacts report={report} timeZone={timeZone} />
         <OrderFacts report={report} />
@@ -459,7 +571,7 @@ function ReviewFlow({
   const errorBox = failureMessage ? (
     <div role="alert" className="grid gap-2">
       <FormFeedback appearance="dashboard">{failureMessage}</FormFeedback>
-      {conflict ? (
+      {conflict || readFailed ? (
         <Button
           type="button"
           variant="outline"
@@ -480,7 +592,12 @@ function ReviewFlow({
   ) : null
 
   if (step === "confirm" && receivedMinor && receivedAt) {
-    const left = report.balanceMinor - receivedMinor
+    const excess = plan.kind === "excess" ? plan : null
+    const left = report.balanceMinor - (excess?.applyMinor ?? receivedMinor)
+    const referenceLabel =
+      referenceKind === "nibss_session_id"
+        ? "NIBSS session ID"
+        : "Bank reference"
     return (
       <Pane
         title="Record this payment?"
@@ -497,11 +614,14 @@ function ReviewFlow({
                       `${report.orderNumber} · ${report.payerName}`,
                       `Received: ${money(receivedMinor)} into ${accountName} on ${formatDay(day)}`,
                       `Customer said: ${money(report.claimedAmountMinor)}`,
+                      excess
+                        ? `On ${report.orderNumber}: ${money(excess.applyMinor)} · Kept as customer money: ${money(excess.heldMinor)}`
+                        : null,
                       report.paymentReference
                         ? `Payment reference: ${report.paymentReference}`
                         : null,
                       reference.trim()
-                        ? `Bank reference: ${reference.trim()}`
+                        ? `${referenceLabel}: ${reference.trim()}`
                         : null,
                     ]
                       .filter(Boolean)
@@ -543,6 +663,15 @@ function ReviewFlow({
                   receivedAt,
                   reference: reference.trim() || undefined,
                   bankCheckAttested: true,
+                  ...(referenceKind === "nibss_session_id"
+                    ? {
+                        transferReferenceNamespace: "nibss_session_id" as const,
+                      }
+                    : {}),
+                  // Only the server's current snapshot; never browser balances.
+                  ...(excess
+                    ? { allocationReview: excess.allocationReview }
+                    : {}),
                 })
               }}
             >
@@ -555,7 +684,9 @@ function ReviewFlow({
       >
         <div className="grid gap-1 rounded-lg border border-border bg-muted/40 p-4">
           <span className="text-xs text-muted-foreground">
-            Record on {report.orderNumber}
+            {excess
+              ? `Record from ${report.payerName}`
+              : `Record on ${report.orderNumber}`}
           </span>
           <b className="text-2xl font-semibold tabular-nums">
             {money(receivedMinor)}
@@ -570,7 +701,19 @@ function ReviewFlow({
             ["You received", <b key="r">{money(receivedMinor)}</b>],
             ["Into", accountName],
             ["Date", formatDay(day)],
-            ["Bank reference", reference.trim() || "—"],
+            ...(excess
+              ? ([
+                  [
+                    `Pays ${report.orderNumber}`,
+                    <b key="o">{money(excess.applyMinor)}</b>,
+                  ],
+                  [
+                    "Kept as customer money",
+                    <b key="h">{money(excess.heldMinor)}</b>,
+                  ],
+                ] as Array<[string, ReactNode]>)
+              : []),
+            [referenceLabel, reference.trim() || "—"],
             ...(report.paymentReference
               ? ([["Payment reference", report.paymentReference]] as Array<
                   [string, ReactNode]
@@ -596,10 +739,27 @@ function ReviewFlow({
             ],
           ]}
         />
-        <p className="text-xs text-muted-foreground">
-          This records one payment on the order, the same as Record payment. It
-          can't be recorded twice.
-        </p>
+        {excess ? (
+          <>
+            <CustomerPreferenceNote words={preference} />
+            {report.allocationPreference === "REFUND" ? (
+              <p className="text-xs text-muted-foreground">
+                If they gave bank details, a refund request is opened for your
+                review. It isn’t reserved or sent until you approve it.
+              </p>
+            ) : null}
+            <p className="text-xs text-muted-foreground">
+              This records one customer payment: {money(excess.applyMinor)} on
+              the order and {money(excess.heldMinor)} kept as their money with
+              you. Nothing is sent back. It can't be recorded twice.
+            </p>
+          </>
+        ) : (
+          <p className="text-xs text-muted-foreground">
+            This records one payment on the order, the same as Record payment.
+            It can't be recorded twice.
+          </p>
+        )}
         <output
           aria-live="polite"
           className={cn("text-xs text-muted-foreground", !copied && "sr-only")}
@@ -631,7 +791,9 @@ function ReviewFlow({
             <Button
               type="button"
               variant="destructive"
-              disabled={!note.trim() || review.isPending || conflict}
+              disabled={
+                !note.trim() || review.isPending || conflict || readFailed
+              }
               onClick={() =>
                 review.mutate({
                   reportId: report.reportId,
@@ -698,7 +860,7 @@ function ReviewFlow({
       }
     >
       <div className="grid gap-5 xl:grid-cols-2">
-        <ClaimFacts report={report} timeZone={timeZone} />
+        <ClaimFacts report={report} timeZone={timeZone} onRetried={onRefresh} />
         <div className="grid content-start gap-4">
           <OrderFacts
             report={report}
@@ -766,19 +928,62 @@ function ReviewFlow({
                 />
               </ControlField>
             </div>
-            <ControlField label="Bank reference (optional)">
+            <ControlField
+              label={
+                referenceKind === "nibss_session_id"
+                  ? "NIBSS session ID"
+                  : "Bank reference (optional)"
+              }
+              error={nibssProblem ?? undefined}
+            >
               <Input
                 value={reference}
                 maxLength={160}
-                placeholder="From your bank app"
+                inputMode={
+                  referenceKind === "nibss_session_id" ? "numeric" : undefined
+                }
+                placeholder={
+                  referenceKind === "nibss_session_id"
+                    ? "30 digits from your bank record"
+                    : "From your bank app"
+                }
                 onChange={(event) => setReference(event.target.value)}
               />
             </ControlField>
-            <LiveLine
-              line={line}
-              money={money}
-              balanceMinor={report.balanceMinor}
-            />
+            {/* biome-ignore lint/a11y/noLabelWithoutControl: the switch is the label's child */}
+            <label className="flex cursor-pointer items-start justify-between gap-4 rounded-lg border border-border px-3 py-2.5">
+              <span className="grid gap-0.5">
+                <span className="text-sm font-medium">
+                  This is a NIBSS session ID
+                </span>
+                <span className="text-xs text-muted-foreground">
+                  Only the 30-digit session ID from your own bank record, not
+                  the receipt or narration. It stops the same transfer being
+                  recorded twice; it isn’t a bank verification.
+                </span>
+              </span>
+              <Switch
+                checked={referenceKind === "nibss_session_id"}
+                onCheckedChange={(checked) =>
+                  setReferenceKind(
+                    checked === true ? "nibss_session_id" : "bank",
+                  )
+                }
+              />
+            </label>
+            {line.kind === "over" && plan.kind !== "none" ? (
+              <ExcessLine
+                plan={plan}
+                money={money}
+                balanceMinor={report.balanceMinor}
+              />
+            ) : (
+              <LiveLine
+                line={line}
+                money={money}
+                balanceMinor={report.balanceMinor}
+              />
+            )}
             {/* biome-ignore lint/a11y/noLabelWithoutControl: the switch is the label's child */}
             <label className="flex cursor-pointer items-start justify-between gap-4 rounded-lg border border-border px-3 py-2.5">
               <span className="grid gap-0.5">
@@ -906,9 +1111,12 @@ function ReasonBox({
 function ClaimFacts({
   report,
   timeZone,
+  onRetried,
 }: {
   report: Report
   timeZone: string
+  /** An open report can ask for another receipt check, then reread itself. */
+  onRetried?: () => Promise<unknown>
 }) {
   const money = (value: number) => orderMoney(value, report.currencyCode)
   const suffix = report.bank.accountNumber?.slice(-4) ?? ""
@@ -996,6 +1204,23 @@ function ClaimFacts({
           No receipt attached
         </p>
       )}
+      <ReceiptEvidence
+        hasReceipt={Boolean(report.receiptPath)}
+        assessment={report.receiptAssessment}
+        extraction={report.receiptExtraction}
+        retry={
+          onRetried
+            ? { reportId: report.reportId, onDone: onRetried }
+            : undefined
+        }
+      />
+      <CustomerPreferenceNote
+        words={allocationPreferenceWords(
+          report.allocationPreference ?? null,
+          report.requestedApplyMinor ?? null,
+          money,
+        )}
+      />
       <p className="text-xs text-muted-foreground">{claim.note}</p>
       <PaymentAlertDeliveries
         reportId={report.reportId}
@@ -1092,6 +1317,40 @@ function VerifiedStamp({
           : ""}
       </span>
     </p>
+  )
+}
+
+/**
+ * What the server saved when a payment went through customer funds. Only
+ * these saved links are shown: how much went to the Order versus held isn't
+ * returned per payment, so it isn't worked out here from Order totals.
+ */
+function SavedCustomerFunds({
+  saved,
+}: {
+  saved: {
+    customerReceiptId?: string | null
+    customerCreditEntryId?: string | null
+    customerFundsRefundRequestId?: string | null
+  }
+}) {
+  if (!saved.customerReceiptId) return null
+  return (
+    <ul className="grid gap-1 rounded-lg border border-border px-3 py-2 text-sm">
+      <li>Recorded as one customer payment on their statement.</li>
+      {saved.customerCreditEntryId ? (
+        <li>
+          Money beyond this Order is kept as the customer’s money with you.
+          Their statement shows it.
+        </li>
+      ) : null}
+      {saved.customerFundsRefundRequestId ? (
+        <li>
+          A refund request was opened from what the customer asked. It isn’t
+          reserved or sent until you approve it.
+        </li>
+      ) : null}
+    </ul>
   )
 }
 

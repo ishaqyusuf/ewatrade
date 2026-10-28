@@ -58,6 +58,7 @@ export const FINANCE_MENU_ITEMS = [
   { path: "/finance/bank", label: "Bank" },
   { path: "/finance/suppliers", label: "Suppliers" },
   { path: "/customer-ledger", label: "Customer balances" },
+  { path: "/finance/refunds", label: "Refunds" },
   { path: "/finance/reports", label: "Reports" },
 ]
 

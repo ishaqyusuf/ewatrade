@@ -3,6 +3,10 @@
 import { useTRPC } from "@/trpc/client"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { useCallback, useEffect, useRef, useState } from "react"
+import {
+  receiptStatusPollDelay,
+  receiptStatusPollKey,
+} from "./receipt-preflight-model"
 
 /**
  * live: subscribed to the status socket.
@@ -87,6 +91,66 @@ export function useReportStatus(reportToken: string | null) {
   refetchRef.current = () => {
     void queryClient.invalidateQueries({ queryKey })
   }
+
+  // Receipt jobs do not publish financial socket hints. Keep their read independent
+  // of a healthy socket, and share the canonical status query without cancelling it.
+  const receiptKey = reportToken ? receiptStatusPollKey(data) : null
+  const currentReceiptKey = useRef(receiptKey)
+  currentReceiptKey.current = receiptKey
+  const receiptRead = useRef<() => Promise<void>>(async () => {})
+  receiptRead.current = () =>
+    queryClient.refetchQueries(
+      { queryKey, exact: true, type: "active" },
+      { cancelRefetch: false },
+    )
+
+  useEffect(() => {
+    if (!receiptKey) return
+    let disposed = false
+    let timer: ReturnType<typeof setTimeout> | undefined
+    let reading = false
+    const startedAt = Date.now()
+    const nextDelay = () =>
+      receiptStatusPollDelay({
+        elapsedMs: Date.now() - startedAt,
+        visible: document.visibilityState === "visible",
+        online: navigator.onLine !== false,
+        expectedKey: receiptKey,
+        currentKey: currentReceiptKey.current,
+      })
+    const schedule = () => {
+      if (timer) clearTimeout(timer)
+      timer = undefined
+      if (disposed || reading) return
+      const delay = nextDelay()
+      if (delay === false) return
+      timer = setTimeout(() => {
+        timer = undefined
+        if (disposed || nextDelay() === false) return
+        // Wait for an in-flight canonical read instead of aborting/overlapping it.
+        reading = true
+        void receiptRead
+          .current()
+          .catch(() => undefined)
+          .finally(() => {
+            reading = false
+            schedule()
+          })
+      }, delay)
+    }
+    schedule()
+    // Resume only within this generation's original bounded window.
+    document.addEventListener("visibilitychange", schedule)
+    window.addEventListener("offline", schedule)
+    window.addEventListener("online", schedule)
+    return () => {
+      disposed = true
+      if (timer) clearTimeout(timer)
+      document.removeEventListener("visibilitychange", schedule)
+      window.removeEventListener("offline", schedule)
+      window.removeEventListener("online", schedule)
+    }
+  }, [receiptKey])
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: restartKey explicitly restarts bounded recovery after the customer's Reload or online event.
   useEffect(() => {

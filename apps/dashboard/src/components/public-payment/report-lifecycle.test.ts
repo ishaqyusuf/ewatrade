@@ -108,6 +108,11 @@ test("lost submit response retries one stable report operation without making a 
   let submissions = 0
   const client = {
     businessBanking: {
+      reportPaymentWithRefund: {
+        mutate: async () => {
+          throw new Error("Unexpected refund prepare")
+        },
+      },
       reportPayment: {
         mutate: async (input: { clientReportId: string }) => {
           operations.push(input.clientReportId)
@@ -173,6 +178,7 @@ test("lost submit response retries one stable report operation without making a 
   expect(operations).toEqual([report.clientReportId, report.clientReportId])
   expect(steps).toEqual(["preparing", "submitting", "preparing", "submitting"])
   expect(Object.keys(client.businessBanking)).toEqual([
+    "reportPaymentWithRefund",
     "reportPayment",
     "submitReport",
   ])
@@ -188,6 +194,11 @@ test("a reloaded receipt draft asks for the same receipt when upload never finis
   })
   const client = {
     businessBanking: {
+      reportPaymentWithRefund: {
+        mutate: async () => {
+          throw new Error("Unexpected refund prepare")
+        },
+      },
       reportPayment: {
         mutate: async () => ({
           reportId: "r",

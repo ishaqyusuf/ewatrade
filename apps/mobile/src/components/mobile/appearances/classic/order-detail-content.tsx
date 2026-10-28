@@ -297,7 +297,14 @@ export function ClassicOrderDetailContent({
           value={formatMinorMoney(order.balanceDueMinor, order.currencyCode)}
         />
       </OrderOverviewSection>
-      <OrderCustomerCredit orderId={order.id} />
+      <OrderCustomerCredit
+        key={JSON.stringify([order.id, order.customerId, order.currencyCode])}
+        order={{
+          id: order.id,
+          customerId: order.customerId,
+          currencyCode: order.currencyCode,
+        }}
+      />
 
       <OrderOverviewSection title="Details">
         <OrderInfoRow

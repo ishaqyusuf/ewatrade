@@ -19,6 +19,41 @@ export type ReceiptAssessment = {
   fundsConfirmed: false
 }
 
+export const RECEIPT_ASSESSMENT_POLL_WINDOW_MS = 3 * 60_000
+
+/** Metadata updates don't restart a receipt generation's polling window. */
+export function receiptAssessmentPollKey(
+  assessment: ReceiptAssessment | null | undefined,
+) {
+  if (
+    !assessment ||
+    (assessment.state !== "pending" && assessment.state !== "checking")
+  )
+    return null
+  return `${assessment.generation}:${assessment.pipelineVersion}`
+}
+
+/** A single foreground wall-clock window, with no refresh at/after its deadline. */
+export function receiptAssessmentPollDelay(input: {
+  assessment: ReceiptAssessment | null | undefined
+  active: boolean
+  offline: boolean
+  elapsedMs: number
+}) {
+  if (
+    !input.active ||
+    input.offline ||
+    !receiptAssessmentPollKey(input.assessment) ||
+    !Number.isFinite(input.elapsedMs) ||
+    input.elapsedMs < 0
+  )
+    return false
+  const interval = input.elapsedMs < 30_000 ? 2_500 : 6_000
+  return input.elapsedMs + interval < RECEIPT_ASSESSMENT_POLL_WINDOW_MS
+    ? interval
+    : false
+}
+
 /** Fixed copy per finding code; an unknown code never shows its raw text. */
 const FINDING_COPY: Record<string, string> = {
   UNREADABLE: "The receipt couldn't be read.",

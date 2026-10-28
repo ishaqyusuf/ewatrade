@@ -119,6 +119,7 @@ export function selectQuickPlan(files: string[]) {
         "turbo.json",
         "biome.json",
         "qa.smoke.example.json",
+        ".env.example",
       ].includes(file) ||
       /^(release\.config\.|tooling\/)/.test(file) ||
       /^(apps|packages)\/[^/]+\/package\.json$/.test(file)

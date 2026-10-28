@@ -1,7 +1,10 @@
 import { expect, test } from "bun:test"
 import {
+  RECEIPT_ASSESSMENT_POLL_WINDOW_MS,
   RECEIPT_CHECK_ADVISORY,
   type ReceiptAssessment,
+  receiptAssessmentPollDelay,
+  receiptAssessmentPollKey,
   receiptCheckView,
   receiptExtractionFacts,
 } from "./receipt-check-model"
@@ -19,6 +22,54 @@ const base: ReceiptAssessment = {
   findings: [],
   fundsConfirmed: false,
 }
+
+test("only an unfinished receipt generation has a stable polling key", () => {
+  const pending = { ...base, state: "pending" as const }
+  expect(receiptAssessmentPollKey(pending)).toBe("1:manual-receipt-v2")
+  expect(receiptAssessmentPollKey({ ...pending, state: "checking" })).toBe(
+    receiptAssessmentPollKey(pending),
+  )
+  expect(receiptAssessmentPollKey({ ...pending, generation: 2 })).not.toBe(
+    receiptAssessmentPollKey(pending),
+  )
+  for (const assessment of [
+    base,
+    { ...base, state: "unavailable" as const },
+    null,
+  ])
+    expect(receiptAssessmentPollKey(assessment)).toBeNull()
+})
+
+test("assessment polling is foreground-only and expires without restarting", () => {
+  const input = {
+    assessment: { ...base, state: "pending" as const },
+    active: true,
+    offline: false,
+    elapsedMs: 0,
+  }
+  expect(receiptAssessmentPollDelay(input)).toBe(2_500)
+  expect(receiptAssessmentPollDelay({ ...input, elapsedMs: 30_000 })).toBe(
+    6_000,
+  )
+  expect(receiptAssessmentPollDelay({ ...input, active: false })).toBe(false)
+  expect(receiptAssessmentPollDelay({ ...input, offline: true })).toBe(false)
+  expect(receiptAssessmentPollDelay({ ...input, assessment: base })).toBe(false)
+  expect(
+    receiptAssessmentPollDelay({
+      ...input,
+      assessment: { ...base, state: "unavailable" },
+    }),
+  ).toBe(false)
+  expect(receiptAssessmentPollDelay({ ...input, assessment: null })).toBe(false)
+  for (const elapsedMs of [
+    RECEIPT_ASSESSMENT_POLL_WINDOW_MS - 6_000,
+    RECEIPT_ASSESSMENT_POLL_WINDOW_MS,
+    RECEIPT_ASSESSMENT_POLL_WINDOW_MS + 1,
+    -1,
+    Number.POSITIVE_INFINITY,
+  ])
+    expect(receiptAssessmentPollDelay({ ...input, elapsedMs })).toBe(false)
+})
 
 test("no assessment shows nothing", () => {
   expect(receiptCheckView(null)).toBeNull()

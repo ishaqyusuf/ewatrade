@@ -1,21 +1,23 @@
 import type { AppRouter } from "@ewatrade/api/trpc/routers/_app"
-import {
-  type FetchEsque,
-  type TRPCLink,
-  httpBatchLink,
-  splitLink,
-} from "@trpc/client"
+import { type TRPCLink, httpBatchLink, splitLink } from "@trpc/client"
 import superjson from "superjson"
+
+type BatchFetch = NonNullable<
+  Parameters<typeof httpBatchLink<AppRouter>>[0]["fetch"]
+>
 
 /**
  * The only public-page procedures that may carry the common User/Session
  * cookie. The server derives the customer from that session; the client never
  * sends actor, customer, account or session IDs. Everything else on the public
- * page (link, report, reference, status, attempts) stays credential-free.
+ * page (link, ordinary report, reference, status, attempts) stays credential-free.
+ * reportPaymentWithRefund is the same report operation, used only when the
+ * customer adds refund bank details, which the server binds to that session.
  */
 const CUSTOMER_FUNDS_OPERATIONS = new Map<string, "query" | "mutation">([
   ["businessBanking.customerFunds", "query"],
   ["businessBanking.applyCustomerCredit", "mutation"],
+  ["businessBanking.reportPaymentWithRefund", "mutation"],
 ])
 
 /** Exact path and procedure type; any other operation stays `omit`. */
@@ -28,7 +30,7 @@ export function isCustomerFundsOperation(op: { path: string; type: string }) {
  * operations use separate batch links so one HTTP request never mixes them.
  */
 export function publicPaymentLinks(
-  baseFetch: FetchEsque = fetch,
+  baseFetch: BatchFetch = fetch,
 ): TRPCLink<AppRouter>[] {
   const batchLink = (credentials: "omit" | "same-origin") =>
     httpBatchLink({

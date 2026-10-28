@@ -107,12 +107,14 @@ provider activation and deployment require their own authorization.
 ## Progress
 
 - [x] Baseline and ownership/contract established; exact Workshop selection recorded.
-- [ ] Five managed workers running with verified UI model settings.
-- [ ] Base pending implementation completed; manual/provider acceptance tracked.
-- [ ] References/confirmation increment integrated and committed.
-- [ ] Receipt checks/deduplication increment integrated and committed.
-- [ ] Excess/credit/refunds integrated with canonical money/proof invariants.
-- [ ] Focused acceptance, assistant impact, Brain and Workshop evidence recorded.
+- [x] Six managed workers used; Opus settings verified and remaining Codex UI explicitly authorized.
+- [x] Base no-phone/draft implementation completed; manual/provider acceptance remains tracked.
+- [x] References/confirmation increment integrated and committed.
+- [x] Receipt checks/deduplication source integrated; provider admission remains disabled.
+- [x] Excess/credit/refunds integrated with canonical money/proof invariants.
+- [x] Focused source/types/money checks, assistant impact and Brain evidence recorded.
+- [ ] Workshop implementation receipt to record the final source commit.
+- [ ] Provider/hosted/native manual acceptance before a separately authorized release.
 
 This coordination checklist is not the feature milestone denominator. Original
 planning4/4/design5/5; eight product milestones are now in progress, none accepted
@@ -139,3 +141,12 @@ retain their other paths. Actual Finance-only orderReturnReview supplies canonic
 source eligibility; returnOrderFunds composes original-credit restoration and
 ordinary cash return through the existing durable command runner. Exact Opus5.5/
 high CLI implementation, no redesigned shell or duplicated financial command.
+
+## Explicit remaining-UI model authorization, 28 October 2026
+
+After verified Opus5.5 quota429/reset18:00Lagos, owner explicitly answered:
+“Let Codex finish the remaining UI.” Completed Opus source/history is retained;
+remaining public pre-submit/refund fields, mixed Order returns and final review
+corrections may be completed by Codex in the same selectedv18 design. This changes
+only the remaining implementation model, not ownership/schema/commit/release
+boundaries. Mixed native UI worker also owns thin app/order-return/[orderId].tsx.

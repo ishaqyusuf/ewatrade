@@ -77,6 +77,8 @@ describe("bank check acknowledgment", () => {
     accountId: "acc_gtb",
     day: "2026-10-26",
     reference: "TRX-9",
+    referenceKind: "bank" as const,
+    fundsSnapshot: "none",
   }
   test("goes stale when the report or any checked fact changes", () => {
     const checked = bankCheckKey(facts)
@@ -89,6 +91,8 @@ describe("bank check acknowledgment", () => {
       { accountId: "acc_opay" },
       { day: "2026-10-25" },
       { reference: "" },
+      { referenceKind: "nibss_session_id" as const },
+      { fundsSnapshot: '["acc_1","4"]' },
     ])
       expect(bankCheckKey({ ...facts, ...change })).not.toBe(checked)
   })

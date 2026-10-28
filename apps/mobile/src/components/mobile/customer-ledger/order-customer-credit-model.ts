@@ -1,15 +1,14 @@
 import { normalizeMobileRole } from "@/lib/mobile-roles"
+import type { RouterOutputs } from "@ewatrade/api/trpc/routers/_app"
 import { formatFinanceMoney } from "@ewatrade/utils/finance-money"
 
 /** businessBanking.orderCustomerFunds: Finance-only, Order-scoped. */
-export type OrderCustomerFunds = {
-  availableMinor: string
-  reservedMinor: string
-  currencyCode: string
-  accountId: string
-  accountRevision: string
-  showCredit: boolean
-} | null
+export type OrderCustomerFunds =
+  RouterOutputs["businessBanking"]["orderCustomerFunds"]
+export type OrderCreditIdentity = Pick<
+  RouterOutputs["orders"]["get"],
+  "id" | "customerId" | "currencyCode"
+>
 
 /** Only owners and admins can read customer funds. */
 export function canSeeOrderCustomerCredit(role: string | undefined) {
@@ -24,18 +23,31 @@ const MINOR = /^(0|[1-9]\d*)$/
  * missing answer is never shown as zero.
  */
 export function orderCustomerCreditView(input: {
+  order: OrderCreditIdentity
   allowed: boolean
   offline: boolean
   status: "pending" | "error" | "success"
+  fetching: boolean
   data: OrderCustomerFunds | undefined
 }) {
-  if (!input.allowed) return { kind: "hidden" as const }
+  if (!input.allowed || !input.order.customerId)
+    return { kind: "hidden" as const }
   if (input.offline) return { kind: "offline" as const }
   if (input.status === "error") return { kind: "error" as const }
   if (input.status === "pending" || input.data === undefined)
     return { kind: "loading" as const }
   const funds = input.data
-  if (!funds || !funds.showCredit) return { kind: "hidden" as const }
+  if (!funds)
+    return { kind: input.fetching ? ("loading" as const) : ("hidden" as const) }
+  if (
+    funds.orderId !== input.order.id ||
+    funds.customerId !== input.order.customerId ||
+    funds.currencyCode !== input.order.currencyCode
+  )
+    return {
+      kind: input.fetching ? ("loading" as const) : ("unavailable" as const),
+    }
+  if (!funds.showCredit) return { kind: "hidden" as const }
   if (!MINOR.test(funds.availableMinor) || !MINOR.test(funds.reservedMinor))
     return { kind: "unavailable" as const }
   const available = BigInt(funds.availableMinor)
@@ -45,6 +57,7 @@ export function orderCustomerCreditView(input: {
     return {
       kind: "credit" as const,
       accountId: funds.accountId,
+      customerId: funds.customerId,
       available: formatFinanceMoney(funds.availableMinor, funds.currencyCode),
       reserved:
         reserved > 0n

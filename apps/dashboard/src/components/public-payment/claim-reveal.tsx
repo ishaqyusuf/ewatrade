@@ -35,8 +35,10 @@ export function ClaimReveal({
   name,
   onNameChange,
   nameLocked,
+  amount,
   receipt,
   step,
+  submitLabel = "Yes, I've paid",
   error,
   onConfirm,
   onCancel,
@@ -48,9 +50,12 @@ export function ClaimReveal({
   onNameChange: (name: string) => void
   /** Finishing a report already started: its name can't change. */
   nameLocked: boolean
+  /** The amount the customer actually sent, and any preference for a larger amount. */
+  amount?: ReactNode
   /** Only when the page above has no receipt picker of its own. */
   receipt?: ReactNode
   step: SendStep | null
+  submitLabel?: string
   error: string | null
   onConfirm: (payerName: string) => void
   onCancel: () => void
@@ -142,6 +147,8 @@ export function ClaimReveal({
         </span>
       </div>
 
+      {amount}
+
       {receipt}
 
       <p className="text-center text-[13px] leading-relaxed text-muted-foreground">
@@ -166,7 +173,7 @@ export function ClaimReveal({
           disabled={sending}
         >
           {sending ? <Spinner className="size-5" /> : null}
-          {step ? stepLabel[step] : "Yes, I've paid"}
+          {step ? stepLabel[step] : submitLabel}
         </button>
         <button
           type="button"

@@ -30,6 +30,9 @@ describe("fast workflow scope", () => {
       "mobile",
     ])
     expect(selectQuickPlan(["bun.lock"]).groups).toHaveLength(4)
+    expect(selectQuickPlan([".env.example"]).groups).toHaveLength(4)
+    expect(selectQuickPlan([".env.example"]).unknown).toEqual([])
+    expect(selectQuickPlan([".env.local"]).unknown).toEqual([".env.local"])
     const payments = selectQuickPlan(["packages/payments/src/payment-link.ts"])
     expect(payments.unknown).toEqual([])
     expect(payments.groups).toEqual(["core", "domain", "web", "mobile"])

@@ -1,5 +1,6 @@
 "use client"
 
+import { OrderReturnSources } from "@/components/customer-ledger/order-returns/order-return-sources"
 import { useTRPC } from "@/trpc/client"
 import { Button, Input, MoneyInput, cn } from "@ewatrade/ui"
 import { majorToMinor, minorToMajorInput } from "@ewatrade/utils/currency"
@@ -293,7 +294,24 @@ type RefundReason = (typeof REFUND_REASONS)[number]["value"]
  * Money back with the outcome shown first (design 02 "Amount + outcome").
  * "Overcharged" also lowers the total, so nothing shows as owed afterwards.
  */
-export function RefundDialog({
+export function RefundDialog(
+  props: Parameters<typeof OrdinaryRefundDialog>[0],
+) {
+  const ordinary = <OrdinaryRefundDialog {...props} />
+  if (props.ask) return ordinary
+  return (
+    <OrderReturnSources
+      order={props.order}
+      ordinary={ordinary}
+      canReturn={props.canReturn}
+      onOpenReturn={props.onOpenReturn}
+      onClose={props.onClose}
+      onDone={props.onDone}
+    />
+  )
+}
+
+function OrdinaryRefundDialog({
   order,
   credit,
   canReturn,

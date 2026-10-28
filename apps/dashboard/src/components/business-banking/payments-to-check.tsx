@@ -186,6 +186,9 @@ export function PaymentsToCheck({
                         </span>
                         <span className="truncate text-xs text-muted-foreground">
                           {item.orderNumber} ·{" "}
+                          {item.paymentReference
+                            ? `${item.paymentReference} · `
+                            : ""}
                           {formatReportTime(item.submittedAt, timeZone)}
                         </span>
                       </span>

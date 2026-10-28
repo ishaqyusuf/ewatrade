@@ -209,9 +209,11 @@ export function receivedLine(input: {
 
 /**
  * What "I checked the bank account" vouches for: this report revision and the
- * exact amount, account, day and bank reference being sent. Any change (an
- * edit, a refreshed report, an account list fallback) makes a saved check
- * stale. Null while the facts are incomplete, so nothing can be checked.
+ * exact amount, account, day and bank reference being sent, how that
+ * reference is read, and the customer-funds snapshot any extra is split
+ * against. Any change (an edit, a refreshed report or snapshot, an account
+ * list fallback) makes a saved check stale. Null while the facts are
+ * incomplete, so nothing can be checked.
  */
 export function bankCheckKey(input: {
   reportId: string
@@ -220,6 +222,10 @@ export function bankCheckKey(input: {
   accountId: string
   day: string
   reference: string
+  /** Plain bank reference (evidence only) or a NIBSS session ID. */
+  referenceKind: "bank" | "nibss_session_id"
+  /** fundsSnapshotKey of the snapshot used for any extra, or "none". */
+  fundsSnapshot: string
 }) {
   const { receivedMinor } = input
   if (!receivedMinor || receivedMinor <= 0 || !input.accountId || !input.day)
@@ -231,6 +237,8 @@ export function bankCheckKey(input: {
     input.accountId,
     input.day,
     input.reference.trim(),
+    input.referenceKind,
+    input.fundsSnapshot,
   ])
 }
 

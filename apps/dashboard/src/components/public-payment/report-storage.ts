@@ -1,3 +1,9 @@
+import {
+  type ReportAllocation,
+  isReportAllocation,
+  sameAllocation,
+} from "./report-allocation"
+
 /**
  * The customer's own payment report for one link, kept in this browser only.
  * The report token proves access to the report status; it never goes in the URL.
@@ -50,6 +56,17 @@ export type StoredReport = {
   paymentReference?: string | null
   /** After this report was decided: the next attempt the customer asked for. */
   nextAttempt?: StoredNextAttempt | null
+  /**
+   * The allocation proposal sent with a larger amount; part of the same idempotent report.
+   * Never refund bank details: those are not kept in browser storage.
+   */
+  allocation?: ReportAllocation | null
+  /**
+   * True when this report's refund request carries bank details. Only this flag is kept: the
+   * details are re-entered to recover an unknown prepare or replace a report after a reload.
+   * A saved server proof can submit the existing sealed destination without resending it.
+   */
+  refundDetails?: boolean
 }
 
 const KEY_PREFIX = "ewatrade.payment-report."
@@ -65,8 +82,13 @@ function fnv1a(value: string, seed: number) {
   return hash.toString(16).padStart(8, "0")
 }
 
+/** A per-link browser key that never contains the raw link token. */
+export function linkScopedKey(prefix: string, linkToken: string) {
+  return `${prefix}${fnv1a(linkToken, 0x811c9dc5)}${fnv1a(linkToken, 0x9e3779b9)}`
+}
+
 export function reportStorageKey(linkToken: string) {
-  return `${KEY_PREFIX}${fnv1a(linkToken, 0x811c9dc5)}${fnv1a(linkToken, 0x9e3779b9)}`
+  return linkScopedKey(KEY_PREFIX, linkToken)
 }
 
 const operationId = /^[a-zA-Z0-9_-]{8,120}$/
@@ -136,6 +158,15 @@ export function parseStoredReport(raw: string | null): StoredReport | null {
       (value.reportedAt !== null && typeof value.reportedAt !== "string") ||
       !optional(value.paymentAttemptId, recordId) ||
       !optional(value.paymentReference, reference) ||
+      (value.allocation !== undefined &&
+        value.allocation !== null &&
+        !isReportAllocation(value.allocation)) ||
+      (value.refundDetails !== undefined &&
+        value.refundDetails !== false &&
+        // Bank details belong only to a refund request.
+        (value.refundDetails !== true ||
+          !isReportAllocation(value.allocation) ||
+          value.allocation.allocationPreference !== "REFUND")) ||
       (value.nextAttempt !== undefined &&
         value.nextAttempt !== null &&
         // Only a report with its own proof can ask for the next attempt.
@@ -204,7 +235,7 @@ export function clearStoredReport(linkToken: string) {
   }
 }
 
-function newOperationId(prefix: string) {
+export function newOperationId(prefix: string) {
   const cryptoApi = globalThis.crypto
   if (cryptoApi?.randomUUID)
     return `${prefix}_${cryptoApi.randomUUID().replace(/-/g, "")}`
@@ -223,7 +254,7 @@ export function newClientAttemptId() {
 
 /**
  * Same report details and the same shown payment attempt → same clientReportId, so a retry
- * replays instead of conflicting. A different attempt is a different report. A record saved
+ * replays instead of conflicting. Refund bank details are compared by the caller in memory. A different attempt is a different report. A record saved
  * before attempts existed is unbound: retrying it unchanged lets the server replay what it saved.
  */
 export function sameReportDetails(
@@ -233,9 +264,13 @@ export function sameReportDetails(
     "payerName" | "claimedAmountMinor" | "receipt"
   > & {
     paymentAttemptId: string | null
+    allocation?: ReportAllocation | null
+    refundDetails?: boolean
   },
 ) {
   return (
+    sameAllocation(report.allocation, details.allocation) &&
+    Boolean(report.refundDetails) === Boolean(details.refundDetails) &&
     (report.paymentAttemptId === undefined ||
       report.paymentAttemptId === details.paymentAttemptId) &&
     report.payerName === details.payerName &&

@@ -1,25 +1,35 @@
 import { expect, test } from "bun:test"
 import { formatFinanceMoney } from "@ewatrade/utils/finance-money"
 import {
+  type OrderCustomerFunds,
   canSeeOrderCustomerCredit,
   orderCustomerCreditView,
 } from "./order-customer-credit-model"
 
 const funds = {
+  orderId: "order_1",
+  customerId: "customer_1",
   availableMinor: "1250050",
   reservedMinor: "0",
   currencyCode: "NGN",
   accountId: "acct_1",
   accountRevision: "7",
   showCredit: true,
+} satisfies NonNullable<OrderCustomerFunds>
+const order = {
+  id: funds.orderId,
+  customerId: funds.customerId,
+  currencyCode: funds.currencyCode,
 }
 const view = (
   input: Partial<Parameters<typeof orderCustomerCreditView>[0]> = {},
 ) =>
   orderCustomerCreditView({
+    order,
     allowed: true,
     offline: false,
     status: "success",
+    fetching: false,
     data: funds,
     ...input,
   })
@@ -37,6 +47,7 @@ test("positive credit shows the exact server amount", () => {
   expect(view()).toEqual({
     kind: "credit",
     accountId: "acct_1",
+    customerId: "customer_1",
     available: formatFinanceMoney("1250050", "NGN"),
     reserved: null,
   })
@@ -58,6 +69,30 @@ test("known zero and absent customer or ledger are hidden", () => {
     view({ data: { ...funds, availableMinor: "0", showCredit: false } }),
   ).toEqual({ kind: "hidden" })
   expect(view({ data: null })).toEqual({ kind: "hidden" })
+  expect(view({ order: { ...order, customerId: null } })).toEqual({
+    kind: "hidden",
+  })
+})
+
+test("cached funds must match the current Order customer and currency", () => {
+  for (const current of [
+    { ...order, id: "order_2" },
+    { ...order, customerId: "customer_2" },
+    { ...order, currencyCode: "USD" },
+  ]) {
+    expect(view({ order: current })).toEqual({ kind: "unavailable" })
+    expect(view({ order: current, fetching: true })).toEqual({
+      kind: "loading",
+    })
+  }
+  // A previous customer's zero is also not a current answer.
+  expect(
+    view({
+      order: { ...order, customerId: "customer_2" },
+      data: { ...funds, availableMinor: "0", showCredit: false },
+    }),
+  ).toEqual({ kind: "unavailable" })
+  expect(view({ data: null, fetching: true })).toEqual({ kind: "loading" })
 })
 
 test("loading, errors, offline and odd answers never read as zero", () => {

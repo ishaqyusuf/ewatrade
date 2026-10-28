@@ -29,7 +29,7 @@ import {
 } from "@ewatrade/utils"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { type Href, useRouter } from "expo-router"
-import { useState } from "react"
+import { useRef, useState } from "react"
 import { ClaimReceipt } from "./claim-receipt"
 import { CustomerMessageEditor } from "./customer-message-editor"
 import {
@@ -62,6 +62,11 @@ import {
   VerifiedStamp,
 } from "./payment-link-parts"
 import { ReceiptCheck } from "./receipt-check"
+import {
+  receiptAssessmentPollDelay,
+  receiptAssessmentPollKey,
+} from "./receipt-check-model"
+import { usePaymentScreenActive } from "./use-payment-screen-active"
 
 type Report = RouterOutputs["businessBanking"]["report"]
 type Decision = RouterOutputs["businessBanking"]["reviewReport"]
@@ -70,15 +75,41 @@ type Step = "check" | "confirm" | "not_received" | "result"
 /** Review one customer claim against what arrived in the business bank. */
 export function PaymentReportScreen({ reportId }: { reportId: string }) {
   const trpc = useTRPC()
+  const queryClient = useQueryClient()
   const offline = useOperationalModeStore((state) => state.isOfflineMode)
+  const active = usePaymentScreenActive()
+  const [pausedReportId, setPausedReportId] = useState<string | null>(null)
+  const paused = pausedReportId === reportId
+  const pollWindow = useRef<{ key: string; startedAt: number } | null>(null)
   const report = useQuery(
     trpc.businessBanking.report.queryOptions(
       { reportId },
       {
-        enabled: !offline && Boolean(reportId),
+        enabled: active && !offline && Boolean(reportId) && !paused,
         retry: false,
         staleTime: 0,
         refetchOnMount: "always",
+        refetchIntervalInBackground: false,
+        refetchInterval: (query) => {
+          if (!active || offline || paused || query.state.status === "error")
+            return false
+          const assessment = query.state.data?.receiptAssessment
+          const generationKey = receiptAssessmentPollKey(assessment)
+          if (!generationKey) return false
+          const key = `${reportId}:${generationKey}`
+          const now = Date.now()
+          let window = pollWindow.current
+          if (!window || window.key !== key) {
+            window = { key, startedAt: now }
+            pollWindow.current = window
+          }
+          return receiptAssessmentPollDelay({
+            assessment,
+            active,
+            offline,
+            elapsedMs: now - window.startedAt,
+          })
+        },
       },
     ),
   )
@@ -138,6 +169,15 @@ export function PaymentReportScreen({ reportId }: { reportId: string }) {
       report={report.data}
       onReload={() => void report.refetch()}
       reloading={report.isRefetching}
+      onReviewStart={async () => {
+        setPausedReportId(reportId)
+        // Cancel only this read before posting, so a late poll cannot replace
+        // the saved result/draft with its new financial revision.
+        await queryClient.cancelQueries(
+          trpc.businessBanking.report.queryFilter({ reportId }),
+        )
+      }}
+      onReviewFailed={() => setPausedReportId(null)}
     />
   )
 }
@@ -146,10 +186,14 @@ function ReviewFlow({
   report,
   onReload,
   reloading,
+  onReviewStart,
+  onReviewFailed,
 }: {
   report: Report
   onReload: () => void
   reloading: boolean
+  onReviewStart: () => Promise<void>
+  onReviewFailed: () => void
 }) {
   const trpc = useTRPC()
   const router = useRouter()
@@ -243,7 +287,9 @@ function ReviewFlow({
 
   const review = useMutation(
     trpc.businessBanking.reviewReport.mutationOptions({
+      onMutate: onReviewStart,
       onError: (failure) => {
+        onReviewFailed()
         const code = errorCode(failure)
         setProblem({
           code,

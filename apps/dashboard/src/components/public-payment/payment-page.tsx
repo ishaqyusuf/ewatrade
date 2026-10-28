@@ -1,7 +1,6 @@
 "use client"
 
 import { useTRPC, useTRPCClient } from "@/trpc/client"
-import { Skeleton } from "@ewatrade/ui"
 import {
   formatCurrencyInput,
   getCurrencySymbol,
@@ -18,6 +17,8 @@ import {
   useState,
 } from "react"
 import { ClaimReveal } from "./claim-reveal"
+import { CustomerCredit } from "./customer-credit"
+import { closeDraftForReplacement, preparedFromStatus } from "./draft-report"
 import {
   type IssuedAttempt,
   startNextPaymentAttempt,
@@ -26,39 +27,52 @@ import { initialPayerName } from "./payer-name"
 import {
   type PublicPaymentLink,
   type PublicReportStatus,
-  formatReportedAt,
-  itemsSummary,
-  lastDigits,
   money,
 } from "./payment-format"
 import {
   AmountField,
   BankDetails,
   BusinessHeader,
-  ConfirmingRings,
   DetailList,
   FixedAmount,
-  HeroAmountCopy,
-  LiveIndicator,
-  OrderDetails,
   OrderSummary,
   PaymentShell,
   ReceiptPicker,
   ReferenceValue,
   StatusCard,
-  UpdatedAt,
   cardClass,
   primaryButtonClass,
   secondaryButtonClass,
 } from "./payment-parts"
 import {
-  type ReportOutcome,
+  confirmedExcessLabel,
+  confirmedOutcome,
   outcomeNextStep,
   reportReference,
   resolvePaymentView,
-  verifiedConfirmation,
 } from "./payment-view"
+import {
+  LoadingView,
+  OutcomeCard,
+  PaymentHero,
+  VerifiedNote,
+  WaitingView,
+} from "./payment-views"
+import { receiptAmountSuggestion } from "./receipt-assessment"
+import { ReceiptCheck } from "./receipt-check"
 import type { PickedReceipt } from "./receipt-file"
+import {
+  type RefundDestination,
+  emptyRefundDestination,
+  readRefundDestination,
+  sameRefundDestination,
+} from "./refund-destination"
+import { RefundFields } from "./refund-fields"
+import {
+  type ExcessChoice,
+  reportAllocation,
+  reviewSentAmount,
+} from "./report-allocation"
 import {
   type StoredReport,
   clearStoredReport,
@@ -69,259 +83,18 @@ import {
   writeStoredReport,
 } from "./report-storage"
 import {
+  type PreparedReport,
   ReportFlowError,
   type SendStep,
-  sendPaymentReport,
+  prepareReport,
+  submitPreparedReport,
   trpcErrorCode,
+  uploadPreparedReceipt,
 } from "./send-payment-report"
-import { type StatusConnection, useReportStatus } from "./use-report-status"
-
-/** Formats on the client only, so server and browser time zones never disagree. */
-function LocalDate({ value }: { value: Date | string }) {
-  const [label, setLabel] = useState<string | null>(null)
-  useEffect(() => {
-    const date = new Date(value)
-    setLabel(
-      Number.isNaN(date.getTime())
-        ? null
-        : new Intl.DateTimeFormat("en-NG", {
-            day: "numeric",
-            month: "short",
-            hour: "numeric",
-            minute: "2-digit",
-          }).format(date),
-    )
-  }, [value])
-  return label ? <>{label}</> : null
-}
-
-function PaymentHero({ link }: { link: PublicPaymentLink }) {
-  const summary = itemsSummary(link.items)
-  return (
-    <section className="bg-[linear-gradient(150deg,#17684f,#0e4a38)] text-[#fff9ed]">
-      <div className="mx-auto flex w-full max-w-[520px] flex-col gap-0.5 px-5 pt-10 pb-6 sm:pt-14">
-        <h1 className="text-[13.5px] opacity-85">
-          {link.businessName} · Order {link.orderNumber}
-        </h1>
-        <p className="text-[40px] leading-tight font-extrabold tracking-tight tabular-nums">
-          <span className="sr-only">Amount to pay: </span>
-          {money(link.amountPrefilledMinor, link.currencyCode)}
-        </p>
-        <HeroAmountCopy amountMinor={link.amountPrefilledMinor} />
-        {summary ? <p className="text-sm opacity-85">{summary}</p> : null}
-        <p className="mt-1 text-[13px] opacity-75">
-          {link.paidMinor > 0
-            ? `Part paid · ${money(link.balanceMinor, link.currencyCode)} left`
-            : "Not paid yet"}
-          {" · Link works until "}
-          <LocalDate value={link.expiresAt} />
-        </p>
-        <div className="mt-2 text-foreground [&_summary]:text-[#fff9ed]">
-          <OrderDetails link={link} />
-        </div>
-      </div>
-    </section>
-  )
-}
-
-/** Shown only for the server's canonical confirmation, never for a reference or receipt match. */
-function VerifiedNote({
-  businessName,
-  status,
-}: {
-  businessName: string
-  status: PublicReportStatus
-}) {
-  const verified = verifiedConfirmation(status)
-  if (!verified) return null
-  return (
-    <p
-      className={`${cardClass} flex flex-col gap-0.5 border-l-4 border-l-success-border px-3.5 py-3 text-sm leading-relaxed`}
-    >
-      <b>Payment verified</b>
-      <span className="text-muted-foreground">
-        Confirmed by {businessName}
-        {verified.confirmedAt ? (
-          <>
-            {" · "}
-            <LocalDate value={verified.confirmedAt} />
-          </>
-        ) : null}
-        . The amounts below are the recorded result.
-      </span>
-    </p>
-  )
-}
-
-function OutcomeCard({
-  link,
-  outcome,
-  status,
-  updatedAt,
-}: {
-  link: PublicPaymentLink
-  outcome: ReportOutcome
-  status: PublicReportStatus
-  updatedAt: number
-}) {
-  const { businessName, currencyCode } = link
-  const received = money(status.receivedAmountMinor ?? 0, currencyCode)
-  const claimed = money(status.claimedAmountMinor, currencyCode)
-  if (outcome === "not_received")
-    return (
-      <>
-        <StatusCard
-          tone="bad"
-          big
-          live
-          title="Payment not found yet"
-          footer={<UpdatedAt at={updatedAt} />}
-        >
-          {businessName} couldn't find your {claimed} transfer.
-        </StatusCard>
-        <div
-          className={`${cardClass} flex flex-col gap-0.5 border-l-4 border-l-destructive px-3.5 py-3`}
-        >
-          <small className="text-[12.5px] text-muted-foreground">
-            Their message
-          </small>
-          <b className="text-[15px] leading-relaxed">{status.message}</b>
-        </div>
-      </>
-    )
-  const short =
-    (status.receivedAmountMinor ?? 0) < status.claimedAmountMinor
-      ? ` You said ${claimed}. If that's wrong, reply to them where you got this link.`
-      : ""
-  if (outcome === "partially_paid")
-    return (
-      <StatusCard
-        tone="ok"
-        big
-        live
-        title={`${received} confirmed`}
-        footer={<UpdatedAt at={updatedAt} />}
-      >
-        {businessName} confirmed they received {received}.{short}
-      </StatusCard>
-    )
-  return (
-    <StatusCard
-      tone="ok"
-      big
-      live
-      title="Payment confirmed"
-      footer={<UpdatedAt at={updatedAt} />}
-    >
-      {businessName} confirmed they received {received}.{short}
-    </StatusCard>
-  )
-}
-
-function WaitingView({
-  link,
-  status,
-  record,
-  connection,
-  onReload,
-  canRecover,
-}: {
-  link: PublicPaymentLink
-  status: PublicReportStatus
-  record: StoredReport | null
-  connection: StatusConnection
-  onReload: () => void
-  canRecover: boolean
-}) {
-  const reportedAt = formatReportedAt(record?.reportedAt ?? null)
-  const reference = reportReference(status)
-  return (
-    <PaymentShell>
-      <BusinessHeader
-        businessName={link.businessName}
-        orderNumber={link.orderNumber}
-      />
-      <section
-        className={`${cardClass} flex flex-col items-center gap-2 px-4.5 pt-6.5 pb-4.5 text-center`}
-        aria-live="polite"
-      >
-        <ConfirmingRings />
-        <h2 className="mt-1.5 text-[21px] font-extrabold">
-          Your payment is being confirmed
-        </h2>
-        <p className="text-[15px] leading-relaxed text-muted-foreground">
-          {link.businessName} is checking their account for your transfer. This
-          page updates when they confirm.
-        </p>
-        <LiveIndicator connection={connection} onReload={onReload} />
-      </section>
-      <DetailList
-        rows={[
-          {
-            label: "You said you paid",
-            value: (
-              <b className="tabular-nums">
-                {money(status.claimedAmountMinor, status.currencyCode)}
-              </b>
-            ),
-          },
-          ...(record?.payerName
-            ? [{ label: "Your name", value: record.payerName }]
-            : []),
-          {
-            label: "Sent to",
-            value: `${link.bank.name} · ${lastDigits(link.bank.accountNumber)}`,
-          },
-          ...(reference
-            ? [
-                {
-                  label: "Payment reference",
-                  value: <ReferenceValue reference={reference} />,
-                },
-              ]
-            : []),
-          ...(reportedAt ? [{ label: "Told them", value: reportedAt }] : []),
-          ...(record?.payerName
-            ? [
-                {
-                  label: "Receipt",
-                  value: record.receipt?.fileName ?? "No receipt",
-                },
-              ]
-            : []),
-        ]}
-      />
-      {reference ? (
-        <p className="text-center text-[13px] leading-relaxed text-muted-foreground">
-          A matching reference helps {link.businessName} find your transfer.
-          They still confirm it in their bank account.
-        </p>
-      ) : null}
-      <p className="text-center text-[13px] leading-relaxed text-muted-foreground">
-        {canRecover
-          ? "You can close this page. Open the same link in this browser later to see the result."
-          : "Keep this page open to see the result. Your browser couldn't save this report for a later visit."}
-      </p>
-    </PaymentShell>
-  )
-}
-
-function LoadingView() {
-  return (
-    <PaymentShell>
-      <div className="flex items-center gap-3" aria-busy="true">
-        <Skeleton className="size-11 rounded-xl" />
-        <div className="flex flex-col gap-1.5">
-          <Skeleton className="h-4 w-40" />
-          <Skeleton className="h-3 w-24" />
-        </div>
-      </div>
-      <Skeleton className="h-48 rounded-2xl" />
-      <Skeleton className="h-64 rounded-2xl" />
-      <output className="sr-only">Loading payment page</output>
-    </PaymentShell>
-  )
-}
+import { SentAmount } from "./sent-amount"
+import { useCustomerCredit } from "./use-customer-credit"
+import { useReceiptPreflight } from "./use-receipt-preflight"
+import { useReportStatus } from "./use-report-status"
 
 const ALREADY_CHECKING =
   "A payment report for this link is already being checked. If you told them from another phone or browser, open this link there to see the result."
@@ -330,6 +103,20 @@ export function PaymentPage({
   token,
   initialLink,
 }: { token: string; initialLink?: PublicPaymentLink }) {
+  const activeVisit = useRef({ token, generation: 0 })
+  if (activeVisit.current.token !== token)
+    activeVisit.current = {
+      token,
+      generation: activeVisit.current.generation + 1,
+    }
+  const visitGeneration = activeVisit.current.generation
+  const mounted = useRef(true)
+  useEffect(() => {
+    mounted.current = true
+    return () => {
+      mounted.current = false
+    }
+  }, [])
   const trpc = useTRPC()
   const client = useTRPCClient()
   const queryClient = useQueryClient()
@@ -339,12 +126,30 @@ export function PaymentPage({
 
   const [record, setRecord] = useState<StoredReport | null>(null)
   const [storageReady, setStorageReady] = useState(false)
+  const [recordOwner, setRecordOwner] = useState(token)
   useEffect(() => {
     setRecord(readStoredReport(token))
     setStorageReady(true)
+    setRecordOwner(token)
+    setDraftMode(false)
+    setCheckedDraftId(null)
+    setPreflightStartedAt(null)
+    setRefundText(emptyRefundDestination)
+    setRefundError(null)
+    preparedDestination.current = null
+    setReceipt(null)
+    setReceiptEdited(false)
+    setRevealed(false)
+    setPayerName(null)
+    setStep(null)
+    setFlowError(null)
+    sendingRef.current = false
+    setNextForm(null)
+    setNextNotice(null)
   }, [token])
 
-  const reportToken = storageReady ? (record?.reportToken ?? null) : null
+  const reportToken =
+    storageReady && recordOwner === token ? (record?.reportToken ?? null) : null
   const {
     query: statusQuery,
     connection,
@@ -364,7 +169,7 @@ export function PaymentPage({
 
   // A decision changes the order balance: read the link again.
   const decision =
-    status && status.state !== "checking"
+    status && status.state !== "checking" && status.state !== "draft_cancelled"
       ? `${status.reportId}:${status.revision}`
       : null
   const linkKey = linkOptions.queryKey
@@ -372,8 +177,28 @@ export function PaymentPage({
     if (decision) void queryClient.invalidateQueries({ queryKey: linkKey })
   }, [decision, queryClient, linkKey])
 
+  const [draftMode, setDraftMode] = useState(false)
+  const [checkedDraftId, setCheckedDraftId] = useState<string | null>(null)
+  const [preflightStartedAt, setPreflightStartedAt] = useState<number | null>(
+    null,
+  )
+  const preflight = useReceiptPreflight({
+    reportToken,
+    startedAt: preflightStartedAt,
+  })
+  const [refundText, setRefundText] = useState(emptyRefundDestination)
+  const [refundError, setRefundError] = useState<string | null>(null)
+  // These private values are never put in storage, query keys or status cache.
+  const preparedDestination = useRef<RefundDestination | null>(null)
+  const [receiptEdited, setReceiptEdited] = useState(false)
+  const invalidateCheck = () => {
+    setCheckedDraftId(null)
+    setPreflightStartedAt(null)
+  }
+
   const view = resolvePaymentView({
-    link,
+    preflight: draftMode,
+    link: recordOwner === token ? link : undefined,
     linkError: linkQuery.error
       ? linkCode === "NOT_FOUND" || linkCode === "BAD_REQUEST"
         ? "not_found"
@@ -398,10 +223,20 @@ export function PaymentPage({
   const [amountText, setAmountText] = useState<string | null>(null)
   const [amountError, setAmountError] = useState<string | null>(null)
   const amountRef = useRef<HTMLInputElement>(null)
+  // What the customer says they actually sent, entered in the "I have paid" step.
+  const [sentText, setSentText] = useState<string | null>(null)
+  const [sentError, setSentError] = useState<string | null>(null)
+  const [excessChoice, setExcessChoice] = useState<ExcessChoice | null>(null)
+  const sentRef = useRef<HTMLInputElement>(null)
   // biome-ignore lint/correctness/useExhaustiveDependencies: reset when the amount due changes
   useEffect(() => {
     setAmountText(null)
     setAmountError(null)
+    setSentText(null)
+    setSentError(null)
+    setExcessChoice(null)
+    setCheckedDraftId(null)
+    setPreflightStartedAt(null)
   }, [dueMinor])
   const shownAmountText =
     amountText ?? formatCurrencyInput(minorToMajorInput(dueMinor))
@@ -433,11 +268,43 @@ export function PaymentPage({
   const focusNewForm = useRef(false)
 
   const finishing = view.kind === "unfinished" && Boolean(record?.reportToken)
+  // What the customer plans to transfer: drives the payment details and copy.
   const claimMinor = finishing
     ? (record?.claimedAmountMinor ?? 0)
     : link?.allowPartial
       ? (majorToMinor(shownAmountText) ?? 0)
       : dueMinor
+
+  const balanceMinor =
+    view.kind === "link" ? view.link.balanceMinor : (link?.balanceMinor ?? 0)
+  const shownSentText =
+    sentText ??
+    formatCurrencyInput(minorToMajorInput(claimMinor > 0 ? claimMinor : 0))
+  const sentMinor = finishing
+    ? (record?.claimedAmountMinor ?? 0)
+    : majorToMinor(shownSentText)
+  const sentReview =
+    finishing || !link
+      ? ({ kind: "ordinary" } as const)
+      : reviewSentAmount({
+          sentMinor,
+          dueMinor,
+          balanceMinor,
+          allowPartial: link.allowPartial,
+          currencyCode: link.currencyCode,
+        })
+  const allocation = finishing
+    ? (record?.allocation ?? null)
+    : reportAllocation(sentReview, excessChoice)
+
+  const credit = useCustomerCredit({
+    token,
+    link: view.kind === "link" ? view.link : link,
+    enabled: view.kind === "link" && view.link.state === "active",
+    allowApply: !revealed && !draftMode,
+    reportToken,
+    linkUpdatedAt: linkQuery.dataUpdatedAt,
+  })
 
   // The link closed or expired while the name step was open.
   useEffect(() => {
@@ -465,6 +332,20 @@ export function PaymentPage({
     return !problem
   }
 
+  /** The amount actually sent, and the customer's choice for any extra, before reporting. */
+  const sentIsValid = () => {
+    if (finishing) return true
+    const problem =
+      sentReview.kind === "invalid"
+        ? sentReview.message
+        : allocation === "choice_required"
+          ? "Choose what should happen to the extra."
+          : null
+    setSentError(problem)
+    if (problem && sentReview.kind === "invalid") sentRef.current?.focus()
+    return !problem
+  }
+
   const openClaim = () => {
     setFlowError(null)
     if (!link || !amountIsValid()) return
@@ -475,6 +356,20 @@ export function PaymentPage({
           ? (record?.payerName ?? "")
           : initialPayerName({ record, customerName: link.customerName })),
     )
+    if (finishing && record) {
+      setPayerName(record.payerName)
+      setSentText(
+        formatCurrencyInput(minorToMajorInput(record.claimedAmountMinor)),
+      )
+      setExcessChoice(
+        record.allocation &&
+          record.allocation.allocationPreference !== "ORDER_MORE"
+          ? record.allocation.allocationPreference
+          : null,
+      )
+      setDraftMode(true)
+      invalidateCheck()
+    }
     setRevealed(true)
   }
 
@@ -504,13 +399,19 @@ export function PaymentPage({
             payerName: own ? attempt.payerName : "",
             receipt: own ? attempt.receipt : null,
             claimedAmountMinor: existing.claimedAmountMinor,
+            allocation: own ? (attempt.allocation ?? null) : null,
             reportedAt: own ? attempt.reportedAt : null,
             // The report being checked keeps the attempt it was made against.
             paymentAttemptId: existing.paymentAttemptId,
             paymentReference: existing.paymentReference,
           }
           writeStoredReport(token, recovered)
-          setRecord(recovered)
+          if (
+            mounted.current &&
+            activeVisit.current.token === token &&
+            activeVisit.current.generation === visitGeneration
+          )
+            setRecord(recovered)
           return true
         } catch {
           /* Try the next stored token. */
@@ -518,131 +419,275 @@ export function PaymentPage({
       }
       return false
     },
-    [client, token],
+    [client, token, visitGeneration],
   )
 
   const confirm = async (payerName: string) => {
-    if (!link || sendingRef.current) return
+    if (
+      !link ||
+      sendingRef.current ||
+      credit.blocksTransfer ||
+      allocation === "choice_required" ||
+      sentMinor === null
+    )
+      return
     setFlowError(null)
-    let attempt: StoredReport
-    if (finishing && record) {
+    setRefundError(null)
+    const parsedDestination =
+      allocation?.allocationPreference === "REFUND"
+        ? readRefundDestination(refundText)
+        : { kind: "empty" as const }
+    if (parsedDestination.kind === "invalid") {
+      setRefundError(parsedDestination.message)
+      return
+    }
+    const destination =
+      parsedDestination.kind === "valid" ? parsedDestination.destination : null
+    if (destination && credit.refundProof.kind !== "verified") {
+      setRefundError(
+        "Sign in as this order's customer before attaching bank details.",
+      )
+      return
+    }
+    const existingDraft =
+      record &&
+      !record.reportedAt &&
+      record.paymentAttemptId === link.paymentAttemptId
+        ? record
+        : null
+    const keepSavedDestination = Boolean(
+      existingDraft?.reportToken &&
+        existingDraft.refundDetails &&
+        !destination &&
+        allocation?.allocationPreference === "REFUND",
+    )
+    const details = {
+      payerName,
+      claimedAmountMinor: sentMinor,
+      allocation,
+      refundDetails: Boolean(destination) || keepSavedDestination,
+      receipt: link.receiptAllowed
+        ? (receipt?.meta ??
+          (!receiptEdited ? (existingDraft?.receipt ?? null) : null))
+        : null,
+      paymentAttemptId: link.paymentAttemptId,
+    }
+    const samePrivate =
+      !destination ||
+      sameRefundDestination(preparedDestination.current, destination)
+    const unchanged = Boolean(
+      existingDraft && sameReportDetails(existingDraft, details) && samePrivate,
+    )
+    // A separate click after preparing/checking is the only path to final receipt submit.
+    const explicitFinal =
+      unchanged && checkedDraftId === existingDraft?.clientReportId
+    let attempt: StoredReport = existingDraft ?? {
+      v: 1,
+      clientReportId: newClientReportId(),
+      ...details,
+      paymentReference: link.paymentReference,
+      reportToken: null,
+      previousReportToken:
+        record?.reportToken ?? record?.previousReportToken ?? null,
+      reportedAt: null,
+    }
+    const isCurrent = () =>
+      mounted.current &&
+      activeVisit.current.token === token &&
+      activeVisit.current.generation === visitGeneration
+    const save = () => {
+      writeStoredReport(token, attempt)
+      if (isCurrent()) setRecord(attempt)
+    }
+    sendingRef.current = true
+    setStep("preparing")
+    setDraftMode(true)
+    try {
+      let prepared: PreparedReport | null = null
+      if (existingDraft) {
+        // A lost prepare answer is recovered with its original stable key before any replacement.
+        if (!attempt.reportToken) {
+          prepared = await prepareReport({
+            client,
+            linkToken: token,
+            report: attempt,
+            refundDestination: preparedDestination.current ?? destination,
+          })
+          attempt = { ...attempt, reportToken: prepared.reportToken }
+          save()
+          if (!isCurrent()) return
+        }
+        const oldToken = attempt.reportToken
+        if (!oldToken)
+          throw new ReportFlowError(
+            "network",
+            "Couldn't recover this draft. Try again.",
+          )
+        const oldStatus = await client.businessBanking.reportStatus.query({
+          reportToken: oldToken,
+        })
+        if (!isCurrent()) return
+        if (oldStatus.status !== "DRAFT") {
+          queryClient.setQueryData(
+            trpc.businessBanking.reportStatus.queryKey({
+              reportToken: oldToken,
+            }),
+            oldStatus,
+          )
+          setDraftMode(false)
+          setRevealed(false)
+          return
+        }
+        if (!unchanged || oldStatus.state === "draft_cancelled") {
+          await closeDraftForReplacement(client, oldToken)
+          if (!isCurrent()) return
+          // The old proof remains saved if closing it has an uncertain answer.
+          attempt = {
+            v: 1,
+            clientReportId: newClientReportId(),
+            ...details,
+            reportToken: null,
+            previousReportToken: oldToken,
+            reportedAt: null,
+            paymentReference: link.paymentReference,
+          }
+          preparedDestination.current = destination
+          save()
+          invalidateCheck()
+        } else
+          prepared = preparedFromStatus(
+            oldToken,
+            oldStatus,
+            Boolean(attempt.receipt),
+          )
+      } else {
+        preparedDestination.current = destination
+        save()
+        if (!isCurrent()) return
+      }
+      if (!prepared || prepared.reportToken !== attempt.reportToken) {
+        if (attempt.refundDetails && !destination)
+          throw new ReportFlowError(
+            "refund_details_needed",
+            "Re-enter all three refund bank fields to prepare a replacement report.",
+          )
+        preparedDestination.current = destination
+        prepared = await prepareReport({
+          client,
+          linkToken: token,
+          report: attempt,
+          refundDestination: destination,
+        })
+        attempt = { ...attempt, reportToken: prepared.reportToken }
+        save()
+      }
       if (
-        record.receipt &&
-        receipt &&
-        receipt.meta.contentDigest !== record.receipt.contentDigest
+        !(
+          explicitFinal &&
+          attempt.clientReportId === existingDraft?.clientReportId
+        ) &&
+        attempt.receipt &&
+        prepared.status === "DRAFT"
       ) {
-        setFlowError(
-          `This isn't the receipt you chose before. Add ${record.receipt.fileName} again.`,
+        if (receipt) {
+          setStep("uploading")
+          await uploadPreparedReceipt({
+            prepared,
+            report: attempt,
+            file: receipt.file,
+          })
+          if (!isCurrent()) return
+        }
+        const canonical = await client.businessBanking.reportStatus.query({
+          reportToken: prepared.reportToken,
+        })
+        if (!isCurrent()) return
+        queryClient.setQueryData(
+          trpc.businessBanking.reportStatus.queryKey({
+            reportToken: prepared.reportToken,
+          }),
+          canonical,
         )
+        if (canonical.state === "draft_cancelled")
+          throw new ReportFlowError(
+            "stale",
+            "This draft was cancelled. Check your details and try again.",
+          )
+        if (canonical.status !== "DRAFT") {
+          setDraftMode(false)
+          setRevealed(false)
+          return
+        }
+        // A reload may have lost the file before it uploaded. Never display a check as started.
+        if (!receipt && !canonical.receiptAssessment)
+          throw new ReportFlowError(
+            "receipt_needed",
+            "Add the same receipt again to check it, or remove it and send for manual review.",
+          )
+        setCheckedDraftId(attempt.clientReportId)
+        setPreflightStartedAt(Date.now())
         return
       }
-      attempt = record
-    } else {
-      const details = {
-        payerName,
-        claimedAmountMinor: claimMinor,
-        receipt: link.receiptAllowed ? (receipt?.meta ?? null) : null,
-        // Bound to the reference on screen; the server refuses it once it is not current.
-        paymentAttemptId: link.paymentAttemptId,
-      }
-      attempt =
-        record && !record.reportToken && sameReportDetails(record, details)
-          ? record
-          : {
-              v: 1,
-              clientReportId: newClientReportId(),
-              ...details,
-              paymentReference: link.paymentReference,
-              reportToken: null,
-              previousReportToken:
-                record?.reportToken ?? record?.previousReportToken ?? null,
-              reportedAt: null,
-            }
-    }
-    // Persist before the first request so a retry reuses the same clientReportId.
-    writeStoredReport(token, attempt)
-    setRecord(attempt)
-    sendingRef.current = true
-    try {
-      await sendPaymentReport({
+      setStep("submitting")
+      const submitted = await submitPreparedReport({
         client,
-        linkToken: token,
-        report: attempt,
-        file: link.receiptAllowed ? (receipt?.file ?? null) : null,
-        onStep: setStep,
-        onPrepared: (preparedToken) => {
-          attempt = { ...attempt, reportToken: preparedToken }
-          writeStoredReport(token, attempt)
-        },
+        prepared,
+        hasFile: Boolean(receipt),
       })
       attempt = {
         ...attempt,
         reportedAt: attempt.reportedAt ?? new Date().toISOString(),
       }
-      writeStoredReport(token, attempt)
-      setRecord(attempt)
+      save()
+      if (!isCurrent()) return
+      queryClient.setQueryData(
+        trpc.businessBanking.reportStatus.queryKey({
+          reportToken: prepared.reportToken,
+        }),
+        { ...submitted, statusSocketUrl: status?.statusSocketUrl ?? null },
+      )
+      void queryClient.invalidateQueries({
+        queryKey: trpc.businessBanking.reportStatus.queryKey({
+          reportToken: prepared.reportToken,
+        }),
+      })
+      if (!isCurrent()) return
+      setDraftMode(false)
+      invalidateCheck()
       setRevealed(false)
       setPayerName(null)
       setReceipt(null)
+      setReceiptEdited(false)
       setAmountText(null)
+      setSentText(null)
+      setExcessChoice(null)
+      setRefundText(emptyRefundDestination)
+      preparedDestination.current = null
     } catch (error) {
-      // Keep this visit's stable operation even when browser storage is denied.
-      setRecord(attempt)
-      if (!(error instanceof ReportFlowError)) {
-        setFlowError("Something went wrong. Try again.")
-        return
-      }
-      if (error.kind === "conflict") {
-        if (await recoverConflict(attempt)) {
+      save()
+      if (!isCurrent()) return
+      if (error instanceof ReportFlowError) {
+        if (error.kind === "conflict" && (await recoverConflict(attempt))) {
+          setDraftMode(false)
           setRevealed(false)
           return
         }
-        if (/payment reference changed/i.test(error.message)) {
-          // Show the current reference first; the next explicit submit binds to it.
+        if (error.kind === "unavailable" || error.kind === "conflict")
           void queryClient.invalidateQueries({ queryKey: linkKey })
-          setFlowError(
-            "The payment reference changed. Check the reference above before you tell them.",
-          )
-          return
-        }
-        if (/start a new payment attempt/i.test(error.message)) {
-          void queryClient.invalidateQueries({ queryKey: linkKey })
-          setFlowError(
-            "This payment reference was already used for a report that was decided. Open this link in the browser you used before, or ask the business for a new link.",
-          )
-          return
-        }
-        if (/different details/i.test(error.message)) {
-          const fresh = { ...attempt, clientReportId: newClientReportId() }
-          writeStoredReport(token, fresh)
-          setRecord(fresh)
-          setFlowError("Something changed since you last tried. Try again.")
-          return
-        }
         setFlowError(
           /already being checked/i.test(error.message)
             ? ALREADY_CHECKING
             : error.message,
         )
-        return
-      }
-      if (error.kind === "stale") {
-        const fresh: StoredReport = {
-          ...attempt,
-          clientReportId: newClientReportId(),
-          reportToken: null,
-          previousReportToken: attempt.reportToken,
-          reportedAt: null,
-        }
-        writeStoredReport(token, fresh)
-        setRecord(fresh)
-      }
-      if (error.kind === "unavailable")
-        void queryClient.invalidateQueries({ queryKey: linkKey })
-      setFlowError(error.message)
+      } else
+        setFlowError(
+          "Couldn't finish this step. Your draft is saved; try again.",
+        )
     } finally {
-      sendingRef.current = false
-      setStep(null)
+      if (isCurrent()) {
+        sendingRef.current = false
+        setStep(null)
+      }
     }
   }
 
@@ -697,21 +742,150 @@ export function PaymentPage({
     if (reportToken) reloadStatus()
   }
 
-  const nameLocked = finishing && Boolean(record?.payerName)
+  const nameLocked = false
+  const checkReady = Boolean(
+    checkedDraftId && checkedDraftId === record?.clientReportId,
+  )
+  const checkedStatus = checkReady ? preflight.status : undefined
+  const suggestion =
+    checkedStatus && link
+      ? receiptAmountSuggestion({
+          assessment: checkedStatus.receiptAssessment,
+          currencyCode: link.currencyCode,
+          claimedAmountMinor: checkedStatus.claimedAmountMinor,
+        })
+      : null
+  const hasReceiptToCheck = Boolean(
+    receipt || (!receiptEdited && draftMode && record?.receipt),
+  )
   const claimStep = (receiptSlot?: ReactNode) =>
     link && revealed && (link.state === "active" || finishing) ? (
       <ClaimReveal
         id={revealId}
         link={link}
-        amountMinor={claimMinor}
+        amountMinor={
+          sentReview.kind !== "invalid" && sentMinor ? sentMinor : claimMinor
+        }
         name={nameLocked ? (record?.payerName ?? "") : (payerName ?? "")}
-        onNameChange={setPayerName}
+        onNameChange={(name) => {
+          setPayerName(name)
+          invalidateCheck()
+        }}
         nameLocked={nameLocked}
+        amount={
+          <>
+            <SentAmount
+              id={revealId}
+              value={
+                finishing
+                  ? formatCurrencyInput(
+                      minorToMajorInput(record?.claimedAmountMinor ?? 0),
+                    )
+                  : shownSentText
+              }
+              onChange={(value) => {
+                invalidateCheck()
+                setSentText(formatCurrencyInput(value))
+                if (sentError) setSentError(null)
+              }}
+              currencyCode={link.currencyCode}
+              currencySymbol={getCurrencySymbol(link.currencyCode)}
+              businessName={link.businessName}
+              error={sentError}
+              locked={finishing}
+              review={sentReview}
+              choice={excessChoice}
+              onChoiceChange={(choice) => {
+                invalidateCheck()
+                setExcessChoice(choice)
+                if (sentError) setSentError(null)
+              }}
+              disabled={step !== null}
+              inputRef={sentRef}
+            />
+            {allocation !== "choice_required" &&
+            allocation?.allocationPreference === "REFUND" ? (
+              <RefundFields
+                id={revealId}
+                value={refundText}
+                onChange={(value) => {
+                  setRefundText(value)
+                  setRefundError(null)
+                  invalidateCheck()
+                }}
+                proof={credit.refundProof}
+                disabled={step !== null}
+                error={refundError}
+                saved={Boolean(record?.reportToken && record.refundDetails)}
+              />
+            ) : null}
+            {checkedStatus && reportToken ? (
+              <ReceiptCheck
+                reportToken={reportToken}
+                status={checkedStatus}
+                businessName={link.businessName}
+                accountNumber={link.bank.accountNumber}
+                hasReceipt
+                stage="draft"
+                inline
+                timedOut={preflight.timedOut}
+                onRetry={() => setPreflightStartedAt(Date.now())}
+              >
+                {suggestion !== null ? (
+                  <button
+                    type="button"
+                    className={`${secondaryButtonClass} mt-2`}
+                    disabled={step !== null}
+                    onClick={() => {
+                      setSentText(
+                        formatCurrencyInput(minorToMajorInput(suggestion)),
+                      )
+                      setExcessChoice(null)
+                      setSentError(null)
+                      invalidateCheck()
+                    }}
+                  >
+                    Use receipt amount · {money(suggestion, link.currencyCode)}
+                  </button>
+                ) : null}
+              </ReceiptCheck>
+            ) : null}
+            {checkReady ? (
+              <p className="text-[13px] text-muted-foreground">
+                Your report is still a draft. Send it below when you're ready;{" "}
+                {link.businessName} will check their account.
+              </p>
+            ) : null}
+            {draftMode && record?.receipt && !receipt && !receiptEdited ? (
+              <p className="text-[13px] text-muted-foreground">
+                Receipt saved for this draft: {record.receipt.fileName}.{" "}
+                <button
+                  type="button"
+                  className="underline"
+                  disabled={step !== null}
+                  onClick={() => {
+                    setReceiptEdited(true)
+                    invalidateCheck()
+                  }}
+                >
+                  Remove receipt
+                </button>
+              </p>
+            ) : null}
+          </>
+        }
         receipt={receiptSlot}
         step={step}
+        submitLabel={
+          hasReceiptToCheck && !checkReady
+            ? "Check receipt"
+            : hasReceiptToCheck
+              ? "Send for business review"
+              : "Yes, I've paid"
+        }
         error={flowError}
         onConfirm={(name) => {
-          if (amountIsValid()) void confirm(name)
+          if (amountIsValid() && sentIsValid()) void confirm(name)
         }}
         onCancel={closeClaim}
       />
@@ -755,6 +929,7 @@ export function PaymentPage({
       <WaitingView
         link={viewLink}
         status={view.status}
+        reportToken={reportToken}
         record={record}
         connection={connection}
         onReload={reloadStatus}
@@ -771,7 +946,11 @@ export function PaymentPage({
         />
         <StatusCard
           tone="wait"
-          title="You haven't finished telling them"
+          title={
+            status?.state === "draft_cancelled"
+              ? "This draft was cancelled"
+              : "You haven't finished telling them"
+          }
           footer={
             revealed ? null : (
               <button
@@ -787,8 +966,14 @@ export function PaymentPage({
             )
           }
         >
-          Your report didn't reach {viewLink.businessName} yet. Send it again so
-          they can check their account.
+          {status?.state === "draft_cancelled" ? (
+            "This draft was never submitted to the business. Check your details to prepare a fresh report."
+          ) : (
+            <>
+              Your report didn't reach {viewLink.businessName} yet. Finish it so
+              they can check their account.
+            </>
+          )}
         </StatusCard>
         {record ? (
           <DetailList
@@ -827,7 +1012,11 @@ export function PaymentPage({
               viewLink.receiptAllowed ? (
                 <ReceiptPicker
                   receipt={receipt}
-                  onChange={setReceipt}
+                  onChange={(value) => {
+                    setReceipt(value)
+                    setReceiptEdited(true)
+                    invalidateCheck()
+                  }}
                   disabled={step !== null}
                 />
               ) : null,
@@ -855,6 +1044,7 @@ export function PaymentPage({
 
   // What the business confirmed and what is still due, from the decided report.
   const outcomeReference = outcome ? reportReference(outcome.status) : null
+  const confirmed = outcome ? confirmedOutcome(outcome.status) : null
   const outcomeAmounts =
     outcome && outcome.state !== "not_received" ? (
       <DetailList
@@ -864,12 +1054,41 @@ export function PaymentPage({
             value: (
               <b className="tabular-nums">
                 {money(
-                  outcome.status.receivedAmountMinor ?? 0,
+                  confirmed?.receivedMinor ??
+                    outcome.status.receivedAmountMinor ??
+                    0,
                   viewLink.currencyCode,
                 )}
               </b>
             ),
           },
+          ...(confirmed
+            ? [
+                {
+                  label: "Applied to this order",
+                  value: (
+                    <b className="tabular-nums">
+                      {money(confirmed.appliedMinor, viewLink.currencyCode)}
+                    </b>
+                  ),
+                },
+              ]
+            : []),
+          ...(confirmed?.excess
+            ? [
+                {
+                  label: confirmedExcessLabel(confirmed.excess),
+                  value: (
+                    <b className="tabular-nums">
+                      {money(
+                        confirmed.excess.amountMinor,
+                        viewLink.currencyCode,
+                      )}
+                    </b>
+                  ),
+                },
+              ]
+            : []),
           {
             label: "Still to pay",
             value: (
@@ -1028,9 +1247,64 @@ export function PaymentPage({
   // The decided report keeps its own reference; say which one this transfer uses instead.
   const previousReference = outcome ? reportReference(outcome.status) : null
 
+  const creditCard = (
+    <CustomerCredit
+      credit={credit}
+      businessName={viewLink.businessName}
+      currencyCode={viewLink.currencyCode}
+      appliedMinor={viewLink.attemptAppliedMinor}
+      transferMinor={viewLink.amountPrefilledMinor}
+    />
+  )
+  // Credit used (or possibly used) on this payment, and no link read yet includes it: the
+  // link's amount may still be the whole installment, so no transfer is offered until it does.
+  if (credit.blocksTransfer)
+    return (
+      <PaymentShell>
+        {header}
+        {creditCard}
+        {credit.command?.result ? (
+          <StatusCard
+            tone="info"
+            title="Updating what's left to pay"
+            footer={
+              <button
+                type="button"
+                className={`${secondaryButtonClass} mt-3`}
+                disabled={linkQuery.isFetching}
+                onClick={() => void linkQuery.refetch()}
+              >
+                Reload
+              </button>
+            }
+          >
+            This page shows the amount to transfer once it has the latest
+            balance from {viewLink.businessName}.
+          </StatusCard>
+        ) : null}
+        <OrderSummary link={viewLink} />
+      </PaymentShell>
+    )
+  // This payment's amount is already covered (by credit or confirmed transfers) while the order
+  // still owes money: the rest needs a new payment from the business, not a ₦0 transfer.
+  if (viewLink.amountPrefilledMinor <= 0)
+    return (
+      <PaymentShell>
+        {header}
+        {creditCard}
+        <StatusCard tone="info" title="Nothing to transfer on this payment">
+          To pay the remaining{" "}
+          {money(viewLink.balanceMinor, viewLink.currencyCode)}, ask{" "}
+          {viewLink.businessName} for a new payment link.
+        </StatusCard>
+        <OrderSummary link={viewLink} />
+      </PaymentShell>
+    )
+
   const again = next === "tell_again"
   return (
     <PaymentShell hero={<PaymentHero link={viewLink} />}>
+      {creditCard}
       <section
         ref={newFormRef}
         tabIndex={-1}
@@ -1041,6 +1315,7 @@ export function PaymentPage({
           <AmountField
             value={shownAmountText}
             onChange={(value) => {
+              invalidateCheck()
               setAmountText(formatCurrencyInput(value))
               if (amountError) setAmountError(null)
             }}
@@ -1079,7 +1354,11 @@ export function PaymentPage({
         {viewLink.receiptAllowed ? (
           <ReceiptPicker
             receipt={receipt}
-            onChange={setReceipt}
+            onChange={(value) => {
+              setReceipt(value)
+              setReceiptEdited(true)
+              invalidateCheck()
+            }}
             disabled={step !== null}
           />
         ) : null}

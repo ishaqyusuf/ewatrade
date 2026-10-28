@@ -14,7 +14,7 @@ export function readOrderManualCustomerFunds(
       await assertFinanceManager(tx, input)
       const order = await tx.commercialOrder.findFirst({
         where: { id: input.orderId, tenantId: input.tenantId },
-        select: { customerId: true, currencyCode: true },
+        select: { id: true, customerId: true, currencyCode: true },
       })
       if (!order) throw new FinanceError("NOT_FOUND", "Order not found.")
       if (!order.customerId) return null
@@ -44,6 +44,8 @@ export function readOrderManualCustomerFunds(
           "Customer funds need a current review.",
         )
       return {
+        orderId: order.id,
+        customerId: order.customerId,
         availableMinor: available.toString(),
         reservedMinor: reserved.toString(),
         currencyCode: order.currencyCode,

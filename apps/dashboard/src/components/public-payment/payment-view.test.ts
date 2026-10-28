@@ -1,6 +1,8 @@
 import { expect, test } from "bun:test"
 import type { PublicPaymentLink, PublicReportStatus } from "./payment-format"
 import {
+  confirmedExcessLabel,
+  confirmedOutcome,
   outcomeNextStep,
   reportReference,
   resolvePaymentView,
@@ -299,4 +301,76 @@ test("a report shows its payment reference only when the server sends one", () =
     reportReference({ ...status({}), paymentReference: "EWA-7K4P9D2Q" }),
   ).toBe("EWA-7K4P9D2Q")
   expect(reportReference({ ...status({}), paymentReference: null })).toBeNull()
+})
+
+test("a cancelled draft restores editing, never a bank rejection or paid outcome", () => {
+  const cancelled = status({ status: "DRAFT", state: "draft_cancelled" })
+  expect(resolve(link(), cancelled)).toEqual({
+    kind: "unfinished",
+    link: link(),
+  })
+  expect(
+    resolvePaymentView({
+      link: link(),
+      linkError: null,
+      hasReportToken: true,
+      status: status({ status: "DRAFT", state: "checking" }),
+      statusPending: false,
+      statusError: null,
+      preflight: true,
+    }),
+  ).toEqual({ kind: "link", link: link(), outcome: null })
+})
+
+test("same-attempt money uses its canonical remainder, newer attempts retain their own remainder", () => {
+  const decided = status({
+    paymentAttemptId: "a_1",
+    attemptAppliedMinor: 50_000,
+    attemptReceivedMinor: 40_000,
+    remainingTransferMinor: 10_000,
+  })
+  const same = resolve(link({ paymentAttemptId: "a_1" }), decided)
+  const newer = resolve(
+    link({ paymentAttemptId: "a_2", amountPrefilledMinor: 60_000 }),
+    decided,
+  )
+  expect(same.kind === "link" && same.link.amountPrefilledMinor).toBe(10_000)
+  expect(newer.kind === "link" && newer.link.amountPrefilledMinor).toBe(60_000)
+})
+
+test("canonical excess distinguishes credit, requested refunds, reserved refunds and returned money", () => {
+  expect(confirmedOutcome({ confirmedAllocation: null })).toBeNull()
+  const outcome = confirmedOutcome({
+    confirmedAllocation: {
+      receivedAmountMinor: 150_000,
+      orderAmountMinor: 100_000,
+      excessAmountMinor: 50_000,
+      refundState: "REQUESTED",
+      excessResolution: "refund_requested",
+    },
+  })
+  expect(outcome).toEqual({
+    receivedMinor: 150_000,
+    appliedMinor: 100_000,
+    excess: {
+      amountMinor: 50_000,
+      resolution: "refund_requested",
+      refund: "requested",
+    },
+  })
+  if (!outcome?.excess) throw new Error("expected excess")
+  expect(confirmedExcessLabel(outcome.excess)).toContain("not yet returned")
+  expect(
+    confirmedExcessLabel({ ...outcome.excess, refund: "approved" }),
+  ).toContain("reserved")
+  expect(
+    confirmedExcessLabel({ ...outcome.excess, refund: "returned" }),
+  ).toContain("returned")
+  expect(
+    confirmedExcessLabel({
+      ...outcome.excess,
+      resolution: "held_credit",
+      refund: null,
+    }),
+  ).toContain("credit")
 })

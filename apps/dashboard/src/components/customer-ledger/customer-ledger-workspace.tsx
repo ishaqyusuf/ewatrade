@@ -19,6 +19,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import Link from "next/link"
 import { type ReactNode, useEffect, useRef, useState } from "react"
 import { CustomerLedgerStatement } from "./customer-ledger-statement"
+import { CustomerRefunds } from "./refunds/customer-refunds"
 
 type Customer = {
   id: string
@@ -63,9 +64,13 @@ function StatementHeader({
 
 export function CustomerLedgerWorkspace({
   customerId,
+  actorUserId,
+  tenantId,
   initialSettings,
 }: {
   customerId: string
+  actorUserId: string
+  tenantId: string
   initialSettings?: Partial<TableSettings>
 }) {
   const trpc = useTRPC()
@@ -217,16 +222,26 @@ export function CustomerLedgerWorkspace({
               </Alert>
             ) : null}
             {selected ? (
-              <CustomerLedgerStatement
-                key={selected.id}
-                accountId={selected.id}
-                customerName={customer?.name}
-                initialSettings={initialSettings}
-                onEditCustomer={() => void customerSheet.openEdit(customerId)}
-                renderHeader={(actions) => (
-                  <StatementHeader customer={customer} actions={actions} />
-                )}
-              />
+              <>
+                <CustomerLedgerStatement
+                  key={selected.id}
+                  accountId={selected.id}
+                  customerName={customer?.name}
+                  initialSettings={initialSettings}
+                  onEditCustomer={() => void customerSheet.openEdit(customerId)}
+                  renderHeader={(actions) => (
+                    <StatementHeader customer={customer} actions={actions} />
+                  )}
+                />
+                {/* Pending refunds are separate from "Return paid-ahead money",
+                    which records a return straight away. */}
+                <CustomerRefunds
+                  key={`refunds:${selected.id}`}
+                  actorUserId={actorUserId}
+                  tenantId={tenantId}
+                  accountId={selected.id}
+                />
+              </>
             ) : (
               <>
                 <StatementHeader

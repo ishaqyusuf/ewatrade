@@ -8,7 +8,7 @@ import { type ReactNode, useState } from "react"
 import { publicPaymentLinks } from "./funds-transport"
 
 /**
- * Public proof tokens stay in POST bodies. Only the two customer-funds
+ * Public proof tokens stay in POST bodies. Only the three allowlisted customer
  * procedures send the same-origin session cookie; see funds-transport.ts.
  */
 export function PaymentProvider({ children }: { children: ReactNode }) {

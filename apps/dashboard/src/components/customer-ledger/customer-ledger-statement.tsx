@@ -234,6 +234,9 @@ export function CustomerLedgerStatement({
   const net = BigInt(statement.totals.netBalanceMinor)
   const owed = BigInt(statement.totals.outstandingDebtMinor)
   const paidAhead = BigInt(statement.totals.availableCreditMinor)
+  // Current holds come only from a successful live account read, never from
+  // this pinned snapshot or a stale cached read after a failed refresh.
+  const current = detail.status === "success" ? detail.data : null
   const updated = new Intl.DateTimeFormat("en-NG", {
     timeStyle: "short",
   }).format(new Date(query.dataUpdatedAt))
@@ -266,6 +269,31 @@ export function CustomerLedgerStatement({
           <dd className="text-sm text-muted-foreground">
             Paid before an Order, not used yet
           </dd>
+          {current ? (
+            BigInt(current.reservedCreditMinor) > BigInt(0) ? (
+              <dd className="mt-1 text-sm text-amber-700 dark:text-amber-300">
+                Now {money(current.reservedCreditMinor)} is held for a refund.{" "}
+                {money(current.totals.availableCreditMinor)} can be used.
+              </dd>
+            ) : null
+          ) : detail.isError ? (
+            <dd className="mt-1 grid justify-items-start gap-1 text-sm text-destructive">
+              Current refund holds couldn’t load, so what can be used now is
+              unknown.
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={detail.isFetching}
+                onClick={() => void detail.refetch()}
+              >
+                Try again
+              </Button>
+            </dd>
+          ) : (
+            <dd className="mt-1 text-sm text-muted-foreground">
+              Checking current refund holds…
+            </dd>
+          )}
         </div>
         <div className="border border-border bg-muted p-4">
           <dt className="text-sm text-muted-foreground">Balance</dt>

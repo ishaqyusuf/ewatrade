@@ -5,6 +5,7 @@ import {
   formatCommerceDateTime,
   formatCommerceQuantity,
 } from "@/components/mobile/commerce/commerce-model"
+import { OrderReturnBridge } from "@/components/mobile/customer-ledger/order-returns/order-return-bridge"
 import { FormField } from "@/components/mobile/form-field"
 import {
   ListCard,
@@ -105,7 +106,13 @@ export function OrderChangeSheetModal({
         ) : sheet === "cancel" ? (
           <CancelForm changes={changes} order={order} />
         ) : sheet === "refund" ? (
-          <RefundForm changes={changes} order={order} />
+          <OrderReturnBridge
+            orderId={order.id}
+            ask={Boolean(changes.options?.refund.ask)}
+            ordinary={<RefundForm changes={changes} order={order} />}
+            onBack={() => changes.go("menu")}
+            onCloseSheet={changes.close}
+          />
         ) : sheet === "approval" ? (
           <ApprovalForm changes={changes} order={order} />
         ) : sheet === "review" ? (

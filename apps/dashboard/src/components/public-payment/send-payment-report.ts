@@ -1,14 +1,21 @@
 import type { AppRouter } from "@ewatrade/api/trpc/routers/_app"
 import { type TRPCClient, TRPCClientError } from "@trpc/client"
+import type { RefundDestination } from "./refund-destination"
 import type { StoredReport } from "./report-storage"
 
 export type SendStep = "preparing" | "uploading" | "submitting"
-type PaymentReportClient = {
-  businessBanking: Pick<
-    TRPCClient<AppRouter>["businessBanking"],
-    "reportPayment" | "submitReport"
-  >
+type Banking = TRPCClient<AppRouter>["businessBanking"]
+type PrepareClient = {
+  businessBanking: Pick<Banking, "reportPayment" | "reportPaymentWithRefund">
 }
+type SubmitClient = { businessBanking: Pick<Banking, "submitReport"> }
+type PaymentReportClient = PrepareClient & SubmitClient
+
+/** The server's answer to preparing a report: a DRAFT until the explicit final submit. */
+export type PreparedReport = Pick<
+  Awaited<ReturnType<Banking["reportPayment"]["mutate"]>>,
+  "reportToken" | "status" | "receiptUploadPath"
+>
 
 export type ReportFlowErrorKind =
   /** One report is already being checked, or this request was used with other details. */
@@ -21,6 +28,10 @@ export type ReportFlowErrorKind =
   | "receipt_needed"
   /** The prepared report is too old to finish; start a fresh report. */
   | "stale"
+  /** Refund bank details need this order's customer signed in. */
+  | "verify"
+  /** Finishing a report whose refund bank details must be entered again. */
+  | "refund_details_needed"
   | "network"
 
 export class ReportFlowError extends Error {
@@ -46,6 +57,7 @@ export function fromTrpc(error: unknown): ReportFlowError {
   const code = trpcErrorCode(error)
   const message = error instanceof Error ? error.message : NETWORK_MESSAGE
   if (code === "CONFLICT") return new ReportFlowError("conflict", message)
+  if (code === "UNAUTHORIZED") return new ReportFlowError("verify", message)
   if (code === "NOT_FOUND")
     return new ReportFlowError(
       "unavailable",
@@ -123,75 +135,114 @@ async function uploadReceipt(input: {
 }
 
 /**
- * reportPayment → (PUT receipt bytes) → submitReport. Every step is idempotent for
- * the same clientReportId and details, so a retry after any failure is safe.
+ * Prepares (or replays) the report as a DRAFT. Nothing is told to the business yet. Refund bank
+ * details go only through the verified refund report, which carries the customer's session; an
+ * ordinary report never carries them. A report saved with bank details replays only with them.
  */
-export async function sendPaymentReport(input: {
-  client: PaymentReportClient
+export async function prepareReport(input: {
+  client: PrepareClient
   linkToken: string
   report: StoredReport
-  file: File | null
-  onStep: (step: SendStep) => void
-  onPrepared: (reportToken: string) => void
-}): Promise<void> {
-  const { client, report } = input
-  input.onStep("preparing")
-  let prepared: Awaited<
-    ReturnType<typeof client.businessBanking.reportPayment.mutate>
-  >
+  refundDestination: RefundDestination | null
+}): Promise<PreparedReport> {
+  const { client, report, refundDestination } = input
+  if (Boolean(report.refundDetails) !== Boolean(refundDestination))
+    throw new ReportFlowError(
+      "refund_details_needed",
+      "Enter the refund bank details you gave for this report again to finish.",
+    )
+  const allocation = report.allocation
+    ? {
+        allocationPreference: report.allocation.allocationPreference,
+        requestedApplyMinor: report.allocation.requestedApplyMinor,
+        ...(refundDestination ? { refundDestination } : {}),
+      }
+    : null
+  const details = {
+    token: input.linkToken,
+    clientReportId: report.clientReportId,
+    payerName: report.payerName,
+    claimedAmountMinor: report.claimedAmountMinor,
+    // The exact reference the customer was shown; the server refuses it once it is not current.
+    ...(report.paymentAttemptId
+      ? { paymentAttemptId: report.paymentAttemptId }
+      : {}),
+    // Part of the same idempotent report: a retry sends exactly the proposal first saved.
+    ...(allocation ? { allocation } : {}),
+    ...(report.receipt
+      ? {
+          receipt: {
+            contentType: report.receipt.contentType,
+            contentDigest: report.receipt.contentDigest,
+            sizeBytes: report.receipt.sizeBytes,
+          },
+        }
+      : {}),
+  }
   try {
-    prepared = await client.businessBanking.reportPayment.mutate({
-      token: input.linkToken,
-      clientReportId: report.clientReportId,
-      payerName: report.payerName,
-      claimedAmountMinor: report.claimedAmountMinor,
-      // The exact reference the customer was shown; the server refuses it once it is not current.
-      ...(report.paymentAttemptId
-        ? { paymentAttemptId: report.paymentAttemptId }
-        : {}),
-      ...(report.receipt
-        ? {
-            receipt: {
-              contentType: report.receipt.contentType,
-              contentDigest: report.receipt.contentDigest,
-              sizeBytes: report.receipt.sizeBytes,
-            },
-          }
-        : {}),
-    })
+    const prepared = refundDestination
+      ? await client.businessBanking.reportPaymentWithRefund.mutate(details)
+      : await client.businessBanking.reportPayment.mutate(details)
+    return {
+      reportToken: prepared.reportToken,
+      status: prepared.status,
+      receiptUploadPath: prepared.receiptUploadPath,
+    }
   } catch (error) {
-    throw fromTrpc(error)
+    const failure = fromTrpc(error)
+    // The refund report needs this order's customer; the server says so before saving anything.
+    if (refundDestination && trpcErrorCode(error) === "FORBIDDEN")
+      throw new ReportFlowError(
+        "verify",
+        "Sign in as this order's customer to add refund bank details.",
+      )
+    throw failure
   }
-  input.onPrepared(prepared.reportToken)
+}
 
-  // Without the file (a later visit), submit anyway: an earlier upload may have
-  // finished, and the server says so if it didn't.
+/**
+ * Uploads the selected private receipt to a prepared DRAFT. Uploading the same bytes again is
+ * idempotent; it never submits the report. Returns whether bytes were sent.
+ */
+export async function uploadPreparedReceipt(input: {
+  prepared: PreparedReport
+  report: StoredReport
+  file: File | null
+}) {
+  const { prepared, report, file } = input
   if (
-    prepared.status === "DRAFT" &&
-    prepared.receiptUploadPath &&
-    input.file &&
-    report.receipt
-  ) {
-    input.onStep("uploading")
-    await uploadReceipt({
-      path: prepared.receiptUploadPath,
-      reportToken: prepared.reportToken,
-      contentType: report.receipt.contentType,
-      file: input.file,
-    })
-  }
+    prepared.status !== "DRAFT" ||
+    !prepared.receiptUploadPath ||
+    !file ||
+    !report.receipt
+  )
+    return false
+  await uploadReceipt({
+    path: prepared.receiptUploadPath,
+    reportToken: prepared.reportToken,
+    contentType: report.receipt.contentType,
+    file,
+  })
+  return true
+}
 
-  input.onStep("submitting")
+/** The explicit final step: tells the business. Only the customer's own action calls this. */
+export async function submitPreparedReport(input: {
+  client: SubmitClient
+  prepared: PreparedReport
+  /** Whether this visit still has the receipt bytes. */
+  hasFile: boolean
+}) {
   try {
-    await client.businessBanking.submitReport.mutate({
-      reportToken: prepared.reportToken,
+    return await input.client.businessBanking.submitReport.mutate({
+      reportToken: input.prepared.reportToken,
     })
   } catch (error) {
     const failure = fromTrpc(error)
     if (
       failure.kind === "conflict" &&
-      prepared.receiptUploadPath &&
-      !input.file
+      input.prepared.receiptUploadPath &&
+      !input.hasFile
     )
       throw new ReportFlowError(
         "receipt_needed",
@@ -199,4 +250,42 @@ export async function sendPaymentReport(input: {
       )
     throw failure
   }
+}
+
+/**
+ * reportPayment → (PUT receipt bytes) → submitReport, all from one explicit final action. Every
+ * step is idempotent for the same clientReportId and details, so a retry after any failure is safe.
+ */
+export async function sendPaymentReport(input: {
+  client: PaymentReportClient
+  linkToken: string
+  report: StoredReport
+  refundDestination?: RefundDestination | null
+  file: File | null
+  onStep: (step: SendStep) => void
+  onPrepared: (reportToken: string) => void
+}): Promise<void> {
+  input.onStep("preparing")
+  const prepared = await prepareReport({
+    client: input.client,
+    linkToken: input.linkToken,
+    report: input.report,
+    refundDestination: input.refundDestination ?? null,
+  })
+  input.onPrepared(prepared.reportToken)
+  // Without the file (a later visit), submit anyway: an earlier upload may have
+  // finished, and the server says so if it didn't.
+  if (prepared.status === "DRAFT" && prepared.receiptUploadPath && input.file)
+    input.onStep("uploading")
+  await uploadPreparedReceipt({
+    prepared,
+    report: input.report,
+    file: input.file,
+  })
+  input.onStep("submitting")
+  await submitPreparedReport({
+    client: input.client,
+    prepared,
+    hasFile: Boolean(input.file),
+  })
 }

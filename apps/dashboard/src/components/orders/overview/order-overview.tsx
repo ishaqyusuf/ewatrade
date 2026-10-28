@@ -2,6 +2,7 @@
 
 import { PaymentLinkDialog } from "@/components/business-banking/payment-link-dialog"
 import { useCanCreateCatalogItems } from "@/components/catalog-item/catalog-create-access"
+import { OrderCustomerCredit } from "@/components/customer-ledger/order-customer-credit"
 import {
   MessageFollowUp,
   type MessageFollowUpTarget,
@@ -357,6 +358,7 @@ export function OrderOverview({
   const details = (
     <div className="grid min-w-0 content-start gap-4">
       <SummaryStrip order={order} fulfilled={fulfilled} />
+      <OrderCustomerCredit order={order} />
       <OverviewCard
         title="Items"
         action={editLink(itemsOption, "Edit items", () =>

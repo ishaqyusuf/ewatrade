@@ -34,6 +34,8 @@ export async function CustomerLedgerRoute({
         <CustomerLedgerWorkspace
           key={`${session.user.id}:${tenant.tenant.id}:${customerId}`}
           customerId={customerId}
+          actorUserId={session.user.id}
+          tenantId={tenant.tenant.id}
           initialSettings={initialSettings}
         />
       </Suspense>
