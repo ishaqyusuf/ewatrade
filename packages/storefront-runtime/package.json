@@ -18,14 +18,19 @@
     "./commerce/preview": "./src/commerce/preview.ts",
     "./commerce/provider": "./src/commerce/provider.tsx",
     "./commerce/navigation": "./src/commerce/navigation.tsx",
-    "./feature-theme": "./src/feature-theme.ts"
+    "./feature-theme": "./src/feature-theme.ts",
+    "./features/account": "./src/features/account/account.tsx",
+    "./features/receipt": "./src/features/receipt/receipt.tsx",
+    "./features/styles.css": "./src/features/styles.css"
   },
   "dependencies": {
     "@ewatrade/storefront-contracts": "workspace:*",
     "react": "catalog:",
     "@ewatrade/ui": "workspace:*",
     "@ewatrade/utils": "workspace:*",
-    "zod": "catalog:"
+    "zod": "catalog:",
+    "@hugeicons/core-free-icons": "^4.1.1",
+    "@hugeicons/react": "^1.1.6"
   },
   "devDependencies": {
     "@ewatrade/tsconfig": "workspace:*"

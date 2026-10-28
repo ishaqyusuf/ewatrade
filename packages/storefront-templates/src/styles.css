@@ -1,3 +1,4 @@
+@import "@ewatrade/storefront-runtime/features/styles.css";
 @import "./catalog-v4/styles.css";
 @import "./shared/editorial.css";
 @import "./generated/public-intro/styles.css";

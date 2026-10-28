@@ -75,9 +75,9 @@ already exist and must be reused.
 - [x] P2.3 Add semantic tokens and portal-aware theme application.
 
 ### Phase 3 — account and receipt
-- [ ] P3.1 Extract account/login/recovery UI and state.
-- [ ] P3.2 Extract receipt/actions with canonical status meaning.
-- [ ] P3.3 Integrate Commerce Studio as a shared-feature consumer.
+- [x] P3.1 Extract account/login/recovery UI and state.
+- [x] P3.2 Extract receipt/actions with canonical status meaning.
+- [x] P3.3 Integrate Commerce Studio as a shared-feature consumer.
 
 ### Phase 4 — server policy and routes
 - [ ] P4.1 Separate customer/history/receipt/new-intake policy.
@@ -177,3 +177,12 @@ bag keys/format retained. 24 focused tests / 150 assertions, 182 fast source tes
 917 assertions pass; owned candidate storefront TypeScript graph zero diagnostics.
 Concurrent helper additions remain unstaged in runtime/commerce/model.ts, reached
 through old forwarding exports. No runtime acceptance or deployment claim yet.
+
+Phase 3: account/login/recovery/history and receipt/appointment presentation moved
+to runtime/features. Neutral scoped selectors and injected theme fonts/tokens keep
+Commerce Studio as a consumer; old imports forward. 18 existing focused tests /
+131 assertions and 2 template-independent feature tests / 10 assertions pass;
+182 scoped fast tests / 917 assertions and owned candidate storefront types0 pass.
+Concurrent quick-login, preferred-time/payment-copy and CSS additions remain
+uncommitted at their shared destinations, excluded from the owned candidate.
+Browser/interaction acceptance remains Phase8 work, not inferred from SSR.

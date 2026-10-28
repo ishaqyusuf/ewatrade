@@ -43,6 +43,13 @@ export function commerceThemeStyle(
 ) {
   return {
     ...storefrontFeatureTokens(theme),
+    "--sf-feature-font-body":
+      '"CS Sans", "Helvetica Neue", Arial, system-ui, sans-serif',
+    "--sf-feature-font-heading":
+      theme.font === "serif"
+        ? '"CS Display", "Iowan Old Style", Georgia, serif'
+        : '"CS Sans", "Helvetica Neue", Arial, system-ui, sans-serif',
+
     "--cs-accent": theme.accent,
     "--cs-on-accent": readableOn(theme.accent),
     "--cs-accent-ink": accentInk(theme.accent, theme.background),
