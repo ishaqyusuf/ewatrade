@@ -13,6 +13,9 @@ export async function manualPaymentPrivacyInventory(
       manualPaymentAlertSettings: number
       manualPaymentAlertIntents: number
       manualPaymentAlertNoticeReads: number
+      manualReceiptAssessments: number
+      manualPaymentTransferConsumptions: number
+      customerFundsRefundActions: number
     }>
   >`
     SELECT
@@ -22,7 +25,11 @@ export async function manualPaymentPrivacyInventory(
       WHERE r."receiptStoragePath" IS NOT NULL AND (l."createdByUserId"=${subjectId} OR r."decidedByUserId"=${subjectId})) AS "manualPaymentReceiptAssets",
     (SELECT count(*)::int FROM "ManualPaymentAlertSetting" WHERE "updatedByUserId"=${subjectId} OR ${subjectId}=ANY("recipientUserIds")) AS "manualPaymentAlertSettings",
     (SELECT count(*)::int FROM "PaymentNotificationIntent" WHERE "recipientUserId"=${subjectId}) AS "manualPaymentAlertIntents",
-    (SELECT count(*)::int FROM "PaymentNotificationNoticeRead" r JOIN "Membership" m ON m.id=r."membershipId" AND m."tenantId"=r."tenantId" WHERE m."userId"=${subjectId}) AS "manualPaymentAlertNoticeReads"
+    (SELECT count(*)::int FROM "PaymentNotificationNoticeRead" r JOIN "Membership" m ON m.id=r."membershipId" AND m."tenantId"=r."tenantId" WHERE m."userId"=${subjectId}) AS "manualPaymentAlertNoticeReads",
+    (SELECT count(*)::int FROM "ManualReceiptAssessment" a JOIN "ManualPaymentReport" r ON r.id=a."reportId"
+      JOIN "ManualPaymentLink" l ON l.id=r."linkId" WHERE l."createdByUserId"=${subjectId} OR r."decidedByUserId"=${subjectId}) AS "manualReceiptAssessments",
+    (SELECT count(*)::int FROM "ManualPaymentTransferConsumption" WHERE "validatedByUserId"=${subjectId}) AS "manualPaymentTransferConsumptions",
+    (SELECT count(*)::int FROM "CustomerFundsRefundRequest" WHERE "requestedByUserId"=${subjectId} OR "approvedByUserId"=${subjectId} OR "completedByUserId"=${subjectId}) AS "customerFundsRefundActions"
   `
   const row = rows[0]
   if (
@@ -34,6 +41,9 @@ export async function manualPaymentPrivacyInventory(
       row.manualPaymentAlertSettings,
       row.manualPaymentAlertIntents,
       row.manualPaymentAlertNoticeReads,
+      row.manualReceiptAssessments,
+      row.manualPaymentTransferConsumptions,
+      row.customerFundsRefundActions,
     ].some((value) => !Number.isSafeInteger(value) || value < 0)
   )
     throw new Error("Manual payment privacy inventory unavailable.")
@@ -44,5 +54,8 @@ export async function manualPaymentPrivacyInventory(
     manualPaymentAlertSettings: row.manualPaymentAlertSettings,
     manualPaymentAlertIntents: row.manualPaymentAlertIntents,
     manualPaymentAlertNoticeReads: row.manualPaymentAlertNoticeReads,
+    manualReceiptAssessments: row.manualReceiptAssessments,
+    manualPaymentTransferConsumptions: row.manualPaymentTransferConsumptions,
+    customerFundsRefundActions: row.customerFundsRefundActions,
   }
 }
