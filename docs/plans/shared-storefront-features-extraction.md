@@ -276,3 +276,7 @@ No hosted/Production acceptance or deployment is implied.
 All27 work packages complete locally. Phase0–7 commits: d01f6b3d8,5ac2e3995,
 00d0648de,50069fc0c,86558cadc,b8289e6b0,67c70385b,4aa915004. Phase8 source and
 final evidence commits are recorded in the detailed receipt. No push/deployment.
+
+Phase8 source committed `a54daea0f4ad8ad7a6b7c53df3ba0231ef724531`. Approved Workshop implementation
+record `11a2fdd0-32b6-49a2-9568-c1de0b82848a` now links the exact selected revision, source files, commit
+and verification. All27 packages are complete locally; no deployment.

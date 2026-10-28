@@ -138,7 +138,10 @@ auth table, payment writer or deployment path was introduced.
 | 6 | 67c70385b |
 | 7 | 4aa915004 |
 
-Phase8 source commit and exact Workshop implementation receipt follow after commit.
+Phase8 source commit: `a54daea0f4ad8ad7a6b7c53df3ba0231ef724531`.
+Exact approved Workshop implementation receipt: `11a2fdd0-32b6-49a2-9568-c1de0b82848a`.
+Revision62577dd1-4da0-4737-bb71-f885f3846f3c remains selected; release not live
+under this task. Final documentation checkpoint adds these identifiers only.
 Concurrent template-update, notification, performance and owner documentation
 changes remain outside this task's staged source. No release/deployment readiness
 claim follows from local clean=false/runtime-unverified smoke.
