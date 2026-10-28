@@ -28,9 +28,14 @@ export default defineConfig({
     },
   },
   build: {
-    external: ["sharp", "libheif-js"],
+    external: ["sharp", "libheif-js", "pdfjs-dist", "@napi-rs/canvas"],
     extensions: [
-      additionalFiles({ files: ["../catalog/src/photo-heic-worker.mjs"] }),
+      additionalFiles({
+        files: [
+          "../catalog/src/photo-heic-worker.mjs",
+          "./src/handlers/manual-receipt-pdf-worker.mjs",
+        ],
+      }),
       syncEnvVars(() => syncedTriggerJobEnvironment(process.env), {
         override: true,
       }),

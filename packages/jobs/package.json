@@ -41,7 +41,9 @@
     "@ewatrade/storefront-contracts": "workspace:*",
     "@ewatrade/storefront-templates": "workspace:*",
     "@ewatrade/storefront-runtime": "workspace:*",
-    "@ewatrade/payments": "workspace:*"
+    "@ewatrade/payments": "workspace:*",
+    "pdfjs-dist": "5.4.296",
+    "@napi-rs/canvas": "0.1.100"
   },
   "devDependencies": {
     "@ewatrade/tsconfig": "workspace:*",
