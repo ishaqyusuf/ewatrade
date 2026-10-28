@@ -1,5 +1,13 @@
 # Manual payment receipt checks and excess-payment handling
 
+Current implementation update, 28 October 2026: work is active under
+[the managed implementation contract](manual-banking-mb01-implementation.md).
+Banking02v18 is selected; schema, references/dedup, customer funds/refund core,
+PDF rendering and payment-login increments are committed. The planning-only and
+0/8 statements below describe the earlier design handoff. Final UI integration,
+provider evaluation/admission and acceptance remain open; no deployment authorized.
+
+
 Date: 27 October 2026. Status: proposed engineering plan; implementation not started.
 
 This plan covers the customer “I have paid” form, receipt assessment, merchant

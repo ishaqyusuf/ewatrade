@@ -1,7 +1,8 @@
 import { paymentReferenceMatches } from "./manual-payment-reference"
+import { checkManualReceiptDate } from "./receipt-date"
 
-export const RECEIPT_PIPELINE_VERSION = "manual-receipt-v1"
-export const RECEIPT_RULE_VERSION = "manual-receipt-rules-v1"
+export const RECEIPT_PIPELINE_VERSION = "manual-receipt-v3"
+export const RECEIPT_RULE_VERSION = "manual-receipt-rules-v2"
 export const RECEIPT_TEXT_FIELDS = [
   "amountText",
   "currencyCode",
@@ -203,28 +204,15 @@ export function assessManualPaymentReceipt(
       account.slice(-4),
       context.receivingAccountNumber.slice(-4),
     )
-  if (extraction.dateAmbiguous) add("DATE_AMBIGUOUS", extraction.dateRaw)
-  else if (
-    extraction.dateTimeIso &&
-    /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,3})?(?:Z|[+-]\d{2}:\d{2})$/.test(
-      extraction.dateTimeIso,
-    )
-  ) {
-    const time = new Date(extraction.dateTimeIso)
-    if (!Number.isFinite(time.getTime())) add("DATE_UNKNOWN")
-    else if (time < context.oldestAcceptableAt)
-      add(
-        "DATE_OLD",
-        extraction.dateTimeIso,
-        context.oldestAcceptableAt.toISOString(),
-      )
-    else if (time > context.latestAcceptableAt)
-      add(
-        "DATE_FUTURE",
-        extraction.dateTimeIso,
-        context.latestAcceptableAt.toISOString(),
-      )
-  } else add("DATE_UNKNOWN", extraction.dateRaw)
+  const date = checkManualReceiptDate(extraction, context)
+  const observedDate =
+    extraction.dateTimeIso ?? extraction.dateOnly ?? extraction.dateRaw
+  if (date === "ambiguous") add("DATE_AMBIGUOUS", extraction.dateRaw)
+  else if (date === "unknown") add("DATE_UNKNOWN", observedDate)
+  else if (date === "old")
+    add("DATE_OLD", observedDate, context.oldestAcceptableAt.toISOString())
+  else if (date === "future")
+    add("DATE_FUTURE", observedDate, context.latestAcceptableAt.toISOString())
   if (extraction.printedStatus !== "successful")
     add("PRINTED_STATUS_REVIEW", extraction.printedStatus)
   if (context.paymentReference) {
@@ -249,4 +237,33 @@ export function assessManualPaymentReceipt(
     findings,
     fundsConfirmed: false as const,
   }
+}
+
+export type ReceiptCandidateLookup = (input: {
+  tenantId: string
+  currencyCode: string
+  excludeReportId: string
+  namespace: "nibss_session_id"
+  printedSessionId: string
+}) => Promise<boolean>
+
+/** Advisory lookup of printed evidence only; never constructs/consumes a financial identity. */
+export async function hasAdvisoryReceiptTransferCandidate(
+  input: {
+    tenantId: string
+    currencyCode: string
+    reportId: string
+    printedBankReference: string | null
+  },
+  lookup: ReceiptCandidateLookup,
+) {
+  const printedSessionId = input.printedBankReference?.trim()
+  if (!printedSessionId || !/^\d{30}$/.test(printedSessionId)) return false
+  return lookup({
+    tenantId: input.tenantId,
+    currencyCode: input.currencyCode,
+    excludeReportId: input.reportId,
+    namespace: "nibss_session_id",
+    printedSessionId,
+  })
 }

@@ -41,6 +41,43 @@ const production = {
 }
 
 describe("Trigger jobs selected deployment profile", () => {
+  test("receipt worker admission resets every gate and requires its dedicated selected-profile key", () => {
+    const gates = [
+      "MANUAL_RECEIPT_PROCESSING_ENABLED",
+      "MANUAL_RECEIPT_PROCESSOR_APPROVED",
+      "MANUAL_RECEIPT_WORKER_ADMITTED",
+    ]
+    const off = syncedTriggerJobEnvironment(production)
+    for (const key of gates) expect(off[key]).toBe("false")
+    const admitted = {
+      ...production,
+      ...Object.fromEntries(gates.map((key) => [key, "true"])),
+      MANUAL_RECEIPT_OPENAI_API_KEY: "FAKE_RECEIPT_KEY",
+      MANUAL_RECEIPT_MODEL: "gpt-4.1-mini",
+      MANUAL_RECEIPT_MAX_DAILY_REQUESTS: "10",
+    }
+    const on = syncedTriggerJobEnvironment(admitted)
+    for (const key of gates) expect(on[key]).toBe("true")
+    expect(on.MANUAL_RECEIPT_MAX_DAILY_REQUESTS).toBe("10")
+    expect(() =>
+      syncedTriggerJobEnvironment({
+        ...admitted,
+        MANUAL_RECEIPT_OPENAI_API_KEY: "",
+      }),
+    ).toThrow("own key")
+    const revoked = syncedTriggerJobEnvironment({
+      ...admitted,
+      MANUAL_RECEIPT_PROCESSOR_APPROVED: "false",
+    })
+    for (const key of gates) expect(revoked[key]).toBe("false")
+    const isolated = selectedTriggerDeployEnvironment(
+      { ...preview, MANUAL_RECEIPT_OPENAI_API_KEY: "FAKE_PRODUCTION_KEY" },
+      preview,
+      { ...production, MANUAL_RECEIPT_OPENAI_API_KEY: "FAKE_PRODUCTION_KEY" },
+    )
+    expect(isolated.MANUAL_RECEIPT_OPENAI_API_KEY).toBeUndefined()
+  })
+
   test("schedule mode is selected-file owned, synchronized explicitly and reset to standard when omitted", () => {
     const selected = { ...production, JOB_SCHEDULE_MODE: "prelaunch" }
     const result = selectedTriggerDeployEnvironment(

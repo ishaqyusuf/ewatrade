@@ -4,6 +4,7 @@ import {
   RECEIPT_RULE_VERSION,
   type ReceiptCheckContext,
   assessManualPaymentReceipt,
+  hasAdvisoryReceiptTransferCandidate,
   parseReceiptExtraction,
 } from "@ewatrade/payments/receipt-assessment"
 import {
@@ -11,8 +12,10 @@ import {
   RECEIPT_SCHEMA_VERSION,
   type ReceiptExtractorResult,
 } from "@ewatrade/payments/receipt-extractor"
+import { ManualPaymentError } from "@ewatrade/utils/manual-payments"
 import type { Prisma, PrismaClient } from "../../generated/prisma/client"
 import { assertAttachmentEntitlement } from "./attachment-entitlement"
+import { assertFinanceManager } from "./finance/access"
 import { runInOwnTransaction } from "./own-transaction"
 
 type Identity = { tenantId: string; assessmentId: string }
@@ -40,7 +43,23 @@ export async function ensureManualReceiptAssessment(
       where: { id: input.reportId, link: { tenant: { isActive: true } } },
       include: { link: { select: { tenantId: true } } },
     })
-    if (!report?.receiptUploadedAt || !report.receiptDigest) return null
+    if (
+      !report?.receiptUploadedAt ||
+      !report.receiptDigest ||
+      report.draftCancelledAt
+    )
+      return null
+    // A pipeline upgrade/public retry is not permission for another uncertain provider call.
+    const dispatched = await tx.manualReceiptAssessment.findFirst({
+      where: {
+        reportId: report.id,
+        generation: report.receiptGeneration,
+        receiptDigest: report.receiptDigest,
+        providerStartedAt: { not: null },
+      },
+      orderBy: { createdAt: "desc" },
+    })
+    if (dispatched) return dispatched
     const identity = {
       reportId: report.id,
       generation: report.receiptGeneration,
@@ -55,9 +74,7 @@ export async function ensureManualReceiptAssessment(
         expiresAt: new Date(Date.now() + 10 * 60_000),
         ...(!input.processingEnabled
           ? unavailable("PROCESSOR_UNAVAILABLE")
-          : report.receiptContentType === "application/pdf"
-            ? unavailable("PDF_MANUAL_REVIEW")
-            : {}),
+          : {}),
       },
       skipDuplicates: true,
     })
@@ -100,6 +117,7 @@ export function claimManualReceiptAssessment(
       row.report.receiptGeneration === row.generation &&
       row.report.receiptDigest === row.receiptDigest &&
       row.report.receiptUploadedAt &&
+      row.report.draftCancelledAt === null &&
       row.report.link.tenantId === row.tenantId &&
       row.report.link.tenant.isActive
     if (
@@ -176,6 +194,35 @@ export function startManualReceiptAssessment(
       },
     })
     if (!row) return false
+    await tx.$queryRaw`SELECT id FROM "ManualPaymentReport" WHERE id=${row.reportId} FOR UPDATE`
+    const currentArtifact = await tx.manualPaymentReport.findFirst({
+      where: {
+        id: row.reportId,
+        receiptDigest: row.receiptDigest,
+        receiptGeneration: row.generation,
+        receiptUploadedAt: { not: null },
+        draftCancelledAt: null,
+        link: { tenantId: row.tenantId, tenant: { isActive: true } },
+      },
+      select: { id: true },
+    })
+    const priorDispatch = await tx.manualReceiptAssessment.findFirst({
+      where: {
+        reportId: row.reportId,
+        generation: row.generation,
+        receiptDigest: row.receiptDigest,
+        id: { not: row.id },
+        providerStartedAt: { not: null },
+      },
+      select: { id: true },
+    })
+    if (!currentArtifact || priorDispatch) {
+      await tx.manualReceiptAssessment.update({
+        where: { id: row.id },
+        data: unavailable("ASSESSMENT_ALREADY_DISPATCHED"),
+      })
+      return false
+    }
     const admission = input.admission
     const bounded = [
       admission.maxDailyRequests,
@@ -194,7 +241,8 @@ export function startManualReceiptAssessment(
       row.report.receiptDigest !== row.receiptDigest ||
       row.report.receiptGeneration !== row.generation ||
       row.report.link.tenantId !== row.tenantId ||
-      !row.report.receiptUploadedAt
+      !row.report.receiptUploadedAt ||
+      row.report.draftCancelledAt !== null
     ) {
       await tx.manualReceiptAssessment.update({
         where: { id: row.id },
@@ -334,6 +382,7 @@ export function finishManualReceiptAssessment(
       !input.result ||
       row.report.receiptDigest !== row.receiptDigest ||
       row.report.receiptGeneration !== row.generation ||
+      row.report.draftCancelledAt !== null ||
       input.result.provider !== row.provider ||
       input.result.model !== row.model
     ) {
@@ -354,7 +403,31 @@ export function finishManualReceiptAssessment(
       !row.report.link.tenant.isActive
     )
       throw new Error("Receipt claim changed.")
-    const result = assessManualPaymentReceipt(extraction, input.context)
+    const semanticCandidate = await hasAdvisoryReceiptTransferCandidate(
+      {
+        tenantId: row.tenantId,
+        currencyCode: row.report.link.currencyCode,
+        reportId: row.reportId,
+        printedBankReference: extraction.bankReference,
+      },
+      async (candidate) =>
+        Boolean(
+          await tx.manualPaymentTransferConsumption.findFirst({
+            where: {
+              tenantId: candidate.tenantId,
+              currencyCode: candidate.currencyCode,
+              reportId: { not: candidate.excludeReportId },
+              namespace: candidate.namespace,
+              normalizedReference: candidate.printedSessionId,
+            },
+            select: { id: true },
+          }),
+        ),
+    )
+    const result = assessManualPaymentReceipt(extraction, {
+      ...input.context,
+      duplicateCandidate: input.context.duplicateCandidate || semanticCandidate,
+    })
     await tx.manualReceiptAssessment.update({
       where: { id: row.id },
       data: {
@@ -398,6 +471,9 @@ export function manualReceiptAssessmentProjection(
         generation: number
         pipelineVersion: string
         completedAt: Date | null
+        expiresAt: Date
+        leaseExpiresAt: Date | null
+        providerStartedAt: Date | null
         amountMinor: number | null
         currencyCode: string | null
         recipientLast4: string | null
@@ -407,6 +483,11 @@ export function manualReceiptAssessmentProjection(
     | undefined,
 ) {
   if (!row) return null
+  const timedOut =
+    (row.state === "PENDING" && row.expiresAt <= new Date()) ||
+    (row.state === "CHECKING" &&
+      (row.expiresAt <= new Date() ||
+        (row.leaseExpiresAt !== null && row.leaseExpiresAt <= new Date())))
   const states = {
     PENDING: "pending",
     CHECKING: "checking",
@@ -421,28 +502,34 @@ export function manualReceiptAssessmentProjection(
       : null
   const findings =
     result && Array.isArray(result.findings)
-      ? result.findings.flatMap((value) => {
-          if (
-            !value ||
-            typeof value !== "object" ||
-            Array.isArray(value) ||
-            typeof value.code !== "string" ||
-            value.code.length > 80 ||
-            (value.severity !== "info" && value.severity !== "review")
-          )
-            return []
-          return [{ code: value.code, severity: value.severity }]
-        })
+      ? result.findings.flatMap<{ code: string; severity: "info" | "review" }>(
+          (value) => {
+            if (
+              !value ||
+              typeof value !== "object" ||
+              Array.isArray(value) ||
+              typeof value.code !== "string" ||
+              value.code.length > 80 ||
+              (value.severity !== "info" && value.severity !== "review")
+            )
+              return []
+            return [{ code: value.code, severity: value.severity }]
+          },
+        )
       : []
   return {
-    state: states[row.state],
+    state: timedOut ? ("unavailable" as const) : states[row.state],
     generation: row.generation,
     pipelineVersion: row.pipelineVersion,
     completedAt: row.completedAt,
     amountMinor: row.amountMinor,
     currencyCode: row.currencyCode,
     recipientLast4: row.recipientLast4,
-    unavailableReason: row.unavailableReason,
+    unavailableReason: timedOut
+      ? row.providerStartedAt
+        ? "PROVIDER_OUTCOME_UNKNOWN"
+        : "PROCESSING_UNAVAILABLE"
+      : row.unavailableReason,
     disposition:
       result?.disposition === "consistent"
         ? ("consistent" as const)
@@ -466,5 +553,36 @@ export async function markManualReceiptAssessmentUnavailable(
       state: "CHECKING",
     },
     data: unavailable("PROCESSING_UNAVAILABLE"),
+  })
+}
+
+export function manualReceiptExtractionProjection(
+  row: { extraction: Prisma.JsonValue | null } | undefined,
+) {
+  if (!row?.extraction) return null
+  try {
+    return parseReceiptExtraction(row.extraction)
+  } catch {
+    return null
+  }
+}
+
+/** Fresh Finance authority and canonical Tenant ownership, independent of funds setup. */
+export function authorizeMerchantReceiptAssessmentRetry(
+  db: PrismaClient,
+  input: { tenantId: string; actorUserId: string; reportId: string },
+) {
+  return runInOwnTransaction(db, async (tx) => {
+    await assertFinanceManager(tx, input)
+    const report = await tx.manualPaymentReport.findFirst({
+      where: {
+        id: input.reportId,
+        link: { tenantId: input.tenantId, tenant: { isActive: true } },
+      },
+      select: { id: true },
+    })
+    if (!report)
+      throw new ManualPaymentError("NOT_FOUND", "Payment report not found.")
+    return report.id
   })
 }

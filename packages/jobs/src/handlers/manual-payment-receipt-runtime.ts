@@ -6,7 +6,10 @@ import {
   markManualReceiptAssessmentUnavailable,
   startManualReceiptAssessment,
 } from "@ewatrade/db/manual-payment-assessments"
-import { createReceiptExtractor } from "@ewatrade/payments/receipt-extractor"
+import {
+  type ReceiptPage,
+  createReceiptExtractor,
+} from "@ewatrade/payments/receipt-extractor"
 import {
   acceptsOrderAttachmentBytes,
   createOrderAttachmentStorage,
@@ -17,12 +20,15 @@ import {
   type ManualReceiptAssessmentPayload,
   runManualReceiptAssessment,
 } from "./manual-payment-receipt-assessment"
+import { renderManualReceiptPdf } from "./manual-receipt-pdf"
 
 function configuredPolicy() {
   const read = (key: string) => {
     const text = process.env[key]
     return text && /^[1-9]\d{0,7}$/.test(text) ? Number(text) : null
   }
+  const model = process.env.MANUAL_RECEIPT_MODEL?.trim()
+  if (!model || !["gpt-4.1-mini", "gpt-4.1"].includes(model)) return null
   const maxDailyRequests = read("MANUAL_RECEIPT_MAX_DAILY_REQUESTS")
   const maxDailyTokens = read("MANUAL_RECEIPT_MAX_DAILY_TOKENS")
   const reservedTokens = read("MANUAL_RECEIPT_RESERVED_TOKENS")
@@ -44,6 +50,7 @@ function configuredPolicy() {
   )
     return null
   return {
+    model,
     maxDailyRequests,
     maxDailyTokens,
     reservedTokens,
@@ -58,7 +65,7 @@ export async function manualPaymentReceiptAssessmentHandler(
   payload: ManualReceiptAssessmentPayload,
 ) {
   const policy = configuredPolicy()
-  const model = process.env.MANUAL_RECEIPT_MODEL ?? "gpt-4.1-mini"
+  const model = policy?.model
   const extractor = createReceiptExtractor({
     enabled: Boolean(policy),
     processorApproved: Boolean(policy),
@@ -96,14 +103,14 @@ export async function manualPaymentReceiptAssessmentHandler(
       if (
         !row ||
         !report?.receiptUploadedAt ||
+        report.draftCancelledAt !== null ||
         !report.receiptStoragePath ||
         !report.receiptContentType ||
         !report.receiptDigest ||
         !report.receiptSizeBytes ||
         report.receiptGeneration !== row.generation ||
         report.receiptDigest !== row.receiptDigest ||
-        report.link.tenantId !== row.tenantId ||
-        report.receiptContentType === "application/pdf"
+        report.link.tenantId !== row.tenantId
       )
         return null
       const bytes = await createOrderAttachmentStorage(
@@ -127,28 +134,35 @@ export async function manualPaymentReceiptAssessmentHandler(
         !acceptsOrderAttachmentBytes(bytes, report.receiptContentType)
       )
         return null
-      const image = sharp(bytes, {
-        limitInputPixels: 12_000_000,
-        animated: false,
-        failOn: "warning",
-      }).timeout({ seconds: 5 })
-      const metadata = await image.metadata()
-      if ((metadata.pages ?? 1) !== 1) return null
-      const normalized = await image
-        .rotate()
-        .png()
-        .toBuffer({ resolveWithObject: true })
-      if (normalized.data.byteLength > 4 * 1024 * 1024) return null
-      const claimedAt = report.submittedAt ?? report.createdAt
-      return {
-        pages: [
+      let pages: ReceiptPage[] | null
+      if (report.receiptContentType === "application/pdf") {
+        pages = await renderManualReceiptPdf(bytes, AbortSignal.timeout(10_000))
+      } else {
+        const image = sharp(bytes, {
+          limitInputPixels: 12_000_000,
+          animated: false,
+          failOn: "warning",
+        }).timeout({ seconds: 5 })
+        const metadata = await image.metadata()
+        if ((metadata.pages ?? 1) !== 1) return null
+        const normalized = await image
+          .rotate()
+          .png()
+          .toBuffer({ resolveWithObject: true })
+        if (normalized.data.byteLength > 4 * 1024 * 1024) return null
+        pages = [
           {
             bytes: normalized.data,
             contentType: "image/png",
             width: normalized.info.width,
             height: normalized.info.height,
           },
-        ],
+        ]
+      }
+      if (!pages) return null
+      const claimedAt = report.submittedAt ?? report.createdAt
+      return {
+        pages,
         extractor,
         context: {
           claimedAmountMinor: report.claimedAmountMinor,
@@ -179,7 +193,7 @@ export async function manualPaymentReceiptAssessmentHandler(
     },
     start: async (identity) => {
       const currentPolicy = configuredPolicy()
-      if (!currentPolicy) {
+      if (!currentPolicy || currentPolicy.model !== model) {
         await markManualReceiptAssessmentUnavailable(prisma, identity)
         return false
       }
@@ -194,7 +208,7 @@ export async function manualPaymentReceiptAssessmentHandler(
           ...currentPolicy,
           imageCount: identity.imageCount,
           provider: "openai",
-          model,
+          model: currentPolicy.model,
           processorApproved: true,
         },
       })

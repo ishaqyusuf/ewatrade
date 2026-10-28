@@ -32,3 +32,42 @@ export async function scheduleManualReceiptAssessment(reportId: string) {
     },
   })
 }
+
+/** Explicit retry cannot reset spend/attempt/expiry fences or repeat uncertain calls. */
+export async function retryManualReceiptAssessment(reportId: string) {
+  const enabled = manualReceiptProcessingEnabled()
+  const row = await ensureManualReceiptAssessment(prisma, {
+    reportId,
+    processingEnabled: enabled,
+  })
+  if (
+    enabled &&
+    row &&
+    row.state === "UNAVAILABLE" &&
+    row.providerStartedAt === null &&
+    row.attempts < 2 &&
+    row.expiresAt > new Date() &&
+    [
+      "PROCESSOR_UNAVAILABLE",
+      "WORKER_UNAVAILABLE",
+      "ENTITLEMENT_UNAVAILABLE",
+      "SCOPE_UNAVAILABLE",
+    ].includes(row.unavailableReason ?? "")
+  ) {
+    await prisma.manualReceiptAssessment.updateMany({
+      where: {
+        id: row.id,
+        state: "UNAVAILABLE",
+        providerStartedAt: null,
+        attempts: { lt: 2 },
+        expiresAt: { gt: new Date() },
+        report: {
+          receiptGeneration: row.generation,
+          receiptDigest: row.receiptDigest,
+        },
+      },
+      data: { state: "PENDING", unavailableReason: null, completedAt: null },
+    })
+  }
+  await scheduleManualReceiptAssessment(reportId)
+}

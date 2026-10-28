@@ -48,11 +48,67 @@ export const createBusinessPaymentLinkSchema = z
   })
   .strict()
 export const publicBusinessPaymentLinkSchema = z.object({ token }).strict()
+export const manualPaymentAllocationProposalSchema = z
+  .object({
+    allocationPreference: z.enum([
+      "ORDER_MORE",
+      "CREDIT",
+      "REFUND",
+      "UNRESOLVED",
+    ]),
+    requestedApplyMinor: z.number().int().min(0).max(100_000_000),
+    refundDestination: z
+      .object({
+        bankName: z.string().trim().min(2).max(100).optional(),
+        bankCode: z
+          .string()
+          .trim()
+          .regex(/^[A-Za-z0-9_-]{1,32}$/)
+          .optional(),
+        accountNumber: z
+          .string()
+          .trim()
+          .regex(/^\d{10}$/),
+        accountName: z.string().trim().min(2).max(160),
+      })
+      .strict()
+      .superRefine((value, ctx) => {
+        if (!value.bankName && !value.bankCode)
+          ctx.addIssue({
+            code: "custom",
+            path: ["bankName"],
+            message: "Enter the receiving bank name.",
+          })
+      })
+      .optional(),
+  })
+  .strict()
+export const applyManualCustomerCreditSchema = z
+  .object({
+    token,
+    clientCommandId: operationId,
+    expectedRevision: z.string().regex(/^(0|[1-9]\d{0,18})$/),
+    expectedOrderTotalMinor: z.string().regex(/^[1-9]\d{0,14}$/),
+    expectedOrderPaidMinor: z.string().regex(/^(0|[1-9]\d{0,14})$/),
+    amountMinor: z.string().regex(/^[1-9]\d{0,14}$/),
+  })
+  .strict()
+export const manualPaymentAllocationReviewSchema = z
+  .object({
+    orderAmountMinor: z.number().int().min(0).max(100_000_000),
+    expectedCustomerFundsAccountId: id,
+    expectedCustomerFundsRevision: z.string().regex(/^(0|[1-9]\d{0,18})$/),
+    expectedOrderUpdatedAt: z.coerce.date(),
+    expectedOrderTotalMinor: z.number().int().positive(),
+    expectedOrderPaidMinor: z.number().int().nonnegative(),
+  })
+  .strict()
 export const prepareManualPaymentReportSchema = z
   .object({
     token,
     clientReportId: operationId,
     paymentAttemptId: id.optional(),
+    allocation: manualPaymentAllocationProposalSchema.optional(),
     payerName: z.string().trim().min(1).max(160),
     claimedAmountMinor: amount,
     receipt: z
@@ -77,6 +133,9 @@ export const prepareManualPaymentReportSchema = z
 export const nextManualPaymentAttemptSchema = z
   .object({ reportToken: token, clientAttemptId: operationId })
   .strict()
+export const cancelManualPaymentDraftSchema = z
+  .object({ reportToken: token, expectedRevision: z.number().int().positive() })
+  .strict()
 export const manualReportTokenSchema = z.object({ reportToken: token }).strict()
 export const manualReportIdSchema = z.object({ reportId: id }).strict()
 export const manualReportPageSchema = z
@@ -96,6 +155,7 @@ export const reviewManualPaymentReportSchema = z
     reference: z.string().trim().max(160).optional(),
     bankCheckAttested: z.boolean().optional(),
     transferReferenceNamespace: z.literal("nibss_session_id").optional(),
+    allocationReview: manualPaymentAllocationReviewSchema.optional(),
     note: z.string().trim().max(500).optional(),
   })
   .strict()

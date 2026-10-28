@@ -3,6 +3,7 @@ import { randomUUID } from "node:crypto"
 import type { Prisma, PrismaClient } from "../../generated/prisma/client"
 import { assertQaAccessAcceptanceDatabase } from "./acceptance/qa-access/database"
 import {
+  cancelManualPaymentReportDraft,
   createBusinessPaymentLink,
   createManualBankAccount,
   manualPaymentReportStatus,
@@ -111,6 +112,38 @@ function repositoryClient(tx: Prisma.TransactionClient): PrismaClient {
             expiresAt: new Date(now.getTime() + 3600_000),
           })
           const proof = { linkId: link.link.id, expiresAt: link.link.expiresAt }
+          const abandoned = await prepareManualPaymentReport(db, {
+            ...proof,
+            clientReportId: "cancel-draft-test",
+            payerName: "Original draft payer",
+            claimedAmountMinor: 5000,
+          })
+          const closure = await cancelManualPaymentReportDraft(db, {
+            reportId: abandoned.report.id,
+            expectedRevision: abandoned.report.revision,
+          })
+          expect(closure.revision).toBe(abandoned.report.revision + 1)
+          expect(
+            (
+              await cancelManualPaymentReportDraft(db, {
+                reportId: abandoned.report.id,
+                expectedRevision: abandoned.report.revision,
+              })
+            ).replay,
+          ).toBe(true)
+          await expect(
+            submitManualPaymentReport(db, { reportId: abandoned.report.id }),
+          ).rejects.toThrow("cancelled")
+          expect(
+            (await manualPaymentReportStatus(db, abandoned.report.id)).state,
+          ).toBe("draft_cancelled")
+          expect(
+            (
+              await tx.manualPaymentReport.findUniqueOrThrow({
+                where: { id: abandoned.report.id },
+              })
+            ).status,
+          ).toBe("DRAFT")
           const first = await prepareManualPaymentReport(db, {
             ...proof,
             clientReportId: "report-test-1",

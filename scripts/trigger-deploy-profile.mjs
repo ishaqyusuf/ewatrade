@@ -28,6 +28,12 @@ const assistantWhatsAppFlags = [
   "ASSISTANT_WHATSAPP_WORKFLOW_WRITES_ENABLED",
 ]
 
+const manualReceiptFlags = [
+  "MANUAL_RECEIPT_PROCESSING_ENABLED",
+  "MANUAL_RECEIPT_PROCESSOR_APPROVED",
+  "MANUAL_RECEIPT_WORKER_ADMITTED",
+]
+
 export const TRIGGER_JOB_ENV_KEYS = [
   "APP_ENV",
   "JOB_SCHEDULE_MODE",
@@ -53,6 +59,15 @@ export const TRIGGER_JOB_ENV_KEYS = [
   "BLOB_READ_WRITE_TOKEN",
   "CATALOG_PHOTO_CLEANUP_ENABLED",
   "CATALOG_PHOTO_REVIEW_OPENAI_API_KEY",
+  ...manualReceiptFlags,
+  "MANUAL_RECEIPT_OPENAI_API_KEY",
+  "MANUAL_RECEIPT_MODEL",
+  "MANUAL_RECEIPT_MAX_DAILY_REQUESTS",
+  "MANUAL_RECEIPT_MAX_DAILY_TOKENS",
+  "MANUAL_RECEIPT_RESERVED_TOKENS",
+  "MANUAL_RECEIPT_MAX_DAILY_IMAGES",
+  "MANUAL_RECEIPT_OLDEST_DAYS",
+  "MANUAL_RECEIPT_FUTURE_MINUTES",
   "OPENAI_API_KEY",
   "EWATRADE_DATABASE_URL",
   "PERFORMANCE_TRACE",
@@ -88,6 +103,7 @@ export const TRIGGER_JOB_ENV_KEYS = [
 ]
 
 const isolatedPreviewKeys = new Set([
+  "MANUAL_RECEIPT_OPENAI_API_KEY",
   "INTERNAL_API_KEY",
   "ASSISTANT_API_PROTECTION_BYPASS_SECRET",
   "ASSISTANT_API_PROTECTION_BYPASS_HOST",
@@ -318,6 +334,19 @@ export function syncedTriggerJobEnvironment(env) {
       return value ? [[key, value]] : []
     }),
   )
+  // Revoking any receipt gate also clears previously deployed opt-ins.
+  const receiptAdmitted = manualReceiptFlags.every(
+    (key) => env[key]?.trim() === "true",
+  )
+  for (const key of manualReceiptFlags)
+    result[key] = receiptAdmitted ? "true" : "false"
+  if (
+    receiptAdmitted &&
+    (!result.MANUAL_RECEIPT_OPENAI_API_KEY || !result.MANUAL_RECEIPT_MODEL)
+  )
+    throw new Error(
+      "Receipt assessment admission requires its own key and explicit model.",
+    )
   // Always overwrite a previously deployed opt-in when the selected file unsets it.
   result.JOB_SCHEDULE_MODE = env.JOB_SCHEDULE_MODE?.trim() || "standard"
   if (

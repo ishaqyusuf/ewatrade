@@ -22,8 +22,30 @@ import { createFinanceMoneyAccountInTransaction } from "./finance/accounts"
 import { assertOrderPaymentAccountInTransaction } from "./finance/order-payment-accounts"
 import type { PaymentAlertSelection } from "./manual-payment-alert-rules"
 import { saveManualPaymentAlertsInTransaction } from "./manual-payment-alert-settings"
-import { createManualPaymentAttemptInTransaction } from "./manual-payment-attempts"
-import { manualPaymentVerification } from "./manual-payment-presentation"
+import {
+  type ManualAllocationProposal,
+  prepareManualAllocationProposalInTransaction,
+  sealManualRefundDestinationInTransaction,
+} from "./manual-payment-allocation-proposal"
+import {
+  manualReceiptAssessmentProjection,
+  manualReceiptExtractionProjection,
+} from "./manual-payment-assessments"
+import {
+  createManualPaymentAttemptInTransaction,
+  readManualPaymentAttemptAmounts,
+} from "./manual-payment-attempts"
+import { cancelManualPaymentDraft } from "./manual-payment-drafts"
+import {
+  type ManualPaymentAllocationReview,
+  confirmManualPaymentExcessInTransaction,
+  readManualPaymentFundsReview,
+} from "./manual-payment-excess"
+import { readOrderManualCustomerFunds } from "./manual-payment-order-funds"
+import {
+  manualPaymentConfirmedAllocation,
+  manualPaymentVerification,
+} from "./manual-payment-presentation"
 import { consumeManualTransferInTransaction } from "./manual-payment-transfer-consumption"
 import {
   runInOwnSerializableTransaction,
@@ -37,6 +59,7 @@ const hash = (value: unknown) =>
   createHash("sha256").update(JSON.stringify(value)).digest("hex")
 const unavailable = () =>
   new ManualPaymentError("NOT_FOUND", "This payment request is unavailable.")
+const assessmentInclude = { take: 5, orderBy: { createdAt: "desc" as const } }
 const orderInclude = { _count: { select: { payments: true } } } as const
 const paid = (order: {
   amountPaidMinor: number
@@ -301,7 +324,18 @@ export async function createBusinessPaymentLinkInTransaction(
       linkId: previous.id,
       clientAttemptId: "initial",
     })
-    return { link: previous, attempt, replay: true }
+    return {
+      link: previous,
+      attempt,
+      replay: true,
+      attemptAmounts: await readManualPaymentAttemptAmounts(tx, {
+        tenantId: input.tenantId,
+        linkId: previous.id,
+        attemptId: attempt.id,
+        requestedMinor: previous.amountMinor,
+        balanceMinor: Math.max(0, order.totalMinor - paid(order)),
+      }),
+    }
   }
   const balance = Math.max(0, order.totalMinor - paid(order))
   const amountMinor = input.amountMinor ?? balance
@@ -358,7 +392,16 @@ export async function createBusinessPaymentLinkInTransaction(
     linkId: link.id,
     clientAttemptId: "initial",
   })
-  return { link, attempt, replay: false }
+  return {
+    link,
+    attempt,
+    replay: false,
+    attemptAmounts: {
+      attemptAppliedMinor: 0,
+      attemptReceivedMinor: 0,
+      remainingTransferMinor: amountMinor,
+    },
+  }
 }
 
 /** Indexed lookup of a deliberately public handle, never an unsigned legacy link/report ID. */
@@ -425,6 +468,13 @@ export async function getBusinessPaymentLink(
   const order = link.order
   const paidMinor = paid(order)
   const balanceMinor = Math.max(0, order.totalMinor - paidMinor)
+  const attemptAmounts = await readManualPaymentAttemptAmounts(db, {
+    tenantId: link.tenantId,
+    linkId: link.id,
+    attemptId: link.attempts?.[0]?.id ?? null,
+    requestedMinor: link.amountMinor,
+    balanceMinor,
+  })
   let receiptAllowed = true
   try {
     await assertAttachmentEntitlement(db, { tenantId: link.tenantId })
@@ -450,7 +500,8 @@ export async function getBusinessPaymentLink(
             ? ("expired" as const)
             : ("active" as const),
     amountRequestedMinor: link.amountMinor,
-    amountPrefilledMinor: Math.min(link.amountMinor, balanceMinor),
+    amountPrefilledMinor: attemptAmounts.remainingTransferMinor,
+    ...attemptAmounts,
     totalMinor: order.totalMinor,
     paidMinor,
     balanceMinor,
@@ -480,6 +531,10 @@ export async function getBusinessPaymentLink(
 
 export type ManualReportInput = Proof & {
   paymentAttemptId?: string
+  allocation?: ManualAllocationProposal
+  authenticatedUserId?: string | null
+  authenticatedSessionId?: string | null
+  destinationEncryptionKey?: string
   clientReportId: string
   payerName: string
   claimedAmountMinor: number
@@ -532,7 +587,26 @@ export async function prepareManualPaymentReport(
       },
     })
     if (previous) {
+      const destination = input.allocation?.refundDestination
+        ? await sealManualRefundDestinationInTransaction(tx, {
+            ...input,
+            tenantId: link.tenantId,
+            linkId: link.id,
+            customerId: link.order.customerId,
+            authenticatedUserId: input.authenticatedUserId ?? null,
+            authenticatedSessionId: input.authenticatedSessionId ?? null,
+            refundDestination: input.allocation.refundDestination,
+          })
+        : null
       if (
+        previous.allocationPreference !==
+          (input.allocation?.allocationPreference ?? null) ||
+        (previous.requestedApplyMinor?.toString() ?? null) !==
+          (input.allocation
+            ? String(input.allocation.requestedApplyMinor)
+            : null) ||
+        previous.refundDestinationFingerprint !==
+          (destination?.destinationFingerprint ?? null) ||
         previous.claimedAmountMinor !== input.claimedAmountMinor ||
         previous.payerName !== payerName ||
         previous.receiptDigest !== (receipt?.contentDigest ?? null) ||
@@ -564,7 +638,10 @@ export async function prepareManualPaymentReport(
           receiptDigest: receipt.contentDigest,
           receiptUploadedAt: { not: null },
           status: "CONFIRMED",
-          canonicalPaymentId: { not: null },
+          OR: [
+            { canonicalPaymentId: { not: null } },
+            { customerReceiptId: { not: null } },
+          ],
           link: { tenantId: link.tenantId },
         },
         select: { id: true },
@@ -606,12 +683,36 @@ export async function prepareManualPaymentReport(
         "CONFLICT",
         "Start a new payment attempt before reporting another transfer.",
       )
-    manualPaymentAmount({
-      amountMinor: input.claimedAmountMinor,
+    const attemptAmounts = await readManualPaymentAttemptAmounts(tx, {
+      tenantId: link.tenantId,
+      linkId: link.id,
+      attemptId: attempt.id,
       requestedMinor: link.amountMinor,
       balanceMinor: Math.max(0, link.order.totalMinor - paid(link.order)),
-      allowPartial: link.allowPartial,
     })
+    const allocation = input.allocation
+      ? await prepareManualAllocationProposalInTransaction(tx, {
+          ...input,
+          proposal: input.allocation,
+          tenantId: link.tenantId,
+          linkId: link.id,
+          customerId: link.order.customerId,
+          requestedAmountMinor: attemptAmounts.remainingTransferMinor,
+          orderBalanceMinor: Math.max(
+            0,
+            link.order.totalMinor - paid(link.order),
+          ),
+          authenticatedUserId: input.authenticatedUserId ?? null,
+          authenticatedSessionId: input.authenticatedSessionId ?? null,
+        })
+      : null
+    if (!allocation)
+      manualPaymentAmount({
+        amountMinor: input.claimedAmountMinor,
+        requestedMinor: attemptAmounts.remainingTransferMinor,
+        balanceMinor: Math.max(0, link.order.totalMinor - paid(link.order)),
+        allowPartial: link.allowPartial,
+      })
     const [pending, recent] = await Promise.all([
       tx.manualPaymentReport.count({
         where: {
@@ -620,6 +721,7 @@ export async function prepareManualPaymentReport(
             { status: "SUBMITTED" },
             {
               status: "DRAFT",
+              draftCancelledAt: null,
               createdAt: { gt: new Date(Date.now() - 3600_000) },
             },
           ],
@@ -646,6 +748,7 @@ export async function prepareManualPaymentReport(
         clientReportId: input.clientReportId,
         payerName,
         claimedAmountMinor: input.claimedAmountMinor,
+        ...(allocation ?? {}),
         receiptContentType: receipt?.contentType,
         receiptDigest: receipt?.contentDigest,
         receiptSizeBytes: receipt?.sizeBytes,
@@ -660,6 +763,13 @@ export async function submitManualPaymentReport(
   input: { reportId: string; notificationDeliveryEnabled?: boolean },
 ) {
   return runInOwnTransaction(db, async (tx) => {
+    const origin = await tx.manualPaymentReport.findFirst({
+      where: { id: input.reportId, link: { tenant: { isActive: true } } },
+      select: { linkId: true },
+    })
+    if (!origin) throw unavailable()
+    await tx.$queryRaw`SELECT id FROM "ManualPaymentLink" WHERE id=${origin.linkId} FOR UPDATE`
+    await tx.$queryRaw`SELECT id FROM "ManualPaymentReport" WHERE id=${input.reportId} FOR UPDATE`
     const report = await tx.manualPaymentReport.findUnique({
       where: { id: input.reportId },
       include: {
@@ -672,6 +782,11 @@ export async function submitManualPaymentReport(
       },
     })
     if (!report || !report.link.tenant.isActive) throw unavailable()
+    if (report.draftCancelledAt)
+      throw new ManualPaymentError(
+        "CONFLICT",
+        "This draft was cancelled. Start a new report before submitting.",
+      )
     if (report.status !== "DRAFT") {
       const intents = input.notificationDeliveryEnabled
         ? await tx.paymentNotificationIntent.findMany({
@@ -702,14 +817,27 @@ export async function submitManualPaymentReport(
         "CONFLICT",
         "Finish uploading the receipt or start a report without it.",
       )
-    manualPaymentAmount({
-      amountMinor: report.claimedAmountMinor,
+    const attemptAmounts = await readManualPaymentAttemptAmounts(tx, {
+      tenantId: link.tenantId,
+      linkId: link.id,
+      attemptId: report.attemptId,
       requestedMinor: link.amountMinor,
       balanceMinor: Math.max(0, link.order.totalMinor - paid(link.order)),
-      allowPartial: link.allowPartial,
     })
+    if (!report.allocationPreference)
+      manualPaymentAmount({
+        amountMinor: report.claimedAmountMinor,
+        requestedMinor: attemptAmounts.remainingTransferMinor,
+        balanceMinor: Math.max(0, link.order.totalMinor - paid(link.order)),
+        allowPartial: link.allowPartial,
+      })
     const changed = await tx.manualPaymentReport.updateMany({
-      where: { id: report.id, status: "DRAFT" },
+      where: {
+        id: report.id,
+        status: "DRAFT",
+        draftCancelledAt: null,
+        revision: report.revision,
+      },
       data: {
         status: "SUBMITTED",
         submittedAt: new Date(),
@@ -743,6 +871,7 @@ export async function manualPaymentReportStatus(
     where: { id: reportId, link: { tenant: { isActive: true } } },
     include: {
       attempt: true,
+      assessments: assessmentInclude,
       link: { include: { order: { include: orderInclude } } },
     },
   })
@@ -750,11 +879,39 @@ export async function manualPaymentReportStatus(
   const totalMinor = row.link.order.totalMinor
   const paidMinor = paid(row.link.order)
   const balanceMinor = Math.max(0, totalMinor - paidMinor)
+  const attemptAmounts = await readManualPaymentAttemptAmounts(db, {
+    tenantId: row.link.tenantId,
+    linkId: row.linkId,
+    attemptId: row.attemptId,
+    requestedMinor: row.link.amountMinor,
+    balanceMinor,
+  })
   return {
+    ...attemptAmounts,
     reportId: row.id,
     paymentReference: row.attempt?.paymentReference ?? null,
     paymentAttemptId: row.attemptId,
     verification: manualPaymentVerification(row),
+    confirmedAllocation: await manualPaymentConfirmedAllocation(db, {
+      ...row,
+      tenantId: row.link.tenantId,
+      orderId: row.link.orderId,
+    }),
+    receiptAssessment: row.draftCancelledAt
+      ? null
+      : manualReceiptAssessmentProjection(
+          row.assessments.find(
+            (assessment) =>
+              assessment.generation === row.receiptGeneration &&
+              assessment.receiptDigest === row.receiptDigest,
+          ),
+        ),
+    allocationPreference: row.allocationPreference,
+    requestedApplyMinor: row.requestedApplyMinor?.toString() ?? null,
+    customerReceiptId: row.customerReceiptId,
+    customerCreditEntryId: row.customerCreditEntryId,
+    customerFundsRefundRequestId: row.customerFundsRefundRequestId,
+    draftCancelledAt: row.draftCancelledAt,
     revision: row.revision,
     status: row.status,
     claimedAmountMinor: row.claimedAmountMinor,
@@ -763,14 +920,20 @@ export async function manualPaymentReportStatus(
     paidMinor,
     balanceMinor,
     currencyCode: row.link.currencyCode,
-    ...manualPaymentOutcome({
-      status: row.status,
-      receivedAmountMinor: row.receivedAmountMinor,
-      balanceMinor,
-      currencyCode: row.link.currencyCode,
-      orderNumber: row.link.order.orderNumber,
-      note: row.decisionNote,
-    }),
+    ...(row.draftCancelledAt
+      ? {
+          state: "draft_cancelled" as const,
+          message:
+            "This draft was cancelled. Start a new report to replace it.",
+        }
+      : manualPaymentOutcome({
+          status: row.status,
+          receivedAmountMinor: row.receivedAmountMinor,
+          balanceMinor,
+          currencyCode: row.link.currencyCode,
+          orderNumber: row.link.order.orderNumber,
+          note: row.decisionNote,
+        })),
   }
 }
 
@@ -782,6 +945,7 @@ export async function readManualPaymentReport(
     where: { id: input.reportId, link: { order: input.scope } },
     include: {
       attempt: true,
+      assessments: assessmentInclude,
       link: {
         include: {
           tenant: { select: { dataClassification: true } },
@@ -791,7 +955,22 @@ export async function readManualPaymentReport(
     },
   })
   if (!report) throw unavailable()
-  return { ...report, verification: manualPaymentVerification(report) }
+  const assessment = report.assessments.find(
+    (row) =>
+      row.generation === report.receiptGeneration &&
+      row.receiptDigest === report.receiptDigest,
+  )
+  return {
+    ...report,
+    verification: manualPaymentVerification(report),
+    confirmedAllocation: await manualPaymentConfirmedAllocation(db, {
+      ...report,
+      tenantId: report.link.tenantId,
+      orderId: report.link.orderId,
+    }),
+    receiptAssessment: manualReceiptAssessmentProjection(assessment),
+    receiptExtraction: manualReceiptExtractionProjection(assessment),
+  }
 }
 export async function pendingManualPaymentReports(
   db: PrismaClient,
@@ -849,6 +1028,8 @@ export type ManualPaymentDecision = Actor & {
   reference?: string
   bankCheckAttested?: boolean
   transferReferenceNamespace?: string
+  allocationReview?: ManualPaymentAllocationReview
+  destinationEncryptionKey?: string
   note?: string
 }
 export async function reviewManualPaymentReport(
@@ -862,6 +1043,9 @@ export async function reviewManualPaymentReport(
     at: input.receivedAt?.toISOString() ?? null,
     reference: input.reference?.trim() || null,
     note: input.note?.trim() || null,
+    ...(input.allocationReview
+      ? { allocationReview: input.allocationReview }
+      : {}),
     ...(input.bankCheckAttested === true || input.transferReferenceNamespace
       ? {
           bankCheckAttested: input.bankCheckAttested === true,
@@ -946,7 +1130,9 @@ export async function reviewManualPaymentReport(
       where: { id: held.order.id },
       include: orderInclude,
     })
-    if (input.receivedAmountMinor > order.totalMinor - paid(order))
+    const hasExcess =
+      input.receivedAmountMinor > Math.max(0, order.totalMinor - paid(order))
+    if (hasExcess && !input.allocationReview)
       throw new ManualPaymentError(
         "CONFLICT",
         "The received amount exceeds the remaining order balance. Review any excess separately.",
@@ -972,7 +1158,10 @@ export async function reviewManualPaymentReport(
           receiptDigest: report.receiptDigest,
           receiptUploadedAt: { not: null },
           status: "CONFIRMED",
-          canonicalPaymentId: { not: null },
+          OR: [
+            { canonicalPaymentId: { not: null } },
+            { customerReceiptId: { not: null } },
+          ],
           link: { tenantId: input.tenantId },
         },
         select: { id: true },
@@ -998,22 +1187,44 @@ export async function reviewManualPaymentReport(
         bankCheckAttested: input.bankCheckAttested,
       })
     }
-    const result = await recordCommercialOrderPaymentInTransaction(
-      tx,
-      {
-        actorUserId: input.actorUserId,
-        amountMinor: input.receivedAmountMinor,
-        moneyAccountId: input.moneyAccountId,
-        clientPaymentId: `manual-report:${report.id}`,
-        method: "bank_transfer",
-        orderId: order.id,
-        reference: input.reference?.trim() || undefined,
-        tenantId: input.tenantId,
-        effectiveAt: input.receivedAt,
-        note: `Merchant-confirmed payment report ${report.id}`,
-      },
-      held,
-    )
+    const settlement =
+      hasExcess && input.allocationReview
+        ? await confirmManualPaymentExcessInTransaction(
+            tx,
+            {
+              ...input,
+              ...input.allocationReview,
+              linkId: original.link.id,
+              clientReportId: report.clientReportId,
+              receivedAmountMinor: input.receivedAmountMinor,
+              moneyAccountId: input.moneyAccountId,
+              receivedAt: input.receivedAt,
+              bankCheckAttested: input.bankCheckAttested,
+              currentOrderPaidMinor: paid(order),
+              allocationPreference: report.allocationPreference,
+              refundDestinationCiphertext: report.refundDestinationCiphertext,
+            },
+            held,
+          )
+        : null
+    const result = settlement
+      ? null
+      : await recordCommercialOrderPaymentInTransaction(
+          tx,
+          {
+            actorUserId: input.actorUserId,
+            amountMinor: input.receivedAmountMinor,
+            moneyAccountId: input.moneyAccountId,
+            clientPaymentId: `manual-report:${report.id}`,
+            method: "bank_transfer",
+            orderId: order.id,
+            reference: input.reference?.trim() || undefined,
+            tenantId: input.tenantId,
+            effectiveAt: input.receivedAt,
+            note: `Merchant-confirmed payment report ${report.id}`,
+          },
+          held,
+        )
     const saved = await tx.manualPaymentReport.update({
       where: { id: report.id },
       data: {
@@ -1026,10 +1237,36 @@ export async function reviewManualPaymentReport(
         bankReference: input.reference?.trim() || null,
         decisionDigest,
         decisionNote: input.note?.trim() || null,
-        canonicalPaymentId: result.id,
+        canonicalPaymentId:
+          settlement?.canonicalPaymentId ?? result?.id ?? null,
+        customerReceiptId: settlement?.customerReceiptId ?? null,
+        customerCreditEntryId: settlement?.customerCreditEntryId ?? null,
+        customerFundsRefundRequestId:
+          settlement?.customerFundsRefundRequestId ?? null,
         revision: { increment: 1 },
       },
     })
     return { report: saved, replay: false }
   })
+}
+
+export function readManualPaymentReportFundsReview(
+  db: PrismaClient,
+  input: Actor & { reportId: string },
+) {
+  return readManualPaymentFundsReview(db, input)
+}
+
+export function readOrderManualPaymentCustomerFunds(
+  db: PrismaClient,
+  input: Actor & { orderId: string },
+) {
+  return readOrderManualCustomerFunds(db, input)
+}
+
+export function cancelManualPaymentReportDraft(
+  db: PrismaClient,
+  input: { reportId: string; expectedRevision: number },
+) {
+  return cancelManualPaymentDraft(db, input)
 }

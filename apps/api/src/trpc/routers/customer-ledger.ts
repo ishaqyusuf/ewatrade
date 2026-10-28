@@ -10,6 +10,7 @@ import {
   getCustomerLedgerCommandStatus,
   getCustomerLedgerEntryDetail,
   getCustomerLedgerStatement,
+  getCustomerOrderReturnReview,
   listCustomerFundsRefunds,
   listCustomerLedgerAccounts,
   listCustomerLedgerReceivables,
@@ -49,6 +50,7 @@ import {
   customerLedgerSourcesSchema,
   customerLedgerStatementSchema,
   customerOrderFundsReturnSchema,
+  customerOrderReturnReviewSchema,
 } from "../../schemas/customer-ledger"
 import { financeProcedure } from "../finance-procedure"
 import { createTRPCRouter } from "../init"
@@ -113,6 +115,11 @@ export const customerLedgerRouter = createTRPCRouter({
         ...input,
         ...ctx.financeActor,
       }),
+    ),
+  orderReturnReview: financeProcedure
+    .input(customerOrderReturnReviewSchema)
+    .query(({ ctx, input }) =>
+      getCustomerOrderReturnReview(ctx.db, { ...input, ...ctx.financeActor }),
     ),
   returnOrderFunds: financeProcedure
     .input(customerOrderFundsReturnSchema)

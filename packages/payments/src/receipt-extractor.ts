@@ -98,8 +98,8 @@ export function createReceiptExtractor(options: {
 }): ReceiptExtractor | null {
   if (!options.enabled || !options.processorApproved || !options.apiKey?.trim())
     return null
-  const model = options.model ?? "gpt-4.1-mini"
-  if (!["gpt-4.1-mini", "gpt-4.1"].includes(model)) return null
+  const model = options.model?.trim()
+  if (!model || !["gpt-4.1-mini", "gpt-4.1"].includes(model)) return null
   const transport = options.fetchImpl ?? fetch
   return async ({ pages, abortSignal }) => {
     if (
@@ -129,6 +129,7 @@ export function createReceiptExtractor(options: {
     signal.throwIfAborted()
     const response = await transport("https://api.openai.com/v1/responses", {
       method: "POST",
+      redirect: "error",
       signal,
       headers: {
         Authorization: `Bearer ${options.apiKey}`,

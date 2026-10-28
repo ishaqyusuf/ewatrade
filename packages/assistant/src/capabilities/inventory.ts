@@ -166,6 +166,21 @@ formOnly(
 planned("customers", "E02", ["customerLedger.*"])
 formOnly(
   "customers",
+  "Customer funds and refund requests use authenticated Finance forms, bank identity review and canonical ledger commands. Receipt analysis and customer proposals never authorize settlement or refunds; no assistant financial write is enabled.",
+  [
+    "customerLedger.refundRequests",
+    "customerLedger.refundRequestDetail",
+    "customerLedger.requestRefund",
+    "customerLedger.reserveRefund",
+    "customerLedger.cancelRefund",
+    "customerLedger.completeRefund",
+    "customerLedger.requestRefundDetails",
+    "customerLedger.returnOrderFunds",
+    "customerLedger.orderReturnReview",
+  ],
+)
+formOnly(
+  "customers",
   "Opening debt is captured by Setup and the ledger form; it is not new money.",
   ["customerLedger.recordOpening"],
 )

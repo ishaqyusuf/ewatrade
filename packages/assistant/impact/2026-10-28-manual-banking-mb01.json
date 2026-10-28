@@ -1,0 +1,111 @@
+{
+  "version": 1,
+  "id": "2026-10-28-manual-banking-mb01",
+  "tickets": ["H01", "H02"],
+  "summary": "MB-01 manual banking adds receipt assessment as advisory evidence, stable payment references, scoped customer-credit consent, canonical excess allocation and Finance-only refund administration. No assistant capability or model receives settlement, credit or payout authority. The generated snapshot also synchronizes an unchanged pre-existing internal QA query.",
+  "capabilities": [],
+  "procedures": [
+    {
+      "path": "businessBanking.orderCustomerFunds",
+      "status": "form_only",
+      "reason": "Scoped manual banking forms own this read/retry operation. Receipt evidence cannot confirm settlement or mutate money; existing role checks and processor admission remain authoritative."
+    },
+    {
+      "path": "businessBanking.retryReportReceiptAssessment",
+      "status": "form_only",
+      "reason": "Scoped manual banking forms own this read/retry operation. Receipt evidence cannot confirm settlement or mutate money; existing role checks and processor admission remain authoritative."
+    },
+    {
+      "path": "customerLedger.cancelRefund",
+      "status": "form_only",
+      "reason": "Existing Owner/Admin Finance forms and canonical ledger commands own refund identity review, reservations, source restoration and manual bank-return recording. No assistant financial write or automatic payout is enabled."
+    },
+    {
+      "path": "customerLedger.completeRefund",
+      "status": "form_only",
+      "reason": "Existing Owner/Admin Finance forms and canonical ledger commands own refund identity review, reservations, source restoration and manual bank-return recording. No assistant financial write or automatic payout is enabled."
+    },
+    {
+      "path": "customerLedger.orderReturnReview",
+      "status": "form_only",
+      "reason": "Existing Owner/Admin Finance forms and canonical ledger commands own refund identity review, reservations, source restoration and manual bank-return recording. No assistant financial write or automatic payout is enabled."
+    },
+    {
+      "path": "customerLedger.refundRequestDetail",
+      "status": "form_only",
+      "reason": "Existing Owner/Admin Finance forms and canonical ledger commands own refund identity review, reservations, source restoration and manual bank-return recording. No assistant financial write or automatic payout is enabled."
+    },
+    {
+      "path": "customerLedger.refundRequests",
+      "status": "form_only",
+      "reason": "Existing Owner/Admin Finance forms and canonical ledger commands own refund identity review, reservations, source restoration and manual bank-return recording. No assistant financial write or automatic payout is enabled."
+    },
+    {
+      "path": "customerLedger.requestRefund",
+      "status": "form_only",
+      "reason": "Existing Owner/Admin Finance forms and canonical ledger commands own refund identity review, reservations, source restoration and manual bank-return recording. No assistant financial write or automatic payout is enabled."
+    },
+    {
+      "path": "customerLedger.requestRefundDetails",
+      "status": "form_only",
+      "reason": "Existing Owner/Admin Finance forms and canonical ledger commands own refund identity review, reservations, source restoration and manual bank-return recording. No assistant financial write or automatic payout is enabled."
+    },
+    {
+      "path": "customerLedger.reserveRefund",
+      "status": "form_only",
+      "reason": "Existing Owner/Admin Finance forms and canonical ledger commands own refund identity review, reservations, source restoration and manual bank-return recording. No assistant financial write or automatic payout is enabled."
+    },
+    {
+      "path": "customerLedger.returnOrderFunds",
+      "status": "form_only",
+      "reason": "Existing Owner/Admin Finance forms and canonical ledger commands own refund identity review, reservations, source restoration and manual bank-return recording. No assistant financial write or automatic payout is enabled."
+    },
+    {
+      "path": "qaAccess.fixtureContext",
+      "status": "excluded",
+      "reason": "Snapshot-only synchronization: this unchanged internal QA query already exists at implementation base ae2c44c63. No QA permission, implementation or assistant capability is changed."
+    }
+  ],
+  "docs": [
+    {
+      "topic": "feature",
+      "status": "local_only",
+      "path": ".brain/features/manual-payment-confirmation.md"
+    },
+    {
+      "topic": "api",
+      "status": "local_only",
+      "path": ".brain/api/contracts.md"
+    },
+    {
+      "topic": "schema",
+      "status": "local_only",
+      "path": ".brain/database/schema.md"
+    },
+    {
+      "topic": "capability",
+      "status": "updated",
+      "path": "packages/assistant/src/capabilities/COVERAGE.md"
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "test",
+      "path": "packages/db/src/queries/customer-ledger/funds-money-boundaries.integration.test.ts",
+      "executed": true,
+      "result": "All five guarded local QA cases pass: three actual two-session reservation races and public proof/spend/replay; independently rerun repaired completion case passes15assertions. Isolated fixture cleanup checked; no provider calls."
+    },
+    {
+      "kind": "test",
+      "path": "packages/db/src/queries/customer-ledger/manual-payment-excess.integration.test.ts",
+      "executed": true,
+      "result": "Actual report confirmation, R=A+E, encrypted refund request, child rollback and exact replay:1pass29assertions. No fabricated bank/model receipt or outgoing payout."
+    },
+    {
+      "kind": "run",
+      "path": ".brain/qa/2026-10-28-manual-banking-mb01.md",
+      "executed": true,
+      "result": "Current strict API and focused native graphs have zero diagnostics. Base report/cancel/replacement/replay1pass30assertions; duplicate and later-billing SQL evidence retained. AI/provider admission remains disabled; UI completion and hosted/native release acceptance are still open."
+    }
+  ]
+}

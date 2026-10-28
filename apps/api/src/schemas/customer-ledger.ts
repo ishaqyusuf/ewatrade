@@ -331,3 +331,7 @@ export const customerOrderFundsReturnSchema = command
         message: "Select each original credit source once.",
       })
   })
+
+export const customerOrderReturnReviewSchema = z
+  .object({ orderId: id })
+  .strict()

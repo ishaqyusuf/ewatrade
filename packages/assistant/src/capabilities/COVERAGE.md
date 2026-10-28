@@ -6,11 +6,11 @@ Tickets refer to the Brain plan `.brain/plans/2026-10-09-assistant-business-oper
 
 ## Summary
 
-- Router procedures: 735 (558 merchant, 177 public/account/internal)
+- Router procedures: 757 (570 merchant, 187 public/account/internal)
 - Merchant supported by a capability: 174
 - Merchant planned: 135
-- Merchant form-only: 188
-- Merchant excluded: 61
+- Merchant form-only: 199
+- Merchant excluded: 62
 - Capabilities: 164 (86 read, 78 write)
 
 ## Capabilities
@@ -423,9 +423,11 @@ track conversational evaluation separately from these source test links.
 | `businessBanking.notificationChanges` | query | read | sales | form_only | Manual bank instructions, customer reports and merchant receipt confirmation use the payment-link/review forms. Customer evidence never authorizes a payment; no model or WhatsApp payment approval is enabled. |
 | `businessBanking.notificationEligibility` | query | Owner/Admin only | sales | form_only | Manual bank instructions, customer reports and merchant receipt confirmation use the payment-link/review forms. Customer evidence never authorizes a payment; no model or WhatsApp payment approval is enabled. |
 | `businessBanking.notificationSettings` | query | Owner/Admin only | sales | form_only | Manual bank instructions, customer reports and merchant receipt confirmation use the payment-link/review forms. Customer evidence never authorizes a payment; no model or WhatsApp payment approval is enabled. |
+| `businessBanking.orderCustomerFunds` | query | Owner/Admin only | sales | form_only | Manual bank instructions, customer reports and merchant receipt confirmation use the payment-link/review forms. Customer evidence never authorizes a payment; no model or WhatsApp payment approval is enabled. |
 | `businessBanking.pendingReports` | query | read | sales | form_only | Manual bank instructions, customer reports and merchant receipt confirmation use the payment-link/review forms. Customer evidence never authorizes a payment; no model or WhatsApp payment approval is enabled. |
 | `businessBanking.report` | query | read | sales | form_only | Manual bank instructions, customer reports and merchant receipt confirmation use the payment-link/review forms. Customer evidence never authorizes a payment; no model or WhatsApp payment approval is enabled. |
 | `businessBanking.retryAlert` | mutation | Owner/Admin only | sales | form_only | Manual bank instructions, customer reports and merchant receipt confirmation use the payment-link/review forms. Customer evidence never authorizes a payment; no model or WhatsApp payment approval is enabled. |
+| `businessBanking.retryReportReceiptAssessment` | mutation | Owner/Admin only | sales | form_only | Manual bank instructions, customer reports and merchant receipt confirmation use the payment-link/review forms. Customer evidence never authorizes a payment; no model or WhatsApp payment approval is enabled. |
 | `businessBanking.reviewReport` | mutation | orders | sales | form_only | Manual bank instructions, customer reports and merchant receipt confirmation use the payment-link/review forms. Customer evidence never authorizes a payment; no model or WhatsApp payment approval is enabled. |
 | `businessBanking.saveBankDetails` | mutation | Owner/Admin only | sales | form_only | Manual bank instructions, customer reports and merchant receipt confirmation use the payment-link/review forms. Customer evidence never authorizes a payment; no model or WhatsApp payment approval is enabled. |
 | `businessNotifications.archive` | mutation | read | platform | form_only | Own alert preferences and receipt state stay in the personal inbox until a dedicated confirmed assistant flow is built. |
@@ -484,15 +486,24 @@ track conversational evaluation separately from these source test links.
 | `customerLedger.accounts` | query | Owner/Admin only | customers | supported | customers.accounts.read |
 | `customerLedger.allocationHistory` | query | Owner/Admin only | finance | supported | customers.allocation_history.read |
 | `customerLedger.applyCredit` | mutation | Owner/Admin only | finance | supported | customers.credit.apply |
+| `customerLedger.cancelRefund` | mutation | Owner/Admin only | customers | form_only | Customer funds and refund requests use authenticated Finance forms, bank identity review and canonical ledger commands. Receipt analysis and customer proposals never authorize settlement or refunds; no assistant financial write is enabled. |
 | `customerLedger.commandStatus` | query | Owner/Admin only | customers | planned | E02 |
+| `customerLedger.completeRefund` | mutation | Owner/Admin only | customers | form_only | Customer funds and refund requests use authenticated Finance forms, bank identity review and canonical ledger commands. Receipt analysis and customer proposals never authorize settlement or refunds; no assistant financial write is enabled. |
 | `customerLedger.ensureAccount` | mutation | Owner/Admin only | customers | planned | E02 |
 | `customerLedger.entryDetail` | query | Owner/Admin only | finance | supported | customers.entry.read |
+| `customerLedger.orderReturnReview` | query | Owner/Admin only | customers | form_only | Customer funds and refund requests use authenticated Finance forms, bank identity review and canonical ledger commands. Receipt analysis and customer proposals never authorize settlement or refunds; no assistant financial write is enabled. |
 | `customerLedger.receivables` | query | Owner/Admin only | customers | supported | customers.receivables.read |
 | `customerLedger.recordOpening` | mutation | Owner/Admin only | customers | form_only | Opening debt is captured by Setup and the ledger form; it is not new money. |
 | `customerLedger.recordReceipt` | mutation | Owner/Admin only | finance | supported | customers.receipt.record |
 | `customerLedger.recordReceiptAndApply` | mutation | Owner/Admin only | customers | planned | E02 |
+| `customerLedger.refundRequestDetail` | query | Owner/Admin only | customers | form_only | Customer funds and refund requests use authenticated Finance forms, bank identity review and canonical ledger commands. Receipt analysis and customer proposals never authorize settlement or refunds; no assistant financial write is enabled. |
+| `customerLedger.refundRequests` | query | Owner/Admin only | customers | form_only | Customer funds and refund requests use authenticated Finance forms, bank identity review and canonical ledger commands. Receipt analysis and customer proposals never authorize settlement or refunds; no assistant financial write is enabled. |
 | `customerLedger.refundUnusedCredit` | mutation | Owner/Admin only | finance | supported | customers.credit.refund |
 | `customerLedger.releaseAllocation` | mutation | Owner/Admin only | finance | supported | customers.allocation.release |
+| `customerLedger.requestRefund` | mutation | Owner/Admin only | customers | form_only | Customer funds and refund requests use authenticated Finance forms, bank identity review and canonical ledger commands. Receipt analysis and customer proposals never authorize settlement or refunds; no assistant financial write is enabled. |
+| `customerLedger.requestRefundDetails` | mutation | Owner/Admin only | customers | form_only | Customer funds and refund requests use authenticated Finance forms, bank identity review and canonical ledger commands. Receipt analysis and customer proposals never authorize settlement or refunds; no assistant financial write is enabled. |
+| `customerLedger.reserveRefund` | mutation | Owner/Admin only | customers | form_only | Customer funds and refund requests use authenticated Finance forms, bank identity review and canonical ledger commands. Receipt analysis and customer proposals never authorize settlement or refunds; no assistant financial write is enabled. |
+| `customerLedger.returnOrderFunds` | mutation | Owner/Admin only | customers | form_only | Customer funds and refund requests use authenticated Finance forms, bank identity review and canonical ledger commands. Receipt analysis and customer proposals never authorize settlement or refunds; no assistant financial write is enabled. |
 | `customerLedger.reverseEntry` | mutation | Owner/Admin only | customers | planned | E02 |
 | `customerLedger.sources` | query | Owner/Admin only | finance | supported | customers.sources.read |
 | `customerLedger.statement` | query | Owner/Admin only | finance | supported | customers.statement.read |
@@ -739,6 +750,7 @@ track conversational evaluation separately from these source test links.
 | `productAssistant.start` | mutation | Owner/Admin only | assistant | excluded | Assistant transport or a dedicated assistant flow. |
 | `productAssistant.state` | query | Owner/Admin only | assistant | excluded | Assistant transport or a dedicated assistant flow. |
 | `productAssistant.updateSnapshot` | mutation | Owner/Admin only | assistant | excluded | Assistant transport or a dedicated assistant flow. |
+| `qaAccess.fixtureContext` | query | Owner/Admin only | platform | excluded | Internal QA tooling. |
 | `qaTools.fixtureContext` | query | Owner/Admin only | platform | excluded | Internal QA tooling. |
 | `retailOps.createSubscriptionCheckoutIntent` | mutation | Owner/Admin only | platform | form_only | Subscription purchase and verification use the billing checkout. |
 | `retailOps.inviteStaff` | mutation | Owner/Admin only | staff | planned | S02 |

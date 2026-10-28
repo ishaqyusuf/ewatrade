@@ -50,6 +50,14 @@ export function registerManualPaymentReceiptRoutes(
         !row.receiptSizeBytes
       )
         return c.json({ error: "Receipt upload not found." }, 404)
+      if (row.draftCancelledAt)
+        return c.json(
+          {
+            error:
+              "This draft was cancelled. Prepare the replacement receipt first.",
+          },
+          410,
+        )
       if (row.receiptUploadedAt) {
         void c.req.raw.body?.cancel().catch(() => undefined)
         await scheduleManualReceiptAssessment(row.id).catch(() => undefined)
@@ -90,6 +98,7 @@ export function registerManualPaymentReceiptRoutes(
         where: {
           id: row.id,
           status: "DRAFT",
+          draftCancelledAt: null,
           receiptDigest: row.receiptDigest,
           receiptUploadedAt: null,
           link: {

@@ -1,3 +1,4 @@
+import { projectManualPaymentAttemptAmounts } from "@ewatrade/payments/manual-payment-allocation"
 import { createManualPaymentReference } from "@ewatrade/payments/manual-payment-reference"
 import { ManualPaymentError } from "@ewatrade/utils/manual-payments"
 import type { Prisma, PrismaClient } from "../../generated/prisma/client"
@@ -120,4 +121,58 @@ export function nextManualPaymentAttempt(
       clientAttemptId: input.clientAttemptId,
     })
   })
+}
+
+/** Canonical attempt attribution only; this is not available Customer credit. */
+export async function readManualPaymentAttemptAmounts(
+  db: Pick<Prisma.TransactionClient, "$queryRaw">,
+  input: {
+    tenantId: string
+    linkId: string
+    attemptId: string | null
+    requestedMinor: number
+    balanceMinor: number
+  },
+) {
+  if (!input.attemptId)
+    return {
+      attemptAppliedMinor: 0,
+      attemptReceivedMinor: 0,
+      remainingTransferMinor: Math.max(
+        0,
+        Math.min(input.requestedMinor, input.balanceMinor),
+      ),
+    }
+  const [row] = await db.$queryRaw<
+    { appliedMinor: bigint; receivedMinor: bigint }[]
+  >`
+    SELECT
+      COALESCE((SELECT SUM((command.result->>'appliedMinor')::bigint)
+        FROM "CustomerLedgerCommand" command
+        WHERE command."tenantId"=${input.tenantId} AND command.kind='PUBLIC_ORDER_CREDIT'
+          AND command.result->>'linkId'=${input.linkId}
+          AND command.result->>'paymentAttemptId'=${input.attemptId}),0)::bigint AS "appliedMinor",
+      COALESCE((SELECT SUM(report."receivedAmountMinor") FROM "ManualPaymentReport" report
+        JOIN "ManualPaymentLink" link ON link.id=report."linkId"
+        WHERE link."tenantId"=${input.tenantId} AND link.id=${input.linkId}
+          AND report."attemptId"=${input.attemptId} AND report.status='CONFIRMED'),0)::bigint AS "receivedMinor"
+  `
+  if (!row)
+    throw new ManualPaymentError(
+      "CONFLICT",
+      "This payment attempt needs a current review.",
+    )
+  try {
+    return projectManualPaymentAttemptAmounts({
+      requestedMinor: input.requestedMinor,
+      balanceMinor: input.balanceMinor,
+      appliedMinor: row.appliedMinor,
+      receivedMinor: row.receivedMinor,
+    })
+  } catch {
+    throw new ManualPaymentError(
+      "CONFLICT",
+      "This payment attempt needs a current review.",
+    )
+  }
 }

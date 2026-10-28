@@ -1,3 +1,4 @@
+import { authorizeMerchantReceiptAssessmentRetry } from "@ewatrade/db/manual-payment-assessments"
 import {
   PaymentNotificationError,
   listPaymentNotificationChanges,
@@ -8,6 +9,7 @@ import {
 import {
   CatalogError,
   FinanceError,
+  cancelManualPaymentReportDraft,
   createBusinessPaymentLink,
   createManualBankAccount,
   effectiveCommercialAmountPaid,
@@ -19,6 +21,8 @@ import {
   pendingManualPaymentReports,
   prepareManualPaymentReport,
   readManualPaymentReport,
+  readManualPaymentReportFundsReview,
+  readOrderManualPaymentCustomerFunds,
   reviewManualPaymentReport,
   saveManualBankDetails,
   shortManualPaymentLinkIdentity,
@@ -42,6 +46,16 @@ import {
 import { TRPCError } from "@trpc/server"
 import { z } from "zod"
 import { paymentLinkOrigin, paymentLinkSigningKey } from "../../banking/config"
+import { retryManualReceiptAssessment } from "../../banking/manual-payment-assessments"
+import {
+  applyManualPaymentCustomerFunds,
+  manualPaymentCustomerSessionPrincipal,
+  readManualPaymentCustomerFunds,
+} from "../../banking/manual-payment-customer-funds"
+import {
+  isManualPaymentFinanceReviewer,
+  projectMerchantPaymentFundsReview,
+} from "../../banking/manual-payment-merchant-review"
 import {
   manualReportIdentity,
   resolveManualLinkIdentity,
@@ -51,6 +65,8 @@ import {
   publishManualPaymentStatus,
 } from "../../banking/status-socket"
 import {
+  applyManualCustomerCreditSchema,
+  cancelManualPaymentDraftSchema,
   createBusinessPaymentLinkSchema,
   createManualBankAccountSchema,
   manualBankDetailsSchema,
@@ -63,7 +79,12 @@ import {
   reviewManualPaymentReportSchema,
 } from "../../schemas/business-banking"
 import { financeProcedure } from "../finance-procedure"
-import { createTRPCRouter, protectedProcedure, publicProcedure } from "../init"
+import {
+  type TRPCContext,
+  createTRPCRouter,
+  protectedProcedure,
+  publicProcedure,
+} from "../init"
 import { orderScope } from "../order-scope"
 import { assertCanOperateOrders, orderError } from "./orders"
 
@@ -90,6 +111,67 @@ const actor = (ctx: {
   tenantId: ctx.tenantContext.tenant.id,
   actorUserId: ctx.session.user.id,
 })
+
+async function prepareReport(
+  ctx: TRPCContext,
+  input: z.infer<typeof prepareManualPaymentReportSchema>,
+  withRefund: boolean,
+) {
+  const secret = paymentLinkSigningKey()
+  const principal = manualPaymentCustomerSessionPrincipal(ctx)
+  if (withRefund) {
+    if (
+      !input.allocation?.refundDestination ||
+      input.allocation.allocationPreference !== "REFUND"
+    )
+      throw new TRPCError({
+        code: "BAD_REQUEST",
+        message: "Review the refund destination before submitting this report.",
+      })
+    if (!principal.authenticatedUserId || !principal.authenticatedSessionId)
+      throw new TRPCError({
+        code: "UNAUTHORIZED",
+        message: "Verify this customer's account before adding refund details.",
+      })
+  } else if (input.allocation?.refundDestination) {
+    throw new TRPCError({
+      code: "BAD_REQUEST",
+      message: "Use the verified refund report to submit bank details.",
+    })
+  }
+  const identity = await resolveManualLinkIdentity(input.token, {
+    readShortLink: (code) => shortManualPaymentLinkIdentity(ctx.db, code),
+  })
+  const result = await mapped(() =>
+    prepareManualPaymentReport(ctx.db, {
+      ...input,
+      ...identity,
+      ...principal,
+      destinationEncryptionKey: process.env.CUSTOMER_FUNDS_DESTINATION_KEY,
+    }),
+  )
+  const reportToken = createPaymentLinkToken(
+    {
+      intentId: result.report.id,
+      expiresAt: new Date(result.report.createdAt.getTime() + 7 * 86400_000),
+    },
+    secret,
+    "manual-report",
+  )
+  return {
+    reportId: result.report.id,
+    reportToken,
+    status: result.report.status,
+    revision: result.report.revision,
+    draftCancelledAt: result.report.draftCancelledAt,
+    paymentReference: result.paymentReference,
+    paymentAttemptId: result.report.attemptId,
+    replay: result.replay,
+    receiptUploadPath: input.receipt
+      ? `/api/manual-payments/reports/${result.report.id}/receipt`
+      : null,
+  }
+}
 
 export const businessBankingRouter = createTRPCRouter({
   retryAlert: financeProcedure
@@ -192,6 +274,16 @@ export const businessBankingRouter = createTRPCRouter({
         }),
       )
     }),
+  orderCustomerFunds: financeProcedure
+    .input(z.object({ orderId: z.string().min(1).max(128) }).strict())
+    .query(({ ctx, input }) =>
+      mapped(() =>
+        readOrderManualPaymentCustomerFunds(ctx.db, {
+          ...actor(ctx),
+          orderId: input.orderId,
+        }),
+      ),
+    ),
   availability: protectedProcedure.query(() => ({
     mode: "manual" as const,
     enabled: true,
@@ -254,7 +346,7 @@ export const businessBankingRouter = createTRPCRouter({
         businessName: order.store.name,
         orderNumber: order.orderNumber,
         url,
-        amountMinor: result.link.amountMinor,
+        amountMinor: result.attemptAmounts.remainingTransferMinor,
         currencyCode: result.link.currencyCode,
       })
       const referenceText = `Payment reference: ${result.attempt.paymentReference}`
@@ -268,13 +360,53 @@ export const businessBankingRouter = createTRPCRouter({
         url,
         ...sharing,
         expiresAt: result.link.expiresAt,
-        amountMinor: result.link.amountMinor,
+        amountMinor: result.attemptAmounts.remainingTransferMinor,
+        amountRequestedMinor: result.link.amountMinor,
+        ...result.attemptAmounts,
         currencyCode: result.link.currencyCode,
         allowPartial: result.link.allowPartial,
         replay: result.replay,
         paymentReference: result.attempt.paymentReference,
         paymentAttemptId: result.attempt.id,
       }
+    }),
+  customerFunds: publicProcedure
+    .input(publicBusinessPaymentLinkSchema)
+    .query(({ ctx, input }) =>
+      mapped(() => readManualPaymentCustomerFunds(ctx, input.token)),
+    ),
+  applyCustomerCredit: publicProcedure
+    .input(applyManualCustomerCreditSchema)
+    .mutation(async ({ ctx, input }) => {
+      const result = await mapped(() =>
+        applyManualPaymentCustomerFunds(ctx, input),
+      )
+      return result
+    }),
+  retryReportReceiptAssessment: financeProcedure
+    .input(manualReportIdSchema)
+    .mutation(async ({ ctx, input }) => {
+      await mapped(async () =>
+        readManualPaymentReport(ctx.db, {
+          reportId: input.reportId,
+          scope: await orderScope(ctx),
+        }),
+      )
+      await mapped(() =>
+        authorizeMerchantReceiptAssessmentRetry(ctx.db, {
+          ...actor(ctx),
+          reportId: input.reportId,
+        }),
+      )
+      await mapped(() => retryManualReceiptAssessment(input.reportId))
+      return mapped(() => manualPaymentReportStatus(ctx.db, input.reportId))
+    }),
+  retryReceiptAssessment: publicProcedure
+    .input(manualReportTokenSchema)
+    .mutation(async ({ ctx, input }) => {
+      const proof = manualReportIdentity(input.reportToken)
+      await mapped(() => retryManualReceiptAssessment(proof.reportId))
+      return mapped(() => manualPaymentReportStatus(ctx.db, proof.reportId))
     }),
   paymentLink: publicProcedure
     .input(publicBusinessPaymentLinkSchema)
@@ -308,37 +440,21 @@ export const businessBankingRouter = createTRPCRouter({
     }),
   reportPayment: publicProcedure
     .input(prepareManualPaymentReportSchema)
+    .mutation(({ ctx, input }) => prepareReport(ctx, input, false)),
+  reportPaymentWithRefund: publicProcedure
+    .input(prepareManualPaymentReportSchema)
+    .mutation(({ ctx, input }) => prepareReport(ctx, input, true)),
+  cancelDraftReport: publicProcedure
+    .input(cancelManualPaymentDraftSchema)
     .mutation(async ({ ctx, input }) => {
-      const identity = await resolveManualLinkIdentity(input.token, {
-        readShortLink: (code) => shortManualPaymentLinkIdentity(ctx.db, code),
-      })
+      const proof = manualReportIdentity(input.reportToken)
       const result = await mapped(() =>
-        prepareManualPaymentReport(ctx.db, {
-          ...input,
-          ...identity,
+        cancelManualPaymentReportDraft(ctx.db, {
+          ...proof,
+          expectedRevision: input.expectedRevision,
         }),
       )
-      const reportToken = createPaymentLinkToken(
-        {
-          intentId: result.report.id,
-          expiresAt: new Date(
-            result.report.createdAt.getTime() + 7 * 86400_000,
-          ),
-        },
-        paymentLinkSigningKey(),
-        "manual-report",
-      )
-      return {
-        reportId: result.report.id,
-        reportToken,
-        status: result.report.status,
-        paymentReference: result.paymentReference,
-        paymentAttemptId: result.report.attemptId,
-        replay: result.replay,
-        receiptUploadPath: input.receipt
-          ? `/api/manual-payments/reports/${result.report.id}/receipt`
-          : null,
-      }
+      return { ...result, state: "draft_cancelled" as const }
     }),
   submitReport: publicProcedure
     .input(manualReportTokenSchema)
@@ -394,6 +510,17 @@ export const businessBankingRouter = createTRPCRouter({
         ...row.link.order,
         paymentCount: row.link.order._count.payments,
       })
+      const fundsReview = await projectMerchantPaymentFundsReview(
+        ctx.tenantContext.membership.role,
+        () =>
+          readManualPaymentReportFundsReview(ctx.db, {
+            ...actor(ctx),
+            reportId: row.id,
+          }),
+      )
+      const finance = isManualPaymentFinanceReviewer(
+        ctx.tenantContext.membership.role,
+      )
       return {
         reportId: row.id,
         alertDeliveries: await manualPaymentAlertDeliveries(ctx.db, {
@@ -405,6 +532,7 @@ export const businessBankingRouter = createTRPCRouter({
             process.env.PAYMENT_REPORT_ALERTS_ENABLED === "true",
         }),
         revision: row.revision,
+        draftCancelledAt: row.draftCancelledAt,
         status: row.status,
         payerName: row.payerName,
         claimedAmountMinor: row.claimedAmountMinor,
@@ -418,6 +546,17 @@ export const businessBankingRouter = createTRPCRouter({
         paymentAttemptId: row.attemptId,
         requestedAmountMinor: row.link.amountMinor,
         verification: row.verification,
+        confirmedAllocation: row.confirmedAllocation,
+        receiptAssessment: row.receiptAssessment,
+        receiptExtraction: row.receiptExtraction,
+        allocationPreference: row.allocationPreference,
+        requestedApplyMinor: row.requestedApplyMinor?.toString() ?? null,
+        customerReceiptId: finance ? row.customerReceiptId : null,
+        customerCreditEntryId: finance ? row.customerCreditEntryId : null,
+        customerFundsRefundRequestId: finance
+          ? row.customerFundsRefundRequestId
+          : null,
+        ...fundsReview,
         receivedAccountId: row.receivedAccountId,
         currencyCode: row.link.currencyCode,
         orderId: row.link.orderId,
@@ -450,7 +589,11 @@ export const businessBankingRouter = createTRPCRouter({
         }),
       )
       const result = await mapped(() =>
-        reviewManualPaymentReport(ctx.db, { ...input, ...actor(ctx) }),
+        reviewManualPaymentReport(ctx.db, {
+          ...input,
+          ...actor(ctx),
+          destinationEncryptionKey: process.env.CUSTOMER_FUNDS_DESTINATION_KEY,
+        }),
       )
       await publishManualPaymentStatus(result.report.id)
       const status = await mapped(() =>

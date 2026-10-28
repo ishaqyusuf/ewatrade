@@ -118,3 +118,24 @@ This coordination checklist is not the feature milestone denominator. Original
 planning4/4/design5/5; eight product milestones are now in progress, none accepted
 complete until its recorded exit criteria passes. Global Finance progress is not
 recomputed from these local milestones.
+
+## Narrow Order balance bridges, 28 October 2026
+
+Dashboard UI additionally owns orders/overview/order-overview.tsx only as a bridge
+to its customer-ledger balance component. Native UI additionally owns
+mobile/order-detail/order-detail-screen.tsx and, only where necessary, classic
+order-detail-content.tsx/order-detail-screen.tsx for the matching narrow prop.
+Positive available customer credit is shown on the Order before a new payment
+link; zero/no account remains hidden. Read uses Finance-only orderCustomerFunds,
+derives scope from Order server-side, subtracts holds, and never creates accounts.
+
+## Parallel mixed-source Order-return UI ownership
+
+Managed supervisor01a182ec-521b-72d1-afc7-69d56793407e owns only dashboard
+orders/overview/order-money-dialogs.tsx RefundDialog bridge plus new
+customer-ledger/order-returns/**; native order-detail/order-change-sheet.tsx
+refund bridge plus new customer-ledger/order-returns/**. Existing UI workers
+retain their other paths. Actual Finance-only orderReturnReview supplies canonical
+source eligibility; returnOrderFunds composes original-credit restoration and
+ordinary cash return through the existing durable command runner. Exact Opus5.5/
+high CLI implementation, no redesigned shell or duplicated financial command.

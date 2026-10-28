@@ -21,3 +21,16 @@ test("confirmed provenance requires a saved canonical financial payment", () => 
     canonicalPaymentId: "canonical-payment",
   })
 })
+
+test("a real canonical held receipt verifies all-excess funds without inventing an Order payment", () => {
+  const result = manualPaymentVerification({
+    status: "CONFIRMED",
+    canonicalPaymentId: null,
+    customerReceiptId: "canonical-held-receipt",
+    decidedAt: new Date(),
+    receivedAt: new Date(),
+    receivedAmountMinor: 100,
+  })
+  expect(result.state).toBe("confirmed")
+  expect(result.canonicalPaymentId).toBeNull()
+})
