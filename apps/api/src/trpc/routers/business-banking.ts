@@ -15,6 +15,7 @@ import {
   listManualBankAccounts,
   manualPaymentLinkCandidates,
   manualPaymentReportStatus,
+  nextManualPaymentAttempt,
   pendingManualPaymentReports,
   prepareManualPaymentReport,
   readManualPaymentReport,
@@ -56,6 +57,7 @@ import {
   manualReportIdSchema,
   manualReportPageSchema,
   manualReportTokenSchema,
+  nextManualPaymentAttemptSchema,
   prepareManualPaymentReportSchema,
   publicBusinessPaymentLinkSchema,
   reviewManualPaymentReportSchema,
@@ -255,6 +257,13 @@ export const businessBankingRouter = createTRPCRouter({
         amountMinor: result.link.amountMinor,
         currencyCode: result.link.currencyCode,
       })
+      const referenceText = `Payment reference: ${result.attempt.paymentReference}`
+      sharing.copyText = `${sharing.copyText}\n${referenceText}`
+      if (sharing.whatsappUrl) {
+        const destination = new URL(sharing.whatsappUrl)
+        destination.searchParams.set("text", sharing.copyText)
+        sharing.whatsappUrl = destination.href
+      }
       return {
         url,
         ...sharing,
@@ -263,6 +272,8 @@ export const businessBankingRouter = createTRPCRouter({
         currencyCode: result.link.currencyCode,
         allowPartial: result.link.allowPartial,
         replay: result.replay,
+        paymentReference: result.attempt.paymentReference,
+        paymentAttemptId: result.attempt.id,
       }
     }),
   paymentLink: publicProcedure
@@ -279,6 +290,21 @@ export const businessBankingRouter = createTRPCRouter({
         }),
       )
       return { ...page, preview: paymentLinkPreview(page.businessName) }
+    }),
+  nextPaymentAttempt: publicProcedure
+    .input(nextManualPaymentAttemptSchema)
+    .mutation(async ({ ctx, input }) => {
+      const result = await mapped(() =>
+        nextManualPaymentAttempt(ctx.db, {
+          ...manualReportIdentity(input.reportToken),
+          clientAttemptId: input.clientAttemptId,
+        }),
+      )
+      return {
+        paymentAttemptId: result.attempt.id,
+        paymentReference: result.attempt.paymentReference,
+        replay: result.replay,
+      }
     }),
   reportPayment: publicProcedure
     .input(prepareManualPaymentReportSchema)
@@ -306,6 +332,8 @@ export const businessBankingRouter = createTRPCRouter({
         reportId: result.report.id,
         reportToken,
         status: result.report.status,
+        paymentReference: result.paymentReference,
+        paymentAttemptId: result.report.attemptId,
         replay: result.replay,
         receiptUploadPath: input.receipt
           ? `/api/manual-payments/reports/${result.report.id}/receipt`
@@ -386,6 +414,10 @@ export const businessBankingRouter = createTRPCRouter({
         receivedAt: row.receivedAt,
         decisionNote: row.decisionNote,
         bankReference: row.bankReference,
+        paymentReference: row.attempt?.paymentReference ?? null,
+        paymentAttemptId: row.attemptId,
+        requestedAmountMinor: row.link.amountMinor,
+        verification: row.verification,
         receivedAccountId: row.receivedAccountId,
         currencyCode: row.link.currencyCode,
         orderId: row.link.orderId,

@@ -40,7 +40,8 @@
     "@ewatrade/private-media": "workspace:*",
     "@ewatrade/storefront-contracts": "workspace:*",
     "@ewatrade/storefront-templates": "workspace:*",
-    "@ewatrade/storefront-runtime": "workspace:*"
+    "@ewatrade/storefront-runtime": "workspace:*",
+    "@ewatrade/payments": "workspace:*"
   },
   "devDependencies": {
     "@ewatrade/tsconfig": "workspace:*",

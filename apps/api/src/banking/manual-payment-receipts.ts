@@ -20,6 +20,7 @@ import { TRPCError } from "@trpc/server"
 import { createTRPCContext, resolveProtectedTenantContext } from "../trpc/init"
 import { orderScope } from "../trpc/order-scope"
 import { assertCanOperateOrders } from "../trpc/routers/orders"
+import { scheduleManualReceiptAssessment } from "./manual-payment-assessments"
 import { manualReportIdentity } from "./manual-payment-tokens"
 
 export function registerManualPaymentReceiptRoutes(
@@ -51,6 +52,7 @@ export function registerManualPaymentReceiptRoutes(
         return c.json({ error: "Receipt upload not found." }, 404)
       if (row.receiptUploadedAt) {
         void c.req.raw.body?.cancel().catch(() => undefined)
+        await scheduleManualReceiptAssessment(row.id).catch(() => undefined)
         return c.json({ status: "ready" })
       }
       if (
@@ -108,6 +110,7 @@ export function registerManualPaymentReceiptRoutes(
           { error: "The payment report changed. Refresh before submitting." },
           409,
         )
+      await scheduleManualReceiptAssessment(row.id).catch(() => undefined)
       return c.json({ status: "ready" })
     } catch (error) {
       void c.req.raw.body?.cancel().catch(() => undefined)

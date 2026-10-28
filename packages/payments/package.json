@@ -4,7 +4,12 @@
   "private": true,
   "type": "module",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./manual-payment-reference": "./src/manual-payment-reference.ts",
+    "./manual-transfer-identity": "./src/manual-transfer-identity.ts",
+    "./receipt-assessment": "./src/receipt-assessment.ts",
+    "./receipt-extractor": "./src/receipt-extractor.ts",
+    "./manual-payment-allocation": "./src/manual-payment-allocation.ts"
   },
   "scripts": {
     "lint": "biome check .",

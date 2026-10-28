@@ -527,3 +527,8 @@ export type {
   DomainReconciliationPayload,
   DomainRegistrationPayload,
 }
+
+export {
+  enqueueManualReceiptAssessment,
+  manualReceiptProcessingEnabled,
+} from "./handlers/manual-payment-receipt-jobs"

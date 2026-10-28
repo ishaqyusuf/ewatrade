@@ -52,6 +52,7 @@ export const prepareManualPaymentReportSchema = z
   .object({
     token,
     clientReportId: operationId,
+    paymentAttemptId: id.optional(),
     payerName: z.string().trim().min(1).max(160),
     claimedAmountMinor: amount,
     receipt: z
@@ -73,6 +74,9 @@ export const prepareManualPaymentReportSchema = z
       .optional(),
   })
   .strict()
+export const nextManualPaymentAttemptSchema = z
+  .object({ reportToken: token, clientAttemptId: operationId })
+  .strict()
 export const manualReportTokenSchema = z.object({ reportToken: token }).strict()
 export const manualReportIdSchema = z.object({ reportId: id }).strict()
 export const manualReportPageSchema = z
@@ -90,6 +94,8 @@ export const reviewManualPaymentReportSchema = z
     moneyAccountId: id.optional(),
     receivedAt: z.coerce.date().optional(),
     reference: z.string().trim().max(160).optional(),
+    bankCheckAttested: z.boolean().optional(),
+    transferReferenceNamespace: z.literal("nibss_session_id").optional(),
     note: z.string().trim().max(500).optional(),
   })
   .strict()
@@ -102,10 +108,14 @@ export const reviewManualPaymentReportSchema = z
       })
     if (
       value.outcome === "received" &&
-      (!value.receivedAmountMinor || !value.moneyAccountId || !value.receivedAt)
+      (value.bankCheckAttested !== true ||
+        !value.receivedAmountMinor ||
+        !value.moneyAccountId ||
+        !value.receivedAt)
     )
       ctx.addIssue({
         code: "custom",
-        message: "Enter the received amount, account and date.",
+        message:
+          "Confirm the bank check and enter the received amount, account and date.",
       })
   })

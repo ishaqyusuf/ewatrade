@@ -51,6 +51,7 @@ test("merchant review requires revision and concrete received facts or a custome
       receivedAmountMinor: 5000,
       moneyAccountId: "bank",
       receivedAt: "2026-10-26T12:00:00Z",
+      bankCheckAttested: true,
     }).success,
   ).toBe(true)
 })
@@ -75,4 +76,32 @@ test("payment links cannot introduce provider checkout and scoped staff retain t
   expect(
     staffProcedureAction("businessBanking.createBankAccount", "mutation"),
   ).toBeNull()
+})
+
+test("bank reference namespace cannot substitute for explicit actual bank-check consent", () => {
+  const received = {
+    reportId: "report-1",
+    expectedRevision: 2,
+    outcome: "received",
+    receivedAmountMinor: 5000,
+    moneyAccountId: "bank",
+    receivedAt: "2026-10-26T12:00:00Z",
+    reference: "123456789012345678901234567890",
+    transferReferenceNamespace: "nibss_session_id",
+  }
+  expect(reviewManualPaymentReportSchema.safeParse(received).success).toBe(
+    false,
+  )
+  expect(
+    reviewManualPaymentReportSchema.safeParse({
+      ...received,
+      bankCheckAttested: false,
+    }).success,
+  ).toBe(false)
+  expect(
+    reviewManualPaymentReportSchema.safeParse({
+      ...received,
+      bankCheckAttested: true,
+    }).success,
+  ).toBe(true)
 })

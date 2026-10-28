@@ -13,6 +13,7 @@ import {
 } from "./business-payment-links"
 import { createCommercialOrderInTransaction } from "./commercial-orders"
 import { createFinanceBookInTransaction } from "./finance/accounts"
+import { nextManualPaymentAttempt } from "./manual-payment-attempts"
 
 const enabled = process.env.RUN_DATABASE_INTEGRATION_TESTS === "1"
 if (enabled) setDefaultTimeout(120_000)
@@ -155,9 +156,25 @@ function repositoryClient(tx: Prisma.TransactionClient): PrismaClient {
               where: { orderId: order.id },
             }),
           ).toBe(0)
+          const nextAttempt = await nextManualPaymentAttempt(db, {
+            reportId: first.report.id,
+            clientAttemptId: "next-payment-test",
+          })
+          expect(nextAttempt.attempt.paymentReference).not.toBe(
+            link.attempt.paymentReference,
+          )
+          expect(
+            (
+              await nextManualPaymentAttempt(db, {
+                reportId: first.report.id,
+                clientAttemptId: "next-payment-test",
+              })
+            ).attempt.id,
+          ).toBe(nextAttempt.attempt.id)
           const next = await prepareManualPaymentReport(db, {
             ...proof,
             clientReportId: "report-test-3",
+            paymentAttemptId: nextAttempt.attempt.id,
             payerName: "Ishaq",
             claimedAmountMinor: 5000,
           })
@@ -172,6 +189,7 @@ function repositoryClient(tx: Prisma.TransactionClient): PrismaClient {
             moneyAccountId: account.id,
             receivedAt,
             reference: "verified-credit",
+            bankCheckAttested: true,
           }
           await expect(
             reviewManualPaymentReport(db, { ...decision, expectedRevision: 1 }),
@@ -185,6 +203,17 @@ function repositoryClient(tx: Prisma.TransactionClient): PrismaClient {
               moneyAccountId: "foreign-account",
             }),
           ).rejects.toThrow("active cash or bank account")
+          await expect(
+            reviewManualPaymentReport(db, {
+              ...decision,
+              bankCheckAttested: false,
+            }),
+          ).rejects.toThrow("bank check")
+          expect(
+            await tx.commercialOrderPayment.count({
+              where: { orderId: order.id },
+            }),
+          ).toBe(0)
           const approved = await reviewManualPaymentReport(db, decision)
           expect(approved.report.receivedAmountMinor).toBe(4000)
           expect((await reviewManualPaymentReport(db, decision)).replay).toBe(
@@ -224,9 +253,14 @@ function repositoryClient(tx: Prisma.TransactionClient): PrismaClient {
             claimedAmountMinor: 5000,
             receivedAmountMinor: 4000,
           })
+          const lastAttempt = await nextManualPaymentAttempt(db, {
+            reportId: next.report.id,
+            clientAttemptId: "last-payment-test",
+          })
           const last = await prepareManualPaymentReport(db, {
             ...proof,
             clientReportId: "report-test-4",
+            paymentAttemptId: lastAttempt.attempt.id,
             payerName: "Ishaq",
             claimedAmountMinor: 6000,
           })

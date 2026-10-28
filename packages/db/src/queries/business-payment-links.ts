@@ -22,7 +22,13 @@ import { createFinanceMoneyAccountInTransaction } from "./finance/accounts"
 import { assertOrderPaymentAccountInTransaction } from "./finance/order-payment-accounts"
 import type { PaymentAlertSelection } from "./manual-payment-alert-rules"
 import { saveManualPaymentAlertsInTransaction } from "./manual-payment-alert-settings"
-import { runInOwnTransaction } from "./own-transaction"
+import { createManualPaymentAttemptInTransaction } from "./manual-payment-attempts"
+import { manualPaymentVerification } from "./manual-payment-presentation"
+import { consumeManualTransferInTransaction } from "./manual-payment-transfer-consumption"
+import {
+  runInOwnSerializableTransaction,
+  runInOwnTransaction,
+} from "./own-transaction"
 import { reservePaymentNotificationGroupInTransaction } from "./payment-report-notifications/quota"
 
 type Actor = { tenantId: string; actorUserId: string }
@@ -290,7 +296,12 @@ export async function createBusinessPaymentLinkInTransaction(
         "CONFLICT",
         "This link request was already used with different details.",
       )
-    return { link: previous, replay: true }
+    const { attempt } = await createManualPaymentAttemptInTransaction(tx, {
+      tenantId: input.tenantId,
+      linkId: previous.id,
+      clientAttemptId: "initial",
+    })
+    return { link: previous, attempt, replay: true }
   }
   const balance = Math.max(0, order.totalMinor - paid(order))
   const amountMinor = input.amountMinor ?? balance
@@ -342,7 +353,12 @@ export async function createBusinessPaymentLinkInTransaction(
       expiresAt: input.expiresAt,
     },
   })
-  return { link, replay: false }
+  const { attempt } = await createManualPaymentAttemptInTransaction(tx, {
+    tenantId: input.tenantId,
+    linkId: link.id,
+    clientAttemptId: "initial",
+  })
+  return { link, attempt, replay: false }
 }
 
 /** Indexed lookup of a deliberately public handle, never an unsigned legacy link/report ID. */
@@ -371,6 +387,7 @@ export async function readManualPaymentLink(
     },
     include: {
       tenant: { select: { dataClassification: true } },
+      attempts: { take: 1, orderBy: { sequence: "desc" } },
       order: {
         include: {
           ...orderInclude,
@@ -416,6 +433,8 @@ export async function getBusinessPaymentLink(
   }
   return {
     businessName: order.store.name,
+    paymentReference: link.attempts?.[0]?.paymentReference ?? null,
+    paymentAttemptId: link.attempts?.[0]?.id ?? null,
     customerName:
       order.customerName?.trim().slice(0, 160) ||
       order.customer?.name.trim().slice(0, 160) ||
@@ -460,6 +479,7 @@ export async function getBusinessPaymentLink(
 }
 
 export type ManualReportInput = Proof & {
+  paymentAttemptId?: string
   clientReportId: string
   payerName: string
   claimedAmountMinor: number
@@ -517,14 +537,75 @@ export async function prepareManualPaymentReport(
         previous.payerName !== payerName ||
         previous.receiptDigest !== (receipt?.contentDigest ?? null) ||
         previous.receiptContentType !== (receipt?.contentType ?? null) ||
-        previous.receiptSizeBytes !== (receipt?.sizeBytes ?? null)
+        previous.receiptSizeBytes !== (receipt?.sizeBytes ?? null) ||
+        (input.paymentAttemptId !== undefined &&
+          previous.attemptId !== input.paymentAttemptId)
       )
         throw new ManualPaymentError(
           "CONFLICT",
           "This report request was already used with different details.",
         )
-      return { report: previous, replay: true }
+      return {
+        report: previous,
+        paymentReference: previous.attemptId
+          ? ((
+              await tx.manualPaymentAttempt.findUnique({
+                where: { id: previous.attemptId },
+                select: { paymentReference: true },
+              })
+            )?.paymentReference ?? null)
+          : null,
+        replay: true,
+      }
     }
+    if (receipt) {
+      const confirmedReuse = await tx.manualPaymentReport.findFirst({
+        where: {
+          receiptDigest: receipt.contentDigest,
+          receiptUploadedAt: { not: null },
+          status: "CONFIRMED",
+          canonicalPaymentId: { not: null },
+          link: { tenantId: link.tenantId },
+        },
+        select: { id: true },
+      })
+      if (confirmedReuse)
+        throw new ManualPaymentError(
+          "CONFLICT",
+          "This receipt has already been used. Ask the business to review the original transfer.",
+        )
+    }
+    const currentAttempt = await tx.manualPaymentAttempt.findFirst({
+      where: { linkId: link.id },
+      orderBy: { sequence: "desc" },
+    })
+    if (input.paymentAttemptId && input.paymentAttemptId !== currentAttempt?.id)
+      throw new ManualPaymentError(
+        "CONFLICT",
+        "The payment reference changed. Review the current payment instructions.",
+      )
+    // Historical links gain their first reference through this explicit mutation only.
+    const attempt =
+      currentAttempt ??
+      (
+        await createManualPaymentAttemptInTransaction(tx, {
+          tenantId: link.tenantId,
+          linkId: link.id,
+          clientAttemptId: "initial",
+        })
+      ).attempt
+    const decidedAttempt = await tx.manualPaymentReport.findFirst({
+      where: {
+        attemptId: attempt.id,
+        status: { in: ["CONFIRMED", "NOT_RECEIVED"] },
+      },
+      select: { id: true },
+    })
+    if (decidedAttempt)
+      throw new ManualPaymentError(
+        "CONFLICT",
+        "Start a new payment attempt before reporting another transfer.",
+      )
     manualPaymentAmount({
       amountMinor: input.claimedAmountMinor,
       requestedMinor: link.amountMinor,
@@ -561,6 +642,7 @@ export async function prepareManualPaymentReport(
     const report = await tx.manualPaymentReport.create({
       data: {
         linkId: link.id,
+        attemptId: attempt.id,
         clientReportId: input.clientReportId,
         payerName,
         claimedAmountMinor: input.claimedAmountMinor,
@@ -569,7 +651,7 @@ export async function prepareManualPaymentReport(
         receiptSizeBytes: receipt?.sizeBytes,
       },
     })
-    return { report, replay: false }
+    return { report, paymentReference: attempt.paymentReference, replay: false }
   })
 }
 
@@ -659,7 +741,10 @@ export async function manualPaymentReportStatus(
 ) {
   const row = await db.manualPaymentReport.findFirst({
     where: { id: reportId, link: { tenant: { isActive: true } } },
-    include: { link: { include: { order: { include: orderInclude } } } },
+    include: {
+      attempt: true,
+      link: { include: { order: { include: orderInclude } } },
+    },
   })
   if (!row) throw unavailable()
   const totalMinor = row.link.order.totalMinor
@@ -667,6 +752,9 @@ export async function manualPaymentReportStatus(
   const balanceMinor = Math.max(0, totalMinor - paidMinor)
   return {
     reportId: row.id,
+    paymentReference: row.attempt?.paymentReference ?? null,
+    paymentAttemptId: row.attemptId,
+    verification: manualPaymentVerification(row),
     revision: row.revision,
     status: row.status,
     claimedAmountMinor: row.claimedAmountMinor,
@@ -693,6 +781,7 @@ export async function readManualPaymentReport(
   const report = await db.manualPaymentReport.findFirst({
     where: { id: input.reportId, link: { order: input.scope } },
     include: {
+      attempt: true,
       link: {
         include: {
           tenant: { select: { dataClassification: true } },
@@ -702,7 +791,7 @@ export async function readManualPaymentReport(
     },
   })
   if (!report) throw unavailable()
-  return report
+  return { ...report, verification: manualPaymentVerification(report) }
 }
 export async function pendingManualPaymentReports(
   db: PrismaClient,
@@ -722,6 +811,7 @@ export async function pendingManualPaymentReports(
       ...(input.beforeId ? { id: { lt: input.beforeId } } : {}),
     },
     include: {
+      attempt: { select: { paymentReference: true } },
       link: {
         select: {
           currencyCode: true,
@@ -735,6 +825,7 @@ export async function pendingManualPaymentReports(
   return {
     items: rows.slice(0, limit).map((row) => ({
       id: row.id,
+      paymentReference: row.attempt?.paymentReference ?? null,
       revision: row.revision,
       payerName: row.payerName,
       amountMinor: row.claimedAmountMinor,
@@ -756,6 +847,8 @@ export type ManualPaymentDecision = Actor & {
   moneyAccountId?: string
   receivedAt?: Date
   reference?: string
+  bankCheckAttested?: boolean
+  transferReferenceNamespace?: string
   note?: string
 }
 export async function reviewManualPaymentReport(
@@ -769,8 +862,14 @@ export async function reviewManualPaymentReport(
     at: input.receivedAt?.toISOString() ?? null,
     reference: input.reference?.trim() || null,
     note: input.note?.trim() || null,
+    ...(input.bankCheckAttested === true || input.transferReferenceNamespace
+      ? {
+          bankCheckAttested: input.bankCheckAttested === true,
+          transferReferenceNamespace: input.transferReferenceNamespace ?? null,
+        }
+      : {}),
   })
-  return runInOwnTransaction(db, async (tx) => {
+  return runInOwnSerializableTransaction(db, async (tx) => {
     const original = await tx.manualPaymentReport.findFirst({
       where: { id: input.reportId, link: { tenantId: input.tenantId } },
       include: { link: { include: { order: { select: { storeId: true } } } } },
@@ -825,6 +924,7 @@ export async function reviewManualPaymentReport(
       return { report: saved, replay: false }
     }
     if (
+      input.bankCheckAttested !== true ||
       !input.receivedAmountMinor ||
       !Number.isSafeInteger(input.receivedAmountMinor) ||
       input.receivedAmountMinor <= 0 ||
@@ -835,7 +935,7 @@ export async function reviewManualPaymentReport(
     )
       throw new ManualPaymentError(
         "BAD_REQUEST",
-        "Enter the amount, receiving account and actual payment date you verified.",
+        "Confirm the bank check, amount, receiving account and actual payment date you verified.",
       )
     if (
       ["DRAFT", "CANCELLED", "REFUNDED"].includes(held.order.status) ||
@@ -862,6 +962,42 @@ export async function reviewManualPaymentReport(
         "BAD_REQUEST",
         "Choose the bank account that received this transfer.",
       )
+    if (report.receiptDigest && report.receiptUploadedAt) {
+      // Same artifact is consumed at most once in a business, including aliases/orders.
+      const artifactLock = `${input.tenantId}:manual-receipt:${report.receiptDigest}`
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${artifactLock}, 0))`
+      const duplicate = await tx.manualPaymentReport.findFirst({
+        where: {
+          id: { not: report.id },
+          receiptDigest: report.receiptDigest,
+          receiptUploadedAt: { not: null },
+          status: "CONFIRMED",
+          canonicalPaymentId: { not: null },
+          link: { tenantId: input.tenantId },
+        },
+        select: { id: true },
+      })
+      if (duplicate)
+        throw new ManualPaymentError(
+          "CONFLICT",
+          "This receipt has already been used. Review the original transfer with the business.",
+        )
+    }
+    if (input.transferReferenceNamespace) {
+      await consumeManualTransferInTransaction(tx, {
+        tenantId: input.tenantId,
+        reportId: report.id,
+        currencyCode: order.currencyCode,
+        receivingAccountId: input.moneyAccountId,
+        receivingAccountNumber: receivedAccount.bankAccountNumber ?? "",
+        namespace: input.transferReferenceNamespace,
+        rawReference: input.reference ?? "",
+        amountMinor: input.receivedAmountMinor,
+        receivedAt: input.receivedAt,
+        validatedByUserId: input.actorUserId,
+        bankCheckAttested: input.bankCheckAttested,
+      })
+    }
     const result = await recordCommercialOrderPaymentInTransaction(
       tx,
       {

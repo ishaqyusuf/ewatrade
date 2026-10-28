@@ -74,7 +74,8 @@
     "./commerce-quote-review-budget": "./src/queries/commerce-quote-review-budget.ts",
     "./commerce-quote-reviewed-issue": "./src/queries/commerce-quote-reviewed-issue.ts",
     "./commerce-quote-reviewed-decision": "./src/queries/commerce-quote-reviewed-decision.ts",
-    "./own-transaction": "./src/queries/own-transaction.ts"
+    "./own-transaction": "./src/queries/own-transaction.ts",
+    "./manual-payment-assessments": "./src/queries/manual-payment-assessments.ts"
   },
   "scripts": {
     "seed:category-suggestion-config": "bun scripts/seed-category-suggestion-config.ts",
@@ -108,7 +109,8 @@
     "@prisma/client": "7.6.0",
     "pg": "^8.16.3",
     "zod": "catalog:",
-    "@ewatrade/order-receipts": "workspace:*"
+    "@ewatrade/order-receipts": "workspace:*",
+    "@ewatrade/payments": "workspace:*"
   },
   "devDependencies": {
     "@biomejs/biome": "^1.9.4",

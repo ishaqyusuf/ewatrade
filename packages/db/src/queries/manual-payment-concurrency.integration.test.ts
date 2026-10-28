@@ -122,6 +122,7 @@ function client(tx: Prisma.TransactionClient): PrismaClient {
             moneyAccountId: account.id,
             receivedAt: new Date(),
             reference: "concurrent-credit",
+            bankCheckAttested: true,
           }
         },
         { maxWait: 10000, timeout: 120000 },
@@ -171,6 +172,7 @@ function client(tx: Prisma.TransactionClient): PrismaClient {
           await tx.manualPaymentReport.deleteMany({
             where: { link: { tenantId } },
           })
+          await tx.manualPaymentAttempt.deleteMany({ where: { tenantId } })
           await tx.manualPaymentLink.deleteMany({ where: { tenantId } })
           await tx.commercialOrderPayment.deleteMany({ where: { tenantId } })
           await tx.commercialOrder.deleteMany({ where: { tenantId } })
