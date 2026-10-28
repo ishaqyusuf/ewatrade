@@ -8,6 +8,7 @@ import {
 } from "@/components/dashboard/overview-metrics"
 import { OverviewNeedsYou } from "@/components/dashboard/overview-needs-you"
 import { OverviewRecentOrders } from "@/components/dashboard/overview-recent-orders"
+import { OverviewSheets } from "@/components/dashboard/overview-sheets"
 import {
   OnlineStoreStrip,
   OwnerBusinesses,
@@ -18,8 +19,6 @@ import {
 } from "@/components/dashboard/workspace-error"
 import { PageHeader } from "@/components/page-header"
 import { SetupAssistant } from "@/components/setup-assistant/setup-assistant"
-import { InventoryOperationSheet } from "@/components/sheets/inventory-operation-sheet"
-import { OrderCreateSheet } from "@/components/sheets/order-create-sheet"
 import { getGettingStartedActions } from "@/lib/dashboard-overview"
 import { canOperateInventory } from "@/lib/inventory-operations"
 import {
@@ -46,16 +45,21 @@ export default async function DashboardHomePage() {
   const ctx = session ? await getActiveTenant(session.user.id) : null
   const store = ctx?.activeStore
   const tenant = ctx?.tenant
-  const scope =
+  const availabilityRead =
+    store && tenant
+      ? getDashboardFeatureAvailability(store.id, tenant.id)
+      : Promise.resolve(null)
+  const scopeRead =
     ctx && session && store
-      ? await resolveOrderScope(prisma, {
+      ? resolveOrderScope(prisma, {
           role: ctx.membership.role,
           userId: session.user.id,
           tenantId: ctx.tenant.id,
           storeId: store.id,
           allowedStoreIds: ctx.stores.map((row) => row.id),
         })
-      : undefined
+      : Promise.resolve(undefined)
+  const [scope, availability] = await Promise.all([scopeRead, availabilityRead])
   const canCreateOrder = canUseSalesOperations(ctx?.membership.role)
   const canUpdateStock = canOperateInventory(
     ctx?.membership.role,
@@ -69,10 +73,6 @@ export default async function DashboardHomePage() {
   const customerDirectory =
     ctx?.membership.staffAccessMode !== "SCOPED" ||
     ["OWNER", "ADMIN"].includes(ctx?.membership.role ?? "")
-  const availability =
-    store && tenant
-      ? await getDashboardFeatureAvailability(store.id, tenant.id)
-      : null
   const actions =
     availability && !availability.hasOrders
       ? getGettingStartedActions(
@@ -217,15 +217,14 @@ export default async function DashboardHomePage() {
         ) : null}
       </div>
       {sections}
-      {store && canCreateOrder ? (
-        <OrderCreateSheet
-          key={`order:${store.id}`}
+      {store ? (
+        <OverviewSheets
+          key={store.id}
           store={store}
+          orders={canCreateOrder}
+          inventory={canUpdateStock}
           customerDirectory={customerDirectory}
         />
-      ) : null}
-      {store && canUpdateStock ? (
-        <InventoryOperationSheet key={`stock:${store.id}`} store={store} />
       ) : null}
       {store ? (
         <OverviewFab

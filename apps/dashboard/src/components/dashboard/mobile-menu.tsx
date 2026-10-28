@@ -4,13 +4,13 @@ import type { DashboardNavItem } from "@/lib/navigation"
 import { getDashboardRoleLabel } from "@/lib/navigation"
 import type { SessionUser } from "@/lib/session"
 import type { TenantContext } from "@/lib/tenant"
+import { Button } from "@ewatrade/ui/button"
 import {
-  Button,
   Sheet,
   SheetClose,
   SheetContent,
   SheetTrigger,
-} from "@ewatrade/ui"
+} from "@ewatrade/ui/sheet"
 import { Cancel01Icon, Menu01Icon } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { usePathname } from "next/navigation"

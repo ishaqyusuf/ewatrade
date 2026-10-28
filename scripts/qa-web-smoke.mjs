@@ -135,7 +135,38 @@ export async function webJourney(page, config) {
         })
       }
     }
+    await page
+      .getByRole("button", { name: "New: choose what to add", exact: true })
+      .click()
+    await page.getByRole("menuitem", { name: "New order", exact: true }).click()
+    await page
+      .getByRole("heading", { name: "New order", exact: true })
+      .waitFor()
+    await page.getByRole("button", { name: "Close", exact: true }).click()
+    await page
+      .getByRole("heading", { name: "New order", exact: true })
+      .waitFor({ state: "hidden" })
+    await page
+      .getByRole("button", { name: "New: choose what to add", exact: true })
+      .click()
+    await page
+      .getByRole("menuitem", { name: "Update stock", exact: true })
+      .click()
+    await page
+      .getByRole("heading", { name: "Correct stock", exact: true })
+      .waitFor()
+    await page.getByRole("button", { name: "Close", exact: true }).click()
+    await page
+      .getByRole("heading", { name: "Correct stock", exact: true })
+      .waitFor({ state: "hidden" })
+    if (mutations.length)
+      throw new Error(
+        "Unexpected business write blocked during lazy sheet acceptance.",
+      )
     mkdirSync(performanceArtifacts, { recursive: true })
+    await page.screenshot({
+      path: resolve(performanceArtifacts, "dashboard-home.png"),
+    })
     writeFileSync(
       resolve(performanceArtifacts, "performance.json"),
       JSON.stringify(
@@ -145,6 +176,8 @@ export async function webJourney(page, config) {
           samples,
           blockedBusinessWrites: mutations.length,
           shellRetained: true,
+          overviewSheets:
+            "order and stock sheets opened and cancelled without submission",
         },
         null,
         2,

@@ -4,8 +4,8 @@ import { FormFeedback } from "@/components/forms/form-feedback"
 import { useWorkspaceSwitch } from "@/hooks/use-workspace-switch"
 import type { TenantContext } from "@/lib/tenant"
 import { cn } from "@/utils"
+import { Button } from "@ewatrade/ui/button"
 import {
-  Button,
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuGroup,
@@ -13,7 +13,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@ewatrade/ui"
+} from "@ewatrade/ui/dropdown-menu"
 import {
   ArrowDown01Icon,
   Building02Icon,

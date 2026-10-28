@@ -1,11 +1,13 @@
 "use client"
 
+import dynamic from "next/dynamic"
 import { type ReactNode, useSyncExternalStore } from "react"
-import {
-  type GlobalSheetAccess,
-  type GlobalSheetStore,
-  GlobalSheets,
-} from "./global-sheets"
+import type { GlobalSheetAccess, GlobalSheetStore } from "./global-sheets"
+
+const GlobalSheets = dynamic(
+  () => import("./global-sheets").then((module) => module.GlobalSheets),
+  { ssr: false },
+)
 
 const subscribeToHydration = () => () => undefined
 

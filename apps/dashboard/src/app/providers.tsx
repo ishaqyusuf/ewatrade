@@ -3,7 +3,7 @@
 import { ThemeProvider } from "@/components/dashboard/theme-provider"
 import { QaDashboardProvider } from "@/components/qa/qa-quick-fill"
 import { TRPCReactProvider } from "@/trpc/client"
-import { Toaster } from "@ewatrade/ui"
+import { Toaster } from "@ewatrade/ui/sonner"
 import { NuqsAdapter } from "nuqs/adapters/next/app"
 
 export function Providers({

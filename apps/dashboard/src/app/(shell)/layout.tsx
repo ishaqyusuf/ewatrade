@@ -1,6 +1,7 @@
 import { CatalogCreateAccessProvider } from "@/components/catalog-item/catalog-create-access"
 import { catalogDetailAccessFingerprint } from "@/components/catalog-item/detail/read-access"
 import { DashboardHeader } from "@/components/dashboard/header"
+import { PageLoading } from "@/components/dashboard/page-loading"
 import { DashboardSidebar } from "@/components/dashboard/sidebar"
 import { QuickAssistant } from "@/components/quick-assistant/quick-assistant"
 import { GlobalSheetsProvider } from "@/components/sheets/global-sheets-provider"
@@ -22,10 +23,9 @@ import {
 } from "@ewatrade/db/queries"
 import { headers } from "next/headers"
 import { redirect } from "next/navigation"
+import { Suspense } from "react"
 
-export default async function ShellLayout({
-  children,
-}: { children: React.ReactNode }) {
+async function ResolvedShell({ children }: { children: React.ReactNode }) {
   const session = await getServerSession()
   const headerStore = await headers()
 
@@ -190,5 +190,22 @@ export default async function ShellLayout({
         ) : null}
       </div>
     </div>
+  )
+}
+
+/** The auth/scope read stays authoritative while the initial document can stream feedback. */
+export default function ShellLayout({
+  children,
+}: { children: React.ReactNode }) {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen px-4 py-6 md:px-8">
+          <PageLoading />
+        </div>
+      }
+    >
+      <ResolvedShell>{children}</ResolvedShell>
+    </Suspense>
   )
 }

@@ -12,15 +12,15 @@ import {
 import type { DashboardNavItem } from "@/lib/navigation"
 import { useTRPC } from "@/trpc/client"
 import { cn } from "@/utils"
+import { Button } from "@ewatrade/ui/button"
 import {
-  Button,
   CommandDialog,
   CommandEmpty,
   CommandGroup,
   CommandInput,
   CommandItem,
   CommandList,
-} from "@ewatrade/ui"
+} from "@ewatrade/ui/command"
 import {
   Cancel01Icon,
   Search01Icon,

@@ -4,11 +4,9 @@ import { SignOut } from "@/components/dashboard/sign-out"
 import { ThemeSwitch } from "@/components/dashboard/theme-switch"
 import type { SessionUser } from "@/lib/session"
 import { getUserInitials } from "@/lib/user-display"
+import { Avatar, AvatarFallback, AvatarImage } from "@ewatrade/ui/avatar"
+import { Button } from "@ewatrade/ui/button"
 import {
-  Avatar,
-  AvatarFallback,
-  AvatarImage,
-  Button,
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuGroup,
@@ -16,7 +14,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@ewatrade/ui"
+} from "@ewatrade/ui/dropdown-menu"
 import Link from "next/link"
 
 type Props = {

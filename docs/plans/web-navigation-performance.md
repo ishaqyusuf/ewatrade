@@ -72,11 +72,11 @@ explicit evidence-based decision if changing them would add cost or weaken polic
 
 - [x] D0 Baseline: inspect current shared layout/providers and measure existing QA
   login, initial shell, representative route transition and warm return.
-- [ ] D1 Request context: deduplicate auth/Tenant/Store/context and preserve matching
+- [x] D1 Request context: deduplicate auth/Tenant/Store/context and preserve matching
   server/client query identity, current scope, revocation and post-write freshness.
-- [ ] D2 Critical rendering: remove unnecessary serial layout/page dependencies;
+- [x] D2 Critical rendering: remove unnecessary serial layout/page dependencies;
   start independent reads early and isolate optional loading/error work.
-- [ ] D3 Delivery and navigation: narrow measured imports/optional global features,
+- [x] D3 Delivery and navigation: narrow measured imports/optional global features,
   avoid mount-time query fanout, retain navigation/state/freshness contracts.
 - [ ] D4 Acceptance: focused checks and local production build, one existing-data
   navigation/smoke session, measurement comparison, Brain updates and owned commits.
@@ -182,6 +182,19 @@ H01/H02 gates remain separate from source smoke. No deployment is implied.
   First receipt rejected extra diagnostic stdout (fixed); second rejected source
   changes during its run. These are diagnostic observations, not passed receipts.
   No deployment/retry-by-deployment. Final acceptance will hold source steady.
+
+- D1: session/legal lookup now React request-memoized; active Tenant header/cookie
+  reads overlap. One cached RPC forwarding context retains cookie/auth/Tenant
+  selection, uses configured API directly instead of Dashboard proxy traversal,
+  and preserves caller cancellation with a15s read deadline. Existing query retry,
+  scope-switch generation and hydration key behavior remain. Focused15/59 and
+  full Dashboard types pass.
+- D2+D3 source: shell streams the existing fallback around its auth/scope boundary;
+  independent Overview scope/presence reads overlap. Global sheets use Midday's
+  client dynamic boundary; Overview order/stock forms load and mount only for
+  their owning URL state. Shared provider/menu/search/navigation imports use
+  explicit UI exports. Full Dashboard types pass; actual deferred-sheet interaction
+  and comparative timing remain D4. No table/form redesign or polling reduction.
 
 ## Midday migration contract and conformance checklist
 

@@ -36,7 +36,10 @@
     "./cn": "./src/lib/utils.ts",
     "./sonner": "./src/components/sonner.tsx",
     "./skeleton": "./src/components/skeleton.tsx",
-    "./select": "./src/components/select.tsx"
+    "./select": "./src/components/select.tsx",
+    "./avatar": "./src/components/avatar.tsx",
+    "./dropdown-menu": "./src/components/dropdown-menu.tsx",
+    "./command": "./src/components/command.tsx"
   },
   "scripts": {
     "lint": "biome check .",
