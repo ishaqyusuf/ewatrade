@@ -19,6 +19,9 @@ export const suites = {
     "apps/storefront/src/lib/storefront-request-result.test.ts",
     "apps/dashboard/src/components/storefront/storefront-preview-navigation.test.ts",
     "packages/storefront-contracts/src/resources.test.ts",
+    "packages/storefront-contracts/src/features.test.ts",
+    "packages/storefront-runtime/src/commerce/provider.test.tsx",
+    "packages/storefront-runtime/src/features/features.test.tsx",
     "packages/storefront-runtime/src/links.test.ts",
     "packages/storefront-runtime/src/share.test.ts",
     "packages/storefront-templates/src/shared/enquiry-selection.test.ts",
@@ -44,6 +47,7 @@ export const suites = {
     "packages/communications/src/whatsapp-typing.test.ts",
     "apps/api/src/health-routes.test.ts",
     "packages/db/src/queries/public-storefront-listing.test.ts",
+    "packages/db/src/queries/storefront-customer-scope.test.ts",
   ],
 }
 type Suite = keyof typeof suites

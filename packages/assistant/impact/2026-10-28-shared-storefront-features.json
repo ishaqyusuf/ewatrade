@@ -1,0 +1,51 @@
+{
+  "version": 1,
+  "id": "2026-10-28-shared-storefront-features",
+  "tickets": ["H02"],
+  "summary": "Extract shared storefront customer journeys and separate historical customer access from new login and order intake policy.",
+  "noAssistantImpact": "Customer identity, OTP, receipt capability proofs, request recovery and customer-initiated actions remain excluded from model tools and ordinary model input. Existing domain commands remain canonical. Shared UI and template configuration do not grant permission. Existing Host/published Site/active release/Store scope and current entitlement checks remain; new login effects recheck publication under a Site lock while valid session/history/receipt reads do not depend on the selected template or new-intake policy. No new protected merchant procedure, assistant capability, provider activation or deployment. Future neutral feature settings must retain existing Owner/Admin draft/save/publication authority and explicit consent; design generation cannot silently alter operational configuration.",
+  "capabilities": [],
+  "procedures": [],
+  "docs": [
+    {
+      "topic": "feature",
+      "status": "local_only",
+      "path": ".brain/features/shared-storefront-features.md"
+    },
+    {
+      "topic": "api",
+      "status": "local_only",
+      "path": ".brain/api/contracts.md"
+    },
+    {
+      "topic": "permissions",
+      "status": "local_only",
+      "path": ".brain/api/permissions.md"
+    },
+    {
+      "topic": "schema",
+      "status": "not_applicable",
+      "note": "Existing customer/request/Site records and JSON composition storage; no Prisma schema edit in this extraction."
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "test",
+      "path": "packages/storefront-contracts/src/features.test.ts",
+      "executed": true,
+      "result": "Independent login/order configuration, legacy normalization, unknown versions and entitlement/channel refusal pass in offline tests."
+    },
+    {
+      "kind": "test",
+      "path": "packages/db/src/queries/storefront-customer-scope.test.ts",
+      "executed": true,
+      "result": "The shared scope resolver interface passes template-switch/history continuity, foreign-host denial, invalid publication/pin/runtime refusal and exact active-Store scope tests with isolated adapters. This is not connected transaction/concurrency proof."
+    },
+    {
+      "kind": "review",
+      "path": "docs/plans/shared-storefront-features-extraction.md",
+      "executed": true,
+      "result": "Owner-authorized 27-work-package local extraction contract preserves customer/session/token/bag compatibility, immutable releases and no-deployment boundary. Full template/UI/transaction acceptance remains open until the final phase."
+    }
+  ]
+}

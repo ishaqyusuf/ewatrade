@@ -8,13 +8,12 @@ import {
 } from "node:crypto"
 import { normalizeWhatsAppPhone } from "@ewatrade/customer-messages"
 import {
-  ORDERING_TEMPLATE_KEYS,
   storefrontCustomerIdentifierSchema,
   storefrontOtpVerifySchema,
   storefrontRequestReferenceSchema,
 } from "@ewatrade/storefront-contracts/orders"
 import type { PrismaClient } from "../../generated/prisma/client"
-import { loadLiveStorefrontForHost } from "./storefront-factory-loader"
+import { resolveStorefrontCustomerScope as accountScope } from "./storefront-customer-scope"
 import type { DbClient } from "./types"
 
 /**
@@ -83,26 +82,26 @@ const sha256 = (value: string) =>
 const hmac = (secret: string, value: string) =>
   createHmac("sha256", secret).update(value).digest("hex")
 
-async function accountScope(db: DbClient, host: string) {
-  const current = await loadLiveStorefrontForHost(db, host, undefined, {})
-  if (!current) return null
-  const release = current.site.release
-  if (!ORDERING_TEMPLATE_KEYS.includes(release.templateKey)) return null
+async function assertCurrentLoginScope(
+  tx: DbClient,
+  host: string,
+  expected: NonNullable<Awaited<ReturnType<typeof accountScope>>>,
+) {
+  const locked = await tx.$queryRaw<{ id: string }[]>`
+    SELECT "id" FROM "Site"
+    WHERE "id" = ${expected.siteId} AND "tenantId" = ${expected.tenantId}
+    FOR SHARE`
+  const fresh = locked.length ? await accountScope(tx, host) : null
   if (
-    !(current.storefront as { customerRequestsAllowed?: boolean })
-      .customerRequestsAllowed
+    !fresh?.allowNewLogin ||
+    fresh.tenantId !== expected.tenantId ||
+    fresh.storeId !== expected.storeId ||
+    fresh.releaseId !== expected.releaseId
   )
-    return null
-  const store = await db.store.findFirst({
-    where: { id: current.site.storeId },
-    select: { countryCode: true },
-  })
-  return {
-    tenantId: release.tenantId,
-    storeId: current.site.storeId,
-    businessName: current.storefront.name,
-    countryCode: store?.countryCode ?? "NG",
-  }
+    throw new StorefrontCustomerError(
+      "UNAVAILABLE",
+      "Login isn't available for this shop.",
+    )
 }
 
 function normalizeIdentifier(
@@ -145,7 +144,7 @@ export async function requestStorefrontCustomerOtp(
     throw new StorefrontCustomerError("UNAVAILABLE", "Login isn't available.")
   const value = storefrontCustomerIdentifierSchema.parse(input.identifier)
   const scope = await accountScope(db, input.host)
-  if (!scope)
+  if (!scope?.allowNewLogin)
     throw new StorefrontCustomerError(
       "UNAVAILABLE",
       "Login isn't available for this shop.",
@@ -171,6 +170,7 @@ export async function requestStorefrontCustomerOtp(
   const code = String(randomInt(0, 1_000_000)).padStart(6, "0")
 
   const challenge = await db.$transaction(async (tx) => {
+    await assertCurrentLoginScope(tx, input.host, scope)
     // Serialize challenges for one identifier so limits can't be raced.
     await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${identifierDigest}))`
     const recent = await tx.storefrontCustomerOtpChallenge.findMany({
@@ -291,12 +291,13 @@ export async function verifyStorefrontCustomerOtp(
 ) {
   const value = storefrontOtpVerifySchema.parse(input.verify)
   const scope = await accountScope(db, input.host)
-  if (!scope)
+  if (!scope?.allowNewLogin)
     throw new StorefrontCustomerError(
       "UNAVAILABLE",
       "Login isn't available for this shop.",
     )
   const outcome = await db.$transaction(async (tx) => {
+    await assertCurrentLoginScope(tx, input.host, scope)
     const locked = await tx.$queryRaw<{ id: string }[]>`
       SELECT "id" FROM "StorefrontCustomerOtpChallenge"
       WHERE "id" = ${value.challengeId} AND "tenantId" = ${scope.tenantId}

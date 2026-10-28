@@ -1,9 +1,8 @@
 import { createHash, createHmac, randomInt } from "node:crypto"
 import { normalizeWhatsAppPhone } from "@ewatrade/customer-messages"
+import { readStorefrontFeatureConfig } from "@ewatrade/storefront-contracts/features"
 import {
-  ORDERING_TEMPLATE_KEYS,
   type StorefrontOrderLineIssue,
-  orderingFulfilmentMethods,
   storefrontOrderRequestSchema,
   storefrontRequestReplySchema,
   storefrontWithdrawSchema,
@@ -21,6 +20,7 @@ import { publicStockState } from "./public-storefront-display"
 import { findRetailOpsPlan } from "./retail-ops-subscription-plans"
 import { resolveRetailOpsPlanId } from "./retail-ops-subscriptions"
 import { assertStoreConversationTextScreened } from "./store-conversation-text-safety"
+import { resolveStorefrontCustomerScope } from "./storefront-customer-scope"
 import { loadLiveStorefrontForHost } from "./storefront-factory-loader"
 import { storefrontPreferredDate } from "./storefront-preferred-date"
 import { siteContentHash } from "./storefront-sites"
@@ -127,13 +127,14 @@ export async function resolveStorefrontOrderingScope(
   if (!current) return null
   const { site, storefront } = current
   const release = site.release
+  const features = readStorefrontFeatureConfig(release.composition)
   const pinned = release.composition as {
     template?: { key?: unknown; version?: unknown }
   } | null
   if (
     release.contentHash !== siteContentHash(release.composition) ||
     pinned?.template?.key !== release.templateKey ||
-    !ORDERING_TEMPLATE_KEYS.includes(release.templateKey) ||
+    !features?.orders.enabled ||
     !(storefront as { customerRequestsAllowed?: boolean })
       .customerRequestsAllowed
   )
@@ -152,7 +153,7 @@ export async function resolveStorefrontOrderingScope(
     currencyCode: storefront.currencyCode,
     countryCode: store.countryCode,
     storefrontItems: storefront.storefrontItems ?? null,
-    fulfilment: orderingFulfilmentMethods(release.composition),
+    fulfilment: features.orders.fulfilment,
     timezone: store.tenant.timezone,
   }
 }
@@ -832,14 +833,7 @@ function projectReceipt(row: ReceiptRow, businessName: string) {
 export type StorefrontOrderReceipt = ReturnType<typeof projectReceipt>
 
 async function hostTenant(db: DbClient, host: string) {
-  const current = await loadLiveStorefrontForHost(db, host, undefined, {})
-  return current
-    ? {
-        tenantId: current.site.release.tenantId,
-        storeId: current.site.storeId,
-        businessName: current.storefront.name,
-      }
-    : null
+  return resolveStorefrontCustomerScope(db, host)
 }
 
 /**

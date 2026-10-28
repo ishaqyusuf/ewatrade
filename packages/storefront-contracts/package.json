@@ -14,7 +14,8 @@
     "./commerce": "./src/commerce.ts",
     "./customer": "./src/customer.ts",
     "./receipt": "./src/receipt.ts",
-    "./routes": "./src/routes.ts"
+    "./routes": "./src/routes.ts",
+    "./features": "./src/features.ts"
   },
   "dependencies": {
     "zod": "catalog:"

@@ -5,12 +5,12 @@ import {
   siteContentHash,
 } from "@ewatrade/db/queries"
 import { storefrontActionSchema } from "@ewatrade/storefront-contracts/actions"
-import { STOREFRONT_RUNTIME_VERSION } from "@ewatrade/storefront-contracts/manifest"
 import {
-  ORDERING_TEMPLATE_KEYS,
-  orderingFulfilmentMethods,
-  publicLowStockCountsEnabled,
-} from "@ewatrade/storefront-contracts/orders"
+  readStorefrontFeatureConfig,
+  storefrontCommerceAvailability,
+} from "@ewatrade/storefront-contracts/features"
+import { STOREFRONT_RUNTIME_VERSION } from "@ewatrade/storefront-contracts/manifest"
+import { publicLowStockCountsEnabled } from "@ewatrade/storefront-contracts/orders"
 import { catalogQuerySchema } from "@ewatrade/storefront-contracts/resources"
 import {
   itemWhatsAppUrl,
@@ -92,9 +92,10 @@ function factoryDependencies(db: Db, host: string, query: unknown) {
         hasBusinessContact?: boolean
         storefrontItems?: number | null
       }
-      const adaptive = ORDERING_TEMPLATE_KEYS.includes(
-        value.site.release.templateKey,
+      const features = readStorefrontFeatureConfig(
+        value.site.release.composition,
       )
+      const adaptive = features?.orders.enabled ?? false
       const offeringCounts = adaptive
         ? await countPublicStorefrontOfferings(db, {
             tenantId: value.site.release.tenantId,
@@ -129,38 +130,27 @@ function factoryDependencies(db: Db, host: string, query: unknown) {
           )
         : []
       // Presentation hints only; every write re-derives these facts on the server.
-      const ordering =
-        ORDERING_TEMPLATE_KEYS.includes(value.site.release.templateKey) &&
-        Boolean(store.customerRequestsAllowed)
-      const otp = ordering
-        ? storefrontOtpAdapter({ qaTenant: Boolean(store.isQaPreview) })
-        : null
+      const otp =
+        features?.accounts.enabled && store.customerRequestsAllowed
+          ? storefrontOtpAdapter({ qaTenant: Boolean(store.isQaPreview) })
+          : null
       return publicStorefrontResources(
         {
           ...value.storefront,
           ...(offeringCounts ? { offeringCounts } : {}),
           ...(pinnedItems.length ? { pinnedItems } : {}),
-          ...(ORDERING_TEMPLATE_KEYS.includes(value.site.release.templateKey)
+          ...(features &&
+          (features.accounts.enabled ||
+            features.orders.enabled ||
+            (value.site.release.composition as { schemaVersion?: unknown })
+              .schemaVersion === 2)
             ? {
-                commerce: {
-                  orderRequests: ordering
-                    ? { available: (offeringCounts?.products ?? 0) > 0 }
-                    : {
-                        available: false,
-                        reason: "Not taking order requests.",
-                      },
-                  customerAccounts: otp
-                    ? { available: true, channels: otp.channels }
-                    : {
-                        available: false,
-                        reason: "Login isn't available.",
-                        channels: [],
-                      },
-                  fulfilment: orderingFulfilmentMethods(
-                    value.site.release.composition,
-                  ),
+                commerce: storefrontCommerceAvailability(features, {
+                  requestsEntitled: Boolean(store.customerRequestsAllowed),
+                  products: offeringCounts?.products ?? 0,
+                  channels: otp?.channels ?? [],
                   hasContact: Boolean(store.hasBusinessContact),
-                },
+                }),
               }
             : {}),
         },

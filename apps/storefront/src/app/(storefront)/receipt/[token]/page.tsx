@@ -32,7 +32,7 @@ export default async function ReceiptPage({ params }: Props) {
   const { load, storefront } = await loadStorefrontPage()
   if (
     load.status !== "ready" ||
-    load.snapshot.composition.template.key !== "commerce-studio" ||
+    !load.snapshot.resources.commerce ||
     !storefront
   )
     notFound()

@@ -24,11 +24,7 @@ type Props = { searchParams: Promise<{ next?: string; find?: string }> }
 
 export default async function AccountPage({ searchParams }: Props) {
   const { load, storefront } = await loadStorefrontPage()
-  if (
-    load.status !== "ready" ||
-    load.snapshot.composition.template.key !== "commerce-studio"
-  )
-    notFound()
+  if (load.status !== "ready" || !load.snapshot.resources.commerce) notFound()
   const session = await loadCustomerSession()
   const { next, find } = await searchParams
   // A reference is only remembered intent; the verified session decides what it opens.

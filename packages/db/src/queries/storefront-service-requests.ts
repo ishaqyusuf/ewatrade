@@ -14,7 +14,7 @@ import { z } from "zod"
 import type { Prisma, PrismaClient } from "../../generated/prisma/client"
 import { issueServiceQuote } from "./service-public"
 import { assertStoreConversationTextScreened } from "./store-conversation-text-safety"
-import { loadLiveStorefrontForHost } from "./storefront-factory-loader"
+import { resolveStorefrontCustomerScope } from "./storefront-customer-scope"
 import {
   StorefrontOrderError,
   newStorefrontReference,
@@ -265,14 +265,7 @@ export async function submitStorefrontServiceRequestWithReceipt(
 }
 
 async function businessForHost(db: DbClient, host: string) {
-  const current = await loadLiveStorefrontForHost(db, host, undefined, {})
-  return current
-    ? {
-        tenantId: current.site.release.tenantId,
-        storeId: current.site.storeId,
-        businessName: current.storefront.name,
-      }
-    : null
+  return resolveStorefrontCustomerScope(db, host)
 }
 
 /** Customer stage for a service request, its current quote and resulting Order. */

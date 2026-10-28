@@ -14,10 +14,9 @@ import { type ReactNode, Suspense } from "react"
 async function PublishedStorefront({ children }: { children: ReactNode }) {
   const { load } = await loadStorefrontPage()
   if (load.status !== "ready") notFound()
-  const customer =
-    load.snapshot.composition.template.key === "commerce-studio"
-      ? customerView(await loadCustomerSession())
-      : null
+  const customer = load.snapshot.resources.commerce
+    ? customerView(await loadCustomerSession())
+    : null
   return (
     <StorefrontShell
       data={storefrontPresentation(load.snapshot, customer)}

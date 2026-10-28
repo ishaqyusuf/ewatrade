@@ -22,11 +22,7 @@ export async function generateMetadata(): Promise<Metadata> {
 /** Domain-owned route: only templates that take order requests render it. */
 export default async function CheckoutPage() {
   const { load } = await loadStorefrontPage()
-  if (
-    load.status !== "ready" ||
-    load.snapshot.composition.template.key !== "commerce-studio"
-  )
-    notFound()
+  if (load.status !== "ready" || !load.snapshot.resources.commerce) notFound()
   const session = await loadCustomerSession()
   return (
     <StorefrontContent

@@ -32,10 +32,9 @@ export default async function AboutPage() {
     )
   )
     notFound()
-  const customer =
-    load.snapshot.composition.template.key === "commerce-studio"
-      ? customerView(await loadCustomerSession())
-      : undefined
+  const customer = load.snapshot.resources.commerce
+    ? customerView(await loadCustomerSession())
+    : undefined
   return (
     <StorefrontContent
       snapshot={load.snapshot}

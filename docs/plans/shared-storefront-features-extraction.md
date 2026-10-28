@@ -80,9 +80,9 @@ already exist and must be reused.
 - [x] P3.3 Integrate Commerce Studio as a shared-feature consumer.
 
 ### Phase 4 — server policy and routes
-- [ ] P4.1 Separate customer/history/receipt/new-intake policy.
-- [ ] P4.2 Remove template identity guards in favor of operation checks.
-- [ ] P4.3 Verify scope, revocation, continuity and current-state checks.
+- [x] P4.1 Separate customer/history/receipt/new-intake policy.
+- [x] P4.2 Remove template identity guards in favor of operation checks.
+- [x] P4.3 Verify scope, revocation, continuity and current-state checks.
 
 ### Phase 5 — operational configuration
 - [ ] P5.1 Add versioned neutral settings and deterministic legacy normalization.
@@ -186,3 +186,14 @@ Commerce Studio as a consumer; old imports forward. 18 existing focused tests /
 Concurrent quick-login, preferred-time/payment-copy and CSS additions remain
 uncommitted at their shared destinations, excluded from the owned candidate.
 Browser/interaction acceptance remains Phase8 work, not inferred from SSR.
+
+Phase 4 source: customer scope now validates published composition/hash/pin/runtime
+and exact active Store independently of new login/intake. OTP writes take a Site
+share lock and freshly recheck scope in their transaction. Order/receipt/service
+queries reuse neutral policy/scope; routes use the commerce resource rather than
+a template-name guard. Other-template feature-page presentation remains Phase7.
+Nine new offline policy/scope tests pass; total scoped fast195/964 passes. Owned
+candidate storefront TypeScript graph0; H02 passes with this task impact record.
+H01 check reports the pre-existing shared coverage snapshot stale; it is not
+claimed green or overwritten here. Connected lock/race and browser acceptance
+remain explicit Phase8 gates. No schema/provider/deployment change.
