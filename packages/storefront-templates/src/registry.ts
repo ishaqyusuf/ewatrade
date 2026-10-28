@@ -367,7 +367,10 @@ export function migrateCommerceStudioMediaDraft(
  * Item IDs a composition pins through manifest `catalog-items` fields, in page order.
  * Empty for templates that declare no such field, so their loads never change.
  */
-export function pinnedCatalogItemIds(composition: StorefrontComposition) {
+export function pinnedCatalogItemIds(
+  composition: StorefrontComposition,
+  pageKey?: string,
+) {
   let manifest: TemplateManifest
   try {
     manifest = getTemplateManifest(composition, "render")
@@ -376,7 +379,9 @@ export function pinnedCatalogItemIds(composition: StorefrontComposition) {
     return []
   }
   const ids: string[] = []
-  for (const page of composition.pages)
+  for (const page of composition.pages.filter(
+    (page) => pageKey === undefined || page.key === pageKey,
+  ))
     for (const section of page.sections) {
       if (!section.visible) continue
       const definition = manifest.sections.find(

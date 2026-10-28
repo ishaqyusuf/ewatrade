@@ -27,6 +27,7 @@ export async function storefrontPageMetadata(
     q,
     availability,
     sort,
+    pageKey,
   )
   if (load.status !== "ready" || !storefront)
     return {
@@ -87,6 +88,7 @@ async function ResolvedTemplatePage({
     q,
     availability,
     sort,
+    pageKey,
   )
   if (
     load.status !== "ready" ||

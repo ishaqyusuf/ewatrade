@@ -2,6 +2,8 @@ import {
   countPublicStorefrontOfferings,
   loadLiveStorefrontForHost,
   loadPublicStorefrontPinnedItems,
+  type loadStorefrontContextForHost,
+  loadStorefrontResourcesForContext,
   siteContentHash,
 } from "@ewatrade/db/queries"
 import { storefrontActionSchema } from "@ewatrade/storefront-contracts/actions"
@@ -36,17 +38,36 @@ import {
 import { storefrontOtpAdapter } from "./storefront-commerce"
 
 type Db = Parameters<typeof loadLiveStorefrontForHost>[0]
+type PageSelection = {
+  pageKey?: string
+  context?: Awaited<ReturnType<typeof loadStorefrontContextForHost>>
+  catalog?: "none" | "detail"
+}
 
 /** Request-local only. Scope comes from verified Host → Site → its active release. */
-function factoryDependencies(db: Db, host: string, query: unknown) {
+function factoryDependencies(
+  db: Db,
+  host: string,
+  query: unknown,
+  selection: PageSelection = {},
+) {
   const checkedQuery = catalogQuerySchema.safeParse(query)
   const parsed = checkedQuery.success ? checkedQuery.data : {}
-  const current = loadLiveStorefrontForHost(
-    db,
-    host,
-    parsed.after,
-    parsed,
-  ).then(async (value) => {
+  const source =
+    "context" in selection
+      ? selection.context
+        ? loadStorefrontResourcesForContext(
+            db,
+            selection.context,
+            parsed.after,
+            parsed,
+            { catalog: selection.catalog },
+          )
+        : Promise.resolve(null)
+      : loadLiveStorefrontForHost(db, host, parsed.after, parsed, {
+          catalog: selection.catalog,
+        })
+  const current = source.then(async (value) => {
     if (!value) return null
     const release = value.site.release
     const pinned = release.composition as {
@@ -113,6 +134,7 @@ function factoryDependencies(db: Db, host: string, query: unknown) {
         value.site.release.composition as Parameters<
           typeof pinnedCatalogItemIds
         >[0],
+        selection.pageKey,
       ).filter((id) => !value.storefront.items.some((item) => item.id === id))
       // Exact low-stock counts only for an explicit opt-in in the active release.
       const lowStockCounts = publicLowStockCountsEnabled(
@@ -166,8 +188,9 @@ export async function loadFactoryStorefront(
   db: Db,
   host: string,
   query: unknown = {},
+  selection: PageSelection = {},
 ) {
-  const deps = factoryDependencies(db, host, query)
+  const deps = factoryDependencies(db, host, query, selection)
   const load = await loadStorefront(deps, query)
   return { load, storefront: (await deps.current)?.storefront ?? null }
 }

@@ -3,7 +3,7 @@ import { storefrontOtpAdapter } from "@/lib/storefront-commerce"
 import {
   customerView,
   loadCustomerSession,
-  loadStorefrontPage,
+  loadStorefrontFrame,
   signedInAccount,
 } from "@/lib/storefront-pages"
 import { storefrontRequestReferenceSchema } from "@ewatrade/storefront-contracts/orders"
@@ -13,7 +13,7 @@ import { notFound } from "next/navigation"
 export const dynamic = "force-dynamic"
 
 export async function generateMetadata(): Promise<Metadata> {
-  const { storefront } = await loadStorefrontPage()
+  const { storefront } = await loadStorefrontFrame("account")
   return {
     title: storefront ? `Your account | ${storefront.name}` : "Account",
     robots: { index: false, follow: false },
@@ -23,7 +23,7 @@ export async function generateMetadata(): Promise<Metadata> {
 type Props = { searchParams: Promise<{ next?: string; find?: string }> }
 
 export default async function AccountPage({ searchParams }: Props) {
-  const { load, storefront } = await loadStorefrontPage()
+  const { load, storefront } = await loadStorefrontFrame("account")
   if (load.status !== "ready" || !load.snapshot.resources.commerce) notFound()
   const session = await loadCustomerSession()
   const { next, find } = await searchParams

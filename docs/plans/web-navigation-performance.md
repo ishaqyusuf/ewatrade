@@ -55,7 +55,7 @@ explicit evidence-based decision if changing them would add cost or weaken polic
 - [x] S0 Baseline: preserve ownership, record local navigation and query-cost repro.
 - [x] S1 Authority: lightweight published Host/Tenant/Site/Store context; customer
   scope without listing/stock/category reads; preserve all eligibility checks.
-- [ ] S2 Route projections: shell/about/account/checkout/receipt/detail request only
+- [x] S2 Route projections: shell/about/account/checkout/receipt/detail request only
   their needed resources; share request context and metadata reads.
 - [ ] S3 Read pipeline: remove redundant work and overlap independent reads;
   retain plan cap, query-bound cursors, stock/price semantics and public DTO bounds.
@@ -131,6 +131,11 @@ H01/H02 gates remain separate from source smoke. No deployment is implied.
   `/tmp/ewatrade-web-performance-20261028/storefront-before/performance.json`.
   Anonymous run includes S1 source (no customer cookie); compilation partially
   warmed by selector repairs. This is development evidence, not production proof.
+
+- S2: request-local business context shared by layout/page/metadata; non-catalog
+  frames omit listings, paid detail reads only the eligible item, capped detail
+  checks bounded ID membership, and photo pins follow the requested page. Release
+  integrity is checked before resources. Focused34/271 and Storefront types pass.
 
 ## Midday migration contract and conformance checklist
 

@@ -1,9 +1,13 @@
 import { expect, test } from "bun:test"
 import { resolveStorefrontCustomerScope } from "./storefront-customer-scope"
+import {
+  loadStorefrontContextForHost,
+  loadStorefrontResourcesForContext,
+} from "./storefront-factory-loader"
 import { siteContentHash } from "./storefront-sites"
 import type { DbClient } from "./types"
 
-function repository() {
+function repository(plan: "starter" | "growth" = "starter") {
   const reads: string[] = []
   const composition = {
     schemaVersion: 1,
@@ -22,8 +26,14 @@ function repository() {
     slug: "merchant",
     timezone: "Africa/Lagos",
     dataClassification: "LIVE",
-    metadata: { retailOpsPlanId: "starter" },
-    subscription: null,
+    metadata: { retailOpsPlanId: plan },
+    subscription: {
+      plan: { key: plan },
+      provider: "MANUAL",
+      status: "ACTIVE",
+      billingSubscriptionId: null,
+      currentPeriodEndsAt: null,
+    },
     stores: [
       {
         id: "store-a",
@@ -107,6 +117,103 @@ test("customer scope resolves the real published repository path without a catal
   expect(
     reads.filter((read) => ["catalog", "categories", "stock"].includes(read)),
   ).toEqual([])
+})
+
+test("shell projections reuse authority without listing, categories or stock for both plans", async () => {
+  for (const plan of ["starter", "growth"] as const) {
+    const { db, reads } = repository(plan)
+    const context = await loadStorefrontContextForHost(
+      db,
+      "merchant.ewatrade.com",
+    )
+    expect(context).not.toBeNull()
+    if (!context) throw new Error("Expected a current publication")
+    const authorityReads = [...reads]
+    for (let page = 0; page < 2; page++) {
+      const result = await loadStorefrontResourcesForContext(
+        db,
+        context,
+        undefined,
+        {},
+        { catalog: "none" },
+      )
+      expect(result?.storefront).toMatchObject({
+        name: "Merchant",
+        items: [],
+        categories: [],
+        highlightedItem: null,
+      })
+    }
+    expect(reads).toEqual(authorityReads)
+  }
+})
+
+test("paid detail reads one eligible item without a listing, stock aggregation or categories", async () => {
+  const { db, reads } = repository("growth")
+  Object.assign(db.catalogItem, {
+    findFirst: async () => {
+      reads.push("detail")
+      return {
+        id: "item-a",
+        name: "Item A",
+        kind: "PRODUCT",
+        description: null,
+        categoryRecord: null,
+        illustrations: [],
+        offerings: [],
+      }
+    },
+  })
+  const context = await loadStorefrontContextForHost(
+    db,
+    "merchant.ewatrade.com",
+  )
+  if (!context) throw new Error("Expected a current publication")
+  const result = await loadStorefrontResourcesForContext(
+    db,
+    context,
+    undefined,
+    { item: "item-a", q: "unrelated" },
+    { catalog: "detail" },
+  )
+  expect(result?.storefront.highlightedItem?.id).toBe("item-a")
+  expect(result?.storefront.items).toEqual([])
+  expect(
+    reads.filter((read) =>
+      ["catalog", "categories", "stock", "detail"].includes(read),
+    ),
+  ).toEqual(["detail"])
+})
+
+test("capped detail checks bounded ID membership and cannot reveal an over-cap item", async () => {
+  const { db, reads } = repository()
+  const selections: unknown[] = []
+  Object.assign(db.catalogItem, {
+    findMany: async (query: unknown) => {
+      selections.push(query)
+      return [{ id: "one" }, { id: "two" }, { id: "three" }]
+    },
+    findFirst: async () => {
+      reads.push("detail")
+      return null
+    },
+  })
+  const context = await loadStorefrontContextForHost(
+    db,
+    "merchant.ewatrade.com",
+  )
+  if (!context) throw new Error("Expected a current publication")
+  const result = await loadStorefrontResourcesForContext(
+    db,
+    context,
+    undefined,
+    { item: "four" },
+    { catalog: "detail" },
+  )
+  expect(result?.storefront.highlightedItem).toBeNull()
+  expect(selections).toHaveLength(1)
+  expect(selections[0]).toMatchObject({ take: 3, select: { id: true } })
+  expect(reads).not.toContain("detail")
 })
 
 test("lightweight scope still refuses an unpublished or mismatched release", async () => {

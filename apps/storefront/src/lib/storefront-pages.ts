@@ -7,6 +7,7 @@ import {
   listLinkableStorefrontRequests,
   listStorefrontCustomerOrders,
   listStorefrontCustomerServiceRequests,
+  loadStorefrontContextForHost,
   maskStorefrontIdentifier,
   storefrontReceiptToken,
 } from "@ewatrade/db/queries"
@@ -24,6 +25,11 @@ import { cache } from "react"
 import { customerSessionToken, receiptSecret } from "./storefront-commerce"
 import { loadFactoryStorefront } from "./storefront-factory"
 
+const loadRequestContext = cache(async () => {
+  const host = (await headers()).get("host") ?? ""
+  return { host, context: await loadStorefrontContextForHost(prisma, host) }
+})
+
 const loadCachedStorefrontPage = cache(
   async (
     after?: string,
@@ -32,6 +38,7 @@ const loadCachedStorefrontPage = cache(
     q?: string,
     availability?: CatalogQuery["availability"],
     sort?: CatalogQuery["sort"],
+    pageKey = "home",
   ) => {
     const query = catalogQuerySchema.safeParse({
       after,
@@ -42,8 +49,18 @@ const loadCachedStorefrontPage = cache(
       sort,
     })
     if (!query.success) notFound()
-    const host = (await headers()).get("host") ?? ""
-    const result = await loadFactoryStorefront(prisma, host, query.data)
+    const { host, context } = await loadRequestContext()
+    const result = await loadFactoryStorefront(prisma, host, query.data, {
+      context,
+      pageKey,
+      catalog: ["shell", "about", "account", "checkout", "receipt"].includes(
+        pageKey,
+      )
+        ? "none"
+        : item
+          ? "detail"
+          : undefined,
+    })
     if (item && !result.storefront?.highlightedItem) notFound()
     return { ...result, host }
   },
@@ -56,8 +73,31 @@ export function loadStorefrontPage(
   q?: string,
   availability?: CatalogQuery["availability"],
   sort?: CatalogQuery["sort"],
+  pageKey = "home",
 ) {
-  return loadCachedStorefrontPage(after, category, item, q, availability, sort)
+  return loadCachedStorefrontPage(
+    after,
+    category,
+    item,
+    q,
+    availability,
+    sort,
+    pageKey,
+  )
+}
+
+export function loadStorefrontFrame(
+  pageKey: "shell" | "about" | "account" | "checkout" | "receipt",
+) {
+  return loadStorefrontPage(
+    undefined,
+    undefined,
+    undefined,
+    undefined,
+    undefined,
+    undefined,
+    pageKey,
+  )
 }
 
 export const loadCustomerSession = cache(async () => {

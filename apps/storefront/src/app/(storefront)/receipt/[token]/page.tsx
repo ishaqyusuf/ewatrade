@@ -3,7 +3,7 @@ import { manualPaymentUrl, quoteAccessSecret } from "@/lib/storefront-commerce"
 import {
   customerView,
   loadCustomerSession,
-  loadStorefrontPage,
+  loadStorefrontFrame,
 } from "@/lib/storefront-pages"
 import { prisma } from "@ewatrade/db"
 import {
@@ -29,7 +29,7 @@ export const metadata: Metadata = {
 /** Guest receipt: the token must belong to a request of the business behind this Host. */
 export default async function ReceiptPage({ params }: Props) {
   const { token } = await params
-  const { load, storefront } = await loadStorefrontPage()
+  const { load, storefront } = await loadStorefrontFrame("receipt")
   if (
     load.status !== "ready" ||
     !load.snapshot.resources.commerce ||

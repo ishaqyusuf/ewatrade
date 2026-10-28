@@ -3,14 +3,14 @@ import { storefrontMetadata } from "@/components/storefront/storefront-metadata"
 import {
   customerView,
   loadCustomerSession,
-  loadStorefrontPage as loadPage,
+  loadStorefrontFrame,
 } from "@/lib/storefront-pages"
 import { storefrontIndexingEnabled } from "@ewatrade/storefront-runtime/seo"
 import { notFound } from "next/navigation"
 
 export const dynamic = "force-dynamic"
 export async function generateMetadata() {
-  const { load, storefront } = await loadPage()
+  const { load, storefront } = await loadStorefrontFrame("about")
   return load.status === "ready" && storefront
     ? storefrontMetadata(
         storefront,
@@ -23,7 +23,7 @@ export async function generateMetadata() {
       }
 }
 export default async function AboutPage() {
-  const { load } = await loadPage()
+  const { load } = await loadStorefrontFrame("about")
   if (
     load.status !== "ready" ||
     !load.snapshot.composition.pages.some((page) => page.key === "about") ||

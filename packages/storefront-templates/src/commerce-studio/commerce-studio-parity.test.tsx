@@ -396,6 +396,9 @@ test("hero and story photos load as pins; Featured never auto-picks them", () =>
   section(composition, "story").settings.image = ["s"]
   section(composition, "featured").settings.pinned = ["f"]
   expect(pinnedCatalogItemIds(composition)).toEqual(["h", "f", "s"])
+  expect(pinnedCatalogItemIds(composition, "home")).toEqual(["h", "f", "s"])
+  expect(pinnedCatalogItemIds(composition, "about")).toEqual([])
+  expect(pinnedCatalogItemIds(composition, "shell")).toEqual([])
   section(composition, "story").visible = false
   expect(pinnedCatalogItemIds(composition)).toEqual(["h", "f"])
   const preview = withPinnedCatalogItems(current(), ["a", "b", "c"])

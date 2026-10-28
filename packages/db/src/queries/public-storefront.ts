@@ -1,3 +1,4 @@
+import { catalogPublicPhotoProviderFilter } from "@ewatrade/catalog/photo-qa-policy"
 import {
   isLocalStorefrontPreviewHost,
   normalizeHostname,
@@ -112,6 +113,26 @@ export async function getPublicStorefrontForSite<T extends { storeId: string }>(
   /** Derived from the resolved Site's published release, never from the request. */
   projection: (site: T) => PublicItemProjection = () => ({}),
 ) {
+  const context = await resolvePublicStorefrontForSite(db, host, resolveSite)
+  if (!context) return null
+  const storefront = await readPublicStorefrontFromContext(
+    db,
+    context.business,
+    after,
+    options,
+    projection(context.site),
+  )
+  return storefront ? { site: context.site, storefront } : null
+}
+
+/** Server-owned context for one request. Never accept this object from a client. */
+export async function resolvePublicStorefrontForSite<
+  T extends { storeId: string },
+>(
+  db: DbClient,
+  host: string,
+  resolveSite: (tenantId: string) => Promise<T | null>,
+) {
   const authority = await resolveStorefrontHostAuthority(db, host)
   if (!authority) return null
   const tenant = await db.tenant.findFirst({
@@ -126,16 +147,13 @@ export async function getPublicStorefrontForSite<T extends { storeId: string }>(
   })
   const site = tenant ? await resolveSite(tenant.id) : null
   if (!site) return null
-  const storefront = await readStorefront(
+  const business = await readStorefrontBusiness(
     db,
     authority.slug,
-    after,
     authority.localQaPreview,
-    options,
     site.storeId,
-    projection(site),
   )
-  return storefront ? { site, storefront } : null
+  return business ? { site, business } : null
 }
 
 /**
@@ -229,7 +247,7 @@ type PublicItemRow<S extends Prisma.CatalogItemSelect> =
 export type PublicItemProjection = {
   lowStockCounts?: boolean
   /** Trusted server projection only; customer/public request input cannot select it. */
-  catalog?: "none"
+  catalog?: "none" | "detail"
 }
 
 /** Same-origin path of the existing public photo route; the host proxies it to the API. */
@@ -247,6 +265,7 @@ export function publicCatalogPhotoPath(storeId: string, assetId: string) {
 function publicPhotoAssetSelect(storeId: string) {
   return {
     where: {
+      ...catalogPublicPhotoProviderFilter(),
       storeId,
       state: "APPROVED" as const,
       approvedAt: { not: null },
@@ -260,7 +279,6 @@ function publicPhotoAssetSelect(storeId: string) {
       attachedAt: { not: null },
       tenant: {
         isActive: true,
-        dataClassification: "LIVE" as const,
         qaPurgeStartedAt: null,
       },
       store: {
@@ -519,6 +537,23 @@ async function readStorefront(
   trustedStoreId?: string,
   projection: PublicItemProjection = {},
 ) {
+  const business = await readStorefrontBusiness(
+    db,
+    slug,
+    localQaPreview,
+    trustedStoreId,
+  )
+  return business
+    ? readPublicStorefrontFromContext(db, business, after, options, projection)
+    : null
+}
+
+async function readStorefrontBusiness(
+  db: DbClient,
+  slug: string,
+  localQaPreview: boolean,
+  trustedStoreId?: string,
+) {
   const tenant = await db.tenant.findFirst({
     where: {
       slug,
@@ -572,6 +607,22 @@ async function readStorefront(
   })
   const plan = findRetailOpsPlan(planId)
   if (!plan) return null
+  return { tenant, store, planId, plan, localQaPreview }
+}
+
+type StorefrontBusiness = NonNullable<
+  Awaited<ReturnType<typeof readStorefrontBusiness>>
+>
+
+/** Public resources from freshly resolved server context, retaining the exact eligibility policy. */
+export async function readPublicStorefrontFromContext(
+  db: DbClient,
+  business: StorefrontBusiness,
+  after?: string,
+  options: PublicStorefrontQuery = {},
+  projection: PublicItemProjection = {},
+) {
+  const { tenant, store, planId, plan, localQaPreview } = business
   const offeringWhere = publicOfferingWhere(tenant.id, store.id)
   const limit = plan.limits.storefrontItems ?? 50
   const paidListing = plan.limits.storefrontItems === null
@@ -603,7 +654,7 @@ async function readStorefront(
   const priceSort = listing.sort?.startsWith("price") ?? false
   const nameSort = listing.sort?.startsWith("name") ?? false
   if (
-    projection.catalog !== "none" &&
+    projection.catalog === undefined &&
     paidListing &&
     (!(nameSort || priceSort) || listing.availability)
   ) {
@@ -697,7 +748,24 @@ async function readStorefront(
   let cappedItems: ReturnType<typeof projectItem>[] = []
   let hasHiddenItems = false
   let nextCursor: string | null = null
-  if (projection.catalog === "none") {
+  if (
+    projection.catalog === "none" ||
+    (projection.catalog === "detail" && paidListing)
+  ) {
+    items = []
+  } else if (projection.catalog === "detail") {
+    // Check only cap membership before the exact item read; never project an unrelated page.
+    const capped = await db.catalogItem.findMany({
+      where: eligibleWhere,
+      orderBy,
+      take: limit,
+      select: { id: true },
+    })
+    const requested =
+      validId(options.item) && capped.some((entry) => entry.id === options.item)
+        ? await cursorRow(eligibleWhere, options.item)
+        : null
+    cappedItems = requested ? [projectItem(requested)] : []
     items = []
   } else if (!paidListing) {
     // The included plan keeps the first N eligible entries; search/filter/sort only
@@ -851,7 +919,7 @@ async function readStorefront(
     highlightedItem = row ? projectItem(row) : null
   }
   const categories =
-    paidListing && projection.catalog !== "none"
+    paidListing && projection.catalog === undefined
       ? await db.catalogCategory.findMany({
           where: {
             tenantId: tenant.id,
