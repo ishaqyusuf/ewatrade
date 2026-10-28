@@ -79,6 +79,8 @@ export const nextConfig: NextConfig = {
       ignore: [
         ...onboardingRequestLogIgnore,
         /(?:^|\/)(?:assistant-review|r\/[^/?]+)(?:\/?\?|\/?$)/,
+        /(?:^|\/)(?:pay|p)\/[^/?]+/,
+        /\/login\?(?:[^#]*&)?next=(?:%2[fF]|\/)(?:pay|p)(?:%2[fF]|\/)/,
       ],
     },
   },

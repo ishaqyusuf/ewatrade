@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test"
 
-import { getDashboardApiRewrites } from "./next.config"
+import nextConfig, { getDashboardApiRewrites } from "./next.config"
 
 test("proxies finance receipt upload, grant and private original transport to the configured API", () => {
   const rewrites = getDashboardApiRewrites("https://api.example.test")
@@ -47,4 +47,18 @@ test("proxies the streaming setup assistant chat to the API", () => {
     source: "/api/assistant/:path*",
     destination: "https://api.example.test/api/assistant/:path*",
   })
+})
+
+test("payment links and payment login returns are omitted from application request logs", () => {
+  const ignored = nextConfig.logging.incomingRequests.ignore
+  const hidden = (path: string) => ignored.some((pattern) => pattern.test(path))
+  for (const path of [
+    "/p/AbCdEfGhIjKlMnOpQr_-12",
+    "/pay/private.signed-token",
+    "/login?next=%2Fp%2FAbCdEfGhIjKlMnOpQr_-12",
+    "/login?error=expired&next=%2Fpay%2Fprivate-token",
+  ])
+    expect(hidden(path)).toBe(true)
+  expect(hidden("/inventory")).toBe(false)
+  expect(hidden("/login?next=%2Finventory")).toBe(false)
 })

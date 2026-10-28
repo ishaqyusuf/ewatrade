@@ -82,5 +82,41 @@ test("accounts without an active workspace receive an actionable error", async (
     request({ email: "owner@example.com", password: "fixture-password" }),
   )
   expect(response.status).toBe(403)
-  expect((await response.json()).error).toContain("request early access")
+  expect((await response.json()).error).toContain("active workspace")
+})
+
+test("an account without workspace can return to payment without gaining workspace access", async () => {
+  findMembership.mockResolvedValueOnce(null)
+  const response = await POST(
+    request({
+      email: "CUSTOMER@example.com",
+      password: "fixture-password",
+      next: "/p/AbCdEfGhIjKlMnOpQr_-12",
+    }),
+  )
+  expect(response.status).toBe(200)
+  expect(response.headers.getSetCookie()).toHaveLength(1)
+  expect(signIn.mock.lastCall?.[0]).toMatchObject({
+    body: { email: "customer@example.com" },
+  })
+})
+
+test("payment-shaped redirects cannot bypass the workspace gate for other destinations", async () => {
+  for (const next of [
+    "/inventory",
+    "//evil.test/pay/token",
+    "/pay/token/private",
+    "/pay/token?next=/inventory",
+  ]) {
+    findMembership.mockResolvedValueOnce(null)
+    const response = await POST(
+      request({
+        email: "customer@example.com",
+        password: "fixture-password",
+        next,
+      }),
+    )
+    expect(response.status).toBe(403)
+    expect(response.headers.getSetCookie()).toHaveLength(0)
+  }
 })

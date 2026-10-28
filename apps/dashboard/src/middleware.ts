@@ -1,3 +1,4 @@
+import { isPaymentLoginDestination } from "@/lib/login-navigation"
 import { resolveTenantDomain } from "@ewatrade/utils"
 import { isManualPaymentShortCode } from "@ewatrade/utils/manual-payments"
 import { NextResponse } from "next/server"
@@ -75,6 +76,9 @@ export function middleware(request: NextRequest) {
     /^\/pay\/[^/]+(?:\/image)?\/?$/.test(request.nextUrl.pathname) ||
     (shortPaymentCode !== undefined &&
       isManualPaymentShortCode(shortPaymentCode))
+  const paymentLogin =
+    request.nextUrl.pathname === "/login" &&
+    isPaymentLoginDestination(request.nextUrl.searchParams.get("next"))
   const reviewContext =
     request.nextUrl.pathname === "/assistant-review" ||
     request.nextUrl.pathname.startsWith("/r/") ||
@@ -92,7 +96,7 @@ export function middleware(request: NextRequest) {
         `frame-ancestors 'self' ${new URL(MARKETING_URL).origin}`,
       )
     }
-    if (reviewContext || signupChat || paymentPage) {
+    if (reviewContext || signupChat || paymentPage || paymentLogin) {
       response.headers.set("Cache-Control", "private, no-store, max-age=0")
       response.headers.set("Referrer-Policy", "no-referrer")
       response.headers.set("X-Robots-Tag", "noindex, nofollow, noarchive")
@@ -109,7 +113,8 @@ export function middleware(request: NextRequest) {
     hostname.toLowerCase() === process.env.VERCEL_URL?.toLowerCase()
   // The dedicated payment-link host serves only the public payment page and image.
   const isPaymentLinkHost =
-    paymentPage && hostname.toLowerCase() === paymentLinkPublicHost()
+    (paymentPage || paymentLogin) &&
+    hostname.toLowerCase() === paymentLinkPublicHost()
 
   // Non-dashboard hostnames redirect to marketing.
   if (

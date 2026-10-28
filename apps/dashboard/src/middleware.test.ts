@@ -248,3 +248,46 @@ test("the configured payment-link host serves only public payment paths", () => 
     else process.env.PAYMENT_LINK_PUBLIC_ORIGIN = prior
   }
 })
+
+test("dedicated payment login keeps return proof private and grants no other host paths", () => {
+  const prior = process.env.PAYMENT_LINK_PUBLIC_ORIGIN
+  process.env.PAYMENT_LINK_PUBLIC_ORIGIN = "https://pay.ewatrade.com"
+  try {
+    for (const next of ["/p/AbCdEfGhIjKlMnOpQr_-12", "/pay/v1.signed-token"]) {
+      const path = `/login?next=${encodeURIComponent(next)}`
+      for (const host of ["pay.ewatrade.com", "ewatrade-dashboard.localhost"]) {
+        const response = middleware(
+          new NextRequest(`https://${host}${path}`, { headers: { host } }),
+        )
+        expect(response.headers.get("location")).toBeNull()
+        expect(response.headers.get("cache-control")).toBe(
+          "private, no-store, max-age=0",
+        )
+        expect(response.headers.get("referrer-policy")).toBe("no-referrer")
+        expect(response.headers.get("x-robots-tag")).toBe(
+          "noindex, nofollow, noarchive",
+        )
+        if (host === "pay.ewatrade.com")
+          expect(
+            response.headers.get("x-middleware-request-x-tenant-slug"),
+          ).toBeNull()
+      }
+    }
+    for (const path of [
+      "/login",
+      "/login?next=%2Finventory",
+      "/login?next=%2Fpay%2Ftoken%2Fprivate",
+    ])
+      expect(
+        middleware(
+          new NextRequest(`https://pay.ewatrade.com${path}`, {
+            headers: { host: "pay.ewatrade.com" },
+          }),
+        ).headers.get("location"),
+      ).not.toBeNull()
+  } finally {
+    if (prior === undefined)
+      Reflect.deleteProperty(process.env, "PAYMENT_LINK_PUBLIC_ORIGIN")
+    else process.env.PAYMENT_LINK_PUBLIC_ORIGIN = prior
+  }
+})

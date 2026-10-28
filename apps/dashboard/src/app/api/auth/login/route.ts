@@ -1,9 +1,14 @@
+import { isPaymentLoginDestination } from "@/lib/login-navigation"
 import { auth } from "@ewatrade/auth"
 import { prisma } from "@ewatrade/db"
 import { type NextRequest, NextResponse } from "next/server"
 import { z } from "zod/v4"
 
-const loginSchema = z.object({ email: z.email(), password: z.string().min(1) })
+const loginSchema = z.object({
+  email: z.email(),
+  password: z.string().min(1),
+  next: z.string().max(4200).optional(),
+})
 
 export async function POST(request: NextRequest) {
   const parsed = loginSchema.safeParse(await request.json().catch(() => null))
@@ -37,7 +42,7 @@ export async function POST(request: NextRequest) {
     },
     select: { id: true },
   })
-  if (!membership) {
+  if (!membership && !isPaymentLoginDestination(parsed.data.next)) {
     return NextResponse.json(
       {
         error:
@@ -46,6 +51,8 @@ export async function POST(request: NextRequest) {
       { status: 403 },
     )
   }
+  // The payment route checks current verified Customer proof separately. A valid
+  // account session here never grants membership or Finance permissions.
   const response = NextResponse.json({ success: true, dashboardUrl: "/" })
   for (const cookie of result.headers.getSetCookie()) {
     response.headers.append("Set-Cookie", cookie)

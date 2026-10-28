@@ -1,5 +1,8 @@
 import { expect, test } from "bun:test"
-import { getLoginDestination } from "./login-navigation"
+import {
+  getLoginDestination,
+  isPaymentLoginDestination,
+} from "./login-navigation"
 
 test("keeps dashboard paths and query parameters", () => {
   expect(getLoginDestination("/inventory?view=stock#history")).toBe(
@@ -19,4 +22,22 @@ test("rejects external, malformed, login and API destinations", () => {
   ]) {
     expect(getLoginDestination(next)).toBe("/")
   }
+})
+
+test("payment account entry admits only exact payment return paths", () => {
+  for (const next of ["/p/AbCdEfGhIjKlMnOpQr_-12", "/pay/v1.signed-token"])
+    expect(isPaymentLoginDestination(next)).toBe(true)
+  for (const next of [
+    null,
+    "/",
+    "/inventory",
+    "/p/short",
+    "/p/AbCdEfGhIjKlMnOpQr_-12/image",
+    "/pay/token/private",
+    "/pay/token?next=/inventory",
+    "/pay/token#private",
+    "//evil.test/pay/token",
+    "/\\evil.test/pay/token",
+  ])
+    expect(isPaymentLoginDestination(next)).toBe(false)
 })
