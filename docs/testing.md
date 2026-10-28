@@ -42,6 +42,12 @@ no provider configuration. It does not verify jobs, populated QA memberships,
 running source SHA, schema parity or native acceptance. `--offline` explicitly
 skips runtime probes; it cannot establish service readiness.
 
+For an authorized local customer-login check, start the required storefront with
+`STOREFRONT_CUSTOMER_OTP_ADAPTER=test bun run dev --local -f storefront`.
+The storefront dev task explicitly passes this flag through Turbo. The registered
+test adapter still requires every local-development marker, labels its code as a
+test delivery, and sends no messages. This is not provider-delivery evidence.
+
 ## Fast source checks
 
 `test:quick` uses staged, unstaged and untracked paths against HEAD. For committed
