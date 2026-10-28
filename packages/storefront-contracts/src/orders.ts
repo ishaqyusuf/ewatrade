@@ -7,9 +7,6 @@ import { readStorefrontFeatureConfig } from "./features"
  * availability from the verified Host before any write.
  */
 
-/** Templates whose release may accept product order requests. Exact keys only. */
-export const ORDERING_TEMPLATE_KEYS: readonly string[] = ["commerce-studio"]
-
 /**
  * Fulfilment methods a published composition offers. Read from the release (never
  * the browser) so the server enforces the merchant's header settings.

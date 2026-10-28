@@ -11,7 +11,8 @@ import type { ReactNode } from "react"
 export function StorefrontFeatureShell({
   children,
   featurePage,
-}: { children: ReactNode; featurePage: boolean }) {
+  onReturn,
+}: { children: ReactNode; featurePage: boolean; onReturn?: () => void }) {
   const { snapshot, themeStyle, href, preview } = useStorefrontCommerce()
   return (
     <>
@@ -26,7 +27,10 @@ export function StorefrontFeatureShell({
               href={href("/")}
               className="sf-feature-brand"
               onClick={(event) => {
-                if (preview) event.preventDefault()
+                if (preview) {
+                  event.preventDefault()
+                  onReturn?.()
+                }
               }}
             >
               {snapshot.resources.business.name}
@@ -35,7 +39,10 @@ export function StorefrontFeatureShell({
               <CommerceLink
                 href={href("/")}
                 onClick={(event) => {
-                  if (preview) event.preventDefault()
+                  if (preview) {
+                    event.preventDefault()
+                    onReturn?.()
+                  }
                 }}
               >
                 Storefront

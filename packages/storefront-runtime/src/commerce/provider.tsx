@@ -51,6 +51,7 @@ export type StorefrontCommerceContext = {
   clearBag(): void
   bagOpen: boolean
   setBagOpen(open: boolean): void
+  openItem(itemId: string): void
   href(path: string): string
   navigate(
     path: string,
@@ -61,6 +62,10 @@ export type StorefrontCommerceContext = {
 }
 
 const Context = createContext<StorefrontCommerceContext | null>(null)
+
+export function useOptionalStorefrontCommerce() {
+  return useContext(Context)
+}
 
 export function useStorefrontCommerce() {
   const value = useContext(Context)
@@ -120,6 +125,7 @@ export function StorefrontCommerceProvider({
   customer,
   preview,
   onPageChange,
+  onOpenItem,
   children,
   presentation,
 }: {
@@ -128,6 +134,7 @@ export function StorefrontCommerceProvider({
   customer?: StorefrontCustomerView
   preview: boolean
   onPageChange?: (key: string) => void
+  onOpenItem?: (itemId: string) => void
   children: ReactNode
   presentation: StorefrontFeaturePresentation
 }) {
@@ -235,6 +242,17 @@ export function StorefrontCommerceProvider({
       clearBag: () => commit([]),
       bagOpen,
       setBagOpen,
+      openItem: (itemId) => {
+        if (preview) {
+          onOpenItem?.(itemId)
+          return
+        }
+        const url = new URL(window.location.href)
+        url.searchParams.set("item", itemId)
+        const path = `${url.pathname}${url.search}`
+        if (navigation) navigation.navigate(path)
+        else window.location.assign(path)
+      },
       href: (path) => (preview ? "#" : path),
       refresh: () => navigation?.refresh(),
       refreshing: navigation?.pending ?? false,
@@ -263,6 +281,7 @@ export function StorefrontCommerceProvider({
       commit,
       bagOpen,
       onPageChange,
+      onOpenItem,
       navigation,
     ],
   )

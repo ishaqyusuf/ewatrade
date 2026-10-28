@@ -1,4 +1,5 @@
 "use client"
+import { useState } from "react"
 
 import { StorefrontCommerceProvider } from "@ewatrade/storefront-runtime/commerce/provider"
 import { StorefrontFeatureBody } from "@ewatrade/storefront-runtime/features/route"
@@ -16,6 +17,15 @@ export function StorefrontFeatureHost({
   children,
   ...props
 }: CommerceStudioProps & { children: ReactNode }) {
+  const [itemId, setItemId] = useState<string | null>(null)
+  const catalog = props.snapshot.resources.catalog
+  const detail =
+    [
+      ...catalog.items,
+      ...(catalog.pinnedItems ?? []),
+      ...(catalog.highlightedItem ? [catalog.highlightedItem] : []),
+    ].find((item) => item.id === itemId) ??
+    storefrontSharedDetail(props.snapshot)
   return (
     <StorefrontCommerceProvider
       snapshot={props.snapshot}
@@ -25,17 +35,20 @@ export function StorefrontFeatureHost({
         props.draftPreview || props.editing || props.onPageChange,
       )}
       onPageChange={props.onPageChange}
+      onOpenItem={setItemId}
       presentation={storefrontFeaturePresentation(props.snapshot)}
     >
       <StorefrontFeatureShell
+        onReturn={() => setItemId(null)}
         featurePage={
           !props.editing &&
-          storefrontUsesFeaturePage(props.snapshot, props.route)
+          (Boolean(detail) ||
+            storefrontUsesFeaturePage(props.snapshot, props.route))
         }
       >
         <StorefrontFeatureBody
           route={props.route}
-          detail={props.editing ? null : storefrontSharedDetail(props.snapshot)}
+          detail={props.editing ? null : detail}
         >
           {children}
         </StorefrontFeatureBody>

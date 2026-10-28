@@ -6,6 +6,7 @@ import { storefrontFeatureTokens } from "../feature-theme"
 import { publicStorefrontResources } from "../projection"
 import type { StorefrontClientSnapshot } from "../server"
 import { StorefrontAccount } from "./account/account"
+import { StorefrontFeatureActions } from "./actions"
 import { StorefrontCheckout } from "./checkout"
 import { StorefrontReceipt } from "./receipt/receipt"
 
@@ -144,4 +145,30 @@ test("checkout renders from the neutral host and refuses unavailable intake", ()
   expect(html).toContain("sf-feature-root")
   expect(html).not.toContain("commerce-studio")
   expect(html).not.toContain("Send request</button>")
+})
+
+test("historical account navigation requires a signed-in session when login is disabled", () => {
+  const anonymous = renderToStaticMarkup(
+    <StorefrontCommerceProvider
+      snapshot={snapshot}
+      presentation={presentation}
+      customer={{ signedIn: false }}
+      preview
+    >
+      <StorefrontFeatureActions />
+    </StorefrontCommerceProvider>,
+  )
+  expect(anonymous).not.toContain("Your account")
+  expect(anonymous).not.toContain("/account")
+  const historical = renderToStaticMarkup(
+    <StorefrontCommerceProvider
+      snapshot={snapshot}
+      presentation={presentation}
+      customer={{ signedIn: true, label: "j…@example.test" }}
+      preview
+    >
+      <StorefrontFeatureActions />
+    </StorefrontCommerceProvider>,
+  )
+  expect(historical).toContain("Your account")
 })

@@ -1,5 +1,6 @@
 "use client"
 
+import { useOptionalStorefrontCommerce } from "@ewatrade/storefront-runtime/commerce/provider"
 import { type RefObject, useEffect, useRef, useState } from "react"
 
 /** "push" lets Back close the detail; "none" is for embedded previews that must not touch the host URL. */
@@ -68,6 +69,7 @@ export function useDetailHistory<T extends { id: string; name: string }>({
   history: DetailHistory
   siteName: string
 }) {
+  const commerce = useOptionalStorefrontCommerce()
   const [selected, setSelected] = useState<T | null>(initial)
   const opener = useRef<HTMLElement | null>(null)
   const pushed = useRef(false)
@@ -101,8 +103,12 @@ export function useDetailHistory<T extends { id: string; name: string }>({
     window.addEventListener("popstate", sync)
     return () => window.removeEventListener("popstate", sync)
   }, [history, siteName])
-  const open = (item: T, trigger: HTMLElement) => {
+  const open = (item: T, trigger: HTMLElement | null) => {
     if (!knownDetail(known.current, item.id)) return
+    if (commerce?.snapshot.composition.schemaVersion === 2) {
+      commerce.openItem(item.id)
+      return
+    }
     opener.current = trigger
     openId.current = item.id
     setSelected(item)

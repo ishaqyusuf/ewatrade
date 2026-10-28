@@ -10,7 +10,7 @@ export function StorefrontFeatureActions() {
     useStorefrontCommerce()
   return (
     <div className="sf-feature-actions">
-      {accounts || customer ? (
+      {accounts || customer?.signedIn ? (
         <CommerceLink
           className={buttonVariants({ variant: "outline", size: "sm" })}
           href={href("/account")}
@@ -18,7 +18,7 @@ export function StorefrontFeatureActions() {
             if (preview) event.preventDefault()
           }}
         >
-          {customer ? "Your account" : "Login"}
+          {customer?.signedIn ? "Your account" : "Login"}
         </CommerceLink>
       ) : null}
       {ordering ? (

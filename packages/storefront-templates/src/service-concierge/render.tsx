@@ -2,6 +2,7 @@
 
 import { useStorefrontItemView } from "@ewatrade/events/storefront-client"
 import type { PublicCatalogItem } from "@ewatrade/storefront-contracts"
+import { useOptionalStorefrontCommerce } from "@ewatrade/storefront-runtime/commerce/provider"
 import {
   handleStorefrontItemClick,
   serviceRequestUrl,
@@ -158,14 +159,22 @@ export function ServiceConciergeCollection({
   // One active service; every service keeps its own option selection. Once a
   // customer changes it, an empty selection stays empty (no implicit re-pick).
   const [chosen, setChosen] = useState<Record<string, string[]>>({})
-  const [detailId, setDetailId] = useState(catalog.highlightedItem?.id ?? "")
+  const commerce = useOptionalStorefrontCommerce()
+  const [detailId, setLocalDetailId] = useState(
+    catalog.highlightedItem?.id ?? "",
+  )
+  const setDetailId = (id: string) => {
+    if (id && commerce?.snapshot.composition.schemaVersion === 2)
+      commerce.openItem(id)
+    else setLocalDetailId(id)
+  }
   const detail = items.find((item) => item.id === detailId)
   useStorefrontItemView(detail ?? null)
   const [noticeFor, setNoticeFor] = useState("")
   const highlighted = catalog.highlightedItem
   useEffect(() => {
     if (highlighted?.kind === "SERVICE") setServiceId(highlighted.id)
-    setDetailId(highlighted?.id ?? "")
+    setLocalDetailId(highlighted?.id ?? "")
   }, [highlighted?.id, highlighted?.kind])
   const service = services.find((item) => item.id === serviceId) ?? services[0]
   const rawSelectedFor = (item: PublicCatalogItem) =>

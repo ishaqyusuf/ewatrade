@@ -100,9 +100,9 @@ already exist and must be reused.
 - [x] P7.3 Integrate remaining registered renderer families and legacy framing.
 
 ### Phase 8 — final acceptance and handoff
-- [ ] P8.1 Complete focused logic/security/types/browser acceptance.
-- [ ] P8.2 Remove obsolete copies/shims after consumer migration.
-- [ ] P8.3 Commit owned source, reconcile Brain and document release compatibility.
+- [x] P8.1 Complete focused logic/security/types/browser acceptance.
+- [x] P8.2 Remove obsolete copies/shims after consumer migration.
+- [x] P8.3 Commit owned source, reconcile Brain and document release compatibility.
 
 ## File-level migration map
 
@@ -250,3 +250,29 @@ errors confined to pre-existing general-customer-allocations, product-share and
 customer-ledger tests; changed storefront source has no diagnostic. Local API/QA,
 Dashboard and Storefront doctor pass with the trusted Portless CA. Phases0–7 source
 complete24/27 (88.9%); connected/browser/cleanup acceptance remains P8.
+
+### Phase8 final verification and cleanup
+Removed143 obsolete template-owned feature-style rules and the old ordering
+allowlist; forwarding aliases retain compatibility without duplicate code. Fixed
+legacy Base UI migration gating, anonymous account-navigation labeling and the
+older canvas conversion that could drop explicit feature settings. Migrated card
+selection now reaches shared item features in live and inert preview hosts.
+
+Source smoke223/1214, migration/canvas13/276, Storefront production build16.4.3,
+Dashboard types, explicit owned-candidate feature/connected-test graph0, H01 and
+existing-data local web smoke pass. Eleven connected domain cases are covered
+across8 initial passes and3 corrected focused passes; fixtures disposed. Original
+failures are retained in logs and corrected for the current optional destination
+and explicit service book-ahead policy. Real queued OTP/publication locking,
+continuity and revocation pass. No UI request/payment was submitted.
+
+The final integrated check covers concurrent committed loader optimizations
+5c8d39b3f/4b61b3e28: Storefront types pass; focused real lock-race1/10 passes
+again and its isolated fixture is disposed. Full API had5 unrelated test-fixture
+errors; transient concurrent source diagnostics are disclosed, not staged or
+claimed as extraction failures. See the detailed tracked verification receipt.
+No hosted/Production acceptance or deployment is implied.
+
+All27 work packages complete locally. Phase0–7 commits: d01f6b3d8,5ac2e3995,
+00d0648de,50069fc0c,86558cadc,b8289e6b0,67c70385b,4aa915004. Phase8 source and
+final evidence commits are recorded in the detailed receipt. No push/deployment.

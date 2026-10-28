@@ -1,3 +1,4 @@
+import { withStorefrontFeatureConfig } from "@ewatrade/storefront-contracts/features"
 import {
   type SectionInstance,
   type StorefrontComposition,
@@ -144,7 +145,11 @@ export function insertSectionExcerpt(
 export function upgradeCanvasDraft(composition: StorefrontComposition) {
   if (isCanvasComposition(composition)) return composition
   const manifest = canvasManifest(composition.template.key)
-  const next = canvasDefaults(manifest)
+  const defaults = canvasDefaults(manifest)
+  const next =
+    composition.schemaVersion === 2
+      ? withStorefrontFeatureConfig(defaults, composition.features)
+      : defaults
   next.theme = structuredClone(composition.theme)
   const old = composition.pages[0]?.sections ?? []
   const intro = old.find((section) => /header|intro/.test(section.type))

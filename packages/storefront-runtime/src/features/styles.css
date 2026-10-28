@@ -39,6 +39,13 @@
   --destructive: #b42318;
   --radius: var(--sf-feature-radius);
   --background: var(--sf-feature-background);
+  --foreground: var(--sf-feature-text);
+  --card: var(--sf-feature-background);
+  --card-foreground: var(--sf-feature-text);
+  --popover-foreground: var(--sf-feature-text);
+  --border: var(--sf-feature-border);
+  --input: var(--sf-feature-border);
+  --muted: var(--sf-feature-surface);
   --popover: var(--sf-feature-background);
   background: var(--sf-feature-background);
   color: var(--sf-feature-text);

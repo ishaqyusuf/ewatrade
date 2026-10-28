@@ -1,7 +1,7 @@
 "use client"
 
 import type { StorefrontFeatureConfig } from "@ewatrade/storefront-contracts/features"
-import { Button, Switch } from "@ewatrade/ui"
+import { Button, Checkbox, Switch } from "@ewatrade/ui"
 import { useId } from "react"
 
 export function StorefrontFeatureSettings({
@@ -55,6 +55,7 @@ export function StorefrontFeatureSettings({
             <p>Let customers sign in and find their request history.</p>
           </div>
           <Switch
+            disabled={disabled || legacy}
             id={`${id}-login`}
             checked={config.accounts.enabled}
             onCheckedChange={(enabled) =>
@@ -73,6 +74,7 @@ export function StorefrontFeatureSettings({
             </p>
           </div>
           <Switch
+            disabled={disabled || legacy}
             id={`${id}-orders`}
             checked={config.orders.enabled}
             onCheckedChange={(enabled) =>
@@ -88,22 +90,23 @@ export function StorefrontFeatureSettings({
           <h2>Fulfilment</h2>
           <p>Choose how customers can request their items.</p>
           {(["pickup", "delivery"] as const).map((method) => (
-            <label key={method}>
-              <input
-                type="checkbox"
+            <label key={method} htmlFor={`${id}-${method}`}>
+              <Checkbox
+                id={`${id}-${method}`}
                 checked={config.orders.fulfilment.includes(method)}
                 disabled={
-                  config.orders.enabled &&
-                  config.orders.fulfilment.length === 1 &&
-                  config.orders.fulfilment.includes(method)
+                  disabled ||
+                  legacy ||
+                  (config.orders.enabled &&
+                    config.orders.fulfilment.length === 1 &&
+                    config.orders.fulfilment.includes(method))
                 }
-                onChange={(event) =>
+                onCheckedChange={(checked) =>
                   update((next) => {
                     next.orders.fulfilment = next.orders.fulfilment.filter(
                       (entry) => entry !== method,
                     )
-                    if (event.target.checked)
-                      next.orders.fulfilment.push(method)
+                    if (checked) next.orders.fulfilment.push(method)
                   })
                 }
               />
@@ -117,6 +120,7 @@ export function StorefrontFeatureSettings({
             <p>Share exact available quantities when stock is low.</p>
           </div>
           <Switch
+            disabled={disabled || legacy}
             id={`${id}-stock`}
             checked={config.catalog.showLowStockCounts}
             onCheckedChange={(enabled) =>

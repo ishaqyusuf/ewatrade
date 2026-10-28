@@ -168,3 +168,70 @@ test("every registered renderer supplies the same account route, including legac
     }
   }
 })
+
+test("migrated legacy card selection reaches the shared item host without touching browser history in preview", async () => {
+  const { renderToStaticMarkup } = await import("react-dom/server")
+  const { StorefrontCommerceProvider } = await import(
+    "@ewatrade/storefront-runtime/commerce/provider"
+  )
+  const { storefrontFeaturePresentation } = await import(
+    "./shared/feature-presentation"
+  )
+  const { useDetailHistory } = await import("./shared/detail-history")
+  const data = fixture("populated")
+  const item = data.resources.catalog.items[0]
+  if (!item) throw new Error("Missing fixture item")
+  const snapshot = {
+    ...data,
+    composition: upgradeStorefrontFeatures(
+      defaultComposition(manifestFor("retail-editorial")),
+    ),
+    mode: "live" as const,
+    locale: "en-NG",
+    currencyCode: "NGN",
+  }
+  let opened = ""
+  const currentItem = item
+  function Probe() {
+    const detail = useDetailHistory({
+      initial: null,
+      items: [currentItem],
+      history: "none",
+      siteName: "Fixture",
+    })
+    detail.open(currentItem, null)
+    return null
+  }
+  renderToStaticMarkup(
+    <StorefrontCommerceProvider
+      snapshot={snapshot}
+      presentation={storefrontFeaturePresentation(snapshot)}
+      preview
+      onOpenItem={(id) => {
+        opened = id
+      }}
+    >
+      <Probe />
+    </StorefrontCommerceProvider>,
+  )
+  expect(opened).toBe(item.id)
+})
+
+test("upgrading an older canvas draft retains explicit feature settings without mutating its old pin", async () => {
+  const { upgradeCanvasDraft } = await import("./canvas/library")
+  const manifest = getTemplateManifest(
+    { template: { key: "retail-editorial", version: "1.0.0" } },
+    "render",
+  )
+  const config = upgradeStorefrontFeatures(
+    defaultComposition(manifestFor("commerce-studio")),
+  ).features
+  const current = withStorefrontFeatureConfig(
+    defaultComposition(manifest),
+    config,
+  )
+  const bytes = JSON.stringify(current)
+  const next = upgradeCanvasDraft(current)
+  expect(readStorefrontFeatureConfig(next)).toEqual(config)
+  expect(JSON.stringify(current)).toBe(bytes)
+})

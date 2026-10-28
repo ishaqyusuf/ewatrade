@@ -32,6 +32,7 @@ import {
   requestStorefrontCustomerOtp,
   reviseServiceCommerceBooking,
   revokeStorefrontCustomerSession,
+  setCatalogStorefrontPolicy,
   submitStorefrontOrderRequest,
   submitStorefrontServiceRequestWithReceipt,
   updateStorefrontOrderRequestDisposition,
@@ -39,6 +40,21 @@ import {
   withdrawStorefrontOrderRequest,
 } from "@ewatrade/db/queries"
 import { listStaffSourceBookingsInTransaction } from "@ewatrade/db/service-booking-read"
+
+import {
+  upgradeStorefrontFeatures,
+  withStorefrontFeatureConfig,
+} from "@ewatrade/storefront-contracts/features"
+import {
+  defaultComposition,
+  listSelectableTemplates,
+  replaceDraftTemplate,
+} from "@ewatrade/storefront-templates"
+import {
+  publishStorefront,
+  rollbackStorefront,
+  saveStorefrontDraft,
+} from "../apps/api/src/storefront/site-commands"
 
 const enabled = process.env.RUN_DATABASE_INTEGRATION_TESTS === "1"
 const suite = enabled ? describe : describe.skip
@@ -197,6 +213,20 @@ suite("commerce studio storefront (connected)", () => {
         { id: row.id, itemId: row.catalogItemId, price: row.fixedPriceMinor },
       ]),
     )
+    // This suite explicitly exercises dated service requests. Book-ahead is now
+    // opt-in, so the isolated fixture needs its canonical policy enabled.
+    const service = ctx.offerings["Small repair"]
+    if (!service) throw new Error("Fixture service missing")
+    await setCatalogStorefrontPolicy(prisma, {
+      tenantId: ctx.tenantId,
+      storeId: ctx.storeId,
+      actorUserId: ctx.ownerId,
+      catalogItemId: service.itemId,
+      unavailable: false,
+      allowBookAhead: true,
+      expectedRevision: 0,
+      clientOperationId: `shared-fixture-policy:${run}`,
+    })
   }, 240_000)
 
   afterAll(async () => {
@@ -282,12 +312,11 @@ suite("commerce studio storefront (connected)", () => {
     expect(fractional.reference).toBeTruthy()
     const empty = order([])
     await expect(submit(empty)).rejects.toThrow()
-    // Delivery needs an address (schema), and a pickup-only business refuses delivery.
-    await expect(
-      submit(
-        order([{ key: "Basket", quantity: "1" }], { fulfilment: "delivery" }),
-      ),
-    ).rejects.toThrow()
+    // A destination can be agreed after review; pickup-only policy still refuses delivery.
+    const destinationPending = await submit(
+      order([{ key: "Basket", quantity: "1" }], { fulfilment: "delivery" }),
+    )
+    expect(destinationPending.reference).toBeTruthy()
     const pickupOnly = await expectCode(
       submitStorefrontOrderRequest(
         prisma,
@@ -371,12 +400,15 @@ suite("commerce studio storefront (connected)", () => {
       },
     })
     expect(orders).toHaveLength(1)
-    expect(orders[0]).toMatchObject({
+    const confirmed = orders[0]
+    if (!confirmed?.createdByUserId)
+      throw new Error("Missing confirmed order actor")
+    expect(confirmed).toMatchObject({
       totalMinor: 1150000,
       serviceChargeMinor: 150000,
       status: "CONFIRMED",
     })
-    expect([ctx.ownerId, ctx.managerId]).toContain(orders[0]?.createdByUserId)
+    expect([ctx.ownerId, ctx.managerId]).toContain(confirmed.createdByUserId)
     const reservations = await prisma.stockReservation.findMany({
       where: { tenantId: ctx.tenantId },
       select: { status: true, enteredQuantity: true },
@@ -393,7 +425,7 @@ suite("commerce studio storefront (connected)", () => {
         deliveryFeeMinor: 150000,
       },
     )
-    expect(retry).toEqual({ orderId: orders[0]?.id, replayed: true })
+    expect(retry).toEqual({ orderId: confirmed.id, replayed: true })
     const receipt = await getStorefrontOrderReceipt(prisma, {
       host,
       token: request.receiptToken,
@@ -1293,4 +1325,184 @@ suite("commerce studio storefront (connected)", () => {
       data: { expiresAt: new Date(Date.now() - 1000) },
     })
   }, 240_000)
+
+  test("published feature changes preserve existing identity and receipts while a queued OTP verification fails closed", async () => {
+    const site = await prisma.site.findFirstOrThrow({
+      where: { tenantId: ctx.tenantId, isPrimary: true },
+    })
+    const originalRelease = site.activeReleaseId
+    if (!originalRelease) throw new Error("Missing fixture release")
+    const source = listSelectableTemplates().find(
+      (entry) => entry.manifest.key === "commerce-studio",
+    )?.manifest
+    if (!source) throw new Error("Missing source template")
+    const original = upgradeStorefrontFeatures(defaultComposition(source))
+    const target = listSelectableTemplates().find(
+      (entry) => entry.manifest.key === "retail-editorial",
+    )?.manifest
+    if (!target) throw new Error("Missing alternate template")
+    const config = structuredClone(original.features)
+    config.accounts.enabled = false
+    config.orders.enabled = false
+    const disabled = withStorefrontFeatureConfig(
+      replaceDraftTemplate(original, target),
+      config,
+    )
+    const actor = { tenantId: ctx.tenantId, actorUserId: ctx.ownerId }
+    const codes: string[] = []
+    const adapter = otp(codes)
+    const identity = {
+      channel: "email",
+      identifier: `continuity-${run}@example.test`,
+    } as const
+    const start = await requestStorefrontCustomerOtp(prisma, {
+      host,
+      identifier: identity,
+      network: "203.0.113.44",
+      secret: SECRET,
+      adapter,
+    })
+    const verified = await verifyStorefrontCustomerOtp(prisma, {
+      host,
+      verify: { challengeId: start.challengeId, code: codes.at(-1) ?? "" },
+      secret: SECRET,
+    })
+    const receipt = await submit(
+      order([{ key: "Untracked piece", quantity: "1" }], {
+        customerPhone: "08035550444",
+      }),
+      verified.customerId,
+    )
+    const pending = await requestStorefrontCustomerOtp(prisma, {
+      host,
+      identifier: { channel: "email", identifier: `race-${run}@example.test` },
+      network: "203.0.113.45",
+      secret: SECRET,
+      adapter,
+    })
+    const pendingCode = codes.at(-1) ?? ""
+    const saved = await saveStorefrontDraft(prisma, actor, {
+      expectedSiteId: site.id,
+      expectedRevision: site.draftRevision,
+      composition: disabled,
+    })
+    expect(saved.ok).toBe(true)
+    const current = await prisma.site.findUniqueOrThrow({
+      where: { id: site.id },
+    })
+    const published = await publishStorefront(prisma, actor, {
+      expectedSiteId: site.id,
+      expectedDraftRevision: current.draftRevision,
+      expectedActiveReleaseId: originalRelease,
+      idempotencyKey: `shared-${run}`,
+      publicBrowsingConsent: true,
+    })
+    if (!published.ok) throw new Error("Fixture publication refused")
+    const disabledRelease = published.releaseId
+    await rollbackStorefront(prisma, actor, {
+      expectedSiteId: site.id,
+      releaseId: originalRelease,
+      expectedActiveReleaseId: disabledRelease,
+      idempotencyKey: `shared-restore-${run}`,
+    })
+    let unlock: () => void = () => {}
+    let signalLocked: () => void = () => {}
+    const gate = new Promise<void>((resolve) => {
+      unlock = resolve
+    })
+    const locked = new Promise<void>((resolve) => {
+      signalLocked = resolve
+    })
+    const publication = prisma.$transaction(
+      async (tx) => {
+        await tx.$queryRaw`SELECT "id" FROM "Site" WHERE "id"=${site.id} FOR UPDATE`
+        signalLocked()
+        await gate
+        // Simulate publication's pointer update using its already validated immutable
+        // release, in this isolated disposable fixture only.
+        await tx.site.update({
+          where: { id: site.id },
+          data: { activeReleaseId: disabledRelease },
+        })
+      },
+      { timeout: 30000 },
+    )
+    await locked
+    const verification = verifyStorefrontCustomerOtp(prisma, {
+      host,
+      verify: { challengeId: pending.challengeId, code: pendingCode },
+      secret: SECRET,
+    }).then(
+      (value) => ({ ok: true as const, value }),
+      (error) => ({
+        ok: false as const,
+        code: (error as { code: string }).code,
+      }),
+    )
+    let observed = false
+    try {
+      for (let attempt = 0; attempt < 30; attempt++) {
+        const waits = await prisma.$queryRaw<
+          { count: bigint }[]
+        >`SELECT count(*) FROM pg_stat_activity WHERE pid <> pg_backend_pid() AND wait_event_type='Lock' AND query ILIKE '%FOR SHARE%'`
+        if (Number(waits[0]?.count) > 0) {
+          observed = true
+          break
+        }
+        await new Promise((resolve) => setTimeout(resolve, 100))
+      }
+    } finally {
+      unlock()
+    }
+    await publication
+    expect(observed).toBe(true)
+    expect(await verification).toEqual({ ok: false, code: "UNAVAILABLE" })
+    const token = verified.sessionToken
+    expect(
+      (await getStorefrontCustomerSession(prisma, { host, token }))?.customer
+        .id,
+    ).toBe(verified.customerId)
+    expect(
+      await getStorefrontCustomerSession(prisma, { host: otherHost, token }),
+    ).toBeNull()
+    expect(
+      (
+        await getStorefrontOrderReceipt(prisma, {
+          host,
+          token: receipt.receiptToken,
+        })
+      )?.reference,
+    ).toBe(receipt.reference)
+    expect(
+      await getStorefrontOrderReceipt(prisma, {
+        host: otherHost,
+        token: receipt.receiptToken,
+      }),
+    ).toBeNull()
+    expect(
+      (
+        await listStorefrontCustomerOrders(prisma, {
+          tenantId: ctx.tenantId,
+          customerId: verified.customerId,
+        })
+      ).length,
+    ).toBeGreaterThan(0)
+    await expectCode(
+      requestStorefrontCustomerOtp(prisma, {
+        host,
+        identifier: {
+          channel: "email",
+          identifier: `blocked-${run}@example.test`,
+        },
+        network: "203.0.113.46",
+        secret: SECRET,
+        adapter,
+      }),
+      "UNAVAILABLE",
+    )
+    await revokeStorefrontCustomerSession(prisma, { token })
+    expect(
+      await getStorefrontCustomerSession(prisma, { host, token }),
+    ).toBeNull()
+  }, 240000)
 })
