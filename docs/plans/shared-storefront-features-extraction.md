@@ -85,9 +85,9 @@ already exist and must be reused.
 - [x] P4.3 Verify scope, revocation, continuity and current-state checks.
 
 ### Phase 5 — operational configuration
-- [ ] P5.1 Add versioned neutral settings and deterministic legacy normalization.
-- [ ] P5.2 Preserve configuration through canonical lifecycle/design acceptance.
-- [ ] P5.3 Add explicit Studio draft migration and settings controls.
+- [x] P5.1 Add versioned neutral settings and deterministic legacy normalization.
+- [x] P5.2 Preserve configuration through canonical lifecycle/design acceptance.
+- [x] P5.3 Add explicit Studio draft migration and settings controls.
 
 ### Phase 6 — bag, checkout, service request
 - [ ] P6.1 Extract bag UI and shared purchase controls.
@@ -197,3 +197,29 @@ candidate storefront TypeScript graph0; H02 passes with this task impact record.
 H01 check reports the pre-existing shared coverage snapshot stale; it is not
 claimed green or overwritten here. Connected lock/race and browser acceptance
 remain explicit Phase8 gates. No schema/provider/deployment change.
+
+
+### Phase 5 source delivery — 28 October 2026
+Composition schema2 carries feature config v1 independently of immutable template
+manifest schema1/runtime1. Legacy readers preserve effective disabled intake and
+exact low-stock opt-in without rewriting releases. Explicit Studio migration and
+template replacement create unsaved drafts; normal Owner/Admin CAS/save/consent/
+publish/rollback remain canonical. AI v5 freezes the current feature settings in
+the brief; every proposal and acceptance recheck must preserve them. Old pending
+proposals require regeneration; accepted-run replay remains unchanged. Repeated
+field declarations are interned to retain the existing bounded provider budget;
+no provider call was made.
+
+Owner approved and selected Workshop shared-customer-features revision
+62577dd1-4da0-4737-bb71-f885f3846f3c. The Features main panel uses that reference
+inside the existing Studio layout. Product browser acceptance remains Phase8.
+Readers must be released before schema2 writers. Binary rollback to a schema1-only
+build cannot read schema2 drafts/releases; restore a compatible release or deploy
+a reader-compatible binary, never rewrite archived release JSON. No Prisma change.
+
+Focused 21 tests/181 assertions and owned-scope fast199/1021 pass; Dashboard and
+Storefront full TypeScript checks pass. Added a disabled-all migration regression
+case after that run; focused final receipt accompanies the phase commit. H01 with
+APP_ENV=local is current (the earlier unset-environment warning was not staleness).
+Phases0–5 source complete:18/27 (66.7%). Runtime, race and full adoption acceptance
+remain open. No push or deployment.

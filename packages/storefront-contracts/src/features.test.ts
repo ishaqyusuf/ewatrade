@@ -19,6 +19,7 @@ test("legacy normalization retains operational defaults without enabling other t
   expect(readStorefrontFeatureConfig(legacy())).toEqual({
     version: 1,
     accounts: { enabled: true },
+    catalog: { showLowStockCounts: false },
     orders: { enabled: true, fulfilment: ["pickup"] },
   })
   expect(

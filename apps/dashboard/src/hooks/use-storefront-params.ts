@@ -6,6 +6,7 @@ export function useStorefrontParams() {
   const [params, setParams] = useQueryStates(
     {
       page: parseAsString.withDefault("home"),
+      panel: parseAsStringEnum(["design", "features"]).withDefault("design"),
       viewport: parseAsStringEnum(["desktop", "tablet", "mobile"]).withDefault(
         "desktop",
       ),

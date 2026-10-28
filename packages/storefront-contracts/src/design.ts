@@ -1,5 +1,9 @@
 import { z } from "zod"
 import {
+  readStorefrontFeatureConfig,
+  storefrontFeatureConfigSchema,
+} from "./features"
+import {
   type StorefrontComposition,
   type TemplateManifest,
   compositionSchema,
@@ -15,6 +19,7 @@ const operationalCopy =
 export const storefrontDesignBriefSchema = z
   .object({
     version: z.literal(1),
+    featureConfig: storefrontFeatureConfigSchema.optional(),
     baseRevision: z.number().int().nonnegative(),
     desiredJourney: z.enum(["browse", "request"]),
     /** Merchant styling intent only; never a source of business facts or authority. */
@@ -88,6 +93,7 @@ export function createStorefrontDesignBrief(input: {
   return storefrontDesignBriefSchema.parse({
     version: 1,
     baseRevision: input.baseRevision,
+    featureConfig: readStorefrontFeatureConfig(input.composition) ?? undefined,
     desiredJourney: input.desiredJourney,
     refinement: input.refinement ?? "",
     business: { name: business.name, description: business.description },
@@ -312,6 +318,15 @@ export function validateStorefrontDesignOutput(
     if (!manifest)
       throw new Error("An unavailable design version was proposed.")
     const composition = validateComposition(direction.composition, manifest)
+    if (
+      brief.featureConfig &&
+      (composition.schemaVersion !== 2 ||
+        JSON.stringify(composition.features) !==
+          JSON.stringify(brief.featureConfig))
+    )
+      throw new Error(
+        "Designs must preserve the current feature settings. Generate fresh designs before accepting.",
+      )
     for (const page of composition.pages)
       for (const section of page.sections) {
         const settings = [

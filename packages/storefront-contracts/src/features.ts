@@ -1,10 +1,15 @@
 import { z } from "zod"
+import type { StorefrontComposition } from "./manifest"
 import type { StorefrontCommerceResource } from "./resources"
 
 export const storefrontFeatureConfigSchema = z
   .object({
     version: z.literal(1),
     accounts: z.object({ enabled: z.boolean() }).strict(),
+    catalog: z
+      .object({ showLowStockCounts: z.boolean() })
+      .strict()
+      .default({ showLowStockCounts: false }),
     orders: z
       .object({
         enabled: z.boolean(),
@@ -65,7 +70,12 @@ export function readStorefrontFeatureConfig(
   const fulfilment: StorefrontFeatureConfig["orders"]["fulfilment"] = []
   if (header?.settings["offer-pickup"] !== false) fulfilment.push("pickup")
   if (header?.settings["offer-delivery"] === true) fulfilment.push("delivery")
-  return { version: 1, accounts: { enabled }, orders: { enabled, fulfilment } }
+  return {
+    version: 1,
+    accounts: { enabled },
+    catalog: { showLowStockCounts: legacyLowStockCountsEnabled(composition) },
+    orders: { enabled: enabled && fulfilment.length > 0, fulfilment },
+  }
 }
 
 /** Rendering hints only. Each domain operation independently rechecks authority. */
@@ -97,4 +107,88 @@ export function storefrontCommerceAvailability(
     fulfilment: config.orders.fulfilment,
     hasContact: facts.hasContact,
   }
+}
+
+/** Exact template pins whose header declares the low-stock count opt-in. */
+const LOW_STOCK_COUNT_PINS: readonly { key: string; version: string }[] = [
+  { key: "commerce-studio", version: "1.2.0" },
+]
+export const LOW_STOCK_COUNT_SETTING = "show-low-stock-count"
+
+/**
+ * Whether a composition (a published release or an authenticated Studio preview
+ * design) explicitly opts in to exact low-stock counts. Only listed exact pins can,
+ * only through their header setting set to `true`; anything else, including older
+ * pins, malformed input or the default, keeps counts out of the public snapshot.
+ */
+function legacyLowStockCountsEnabled(composition: unknown) {
+  const value = composition as {
+    template?: { key?: unknown; version?: unknown }
+    pages?: {
+      sections?: {
+        type?: unknown
+        version?: unknown
+        settings?: Record<string, unknown>
+      }[]
+    }[]
+  } | null
+  if (
+    !LOW_STOCK_COUNT_PINS.some(
+      (pin) =>
+        pin.key === value?.template?.key &&
+        pin.version === value?.template?.version,
+    ) ||
+    !Array.isArray(value?.pages)
+  )
+    return false
+  // The same header the template and fulfilment policy read: the first one.
+  const header = value.pages
+    .flatMap((page) => (Array.isArray(page?.sections) ? page.sections : []))
+    .find((entry) => entry?.type === "commerce-studio-header")
+  return (
+    header?.version === 2 && header.settings?.[LOW_STOCK_COUNT_SETTING] === true
+  )
+}
+
+export function publicLowStockCountsEnabled(composition: unknown) {
+  const version = (composition as { schemaVersion?: unknown } | null)
+    ?.schemaVersion
+  return version === 2
+    ? readStorefrontFeatureConfig(composition)?.catalog.showLowStockCounts ===
+        true
+    : legacyLowStockCountsEnabled(composition)
+}
+
+/** Explicit unsaved draft migration. No release, persistence or authority is changed. */
+export function withStorefrontFeatureConfig(
+  current: StorefrontComposition,
+  config: StorefrontFeatureConfig,
+) {
+  const next = {
+    ...structuredClone(current),
+    schemaVersion: 2 as const,
+    features: storefrontFeatureConfigSchema.parse(config),
+  }
+  for (const page of next.pages)
+    for (const section of page.sections) {
+      if (section.type !== "commerce-studio-header") continue
+      // Compatibility UI aliases mirror the one canonical configuration, never authorize it.
+      if ("offer-pickup" in section.settings)
+        section.settings["offer-pickup"] =
+          next.features.orders.fulfilment.includes("pickup")
+      if ("offer-delivery" in section.settings)
+        section.settings["offer-delivery"] =
+          next.features.orders.fulfilment.includes("delivery")
+      if (LOW_STOCK_COUNT_SETTING in section.settings)
+        section.settings[LOW_STOCK_COUNT_SETTING] =
+          next.features.catalog.showLowStockCounts
+    }
+  return next
+}
+
+export function upgradeStorefrontFeatures(current: StorefrontComposition) {
+  const config = readStorefrontFeatureConfig(current)
+  if (!config)
+    throw new Error("These storefront feature settings are unavailable.")
+  return withStorefrontFeatureConfig(current, config)
 }

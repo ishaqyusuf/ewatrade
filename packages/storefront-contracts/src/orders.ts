@@ -1,4 +1,5 @@
 import { z } from "zod"
+import { readStorefrontFeatureConfig } from "./features"
 
 /**
  * Customer-side storefront request contracts. Client state is never purchasing
@@ -14,63 +15,21 @@ export const ORDERING_TEMPLATE_KEYS: readonly string[] = ["commerce-studio"]
  * the browser) so the server enforces the merchant's header settings.
  */
 export function orderingFulfilmentMethods(composition: unknown) {
-  const pages =
-    (
-      composition as {
-        pages?: {
-          sections?: { type?: unknown; settings?: Record<string, unknown> }[]
-        }[]
-      } | null
-    )?.pages ?? []
-  const header = pages
-    .flatMap((page) => page.sections ?? [])
-    .find((entry) => entry.type === "commerce-studio-header")
-  const methods: ("pickup" | "delivery")[] = []
-  if (header?.settings?.["offer-pickup"] !== false) methods.push("pickup")
-  if (header?.settings?.["offer-delivery"] === true) methods.push("delivery")
-  return methods
-}
-
-/** Exact template pins whose header declares the low-stock count opt-in. */
-const LOW_STOCK_COUNT_PINS: readonly { key: string; version: string }[] = [
-  { key: "commerce-studio", version: "1.2.0" },
-]
-export const LOW_STOCK_COUNT_SETTING = "show-low-stock-count"
-
-/**
- * Whether a composition (a published release or an authenticated Studio preview
- * design) explicitly opts in to exact low-stock counts. Only listed exact pins can,
- * only through their header setting set to `true`; anything else, including older
- * pins, malformed input or the default, keeps counts out of the public snapshot.
- */
-export function publicLowStockCountsEnabled(composition: unknown) {
-  const value = composition as {
-    template?: { key?: unknown; version?: unknown }
-    pages?: {
-      sections?: {
-        type?: unknown
-        version?: unknown
-        settings?: Record<string, unknown>
-      }[]
-    }[]
-  } | null
-  if (
-    !LOW_STOCK_COUNT_PINS.some(
-      (pin) =>
-        pin.key === value?.template?.key &&
-        pin.version === value?.template?.version,
-    ) ||
-    !Array.isArray(value?.pages)
-  )
-    return false
-  // The same header the template and fulfilment policy read: the first one.
-  const header = value.pages
-    .flatMap((page) => (Array.isArray(page?.sections) ? page.sections : []))
-    .find((entry) => entry?.type === "commerce-studio-header")
   return (
-    header?.version === 2 && header.settings?.[LOW_STOCK_COUNT_SETTING] === true
+    readStorefrontFeatureConfig(
+      composition &&
+        typeof composition === "object" &&
+        !("schemaVersion" in composition)
+        ? { ...composition, schemaVersion: 1 }
+        : composition,
+    )?.orders.fulfilment ?? []
   )
 }
+
+export {
+  LOW_STOCK_COUNT_SETTING,
+  publicLowStockCountsEnabled,
+} from "./features"
 
 const id = z.string().regex(/^[A-Za-z0-9_-]{1,128}$/)
 /** Positive decimal up to 6 places; unit scale is checked against the offering. */

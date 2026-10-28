@@ -1,5 +1,7 @@
 "use client"
 
+import { readStorefrontFeatureConfig } from "@ewatrade/storefront-contracts/features"
+
 import type { SectionInstance } from "@ewatrade/storefront-contracts/manifest"
 import {
   accentInk,
@@ -26,12 +28,20 @@ export function headerSettings(
     .flatMap((page) => page.sections)
     .find((section) => section.type === "commerce-studio-header")
   const value = (key: string) => String(header?.settings[key] ?? "").trim()
+  const features =
+    composition.schemaVersion === 2
+      ? readStorefrontFeatureConfig(composition)
+      : null
   return {
     tagline: value("tagline"),
     location: value("location"),
     hours: value("hours"),
-    offerPickup: header?.settings["offer-pickup"] !== false,
-    offerDelivery: header?.settings["offer-delivery"] === true,
+    offerPickup: features
+      ? features.orders.fulfilment.includes("pickup")
+      : header?.settings["offer-pickup"] !== false,
+    offerDelivery: features
+      ? features.orders.fulfilment.includes("delivery")
+      : header?.settings["offer-delivery"] === true,
     deliveryNote: value("delivery-note"),
     showLogin: header?.settings["show-login"] !== false,
   }

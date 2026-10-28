@@ -3,6 +3,7 @@ import { createHash } from "node:crypto"
 import { readFileSync } from "node:fs"
 import { createComponentInput } from "@ewatrade/storefront-components/contracts"
 import { ComponentHost } from "@ewatrade/storefront-components/host"
+import { upgradeStorefrontFeatures } from "@ewatrade/storefront-contracts/features"
 import { storefrontDesignResources } from "@ewatrade/storefront-runtime/design-assets"
 import { renderToStaticMarkup } from "react-dom/server"
 import {
@@ -81,7 +82,9 @@ test("only the exact reviewed source/manifest/CSS enters the static registry and
         rationale: ["brand-led"],
         missingAssets: [],
         sourceReferences: [],
-        composition: defaultComposition(manifestFor(key)),
+        composition: upgradeStorefrontFeatures(
+          defaultComposition(manifestFor(key)),
+        ),
       })),
     },
     brief,

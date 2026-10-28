@@ -1,7 +1,10 @@
 import { z } from "zod"
+import { storefrontFeatureConfigSchema } from "./features"
 
 export const STOREFRONT_SCHEMA_VERSION = 1
 export const STOREFRONT_RUNTIME_VERSION = 1
+/** Composition versions are independent of immutable template manifest versions. */
+export const STOREFRONT_COMPOSITION_VERSION = 2
 export const storefrontRoutes = [
   "/",
   "/about",
@@ -204,7 +207,7 @@ export const sectionInstanceSchema = z
   })
   .strict()
 
-export const compositionSchema = z
+const legacyCompositionSchema = z
   .object({
     schemaVersion: z.literal(STOREFRONT_SCHEMA_VERSION),
     template: z
@@ -224,6 +227,15 @@ export const compositionSchema = z
       .max(4),
   })
   .strict()
+export const compositionSchema = z.discriminatedUnion("schemaVersion", [
+  legacyCompositionSchema,
+  legacyCompositionSchema
+    .extend({
+      schemaVersion: z.literal(STOREFRONT_COMPOSITION_VERSION),
+      features: storefrontFeatureConfigSchema,
+    })
+    .strict(),
+])
 export type StorefrontComposition = z.infer<typeof compositionSchema>
 export type SectionInstance = z.infer<typeof sectionInstanceSchema>
 
@@ -350,6 +362,14 @@ export function validateComposition(
   ) {
     throw new Error("Template version is unavailable.")
   }
+  if (
+    value.schemaVersion === 2 &&
+    value.features.orders.enabled &&
+    value.features.orders.fulfilment.length === 0
+  )
+    throw new Error(
+      "Choose pickup or delivery before accepting order requests.",
+    )
   for (const control of themeControlSchema.options)
     if (
       value.theme[control] !== undefined &&

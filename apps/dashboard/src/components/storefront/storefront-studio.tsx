@@ -4,6 +4,11 @@ import { useStorefrontParams } from "@/hooks/use-storefront-params"
 import { getDataCacheGeneration, useTRPC, useTRPCClient } from "@/trpc/client"
 import type { RouterOutputs } from "@ewatrade/api/trpc/routers/_app"
 import {
+  readStorefrontFeatureConfig,
+  upgradeStorefrontFeatures,
+  withStorefrontFeatureConfig,
+} from "@ewatrade/storefront-contracts/features"
+import {
   type EditableField,
   type SettingValue,
   type StorefrontComposition,
@@ -41,6 +46,7 @@ import { useRouter } from "next/navigation"
 import { useCallback, useEffect, useId, useRef, useState } from "react"
 import { StorefrontCanvasPreview } from "./storefront-canvas-preview"
 import { StorefrontCatalogItemsField } from "./storefront-catalog-items-field"
+import { StorefrontFeatureSettings } from "./storefront-feature-settings"
 import { StorefrontPhrasesPopover } from "./storefront-phrases-popover"
 import { StorefrontProposals } from "./storefront-proposals"
 import { StorefrontSectionDialog } from "./storefront-section-dialog"
@@ -201,7 +207,7 @@ function StudioEditor({
   const setPage = (page: string) => {
     setSectionId("")
     setPhrases(null)
-    void params.setParams({ page })
+    void params.setParams({ page, panel: "design" })
   }
   const [snapshot, setSnapshot] = useState<StorefrontClientSnapshot | null>(
     null,
@@ -383,7 +389,25 @@ function StudioEditor({
       const section = canvasPage(next, pageKey).sections.find(
         (section) => section.id === sectionId,
       )
-      if (section) section.settings[key] = value
+      if (section) {
+        section.settings[key] = value
+        if (
+          next.schemaVersion === 2 &&
+          section.type === "commerce-studio-header"
+        ) {
+          const features = structuredClone(next.features)
+          if (key === "show-low-stock-count")
+            features.catalog.showLowStockCounts = value === true
+          if (key === "offer-pickup" || key === "offer-delivery") {
+            const method = key === "offer-pickup" ? "pickup" : "delivery"
+            features.orders.fulfilment = features.orders.fulfilment.filter(
+              (entry) => entry !== method,
+            )
+            if (value === true) features.orders.fulfilment.push(method)
+          }
+          Object.assign(next, withStorefrontFeatureConfig(next, features))
+        }
+      }
     })
   const publish = async () => {
     if (
@@ -457,6 +481,7 @@ function StudioEditor({
     ? sections.find((entry) => entry.id === phrases.id)
     : null
   const selectSection = (id: string) => {
+    void params.setParams({ panel: "design" })
     setSectionId(id)
     document
       .querySelector(`[data-section-id="${CSS.escape(id)}"]`)
@@ -773,6 +798,13 @@ function StudioEditor({
                 Drag interior sections to reorder. Header and Footer stay fixed.
               </p>
             </details>
+            <Button
+              variant={params.panel === "features" ? "secondary" : "outline"}
+              aria-pressed={params.panel === "features"}
+              onClick={() => void params.setParams({ panel: "features" })}
+            >
+              Features
+            </Button>
             <details open>
               <summary>Brand</summary>
               <div className="sf-canvas-brand">
@@ -996,28 +1028,53 @@ function StudioEditor({
             </div>
           </aside>
         ) : null}
-        <main className="sf-canvas-stage" aria-label="Storefront preview">
-          <StorefrontCanvasPreview
-            key={`${initial.siteId}:${saved.revision}`}
-            siteId={initial.siteId}
-            storeId={initial.storeId}
-            revision={saved.revision}
-            composition={candidatePreview ?? composition}
-            pageKey={pageKey}
-            viewport={viewport}
-            editing={
-              blocked
-                ? undefined
-                : {
-                    selectedId: sectionId,
-                    onSelect: setSectionId,
-                    onFieldChange: changeField,
-                    onPhrases: (id, anchor) => setPhrases({ id, anchor }),
-                  }
-            }
-            onPageChange={setPage}
-            onSnapshot={setSnapshot}
-          />
+        <main
+          className="sf-canvas-stage"
+          aria-label={
+            params.panel === "features"
+              ? "Storefront features"
+              : "Storefront preview"
+          }
+        >
+          {params.panel === "features" ? (
+            <StorefrontFeatureSettings
+              legacy={composition.schemaVersion === 1}
+              config={readStorefrontFeatureConfig(composition)}
+              disabled={blocked}
+              onUpgrade={() =>
+                edit((next) => {
+                  Object.assign(next, upgradeStorefrontFeatures(next))
+                })
+              }
+              onChange={(config) =>
+                edit((next) => {
+                  Object.assign(next, withStorefrontFeatureConfig(next, config))
+                })
+              }
+            />
+          ) : (
+            <StorefrontCanvasPreview
+              key={`${initial.siteId}:${saved.revision}`}
+              siteId={initial.siteId}
+              storeId={initial.storeId}
+              revision={saved.revision}
+              composition={candidatePreview ?? composition}
+              pageKey={pageKey}
+              viewport={viewport}
+              editing={
+                blocked
+                  ? undefined
+                  : {
+                      selectedId: sectionId,
+                      onSelect: setSectionId,
+                      onFieldChange: changeField,
+                      onPhrases: (id, anchor) => setPhrases({ id, anchor }),
+                    }
+              }
+              onPageChange={setPage}
+              onSnapshot={setSnapshot}
+            />
+          )}
         </main>
       </div>
       {libraryOpen && snapshot ? (

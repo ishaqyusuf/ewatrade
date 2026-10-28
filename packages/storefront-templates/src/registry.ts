@@ -1,4 +1,8 @@
 import {
+  upgradeStorefrontFeatures,
+  withStorefrontFeatureConfig,
+} from "@ewatrade/storefront-contracts/features"
+import {
   type VersionAvailability,
   type VersionIntent,
   versionAvailable,
@@ -246,7 +250,10 @@ export function replaceDraftTemplate(
   const manifest = getTemplateManifest({ template: target }, "new-use")
   return validateComposition(
     {
-      ...defaultComposition(manifest),
+      ...withStorefrontFeatureConfig(
+        defaultComposition(manifest),
+        upgradeStorefrontFeatures(current).features,
+      ),
       theme: themeForTemplate(current.theme, manifest),
     },
     manifest,
@@ -422,6 +429,14 @@ export function withLowStockCountSetting(
 ) {
   const manifest = getTemplateManifest(design, "render")
   const next = structuredClone(design)
+  if (next.schemaVersion === 2) {
+    const features = structuredClone(next.features)
+    features.catalog.showLowStockCounts = enabled
+    return validateComposition(
+      withStorefrontFeatureConfig(next, features),
+      manifest,
+    )
+  }
   const header = next.pages
     .flatMap((page) => page.sections)
     .find((section) => section.type === "commerce-studio-header")
@@ -565,3 +580,8 @@ export function templateInventory() {
       ...status,
     }))
 }
+
+export {
+  upgradeStorefrontFeatures,
+  withStorefrontFeatureConfig,
+} from "@ewatrade/storefront-contracts/features"

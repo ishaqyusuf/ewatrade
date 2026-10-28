@@ -25,7 +25,12 @@ test("the complete canvas catalog fits the existing generation input budget and 
   manifests.forEach((manifest, index) => {
     const references: string[] = data.manifests[index].sectionDefinitions
     expect(
-      references.map((reference) => data.sectionDeclarations[reference]),
+      references.map((reference) => ({
+        ...data.sectionDeclarations[reference],
+        fields: data.sectionDeclarations[reference].fields.map(
+          (field: string) => data.fieldDeclarations[field],
+        ),
+      })),
     ).toEqual(JSON.parse(JSON.stringify(manifest.sections)))
   })
   const declared = manifests.flatMap((manifest) => manifest.sections)

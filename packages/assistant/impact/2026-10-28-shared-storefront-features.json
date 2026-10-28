@@ -1,9 +1,11 @@
 {
   "version": 1,
   "id": "2026-10-28-shared-storefront-features",
-  "tickets": ["H02"],
-  "summary": "Extract shared storefront customer journeys and separate historical customer access from new login and order intake policy.",
-  "noAssistantImpact": "Customer identity, OTP, receipt capability proofs, request recovery and customer-initiated actions remain excluded from model tools and ordinary model input. Existing domain commands remain canonical. Shared UI and template configuration do not grant permission. Existing Host/published Site/active release/Store scope and current entitlement checks remain; new login effects recheck publication under a Site lock while valid session/history/receipt reads do not depend on the selected template or new-intake policy. No new protected merchant procedure, assistant capability, provider activation or deployment. Future neutral feature settings must retain existing Owner/Admin draft/save/publication authority and explicit consent; design generation cannot silently alter operational configuration.",
+  "tickets": [
+    "H02"
+  ],
+  "summary": "Shared storefront runtime, independent customer/intake policy and explicit merchant-controlled neutral feature configuration.",
+  "noAssistantImpact": "Customer identity, OTP, receipt capability proofs, request recovery and customer-initiated actions remain excluded from model tools and ordinary model input. Existing domain commands remain canonical. Shared UI and template configuration do not grant permission. Existing Host/published Site/active release/Store scope and current entitlement checks remain; new login effects recheck publication under a Site lock while valid session/history/receipt reads do not depend on the selected template or new-intake policy. No new protected merchant procedure, assistant capability, provider activation or deployment. Neutral feature settings retain existing Owner/Admin draft/save/publication authority and explicit consent; design generation cannot silently alter operational configuration.",
   "capabilities": [],
   "procedures": [],
   "docs": [
@@ -46,6 +48,12 @@
       "path": "docs/plans/shared-storefront-features-extraction.md",
       "executed": true,
       "result": "Owner-authorized 27-work-package local extraction contract preserves customer/session/token/bag compatibility, immutable releases and no-deployment boundary. Full template/UI/transaction acceptance remains open until the final phase."
+    },
+    {
+      "kind": "test",
+      "path": "packages/storefront-templates/src/shared-features.test.ts",
+      "executed": true,
+      "result": "Explicit migration preserves disabled intake/privacy and immutable input, every selectable template preserves configuration, AI proposals cannot change feature policy. Existing save/publish/consent remains authoritative; no new assistant tool."
     }
   ]
 }
