@@ -1,16 +1,4 @@
-import {
-  checkStorefrontBag,
-  declineStorefrontQuote,
-  linkStorefrontReceipt,
-  linkVerifiedStorefrontHistory,
-  logoutStorefrontCustomer,
-  replyToStorefrontRequest,
-  requestStorefrontLoginCode,
-  submitStorefrontOrder,
-  submitStorefrontService,
-  verifyStorefrontLoginCode,
-  withdrawStorefrontRequest,
-} from "@/app/storefront-commerce-actions"
+import { storefrontPresentation } from "@/lib/storefront-presentation"
 import { formatStorefrontPrice } from "@ewatrade/storefront-runtime/presentation"
 import {
   serializeStorefrontStructuredData,
@@ -20,28 +8,13 @@ import {
 import type { StorefrontClientSnapshot } from "@ewatrade/storefront-runtime/server"
 import type {
   CommerceStudioRoute,
-  StorefrontCommerceAdapter,
   StorefrontCustomerView,
 } from "@ewatrade/storefront-templates/commerce-studio"
 import { StorefrontTemplate } from "@ewatrade/storefront-templates/render"
 import { getStorefrontDomain, resolveCustomerChatOrigin } from "@ewatrade/utils"
+import { CommerceStudioPage } from "./storefront-commerce-page"
+import { StorefrontPageBoundary } from "./storefront-shell"
 import "@ewatrade/storefront-templates/styles.css"
-
-/** Server actions only; each re-derives Host scope and session before any effect. */
-const commerceAdapter = {
-  mode: "live",
-  checkBag: checkStorefrontBag,
-  submitOrder: submitStorefrontOrder,
-  submitService: submitStorefrontService,
-  reply: replyToStorefrontRequest,
-  withdraw: withdrawStorefrontRequest,
-  declineQuote: declineStorefrontQuote,
-  requestCode: requestStorefrontLoginCode,
-  verifyCode: verifyStorefrontLoginCode,
-  logout: logoutStorefrontCustomer,
-  linkVerified: linkVerifiedStorefrontHistory,
-  linkReceipt: linkStorefrontReceipt,
-} as unknown as StorefrontCommerceAdapter
 
 export function StorefrontContent({
   snapshot,
@@ -114,17 +87,28 @@ export function StorefrontContent({
           </article>
         </noscript>
       ) : null}
-      <StorefrontTemplate
-        snapshot={snapshot}
-        domain={domain}
-        after={after}
-        pageKey={pageKey}
-        customerChatOrigin={customerChatOrigin}
-        syncUrl
-        {...(snapshot.composition.template.key === "commerce-studio"
-          ? { commerce: commerceAdapter, customer: customer ?? null, route }
-          : {})}
-      />
+      <StorefrontPageBoundary
+        data={storefrontPresentation(snapshot, customer, pageKey, route)}
+      >
+        {snapshot.composition.template.key === "commerce-studio" ? (
+          <CommerceStudioPage
+            snapshot={snapshot}
+            domain={domain}
+            pageKey={pageKey}
+            route={route}
+            customer={customer}
+          />
+        ) : (
+          <StorefrontTemplate
+            snapshot={snapshot}
+            domain={domain}
+            after={after}
+            pageKey={pageKey}
+            customerChatOrigin={customerChatOrigin}
+            syncUrl
+          />
+        )}
+      </StorefrontPageBoundary>
     </>
   )
 }

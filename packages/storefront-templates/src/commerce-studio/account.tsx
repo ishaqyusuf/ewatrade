@@ -1,5 +1,7 @@
 "use client"
 
+import { CommerceLink } from "./navigation"
+
 import {
   Alert,
   AlertDescription,
@@ -95,7 +97,7 @@ export function CommerceAccount({ account }: { account: AccountView }) {
 function SignIn({
   account,
 }: { account: Extract<AccountView, { signedIn: false }> }) {
-  const { adapter, snapshot } = useCommerceStudio()
+  const { adapter, snapshot, navigate } = useCommerceStudio()
   const [channel, setChannel] = useState<"email" | "whatsapp">(
     account.channels[0] ?? "email",
   )
@@ -188,7 +190,7 @@ function SignIn({
         account.next?.startsWith("/") && !account.next.startsWith("//")
           ? account.next
           : "/account"
-      window.location.assign(next)
+      navigate(next, { replace: true, refresh: true })
     } catch {
       setError("We couldn't check the code. Try again.")
     } finally {
@@ -353,7 +355,7 @@ function SignIn({
 function SignedIn({
   account,
 }: { account: Extract<AccountView, { signedIn: true }> }) {
-  const { adapter, href } = useCommerceStudio()
+  const { adapter, href, navigate } = useCommerceStudio()
   const [pending, setPending] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const headingRef = useRef<HTMLHeadingElement>(null)
@@ -371,7 +373,7 @@ function SignedIn({
     setError(null)
     try {
       const result = await run()
-      if (result.ok) window.location.assign(then)
+      if (result.ok) navigate(then, { replace: true, refresh: true })
       else setError(result.message ?? "That didn't work.")
     } catch {
       setError("We couldn't reach the shop. Try again.")
@@ -436,7 +438,7 @@ function SignedIn({
         <ul className="cs-history">
           {account.history.map((entry) => (
             <li key={entry.key}>
-              <a className="cs-history__row" href={entry.href}>
+              <CommerceLink className="cs-history__row" href={entry.href}>
                 <span>
                   <strong>{entry.reference}</strong>
                   <span className="cs-muted">
@@ -460,7 +462,7 @@ function SignedIn({
                     })}
                   </span>
                 </span>
-              </a>
+              </CommerceLink>
             </li>
           ))}
         </ul>
@@ -472,12 +474,12 @@ function SignedIn({
               Requests you send while logged in appear here.
             </EmptyDescription>
           </EmptyHeader>
-          <a
+          <CommerceLink
             className={buttonVariants({ className: "cs-primary" })}
             href={href("/")}
           >
             Start shopping
-          </a>
+          </CommerceLink>
         </Empty>
       )}
     </div>

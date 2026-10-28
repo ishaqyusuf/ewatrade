@@ -23,7 +23,7 @@ import { cache } from "react"
 import { customerSessionToken, receiptSecret } from "./storefront-commerce"
 import { loadFactoryStorefront } from "./storefront-factory"
 
-export const loadStorefrontPage = cache(
+const loadCachedStorefrontPage = cache(
   async (
     after?: string,
     category?: string,
@@ -47,6 +47,17 @@ export const loadStorefrontPage = cache(
     return { ...result, host }
   },
 )
+
+export function loadStorefrontPage(
+  after?: string,
+  category?: string,
+  item?: string,
+  q?: string,
+  availability?: CatalogQuery["availability"],
+  sort?: CatalogQuery["sort"],
+) {
+  return loadCachedStorefrontPage(after, category, item, q, availability, sort)
+}
 
 export const loadCustomerSession = cache(async () => {
   const host = (await headers()).get("host") ?? ""

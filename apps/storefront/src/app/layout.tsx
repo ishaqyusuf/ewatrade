@@ -1,4 +1,5 @@
 import { StorefrontAnalytics } from "@/components/storefront/storefront-analytics"
+import { StorefrontNavigation } from "@/components/storefront/storefront-navigation"
 import type { Metadata } from "next"
 import "@ewatrade/ui/globals.css"
 import { cn } from "@/utils"
@@ -22,7 +23,9 @@ export default function RootLayout({
   return (
     <html lang="en" className={cn("font-sans", geist.variable)}>
       <body>
-        <StorefrontAnalytics>{children}</StorefrontAnalytics>
+        <StorefrontAnalytics>
+          <StorefrontNavigation>{children}</StorefrontNavigation>
+        </StorefrontAnalytics>
       </body>
     </html>
   )

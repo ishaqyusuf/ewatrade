@@ -1,10 +1,9 @@
 "use client"
 
+import { CommerceLink } from "./navigation"
+
 import { storefrontItemHref } from "@ewatrade/storefront-runtime/links"
-import {
-  StorefrontArtwork,
-  StorefrontAttribution,
-} from "@ewatrade/storefront-runtime/primitives"
+import { StorefrontArtwork } from "@ewatrade/storefront-runtime/primitives"
 import type { StorefrontClientSnapshot } from "@ewatrade/storefront-runtime/server"
 import {
   Accordion,
@@ -17,7 +16,6 @@ import {
   EmptyDescription,
   EmptyHeader,
   EmptyTitle,
-  Toaster,
   buttonVariants,
   cn,
 } from "@ewatrade/ui"
@@ -26,8 +24,6 @@ import {
   Clock01Icon,
   DeliveryTruck01Icon,
   Location01Icon,
-  ShoppingBag01Icon,
-  UserIcon,
   WhatsappIcon,
 } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
@@ -41,12 +37,10 @@ import {
   catalogListingHref,
 } from "../shared/catalog-listing"
 import { type AccountView, CommerceAccount } from "./account"
-import { BagSheet } from "./bag"
 import { CommerceCheckout } from "./checkout"
 import {
   type StorefrontCommerceAdapter,
   type StorefrontCustomerView,
-  bagTotals,
   formatMoney,
   itemSoldOut,
   stockWording,
@@ -60,6 +54,7 @@ import {
 import { ProductDetail } from "./product"
 import { CommerceReceipt, type ReceiptView } from "./receipt"
 import { ServiceDetail } from "./service"
+import { CommerceStudioShell } from "./shell"
 
 /** Domain-owned routes the storefront app renders inside this template's shell. */
 export type CommerceStudioRoute =
@@ -81,20 +76,11 @@ export type CommerceStudioProps = {
   route?: CommerceStudioRoute
 }
 
-const pagePath: Record<string, string> = {
-  home: "/",
-  shop: "/shop",
-  services: "/services",
-  about: "/about",
-}
-
 export function CommerceStudio(props: CommerceStudioProps) {
   const { snapshot } = props
   const preview = Boolean(
     props.editing || props.onPageChange || props.draftPreview,
   )
-  const theme = snapshot.composition.theme
-  const style = commerceThemeStyle(theme)
   return (
     <CommerceStudioProvider
       snapshot={snapshot}
@@ -103,49 +89,25 @@ export function CommerceStudio(props: CommerceStudioProps) {
       preview={preview}
       onPageChange={props.onPageChange}
     >
-      <div
-        className="cs-store"
-        data-preview={preview || undefined}
-        data-font={theme.font}
-        data-density={theme.density ?? "comfortable"}
-        data-page={
-          props.route?.kind === "page" || !props.route
-            ? (props.pageKey ?? "home")
-            : props.route.kind
+      <CommerceStudioShell
+        current={
+          props.route && props.route.kind !== "page"
+            ? props.route.kind
+            : !props.editing && snapshot.resources.catalog.highlightedItem
+              ? snapshot.resources.catalog.highlightedItem.kind === "SERVICE"
+                ? "services"
+                : "shop"
+              : (props.pageKey ?? "home")
         }
-        style={style}
+        routeKind={props.route?.kind}
       >
-        {snapshot.mode === "preview" && !preview ? (
-          <aside className="cs-qa-banner" aria-label="Preview notice">
-            Local QA preview · test data · requests are saved to the QA database
-            and no messages are sent
-          </aside>
-        ) : null}
-        <StoreHeader
-          current={
-            // Checkout, receipts and the account aren't nav pages: mark none current.
-            props.route && props.route.kind !== "page"
-              ? props.route.kind
-              : !props.editing && snapshot.resources.catalog.highlightedItem
-                ? snapshot.resources.catalog.highlightedItem.kind === "SERVICE"
-                  ? "services"
-                  : "shop"
-                : (props.pageKey ?? "home")
-          }
-        />
-        <main id="cs-main" className="cs-main" tabIndex={-1}>
-          <RouteBody {...props} />
-        </main>
-        <StoreFooter />
-        <BagDock hidden={props.route?.kind === "checkout"} />
-        <BagSheet />
-        {preview ? null : <Toaster position="top-center" />}
-      </div>
+        <CommerceStudioBody {...props} />
+      </CommerceStudioShell>
     </CommerceStudioProvider>
   )
 }
 
-function RouteBody(props: CommerceStudioProps) {
+export function CommerceStudioBody(props: CommerceStudioProps) {
   const { snapshot, route } = props
   if (route?.kind === "checkout") return <CommerceCheckout />
   if (route?.kind === "receipt")
@@ -242,244 +204,6 @@ function Section({
   }
 }
 
-// ---------------------------------------------------------------- Shell
-
-function StoreHeader({ current }: { current: string }) {
-  const {
-    snapshot,
-    facts,
-    header,
-    customer,
-    accounts,
-    ordering,
-    bag,
-    setBagOpen,
-    href,
-    navigate,
-    preview,
-  } = useCommerceStudio()
-  const pages = snapshot.composition.pages.filter((page) => {
-    if (page.key === "shop") return facts.products > 0
-    if (page.key === "services") return facts.services > 0
-    if (page.key === "about") return aboutHasContent(snapshot, header)
-    return true
-  })
-  const count = bag.lines.length
-  const name = snapshot.resources.business.name
-  return (
-    <header className="cs-header">
-      <a className="cs-skip" href="#cs-main">
-        Skip to content
-      </a>
-      <div className="cs-wrap cs-header__row">
-        <a
-          className="cs-wordmark"
-          href={href("/")}
-          onClick={(event) => {
-            if (preview) {
-              event.preventDefault()
-              navigate("/")
-            }
-          }}
-        >
-          <span className="cs-wordmark__name">{name}</span>
-          {header.tagline ? (
-            <span className="cs-wordmark__tagline">{header.tagline}</span>
-          ) : null}
-        </a>
-        <nav className="cs-nav" aria-label={`${name} pages`}>
-          {pages.map((page) => {
-            const path = pagePath[page.key] ?? "/"
-            const label =
-              snapshot.composition.pages.length && page.key === "about"
-                ? "Our story"
-                : page.key === "home"
-                  ? "Home"
-                  : page.key === "shop"
-                    ? "Shop"
-                    : "Services"
-            return (
-              <a
-                key={page.key}
-                className="cs-nav__link"
-                href={href(path)}
-                aria-current={current === page.key ? "page" : undefined}
-                onClick={(event) => {
-                  if (preview) {
-                    event.preventDefault()
-                    navigate(path)
-                  }
-                }}
-              >
-                {label}
-              </a>
-            )
-          })}
-        </nav>
-        <div className="cs-header__actions">
-          {accounts ? (
-            <a
-              className={buttonVariants({
-                variant: "ghost",
-                className: "cs-icon-text",
-              })}
-              href="/account"
-              aria-label={customer?.signedIn ? "Your account" : "Log in"}
-            >
-              <HugeiconsIcon icon={UserIcon} strokeWidth={1.8} />
-              <span className="cs-hide-sm">
-                {customer?.signedIn ? "Account" : "Log in"}
-              </span>
-            </a>
-          ) : null}
-          {ordering ? (
-            <Button
-              variant="ghost"
-              className="cs-icon-text"
-              aria-label={`Bag, ${count} ${count === 1 ? "item" : "items"}`}
-              onClick={() => setBagOpen(true)}
-            >
-              <HugeiconsIcon icon={ShoppingBag01Icon} strokeWidth={1.8} />
-              <span className="cs-hide-sm">Bag</span>
-              <span className="cs-count" aria-hidden="true">
-                {count}
-              </span>
-            </Button>
-          ) : null}
-        </div>
-      </div>
-    </header>
-  )
-}
-
-/** "Our story" only when there is something real to read there. */
-function aboutHasContent(
-  snapshot: StorefrontClientSnapshot,
-  header: { location: string; hours: string },
-) {
-  const story = snapshot.composition.pages
-    .find((page) => page.key === "about")
-    ?.sections.some(
-      (section) =>
-        section.visible &&
-        section.type === "commerce-studio-story" &&
-        String(section.settings.body ?? "").trim(),
-    )
-  return Boolean(
-    story ||
-      snapshot.resources.business.description?.trim() ||
-      header.location ||
-      header.hours ||
-      snapshot.resources.contact.whatsAppPhone,
-  )
-}
-
-function StoreFooter() {
-  const { snapshot, header, facts, href } = useCommerceStudio()
-  const footer = snapshot.composition.pages
-    .flatMap((page) => page.sections)
-    .find((section) => section.type === "commerce-studio-footer")
-  const note = footer ? sectionText(footer, "note") : ""
-  const whatsapp = snapshot.resources.contact.whatsAppPhone
-  const name = snapshot.resources.business.name
-  return (
-    <footer className="cs-footer">
-      <div className="cs-wrap cs-footer__grid">
-        <div>
-          <p className="cs-footer__name">{name}</p>
-          {header.tagline ? <p>{header.tagline}</p> : null}
-        </div>
-        {header.location || header.hours ? (
-          <div>
-            <h2 className="cs-footer__head">Visit</h2>
-            {header.location ? <p>{header.location}</p> : null}
-            {header.hours ? <p>{header.hours}</p> : null}
-          </div>
-        ) : null}
-        {facts.products ||
-        facts.services ||
-        aboutHasContent(snapshot, header) ? (
-          <div>
-            <h2 className="cs-footer__head">Explore</h2>
-            <ul className="cs-footer__links">
-              {facts.products ? (
-                <li>
-                  <a href={href("/shop")}>Shop</a>
-                </li>
-              ) : null}
-              {facts.services ? (
-                <li>
-                  <a href={href("/services")}>Services</a>
-                </li>
-              ) : null}
-              {aboutHasContent(snapshot, header) ? (
-                <li>
-                  <a href={href("/about")}>Our story</a>
-                </li>
-              ) : null}
-            </ul>
-          </div>
-        ) : null}
-        {whatsapp || facts.products || facts.services ? (
-          <div>
-            <h2 className="cs-footer__head">Talk to us</h2>
-            {whatsapp ? (
-              <a
-                className="cs-link"
-                href={`https://wa.me/${whatsapp.replace(/\D/g, "")}`}
-                target="_blank"
-                rel="noreferrer"
-              >
-                Message on WhatsApp
-              </a>
-            ) : (
-              <p>
-                Send a request on this site and the business replies to the
-                number you give.
-              </p>
-            )}
-          </div>
-        ) : null}
-      </div>
-      <div className="cs-wrap cs-footer__fine">
-        {note ? <p>{note}</p> : null}
-        <p>
-          © {name} · <StorefrontAttribution />
-        </p>
-      </div>
-    </footer>
-  )
-}
-
-function BagDock({ hidden }: { hidden: boolean }) {
-  const { bag, ordering, setBagOpen, snapshot } = useCommerceStudio()
-  if (hidden || !ordering || !bag.lines.length) return null
-  const totals = bagTotals(bag.lines)
-  const currency = bag.lines[0]?.currencyCode ?? snapshot.currencyCode
-  return (
-    <div className="cs-dock">
-      <button
-        type="button"
-        className="cs-dock__button"
-        onClick={() => setBagOpen(true)}
-      >
-        <span className="cs-dock__count">
-          <HugeiconsIcon icon={ShoppingBag01Icon} strokeWidth={1.8} />
-          {totals.count} {totals.count === 1 ? "item" : "items"}
-        </span>
-        <span className="cs-dock__total">
-          {totals.complete
-            ? formatMoney(totals.subtotal, currency)
-            : "Total to confirm"}
-        </span>
-        <span className="cs-dock__cta">
-          View bag <HugeiconsIcon icon={ArrowRight01Icon} strokeWidth={2} />
-        </span>
-      </button>
-    </div>
-  )
-}
-
 // ---------------------------------------------------------------- Sections
 
 function Hero({ section }: { section: SectionInstance }) {
@@ -525,7 +249,7 @@ function Hero({ section }: { section: SectionInstance }) {
           {showActions && (facts.products || facts.services) ? (
             <div className="cs-hero__actions">
               {facts.products ? (
-                <a
+                <CommerceLink
                   className={buttonVariants({
                     size: "lg",
                     className: "cs-primary",
@@ -533,10 +257,10 @@ function Hero({ section }: { section: SectionInstance }) {
                   href={href("/shop")}
                 >
                   Shop now
-                </a>
+                </CommerceLink>
               ) : null}
               {facts.services ? (
-                <a
+                <CommerceLink
                   className={buttonVariants({
                     size: "lg",
                     variant: facts.products ? "outline" : "default",
@@ -545,7 +269,7 @@ function Hero({ section }: { section: SectionInstance }) {
                   href={href("/services")}
                 >
                   {facts.products ? "See services" : "Choose a service"}
-                </a>
+                </CommerceLink>
               ) : null}
             </div>
           ) : null}
@@ -569,14 +293,14 @@ function Hero({ section }: { section: SectionInstance }) {
           ) : null}
         </div>
         {feature ? (
-          <a
+          <CommerceLink
             className="cs-hero__media"
             href={href(storefrontItemHref(feature.id))}
             aria-label={`View ${feature.name}`}
           >
             <StorefrontArtwork item={feature} />
             <span className="cs-hero__caption">{feature.name}</span>
-          </a>
+          </CommerceLink>
         ) : null}
       </div>
     </section>
@@ -607,7 +331,7 @@ function Categories({ section }: { section: SectionInstance }) {
         </h2>
         <div className="cs-category-row">
           {tiles.map(({ category, cover }) => (
-            <a
+            <CommerceLink
               key={category.id}
               className="cs-category"
               href={href(`/shop${catalogListingHref(category.id)}`)}
@@ -622,7 +346,7 @@ function Categories({ section }: { section: SectionInstance }) {
                 )}
               </span>
               <span className="cs-category__label">{category.name}</span>
-            </a>
+            </CommerceLink>
           ))}
         </div>
       </div>
@@ -692,10 +416,13 @@ function Featured({ section }: { section: SectionInstance }) {
         <div className="cs-section__head">
           <h2 className="cs-title">{heading}</h2>
           {facts.products > items.length ? (
-            <a className="cs-link cs-link--arrow" href={href("/shop")}>
+            <CommerceLink
+              className="cs-link cs-link--arrow"
+              href={href("/shop")}
+            >
               View all {facts.products}{" "}
               <HugeiconsIcon icon={ArrowRight01Icon} strokeWidth={2} />
-            </a>
+            </CommerceLink>
           ) : null}
         </div>
         {items.length === 1 && items[0] ? (
@@ -723,18 +450,17 @@ function FeatureItem({ item }: { item: PublicCatalogItem }) {
   const link = href(storefrontItemHref(item.id))
   return (
     <article className="cs-feature">
-      {/* biome-ignore lint/a11y/useAnchorContent: decorative duplicate of the named link below, hidden from assistive tech. */}
-      <a
+      <CommerceLink
         className="cs-feature__media"
         href={link}
         tabIndex={-1}
         aria-hidden="true"
       >
         <StorefrontArtwork item={{ ...item, availability: null }} />
-      </a>
+      </CommerceLink>
       <div className="cs-feature__body">
         <h3 className="cs-title">
-          <a href={link}>{item.name}</a>
+          <CommerceLink href={link}>{item.name}</CommerceLink>
         </h3>
         <p className="cs-product__price">
           {item.priceMinor === null
@@ -755,7 +481,7 @@ function FeatureItem({ item }: { item: PublicCatalogItem }) {
             <span>{item.options.length} options</span>
           ) : null}
         </p>
-        <a
+        <CommerceLink
           className={buttonVariants({
             size: "lg",
             className: "cs-primary cs-feature__cta",
@@ -763,7 +489,7 @@ function FeatureItem({ item }: { item: PublicCatalogItem }) {
           href={link}
         >
           View details
-        </a>
+        </CommerceLink>
       </div>
     </article>
   )
@@ -800,15 +526,15 @@ function Catalog({ section }: { section: SectionInstance }) {
         </div>
         {catalog.categories.length > 1 ? (
           <nav className="cs-chips" aria-label="Categories">
-            <a
+            <CommerceLink
               className="cs-chip"
               href={href("/shop")}
               aria-current={!catalog.category ? "page" : undefined}
             >
               All
-            </a>
+            </CommerceLink>
             {catalog.categories.map((category) => (
-              <a
+              <CommerceLink
                 key={category.id}
                 className="cs-chip"
                 href={href(
@@ -819,7 +545,7 @@ function Catalog({ section }: { section: SectionInstance }) {
                 }
               >
                 {category.name}
-              </a>
+              </CommerceLink>
             ))}
           </nav>
         ) : null}
@@ -846,12 +572,12 @@ function Catalog({ section }: { section: SectionInstance }) {
               </EmptyDescription>
             </EmptyHeader>
             <EmptyContent>
-              <a
+              <CommerceLink
                 className={buttonVariants({ variant: "outline" })}
                 href={href("/shop")}
               >
                 Clear search
-              </a>
+              </CommerceLink>
             </EmptyContent>
           </Empty>
         ) : (
@@ -859,14 +585,14 @@ function Catalog({ section }: { section: SectionInstance }) {
         )}
         {catalog.nextCursor ? (
           <div className="cs-more">
-            <a
+            <CommerceLink
               className={buttonVariants({ variant: "outline" })}
               href={href(
                 `/shop${catalogListingHref(catalog.category, catalog.nextCursor, catalog.query)}`,
               )}
             >
               Show more
-            </a>
+            </CommerceLink>
           </div>
         ) : null}
       </div>
@@ -906,8 +632,7 @@ function ProductCard({ item }: { item: PublicCatalogItem }) {
   const link = href(storefrontItemHref(item.id))
   return (
     <article className="cs-card" data-sold-out={soldOut || undefined}>
-      {/* biome-ignore lint/a11y/useAnchorContent: decorative duplicate of the named link below, hidden from assistive tech. */}
-      <a
+      <CommerceLink
         className="cs-card__media"
         href={link}
         tabIndex={-1}
@@ -915,10 +640,10 @@ function ProductCard({ item }: { item: PublicCatalogItem }) {
       >
         <StorefrontArtwork item={{ ...item, availability: null }} />
         {soldOut ? <span className="cs-card__flag">Sold out</span> : null}
-      </a>
+      </CommerceLink>
       <div className="cs-card__body">
         <h3 className="cs-card__name">
-          <a href={link}>{item.name}</a>
+          <CommerceLink href={link}>{item.name}</CommerceLink>
         </h3>
         <p className="cs-card__price">
           {item.priceMinor === null
@@ -956,14 +681,14 @@ function EmptyShelf() {
       </EmptyHeader>
       {whatsapp ? (
         <EmptyContent>
-          <a
+          <CommerceLink
             className={buttonVariants({ variant: "outline" })}
             href={`https://wa.me/${whatsapp.replace(/\D/g, "")}`}
             target="_blank"
             rel="noreferrer"
           >
             Message on WhatsApp
-          </a>
+          </CommerceLink>
         </EmptyContent>
       ) : null}
     </Empty>
@@ -1031,7 +756,7 @@ function ServiceRow({ item, href }: { item: PublicCatalogItem; href: string }) {
     <article className="cs-service">
       <div className="cs-service__main">
         <h3 className="cs-service__name">
-          <a href={href}>{item.name}</a>
+          <CommerceLink href={href}>{item.name}</CommerceLink>
         </h3>
         {item.description ? (
           <p className="cs-service__text">{item.description}</p>
@@ -1052,7 +777,7 @@ function ServiceRow({ item, href }: { item: PublicCatalogItem; href: string }) {
           ) : null}
         </p>
       </div>
-      <a
+      <CommerceLink
         className={buttonVariants({
           variant: "outline",
           className: "cs-service__cta",
@@ -1061,7 +786,7 @@ function ServiceRow({ item, href }: { item: PublicCatalogItem; href: string }) {
         aria-label={`Choose ${item.name}`}
       >
         Choose
-      </a>
+      </CommerceLink>
     </article>
   )
 }
@@ -1163,7 +888,7 @@ function Contact({ section }: { section: SectionInstance }) {
           ) : null}
           {note ? <p className="cs-contact__note">{note}</p> : null}
           {whatsapp ? (
-            <a
+            <CommerceLink
               className={buttonVariants({ className: "cs-primary" })}
               href={`https://wa.me/${whatsapp.replace(/\D/g, "")}`}
               target="_blank"
@@ -1171,7 +896,7 @@ function Contact({ section }: { section: SectionInstance }) {
             >
               <HugeiconsIcon icon={WhatsappIcon} strokeWidth={1.8} />
               Message on WhatsApp
-            </a>
+            </CommerceLink>
           ) : null}
         </div>
       </div>

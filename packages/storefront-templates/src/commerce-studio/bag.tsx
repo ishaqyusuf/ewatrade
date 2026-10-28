@@ -1,5 +1,7 @@
 "use client"
 
+import { CommerceLink } from "./navigation"
+
 import { StorefrontArtwork } from "@ewatrade/storefront-runtime/primitives"
 import {
   Alert,
@@ -216,7 +218,7 @@ export function BagSheet() {
               No payment now. The business confirms stock, any delivery fee and
               the total first.
             </p>
-            <a
+            <CommerceLink
               className={buttonVariants({
                 size: "lg",
                 className: "cs-primary cs-full",
@@ -228,7 +230,7 @@ export function BagSheet() {
               }}
             >
               Continue to request
-            </a>
+            </CommerceLink>
             <Button variant="ghost" onClick={clearBag}>
               Clear bag
             </Button>

@@ -1,5 +1,7 @@
 "use client"
 
+import { CommerceLink } from "./navigation"
+
 import { StorefrontArtwork } from "@ewatrade/storefront-runtime/primitives"
 import {
   Button,
@@ -147,20 +149,20 @@ export function ProductDetail({ item }: { item: PublicCatalogItem }) {
   return (
     <article className="cs-product cs-wrap">
       <nav className="cs-breadcrumb" aria-label="Breadcrumb">
-        <a href={href("/shop")}>
+        <CommerceLink href={href("/shop")}>
           <HugeiconsIcon icon={ArrowLeft01Icon} strokeWidth={2} />
           Shop
-        </a>
+        </CommerceLink>
         {item.category ? (
           <>
             <span aria-hidden="true">/</span>
-            <a
+            <CommerceLink
               href={href(
                 `/shop?category=${encodeURIComponent(item.category.id)}`,
               )}
             >
               {item.category.name}
-            </a>
+            </CommerceLink>
           </>
         ) : null}
       </nav>
@@ -280,7 +282,7 @@ export function ProductDetail({ item }: { item: PublicCatalogItem }) {
               </Button>
             ) : null}
             {(priceOnRequest || soldOut || !ordering) && enquiry ? (
-              <a
+              <CommerceLink
                 className={buttonVariants({
                   size: "lg",
                   variant:
@@ -295,7 +297,7 @@ export function ProductDetail({ item }: { item: PublicCatalogItem }) {
               >
                 <HugeiconsIcon icon={WhatsappIcon} strokeWidth={1.8} />
                 Ask on WhatsApp
-              </a>
+              </CommerceLink>
             ) : null}
           </div>
           {ordering && !priceOnRequest && !soldOut ? (

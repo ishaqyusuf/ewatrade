@@ -1,5 +1,7 @@
 "use client"
 
+import { CommerceLink } from "./navigation"
+
 import {
   Alert,
   AlertDescription,
@@ -42,7 +44,8 @@ function todayInLagos() {
 }
 
 export function ServiceDetail({ item }: { item: PublicCatalogItem }) {
-  const { snapshot, adapter, header, href, preview } = useCommerceStudio()
+  const { snapshot, adapter, header, href, preview, navigate } =
+    useCommerceStudio()
   const entry = snapshot.resources.contact.serviceRequestEntry
   const requestable = new Set(entry?.offeringIds ?? [])
   const options = item.options.filter((option) => requestable.has(option.id))
@@ -59,6 +62,7 @@ export function ServiceDetail({ item }: { item: PublicCatalogItem }) {
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [formError, setFormError] = useState<string | null>(null)
   const [pending, setPending] = useState(false)
+  const [receiptPath, setReceiptPath] = useState<string | null>(null)
   const busy = useRef(false)
   const requestId = useRef<string | null>(null)
   const errorRef = useRef<HTMLDivElement>(null)
@@ -97,7 +101,7 @@ export function ServiceDetail({ item }: { item: PublicCatalogItem }) {
   }
 
   const submit = async () => {
-    if (busy.current || !entry) return
+    if (busy.current || receiptPath || !entry) return
     setFormError(null)
     const next: Record<string, string> = {}
     if (!chosen.length) next.options = "Choose at least one option."
@@ -130,6 +134,7 @@ export function ServiceDetail({ item }: { item: PublicCatalogItem }) {
     requestId.current ??= newClientId()
     busy.current = true
     setPending(true)
+    let completed = false
     try {
       const result = await adapter.submitService({
         request: {
@@ -151,7 +156,9 @@ export function ServiceDetail({ item }: { item: PublicCatalogItem }) {
         },
       })
       if (result.ok) {
-        window.location.assign(result.receiptPath)
+        completed = true
+        setReceiptPath(result.receiptPath)
+        navigate(result.receiptPath)
         return
       }
       if (result.field)
@@ -169,17 +176,29 @@ export function ServiceDetail({ item }: { item: PublicCatalogItem }) {
       )
       requestAnimationFrame(() => errorRef.current?.focus())
     } finally {
-      busy.current = false
-      setPending(false)
+      if (!completed) {
+        busy.current = false
+        setPending(false)
+      }
     }
   }
 
+  if (receiptPath)
+    return (
+      <section className="cs-section cs-wrap">
+        <h1 className="cs-title cs-title--page">Request received</h1>
+        <output>Opening your request status…</output>
+        <CommerceLink className="cs-link" href={receiptPath}>
+          View your request
+        </CommerceLink>
+      </section>
+    )
   return (
     <article className="cs-wrap cs-service-detail">
-      <a className="cs-back" href={href("/services")}>
+      <CommerceLink className="cs-back" href={href("/services")}>
         <HugeiconsIcon icon={ArrowLeft01Icon} strokeWidth={2} />
         All services
-      </a>
+      </CommerceLink>
       <div className="cs-service-detail__grid">
         <div>
           <h1 className="cs-display cs-display--product">{item.name}</h1>
@@ -206,7 +225,7 @@ export function ServiceDetail({ item }: { item: PublicCatalogItem }) {
                   ? "This business takes requests for this service on WhatsApp."
                   : "This service isn't taking requests on this site right now."}
                 {enquiry ? (
-                  <a
+                  <CommerceLink
                     className={buttonVariants({
                       className: "cs-primary cs-mt",
                     })}
@@ -216,7 +235,7 @@ export function ServiceDetail({ item }: { item: PublicCatalogItem }) {
                   >
                     <HugeiconsIcon icon={WhatsappIcon} strokeWidth={1.8} />
                     Ask on WhatsApp
-                  </a>
+                  </CommerceLink>
                 ) : null}
               </AlertDescription>
             </Alert>

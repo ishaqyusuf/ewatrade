@@ -1,5 +1,7 @@
 "use client"
 
+import { CommerceLink } from "./navigation"
+
 import {
   Alert,
   AlertDescription,
@@ -85,6 +87,7 @@ export function CommerceCheckout() {
     updateLine,
     removeLine,
     preview,
+    navigate,
   } = useCommerceStudio()
   const methods = [
     ...(header.offerPickup ? (["pickup"] as const) : []),
@@ -116,6 +119,7 @@ export function CommerceCheckout() {
   >({})
   const [formError, setFormError] = useState<string | null>(null)
   const [pending, setPending] = useState(false)
+  const [receiptPath, setReceiptPath] = useState<string | null>(null)
   const [checking, setChecking] = useState(false)
   const [summaryOpen, setSummaryOpen] = useState(false)
   // Wide layouts show the summary beside the form; phones start collapsed.
@@ -196,15 +200,25 @@ export function CommerceCheckout() {
               </EmptyDescription>
             </EmptyHeader>
             <EmptyContent>
-              <a
+              <CommerceLink
                 className={buttonVariants({ variant: "outline" })}
                 href={href("/")}
               >
                 Back to the shop
-              </a>
+              </CommerceLink>
             </EmptyContent>
           </Empty>
         </div>
+      </section>
+    )
+  if (receiptPath)
+    return (
+      <section className="cs-section cs-wrap">
+        <h1 className="cs-title cs-title--page">Request received</h1>
+        <output>Opening your request status…</output>
+        <CommerceLink className="cs-link" href={receiptPath}>
+          View your request
+        </CommerceLink>
       </section>
     )
   if (bagReady && !bag.lines.length)
@@ -221,12 +235,12 @@ export function CommerceCheckout() {
               </EmptyDescription>
             </EmptyHeader>
             <EmptyContent>
-              <a
+              <CommerceLink
                 className={buttonVariants({ className: "cs-primary" })}
                 href={href("/shop")}
               >
                 Browse the shop
-              </a>
+              </CommerceLink>
             </EmptyContent>
           </Empty>
         </div>
@@ -278,7 +292,7 @@ export function CommerceCheckout() {
   }
 
   const submit = async () => {
-    if (busy.current) return
+    if (busy.current || receiptPath) return
     setFormError(null)
     const found = validate()
     setErrors(found)
@@ -329,12 +343,15 @@ export function CommerceCheckout() {
       stableRequestId(JSON.stringify(payload)) ?? newClientId()
     busy.current = true
     setPending(true)
+    let completed = false
     try {
       const result = await adapter.submitOrder({ clientRequestId, ...payload })
       if (result.ok) {
         forgetRequestId()
         clearBag()
-        window.location.assign(result.receiptPath)
+        completed = true
+        setReceiptPath(result.receiptPath)
+        navigate(result.receiptPath)
         return
       }
       if (result.fields)
@@ -367,18 +384,20 @@ export function CommerceCheckout() {
       )
       requestAnimationFrame(() => errorRef.current?.focus())
     } finally {
-      busy.current = false
-      setPending(false)
+      if (!completed) {
+        busy.current = false
+        setPending(false)
+      }
     }
   }
 
   return (
     <section className="cs-section cs-checkout">
       <div className="cs-wrap">
-        <a className="cs-back" href={href("/shop")}>
+        <CommerceLink className="cs-back" href={href("/shop")}>
           <HugeiconsIcon icon={ArrowLeft01Icon} strokeWidth={2} />
           Keep shopping
-        </a>
+        </CommerceLink>
         <h1 className="cs-title cs-title--page">Send your order request</h1>
         <p className="cs-lead cs-lead--narrow">
           No payment now. {snapshot.resources.business.name} checks stock
@@ -410,9 +429,12 @@ export function CommerceCheckout() {
                 <HugeiconsIcon icon={UserIcon} strokeWidth={1.8} />
                 <AlertDescription>
                   Ordering as a guest.{" "}
-                  <a className="cs-link" href="/account?next=/checkout">
+                  <CommerceLink
+                    className="cs-link"
+                    href="/account?next=/checkout"
+                  >
                     Log in
-                  </a>{" "}
+                  </CommerceLink>{" "}
                   to keep it in your history.
                 </AlertDescription>
               </Alert>

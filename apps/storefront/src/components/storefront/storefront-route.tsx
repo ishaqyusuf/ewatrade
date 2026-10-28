@@ -9,6 +9,8 @@ import type { CatalogQuery } from "@ewatrade/storefront-contracts/resources"
 import { storefrontIndexingEnabled } from "@ewatrade/storefront-runtime/seo"
 import type { Metadata } from "next"
 import { notFound } from "next/navigation"
+import { Suspense } from "react"
+import { StorefrontLoading } from "./storefront-loading"
 
 export type StorefrontSearch = Promise<CatalogQuery>
 
@@ -57,7 +59,27 @@ export async function StorefrontTemplatePage({
   pageKey: string
   searchParams: StorefrontSearch
 }) {
-  const { after, category, item, q, availability, sort } = await searchParams
+  const query = await searchParams
+  return (
+    <Suspense
+      key={JSON.stringify(query)}
+      fallback={
+        <StorefrontLoading
+          label={pageKey}
+          listing={pageKey === "shop" || pageKey === "services"}
+        />
+      }
+    >
+      <ResolvedTemplatePage pageKey={pageKey} query={query} />
+    </Suspense>
+  )
+}
+
+async function ResolvedTemplatePage({
+  pageKey,
+  query,
+}: { pageKey: string; query: CatalogQuery }) {
+  const { after, category, item, q, availability, sort } = query
   const { load } = await loadStorefrontPage(
     after,
     category,

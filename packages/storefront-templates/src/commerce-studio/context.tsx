@@ -26,6 +26,7 @@ import {
   storefrontMode,
   writeBag,
 } from "./commerce"
+import { useCommerceNavigation } from "./navigation"
 
 export type HeaderSettings = {
   tagline: string
@@ -101,7 +102,12 @@ export type CommerceStudioContext = {
   bagOpen: boolean
   setBagOpen(open: boolean): void
   href(path: string): string
-  navigate(path: string): void
+  navigate(
+    path: string,
+    options?: { replace?: boolean; refresh?: boolean },
+  ): void
+  refresh(): void
+  refreshing: boolean
 }
 
 const Context = createContext<CommerceStudioContext | null>(null)
@@ -110,6 +116,38 @@ export function useCommerceStudio() {
   const value = useContext(Context)
   if (!value) throw new Error("Commerce studio context is missing.")
   return value
+}
+
+/** Route data changes independently of the shell's persistent bag state. */
+export function CommerceStudioPageProvider({
+  snapshot,
+  customer,
+  children,
+}: {
+  snapshot: StorefrontClientSnapshot
+  customer?: StorefrontCustomerView
+  children: ReactNode
+}) {
+  const parent = useCommerceStudio()
+  const facts = storefrontMode({
+    offeringCounts: snapshot.resources.catalog.offeringCounts,
+    items: snapshot.resources.catalog.items,
+  })
+  const value: CommerceStudioContext = {
+    ...parent,
+    snapshot,
+    customer: customer ?? null,
+    facts,
+    header: headerSettings(snapshot.composition),
+    themeStyle: commerceThemeStyle(snapshot.composition.theme),
+    ordering:
+      facts.products > 0 &&
+      !!snapshot.resources.commerce?.orderRequests.available,
+    accounts:
+      !!snapshot.resources.commerce?.customerAccounts.available &&
+      headerSettings(snapshot.composition).showLogin,
+  }
+  return <Context.Provider value={value}>{children}</Context.Provider>
 }
 
 function safeStorage() {
@@ -139,6 +177,7 @@ export function CommerceStudioProvider({
   onPageChange?: (key: string) => void
   children: ReactNode
 }) {
+  const navigation = useCommerceNavigation()
   const commerce = snapshot.resources.commerce
   // The host's server-derived flags decide; QA data writes only under local QA
   // preview admission. Studio previews never get a live adapter.
@@ -239,13 +278,16 @@ export function CommerceStudioProvider({
       bagOpen,
       setBagOpen,
       href: (path) => (preview ? "#" : path),
-      navigate: (path) => {
+      refresh: () => navigation?.refresh(),
+      refreshing: navigation?.pending ?? false,
+      navigate: (path, options) => {
         if (preview) {
           const key = path.replace(/^\//, "").split("?")[0] || "home"
           onPageChange?.(key)
           return
         }
-        window.location.assign(path)
+        if (navigation) navigation.navigate(path, options)
+        else window.location.assign(path)
       },
     }),
     [
@@ -262,6 +304,7 @@ export function CommerceStudioProvider({
       commit,
       bagOpen,
       onPageChange,
+      navigation,
     ],
   )
   return <Context.Provider value={value}>{children}</Context.Provider>

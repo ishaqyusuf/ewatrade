@@ -1,0 +1,41 @@
+{
+  "version": 1,
+  "id": "2026-10-28-storefront-navigation",
+  "tickets": ["H02"],
+  "summary": "Commerce studio soft navigation, persistent presentation and bag, route loading/error states and local action refresh.",
+  "noAssistantImpact": "Customer web presentation only. Existing Host/session/publication/plan and domain commands remain authoritative and unchanged. No new merchant capability, API procedure, permission, model tool, provider action or assistant rollout. Existing order/service/account/receipt actions retain their original commands and confirmation rules.",
+  "capabilities": [],
+  "procedures": [],
+  "docs": [
+    {
+      "topic": "feature",
+      "status": "local_only",
+      "path": ".brain/features/storefront-commerce-studio.md"
+    },
+    {
+      "topic": "decision",
+      "status": "local_only",
+      "path": ".brain/decisions/2026-10-28-storefront-navigation-and-loading.md"
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "test",
+      "path": "packages/storefront-templates/src/commerce-studio/navigation.test.tsx",
+      "executed": true,
+      "result": "2 tests pass: host adapter only for internal navigation; external/hash and standalone preview anchors preserved."
+    },
+    {
+      "kind": "test",
+      "path": "apps/storefront/src/lib/storefront-presentation.test.ts",
+      "executed": true,
+      "result": "Publication/business/session changes alter presentation identity; page listing data does not. 1 test/5 assertions pass."
+    },
+    {
+      "kind": "run",
+      "path": "scripts/storefront-navigation.browser.test.mjs",
+      "executed": true,
+      "result": "Existing Tola Stitches local storefront: delayed Shop skeleton, retained header/footer DOM nodes, Shop/About/Back/Home, one document request, zero writes/errors, in-memory bag survives item/Services/Home with blocked storage, and phone containment pass. No business/provider action submitted."
+    }
+  ]
+}

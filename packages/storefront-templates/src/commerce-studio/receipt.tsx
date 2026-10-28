@@ -1,5 +1,7 @@
 "use client"
 
+import { CommerceLink } from "./navigation"
+
 import {
   Alert,
   AlertDescription,
@@ -268,7 +270,7 @@ function paymentState(order: OrderFacts) {
 }
 
 export function CommerceReceipt({ receipt }: { receipt: ReceiptView }) {
-  const { adapter, href, themeStyle } = useCommerceStudio()
+  const { adapter, href, themeStyle, refresh, refreshing } = useCommerceStudio()
   const [confirmWithdraw, setConfirmWithdraw] = useState(false)
   const base = stageCopy[receipt.stage]
   // Confirmed orders say what to do about payment from canonical Order facts.
@@ -312,14 +314,18 @@ export function CommerceReceipt({ receipt }: { receipt: ReceiptView }) {
     action: () => Promise<{ ok: boolean; message?: string }>,
     done: string,
   ) => {
-    if (busy) return
+    if (busy || refreshing) return
     setBusy(key)
     setMessage(null)
     try {
       const result = await action()
       if (result.ok) {
         setMessage({ tone: "ok", text: done })
-        window.location.reload()
+        setReply("")
+        setDeclineReason("")
+        setConfirmWithdraw(false)
+        replyId.current = newClientId()
+        refresh()
       } else
         setMessage({
           tone: "error",
@@ -433,7 +439,7 @@ export function CommerceReceipt({ receipt }: { receipt: ReceiptView }) {
             <Button
               type="submit"
               className="cs-primary"
-              disabled={busy !== null || !reply.trim()}
+              disabled={refreshing || busy !== null || !reply.trim()}
             >
               {busy === "reply" ? <Spinner /> : null}
               Send reply
@@ -505,7 +511,7 @@ export function CommerceReceipt({ receipt }: { receipt: ReceiptView }) {
             ) : null}
             <div className="cs-row-actions">
               {receipt.quote.acceptUrl ? (
-                <a
+                <CommerceLink
                   className={buttonVariants({
                     size: "lg",
                     className: "cs-primary",
@@ -513,7 +519,7 @@ export function CommerceReceipt({ receipt }: { receipt: ReceiptView }) {
                   href={receipt.quote.acceptUrl}
                 >
                   Review and accept
-                </a>
+                </CommerceLink>
               ) : (
                 <p className="cs-muted">
                   Use the quote link the business sent you to accept.
@@ -549,7 +555,11 @@ export function CommerceReceipt({ receipt }: { receipt: ReceiptView }) {
                   onChange={(event) => setDeclineReason(event.target.value)}
                 />
               </Field>
-              <Button type="submit" variant="outline" disabled={busy !== null}>
+              <Button
+                type="submit"
+                variant="outline"
+                disabled={refreshing || busy !== null}
+              >
                 {busy === "decline" ? <Spinner /> : null}
                 Decline quote
               </Button>
@@ -609,7 +619,7 @@ export function CommerceReceipt({ receipt }: { receipt: ReceiptView }) {
               {paymentState(receipt.order)}
             </output>
             {receipt.paymentUrl && receipt.order.paymentStatus !== "PAID" ? (
-              <a
+              <CommerceLink
                 className={buttonVariants({
                   size: "lg",
                   className: "cs-primary",
@@ -617,7 +627,7 @@ export function CommerceReceipt({ receipt }: { receipt: ReceiptView }) {
                 href={receipt.paymentUrl}
               >
                 See payment details
-              </a>
+              </CommerceLink>
             ) : null}
           </div>
         ) : null}
@@ -721,7 +731,7 @@ export function CommerceReceipt({ receipt }: { receipt: ReceiptView }) {
 
         <div className="cs-row-actions">
           {whatsappDraft ? (
-            <a
+            <CommerceLink
               className={buttonVariants({ variant: "outline" })}
               href={whatsappDraft}
               target="_blank"
@@ -729,12 +739,12 @@ export function CommerceReceipt({ receipt }: { receipt: ReceiptView }) {
             >
               <HugeiconsIcon icon={WhatsappIcon} strokeWidth={1.8} />
               Message the business
-            </a>
+            </CommerceLink>
           ) : null}
           {receipt.canLinkToAccount ? (
             <Button
               variant="outline"
-              disabled={busy !== null}
+              disabled={refreshing || busy !== null}
               onClick={() =>
                 void run(
                   "link",
@@ -751,7 +761,7 @@ export function CommerceReceipt({ receipt }: { receipt: ReceiptView }) {
             <>
               <Button
                 variant="ghost"
-                disabled={busy !== null}
+                disabled={refreshing || busy !== null}
                 onClick={() => setConfirmWithdraw(true)}
               >
                 Withdraw request
@@ -793,9 +803,12 @@ export function CommerceReceipt({ receipt }: { receipt: ReceiptView }) {
               </AlertDialog>
             </>
           ) : null}
-          <a className={buttonVariants({ variant: "ghost" })} href={href("/")}>
+          <CommerceLink
+            className={buttonVariants({ variant: "ghost" })}
+            href={href("/")}
+          >
             Back to {receipt.businessName}
-          </a>
+          </CommerceLink>
         </div>
       </div>
     </section>
