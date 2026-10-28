@@ -65,6 +65,7 @@ model ManualPaymentReport {
   receiptProvider     String?
   receiptStoreId      String?
   receiptUploadedAt   DateTime?
+  draftCancelledAt          DateTime?
   receiptGeneration   Int                       @default(1)
   submittedAt         DateTime?
   decidedAt           DateTime?

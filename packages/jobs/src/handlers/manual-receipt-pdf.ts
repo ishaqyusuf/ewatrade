@@ -1,4 +1,5 @@
 import { EventEmitter } from "node:events"
+import { URL } from "node:url"
 import { Worker } from "node:worker_threads"
 import type { ReceiptPage } from "@ewatrade/payments/receipt-extractor"
 
