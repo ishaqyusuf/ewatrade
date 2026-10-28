@@ -5,6 +5,13 @@ enum ManualPaymentReportStatus {
   NOT_RECEIVED
 }
 
+enum ManualPaymentAllocationPreference {
+  ORDER_MORE
+  CREDIT
+  REFUND
+  UNRESOLVED
+}
+
 /// Public payment instructions for an existing Order, including service Orders.
 /// This is not a provider CollectionIntent and never reserves/settles funds.
 model ManualPaymentLink {
@@ -42,6 +49,13 @@ model ManualPaymentReport {
   clientReportId      String
   status              ManualPaymentReportStatus @default(DRAFT)
   claimedAmountMinor  Int
+  allocationPreference ManualPaymentAllocationPreference?
+  requestedApplyMinor BigInt?
+  refundDestinationCiphertext String?
+  refundDestinationFingerprint String?
+  customerReceiptId String? @unique
+  customerCreditEntryId String?
+  customerFundsRefundRequestId String? @unique
   payerName           String
   customerPhone       String?
   receiptContentType  String?
