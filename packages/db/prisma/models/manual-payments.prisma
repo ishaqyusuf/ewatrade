@@ -27,6 +27,7 @@ model ManualPaymentLink {
   order             CommercialOrder       @relation(fields: [tenantId, orderId], references: [tenantId, id], onDelete: Restrict)
   bankAccount       FinanceAccount        @relation(fields: [bankAccountId], references: [id], onDelete: Restrict)
   reports           ManualPaymentReport[]
+  attempts          ManualPaymentAttempt[]
 
   @@unique([tenantId, clientLinkId])
   @@index([tenantId, orderId, createdAt])
@@ -37,6 +38,7 @@ model ManualPaymentReport {
   notificationIntents PaymentNotificationIntent[]
   id                  String                    @id @default(cuid())
   linkId              String
+  attemptId           String?
   clientReportId      String
   status              ManualPaymentReportStatus @default(DRAFT)
   claimedAmountMinor  Int
@@ -49,6 +51,7 @@ model ManualPaymentReport {
   receiptProvider     String?
   receiptStoreId      String?
   receiptUploadedAt   DateTime?
+  receiptGeneration   Int                       @default(1)
   submittedAt         DateTime?
   decidedAt           DateTime?
   decidedByUserId     String?
@@ -63,8 +66,97 @@ model ManualPaymentReport {
   createdAt           DateTime                  @default(now())
   updatedAt           DateTime                  @updatedAt
   link                ManualPaymentLink         @relation(fields: [linkId], references: [id], onDelete: Restrict)
+  attempt             ManualPaymentAttempt?     @relation(fields: [attemptId], references: [id], onDelete: Restrict)
+  transferConsumption ManualPaymentTransferConsumption?
+  assessments         ManualReceiptAssessment[]
 
   @@unique([linkId, clientReportId])
   @@index([linkId, status, createdAt])
   @@index([status, submittedAt, id])
+  @@index([attemptId])
+}
+
+/// One explicit payment attempt. The narration reference is not transfer identity.
+model ManualPaymentAttempt {
+  id               String                @id @default(cuid())
+  tenantId         String
+  linkId           String
+  clientAttemptId  String
+  sequence         Int
+  paymentReference String
+  createdAt        DateTime              @default(now())
+  link             ManualPaymentLink     @relation(fields: [linkId], references: [id], onDelete: Restrict)
+  reports          ManualPaymentReport[]
+
+  @@unique([tenantId, paymentReference])
+  @@unique([linkId, clientAttemptId])
+  @@unique([linkId, sequence])
+  @@index([linkId, createdAt, id])
+}
+
+/// A merchant-validated bank transfer may fund only one canonical receipt.
+model ManualPaymentTransferConsumption {
+  id                 String              @id @default(cuid())
+  tenantId           String
+  currencyCode       String
+  receivingAccountId String
+  namespace          String
+  normalizedReference String
+  rawReference       String
+  identityDigest     String
+  reportId           String              @unique
+  amountMinor        Int
+  receivedAt         DateTime
+  validatedByUserId  String
+  createdAt          DateTime            @default(now())
+  report             ManualPaymentReport @relation(fields: [reportId], references: [id], onDelete: Restrict)
+
+  @@unique([tenantId, identityDigest])
+  @@index([tenantId, receivingAccountId, createdAt])
+}
+
+enum ManualReceiptAssessmentState {
+  PENDING
+  CHECKING
+  COMPLETE
+  UNAVAILABLE
+}
+
+/// Private, generation-fenced advisory extraction and bounded durable work.
+/// A result never confirms funds or grants access to a financial command.
+model ManualReceiptAssessment {
+  id                String                       @id @default(cuid())
+  tenantId          String
+  reportId          String
+  generation        Int
+  receiptDigest     String
+  pipelineVersion   String
+  schemaVersion     String
+  promptVersion     String
+  ruleVersion       String
+  state             ManualReceiptAssessmentState @default(PENDING)
+  attempts          Int                          @default(0)
+  leaseToken        String?
+  leaseExpiresAt    DateTime?
+  providerStartedAt DateTime?
+  provider          String?
+  model             String?
+  providerRequestId String?
+  usageEventId      String?
+  nextAttemptAt     DateTime                     @default(now())
+  expiresAt         DateTime
+  completedAt       DateTime?
+  unavailableReason String?
+  extraction        Json?
+  findings          Json?
+  amountMinor       Int?
+  currencyCode      String?
+  recipientLast4    String?
+  createdAt         DateTime                     @default(now())
+  updatedAt         DateTime                     @updatedAt
+  report            ManualPaymentReport          @relation(fields: [reportId], references: [id], onDelete: Restrict)
+
+  @@unique([reportId, generation, pipelineVersion])
+  @@index([tenantId, state, nextAttemptAt])
+  @@index([state, leaseExpiresAt])
 }

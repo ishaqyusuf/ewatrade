@@ -25,6 +25,7 @@ model CustomerLedgerAccount {
   customer     Customer                @relation(fields: [tenantId, customerId], references: [tenantId, id], onDelete: Restrict)
   entries      CustomerLedgerEntry[]
   commands     CustomerLedgerCommand[]
+  refundRequests CustomerFundsRefundRequest[]
 
   @@unique([tenantId, customerId, currencyCode])
   @@unique([tenantId, id])
@@ -54,6 +55,7 @@ model CustomerLedgerEntry {
   reversals    CustomerLedgerEntry[]      @relation("CustomerLedgerReversal")
   creditsUsed  CustomerLedgerAllocation[] @relation("CustomerLedgerCredit")
   chargesPaid  CustomerLedgerAllocation[] @relation("CustomerLedgerCharge")
+  refundRequests CustomerFundsRefundRequest[]
 
   @@unique([accountId, id])
   @@unique([accountId, sequence])
@@ -61,6 +63,42 @@ model CustomerLedgerEntry {
   @@index([accountId, effectiveAt, sequence])
   @@index([tenantId, storeId, effectiveAt])
   @@index([orderId])
+}
+
+enum CustomerFundsRefundStatus {
+  REQUESTED
+  RESERVED
+  COMPLETED
+  CANCELLED
+}
+
+/// Request and reservation only; completion records an independently returned sum.
+model CustomerFundsRefundRequest {
+  id                     String                    @id @default(cuid())
+  tenantId               String
+  accountId              String
+  bookId                 String
+  creditEntryId          String
+  amountMinor            BigInt
+  destinationCiphertext  String
+  destinationFingerprint String
+  status                 CustomerFundsRefundStatus @default(REQUESTED)
+  version                Int                       @default(1)
+  requestedByUserId      String
+  approvedByUserId       String?
+  completedByUserId      String?
+  reason                 String
+  outgoingReference      String?
+  refundEntryId          String?                   @unique
+  createdAt              DateTime                  @default(now())
+  approvedAt             DateTime?
+  completedAt            DateTime?
+  cancelledAt            DateTime?
+  account                CustomerLedgerAccount     @relation(fields: [tenantId, accountId], references: [tenantId, id], onDelete: Restrict)
+  credit                 CustomerLedgerEntry       @relation(fields: [accountId, creditEntryId], references: [accountId, id], onDelete: Restrict)
+
+  @@index([accountId, creditEntryId, status])
+  @@index([tenantId, status, createdAt])
 }
 
 model CustomerLedgerAllocation {
