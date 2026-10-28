@@ -6,9 +6,104 @@ import { launchSmokeBrowser } from "./qa-web-smoke.mjs"
 
 const origin = process.env.STOREFRONT_NAVIGATION_ORIGIN
 const photoOrigin = process.env.STOREFRONT_PHOTO_ORIGIN
+const performanceOrigin = process.env.STOREFRONT_PERFORMANCE_ORIGIN
 const artifacts = resolve(
   process.env.STOREFRONT_NAVIGATION_ARTIFACTS ??
     ".scratch/storefront-navigation/2026-10-28",
+)
+
+test(
+  "bounded existing-data storefront navigation timing",
+  { skip: !performanceOrigin, timeout: 180000 },
+  async () => {
+    const target = new URL(performanceOrigin)
+    assert.equal(target.protocol, "https:")
+    assert.match(
+      target.hostname,
+      /^[a-z0-9-]+-qa\.ewatrade-storefront\.localhost$/,
+    )
+    assert.equal(target.port, "")
+    const samples = []
+    let writes = 0
+    let documents = 0
+    const errors = []
+    mkdirSync(artifacts, { recursive: true })
+    const browser = await launchSmokeBrowser()
+    try {
+      const context = await browser.newContext({
+        viewport: { width: 1280, height: 900 },
+        serviceWorkers: "block",
+      })
+      const page = await context.newPage()
+      page.setDefaultTimeout(45000)
+      page.on("pageerror", (error) => errors.push(error.message))
+      page.on("request", (request) => {
+        if (
+          request.isNavigationRequest() &&
+          request.resourceType() === "document"
+        )
+          documents++
+      })
+      await page.route("**/*", (route) => {
+        if (!["GET", "HEAD"].includes(route.request().method())) {
+          writes++
+          return route.abort("blockedbyclient")
+        }
+        return route.continue()
+      })
+      await page.goto(target.origin, {
+        waitUntil: "domcontentloaded",
+        timeout: 60000,
+      })
+      await page.locator(".cs-hero").waitFor()
+      const header = await page.locator(".cs-header").elementHandle()
+      const nav = page.getByRole("navigation", { name: /pages$/ })
+      for (let round = 0; round < 3; round++) {
+        for (const [label, path, selector] of [
+          ["Shop", "/shop", ".cs-card"],
+          ["Our story", "/about", ".cs-story"],
+          ["Home", "/", ".cs-hero"],
+        ]) {
+          const started = performance.now()
+          await nav.getByRole("link", { name: label, exact: true }).click()
+          await page.waitForURL(`${target.origin}${path}`)
+          await page.locator(`main ${selector}`).first().waitFor()
+          samples.push({
+            path,
+            phase: round === 0 ? "first-visit" : "warm",
+            milliseconds: Math.round(performance.now() - started),
+          })
+          assert.equal(await header.evaluate((node) => node.isConnected), true)
+        }
+      }
+      const result = {
+        origin: target.origin,
+        runtime: "local development; source SHA recorded separately",
+        samples,
+        documents,
+        writes,
+        errors,
+      }
+      writeFileSync(
+        resolve(artifacts, "performance.json"),
+        JSON.stringify(result, null, 2),
+      )
+      console.log(JSON.stringify(result))
+      assert.equal(documents, 1)
+      assert.equal(writes, 0)
+      assert.deepEqual(errors, [])
+      const budget = Number(process.env.STOREFRONT_PERFORMANCE_BUDGET_MS)
+      if (Number.isFinite(budget) && budget > 0)
+        assert.ok(
+          samples
+            .filter((sample) => sample.phase === "warm")
+            .every((sample) => sample.milliseconds <= budget),
+          `Warm navigation exceeds the explicit ${budget} ms local budget`,
+        )
+    } finally {
+      await browser.close()
+    }
+  },
 )
 
 test(

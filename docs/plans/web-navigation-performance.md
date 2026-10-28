@@ -52,7 +52,7 @@ explicit evidence-based decision if changing them would add cost or weaken polic
 
 ### Batch 1 — Storefront
 
-- [ ] S0 Baseline: preserve ownership, record local navigation and query-cost repro.
+- [x] S0 Baseline: preserve ownership, record local navigation and query-cost repro.
 - [x] S1 Authority: lightweight published Host/Tenant/Site/Store context; customer
   scope without listing/stock/category reads; preserve all eligibility checks.
 - [ ] S2 Route projections: shell/about/account/checkout/receipt/detail request only
@@ -124,3 +124,29 @@ H01/H02 gates remain separate from source smoke. No deployment is implied.
   catalog projection removes listing/stock/category work. Focused existing scope,
   public admission/cap/cursor tests: 23 passed / 138 assertions; Storefront full
   TypeScript check and owned formatting passed. No write-authority/schema change.
+- S0 timing mode extends the existing navigation browser test. Exact flagship QA
+  host,9 transitions,1 document,0 writes/errors. First visits Shop2396/About3983/
+  Home2370 ms; six warm samples2312–2350 ms, median2326.5 ms. Explicit1000 ms goal
+  correctly fails. Private artifact:
+  `/tmp/ewatrade-web-performance-20261028/storefront-before/performance.json`.
+  Anonymous run includes S1 source (no customer cookie); compilation partially
+  warmed by selector repairs. This is development evidence, not production proof.
+
+## Midday migration contract and conformance checklist
+
+- References: Midday Customers route/trpc request-context/server/query-client;
+  website layout/startpage; public invoice route; global-sheets provider.
+- Storefront files: DB public-storefront/factory-loader/customer-scope, app
+  storefront-pages/factory/layout/route metadata, runtime feature dispatcher and
+  template dispatch. Keep route entrypoints thin and scope in DB repositories.
+- Dashboard files: lib session/tenant, trpc server/request-context/query-client,
+  shell layout/loading boundary, optional global-sheets and assistant loaders.
+- Required: request-local authority, matching route/query identity, independent
+  reads, loading/error ownership, bounded optional features and focused QA.
+- Preserved: URL search/filter/sort/detail state, persistent bag/form state,
+  existing headers/open buttons/sheets/table actions/mutation invalidation.
+- Tables, columns, bulk bars and form-to-sheet redesign are intentionally omitted:
+  this task changes navigation/loading, not those established interactions.
+- No new API/schema, scope from client input, stale shared authorization cache,
+  package-to-app dependency or blanket client-only rendering. Final acceptance
+  audits every changed boundary against this contract and the failure matrix.
