@@ -53,7 +53,8 @@ function repository(plan: "starter" | "growth" = "starter") {
     tenantId: tenant.id,
     storeId: "store-a",
     status: "PUBLISHED",
-    store: { status: "ACTIVE" },
+    tenant,
+    store: { ...tenant.stores[0], status: "ACTIVE", tenantId: tenant.id },
     activeRelease: {
       id: "release-a",
       tenantId: tenant.id,
@@ -66,6 +67,8 @@ function repository(plan: "starter" | "growth" = "starter") {
       runtimeVersion: 1,
     },
   }
+  const sites = [site]
+  const siteQueries: unknown[] = []
   const db = {
     tenant: {
       findFirst: async () => {
@@ -74,9 +77,10 @@ function repository(plan: "starter" | "growth" = "starter") {
       },
     },
     site: {
-      findMany: async () => {
+      findMany: async (query: unknown) => {
         reads.push("site")
-        return [site]
+        siteQueries.push(query)
+        return sites
       },
     },
     store: {
@@ -104,7 +108,7 @@ function repository(plan: "starter" | "growth" = "starter") {
       },
     },
   } as unknown as DbClient
-  return { db, reads, site }
+  return { db, reads, site, sites, siteQueries }
 }
 
 test("customer scope resolves the real published repository path without a catalog read", async () => {
@@ -266,7 +270,7 @@ test("a valid render session reuses current authority and expired/foreign sessio
     tenantId: "tenant-a",
     storeId: "store-a",
   })
-  expect(reads).toEqual(["tenant", "site", "tenant"])
+  expect(reads).toEqual(["site"])
   expect(scopeReads).toBe(1)
   session.expiresAt = new Date(0)
   expect(await getStorefrontCustomerSession(db, input, resolve)).toBeNull()
@@ -275,4 +279,27 @@ test("a valid render session reuses current authority and expired/foreign sessio
   session.tenantId = "foreign"
   session.customer.tenantId = "foreign"
   expect(await getStorefrontCustomerSession(db, input, resolve)).toBeNull()
+})
+
+test("the joined authority query is host-scoped and refuses duplicate primaries or a foreign Store", async () => {
+  const { db, site, sites, siteQueries } = repository()
+  expect(
+    await loadStorefrontContextForHost(db, "merchant.ewatrade.com"),
+  ).not.toBeNull()
+  expect(siteQueries[0]).toMatchObject({
+    take: 2,
+    where: {
+      isPrimary: true,
+      tenant: { slug: "merchant", isActive: true, dataClassification: "LIVE" },
+    },
+  })
+  site.store.tenantId = "foreign"
+  expect(
+    await loadStorefrontContextForHost(db, "merchant.ewatrade.com"),
+  ).toBeNull()
+  site.store.tenantId = "tenant-a"
+  sites.push(site)
+  expect(
+    await loadStorefrontContextForHost(db, "merchant.ewatrade.com"),
+  ).toBeNull()
 })

@@ -548,6 +548,32 @@ async function readStorefront(
     : null
 }
 
+export const storefrontBusinessTenantSelect = {
+  id: true,
+  name: true,
+  slug: true,
+  dataClassification: true,
+  timezone: true,
+  metadata: true,
+  subscription: {
+    select: {
+      plan: { select: { key: true } },
+      provider: true,
+      status: true,
+      billingSubscriptionId: true,
+      currentPeriodEndsAt: true,
+    },
+  },
+} satisfies Prisma.TenantSelect
+
+export const storefrontBusinessStoreSelect = {
+  id: true,
+  description: true,
+  currencyCode: true,
+  supportPhone: true,
+  countryCode: true,
+} satisfies Prisma.StoreSelect
+
 async function readStorefrontBusiness(
   db: DbClient,
   slug: string,
@@ -561,21 +587,7 @@ async function readStorefrontBusiness(
       dataClassification: localQaPreview ? { in: ["LIVE", "QA"] } : "LIVE",
     },
     select: {
-      id: true,
-      name: true,
-      slug: true,
-      dataClassification: true,
-      timezone: true,
-      metadata: true,
-      subscription: {
-        select: {
-          plan: { select: { key: true } },
-          provider: true,
-          status: true,
-          billingSubscriptionId: true,
-          currentPeriodEndsAt: true,
-        },
-      },
+      ...storefrontBusinessTenantSelect,
       stores: {
         where: {
           status: "ACTIVE",
@@ -584,17 +596,25 @@ async function readStorefrontBusiness(
         orderBy: [{ createdAt: "asc" }, { id: "asc" }],
         take: 1,
         select: {
-          id: true,
-          description: true,
-          currencyCode: true,
-          supportPhone: true,
-          countryCode: true,
+          ...storefrontBusinessStoreSelect,
         },
       },
     },
   })
   const store = tenant?.stores[0]
   if (!tenant || !store) return null
+  return projectStorefrontBusiness(tenant, store, localQaPreview)
+}
+
+export function projectStorefrontBusiness(
+  tenant: Prisma.TenantGetPayload<{
+    select: typeof storefrontBusinessTenantSelect
+  }>,
+  store: Prisma.StoreGetPayload<{
+    select: typeof storefrontBusinessStoreSelect
+  }>,
+  localQaPreview: boolean,
+) {
   if (
     tenant.subscription &&
     (projectDurableStoreAccess(tenant.subscription) === false ||

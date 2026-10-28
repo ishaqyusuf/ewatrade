@@ -2,11 +2,14 @@ import { STOREFRONT_RUNTIME_VERSION } from "@ewatrade/storefront-contracts/manif
 import { publicLowStockCountsEnabled } from "@ewatrade/storefront-contracts/orders"
 import {
   type PublicItemProjection,
+  projectStorefrontBusiness,
   readPublicStorefrontFromContext,
-  resolvePublicStorefrontForSite,
+  resolveStorefrontHostAuthority,
+  storefrontBusinessStoreSelect,
+  storefrontBusinessTenantSelect,
 } from "./public-storefront"
 import type { PublicStorefrontQuery } from "./public-storefront-listing"
-import { getLiveSiteRelease, siteContentHash } from "./storefront-sites"
+import { siteContentHash } from "./storefront-sites"
 import type { DbClient } from "./types"
 
 /** Live only: verified Host → tenant → primary published Site → active release → Site.storeId. */
@@ -25,11 +28,73 @@ export async function loadLiveStorefrontForHost(
 
 /** Current publication/business facts only; never reads listing, stock or categories. */
 export async function loadStorefrontContextForHost(db: DbClient, host: string) {
-  const context = await resolvePublicStorefrontForSite(db, host, (tenantId) =>
-    getLiveSiteRelease(db, tenantId),
+  const authority = await resolveStorefrontHostAuthority(db, host)
+  if (!authority) return null
+  // relationJoins keeps Tenant, exact Store and active release on one round trip.
+  const sites = await db.site.findMany({
+    take: 2,
+    where: {
+      isPrimary: true,
+      tenant: {
+        slug: authority.slug,
+        isActive: true,
+        dataClassification: authority.localQaPreview
+          ? { in: ["LIVE", "QA"] }
+          : "LIVE",
+      },
+    },
+    select: {
+      id: true,
+      tenantId: true,
+      storeId: true,
+      status: true,
+      tenant: { select: storefrontBusinessTenantSelect },
+      store: {
+        select: {
+          ...storefrontBusinessStoreSelect,
+          status: true,
+          tenantId: true,
+        },
+      },
+      activeRelease: {
+        select: {
+          id: true,
+          tenantId: true,
+          storeId: true,
+          siteId: true,
+          composition: true,
+          contentHash: true,
+          templateKey: true,
+          templateVersion: true,
+          runtimeVersion: true,
+        },
+      },
+    },
+  })
+  const row = sites.length === 1 ? sites[0] : null
+  const release = row?.activeRelease
+  if (
+    !row ||
+    !release ||
+    row.status !== "PUBLISHED" ||
+    row.store.status !== "ACTIVE" ||
+    row.tenant.id !== row.tenantId ||
+    row.store.tenantId !== row.tenantId ||
+    release.tenantId !== row.tenantId ||
+    release.storeId !== row.storeId ||
+    release.siteId !== row.id
   )
-  if (!context) return null
-  const release = context.site.release
+    return null
+  const business = projectStorefrontBusiness(
+    row.tenant,
+    row.store,
+    authority.localQaPreview,
+  )
+  if (!business) return null
+  const context = {
+    site: { siteId: row.id, storeId: row.storeId, release },
+    business,
+  }
   const pin = release.composition as {
     template?: { key?: unknown; version?: unknown }
   } | null
