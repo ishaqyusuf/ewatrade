@@ -181,7 +181,13 @@ export function PaymentsToCheckScreen() {
             <RecordRow
               stackDetails
               title={item.payerName}
-              meta={`${item.orderNumber} · ${ageLabel(item.submittedAt ?? new Date())}`}
+              meta={[
+                item.orderNumber,
+                item.paymentReference,
+                ageLabel(item.submittedAt ?? new Date()),
+              ]
+                .filter(Boolean)
+                .join(" · ")}
               amount={formatMinorMoney(item.amountMinor, item.currencyCode)}
               avatar={{ icon: "Building2", tint: "amber" }}
               status={<StatusPill label="To check" tone="warn" />}

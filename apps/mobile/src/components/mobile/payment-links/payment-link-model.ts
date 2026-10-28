@@ -1,4 +1,6 @@
 import { formatMinorMoney } from "@ewatrade/utils"
+import { toInternationalPhone } from "@ewatrade/utils/countries"
+import { parsePhoneNumberFromString } from "libphonenumber-js"
 
 /** How long a new payment link works (server accepts 10 minutes to 72 hours). */
 export const PAYMENT_LINK_LIFETIMES = [
@@ -48,6 +50,27 @@ export function whatsAppWithText(whatsappUrl: string | null, text: string) {
   )?.[1]
   if (!phone) return null
   return `https://wa.me/${phone}?text=${encodeURIComponent(text)}`
+}
+
+/**
+ * A WhatsApp draft to a number typed for this message only (nothing is
+ * saved). `digits` are the local digits beside the picked country's +code, as
+ * PhoneField keeps them; a number that isn't valid there gives null.
+ */
+export function whatsAppDraftToNumber(
+  dialCode: string,
+  digits: string,
+  text: string,
+) {
+  const international = toInternationalPhone(dialCode, digits)
+  const phone = international
+    ? parsePhoneNumberFromString(international)
+    : undefined
+  if (!phone?.isValid() || phone.ext) return null
+  return {
+    display: phone.formatInternational(),
+    url: `https://wa.me/${phone.number.slice(1)}?text=${encodeURIComponent(text)}`,
+  }
 }
 
 /** "0123456789" → "012 345 6789". */
@@ -140,4 +163,74 @@ export function transferAccounts(accounts: readonly OrderPaymentAccount[]) {
 
 export function isOwnerOrAdmin(role: string | null | undefined) {
   return ["OWNER", "ADMIN"].includes(role?.trim().toUpperCase() ?? "")
+}
+
+export type PaymentVerification = {
+  state: "unverified" | "confirmed"
+  source: "merchant_bank_check" | null
+  confirmedAt: Date | string | null
+  receivedAt: Date | string | null
+  receivedAmountMinor: number | null
+  canonicalPaymentId: string | null
+}
+
+/**
+ * The saved bank-check confirmation, or null. Only a confirmation the server
+ * recorded as one Order payment counts; a receipt or a matching reference
+ * never does.
+ */
+export function verifiedPayment(
+  verification: PaymentVerification | null | undefined,
+) {
+  if (
+    verification?.state !== "confirmed" ||
+    verification.source !== "merchant_bank_check" ||
+    !verification.canonicalPaymentId
+  )
+    return null
+  return {
+    confirmedAt: verification.confirmedAt,
+    receivedAt: verification.receivedAt,
+    receivedAmountMinor: verification.receivedAmountMinor,
+  }
+}
+
+/** A NIBSS session ID is exactly 30 digits; nothing else is sent as one. */
+export function isNibssSessionId(reference: string) {
+  return /^\d{30}$/.test(reference.trim())
+}
+
+/**
+ * The "received" decision. The merchant's bank check is required; the NIBSS
+ * namespace is only sent when they marked a 30-digit reference as one, so the
+ * server can refuse the same transfer twice.
+ */
+export function receivedDecision(input: {
+  reportId: string
+  expectedRevision: number
+  receivedAmountMinor: number
+  moneyAccountId: string
+  receivedAt: Date
+  reference: string
+  note: string
+  bankChecked: boolean
+  nibssSession: boolean
+}) {
+  if (!input.bankChecked) return null
+  const reference = input.reference.trim()
+  const note = input.note.trim()
+  return {
+    reportId: input.reportId,
+    expectedRevision: input.expectedRevision,
+    outcome: "received" as const,
+    receivedAmountMinor: input.receivedAmountMinor,
+    moneyAccountId: input.moneyAccountId,
+    receivedAt: input.receivedAt,
+    reference: reference || undefined,
+    note: note || undefined,
+    bankCheckAttested: true as const,
+    ...(input.nibssSession && isNibssSessionId(reference)
+      ? { transferReferenceNamespace: "nibss_session_id" as const }
+      : {}),
+  }
 }

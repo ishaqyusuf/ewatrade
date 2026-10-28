@@ -29,8 +29,10 @@ import {
   businessInitials,
   copyableAmount,
   money,
+  paymentDetailsText,
   quantityLabel,
   spacedAccountNumber,
+  transferReference,
 } from "./payment-format"
 import {
   type PickedReceipt,
@@ -276,55 +278,101 @@ async function copyText(value: string) {
   }
 }
 
-function CopyButton({
+/** Copies the exact value. Announces through `onCopied`, or its own live region without one. */
+export function CopyButton({
   value,
   label,
   onCopied,
+  text = "Copy",
+  className = smallButtonClass,
 }: {
   value: string
   label: string
-  onCopied: (message: string) => void
+  onCopied?: (message: string) => void
+  /** Visible label; "Copied" replaces it briefly after a copy. */
+  text?: string
+  className?: string
 }) {
   const [copied, setCopied] = useState(false)
+  const [announcement, setAnnouncement] = useState("")
   useEffect(() => {
     if (!copied) return
     const timer = setTimeout(() => setCopied(false), 2000)
     return () => clearTimeout(timer)
   }, [copied])
   return (
-    <button
-      type="button"
-      className={smallButtonClass}
-      aria-label={`Copy ${label}`}
-      onClick={async () => {
-        const ok = await copyText(value)
-        setCopied(ok)
-        onCopied(ok ? `${label} copied` : `Couldn't copy the ${label}`)
-      }}
-    >
-      <HugeiconsIcon
-        icon={copied ? Tick02Icon : Copy01Icon}
-        strokeWidth={2}
-        className="size-3.5"
-      />
-      {copied ? "Copied" : "Copy"}
-    </button>
+    <>
+      <button
+        type="button"
+        className={className}
+        aria-label={`Copy ${label}`}
+        onClick={async () => {
+          const ok = await copyText(value)
+          setCopied(ok)
+          const message = ok ? `${label} copied` : `Couldn't copy the ${label}`
+          if (onCopied) onCopied(message)
+          else setAnnouncement(message)
+        }}
+      >
+        <HugeiconsIcon
+          icon={copied ? Tick02Icon : Copy01Icon}
+          strokeWidth={2}
+          className="size-3.5"
+        />
+        {copied ? "Copied" : text}
+      </button>
+      {onCopied ? null : (
+        <span className="sr-only" aria-live="polite">
+          {announcement}
+        </span>
+      )}
+    </>
+  )
+}
+
+/** "Copy amount" on the green hero: the exact digits a banking app's amount field accepts. */
+export function HeroAmountCopy({ amountMinor }: { amountMinor: number }) {
+  return (
+    <CopyButton
+      value={copyableAmount(amountMinor)}
+      label="amount"
+      text="Copy amount"
+      className="mt-1 inline-flex min-h-9 items-center gap-1.5 self-start rounded-full border border-white/25 bg-white/15 px-3 text-[13px] font-bold text-inherit transition-colors hover:bg-white/25 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-white/40"
+    />
+  )
+}
+
+/**
+ * The saved payment reference with its own Copy, for status and result pages. On a narrow phone
+ * the Copy wraps under the reference instead of being clipped by the row.
+ */
+export function ReferenceValue({ reference }: { reference: string }) {
+  return (
+    <span className="inline-flex max-w-full min-w-0 flex-wrap items-center justify-end gap-x-2 gap-y-1">
+      <b className="min-w-0 break-all tabular-nums">{reference}</b>
+      <CopyButton value={reference} label="payment reference" />
+    </span>
   )
 }
 
 export function BankDetails({
   link,
   amountMinor,
+  detailsAmountMinor,
 }: {
-  link: PublicPaymentLink
+  link: PublicPaymentLink & { paymentReference?: string | null }
   /** Shown with Copy when the amount is fixed; omitted when the customer types it. */
   amountMinor: number | null
+  /** The amount "Copy payment details" includes: the fixed or valid typed amount, else none. */
+  detailsAmountMinor: number | null
 }) {
   const [announcement, setAnnouncement] = useState("")
+  const reference = transferReference(link)
   const rows: Array<{
     label: string
     value: string
     copy?: string
+    copyLabel?: string
     big?: boolean
   }> = [
     { label: "Bank", value: link.bank.name },
@@ -348,41 +396,61 @@ export function BankDetails({
           },
         ]
       : []),
-    { label: "Narration", value: link.orderNumber, copy: link.orderNumber },
+    {
+      label: reference.label,
+      value: reference.value,
+      copy: reference.value,
+      copyLabel:
+        reference.label === "Narration" ? "narration" : "payment reference",
+    },
   ]
   return (
-    <div className="overflow-hidden rounded-2xl border-[1.5px] border-border">
-      <dl>
-        {rows.map((row) => (
-          <div
-            key={row.label}
-            className="flex flex-col border-b border-border px-3.5 py-2.5 last:border-b-0"
-          >
-            <dt className="text-[12.5px] text-muted-foreground">{row.label}</dt>
-            <dd className="flex items-center justify-between gap-2">
-              <b
-                className={cn(
-                  "min-w-0 break-words tabular-nums",
-                  row.big ? "text-[21px] tracking-wide" : "text-base",
-                )}
-              >
-                {row.value}
-              </b>
-              {row.copy ? (
-                <CopyButton
-                  value={row.copy}
-                  label={row.label.toLowerCase()}
-                  onCopied={setAnnouncement}
-                />
-              ) : null}
-            </dd>
-          </div>
-        ))}
-      </dl>
-      <span className="sr-only" aria-live="polite">
-        {announcement}
-      </span>
-    </div>
+    <>
+      <div className="overflow-hidden rounded-2xl border-[1.5px] border-border">
+        <dl>
+          {rows.map((row) => (
+            <div
+              key={row.label}
+              className="flex flex-col border-b border-border px-3.5 py-2.5 last:border-b-0"
+            >
+              <dt className="text-[12.5px] text-muted-foreground">
+                {row.label}
+              </dt>
+              <dd className="flex items-center justify-between gap-2">
+                <b
+                  className={cn(
+                    "min-w-0 break-words tabular-nums",
+                    row.big ? "text-[21px] tracking-wide" : "text-base",
+                  )}
+                >
+                  {row.value}
+                </b>
+                {row.copy ? (
+                  <CopyButton
+                    value={row.copy}
+                    label={row.copyLabel ?? row.label.toLowerCase()}
+                    onCopied={setAnnouncement}
+                  />
+                ) : null}
+              </dd>
+            </div>
+          ))}
+        </dl>
+        <span className="sr-only" aria-live="polite">
+          {announcement}
+        </span>
+      </div>
+      <p className="text-center text-[13px] leading-relaxed text-muted-foreground">
+        Paste {reference.value} into your bank app's narration or description.
+      </p>
+      <CopyButton
+        value={paymentDetailsText({ link, amountMinor: detailsAmountMinor })}
+        label="payment details"
+        text="Copy payment details"
+        onCopied={setAnnouncement}
+        className={cn(secondaryButtonClass, "bg-transparent text-[15px]")}
+      />
+    </>
   )
 }
 

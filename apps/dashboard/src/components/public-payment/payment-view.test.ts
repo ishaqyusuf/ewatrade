@@ -1,6 +1,11 @@
 import { expect, test } from "bun:test"
 import type { PublicPaymentLink, PublicReportStatus } from "./payment-format"
-import { outcomeNextStep, resolvePaymentView } from "./payment-view"
+import {
+  outcomeNextStep,
+  reportReference,
+  resolvePaymentView,
+  verifiedConfirmation,
+} from "./payment-view"
 
 function link(over: Partial<PublicPaymentLink> = {}): PublicPaymentLink {
   return {
@@ -257,4 +262,41 @@ test("a full payment, a settled order or a closed link offers no payment action"
         outcomeNextStep(outcome, { linkState, balanceMinor: 150_000 }),
       ).toBeNull()
   }
+})
+
+test("only a canonical confirmation reads as verified", () => {
+  expect(verifiedConfirmation(status({}))).toBeNull()
+  const confirmedAt = new Date("2026-10-27T09:42:00Z")
+  const confirmed = {
+    state: "confirmed" as const,
+    confirmedAt,
+    canonicalPaymentId: "payment-1",
+  }
+  expect(
+    verifiedConfirmation({ ...status({}), verification: confirmed }),
+  ).toEqual({ confirmedAt })
+  expect(
+    verifiedConfirmation({
+      ...status({}),
+      verification: { ...confirmed, canonicalPaymentId: null },
+    }),
+  ).toBeNull()
+  expect(
+    verifiedConfirmation({
+      ...status({}),
+      verification: {
+        state: "unverified",
+        confirmedAt: null,
+        canonicalPaymentId: null,
+      },
+    }),
+  ).toBeNull()
+})
+
+test("a report shows its payment reference only when the server sends one", () => {
+  expect(reportReference(status({}))).toBeNull()
+  expect(
+    reportReference({ ...status({}), paymentReference: "EWA-7K4P9D2Q" }),
+  ).toBe("EWA-7K4P9D2Q")
+  expect(reportReference({ ...status({}), paymentReference: null })).toBeNull()
 })

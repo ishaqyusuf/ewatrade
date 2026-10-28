@@ -1,7 +1,9 @@
 import { describe, expect, test } from "bun:test"
 import {
   bankAccountNumberProblem,
+  bankCheckKey,
   businessToday,
+  oneTimeWhatsAppDraft,
   rebuildWhatsAppUrl,
   receivedAtFromDay,
   receivedLine,
@@ -41,6 +43,60 @@ describe("WhatsApp links", () => {
       null,
     )
     expect(rebuildWhatsAppUrl("https://wa.me/?text=x", "x")).toBeNull()
+  })
+})
+
+describe("one-time WhatsApp number", () => {
+  test("reads a Nigerian national number and keeps the edited text", () => {
+    const draft = oneTimeWhatsAppDraft(" 0803 000 4521 ", "Pay here & thanks")
+    expect(draft).toMatchObject({
+      kind: "ready",
+      url: "https://wa.me/2348030004521?text=Pay%20here%20%26%20thanks",
+    })
+  })
+  test("accepts other countries only with their country code", () => {
+    expect(oneTimeWhatsAppDraft("+44 7911 123456", "Hi").kind).toBe("ready")
+    expect(oneTimeWhatsAppDraft("07911 123456", "Hi").kind).toBe("invalid")
+  })
+  test("separates an empty, invalid or unsendable draft", () => {
+    expect(oneTimeWhatsAppDraft("  ", "Hi").kind).toBe("empty")
+    expect(oneTimeWhatsAppDraft("0803 000", "Hi").kind).toBe("invalid")
+    expect(oneTimeWhatsAppDraft("08030004521 ext 2", "Hi").kind).toBe("invalid")
+    expect(oneTimeWhatsAppDraft("08030004521", "  ").kind).toBe("no-text")
+    expect(oneTimeWhatsAppDraft("08030004521", "x".repeat(1501)).kind).toBe(
+      "too-long",
+    )
+  })
+})
+
+describe("bank check acknowledgment", () => {
+  const facts = {
+    reportId: "rep_1",
+    revision: 3,
+    receivedMinor: 500_000,
+    accountId: "acc_gtb",
+    day: "2026-10-26",
+    reference: "TRX-9",
+  }
+  test("goes stale when the report or any checked fact changes", () => {
+    const checked = bankCheckKey(facts)
+    expect(checked).not.toBeNull()
+    expect(bankCheckKey({ ...facts, reference: " TRX-9 " })).toBe(checked)
+    for (const change of [
+      { reportId: "rep_2" },
+      { revision: 4 },
+      { receivedMinor: 499_999 },
+      { accountId: "acc_opay" },
+      { day: "2026-10-25" },
+      { reference: "" },
+    ])
+      expect(bankCheckKey({ ...facts, ...change })).not.toBe(checked)
+  })
+  test("can't be given while the facts are incomplete", () => {
+    expect(bankCheckKey({ ...facts, receivedMinor: null })).toBeNull()
+    expect(bankCheckKey({ ...facts, receivedMinor: 0 })).toBeNull()
+    expect(bankCheckKey({ ...facts, accountId: "" })).toBeNull()
+    expect(bankCheckKey({ ...facts, day: "" })).toBeNull()
   })
 })
 

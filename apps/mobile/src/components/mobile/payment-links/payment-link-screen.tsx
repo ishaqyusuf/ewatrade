@@ -36,7 +36,7 @@ import {
   newOperationId,
   shortDateTime,
 } from "./payment-link-model"
-import { FactCard, InfoNote } from "./payment-link-parts"
+import { FactCard, InfoNote, PaymentReferenceCard } from "./payment-link-parts"
 
 type CreatedLink = RouterOutputs["businessBanking"]["createPaymentLink"]
 
@@ -322,7 +322,8 @@ export function PaymentLinkScreen({ orderId }: { orderId: string }) {
           </ActionButton>
           <InfoNote>
             The customer transfers to your bank and taps I have paid. Nothing is
-            recorded until you check your bank and confirm.
+            recorded until you check your bank and confirm. A saved payment
+            reference is added when the link is created.
           </InfoNote>
         </>
       )}
@@ -373,25 +374,23 @@ function LinkReady({
               Copy link
             </ActionButton>
           </View>
-          {created.whatsappUrl ? (
-            <View className="flex-1">
-              <ActionButton
-                icon="Share"
-                variant="outline"
-                onPress={() => {
-                  setProblem(null)
-                  void Share.share({
-                    message: created.url,
-                    url: created.url,
-                  }).catch(() =>
-                    setProblem("Sharing isn't available. Copy the link."),
-                  )
-                }}
-              >
-                Share
-              </ActionButton>
-            </View>
-          ) : null}
+          <View className="flex-1">
+            <ActionButton
+              icon="Share"
+              variant="outline"
+              onPress={() => {
+                setProblem(null)
+                void Share.share({
+                  message: created.url,
+                  url: created.url,
+                }).catch(() =>
+                  setProblem("Sharing isn't available. Copy the link."),
+                )
+              }}
+            >
+              Share
+            </ActionButton>
+          </View>
         </View>
         <ActionButton
           icon="Globe"
@@ -414,6 +413,15 @@ function LinkReady({
         ) : null}
         {problem ? <StatusBanner tone="destructive" message={problem} /> : null}
       </View>
+      {created.paymentReference ? (
+        <View className="gap-2">
+          <PaymentReferenceCard paymentReference={created.paymentReference} />
+          <InfoNote>
+            Ask the customer to put this in their transfer narration. It helps
+            you find the payment; you still check your bank before confirming.
+          </InfoNote>
+        </View>
+      ) : null}
       <FactCard
         facts={[
           {
@@ -430,7 +438,7 @@ function LinkReady({
         <CustomerMessageEditor
           initialText={created.copyText}
           label="Message to the customer"
-          noPhoneMessage={`${customer} has no phone number saved. Copy the message and send it your way.`}
+          noPhoneMessage={`${customer} has no phone number saved. Enter one to open a WhatsApp draft, or copy the message.`}
           whatsappUrl={created.whatsappUrl}
         />
       </View>

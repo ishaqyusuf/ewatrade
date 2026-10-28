@@ -19,6 +19,17 @@ export type StoredReceipt = {
   fileName: string
 }
 
+/**
+ * A new payment reference requested after a decided report. The clientAttemptId is saved before
+ * the request so a lost response or a reload replays the same attempt instead of issuing another.
+ */
+export type StoredNextAttempt = {
+  clientAttemptId: string
+  /** Filled from the server's answer; null until one arrives. */
+  paymentAttemptId: string | null
+  paymentReference: string | null
+}
+
 export type StoredReport = {
   v: 1
   /** Stable for every retry of one report; replaced only for a new report. */
@@ -30,6 +41,15 @@ export type StoredReport = {
   /** The report this one replaced, used to recover an "already being checked" conflict. */
   previousReportToken: string | null
   reportedAt: string | null
+  /**
+   * The payment attempt shown when this report was made; every retry is bound to it. Absent on
+   * reports saved before references, and null for links that never had one.
+   */
+  paymentAttemptId?: string | null
+  /** The reference shown with that attempt, kept for the unfinished/retry page. */
+  paymentReference?: string | null
+  /** After this report was decided: the next attempt the customer asked for. */
+  nextAttempt?: StoredNextAttempt | null
 }
 
 const KEY_PREFIX = "ewatrade.payment-report."
@@ -51,6 +71,32 @@ export function reportStorageKey(linkToken: string) {
 
 const operationId = /^[a-zA-Z0-9_-]{8,120}$/
 const digest = /^[a-f0-9]{64}$/
+const recordId = /^[a-zA-Z0-9_-]{1,128}$/
+const reference = /^[A-Z0-9-]{1,64}$/
+
+/** Absent (older records) or null are allowed; anything present must be well formed. */
+function optional(value: unknown, pattern: RegExp) {
+  return (
+    value === undefined ||
+    value === null ||
+    (typeof value === "string" && pattern.test(value))
+  )
+}
+
+function isStoredNextAttempt(value: unknown): value is StoredNextAttempt {
+  if (!value || typeof value !== "object") return false
+  const attempt = value as Record<string, unknown>
+  return (
+    typeof attempt.clientAttemptId === "string" &&
+    operationId.test(attempt.clientAttemptId) &&
+    attempt.paymentAttemptId !== undefined &&
+    attempt.paymentReference !== undefined &&
+    optional(attempt.paymentAttemptId, recordId) &&
+    optional(attempt.paymentReference, reference) &&
+    // An issued attempt always arrives with its reference.
+    (attempt.paymentAttemptId === null) === (attempt.paymentReference === null)
+  )
+}
 
 function isStoredReceipt(value: unknown): value is StoredReceipt {
   if (!value || typeof value !== "object") return false
@@ -87,7 +133,14 @@ export function parseStoredReport(raw: string | null): StoredReport | null {
       (value.reportToken !== null && typeof value.reportToken !== "string") ||
       (value.previousReportToken !== null &&
         typeof value.previousReportToken !== "string") ||
-      (value.reportedAt !== null && typeof value.reportedAt !== "string")
+      (value.reportedAt !== null && typeof value.reportedAt !== "string") ||
+      !optional(value.paymentAttemptId, recordId) ||
+      !optional(value.paymentReference, reference) ||
+      (value.nextAttempt !== undefined &&
+        value.nextAttempt !== null &&
+        // Only a report with its own proof can ask for the next attempt.
+        (typeof value.reportToken !== "string" ||
+          !isStoredNextAttempt(value.nextAttempt)))
     )
       return null
     return value as unknown as StoredReport
@@ -151,21 +204,40 @@ export function clearStoredReport(linkToken: string) {
   }
 }
 
-export function newClientReportId() {
+function newOperationId(prefix: string) {
   const cryptoApi = globalThis.crypto
   if (cryptoApi?.randomUUID)
-    return `pr_${cryptoApi.randomUUID().replace(/-/g, "")}`
+    return `${prefix}_${cryptoApi.randomUUID().replace(/-/g, "")}`
   const bytes = new Uint8Array(16)
   cryptoApi.getRandomValues(bytes)
-  return `pr_${Array.from(bytes, (byte) => byte.toString(16).padStart(2, "0")).join("")}`
+  return `${prefix}_${Array.from(bytes, (byte) => byte.toString(16).padStart(2, "0")).join("")}`
 }
 
-/** Same report details → same clientReportId, so a retry replays instead of conflicting. */
+export function newClientReportId() {
+  return newOperationId("pr")
+}
+
+export function newClientAttemptId() {
+  return newOperationId("pa")
+}
+
+/**
+ * Same report details and the same shown payment attempt → same clientReportId, so a retry
+ * replays instead of conflicting. A different attempt is a different report. A record saved
+ * before attempts existed is unbound: retrying it unchanged lets the server replay what it saved.
+ */
 export function sameReportDetails(
   report: StoredReport,
-  details: Pick<StoredReport, "payerName" | "claimedAmountMinor" | "receipt">,
+  details: Pick<
+    StoredReport,
+    "payerName" | "claimedAmountMinor" | "receipt"
+  > & {
+    paymentAttemptId: string | null
+  },
 ) {
   return (
+    (report.paymentAttemptId === undefined ||
+      report.paymentAttemptId === details.paymentAttemptId) &&
     report.payerName === details.payerName &&
     report.claimedAmountMinor === details.claimedAmountMinor &&
     (report.receipt?.contentDigest ?? null) ===

@@ -6,7 +6,11 @@ import { FinanceChoice } from "@/components/mobile/finance/finance-ledger-layout
 import { PaymentAlertDeliveries } from "@/components/mobile/finance/payment-alert-deliveries"
 import { FormField } from "@/components/mobile/form-field"
 import { HeroCard } from "@/components/mobile/green-till/hero-card"
-import { SectionHeader, StatusPill } from "@/components/mobile/green-till/kit"
+import {
+  SectionHeader,
+  StatusPill,
+  ToggleRow,
+} from "@/components/mobile/green-till/kit"
 import { MoneyField } from "@/components/mobile/money-field"
 import { StatusBanner } from "@/components/mobile/status-banner"
 import { useWorkflowHeader } from "@/components/mobile/workflow-modal-screen"
@@ -34,12 +38,21 @@ import {
   accountSuffix,
   errorCode,
   errorMessage,
+  isNibssSessionId,
   localDay,
   receivedAtFor,
+  receivedDecision,
   shortDateTime,
   transferAccounts,
+  verifiedPayment,
 } from "./payment-link-model"
-import { type Fact, FactCard, InfoNote } from "./payment-link-parts"
+import {
+  type Fact,
+  FactCard,
+  InfoNote,
+  PaymentReferenceCard,
+  VerifiedStamp,
+} from "./payment-link-parts"
 
 type Report = RouterOutputs["businessBanking"]["report"]
 type Decision = RouterOutputs["businessBanking"]["reviewReport"]
@@ -135,9 +148,27 @@ function ReviewFlow({
   )
   const eligible = transferAccounts(accountsQuery.data?.accounts ?? [])
   const [step, setStep] = useState<Step>("check")
-  const [amount, setAmount] = useState("")
-  const [accountId, setAccountId] = useState<string | null>(null)
-  const [day, setDay] = useState(() => localDay(new Date()))
+  const [amount, setAmountValue] = useState("")
+  const [accountId, setAccountIdValue] = useState<string | null>(null)
+  const [day, setDayValue] = useState(() => localDay(new Date()))
+  // The bank check covers amount, account and date, so changing one clears it.
+  const [bankChecked, setBankChecked] = useState(false)
+  const [nibssSession, setNibssSession] = useState(false)
+  const setAmount = (value: string) => {
+    if (value === amount) return
+    setAmountValue(value)
+    setBankChecked(false)
+  }
+  const setAccountId = (value: string) => {
+    if (value === account?.id) return
+    setAccountIdValue(value)
+    setBankChecked(false)
+  }
+  const setDay = (value: string) => {
+    if (value === day) return
+    setDayValue(value)
+    setBankChecked(false)
+  }
   const [reference, setReference] = useState("")
   const [note, setNote] = useState("")
   const [reason, setReason] = useState("")
@@ -160,7 +191,10 @@ function ReviewFlow({
     receivedMinor > 0 &&
     receivedMinor <= report.balanceMinor
   const dayValid = /^\d{4}-\d{2}-\d{2}$/.test(day) && day <= today
-  const canConfirm = pending && amountValid && Boolean(account) && dayValid
+  const canConfirm =
+    pending && amountValid && Boolean(account) && dayValid && bankChecked
+  const nibssReference = isNibssSessionId(reference)
+  const verified = verifiedPayment(report.verification)
   const left = amountValid ? report.balanceMinor - (receivedMinor ?? 0) : null
 
   const review = useMutation(
@@ -284,6 +318,9 @@ function ReviewFlow({
       />
     </View>
   )
+  const referenceCard = report.paymentReference ? (
+    <PaymentReferenceCard paymentReference={report.paymentReference} />
+  ) : null
   const orderFacts: Fact[] = [
     { label: "Order", value: report.orderNumber },
     { label: "Total", value: money(report.totalMinor), numeric: true },
@@ -312,26 +349,42 @@ function ReviewFlow({
 
   if (step === "result" && decision) {
     const received = decision.status === "CONFIRMED"
+    const balanceLine =
+      decision.balanceMinor > 0
+        ? `Part paid · ${money(decision.balanceMinor)} still to pay.`
+        : "Paid in full."
+    const bankReference = received ? reference.trim() : ""
     return (
       <FinanceFormBody>
-        <StatusBanner
-          icon={received ? "CircleCheck" : "XCircle"}
-          title={
-            received
-              ? `${money(decision.receivedAmountMinor ?? 0)} recorded on ${report.orderNumber}`
-              : "Not received"
-          }
-          message={
-            received
-              ? decision.balanceMinor > 0
-                ? `Part paid · ${money(decision.balanceMinor)} still to pay.`
-                : "Paid in full."
-              : `${reason.trim()} ${report.orderNumber} is unchanged.`
-          }
-          tone={received ? "success" : "warning"}
-        />
+        {received && verifiedPayment(decision.verification) ? (
+          <VerifiedStamp
+            verification={decision.verification}
+            message={`${money(decision.receivedAmountMinor ?? 0)} recorded on ${report.orderNumber}. ${balanceLine}`}
+          />
+        ) : (
+          <StatusBanner
+            icon={received ? "CircleCheck" : "XCircle"}
+            title={
+              received
+                ? `${money(decision.receivedAmountMinor ?? 0)} recorded on ${report.orderNumber}`
+                : "Not received"
+            }
+            message={
+              received
+                ? balanceLine
+                : `${reason.trim()} ${report.orderNumber} is unchanged.`
+            }
+            tone={received ? "success" : "warning"}
+          />
+        )}
+        {decision.paymentReference ? (
+          <PaymentReferenceCard paymentReference={decision.paymentReference} />
+        ) : null}
         <FactCard
           facts={[
+            ...(bankReference
+              ? [{ label: "Bank reference", value: bankReference }]
+              : []),
             {
               label: "Order total",
               value: formatMinorMoney(
@@ -364,7 +417,7 @@ function ReviewFlow({
           <CustomerMessageEditor
             initialText={decision.copyText}
             label="Message to the customer"
-            noPhoneMessage={`${report.orderNumber} has no saved customer phone. Copy the message and send it yourself.`}
+            noPhoneMessage={`${report.orderNumber} has no saved customer phone. Enter one to open a WhatsApp draft, or copy the message.`}
             whatsappUrl={decision.whatsappUrl}
           />
         </View>
@@ -414,8 +467,25 @@ function ReviewFlow({
     />
   ) : null
 
-  if (step === "confirm" && account && receivedMinor !== null && confirmedAt) {
+  if (
+    step === "confirm" &&
+    account &&
+    receivedMinor !== null &&
+    confirmedAt &&
+    bankChecked
+  ) {
     const receivedAt = receivedAtFor(day, confirmedAt)
+    const decisionInput = receivedDecision({
+      reportId: report.reportId,
+      expectedRevision: report.revision,
+      receivedAmountMinor: receivedMinor,
+      moneyAccountId: account.id,
+      receivedAt,
+      reference,
+      note,
+      bankChecked,
+      nibssSession,
+    })
     return (
       <FinanceFormBody>
         <HeroCard
@@ -445,7 +515,23 @@ function ReviewFlow({
                 year: "numeric",
               }),
             },
-            { label: "Reference", value: reference.trim() || "—" },
+            ...(report.paymentReference
+              ? [
+                  {
+                    label: "Payment reference",
+                    value: report.paymentReference,
+                  },
+                ]
+              : []),
+            {
+              label: "Bank reference",
+              value: reference.trim()
+                ? decisionInput?.transferReferenceNamespace
+                  ? `${reference.trim()} · NIBSS session ID`
+                  : reference.trim()
+                : "—",
+            },
+            { label: "Bank check", value: "You checked the bank account" },
             { label: "Note", value: note.trim() || "—" },
             {
               label: `${report.orderNumber} after this`,
@@ -475,22 +561,13 @@ function ReviewFlow({
           </View>
           <View className="flex-1">
             <ActionButton
-              disabled={review.isPending}
+              disabled={!decisionInput || review.isPending}
               icon="Check"
               isLoading={review.isPending}
               loadingLabel="Recording…"
-              onPress={() =>
-                review.mutate({
-                  reportId: report.reportId,
-                  expectedRevision: report.revision,
-                  outcome: "received",
-                  receivedAmountMinor: receivedMinor,
-                  moneyAccountId: account.id,
-                  receivedAt,
-                  reference: reference.trim() || undefined,
-                  note: note.trim() || undefined,
-                })
-              }
+              onPress={() => {
+                if (decisionInput) review.mutate(decisionInput)
+              }}
             >
               {`Record ${money(receivedMinor)}`}
             </ActionButton>
@@ -574,26 +651,43 @@ function ReviewFlow({
   if (!pending)
     return (
       <FinanceFormBody>
-        <StatusBanner
-          icon={report.status === "CONFIRMED" ? "CircleCheck" : "XCircle"}
-          title={
-            report.status === "CONFIRMED"
-              ? "Already confirmed"
-              : report.status === "NOT_RECEIVED"
-                ? "Already marked not received"
-                : "Not ready to check"
-          }
-          message={
-            report.status === "CONFIRMED"
-              ? `${money(report.receivedAmountMinor ?? 0)} was confirmed ${shortDateTime(report.decidedAt)}. It is recorded once on ${report.orderNumber}. Nothing more to do.`
-              : report.status === "NOT_RECEIVED"
-                ? `Marked ${shortDateTime(report.decidedAt)}.${report.decisionNote ? ` Reason: ${report.decisionNote}` : ""}`
-                : "The customer hasn't finished sending this payment notification."
-          }
-          tone={report.status === "CONFIRMED" ? "success" : "muted"}
-        />
+        {report.status === "CONFIRMED" && verified ? (
+          <VerifiedStamp
+            verification={report.verification}
+            message={`${money(report.receivedAmountMinor ?? 0)} is recorded once on ${report.orderNumber}. Nothing more to do.`}
+          />
+        ) : (
+          <StatusBanner
+            icon={report.status === "CONFIRMED" ? "CircleCheck" : "XCircle"}
+            title={
+              report.status === "CONFIRMED"
+                ? "Already confirmed"
+                : report.status === "NOT_RECEIVED"
+                  ? "Already marked not received"
+                  : "Not ready to check"
+            }
+            message={
+              report.status === "CONFIRMED"
+                ? `${money(report.receivedAmountMinor ?? 0)} was confirmed ${shortDateTime(report.decidedAt)}. It is recorded once on ${report.orderNumber}. Nothing more to do.`
+                : report.status === "NOT_RECEIVED"
+                  ? `Marked ${shortDateTime(report.decidedAt)}.${report.decisionNote ? ` Reason: ${report.decisionNote}` : ""}`
+                  : "The customer hasn't finished sending this payment notification."
+            }
+            tone={report.status === "CONFIRMED" ? "success" : "muted"}
+          />
+        )}
         {claim}
-        <FactCard facts={orderFacts} />
+        {referenceCard}
+        <FactCard
+          facts={
+            report.bankReference
+              ? [
+                  { label: "Bank reference", value: report.bankReference },
+                  ...orderFacts,
+                ]
+              : orderFacts
+          }
+        />
         <ActionButton variant="outline" onPress={openOrder}>
           View order
         </ActionButton>
@@ -700,11 +794,30 @@ function ReviewFlow({
           placeholder="From your bank app"
           value={reference}
         />
+        {nibssReference ? (
+          <View className="rounded-[20px] bg-card px-3.5 shadow-sm">
+            <ToggleRow
+              title="This is the NIBSS session ID"
+              sub="The 30-digit ID on the transfer. The same transfer then can't be recorded twice."
+              value={nibssSession}
+              onValueChange={setNibssSession}
+            />
+          </View>
+        ) : null}
         <FormField
           label="Payment note (optional)"
           maxLength={500}
           onChangeText={setNote}
           value={note}
+        />
+      </View>
+      {referenceCard}
+      <View className="rounded-[20px] bg-card px-3.5 shadow-sm">
+        <ToggleRow
+          title="I checked the bank account"
+          sub="The actual amount, receiving account and date are correct."
+          value={bankChecked}
+          onValueChange={setBankChecked}
         />
       </View>
       <View className="flex-row gap-3">

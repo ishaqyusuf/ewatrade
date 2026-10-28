@@ -12,6 +12,7 @@ import {
   Input,
   MoneyInput,
   SelectControl,
+  Switch,
   Textarea,
   cn,
 } from "@ewatrade/ui"
@@ -19,6 +20,7 @@ import { majorToMinor, minorToMajorInput } from "@ewatrade/utils/currency"
 import {
   Alert02Icon,
   Cancel01Icon,
+  Copy01Icon,
   Image01Icon,
   LinkSquare02Icon,
   Tick02Icon,
@@ -30,6 +32,7 @@ import { type ReactNode, useId, useState } from "react"
 import {
   NOT_RECEIVED_NOTE_MAX,
   NOT_RECEIVED_REASONS,
+  bankCheckKey,
   businessToday,
   errorCode,
   maskedAccountSuffix,
@@ -44,6 +47,15 @@ import {
 
 type Step = "check" | "confirm" | "not-received"
 
+/**
+ * Server provenance. "confirmed" only once the business recorded the bank
+ * receipt as a canonical payment; receipts and references never set it.
+ */
+type Verification = {
+  state: "unverified" | "confirmed"
+  confirmedAt: Date | string | null
+}
+
 type ReviewResult = {
   status: string
   state: string
@@ -55,6 +67,9 @@ type ReviewResult = {
   copyText: string
   whatsappUrl: string | null
   replay: boolean
+  /** Missing from an older server. */
+  paymentReference?: string | null
+  verification?: Verification
 }
 
 export function formatReportTime(
@@ -180,6 +195,9 @@ type Report = {
   receivedAt: Date | string | null
   decisionNote: string | null
   bankReference: string | null
+  /** The saved reference customers were asked to use; missing from an older server. */
+  paymentReference?: string | null
+  verification?: Verification
   receivedAccountId: string | null
   currencyCode: string
   orderId: string
@@ -219,6 +237,11 @@ function ReviewFlow({
   const [chosenAccount, setChosenAccount] = useState("")
   const [day, setDay] = useState(() => businessToday(timeZone))
   const [reference, setReference] = useState("")
+  // The merchant's own check of the real bank account, saved as the exact
+  // facts they checked (see bankCheckKey). A receipt or matching reference
+  // never stands in for it.
+  const [checkedKey, setCheckedKey] = useState<string | null>(null)
+  const [copied, setCopied] = useState<string | null>(null)
   const [note, setNote] = useState("")
   // Fixed the first time the person reaches the confirm step for a day, so a
   // retry sends the exact same decision (the server treats it as a replay).
@@ -264,8 +287,22 @@ function ReviewFlow({
           : !accountId
             ? "Choose the account the money arrived in."
             : null
+  const currentKey = bankCheckKey({
+    reportId: report.reportId,
+    revision: report.revision,
+    receivedMinor,
+    accountId,
+    day,
+    reference,
+  })
+  // Only a check of the current report revision and current facts counts.
+  const bankChecked = currentKey !== null && checkedKey === currentKey
   const canConfirm =
-    line.kind === "records" && !accountProblem && !dayProblem && !!receivedMinor
+    line.kind === "records" &&
+    !accountProblem &&
+    !dayProblem &&
+    !!receivedMinor &&
+    bankChecked
 
   const review = useMutation(
     trpc.businessBanking.reviewReport.mutationOptions({
@@ -317,6 +354,12 @@ function ReviewFlow({
           </>
         }
       >
+        {recorded ? (
+          <VerifiedStamp
+            verification={result.verification}
+            timeZone={timeZone}
+          />
+        ) : null}
         <Outcome
           tone={recorded ? "ok" : "bad"}
           title={
@@ -344,6 +387,9 @@ function ReviewFlow({
             </div>
           ))}
         </dl>
+        <PaymentReferenceRow
+          reference={result.paymentReference ?? report.paymentReference}
+        />
         {result.replay ? (
           <p className="text-xs text-muted-foreground">
             This decision was already saved. Nothing was recorded twice.
@@ -354,7 +400,7 @@ function ReviewFlow({
           <CustomerMessageEditor
             initialText={result.copyText}
             whatsappUrl={result.whatsappUrl}
-            noPhoneNote={`${report.orderNumber} has no saved customer phone. Copy the message and send it yourself.`}
+            noPhoneNote={`${report.orderNumber} has no saved customer phone. Enter a number for this message, or copy it.`}
           />
           <p className="text-xs text-muted-foreground">
             {report.payerName}'s payment page will show this decision when
@@ -399,6 +445,12 @@ function ReviewFlow({
                 : "It shows here once they tap I have paid."
           }
         />
+        {report.status === "CONFIRMED" ? (
+          <VerifiedStamp
+            verification={report.verification}
+            timeZone={timeZone}
+          />
+        ) : null}
         <ClaimFacts report={report} timeZone={timeZone} />
         <OrderFacts report={report} />
       </Pane>
@@ -416,6 +468,7 @@ function ReviewFlow({
           onClick={() =>
             void onRefresh().then(() => {
               review.reset()
+              setCheckedKey(null)
               setStep("check")
             })
           }
@@ -435,6 +488,36 @@ function ReviewFlow({
           <>
             <Button
               type="button"
+              variant="outline"
+              className="sm:mr-auto"
+              onClick={() =>
+                void navigator.clipboard
+                  .writeText(
+                    [
+                      `${report.orderNumber} · ${report.payerName}`,
+                      `Received: ${money(receivedMinor)} into ${accountName} on ${formatDay(day)}`,
+                      `Customer said: ${money(report.claimedAmountMinor)}`,
+                      report.paymentReference
+                        ? `Payment reference: ${report.paymentReference}`
+                        : null,
+                      reference.trim()
+                        ? `Bank reference: ${reference.trim()}`
+                        : null,
+                    ]
+                      .filter(Boolean)
+                      .join("\n"),
+                  )
+                  .then(
+                    () => setCopied("Payment summary copied."),
+                    () => setCopied("Copy didn't work."),
+                  )
+              }
+            >
+              <HugeiconsIcon icon={Copy01Icon} data-icon="inline-start" />
+              Copy payment summary
+            </Button>
+            <Button
+              type="button"
               variant="ghost"
               disabled={review.isPending}
               onClick={() => {
@@ -446,8 +529,11 @@ function ReviewFlow({
             </Button>
             <Button
               type="button"
-              disabled={review.isPending || conflict}
-              onClick={() =>
+              disabled={review.isPending || conflict || !canConfirm}
+              onClick={() => {
+                // Re-read at press time: the report or accounts may have
+                // refreshed since the check.
+                if (!canConfirm) return
                 review.mutate({
                   reportId: report.reportId,
                   expectedRevision: report.revision,
@@ -456,8 +542,9 @@ function ReviewFlow({
                   moneyAccountId: accountId,
                   receivedAt,
                   reference: reference.trim() || undefined,
+                  bankCheckAttested: true,
                 })
-              }
+              }}
             >
               {review.isPending
                 ? "Recording…"
@@ -483,7 +570,22 @@ function ReviewFlow({
             ["You received", <b key="r">{money(receivedMinor)}</b>],
             ["Into", accountName],
             ["Date", formatDay(day)],
-            ["Reference", reference.trim() || "—"],
+            ["Bank reference", reference.trim() || "—"],
+            ...(report.paymentReference
+              ? ([["Payment reference", report.paymentReference]] as Array<
+                  [string, ReactNode]
+                >)
+              : []),
+            [
+              "Bank checked",
+              bankChecked ? (
+                "Yes, by you"
+              ) : (
+                <span key="c" className="text-destructive">
+                  Not for these details. Go back and check again.
+                </span>
+              ),
+            ],
             [
               `${report.orderNumber} after this`,
               <b key="a">
@@ -498,6 +600,12 @@ function ReviewFlow({
           This records one payment on the order, the same as Record payment. It
           can't be recorded twice.
         </p>
+        <output
+          aria-live="polite"
+          className={cn("text-xs text-muted-foreground", !copied && "sr-only")}
+        >
+          {copied ?? ""}
+        </output>
         {errorBox}
       </Pane>
     )
@@ -671,6 +779,25 @@ function ReviewFlow({
               money={money}
               balanceMinor={report.balanceMinor}
             />
+            {/* biome-ignore lint/a11y/noLabelWithoutControl: the switch is the label's child */}
+            <label className="flex cursor-pointer items-start justify-between gap-4 rounded-lg border border-border px-3 py-2.5">
+              <span className="grid gap-0.5">
+                <span className="text-sm font-medium">
+                  I checked the bank account
+                </span>
+                <span className="text-xs text-muted-foreground">
+                  The actual amount, receiving account and date are correct. A
+                  receipt or matching reference isn't proof on its own.
+                </span>
+              </span>
+              <Switch
+                checked={bankChecked}
+                disabled={currentKey === null}
+                onCheckedChange={(checked) =>
+                  setCheckedKey(checked === true ? currentKey : null)
+                }
+              />
+            </label>
           </section>
         </div>
       </div>
@@ -822,6 +949,11 @@ function ClaimFacts({
         rows={[
           ["Name they gave", report.payerName],
           ["Submitted", formatReportTime(report.submittedAt, timeZone)],
+          ...(report.paymentReference
+            ? ([["Payment reference", report.paymentReference]] as Array<
+                [string, ReactNode]
+              >)
+            : []),
           [
             "Link pays into",
             [report.bank.name, maskedAccountSuffix(suffix)]
@@ -934,6 +1066,42 @@ function Facts({ rows }: { rows: Array<[string, ReactNode]> }) {
       ))}
     </dl>
   )
+}
+
+/** "Payment verified" only from the server's canonical confirmation. */
+function VerifiedStamp({
+  verification,
+  timeZone,
+}: {
+  verification: Verification | undefined
+  timeZone: string
+}) {
+  if (verification?.state !== "confirmed") return null
+  return (
+    <p className="flex items-center gap-2 rounded-lg border border-emerald-500/30 bg-emerald-500/5 px-3 py-2 text-sm">
+      <HugeiconsIcon
+        icon={Tick02Icon}
+        className="size-4 shrink-0 text-emerald-600"
+        aria-hidden
+      />
+      <span>
+        <b className="font-semibold">Payment verified</b> · Confirmed by your
+        business
+        {verification.confirmedAt
+          ? ` · ${formatReportTime(verification.confirmedAt, timeZone)}`
+          : ""}
+      </span>
+    </p>
+  )
+}
+
+function PaymentReferenceRow({
+  reference,
+}: {
+  reference: string | null | undefined
+}) {
+  if (!reference) return null
+  return <Facts rows={[["Payment reference", reference]]} />
 }
 
 function Outcome({

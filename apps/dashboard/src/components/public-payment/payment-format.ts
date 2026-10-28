@@ -22,6 +22,38 @@ export function spacedAccountNumber(accountNumber: string) {
     : accountNumber
 }
 
+/**
+ * What the customer pastes into the transfer narration. A saved payment reference replaces the
+ * order number once the server issues one; links without one keep the order number.
+ */
+export function transferReference(source: {
+  orderNumber: string
+  paymentReference?: string | null
+}) {
+  const reference = source.paymentReference?.trim()
+  return reference
+    ? { label: "Payment reference / narration", value: reference }
+    : { label: "Narration", value: source.orderNumber }
+}
+
+/** One paste with everything a transfer needs; the amount only when it is known. */
+export function paymentDetailsText(input: {
+  link: Pick<PublicPaymentLink, "bank" | "currencyCode" | "orderNumber"> & {
+    paymentReference?: string | null
+  }
+  amountMinor: number | null
+}) {
+  const { bank, currencyCode } = input.link
+  const reference = transferReference(input.link)
+  return [
+    `${bank.name} · ${bank.accountNumber} · ${bank.accountHolder}`,
+    ...(input.amountMinor !== null && input.amountMinor > 0
+      ? [`Amount: ${money(input.amountMinor, currencyCode)}`]
+      : []),
+    `${reference.label === "Narration" ? "Narration" : "Reference"}: ${reference.value}`,
+  ].join("\n")
+}
+
 export function lastDigits(accountNumber: string) {
   return `••${accountNumber.slice(-4)}`
 }

@@ -3,11 +3,14 @@
 import { TRPCProvider } from "@/trpc/client"
 import type { AppRouter } from "@ewatrade/api/trpc/routers/_app"
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
-import { createTRPCClient, httpBatchLink } from "@trpc/client"
+import { createTRPCClient } from "@trpc/client"
 import { type ReactNode, useState } from "react"
-import superjson from "superjson"
+import { publicPaymentLinks } from "./funds-transport"
 
-/** Public proof tokens stay in POST bodies; no merchant cookies or analytics. */
+/**
+ * Public proof tokens stay in POST bodies. Only the two customer-funds
+ * procedures send the same-origin session cookie; see funds-transport.ts.
+ */
 export function PaymentProvider({ children }: { children: ReactNode }) {
   const [queryClient] = useState(
     () =>
@@ -16,28 +19,7 @@ export function PaymentProvider({ children }: { children: ReactNode }) {
       }),
   )
   const [client] = useState(() =>
-    createTRPCClient<AppRouter>({
-      links: [
-        httpBatchLink({
-          url: "/api/trpc",
-          methodOverride: "POST",
-          transformer: superjson,
-          fetch(input, init) {
-            return fetch(input, {
-              ...init,
-              credentials: "omit",
-              cache: "no-store",
-              referrerPolicy: "no-referrer",
-              redirect: "error",
-              signal: AbortSignal.any([
-                ...(init?.signal ? [init.signal] : []),
-                AbortSignal.timeout(15_000),
-              ]),
-            })
-          },
-        }),
-      ],
-    }),
+    createTRPCClient<AppRouter>({ links: publicPaymentLinks() }),
   )
   return (
     <QueryClientProvider client={queryClient}>

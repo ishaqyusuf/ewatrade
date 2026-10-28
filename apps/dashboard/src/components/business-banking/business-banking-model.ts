@@ -4,6 +4,11 @@
  * nothing here records money.
  */
 
+import {
+  buildWhatsAppMessageUrl,
+  normalizeWhatsAppPhone,
+} from "@ewatrade/customer-messages"
+
 /** Nigerian account numbers (NUBAN): exactly 10 digits, leading zeros kept. */
 export function bankAccountNumberProblem(value: string) {
   const digits = value.trim()
@@ -108,7 +113,38 @@ export function whatsAppPhoneLabel(url: string | null) {
   }
 }
 
-/** Message for a link when the order has no saved phone (Copy only). */
+/**
+ * A one-time WhatsApp draft to a number typed for this message only. National
+ * numbers are read as Nigerian; others need their country code. Nothing is
+ * saved: the merchant still presses Send in WhatsApp.
+ */
+export function oneTimeWhatsAppDraft(
+  phone: string,
+  text: string,
+  countryCode = "NG",
+):
+  | { kind: "empty" }
+  | { kind: "invalid" }
+  | { kind: "no-text"; display: string }
+  | { kind: "too-long"; display: string }
+  | { kind: "ready"; display: string; url: string } {
+  if (!phone.trim()) return { kind: "empty" }
+  const normalized = normalizeWhatsAppPhone(phone, countryCode)
+  if (!normalized) return { kind: "invalid" }
+  if (!text.trim()) return { kind: "no-text", display: normalized.display }
+  try {
+    return {
+      kind: "ready",
+      display: normalized.display,
+      url: buildWhatsAppMessageUrl(normalized.phoneE164, text.trim()),
+    }
+  } catch {
+    // Over WhatsApp's text or link limits: the draft stays for Copy.
+    return { kind: "too-long", display: normalized.display }
+  }
+}
+
+/** Message for a link when the order has no saved phone. */
 export function paymentLinkMessage(input: {
   orderNumber: string
   url: string
@@ -169,6 +205,33 @@ export function receivedLine(input: {
     lessBy: Math.max(0, claimedMinor - receivedMinor),
     left: balanceMinor - receivedMinor,
   }
+}
+
+/**
+ * What "I checked the bank account" vouches for: this report revision and the
+ * exact amount, account, day and bank reference being sent. Any change (an
+ * edit, a refreshed report, an account list fallback) makes a saved check
+ * stale. Null while the facts are incomplete, so nothing can be checked.
+ */
+export function bankCheckKey(input: {
+  reportId: string
+  revision: number
+  receivedMinor: number | null
+  accountId: string
+  day: string
+  reference: string
+}) {
+  const { receivedMinor } = input
+  if (!receivedMinor || receivedMinor <= 0 || !input.accountId || !input.day)
+    return null
+  return JSON.stringify([
+    input.reportId,
+    input.revision,
+    receivedMinor,
+    input.accountId,
+    input.day,
+    input.reference.trim(),
+  ])
 }
 
 /** A tRPC-style error code, when the error carries one. */

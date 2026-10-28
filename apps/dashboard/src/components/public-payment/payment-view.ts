@@ -31,6 +31,33 @@ export function outcomeNextStep(
   return null
 }
 
+/** The payment reference a report was made against, once the server sends one. */
+export function reportReference(status: {
+  reportId: string
+  paymentReference?: string | null
+}) {
+  return status.paymentReference?.trim() || null
+}
+
+/**
+ * Business-confirmation provenance for a decided report. Only the server's canonical confirmation
+ * counts: a matched reference, a receipt check or a CONFIRMED status without a recorded payment
+ * never reads as verified. Reports read before the server sends provenance return null.
+ */
+export function verifiedConfirmation(status: {
+  reportId: string
+  verification?: {
+    state: "unverified" | "confirmed"
+    confirmedAt: Date | string | null
+    canonicalPaymentId: string | null
+  } | null
+}): { confirmedAt: Date | string | null } | null {
+  const verification = status.verification
+  if (verification?.state !== "confirmed" || !verification.canonicalPaymentId)
+    return null
+  return { confirmedAt: verification.confirmedAt }
+}
+
 /**
  * A decided report and the link are separate reads, and the link is read again only after the
  * decision arrives. Until then the page shows the report's order money as one snapshot, so the

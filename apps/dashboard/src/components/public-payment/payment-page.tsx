@@ -18,6 +18,10 @@ import {
   useState,
 } from "react"
 import { ClaimReveal } from "./claim-reveal"
+import {
+  type IssuedAttempt,
+  startNextPaymentAttempt,
+} from "./next-payment-attempt"
 import { initialPayerName } from "./payer-name"
 import {
   type PublicPaymentLink,
@@ -34,20 +38,25 @@ import {
   ConfirmingRings,
   DetailList,
   FixedAmount,
+  HeroAmountCopy,
   LiveIndicator,
   OrderDetails,
   OrderSummary,
   PaymentShell,
   ReceiptPicker,
+  ReferenceValue,
   StatusCard,
   UpdatedAt,
   cardClass,
   primaryButtonClass,
+  secondaryButtonClass,
 } from "./payment-parts"
 import {
   type ReportOutcome,
   outcomeNextStep,
+  reportReference,
   resolvePaymentView,
+  verifiedConfirmation,
 } from "./payment-view"
 import type { PickedReceipt } from "./receipt-file"
 import {
@@ -98,6 +107,7 @@ function PaymentHero({ link }: { link: PublicPaymentLink }) {
           <span className="sr-only">Amount to pay: </span>
           {money(link.amountPrefilledMinor, link.currencyCode)}
         </p>
+        <HeroAmountCopy amountMinor={link.amountPrefilledMinor} />
         {summary ? <p className="text-sm opacity-85">{summary}</p> : null}
         <p className="mt-1 text-[13px] opacity-75">
           {link.paidMinor > 0
@@ -111,6 +121,35 @@ function PaymentHero({ link }: { link: PublicPaymentLink }) {
         </div>
       </div>
     </section>
+  )
+}
+
+/** Shown only for the server's canonical confirmation, never for a reference or receipt match. */
+function VerifiedNote({
+  businessName,
+  status,
+}: {
+  businessName: string
+  status: PublicReportStatus
+}) {
+  const verified = verifiedConfirmation(status)
+  if (!verified) return null
+  return (
+    <p
+      className={`${cardClass} flex flex-col gap-0.5 border-l-4 border-l-success-border px-3.5 py-3 text-sm leading-relaxed`}
+    >
+      <b>Payment verified</b>
+      <span className="text-muted-foreground">
+        Confirmed by {businessName}
+        {verified.confirmedAt ? (
+          <>
+            {" · "}
+            <LocalDate value={verified.confirmedAt} />
+          </>
+        ) : null}
+        . The amounts below are the recorded result.
+      </span>
+    </p>
   )
 }
 
@@ -195,6 +234,7 @@ function WaitingView({
   canRecover: boolean
 }) {
   const reportedAt = formatReportedAt(record?.reportedAt ?? null)
+  const reference = reportReference(status)
   return (
     <PaymentShell>
       <BusinessHeader
@@ -232,6 +272,14 @@ function WaitingView({
             label: "Sent to",
             value: `${link.bank.name} · ${lastDigits(link.bank.accountNumber)}`,
           },
+          ...(reference
+            ? [
+                {
+                  label: "Payment reference",
+                  value: <ReferenceValue reference={reference} />,
+                },
+              ]
+            : []),
           ...(reportedAt ? [{ label: "Told them", value: reportedAt }] : []),
           ...(record?.payerName
             ? [
@@ -243,6 +291,12 @@ function WaitingView({
             : []),
         ]}
       />
+      {reference ? (
+        <p className="text-center text-[13px] leading-relaxed text-muted-foreground">
+          A matching reference helps {link.businessName} find your transfer.
+          They still confirm it in their bank account.
+        </p>
+      ) : null}
       <p className="text-center text-[13px] leading-relaxed text-muted-foreground">
         {canRecover
           ? "You can close this page. Open the same link in this browser later to see the result."
@@ -362,8 +416,19 @@ export function PaymentPage({
   const sendingRef = useRef(false)
   const revealId = useId()
   const paidButtonRef = useRef<HTMLButtonElement>(null)
-  // A decided report stays the whole page until the customer explicitly starts a new one.
-  const [newReportAfter, setNewReportAfter] = useState<string | null>(null)
+  // A decided report stays the whole page until the customer explicitly starts a new one, the
+  // server issues its payment attempt, and the link shows that exact attempt.
+  const [nextForm, setNextForm] = useState<{
+    outcomeKey: string
+    paymentAttemptId: string
+  } | null>(null)
+  const [nextNotice, setNextNotice] = useState<
+    | { outcomeKey: string; kind: "error"; message: string }
+    | { outcomeKey: string; kind: "changed"; attempt: IssuedAttempt }
+    | null
+  >(null)
+  const [nextBusy, setNextBusy] = useState(false)
+  const nextBusyRef = useRef(false)
   const newFormRef = useRef<HTMLElement>(null)
   const focusNewForm = useRef(false)
 
@@ -381,10 +446,10 @@ export function PaymentPage({
   }, [link, step, finishing])
 
   useEffect(() => {
-    if (!newReportAfter || !focusNewForm.current) return
+    if (!nextForm || !focusNewForm.current) return
     focusNewForm.current = false
     newFormRef.current?.focus()
-  }, [newReportAfter])
+  }, [nextForm])
 
   const amountIsValid = () => {
     if (finishing || !link?.allowPartial) return true
@@ -440,6 +505,9 @@ export function PaymentPage({
             receipt: own ? attempt.receipt : null,
             claimedAmountMinor: existing.claimedAmountMinor,
             reportedAt: own ? attempt.reportedAt : null,
+            // The report being checked keeps the attempt it was made against.
+            paymentAttemptId: existing.paymentAttemptId,
+            paymentReference: existing.paymentReference,
           }
           writeStoredReport(token, recovered)
           setRecord(recovered)
@@ -474,6 +542,8 @@ export function PaymentPage({
         payerName,
         claimedAmountMinor: claimMinor,
         receipt: link.receiptAllowed ? (receipt?.meta ?? null) : null,
+        // Bound to the reference on screen; the server refuses it once it is not current.
+        paymentAttemptId: link.paymentAttemptId,
       }
       attempt =
         record && !record.reportToken && sameReportDetails(record, details)
@@ -482,6 +552,7 @@ export function PaymentPage({
               v: 1,
               clientReportId: newClientReportId(),
               ...details,
+              paymentReference: link.paymentReference,
               reportToken: null,
               previousReportToken:
                 record?.reportToken ?? record?.previousReportToken ?? null,
@@ -526,6 +597,21 @@ export function PaymentPage({
           setRevealed(false)
           return
         }
+        if (/payment reference changed/i.test(error.message)) {
+          // Show the current reference first; the next explicit submit binds to it.
+          void queryClient.invalidateQueries({ queryKey: linkKey })
+          setFlowError(
+            "The payment reference changed. Check the reference above before you tell them.",
+          )
+          return
+        }
+        if (/start a new payment attempt/i.test(error.message)) {
+          void queryClient.invalidateQueries({ queryKey: linkKey })
+          setFlowError(
+            "This payment reference was already used for a report that was decided. Open this link in the browser you used before, or ask the business for a new link.",
+          )
+          return
+        }
         if (/different details/i.test(error.message)) {
           const fresh = { ...attempt, clientReportId: newClientReportId() }
           writeStoredReport(token, fresh)
@@ -557,6 +643,52 @@ export function PaymentPage({
     } finally {
       sendingRef.current = false
       setStep(null)
+    }
+  }
+
+  /** Pay remaining / Tell them again, with the decided report's proof. */
+  const startNextAttempt = async (decided: PublicReportStatus, key: string) => {
+    if (!record?.reportToken || nextBusyRef.current) return
+    nextBusyRef.current = true
+    setNextBusy(true)
+    setNextNotice(null)
+    try {
+      const result = await startNextPaymentAttempt({
+        client,
+        record,
+        decidedAttemptId: decided.paymentAttemptId,
+        save: (saved) => {
+          writeStoredReport(token, saved)
+          setRecord(saved)
+        },
+        readLink: async () => {
+          // Never settle for an older read that was already in flight.
+          await queryClient.cancelQueries({ queryKey: linkKey })
+          return queryClient.fetchQuery({ ...linkOptions, staleTime: 0 })
+        },
+      })
+      if (result.kind === "ready") {
+        focusNewForm.current = true
+        setNextForm({
+          outcomeKey: key,
+          paymentAttemptId: result.attempt.paymentAttemptId,
+        })
+        return
+      }
+      if (result.kind === "changed") {
+        setNextNotice({
+          outcomeKey: key,
+          kind: "changed",
+          attempt: result.attempt,
+        })
+        return
+      }
+      if (result.refresh)
+        void queryClient.invalidateQueries({ queryKey: linkKey })
+      setNextNotice({ outcomeKey: key, kind: "error", message: result.message })
+    } finally {
+      nextBusyRef.current = false
+      setNextBusy(false)
     }
   }
 
@@ -672,6 +804,16 @@ export function PaymentPage({
               ...(record.payerName
                 ? [{ label: "Your name", value: record.payerName }]
                 : []),
+              ...(record.paymentReference
+                ? [
+                    {
+                      label: "Payment reference",
+                      value: (
+                        <ReferenceValue reference={record.paymentReference} />
+                      ),
+                    },
+                  ]
+                : []),
               {
                 label: "Receipt",
                 value: record.receipt?.fileName ?? "No receipt",
@@ -712,6 +854,7 @@ export function PaymentPage({
   )
 
   // What the business confirmed and what is still due, from the decided report.
+  const outcomeReference = outcome ? reportReference(outcome.status) : null
   const outcomeAmounts =
     outcome && outcome.state !== "not_received" ? (
       <DetailList
@@ -735,7 +878,22 @@ export function PaymentPage({
               </b>
             ),
           },
+          ...(outcomeReference
+            ? [
+                {
+                  label: "Payment reference",
+                  value: <ReferenceValue reference={outcomeReference} />,
+                },
+              ]
+            : []),
         ]}
+      />
+    ) : null
+  const verifiedNote =
+    outcome && outcome.state !== "not_received" ? (
+      <VerifiedNote
+        businessName={viewLink.businessName}
+        status={outcome.status}
       />
     ) : null
 
@@ -749,6 +907,7 @@ export function PaymentPage({
             {viewLink.businessName}.
           </StatusCard>
         )}
+        {verifiedNote}
         {outcomeAmounts}
         <OrderSummary link={viewLink} />
       </PaymentShell>
@@ -786,37 +945,88 @@ export function PaymentPage({
   const outcomeKey = outcome
     ? `${outcome.status.reportId}:${outcome.status.revision}`
     : null
-  if (outcome && !(next && newReportAfter === outcomeKey)) {
+  // Open only while the link still shows the exact attempt the customer moved on to.
+  const nextFormOpen =
+    nextForm !== null &&
+    nextForm.outcomeKey === outcomeKey &&
+    nextForm.paymentAttemptId === viewLink.paymentAttemptId
+  if (outcome && outcomeKey && !(next && nextFormOpen)) {
     // What a new report would ask for: this link's amount, up to what is still due.
     const nextMinor = Math.min(
       viewLink.amountRequestedMinor,
       outcome.status.balanceMinor,
     )
+    // A newer reference is offered only while the link still shows it.
+    const notice =
+      nextNotice?.outcomeKey === outcomeKey &&
+      (nextNotice.kind === "error" ||
+        nextNotice.attempt.paymentAttemptId === viewLink.paymentAttemptId)
+        ? nextNotice
+        : null
+    const decided = outcome.status
     return (
       <PaymentShell>
         {header}
         {outcomeCard}
+        {verifiedNote}
         {outcomeAmounts}
-        {next ? (
+        {next && notice?.kind === "changed" ? (
+          <section
+            className={`${cardClass} flex flex-col gap-2 border-l-4 border-l-warning px-3.5 py-3 text-sm leading-relaxed`}
+            aria-live="polite"
+          >
+            <b>This link has a newer payment reference</b>
+            <span className="text-muted-foreground">
+              Your last report keeps its own reference. Use this one only for a
+              new transfer.
+            </span>
+            <div>
+              <ReferenceValue reference={notice.attempt.paymentReference} />
+            </div>
+            <button
+              type="button"
+              className={secondaryButtonClass}
+              onClick={() => {
+                focusNewForm.current = true
+                setNextForm({
+                  outcomeKey,
+                  paymentAttemptId: notice.attempt.paymentAttemptId,
+                })
+              }}
+            >
+              Continue with this reference
+            </button>
+          </section>
+        ) : next ? (
           <button
             type="button"
             className={primaryButtonClass}
-            onClick={() => {
-              focusNewForm.current = true
-              setNewReportAfter(outcomeKey)
-            }}
+            disabled={nextBusy}
+            onClick={() => void startNextAttempt(decided, outcomeKey)}
           >
-            {next === "tell_again"
-              ? "Tell them again"
-              : nextMinor < outcome.status.balanceMinor
-                ? `Pay ${money(nextMinor, viewLink.currencyCode)} more`
-                : `Pay remaining ${money(nextMinor, viewLink.currencyCode)}`}
+            {nextBusy
+              ? "Getting a new payment reference…"
+              : next === "tell_again"
+                ? "Tell them again"
+                : nextMinor < outcome.status.balanceMinor
+                  ? `Pay ${money(nextMinor, viewLink.currencyCode)} more`
+                  : `Pay remaining ${money(nextMinor, viewLink.currencyCode)}`}
           </button>
+        ) : null}
+        {next && notice?.kind === "error" ? (
+          <p
+            role="alert"
+            className="text-center text-[13px] leading-relaxed text-destructive"
+          >
+            {notice.message}
+          </p>
         ) : null}
         <OrderSummary link={viewLink} />
       </PaymentShell>
     )
   }
+  // The decided report keeps its own reference; say which one this transfer uses instead.
+  const previousReference = outcome ? reportReference(outcome.status) : null
 
   const again = next === "tell_again"
   return (
@@ -847,9 +1057,24 @@ export function PaymentPage({
             currencyCode={viewLink.currencyCode}
           />
         ) : null}
+        {previousReference &&
+        viewLink.paymentReference &&
+        previousReference !== viewLink.paymentReference ? (
+          <p className="text-[13px] leading-relaxed text-muted-foreground">
+            This transfer has a new payment reference. Your last report used{" "}
+            <span className="break-all">{previousReference}</span>.
+          </p>
+        ) : null}
         <BankDetails
           link={viewLink}
           amountMinor={viewLink.allowPartial ? null : dueMinor}
+          detailsAmountMinor={
+            !viewLink.allowPartial
+              ? dueMinor
+              : claimMinor > 0 && claimMinor <= dueMinor
+                ? claimMinor
+                : null
+          }
         />
         {viewLink.receiptAllowed ? (
           <ReceiptPicker

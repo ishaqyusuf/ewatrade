@@ -75,6 +75,7 @@ test("reload records refuse malformed amounts and receipt metadata", () => {
       payerName: "Ada",
       claimedAmountMinor: 150000,
       receipt: null,
+      paymentAttemptId: null,
     }),
   ).toBe(true)
   expect(
@@ -82,6 +83,7 @@ test("reload records refuse malformed amounts and receipt metadata", () => {
       payerName: "Ada",
       claimedAmountMinor: 150001,
       receipt: null,
+      paymentAttemptId: null,
     }),
   ).toBe(false)
 })
@@ -113,6 +115,8 @@ test("lost submit response retries one stable report operation without making a 
             reportId: "report_1",
             reportToken: "private-proof",
             status: "DRAFT" as const,
+            paymentReference: null,
+            paymentAttemptId: null,
             replay: operations.length > 1,
             receiptUploadPath: null,
           }
@@ -124,6 +128,16 @@ test("lost submit response retries one stable report operation without making a 
           if (++submissions === 1) throw new Error("Lost response")
           return {
             reportId: "report_1",
+            paymentReference: null,
+            paymentAttemptId: null,
+            verification: {
+              state: "unverified" as const,
+              source: null,
+              confirmedAt: null,
+              receivedAt: null,
+              receivedAmountMinor: null,
+              canonicalPaymentId: null,
+            },
             revision: 2,
             status: "SUBMITTED" as const,
             state: "checking" as const,
@@ -179,6 +193,8 @@ test("a reloaded receipt draft asks for the same receipt when upload never finis
           reportId: "r",
           reportToken: "private-proof",
           status: "DRAFT" as const,
+          paymentReference: null,
+          paymentAttemptId: null,
           replay: true,
           receiptUploadPath: "/api/manual-payments/reports/r/receipt",
         }),

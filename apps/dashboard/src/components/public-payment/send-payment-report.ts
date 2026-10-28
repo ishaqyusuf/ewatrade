@@ -42,7 +42,7 @@ export function trpcErrorCode(error: unknown) {
   return typeof data?.code === "string" ? data.code : null
 }
 
-function fromTrpc(error: unknown): ReportFlowError {
+export function fromTrpc(error: unknown): ReportFlowError {
   const code = trpcErrorCode(error)
   const message = error instanceof Error ? error.message : NETWORK_MESSAGE
   if (code === "CONFLICT") return new ReportFlowError("conflict", message)
@@ -145,6 +145,10 @@ export async function sendPaymentReport(input: {
       clientReportId: report.clientReportId,
       payerName: report.payerName,
       claimedAmountMinor: report.claimedAmountMinor,
+      // The exact reference the customer was shown; the server refuses it once it is not current.
+      ...(report.paymentAttemptId
+        ? { paymentAttemptId: report.paymentAttemptId }
+        : {}),
       ...(report.receipt
         ? {
             receipt: {

@@ -56,6 +56,8 @@ type CreatedLink = {
   currencyCode: string
   allowPartial: boolean
   replay: boolean
+  /** Saved per attempt by the server; missing from an older server. */
+  paymentReference?: string | null
 }
 
 const BANK_DETAILS_HREF = "/finance/accounts?financeSheet=bank-details"
@@ -103,7 +105,7 @@ export function PaymentLinkDialog({
           }
           whatsappUrl={created.whatsappUrl}
           recipient={order.customerName}
-          noPhoneNote={`${order.customerName || "This customer"} has no phone number saved on ${order.orderNumber}. Copy the message and send it your way.`}
+          noPhoneNote={`${order.customerName || "This customer"} has no phone number saved on ${order.orderNumber}. Enter one to open a WhatsApp draft, or copy the message.`}
         />
       </OrderDialog>
     )
@@ -463,6 +465,33 @@ function ReadyLink({
           Copy link
         </Button>
       </div>
+      {link.paymentReference ? (
+        <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border px-3 py-2 text-sm">
+          <span className="text-muted-foreground">Payment reference</span>
+          <span className="flex items-center gap-2">
+            <b className="font-mono tabular-nums">{link.paymentReference}</b>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={() =>
+                void navigator.clipboard
+                  .writeText(link.paymentReference ?? "")
+                  .then(
+                    () => setCopied("Reference copied."),
+                    () =>
+                      setCopied(
+                        "Copy didn't work. Select the reference instead.",
+                      ),
+                  )
+              }
+            >
+              <HugeiconsIcon icon={Copy01Icon} data-icon="inline-start" />
+              Copy reference
+            </Button>
+          </span>
+        </div>
+      ) : null}
       <output
         aria-live="polite"
         className="-mt-2 text-xs text-muted-foreground"
@@ -481,18 +510,11 @@ function ReadyLink({
       <div className="flex flex-wrap gap-2">
         <Button
           type="button"
-          className={
-            link.whatsappUrl
-              ? "bg-emerald-600 text-white hover:bg-emerald-600/90"
-              : undefined
-          }
+          className="bg-emerald-600 text-white hover:bg-emerald-600/90"
           onClick={onWhatsApp}
         >
-          <HugeiconsIcon
-            icon={link.whatsappUrl ? WhatsappIcon : Copy01Icon}
-            data-icon="inline-start"
-          />
-          {link.whatsappUrl ? "WhatsApp" : "Prepare message"}
+          <HugeiconsIcon icon={WhatsappIcon} data-icon="inline-start" />
+          WhatsApp
         </Button>
         <Button
           type="button"
