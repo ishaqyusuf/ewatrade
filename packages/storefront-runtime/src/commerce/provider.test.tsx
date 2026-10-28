@@ -112,3 +112,31 @@ test("the live host supplies behavior independently of template identity", () =>
     ),
   ).toBe("<span>Business A</span>")
 })
+
+test("preview respects explicit disabled order policy even when products exist", () => {
+  const value = structuredClone(snapshot)
+  value.composition = {
+    ...snapshot.composition,
+    schemaVersion: 2,
+    features: {
+      version: 1,
+      accounts: { enabled: false },
+      catalog: { showLowStockCounts: false },
+      orders: { enabled: false, fulfilment: ["pickup"] },
+    },
+  }
+  value.resources.catalog.offeringCounts = { products: 2, services: 0 }
+  function Probe() {
+    expect(useStorefrontCommerce().ordering).toBe(false)
+    return null
+  }
+  renderToStaticMarkup(
+    <StorefrontCommerceProvider
+      snapshot={value}
+      presentation={presentation}
+      preview
+    >
+      <Probe />
+    </StorefrontCommerceProvider>,
+  )
+})

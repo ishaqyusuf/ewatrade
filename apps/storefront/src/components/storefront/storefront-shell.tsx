@@ -3,11 +3,17 @@
 import type { StorefrontCommerceAdapter } from "@ewatrade/storefront-contracts/commerce"
 
 import type { StorefrontPresentation } from "@/lib/storefront-presentation"
+import { StorefrontCommerceProvider } from "@ewatrade/storefront-runtime/commerce/provider"
 import {
   CommerceStudioProvider,
   CommerceStudioShell,
   StorefrontViewport,
 } from "@ewatrade/storefront-templates/commerce-studio"
+import {
+  storefrontFeaturePresentation,
+  storefrontUsesFeaturePage,
+} from "@ewatrade/storefront-templates/feature-presentation"
+import { StorefrontFeatureShell } from "@ewatrade/storefront-templates/feature-shell"
 import { usePathname } from "next/navigation"
 import {
   type ReactNode,
@@ -75,7 +81,23 @@ export function StorefrontShell({
           </StorefrontViewport>
         </CommerceStudioProvider>
       ) : (
-        children
+        <StorefrontCommerceProvider
+          key={presentation.snapshot.resources.business.slug}
+          snapshot={presentation.snapshot}
+          customer={presentation.customer}
+          adapter={adapter}
+          preview={false}
+          presentation={storefrontFeaturePresentation(presentation.snapshot)}
+        >
+          <StorefrontFeatureShell
+            featurePage={
+              routeKind !== "page" ||
+              storefrontUsesFeaturePage(presentation.snapshot)
+            }
+          >
+            {children}
+          </StorefrontFeatureShell>
+        </StorefrontCommerceProvider>
       )}
     </PresentationContext.Provider>
   )

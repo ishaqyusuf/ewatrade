@@ -8,9 +8,13 @@ import {
   storefrontStructuredData,
 } from "@ewatrade/storefront-runtime/seo"
 import type { StorefrontClientSnapshot } from "@ewatrade/storefront-runtime/server"
+import { storefrontUsesFeaturePage } from "@ewatrade/storefront-templates/feature-presentation"
 import { StorefrontTemplate } from "@ewatrade/storefront-templates/render"
 import { getStorefrontDomain, resolveCustomerChatOrigin } from "@ewatrade/utils"
-import { CommerceStudioPage } from "./storefront-commerce-page"
+import {
+  CommerceStudioPage,
+  StorefrontSharedPage,
+} from "./storefront-commerce-page"
 import { StorefrontPageBoundary } from "./storefront-shell"
 import "@ewatrade/storefront-templates/styles.css"
 
@@ -96,8 +100,16 @@ export function StorefrontContent({
             route={route}
             customer={customer}
           />
+        ) : storefrontUsesFeaturePage(snapshot, route) ? (
+          <StorefrontSharedPage
+            snapshot={snapshot}
+            domain={domain}
+            route={route}
+            customer={customer}
+          />
         ) : (
           <StorefrontTemplate
+            sharedFeaturesManaged
             snapshot={snapshot}
             domain={domain}
             after={after}

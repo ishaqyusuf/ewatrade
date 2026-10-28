@@ -20,7 +20,7 @@ export const suites = {
     "apps/dashboard/src/components/storefront/storefront-preview-navigation.test.ts",
     "packages/storefront-contracts/src/resources.test.ts",
     "packages/storefront-contracts/src/features.test.ts",
-    "packages/storefront-templates/src/shared-features.test.ts",
+    "packages/storefront-templates/src/shared-features.test.tsx",
     "packages/ai/src/storefront-design.test.ts",
     "packages/storefront-runtime/src/commerce/provider.test.tsx",
     "packages/storefront-runtime/src/features/features.test.tsx",

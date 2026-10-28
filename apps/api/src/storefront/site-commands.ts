@@ -47,6 +47,7 @@ import {
   storefrontDesignBriefSchema,
   validateStorefrontDesignOutput,
 } from "@ewatrade/storefront-contracts/design"
+import { readStorefrontFeatureConfig } from "@ewatrade/storefront-contracts/features"
 import {
   STOREFRONT_RUNTIME_VERSION,
   type StorefrontComposition,
@@ -54,10 +55,7 @@ import {
   assertCompositionSources,
   validateComposition,
 } from "@ewatrade/storefront-contracts/manifest"
-import {
-  ORDERING_TEMPLATE_KEYS,
-  publicLowStockCountsEnabled,
-} from "@ewatrade/storefront-contracts/orders"
+import { publicLowStockCountsEnabled } from "@ewatrade/storefront-contracts/orders"
 import { catalogQuerySchema } from "@ewatrade/storefront-contracts/resources"
 import { validateDesignAssets } from "@ewatrade/storefront-runtime/design-assets"
 import { publicStorefrontResources } from "@ewatrade/storefront-runtime/projection"
@@ -329,11 +327,12 @@ export function previewStorefrontDraft(
       }
       pins = pins.filter((id) => !store.items.some((item) => item.id === id))
       const counts = publicLowStockCountsEnabled(composition)
-      const templateKey = (composition as StorefrontComposition | null)
-        ?.template?.key
+      const config = readStorefrontFeatureConfig(composition)
       const adaptive =
-        typeof templateKey === "string" &&
-        ORDERING_TEMPLATE_KEYS.includes(templateKey)
+        !!config &&
+        (config.accounts.enabled ||
+          config.orders.enabled ||
+          (composition as StorefrontComposition).schemaVersion === 2)
       if (adaptive)
         offeringCounts ??= countPublicStorefrontOfferings(tx, {
           tenantId: scope.tenantId,

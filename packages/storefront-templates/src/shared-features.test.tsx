@@ -128,3 +128,43 @@ test("a legacy merchant with all fulfilment disabled can migrate without reopeni
   expect(next.features.accounts.enabled).toBe(true)
   expect(validateComposition(next, getTemplateManifest(next))).toEqual(next)
 })
+
+test("every registered renderer supplies the same account route, including legacy templates", async () => {
+  const { renderToStaticMarkup } = await import("react-dom/server")
+  const { StorefrontTemplate } = await import("./render")
+  const data = fixture("populated")
+  for (const { manifest } of listSelectableTemplates()) {
+    for (const composition of [
+      defaultComposition(manifest),
+      upgradeStorefrontFeatures(defaultComposition(manifest)),
+    ]) {
+      const snapshot = {
+        ...data,
+        composition,
+        mode: "live" as const,
+        locale: "en-NG",
+        currencyCode: "NGN",
+      }
+      const html = renderToStaticMarkup(
+        <StorefrontTemplate
+          snapshot={snapshot}
+          domain="shop.test"
+          customerChatOrigin=""
+          route={{
+            kind: "account",
+            account: {
+              signedIn: true,
+              label: "j…@example.test",
+              channel: "email",
+              history: [],
+              linkable: [],
+            },
+          }}
+        />,
+      )
+      expect(html).toContain("sf-feature-root")
+      expect(html).toContain("j…@example.test")
+      expect(html).toContain("No requests yet")
+    }
+  }
+})

@@ -15,6 +15,7 @@ import {
 import { getTemplateManifest } from "./registry"
 import { RetailEditorial } from "./retail-editorial/render"
 import { ServiceDesk } from "./service-desk/render"
+import { StorefrontFeatureHost } from "./shared/feature-host"
 import { StorefrontViewport } from "./viewport"
 
 /** One exact renderer dispatch for live pages, editor previews and offline fixtures. */
@@ -34,12 +35,25 @@ function TemplateBody(props: {
   commerce?: StorefrontCommerceAdapter
   customer?: StorefrontCustomerView
   route?: CommerceStudioRoute
+  sharedFeaturesManaged?: boolean
 }) {
   const { snapshot } = props
   const manifest = getTemplateManifest(snapshot.composition, "render")
   validateComposition(snapshot.composition, manifest)
   validateDesignAssets(snapshot.composition, manifest)
   if (manifest.key === "commerce-studio") return <CommerceStudio {...props} />
+  if (!props.sharedFeaturesManaged)
+    return (
+      <StorefrontFeatureHost {...props}>
+        <LegacyTemplateBody {...props} />
+      </StorefrontFeatureHost>
+    )
+  return <LegacyTemplateBody {...props} />
+}
+
+function LegacyTemplateBody(props: Parameters<typeof TemplateBody>[0]) {
+  const { snapshot } = props
+  const manifest = getTemplateManifest(snapshot.composition, "render")
   if (isCanvasManifest(manifest)) return <CanvasStorefront {...props} />
   if (manifest.key === "component-editorial" && manifest.version === "1.0.0")
     return <RetailEditorial {...props} />

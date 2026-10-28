@@ -95,7 +95,12 @@ function factoryDependencies(db: Db, host: string, query: unknown) {
       const features = readStorefrontFeatureConfig(
         value.site.release.composition,
       )
-      const adaptive = features?.orders.enabled ?? false
+      const adaptive =
+        !!features &&
+        (features.accounts.enabled ||
+          features.orders.enabled ||
+          (value.site.release.composition as { schemaVersion?: unknown })
+            .schemaVersion === 2)
       const offeringCounts = adaptive
         ? await countPublicStorefrontOfferings(db, {
             tenantId: value.site.release.tenantId,
@@ -139,11 +144,7 @@ function factoryDependencies(db: Db, host: string, query: unknown) {
           ...value.storefront,
           ...(offeringCounts ? { offeringCounts } : {}),
           ...(pinnedItems.length ? { pinnedItems } : {}),
-          ...(features &&
-          (features.accounts.enabled ||
-            features.orders.enabled ||
-            (value.site.release.composition as { schemaVersion?: unknown })
-              .schemaVersion === 2)
+          ...(features
             ? {
                 commerce: storefrontCommerceAvailability(features, {
                   requestsEntitled: Boolean(store.customerRequestsAllowed),

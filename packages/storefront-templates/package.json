@@ -12,7 +12,9 @@
     "./canvas": "./src/canvas/render.tsx",
     "./service-options": "./src/shared/service-option-picker.tsx",
     "./service-options.css": "./src/shared/service-option-picker.css",
-    "./styles.css": "./src/styles.css"
+    "./styles.css": "./src/styles.css",
+    "./feature-shell": "./src/shared/feature-shell.tsx",
+    "./feature-presentation": "./src/shared/feature-presentation.ts"
   },
   "dependencies": {
     "@ewatrade/events": "workspace:*",

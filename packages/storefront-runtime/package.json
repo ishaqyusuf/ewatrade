@@ -26,7 +26,9 @@
     "./features/checkout": "./src/features/checkout.tsx",
     "./features/product": "./src/features/product.tsx",
     "./features/service": "./src/features/service.tsx",
-    "./features/gallery": "./src/features/gallery.tsx"
+    "./features/gallery": "./src/features/gallery.tsx",
+    "./features/actions": "./src/features/actions.tsx",
+    "./features/route": "./src/features/route.tsx"
   },
   "dependencies": {
     "@ewatrade/storefront-contracts": "workspace:*",

@@ -95,9 +95,9 @@ already exist and must be reused.
 - [x] P6.3 Share applicable service form behavior across current entry paths.
 
 ### Phase 7 — template adoption
-- [ ] P7.1 Add trusted presentation adapters and feature-page framing.
-- [ ] P7.2 Prove Commerce Studio and Quiet Editorial against the same modules.
-- [ ] P7.3 Integrate remaining registered renderer families and legacy framing.
+- [x] P7.1 Add trusted presentation adapters and feature-page framing.
+- [x] P7.2 Prove Commerce Studio and Quiet Editorial against the same modules.
+- [x] P7.3 Integrate remaining registered renderer families and legacy framing.
 
 ### Phase 8 — final acceptance and handoff
 - [ ] P8.1 Complete focused logic/security/types/browser acceptance.
@@ -232,3 +232,21 @@ time behavior retained. No new domain writer/provider. Existing commerce suite p
 shared features41/274 and Storefront full types pass; final focused receipt and
 fast scope accompany commit. Phases0–6 source21/27 (77.8%); actual cross-template
 product wiring and final UI/race acceptance still open.
+
+### Phase7 source delivery
+All selectable families consume the same account/checkout/receipt runtime and
+explicit-schema2 product/service detail UI. Live app owns one persistent neutral
+provider outside page navigation; fresh page providers replace route data without
+resetting bag state. Studio/standalone renderers use an inert preview host.
+Template adapters inject semantic typography/color/layout tokens; dark backgrounds
+receive readable text/accent. Legacy layouts remain intact and valid historical
+session/receipt reads receive commerce resources even when intake is disabled.
+Preview counts and policy no longer use the template allowlist. Shared account
+SSR passes for every selectable exact pin in legacy and migrated configurations.
+
+Focused51/459 and family+provider7/131 pass, plus preview-disabled policy3/9.
+Owned-scope fast203/1112 and full Storefront types pass. Full API types report5
+errors confined to pre-existing general-customer-allocations, product-share and
+customer-ledger tests; changed storefront source has no diagnostic. Local API/QA,
+Dashboard and Storefront doctor pass with the trusted Portless CA. Phases0–7 source
+complete24/27 (88.9%); connected/browser/cleanup acceptance remains P8.

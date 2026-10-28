@@ -1,5 +1,6 @@
 "use client"
 
+import { readStorefrontFeatureConfig } from "@ewatrade/storefront-contracts/features"
 import {
   type ReactNode,
   createContext,
@@ -147,8 +148,12 @@ export function StorefrontCommerceProvider({
     offeringCounts: snapshot.resources.catalog.offeringCounts,
     items: snapshot.resources.catalog.items,
   })
+  const config = readStorefrontFeatureConfig(snapshot.composition)
   const ordering =
-    facts.products > 0 && (preview || !!commerce?.orderRequests.available)
+    facts.products > 0 &&
+    (preview
+      ? !!config?.orders.enabled && config.orders.fulfilment.length > 0
+      : !!commerce?.orderRequests.available)
   const accounts =
     !preview &&
     !!commerce?.customerAccounts.available &&

@@ -1,6 +1,6 @@
 import type { StorefrontComposition } from "@ewatrade/storefront-contracts/manifest"
 import type { CSSProperties } from "react"
-import { readableOn } from "./commerce/model"
+import { accentInk, readableOn } from "./commerce/model"
 
 export type StorefrontDetails = {
   tagline: string
@@ -20,12 +20,16 @@ export type StorefrontFeaturePresentation = {
 export function storefrontFeatureTokens(
   theme: StorefrontComposition["theme"],
 ): CSSProperties {
+  const text = readableOn(theme.background)
   return {
     "--sf-feature-background": theme.background,
     "--sf-feature-surface": `color-mix(in oklab, ${theme.background} 70%, #ffffff)`,
-    "--sf-feature-text": "#232b27",
-    "--sf-feature-muted": "#5a645e",
-    "--sf-feature-border": "color-mix(in oklab, #232b27 14%, transparent)",
+    "--sf-feature-text": text,
+    "--sf-feature-text-secondary": text,
+    "--sf-feature-muted": accentInk("#5a645e", theme.background),
+    "--sf-feature-border-strong": `color-mix(in oklab, ${text} 28%, transparent)`,
+    "--sf-feature-accent-ink": accentInk(theme.accent, theme.background),
+    "--sf-feature-border": `color-mix(in oklab, ${text} 14%, transparent)`,
     "--sf-feature-accent": theme.accent,
     "--sf-feature-on-accent": readableOn(theme.accent),
     "--sf-feature-radius":

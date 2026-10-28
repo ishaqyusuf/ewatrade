@@ -4,7 +4,7 @@
   "tickets": [
     "H02"
   ],
-  "summary": "Shared customer, bag/checkout/service-request runtime and merchant-controlled feature configuration; existing domain writers remain authoritative.",
+  "summary": "All template families consume shared customer/commerce features with injected presentation; canonical domain commands and merchant authority unchanged.",
   "noAssistantImpact": "Customer identity, OTP, receipt capability proofs, request recovery and customer-initiated actions remain excluded from model tools and ordinary model input. Existing domain commands remain canonical. Shared UI and template configuration do not grant permission. Existing Host/published Site/active release/Store scope and current entitlement checks remain; new login effects recheck publication under a Site lock while valid session/history/receipt reads do not depend on the selected template or new-intake policy. No new protected merchant procedure, assistant capability, provider activation or deployment. Neutral feature settings retain existing Owner/Admin draft/save/publication authority and explicit consent; design generation cannot silently alter operational configuration.",
   "capabilities": [],
   "procedures": [],
@@ -51,7 +51,7 @@
     },
     {
       "kind": "test",
-      "path": "packages/storefront-templates/src/shared-features.test.ts",
+      "path": "packages/storefront-templates/src/shared-features.test.tsx",
       "executed": true,
       "result": "Explicit migration preserves disabled intake/privacy and immutable input, every selectable template preserves configuration, AI proposals cannot change feature policy. Existing save/publish/consent remains authoritative; no new assistant tool."
     },
@@ -60,6 +60,12 @@
       "path": "packages/storefront-runtime/src/features/features.test.tsx",
       "executed": true,
       "result": "Shared customer/receipt/checkout SSR and moved commerce baseline pass. Presentation/config injection grants no effect authority; no new assistant procedure or domain writer."
+    },
+    {
+      "kind": "test",
+      "path": "packages/storefront-templates/src/shared-features.test.tsx",
+      "executed": true,
+      "result": "Every selectable exact pin renders the shared historical account route in legacy and migrated compositions. Preview configuration cannot re-enable disabled order intake; all preview effects remain inert. Fast203/1112 and Storefront types pass; full API test-fixture errors remain disclosed in plan."
     }
   ]
 }
