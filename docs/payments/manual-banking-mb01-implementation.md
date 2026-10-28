@@ -113,7 +113,7 @@ provider activation and deployment require their own authorization.
 - [x] Receipt checks/deduplication source integrated; provider admission remains disabled.
 - [x] Excess/credit/refunds integrated with canonical money/proof invariants.
 - [x] Focused source/types/money checks, assistant impact and Brain evidence recorded.
-- [ ] Workshop implementation receipt to record the final source commit.
+- [x] Workshop implementation receipt recorded against final source commit e54f51ccb.
 - [ ] Provider/hosted/native manual acceptance before a separately authorized release.
 
 This coordination checklist is not the feature milestone denominator. Original
@@ -150,3 +150,19 @@ remaining public pre-submit/refund fields, mixed Order returns and final review
 corrections may be completed by Codex in the same selectedv18 design. This changes
 only the remaining implementation model, not ownership/schema/commit/release
 boundaries. Mixed native UI worker also owns thin app/order-return/[orderId].tsx.
+
+Owner communication preference,28October2026: after every major milestone provide
+a checklist and percentage progress breakdown, distinguishing source implementation
+from provider/acceptance/release gates. Estimates are not measured test coverage.
+
+## Recorded source handoff
+
+Final integrated UI source commit: `e54f51ccb`. Exact Workshop revision remains
+`9a15dd1d-5612-4d02-8835-e7547d0d6d8e`; implementation evidence record
+`7980e734-6846-4d6b-96b0-99b661dfe7ee` reports source/local implementation and
+explicitly excludes live/provider/native device acceptance.143 updated design
+scenarios and80 unchanged scenarios retain their history. Local scenario tracker
+links each case to the candidate commit; no individual runtime verification is
+inferred from source presence or the Workshop badge. Overall delivery estimate81%;
+committed source work complete, provider evaluation/admission and release checks
+remain separate. No push, deployment, real receipt/model processing or payout.
