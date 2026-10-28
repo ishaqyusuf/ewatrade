@@ -1,5 +1,8 @@
+import { catalogPhotoStoragePath } from "@ewatrade/catalog/photo-contracts"
 import { processCatalogPhoto } from "@ewatrade/catalog/photo-processing"
-import { createVercelCatalogPhotoStorage } from "@ewatrade/catalog/photo-storage"
+import { createLocalQaCatalogPhotoReviewProvider } from "@ewatrade/catalog/photo-qa-review"
+import { reviewCatalogPhoto } from "@ewatrade/catalog/photo-review"
+import { createCatalogPhotoStorageForScope } from "@ewatrade/catalog/photo-storage"
 import { uploadCatalogPhoto } from "@ewatrade/catalog/photo-upload"
 import type { PrismaClient } from "@ewatrade/db"
 import { getCatalogPhotoReuseSource } from "@ewatrade/db/catalog-photo-gallery"
@@ -41,7 +44,7 @@ export async function reuseCatalogPhoto(
   })
   // A replayed command returns the copy it already made.
   if (intent.state !== "UPLOADING") return intent
-  const storage = createVercelCatalogPhotoStorage()
+  const storage = createCatalogPhotoStorageForScope(source.scope)
   const bytes = await storage.read({
     scope: source.scope,
     photo: source.photo,
@@ -70,6 +73,29 @@ export async function reuseCatalogPhoto(
     complete: (photo) =>
       recordVerifiedCatalogPhotoUpload(db, input.target, photo),
   })
+  if (target.scope.dataClassification === "QA")
+    return reviewCatalogPhoto({
+      scope: target.scope,
+      photo: {
+        ...source.photo,
+        assetId: intent.assetId,
+        storeId: input.target.storeId,
+        storagePath: catalogPhotoStoragePath({
+          ...source.photo,
+          assetId: intent.assetId,
+          storeId: input.target.storeId,
+        }),
+      },
+      provider: createLocalQaCatalogPhotoReviewProvider(),
+      read: async () => bytes,
+      commit: (verdict) =>
+        recordCatalogPhotoVerdict(db, {
+          ...input.target,
+          ...verdict,
+          assetId: intent.assetId,
+        }),
+      signal: input.signal,
+    })
   if (
     source.review &&
     displayDigest !== null &&

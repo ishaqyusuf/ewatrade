@@ -7,6 +7,11 @@ import {
   catalogPhotoStoragePath,
 } from "@ewatrade/catalog/photo-contracts"
 import {
+  catalogPhotoStorageIdentity,
+  catalogPublicPhotoProviderFilter,
+  isLocalCatalogPhotoQaEnabled,
+} from "@ewatrade/catalog/photo-qa-policy"
+import {
   type CatalogPhotoAsset,
   Prisma,
   type PrismaClient,
@@ -155,10 +160,11 @@ export async function getCatalogPhotoUploadTarget(
         "Invalid photo upload details.",
       )
     }
+    const identity = catalogPhotoStorageIdentity(tenant.dataClassification)
     if (
-      tenant.dataClassification === "LIVE" &&
-      (!asset.storageStoreId ||
-        asset.storageStoreId !== process.env.BLOB_STORE_ID?.trim())
+      !asset.storageStoreId ||
+      asset.storageStoreId !== identity.storeId ||
+      asset.storageProvider !== identity.provider
     )
       throw new CatalogPhotoError(
         "PHOTO_NOT_READY",
@@ -236,11 +242,20 @@ export async function createCatalogPhotoIntent(
           actorUserId: input.actorUserId,
           clientOperationId: input.clientOperationId,
           payloadHash,
-          storageStoreId:
-            tenant.dataClassification === "LIVE" &&
-            /^store_[a-zA-Z0-9]+$/.test(process.env.BLOB_STORE_ID?.trim() ?? "")
-              ? process.env.BLOB_STORE_ID?.trim()
-              : null,
+          ...(tenant.dataClassification === "QA" &&
+          isLocalCatalogPhotoQaEnabled()
+            ? {
+                storageProvider: "local_test",
+                storageStoreId: catalogPhotoStorageIdentity("QA").storeId,
+              }
+            : {
+                storageStoreId:
+                  /^store_[a-zA-Z0-9]+$/.test(
+                    process.env.BLOB_STORE_ID?.trim() ?? "",
+                  ) && tenant.dataClassification === "LIVE"
+                    ? process.env.BLOB_STORE_ID?.trim()
+                    : null,
+              }),
           contentDigest: input.contentDigest,
           contentType: input.contentType,
           sizeBytes: input.sizeBytes,
@@ -312,11 +327,12 @@ export async function getCatalogPhotoReadTarget(
     )
     if (!contentType)
       throw new CatalogPhotoError("INVALID_PHOTO", "Photo unavailable.")
+    const identity = catalogPhotoStorageIdentity(tenant.dataClassification)
     const photo: CatalogStoredPhoto = {
       assetId: asset.id,
       tenantId: asset.tenantId,
       storeId: asset.storeId,
-      storageProvider: "vercel_blob_private",
+      storageProvider: identity.provider,
       storagePath: asset.storagePath,
       contentDigest: asset.contentDigest,
       contentType,
@@ -324,7 +340,7 @@ export async function getCatalogPhotoReadTarget(
     }
     if (
       !asset.storageStoreId ||
-      asset.storageStoreId !== process.env.BLOB_STORE_ID?.trim() ||
+      asset.storageStoreId !== identity.storeId ||
       asset.storageProvider !== photo.storageProvider ||
       photo.storagePath !== catalogPhotoStoragePath(photo)
     )
@@ -349,6 +365,7 @@ export async function getCatalogPublicPhotoTarget(
 ) {
   const asset = await db.catalogPhotoAsset.findFirst({
     where: {
+      ...catalogPublicPhotoProviderFilter(),
       id: input.assetId,
       storeId: input.storeId,
       state: "APPROVED",
@@ -360,7 +377,6 @@ export async function getCatalogPublicPhotoTarget(
       bytesDeletedAt: null,
       tenant: {
         isActive: true,
-        dataClassification: "LIVE",
         qaPurgeStartedAt: null,
       },
       store: { status: "ACTIVE", sites: { some: { status: "PUBLISHED" } } },
@@ -380,6 +396,7 @@ export async function getCatalogPublicPhotoTarget(
         },
       },
     },
+    include: { tenant: { select: { dataClassification: true } } },
   })
   if (!asset?.storagePath || !asset.uploadedAt || !asset.reviewDisplayDigest)
     throw new CatalogPhotoError("PHOTO_NOT_FOUND", "Photo not found.")
@@ -388,11 +405,12 @@ export async function getCatalogPublicPhotoTarget(
   )
   if (!contentType)
     throw new CatalogPhotoError("PHOTO_NOT_FOUND", "Photo not found.")
+  const identity = catalogPhotoStorageIdentity(asset.tenant.dataClassification)
   const photo: CatalogStoredPhoto = {
     assetId: asset.id,
     tenantId: asset.tenantId,
     storeId: asset.storeId,
-    storageProvider: "vercel_blob_private",
+    storageProvider: identity.provider,
     storagePath: asset.storagePath,
     contentDigest: asset.contentDigest,
     contentType,
@@ -400,7 +418,7 @@ export async function getCatalogPublicPhotoTarget(
   }
   if (
     !asset.storageStoreId ||
-    asset.storageStoreId !== process.env.BLOB_STORE_ID?.trim() ||
+    asset.storageStoreId !== identity.storeId ||
     asset.storageProvider !== photo.storageProvider ||
     photo.storagePath !== catalogPhotoStoragePath(photo)
   )
@@ -412,7 +430,7 @@ export async function getCatalogPublicPhotoTarget(
     scope: {
       tenantId: asset.tenantId,
       storeId: asset.storeId,
-      dataClassification: "LIVE" as const,
+      dataClassification: asset.tenant.dataClassification,
     },
   }
 }
@@ -459,7 +477,7 @@ export async function recordVerifiedCatalogPhotoUpload(
   if (
     verified.tenantId !== scope.tenantId ||
     verified.storeId !== scope.storeId ||
-    verified.storageProvider !== "vercel_blob_private" ||
+    !["vercel_blob_private", "local_test"].includes(verified.storageProvider) ||
     verified.storagePath !== catalogPhotoStoragePath(verified)
   ) {
     throw new CatalogPhotoError(
@@ -471,6 +489,20 @@ export async function recordVerifiedCatalogPhotoUpload(
     const [asset] = await lockAssets(tx, scope, [verified.assetId])
     if (!asset)
       throw new CatalogPhotoError("PHOTO_NOT_FOUND", "Photo not found.")
+    const tenant = await tx.tenant.findUniqueOrThrow({
+      where: { id: scope.tenantId },
+      select: { dataClassification: true },
+    })
+    const identity = catalogPhotoStorageIdentity(tenant.dataClassification)
+    if (
+      verified.storageProvider !== identity.provider ||
+      asset.storageProvider !== identity.provider ||
+      asset.storageStoreId !== identity.storeId
+    )
+      throw new CatalogPhotoError(
+        "INVALID_PHOTO",
+        "Photo storage ownership changed.",
+      )
     if (
       asset.contentDigest !== verified.contentDigest ||
       asset.contentType !== verified.contentType ||

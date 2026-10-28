@@ -52,7 +52,7 @@ export type CatalogStoredPhoto = {
   assetId: string
   tenantId: string
   storeId: string
-  storageProvider: "vercel_blob_private"
+  storageProvider: "vercel_blob_private" | "local_test"
   storagePath: string
   contentDigest: string
   contentType: CatalogPhotoContentType

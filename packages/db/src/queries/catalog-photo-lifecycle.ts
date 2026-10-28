@@ -4,6 +4,12 @@ import {
   type CatalogStoredPhoto,
   catalogPhotoStoragePath,
 } from "@ewatrade/catalog/photo-contracts"
+import {
+  CATALOG_QA_REVIEW_POLICY,
+  CATALOG_QA_REVIEW_PROVIDER,
+  CATALOG_QA_STORE_ID,
+  isLocalCatalogPhotoQaEnabled,
+} from "@ewatrade/catalog/photo-qa-policy"
 import { Prisma, type PrismaClient } from "../../generated/prisma/client"
 import {
   type CatalogPhotoActorScope,
@@ -198,6 +204,7 @@ export async function recordCatalogPhotoVerdict(
         expiresAt: Date
         bytesDeletedAt: Date | null
         storageStoreId: string | null
+        storageProvider: string
         reviewLeaseToken: string | null
         reviewLeaseUntil: Date | null
       }>
@@ -207,7 +214,16 @@ export async function recordCatalogPhotoVerdict(
     `)
     if (
       !asset ||
-      tenant.dataClassification !== "LIVE" ||
+      (tenant.dataClassification !== "LIVE" &&
+        !(
+          isLocalCatalogPhotoQaEnabled() &&
+          snapshot.provider === CATALOG_QA_REVIEW_PROVIDER &&
+          snapshot.policyVersion === CATALOG_QA_REVIEW_POLICY &&
+          asset?.storageProvider === "local_test" &&
+          asset?.storageStoreId === CATALOG_QA_STORE_ID
+        )) ||
+      (tenant.dataClassification === "LIVE" &&
+        snapshot.provider === CATALOG_QA_REVIEW_PROVIDER) ||
       asset.bytesDeletedAt !== null ||
       asset.contentDigest !== snapshot.sourceDigest ||
       !asset.storagePath ||

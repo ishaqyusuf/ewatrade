@@ -8,14 +8,14 @@ import {
   CatalogPhotoProcessingError,
   processCatalogPhoto,
 } from "@ewatrade/catalog/photo-processing"
-import { createVercelCatalogPhotoStorage } from "@ewatrade/catalog/photo-storage"
+import { createCatalogPhotoStorageForScope } from "@ewatrade/catalog/photo-storage"
+import type { PrismaClient } from "@ewatrade/db"
 import {
   type CatalogPhotoCacheTarget,
   completeCatalogPhotoDerivative,
   readCatalogPhotoDerivativeReceipts,
   reserveCatalogPhotoDerivatives,
 } from "@ewatrade/db/catalog-photo-derivatives"
-import type { PrismaClient } from "@ewatrade/db"
 
 let active = 0
 
@@ -31,10 +31,18 @@ export async function loadCatalogPhotoDelivery(
     throw new CatalogPhotoProcessingError("PHOTO_PROCESSING_BUSY")
   active++
   try {
-    const bytes = await createVercelCatalogPhotoStorage().read({
+    const bytes = await createCatalogPhotoStorageForScope(target.scope).read({
       ...target,
       abortSignal: signal,
     })
+    // Local QA bytes use the same bounded codec. They never create LIVE cache
+    // receipts or enter the Blob derivative/cleanup lifecycle.
+    if (target.scope.dataClassification === "QA")
+      return processCatalogPhoto({
+        bytes,
+        contentType: target.photo.contentType,
+        signal,
+      })
     const storage = createVercelCatalogPhotoDerivativeStorage()
     try {
       const receipts = await readCatalogPhotoDerivativeReceipts(

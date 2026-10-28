@@ -7,6 +7,7 @@ import {
   type CatalogStoredPhoto,
   catalogPhotoStoragePath,
 } from "./photo-contracts"
+import { catalogPhotoStorageIdentity } from "./photo-qa-policy"
 
 export type CatalogPhotoUploadTarget = {
   assetId: string
@@ -171,7 +172,8 @@ export async function uploadCatalogPhoto<T>(input: {
     photo.contentDigest !== target.contentDigest ||
     photo.contentType !== target.contentType ||
     photo.sizeBytes !== target.sizeBytes ||
-    photo.storageProvider !== "vercel_blob_private" ||
+    photo.storageProvider !==
+      catalogPhotoStorageIdentity(target.scope.dataClassification).provider ||
     photo.storagePath !== catalogPhotoStoragePath(photo)
   ) {
     throw new CatalogPhotoStorageError(

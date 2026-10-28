@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto"
+import { createLocalTestPrivateObjectPort } from "@ewatrade/private-media/local-test-object-port"
 import {
   type PrivateObjectPort,
   PrivateObjectStorageError,
@@ -14,6 +15,7 @@ import {
   type CatalogStoredPhoto,
   catalogPhotoStoragePath,
 } from "./photo-contracts"
+import { catalogPhotoStorageIdentity } from "./photo-qa-policy"
 
 /** Stable Catalog port alias; the shared transport never grants actor authority. */
 export type CatalogPhotoBlobPort = PrivateObjectPort<CatalogPhotoContentType>
@@ -27,7 +29,7 @@ function assertServer() {
   }
 }
 
-function assertScope(scope: CatalogPhotoScope) {
+function assertScope(scope: CatalogPhotoScope, mode: "live" | "test") {
   assertServer()
   for (const id of [scope.tenantId, scope.storeId]) {
     if (!/^[a-zA-Z0-9_-]{1,128}$/.test(id)) {
@@ -38,7 +40,7 @@ function assertScope(scope: CatalogPhotoScope) {
     }
   }
   assertQaProviderAllowed({
-    adapter: "live",
+    adapter: mode,
     operation: "media_analysis",
     tenantDataClassification: scope.dataClassification,
   })
@@ -111,6 +113,7 @@ function storageFailure(error: unknown): never {
 export function createCatalogPhotoStorage(input: {
   blob: CatalogPhotoBlobPort
   configured: () => boolean
+  provider?: CatalogStoredPhoto["storageProvider"]
 }) {
   assertServer()
   const objects = createPrivateObjectStorage({
@@ -121,7 +124,17 @@ export function createCatalogPhotoStorage(input: {
     validateBytes: () => undefined,
   })
   function assertReady(scope: CatalogPhotoScope) {
-    assertScope(scope)
+    const provider = input.provider ?? "vercel_blob_private"
+    assertScope(scope, provider === "local_test" ? "test" : "live")
+    if (
+      provider === "local_test" &&
+      catalogPhotoStorageIdentity(scope.dataClassification).provider !==
+        provider
+    )
+      throw new CatalogPhotoStorageError(
+        "PHOTO_SCOPE_MISMATCH",
+        "QA photo scope does not match.",
+      )
     if (!input.configured()) {
       throw new CatalogPhotoStorageError(
         "PHOTO_STORAGE_UNAVAILABLE",
@@ -141,7 +154,7 @@ export function createCatalogPhotoStorage(input: {
       if (
         photo.tenantId !== request.scope.tenantId ||
         photo.storeId !== request.scope.storeId ||
-        photo.storageProvider !== "vercel_blob_private" ||
+        photo.storageProvider !== (input.provider ?? "vercel_blob_private") ||
         photo.storagePath !== catalogPhotoStoragePath(photo)
       )
         throw new CatalogPhotoStorageError(
@@ -178,7 +191,7 @@ export function createCatalogPhotoStorage(input: {
         assetId: request.assetId,
         tenantId: request.scope.tenantId,
         storeId: request.scope.storeId,
-        storageProvider: "vercel_blob_private",
+        storageProvider: input.provider ?? "vercel_blob_private",
         storagePath: photoPath({
           ...request,
           contentDigest,
@@ -209,7 +222,7 @@ export function createCatalogPhotoStorage(input: {
       if (
         photo.tenantId !== scope.tenantId ||
         photo.storeId !== scope.storeId ||
-        photo.storageProvider !== "vercel_blob_private" ||
+        photo.storageProvider !== (input.provider ?? "vercel_blob_private") ||
         photo.storagePath !== photoPath({ ...photo, scope }) ||
         !Number.isSafeInteger(photo.sizeBytes) ||
         photo.sizeBytes <= 0 ||
@@ -239,4 +252,17 @@ export function createVercelCatalogPhotoStorage() {
   const { port, configured } =
     createVercelPrivateObjectPort<CatalogPhotoContentType>()
   return createCatalogPhotoStorage({ blob: port, configured })
+}
+
+export function createCatalogPhotoStorageForScope(scope: CatalogPhotoScope) {
+  const identity = catalogPhotoStorageIdentity(scope.dataClassification)
+  if (identity.provider === "vercel_blob_private")
+    return createVercelCatalogPhotoStorage()
+  const { port, configured } =
+    createLocalTestPrivateObjectPort<CatalogPhotoContentType>()
+  return createCatalogPhotoStorage({
+    blob: port,
+    configured,
+    provider: "local_test",
+  })
 }

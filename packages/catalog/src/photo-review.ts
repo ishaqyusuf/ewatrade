@@ -3,12 +3,14 @@ import type { URL } from "node:url"
 import { assertQaProviderAllowed } from "@ewatrade/utils/qa-provider-policy"
 import type { CatalogPhotoScope, CatalogStoredPhoto } from "./photo-contracts"
 import { processCatalogPhoto } from "./photo-processing"
+import { catalogPhotoStorageIdentity } from "./photo-qa-policy"
 
 /** The selected service implements this server port. No client verdict or
  * always-approve fallback exists. Storage and processing never grant approval. */
 export type CatalogPhotoReviewProvider = {
   id: string
   policyVersion: string
+  mode?: "live" | "test"
   inspect(input: {
     bytes: Uint8Array
     contentType: "image/webp"
@@ -34,10 +36,16 @@ export async function reviewCatalogPhoto<T>(input: {
   const scope = { ...input.scope }
   const photo = { ...input.photo }
   assertQaProviderAllowed({
-    adapter: "live",
+    adapter: input.provider.mode ?? "live",
     operation: "media_analysis",
     tenantDataClassification: scope.dataClassification,
   })
+  if (
+    input.provider.mode === "test" &&
+    (scope.dataClassification !== "QA" ||
+      catalogPhotoStorageIdentity(scope.dataClassification).mode !== "test")
+  )
+    throw new Error("QA review cannot inspect live data.")
   if (photo.tenantId !== scope.tenantId || photo.storeId !== scope.storeId)
     throw new Error("Photo review scope does not match.")
   const provider = input.provider

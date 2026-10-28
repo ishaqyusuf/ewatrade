@@ -1,0 +1,40 @@
+{
+  "version": 1,
+  "id": "2026-10-28-catalog-local-qa-adapter",
+  "tickets": ["H02"],
+  "summary": "Complete Jawdah local QA acceptance with a registered Catalog image test adapter and expiring canonical QA Service Commerce policy/form setup.",
+  "noAssistantImpact": "Server-derived QA classification selects a local private-file transport and fixture-only review port, strictly limited to APP_ENV local / DEV_PROFILE local / nonproduction. Browser input cannot select providers or supply verdicts. Existing Catalog management permissions, immutable upload receipts, publication, primary ordering and fresh read fences remain authoritative. LIVE storage/review/cleanup remain separate. Service policy decisions use the existing Owner/Admin revisioned command with explicit 24-hour QA simulation references; no model capability, new API procedure, provider send or Production approval is introduced.",
+  "capabilities": [],
+  "procedures": [],
+  "docs": [
+    {
+      "topic": "feature",
+      "status": "local_only",
+      "path": ".brain/features/jawdah-storefront-end-to-end.md"
+    },
+    {
+      "topic": "decision",
+      "status": "local_only",
+      "path": ".brain/decisions/2026-10-28-catalog-local-qa-adapter.md"
+    },
+    {
+      "topic": "api",
+      "status": "local_only",
+      "path": ".brain/api/contracts.md"
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "run",
+      "path": "packages/catalog/src/photo-qa.test.ts",
+      "executed": true,
+      "result": "5 QA tests plus 24 existing storage/upload/review tests pass,29tests/226assertions. Covers environment/Production refusal, private local byte integrity and scope, provider mismatch before completion, registered normalized-image approval, unknown-image rejection and refusing QA review of LIVE data."
+    },
+    {
+      "kind": "run",
+      "path": "docs/verification/2026-10-28-jawdah-remaining-checks.md",
+      "executed": true,
+      "result": "Catalog, scoped DB and API photo graphs typecheck. Scoped source smoke224tests/1219assertions passes. Canonical Jawdah QA service policy decisions/form created with 24-hour expiry; operating UI/mobile acceptance continues in the linked receipt."
+    }
+  ]
+}

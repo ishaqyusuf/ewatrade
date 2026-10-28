@@ -3,18 +3,22 @@ import {
   CatalogPhotoProcessingError,
   processCatalogPhoto,
 } from "@ewatrade/catalog/photo-processing"
-import { createVercelCatalogPhotoStorage } from "@ewatrade/catalog/photo-storage"
+import { createLocalQaCatalogPhotoReviewProvider } from "@ewatrade/catalog/photo-qa-review"
+import { reviewCatalogPhoto } from "@ewatrade/catalog/photo-review"
+import { createCatalogPhotoStorageForScope } from "@ewatrade/catalog/photo-storage"
 import {
   CatalogPhotoUploadError,
   uploadCatalogPhoto,
 } from "@ewatrade/catalog/photo-upload"
+import { recordCatalogPhotoVerdict } from "@ewatrade/db/catalog-photo-lifecycle"
 import {
   CatalogPhotoError,
+  getCatalogPhotoMetadata,
   getCatalogPhotoUploadTarget,
   recordVerifiedCatalogPhotoUpload,
 } from "@ewatrade/db/catalog-photos"
-import { QaProviderPolicyError } from "@ewatrade/utils/qa-provider-policy"
 import { enqueueCatalogPhotoReview } from "@ewatrade/jobs/catalog-photo-review"
+import { QaProviderPolicyError } from "@ewatrade/utils/qa-provider-policy"
 import type { OpenAPIHono } from "@hono/zod-openapi"
 import { TRPCError } from "@trpc/server"
 import { getHTTPStatusCodeFromError } from "@trpc/server/http"
@@ -41,21 +45,47 @@ export function registerCatalogPhotoUploadRoutes(app: OpenAPIHono) {
         ...scope,
         assetId: parsed.data.assetId,
       })
+      const storage = createCatalogPhotoStorageForScope(target.scope)
       const result = await uploadCatalogPhoto({
         request: context.req.raw,
         target,
-        storage: createVercelCatalogPhotoStorage(),
+        storage,
         validate: async (photo) => {
           await processCatalogPhoto(photo)
         },
-        complete: (photo) =>
-          recordVerifiedCatalogPhotoUpload(ctx.db, scope, photo),
+        complete: async (photo) => {
+          const uploaded = await recordVerifiedCatalogPhotoUpload(
+            ctx.db,
+            scope,
+            photo,
+          )
+          if (target.scope.dataClassification !== "QA") return uploaded
+          // Registered fixture-only local review; no live queue/provider call.
+          await reviewCatalogPhoto({
+            scope: target.scope,
+            photo,
+            provider: createLocalQaCatalogPhotoReviewProvider(),
+            read: (signal) =>
+              storage.read({ scope: target.scope, photo, abortSignal: signal }),
+            commit: (verdict) =>
+              recordCatalogPhotoVerdict(ctx.db, {
+                ...scope,
+                ...verdict,
+                assetId: photo.assetId,
+              }),
+          })
+          return getCatalogPhotoMetadata(ctx.db, {
+            ...scope,
+            assetId: photo.assetId,
+          })
+        },
       })
       // The verified receipt is already committed. A dispatch failure must not
       // turn a successful upload into a failed client command; recovery scans it.
-      await enqueueCatalogPhotoReview(parsed.data.assetId).catch(
-        () => undefined,
-      )
+      if (target.scope.dataClassification === "LIVE")
+        await enqueueCatalogPhotoReview(parsed.data.assetId).catch(
+          () => undefined,
+        )
       return context.json(result, 200)
     } catch (error) {
       if (context.req.raw.body && !context.req.raw.body.locked) {
