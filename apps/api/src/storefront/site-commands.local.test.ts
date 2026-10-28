@@ -58,6 +58,7 @@ function memoryDatabase(
     planId?: string
     /** Public catalog emulation; receives each `catalogItem.findMany` call. */
     catalog?: (args: Row) => Row[]
+    catalogCount?: (args: Row) => number
   } = {},
 ) {
   let state = {
@@ -239,7 +240,7 @@ function memoryDatabase(
     catalogItem: {
       findMany: async (args: Row) => clone(options.catalog?.(args) ?? []),
       findFirst: async () => null,
-      count: async () => 0,
+      count: async (args: Row) => options.catalogCount?.(args) ?? 0,
     },
     catalogCategory: { findMany: async () => [] },
     stockBalanceSource: { groupBy: async () => [] },
@@ -474,6 +475,67 @@ const catalogRow = (id: string) => ({
   ],
 })
 
+test("Studio preview keeps scoped business totals for filtered and empty results, once per request", async () => {
+  let rows = [catalogRow("match")]
+  const counts: Row[] = []
+  const fixture = memoryDatabase({
+    planId: "growth",
+    catalog: (args) => {
+      const where = args.where as { AND?: Row[] } | undefined
+      // These fixture rows have no unavailable policy or sold-out balance.
+      return Array.isArray(where?.AND?.[1]?.OR) ? [] : rows
+    },
+    catalogCount: (args) => {
+      const where = args.where as { AND?: Row[] } | undefined
+      const kind = where?.AND?.find(
+        (entry) => typeof entry.kind === "string",
+      )?.kind
+      if (!kind) return 0
+      counts.push(args)
+      return kind === "PRODUCT" ? 8 : 1
+    },
+  })
+  const { db, actor } = fixture
+  const initialized = await commands.initializeStorefront(db, actor, {
+    storeId: "store-local",
+    templateKey: "commerce-studio",
+  })
+  if (!initialized.ok) throw new Error("Fixture did not initialize")
+  const session = await commands.startStorefrontPreview(db, actor)
+  const preview = () =>
+    commands.previewStorefrontDraft(db, actor, {
+      session: session.session,
+      query: { q: "match" },
+      designs: [initialized.draft.composition],
+    })
+  const filtered = await preview()
+  for (const snapshot of [filtered.snapshot, ...filtered.designSnapshots]) {
+    expect(snapshot.resources.catalog.items).toHaveLength(1)
+    expect(snapshot.resources.catalog.offeringCounts).toEqual({
+      products: 8,
+      services: 1,
+    })
+  }
+  expect(counts).toHaveLength(2)
+  expect(counts[0]).toMatchObject({
+    where: {
+      AND: [
+        catalogRepository.publicCatalogItemWhere("tenant-local", "store-local"),
+        { kind: "PRODUCT" },
+      ],
+    },
+  })
+  rows = []
+  const empty = await preview()
+  expect(empty.snapshot.resources.catalog.items).toEqual([])
+  expect(empty.snapshot.resources.catalog.offeringCounts).toEqual({
+    products: 8,
+    services: 1,
+  })
+  expect(counts).toHaveLength(4)
+  expect(fixture.state().releases).toHaveLength(0)
+})
+
 test("Studio preview loads Featured pins past the page with the bounded public read", async () => {
   // "far" is public but past the loaded page; "archived" is no longer public.
   const page = ["on-page"]
@@ -483,9 +545,11 @@ test("Studio preview loads Featured pins past the page with the bounded public r
     planId: "growth",
     catalog: (args) => {
       const where = args.where as
-        | { AND?: [Row, { id?: { in?: string[] } }] }
+        | { AND?: [Row, { id?: { in?: string[] }; OR?: Row[] }] }
         | undefined
       const ids = where?.AND?.[1]?.id?.in
+      // No fixture row belongs in the explicit out-of-stock bucket.
+      if (where?.AND?.[1]?.OR) return []
       if (ids) {
         pinnedReads.push(args)
         return ids.filter((id) => eligible.has(id)).map(catalogRow)
@@ -503,7 +567,7 @@ test("Studio preview loads Featured pins past the page with the bounded public r
     initialized.draft.composition,
     getTemplateManifest(initialized.draft.composition),
   )
-  expect(draft.template.version).toBe("1.1.0")
+  expect(draft.template.version).toBe("1.2.0")
   const preview = async () =>
     commands.previewStorefrontDraft(db, actor, {
       session: (await commands.startStorefrontPreview(db, actor)).session,

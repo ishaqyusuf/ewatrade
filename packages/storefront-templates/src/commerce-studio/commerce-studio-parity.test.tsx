@@ -420,7 +420,7 @@ test("Shop search applies and clears on /shop, keeping clean listing URLs", () =
   )
   const html = render(
     snapshot(current(), {
-      items: products(8),
+      items: products(1),
       offeringCounts: { products: 8, services: 0 },
       categories: [
         { id: "cat-a", name: "Baskets" },
@@ -439,6 +439,17 @@ test("Shop search applies and clears on /shop, keeping clean listing URLs", () =
     'href="/shop?category=cat-a&amp;q=basket&amp;after=p7"',
   )
   expect(html).not.toContain('href="/shop/?')
+  const empty = render(
+    snapshot(current(), {
+      items: [],
+      offeringCounts: { products: 8, services: 1 },
+      query: { q: "missing" },
+    }),
+    "shop",
+  )
+  expect(empty).toContain("Nothing matches that search")
+  expect(empty.match(/<form[^>]*>/)?.[0]).toContain('action="/shop"')
+  expect(empty).toMatch(/href="\/shop"[^>]*>Clear filters/)
 })
 
 test("footer links to Your orders exactly when customer accounts are offered", () => {

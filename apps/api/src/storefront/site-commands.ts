@@ -11,6 +11,7 @@ import {
   type StorefrontAuthority,
   activateSiteReleaseInTransaction,
   cancelSiteDesignRunInTransaction,
+  countPublicStorefrontOfferings,
   createPrimarySiteInTransaction,
   createSiteDesignRunInTransaction,
   findSiteDesignRequestInTransaction,
@@ -53,7 +54,10 @@ import {
   assertCompositionSources,
   validateComposition,
 } from "@ewatrade/storefront-contracts/manifest"
-import { publicLowStockCountsEnabled } from "@ewatrade/storefront-contracts/orders"
+import {
+  ORDERING_TEMPLATE_KEYS,
+  publicLowStockCountsEnabled,
+} from "@ewatrade/storefront-contracts/orders"
 import { catalogQuerySchema } from "@ewatrade/storefront-contracts/resources"
 import { validateDesignAssets } from "@ewatrade/storefront-runtime/design-assets"
 import { publicStorefrontResources } from "@ewatrade/storefront-runtime/projection"
@@ -309,6 +313,11 @@ export function previewStorefrontDraft(
     const storefrontItems =
       (store as typeof store & { storefrontItems?: number | null })
         .storefrontItems ?? null
+    // Reuse the live bridge's unfiltered, plan-capped mode facts. Filtered results
+    // must not hide Search/Clear or change the business's Shop/Services navigation.
+    let offeringCounts:
+      | ReturnType<typeof countPublicStorefrontOfferings>
+      | undefined
     // Featured pins beyond the first page: the same bounded, eligibility-checked
     // read the live storefront makes, per composition being previewed.
     const previewResources = async (composition: unknown) => {
@@ -320,6 +329,17 @@ export function previewStorefrontDraft(
       }
       pins = pins.filter((id) => !store.items.some((item) => item.id === id))
       const counts = publicLowStockCountsEnabled(composition)
+      const templateKey = (composition as StorefrontComposition | null)
+        ?.template?.key
+      const adaptive =
+        typeof templateKey === "string" &&
+        ORDERING_TEMPLATE_KEYS.includes(templateKey)
+      if (adaptive)
+        offeringCounts ??= countPublicStorefrontOfferings(tx, {
+          tenantId: scope.tenantId,
+          storeId: scope.storeId,
+          storefrontItems,
+        })
       const pinnedItems = pins.length
         ? await loadPublicStorefrontPinnedItems(tx, {
             tenantId: scope.tenantId,
@@ -330,7 +350,11 @@ export function previewStorefrontDraft(
           })
         : []
       return publicStorefrontResources(
-        pinnedItems.length ? { ...store, pinnedItems } : store,
+        {
+          ...store,
+          ...(adaptive ? { offeringCounts: await offeringCounts } : {}),
+          ...(pinnedItems.length ? { pinnedItems } : {}),
+        },
         { lowStockCounts: counts },
       )
     }

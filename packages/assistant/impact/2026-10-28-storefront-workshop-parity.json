@@ -35,6 +35,12 @@
       "path": "scripts/storefront-navigation.browser.test.mjs",
       "executed": true,
       "result": "Desktop/phone native loading, persistent header/footer/memory bag, Shop/Back/Home navigation pass with one document, zero business writes/errors. Existing QA photos load and simulated photo404 falls back to artwork. Connected existing-request recovery passes same identity, foreign Store/Tenant and email-only denial; test OTP adapter sends nothing. No sale/payment/provider/deployment acceptance claimed."
+    },
+    {
+      "kind": "run",
+      "path": "apps/api/src/storefront/site-commands.local.test.ts",
+      "executed": true,
+      "result": "Final Studio acceptance found filtered preview mode facts were derived from result count. Reused existing scoped, plan-capped public offering counts once per preview request, independently of listing query. Offline command tests4/52 and template parity12/107 pass, including single/empty results, scoped counts and one shared count read for saved+candidate designs. Scoped fast182/917, Biome and full dashboard strict types pass. API-only restart was explicitly owner-authorized; preview/readiness now work. Final browser result documented in Brain receipt; concurrent extraction/Jawdah source remains separately owned."
     }
   ]
 }
