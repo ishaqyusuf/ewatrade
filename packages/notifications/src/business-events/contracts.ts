@@ -77,6 +77,7 @@ export const businessEventTypes = [
   "communication.delivery_changed",
   "settings.store_changed",
   "settings.storefront_changed",
+  "settings.storefront_template_update",
   "settings.business_changed",
   "settings.team_policy_changed",
   "settings.channel_changed",

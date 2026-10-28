@@ -84,6 +84,7 @@ export function middleware(request: NextRequest) {
     request.nextUrl.pathname.startsWith("/r/") ||
     request.nextUrl.pathname === "/storefront-preview" ||
     request.nextUrl.pathname === "/storefront" ||
+    request.nextUrl.pathname.startsWith("/storefront/updates/") ||
     (request.nextUrl.pathname === "/login" &&
       (request.nextUrl.searchParams
         .get("next")

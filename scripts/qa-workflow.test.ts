@@ -55,6 +55,11 @@ describe("fast workflow scope", () => {
     const jobs = selectQuickPlan(["packages/jobs/src/schedule-policy.ts"])
     expect(jobs.unknown).toEqual([])
     expect(jobs.tests).toContain("packages/jobs/src/schedule-policy.test.ts")
+    const notifications = selectQuickPlan([
+      "packages/notifications/src/business-events/template-updates.ts",
+    ])
+    expect(notifications.unknown).toEqual([])
+    expect(notifications.groups).toEqual(["core", "domain", "web", "mobile"])
   })
   test("reports unsupported source and deleted tests instead of inventing coverage", () => {
     expect(

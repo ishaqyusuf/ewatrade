@@ -117,6 +117,7 @@ describe("scheduled cadences", () => {
       "store-conversations.media-safety-recovery": "*/5 * * * * sweep",
       "storefront.design.recovery": "*/5 * * * * sweep",
       "storefront.release-source-check": "*/5 * * * * sweep",
+      "storefront.template-update-emails": "0 * * * * sweep",
     })
   })
 

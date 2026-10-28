@@ -106,6 +106,23 @@ function defineHandler<Schema extends z.ZodType>(handler: Handler<Schema>) {
 }
 
 export const implementedBusinessEventHandlers = {
+  "settings.storefront_template_update": defineHandler({
+    label: "Storefront template updates",
+    description:
+      "New template features you can review before upgrading your website.",
+    category: "settings",
+    schema: z
+      .object({ siteId: id, templateKey: id, fromVersion: id, toVersion: id })
+      .strict(),
+    present: (payload) => ({
+      summary: "A storefront template update is available",
+      detail: `Version ${payload.toVersion}. Review the changes in Storefront Studio.`,
+      subject: null,
+      amount: null,
+      statusAtEvent: null,
+      target: null,
+    }),
+  }),
   "settings.storefront_changed": defineHandler({
     label: "Storefront changed",
     description:

@@ -40,6 +40,7 @@ import { runStoreConversationWhatsAppBridgeSchedule } from "./store-conversation
 import { runStoreConversationWhatsAppRecoverySchedule } from "./store-conversation-whatsapp-recovery-schedule"
 import { recoverStorefrontDesignRuns } from "./storefront-design"
 import { runStorefrontReleaseChecks } from "./storefront-release-check"
+import { runStorefrontTemplateUpdateEmails } from "./storefront-template-update-email"
 
 type CadenceTask = {
   id: string
@@ -171,6 +172,10 @@ export const SCHEDULED_CADENCES = {
   "schedules.hourly": {
     cron: "0 * * * *",
     steps: [
+      sweep(
+        "storefront.template-update-emails",
+        runStorefrontTemplateUpdateEmails,
+      ),
       start(accountPrivacyNoticeAlert, () =>
         env("ACCOUNT_PRIVACY_NOTICE_ALERTS_ENABLED"),
       ),

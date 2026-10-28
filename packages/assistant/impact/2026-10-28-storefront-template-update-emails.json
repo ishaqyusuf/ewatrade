@@ -1,0 +1,40 @@
+{
+  "version": 1,
+  "id": "2026-10-28-storefront-template-update-emails",
+  "tickets": ["H02"],
+  "summary": "Plain-language exact-version template update emails with business-bound authenticated Studio review and personal email preference.",
+  "noAssistantImpact": "Template upgrade/save/publish remains a form-only Studio capability through the existing canonical CAS commands. The email link is ordinary navigation and grants no business access or write authority. Recipient selection is system-owned, current verified Owner/Admin scoped, LIVE-only and explicit release/production-email gated. The personal email setting uses authenticated user identity and current business membership. No assistant tool, model input, provider permission, background upgrade or new merchant tRPC procedure is added.",
+  "capabilities": [],
+  "procedures": [],
+  "docs": [
+    {
+      "topic": "feature",
+      "status": "local_only",
+      "path": ".brain/features/storefront-template-update-emails.md"
+    },
+    {
+      "topic": "api",
+      "status": "local_only",
+      "path": ".brain/api/contracts.md"
+    },
+    {
+      "topic": "permissions",
+      "status": "local_only",
+      "path": ".brain/api/permissions.md"
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "run",
+      "path": "packages/jobs/src/handlers/storefront-template-update-email.test.ts",
+      "executed": true,
+      "result": "Offline DI checks cover explicit production opt-in, live transport/sender, stable idempotency, concurrent claim loser, current recipient recheck, pre-provider retry and terminal ambiguous outcomes; no real emails or provider calls."
+    },
+    {
+      "kind": "run",
+      "path": "packages/db/src/queries/storefront-template-updates.test.ts",
+      "executed": true,
+      "result": "Offline repository boundary checks cover tenant/member/Store/older-release constraints, scoped conditional leases, NULL preparation recovery, terminal unknown provider leases, bounded selection and current authorized personal preference. Connected delivery/release remains unexercised."
+    }
+  ]
+}
