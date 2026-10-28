@@ -1384,7 +1384,15 @@ export async function confirmStorefrontOrderRequest(
         { issues },
       )
     const address = deliveryAddress ? ` Deliver to: ${deliveryAddress}.` : ""
-    const notes = `Storefront request ${row.reference}.${address}${row.notes ? ` Customer note: ${row.notes}` : ""}`
+    // Keep the customer's future intent when the request becomes an Order.
+    // A date-only preference must never invent a confirmed delivery timestamp.
+    const preference = row.requestedAt
+      ? ` Preferred date: ${row.requestedAt.toISOString().slice(0, 10)} (customer preference; not a confirmed delivery time).`
+      : ""
+    const preorder = row.lines.some((line) => line.preorder)
+      ? " Includes request-ahead items."
+      : ""
+    const notes = `Storefront request ${row.reference}.${preorder}${preference}${address}${row.notes ? ` Customer note: ${row.notes}` : ""}`
     let order: Awaited<ReturnType<typeof createCommercialOrderInTransaction>>
     try {
       order = await createCommercialOrderInTransaction(tx, {

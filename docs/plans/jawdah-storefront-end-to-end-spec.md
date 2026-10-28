@@ -1,7 +1,8 @@
 # Jawdah storefront: catalog media to customer payment
 
-Date: 28 October 2026 (Africa/Lagos). Status: specification ready for review;
-implementation and connected acceptance have not started under this task.
+Date: 28 October 2026 (Africa/Lagos). Status: implementation committed locally;
+primary four-crate QA payment journey verified. Full acceptance retains image and
+Service Commerce operating gates. See [verification](../verification/2026-10-28-jawdah-storefront-flow.md).
 
 ## Outcome and scope
 
@@ -17,9 +18,10 @@ existing payment flow. Also support product preorders and service booking
 requests. Reuse current domain commands, media handling, identity and payment
 infrastructure rather than creating parallel systems.
 
-The owner's immediate instruction is **specification before execution**. This
-document does not report that Jawdah was opened, its template changed, a request
-submitted, a message sent, or a payment made. Those are later acceptance steps.
+The original planning instruction was **specification before execution**. The
+owner subsequently authorized implementation and local testing through payment,
+with no deployment. Requirements below remain the acceptance contract; the linked
+verification report distinguishes actual results from unresolved gates.
 
 ## Confirmed product decisions
 

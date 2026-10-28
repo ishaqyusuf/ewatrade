@@ -128,10 +128,10 @@ export function BusinessNotificationInbox({
         ) : (
           <p className="px-3.5 py-8 text-center text-sm text-muted-foreground">
             {tab === "unread"
-              ? "You're all caught up."
+              ? "No unread activity alerts."
               : tab === "archived"
                 ? "No archived alerts."
-                : "No alerts yet."}
+                : "No activity alerts yet."}
           </p>
         )}
         {hasNextPage ? (
