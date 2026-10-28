@@ -215,7 +215,27 @@ test("paid search and availability constrain the server query before its bounded
   expect(reads).toHaveLength(1)
   expect(reads[0]).toMatchObject({
     take: 51,
-    where: { AND: [where, { NOT: { kind: "PRODUCT" } }] },
+    where: {
+      AND: [
+        where,
+        {
+          NOT: {
+            OR: [
+              {
+                storefrontPolicies: {
+                  some: {
+                    tenantId: "tenant",
+                    storeId: "store",
+                    unavailable: true,
+                  },
+                },
+              },
+              { kind: "PRODUCT" },
+            ],
+          },
+        },
+      ],
+    },
   })
 })
 
@@ -407,7 +427,9 @@ test("price SQL mirrors the public predicate and comparable-price semantics", ()
     `i."categoryId" = ?`,
     "(i.name ILIKE ? OR i.description ILIKE ?)",
     `o."pricingPolicy" = 'FIXED' AND o."fixedPriceMinor" IS NOT NULL AND o."currencyCode" = ?`,
-    `HAVING (i.kind = 'PRODUCT' AND bool_and(o."variantId" = ANY(?::text[])))`,
+    `HAVING (EXISTS (SELECT 1 FROM "CatalogStorefrontPolicy" policy`,
+    `policy."tenantId"=? AND policy."storeId"=? AND policy."catalogItemId"=i.id AND policy.unavailable=true`,
+    `OR (i.kind = 'PRODUCT' AND bool_and(o."variantId" = ANY(?::text[]))))`,
     `WHERE price IS NULL OR price > ? OR (price = ? AND id COLLATE "C" > ?)`,
     `ORDER BY price IS NULL, price ASC, id COLLATE "C" LIMIT ?`,
   ])
@@ -420,6 +442,8 @@ test("price SQL mirrors the public predicate and comparable-price semantics", ()
     "category-1",
     "%bag%",
     "%bag%",
+    "tenant",
+    "store",
     ["v1"],
     500,
     500,
@@ -438,7 +462,7 @@ test("price SQL mirrors the public predicate and comparable-price semantics", ()
     after: null,
     take: 4,
   }).sql.replace(/\s+/g, " ")
-  expect(descending).toContain("HAVING NOT (i.kind = 'PRODUCT'")
+  expect(descending).toContain("HAVING NOT (EXISTS (SELECT 1 FROM")
   expect(descending).toContain("ORDER BY price IS NULL, price DESC")
   expect(descending).not.toContain("categoryId")
   expect(descending).not.toContain("WHERE price")
@@ -458,7 +482,10 @@ test("capped sort: ranges use the minimum, unknown or mixed currency last both w
   const project =
     (
       await getPublicStorefront(
-        repository("growth", { findMany: () => rows }).db,
+        repository("growth", {
+          findMany: (query) =>
+            JSON.stringify(query.where).includes('"NOT"') ? rows : [],
+        }).db,
         "merchant",
       )
     )?.items ?? []

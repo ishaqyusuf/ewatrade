@@ -8,9 +8,11 @@ import {
   countPendingStorefrontRequests,
   getStorefrontOrderRequestForStaff,
   issueStorefrontServiceQuote,
+  listStorefrontNotifications,
   listStorefrontOrderRequests,
   listStorefrontServiceRequests,
   openQuoteAccess,
+  readStorefrontNotification,
   retryStorefrontMerchantAlert,
   updateServiceRequestDisposition,
   updateStorefrontOrderRequestDisposition,
@@ -81,6 +83,16 @@ function mapError(error: unknown): never {
 }
 
 export const storefrontRequestsRouter = createTRPCRouter({
+  notifications: protectedProcedure.query(({ ctx }) => {
+    assertCanOperateOrders(ctx.tenantContext.membership.role)
+    return listStorefrontNotifications(ctx.db, scope(ctx))
+  }),
+  readNotification: protectedProcedure
+    .input(z.object({ alertId: id }).strict())
+    .mutation(({ ctx, input }) => {
+      assertCanOperateOrders(ctx.tenantContext.membership.role)
+      return readStorefrontNotification(ctx.db, scope(ctx), input.alertId)
+    }),
   counts: protectedProcedure.query(({ ctx }) => {
     const value = scope(ctx)
     return countPendingStorefrontRequests(ctx.db, value)
@@ -131,6 +143,7 @@ export const storefrontRequestsRouter = createTRPCRouter({
             .max(1_000_000_000)
             .optional(),
           acceptCurrentPrices: z.boolean().optional(),
+          deliveryAddress: z.string().trim().min(8).max(300).optional(),
         })
         .strict(),
     )

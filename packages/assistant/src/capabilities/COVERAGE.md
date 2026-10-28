@@ -6,10 +6,10 @@ Tickets refer to the Brain plan `.brain/plans/2026-10-09-assistant-business-oper
 
 ## Summary
 
-- Router procedures: 757 (570 merchant, 187 public/account/internal)
+- Router procedures: 761 (574 merchant, 187 public/account/internal)
 - Merchant supported by a capability: 174
 - Merchant planned: 135
-- Merchant form-only: 199
+- Merchant form-only: 203
 - Merchant excluded: 62
 - Capabilities: 164 (86 read, 78 write)
 
@@ -477,6 +477,8 @@ track conversational evaluation separately from these source test links.
 | `catalog.searchProductCategories` | query | read | catalog | supported | catalog.categories.suggest |
 | `catalog.setOfferingAvailability` | mutation | catalog | catalog | supported | catalog.availability.update |
 | `catalog.setProductUsage` | mutation | Owner/Admin only | catalog | planned | B03 |
+| `catalog.storefront.get` | query | Owner/Admin only | catalog | form_only | Store-scoped storefront availability and book-ahead settings use the Catalog form with a reviewed revision. They never alter inventory or grant publication, booking or payment authority. |
+| `catalog.storefront.save` | mutation | Owner/Admin only | catalog | form_only | Store-scoped storefront availability and book-ahead settings use the Catalog form with a reviewed revision. They never alter inventory or grant publication, booking or payment authority. |
 | `catalog.updateItem` | mutation | catalog | catalog | form_only | Explicit native Catalog sheet/menu commands; assistant model tools cannot invoke these writes. Assistant edits use the narrow price, details, identifier and availability capabilities. |
 | `catalog.updatePrice` | mutation | catalog | catalog | supported | catalog.price.update |
 | `catalog.updateProductDetails` | mutation | catalog | catalog | supported | catalog.details.update |
@@ -941,8 +943,10 @@ track conversational evaluation separately from these source test links.
 | `storefrontRequests.confirmOrder` | mutation | orders | sales | form_only | Website requests inbox: staff review of customer-submitted storefront order and service requests. Confirmation composes the canonical Commercial Order writer with the authenticated staff actor; quotes reuse canonical service quote commands. Customer intent comes only from the storefront form; no model authority. |
 | `storefrontRequests.counts` | query | read | sales | form_only | Website requests inbox: staff review of customer-submitted storefront order and service requests. Confirmation composes the canonical Commercial Order writer with the authenticated staff actor; quotes reuse canonical service quote commands. Customer intent comes only from the storefront form; no model authority. |
 | `storefrontRequests.issueServiceQuote` | mutation | Owner/Admin only | sales | form_only | Website requests inbox: staff review of customer-submitted storefront order and service requests. Confirmation composes the canonical Commercial Order writer with the authenticated staff actor; quotes reuse canonical service quote commands. Customer intent comes only from the storefront form; no model authority. |
+| `storefrontRequests.notifications` | query | Owner/Admin only | sales | form_only | Website requests inbox: staff review of customer-submitted storefront order and service requests. Confirmation composes the canonical Commercial Order writer with the authenticated staff actor; quotes reuse canonical service quote commands. Customer intent comes only from the storefront form; no model authority. |
 | `storefrontRequests.order` | query | read | sales | form_only | Website requests inbox: staff review of customer-submitted storefront order and service requests. Confirmation composes the canonical Commercial Order writer with the authenticated staff actor; quotes reuse canonical service quote commands. Customer intent comes only from the storefront form; no model authority. |
 | `storefrontRequests.orders` | query | read | sales | form_only | Website requests inbox: staff review of customer-submitted storefront order and service requests. Confirmation composes the canonical Commercial Order writer with the authenticated staff actor; quotes reuse canonical service quote commands. Customer intent comes only from the storefront form; no model authority. |
+| `storefrontRequests.readNotification` | mutation | Owner/Admin only | sales | form_only | Website requests inbox: staff review of customer-submitted storefront order and service requests. Confirmation composes the canonical Commercial Order writer with the authenticated staff actor; quotes reuse canonical service quote commands. Customer intent comes only from the storefront form; no model authority. |
 | `storefrontRequests.recordServiceQuoteAcceptance` | mutation | Owner/Admin only | sales | form_only | Website requests inbox: staff review of customer-submitted storefront order and service requests. Confirmation composes the canonical Commercial Order writer with the authenticated staff actor; quotes reuse canonical service quote commands. Customer intent comes only from the storefront form; no model authority. |
 | `storefrontRequests.respondOrder` | mutation | orders | sales | form_only | Website requests inbox: staff review of customer-submitted storefront order and service requests. Confirmation composes the canonical Commercial Order writer with the authenticated staff actor; quotes reuse canonical service quote commands. Customer intent comes only from the storefront form; no model authority. |
 | `storefrontRequests.respondService` | mutation | Owner/Admin only | sales | form_only | Website requests inbox: staff review of customer-submitted storefront order and service requests. Confirmation composes the canonical Commercial Order writer with the authenticated staff actor; quotes reuse canonical service quote commands. Customer intent comes only from the storefront form; no model authority. |

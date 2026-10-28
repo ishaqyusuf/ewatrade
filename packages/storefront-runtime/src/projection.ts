@@ -12,6 +12,7 @@ export type PublicStorefrontProjection = {
   name: string
   slug: string
   description: string | null
+  timezone?: string
   currencyCode: string
   items: PublicCatalogItem[]
   highlightedItem: PublicCatalogItem | null
@@ -76,6 +77,7 @@ export function publicStorefrontResources(
         name: store.name,
         slug: store.slug,
         description: store.description,
+        timezone: store.timezone ?? "Africa/Lagos",
       },
       catalog: {
         items: store.items,

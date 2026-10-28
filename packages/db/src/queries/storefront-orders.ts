@@ -22,6 +22,7 @@ import { findRetailOpsPlan } from "./retail-ops-subscription-plans"
 import { resolveRetailOpsPlanId } from "./retail-ops-subscriptions"
 import { assertStoreConversationTextScreened } from "./store-conversation-text-safety"
 import { loadLiveStorefrontForHost } from "./storefront-factory-loader"
+import { storefrontPreferredDate } from "./storefront-preferred-date"
 import { siteContentHash } from "./storefront-sites"
 import type { DbClient } from "./types"
 
@@ -114,6 +115,7 @@ type LiveScope = {
   countryCode: string | null
   storefrontItems: number | null
   fulfilment: ("pickup" | "delivery")[]
+  timezone: string
 }
 
 /** Verified Host → published Site → active release → Store, plus ordering policy. */
@@ -138,7 +140,7 @@ export async function resolveStorefrontOrderingScope(
     return null
   const store = await db.store.findFirst({
     where: { id: site.storeId, tenantId: release.tenantId, status: "ACTIVE" },
-    select: { countryCode: true },
+    select: { countryCode: true, tenant: { select: { timezone: true } } },
   })
   if (!store) return null
   return {
@@ -151,6 +153,7 @@ export async function resolveStorefrontOrderingScope(
     countryCode: store.countryCode,
     storefrontItems: storefront.storefrontItems ?? null,
     fulfilment: orderingFulfilmentMethods(release.composition),
+    timezone: store.tenant.timezone,
   }
 }
 
@@ -178,6 +181,8 @@ async function publicItemIds(
 }
 
 type CurrentLine = {
+  unavailable: boolean
+  allowBookAhead: boolean
   offeringId: string
   itemId: string
   itemName: string
@@ -220,7 +225,15 @@ export async function readStorefrontPurchaseFacts(
       fixedPriceMinor: true,
       currencyCode: true,
       catalogItem: {
-        select: { name: true, product: { select: { lowStockLevel: true } } },
+        select: {
+          name: true,
+          product: { select: { lowStockLevel: true } },
+          storefrontPolicies: {
+            where: { tenantId: scope.tenantId, storeId: scope.storeId },
+            select: { unavailable: true, allowBookAhead: true },
+            take: 1,
+          },
+        },
       },
       productUnitOffering: {
         select: {
@@ -273,6 +286,10 @@ export async function readStorefrontPurchaseFacts(
               offering.catalogItem.product?.lowStockLevel,
             )
     facts.set(offering.id, {
+      unavailable:
+        offering.catalogItem.storefrontPolicies[0]?.unavailable ?? false,
+      allowBookAhead:
+        offering.catalogItem.storefrontPolicies[0]?.allowBookAhead ?? false,
       offeringId: offering.id,
       itemId: offering.catalogItemId,
       itemName: offering.catalogItem.name,
@@ -305,6 +322,7 @@ function lineIssues(
     offeringId: string
     quantity: string
     observedUnitPriceMinor: number
+    preorder?: boolean
   }[],
   facts: Map<string, CurrentLine>,
 ): StorefrontOrderLineIssue[] {
@@ -312,6 +330,10 @@ function lineIssues(
   for (const line of lines) {
     const fact = facts.get(line.offeringId)
     if (!fact || !fact.public || fact.itemId !== line.itemId) {
+      issues.push({ offeringId: line.offeringId, reason: "unavailable" })
+      continue
+    }
+    if (line.preorder ? !fact.allowBookAhead : fact.unavailable) {
       issues.push({ offeringId: line.offeringId, reason: "unavailable" })
       continue
     }
@@ -336,11 +358,12 @@ function lineIssues(
       })
       continue
     }
-    if (fact.stock === "out_of_stock") {
+    if (!line.preorder && fact.stock === "out_of_stock") {
       issues.push({ offeringId: line.offeringId, reason: "out_of_stock" })
       continue
     }
     if (
+      !line.preorder &&
       fact.availableQuantity !== null &&
       compareExactDecimals(fact.availableQuantity, line.quantity) < 0
     )
@@ -380,6 +403,16 @@ export async function submitStorefrontOrderRequest(
       "UNAVAILABLE",
       "This shop isn't taking order requests right now.",
     )
+  let requestedAt: Date | null = null
+  if (value.preferredDate) {
+    try {
+      requestedAt = storefrontPreferredDate(value.preferredDate, scope.timezone)
+    } catch (error) {
+      throw new StorefrontOrderError("INVALID", (error as Error).message, {
+        field: "preferredDate",
+      })
+    }
+  }
   if (!scope.fulfilment.includes(value.fulfilment))
     throw new StorefrontOrderError(
       "INVALID",
@@ -414,6 +447,7 @@ export async function submitStorefrontOrderRequest(
         : null,
     notes: value.notes?.trim() || null,
     customerId: context.customerId ?? null,
+    ...(value.preferredDate ? { preferredDate: value.preferredDate } : {}),
   }
   const hash = payloadHash(normalized)
   const replay = async () => {
@@ -453,6 +487,10 @@ export async function submitStorefrontOrderRequest(
         await tx.$queryRaw`SELECT "id" FROM "TenantSubscription" WHERE "tenantId" = ${scope.tenantId} FOR SHARE`
         await tx.$queryRaw`SELECT "id" FROM "Store" WHERE "id" = ${scope.storeId} FOR SHARE`
         await tx.$queryRaw`SELECT "id" FROM "Site" WHERE "id" = ${scope.siteId} FOR SHARE`
+        const itemIds = [
+          ...new Set(value.lines.map((line) => line.itemId)),
+        ].sort()
+        await tx.$queryRaw`SELECT "id" FROM "CatalogItem" WHERE "id" IN (${Prisma.join(itemIds)}) ORDER BY "id" FOR SHARE`
         const ids = value.lines.map((line) => line.offeringId).sort()
         await tx.$queryRaw`SELECT "id" FROM "SellableOffering" WHERE "id" IN (${Prisma.join(ids)}) ORDER BY "id" FOR SHARE`
         await tx.$queryRaw`SELECT "id" FROM "StoreOfferingAvailability" WHERE "storeId" = ${scope.storeId} AND "offeringId" IN (${Prisma.join(ids)}) ORDER BY "id" FOR SHARE`
@@ -468,6 +506,19 @@ export async function submitStorefrontOrderRequest(
             "UNAVAILABLE",
             "This shop isn't taking order requests right now.",
           )
+        if (value.preferredDate) {
+          try {
+            storefrontPreferredDate(value.preferredDate, fresh.timezone)
+          } catch (error) {
+            throw new StorefrontOrderError(
+              "INVALID",
+              (error as Error).message,
+              {
+                field: "preferredDate",
+              },
+            )
+          }
+        }
         const recent = await tx.storefrontOrderRequest.count({
           where: {
             tenantId: scope.tenantId,
@@ -498,6 +549,7 @@ export async function submitStorefrontOrderRequest(
             optionName: fact.optionName,
             unitLabel: fact.unitLabel,
             quantity: line.quantity,
+            preorder: line.preorder ?? false,
             observedUnitPriceMinor: line.observedUnitPriceMinor,
             currencyCode: fact.currencyCode,
             observedAvailability:
@@ -530,6 +582,7 @@ export async function submitStorefrontOrderRequest(
             customerId: normalized.customerId,
             fulfilment: value.fulfilment === "delivery" ? "DELIVERY" : "PICKUP",
             deliveryAddress: normalized.deliveryAddress,
+            requestedAt,
             notes: normalized.notes,
             currencyCode: scope.currencyCode,
             observedSubtotalMinor: subtotal,
@@ -625,6 +678,7 @@ const receiptSelect = {
   customerId: true,
   fulfilment: true,
   deliveryAddress: true,
+  requestedAt: true,
   notes: true,
   currencyCode: true,
   observedSubtotalMinor: true,
@@ -642,6 +696,7 @@ const receiptSelect = {
       optionName: true,
       unitLabel: true,
       quantity: true,
+      preorder: true,
       observedUnitPriceMinor: true,
       currencyCode: true,
       observedAvailability: true,
@@ -717,6 +772,7 @@ function projectReceipt(row: ReceiptRow, businessName: string) {
     customerPhoneMasked: maskPhone(row.customerPhone),
     fulfilment: row.fulfilment === "DELIVERY" ? "delivery" : "pickup",
     deliveryAddress: row.deliveryAddress,
+    preferredDate: row.requestedAt?.toISOString().slice(0, 10) ?? null,
     notes: row.notes,
     currencyCode: row.currencyCode,
     observedSubtotalMinor: row.observedSubtotalMinor,
@@ -728,6 +784,7 @@ function projectReceipt(row: ReceiptRow, businessName: string) {
       optionName: line.optionName,
       unitLabel: line.unitLabel,
       quantity: line.quantity.toString(),
+      preorder: line.preorder,
       observedUnitPriceMinor: line.observedUnitPriceMinor,
       availability: line.observedAvailability.toLowerCase() as
         | "in_stock"
@@ -1143,7 +1200,11 @@ export async function getStorefrontOrderRequestForStaff(
       const fact = facts.get(line.offeringId)
       return {
         offeringId: line.offeringId,
-        available: Boolean(fact),
+        available: Boolean(
+          fact?.public &&
+            !fact.unavailable &&
+            (!line.preorder || fact.allowBookAhead),
+        ),
         priceMinor: fact?.priceMinor ?? null,
         priceChanged: !!fact && fact.priceMinor !== line.observedUnitPriceMinor,
         stock: fact?.stock ?? ("unknown" as const),
@@ -1190,6 +1251,7 @@ export async function confirmStorefrontOrderRequest(
     requestId: string
     expectedRevision: number
     deliveryFeeMinor?: number
+    deliveryAddress?: string
     /** Staff reviewed and accepts current prices that differ from what the customer saw. */
     acceptCurrentPrices?: boolean
   },
@@ -1200,6 +1262,8 @@ export async function confirmStorefrontOrderRequest(
       input.deliveryFeeMinor < 0)
   )
     throw new StorefrontOrderError("INVALID", "Enter a valid delivery fee.")
+  if (input.deliveryAddress)
+    await assertStoreConversationTextScreened(input.deliveryAddress)
   return db.$transaction(async (tx) => {
     const row = await lockStaffRequest(tx, scope, input.requestId)
     if (row.status === "CONFIRMED" && row.confirmedOrderId)
@@ -1219,6 +1283,27 @@ export async function confirmStorefrontOrderRequest(
         "INVALID",
         "Enter the delivery fee (use 0 for free delivery).",
       )
+    const deliveryAddress =
+      (input.deliveryAddress ?? row.deliveryAddress)?.trim() || null
+    if (
+      row.fulfilment === "DELIVERY" &&
+      (!deliveryAddress ||
+        deliveryAddress.length < 8 ||
+        deliveryAddress.length > 300)
+    )
+      throw new StorefrontOrderError(
+        "INVALID",
+        "Add the delivery destination before confirming the cost.",
+      )
+    if (row.fulfilment !== "DELIVERY" && (input.deliveryFeeMinor ?? 0) !== 0)
+      throw new StorefrontOrderError(
+        "INVALID",
+        "Pickup cannot carry a delivery fee.",
+      )
+    const itemIds = [
+      ...new Set(row.lines.map((line) => line.catalogItemId)),
+    ].sort()
+    await tx.$queryRaw`SELECT "id" FROM "CatalogItem" WHERE "id" IN (${Prisma.join(itemIds)}) ORDER BY "id" FOR SHARE`
     const tenant = await tx.tenant.findFirst({
       where: { id: scope.tenantId },
       select: {
@@ -1255,7 +1340,12 @@ export async function confirmStorefrontOrderRequest(
     const issues: StorefrontOrderLineIssue[] = []
     for (const line of row.lines) {
       const fact = facts.get(line.offeringId)
-      if (!fact) {
+      if (
+        !fact ||
+        !fact.public ||
+        fact.unavailable ||
+        (line.preorder && !fact.allowBookAhead)
+      ) {
         issues.push({ offeringId: line.offeringId, reason: "unavailable" })
         continue
       }
@@ -1285,9 +1375,7 @@ export async function confirmStorefrontOrderRequest(
         "Some items are no longer available to sell. Ask the customer or decline.",
         { issues },
       )
-    const address = row.deliveryAddress
-      ? ` Deliver to: ${row.deliveryAddress}.`
-      : ""
+    const address = deliveryAddress ? ` Deliver to: ${deliveryAddress}.` : ""
     const notes = `Storefront request ${row.reference}.${address}${row.notes ? ` Customer note: ${row.notes}` : ""}`
     let order: Awaited<ReturnType<typeof createCommercialOrderInTransaction>>
     try {
@@ -1341,6 +1429,7 @@ export async function confirmStorefrontOrderRequest(
         decidedAt: new Date(),
         decidedByUserId: scope.actorUserId,
         deliveryFeeMinor: input.deliveryFeeMinor ?? null,
+        deliveryAddress: row.fulfilment === "DELIVERY" ? deliveryAddress : null,
       },
     })
     return { orderId: order.id, replayed: false }

@@ -5,6 +5,7 @@ import {
   randomBytes,
 } from "node:crypto"
 import { normalizeWhatsAppPhone } from "@ewatrade/customer-messages"
+import { storefrontServiceRequestSchema } from "@ewatrade/service-commerce"
 import {
   storefrontRequestReplySchema,
   storefrontWithdrawSchema,
@@ -20,7 +21,11 @@ import {
   storefrontReceiptDigest,
   storefrontReceiptToken,
 } from "./storefront-orders"
-import { submitStorefrontServiceRequest } from "./storefront-service-intake"
+import { storefrontPreferredTime } from "./storefront-preferred-date"
+import {
+  getStorefrontServiceIntake,
+  submitStorefrontServiceRequest,
+} from "./storefront-service-intake"
 import type { DbClient } from "./types"
 
 /**
@@ -48,11 +53,22 @@ export const storefrontServiceExtrasSchema = z
       .regex(/^\d{4}-\d{2}-\d{2}$/, "Choose a valid date.")
       .optional(),
     collectionAddress: plainText(300).optional(),
+    preferredTime: z
+      .string()
+      .regex(
+        /^(?:[01]\d|2[0-3]):(?:00|15|30|45)$/,
+        "Choose a valid preferred time.",
+      )
+      .optional(),
   })
   .strict()
 
 /** Date-only preference in the business's local calendar (Africa/Lagos default). */
-export function parsePreferredDate(value: string, now = new Date()) {
+export function parsePreferredDate(
+  value: string,
+  now = new Date(),
+  timezone = "Africa/Lagos",
+) {
   const [year, month, day] = value.split("-").map(Number)
   const date = new Date(Date.UTC(year ?? 0, (month ?? 1) - 1, day ?? 1, 12))
   if (
@@ -65,7 +81,7 @@ export function parsePreferredDate(value: string, now = new Date()) {
       field: "preferredDate",
     })
   const today = new Date(
-    `${new Intl.DateTimeFormat("en-CA", { timeZone: "Africa/Lagos" }).format(now)}T12:00:00Z`,
+    `${new Intl.DateTimeFormat("en-CA", { timeZone: timezone }).format(now)}T12:00:00Z`,
   )
   if (date.getTime() < today.getTime())
     throw new StorefrontOrderError("INVALID", "Choose today or a later date.", {
@@ -115,9 +131,41 @@ export async function submitStorefrontServiceRequestWithReceipt(
   context: { host: string; receiptSecret: string; customerId?: string | null },
 ) {
   const extras = storefrontServiceExtrasSchema.parse(input.extras ?? {})
-  const requestedAt = extras.preferredDate
-    ? parsePreferredDate(extras.preferredDate)
-    : undefined
+  const parsedRequest = storefrontServiceRequestSchema.parse(input.request)
+  const intake = await getStorefrontServiceIntake(
+    db,
+    context.host,
+    parsedRequest.itemId,
+  )
+  if (!intake)
+    throw new StorefrontOrderError(
+      "UNAVAILABLE",
+      "Service requests are unavailable for this storefront.",
+    )
+  const timezone = intake.form.store.timezone
+  if (extras.preferredTime && !extras.preferredDate)
+    throw new StorefrontOrderError(
+      "INVALID",
+      "Choose a preferred date first.",
+      { field: "preferredDate" },
+    )
+  let requestedAt: Date | undefined
+  try {
+    requestedAt = extras.preferredDate
+      ? extras.preferredTime
+        ? storefrontPreferredTime(
+            extras.preferredDate,
+            extras.preferredTime,
+            timezone,
+          )
+        : parsePreferredDate(extras.preferredDate, new Date(), timezone)
+      : undefined
+  } catch (error) {
+    if (error instanceof StorefrontOrderError) throw error
+    throw new StorefrontOrderError("INVALID", (error as Error).message, {
+      field: "preferredDate",
+    })
+  }
   if (extras.collectionAddress)
     await assertStoreConversationTextScreened(extras.collectionAddress)
   let saved: { id: string; tenantId: string } | null = null
@@ -128,12 +176,37 @@ export async function submitStorefrontServiceRequestWithReceipt(
     {
       requestedAt,
       onSaved: async (tx, request) => {
+        if (requestedAt && request.timezone !== timezone)
+          throw new StorefrontOrderError(
+            "INVALID",
+            "The business timezone changed. Review your preferred time and send again.",
+            { field: "preferredDate" },
+          )
         saved = { id: request.id, tenantId: request.tenantId }
         const existing = await tx.storefrontServiceRequestContext.findUnique({
           where: { serviceRequestId: request.id },
-          select: { id: true },
+          select: {
+            id: true,
+            collectionAddress: true,
+            preferredTime: true,
+            preferenceTimezone: true,
+          },
         })
-        if (existing) return
+        if (existing) {
+          if (
+            existing.collectionAddress !==
+              (extras.collectionAddress?.trim() || null) ||
+            existing.preferredTime !== (extras.preferredTime ?? null) ||
+            (existing.preferenceTimezone !== null &&
+              existing.preferenceTimezone !==
+                (extras.preferredDate ? timezone : null))
+          )
+            throw new StorefrontOrderError(
+              "REPLAY_MISMATCH",
+              "This request was already sent with different details. Review the saved request before sending again.",
+            )
+          return
+        }
         const token = storefrontReceiptToken(
           "service",
           request.id,
@@ -148,6 +221,8 @@ export async function submitStorefrontServiceRequestWithReceipt(
             receiptTokenDigest: storefrontReceiptDigest(token),
             customerId: context.customerId ?? null,
             collectionAddress: extras.collectionAddress?.trim() || null,
+            preferredTime: extras.preferredTime ?? null,
+            preferenceTimezone: extras.preferredDate ? timezone : null,
           },
           select: { id: true },
         })
@@ -223,6 +298,8 @@ const serviceReceiptSelect = {
   id: true,
   reference: true,
   collectionAddress: true,
+  preferredTime: true,
+  preferenceTimezone: true,
   customerId: true,
   quoteVersionId: true,
   quoteAccessCiphertext: true,
@@ -460,8 +537,14 @@ async function projectServiceReceipt(
     details: request.details,
     staffResponse: request.staffResponse,
     preferredDate: request.requestedAt
-      ? request.requestedAt.toISOString().slice(0, 10)
+      ? row.preferredTime && row.preferenceTimezone
+        ? new Intl.DateTimeFormat("en-CA", {
+            timeZone: row.preferenceTimezone,
+          }).format(request.requestedAt)
+        : request.requestedAt.toISOString().slice(0, 10)
       : null,
+    preferredTime: row.preferredTime,
+    preferenceTimezone: row.preferenceTimezone,
     collectionAddress: row.collectionAddress,
     lines: request.lines.map((line) => ({
       offeringId: line.offeringId,

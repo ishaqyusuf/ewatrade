@@ -76,6 +76,11 @@ formOnly(
 // Catalog
 formOnly(
   "catalog",
+  "Store-scoped storefront availability and book-ahead settings use the Catalog form with a reviewed revision. They never alter inventory or grant publication, booking or payment authority.",
+  ["catalog.storefront.*"],
+)
+formOnly(
+  "catalog",
   "Dashboard Product Share reads an already public product link for explicit browser Share/Copy; no publishing, provider or model authority.",
   ["catalog.productShare"],
 )

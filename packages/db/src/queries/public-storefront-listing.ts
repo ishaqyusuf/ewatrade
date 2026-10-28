@@ -179,7 +179,10 @@ export function publicPriceSortedIdsSql(input: {
     filters.push(
       Prisma.sql`AND (i.name ILIKE ${`%${escapePublicListingTerm(term)}%`} OR i.description ILIKE ${`%${escapePublicListingTerm(term)}%`})`,
     )
-  const out = Prisma.sql`(i.kind = 'PRODUCT' AND bool_and(o."variantId" = ANY(${input.outVariantIds}::text[])))`
+  const out = Prisma.sql`(EXISTS (SELECT 1 FROM "CatalogStorefrontPolicy" policy
+    WHERE policy."tenantId"=${input.tenantId} AND policy."storeId"=${input.storeId}
+      AND policy."catalogItemId"=i.id AND policy.unavailable=true)
+    OR (i.kind = 'PRODUCT' AND bool_and(o."variantId" = ANY(${input.outVariantIds}::text[]))))`
   const having =
     input.availability === "out_of_stock"
       ? Prisma.sql`HAVING ${out}`

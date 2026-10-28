@@ -6,7 +6,12 @@ import {
 import type { DbClient } from "./types"
 
 type Select = {
-  photoAssets?: { where: Record<string, unknown> }
+  photoAssets?: {
+    where: Record<string, unknown>
+    take: number
+    orderBy: unknown
+  }
+  storefrontPolicies?: { where: unknown }
   offerings?: {
     select: { productUnitOffering: { select: Record<string, unknown> } }
   }
@@ -26,6 +31,7 @@ const row = (
     balances?: ReturnType<typeof balance>[]
     lowStockLevel?: string | null
     unit?: { id: string; scale: number } | null
+    policy?: { unavailable: boolean; allowBookAhead: boolean }
   } = {},
 ) => ({
   id,
@@ -35,6 +41,7 @@ const row = (
   categoryRecord: null,
   illustrations: [],
   photoAssets: (extra.photos ?? []).map((asset) => ({ id: asset })),
+  storefrontPolicies: extra.policy ? [extra.policy] : [],
   product: { lowStockLevel: extra.lowStockLevel ?? null },
   offerings: [
     {
@@ -62,6 +69,36 @@ const row = (
       },
     },
   ],
+})
+
+test("gallery preserves effective primary ordering and manual unavailability keeps actual stock separate", async () => {
+  const { db, selects } = fixture([
+    row("eggs", {
+      photos: ["approved-primary", "approved-next", "approved-third"],
+      balances: [balance("pair", "40")],
+      policy: { unavailable: true, allowBookAhead: true },
+    }),
+  ])
+  const [item] = await loadPublicStorefrontPinnedItems(db, input(["eggs"]))
+  expect(item?.photos?.map((photo) => photo.id)).toEqual([
+    "approved-primary",
+    "approved-next",
+    "approved-third",
+  ])
+  expect(item?.photoUrl).toBe(item?.photos?.[0]?.url)
+  expect(item).toMatchObject({
+    storefrontPolicy: { unavailable: true, allowBookAhead: true },
+    availability: "OUT_OF_STOCK",
+    options: [{ stock: "in_stock", availability: "OUT_OF_STOCK" }],
+  })
+  expect(selects[0]?.photoAssets).toMatchObject({
+    take: 8,
+    orderBy: [{ sortOrder: "asc" }, { id: "asc" }],
+  })
+  expect(selects[0]?.storefrontPolicies?.where).toEqual({
+    tenantId: "tenant",
+    storeId: "store_1",
+  })
 })
 
 function fixture(rows: ReturnType<typeof row>[]) {

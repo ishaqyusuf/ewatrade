@@ -43,7 +43,11 @@ test("a form with no eligible options has no request action", async () => {
         id: "form",
         label: "Request",
         offerings: [],
-        store: { name: "Store", currencyCode: "NGN" },
+        store: {
+          name: "Store",
+          currencyCode: "NGN",
+          tenant: { timezone: "Africa/Lagos" },
+        },
       }),
     },
   } as unknown as DbClient

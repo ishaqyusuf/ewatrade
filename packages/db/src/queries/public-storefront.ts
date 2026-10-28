@@ -265,7 +265,7 @@ function publicPhotoAssetSelect(storeId: string) {
       },
     },
     orderBy: [{ sortOrder: "asc" as const }, { id: "asc" as const }],
-    take: 1,
+    take: 8,
     select: { id: true },
   }
 }
@@ -279,6 +279,11 @@ function publicItemReader(
 ) {
   const select = {
     photoAssets: publicPhotoAssetSelect(store.id),
+    storefrontPolicies: {
+      where: { tenantId, storeId: store.id },
+      take: 1,
+      select: { unavailable: true, allowBookAhead: true },
+    },
     id: true,
     name: true,
     kind: true,
@@ -306,7 +311,11 @@ function publicItemReader(
           },
         },
         serviceOffering: {
-          select: { quantityScale: true, durationMinutes: true },
+          select: {
+            quantityScale: true,
+            durationMinutes: true,
+            bookingPolicy: true,
+          },
         },
         variant: {
           select: {
@@ -333,6 +342,7 @@ function publicItemReader(
   const projectItem = (
     item: Prisma.CatalogItemGetPayload<{ select: typeof select }>,
   ) => {
+    const unavailable = item.storefrontPolicies?.[0]?.unavailable ?? false
     // Opt-in only; computed per option so a count never crosses selling units.
     const lowStockCount = (offering: (typeof item.offerings)[number]) => {
       if (!projection.lowStockCounts || item.kind !== "PRODUCT") return {}
@@ -360,8 +370,9 @@ function publicItemReader(
       priceMinor:
         offering.pricingPolicy === "FIXED" ? offering.fixedPriceMinor : null,
       currencyCode: offering.currencyCode,
-      availability:
-        item.kind === "SERVICE"
+      availability: unavailable
+        ? ("OUT_OF_STOCK" as const)
+        : item.kind === "SERVICE"
           ? null
           : publicStockAvailability(offering.variant.stockBalanceSources),
       ...(item.kind === "SERVICE"
@@ -413,7 +424,29 @@ function publicItemReader(
         ? { photoUrl: publicCatalogPhotoPath(store.id, photo.id) }
         : {}),
       ...publicOptionPrice(itemOptions, store.currencyCode),
-      availability: publicItemAvailability(itemOptions),
+      storefrontPolicy: {
+        unavailable: item.storefrontPolicies?.[0]?.unavailable ?? false,
+        allowBookAhead:
+          item.storefrontPolicies?.[0]?.allowBookAhead ??
+          (item.kind === "SERVICE" &&
+            item.offerings.some(
+              (entry) =>
+                entry.serviceOffering?.bookingPolicy &&
+                entry.serviceOffering.bookingPolicy !== "NOT_BOOKABLE",
+            )),
+      },
+      ...(item.photoAssets?.length
+        ? {
+            photos: item.photoAssets.map((asset) => ({
+              id: asset.id,
+              url: publicCatalogPhotoPath(store.id, asset.id),
+              alt: item.name,
+            })),
+          }
+        : {}),
+      availability: unavailable
+        ? ("OUT_OF_STOCK" as const)
+        : publicItemAvailability(itemOptions),
       options: itemOptions,
     }
   }
@@ -493,6 +526,7 @@ async function readStorefront(
       name: true,
       slug: true,
       dataClassification: true,
+      timezone: true,
       metadata: true,
       subscription: {
         select: {
@@ -599,10 +633,19 @@ async function readStorefront(
       .map(([id]) => id)
   }
   const outWhere = {
-    kind: "PRODUCT",
-    offerings: {
-      none: { ...offeringWhere, variantId: { notIn: outVariantIds } },
-    },
+    OR: [
+      {
+        storefrontPolicies: {
+          some: { tenantId: tenant.id, storeId: store.id, unavailable: true },
+        },
+      },
+      {
+        kind: "PRODUCT",
+        offerings: {
+          none: { ...offeringWhere, variantId: { notIn: outVariantIds } },
+        },
+      },
+    ],
   } satisfies Prisma.CatalogItemWhereInput
   const orderBy = [{ createdAt: "asc" as const }, { id: "asc" as const }]
   const take = limit + 1
@@ -617,17 +660,14 @@ async function readStorefront(
         ? []
         : await db.catalogItem.findMany({
             where: {
-              AND: [
-                where,
-                ...(outVariantIds.length ? [{ NOT: outWhere }] : []),
-              ],
+              AND: [where, { NOT: outWhere }],
             },
             orderBy,
             take,
             ...(cursorId ? { cursor: { id: cursorId }, skip: 1 } : {}),
             select,
           })
-    if (only !== "a" && outVariantIds.length && rows.length <= limit) {
+    if (only !== "a" && rows.length <= limit) {
       rows.push(
         ...(await db.catalogItem.findMany({
           where: { AND: [where, outWhere] },
@@ -836,6 +876,7 @@ async function readStorefront(
   return {
     ...(serviceRequestEntry ? { serviceRequestEntry } : {}),
     name: tenant.name,
+    timezone: tenant.timezone,
     category,
     categories: categories.map((category) => ({
       id: category.id,

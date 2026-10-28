@@ -48,6 +48,8 @@ export const catalogPhotoReplacementSchema = z
         (ids) => new Set(ids).size === ids.length,
         "Choose distinct photos.",
       ),
+    expectedAssetIds: z.array(identifier).max(8).optional(),
+    expectedIllustrationId: z.string().nullable().optional(),
   })
   .strict()
   .refine(

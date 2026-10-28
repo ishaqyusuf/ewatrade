@@ -1,0 +1,16 @@
+/// Storefront presentation/intake policy. Never changes inventory or general sale eligibility.
+model CatalogStorefrontPolicy {
+  id             String      @id @default(cuid())
+  tenantId       String
+  storeId        String
+  catalogItemId  String
+  unavailable    Boolean     @default(false)
+  allowBookAhead Boolean     @default(false)
+  revision       Int         @default(1)
+  updatedAt      DateTime    @updatedAt
+  tenant         Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  store          Store       @relation(fields: [tenantId, storeId], references: [tenantId, id], onDelete: Cascade)
+  catalogItem    CatalogItem @relation(fields: [tenantId, catalogItemId], references: [tenantId, id], onDelete: Cascade)
+
+  @@unique([tenantId, storeId, catalogItemId])
+}

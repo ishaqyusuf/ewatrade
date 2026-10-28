@@ -75,6 +75,16 @@ export const publicCatalogItemSchema = z
       .nullable(),
     illustrationId: z.string(),
     photoUrl: z.string().optional(),
+    photos: z
+      .array(
+        z.object({ id: z.string(), url: z.string(), alt: z.string() }).strict(),
+      )
+      .max(8)
+      .optional(),
+    storefrontPolicy: z
+      .object({ unavailable: z.boolean(), allowBookAhead: z.boolean() })
+      .strict()
+      .optional(),
     currencyCode: z.string(),
     priceMinor: z.number().int().nonnegative().nullable(),
     isFromPrice: z.boolean(),
@@ -85,7 +95,12 @@ export const publicCatalogItemSchema = z
 export type PublicCatalogItem = z.infer<typeof publicCatalogItemSchema>
 
 export type StorefrontResources = {
-  business: { name: string; slug: string; description: string | null }
+  business: {
+    name: string
+    slug: string
+    description: string | null
+    timezone?: string
+  }
   catalog: {
     items: PublicCatalogItem[]
     highlightedItem: PublicCatalogItem | null

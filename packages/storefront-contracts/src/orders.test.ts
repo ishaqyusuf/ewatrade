@@ -1,9 +1,71 @@
 import { expect, test } from "bun:test"
 import {
+  orderingFulfilmentMethods,
   publicLowStockCountsEnabled,
+  storefrontOrderRequestSchema,
   storefrontRequestReferenceSchema,
 } from "./orders"
 import { publicCatalogOptionSchema } from "./resources"
+
+test("delivery can start without a destination but preorder intent needs a date", () => {
+  const request = {
+    clientRequestId: "323ca9ec-5b2c-48c5-979a-b2bf883dab74",
+    lines: [
+      {
+        itemId: "eggs",
+        offeringId: "crate",
+        quantity: "4",
+        observedUnitPriceMinor: 450000,
+      },
+    ],
+    customerName: "QA Customer",
+    customerPhone: "08031234567",
+    fulfilment: "delivery",
+  }
+  const parsed = storefrontOrderRequestSchema.parse(request)
+  expect(parsed.deliveryAddress).toBeUndefined()
+  // Old requests must retain their omission semantics for stable retry hashes.
+  expect(parsed.lines[0]).not.toHaveProperty("preorder")
+  const ahead = { ...request, lines: [{ ...request.lines[0], preorder: true }] }
+  expect(storefrontOrderRequestSchema.safeParse(ahead).success).toBe(false)
+  expect(
+    storefrontOrderRequestSchema.safeParse({
+      ...ahead,
+      preferredDate: "2026-11-05",
+    }).success,
+  ).toBe(true)
+  expect(
+    storefrontOrderRequestSchema.safeParse({
+      ...request,
+      preferredDate: "2026-11-05",
+    }).success,
+  ).toBe(false)
+  expect(
+    storefrontOrderRequestSchema.safeParse({
+      ...request,
+      deliveryAddress: "<script>bad</script>",
+    }).success,
+  ).toBe(false)
+})
+
+test("a merchant can disable all fulfilment rather than silently enabling pickup", () => {
+  expect(
+    orderingFulfilmentMethods(
+      design("1.2.0", {
+        version: 2,
+        settings: { "offer-pickup": false, "offer-delivery": false },
+      }),
+    ),
+  ).toEqual([])
+  expect(
+    orderingFulfilmentMethods(
+      design("1.2.0", {
+        version: 2,
+        settings: { "offer-pickup": false, "offer-delivery": true },
+      }),
+    ),
+  ).toEqual(["delivery"])
+})
 
 const design = (
   version: string,

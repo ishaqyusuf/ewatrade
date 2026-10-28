@@ -25,6 +25,7 @@ model CatalogItem {
   creationCommands  CatalogCommandReceipt[]
   illustrations     CatalogItemIllustration[]
   photoAssets       CatalogPhotoAsset[]
+  storefrontPolicies CatalogStorefrontPolicy[]
   categoryRecord    CatalogCategory?        @relation("CatalogItemCategory", fields: [tenantId, categoryId], references: [tenantId, id], onDelete: Restrict)
   subcategoryRecord CatalogCategory?        @relation("CatalogItemSubcategory", fields: [tenantId, subcategoryId], references: [tenantId, id], onDelete: Restrict)
 

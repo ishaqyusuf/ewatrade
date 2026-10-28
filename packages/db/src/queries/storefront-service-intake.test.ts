@@ -19,7 +19,11 @@ const input = {
   details: "Please clean the handles.",
 }
 
-function fixture(second = false, quote = false) {
+function fixture(
+  second = false,
+  quote = false,
+  policy?: { unavailable: boolean; allowBookAhead: boolean },
+) {
   const committedLines: Record<string, unknown>[] = []
   let pendingLines: Record<string, unknown>[] = []
   let published = true
@@ -35,7 +39,11 @@ function fixture(second = false, quote = false) {
     currencyCode: "NGN",
     pricingPolicy: "FIXED",
     status: "ACTIVE",
-    serviceOffering: { quantityScale: 0, guidance: null },
+    serviceOffering: {
+      quantityScale: 0,
+      guidance: null,
+      bookingPolicy: "NOT_BOOKABLE",
+    },
     storeAvailability: [{ storeId: "store-1", isAvailable: true }],
     variant: {
       id: "variant-1",
@@ -44,7 +52,10 @@ function fixture(second = false, quote = false) {
       selections: [],
       stockBalanceSources: [],
     },
-    catalogItem: { name: "Leather Bag Cleaning" },
+    catalogItem: {
+      name: "Leather Bag Cleaning",
+      storefrontPolicies: policy ? [policy] : [],
+    },
   }
   const offerings = [
     offering,
@@ -70,7 +81,11 @@ function fixture(second = false, quote = false) {
     label: "Service request",
     storeId: "store-1",
     tenantId: "tenant-1",
-    store: { name: "Main Store", currencyCode: "NGN" },
+    store: {
+      name: "Main Store",
+      currencyCode: "NGN",
+      tenant: { timezone: "Africa/Lagos" },
+    },
     offerings: offerings.map((offering) => ({
       offeringId: offering.id,
       offering,
@@ -226,6 +241,40 @@ async function local<T>(run: () => Promise<T>) {
     })
   }
 }
+
+describe("storefront service availability and book ahead", () => {
+  test("unavailable ordinary requests and disabled future requests roll back", () =>
+    local(async () => {
+      for (const [policy, extras] of [
+        [{ unavailable: true, allowBookAhead: false }, {}],
+        [
+          { unavailable: false, allowBookAhead: false },
+          { requestedAt: new Date(Date.now() + 86_400_000) },
+        ],
+      ] as const) {
+        const f = fixture(false, false, policy)
+        await expect(
+          submitStorefrontServiceRequest(f.db, input, host, extras),
+        ).rejects.toThrow()
+        expect(f.persisted()).toBeNull()
+        expect(f.lines()).toHaveLength(0)
+      }
+    }))
+  test("an enabled future request saves intent without a confirmed booking", () =>
+    local(async () => {
+      const f = fixture(false, false, {
+        unavailable: true,
+        allowBookAhead: true,
+      })
+      const requestedAt = new Date(Date.now() + 86_400_000)
+      const result = await submitStorefrontServiceRequest(f.db, input, host, {
+        requestedAt,
+      })
+      expect(result.requestId).toBe("request-1")
+      expect(f.lines()).toHaveLength(1)
+      expect(f.persisted()).toMatchObject({ requestedAt, contactOptIn: false })
+    }))
+})
 
 describe("standalone storefront service intake", () => {
   test("projects a published Store's form without any conversation or age delegates", () =>

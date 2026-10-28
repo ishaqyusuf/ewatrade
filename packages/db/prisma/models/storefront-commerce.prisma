@@ -71,6 +71,8 @@ model StorefrontOrderRequest {
   customerId            String?
   fulfilment            StorefrontFulfilmentMethod
   deliveryAddress       String?
+  /// Preferred future fulfilment, never a reservation or stock commitment.
+  requestedAt           DateTime?
   notes                 String?
   currencyCode          String
   observedSubtotalMinor Int
@@ -110,6 +112,7 @@ model StorefrontOrderRequestLine {
   optionName             String
   unitLabel              String?
   quantity               Decimal                        @db.Decimal(38, 6)
+  preorder               Boolean                        @default(false)
   /// Price the customer saw. Evidence only; confirmation re-reads current prices.
   observedUnitPriceMinor Int
   currencyCode           String
@@ -130,6 +133,8 @@ model StorefrontServiceRequestContext {
   receiptTokenDigest String                     @unique
   customerId         String?
   collectionAddress  String?
+  preferredTime      String?
+  preferenceTimezone String?
   /// Latest quote version issued from the storefront inbox and its acceptance
   /// capability, encrypted at rest, so the receipt holder opens the canonical quote page.
   quoteVersionId        String?
@@ -170,6 +175,8 @@ model StorefrontRequestMessage {
 /// the request. Delivery happens after commit, with deduplication and retries; a
 /// provider outage leaves the request intact and the alert visibly FAILED/SKIPPED.
 model StorefrontMerchantAlert {
+  /// Personal in-app acknowledgement only; provider dispatch status is independent.
+  readByUserIds     String[] @default([])
   id                String                           @id @default(cuid())
   tenantId          String
   storeId           String

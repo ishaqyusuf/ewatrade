@@ -21,6 +21,8 @@ export async function replaceCatalogItemPhotos(
     catalogItemId: string
     illustrationId?: string | null
     assetIds: string[]
+    expectedAssetIds?: string[]
+    expectedIllustrationId?: string | null
     clientOperationId: string
   },
 ) {
@@ -50,6 +52,9 @@ export async function replaceCatalogItemPhotos(
         ...(request.illustrationId === undefined
           ? []
           : [request.illustrationId]),
+        ...(request.expectedAssetIds === undefined
+          ? []
+          : [request.expectedAssetIds, request.expectedIllustrationId ?? null]),
       ]),
     )
     .digest("hex")
@@ -102,6 +107,38 @@ export async function replaceCatalogItemPhotos(
       const selected = request.assetIds.map((id) =>
         assets.find((asset) => asset.id === id),
       )
+      if (request.expectedAssetIds !== undefined) {
+        const currentIds = assets
+          .filter(
+            (asset) =>
+              asset.catalogItemId === item.id &&
+              asset.storeId === request.storeId &&
+              ["PENDING_REVIEW", "APPROVED"].includes(asset.state),
+          )
+          .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0))
+          .map((asset) => asset.id)
+        const illustration = await tx.catalogItemIllustration.findUnique({
+          where: {
+            tenantId_catalogItemId_storeId: {
+              tenantId: request.tenantId,
+              catalogItemId: item.id,
+              storeId: request.storeId,
+            },
+          },
+          select: { illustrationId: true },
+        })
+        if (
+          JSON.stringify(currentIds) !==
+            JSON.stringify(request.expectedAssetIds) ||
+          (request.expectedIllustrationId !== undefined &&
+            (illustration?.illustrationId ?? null) !==
+              request.expectedIllustrationId)
+        )
+          throw new CatalogPhotoError(
+            "PHOTO_COMMAND_CONFLICT",
+            "These photos changed elsewhere. Reopen Images to see the latest, then try again.",
+          )
+      }
       if (
         selected.some(
           (asset) =>

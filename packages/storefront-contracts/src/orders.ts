@@ -28,7 +28,7 @@ export function orderingFulfilmentMethods(composition: unknown) {
   const methods: ("pickup" | "delivery")[] = []
   if (header?.settings?.["offer-pickup"] !== false) methods.push("pickup")
   if (header?.settings?.["offer-delivery"] === true) methods.push("delivery")
-  return methods.length ? methods : (["pickup"] as ("pickup" | "delivery")[])
+  return methods
 }
 
 /** Exact template pins whose header declares the low-stock count opt-in. */
@@ -100,6 +100,7 @@ export const storefrontOrderLineSchema = z
     quantity: storefrontQuantitySchema,
     /** The price the customer saw. Evidence only; a mismatch refuses the line. */
     observedUnitPriceMinor: z.number().int().nonnegative(),
+    preorder: z.boolean().optional(),
   })
   .strict()
 
@@ -122,17 +123,24 @@ export const storefrontOrderRequestSchema = z
     fulfilment: z.enum(["pickup", "delivery"]),
     deliveryAddress: plain(300).optional(),
     notes: plain(500).optional(),
+    preferredDate: z
+      .string()
+      .regex(/^\d{4}-\d{2}-\d{2}$/, "Choose a valid preferred date.")
+      .optional(),
   })
   .strict()
   .superRefine((value, context) => {
-    if (
-      value.fulfilment === "delivery" &&
-      (value.deliveryAddress ?? "").trim().length < 8
-    )
+    if (value.lines.some((line) => line.preorder) && !value.preferredDate)
       context.addIssue({
         code: "custom",
-        path: ["deliveryAddress"],
-        message: "Enter the delivery address.",
+        path: ["preferredDate"],
+        message: "Choose a preferred date for your preorder.",
+      })
+    if (value.preferredDate && !value.lines.some((line) => line.preorder))
+      context.addIssue({
+        code: "custom",
+        path: ["preferredDate"],
+        message: "Choose request ahead for the items you need later.",
       })
     const seen = new Set<string>()
     for (const [index, line] of value.lines.entries()) {

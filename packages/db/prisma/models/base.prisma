@@ -1,4 +1,5 @@
 model Tenant {
+  catalogStorefrontPolicies CatalogStorefrontPolicy[]
   manualPaymentAlertSettings ManualPaymentAlertSetting[]
   paymentNotificationQuotas PaymentNotificationQuota[]
   paymentNotificationIntents PaymentNotificationIntent[]

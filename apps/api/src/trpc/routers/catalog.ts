@@ -40,6 +40,7 @@ import { readCatalogProductShare } from "../../catalog/product-share"
 import { catalogCategoriesRouter } from "./catalog-categories"
 import { catalogDetailRouter } from "./catalog-detail"
 import { catalogPhotoTRPCError, catalogPhotosRouter } from "./catalog-photos"
+import { catalogStorefrontRouter } from "./catalog-storefront"
 
 import {
   catalogAddServiceChoiceSchema,
@@ -186,6 +187,7 @@ function catalogTRPCError(error: CatalogError) {
 }
 
 export const catalogRouter = createTRPCRouter({
+  storefront: catalogStorefrontRouter,
   productShare: protectedProcedure
     .input(catalogProductShareSchema)
     .query(({ ctx, input }) => {

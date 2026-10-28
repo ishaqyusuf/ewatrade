@@ -23,6 +23,13 @@ export async function getStorefrontServiceForm(
     orderBy: [{ createdAt: "desc" }, { id: "desc" }],
     include: {
       ...publicServiceRequestFormInclude,
+      store: {
+        select: {
+          currencyCode: true,
+          name: true,
+          tenant: { select: { timezone: true } },
+        },
+      },
       offerings: {
         ...publicServiceRequestFormInclude.offerings,
         take: 100,
@@ -46,19 +53,51 @@ export async function getStorefrontServiceForm(
             },
           },
         },
+        include: {
+          offering: {
+            include: {
+              ...publicServiceRequestFormInclude.offerings.include.offering
+                .include,
+              catalogItem: {
+                include: {
+                  storefrontPolicies: {
+                    where: { tenantId: scope.tenantId, storeId: scope.storeId },
+                    take: 1,
+                  },
+                },
+              },
+            },
+          },
+        },
       },
     },
   })
   if (!form) return null
   const items = new Map(
-    form.offerings.map((row) => [row.offeringId, row.offering.catalogItemId]),
+    form.offerings.map((row) => [
+      row.offeringId,
+      {
+        catalogItemId: row.offering.catalogItemId,
+        unavailable:
+          row.offering.catalogItem.storefrontPolicies[0]?.unavailable ?? false,
+        allowBookAhead:
+          row.offering.catalogItem.storefrontPolicies[0]?.allowBookAhead ??
+          (row.offering.serviceOffering?.bookingPolicy !== undefined &&
+            row.offering.serviceOffering.bookingPolicy !== "NOT_BOOKABLE"),
+      },
+    ]),
   )
   const projection = projectPublicServiceRequestForm(form)
   return {
     ...projection,
+    store: {
+      currencyCode: form.store.currencyCode,
+      name: form.store.name,
+      timezone: form.store.tenant.timezone,
+    },
     offerings: projection.offerings.flatMap((offering) => {
-      const catalogItemId = items.get(offering.id)
-      return catalogItemId ? [{ ...offering, catalogItemId }] : []
+      const policy = items.get(offering.id)
+      return policy ? [{ ...offering, ...policy }] : []
     }),
   }
 }

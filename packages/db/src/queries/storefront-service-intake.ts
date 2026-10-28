@@ -79,7 +79,13 @@ export async function submitStorefrontServiceRequest(
     /** Runs inside the canonical transaction after scope rechecks (create and replay). */
     onSaved?: (
       tx: Prisma.TransactionClient,
-      saved: { id: string; tenantId: string; storeId: string; siteId: string },
+      saved: {
+        id: string
+        tenantId: string
+        storeId: string
+        siteId: string
+        timezone: string
+      },
     ) => Promise<void>
   } = {},
 ) {
@@ -158,6 +164,22 @@ export async function submitStorefrontServiceRequest(
           )
         )
           unavailable()
+        for (const line of lines) {
+          const policy = fresh.form.offerings.find(
+            (option) => option.id === line.offeringId,
+          )
+          if (
+            !policy ||
+            (policy.unavailable &&
+              !(policy.allowBookAhead && extras.requestedAt))
+          )
+            unavailable()
+          if (extras.requestedAt && !policy.allowBookAhead)
+            throw new CatalogError(
+              "INVALID_ORDER",
+              "This service is not taking booking requests. Send an ordinary request instead.",
+            )
+        }
         const ownRequest = await tx.serviceRequest.findFirst({
           where: {
             id: saved.id,
@@ -173,6 +195,7 @@ export async function submitStorefrontServiceRequest(
           tenantId: scope.tenantId,
           storeId: scope.storeId,
           siteId: scope.id,
+          timezone: fresh.form.store.timezone,
         })
       },
     },

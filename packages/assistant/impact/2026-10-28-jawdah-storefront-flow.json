@@ -1,0 +1,77 @@
+{
+  "version": 1,
+  "id": "2026-10-28-jawdah-storefront-flow",
+  "tickets": ["H02"],
+  "summary": "Jawdah storefront flow: Store-scoped Catalog availability/book-ahead policy and personal website-request notification reads, with future request fields.",
+  "noAssistantImpact": "Catalog Storefront settings use an authenticated form with fresh Catalog-management scope, revision and idempotency fences; they never change stock, publication or bookings. Website notifications reuse durable request alerts and authenticated Store scope; acknowledging them has no Order, payment or provider effect. Customer structured intent and payment verification remain canonical; no new model tool, financial authority or provider activation.",
+  "capabilities": [],
+  "procedures": [
+    {
+      "path": "catalog.storefront.get",
+      "status": "form_only",
+      "reason": "Catalog management form; fresh business/Store/member scope."
+    },
+    {
+      "path": "catalog.storefront.save",
+      "status": "form_only",
+      "reason": "Explicit Store-scoped settings save; CAS and canonical command receipt; no stock change."
+    },
+    {
+      "path": "storefrontRequests.notifications",
+      "status": "form_only",
+      "reason": "Personal dashboard request notices filtered by current authorized Stores."
+    },
+    {
+      "path": "storefrontRequests.readNotification",
+      "status": "form_only",
+      "reason": "Personal notification acknowledgement only; no business-state mutation."
+    }
+  ],
+  "docs": [
+    {
+      "topic": "feature",
+      "status": "local_only",
+      "path": ".brain/features/jawdah-storefront-end-to-end.md"
+    },
+    {
+      "topic": "api",
+      "status": "local_only",
+      "path": ".brain/api/contracts.md"
+    },
+    {
+      "topic": "permissions",
+      "status": "local_only",
+      "path": ".brain/api/permissions.md"
+    },
+    {
+      "topic": "schema",
+      "status": "local_only",
+      "path": ".brain/database/schema.md"
+    },
+    {
+      "topic": "capability",
+      "status": "local_only",
+      "path": ".brain/features/assistant-business-operations.md"
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "run",
+      "path": "packages/db/src/queries/catalog-storefront-policy.integration.test.ts",
+      "executed": true,
+      "result": "Existing non-production Jawdah QA CAS/concurrent-save, stable replay, mismatch/scope refusal and unchanged stock/Order facts pass; original settings restored."
+    },
+    {
+      "kind": "run",
+      "path": "packages/db/src/queries/storefront-preferred-date.test.ts",
+      "executed": true,
+      "result": "Three tests/11 assertions pass for business calendar, invalid/past/bounded future dates and service timezone DST fold/gap refusal."
+    },
+    {
+      "kind": "review",
+      "path": "docs/plans/jawdah-storefront-end-to-end-spec.md",
+      "executed": true,
+      "result": "Owner authorized implementation/testing with no deployment; full UI/payment acceptance remains pending."
+    }
+  ]
+}
