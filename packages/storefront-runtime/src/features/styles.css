@@ -393,3 +393,6 @@ html:has(.sf-feature-root:not([data-preview])) {
 .sf-feature-block {
   display: block;
 }
+.sf-feature-auth[data-embedded] {
+  gap: 12px;
+}

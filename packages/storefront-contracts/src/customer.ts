@@ -3,6 +3,9 @@ export type StorefrontCustomerView = {
   signedIn: boolean
   label?: string
   channel?: "email" | "whatsapp"
+  name?: string | null
+  email?: string | null
+  phone?: string | null
 } | null
 
 export type AccountView =

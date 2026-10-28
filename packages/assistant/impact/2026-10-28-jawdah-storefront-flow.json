@@ -2,7 +2,7 @@
   "version": 1,
   "id": "2026-10-28-jawdah-storefront-flow",
   "tickets": ["H02"],
-  "summary": "Jawdah storefront flow: Store-scoped Catalog availability/book-ahead policy and personal website-request notification reads, with future request fields.",
+  "summary": "Jawdah storefront flow: Store-specific availability, product and service request-ahead intent, multi-photo primary/gallery, quick customer login, retained draft/item links, delivery review and personal website-request notifications.",
   "noAssistantImpact": "Catalog Storefront settings use an authenticated form with fresh Catalog-management scope, revision and idempotency fences; they never change stock, publication or bookings. Website notifications reuse durable request alerts and authenticated Store scope; acknowledging them has no Order, payment or provider effect. Customer structured intent and payment verification remain canonical; no new model tool, financial authority or provider activation.",
   "capabilities": [],
   "procedures": [
@@ -72,6 +72,12 @@
       "path": "docs/plans/jawdah-storefront-end-to-end-spec.md",
       "executed": true,
       "result": "Owner authorized implementation/testing with no deployment; full UI/payment acceptance remains pending."
+    },
+    {
+      "kind": "run",
+      "path": "packages/storefront-templates/src/commerce-studio/commerce-flow.test.ts",
+      "executed": true,
+      "result": "Two tests/10 assertions pass: intent/date cannot silently merge; exact totals and scoped checkout drafts retain fulfilment choices and clear after submit. Full operating payment acceptance remains pending."
     }
   ]
 }

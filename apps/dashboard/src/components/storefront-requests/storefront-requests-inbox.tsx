@@ -39,13 +39,14 @@ import {
   buttonVariants,
   cn,
 } from "@ewatrade/ui"
+import { multiplyExactDecimals } from "@ewatrade/utils/exact-decimal"
 import { ArrowLeft01Icon, InboxIcon } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import type { inferRouterOutputs } from "@trpc/server"
 import Link from "next/link"
 import { parseAsString, parseAsStringLiteral, useQueryState } from "nuqs"
-import { useId, useMemo, useState } from "react"
+import { useId, useMemo, useRef, useState } from "react"
 import {
   alertLabels,
   money,
@@ -61,6 +62,39 @@ const filters = ["open", "confirmed", "closed", "all"] as const
 
 function errorMessage(error: unknown) {
   return error instanceof Error ? error.message : "That didn't work. Try again."
+}
+
+/** A destination confirmOrder accepts: 8–300 characters after trimming. */
+function hasDestination(value: unknown): value is string {
+  if (typeof value !== "string") return false
+  const length = value.trim().length
+  return length >= 8 && length <= 300
+}
+
+/** Same exact decimal math the server confirms with; null when not whole. */
+function exactLineTotalMinor(unitPriceMinor: number, quantity: string) {
+  try {
+    const whole = /^(\d+)(?:\.0+)?$/.exec(
+      multiplyExactDecimals(String(unitPriceMinor), quantity),
+    )
+    const value = Number(whole?.[1])
+    return whole && Number.isSafeInteger(value) ? value : null
+  } catch {
+    return null
+  }
+}
+
+/** Calendar day saved as YYYY-MM-DD; formatted without shifting time zones. */
+function preferredDay(value: string) {
+  const date = new Date(`${value}T00:00:00Z`)
+  return Number.isNaN(date.getTime())
+    ? value
+    : date.toLocaleDateString("en-NG", {
+        weekday: "short",
+        day: "numeric",
+        month: "short",
+        timeZone: "UTC",
+      })
 }
 
 /**
@@ -250,7 +284,14 @@ function OrderRequests({
                   <span className="truncate text-xs text-muted-foreground">
                     {item.reference} · {item.lineCount}{" "}
                     {item.lineCount === 1 ? "item" : "items"} ·{" "}
-                    {item.fulfilment === "DELIVERY" ? "Delivery" : "Pickup"} ·{" "}
+                    {item.fulfilment !== "DELIVERY"
+                      ? "Pickup"
+                      : // Flagged only once the list carries the saved destination.
+                        "deliveryAddress" in item &&
+                          !hasDestination(item.deliveryAddress)
+                        ? "Delivery · details needed"
+                        : "Delivery"}{" "}
+                    ·{" "}
                     {new Date(item.createdAt).toLocaleString("en-NG", {
                       day: "numeric",
                       month: "short",
@@ -281,6 +322,7 @@ function OrderRequests({
       </ListShell>
       {selected ? (
         <OrderRequestDetail
+          key={selected}
           requestId={selected}
           onBack={() => onSelect(null)}
           timeZone={timeZone}
@@ -301,13 +343,13 @@ function OrderRequestDetail({
     ...trpc.storefrontRequests.order.queryOptions({ requestId }),
     ...FRESH,
   })
-  const [fee, setFee] = useState("")
-  const [acceptPrices, setAcceptPrices] = useState(false)
-  const [dialog, setDialog] = useState<
-    "decline" | "request_information" | null
-  >(null)
+  const [dialog, setDialog] = useState<{
+    action: RespondAction
+    initialMessage?: string
+  } | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const feeId = useId()
+  // Blocks a second confirm before the pending state renders; released on failure.
+  const confirmLock = useRef(false)
   const refresh = () =>
     Promise.all([
       queryClient.invalidateQueries({
@@ -327,6 +369,7 @@ function OrderRequestDetail({
         void refresh()
       },
       onError: (failure) => {
+        confirmLock.current = false
         setError(errorMessage(failure))
         void refresh()
       },
@@ -346,6 +389,7 @@ function OrderRequestDetail({
       reference: data.reference,
       kind: "order",
       stage: data.stage,
+      fulfilment: data.fulfilment,
       staffResponse: data.staffResponse,
       lines: data.lines.map((line) => ({
         name: line.itemName,
@@ -362,6 +406,7 @@ function OrderRequestDetail({
             paymentStatus: data.order.paymentStatus,
           }
         : null,
+      preferredDate: data.preferredDate,
     })
   }, [data])
   if (detail.isPending)
@@ -380,20 +425,18 @@ function OrderRequestDetail({
     )
   const open =
     data.status === "SUBMITTED" || data.status === "NEEDS_INFORMATION"
-  const priceChanged = data.current.some((line) => line.priceChanged)
-  const unavailable = data.current.some(
-    (line) => !line.available || line.priceMinor === null,
-  )
-  const short = data.current.some((line) => !line.enoughStock)
   const delivery = data.fulfilment === "delivery"
-  const feeMinor = delivery ? parseMoneyInput(fee) : 0
-  const currentSubtotal = data.lines.reduce((sum, line) => {
-    const current = data.current.find(
-      (entry) => entry.offeringId === line.offeringId,
-    )
-    const price = current?.priceMinor ?? line.observedUnitPriceMinor
-    return sum + Math.round(price * Number(line.quantity))
-  }, 0)
+  const requestedAhead = data.lines.some((line) => line.preorder)
+  const busy = confirm.isPending || confirm.isSuccess
+  const submitConfirm = (choice: ConfirmChoice) => {
+    if (confirmLock.current || busy) return
+    confirmLock.current = true
+    confirm.mutate({
+      requestId,
+      expectedRevision: data.revision,
+      ...choice,
+    })
+  }
   const alert = data.alerts.at(-1)
   return (
     <article
@@ -414,12 +457,30 @@ function OrderRequestDetail({
               timeStyle: "short",
               timeZone,
             })}{" "}
-            · {delivery ? `Delivery to ${data.deliveryAddress}` : "Pickup"}
+            ·{" "}
+            {!delivery
+              ? "Pickup"
+              : hasDestination(data.deliveryAddress)
+                ? `Delivery to ${data.deliveryAddress.trim()}`
+                : "Delivery · details needed"}
           </p>
           <p className="text-sm">
             WhatsApp {data.customerPhone}
             {data.customerEmail ? ` · ${data.customerEmail}` : ""}
           </p>
+          {requestedAhead || data.preferredDate ? (
+            <p className="text-sm text-muted-foreground">
+              {[
+                requestedAhead ? "Requested ahead" : null,
+                data.preferredDate
+                  ? `Preferred date ${preferredDay(data.preferredDate)}`
+                  : null,
+              ]
+                .filter(Boolean)
+                .join(" · ")}
+              {data.order ? "" : " (not reserved until you confirm)"}
+            </p>
+          ) : null}
         </div>
         <Badge variant={data.stage === "received" ? "default" : "outline"}>
           {stageLabels[data.stage] ?? data.stage}
@@ -482,6 +543,8 @@ function OrderRequestDetail({
                     <Badge variant="destructive">Unavailable</Badge>
                   ) : !current.enoughStock ? (
                     <Badge variant="destructive">Not enough</Badge>
+                  ) : line.preorder ? (
+                    <Badge variant="outline">Requested ahead</Badge>
                   ) : current.stock === "unknown" ? (
                     <Badge variant="outline">Not tracked</Badge>
                   ) : current.stock === "low_stock" ? (
@@ -517,9 +580,11 @@ function OrderRequestDetail({
           </div>
           <p className="text-sm text-muted-foreground">
             Total {money(data.order.totalMinor, data.order.currencyCode)}
-            {data.order.deliveryFeeMinor
-              ? ` (includes ${money(data.order.deliveryFeeMinor, data.order.currencyCode)} delivery)`
-              : ""}{" "}
+            {!delivery
+              ? ""
+              : data.order.deliveryFeeMinor === 0
+                ? " (free delivery)"
+                : ` (includes ${money(data.order.deliveryFeeMinor, data.order.currencyCode)} delivery)`}{" "}
             · Balance {money(data.order.balanceMinor, data.order.currencyCode)}
           </p>
           <div className="flex flex-wrap gap-2">
@@ -540,87 +605,15 @@ function OrderRequestDetail({
           </div>
         </div>
       ) : open ? (
-        <div className="grid gap-3 rounded-lg border border-border p-4">
-          <p className="text-sm">
-            Confirming creates an order for {data.customerName} and reserves the
-            stock. Current subtotal{" "}
-            <b>{money(currentSubtotal, data.currencyCode)}</b>.
-          </p>
-          {delivery ? (
-            <Field data-invalid={fee && feeMinor === null ? true : undefined}>
-              <FieldLabel htmlFor={feeId}>Delivery fee</FieldLabel>
-              <Input
-                id={feeId}
-                inputMode="decimal"
-                placeholder="0"
-                value={fee}
-                onChange={(event) => setFee(event.target.value)}
-                className="max-w-40"
-              />
-              <FieldDescription>
-                Use 0 for free delivery. Added to the order total.
-              </FieldDescription>
-              {fee && feeMinor === null ? (
-                <FieldError>Enter an amount like 1500.</FieldError>
-              ) : null}
-            </Field>
-          ) : null}
-          {priceChanged ? (
-            <Field orientation="horizontal">
-              <Checkbox
-                id={`${feeId}-prices`}
-                checked={acceptPrices}
-                onCheckedChange={(value) => setAcceptPrices(value === true)}
-              />
-              <FieldLabel htmlFor={`${feeId}-prices`}>
-                Prices changed since the customer sent this. Confirm at today's
-                prices (tell the customer).
-              </FieldLabel>
-            </Field>
-          ) : null}
-          {unavailable || short ? (
-            <p className="text-sm text-amber-800">
-              {unavailable ? "Some items can't be sold now. " : ""}
-              {short
-                ? "Recorded stock isn't enough for some items. Update stock or ask the customer."
-                : ""}
-            </p>
-          ) : null}
-          <div className="flex flex-wrap gap-2">
-            <Button
-              disabled={
-                confirm.isPending ||
-                (delivery && (fee === "" || feeMinor === null)) ||
-                (priceChanged && !acceptPrices) ||
-                unavailable
-              }
-              onClick={() =>
-                confirm.mutate({
-                  requestId,
-                  expectedRevision: data.revision,
-                  ...(delivery && feeMinor !== null
-                    ? { deliveryFeeMinor: feeMinor }
-                    : {}),
-                  ...(priceChanged
-                    ? { acceptCurrentPrices: acceptPrices }
-                    : {}),
-                })
-              }
-            >
-              {confirm.isPending ? <Spinner /> : null}
-              Confirm order
-            </Button>
-            <Button
-              variant="outline"
-              onClick={() => setDialog("request_information")}
-            >
-              Ask for details
-            </Button>
-            <Button variant="outline" onClick={() => setDialog("decline")}>
-              Decline
-            </Button>
-          </div>
-        </div>
+        <ConfirmOrderPanel
+          data={data}
+          busy={busy}
+          pending={confirm.isPending}
+          onConfirm={submitConfirm}
+          onRespond={(action, initialMessage) =>
+            setDialog({ action, initialMessage })
+          }
+        />
       ) : data.staffResponse ? (
         <p className="text-sm text-muted-foreground">
           Your reply: {data.staffResponse}
@@ -684,13 +677,14 @@ function OrderRequestDetail({
       ) : null}
       {dialog ? (
         <RespondDialog
-          action={dialog}
+          action={dialog.action}
+          initialMessage={dialog.initialMessage}
           customerName={data.customerName}
           onClose={() => setDialog(null)}
           onSubmit={async (message, clientMessageId) => ({
             requestId,
             expectedRevision: data.revision,
-            action: dialog,
+            action: dialog.action,
             message,
             clientMessageId,
           })}
@@ -704,14 +698,278 @@ function OrderRequestDetail({
   )
 }
 
+type OrderDetail = inferRouterOutputs<AppRouter>["storefrontRequests"]["order"]
+type RespondAction = "decline" | "request_information"
+type ConfirmChoice = {
+  deliveryFeeMinor?: number
+  deliveryAddress?: string
+  acceptCurrentPrices?: boolean
+}
+
+/** Items subtotal at today's prices, or null when any line can't be priced exactly. */
+function currentSubtotalMinor(data: OrderDetail) {
+  let subtotal = 0
+  for (const line of data.lines) {
+    const price = data.current.find(
+      (entry) => entry.offeringId === line.offeringId,
+    )?.priceMinor
+    const total =
+      price === null || price === undefined
+        ? null
+        : exactLineTotalMinor(price, line.quantity)
+    if (total === null) return null
+    subtotal += total
+  }
+  return Number.isSafeInteger(subtotal) ? subtotal : null
+}
+
+/**
+ * Review for a pending request. Drafts live here, keyed with the selected request,
+ * so they never carry over and refetches never overwrite what staff typed.
+ */
+function ConfirmOrderPanel({
+  data,
+  busy,
+  pending,
+  onConfirm,
+  onRespond,
+}: {
+  data: OrderDetail
+  busy: boolean
+  pending: boolean
+  onConfirm: (choice: ConfirmChoice) => void
+  onRespond: (action: RespondAction, initialMessage?: string) => void
+}) {
+  const id = useId()
+  const [destinationDraft, setDestinationDraft] = useState<string | null>(null)
+  const [fee, setFee] = useState("")
+  const [acceptPrices, setAcceptPrices] = useState(false)
+  const delivery = data.fulfilment === "delivery"
+  // Untouched, the field follows the saved request; once typed, the draft wins.
+  const destination = destinationDraft ?? data.deliveryAddress ?? ""
+  const destinationReady = hasDestination(destination)
+  const destinationLength = destination.trim().length
+  const feeMinor = !delivery
+    ? 0
+    : destinationReady
+      ? parseMoneyInput(fee)
+      : null
+  const priceChanged = data.current.some((line) => line.priceChanged)
+  const unavailable = data.current.some(
+    (line) => !line.available || line.priceMinor === null,
+  )
+  const short = data.current.some((line) => !line.enoughStock)
+  const subtotal = currentSubtotalMinor(data)
+  const total =
+    subtotal !== null &&
+    feeMinor !== null &&
+    Number.isSafeInteger(subtotal + feeMinor)
+      ? subtotal + feeMinor
+      : null
+  const blocked =
+    busy ||
+    unavailable ||
+    short ||
+    total === null ||
+    (delivery && !destinationReady) ||
+    (priceChanged && !acceptPrices)
+  const askForDestination = `Please share the delivery address or a landmark for your order ${data.reference}.`
+  return (
+    <div className="grid gap-3 rounded-lg border border-border p-4">
+      {delivery && !hasDestination(data.deliveryAddress) ? (
+        <Alert>
+          <AlertTitle>Delivery details needed</AlertTitle>
+          <AlertDescription className="grid justify-items-start gap-2">
+            Ask the customer for an address or location before setting the
+            delivery fee.
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={busy}
+              onClick={() =>
+                onRespond("request_information", askForDestination)
+              }
+            >
+              Ask for details
+            </Button>
+          </AlertDescription>
+        </Alert>
+      ) : null}
+      <p className="text-sm">
+        Confirming creates an order for {data.customerName} and reserves the
+        stock.
+      </p>
+      {delivery ? (
+        <>
+          <Field
+            data-invalid={
+              destinationDraft !== null &&
+              destinationLength > 0 &&
+              !destinationReady
+                ? true
+                : undefined
+            }
+          >
+            <FieldLabel htmlFor={`${id}-destination`}>
+              Delivery destination
+            </FieldLabel>
+            <Textarea
+              id={`${id}-destination`}
+              rows={2}
+              value={destination}
+              disabled={busy}
+              placeholder="Street address or a landmark"
+              onChange={(event) => setDestinationDraft(event.target.value)}
+            />
+            {destinationDraft !== null &&
+            destinationLength > 0 &&
+            !destinationReady ? (
+              <FieldError>
+                {destinationLength > 300
+                  ? "Keep the destination under 300 characters."
+                  : "Add a little more detail, like a street or landmark."}
+              </FieldError>
+            ) : null}
+          </Field>
+          <Field
+            data-invalid={
+              destinationReady && fee && feeMinor === null ? true : undefined
+            }
+          >
+            <FieldLabel htmlFor={`${id}-fee`}>Delivery fee</FieldLabel>
+            <Input
+              id={`${id}-fee`}
+              inputMode="decimal"
+              value={fee}
+              disabled={busy || !destinationReady}
+              onChange={(event) => setFee(event.target.value)}
+              className="max-w-40"
+            />
+            <FieldDescription>
+              {destinationReady
+                ? "Use 0 for free delivery. Added to the order total."
+                : "Add a destination first."}
+            </FieldDescription>
+            {destinationReady && fee && feeMinor === null ? (
+              <FieldError>Enter an amount like 1500.</FieldError>
+            ) : null}
+          </Field>
+        </>
+      ) : null}
+      {priceChanged ? (
+        <Field orientation="horizontal">
+          <Checkbox
+            id={`${id}-prices`}
+            checked={acceptPrices}
+            disabled={busy}
+            onCheckedChange={(value) => setAcceptPrices(value === true)}
+          />
+          <FieldLabel htmlFor={`${id}-prices`}>
+            Prices changed since the customer sent this. Confirm at today's
+            prices (tell the customer).
+          </FieldLabel>
+        </Field>
+      ) : null}
+      {unavailable || short || subtotal === null ? (
+        <p className="text-sm text-amber-800">
+          {unavailable ? "Some items can't be sold now. " : ""}
+          {short
+            ? "Recorded stock isn't enough for some items. Update stock or ask the customer. "
+            : ""}
+          {!unavailable && subtotal === null
+            ? "A quantity doesn't come to a whole price. Ask the customer."
+            : ""}
+        </p>
+      ) : null}
+      <dl className="grid max-w-80 gap-1 text-sm">
+        <QuoteRow
+          label="Items subtotal"
+          value={subtotal === null ? "—" : money(subtotal, data.currencyCode)}
+        />
+        {delivery ? (
+          <QuoteRow
+            label="Delivery fee"
+            value={
+              feeMinor === null
+                ? "—"
+                : feeMinor === 0
+                  ? "Free"
+                  : money(feeMinor, data.currencyCode)
+            }
+          />
+        ) : null}
+        <QuoteRow
+          strong
+          label="Total"
+          value={total === null ? "—" : money(total, data.currencyCode)}
+        />
+      </dl>
+      <div className="flex flex-wrap gap-2">
+        <Button
+          disabled={blocked}
+          onClick={() => {
+            if (blocked) return
+            onConfirm({
+              ...(delivery && feeMinor !== null
+                ? {
+                    deliveryFeeMinor: feeMinor,
+                    deliveryAddress: destination.trim(),
+                  }
+                : {}),
+              ...(priceChanged ? { acceptCurrentPrices: acceptPrices } : {}),
+            })
+          }}
+        >
+          {pending ? <Spinner /> : null}
+          {total === null
+            ? "Confirm order"
+            : `Confirm order · ${money(total, data.currencyCode)}`}
+        </Button>
+        <Button
+          variant="outline"
+          disabled={busy}
+          onClick={() => onRespond("request_information")}
+        >
+          Ask for details
+        </Button>
+        <Button
+          variant="outline"
+          disabled={busy}
+          onClick={() => onRespond("decline")}
+        >
+          Decline
+        </Button>
+      </div>
+    </div>
+  )
+}
+
+function QuoteRow({
+  label,
+  value,
+  strong,
+}: { label: string; value: string; strong?: boolean }) {
+  return (
+    <div className="flex items-center justify-between gap-4">
+      <dt className={strong ? "font-medium" : "text-muted-foreground"}>
+        {label}
+      </dt>
+      <dd className={cn("tabular-nums", strong && "font-semibold")}>{value}</dd>
+    </div>
+  )
+}
+
 function RespondDialog({
   action,
+  initialMessage,
   customerName,
   onClose,
   onSubmit,
   onDone,
 }: {
-  action: "decline" | "request_information"
+  action: RespondAction
+  /** Optional starting text; staff can edit it before sending. */
+  initialMessage?: string
   customerName: string
   onClose: () => void
   onSubmit: (
@@ -720,7 +978,7 @@ function RespondDialog({
   ) => Promise<{
     requestId: string
     expectedRevision: number
-    action: "decline" | "request_information"
+    action: RespondAction
     message: string
     clientMessageId: string
   }>
@@ -728,7 +986,7 @@ function RespondDialog({
 }) {
   const trpc = useTRPC()
   const id = useId()
-  const [message, setMessage] = useState("")
+  const [message, setMessage] = useState(initialMessage ?? "")
   const [clientMessageId] = useState(() => crypto.randomUUID())
   const respond = useMutation(
     trpc.storefrontRequests.respondOrder.mutationOptions({ onSuccess: onDone }),

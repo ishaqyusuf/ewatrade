@@ -9,6 +9,7 @@ export type DraftFacts = {
   reference: string
   kind: "order" | "service"
   stage: string
+  fulfilment?: "pickup" | "delivery"
   staffResponse?: string | null
   lines: { name: string; quantity: string; unitLabel?: string | null }[]
   order?: {
@@ -61,9 +62,11 @@ export function storefrontDraftText(facts: DraftFacts) {
     ? `\n\nTrack it here: ${facts.receiptUrl}`
     : ""
   if (facts.order) {
-    const fee = facts.order.deliveryFeeMinor
-      ? `\nDelivery: ${money(facts.order.deliveryFeeMinor, facts.order.currencyCode)}`
-      : ""
+    const amount = facts.order.deliveryFeeMinor
+    const fee =
+      amount !== undefined && (facts.fulfilment === "delivery" || amount > 0)
+        ? `\nDelivery: ${amount === 0 ? "Free" : money(amount, facts.order.currencyCode)}`
+        : ""
     if (facts.order.paymentStatus === "PAID")
       return `${hello} Thank you, we've received full payment for order ${facts.order.orderNumber}. We'll let you know when it's ready.${receipt}`
     return `${hello} We've confirmed your ${facts.kind === "order" ? "order" : "service"} (${ref}, order ${facts.order.orderNumber}).\n\n${itemsText(facts.lines)}${fee}\nTotal: ${money(facts.order.totalMinor, facts.order.currencyCode)}\n\nWe'll send payment details next.${receipt}`

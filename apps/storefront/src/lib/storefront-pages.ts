@@ -79,6 +79,9 @@ export function customerView(
     signedIn: true,
     channel,
     label: maskStorefrontIdentifier(channel, identifier),
+    name: session.customer.displayName,
+    email: session.customer.emailNormalized,
+    phone: session.customer.phoneE164,
   }
 }
 

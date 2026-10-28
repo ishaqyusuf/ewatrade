@@ -326,7 +326,7 @@ const serviceReceiptSelect = {
               pricingPolicy: true,
               fixedPriceMinor: true,
               currencyCode: true,
-              catalogItem: { select: { name: true } },
+              catalogItem: { select: { id: true, name: true } },
             },
           },
         },
@@ -541,6 +541,7 @@ async function projectServiceReceipt(
     collectionAddress: row.collectionAddress,
     lines: request.lines.map((line) => ({
       offeringId: line.offeringId,
+      itemId: line.offering.catalogItem.id,
       serviceName: line.offering.catalogItem.name,
       optionName: line.variantName || line.offeringName,
       quantity: line.requestedQuantity.toString(),

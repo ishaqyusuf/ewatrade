@@ -139,6 +139,7 @@ export async function checkStorefrontBag(lines: unknown) {
                 quantity: String(
                   (line as { quantity?: unknown }).quantity ?? "1",
                 ),
+                preorder: (line as { intent?: unknown }).intent === "preorder",
               },
             ]
           : [],
@@ -163,10 +164,15 @@ export async function checkStorefrontBag(lines: unknown) {
         const quantity = Number(line.quantity)
         return {
           offeringId: line.offeringId,
-          available: Boolean(fact?.public && fact.itemId === line.itemId),
+          available: Boolean(
+            fact?.public &&
+              fact.itemId === line.itemId &&
+              (line.preorder ? fact.allowBookAhead : !fact.unavailable),
+          ),
           priceMinor: fact?.priceMinor ?? null,
           stock: fact?.stock ?? ("unknown" as const),
           enough:
+            line.preorder ||
             !fact ||
             fact.availableQuantity === null ||
             (Number.isFinite(quantity) &&

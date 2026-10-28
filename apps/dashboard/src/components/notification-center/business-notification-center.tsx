@@ -27,6 +27,10 @@ import {
   PaymentReportNotifications,
   usePendingPaymentReports,
 } from "./payment-report-notifications"
+import {
+  StorefrontRequestNotifications,
+  useStorefrontRequestNotifications,
+} from "./storefront-request-notifications"
 
 /** Fresh, mount-owned reads: never joined across user, Business or Store. */
 const freshRead = {
@@ -71,10 +75,13 @@ export function BusinessNotificationCenter({
   const payments = usePendingPaymentReports()
   // So do unread payment alert plan changes.
   const planNotices = usePaymentPlanNotices()
+  // And unread website requests; only this read polls.
+  const requests = useStorefrontRequestNotifications({ poll: true })
   const unread =
     alerts +
     (payments.isSuccess ? payments.data.items.length : 0) +
-    (planNotices.isSuccess ? planNotices.data.unreadCount : 0)
+    (planNotices.isSuccess ? planNotices.data.unreadCount : 0) +
+    (requests.isSuccess ? requests.data.unreadCount : 0)
 
   return (
     <Popover
@@ -114,6 +121,13 @@ export function BusinessNotificationCenter({
             appearance="bell"
             timeZone={timeZone}
             onNavigate={() => setOpen(false)}
+          />
+        ) : null}
+        {open ? (
+          <StorefrontRequestNotifications
+            timeZone={timeZone}
+            onNavigate={() => setOpen(false)}
+            onChanged={() => void requests.refetch()}
           />
         ) : null}
         {open ? (

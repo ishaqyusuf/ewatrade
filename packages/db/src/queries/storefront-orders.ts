@@ -405,15 +405,6 @@ export async function submitStorefrontOrderRequest(
       "This shop isn't taking order requests right now.",
     )
   let requestedAt: Date | null = null
-  if (value.preferredDate) {
-    try {
-      requestedAt = storefrontPreferredDate(value.preferredDate, scope.timezone)
-    } catch (error) {
-      throw new StorefrontOrderError("INVALID", (error as Error).message, {
-        field: "preferredDate",
-      })
-    }
-  }
   if (!scope.fulfilment.includes(value.fulfilment))
     throw new StorefrontOrderError(
       "INVALID",
@@ -459,10 +450,20 @@ export async function submitStorefrontOrderRequest(
           clientRequestId: value.clientRequestId,
         },
       },
-      select: { id: true, reference: true, payloadHash: true },
+      select: {
+        id: true,
+        reference: true,
+        payloadHash: true,
+        storeId: true,
+        siteId: true,
+      },
     })
     if (!previous) return null
-    if (previous.payloadHash !== hash)
+    if (
+      previous.payloadHash !== hash ||
+      previous.storeId !== scope.storeId ||
+      previous.siteId !== scope.siteId
+    )
       throw new StorefrontOrderError(
         "REPLAY_MISMATCH",
         "This request was already sent with different details. Refresh and try again.",
@@ -480,6 +481,15 @@ export async function submitStorefrontOrderRequest(
   }
   const existing = await replay()
   if (existing) return existing
+  if (value.preferredDate) {
+    try {
+      requestedAt = storefrontPreferredDate(value.preferredDate, scope.timezone)
+    } catch (error) {
+      throw new StorefrontOrderError("INVALID", (error as Error).message, {
+        field: "preferredDate",
+      })
+    }
+  }
 
   for (let attempt = 0; attempt < 3; attempt++) {
     try {
@@ -771,7 +781,10 @@ function projectReceipt(row: ReceiptRow, businessName: string) {
     createdAt: row.createdAt.toISOString(),
     customerName: row.customerName,
     customerPhoneMasked: maskPhone(row.customerPhone),
-    fulfilment: row.fulfilment === "DELIVERY" ? "delivery" : "pickup",
+    fulfilment:
+      row.fulfilment === "DELIVERY"
+        ? ("delivery" as const)
+        : ("pickup" as const),
     deliveryAddress: row.deliveryAddress,
     preferredDate: row.requestedAt?.toISOString().slice(0, 10) ?? null,
     notes: row.notes,
@@ -1070,6 +1083,7 @@ export async function listStorefrontOrderRequests(
       revision: true,
       customerName: true,
       fulfilment: true,
+      deliveryAddress: true,
       currencyCode: true,
       observedSubtotalMinor: true,
       createdAt: true,

@@ -1546,3 +1546,175 @@ html:has(.cs-store:not([data-preview])) {
 .cs-block {
   display: block;
 }
+
+/* ---------- photo gallery (Product and Service detail) ---------- */
+.cs-product__media:has(> .cs-gallery) {
+  overflow: visible;
+  background: none;
+  border-radius: 0;
+}
+.cs-gallery {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+}
+.cs-gallery__stage {
+  position: relative;
+  border-radius: var(--cs-radius);
+  overflow: hidden;
+  background: var(--cs-tint);
+  outline: none;
+}
+.cs-gallery__stage:focus-visible {
+  box-shadow: 0 0 0 3px var(--cs-accent-ink, var(--cs-accent));
+}
+.cs-gallery__photo {
+  display: block;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+}
+.cs-store .cs-gallery__nav {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  background: color-mix(in oklab, var(--cs-paper) 88%, transparent);
+  border-color: var(--cs-line-strong);
+}
+.cs-gallery__nav[data-side="previous"] {
+  left: 10px;
+}
+.cs-gallery__nav[data-side="next"] {
+  right: 10px;
+}
+.cs-gallery__thumbs {
+  display: flex;
+  gap: 8px;
+  list-style: none;
+  margin: 0;
+  padding: 2px;
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+.cs-gallery__thumb {
+  display: block;
+  width: 72px;
+  flex: none;
+  padding: 0;
+  border: 1px solid var(--cs-line);
+  border-radius: calc(var(--cs-radius) * 0.6);
+  overflow: hidden;
+  background: var(--cs-tint);
+  cursor: pointer;
+}
+.cs-gallery__thumb[aria-current="true"] {
+  border-color: var(--cs-accent-ink, var(--cs-accent));
+  box-shadow: 0 0 0 2px var(--cs-accent-ink, var(--cs-accent));
+}
+.cs-gallery__thumb:focus-visible {
+  outline: 2px solid var(--cs-accent-ink, var(--cs-accent));
+  outline-offset: 2px;
+}
+.cs-gallery__thumb-photo {
+  display: block;
+  width: 100%;
+  aspect-ratio: 1;
+  object-fit: cover;
+}
+.cs-service-detail__media .sf-tile {
+  aspect-ratio: 4 / 3;
+  border-radius: var(--cs-radius);
+}
+.cs-service-detail__grid[data-media] {
+  max-width: none;
+}
+@container storefront (min-width: 900px) {
+  .cs-service-detail__grid[data-media] {
+    grid-template-columns: 1.1fr 1fr;
+    gap: 56px;
+    align-items: start;
+  }
+  .cs-service-detail__media {
+    position: sticky;
+    top: 96px;
+  }
+}
+
+/* ---------- request ahead, quick login, location ---------- */
+.cs-bag-line__tag {
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--cs-ink-2);
+  margin-top: 2px !important;
+}
+.cs-checkout__main {
+  display: grid;
+  gap: 20px;
+  align-content: start;
+  min-width: 0;
+}
+.cs-link-button {
+  appearance: none;
+  background: none;
+  border: 0;
+  padding: 0;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+.cs-quick-login {
+  display: grid;
+  gap: 12px;
+}
+.cs-quick-login[hidden] {
+  display: none;
+}
+.cs-auth[data-embedded] {
+  gap: 12px;
+}
+.cs-locate {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  margin-top: 8px;
+}
+.cs-locate .cs-fine:empty {
+  display: none;
+}
+.cs-locate .cs-fine {
+  margin: 0;
+}
+.cs-locate__badge {
+  gap: 6px;
+}
+.cs-locate__remove {
+  display: inline-grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  margin-right: -4px;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: none;
+  color: inherit;
+  cursor: pointer;
+}
+.cs-locate__remove svg {
+  width: 14px;
+  height: 14px;
+}
+.cs-time-menu {
+  max-height: min(320px, var(--available-height));
+}
+@media (pointer: coarse) {
+  .cs-gallery__thumb {
+    width: 64px;
+    min-height: 44px;
+  }
+  .cs-locate__remove {
+    width: 32px;
+    height: 32px;
+  }
+}

@@ -1,7 +1,7 @@
 "use client"
 
 import { SheetFrame } from "@/components/sheets/sheet-frame"
-import { useCatalogPhoto } from "@/hooks/use-catalog-photo"
+import { useCatalogPhotoQueue } from "@/hooks/use-catalog-photo"
 import { useTRPC } from "@/trpc/client"
 import type {
   RouterInputs,
@@ -47,6 +47,26 @@ type Item = Pick<
   RouterOutputs["catalog"]["getItem"],
   "id" | "name" | "photos" | "illustrations" | "category" | "kind"
 >
+
+type PhotoTile = {
+  key: string
+  image: ReactNode
+  note?: string
+  pending: boolean
+  remove(): void
+}
+
+/** Arranged tiles first, in the owner's order; newly added ones follow. */
+function arrangePhotos<T extends { key: string }>(order: string[], tiles: T[]) {
+  const rank = new Map(order.map((key, index) => [key, index]))
+  return tiles
+    .map((tile, index) => ({
+      tile,
+      rank: rank.get(tile.key) ?? order.length + index,
+    }))
+    .sort((left, right) => left.rank - right.rank)
+    .map((entry) => entry.tile)
+}
 
 export function CatalogSavedPhotos({
   item,
@@ -136,7 +156,7 @@ function SavedPhotoEditor({
   const themeClass = useCatalogThemeClass()
   const trpc = useTRPC()
   const client = useQueryClient()
-  const photo = useCatalogPhoto(storeId)
+  const photos = useCatalogPhotoQueue(storeId)
   const stores = useQuery(trpc.tenant.stores.queryOptions())
   const businessProfileKey = stores.data?.find(
     (store) => store.id === storeId,
@@ -156,8 +176,19 @@ function SavedPhotoEditor({
   const [ids, setIds] = useState(() =>
     item.photos.filter((p) => p.storeId === storeId).map((p) => p.assetId),
   )
+  const expected = useRef({
+    expectedAssetIds: item.photos
+      .filter((photo) => photo.storeId === storeId)
+      .map((photo) => photo.assetId),
+    expectedIllustrationId:
+      item.illustrations.find((entry) => entry.storeId === storeId)
+        ?.illustrationId ?? null,
+  })
   // Picked from My images; each is copied onto this item when it saves.
   const [picked, setPicked] = useState<CatalogGalleryEntry[]>([])
+  // Tile keys in the order the owner arranged them; the first is primary.
+  const [order, setOrder] = useState<string[]>([])
+  const [announcement, setAnnouncement] = useState("")
   const [galleryOpen, setGalleryOpen] = useState(false)
   const [showIllustrations, setShowIllustrations] = useState(false)
   const [removedSaved, setRemovedSaved] = useState(false)
@@ -173,7 +204,7 @@ function SavedPhotoEditor({
   const reuse = useMutation(trpc.catalog.photos.reuse.mutationOptions())
   const busy = useRef(false)
   const locked = saving || Boolean(attempt.current)
-  const total = ids.length + picked.length + (photo.file ? 1 : 0)
+  const total = ids.length + picked.length + photos.drafts.length
   const illustration = findCatalogIllustration(illustrationId)
   async function save() {
     if (busy.current) return
@@ -183,24 +214,37 @@ function SavedPhotoEditor({
     setError(null)
     try {
       if (!attempt.current) {
-        const added = illustrationId ? [] : await photo.upload(command.current)
-        const reused: string[] = []
-        for (const entry of illustrationId ? [] : picked) {
-          if (!mounted.current) break
-          const copy = await reuse.mutateAsync({
-            storeId,
-            sourceAssetId: entry.assetId,
-            sourceStoreId: entry.storeId,
-            clientOperationId: `${command.current}:reuse:${entry.assetId}`,
-          })
-          reused.push(copy.assetId)
+        // Each tile resolves to its asset in this Store, then keeps its place.
+        const assets = new Map(ids.map((id) => [id, id]))
+        if (!illustrationId) {
+          for (const [key, id] of await photos.upload(command.current))
+            assets.set(`new:${key}`, id)
+          for (const entry of picked) {
+            if (!mounted.current) break
+            const copy = await reuse.mutateAsync({
+              storeId,
+              sourceAssetId: entry.assetId,
+              sourceStoreId: entry.storeId,
+              clientOperationId: `${command.current}:reuse:${entry.assetId}`,
+            })
+            assets.set(`picked:${entry.assetId}`, copy.assetId)
+          }
         }
         if (!mounted.current)
           throw new Error(
             "The active Store changed. Reopen this item before saving.",
           )
+        const assetIds = (illustrationId ? [] : tiles).flatMap((tile) => {
+          const id = assets.get(tile.key)
+          return id ? [id] : []
+        })
+        if (assetIds.length !== (illustrationId ? 0 : tiles.length))
+          throw new Error(
+            "Images could not be saved. Retry the same selection.",
+          )
         attempt.current = {
-          assetIds: illustrationId ? [] : [...ids, ...reused, ...added],
+          // Primary first: the replace command keeps this order.
+          assetIds: [...new Set(assetIds)],
           illustrationId,
           clientOperationId: command.current,
         }
@@ -211,6 +255,7 @@ function SavedPhotoEditor({
         )
       await replace.mutateAsync({
         ...attempt.current,
+        ...expected.current,
         catalogItemId: item.id,
         storeId,
       })
@@ -235,7 +280,7 @@ function SavedPhotoEditor({
     }
   }
   function chooseIllustration(id: string | null) {
-    if (!photo.select(null)) return
+    if (!photos.clear()) return
     setIllustrationId(id)
     if (id) {
       if (ids.length) setRemovedSaved(true)
@@ -243,17 +288,17 @@ function SavedPhotoEditor({
       setPicked([])
     }
   }
-  const tiles: Array<{
-    key: string
-    image: ReactNode
-    note?: string
-    remove(): void
-  }> = [
+  function makePrimary(key: string, index: number) {
+    setOrder([key, ...tiles.map((tile) => tile.key).filter((k) => k !== key)])
+    setAnnouncement(`Photo ${index + 1} is now primary. Save to apply.`)
+  }
+  const tiles = arrangePhotos<PhotoTile>(order, [
     ...ids.map((id) => {
       const pending =
         item.photos.find((p) => p.assetId === id)?.state !== "APPROVED"
       return {
         key: id,
+        pending,
         image: (
           <CatalogPhotoPreview
             compact
@@ -272,6 +317,7 @@ function SavedPhotoEditor({
     }),
     ...picked.map((entry) => ({
       key: `picked:${entry.assetId}`,
+      pending: false,
       image: (
         <CatalogPhotoPreview
           compact
@@ -287,23 +333,22 @@ function SavedPhotoEditor({
           current.filter((value) => value.assetId !== entry.assetId),
         ),
     })),
-    ...(photo.preview
-      ? [
-          {
-            key: "new-upload",
-            image: (
-              <img
-                src={photo.preview}
-                alt={`New upload for ${item.name}`}
-                className="size-full object-cover"
-              />
-            ),
-            note: "New photo",
-            remove: () => void photo.select(null),
-          },
-        ]
-      : []),
-  ]
+    ...photos.drafts.map((draft) => ({
+      key: `new:${draft.key}`,
+      // New photos stay private until their image check passes.
+      pending: true,
+      image: (
+        <img
+          src={draft.preview}
+          alt={`New upload for ${item.name}`}
+          className="size-full object-cover"
+        />
+      ),
+      note: "New photo",
+      remove: () => void photos.remove(draft.key),
+    })),
+  ])
+  const primaryPending = !illustration && Boolean(tiles[0]?.pending)
   return (
     <SheetFrame
       title="Images"
@@ -355,19 +400,36 @@ function SavedPhotoEditor({
                 {tile.image}
                 {index === 0 ? (
                   <span className="absolute top-1.5 left-1.5 rounded bg-black/60 px-1.5 py-0.5 text-[11px] font-medium text-white">
-                    Cover
+                    Primary
                   </span>
                 ) : null}
-                {tile.note ? (
-                  <span className="absolute inset-x-1.5 bottom-1.5 truncate rounded bg-background/90 px-1.5 py-0.5 text-[11px] font-medium">
-                    {tile.note}
-                  </span>
+                {tile.note || index > 0 ? (
+                  <div className="absolute inset-x-1.5 bottom-1.5 flex items-end gap-1">
+                    {tile.note ? (
+                      <span className="min-w-0 truncate rounded bg-background/90 px-1.5 py-0.5 text-[11px] font-medium">
+                        {tile.note}
+                      </span>
+                    ) : null}
+                    {index > 0 ? (
+                      <Button
+                        type="button"
+                        size="xs"
+                        variant="secondary"
+                        disabled={locked || photos.uploading}
+                        aria-label={`Make photo ${index + 1} of ${tiles.length} primary`}
+                        onClick={() => makePrimary(tile.key, index)}
+                        className="ml-auto shrink-0 bg-black/60 text-white hover:bg-black/75"
+                      >
+                        Make primary
+                      </Button>
+                    ) : null}
+                  </div>
                 ) : null}
                 <Button
                   type="button"
                   size="icon-xs"
                   variant="secondary"
-                  disabled={locked || photo.uploading}
+                  disabled={locked || photos.uploading}
                   aria-label={`Remove photo ${index + 1} of ${tiles.length}`}
                   onClick={tile.remove}
                   className="absolute top-1.5 right-1.5 rounded-full bg-black/60 text-white hover:bg-black/75"
@@ -380,7 +442,7 @@ function SavedPhotoEditor({
               <li className="aspect-square">
                 <DropdownMenu>
                   <DropdownMenuTrigger
-                    disabled={locked || photo.uploading}
+                    disabled={locked || photos.uploading}
                     render={
                       <button
                         type="button"
@@ -401,9 +463,7 @@ function SavedPhotoEditor({
                         onClick={() => fileInput.current?.click()}
                       >
                         <HugeiconsIcon icon={Upload01Icon} aria-hidden="true" />
-                        {photo.file
-                          ? "Replace new photo"
-                          : "Upload from computer"}
+                        Upload from computer
                       </DropdownMenuItem>
                       <DropdownMenuItem onClick={() => setGalleryOpen(true)}>
                         <HugeiconsIcon icon={Album02Icon} aria-hidden="true" />
@@ -429,10 +489,12 @@ function SavedPhotoEditor({
           ref={fileInput}
           type="file"
           hidden
+          multiple
           accept="image/jpeg,image/png,image/webp,image/heic,image/heif"
           onChange={(event) => {
-            const selected = event.currentTarget.files?.[0]
-            if (selected && photo.select(selected)) setIllustrationId(null)
+            const selected = Array.from(event.currentTarget.files ?? [])
+            if (selected.length && photos.add(selected, 8 - total))
+              setIllustrationId(null)
             event.currentTarget.value = ""
           }}
         />
@@ -454,7 +516,7 @@ function SavedPhotoEditor({
               category={item.category}
               kind={item.kind}
               selectedId={illustrationId}
-              disabled={locked || photo.uploading}
+              disabled={locked || photos.uploading}
               onSelect={chooseIllustration}
             />
             <Button
@@ -471,14 +533,30 @@ function SavedPhotoEditor({
           Changes take effect when you save. New photos stay private until their
           image check passes; an illustration replaces this Store’s photos.
         </p>
-        {photo.uploading ? (
-          <output className="text-sm">Uploading your photo…</output>
+        {primaryPending ? (
+          <p className="text-sm text-muted-foreground">
+            Your primary photo is waiting for its image check. The storefront
+            shows the next approved photo until then.
+          </p>
+        ) : null}
+        <output
+          aria-live="polite"
+          className="block text-sm text-muted-foreground empty:hidden"
+        >
+          {announcement}
+        </output>
+        {photos.uploading ? (
+          <output className="text-sm">
+            {photos.drafts.length > 1
+              ? "Uploading your photos…"
+              : "Uploading your photo…"}
+          </output>
         ) : reuse.isPending ? (
           <output className="text-sm">Adding photos from My images…</output>
         ) : null}
-        {photo.error || error ? (
+        {photos.error || error ? (
           <p role="alert" className="text-sm text-destructive">
-            {error ?? photo.error}
+            {error ?? photos.error}
           </p>
         ) : null}
       </div>

@@ -60,6 +60,8 @@ export default async function ReceiptPage({ params }: Props) {
       currencyCode: order.currencyCode,
       lines: order.lines.map((line) => ({
         key: line.offeringId,
+        itemId: line.itemId,
+        preorder: line.preorder,
         name: line.itemName,
         option: line.optionName === line.itemName ? "" : line.optionName,
         quantity: line.quantity.replace(/\.?0+$/, "") || line.quantity,
@@ -68,6 +70,7 @@ export default async function ReceiptPage({ params }: Props) {
       })),
       fulfilment: order.fulfilment as "pickup" | "delivery",
       deliveryAddress: order.deliveryAddress,
+      preferredDate: order.preferredDate,
       observedSubtotalMinor: order.observedSubtotalMinor,
       order: order.order
         ? {
@@ -123,6 +126,7 @@ export default async function ReceiptPage({ params }: Props) {
       currencyCode: service.lines[0]?.currencyCode ?? storefront.currencyCode,
       lines: service.lines.map((line) => ({
         key: line.offeringId,
+        itemId: line.itemId,
         name: line.serviceName,
         option: line.optionName === line.serviceName ? "" : line.optionName,
         quantity: line.quantity.replace(/\.?0+$/, "") || line.quantity,
@@ -130,6 +134,8 @@ export default async function ReceiptPage({ params }: Props) {
         unitPriceMinor: line.priceMinor,
       })),
       preferredDate: service.preferredDate,
+      preferredTime: service.preferredTime,
+      preferenceTimezone: service.preferenceTimezone,
       collectionAddress: service.collectionAddress,
       details: service.details,
       quote: service.quote

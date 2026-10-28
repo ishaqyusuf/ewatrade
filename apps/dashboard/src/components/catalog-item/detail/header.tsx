@@ -20,6 +20,7 @@ import {
   PencilEdit02Icon,
   RulerIcon,
   Share01Icon,
+  Store01Icon,
 } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { useState } from "react"
@@ -34,10 +35,13 @@ export function CatalogDetailHeader({
   detail,
   store,
   readOnly,
+  onStorefrontSettings,
 }: {
   detail: CatalogDetail
   store: { id: string; name: string }
   readOnly: boolean
+  /** Opens the item's Storefront settings view, when the sheet offers it. */
+  onStorefrontSettings?: () => void
 }) {
   const item = detail.item
   const { close, setView } = useCatalogDetailParams()
@@ -145,6 +149,12 @@ export function CatalogDetailHeader({
                   <HugeiconsIcon icon={Image01Icon} aria-hidden="true" />
                   Images
                 </DropdownMenuItem>
+                {onStorefrontSettings ? (
+                  <DropdownMenuItem onClick={onStorefrontSettings}>
+                    <HugeiconsIcon icon={Store01Icon} aria-hidden="true" />
+                    Storefront settings
+                  </DropdownMenuItem>
+                ) : null}
                 {item.product && affordances.configureUnits ? (
                   <DropdownMenuItem onClick={() => void setView("units")}>
                     <HugeiconsIcon icon={RulerIcon} aria-hidden="true" />

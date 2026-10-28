@@ -16,6 +16,12 @@ import {
   FieldLegend,
   FieldSet,
   Input,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectRoot,
+  SelectTrigger,
+  SelectValue,
   Spinner,
   Textarea,
   buttonVariants,
@@ -26,29 +32,41 @@ import {
   WhatsappIcon,
 } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
-import { useId, useRef, useState } from "react"
+import { useEffect, useId, useRef, useState } from "react"
 import type { PublicCatalogItem } from "../../../storefront-contracts/src/resources"
 import {
+  addDays,
+  dateInZone,
+  defaultBusinessTimeZone,
   formatMoney,
+  formatTimeLabel,
   lineTotalMinor,
   newClientId,
   quantityProblem,
+  quarterHourTimes,
+  timeInZone,
+  zoneLabel,
 } from "./commerce"
 import { useCommerceStudio } from "./context"
+import { CommerceGallery, galleryPhotos } from "./gallery"
 import { QuantityStepper } from "./product"
 
-function todayInLagos() {
-  return new Intl.DateTimeFormat("en-CA", { timeZone: "Africa/Lagos" }).format(
-    new Date(),
-  )
-}
-
 export function ServiceDetail({ item }: { item: PublicCatalogItem }) {
-  const { snapshot, adapter, header, href, preview, navigate } =
+  const { snapshot, adapter, header, href, preview, navigate, themeStyle } =
     useCommerceStudio()
   const entry = snapshot.resources.contact.serviceRequestEntry
   const requestable = new Set(entry?.offeringIds ?? [])
   const options = item.options.filter((option) => requestable.has(option.id))
+  // A preferred date/time is offered only with book ahead; it stays a request.
+  const bookAhead = item.storefrontPolicy?.allowBookAhead === true
+  const unavailable = item.storefrontPolicy?.unavailable === true
+  // Manually unavailable: only a dated request ahead, and only with book ahead.
+  const dateRequired = unavailable && bookAhead
+  const timeZone =
+    snapshot.resources.business.timezone ?? defaultBusinessTimeZone
+  const today = dateInZone(timeZone)
+  const earliest = dateRequired ? addDays(today, 1) : today
+  const hasMedia = galleryPhotos(item).length > 0
   const [selected, setSelected] = useState<Record<string, string>>(() =>
     options.length === 1 && options[0] ? { [options[0].id]: "1" } : {},
   )
@@ -57,8 +75,22 @@ export function ServiceDetail({ item }: { item: PublicCatalogItem }) {
     phone: "",
     notes: "",
     date: "",
+    time: "",
     address: "",
   })
+  // Name the zone only when it differs from the visitor's (client-only, after hydration).
+  const [foreignZone, setForeignZone] = useState(false)
+  useEffect(() => {
+    try {
+      setForeignZone(
+        Intl.DateTimeFormat().resolvedOptions().timeZone !== timeZone,
+      )
+    } catch {}
+  }, [timeZone])
+  const times =
+    fields.date && fields.date === today
+      ? quarterHourTimes.filter((time) => time > timeInZone(timeZone))
+      : quarterHourTimes
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [formError, setFormError] = useState<string | null>(null)
   const [pending, setPending] = useState(false)
@@ -71,6 +103,7 @@ export function ServiceDetail({ item }: { item: PublicCatalogItem }) {
     phone: useId(),
     notes: useId(),
     date: useId(),
+    time: useId(),
     address: useId(),
     options: useId(),
   }
@@ -116,8 +149,18 @@ export function ServiceDetail({ item }: { item: PublicCatalogItem }) {
     if (fields.name.trim().length < 2) next.name = "Enter your name."
     if (fields.phone.replace(/\D/g, "").length < 7)
       next.phone = "Enter your WhatsApp number."
-    if (fields.date && fields.date < todayInLagos())
-      next.date = "Choose today or a later date."
+    if (dateRequired && !fields.date) next.date = "Choose a date."
+    else if (fields.date && fields.date < earliest)
+      next.date = dateRequired
+        ? "Choose a date after today."
+        : "Choose today or a later date."
+    else if (
+      fields.date &&
+      fields.time &&
+      fields.date === today &&
+      fields.time <= timeInZone(timeZone)
+    )
+      next.time = "Choose a time later than now."
     setErrors(next)
     const first = Object.keys(next)[0]
     if (first) {
@@ -149,7 +192,10 @@ export function ServiceDetail({ item }: { item: PublicCatalogItem }) {
           details: fields.notes.trim(),
         },
         extras: {
-          ...(fields.date ? { preferredDate: fields.date } : {}),
+          ...(bookAhead && fields.date ? { preferredDate: fields.date } : {}),
+          ...(bookAhead && fields.date && fields.time
+            ? { preferredTime: fields.time }
+            : {}),
           ...(fields.address.trim()
             ? { collectionAddress: fields.address.trim() }
             : {}),
@@ -166,7 +212,9 @@ export function ServiceDetail({ item }: { item: PublicCatalogItem }) {
           ...current,
           [result.field === "preferredDate"
             ? "date"
-            : (result.field as string)]: result.message,
+            : result.field === "preferredTime"
+              ? "time"
+              : (result.field as string)]: result.message,
         }))
       setFormError(result.message)
       requestAnimationFrame(() => errorRef.current?.focus())
@@ -199,7 +247,15 @@ export function ServiceDetail({ item }: { item: PublicCatalogItem }) {
         <HugeiconsIcon icon={ArrowLeft01Icon} strokeWidth={2} />
         All services
       </CommerceLink>
-      <div className="cs-service-detail__grid">
+      <div
+        className="cs-service-detail__grid"
+        data-media={hasMedia || undefined}
+      >
+        {hasMedia ? (
+          <div className="cs-service-detail__media">
+            <CommerceGallery item={item} kind="service" />
+          </div>
+        ) : null}
         <div>
           <h1 className="cs-display cs-display--product">{item.name}</h1>
           {item.description ? (
@@ -217,12 +273,18 @@ export function ServiceDetail({ item }: { item: PublicCatalogItem }) {
                 : `${duration} minutes`}
             </p>
           ) : null}
-          {!entry || !options.length ? (
+          {!entry || !options.length || (unavailable && !bookAhead) ? (
             <Alert className="cs-note">
-              <AlertTitle>Requests by message</AlertTitle>
+              <AlertTitle>
+                {unavailable
+                  ? "Not taking requests right now"
+                  : "Requests by message"}
+              </AlertTitle>
               <AlertDescription>
                 {enquiry
-                  ? "This business takes requests for this service on WhatsApp."
+                  ? unavailable
+                    ? "Message the business on WhatsApp to ask when it's available again."
+                    : "This business takes requests for this service on WhatsApp."
                   : "This service isn't taking requests on this site right now."}
                 {enquiry ? (
                   <CommerceLink
@@ -329,30 +391,105 @@ export function ServiceDetail({ item }: { item: PublicCatalogItem }) {
                   <FieldError>{errors.options}</FieldError>
                 ) : null}
               </FieldSet>
+              {dateRequired ? (
+                <Alert className="cs-note">
+                  <AlertTitle>Not available right now</AlertTitle>
+                  <AlertDescription>
+                    You can still ask for a later date. It stays a request until
+                    the business confirms the booking.
+                  </AlertDescription>
+                </Alert>
+              ) : null}
               <FieldGroup>
-                <Field data-invalid={errors.date ? true : undefined}>
-                  <FieldLabel htmlFor={ids.date}>
-                    Preferred date (optional)
-                  </FieldLabel>
-                  <FieldDescription id={`${ids.date}-help`}>
-                    A preference, not a booking. The business confirms the time
-                    with you.
-                  </FieldDescription>
-                  <Input
-                    id={ids.date}
-                    type="date"
-                    min={todayInLagos()}
-                    value={fields.date}
-                    aria-invalid={errors.date ? true : undefined}
-                    aria-describedby={`${ids.date}-help${errors.date ? ` ${ids.date}-error` : ""}`}
-                    onChange={(event) => set("date", event.target.value)}
-                  />
-                  {errors.date ? (
-                    <FieldError id={`${ids.date}-error`}>
-                      {errors.date}
-                    </FieldError>
-                  ) : null}
-                </Field>
+                {bookAhead ? (
+                  <Field data-invalid={errors.date ? true : undefined}>
+                    <FieldLabel htmlFor={ids.date}>
+                      {dateRequired
+                        ? "Preferred date"
+                        : "Preferred date (optional)"}
+                    </FieldLabel>
+                    <FieldDescription id={`${ids.date}-help`}>
+                      A preference, not a booking. The business confirms the
+                      time with you.
+                    </FieldDescription>
+                    <Input
+                      id={ids.date}
+                      type="date"
+                      min={earliest}
+                      value={fields.date}
+                      aria-invalid={errors.date ? true : undefined}
+                      aria-describedby={`${ids.date}-help${errors.date ? ` ${ids.date}-error` : ""}`}
+                      onChange={(event) => {
+                        set("date", event.target.value)
+                        if (!event.target.value) set("time", "")
+                      }}
+                    />
+                    {errors.date ? (
+                      <FieldError id={`${ids.date}-error`}>
+                        {errors.date}
+                      </FieldError>
+                    ) : null}
+                  </Field>
+                ) : null}
+                {bookAhead ? (
+                  <Field data-invalid={errors.time ? true : undefined}>
+                    <FieldLabel htmlFor={ids.time}>
+                      Preferred time (optional)
+                      {foreignZone ? ` (${zoneLabel(timeZone)} time)` : ""}
+                    </FieldLabel>
+                    <FieldDescription id={`${ids.time}-help`}>
+                      We'll pass this to the business. It isn't booked until
+                      they confirm.
+                    </FieldDescription>
+                    <SelectRoot
+                      value={fields.time || null}
+                      items={[
+                        { value: "", label: "No preference" },
+                        ...times.map((time) => ({
+                          value: time,
+                          label: formatTimeLabel(time),
+                        })),
+                      ]}
+                      disabled={!fields.date}
+                      onValueChange={(next) => set("time", next ?? "")}
+                    >
+                      <SelectTrigger
+                        id={ids.time}
+                        appearance="form"
+                        aria-invalid={errors.time ? true : undefined}
+                        aria-describedby={`${ids.time}-help${errors.time ? ` ${ids.time}-error` : ""}`}
+                      >
+                        <SelectValue
+                          placeholder={
+                            fields.date
+                              ? "No preference"
+                              : "Choose a date first"
+                          }
+                        />
+                      </SelectTrigger>
+                      <SelectContent
+                        className="cs-portal cs-time-menu"
+                        style={themeStyle}
+                        alignItemWithTrigger={false}
+                        align="start"
+                      >
+                        <SelectGroup>
+                          <SelectItem value="">No preference</SelectItem>
+                          {times.map((time) => (
+                            <SelectItem key={time} value={time}>
+                              {formatTimeLabel(time)}
+                            </SelectItem>
+                          ))}
+                        </SelectGroup>
+                      </SelectContent>
+                    </SelectRoot>
+                    {errors.time ? (
+                      <FieldError id={`${ids.time}-error`}>
+                        {errors.time}
+                      </FieldError>
+                    ) : null}
+                  </Field>
+                ) : null}
                 {header.offerDelivery ? (
                   <Field>
                     <FieldLabel htmlFor={ids.address}>

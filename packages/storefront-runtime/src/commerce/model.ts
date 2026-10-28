@@ -83,6 +83,14 @@ export function writeBag(
 
 export function addBagLine(lines: BagLine[], line: BagLine, max = 20) {
   const existing = lines.find((entry) => entry.offeringId === line.offeringId)
+  if (
+    existing &&
+    ((existing.intent ?? "purchase") !== (line.intent ?? "purchase") ||
+      existing.preferredDate !== line.preferredDate)
+  )
+    throw new Error(
+      "This option is already in your bag for a different date or purpose. Edit or remove it first.",
+    )
   if (existing)
     return lines.map((entry) =>
       entry.offeringId === line.offeringId
@@ -202,6 +210,181 @@ export function stockWording(
 export function quantityLabel(quantity: string, unit: string | null) {
   if (!unit) return quantity
   return `${quantity} ${unit}`
+}
+
+// ---------------------------------------------------------------- Request ahead
+
+export const defaultBusinessTimeZone = "Africa/Lagos"
+
+/** Calendar date (YYYY-MM-DD) in the business's time zone. */
+export function dateInZone(timeZone: string, at = new Date()) {
+  try {
+    return new Intl.DateTimeFormat("en-CA", { timeZone }).format(at)
+  } catch {
+    return new Intl.DateTimeFormat("en-CA", {
+      timeZone: defaultBusinessTimeZone,
+    }).format(at)
+  }
+}
+
+/** Wall-clock time (HH:mm) in the business's time zone. */
+export function timeInZone(timeZone: string, at = new Date()) {
+  const format = (zone: string) =>
+    new Intl.DateTimeFormat("en-GB", {
+      timeZone: zone,
+      hour: "2-digit",
+      minute: "2-digit",
+      hourCycle: "h23",
+    }).format(at)
+  try {
+    return format(timeZone)
+  } catch {
+    return format(defaultBusinessTimeZone)
+  }
+}
+
+export function addDays(date: string, days: number) {
+  const value = new Date(`${date}T12:00:00Z`)
+  value.setUTCDate(value.getUTCDate() + days)
+  return value.toISOString().slice(0, 10)
+}
+
+/** "Wed 5 Nov" for a YYYY-MM-DD date; the date is a calendar day, not an instant. */
+export function formatPreferredDate(date: string) {
+  const value = new Date(`${date}T12:00:00Z`)
+  if (Number.isNaN(value.getTime())) return date
+  const part = (options: Intl.DateTimeFormatOptions) =>
+    value.toLocaleDateString("en-GB", { ...options, timeZone: "UTC" })
+  return `${part({ weekday: "short" })} ${part({ day: "numeric" })} ${part({ month: "short" })}`
+}
+
+/** "Lagos" from "Africa/Lagos". */
+export function zoneLabel(timeZone: string) {
+  return (timeZone.split("/").pop() ?? timeZone).replace(/_/g, " ")
+}
+
+/** 15-minute preferred-time choices, "00:00" to "23:45". */
+export const quarterHourTimes = Array.from({ length: 96 }, (_, index) => {
+  const hours = String(Math.floor(index / 4)).padStart(2, "0")
+  const minutes = String((index % 4) * 15).padStart(2, "0")
+  return `${hours}:${minutes}`
+})
+
+/** "10:00" → "10:00 am" style label without shifting zones. */
+export function formatTimeLabel(time: string) {
+  const [hours = 0, minutes = 0] = time.split(":").map(Number)
+  const suffix = hours < 12 ? "am" : "pm"
+  const hour = hours % 12 === 0 ? 12 : hours % 12
+  return `${hour}:${String(minutes).padStart(2, "0")} ${suffix}`
+}
+
+export const isPreorderLine = (line: Pick<BagLine, "intent">) =>
+  line.intent === "preorder"
+
+/** Distinct preferred dates across request-ahead lines. One request carries one date. */
+export function preorderDates(lines: readonly BagLine[]) {
+  return [
+    ...new Set(
+      lines
+        .filter(isPreorderLine)
+        .map((line) => line.preferredDate)
+        .filter((date): date is string => Boolean(date)),
+    ),
+  ]
+}
+
+/**
+ * What the product page can offer right now. Manual "unavailable" wins over stock;
+ * book ahead only ever creates a request, never confirmed stock.
+ */
+export function offeringAvailability(
+  item: Pick<PublicCatalogItem, "storefrontPolicy">,
+  option: Pick<PublicCatalogItem["options"][number], "stock" | "availability">,
+) {
+  const manual = item.storefrontPolicy?.unavailable === true
+  const soldOut =
+    option.stock === "out_of_stock" || option.availability === "OUT_OF_STOCK"
+  return {
+    manualUnavailable: manual,
+    soldOut,
+    blockedNow: manual || soldOut,
+    bookAhead: item.storefrontPolicy?.allowBookAhead === true,
+  }
+}
+
+// ---------------------------------------------------------------- Checkout draft
+
+/**
+ * Details typed on this visit, kept in session storage so a quick login or a trip
+ * to /account doesn't lose them. Bounded and validated on read; cleared only once a
+ * request is durably accepted.
+ */
+const checkoutDraftSchema = z
+  .object({
+    version: z.literal(1),
+    customerName: z.string().max(80),
+    customerPhone: z.string().max(24),
+    customerEmail: z.string().max(254),
+    fulfilment: z.enum(["pickup", "delivery"]),
+    deliveryAddress: z.string().max(300),
+    notes: z.string().max(500),
+  })
+  .strict()
+export type CheckoutDraft = Omit<z.infer<typeof checkoutDraftSchema>, "version">
+
+export const checkoutDraftKey = (scope: string) =>
+  `ewatrade.storefront.checkout-draft.v1:${scope}`
+
+export function readCheckoutDraft(
+  storage: BagStorage | null,
+  scope: string,
+): CheckoutDraft | null {
+  if (!storage) return null
+  try {
+    const raw = storage.getItem(checkoutDraftKey(scope))
+    if (!raw) return null
+    if (raw.length > 4096) {
+      storage.removeItem(checkoutDraftKey(scope))
+      return null
+    }
+    const parsed = checkoutDraftSchema.safeParse(JSON.parse(raw))
+    if (!parsed.success) {
+      storage.removeItem(checkoutDraftKey(scope))
+      return null
+    }
+    const { version: _version, ...draft } = parsed.data
+    return draft
+  } catch {
+    return null
+  }
+}
+
+export function writeCheckoutDraft(
+  storage: BagStorage | null,
+  scope: string,
+  draft: CheckoutDraft,
+) {
+  if (!storage) return
+  try {
+    storage.setItem(
+      checkoutDraftKey(scope),
+      JSON.stringify({
+        version: 1,
+        customerName: draft.customerName.slice(0, 80),
+        customerPhone: draft.customerPhone.slice(0, 24),
+        customerEmail: draft.customerEmail.slice(0, 254),
+        fulfilment: draft.fulfilment,
+        deliveryAddress: draft.deliveryAddress.slice(0, 300),
+        notes: draft.notes.slice(0, 500),
+      }),
+    )
+  } catch {}
+}
+
+export function clearCheckoutDraft(storage: BagStorage | null, scope: string) {
+  try {
+    storage?.removeItem(checkoutDraftKey(scope))
+  } catch {}
 }
 
 /** Presentation mode from currently public offerings only. */

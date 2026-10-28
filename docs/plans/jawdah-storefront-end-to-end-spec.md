@@ -365,3 +365,7 @@ A mock receipt, Workshop selection, source-only test pass, draft WhatsApp messag
 or local payment simulation cannot establish provider delivery, real settlement,
 hosted runtime acceptance or production availability. Report each evidence level
 accurately; keep release actions under their existing authorization boundary.
+
+## Addendum — order summary navigation, 28 October 2026
+
+Catalog and service names in checkout/order summaries link to the corresponding public item detail page. Navigation and browser Back retain the scoped bag and checkout draft; a now-hidden item must fail safely without changing the order. This applies to the new template and reusable commerce summaries.

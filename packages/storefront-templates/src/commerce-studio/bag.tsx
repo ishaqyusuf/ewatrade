@@ -2,6 +2,7 @@
 
 import { CommerceLink } from "./navigation"
 
+import { storefrontItemHref } from "@ewatrade/storefront-runtime/links"
 import { StorefrontArtwork } from "@ewatrade/storefront-runtime/primitives"
 import {
   Alert,
@@ -32,11 +33,27 @@ import {
   type BagLine,
   bagTotals,
   formatMoney,
+  formatPreferredDate,
+  isPreorderLine,
   lineTotalMinor,
   quantityProblem,
 } from "./commerce"
 import { useCommerceStudio } from "./context"
 import { QuantityStepper } from "./product"
+
+/** One note when a bag mixes items for now with items requested ahead. */
+export function BagIntentNote({ lines }: { lines: BagLine[] }) {
+  const ahead = lines.filter(isPreorderLine).length
+  if (!ahead || ahead === lines.length) return null
+  return (
+    <Alert className="cs-note">
+      <AlertDescription>
+        Some items are requested ahead. The business reviews the whole request
+        before you pay.
+      </AlertDescription>
+    </Alert>
+  )
+}
 
 export function BagLines({
   lines,
@@ -47,7 +64,7 @@ export function BagLines({
   editable: boolean
   notes?: Record<string, string>
 }) {
-  const { setQuantity, removeLine } = useCommerceStudio()
+  const { setQuantity, removeLine, href, setBagOpen } = useCommerceStudio()
   return (
     <ul className="cs-bag-lines">
       {lines.map((line) => {
@@ -60,7 +77,13 @@ export function BagLines({
             className="cs-bag-line"
             data-issue={note ? true : undefined}
           >
-            <span className="cs-bag-line__media">
+            <CommerceLink
+              className="cs-bag-line__media"
+              href={href(storefrontItemHref(line.itemId))}
+              tabIndex={-1}
+              aria-hidden="true"
+              onClick={() => setBagOpen(false)}
+            >
               <StorefrontArtwork
                 item={{
                   id: line.itemId,
@@ -70,9 +93,17 @@ export function BagLines({
                   availability: null,
                 }}
               />
-            </span>
+            </CommerceLink>
             <div className="cs-bag-line__body">
-              <p className="cs-bag-line__name">{line.itemName}</p>
+              <p className="cs-bag-line__name">
+                <CommerceLink
+                  className="cs-link"
+                  href={href(storefrontItemHref(line.itemId))}
+                  onClick={() => setBagOpen(false)}
+                >
+                  {line.itemName}
+                </CommerceLink>
+              </p>
               {line.optionName ? (
                 <p className="cs-muted">{line.optionName}</p>
               ) : null}
@@ -81,6 +112,14 @@ export function BagLines({
                   ? "Price on request"
                   : `${formatMoney(line.priceMinor, line.currencyCode)}${line.unitLabel ? ` per ${line.unitLabel}` : ""}`}
               </p>
+              {isPreorderLine(line) ? (
+                <p className="cs-bag-line__tag">
+                  Request ahead
+                  {line.preferredDate
+                    ? ` · ${formatPreferredDate(line.preferredDate)}`
+                    : ""}
+                </p>
+              ) : null}
               {note ? (
                 <output className="cs-bag-line__issue">{note}</output>
               ) : null}
@@ -189,7 +228,10 @@ export function BagSheet() {
             </Alert>
           ) : null}
           {bag.lines.length ? (
-            <BagLines lines={bag.lines} editable />
+            <>
+              <BagIntentNote lines={bag.lines} />
+              <BagLines lines={bag.lines} editable />
+            </>
           ) : (
             <Empty className="cs-empty cs-empty--compact">
               <EmptyHeader>
@@ -227,6 +269,7 @@ export function BagSheet() {
               aria-disabled={invalid || undefined}
               onClick={(event) => {
                 if (invalid) event.preventDefault()
+                else setBagOpen(false)
               }}
             >
               Continue to request

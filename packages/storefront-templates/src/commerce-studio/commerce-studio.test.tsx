@@ -335,7 +335,7 @@ test("bag storage is business-scoped, validated and survives blocked or corrupt 
   expect(() => addBagLine(many, { ...line, offeringId: "o99" })).toThrow()
 })
 
-test("order request contract: guest name + WhatsApp, address only for delivery, no duplicate options", () => {
+test("order request contract: guest name + WhatsApp, optional destination, no duplicate options", () => {
   const base = {
     clientRequestId: "6a1f4d1e-8b38-4b8a-9d1e-7f0a3c2b1a00",
     lines: [
@@ -354,7 +354,7 @@ test("order request contract: guest name + WhatsApp, address only for delivery, 
   expect(
     storefrontOrderRequestSchema.safeParse({ ...base, fulfilment: "delivery" })
       .success,
-  ).toBe(false)
+  ).toBe(true)
   expect(
     storefrontOrderRequestSchema.safeParse({
       ...base,
@@ -392,9 +392,9 @@ test("order request contract: guest name + WhatsApp, address only for delivery, 
       header({ "offer-pickup": false, "offer-delivery": true }),
     ),
   ).toEqual(["delivery"])
-  expect(orderingFulfilmentMethods(header({ "offer-pickup": false }))).toEqual([
-    "pickup",
-  ])
+  expect(orderingFulfilmentMethods(header({ "offer-pickup": false }))).toEqual(
+    [],
+  )
 })
 
 test("merchant settings render; copy stays plain text; storefront mode counts public offerings", () => {

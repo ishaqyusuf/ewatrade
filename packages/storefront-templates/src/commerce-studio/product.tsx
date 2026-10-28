@@ -2,7 +2,6 @@
 
 import { CommerceLink } from "./navigation"
 
-import { StorefrontArtwork } from "@ewatrade/storefront-runtime/primitives"
 import {
   Button,
   ButtonGroup,
@@ -24,16 +23,23 @@ import {
   WhatsappIcon,
 } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
-import { useId, useState } from "react"
+import { useId, useRef, useState } from "react"
 import type { PublicCatalogItem } from "../../../storefront-contracts/src/resources"
 import {
+  addDays,
+  dateInZone,
+  defaultBusinessTimeZone,
   formatMoney,
+  formatPreferredDate,
   lineTotalMinor,
+  offeringAvailability,
+  preorderDates,
   quantityProblem,
   stepQuantity,
   stockWording,
 } from "./commerce"
 import { useCommerceStudio } from "./context"
+import { CommerceGallery } from "./gallery"
 
 export function QuantityStepper({
   id,
@@ -94,7 +100,7 @@ export function QuantityStepper({
 }
 
 export function ProductDetail({ item }: { item: PublicCatalogItem }) {
-  const { snapshot, ordering, addToBag, setBagOpen, href, preview } =
+  const { snapshot, ordering, addToBag, setBagOpen, href, preview, bag } =
     useCommerceStudio()
   const firstAvailable =
     item.options.find((option) => option.stock !== "out_of_stock") ??
@@ -102,16 +108,34 @@ export function ProductDetail({ item }: { item: PublicCatalogItem }) {
   const [optionId, setOptionId] = useState(firstAvailable?.id ?? "")
   const [quantity, setQuantity] = useState("1")
   const [error, setError] = useState<string | null>(null)
-  const ids = { qty: useId(), qtyError: useId(), note: useId() }
+  const [intent, setIntent] = useState<"purchase" | "preorder">("purchase")
+  const [date, setDate] = useState("")
+  const [dateError, setDateError] = useState<string | null>(null)
+  const dateRef = useRef<HTMLInputElement>(null)
+  const ids = {
+    qty: useId(),
+    qtyError: useId(),
+    note: useId(),
+    date: useId(),
+  }
   const option =
     item.options.find((entry) => entry.id === optionId) ?? firstAvailable
   if (!option) return null
   const scale = option.unit?.scale ?? 0
   const unit = option.unit?.label ?? null
   const stock = stockWording(option.stock, option.lowStockQuantity)
-  const soldOut =
-    option.stock === "out_of_stock" || option.availability === "OUT_OF_STOCK"
+  const { manualUnavailable, blockedNow, bookAhead } = offeringAvailability(
+    item,
+    option,
+  )
   const priceOnRequest = option.priceMinor === null
+  // Not available now: only a dated request ahead, and only when the business allows it.
+  const requestAhead =
+    bookAhead && (blockedNow || intent === "preorder") && !priceOnRequest
+  const orderable = ordering && !priceOnRequest && (!blockedNow || bookAhead)
+  const timeZone =
+    snapshot.resources.business.timezone ?? defaultBusinessTimeZone
+  const earliest = addDays(dateInZone(timeZone), 1)
   const problem = quantityProblem(quantity, scale)
   const total = lineTotalMinor(option.priceMinor, quantity)
   const whatsapp = snapshot.resources.contact.whatsAppPhone
@@ -120,10 +144,24 @@ export function ProductDetail({ item }: { item: PublicCatalogItem }) {
         `Hello ${snapshot.resources.business.name}, I'm interested in ${item.name}${item.options.length > 1 ? ` (${option.name})` : ""}.`,
       )}`
     : null
+  const failDate = (message: string) => {
+    setDateError(message)
+    requestAnimationFrame(() => dateRef.current?.focus())
+  }
   const add = () => {
     if (problem) {
       setError(problem)
       return
+    }
+    if (requestAhead) {
+      if (!date) return failDate("Choose a date.")
+      if (date < earliest) return failDate("Choose a date after today.")
+      // One request carries one preferred date for everything requested ahead.
+      const other = preorderDates(bag.lines).find((entry) => entry !== date)
+      if (other)
+        return failDate(
+          `Your bag already has items requested ahead for ${formatPreferredDate(other)}. One request uses one date, so choose ${formatPreferredDate(other)} or send this separately.`,
+        )
     }
     const failure = addToBag({
       itemId: item.id,
@@ -137,12 +175,16 @@ export function ProductDetail({ item }: { item: PublicCatalogItem }) {
       scale,
       photoUrl: item.photoUrl ?? null,
       illustrationId: item.illustrationId,
+      ...(requestAhead
+        ? { intent: "preorder" as const, preferredDate: date }
+        : {}),
     })
     if (failure) {
       setError(failure)
       return
     }
     setError(null)
+    setDateError(null)
     // The bag sheet opens with focus on its title; a toast would cover that header.
     setBagOpen(true)
   }
@@ -168,7 +210,7 @@ export function ProductDetail({ item }: { item: PublicCatalogItem }) {
       </nav>
       <div className="cs-product__grid">
         <div className="cs-product__media">
-          <StorefrontArtwork item={{ ...item, availability: null }} />
+          <CommerceGallery item={item} kind="product" />
         </div>
         <div className="cs-product__info">
           <h1 className="cs-display cs-display--product">{item.name}</h1>
@@ -196,6 +238,7 @@ export function ProductDetail({ item }: { item: PublicCatalogItem }) {
                   if (next) {
                     setOptionId(next)
                     setError(null)
+                    setDateError(null)
                   }
                 }}
                 aria-label="Options"
@@ -230,7 +273,60 @@ export function ProductDetail({ item }: { item: PublicCatalogItem }) {
               </ToggleGroup>
             </FieldSet>
           ) : null}
-          {ordering && !priceOnRequest && !soldOut ? (
+          {orderable && bookAhead && !blockedNow ? (
+            <FieldSet className="cs-options">
+              <FieldLegend variant="label">When do you need it?</FieldLegend>
+              <ToggleGroup
+                className="cs-option-group"
+                value={[intent]}
+                onValueChange={(value: string[]) => {
+                  const next = value[0]
+                  if (next === "purchase" || next === "preorder") {
+                    setIntent(next)
+                    setDateError(null)
+                  }
+                }}
+                aria-label="When do you need it?"
+              >
+                <ToggleGroupItem value="purchase" className="cs-option">
+                  <span className="cs-option__name">Now</span>
+                </ToggleGroupItem>
+                <ToggleGroupItem value="preorder" className="cs-option">
+                  <span className="cs-option__name">A later date</span>
+                </ToggleGroupItem>
+              </ToggleGroup>
+            </FieldSet>
+          ) : null}
+          {orderable && requestAhead ? (
+            <Field
+              className="cs-qty"
+              data-invalid={dateError ? true : undefined}
+            >
+              <FieldLabel htmlFor={ids.date}>Preferred date</FieldLabel>
+              <FieldDescription id={`${ids.date}-help`}>
+                A preference, not a reservation.{" "}
+                {snapshot.resources.business.name} confirms stock and the date
+                before you pay.
+              </FieldDescription>
+              <Input
+                id={ids.date}
+                ref={dateRef}
+                type="date"
+                min={earliest}
+                value={date}
+                aria-invalid={dateError ? true : undefined}
+                aria-describedby={`${ids.date}-help${dateError ? ` ${ids.date}-error` : ""}`}
+                onChange={(event) => {
+                  setDate(event.target.value)
+                  setDateError(null)
+                }}
+              />
+              {dateError ? (
+                <FieldError id={`${ids.date}-error`}>{dateError}</FieldError>
+              ) : null}
+            </Field>
+          ) : null}
+          {orderable ? (
             <Field className="cs-qty" data-invalid={error ? true : undefined}>
               <FieldLabel htmlFor={ids.qty}>
                 Quantity{unit ? ` (${unit})` : ""}
@@ -248,9 +344,11 @@ export function ProductDetail({ item }: { item: PublicCatalogItem }) {
                     setError(null)
                   }}
                 />
-                <span className="cs-stock" data-tone={stock.tone}>
-                  {stock.label}
-                </span>
+                {requestAhead ? null : (
+                  <span className="cs-stock" data-tone={stock.tone}>
+                    {stock.label}
+                  </span>
+                )}
               </div>
               {scale > 0 ? (
                 <FieldDescription>
@@ -264,34 +362,35 @@ export function ProductDetail({ item }: { item: PublicCatalogItem }) {
             </Field>
           ) : null}
           <div className="cs-product__actions">
-            {soldOut ? (
+            {blockedNow ? (
               <output className="cs-stock cs-stock--block" data-tone="out">
-                {item.options.length > 1
-                  ? "This option is sold out."
-                  : "Sold out right now."}
+                {bookAhead && !priceOnRequest
+                  ? "Sold out now: request ahead"
+                  : manualUnavailable
+                    ? "Unavailable"
+                    : item.options.length > 1
+                      ? "This option is sold out."
+                      : "Sold out right now."}
               </output>
             ) : null}
-            {ordering && !priceOnRequest && !soldOut ? (
+            {orderable ? (
               <Button
                 size="lg"
                 className="cs-primary cs-add"
                 onClick={add}
                 disabled={preview && false}
               >
-                Add to bag
+                {requestAhead ? "Request ahead" : "Add to bag"}
                 {total !== null
                   ? ` · ${formatMoney(total, option.currencyCode)}`
                   : ""}
               </Button>
             ) : null}
-            {(priceOnRequest || soldOut || !ordering) && enquiry ? (
+            {(!orderable || blockedNow) && enquiry ? (
               <CommerceLink
                 className={buttonVariants({
                   size: "lg",
-                  variant:
-                    ordering && !priceOnRequest && !soldOut
-                      ? "outline"
-                      : "default",
+                  variant: orderable ? "outline" : "default",
                   className: "cs-add",
                 })}
                 href={enquiry}
@@ -303,7 +402,16 @@ export function ProductDetail({ item }: { item: PublicCatalogItem }) {
               </CommerceLink>
             ) : null}
           </div>
-          {ordering && !priceOnRequest && !soldOut ? (
+          {orderable && requestAhead ? (
+            <p className="cs-fine" id={ids.note}>
+              This is a request ahead, not a reservation.{" "}
+              {snapshot.resources.business.name} confirms stock, the date
+              {snapshot.resources.commerce?.fulfilment.includes("delivery")
+                ? " and any delivery fee"
+                : ""}{" "}
+              before you pay.
+            </p>
+          ) : orderable ? (
             <p className="cs-fine" id={ids.note}>
               This is an order request. {snapshot.resources.business.name}{" "}
               confirms stock

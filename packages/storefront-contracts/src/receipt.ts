@@ -38,6 +38,8 @@ export type ReceiptView = {
   currencyCode: string
   lines: {
     key: string
+    itemId?: string
+    preorder?: boolean
     name: string
     option: string
     quantity: string
@@ -48,6 +50,8 @@ export type ReceiptView = {
   deliveryAddress?: string | null
   observedSubtotalMinor?: number
   preferredDate?: string | null
+  preferredTime?: string | null
+  preferenceTimezone?: string | null
   collectionAddress?: string | null
   details?: string | null
   quote?: {

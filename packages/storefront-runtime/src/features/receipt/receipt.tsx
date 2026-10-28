@@ -1,11 +1,16 @@
 "use client"
 
-import { ReceiptAppointment, preferredDateNote } from "./appointment"
+import {
+  ReceiptAppointment,
+  isLiveAppointment,
+  preferredDateNote,
+} from "./appointment"
 export { ReceiptAppointment, preferredDateNote } from "./appointment"
 
 import { StorefrontFeatureFrame } from "../frame"
 
 import { CommerceLink } from "../../commerce/navigation"
+import { storefrontItemHref } from "../../links"
 
 import {
   Alert,
@@ -29,7 +34,12 @@ import {
 import { CheckmarkCircle02Icon, WhatsappIcon } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { useEffect, useId, useRef, useState } from "react"
-import { formatMoney, newClientId } from "../../commerce/model"
+import {
+  formatMoney,
+  formatPreferredDate,
+  newClientId,
+  zoneLabel,
+} from "../../commerce/model"
 import { useStorefrontCommerce } from "../../commerce/provider"
 
 export type { ReceiptView } from "@ewatrade/storefront-contracts/receipt"
@@ -38,6 +48,15 @@ import type {
   ReceiptView,
   StorefrontReceiptStage as Stage,
 } from "@ewatrade/storefront-contracts/receipt"
+
+/** Payment wording from canonical Order facts. "I have paid" is never settled. */
+function paymentLabel(order: OrderFacts, paymentUrl: string | null) {
+  if (order.paymentStatus === "PAID") return "Paid"
+  if (order.paymentReport?.status === "SUBMITTED") return "Checking"
+  if (order.paidMinor > 0) return "Part-paid"
+  if (paymentUrl) return "Ready to pay"
+  return "Not paid yet"
+}
 
 const stageCopy: Record<Stage, { title: string; next: string; tone: string }> =
   {
@@ -109,26 +128,54 @@ export function StorefrontReceipt({ receipt }: { receipt: ReceiptView }) {
     useStorefrontCommerce()
   const [confirmWithdraw, setConfirmWithdraw] = useState(false)
   const base = stageCopy[receipt.stage]
+  const preferences = receipt
+  const deliveryDetailsNeeded =
+    receipt.kind === "order" &&
+    receipt.fulfilment === "delivery" &&
+    !receipt.deliveryAddress?.trim()
   // Confirmed orders say what to do about payment from canonical Order facts.
   const copy =
     receipt.stage === "confirmed" && receipt.order
       ? receipt.order.paymentStatus === "PAID"
         ? {
             ...base,
+            title: "Paid",
             next: "Paid in full. The business will let you know when it's ready.",
           }
         : receipt.order.paymentReport?.status === "SUBMITTED"
           ? {
               ...base,
+              title: "Payment checking",
               next: "You told the business you've paid. They'll confirm once it arrives in their account.",
             }
-          : receipt.paymentUrl
+          : receipt.order.paidMinor > 0
             ? {
                 ...base,
-                next: "Your order is confirmed. Use the payment details below.",
+                title: "Part-paid",
+                next: paymentState(receipt.order),
               }
-            : base
-      : base
+            : receipt.paymentUrl
+              ? {
+                  ...base,
+                  title: "Ready to pay",
+                  next: "Check the items, delivery fee and total, then open the payment details.",
+                }
+              : base
+      : receipt.stage === "needs_information" && deliveryDetailsNeeded
+        ? {
+            ...base,
+            title: "The business needs delivery details",
+            next: "Reply with your address or a landmark so they can confirm the delivery cost.",
+          }
+        : base
+  const order = receipt.order
+  const payLabel = order ? paymentLabel(order, receipt.paymentUrl) : null
+  // Items the customer saw versus what the business confirmed.
+  const totalChanged =
+    order?.subtotalMinor !== undefined &&
+    receipt.observedSubtotalMinor !== undefined &&
+    order.subtotalMinor !== receipt.observedSubtotalMinor
+  const aheadLines = receipt.lines.some((line) => line.preorder === true)
   const step = progress(receipt)
   const [reply, setReply] = useState("")
   const [declineReason, setDeclineReason] = useState("")
@@ -417,51 +464,74 @@ export function StorefrontReceipt({ receipt }: { receipt: ReceiptView }) {
             />
           ) : null}
 
-          {receipt.order ? (
+          {order ? (
             <div className="sf-feature-card-panel">
               <div className="sf-feature-panel-head">
                 <h2 className="sf-feature-subtitle">
-                  Order {receipt.order.orderNumber}
+                  Order {order.orderNumber}
                 </h2>
-                <Badge variant="secondary">
-                  {paymentState(receipt.order).split(".")[0]}
-                </Badge>
+                <Badge variant="secondary">{payLabel}</Badge>
               </div>
-              {receipt.order.deliveryFeeMinor ? (
+              {totalChanged ? (
+                <Alert className="sf-feature-note">
+                  <AlertDescription>
+                    The total changed to{" "}
+                    {formatMoney(order.totalMinor, order.currencyCode)}. Review
+                    the new total before paying.
+                  </AlertDescription>
+                </Alert>
+              ) : null}
+              {order.subtotalMinor !== undefined ? (
+                <div className="sf-feature-total-row sf-feature-total-row--quiet">
+                  <span>Items subtotal</span>
+                  <span>
+                    {formatMoney(order.subtotalMinor, order.currencyCode)}
+                  </span>
+                </div>
+              ) : null}
+              {receipt.fulfilment === "delivery" ||
+              (order.deliveryFeeMinor ?? 0) > 0 ? (
                 <div className="sf-feature-total-row sf-feature-total-row--quiet">
                   <span>Delivery</span>
                   <span>
-                    {formatMoney(
-                      receipt.order.deliveryFeeMinor,
-                      receipt.order.currencyCode,
-                    )}
+                    {order.deliveryFeeMinor === undefined
+                      ? "To be confirmed"
+                      : order.deliveryFeeMinor === 0
+                        ? `Free (${formatMoney(0, order.currencyCode)})`
+                        : formatMoney(
+                            order.deliveryFeeMinor,
+                            order.currencyCode,
+                          )}
                   </span>
                 </div>
               ) : null}
               <div className="sf-feature-total-row">
                 <span>Total</span>
                 <strong>
-                  {formatMoney(
-                    receipt.order.totalMinor,
-                    receipt.order.currencyCode,
-                  )}
+                  {formatMoney(order.totalMinor, order.currencyCode)}
                 </strong>
               </div>
-              {receipt.order.paidMinor > 0 ? (
+              {order.paidMinor > 0 ? (
                 <div className="sf-feature-total-row sf-feature-total-row--quiet">
                   <span>Paid</span>
                   <span>
-                    {formatMoney(
-                      receipt.order.paidMinor,
-                      receipt.order.currencyCode,
-                    )}
+                    {formatMoney(order.paidMinor, order.currencyCode)}
                   </span>
                 </div>
               ) : null}
+              <div className="sf-feature-total-row">
+                <span>Amount due</span>
+                <strong>
+                  {formatMoney(
+                    order.paymentStatus === "PAID" ? 0 : order.balanceMinor,
+                    order.currencyCode,
+                  )}
+                </strong>
+              </div>
               <output className="sf-feature-muted sf-feature-block">
-                {paymentState(receipt.order)}
+                {paymentState(order)}
               </output>
-              {receipt.paymentUrl && receipt.order.paymentStatus !== "PAID" ? (
+              {receipt.paymentUrl && order.paymentStatus !== "PAID" ? (
                 <CommerceLink
                   className={buttonVariants({
                     size: "lg",
@@ -469,7 +539,8 @@ export function StorefrontReceipt({ receipt }: { receipt: ReceiptView }) {
                   })}
                   href={receipt.paymentUrl}
                 >
-                  See payment details
+                  Review and pay{" "}
+                  {formatMoney(order.balanceMinor, order.currencyCode)}
                 </CommerceLink>
               ) : null}
             </div>
@@ -483,9 +554,21 @@ export function StorefrontReceipt({ receipt }: { receipt: ReceiptView }) {
               {receipt.lines.map((line) => (
                 <li key={line.key}>
                   <span>
-                    {line.name}
+                    {line.itemId ? (
+                      <CommerceLink
+                        className="sf-feature-link"
+                        href={href(storefrontItemHref(line.itemId))}
+                      >
+                        {line.name}
+                      </CommerceLink>
+                    ) : (
+                      line.name
+                    )}
                     {line.option ? ` · ${line.option}` : ""}
                     {` × ${line.quantity}${line.unitLabel ? ` ${line.unitLabel}` : ""}`}
+                    {line.preorder ? (
+                      <span className="sf-feature-muted"> · Request ahead</span>
+                    ) : null}
                   </span>
                   <span>
                     {line.unitPriceMinor === null
@@ -501,6 +584,14 @@ export function StorefrontReceipt({ receipt }: { receipt: ReceiptView }) {
                 <strong>{formatMoney(total, receipt.currencyCode)}</strong>
               </div>
             ) : null}
+            {!receipt.order &&
+            receipt.kind === "order" &&
+            receipt.fulfilment === "delivery" ? (
+              <div className="sf-feature-total-row sf-feature-total-row--quiet">
+                <span>Delivery</span>
+                <span>To be confirmed</span>
+              </div>
+            ) : null}
             <Separator />
             <dl className="sf-feature-facts">
               {receipt.fulfilment ? (
@@ -508,12 +599,45 @@ export function StorefrontReceipt({ receipt }: { receipt: ReceiptView }) {
                   <dt>Getting it</dt>
                   <dd>
                     {receipt.fulfilment === "delivery"
-                      ? `Delivery to ${receipt.deliveryAddress ?? "your address"}`
+                      ? receipt.deliveryAddress?.trim()
+                        ? `Delivery to ${receipt.deliveryAddress}`
+                        : "Delivery. Address to be confirmed"
                       : "Pick up"}
                   </dd>
                 </>
               ) : null}
-              {receipt.preferredDate ? (
+              {receipt.kind === "order" &&
+              aheadLines &&
+              receipt.preferredDate ? (
+                <>
+                  <dt>Requested ahead</dt>
+                  <dd>
+                    For {formatPreferredDate(receipt.preferredDate)}.{" "}
+                    <span className="sf-feature-muted">
+                      {receipt.order
+                        ? "The business confirmed this order."
+                        : "Awaiting availability."}
+                    </span>
+                  </dd>
+                </>
+              ) : receipt.preferredDate && preferences.preferredTime ? (
+                <>
+                  <dt>Preferred time</dt>
+                  <dd>
+                    {formatPreferredDate(receipt.preferredDate)},{" "}
+                    {preferences.preferredTime}
+                    {preferences.preferenceTimezone
+                      ? ` (${zoneLabel(preferences.preferenceTimezone)})`
+                      : ""}
+                    .{" "}
+                    <span className="sf-feature-muted">
+                      {isLiveAppointment(receipt.appointment?.status)
+                        ? "Your requested time, not the booked time."
+                        : "Requested time. The business confirms the booking."}
+                    </span>
+                  </dd>
+                </>
+              ) : receipt.preferredDate ? (
                 <>
                   <dt>Preferred date</dt>
                   <dd>

@@ -6,6 +6,7 @@ import {
   Alert,
   AlertDescription,
   AlertTitle,
+  Badge,
   Button,
   Empty,
   EmptyContent,
@@ -26,18 +27,30 @@ import {
   Textarea,
   buttonVariants,
 } from "@ewatrade/ui"
-import { ArrowLeft01Icon, UserIcon } from "@hugeicons/core-free-icons"
+import {
+  ArrowLeft01Icon,
+  Cancel01Icon,
+  Location01Icon,
+  UserIcon,
+} from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { useEffect, useId, useRef, useState } from "react"
-import { BagLines } from "./bag"
+import { CommerceQuickLogin } from "./account"
+import { BagIntentNote, BagLines } from "./bag"
 import {
   type BagLine,
   bagTotals,
+  clearCheckoutDraft,
   formatMoney,
+  formatPreferredDate,
+  isPreorderLine,
   issueMessage,
   newClientId,
+  preorderDates,
   quantityProblem,
+  readCheckoutDraft,
   stockWording,
+  writeCheckoutDraft,
 } from "./commerce"
 import { useCommerceStudio } from "./context"
 
@@ -71,6 +84,13 @@ function forgetRequestId() {
     window.sessionStorage.removeItem("ewatrade.storefront.pending-request")
   } catch {}
 }
+function sessionStore() {
+  try {
+    return window.sessionStorage
+  } catch {
+    return null
+  }
+}
 
 export function CommerceCheckout() {
   const {
@@ -93,7 +113,26 @@ export function CommerceCheckout() {
     ...(header.offerPickup ? (["pickup"] as const) : []),
     ...(header.offerDelivery ? (["delivery"] as const) : []),
   ]
-  const offered = methods.length ? methods : (["pickup"] as const)
+  // No method switched on means no checkout; never assume pickup.
+  const offered: readonly Fields["fulfilment"][] = methods
+  const noMethods = !offered.length
+  const scope = snapshot.resources.business.slug || "storefront"
+  const commerce = snapshot.resources.commerce
+  const channels = commerce?.customerAccounts.channels ?? []
+  const loginOffered =
+    !customer?.signedIn &&
+    (accounts ||
+      (preview && !!commerce?.customerAccounts.available && header.showLogin))
+  const [loginOpen, setLoginOpen] = useState(false)
+  const [restored, setRestored] = useState(false)
+  const [geoSupported, setGeoSupported] = useState(false)
+  const [geo, setGeo] = useState<"idle" | "finding" | "shared" | "denied">(
+    "idle",
+  )
+  const sharedLine = useRef<string | null>(null)
+  const signedInHere = useRef(false)
+  const loginToggleRef = useRef<HTMLButtonElement>(null)
+  const submitRef = useRef<HTMLButtonElement>(null)
   const [fields, setFields] = useState<Fields>({
     customerName: "",
     customerPhone: "",
@@ -138,9 +177,106 @@ export function CommerceCheckout() {
   }
   const currency = bag.lines[0]?.currencyCode ?? snapshot.currencyCode
 
+  // Restore this visit's typed details (after a quick login or a trip to /account).
+  // biome-ignore lint/correctness/useExhaustiveDependencies: restore once per Store.
+  useEffect(() => {
+    setGeoSupported(
+      typeof navigator !== "undefined" && "geolocation" in navigator,
+    )
+    if (!preview) {
+      const draft = readCheckoutDraft(sessionStore(), scope)
+      if (draft)
+        setFields((current) => ({
+          ...current,
+          ...draft,
+          fulfilment: offered.includes(draft.fulfilment)
+            ? draft.fulfilment
+            : current.fulfilment,
+        }))
+    }
+    setRestored(true)
+  }, [scope, preview])
+  useEffect(() => {
+    if (!restored || preview) return
+    writeCheckoutDraft(sessionStore(), scope, fields)
+  }, [restored, preview, scope, fields])
+  // Verified facts fill only fields that are still empty; typed values always win.
+  const verified = customer?.signedIn
+    ? {
+        name: customer.name ?? "",
+        email: customer.email ?? "",
+        phone: customer.phone ?? "",
+      }
+    : null
+  // biome-ignore lint/correctness/useExhaustiveDependencies: keyed on the verified values.
+  useEffect(() => {
+    if (!restored || !verified) return
+    setFields((current) => ({
+      ...current,
+      customerName: current.customerName || verified.name.slice(0, 80),
+      customerPhone: current.customerPhone || verified.phone.slice(0, 24),
+      customerEmail: current.customerEmail || verified.email.slice(0, 254),
+    }))
+  }, [restored, verified?.name, verified?.email, verified?.phone])
+  // After a quick login here, continue at the first empty required field, or Send.
+  useEffect(() => {
+    if (!customer?.signedIn || !signedInHere.current) return
+    signedInHere.current = false
+    requestAnimationFrame(() => {
+      const empty = [ids.name, ids.phone]
+        .map((id) => document.getElementById(id) as HTMLInputElement | null)
+        .find((input) => input && !input.value.trim())
+      const target = empty ?? submitRef.current
+      target?.focus()
+    })
+  }, [customer?.signedIn, ids.name, ids.phone])
+
+  const locate = () => {
+    if (preview || !geoSupported) return
+    setGeo("finding")
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const line = `Shared location: ${position.coords.latitude.toFixed(5)}, ${position.coords.longitude.toFixed(5)}`
+        sharedLine.current = line
+        setFields((current) => {
+          const base = current.deliveryAddress
+            .split("\n")
+            .filter((entry) => !entry.startsWith("Shared location: "))
+            .join("\n")
+            .trim()
+            .slice(0, 300 - line.length - 1)
+          return {
+            ...current,
+            deliveryAddress: base ? `${base}\n${line}` : line,
+          }
+        })
+        setGeo("shared")
+      },
+      () => setGeo("denied"),
+      { enableHighAccuracy: false, timeout: 15000, maximumAge: 300000 },
+    )
+  }
+  const forgetLocation = () => {
+    const line = sharedLine.current
+    sharedLine.current = null
+    setGeo("idle")
+    if (!line) return
+    setFields((current) => ({
+      ...current,
+      deliveryAddress: current.deliveryAddress
+        .split("\n")
+        .filter((entry) => entry !== line)
+        .join("\n")
+        .trim(),
+    }))
+  }
+
   // Re-check current prices/availability whenever the bag changes.
   const signature = bag.lines
-    .map((line) => `${line.offeringId}:${line.quantity}:${line.priceMinor}`)
+    .map(
+      (line) =>
+        `${line.offeringId}:${line.quantity}:${line.priceMinor}:${line.intent ?? "purchase"}:${line.preferredDate ?? ""}`,
+    )
     .join("|")
   // biome-ignore lint/correctness/useExhaustiveDependencies: signature captures the bag lines.
   useEffect(() => {
@@ -159,6 +295,8 @@ export function CommerceCheckout() {
             (entry) => entry.offeringId === line.offeringId,
           )
           if (!saved) continue
+          // Requested ahead: today's stock doesn't decide; the business confirms later.
+          const ahead = isPreorderLine(saved)
           if (!line.available)
             next[line.offeringId] = "This item is no longer available."
           else if (line.priceMinor === null)
@@ -166,9 +304,9 @@ export function CommerceCheckout() {
           else if (line.priceMinor !== saved.priceMinor)
             next[line.offeringId] =
               `The price is now ${formatMoney(line.priceMinor, saved.currencyCode)}.`
-          else if (line.stock === "out_of_stock")
+          else if (!ahead && line.stock === "out_of_stock")
             next[line.offeringId] = "This just sold out."
-          else if (!line.enough)
+          else if (!ahead && !line.enough)
             next[line.offeringId] =
               "Not enough in stock for this quantity. Try fewer."
         }
@@ -255,10 +393,14 @@ export function CommerceCheckout() {
       (check &&
         (!check.available ||
           check.priceMinor === null ||
-          check.stock === "out_of_stock" ||
-          !check.enough))
+          (!isPreorderLine(line) &&
+            (check.stock === "out_of_stock" || !check.enough))))
     )
   })
+  const aheadDates = preorderDates(bag.lines)
+  const aheadUndated = bag.lines.some(
+    (line) => isPreorderLine(line) && !line.preferredDate,
+  )
   const changedPrices = bag.lines.filter((line) => {
     const check = checks[line.offeringId]
     return (
@@ -283,16 +425,11 @@ export function CommerceCheckout() {
       !/^\S+@\S+\.\S+$/.test(fields.customerEmail.trim())
     )
       next.customerEmail = "Enter a valid email, or leave it empty."
-    if (
-      fields.fulfilment === "delivery" &&
-      fields.deliveryAddress.trim().length < 8
-    )
-      next.deliveryAddress = "Enter the delivery address."
     return next
   }
 
   const submit = async () => {
-    if (busy.current || receiptPath) return
+    if (busy.current || receiptPath || noMethods) return
     setFormError(null)
     const found = validate()
     setErrors(found)
@@ -323,18 +460,30 @@ export function CommerceCheckout() {
       summaryRef.current?.focus()
       return
     }
+    // One request carries one preferred date for everything requested ahead.
+    if (aheadDates.length > 1 || aheadUndated) {
+      setFormError(
+        aheadUndated
+          ? "Some items requested ahead have no date. Remove them and add them again with a date."
+          : `Items requested ahead must share one date. Remove the items that aren't for ${formatPreferredDate(aheadDates[0] as string)} and send them separately.`,
+      )
+      summaryRef.current?.focus()
+      return
+    }
     const payload = {
       lines: bag.lines.map((line) => ({
         itemId: line.itemId,
         offeringId: line.offeringId,
         quantity: line.quantity,
         observedUnitPriceMinor: line.priceMinor ?? 0,
+        ...(isPreorderLine(line) ? { preorder: true } : {}),
       })),
+      ...(aheadDates[0] ? { preferredDate: aheadDates[0] } : {}),
       customerName: fields.customerName.trim(),
       customerPhone: fields.customerPhone.trim(),
       customerEmail: fields.customerEmail.trim(),
       fulfilment: fields.fulfilment,
-      ...(fields.fulfilment === "delivery"
+      ...(fields.fulfilment === "delivery" && fields.deliveryAddress.trim()
         ? { deliveryAddress: fields.deliveryAddress.trim() }
         : {}),
       ...(fields.notes.trim() ? { notes: fields.notes.trim() } : {}),
@@ -348,6 +497,7 @@ export function CommerceCheckout() {
       const result = await adapter.submitOrder({ clientRequestId, ...payload })
       if (result.ok) {
         forgetRequestId()
+        clearCheckoutDraft(sessionStore(), scope)
         clearBag()
         completed = true
         setReceiptPath(result.receiptPath)
@@ -405,209 +555,340 @@ export function CommerceCheckout() {
           total with you on WhatsApp, then shares how to pay.
         </p>
         <div className="cs-checkout__grid">
-          <form
-            className="cs-checkout__form"
-            noValidate
-            onSubmit={(event) => {
-              event.preventDefault()
-              void submit()
-            }}
-          >
-            {formError ? (
-              <Alert
-                variant="destructive"
-                className="cs-alert"
-                ref={errorRef}
-                tabIndex={-1}
-              >
-                <AlertTitle>Not sent yet</AlertTitle>
-                <AlertDescription>{formError}</AlertDescription>
+          <div className="cs-checkout__main">
+            {accounts && customer?.signedIn ? (
+              <Alert className="cs-note">
+                <HugeiconsIcon icon={UserIcon} strokeWidth={1.8} />
+                <AlertDescription>
+                  Signed in as{" "}
+                  <strong>{customer.name || customer.label}</strong>.
+                </AlertDescription>
               </Alert>
             ) : null}
-            {accounts && !customer?.signedIn ? (
+            {loginOffered ? (
               <Alert className="cs-note">
                 <HugeiconsIcon icon={UserIcon} strokeWidth={1.8} />
                 <AlertDescription>
                   Ordering as a guest.{" "}
-                  <CommerceLink
-                    className="cs-link"
-                    href="/account?next=/checkout"
-                  >
-                    Log in
-                  </CommerceLink>{" "}
+                  {channels.length || preview ? (
+                    <button
+                      ref={loginToggleRef}
+                      type="button"
+                      className="cs-link cs-link-button"
+                      aria-expanded={loginOpen}
+                      aria-controls="cs-quick-login"
+                      onClick={() => setLoginOpen((open) => !open)}
+                    >
+                      Log in
+                    </button>
+                  ) : (
+                    <CommerceLink
+                      className="cs-link"
+                      href="/account?next=/checkout"
+                    >
+                      Log in
+                    </CommerceLink>
+                  )}{" "}
                   to keep it in your history.
                 </AlertDescription>
               </Alert>
             ) : null}
-            <FieldSet>
-              <FieldLegend>Your details</FieldLegend>
-              <FieldGroup>
-                <Field data-invalid={errors.customerName ? true : undefined}>
-                  <FieldLabel htmlFor={ids.name}>Your name</FieldLabel>
-                  <Input
-                    id={ids.name}
-                    autoComplete="name"
-                    value={fields.customerName}
-                    maxLength={80}
-                    aria-invalid={errors.customerName ? true : undefined}
-                    aria-describedby={
-                      errors.customerName ? `${ids.name}-error` : undefined
-                    }
-                    onChange={(event) =>
-                      set("customerName", event.target.value)
-                    }
+            {loginOffered && (channels.length || preview) ? (
+              // Outside the checkout form: the code steps are forms of their own.
+              <section
+                id="cs-quick-login"
+                className="cs-card-panel cs-quick-login"
+                aria-label="Log in with a code"
+                hidden={!loginOpen}
+              >
+                {preview ? (
+                  <>
+                    <h2 className="cs-subtitle">Log in with a code</h2>
+                    <p className="cs-muted">
+                      Log in isn't available in preview.
+                    </p>
+                  </>
+                ) : (
+                  <CommerceQuickLogin
+                    channels={channels}
+                    onSignedIn={() => {
+                      signedInHere.current = true
+                      setLoginOpen(false)
+                      // Same route, fresh session facts; the bag and the draft stay.
+                      navigate("/checkout", { replace: true, refresh: true })
+                    }}
                   />
-                  {errors.customerName ? (
-                    <FieldError id={`${ids.name}-error`}>
-                      {errors.customerName}
-                    </FieldError>
-                  ) : null}
-                </Field>
-                <Field data-invalid={errors.customerPhone ? true : undefined}>
-                  <FieldLabel htmlFor={ids.phone}>WhatsApp number</FieldLabel>
-                  <FieldDescription id={`${ids.phone}-help`}>
-                    The business replies here.
-                  </FieldDescription>
-                  <Input
-                    id={ids.phone}
-                    type="tel"
-                    inputMode="tel"
-                    autoComplete="tel"
-                    value={fields.customerPhone}
-                    maxLength={24}
-                    aria-invalid={errors.customerPhone ? true : undefined}
-                    aria-describedby={`${ids.phone}-help${errors.customerPhone ? ` ${ids.phone}-error` : ""}`}
-                    onChange={(event) =>
-                      set("customerPhone", event.target.value)
-                    }
-                  />
-                  {errors.customerPhone ? (
-                    <FieldError id={`${ids.phone}-error`}>
-                      {errors.customerPhone}
-                    </FieldError>
-                  ) : null}
-                </Field>
-                <Field data-invalid={errors.customerEmail ? true : undefined}>
-                  <FieldLabel htmlFor={ids.email}>Email (optional)</FieldLabel>
-                  <Input
-                    id={ids.email}
-                    type="email"
-                    autoComplete="email"
-                    value={fields.customerEmail}
-                    aria-invalid={errors.customerEmail ? true : undefined}
-                    aria-describedby={
-                      errors.customerEmail ? `${ids.email}-error` : undefined
-                    }
-                    onChange={(event) =>
-                      set("customerEmail", event.target.value)
-                    }
-                  />
-                  {errors.customerEmail ? (
-                    <FieldError id={`${ids.email}-error`}>
-                      {errors.customerEmail}
-                    </FieldError>
-                  ) : null}
-                </Field>
-              </FieldGroup>
-            </FieldSet>
-            {offered.length > 1 ? (
-              <FieldSet>
-                <FieldLegend>How you'll get it</FieldLegend>
-                <RadioGroup
-                  value={fields.fulfilment}
-                  onValueChange={(value) =>
-                    set("fulfilment", value as Fields["fulfilment"])
-                  }
-                  className="cs-radio-cards"
+                )}
+                <Button
+                  type="button"
+                  variant="ghost"
+                  className="cs-full"
+                  onClick={() => {
+                    setLoginOpen(false)
+                    requestAnimationFrame(() => loginToggleRef.current?.focus())
+                  }}
                 >
-                  {offered.map((method) => (
-                    <Field
-                      key={method}
-                      orientation="horizontal"
-                      className="cs-radio-card"
-                    >
-                      <RadioGroupItem
-                        value={method}
-                        id={`${ids.address}-${method}`}
-                      />
-                      <FieldLabel htmlFor={`${ids.address}-${method}`}>
-                        <span>
-                          <strong>
-                            {method === "pickup" ? "Pick up" : "Delivery"}
-                          </strong>
-                          <span className="cs-muted">
-                            {method === "pickup"
-                              ? header.location || "Collect from the business"
-                              : header.deliveryNote ||
-                                "The business confirms the delivery fee"}
-                          </span>
-                        </span>
-                      </FieldLabel>
-                    </Field>
-                  ))}
-                </RadioGroup>
-              </FieldSet>
-            ) : (
-              <p className="cs-muted cs-fulfilment-note">
-                {offered[0] === "delivery"
-                  ? `Delivery. ${header.deliveryNote || "The business confirms the delivery fee."}`
-                  : `Pick up${header.location ? ` from ${header.location}` : " from the business"}.`}
-              </p>
-            )}
-            {fields.fulfilment === "delivery" ? (
-              <Field data-invalid={errors.deliveryAddress ? true : undefined}>
-                <FieldLabel htmlFor={ids.address}>Delivery address</FieldLabel>
-                <Textarea
-                  id={ids.address}
-                  rows={3}
-                  maxLength={300}
-                  autoComplete="street-address"
-                  value={fields.deliveryAddress}
-                  aria-invalid={errors.deliveryAddress ? true : undefined}
-                  aria-describedby={
-                    errors.deliveryAddress ? `${ids.address}-error` : undefined
-                  }
-                  onChange={(event) =>
-                    set("deliveryAddress", event.target.value)
-                  }
-                />
-                {errors.deliveryAddress ? (
-                  <FieldError id={`${ids.address}-error`}>
-                    {errors.deliveryAddress}
-                  </FieldError>
-                ) : null}
-              </Field>
+                  Continue as guest
+                </Button>
+              </section>
             ) : null}
-            <Field>
-              <FieldLabel htmlFor={ids.notes}>
-                Note for the business (optional)
-              </FieldLabel>
-              <Textarea
-                id={ids.notes}
-                rows={3}
-                maxLength={500}
-                value={fields.notes}
-                onChange={(event) => set("notes", event.target.value)}
-              />
-            </Field>
-            <Button
-              type="submit"
-              size="lg"
-              className="cs-primary cs-full"
-              disabled={pending || preview}
+            <form
+              className="cs-checkout__form"
+              noValidate
+              onSubmit={(event) => {
+                event.preventDefault()
+                void submit()
+              }}
             >
-              {pending ? <Spinner /> : null}
-              {pending
-                ? "Sending…"
-                : preview
-                  ? "Send request (preview)"
-                  : "Send order request"}
-            </Button>
-            <p className="cs-fine">
-              Your request reference appears straight away. Nothing is charged
-              until the business confirms.
-            </p>
-          </form>
+              {formError ? (
+                <Alert
+                  variant="destructive"
+                  className="cs-alert"
+                  ref={errorRef}
+                  tabIndex={-1}
+                >
+                  <AlertTitle>Not sent yet</AlertTitle>
+                  <AlertDescription>{formError}</AlertDescription>
+                </Alert>
+              ) : null}
+              <FieldSet>
+                <FieldLegend>Your details</FieldLegend>
+                <FieldGroup>
+                  <Field data-invalid={errors.customerName ? true : undefined}>
+                    <FieldLabel htmlFor={ids.name}>Your name</FieldLabel>
+                    <Input
+                      id={ids.name}
+                      autoComplete="name"
+                      value={fields.customerName}
+                      maxLength={80}
+                      aria-invalid={errors.customerName ? true : undefined}
+                      aria-describedby={
+                        errors.customerName ? `${ids.name}-error` : undefined
+                      }
+                      onChange={(event) =>
+                        set("customerName", event.target.value)
+                      }
+                    />
+                    {errors.customerName ? (
+                      <FieldError id={`${ids.name}-error`}>
+                        {errors.customerName}
+                      </FieldError>
+                    ) : null}
+                  </Field>
+                  <Field data-invalid={errors.customerPhone ? true : undefined}>
+                    <FieldLabel htmlFor={ids.phone}>WhatsApp number</FieldLabel>
+                    <FieldDescription id={`${ids.phone}-help`}>
+                      The business replies here.
+                    </FieldDescription>
+                    <Input
+                      id={ids.phone}
+                      type="tel"
+                      inputMode="tel"
+                      autoComplete="tel"
+                      value={fields.customerPhone}
+                      maxLength={24}
+                      aria-invalid={errors.customerPhone ? true : undefined}
+                      aria-describedby={`${ids.phone}-help${errors.customerPhone ? ` ${ids.phone}-error` : ""}`}
+                      onChange={(event) =>
+                        set("customerPhone", event.target.value)
+                      }
+                    />
+                    {errors.customerPhone ? (
+                      <FieldError id={`${ids.phone}-error`}>
+                        {errors.customerPhone}
+                      </FieldError>
+                    ) : null}
+                  </Field>
+                  <Field data-invalid={errors.customerEmail ? true : undefined}>
+                    <FieldLabel htmlFor={ids.email}>
+                      Email (optional)
+                    </FieldLabel>
+                    <Input
+                      id={ids.email}
+                      type="email"
+                      autoComplete="email"
+                      value={fields.customerEmail}
+                      aria-invalid={errors.customerEmail ? true : undefined}
+                      aria-describedby={
+                        errors.customerEmail ? `${ids.email}-error` : undefined
+                      }
+                      onChange={(event) =>
+                        set("customerEmail", event.target.value)
+                      }
+                    />
+                    {errors.customerEmail ? (
+                      <FieldError id={`${ids.email}-error`}>
+                        {errors.customerEmail}
+                      </FieldError>
+                    ) : null}
+                  </Field>
+                </FieldGroup>
+              </FieldSet>
+              {noMethods ? (
+                <Alert className="cs-note">
+                  <AlertTitle>Order requests are paused</AlertTitle>
+                  <AlertDescription>
+                    {snapshot.resources.business.name} hasn't set up pickup or
+                    delivery on this site yet, so a request can't be sent.
+                    Message the business to order.
+                  </AlertDescription>
+                </Alert>
+              ) : offered.length > 1 ? (
+                <FieldSet>
+                  <FieldLegend>How you'll get it</FieldLegend>
+                  <RadioGroup
+                    value={fields.fulfilment}
+                    onValueChange={(value) =>
+                      set("fulfilment", value as Fields["fulfilment"])
+                    }
+                    className="cs-radio-cards"
+                  >
+                    {offered.map((method) => (
+                      <Field
+                        key={method}
+                        orientation="horizontal"
+                        className="cs-radio-card"
+                      >
+                        <RadioGroupItem
+                          value={method}
+                          id={`${ids.address}-${method}`}
+                        />
+                        <FieldLabel htmlFor={`${ids.address}-${method}`}>
+                          <span>
+                            <strong>
+                              {method === "pickup" ? "Pick up" : "Delivery"}
+                            </strong>
+                            <span className="cs-muted">
+                              {method === "pickup"
+                                ? header.location || "Collect from the business"
+                                : header.deliveryNote ||
+                                  "The business confirms the delivery fee"}
+                            </span>
+                          </span>
+                        </FieldLabel>
+                      </Field>
+                    ))}
+                  </RadioGroup>
+                </FieldSet>
+              ) : (
+                <p className="cs-muted cs-fulfilment-note">
+                  {offered[0] === "delivery"
+                    ? `Delivery. ${header.deliveryNote || "The business confirms the delivery fee."}`
+                    : `Pick up${header.location ? ` from ${header.location}` : " from the business"}.`}
+                </p>
+              )}
+              {fields.fulfilment === "delivery" && !noMethods ? (
+                <Field data-invalid={errors.deliveryAddress ? true : undefined}>
+                  <FieldLabel htmlFor={ids.address}>
+                    Delivery address (optional)
+                  </FieldLabel>
+                  <FieldDescription id={`${ids.address}-help`}>
+                    Add it now, or the business will ask before confirming the
+                    delivery cost.
+                  </FieldDescription>
+                  <Textarea
+                    id={ids.address}
+                    rows={3}
+                    maxLength={300}
+                    autoComplete="street-address"
+                    value={fields.deliveryAddress}
+                    aria-invalid={errors.deliveryAddress ? true : undefined}
+                    aria-describedby={`${ids.address}-help${errors.deliveryAddress ? ` ${ids.address}-error` : ""}`}
+                    onChange={(event) =>
+                      set("deliveryAddress", event.target.value)
+                    }
+                  />
+                  {geoSupported ? (
+                    <div className="cs-locate">
+                      {geo === "shared" ? (
+                        <Badge variant="secondary" className="cs-locate__badge">
+                          <HugeiconsIcon
+                            icon={Location01Icon}
+                            strokeWidth={1.8}
+                          />
+                          Location shared
+                          <button
+                            type="button"
+                            className="cs-locate__remove"
+                            aria-label="Remove shared location"
+                            onClick={forgetLocation}
+                          >
+                            <HugeiconsIcon
+                              icon={Cancel01Icon}
+                              strokeWidth={2}
+                            />
+                          </button>
+                        </Badge>
+                      ) : (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          disabled={preview || geo === "finding"}
+                          onClick={locate}
+                        >
+                          {geo === "finding" ? (
+                            <Spinner />
+                          ) : (
+                            <HugeiconsIcon
+                              icon={Location01Icon}
+                              strokeWidth={1.8}
+                            />
+                          )}
+                          {geo === "finding"
+                            ? "Finding you…"
+                            : "Use my current location"}
+                        </Button>
+                      )}
+                      <output className="cs-fine">
+                        {geo === "denied"
+                          ? "Location not shared. You can type an address instead."
+                          : preview
+                            ? "Location isn't shared in preview."
+                            : ""}
+                      </output>
+                    </div>
+                  ) : null}
+                  {errors.deliveryAddress ? (
+                    <FieldError id={`${ids.address}-error`}>
+                      {errors.deliveryAddress}
+                    </FieldError>
+                  ) : null}
+                </Field>
+              ) : null}
+              <Field>
+                <FieldLabel htmlFor={ids.notes}>
+                  Note for the business (optional)
+                </FieldLabel>
+                <Textarea
+                  id={ids.notes}
+                  rows={3}
+                  maxLength={500}
+                  value={fields.notes}
+                  onChange={(event) => set("notes", event.target.value)}
+                />
+              </Field>
+              <Button
+                ref={submitRef}
+                type="submit"
+                size="lg"
+                className="cs-primary cs-full"
+                disabled={pending || preview || noMethods}
+              >
+                {pending ? <Spinner /> : null}
+                {pending
+                  ? "Sending…"
+                  : preview
+                    ? "Send request (preview)"
+                    : "Send order request"}
+              </Button>
+              <p className="cs-fine">
+                {noMethods
+                  ? "Sending is off until the business sets up pickup or delivery."
+                  : "Your request reference appears straight away. Nothing is charged until the business confirms."}
+              </p>
+            </form>
+          </div>
           <aside
             className="cs-summary"
             aria-labelledby="cs-summary-title"
@@ -642,6 +923,7 @@ export function CommerceCheckout() {
               </button>
             </h2>
             <div id="cs-summary-body" className="cs-summary__body">
+              <BagIntentNote lines={bag.lines} />
               <BagLines lines={bag.lines} editable notes={notes} />
               {changedPrices.length ? (
                 <Alert className="cs-note">
@@ -693,13 +975,24 @@ export function CommerceCheckout() {
                     : "To confirm"}
                 </strong>
               </div>
-              {header.offerDelivery ? (
-                <p className="cs-fine">
-                  Delivery fee, if any, is confirmed by the business.
-                </p>
+              {fields.fulfilment === "delivery" && !noMethods ? (
+                <>
+                  {/* Never "Free" here: the business sets the fee when it confirms. */}
+                  <div className="cs-total-row cs-total-row--quiet">
+                    <span>Delivery</span>
+                    <strong>To be confirmed</strong>
+                  </div>
+                  {fields.deliveryAddress.trim() ? null : (
+                    <p className="cs-fine">
+                      The business will confirm delivery details and cost.
+                    </p>
+                  )}
+                </>
               ) : null}
               {bag.lines.some(
-                (line) => checks[line.offeringId]?.stock === "unknown",
+                (line) =>
+                  !isPreorderLine(line) &&
+                  checks[line.offeringId]?.stock === "unknown",
               ) ? (
                 <p className="cs-fine">
                   <span

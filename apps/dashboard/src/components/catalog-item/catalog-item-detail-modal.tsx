@@ -13,6 +13,7 @@ import { useQuery } from "@tanstack/react-query"
 import { useEffect, useRef, useState } from "react"
 import { useCatalogThemeClass } from "./catalog-appearance"
 import { CatalogSavedPhotosView } from "./catalog-saved-photos"
+import { CatalogStorefrontSettingsView } from "./catalog-storefront-settings"
 import { CatalogUnitsView } from "./catalog-units-view"
 import { CatalogDetailContent } from "./detail/content"
 import { dateTime } from "./detail/display"
@@ -41,7 +42,7 @@ export function CatalogItemDetailModal({
 }) {
   const { catalogDetail, catalogDetailView, close, setView } =
     useCatalogDetailParams()
-  // Closing is blocked while an Images save is in flight.
+  // Closing is blocked while an Images or Storefront settings save is in flight.
   const [photosBusy, setPhotosBusy] = useState(false)
   const lastItemId = useRef(catalogDetail)
   useEffect(() => {
@@ -100,21 +101,36 @@ export function CatalogItemDetailModal({
       ? "images"
       : catalogDetailView === "units" && affordances?.configureUnits
         ? "units"
-        : null
+        : catalogDetailView === "storefront" && affordances?.privatePhotos
+          ? "storefront"
+          : null
   const finalFocus = () =>
     document.querySelector<HTMLButtonElement>(
       `[data-catalog-open="${CSS.escape(lastItemId.current ?? "")}"]`,
     )
-  const back = () => void setView(null)
+  const back = () => {
+    void setView(null)
+  }
   return (
     <Sheet
       open={Boolean(catalogDetail)}
       onOpenChange={(open) => {
-        if (!open && !photosBusy) void close()
+        if (open || photosBusy) return
+        void close()
       }}
     >
       {!catalogDetail ? null : detail && view === "images" ? (
         <CatalogSavedPhotosView
+          item={detail.item}
+          storeId={store.id}
+          storeName={store.name}
+          back={back}
+          onBusy={setPhotosBusy}
+          finalFocus={finalFocus}
+        />
+      ) : detail && view === "storefront" ? (
+        <CatalogStorefrontSettingsView
+          key={`${detail.item.id}:${store.id}`}
           item={detail.item}
           storeId={store.id}
           storeName={store.name}
@@ -142,6 +158,7 @@ export function CatalogItemDetailModal({
                 detail={detail}
                 store={store}
                 readOnly={readOnly}
+                onStorefrontSettings={() => void setView("storefront")}
               />
               <CatalogDetailContent
                 key={`${readScope.key}:${catalogDetail}`}

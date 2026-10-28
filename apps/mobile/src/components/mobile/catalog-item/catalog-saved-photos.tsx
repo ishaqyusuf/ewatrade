@@ -15,7 +15,12 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import * as Crypto from "expo-crypto"
 import { Image } from "expo-image"
 import { type ReactNode, useEffect, useRef, useState } from "react"
-import { Text as NativeText, Modal as RNModal, View } from "react-native"
+import {
+  AccessibilityInfo,
+  Text as NativeText,
+  Modal as RNModal,
+  View,
+} from "react-native"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 import {
   CatalogIllustrationLibrary,
@@ -343,8 +348,18 @@ function SavedPhotoEditor({
   const [ids, setIds] = useState(() =>
     item.photos.filter((p) => p.storeId === storeId).map((p) => p.assetId),
   )
+  const expected = useRef({
+    expectedAssetIds: item.photos
+      .filter((photo) => photo.storeId === storeId)
+      .map((photo) => photo.assetId),
+    expectedIllustrationId:
+      item.illustrations.find((entry) => entry.storeId === storeId)
+        ?.illustrationId ?? null,
+  })
   // Picked from My images; each is copied onto this item when it saves.
   const [picked, setPicked] = useState<CatalogGalleryEntry[]>([])
+  // Tile keys in the order the owner arranged them; the first is primary.
+  const [order, setOrder] = useState<string[]>([])
   const [galleryOpen, setGalleryOpen] = useState(false)
   const [addOpen, setAddOpen] = useState(false)
   const [removedSaved, setRemovedSaved] = useState(false)
@@ -411,18 +426,20 @@ function SavedPhotoEditor({
     try {
       assertCurrent()
       if (!attempt.current) {
-        const added = draft.image
-          ? [
-              await uploadMobileCatalogPhoto({
-                image: draft.image,
-                storeId,
-                clientOperationId: `${command.current}:photo:${draft.image.id}`,
-                assertCurrent,
-                createIntent: (input) => createIntent.mutateAsync(input),
-              }),
-            ]
-          : []
-        const reused: string[] = []
+        // Each tile resolves to its asset in this Store, then keeps its place.
+        const assets = new Map(ids.map((id) => [id, id]))
+        if (draft.image)
+          assets.set(
+            `new:${draft.image.id}`,
+            await uploadMobileCatalogPhoto({
+              image: draft.image,
+              storeId,
+              clientOperationId: `${command.current}:photo:${draft.image.id}`,
+              assertCurrent,
+              createIntent: (input) => createIntent.mutateAsync(input),
+            }),
+          )
+        let reused = false
         for (const entry of illustrationId && !draft.image ? [] : picked) {
           assertCurrent()
           const copy = await reuse.mutateAsync({
@@ -431,17 +448,27 @@ function SavedPhotoEditor({
             sourceStoreId: entry.storeId,
             clientOperationId: `${command.current}:reuse:${entry.assetId}`,
           })
-          reused.push(copy.assetId)
+          assets.set(`picked:${entry.assetId}`, copy.assetId)
+          reused = true
         }
         assertCurrent()
         attempt.current = {
-          assetIds: [...ids, ...reused, ...added],
+          // Primary first: the replace command keeps this order.
+          assetIds: [
+            ...new Set(
+              tiles.flatMap((tile) => {
+                const id = assets.get(tile.key)
+                return id ? [id] : []
+              }),
+            ),
+          ],
           clientOperationId: command.current,
-          illustrationId: draft.image || reused.length ? null : illustrationId,
+          illustrationId: draft.image || reused ? null : illustrationId,
         }
       }
       await replace.mutateAsync({
         ...attempt.current,
+        ...expected.current,
         catalogItemId: item.id,
         storeId,
       })
@@ -462,33 +489,43 @@ function SavedPhotoEditor({
       if (mounted.current) setSaving(false)
     }
   }
-  const tiles: Array<{
+  function makePrimary(key: string, index: number) {
+    setOrder([key, ...tiles.map((tile) => tile.key).filter((k) => k !== key)])
+    AccessibilityInfo.announceForAccessibility(
+      `Photo ${index + 1} is now primary. Save to apply.`,
+    )
+  }
+  const tiles = arrangePhotos<{
     key: string
     image: ReactNode
     note?: string
+    pending: boolean
     remove(): void
-  }> = [
-    ...ids.map((id) => ({
-      key: id,
-      image: (
-        <SavedPhotoPreview
-          assetId={id}
-          storeId={storeId}
-          name={item.name}
-          variant="thumbnail"
-        />
-      ),
-      note:
-        item.photos.find((p) => p.assetId === id)?.state === "APPROVED"
-          ? undefined
-          : "Check pending",
-      remove: () => {
-        setIds((value) => value.filter((entry) => entry !== id))
-        setRemovedSaved(true)
-      },
-    })),
+  }>(order, [
+    ...ids.map((id) => {
+      const pending =
+        item.photos.find((p) => p.assetId === id)?.state !== "APPROVED"
+      return {
+        key: id,
+        image: (
+          <SavedPhotoPreview
+            assetId={id}
+            storeId={storeId}
+            name={item.name}
+            variant="thumbnail"
+          />
+        ),
+        note: pending ? "Check pending" : undefined,
+        pending,
+        remove: () => {
+          setIds((value) => value.filter((entry) => entry !== id))
+          setRemovedSaved(true)
+        },
+      }
+    }),
     ...picked.map((entry) => ({
       key: `picked:${entry.assetId}`,
+      pending: false,
       image: (
         <SavedPhotoPreview
           assetId={entry.assetId}
@@ -516,11 +553,14 @@ function SavedPhotoEditor({
               />
             ),
             note: "New photo",
+            // New photos stay private until their image check passes.
+            pending: true,
             remove: draft.remove,
           },
         ]
       : []),
-  ]
+  ])
+  const primaryPending = !illustrationId && Boolean(tiles[0]?.pending)
   return (
     <View className="gap-4">
       {illustrationId ? (
@@ -564,33 +604,72 @@ function SavedPhotoEditor({
                       fontWeight: "700",
                     }}
                   >
-                    Cover
+                    Primary
                   </NativeText>
                 </View>
               ) : null}
-              {tile.note ? (
+              {tile.note || index > 0 ? (
                 <View
                   style={{
-                    backgroundColor: palette.overlayChip,
-                    borderRadius: 6,
+                    alignItems: "flex-end",
                     bottom: 6,
+                    flexDirection: "row",
+                    gap: 4,
                     left: 6,
-                    paddingHorizontal: 6,
-                    paddingVertical: 2,
                     position: "absolute",
                     right: 6,
                   }}
                 >
-                  <NativeText
-                    numberOfLines={1}
-                    style={{
-                      color: palette.overlayForeground,
-                      fontSize: 11,
-                      fontWeight: "700",
-                    }}
-                  >
-                    {tile.note}
-                  </NativeText>
+                  {tile.note ? (
+                    <View
+                      style={{
+                        backgroundColor: palette.overlayChip,
+                        borderRadius: 6,
+                        flexShrink: 1,
+                        paddingHorizontal: 6,
+                        paddingVertical: 2,
+                      }}
+                    >
+                      <NativeText
+                        numberOfLines={1}
+                        style={{
+                          color: palette.overlayForeground,
+                          fontSize: 11,
+                          fontWeight: "700",
+                        }}
+                      >
+                        {tile.note}
+                      </NativeText>
+                    </View>
+                  ) : null}
+                  {index > 0 ? (
+                    <Pressable
+                      accessibilityRole="button"
+                      accessibilityLabel={`Make photo ${index + 1} of ${tiles.length} primary`}
+                      disabled={disabled}
+                      hitSlop={8}
+                      onPress={() => makePrimary(tile.key, index)}
+                      style={{
+                        backgroundColor: palette.overlayChip,
+                        borderRadius: 6,
+                        flexShrink: 0,
+                        marginLeft: "auto",
+                        paddingHorizontal: 6,
+                        paddingVertical: 2,
+                      }}
+                    >
+                      <NativeText
+                        numberOfLines={1}
+                        style={{
+                          color: palette.overlayForeground,
+                          fontSize: 11,
+                          fontWeight: "700",
+                        }}
+                      >
+                        Make primary
+                      </NativeText>
+                    </Pressable>
+                  ) : null}
                 </View>
               ) : null}
               <Pressable
@@ -670,6 +749,12 @@ function SavedPhotoEditor({
         Changes take effect when you save. New photos stay private until their
         image checks pass.
       </Text>
+      {primaryPending ? (
+        <Text className="text-sm text-muted-foreground">
+          Your primary photo is waiting for its image check. The storefront
+          shows the next approved photo until then.
+        </Text>
+      ) : null}
       {reuse.isPending ? (
         <StatusBanner tone="default" message="Adding photos from My images…" />
       ) : null}
@@ -723,6 +808,18 @@ function SavedPhotoEditor({
       />
     </View>
   )
+}
+
+/** Arranged tiles first, in the owner's order; newly added ones follow. */
+function arrangePhotos<T extends { key: string }>(order: string[], tiles: T[]) {
+  const rank = new Map(order.map((key, index) => [key, index]))
+  return tiles
+    .map((tile, index) => ({
+      tile,
+      rank: rank.get(tile.key) ?? order.length + index,
+    }))
+    .sort((left, right) => left.rank - right.rank)
+    .map((entry) => entry.tile)
 }
 
 function AddPhotoSheet({

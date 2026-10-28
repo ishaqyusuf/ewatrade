@@ -89,6 +89,11 @@ export const bagLineSchema = z
     scale: z.number().int().min(0).max(6),
     photoUrl: z.string().max(2048).nullable(),
     illustrationId: z.string().max(128),
+    intent: z.enum(["purchase", "preorder"]).optional(),
+    preferredDate: z
+      .string()
+      .regex(/^\d{4}-\d{2}-\d{2}$/)
+      .optional(),
   })
   .strict()
 export type BagLine = z.infer<typeof bagLineSchema>

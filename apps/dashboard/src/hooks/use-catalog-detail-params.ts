@@ -40,7 +40,7 @@ export function useCatalogDetailParams() {
   }
 }
 
-export type CatalogDetailView = "images" | "units"
+export type CatalogDetailView = "images" | "units" | "storefront"
 
 /** The canonical details sheet's query contract, also consumed by handoff regression checks. */
 export const catalogDetailParamParsers = {
@@ -57,5 +57,9 @@ export const catalogDetailParamParsers = {
     "stock",
   ]).withDefault("all"),
   /** A view inside the details sheet that changes the item; it returns to the item. */
-  catalogDetailView: parseAsStringEnum<CatalogDetailView>(["images", "units"]),
+  catalogDetailView: parseAsStringEnum<CatalogDetailView>([
+    "images",
+    "units",
+    "storefront",
+  ]),
 }

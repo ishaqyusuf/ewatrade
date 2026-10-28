@@ -25,17 +25,22 @@ import {
 import { Mail01Icon, WhatsappIcon } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { useEffect, useId, useRef, useState } from "react"
-
 import { useStorefrontCommerce } from "../../commerce/provider"
 
 import type { AccountView } from "@ewatrade/storefront-contracts/customer"
 import { parseReference } from "./reference"
 export function StorefrontSignIn({
   account,
-}: { account: Extract<AccountView, { signedIn: false }> }) {
+  embedded = false,
+  onSignedIn,
+}: {
+  account: Extract<AccountView, { signedIn: false }>
+  embedded?: boolean
+  onSignedIn?: () => void
+}) {
   const { adapter, snapshot, navigate } = useStorefrontCommerce()
   // Guest recovery proves the WhatsApp number a request was sent from; no other way in.
-  const canFind = account.channels.includes("whatsapp")
+  const canFind = !embedded && account.channels.includes("whatsapp")
   const [mode, setMode] = useState<"login" | "find">(
     canFind && account.find ? "find" : "login",
   )
@@ -162,6 +167,10 @@ export function StorefrontSignIn({
         )
         return
       }
+      if (onSignedIn) {
+        onSignedIn()
+        return
+      }
       const next =
         account.next?.startsWith("/") && !account.next.startsWith("//")
           ? account.next
@@ -174,17 +183,23 @@ export function StorefrontSignIn({
     }
   }
   return (
-    <div className="sf-feature-auth">
-      <h1 className="sf-feature-title sf-feature-title--page">
-        {mode === "find"
-          ? "Find your request"
-          : `Log in to ${snapshot.resources.business.name}`}
-      </h1>
-      <p className="sf-feature-lead">
-        {mode === "find"
-          ? "Enter the reference from your receipt and the WhatsApp number you sent it from. We'll send a code to that number to check it's you."
-          : "See your requests and orders in one place. You don't need an account to order."}
-      </p>
+    <div className="sf-feature-auth" data-embedded={embedded || undefined}>
+      {embedded ? (
+        <h2 className="sf-feature-subtitle">Log in with a code</h2>
+      ) : (
+        <>
+          <h1 className="sf-feature-title sf-feature-title--page">
+            {mode === "find"
+              ? "Find your request"
+              : `Log in to ${snapshot.resources.business.name}`}
+          </h1>
+          <p className="sf-feature-lead">
+            {mode === "find"
+              ? "Enter the reference from your receipt and the WhatsApp number you sent it from. We'll send a code to that number to check it's you."
+              : "See your requests and orders in one place. You don't need an account to order."}
+          </p>
+        </>
+      )}
       {!challenge ? (
         <form
           className="sf-feature-auth__form"
