@@ -70,9 +70,9 @@ already exist and must be reused.
 - [x] P1.3 Keep forwarding exports and verify dependency direction.
 
 ### Phase 2 — runtime infrastructure
-- [ ] P2.1 Extract persistent bag/context, separate from fresh route data.
-- [ ] P2.2 Extract host navigation and inert preview adapter.
-- [ ] P2.3 Add semantic tokens and portal-aware theme application.
+- [x] P2.1 Extract persistent bag/context, separate from fresh route data.
+- [x] P2.2 Extract host navigation and inert preview adapter.
+- [x] P2.3 Add semantic tokens and portal-aware theme application.
 
 ### Phase 3 — account and receipt
 - [ ] P3.1 Extract account/login/recovery UI and state.
@@ -169,3 +169,11 @@ TypeScript diagnostics (HEAD plus owned-file overlay, excluding concurrent edits
 Scoped fast source smoke: 182 tests / 917 assertions pass. Current shared working
 graph also exposed an in-flight foreign ProductDetail missing artwork import;
 that is not claimed as green or included in this phase commit.
+
+Phase 2: shared persistent provider/model, host navigation and inert preview adapter
+extracted. Template-specific header parsing remains in its presentation wrapper.
+Semantic theme tokens now travel with existing root/portal theme styles. Existing
+bag keys/format retained. 24 focused tests / 150 assertions, 182 fast source tests /
+917 assertions pass; owned candidate storefront TypeScript graph zero diagnostics.
+Concurrent helper additions remain unstaged in runtime/commerce/model.ts, reached
+through old forwarding exports. No runtime acceptance or deployment claim yet.

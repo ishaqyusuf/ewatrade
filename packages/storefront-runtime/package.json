@@ -13,13 +13,19 @@
     "./links": "./src/links.ts",
     "./projection": "./src/projection.ts",
     "./share": "./src/share.ts",
-    "./design-assets": "./src/design-assets.ts"
+    "./design-assets": "./src/design-assets.ts",
+    "./commerce/model": "./src/commerce/model.ts",
+    "./commerce/preview": "./src/commerce/preview.ts",
+    "./commerce/provider": "./src/commerce/provider.tsx",
+    "./commerce/navigation": "./src/commerce/navigation.tsx",
+    "./feature-theme": "./src/feature-theme.ts"
   },
   "dependencies": {
     "@ewatrade/storefront-contracts": "workspace:*",
     "react": "catalog:",
     "@ewatrade/ui": "workspace:*",
-    "@ewatrade/utils": "workspace:*"
+    "@ewatrade/utils": "workspace:*",
+    "zod": "catalog:"
   },
   "devDependencies": {
     "@ewatrade/tsconfig": "workspace:*"

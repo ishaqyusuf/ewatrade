@@ -4,7 +4,7 @@ import {
   type CommerceLinkProps,
   type CommerceNavigation,
   CommerceNavigationProvider,
-} from "@ewatrade/storefront-templates/commerce-studio"
+} from "@ewatrade/storefront-runtime/commerce/navigation"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { type ReactNode, useMemo, useTransition } from "react"

@@ -1,42 +1,23 @@
 "use client"
 
-import type { StorefrontClientSnapshot } from "@ewatrade/storefront-runtime/server"
+import type { SectionInstance } from "@ewatrade/storefront-contracts/manifest"
 import {
-  type CSSProperties,
-  type ReactNode,
-  createContext,
-  useCallback,
-  useContext,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react"
-import type { SectionInstance } from "../../../storefront-contracts/src/manifest"
-import {
-  type BagLine,
-  type BagState,
-  type StorefrontCommerceAdapter,
-  type StorefrontCustomerView,
   accentInk,
-  addBagLine,
-  previewCommerceAdapter,
-  readBag,
   readableOn,
-  storefrontMode,
-  writeBag,
-} from "./commerce"
-import { useCommerceNavigation } from "./navigation"
-
-export type HeaderSettings = {
-  tagline: string
-  location: string
-  hours: string
-  offerPickup: boolean
-  offerDelivery: boolean
-  deliveryNote: string
-  showLogin: boolean
-}
+} from "@ewatrade/storefront-runtime/commerce/model"
+import {
+  StorefrontCommercePageProvider,
+  StorefrontCommerceProvider,
+} from "@ewatrade/storefront-runtime/commerce/provider"
+import {
+  type StorefrontDetails as HeaderSettings,
+  storefrontFeatureTokens,
+} from "@ewatrade/storefront-runtime/feature-theme"
+import type { StorefrontClientSnapshot } from "@ewatrade/storefront-runtime/server"
+import type { CSSProperties, ComponentProps } from "react"
+export { useStorefrontCommerce as useCommerceStudio } from "@ewatrade/storefront-runtime/commerce/provider"
+export type { StorefrontCommerceContext as CommerceStudioContext } from "@ewatrade/storefront-runtime/commerce/provider"
+export type { StorefrontDetails as HeaderSettings } from "@ewatrade/storefront-runtime/feature-theme"
 
 export function headerSettings(
   composition: StorefrontClientSnapshot["composition"],
@@ -61,6 +42,7 @@ export function commerceThemeStyle(
   theme: StorefrontClientSnapshot["composition"]["theme"],
 ) {
   return {
+    ...storefrontFeatureTokens(theme),
     "--cs-accent": theme.accent,
     "--cs-on-accent": readableOn(theme.accent),
     "--cs-accent-ink": accentInk(theme.accent, theme.background),
@@ -80,234 +62,37 @@ export function commerceThemeStyle(
   } as CSSProperties
 }
 
-export type CommerceStudioContext = {
-  snapshot: StorefrontClientSnapshot
-  themeStyle: CSSProperties
-  adapter: StorefrontCommerceAdapter
-  customer: StorefrontCustomerView
-  header: HeaderSettings
-  facts: ReturnType<typeof storefrontMode>
-  /** Product ordering is live (server re-checks on every write). */
-  ordering: boolean
-  accounts: boolean
-  /** Studio/editor preview: links stay inert and nothing is written. */
-  preview: boolean
-  bag: BagState
-  bagReady: boolean
-  addToBag(line: BagLine): string | null
-  setQuantity(offeringId: string, quantity: string): void
-  updateLine(offeringId: string, patch: Partial<BagLine>): void
-  removeLine(offeringId: string): void
-  clearBag(): void
-  bagOpen: boolean
-  setBagOpen(open: boolean): void
-  href(path: string): string
-  navigate(
-    path: string,
-    options?: { replace?: boolean; refresh?: boolean },
-  ): void
-  refresh(): void
-  refreshing: boolean
-}
-
-const Context = createContext<CommerceStudioContext | null>(null)
-
-export function useCommerceStudio() {
-  const value = useContext(Context)
-  if (!value) throw new Error("Commerce studio context is missing.")
-  return value
-}
-
-/** Route data changes independently of the shell's persistent bag state. */
-export function CommerceStudioPageProvider({
-  snapshot,
-  customer,
-  children,
-}: {
-  snapshot: StorefrontClientSnapshot
-  customer?: StorefrontCustomerView
-  children: ReactNode
-}) {
-  const parent = useCommerceStudio()
-  const facts = storefrontMode({
-    offeringCounts: snapshot.resources.catalog.offeringCounts,
-    items: snapshot.resources.catalog.items,
-  })
-  const value: CommerceStudioContext = {
-    ...parent,
-    snapshot,
-    customer: customer ?? null,
-    facts,
-    header: headerSettings(snapshot.composition),
-    themeStyle: commerceThemeStyle(snapshot.composition.theme),
-    ordering:
-      facts.products > 0 &&
-      !!snapshot.resources.commerce?.orderRequests.available,
-    accounts:
-      !!snapshot.resources.commerce?.customerAccounts.available &&
-      headerSettings(snapshot.composition).showLogin,
-  }
-  return <Context.Provider value={value}>{children}</Context.Provider>
-}
-
-function safeStorage() {
-  try {
-    const storage = window.localStorage
-    const probe = "ewatrade.storefront.probe"
-    storage.setItem(probe, "1")
-    storage.removeItem(probe)
-    return storage
-  } catch {
-    return null
+function presentation(snapshot: StorefrontClientSnapshot) {
+  return {
+    details: headerSettings(snapshot.composition),
+    style: commerceThemeStyle(snapshot.composition.theme),
   }
 }
-
-export function CommerceStudioProvider({
-  snapshot,
-  adapter,
-  customer,
-  preview,
-  onPageChange,
-  children,
-}: {
-  snapshot: StorefrontClientSnapshot
-  adapter?: StorefrontCommerceAdapter
-  customer?: StorefrontCustomerView
-  preview: boolean
-  onPageChange?: (key: string) => void
-  children: ReactNode
-}) {
-  const navigation = useCommerceNavigation()
-  const commerce = snapshot.resources.commerce
-  // The host's server-derived flags decide; QA data writes only under local QA
-  // preview admission. Studio previews never get a live adapter.
-  const live =
-    !preview &&
-    !!adapter &&
-    Boolean(
-      commerce?.orderRequests.available ||
-        commerce?.customerAccounts.available ||
-        snapshot.resources.contact.serviceRequestEntry,
-    )
-  const effectiveAdapter = live && adapter ? adapter : previewCommerceAdapter
-  const facts = storefrontMode({
-    offeringCounts: snapshot.resources.catalog.offeringCounts,
-    items: snapshot.resources.catalog.items,
-  })
-  const ordering =
-    facts.products > 0 && (preview || !!commerce?.orderRequests.available)
-  const accounts =
-    !preview &&
-    !!commerce?.customerAccounts.available &&
-    headerSettings(snapshot.composition).showLogin
-  // Bag is scoped to one business; the slug comes from the verified load.
-  const scope = snapshot.resources.business.slug || "storefront"
-  const storage = useRef<Storage | null>(null)
-  const [bag, setBag] = useState<BagState>({
-    lines: [],
-    persistence: "storage",
-    recovered: false,
-  })
-  const [bagReady, setBagReady] = useState(false)
-  const [bagOpen, setBagOpen] = useState(false)
-  useEffect(() => {
-    if (preview) {
-      setBag({ lines: [], persistence: "memory", recovered: false })
-      setBagReady(true)
-      return
-    }
-    storage.current = safeStorage()
-    setBag(readBag(storage.current, scope))
-    setBagReady(true)
-    const sync = (event: StorageEvent) => {
-      if (event.key?.endsWith(`:${scope}`))
-        setBag(readBag(storage.current, scope))
-    }
-    window.addEventListener("storage", sync)
-    return () => window.removeEventListener("storage", sync)
-  }, [scope, preview])
-  const commit = useCallback(
-    (lines: BagLine[]) => {
-      const persistence = preview
-        ? "memory"
-        : writeBag(storage.current, scope, lines)
-      setBag((current) => ({ ...current, lines, persistence }))
-    },
-    [scope, preview],
+export function CommerceStudioProvider(
+  props: Omit<
+    ComponentProps<typeof StorefrontCommerceProvider>,
+    "presentation"
+  >,
+) {
+  return (
+    <StorefrontCommerceProvider
+      {...props}
+      presentation={presentation(props.snapshot)}
+    />
   )
-  const addToBag = useCallback(
-    (line: BagLine) => {
-      try {
-        commit(addBagLine(bag.lines, line))
-        return null
-      } catch (error) {
-        return error instanceof Error ? error.message : "Couldn't add this."
-      }
-    },
-    [bag.lines, commit],
+}
+export function CommerceStudioPageProvider(
+  props: Omit<
+    ComponentProps<typeof StorefrontCommercePageProvider>,
+    "presentation"
+  >,
+) {
+  return (
+    <StorefrontCommercePageProvider
+      {...props}
+      presentation={presentation(props.snapshot)}
+    />
   )
-  const value = useMemo<CommerceStudioContext>(
-    () => ({
-      snapshot,
-      themeStyle: commerceThemeStyle(snapshot.composition.theme),
-      adapter: effectiveAdapter,
-      customer: customer ?? null,
-      header: headerSettings(snapshot.composition),
-      facts,
-      ordering,
-      accounts,
-      preview,
-      bag,
-      bagReady,
-      addToBag,
-      setQuantity: (offeringId, quantity) =>
-        commit(
-          bag.lines.map((line) =>
-            line.offeringId === offeringId ? { ...line, quantity } : line,
-          ),
-        ),
-      updateLine: (offeringId, patch) =>
-        commit(
-          bag.lines.map((line) =>
-            line.offeringId === offeringId ? { ...line, ...patch } : line,
-          ),
-        ),
-      removeLine: (offeringId) =>
-        commit(bag.lines.filter((line) => line.offeringId !== offeringId)),
-      clearBag: () => commit([]),
-      bagOpen,
-      setBagOpen,
-      href: (path) => (preview ? "#" : path),
-      refresh: () => navigation?.refresh(),
-      refreshing: navigation?.pending ?? false,
-      navigate: (path, options) => {
-        if (preview) {
-          const key = path.replace(/^\//, "").split("?")[0] || "home"
-          onPageChange?.(key)
-          return
-        }
-        if (navigation) navigation.navigate(path, options)
-        else window.location.assign(path)
-      },
-    }),
-    [
-      snapshot,
-      effectiveAdapter,
-      customer,
-      facts,
-      ordering,
-      accounts,
-      preview,
-      bag,
-      bagReady,
-      addToBag,
-      commit,
-      bagOpen,
-      onPageChange,
-      navigation,
-    ],
-  )
-  return <Context.Provider value={value}>{children}</Context.Provider>
 }
 
 export function sectionText(

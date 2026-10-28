@@ -792,6 +792,7 @@
         "@ewatrade/ui": "workspace:*",
         "@ewatrade/utils": "workspace:*",
         "react": "catalog:",
+        "zod": "catalog:",
       },
       "devDependencies": {
         "@ewatrade/tsconfig": "workspace:*",
