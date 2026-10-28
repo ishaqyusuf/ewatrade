@@ -53,7 +53,13 @@ function matches(row: Row, where: Row = {}): boolean {
 }
 
 /** Only storage mechanics live here; real repositories own scope/CAS/replay/audit. */
-function memoryDatabase() {
+function memoryDatabase(
+  options: {
+    planId?: string
+    /** Public catalog emulation; receives each `catalogItem.findMany` call. */
+    catalog?: (args: Row) => Row[]
+  } = {},
+) {
   let state = {
     sites: [] as Row[],
     releases: [] as Row[],
@@ -70,7 +76,17 @@ function memoryDatabase() {
     slug: "synthetic-local-shop",
     isActive: true,
     dataClassification: "QA",
-    metadata: { retailOpsPlanId: "starter" },
+    metadata: options.planId
+      ? {
+          retailOps: {
+            subscription: {
+              planId: options.planId,
+              source: "local_command_fixture",
+              grantedAt: "2026-10-01T00:00:00.000Z",
+            },
+          },
+        }
+      : { retailOpsPlanId: "starter" },
     subscription: null,
   }
   const store = {
@@ -220,7 +236,13 @@ function memoryDatabase() {
     businessActivityOutbox: {
       create: async ({ data }: { data: Row }) => state.outbox.push(clone(data)),
     },
-    catalogItem: { findMany: async () => [] },
+    catalogItem: {
+      findMany: async (args: Row) => clone(options.catalog?.(args) ?? []),
+      findFirst: async () => null,
+      count: async () => 0,
+    },
+    catalogCategory: { findMany: async () => [] },
+    stockBalanceSource: { groupBy: async () => [] },
   }
   const db = {
     async $transaction<T>(
@@ -422,4 +444,168 @@ test("offline reviewed-component draft, signed preview, publication, replay and 
   expect(new Set(fixture.transactionOptions).size).toBe(
     fixture.transactionOptions.length,
   )
+})
+
+/** Public projection row the repository's shared item select returns. */
+const catalogRow = (id: string) => ({
+  id,
+  name: `Item ${id}`,
+  kind: "PRODUCT",
+  description: null,
+  categoryRecord: null,
+  illustrations: [],
+  product: { lowStockLevel: null },
+  offerings: [
+    {
+      id: `${id}-o`,
+      name: "Standard",
+      fixedPriceMinor: 1000,
+      currencyCode: "NGN",
+      pricingPolicy: "FIXED",
+      productUnitOffering: null,
+      serviceOffering: null,
+      variant: {
+        id: `${id}-v`,
+        name: "Standard",
+        isDefault: true,
+        stockBalanceSources: [],
+      },
+    },
+  ],
+})
+
+test("Studio preview loads Featured pins past the page with the bounded public read", async () => {
+  // "far" is public but past the loaded page; "archived" is no longer public.
+  const page = ["on-page"]
+  const eligible = new Set(["on-page", "far"])
+  const pinnedReads: Row[] = []
+  const fixture = memoryDatabase({
+    planId: "growth",
+    catalog: (args) => {
+      const where = args.where as
+        | { AND?: [Row, { id?: { in?: string[] } }] }
+        | undefined
+      const ids = where?.AND?.[1]?.id?.in
+      if (ids) {
+        pinnedReads.push(args)
+        return ids.filter((id) => eligible.has(id)).map(catalogRow)
+      }
+      return page.map(catalogRow)
+    },
+  })
+  const { db, actor } = fixture
+  const initialized = await commands.initializeStorefront(db, actor, {
+    storeId: "store-local",
+    templateKey: "commerce-studio",
+  })
+  if (!initialized.ok) throw new Error("Fixture did not initialize")
+  const draft = validateComposition(
+    initialized.draft.composition,
+    getTemplateManifest(initialized.draft.composition),
+  )
+  expect(draft.template.version).toBe("1.1.0")
+  const preview = async () =>
+    commands.previewStorefrontDraft(db, actor, {
+      session: (await commands.startStorefrontPreview(db, actor)).session,
+    })
+  // No pins: the preview makes no pinned read and carries no pinnedItems.
+  const plain = await preview()
+  expect(plain.snapshot.resources.catalog.pinnedItems).toBeUndefined()
+  expect(pinnedReads).toHaveLength(0)
+
+  const pinned = clone(draft)
+  const featured = pinned.pages[0]?.sections.find(
+    (section) => section.type === "commerce-studio-featured",
+  )
+  if (!featured) throw new Error("Featured missing")
+  featured.settings.pinned = ["far", "archived", "on-page"]
+  const saved = await commands.saveStorefrontDraft(db, actor, {
+    expectedSiteId: initialized.siteId,
+    expectedRevision: initialized.draft.revision,
+    composition: pinned,
+  })
+  expect(saved.ok).toBe(true)
+  const result = await preview()
+  const catalog = result.snapshot.resources.catalog
+  expect(catalog.items.map((item) => item.id)).toEqual(["on-page"])
+  // Past-the-page public pin included; archived pin excluded; on-page pin not repeated.
+  expect(catalog.pinnedItems?.map((item) => item.id)).toEqual(["far"])
+  // One bounded read, only for pins missing from the page, under public eligibility.
+  expect(pinnedReads).toHaveLength(1)
+  expect(pinnedReads[0]).toMatchObject({
+    where: {
+      AND: [
+        catalogRepository.publicCatalogItemWhere("tenant-local", "store-local"),
+        { id: { in: ["far", "archived"] } },
+      ],
+    },
+    take: 2,
+  })
+  // Unsaved candidate designs get the same read for their own pins.
+  const candidate = clone(pinned)
+  const candidateFeatured = candidate.pages[0]?.sections.find(
+    (section) => section.type === "commerce-studio-featured",
+  )
+  if (!candidateFeatured) throw new Error("Featured missing")
+  candidateFeatured.settings.pinned = ["on-page"]
+  const designs = await commands.previewStorefrontDraft(db, actor, {
+    session: (await commands.startStorefrontPreview(db, actor)).session,
+    designs: [candidate],
+  })
+  expect(
+    designs.designSnapshots[0]?.resources.catalog.pinnedItems,
+  ).toBeUndefined()
+  expect(pinnedReads).toHaveLength(2)
+  expect(fixture.state().releases).toHaveLength(0)
+})
+
+test("Studio preview never loads a pin outside an included plan's cap", async () => {
+  const reads: Row[] = []
+  // Starter shows only the first 3 eligible entries; "far" is the 4th.
+  const eligible = ["a", "b", "c", "far"]
+  const fixture = memoryDatabase({
+    catalog: (args) => {
+      reads.push(args)
+      const where = args.where as
+        | { AND?: [Row, { id?: { in?: string[] } }] }
+        | undefined
+      const ids = where?.AND?.[1]?.id?.in
+      const rows = ids ? eligible.filter((id) => ids.includes(id)) : eligible
+      return rows.slice(0, args.take as number | undefined).map(catalogRow)
+    },
+  })
+  const { db, actor } = fixture
+  const initialized = await commands.initializeStorefront(db, actor, {
+    storeId: "store-local",
+    templateKey: "commerce-studio",
+  })
+  if (!initialized.ok) throw new Error("Fixture did not initialize")
+  const pinned = validateComposition(
+    initialized.draft.composition,
+    getTemplateManifest(initialized.draft.composition),
+  )
+  const featured = pinned.pages[0]?.sections.find(
+    (section) => section.type === "commerce-studio-featured",
+  )
+  if (!featured) throw new Error("Featured missing")
+  featured.settings.pinned = ["far"]
+  await commands.saveStorefrontDraft(db, actor, {
+    expectedSiteId: initialized.siteId,
+    expectedRevision: initialized.draft.revision,
+    composition: pinned,
+  })
+  const result = await commands.previewStorefrontDraft(db, actor, {
+    session: (await commands.startStorefrontPreview(db, actor)).session,
+  })
+  expect(
+    result.snapshot.resources.catalog.items.map((item) => item.id),
+  ).toEqual(["a", "b", "c"])
+  expect(result.snapshot.resources.catalog.pinnedItems).toBeUndefined()
+  // The cap check reads at most the cap; no ID lookup follows for an over-cap pin.
+  expect(
+    reads.some(
+      (args) =>
+        (args.where as { AND?: unknown[] } | undefined)?.AND !== undefined,
+    ),
+  ).toBe(false)
 })
