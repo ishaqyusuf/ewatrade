@@ -327,6 +327,32 @@ export function pinnedCatalogItemIds(composition: StorefrontComposition) {
   return [...new Set(ids)]
 }
 
+/**
+ * A copy of `design` whose `catalog-items` fields carry `ids` (in order, split across
+ * fields by their max). Previews use it to request pinned public items for a draft
+ * without sending the draft's copy. IDs that don't fit any field are left out.
+ */
+export function withPinnedCatalogItems(
+  design: StorefrontComposition,
+  ids: readonly string[],
+) {
+  const manifest = getTemplateManifest(design, "render")
+  const next = structuredClone(design)
+  let rest = [...ids]
+  for (const page of next.pages)
+    for (const section of page.sections) {
+      const definition = manifest.sections.find(
+        (entry) => entry.key === section.type,
+      )
+      for (const field of definition?.fields ?? [])
+        if (field.kind === "catalog-items" && section.visible) {
+          section.settings[field.key] = rest.slice(0, field.maxItems)
+          rest = rest.slice(field.maxItems)
+        }
+    }
+  return validateComposition(next, manifest)
+}
+
 type DraftUpgrade = {
   from: { key: string; version: string }
   to: string

@@ -26,6 +26,7 @@ import {
   templateRegistry,
   themeForTemplate,
   upgradeDraftVersion,
+  withPinnedCatalogItems,
 } from "../registry"
 import { StorefrontTemplate } from "../render"
 import {
@@ -608,4 +609,22 @@ test("pins past the loaded page render from catalog.pinnedItems without joining 
   expect(featuredNames(render(value))).toEqual(["late", "a", "b"])
   // The shop listing is only the loaded page.
   expect(render(value, "shop")).not.toContain("?item=late")
+})
+
+test("preview resource design carries only pin IDs, split by field max", () => {
+  const design = canvasDefaults(commerceStudioManifest)
+  const ids = Array.from({ length: 10 }, (_, index) => `p${index}`)
+  const next = withPinnedCatalogItems(design, ids)
+  expect(featuredSection(next).settings.pinned).toEqual(ids.slice(0, 8))
+  expect(pinnedCatalogItemIds(next)).toEqual(ids.slice(0, 8))
+  // Copy stays the reviewed default; the input design is not mutated.
+  expect(featuredSection(next).settings.heading).toBe("New in the shop")
+  expect(featuredSection(design).settings.pinned).toEqual([])
+  const legacy = getTemplateManifest(
+    { template: { key: "commerce-studio", version: "1.0.0" } },
+    "render",
+  )
+  expect(withPinnedCatalogItems(canvasDefaults(legacy), ["p0"])).toEqual(
+    canvasDefaults(legacy),
+  )
 })

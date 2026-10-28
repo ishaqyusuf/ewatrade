@@ -4,11 +4,16 @@ import { getDataCacheGeneration, useTRPC, useTRPCClient } from "@/trpc/client"
 import type { StorefrontComposition } from "@ewatrade/storefront-contracts/manifest"
 import type { CatalogQuery } from "@ewatrade/storefront-contracts/resources"
 import type { StorefrontClientSnapshot } from "@ewatrade/storefront-runtime/server"
-import { canvasDefaults, canvasManifest } from "@ewatrade/storefront-templates"
+import {
+  canvasDefaults,
+  canvasManifest,
+  pinnedCatalogItemIds,
+  withPinnedCatalogItems,
+} from "@ewatrade/storefront-templates"
 import type { CanvasEditing } from "@ewatrade/storefront-templates/canvas"
 import { StorefrontTemplate } from "@ewatrade/storefront-templates/render"
-import { useQuery } from "@tanstack/react-query"
-import { useEffect, useState } from "react"
+import { keepPreviousData, useQuery } from "@tanstack/react-query"
+import { useEffect, useMemo, useState } from "react"
 import {
   storefrontPreviewFormQuery,
   storefrontPreviewQuery,
@@ -59,8 +64,21 @@ export function StorefrontCanvasPreview({
   // A reviewed default blueprint always declares the bounded catalog/contact projection,
   // even when the saved composition has hidden or removed its collection.
   // Copy/theme/reorder changes never request another database projection.
-  const [resourceDesign] = useState(() =>
-    canvasDefaults(canvasManifest(composition.template.key)),
+  // Pinned items are the exception: the request carries the draft's pin IDs (not its
+  // copy), so pins past the first page load. Only a change to the pin set refetches.
+  const pins = pinnedCatalogItemIds(composition).join(",")
+  const resourceDesign = useMemo(
+    () =>
+      withPinnedCatalogItems(
+        canvasDefaults(
+          canvasManifest(
+            composition.template.key,
+            composition.template.version,
+          ),
+        ),
+        pins ? pins.split(",") : [],
+      ),
+    [composition.template.key, composition.template.version, pins],
   )
   const preview = useQuery(
     trpc.storefront.preview.queryOptions(
@@ -71,6 +89,8 @@ export function StorefrontCanvasPreview({
       },
       {
         enabled: !!session.data && session.data.expiresAt > now,
+        // Keep the canvas on screen while a changed pin set loads.
+        placeholderData: keepPreviousData,
         retry: false,
         staleTime: Number.POSITIVE_INFINITY,
         gcTime: 0,
