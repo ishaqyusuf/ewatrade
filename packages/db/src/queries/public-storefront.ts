@@ -226,7 +226,11 @@ type PublicItemRow<S extends Prisma.CatalogItemSelect> =
  * published (or authenticated preview) composition via `publicLowStockCountsEnabled`,
  * never from request input. Off by default.
  */
-export type PublicItemProjection = { lowStockCounts?: boolean }
+export type PublicItemProjection = {
+  lowStockCounts?: boolean
+  /** Trusted server projection only; customer/public request input cannot select it. */
+  catalog?: "none"
+}
 
 /** Same-origin path of the existing public photo route; the host proxies it to the API. */
 export function publicCatalogPhotoPath(storeId: string, assetId: string) {
@@ -598,7 +602,11 @@ async function readStorefront(
   let outVariantIds: string[] = []
   const priceSort = listing.sort?.startsWith("price") ?? false
   const nameSort = listing.sort?.startsWith("name") ?? false
-  if (paidListing && (!(nameSort || priceSort) || listing.availability)) {
+  if (
+    projection.catalog !== "none" &&
+    paidListing &&
+    (!(nameSort || priceSort) || listing.availability)
+  ) {
     const balances = await db.stockBalanceSource.groupBy({
       by: ["variantId", "inventoryUnitId"],
       where: {
@@ -689,7 +697,9 @@ async function readStorefront(
   let cappedItems: ReturnType<typeof projectItem>[] = []
   let hasHiddenItems = false
   let nextCursor: string | null = null
-  if (!paidListing) {
+  if (projection.catalog === "none") {
+    items = []
+  } else if (!paidListing) {
     // The included plan keeps the first N eligible entries; search/filter/sort only
     // narrow or reorder those, so they can never reveal an entry beyond the cap.
     const rows = await db.catalogItem.findMany({
@@ -830,7 +840,8 @@ async function readStorefront(
     }
   }
   // Deep links ignore listing filters but never reach beyond the public cap.
-  const requestedItem = validId(options.item) ? options.item : null
+  const requestedItem =
+    projection.catalog !== "none" && validId(options.item) ? options.item : null
   let highlightedItem =
     (paidListing ? items : cappedItems).find(
       (item) => item.id === requestedItem,
@@ -839,24 +850,25 @@ async function readStorefront(
     const row = await cursorRow(eligibleWhere, requestedItem)
     highlightedItem = row ? projectItem(row) : null
   }
-  const categories = paidListing
-    ? await db.catalogCategory.findMany({
-        where: {
-          tenantId: tenant.id,
-          items: {
-            some: {
-              ...saleEligibleCatalogItem,
-              tenantId: tenant.id,
-              status: "ACTIVE",
-              archivedAt: null,
-              offerings: { some: offeringWhere },
+  const categories =
+    paidListing && projection.catalog !== "none"
+      ? await db.catalogCategory.findMany({
+          where: {
+            tenantId: tenant.id,
+            items: {
+              some: {
+                ...saleEligibleCatalogItem,
+                tenantId: tenant.id,
+                status: "ACTIVE",
+                archivedAt: null,
+                offerings: { some: offeringWhere },
+              },
             },
           },
-        },
-        select: { id: true, label: true },
-        orderBy: [{ normalizedLabel: "asc" }, { id: "asc" }],
-      })
-    : []
+          select: { id: true, label: true },
+          orderBy: [{ normalizedLabel: "asc" }, { id: "asc" }],
+        })
+      : []
   const isQaPreview = tenant.dataClassification === "QA"
   const messagesEnabled =
     !isQaPreview && planHasFeature(plan, "customerMessages")

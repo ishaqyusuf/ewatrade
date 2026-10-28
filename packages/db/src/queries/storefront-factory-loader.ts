@@ -1,5 +1,8 @@
 import { publicLowStockCountsEnabled } from "@ewatrade/storefront-contracts/orders"
-import { getPublicStorefrontForSite } from "./public-storefront"
+import {
+  type PublicItemProjection,
+  getPublicStorefrontForSite,
+} from "./public-storefront"
 import type { PublicStorefrontQuery } from "./public-storefront-listing"
 import { getLiveSiteRelease } from "./storefront-sites"
 import type { DbClient } from "./types"
@@ -10,6 +13,7 @@ export function loadLiveStorefrontForHost(
   host: string,
   after?: string,
   options: PublicStorefrontQuery = {},
+  projection: Pick<PublicItemProjection, "catalog"> = {},
 ) {
   return getPublicStorefrontForSite(
     db,
@@ -19,7 +23,13 @@ export function loadLiveStorefrontForHost(
     options,
     // Opt-in extras come from the active published release only.
     (site) => ({
+      ...projection,
       lowStockCounts: publicLowStockCountsEnabled(site.release.composition),
     }),
   )
+}
+
+/** Current publication/business facts only; never reads listing, stock or categories. */
+export function loadStorefrontContextForHost(db: DbClient, host: string) {
+  return loadLiveStorefrontForHost(db, host, undefined, {}, { catalog: "none" })
 }

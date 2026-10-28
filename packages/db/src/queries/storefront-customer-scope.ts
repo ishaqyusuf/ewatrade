@@ -3,7 +3,7 @@ import {
   STOREFRONT_RUNTIME_VERSION,
   compositionSchema,
 } from "@ewatrade/storefront-contracts/manifest"
-import { loadLiveStorefrontForHost } from "./storefront-factory-loader"
+import { loadStorefrontContextForHost } from "./storefront-factory-loader"
 import { siteContentHash } from "./storefront-sites"
 import type { DbClient } from "./types"
 
@@ -76,8 +76,7 @@ export function createStorefrontCustomerScopeResolver(
 /** Customer reads depend on the published business, not its template or new intake. */
 export function resolveStorefrontCustomerScope(db: DbClient, host: string) {
   return createStorefrontCustomerScopeResolver({
-    loadCurrent: (hostname) =>
-      loadLiveStorefrontForHost(db, hostname, undefined, {}),
+    loadCurrent: (hostname) => loadStorefrontContextForHost(db, hostname),
     findActiveStore: ({ tenantId, storeId }) =>
       db.store.findFirst({
         where: { id: storeId, tenantId, status: "ACTIVE" },

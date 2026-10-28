@@ -53,7 +53,7 @@ explicit evidence-based decision if changing them would add cost or weaken polic
 ### Batch 1 — Storefront
 
 - [ ] S0 Baseline: preserve ownership, record local navigation and query-cost repro.
-- [ ] S1 Authority: lightweight published Host/Tenant/Site/Store context; customer
+- [x] S1 Authority: lightweight published Host/Tenant/Site/Store context; customer
   scope without listing/stock/category reads; preserve all eligibility checks.
 - [ ] S2 Route projections: shell/about/account/checkout/receipt/detail request only
   their needed resources; share request context and metadata reads.
@@ -119,3 +119,8 @@ H01/H02 gates remain separate from source smoke. No deployment is implied.
   storefront/notification work preserved. Offline doctor passed. Whole-checkout
   smoke plan exposes foreign unmapped notification paths; owned-scope verification
   will not claim acceptance of those paths.
+- S1: real repository-path regression reproduced an unnecessary catalog read for
+  customer scope (including before a tampered-release refusal). Server-only empty
+  catalog projection removes listing/stock/category work. Focused existing scope,
+  public admission/cap/cursor tests: 23 passed / 138 assertions; Storefront full
+  TypeScript check and owned formatting passed. No write-authority/schema change.
