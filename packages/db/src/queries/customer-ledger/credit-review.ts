@@ -1,15 +1,16 @@
 import type { Prisma } from "../../../generated/prisma/client"
-import { assertFinanceManager, type FinanceActor } from "../finance/access"
+import { type FinanceActor, assertFinanceManager } from "../finance/access"
 import {
   FinanceError,
-  financeAmount,
   assertFinancePostingDate,
+  financeAmount,
 } from "../finance/rules"
-import { getCustomerLedgerTotalsInTransaction } from "./balances"
-import { reviewCreditAllocationSource } from "./allocation-source-review"
 import { reviewAllocationReleaseSource } from "./allocation-release-review-source"
-import type { ApplyCustomerLedgerCreditInput } from "./allocations"
 import type { ReleaseCustomerLedgerAllocationInput } from "./allocation-releases"
+import { reviewCreditAllocationSource } from "./allocation-source-review"
+import type { ApplyCustomerLedgerCreditInput } from "./allocations"
+import { getCustomerLedgerTotalsInTransaction } from "./balances"
+import { getCustomerFundsReservedInTransaction } from "./funds-reservations"
 
 async function context(
   tx: Prisma.TransactionClient,
@@ -107,6 +108,9 @@ export async function getCustomerAllocationReleaseReview(
     account.id,
     account.lastSequence,
   )
+  const reserved = await getCustomerFundsReservedInTransaction(tx, {
+    accountId: account.id,
+  })
   return {
     bookId: book.id,
     accountId: account.id,
@@ -120,13 +124,17 @@ export async function getCustomerAllocationReleaseReview(
     chargeEntryId: source.allocation.chargeEntryId,
     allocatedBeforeMinor: source.remaining.toString(),
     allocatedAfterMinor: (source.remaining - amount).toString(),
-    accountCreditBeforeMinor: totals.availableCreditMinor,
+    accountCreditBeforeMinor: (
+      BigInt(totals.availableCreditMinor) - reserved
+    ).toString(),
     accountCreditAfterMinor: (
-      BigInt(totals.availableCreditMinor) + amount
+      BigInt(totals.availableCreditMinor) -
+      reserved +
+      amount
     ).toString(),
     accountDebtBeforeMinor: totals.outstandingDebtMinor,
     accountDebtAfterMinor: (
-      BigInt(totals.outstandingDebtMinor) + amount
+      BigInt(totals.outstandingDebtMinor) + (source.unbilled ? 0n : amount)
     ).toString(),
     orderId: source.order?.id ?? null,
     orderNumber: source.order?.orderNumber ?? null,

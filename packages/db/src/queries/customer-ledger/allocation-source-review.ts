@@ -1,14 +1,16 @@
 import type {
-  Prisma,
-  FinanceBook,
   CustomerLedgerAccount,
+  FinanceBook,
+  Prisma,
 } from "../../../generated/prisma/client"
 import { FinanceError } from "../finance/rules"
+import type { ApplyCustomerLedgerCreditInput } from "./allocations"
 import {
   lockPostedCustomerOrderCharge,
   readPostedCustomerOrderCharge,
 } from "./order-charges"
-import type { ApplyCustomerLedgerCreditInput } from "./allocations"
+
+import { assertCustomerFundsNotReserved } from "./funds-reservations"
 
 type SourceInput = Omit<
   ApplyCustomerLedgerCreditInput,
@@ -89,6 +91,12 @@ async function source(
       "CONFLICT",
       "The allocation exceeds available credit or remaining debt.",
     )
+  const reserved = await assertCustomerFundsNotReserved(
+    tx,
+    { accountId: account.id, creditEntryId: credit.id },
+    credit.amountMinor - creditUsed,
+    amount,
+  )
   const [advance, receivable] = await Promise.all([
     tx.financeAccount.findFirst({
       where: {
@@ -118,7 +126,7 @@ async function source(
     order,
     advance,
     receivable,
-    creditRemaining: credit.amountMinor - creditUsed,
+    creditRemaining: credit.amountMinor - creditUsed - reserved,
     debtRemaining: charge.amountMinor - chargePaid,
   }
 }

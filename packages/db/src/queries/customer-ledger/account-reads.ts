@@ -3,6 +3,8 @@ import { type FinanceActor, assertFinanceManager } from "../finance/access"
 import { FinanceError } from "../finance/rules"
 import { getCustomerLedgerTotalsInTransaction } from "./balances"
 
+import { getCustomerFundsReservedInTransaction } from "./funds-reservations"
+
 const customerSelection = {
   id: true,
   name: true,
@@ -91,7 +93,7 @@ export async function getCustomerLedgerAccountDetail(
           "NOT_FOUND",
           "Customer account not found in this business.",
         )
-      const [totals, book] = await Promise.all([
+      const [totals, book, reserved] = await Promise.all([
         getCustomerLedgerTotalsInTransaction(
           tx,
           account.id,
@@ -104,6 +106,7 @@ export async function getCustomerLedgerAccountDetail(
           },
           select: { id: true, currencyCode: true, startsAt: true },
         }),
+        getCustomerFundsReservedInTransaction(tx, { accountId: account.id }),
       ])
       return {
         id: account.id,
@@ -112,7 +115,13 @@ export async function getCustomerLedgerAccountDetail(
         revision: account.revision.toString(),
         snapshotSequence: account.lastSequence.toString(),
         book,
-        totals,
+        totals: {
+          ...totals,
+          availableCreditMinor: (
+            BigInt(totals.availableCreditMinor) - reserved
+          ).toString(),
+        },
+        reservedCreditMinor: reserved.toString(),
         coverage: "POSTED_CUSTOMER_LEDGER_ENTRIES" as const,
         completeness: "INCOMPLETE_SOURCE_COVERAGE" as const,
       }

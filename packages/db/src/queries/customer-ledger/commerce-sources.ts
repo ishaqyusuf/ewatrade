@@ -1,6 +1,8 @@
 import type { FinanceBook, Prisma } from "../../../generated/prisma/client"
 import type { CommerceFinanceSource } from "../finance/commerce-posting-source"
+import { postCustomerBillingReclassificationInTransaction } from "../finance/posting"
 import { FinanceError } from "../finance/rules"
+import { reclassifyCustomerCreditAtBillingInTransaction } from "./billing-reclassification"
 
 const zero = BigInt(0)
 const min = (left: bigint, right: bigint) => (left < right ? left : right)
@@ -86,6 +88,13 @@ export async function recordCommerceCustomerLedgerInTransaction(
         "CONFLICT",
         "Customer source has already posted with different facts.",
       )
+    if (source.event === "BILLED")
+      await reconcilePrebillingSources(tx, {
+        book,
+        account,
+        order,
+        charge: previous,
+      })
     return { id: previous.id }
   }
   if (amount <= zero)
@@ -134,7 +143,16 @@ export async function recordCommerceCustomerLedgerInTransaction(
     },
     select: { id: true },
   })
-  if (!payment || !charge) return entry
+  if (!payment || !charge) {
+    if (source.event === "BILLED")
+      await reconcilePrebillingSources(tx, {
+        book,
+        account,
+        order,
+        charge: entry,
+      })
+    return entry
+  }
   if (!isRefund) {
     const allocations = await tx.customerLedgerAllocation.findMany({
       where: { accountId: account.id, chargeEntryId: charge.id },
@@ -241,4 +259,50 @@ export async function recordCommerceCustomerLedgerInTransaction(
       "Release this Order's collected funds from other charges before returning money.",
     )
   return entry
+}
+
+/** No second cash event: move existing custody and then materialize its ledger settlement. */
+async function reconcilePrebillingSources(
+  tx: Prisma.TransactionClient,
+  input: Parameters<typeof reclassifyCustomerCreditAtBillingInTransaction>[1],
+) {
+  await reclassifyCustomerCreditAtBillingInTransaction(tx, input)
+  const collections = await tx.financeJournalEntry.findMany({
+    where: {
+      bookId: input.book.id,
+      sourceKind: "COMMERCIAL_ORDER_COLLECTION",
+      sourceId: {
+        in: (
+          await tx.commercialOrderPayment.findMany({
+            where: {
+              tenantId: input.book.tenantId,
+              orderId: input.order.id,
+              method: { not: "CUSTOMER_CREDIT" },
+            },
+            select: { id: true },
+          })
+        ).map((row) => row.id),
+      },
+    },
+    orderBy: [{ effectiveAt: "asc" }, { sequence: "asc" }],
+    select: { sourceId: true },
+  })
+  for (const collection of collections) {
+    await postCustomerBillingReclassificationInTransaction(tx, {
+      tenantId: input.book.tenantId,
+      orderId: input.order.id,
+      kind: "CASH_COLLECTION",
+      paymentId: collection.sourceId,
+    })
+    await recordCommerceCustomerLedgerInTransaction(
+      tx,
+      {
+        tenantId: input.book.tenantId,
+        orderId: input.order.id,
+        event: "PAYMENT",
+        paymentId: collection.sourceId,
+      },
+      input.book,
+    )
+  }
 }

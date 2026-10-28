@@ -1,5 +1,3 @@
-import { runInOwnTransaction } from "../own-transaction"
-import { reviewCustomerReceiptAccounts } from "./receipt-account-review"
 import { randomUUID } from "node:crypto"
 import type {
   CommercialPaymentMethod,
@@ -11,10 +9,13 @@ import { financePostingCommandId } from "../finance/commands"
 import { postFinanceJournalInTransaction } from "../finance/posting"
 import {
   FinanceError,
+  assertFinancePostingDate,
   financeAmount,
   financePayloadHash,
 } from "../finance/rules"
+import { runInOwnTransaction } from "../own-transaction"
 import { lockCustomerLedgerAccount } from "./accounts"
+import { reviewCustomerReceiptAccounts } from "./receipt-account-review"
 
 export type RecordCustomerLedgerReceiptInput = FinanceActor & {
   bookId: string
@@ -27,6 +28,8 @@ export type RecordCustomerLedgerReceiptInput = FinanceActor & {
   reference?: string
   description: string
   storeId?: string
+  /** Explicit bank receipt date for trusted merchant confirmation only. */
+  effectiveAt?: Date
 }
 
 export function recordCustomerLedgerReceipt(
@@ -112,6 +115,13 @@ export async function recordCustomerLedgerReceiptInTransaction(
     book,
   )
   const now = new Date()
+  const effectiveAt = input.effectiveAt ?? now
+  assertFinancePostingDate({
+    effectiveAt,
+    startsAt: book.startsAt,
+    closedThrough: book.closedThrough,
+    now,
+  })
   const receiptId = randomUUID()
   const updated = await tx.customerLedgerAccount.update({
     where: { id: account.id },
@@ -129,7 +139,7 @@ export async function recordCustomerLedgerReceiptInTransaction(
       sourceId: receiptId,
       storeId: input.storeId,
       actorUserId: input.actorUserId,
-      effectiveAt: now,
+      effectiveAt,
       description: input.description.trim(),
     },
   })
@@ -154,7 +164,7 @@ export async function recordCustomerLedgerReceiptInTransaction(
     sourceKind: "CUSTOMER_RECEIPT",
     sourceId: receipt.id,
     description: input.description.trim(),
-    effectiveAt: now,
+    effectiveAt,
     lines: [
       {
         accountId: money.id,

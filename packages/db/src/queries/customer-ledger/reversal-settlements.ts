@@ -67,6 +67,15 @@ export async function inspectCustomerLedgerSettlementHistory(
           WHERE account.kind = 'ASSET' AND account.purpose = 'RECEIVABLE'
         ) AS receivable_account_id,
         COALESCE(SUM(line."debitMinor") FILTER (
+          WHERE account.kind = 'LIABILITY' AND account.purpose = 'OTHER' AND account.code = '2200' AND account.name = 'Order collections awaiting reconciliation'
+        ), 0) AS collections_debit,
+        COALESCE(SUM(line."creditMinor") FILTER (
+          WHERE account.kind = 'LIABILITY' AND account.purpose = 'OTHER' AND account.code = '2200' AND account.name = 'Order collections awaiting reconciliation'
+        ), 0) AS collections_credit,
+        MAX(account.id) FILTER (
+          WHERE account.kind = 'LIABILITY' AND account.purpose = 'OTHER' AND account.code = '2200' AND account.name = 'Order collections awaiting reconciliation'
+        ) AS collections_account_id,
+        COALESCE(SUM(line."debitMinor") FILTER (
           WHERE account.kind = 'ASSET' AND account.purpose IN ('CASH', 'BANK', 'CLEARING')
         ), 0) AS money_debit,
         COALESCE(SUM(line."creditMinor") FILTER (
@@ -192,7 +201,7 @@ export async function inspectCustomerLedgerSettlementHistory(
     ), allocation_proof AS (
       SELECT targets.allocation_id, targets.amount,
         allocation_journal.advance_account_id,
-        allocation_journal.receivable_account_id,
+        CASE WHEN targets.charge_source_kind = 'CUSTOMER_UNBILLED_ORDER_CREDIT' THEN allocation_journal.collections_account_id ELSE allocation_journal.receivable_account_id END AS receivable_account_id,
         COALESCE(release_totals.amount, 0) AS released,
         COALESCE(release_totals.count, 0) AS release_count,
         CASE WHEN targets.charge_kind = 'REFUND' THEN
@@ -232,7 +241,11 @@ export async function inspectCustomerLedgerSettlementHistory(
           AND allocation_journal.reversal_of_id IS NULL
           AND allocation_journal.line_count = 2
           AND allocation_journal.advance_debit = targets.amount
-          AND allocation_journal.receivable_credit = targets.amount
+          AND (CASE WHEN targets.charge_source_kind = 'CUSTOMER_UNBILLED_ORDER_CREDIT' THEN
+            targets.charge_kind = 'ORDER_PAYMENT' AND targets.charge_side = 'DEBIT'
+            AND targets.charge_source_id = targets.allocation_id AND targets.charge_amount = targets.amount
+            AND allocation_journal.collections_credit = targets.amount
+            ELSE allocation_journal.receivable_credit = targets.amount END)
           AND allocation_journal.debit_total = targets.amount
           AND allocation_journal.credit_total = targets.amount
           AND targets.target_sequence > ${input.sourceSequence}
@@ -267,12 +280,28 @@ export async function inspectCustomerLedgerSettlementHistory(
           release_journal.id IS NOT NULL
           AND release_journal.reversal_of_id IS NULL
           AND release_journal.line_count = 2
-          AND release_journal.receivable_debit = target_releases.amount
+          AND (CASE WHEN targets.charge_source_kind = 'CUSTOMER_UNBILLED_ORDER_CREDIT' THEN
+            release_journal.collections_debit = target_releases.amount
+            AND EXISTS (
+              SELECT 1 FROM "CustomerLedgerEntry" correction
+              JOIN "CustomerLedgerAllocation" bridge ON bridge."creditEntryId" = correction.id
+              WHERE correction."accountId" = ${input.accountId}
+                AND correction.kind = 'REVERSAL' AND correction.side = 'CREDIT'
+                AND correction."sourceKind" = 'CUSTOMER_UNBILLED_CREDIT_RELEASE'
+                AND correction."sourceId" = target_releases.release_id
+                AND correction."amountMinor" = target_releases.amount
+                AND correction.sequence = target_releases.sequence
+                AND bridge."accountId" = ${input.accountId}
+                AND bridge."chargeEntryId" = targets.charge_id
+                AND bridge."amountMinor" = target_releases.amount
+                AND bridge.sequence = target_releases.sequence
+            )
+            ELSE release_journal.receivable_debit = target_releases.amount END)
           AND release_journal.advance_credit = target_releases.amount
           AND release_journal.debit_total = target_releases.amount
           AND release_journal.credit_total = target_releases.amount
           AND release_journal.advance_account_id = allocation_proof.advance_account_id
-          AND release_journal.receivable_account_id = allocation_proof.receivable_account_id
+          AND (CASE WHEN targets.charge_source_kind = 'CUSTOMER_UNBILLED_ORDER_CREDIT' THEN release_journal.collections_account_id ELSE release_journal.receivable_account_id END) = allocation_proof.receivable_account_id
           AND target_releases.sequence > targets.target_sequence
           AND target_releases.sequence <= ${input.currentSequence}
           AND NOT EXISTS (

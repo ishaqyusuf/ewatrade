@@ -1,16 +1,22 @@
-import { runInOwnTransaction } from "../own-transaction"
 import type { Prisma, PrismaClient } from "../../../generated/prisma/client"
 import { recordCommercialCreditSettlementInTransaction } from "../commercial-payments"
 import { type FinanceActor, lockFinanceBook } from "../finance/access"
 import { financePostingCommandId } from "../finance/commands"
+import { postCustomerCreditAllocationFinanceInTransaction } from "../finance/posting"
 import { postFinanceJournalInTransaction } from "../finance/posting"
 import {
   FinanceError,
   financeAmount,
   financePayloadHash,
 } from "../finance/rules"
+import { runInOwnTransaction } from "../own-transaction"
 import { lockCustomerLedgerAccount } from "./accounts"
 import { reviewLockedCreditAllocationSource } from "./allocation-source-review"
+import {
+  type CustomerFundsAllocationAuthority,
+  consumeCustomerFundsAllocationAuthority,
+  readCustomerFundsAllocationAuthority,
+} from "./funds-allocation-authority"
 
 /** Apply held customer funds without recording another monetary collection. */
 export type ApplyCustomerLedgerCreditInput = FinanceActor & {
@@ -36,6 +42,7 @@ export function applyCustomerLedgerCredit(
 export async function applyCustomerLedgerCreditInTransaction(
   tx: Prisma.TransactionClient,
   input: ApplyCustomerLedgerCreditInput,
+  customerAuthority?: CustomerFundsAllocationAuthority,
 ) {
   const amount = financeAmount(input.amountMinor)
   if (
@@ -49,8 +56,15 @@ export async function applyCustomerLedgerCreditInTransaction(
     )
   const { actorUserId: _actor, tenantId: _tenant, ...payload } = input
   const hash = financePayloadHash(payload)
-  const book = await lockFinanceBook(tx, input)
-  const account = await lockCustomerLedgerAccount(tx, input)
+  const authorized = customerAuthority
+    ? readCustomerFundsAllocationAuthority(tx, customerAuthority, input)
+    : null
+  const book = authorized?.book ?? (await lockFinanceBook(tx, input))
+  const account = authorized
+    ? await tx.customerLedgerAccount.findUniqueOrThrow({
+        where: { id: authorized.account.id },
+      })
+    : await lockCustomerLedgerAccount(tx, input)
   if (account.currencyCode !== book.currencyCode)
     throw new FinanceError(
       "INVALID_JOURNAL",
@@ -94,6 +108,23 @@ export async function applyCustomerLedgerCreditInTransaction(
     )
   const { credit, charge, order, advance, receivable } =
     await reviewLockedCreditAllocationSource(tx, input, book, account, amount)
+  if (customerAuthority) {
+    if (!order)
+      throw new FinanceError(
+        "FORBIDDEN",
+        "Customer consent can only settle its reviewed Order.",
+      )
+    readCustomerFundsAllocationAuthority(tx, customerAuthority, {
+      ...input,
+      orderId: order.id,
+    })
+    consumeCustomerFundsAllocationAuthority(
+      tx,
+      customerAuthority,
+      { ...input, orderId: order.id },
+      amount,
+    )
+  }
   const updated = await tx.customerLedgerAccount.update({
     where: { id: account.id },
     data: { lastSequence: { increment: 1 }, revision: { increment: 1 } },
@@ -106,34 +137,42 @@ export async function applyCustomerLedgerCreditInTransaction(
       chargeEntryId: charge.id,
       amountMinor: amount,
       actorUserId: input.actorUserId,
+      createdAt: new Date(),
     },
     select: { id: true },
   })
-  await postFinanceJournalInTransaction(tx, {
-    ...input,
-    clientCommandId: financePostingCommandId(
-      `customer-ledger:${input.clientCommandId}`,
-      "allocation",
-    ),
-    sourceKind: "CUSTOMER_CREDIT_ALLOCATION",
-    sourceId: allocation.id,
-    description: order
-      ? `Apply existing customer credit to Order ${order.orderNumber}`
-      : "Apply existing customer credit to opening debt",
-    effectiveAt: new Date(),
-    lines: [
-      {
-        accountId: advance.id,
-        side: "DEBIT",
-        amountMinor: amount.toString(),
-      },
-      {
-        accountId: receivable.id,
-        side: "CREDIT",
-        amountMinor: amount.toString(),
-      },
-    ],
-  })
+  if (customerAuthority)
+    await postCustomerCreditAllocationFinanceInTransaction(
+      tx,
+      { allocationId: allocation.id, clientCommandId: input.clientCommandId },
+      customerAuthority,
+    )
+  else
+    await postFinanceJournalInTransaction(tx, {
+      ...input,
+      clientCommandId: financePostingCommandId(
+        `customer-ledger:${input.clientCommandId}`,
+        "allocation",
+      ),
+      sourceKind: "CUSTOMER_CREDIT_ALLOCATION",
+      sourceId: allocation.id,
+      description: order
+        ? `Apply existing customer credit to Order ${order.orderNumber}`
+        : "Apply existing customer credit to opening debt",
+      effectiveAt: new Date(),
+      lines: [
+        {
+          accountId: advance.id,
+          side: "DEBIT",
+          amountMinor: amount.toString(),
+        },
+        {
+          accountId: receivable.id,
+          side: "CREDIT",
+          amountMinor: amount.toString(),
+        },
+      ],
+    })
   if (order)
     await recordCommercialCreditSettlementInTransaction(
       tx,
@@ -145,6 +184,7 @@ export async function applyCustomerLedgerCreditInTransaction(
         method: "other",
       },
       { bookId: book.id, allocationId: allocation.id },
+      customerAuthority,
     )
   await tx.customerLedgerCommand.create({
     data: {

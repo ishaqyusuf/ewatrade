@@ -20,6 +20,16 @@ export * from "./refund-review"
 export * from "./receipt-review"
 
 export * from "./credit-review"
+export * from "./funds-refunds"
+export * from "./funds-destination"
+export * from "./public-funds"
+export {
+  applyVerifiedCustomerCredit,
+  applyVerifiedCustomerCreditInTransaction,
+  type ApplyVerifiedCustomerCreditInput,
+} from "./public-credit"
+export * from "./order-funds-return"
+export * from "./receipt-for-order"
 export {
   type CustomerLedgerBalance,
   listCustomerLedgerBalances,

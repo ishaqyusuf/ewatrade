@@ -1,5 +1,10 @@
-import type { CommercialPaymentMethod, Prisma } from "../../../generated/prisma/client"
+import type {
+  CommercialPaymentMethod,
+  Prisma,
+} from "../../../generated/prisma/client"
 import { FinanceError, financeAmount } from "../finance/rules"
+
+import { assertCustomerFundsNotReserved } from "./funds-reservations"
 
 export type HeldCreditRefundSourceInput = {
   creditEntryId: string
@@ -123,6 +128,12 @@ export async function reviewHeldCreditRefundSource(
       "CONFLICT",
       "Refund exceeds unused held credit. Release any charge allocations first.",
     )
+  const reserved = await assertCustomerFundsNotReserved(
+    tx,
+    { accountId: account.id, creditEntryId: credit.id },
+    credit.amountMinor - used,
+    amount,
+  )
   if (!money || !advance)
     throw new FinanceError(
       "NOT_FOUND",
@@ -137,5 +148,12 @@ export async function reviewHeldCreditRefundSource(
       "INVALID_JOURNAL",
       "The money account does not match the refund method.",
     )
-  return { credit, money, advance, amount, availableBefore: credit.amountMinor - used, availableAfter: credit.amountMinor - used - amount }
+  return {
+    credit,
+    money,
+    advance,
+    amount,
+    availableBefore: credit.amountMinor - used - reserved,
+    availableAfter: credit.amountMinor - used - reserved - amount,
+  }
 }

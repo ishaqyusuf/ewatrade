@@ -245,6 +245,7 @@ export async function listCustomerLedgerSources(
           SELECT candidate.*,
             COALESCE(alloc.total_minor, 0) AS allocated_minor,
             COALESCE(rel.total_minor, 0) AS released_minor,
+            COALESCE(held.total_minor, 0) AS reserved_minor,
             order_row."orderNumber" AS "orderNumber",
             order_row.status AS "orderStatus"
           FROM candidates candidate
@@ -270,6 +271,10 @@ export async function listCustomerLedgerSources(
                 OR (${input.side} = 'DEBIT' AND allocation."chargeEntryId" = candidate.id)
               )
           ) rel ON TRUE
+          LEFT JOIN LATERAL (
+            SELECT SUM("amountMinor") AS total_minor FROM "CustomerFundsRefundRequest"
+            WHERE "accountId" = ${account.id} AND "creditEntryId" = candidate.id AND status = 'RESERVED'
+          ) held ON TRUE
           LEFT JOIN "CommercialOrder" order_row
             ON candidate.kind = 'ORDER_CHARGE'
             AND order_row.id = candidate."orderId"
@@ -279,12 +284,12 @@ export async function listCustomerLedgerSources(
         )
         SELECT id, sequence, kind, side, "amountMinor",
           (allocated_minor - released_minor)::text AS "usedAmountMinor",
-          ("amountMinor" - allocated_minor + released_minor)::text AS "remainingAmountMinor",
+          ("amountMinor" - allocated_minor + released_minor - reserved_minor)::text AS "remainingAmountMinor",
           "sourceKind", "sourceId", "orderId", "effectiveAt", "orderNumber", "orderStatus"
         FROM source_balances
         WHERE allocated_minor >= released_minor
           AND allocated_minor - released_minor <= "amountMinor"
-          AND "amountMinor" - allocated_minor + released_minor > 0
+          AND "amountMinor" - allocated_minor + released_minor - reserved_minor > 0
         ORDER BY sequence
         LIMIT ${limit + 1}
       `

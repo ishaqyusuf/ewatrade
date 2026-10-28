@@ -1,4 +1,3 @@
-import { runInOwnTransaction } from "../own-transaction"
 import type { Prisma, PrismaClient } from "../../../generated/prisma/client"
 import { recordCommercialCreditSettlementInTransaction } from "../commercial-payments"
 import { type FinanceActor, lockFinanceBook } from "../finance/access"
@@ -9,6 +8,7 @@ import {
   financeAmount,
   financePayloadHash,
 } from "../finance/rules"
+import { runInOwnTransaction } from "../own-transaction"
 import { lockCustomerLedgerAccount } from "./accounts"
 import { reviewLockedAllocationReleaseSource } from "./allocation-release-review-source"
 
@@ -95,7 +95,7 @@ export async function releaseCustomerLedgerAllocationInTransaction(
       "CONFLICT",
       "The customer account changed. Review current balances before releasing credit.",
     )
-  const { allocation, order, advance, receivable } =
+  const { allocation, order, advance, receivable, unbilled } =
     await reviewLockedAllocationReleaseSource(tx, input, book, account, amount)
   const updated = await tx.customerLedgerAccount.update({
     where: { id: account.id },
@@ -111,6 +111,36 @@ export async function releaseCustomerLedgerAllocationInTransaction(
     },
     select: { id: true },
   })
+  const effectiveAt = new Date()
+  if (unbilled) {
+    const correction = await tx.customerLedgerEntry.create({
+      data: {
+        tenantId: input.tenantId,
+        accountId: account.id,
+        sequence: updated.lastSequence,
+        kind: "REVERSAL",
+        side: "CREDIT",
+        amountMinor: amount,
+        sourceKind: "CUSTOMER_UNBILLED_CREDIT_RELEASE",
+        sourceId: release.id,
+        orderId: order?.id,
+        storeId: order?.storeId,
+        actorUserId: input.actorUserId,
+        effectiveAt,
+        description: `Restore held funds from unbilled Order: ${reason}`,
+      },
+    })
+    await tx.customerLedgerAllocation.create({
+      data: {
+        accountId: account.id,
+        sequence: updated.lastSequence,
+        creditEntryId: correction.id,
+        chargeEntryId: allocation.chargeEntryId,
+        amountMinor: amount,
+        actorUserId: input.actorUserId,
+      },
+    })
+  }
   await postFinanceJournalInTransaction(tx, {
     ...input,
     clientCommandId: financePostingCommandId(
@@ -119,7 +149,7 @@ export async function releaseCustomerLedgerAllocationInTransaction(
     ),
     sourceKind: "CUSTOMER_ALLOCATION_RELEASE",
     sourceId: release.id,
-    effectiveAt: new Date(),
+    effectiveAt,
     description: `Release customer credit allocation: ${reason}`,
     lines: [
       {

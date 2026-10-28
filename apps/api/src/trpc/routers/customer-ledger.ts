@@ -1,11 +1,16 @@
 import {
   applyCustomerLedgerCredit,
+  cancelCustomerFundsRefund,
+  completeCustomerFundsRefund,
+  encryptCustomerRefundDestination,
   ensureCustomerLedgerAccount,
+  getCustomerFundsRefundDetail,
   getCustomerLedgerAccountDetail,
   getCustomerLedgerAllocationHistory,
   getCustomerLedgerCommandStatus,
   getCustomerLedgerEntryDetail,
   getCustomerLedgerStatement,
+  listCustomerFundsRefunds,
   listCustomerLedgerAccounts,
   listCustomerLedgerReceivables,
   listCustomerLedgerSources,
@@ -14,9 +19,20 @@ import {
   recordCustomerLedgerReceiptAndApply,
   refundCustomerLedgerCredit,
   releaseCustomerLedgerAllocation,
+  requestCustomerFundsRefund,
+  requestCustomerFundsRefundDetails,
+  reserveCustomerFundsRefund,
+  returnCustomerOrderFunds,
   reverseCustomerLedgerEntry,
 } from "@ewatrade/db/queries"
 import {
+  customerFundsRefundChangeSchema,
+  customerFundsRefundCompleteSchema,
+  customerFundsRefundDetailSchema,
+  customerFundsRefundListSchema,
+  customerFundsRefundNeedDetailsSchema,
+  customerFundsRefundRequestSchema,
+  customerFundsRefundReserveSchema,
   customerLedgerAccountDetailSchema,
   customerLedgerAccountsSchema,
   customerLedgerAllocationHistorySchema,
@@ -32,11 +48,77 @@ import {
   customerLedgerReverseEntrySchema,
   customerLedgerSourcesSchema,
   customerLedgerStatementSchema,
+  customerOrderFundsReturnSchema,
 } from "../../schemas/customer-ledger"
 import { financeProcedure } from "../finance-procedure"
 import { createTRPCRouter } from "../init"
 
+// A missing destination key preserves safe request reads/cancellation.
+// Approvals require the exact available destination; new custody requires a dedicated key.
+const destinationKey = () => process.env.CUSTOMER_FUNDS_DESTINATION_KEY ?? ""
+
 export const customerLedgerRouter = createTRPCRouter({
+  refundRequests: financeProcedure
+    .input(customerFundsRefundListSchema)
+    .query(({ ctx, input }) =>
+      listCustomerFundsRefunds(ctx.db, { ...input, ...ctx.financeActor }),
+    ),
+  refundRequestDetail: financeProcedure
+    .input(customerFundsRefundDetailSchema)
+    .query(({ ctx, input }) =>
+      getCustomerFundsRefundDetail(
+        ctx.db,
+        { ...input, ...ctx.financeActor },
+        destinationKey(),
+      ),
+    ),
+  requestRefund: financeProcedure
+    .input(customerFundsRefundRequestSchema)
+    .mutation(({ ctx, input }) => {
+      const { destination, ...command } = input
+      const encrypted = encryptCustomerRefundDestination(
+        destination,
+        { ...ctx.financeActor, ...command },
+        destinationKey(),
+      )
+      return requestCustomerFundsRefund(ctx.db, {
+        ...command,
+        ...ctx.financeActor,
+        ...encrypted,
+      })
+    }),
+  reserveRefund: financeProcedure
+    .input(customerFundsRefundReserveSchema)
+    .mutation(({ ctx, input }) =>
+      reserveCustomerFundsRefund(
+        ctx.db,
+        { ...input, ...ctx.financeActor },
+        destinationKey(),
+      ),
+    ),
+  cancelRefund: financeProcedure
+    .input(customerFundsRefundChangeSchema)
+    .mutation(({ ctx, input }) =>
+      cancelCustomerFundsRefund(ctx.db, { ...input, ...ctx.financeActor }),
+    ),
+  completeRefund: financeProcedure
+    .input(customerFundsRefundCompleteSchema)
+    .mutation(({ ctx, input }) =>
+      completeCustomerFundsRefund(ctx.db, { ...input, ...ctx.financeActor }),
+    ),
+  requestRefundDetails: financeProcedure
+    .input(customerFundsRefundNeedDetailsSchema)
+    .mutation(({ ctx, input }) =>
+      requestCustomerFundsRefundDetails(ctx.db, {
+        ...input,
+        ...ctx.financeActor,
+      }),
+    ),
+  returnOrderFunds: financeProcedure
+    .input(customerOrderFundsReturnSchema)
+    .mutation(({ ctx, input }) =>
+      returnCustomerOrderFunds(ctx.db, { ...input, ...ctx.financeActor }),
+    ),
   receivables: financeProcedure
     .input(customerLedgerReceivablesSchema)
     .query(({ ctx, input }) =>

@@ -3,14 +3,24 @@ import type {
   Prisma,
   PrismaClient,
 } from "../../../generated/prisma/client"
+import {
+  type CustomerBillingReclassificationSource,
+  resolveCustomerBillingReclassification,
+} from "../customer-ledger/billing-reclassification-source"
 import { recordCommerceCustomerLedgerInTransaction } from "../customer-ledger/commerce-sources"
+import {
+  type CustomerFundsAllocationAuthority,
+  readCustomerFundsAllocationAuthority,
+} from "../customer-ledger/funds-allocation-authority"
+import { getUnbilledOrderFundsControl } from "../customer-ledger/funds-order-control"
 import { type FinanceActor, lockFinanceBook } from "./access"
+import { financePostingCommandId } from "./commands"
 import { resolveCommerceFinancePosting } from "./commerce-posting-source"
-import { resolveOrderCollectionPosting } from "./order-collection-source"
 import { prepareInventoryCloseoutFinanceInTransaction } from "./inventory-closeout-posting-source"
 import { resolveCommerceInventoryCostPosting } from "./inventory-cost-posting-source"
 import { resolveInventoryCountPostings } from "./inventory-count-posting-source"
 import { resolveCommerceInventoryReturnPosting } from "./inventory-return-posting-source"
+import { resolveOrderCollectionPosting } from "./order-collection-source"
 import {
   FinanceError,
   type FinanceLineInput,
@@ -307,4 +317,116 @@ export async function recordInventoryCloseoutFinanceInTransaction(
   for (const input of closeout.inputs) {
     await postJournalWithLockedBook(tx, input, closeout.book)
   }
+}
+
+/** Customer-consented allocation adapter; derives the entire journal from its saved source.
+ * The opaque capability belongs to this transaction and one Order. It cannot post
+ * arbitrary lines, refund, collect cash, open accounts or act as a FinanceManager.
+ */
+export async function postCustomerCreditAllocationFinanceInTransaction(
+  tx: Prisma.TransactionClient,
+  source: { allocationId: string; clientCommandId: string },
+  authority: CustomerFundsAllocationAuthority,
+) {
+  const allocation = await tx.customerLedgerAllocation.findUniqueOrThrow({
+    where: { id: source.allocationId },
+    include: { credit: true, charge: { include: { order: true } } },
+  })
+  const order = allocation.charge.order
+  if (
+    !order ||
+    !(
+      allocation.charge.kind === "ORDER_CHARGE" ||
+      (allocation.charge.kind === "ORDER_PAYMENT" &&
+        allocation.charge.side === "DEBIT" &&
+        allocation.charge.sourceKind === "CUSTOMER_UNBILLED_ORDER_CREDIT" &&
+        allocation.charge.sourceId === allocation.id &&
+        allocation.charge.amountMinor === allocation.amountMinor)
+    ) ||
+    !["RECEIPT", "OPENING_CREDIT"].includes(allocation.credit.kind)
+  )
+    throw new FinanceError(
+      "FORBIDDEN",
+      "Only an exact held-credit allocation to this Order can be posted.",
+    )
+  const held = readCustomerFundsAllocationAuthority(tx, authority, {
+    tenantId: order.tenantId,
+    actorUserId: allocation.actorUserId,
+    accountId: allocation.accountId,
+    bookId: (
+      await tx.financeBook.findUniqueOrThrow({
+        where: {
+          tenantId_currencyCode: {
+            tenantId: order.tenantId,
+            currencyCode: order.currencyCode,
+          },
+        },
+        select: { id: true },
+      })
+    ).id,
+    orderId: order.id,
+  })
+  const [advance, receivable] = await Promise.all([
+    tx.financeAccount.findFirst({
+      where: {
+        bookId: held.book.id,
+        kind: "LIABILITY",
+        purpose: "CUSTOMER_ADVANCE",
+        archivedAt: null,
+      },
+    }),
+    allocation.charge.sourceKind === "CUSTOMER_UNBILLED_ORDER_CREDIT"
+      ? getUnbilledOrderFundsControl(tx, held.book.id)
+      : tx.financeAccount.findFirst({
+          where: {
+            bookId: held.book.id,
+            kind: "ASSET",
+            purpose: "RECEIVABLE",
+            archivedAt: null,
+          },
+        }),
+  ])
+  if (!advance || !receivable)
+    throw new FinanceError(
+      "NOT_FOUND",
+      "Customer control accounts are unavailable.",
+    )
+  return postJournalWithLockedBook(
+    tx,
+    {
+      tenantId: order.tenantId,
+      actorUserId: allocation.actorUserId,
+      bookId: held.book.id,
+      clientCommandId: financePostingCommandId(
+        `customer-ledger:${source.clientCommandId}`,
+        "allocation",
+      ),
+      sourceKind: "CUSTOMER_CREDIT_ALLOCATION",
+      sourceId: allocation.id,
+      description: `Apply existing customer credit to Order ${order.orderNumber}`,
+      effectiveAt: allocation.createdAt,
+      lines: [
+        {
+          accountId: advance.id,
+          side: "DEBIT",
+          amountMinor: allocation.amountMinor.toString(),
+        },
+        {
+          accountId: receivable.id,
+          side: "CREDIT",
+          amountMinor: allocation.amountMinor.toString(),
+        },
+      ],
+    },
+    held.book,
+  )
+}
+
+/** Internal exact-source reclassification at canonical billing; never a bank receipt. */
+export async function postCustomerBillingReclassificationInTransaction(
+  tx: Prisma.TransactionClient,
+  source: CustomerBillingReclassificationSource,
+) {
+  const resolved = await resolveCustomerBillingReclassification(tx, source)
+  return postJournalWithLockedBook(tx, resolved.input, resolved.book)
 }

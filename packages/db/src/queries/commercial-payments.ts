@@ -17,6 +17,10 @@ import {
   assertHeldCommerceFinancialOrder,
   lockCommerceFinancialOrder,
 } from "./customer-ledger/commerce-locks"
+import {
+  type CustomerFundsAllocationAuthority,
+  readCustomerFundsAllocationAuthority,
+} from "./customer-ledger/funds-allocation-authority"
 import { lockFinanceBook } from "./finance/access"
 import { assertOrderPaymentAccountInTransaction } from "./finance/order-payment-accounts"
 import { postOrderCollectionInTransaction } from "./finance/posting"
@@ -468,6 +472,7 @@ export async function recordCommercialCreditSettlementInTransaction(
   tx: Prisma.TransactionClient,
   input: Parameters<typeof recordCommercialOrderPaymentCore>[1],
   source: { bookId: string; allocationId?: string; releaseId?: string },
+  customerAuthority?: CustomerFundsAllocationAuthority,
 ) {
   assertPaymentAmount(input.amountMinor)
   if (Boolean(source.allocationId) === Boolean(source.releaseId))
@@ -475,7 +480,20 @@ export async function recordCommercialCreditSettlementInTransaction(
       "INVALID_ORDER",
       "One durable credit settlement source is required.",
     )
-  const book = await lockFinanceBook(tx, { ...input, bookId: source.bookId })
+  const authorized = customerAuthority
+    ? readCustomerFundsAllocationAuthority(tx, customerAuthority, {
+        ...input,
+        bookId: source.bookId,
+      })
+    : null
+  if (authorized && source.releaseId)
+    throw new FinanceError(
+      "FORBIDDEN",
+      "Customer credit consent cannot release settlements or return money.",
+    )
+  const book =
+    authorized?.book ??
+    (await lockFinanceBook(tx, { ...input, bookId: source.bookId }))
   const release = source.releaseId
     ? await tx.customerLedgerAllocationRelease.findUnique({
         where: { id: source.releaseId },
@@ -493,10 +511,17 @@ export async function recordCommercialCreditSettlementInTransaction(
       "INVALID_ORDER",
       "Customer allocation source not found.",
     )
-  const account = await lockCustomerLedgerAccount(tx, {
-    ...input,
-    accountId: allocation.accountId,
-  })
+  if (authorized && allocation.accountId !== authorized.account.id)
+    throw new FinanceError(
+      "FORBIDDEN",
+      "Allocation belongs to another customer.",
+    )
+  const account =
+    authorized?.account ??
+    (await lockCustomerLedgerAccount(tx, {
+      ...input,
+      accountId: allocation.accountId,
+    }))
   await tx.$queryRaw`SELECT id FROM "CommercialOrder" WHERE id = ${input.orderId} AND "tenantId" = ${input.tenantId} FOR UPDATE`
   const order = await tx.commercialOrder.findFirst({
     where: { id: input.orderId, tenantId: input.tenantId },
@@ -508,7 +533,14 @@ export async function recordCommercialCreditSettlementInTransaction(
   if (
     !order ||
     allocation.charge.orderId !== order.id ||
-    allocation.charge.kind !== "ORDER_CHARGE" ||
+    !(
+      allocation.charge.kind === "ORDER_CHARGE" ||
+      (allocation.charge.kind === "ORDER_PAYMENT" &&
+        allocation.charge.side === "DEBIT" &&
+        allocation.charge.sourceKind === "CUSTOMER_UNBILLED_ORDER_CREDIT" &&
+        allocation.charge.sourceId === allocation.id &&
+        allocation.charge.amountMinor === allocation.amountMinor)
+    ) ||
     order.customerId !== account.customerId ||
     order.currencyCode !== account.currencyCode ||
     book.currencyCode !== account.currencyCode ||

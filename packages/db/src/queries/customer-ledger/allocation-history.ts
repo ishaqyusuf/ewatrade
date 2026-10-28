@@ -1,6 +1,7 @@
 import type { PrismaClient } from "../../../generated/prisma/client"
 import { type FinanceActor, assertFinanceManager } from "../finance/access"
 import { FinanceError } from "../finance/rules"
+import { resolveCustomerAllocationAfterBilling } from "./billing-reclassification"
 /** Current, revision-pinned correction history. Totals are independent of the page. */
 export async function getCustomerLedgerAllocationHistory(
   db: PrismaClient,
@@ -69,6 +70,7 @@ export async function getCustomerLedgerAllocationHistory(
           chargeEntryId: true,
           actorUserId: true,
           createdAt: true,
+          charge: { select: { sourceKind: true } },
         },
       })
       if (!allocation)
@@ -110,17 +112,51 @@ export async function getCustomerLedgerAllocationHistory(
           _sum: { amountMinor: true },
         }),
       ])
+      const currentAllocationId =
+        allocation.charge?.sourceKind === "CUSTOMER_UNBILLED_ORDER_CREDIT"
+          ? await resolveCustomerAllocationAfterBilling(tx, {
+              tenantId: input.tenantId,
+              accountId: account.id,
+              allocationId: allocation.id,
+            })
+          : allocation.id
+      const replacement =
+        currentAllocationId !== allocation.id
+          ? await tx.customerLedgerAllocation.findFirst({
+              where: {
+                id: currentAllocationId,
+                accountId: account.id,
+                sequence: { lte: account.lastSequence },
+              },
+              select: { amountMinor: true },
+            })
+          : null
+      const currentReleases = replacement
+        ? await tx.customerLedgerAllocationRelease.aggregate({
+            where: {
+              allocationId: currentAllocationId,
+              sequence: { lte: account.lastSequence },
+            },
+            _sum: { amountMinor: true },
+          })
+        : null
       const released = total._sum.amountMinor ?? BigInt(0)
+      const currentRemaining = replacement
+        ? replacement.amountMinor - (currentReleases?._sum.amountMinor ?? 0n)
+        : allocation.amountMinor - released
+      const { charge: _charge, ...allocationRecord } = allocation
       const page = rows.slice(0, limit)
       return {
         accountId: account.id,
         currencyCode: account.currencyCode,
         currentRevision: account.revision.toString(),
         allocation: {
-          ...allocation,
+          ...allocationRecord,
           amountMinor: allocation.amountMinor.toString(),
           sequence: allocation.sequence.toString(),
         },
+        currentAllocationId,
+        currentRemainingAmountMinor: currentRemaining.toString(),
         releasedAmountMinor: released.toString(),
         remainingAmountMinor: (allocation.amountMinor - released).toString(),
         reconciliationRequired:

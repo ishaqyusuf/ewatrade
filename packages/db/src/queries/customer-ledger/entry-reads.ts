@@ -1,6 +1,7 @@
 import type { PrismaClient } from "../../../generated/prisma/client"
 import { type FinanceActor, assertFinanceManager } from "../finance/access"
 import { FinanceError } from "../finance/rules"
+import { getCustomerFundsReservedInTransaction } from "./funds-reservations"
 
 const entrySelection = {
   id: true,
@@ -150,6 +151,13 @@ export async function getCustomerLedgerEntryDetail(
       const used =
         (allocated._sum.amountMinor ?? BigInt(0)) -
         (released._sum.amountMinor ?? BigInt(0))
+      const reserved =
+        entry.side === "CREDIT"
+          ? await getCustomerFundsReservedInTransaction(tx, {
+              accountId: account.id,
+              creditEntryId: entry.id,
+            })
+          : 0n
       const { reversals, receipt, ...entryRecord } = entry
       return {
         accountId: account.id,
@@ -161,8 +169,10 @@ export async function getCustomerLedgerEntryDetail(
         receipt,
         reversal: reversals[0] ? serializeEntry(reversals[0]) : null,
         usedAmountMinor: used.toString(),
-        remainingAmountMinor: (entry.amountMinor - used).toString(),
-        reconciliationRequired: used < BigInt(0) || used > entry.amountMinor,
+        remainingAmountMinor: (entry.amountMinor - used - reserved).toString(),
+        reservedAmountMinor: reserved.toString(),
+        reconciliationRequired:
+          used < BigInt(0) || used + reserved > entry.amountMinor,
         allocations: page.map((row) => {
           const release = releaseById.get(row.id) ?? BigInt(0)
           return {

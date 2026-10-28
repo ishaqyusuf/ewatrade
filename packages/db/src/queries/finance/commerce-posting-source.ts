@@ -65,25 +65,45 @@ export async function resolveCommerceFinancePosting(
     )
   if (order.taxMinor < 0 || order.taxMinor > order.totalMinor)
     throw new FinanceError("INVALID_AMOUNT", "Order tax exceeds its total.")
-  const collections = await tx.financeJournalEntry.count({
+  const paymentIds = (
+    await tx.commercialOrderPayment.findMany({
+      where: { orderId: order.id, tenantId: source.tenantId },
+      select: { id: true },
+    })
+  ).map((row) => row.id)
+  const collections = await tx.financeJournalEntry.findMany({
     where: {
       bookId: book.id,
       sourceKind: "COMMERCIAL_ORDER_COLLECTION",
-      sourceId: {
-        in: (
-          await tx.commercialOrderPayment.findMany({
-            where: { orderId: order.id },
-            select: { id: true },
-          })
-        ).map((row) => row.id),
-      },
+      sourceId: { in: paymentIds },
     },
+    select: { sourceId: true },
   })
-  if (collections)
+  if (collections.length && source.event === "BILLED" && !order.customerId)
     throw new FinanceError(
       "CONFLICT",
-      "Reconcile the Order's collected money before posting billing or receivable activity.",
+      "Link the Order's customer before reconciling its prebilling collections.",
     )
+  if (collections.length && source.event !== "BILLED") {
+    const reconciled = await tx.financeJournalEntry.findMany({
+      where: {
+        bookId: book.id,
+        sourceKind: "COMMERCIAL_COLLECTION_BILLING_RECLASS",
+        sourceId: { in: collections.map((row) => row.sourceId) },
+        reversalOfId: null,
+        reversal: null,
+      },
+      select: { sourceId: true },
+    })
+    const ids = new Set(reconciled.map((row) => row.sourceId))
+    if (collections.some((row) => !ids.has(row.sourceId)))
+      throw new FinanceError(
+        "CONFLICT",
+        "Reconcile the Order's collected money before posting billing or receivable activity.",
+      )
+    // This historical cash source already posted custody and its later reclassification.
+    if (source.event === "PAYMENT" && ids.has(source.paymentId)) return null
+  }
   if (source.event !== "BILLED") {
     const billing = await tx.financeJournalEntry.findUnique({
       where: {

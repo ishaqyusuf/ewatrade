@@ -7,6 +7,7 @@ export function customerLedgerTotalsFromAggregates(input: {
   credit: bigint
   allocations: bigint
   releases: bigint
+  reserved?: bigint
 }) {
   const allocated = input.allocations - input.releases
   return {
@@ -14,7 +15,11 @@ export function customerLedgerTotalsFromAggregates(input: {
     creditMinor: input.credit.toString(),
     allocatedMinor: allocated.toString(),
     outstandingDebtMinor: (input.debit - allocated).toString(),
-    availableCreditMinor: (input.credit - allocated).toString(),
+    availableCreditMinor: (
+      input.credit -
+      allocated -
+      (input.reserved ?? 0n)
+    ).toString(),
     netBalanceMinor: (input.debit - input.credit).toString(),
   }
 }
@@ -39,10 +44,11 @@ export async function listCustomerLedgerBalances(
       credit: string
       allocations: string
       releases: string
+      reserved: string
     }>
   >(Prisma.sql`
     SELECT account."customerId", COALESCE(e.debit,0)::text AS debit, COALESCE(e.credit,0)::text AS credit,
-      COALESCE(a.amount,0)::text AS allocations, COALESCE(r.amount,0)::text AS releases
+      COALESCE(a.amount,0)::text AS allocations, COALESCE(r.amount,0)::text AS releases, COALESCE(held.amount,0)::text AS reserved
     FROM "CustomerLedgerAccount" account
     LEFT JOIN LATERAL (SELECT SUM("amountMinor") FILTER (WHERE side = 'DEBIT') AS debit, SUM("amountMinor") FILTER (WHERE side = 'CREDIT') AS credit
       FROM "CustomerLedgerEntry" WHERE "accountId" = account.id AND sequence <= account."lastSequence") e ON TRUE
@@ -50,6 +56,8 @@ export async function listCustomerLedgerBalances(
     LEFT JOIN LATERAL (SELECT SUM(rel."amountMinor") AS amount FROM "CustomerLedgerAllocationRelease" rel
       JOIN "CustomerLedgerAllocation" allocation ON allocation.id = rel."allocationId"
       WHERE allocation."accountId" = account.id AND allocation.sequence <= account."lastSequence" AND rel.sequence <= account."lastSequence") r ON TRUE
+    LEFT JOIN LATERAL (SELECT SUM("amountMinor") AS amount FROM "CustomerFundsRefundRequest"
+      WHERE "accountId" = account.id AND status = 'RESERVED') held ON TRUE
     WHERE account."tenantId" = ${input.tenantId} AND account."currencyCode" = ${input.currencyCode}
       AND account."customerId" = ANY(${input.customerIds}::text[])
   `)
@@ -61,6 +69,7 @@ export async function listCustomerLedgerBalances(
         credit: BigInt(row.credit),
         allocations: BigInt(row.allocations),
         releases: BigInt(row.releases),
+        reserved: BigInt(row.reserved ?? "0"),
       }),
     )
   return balances
@@ -80,10 +89,11 @@ export async function getCustomerLedgerScopeTotalsInTransaction(
       credit: string
       allocations: string
       releases: string
+      reserved: string
     }>
   >(Prisma.sql`
     SELECT COUNT(*)::text AS "accountCount", COALESCE(SUM(e.debit),0)::text AS debit,
-      COALESCE(SUM(e.credit),0)::text AS credit, COALESCE(SUM(a.amount),0)::text AS allocations, COALESCE(SUM(r.amount),0)::text AS releases
+      COALESCE(SUM(e.credit),0)::text AS credit, COALESCE(SUM(a.amount),0)::text AS allocations, COALESCE(SUM(r.amount),0)::text AS releases, COALESCE(SUM(held.amount),0)::text AS reserved
     FROM "CustomerLedgerAccount" account JOIN "Customer" c ON c.id = account."customerId" AND c."tenantId" = account."tenantId"
     LEFT JOIN LATERAL (SELECT SUM("amountMinor") FILTER (WHERE side = 'DEBIT') AS debit, SUM("amountMinor") FILTER (WHERE side = 'CREDIT') AS credit
       FROM "CustomerLedgerEntry" WHERE "accountId" = account.id AND sequence <= account."lastSequence") e ON TRUE
@@ -91,6 +101,8 @@ export async function getCustomerLedgerScopeTotalsInTransaction(
     LEFT JOIN LATERAL (SELECT SUM(rel."amountMinor") AS amount FROM "CustomerLedgerAllocationRelease" rel
       JOIN "CustomerLedgerAllocation" allocation ON allocation.id = rel."allocationId"
       WHERE allocation."accountId" = account.id AND allocation.sequence <= account."lastSequence" AND rel.sequence <= account."lastSequence") r ON TRUE
+    LEFT JOIN LATERAL (SELECT SUM("amountMinor") AS amount FROM "CustomerFundsRefundRequest"
+      WHERE "accountId" = account.id AND status = 'RESERVED') held ON TRUE
     WHERE account."tenantId" = ${input.tenantId} AND account."currencyCode" = ${input.currencyCode}
       ${search ? Prisma.sql`AND (c.name ILIKE ${search} OR c.phone ILIKE ${search} OR c.email ILIKE ${search})` : Prisma.empty}
   `)
@@ -103,6 +115,7 @@ export async function getCustomerLedgerScopeTotalsInTransaction(
       credit: BigInt(row.credit),
       allocations: BigInt(row.allocations),
       releases: BigInt(row.releases),
+      reserved: BigInt(row.reserved ?? "0"),
     }),
   }
 }

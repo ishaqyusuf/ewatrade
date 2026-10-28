@@ -21,6 +21,8 @@ type ReverseCustomerLedgerEntryInput = FinanceActor & {
   effectiveAt: Date
 }
 
+import { assertCustomerFundsNotReserved } from "./funds-reservations"
+
 const zero = BigInt(0)
 const revisionPattern = /^(0|[1-9]\d{0,18})$/
 
@@ -81,6 +83,14 @@ export async function reverseCustomerLedgerEntry(
             throw new FinanceError(
               "NOT_FOUND",
               "This posted customer entry is unavailable for reversal.",
+            )
+
+          if (source.side === "CREDIT")
+            await assertCustomerFundsNotReserved(
+              tx,
+              { accountId: account.id, creditEntryId: source.id },
+              source.amountMinor,
+              source.amountMinor,
             )
 
           const opening = source.kind.startsWith("OPENING_")
