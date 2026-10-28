@@ -1,3 +1,4 @@
+import { publicLowStockCountsEnabled } from "@ewatrade/storefront-contracts/orders"
 import { getPublicStorefrontForSite } from "./public-storefront"
 import type { PublicStorefrontQuery } from "./public-storefront-listing"
 import { getLiveSiteRelease } from "./storefront-sites"
@@ -16,5 +17,9 @@ export function loadLiveStorefrontForHost(
     (tenantId) => getLiveSiteRelease(db, tenantId),
     after,
     options,
+    // Opt-in extras come from the active published release only.
+    (site) => ({
+      lowStockCounts: publicLowStockCountsEnabled(site.release.composition),
+    }),
   )
 }

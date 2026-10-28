@@ -12,6 +12,7 @@ const row = (id: string) => ({
   description: null,
   categoryRecord: null,
   illustrations: [],
+  photoAssets: [],
   product: { lowStockLevel: null },
   offerings: [
     {

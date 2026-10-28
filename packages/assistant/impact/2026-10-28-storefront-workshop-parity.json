@@ -1,0 +1,40 @@
+{
+  "version": 1,
+  "id": "2026-10-28-storefront-workshop-parity",
+  "tickets": ["H02"],
+  "summary": "Commerce studio Workshop v7 parity: responsive shell, Shop URL state, versioned photo/layout controls and verified guest request recovery.",
+  "noAssistantImpact": "Template configuration remains in merchant Storefront Studio and canonical save/publish commands. Customer receipt recovery is a website identity flow gated by the existing Host-scoped customer session and verified WhatsApp identity; it is deliberately excluded from assistant tools and model input. No new merchant tRPC procedure, assistant capability, provider send, money command or assistant rollout. Public media and optional stock presentation are server-derived from eligible published settings, never model authority.",
+  "capabilities": [],
+  "procedures": [],
+  "docs": [
+    {
+      "topic": "feature",
+      "status": "local_only",
+      "path": ".brain/features/storefront-commerce-studio.md"
+    },
+    {
+      "topic": "api",
+      "status": "local_only",
+      "path": ".brain/api/contracts.md"
+    },
+    {
+      "topic": "permissions",
+      "status": "local_only",
+      "path": ".brain/api/permissions.md"
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "review",
+      "path": ".brain/tasks/storefront-workshop-parity/acceptance.md",
+      "executed": true,
+      "result": "Exact Workshop v7 selected before implementation; original 1.0.0/1.1.0 serialized manifest hashes preserved and rechecked. 136 focused tests/1116 assertions, 182 scoped fast tests/915 assertions, actual TSX and owned DB types, full dashboard strict types and storefront production build pass. Verification receipt in .brain/qa/2026-10-28-storefront-workshop-parity.md."
+    },
+    {
+      "kind": "run",
+      "path": "scripts/storefront-navigation.browser.test.mjs",
+      "executed": true,
+      "result": "Desktop/phone native loading, persistent header/footer/memory bag, Shop/Back/Home navigation pass with one document, zero business writes/errors. Existing QA photos load and simulated photo404 falls back to artwork. Connected existing-request recovery passes same identity, foreign Store/Tenant and email-only denial; test OTP adapter sends nothing. No sale/payment/provider/deployment acceptance claimed."
+    }
+  ]
+}

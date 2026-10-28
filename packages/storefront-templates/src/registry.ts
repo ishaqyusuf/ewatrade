@@ -12,12 +12,14 @@ import {
   defaultSettings,
   validateComposition,
 } from "../../storefront-contracts/src/manifest"
+import { LOW_STOCK_COUNT_SETTING } from "../../storefront-contracts/src/orders"
 import { canvasManifests } from "./canvas/manifests"
 import {
   catalogV4LegacyManifest,
   catalogV4Manifest,
 } from "./catalog-v4/manifest"
 import {
+  commerceStudioFeaturedManifest,
   commerceStudioLegacyManifest,
   commerceStudioManifest,
 } from "./commerce-studio/manifest"
@@ -89,6 +91,18 @@ export const templateRegistry: readonly TemplateEntry[] = [
   },
   {
     manifest: commerceStudioManifest,
+    availability: { state: "active" },
+    source: "packages/storefront-templates/src/commerce-studio",
+    // 1.2.0: hero/story photos from public catalog items (IDs only), button text and
+    // explicit 3/4 columns. Local qualification only.
+    status: {
+      registration: "runtime-registered",
+      qualification: "qualified",
+      release: "not-live",
+    },
+  },
+  {
+    manifest: commerceStudioFeaturedManifest,
     availability: { state: "active" },
     source: "packages/storefront-templates/src/commerce-studio",
     // 1.1.0: Featured section v2 adds pinned products (IDs only). Local qualification only.
@@ -277,8 +291,8 @@ export function migrateCommerceStudioFeaturedDraft(
   const manifest = getTemplateManifest(
     {
       template: {
-        key: commerceStudioManifest.key,
-        version: commerceStudioManifest.version,
+        key: commerceStudioFeaturedManifest.key,
+        version: commerceStudioFeaturedManifest.version,
       },
     },
     "new-use",
@@ -296,6 +310,49 @@ export function migrateCommerceStudioFeaturedDraft(
         section.source = structuredClone(featured.source)
         section.settings.pinned = []
       }
+  return validateComposition(next, manifest)
+}
+
+/**
+ * Named direct migration 1.1.0 → 1.2.0. Every merchant setting and pin is kept; revised
+ * sections gain their new fields at defaults, so the page looks the same until the
+ * merchant chooses a photo, button text or column count.
+ */
+export function migrateCommerceStudioMediaDraft(
+  current: StorefrontComposition,
+) {
+  if (
+    current.template.key !== commerceStudioFeaturedManifest.key ||
+    current.template.version !== commerceStudioFeaturedManifest.version
+  )
+    throw new Error("Image options migration requires commerce-studio@1.1.0.")
+  const from = getTemplateManifest(current)
+  validateComposition(current, from)
+  const manifest = getTemplateManifest(
+    {
+      template: {
+        key: commerceStudioManifest.key,
+        version: commerceStudioManifest.version,
+      },
+    },
+    "new-use",
+  )
+  const next = structuredClone(current)
+  next.template.version = manifest.version
+  for (const page of next.pages)
+    for (const section of page.sections) {
+      const before = from.sections.find((entry) => entry.key === section.type)
+      const after = manifest.sections.find(
+        (entry) => entry.key === section.type,
+      )
+      if (!before || !after?.source || after.version === before.version)
+        continue
+      section.version = after.version
+      section.source = structuredClone(after.source)
+      for (const field of after.fields)
+        if (!before.fields.some((entry) => entry.key === field.key))
+          section.settings[field.key] = structuredClone(field.default)
+    }
   return validateComposition(next, manifest)
 }
 
@@ -353,6 +410,29 @@ export function withPinnedCatalogItems(
   return validateComposition(next, manifest)
 }
 
+/**
+ * A copy of `design` carrying the draft's low-stock count opt-in
+ * (`publicLowStockCountsEnabled(draft)`), so a preview resource request, which sends
+ * reviewed defaults rather than the draft's copy, asks for counts only when the
+ * draft itself opted in. Unchanged for pins without the setting.
+ */
+export function withLowStockCountSetting(
+  design: StorefrontComposition,
+  enabled: boolean,
+) {
+  const manifest = getTemplateManifest(design, "render")
+  const next = structuredClone(design)
+  const header = next.pages
+    .flatMap((page) => page.sections)
+    .find((section) => section.type === "commerce-studio-header")
+  const declared = manifest.sections
+    .find((entry) => entry.key === header?.type)
+    ?.fields.some((field) => field.key === LOW_STOCK_COUNT_SETTING)
+  if (!header || !declared) return design
+  header.settings[LOW_STOCK_COUNT_SETTING] = enabled
+  return validateComposition(next, manifest)
+}
+
 type DraftUpgrade = {
   from: { key: string; version: string }
   to: string
@@ -373,6 +453,13 @@ export const draftUpgrades: readonly DraftUpgrade[] = [
     to: "1.1.0",
     summary: "Adds pinned featured products.",
     migrate: migrateCommerceStudioFeaturedDraft,
+  },
+  {
+    from: { key: "commerce-studio", version: "1.1.0" },
+    to: "1.2.0",
+    summary:
+      "Adds hero and story photos, button text and a 3 or 4 column choice.",
+    migrate: migrateCommerceStudioMediaDraft,
   },
 ]
 

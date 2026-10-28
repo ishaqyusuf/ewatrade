@@ -1,6 +1,7 @@
 import { expect, test } from "bun:test"
 import {
   publicItemAvailability,
+  publicLowStockQuantity,
   publicOptionPrice,
   publicStockAvailability,
   publicStorefrontOptionName,
@@ -109,4 +110,66 @@ test("matching service variant and offering labels do not repeat", () => {
     "Red · Box of six",
   )
   expect(publicStorefrontOptionName("Standard", "Pair", true)).toBe("Pair")
+})
+
+test("low-stock counts: exact free units, only low stock in the option's own unit", () => {
+  const pair = { inventoryUnitId: "pair", transactionScale: 0 }
+  // On hand minus reserved, summed across this Store's balances of the same unit.
+  expect(
+    publicLowStockQuantity(
+      [balance("pair", "4", "1"), balance("pair", "1")],
+      "5",
+      pair,
+    ),
+  ).toBe("4")
+  expect(
+    publicLowStockQuantity(
+      [balance("pair", "3.000000000000000000", "1")],
+      "5",
+      pair,
+    ),
+  ).toBe("2")
+  // Ordinary (in) stock, no level, unknown or sold out: no count.
+  expect(publicLowStockQuantity([balance("pair", "9")], "5", pair)).toBe(
+    undefined,
+  )
+  expect(publicLowStockQuantity([balance("pair", "2")], null, pair)).toBe(
+    undefined,
+  )
+  expect(publicLowStockQuantity([balance("pair", "2")], "0", pair)).toBe(
+    undefined,
+  )
+  expect(publicLowStockQuantity([], "5", pair)).toBe(undefined)
+  expect(publicLowStockQuantity([balance("pair", "2", "2")], "5", pair)).toBe(
+    undefined,
+  )
+  // Ambiguous units: another unit's balance, or no selling unit, never sums.
+  expect(
+    publicLowStockQuantity(
+      [balance("pair", "2"), balance("box", "1")],
+      "5",
+      pair,
+    ),
+  ).toBe(undefined)
+  expect(publicLowStockQuantity([balance("box", "2")], "5", pair)).toBe(
+    undefined,
+  )
+  expect(publicLowStockQuantity([balance("pair", "2")], "5", null)).toBe(
+    undefined,
+  )
+})
+
+test("low-stock counts stay within the unit's decimals and a bounded size", () => {
+  const kg = { inventoryUnitId: "kg", transactionScale: 2 }
+  expect(publicLowStockQuantity([balance("kg", "1.25")], "3", kg)).toBe("1.25")
+  // More precision than customers can order in this unit: no count.
+  expect(publicLowStockQuantity([balance("kg", "1.255")], "3", kg)).toBe(
+    undefined,
+  )
+  expect(
+    publicLowStockQuantity([balance("kg", "1500000")], "2000000", {
+      inventoryUnitId: "kg",
+      transactionScale: 0,
+    }),
+  ).toBe(undefined)
 })

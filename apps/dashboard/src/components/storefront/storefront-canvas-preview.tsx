@@ -2,12 +2,14 @@
 
 import { getDataCacheGeneration, useTRPC, useTRPCClient } from "@/trpc/client"
 import type { StorefrontComposition } from "@ewatrade/storefront-contracts/manifest"
+import { publicLowStockCountsEnabled } from "@ewatrade/storefront-contracts/orders"
 import type { CatalogQuery } from "@ewatrade/storefront-contracts/resources"
 import type { StorefrontClientSnapshot } from "@ewatrade/storefront-runtime/server"
 import {
   canvasDefaults,
   canvasManifest,
   pinnedCatalogItemIds,
+  withLowStockCountSetting,
   withPinnedCatalogItems,
 } from "@ewatrade/storefront-templates"
 import type { CanvasEditing } from "@ewatrade/storefront-templates/canvas"
@@ -66,19 +68,30 @@ export function StorefrontCanvasPreview({
   // Copy/theme/reorder changes never request another database projection.
   // Pinned items are the exception: the request carries the draft's pin IDs (not its
   // copy), so pins past the first page load. Only a change to the pin set refetches.
+  // The low-stock count opt-in travels the same way: the server reads counts only
+  // when this design has it on, and toggling it is the only other refetch.
   const pins = pinnedCatalogItemIds(composition).join(",")
+  const lowStockCounts = publicLowStockCountsEnabled(composition)
   const resourceDesign = useMemo(
     () =>
-      withPinnedCatalogItems(
-        canvasDefaults(
-          canvasManifest(
-            composition.template.key,
-            composition.template.version,
+      withLowStockCountSetting(
+        withPinnedCatalogItems(
+          canvasDefaults(
+            canvasManifest(
+              composition.template.key,
+              composition.template.version,
+            ),
           ),
+          pins ? pins.split(",") : [],
         ),
-        pins ? pins.split(",") : [],
+        lowStockCounts,
       ),
-    [composition.template.key, composition.template.version, pins],
+    [
+      composition.template.key,
+      composition.template.version,
+      pins,
+      lowStockCounts,
+    ],
   )
   const preview = useQuery(
     trpc.storefront.preview.queryOptions(

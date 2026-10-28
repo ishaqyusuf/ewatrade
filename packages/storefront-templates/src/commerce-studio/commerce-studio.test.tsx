@@ -442,7 +442,12 @@ test("1.1.0 keeps 1.0.0 registered and pins only IDs on Featured", () => {
     { template: { key: "commerce-studio", version: "1.0.0" } },
     "render",
   )
-  expect(commerceStudioManifest.version).toBe("1.1.0")
+  expect(
+    getTemplateManifest(
+      { template: { key: "commerce-studio", version: "1.1.0" } },
+      "render",
+    ).version,
+  ).toBe("1.1.0")
   const old = canvasDefaults(legacy)
   expect(featuredSection(old).settings.pinned).toBeUndefined()
   // An old release stays valid against its exact pin and refuses the new field.
@@ -472,7 +477,7 @@ test("1.1.0 keeps 1.0.0 registered and pins only IDs on Featured", () => {
   const featured = library.filter(
     (entry) => entry.definition.key === "commerce-studio-featured",
   )
-  expect(featured.map((entry) => entry.definition.version)).toEqual([2])
+  expect(featured.map((entry) => entry.definition.version)).toEqual([3])
   const [current] = featured
   if (!current) throw new Error("featured excerpt missing")
   const inserted = insertSectionExcerpt(old, "shop", current, "shop-featured")
@@ -535,8 +540,16 @@ test("Studio version update is explicit, generic and draft-only; pinned IDs come
     heading: "Merchant copy",
     pinned: [],
   })
-  expect(availableDraftUpgrade(next)).toBeNull()
-  expect(() => upgradeDraftVersion(next)).toThrow()
+  // 1.1.0 → 1.2.0 is a second explicit hop, never a jump or a release change.
+  expect(availableDraftUpgrade(next)).toEqual({
+    version: "1.2.0",
+    summary:
+      "Adds hero and story photos, button text and a 3 or 4 column choice.",
+  })
+  const latest = upgradeDraftVersion(next)
+  expect(latest.template.version).toBe("1.2.0")
+  expect(availableDraftUpgrade(latest)).toBeNull()
+  expect(() => upgradeDraftVersion(latest)).toThrow()
   // Every registered migration starts from a registered pin and lands on a selectable one.
   for (const upgrade of draftUpgrades) {
     expect(
@@ -555,7 +568,7 @@ test("Studio version update is explicit, generic and draft-only; pinned IDs come
     listSelectableTemplates().findIndex(
       (entry) =>
         entry.manifest.key === "commerce-studio" &&
-        entry.manifest.version === "1.1.0",
+        entry.manifest.version === "1.2.0",
     ),
   )
   featuredSection(next).settings.pinned = ["b", "a"]
@@ -612,7 +625,12 @@ test("pins past the loaded page render from catalog.pinnedItems without joining 
 })
 
 test("preview resource design carries only pin IDs, split by field max", () => {
-  const design = canvasDefaults(commerceStudioManifest)
+  const design = canvasDefaults(
+    getTemplateManifest(
+      { template: { key: "commerce-studio", version: "1.1.0" } },
+      "render",
+    ),
+  )
   const ids = Array.from({ length: 10 }, (_, index) => `p${index}`)
   const next = withPinnedCatalogItems(design, ids)
   expect(featuredSection(next).settings.pinned).toEqual(ids.slice(0, 8))

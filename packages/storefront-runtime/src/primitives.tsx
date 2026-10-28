@@ -2,7 +2,10 @@ import { Badge } from "@ewatrade/ui"
 import { getCatalogIllustrationSvg } from "@ewatrade/utils/catalog-illustration-artwork"
 import type { PublicCatalogItem } from "../../storefront-contracts/src/resources"
 
+import { StorefrontPhoto } from "./photo"
 import { formatStorefrontPrice, storefrontInitials } from "./presentation"
+
+export { StorefrontPhoto } from "./photo"
 
 export function StorefrontAttribution() {
   return (
@@ -49,6 +52,18 @@ export function StorefrontArtwork({
   const label =
     availabilityLabel(item.availability) ??
     (item.kind === "SERVICE" ? "Service" : null)
+  const artwork = svg ? (
+    <span
+      aria-hidden="true"
+      className="sf-tile-art"
+      // biome-ignore lint/security/noDangerouslySetInnerHtml: Only allowlisted bundled SVG and fixed CSS paints; never merchant markup.
+      dangerouslySetInnerHTML={{ __html: svg }}
+    />
+  ) : (
+    <span aria-hidden="true" className="sf-tile-initials">
+      {storefrontInitials(item.name)}
+    </span>
+  )
   return (
     <div
       className="sf-tile"
@@ -56,23 +71,15 @@ export function StorefrontArtwork({
       data-out={item.availability === "OUT_OF_STOCK"}
     >
       {item.photoUrl ? (
-        <img
+        <StorefrontPhoto
           src={item.photoUrl}
           alt={item.name}
           className="sf-product-photo"
           loading="lazy"
-        />
-      ) : svg ? (
-        <span
-          aria-hidden="true"
-          className="sf-tile-art"
-          // biome-ignore lint/security/noDangerouslySetInnerHtml: Only allowlisted bundled SVG and fixed CSS paints; never merchant markup.
-          dangerouslySetInnerHTML={{ __html: svg }}
+          fallback={artwork}
         />
       ) : (
-        <span aria-hidden="true" className="sf-tile-initials">
-          {storefrontInitials(item.name)}
-        </span>
+        artwork
       )}
       {label ? (
         <Badge

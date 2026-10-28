@@ -15,6 +15,7 @@ import {
 import { getTemplateManifest } from "./registry"
 import { RetailEditorial } from "./retail-editorial/render"
 import { ServiceDesk } from "./service-desk/render"
+import { StorefrontViewport } from "./viewport"
 
 /** One exact renderer dispatch for live pages, editor previews and offline fixtures. */
 function TemplateBody(props: {
@@ -69,8 +70,8 @@ function TemplateBody(props: {
 /** Container width, rather than dashboard viewport, controls embedded candidate responsiveness. */
 export function StorefrontTemplate(props: Parameters<typeof TemplateBody>[0]) {
   return (
-    <div className="sf-template-viewport">
+    <StorefrontViewport>
       <TemplateBody {...props} />
-    </div>
+    </StorefrontViewport>
   )
 }

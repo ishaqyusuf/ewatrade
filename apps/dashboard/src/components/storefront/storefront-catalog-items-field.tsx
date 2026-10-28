@@ -160,7 +160,9 @@ export function CatalogItemsPicker({
 }) {
   const id = useId()
   const ids = entries.map((entry) => entry.id)
-  const full = ids.length >= field.maxItems
+  // One-item fields (a section photo) choose and replace rather than pin and order.
+  const single = field.maxItems === 1
+  const full = !single && ids.length >= field.maxItems
   const [announcement, setAnnouncement] = useState("")
   const [focus, setFocus] = useState<string | null>(null)
   const list = useRef<HTMLOListElement>(null)
@@ -194,9 +196,14 @@ export function CatalogItemsPicker({
     const neighbour = next[Math.min(index, next.length - 1)]
     if (neighbour) setFocus(`${neighbour}:remove`)
     else document.getElementById(`${id}-search`)?.focus()
-    setAnnouncement(`${label(entry)} unpinned.`)
+    setAnnouncement(`${label(entry)} ${single ? "removed" : "unpinned"}.`)
   }
   const pin = (candidate: PinCandidate) => {
+    if (single) {
+      onChange([candidate.id])
+      setAnnouncement(`${candidate.name} chosen.`)
+      return
+    }
     const next = pinCatalogItem(ids, candidate.id, field.maxItems)
     onChange(next)
     setAnnouncement(
@@ -207,13 +214,16 @@ export function CatalogItemsPicker({
     <fieldset className="sf-pin-field" aria-describedby={`${id}-hint`}>
       <legend>
         {field.label}
-        <small>
-          {ids.length} of {field.maxItems}
-        </small>
+        {single ? null : (
+          <small>
+            {ids.length} of {field.maxItems}
+          </small>
+        )}
       </legend>
       <p id={`${id}-hint`} className="sf-config-hint">
-        Shown first, in this order. Other spots fill automatically. Hidden,
-        archived or sold-elsewhere items are skipped on your website.
+        {single
+          ? "Uses this product's photo from your catalog, or its catalog artwork until it has one. Hidden, archived or sold-elsewhere items are skipped on your website."
+          : "Shown first, in this order. Other spots fill automatically. Hidden, archived or sold-elsewhere items are skipped on your website."}
       </p>
       {entries.length ? (
         <ol className="sf-pin-list" ref={list} aria-label={field.label}>
@@ -228,34 +238,38 @@ export function CatalogItemsPicker({
                   <small>Not on your website now. It will be skipped.</small>
                 ) : null}
               </span>
-              <Button
-                type="button"
-                size="icon-xs"
-                variant="ghost"
-                data-pin-action={`${entry.id}:up`}
-                aria-label={`Move ${label(entry)} up`}
-                disabled={disabled || index === 0}
-                onClick={() => move(entry, -1)}
-              >
-                <HugeiconsIcon icon={ArrowUp01Icon} strokeWidth={2} />
-              </Button>
-              <Button
-                type="button"
-                size="icon-xs"
-                variant="ghost"
-                data-pin-action={`${entry.id}:down`}
-                aria-label={`Move ${label(entry)} down`}
-                disabled={disabled || index === entries.length - 1}
-                onClick={() => move(entry, 1)}
-              >
-                <HugeiconsIcon icon={ArrowDown01Icon} strokeWidth={2} />
-              </Button>
+              {single ? null : (
+                <>
+                  <Button
+                    type="button"
+                    size="icon-xs"
+                    variant="ghost"
+                    data-pin-action={`${entry.id}:up`}
+                    aria-label={`Move ${label(entry)} up`}
+                    disabled={disabled || index === 0}
+                    onClick={() => move(entry, -1)}
+                  >
+                    <HugeiconsIcon icon={ArrowUp01Icon} strokeWidth={2} />
+                  </Button>
+                  <Button
+                    type="button"
+                    size="icon-xs"
+                    variant="ghost"
+                    data-pin-action={`${entry.id}:down`}
+                    aria-label={`Move ${label(entry)} down`}
+                    disabled={disabled || index === entries.length - 1}
+                    onClick={() => move(entry, 1)}
+                  >
+                    <HugeiconsIcon icon={ArrowDown01Icon} strokeWidth={2} />
+                  </Button>
+                </>
+              )}
               <Button
                 type="button"
                 size="icon-xs"
                 variant="ghost"
                 data-pin-action={`${entry.id}:remove`}
-                aria-label={`Unpin ${label(entry)}`}
+                aria-label={`${single ? "Remove" : "Unpin"} ${label(entry)}`}
                 disabled={disabled}
                 onClick={() => remove(entry, index)}
               >
@@ -266,11 +280,13 @@ export function CatalogItemsPicker({
         </ol>
       ) : (
         <p className="sf-pin-empty">
-          No pinned products. Featured picks automatically.
+          {single
+            ? "No product chosen. The section shows without it."
+            : "No pinned products. Featured picks automatically."}
         </p>
       )}
       <label htmlFor={`${id}-search`} className="sf-pin-search-label">
-        Find a product to pin
+        {single ? "Find a product" : "Find a product to pin"}
       </label>
       <InputGroup>
         <InputGroupAddon>
@@ -308,14 +324,22 @@ export function CatalogItemsPicker({
                   variant="outline"
                   aria-label={
                     chosen
-                      ? `${candidate.name} is pinned`
-                      : `Pin ${candidate.name}`
+                      ? `${candidate.name} is ${single ? "chosen" : "pinned"}`
+                      : `${single ? "Use" : "Pin"} ${candidate.name}`
                   }
                   disabled={disabled || chosen || full}
                   onClick={() => pin(candidate)}
                 >
-                  <HugeiconsIcon icon={PinIcon} strokeWidth={2} />
-                  {chosen ? "Pinned" : "Pin"}
+                  {single ? null : (
+                    <HugeiconsIcon icon={PinIcon} strokeWidth={2} />
+                  )}
+                  {single
+                    ? chosen
+                      ? "Chosen"
+                      : "Use"
+                    : chosen
+                      ? "Pinned"
+                      : "Pin"}
                 </Button>
               </li>
             )

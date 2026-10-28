@@ -9,6 +9,7 @@ import { STOREFRONT_RUNTIME_VERSION } from "@ewatrade/storefront-contracts/manif
 import {
   ORDERING_TEMPLATE_KEYS,
   orderingFulfilmentMethods,
+  publicLowStockCountsEnabled,
 } from "@ewatrade/storefront-contracts/orders"
 import { catalogQuerySchema } from "@ewatrade/storefront-contracts/resources"
 import {
@@ -28,7 +29,10 @@ import {
   buildCustomerChatEntryUrl,
   resolveCustomerChatOrigin,
 } from "@ewatrade/utils"
-import { withLocalQaStorefrontPhotos } from "./local-qa-storefront-photos"
+import {
+  withLocalQaPinnedPhotos,
+  withLocalQaStorefrontPhotos,
+} from "./local-qa-storefront-photos"
 import { storefrontOtpAdapter } from "./storefront-commerce"
 
 type Db = Parameters<typeof loadLiveStorefrontForHost>[0]
@@ -104,16 +108,25 @@ function factoryDependencies(db: Db, host: string, query: unknown) {
           typeof pinnedCatalogItemIds
         >[0],
       ).filter((id) => !value.storefront.items.some((item) => item.id === id))
+      // Exact low-stock counts only for an explicit opt-in in the active release.
+      const lowStockCounts = publicLowStockCountsEnabled(
+        value.site.release.composition,
+      )
       const pinnedItems = pins.length
-        ? await loadPublicStorefrontPinnedItems(db, {
-            tenantId: value.site.release.tenantId,
-            store: {
-              id: value.site.storeId,
-              currencyCode: value.storefront.currencyCode,
-            },
-            ids: pins,
-            storefrontItems: store.storefrontItems ?? null,
-          })
+        ? await withLocalQaPinnedPhotos(
+            value.storefront,
+            host,
+            await loadPublicStorefrontPinnedItems(db, {
+              tenantId: value.site.release.tenantId,
+              store: {
+                id: value.site.storeId,
+                currencyCode: value.storefront.currencyCode,
+              },
+              ids: pins,
+              storefrontItems: store.storefrontItems ?? null,
+              projection: { lowStockCounts },
+            }),
+          )
         : []
       // Presentation hints only; every write re-derives these facts on the server.
       const ordering =
@@ -122,31 +135,37 @@ function factoryDependencies(db: Db, host: string, query: unknown) {
       const otp = ordering
         ? storefrontOtpAdapter({ qaTenant: Boolean(store.isQaPreview) })
         : null
-      return publicStorefrontResources({
-        ...value.storefront,
-        ...(offeringCounts ? { offeringCounts } : {}),
-        ...(pinnedItems.length ? { pinnedItems } : {}),
-        ...(ORDERING_TEMPLATE_KEYS.includes(value.site.release.templateKey)
-          ? {
-              commerce: {
-                orderRequests: ordering
-                  ? { available: (offeringCounts?.products ?? 0) > 0 }
-                  : { available: false, reason: "Not taking order requests." },
-                customerAccounts: otp
-                  ? { available: true, channels: otp.channels }
-                  : {
-                      available: false,
-                      reason: "Login isn't available.",
-                      channels: [],
-                    },
-                fulfilment: orderingFulfilmentMethods(
-                  value.site.release.composition,
-                ),
-                hasContact: Boolean(store.hasBusinessContact),
-              },
-            }
-          : {}),
-      })
+      return publicStorefrontResources(
+        {
+          ...value.storefront,
+          ...(offeringCounts ? { offeringCounts } : {}),
+          ...(pinnedItems.length ? { pinnedItems } : {}),
+          ...(ORDERING_TEMPLATE_KEYS.includes(value.site.release.templateKey)
+            ? {
+                commerce: {
+                  orderRequests: ordering
+                    ? { available: (offeringCounts?.products ?? 0) > 0 }
+                    : {
+                        available: false,
+                        reason: "Not taking order requests.",
+                      },
+                  customerAccounts: otp
+                    ? { available: true, channels: otp.channels }
+                    : {
+                        available: false,
+                        reason: "Login isn't available.",
+                        channels: [],
+                      },
+                  fulfilment: orderingFulfilmentMethods(
+                    value.site.release.composition,
+                  ),
+                  hasContact: Boolean(store.hasBusinessContact),
+                },
+              }
+            : {}),
+        },
+        { lowStockCounts },
+      )
     },
   }
 }

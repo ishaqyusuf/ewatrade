@@ -5,6 +5,7 @@ import {
   CommerceStudioProvider,
   CommerceStudioShell,
   type StorefrontCommerceAdapter,
+  StorefrontViewport,
 } from "@ewatrade/storefront-templates/commerce-studio"
 import { usePathname } from "next/navigation"
 import {
@@ -64,9 +65,13 @@ export function StorefrontShell({
           adapter={adapter}
           preview={false}
         >
-          <CommerceStudioShell current={current} routeKind={routeKind}>
-            {children}
-          </CommerceStudioShell>
+          {/* The persistent shell sits outside StorefrontTemplate, so it supplies the
+              named container its responsive rules query. */}
+          <StorefrontViewport>
+            <CommerceStudioShell current={current} routeKind={routeKind}>
+              {children}
+            </CommerceStudioShell>
+          </StorefrontViewport>
         </CommerceStudioProvider>
       ) : (
         children

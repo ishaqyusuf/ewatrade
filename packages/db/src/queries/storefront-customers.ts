@@ -11,6 +11,7 @@ import {
   ORDERING_TEMPLATE_KEYS,
   storefrontCustomerIdentifierSchema,
   storefrontOtpVerifySchema,
+  storefrontRequestReferenceSchema,
 } from "@ewatrade/storefront-contracts/orders"
 import type { PrismaClient } from "../../generated/prisma/client"
 import { loadLiveStorefrontForHost } from "./storefront-factory-loader"
@@ -500,6 +501,61 @@ export async function listLinkableStorefrontRequests(
     ...orders.map((row) => ({ kind: "order" as const, ...row })),
     ...services.map((row) => ({ kind: "service" as const, ...row })),
   ]
+}
+
+/**
+ * Guest request recovery: the one request with this reference that was sent from the
+ * customer's OTP-verified WhatsApp number, in this business and its storefront Store.
+ * The reference alone proves nothing. Email logins, other numbers, other Stores and
+ * requests already linked to another account all read as not found, identically.
+ * Returns only the request identity the caller signs a receipt link for.
+ */
+export async function findVerifiedStorefrontRequest(
+  db: DbClient,
+  input: {
+    tenantId: string
+    storeId: string
+    customerId: string
+    reference: unknown
+  },
+): Promise<{ kind: "order" | "service"; requestId: string } | null> {
+  const reference = storefrontRequestReferenceSchema.safeParse(input.reference)
+  if (!reference.success) return null
+  const customer = await db.storefrontCustomer.findFirst({
+    where: { id: input.customerId, tenantId: input.tenantId },
+    select: { phoneE164: true },
+  })
+  if (!customer?.phoneE164) return null
+  const owner = [{ customerId: null }, { customerId: input.customerId }]
+  if (reference.data.startsWith("R-")) {
+    const order = await db.storefrontOrderRequest.findFirst({
+      where: {
+        tenantId: input.tenantId,
+        storeId: input.storeId,
+        reference: reference.data,
+        customerPhone: customer.phoneE164,
+        OR: owner,
+      },
+      select: { id: true },
+    })
+    return order ? { kind: "order", requestId: order.id } : null
+  }
+  const service = await db.storefrontServiceRequestContext.findFirst({
+    where: {
+      tenantId: input.tenantId,
+      reference: reference.data,
+      OR: owner,
+      serviceRequest: {
+        tenantId: input.tenantId,
+        storeId: input.storeId,
+        customerPhone: customer.phoneE164,
+      },
+    },
+    select: { serviceRequestId: true },
+  })
+  return service
+    ? { kind: "service", requestId: service.serviceRequestId }
+    : null
 }
 
 export async function linkVerifiedStorefrontRequests(

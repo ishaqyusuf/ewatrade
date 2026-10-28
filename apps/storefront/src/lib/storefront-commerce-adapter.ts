@@ -1,6 +1,7 @@
 import {
   checkStorefrontBag,
   declineStorefrontQuote,
+  findStorefrontRequest,
   linkStorefrontReceipt,
   linkVerifiedStorefrontHistory,
   logoutStorefrontCustomer,
@@ -27,4 +28,5 @@ export const commerceAdapter = {
   logout: logoutStorefrontCustomer,
   linkVerified: linkVerifiedStorefrontHistory,
   linkReceipt: linkStorefrontReceipt,
+  findRequest: findStorefrontRequest,
 } as unknown as StorefrontCommerceAdapter

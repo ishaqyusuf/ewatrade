@@ -33,7 +33,21 @@ import {
 } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { useEffect, useId, useRef, useState } from "react"
+import { storefrontRequestReferenceSchema } from "../../../storefront-contracts/src/orders"
 import { useCommerceStudio } from "./context"
+
+/** Normalized reference, or null with the customer-facing reason. */
+function parseReference(value: string) {
+  const parsed = storefrontRequestReferenceSchema.safeParse(value.trim())
+  return parsed.success
+    ? { reference: parsed.data, problem: null }
+    : {
+        reference: null,
+        problem: value.trim()
+          ? "Enter the reference from your receipt, like R-7KQ2MX."
+          : "Enter your request reference.",
+      }
+}
 
 export type AccountView =
   | {
@@ -41,6 +55,8 @@ export type AccountView =
       channels: readonly ("email" | "whatsapp")[]
       next: string | null
       testAdapter: boolean
+      /** Guest-recovery reference to keep through WhatsApp verification. */
+      find?: string | null
     }
   | {
       signedIn: true
@@ -60,6 +76,11 @@ export type AccountView =
         kind: "order" | "service"
         createdAt: string
       }[]
+      /**
+       * Server-resolved guest recovery: `href` only when the reference names a request
+       * sent from this session's verified WhatsApp number in this Store.
+       */
+      lookup?: { reference: string; href: string | null } | null
     }
 
 const stageLabel: Record<string, string> = {
@@ -98,9 +119,18 @@ function SignIn({
   account,
 }: { account: Extract<AccountView, { signedIn: false }> }) {
   const { adapter, snapshot, navigate } = useCommerceStudio()
-  const [channel, setChannel] = useState<"email" | "whatsapp">(
+  // Guest recovery proves the WhatsApp number a request was sent from; no other way in.
+  const canFind = account.channels.includes("whatsapp")
+  const [mode, setMode] = useState<"login" | "find">(
+    canFind && account.find ? "find" : "login",
+  )
+  const [loginChannel, setChannel] = useState<"email" | "whatsapp">(
     account.channels[0] ?? "email",
   )
+  const channel = mode === "find" ? "whatsapp" : loginChannel
+  const [reference, setReference] = useState(account.find ?? "")
+  const [referenceError, setReferenceError] = useState<string | null>(null)
+  const [found, setFound] = useState<string | null>(null)
   const [identifier, setIdentifier] = useState("")
   const [challenge, setChallenge] = useState<{
     id: string
@@ -111,7 +141,14 @@ function SignIn({
   const [error, setError] = useState<string | null>(null)
   const [pending, setPending] = useState(false)
   const [wait, setWait] = useState(0)
-  const ids = { identifier: useId(), code: useId(), error: useId() }
+  const ids = {
+    identifier: useId(),
+    code: useId(),
+    error: useId(),
+    reference: useId(),
+    referenceError: useId(),
+  }
+  const referenceRef = useRef<HTMLInputElement>(null)
   const codeRef = useRef<HTMLInputElement>(null)
   const identifierRef = useRef<HTMLInputElement>(null)
   useEffect(() => {
@@ -137,6 +174,16 @@ function SignIn({
     )
   const send = async () => {
     setError(null)
+    setReferenceError(null)
+    if (mode === "find") {
+      const parsed = parseReference(reference)
+      if (!parsed.reference) {
+        setReferenceError(parsed.problem)
+        requestAnimationFrame(() => referenceRef.current?.focus())
+        return
+      }
+      setFound(parsed.reference)
+    }
     if (!identifier.trim()) {
       setError(
         channel === "email"
@@ -186,6 +233,20 @@ function SignIn({
         requestAnimationFrame(() => codeRef.current?.focus())
         return
       }
+      if (mode === "find" && found) {
+        // Now verified: open the request only if it was sent from this number.
+        // A miss keeps the reference so the account page can say so.
+        const lookup = await adapter
+          .findRequest({ reference: found })
+          .catch(() => null)
+        navigate(
+          lookup?.ok
+            ? lookup.receiptPath
+            : `/account?find=${encodeURIComponent(found)}`,
+          { replace: true, refresh: true },
+        )
+        return
+      }
       const next =
         account.next?.startsWith("/") && !account.next.startsWith("//")
           ? account.next
@@ -200,11 +261,14 @@ function SignIn({
   return (
     <div className="cs-auth">
       <h1 className="cs-title cs-title--page">
-        Log in to {snapshot.resources.business.name}
+        {mode === "find"
+          ? "Find your request"
+          : `Log in to ${snapshot.resources.business.name}`}
       </h1>
       <p className="cs-lead">
-        See your requests and orders in one place. You don't need an account to
-        order.
+        {mode === "find"
+          ? "Enter the reference from your receipt and the WhatsApp number you sent it from. We'll send a code to that number to check it's you."
+          : "See your requests and orders in one place. You don't need an account to order."}
       </p>
       {!challenge ? (
         <form
@@ -215,7 +279,31 @@ function SignIn({
             void send()
           }}
         >
-          {account.channels.length > 1 ? (
+          {mode === "find" ? (
+            <Field data-invalid={referenceError ? true : undefined}>
+              <FieldLabel htmlFor={ids.reference}>Request reference</FieldLabel>
+              <Input
+                id={ids.reference}
+                ref={referenceRef}
+                value={reference}
+                maxLength={24}
+                autoComplete="off"
+                autoCapitalize="characters"
+                spellCheck={false}
+                placeholder="R-7KQ2MX"
+                aria-invalid={referenceError ? true : undefined}
+                aria-describedby={
+                  referenceError ? ids.referenceError : undefined
+                }
+                onChange={(event) => setReference(event.target.value)}
+              />
+              {referenceError ? (
+                <FieldError id={ids.referenceError}>
+                  {referenceError}
+                </FieldError>
+              ) : null}
+            </Field>
+          ) : account.channels.length > 1 ? (
             <Tabs
               value={channel}
               onValueChange={(value) => {
@@ -264,6 +352,29 @@ function SignIn({
             {pending ? <Spinner /> : null}
             {wait > 0 ? `Send code in ${wait}s` : "Send code"}
           </Button>
+          {canFind ? (
+            <Button
+              type="button"
+              variant="ghost"
+              className="cs-full"
+              onClick={() => {
+                setMode(mode === "find" ? "login" : "find")
+                setIdentifier("")
+                setError(null)
+                setReferenceError(null)
+                requestAnimationFrame(() =>
+                  (mode === "find"
+                    ? identifierRef.current
+                    : referenceRef.current
+                  )?.focus(),
+                )
+              }}
+            >
+              {mode === "find"
+                ? "Log in instead"
+                : "Ordered as a guest? Find a request"}
+            </Button>
+          ) : null}
         </form>
       ) : (
         <form
@@ -276,6 +387,9 @@ function SignIn({
         >
           <p>
             Enter the code sent to <strong>{challenge.destination}</strong>.
+            {mode === "find" && found
+              ? ` Then we'll open request ${found} if it was sent from this number. This also logs you in on this device.`
+              : null}
           </p>
           {challenge.testCode ? (
             <Alert className="cs-note">
@@ -322,7 +436,7 @@ function SignIn({
             disabled={pending || code.length !== 6}
           >
             {pending ? <Spinner /> : null}
-            Log in
+            {mode === "find" ? "Find request" : "Log in"}
           </Button>
           <div className="cs-row-actions">
             <Button
@@ -343,11 +457,131 @@ function SignIn({
                 requestAnimationFrame(() => identifierRef.current?.focus())
               }}
             >
-              Use a different {channel === "email" ? "email" : "number"}
+              {mode === "find"
+                ? "Change reference or number"
+                : `Use a different ${channel === "email" ? "email" : "number"}`}
             </Button>
           </div>
         </form>
       )}
+    </div>
+  )
+}
+
+/** Signed in with WhatsApp: open one of this number's requests by its reference. */
+function FindRequest({
+  account,
+}: { account: Extract<AccountView, { signedIn: true }> }) {
+  const { adapter, navigate } = useCommerceStudio()
+  const lookup = account.lookup ?? null
+  const [reference, setReference] = useState(lookup?.reference ?? "")
+  const [error, setError] = useState<string | null>(null)
+  const [pending, setPending] = useState(false)
+  const ids = { reference: useId(), error: useId() }
+  const inputRef = useRef<HTMLInputElement>(null)
+  if (account.channel !== "whatsapp")
+    return lookup ? (
+      <Alert className="cs-note">
+        <AlertTitle>Find {lookup.reference} with WhatsApp</AlertTitle>
+        <AlertDescription>
+          Guest requests are found by the WhatsApp number they were sent from.
+          Log out, then choose Find a request and verify that number.
+        </AlertDescription>
+      </Alert>
+    ) : null
+  const submit = async () => {
+    const parsed = parseReference(reference)
+    if (!parsed.reference) {
+      setError(parsed.problem)
+      requestAnimationFrame(() => inputRef.current?.focus())
+      return
+    }
+    setPending(true)
+    setError(null)
+    try {
+      const result = await adapter.findRequest({ reference: parsed.reference })
+      if (result.ok) navigate(result.receiptPath)
+      else {
+        setError(result.message)
+        requestAnimationFrame(() => inputRef.current?.focus())
+      }
+    } catch {
+      setError("We couldn't reach the shop. Try again.")
+    } finally {
+      setPending(false)
+    }
+  }
+  return (
+    <div className="cs-find">
+      {lookup?.href ? (
+        <Alert className="cs-note">
+          <AlertTitle>Request {lookup.reference}</AlertTitle>
+          <AlertDescription>
+            <p>Sent from your verified WhatsApp number.</p>
+            <CommerceLink
+              className={buttonVariants({
+                variant: "outline",
+                className: "cs-mt",
+              })}
+              href={lookup.href}
+            >
+              Open request
+            </CommerceLink>
+          </AlertDescription>
+        </Alert>
+      ) : null}
+      <form
+        className="cs-find__form"
+        noValidate
+        onSubmit={(event) => {
+          event.preventDefault()
+          void submit()
+        }}
+      >
+        <Field
+          data-invalid={error || (lookup && !lookup.href) ? true : undefined}
+        >
+          <FieldLabel htmlFor={ids.reference}>
+            Find a request by its reference
+          </FieldLabel>
+          <Input
+            id={ids.reference}
+            ref={inputRef}
+            value={reference}
+            maxLength={24}
+            autoComplete="off"
+            autoCapitalize="characters"
+            spellCheck={false}
+            placeholder="R-7KQ2MX"
+            aria-invalid={error || (lookup && !lookup.href) ? true : undefined}
+            aria-describedby={
+              error || (lookup && !lookup.href) ? ids.error : undefined
+            }
+            onChange={(event) => {
+              setReference(event.target.value)
+              setError(null)
+            }}
+          />
+          {error ? (
+            <FieldError id={ids.error} role="alert">
+              {error}
+            </FieldError>
+          ) : lookup && !lookup.href ? (
+            <FieldError id={ids.error}>
+              We couldn't find {lookup.reference} from your verified WhatsApp
+              number. Check the reference on your receipt.
+            </FieldError>
+          ) : (
+            <FieldDescription>
+              Only requests sent from {account.label} can be opened here.
+            </FieldDescription>
+          )}
+        </Field>
+        <Button type="submit" variant="outline" disabled={pending}>
+          {pending ? <Spinner /> : null}
+          Find request
+        </Button>
+      </form>
     </div>
   )
 }
@@ -408,6 +642,7 @@ function SignedIn({
           <AlertDescription>{error}</AlertDescription>
         </Alert>
       ) : null}
+      <FindRequest account={account} />
       {account.linkable.length ? (
         <Alert className="cs-note">
           <AlertTitle>

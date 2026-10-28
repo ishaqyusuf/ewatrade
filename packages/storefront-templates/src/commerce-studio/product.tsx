@@ -108,7 +108,7 @@ export function ProductDetail({ item }: { item: PublicCatalogItem }) {
   if (!option) return null
   const scale = option.unit?.scale ?? 0
   const unit = option.unit?.label ?? null
-  const stock = stockWording(option.stock)
+  const stock = stockWording(option.stock, option.lowStockQuantity)
   const soldOut =
     option.stock === "out_of_stock" || option.availability === "OUT_OF_STOCK"
   const priceOnRequest = option.priceMinor === null
@@ -201,7 +201,10 @@ export function ProductDetail({ item }: { item: PublicCatalogItem }) {
                 aria-label="Options"
               >
                 {item.options.map((entry) => {
-                  const wording = stockWording(entry.stock)
+                  const wording = stockWording(
+                    entry.stock,
+                    entry.lowStockQuantity,
+                  )
                   return (
                     <ToggleGroupItem
                       key={entry.id}

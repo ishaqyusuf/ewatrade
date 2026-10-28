@@ -19,6 +19,7 @@ import {
   StorefrontOrderError,
   declineStorefrontServiceQuote,
   dispatchStorefrontMerchantAlerts,
+  findVerifiedStorefrontRequest,
   getStorefrontCustomerSession,
   linkStorefrontOrderToCustomer,
   linkVerifiedStorefrontRequests,
@@ -30,6 +31,7 @@ import {
   resolveStorefrontOrderingScope,
   revokeStorefrontCustomerSession,
   storefrontReceiptDigest,
+  storefrontReceiptToken,
   submitStorefrontOrderRequest,
   submitStorefrontServiceRequestWithReceipt,
   verifyStorefrontCustomerOtp,
@@ -351,6 +353,41 @@ export async function linkVerifiedStorefrontHistory() {
       customerId: current.customer.id,
     })
     return { ok: true as const, linked: result.linked }
+  } catch (error) {
+    return failure(error)
+  }
+}
+
+const requestNotFound = {
+  ok: false as const,
+  message:
+    "We couldn't find a request with that reference from your verified WhatsApp number. Check the reference on your receipt.",
+}
+
+/**
+ * Guest request recovery after WhatsApp OTP. The session (this Host's business, Store
+ * and ordering plan) and its verified number decide; the reference only picks which
+ * of that number's requests to open. Every miss reads the same.
+ */
+export async function findStorefrontRequest(input: { reference: unknown }) {
+  try {
+    const current = await session()
+    if (!current)
+      return {
+        ok: false as const,
+        message: "Verify your WhatsApp number to find a request.",
+      }
+    const found = await findVerifiedStorefrontRequest(prisma, {
+      tenantId: current.tenantId,
+      storeId: current.storeId,
+      customerId: current.customer.id,
+      reference: input?.reference,
+    })
+    if (!found) return requestNotFound
+    return {
+      ok: true as const,
+      receiptPath: `/receipt/${storefrontReceiptToken(found.kind, found.requestId, receiptSecret())}`,
+    }
   } catch (error) {
     return failure(error)
   }

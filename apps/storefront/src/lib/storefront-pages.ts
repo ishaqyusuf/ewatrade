@@ -2,6 +2,7 @@ import "server-only"
 
 import { prisma } from "@ewatrade/db"
 import {
+  findVerifiedStorefrontRequest,
   getStorefrontCustomerSession,
   listLinkableStorefrontRequests,
   listStorefrontCustomerOrders,
@@ -81,11 +82,16 @@ export function customerView(
   }
 }
 
-/** Verified history for this business only, with receipt links for each request. */
+/**
+ * Verified history for this business only, with receipt links for each request.
+ * `reference` is guest-recovery intent carried through login; only a request from
+ * the session's verified WhatsApp number in this Store resolves to a link.
+ */
 export async function signedInAccount(
   session: NonNullable<Awaited<ReturnType<typeof loadCustomerSession>>>,
+  reference?: string,
 ): Promise<AccountView> {
-  const [orders, services, linkable] = await Promise.all([
+  const [orders, services, linkable, found] = await Promise.all([
     listStorefrontCustomerOrders(prisma, {
       tenantId: session.tenantId,
       customerId: session.customer.id,
@@ -98,6 +104,14 @@ export async function signedInAccount(
       tenantId: session.tenantId,
       customerId: session.customer.id,
     }),
+    reference
+      ? findVerifiedStorefrontRequest(prisma, {
+          tenantId: session.tenantId,
+          storeId: session.storeId,
+          customerId: session.customer.id,
+          reference,
+        })
+      : null,
   ])
   const serviceIds = await prisma.storefrontServiceRequestContext.findMany({
     where: { id: { in: services.map((entry) => entry.id) } },
@@ -138,5 +152,13 @@ export async function signedInAccount(
       kind: entry.kind,
       createdAt: entry.createdAt.toISOString(),
     })),
+    lookup: reference
+      ? {
+          reference,
+          href: found
+            ? `/receipt/${storefrontReceiptToken(found.kind, found.requestId, secret)}`
+            : null,
+        }
+      : null,
   }
 }

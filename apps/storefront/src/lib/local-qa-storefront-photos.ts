@@ -77,6 +77,24 @@ export async function withLocalQaStorefrontPhotos(
   }
 }
 
+/**
+ * Pinned public items past the first page (hero/story photos, Featured pins) get the
+ * same local QA photo identity as the listing. Same host/slug/QA admission checks;
+ * LIVE stores and unlisted items are returned unchanged.
+ */
+export async function withLocalQaPinnedPhotos<
+  T extends PublicStorefront["items"][number],
+>(store: PublicStorefront | null, host: string, items: T[]): Promise<T[]> {
+  if (!store?.isQaPreview || !items.length) return items
+  const manifest = await manifestForHost(host)
+  if (!manifest || manifest.slug !== store.slug) return items
+  return items.map((item) =>
+    manifest.photos[item.id]
+      ? { ...item, photoUrl: `/qa-photo/${manifest.photos[item.id]}` }
+      : item,
+  )
+}
+
 export async function readLocalQaStorefrontPhoto(
   host: string,
   filename: string,

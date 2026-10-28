@@ -9,6 +9,7 @@ import type { Prisma } from "../../generated/prisma/client"
 import { saleEligibleCatalogItem } from "./product-usage"
 import {
   publicItemAvailability,
+  publicLowStockQuantity,
   publicOptionPrice,
   publicStockAvailability,
   publicStockState,
@@ -108,6 +109,8 @@ export async function getPublicStorefrontForSite<T extends { storeId: string }>(
   resolveSite: (tenantId: string) => Promise<T | null>,
   after?: string,
   options: PublicStorefrontQuery = {},
+  /** Derived from the resolved Site's published release, never from the request. */
+  projection: (site: T) => PublicItemProjection = () => ({}),
 ) {
   const authority = await resolveStorefrontHostAuthority(db, host)
   if (!authority) return null
@@ -130,6 +133,7 @@ export async function getPublicStorefrontForSite<T extends { storeId: string }>(
     authority.localQaPreview,
     options,
     site.storeId,
+    projection(site),
   )
   return storefront ? { site, storefront } : null
 }
@@ -143,6 +147,8 @@ export async function getScopedStorefrontDesignPreview(
   db: DbClient,
   scope: { tenantId: string; storeId: string },
   options: PublicStorefrontQuery & { after?: string } = {},
+  /** From the previewed compositions; each design is re-gated at projection. */
+  projection: PublicItemProjection = {},
 ) {
   const tenant = await db.tenant.findUnique({
     where: { id: scope.tenantId },
@@ -156,6 +162,7 @@ export async function getScopedStorefrontDesignPreview(
         true,
         options,
         scope.storeId,
+        projection,
       )
     : null
 }
@@ -214,13 +221,64 @@ export async function countPublicStorefrontOfferings(
 type PublicItemRow<S extends Prisma.CatalogItemSelect> =
   Prisma.CatalogItemGetPayload<{ select: S }>
 
+/**
+ * Server-decided extras for one public read. `lowStockCounts` must come from the
+ * published (or authenticated preview) composition via `publicLowStockCountsEnabled`,
+ * never from request input. Off by default.
+ */
+export type PublicItemProjection = { lowStockCounts?: boolean }
+
+/** Same-origin path of the existing public photo route; the host proxies it to the API. */
+export function publicCatalogPhotoPath(storeId: string, assetId: string) {
+  return `/api/catalog/public/stores/${encodeURIComponent(storeId)}/photos/${encodeURIComponent(assetId)}`
+}
+
+/**
+ * The first attached photo that `getCatalogPublicPhotoTarget` would serve for this
+ * Store: approved with a complete review verdict, bytes present, LIVE active tenant
+ * not being purged, ACTIVE Store with a published Site. The item's own public
+ * eligibility comes from the reader's item/offering filters. Only the asset ID leaves
+ * the database; delivery re-checks everything and the page falls back to artwork.
+ */
+function publicPhotoAssetSelect(storeId: string) {
+  return {
+    where: {
+      storeId,
+      state: "APPROVED" as const,
+      approvedAt: { not: null },
+      reviewedAt: { not: null },
+      reviewProvider: { not: null },
+      reviewPolicyVersion: { not: null },
+      reviewDisplayDigest: { not: null },
+      bytesDeletedAt: null,
+      uploadedAt: { not: null },
+      storagePath: { not: null },
+      attachedAt: { not: null },
+      tenant: {
+        isActive: true,
+        dataClassification: "LIVE" as const,
+        qaPurgeStartedAt: null,
+      },
+      store: {
+        status: "ACTIVE" as const,
+        sites: { some: { status: "PUBLISHED" as const } },
+      },
+    },
+    orderBy: [{ sortOrder: "asc" as const }, { id: "asc" as const }],
+    take: 1,
+    select: { id: true },
+  }
+}
+
 /** The one public item select + projection, shared by every public catalog read. */
 function publicItemReader(
   tenantId: string,
   store: { id: string; currencyCode: string },
   offeringWhere: Prisma.SellableOfferingWhereInput,
+  projection: PublicItemProjection = {},
 ) {
   const select = {
+    photoAssets: publicPhotoAssetSelect(store.id),
     id: true,
     name: true,
     kind: true,
@@ -243,6 +301,7 @@ function publicItemReader(
         pricingPolicy: true,
         productUnitOffering: {
           select: {
+            inventoryUnitId: true,
             inventoryUnit: { select: { name: true, transactionScale: true } },
           },
         },
@@ -274,6 +333,23 @@ function publicItemReader(
   const projectItem = (
     item: Prisma.CatalogItemGetPayload<{ select: typeof select }>,
   ) => {
+    // Opt-in only; computed per option so a count never crosses selling units.
+    const lowStockCount = (offering: (typeof item.offerings)[number]) => {
+      if (!projection.lowStockCounts || item.kind !== "PRODUCT") return {}
+      const unit = offering.productUnitOffering
+      const quantity = publicLowStockQuantity(
+        offering.variant.stockBalanceSources,
+        item.product?.lowStockLevel,
+        unit
+          ? {
+              inventoryUnitId: unit.inventoryUnitId,
+              transactionScale: unit.inventoryUnit.transactionScale,
+            }
+          : null,
+      )
+      return quantity ? { lowStockQuantity: quantity } : {}
+    }
+    const photo = item.photoAssets?.[0]
     const itemOptions = item.offerings.map((offering) => ({
       id: offering.id,
       name: publicStorefrontOptionName(
@@ -301,6 +377,7 @@ function publicItemReader(
               offering.variant.stockBalanceSources,
               item.product?.lowStockLevel,
             ),
+            ...lowStockCount(offering),
             ...(offering.productUnitOffering
               ? {
                   unit: {
@@ -332,6 +409,9 @@ function publicItemReader(
         (item.kind === "SERVICE"
           ? "ill-generic-service"
           : "ill-generic-product"),
+      ...(photo
+        ? { photoUrl: publicCatalogPhotoPath(store.id, photo.id) }
+        : {}),
       ...publicOptionPrice(itemOptions, store.currencyCode),
       availability: publicItemAvailability(itemOptions),
       options: itemOptions,
@@ -353,6 +433,8 @@ export async function loadPublicStorefrontPinnedItems(
     store: { id: string; currencyCode: string }
     ids: readonly string[]
     storefrontItems: number | null
+    /** From the published/previewed composition only; see PublicItemProjection. */
+    projection?: PublicItemProjection
   },
 ) {
   const ids = [
@@ -377,6 +459,7 @@ export async function loadPublicStorefrontPinnedItems(
     input.tenantId,
     input.store,
     publicOfferingWhere(input.tenantId, input.store.id),
+    input.projection,
   )
   const rows = await db.catalogItem.findMany({
     where: { AND: [eligible, { id: { in: allowed } }] },
@@ -397,6 +480,7 @@ async function readStorefront(
   options: PublicStorefrontQuery,
   /** Factory loader only: the Site's trusted Store. No oldest-Store fallback. */
   trustedStoreId?: string,
+  projection: PublicItemProjection = {},
 ) {
   const tenant = await db.tenant.findFirst({
     where: {
@@ -472,6 +556,7 @@ async function readStorefront(
     tenant.id,
     store,
     offeringWhere,
+    projection,
   )
   type Row = PublicItemRow<typeof select>
   // Paid pagination has two stable buckets, so sold-out items remain last across pages.

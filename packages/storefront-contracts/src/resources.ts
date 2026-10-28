@@ -41,6 +41,15 @@ export const publicCatalogOptionSchema = z
     availability,
     /** Products only. Absent for services and older loaders. */
     stock: publicStockStateSchema.optional(),
+    /**
+     * Exact units free to sell, only with `low_stock` and only when the published
+     * design opts in (`publicLowStockCountsEnabled`) and the stock is held in this
+     * option's own selling unit. Absent otherwise: quantities stay private by default.
+     */
+    lowStockQuantity: z
+      .string()
+      .regex(/^(?:0|[1-9]\d{0,5})(?:\.\d{1,6})?$/)
+      .optional(),
     /** Selling unit and allowed decimal places for quantity entry. */
     unit: z
       .object({

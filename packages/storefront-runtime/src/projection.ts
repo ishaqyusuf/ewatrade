@@ -30,11 +30,42 @@ export type PublicStorefrontProjection = {
   commerce?: StorefrontCommerceResource
 }
 
+/**
+ * Low-stock counts survive only for a composition that opted in
+ * (`publicLowStockCountsEnabled`); every other snapshot is serialized without them,
+ * whatever the loader returned.
+ */
+function gateItem(
+  item: PublicCatalogItem,
+  lowStockCounts: boolean,
+): PublicCatalogItem {
+  if (lowStockCounts || !item.options.some((option) => option.lowStockQuantity))
+    return item
+  return {
+    ...item,
+    options: item.options.map(({ lowStockQuantity: _, ...option }) => option),
+  }
+}
+
 /** Explicit projection keeps extra repository metadata out of client snapshots. */
-export function publicStorefrontResources(store: PublicStorefrontProjection): {
+export function publicStorefrontResources(
+  input: PublicStorefrontProjection,
+  options: { lowStockCounts?: boolean } = {},
+): {
   resources: StorefrontResources
   capabilities: StorefrontCapabilities
 } {
+  const counts = options.lowStockCounts === true
+  const store: PublicStorefrontProjection = {
+    ...input,
+    items: input.items.map((item) => gateItem(item, counts)),
+    highlightedItem: input.highlightedItem
+      ? gateItem(input.highlightedItem, counts)
+      : null,
+    ...(input.pinnedItems
+      ? { pinnedItems: input.pinnedItems.map((item) => gateItem(item, counts)) }
+      : {}),
+  }
   const items = [
     ...store.items,
     ...(store.highlightedItem ? [store.highlightedItem] : []),

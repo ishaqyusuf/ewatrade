@@ -168,7 +168,7 @@ function StoreHeader({ current }: { current: string }) {
 }
 
 /** "Our story" only when there is something real to read there. */
-function aboutHasContent(
+export function aboutHasContent(
   snapshot: StorefrontClientSnapshot,
   header: { location: string; hours: string },
 ) {
@@ -190,7 +190,7 @@ function aboutHasContent(
 }
 
 function StoreFooter() {
-  const { snapshot, header, facts, href } = useCommerceStudio()
+  const { snapshot, header, facts, accounts, href } = useCommerceStudio()
   const footer = snapshot.composition.pages
     .flatMap((page) => page.sections)
     .find((section) => section.type === "commerce-studio-footer")
@@ -213,6 +213,7 @@ function StoreFooter() {
         ) : null}
         {facts.products ||
         facts.services ||
+        accounts ||
         aboutHasContent(snapshot, header) ? (
           <div>
             <h2 className="cs-footer__head">Explore</h2>
@@ -230,6 +231,14 @@ function StoreFooter() {
               {aboutHasContent(snapshot, header) ? (
                 <li>
                   <CommerceLink href={href("/about")}>Our story</CommerceLink>
+                </li>
+              ) : null}
+              {/* Same account route and availability as the header's Log in. */}
+              {accounts ? (
+                <li>
+                  <CommerceLink href={href("/account")}>
+                    Your orders
+                  </CommerceLink>
                 </li>
               ) : null}
             </ul>

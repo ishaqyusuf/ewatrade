@@ -5,7 +5,130 @@ import test from "node:test"
 import { launchSmokeBrowser } from "./qa-web-smoke.mjs"
 
 const origin = process.env.STOREFRONT_NAVIGATION_ORIGIN
-const artifacts = resolve(".scratch/storefront-navigation/2026-10-28")
+const photoOrigin = process.env.STOREFRONT_PHOTO_ORIGIN
+const artifacts = resolve(
+  process.env.STOREFRONT_NAVIGATION_ARTIFACTS ??
+    ".scratch/storefront-navigation/2026-10-28",
+)
+
+test(
+  "existing QA photography falls back to artwork when delivery is unavailable",
+  { skip: !photoOrigin, timeout: 90000 },
+  async () => {
+    const target = new URL(photoOrigin)
+    assert.equal(target.protocol, "https:")
+    assert.match(
+      target.hostname,
+      /^[a-z0-9-]+-qa\.ewatrade-storefront\.localhost$/,
+    )
+    assert.equal(target.port, "")
+    assert.ok(["/", "/qa-template-preview"].includes(target.pathname))
+    mkdirSync(artifacts, { recursive: true })
+    const browser = await launchSmokeBrowser()
+    try {
+      const context = await browser.newContext({
+        viewport: { width: 1280, height: 900 },
+        serviceWorkers: "block",
+      })
+      const page = await context.newPage()
+      let unavailable = false
+      let blockedPhotos = 0
+      let writes = 0
+      const errors = []
+      page.on("pageerror", (error) => errors.push(error.message))
+      await page.route("**/*", async (route) => {
+        const request = route.request()
+        if (!["GET", "HEAD"].includes(request.method())) {
+          writes++
+          return route.abort("blockedbyclient")
+        }
+        if (
+          unavailable &&
+          new URL(request.url()).pathname.startsWith("/qa-photo/")
+        ) {
+          blockedPhotos++
+          return route.fulfill({
+            status: 404,
+            contentType: "text/plain",
+            body: "Unavailable for the photo failure check",
+          })
+        }
+        return route.continue()
+      })
+      await page.goto(target.href, { waitUntil: "domcontentloaded" })
+      await page.locator(".sf-product-photo").first().waitFor()
+      const tileIndex = await page.evaluate(() =>
+        [...document.querySelectorAll(".sf-tile")].findIndex((tile) =>
+          tile.querySelector(".sf-product-photo"),
+        ),
+      )
+      assert.ok(tileIndex >= 0, "an existing configured photo is present")
+      await page.locator(".sf-tile").nth(tileIndex).scrollIntoViewIfNeeded()
+      await page.waitForFunction(() =>
+        [...document.querySelectorAll(".sf-product-photo")].some(
+          (image) => image.complete && image.naturalWidth > 0,
+        ),
+      )
+      unavailable = true
+      await page.reload({ waitUntil: "domcontentloaded" })
+      const tile = page.locator(".sf-tile").nth(tileIndex)
+      await tile.scrollIntoViewIfNeeded()
+      await tile.locator(".sf-tile-art svg").waitFor()
+      assert.equal(await tile.locator("img").count(), 0)
+      assert.ok(blockedPhotos > 0)
+      assert.equal(writes, 0)
+      assert.deepEqual(errors, [])
+      await page.screenshot({ path: resolve(artifacts, "photo-fallback.png") })
+      writeFileSync(
+        resolve(artifacts, "photo-verification.json"),
+        JSON.stringify(
+          {
+            origin: target.origin,
+            existingPhotosLoaded: true,
+            failedPhotoUsesArtwork: true,
+            blockedPhotos,
+            writes,
+            errors,
+          },
+          null,
+          2,
+        ),
+      )
+      await context.close()
+    } finally {
+      await browser.close()
+    }
+  },
+)
+
+async function desktopShell(page) {
+  const layout = await page.evaluate(() => {
+    const viewport = document.querySelector(".sf-template-viewport")
+    const nav = document.querySelector(".cs-nav")?.getBoundingClientRect()
+    const wordmark = document
+      .querySelector(".cs-wordmark")
+      ?.getBoundingClientRect()
+    const footer = document.querySelector(".cs-footer__grid")
+    return {
+      viewports: document.querySelectorAll(".sf-template-viewport").length,
+      name: viewport && getComputedStyle(viewport).containerName,
+      containment: viewport && getComputedStyle(viewport).containerType,
+      navigationSharesHeaderRow:
+        nav &&
+        wordmark &&
+        nav.top < wordmark.bottom &&
+        nav.bottom > wordmark.top,
+      footerColumns:
+        footer &&
+        getComputedStyle(footer).gridTemplateColumns.split(" ").length,
+    }
+  })
+  assert.equal(layout.viewports, 1, "one responsive storefront container")
+  assert.equal(layout.name, "storefront")
+  assert.equal(layout.containment, "inline-size")
+  assert.equal(layout.navigationSharesHeaderRow, true)
+  assert.equal(layout.footerColumns, 4)
+}
 
 test(
   "configured storefront retains its shell during streaming navigation",
@@ -74,6 +197,7 @@ test(
         .getByRole("heading", { name: "Services", exact: true })
         .waitFor()
       assert.equal(await page.locator("main").count(), 1)
+      await desktopShell(page)
       const header = await page.locator(".cs-header").elementHandle()
       const footer = await page.locator(".cs-footer").elementHandle()
       assert.ok(header && footer)
@@ -84,6 +208,15 @@ test(
       assert.equal(await header.evaluate((node) => node.isConnected), true)
       await page.screenshot({ path: resolve(artifacts, "shop-loading.png") })
       await page.locator(".cs-card").first().waitFor()
+      assert.ok(
+        (await page
+          .locator(".cs-grid")
+          .evaluate(
+            (node) =>
+              getComputedStyle(node).gridTemplateColumns.split(" ").length,
+          )) >= 3,
+        "desktop catalog uses multiple columns",
+      )
       assert.equal(
         await header.evaluate(
           (node) => node === document.querySelector(".cs-header"),
@@ -106,8 +239,33 @@ test(
       await page.waitForURL(`${target.origin}/`)
       await page.getByRole("heading", { level: 1 }).waitFor()
       assert.equal(await header.evaluate((node) => node.isConnected), true)
+      const hero = await page.locator(".cs-hero__grid").evaluate((node) => {
+        const copy = node
+          .querySelector(".cs-hero__copy")
+          ?.getBoundingClientRect()
+        const media = node
+          .querySelector(".cs-hero__media")
+          ?.getBoundingClientRect()
+        return {
+          columns: getComputedStyle(node).gridTemplateColumns.split(" ").length,
+          sideBySide: copy && media && media.left >= copy.right,
+        }
+      })
+      assert.equal(hero.columns, 2)
+      assert.equal(hero.sideBySide, true)
       // A bag held only in memory proves provider lifetime, rather than storage rehydration.
       await page.locator(".cs-card h3 a").first().click()
+      await page.locator(".cs-product__grid").waitFor()
+      assert.equal(
+        await page
+          .locator(".cs-product__grid")
+          .evaluate(
+            (node) =>
+              getComputedStyle(node).gridTemplateColumns.split(" ").length,
+          ),
+        2,
+        "desktop product photo and controls sit side by side",
+      )
       await page.getByRole("button", { name: /^Add to bag/ }).click()
       await page.getByRole("button", { name: "Close bag", exact: true }).click()
       await nav.getByRole("link", { name: "Services", exact: true }).click()
@@ -120,11 +278,24 @@ test(
       await nav.getByRole("link", { name: "Home", exact: true }).click()
       await page.waitForURL(`${target.origin}/`)
       await page.getByRole("heading", { level: 1 }).waitFor()
+      await desktopShell(page)
+      assert.equal(await page.locator(".cs-dock").isVisible(), false)
       assert.equal(documents, initialDocuments)
       assert.equal(writes, 0)
       assert.deepEqual(errors, [])
       await page.screenshot({ path: resolve(artifacts, "home.png") })
       await page.setViewportSize({ width: 390, height: 844 })
+      assert.equal(await page.locator(".cs-dock").isVisible(), true)
+      assert.equal(
+        await page
+          .locator(".cs-hero__grid")
+          .evaluate(
+            (node) =>
+              getComputedStyle(node).gridTemplateColumns.split(" ").length,
+          ),
+        1,
+        "phone hero stacks",
+      )
       assert.equal(
         await page.evaluate(
           () => document.documentElement.scrollWidth <= window.innerWidth,
@@ -148,6 +319,8 @@ test(
               "one main",
               "in-memory bag survives item/Services/Home navigation",
               "phone containment",
+              "desktop responsive container/header/hero/catalog/product/footer",
+              "bag dock hidden on desktop and visible on phone",
             ],
           },
           null,

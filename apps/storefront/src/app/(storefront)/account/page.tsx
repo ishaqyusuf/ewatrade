@@ -6,6 +6,7 @@ import {
   loadStorefrontPage,
   signedInAccount,
 } from "@/lib/storefront-pages"
+import { storefrontRequestReferenceSchema } from "@ewatrade/storefront-contracts/orders"
 import type { Metadata } from "next"
 import { notFound } from "next/navigation"
 
@@ -19,7 +20,7 @@ export async function generateMetadata(): Promise<Metadata> {
   }
 }
 
-type Props = { searchParams: Promise<{ next?: string }> }
+type Props = { searchParams: Promise<{ next?: string; find?: string }> }
 
 export default async function AccountPage({ searchParams }: Props) {
   const { load, storefront } = await loadStorefrontPage()
@@ -29,12 +30,17 @@ export default async function AccountPage({ searchParams }: Props) {
   )
     notFound()
   const session = await loadCustomerSession()
-  const { next } = await searchParams
+  const { next, find } = await searchParams
+  // A reference is only remembered intent; the verified session decides what it opens.
+  const reference = storefrontRequestReferenceSchema.safeParse(find)
   const adapter = load.snapshot.resources.commerce?.customerAccounts.available
     ? storefrontOtpAdapter({ qaTenant: Boolean(storefront?.isQaPreview) })
     : null
   const account = session
-    ? await signedInAccount(session)
+    ? await signedInAccount(
+        session,
+        reference.success ? reference.data : undefined,
+      )
     : {
         signedIn: false as const,
         channels: adapter?.channels ?? [],
@@ -43,6 +49,7 @@ export default async function AccountPage({ searchParams }: Props) {
             ? next
             : null,
         testAdapter: adapter?.name === "test",
+        find: reference.success ? reference.data : null,
       }
   return (
     <StorefrontContent

@@ -31,6 +31,47 @@ export function orderingFulfilmentMethods(composition: unknown) {
   return methods.length ? methods : (["pickup"] as ("pickup" | "delivery")[])
 }
 
+/** Exact template pins whose header declares the low-stock count opt-in. */
+const LOW_STOCK_COUNT_PINS: readonly { key: string; version: string }[] = [
+  { key: "commerce-studio", version: "1.2.0" },
+]
+export const LOW_STOCK_COUNT_SETTING = "show-low-stock-count"
+
+/**
+ * Whether a composition (a published release or an authenticated Studio preview
+ * design) explicitly opts in to exact low-stock counts. Only listed exact pins can,
+ * only through their header setting set to `true`; anything else, including older
+ * pins, malformed input or the default, keeps counts out of the public snapshot.
+ */
+export function publicLowStockCountsEnabled(composition: unknown) {
+  const value = composition as {
+    template?: { key?: unknown; version?: unknown }
+    pages?: {
+      sections?: {
+        type?: unknown
+        version?: unknown
+        settings?: Record<string, unknown>
+      }[]
+    }[]
+  } | null
+  if (
+    !LOW_STOCK_COUNT_PINS.some(
+      (pin) =>
+        pin.key === value?.template?.key &&
+        pin.version === value?.template?.version,
+    ) ||
+    !Array.isArray(value?.pages)
+  )
+    return false
+  // The same header the template and fulfilment policy read: the first one.
+  const header = value.pages
+    .flatMap((page) => (Array.isArray(page?.sections) ? page.sections : []))
+    .find((entry) => entry?.type === "commerce-studio-header")
+  return (
+    header?.version === 2 && header.settings?.[LOW_STOCK_COUNT_SETTING] === true
+  )
+}
+
 const id = z.string().regex(/^[A-Za-z0-9_-]{1,128}$/)
 /** Positive decimal up to 6 places; unit scale is checked against the offering. */
 export const storefrontQuantitySchema = z
@@ -133,6 +174,25 @@ export const storefrontRequestReplySchema = z
 export const storefrontWithdrawSchema = z
   .object({ expectedRevision: z.number().int().positive() })
   .strict()
+
+/**
+ * Customer-facing request reference (`R-` order, `S-` service request), as printed on
+ * receipts. Tolerates case, spaces and a missing dash. A reference is only a locator:
+ * it never grants access without a verified identity for the same request.
+ */
+export const storefrontRequestReferenceSchema = z
+  .string()
+  .max(24)
+  .transform((value) => value.toUpperCase().replace(/[\s-]/g, ""))
+  .pipe(
+    z
+      .string()
+      .regex(
+        /^[RS][23456789ABCDEFGHJKMNPQRSTUVWXYZ]{6}$/,
+        "Enter the reference from your receipt, like R-7KQ2MX.",
+      ),
+  )
+  .transform((value) => `${value.slice(0, 1)}-${value.slice(1)}`)
 
 export const storefrontCustomerIdentifierSchema = z.discriminatedUnion(
   "channel",

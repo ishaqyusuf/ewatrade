@@ -89,3 +89,36 @@ test("picker shows order, accessible controls, skipped pins and the max", () => 
     "Unavailable item",
   )
 })
+
+test("a one-item photo field chooses and replaces instead of pinning and ordering", () => {
+  const photo = { ...field, key: "image", label: "Hero photo", maxItems: 1 }
+  const render = (
+    entries: Parameters<typeof CatalogItemsPicker>[0]["entries"],
+  ) =>
+    renderToStaticMarkup(
+      createElement(CatalogItemsPicker, {
+        field: photo,
+        entries,
+        candidates: [
+          { id: "a", name: "Ankara tote" },
+          { id: "d", name: "Linen shirt" },
+        ],
+        query: "",
+        searching: false,
+        failed: false,
+        disabled: false,
+        onQuery: () => {},
+        onChange: () => {},
+      }),
+    )
+  const html = render([{ id: "a", name: "Ankara tote", listed: true }])
+  expect(html).not.toContain("1 of 1")
+  expect(html).not.toContain("Move Ankara tote")
+  expect(html).toContain('aria-label="Remove Ankara tote"')
+  expect(html).toContain("catalog artwork")
+  expect(disabled(html, "Ankara tote is chosen")).toBe(true)
+  // Full is not a dead end: another product replaces the current choice.
+  expect(disabled(html, "Use Linen shirt")).toBe(false)
+  expect(html).not.toContain("You can pin up to")
+  expect(render([])).toContain("No product chosen.")
+})

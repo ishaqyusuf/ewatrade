@@ -83,6 +83,21 @@ export function catalogListingHref(
 }
 
 /**
+ * The same listing state on a page other than Home, e.g. `/shop?category=…`. A root
+ * path keeps the original `/?…` links; other paths never gain a trailing slash.
+ */
+export function catalogListingPathHref(
+  path: string,
+  category?: string | null,
+  after?: string | null,
+  query?: CatalogListingQuery | null,
+) {
+  const href = catalogListingHref(category, after, query)
+  if (path === "/") return href
+  return href === "/" ? path : `${path}${href.slice(1)}`
+}
+
+/**
  * GET form submissions carry every named control. Empty values are removed so the URL
  * matches catalogListingHref and an empty select never invalidates the server query.
  */

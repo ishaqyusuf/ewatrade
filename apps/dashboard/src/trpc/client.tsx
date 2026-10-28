@@ -4,11 +4,17 @@ import type { AppRouter } from "@ewatrade/api/trpc/routers/_app"
 import { useEvents } from "@ewatrade/events/client"
 import { resolveTenantDomain } from "@ewatrade/utils"
 import { QueryClientProvider, isServer } from "@tanstack/react-query"
-import { createTRPCClient, httpBatchLink, loggerLink } from "@trpc/client"
+import {
+  createTRPCClient,
+  httpBatchLink,
+  loggerLink,
+  splitLink,
+} from "@trpc/client"
 import { createTRPCContext } from "@trpc/tanstack-react-query"
 import { useState } from "react"
 import superjson from "superjson"
 import { dashboardAnalyticsLink } from "./analytics-link"
+import { isBodyTransportQuery } from "./body-transport"
 import { shouldLogDashboardTrpcOperation } from "./log-operation"
 import { makeQueryClient } from "./query-client"
 
@@ -55,33 +61,41 @@ export function TRPCReactProvider({
 }: Readonly<{ children: React.ReactNode }>) {
   const events = useEvents()
   const queryClient = getQueryClient()
-  const [trpcClient] = useState(() =>
-    createTRPCClient<AppRouter>({
+  const [trpcClient] = useState(() => {
+    async function headers() {
+      const tenantSlug = getTenantSlugFromBrowserHost()
+
+      return {
+        "x-trpc-source": "react",
+        "x-assistant-client": "dashboard",
+        "x-ewatrade-analytics": events.canCollect() ? "allowed" : "denied",
+        ...(tenantSlug ? { "x-tenant-slug": tenantSlug } : {}),
+      }
+    }
+    return createTRPCClient<AppRouter>({
       links: [
         dashboardAnalyticsLink<AppRouter>(events.track),
-        httpBatchLink({
-          url: "/api/trpc",
-          transformer: superjson,
-          async headers() {
-            const tenantSlug = getTenantSlugFromBrowserHost()
-
-            return {
-              "x-trpc-source": "react",
-              "x-assistant-client": "dashboard",
-              "x-ewatrade-analytics": events.canCollect()
-                ? "allowed"
-                : "denied",
-              ...(tenantSlug ? { "x-tenant-slug": tenantSlug } : {}),
-            }
-          },
+        splitLink({
+          condition: isBodyTransportQuery,
+          true: httpBatchLink({
+            url: "/api/trpc",
+            transformer: superjson,
+            methodOverride: "POST",
+            headers,
+          }),
+          false: httpBatchLink({
+            url: "/api/trpc",
+            transformer: superjson,
+            headers,
+          }),
         }),
         loggerLink({
           enabled: (opts) =>
             shouldLogDashboardTrpcOperation(opts, process.env.NODE_ENV),
         }),
       ],
-    }),
-  )
+    })
+  })
 
   return (
     <QueryClientProvider client={queryClient}>

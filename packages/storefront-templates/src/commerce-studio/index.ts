@@ -16,4 +16,5 @@ export {
 
 export { CommerceStudioBody, type CommerceStudioProps } from "./render"
 export { CommerceStudioShell } from "./shell"
+export { StorefrontViewport } from "../viewport"
 export { CommerceStudioProvider, CommerceStudioPageProvider } from "./context"

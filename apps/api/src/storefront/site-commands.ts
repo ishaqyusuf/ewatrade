@@ -53,6 +53,7 @@ import {
   assertCompositionSources,
   validateComposition,
 } from "@ewatrade/storefront-contracts/manifest"
+import { publicLowStockCountsEnabled } from "@ewatrade/storefront-contracts/orders"
 import { catalogQuerySchema } from "@ewatrade/storefront-contracts/resources"
 import { validateDesignAssets } from "@ewatrade/storefront-runtime/design-assets"
 import { publicStorefrontResources } from "@ewatrade/storefront-runtime/projection"
@@ -291,7 +292,15 @@ export function previewStorefrontDraft(
         code: "CONFLICT",
         message: "The draft changed. Open a fresh preview.",
       })
-    const store = await getScopedStorefrontDesignPreview(tx, scope, parsed)
+    // Counts are read once if any previewed composition opts in, then each design's
+    // own setting decides at projection, so a design without the opt-in never shows them.
+    const lowStockCounts = [
+      site.draftComposition,
+      ...(parsedInput.designs ?? []),
+    ].some((composition) => publicLowStockCountsEnabled(composition))
+    const store = await getScopedStorefrontDesignPreview(tx, scope, parsed, {
+      lowStockCounts,
+    })
     if (!store)
       throw new TRPCError({
         code: "PRECONDITION_FAILED",
@@ -310,16 +319,19 @@ export function previewStorefrontDraft(
         pins = []
       }
       pins = pins.filter((id) => !store.items.some((item) => item.id === id))
+      const counts = publicLowStockCountsEnabled(composition)
       const pinnedItems = pins.length
         ? await loadPublicStorefrontPinnedItems(tx, {
             tenantId: scope.tenantId,
             store: { id: scope.storeId, currencyCode: store.currencyCode },
             ids: pins,
             storefrontItems,
+            projection: { lowStockCounts: counts },
           })
         : []
       return publicStorefrontResources(
         pinnedItems.length ? { ...store, pinnedItems } : store,
+        { lowStockCounts: counts },
       )
     }
     // Load once from existing scoped queries, then independently filter each design.

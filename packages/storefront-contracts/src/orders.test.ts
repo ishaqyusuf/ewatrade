@@ -1,0 +1,115 @@
+import { expect, test } from "bun:test"
+import {
+  publicLowStockCountsEnabled,
+  storefrontRequestReferenceSchema,
+} from "./orders"
+import { publicCatalogOptionSchema } from "./resources"
+
+const design = (
+  version: string,
+  header: { version: number; settings: Record<string, unknown> } | null,
+) => ({
+  template: { key: "commerce-studio", version },
+  pages: [
+    {
+      key: "home",
+      sections: header
+        ? [{ type: "commerce-studio-header", ...header }]
+        : [{ type: "commerce-studio-hero", version: 2, settings: {} }],
+    },
+  ],
+})
+
+test("low-stock counts need an explicit opt-in on an exact 1.2.0 header", () => {
+  const on = { "show-low-stock-count": true }
+  expect(
+    publicLowStockCountsEnabled(design("1.2.0", { version: 2, settings: on })),
+  ).toBe(true)
+  // Default off, absent or truthy-but-not-true values.
+  for (const settings of [
+    { "show-low-stock-count": false },
+    {},
+    { "show-low-stock-count": "true" },
+    { "show-low-stock-count": 1 },
+  ])
+    expect(
+      publicLowStockCountsEnabled(design("1.2.0", { version: 2, settings })),
+    ).toBe(false)
+  // Older pins, a v1 header or another template can't opt in, even if forged.
+  expect(
+    publicLowStockCountsEnabled(design("1.1.0", { version: 2, settings: on })),
+  ).toBe(false)
+  expect(
+    publicLowStockCountsEnabled(design("1.0.0", { version: 1, settings: on })),
+  ).toBe(false)
+  expect(
+    publicLowStockCountsEnabled(design("1.2.0", { version: 1, settings: on })),
+  ).toBe(false)
+  expect(
+    publicLowStockCountsEnabled({
+      ...design("1.2.0", { version: 2, settings: on }),
+      template: { key: "market-hall", version: "1.2.0" },
+    }),
+  ).toBe(false)
+  for (const malformed of [
+    null,
+    undefined,
+    "x",
+    {},
+    { template: {} },
+    design("1.2.0", null),
+  ])
+    expect(publicLowStockCountsEnabled(malformed)).toBe(false)
+})
+
+test("public low-stock counts are bounded exact decimals", () => {
+  const option = {
+    id: "o",
+    name: "Pair",
+    priceMinor: 100,
+    currencyCode: "NGN",
+    availability: null,
+    stock: "low_stock",
+  }
+  for (const value of ["1", "2.5", "999999", "0.000001"])
+    expect(
+      publicCatalogOptionSchema.safeParse({
+        ...option,
+        lowStockQuantity: value,
+      }).success,
+    ).toBe(true)
+  for (const value of ["1000000", "-1", "1e3", "01", "1.0000001", "", 3])
+    expect(
+      publicCatalogOptionSchema.safeParse({
+        ...option,
+        lowStockQuantity: value,
+      }).success,
+    ).toBe(false)
+})
+
+test("request references normalize the receipt format and refuse anything else", () => {
+  for (const [input, output] of [
+    ["R-7KQ2MX", "R-7KQ2MX"],
+    ["r-7kq2mx", "R-7KQ2MX"],
+    [" s 7kq 2mx ", "S-7KQ2MX"],
+    ["R7KQ2MX", "R-7KQ2MX"],
+  ] as const)
+    expect(storefrontRequestReferenceSchema.parse(input)).toBe(output)
+  for (const input of [
+    "",
+    "R-7KQ2M",
+    "R-7KQ2MXX",
+    "X-7KQ2MX",
+    // 0, 1, I, L and O are never issued.
+    "R-0KQ2MX",
+    "R-IKQ2MX",
+    "R-7KQ2M%",
+    "https://shop.test/R-7KQ2MX",
+    "R-7KQ2MX' OR 1=1",
+    123456,
+    null,
+  ])
+    expect(storefrontRequestReferenceSchema.safeParse(input).success).toBe(
+      false,
+    )
+})

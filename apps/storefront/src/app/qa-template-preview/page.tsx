@@ -1,3 +1,4 @@
+import { withLocalQaStorefrontPhotos } from "@/lib/local-qa-storefront-photos"
 import { prisma } from "@ewatrade/db"
 import {
   countPublicStorefrontOfferings,
@@ -63,13 +64,15 @@ export default async function QaTemplatePreview({ searchParams }: Props) {
     query.data,
   )
   if (!projection) notFound()
+  const decorated = await withLocalQaStorefrontPhotos(projection, host)
+  if (!decorated) notFound()
   const offeringCounts = await countPublicStorefrontOfferings(prisma, {
     tenantId: tenant.id,
     storeId: store.id,
     storefrontItems: projection.storefrontItems ?? null,
   })
   const { resources, capabilities } = publicStorefrontResources({
-    ...projection,
+    ...decorated,
     offeringCounts,
   })
   const composition = defaultComposition(commerceStudioManifest)

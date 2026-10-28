@@ -1,6 +1,7 @@
 import type { SectionDefinition } from "../../../storefront-contracts/src/manifest"
 import {
   type CommerceStudioKind,
+  commerceStudioFeaturedManifest,
   commerceStudioLegacyManifest,
   commerceStudioManifest,
   commerceStudioSectionKind,
@@ -30,6 +31,7 @@ export const canvasEditableManifests = [
   ...canvasManifests,
   marketHallManifest,
   commerceStudioManifest,
+  commerceStudioFeaturedManifest,
   commerceStudioLegacyManifest,
 ]
 export const portableSections: readonly SectionDefinition[] = [

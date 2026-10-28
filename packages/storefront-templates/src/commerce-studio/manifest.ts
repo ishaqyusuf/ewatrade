@@ -3,6 +3,7 @@ import {
   type SectionDefinition,
   defineTemplate,
 } from "../../../storefront-contracts/src/manifest"
+import { LOW_STOCK_COUNT_SETTING } from "../../../storefront-contracts/src/orders"
 
 /**
  * Commerce studio: the flagship shop + services storefront.
@@ -13,7 +14,13 @@ import {
  */
 export const commerceStudioLegacyVersion = "1.0.0"
 /** 1.1.0 adds pinned products to Featured; every other section keeps its 1.0.0 source. */
-export const commerceStudioVersion = "1.1.0"
+export const commerceStudioFeaturedVersion = "1.1.0"
+/**
+ * 1.2.0 adds the Workshop v7 image-led options: a hero photo and editable button text,
+ * a story photo with layout and Home link, and an explicit 3/4 column choice for
+ * Featured and the full catalog. Photos are the business's own public catalog items.
+ */
+export const commerceStudioVersion = "1.2.0"
 export type CommerceStudioKind =
   | "header"
   | "hero"
@@ -227,22 +234,115 @@ export const commerceStudioPinnedField: EditableField = {
   default: [],
 }
 
-export const commerceStudioSections: readonly SectionDefinition[] =
+/** A section re-declared at a newer template version, with extra fields. */
+const revise = (
+  entry: SectionDefinition,
+  templateVersion: string,
+  version: number,
+  fields: EditableField[],
+): SectionDefinition => ({
+  ...entry,
+  version,
+  source: {
+    templateKey: "commerce-studio",
+    templateVersion,
+    sectionKey: entry.key,
+    sectionVersion: version,
+  },
+  fields: [...entry.fields, ...fields],
+})
+
+/** Exact 1.1.0 sections, kept registered so releases pinned to it still render. */
+export const commerceStudioFeaturedSections: readonly SectionDefinition[] =
   commerceStudioLegacySections.map((entry) =>
     entry.key === k("featured")
-      ? {
-          ...entry,
-          version: 2,
-          source: {
-            templateKey: "commerce-studio",
-            templateVersion: commerceStudioVersion,
-            sectionKey: entry.key,
-            sectionVersion: 2,
-          },
-          fields: [...entry.fields, commerceStudioPinnedField],
-        }
+      ? revise(entry, commerceStudioFeaturedVersion, 2, [
+          commerceStudioPinnedField,
+        ])
       : entry,
   )
+
+export const commerceStudioFeaturedManifest = defineTemplate({
+  ...commerceStudioLegacyManifest,
+  version: commerceStudioFeaturedVersion,
+  sections: commerceStudioFeaturedSections,
+})
+
+/**
+ * One public product, chosen by ID like a Featured pin. Only its current public photo
+ * (or catalog artwork) renders; no URL, upload or private asset is ever stored.
+ */
+export const commerceStudioPhotoField = (label: string): EditableField => ({
+  key: "image",
+  label,
+  kind: "catalog-items",
+  maxItems: 1,
+  itemKind: "PRODUCT",
+  default: [],
+})
+const columns: EditableField = {
+  key: "columns",
+  label: "Columns on wide screens",
+  kind: "select",
+  default: "auto",
+  options: [
+    { value: "auto", label: "Match the number of items" },
+    { value: "three", label: "3" },
+    { value: "four", label: "4" },
+  ],
+}
+const imageAlt = text(
+  "image-alt",
+  "Describe the photo for screen readers",
+  "",
+  160,
+)
+
+export const commerceStudioSections: readonly SectionDefinition[] =
+  commerceStudioFeaturedSections.map((entry) => {
+    switch (entry.key) {
+      case k("header"):
+        // Off by default; the server sends counts only when a published (or
+        // previewed) 1.2.0 header has this explicitly on.
+        return revise(entry, commerceStudioVersion, 2, [
+          toggle(
+            LOW_STOCK_COUNT_SETTING,
+            "Show how many are left when stock is low",
+            false,
+          ),
+        ])
+      case k("hero"):
+        return revise(entry, commerceStudioVersion, 2, [
+          text("shop-label", "Shop button text", "", 40),
+          text("services-label", "Services button text", "", 40),
+          commerceStudioPhotoField("Hero photo"),
+          imageAlt,
+        ])
+      case k("featured"):
+        return revise(entry, commerceStudioVersion, 3, [columns])
+      case k("catalog"):
+        return revise(entry, commerceStudioVersion, 2, [columns])
+      case k("story"):
+        return revise(entry, commerceStudioVersion, 2, [
+          commerceStudioPhotoField("Story photo"),
+          imageAlt,
+          {
+            key: "image-side",
+            label: "Photo position",
+            kind: "select",
+            default: "start",
+            options: [
+              { value: "start", label: "Photo first" },
+              { value: "end", label: "Story first" },
+            ],
+          },
+          toggle("show-link", "On Home, link to the Our story page", true),
+          text("link-label", "Link text", "", 40),
+        ])
+      default:
+        return entry
+    }
+  })
 
 export const commerceStudioManifest = defineTemplate({
   ...commerceStudioLegacyManifest,

@@ -19,7 +19,7 @@ import {
   LISTING_SEARCH_MAX,
   LISTING_SORTS,
   catalogListingCustomized,
-  catalogListingHref,
+  catalogListingPathHref,
   catalogListingPriceSorted,
   catalogListingQuery,
   pruneListingFormData,
@@ -29,6 +29,7 @@ import {
  * Standard listing controls for every catalog surface: one GET form, so search,
  * availability and sort work before hydration and soft-navigate after it.
  * The server applies them to the whole catalog; a new query always starts at page one.
+ * `action` is the listing page the form and Clear filters stay on (Home by default).
  */
 export function CatalogListingControls({
   category,
@@ -36,12 +37,14 @@ export function CatalogListingControls({
   label = "Search items",
   stacked = false,
   className,
+  action = "/",
 }: {
   category?: string | null
   query?: CatalogListingQuery | null
   label?: string
   stacked?: boolean
   className?: string
+  action?: string
 }) {
   const current = catalogListingQuery(query)
   // Remount on every server state so uncontrolled fields show the loaded query after Back or Clear.
@@ -53,6 +56,7 @@ export function CatalogListingControls({
       label={label}
       stacked={stacked}
       className={className}
+      action={action}
     />
   )
 }
@@ -63,12 +67,14 @@ function ListingForm({
   label,
   stacked,
   className,
+  action,
 }: {
   category: string | null
   query: CatalogListingQuery
   label: string
   stacked: boolean
   className?: string
+  action: string
 }) {
   const id = useId()
   const priceSorted = catalogListingPriceSorted(query)
@@ -83,7 +89,7 @@ function ListingForm({
   return (
     <Form
       ref={form}
-      action="/"
+      action={action}
       scroll={false}
       prefetch={false}
       // biome-ignore lint/a11y/useSemanticElements: a GET form with the search landmark role is the standard search pattern.
@@ -160,7 +166,7 @@ function ListingForm({
               <Link
                 prefetch={false}
                 scroll={false}
-                href={catalogListingHref()}
+                href={catalogListingPathHref(action)}
               />
             }
           >

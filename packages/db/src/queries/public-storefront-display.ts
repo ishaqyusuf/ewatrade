@@ -74,6 +74,48 @@ export function publicStockState(
   return compareExactDecimals(most, level) <= 0 ? "low_stock" : "in_stock"
 }
 
+/**
+ * Exact units left to sell, for a business that explicitly opted in to showing
+ * low-stock counts. Only when the option is `low_stock` and every Store balance is
+ * held in the option's own selling unit (so on-hand minus reserved is unambiguous and
+ * no incompatible units are summed). Bounded to (0, low-stock level], at most 6 digits
+ * and the unit's own decimal places. Anything else returns undefined: no count.
+ */
+export function publicLowStockQuantity(
+  balances: Balance[],
+  lowStockLevel: { toString(): string } | null | undefined,
+  sellingUnit: { inventoryUnitId: string; transactionScale: number } | null,
+): string | undefined {
+  if (!sellingUnit || !balances.length || lowStockLevel == null)
+    return undefined
+  if (publicStockState(balances, lowStockLevel) !== "low_stock")
+    return undefined
+  if (
+    balances.some(
+      (balance) => balance.inventoryUnitId !== sellingUnit.inventoryUnitId,
+    )
+  )
+    return undefined
+  let free = "0"
+  for (const balance of balances)
+    free = addExactDecimals(
+      free,
+      subtractExactDecimals(
+        balance.onHandQuantity.toString(),
+        balance.reservedQuantity.toString(),
+      ),
+    )
+  if (
+    compareExactDecimals(free, "0") <= 0 ||
+    compareExactDecimals(free, lowStockLevel.toString()) > 0 ||
+    compareExactDecimals(free, "999999") > 0 ||
+    (free.split(".")[1]?.length ?? 0) >
+      Math.min(6, Math.max(0, sellingUnit.transactionScale))
+  )
+    return undefined
+  return free
+}
+
 export function publicItemAvailability(
   options: { availability: PublicAvailability }[],
 ): PublicAvailability {

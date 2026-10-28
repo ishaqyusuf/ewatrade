@@ -3,7 +3,10 @@
 import { CommerceLink } from "./navigation"
 
 import { storefrontItemHref } from "@ewatrade/storefront-runtime/links"
-import { StorefrontArtwork } from "@ewatrade/storefront-runtime/primitives"
+import {
+  StorefrontArtwork,
+  StorefrontPhoto,
+} from "@ewatrade/storefront-runtime/primitives"
 import type { StorefrontClientSnapshot } from "@ewatrade/storefront-runtime/server"
 import {
   Accordion,
@@ -34,7 +37,7 @@ import type { CanvasEditing } from "../canvas/render"
 import { CatalogListingControls } from "../shared/catalog-controls"
 import {
   catalogListingFiltered,
-  catalogListingHref,
+  catalogListingPathHref,
 } from "../shared/catalog-listing"
 import { type AccountView, CommerceAccount } from "./account"
 import { CommerceCheckout } from "./checkout"
@@ -54,7 +57,7 @@ import {
 import { ProductDetail } from "./product"
 import { CommerceReceipt, type ReceiptView } from "./receipt"
 import { ServiceDetail } from "./service"
-import { CommerceStudioShell } from "./shell"
+import { CommerceStudioShell, aboutHasContent } from "./shell"
 
 /** Domain-owned routes the storefront app renders inside this template's shell. */
 export type CommerceStudioRoute =
@@ -206,6 +209,35 @@ function Section({
 
 // ---------------------------------------------------------------- Sections
 
+/**
+ * The public product a section's `image` field names (1.2.0). Resolved only against the
+ * published load, like Featured pins: hidden, archived, off-Store or over-cap items and
+ * services are skipped, so the section falls back silently.
+ */
+export function chosenPhotoItem(
+  snapshot: StorefrontClientSnapshot,
+  section: SectionInstance,
+) {
+  const value = section.settings.image
+  const id = Array.isArray(value) ? value[0] : undefined
+  if (typeof id !== "string") return null
+  const { items, pinnedItems = [] } = snapshot.resources.catalog
+  return (
+    [...items, ...pinnedItems].find(
+      (item) => item.id === id && item.kind === "PRODUCT",
+    ) ?? null
+  )
+}
+
+/** Explicit 3/4 columns (1.2.0) or, by default, a count that leaves no orphan row. */
+function gridColumns(section: SectionInstance) {
+  return section.settings.columns === "three"
+    ? "3"
+    : section.settings.columns === "four"
+      ? "4"
+      : undefined
+}
+
 function Hero({ section }: { section: SectionInstance }) {
   const { snapshot, facts, header, href } = useCommerceStudio()
   const business = snapshot.resources.business
@@ -217,17 +249,22 @@ function Hero({ section }: { section: SectionInstance }) {
   )
   const showActions = section.settings["show-actions"] !== false
   const items = snapshot.resources.catalog.items
+  // 1.2.0: the merchant's chosen product photo leads; otherwise its catalog artwork.
+  const chosen = chosenPhotoItem(snapshot, section)
+  const photo = chosen?.photoUrl ? chosen : null
   // A sparse catalog already shows its items below; repeating one here adds nothing.
   const sparse = facts.products + facts.services < 4
-  const feature =
-    items.find((item) => item.photoUrl && !itemSoldOut(item)) ??
-    (sparse
-      ? null
-      : (items.find(
-          (item) =>
-            item.kind === (facts.products ? "PRODUCT" : "SERVICE") &&
-            !itemSoldOut(item),
-        ) ?? null))
+  const feature = photo
+    ? null
+    : (chosen ??
+      items.find((item) => item.photoUrl && !itemSoldOut(item)) ??
+      (sparse
+        ? null
+        : (items.find(
+            (item) =>
+              item.kind === (facts.products ? "PRODUCT" : "SERVICE") &&
+              !itemSoldOut(item),
+          ) ?? null)))
   const factsList = [
     header.location ? { icon: Location01Icon, text: header.location } : null,
     header.offerDelivery && header.deliveryNote
@@ -241,7 +278,10 @@ function Hero({ section }: { section: SectionInstance }) {
       : null,
   ].filter(Boolean) as { icon: typeof Location01Icon; text: string }[]
   return (
-    <section className="cs-hero" data-media={feature ? "item" : "none"}>
+    <section
+      className="cs-hero"
+      data-media={photo ? "photo" : feature ? "item" : "none"}
+    >
       <div className="cs-wrap cs-hero__grid">
         <div className="cs-hero__copy">
           <h1 className="cs-display">{headline}</h1>
@@ -256,7 +296,7 @@ function Hero({ section }: { section: SectionInstance }) {
                   })}
                   href={href("/shop")}
                 >
-                  Shop now
+                  {sectionText(section, "shop-label", "Shop now")}
                 </CommerceLink>
               ) : null}
               {facts.services ? (
@@ -268,7 +308,11 @@ function Hero({ section }: { section: SectionInstance }) {
                   })}
                   href={href("/services")}
                 >
-                  {facts.products ? "See services" : "Choose a service"}
+                  {sectionText(
+                    section,
+                    "services-label",
+                    facts.products ? "See services" : "Choose a service",
+                  )}
                 </CommerceLink>
               ) : null}
             </div>
@@ -292,7 +336,21 @@ function Hero({ section }: { section: SectionInstance }) {
             </ul>
           ) : null}
         </div>
-        {feature ? (
+        {photo?.photoUrl ? (
+          <figure className="cs-hero__media cs-hero__media--photo">
+            <StorefrontPhoto
+              src={photo.photoUrl}
+              alt={sectionText(section, "image-alt", photo.name)}
+              className="cs-photo"
+              fetchPriority="high"
+              fallback={
+                <StorefrontArtwork
+                  item={{ ...photo, photoUrl: undefined, availability: null }}
+                />
+              }
+            />
+          </figure>
+        ) : feature ? (
           <CommerceLink
             className="cs-hero__media"
             href={href(storefrontItemHref(feature.id))}
@@ -334,7 +392,7 @@ function Categories({ section }: { section: SectionInstance }) {
             <CommerceLink
               key={category.id}
               className="cs-category"
-              href={href(`/shop${catalogListingHref(category.id)}`)}
+              href={href(catalogListingPathHref("/shop", category.id))}
             >
               <span className="cs-category__media">
                 {cover ? (
@@ -377,10 +435,12 @@ export function featuredItems(
   items: readonly PublicCatalogItem[],
   pinned: unknown,
   lead: string,
+  /** Pinned public items beyond this page: eligible as pins, never as automatic picks. */
+  pinnedPool: readonly PublicCatalogItem[] = [],
 ) {
   const ids = Array.isArray(pinned) ? pinned : []
   const chosen = ids.flatMap((id) => {
-    const item = items.find(
+    const item = [...items, ...pinnedPool].find(
       (entry) => entry.id === id && entry.kind === "PRODUCT",
     )
     return item ? [item] : []
@@ -401,13 +461,11 @@ function Featured({ section }: { section: SectionInstance }) {
         ? 8
         : 4
   const items = featuredItems(
-    // Pinned public items past this page arrive separately; they are never listed.
-    [
-      ...snapshot.resources.catalog.items,
-      ...(snapshot.resources.catalog.pinnedItems ?? []),
-    ],
+    snapshot.resources.catalog.items,
     section.settings.pinned,
     String(section.settings.lead ?? "available"),
+    // Pinned public items past this page arrive separately; they are never listed.
+    snapshot.resources.catalog.pinnedItems,
   ).slice(0, count)
   const heading = sectionText(section, "heading", "New in the shop")
   return (
@@ -428,7 +486,11 @@ function Featured({ section }: { section: SectionInstance }) {
         {items.length === 1 && items[0] ? (
           <FeatureItem item={items[0]} />
         ) : items.length ? (
-          <ProductGrid items={items} sparse={items.length < 3} />
+          <ProductGrid
+            items={items}
+            sparse={items.length < 3}
+            columns={gridColumns(section)}
+          />
         ) : (
           <EmptyShelf />
         )}
@@ -446,7 +508,7 @@ function FeatureItem({ item }: { item: PublicCatalogItem }) {
     item.options[0]
   const stock = soldOut
     ? stockWording("out_of_stock")
-    : stockWording(first?.stock)
+    : stockWording(first?.stock, first?.lowStockQuantity)
   const link = href(storefrontItemHref(item.id))
   return (
     <article className="cs-feature">
@@ -538,7 +600,12 @@ function Catalog({ section }: { section: SectionInstance }) {
                 key={category.id}
                 className="cs-chip"
                 href={href(
-                  `/shop${catalogListingHref(category.id, null, catalog.query)}`,
+                  catalogListingPathHref(
+                    "/shop",
+                    category.id,
+                    null,
+                    catalog.query,
+                  ),
                 )}
                 aria-current={
                   catalog.category === category.id ? "page" : undefined
@@ -555,6 +622,7 @@ function Catalog({ section }: { section: SectionInstance }) {
             category={catalog.category}
             query={catalog.query}
             label="Search the shop"
+            action="/shop"
           />
         ) : null}
         {/* Product cards use h3; keep the outline h1 → h2 → h3. */}
@@ -562,7 +630,11 @@ function Catalog({ section }: { section: SectionInstance }) {
         {products.length === 1 && products[0] && !filtered ? (
           <FeatureItem item={products[0]} />
         ) : products.length ? (
-          <ProductGrid items={products} sparse={products.length < 3} />
+          <ProductGrid
+            items={products}
+            sparse={products.length < 3}
+            columns={gridColumns(section)}
+          />
         ) : filtered ? (
           <Empty className="cs-empty">
             <EmptyHeader>
@@ -588,7 +660,12 @@ function Catalog({ section }: { section: SectionInstance }) {
             <CommerceLink
               className={buttonVariants({ variant: "outline" })}
               href={href(
-                `/shop${catalogListingHref(catalog.category, catalog.nextCursor, catalog.query)}`,
+                catalogListingPathHref(
+                  "/shop",
+                  catalog.category,
+                  catalog.nextCursor,
+                  catalog.query,
+                ),
               )}
             >
               Show more
@@ -603,13 +680,20 @@ function Catalog({ section }: { section: SectionInstance }) {
 export function ProductGrid({
   items,
   sparse,
-}: { items: readonly PublicCatalogItem[]; sparse?: boolean }) {
+  columns,
+}: {
+  items: readonly PublicCatalogItem[]
+  sparse?: boolean
+  columns?: "3" | "4"
+}) {
   return (
     <ul
       className="cs-grid"
       data-sparse={sparse ? "true" : undefined}
-      // Column count follows the item count so rows don't end with an orphan.
-      data-columns={items.length % 4 === 0 || items.length > 6 ? "4" : "3"}
+      // Without a merchant choice, the count follows the items so rows don't end with an orphan.
+      data-columns={
+        columns ?? (items.length % 4 === 0 || items.length > 6 ? "4" : "3")
+      }
     >
       {items.map((item) => (
         <li key={item.id}>
@@ -628,7 +712,7 @@ function ProductCard({ item }: { item: PublicCatalogItem }) {
     item.options[0]
   const stock = soldOut
     ? stockWording("out_of_stock")
-    : stockWording(first?.stock)
+    : stockWording(first?.stock, first?.lowStockQuantity)
   const link = href(storefrontItemHref(item.id))
   return (
     <article className="cs-card" data-sold-out={soldOut || undefined}>
@@ -795,7 +879,7 @@ function Story({
   section,
   standalone,
 }: { section: SectionInstance; standalone: boolean }) {
-  const { snapshot } = useCommerceStudio()
+  const { snapshot, header, href } = useCommerceStudio()
   // On Home the introduction already shows the description; don't repeat it.
   const body = sectionText(
     section,
@@ -817,15 +901,58 @@ function Story({
       </section>
     ) : null
   const Heading = standalone ? "h1" : "h2"
+  const chosen = chosenPhotoItem(snapshot, section)
+  // 1.2.0 Home treatment: a link on to the full Our story page, when it has content.
+  const link =
+    !standalone &&
+    section.settings["show-link"] === true &&
+    aboutHasContent(snapshot, header)
+  const prose = (
+    <div className={cn(!chosen && "cs-wrap", "cs-prose")}>
+      <Heading className={cn("cs-title", standalone && "cs-title--page")}>
+        {sectionText(section, "heading", "Our story")}
+      </Heading>
+      {body.split(/\n{2,}/).map((paragraph) => (
+        <p key={paragraph.slice(0, 40)}>{paragraph}</p>
+      ))}
+      {link ? (
+        <CommerceLink
+          className="cs-link cs-link--arrow cs-story__link"
+          href={href("/about")}
+        >
+          {sectionText(section, "link-label", "Read our story")}{" "}
+          <HugeiconsIcon icon={ArrowRight01Icon} strokeWidth={2} />
+        </CommerceLink>
+      ) : null}
+    </div>
+  )
+  if (!chosen) return <section className="cs-section cs-story">{prose}</section>
   return (
-    <section className="cs-section cs-story">
-      <div className="cs-wrap cs-prose">
-        <Heading className={cn("cs-title", standalone && "cs-title--page")}>
-          {sectionText(section, "heading", "Our story")}
-        </Heading>
-        {body.split(/\n{2,}/).map((paragraph) => (
-          <p key={paragraph.slice(0, 40)}>{paragraph}</p>
-        ))}
+    <section
+      className="cs-section cs-story"
+      data-media="item"
+      data-side={section.settings["image-side"] === "end" ? "end" : "start"}
+    >
+      <div className="cs-wrap cs-story__grid">
+        <figure className="cs-story__media">
+          {chosen.photoUrl ? (
+            <StorefrontPhoto
+              src={chosen.photoUrl}
+              alt={sectionText(section, "image-alt", chosen.name)}
+              className="cs-photo"
+              loading="lazy"
+              fallback={
+                <StorefrontArtwork
+                  item={{ ...chosen, photoUrl: undefined, availability: null }}
+                />
+              }
+            />
+          ) : (
+            // No public photo yet: the item's catalog artwork, decorative only.
+            <StorefrontArtwork item={{ ...chosen, availability: null }} />
+          )}
+        </figure>
+        {prose}
       </div>
     </section>
   )

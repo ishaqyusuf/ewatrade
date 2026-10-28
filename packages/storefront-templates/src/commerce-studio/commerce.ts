@@ -70,6 +70,10 @@ export type StorefrontCommerceAdapter = {
   logout(): Promise<CommerceResult<Record<string, never>>>
   linkVerified(): Promise<CommerceResult<{ linked: number }>>
   linkReceipt(token: string): Promise<CommerceResult<Record<string, never>>>
+  /** After WhatsApp OTP: open one of the verified number's own requests by reference. */
+  findRequest(input: {
+    reference: string
+  }): Promise<CommerceResult<{ receiptPath: string }>>
 }
 
 const previewFailure: CommerceFailure = {
@@ -98,6 +102,7 @@ export const previewCommerceAdapter: StorefrontCommerceAdapter = {
   logout: async () => previewFailure,
   linkVerified: async () => previewFailure,
   linkReceipt: async () => previewFailure,
+  findRequest: async () => previewFailure,
 }
 
 /** Customer session facts the host may pass to the template. Never staff identity. */
@@ -276,13 +281,23 @@ export function formatMoney(minor: number, currencyCode: string) {
   }
 }
 
-/** Plain wording. Unknown stock is never presented as available stock. */
-export function stockWording(state: PublicStockState | undefined) {
+/**
+ * Plain wording. Unknown stock is never presented as available stock. An exact
+ * count appears only with low stock and only when the server sent one (the
+ * business opted in and the units are unambiguous).
+ */
+export function stockWording(
+  state: PublicStockState | undefined,
+  lowStockQuantity?: string,
+) {
   switch (state) {
     case "in_stock":
       return { label: "In stock", tone: "in" as const }
     case "low_stock":
-      return { label: "Low stock", tone: "low" as const }
+      return {
+        label: lowStockQuantity ? `Only ${lowStockQuantity} left` : "Low stock",
+        tone: "low" as const,
+      }
     case "out_of_stock":
       return { label: "Sold out", tone: "out" as const }
     default:

@@ -45,6 +45,11 @@ export function getDashboardApiRewrites(apiOrigin = getApiOrigin()) {
       source: "/api/catalog/photos/:path*",
       destination: `${apiOrigin}/api/catalog/photos/:path*`,
     },
+    // Studio previews render the same public photo paths the storefront serves.
+    {
+      source: "/api/catalog/public/stores/:storeId/photos/:assetId",
+      destination: `${apiOrigin}/api/catalog/public/stores/:storeId/photos/:assetId`,
+    },
     {
       source: "/api/trpc/:path*",
       destination: `${apiOrigin}/api/trpc/:path*`,

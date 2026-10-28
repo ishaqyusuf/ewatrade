@@ -443,6 +443,37 @@
   aspect-ratio: auto;
   border-radius: 0;
 }
+/* Merchant-chosen public product photo (1.2.0): hero and story. */
+figure.cs-hero__media,
+.cs-story__media {
+  margin: 0;
+  background: var(--cs-tint);
+}
+.cs-photo {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.cs-story__grid {
+  display: grid;
+  gap: 28px;
+  align-items: center;
+}
+.cs-story__media {
+  border-radius: var(--cs-radius);
+  overflow: hidden;
+  aspect-ratio: 4 / 3;
+}
+.cs-story__media .sf-tile {
+  height: 100%;
+  width: 100%;
+  aspect-ratio: auto;
+  border-radius: 0;
+}
+.cs-story__link {
+  margin-top: 8px;
+}
 .cs-hero__caption {
   position: absolute;
   left: 12px;
@@ -967,6 +998,23 @@
   gap: 32px;
   margin-top: 28px;
 }
+.cs-find {
+  display: grid;
+  gap: 16px;
+  margin-block: 20px;
+}
+.cs-find__form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: start;
+  gap: 12px;
+}
+.cs-find__form [data-slot="field"] {
+  flex: 1 1 240px;
+}
+.cs-find__form > button {
+  margin-top: 26px;
+}
 .cs-checkout__form,
 .cs-service-form,
 .cs-auth__form,
@@ -1312,6 +1360,16 @@
   }
   .cs-hero[data-media="none"] .cs-hero__grid {
     grid-template-columns: minmax(0, 860px);
+  }
+  .cs-hero[data-media="photo"] .cs-hero__media {
+    aspect-ratio: 5 / 4;
+  }
+  .cs-story__grid {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 56px;
+  }
+  .cs-story[data-side="end"] .cs-story__media {
+    order: 1;
   }
   .cs-feature {
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);

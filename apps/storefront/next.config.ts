@@ -25,6 +25,12 @@ const nextConfig: NextConfig = {
         source: "/api/trpc/:path*",
         destination: `${getApiOrigin()}/api/trpc/:path*`,
       },
+      // Exactly the existing public catalog photo route; the API re-checks review,
+      // LIVE publication and Store availability on every request.
+      {
+        source: "/api/catalog/public/stores/:storeId/photos/:assetId",
+        destination: `${getApiOrigin()}/api/catalog/public/stores/:storeId/photos/:assetId`,
+      },
     ]
   },
   transpilePackages: [
