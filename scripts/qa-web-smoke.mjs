@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs"
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs"
 import { resolve } from "node:path"
 import { fileURLToPath } from "node:url"
 import { chromium } from "playwright"
@@ -12,6 +12,8 @@ export const launchSmokeBrowser = () => chromium.launch({ headless: true })
 export async function webJourney(page, config) {
   page.setDefaultTimeout(15000)
   const origin = config.web.origin
+  const performanceArtifacts = process.env.QA_WEB_NAVIGATION_ARTIFACTS
+  const samples = []
   const mutations = []
   await page.route("**/api/**", async (route) => {
     const request = route.request()
@@ -55,10 +57,20 @@ export async function webJourney(page, config) {
   await page
     .getByRole("option", { name: config.web.profileLabel, exact: true })
     .click()
+  const loginStarted = performance.now()
   await page.getByRole("button", { name: "Sign in", exact: true }).click()
   await page.waitForURL(
     (url) => url.origin === origin && url.pathname !== "/login",
   )
+  if (performanceArtifacts) {
+    await page.locator('aside[aria-label="Dashboard sidebar"]').waitFor()
+    await page.getByRole("heading", { name: "Overview", exact: true }).waitFor()
+    samples.push({
+      path: "/",
+      phase: "initial-shell-after-login",
+      milliseconds: Math.round(performance.now() - loginStarted),
+    })
+  }
   await go("/catalog")
   await page
     .getByText(config.web.catalogItem, { exact: true })
@@ -89,6 +101,56 @@ export async function webJourney(page, config) {
     throw new Error(
       "An unexpected business mutation was attempted; the browser blocked it.",
     )
+  if (performanceArtifacts) {
+    if (origin !== "https://ewatrade-dashboard.localhost")
+      throw new Error("Navigation measurement is local-only.")
+    const sidebar = page.locator('aside[aria-label="Dashboard sidebar"]')
+    const shell = await sidebar.elementHandle()
+    for (let round = 0; round < 2; round++) {
+      for (const path of ["/catalog", "/"]) {
+        const started = performance.now()
+        await sidebar
+          .locator(`nav[aria-label="Main navigation"] a[href="${path}"]`)
+          .click()
+        await page.waitForURL(`${origin}${path}`)
+        if (path === "/catalog")
+          await page
+            .getByText(config.web.catalogItem, { exact: true })
+            .first()
+            .waitFor()
+        else {
+          await page
+            .getByRole("heading", { name: "Overview", exact: true })
+            .waitFor()
+          await page.waitForFunction(
+            () => !document.querySelector("main [data-summary-skeleton]"),
+          )
+        }
+        if (!(await shell.evaluate((node) => node.isConnected)))
+          throw new Error("Dashboard shell was replaced during navigation.")
+        samples.push({
+          path,
+          phase: round ? "warm" : "first-measured-transition",
+          milliseconds: Math.round(performance.now() - started),
+        })
+      }
+    }
+    mkdirSync(performanceArtifacts, { recursive: true })
+    writeFileSync(
+      resolve(performanceArtifacts, "performance.json"),
+      JSON.stringify(
+        {
+          origin,
+          runtime: "local development; source recorded separately",
+          samples,
+          blockedBusinessWrites: mutations.length,
+          shellRetained: true,
+        },
+        null,
+        2,
+      ),
+    )
+  }
   return [
     "QA login and exact account selection",
     "populated catalog",

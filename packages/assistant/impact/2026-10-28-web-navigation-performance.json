@@ -1,0 +1,46 @@
+{
+  "version": 1,
+  "id": "2026-10-28-web-navigation-performance",
+  "tickets": ["H02"],
+  "summary": "Local web navigation performance: request-local published Storefront context, route projections and SSR-preserving feature delivery; Dashboard navigation batch follows.",
+  "noAssistantImpact": "Internal presentation/read-path optimization only. No merchant procedure, assistant tool, permission, entitlement, confirmation or channel is added. Verified Host/Tenant/Site/Store/release, LIVE/QA classification and subscription policy remain authoritative. Session proof and receipt capabilities remain outside model input. Commands retain fresh locked scope, stock, price and idempotency checks. No shared authorization cache, Prisma change, provider activation or deployment.",
+  "capabilities": [],
+  "procedures": [],
+  "docs": [
+    {
+      "topic": "feature",
+      "status": "local_only",
+      "path": ".brain/features/web-navigation-performance.md"
+    },
+    {
+      "topic": "permissions",
+      "status": "local_only",
+      "path": ".brain/api/permissions.md"
+    },
+    {
+      "topic": "schema",
+      "status": "not_applicable",
+      "note": "Repository read projections and package boundaries only; no schema or migration."
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "test",
+      "path": "packages/db/src/queries/storefront-read-performance.test.ts",
+      "executed": true,
+      "result": "Real repository path omits catalog/stock/categories for scope; joined authority rejects foreign Store, duplicate primary and invalid release; capped detail and expired/foreign sessions retain refusal."
+    },
+    {
+      "kind": "test",
+      "path": "apps/storefront/src/lib/storefront-prefetch.test.ts",
+      "executed": true,
+      "result": "Speculative item reads are bounded, deduplicated and exclude private/external/malformed URLs."
+    },
+    {
+      "kind": "review",
+      "path": "docs/plans/web-navigation-performance.md",
+      "executed": true,
+      "result": "Owner-authorized phased local implementation retains canonical domain checks and separately records development timings, source checks and runtime acceptance. No deployment."
+    }
+  ]
+}

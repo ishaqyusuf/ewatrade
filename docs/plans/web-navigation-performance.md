@@ -70,7 +70,7 @@ explicit evidence-based decision if changing them would add cost or weaken polic
 
 ### Batch 2 — Dashboard
 
-- [ ] D0 Baseline: inspect current shared layout/providers and measure existing QA
+- [x] D0 Baseline: inspect current shared layout/providers and measure existing QA
   login, initial shell, representative route transition and warm return.
 - [ ] D1 Request context: deduplicate auth/Tenant/Store/context and preserve matching
   server/client query identity, current scope, revocation and post-write freshness.
@@ -169,6 +169,19 @@ H01/H02 gates remain separate from source smoke. No deployment is implied.
   Warm Shop1823–1824/About810–824/Home1860–2358 ms. About meets the initial goal;
   listings/Home do not. Source/remote database/streaming costs remain explicit;
   no production speedup or statistically reliable tail percentile is claimed.
+
+- S6 source: owned-path fast smoke225/1224, final Storefront production build and
+  types pass; H01 current and H02 passes with0 capability/procedure changes.
+  Concurrent local-QA photo adapter moved LIVE/provider admission into an OR
+  branch; its stale projection assertion is aligned with that guard, not weakened.
+  Final canonical smoke receipt is pending shared with D4.
+- D0: existing canonical web smoke now optionally writes local navigation timing
+  artifacts, preserving its single-JSON stdout protocol. Existing QA login,
+  catalog, sale-draft total and cancellation completed with0 business writes;
+  initial shell7037/7097 ms, warm Catalog1389/1474 and Overview1595/1493 ms.
+  First receipt rejected extra diagnostic stdout (fixed); second rejected source
+  changes during its run. These are diagnostic observations, not passed receipts.
+  No deployment/retry-by-deployment. Final acceptance will hold source steady.
 
 ## Midday migration contract and conformance checklist
 

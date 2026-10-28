@@ -145,9 +145,16 @@ test("an eligible public photo projects only its asset ID as the existing same-o
     attachedAt: { not: null },
     tenant: {
       isActive: true,
-      dataClassification: "LIVE",
       qaPurgeStartedAt: null,
     },
+    OR: expect.arrayContaining([
+      {
+        tenant: { dataClassification: "LIVE" },
+        storageProvider: "vercel_blob_private",
+        storageStoreId: expect.any(String),
+        reviewProvider: { not: "local_qa_fixture" },
+      },
+    ]),
     store: { status: "ACTIVE", sites: { some: { status: "PUBLISHED" } } },
   })
   // Storage paths, digests and original URLs never leave the database.
