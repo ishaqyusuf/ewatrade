@@ -157,7 +157,7 @@ export function selectQuickPlan(files: string[]) {
       groups.add("mobile")
       groups.add("domain")
     } else if (
-      /^(apps\/api|packages\/(db|assistant|communications|notifications|utils|payments|catalog|errors|email|jobs|oversight|service-commerce|storefront-runtime|storefront-contracts|storefront-templates))\//.test(
+      /^(apps\/api|packages\/(auth|db|assistant|communications|notifications|utils|payments|catalog|errors|email|jobs|oversight|service-commerce|storefront-runtime|storefront-contracts|storefront-templates))\//.test(
         file,
       )
     ) {

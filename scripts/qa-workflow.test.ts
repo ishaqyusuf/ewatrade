@@ -23,6 +23,9 @@ describe("fast workflow scope", () => {
     expect(plan.unknown).toEqual([])
   })
   test("shared changes broaden the smoke set across clients", () => {
+    const auth = selectQuickPlan(["packages/auth/src/index.ts"])
+    expect(auth.unknown).toEqual([])
+    expect(auth.groups).toEqual(["core", "domain", "web", "mobile"])
     expect(selectQuickPlan(["packages/utils/src/currency.ts"]).groups).toEqual([
       "core",
       "domain",

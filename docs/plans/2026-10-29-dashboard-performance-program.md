@@ -336,3 +336,32 @@ without restart. Development Catalog refresh5261ms and warm Catalog874ms/Overvie
 pool2218.9ms in one visible response prioritize further attribution; overlapping
 phases are not additive. Full program3/27 (11.1%) remains unchanged.
 [Evidence](../verification/2026-10-29-dashboard-qa-proof-projection.md).
+
+### SDK session join contract (DP-103, implementation follow-up)
+
+The installed Better Auth1.6.23 Prisma adapter supports experimental.joins. Current
+configuration leaves it off: real initAuth/getSession regression reproduces two
+repository reads for a valid signed cookie. Midday keeps admission in its existing
+SDK and instruments context separately; its JWT/Supabase provider is not applicable
+to EwaTrade's cookie/bearer and current QA proof authority. Keep the auth package
+as owner; enable the installed adapter's relation support rather than replacing it.
+
+- [x] Prove current signed-cookie admission, missing/expired/revoked session and
+  missing user refusal, fresh current user/session reads, SDK refresh/delete/error
+  behavior, creation privacy/legal hooks and existing account/session relations.
+- [x] Enable only the supported joined read setting. Keep cookie cache disabled,
+  all token/signature/expiry/refresh policy and API bearer/QA/legal/Store/command
+  checks unchanged. No schema, dependency, endpoint or provider configuration change.
+- [x] Verify real SDK+adapter read count reduction and generated Prisma relation
+  compatibility, focused/fast/types/impact checks, then one canonical existing-data
+  local smoke. Preserve partial/full-ticket distinction and program3/27.
+
+Executed:12/46 actual SDK tests after4 red excess-read failures; generated Prisma
+compatibility1 SQL/0 rows with an inert nonexistent signed token; owned fast237/
+1533, API production+owned-test types/H02 and frozen-source canonical local smoke
+pass. Development Catalog refresh4128ms, warm Catalog899ms/Overview1087ms; shell
+retained,0 blocked business writes. One visible response has6 SQL/acquisitions,
+auth1478.6ms/context2380.1ms; pool1760.6ms remains substantial. No controlled ratio,
+optimized acceptance or runtime identity claim. No restart/runtime switch/deploy.
+Broader DP-103/context/pool work remains; program3/27 (11.1%) unchanged.
+[Evidence](../verification/2026-10-29-dashboard-auth-session-joins.md).

@@ -235,6 +235,7 @@ function createAuthConfig(options: InitAuthOptions = {}) {
     database: prismaAdapter(prisma, {
       provider: "postgresql",
     }),
+    experimental: { joins: true },
     baseURL: baseUrl,
     secret: options.secret ?? getAuthSecret(),
     user: {
