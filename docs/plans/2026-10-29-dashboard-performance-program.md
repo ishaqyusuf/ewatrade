@@ -158,3 +158,12 @@ and commit owned coherent slices. Preserve all original27 requirements across tu
   HEADa94ba7317, runtime identity unverified. No business submissions. Earlier
   Catalog shared compile blocker is cleared for this journey; full shared source/
   coverage/optimized-runtime acceptance remains separate.
+- DP-003 instrumentation: existing PERFORMANCE_TRACE gate now exports fixed numeric
+  phase/count Server-Timing values; adds legal/sessionProof/scope distinctions.
+  Arbitrary labels, SQL, inputs, identities and error text are excluded. Durations
+  overlap and are not additive wall time. Focused tracing/request-ID9/29, owned fast
+  source237/1531 and API production-source types pass. Runtime `/live` shows the new
+  header; approved API-only root launcher runs with local tracing, other services
+  preserved. One observed QA request4038ms had context3371ms, auth1873ms,
+  QA proof1281ms and scope445ms. This identifies a hypothesis, not an optimized or
+  production baseline. Bounded journey collection remains open.

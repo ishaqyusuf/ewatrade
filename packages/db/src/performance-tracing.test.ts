@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test"
 import {
   type PerformanceTrace,
+  formatPerformanceServerTiming,
   instrumentMethod,
   tracePhase,
   traceSynchronousPhase,
@@ -8,6 +9,32 @@ import {
 } from "./performance-tracing"
 
 describe("performance tracing", () => {
+  test("Server-Timing exports only fixed numeric phases, never labels or sensitive values", () => {
+    const trace: PerformanceTrace = {
+      version: 1,
+      id: "private-request-id",
+      kind: "request",
+      milliseconds: 101.234,
+      failed: false,
+      phases: {
+        auth: { count: 1, milliseconds: 10.125, failures: 0 },
+        sql: { count: 3, milliseconds: 160.05, failures: 1 },
+      },
+    }
+    Object.assign(trace.phases, {
+      'secret;desc="private@example.test"': { count: 1, milliseconds: 2 },
+    })
+    expect(formatPerformanceServerTiming(trace)).toBe(
+      'ew_request;dur=101.2,ew_auth;dur=10.1;desc="1 calls",ew_sql;dur=160.1;desc="3 calls"',
+    )
+    trace.phases.sql = {
+      count: Number.NaN,
+      milliseconds: Number.POSITIVE_INFINITY,
+      failures: 0,
+    }
+    expect(formatPerformanceServerTiming(trace)).not.toContain("ew_sql")
+    expect(formatPerformanceServerTiming(trace)).not.toContain("private")
+  })
   test("concurrent requests retain their own counts and never log values/errors", async () => {
     const traces: PerformanceTrace[] = []
     const secret = "private-password-and-query-parameter"

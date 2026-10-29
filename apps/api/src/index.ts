@@ -8,7 +8,10 @@ import { oversightRoutes } from "./oversight/routes"
 import { auth } from "@ewatrade/auth"
 import { prisma } from "@ewatrade/db"
 import { isLegalSignupSessionBlocked } from "@ewatrade/db/legal-session-access"
-import { withPerformanceTrace } from "@ewatrade/db/performance-tracing"
+import {
+  formatPerformanceServerTiming,
+  withPerformanceTrace,
+} from "@ewatrade/db/performance-tracing"
 import { isPrescriptionProductionLaunchApproved } from "@ewatrade/db/queries"
 import { toPublicErrorEnvelope } from "@ewatrade/errors"
 import { trpcServer } from "@hono/trpc-server"
@@ -66,6 +69,12 @@ app.use("*", async (c, next) => {
   if (process.env.PERFORMANCE_TRACE !== "true") return next()
   return withPerformanceTrace("request", next, (trace) => {
     c.header("X-Performance-Trace-Id", trace.id)
+    c.header(
+      "Server-Timing",
+      [c.res.headers.get("Server-Timing"), formatPerformanceServerTiming(trace)]
+        .filter(Boolean)
+        .join(","),
+    )
     console.info(
       "[performance]",
       JSON.stringify({ ...trace, status: c.res.status }),

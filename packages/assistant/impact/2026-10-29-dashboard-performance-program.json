@@ -1,0 +1,51 @@
+{
+  "version": 1,
+  "id": "2026-10-29-dashboard-performance-program",
+  "tickets": ["DP-003", "H02"],
+  "summary": "Local dashboard performance program: privacy-safe request phase timings and bounded read-path optimization, preserving all existing command and access authority.",
+  "noAssistantImpact": "Internal observability/read scheduling only. No tool, capability, merchant procedure, permission, entitlement, confirmation, schema or provider action is added. Existing PERFORMANCE_TRACE flag gates phase headers/logging; fixed numeric labels exclude payloads, SQL and identity. Fresh domain write and proof checks remain. No deployment.",
+  "capabilities": [],
+  "procedures": [],
+  "docs": [
+    {
+      "topic": "feature",
+      "status": "local_only",
+      "path": ".brain/features/web-navigation-performance.md"
+    },
+    {
+      "topic": "api",
+      "status": "local_only",
+      "path": ".brain/api/contracts.md"
+    },
+    {
+      "topic": "permissions",
+      "status": "local_only",
+      "path": ".brain/api/permissions.md"
+    },
+    {
+      "topic": "schema",
+      "status": "not_applicable",
+      "note": "Tracing/read scheduling only; no schema or migration."
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "test",
+      "path": "packages/db/src/performance-tracing.test.ts",
+      "executed": true,
+      "result": "Fixed phase/count Server-Timing excludes arbitrary labels, values and nonfinite metrics; concurrent request/SQL/pool isolation and exporter-failure behavior pass."
+    },
+    {
+      "kind": "test",
+      "path": "apps/api/src/utils/request-trace.test.ts",
+      "executed": true,
+      "result": "Server-minted request correlation remains opaque; arbitrary inbound private identifiers are refused."
+    },
+    {
+      "kind": "review",
+      "path": "docs/plans/2026-10-29-dashboard-performance-program.md",
+      "executed": true,
+      "result": "All27 original requirements preserved with separate per-family source/runtime and latency acceptance; no rollout."
+    }
+  ]
+}

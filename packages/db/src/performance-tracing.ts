@@ -5,6 +5,9 @@ import type pg from "pg"
 export type PerformancePhase =
   | "auth"
   | "context"
+  | "legal"
+  | "sessionProof"
+  | "scope"
   | "pool"
   | "sql"
   | "lockingSql"
@@ -23,6 +26,46 @@ export type PerformanceTrace = {
   milliseconds: number
   failed: boolean
   phases: Partial<Record<PerformancePhase, Measurement>>
+}
+
+const serverTimingPhases: PerformancePhase[] = [
+  "auth",
+  "legal",
+  "sessionProof",
+  "scope",
+  "context",
+  "pool",
+  "sql",
+  "lockingSql",
+  "serialization",
+  "proposalReview",
+  "proposalExecution",
+  "fulfillmentLock",
+  "fulfillmentReview",
+  "fulfillmentEffects",
+]
+
+/** Phase durations can overlap; they are accumulated work, not additive request time. */
+export function formatPerformanceServerTiming(trace: PerformanceTrace) {
+  const parts =
+    Number.isFinite(trace.milliseconds) && trace.milliseconds >= 0
+      ? [`ew_request;dur=${trace.milliseconds.toFixed(1)}`]
+      : []
+  for (const phase of serverTimingPhases) {
+    const value = trace.phases[phase]
+    if (
+      !value ||
+      !Number.isFinite(value.milliseconds) ||
+      value.milliseconds < 0 ||
+      !Number.isSafeInteger(value.count) ||
+      value.count < 1
+    )
+      continue
+    parts.push(
+      `ew_${phase};dur=${value.milliseconds.toFixed(1)};desc="${value.count} calls"`,
+    )
+  }
+  return parts.join(",")
 }
 
 const storage = new AsyncLocalStorage<PerformanceTrace>()

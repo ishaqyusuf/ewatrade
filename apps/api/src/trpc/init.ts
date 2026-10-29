@@ -161,11 +161,15 @@ export const createTRPCContext = async (
       (await tracePhase("auth", () => getSessionFromBearer(bearerToken)))
     const qaSessionValidation = candidateSession
       ? candidateSession.session.token.startsWith("qas_")
-        ? await validateQaDerivedSession(prisma, candidateSession.session.id)
+        ? await tracePhase("sessionProof", () =>
+            validateQaDerivedSession(prisma, candidateSession.session.id),
+          )
         : { active: true, scope: null }
       : { active: false, scope: null }
     const legalSessionAllowed = candidateSession
-      ? !(await isLegalSignupSessionBlocked(prisma, candidateSession.user.id))
+      ? !(await tracePhase("legal", () =>
+          isLegalSignupSessionBlocked(prisma, candidateSession.user.id),
+        ))
       : false
     const session =
       qaSessionValidation.active && legalSessionAllowed
@@ -180,14 +184,16 @@ export const createTRPCContext = async (
     // A remembered business is only a suggestion. Explicit tenant headers stay strict.
     const cookieMembership =
       explicitTenantSlug === undefined && cookieTenantSlug && session
-        ? await prisma.membership.findFirst({
-            where: {
-              userId: session.user.id,
-              status: "ACTIVE",
-              tenant: { slug: cookieTenantSlug, isActive: true },
-            },
-            select: { id: true },
-          })
+        ? await tracePhase("scope", () =>
+            prisma.membership.findFirst({
+              where: {
+                userId: session.user.id,
+                status: "ACTIVE",
+                tenant: { slug: cookieTenantSlug, isActive: true },
+              },
+              select: { id: true },
+            }),
+          )
         : null
     const tenantSlug =
       explicitTenantSlug ?? (cookieMembership ? cookieTenantSlug : null) ?? null
@@ -324,7 +330,9 @@ async function requireEligibleAccountAge(
   db: TRPCContext["db"],
   userId: string,
 ) {
-  const age = await getCustomerAccountAgeStatus(db, userId)
+  const age = await tracePhase("legal", () =>
+    getCustomerAccountAgeStatus(db, userId),
+  )
   if (!age.eligible) {
     throw new TRPCError({
       code: "PRECONDITION_FAILED",
@@ -380,13 +388,15 @@ export async function resolveProtectedTenantContext(
   }
   const tenantContext =
     ctx.tenantContext ??
-    (await getActiveTenantForUser(ctx.db, {
-      storeId:
-        ctx.qaSessionScope?.storeId ??
-        (recoverStoreSelection ? null : ctx.activeStoreId),
-      userId: session.user.id,
-      tenantSlug: ctx.tenantSlug,
-    }))
+    (await tracePhase("scope", () =>
+      getActiveTenantForUser(ctx.db, {
+        storeId:
+          ctx.qaSessionScope?.storeId ??
+          (recoverStoreSelection ? null : ctx.activeStoreId),
+        userId: session.user.id,
+        tenantSlug: ctx.tenantSlug,
+      }),
+    ))
 
   if (!tenantContext) {
     throw new TRPCError({
@@ -660,11 +670,13 @@ export const protectedOrInternalProcedure = publicProcedure
 
     const tenantContext =
       opts.ctx.tenantContext ??
-      (await getActiveTenantForUser(opts.ctx.db, {
-        storeId: opts.ctx.qaSessionScope?.storeId ?? opts.ctx.activeStoreId,
-        userId: session.user.id,
-        tenantSlug: opts.ctx.tenantSlug,
-      }))
+      (await tracePhase("scope", () =>
+        getActiveTenantForUser(opts.ctx.db, {
+          storeId: opts.ctx.qaSessionScope?.storeId ?? opts.ctx.activeStoreId,
+          userId: session.user.id,
+          tenantSlug: opts.ctx.tenantSlug,
+        }),
+      ))
 
     if (!tenantContext) {
       throw new TRPCError({
