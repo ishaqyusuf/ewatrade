@@ -10,7 +10,8 @@
     "./runtime-config": "./src/runtime-config.ts",
     "./transcription": "./src/transcription/router.ts",
     "./transcription-contracts": "./src/transcription/contracts.ts",
-    "./storefront-design": "./src/storefront-design.ts"
+    "./storefront-design": "./src/storefront-design.ts",
+    "./storefront-content": "./src/storefront-content.ts"
   },
   "scripts": {
     "lint": "biome check .",

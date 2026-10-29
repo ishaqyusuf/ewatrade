@@ -102,6 +102,8 @@ function guidance(
   const name = `${sectionType} ${sectionLabel}`.toLowerCase()
   const key = field.key.toLowerCase()
   const manual =
+    /header|footer/.test(name) ||
+    /(?:-label|-alt)$/.test(key) ||
     /^(?:quote|name|author|customer|question|answer|price|stock|phone|email|address|hours|contact|link|cta|button|duration|turnaround)(?:-|$)/.test(
       key,
     ) ||
@@ -109,7 +111,7 @@ function guidance(
     (/(?:contact|details)/.test(name) && !/heading|headline|title/.test(key))
   const story =
     /story|about/.test(name) && /tagline|body|description|text/.test(key)
-  const intro = /tagline|lede|description|body|text/.test(key)
+  const intro = /tagline|lede|description|body|text|^intro$/.test(key)
   const short = /phrase|prefix|eyebrow|kicker/.test(key)
   const range: readonly [number, number] = short
     ? [2, 5]

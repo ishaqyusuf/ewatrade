@@ -19,7 +19,7 @@ import {
   findSiteReleaseInTransaction,
   findStorefrontReplay,
   getPrimarySite,
-  getScopedSite,
+  type getScopedSite,
   getScopedStorefrontDesignPreview,
   listSiteDesignRunsInTransaction,
   listSiteReleases,
@@ -85,6 +85,17 @@ import {
   createStorefrontPreviewSession,
   verifyStorefrontPreviewSession,
 } from "./preview-session"
+import {
+  type StorefrontActor,
+  assertExpectedSite,
+  authorize,
+  checkComposition,
+  inTx,
+  openPrimarySite,
+  presentGeneration,
+  requireSite,
+  usableTemplate,
+} from "./site-command-context"
 
 /**
  * Canonical storefront draft/release commands: the only writer of Site drafts,
@@ -92,73 +103,10 @@ import {
  * session; every command rechecks Owner/Admin membership, Store and plan inside
  * its own write transaction, so a cached router role is never the authority.
  */
-export type StorefrontActor = { tenantId: string; actorUserId: string }
+export type { StorefrontActor } from "./site-command-context"
 type Tx = Prisma.TransactionClient
 
 const DEFAULT_TEMPLATE_KEY = "catalog-v4"
-
-/** Only runtime-registered, qualified templates on the current runtime are usable. */
-function usableTemplate(
-  key: string,
-  version?: string,
-  intent: VersionIntent = "inspect",
-) {
-  const entry = (
-    version === undefined ? listSelectableTemplates() : templateRegistry
-  ).find(
-    ({ manifest }) =>
-      manifest.key === key &&
-      (version === undefined || manifest.version === version),
-  )
-  if (
-    !entry ||
-    entry.status.registration !== "runtime-registered" ||
-    entry.status.qualification !== "qualified" ||
-    !versionAvailable(entry, intent) ||
-    entry.manifest.runtimeVersion !== STOREFRONT_RUNTIME_VERSION
-  )
-    return null
-  return entry.manifest
-}
-
-/** Validates against the registered manifest the composition names. */
-function checkComposition(
-  input: unknown,
-  intent: VersionIntent = "inspect",
-):
-  | { ok: true; composition: StorefrontComposition; manifest: TemplateManifest }
-  | { ok: false; issue: string } {
-  const template = (
-    input as { template?: { key?: unknown; version?: unknown } } | null
-  )?.template
-  const manifest =
-    typeof template?.key === "string" && typeof template.version === "string"
-      ? usableTemplate(template.key, template.version, intent)
-      : null
-  if (!manifest)
-    return {
-      ok: false,
-      issue: "This storefront design version isn't available.",
-    }
-  try {
-    const composition = validateComposition(input, manifest)
-    assertCompositionSources(composition, (pin) =>
-      usableTemplate(pin.key, pin.version, intent),
-    )
-    validateDesignAssets(composition, manifest)
-    return {
-      ok: true,
-      composition,
-      manifest,
-    }
-  } catch (error) {
-    const issue =
-      error instanceof Error && !error.message.startsWith("[")
-        ? error.message
-        : "The storefront draft has invalid settings."
-    return { ok: false, issue }
-  }
-}
 
 function publishBlockers(input: unknown, intent: VersionIntent = "new-use") {
   const checked = checkComposition(input, intent)
@@ -188,55 +136,6 @@ function requireCompatibleRelease(
       message:
         "That storefront version is no longer compatible and can't be activated.",
     })
-}
-
-async function authorize(tx: Tx, actor: StorefrontActor, storeId: string) {
-  const result = await lockStorefrontAuthorityInTransaction(tx, {
-    ...actor,
-    storeId,
-  })
-  if (result.ok) return result.authority
-  if (result.reason === "forbidden")
-    throw new TRPCError({
-      code: "FORBIDDEN",
-      message:
-        "Only active business Owners and Admins can manage the storefront.",
-    })
-  throw new TRPCError({
-    code: "PRECONDITION_FAILED",
-    message:
-      result.reason === "store-unavailable"
-        ? "The storefront's Store is not active."
-        : "The business plan doesn't currently allow a public storefront.",
-  })
-}
-
-/** Primary Site plus fresh authority for its own Store; null when not initialized. */
-async function openPrimarySite(tx: Tx, actor: StorefrontActor, lock: boolean) {
-  const primary = await getPrimarySite(tx, actor.tenantId)
-  if (!primary) return null
-  const authority = await authorize(tx, actor, primary.storeId)
-  const scope: SiteScope = {
-    tenantId: actor.tenantId,
-    storeId: primary.storeId,
-    siteId: primary.id,
-  }
-  if (lock && !(await lockSiteInTransaction(tx, scope))) return null
-  const site = lock ? await getScopedSite(tx, scope) : primary
-  return site ? { site, scope, authority } : null
-}
-
-function requireSite<T>(value: T | null): T {
-  if (!value)
-    throw new TRPCError({
-      code: "NOT_FOUND",
-      message: "Set up the storefront first.",
-    })
-  return value
-}
-
-function inTx<T>(db: PrismaClient, run: (tx: Tx) => Promise<T>) {
-  return db.$transaction(run, storefrontTransactionOptions())
 }
 
 function presentDraft(
@@ -718,15 +617,6 @@ function lostFence(): never {
   })
 }
 
-function assertExpectedSite(siteId: string, expectedSiteId: string) {
-  if (siteId !== expectedSiteId)
-    throw new TRPCError({
-      code: "CONFLICT",
-      message:
-        "The storefront workspace changed. Reload before saving or publishing.",
-    })
-}
-
 /**
  * Freeze the exact expected draft revision and activate it with explicit public
  * browsing consent. Authority, scope and the Site row lock come before any replay;
@@ -907,35 +797,6 @@ export function rollbackStorefront(
   })
 }
 
-function presentGeneration(
-  run: Awaited<ReturnType<typeof listSiteDesignRunsInTransaction>>[number] & {
-    output?: Prisma.JsonValue
-  },
-) {
-  return {
-    id: run.id,
-    status: run.status,
-    baseRevision: run.baseDraftRevision,
-    createdAt: run.createdAt,
-    completedAt: run.completedAt,
-    errorCode: run.errorCode,
-    needsReconciliation:
-      !!run.providerStartedAt &&
-      !run.usageSettledAt &&
-      (run.status === "FAILED" ||
-        run.status === "CANCELLED" ||
-        run.status === "READY"),
-    output:
-      run.status === "READY" &&
-      run.output &&
-      run.outputHash === siteContentHash(run.output)
-        ? run.output
-        : null,
-    acceptedDirectionId: run.acceptedDirectionId,
-    acceptedDraftRevision: run.acceptedDraftRevision,
-  }
-}
-
 /** Explicit intent only. Fresh Site/actor/plan, frozen public brief, atomic daily reservation and durable queue row. */
 export function requestStorefrontGeneration(
   db: PrismaClient,
@@ -1112,13 +973,13 @@ export function cancelStorefrontGeneration(
     const { scope, site } = requireSite(await openPrimarySite(tx, actor, true))
     assertExpectedSite(site.id, input.expectedSiteId)
     const prior = await findSiteDesignRunInTransaction(tx, scope, input.runId)
-    if (!prior)
+    if (!prior || !prior.promptVersion.startsWith("storefront-design-"))
       throw new TRPCError({
         code: "NOT_FOUND",
         message: "That design run is unavailable.",
       })
     const run = await cancelSiteDesignRunInTransaction(tx, scope, input.runId)
-    if (!run)
+    if (!run || !run.promptVersion.startsWith("storefront-design-"))
       throw new TRPCError({
         code: "CONFLICT",
         message: "An accepted design run can't be cancelled.",
@@ -1153,7 +1014,7 @@ export function readStorefrontGeneration(
     const { site, scope } = requireSite(await openPrimarySite(tx, actor, false))
     assertExpectedSite(site.id, input.expectedSiteId)
     const run = await findSiteDesignRunInTransaction(tx, scope, input.runId)
-    if (!run)
+    if (!run || !run.promptVersion.startsWith("storefront-design-"))
       throw new TRPCError({
         code: "NOT_FOUND",
         message: "That design run is unavailable.",
@@ -1193,7 +1054,7 @@ export async function acceptStorefrontDesignInTransaction(
   const { site, scope } = requireSite(await openPrimarySite(tx, actor, true))
   assertExpectedSite(site.id, input.expectedSiteId)
   const run = await lockSiteDesignRunInTransaction(tx, scope, input.runId)
-  if (!run)
+  if (!run || !run.promptVersion.startsWith("storefront-design-"))
     throw new TRPCError({
       code: "NOT_FOUND",
       message: "That design run is unavailable.",

@@ -209,3 +209,19 @@ test("every selectable template has a profile and copied sections keep source gu
     }),
   ).toThrow("only once")
 })
+test("commerce action labels, photos and fixed shell copy remain manual", () => {
+  const entry = listSelectableTemplates().find(
+    (template) => template.manifest.key === "commerce-studio",
+  )
+  if (!entry) throw new Error("Expected Commerce studio.")
+  const fields = storefrontContentFields(
+    defaultComposition(entry.manifest),
+    "home",
+  )
+  expect(fields.length).toBeGreaterThan(0)
+  expect(fields.some((field) => /(?:-label|-alt)$/.test(field.key))).toBe(false)
+  expect(fields.some((field) => /header|footer/.test(field.sectionId))).toBe(
+    false,
+  )
+  expect(fields.find((field) => field.key === "intro")?.maxWords).toBe(32)
+})

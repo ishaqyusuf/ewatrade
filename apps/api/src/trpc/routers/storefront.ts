@@ -4,6 +4,17 @@ import {
   normalizeRole,
 } from "@ewatrade/auth/roles"
 import { TRPCError } from "@trpc/server"
+import {
+  storefrontContentGenerateSchema,
+  storefrontContentIdSchema,
+  storefrontContentSiteSchema,
+} from "../../schemas/storefront-content"
+import {
+  cancelStorefrontContent,
+  readStorefrontContent,
+  readStorefrontContentContext,
+  requestStorefrontContent,
+} from "../../storefront/content-commands"
 
 import {
   storefrontAcceptDesignSchema,
@@ -59,6 +70,24 @@ const storefrontProcedure = protectedProcedure.use(({ ctx, next }) => {
 })
 
 export const storefrontRouter = createTRPCRouter({
+  contentContext: storefrontProcedure
+    .input(storefrontContentSiteSchema)
+    .query(({ ctx, input }) =>
+      readStorefrontContentContext(ctx.db, ctx.actor, input),
+    ),
+  generateContent: storefrontProcedure
+    .input(storefrontContentGenerateSchema)
+    .mutation(({ ctx, input }) =>
+      requestStorefrontContent(ctx.db, ctx.actor, input),
+    ),
+  contentGeneration: storefrontProcedure
+    .input(storefrontContentIdSchema)
+    .query(({ ctx, input }) => readStorefrontContent(ctx.db, ctx.actor, input)),
+  cancelContentGeneration: storefrontProcedure
+    .input(storefrontContentIdSchema)
+    .mutation(({ ctx, input }) =>
+      cancelStorefrontContent(ctx.db, ctx.actor, input),
+    ),
   acceptDesign: storefrontProcedure
     .input(storefrontAcceptDesignSchema)
     .mutation(({ ctx, input }) =>

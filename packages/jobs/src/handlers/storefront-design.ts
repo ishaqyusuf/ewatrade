@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto"
+import { storefrontContentPrompt } from "@ewatrade/ai/storefront-content"
 import {
   STOREFRONT_DESIGN_PROMPT_VERSION,
   STOREFRONT_GENERATION_CONFIGURATION_KEY,
@@ -19,12 +20,28 @@ import {
   siteContentHash,
   storefrontTransactionOptions,
 } from "@ewatrade/db/queries"
+import { versionAvailable } from "@ewatrade/storefront-contracts/availability"
+import {
+  STOREFRONT_CONTENT_PROMPT_VERSION,
+  storefrontContentBriefSchema,
+  validateStorefrontContentOutput,
+} from "@ewatrade/storefront-contracts/content"
 import {
   storefrontDesignBriefSchema,
   validateStorefrontDesignOutput,
 } from "@ewatrade/storefront-contracts/design"
 import { templateManifestSchema } from "@ewatrade/storefront-contracts/manifest"
-import { listSelectableTemplates } from "@ewatrade/storefront-templates"
+import {
+  type TemplateManifest,
+  assertCompositionSources,
+  validateComposition,
+} from "@ewatrade/storefront-contracts/manifest"
+import { validateDesignAssets } from "@ewatrade/storefront-runtime/design-assets"
+import {
+  assertStorefrontContentBrief,
+  listSelectableTemplates,
+  templateRegistry,
+} from "@ewatrade/storefront-templates"
 import { evaluateQaProviderPolicy } from "@ewatrade/utils/qa-provider-policy"
 import { z } from "zod"
 
@@ -32,6 +49,46 @@ const payloadSchema = z
   .object({ runId: z.string().regex(/^[A-Za-z0-9_-]{1,128}$/) })
   .strict()
 const maxAttempts = 2
+
+/** Current registered policy is rechecked before a provider sees a frozen request. */
+export function prepareStorefrontGenerationInput(
+  run: { promptVersion: string; brief: unknown },
+  registered: readonly TemplateManifest[],
+) {
+  if (run.promptVersion === STOREFRONT_CONTENT_PROMPT_VERSION) {
+    const brief = storefrontContentBriefSchema.parse(run.brief)
+    const manifest = registered.find(
+      (entry) =>
+        entry.key === brief.composition.template.key &&
+        entry.version === brief.composition.template.version,
+    )
+    if (!manifest)
+      throw new StorefrontDesignPreflightError("DESIGN_VERSIONS_CHANGED")
+    validateComposition(brief.composition, manifest)
+    assertCompositionSources(
+      brief.composition,
+      (pin) =>
+        registered.find(
+          (entry) => entry.key === pin.key && entry.version === pin.version,
+        ) ?? null,
+    )
+    validateDesignAssets(brief.composition, manifest)
+    assertStorefrontContentBrief(brief, registered)
+    return {
+      prompt: storefrontContentPrompt(brief),
+      validate: (value: unknown) =>
+        validateStorefrontContentOutput(value, brief),
+    }
+  }
+  if (run.promptVersion !== STOREFRONT_DESIGN_PROMPT_VERSION)
+    throw new StorefrontDesignPreflightError("DESIGN_VERSIONS_CHANGED")
+  const brief = storefrontDesignBriefSchema.parse(run.brief)
+  return {
+    prompt: storefrontDesignPrompt(brief, registered),
+    validate: (value: unknown) =>
+      validateStorefrontDesignOutput(value, brief, registered),
+  }
+}
 
 /** Identifier-only durable worker. One external call maximum; unknown outcomes are never retried/refunded. */
 export async function storefrontDesignHandler(
@@ -124,7 +181,10 @@ export async function storefrontDesignHandler(
     )
       return failBeforeCall("DESIGN_CONFIGURATION_CHANGED")
     if (
-      run.promptVersion !== STOREFRONT_DESIGN_PROMPT_VERSION ||
+      ![
+        STOREFRONT_DESIGN_PROMPT_VERSION,
+        STOREFRONT_CONTENT_PROMPT_VERSION,
+      ].includes(run.promptVersion) ||
       run.inputHash !==
         siteContentHash({
           brief: run.brief,
@@ -149,7 +209,10 @@ export async function storefrontDesignHandler(
   let providerStarted = false
   const started = Date.now()
   const finish = async (
-    output: ReturnType<typeof validateStorefrontDesignOutput> | null,
+    output:
+      | ReturnType<typeof validateStorefrontDesignOutput>
+      | ReturnType<typeof validateStorefrontContentOutput>
+      | null,
     errorCode: string | null,
   ) =>
     db.$transaction(async (tx) => {
@@ -183,7 +246,6 @@ export async function storefrontDesignHandler(
       })
     }, storefrontTransactionOptions())
   try {
-    const brief = storefrontDesignBriefSchema.parse(claimed.brief)
     const manifests = z
       .array(templateManifestSchema)
       .max(20)
@@ -193,7 +255,16 @@ export async function storefrontDesignHandler(
     )
     if (!configuration)
       throw new StorefrontDesignPreflightError("DESIGN_CONFIGURATION_CHANGED")
-    const registered = listSelectableTemplates().map((entry) => entry.manifest)
+    const registered = (
+      claimed.promptVersion === STOREFRONT_CONTENT_PROMPT_VERSION
+        ? templateRegistry.filter(
+            (entry) =>
+              entry.status.registration === "runtime-registered" &&
+              entry.status.qualification === "qualified" &&
+              versionAvailable(entry, "inspect"),
+          )
+        : listSelectableTemplates()
+    ).map((entry) => entry.manifest)
     if (
       manifests.some(
         (manifest) =>
@@ -206,7 +277,14 @@ export async function storefrontDesignHandler(
       )
     )
       throw new StorefrontDesignPreflightError("DESIGN_VERSIONS_CHANGED")
-    const prompt = storefrontDesignPrompt(brief, manifests)
+    // Designs retain their exact frozen manifests; content resolves its current source profiles.
+    const prepared = prepareStorefrontGenerationInput(
+      claimed,
+      claimed.promptVersion === STOREFRONT_CONTENT_PROMPT_VERSION
+        ? registered
+        : manifests,
+    )
+    const prompt = prepared.prompt
     if (new TextEncoder().encode(prompt).length > configuration.maxInputBytes)
       throw new StorefrontDesignPreflightError("DESIGN_INPUT_TOO_LARGE")
     const began = await db.siteDesignRun.updateMany({
@@ -244,14 +322,12 @@ export async function storefrontDesignHandler(
       await finish(null, "DESIGN_OUTPUT_TOO_LARGE")
       return
     }
-    let output: ReturnType<typeof validateStorefrontDesignOutput>
+    let output:
+      | ReturnType<typeof validateStorefrontDesignOutput>
+      | ReturnType<typeof validateStorefrontContentOutput>
     try {
       const text = result.text.trim().replace(/^```(?:json)?\s*|\s*```$/g, "")
-      output = validateStorefrontDesignOutput(
-        JSON.parse(text),
-        brief,
-        registered,
-      )
+      output = prepared.validate(JSON.parse(text))
     } catch {
       await finish(null, "DESIGN_OUTPUT_INVALID")
       return

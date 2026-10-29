@@ -164,7 +164,9 @@ export async function settleSiteDesignUsageInTransaction(
       actorUserId: run.actorUserId,
       provider: run.provider,
       model: run.model,
-      requestClass: "storefront-design",
+      requestClass: run.promptVersion.startsWith("storefront-content-")
+        ? "storefront-content"
+        : "storefront-design",
       totalTokens: actualTokens,
       durationMs: run.durationMs,
       outcome,
@@ -202,13 +204,21 @@ export async function cancelSiteDesignRunInTransaction(
   })
 }
 
-export function listSiteDesignRunsInTransaction(tx: Tx, scope: SiteScope) {
+export function listSiteDesignRunsInTransaction(
+  tx: Tx,
+  scope: SiteScope,
+  kind: "design" | "content" = "design",
+) {
   return tx.siteDesignRun.findMany({
     omit: { brief: true, manifests: true, configuration: true, output: true },
     where: {
       tenantId: scope.tenantId,
       storeId: scope.storeId,
       siteId: scope.siteId,
+      promptVersion: {
+        startsWith:
+          kind === "content" ? "storefront-content-" : "storefront-design-",
+      },
     },
     orderBy: { createdAt: "desc" },
     take: 10,

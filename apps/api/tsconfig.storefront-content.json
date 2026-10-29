@@ -1,0 +1,11 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": { "incremental": false },
+  "include": [
+    "src/storefront/*.ts",
+    "src/schemas/storefront-content.ts",
+    "src/trpc/routers/storefront.ts",
+    "../../packages/jobs/src/handlers/storefront-design.ts"
+  ],
+  "exclude": ["node_modules"]
+}
