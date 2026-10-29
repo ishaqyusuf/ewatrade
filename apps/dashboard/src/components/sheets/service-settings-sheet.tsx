@@ -1,10 +1,18 @@
 "use client"
 
-import { ServiceSettingsForm } from "@/components/service-work/service-settings-form"
-import { SheetFrame } from "@/components/sheets/sheet-frame"
+import { SheetBodyLoading, SheetFrame } from "@/components/sheets/sheet-frame"
 import { useServiceWorkParams } from "@/hooks/use-service-work-params"
 import { useSheetDismissal } from "@/hooks/use-sheet-dismissal"
 import { Sheet } from "@ewatrade/ui"
+import dynamic from "next/dynamic"
+
+const ServiceSettingsForm = dynamic(
+  () =>
+    import("@/components/service-work/service-settings-form").then(
+      (module) => module.ServiceSettingsForm,
+    ),
+  { loading: SheetBodyLoading },
+)
 
 export function ServiceSettingsSheet({
   currencyCode,

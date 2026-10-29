@@ -1,10 +1,18 @@
 "use client"
 
-import { ServiceRequestForm } from "@/components/service-work/service-request-form"
-import { SheetFrame } from "@/components/sheets/sheet-frame"
+import { SheetBodyLoading, SheetFrame } from "@/components/sheets/sheet-frame"
 import { useServiceWorkParams } from "@/hooks/use-service-work-params"
 import { useSheetDismissal } from "@/hooks/use-sheet-dismissal"
 import { Sheet } from "@ewatrade/ui"
+import dynamic from "next/dynamic"
+
+const ServiceRequestForm = dynamic(
+  () =>
+    import("@/components/service-work/service-request-form").then(
+      (module) => module.ServiceRequestForm,
+    ),
+  { loading: SheetBodyLoading },
+)
 
 type StoreSummary = { currencyCode: string; id: string; name: string }
 

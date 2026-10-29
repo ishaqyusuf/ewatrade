@@ -402,3 +402,40 @@ causal page-speed or production claim. Remaining route-owned Inventory operation
 audit/store/threshold, Sales create and Services Job/Request/Settings imports require
 inspection/correction before DP-301 acceptance. Program3/27 (11.1%) unchanged.
 [Evidence](../verification/2026-10-29-dashboard-global-sheet-delivery.md).
+
+### Route sheet body delivery contract (DP-301/302, implementation follow-up)
+
+Active Inventory/Catalog and Sales routes import their closed sheet controllers,
+which eagerly import InventoryOperationForm/StockCountForm and OrderForm. Services
+imports closed Request/Settings forms and ServiceJobWorkspace. Keep these lightweight
+controllers mounted; defer six heavy bodies within their existing open/current
+admission branches and SheetFrame loading/error ownership. Midday InvoiceSheet
+provides the controller/form separation; existing local Catalog/Finance bodies
+provide the demand-import pattern.
+
+- [x] Reproduce eager optional body evaluation through actual sheet-controller
+  imports. Prove each body only loads when selected, with current Store resolution,
+  header, child key/props and close-error behavior retained.
+- [x] Move parseJobStep unchanged into existing pure service-utils so the Job
+  header cannot pull in its workspace. Keep the old export for compatibility.
+- [x] Preserve job handoff fresh authority/refusal, title lookup, keys, current
+  scope and dismissal/release/invalidation; no command/data/cache policy change.
+- [x] Run focused/private-owner checks, owned fast/types/build/impact and one
+  existing-data local browser/smoke window. No save/fulfillment/provider submission.
+
+Do not edit the unused ServiceRequestsPage merely for import counts: its route
+redirects to the current Services workspace. Inventory store/threshold/audit wrappers
+are small and share the table's existing dependencies; data reads already sit inside
+open bodies. Their source presence alone does not establish a heavy-graph defect.
+Other code-load failure recovery and optimized comparative acceptance remain open.
+
+Executed:13/40 actual import/controller checks after eager-import failure; existing
+Job/utils10/20; AST parity for six functions and moved parser; fast237/1533, full
+Dashboard types, optimized build/H02 and all six actual local bodies via existing-QA
+Inventory/Services and canonical Sales smoke pass. No save/stock/draft/settings/
+link/payment/work/message submission. Development Catalog script responses52→50,
+encoded bodies2282436→2191680 bytes (~4.0% less), refresh3356ms, warm Catalog872ms/
+Overview1169ms. Shell retained;0 blocked business writes. First navigation and
+auth/context/pool costs remain above goals. Code-load recovery and pinned optimized
+comparison stay open; program3/27 (11.1%) unchanged.
+[Evidence](../verification/2026-10-29-dashboard-route-sheet-delivery.md).

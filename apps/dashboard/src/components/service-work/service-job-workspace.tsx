@@ -57,6 +57,7 @@ import {
   jobNextStep,
   jobStage,
   lineStage,
+  parseJobStep,
   toneClass,
 } from "@/components/service-work/service-utils"
 import { useJobQuickStep } from "@/components/service-work/use-job-quick-step"
@@ -108,12 +109,7 @@ const METHOD_LABEL: Record<string, string> = {
   pos: "POS",
 }
 
-/** "pay" or "split:<lineId>" from the URL. */
-export function parseJobStep(value: string | null) {
-  if (!value) return null
-  const [step, lineId] = value.split(":")
-  return { step: step as JobStep, lineId: lineId || null }
-}
+export { parseJobStep } from "./service-utils"
 
 export function ServiceJobWorkspace({
   canManage,

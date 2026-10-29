@@ -1,10 +1,16 @@
 "use client"
 
-import { OrderForm } from "@/components/orders/order-form"
-import { SheetFrame } from "@/components/sheets/sheet-frame"
+import { SheetBodyLoading, SheetFrame } from "@/components/sheets/sheet-frame"
 import { useOrderParams } from "@/hooks/use-order-params"
 import { useSheetDismissal } from "@/hooks/use-sheet-dismissal"
 import { Sheet } from "@ewatrade/ui"
+import dynamic from "next/dynamic"
+
+const OrderForm = dynamic(
+  () =>
+    import("@/components/orders/order-form").then((module) => module.OrderForm),
+  { loading: SheetBodyLoading },
+)
 
 type StoreSummary = { currencyCode: string; id: string; name: string }
 

@@ -149,6 +149,7 @@ mock.module("@ewatrade/ui", () => ({
   ),
 }))
 mock.module("@/components/sheets/sheet-frame", () => ({
+  SheetBodyLoading: () => <output>Loading…</output>,
   SheetFrame: ({
     children,
     closeError,
@@ -259,7 +260,12 @@ mock.module("next/dynamic", () => ({
   },
 }))
 const { GlobalSheets } = await import("./global-sheets")
-await Promise.all(sheetLoads)
+let loadedSheets = 0
+while (loadedSheets < sheetLoads.length) {
+  const batch = sheetLoads.slice(loadedSheets)
+  loadedSheets = sheetLoads.length
+  await Promise.all(batch)
+}
 function render(
   serviceIntake: boolean,
   serviceJobs = false,

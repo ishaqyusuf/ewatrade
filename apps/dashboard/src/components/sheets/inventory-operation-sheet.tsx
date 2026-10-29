@@ -1,13 +1,27 @@
 "use client"
 
-import { InventoryOperationForm } from "@/components/inventory/inventory-operation-form"
-import { StockCountForm } from "@/components/inventory/stock-count-form"
-import { SheetFrame } from "@/components/sheets/sheet-frame"
+import { SheetBodyLoading, SheetFrame } from "@/components/sheets/sheet-frame"
 import { useInventoryParams } from "@/hooks/use-inventory-params"
 import { useSheetDismissal } from "@/hooks/use-sheet-dismissal"
 import { useTRPC } from "@/trpc/client"
 import { Sheet } from "@ewatrade/ui"
 import { useQuery } from "@tanstack/react-query"
+import dynamic from "next/dynamic"
+
+const InventoryOperationForm = dynamic(
+  () =>
+    import("@/components/inventory/inventory-operation-form").then(
+      (module) => module.InventoryOperationForm,
+    ),
+  { loading: SheetBodyLoading },
+)
+const StockCountForm = dynamic(
+  () =>
+    import("@/components/inventory/stock-count-form").then(
+      (module) => module.StockCountForm,
+    ),
+  { loading: SheetBodyLoading },
+)
 
 type StoreSummary = { currencyCode: string; id: string; name: string }
 

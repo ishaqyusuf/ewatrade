@@ -6,14 +6,11 @@ import {
   draftJobFactoryReadState,
 } from "@/components/general-assistant/assistant-draft-job-handoff-state"
 import {
-  ServiceJobWorkspace,
-  parseJobStep,
-} from "@/components/service-work/service-job-workspace"
-import {
   JOB_STEP_TITLES,
   jobWhat,
+  parseJobStep,
 } from "@/components/service-work/service-utils"
-import { SheetFrame } from "@/components/sheets/sheet-frame"
+import { SheetBodyLoading, SheetFrame } from "@/components/sheets/sheet-frame"
 import {
   releaseAssistantDraftJobOverlay,
   useAssistantDraftJobOverlay,
@@ -23,7 +20,16 @@ import { useSheetDismissal } from "@/hooks/use-sheet-dismissal"
 import { useTRPC, useTRPCClient } from "@/trpc/client"
 import { Sheet } from "@ewatrade/ui"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
+import dynamic from "next/dynamic"
 import { useRef } from "react"
+
+const ServiceJobWorkspace = dynamic(
+  () =>
+    import("@/components/service-work/service-job-workspace").then(
+      (module) => module.ServiceJobWorkspace,
+    ),
+  { loading: SheetBodyLoading },
+)
 
 export function ServiceJobSheet({
   canManage,

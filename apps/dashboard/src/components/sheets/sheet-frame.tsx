@@ -36,9 +36,13 @@ type SheetFrameProps = {
   finalFocus?: ComponentProps<typeof SheetContent>["finalFocus"]
 }
 
+export function SheetBodyLoading() {
+  return <output aria-live="polite">Loading…</output>
+}
+
 export function SheetFrame({
   children,
-  loadingFallback = <output aria-live="polite">Loading…</output>,
+  loadingFallback = <SheetBodyLoading />,
   closeError,
   title,
   description,

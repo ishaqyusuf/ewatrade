@@ -264,6 +264,13 @@ export type JobStep =
   | "split"
   | "redo"
 
+/** "pay" or "split:<lineId>" from the URL. */
+export function parseJobStep(value: string | null) {
+  if (!value) return null
+  const [step, lineId] = value.split(":")
+  return { step: step as JobStep, lineId: lineId || null }
+}
+
 export const JOB_STEP_TITLES: Record<JobStep, string> = {
   complete: "Complete job",
   pay: "Take payment",
