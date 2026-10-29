@@ -262,6 +262,14 @@ QA-derived session diagnostics additionally split fixed numeric `qaProofFacts`
 positive phase sample can show the changed runtime path is active; source/build
 presence alone cannot. Overlap/sample/mode and release-identity limits still apply.
 
+Database diagnostics distinguish `connection` (physical socket/TLS/auth setup,
+inside `pool` checkout) and `poolBusy` (whole checkout begun with no idle connection
+at the configured maximum). `poolBusy` includes queueing and possible replacement
+connection setup; it is not pure wait time. Absent phases mean no observed event
+in the captured trace, not proof of database capacity or work outside that trace.
+The shared Prisma adapter uses a30-second idle window in both tracing modes,
+with its existing max/min and transaction limits. No keepalive SQL is added.
+
 Record the actual build mode, served candidate, source/lock hashes and sample limits
 separately. The local smoke receipt's checkout SHA does not establish the identity
 of an already-running optimized build; `runtimeVerified: false` remains meaningful.

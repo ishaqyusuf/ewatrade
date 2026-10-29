@@ -15,6 +15,8 @@ const phases = new Set([
   "scopeReuse",
   "context",
   "pool",
+  "connection",
+  "poolBusy",
   "sql",
   "lockingSql",
   "serialization",

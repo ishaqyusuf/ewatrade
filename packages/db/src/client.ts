@@ -1,8 +1,7 @@
 import { PrismaPg } from "@prisma/adapter-pg"
-import pg from "pg"
 
 import { PrismaClient } from "../generated/prisma/client"
-import { instrumentDatabasePool } from "./performance-tracing"
+import { createInstrumentedDatabasePool } from "./performance-tracing"
 
 declare global {
   // eslint-disable-next-line no-var
@@ -25,18 +24,19 @@ const cached =
     ? globalThis.__ewatradePrisma__
     : undefined
 
+// Short pauses between Dashboard interactions should reuse an existing socket.
+// Keep the default max/min; idle connections still expire without keepalive SQL.
+const poolOptions = { connectionString: databaseUrl, idleTimeoutMillis: 30_000 }
+
 export const prisma =
   cached ??
   new PrismaClient({
     adapter:
       process.env.PERFORMANCE_TRACE === "true"
-        ? new PrismaPg(
-            instrumentDatabasePool(
-              new pg.Pool({ connectionString: databaseUrl }),
-            ),
-            { disposeExternalPool: true },
-          )
-        : new PrismaPg({ connectionString: databaseUrl }),
+        ? new PrismaPg(createInstrumentedDatabasePool(poolOptions), {
+            disposeExternalPool: true,
+          })
+        : new PrismaPg(poolOptions),
     transactionOptions: {
       maxWait: 10_000,
       timeout: 30_000,

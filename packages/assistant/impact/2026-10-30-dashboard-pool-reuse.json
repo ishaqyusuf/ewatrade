@@ -1,0 +1,57 @@
+{
+  "version": 1,
+  "id": "2026-10-30-dashboard-pool-reuse",
+  "tickets": ["H02"],
+  "summary": "Local shared Dashboard refresh: distinguish physical connection/setup from full-pool checkouts and retain idle database connections for 30 seconds after a measured 10-second churn penalty. No deployment.",
+  "noAssistantImpact": "Internal database connection lifecycle and fixed numeric diagnostics only. Traced and untraced Prisma adapters share a 30-second idle timeout; max/min, transaction bounds, SQL, current authorization/revocation, tool/procedure/capability/permission/entitlement/confirmation contracts, schema and provider configuration remain. No keepalive queries or new connection limit; no cache of business or authority facts.",
+  "capabilities": [],
+  "procedures": [],
+  "docs": [
+    {
+      "topic": "feature",
+      "status": "local_only",
+      "path": ".brain/features/web-navigation-performance.md"
+    },
+    {
+      "topic": "api",
+      "status": "local_only",
+      "path": ".brain/api/contracts.md"
+    },
+    {
+      "topic": "permissions",
+      "status": "not_applicable",
+      "note": "No permission or authority changes; only socket reuse."
+    },
+    {
+      "topic": "schema",
+      "status": "not_applicable",
+      "note": "No schema or migration change."
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "test",
+      "path": "packages/db/src/performance-pool.test.ts",
+      "executed": true,
+      "result": "Actual installed pg.Pool with inert socket I/O reproduces missing attribution then passes physical setup/warm reuse, saturated callback scope/release identity and connection-error behavior. No private values exported."
+    },
+    {
+      "kind": "test",
+      "path": "packages/db/src/database-pool-config.test.ts",
+      "executed": true,
+      "result": "Separate processes load the real application config, generated Prisma and installed adapter against an unreachable sentinel, without opening a socket. Both trace modes fail at10s then pass at30s; default max10/min0 and transaction maxWait10s/timeout30s preserved."
+    },
+    {
+      "kind": "run",
+      "path": "docs/verification/2026-10-30-dashboard-pool-reuse.md",
+      "executed": true,
+      "result": "Verified local read-only SELECT1 comparison: after just over10s idle, installed10s pool reconnects at1494ms including1284ms physical setup;30s candidate reuses at225ms,0.2ms checkout. Four reads, no data/fixtures/writes. Sparse controlled mechanism evidence, not page/p95/production speedup."
+    },
+    {
+      "kind": "run",
+      "path": "docs/verification/2026-10-30-dashboard-pool-reuse.md",
+      "executed": true,
+      "result": "API/owned-test types, owned fast237/1533 plus QA tooling/Biome, H01 current and three existing driver checks pass. Frozen-source canonical existing-data local web smoke passes; runtime unverified. Catalog dev refresh2510ms/warm841ms, no causal or optimized claim. New poolBusy1/314.4ms appears in one observed API read, no connection event in that read. No manual restart/switch/deployment/business submission."
+    }
+  ]
+}

@@ -1,6 +1,6 @@
 import { AsyncLocalStorage } from "node:async_hooks"
 import { randomUUID } from "node:crypto"
-import type pg from "pg"
+import pg from "pg"
 
 export type PerformancePhase =
   | "auth"
@@ -13,6 +13,8 @@ export type PerformancePhase =
   | "legalReuse"
   | "scopeReuse"
   | "pool"
+  | "connection"
+  | "poolBusy"
   | "sql"
   | "lockingSql"
   | "serialization"
@@ -43,6 +45,8 @@ const serverTimingPhases: PerformancePhase[] = [
   "scopeReuse",
   "context",
   "pool",
+  "connection",
+  "poolBusy",
   "sql",
   "lockingSql",
   "serialization",
@@ -226,8 +230,38 @@ export function instrumentMethod<T extends (...args: never[]) => unknown>(
   })
 }
 
+export function createInstrumentedDatabasePool(options: pg.PoolConfig) {
+  const BaseClient: new (options?: pg.ClientConfig) => pg.ClientBase =
+    options.Client ?? pg.Client
+  class MeasuredClient extends BaseClient {
+    constructor(options?: pg.ClientConfig) {
+      super(options)
+      // Physical connection establishment (including TLS/auth), within checkout.
+      this.connect = instrumentMethod(this.connect, "connection")
+    }
+  }
+  return instrumentDatabasePool(
+    new pg.Pool({ ...options, Client: MeasuredClient }),
+  )
+}
+
 export function instrumentDatabasePool(pool: pg.Pool) {
-  pool.connect = instrumentMethod(pool.connect, "pool")
+  const connect = instrumentMethod(pool.connect, "pool")
+  pool.connect = new Proxy(connect, {
+    apply(target, receiver: pg.Pool, args) {
+      // Whole checkout that STARTED with no idle capacity at the configured max.
+      // This includes queueing and any replacement connection, not pure wait time.
+      const busy =
+        !receiver.ending &&
+        receiver.idleCount === 0 &&
+        receiver.totalCount >= receiver.options.max
+      return Reflect.apply(
+        busy ? instrumentMethod(target, "poolBusy") : target,
+        receiver,
+        args,
+      )
+    },
+  })
   pool.on("connect", (client) => {
     const query = client.query
     client.query = new Proxy(query, {

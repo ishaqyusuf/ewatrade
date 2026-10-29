@@ -16,8 +16,8 @@ Midday adoption is incomplete across owners, rather than absent. Request-local
 reuse, streaming/scheduling, retained tabs, hidden-reader controls and optional
 delivery have implemented slices. Those are not blanket acceptance of every
 route or proof that refresh latency is solved. Latest development smoke still
-measures Catalog refresh4054ms and warm Catalog853ms; Overview transitions range
-from1034ms to2382ms in that run. Refresh remains slow. Sparse, uncontrolled
+measures Catalog refresh2510ms and warm Catalog841ms; Overview transitions are
+2484ms/warm1360ms in that run. Initial post-login shell6323ms remains slow. Sparse, uncontrolled
 observations cannot establish production performance, a causal speedup or p95.
 
 | Phase | Tickets | Accepted | Remaining outcome |
@@ -594,3 +594,39 @@ and close-focus behavior work. Catalog dev refresh4054ms, warm853ms; Overview
 Substantial observed admission/pool costs keep DP-003/103 high priority. No service
 restart/switch, deployment, business submission or schema/provider action.
 [Receipt](../verification/2026-10-30-dashboard-catalog-directory.md). Overall3/27.
+
+
+## Shared database connection reuse — DP-003/103
+
+The installed pg default evicts idle connections after10seconds. One read-only
+local comparison after that pause reproduces a new1284ms physical connection;
+identical SELECT1 with a30-second idle window reuses its socket,225ms total versus
+1494ms. First reads remain cold in both. This supports retaining existing sockets
+across short pauses, without changing query authority or pretending connection
+setup is SQL work.
+
+- [x] Separate fixed numeric physical `connection` and saturated-start `poolBusy`
+  checkout phases. Preserve Promise/callback/release/error/request ownership and
+  privacy. Durations overlap; busy checkout is not a direct lock/queue-wait metric.
+- [x] Apply a30-second idle timeout in both traced and ordinary Prisma adapters;
+  preserve max10/min0, existing transaction limits and idle eviction. No keepalive
+  SQL, background sweeps, schema, provider or authorization cache changes.
+- [x] Actual installed-pool regression goes red for missing attribution; actual
+  application/generated-Prisma/adapter subprocesses go red at10seconds then pass
+  at30seconds for both modes. Bounded local SQL comparison retains no user data.
+- [x] Final relevant types/source/H01/H02 and frozen-source existing-data smoke;
+  commit only owned paths. Optimized/runtime budget acceptance remains separate.
+
+[Receipt](../verification/2026-10-30-dashboard-pool-reuse.md). DP-003/103 and all
+family acceptance remain open; this is a shared mechanism improvement,3/27 accepted.
+
+
+Executed: actual config/pool/tracing/parser13/57, API production/owned-test types,
+owned fast237/1533 plus QA tooling/Biome, H01 current/H02 domain-only pass and3
+existing driver checks. Frozen-source canonical local web smoke passes, runtime
+unverified. Dev Catalog refresh2510ms/warm841ms, Overview2484ms/warm1360ms;
+initial post-login6323ms remains slow. One observed API read reports physical
+connection absent and poolBusy1/314.4ms, exposing saturated-start checkout; no
+causal/p95/optimized claim. Next: correlate simultaneous reads and critical-path
+scope/SQL before pool-size changes. No manual restart/switch/deployment/business
+submission. Existing3cf optimized build preserved; accepted3/27 unchanged.
