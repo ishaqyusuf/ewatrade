@@ -57,10 +57,15 @@ mock.module("@ewatrade/utils/qa-policy-server", () => ({
     QA_ACCELERATOR_ENABLED: String(qaPolicyEnabled),
   }),
 }))
-mock.module("@ewatrade/jobs", () => ({
+mock.module("@ewatrade/jobs/staff-invitations", () => ({
   enqueueRetailOpsStaffInviteNotification: notify,
 }))
 const { POST } = await import("./route")
+async function postRequest(request: NextRequest) {
+  const response = await POST(request)
+  if (!response) throw new Error("Staff route returned no response")
+  return response
+}
 const keys = [
   "APP_ENV",
   "DEV_PROFILE",
@@ -103,7 +108,7 @@ afterEach(() => {
 })
 test("owner QA invitation exposes only a no-store website link with redacted result", async () => {
   local()
-  const result = await POST(request("staff@ishaq.qa.test"))
+  const result = await postRequest(request("staff@ishaq.qa.test"))
   const body = await result.json()
   expect(result.status).toBe(200)
   expect(result.headers.get("Cache-Control")).toBe("no-store")
@@ -116,13 +121,13 @@ test("owner QA invitation exposes only a no-store website link with redacted res
 test("no QA link when the central QA policy is unavailable", async () => {
   local()
   qaPolicyEnabled = false
-  const body = await (await POST(request("staff@ishaq.qa.test"))).json()
+  const body = await (await postRequest(request("staff@ishaq.qa.test"))).json()
   expect(body.qaInviteUrl).toBeUndefined()
   expect(body.result.invite.acceptanceToken).toBeNull()
 })
 test("live email invitation never exposes the secret link", async () => {
   local()
-  const body = await (await POST(request("staff@example.com"))).json()
+  const body = await (await postRequest(request("staff@example.com"))).json()
   expect(body.qaInviteUrl).toBeUndefined()
   expect(body.result.invite.acceptanceToken).toBeNull()
 })
@@ -130,14 +135,14 @@ test("Production refuses QA link exposure even with accelerator enabled", async 
   local()
   process.env.DEV_PROFILE = "production"
   process.env.QA_ACCELERATOR_ENABLED = "true"
-  const body = await (await POST(request("staff@ishaq.qa.test"))).json()
+  const body = await (await postRequest(request("staff@ishaq.qa.test"))).json()
   expect(body.qaInviteUrl).toBeUndefined()
   expect(body.result.invite.acceptanceToken).toBeNull()
 })
 test("cashier cannot create an invitation or receive its secret link", async () => {
   local()
   role = "CASHIER"
-  const result = await POST(request("staff@ishaq.qa.test"))
+  const result = await postRequest(request("staff@ishaq.qa.test"))
   expect(result.status).toBe(403)
   expect(invite).not.toHaveBeenCalled()
   expect(notify).not.toHaveBeenCalled()
@@ -147,12 +152,12 @@ test("scoped Manager cannot invite or change staff access", async () => {
   local()
   role = "MANAGER"
   staffAccessMode = "SCOPED"
-  expect((await POST(request("staff@example.com"))).status).toBe(403)
+  expect((await postRequest(request("staff@example.com"))).status).toBe(403)
   expect(invite).not.toHaveBeenCalled()
 })
 test("Owner can remove every Store without suspending the Membership", async () => {
   local()
-  const response = await POST(
+  const response = await postRequest(
     new NextRequest("https://ewatrade-dashboard.localhost/api/staff", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -181,7 +186,7 @@ test("Owner can remove every Store without suspending the Membership", async () 
 })
 
 function post(body: unknown) {
-  return POST(
+  return postRequest(
     new NextRequest("https://ewatrade-dashboard.localhost/api/staff", {
       method: "POST",
       headers: { "Content-Type": "application/json" },

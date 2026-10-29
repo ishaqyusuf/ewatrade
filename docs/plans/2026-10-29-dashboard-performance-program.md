@@ -663,3 +663,36 @@ was unavailable; headless desktop browser used. Dev refresh2731ms, Catalog warm
 831ms/Overview warm1016ms, initial post-login5518ms: no causal speedup/p95 claim.
 PoolBusy2/524.8ms keeps shared concurrency/critical path priority. No manual restart,
 runtime switch or deployment. Full program3/27 accepted remains unchanged.
+
+
+## Measured Staff producer import boundary — DP-302/407
+
+Current optimized15489 build succeeds but exposes two whole-project trace warnings
+through Staff HTTP→jobs root→unrelated receipt/media workers. Its Staff trace has
+1715files. Offline actual compiler graph reproduces1697modules/25unrelated workers.
+
+- [x] Expose the existing staff invitation producer at a specific jobs subpath;
+  shared pure job IDs and legacy root reexports stay compatible. Original helper
+  body/IDs, canonical trigger/payload, matching local fallback and authority remain.
+- [x] Actual producer compiler graph218modules/0unrelated workers; fixed raw output
+ 16565252→14334262bytes. No browser byte/latency claim. Producer3/10 and existing
+  actual Staff route10/24 pass without provider calls or invitations.
+- [x] Rebuild and compare actual Next trace; relevant types/source/H01/H02 and
+  frozen existing-data smoke; commit source/evidence/Brain. Preserve old/current
+  prepared runtime artifacts; no shared runtime switch without coordination.
+
+[Receipt](../verification/2026-10-30-dashboard-staff-import-boundary.md). Broader
+hot graphs, optimized journeys and family budgets remain; accepted3/27 unchanged.
+
+
+Executed: actual Next Staff trace1715→274 files (source refs1360→47); both dynamic
+whole-project warnings disappear without ignores/private-adapter changes. Normal
+optimized build/type stage, API production+owned-test types, producer3/10, Staff
+route10/24, owned fast237/1533+QA tooling/Biome and H01/H02 pass. Later test-only
+narrowing fixes separately pass; production source/fast proof reused. Frozen-source
+canonical existing-data local smoke passes, runtime unverified, no business write.
+Current optimized candidate remains prepared, not served/timed. Older3cf and15489
+runtime files archived; dev restored type references/running service retained.
+Coordinate a new Dashboard-only timing/restoration window for this candidate;
+965 approval was already executed. No deployment or manual service restart.
+Overall3/27 unchanged; this does not establish optimized per-family budgets.

@@ -1,0 +1,51 @@
+{
+  "version": 1,
+  "id": "2026-10-30-dashboard-staff-import-boundary",
+  "tickets": ["H02"],
+  "summary": "Local Dashboard staff route imports its specific invitation enqueue producer rather than the entire job handler registry. Matching local fallback and legacy root API remain. No deployment.",
+  "noAssistantImpact": "Only package export/import ownership changes. Original invitation producer and job ID object move byte-identically; root reexports remain compatible. Canonical job ID, payload, handler, trigger configuration, local retry/fallback, recipient/role/Store permissions, confirmation/privacy/QA/no-store/refusal and commands remain unchanged. No assistant tool/procedure/capability/rollout, schema/provider action or invitation send.",
+  "capabilities": [],
+  "procedures": [],
+  "docs": [
+    {
+      "topic": "feature",
+      "status": "local_only",
+      "path": ".brain/features/web-navigation-performance.md"
+    },
+    {
+      "topic": "api",
+      "status": "not_applicable",
+      "note": "Existing HTTP/tRPC input, result, auth and command contracts unchanged; route imports the same producer implementation."
+    },
+    {
+      "topic": "permissions",
+      "status": "not_applicable",
+      "note": "No permission/role/Store/QA change; existing route regressions retained."
+    },
+    {
+      "topic": "schema",
+      "status": "not_applicable",
+      "note": "No database schema or migration."
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "test",
+      "path": "packages/jobs/src/staff-invitations.test.ts",
+      "executed": true,
+      "result": "Actual public producer preserves job/handler and same payload identity; enqueue rejection propagates. Offline Bun build metadata confirms no worker registry/unrelated media, domain, prescription or service workers. Three tests/10 assertions pass after graph-cost red reproduction."
+    },
+    {
+      "kind": "test",
+      "path": "apps/dashboard/src/app/api/staff/route.test.ts",
+      "executed": true,
+      "result": "Existing actual route10 tests/24 assertions pass after updating only producer-port mock path. Owner QA/no-store/redaction, central policy absence, live/Production token suppression, Cashier/scoped Manager refusals, Store-access update/removal and reason forwarding unchanged. Inert transport/repositories; no invitation sent."
+    },
+    {
+      "kind": "run",
+      "path": "docs/verification/2026-10-30-dashboard-staff-import-boundary.md",
+      "executed": true,
+      "result": "Identical offline Bun options: producer graph1697\u2192218 modules, unrelated workers25\u21920; output16565252\u219214334262 bytes. Actual Next Staff trace1715\u2192274 files/source refs1360\u219247; two whole-project warnings disappear without suppression. Optimized Dashboard build/type stage, API production+owned-test types and owned fast237/1533+QA tooling/Biome pass. Frozen canonical existing-data local smoke passes, runtime unverified. No runtime switch, invitation/business/provider/deployment action; no browser/page-speed claim."
+    }
+  ]
+}

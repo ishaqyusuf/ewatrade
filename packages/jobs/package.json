@@ -8,7 +8,8 @@
     "./catalog-photo-review": "./src/catalog-photo-review.ts",
     "./assistant-whatsapp": "./src/assistant-whatsapp.ts",
     "./assistant-attachments": "./src/assistant-attachments.ts",
-    "./product-analytics": "./src/product-analytics.ts"
+    "./product-analytics": "./src/product-analytics.ts",
+    "./staff-invitations": "./src/staff-invitations.ts"
   },
   "scripts": {
     "dev": "node ../../scripts/with-workspace-env.mjs bun ../../scripts/with-trigger-profile.mjs -- trigger dev",

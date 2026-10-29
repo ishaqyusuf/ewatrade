@@ -14,7 +14,7 @@ import {
   updateRetailOpsStaffStatus,
   updateRetailOpsStaffStoreAccess,
 } from "@ewatrade/db/queries"
-import { enqueueRetailOpsStaffInviteNotification } from "@ewatrade/jobs"
+import { enqueueRetailOpsStaffInviteNotification } from "@ewatrade/jobs/staff-invitations"
 import { getQaPolicyEnvironment } from "@ewatrade/utils/qa-policy-server"
 import {
   buildStaffInvitationLinks,
