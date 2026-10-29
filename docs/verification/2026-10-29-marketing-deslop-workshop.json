@@ -1,0 +1,269 @@
+{
+  "schemaVersion": 1,
+  "date": "2026-10-29",
+  "timezone": "Africa/Lagos",
+  "scope": "Design exploration only. Product implementation and release not authorized.",
+  "url": "https://workshop.localhost/ewatrade/marketing/deslop-round-2026-10-29",
+  "selectedRevisionId": null,
+  "recommendedDirection": "03",
+  "revisions": [
+    {
+      "directionKey": "01",
+      "revisionId": "84c9d358-ab1b-44d7-96ed-62425190a0b8",
+      "version": 3,
+      "reused": true
+    },
+    {
+      "directionKey": "02",
+      "revisionId": "6f41fc32-bf89-4d96-a15b-e44b5b5715f1",
+      "version": 3,
+      "reused": true
+    },
+    {
+      "directionKey": "03",
+      "revisionId": "9c4d6586-3668-4950-8919-41f0b8274064",
+      "version": 2,
+      "reused": true
+    },
+    {
+      "directionKey": "04",
+      "revisionId": "bcdf9080-b6bc-467a-820b-0e30f1c589f5",
+      "version": 3,
+      "reused": false
+    },
+    {
+      "directionKey": "05",
+      "revisionId": "9e40cada-81fe-4a4f-aa07-30b5f8d8d73e",
+      "version": 3,
+      "reused": true
+    }
+  ],
+  "authors": [
+    {
+      "key": "01",
+      "model": "claude-opus-5-5",
+      "sessionId": "659c2ea8-6de5-4853-9a3a-c307a88cc935",
+      "effort": "high",
+      "launchEffortVerified": true,
+      "result": "success",
+      "resultModelUsage": [
+        "claude-opus-5-5"
+      ],
+      "permissionDenials": [],
+      "coordinatorReviewEdits": true
+    },
+    {
+      "key": "02",
+      "model": "claude-opus-5-5",
+      "sessionId": "0328c0ce-7ce4-47b3-9829-f7964896b520",
+      "effort": "high",
+      "launchEffortVerified": true,
+      "result": "success",
+      "resultModelUsage": [
+        "claude-opus-5-5"
+      ],
+      "permissionDenials": [],
+      "coordinatorReviewEdits": true
+    },
+    {
+      "key": "03",
+      "model": "claude-opus-5-5",
+      "sessionId": "bfc75e0a-55e7-48f5-bc3a-d55cd2d6e320",
+      "effort": "high",
+      "launchEffortVerified": true,
+      "result": "success",
+      "resultModelUsage": [
+        "claude-opus-5-5"
+      ],
+      "permissionDenials": [],
+      "coordinatorReviewEdits": true
+    },
+    {
+      "key": "05",
+      "model": "claude-opus-5-5",
+      "sessionId": "bcecd65b-1940-4fd3-8228-de6537bcf987",
+      "effort": "high",
+      "launchEffortVerified": true,
+      "result": "success",
+      "resultModelUsage": [
+        "claude-opus-5-5"
+      ],
+      "permissionDenials": [],
+      "coordinatorReviewEdits": true
+    }
+  ],
+  "direction04Takeover": {
+    "originalModel": "claude-opus-5-5",
+    "originalEffort": "high",
+    "originalSession": "86bff231-446b-4a3e-af49-36e0aae46135",
+    "reason": "No completed substantive action or artifact since 10:10:09 UTC, over five minutes; thinking-token telemetry only. Exact owned run stopped and process exit confirmed before takeover.",
+    "author": "Codex coordinator",
+    "partialFilesPreserved": [
+      "ASSIGNMENT.md",
+      "assets/"
+    ]
+  },
+  "sourceChecks": [
+    {
+      "key": "01",
+      "files": 10,
+      "inlineScripts": 0,
+      "issues": [],
+      "sha256": {
+        "index.html": "459b7bd43a1524222f9bb02f492846a5d47a82e960cb41f0eccc746a793d016d",
+        "styles.css": "2388d661ac0a6cf12c988dcd7183c2e57a5e73ee2d2dede80e4ebf57c93362b2",
+        "delivery.json": "e147d7972db588871c243e37dcd0c98d5f0c3fffaf65b5e5b85ef5cd9b08424b",
+        "coordinator-review.json": "0e0c02b2df1595d9e55e542119fdc44083dd1adc88111988e8d3dd9e3a18f6c8",
+        "app.js": "ecddab184182551fa2eba8b33c0f35da06e7ec59d8ea1cba0bcb553891923dea",
+        "assets/bricolage-OFL.txt": "4b5a7d8f37f5602621c8a8d7358a6a2e71317e6c231c661e15aef0275d3e07ba",
+        "assets/cal-sans.woff2": "d3e38c946c6c0299f321b6cf2c92f7f26e202530f49d6bc86d52e9fd74f393a2",
+        "assets/bricolage.ttf": "413e7357809ddd12fd80a96a8a396de0e401638d4acd3cb3e37532f0472ac682",
+        "assets/inter-latin.woff2": "e8b302bdc1532b0ad4bf8233a2f185cd8072662c4144d0c3b15a4c193fc634cc",
+        "assets/mark.svg": "bcbeb5d7401b5d2224c36374d7d33b7abe60c2060cac7a2a5b0ed4f397c10138"
+      }
+    },
+    {
+      "key": "02",
+      "files": 12,
+      "inlineScripts": 0,
+      "issues": [],
+      "sha256": {
+        "index.html": "be2db0d61dafb5ebb373a5b021af718a8be7e2bde1aa318ec4886d3b0d9284ea",
+        "styles.css": "e3a32deb92fd959eb932e19dd0e54bcd10da156d659b75813ecb2a10e48e400e",
+        "delivery.json": "7959263e3b3b86b1fae58b6bd3730db077fa1792544979d3976e3a03b2fb37c3",
+        "coordinator-review.json": "cea3225b9d875677f1c37fef78080876ce707f19e9057cd9b8a09acb200161fb",
+        "script.js": "164f43757bbdd7c304af2694a752b71ca6a3d2b0c10dd0af5a053cdb71112b52",
+        "assets/archivo.ttf": "0e094a7d3c7c4c25cf1310c4b30014f1dae9332220b1c2c88f4fa996f0b05053",
+        "assets/bricolage-OFL.txt": "4b5a7d8f37f5602621c8a8d7358a6a2e71317e6c231c661e15aef0275d3e07ba",
+        "assets/cal-sans.woff2": "d3e38c946c6c0299f321b6cf2c92f7f26e202530f49d6bc86d52e9fd74f393a2",
+        "assets/bricolage.ttf": "413e7357809ddd12fd80a96a8a396de0e401638d4acd3cb3e37532f0472ac682",
+        "assets/inter-latin.woff2": "e8b302bdc1532b0ad4bf8233a2f185cd8072662c4144d0c3b15a4c193fc634cc",
+        "assets/mark.svg": "bcbeb5d7401b5d2224c36374d7d33b7abe60c2060cac7a2a5b0ed4f397c10138",
+        "assets/archivo-OFL.txt": "108b4e57c9c796d3d38d0428ca7ee39de47ad93187302718d9b2d8864b9b716b"
+      }
+    },
+    {
+      "key": "03",
+      "files": 10,
+      "inlineScripts": 0,
+      "issues": [],
+      "sha256": {
+        "index.html": "33f6344370a9369464f9ba5188f285fe3416bc12f810232a277e95762f86d3cd",
+        "styles.css": "0f203fe40b478f85c6427329ca84b8c74de1b66a28513e04bf922c4832200180",
+        "delivery.json": "868ce80c9e96a67fcc3aa0b1d2e5385a69f7fc4f560b03e232cf0b95fc9c9a30",
+        "coordinator-review.json": "2a1904a01516f8661a596899da55895b28cfb4811d771db9b2ae1bc0c7c7bfcb",
+        "app.js": "d45e959b0a8b70081ab456db957e56d783c9d2f95bb629f04fca6b451a9159be",
+        "assets/bricolage-OFL.txt": "4b5a7d8f37f5602621c8a8d7358a6a2e71317e6c231c661e15aef0275d3e07ba",
+        "assets/cal-sans.woff2": "d3e38c946c6c0299f321b6cf2c92f7f26e202530f49d6bc86d52e9fd74f393a2",
+        "assets/bricolage.ttf": "413e7357809ddd12fd80a96a8a396de0e401638d4acd3cb3e37532f0472ac682",
+        "assets/inter-latin.woff2": "e8b302bdc1532b0ad4bf8233a2f185cd8072662c4144d0c3b15a4c193fc634cc",
+        "assets/mark.svg": "bcbeb5d7401b5d2224c36374d7d33b7abe60c2060cac7a2a5b0ed4f397c10138"
+      }
+    },
+    {
+      "key": "04",
+      "files": 10,
+      "inlineScripts": 0,
+      "issues": [],
+      "sha256": {
+        "index.html": "2e913be335c7f388bf55741b889ea6db42add2b599d582edc81b126e31e8d88b",
+        "delivery.json": "6fb8957dbbd382cf83e5e561c2a5be0c2f2300bac3af6d2bba0b3e2fb56fcd5a",
+        "coordinator-review.json": "9f4f9f1a9d8701a9b306acd7f46a7795849929c8f32beec97434d770a41b26d6",
+        "style.css": "570ff62f45a99c841b074c69701a68ff71481ea86dcb7b89c08b8cfd6569bbd4",
+        "app.js": "90fecb251348cd95ee72f412d55c5a0e6a07e606f84e1fbb36241fcf7422cbb7",
+        "assets/bricolage-OFL.txt": "4b5a7d8f37f5602621c8a8d7358a6a2e71317e6c231c661e15aef0275d3e07ba",
+        "assets/cal-sans.woff2": "d3e38c946c6c0299f321b6cf2c92f7f26e202530f49d6bc86d52e9fd74f393a2",
+        "assets/bricolage.ttf": "413e7357809ddd12fd80a96a8a396de0e401638d4acd3cb3e37532f0472ac682",
+        "assets/inter-latin.woff2": "e8b302bdc1532b0ad4bf8233a2f185cd8072662c4144d0c3b15a4c193fc634cc",
+        "assets/mark.svg": "bcbeb5d7401b5d2224c36374d7d33b7abe60c2060cac7a2a5b0ed4f397c10138"
+      }
+    },
+    {
+      "key": "05",
+      "files": 12,
+      "inlineScripts": 0,
+      "issues": [],
+      "sha256": {
+        "index.html": "59926b99201e2a5e2cc11c717849363dafe38b5d50ef8693c942b0deb6b98329",
+        "styles.css": "00ab9298bc851bda1f9ec32b935752e2030463ee5c2158b5fd6efd36f1c105bd",
+        "delivery.json": "240962bb84eed57c149958fd0bf0a301386ffcd4dff946254af8802cb888fcb1",
+        "coordinator-review.json": "18c79d431022cb158be0d0c5b4ea176591766322e13aad20807fb24362821caf",
+        "app.js": "be98ab2a7347c6c0b8583cc18ccec92080f527963e457815fb31cad4a234c058",
+        "assets/manrope-OFL.txt": "58172e0c0fac2cda8a37b348164bb55e44b0e69051e557e92b1d3f6910141f7b",
+        "assets/bricolage-OFL.txt": "4b5a7d8f37f5602621c8a8d7358a6a2e71317e6c231c661e15aef0275d3e07ba",
+        "assets/cal-sans.woff2": "d3e38c946c6c0299f321b6cf2c92f7f26e202530f49d6bc86d52e9fd74f393a2",
+        "assets/bricolage.ttf": "413e7357809ddd12fd80a96a8a396de0e401638d4acd3cb3e37532f0472ac682",
+        "assets/manrope.ttf": "3ae11c49db0455a3cc33e37d380f20fdb8c7f8b41dc07625c177e3d87a9d6ae6",
+        "assets/inter-latin.woff2": "e8b302bdc1532b0ad4bf8233a2f185cd8072662c4144d0c3b15a4c193fc634cc",
+        "assets/mark.svg": "bcbeb5d7401b5d2224c36374d7d33b7abe60c2060cac7a2a5b0ed4f397c10138"
+      }
+    }
+  ],
+  "browserEvidence": {
+    "platform": "In-app browser, desktop default viewport and390px CSS viewport; no physical device",
+    "allFiveRendered": true,
+    "allFiveNarrowOverflow": {
+      "viewportWidth": 390,
+      "documentScrollWidth": 375,
+      "bodyScrollWidth": 375,
+      "explanation": "Browser reserves15px scrollbar. No global horizontal overflow."
+    },
+    "centralFlows": {
+      "01": "Sample sale184500→195500, crates120→118, orders23→24, reset; closing-time stage/tab changes.",
+      "02": "Prepare→review independent Paid/Preparing→confirm sample sale;195500/118/24; reset.",
+      "03": "Select09:42 from closing-first day index, record sample order, Paid/Preparing,195500/118; reset; desktop and390px.",
+      "04": "Review→confirm→linked195500/118/42000 owed; reset;18:40cash126000/125500/−500.",
+      "05": "Customer book pane populated; sample sale195500/118/Paid/Preparing; reset; mobile Menu opens."
+    },
+    "reuse": "Final text/heading/type revisions retain the interaction scripts exercised on earlier archived revisions except04, whose final data-alignment script was exercised again. Final five390px layouts checked after copy/type repairs.",
+    "limits": [
+      "Not a complete accessibility audit",
+      "No physical-device/native checks",
+      "No performance benchmark",
+      "No real signup, messaging, payment, product acceptance or deployment"
+    ],
+    "retry": "One04 click immediately after navigation preceded deferred handler initialization; inspected state and console (no errors), retried successfully."
+  },
+  "mechanicalDetector": {
+    "runCount": 1,
+    "rawFindingCount": 51,
+    "findingsByPattern": {
+      "cramped-padding": 30,
+      "overused-font": 8,
+      "tiny-text": 5,
+      "undersized-ui-text": 2,
+      "nested-cards": 2,
+      "flat-type-hierarchy": 1,
+      "skipped-heading": 1,
+      "tight-leading": 1,
+      "cream-palette": 1
+    },
+    "repairs": [
+      "01added accessible h2 within hero sample before h3 headings",
+      "04raised10/11px functional/disclosure text declarations to12px"
+    ],
+    "reviewedRetained": [
+      "Section/wrapper padding flags inspect immediate parent, while actual inner wrappers/gutters supply space. Rendered layouts inspected.",
+      "Inter remains a legible established body/UI face; display families deliberately differ (Cal Sans/Archivo/Bricolage/Manrope).",
+      "01flat hierarchy advisory reads product-window labels; main rendered section headings have clear size separation.",
+      "02tight leading applies to display/compact labels, not paragraph copy.",
+      "04palette detector labels pale rose rgb255247247 as cream; intentional coral/rose world retained.",
+      "05nested panels are functional product-form/assistant structure, not a repeated marketing card grid."
+    ],
+    "claim": "Detector is a heuristic critique, not a clean automated pass or complete accessibility proof."
+  },
+  "repositoryVerification": {
+    "doctor": "bun run qa:doctor --offline: PASS setup/isolation, runtime skipped",
+    "fastCheck": "bun run test:quick --files docs/plans/2026-10-29-marketing-deslop-directions.md:47passed/193assertions;QA-tooling types pass",
+    "scopeNarrowed": true,
+    "reason": "Unrelated staged explainers and dirty Agent Chat preserved. Product source unchanged."
+  },
+  "lockfileSha256": "387abd6e24dda2ff71913a555ab99db6d487c4a7cf7ed2be38753fba653aabf5",
+  "brainFiles": [
+    ".brain/features/marketing-launch-v4.md",
+    ".brain/tasks/2026-10-29-marketing-deslop-workshop.md",
+    ".brain/tasks/in-progress.md",
+    ".brain/tasks/done.md",
+    ".brain/BRAIN.md"
+  ]
+}
