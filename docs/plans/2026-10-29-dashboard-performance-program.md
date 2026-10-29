@@ -30,7 +30,7 @@ authorization and locked commands retain their ordering and transaction boundari
 
 ## Phase0 — Reliable evidence
 
-- [ ] **DP-001 Stable candidate.** Reconcile outstanding compile/smoke/coverage
+- [x] **DP-001 Stable candidate.** Reconcile outstanding compile/smoke/coverage
   blockers; pin commit plus dirty hashes, service/profile identity and lock hash.
   Acceptance: canonical existing-data smoke can exercise the intended runtime;
   foreign failures remain visible and owned/coordinated, never silently excluded.
@@ -182,3 +182,14 @@ and commit owned coherent slices. Preserve all original27 requirements across tu
   Deep-linked existing Notebook still opens3479ms/refreshes6860ms in development;
   latency remains above target. Existing reader-key isolation tests5/39 and types
   pass. Remaining route prefetch/input matching audit stays open.
+- DP-001 local baseline accepted: current runtime source is committed in1c7713ec9;
+  controlled fixed phase headers and GET reuse counters prove the changed API path
+  is active. Existing root local profile/QA admission and canonical smoke pass at
+  that candidate. Local receipt runtimeVerified remainsfalse, so this is not a
+  release identity assertion. H01 snapshot now matches the committed router in
+  APP_ENV=local and H02 passes4 records,0 capability/4 procedure changes from the
+  comparison (procedure deltas belong to concurrent committed features, not this
+  optimization). Program impact ticket metadata corrected to the existing H02
+  schema; DP work IDs remain in this plan. Source/lock hashes and process details
+  retained privately. DP-001+002+101 complete3/27 (11.1%); DP-003 optimized-runtime
+  measurement and final DP-503 acceptance remain open.
