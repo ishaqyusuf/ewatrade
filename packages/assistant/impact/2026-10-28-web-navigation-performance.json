@@ -26,6 +26,12 @@
   "evidence": [
     {
       "kind": "test",
+      "path": "packages/db/src/queries/workspace-memberships.test.ts",
+      "executed": true,
+      "result": "One current actor-owned membership projection preserves ACTIVE business membership and refuses foreign, inactive or revoked Store assignment facts; canonical command readers remain fresh."
+    },
+    {
+      "kind": "test",
       "path": "apps/dashboard/src/trpc/request-context-headers.test.ts",
       "executed": true,
       "result": "Configured API selection, session/cookie/Tenant forwarding, invalid upstream refusal and cancellation signal behavior pass; existing query retry and privacy-safe logging tests retained."

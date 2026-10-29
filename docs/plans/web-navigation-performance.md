@@ -65,7 +65,7 @@ explicit evidence-based decision if changing them would add cost or weaken polic
 - [x] S5 Navigation policy: bounded intent prefetch and useful pending feedback;
   retain URL ownership, privacy/no-store and photo-revocation/fallback semantics.
   Media/shared caching changes require evidence and an explicit freshness contract.
-- [ ] S6 Acceptance: focused source/security/types/build, existing-data browser/smoke,
+- [x] S6 Acceptance: focused source/security/types/build, existing-data browser/smoke,
   before/after receipt, Brain updates and owned commits.
 
 ### Batch 2 — Dashboard
@@ -78,7 +78,7 @@ explicit evidence-based decision if changing them would add cost or weaken polic
   start independent reads early and isolate optional loading/error work.
 - [x] D3 Delivery and navigation: narrow measured imports/optional global features,
   avoid mount-time query fanout, retain navigation/state/freshness contracts.
-- [ ] D4 Acceptance: focused checks and local production build, one existing-data
+- [x] D4 Acceptance: focused checks and local production build, one existing-data
   navigation/smoke session, measurement comparison, Brain updates and owned commits.
 
 ## Intended data flow
@@ -204,6 +204,46 @@ H01/H02 gates remain separate from source smoke. No deployment is implied.
   explicit assignment/Store Tenant and ACTIVE fences; canonical API/command fresh
   readers are untouched. Focused27/76 and Dashboard types pass. Final build/smoke
   is repeated only for this relevant source change.
+
+## Local acceptance —29 October 2026
+
+All twelve implementation/acceptance packages are complete locally. This records
+delivery and verification; it does not mean every latency goal is met. Final
+Dashboard source is `8d7fc141b`, tested with shared-checkout HEAD `955706139`.
+Source-specific evidence and full limitations are in
+[the verification receipt](../verification/2026-10-29-web-navigation-performance.md).
+
+| Useful destination | Baseline development observation | Final development observation |
+| --- | --- | --- |
+| Storefront About, warm | 2319–2328 ms (2 samples) | 810–824 ms (2 samples) |
+| Storefront Shop, warm | 2312–2325 ms (2 samples) | 1823–1824 ms (2 samples) |
+| Storefront Home, warm | 2343–2350 ms (2 samples) | 1860–2358 ms (2 samples) |
+| Dashboard post-login shell | 7037 ms (1 sample) | 6487 ms (1 sample) |
+| Dashboard Catalog, warm | 1389 ms (1 sample) | 895 ms (1 sample) |
+| Dashboard Overview, warm | 1595 ms (1 sample) | 1373 ms (1 sample) |
+
+Storefront has9 timed transitions per session; Dashboard has5 including login.
+First measured transitions remain separate from warm observations. Small samples,
+shared development compilation and remote data access prevent causal attribution,
+tail-latency or production claims. About shows the clearest improvement (about65%
+lower warm observed latency); Home remains variable. Dashboard initial loading
+still takes6.49s including authentication. Intermediate Dashboard sample7.70s
+demonstrates noise; do not present the final sample as a reliable startup speedup.
+
+Final owned-path fast checks225/1224; focused authority/context/template tests,
+both application types and production builds pass. Storefront browser proof
+retains shell/bag/Back/fallback behavior. Canonical local web smoke passes with
+runtime identity unverified, zero business submissions, retained Dashboard shell
+and deferred order/stock forms opening/cancelling. Local receipts do not qualify
+for deployment. Existing middleware/tracing warnings remain disclosed.
+
+Next evidence-driven work: capture server spans for auth/legal, plan lookup,
+membership, Overview summaries, catalog stock/counts and database round trips on
+the same warmed profile; compare a locally served optimized build separately from
+development. Optimize the largest measured span first. Consider query plans,
+pagination/aggregation or connection placement only after those measurements.
+Shared caching requires explicit freshness/revocation rules. No index, read-model,
+provider, schema or deployment change is justified by these observations alone.
 
 ## Midday migration contract and conformance checklist
 
