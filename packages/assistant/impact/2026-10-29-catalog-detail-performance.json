@@ -8,6 +8,11 @@
   "procedures": [],
   "docs": [
     {
+      "topic": "api",
+      "status": "local_only",
+      "path": ".brain/api/contracts.md"
+    },
+    {
       "topic": "feature",
       "status": "local_only",
       "path": ".brain/features/product-service-catalog-items.md"

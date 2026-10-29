@@ -108,4 +108,21 @@ audit passes for the targeted performance correction; UI redesign and broad glob
 cache-policy changes are intentionally outside scope. Screenshot and metric artifacts
 are private/local. Canonical smoke and commit details follow in the closing record.
 
+## Shared-checkout gate limitations
+
+Implementation committed in `c890a5a72`. The required canonical local smoke was
+attempted against that commit and failed before its journey: concurrently added
+`storefront-content-context.tsx:10` imports nonexistent `Form` exports from the UI
+package. Private failure screenshot inspected; the owning feature was notified
+through Agent Chat. Do not count this as a passed smoke or a Catalog regression.
+
+Whole-checkout H01/H02 also currently include four new Storefront content procedures
+and changing procedure policies from another task. Generated COVERAGE.md was left
+unstaged with its owning feature, excluded from this performance commit. The
+shared gates remain open until that feature records its coverage/impact decisions.
+An owned-candidate check using the existing impact evaluator and the exact committed
+coverage snapshots passes with zero capability/procedure row changes; API contract,
+feature and permissions documentation decisions are recorded. That scoped evidence
+does not replace acceptance of concurrent working-tree source.
+
 Private logs/metrics/source hashes: `/tmp/ewatrade-catalog-performance-20261029/`.
