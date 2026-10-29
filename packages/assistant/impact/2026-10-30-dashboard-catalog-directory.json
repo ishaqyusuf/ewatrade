@@ -1,0 +1,74 @@
+{
+  "version": 1,
+  "id": "2026-10-30-dashboard-catalog-directory",
+  "tickets": ["H01", "H02"],
+  "summary": "Local Dashboard Catalog directory projection, matched infinite hydration and precise directory invalidation. Existing full Catalog read/commands and mobile/Assistant consumers remain; no deployment.",
+  "capabilities": [
+    {
+      "id": "catalog.page",
+      "change": "changed",
+      "rollout": "source",
+      "note": "Adds a compact presentation procedure under the existing Catalog page read capability. The Assistant tool continues to use full listItemsPage; no new tool, command, permission or rollout."
+    }
+  ],
+  "procedures": [
+    {
+      "path": "catalog.listDirectoryPage",
+      "status": "supported",
+      "reason": "Protected current Tenant/active Store and scoped staff read, same strict filter/cursor schema and Catalog permission. Bounded directory DTO only; no write or authority input."
+    }
+  ],
+  "docs": [
+    {
+      "topic": "feature",
+      "status": "local_only",
+      "path": ".brain/features/web-navigation-performance.md"
+    },
+    {
+      "topic": "api",
+      "status": "local_only",
+      "path": ".brain/api/contracts.md"
+    },
+    {
+      "topic": "permissions",
+      "status": "local_only",
+      "path": ".brain/api/permissions.md"
+    },
+    {
+      "topic": "capability",
+      "status": "updated",
+      "path": "packages/assistant/src/capabilities/COVERAGE.md"
+    },
+    {
+      "topic": "schema",
+      "status": "not_applicable",
+      "note": "No database schema or migration change."
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "test",
+      "path": "packages/db/src/queries/catalog-directory.test.ts",
+      "executed": true,
+      "result": "Actual directory queries and serializers with a logical relational port:6 tests/35 assertions pass. Full-page serializer display/ID/cursor parity, no unused global count, bounded nested projection, >90% smaller representative complex fixture payload, scoped stock/media, keyset and ranked300-candidate/selected-page bounds pass. Primary fallback, quote/empty Service graph and read-error propagation pass. Existing full-page3/86 pass; one stale hidden-system-role expectation corrected to the pre-existing predicate."
+    },
+    {
+      "kind": "test",
+      "path": "apps/dashboard/src/app/(shell)/catalog/catalog-directory-hydration.test.tsx",
+      "executed": true,
+      "result": "Actual route plus mounted actual table, installed tRPC option factory and query observers:4 tests/14 assertions pass after route and infinite-invalidation failures. Prefetch consumes matching input with no duplicate mount fetch; exact directory and existing Catalog prefix refresh work; unrelated cache retained. Creation uses existing RSC refresh to hydrate invalidated rows without an extra foreground read. No business command is submitted."
+    },
+    {
+      "kind": "test",
+      "path": "apps/api/src/trpc/routers/catalog-directory.test.ts",
+      "executed": true,
+      "result": "Actual protected router and staff scope checks:13 tests/49 assertions across router/staff entry files pass. Current Tenant/Store, unauthenticated/denied/missing Store/foreign QA, strict authority input, assigned Store/revocation and no-write policy covered. Inert database URL; no external calls."
+    },
+    {
+      "kind": "run",
+      "path": "packages/db/src/queries/catalog-directory.ts",
+      "executed": true,
+      "result": "Whole directory function through generated Prisma against a random nonexistent Tenant/Store validates the nested projection and removal of the unused aggregate:1 statement/acquisition,0 rows/stored fixtures/writes/private payload. Verified local profile; no migration or provider change."
+    }
+  ]
+}

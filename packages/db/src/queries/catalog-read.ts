@@ -120,11 +120,20 @@ export type CatalogItemGraph = Prisma.CatalogItemGetPayload<{
   include: typeof catalogItemGraph
 }>
 
-function catalogKindValue(kind: CatalogItemKind): CatalogItemKindValue {
+export function catalogKind(kind: CatalogItemKindValue) {
+  return kind === "product" ? CatalogItemKind.PRODUCT : CatalogItemKind.SERVICE
+}
+export function catalogStatus(status: CatalogItemStatusValue) {
+  if (status === "active") return CatalogRecordStatus.ACTIVE
+  if (status === "archived") return CatalogRecordStatus.ARCHIVED
+  return CatalogRecordStatus.DRAFT
+}
+
+export function catalogKindValue(kind: CatalogItemKind): CatalogItemKindValue {
   return kind === CatalogItemKind.PRODUCT ? "product" : "service"
 }
 
-function catalogStatusValue(
+export function catalogStatusValue(
   status: CatalogRecordStatus,
 ): CatalogItemStatusValue {
   if (status === CatalogRecordStatus.ACTIVE) return "active"
@@ -132,7 +141,7 @@ function catalogStatusValue(
   return "draft"
 }
 
-function pricingPolicyValue(
+export function pricingPolicyValue(
   policy: OfferingPricingPolicy,
 ): OfferingPricingPolicyValue {
   if (policy === OfferingPricingPolicy.ORDER_TOTAL) return "order_total"

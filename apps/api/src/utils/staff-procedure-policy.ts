@@ -48,6 +48,7 @@ const reads = new Set([
   "catalog.listItems",
   "catalog.count",
   "catalog.listItemsPage",
+  "catalog.listDirectoryPage",
   "catalog.searchProductCategories",
   "catalog.listUnitConfigurations",
   "catalog.listUnitDefinitions",

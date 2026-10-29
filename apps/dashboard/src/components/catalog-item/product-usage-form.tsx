@@ -32,6 +32,9 @@ export function ProductUsageForm({
           queryClient.invalidateQueries(
             trpc.catalog.listItemsPage.infiniteQueryFilter(),
           ),
+          queryClient.invalidateQueries(
+            trpc.catalog.listDirectoryPage.infiniteQueryFilter(),
+          ),
           queryClient.invalidateQueries(trpc.catalog.getItem.queryFilter()),
           queryClient.invalidateQueries(
             trpc.catalog.detail.overview.queryFilter(),

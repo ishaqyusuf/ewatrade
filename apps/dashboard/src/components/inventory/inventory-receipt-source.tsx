@@ -108,9 +108,14 @@ export function InventoryReceiptSource({
           { staleTime: 0, retry: false },
         ),
       )
-      await queryClient.invalidateQueries({
-        queryKey: trpc.inventory.balanceReport.queryKey(),
-      })
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: trpc.inventory.balanceReport.queryKey(),
+        }),
+        queryClient.invalidateQueries({
+          queryKey: trpc.catalog.listDirectoryPage.pathKey(),
+        }),
+      ])
       onSourceChange(availability.balanceSourceId)
     } catch (failure) {
       setError(

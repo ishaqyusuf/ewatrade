@@ -15,7 +15,7 @@ import { catalogItemDetail } from "./catalog-display"
 import { CatalogItemActions } from "./item-actions"
 
 export type CatalogRow =
-  RouterOutputs["catalog"]["listItemsPage"]["items"][number]
+  RouterOutputs["catalog"]["listDirectoryPage"]["items"][number]
 
 export function getCatalogPrice(item: CatalogRow) {
   const offering = primaryOffering(item)
@@ -35,37 +35,17 @@ export function getCatalogStock(item: CatalogRow) {
     : "—"
 }
 
-// Edits archive replaced choices and units; the list shows only live rows.
-function liveVariants(item: CatalogRow) {
-  return item.variants.filter((variant) => variant.status !== "archived")
-}
-
-function liveOfferings(variant: CatalogRow["variants"][number] | undefined) {
-  return (variant?.offerings ?? []).filter(
-    (offering) => offering.status !== "archived",
-  )
-}
-
 export function primaryOffering(item: CatalogRow) {
-  const variants = liveVariants(item)
-  const variant =
-    variants.find((candidate) => candidate.isDefault) ?? variants[0]
-  return liveOfferings(variant)[0] ?? null
+  return item.primaryOffering
 }
 
 export function itemDetail(item: CatalogRow) {
-  const variants = liveVariants(item)
-  if (variants.length !== 1) {
-    return `${variants.length} variants`
-  }
-
-  const variant = variants[0]
-  const offering = primaryOffering(item)
+  if (item.variantCount !== 1) return `${item.variantCount} variants`
   return catalogItemDetail({
     itemName: item.name,
-    offeringCount: liveOfferings(variant).length,
-    offeringName: offering?.name,
-    variantName: variant?.name,
+    offeringCount: item.offeringCount,
+    offeringName: item.primaryOffering?.name,
+    variantName: item.primaryVariantName,
   })
 }
 

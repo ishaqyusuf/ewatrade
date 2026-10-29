@@ -268,6 +268,9 @@ of an already-running optimized build; `runtimeVerified: false` remains meaningf
 Changing a shared Dashboard runtime still requires coordination under the ordinary
 development rule above. No deployment is implied.
 
+The opt-in also saves private Catalog and Overview screenshots beside the numeric
+summary. Catalog capture occurs after measured readiness, outside the timing window.
+
 ## Candidate verification and release
 
 `bun run qa:candidate` runs the bounded source smoke from clean committed source,

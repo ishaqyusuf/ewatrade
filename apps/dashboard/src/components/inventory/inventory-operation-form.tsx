@@ -271,7 +271,10 @@ export function InventoryOperationForm({
         queryKey: trpc.catalog.listItems.queryKey(),
       }),
       queryClient.invalidateQueries({
-        queryKey: trpc.catalog.listItemsPage.queryKey(),
+        queryKey: trpc.catalog.listItemsPage.pathKey(),
+      }),
+      queryClient.invalidateQueries({
+        queryKey: trpc.catalog.listDirectoryPage.pathKey(),
       }),
       queryClient.invalidateQueries({
         queryKey: trpc.inventory.balanceReport.queryKey(),

@@ -3195,7 +3195,7 @@ export const capabilityManifest = [
     clients: ["dashboard", "mobile", "whatsapp"],
     rollout: "source",
     whatsapp: { mode: "native", rollout: "source" },
-    procedures: ["catalog.listItemsPage"],
+    procedures: ["catalog.listItemsPage", "catalog.listDirectoryPage"],
     examples: ["Find eggs and show the next page"],
     tests: [
       "apps/api/src/assistant/channel-principal.integration.test.ts",

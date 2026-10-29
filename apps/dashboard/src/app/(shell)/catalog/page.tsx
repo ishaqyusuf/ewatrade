@@ -65,7 +65,7 @@ export default async function CatalogRoutePage({
   const queryClient = getQueryClient()
   void Promise.allSettled([
     queryClient.prefetchInfiniteQuery(
-      trpc.catalog.listItemsPage.infiniteQueryOptions(
+      trpc.catalog.listDirectoryPage.infiniteQueryOptions(
         { ...getCatalogListPageInput(filter), sort },
         {
           getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,

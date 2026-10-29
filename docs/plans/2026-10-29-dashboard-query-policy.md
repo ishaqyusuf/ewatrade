@@ -110,3 +110,15 @@ Assistant/WhatsApp, Conversations, website inbox lists, private financial/receip
 review, attachment jobs and domain progress. Required live status, link expiry and
 bounded private-proof owners must be inspected individually, not given a global TTL.
 [Evidence](../verification/2026-10-29-dashboard-notification-polling.md).
+
+## Infinite Catalog invalidation —30October2026
+
+Actual mounted table/tRPC/query observers reproduced queryKey() type:query not
+matching type:infinite. The new directory and touched full Catalog invalidations
+use endpoint path keys or infinite filters. Matching server/client directory
+hydration consumes1 prefetched read without another mount fetch. Creation marks
+its directory stale without foreground refetch because existing RSC refresh owns
+that reload; other stock/usage/graduation refreshes remain active. Draft counts do
+not refresh stock. Broader infinite-owner/mutation audits remain DP-203 work; no
+global TTL or all-dashboard invalidation policy is introduced.
+[Evidence](../verification/2026-10-30-dashboard-catalog-directory.md).

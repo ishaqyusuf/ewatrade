@@ -6,8 +6,8 @@ Tickets refer to the Brain plan `.brain/plans/2026-10-09-assistant-business-oper
 
 ## Summary
 
-- Router procedures: 767 (580 merchant, 187 public/account/internal)
-- Merchant supported by a capability: 176
+- Router procedures: 768 (581 merchant, 187 public/account/internal)
+- Merchant supported by a capability: 177
 - Merchant planned: 135
 - Merchant form-only: 207
 - Merchant excluded: 62
@@ -159,7 +159,7 @@ Tickets refer to the Brain plan `.brain/plans/2026-10-09-assistant-business-oper
 | `customers.page` | 1 | read | `readCustomers` | OWNER, ADMIN, MANAGER | Owner/Admin only | dashboard, mobile, whatsapp | source | `customers.listPage` |
 | `catalog.categories.suggest` | 1 | read | `searchProductCategories` | OWNER, ADMIN, MANAGER, CASHIER, OPERATOR | read, read | dashboard, mobile, whatsapp | source | `catalog.searchProductCategories`, `catalog.categories.browse` |
 | `catalog.categories.attributes` | 1 | read | `readProductCategoryAttributes` | OWNER, ADMIN, MANAGER, CASHIER, OPERATOR | read | dashboard, mobile, whatsapp | source | `catalog.categories.attributes` |
-| `catalog.page` | 1 | read | `readCatalogPage` | OWNER, ADMIN, MANAGER, CASHIER, OPERATOR | read | dashboard, mobile, whatsapp | source | `catalog.listItemsPage` |
+| `catalog.page` | 1 | read | `readCatalogPage` | OWNER, ADMIN, MANAGER, CASHIER, OPERATOR | read, read | dashboard, mobile, whatsapp | source | `catalog.listItemsPage`, `catalog.listDirectoryPage` |
 | `sales.order.prepare` | 1 | read | `prepareOrder` | OWNER, ADMIN, MANAGER | read, Owner/Admin only | dashboard | source | `catalog.listItemsPage`, `customers.listPage` |
 | `services.job.prepare` | 1 | read | `prepareServiceJob` | OWNER, ADMIN, MANAGER | read, Owner/Admin only | dashboard | source | `catalog.listItemsPage`, `customers.listPage` |
 | `sales.orders.lookup` | 1 | read | `lookupOpenOrders` | OWNER, ADMIN, MANAGER, CASHIER, OPERATOR | read | dashboard, mobile, whatsapp | source | `orders.lookupOpenPage` |
@@ -466,6 +466,7 @@ track conversational evaluation separately from these source test links.
 | `catalog.detail.orders` | query | read | catalog | supported | catalog.history.read |
 | `catalog.detail.overview` | query | read | catalog | supported | catalog.item.read |
 | `catalog.getItem` | query | read | catalog | form_only | Generic item editor payload; assistant uses active-Store detail.overview with stock permission filtering. |
+| `catalog.listDirectoryPage` | query | read | catalog | supported | catalog.page |
 | `catalog.listItems` | query | read | catalog | excluded | Unbounded legacy list; assistant uses stable listItemsPage continuation. |
 | `catalog.listItemsPage` | query | read | services | supported | services.intake.options.read, catalog.page, sales.order.prepare, services.job.prepare |
 | `catalog.listUnitConfigurations` | query | read | catalog | planned | B03 |

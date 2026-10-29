@@ -33,7 +33,7 @@ export function CatalogDataTable({
   const { filter, hasFilters } = useCatalogItemParams()
   const { sort } = useSortParams({ fields: catalogSortFields })
   const query = useSuspenseInfiniteQuery(
-    trpc.catalog.listItemsPage.infiniteQueryOptions(
+    trpc.catalog.listDirectoryPage.infiniteQueryOptions(
       {
         ...getCatalogListPageInput(filter),
         sort,

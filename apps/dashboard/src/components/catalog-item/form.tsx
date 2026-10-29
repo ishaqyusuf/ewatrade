@@ -617,7 +617,11 @@ export function CatalogItemForm({
         queryKey: trpc.catalog.listItems.queryKey(),
       }),
       queryClient.invalidateQueries({
-        queryKey: trpc.catalog.listItemsPage.queryKey(),
+        queryKey: trpc.catalog.listItemsPage.pathKey(),
+      }),
+      queryClient.invalidateQueries({
+        queryKey: trpc.catalog.listDirectoryPage.pathKey(),
+        refetchType: "none",
       }),
       queryClient.invalidateQueries({
         queryKey: trpc.tenant.featureAvailability.queryKey(),

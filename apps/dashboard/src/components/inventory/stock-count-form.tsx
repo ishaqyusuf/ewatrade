@@ -108,8 +108,15 @@ export function StockCountForm({ store }: { store: StoreSummary }) {
     ),
   )
 
-  async function refresh() {
+  async function refresh(stockChanged = false) {
     await Promise.all([
+      ...(stockChanged
+        ? [
+            queryClient.invalidateQueries({
+              queryKey: trpc.catalog.listDirectoryPage.pathKey(),
+            }),
+          ]
+        : []),
       queryClient.invalidateQueries({
         queryKey: trpc.inventory.stockCounts.queryKey(),
       }),
@@ -251,7 +258,7 @@ export function StockCountForm({ store }: { store: StoreSummary }) {
         schemaVersion: 1,
         stockCountId: data.id,
       })
-      await refresh()
+      await refresh(true)
       const changed = data.lines.filter(
         (line) => compareExactDecimals(line.varianceQuantity, "0") !== 0,
       ).length

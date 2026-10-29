@@ -108,7 +108,10 @@ export function CatalogGraduationForm({ storeId }: { storeId: string }) {
         queryKey: trpc.catalog.listItems.queryKey(),
       }),
       queryClient.invalidateQueries({
-        queryKey: trpc.catalog.listItemsPage.queryKey(),
+        queryKey: trpc.catalog.listItemsPage.pathKey(),
+      }),
+      queryClient.invalidateQueries({
+        queryKey: trpc.catalog.listDirectoryPage.pathKey(),
       }),
     ])
   }

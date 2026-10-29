@@ -18,6 +18,7 @@ import {
   createProductUnitConfigurationDraft,
   createSimpleCatalogItem,
   getCatalogItem,
+  listCatalogDirectoryPage,
   listCatalogItems,
   listCatalogItemsPage,
   listCatalogUnitDefinitions,
@@ -509,6 +510,24 @@ export const catalogRouter = createTRPCRouter({
     .query(({ ctx, input }) => {
       assertCanReadCatalog(ctx.tenantContext.membership.role)
       return searchProductTaxonomyCategories(input.query)
+    }),
+
+  listDirectoryPage: protectedProcedure
+    .input(catalogListItemsPageSchema)
+    .query(async ({ ctx, input }) => {
+      assertCanReadCatalog(ctx.tenantContext.membership.role)
+      const store = ctx.tenantContext.activeStore ?? ctx.tenantContext.stores[0]
+      if (!store)
+        throw new TRPCError({ code: "NOT_FOUND", message: "Store not found" })
+      return listCatalogDirectoryPage(ctx.db, {
+        ...input,
+        tenantId: ctx.tenantContext.tenant.id,
+        storeId: store.id,
+        storeIds:
+          ctx.tenantContext.staffAccess?.mode === "SCOPED"
+            ? ctx.tenantContext.stores.map((store) => store.id)
+            : undefined,
+      })
     }),
 
   listItemsPage: protectedProcedure

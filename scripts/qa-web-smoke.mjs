@@ -89,6 +89,15 @@ export async function webJourney(page, config) {
       milliseconds: Math.round(performance.now() - catalogStarted),
       requests: await observation.end(),
     })
+  if (
+    performanceArtifacts &&
+    origin === "https://ewatrade-dashboard.localhost"
+  ) {
+    mkdirSync(performanceArtifacts, { recursive: true })
+    await page.screenshot({
+      path: resolve(performanceArtifacts, "catalog-page.png"),
+    })
+  }
   await go("/sales?orderSheet=create")
   await page
     .getByRole("heading", { name: "New order", exact: true })

@@ -16,8 +16,9 @@ Midday adoption is incomplete across owners, rather than absent. Request-local
 reuse, streaming/scheduling, retained tabs, hidden-reader controls and optional
 delivery have implemented slices. Those are not blanket acceptance of every
 route or proof that refresh latency is solved. Latest development smoke still
-measures Catalog refresh4535ms, warm Catalog859ms and Overview1032ms; sparse,
-uncontrolled observations cannot establish production performance or p95.
+measures Catalog refresh4054ms and warm Catalog853ms; Overview transitions range
+from1034ms to2382ms in that run. Refresh remains slow. Sparse, uncontrolled
+observations cannot establish production performance, a causal speedup or p95.
 
 | Phase | Tickets | Accepted | Remaining outcome |
 | --- | --- | --- | --- |
@@ -543,3 +544,53 @@ vs prior1854ms is encouraging but uncontrolled; Catalog refresh4535ms remains a
 miss. Structural9-to1 reader reduction is proven; no optimized speedup/p95/release
 claim. No manual restart/runtime switch/schema/provider/deployment/business action.
 [Receipt](../verification/2026-10-29-dashboard-overview-presence.md).
+
+## Catalog directory projection contract — DP-102/203/402
+
+Catalog table currently loads the full editor graph: option groups, unit setup,
+all stock sources, variant selections and offerings. Implement a separate typed
+catalog.listDirectoryPage read and DB directory module. Existing listItemsPage
+remains the full contract for mobile, sale/setup and Assistant consumers. Share
+filter/search/keyset planning so the directory cannot fork cursor/scope semantics.
+Midday Customers route/table/router and DB query boundary are the nearest analogue.
+
+- [x] New DB select returns visible row summary only: ID/name/kind/status, live
+  variant/offering counts and primary labels/price, product ID/usage/first scoped
+  stock text, and current Store photo/illustration. Bound nested reads to1; retain
+  full detail/form reads only at existing owners. Preserve display meaning.
+- [x] Preserve Tenant/allowed-Store admission, filtering/sort/keyset/ranked search,
+  displayed counts/cursor limits and error behavior. Omit unused global totalCount.
+  Ranked candidates use narrow search
+  fields with the existing300 cap, then hydrate only the requested directory page.
+- [x] Catalog server prefetch and client infinite consumer use the identical new
+  typed endpoint and inputs. Keep existing Suspense/error/filter/selection/view/
+  table/columns/URL/sheet/draft ownership; no visual redesign or Workshop.
+- [x] Audit Catalog/stock/Assistant mutations and invalidate the new directory key
+  alongside existing full list/detail/availability keys; no stale authority or TTL.
+- [x] Actual route/query regression must go red before implementation. Verify
+  directory display parity, payload bounds, scope/cursor/ranked search, hydration
+  and invalidation with existing package tests plus actual query observers.
+- [x] Verify relevant types/fast/H01/H02, one frozen existing-data UI smoke and
+  commit source/evidence/Brain. No save/business/provider/deployment/restart.
+
+Files: DB catalog-list-query.ts/catalog-directory.ts and focused tests; existing
+catalog.ts/read helpers/index; API Catalog router and existing schema, capability
+manifest/coverage; Catalog route/table/columns and current mutation owners. Product
+form/command owners, full Catalog DTO and mobile callers remain. Only specified
+invalidation callbacks change. New directory
+read is presentation of the existing Catalog read capability, without a new write
+or Assistant tool. Prepared3cf build remains untouched while its window is pending.
+Full DP-102/203/402 and optimized acceptance remain open; overall3/27 unchanged.
+
+
+Executed: query/display11/123, actual route/table/hydration4/14, protected/staff
+scope13/49; generated Prisma whole directory1statement/acquisition, no stored
+fixture or write. Dashboard and API/owned-test type graphs, owned fast237/1533,
+supplemental QA tooling47/195, H01/H02 and3driver checks pass. Frozen-source
+existing-data local smoke passes with runtimeVerified:false. Existing Notebook
+Overview/Orders/Activity first visits and warm revisits retain content; Table/Grid
+and close-focus behavior work. Catalog dev refresh4054ms, warm853ms; Overview
+1034ms/2382ms. Samples are uncontrolled and not causal/p95/optimized acceptance.
+Substantial observed admission/pool costs keep DP-003/103 high priority. No service
+restart/switch, deployment, business submission or schema/provider action.
+[Receipt](../verification/2026-10-30-dashboard-catalog-directory.md). Overall3/27.

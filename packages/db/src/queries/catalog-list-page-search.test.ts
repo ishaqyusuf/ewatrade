@@ -34,6 +34,7 @@ describe("catalog list page search", () => {
     expect(countWhere).toEqual({
       kind: "PRODUCT",
       status: "ACTIVE",
+      systemRole: null,
       tenantId: "tenant_1",
     })
     // Deep search: each word may match any field, in any order.

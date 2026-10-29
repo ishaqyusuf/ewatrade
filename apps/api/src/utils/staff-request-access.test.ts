@@ -41,6 +41,27 @@ test("omitted query scope becomes the active Store instead of all-business data"
     await scopeStaffRequest(context(), "orders.listPage", "query", {}),
   ).toEqual({ storeId: "a" })
 })
+test("Catalog directory retains current assigned-Store read admission and grants no write", async () => {
+  expect(
+    await scopeStaffRequest(context(), "catalog.listDirectoryPage", "query", {
+      limit: 25,
+    }),
+  ).toEqual({ limit: 25 })
+  await expect(
+    scopeStaffRequest(context(), "catalog.listDirectoryPage", "query", {
+      storeId: "foreign",
+    }),
+  ).rejects.toMatchObject({ code: "FORBIDDEN" })
+  await expect(
+    scopeStaffRequest(context(), "catalog.listDirectoryPage", "mutation", {}),
+  ).rejects.toMatchObject({ code: "FORBIDDEN" })
+  const revoked = context()
+  if (!revoked.tenantContext?.staffAccess) throw Error("Missing inert context")
+  revoked.tenantContext.staffAccess.assignments = []
+  await expect(
+    scopeStaffRequest(revoked, "catalog.listDirectoryPage", "query", {}),
+  ).rejects.toMatchObject({ code: "FORBIDDEN" })
+})
 test("a role at one Store never grants stock authority at another", async () => {
   await expect(
     scopeStaffRequest(context(), "inventory.postBalanceOperation", "mutation", {
