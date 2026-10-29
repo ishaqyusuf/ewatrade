@@ -52,6 +52,19 @@ API rate limits), Codex should do the Workshop work directly and finish the
 authorized deliverable. Report the fallback; do not keep retrying or ask for a
 model override. Preserve the same review, history and implementation boundaries.
 
+## Workshop continuation rule
+
+Always start Workshop work from the existing implemented design for the affected
+surface. Resolve its current collection, screen and implemented direction before
+authoring. Update that design in place as a new immutable revision under the same
+Workshop path and direction key, retaining the complete design, shared components,
+working flows and history. Do not create a standalone feature demo or repeat the
+surrounding design when an implemented baseline exists unless the owner explicitly
+asks for a separate exploration. If catalog selection metadata is missing on an
+imported collection, use the documented implementation and source evidence rather
+than treating it as permission to invent a new design. This rule does not authorize
+selection, native implementation, deployment or provider actions before approval.
+
 ## Storefront template design lifecycle
 
 Use `https://workshop.localhost/ewatrade/storefront/template-library` as the

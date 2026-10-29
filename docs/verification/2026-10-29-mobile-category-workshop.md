@@ -1,3 +1,82 @@
+# Existing mobile design correction — Category in Live Card
+
+Owner corrected the initial isolated study: resume the existing implemented
+mobile design and revise it rather than creating another feature demo. This is
+now a standing rule in `AGENTS.md` under Workshop continuation rule.
+
+Current review: [existing Mobile Quality Workshop, First product setup](https://workshop.localhost/ewatrade/legacy/mobile-quality-workshop?rev=ddb9c72f-d30c-4dc7-a310-4d77caffcacd&screen=19-first-product-setup%2Findex.html&state=focus%3D01%26view%3Dessentials).
+Canonical path `legacy/mobile-quality-workshop`, existing direction `archive`.
+Implemented in-source design: screen 19, `01 Live Card` (matched to native Classic
+and the existing design/implementation records; imported catalog has no guessed
+selection). This is a Category proposal inside that full design, not a claim that
+the new revision is implemented.
+
+## Baseline and exact revision
+
+Resumed saved v15 `361450c2-3a3a-4b0d-b05d-9c337f5a177b`. SHA256 matched the
+existing working preview's First product setup page. Copied the saved full
+collection to its canonical Workshop work folder, then updated only
+`19-first-product-setup/index.html`.
+
+Final v17 `ddb9c72f-d30c-4dc7-a310-4d77caffcacd`. Archived comparison proves all 61
+baseline files retained; exactly that one page changed. All 60 other files,
+including shared floating search, phone/theme/config components and other mobile
+screens, remain byte-identical. The collection has the same single `archive`
+direction and all earlier revisions; no new selection or implementation receipt.
+The intermediate v16 exposed a typing/caret redraw problem during browser checking;
+v17 updates just result content, retaining the shared search input DOM and caret.
+
+Opus 5.5/high returned a concise incremental design amendment with tools disabled;
+canonical model and explicit launch effort verified. Codex integrated locally.
+No private source/assets were sent to that author. The shared footer uses the
+existing `FS.dock(FS.field(...))` call unchanged. Product native work remains
+unmodified and approval is still required before building the new behavior.
+
+Category now appears after Name for Product and Service in Live Card Essentials.
+The old suggestion chip and More details Category row are removed from that flow.
+The existing Category route shows six pinned Shopify sample paths, searches at
+most eight matches with slash-path tokens, immediately returns on selection, and
+supports X clear and Back. Product/Service selections stay independent; the
+existing hero uses the selected leaf. Category stays optional, and existing save,
+photos, units, choices, stock, pricing and review logic is retained.
+
+## Focused verification of the integrated revision
+
+- Inline JS syntax check: pass.
+- Full collection asset comparison: 61 files retained, exactly 1 page changed.
+- Browser: Product six choices → type `milk` → correct one result → select returns with
+  Milk in original field and hero; X clear returns empty: pass.
+- Service: slash search `Services / Professional Services / Tax` → Tax Services →
+  immediate return with existing name and ₦15,000 price: pass.
+- Empty results, Back cancellation retaining Tax Services/name/price, query X clear
+  restoring six choices: pass.
+- Edited Product `Eggs draft` survives keyboard search/selection and return; form
+  returns at nonzero 303px scroll. Name restored to Eggs and Whole Eggs selected
+  for the final review screenshot. No save action performed.
+- Existing config: Product/Service/Step sync, dark/light, compact 320×568,
+  collapse/reopen, navigate to Home and back retaining theme/size: pass.
+- Existing Photos, units, choices, stock, pricing and review actions remain in
+  the same form; their source is retained. No claim of exhaustive retesting.
+- Browser error/warning log empty when checked on final revision.
+- Screenshot: `/private/tmp/ewatrade-category-existing-live-card.png`.
+- Existing offline doctor pass reused: no dependencies/runtime source changed.
+- `bun run test:quick --plan --files AGENTS.md docs/verification/2026-10-29-mobile-category-workshop.md`: core documentation scope, no unknown mappings.
+- Same explicit owned-path `test:quick`: QA tooling types and 47 tests / 193 assertions pass; unrelated concurrent changes excluded.
+
+The prior isolated `category-search` study remains as history, is no longer
+recommended, and its metadata points to the full collection. It is not the
+implementation baseline. No production/mobile code, API/schema, product provider
+or deployment action occurred. Owner review/selection precedes implementation.
+
+Brain impact: `.brain/design/2026-10-29-mobile-category-search-workshop.md` and
+`.brain/tasks/in-progress.md` updated to point at this integrated revision; no
+API/database/accepted-architecture changes, so those documents need no update.
+
+## Superseded initial standalone study
+
+The following is historical verification of the initial study, not the current
+review or native implementation target.
+
 # Mobile Category in Essentials — Workshop review
 
 Scope: design only, requested 29 October 2026. Native implementation requires
