@@ -4,7 +4,7 @@ import {
   canStaffPerform,
 } from "@ewatrade/auth/store-access"
 import { prisma } from "@ewatrade/db"
-import { readStaffStoreAccess } from "@ewatrade/db/staff-store-access"
+import { listActiveWorkspaceMemberships } from "@ewatrade/db/tenant-context"
 import {
   type BusinessOnboardingFacts,
   readBusinessOnboardingFactsFromStoreMetadata,
@@ -82,44 +82,8 @@ export const getActiveTenant = cache(
     const requestedSlug = headerSlug ?? cookieSlug
     const activeStoreId = cookieStore.get(ACTIVE_STORE_COOKIE)?.value
 
-    const memberships = await prisma.membership.findMany({
-      where: {
-        userId,
-        status: "ACTIVE",
-        tenant: {
-          isActive: true,
-        },
-      },
-      orderBy: { createdAt: "asc" },
-      select: {
-        id: true,
-        role: true,
-        tenantId: true,
-        tenant: {
-          select: {
-            id: true,
-            slug: true,
-            name: true,
-            type: true,
-            enabledModes: true,
-            currencyCode: true,
-            timezone: true,
-            stores: {
-              where: { status: { not: "ARCHIVED" } },
-              select: {
-                id: true,
-                slug: true,
-                name: true,
-                status: true,
-                currencyCode: true,
-                metadata: true,
-              },
-              orderBy: { createdAt: "asc" },
-            },
-          },
-        },
-      },
-    })
+    const memberships = await listActiveWorkspaceMemberships(prisma, userId)
+
     const membership =
       (requestedSlug
         ? memberships.find((item) => item.tenant.slug === requestedSlug)
@@ -135,12 +99,7 @@ export const getActiveTenant = cache(
       role: item.role,
       slug: item.tenant.slug,
     }))
-    const fresh = await readStaffStoreAccess(
-      prisma,
-      membership.id,
-      membership.tenantId,
-    )
-    if (!fresh) return null
+    const fresh = membership
     const staffAccess: StaffAccess = {
       businessRole: fresh.role,
       status: fresh.status,

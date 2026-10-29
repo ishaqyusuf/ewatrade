@@ -196,6 +196,15 @@ H01/H02 gates remain separate from source smoke. No deployment is implied.
   explicit UI exports. Full Dashboard types pass; actual deferred-sheet interaction
   and comparative timing remain D4. No table/form redesign or polling reduction.
 
+- D4 measured follow-up: the first source-stable canonical smoke passed on
+  bf0dce71e; both Overview sheets opened/cancelled with0 business writes. Warm
+  Catalog1389/Overview1444 ms; initial post-login shell7704 ms, so no broad startup
+  improvement is claimed. Inspection found a second sequential membership/Store
+  permission read. It is folded into one actor-owned repository projection with
+  explicit assignment/Store Tenant and ACTIVE fences; canonical API/command fresh
+  readers are untouched. Focused27/76 and Dashboard types pass. Final build/smoke
+  is repeated only for this relevant source change.
+
 ## Midday migration contract and conformance checklist
 
 - References: Midday Customers route/trpc request-context/server/query-client;

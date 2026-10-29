@@ -36,7 +36,7 @@ export function buildDashboardRequestContext(
     requestHeaders.get("x-forwarded-proto") ??
     (host?.includes("localhost") ? "http" : "https")
   const requestOrigin = host ? new URL(`${protocol}://${host}`).origin : null
-  const existing = requestHeaders.get("x-tenant-slug")
+  const existing = requestHeaders.get("x-tenant-slug") || null
   const domain =
     !existing && host
       ? resolveTenantDomain(host, {

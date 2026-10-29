@@ -203,3 +203,80 @@ export async function getActiveTenantForUser(
     activeStore,
   }
 }
+
+/** Current actor-owned business choices and Store access in one joined read. No cross-request cache. */
+export async function listActiveWorkspaceMemberships(
+  db: DbClient,
+  userId: string,
+) {
+  const rows = await db.membership.findMany({
+    where: {
+      userId,
+      status: "ACTIVE",
+      tenant: {
+        isActive: true,
+      },
+    },
+    orderBy: { createdAt: "asc" },
+    select: {
+      id: true,
+      role: true,
+      status: true,
+      tenantId: true,
+      staffAccessMode: true,
+      catalogEditor: true,
+      retailOpsStaffProfile: { select: { defaultStoreId: true } },
+      staffStoreAssignments: {
+        where: { status: "ACTIVE", store: { status: "ACTIVE" } },
+        select: {
+          storeId: true,
+          role: true,
+          status: true,
+          revision: true,
+          tenantId: true,
+          store: { select: { tenantId: true, status: true } },
+        },
+      },
+      tenant: {
+        select: {
+          id: true,
+          slug: true,
+          name: true,
+          type: true,
+          enabledModes: true,
+          currencyCode: true,
+          timezone: true,
+          stores: {
+            where: { status: { not: "ARCHIVED" } },
+            select: {
+              id: true,
+              slug: true,
+              name: true,
+              status: true,
+              currencyCode: true,
+              metadata: true,
+            },
+            orderBy: { createdAt: "asc" },
+          },
+        },
+      },
+    },
+  })
+  return rows.map((row) => ({
+    ...row,
+    staffStoreAssignments: row.staffStoreAssignments
+      .filter(
+        (assignment) =>
+          assignment.tenantId === row.tenantId &&
+          assignment.store.tenantId === row.tenantId &&
+          assignment.status === "ACTIVE" &&
+          assignment.store.status === "ACTIVE",
+      )
+      .map(({ storeId, role, status, revision }) => ({
+        storeId,
+        role,
+        status,
+        revision,
+      })),
+  }))
+}

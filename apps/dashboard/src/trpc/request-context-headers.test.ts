@@ -35,6 +35,12 @@ test("host-derived Tenant and cookie selection fallback retain the existing API 
     { API_URL: "https://api.test" },
   )
   expect(scoped.headers).toMatchObject({ "x-tenant-slug": "merchant" })
+  expect(
+    buildDashboardRequestContext(
+      new Headers({ host: "merchant.ewatrade.com", "x-tenant-slug": "" }),
+      { API_URL: "https://api.test" },
+    ).headers,
+  ).toMatchObject({ "x-tenant-slug": "merchant" })
   const dashboard = buildDashboardRequestContext(
     new Headers({
       host: "dash.ewatrade.com",
