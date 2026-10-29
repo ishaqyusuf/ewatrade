@@ -104,9 +104,14 @@ export function PaymentsToCheck({
   // Only the claim list (and the notification bell) refresh after a review:
   // the open review keeps showing its result.
   const refreshList = () =>
-    queryClient.invalidateQueries({
-      queryKey: trpc.businessBanking.pendingReports.queryKey(),
-    })
+    Promise.all([
+      queryClient.invalidateQueries({
+        queryKey: trpc.businessBanking.pendingReports.queryKey(),
+      }),
+      queryClient.invalidateQueries({
+        queryKey: trpc.businessBanking.pendingReportCount.pathKey(),
+      }),
+    ])
   const selected = reportId
   return (
     <ScrollableContent>

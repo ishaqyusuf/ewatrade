@@ -14,6 +14,14 @@ export async function webJourney(page, config) {
   page.setDefaultTimeout(15000)
   const origin = config.web.origin
   const performanceArtifacts = process.env.QA_WEB_NAVIGATION_ARTIFACTS
+  const verifyBell = process.env.QA_WEB_NOTIFICATION_COUNTS === "true"
+  if (
+    verifyBell &&
+    (!performanceArtifacts || origin !== "https://ewatrade-dashboard.localhost")
+  )
+    throw new Error(
+      "Bell count verification requires local navigation artifacts.",
+    )
   const observation = performanceArtifacts
     ? observeWebPerformance(page, origin)
     : undefined
@@ -75,6 +83,34 @@ export async function webJourney(page, config) {
       milliseconds: Math.round(performance.now() - loginStarted),
     })
   }
+  const countFields = [
+    ["businessBanking.pendingReportCount", "count"],
+    ["businessBanking.notificationChangeCount", "unreadCount"],
+    ["storefrontRequests.notificationCount", "unreadCount"],
+  ]
+  const previews = [
+    "businessBanking.pendingReports",
+    "businessBanking.notificationChanges",
+    "storefrontRequests.notifications",
+  ]
+  let closedPreviewRequests = 0
+  /** @param {import("playwright").Request} request */
+  const trackPreview = (request) => {
+    const path = decodeURIComponent(new URL(request.url()).pathname)
+    if (previews.some((name) => path.includes(name))) closedPreviewRequests++
+  }
+  const badgeResponses = verifyBell
+    ? countFields.map(([name, field]) => ({
+        name,
+        field,
+        response: page
+          .waitForResponse((response) =>
+            decodeURIComponent(new URL(response.url()).pathname).includes(name),
+          )
+          .catch(() => null),
+      }))
+    : []
+  if (verifyBell) page.on("request", trackPreview)
   observation?.begin()
   const catalogStarted = performance.now()
   await go("/catalog")
@@ -97,6 +133,51 @@ export async function webJourney(page, config) {
     await page.screenshot({
       path: resolve(performanceArtifacts, "catalog-page.png"),
     })
+  }
+  if (verifyBell && performanceArtifacts) {
+    await Promise.all(
+      badgeResponses.map(async ({ name, field, response }) => {
+        const value = await response
+        if (!value?.ok()) throw new Error("A fresh bell count read failed.")
+        const names =
+          decodeURIComponent(new URL(value.url()).pathname)
+            .split("/api/trpc/")[1]
+            ?.split(",") ?? []
+        const body = await value.json()
+        const data = (Array.isArray(body) ? body[names.indexOf(name)] : body)
+          ?.result?.data?.json
+        if (
+          !Number.isSafeInteger(data?.[field]) ||
+          data[field] < 0 ||
+          (field === "count" && data[field] > 5)
+        )
+          throw new Error(
+            "Bell count response is not its bounded numeric projection.",
+          )
+      }),
+    )
+    page.off("request", trackPreview)
+    if (closedPreviewRequests)
+      throw new Error("Closed bell fetched unused private previews.")
+    const previewResponses = previews.map((name) =>
+      page.waitForResponse((response) =>
+        decodeURIComponent(new URL(response.url()).pathname).includes(name),
+      ),
+    )
+    await page.getByRole("button", { name: /^My notifications/ }).click()
+    if (
+      (await Promise.all(previewResponses)).some((response) => !response.ok())
+    )
+      throw new Error("An opened notification preview failed.")
+    await page.getByText("My notifications", { exact: true }).first().waitFor()
+    await page.screenshot({
+      path: resolve(performanceArtifacts, "notification-bell.png"),
+    })
+    await page.keyboard.press("Escape")
+    await page
+      .getByText("My notifications", { exact: true })
+      .first()
+      .waitFor({ state: "hidden" })
   }
   await go("/sales?orderSheet=create")
   await page
@@ -205,6 +286,12 @@ export async function webJourney(page, config) {
           samples,
           blockedBusinessWrites: mutations.length,
           shellRetained: true,
+          ...(verifyBell
+            ? {
+                bellCounts:
+                  "three numeric reads; no closed previews; open/read/close passed",
+              }
+            : {}),
           overviewSheets:
             "order and stock sheets opened and cancelled without submission",
         },

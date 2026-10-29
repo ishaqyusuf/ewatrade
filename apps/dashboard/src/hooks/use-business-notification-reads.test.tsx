@@ -72,6 +72,21 @@ const behavior = new Map<
 const payload = { count: 2, unreadCount: 2, items: [{ id: "inert" }] }
 function endpoint(path: string) {
   return {
+    infiniteQueryOptions: (input?: unknown, options?: object) => ({
+      ...options,
+      queryKey: [path, input ?? null],
+      initialPageParam: undefined,
+      getNextPageParam: () => undefined,
+      queryFn: async ({ signal }: { signal: AbortSignal }) => {
+        reads.push({ path, input, key: [path, input ?? null], signal })
+        return payload
+      },
+    }),
+    mutationOptions: () => ({
+      mutationFn: async () => {
+        throw new Error("No business command in read test")
+      },
+    }),
     queryOptions: (input?: unknown, options?: object) => ({
       ...options,
       queryKey: [path, input ?? null],
@@ -87,28 +102,46 @@ function endpoint(path: string) {
 }
 mock.module("@/trpc/client", () => ({
   useTRPC: () => ({
-    businessNotifications: { unreadCount: endpoint("count") },
+    businessNotifications: {
+      unreadCount: endpoint("count"),
+      listMine: endpoint("inbox"),
+      markRead: endpoint("mark"),
+      archive: endpoint("archive"),
+      markAllRead: endpoint("mark-all"),
+    },
     businessBanking: {
       pendingReports: endpoint("payments"),
+      pendingReportCount: endpoint("payment-count"),
       notificationChanges: endpoint("plans"),
+      notificationChangeCount: endpoint("plan-count"),
     },
-    storefrontRequests: { notifications: endpoint("requests") },
+    storefrontRequests: {
+      notifications: endpoint("requests"),
+      notificationCount: endpoint("request-count"),
+    },
   }),
 }))
 const {
   useUnreadBusinessNotificationCount,
+  usePendingPaymentReportCount,
+  usePaymentPlanNoticeCount,
+  useStorefrontRequestNotificationCount,
   usePendingPaymentReports,
   usePaymentPlanNotices,
   useStorefrontRequestNotifications,
 } = await import("./use-business-notification-reads")
 const hooks = {
   count: useUnreadBusinessNotificationCount,
+  "payment-count": usePendingPaymentReportCount,
+  "plan-count": usePaymentPlanNoticeCount,
+  "request-count": useStorefrontRequestNotificationCount,
   payments: usePendingPaymentReports,
   plans: usePaymentPlanNotices,
   requests: () => useStorefrontRequestNotifications({ poll: true }),
   panel: () => useStorefrontRequestNotifications({ poll: false }),
 }
-type Kind = keyof typeof hooks
+type Kind = keyof typeof hooks | "bell"
+let Bell: () => React.ReactNode
 type Snapshot = {
   data: unknown
   isSuccess: boolean
@@ -117,6 +150,7 @@ type Snapshot = {
 }
 const snapshots = new Map<string, Snapshot>()
 function Owner({ kind, name }: { kind: Kind; name: string }) {
+  if (kind === "bell") return <Bell />
   const query = hooks[kind]()
   snapshots.set(name, query)
   return (
@@ -188,12 +222,20 @@ async function mount(initial: { kind: Kind; name: string }[]) {
       await wait(85)
     })
   }
-  return { client, render, close, until, hold }
+  return { client, render, close, until, hold, host }
 }
 const count = (path: string) =>
   reads.filter((read) => read.path === path).length
 
-for (const kind of ["count", "payments", "plans", "requests"] as const) {
+for (const kind of [
+  "count",
+  "payments",
+  "plans",
+  "requests",
+  "payment-count",
+  "plan-count",
+  "request-count",
+] as const) {
   test(`${kind} stops repeated interval reads and clears prior data after a fresh refusal`, async () => {
     const ui = await mount([{ kind, name: "owner" }])
     await ui.until(() => snapshots.get("owner")?.isSuccess === true)
@@ -291,7 +333,15 @@ test("the website panel reads once without interval/focus work and reopening get
   expect(count("requests")).toBe(2)
 })
 
-for (const kind of ["count", "payments", "plans", "requests"] as const) {
+for (const kind of [
+  "count",
+  "payments",
+  "plans",
+  "requests",
+  "payment-count",
+  "plan-count",
+  "request-count",
+] as const) {
   test(`${kind} pauses interval work while unfocused and resumes on focus`, async () => {
     const ui = await mount([{ kind, name: "owner" }])
     await ui.until(() => snapshots.get("owner")?.isSuccess === true)
@@ -309,3 +359,101 @@ for (const kind of ["count", "payments", "plans", "requests"] as const) {
     await ui.until(() => count(kind) > paused)
   })
 }
+
+test("actual closed bell fetches compact counts; previews start only on open and stop on close", async () => {
+  let toggle: ((open: boolean) => void) | undefined
+  const empty = () => null
+  mock.module("@ewatrade/ui", () => ({
+    Popover: ({
+      children,
+      onOpenChange,
+    }: {
+      children: React.ReactNode
+      onOpenChange: (open: boolean) => void
+    }) => {
+      toggle = onOpenChange
+      return children
+    },
+    PopoverContent: ({ children }: { children: React.ReactNode }) => (
+      <div>{children}</div>
+    ),
+    PopoverTrigger: ({
+      children,
+      ...props
+    }: React.ButtonHTMLAttributes<HTMLButtonElement>) => (
+      <button {...props}>{children}</button>
+    ),
+    cn: (...values: string[]) => values.join(" "),
+  }))
+  mock.module("@hugeicons/react", () => ({ HugeiconsIcon: empty }))
+  mock.module("@/components/activity/activity-viewer", () => ({
+    ActivityViewerProvider: ({ children }: { children: React.ReactNode }) =>
+      children,
+  }))
+  mock.module("@/hooks/use-activity-params", () => ({
+    useActivityParams: () => ({ open() {} }),
+  }))
+  mock.module(
+    "../components/notification-center/business-notification-settings",
+    () => ({ useAlertPreferencesParams: () => ({ open() {} }) }),
+  )
+  mock.module(
+    "../components/notification-center/business-notification-inbox",
+    () => ({ BusinessNotificationInbox: empty }),
+  )
+  mock.module("../components/notification-center/payment-plan-notices", () => ({
+    PaymentPlanNotices: () => {
+      usePaymentPlanNotices()
+      return null
+    },
+  }))
+  mock.module(
+    "../components/notification-center/payment-report-notifications",
+    () => ({
+      PaymentReportNotifications: () => {
+        usePendingPaymentReports()
+        return null
+      },
+    }),
+  )
+  mock.module(
+    "../components/notification-center/storefront-request-notifications",
+    () => ({
+      StorefrontRequestNotifications: () => {
+        useStorefrontRequestNotifications({ poll: false })
+        return null
+      },
+    }),
+  )
+  const { BusinessNotificationCenter } = await import(
+    "../components/notification-center/business-notification-center"
+  )
+  Bell = () => (
+    <BusinessNotificationCenter timeZone="UTC" viewerMembershipId="member" />
+  )
+  const ui = await mount([{ kind: "bell", name: "shell" }])
+  await ui.until(() =>
+    ui.host.toString().includes("My notifications, 8 unread"),
+  )
+  expect(new Set(reads.map((read) => read.path))).toEqual(
+    new Set(["count", "payment-count", "plan-count", "request-count"]),
+  )
+  await act(async () => {
+    toggle?.(true)
+    await wait()
+  })
+  await ui.until(() =>
+    ["payments", "plans", "requests", "inbox"].every((path) => count(path) > 0),
+  )
+  await act(async () => {
+    toggle?.(false)
+    await wait()
+  })
+  const previewReads = ["payments", "plans", "requests", "inbox"].map(count)
+  await ui.hold()
+  expect(["payments", "plans", "requests", "inbox"].map(count)).toEqual(
+    previewReads,
+  )
+  await ui.close()
+  expect(ui.client.getQueryCache().getAll()).toHaveLength(0)
+})

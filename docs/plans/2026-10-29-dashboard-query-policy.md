@@ -122,3 +122,15 @@ that reload; other stock/usage/graduation refreshes remain active. Draft counts 
 not refresh stock. Broader infinite-owner/mutation audits remain DP-203 work; no
 global TTL or all-dashboard invalidation policy is introduced.
 [Evidence](../verification/2026-10-30-dashboard-catalog-directory.md).
+
+
+## Closed bell counts —30October2026
+
+Closed shared bell uses numeric payment/plan/website projections, rather than
+unused full previews. Open panels retain existing fresh private reads. Numeric
+hooks retain0freshness/retention, mount/cancellation/focus/rejection rules and
+30s/60s intervals. Payment review and plan dismissal refresh affected numeric keys;
+website acknowledgement reuses its owning callback. No total-count semantic change
+for the five-claim payment badge or new scoped website access. This is a DP-204/407
+slice, not whole-dashboard lifetime acceptance.
+[Receipt](../verification/2026-10-30-dashboard-notification-counts.md).

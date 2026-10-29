@@ -1,6 +1,7 @@
 import { authorizeMerchantReceiptAssessmentRetry } from "@ewatrade/db/manual-payment-assessments"
 import {
   PaymentNotificationError,
+  countPaymentNotificationChanges,
   listPaymentNotificationChanges,
   markPaymentNotificationChangesRead,
   paymentNotificationEligibility,
@@ -10,6 +11,7 @@ import {
   CatalogError,
   FinanceError,
   cancelManualPaymentReportDraft,
+  countPendingManualPaymentReportBadge,
   createBusinessPaymentLink,
   createManualBankAccount,
   effectiveCommercialAmountPaid,
@@ -218,6 +220,11 @@ export const businessBankingRouter = createTRPCRouter({
         })
         return { queued: true }
       }),
+    ),
+  notificationChangeCount: protectedProcedure
+    .input(z.void())
+    .query(({ ctx }) =>
+      mapped(() => countPaymentNotificationChanges(ctx.db, actor(ctx))),
     ),
   notificationChanges: protectedProcedure
     .input(manualReportPageSchema)
@@ -485,6 +492,14 @@ export const businessBankingRouter = createTRPCRouter({
       )),
       statusSocketUrl: manualPaymentStatusSocketUrl(),
     })),
+  pendingReportCount: protectedProcedure
+    .input(z.void())
+    .query(async ({ ctx }) => {
+      assertCanOperateOrders(ctx.tenantContext.membership.role)
+      return mapped(async () =>
+        countPendingManualPaymentReportBadge(ctx.db, await orderScope(ctx)),
+      )
+    }),
   pendingReports: protectedProcedure
     .input(manualReportPageSchema)
     .query(async ({ ctx, input }) => {

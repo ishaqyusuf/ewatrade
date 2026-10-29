@@ -972,6 +972,19 @@ export async function readManualPaymentReport(
     receiptExtraction: manualReceiptExtractionProjection(assessment),
   }
 }
+export async function countPendingManualPaymentReportBadge(
+  db: PrismaClient,
+  scope: Prisma.CommercialOrderWhereInput,
+) {
+  const rows = await db.manualPaymentReport.findMany({
+    where: { status: "SUBMITTED", link: { order: scope } },
+    select: { id: true },
+    orderBy: { id: "desc" },
+    take: 5,
+  })
+  return { count: rows.length }
+}
+
 export async function pendingManualPaymentReports(
   db: PrismaClient,
   input: {

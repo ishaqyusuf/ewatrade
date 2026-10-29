@@ -6,10 +6,10 @@ Tickets refer to the Brain plan `.brain/plans/2026-10-09-assistant-business-oper
 
 ## Summary
 
-- Router procedures: 768 (581 merchant, 187 public/account/internal)
+- Router procedures: 771 (584 merchant, 187 public/account/internal)
 - Merchant supported by a capability: 177
 - Merchant planned: 135
-- Merchant form-only: 207
+- Merchant form-only: 210
 - Merchant excluded: 62
 - Capabilities: 165 (87 read, 78 write)
 
@@ -422,10 +422,12 @@ track conversational evaluation separately from these source test links.
 | `businessBanking.createPaymentLink` | mutation | orders | sales | supported | sales.payment_links.create |
 | `businessBanking.linkCandidates` | query | read | sales | supported | sales.payment_links.read |
 | `businessBanking.markNotificationChangesRead` | mutation | read | sales | form_only | Manual bank instructions, customer reports and merchant receipt confirmation use the payment-link/review forms. Customer evidence never authorizes a payment; no model or WhatsApp payment approval is enabled. |
+| `businessBanking.notificationChangeCount` | query | read | sales | form_only | Manual bank instructions, customer reports and merchant receipt confirmation use the payment-link/review forms. Customer evidence never authorizes a payment; no model or WhatsApp payment approval is enabled. |
 | `businessBanking.notificationChanges` | query | read | sales | form_only | Manual bank instructions, customer reports and merchant receipt confirmation use the payment-link/review forms. Customer evidence never authorizes a payment; no model or WhatsApp payment approval is enabled. |
 | `businessBanking.notificationEligibility` | query | Owner/Admin only | sales | form_only | Manual bank instructions, customer reports and merchant receipt confirmation use the payment-link/review forms. Customer evidence never authorizes a payment; no model or WhatsApp payment approval is enabled. |
 | `businessBanking.notificationSettings` | query | Owner/Admin only | sales | form_only | Manual bank instructions, customer reports and merchant receipt confirmation use the payment-link/review forms. Customer evidence never authorizes a payment; no model or WhatsApp payment approval is enabled. |
 | `businessBanking.orderCustomerFunds` | query | Owner/Admin only | sales | form_only | Manual bank instructions, customer reports and merchant receipt confirmation use the payment-link/review forms. Customer evidence never authorizes a payment; no model or WhatsApp payment approval is enabled. |
+| `businessBanking.pendingReportCount` | query | read | sales | form_only | Manual bank instructions, customer reports and merchant receipt confirmation use the payment-link/review forms. Customer evidence never authorizes a payment; no model or WhatsApp payment approval is enabled. |
 | `businessBanking.pendingReports` | query | read | sales | form_only | Manual bank instructions, customer reports and merchant receipt confirmation use the payment-link/review forms. Customer evidence never authorizes a payment; no model or WhatsApp payment approval is enabled. |
 | `businessBanking.report` | query | read | sales | form_only | Manual bank instructions, customer reports and merchant receipt confirmation use the payment-link/review forms. Customer evidence never authorizes a payment; no model or WhatsApp payment approval is enabled. |
 | `businessBanking.retryAlert` | mutation | Owner/Admin only | sales | form_only | Manual bank instructions, customer reports and merchant receipt confirmation use the payment-link/review forms. Customer evidence never authorizes a payment; no model or WhatsApp payment approval is enabled. |
@@ -952,6 +954,7 @@ track conversational evaluation separately from these source test links.
 | `storefrontRequests.confirmOrder` | mutation | orders | sales | form_only | Website requests inbox: staff review of customer-submitted storefront order and service requests. Confirmation composes the canonical Commercial Order writer with the authenticated staff actor; quotes reuse canonical service quote commands. Customer intent comes only from the storefront form; no model authority. |
 | `storefrontRequests.counts` | query | read | sales | form_only | Website requests inbox: staff review of customer-submitted storefront order and service requests. Confirmation composes the canonical Commercial Order writer with the authenticated staff actor; quotes reuse canonical service quote commands. Customer intent comes only from the storefront form; no model authority. |
 | `storefrontRequests.issueServiceQuote` | mutation | Owner/Admin only | sales | form_only | Website requests inbox: staff review of customer-submitted storefront order and service requests. Confirmation composes the canonical Commercial Order writer with the authenticated staff actor; quotes reuse canonical service quote commands. Customer intent comes only from the storefront form; no model authority. |
+| `storefrontRequests.notificationCount` | query | Owner/Admin only | sales | form_only | Website requests inbox: staff review of customer-submitted storefront order and service requests. Confirmation composes the canonical Commercial Order writer with the authenticated staff actor; quotes reuse canonical service quote commands. Customer intent comes only from the storefront form; no model authority. |
 | `storefrontRequests.notifications` | query | Owner/Admin only | sales | form_only | Website requests inbox: staff review of customer-submitted storefront order and service requests. Confirmation composes the canonical Commercial Order writer with the authenticated staff actor; quotes reuse canonical service quote commands. Customer intent comes only from the storefront form; no model authority. |
 | `storefrontRequests.order` | query | read | sales | form_only | Website requests inbox: staff review of customer-submitted storefront order and service requests. Confirmation composes the canonical Commercial Order writer with the authenticated staff actor; quotes reuse canonical service quote commands. Customer intent comes only from the storefront form; no model authority. |
 | `storefrontRequests.orders` | query | read | sales | form_only | Website requests inbox: staff review of customer-submitted storefront order and service requests. Confirmation composes the canonical Commercial Order writer with the authenticated staff actor; quotes reuse canonical service quote commands. Customer intent comes only from the storefront form; no model authority. |

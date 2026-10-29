@@ -6,6 +6,7 @@ import {
   acceptServiceQuote,
   confirmStorefrontOrderRequest,
   countPendingStorefrontRequests,
+  countStorefrontNotifications,
   getStorefrontOrderRequestForStaff,
   issueStorefrontServiceQuote,
   listStorefrontNotifications,
@@ -83,6 +84,10 @@ function mapError(error: unknown): never {
 }
 
 export const storefrontRequestsRouter = createTRPCRouter({
+  notificationCount: protectedProcedure.input(z.void()).query(({ ctx }) => {
+    assertCanOperateOrders(ctx.tenantContext.membership.role)
+    return countStorefrontNotifications(ctx.db, scope(ctx))
+  }),
   notifications: protectedProcedure.query(({ ctx }) => {
     assertCanOperateOrders(ctx.tenantContext.membership.role)
     return listStorefrontNotifications(ctx.db, scope(ctx))

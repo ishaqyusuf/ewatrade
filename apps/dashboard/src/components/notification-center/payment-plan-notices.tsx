@@ -15,7 +15,7 @@ import {
   WhatsappIcon,
 } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
-import { useMutation, useQuery } from "@tanstack/react-query"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import Link from "next/link"
 
 /**
@@ -54,6 +54,7 @@ export function PaymentPlanNotices({
   bookId?: string
 }) {
   const trpc = useTRPC()
+  const queryClient = useQueryClient()
   const notices = usePaymentPlanNotices()
   // The book Money accounts opens on. Unknown (loading, no access) never deep-links.
   const book = useQuery(
@@ -65,7 +66,14 @@ export function PaymentPlanNotices({
   const currentBookId = bookId ?? book.data?.id
   const dismiss = useMutation(
     trpc.businessBanking.markNotificationChangesRead.mutationOptions({
-      onSettled: () => void notices.refetch(),
+      onSettled: async () => {
+        await Promise.all([
+          notices.refetch(),
+          queryClient.invalidateQueries({
+            queryKey: trpc.businessBanking.notificationChangeCount.pathKey(),
+          }),
+        ])
+      },
     }),
   )
   const items = notices.isSuccess

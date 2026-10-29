@@ -249,6 +249,14 @@ credentials and error text are excluded. Background requests can share a window;
 server-to-server reads are invisible to the browser. Missing phase evidence is not
 zero SQL work, and overlapping work durations are not additive page latency.
 
+For a permitted existing QA Owner profile, add `QA_WEB_NOTIFICATION_COUNTS=true`
+to that local artifact command to verify the three compact closed-bell responses,
+absence of closed private-preview requests, and open/read/close behavior. A private
+notification-bell.png is captured outside navigation timings. It submits no read
+acknowledgement or other business command. The opt-in requires the canonical local
+host plus navigation artifacts; profiles denied an existing notification domain
+must not be used to manufacture a passing count result.
+
 With PERFORMANCE_TRACE enabled, streamed tRPC JSONL/SSE responses expose only
 `ew_responseSetup` in response headers. Full numeric request/phase facts are emitted
 in the fixed server trace when the body completes, errors or is cancelled; cancelled

@@ -16,8 +16,8 @@ Midday adoption is incomplete across owners, rather than absent. Request-local
 reuse, streaming/scheduling, retained tabs, hidden-reader controls and optional
 delivery have implemented slices. Those are not blanket acceptance of every
 route or proof that refresh latency is solved. Latest development smoke still
-measures Catalog refresh2510ms and warm Catalog841ms; Overview transitions are
-2484ms/warm1360ms in that run. Initial post-login shell6323ms remains slow. Sparse, uncontrolled
+measures Catalog refresh2731ms and warm Catalog831ms; Overview transitions are
+1045ms/warm1016ms in that run. Initial post-login shell5518ms remains slow. Sparse, uncontrolled
 observations cannot establish production performance, a causal speedup or p95.
 
 | Phase | Tickets | Accepted | Remaining outcome |
@@ -630,3 +630,36 @@ connection absent and poolBusy1/314.4ms, exposing saturated-start checkout; no
 causal/p95/optimized claim. Next: correlate simultaneous reads and critical-path
 scope/SQL before pool-size changes. No manual restart/switch/deployment/business
 submission. Existing3cf optimized build preserved; accepted3/27 unchanged.
+
+
+## Closed bell count projections — DP-103/204/407
+
+Shared bell reads full private payment/plan/website previews on every dashboard
+page while closed. Replace those three owners with count projections; preserve
+personal count, full open-panel readers, exact current authority and badge meaning.
+
+- [x] Website: same unread Tenant/Store/actor count, no preview SELECT.
+- [x] Plan notices: same fresh audience and unread count, no notice rows.
+- [x] Pending payment: same scope/SUBMITTED predicate, onlyfive IDs, capped meaning.
+- [x] Protected void inputs and same read allowlists/refusals; no command/tool grant.
+- [x] Actual mounted bell starts previews only on open and stops on close. Reuse
+  private generations, focus/error/cancellation and30s/60s cadence; affected command
+  callbacks refresh new numeric keys alongside existing owners.
+- [x] Final focused/API/types/source/H01/H02, existing-data UI and frozen smoke;
+  commit only owned source/receipt/Brain. Prepared3cf optimized build preserved.
+
+[Receipt](../verification/2026-10-30-dashboard-notification-counts.md). Broader
+query lifetime/concurrency and optimized family acceptance remain; overall3/27.
+
+
+Executed: count/full readers9/28, actual mounted bell/hooks37/142, protected API/
+existing staff14/63, full Dashboard/API production+owned-test types and owned
+fast237/1533+QA types/Biome pass. H01 current/H02 API/permissions/client/domain,
+0capability/3procedure changes. Three existing driver checks pass. Frozen-source
+local canonical smoke plus opt-in actual count response/closed-preview/open/close
+checks pass, runtime unverified; no acknowledgements/business submissions. Private
+screenshot confirms existing website preview and current Catalog. IAB controller
+was unavailable; headless desktop browser used. Dev refresh2731ms, Catalog warm
+831ms/Overview warm1016ms, initial post-login5518ms: no causal speedup/p95 claim.
+PoolBusy2/524.8ms keeps shared concurrency/critical path priority. No manual restart,
+runtime switch or deployment. Full program3/27 accepted remains unchanged.

@@ -32,6 +32,48 @@ export function useUnreadBusinessNotificationCount() {
   )
 }
 
+export function usePendingPaymentReportCount() {
+  const trpc = useTRPC()
+  const [mount] = useState(nextReadMount)
+  return useQuery(
+    mountOwnedRead(
+      trpc.businessBanking.pendingReportCount.queryOptions(undefined, {
+        ...notificationReadOptions,
+        refetchInterval: (query) => readPollInterval(query.state.error, 30_000),
+      }),
+      mount,
+    ),
+  )
+}
+
+export function usePaymentPlanNoticeCount() {
+  const trpc = useTRPC()
+  const [mount] = useState(nextReadMount)
+  return useQuery(
+    mountOwnedRead(
+      trpc.businessBanking.notificationChangeCount.queryOptions(undefined, {
+        ...notificationReadOptions,
+        refetchInterval: (query) => readPollInterval(query.state.error, 60_000),
+      }),
+      mount,
+    ),
+  )
+}
+
+export function useStorefrontRequestNotificationCount() {
+  const trpc = useTRPC()
+  const [mount] = useState(nextReadMount)
+  return useQuery(
+    mountOwnedRead(
+      trpc.storefrontRequests.notificationCount.queryOptions(undefined, {
+        ...notificationReadOptions,
+        refetchInterval: (query) => readPollInterval(query.state.error, 60_000),
+      }),
+      mount,
+    ),
+  )
+}
+
 export function usePendingPaymentReports() {
   const trpc = useTRPC()
   const [mount] = useState(nextReadMount)

@@ -1,0 +1,78 @@
+{
+  "version": 1,
+  "id": "2026-10-30-dashboard-notification-counts",
+  "tickets": ["H01", "H02"],
+  "summary": "Local dashboard closed bell reads numeric projections rather than full private previews; open panels keep existing fresh full readers. No deployment.",
+  "noAssistantImpact": "Three UI-only count queries under existing form-only banking/website-request wildcard classifications. No assistant tool/capability/write/rollout or provider action. Same fresh protected context, order visibility, audience/recipient/account and unread scope. New banking count paths mirror only existing read allowlist; website scoped-staff refusal is retained. Payment badge remains capped atfive visible claims. Command/review authority and full DTOs stay unchanged.",
+  "capabilities": [],
+  "procedures": [
+    {
+      "path": "businessBanking.pendingReportCount",
+      "status": "form_only",
+      "reason": "Private notification bell presentation only; existing current scope and domain admission, no model operation."
+    },
+    {
+      "path": "businessBanking.notificationChangeCount",
+      "status": "form_only",
+      "reason": "Private notification bell presentation only; existing current scope and domain admission, no model operation."
+    },
+    {
+      "path": "storefrontRequests.notificationCount",
+      "status": "form_only",
+      "reason": "Private notification bell presentation only; existing current scope and domain admission, no model operation."
+    }
+  ],
+  "docs": [
+    {
+      "topic": "feature",
+      "status": "local_only",
+      "path": ".brain/features/web-navigation-performance.md"
+    },
+    {
+      "topic": "api",
+      "status": "local_only",
+      "path": ".brain/api/contracts.md"
+    },
+    {
+      "topic": "permissions",
+      "status": "local_only",
+      "path": ".brain/api/permissions.md"
+    },
+    {
+      "topic": "capability",
+      "status": "updated",
+      "path": "packages/assistant/src/capabilities/COVERAGE.md"
+    },
+    {
+      "topic": "schema",
+      "status": "not_applicable",
+      "note": "No schema or migration change."
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "test",
+      "path": "packages/db/src/queries/notification-badge-counts.test.ts",
+      "executed": true,
+      "result": "Actual count/full readers with inert query ports:9 tests/28 assertions pass after preview-cost failures. Numeric/count-only/cappedfive IDs; exact unread predicate parity; current audience/recipient/Store/creator scope, missing/revoked/unassigned refusal and error propagation."
+    },
+    {
+      "kind": "test",
+      "path": "apps/dashboard/src/hooks/use-business-notification-reads.test.tsx",
+      "executed": true,
+      "result": "Actual mounted bell/hooks and QueryClient:37 tests/142 assertions pass. Closed bell starts only count reads; full previews start on open and stop on close. Existing/new intervals, focus pause/recovery, transient errors, access-refusal clearing, mount keys, canonical input and cancellation covered. Socket/transport and presentation primitives inert; no business submission."
+    },
+    {
+      "kind": "test",
+      "path": "apps/api/src/trpc/routers/notification-badge-counts.test.ts",
+      "executed": true,
+      "result": "Actual protected API and existing staff suite14 tests/63 assertions pass. Numeric DTOs, current Tenant/Store and sales visibility, strict input, missing identity/denied role/foreign QA/revoked Store and unchanged website scoped-staff refusal. Inert DB ports/unreachable URL; no external calls."
+    },
+    {
+      "kind": "run",
+      "path": "docs/verification/2026-10-30-dashboard-notification-counts.md",
+      "executed": true,
+      "result": "Full Dashboard/API production+owned-test types, owned fast237/1533 plus QA tooling/Biome, H01 current and3existing driver checks pass. Frozen-source canonical local smoke plus actual numeric response/no closed preview/open-read-close assertions pass. Existing QA website preview visibly loaded; no acknowledgement/business action. Runtime unverified; dev Catalog refresh2731ms/warm831ms, no causal/p95/optimized claim. Prepared3cf manifests preserved; no manual restart/switch/deployment."
+    }
+  ]
+}

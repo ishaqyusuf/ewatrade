@@ -285,6 +285,29 @@ async function noticeAudience(
     books: new Map(allowed.map((s) => [s.accountId, s.account.bookId])),
   }
 }
+export async function countPaymentNotificationChanges(
+  db: DbClient,
+  input: { tenantId: string; actorUserId: string },
+) {
+  const audience = await noticeAudience(db, input)
+  return {
+    unreadCount: await db.paymentNotificationNotice.count({
+      where: unreadNoticeWhere(input.tenantId, audience),
+    }),
+  }
+}
+
+function unreadNoticeWhere(
+  tenantId: string,
+  audience: { membershipId: string; accountIds: string[] },
+) {
+  return {
+    tenantId,
+    accountIds: { hasSome: audience.accountIds },
+    reads: { none: { membershipId: audience.membershipId, tenantId } },
+  }
+}
+
 export async function listPaymentNotificationChanges(
   db: DbClient,
   input: {
@@ -324,15 +347,7 @@ export async function listPaymentNotificationChanges(
       },
     }),
     db.paymentNotificationNotice.count({
-      where: {
-        ...where,
-        reads: {
-          none: {
-            membershipId: audience.membershipId,
-            tenantId: input.tenantId,
-          },
-        },
-      },
+      where: unreadNoticeWhere(input.tenantId, audience),
     }),
   ])
   return {

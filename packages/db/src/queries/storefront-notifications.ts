@@ -6,13 +6,25 @@ type Scope = {
   actorUserId: string
 }
 
-/** The request outbox is durable even when external delivery is unavailable. */
-export async function listStorefrontNotifications(db: DbClient, scope: Scope) {
-  const where = {
+export async function countStorefrontNotifications(db: DbClient, scope: Scope) {
+  return {
+    unreadCount: await db.storefrontMerchantAlert.count({
+      where: unreadWhere(scope),
+    }),
+  }
+}
+
+function unreadWhere(scope: Scope) {
+  return {
     tenantId: scope.tenantId,
     storeId: { in: [...scope.storeIds] },
     NOT: { readByUserIds: { has: scope.actorUserId } },
   }
+}
+
+/** The request outbox is durable even when external delivery is unavailable. */
+export async function listStorefrontNotifications(db: DbClient, scope: Scope) {
+  const where = unreadWhere(scope)
   const [unreadCount, alerts] = await Promise.all([
     db.storefrontMerchantAlert.count({ where }),
     db.storefrontMerchantAlert.findMany({

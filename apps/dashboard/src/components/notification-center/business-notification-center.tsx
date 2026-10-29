@@ -5,9 +5,9 @@ import { ActivityViewerProvider } from "@/components/activity/activity-viewer"
 import { useActivityParams } from "@/hooks/use-activity-params"
 import {
   notificationReadOptions,
-  usePaymentPlanNotices,
-  usePendingPaymentReports,
-  useStorefrontRequestNotifications,
+  usePaymentPlanNoticeCount,
+  usePendingPaymentReportCount,
+  useStorefrontRequestNotificationCount,
   useUnreadBusinessNotificationCount,
 } from "@/hooks/use-business-notification-reads"
 import { useTRPC } from "@/trpc/client"
@@ -51,14 +51,14 @@ export function BusinessNotificationCenter({
   const count = useUnreadBusinessNotificationCount()
   const alerts = count.isSuccess ? count.data.count : 0
   // Customer payment claims waiting for a check also light the bell.
-  const payments = usePendingPaymentReports()
+  const payments = usePendingPaymentReportCount()
   // So do unread payment alert plan changes.
-  const planNotices = usePaymentPlanNotices()
+  const planNotices = usePaymentPlanNoticeCount()
   // And unread website requests; only this read polls.
-  const requests = useStorefrontRequestNotifications({ poll: true })
+  const requests = useStorefrontRequestNotificationCount()
   const unread =
     alerts +
-    (payments.isSuccess ? payments.data.items.length : 0) +
+    (payments.isSuccess ? payments.data.count : 0) +
     (planNotices.isSuccess ? planNotices.data.unreadCount : 0) +
     (requests.isSuccess ? requests.data.unreadCount : 0)
 
