@@ -67,14 +67,15 @@ authority remain unchanged.
   and compatible-total inputs. Prefetching all panels is a DP-409 activation question.
 - Service and prescription reports use the current parsed range/Store. Their separate
   previous-period client read is additional work, not a mismatch of the current key.
-- Services currently prefetches manager request forms and up to 100 requests on the
-  default work tab, even though those consumers mount for request-related UI. It also
-  prefetches the work queue when the requests tab is selected. DP-103/204/406 should
-  align these reads with typed URL activation rather than changing permission checks.
+- Services originally prefetched manager request forms/requests on Work and the Work
+  queue on Requests. The follow-up now uses the same typed URL parsers as the client:
+  only the authorized selected table and open-sheet dependencies are prefetched.
+  Actual route tests and existing-data views pass; full DP-406 acceptance remains.
 - Finance book ID is a real dependency for the selected bank/supplier/spending list.
   Corresponding trimmed filters, sort and limit 30 match their client directories.
-  Table/view settings are currently awaited before the book read; overlap independent
-  reads under DP-103. Do not fetch an unselected financial view speculatively.
+  Table/view settings and the book now start together after admission, verified by
+  holding the settings reads pending at the actual route boundary. Unselected
+  financial lists are still not prefetched. Full DP-405 runtime acceptance remains.
 - Prescription access uses the explicit workspace-access result to decide which
   queue/setup reads are admitted. Preserve access-before-data ordering and exact Store
   scope. Do not parallelize protected data ahead of that decision.

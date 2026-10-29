@@ -34,20 +34,14 @@ export async function FinanceRoute({
   )
     redirect("/")
   const queryClient = getQueryClient()
-  const initialTableSettings =
-    view === "spending" || view === "suppliers" || view === "bank"
-      ? await getInitialTableSettings(
-          view === "bank"
-            ? "finance-bank-statements"
-            : view === "suppliers"
-              ? "finance-suppliers"
-              : "expenses",
-          {
-            userId: session.user.id,
-            tenantId: tenant.tenant.id,
-          },
-        )
-      : undefined
+  const tableId =
+    view === "bank"
+      ? "finance-bank-statements"
+      : view === "suppliers"
+        ? "finance-suppliers"
+        : view === "spending"
+          ? "expenses"
+          : undefined
   const directoryPageIds: FinanceDirectoryPageId[] =
     view === "spending"
       ? ["expenses"]
@@ -58,21 +52,18 @@ export async function FinanceRoute({
           : view === "bank"
             ? ["finance-bank-statements"]
             : []
-  const initialViewSettings = Object.fromEntries(
-    await Promise.all(
+  const identity = { userId: session.user.id, tenantId: tenant.tenant.id }
+  const [initialTableSettings, viewEntries, book] = await Promise.all([
+    tableId ? getInitialTableSettings(tableId, identity) : undefined,
+    Promise.all(
       directoryPageIds.map(
         async (pageId) =>
-          [
-            pageId,
-            await getInitialDirectoryView(pageId, {
-              userId: session.user.id,
-              tenantId: tenant.tenant.id,
-            }),
-          ] as const,
+          [pageId, await getInitialDirectoryView(pageId, identity)] as const,
       ),
     ),
-  )
-  const book = await queryClient.fetchQuery(trpc.finance.book.queryOptions())
+    queryClient.fetchQuery(trpc.finance.book.queryOptions()),
+  ])
+  const initialViewSettings = Object.fromEntries(viewEntries)
   if (book && view === "bank") {
     const filter = await loadFinanceBankFilterParams((await searchParams) ?? {})
     void queryClient.prefetchInfiniteQuery(

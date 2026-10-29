@@ -1,5 +1,6 @@
 import { ServiceJobsPage } from "@/components/dashboard/service-jobs-page"
 import { ServiceWorkTableSkeleton } from "@/components/tables/service-work/skeleton"
+import { loadServiceWorkParams } from "@/hooks/service-work-params"
 import {
   getTableSort,
   loadSortParams,
@@ -53,6 +54,7 @@ export default async function ServicesRoutePage({
     redirect("/setup")
   }
   const params = await searchParams
+  const state = loadServiceWorkParams(params)
   const filter = await loadServiceWorkFilterParams(params)
   const sort = getTableSort(
     (await loadSortParams(params)).sort,
@@ -65,28 +67,44 @@ export default async function ServicesRoutePage({
   ])
   const queryClient = getQueryClient()
   const canManage = canManageSalesReports(ctx.membership.role)
+  const showRequests = canManage && state.serviceTab === "requests"
+  const requestDetailOpen =
+    canManage &&
+    Boolean(state.requestId) &&
+    (state.serviceSheet === "customer_request" ||
+      state.serviceSheet === "quote")
   void Promise.allSettled([
-    ...(params.serviceSheet === "intake" || params.serviceSheet === "request"
+    ...(state.serviceSheet === "intake" ||
+    (canManage && state.serviceSheet === "request")
       ? [prefetch(trpc.catalog.listItems.queryOptions({ kind: "service" }))]
       : []),
-    queryClient.prefetchInfiniteQuery(
-      trpc.services.queuePage.infiniteQueryOptions(
-        {
-          ...getServiceWorkQueuePageInput(filter),
-          storeId: store.id,
-          sort: sort ?? { field: "createdAt", direction: "desc" },
-        },
-        {
-          getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
-          retry: false,
-        },
-      ),
-    ),
-    ...(canManage
+    ...(!showRequests
+      ? [
+          queryClient.prefetchInfiniteQuery(
+            trpc.services.queuePage.infiniteQueryOptions(
+              {
+                ...getServiceWorkQueuePageInput(filter),
+                storeId: store.id,
+                sort: sort ?? { field: "createdAt", direction: "desc" },
+              },
+              {
+                getNextPageParam: (lastPage) =>
+                  lastPage.nextCursor ?? undefined,
+                retry: false,
+              },
+            ),
+          ),
+        ]
+      : []),
+    ...(canManage && state.serviceSheet === "request"
       ? [
           prefetch(
             trpc.serviceAccess.requestForms.queryOptions({ storeId: store.id }),
           ),
+        ]
+      : []),
+    ...(showRequests || requestDetailOpen
+      ? [
           prefetch(
             trpc.serviceAccess.requests.queryOptions({
               limit: 100,

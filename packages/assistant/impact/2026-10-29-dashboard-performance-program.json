@@ -58,6 +58,12 @@
       "path": "docs/verification/2026-10-29-dashboard-deferred-forms.md",
       "executed": true,
       "result": "Catalog/Finance heavy bodies deferred behind existing open conditions. Dashboard types, optimized build and owned fast220/1481 pass. Existing-data Catalog open/close/focus/Back and Finance deep-link/cancel pass; no business submission. Other sheet families and optimized-runtime timings remain open."
+    },
+    {
+      "kind": "test",
+      "path": "apps/dashboard/src/components/finance/route-read-scheduling.test.tsx",
+      "executed": true,
+      "result": "Actual Finance/Services route tests reproduced6 scheduling failures before repair;11 tests/20 assertions now pass with real QueryClient. Finance starts book alongside pending display reads; Services only prefetches the selected authorized tab and open-sheet dependencies. Signed-out/role/Store admission and filter/cursor bounds remain."
     }
   ]
 }

@@ -206,3 +206,16 @@ and commit owned coherent slices. Preserve all original27 requirements across tu
   submissions; Finance retains replace-history close behavior. Other families,
   chunk-failure behavior and optimized-runtime measurement remain open. Overall
   accepted count remains3/27 (11.1%). [Receipt](../verification/2026-10-29-dashboard-deferred-forms.md).
+
+- DP-103/204 partial: real route tests reproduced6 failures, then11/20 pass.
+  Finance book and independent scoped display preferences now start together after
+  admission. Services Work prefetches1 data endpoint instead of3; Requests omits
+  the hidden Work queue. Shared typed URL parsers preserve role/default/sheet and
+  filter semantics. Open sheet dependencies retain bounded reads. Existing URL
+  tests2/9, owned fast220/1481, Dashboard types/build and actual existing-data views
+  pass. Loaded Services tab revisits95/125ms, Work refresh2613ms, Requests refresh
+ 12206ms, Finance summary refresh5979ms: small development samples, initial loads
+  remain above target. Shared API window includes substantial context/pool waits;
+  no endpoint-level attribution or causal speedup claim. DP-103/204 and program
+  count3/27 stay open until the remaining scheduling/runtime evidence is complete.
+  [Receipt](../verification/2026-10-29-dashboard-route-scheduling.md).

@@ -1,35 +1,18 @@
 "use client"
 
 import { useQueryStates } from "nuqs"
-import { parseAsString, parseAsStringEnum } from "nuqs/server"
-import {
-  type SERVICE_DUE_FILTERS,
-  type SERVICE_PRIORITY_FILTERS,
-  type SERVICE_STAGE_FILTERS,
-  type ServiceWorkFilters,
-  serviceWorkFilterParams,
+import { type ServiceSheetMode, serviceWorkParams } from "./service-work-params"
+import type {
+  SERVICE_DUE_FILTERS,
+  SERVICE_PRIORITY_FILTERS,
+  SERVICE_STAGE_FILTERS,
+  ServiceWorkFilters,
 } from "./use-service-work-filter-params"
 
-export const SERVICE_SHEET_MODES = [
-  "customer_request",
-  "intake",
-  "job",
-  "quote",
-  "request",
-  "settings",
-] as const
-
-export type ServiceSheetMode = (typeof SERVICE_SHEET_MODES)[number]
-
-const serviceWorkParams = {
-  serviceTab: parseAsStringEnum(["work", "requests"]).withDefault("work"),
-  jobId: parseAsString,
-  /** A step inside the job sheet, e.g. "pay" or "split:<lineId>". */
-  jobStep: parseAsString,
-  requestId: parseAsString,
-  serviceSheet: parseAsStringEnum([...SERVICE_SHEET_MODES]),
-  ...serviceWorkFilterParams,
-}
+export {
+  SERVICE_SHEET_MODES,
+  type ServiceSheetMode,
+} from "./service-work-params"
 
 export function useServiceWorkParams() {
   const [params, updateParams] = useQueryStates(serviceWorkParams)
