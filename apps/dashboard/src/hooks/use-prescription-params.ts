@@ -44,7 +44,7 @@ const PRESCRIPTION_SHEET_MODE_BY_STATUS = {
   withdrawn: "details",
 } satisfies Record<PrescriptionRequestStatus, PrescriptionSheetMode>
 
-const prescriptionParamsSchema = {
+export const prescriptionParamsSchema = {
   prescriptionId: parseAsString,
   prescriptionSheet: parseAsStringEnum(PRESCRIPTION_SHEET_MODES),
 }

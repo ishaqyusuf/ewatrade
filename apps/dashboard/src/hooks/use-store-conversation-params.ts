@@ -12,7 +12,7 @@ const requestKinds = [
   "prescription_request",
 ] as const
 
-const storeConversationParams = {
+export const storeConversationParams = {
   assignment: parseAsStringEnum([
     "all",
     "unassigned",

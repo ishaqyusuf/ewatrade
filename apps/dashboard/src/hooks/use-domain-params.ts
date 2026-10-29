@@ -14,7 +14,7 @@ export type DomainSheetMode = (typeof domainSheetModes)[number]
 export const domainPurchaseSteps = ["search", "owner", "review"] as const
 export type DomainPurchaseStep = (typeof domainPurchaseSteps)[number]
 
-const domainParams = {
+export const domainParams = {
   domainId: parseAsString,
   domainMode: parseAsStringLiteral(domainSheetModes),
   domainOrderId: parseAsString,

@@ -4,10 +4,14 @@ import { useQueryStates } from "nuqs"
 import { parseAsString, parseAsStringEnum } from "nuqs/server"
 import { type OrderFilters, orderFilterParams } from "./use-order-filter-params"
 
+export const orderSheetParams = {
+  orderSheet: parseAsStringEnum(["create", "details"] as const),
+  orderId: parseAsString,
+}
+
 export function useOrderParams() {
   const [params, setParams] = useQueryStates({
-    orderSheet: parseAsStringEnum(["create", "details"] as const),
-    orderId: parseAsString,
+    ...orderSheetParams,
     ...orderFilterParams,
   })
   const filter: OrderFilters = {

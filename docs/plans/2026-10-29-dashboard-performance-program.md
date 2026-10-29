@@ -365,3 +365,40 @@ auth1478.6ms/context2380.1ms; pool1760.6ms remains substantial. No controlled ra
 optimized acceptance or runtime identity claim. No restart/runtime switch/deploy.
 Broader DP-103/context/pool work remains; program3/27 (11.1%) unchanged.
 [Evidence](../verification/2026-10-29-dashboard-auth-session-joins.md).
+
+### Global sheet delivery contract (DP-301/302, implementation follow-up)
+
+Current hydrated GlobalSheets statically imports41 sheet families; unopened
+controllers pull their feature graphs into ordinary navigation. Midday's global
+sheet provider preserves typed URL controllers and scope lifetime; EwaTrade keeps
+that ownership and adds demand-based delivery using existing next/dynamic. No
+redesign, command change or global cache policy is involved.
+
+- [x] Reproduce closed-family mounts at the actual GlobalSheets boundary. Cover
+  all41 typed deep-link intents, invalid modes, permission/path exclusions and
+  the assistant-owned Job exception; keep role/Store/access fingerprints intact.
+- [x] Split all41 family imports behind intent; retain an activated controller
+  through close/reopen in the same scope so existing dismissal/focus/draft owners
+  keep their lifecycle. Scope/permission changes still remove the owning subtree.
+- [x] Reuse canonical parsers/allowlists, including empty malformed target overlays
+  that must still show their existing refusal. Separate pure assistant object URL
+  constants from receipt orchestration imports; no new registry or polling runner.
+- [x] Prove loaded-controller retention, scope reset, no unopened imports/mounts,
+  actual assistant Job revocation and existing mounted private-reader policy. Run
+  focused/fast/types/build/impact and one existing-data browser window; compare
+  closed resource delivery without treating dev module bytes as optimized transfer.
+
+Full program3/27 remains until ticket acceptance is established; current bounded
+family/runtime evidence will be recorded independently from source conformance.
+
+Executed: actual boundary54/113 after48 initial failures; existing private-reader/
+Job entry checks5/30; AST conformance preserves existing factory access/path/props/
+keys/callbacks. Fast237/1533, full Dashboard types, optimized build/H02 and existing-QA
+Catalog tabs/deep-link refresh/close/reopen, Order detail and frozen-source smoke
+pass. Development Catalog refresh script responses77→52 and measured encoded bodies
+3240339→2282436 bytes (29.6% less); refresh4052ms remains above target. Warm Catalog
+862ms/Overview1167ms, shell retained,0 blocked business writes. No optimized transfer,
+causal page-speed or production claim. Remaining route-owned Inventory operation/
+audit/store/threshold, Sales create and Services Job/Request/Settings imports require
+inspection/correction before DP-301 acceptance. Program3/27 (11.1%) unchanged.
+[Evidence](../verification/2026-10-29-dashboard-global-sheet-delivery.md).

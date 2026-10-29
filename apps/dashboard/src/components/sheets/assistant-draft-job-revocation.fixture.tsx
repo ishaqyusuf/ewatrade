@@ -1,5 +1,5 @@
 import { beforeEach, expect, mock, test } from "bun:test"
-import type { ReactNode } from "react"
+import type { ComponentType, ReactNode } from "react"
 import { renderToStaticMarkup } from "react-dom/server"
 import {
   type DraftJobHandoff,
@@ -240,7 +240,26 @@ mock.module("./service-intake-sheet", () => ({
     return <output>NATIVE INTAKE</output>
   },
 }))
+// This fixture isolates admission/revocation with already-loaded sheet code.
+// The mounted activation suite separately exercises actual URL parsing/lifetimes.
+const sheetLoads: Promise<void>[] = []
+mock.module("@/hooks/use-global-sheet-intents", () => ({
+  useGlobalSheetIntents: () => new Proxy({}, { get: () => true }),
+}))
+mock.module("next/dynamic", () => ({
+  default: (load: () => Promise<ComponentType<Record<string, unknown>>>) => {
+    let Component: ComponentType<Record<string, unknown>> | undefined
+    sheetLoads.push(
+      load().then((loaded) => {
+        Component = loaded
+      }),
+    )
+    return (props: Record<string, unknown>) =>
+      Component ? <Component {...props} /> : null
+  },
+}))
 const { GlobalSheets } = await import("./global-sheets")
+await Promise.all(sheetLoads)
 function render(
   serviceIntake: boolean,
   serviceJobs = false,

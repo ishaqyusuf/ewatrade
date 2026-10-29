@@ -1,53 +1,272 @@
 "use client"
 import { CatalogAppearance } from "@/components/catalog-item/catalog-appearance"
-import { CatalogItemDetailModal } from "@/components/catalog-item/catalog-item-detail-modal"
-import { CatalogItemSheet } from "@/components/catalog-item/catalog-item-sheet"
 import { useAssistantDraftJobOverlay } from "@/hooks/use-assistant-draft-job-handoff"
 import { useCatalogItemParams } from "@/hooks/use-catalog-item-params"
 import { useServiceWorkParams } from "@/hooks/use-service-work-params"
 import { Button } from "@ewatrade/ui"
 import { usePathname } from "next/navigation"
 import { useState } from "react"
-import { CustomerRequestSheet } from "./customer-request-sheet"
-import { ServiceIntakeReceiptSheet } from "./service-intake-receipt-sheet"
-import { ServiceIntakeSheet } from "./service-intake-sheet"
-import { ServiceJobSheet } from "./service-job-sheet"
-import { ServiceWorkOriginalSheet } from "./service-work-original-sheet"
 
-import { BusinessNotificationPreferencesSheet } from "@/components/notification-center/business-notification-settings"
-import { ActivitySheet } from "./activity-sheet"
-import { AssistantBookingSheet } from "./assistant-booking-sheet"
-import { AssistantCashCountSheet } from "./assistant-cash-count-sheet"
-import { AssistantDayCloseSheet } from "./assistant-day-close-sheet"
-import { AssistantManualMessageSheet } from "./assistant-manual-message-sheet"
-import { AssistantQuoteApprovalSheet } from "./assistant-quote-approval-sheet"
-import { AssistantServiceRequestSheet } from "./assistant-service-request-sheet"
-import { BusinessReportSheet } from "./business-report-sheet"
-import { CloseoutSheet } from "./closeout-sheet"
-import { CustomerDetailsSheet } from "./customer-details-sheet"
-import { CustomerLedgerSheet } from "./customer-ledger-sheet"
-import { CustomerMessageSheet } from "./customer-message-sheet"
-import { DomainSheet } from "./domain-sheet"
-import { FinanceMovementDetailsSheet } from "./finance-movement-details-sheet"
-import { FinanceSheet } from "./finance-sheet"
-import { InventoryOperationDetailsSheet } from "./inventory-operation-details-sheet"
-import { OrderDetailsSheet } from "./order-details-sheet"
-import { PrescriptionRequestSheet } from "./prescription-request-sheet"
-import { PurchaseBillDetailsSheet } from "./purchase-bill-details-sheet"
-import { PurchaseRegistrationDetailsSheet } from "./purchase-registration-details-sheet"
-import { ReceiptSheet } from "./receipt-sheet"
-import { ServiceCommerceSheet } from "./service-commerce-sheet"
-import { StaffAccessSheet } from "./staff-access-sheet"
-import { StaffActivitySheet } from "./staff-activity-sheet"
-import { StaffDirectorySheet } from "./staff-directory-sheet"
-import { StaffHistorySheet } from "./staff-history-sheet"
-import { StaffInvitationSheet } from "./staff-invitation-sheet"
-import { StaffMemberSheet } from "./staff-member-sheet"
-import { StaffStatusSheet } from "./staff-status-sheet"
-import { StockCountSheet } from "./stock-count-sheet"
-import { StockTransferDetailsSheet } from "./stock-transfer-details-sheet"
-import { StoreConversationSheet } from "./store-conversation-sheet"
-import { StoreSettingsSheet } from "./store-settings-sheet"
+import { useGlobalSheetIntents } from "@/hooks/use-global-sheet-intents"
+import dynamic from "next/dynamic"
+import { ActivatedSheet, SheetCodeLoading } from "./activated-sheet"
+
+const CatalogItemDetailModal = dynamic(
+  () =>
+    import("@/components/catalog-item/catalog-item-detail-modal").then(
+      (module) => module.CatalogItemDetailModal,
+    ),
+  { loading: SheetCodeLoading },
+)
+const CatalogItemSheet = dynamic(
+  () =>
+    import("@/components/catalog-item/catalog-item-sheet").then(
+      (module) => module.CatalogItemSheet,
+    ),
+  { loading: SheetCodeLoading },
+)
+const CustomerRequestSheet = dynamic(
+  () =>
+    import("./customer-request-sheet").then(
+      (module) => module.CustomerRequestSheet,
+    ),
+  { loading: SheetCodeLoading },
+)
+const ServiceIntakeReceiptSheet = dynamic(
+  () =>
+    import("./service-intake-receipt-sheet").then(
+      (module) => module.ServiceIntakeReceiptSheet,
+    ),
+  { loading: SheetCodeLoading },
+)
+const ServiceIntakeSheet = dynamic(
+  () =>
+    import("./service-intake-sheet").then(
+      (module) => module.ServiceIntakeSheet,
+    ),
+  { loading: SheetCodeLoading },
+)
+const ServiceJobSheet = dynamic(
+  () => import("./service-job-sheet").then((module) => module.ServiceJobSheet),
+  { loading: SheetCodeLoading },
+)
+const ServiceWorkOriginalSheet = dynamic(
+  () =>
+    import("./service-work-original-sheet").then(
+      (module) => module.ServiceWorkOriginalSheet,
+    ),
+  { loading: SheetCodeLoading },
+)
+const BusinessNotificationPreferencesSheet = dynamic(
+  () =>
+    import(
+      "@/components/notification-center/business-notification-settings"
+    ).then((module) => module.BusinessNotificationPreferencesSheet),
+  { loading: SheetCodeLoading },
+)
+const ActivitySheet = dynamic(
+  () => import("./activity-sheet").then((module) => module.ActivitySheet),
+  { loading: SheetCodeLoading },
+)
+const AssistantBookingSheet = dynamic(
+  () =>
+    import("./assistant-booking-sheet").then(
+      (module) => module.AssistantBookingSheet,
+    ),
+  { loading: SheetCodeLoading },
+)
+const AssistantCashCountSheet = dynamic(
+  () =>
+    import("./assistant-cash-count-sheet").then(
+      (module) => module.AssistantCashCountSheet,
+    ),
+  { loading: SheetCodeLoading },
+)
+const AssistantDayCloseSheet = dynamic(
+  () =>
+    import("./assistant-day-close-sheet").then(
+      (module) => module.AssistantDayCloseSheet,
+    ),
+  { loading: SheetCodeLoading },
+)
+const AssistantManualMessageSheet = dynamic(
+  () =>
+    import("./assistant-manual-message-sheet").then(
+      (module) => module.AssistantManualMessageSheet,
+    ),
+  { loading: SheetCodeLoading },
+)
+const AssistantQuoteApprovalSheet = dynamic(
+  () =>
+    import("./assistant-quote-approval-sheet").then(
+      (module) => module.AssistantQuoteApprovalSheet,
+    ),
+  { loading: SheetCodeLoading },
+)
+const AssistantServiceRequestSheet = dynamic(
+  () =>
+    import("./assistant-service-request-sheet").then(
+      (module) => module.AssistantServiceRequestSheet,
+    ),
+  { loading: SheetCodeLoading },
+)
+const BusinessReportSheet = dynamic(
+  () =>
+    import("./business-report-sheet").then(
+      (module) => module.BusinessReportSheet,
+    ),
+  { loading: SheetCodeLoading },
+)
+const CloseoutSheet = dynamic(
+  () => import("./closeout-sheet").then((module) => module.CloseoutSheet),
+  { loading: SheetCodeLoading },
+)
+const CustomerDetailsSheet = dynamic(
+  () =>
+    import("./customer-details-sheet").then(
+      (module) => module.CustomerDetailsSheet,
+    ),
+  { loading: SheetCodeLoading },
+)
+const CustomerLedgerSheet = dynamic(
+  () =>
+    import("./customer-ledger-sheet").then(
+      (module) => module.CustomerLedgerSheet,
+    ),
+  { loading: SheetCodeLoading },
+)
+const CustomerMessageSheet = dynamic(
+  () =>
+    import("./customer-message-sheet").then(
+      (module) => module.CustomerMessageSheet,
+    ),
+  { loading: SheetCodeLoading },
+)
+const DomainSheet = dynamic(
+  () => import("./domain-sheet").then((module) => module.DomainSheet),
+  { loading: SheetCodeLoading },
+)
+const FinanceMovementDetailsSheet = dynamic(
+  () =>
+    import("./finance-movement-details-sheet").then(
+      (module) => module.FinanceMovementDetailsSheet,
+    ),
+  { loading: SheetCodeLoading },
+)
+const FinanceSheet = dynamic(
+  () => import("./finance-sheet").then((module) => module.FinanceSheet),
+  { loading: SheetCodeLoading },
+)
+const InventoryOperationDetailsSheet = dynamic(
+  () =>
+    import("./inventory-operation-details-sheet").then(
+      (module) => module.InventoryOperationDetailsSheet,
+    ),
+  { loading: SheetCodeLoading },
+)
+const OrderDetailsSheet = dynamic(
+  () =>
+    import("./order-details-sheet").then((module) => module.OrderDetailsSheet),
+  { loading: SheetCodeLoading },
+)
+const PrescriptionRequestSheet = dynamic(
+  () =>
+    import("./prescription-request-sheet").then(
+      (module) => module.PrescriptionRequestSheet,
+    ),
+  { loading: SheetCodeLoading },
+)
+const PurchaseBillDetailsSheet = dynamic(
+  () =>
+    import("./purchase-bill-details-sheet").then(
+      (module) => module.PurchaseBillDetailsSheet,
+    ),
+  { loading: SheetCodeLoading },
+)
+const PurchaseRegistrationDetailsSheet = dynamic(
+  () =>
+    import("./purchase-registration-details-sheet").then(
+      (module) => module.PurchaseRegistrationDetailsSheet,
+    ),
+  { loading: SheetCodeLoading },
+)
+const ReceiptSheet = dynamic(
+  () => import("./receipt-sheet").then((module) => module.ReceiptSheet),
+  { loading: SheetCodeLoading },
+)
+const ServiceCommerceSheet = dynamic(
+  () =>
+    import("./service-commerce-sheet").then(
+      (module) => module.ServiceCommerceSheet,
+    ),
+  { loading: SheetCodeLoading },
+)
+const StaffAccessSheet = dynamic(
+  () =>
+    import("./staff-access-sheet").then((module) => module.StaffAccessSheet),
+  { loading: SheetCodeLoading },
+)
+const StaffActivitySheet = dynamic(
+  () =>
+    import("./staff-activity-sheet").then(
+      (module) => module.StaffActivitySheet,
+    ),
+  { loading: SheetCodeLoading },
+)
+const StaffDirectorySheet = dynamic(
+  () =>
+    import("./staff-directory-sheet").then(
+      (module) => module.StaffDirectorySheet,
+    ),
+  { loading: SheetCodeLoading },
+)
+const StaffHistorySheet = dynamic(
+  () =>
+    import("./staff-history-sheet").then((module) => module.StaffHistorySheet),
+  { loading: SheetCodeLoading },
+)
+const StaffInvitationSheet = dynamic(
+  () =>
+    import("./staff-invitation-sheet").then(
+      (module) => module.StaffInvitationSheet,
+    ),
+  { loading: SheetCodeLoading },
+)
+const StaffMemberSheet = dynamic(
+  () =>
+    import("./staff-member-sheet").then((module) => module.StaffMemberSheet),
+  { loading: SheetCodeLoading },
+)
+const StaffStatusSheet = dynamic(
+  () =>
+    import("./staff-status-sheet").then((module) => module.StaffStatusSheet),
+  { loading: SheetCodeLoading },
+)
+const StockCountSheet = dynamic(
+  () => import("./stock-count-sheet").then((module) => module.StockCountSheet),
+  { loading: SheetCodeLoading },
+)
+const StockTransferDetailsSheet = dynamic(
+  () =>
+    import("./stock-transfer-details-sheet").then(
+      (module) => module.StockTransferDetailsSheet,
+    ),
+  { loading: SheetCodeLoading },
+)
+const StoreConversationSheet = dynamic(
+  () =>
+    import("./store-conversation-sheet").then(
+      (module) => module.StoreConversationSheet,
+    ),
+  { loading: SheetCodeLoading },
+)
+const StoreSettingsSheet = dynamic(
+  () =>
+    import("./store-settings-sheet").then(
+      (module) => module.StoreSettingsSheet,
+    ),
+  { loading: SheetCodeLoading },
+)
 
 export type GlobalSheetAccess = {
   /** Existing native Service Jobs operator/manager access, independent of assistant intake. */
@@ -91,6 +310,7 @@ export function GlobalSheets({
   tenantId: string
   timeZone: string
 }) {
+  const intent = useGlobalSheetIntents()
   const objectScope = JSON.stringify([actorUserId, tenantId, store.id])
   const pathname = usePathname()
   const ownedJob = useAssistantDraftJobOverlay()
@@ -104,16 +324,21 @@ export function GlobalSheets({
     <>
       {access.catalog && pathname !== "/catalog" ? (
         <CatalogAppearance>
-          <CatalogItemSheet
-            storeId={store.id}
-            currencyCode={store.currencyCode}
-            businessProfileKey={store.businessProfileKey}
-            onCreated={(name) => {
-              setNotice(`${name} added.`)
-              void setCatalogItemMode(null)
-            }}
-            onSaved={(name) => setNotice(`${name} saved.`)}
-          />
+          <ActivatedSheet
+            key={`CatalogItemSheet:${objectScope}`}
+            active={intent.CatalogItemSheet}
+          >
+            <CatalogItemSheet
+              storeId={store.id}
+              currencyCode={store.currencyCode}
+              businessProfileKey={store.businessProfileKey}
+              onCreated={(name) => {
+                setNotice(`${name} added.`)
+                void setCatalogItemMode(null)
+              }}
+              onSaved={(name) => setNotice(`${name} saved.`)}
+            />
+          </ActivatedSheet>
         </CatalogAppearance>
       ) : null}
       {notice ? (
@@ -125,181 +350,391 @@ export function GlobalSheets({
         </div>
       ) : null}
       {access.domains && !access.scopedStaff ? (
-        <DomainSheet store={store} />
+        <ActivatedSheet
+          key={`DomainSheet:${objectScope}`}
+          active={intent.DomainSheet}
+        >
+          <DomainSheet store={store} />
+        </ActivatedSheet>
       ) : null}
       {(access.sales || access.catalog) && access.catalogReadAccessKey ? (
-        <CatalogItemDetailModal
-          key={`catalog-detail:${objectScope}:${Boolean(access.catalog)}:${access.catalogReadAccessKey}`}
-          actorUserId={actorUserId}
-          tenantId={tenantId}
-          store={store}
-          readOnly={!access.catalog}
-          accessKey={access.catalogReadAccessKey}
-          canCreateServiceJob={Boolean(access.serviceJobs)}
-        />
+        <ActivatedSheet
+          key={`CatalogItemDetailModal:${objectScope}`}
+          active={intent.CatalogItemDetailModal}
+        >
+          <CatalogItemDetailModal
+            key={`catalog-detail:${objectScope}:${Boolean(access.catalog)}:${access.catalogReadAccessKey}`}
+            actorUserId={actorUserId}
+            tenantId={tenantId}
+            store={store}
+            readOnly={!access.catalog}
+            accessKey={access.catalogReadAccessKey}
+            canCreateServiceJob={Boolean(access.serviceJobs)}
+          />
+        </ActivatedSheet>
       ) : null}
       {access.sales ? (
         <>
-          <OrderDetailsSheet
-            storeId={store.id}
-            fullPage={Boolean(access.ordersPage)}
-            timeZone={timeZone}
-          />
-          <CustomerDetailsSheet />
+          <ActivatedSheet
+            key={`OrderDetailsSheet:${objectScope}`}
+            active={intent.OrderDetailsSheet}
+          >
+            <OrderDetailsSheet
+              storeId={store.id}
+              fullPage={Boolean(access.ordersPage)}
+              timeZone={timeZone}
+            />
+          </ActivatedSheet>
+          <ActivatedSheet
+            key={`CustomerDetailsSheet:${objectScope}`}
+            active={intent.CustomerDetailsSheet}
+          >
+            <CustomerDetailsSheet />
+          </ActivatedSheet>
           {/* WhatsApp messages; drafts reset with user, business or Store. */}
-          <CustomerMessageSheet key={`customer-message:${objectScope}`} />
+          <ActivatedSheet
+            key={`CustomerMessageSheet:${objectScope}`}
+            active={intent.CustomerMessageSheet}
+          >
+            <CustomerMessageSheet key={`customer-message:${objectScope}`} />
+          </ActivatedSheet>
         </>
       ) : null}
       {access.serviceIntake ? (
-        <ServiceIntakeReceiptSheet
-          key={`service-intake:${objectScope}`}
-          timeZone={timeZone}
-        />
+        <ActivatedSheet
+          key={`ServiceIntakeReceiptSheet:${objectScope}`}
+          active={intent.ServiceIntakeReceiptSheet}
+        >
+          <ServiceIntakeReceiptSheet
+            key={`service-intake:${objectScope}`}
+            timeZone={timeZone}
+          />
+        </ActivatedSheet>
       ) : null}
       {access.serviceJobs ? (
-        <ServiceIntakeSheet
-          key={`new-service-job:${objectScope}:${Boolean(access.manageServiceJobs)}`}
-          tenantId={tenantId}
-          canManage={Boolean(access.manageServiceJobs)}
-          store={store}
-        />
+        <ActivatedSheet
+          key={`ServiceIntakeSheet:${objectScope}`}
+          active={intent.ServiceIntakeSheet}
+        >
+          <ServiceIntakeSheet
+            key={`new-service-job:${objectScope}:${Boolean(access.manageServiceJobs)}`}
+            tenantId={tenantId}
+            canManage={Boolean(access.manageServiceJobs)}
+            store={store}
+          />
+        </ActivatedSheet>
       ) : null}
       {access.serviceJobs && access.manageServiceJobs ? (
-        <CustomerRequestSheet
-          key={`native-service-request:${objectScope}`}
-          store={store}
-          timeZone={timeZone}
-        />
+        <ActivatedSheet
+          key={`CustomerRequestSheet:${objectScope}`}
+          active={intent.CustomerRequestSheet}
+        >
+          <CustomerRequestSheet
+            key={`native-service-request:${objectScope}`}
+            store={store}
+            timeZone={timeZone}
+          />
+        </ActivatedSheet>
       ) : null}
       {(access.serviceIntake || ownedJobOpen) && pathname !== "/services" ? (
-        <ServiceJobSheet
-          canManage
-          storeId={store.id}
-          scope={{ actorUserId, tenantId, storeId: store.id }}
-          nativeAccessAvailable={Boolean(access.serviceIntake)}
-        />
+        <ActivatedSheet
+          key={`ServiceJobSheet:${objectScope}`}
+          active={intent.ServiceJobSheet}
+        >
+          <ServiceJobSheet
+            canManage
+            storeId={store.id}
+            scope={{ actorUserId, tenantId, storeId: store.id }}
+            nativeAccessAvailable={Boolean(access.serviceIntake)}
+          />
+        </ActivatedSheet>
       ) : null}
       {/* Exact original reads authorize independently of the intake-editor role. */}
-      <AssistantQuoteApprovalSheet
-        key={`quotation:${objectScope}`}
-        scopeKey={objectScope}
-      />
-      {access.serviceIntake ? (
-        <AssistantManualMessageSheet
-          key={`manual-message:${objectScope}`}
+      <ActivatedSheet
+        key={`AssistantQuoteApprovalSheet:${objectScope}`}
+        active={intent.AssistantQuoteApprovalSheet}
+      >
+        <AssistantQuoteApprovalSheet
+          key={`quotation:${objectScope}`}
           scopeKey={objectScope}
         />
+      </ActivatedSheet>
+      {access.serviceIntake ? (
+        <ActivatedSheet
+          key={`AssistantManualMessageSheet:${objectScope}`}
+          active={intent.AssistantManualMessageSheet}
+        >
+          <AssistantManualMessageSheet
+            key={`manual-message:${objectScope}`}
+            scopeKey={objectScope}
+          />
+        </ActivatedSheet>
       ) : null}
       {access.serviceIntake ? (
-        <AssistantServiceRequestSheet
-          key={`service-request:${objectScope}`}
+        <ActivatedSheet
+          key={`AssistantServiceRequestSheet:${objectScope}`}
+          active={intent.AssistantServiceRequestSheet}
+        >
+          <AssistantServiceRequestSheet
+            key={`service-request:${objectScope}`}
+            scopeKey={objectScope}
+          />
+        </ActivatedSheet>
+      ) : null}
+      <ActivatedSheet
+        key={`AssistantBookingSheet:${objectScope}`}
+        active={intent.AssistantBookingSheet}
+      >
+        <AssistantBookingSheet
+          key={`booking:${objectScope}`}
           scopeKey={objectScope}
         />
-      ) : null}
-      <AssistantBookingSheet
-        key={`booking:${objectScope}`}
-        scopeKey={objectScope}
-      />
-      <ServiceWorkOriginalSheet
-        key={`service-work-original:${objectScope}`}
-        scopeKey={objectScope}
-        timeZone={timeZone}
-      />
+      </ActivatedSheet>
+      <ActivatedSheet
+        key={`ServiceWorkOriginalSheet:${objectScope}`}
+        active={intent.ServiceWorkOriginalSheet}
+      >
+        <ServiceWorkOriginalSheet
+          key={`service-work-original:${objectScope}`}
+          scopeKey={objectScope}
+          timeZone={timeZone}
+        />
+      </ActivatedSheet>
       {access.sales ? (
-        <BusinessReportSheet key={`business-report:${objectScope}`} />
+        <ActivatedSheet
+          key={`BusinessReportSheet:${objectScope}`}
+          active={intent.BusinessReportSheet}
+        >
+          <BusinessReportSheet key={`business-report:${objectScope}`} />
+        </ActivatedSheet>
       ) : null}
       {/* The protected activity query re-checks Owner/Admin/Manager access. */}
-      <StaffActivitySheet
-        timeZone={timeZone}
-        context={{
-          scopeKey: objectScope,
-          activeStoreId: store.id,
-          opens: {
-            order: Boolean(access.sales),
-            product: Boolean(access.catalog),
-            serviceJob:
-              Boolean(access.serviceIntake) && pathname !== "/services",
-          },
-        }}
-      />
+      <ActivatedSheet
+        key={`StaffActivitySheet:${objectScope}`}
+        active={intent.StaffActivitySheet}
+      >
+        <StaffActivitySheet
+          timeZone={timeZone}
+          context={{
+            scopeKey: objectScope,
+            activeStoreId: store.id,
+            opens: {
+              order: Boolean(access.sales),
+              product: Boolean(access.catalog),
+              serviceJob:
+                Boolean(access.serviceIntake) && pathname !== "/services",
+            },
+          }}
+        />
+      </ActivatedSheet>
       {/* Business Activity detail; the server re-reads under current access. */}
-      <ActivitySheet
-        key={`activity:${objectScope}`}
-        timeZone={timeZone}
-        context={{
-          scopeKey: objectScope,
-          activeStoreId: store.id,
-          access: {
-            sales: Boolean(access.sales),
-            catalog: Boolean(access.catalog),
-            staffDirectory: Boolean(access.staffDirectory),
-            staffHistory: Boolean(access.staffHistory),
-            finance: Boolean(access.finance),
-            serviceJobs:
-              Boolean(access.serviceIntake) && pathname !== "/services",
-          },
-        }}
-      />
-      <BusinessNotificationPreferencesSheet
-        key={`alert-preferences:${objectScope}`}
-        scopeKey={objectScope}
-      />
-      {access.staffHistory ? <StaffHistorySheet /> : null}
-      {access.staffHistory ? (
-        <StaffAccessSheet
-          key={`staff-access:${objectScope}`}
+      <ActivatedSheet
+        key={`ActivitySheet:${objectScope}`}
+        active={intent.ActivitySheet}
+      >
+        <ActivitySheet
+          key={`activity:${objectScope}`}
           timeZone={timeZone}
+          context={{
+            scopeKey: objectScope,
+            activeStoreId: store.id,
+            access: {
+              sales: Boolean(access.sales),
+              catalog: Boolean(access.catalog),
+              staffDirectory: Boolean(access.staffDirectory),
+              staffHistory: Boolean(access.staffHistory),
+              finance: Boolean(access.finance),
+              serviceJobs:
+                Boolean(access.serviceIntake) && pathname !== "/services",
+            },
+          }}
         />
+      </ActivatedSheet>
+      <ActivatedSheet
+        key={`BusinessNotificationPreferencesSheet:${objectScope}`}
+        active={intent.BusinessNotificationPreferencesSheet}
+      >
+        <BusinessNotificationPreferencesSheet
+          key={`alert-preferences:${objectScope}`}
+          scopeKey={objectScope}
+        />
+      </ActivatedSheet>
+      {access.staffHistory ? (
+        <ActivatedSheet
+          key={`StaffHistorySheet:${objectScope}`}
+          active={intent.StaffHistorySheet}
+        >
+          <StaffHistorySheet />
+        </ActivatedSheet>
       ) : null}
       {access.staffHistory ? (
-        <StaffStatusSheet
-          key={`staff-status:${objectScope}`}
-          timeZone={timeZone}
-        />
+        <ActivatedSheet
+          key={`StaffAccessSheet:${objectScope}`}
+          active={intent.StaffAccessSheet}
+        >
+          <StaffAccessSheet
+            key={`staff-access:${objectScope}`}
+            timeZone={timeZone}
+          />
+        </ActivatedSheet>
       ) : null}
-      {access.staffHistory ? <StaffInvitationSheet /> : null}
+      {access.staffHistory ? (
+        <ActivatedSheet
+          key={`StaffStatusSheet:${objectScope}`}
+          active={intent.StaffStatusSheet}
+        >
+          <StaffStatusSheet
+            key={`staff-status:${objectScope}`}
+            timeZone={timeZone}
+          />
+        </ActivatedSheet>
+      ) : null}
+      {access.staffHistory ? (
+        <ActivatedSheet
+          key={`StaffInvitationSheet:${objectScope}`}
+          active={intent.StaffInvitationSheet}
+        >
+          <StaffInvitationSheet />
+        </ActivatedSheet>
+      ) : null}
       {access.staffDirectory ? (
         <>
-          <StaffDirectorySheet />
-          <StaffMemberSheet historyAllowed={Boolean(access.staffHistory)} />
+          <ActivatedSheet
+            key={`StaffDirectorySheet:${objectScope}`}
+            active={intent.StaffDirectorySheet}
+          >
+            <StaffDirectorySheet />
+          </ActivatedSheet>
+          <ActivatedSheet
+            key={`StaffMemberSheet:${objectScope}`}
+            active={intent.StaffMemberSheet}
+          >
+            <StaffMemberSheet historyAllowed={Boolean(access.staffHistory)} />
+          </ActivatedSheet>
         </>
       ) : null}
       {/* Server procedures enforce Owner/Admin and plan per section. */}
-      <StoreSettingsSheet />
-      <StockTransferDetailsSheet storeId={store.id} />
-      <InventoryOperationDetailsSheet storeId={store.id} />
-      <ReceiptSheet storeId={store.id} />
-      <StockCountSheet storeId={store.id} />
-      <CloseoutSheet storeId={store.id} />
+      <ActivatedSheet
+        key={`StoreSettingsSheet:${objectScope}`}
+        active={intent.StoreSettingsSheet}
+      >
+        <StoreSettingsSheet />
+      </ActivatedSheet>
+      <ActivatedSheet
+        key={`StockTransferDetailsSheet:${objectScope}`}
+        active={intent.StockTransferDetailsSheet}
+      >
+        <StockTransferDetailsSheet storeId={store.id} />
+      </ActivatedSheet>
+      <ActivatedSheet
+        key={`InventoryOperationDetailsSheet:${objectScope}`}
+        active={intent.InventoryOperationDetailsSheet}
+      >
+        <InventoryOperationDetailsSheet storeId={store.id} />
+      </ActivatedSheet>
+      <ActivatedSheet
+        key={`ReceiptSheet:${objectScope}`}
+        active={intent.ReceiptSheet}
+      >
+        <ReceiptSheet storeId={store.id} />
+      </ActivatedSheet>
+      <ActivatedSheet
+        key={`StockCountSheet:${objectScope}`}
+        active={intent.StockCountSheet}
+      >
+        <StockCountSheet storeId={store.id} />
+      </ActivatedSheet>
+      <ActivatedSheet
+        key={`CloseoutSheet:${objectScope}`}
+        active={intent.CloseoutSheet}
+      >
+        <CloseoutSheet storeId={store.id} />
+      </ActivatedSheet>
       {access.finance ? (
-        <CustomerLedgerSheet actorUserId={actorUserId} tenantId={tenantId} />
+        <ActivatedSheet
+          key={`CustomerLedgerSheet:${objectScope}`}
+          active={intent.CustomerLedgerSheet}
+        >
+          <CustomerLedgerSheet actorUserId={actorUserId} tenantId={tenantId} />
+        </ActivatedSheet>
       ) : null}
       {access.finance ? (
-        <AssistantCashCountSheet key={`cash-count:${objectScope}`} />
+        <ActivatedSheet
+          key={`AssistantCashCountSheet:${objectScope}`}
+          active={intent.AssistantCashCountSheet}
+        >
+          <AssistantCashCountSheet key={`cash-count:${objectScope}`} />
+        </ActivatedSheet>
       ) : null}
       {access.finance ? (
-        <AssistantDayCloseSheet key={`day-close:${objectScope}`} />
+        <ActivatedSheet
+          key={`AssistantDayCloseSheet:${objectScope}`}
+          active={intent.AssistantDayCloseSheet}
+        >
+          <AssistantDayCloseSheet key={`day-close:${objectScope}`} />
+        </ActivatedSheet>
       ) : null}
-      {access.finance ? <FinanceMovementDetailsSheet /> : null}
-      {access.finance ? <PurchaseRegistrationDetailsSheet /> : null}
-      {access.finance ? <PurchaseBillDetailsSheet /> : null}
       {access.finance ? (
-        <FinanceSheet
-          actorUserId={actorUserId}
-          storeId={store.id}
-          tenantId={tenantId}
-        />
+        <ActivatedSheet
+          key={`FinanceMovementDetailsSheet:${objectScope}`}
+          active={intent.FinanceMovementDetailsSheet}
+        >
+          <FinanceMovementDetailsSheet />
+        </ActivatedSheet>
+      ) : null}
+      {access.finance ? (
+        <ActivatedSheet
+          key={`PurchaseRegistrationDetailsSheet:${objectScope}`}
+          active={intent.PurchaseRegistrationDetailsSheet}
+        >
+          <PurchaseRegistrationDetailsSheet />
+        </ActivatedSheet>
+      ) : null}
+      {access.finance ? (
+        <ActivatedSheet
+          key={`PurchaseBillDetailsSheet:${objectScope}`}
+          active={intent.PurchaseBillDetailsSheet}
+        >
+          <PurchaseBillDetailsSheet />
+        </ActivatedSheet>
+      ) : null}
+      {access.finance ? (
+        <ActivatedSheet
+          key={`FinanceSheet:${objectScope}`}
+          active={intent.FinanceSheet}
+        >
+          <FinanceSheet
+            actorUserId={actorUserId}
+            storeId={store.id}
+            tenantId={tenantId}
+          />
+        </ActivatedSheet>
       ) : null}
       {access.prescriptions ? (
-        <PrescriptionRequestSheet
-          canManageSetup={access.managePrescriptionSetup}
-          storeId={store.id}
-        />
+        <ActivatedSheet
+          key={`PrescriptionRequestSheet:${objectScope}`}
+          active={intent.PrescriptionRequestSheet}
+        >
+          <PrescriptionRequestSheet
+            canManageSetup={access.managePrescriptionSetup}
+            storeId={store.id}
+          />
+        </ActivatedSheet>
       ) : null}
       {!access.scopedStaff ? (
         <>
-          <ServiceCommerceSheet storeId={store.id} storeIds={storeIds} />
-          <StoreConversationSheet storeId={store.id} storeIds={storeIds} />
+          <ActivatedSheet
+            key={`ServiceCommerceSheet:${objectScope}`}
+            active={intent.ServiceCommerceSheet}
+          >
+            <ServiceCommerceSheet storeId={store.id} storeIds={storeIds} />
+          </ActivatedSheet>
+          <ActivatedSheet
+            key={`StoreConversationSheet:${objectScope}`}
+            active={intent.StoreConversationSheet}
+          >
+            <StoreConversationSheet storeId={store.id} storeIds={storeIds} />
+          </ActivatedSheet>
         </>
       ) : null}
     </>

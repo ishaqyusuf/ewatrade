@@ -9,7 +9,7 @@ import {
   toActivityFilters,
 } from "./use-activity-filter-params"
 
-const activitySheetParams = { activityEvent: parseAsString }
+export const activitySheetParams = { activityEvent: parseAsString }
 
 /** Activity list filters; any change restarts the cursor from page one. */
 export function useActivityFilterParams() {

@@ -46,7 +46,7 @@ const SUCCESS_KINDS = [
   "delivery",
 ] as const
 
-const serviceCommerceParams = {
+export const serviceCommerceParams = {
   attachmentId: parseAsString,
   bookingId: parseAsString,
   catalogItemId: parseAsString,
