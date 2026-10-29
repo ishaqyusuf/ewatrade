@@ -9,6 +9,7 @@
     "./resources": "./src/resources.ts",
     "./actions": "./src/actions.ts",
     "./design": "./src/design.ts",
+    "./content": "./src/content.ts",
     "./availability": "./src/availability.ts",
     "./orders": "./src/orders.ts",
     "./commerce": "./src/commerce.ts",

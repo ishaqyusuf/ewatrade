@@ -1,4 +1,5 @@
 export * from "./registry"
+export * from "./content-profiles"
 export * from "./updates"
 export * from "./canvas/library"
 export * from "./canvas/manifests"
