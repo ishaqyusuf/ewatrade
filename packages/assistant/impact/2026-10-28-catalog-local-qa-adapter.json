@@ -2,7 +2,7 @@
   "version": 1,
   "id": "2026-10-28-catalog-local-qa-adapter",
   "tickets": ["H02"],
-  "summary": "Complete Jawdah local QA acceptance with a registered Catalog image test adapter and expiring canonical QA Service Commerce policy/form setup.",
+  "summary": "Complete Jawdah local QA acceptance with a registered Catalog image test adapter and expiring canonical QA Service Commerce policy/form setup. Merchant Service preferences now include saved local time/timezone in the inbox and prepared draft; phone acceptance uses the existing QA browser launcher.",
   "noAssistantImpact": "Server-derived QA classification selects a local private-file transport and fixture-only review port, strictly limited to APP_ENV local / DEV_PROFILE local / nonproduction. Browser input cannot select providers or supply verdicts. Existing Catalog management permissions, immutable upload receipts, publication, primary ordering and fresh read fences remain authoritative. LIVE storage/review/cleanup remain separate. Service policy decisions use the existing Owner/Admin revisioned command with explicit 24-hour QA simulation references; no model capability, new API procedure, provider send or Production approval is introduced.",
   "capabilities": [],
   "procedures": [],
@@ -34,7 +34,7 @@
       "kind": "run",
       "path": "docs/verification/2026-10-28-jawdah-remaining-checks.md",
       "executed": true,
-      "result": "Catalog, scoped DB and API photo graphs typecheck. Scoped source smoke224tests/1219assertions passes. Canonical Jawdah QA service policy decisions/form created with 24-hour expiry; operating UI/mobile acceptance continues in the linked receipt."
+      "result": "Actual Product and Service two-photo upload/save/reopen, explicit primary persistence, approved public byte reads and foreign-Store refusal pass. S-27SUGA stores5Nov2026/10:00Africa/Lagos, one ServiceRequest, zero bookings/holds and unchanged61Orders/one original payment. Merchant notification opens it; customer and corrected merchant UI/draft retain time and not-booked wording. 390x844 phone test passes all seven checks with no overflow/errors/business submission/provider call; permits only manifest-identified read-only bag checks."
     }
   ]
 }

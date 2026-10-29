@@ -1,5 +1,8 @@
 # Jawdah storefront local acceptance — 28 October 2026
 
+**29 October follow-up:** the three image, QA Service policy and phone operating
+gates below are resolved locally. See [remaining-check acceptance](2026-10-28-jawdah-remaining-checks.md). The earlier dated checkpoint is retained for history.
+
 Implementation is committed locally. The primary four-crate journey passed through
 canonical payment verification. Full acceptance remains open for the operating
 image and Service Commerce gates below. No push, deployment, real transfer,

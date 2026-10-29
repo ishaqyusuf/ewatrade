@@ -918,6 +918,8 @@ export async function listStorefrontServiceRequests(
       reference: true,
       createdAt: true,
       collectionAddress: true,
+      preferredTime: true,
+      preferenceTimezone: true,
       serviceRequest: {
         select: {
           id: true,

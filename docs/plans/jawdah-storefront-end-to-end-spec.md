@@ -1,8 +1,8 @@
 # Jawdah storefront: catalog media to customer payment
 
 Date: 28 October 2026 (Africa/Lagos). Status: implementation committed locally;
-primary four-crate QA payment journey verified. Full acceptance retains image and
-Service Commerce operating gates. See [verification](../verification/2026-10-28-jawdah-storefront-flow.md).
+primary four-crate QA payment journey and the remaining image, QA Service booking
+and phone checks verified locally. No deployment. See [verification](../verification/2026-10-28-jawdah-remaining-checks.md).
 
 ## Outcome and scope
 

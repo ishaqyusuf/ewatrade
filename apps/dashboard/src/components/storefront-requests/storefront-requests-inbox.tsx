@@ -98,6 +98,38 @@ function preferredDay(value: string) {
 }
 
 /**
+ * A service request's preferred day plus any saved clock. With a clock, the day
+ * comes from the saved timezone; date-only requests are stored at UTC noon, so
+ * their UTC day is the one the customer chose. Legacy rows lack time/timezone.
+ */
+function servicePreference(
+  requestedAt: Date | string,
+  preferredTime: string | null,
+  preferenceTimezone: string | null,
+) {
+  const date = new Date(requestedAt)
+  if (Number.isNaN(date.getTime())) return null
+  let timeZone = "UTC"
+  let clock: string | null = null
+  if (preferredTime && preferenceTimezone) {
+    try {
+      new Intl.DateTimeFormat("en-NG", { timeZone: preferenceTimezone })
+      timeZone = preferenceTimezone
+      clock = `${preferredTime} ${preferenceTimezone.split("/").at(-1)?.replaceAll("_", " ")} time`
+    } catch {
+      // Unknown saved timezone: keep the stored UTC day and claim no clock.
+    }
+  }
+  const iso = new Intl.DateTimeFormat("en-CA", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    timeZone,
+  }).format(date)
+  return { iso, day: preferredDay(iso), clock }
+}
+
+/**
  * Requests customers sent from the business website. Product requests are pending
  * until confirmed here; confirming creates the canonical Order and reserves stock.
  */
@@ -1210,6 +1242,13 @@ function ServiceRequestDetail({
   const quote = item.quote
   const open =
     request.status === "SUBMITTED" || request.status === "NEEDS_INFORMATION"
+  const preference = request.requestedAt
+    ? servicePreference(
+        request.requestedAt,
+        item.preferredTime ?? null,
+        item.preferenceTimezone ?? null,
+      )
+    : null
   const draft = storefrontDraftText({
     businessName: "",
     customerName: request.customerName,
@@ -1230,8 +1269,8 @@ function ServiceRequestDetail({
             : null,
         }
       : null,
-    preferredDate: request.requestedAt
-      ? new Date(request.requestedAt).toISOString().slice(0, 10)
+    preferredDate: preference
+      ? [preference.iso, preference.clock].filter(Boolean).join(" ")
       : null,
   }).replace("this is .", "here.")
   return (
@@ -1247,15 +1286,10 @@ function ServiceRequestDetail({
           <p className="text-sm">
             WhatsApp {item.customerPhoneE164 ?? request.customerPhone}
           </p>
-          {request.requestedAt ? (
+          {preference ? (
             <p className="text-sm text-muted-foreground">
-              Preferred date{" "}
-              {new Date(request.requestedAt).toLocaleDateString("en-NG", {
-                weekday: "short",
-                day: "numeric",
-                month: "short",
-              })}{" "}
-              (not booked)
+              Preferred date {preference.day}
+              {preference.clock ? `, ${preference.clock}` : ""} (not booked)
             </p>
           ) : null}
           {item.collectionAddress ? (
