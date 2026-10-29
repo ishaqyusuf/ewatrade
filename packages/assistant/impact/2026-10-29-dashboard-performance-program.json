@@ -2,8 +2,8 @@
   "version": 1,
   "id": "2026-10-29-dashboard-performance-program",
   "tickets": ["H02"],
-  "summary": "Local dashboard performance: bounded reads, optional code delivery, idle Assistant activation and a current navigation-only plan-feature projection.",
-  "noAssistantImpact": "No assistant capability, tool, procedure, permission, entitlement, confirmation, schema or provider action changes. Assistant UI lifecycle pauses optional idle reads while hidden, keeps drafts mounted, prevents hidden auto-start and preserves pending-command finalization/durable run recovery. Existing fresh server checks, scope reset and command owners remain. Other changes are internal tracing/read scheduling/code delivery. No deployment. Dashboard shell now reads current plan features through one joined projection rather than the full plan catalogue; canonical feature resolution/fallback is preserved. Full billing/entitlement readers and command admission are unchanged.",
+  "summary": "Local dashboard performance: scoped reads, request-owned streamed SSR batches, optional delivery and idle query activation.",
+  "noAssistantImpact": "No assistant capability, tool, procedure, permission, entitlement, confirmation, schema or provider action changes. Assistant UI lifecycle pauses optional idle reads while hidden, keeps drafts mounted, prevents hidden auto-start and preserves pending-command finalization/durable run recovery. Existing fresh server checks, scope reset and command owners remain. Other changes are internal tracing/read scheduling/code delivery. No deployment. Dashboard shell now reads current plan features through one joined projection rather than the full plan catalogue; canonical feature resolution/fallback is preserved. Full billing/entitlement readers and command admission are unchanged. Server reads now stream within one render-owned batch; API authentication/scope, browser mutation/body transport, deadlines and full command authority remain. Default-off diagnostics follow JSONL/SSE body lifetime, preserving bytes, cancellation and refusals without retaining content.",
   "capabilities": [],
   "procedures": [],
   "docs": [
@@ -82,6 +82,18 @@
       "path": "apps/dashboard/src/app/(shell)/shell-plan-loading.test.tsx",
       "executed": true,
       "result": "Actual shell regression reproduced3 repository reads before repair, now1. Free navigation, optional-failure fallback and admission-before-plan remain. Canonical billing parity tests cover27 policy cases, current rereads, isolated returned arrays and error propagation; one existing-data read-only comparison confirms3 SQL queries versus1 with identical features."
+    },
+    {
+      "kind": "test",
+      "path": "apps/dashboard/src/trpc/server-read-streaming.test.ts",
+      "executed": true,
+      "result": "Actual server client/Hono/tRPC/protected middleware tests reproduce blocked ready results and cross-owner module-global batching under an isolated RSC host cache adapter. Six cases/40 assertions pass: per-owner batches, one shared eligibility/Tenant read per batch, pending hydration without duplicate fetch, fresh refusal clearing old data, typed date results and opted-in cancellation."
+    },
+    {
+      "kind": "test",
+      "path": "apps/api/src/utils/performance-trace-response.test.ts",
+      "executed": true,
+      "result": "Response setup no longer masquerades as full streaming completion. Header/cookie/status preservation, Hono header merge, default-off behavior, no-buffer first chunk, final query work, error/cancellation, exporter failure and frozen terminal snapshots pass with fixed numeric diagnostics only."
     }
   ]
 }

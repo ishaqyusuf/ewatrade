@@ -65,3 +65,14 @@ all127 zero-freshness sites. Prove visible→hidden→visible, warm tab reuse, r
 rejection, expiry, actor/Tenant/Store switch and post-command freshness at actual
 boundaries. Record request counts and cancellation with the existing QA tooling.
 Source-only policy and fast revisits do not close DP-201/202/204 or family tickets.
+
+## Server transport lifetime
+
+The tRPC server client now shares the QueryClient's render-request lifetime rather
+than a module-global transport. Streaming delivers independent ready results while
+retaining one batch/admission per render owner. This introduces no stale cache or
+browser freshness change. Pending hydration, fresh refusal clearing and concurrent
+owner separation have actual transport regression proof; per-family runtime proof
+remains required. Streaming responseSetup headers are not full request/SQL totals;
+completed fixed server traces retain that distinction, including partial cancellation.
+[Evidence](../verification/2026-10-29-dashboard-server-streaming.md).

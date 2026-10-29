@@ -8,10 +8,6 @@ import { oversightRoutes } from "./oversight/routes"
 import { auth } from "@ewatrade/auth"
 import { prisma } from "@ewatrade/db"
 import { isLegalSignupSessionBlocked } from "@ewatrade/db/legal-session-access"
-import {
-  formatPerformanceServerTiming,
-  withPerformanceTrace,
-} from "@ewatrade/db/performance-tracing"
 import { isPrescriptionProductionLaunchApproved } from "@ewatrade/db/queries"
 import { toPublicErrorEnvelope } from "@ewatrade/errors"
 import { trpcServer } from "@hono/trpc-server"
@@ -56,6 +52,10 @@ import { registerServiceCommerceMediaUploadRoutes } from "./service-commerce/med
 import { registerStaffInvitationResendWebhook } from "./staff/resend-webhook"
 import { createTRPCContext } from "./trpc/init"
 import { appRouter } from "./trpc/routers/_app"
+import {
+  isStreamingPerformanceResponse,
+  performanceTracingMiddleware,
+} from "./utils/performance-trace-response"
 import { getRequestTrace } from "./utils/request-trace"
 
 const allowedOrigins =
@@ -65,22 +65,18 @@ const allowedOrigins =
 
 const app = new OpenAPIHono()
 
-app.use("*", async (c, next) => {
-  if (process.env.PERFORMANCE_TRACE !== "true") return next()
-  return withPerformanceTrace("request", next, (trace) => {
-    c.header("X-Performance-Trace-Id", trace.id)
-    c.header(
-      "Server-Timing",
-      [c.res.headers.get("Server-Timing"), formatPerformanceServerTiming(trace)]
-        .filter(Boolean)
-        .join(","),
-    )
-    console.info(
-      "[performance]",
-      JSON.stringify({ ...trace, status: c.res.status }),
-    )
-  })
-})
+app.use(
+  "*",
+  performanceTracingMiddleware(
+    () => process.env.PERFORMANCE_TRACE === "true",
+    (trace, completion, status) => {
+      console.info(
+        "[performance]",
+        JSON.stringify({ ...trace, completion, status }),
+      )
+    },
+  ),
+)
 
 app.use(secureHeaders({ crossOriginResourcePolicy: "cross-origin" }))
 
@@ -176,14 +172,16 @@ app.use("/api/trpc/*", async (c, next) => {
 
   c.header(
     "Server-Timing",
-    `total;dur=${duration.toFixed(1)},procedures;desc="${procedures.join(",")}"`,
+    `${isStreamingPerformanceResponse(c.res) ? "responseSetup" : "total"};dur=${duration.toFixed(1)},procedures;desc="${procedures.join(",")}"`,
   )
 
   if (debugPerf) {
     const { requestId, cfRay } = getRequestTrace(c.req)
 
     console.info("[perf:trpc]", {
-      totalMs: Number(duration.toFixed(2)),
+      ...(isStreamingPerformanceResponse(c.res)
+        ? { responseSetupMs: Number(duration.toFixed(2)) }
+        : { totalMs: Number(duration.toFixed(2)) }),
       procedureCount: procedures.length,
       procedures,
       status: c.res.status,

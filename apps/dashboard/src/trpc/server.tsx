@@ -7,8 +7,7 @@ import {
   type QueryKey,
   dehydrate,
 } from "@tanstack/react-query"
-import { createTRPCClient, loggerLink } from "@trpc/client"
-import { httpBatchLink } from "@trpc/client/links/httpBatchLink"
+import { createTRPCClient, httpBatchStreamLink, loggerLink } from "@trpc/client"
 import { createTRPCOptionsProxy } from "@trpc/tanstack-react-query"
 import { headers } from "next/headers"
 import { cache } from "react"
@@ -26,15 +25,16 @@ const getServerRequestContext = cache(async () =>
   buildDashboardRequestContext(await headers(), process.env),
 )
 
-export const trpc = createTRPCOptionsProxy<AppRouter>({
-  queryClient: getQueryClient,
-  client: createTRPCClient({
+// A batch must belong to one render request, never to the module singleton.
+const getServerClient = cache(() => {
+  const requestContext = getServerRequestContext()
+  return createTRPCClient<AppRouter>({
     links: [
-      httpBatchLink({
+      httpBatchStreamLink({
         url: "/api/trpc",
         transformer: superjson,
         async fetch(input, init) {
-          const context = await getServerRequestContext()
+          const context = await requestContext
           const url =
             typeof input === "string"
               ? input
@@ -47,11 +47,12 @@ export const trpc = createTRPCOptionsProxy<AppRouter>({
 
           return fetch(resolvedUrl, {
             ...init,
+            cache: "no-store",
             signal: dashboardReadSignal(init?.signal),
           })
         },
         async headers() {
-          return (await getServerRequestContext()).headers
+          return (await requestContext).headers
         },
       }),
       loggerLink({
@@ -59,7 +60,14 @@ export const trpc = createTRPCOptionsProxy<AppRouter>({
           shouldLogDashboardTrpcOperation(opts, process.env.NODE_ENV),
       }),
     ],
-  }),
+  })
+})
+
+export const trpc = createTRPCOptionsProxy<AppRouter>({
+  queryClient: getQueryClient,
+  get client() {
+    return getServerClient()
+  },
 })
 
 export function HydrateClient({ children }: { children: React.ReactNode }) {

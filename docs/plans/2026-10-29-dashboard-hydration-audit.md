@@ -94,3 +94,18 @@ authority remain unchanged.
 
 No new broad cache TTL, access exemption, API contract or deployment is authorized
 by this source audit.
+
+## Render-owned streaming follow-up
+
+Server transport now streams results inside a React.cache-owned render-request
+batch. Actual transport/protected middleware6/40 proves a ready sibling resolves
+while another is pending, pending hydration avoids another fetch, and concurrent
+owners cannot share a batch. One fresh API admission per owner remains. This is
+shared contract evidence, not per-route runtime acceptance.
+
+DP-104 still includes awaited presentation reads in Channels, Compliance,
+Service-commerce settings, Stores, Returns, Receipts, WhatsApp messages,
+Conversations and Order detail. Channels additionally gates the workspace on all
+five queries, so changing its route alone cannot isolate loaded sections. Clinical
+workspace access before admitted prescription data is a genuine dependency. Keep
+that ordering. [Evidence](../verification/2026-10-29-dashboard-server-streaming.md).

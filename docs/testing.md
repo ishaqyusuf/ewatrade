@@ -249,6 +249,13 @@ credentials and error text are excluded. Background requests can share a window;
 server-to-server reads are invisible to the browser. Missing phase evidence is not
 zero SQL work, and overlapping work durations are not additive page latency.
 
+With PERFORMANCE_TRACE enabled, streamed tRPC JSONL/SSE responses expose only
+`ew_responseSetup` in response headers. Full numeric request/phase facts are emitted
+in the fixed server trace when the body completes, errors or is cancelled; cancelled
+work is partial. Do not treat response setup as full query/request completion or
+missing header phases as zero work. The existing numeric parser accepts this fixed
+setup label without retaining arbitrary descriptions or response content.
+
 Record the actual build mode, served candidate, source/lock hashes and sample limits
 separately. The local smoke receipt's checkout SHA does not establish the identity
 of an already-running optimized build; `runtimeVerified: false` remains meaningful.

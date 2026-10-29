@@ -125,9 +125,9 @@ export function traceSynchronousPhase<T>(
   }
 }
 
-export async function withPerformanceTrace<T>(
+/** Explicit lifetime for streamed responses; finish once and freeze exported facts. */
+export function startPerformanceTrace(
   kind: PerformanceTrace["kind"],
-  work: () => Promise<T>,
   emit: (trace: PerformanceTrace) => void,
 ) {
   const trace: PerformanceTrace = {
@@ -139,18 +139,41 @@ export async function withPerformanceTrace<T>(
     phases: {},
   }
   const started = performance.now()
-  return storage.run(trace, async () => {
+  let finished = false
+  const snapshot = () =>
+    structuredClone({ ...trace, milliseconds: performance.now() - started })
+  return {
+    run<T>(work: () => T): T {
+      return storage.run(trace, work)
+    },
+    snapshot,
+    finish(failed = false) {
+      if (finished) return
+      finished = true
+      trace.failed = failed
+      // Observability must not turn a committed command into a failed response.
+      try {
+        emit(snapshot())
+      } catch {}
+    },
+  }
+}
+
+export async function withPerformanceTrace<T>(
+  kind: PerformanceTrace["kind"],
+  work: () => Promise<T>,
+  emit: (trace: PerformanceTrace) => void,
+) {
+  const trace = startPerformanceTrace(kind, emit)
+  return trace.run(async () => {
+    let failed = false
     try {
       return await work()
     } catch (error) {
-      trace.failed = true
+      failed = true
       throw error
     } finally {
-      trace.milliseconds = performance.now() - started
-      // Observability must not turn a committed command into a failed response.
-      try {
-        emit(trace)
-      } catch {}
+      trace.finish(failed)
     }
   })
 }

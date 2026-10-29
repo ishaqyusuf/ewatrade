@@ -4,6 +4,7 @@
 /** @typedef {{completed: number, failed: number, cancelled: number, httpErrors: number, responseBodyBytes: number, byteMeasurements: number, requestWorkMilliseconds: number, serverPhases: Record<string, Phase>}} Group */
 const phases = new Set([
   "request",
+  "responseSetup",
   "auth",
   "legal",
   "sessionProof",

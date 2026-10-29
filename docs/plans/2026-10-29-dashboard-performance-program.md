@@ -265,3 +265,15 @@ and commit owned coherent slices. Preserve all original27 requirements across tu
   types and refreshed Reports/menu pass. Full billing commands/limits unchanged.
   Broader API context/scheduling/optimized acceptance remain open;3/27 unchanged.
   [Receipt](../verification/2026-10-29-dashboard-shell-plan-read.md).
+
+- DP-003/102/103/104 partial: actual server transport reproduced a ready result
+  blocked behind a slow sibling and module-global batching across simulated render
+  owners. Server client is now render-request-owned and streams within each batch;
+  one shared fresh API context/legal/Tenant read remains. Actual transport6/40,
+  focused21/109, owned fast237/1531, Dashboard/API production types and optimized
+  build pass. Optional traces follow body completion/cancel/error; setup timing
+  is explicitly separate. Existing-QA Reports navigation/full refresh renders its
+  loaded chart in development. No new optimized runtime switch or page-speed claim.
+  Awaited route presentation reads and all-panel pending gates remain DP-104 work;
+  no blanket await removal ahead of clinical/access admission. Program3/27 (11.1%)
+  unchanged. [Receipt](../verification/2026-10-29-dashboard-server-streaming.md).
