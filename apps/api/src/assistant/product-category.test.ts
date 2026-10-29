@@ -3,6 +3,7 @@ import {
   productCreateDraft,
   productCreatePayload,
 } from "@ewatrade/assistant/general/product-create"
+import type { SetupProductPayload } from "@ewatrade/assistant/setup/contracts"
 import { catalogCategoryIdentity } from "../../../../packages/db/src/queries/catalog-category-identity"
 import {
   prepareProductCategory,
@@ -59,4 +60,30 @@ test("a retrieved valid suggestion survives normalization even when the name has
   })
   expect(prepared.categoryKey).toBe(category.categoryKey)
   expect(prepared.categoryLabel).toBe(category.label)
+})
+
+test("model category search is compact and attributes are only retrieved for a selected identity", async () => {
+  const { readProductCategoryAttributes } = await import("./product-category")
+  const entries = searchProductCategories("Smart Phones")
+  expect(entries.length).toBeLessThanOrEqual(8)
+  expect(
+    entries.every(
+      (entry) => Object.keys(entry).sort().join(",") === "categoryKey,label",
+    ),
+  ).toBe(true)
+  const attrs = readProductCategoryAttributes("shopify:el-4-8-5-2")
+  expect(attrs?.attributes.length).toBeGreaterThan(0)
+  expect(
+    attrs?.attributes.every(
+      (entry) => Object.keys(entry).sort().join(",") === "id,name",
+    ),
+  ).toBe(true)
+  expect(readProductCategoryAttributes("shopify:made-up")).toBeNull()
+  expect(
+    prepareProductCategory<SetupProductPayload>({
+      kind: "product",
+      name: "Eggs",
+      unitName: "Piece",
+    }).categoryKey,
+  ).toBe("shopify:fb-2-12-1-4")
 })

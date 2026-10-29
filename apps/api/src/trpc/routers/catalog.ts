@@ -1,7 +1,8 @@
+import { assertCanReadCatalog } from "../../catalog/reference-access"
+export { assertCanReadCatalog } from "../../catalog/reference-access"
 import {
   type EwaTradeRole,
   canManageSalesOperations,
-  canOperatePos,
   normalizeRole,
 } from "@ewatrade/auth/roles"
 import { canStaffPerform } from "@ewatrade/auth/store-access"
@@ -32,7 +33,7 @@ import {
 } from "@ewatrade/db/queries"
 import type { TenantContext } from "@ewatrade/db/tenant-context"
 import { ruleRejectedError } from "@ewatrade/errors"
-import { searchProductTaxonomy } from "@ewatrade/utils/product-taxonomy"
+import { searchProductTaxonomyCategories } from "@ewatrade/utils/product-taxonomy"
 import { TRPCError } from "@trpc/server"
 import { catalogDetailScope } from "../../catalog/detail-access"
 import { catalogPhotoActorScope } from "../../catalog/photo-access"
@@ -79,15 +80,6 @@ function catalogRole(role: string): EwaTradeRole {
   }
 
   return normalized
-}
-
-export function assertCanReadCatalog(role: string) {
-  if (!canOperatePos(catalogRole(role))) {
-    throw new TRPCError({
-      code: "FORBIDDEN",
-      message: "You do not have permission to view the Catalog.",
-    })
-  }
 }
 
 export function assertCanManageCatalog(tenant: TenantContext) {
@@ -516,9 +508,7 @@ export const catalogRouter = createTRPCRouter({
     .input(catalogProductCategorySearchSchema)
     .query(({ ctx, input }) => {
       assertCanReadCatalog(ctx.tenantContext.membership.role)
-      return searchProductTaxonomy(input.query).map(
-        ({ score, completeNameMatch, ...category }) => category,
-      )
+      return searchProductTaxonomyCategories(input.query)
     }),
 
   listItemsPage: protectedProcedure

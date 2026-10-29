@@ -1,5 +1,3 @@
-import { catalogCategoryEmoji } from "@ewatrade/utils/catalog-category-emojis"
-import { getCatalogCategoryPresets } from "@ewatrade/utils/catalog-category-presets"
 import { recommendCatalogIllustration } from "@ewatrade/utils/catalog-illustrations"
 import { listCatalogSetupHelpers } from "@ewatrade/utils/catalog-setup-helpers"
 import { tool } from "ai"
@@ -89,6 +87,7 @@ export type SetupToolDependencies = {
   ) => void
   resolveProductCategory?: (payload: SetupProductPayload) => SetupProductPayload
   searchProductCategories?: (query: string) => unknown[]
+  readProductCategoryAttributes?: (key: string) => unknown
   productOnly?: boolean
   productSeed?: unknown
   context: SetupBusinessContext
@@ -888,41 +887,35 @@ export function createSetupAssistantTools(deps: SetupToolDependencies) {
     }),
     setup_search_categories: tool({
       description:
-        "Find EwaTrade category keys (with their emoji) for products or services. Only use keys returned here.",
+        "Search Shopify categories for products or services. Returns compact keys and paths only; reuse matches, and fetch attributes separately only if needed. Only use keys returned here.",
       inputSchema: z.object({
         kind: z.enum(["product", "service"]),
         query: z.string().max(80).optional(),
       }),
-      execute: async ({ kind, query }): Promise<ToolEnvelope<unknown>> => {
-        const presets = getCatalogCategoryPresets({
-          businessProfileKey: deps.context.businessProfile?.key ?? null,
-          kind,
-          query: query ?? "",
-          all: Boolean(query),
-        })
+      execute: async ({ query }): Promise<ToolEnvelope<unknown>> => {
         return {
           status: "success",
-          data: [
-            ...(kind === "product" && query && deps.searchProductCategories
+          data:
+            query && deps.searchProductCategories
               ? deps.searchProductCategories(query)
-              : []),
-            ...presets.slice(0, 8).flatMap((preset) => [
-              {
-                categoryKey: preset.key,
-                label: preset.label,
-                emoji: catalogCategoryEmoji(preset.key),
-              },
-              ...preset.subcategories.slice(0, 8).map((child) => ({
-                categoryKey: child.key,
-                label: `${preset.label} › ${child.label}`,
-                emoji: catalogCategoryEmoji(child.key),
-              })),
-            ]),
-          ],
+              : [],
           warnings: [],
         }
       },
     }),
+    setup_category_attributes: tool({
+      description:
+        "Read attribute names only for an already selected Shopify category when supplied facts require them. Never invent attribute values or variants.",
+      inputSchema: z
+        .object({ categoryKey: z.string().regex(/^shopify:[a-z0-9-]+$/) })
+        .strict(),
+      execute: async ({ categoryKey }): Promise<ToolEnvelope<unknown>> => ({
+        status: "success",
+        data: deps.readProductCategoryAttributes?.(categoryKey) ?? null,
+        warnings: [],
+      }),
+    }),
+
     setup_draft_upsert_items: tool({
       description:
         "Stage products or services in the owner's setup draft. Nothing is created in the business until the owner confirms. Re-send an item with its key to update it.",

@@ -323,7 +323,16 @@ async function applyCatalogItemUpdate(
   })
 
   // Item details and Product usage.
-  const category = await resolveCatalogCategorySelection(tx, input)
+  const category =
+    !input.categoryId &&
+    !input.subcategoryId &&
+    (input.category?.trim() || null) === item.category
+      ? {
+          category: item.category,
+          categoryId: item.categoryId,
+          subcategoryId: item.subcategoryId,
+        }
+      : await resolveCatalogCategorySelection(tx, input)
   await tx.catalogItem.update({
     where: { id: item.id },
     data: {

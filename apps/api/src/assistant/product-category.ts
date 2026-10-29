@@ -5,7 +5,8 @@ import {
 import type { SetupProductPayload } from "@ewatrade/assistant/setup/contracts"
 import {
   findProductTaxonomyCategory,
-  searchProductTaxonomy,
+  readProductTaxonomyAttributes,
+  searchProductTaxonomyCategories,
   suggestProductTaxonomy,
 } from "@ewatrade/utils/product-taxonomy"
 
@@ -22,7 +23,7 @@ export function prepareProductCategory<T extends SetupProductPayload>(
     return {
       ...payload,
       categoryKey: local.categoryKey,
-      categoryLabel: undefined,
+      categoryLabel: findProductTaxonomyCategory(local.categoryKey)?.label,
       categorySuggested: true,
       categorySuggestionName: payload.name,
     }
@@ -39,9 +40,12 @@ export function prepareProductCategory<T extends SetupProductPayload>(
   }
 }
 export function searchProductCategories(query: string) {
-  return searchProductTaxonomy(query).map(
-    ({ score, completeNameMatch, ...category }) => category,
+  return searchProductTaxonomyCategories(query).map(
+    ({ categoryKey, label }) => ({ categoryKey, label }),
   )
+}
+export function readProductCategoryAttributes(categoryKey: string) {
+  return readProductTaxonomyAttributes(categoryKey)
 }
 export function trustedProductCategoryLabel(key: string | undefined) {
   return (

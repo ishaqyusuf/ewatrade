@@ -37,6 +37,7 @@ test("the form-only job preparer is available to a dashboard owner without enabl
     expect(Object.keys(tools)).toContain("prepareServiceJob")
     expect(Object.keys(tools)).toContain("prepareOrder")
     expect(Object.keys(tools)).toContain("searchProductCategories")
+    expect(Object.keys(tools)).toContain("readProductCategoryAttributes")
     expect(
       Object.keys(
         createGeneralTools(
@@ -59,6 +60,7 @@ test("the form-only job preparer is available to a dashboard owner without enabl
     expect(fallback).not.toContain("prepareOrder")
     expect(fallback).not.toContain("prepareServiceJob")
     expect(fallback).not.toContain("searchProductCategories")
+    expect(fallback).not.toContain("readProductCategoryAttributes")
     expect(fallback).toContain("draftAction")
   } finally {
     if (previous === undefined)

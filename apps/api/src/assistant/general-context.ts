@@ -230,6 +230,8 @@ const domainAccess: Record<CapabilityId, (tenant: TenantContext) => void> = {
   "search.records": () => {},
   "catalog.history.read": (tenant) =>
     assertCanReadCatalog(tenant.membership.role),
+  "catalog.categories.attributes": (tenant) =>
+    assertCanReadCatalog(tenant.membership.role),
   "catalog.categories.suggest": (tenant) =>
     assertCanReadCatalog(tenant.membership.role),
   "sales.order.prepare": (tenant) => {

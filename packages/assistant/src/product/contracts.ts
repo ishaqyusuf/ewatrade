@@ -292,7 +292,7 @@ export const productWorkflowContextSchema = z
   })
   .strict()
 export const PRODUCT_DRAFT_KEY = "product"
-export const PRODUCT_ASSISTANT_PROMPT_VERSION = "product-create-v4"
+export const PRODUCT_ASSISTANT_PROMPT_VERSION = "product-create-v5"
 
 /** Advanced facts remain in the ordinary editor; chat never flattens them. */
 export function productRequiresForm(snapshot: ProductFormSnapshot) {

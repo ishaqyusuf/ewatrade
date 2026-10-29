@@ -48,6 +48,7 @@ import {
 } from "./preparation-observability"
 import {
   prepareProductCategory,
+  readProductCategoryAttributes,
   searchProductCategories,
 } from "./product-category"
 import { SETUP_BUDGET_LIMITS } from "./setup-context"
@@ -381,6 +382,9 @@ export async function createWorkflowAssistantTurn(
           searchProductCategories: commercePreparationEnabled()
             ? searchProductCategories
             : undefined,
+          readProductCategoryAttributes: commercePreparationEnabled()
+            ? readProductCategoryAttributes
+            : undefined,
           onProductPrepared: (payload, stats) =>
             recordPreparation({
               purpose: productMode ? "product" : "setup",
@@ -438,6 +442,7 @@ export async function createWorkflowAssistantTurn(
               setup_get_context: setupTools.setup_get_context,
               setup_search_quick_setups: setupTools.setup_search_quick_setups,
               setup_search_categories: setupTools.setup_search_categories,
+              setup_category_attributes: setupTools.setup_category_attributes,
               setup_draft_upsert_items: setupTools.setup_draft_upsert_items,
             }
           : setupTools

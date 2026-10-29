@@ -1,5 +1,5 @@
 import { PRODUCT_PREPARATION_INSTRUCTIONS } from "../product/knowledge"
-export const GENERAL_PROMPT_VERSION = "general-v34"
+export const GENERAL_PROMPT_VERSION = "general-v35"
 /** "Sat 10 Oct 2026, 19:15" in the business time zone; UTC if it is invalid. */
 export function generalLocalNow(timeZone: string, now = new Date()) {
   const format = (zone: string) => {

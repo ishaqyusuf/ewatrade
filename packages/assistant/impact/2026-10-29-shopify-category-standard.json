@@ -1,0 +1,62 @@
+{
+  "version": 1,
+  "id": "2026-10-29-shopify-category-standard",
+  "tickets": ["H01", "H02"],
+  "summary": "Shopify-only category tree and lean assistant retrieval, existing-schema stable keys and category-aware eligible storefront search. Source only; no deployment/provider action.",
+  "capabilities": [
+    {
+      "id": "catalog.categories.suggest",
+      "change": "changed",
+      "rollout": "source",
+      "note": "Bounded Shopify reference lookup under existing Catalog/staff read authority; no merchant writes or activation."
+    },
+    {
+      "id": "catalog.categories.attributes",
+      "change": "added",
+      "rollout": "source",
+      "note": "Bounded Shopify reference lookup under existing Catalog/staff read authority; no merchant writes or activation."
+    }
+  ],
+  "procedures": [
+    {
+      "path": "catalog.categories.attributes",
+      "status": "supported",
+      "reason": "Protected bounded local Shopify reference read with existing Catalog/staff authority; no merchant inventory data or write."
+    },
+    {
+      "path": "catalog.categories.browse",
+      "status": "supported",
+      "reason": "Protected bounded local Shopify reference read with existing Catalog/staff authority; no merchant inventory data or write."
+    }
+  ],
+  "docs": [
+    {
+      "topic": "feature",
+      "status": "local_only",
+      "path": ".brain/features/catalog-category-presets.md"
+    },
+    {
+      "topic": "capability",
+      "status": "updated",
+      "path": "packages/assistant/src/capabilities/COVERAGE.md"
+    },
+    {
+      "topic": "api",
+      "status": "local_only",
+      "path": ".brain/api/endpoints.md"
+    },
+    {
+      "topic": "permissions",
+      "status": "local_only",
+      "path": ".brain/api/permissions.md"
+    }
+  ],
+  "evidence": [
+    {
+      "path": "docs/verification/2026-10-29-shopify-category-standard.md",
+      "kind": "review",
+      "executed": true,
+      "result": "Focused source checks and local UI review recorded with explicit inherited/connected/device limitations."
+    }
+  ]
+}

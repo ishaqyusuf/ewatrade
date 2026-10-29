@@ -20,6 +20,14 @@ type AttributeRow = [
 const categories = categoryRows as CategoryRow[]
 const attributes = attributeRows as AttributeRow[]
 const byId = new Map(categories.map((row) => [row[0], row]))
+const childrenByParent = new Map<string | null, CategoryRow[]>()
+for (const row of categories) {
+  const siblings = childrenByParent.get(row[2]) ?? []
+  siblings.push(row)
+  childrenByParent.set(row[2], siblings)
+}
+for (const siblings of childrenByParent.values())
+  siblings.sort((a, b) => a[1].localeCompare(b[1]) || a[0].localeCompare(b[0]))
 const attributesById = new Map(attributes.map((row) => [row[0], row]))
 const normalize = (text: string) =>
   text
@@ -50,6 +58,8 @@ const indexed = categories.map((row) => ({
   row,
   path: pathFor(row),
   tokens: words(row[1]),
+  normalizedName: normalize(row[1]),
+  parentTokens: words(pathFor(row).slice(0, -1).join(" ")),
 }))
 const labels = new Map(
   indexed.map((entry) => [entry.path.join(" / "), entry.row[0]]),
@@ -59,6 +69,75 @@ export const PRODUCT_TAXONOMY_COUNTS = {
   categories: categories.length,
   attributes: attributes.length,
   verticals: manifest.verticals,
+}
+
+function categorySummary(row: CategoryRow) {
+  return {
+    id: row[0],
+    categoryKey: `shopify:${row[0]}`,
+    name: row[1],
+    label: pathFor(row).join(" / "),
+    parentId: row[2] ? `shopify:${row[2]}` : null,
+    hasChildren: childrenByParent.has(row[0]),
+  }
+}
+
+/** Bounded tree pages; never ship the full reference index to clients. */
+export function browseProductTaxonomy(
+  input: {
+    parentId?: string
+    after?: string
+    limit?: number
+  } = {},
+) {
+  const parentId = input.parentId?.replace(/^shopify:/, "") ?? null
+  if (parentId && !byId.has(parentId)) throw Error("Unknown category.")
+  const siblings = childrenByParent.get(parentId) ?? []
+  const cursor = input.after?.replace(/^shopify:/, "")
+  const cursorIndex = cursor
+    ? siblings.findIndex((row) => row[0] === cursor)
+    : -1
+  if (cursor && cursorIndex < 0) throw Error("Invalid category cursor.")
+  const start = cursorIndex + 1
+  const limit = Math.min(Math.max(input.limit ?? 40, 1), 50)
+  const page = siblings.slice(start, start + limit)
+  const breadcrumbs: ReturnType<typeof categorySummary>[] = []
+  let ancestor = parentId ? byId.get(parentId) : undefined
+  while (ancestor) {
+    breadcrumbs.unshift(categorySummary(ancestor))
+    ancestor = ancestor[2] ? byId.get(ancestor[2]) : undefined
+  }
+  return {
+    version: PRODUCT_TAXONOMY_VERSION,
+    categories: page.map(categorySummary),
+    breadcrumbs,
+    nextCursor:
+      start + page.length < siblings.length ? (page.at(-1)?.[0] ?? null) : null,
+  }
+}
+
+/** Category-only retrieval is the default for forms and model tools. */
+export function searchProductTaxonomyCategories(query: string, limit = 8) {
+  return rankProductTaxonomy(query)
+    .slice(0, Math.min(Math.max(limit, 1), 12))
+    .flatMap(({ id }) => {
+      const row = byId.get(id)
+      return row ? [categorySummary(row)] : []
+    })
+}
+
+export function readProductTaxonomyAttributes(categoryKey: string) {
+  const category = findProductTaxonomyCategory(categoryKey)
+  return category
+    ? {
+        categoryKey: category.categoryKey,
+        label: category.label,
+        version: PRODUCT_TAXONOMY_VERSION,
+        attributes: category.attributes
+          .slice(0, 12)
+          .map(({ id, name }) => ({ id, name })),
+      }
+    : null
 }
 
 export function findProductTaxonomyCategory(id: string) {
@@ -98,12 +177,12 @@ function rankProductTaxonomy(query: string) {
   if (!tokens.size) return []
   const phrase = normalize(query)
   return indexed
-    .flatMap(({ row, path, tokens: nameTokens }) => {
+    .flatMap(({ row, tokens: nameTokens, normalizedName, parentTokens }) => {
       const matched = nameTokens.filter((word) => tokens.has(word)).length
       if (!matched) return []
       const coverage = matched / nameTokens.length
-      const exact = normalize(row[1]) === phrase
-      const parentMatches = words(path.slice(0, -1).join(" ")).filter((word) =>
+      const exact = normalizedName === phrase
+      const parentMatches = parentTokens.filter((word) =>
         tokens.has(word),
       ).length
       return [

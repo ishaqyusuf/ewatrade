@@ -310,6 +310,7 @@ function publicItemReader(
     name: true,
     kind: true,
     description: true,
+    category: true,
     categoryRecord: { select: { id: true, label: true } },
     illustrations: {
       where: { tenantId: tenantId, storeId: store.id },
@@ -798,7 +799,15 @@ export async function readPublicStorefrontFromContext(
     })
     hasHiddenItems = rows.length > limit
     cappedItems = rows.slice(0, limit).map(projectItem)
-    items = applyCappedListing([...cappedItems], listing, store.currencyCode)
+    const categoryLabels = new Map(
+      rows.slice(0, limit).map((row) => [row.id, row.category]),
+    )
+    items = applyCappedListing(
+      [...cappedItems],
+      listing,
+      store.currencyCode,
+      (item) => categoryLabels.get(item.id),
+    )
   } else if (!listing.advanced) {
     // Unchanged default listing with legacy `(a:|o:)?ID` bucket cursors.
     let cursorId: string | null = null

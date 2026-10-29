@@ -91,16 +91,40 @@ test("foreign Store and QA Store override are denied", async () => {
     }),
   ).rejects.toMatchObject({ code: "FORBIDDEN" })
 })
-test("the real nested tRPC path blocks and audits QA live AI calls", async () => {
+test("QA category suggestions use local reference data without a live provider or audit", async () => {
   let audits = 0
+  const result = await caller({
+    classification: "QA",
+    qa: true,
+    onAudit: () => {
+      audits += 1
+    },
+  }).catalog.categories.suggest({ title: "Eggs" })
+  expect(result.status).toBe("ready")
+  expect(result.suggestions.length).toBeGreaterThan(0)
+  expect(
+    result.suggestions.every((entry) => entry.key.startsWith("shopify:")),
+  ).toBe(true)
+  expect(audits).toBe(0)
+})
+
+test("taxonomy tree and attributes are authenticated, bounded and reject invented identities", async () => {
   await expect(
-    caller({
-      classification: "QA",
-      qa: true,
-      onAudit: () => {
-        audits += 1
-      },
-    }).catalog.categories.suggest({ title: "Eggs" }),
-  ).rejects.toMatchObject({ code: "PRECONDITION_FAILED" })
-  expect(audits).toBe(1)
+    caller({ user: false }).catalog.categories.browse({}),
+  ).rejects.toMatchObject({ code: "UNAUTHORIZED" })
+  const page = await caller().catalog.categories.browse({})
+  expect(page.categories.length).toBe(26)
+  await expect(
+    caller().catalog.categories.browse({ parentId: "shopify:made-up" }),
+  ).rejects.toMatchObject({ code: "BAD_REQUEST" })
+  await expect(
+    caller().catalog.categories.attributes({ categoryKey: "shopify:made-up" }),
+  ).rejects.toMatchObject({ code: "NOT_FOUND" })
+  expect(
+    (
+      await caller().catalog.categories.attributes({
+        categoryKey: "shopify:el-4-8-5-2",
+      })
+    ).attributes.length,
+  ).toBeLessThanOrEqual(12)
 })

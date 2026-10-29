@@ -49,3 +49,59 @@ test("ambiguous names use a shared ancestor across the whole index rather than o
   expect(partial.length).toBeLessThanOrEqual(8)
   expect(suggestProductTaxonomy("Accessories")).toBeUndefined()
 })
+
+test("tree browsing retains arbitrary ancestry, bounded pages and sibling-bound cursors", async () => {
+  const { browseProductTaxonomy } = await import("./product-taxonomy")
+  const roots = browseProductTaxonomy({ limit: 2 })
+  expect(roots.categories).toHaveLength(2)
+  expect(roots.nextCursor).not.toBeNull()
+  const next = browseProductTaxonomy({
+    limit: 2,
+    after: roots.nextCursor ?? undefined,
+  })
+  expect(next.categories.map((entry) => entry.id)).not.toContain(
+    roots.categories[0]?.id,
+  )
+  const branch = browseProductTaxonomy({ parentId: "shopify:fb-2-12-1" })
+  expect(branch.breadcrumbs.map((entry) => entry.categoryKey)).toEqual([
+    "shopify:fb",
+    "shopify:fb-2",
+    "shopify:fb-2-12",
+    "shopify:fb-2-12-1",
+  ])
+  expect(
+    branch.categories.some(
+      (entry) => entry.categoryKey === "shopify:fb-2-12-1-4",
+    ),
+  ).toBe(true)
+  expect(() =>
+    browseProductTaxonomy({
+      parentId: "shopify:fb",
+      after: roots.categories[0]?.id,
+    }),
+  ).toThrow("cursor")
+  expect(() => browseProductTaxonomy({ parentId: "shopify:invented" })).toThrow(
+    "category",
+  )
+  expect(
+    browseProductTaxonomy().categories.some(
+      (entry) => entry.name === "Services",
+    ),
+  ).toBe(true)
+})
+
+test("default category results omit attributes and selected-identity attribute reads stay bounded", async () => {
+  const { searchProductTaxonomyCategories, readProductTaxonomyAttributes } =
+    await import("./product-taxonomy")
+  const results = searchProductTaxonomyCategories("Smart Phones")
+  expect(results.length).toBeGreaterThan(0)
+  expect(results.length).toBeLessThanOrEqual(8)
+  expect(results.every((entry) => !("attributes" in entry))).toBe(true)
+  const attributes = readProductTaxonomyAttributes("shopify:el-4-8-5-2")
+  expect(attributes?.attributes.length).toBeGreaterThan(0)
+  expect(attributes?.attributes.length).toBeLessThanOrEqual(12)
+  expect(
+    attributes?.attributes.every((entry) => !("description" in entry)),
+  ).toBe(true)
+  expect(readProductTaxonomyAttributes("shopify:invented")).toBeNull()
+})

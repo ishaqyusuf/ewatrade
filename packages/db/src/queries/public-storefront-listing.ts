@@ -32,7 +32,7 @@ export type PublicListing = ReturnType<typeof normalizePublicListing>
 
 /**
  * The bounded query is whitespace-separated literal terms. Every term matches
- * the public name or description; SQL patterns are never customer input.
+ * the public name, description or saved category path; SQL patterns are never customer input.
  */
 export function normalizePublicListing(query: PublicStorefrontQuery) {
   const trimmed = typeof query.q === "string" ? query.q.trim() : ""
@@ -64,6 +64,12 @@ export function normalizePublicListing(query: PublicStorefrontQuery) {
 export function publicListingSearchWhere(terms: string[]) {
   return terms.map((term) => ({
     OR: [
+      {
+        category: {
+          contains: escapePublicListingTerm(term),
+          mode: "insensitive" as const,
+        },
+      },
       {
         name: {
           contains: escapePublicListingTerm(term),
@@ -177,7 +183,7 @@ export function publicPriceSortedIdsSql(input: {
     filters.push(Prisma.sql`AND i."categoryId" = ${input.category}`)
   for (const term of input.terms)
     filters.push(
-      Prisma.sql`AND (i.name ILIKE ${`%${escapePublicListingTerm(term)}%`} OR i.description ILIKE ${`%${escapePublicListingTerm(term)}%`})`,
+      Prisma.sql`AND (i.name ILIKE ${`%${escapePublicListingTerm(term)}%`} OR i.description ILIKE ${`%${escapePublicListingTerm(term)}%`} OR i.category ILIKE ${`%${escapePublicListingTerm(term)}%`})`,
     )
   const out = Prisma.sql`(EXISTS (SELECT 1 FROM "CatalogStorefrontPolicy" policy
     WHERE policy."tenantId"=${input.tenantId} AND policy."storeId"=${input.storeId}
@@ -255,6 +261,7 @@ export function applyCappedListing<T extends ListedItem>(
   items: T[],
   listing: PublicListing,
   currencyCode: string,
+  categoryLabel: (item: T) => string | null | undefined = () => null,
 ) {
   const terms = listing.terms.map((term) => term.toLowerCase())
   const filtered = items.filter(
@@ -262,7 +269,8 @@ export function applyCappedListing<T extends ListedItem>(
       terms.every(
         (term) =>
           item.name.toLowerCase().includes(term) ||
-          (item.description ?? "").toLowerCase().includes(term),
+          (item.description ?? "").toLowerCase().includes(term) ||
+          (categoryLabel(item) ?? "").toLowerCase().includes(term),
       ) &&
       (listing.availability === undefined ||
         (item.availability === "OUT_OF_STOCK") ===

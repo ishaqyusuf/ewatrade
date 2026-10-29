@@ -60,10 +60,11 @@ export async function resolveCatalogCategorySelection(
       "INVALID_PHOTO",
       "Use a category of 500 characters or fewer.",
     )
-  const { preset, rootLabel, childLabel } = catalogCategoryIdentity(label)
-  const rootKey = preset
-    ? `preset:${preset.key}`
-    : `custom:${customKey(rootLabel)}`
+  const { preset, taxonomy, taxonomyRootKey, rootLabel, childLabel } =
+    catalogCategoryIdentity(label)
+  const rootKey =
+    taxonomyRootKey ??
+    (preset ? `preset:${preset.key}` : `custom:${customKey(rootLabel)}`)
   const root = await tx.catalogCategory.upsert({
     where: { tenantId_key: { tenantId: input.tenantId, key: rootKey } },
     create: {
@@ -82,16 +83,20 @@ export async function resolveCatalogCategorySelection(
         where: {
           tenantId_key: {
             tenantId: input.tenantId,
-            key: childPreset
-              ? `preset:${childPreset.key}`
-              : `child:${root.id}:${customKey(childLabel)}`,
+            key:
+              taxonomy?.categoryKey ??
+              (childPreset
+                ? `preset:${childPreset.key}`
+                : `child:${root.id}:${customKey(childLabel)}`),
           },
         },
         create: {
           tenantId: input.tenantId,
-          key: childPreset
-            ? `preset:${childPreset.key}`
-            : `child:${root.id}:${customKey(childLabel)}`,
+          key:
+            taxonomy?.categoryKey ??
+            (childPreset
+              ? `preset:${childPreset.key}`
+              : `child:${root.id}:${customKey(childLabel)}`),
           label: childLabel,
           normalizedLabel: normalized(childLabel),
           parentId: root.id,
@@ -140,10 +145,11 @@ export async function previewCatalogCategoryLabel(
 ) {
   const label = category?.trim()
   if (!label) return null
-  const { preset, rootLabel, childLabel } = catalogCategoryIdentity(label)
-  const rootKey = preset
-    ? `preset:${preset.key}`
-    : `custom:${customKey(rootLabel)}`
+  const { preset, taxonomy, taxonomyRootKey, rootLabel, childLabel } =
+    catalogCategoryIdentity(label)
+  const rootKey =
+    taxonomyRootKey ??
+    (preset ? `preset:${preset.key}` : `custom:${customKey(rootLabel)}`)
   const root = await tx.catalogCategory.findUnique({
     where: { tenantId_key: { tenantId, key: rootKey } },
   })
@@ -151,11 +157,13 @@ export async function previewCatalogCategoryLabel(
   const childPreset = preset?.subcategories.find(
     (entry) => normalized(entry.label) === normalized(childLabel),
   )
-  const childKey = childPreset
-    ? `preset:${childPreset.key}`
-    : root
-      ? `child:${root.id}:${customKey(childLabel)}`
-      : null
+  const childKey =
+    taxonomy?.categoryKey ??
+    (childPreset
+      ? `preset:${childPreset.key}`
+      : root
+        ? `child:${root.id}:${customKey(childLabel)}`
+        : null)
   const child = childKey
     ? await tx.catalogCategory.findUnique({
         where: { tenantId_key: { tenantId, key: childKey } },

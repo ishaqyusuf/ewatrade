@@ -56,6 +56,8 @@ const reads = new Set([
   "catalog.detail.activity",
   "catalog.categories.suggest",
   "catalog.categories.list",
+  "catalog.categories.browse",
+  "catalog.categories.attributes",
   "orders.receiptSettings",
   "orders.prepareReceipts",
   "orders.customerCount",

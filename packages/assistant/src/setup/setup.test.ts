@@ -32,6 +32,9 @@ function harness() {
   const changes: Array<{ revision: number; keys: string[] }> = []
   const tools = createSetupAssistantTools({
     context,
+    searchProductCategories: (query) => [
+      { categoryKey: "shopify:fb-2-12-1-4", label: query },
+    ],
     sourceMessageId: "msg_1",
     readDraft: async () =>
       [...rows.values()].map(

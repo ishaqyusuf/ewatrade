@@ -1,5 +1,8 @@
 import { CATALOG_CATEGORY_PRESETS } from "@ewatrade/utils/catalog-category-presets"
-import { productTaxonomyCategoryForLabel } from "@ewatrade/utils/product-taxonomy"
+import {
+  browseProductTaxonomy,
+  productTaxonomyCategoryForLabel,
+} from "@ewatrade/utils/product-taxonomy"
 const normalized = (label: string) =>
   label.trim().replace(/\s+/g, " ").toLowerCase()
 /** Two-level Catalog hierarchy retains intermediate taxonomy labels in its child
@@ -7,13 +10,20 @@ const normalized = (label: string) =>
  */
 export function catalogCategoryIdentity(label: string) {
   const taxonomy = productTaxonomyCategoryForLabel(label)
-  const preset = CATALOG_CATEGORY_PRESETS.find(
-    (entry) =>
-      normalized(entry.label) === normalized(label) ||
-      normalized(label).startsWith(`${normalized(entry.label)} / `),
-  )
+  const preset = taxonomy
+    ? undefined
+    : CATALOG_CATEGORY_PRESETS.find(
+        (entry) =>
+          normalized(entry.label) === normalized(label) ||
+          normalized(label).startsWith(`${normalized(entry.label)} / `),
+      )
   return {
     preset,
+    taxonomy,
+    taxonomyRootKey: taxonomy
+      ? browseProductTaxonomy({ parentId: taxonomy.categoryKey }).breadcrumbs[0]
+          ?.categoryKey
+      : undefined,
     rootLabel: taxonomy?.path[0] ?? preset?.label ?? label,
     childLabel:
       taxonomy && taxonomy.path.length > 1

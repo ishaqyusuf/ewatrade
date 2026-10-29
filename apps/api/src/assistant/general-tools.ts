@@ -262,7 +262,10 @@ import {
 } from "./general-supplier-reads"
 import { recoverableToolFailure } from "./general-tool-recovery"
 import { recordPreparation } from "./preparation-observability"
-import { searchProductCategories } from "./product-category"
+import {
+  readProductCategoryAttributes,
+  searchProductCategories,
+} from "./product-category"
 import { proposalDigest } from "./proposal-security"
 import {
   catalogItemReadAnswers,
@@ -390,6 +393,14 @@ export function createGeneralTools(
   onAnswer: (answer: GeneralAnswer) => void,
   runId?: string,
 ): ToolSet {
+  const categorySearches = new Map<
+    string,
+    ReturnType<typeof searchProductCategories>
+  >()
+  const categoryAttributes = new Map<
+    string,
+    ReturnType<typeof readProductCategoryAttributes>
+  >()
   const toolsStartedAt = Date.now()
   let firstDraftObserved = false
   const observeFirstDraft = (
@@ -1234,15 +1245,36 @@ export function createGeneralTools(
     }),
     searchProductCategories: tool({
       description:
-        "Search all categories in the pinned Shopify reference and retrieve relevant attribute names. Pass the product type or description. Use returned category keys only; attributes guide mapping supplied facts, never fabricate variants, prices, specifications or stock. Does not read merchant catalog or write records.",
+        "Search Shopify categories by product or service type. Returns compact IDs and full paths only. Reuse matches within this turn. Read attributes separately for the selected category only when needed. Use returned keys only. Does not read merchant catalog or write records.",
       inputSchema: z
         .object({ query: z.string().trim().min(2).max(160) })
         .strict(),
       execute: ({ query }) =>
-        wrap("searchProductCategories", async () => ({
-          version: "2026-08",
-          categories: searchProductCategories(query),
-        })),
+        wrap("searchProductCategories", async () => {
+          const key = query.trim().toLowerCase()
+          let categories = categorySearches.get(key)
+          if (!categories) {
+            categories = searchProductCategories(query)
+            categorySearches.set(key, categories)
+          }
+          return { version: "2026-08", categories }
+        }),
+    }),
+    readProductCategoryAttributes: tool({
+      description:
+        "Read bounded attribute names for one selected Shopify category, only when supplied facts require them. Never invent specifications, attribute values, variants, prices or stock.",
+      inputSchema: z
+        .object({ categoryKey: z.string().regex(/^shopify:[a-z0-9-]+$/) })
+        .strict(),
+      execute: ({ categoryKey }) =>
+        wrap("readProductCategoryAttributes", async () => {
+          if (!categoryAttributes.has(categoryKey))
+            categoryAttributes.set(
+              categoryKey,
+              readProductCategoryAttributes(categoryKey),
+            )
+          return categoryAttributes.get(categoryKey) ?? null
+        }),
     }),
     prepareOrder: tool({
       description:

@@ -7,6 +7,7 @@ export function generalCapabilityEnabled(capability: Capability) {
     !commercePreparationEnabled() &&
     [
       "catalog.categories.suggest",
+      "catalog.categories.attributes",
       "sales.order.prepare",
       "services.job.prepare",
     ].includes(capability.id)

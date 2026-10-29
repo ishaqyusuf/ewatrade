@@ -21,12 +21,14 @@ test("literal wildcard characters and every bounded search term are retained", (
   expect(query.terms.slice(0, 3)).toEqual(["100%", "a_b", "c\\d"])
   expect(publicListingSearchWhere(query.terms)[0]).toMatchObject({
     OR: [
+      { category: { contains: "100\\%" } },
       { name: { contains: "100\\%" } },
       { description: { contains: "100\\%" } },
     ],
   })
   expect(publicListingSearchWhere(query.terms)[1]).toMatchObject({
     OR: [
+      { category: { contains: "a\\_b" } },
       { name: { contains: "a\\_b" } },
       { description: { contains: "a\\_b" } },
     ],
@@ -149,6 +151,7 @@ function repository(
 
 const searchTerm = (term: string) => ({
   OR: [
+    { category: { contains: term, mode: "insensitive" } },
     { name: { contains: term, mode: "insensitive" } },
     { description: { contains: term, mode: "insensitive" } },
   ],
@@ -425,7 +428,7 @@ test("price SQL mirrors the public predicate and comparable-price semantics", ()
     `v.status = 'ACTIVE' AND v."archivedAt" IS NULL`,
     `a."storeId" = ? AND a."isAvailable" = true`,
     `i."categoryId" = ?`,
-    "(i.name ILIKE ? OR i.description ILIKE ?)",
+    "(i.name ILIKE ? OR i.description ILIKE ? OR i.category ILIKE ?)",
     `o."pricingPolicy" = 'FIXED' AND o."fixedPriceMinor" IS NOT NULL AND o."currencyCode" = ?`,
     `HAVING (EXISTS (SELECT 1 FROM "CatalogStorefrontPolicy" policy`,
     `policy."tenantId"=? AND policy."storeId"=? AND policy."catalogItemId"=i.id AND policy.unavailable=true`,
@@ -440,6 +443,7 @@ test("price SQL mirrors the public predicate and comparable-price semantics", ()
     "tenant",
     "store",
     "category-1",
+    "%bag%",
     "%bag%",
     "%bag%",
     "tenant",
@@ -565,4 +569,28 @@ test("paid deep links ignore search, availability and category but keep public e
       ],
     },
   })
+})
+
+test("included-plan category searches match the saved full path without extending the eligible cap", () => {
+  const item = {
+    id: "inside-cap",
+    name: "Breakfast",
+    description: null,
+    priceMinor: 100,
+    currencyCode: "NGN",
+    availability: null,
+  }
+  const listing = normalizePublicListing({ q: "Food Whole Eggs" })
+  expect(
+    applyCappedListing(
+      [item],
+      listing,
+      "NGN",
+      () =>
+        "Food, Beverages & Tobacco / Food Items / Meat, Seafood & Eggs / Eggs / Whole Eggs",
+    ),
+  ).toEqual([item])
+  expect(
+    applyCappedListing([item], listing, "NGN", () => "Services / Inspection"),
+  ).toEqual([])
 })

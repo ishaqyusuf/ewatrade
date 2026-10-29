@@ -6,12 +6,12 @@ Tickets refer to the Brain plan `.brain/plans/2026-10-09-assistant-business-oper
 
 ## Summary
 
-- Router procedures: 761 (574 merchant, 187 public/account/internal)
-- Merchant supported by a capability: 174
+- Router procedures: 763 (576 merchant, 187 public/account/internal)
+- Merchant supported by a capability: 176
 - Merchant planned: 135
 - Merchant form-only: 203
 - Merchant excluded: 62
-- Capabilities: 164 (86 read, 78 write)
+- Capabilities: 165 (87 read, 78 write)
 
 ## Capabilities
 
@@ -157,7 +157,8 @@ Tickets refer to the Brain plan `.brain/plans/2026-10-09-assistant-business-oper
 | `customers.count` | 1 | read | `readCustomerCount` | OWNER, ADMIN, MANAGER | Owner/Admin only | dashboard, mobile, whatsapp | source | `customers.count` |
 | `stores.count` | 1 | read | `readStoreCount` | OWNER, ADMIN, MANAGER, CASHIER, OPERATOR | read | dashboard, mobile, whatsapp | source | `tenant.stores` |
 | `customers.page` | 1 | read | `readCustomers` | OWNER, ADMIN, MANAGER | Owner/Admin only | dashboard, mobile, whatsapp | source | `customers.listPage` |
-| `catalog.categories.suggest` | 1 | read | `searchProductCategories` | OWNER, ADMIN, MANAGER, CASHIER, OPERATOR | read | dashboard, mobile, whatsapp | source | `catalog.searchProductCategories` |
+| `catalog.categories.suggest` | 1 | read | `searchProductCategories` | OWNER, ADMIN, MANAGER, CASHIER, OPERATOR | read, read | dashboard, mobile, whatsapp | source | `catalog.searchProductCategories`, `catalog.categories.browse` |
+| `catalog.categories.attributes` | 1 | read | `readProductCategoryAttributes` | OWNER, ADMIN, MANAGER, CASHIER, OPERATOR | read | dashboard, mobile, whatsapp | source | `catalog.categories.attributes` |
 | `catalog.page` | 1 | read | `readCatalogPage` | OWNER, ADMIN, MANAGER, CASHIER, OPERATOR | read | dashboard, mobile, whatsapp | source | `catalog.listItemsPage` |
 | `sales.order.prepare` | 1 | read | `prepareOrder` | OWNER, ADMIN, MANAGER | read, Owner/Admin only | dashboard | source | `catalog.listItemsPage`, `customers.listPage` |
 | `services.job.prepare` | 1 | read | `prepareServiceJob` | OWNER, ADMIN, MANAGER | read, Owner/Admin only | dashboard | source | `catalog.listItemsPage`, `customers.listPage` |
@@ -336,6 +337,7 @@ track conversational evaluation separately from these source test links.
 | `stores.count` | Count accessible Stores | [apps/api/src/assistant/general-counts.test.ts](../../../../apps/api/src/assistant/general-counts.test.ts)<br>[apps/api/src/assistant/general-proposals.integration.test.ts](../../../../apps/api/src/assistant/general-proposals.integration.test.ts)<br>[packages/assistant/src/general/contracts.test.ts](../../../../packages/assistant/src/general/contracts.test.ts) |
 | `customers.page` | Find customers named Amina and show the next page | [apps/api/src/assistant/channel-principal.integration.test.ts](../../../../apps/api/src/assistant/channel-principal.integration.test.ts)<br>[apps/api/src/assistant/channel-principal.test.ts](../../../../apps/api/src/assistant/channel-principal.test.ts)<br>[apps/api/src/assistant/general-lookup-inputs.test.ts](../../../../apps/api/src/assistant/general-lookup-inputs.test.ts)<br>[apps/api/src/assistant/general-proposals.integration.test.ts](../../../../apps/api/src/assistant/general-proposals.integration.test.ts)<br>[packages/assistant/src/general/contracts.test.ts](../../../../packages/assistant/src/general/contracts.test.ts) |
 | `catalog.categories.suggest` | Categorize a rechargeable standing fan | [packages/utils/src/product-taxonomy.test.ts](../../../../packages/utils/src/product-taxonomy.test.ts) |
+| `catalog.categories.attributes` | Read relevant attributes for the selected Smart Phones category | [packages/utils/src/product-taxonomy.test.ts](../../../../packages/utils/src/product-taxonomy.test.ts) |
 | `catalog.page` | Find eggs and show the next page | [apps/api/src/assistant/channel-principal.integration.test.ts](../../../../apps/api/src/assistant/channel-principal.integration.test.ts)<br>[apps/api/src/assistant/channel-principal.test.ts](../../../../apps/api/src/assistant/channel-principal.test.ts)<br>[apps/api/src/assistant/general-lookup-inputs.test.ts](../../../../apps/api/src/assistant/general-lookup-inputs.test.ts)<br>[apps/api/src/assistant/general-proposals.integration.test.ts](../../../../apps/api/src/assistant/general-proposals.integration.test.ts)<br>[packages/assistant/src/general/contracts.test.ts](../../../../packages/assistant/src/general/contracts.test.ts) |
 | `sales.order.prepare` | New order, paid and delivered: 10 crates of big eggs | [packages/assistant/src/general/order-preparation.test.ts](../../../../packages/assistant/src/general/order-preparation.test.ts) |
 | `services.job.prepare` | Laundry: 40 shirts, 10 trousers and 5 socks, wash and iron | [packages/assistant/src/general/service-job-draft.test.ts](../../../../packages/assistant/src/general/service-job-draft.test.ts) |
@@ -451,6 +453,8 @@ track conversational evaluation separately from these source test links.
 | `catalog.addServiceChoice` | mutation | catalog | catalog | form_only | Explicit native Catalog sheet/menu commands; assistant model tools cannot invoke these writes. Assistant edits use the narrow price, details, identifier and availability capabilities. |
 | `catalog.archiveOffering` | mutation | catalog | catalog | supported | catalog.archive |
 | `catalog.archiveVariant` | mutation | catalog | catalog | supported | catalog.archive |
+| `catalog.categories.attributes` | query | read | catalog | supported | catalog.categories.attributes |
+| `catalog.categories.browse` | query | read | catalog | supported | catalog.categories.suggest |
 | `catalog.categories.list` | query | read | catalog | planned | B02 |
 | `catalog.categories.suggest` | mutation | Owner/Admin only | catalog | planned | B02 |
 | `catalog.count` | query | read | catalog | supported | catalog.count |

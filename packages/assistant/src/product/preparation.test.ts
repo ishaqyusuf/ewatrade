@@ -45,7 +45,7 @@ const eggs = () =>
 test("owner egg case: visible regional default, nested counts, independent prices and editable category", () => {
   const draft = productCreateDraft(eggs(), "NGN")
   expect(productCreateIssues(draft)).toEqual([])
-  expect(draft.categoryKey).toBe("poultry:eggs")
+  expect(draft.categoryKey).toBe("shopify:fb-2-12-1-4")
   expect(draft.sellingUnits?.map((unit) => unit.containsQuantity)).toEqual([
     "30",
     "360",
@@ -131,7 +131,7 @@ test("shirt preparation preserves colour stock without fabricating sizes, prices
     }),
     "NGN",
   )
-  expect(payload.categoryKey).toBe("clothing:t-shirts")
+  expect(payload.categoryKey).toBe("shopify:aa-1-13-8")
   expect(payload.options).toHaveLength(1)
   expect(payload.variants?.map((variant) => variant.openingStock)).toEqual([
     "30",
@@ -190,7 +190,7 @@ test("invalid choice facts are retained for correction instead of silently disca
 test("revisions update inferred categories but preserve merchant overrides and nonstandard egg counts", () => {
   const suggested = productCreateDraft(eggs(), "NGN")
   const renamed = productCreateDraft({ ...suggested, name: "T-shirt" }, "NGN")
-  expect(renamed.categoryKey).toBe("clothing:t-shirts")
+  expect(renamed.categoryKey).toBe("shopify:aa-1-13-8")
   const manual = productCreateDraft(
     {
       ...suggested,
