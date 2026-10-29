@@ -24,9 +24,7 @@ export default async function ReceiptSettingsPage({ searchParams }: Props) {
   const params = await loadSettingsStoreParams(searchParams)
   const store =
     ctx.stores.find((option) => option.id === params.storeId) ?? active
-  await prefetch(
-    trpc.orders.receiptSettings.queryOptions({ storeId: store.id }),
-  )
+  void prefetch(trpc.orders.receiptSettings.queryOptions({ storeId: store.id }))
   return (
     <HydrateClient>
       <ReceiptSettingsForm

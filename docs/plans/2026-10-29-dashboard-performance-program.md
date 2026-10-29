@@ -277,3 +277,12 @@ and commit owned coherent slices. Preserve all original27 requirements across tu
   Awaited route presentation reads and all-panel pending gates remain DP-104 work;
   no blanket await removal ahead of clinical/access admission. Program3/27 (11.1%)
   unchanged. [Receipt](../verification/2026-10-29-dashboard-server-streaming.md).
+
+- DP-104 partial: nine actual route functions reproduced presentation-prefetch waits
+  before returning their loading owners. Settings Channels/Compliance/Service-commerce/
+  Receipts/Returns/Stores/Messages, Conversations and Order detail now start those
+  reads without awaiting completion. Clinical workspace access and Setup dependency
+  waits remain. Actual routes22/64 (9 red before fix), owned fast237/1531, Dashboard
+  types/H02 and read-only Receipt settings refresh pass. Client all-panel gates and
+  optimized latency acceptance remain;3/27 unchanged.
+  [Receipt](../verification/2026-10-29-dashboard-route-presentation.md).

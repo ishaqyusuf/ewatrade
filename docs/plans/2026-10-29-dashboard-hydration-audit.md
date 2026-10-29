@@ -109,3 +109,12 @@ Conversations and Order detail. Channels additionally gates the workspace on all
 five queries, so changing its route alone cannot isolate loaded sections. Clinical
 workspace access before admitted prescription data is a genuine dependency. Keep
 that ordering. [Evidence](../verification/2026-10-29-dashboard-server-streaming.md).
+
+## Presentation route waits corrected
+
+The nine awaited presentation owners listed above now start their same prefetches
+without waiting to return the route. Actual functions22/64 pass after9 red cases,
+including allowed Store/role/pharmacy checks and open booking dependencies. Setup
+and clinical workspace-access waits remain. Channels' client all-query pending/error
+gate, other section boundaries and per-family runtime acceptance stay open.
+[Evidence](../verification/2026-10-29-dashboard-route-presentation.md).

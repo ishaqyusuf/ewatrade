@@ -44,7 +44,7 @@ export default async function ConversationsPage({
     { ...params, store: selectedStore },
     activeStore.id,
   )
-  await prefetch(
+  void prefetch(
     trpc.serviceCommerce.storeConversationQueue.queryOptions(input, {
       retry: false,
     }),

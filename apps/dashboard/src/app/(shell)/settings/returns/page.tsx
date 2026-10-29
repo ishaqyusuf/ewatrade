@@ -26,7 +26,7 @@ export default async function ReturnRefundSettingsPage({
   const params = await loadSettingsStoreParams(searchParams)
   const store =
     ctx.stores.find((option) => option.id === params.storeId) ?? fallback
-  await prefetch(trpc.orders.changePolicy.queryOptions({ storeId: store.id }))
+  void prefetch(trpc.orders.changePolicy.queryOptions({ storeId: store.id }))
   return (
     <HydrateClient>
       <ReturnRefundSettings

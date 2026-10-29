@@ -25,7 +25,7 @@ export default async function OrderRoutePage({
 
   const { orderId } = await params
   // Misses (unknown order, other Store) render in the page, not as a crash.
-  await Promise.allSettled([
+  void Promise.allSettled([
     prefetch(trpc.orders.get.queryOptions({ orderId })),
     prefetch(trpc.orders.timeline.queryOptions({ orderId })),
     prefetch(trpc.orders.changeOptions.queryOptions({ orderId })),

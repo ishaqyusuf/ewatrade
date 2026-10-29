@@ -26,7 +26,7 @@ export default async function WhatsAppMessageSettingsPage({
   const { storeId } = await loadSettingsStoreParams(searchParams)
   // No Store (or one this person can't reach) shows the business messages.
   const selected = stores.find((store) => store.id === storeId)?.id
-  await prefetch(
+  void prefetch(
     trpc.customerMessages.templates.list.queryOptions(
       templateListInput(selected),
     ),
