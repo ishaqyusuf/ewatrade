@@ -295,3 +295,12 @@ and commit owned coherent slices. Preserve all original27 requirements across tu
   refresh/See why open-close pass, no settings save. [Contract](2026-10-29-dashboard-section-loading.md)
   and [receipt](../verification/2026-10-29-dashboard-section-loading.md) record Midday
   conformance. Broader loading/optimized budgets remain open;3/27 unchanged.
+
+- DP-204/407 partial: three notification reads reproduced repeated refused interval
+  requests (6 mounted failures). Four hooks now separate query ownership from UI;
+  known rejected reads stop polling, while fresh focus/reopen/manual recovery and
+  successful/transient cadence remain.21/80 mounted, policy/retry6/65, real server
+  hydration/refusal6/40, fast237/1531, Dashboard types/H02 and existing-QA bell
+  open-close-reopen pass without alert changes. Other polling/projection owners and
+  optimized budgets remain;3/27 (11.1%) unchanged.
+  [Evidence](../verification/2026-10-29-dashboard-notification-polling.md).

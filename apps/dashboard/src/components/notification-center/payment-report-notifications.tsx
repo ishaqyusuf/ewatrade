@@ -2,45 +2,11 @@
 
 import { formatReportTime } from "@/components/business-banking/business-banking-model"
 import { orderMoney } from "@/components/orders/order-draft"
-import { useTRPC } from "@/trpc/client"
-import {
-  mountOwnedRead,
-  nextReadMount,
-} from "@ewatrade/assistant/general/staff-activity-target"
+import { usePendingPaymentReports } from "@/hooks/use-business-notification-reads"
 import { Button } from "@ewatrade/ui"
 import { BankIcon } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
-import { useQuery } from "@tanstack/react-query"
 import Link from "next/link"
-import { useState } from "react"
-
-const PREVIEW_LIMIT = 5
-
-/**
- * Customer payment claims waiting for a check. Each mounted consumer owns its
- * read generation, refreshes on focus and polls while active. The panel gets
- * a fresh generation each time it opens.
- */
-export function usePendingPaymentReports() {
-  const trpc = useTRPC()
-  const [mount] = useState(nextReadMount)
-  return useQuery(
-    mountOwnedRead(
-      trpc.businessBanking.pendingReports.queryOptions(
-        { limit: PREVIEW_LIMIT },
-        {
-          retry: false,
-          staleTime: 0,
-          gcTime: 0,
-          refetchOnMount: "always",
-          refetchInterval: 30_000,
-          trpc: { abortOnUnmount: true },
-        },
-      ),
-      mount,
-    ),
-  )
-}
 
 /** "Payment notification from … [Open] [Evaluate]" rows above the alerts. */
 export function PaymentReportNotifications({

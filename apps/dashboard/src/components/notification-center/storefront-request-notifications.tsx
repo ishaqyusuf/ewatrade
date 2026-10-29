@@ -2,55 +2,14 @@
 
 import { formatReportTime } from "@/components/business-banking/business-banking-model"
 import { orderMoney } from "@/components/orders/order-draft"
+import { useStorefrontRequestNotifications } from "@/hooks/use-business-notification-reads"
 import { useTRPC } from "@/trpc/client"
-import {
-  mountOwnedRead,
-  nextReadMount,
-} from "@ewatrade/assistant/general/staff-activity-target"
 import { Button } from "@ewatrade/ui"
 import { ShoppingCart01Icon } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
-import { useMutation, useQuery } from "@tanstack/react-query"
-import { TRPCClientError } from "@trpc/client"
+import { useMutation } from "@tanstack/react-query"
 import Link from "next/link"
 import { useState } from "react"
-
-/** Members without request access keep a quiet bell instead of a polling error. */
-function isRefused(error: unknown) {
-  if (!(error instanceof TRPCClientError)) return false
-  const code = (error.data as { code?: unknown } | undefined)?.code
-  return code === "FORBIDDEN" || code === "UNAUTHORIZED"
-}
-
-/**
- * Unread website requests for the signed-in member's Stores. Each mounted
- * consumer owns its read generation; only the bell polls, the panel section
- * reads once each time it opens.
- */
-export function useStorefrontRequestNotifications({
-  poll,
-}: {
-  poll: boolean
-}) {
-  const trpc = useTRPC()
-  const [mount] = useState(nextReadMount)
-  return useQuery(
-    mountOwnedRead(
-      trpc.storefrontRequests.notifications.queryOptions(undefined, {
-        retry: false,
-        staleTime: 0,
-        gcTime: 0,
-        refetchOnMount: "always",
-        refetchOnWindowFocus: poll,
-        refetchInterval: poll
-          ? (query) => (isRefused(query.state.error) ? false : 60_000)
-          : false,
-        trpc: { abortOnUnmount: true },
-      }),
-      mount,
-    ),
-  )
-}
 
 /** "New website request …  [Open] [Mark as read]" rows above the alerts. */
 export function StorefrontRequestNotifications({

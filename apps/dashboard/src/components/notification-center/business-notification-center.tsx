@@ -3,6 +3,13 @@
 import { isAccessDrift } from "@/components/activity/activity-read-errors"
 import { ActivityViewerProvider } from "@/components/activity/activity-viewer"
 import { useActivityParams } from "@/hooks/use-activity-params"
+import {
+  notificationReadOptions,
+  usePaymentPlanNotices,
+  usePendingPaymentReports,
+  useStorefrontRequestNotifications,
+  useUnreadBusinessNotificationCount,
+} from "@/hooks/use-business-notification-reads"
 import { useTRPC } from "@/trpc/client"
 import {
   mountOwnedRead,
@@ -12,34 +19,16 @@ import type { BusinessNotificationReceiptView } from "@ewatrade/notifications/bu
 import { Popover, PopoverContent, PopoverTrigger, cn } from "@ewatrade/ui"
 import { Notification01Icon } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
-import { useInfiniteQuery, useMutation, useQuery } from "@tanstack/react-query"
+import { useInfiniteQuery, useMutation } from "@tanstack/react-query"
 import { useState } from "react"
 import {
   BusinessNotificationInbox,
   type InboxTab,
 } from "./business-notification-inbox"
 import { useAlertPreferencesParams } from "./business-notification-settings"
-import {
-  PaymentPlanNotices,
-  usePaymentPlanNotices,
-} from "./payment-plan-notices"
-import {
-  PaymentReportNotifications,
-  usePendingPaymentReports,
-} from "./payment-report-notifications"
-import {
-  StorefrontRequestNotifications,
-  useStorefrontRequestNotifications,
-} from "./storefront-request-notifications"
-
-/** Fresh, mount-owned reads: never joined across user, Business or Store. */
-const freshRead = {
-  retry: false,
-  staleTime: 0,
-  gcTime: 0,
-  refetchOnMount: "always",
-  trpc: { abortOnUnmount: true },
-} as const
+import { PaymentPlanNotices } from "./payment-plan-notices"
+import { PaymentReportNotifications } from "./payment-report-notifications"
+import { StorefrontRequestNotifications } from "./storefront-request-notifications"
 
 /**
  * Personal alerts trigger and inbox. Mount it keyed by the current user,
@@ -53,23 +42,13 @@ export function BusinessNotificationCenter({
   /** The signed-in membership; its own actions read "You". */
   viewerMembershipId: string
 }) {
-  const trpc = useTRPC()
-  const [mount] = useState(nextReadMount)
   const [open, setOpen] = useState(false)
   // A new generation on every open: the panel remounts, aborting the earlier
   // read and showing nothing until its own fresh read succeeds.
   const [generation, setGeneration] = useState(0)
   const [tab, setTab] = useState<InboxTab>("unread")
 
-  const count = useQuery(
-    mountOwnedRead(
-      trpc.businessNotifications.unreadCount.queryOptions(undefined, {
-        ...freshRead,
-        refetchInterval: 60_000,
-      }),
-      mount,
-    ),
-  )
+  const count = useUnreadBusinessNotificationCount()
   const alerts = count.isSuccess ? count.data.count : 0
   // Customer payment claims waiting for a check also light the bell.
   const payments = usePendingPaymentReports()
@@ -181,7 +160,7 @@ function InboxPanel({
       trpc.businessNotifications.listMine.infiniteQueryOptions(
         { state: tab },
         {
-          ...freshRead,
+          ...notificationReadOptions,
           getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
         },
       ),

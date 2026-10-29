@@ -76,3 +76,37 @@ owner separation have actual transport regression proof; per-family runtime proo
 remains required. Streaming responseSetup headers are not full request/SQL totals;
 completed fixed server traces retain that distinction, including partial cancellation.
 [Evidence](../verification/2026-10-29-dashboard-server-streaming.md).
+
+## Notification polling contract —implementation follow-up
+
+Midday reference inspected: hooks/use-notifications.ts and notification-center/
+notification-center.tsx. Adopt hook/UI separation, while retaining EwaTrade's
+mount-owned fresh/private reads rather than Midday's optimistic/realtime policy.
+
+- [x] Move the four bell query hooks and unchanged fresh options into
+  hooks/use-business-notification-reads.ts; components keep existing rendering,
+  open generations, actions, exact invalidation/refetch and scope remount ownership.
+- [x] Put the existing rejected-read classification in trpc/query-read-errors.ts;
+  reuse it for current cache erasure and notification poll decisions. Only known
+  FORBIDDEN/UNAUTHORIZED/NOT_FOUND stop intervals; transient failures keep cadence.
+- [x] Preserve0 freshness/retention, fresh mount, abort ownership, focus recovery,
+ 30s payment/60s other active intervals and website panel's poll:false behavior.
+  Never disable the owner or weaken fresh server writes/status/revocation checks.
+- [x] Prove actual hook interval behavior with mounted real observers, denied payload
+  erasure, independent mount keys, focus recovery, successful polling resumption,
+  transient failure continuation and unmount. Run owned source/types/H02 and one
+  existing-data bell/browser smoke window, then commit owned source and evidence.
+
+No new UI/table/form/sheet/API/schema/provider, optimistic notification write,
+realtime service, polling framework, broad TTL or command change is required. Other
+pollers remain an explicit DP-204 audit/application obligation; this contract does
+not complete the full ticket or dashboard program.
+
+Conformance: four existing input/DTO contracts, mount generations, exact read/write
+callbacks, private scope and0 retention remain. UI is unchanged. The source follows
+the inspected Midday hook/UI split; EwaTrade retains protected fresh reads instead
+of introducing realtime or optimistic writes. Broader polling audit still includes
+Assistant/WhatsApp, Conversations, website inbox lists, private financial/receipt
+review, attachment jobs and domain progress. Required live status, link expiry and
+bounded private-proof owners must be inspected individually, not given a global TTL.
+[Evidence](../verification/2026-10-29-dashboard-notification-polling.md).

@@ -6,6 +6,7 @@ import {
   defaultShouldDehydrateQuery,
 } from "@tanstack/react-query"
 import superjson from "superjson"
+import { isRejectedRead } from "./query-read-errors"
 import { shouldRetryQuery } from "./query-retry"
 
 export function makeQueryClient() {
@@ -16,16 +17,7 @@ export function makeQueryClient() {
     queryCache: new QueryCache({
       onError: (error, query) => {
         captureDashboardError(error, "dashboard.query")
-        const data =
-          error && typeof error === "object" && "data" in error
-            ? error.data
-            : null
-        if (
-          data &&
-          typeof data === "object" &&
-          "code" in data &&
-          ["FORBIDDEN", "UNAUTHORIZED", "NOT_FOUND"].includes(String(data.code))
-        ) {
+        if (isRejectedRead(error)) {
           // A rejected fresh read must not keep an earlier authorized payload visible.
           query.setState({ data: undefined, status: "error" })
         }

@@ -1,11 +1,8 @@
 "use client"
 
 import { formatReportTime } from "@/components/business-banking/business-banking-model"
+import { usePaymentPlanNotices } from "@/hooks/use-business-notification-reads"
 import { useTRPC } from "@/trpc/client"
-import {
-  mountOwnedRead,
-  nextReadMount,
-} from "@ewatrade/assistant/general/staff-activity-target"
 import { Button, cn } from "@ewatrade/ui"
 import {
   type NoticeReview,
@@ -20,33 +17,6 @@ import {
 import { HugeiconsIcon } from "@hugeicons/react"
 import { useMutation, useQuery } from "@tanstack/react-query"
 import Link from "next/link"
-import { useState } from "react"
-
-/**
- * Payment alert plan changes for this Business (Banking 02 v9): one notice per plan revision,
- * naming what changed and what happens next. In-app only; never a payment claim. Each mounted
- * consumer owns its read, like Payments to check.
- */
-export function usePaymentPlanNotices() {
-  const trpc = useTRPC()
-  const [mount] = useState(nextReadMount)
-  return useQuery(
-    mountOwnedRead(
-      trpc.businessBanking.notificationChanges.queryOptions(
-        { limit: 5 },
-        {
-          retry: false,
-          staleTime: 0,
-          gcTime: 0,
-          refetchOnMount: "always",
-          refetchInterval: 60_000,
-          trpc: { abortOnUnmount: true },
-        },
-      ),
-      mount,
-    ),
-  )
-}
 
 /**
  * Review settings opens the exact bank account only when the notice names one account in the
