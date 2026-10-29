@@ -1,5 +1,7 @@
 "use client"
 
+import { loadSheetCode } from "./load-sheet-code"
+
 import { SheetBodyLoading, SheetFrame } from "@/components/sheets/sheet-frame"
 import { useInventoryParams } from "@/hooks/use-inventory-params"
 import { useSheetDismissal } from "@/hooks/use-sheet-dismissal"
@@ -10,15 +12,23 @@ import dynamic from "next/dynamic"
 
 const InventoryOperationForm = dynamic(
   () =>
-    import("@/components/inventory/inventory-operation-form").then(
-      (module) => module.InventoryOperationForm,
+    loadSheetCode(
+      () =>
+        import("@/components/inventory/inventory-operation-form").then(
+          (module) => module.InventoryOperationForm,
+        ),
+      "body",
     ),
   { loading: SheetBodyLoading },
 )
 const StockCountForm = dynamic(
   () =>
-    import("@/components/inventory/stock-count-form").then(
-      (module) => module.StockCountForm,
+    loadSheetCode(
+      () =>
+        import("@/components/inventory/stock-count-form").then(
+          (module) => module.StockCountForm,
+        ),
+      "body",
     ),
   { loading: SheetBodyLoading },
 )

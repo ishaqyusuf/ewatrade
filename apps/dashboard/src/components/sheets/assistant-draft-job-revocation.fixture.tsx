@@ -40,6 +40,7 @@ let releaseSawInvalidation = false
 const reviewKey = ["retailOps", "staffStoreAccessReview"]
 
 mock.module("next/navigation", () => ({ usePathname: () => pathname }))
+mock.module("@/observability/sentry", () => ({ captureDashboardError() {} }))
 mock.module("@/hooks/use-catalog-item-params", () => ({
   useCatalogItemParams: () => ({ setCatalogItemMode: () => {} }),
 }))

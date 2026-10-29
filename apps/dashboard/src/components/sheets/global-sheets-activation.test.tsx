@@ -57,6 +57,7 @@ mock.module("@/hooks/use-assistant-draft-job-handoff", () => ({
   useAssistantDraftJobOverlay: () => ownedJob,
 }))
 mock.module("@ewatrade/ui", () => ({ Button: () => null }))
+mock.module("@/observability/sentry", () => ({ captureDashboardError() {} }))
 mock.module("@/components/catalog-item/catalog-appearance", () => ({
   CatalogAppearance: ({ children }: { children: ReactNode }) => children,
 }))

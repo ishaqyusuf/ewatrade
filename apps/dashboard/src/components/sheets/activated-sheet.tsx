@@ -10,6 +10,10 @@ import {
 
 const ActiveSheet = createContext(false)
 
+export function useActiveSheet() {
+  return useContext(ActiveSheet)
+}
+
 /** Keep a loaded controller alive for its own close/focus/draft lifecycle. */
 export function ActivatedSheet({
   active,

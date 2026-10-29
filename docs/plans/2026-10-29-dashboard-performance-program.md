@@ -10,6 +10,32 @@ Do not substitute the earlier navigation batch or Catalog correction for complet
 of this program. Work-package progress and measured performance acceptance are
 separate. Start:0/27. Evidence belongs in the execution log below and linked receipts.
 
+## Current assessment and phase order
+
+Midday adoption is incomplete across owners, rather than absent. Request-local
+reuse, streaming/scheduling, retained tabs, hidden-reader controls and optional
+delivery have implemented slices. Those are not blanket acceptance of every
+route or proof that refresh latency is solved. Latest development smoke still
+measures Catalog refresh3873ms, warm Catalog853ms and Overview1854ms; sparse,
+uncontrolled observations cannot establish production performance or p95.
+
+| Phase | Tickets | Accepted | Remaining outcome |
+| --- | --- | --- | --- |
+|0 Evidence |001–003 |2/3 |Optimized, pinned per-family costs and calibrated budgets |
+|1 Shared boot |101–104 |1/4 |Hydration consumption, shorter critical path, independent loading |
+|2 Query lifecycle |201–204 |0/4 |Correct retention, precise invalidation, bounded background reads |
+|3 Delivery/rendering |301–304 |0/4 |Code recovery/optimized bytes, import/tools and interaction evidence |
+|4 Domain rollout |401–409 |0/9 |All nine families satisfy read/state/access/freshness budgets |
+|5 Acceptance |501–503 |0/3 |Behavior, regression budgets and full27-ticket audit |
+
+Next priority: correlate remaining document/render/API/pool/SQL cost in DP-003/103,
+finish actual prefetch consumption and query lifetime in DP-102/201–204, then use
+the measured slowest owners to order DP-401–409. Continue small delivery/recovery
+fixes only where an actual defect or costly graph is demonstrated. Keep the full
+ticket acceptance below; build success and a faster isolated tab do not close a
+domain ticket. Optimized runtime changes retain their explicit shared-service
+coordination requirement. Overall3/27 (11.1%); no deployment.
+
 ## References and migration contract
 
 Midday reference: local `apps/dashboard/src/trpc/{server,query-client,request-context}`,
@@ -439,3 +465,44 @@ Overview1169ms. Shell retained;0 blocked business writes. First navigation and
 auth/context/pool costs remain above goals. Code-load recovery and pinned optimized
 comparison stay open; program3/27 (11.1%) unchanged.
 [Evidence](../verification/2026-10-29-dashboard-route-sheet-delivery.md).
+
+## Sheet code recovery contract — DP-301 follow-up
+
+Installed Next App loadable keeps a rejected React.lazy import across ordinary
+error-boundary reset (actual installed-loader probe:1 test/6 assertions). Preserve
+the existing Midday GlobalSheets/provider and domain controller ownership; add
+one Dashboard-local code-loader recovery adapter at the existing dynamic import
+sites. It must retain literal imports for Next code splitting, and must not
+introduce data caching, different URL semantics or command retry.
+
+- [x] Resolve a failed import to a local recovery component; a manual retry calls
+  the code loader again rather than resetting the cached rejected React.lazy.
+- [x] Keep global feedback within existing active-sheet visibility; body feedback
+  stays inside the owning frame. Disable duplicate retries while pending.
+- [x] Cache only successful code definitions, never props, scope or private data.
+  Pending old-scope work cannot revive an unmounted owner or steal focus. Retry
+  renders current props and preserves existing form/dismissal ownership.
+- [x] Cover actual installed App loadable, repeated failure/recovery, current props,
+  close/scope/focus and ordinary feature-render errors. Reuse prior domain checks;
+  run focused source/types and existing-data UI smoke after the coherent change.
+
+Target files: new sheets/load-sheet-code.tsx and mounted regression; existing
+activated-sheet.tsx context accessor,41 global loaders and6 route body loaders.
+Routes, headers, tables, filters, URL parsers, forms, API/query/mutation/invalidation
+remain owned by their existing files. No new feature/table/header/form migration
+is necessary for import recovery. Reference: Midday global-sheets/provider,
+customer-details-sheet and error-fallback; existing EwaTrade SheetFrame/Button/
+observability. Midday's route refresh alone does not retry this installed loader.
+Prepared3cf06633b optimized build must remain untouched while its runtime window
+is pending; source checks and dev evidence do not qualify that build or close
+DP-301/003/502. Accepted program count remains3/27 (11.1%).
+
+Implementation now wraps47 existing literal loaders, with six controller ASTs,
+dynamic options and imported targets unchanged. Actual App loader6/38 passes after
+five red recovery cases; global54/113, route13/40 and isolated actual Job factory
+regression pass. Dashboard types and owned fast220/1483 across41 files pass. A
+development build inspection confirms the nested literal imports still produce
+Turbopack async loaders; its runtime drops rejected chunk resolvers. This is source
+evidence, not an actual browser network-fault test. Optimized build3cf06633b stays
+prepared and unchanged; the older965f64794 approval window already completed and
+does not authorize a new candidate switch. [Receipt](../verification/2026-10-29-dashboard-sheet-code-recovery.md).

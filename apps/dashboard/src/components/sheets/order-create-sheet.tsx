@@ -1,5 +1,7 @@
 "use client"
 
+import { loadSheetCode } from "./load-sheet-code"
+
 import { SheetBodyLoading, SheetFrame } from "@/components/sheets/sheet-frame"
 import { useOrderParams } from "@/hooks/use-order-params"
 import { useSheetDismissal } from "@/hooks/use-sheet-dismissal"
@@ -8,7 +10,13 @@ import dynamic from "next/dynamic"
 
 const OrderForm = dynamic(
   () =>
-    import("@/components/orders/order-form").then((module) => module.OrderForm),
+    loadSheetCode(
+      () =>
+        import("@/components/orders/order-form").then(
+          (module) => module.OrderForm,
+        ),
+      "body",
+    ),
   { loading: SheetBodyLoading },
 )
 

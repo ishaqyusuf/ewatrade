@@ -41,6 +41,7 @@ document.createTextNode = (value: string) => {
   return node
 }
 const { createRoot } = await import("react-dom/client")
+mock.module("@/observability/sentry", () => ({ captureDashboardError() {} }))
 
 let params = new URLSearchParams()
 let failDismissal = false
@@ -66,6 +67,7 @@ mock.module("@/hooks/use-assistant-draft-job-handoff", () => ({
   releaseAssistantDraftJobOverlay: () => false,
 }))
 mock.module("@ewatrade/ui", () => ({
+  Button: () => null,
   Sheet: ({
     open,
     onOpenChange,

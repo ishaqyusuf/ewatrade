@@ -1,5 +1,7 @@
 "use client"
 
+import { loadSheetCode } from "./load-sheet-code"
+
 import {
   type DraftJobHandoff,
   type DraftJobScope,
@@ -25,8 +27,12 @@ import { useRef } from "react"
 
 const ServiceJobWorkspace = dynamic(
   () =>
-    import("@/components/service-work/service-job-workspace").then(
-      (module) => module.ServiceJobWorkspace,
+    loadSheetCode(
+      () =>
+        import("@/components/service-work/service-job-workspace").then(
+          (module) => module.ServiceJobWorkspace,
+        ),
+      "body",
     ),
   { loading: SheetBodyLoading },
 )

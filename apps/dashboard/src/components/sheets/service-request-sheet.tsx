@@ -1,5 +1,7 @@
 "use client"
 
+import { loadSheetCode } from "./load-sheet-code"
+
 import { SheetBodyLoading, SheetFrame } from "@/components/sheets/sheet-frame"
 import { useServiceWorkParams } from "@/hooks/use-service-work-params"
 import { useSheetDismissal } from "@/hooks/use-sheet-dismissal"
@@ -8,8 +10,12 @@ import dynamic from "next/dynamic"
 
 const ServiceRequestForm = dynamic(
   () =>
-    import("@/components/service-work/service-request-form").then(
-      (module) => module.ServiceRequestForm,
+    loadSheetCode(
+      () =>
+        import("@/components/service-work/service-request-form").then(
+          (module) => module.ServiceRequestForm,
+        ),
+      "body",
     ),
   { loading: SheetBodyLoading },
 )

@@ -1,4 +1,5 @@
 "use client"
+
 import { CatalogAppearance } from "@/components/catalog-item/catalog-appearance"
 import { useAssistantDraftJobOverlay } from "@/hooks/use-assistant-draft-job-handoff"
 import { useCatalogItemParams } from "@/hooks/use-catalog-item-params"
@@ -6,6 +7,7 @@ import { useServiceWorkParams } from "@/hooks/use-service-work-params"
 import { Button } from "@ewatrade/ui"
 import { usePathname } from "next/navigation"
 import { useState } from "react"
+import { loadSheetCode } from "./load-sheet-code"
 
 import { useGlobalSheetIntents } from "@/hooks/use-global-sheet-intents"
 import dynamic from "next/dynamic"
@@ -13,257 +15,350 @@ import { ActivatedSheet, SheetCodeLoading } from "./activated-sheet"
 
 const CatalogItemDetailModal = dynamic(
   () =>
-    import("@/components/catalog-item/catalog-item-detail-modal").then(
-      (module) => module.CatalogItemDetailModal,
+    loadSheetCode(() =>
+      import("@/components/catalog-item/catalog-item-detail-modal").then(
+        (module) => module.CatalogItemDetailModal,
+      ),
     ),
   { loading: SheetCodeLoading },
 )
 const CatalogItemSheet = dynamic(
   () =>
-    import("@/components/catalog-item/catalog-item-sheet").then(
-      (module) => module.CatalogItemSheet,
+    loadSheetCode(() =>
+      import("@/components/catalog-item/catalog-item-sheet").then(
+        (module) => module.CatalogItemSheet,
+      ),
     ),
   { loading: SheetCodeLoading },
 )
 const CustomerRequestSheet = dynamic(
   () =>
-    import("./customer-request-sheet").then(
-      (module) => module.CustomerRequestSheet,
+    loadSheetCode(() =>
+      import("./customer-request-sheet").then(
+        (module) => module.CustomerRequestSheet,
+      ),
     ),
   { loading: SheetCodeLoading },
 )
 const ServiceIntakeReceiptSheet = dynamic(
   () =>
-    import("./service-intake-receipt-sheet").then(
-      (module) => module.ServiceIntakeReceiptSheet,
+    loadSheetCode(() =>
+      import("./service-intake-receipt-sheet").then(
+        (module) => module.ServiceIntakeReceiptSheet,
+      ),
     ),
   { loading: SheetCodeLoading },
 )
 const ServiceIntakeSheet = dynamic(
   () =>
-    import("./service-intake-sheet").then(
-      (module) => module.ServiceIntakeSheet,
+    loadSheetCode(() =>
+      import("./service-intake-sheet").then(
+        (module) => module.ServiceIntakeSheet,
+      ),
     ),
   { loading: SheetCodeLoading },
 )
 const ServiceJobSheet = dynamic(
-  () => import("./service-job-sheet").then((module) => module.ServiceJobSheet),
+  () =>
+    loadSheetCode(() =>
+      import("./service-job-sheet").then((module) => module.ServiceJobSheet),
+    ),
   { loading: SheetCodeLoading },
 )
 const ServiceWorkOriginalSheet = dynamic(
   () =>
-    import("./service-work-original-sheet").then(
-      (module) => module.ServiceWorkOriginalSheet,
+    loadSheetCode(() =>
+      import("./service-work-original-sheet").then(
+        (module) => module.ServiceWorkOriginalSheet,
+      ),
     ),
   { loading: SheetCodeLoading },
 )
 const BusinessNotificationPreferencesSheet = dynamic(
   () =>
-    import(
-      "@/components/notification-center/business-notification-settings"
-    ).then((module) => module.BusinessNotificationPreferencesSheet),
+    loadSheetCode(() =>
+      import(
+        "@/components/notification-center/business-notification-settings"
+      ).then((module) => module.BusinessNotificationPreferencesSheet),
+    ),
   { loading: SheetCodeLoading },
 )
 const ActivitySheet = dynamic(
-  () => import("./activity-sheet").then((module) => module.ActivitySheet),
+  () =>
+    loadSheetCode(() =>
+      import("./activity-sheet").then((module) => module.ActivitySheet),
+    ),
   { loading: SheetCodeLoading },
 )
 const AssistantBookingSheet = dynamic(
   () =>
-    import("./assistant-booking-sheet").then(
-      (module) => module.AssistantBookingSheet,
+    loadSheetCode(() =>
+      import("./assistant-booking-sheet").then(
+        (module) => module.AssistantBookingSheet,
+      ),
     ),
   { loading: SheetCodeLoading },
 )
 const AssistantCashCountSheet = dynamic(
   () =>
-    import("./assistant-cash-count-sheet").then(
-      (module) => module.AssistantCashCountSheet,
+    loadSheetCode(() =>
+      import("./assistant-cash-count-sheet").then(
+        (module) => module.AssistantCashCountSheet,
+      ),
     ),
   { loading: SheetCodeLoading },
 )
 const AssistantDayCloseSheet = dynamic(
   () =>
-    import("./assistant-day-close-sheet").then(
-      (module) => module.AssistantDayCloseSheet,
+    loadSheetCode(() =>
+      import("./assistant-day-close-sheet").then(
+        (module) => module.AssistantDayCloseSheet,
+      ),
     ),
   { loading: SheetCodeLoading },
 )
 const AssistantManualMessageSheet = dynamic(
   () =>
-    import("./assistant-manual-message-sheet").then(
-      (module) => module.AssistantManualMessageSheet,
+    loadSheetCode(() =>
+      import("./assistant-manual-message-sheet").then(
+        (module) => module.AssistantManualMessageSheet,
+      ),
     ),
   { loading: SheetCodeLoading },
 )
 const AssistantQuoteApprovalSheet = dynamic(
   () =>
-    import("./assistant-quote-approval-sheet").then(
-      (module) => module.AssistantQuoteApprovalSheet,
+    loadSheetCode(() =>
+      import("./assistant-quote-approval-sheet").then(
+        (module) => module.AssistantQuoteApprovalSheet,
+      ),
     ),
   { loading: SheetCodeLoading },
 )
 const AssistantServiceRequestSheet = dynamic(
   () =>
-    import("./assistant-service-request-sheet").then(
-      (module) => module.AssistantServiceRequestSheet,
+    loadSheetCode(() =>
+      import("./assistant-service-request-sheet").then(
+        (module) => module.AssistantServiceRequestSheet,
+      ),
     ),
   { loading: SheetCodeLoading },
 )
 const BusinessReportSheet = dynamic(
   () =>
-    import("./business-report-sheet").then(
-      (module) => module.BusinessReportSheet,
+    loadSheetCode(() =>
+      import("./business-report-sheet").then(
+        (module) => module.BusinessReportSheet,
+      ),
     ),
   { loading: SheetCodeLoading },
 )
 const CloseoutSheet = dynamic(
-  () => import("./closeout-sheet").then((module) => module.CloseoutSheet),
+  () =>
+    loadSheetCode(() =>
+      import("./closeout-sheet").then((module) => module.CloseoutSheet),
+    ),
   { loading: SheetCodeLoading },
 )
 const CustomerDetailsSheet = dynamic(
   () =>
-    import("./customer-details-sheet").then(
-      (module) => module.CustomerDetailsSheet,
+    loadSheetCode(() =>
+      import("./customer-details-sheet").then(
+        (module) => module.CustomerDetailsSheet,
+      ),
     ),
   { loading: SheetCodeLoading },
 )
 const CustomerLedgerSheet = dynamic(
   () =>
-    import("./customer-ledger-sheet").then(
-      (module) => module.CustomerLedgerSheet,
+    loadSheetCode(() =>
+      import("./customer-ledger-sheet").then(
+        (module) => module.CustomerLedgerSheet,
+      ),
     ),
   { loading: SheetCodeLoading },
 )
 const CustomerMessageSheet = dynamic(
   () =>
-    import("./customer-message-sheet").then(
-      (module) => module.CustomerMessageSheet,
+    loadSheetCode(() =>
+      import("./customer-message-sheet").then(
+        (module) => module.CustomerMessageSheet,
+      ),
     ),
   { loading: SheetCodeLoading },
 )
 const DomainSheet = dynamic(
-  () => import("./domain-sheet").then((module) => module.DomainSheet),
+  () =>
+    loadSheetCode(() =>
+      import("./domain-sheet").then((module) => module.DomainSheet),
+    ),
   { loading: SheetCodeLoading },
 )
 const FinanceMovementDetailsSheet = dynamic(
   () =>
-    import("./finance-movement-details-sheet").then(
-      (module) => module.FinanceMovementDetailsSheet,
+    loadSheetCode(() =>
+      import("./finance-movement-details-sheet").then(
+        (module) => module.FinanceMovementDetailsSheet,
+      ),
     ),
   { loading: SheetCodeLoading },
 )
 const FinanceSheet = dynamic(
-  () => import("./finance-sheet").then((module) => module.FinanceSheet),
+  () =>
+    loadSheetCode(() =>
+      import("./finance-sheet").then((module) => module.FinanceSheet),
+    ),
   { loading: SheetCodeLoading },
 )
 const InventoryOperationDetailsSheet = dynamic(
   () =>
-    import("./inventory-operation-details-sheet").then(
-      (module) => module.InventoryOperationDetailsSheet,
+    loadSheetCode(() =>
+      import("./inventory-operation-details-sheet").then(
+        (module) => module.InventoryOperationDetailsSheet,
+      ),
     ),
   { loading: SheetCodeLoading },
 )
 const OrderDetailsSheet = dynamic(
   () =>
-    import("./order-details-sheet").then((module) => module.OrderDetailsSheet),
+    loadSheetCode(() =>
+      import("./order-details-sheet").then(
+        (module) => module.OrderDetailsSheet,
+      ),
+    ),
   { loading: SheetCodeLoading },
 )
 const PrescriptionRequestSheet = dynamic(
   () =>
-    import("./prescription-request-sheet").then(
-      (module) => module.PrescriptionRequestSheet,
+    loadSheetCode(() =>
+      import("./prescription-request-sheet").then(
+        (module) => module.PrescriptionRequestSheet,
+      ),
     ),
   { loading: SheetCodeLoading },
 )
 const PurchaseBillDetailsSheet = dynamic(
   () =>
-    import("./purchase-bill-details-sheet").then(
-      (module) => module.PurchaseBillDetailsSheet,
+    loadSheetCode(() =>
+      import("./purchase-bill-details-sheet").then(
+        (module) => module.PurchaseBillDetailsSheet,
+      ),
     ),
   { loading: SheetCodeLoading },
 )
 const PurchaseRegistrationDetailsSheet = dynamic(
   () =>
-    import("./purchase-registration-details-sheet").then(
-      (module) => module.PurchaseRegistrationDetailsSheet,
+    loadSheetCode(() =>
+      import("./purchase-registration-details-sheet").then(
+        (module) => module.PurchaseRegistrationDetailsSheet,
+      ),
     ),
   { loading: SheetCodeLoading },
 )
 const ReceiptSheet = dynamic(
-  () => import("./receipt-sheet").then((module) => module.ReceiptSheet),
+  () =>
+    loadSheetCode(() =>
+      import("./receipt-sheet").then((module) => module.ReceiptSheet),
+    ),
   { loading: SheetCodeLoading },
 )
 const ServiceCommerceSheet = dynamic(
   () =>
-    import("./service-commerce-sheet").then(
-      (module) => module.ServiceCommerceSheet,
+    loadSheetCode(() =>
+      import("./service-commerce-sheet").then(
+        (module) => module.ServiceCommerceSheet,
+      ),
     ),
   { loading: SheetCodeLoading },
 )
 const StaffAccessSheet = dynamic(
   () =>
-    import("./staff-access-sheet").then((module) => module.StaffAccessSheet),
+    loadSheetCode(() =>
+      import("./staff-access-sheet").then((module) => module.StaffAccessSheet),
+    ),
   { loading: SheetCodeLoading },
 )
 const StaffActivitySheet = dynamic(
   () =>
-    import("./staff-activity-sheet").then(
-      (module) => module.StaffActivitySheet,
+    loadSheetCode(() =>
+      import("./staff-activity-sheet").then(
+        (module) => module.StaffActivitySheet,
+      ),
     ),
   { loading: SheetCodeLoading },
 )
 const StaffDirectorySheet = dynamic(
   () =>
-    import("./staff-directory-sheet").then(
-      (module) => module.StaffDirectorySheet,
+    loadSheetCode(() =>
+      import("./staff-directory-sheet").then(
+        (module) => module.StaffDirectorySheet,
+      ),
     ),
   { loading: SheetCodeLoading },
 )
 const StaffHistorySheet = dynamic(
   () =>
-    import("./staff-history-sheet").then((module) => module.StaffHistorySheet),
+    loadSheetCode(() =>
+      import("./staff-history-sheet").then(
+        (module) => module.StaffHistorySheet,
+      ),
+    ),
   { loading: SheetCodeLoading },
 )
 const StaffInvitationSheet = dynamic(
   () =>
-    import("./staff-invitation-sheet").then(
-      (module) => module.StaffInvitationSheet,
+    loadSheetCode(() =>
+      import("./staff-invitation-sheet").then(
+        (module) => module.StaffInvitationSheet,
+      ),
     ),
   { loading: SheetCodeLoading },
 )
 const StaffMemberSheet = dynamic(
   () =>
-    import("./staff-member-sheet").then((module) => module.StaffMemberSheet),
+    loadSheetCode(() =>
+      import("./staff-member-sheet").then((module) => module.StaffMemberSheet),
+    ),
   { loading: SheetCodeLoading },
 )
 const StaffStatusSheet = dynamic(
   () =>
-    import("./staff-status-sheet").then((module) => module.StaffStatusSheet),
+    loadSheetCode(() =>
+      import("./staff-status-sheet").then((module) => module.StaffStatusSheet),
+    ),
   { loading: SheetCodeLoading },
 )
 const StockCountSheet = dynamic(
-  () => import("./stock-count-sheet").then((module) => module.StockCountSheet),
+  () =>
+    loadSheetCode(() =>
+      import("./stock-count-sheet").then((module) => module.StockCountSheet),
+    ),
   { loading: SheetCodeLoading },
 )
 const StockTransferDetailsSheet = dynamic(
   () =>
-    import("./stock-transfer-details-sheet").then(
-      (module) => module.StockTransferDetailsSheet,
+    loadSheetCode(() =>
+      import("./stock-transfer-details-sheet").then(
+        (module) => module.StockTransferDetailsSheet,
+      ),
     ),
   { loading: SheetCodeLoading },
 )
 const StoreConversationSheet = dynamic(
   () =>
-    import("./store-conversation-sheet").then(
-      (module) => module.StoreConversationSheet,
+    loadSheetCode(() =>
+      import("./store-conversation-sheet").then(
+        (module) => module.StoreConversationSheet,
+      ),
     ),
   { loading: SheetCodeLoading },
 )
 const StoreSettingsSheet = dynamic(
   () =>
-    import("./store-settings-sheet").then(
-      (module) => module.StoreSettingsSheet,
+    loadSheetCode(() =>
+      import("./store-settings-sheet").then(
+        (module) => module.StoreSettingsSheet,
+      ),
     ),
   { loading: SheetCodeLoading },
 )
