@@ -18,6 +18,8 @@ describe("performance tracing", () => {
       failed: false,
       phases: {
         auth: { count: 1, milliseconds: 10.125, failures: 0 },
+        qaProofFacts: { count: 1, milliseconds: 3, failures: 0 },
+        qaDomain: { count: 1, milliseconds: 7, failures: 0 },
         sql: { count: 3, milliseconds: 160.05, failures: 1 },
       },
     }
@@ -25,7 +27,7 @@ describe("performance tracing", () => {
       'secret;desc="private@example.test"': { count: 1, milliseconds: 2 },
     })
     expect(formatPerformanceServerTiming(trace)).toBe(
-      'ew_request;dur=101.2,ew_auth;dur=10.1;desc="1 calls",ew_sql;dur=160.1;desc="3 calls"',
+      'ew_request;dur=101.2,ew_auth;dur=10.1;desc="1 calls",ew_qaProofFacts;dur=3.0;desc="1 calls",ew_qaDomain;dur=7.0;desc="1 calls",ew_sql;dur=160.1;desc="3 calls"',
     )
     trace.phases.sql = {
       count: Number.NaN,

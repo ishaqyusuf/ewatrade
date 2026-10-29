@@ -7,6 +7,8 @@ export type PerformancePhase =
   | "context"
   | "legal"
   | "sessionProof"
+  | "qaProofFacts"
+  | "qaDomain"
   | "scope"
   | "legalReuse"
   | "scopeReuse"
@@ -34,6 +36,8 @@ const serverTimingPhases: PerformancePhase[] = [
   "auth",
   "legal",
   "sessionProof",
+  "qaProofFacts",
+  "qaDomain",
   "scope",
   "legalReuse",
   "scopeReuse",

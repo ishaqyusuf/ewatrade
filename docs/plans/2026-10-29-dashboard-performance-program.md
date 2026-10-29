@@ -304,3 +304,35 @@ and commit owned coherent slices. Preserve all original27 requirements across tu
   open-close-reopen pass without alert changes. Other polling/projection owners and
   optimized budgets remain;3/27 (11.1%) unchanged.
   [Evidence](../verification/2026-10-29-dashboard-notification-polling.md).
+
+### QA proof projection contract (DP-103, implementation follow-up)
+
+Actual createTRPCContext→validateQaDerivedSession path inspected. A valid QA-derived
+session currently reads Session+authorization+grant, then the bound Membership/
+Tenant/active Store. The second query depends only on fields in the first. Keep
+fresh managed-domain admission and invalid-session deletion; this is no auth cache.
+Midday users-on-team query reference selects narrow joined facts behind the DB
+boundary. EwaTrade keeps Prisma schema/DbClient and current validation API.
+
+- [x] Add an internal qa-session-validation-facts query selecting only current
+  QA scope/status/expiry/revocation/domain facts and the exact membership/Tenant/
+  Store predicates in one parameterized statement. No token/digest/metadata payload.
+- [x] Keep validateQaDerivedSession output, legacy/nonexistent handling, fresh
+  domain policy check, invalid-session delete and error propagation. No schema,
+  migration, cross-request memo, API/procedure, write/permission or provider change.
+- [x] Prove two repository calls→one for valid proof; policy matrix for missing/
+  legacy/expired/revoked/domain/membership/Tenant/Store cases, fresh rereads and
+  failures. Execute a bounded read-only PostgreSQL CTE matrix over inert values
+  using the actual statement; no real auth token extraction or stored fixtures.
+- [x] Run owned checks/types/assistant impact and one existing-data local runtime
+  verification, update Brain/evidence and commit only owned paths. Broader context
+  latency and optimized family budgets remain open; full program denominator27.
+
+Executed: validator36/116, tracing/privacy44/142, actual PostgreSQL inert CTE33/33,
+owned fast237/1531, API entrypoint+owned-test types/H02 and frozen-source existing-QA
+smoke pass. New qaProofFacts/qaDomain phases confirm the helper is serving locally
+without restart. Development Catalog refresh5261ms and warm Catalog874ms/Overview
+1347ms remain observations, not optimized acceptance. Auth2446.8ms and accumulated
+pool2218.9ms in one visible response prioritize further attribution; overlapping
+phases are not additive. Full program3/27 (11.1%) remains unchanged.
+[Evidence](../verification/2026-10-29-dashboard-qa-proof-projection.md).

@@ -256,6 +256,12 @@ work is partial. Do not treat response setup as full query/request completion or
 missing header phases as zero work. The existing numeric parser accepts this fixed
 setup label without retaining arbitrary descriptions or response content.
 
+QA-derived session diagnostics additionally split fixed numeric `qaProofFacts`
+(joined binding read) and `qaDomain` (existing managed-domain check) within
+`sessionProof`. They export no session/grant identity, domain value or SQL. A
+positive phase sample can show the changed runtime path is active; source/build
+presence alone cannot. Overlap/sample/mode and release-identity limits still apply.
+
 Record the actual build mode, served candidate, source/lock hashes and sample limits
 separately. The local smoke receipt's checkout SHA does not establish the identity
 of an already-running optimized build; `runtimeVerified: false` remains meaningful.

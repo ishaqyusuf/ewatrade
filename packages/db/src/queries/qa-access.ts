@@ -9,7 +9,12 @@ import {
   getQaPolicyEnvironment,
   managedQaDomainEnabled,
 } from "@ewatrade/utils/qa-policy-server"
+import { tracePhase } from "../performance-tracing"
 import { loadQaProfileCounts } from "./qa-profile-counts"
+import {
+  hasActiveQaSessionBinding,
+  readQaSessionValidationFacts,
+} from "./qa-session-validation-facts"
 import type { DbClient } from "./types"
 
 const AUTHORIZATION_TTL_HOURS = 12
@@ -827,46 +832,15 @@ export async function validateQaDerivedSession(
   db: DbClient,
   sessionId: string,
 ): Promise<QaDerivedSessionValidation> {
-  const session = await db.session.findUnique({
-    where: { id: sessionId },
-    include: {
-      qaAuthorization: { include: { grant: true } },
-    },
-  })
+  const session = await readQaSessionValidationFacts(db, sessionId)
   if (!session) return { active: false, scope: null }
   if (!session.qaAuthorizationId) return { active: true, scope: null }
 
-  const now = new Date()
-  const authorization = session.qaAuthorization
-  const membership = session.qaMembershipId
-    ? await db.membership.findFirst({
-        where: {
-          id: session.qaMembershipId,
-          status: "ACTIVE",
-          tenant: {
-            dataClassification: "QA",
-            id: session.qaTenantId ?? "",
-            isActive: true,
-            qaPurgeStartedAt: null,
-            qaSourceDomain: authorization?.grant.qaDomain,
-            stores: {
-              some: { id: session.qaStoreId ?? "", status: "ACTIVE" },
-            },
-          },
-        },
-        select: { id: true },
-      })
-    : null
   const active = Boolean(
-    authorization &&
-      authorization.status === "ACTIVE" &&
-      !authorization.revokedAt &&
-      authorization.expiresAt > now &&
-      authorization.grant.status === "ACTIVE" &&
-      !authorization.grant.revokedAt &&
-      authorization.grant.expiresAt > now &&
-      membership &&
-      (await managedQaDomainEnabled(authorization.grant.qaDomain)),
+    hasActiveQaSessionBinding(session, new Date()) &&
+      (await tracePhase("qaDomain", () =>
+        managedQaDomainEnabled(session.qaDomain),
+      )),
   )
   if (!active) {
     await db.session.deleteMany({ where: { id: sessionId } })

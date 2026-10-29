@@ -8,6 +8,8 @@ const phases = new Set([
   "auth",
   "legal",
   "sessionProof",
+  "qaProofFacts",
+  "qaDomain",
   "scope",
   "legalReuse",
   "scopeReuse",
