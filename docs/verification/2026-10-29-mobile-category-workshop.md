@@ -1,3 +1,6 @@
+Current review superseded by the [v18 consistency refinement](2026-10-29-mobile-category-consistency.md)
+after owner rejected both the field and search screen. Records below are historical.
+
 # Existing mobile design correction — Category in Live Card
 
 Owner corrected the initial isolated study: resume the existing implemented
