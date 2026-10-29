@@ -49,9 +49,10 @@ per-feature mount/visit/proof ownership or server command authority.
   URL state. Preserve access-before-data, queue bounds, assignment/clinical reviews
   and current response indicators. Loaded Services tabs measured95/125ms locally.
 - Assistant/Staff/Activity/Notifications: mount-owned sensitive reads stay fresh.
-  Further audit found minimized Quick Assistant passes `active` to URL syncing but
-  not to its actual data hook/pending-review/voice-capability query owners. Fix idle
-  background work while retaining drafts, streams, confirmations and durable recovery.
+  Quick Assistant now forwards visibility to its actual hook, pending-review and
+  voice query owners, with real observer/retention/recovery regression and UI proof.
+  Pending commands/durable runs keep their owner alive; hidden auto-start is refused.
+  Other polling owners and aggregate request-rate acceptance still need verification.
 - Studio/Settings/Access: only an active generation/proof may poll; closed editors,
   public capabilities and role changes retain their existing ownership/expiry rules.
 - Reports: current aggregates and a selected historical snapshot are different reads.

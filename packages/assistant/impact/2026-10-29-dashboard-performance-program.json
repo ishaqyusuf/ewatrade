@@ -2,8 +2,8 @@
   "version": 1,
   "id": "2026-10-29-dashboard-performance-program",
   "tickets": ["H02"],
-  "summary": "Local dashboard performance program: fixed request diagnostics, bounded read scheduling and deferred optional form delivery, preserving existing command and access authority.",
-  "noAssistantImpact": "Internal observability/read scheduling and Catalog/Finance form code delivery only. No tool, capability, merchant procedure, permission, entitlement, confirmation, schema or provider action is added. Existing PERFORMANCE_TRACE gates numeric diagnostics. Sheet controllers, scope resets, mutation owners and fresh proof/write checks remain. No deployment.",
+  "summary": "Local dashboard performance: bounded reads, optional code delivery and idle Assistant query activation, preserving current command and access authority.",
+  "noAssistantImpact": "No assistant capability, tool, procedure, permission, entitlement, confirmation, schema or provider action changes. Assistant UI lifecycle pauses optional idle reads while hidden, keeps drafts mounted, prevents hidden auto-start and preserves pending-command finalization/durable run recovery. Existing fresh server checks, scope reset and command owners remain. Other changes are internal tracing/read scheduling/code delivery. No deployment.",
   "capabilities": [],
   "procedures": [],
   "docs": [
@@ -70,6 +70,12 @@
       "path": "docs/verification/2026-10-29-dashboard-optional-delivery.md",
       "executed": true,
       "result": "Measured dev delivery removes payment-review and Setup chat/draft bodies from closed Overview. Banking formatter and Setup controllers unchanged. Types,28/86 focused,220/1481 fast and notification UI pass; new optimized/open-Setup proof remains pending. No authority or provider change."
+    },
+    {
+      "kind": "test",
+      "path": "apps/dashboard/src/components/general-assistant/use-general-assistant-visibility.mounted.test.ts",
+      "executed": true,
+      "result": "Real mounted GeneralChat/hook/composer and QueryClient observers reproduced hidden reads/auto-start before correction. Five cases/28 assertions now pass: idle zero new reads after hide/invalidation/poll ticks, draft/attachment/recorder retention, late-history guard, pending command finalization and streamed-run recovery. Existing attachment-switch regression,237/1531 fast source, types and actual saved-chat draft/minimize/reopen pass; no business submission."
     }
   ]
 }

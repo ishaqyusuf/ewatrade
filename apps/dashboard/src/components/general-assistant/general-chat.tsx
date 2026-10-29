@@ -135,10 +135,13 @@ export type GeneralPendingReview = {
  * Drafts waiting for review across every saved chat. Refreshed whenever the
  * open chat's drafts change (new draft, confirm, cancel or edit).
  */
-export function useGeneralPendingReviews(vm: GeneralAssistantVM) {
+export function useGeneralPendingReviews(
+  vm: GeneralAssistantVM,
+  active = true,
+) {
   const trpc = useTRPC()
   const queryClient = useQueryClient()
-  const enabled = vm.availability.data?.enabled === true
+  const enabled = active && vm.availability.data?.enabled === true
   const query = useQuery(
     trpc.assistant.pendingProposals.queryOptions(undefined, {
       enabled,
@@ -557,8 +560,10 @@ export function GeneralThread({
 export function GeneralComposer({
   vm,
   footer,
+  active = true,
 }: {
   vm: GeneralAssistantVM
+  active?: boolean
   footer?: ReactNode
 }) {
   const { enabled, disabled, exhausted } = generalChatFlags(vm)
@@ -574,6 +579,7 @@ export function GeneralComposer({
     files: availability?.mediaEnabled === true,
   }
   const props = {
+    active,
     hasAttachments: vm.readyAttachments.length > 0,
     value: vm.draft,
     onChange: vm.setDraft,
@@ -871,12 +877,13 @@ export function GeneralChat({
 }: { actions?: ReactNode; active?: boolean }) {
   const [chatId] = useQuickChatParam()
   const vm = useGeneralAssistant({
+    active,
     autoStart: true,
     initialConversationId: chatId,
   })
   useQuickChatUrl(vm, active)
   const { navigationDisabled } = generalChatFlags(vm)
-  const pending = useGeneralPendingReviews(vm)
+  const pending = useGeneralPendingReviews(vm, active)
   const pendingChats = new Set(pending.map((row) => row.conversationId))
   const focus = useReviewFocus(vm)
   return (
@@ -918,6 +925,7 @@ export function GeneralChat({
       <div className="shrink-0 px-3 pt-2 pb-3">
         <GeneralComposer
           vm={vm}
+          active={active}
           footer={
             <p
               className={cn(

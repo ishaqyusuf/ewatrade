@@ -233,3 +233,12 @@ and commit owned coherent slices. Preserve all original27 requirements across tu
   often a required sensitive-read contract. Minimized Quick Assistant data/pending/
   voice queries need visibility ownership while preserving in-flight work. Policy
   application and DP-204 proof continue;3/27 (11.1%) unchanged.
+
+- DP-202/204/407 partial: real mounted Assistant source reproduced hidden query/poll
+  work and cached hidden auto-start. Visibility now reaches hook, pending-review
+  and voice query owners; pending commands/durable runs keep their owner alive.
+  Draft/ready files/recorder/stream are retained.5/28 mounted, existing attachment
+  regression, fast237/1531, Dashboard types and actual saved-chat minimize/reopen
+  pass; test draft cleared, no sends/confirmations/new conversation. Other polling
+  owners and optimized runtime remain open;3/27 unchanged.
+  [Receipt](../verification/2026-10-29-dashboard-assistant-visibility.md).

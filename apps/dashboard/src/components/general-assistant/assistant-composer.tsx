@@ -24,6 +24,8 @@ import {
 } from "../setup-assistant/use-setup-voice-recorder"
 
 type ComposerProps = {
+  /** Pause optional capability reads while preserving the mounted composer. */
+  active?: boolean
   value: string
   onChange: (value: string) => void
   onSend: () => void
@@ -92,11 +94,13 @@ type Voice = {
 
 function VoiceComposer({
   conversationId,
+  active = true,
   ...props
 }: ComposerProps & { conversationId: string }) {
   const trpc = useTRPC()
   const capabilities = useQuery(
     trpc.setupAssistant.attachments.voiceCapabilities.queryOptions(undefined, {
+      enabled: active,
       retry: false,
       // The local Whisper gateway can come and go; hide the mic when it does.
       staleTime: 30_000,

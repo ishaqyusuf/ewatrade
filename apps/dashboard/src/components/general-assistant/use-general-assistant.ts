@@ -31,10 +31,13 @@ const errorMessage = (error: unknown) =>
  * Store, role and target state on every call.
  */
 export function useGeneralAssistant({
+  active = true,
   autoStart = false,
   initialConversationId = null,
   blankStart = false,
 }: {
+  /** Visibility controls idle reads; pending commands and recovery keep their owner. */
+  active?: boolean
   autoStart?: boolean
   /** A chat named by the URL; opened first instead of the latest one. */
   initialConversationId?: string | null
@@ -92,13 +95,17 @@ export function useGeneralAssistant({
   const [notice, setNotice] = useState<string | null>(null)
   const [pending, setPending] = useState(false)
   const [runId, setRunId] = useState<string | null>(null)
+  const readActive = active || pending || Boolean(runId)
   const availability = useQuery(
-    trpc.assistant.availability.queryOptions(undefined, { retry: false }),
+    trpc.assistant.availability.queryOptions(undefined, {
+      enabled: readActive,
+      retry: false,
+    }),
   )
   const enabled = availability.data?.enabled === true
   const conversations = useQuery(
     trpc.assistant.conversations.queryOptions(undefined, {
-      enabled,
+      enabled: enabled && readActive,
       retry: false,
     }),
   )
@@ -106,7 +113,7 @@ export function useGeneralAssistant({
     trpc.assistant.conversation.queryOptions(
       { conversationId: conversationId ?? "" },
       {
-        enabled: enabled && !!conversationId,
+        enabled: enabled && readActive && !!conversationId,
         retry: false,
         refetchOnWindowFocus: false,
       },
@@ -385,6 +392,7 @@ export function useGeneralAssistant({
   useEffect(() => {
     if (
       !autoStart ||
+      !active ||
       !enabled ||
       !conversations.isSuccess ||
       conversations.isFetching ||
@@ -397,6 +405,7 @@ export function useGeneralAssistant({
     void newThread({ preserveDraft: true })
   }, [
     autoStart,
+    active,
     enabled,
     conversations.isSuccess,
     conversations.isFetching,
