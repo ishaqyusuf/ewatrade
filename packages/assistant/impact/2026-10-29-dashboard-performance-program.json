@@ -2,8 +2,8 @@
   "version": 1,
   "id": "2026-10-29-dashboard-performance-program",
   "tickets": ["H02"],
-  "summary": "Local dashboard performance: bounded reads, optional code delivery and idle Assistant query activation, preserving current command and access authority.",
-  "noAssistantImpact": "No assistant capability, tool, procedure, permission, entitlement, confirmation, schema or provider action changes. Assistant UI lifecycle pauses optional idle reads while hidden, keeps drafts mounted, prevents hidden auto-start and preserves pending-command finalization/durable run recovery. Existing fresh server checks, scope reset and command owners remain. Other changes are internal tracing/read scheduling/code delivery. No deployment.",
+  "summary": "Local dashboard performance: bounded reads, optional code delivery, idle Assistant activation and a current navigation-only plan-feature projection.",
+  "noAssistantImpact": "No assistant capability, tool, procedure, permission, entitlement, confirmation, schema or provider action changes. Assistant UI lifecycle pauses optional idle reads while hidden, keeps drafts mounted, prevents hidden auto-start and preserves pending-command finalization/durable run recovery. Existing fresh server checks, scope reset and command owners remain. Other changes are internal tracing/read scheduling/code delivery. No deployment. Dashboard shell now reads current plan features through one joined projection rather than the full plan catalogue; canonical feature resolution/fallback is preserved. Full billing/entitlement readers and command admission are unchanged.",
   "capabilities": [],
   "procedures": [],
   "docs": [
@@ -76,6 +76,12 @@
       "path": "apps/dashboard/src/components/general-assistant/use-general-assistant-visibility.mounted.test.ts",
       "executed": true,
       "result": "Real mounted GeneralChat/hook/composer and QueryClient observers reproduced hidden reads/auto-start before correction. Five cases/28 assertions now pass: idle zero new reads after hide/invalidation/poll ticks, draft/attachment/recorder retention, late-history guard, pending command finalization and streamed-run recovery. Existing attachment-switch regression,237/1531 fast source, types and actual saved-chat draft/minimize/reopen pass; no business submission."
+    },
+    {
+      "kind": "test",
+      "path": "apps/dashboard/src/app/(shell)/shell-plan-loading.test.tsx",
+      "executed": true,
+      "result": "Actual shell regression reproduced3 repository reads before repair, now1. Free navigation, optional-failure fallback and admission-before-plan remain. Canonical billing parity tests cover27 policy cases, current rereads, isolated returned arrays and error propagation; one existing-data read-only comparison confirms3 SQL queries versus1 with identical features."
     }
   ]
 }

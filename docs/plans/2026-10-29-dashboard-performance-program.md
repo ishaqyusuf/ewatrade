@@ -255,3 +255,13 @@ and commit owned coherent slices. Preserve all original27 requirements across tu
   Per-family attribution, calibrated budgets and newer-source optimized proof stay
   open; accepted3/27 unchanged. Development mode restoration is part of this window.
   [Receipt](../verification/2026-10-29-dashboard-optimized-baseline.md).
+
+- DP-103/401 partial: actual shell regression reproduced3 plan repository reads
+  for menu features. A current narrow billing projection uses1 joined SQL query,
+  retaining canonical known/unknown plan, native/reviewer expiry, metadata and
+  optional-failure policy. Real existing-data read-only comparison confirms3→1
+  with identical features; timings have pool warm-up differences, no page-speed
+  claim. Shell4/9, billing parity/existing18/215, owned fast237/1531, Dashboard
+  types and refreshed Reports/menu pass. Full billing commands/limits unchanged.
+  Broader API context/scheduling/optimized acceptance remain open;3/27 unchanged.
+  [Receipt](../verification/2026-10-29-dashboard-shell-plan-read.md).

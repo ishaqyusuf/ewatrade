@@ -18,7 +18,7 @@ import { getActiveTenant } from "@/lib/tenant"
 import { canManageTenant, normalizeRole } from "@ewatrade/auth/roles"
 import { prisma } from "@ewatrade/db"
 import {
-  getRetailOpsTenantPlan,
+  getRetailOpsTenantPlanFeatures,
   isWebsiteDomainsLaunchApproved,
 } from "@ewatrade/db/queries"
 import { headers } from "next/headers"
@@ -64,12 +64,9 @@ async function ResolvedShell({ children }: { children: React.ReactNode }) {
     redirect("/setup")
   }
   // A failed plan read leaves navigation ungated; the API still enforces.
-  const planFeatures = await getRetailOpsTenantPlan(prisma, {
+  const planFeatures = await getRetailOpsTenantPlanFeatures(prisma, {
     tenantId: ctx.tenant.id,
-  }).then(
-    ({ plan }) => plan.features,
-    () => undefined,
-  )
+  }).catch(() => undefined)
   const navigationContext = {
     staffAccessMode: ctx.membership.staffAccessMode,
     catalogEditor: ctx.membership.catalogEditor,
