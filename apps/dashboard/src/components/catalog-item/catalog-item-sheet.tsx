@@ -7,11 +7,29 @@ import { useTRPC } from "@/trpc/client"
 import { Sheet, type SheetContent } from "@ewatrade/ui"
 import { minorToMajorInput } from "@ewatrade/utils/currency"
 import { useQuery } from "@tanstack/react-query"
+import dynamic from "next/dynamic"
 import type { ComponentProps } from "react"
 import { useCatalogThemeClass } from "./catalog-appearance"
-import { CatalogItemContent } from "./catalog-item-content"
 import { CatalogItemSkeleton } from "./catalog-item-skeleton"
 import { CatalogItemFormProvider } from "./form-context"
+
+const CatalogItemContent = dynamic(
+  () => import("./catalog-item-content").then((mod) => mod.CatalogItemContent),
+  { loading: () => <CatalogItemLoading /> },
+)
+
+function CatalogItemLoading() {
+  const themeClass = useCatalogThemeClass()
+  const { catalogCreateMode } = useCatalogItemParams()
+  return (
+    <SheetFrame
+      title="Item"
+      popupClassName={`${themeClass} sm:w-[min(900px,95vw)] sm:max-w-[900px]`}
+    >
+      <CatalogItemSkeleton chat={catalogCreateMode === "chat"} />
+    </SheetFrame>
+  )
+}
 
 type CatalogItemSheetProps = {
   finalFocus?: ComponentProps<typeof SheetContent>["finalFocus"]

@@ -2,8 +2,8 @@
   "version": 1,
   "id": "2026-10-29-dashboard-performance-program",
   "tickets": ["H02"],
-  "summary": "Local dashboard performance program: privacy-safe request phase timings and bounded read-path optimization, preserving all existing command and access authority.",
-  "noAssistantImpact": "Internal observability/read scheduling only. No tool, capability, merchant procedure, permission, entitlement, confirmation, schema or provider action is added. Existing PERFORMANCE_TRACE flag gates phase headers/logging; fixed numeric labels exclude payloads, SQL and identity. Fresh domain write and proof checks remain. No deployment.",
+  "summary": "Local dashboard performance program: fixed request diagnostics, bounded read scheduling and deferred optional form delivery, preserving existing command and access authority.",
+  "noAssistantImpact": "Internal observability/read scheduling and Catalog/Finance form code delivery only. No tool, capability, merchant procedure, permission, entitlement, confirmation, schema or provider action is added. Existing PERFORMANCE_TRACE gates numeric diagnostics. Sheet controllers, scope resets, mutation owners and fresh proof/write checks remain. No deployment.",
   "capabilities": [],
   "procedures": [],
   "docs": [
@@ -52,6 +52,12 @@
       "path": "docs/plans/2026-10-29-dashboard-performance-program.md",
       "executed": true,
       "result": "All27 original requirements preserved with separate per-family source/runtime and latency acceptance; no rollout."
+    },
+    {
+      "kind": "review",
+      "path": "docs/verification/2026-10-29-dashboard-deferred-forms.md",
+      "executed": true,
+      "result": "Catalog/Finance heavy bodies deferred behind existing open conditions. Dashboard types, optimized build and owned fast220/1481 pass. Existing-data Catalog open/close/focus/Back and Finance deep-link/cancel pass; no business submission. Other sheet families and optimized-runtime timings remain open."
     }
   ]
 }

@@ -1,10 +1,31 @@
 "use client"
 
-import { FinanceSheetContent } from "@/components/finance/finance-sheet-content"
+import { financeSheetTitles } from "@/components/finance/finance-sheet-header"
 import { FinanceFormProvider } from "@/components/finance/form-context"
+import { FinanceDialogFrame } from "@/components/modals/finance-dialog-frame"
+import { SheetFrame } from "@/components/sheets/sheet-frame"
 import { useFinanceParams } from "@/hooks/use-finance-params"
 import { Dialog, Sheet } from "@ewatrade/ui"
+import dynamic from "next/dynamic"
 import { useCallback, useRef, useState } from "react"
+
+const FinanceSheetContent = dynamic(
+  () =>
+    import("@/components/finance/finance-sheet-content").then(
+      (mod) => mod.FinanceSheetContent,
+    ),
+  { loading: () => <FinanceSheetLoading /> },
+)
+
+function FinanceSheetLoading() {
+  const { financeSheet } = useFinanceParams()
+  const Frame = financeSheet === "bank-import" ? FinanceDialogFrame : SheetFrame
+  return (
+    <Frame title={financeSheet ? financeSheetTitles[financeSheet] : "Finance"}>
+      <output aria-live="polite">Loading…</output>
+    </Frame>
+  )
+}
 
 export function FinanceSheet({
   actorUserId,

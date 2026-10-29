@@ -193,3 +193,16 @@ and commit owned coherent slices. Preserve all original27 requirements across tu
   schema; DP work IDs remain in this plan. Source/lock hashes and process details
   retained privately. DP-001+002+101 complete3/27 (11.1%); DP-003 optimized-runtime
   measurement and final DP-503 acceptance remain open.
+
+- DP-102 audit:52 direct server option calls across22 owners inventoried, plus
+  variable-held prescription access inspected separately. Store/range/filter/key
+  comparison and activation findings recorded in [hydration audit](2026-10-29-dashboard-hydration-audit.md).
+  Runtime request-count/scope proof remains open; source matches are not acceptance.
+- DP-301 partial: Catalog editor and Finance form bodies now dynamically import only
+  when the existing sheet renders them. Light URL/dismissal/provider/command-lock
+  owners remain in place. Refreshed Overview no longer delivers those body definitions
+  in observed development scripts. Types, optimized build and owned fast220/1481
+  pass. Catalog open/close/focus/Back and Finance deep-link/cancel verified without
+  submissions; Finance retains replace-history close behavior. Other families,
+  chunk-failure behavior and optimized-runtime measurement remain open. Overall
+  accepted count remains3/27 (11.1%). [Receipt](../verification/2026-10-29-dashboard-deferred-forms.md).
