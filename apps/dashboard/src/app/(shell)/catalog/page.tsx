@@ -11,7 +11,7 @@ import {
 import { canManageProductCatalog } from "@/lib/product-catalog"
 import { getServerSession } from "@/lib/session"
 import { getActiveTenant } from "@/lib/tenant"
-import { HydrateClient, getQueryClient, prefetch, trpc } from "@/trpc/server"
+import { HydrateClient, getQueryClient, trpc } from "@/trpc/server"
 import { getInitialTableSettings } from "@/utils/columns"
 import { getInitialDirectoryView } from "@/utils/directory-views"
 import { canStaffPerform } from "@ewatrade/auth/store-access"
@@ -73,16 +73,6 @@ export default async function CatalogRoutePage({
         },
       ),
     ),
-    ...(typeof params.catalogDetail === "string" && params.catalogDetail
-      ? [
-          prefetch(
-            trpc.catalog.detail.overview.queryOptions({
-              itemId: params.catalogDetail,
-              storeId: store.id,
-            }),
-          ),
-        ]
-      : []),
   ])
 
   return (

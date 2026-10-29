@@ -1,6 +1,7 @@
 "use client"
 import { useCatalogDetailParams } from "@/hooks/use-catalog-detail-params"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@ewatrade/ui"
+import { useEffect, useState } from "react"
 import { CatalogDetailActivity } from "./activity"
 import type { CatalogDetail } from "./display"
 import { CatalogDetailOrders } from "./orders"
@@ -23,6 +24,14 @@ export function CatalogDetailContent({
   error?: { message: string; retry: () => void }
 }) {
   const { catalogDetailTab, setParams } = useCatalogDetailParams()
+  const [visitedTabs, setVisitedTabs] = useState([catalogDetailTab])
+  useEffect(() => {
+    setVisitedTabs((visited) =>
+      visited.includes(catalogDetailTab)
+        ? visited
+        : [...visited, catalogDetailTab],
+    )
+  }, [catalogDetailTab])
   return (
     <Tabs
       value={catalogDetailTab}
@@ -50,7 +59,10 @@ export function CatalogDetailContent({
             <DetailError message={error.message} retry={error.retry} />
           </div>
         ) : null}
-        <TabsContent value="overview">
+        <TabsContent
+          value="overview"
+          keepMounted={visitedTabs.includes("overview")}
+        >
           <CatalogDetailOverview
             detail={detail}
             storeId={storeId}
@@ -59,14 +71,20 @@ export function CatalogDetailContent({
             canCreateServiceJob={canCreateServiceJob}
           />
         </TabsContent>
-        <TabsContent value="orders">
+        <TabsContent
+          value="orders"
+          keepMounted={visitedTabs.includes("orders")}
+        >
           <CatalogDetailOrders
             itemId={detail.item.id}
             storeId={storeId}
             readScope={readScope}
           />
         </TabsContent>
-        <TabsContent value="activity">
+        <TabsContent
+          value="activity"
+          keepMounted={visitedTabs.includes("activity")}
+        >
           <CatalogDetailActivity
             itemId={detail.item.id}
             storeId={storeId}

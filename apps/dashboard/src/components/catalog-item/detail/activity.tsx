@@ -1,7 +1,10 @@
 "use client"
 import { useCatalogDetailParams } from "@/hooks/use-catalog-detail-params"
 import { getDataCacheGeneration, useTRPC, useTRPCClient } from "@/trpc/client"
-import type { RouterInputs } from "@ewatrade/api/trpc/routers/_app"
+import type {
+  RouterInputs,
+  RouterOutputs,
+} from "@ewatrade/api/trpc/routers/_app"
 import { Badge, Button, ToggleGroup, ToggleGroupItem } from "@ewatrade/ui"
 import {
   Add01Icon,
@@ -119,72 +122,7 @@ export function CatalogDetailActivity({
           </p>
         </>
       ) : null}
-      {events.length ? (
-        <ul className="divide-y">
-          {events.map((event) => (
-            <li key={event.key} className="flex items-start gap-3 py-3">
-              <ActivityIcon
-                eventKey={event.key}
-                category={event.category}
-                direction={event.changeDirection}
-              />
-              <div className="grid min-w-0 flex-1 gap-1">
-                <div className="flex flex-wrap items-baseline justify-between gap-2">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <p className="font-medium capitalize">{event.title}</p>
-                    <Badge variant="outline" className="capitalize">
-                      {event.category}
-                    </Badge>
-                  </div>
-                  <time
-                    className="text-xs text-muted-foreground"
-                    dateTime={event.at}
-                  >
-                    {dateTime(event.at)}
-                  </time>
-                </div>
-                <p className="text-sm text-muted-foreground break-words">
-                  {event.description}
-                  {event.actorName ? ` · ${event.actorName}` : ""}
-                </p>
-                {event.categories?.length ? (
-                  <div
-                    className="flex flex-wrap items-center gap-1"
-                    aria-label="Saved operation categories"
-                  >
-                    {event.categories.map((category) => (
-                      <Badge variant="secondary" key={category}>
-                        {category}
-                      </Badge>
-                    ))}
-                  </div>
-                ) : null}
-                {event.amountMinor !== null && event.currencyCode ? (
-                  <p className="text-sm">
-                    {event.previousAmountMinor !== null
-                      ? `${money(event.previousAmountMinor, event.currencyCode)} → `
-                      : ""}
-                    {money(event.amountMinor, event.currencyCode)}
-                  </p>
-                ) : null}
-                {event.orderNumber ? (
-                  <Link
-                    href={orderHref(event.orderNumber)}
-                    className="text-sm underline underline-offset-4"
-                  >
-                    {event.orderNumber}
-                  </Link>
-                ) : null}
-              </div>
-            </li>
-          ))}
-        </ul>
-      ) : (
-        <DetailEmpty
-          title="No activity recorded"
-          description="Retained events for this category will appear here."
-        />
-      )}
+      <CatalogActivityEvents events={events} />
       {!preview && query.hasNextPage ? (
         <Button
           variant="outline"
@@ -196,6 +134,79 @@ export function CatalogDetailActivity({
         </Button>
       ) : null}
     </div>
+  )
+}
+
+export function CatalogActivityEvents({
+  events,
+}: {
+  events: RouterOutputs["catalog"]["detail"]["activity"]["items"]
+}) {
+  return events.length ? (
+    <ul className="divide-y">
+      {events.map((event) => (
+        <li key={event.key} className="flex items-start gap-3 py-3">
+          <ActivityIcon
+            eventKey={event.key}
+            category={event.category}
+            direction={event.changeDirection}
+          />
+          <div className="grid min-w-0 flex-1 gap-1">
+            <div className="flex flex-wrap items-baseline justify-between gap-2">
+              <div className="flex flex-wrap items-center gap-2">
+                <p className="font-medium capitalize">{event.title}</p>
+                <Badge variant="outline" className="capitalize">
+                  {event.category}
+                </Badge>
+              </div>
+              <time
+                className="text-xs text-muted-foreground"
+                dateTime={event.at}
+              >
+                {dateTime(event.at)}
+              </time>
+            </div>
+            <p className="text-sm text-muted-foreground break-words">
+              {event.description}
+              {event.actorName ? ` · ${event.actorName}` : ""}
+            </p>
+            {event.categories?.length ? (
+              <div
+                className="flex flex-wrap items-center gap-1"
+                aria-label="Saved operation categories"
+              >
+                {event.categories.map((category) => (
+                  <Badge variant="secondary" key={category}>
+                    {category}
+                  </Badge>
+                ))}
+              </div>
+            ) : null}
+            {event.amountMinor !== null && event.currencyCode ? (
+              <p className="text-sm">
+                {event.previousAmountMinor !== null
+                  ? `${money(event.previousAmountMinor, event.currencyCode)} → `
+                  : ""}
+                {money(event.amountMinor, event.currencyCode)}
+              </p>
+            ) : null}
+            {event.orderNumber ? (
+              <Link
+                href={orderHref(event.orderNumber)}
+                className="text-sm underline underline-offset-4"
+              >
+                {event.orderNumber}
+              </Link>
+            ) : null}
+          </div>
+        </li>
+      ))}
+    </ul>
+  ) : (
+    <DetailEmpty
+      title="No activity recorded"
+      description="Retained events for this category will appear here."
+    />
   )
 }
 

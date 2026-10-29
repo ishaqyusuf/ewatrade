@@ -1,6 +1,5 @@
 import {
-  catalogDetailItemExists,
-  getCatalogItemDetail,
+  getCatalogItemOverview,
   listCatalogItemActivity,
   listCatalogItemOrders,
 } from "@ewatrade/db/queries"
@@ -18,7 +17,7 @@ export const catalogDetailRouter = createTRPCRouter({
   overview: protectedProcedure
     .input(catalogDetailSchema)
     .query(async ({ ctx, input }) => {
-      const result = await getCatalogItemDetail(ctx.db, {
+      const result = await getCatalogItemOverview(ctx.db, {
         ...(await orderScope(ctx, { storeId: input.storeId })),
         ...catalogDetailScope(input, ctx.tenantContext),
       })

@@ -172,24 +172,26 @@ export async function getCatalogItemDetail(
   db: PrismaClient,
   scope: CatalogDetailScope,
 ) {
-  const item = await getCatalogItem(db, {
-    itemId: scope.itemId,
-    tenantId: scope.tenantId,
-  })
-  if (!item) return null
-  const last = await db.commercialOrderLine.findFirst({
-    include: orderGraph,
-    where: {
-      ...catalogOrderWhere(scope),
-      order: {
-        tenantId: scope.tenantId,
-        storeId: scope.storeId,
-        createdByUserId: scope.createdByUserId,
-        status: { not: "CANCELLED" },
+  const [item, last] = await Promise.all([
+    getCatalogItem(db, {
+      itemId: scope.itemId,
+      tenantId: scope.tenantId,
+    }),
+    db.commercialOrderLine.findFirst({
+      include: orderGraph,
+      where: {
+        ...catalogOrderWhere(scope),
+        order: {
+          tenantId: scope.tenantId,
+          storeId: scope.storeId,
+          createdByUserId: scope.createdByUserId,
+          status: { not: "CANCELLED" },
+        },
       },
-    },
-    orderBy: [{ createdAt: "desc" }, { id: "desc" }],
-  })
+      orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+    }),
+  ])
+  if (!item) return null
   return {
     item: {
       ...item,
@@ -220,6 +222,22 @@ export async function getCatalogItemDetail(
     inventoryAllowed: scope.inventory,
     lastOrder: last ? serializeCatalogOrderLine(last) : null,
   }
+}
+
+/** Overview and its bounded preview share authority and start together. */
+export async function getCatalogItemOverview(
+  db: PrismaClient,
+  scope: CatalogDetailScope,
+) {
+  const [detail, activity] = await Promise.all([
+    getCatalogItemDetail(db, scope),
+    listCatalogItemActivity(db, scope, { category: "all", limit: 2 }).then(
+      (result) => result,
+      () => null,
+    ),
+  ])
+  // A failed preview retains the independent client error/retry path.
+  return detail ? { ...detail, recentActivity: activity } : null
 }
 
 // Comparisons use retained values; Decimal callers never convert stock to floats.

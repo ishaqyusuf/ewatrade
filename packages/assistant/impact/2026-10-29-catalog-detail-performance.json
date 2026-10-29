@@ -1,0 +1,46 @@
+{
+  "version": 1,
+  "id": "2026-10-29-catalog-detail-performance",
+  "tickets": ["H02"],
+  "summary": "Local Catalog detail performance: retain visited panels only inside the current authorized sheet, remove unused unscoped prefetch and overlap bounded Overview/activity reads.",
+  "noAssistantImpact": "Internal read scheduling and UI lifetime only. Existing protected Catalog/Sales/Inventory policy, actor/Tenant/Store/role/generation/visit cache keys, rejection gates, fresh reads on scope changes and canonical command authority remain. Existing Overview response adds a nullable bounded activity preview; no new endpoint, assistant tool, permission, schema, provider action or deployment.",
+  "capabilities": [],
+  "procedures": [],
+  "docs": [
+    {
+      "topic": "feature",
+      "status": "local_only",
+      "path": ".brain/features/product-service-catalog-items.md"
+    },
+    {
+      "topic": "permissions",
+      "status": "local_only",
+      "path": ".brain/api/permissions.md"
+    },
+    {
+      "topic": "schema",
+      "status": "not_applicable",
+      "note": "Read scheduling only; no schema or migration."
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "test",
+      "path": "packages/db/src/queries/catalog-detail.test.ts",
+      "executed": true,
+      "result": "Serial-read regression observed red then green. Joined overview preview is bounded, actor/Store scoped, refuses stock reads without Inventory access and preserves details on preview failure."
+    },
+    {
+      "kind": "test",
+      "path": "apps/dashboard/src/components/catalog-item/detail/read-access.test.ts",
+      "executed": true,
+      "result": "Existing actor/business/Store/role/visit/generation cache isolation, role narrowing, fresh-read gates and canonical invalidation pass."
+    },
+    {
+      "kind": "review",
+      "path": "docs/verification/2026-10-29-catalog-detail-performance.md",
+      "executed": true,
+      "result": "Actual existing-data browser baseline and fixed tab revisits measured. Source/runtime limits and Midday contract recorded; no business submission or deployment."
+    }
+  ]
+}

@@ -24,7 +24,7 @@ import {
 import Link from "next/link"
 import { useMemo } from "react"
 import { ProductUsageForm } from "../product-usage-form"
-import { CatalogDetailActivity } from "./activity"
+import { CatalogActivityEvents, CatalogDetailActivity } from "./activity"
 import { type CatalogDetail, dateTime, money, orderHref } from "./display"
 import {
   type CatalogDetailReadScope,
@@ -314,13 +314,17 @@ export function CatalogDetailOverview({
             All activity
           </Button>
         </div>
-        <CatalogDetailActivity
-          itemId={item.id}
-          storeId={storeId}
-          readScope={readScope}
-          inventoryAllowed={detail.inventoryAllowed && Boolean(product)}
-          preview
-        />
+        {detail.recentActivity ? (
+          <CatalogActivityEvents events={detail.recentActivity.items} />
+        ) : (
+          <CatalogDetailActivity
+            itemId={item.id}
+            storeId={storeId}
+            readScope={readScope}
+            inventoryAllowed={detail.inventoryAllowed && Boolean(product)}
+            preview
+          />
+        )}
       </section>
     </div>
   )
