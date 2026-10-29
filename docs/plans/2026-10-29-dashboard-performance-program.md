@@ -46,7 +46,7 @@ authorization and locked commands retain their ordering and transaction boundari
 
 ## Phase1 — Shared boot and data loading
 
-- [ ] **DP-101 Request context reuse.** Remove duplicate read-only session/legal/
+- [x] **DP-101 Request context reuse.** Remove duplicate read-only session/legal/
   membership/Store/plan lookups within the same trusted request/batch. Acceptance:
   real multi-caller regression, correct strict/recovery scope and rejection, no
   cross-request reuse or weaker fresh write checks.
@@ -167,3 +167,18 @@ and commit owned coherent slices. Preserve all original27 requirements across tu
   preserved. One observed QA request4038ms had context3371ms, auth1873ms,
   QA proof1281ms and scope445ms. This identifies a hypothesis, not an optimized or
   production baseline. Bounded journey collection remains open.
+- DP-101: real protected/protected-or-internal callers reproduced3 legal+Tenant
+  reads before correction, now1 each. One HTTP GET owns memoized in-flight facts,
+  keyed by database/actor/business/Store; procedures receive independent copies.
+  POST, mutations, linked identity and default byte resolvers stay fresh. Strict
+  Store rejection and recovery cannot share incompatible facts.26/76 focused
+  tests, owned fast237/1531, Dashboard types and API production-source types pass.
+  Two stale age-gate fixtures gained the session envelope required by the existing
+  browser-identity guard; the guard was unchanged. Runtime traces show scopeReuse
+  hits including2 and8 in separate GETs. Warm core sample Catalog950ms/Overview1381ms;
+  prior985/1474ms has too few observations for a reliable speedup claim. Progress
+  DP-002+DP-101:2/27 (7.4%); remaining tickets retain their full acceptance scope.
+- DP-102 partial: Inventory's unconsumed unscoped Catalog detail prefetch removed.
+  Deep-linked existing Notebook still opens3479ms/refreshes6860ms in development;
+  latency remains above target. Existing reader-key isolation tests5/39 and types
+  pass. Remaining route prefetch/input matching audit stays open.

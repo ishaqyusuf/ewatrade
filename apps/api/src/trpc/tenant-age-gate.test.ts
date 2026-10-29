@@ -26,7 +26,10 @@ test("user-scoped protected-or-internal call checks age before Tenant lookup", a
       },
     },
     isInternalRequest: false,
-    session: { user: { id: "legacy-account" } },
+    session: {
+      session: { id: "session", token: "token" },
+      user: { id: "legacy-account" },
+    },
     tenantContext: null,
   } as never)
 
@@ -57,7 +60,10 @@ test("QA age recovery does not grant global Account or platform access", async (
     platform: platformAdminProcedure.query(() => "platform"),
   })
   const caller = createCallerFactory(restrictedRouter)({
-    session: { user: { id: "qa-admin", isPlatformAdmin: true } },
+    session: {
+      session: { id: "qa-session", token: "qa-token" },
+      user: { id: "qa-admin", isPlatformAdmin: true },
+    },
     qaSessionScope: {
       membershipId: "qa-membership",
       storeId: "qa-store",

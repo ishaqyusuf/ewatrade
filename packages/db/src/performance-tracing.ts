@@ -8,6 +8,8 @@ export type PerformancePhase =
   | "legal"
   | "sessionProof"
   | "scope"
+  | "legalReuse"
+  | "scopeReuse"
   | "pool"
   | "sql"
   | "lockingSql"
@@ -33,6 +35,8 @@ const serverTimingPhases: PerformancePhase[] = [
   "legal",
   "sessionProof",
   "scope",
+  "legalReuse",
+  "scopeReuse",
   "context",
   "pool",
   "sql",

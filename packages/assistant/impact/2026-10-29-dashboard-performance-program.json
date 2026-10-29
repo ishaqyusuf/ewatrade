@@ -1,7 +1,7 @@
 {
   "version": 1,
   "id": "2026-10-29-dashboard-performance-program",
-  "tickets": ["DP-003", "H02"],
+  "tickets": ["DP-003", "DP-101", "DP-102", "H02"],
   "summary": "Local dashboard performance program: privacy-safe request phase timings and bounded read-path optimization, preserving all existing command and access authority.",
   "noAssistantImpact": "Internal observability/read scheduling only. No tool, capability, merchant procedure, permission, entitlement, confirmation, schema or provider action is added. Existing PERFORMANCE_TRACE flag gates phase headers/logging; fixed numeric labels exclude payloads, SQL and identity. Fresh domain write and proof checks remain. No deployment.",
   "capabilities": [],
@@ -29,6 +29,12 @@
     }
   ],
   "evidence": [
+    {
+      "kind": "test",
+      "path": "apps/api/src/trpc/request-read-context.test.ts",
+      "executed": true,
+      "result": "Actual protected procedure callers reduced repeated read facts from3 to1 per GET. POST/mutations/new requests/readers/database identities/strict-vs-recovery/QA scope remain isolated; each procedure owns its facts."
+    },
     {
       "kind": "test",
       "path": "packages/db/src/performance-tracing.test.ts",

@@ -14,10 +14,7 @@ export const metadata: Metadata = {
   title: "Inventory | EwaTrade",
 }
 
-export default async function InventoryRoutePage({
-  searchParams,
-}: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
-  const params = await searchParams
+export default async function InventoryRoutePage() {
   const session = await getServerSession()
 
   if (!session) {
@@ -49,16 +46,6 @@ export default async function InventoryRoutePage({
   ])
 
   void Promise.allSettled([
-    ...(typeof params.catalogDetail === "string" && params.catalogDetail
-      ? [
-          prefetch(
-            trpc.catalog.detail.overview.queryOptions({
-              itemId: params.catalogDetail,
-              storeId: store.id,
-            }),
-          ),
-        ]
-      : []),
     prefetch(
       trpc.inventory.balanceReport.queryOptions({
         includeCompatibleTotals: true,

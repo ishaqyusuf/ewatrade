@@ -43,10 +43,12 @@ import { getRequestTrace } from "../utils/request-trace"
 import { safeCompare } from "../utils/safe-compare"
 import { scopeStaffRequest } from "../utils/staff-request-access"
 import { withStaffWriteTransaction } from "../utils/staff-write-transaction"
+import { createRequestReadContext } from "./request-read-context"
 
 type AuthenticatedSession = Session
 
 export type TRPCContext = {
+  readContext?: ReturnType<typeof createRequestReadContext>
   requestHeaders: Headers
   db: typeof prisma
   session: RequestIdentity | null
@@ -199,6 +201,7 @@ export const createTRPCContext = async (
       explicitTenantSlug ?? (cookieMembership ? cookieTenantSlug : null) ?? null
 
     return {
+      readContext: session ? createRequestReadContext(c.req.method) : undefined,
       requestHeaders: c.req.raw.headers,
       db: prisma,
       session,
@@ -345,6 +348,7 @@ async function requireEligibleAccountAge(
 export async function resolveProtectedTenantContext(
   ctx: TRPCContext,
   recoverStoreSelection = false,
+  reuseQueryReads = false,
 ) {
   const { session } = ctx
 
@@ -383,20 +387,12 @@ export async function resolveProtectedTenantContext(
     })
   }
 
-  if (!ctx.tenantContext) {
-    await requireEligibleAccountAge(ctx.db, session.user.id)
-  }
-  const tenantContext =
-    ctx.tenantContext ??
-    (await tracePhase("scope", () =>
-      getActiveTenantForUser(ctx.db, {
-        storeId:
-          ctx.qaSessionScope?.storeId ??
-          (recoverStoreSelection ? null : ctx.activeStoreId),
-        userId: session.user.id,
-        tenantSlug: ctx.tenantSlug,
-      }),
-    ))
+  const tenantContext = await readCurrentTenantContext(
+    ctx,
+    session,
+    recoverStoreSelection,
+    reuseQueryReads,
+  )
 
   if (!tenantContext) {
     throw new TRPCError({
@@ -427,6 +423,33 @@ export async function resolveProtectedTenantContext(
   return { ...ctx, session, tenantContext, tenantId: tenantContext.tenant.id }
 }
 
+async function readCurrentTenantContext(
+  ctx: TRPCContext,
+  session: NonNullable<TRPCContext["session"]>,
+  recoverStoreSelection: boolean,
+  reuseQueryReads: boolean,
+) {
+  if (ctx.tenantContext) return ctx.tenantContext
+  const memo =
+    reuseQueryReads && !isLinkedAssistantIdentity(session)
+      ? ctx.readContext
+      : undefined
+  const eligibility = () => requireEligibleAccountAge(ctx.db, session.user.id)
+  await (memo
+    ? memo.eligibility(ctx.db, session.user.id, eligibility)
+    : eligibility())
+  const input = {
+    storeId:
+      ctx.qaSessionScope?.storeId ??
+      (recoverStoreSelection ? null : ctx.activeStoreId),
+    userId: session.user.id,
+    tenantSlug: ctx.tenantSlug,
+  }
+  const read = () =>
+    tracePhase("scope", () => getActiveTenantForUser(ctx.db, input))
+  return memo ? memo.tenant(ctx.db, input, read) : read()
+}
+
 const withTenantPermissionMiddleware = t.middleware(async (opts) => {
   // Directory/context reads repair a revoked Store preference. Operational
   // requests keep the explicit Store and fail instead of switching silently.
@@ -436,7 +459,11 @@ const withTenantPermissionMiddleware = t.middleware(async (opts) => {
       opts.path,
     )
   return opts.next({
-    ctx: await resolveProtectedTenantContext(opts.ctx, recover),
+    ctx: await resolveProtectedTenantContext(
+      opts.ctx,
+      recover,
+      opts.type === "query",
+    ),
   })
 })
 
@@ -664,19 +691,12 @@ export const protectedOrInternalProcedure = publicProcedure
       })
     }
 
-    if (!opts.ctx.tenantContext) {
-      await requireEligibleAccountAge(opts.ctx.db, session.user.id)
-    }
-
-    const tenantContext =
-      opts.ctx.tenantContext ??
-      (await tracePhase("scope", () =>
-        getActiveTenantForUser(opts.ctx.db, {
-          storeId: opts.ctx.qaSessionScope?.storeId ?? opts.ctx.activeStoreId,
-          userId: session.user.id,
-          tenantSlug: opts.ctx.tenantSlug,
-        }),
-      ))
+    const tenantContext = await readCurrentTenantContext(
+      opts.ctx,
+      session,
+      false,
+      opts.type === "query",
+    )
 
     if (!tenantContext) {
       throw new TRPCError({
