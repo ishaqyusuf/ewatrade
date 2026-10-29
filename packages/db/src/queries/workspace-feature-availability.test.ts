@@ -41,69 +41,39 @@ function createMockDb(input?: {
   staff?: unknown
 }) {
   const calls: QueryCall[] = []
-
-  function findFirst(kind: string, value: unknown) {
-    return async ({ where }: { where: unknown }) => {
-      calls.push({ kind, where })
-      return value ?? null
-    }
-  }
-
   const db = {
-    catalogItem: {
-      findFirst: findFirst("catalogItem.findFirst", input?.activeSellableItem),
-      findMany: async ({
-        take,
-        where,
-      }: {
-        take?: number
-        where: unknown
-      }) => {
-        calls.push({ kind: "catalogItem.findMany", take, where })
-        return (input?.catalogKinds ?? []).map((kind) => ({ kind }))
-      },
-    },
-    commercialOrder: {
-      findFirst: async ({ where }: { where: Record<string, unknown> }) => {
-        const isCustomerQuery = "OR" in where
-        calls.push({
-          kind: isCustomerQuery
-            ? "commercialOrder.findFirst.customer"
-            : "commercialOrder.findFirst.order",
-          where,
-        })
-        return isCustomerQuery
-          ? (input?.customer ?? null)
-          : (input?.order ?? null)
-      },
-    },
-    customer: {
-      findFirst: findFirst("customer.findFirst", input?.customer),
-    },
-    membership: {
-      findFirst: findFirst("membership.findFirst", input?.staff),
-    },
-    prescriptionStoreSettings: {
-      findFirst: findFirst(
-        "prescriptionStoreSettings.findFirst",
-        input?.prescriptionCommerce,
-      ),
-    },
-    serviceJob: {
-      findFirst: findFirst("serviceJob.findFirst", input?.serviceJob),
-    },
-    stockOperation: {
-      findFirst: findFirst(
-        "stockOperation.findFirst",
-        input?.inventoryActivity,
-      ),
+    $queryRaw: async (query: { text: string; values: unknown[] }) => {
+      calls.push({ kind: "presence", where: query })
+      return [
+        {
+          hasActiveSellableItems: input?.activeSellableItem != null,
+          hasProductItems: input?.catalogKinds?.includes("PRODUCT") ?? false,
+          hasServiceItems: input?.catalogKinds?.includes("SERVICE") ?? false,
+          hasCustomers: input?.customer != null,
+          hasInventoryActivity: input?.inventoryActivity != null,
+          hasOrders: input?.order != null,
+          hasPrescriptionCommerce: input?.prescriptionCommerce != null,
+          hasServiceJobs: input?.serviceJob != null,
+          hasStaff: input?.staff != null,
+        },
+      ]
     },
   }
-
   return { calls, client: db as unknown as DbClient }
 }
 
 describe("workspace feature availability", () => {
+  test("reads Overview feature presence without nine separate database acquisitions", async () => {
+    const db = createMockDb({
+      catalogKinds: ["PRODUCT"],
+      order: { id: "order" },
+    })
+    await getWorkspaceFeatureAvailability(db.client, {
+      storeId: "store_a",
+      tenantId: "tenant_a",
+    })
+    expect(db.calls.length).toBe(1)
+  })
   test("keeps a new workspace focused", () => {
     expect(presence()).toEqual({
       hasActiveSellableItems: false,
@@ -220,54 +190,15 @@ describe("workspace feature availability", () => {
       hasStaff: true,
       storeId: "store_a",
     })
-    expect(db.calls).toContainEqual({
-      kind: "commercialOrder.findFirst.order",
-      where: { storeId: "store_a", tenantId: "tenant_a" },
-    })
-    expect(db.calls).toContainEqual({
-      kind: "customer.findFirst",
-      where: { tenantId: "tenant_a" },
-    })
-    expect(db.calls).toContainEqual({
-      kind: "membership.findFirst",
-      where: {
-        role: { in: ["ADMIN", "MANAGER", "CASHIER", "OPERATOR"] },
-        tenantId: "tenant_a",
-      },
-    })
-    expect(
-      db.calls.find((call) => call.kind === "catalogItem.findMany"),
-    ).toMatchObject({
-      take: 2,
-      where: {
-        tenantId: "tenant_a",
-        offerings: {
-          some: {
-            storeAvailability: {
-              some: { storeId: "store_a" },
-            },
-          },
-        },
-      },
-    })
-    expect(
-      db.calls.find((call) => call.kind === "catalogItem.findMany")?.where,
-    ).not.toHaveProperty("status")
-    expect(
-      db.calls.find((call) => call.kind === "catalogItem.findFirst"),
-    ).toMatchObject({
-      where: {
-        offerings: {
-          some: {
-            fixedPriceMinor: { not: null },
-            pricingPolicy: "FIXED",
-          },
-        },
-      },
-    })
-    expect(
-      db.calls.find((call) => call.kind === "membership.findFirst")?.where,
-    ).not.toHaveProperty("status")
+    expect(db.calls).toHaveLength(1)
+    const query = db.calls[0]?.where as { text: string; values: unknown[] }
+    expect(query.text).not.toContain("tenant_a")
+    expect(query.text).not.toContain("store_a")
+    expect(query.values).toContain("tenant_a")
+    expect(query.values).toContain("store_a")
+    expect(query.text).not.toMatch(
+      /\b(INSERT|UPDATE|DELETE|CREATE|DROP|ALTER)\b/i,
+    )
   })
 
   test("keeps store-scoped operational history isolated", async () => {
@@ -285,18 +216,45 @@ describe("workspace feature availability", () => {
       hasStaff: false,
       storeId: "store_without_history",
     })
-    for (const call of db.calls.filter((entry) =>
-      [
-        "commercialOrder.findFirst.order",
-        "commercialOrder.findFirst.customer",
-        "serviceJob.findFirst",
-        "stockOperation.findFirst",
-      ].includes(entry.kind),
-    )) {
-      expect(call.where).toMatchObject({
-        storeId: "store_without_history",
-        tenantId: "tenant_a",
-      })
-    }
+    const query = db.calls[0]?.where as { text: string; values: unknown[] }
+    expect(query.values).toContain("store_without_history")
+    expect(query.values).toContain("tenant_a")
+    expect(query.text).not.toContain("store_without_history")
   })
+})
+
+// The real PostgreSQL matrix in fixtures/workspace-feature-presence.fixture.ts
+// verifies all scope/status/history predicates with the actual projection SQL.
+test("availability stays current across calls and propagates read failure", async () => {
+  let calls = 0
+  const db = {
+    $queryRaw: async () => {
+      calls++
+      if (calls === 3) throw new Error("inert database failure")
+      return [{ hasOrders: calls === 1 }]
+    },
+  } as unknown as DbClient
+  expect(
+    (
+      await getWorkspaceFeatureAvailability(db, {
+        tenantId: "tenant",
+        storeId: "store",
+      })
+    ).hasOrders,
+  ).toBe(true)
+  expect(
+    (
+      await getWorkspaceFeatureAvailability(db, {
+        tenantId: "tenant",
+        storeId: "store",
+      })
+    ).hasOrders,
+  ).toBe(false)
+  await expect(
+    getWorkspaceFeatureAvailability(db, {
+      tenantId: "tenant",
+      storeId: "store",
+    }),
+  ).rejects.toThrow("inert database failure")
+  expect(calls).toBe(3)
 })

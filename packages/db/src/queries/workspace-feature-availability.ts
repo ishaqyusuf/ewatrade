@@ -1,4 +1,8 @@
 import type { DbClient } from "./types"
+import {
+  type WorkspaceFeaturePresenceFacts,
+  workspaceFeaturePresenceQuery,
+} from "./workspace-feature-presence"
 
 export type WorkspaceFeatureAvailability = {
   hasActiveSellableItems: boolean
@@ -55,111 +59,22 @@ export async function getWorkspaceFeatureAvailability(
   db: DbClient,
   input: { storeId: string; tenantId: string },
 ): Promise<WorkspaceFeatureAvailability> {
-  const storeScope = {
-    storeId: input.storeId,
-    tenantId: input.tenantId,
-  }
-  const [
-    catalogItems,
-    activeSellableItem,
-    order,
-    serviceJob,
-    identifiedOrderCustomer,
-    directoryCustomer,
-    staff,
-    inventoryActivity,
-    prescriptionCommerce,
-  ] = await Promise.all([
-    db.catalogItem.findMany({
-      distinct: ["kind"],
-      select: { kind: true },
-      take: 2,
-      where: {
-        tenantId: input.tenantId,
-        systemRole: null,
-        offerings: {
-          some: {
-            storeAvailability: {
-              some: { storeId: input.storeId },
-            },
-          },
-        },
-      },
-    }),
-    db.catalogItem.findFirst({
-      select: { id: true },
-      where: {
-        status: "ACTIVE",
-        systemRole: null,
-        tenantId: input.tenantId,
-        offerings: {
-          some: {
-            fixedPriceMinor: { not: null },
-            pricingPolicy: "FIXED",
-            status: "ACTIVE",
-            storeAvailability: {
-              some: {
-                isAvailable: true,
-                storeId: input.storeId,
-              },
-            },
-            variant: { status: "ACTIVE" },
-          },
-        },
-      },
-    }),
-    db.commercialOrder.findFirst({
-      select: { id: true },
-      where: storeScope,
-    }),
-    db.serviceJob.findFirst({
-      select: { id: true },
-      where: storeScope,
-    }),
-    db.commercialOrder.findFirst({
-      select: { id: true },
-      where: {
-        ...storeScope,
-        OR: [
-          { customerEmail: { not: null } },
-          { customerName: { not: null } },
-          { customerPhone: { not: null } },
-        ],
-      },
-    }),
-    db.customer.findFirst({
-      select: { id: true },
-      where: { tenantId: input.tenantId },
-    }),
-    db.membership.findFirst({
-      select: { id: true },
-      where: {
-        role: { in: ["ADMIN", "MANAGER", "CASHIER", "OPERATOR"] },
-        tenantId: input.tenantId,
-      },
-    }),
-    db.stockOperation.findFirst({
-      select: { id: true },
-      where: storeScope,
-    }),
-    db.prescriptionStoreSettings.findFirst({
-      select: { id: true },
-      where: {
-        ...storeScope,
-        status: "ACTIVE",
-      },
-    }),
-  ])
-
+  const [facts] = await db.$queryRaw<WorkspaceFeaturePresenceFacts[]>(
+    workspaceFeaturePresenceQuery(input),
+  )
+  if (!facts) throw new Error("Workspace feature presence is unavailable.")
   return deriveWorkspaceFeatureAvailability({
-    activeSellableItem,
-    catalogKinds: catalogItems.map((item) => item.kind),
-    customer: directoryCustomer ?? identifiedOrderCustomer,
-    inventoryActivity,
-    order,
-    prescriptionCommerce,
-    serviceJob,
-    staff,
+    activeSellableItem: facts.hasActiveSellableItems ? true : null,
+    catalogKinds: [
+      ...(facts.hasProductItems ? ["PRODUCT" as const] : []),
+      ...(facts.hasServiceItems ? ["SERVICE" as const] : []),
+    ],
+    customer: facts.hasCustomers ? true : null,
+    inventoryActivity: facts.hasInventoryActivity ? true : null,
+    order: facts.hasOrders ? true : null,
+    prescriptionCommerce: facts.hasPrescriptionCommerce ? true : null,
+    serviceJob: facts.hasServiceJobs ? true : null,
+    staff: facts.hasStaff ? true : null,
     storeId: input.storeId,
   })
 }

@@ -16,7 +16,7 @@ Midday adoption is incomplete across owners, rather than absent. Request-local
 reuse, streaming/scheduling, retained tabs, hidden-reader controls and optional
 delivery have implemented slices. Those are not blanket acceptance of every
 route or proof that refresh latency is solved. Latest development smoke still
-measures Catalog refresh3873ms, warm Catalog853ms and Overview1854ms; sparse,
+measures Catalog refresh4535ms, warm Catalog859ms and Overview1032ms; sparse,
 uncontrolled observations cannot establish production performance or p95.
 
 | Phase | Tickets | Accepted | Remaining outcome |
@@ -506,3 +506,40 @@ Turbopack async loaders; its runtime drops rejected chunk resolvers. This is sou
 evidence, not an actual browser network-fault test. Optimized build3cf06633b stays
 prepared and unchanged; the older965f64794 approval window already completed and
 does not authorize a new candidate switch. [Receipt](../verification/2026-10-29-dashboard-sheet-code-recovery.md).
+
+## Overview presence projection contract — DP-103/401
+
+Actual getWorkspaceFeatureAvailability reproduces9 repository calls for a small
+set of presence flags. Root Overview awaits these flags before composing its
+sections. Replace that fan-out with one parameterized PostgreSQL EXISTS projection
+inside the existing DB query boundary; retain its derive function and DTO. Midday
+packages/db/queries/teams.hasTeamData is the closest joined-presence analogue.
+
+- [x] Preserve exact Tenant/Store predicates, Catalog kind/system-role rules,
+  active fixed-price/variant/availability conditions, identified-order or Tenant
+  directory Customer fallback, historical Staff and active prescription settings.
+- [x] Keep a single current read with no TTL/cache, schema/index or authority
+  change. API protected admission and Overview request-owned caching stay put.
+- [x] Prove9-to1 acquisition reduction, errors/freshness and all previous flag
+  behavior. Validate actual SQL with bounded read-only inert CTE cases; no stored
+  fixtures or private record scan. Compare one existing-QA projection if needed.
+- [x] Run focused/types/owned source/H02 and one frozen existing-data local smoke;
+  commit owned source/receipt/Brain. No provider action, restart or deployment.
+
+Files: existing workspace-feature-availability.ts/.test.ts and a private SQL
+projection module/fixtures. Route, component, table/header/form/URL/query lifetime,
+API DTO/commands and invalidation need no new owners. Query parity includes odd
+existing historical conditions; performance work must not silently change product
+meaning. One snapshot may intentionally replace the nine independent read snapshots.
+Full DP-103/401 and optimized program acceptance remain open;3/27 unchanged.
+
+Executed: actual reader10/26 after9-call red; byte-identical derivation,46 inert
+PostgreSQL cases/414boolean checks in1 read-only CTE statement; real-schema EXPLAIN
+without ANALYZE validates tables/columns and plans without executing the projection.
+API/owned-test and Dashboard types, fast237/1533/H02 and final canonical frozen-source
+local smoke pass. Existing Overview summary/cards/recent orders/setup/store content
+retained, shell retained and0 blocked business writes. Dev warm Overview1032ms
+vs prior1854ms is encouraging but uncontrolled; Catalog refresh4535ms remains a
+miss. Structural9-to1 reader reduction is proven; no optimized speedup/p95/release
+claim. No manual restart/runtime switch/schema/provider/deployment/business action.
+[Receipt](../verification/2026-10-29-dashboard-overview-presence.md).
