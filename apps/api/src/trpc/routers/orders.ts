@@ -39,7 +39,6 @@ import {
 } from "@ewatrade/db/queries"
 import { ruleRejectedError } from "@ewatrade/errors"
 import { ReceiptRenderError } from "@ewatrade/order-receipts"
-import { renderOrderReceipts } from "@ewatrade/order-receipts/pdf"
 import { TRPCError } from "@trpc/server"
 import {
   orderReceiptPrepareSchema,
@@ -273,6 +272,9 @@ export const ordersRouter = createTRPCRouter({
           ...(await orderScope(ctx, { storeId })),
           storeId,
         })
+        const { renderOrderReceipts } = await import(
+          "@ewatrade/order-receipts/pdf"
+        )
         const pdf = await renderOrderReceipts(receipts)
         const pages = input.includeImages
           ? await (

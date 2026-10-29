@@ -1,0 +1,41 @@
+{
+  "version": 1,
+  "id": "2026-10-29-api-startup-efficiency",
+  "tickets": ["H02"],
+  "summary": "Defer the Order receipt PDF renderer until an authorized export needs it; document measured Vercel CPU attribution and shared Free-plan budget.",
+  "noAssistantImpact": "Import timing only. Existing receipt entitlement, role, Tenant/Store scope, receipt source reads, renderer, images, output and error handling remain. No procedure, assistant capability, permission, schema, live configuration or deployment changes.",
+  "capabilities": [],
+  "procedures": [],
+  "docs": [
+    {
+      "topic": "feature",
+      "status": "updated",
+      "path": "docs/verification/2026-10-29-vercel-cpu-investigation.md"
+    },
+    {
+      "topic": "api",
+      "status": "local_only",
+      "path": ".brain/api/contracts.md"
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "review",
+      "path": "docs/verification/2026-10-29-vercel-cpu-investigation.md",
+      "executed": true,
+      "result": "Authenticated Vercel project/Production/all-environment and historical CPU review; private synthetic offline startup comparison. No live savings claim or deployment. Full API types have five unrelated test diagnostics."
+    },
+    {
+      "kind": "test",
+      "path": "apps/api/src/trpc/routers/order-receipts.test.ts",
+      "executed": true,
+      "result": "Existing receipt permissions and refused source-input boundaries pass; combined receipt/PDF factual validation passes nine tests and 39 assertions without database access."
+    },
+    {
+      "kind": "test",
+      "path": "packages/order-receipts/src/pdf.test.ts",
+      "executed": true,
+      "result": "Existing actual PDF generation and parsing preserve amounts, credit, notes, embedded font, bounded groups and unsupported-glyph refusal. Scoped fast smoke passes 226 tests and 1226 assertions."
+    }
+  ]
+}
