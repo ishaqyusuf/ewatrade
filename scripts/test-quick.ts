@@ -22,6 +22,9 @@ export const suites = {
     "packages/storefront-contracts/src/features.test.ts",
     "packages/storefront-templates/src/shared-features.test.tsx",
     "packages/ai/src/storefront-design.test.ts",
+    "packages/ai/src/storefront-content.test.ts",
+    "packages/storefront-contracts/src/content.test.ts",
+    "apps/dashboard/src/components/storefront/storefront-content-model.test.tsx",
     "packages/storefront-runtime/src/commerce/provider.test.tsx",
     "packages/storefront-runtime/src/features/features.test.tsx",
     "packages/storefront-runtime/src/links.test.ts",
@@ -142,7 +145,9 @@ export function selectQuickPlan(files: string[]) {
     )
       groups.add("core")
     else if (
-      /^packages\/ai\/src\/storefront-design(?:\.test)?\.ts$/.test(file) ||
+      /^packages\/ai\/src\/storefront-(?:design|content)(?:\.test)?\.ts$/.test(
+        file,
+      ) ||
       /^apps\/(dashboard|marketing|storefront)\//.test(file) ||
       /^packages\/onboarding\/src\/components\/product-preview\//.test(file)
     ) {

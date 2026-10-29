@@ -7,6 +7,7 @@ export function useStorefrontParams() {
     {
       page: parseAsString.withDefault("home"),
       panel: parseAsStringEnum(["design", "features"]).withDefault("design"),
+      content: parseAsStringEnum(["write", "context", "guidance"]),
       viewport: parseAsStringEnum(["desktop", "tablet", "mobile"]).withDefault(
         "desktop",
       ),

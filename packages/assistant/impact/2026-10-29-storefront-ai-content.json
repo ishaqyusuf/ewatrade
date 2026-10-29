@@ -1,0 +1,59 @@
+{
+  "version": 1,
+  "id": "2026-10-29-storefront-ai-content",
+  "tickets": ["H01", "H02"],
+  "summary": "Implement approved Studio v9 AI text drafting with source-template profiles, public business context, typed refinements and direct editing. Local source only; no deployment.",
+  "capabilities": [],
+  "procedures": [
+    {
+      "path": "storefront.contentContext",
+      "status": "form_only",
+      "reason": "Owner/Admin Studio form workflow using canonical scoped commands and a durable budgeted job. Manual review and unsaved selected Apply remain explicit; no assistant tool, provider activation or publication authority."
+    },
+    {
+      "path": "storefront.generateContent",
+      "status": "form_only",
+      "reason": "Owner/Admin Studio form workflow using canonical scoped commands and a durable budgeted job. Manual review and unsaved selected Apply remain explicit; no assistant tool, provider activation or publication authority."
+    },
+    {
+      "path": "storefront.contentGeneration",
+      "status": "form_only",
+      "reason": "Owner/Admin Studio form workflow using canonical scoped commands and a durable budgeted job. Manual review and unsaved selected Apply remain explicit; no assistant tool, provider activation or publication authority."
+    },
+    {
+      "path": "storefront.cancelContentGeneration",
+      "status": "form_only",
+      "reason": "Owner/Admin Studio form workflow using canonical scoped commands and a durable budgeted job. Manual review and unsaved selected Apply remain explicit; no assistant tool, provider activation or publication authority."
+    }
+  ],
+  "docs": [
+    {
+      "topic": "feature",
+      "status": "local_only",
+      "path": ".brain/features/storefront-ai-content.md"
+    },
+    {
+      "topic": "capability",
+      "status": "updated",
+      "path": "packages/assistant/src/capabilities/COVERAGE.md"
+    },
+    {
+      "topic": "api",
+      "status": "local_only",
+      "path": ".brain/api/contracts.md"
+    },
+    {
+      "topic": "permissions",
+      "status": "local_only",
+      "path": ".brain/api/permissions.md"
+    }
+  ],
+  "evidence": [
+    {
+      "path": "docs/verification/2026-10-29-storefront-ai-content.md",
+      "kind": "test",
+      "executed": true,
+      "result": "Twelve canonical command/worker tests and eleven contracts/prompt/review tests pass offline; focused types and browser acceptance recorded with explicit live-provider and SQL-port limits."
+    }
+  ]
+}

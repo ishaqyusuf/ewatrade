@@ -6,10 +6,10 @@ Tickets refer to the Brain plan `.brain/plans/2026-10-09-assistant-business-oper
 
 ## Summary
 
-- Router procedures: 763 (576 merchant, 187 public/account/internal)
+- Router procedures: 767 (580 merchant, 187 public/account/internal)
 - Merchant supported by a capability: 176
 - Merchant planned: 135
-- Merchant form-only: 203
+- Merchant form-only: 207
 - Merchant excluded: 62
 - Capabilities: 165 (87 read, 78 write)
 
@@ -931,9 +931,13 @@ track conversational evaluation separately from these source test links.
 | `setupAssistant.updateEntity` | mutation | Owner/Admin only | assistant | excluded | Assistant transport or a dedicated assistant flow. |
 | `setupAssistant.visit` | mutation | Owner/Admin only | assistant | excluded | Assistant transport or a dedicated assistant flow. |
 | `storefront.acceptDesign` | mutation | Owner/Admin only | storefront | supported | storefront.design.accept |
+| `storefront.cancelContentGeneration` | mutation | Owner/Admin only | platform | form_only | AI content drafting is an Owner/Admin Studio form workflow: inspect context/source-template guidance, explicitly generate/refine, edit/review selected fields, then apply only to the unsaved draft. It uses canonical scoped content commands and a durable budgeted job. It adds no assistant tool, publication or provider configuration authority. |
 | `storefront.cancelGeneration` | mutation | Owner/Admin only | platform | form_only | Storefront preview/edit/cancel/publish/rollback use the studio. Only the registered dashboard design read/generate/accept capabilities use shared commands and explicit confirmation. |
+| `storefront.contentContext` | query | Owner/Admin only | platform | form_only | AI content drafting is an Owner/Admin Studio form workflow: inspect context/source-template guidance, explicitly generate/refine, edit/review selected fields, then apply only to the unsaved draft. It uses canonical scoped content commands and a durable budgeted job. It adds no assistant tool, publication or provider configuration authority. |
+| `storefront.contentGeneration` | query | Owner/Admin only | platform | form_only | AI content drafting is an Owner/Admin Studio form workflow: inspect context/source-template guidance, explicitly generate/refine, edit/review selected fields, then apply only to the unsaved draft. It uses canonical scoped content commands and a durable budgeted job. It adds no assistant tool, publication or provider configuration authority. |
 | `storefront.draft` | query | Owner/Admin only | storefront | supported | storefront.design.read |
 | `storefront.generate` | mutation | Owner/Admin only | storefront | supported | storefront.design.generate |
+| `storefront.generateContent` | mutation | Owner/Admin only | platform | form_only | AI content drafting is an Owner/Admin Studio form workflow: inspect context/source-template guidance, explicitly generate/refine, edit/review selected fields, then apply only to the unsaved draft. It uses canonical scoped content commands and a durable budgeted job. It adds no assistant tool, publication or provider configuration authority. |
 | `storefront.generation` | query | Owner/Admin only | storefront | supported | storefront.design.read |
 | `storefront.generations` | query | Owner/Admin only | storefront | supported | storefront.design.read |
 | `storefront.history` | query | Owner/Admin only | platform | form_only | Storefront preview/edit/cancel/publish/rollback use the studio. Only the registered dashboard design read/generate/accept capabilities use shared commands and explicit confirmation. |

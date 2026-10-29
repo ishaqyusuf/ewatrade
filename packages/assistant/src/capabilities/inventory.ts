@@ -72,6 +72,16 @@ formOnly(
   "Storefront preview/edit/cancel/publish/rollback use the studio. Only the registered dashboard design read/generate/accept capabilities use shared commands and explicit confirmation.",
   ["storefront.*"],
 )
+formOnly(
+  "platform",
+  "AI content drafting is an Owner/Admin Studio form workflow: inspect context/source-template guidance, explicitly generate/refine, edit/review selected fields, then apply only to the unsaved draft. It uses canonical scoped content commands and a durable budgeted job. It adds no assistant tool, publication or provider configuration authority.",
+  [
+    "storefront.contentContext",
+    "storefront.generateContent",
+    "storefront.contentGeneration",
+    "storefront.cancelContentGeneration",
+  ],
+)
 
 // Catalog
 formOnly(

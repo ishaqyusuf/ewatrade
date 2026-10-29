@@ -3,6 +3,7 @@
 import { useStorefrontParams } from "@/hooks/use-storefront-params"
 import { getDataCacheGeneration, useTRPC, useTRPCClient } from "@/trpc/client"
 import type { RouterOutputs } from "@ewatrade/api/trpc/routers/_app"
+import { applyStorefrontContent } from "@ewatrade/storefront-contracts/content"
 import {
   readStorefrontFeatureConfig,
   upgradeStorefrontFeatures,
@@ -46,6 +47,7 @@ import { useRouter } from "next/navigation"
 import { useCallback, useEffect, useId, useRef, useState } from "react"
 import { StorefrontCanvasPreview } from "./storefront-canvas-preview"
 import { StorefrontCatalogItemsField } from "./storefront-catalog-items-field"
+import { StorefrontContentSheet } from "./storefront-content-sheet"
 import { StorefrontFeatureSettings } from "./storefront-feature-settings"
 import { StorefrontPhrasesPopover } from "./storefront-phrases-popover"
 import { StorefrontProposals } from "./storefront-proposals"
@@ -555,6 +557,16 @@ function StudioEditor({
           ))}
         </fieldset>
         <div className="sf-canvas-header-right">
+          <Button
+            variant="outline"
+            disabled={blocked || !!conflict}
+            data-storefront-content-trigger
+            aria-label="Generate content"
+            onClick={() => void params.setParams({ content: "write" })}
+          >
+            <span aria-hidden="true">✧</span>
+            <span className="sf-content-toolbar-label">Generate content</span>
+          </Button>
           <span className="sf-save-status">
             {dirty ? "● Unsaved changes" : `✓ Saved · rev ${saved.revision}`}
           </span>
@@ -726,6 +738,20 @@ function StudioEditor({
                 </Button>
               </div>
             ) : null}
+            <div className="sf-content-sidebar-entry">
+              <div>
+                <strong>Your words, a little help</strong>
+                <small>Content shaped for this template</small>
+              </div>
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={blocked || !!conflict}
+                onClick={() => void params.setParams({ content: "write" })}
+              >
+                ✧ Write with AI
+              </Button>
+            </div>
             <details open>
               <summary>Pages</summary>
               <nav className="sf-canvas-pages" aria-label="Editor pages">
@@ -1077,6 +1103,38 @@ function StudioEditor({
           )}
         </main>
       </div>
+      <StorefrontContentSheet
+        siteId={initial.siteId}
+        revision={saved.revision}
+        composition={composition}
+        pageKey={pageKey}
+        sectionId={sectionId}
+        blocked={blocked || !!conflict}
+        onApply={(input) => {
+          if (input.revision !== saved.revision || conflict) {
+            setError(
+              "The saved draft changed. Generate content from the current draft before applying it.",
+            )
+            return false
+          }
+          const applied = edit((next) =>
+            Object.assign(
+              next,
+              applyStorefrontContent({
+                current: next,
+                base: input.base,
+                fields: input.fields,
+                drafts: input.drafts,
+              }),
+            ),
+          )
+          if (applied)
+            setStatus(
+              `${input.drafts.length} content ${input.drafts.length === 1 ? "area" : "areas"} applied. Save draft to keep these edits; your live site is unchanged.`,
+            )
+          return applied
+        }}
+      />
       {libraryOpen && snapshot ? (
         <StorefrontSectionDialog
           composition={composition}

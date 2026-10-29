@@ -53,9 +53,9 @@ the path without changing settings or sending real model requests.
 
 - [x] M1: exact approval, source audit and execution contract.
 - [x] M2: content contracts and all registered-template profiles.
-- [ ] M3: canonical API, durable job integration and focused boundary tests.
-- [ ] M4: v9 composer UI, typed refinement/direct editing and selected Apply/Undo.
-- [ ] M5: focused source/types, fast smoke, H01/H02 and actual local browser QA.
+- [x] M3: canonical API, durable job integration and focused boundary tests.
+- [x] M4: v9 composer UI, typed refinement/direct editing and selected Apply/Undo.
+- [x] M5: focused source/types, fast smoke, H01/H02 and actual local browser QA.
 - [ ] M6: Brain/conformance audit, scoped local commits and Workshop evidence.
 
 ## Verification plan
@@ -78,3 +78,13 @@ M2 evidence: five offline tests / 272 assertions pass, including all selectable
 profiles, copied-section guidance, exact field/output selection, dangerous/over-
 limit/operational-copy refusal and stale text-only Apply. Contracts TypeScript
 passes with fresh incremental state. Broader API/UI/worker acceptance is pending.
+
+M3/M4/M5 evidence: canonical generation committed `02cd7fb37`;12 offline command/
+worker tests115assertions,11 contracts/prompt/review tests305assertions,237 scoped
+fast checks1,531assertions, fresh contracts/scopedAPI-worker/fullDashboard types
+and actual browser checks pass. Canonical existing-data local smoke passed with
+receipt7b601558-e748-4ccb-a157-6a1399bca73b; local runtime unverified for release.
+H01 current and owned H02 pass; whole-checkout H02 has unrelated QA alias coverage
+drift. Full API graph has five existing fixture diagnostics. No live provider,
+PostgreSQL concurrency requalification, Preview/release or deployment claimed.
+Midday conformance and Brain impact are recorded in the verification receipt.
