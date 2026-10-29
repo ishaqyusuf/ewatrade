@@ -1,6 +1,6 @@
 "use client"
 
-import { formatReportTime } from "@/components/business-banking/payment-report-review"
+import { formatReportTime } from "@/components/business-banking/business-banking-model"
 import { useTRPC } from "@/trpc/client"
 import {
   mountOwnedRead,

@@ -219,3 +219,17 @@ and commit owned coherent slices. Preserve all original27 requirements across tu
   no endpoint-level attribution or causal speedup claim. DP-103/204 and program
   count3/27 stay open until the remaining scheduling/runtime evidence is complete.
   [Receipt](../verification/2026-10-29-dashboard-route-scheduling.md).
+
+- DP-302/303 partial: actual closed Overview delivered payment-review bodies via a
+  timestamp helper and Setup chat/draft bodies via its banner. Formatter now uses
+  the existing pure model; Setup bodies load dynamically within their unchanged
+  controller/frame. Observed resolved dev scripts23.39MB→19.06MB; seven review and
+ 14 Setup app modules removed in successive observations. Types, focused28/86,
+  owned fast220/1481 and closed Overview/bell UI pass. Open Setup runtime and new
+  optimized comparative proof remain open; prepared965f64794 build preserved while
+  Dashboard-only switch approval is pending. [Receipt](../verification/2026-10-29-dashboard-optional-delivery.md).
+- DP-201 audit:425 direct tRPC option sites/245 owners inventoried, with explicit
+  limits and [query policy](2026-10-29-dashboard-query-policy.md). Zero freshness is
+  often a required sensitive-read contract. Minimized Quick Assistant data/pending/
+  voice queries need visibility ownership while preserving in-flight work. Policy
+  application and DP-204 proof continue;3/27 (11.1%) unchanged.

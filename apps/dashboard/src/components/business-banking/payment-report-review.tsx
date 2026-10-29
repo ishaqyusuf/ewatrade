@@ -36,6 +36,7 @@ import {
   bankCheckKey,
   businessToday,
   errorCode,
+  formatReportTime,
   maskedAccountSuffix,
   receivedAtFromDay,
   receivedLine,
@@ -93,21 +94,6 @@ type ReviewResult = {
   customerFundsRefundRequestId?: string | null
   /** This payment's saved split; missing from an older server. */
   confirmedAllocation?: MerchantReport["confirmedAllocation"]
-}
-
-export function formatReportTime(
-  value: Date | string | null,
-  timeZone: string,
-) {
-  if (!value) return "—"
-  return new Intl.DateTimeFormat("en-NG", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-    timeZone,
-  }).format(new Date(value))
 }
 
 /** "2026-10-26" → "26 Oct 2026", without shifting the calendar day. */

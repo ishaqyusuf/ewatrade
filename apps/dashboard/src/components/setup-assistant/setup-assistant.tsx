@@ -16,11 +16,32 @@ import { SparklesIcon, TaskDone01Icon } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import type { UIMessage } from "ai"
+import dynamic from "next/dynamic"
 import { type ReactNode, useEffect, useMemo, useRef, useState } from "react"
-import { SetupChat } from "./setup-chat"
-import { SetupDraftPanel } from "./setup-draft-panel"
 import type { SetupAttachmentName, SetupDraftEntity } from "./setup-format"
 import type { SetupPrerequisiteState } from "./setup-prerequisites"
+
+const SetupChat = dynamic(
+  () => import("./setup-chat").then((mod) => mod.SetupChat),
+  {
+    loading: () => (
+      <output aria-live="polite" className="p-5 text-sm text-muted-foreground">
+        Loading chat…
+      </output>
+    ),
+  },
+)
+
+const SetupDraftPanel = dynamic(
+  () => import("./setup-draft-panel").then((mod) => mod.SetupDraftPanel),
+  {
+    loading: () => (
+      <output aria-live="polite" className="p-4 text-sm text-muted-foreground">
+        Loading setup list…
+      </output>
+    ),
+  },
+)
 
 type SetupChatMessage = UIMessage<never, SetupAssistantDataParts>
 

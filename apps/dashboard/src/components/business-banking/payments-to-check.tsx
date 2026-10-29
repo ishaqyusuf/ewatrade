@@ -17,8 +17,8 @@ import {
 } from "@tanstack/react-query"
 import { parseAsString, useQueryState } from "nuqs"
 import { useEffect, useRef } from "react"
-import { errorCode } from "./business-banking-model"
-import { PaymentReportReview, formatReportTime } from "./payment-report-review"
+import { errorCode, formatReportTime } from "./business-banking-model"
+import { PaymentReportReview } from "./payment-report-review"
 
 const PAGE_SIZE = 20
 /** New customer claims appear on an open page within this interval. */
