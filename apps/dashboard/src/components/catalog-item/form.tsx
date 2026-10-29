@@ -80,7 +80,6 @@ import {
   Layers01Icon,
   Money03Icon,
   Package01Icon,
-  Tag01Icon,
   Task01Icon,
   TextAlignLeftIcon,
   WarehouseIcon,
@@ -157,7 +156,6 @@ const DEFAULT_UNIT_TRANSACTION_SCALE = 2
 
 type CatalogSectionId =
   | "images"
-  | "category"
   | "pricing"
   | "options"
   | "units"
@@ -1553,12 +1551,6 @@ export function CatalogItemForm({
           : "Photos or illustrations that describe this item.",
       done: Boolean(illustrationId || photo.file),
     },
-    category: {
-      title: "Category",
-      icon: Tag01Icon,
-      summary: category.trim() || "Uncategorized",
-      done: Boolean(category.trim()),
-    },
     pricing: {
       title: "How you charge",
       icon: Money03Icon,
@@ -1630,16 +1622,8 @@ export function CatalogItemForm({
   }
   const sectionOrder: CatalogSectionId[] =
     form.kind === "product"
-      ? [
-          "images",
-          "category",
-          "options",
-          "units",
-          "stock",
-          "description",
-          "codes",
-        ]
-      : ["images", "category", "pricing", "options", "work", "description"]
+      ? ["images", "options", "units", "stock", "description", "codes"]
+      : ["images", "pricing", "options", "work", "description"]
 
   function sectionContent(id: CatalogSectionId) {
     const stack = sections.section(id)
@@ -1686,25 +1670,6 @@ export function CatalogItemForm({
             disabled={
               suggestionsDisabled || Boolean(createAdvancedMutation.variables)
             }
-          />
-        </CatalogDetailEditor>
-      )
-    if (id === "category")
-      return (
-        <CatalogDetailEditor
-          active={stack.active}
-          editor="category"
-          title="Category"
-          description="Group this item for browsing. Leave it Uncategorized if no category fits."
-          onBack={stack.back}
-        >
-          <CatalogCategoryEditor
-            businessProfileKey={businessProfileKey}
-            kind={itemKind}
-            category={category}
-            enabled={sections.open.includes("category")}
-            storeId={storeId}
-            onChange={setCategory}
           />
         </CatalogDetailEditor>
       )
@@ -2453,6 +2418,17 @@ export function CatalogItemForm({
                       }))
                     }
                     required
+                  />
+                </Field>
+
+                <Field
+                  htmlFor="catalog-item-category"
+                  label="Category (optional)"
+                >
+                  <CatalogCategoryEditor
+                    category={category}
+                    enabled={!suggestionsDisabled}
+                    onChange={setCategory}
                   />
                 </Field>
 

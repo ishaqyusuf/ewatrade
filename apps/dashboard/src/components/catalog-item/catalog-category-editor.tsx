@@ -2,239 +2,140 @@
 
 import { useTRPC } from "@/trpc/client"
 import {
-  Button,
-  Field,
-  FieldDescription,
-  FieldGroup,
-  FieldLabel,
-  Input,
+  Combobox,
+  ComboboxContent,
+  ComboboxEmpty,
+  ComboboxInput,
+  ComboboxItem,
+  ComboboxList,
+  InputGroupAddon,
+  InputGroupButton,
 } from "@ewatrade/ui"
-import { ArrowRight01Icon, Tick02Icon } from "@hugeicons/core-free-icons"
+import { Cancel01Icon } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { useQuery } from "@tanstack/react-query"
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
+
+type CategoryOption = { label: string }
 
 export function CatalogCategoryEditor({
   category,
   enabled,
   onChange,
 }: {
-  businessProfileKey?: string | null
   category: string
   enabled: boolean
-  kind: "product" | "service"
   onChange: (value: string) => void
-  storeId: string
 }) {
   const trpc = useTRPC()
-  const [query, setQuery] = useState("")
+  const inputRef = useRef<HTMLInputElement>(null)
+  const [query, setQuery] = useState<string | null>(null)
   const [search, setSearch] = useState("")
-  const [parentId, setParentId] = useState<string>()
-  const [after, setAfter] = useState<string>()
+  const term = query?.trim() ?? ""
   useEffect(() => {
-    const timer = setTimeout(() => setSearch(query.trim()), 250)
+    const timer = setTimeout(() => setSearch(term), 250)
     return () => clearTimeout(timer)
-  }, [query])
-  const searching = Boolean(query.trim())
-  const settled = query.trim() === search
-  const tree = useQuery(
-    trpc.catalog.categories.browse.queryOptions(
-      { parentId, after },
-      { enabled: enabled && !searching, staleTime: 300_000, retry: false },
-    ),
-  )
+  }, [term])
+  const settled = term === search
   const matches = useQuery(
     trpc.catalog.searchProductCategories.queryOptions(
       { query: search || " " },
       {
-        enabled: enabled && searching && settled,
+        enabled: enabled && Boolean(term) && settled,
         staleTime: 300_000,
         retry: false,
       },
     ),
   )
-  const request = searching ? matches : tree
-  const categories = searching
+  const loading = Boolean(term) && (!settled || matches.isFetching)
+  const selected = category ? { label: category } : null
+  const items: CategoryOption[] = term
     ? settled
       ? (matches.data ?? [])
       : []
-    : (tree.data?.categories ?? [])
-  const loading = request.isFetching || (searching && !settled)
-  function browse(key?: string) {
-    setParentId(key)
-    setAfter(undefined)
-    setQuery("")
-  }
+    : selected
+      ? [selected]
+      : []
   return (
-    <FieldGroup>
-      <Field>
-        <FieldLabel>Selected category</FieldLabel>
-        <div className="flex items-start justify-between gap-3">
-          <p className="min-w-0 break-words text-sm" aria-live="polite">
-            {category || "Uncategorized"}
-          </p>
-          {category ? (
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              onClick={() => onChange("")}
-            >
-              Clear category
-            </Button>
-          ) : null}
-        </div>
-        <FieldDescription>
-          Choose a category below. Your current category stays until you select
-          another.
-        </FieldDescription>
-      </Field>
-      <Field>
-        <FieldLabel htmlFor="catalog-category-search">
-          Find a category
-        </FieldLabel>
-        <Input
-          id="catalog-category-search"
-          placeholder="Search categories"
-          maxLength={160}
-          value={query}
-          onChange={(event) => setQuery(event.target.value)}
-        />
-      </Field>
-      {!searching ? (
-        <nav
-          aria-label="Category path"
-          className="flex flex-wrap items-center gap-1"
-        >
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            onClick={() => browse()}
-          >
-            All categories
-          </Button>
-          {tree.data?.breadcrumbs.map((ancestor) => (
-            <Button
-              key={ancestor.categoryKey}
-              type="button"
-              variant="ghost"
-              size="sm"
-              onClick={() => browse(ancestor.categoryKey)}
-            >
-              {ancestor.name}
-            </Button>
-          ))}
-        </nav>
-      ) : (
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          className="self-start"
-          onClick={() => setQuery("")}
-        >
-          Browse category tree
-        </Button>
-      )}
-      {loading ? (
-        <output className="text-sm text-muted-foreground">
-          Loading categories…
-        </output>
-      ) : null}
-      {request.isError ? (
-        <div
-          role="alert"
-          className="flex items-center justify-between gap-3 text-sm"
-        >
-          <p>Categories could not load. Your selection is unchanged.</p>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={() => void request.refetch()}
-          >
-            Try again
-          </Button>
-        </div>
-      ) : null}
-      <ul
-        aria-label="Available categories"
-        aria-busy={loading}
-        className="divide-y divide-border"
+    <Combobox<CategoryOption>
+      items={items}
+      value={selected}
+      inputValue={query ?? category}
+      filter={null}
+      disabled={!enabled}
+      autoHighlight
+      itemToStringLabel={(option) => option.label}
+      isItemEqualToValue={(a, b) => a.label === b.label}
+      onInputValueChange={(value, details) => {
+        if (
+          details.reason === "input-change" ||
+          details.reason === "clear-press"
+        )
+          setQuery(value)
+      }}
+      onValueChange={(option) => {
+        onChange(option?.label ?? "")
+        setQuery(null)
+      }}
+      onOpenChange={(open) => {
+        if (!open) setQuery(null)
+      }}
+    >
+      <ComboboxInput
+        ref={inputRef}
+        id="catalog-item-category"
+        aria-label="Category"
+        placeholder="Search categories"
+        title={category || undefined}
+        maxLength={160}
+        onKeyDownCapture={(event) => {
+          if (event.key === "Enter" && !event.nativeEvent.isComposing)
+            event.preventDefault()
+        }}
+        showTrigger={false}
+        className="w-full rounded-none border-border bg-transparent [&>[data-slot=input-group-addon]:empty]:hidden"
       >
-        {categories.map((entry) => (
-          <li key={entry.categoryKey} className="flex items-center gap-2 py-1">
-            <Button
+        {category || query ? (
+          <InputGroupAddon align="inline-end">
+            <InputGroupButton
               type="button"
+              size="icon-xs"
               variant="ghost"
-              className="h-auto min-h-11 min-w-0 flex-1 justify-start whitespace-normal py-2 text-left"
-              aria-label={`Use ${entry.label}`}
-              aria-pressed={category === entry.label}
-              disabled={loading}
-              onClick={() => onChange(entry.label)}
+              aria-label="Clear category"
+              onMouseDown={(event) => event.preventDefault()}
+              onClick={() => {
+                onChange("")
+                setQuery(null)
+                inputRef.current?.focus()
+              }}
             >
-              <span className="min-w-0 flex-1 break-words">
-                {searching ? entry.label : entry.name}
-              </span>
-              {category === entry.label ? (
-                <HugeiconsIcon
-                  icon={Tick02Icon}
-                  className="size-4 shrink-0 text-primary"
-                />
-              ) : null}
-            </Button>
-            {entry.hasChildren ? (
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                disabled={loading}
-                aria-label={`Browse ${entry.name}`}
-                onClick={() => browse(entry.categoryKey)}
-              >
-                <HugeiconsIcon icon={ArrowRight01Icon} className="size-4" />
-              </Button>
-            ) : null}
-          </li>
-        ))}
-      </ul>
-      {!loading && !request.isError && !categories.length ? (
-        <p className="text-sm text-muted-foreground">
-          {searching
-            ? "No matching category. Try a broader product or service name."
-            : "This category has no subcategories."}
-        </p>
-      ) : null}
-      {!searching && tree.data?.nextCursor ? (
-        <Button
-          type="button"
-          variant="outline"
-          onClick={() => setAfter(tree.data?.nextCursor ?? undefined)}
-        >
-          More categories
-        </Button>
-      ) : null}
-      {!searching && after ? (
-        <Button
-          type="button"
-          variant="ghost"
-          onClick={() => setAfter(undefined)}
-        >
-          First page
-        </Button>
-      ) : null}
-      {!searching && tree.data?.breadcrumbs.at(-1) ? (
-        <Button
-          type="button"
-          variant="outline"
-          onClick={() =>
-            onChange(tree.data?.breadcrumbs.at(-1)?.label ?? category)
-          }
-        >
-          Use this category
-        </Button>
-      ) : null}
-    </FieldGroup>
+              <HugeiconsIcon icon={Cancel01Icon} className="size-4" />
+            </InputGroupButton>
+          </InputGroupAddon>
+        ) : null}
+      </ComboboxInput>
+      <ComboboxContent className="rounded-none border border-border bg-popover shadow-md ring-0 before:hidden **:data-[slot$=-item]:rounded-none">
+        <ComboboxEmpty>
+          {loading
+            ? "Searching categories…"
+            : matches.isError && term
+              ? "Categories could not load. Search again to retry."
+              : term
+                ? "No matching categories."
+                : "Type to search categories."}
+        </ComboboxEmpty>
+        <ComboboxList aria-busy={loading}>
+          {(option: CategoryOption) => (
+            <ComboboxItem
+              key={option.label}
+              value={option}
+              className="whitespace-normal break-words"
+            >
+              {option.label}
+            </ComboboxItem>
+          )}
+        </ComboboxList>
+      </ComboboxContent>
+    </Combobox>
   )
 }
