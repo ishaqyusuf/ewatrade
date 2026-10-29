@@ -106,6 +106,10 @@ export async function webJourney(page, config) {
       throw new Error("Navigation measurement is local-only.")
     const sidebar = page.locator('aside[aria-label="Dashboard sidebar"]')
     const shell = await sidebar.elementHandle()
+    if (!shell)
+      throw new Error(
+        "Dashboard shell is unavailable for navigation measurement.",
+      )
     for (let round = 0; round < 2; round++) {
       for (const path of ["/catalog", "/"]) {
         const started = performance.now()

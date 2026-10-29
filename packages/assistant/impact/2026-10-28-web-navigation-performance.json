@@ -2,7 +2,7 @@
   "version": 1,
   "id": "2026-10-28-web-navigation-performance",
   "tickets": ["H02"],
-  "summary": "Local web navigation performance: request-local published Storefront context, route projections and SSR-preserving feature delivery; Dashboard navigation batch follows.",
+  "summary": "Local Storefront and Dashboard navigation performance: request-local authority/session context, route projections, direct server reads, streaming boundaries and deferred feature delivery.",
   "noAssistantImpact": "Internal presentation/read-path optimization only. No merchant procedure, assistant tool, permission, entitlement, confirmation or channel is added. Verified Host/Tenant/Site/Store/release, LIVE/QA classification and subscription policy remain authoritative. Session proof and receipt capabilities remain outside model input. Commands retain fresh locked scope, stock, price and idempotency checks. No shared authorization cache, Prisma change, provider activation or deployment.",
   "capabilities": [],
   "procedures": [],
@@ -24,6 +24,12 @@
     }
   ],
   "evidence": [
+    {
+      "kind": "test",
+      "path": "apps/dashboard/src/trpc/request-context-headers.test.ts",
+      "executed": true,
+      "result": "Configured API selection, session/cookie/Tenant forwarding, invalid upstream refusal and cancellation signal behavior pass; existing query retry and privacy-safe logging tests retained."
+    },
     {
       "kind": "test",
       "path": "packages/db/src/queries/storefront-read-performance.test.ts",
