@@ -3,7 +3,7 @@
   "id": "2026-10-29-dashboard-performance-program",
   "tickets": ["H02"],
   "summary": "Local dashboard performance: scoped reads, request-owned streamed SSR batches, optional delivery and idle query activation.",
-  "noAssistantImpact": "No assistant capability, tool, procedure, permission, entitlement, confirmation, schema or provider action changes. Assistant UI lifecycle pauses optional idle reads while hidden, keeps drafts mounted, prevents hidden auto-start and preserves pending-command finalization/durable run recovery. Existing fresh server checks, scope reset and command owners remain. Other changes are internal tracing/read scheduling/code delivery. No deployment. Dashboard shell now reads current plan features through one joined projection rather than the full plan catalogue; canonical feature resolution/fallback is preserved. Full billing/entitlement readers and command admission are unchanged. Server reads now stream within one render-owned batch; API authentication/scope, browser mutation/body transport, deadlines and full command authority remain. Default-off diagnostics follow JSONL/SSE body lifetime, preserving bytes, cancellation and refusals without retaining content. Nine presentation routes now return their existing loading owners while prefetch remains pending; session/role/permitted-Store/pharmacy admission remains before reads. Setup and clinical workspace-access dependency waits remain.",
+  "noAssistantImpact": "No assistant capability, tool, procedure, permission, entitlement, confirmation, schema or provider action changes. Assistant UI lifecycle pauses optional idle reads while hidden, keeps drafts mounted, prevents hidden auto-start and preserves pending-command finalization/durable run recovery. Existing fresh server checks, scope reset and command owners remain. Other changes are internal tracing/read scheduling/code delivery. No deployment. Dashboard shell now reads current plan features through one joined projection rather than the full plan catalogue; canonical feature resolution/fallback is preserved. Full billing/entitlement readers and command admission are unchanged. Server reads now stream within one render-owned batch; API authentication/scope, browser mutation/body transport, deadlines and full command authority remain. Default-off diagnostics follow JSONL/SSE body lifetime, preserving bytes, cancellation and refusals without retaining content. Nine presentation routes now return their existing loading owners while prefetch remains pending; session/role/permitted-Store/pharmacy admission remains before reads. Setup and clinical workspace-access dependency waits remain. Customer channels now isolates optional read status/retries; current workspace refusal still removes admitted content, manager sections mount only with canManage, and existing API/procedure/command/sheet/invalidation authority is unchanged.",
   "capabilities": [],
   "procedures": [],
   "docs": [
@@ -100,6 +100,12 @@
       "path": "apps/dashboard/src/app/(shell)/route-presentation-loading.test.tsx",
       "executed": true,
       "result": "Actual nine route functions with real QueryClient prefetch reproduce9 blocked loading owners, now22 tests/64 assertions pass. Signed-out/manager/pharmacy admission, selected permitted Store, operator-only reads and open booking dependencies remain. This tests route scheduling, not rendered browser latency."
+    },
+    {
+      "kind": "test",
+      "path": "apps/dashboard/src/components/customer-channels/customer-channels-loading.test.tsx",
+      "executed": true,
+      "result": "Mounted real useQuery observers reproduce10 failure cases before correction.16 tests/109 assertions pass: four independent pending/error/retry owners, fresh errors hiding retained payloads, no manager reads/rendering after denied access, workspace refusal and Store boundary, unchanged approval amount/decision/review URL. Inert transport/presentation, no external fixtures or commands."
     }
   ]
 }

@@ -286,3 +286,12 @@ and commit owned coherent slices. Preserve all original27 requirements across tu
   types/H02 and read-only Receipt settings refresh pass. Client all-panel gates and
   optimized latency acceptance remain;3/27 unchanged.
   [Receipt](../verification/2026-10-29-dashboard-route-presentation.md).
+
+- DP-104/408 partial: Customer channels all-query pending/error gate reproduced10
+  mounted failures. Workspace now owns admission/status; management sections and
+  approval rows have local pending/error/retry owners. Independent approval read
+  still overlaps workspace; current canManage gates management mounts.16/109 actual
+  mounted checks, fast237/1531, Dashboard types/H02 and existing-QA navigation/full
+  refresh/See why open-close pass, no settings save. [Contract](2026-10-29-dashboard-section-loading.md)
+  and [receipt](../verification/2026-10-29-dashboard-section-loading.md) record Midday
+  conformance. Broader loading/optimized budgets remain open;3/27 unchanged.

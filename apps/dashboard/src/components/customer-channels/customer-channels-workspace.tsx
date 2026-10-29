@@ -9,20 +9,20 @@ import {
 import { SettingsStatusPill } from "@/components/settings/settings-status-pill"
 import { useServiceCommerceParams } from "@/hooks/use-service-commerce-params"
 import { useTRPC } from "@/trpc/client"
-import type { RouterOutputs } from "@ewatrade/api/trpc/routers/_app"
 import { Button } from "@ewatrade/ui"
 import { useQuery } from "@tanstack/react-query"
 import { useMemo } from "react"
 
-import { ChannelRecommendationNote } from "./channel-recommendation-note"
 import {
-  chatHoursSummary,
-  peopleCount,
-  quoteSourceLabel,
-} from "./channel-settings-labels"
+  ChatHoursRow,
+  ConversationModeSection,
+  QuoteReleasePolicyRow,
+} from "./channel-management-settings"
+import { ChannelRecommendationNote } from "./channel-recommendation-note"
+import { peopleCount } from "./channel-settings-labels"
 import { ChannelsHeader } from "./channels-header"
 import { ConnectionsList } from "./connections-list"
-import { ConversationModeChoice } from "./conversation-mode-choice"
+import { PendingQuoteApprovals } from "./pending-quote-approvals"
 import type { CustomerChannelStoreOption } from "./types"
 
 export function CustomerChannelsWorkspace({
@@ -50,27 +50,6 @@ export function CustomerChannelsWorkspace({
     ),
   )
   const canManage = Boolean(workspace.data?.access.canManage)
-  const releaseSettings = useQuery({
-    ...trpc.serviceCommerce.quoteReleaseSettings.queryOptions({
-      storeId: selectedStoreId,
-    }),
-    enabled: canManage,
-    retry: false,
-  })
-  const availability = useQuery({
-    ...trpc.serviceCommerce.storeConversationAvailabilitySettings.queryOptions({
-      storeId: selectedStoreId,
-    }),
-    enabled: canManage,
-    retry: false,
-  })
-  const modeSettings = useQuery({
-    ...trpc.serviceCommerce.storeConversationChannelModeSettings.queryOptions({
-      storeId: selectedStoreId,
-    }),
-    enabled: canManage,
-    retry: false,
-  })
   const approvals = useQuery(
     trpc.serviceCommerce.pendingQuoteApprovals.queryOptions(
       { storeId: selectedStoreId },
@@ -78,29 +57,8 @@ export function CustomerChannelsWorkspace({
     ),
   )
 
-  if (
-    workspace.isLoading ||
-    (canManage &&
-      (availability.isLoading ||
-        releaseSettings.isLoading ||
-        modeSettings.isLoading)) ||
-    approvals.isLoading
-  ) {
-    return <CustomerChannelsSkeleton />
-  }
-  const error =
-    workspace.error ??
-    availability.error ??
-    releaseSettings.error ??
-    modeSettings.error ??
-    approvals.error
-  if (
-    error ||
-    !workspace.data ||
-    (canManage &&
-      (!availability.data || !releaseSettings.data || !modeSettings.data)) ||
-    !approvals.data
-  ) {
+  if (workspace.isLoading) return <CustomerChannelsSkeleton />
+  if (workspace.isError || !workspace.data) {
     return (
       <SettingsPage>
         <SettingsHeader title="Customer channels" />
@@ -109,15 +67,7 @@ export function CustomerChannelsWorkspace({
           action={
             <Button
               className="bg-background"
-              onClick={() =>
-                void Promise.all([
-                  workspace.refetch(),
-                  availability.refetch(),
-                  releaseSettings.refetch(),
-                  modeSettings.refetch(),
-                  approvals.refetch(),
-                ])
-              }
+              onClick={() => void workspace.refetch()}
               size="sm"
               variant="outline"
             >
@@ -141,8 +91,6 @@ export function CustomerChannelsWorkspace({
   ) => void params.setParams({ serviceCommerceSheet, storeId: selectedStoreId })
   const activeTeam = data.team.filter((member) => member.status === "active")
   const linkLive = data.entryPoint?.status === "published"
-  const approverCount =
-    releaseSettings.data?.policy.selectedApproverMembershipIds.length ?? 0
 
   return (
     <SettingsPage>
@@ -177,40 +125,20 @@ export function CustomerChannelsWorkspace({
         }
       />
 
-      {modeSettings.data ? (
-        <SettingsSection title={`How customers reach ${storeName}`}>
-          <ConversationModeChoice
-            key={selectedStoreId}
-            onShowDetails={() => openSheet("conversation_mode")}
-            settings={modeSettings.data}
-            storeId={selectedStoreId}
-          />
-        </SettingsSection>
+      {canManage ? (
+        <ConversationModeSection
+          onShowDetails={() => openSheet("conversation_mode")}
+          storeId={selectedStoreId}
+          storeName={storeName}
+        />
       ) : null}
 
       <SettingsSection title="Who replies">
-        {availability.data ? (
-          <SettingsRow
-            label="Chat hours"
-            description={
-              availability.data.manualPaused
-                ? "New chats are paused. Your team can still reply to existing chats."
-                : "Chat is open in these hours when someone is free to reply."
-            }
-          >
-            <span className="text-sm font-medium">
-              {availability.data.manualPaused
-                ? "Paused"
-                : chatHoursSummary(availability.data.weeklyHours)}
-            </span>
-            <Button
-              onClick={() => openSheet("availability")}
-              size="sm"
-              variant="outline"
-            >
-              Change
-            </Button>
-          </SettingsRow>
+        {canManage ? (
+          <ChatHoursRow
+            onChange={() => openSheet("availability")}
+            storeId={selectedStoreId}
+          />
         ) : null}
         <SettingsRow
           label="Team members replying"
@@ -223,24 +151,11 @@ export function CustomerChannelsWorkspace({
             Choose
           </Button>
         </SettingsRow>
-        {releaseSettings.data ? (
-          <SettingsRow
-            label="Quotes need approval"
-            description="Another person must approve each quote before the customer sees it."
-          >
-            <span className="text-sm font-medium">
-              {releaseSettings.data.policy.mode === "approval_required"
-                ? `On · ${approverCount === 1 ? "1 approver" : `${approverCount} approvers`}`
-                : "Off"}
-            </span>
-            <Button
-              onClick={() => openSheet("quote_policy")}
-              size="sm"
-              variant="outline"
-            >
-              Change
-            </Button>
-          </SettingsRow>
+        {canManage ? (
+          <QuoteReleasePolicyRow
+            onChange={() => openSheet("quote_policy")}
+            storeId={selectedStoreId}
+          />
         ) : null}
         <SettingsRow
           label="Customer link and QR code"
@@ -273,67 +188,23 @@ export function CustomerChannelsWorkspace({
         </SettingsRow>
       </SettingsSection>
 
-      <SettingsSection title="Quotes waiting for approval">
-        {approvals.data.length > 0 ? (
-          approvals.data.map((approval) => (
-            <PendingApprovalRow
-              approval={approval}
-              key={approval.id}
-              onReview={() =>
-                void params.setParams({
-                  quoteApprovalId: approval.id,
-                  quoteId: approval.quoteId,
-                  serviceCommerceSheet: "quote_approval",
-                  storeId: selectedStoreId,
-                })
-              }
-            />
-          ))
-        ) : (
-          <p className="px-4 py-3.5 text-sm text-muted-foreground">
-            No quotes waiting for approval.
-          </p>
-        )}
-      </SettingsSection>
+      <PendingQuoteApprovals
+        query={approvals}
+        onReview={(approval) =>
+          void params.setParams({
+            quoteApprovalId: approval.id,
+            quoteId: approval.quoteId,
+            serviceCommerceSheet: "quote_approval",
+            storeId: selectedStoreId,
+          })
+        }
+      />
 
       {data.recommendation ? (
         <ChannelRecommendationNote recommendation={data.recommendation} />
       ) : null}
     </SettingsPage>
   )
-}
-
-type PendingApproval =
-  RouterOutputs["serviceCommerce"]["pendingQuoteApprovals"][number]
-
-function PendingApprovalRow({
-  approval,
-  onReview,
-}: {
-  approval: PendingApproval
-  onReview: () => void
-}) {
-  return (
-    <SettingsRow
-      label={`${quoteSourceLabel(approval.sourceKind)} · ${formatMoney(approval.totalMinor, approval.currencyCode)}`}
-      description={`Quote ${approval.version}. ${
-        approval.canApprove || approval.canReject
-          ? "You can approve this quote."
-          : "Waiting for another approver."
-      }`}
-    >
-      <Button onClick={onReview} size="sm" variant="outline">
-        Review quote
-      </Button>
-    </SettingsRow>
-  )
-}
-
-function formatMoney(amount: number, currencyCode: string) {
-  return new Intl.NumberFormat("en-NG", {
-    currency: currencyCode,
-    style: "currency",
-  }).format(amount / 100)
 }
 
 export function CustomerChannelsSkeleton() {

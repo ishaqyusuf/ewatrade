@@ -118,3 +118,13 @@ including allowed Store/role/pharmacy checks and open booking dependencies. Setu
 and clinical workspace-access waits remain. Channels' client all-query pending/error
 gate, other section boundaries and per-family runtime acceptance stay open.
 [Evidence](../verification/2026-10-29-dashboard-route-presentation.md).
+
+## Channels section ownership corrected
+
+The Channels client all-query gate is now removed. Workspace admission remains the
+root owner; management sections mount only with current canManage, and optional
+read pending/error/retry stays local. Approval scheduling still overlaps workspace.
+Same Store query inputs and route prefetches remain; actual mounted16/109 plus
+existing-data navigation/refresh/details dismissal pass. Other section gates and
+per-family optimized identity/count proof remain open.
+[Evidence](../verification/2026-10-29-dashboard-section-loading.md).
