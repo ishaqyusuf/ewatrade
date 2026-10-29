@@ -73,7 +73,11 @@ is a local dirty-checkout result (`runtimeVerified:false`), not clean-copy,
 Preview/Production or release evidence. No sale/payment/fixture was submitted.
 
 Source commits: foundation `afb4e99f8`, canonical generation `02cd7fb37`;
-UI/evidence commit and exact Workshop implementation record follow.
+UI/evidence `ad991b78b`. Exact approved v9 implementation was recorded as
+`2ea762d3-32e7-47de-a184-839251910dd9` in the shared Workshop catalog. Earlier
+revisions/selections remain in history; v9 stays the exact current selection.
+All owned source is committed and unrelated staged/working files are preserved.
+No deployment or push.
 
 ## Midday conformance and documentation impact
 

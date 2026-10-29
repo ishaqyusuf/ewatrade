@@ -56,7 +56,7 @@ the path without changing settings or sending real model requests.
 - [x] M3: canonical API, durable job integration and focused boundary tests.
 - [x] M4: v9 composer UI, typed refinement/direct editing and selected Apply/Undo.
 - [x] M5: focused source/types, fast smoke, H01/H02 and actual local browser QA.
-- [ ] M6: Brain/conformance audit, scoped local commits and Workshop evidence.
+- [x] M6: Brain/conformance audit, scoped local commits and Workshop evidence.
 
 ## Verification plan
 
@@ -88,3 +88,9 @@ H01 current and owned H02 pass; whole-checkout H02 has unrelated QA alias covera
 drift. Full API graph has five existing fixture diagnostics. No live provider,
 PostgreSQL concurrency requalification, Preview/release or deployment claimed.
 Midday conformance and Brain impact are recorded in the verification receipt.
+
+M6 complete: source UI/owned coverage/evidence committed `ad991b78b`. Exact v9
+Workshop implementation record `2ea762d3-32e7-47de-a184-839251910dd9` links that
+commit and the precise validation/limitations. Brain feature/API/ADR/task state
+updated locally. All owned source is committed; unrelated staged banking
+explainers, shared chat and QA alias coverage drift preserved. No push/deployment.
