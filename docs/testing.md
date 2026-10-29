@@ -233,6 +233,28 @@ group/project/commit. An emergency fallback or old installed update cannot pass
 as the candidate. Existing native compatibility/signing gates remain separate.
 Local smoke is useful development evidence; it never qualifies Production.
 
+For an authorized local performance check, the existing web smoke can also write
+private navigation diagnostics:
+
+```sh
+QA_WEB_NAVIGATION_ARTIFACTS=/private/tmp/ewatrade-navigation bun run qa:smoke --target local --surface web --config .scratch/qa-release/smoke-local.json
+```
+
+This opt-in is restricted to the canonical local Dashboard host. It measures the
+existing Catalog refresh and Catalog/Overview transitions, checks shell retention,
+and opens/cancels the existing order and stock sheets. It records request counts,
+available response-body byte counts, in-flight requests at readiness, cancellations
+and fixed numeric API Server-Timing phases. URLs, query strings, headers, payloads,
+credentials and error text are excluded. Background requests can share a window;
+server-to-server reads are invisible to the browser. Missing phase evidence is not
+zero SQL work, and overlapping work durations are not additive page latency.
+
+Record the actual build mode, served candidate, source/lock hashes and sample limits
+separately. The local smoke receipt's checkout SHA does not establish the identity
+of an already-running optimized build; `runtimeVerified: false` remains meaningful.
+Changing a shared Dashboard runtime still requires coordination under the ordinary
+development rule above. No deployment is implied.
+
 ## Candidate verification and release
 
 `bun run qa:candidate` runs the bounded source smoke from clean committed source,

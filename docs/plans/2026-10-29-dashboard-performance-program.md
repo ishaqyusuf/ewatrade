@@ -242,3 +242,16 @@ and commit owned coherent slices. Preserve all original27 requirements across tu
   pass; test draft cleared, no sends/confirmations/new conversation. Other polling
   owners and optimized runtime remain open;3/27 unchanged.
   [Receipt](../verification/2026-10-29-dashboard-assistant-visibility.md).
+
+- DP-003/502 partial: owner-approved prepared965f64794 optimized Dashboard measured
+  locally, preserving API/other services. IAB representative refresh observations
+  cover all nine families; loaded Catalog tabs77/81/85ms. Final frozen-source
+  canonical smoke passes: Catalog refresh3540ms, warm Catalog819ms/Overview1322ms,
+  shell retained and zero business writes. Existing QA artifacts now record bounded
+  request/byte/fixed-phase/cancellation summaries without URLs or payloads. Catalog
+  action window includes59 scripts/1.13MB body bytes and one visible API request
+  with1058ms context/8 SQL calls; background/server-to-server limitations explicit.
+  Missed IAB sidebar clicks are interaction uncertainties, not valid latency clocks.
+  Per-family attribution, calibrated budgets and newer-source optimized proof stay
+  open; accepted3/27 unchanged. Development mode restoration is part of this window.
+  [Receipt](../verification/2026-10-29-dashboard-optimized-baseline.md).

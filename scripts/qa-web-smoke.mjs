@@ -2,6 +2,7 @@ import { mkdirSync, readFileSync, writeFileSync } from "node:fs"
 import { resolve } from "node:path"
 import { fileURLToPath } from "node:url"
 import { chromium } from "playwright"
+import { observeWebPerformance } from "./qa-web-performance.mjs"
 
 export const launchSmokeBrowser = () => chromium.launch({ headless: true })
 
@@ -13,6 +14,9 @@ export async function webJourney(page, config) {
   page.setDefaultTimeout(15000)
   const origin = config.web.origin
   const performanceArtifacts = process.env.QA_WEB_NAVIGATION_ARTIFACTS
+  const observation = performanceArtifacts
+    ? observeWebPerformance(page, origin)
+    : undefined
   const samples = []
   const mutations = []
   await page.route("**/api/**", async (route) => {
@@ -71,11 +75,20 @@ export async function webJourney(page, config) {
       milliseconds: Math.round(performance.now() - loginStarted),
     })
   }
+  observation?.begin()
+  const catalogStarted = performance.now()
   await go("/catalog")
   await page
     .getByText(config.web.catalogItem, { exact: true })
     .first()
     .waitFor({ state: "visible" })
+  if (observation)
+    samples.push({
+      path: "/catalog",
+      phase: "full-refresh",
+      milliseconds: Math.round(performance.now() - catalogStarted),
+      requests: await observation.end(),
+    })
   await go("/sales?orderSheet=create")
   await page
     .getByRole("heading", { name: "New order", exact: true })
@@ -112,6 +125,7 @@ export async function webJourney(page, config) {
       )
     for (let round = 0; round < 2; round++) {
       for (const path of ["/catalog", "/"]) {
+        observation?.begin()
         const started = performance.now()
         await sidebar
           .locator(`nav[aria-label="Main navigation"] a[href="${path}"]`)
@@ -132,10 +146,12 @@ export async function webJourney(page, config) {
         }
         if (!(await shell.evaluate((node) => node.isConnected)))
           throw new Error("Dashboard shell was replaced during navigation.")
+        const milliseconds = Math.round(performance.now() - started)
         samples.push({
           path,
           phase: round ? "warm" : "first-measured-transition",
-          milliseconds: Math.round(performance.now() - started),
+          milliseconds,
+          requests: await observation?.end(),
         })
       }
     }
@@ -176,7 +192,7 @@ export async function webJourney(page, config) {
       JSON.stringify(
         {
           origin,
-          runtime: "local development; source recorded separately",
+          runtime: "local runtime; build mode and source recorded separately",
           samples,
           blockedBusinessWrites: mutations.length,
           shellRetained: true,
@@ -188,6 +204,7 @@ export async function webJourney(page, config) {
       ),
     )
   }
+  observation?.dispose()
   return [
     "QA login and exact account selection",
     "populated catalog",
