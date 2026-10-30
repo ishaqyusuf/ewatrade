@@ -20,6 +20,8 @@ Draft notes from different variants/reviewers remain separate.
 
 ## Policy ARP-1
 
+Technical identity: `ewatrade.assistant.copy-refine`, version `1`.
+
 1. Lead with the result or the next required action. Let a useful card answer the
    request without a second prose summary.
 2. Remove generic introductions, tool narration, repeated reference names and
@@ -78,3 +80,11 @@ adoption, human approval, implementation or release has occurred.
   WhatsApp. Reuse unchanged evidence; no product service or business write needed.
 - Publish the exact new revision, record evidence and commit owned repository
   documentation. Workshop assets are archived by the catalog; Brain stays local.
+
+## Delivered candidate
+
+Direction `01` v24, `488b4b4d-03b1-4b48-8383-a14536204d2f`, is the final
+review candidate. v23 remains an intermediate immutable revision. Refined is the
+default; Current retains the frozen v22 output. Historical WhatsApp versions
+always use their exact Current replay; exported notes record requested and
+effective wording. [Verification](../verification/2026-10-30-assistant-response-refinement.md).
