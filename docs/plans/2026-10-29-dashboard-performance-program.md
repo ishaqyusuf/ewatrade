@@ -1,5 +1,22 @@
 # Dashboard performance program
 
+## Nine-family measurement coverage — DP-003/502,30October2026
+
+- [x] Extend the existing optional local QA performance pass to fixed DP-401–409
+  representatives: full refresh, warm return and retained shell on departure/return.
+- [x] Record18 content-readiness samples plus partial failure checkpoints; headers,
+  visible errors, redirects and replaced shells cannot produce full acceptance.
+- [x] Ten existing-driver Chromium fixture checks and QA types pass. Ordinary
+  smoke/Preview and prepared product f027263c stay unchanged.
+
+[Receipt](../verification/2026-10-30-dashboard-route-family-measurements.md).
+Frozen existing-data development smoke passes all18 family samples and zero
+business writes; source/lock hashes and preparedf027 manifests match. Finance/
+Activity refresh6422/5513ms and warm2982/3693ms lead the next attribution work.
+Owned fast47/195+QA types/Biome and H02 pass; unchanged H01 evidence reused.
+This adds measurement coverage, not numeric budgets or domain acceptance. Full
+program remains3/27 (11.1%); optimized timing coordination remains pending.
+
 ## Current optimized candidate — DP-003/502,30October2026
 
 - [x] Full optimized build at product source f027263c passes compile/types/75

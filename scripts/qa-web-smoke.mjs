@@ -3,6 +3,7 @@ import { resolve } from "node:path"
 import { fileURLToPath } from "node:url"
 import { chromium } from "playwright"
 import { observeWebPerformance } from "./qa-web-performance.mjs"
+import { measureDashboardRouteFamilies } from "./qa-web-route-families.mjs"
 
 export const launchSmokeBrowser = () => chromium.launch({ headless: true })
 
@@ -15,6 +16,14 @@ export async function webJourney(page, config) {
   const origin = config.web.origin
   const performanceArtifacts = process.env.QA_WEB_NAVIGATION_ARTIFACTS
   const verifyBell = process.env.QA_WEB_NOTIFICATION_COUNTS === "true"
+  const verifyFamilies = process.env.QA_WEB_ROUTE_FAMILIES === "true"
+  if (
+    verifyFamilies &&
+    (!performanceArtifacts || origin !== "https://ewatrade-dashboard.localhost")
+  )
+    throw new Error(
+      "Route-family verification requires local navigation artifacts.",
+    )
   if (
     verifyBell &&
     (!performanceArtifacts || origin !== "https://ewatrade-dashboard.localhost")
@@ -273,6 +282,40 @@ export async function webJourney(page, config) {
       throw new Error(
         "Unexpected business write blocked during lazy sheet acceptance.",
       )
+    if (verifyFamilies && observation) {
+      mkdirSync(performanceArtifacts, { recursive: true })
+      const familySamples = await measureDashboardRouteFamilies(
+        page,
+        config.web,
+        observation,
+        (update) => {
+          writeFileSync(
+            resolve(performanceArtifacts, "route-families.json"),
+            JSON.stringify(
+              {
+                version: 1,
+                scope:
+                  "Fixed read-only representatives; full refresh and warm return after navigation away. Existing data only. Shell retention concerns soft navigation; readiness is representative content. No percentile or runtime-source qualification.",
+                ...update,
+              },
+              null,
+              2,
+            ),
+          )
+        },
+      )
+      samples.push(...familySamples)
+      await sidebar
+        .locator('nav[aria-label="Main navigation"] a[href="/"]')
+        .click()
+      await page.waitForURL(`${origin}/`)
+      await page
+        .getByRole("heading", { name: "Overview", exact: true })
+        .waitFor()
+      await page.waitForFunction(
+        () => !document.querySelector("main [data-summary-skeleton]"),
+      )
+    }
     mkdirSync(performanceArtifacts, { recursive: true })
     await page.screenshot({
       path: resolve(performanceArtifacts, "dashboard-home.png"),

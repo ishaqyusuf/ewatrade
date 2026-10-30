@@ -1,0 +1,36 @@
+<!doctype html><html><head><meta charset="utf-8"><title>Inert route-family driver fixture</title></head>
+<body><aside aria-label="Dashboard sidebar"><nav aria-label="Main navigation"></nav></aside><main></main><script>
+const options = {} // fixture-options
+const routes = {"/":"Overview","/catalog":"Catalog","/sales":"Orders","/customers":"Customers","/finance":"Finance","/website-requests":"Website requests","/activity":"Activity","/settings":"General","/analytics":"Reports"}
+const sidebar = document.querySelector("aside")
+sidebar.querySelector("nav").innerHTML = Object.entries(routes).map(([path,label])=>`<a href="${path}">${label}</a>`).join("")
+let revision = 0
+function render(){
+ const path = location.pathname
+ const current = ++revision
+ if(options.redirectOn === path){history.replaceState({},"","/login");return}
+ const main = document.querySelector("main")
+ main.innerHTML = `<h1>${routes[path]}</h1><div class="animate-pulse" data-summary-skeleton>Loading</div>`
+ if(options.omitReady === path)return
+ fetch("/api/fixture-read?secret=private-url-sentinel").then(()=>{
+  if(current!==revision)return
+  const content = path==="/catalog" ? "<p>Fixture item</p>" :
+    path==="/finance" ? ["Money accounts","Who owes what","Recent spending"].map(title=>`<section><h2>${title}</h2><p>Inert data</p></section>`).join("") :
+    path==="/website-requests" ? '<section aria-label="Product order requests"><b>Nothing here</b></section>' :
+    path==="/customers" ? '<div data-summary-grid>Inert data</div>' :
+    path==="/settings" ? '<p>Current store</p><p>Inert data</p>' :
+    path==="/activity" ? '<section aria-label="Recorded activity"><p>0 events</p></section>' :
+    path==="/analytics" ? '<dl aria-label="Sales"><dt>Orders</dt><dd>0</dd></dl>' : "<p>Inert data</p>"
+  main.innerHTML = `<h1>${routes[path]}</h1>${content}${options.errorOn===path?'<p role="alert">private-error-sentinel</p>':""}`
+ })
+}
+sidebar.addEventListener("click",event=>{
+ const anchor=event.target.closest("a")
+ if(!anchor)return
+ event.preventDefault()
+ history.pushState({},"",anchor.getAttribute("href"))
+ if(options.replaceShell || options.replaceShellOn === location.pathname){const clone=sidebar.cloneNode(true);sidebar.replaceWith(clone)}
+ render()
+})
+render()
+</script></body></html>

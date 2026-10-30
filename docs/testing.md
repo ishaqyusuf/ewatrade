@@ -249,6 +249,36 @@ credentials and error text are excluded. Background requests can share a window;
 server-to-server reads are invisible to the browser. Missing phase evidence is not
 zero SQL work, and overlapping work durations are not additive page latency.
 
+For the full Dashboard representative pass, add `QA_WEB_ROUTE_FAMILIES=true` to
+that same local-artifact command. This is optional and uses the existing runner,
+write interception and current QA account; it creates no fixtures. It requires an
+existing eligible Owner profile, including a Finance book and the configured
+Catalog row. Missing access/data or a visible content error fails, never skips a
+family or creates records to pass.
+
+The pass records one full refresh and one warm return after navigation away for
+each DP-401–409 representative: Overview, Catalog, Orders, Customers, Finance,
+Website requests, Activity, General settings and Reports. Readiness uses the
+configured Catalog row, loaded customer summary, three Finance panels, selected
+request list, recorded Activity region, server settings and sales headlines;
+Overview/Orders loading placeholders must finish. Healthy empty list states are
+allowed where the existing page supports them. It does not open records, submit
+commands, generate content, export data or change scope.
+
+`route-families.json` checkpoints each action with fixed family/path/readiness
+labels, numeric request/timing diagnostics and running/passed/failed state. A
+failure preserves earlier samples with its fixed family/phase, without response
+bodies or private error text. Interrupted runs may remain running and never count
+as passed. The final `performance.json` includes all18 family samples. Soft
+navigation checks shell identity on departure and return; full refresh naturally
+creates a new shell. The runner returns to Overview for its existing screenshot.
+
+These are representative action-to-content samples, including driver overhead,
+not full domain acceptance, Core Web Vitals, p95 or numeric budget qualification.
+Finance setup, additional report charts/Stock panels, Studio, detail/tab/Back,
+public-token and scope/error journeys retain their separate obligations. Build
+mode and served source still need the independent identity evidence below.
+
 For a permitted existing QA Owner profile, add `QA_WEB_NOTIFICATION_COUNTS=true`
 to that local artifact command to verify the three compact closed-bell responses,
 absence of closed private-preview requests, and open/read/close behavior. A private

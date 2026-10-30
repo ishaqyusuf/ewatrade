@@ -153,3 +153,163 @@ test(
     }
   },
 )
+
+// The runner's readiness/checkpoint contract, not product rendering or latency.
+for (const scenario of [
+  { name: "all nine representatives", options: {}, expected: "passed" },
+  {
+    name: "header without customer data",
+    options: { omitReady: "/customers" },
+    expected: "DP-404",
+  },
+  {
+    name: "visible Finance error",
+    options: { errorOn: "/finance" },
+    expected: "DP-405",
+  },
+  {
+    name: "replaced shell",
+    options: { replaceShell: true },
+    expected: "DP-401",
+  },
+  {
+    name: "shell replaced on return",
+    options: { replaceShellOn: "/" },
+    expected: "DP-401",
+  },
+  {
+    name: "session redirect",
+    options: { redirectOn: "/customers" },
+    expected: "DP-404",
+  },
+]) {
+  test(
+    `route-family diagnostics reject false readiness: ${scenario.name}`,
+    { timeout: 30000 },
+    async () => {
+      const { dashboardRouteFamilies, measureDashboardRouteFamilies } =
+        await import("./qa-web-route-families.mjs")
+      const browser = await launchSmokeBrowser()
+      try {
+        const page = await browser.newPage({ serviceWorkers: "block" })
+        page.setDefaultTimeout(800)
+        const origin = "https://ewatrade-dashboard.localhost"
+        /** @type {string[]} */
+        const unexpected = []
+        const html = readFileSync(
+          new URL("./fixtures/qa-route-families.html", import.meta.url),
+          "utf8",
+        ).replace(
+          "const options = {} // fixture-options",
+          `const options = ${JSON.stringify(scenario.options)}`,
+        )
+        await page.route("**/*", async (route) => {
+          const request = route.request()
+          const url = new URL(request.url())
+          if (request.method() !== "GET" || url.origin !== origin) {
+            unexpected.push(request.method())
+            await route.abort()
+          } else if (url.pathname === "/api/fixture-read") {
+            await route.fulfill({
+              contentType: "application/json",
+              headers: { "server-timing": "ew_sql;dur=2" },
+              body: '{"private":"private-body-sentinel"}',
+            })
+          } else if (url.pathname === "/favicon.ico")
+            await route.fulfill({ status: 204 })
+          else await route.fulfill({ contentType: "text/html", body: html })
+        })
+        const observation = observeWebPerformance(page, origin)
+        /** @type {Array<{status: string, family: string | null, phase: string | null, samples: object[]}>} */
+        const checkpoints = []
+        const run = () =>
+          measureDashboardRouteFamilies(
+            page,
+            { origin, catalogItem: "Fixture item" },
+            observation,
+            (update) => checkpoints.push(update),
+          )
+        if (scenario.expected === "passed") {
+          const samples = await run()
+          assert.equal(samples.length, 18)
+          assert.equal(dashboardRouteFamilies.length, 9)
+          for (const { family } of dashboardRouteFamilies) {
+            const pair = samples.filter((sample) => sample.family === family)
+            assert.deepEqual(
+              pair.map((sample) => sample.phase),
+              ["full-refresh", "warm-return"],
+            )
+            assert.ok(pair.every((sample) => sample.milliseconds >= 0))
+            assert.ok(pair[0].requests.started > 0)
+          }
+        } else await assert.rejects(run, new RegExp(scenario.expected))
+        assert.equal(
+          checkpoints.at(-1)?.status,
+          scenario.expected === "passed" ? "passed" : "failed",
+        )
+        if (scenario.expected !== "passed")
+          assert.equal(checkpoints.at(-1)?.family, scenario.expected)
+        if (scenario.name === "shell replaced on return")
+          assert.equal(checkpoints.at(-1)?.phase, "warm-return")
+        assert.ok(!JSON.stringify(checkpoints).includes("sentinel"))
+        assert.deepEqual(unexpected, [])
+        observation.dispose()
+        await observation.begin()
+        assert.equal((await observation.end()).started, 0)
+      } finally {
+        await browser.close()
+      }
+    },
+  )
+}
+
+test(
+  "route-family opt-in requires canonical local artifacts before page activity",
+  { timeout: 30000 },
+  async () => {
+    const browser = await launchSmokeBrowser()
+    const oldFamilies = process.env.QA_WEB_ROUTE_FAMILIES
+    const oldArtifacts = process.env.QA_WEB_NAVIGATION_ARTIFACTS
+    try {
+      const page = await browser.newPage()
+      let requests = 0
+      page.on("request", () => requests++)
+      process.env.QA_WEB_ROUTE_FAMILIES = "true"
+      const config = {
+        qaDomain: "fixture.qa.test",
+        web: {
+          origin: "https://ewatrade-dashboard.localhost",
+          profileLabel: "Inert",
+          catalogItem: "Inert",
+          expectedTotal: "Inert",
+        },
+      }
+      Reflect.deleteProperty(process.env, "QA_WEB_NAVIGATION_ARTIFACTS")
+      await assert.rejects(
+        () => webJourney(page, config),
+        /requires local navigation artifacts/,
+      )
+      process.env.QA_WEB_NAVIGATION_ARTIFACTS = "/tmp/inert-not-written"
+      await assert.rejects(
+        () =>
+          webJourney(page, {
+            ...config,
+            web: {
+              ...config.web,
+              origin: "https://preview-dashboard.ewatrade.com",
+            },
+          }),
+        /requires local navigation artifacts/,
+      )
+      assert.equal(requests, 0)
+    } finally {
+      if (oldFamilies === undefined)
+        Reflect.deleteProperty(process.env, "QA_WEB_ROUTE_FAMILIES")
+      else process.env.QA_WEB_ROUTE_FAMILIES = oldFamilies
+      if (oldArtifacts === undefined)
+        Reflect.deleteProperty(process.env, "QA_WEB_NAVIGATION_ARTIFACTS")
+      else process.env.QA_WEB_NAVIGATION_ARTIFACTS = oldArtifacts
+      await browser.close()
+    }
+  },
+)
