@@ -7,6 +7,7 @@ import { QueryClientProvider, isServer } from "@tanstack/react-query"
 import {
   createTRPCClient,
   httpBatchLink,
+  httpBatchStreamLink,
   loggerLink,
   splitLink,
 } from "@trpc/client"
@@ -76,17 +77,25 @@ export function TRPCReactProvider({
       links: [
         dashboardAnalyticsLink<AppRouter>(events.track),
         splitLink({
-          condition: isBodyTransportQuery,
-          true: httpBatchLink({
+          condition: (op) => op.type === "query" && !isBodyTransportQuery(op),
+          true: httpBatchStreamLink({
             url: "/api/trpc",
             transformer: superjson,
-            methodOverride: "POST",
             headers,
           }),
-          false: httpBatchLink({
-            url: "/api/trpc",
-            transformer: superjson,
-            headers,
+          false: splitLink({
+            condition: isBodyTransportQuery,
+            true: httpBatchLink({
+              url: "/api/trpc",
+              transformer: superjson,
+              methodOverride: "POST",
+              headers,
+            }),
+            false: httpBatchLink({
+              url: "/api/trpc",
+              transformer: superjson,
+              headers,
+            }),
           }),
         }),
         loggerLink({

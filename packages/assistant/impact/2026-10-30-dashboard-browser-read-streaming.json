@@ -1,0 +1,40 @@
+{
+  "version": 1,
+  "id": "2026-10-30-dashboard-browser-read-streaming",
+  "tickets": ["H02"],
+  "summary": "Stream ordinary Dashboard browser query results within existing fresh-context batches; preserve mutations and private-body transport. Local only.",
+  "noAssistantImpact": "Procedure DTOs, query policy/keys, mount authority, GET-local context, fresh POST admission, analytics/privacy and cache clearing remain. Only ordinary query transport negotiates JSONL. Mutations retain non-streaming batching and Studio preview stays a POST body. No capability, tool, procedure, domain command, schema, dependency, provider or deployment change.",
+  "capabilities": [],
+  "procedures": [],
+  "docs": [
+    {
+      "topic": "feature",
+      "status": "local_only",
+      "path": ".brain/features/web-navigation-performance.md"
+    },
+    {
+      "topic": "api",
+      "status": "local_only",
+      "path": ".brain/api/contracts.md"
+    },
+    {
+      "topic": "schema",
+      "status": "not_applicable",
+      "note": "No database/schema/index/migration; inert transport ports only."
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "test",
+      "path": "apps/dashboard/src/trpc/browser-read-streaming.test.ts",
+      "executed": true,
+      "result": "Isolated actual-provider/SDK/Hono fixture6 tests34 assertions. Ready-before-blocked, one GET context, Date, refusal clearing, fresh actor, POST commands/private preview and single/mixed cancellation pass. Existing policy9/75 passes."
+    },
+    {
+      "kind": "run",
+      "path": "docs/verification/2026-10-30-dashboard-browser-read-streaming.md",
+      "executed": true,
+      "result": "Dashboard/fixture types, optimized build, scoped237/1533+QA/Biome pass. Frozen-source canonical optimized smoke/all18 readiness actions/two Activity GETs pass; runtime unverified. Development restored, other services unchanged. No broad speedup, budget or deployment claim."
+    }
+  ]
+}

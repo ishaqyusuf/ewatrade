@@ -21,40 +21,41 @@ optional code delivery and narrower database projections. Adoption and verificat
 remain uneven. Current local results still miss the proposed refresh/warm budgets;
 this program is not complete.
 
-Latest source slices combine locked Activity admission/Stores (`709d2269c`) and
-bound page enrichment before presentation joins. The common raw presenter read now
-selects only consumed fields. Access, snapshot/cursor, exact money and API/UI remain.
-Native68 old/new outputs match; existing19-row payload24,700→16,046 bytes. Warm
-server plans are cheap; request/transaction latency and initial loading remain.
+Latest source slices bound Activity enrichment/payload (`5518bde5a`) and correct
+an adoption gap in the browser provider: ordinary reads now stream within their
+existing fresh-context batches. Midday already uses this browser pattern; our
+server provider streamed but the browser still waited for whole batches. Actual
+provider/SDK/Hono tests reproduce and remove that barrier, retaining command/body
+transport, fresh authority, refusal clearing and query/cache ownership.
 
-The current root optimized Dashboard artifact is **b636ec94a**, Next16.4.3 BUILD_ID
-`9_xXHBCwpx3JFUo5UurJb`; it was reused with the separately running updated hot API.
-It is not a newly compiled full-stack candidate or certified API revision.
-Dashboard-only measurement completed all18 readiness actions and two isolated reads;
-owned code/lock/manifests stayed fixed. Unrelated checkout changes invalidated the
-overall smoke receipt, so these are diagnostics, **not passing smoke evidence**.
-Development was restored, other services unchanged; `runtimeVerified:false`.
-[Latest evidence](../verification/2026-10-30-dashboard-activity-bounded-enrichment.md).
-[Prior passing optimized window](../verification/2026-10-30-dashboard-activity-filter-projection.md).
+The root optimized Dashboard artifact now uses the browser-stream source candidate
+(parent `5518bde5a`, client hash pinned in the receipt), Next16.4.3 BUILD_ID
+`o7zCuLrMZYHJOvlfCX3EM`. Full optimized build/types and a frozen-source canonical
+local smoke pass, including18 readiness actions and two isolated Activity GETs.
+Dashboard development mode was restored; API/Storefront/Marketing stayed running.
+`runtimeVerified:false`: no release qualification or deployment.
+[Latest evidence](../verification/2026-10-30-dashboard-browser-read-streaming.md).
+[Activity enrichment evidence](../verification/2026-10-30-dashboard-activity-bounded-enrichment.md).
 
 | Family | Latest refresh observation | Latest warm-return observation |
 | --- | ---: | ---: |
-| Overview |2197ms |1075ms |
-| Catalog |1378ms |817ms |
-| Orders |2042ms |816ms |
-| Customers |1032ms |1317ms |
-| Finance |3233ms |2329ms |
-| Website requests |2476ms |813ms |
-| Activity |3654ms |2600ms |
-| General |991ms |1322ms |
-| Reports |1843ms |814ms |
+| Overview |986ms |1077ms |
+| Catalog |1892ms |817ms |
+| Orders |2411ms |820ms |
+| Customers |2796ms |1329ms |
+| Finance |3603ms |2336ms |
+| Website requests |2482ms |822ms |
+| Activity |3593ms |2631ms |
+| General |1053ms |1324ms |
+| Reports |2552ms |825ms |
 
 Single representative content-readiness samples, not p95, accepted budgets or
-whole-family acceptance. Activity's preceding3513/4615ms observations differ in
-both directions. Warm server planning/execution~4/2ms does not explain the isolated
-page query's~219ms or whole list1804ms. Context652.4ms and transaction-control643.1ms
-remain; phases overlap and cannot be summed. Keep investigating the initial loading
-edge and request/control round trips; no blanket freshness-window or index change.
+whole-family acceptance. Activity's prior3654/2600ms is similar; other families vary
+in both directions. The controlled test establishes independent result delivery,
+not a dashboard-wide latency ratio. Streams may remain in flight at readiness;
+missing completed API counts/phases are not zero work. Isolated list1813ms still
+spends638.4ms in context and624.4ms in transaction control versus warmed server
+execution~2ms. Phases overlap; no blanket freshness-window or index change.
 
 | Phase | Tickets | Accepted | Remaining outcome |
 | --- | --- | --- | --- |
@@ -67,13 +68,14 @@ edge and request/control round trips; no blanket freshness-window or index chang
 
 Next execution order, within the same27 tickets:
 
-1. **DP-003/103:** actual list plans and bounded enrichment/payload are inspected.
-   Isolated SQL stays8; list1804ms, page SQL219.3ms, context652.4ms and control643.1ms
-   remain versus warmed server execution~2ms. Attribute request/transaction round
-   trips with bounded private diagnostics; do not infer a server scan bottleneck.
-2. **DP-102/104/407:** inspect Activity's server-to-client initial loading edge and
-   filter ownership. Any useful document prefetch must preserve current mount
-   admission, exact scope/key consumption, refusal erasure and fresh returns.
+1. **DP-003/103/104:** browser batch-wide completion barrier is corrected. Capture
+   the actual Activity query-start/ready timeline, then attribute remaining context/
+   transaction round trips. Isolated list1813ms/SQL8 versus warmed server~2ms;
+   aggregate document duration alone does not prove exact client-start ordering.
+2. **DP-102/104/407:** preserve fresh mount-owned reads while evaluating the initial
+   loading edge and explicit all-panel gates. Useful document prefetch requires
+   current mount admission, exact key/scope consumption, one-use ownership, refusal
+   erasure and fresh returns; no speculative cross-mount hydration shortcut.
 3. **DP-405/407, then409/403:** remaining Finance metadata/spending and Activity
    costs, followed by the observed Reports/Orders refresh outliers. Inspect real
    query plans and caller work before indexes, read models or infrastructure.
@@ -129,6 +131,22 @@ cluster stopped; app services unchanged. No cache/schema/deployment.3/27 unchang
 [Evidence and sample limits](../verification/2026-10-30-dashboard-activity-bounded-enrichment.md).
 Largest native server sample is slower despite bounded enrichment; no consistent
 SQL speedup, whole-page or additional ticket acceptance claim.3/27 unchanged.
+
+## Browser query streaming — DP-003/103/104
+
+- [x] Reproduce ready-result blocking in the actual browser provider/SDK/Hono path;
+  ordinary reads now stream with one fresh GET context per batch. Commands and
+  private preview retain their existing non-streaming/body transport.
+- [x]6/34 transport plus9/75 policy, Dashboard/fixture types, optimized build,
+  scoped237/1533+QA/Biome pass. Cache/header/analytics/logger ownership unchanged.
+- [x] Frozen-source optimized canonical smoke/all18 readiness actions/two GETs pass;
+  development restored and sibling services unchanged. Runtime unverified.
+- [ ] Exact initial-read start/ready attribution, remaining presentation gates,
+  lifecycle/interaction and comparable per-family budget acceptance.
+
+[Evidence](../verification/2026-10-30-dashboard-browser-read-streaming.md).
+This removes a demonstrated browser adoption gap; no stale cache, authority or
+whole-dashboard speedup claim. All original27 criteria below remain;3/27 accepted.
 
 ## Current implementation evidence
 
