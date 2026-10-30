@@ -1,0 +1,45 @@
+{
+  "version": 1,
+  "id": "2026-10-30-dashboard-menu-prefetch",
+  "tickets": ["H02"],
+  "summary": "Local Dashboard submenu full prefetch follows destination intent. No deployment.",
+  "noAssistantImpact": "Only Dashboard child navigation Link prefetch eligibility changes. Same native anchor, href, role-filtered items, route/query/API permissions, data freshness and commands. No Assistant capability/tool, procedure, identity, confirmation, money/message/provider action, schema or contract change.",
+  "capabilities": [],
+  "procedures": [],
+  "docs": [
+    {
+      "topic": "feature",
+      "status": "local_only",
+      "path": ".brain/features/web-navigation-performance.md"
+    },
+    {
+      "topic": "api",
+      "status": "not_applicable",
+      "note": "No API input/output or reader change."
+    },
+    {
+      "topic": "permissions",
+      "status": "not_applicable",
+      "note": "Existing server authority and role-filtered menu stay intact."
+    },
+    {
+      "topic": "schema",
+      "status": "not_applicable",
+      "note": "No schema/index/migration."
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "test",
+      "path": "packages/assistant/evaluations/fixtures/dashboard-menu-prefetch.fixture.ts",
+      "executed": true,
+      "result": "11 isolated Chromium cases/52 assertions pass: real MainMenu, IntentLink and native Next Link/registry; inert scheduler/state/dispatch/Flight ports, intercepted URLs. Expansion Full tasks9 to0; parent PPR positive control15 remains. Intent, focus/cold click/collapse/href/handlers/options/current staff filtering/development covered. No live route-latency or permission claim."
+    },
+    {
+      "kind": "run",
+      "path": "docs/verification/2026-10-30-dashboard-menu-prefetch.md",
+      "executed": true,
+      "result": "11 Chromium cases/52 assertions, isolated entry, Dashboard/owned types, scoped fast237/1533+QA types/Biome and H01/H02 pass. Frozen canonical local smoke passes login/Catalog/draft-cancel, runtimeVerified:false; exact scheduling proof is inert. Eight source/lock hashes match; four prepared9eb8 manifests unchanged. Full program3/27; no service restart, deployment or business/provider action."
+    }
+  ]
+}

@@ -1,5 +1,22 @@
 # Dashboard performance program
 
+## Submenu speculation budget — DP-103/501,30October2026
+
+- [x] Actual Chromium/Next Link registry reproduces nine Full child tasks when
+  Settings opens before destination intent, plus15 automatic parent tasks.
+- [x] Child-only IntentLink enables warming on hover/focus/touch and retains
+  native navigation, cancellation, href ownership and caller handlers.
+- [x] Eleven browser cases/52 assertions pass; four groups expand with zero
+  Full child tasks and unchanged automatic parent positive control.
+
+[Receipt](../verification/2026-10-30-dashboard-menu-prefetch.md). This bounds
+optimized speculation; installed Next already disables development prefetch.
+No page-speed, HTTP/SQL count or whole-ticket acceptance claim. Midday also
+explicitly prefetches children; this is an evidence-based adaptation. Dashboard/
+owned types, browser entry, scoped fast237/1533+QA types/Biome, H01/H02 and frozen
+canonical local smoke pass (runtime unverified). Full program stays3/27.
+Prepared9eb8 remains separate; no service restart or deployment.
+
 ## Inbox/queue refused-read intervals — DP-201/204/406,30October2026
 
 - [x] Actual mounted owners reproduce12 refused-interval failures at P17/P25–27.

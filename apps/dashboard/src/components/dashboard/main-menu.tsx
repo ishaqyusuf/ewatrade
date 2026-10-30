@@ -7,6 +7,7 @@ import { HugeiconsIcon } from "@hugeicons/react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { useEffect, useId, useState } from "react"
+import { IntentLink } from "./intent-link"
 import { NavIcon } from "./nav-icon"
 
 type Props = {
@@ -115,9 +116,8 @@ export function MainMenu({ navItems, isExpanded, onNavigate }: Props) {
                 >
                   {item.children?.map((child) => (
                     <li key={child.href}>
-                      <Link
+                      <IntentLink
                         href={child.href}
-                        prefetch
                         onClick={onNavigate}
                         aria-current={
                           pathname === child.href ? "page" : undefined
@@ -128,7 +128,7 @@ export function MainMenu({ navItems, isExpanded, onNavigate }: Props) {
                         )}
                       >
                         {child.label}
-                      </Link>
+                      </IntentLink>
                     </li>
                   ))}
                 </ul>
