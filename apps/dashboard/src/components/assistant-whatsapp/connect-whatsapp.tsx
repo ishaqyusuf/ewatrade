@@ -1,6 +1,7 @@
 "use client"
 
 import { getDataCacheGeneration, useTRPC, useTRPCClient } from "@/trpc/client"
+import { isRejectedRead, readPollInterval } from "@/trpc/query-read-errors"
 import { Button, buttonVariants } from "@ewatrade/ui"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import Link from "next/link"
@@ -46,7 +47,7 @@ export function ConnectWhatsApp({ scope }: { scope: WhatsAppConnectScope }) {
     gcTime: 0,
     retry: false,
     refetchOnMount: "always",
-    refetchInterval: 15_000,
+    refetchInterval: (query) => readPollInterval(query.state.error, 15_000),
   })
   const contextMatches =
     context.isSuccess &&
@@ -63,7 +64,7 @@ export function ConnectWhatsApp({ scope }: { scope: WhatsAppConnectScope }) {
       gcTime: 0,
       retry: false,
       refetchOnMount: "always",
-      refetchInterval: 15_000,
+      refetchInterval: (query) => readPollInterval(query.state.error, 15_000),
     }),
   )
   const enabled =
@@ -86,7 +87,7 @@ export function ConnectWhatsApp({ scope }: { scope: WhatsAppConnectScope }) {
             query.state.data?.state ?? "",
           )
             ? false
-            : 2_000,
+            : readPollInterval(query.state.error, 2_000),
       },
     ),
   )
@@ -287,49 +288,61 @@ export function ConnectWhatsApp({ scope }: { scope: WhatsAppConnectScope }) {
       ) : null}
       {enabled && link && !expired && !connected ? (
         <div className="grid gap-4">
-          {qr ? (
-            <img
-              src={qr}
-              width={208}
-              height={208}
-              alt="Scan to open your private EwaTrade connection message in WhatsApp"
-              className="border bg-white"
-            />
+          {!isRejectedRead(status.error) &&
+          // A retry clears the error before it restores a refused payload.
+          (status.data !== undefined || status.errorUpdatedAt === 0) ? (
+            <>
+              {qr ? (
+                <img
+                  src={qr}
+                  width={208}
+                  height={208}
+                  alt="Scan to open your private EwaTrade connection message in WhatsApp"
+                  className="border bg-white"
+                />
+              ) : null}
+              <div className="flex flex-wrap gap-2">
+                <a
+                  className={buttonVariants()}
+                  href={link.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  referrerPolicy="no-referrer"
+                >
+                  Open WhatsApp
+                </a>
+                <Button
+                  variant="outline"
+                  onClick={async () => {
+                    try {
+                      await navigator.clipboard.writeText(link.url)
+                      if (current())
+                        setCopyState("Link copied. Keep it private.")
+                    } catch {
+                      if (current())
+                        setCopyState(
+                          "Could not copy. Use Open WhatsApp or scan the code.",
+                        )
+                    }
+                  }}
+                >
+                  Copy link
+                </Button>
+              </div>
+              {copyState ? (
+                <output className="text-sm">{copyState}</output>
+              ) : null}
+              <p className="text-sm text-muted-foreground">
+                Send the prefilled message. Keep this private link to yourself.
+                It expires in{" "}
+                {Math.max(
+                  0,
+                  Math.ceil((link.expiresAt.getTime() - now) / 60_000),
+                )}{" "}
+                min.
+              </p>
+            </>
           ) : null}
-          <div className="flex flex-wrap gap-2">
-            <a
-              className={buttonVariants()}
-              href={link.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              referrerPolicy="no-referrer"
-            >
-              Open WhatsApp
-            </a>
-            <Button
-              variant="outline"
-              onClick={async () => {
-                try {
-                  await navigator.clipboard.writeText(link.url)
-                  if (current()) setCopyState("Link copied. Keep it private.")
-                } catch {
-                  if (current())
-                    setCopyState(
-                      "Could not copy. Use Open WhatsApp or scan the code.",
-                    )
-                }
-              }}
-            >
-              Copy link
-            </Button>
-          </div>
-          {copyState ? <output className="text-sm">{copyState}</output> : null}
-          <p className="text-sm text-muted-foreground">
-            Send the prefilled message. Keep this private link to yourself. It
-            expires in{" "}
-            {Math.max(0, Math.ceil((link.expiresAt.getTime() - now) / 60_000))}{" "}
-            min.
-          </p>
           {status.isError || status.isPaused ? (
             <div className="grid gap-2">
               <p role="alert" className="text-sm">

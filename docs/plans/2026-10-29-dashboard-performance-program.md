@@ -36,6 +36,14 @@ multiple sequential direct calls; custom-hook/server dependencies are outside it
 This later Service slice has no new optimized build or latency claim and does not
 close DP-104/406. [Evidence](../verification/2026-10-30-dashboard-service-form-reads.md).
 
+Current development also stops six WhatsApp/Domain interval owners after known
+refusals. Actual32/170 proves payload clearing, stopped intervals, focus recovery,
+held private-link recovery, transient/terminal/durable behavior; full types, scoped
+smoke and canonical existing-data development UI pass. Keys, cadences, authority,
+confirmation and provider behavior remain. P28/A3/aggregate budgets and DP-204
+remain open; no additional ticket accepted or optimized timing claimed.
+[Evidence](../verification/2026-10-30-dashboard-connection-refusal-polls.md).
+
 The current root optimized Dashboard artifact adds parallel cold Stock activation
 in Reports (parent `a8625157` plus frozen owned source), Next16.4.3 BUILD_ID
 `zMN4q6wxzuTfj0KPK4a8Y`. Actual caller regression and optimized browser confirm two

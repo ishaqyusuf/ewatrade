@@ -236,3 +236,18 @@ change. No business/provider command. Other A2 owners and aggregate/optimized
 budgets remain; full program3/27. Dashboard/owned types, isolated entry, owned
 fast237/1533+QA types/Biome, H01/H02 and frozen local smoke pass (runtime
 unverified). Exact owner proof is inert; no application restart or deployment.
+
+## Implementation follow-up: P08–12/P20 / A2 —30October2026
+
+[Six WhatsApp/Domain read owners](../verification/2026-10-30-dashboard-connection-refusal-polls.md)
+now reuse the existing known-refusal interval helper. Actual components and installed
+query/tRPC observers reproduce18 interval failures; private-link visibility and
+held retry checks reproduce three failures each. Final32/170, existing lifecycle,
+source/fixture types, owned237/1533+QA/Biome and frozen canonical smoke pass.
+Cadences, activation, fresh authority, withdrawal/confirmation and durable refund
+recovery remain. Private link outputs stay hidden after status refusal until a
+successful read. Restricted local QA account displays expected refusal; no live
+link, paid Domain order, conversation case/provider or deployment acceptance.
+Historical39-site inventory is unchanged. Current full program4/27 (14.8%);
+P28 attachment recovery/budget, A3 QA entry visibility and aggregate/optimized
+budgets remain open. This subset does not accept DP-204.

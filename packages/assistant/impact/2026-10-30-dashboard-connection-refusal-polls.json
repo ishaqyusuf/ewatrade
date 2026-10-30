@@ -1,0 +1,56 @@
+{
+  "version": 1,
+  "id": "2026-10-30-dashboard-connection-refusal-polls",
+  "tickets": ["H02"],
+  "summary": "Stop six Dashboard WhatsApp/Domain read intervals after known refusals and hide refused one-time link outputs through pending recovery. Local only.",
+  "noAssistantImpact": "Client read-lifecycle repair using existing refusal policy. No assistant capability/procedure, server-derived permission/proof/scope, command, confirmation/revision, consent, conversation message/button meaning, provider, payment or schema changes. Existing cadences, activation, cache keys, fresh mount, zero retention and transient/durable recovery remain. One-time link display requires recovery after known refusal. No Workshop/Site conversation revision, deployment, live grant or business submission.",
+  "capabilities": [],
+  "procedures": [],
+  "docs": [
+    {
+      "topic": "feature",
+      "status": "local_only",
+      "path": ".brain/features/web-navigation-performance.md"
+    },
+    {
+      "topic": "feature",
+      "status": "local_only",
+      "path": ".brain/features/whatsapp-assistant.md"
+    },
+    {
+      "topic": "feature",
+      "status": "local_only",
+      "path": ".brain/features/managed-domains.md"
+    },
+    {
+      "topic": "api",
+      "status": "not_applicable",
+      "note": "No API, authority, permission, command or protocol change."
+    },
+    {
+      "topic": "schema",
+      "status": "not_applicable",
+      "note": "No persistence or schema change."
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "test",
+      "path": "apps/dashboard/src/hooks/connection-refusal-polls.mounted.test.ts",
+      "executed": true,
+      "result": "Isolated actual six-owner fixture32/170 passes after18 interval, three private URL and three held-recovery failures. Denied payload clearing, focus resumption, transients, link terminal states, durable domain/refund cadences and no selected order; zero external calls."
+    },
+    {
+      "kind": "test",
+      "path": "apps/dashboard/src/components/assistant-whatsapp/connect-whatsapp.mounted.test.ts",
+      "executed": true,
+      "result": "Existing isolated app connect/manage lifecycle passes unchanged; no live provider acceptance implied."
+    },
+    {
+      "kind": "run",
+      "path": "docs/verification/2026-10-30-dashboard-connection-refusal-polls.md",
+      "executed": true,
+      "result": "Dashboard/fixture types, scoped237/1533 plus QA types/Biome pass. Restricted QA account displays expected refusal without connection actions. Frozen existing-data local smoke passes, runtime unverified; no restart, deployment or optimized latency claim."
+    }
+  ]
+}

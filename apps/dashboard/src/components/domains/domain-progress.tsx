@@ -2,6 +2,7 @@
 
 import { useDomainParams } from "@/hooks/use-domain-params"
 import { useTRPC } from "@/trpc/client"
+import { readPollInterval } from "@/trpc/query-read-errors"
 import { Button } from "@ewatrade/ui"
 import { useQuery } from "@tanstack/react-query"
 
@@ -21,7 +22,10 @@ export function DomainProgress() {
       ) {
         return false
       }
-      return current?.registrationStatus === "UNCERTAIN" ? 30_000 : 5_000
+      return readPollInterval(
+        query.state.error,
+        current?.registrationStatus === "UNCERTAIN" ? 30_000 : 5_000,
+      )
     },
   })
 

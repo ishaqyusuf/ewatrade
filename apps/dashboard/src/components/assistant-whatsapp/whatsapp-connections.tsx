@@ -1,6 +1,7 @@
 "use client"
 
 import { getDataCacheGeneration, useTRPC, useTRPCClient } from "@/trpc/client"
+import { readPollInterval } from "@/trpc/query-read-errors"
 import { conversationAppLink } from "@ewatrade/assistant/channels/conversation-links"
 import { workflowConversationAppLink } from "@ewatrade/assistant/channels/workflow"
 import { Button } from "@ewatrade/ui"
@@ -50,7 +51,7 @@ export function WhatsAppConnections({ actorUserId }: { actorUserId: string }) {
     gcTime: 0,
     retry: false,
     refetchOnMount: "always",
-    refetchInterval: 30_000,
+    refetchInterval: (query) => readPollInterval(query.state.error, 30_000),
   })
   const revoke = useMutation(
     trpc.assistantChannels.revokeWhatsApp.mutationOptions({ gcTime: 0 }),
@@ -69,7 +70,7 @@ export function WhatsAppConnections({ actorUserId }: { actorUserId: string }) {
     gcTime: 0,
     retry: false,
     refetchOnMount: "always",
-    refetchInterval: 15_000,
+    refetchInterval: (query) => readPollInterval(query.state.error, 15_000),
   })
   useEffect(() => {
     const timer = window.setInterval(() => setNow(Date.now()), 10_000)
