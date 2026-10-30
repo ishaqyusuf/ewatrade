@@ -43,6 +43,7 @@ export function FinanceAccountForm({
         ? `Spending category “${savedName}” added.`
         : `Money account “${savedName}” added. Add what it holds with Move money → Starting balance.`
       : undefined,
+    category ? "finance" : "money-accounts",
   )
   const [code] = useState(
     () => `${category ? "E" : "M"}_${crypto.randomUUID().slice(0, 12)}`,

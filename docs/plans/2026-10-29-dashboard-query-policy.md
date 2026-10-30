@@ -158,9 +158,37 @@ and Book metadata are outside this effect set. No new query, TTL, domain command
 authorization rule or snapshot generation policy. Actual callbacks and five live
 cache observers prove the omission before/correction after, while uncached financial
 reads stay absent. This supplies creation-effect coverage, not all DP-203 commands.
-Next inspect `hooks/use-finance-invalidation.ts` and its blanket Finance prefix
-against current/snapshot and Customer-ledger dependencies at actual callbacks.
+The shared Finance completion follow-up below checks its blanket prefix against
+current/snapshot and account-setup dependencies at actual callbacks.
 [Creation effects and proof limits](../verification/2026-10-30-dashboard-order-effects-refresh.md).
+
+## Finance completion effects —30October2026
+
+The shared Finance invalidator now preserves **loaded successful** fixed-sequence
+`accountActivity`/`accountLedger` reads. An actual completion-hook reproduction
+previously waited for a held statement reload before Close/toast; those loaded
+statement queries now stay outside the invalidation wait. Latest, pending, failed,
+absent and unknown key shapes retain their existing refresh behavior. Sequence0
+is valid. The narrow classifier uses the installed SDK's public unprefixed key
+layout; unrecognized layouts conservatively refresh.
+
+Reports and journals stay refreshable even with a sequence: sequence-bounded
+numbers alone do not establish an immutable DTO, and report account metadata can
+change. This does not opt out private status/access reads, entry checks, recovery,
+scope clearing or future fresh mounts. No freshness/retention TTL changes.
+
+Explicit `money-accounts` completion refreshes cached Order payment choices after
+money-account creation. `book-setup` additionally refreshes cached Customer-account
+Book availability. Category creation retains the ordinary Finance-only effect;
+existing bank-detail/payment-settings identity callbacks remain unchanged. No
+uncached API read is manufactured. Direct source inventory finds21 completion
+calls across20 form files, plus the separate shared recovery owner. This is shared
+source reach, not runtime acceptance of every form or command.
+
+Current mutable Finance namespace refresh remains broad; full per-command
+dependencies are still DP-203 work. Next inspect the Customer-ledger command
+runner's blanket invalidations and live/pinned effects at its actual success seam.
+[Completion proof, UI and limits](../verification/2026-10-30-dashboard-finance-read-effects.md).
 
 
 ## Closed bell counts —30October2026

@@ -1,0 +1,50 @@
+{
+  "version": 1,
+  "id": "2026-10-30-dashboard-finance-read-effects",
+  "tickets": ["H02"],
+  "summary": "Keep loaded pinned Finance statements out of routine completion refresh while updating account-setup dependencies. Local only.",
+  "noAssistantImpact": "Dashboard cache wiring only. Shared completion retains current Finance refreshes, error recovery, Close and toast ordering. Only successful loaded accountActivity/accountLedger keys with canonical fixed sequence avoid invalidation; latest/failed/pending/unknown reads and report metadata remain refreshable. Money-account creation explicitly refreshes cached Order payment choices; Finance setup additionally refreshes cached Customer account Book availability. Category creation keeps its existing Finance-only effect. Existing payment-settings/bank-details callbacks, native command payloads, financial locks/permissions, recovery identities, snapshots, API and assistant capabilities are unchanged. No schema, provider, command submission or deployment.",
+  "capabilities": [],
+  "procedures": [],
+  "docs": [
+    {
+      "topic": "feature",
+      "status": "local_only",
+      "path": ".brain/features/web-navigation-performance.md"
+    },
+    {
+      "topic": "feature",
+      "status": "local_only",
+      "path": ".brain/features/merchant-finance.md"
+    },
+    {
+      "topic": "feature",
+      "status": "local_only",
+      "path": ".brain/features/finance-reporting.md"
+    },
+    {
+      "topic": "api",
+      "status": "not_applicable",
+      "note": "No financial API, private access, input/output or command/transaction change."
+    },
+    {
+      "topic": "schema",
+      "status": "not_applicable",
+      "note": "No database schema, persistence, migration or index change."
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "test",
+      "path": "apps/dashboard/src/hooks/finance-invalidation.integration.test.ts",
+      "executed": true,
+      "result": "Actual shared completion and Account/Setup form callbacks: before correction a held loaded statement blocks Close/toast and account/setup omit related reads. After correction live cache markers refresh, loaded fixed statement/ledger markers stay untouched, metadata reports and failed statements refresh, account/setup dependencies match their effects and category avoids extra identity reads. Only inert cache functions; no API operation or mutation permitted."
+    },
+    {
+      "kind": "test",
+      "path": "apps/dashboard/src/utils/finance-snapshot-query.test.ts",
+      "executed": true,
+      "result": "Public tRPC keys verify normal/infinite fixed sequences including zero/max, malformed/latest inputs, loaded/error/pending/absent data, unknown/prefixed layouts and report/journal/other-domain conservatism."
+    }
+  ]
+}

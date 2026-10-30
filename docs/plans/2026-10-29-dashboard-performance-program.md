@@ -145,6 +145,16 @@ types, scoped237/1533+QA/Biome,H02 and frozen canonical development smoke pass.
 No mutation, service restart or optimized-latency claim; program remains4/27.
 [Creation-effect evidence](../verification/2026-10-30-dashboard-order-effects-refresh.md).
 
+Shared Finance completion now avoids a demonstrated wait on loaded pinned
+account-statement/ledger reloads. Mutable/latest/failed reads still refresh; reports
+remain refreshable because account metadata can change. Money-account creation
+refreshes cached payment choices; Book setup also refreshes cached Customer-account
+Book availability, while category creation adds no identity reads.9 focused/55,
+Dashboard/fixture types, owned237/1533+QA/Biome,H02, frozen canonical local smoke and
+one existing Add account open/Cancel pass.21 completion calls/20 form files share
+the hook; no native financial command, restart, optimized latency or new ticket
+acceptance. [Evidence](../verification/2026-10-30-dashboard-finance-read-effects.md).
+
 | Phase | Tickets | Accepted | Remaining outcome |
 | --- | --- | --- | --- |
 |0 Evidence |001–003 |2/3 |Comparable costs, variable-wait attribution and calibrated budgets |
@@ -173,12 +183,12 @@ The prior source/artifact were restored before this retained change. Code warmin
 
 Next execution order, within the same27 tickets:
 
-DP-203 creation-effect review is now implemented for native Order and Service
-intake→Finance/Customer/ledger/search and tracked work. The next concrete source
-candidate is `hooks/use-finance-invalidation.ts`: its blanket Finance prefix and
-actual form callbacks need current/snapshot and cross-domain dependency proof
-before narrowing. Preserve current money/command authority and required fresh
-reads. This is independent of remaining Activity/Finance timing work below.
+DP-203 creation effects and shared Finance completion now have actual callback
+proof. The next concrete source candidate is `hooks/use-customer-ledger-command.ts`:
+its five blanket namespace invalidations need actual success, live/pinned and
+affected-read evidence before narrowing. Shared mutable Finance refresh is still
+broad. Preserve current money/command authority and required fresh reads. This is
+independent of remaining Activity/Finance timing work below.
 
 1. **DP-405/407:** shared critical-path scheduling DP-103 is accepted from its
    criterion audit; the shared shell projection and cold Stock fix are verified.

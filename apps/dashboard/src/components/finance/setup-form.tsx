@@ -30,6 +30,7 @@ export function FinanceSetupForm() {
     started
       ? `Finance is set up from ${plainDay(started)}. Next, add your money accounts and what they held that day.`
       : undefined,
+    "book-setup",
   )
   const form = useZodForm<z.infer<typeof schema>>(schema, {
     defaultValues: { date: firstOfMonth() },
