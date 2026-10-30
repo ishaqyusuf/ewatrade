@@ -1,0 +1,44 @@
+{
+  "version": 1,
+  "id": "2026-10-30-dashboard-created-order-effects",
+  "tickets": ["H02"],
+  "summary": "Refresh affected current financial/Customer projections after native Order or Service intake creation, retaining snapshot and navigation ownership. Local only.",
+  "noAssistantImpact": "Only Dashboard success-callback cache dependencies change. Both forms retain native mutations, payload construction, money and pricing, current permissions, drafts, selection, message offer and route refresh. Existing Service queue invalidation is also used by Order creation because it can create tracked work. No new endpoint, capability, assistant intent, schema, domain/command/transaction change, provider call, live submission or deployment. Fixed account/Customer statement snapshots and unrelated supplier/bill/Book data are not invalidated.",
+  "capabilities": [],
+  "procedures": [],
+  "docs": [
+    {
+      "topic": "feature",
+      "status": "local_only",
+      "path": ".brain/features/web-navigation-performance.md"
+    },
+    {
+      "topic": "feature",
+      "status": "local_only",
+      "path": ".brain/features/service-commerce.md"
+    },
+    {
+      "topic": "feature",
+      "status": "local_only",
+      "path": ".brain/features/dashboard-quick-orders.md"
+    },
+    {
+      "topic": "api",
+      "status": "not_applicable",
+      "note": "Existing APIs, command inputs, permissions and financial authority unchanged."
+    },
+    {
+      "topic": "schema",
+      "status": "not_applicable",
+      "note": "No persistence, schema, migration or index change."
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "test",
+      "path": "apps/dashboard/src/components/service-work/service-form-reads.integration.test.ts",
+      "executed": true,
+      "result": "Actual mounted Order and Service intake success callbacks reproduce omitted live financial refreshes before correction. Corrected callbacks refresh cached balances/owed/account and Service queue/count observers once, mark affected retained facts stale, preserve pinned statement and unrelated caches, retain route refresh once, and issue no mutations. Active Customer/search lookup markers and Order directory refresh ownership remain."
+    }
+  ]
+}

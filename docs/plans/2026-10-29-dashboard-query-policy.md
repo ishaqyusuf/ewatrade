@@ -135,9 +135,32 @@ data remains. No global cache clear, new TTL, command submission or clinical lau
 Direct AST audit of1108 production files finds26 infinite option sites/17 procedures;
 all three ordinary-key overlaps are these invalidation sites, now zero. This excludes
 aliases, manual keys and imported helpers, and does not prove all command-to-read
-dependencies. Service intake's Finance/Customer/ledger/search dependencies still
-need explicit review; typed matching alone does not complete DP-203/406/501.
+dependencies. The creation-effect follow-up below reviews Service intake's
+Finance/Customer/ledger/search dependencies; typed matching alone does not complete
+DP-203/406/501.
 [Actual-callback proof and limits](../verification/2026-10-30-dashboard-infinite-list-refresh.md).
+
+## Order creation effects —30October2026
+
+Native Order and Service intake success now share an application-level dependency
+owner. It targets19 current projection/lookup procedures, without invalidating an
+entire Finance or Customer-ledger namespace. Cached live balances, owed/account/
+Customer facts and current Finance reports refresh active observers. Customer
+directories/search and operational/Service reports become stale for their next use;
+they do not start eager lookup reloads while the creation form closes. Ordinary
+Order creation also uses the existing Service queue/count invalidator because the
+canonical command can create tracked Service work. Existing order/stock/usage and
+RSC refresh ownership remains, including no foreground Order-directory reload from
+ordinary creation.
+
+Pinned account/Customer statements, account-ledger snapshots, supplier/bill lists
+and Book metadata are outside this effect set. No new query, TTL, domain command,
+authorization rule or snapshot generation policy. Actual callbacks and five live
+cache observers prove the omission before/correction after, while uncached financial
+reads stay absent. This supplies creation-effect coverage, not all DP-203 commands.
+Next inspect `hooks/use-finance-invalidation.ts` and its blanket Finance prefix
+against current/snapshot and Customer-ledger dependencies at actual callbacks.
+[Creation effects and proof limits](../verification/2026-10-30-dashboard-order-effects-refresh.md).
 
 
 ## Closed bell counts —30October2026

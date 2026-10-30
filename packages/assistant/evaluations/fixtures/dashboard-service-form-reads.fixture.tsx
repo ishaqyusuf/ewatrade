@@ -53,6 +53,7 @@ Object.assign(globalThis, {
 const {
   QueryClientProvider,
   InfiniteQueryObserver,
+  QueryObserver,
   notifyManager,
   focusManager,
 } = await import("@tanstack/react-query")
@@ -136,6 +137,9 @@ mock.module(app("components/qa/fixture-recipes"), () => ({
   createServiceFixture() {
     throw Error("No business fixtures")
   },
+  createOrderFixture() {
+    throw Error("No business fixtures")
+  },
 }))
 mock.module(app("components/service-work/service-inline-picker"), () => ({
   ServiceInlinePicker: ({
@@ -148,6 +152,12 @@ mock.module(app("components/service-work/service-inline-picker"), () => ({
     </div>
   ),
 }))
+for (const [path, name] of [
+  ["order-item-picker", "OrderItemPicker"],
+  ["order-item-row", "OrderItemRow"],
+  ["order-catalog-free-lines", "OrderCatalogFreeLines"],
+] as const)
+  mock.module(app(`components/orders/${path}`), () => ({ [name]: () => null }))
 const store = {
   id: "selected-store",
   currencyCode: "NGN",
@@ -200,6 +210,7 @@ const data: Record<string, unknown> = {
     expressSurchargeValue: 250,
   },
   "orders.listPage": { items: [], nextCursor: undefined, totalCount: 2 },
+  "orders.paymentAccounts": { book: null, accounts: [] },
 }
 const calls: Array<{ path: string; input: unknown; type: string }> = []
 let release = () => {}
@@ -231,10 +242,35 @@ let options = createTRPCOptionsProxy<AppRouter>({
   queryClient: client,
 })
 let intakeSuccess: (() => unknown) | undefined
+let orderSuccess: (() => unknown) | undefined
 mock.module(app("trpc/client"), () => ({
   useTRPC: () =>
     new Proxy(options, {
       get(target, key) {
+        if (key === "orders")
+          return new Proxy(target.orders, {
+            get(orders, name) {
+              if (name !== "create") return Reflect.get(orders, name)
+              return new Proxy(orders.create, {
+                get(create, method) {
+                  if (method !== "mutationOptions")
+                    return Reflect.get(create, method)
+                  return (
+                    configuration: Parameters<typeof create.mutationOptions>[0],
+                  ) => {
+                    const handler = configuration?.onSuccess
+                    orderSuccess = handler
+                      ? () =>
+                          Reflect.apply(handler, undefined, [
+                            { id: "created-order" },
+                          ])
+                      : undefined
+                    return create.mutationOptions(configuration)
+                  }
+                },
+              })
+            },
+          })
         if (key !== "services") return Reflect.get(target, key)
         return new Proxy(target.services, {
           get(services, name) {
@@ -267,6 +303,9 @@ const { ServiceRequestForm } = await import(
 const { ServiceIntakeForm } = await import(
   "../../../../apps/dashboard/src/components/service-work/service-intake-form"
 )
+const { OrderForm } = await import(
+  "../../../../apps/dashboard/src/components/orders/order-form"
+)
 const roots: ReturnType<typeof createRoot>[] = []
 async function flush() {
   await act(async () => {
@@ -292,6 +331,7 @@ async function mount(form: ReactNode) {
 beforeEach(() => {
   routeRefreshes = 0
   intakeSuccess = undefined
+  orderSuccess = undefined
   calls.length = 0
   held = undefined
   heldPath = "catalog.listItems"
@@ -420,3 +460,150 @@ test("actual intake success refreshes active infinite Orders variants and marks 
     for (const unsubscribe of unsubscribes) unsubscribe()
   }
 })
+
+for (const kind of ["intake", "order"] as const)
+  test(`actual ${kind} success refreshes live financial reads and invalidates affected retained facts without reloading snapshots`, async () => {
+    await mount(
+      kind === "intake" ? (
+        <ServiceIntakeForm store={store} canManage={false} />
+      ) : (
+        <OrderForm store={store} />
+      ),
+    )
+    const live = [
+      ["balances", options.finance.balances.queryKey({ bookId: "book" })],
+      ["owed", options.finance.owedSummary.queryKey({ bookId: "book" })],
+      [
+        "account",
+        options.customerLedger.accountDetail.queryKey({ accountId: "ledger" }),
+      ],
+      [
+        "work queue",
+        options.services.queuePage.infiniteQueryKey({
+          storeId: store.id,
+          limit: 25,
+        }),
+      ],
+      [
+        "work counts",
+        options.services.queueStageCounts.queryKey({ storeId: store.id }),
+      ],
+    ] as const
+    const lookups = [
+      [
+        "customer lookup",
+        options.customers.listPage.infiniteQueryKey({ limit: 25 }),
+      ],
+      ["search", options.search.global.queryKey()],
+      ...(kind === "order"
+        ? [
+            [
+              "order directory",
+              options.orders.listPage.infiniteQueryKey({
+                storeId: store.id,
+                limit: 25,
+              }),
+            ] as const,
+          ]
+        : []),
+    ] as const
+    const retained = [
+      options.finance.customerBalances.queryKey(),
+      options.finance.customerBalanceDirectory.infiniteQueryKey({
+        limit: 30,
+      }),
+      options.finance.reports.queryKey(),
+      options.finance.periodCloseChecklist.queryKey(),
+      options.finance.inventoryReconciliation.queryKey(),
+      options.customerLedger.accounts.queryKey({
+        customerId: "customer",
+        limit: 50,
+      }),
+      options.customerLedger.receivables.queryKey(),
+      options.customers.getById.queryKey({ customerId: "customer" }),
+      options.customers.count.queryKey(),
+      options.customers.listPage.infiniteQueryKey({ limit: 25 }),
+      options.orders.salesReport.queryKey(),
+      options.orders.operationalSummary.queryKey(),
+      options.serviceReporting.summary.queryKey(),
+      options.serviceCommerce.report.queryKey(),
+      options.serviceCommerce.reportDrilldown.queryKey(),
+      options.search.global.queryKey(),
+    ]
+    const protectedReads = [
+      options.finance.book.queryKey(),
+      options.finance.bills.infiniteQueryKey({ bookId: "book", limit: 30 }),
+      options.finance.supplierDirectory.infiniteQueryKey({
+        bookId: "book",
+        limit: 30,
+      }),
+      options.finance.accountActivity.queryKey({
+        bookId: "book",
+        accountId: "money",
+        from: new Date("2026-10-01Z"),
+        through: new Date("2026-10-30Z"),
+        snapshotSequence: "7",
+        limit: 30,
+      }),
+      options.finance.accountLedger.infiniteQueryKey({
+        bookId: "book",
+        accountId: "money",
+        from: new Date("2026-10-01Z"),
+        through: new Date("2026-10-30Z"),
+        snapshotSequence: "7",
+        limit: 30,
+      }),
+      options.customerLedger.statement.queryKey({
+        accountId: "ledger",
+        snapshotSequence: "7",
+        limit: 30,
+      }),
+    ]
+    const refreshed: string[] = []
+    const observers = [...live, ...lookups].map(([name, queryKey]) => {
+      // The probe owns numeric cache markers, not financial DTOs or commands.
+      const observer = new QueryObserver(client, {
+        queryKey: [...queryKey],
+        queryFn: async () => {
+          refreshed.push(name)
+          return 2
+        },
+        staleTime: Number.POSITIVE_INFINITY,
+      })
+      client.setQueryData([...queryKey], 1)
+      return observer
+    })
+    for (const key of [...retained, ...protectedReads])
+      client.setQueryData([...key], 1)
+    const stops = observers.map((observer) => observer.subscribe(() => {}))
+    try {
+      const success = kind === "intake" ? intakeSuccess : orderSuccess
+      if (!success) throw Error("Missing actual creation success callback")
+      await act(async () => {
+        await success()
+      })
+      expect(refreshed.sort()).toEqual([
+        "account",
+        "balances",
+        "owed",
+        "work counts",
+        "work queue",
+      ])
+      for (const observer of observers.slice(0, live.length))
+        expect(observer.getCurrentResult().data).toBe(2)
+      for (const observer of observers.slice(live.length))
+        expect(observer.getCurrentResult().data).toBe(1)
+      for (const key of retained) {
+        expect(client.getQueryState(key)?.isInvalidated).toBe(true)
+        expect(client.getQueryData([...key])).toBe(1)
+      }
+      for (const key of protectedReads) {
+        expect(client.getQueryState(key)?.isInvalidated).toBe(false)
+        expect(client.getQueryData([...key])).toBe(1)
+      }
+      expect(routeRefreshes).toBe(1)
+      expect(calls.every((call) => call.type === "query")).toBe(true)
+    } finally {
+      for (const stop of stops) stop()
+    }
+  })

@@ -1,5 +1,6 @@
 "use client"
 
+import { invalidateCreatedOrderEffects } from "@/components/orders/invalidate-created-order-effects"
 import {
   OrderPaymentAccount,
   useOrderPaymentAccountChoice,
@@ -234,6 +235,7 @@ export function ServiceIntakeForm({
       onSuccess: async () => {
         setServiceIntakeDraft(null)
         await Promise.all([
+          invalidateCreatedOrderEffects(queryClient, trpc),
           invalidateServiceJobLists(queryClient, trpc),
           ...(initialDraft?.sourceAnswerId
             ? [

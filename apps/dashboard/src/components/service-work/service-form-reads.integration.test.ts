@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test"
 
-test("actual Service form owners schedule independent reads without changing inputs or cache policy", () => {
+test("actual Service and Order forms schedule independent reads and refresh affected facts", () => {
   const result = Bun.spawnSync(
     [
       process.execPath,

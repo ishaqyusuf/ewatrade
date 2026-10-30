@@ -16,6 +16,7 @@ import {
   catalogFreeOrderLines,
 } from "@ewatrade/utils/catalog-free-lines"
 
+import { invalidateCreatedOrderEffects } from "./invalidate-created-order-effects"
 import { OrderCatalogFreeLines } from "./order-catalog-free-lines"
 import { customerDraftFromSearch } from "./order-customer-search"
 import {
@@ -37,6 +38,7 @@ import { FormFeedback } from "@/components/forms/form-feedback"
 
 import { createOrderFixture } from "@/components/qa/fixture-recipes"
 import { QaDashboardQuickFill } from "@/components/qa/qa-quick-fill"
+import { invalidateServiceJobLists } from "@/components/service-work/invalidate-service-job-lists"
 import { useCustomerMessageParams } from "@/hooks/use-customer-message-params"
 import { useOrderParams } from "@/hooks/use-order-params"
 import { useTRPC } from "@/trpc/client"
@@ -140,6 +142,8 @@ export function OrderForm({
       onError: (failure) => setError(failure.message),
       onSuccess: async (created) => {
         await Promise.all([
+          invalidateCreatedOrderEffects(queryClient, trpc),
+          invalidateServiceJobLists(queryClient, trpc),
           queryClient.invalidateQueries({
             refetchType: "none",
             queryKey: trpc.orders.list.queryKey(),
@@ -147,10 +151,6 @@ export function OrderForm({
           queryClient.invalidateQueries({
             refetchType: "none",
             queryKey: trpc.orders.listPage.pathKey(),
-          }),
-          queryClient.invalidateQueries({
-            refetchType: "none",
-            queryKey: trpc.customers.listPage.pathKey(),
           }),
           queryClient.invalidateQueries({
             refetchType: "none",

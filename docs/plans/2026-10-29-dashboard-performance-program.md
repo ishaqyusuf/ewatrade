@@ -135,6 +135,16 @@ accepting another whole ticket or claiming latency gains. The optimized timing
 candidate above predates these three client changes.
 [Evidence](../verification/2026-10-30-dashboard-infinite-list-refresh.md).
 
+The follow-up traces native Order/Service intake effects to Customer history,
+receivables, collections, reports and tracked work. Both creation callbacks now
+target current projection dependencies and retain immutable snapshots. Actual
+callbacks reproduce missing live balance/owed/account refreshes before the fix;
+afterward five live cache observers refresh once, lookups avoid eager reloads and
+affected retained facts become stale.8 focused/152 assertions, Dashboard/fixture
+types, scoped237/1533+QA/Biome,H02 and frozen canonical development smoke pass.
+No mutation, service restart or optimized-latency claim; program remains4/27.
+[Creation-effect evidence](../verification/2026-10-30-dashboard-order-effects-refresh.md).
+
 | Phase | Tickets | Accepted | Remaining outcome |
 | --- | --- | --- | --- |
 |0 Evidence |001–003 |2/3 |Comparable costs, variable-wait attribution and calibrated budgets |
@@ -163,11 +173,12 @@ The prior source/artifact were restored before this retained change. Code warmin
 
 Next execution order, within the same27 tickets:
 
-The next concrete DP-203 dependency review is Service intake→Finance/Customer/
-ledger/search facts. Its three typed-matcher defects above are fixed; its current
-callback still needs a command-to-read audit for created Customer, Order debt and
-initial-payment effects. Preserve existing job/order/usage refresh and fresh command
-authority. This is independent of the remaining Activity/Finance timing work below.
+DP-203 creation-effect review is now implemented for native Order and Service
+intake→Finance/Customer/ledger/search and tracked work. The next concrete source
+candidate is `hooks/use-finance-invalidation.ts`: its blanket Finance prefix and
+actual form callbacks need current/snapshot and cross-domain dependency proof
+before narrowing. Preserve current money/command authority and required fresh
+reads. This is independent of remaining Activity/Finance timing work below.
 
 1. **DP-405/407:** shared critical-path scheduling DP-103 is accepted from its
    criterion audit; the shared shell projection and cold Stock fix are verified.
