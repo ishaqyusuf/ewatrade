@@ -57,7 +57,7 @@ import {
   useMutation,
   useQuery,
   useQueryClient,
-  useSuspenseQuery,
+  useSuspenseQueries,
 } from "@tanstack/react-query"
 import { useRouter } from "next/navigation"
 import { useMemo, useRef, useState } from "react"
@@ -84,9 +84,18 @@ export function ServiceIntakeForm({
   const trpc = useTRPC()
   const queryClient = useQueryClient()
   const { setParams } = useServiceWorkParams()
-  const { data: items } = useSuspenseQuery(
-    trpc.catalog.listItems.queryOptions({ kind: "service" }, { retry: false }),
-  )
+  const [{ data: items }, settingsQuery] = useSuspenseQueries({
+    queries: [
+      trpc.catalog.listItems.queryOptions(
+        { kind: "service" },
+        { retry: false },
+      ),
+      trpc.services.getSettings.queryOptions(
+        { storeId: store.id },
+        { retry: false },
+      ),
+    ],
+  })
   const offerings = useMemo(
     () =>
       flattenServiceOfferings(items, store.id).filter(
@@ -95,12 +104,6 @@ export function ServiceIntakeForm({
           offering.pricingPolicy === "quote_required",
       ),
     [items, store.id],
-  )
-  const settingsQuery = useSuspenseQuery(
-    trpc.services.getSettings.queryOptions(
-      { storeId: store.id },
-      { retry: false },
-    ),
   )
   const assigneesQuery = useQuery(
     trpc.services.assignees.queryOptions(undefined, {

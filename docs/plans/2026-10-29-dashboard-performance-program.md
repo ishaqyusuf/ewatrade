@@ -28,6 +28,14 @@ real existing-QA read-only comparison proves SQL2→1 and exact workspace/featur
 parity. General workspace and API/command authority remain unchanged; optional join
 failure still requires fresh mandatory workspace admission before existing fallback.
 
+Current development source also groups the two independent reads in each Service
+request-link/intake form. Actual mounted4/28, types, scoped237/1533, IAB open/Close
+and frozen canonical smoke pass. All command/money/draft/invalidation bodies remain
+byte-identical. The direct TSX-hook scan has18 modules/21 owners and no remaining
+multiple sequential direct calls; custom-hook/server dependencies are outside it.
+This later Service slice has no new optimized build or latency claim and does not
+close DP-104/406. [Evidence](../verification/2026-10-30-dashboard-service-form-reads.md).
+
 The current root optimized Dashboard artifact adds parallel cold Stock activation
 in Reports (parent `a8625157` plus frozen owned source), Next16.4.3 BUILD_ID
 `zMN4q6wxzuTfj0KPK4a8Y`. Actual caller regression and optimized browser confirm two

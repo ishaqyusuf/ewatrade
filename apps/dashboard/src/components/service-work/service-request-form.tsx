@@ -26,7 +26,7 @@ import { useTRPC } from "@/trpc/client"
 import {
   useMutation,
   useQueryClient,
-  useSuspenseQuery,
+  useSuspenseQueries,
 } from "@tanstack/react-query"
 import { useMemo, useState } from "react"
 
@@ -35,18 +35,21 @@ type StoreSummary = { currencyCode: string; id: string; name: string }
 export function ServiceRequestForm({ store }: { store: StoreSummary }) {
   const trpc = useTRPC()
   const queryClient = useQueryClient()
-  const { data: items } = useSuspenseQuery(
-    trpc.catalog.listItems.queryOptions({ kind: "service" }, { retry: false }),
-  )
+  const [{ data: items }, { data: links }] = useSuspenseQueries({
+    queries: [
+      trpc.catalog.listItems.queryOptions(
+        { kind: "service" },
+        { retry: false },
+      ),
+      trpc.serviceAccess.requestForms.queryOptions(
+        { storeId: store.id },
+        { retry: false },
+      ),
+    ],
+  })
   const offerings = useMemo(
     () => flattenServiceOfferings(items, store.id),
     [items, store.id],
-  )
-  const { data: links } = useSuspenseQuery(
-    trpc.serviceAccess.requestForms.queryOptions(
-      { storeId: store.id },
-      { retry: false },
-    ),
   )
   const [formLabel, setFormLabel] = useState("")
   const [selectedOfferings, setSelectedOfferings] = useState<string[]>([])

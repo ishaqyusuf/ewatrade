@@ -1,0 +1,45 @@
+{
+  "version": 1,
+  "id": "2026-10-30-dashboard-service-form-reads",
+  "tickets": ["H02"],
+  "summary": "Start independent Service request-link and intake form reads together before Suspense. Local only.",
+  "noAssistantImpact": "Only two Dashboard query-hook groups change. Exact query inputs/keys/cache/retry, assignee/payment activation, Store offering filters, draft/default state and all pricing/command/mutation/invalidation bodies are preserved. API, fresh permission checks, domain commands and assistant availability are unchanged. No endpoint, schema, provider, dependency, business fixture/submission or deployment.",
+  "capabilities": [],
+  "procedures": [],
+  "docs": [
+    {
+      "topic": "feature",
+      "status": "local_only",
+      "path": ".brain/features/web-navigation-performance.md"
+    },
+    {
+      "topic": "feature",
+      "status": "local_only",
+      "path": ".brain/features/service-commerce.md"
+    },
+    {
+      "topic": "api",
+      "status": "not_applicable",
+      "note": "No API or permission/input/output/command change."
+    },
+    {
+      "topic": "schema",
+      "status": "not_applicable",
+      "note": "No persistence/schema/index/migration change."
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "test",
+      "path": "apps/dashboard/src/components/service-work/service-form-reads.integration.test.ts",
+      "executed": true,
+      "result": "Isolated wrapper passes; actual mounted fixture4/28 passes after red2 failures. Holding either required read proves concurrent starts, unchanged exact scope/inputs, pending form, filtered offerings, warm cache reuse and no default assignee/payment-account fetch."
+    },
+    {
+      "kind": "run",
+      "path": "docs/verification/2026-10-30-dashboard-service-form-reads.md",
+      "executed": true,
+      "result": "Full Dashboard/fixture types, scoped237/1533 plus QA types/Biome pass. Command/money/draft/invalidation bodies byte-identical. Current development IAB opens both Service sheets and uses Close without submission. Frozen canonical local smoke passes; runtime unverified and no optimized latency claim or service restart."
+    }
+  ]
+}
