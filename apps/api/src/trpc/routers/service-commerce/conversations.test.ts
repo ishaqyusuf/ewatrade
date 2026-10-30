@@ -94,7 +94,10 @@ function caller(input?: { attendant?: boolean; stores?: string[] }) {
     calls,
     client: createCaller({
       db,
-      session: { user: { id: "attendant_user_1" } },
+      session: {
+        session: { id: "session_1" },
+        user: { id: "attendant_user_1" },
+      },
       tenantContext: {
         activeStore: { id: "store_1" },
         membership: { role: "MEMBER" },

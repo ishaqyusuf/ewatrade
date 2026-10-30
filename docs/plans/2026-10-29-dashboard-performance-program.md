@@ -760,3 +760,23 @@ local smoke pass. Existing driver proof is reused unchanged. No connected inbox
 fixture/report/review submission or money write; exact read counts are inert
 actual-component evidence, not browser latency. Prepared9eb8 remains untouched
 and excludes this source; no shared restart or deployment. Overall3/27 remains.
+
+## Store Conversation recovery lifetime — DP-204/406
+
+- [x] Reproduce callback/mutation render polling resets, late page/acknowledgement
+  work after close, stale queued cursor and cache-clear lifetime gaps with inert
+  actual hook/tRPC/query observers. No real message or watermark write.
+- [x] Keep one active scope lifetime and latest callbacks. Cancel owned reads,
+  stop obsolete queued work, retain applied cursor/ack retry identity and fresh
+  foreground recovery. Already issued mutations may finish; active page drain stays.
+- [x] Finish relevant source/types/gates and frozen local smoke, then commit.
+
+[Receipt](../verification/2026-10-30-dashboard-conversation-recovery-lifetime.md).
+T04/A5 is a demonstrated owner fix; whole polling/domain budgets remain. Overall3/27.
+
+Executed:19 focused lifecycle/helper tests/70 assertions, six inert protected router
+scope tests/13 assertions and Dashboard/owned/API fixture types pass. Only the old
+router test's synthetic Session shape is repaired; production auth/API unchanged.
+Owned fast237/1533+QA tooling/Biome, H01/H02 and frozen canonical local smoke pass,
+runtime unverified. No real conversation/read acknowledgement, restart/deployment
+or page-latency claim. Prepared9eb8 files remain separate and unchanged. Overall3/27.

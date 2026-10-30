@@ -1,0 +1,51 @@
+{
+  "version": 1,
+  "id": "2026-10-30-dashboard-conversation-recovery-lifetime",
+  "tickets": ["H02"],
+  "summary": "Local Store Conversation recovery no longer restarts on callback renders or continues optional reads/new acknowledgements after its owner ends. No deployment.",
+  "noAssistantImpact": "Client recovery lifecycle only. Existing Store Conversation cursor/read-watermark procedure inputs, server-derived actor/Tenant/Store permissions, monotonic canonical command, privacy/QA/confirmation and message/assignment flows remain. No assistant capability/tool/procedure or new grant. Already issued acknowledgements may finish; obsolete reads cannot issue new ones. Source tests intercept every SDK read/mutation; no real message, watermark write, provider action or deployment.",
+  "capabilities": [],
+  "procedures": [],
+  "docs": [
+    {
+      "topic": "feature",
+      "status": "local_only",
+      "path": ".brain/features/store-conversations.md"
+    },
+    {
+      "topic": "api",
+      "status": "not_applicable",
+      "note": "Production cursor/read-watermark contracts unchanged; existing router test synthetic identity gains the current nested browser Session so its scope regressions run."
+    },
+    {
+      "topic": "permissions",
+      "status": "not_applicable",
+      "note": "No permission change; fresh server scope, monotonic watermark and current command authority remain."
+    },
+    {
+      "topic": "schema",
+      "status": "not_applicable",
+      "note": "No schema or migration."
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "test",
+      "path": "packages/assistant/evaluations/fixtures/dashboard-conversation-recovery.fixture.tsx",
+      "executed": true,
+      "result": "Nineteen focused checks/70 assertions (15 actual hook/caller/tRPC/query-mutation lifecycle cases plus four shared helper cases) pass after render-loop, late page/ack, queued cursor and cache-clear red reproductions. No real read/write; active catch-up, retry IDs, latest callbacks, independent owners and completion of already issued inert acknowledgements remain."
+    },
+    {
+      "kind": "test",
+      "path": "apps/api/src/trpc/routers/service-commerce/conversations.test.ts",
+      "executed": true,
+      "result": "Six actual protected router tests/13 assertions pass with inert repositories after updating only the legacy synthetic browser Session shape. Removed attendant/foreign Store refusal and actor/cursor/read-watermark scope remain. No production API/auth edit or real acknowledgement."
+    },
+    {
+      "kind": "run",
+      "path": "docs/verification/2026-10-30-dashboard-conversation-recovery-lifetime.md",
+      "executed": true,
+      "result": "Nineteen focused lifecycle/helper tests/70 assertions, six inert protected scope tests/13 assertions, Dashboard/owned/API fixture types, owned fast237/1533 plus QA tooling types/Biome and H01/H02 pass. Frozen canonical existing-data local smoke passes QA login/Catalog/draft total/cancel, runtimeVerified:false; exact conversation behavior remains inert integration proof. No real message/read acknowledgement, shared restart or deployment. Prepared optimized9eb8 manifests unchanged and exclude this source; no page-speed or production request-rate claim."
+    }
+  ]
+}

@@ -203,3 +203,14 @@ reads before the new shared read. Zero freshness/retention, loaded cursor behavi
 refusal erasure/recovery, badge and selected review remain. Eleven mounted
 component/tRPC/query tests/67 assertions and relevant types pass. This does not
 accept DP-203/204/405 or rewrite the historical inventory.
+
+## Implementation follow-up: T04 / A5 — 30 October 2026
+
+[Conversation recovery lifetime](../verification/2026-10-30-dashboard-conversation-recovery-lifetime.md)
+reproduces the previously source-only late callback/read/ack concerns. It also
+demonstrates that callback/mutation renders restarted the effect's immediate read
+and reset watermarks. Scope-owned recovery, latest callback refs, cancellation,
+cache-generation guards and an applied cursor stop that work while preserving
+full active catch-up and existing acknowledgement idempotency. Already issued
+mutations may finish. Exact hook/caller SDK proof is inert; this does not claim
+live conversation or whole-DP-204/406 acceptance. Historical ledger stays pinned.
