@@ -25,6 +25,13 @@ export const financeAccountActivitySchema = z
   })
   .strict()
 export const financeBookSchema = z.object({ bookId: id }).strict()
+const financeCurrentBookSchema = z
+  .object({ currentCurrency: z.string().regex(/^[A-Z]{3}$/) })
+  .strict()
+export const financeReadBookSchema = z.union([
+  financeBookSchema,
+  financeCurrentBookSchema,
+])
 export const financeCustomerBalancesSchema = z
   .object({ customerIds: z.array(id).max(50) })
   .strict()
@@ -232,6 +239,13 @@ export const financeBillsSchema = financeBookSchema
       .optional(),
   })
   .strict()
+export const financeBillsReadSchema = z.union([
+  financeBillsSchema,
+  financeCurrentBookSchema
+    // Keep the cursor field typed for the legacy infinite reader; this mode has no pages.
+    .extend({ limit: z.literal(5), cursor: z.undefined().optional() })
+    .strict(),
+])
 export const financeCategorySchema = financeAccountSchema.omit({
   purpose: true,
   paymentMethods: true,

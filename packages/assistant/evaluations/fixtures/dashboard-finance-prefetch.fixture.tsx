@@ -129,6 +129,11 @@ mock.module("next/navigation", () => ({
 }))
 let signedIn = true
 let permitted = true
+let tenantCurrency = "NGN"
+let resolvedBookId = "book-a"
+const currentData: Record<string, unknown> = {}
+const currentFailures = new Map<string, "NOT_FOUND" | "FORBIDDEN">()
+const cancellations: string[] = []
 const tenantId = "tenant-a"
 let requestHeaders = new Headers({ "x-ewatrade-request-kind": "document" })
 mock.module("next/headers", () => ({ headers: async () => requestHeaders }))
@@ -138,7 +143,10 @@ mock.module(app("lib/session"), () => ({
 mock.module(app("lib/tenant"), () => ({
   getActiveTenant: async () =>
     permitted
-      ? { tenant: { id: tenantId }, membership: { role: "OWNER" } }
+      ? {
+          tenant: { id: tenantId, currencyCode: tenantCurrency },
+          membership: { role: "OWNER" },
+        }
       : null,
 }))
 mock.module(app("utils/columns"), () => ({
@@ -213,17 +221,33 @@ const rpc = createTRPCClient<AppRouter>({
             )
             return
           }
+          const current =
+            op.input &&
+            typeof op.input === "object" &&
+            "currentCurrency" in op.input
+          const onAbort = () => {
+            cancellations.push(op.path)
+            observer.error(new TRPCClientError("Inert read cancelled"))
+          }
+          op.signal?.addEventListener("abort", onAbort, { once: true })
           void Promise.resolve(gates.get(op.path)?.promise).then(() => {
-            if (failure === op.path) {
+            if (op.signal?.aborted) return
+            const refusal =
+              failure === op.path
+                ? "FORBIDDEN"
+                : current
+                  ? currentFailures.get(op.path)
+                  : undefined
+            if (refusal) {
               observer.error(
                 new TRPCClientError("Inert refusal", {
                   result: {
                     error: {
-                      code: -32003,
+                      code: refusal === "NOT_FOUND" ? -32004 : -32003,
                       message: "Inert refusal",
                       data: {
-                        code: "FORBIDDEN",
-                        httpStatus: 403,
+                        code: refusal,
+                        httpStatus: refusal === "NOT_FOUND" ? 404 : 403,
                         stack: undefined,
                         ownerSignupBusinessId: undefined,
                         appError: {
@@ -239,10 +263,18 @@ const rpc = createTRPCClient<AppRouter>({
                 }),
               )
             } else {
-              observer.next({ result: { data: data[op.path] } })
+              const value = currentData[op.path] ?? data[op.path]
+              observer.next({
+                result: {
+                  data: current
+                    ? { ...(value as object), resolvedBookId }
+                    : data[op.path],
+                },
+              })
               observer.complete()
             }
           })
+          return () => op.signal?.removeEventListener("abort", onAbort)
         }),
   ],
 })
@@ -261,6 +293,7 @@ let browserOptions = createTRPCOptionsProxy<AppRouter>({
 })
 mock.module(app("trpc/server"), () => ({
   getQueryClient: () => server,
+  getServerClient: () => rpc,
   get trpc() {
     return serverOptions
   },
@@ -300,6 +333,11 @@ beforeEach(() => {
   signedIn = permitted = true
   requestHeaders = new Headers({ "x-ewatrade-request-kind": "document" })
   failure = null
+  tenantCurrency = "NGN"
+  resolvedBookId = "book-a"
+  currentFailures.clear()
+  cancellations.length = 0
+  for (const key of Object.keys(currentData)) delete currentData[key]
   data = { ...initialData }
   calls.length = 0
   gates.clear()
@@ -326,6 +364,18 @@ afterEach(async () => {
   browser.clear()
 })
 
+test("document panels start while Book metadata is pending, without waiting for its identifier", async () => {
+  const gate = Promise.withResolvers<unknown>()
+  gates.set("finance.book", gate)
+  const pending = FinanceRoute({ view: "overview" })
+  await turn()
+  await turn()
+  const started = calls.map((call) => call.path).sort()
+  gate.resolve(undefined)
+  await pending
+  expect(started).toEqual(["finance.book", ...panels].sort())
+})
+
 test("Finance Overview starts only its three real panel reads before hydration, and consumers do not read twice", async () => {
   const page = await FinanceRoute({ view: "overview" })
   await turn()
@@ -344,7 +394,7 @@ test("Finance Overview starts only its three real panel reads before hydration, 
   expect(view.text()).toContain("Inert spending")
   expect(calls).toEqual(before)
   expect(calls.find((call) => call.path === "finance.bills")?.input).toEqual({
-    bookId: "book-a",
+    currentCurrency: "NGN",
     limit: 5,
   })
 })
@@ -388,26 +438,32 @@ test("pending panels start together without holding the route and settle indepen
   expect(calls).toHaveLength(4)
 })
 
-test("Book admission precedes all child reads, including missing Book and refused admission", async () => {
+test("Book admission still controls hydration and cancels unused reads when missing or refused", async () => {
   gates.set("finance.book", Promise.withResolvers<unknown>())
   const pending = FinanceRoute({ view: "overview" })
   await turn()
-  expect(calls.map((call) => call.path)).toEqual(["finance.book"])
+  expect(calls.map((call) => call.path).sort()).toEqual(
+    ["finance.book", ...panels].sort(),
+  )
   data["finance.book"] = null
   gates.get("finance.book")?.resolve(undefined)
   const view = await mount(await pending)
-  expect(calls).toHaveLength(1)
+  expect(calls).toHaveLength(4)
   expect(view.text()).not.toContain("Money accounts")
   expect(view.text()).not.toContain("Inert cash")
+  expect(
+    server
+      .getQueryCache()
+      .getAll()
+      .map((query) => query.queryKey),
+  ).toEqual([serverOptions.finance.book.queryKey()])
   server.clear()
   failure = "finance.book"
   await expect(FinanceRoute({ view: "overview" })).rejects.toBeInstanceOf(
     TRPCClientError,
   )
-  expect(calls.map((call) => call.path)).toEqual([
-    "finance.book",
-    "finance.book",
-  ])
+  expect(calls.filter((call) => call.path === "finance.book")).toHaveLength(2)
+  expect(server.getQueryCache().getAll()).toHaveLength(1)
 })
 
 test("route authentication and role admission refuse before any Finance read", async () => {
@@ -453,6 +509,7 @@ for (const view of [
 }
 
 test("pending Book-B balances cannot consume a retained Book-A query", async () => {
+  resolvedBookId = "book-b"
   data["finance.book"] = {
     ...(initialData["finance.book"] as object),
     id: "book-b",
@@ -499,7 +556,7 @@ test("pending Book-B balances cannot consume a retained Book-A query", async () 
   expect(view.text()).toContain("Inert cash")
   expect(view.text()).not.toContain("Private A cash")
   for (const call of calls.filter((call) => panels.includes(call.path)))
-    expect(call.input).toMatchObject({ bookId: "book-b" })
+    expect(call.input).toMatchObject({ currentCurrency: "NGN" })
   expect(calls).toHaveLength(4)
 })
 
@@ -609,4 +666,101 @@ test("missing document marker falls back to browser ownership", async () => {
   const view = await mount(page)
   expect(view.text()).toContain("Inert cash")
   expect(calls).toHaveLength(4)
+})
+
+for (const refused of [false, true]) {
+  test(`unused pending current-book reads cancel when Book is ${refused ? "refused" : "missing"}`, async () => {
+    for (const path of panels) gates.set(path, Promise.withResolvers<unknown>())
+    if (refused) failure = "finance.book"
+    else data["finance.book"] = null
+    const route = FinanceRoute({ view: "overview" })
+    if (refused) await expect(route).rejects.toBeInstanceOf(TRPCClientError)
+    else await route
+    await turn()
+    expect(cancellations.sort()).toEqual([...panels].sort())
+    expect(server.getQueryCache().getAll()).toHaveLength(1)
+    expect(
+      server.getQueryData(
+        serverOptions.finance.balances.queryKey({ bookId: "book-a" }),
+      ),
+    ).toBeUndefined()
+  })
+}
+
+test("same-currency Book identity mismatch cannot hydrate early results into another Book's cache", async () => {
+  data["finance.book"] = {
+    ...(initialData["finance.book"] as object),
+    id: "book-b",
+  }
+  currentData["finance.balances"] = {
+    accounts: [
+      {
+        id: "old",
+        name: "Private A cash",
+        purpose: "CASH",
+        balanceMinor: "999",
+      },
+    ],
+  }
+  currentData["finance.owedSummary"] = {
+    ...(initialData["finance.owedSummary"] as object),
+    privateSentinel: "Private A debt",
+  }
+  currentData["finance.bills"] = {
+    items: [{ description: "Private A spending" }],
+  }
+  const view = await mount(await FinanceRoute({ view: "overview" }))
+  expect(view.text()).toContain("Inert cash")
+  expect(view.text()).toContain("Inert customer")
+  expect(view.text()).toContain("Inert spending")
+  expect(view.text()).not.toContain("Private A")
+  expect(
+    JSON.stringify(
+      server
+        .getQueryCache()
+        .getAll()
+        .map((query) => query.state.data),
+    ),
+  ).not.toContain("Private A")
+  expect(server.getQueryCache().getAll()).toHaveLength(4)
+  expect(
+    calls
+      .filter(
+        (call) =>
+          panels.includes(call.path) &&
+          call.input &&
+          typeof call.input === "object" &&
+          "bookId" in call.input,
+      )
+      .map((call) => call.input),
+  ).toEqual([
+    { bookId: "book-b" },
+    { bookId: "book-b" },
+    { bookId: "book-b", limit: 5 },
+  ])
+  expect(calls).toHaveLength(7)
+})
+
+test("a current-currency race retries only the admitted Book identity without changing cache ownership", async () => {
+  data["finance.book"] = {
+    ...(initialData["finance.book"] as object),
+    id: "book-b",
+    currencyCode: "USD",
+  }
+  for (const path of panels) currentFailures.set(path, "NOT_FOUND")
+  const view = await mount(await FinanceRoute({ view: "overview" }))
+  expect(view.text()).toContain("Inert cash")
+  expect(view.text()).toContain("Inert customer")
+  expect(view.text()).toContain("Inert spending")
+  expect(calls).toHaveLength(7)
+  expect(
+    server.getQueryData(
+      serverOptions.finance.balances.queryKey({ bookId: "book-a" }),
+    ),
+  ).toBeUndefined()
+  expect(
+    server.getQueryData(
+      serverOptions.finance.balances.queryKey({ bookId: "book-b" }),
+    ),
+  ).toBeDefined()
 })

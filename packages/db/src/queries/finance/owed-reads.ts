@@ -3,6 +3,11 @@ import { listCustomerLedgerBalances } from "../customer-ledger/totals-projection
 import { type FinanceActor, assertFinanceManager } from "./access"
 import { assertFinanceManagerSnapshot } from "./manager-snapshot"
 import { getFinanceOwedSummaryProjection } from "./owed-summary-projection"
+import {
+  type FinanceReadBookScope,
+  financeReadBookIdentity,
+  financeReadBookWhere,
+} from "./read-book-scope"
 import { FinanceError } from "./rules"
 
 /**
@@ -11,13 +16,13 @@ import { FinanceError } from "./rules"
  */
 export async function getFinanceOwedSummary(
   db: PrismaClient,
-  input: FinanceActor & { bookId: string },
+  input: FinanceActor & FinanceReadBookScope,
 ) {
   return db.$transaction(
     async (tx) => {
-      await assertFinanceManagerSnapshot(tx, input)
+      const tenant = await assertFinanceManagerSnapshot(tx, input)
       const book = await tx.financeBook.findFirst({
-        where: { id: input.bookId, tenantId: input.tenantId },
+        where: financeReadBookWhere(input, tenant.currencyCode),
         select: { id: true, currencyCode: true, lastSequence: true },
       })
       if (!book)
@@ -28,7 +33,11 @@ export async function getFinanceOwedSummary(
         bookId: book.id,
         snapshot: book.lastSequence,
       })
-      return { currencyCode: book.currencyCode, ...projection }
+      return {
+        ...financeReadBookIdentity(input, book.id),
+        currencyCode: book.currencyCode,
+        ...projection,
+      }
     },
     { maxWait: 10_000, timeout: 30_000, isolationLevel: "RepeatableRead" },
   )

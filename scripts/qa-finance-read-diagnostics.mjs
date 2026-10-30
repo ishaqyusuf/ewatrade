@@ -43,10 +43,16 @@ export async function diagnoseFinanceReads(page, origin) {
       if (
         typeof book.data?.id !== "string" ||
         !book.data.id ||
-        book.data.id.length > 128
+        book.data.id.length > 128 ||
+        typeof book.data.currencyCode !== "string" ||
+        !/^[A-Z]{3}$/.test(book.data.currencyCode)
       )
         throw Error("Existing Finance Book is required.")
-      const owed = await read("finance.owedSummary", { bookId: book.data.id })
+      const owed = await read("finance.owedSummary", {
+        currentCurrency: book.data.currencyCode,
+      })
+      if (owed.data?.resolvedBookId !== book.data.id)
+        throw Error("Current Finance Book changed.")
       for (const party of [owed.data?.customers, owed.data?.suppliers]) {
         if (
           !party ||

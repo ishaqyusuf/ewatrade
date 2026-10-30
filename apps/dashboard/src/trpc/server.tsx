@@ -26,7 +26,7 @@ const getServerRequestContext = cache(async () =>
 )
 
 // A batch must belong to one render request, never to the module singleton.
-const getServerClient = cache(() => {
+export const getServerClient = cache(() => {
   const requestContext = getServerRequestContext()
   return createTRPCClient<AppRouter>({
     links: [

@@ -136,6 +136,7 @@ async function legacy(bookId: string, snapshot: bigint, monthStart: Date) {
 }
 function reader(
   options: {
+    current?: boolean
     denied?: boolean
     inactive?: boolean
     missingBook?: boolean
@@ -182,7 +183,11 @@ function reader(
     financeBook: {
       findFirst: async (args: unknown) => {
         events.push("book")
-        expect(args).toEqual({ where: { id: "book-a", tenantId: "tenant-a" } })
+        expect(args).toEqual({
+          where: options.current
+            ? { tenantId: "tenant-a", currencyCode: "NGN" }
+            : { id: "book-a", tenantId: "tenant-a" },
+        })
         return options.missingBook
           ? null
           : {
@@ -360,4 +365,27 @@ test("parameters do not become SQL and consecutive snapshots are not cached", as
     "book",
     "projection",
   ])
+})
+
+test("current Book selection matches the legacy read and binds its resolved identity", async () => {
+  const legacy = reader()
+  const expected = await getFinanceAccountBalances(legacy.db, actor)
+  expect(Object.hasOwn(expected, "resolvedBookId")).toBe(false)
+  const f = reader({ current: true })
+  const { bookId: _book, ...identity } = actor
+  const result = await getFinanceAccountBalances(f.db, {
+    ...identity,
+    currentCurrency: "NGN",
+  })
+  expect(result).toEqual({ ...expected, resolvedBookId: "book-a" })
+  expect(f.events).toEqual(["snapshot-manager", "book", "projection"])
+})
+test("stale current currency refuses after admission without a Book or money read", async () => {
+  const f = reader({ current: true })
+  const { bookId: _book, ...identity } = actor
+  await expect(
+    getFinanceAccountBalances(f.db, { ...identity, currentCurrency: "USD" }),
+  ).rejects.toMatchObject({ code: "NOT_FOUND" })
+  expect(f.events).toEqual(["snapshot-manager"])
+  expect(f.queries).toEqual([])
 })

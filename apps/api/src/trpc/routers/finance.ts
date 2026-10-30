@@ -66,7 +66,7 @@ import {
   financeAccountSchema,
   financeBillPaymentSchema,
   financeBillSchema,
-  financeBillsSchema,
+  financeBillsReadSchema,
   financeBookSchema,
   financeCashAdjustmentReversalSchema,
   financeCashAdjustmentSchema,
@@ -88,6 +88,7 @@ import {
   financeMoneySchema,
   financePeriodCloseChecklistSchema,
   financePeriodSchema,
+  financeReadBookSchema,
   financeReportsSchema,
   financeReverseBillPaymentSchema,
   financeSetupSchema,
@@ -383,7 +384,7 @@ export const financeRouter = createTRPCRouter({
       getFinanceBill(ctx.db, { ...input, ...ctx.financeActor }),
     ),
   bills: financeProcedure
-    .input(financeBillsSchema)
+    .input(financeBillsReadSchema)
     .query(({ ctx, input }) =>
       listFinanceBills(ctx.db, { ...input, ...ctx.financeActor }),
     ),
@@ -419,12 +420,12 @@ export const financeRouter = createTRPCRouter({
       }),
     ),
   balances: financeProcedure
-    .input(financeBookSchema)
+    .input(financeReadBookSchema)
     .query(({ ctx, input }) =>
       getFinanceAccountBalances(ctx.db, { ...input, ...ctx.financeActor }),
     ),
   owedSummary: financeProcedure
-    .input(financeBookSchema)
+    .input(financeReadBookSchema)
     .query(({ ctx, input }) =>
       getFinanceOwedSummary(ctx.db, { ...input, ...ctx.financeActor }),
     ),

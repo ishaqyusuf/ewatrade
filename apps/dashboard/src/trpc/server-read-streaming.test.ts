@@ -66,7 +66,49 @@ function fixture(options: { failSlow?: boolean; deniedActor?: string } = {}) {
   const counts = { contexts: 0, legalReads: 0, tenantReads: 0, requests: 0 }
   const traces: { trace: PerformanceTrace; completion: TraceCompletion }[] = []
   let signal: AbortSignal | null | undefined
+  const currentBookInput = z.union([
+    z.object({ currentCurrency: z.literal("NGN") }).strict(),
+    z.object({ bookId: z.literal("book-ready") }).strict(),
+  ])
   const router = createTRPCRouter({
+    finance: createTRPCRouter({
+      book: protectedProcedure.query(async ({ ctx }) => {
+        started()
+        await blocked
+        return {
+          id: "book-ready",
+          tenantId: ctx.tenantId,
+          currencyCode: "NGN",
+          timezone: "UTC",
+          startsAt: new Date("2026-01-01Z"),
+          lastSequence: "1",
+          accounts: [],
+        }
+      }),
+      balances: protectedProcedure
+        .input(currentBookInput)
+        .query(() => ({ resolvedBookId: "book-ready", accounts: [] })),
+      owedSummary: protectedProcedure.input(currentBookInput).query(() => ({
+        resolvedBookId: "book-ready",
+        customers: { count: 0, owedMinor: "0", top: [] },
+        suppliers: { count: 0, owedMinor: "0", top: [] },
+      })),
+      bills: protectedProcedure
+        .input(
+          z.union([
+            z
+              .object({
+                currentCurrency: z.literal("NGN"),
+                limit: z.literal(5),
+              })
+              .strict(),
+            z
+              .object({ bookId: z.literal("book-ready"), limit: z.literal(5) })
+              .strict(),
+          ]),
+        )
+        .query(() => ({ resolvedBookId: "book-ready", items: [] })),
+    }),
     orders: createTRPCRouter({
       get: protectedProcedure
         .input(z.object({ orderId: z.string() }))
@@ -366,4 +408,80 @@ test("simultaneous RSC owners cannot share an HTTP batch or another actor's resu
     legalReads: 2,
     tenantReads: 2,
   })
+})
+
+test("current Finance panels share Book's render batch and fresh context, then hydrate only admitted Book keys", async () => {
+  const { startFinanceOverviewReads, prefetchAdmittedFinanceOverview } =
+    await import("../components/finance/overview-prefetch")
+  const state = fixture()
+  const owner = { actor: "finance", values: new Map<unknown, unknown>() }
+  const source = owners.run(owner, () => {
+    const client = getQueryClient()
+    const book = client.fetchQuery(trpc.finance.book.queryOptions())
+    const reads = startFinanceOverviewReads("NGN")
+    return {
+      client,
+      book,
+      reads,
+      keys: [
+        trpc.finance.balances.queryOptions({ bookId: "book-ready" }),
+        trpc.finance.owedSummary.queryOptions({ bookId: "book-ready" }),
+        trpc.finance.bills.queryOptions({ bookId: "book-ready", limit: 5 }),
+      ],
+    }
+  })
+  const browser = makeQueryClient()
+  const subscriptions: (() => void)[] = []
+  try {
+    await state.slowStarted
+    const blocked = Symbol("blocked")
+    const results = await Promise.race([
+      Promise.all([
+        source.reads.balances,
+        source.reads.owed,
+        source.reads.bills,
+      ]),
+      new Promise<typeof blocked>((resolve) =>
+        setTimeout(() => resolve(blocked), 500),
+      ),
+    ])
+    expect(results).not.toBe(blocked)
+    if (typeof results !== "symbol")
+      expect(results.every((result) => result.ok)).toBe(true)
+    expect(source.client.getQueryCache().getAll()).toHaveLength(1)
+    expect(state.counts).toEqual({
+      requests: 1,
+      contexts: 1,
+      legalReads: 1,
+      tenantReads: 1,
+    })
+    state.release()
+    const book = await source.book
+    if (!book) throw Error("Missing admitted fixture Book")
+    owners.run(owner, () => prefetchAdmittedFinanceOverview(source.reads, book))
+    await new Promise<void>((resolve) => setImmediate(resolve))
+    expect(source.client.getQueryCache().getAll()).toHaveLength(4)
+    hydrate(browser, dehydrate(source.client))
+    let extra = 0
+    for (const option of source.keys) {
+      const observer = new QueryObserver(browser, {
+        queryKey: option.queryKey,
+        queryFn: async () => {
+          extra++
+          throw Error("Unexpected duplicate fixture read")
+        },
+      })
+      subscriptions.push(observer.subscribe(() => {}))
+      expect(browser.getQueryState(option.queryKey)?.status).toBe("success")
+    }
+    expect(extra).toBe(0)
+    expect(state.counts.requests).toBe(1)
+  } finally {
+    state.release()
+    source.reads.cancel()
+    await Promise.allSettled([source.book])
+    for (const unsubscribe of subscriptions) unsubscribe()
+    browser.clear()
+    source.client.clear()
+  }
 })

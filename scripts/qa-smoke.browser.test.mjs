@@ -168,6 +168,11 @@ for (const scenario of [
     expected: "DP-405",
   },
   {
+    name: "mismatched current Finance Book",
+    options: { diagnosticBookMismatch: true },
+    expected: "DP-405",
+  },
+  {
     name: "missing Finance Book",
     options: { diagnosticNoBook: true },
     expected: "DP-405",
@@ -244,6 +249,7 @@ for (const scenario of [
                         "diagnosticNoBook" in scenario.options
                           ? null
                           : "private-book-sentinel",
+                      currencyCode: "NGN",
                       accounts: [{ name: "private-name-sentinel" }],
                     },
                   },
@@ -259,8 +265,9 @@ for (const scenario of [
               return
             }
             assert.equal(
-              JSON.parse(url.searchParams.get("input") ?? "").json.bookId,
-              "private-book-sentinel",
+              JSON.parse(url.searchParams.get("input") ?? "").json
+                .currentCurrency,
+              "NGN",
             )
             await route.fulfill({
               contentType: "application/json",
@@ -269,6 +276,10 @@ for (const scenario of [
                 result: {
                   data: {
                     json: {
+                      resolvedBookId:
+                        "diagnosticBookMismatch" in scenario.options
+                          ? "private-other-book-sentinel"
+                          : "private-book-sentinel",
                       customers: {
                         count: 1,
                         owedMinor:

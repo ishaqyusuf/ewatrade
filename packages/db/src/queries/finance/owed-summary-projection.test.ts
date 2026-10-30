@@ -235,6 +235,7 @@ async function reference(scope: typeof input) {
 }
 function reader(
   options: {
+    current?: boolean
     denied?: boolean
     inactive?: boolean
     missingBook?: boolean
@@ -278,7 +279,9 @@ function reader(
       findFirst: async (args: unknown) => {
         events.push("book")
         expect(args).toEqual({
-          where: { id: options.book?.id ?? "book-a", tenantId: "tenant-a" },
+          where: options.current
+            ? { tenantId: "tenant-a", currencyCode: "NGN" }
+            : { id: options.book?.id ?? "book-a", tenantId: "tenant-a" },
           select: { id: true, currencyCode: true, lastSequence: true },
         })
         return options.missingBook
@@ -473,4 +476,27 @@ test("actual reader uses the selected Book currency instead of the Tenant defaul
   ).toEqual({ currencyCode: "USD", ...(await reference(current)) })
   expect(f.queries).toHaveLength(1)
   expect(f.queries[0]?.values).toContain("USD")
+})
+
+test("current Book selection matches the legacy read and binds its resolved identity", async () => {
+  const legacy = reader()
+  const expected = await getFinanceOwedSummary(legacy.db, actor)
+  expect(Object.hasOwn(expected, "resolvedBookId")).toBe(false)
+  const f = reader({ current: true })
+  const { bookId: _book, ...identity } = actor
+  const result = await getFinanceOwedSummary(f.db, {
+    ...identity,
+    currentCurrency: "NGN",
+  })
+  expect(result).toEqual({ ...expected, resolvedBookId: "book-a" })
+  expect(f.events).toEqual(["snapshot-manager", "book", "projection"])
+})
+test("stale current currency refuses after admission without a Book or money read", async () => {
+  const f = reader({ current: true })
+  const { bookId: _book, ...identity } = actor
+  await expect(
+    getFinanceOwedSummary(f.db, { ...identity, currentCurrency: "USD" }),
+  ).rejects.toMatchObject({ code: "NOT_FOUND" })
+  expect(f.events).toEqual(["snapshot-manager"])
+  expect(f.queries).toEqual([])
 })

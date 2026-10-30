@@ -1,5 +1,25 @@
 # Dashboard performance program
 
+## Independent Finance document reads — DP-102/103/405,30October2026
+
+- [x] Red held-Book test reproduces the serial panel startup.
+- [x] Start three independently guarded current-Book reads beside Book metadata;
+  seed canonical Book-ID keys only after matching admitted identity.
+- [x]20 mounted/100 assertions, real transport7/52, DB19/275 and API15/82 pass.
+  Mismatch/race/refusal/cancel/invalidation/return and strict scope modes covered.
+- [x] Types, scoped237/1533+QA types/Biome, H01 and14 QA driver cases pass.
+- [x] Matching optimized18-action smoke/current-Book identity proof passes;
+  Dashboard development restored, other listeners unchanged.
+
+Legacy Book-ID contracts and infinite lists, UI consumers/keys and command guards
+remain; soft navigation retains its existing panel owner. Only the three read
+inputs add current-currency mode, with resolved identity for safe canonical cache
+seeding. No extra lookup, aggregate barrier, global TTL or permission cache.
+[Receipt](../verification/2026-10-30-dashboard-finance-independent-prefetch.md).
+Finance3414/2847ms(refresh/warm), previous5335/2834ms. One sample each, includes
+parent6423 guard work; no isolated causal/p95 claim. Refresh wave removal proven;
+warm metadata gate and Activity3496/3113ms remain. Full program3/27 (11.1%), local only.
+
 ## Finance snapshot admission — DP-103/405,30October2026
 
 - [x] Reproduce two permission operations in each actual balance/owed reader.

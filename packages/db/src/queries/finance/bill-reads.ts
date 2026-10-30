@@ -5,28 +5,33 @@ import {
   buildScopedListPageWhere,
 } from "../list-sort"
 import { type FinanceActor, assertFinanceManager } from "./access"
+import {
+  type FinanceReadBookScope,
+  financeReadBookIdentity,
+  financeReadBookWhere,
+} from "./read-book-scope"
 import { FinanceError } from "./rules"
 
 export async function listFinanceBills(
   db: PrismaClient,
-  input: FinanceActor & {
-    bookId: string
-    query?: string
-    storeId?: string
-    /** OPEN = still to pay (unpaid or partly paid); NO_RECEIPT = no attached receipt. */
-    status?: "UNPAID" | "PARTIAL" | "PAID" | "VOID" | "OPEN" | "NO_RECEIPT"
-    cursor?: string
-    limit?: number
-    sort?: {
-      direction: "asc" | "desc"
-      field:
-        | "incurredAt"
-        | "description"
-        | "payeeName"
-        | "totalMinor"
-        | "paidMinor"
-    }
-  },
+  input: FinanceActor &
+    FinanceReadBookScope & {
+      query?: string
+      storeId?: string
+      /** OPEN = still to pay (unpaid or partly paid); NO_RECEIPT = no attached receipt. */
+      status?: "UNPAID" | "PARTIAL" | "PAID" | "VOID" | "OPEN" | "NO_RECEIPT"
+      cursor?: string
+      limit?: number
+      sort?: {
+        direction: "asc" | "desc"
+        field:
+          | "incurredAt"
+          | "description"
+          | "payeeName"
+          | "totalMinor"
+          | "paidMinor"
+      }
+    },
 ) {
   const limit = input.limit ?? 30
   if (
@@ -39,9 +44,9 @@ export async function listFinanceBills(
   }
   return db.$transaction(
     async (tx) => {
-      await assertFinanceManager(tx, input)
+      const tenant = await assertFinanceManager(tx, input)
       const book = await tx.financeBook.findFirst({
-        where: { id: input.bookId, tenantId: input.tenantId },
+        where: financeReadBookWhere(input, tenant.currencyCode),
       })
       if (!book)
         throw new FinanceError("NOT_FOUND", "Financial book not found.")
@@ -160,6 +165,7 @@ export async function listFinanceBills(
         receiptGroups.map((group) => [group.billId, group._count._all]),
       )
       return {
+        ...financeReadBookIdentity(input, book.id),
         currencyCode: book.currencyCode,
         count,
         summary: {

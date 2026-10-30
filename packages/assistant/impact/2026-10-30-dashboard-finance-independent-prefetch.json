@@ -1,0 +1,57 @@
+{
+  "version": 1,
+  "id": "2026-10-30-dashboard-finance-independent-prefetch",
+  "tickets": ["H02"],
+  "summary": "Overview documents overlap protected current-Book reads and seed only admitted canonical identities. Local only.",
+  "noAssistantImpact": "Existing finance.balances/owedSummary/bills inputs add a strict current-currency read alternative, with resolvedBookId metadata only for that mode. Canonical Book-ID inputs/outputs and all command schemas remain unchanged. Current mode retains fresh protected actor/business/Owner/Admin/plan and transactional scope, rejects stale currency, and adds no grants or cross-request cache. Dashboard-only data scheduling; existing assistant tools still require Book IDs and their schemas/adapters/availability are unchanged. No new capability, procedure, rollout, schema or provider action.",
+  "capabilities": [],
+  "procedures": [],
+  "docs": [
+    {
+      "topic": "feature",
+      "status": "local_only",
+      "path": ".brain/features/merchant-finance.md"
+    },
+    {
+      "topic": "api",
+      "status": "local_only",
+      "path": ".brain/api/contracts.md"
+    },
+    {
+      "topic": "permissions",
+      "status": "local_only",
+      "path": ".brain/api/permissions.md"
+    },
+    {
+      "topic": "schema",
+      "status": "not_applicable",
+      "note": "No schema/index/migration."
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "test",
+      "path": "packages/assistant/evaluations/fixtures/dashboard-finance-prefetch.fixture.tsx",
+      "executed": true,
+      "result": "Held-Book red reproduction;20 mounted cases/100 assertions prove independent early startup, canonical identity matching/fallback, no duplicate hydration, refusal erasure, soft returns, invalidation and cancellation."
+    },
+    {
+      "kind": "test",
+      "path": "apps/api/src/trpc/routers/finance-current-book.test.ts",
+      "executed": true,
+      "result": "Actual router/schema/legacy read15/82 pass; role/plan/context/scope and strict current-mode rejection. DB19/275 preserves exact canonical outputs and rejects stale currency before Book/money reads. Assistant bill input/adapter remains canonical."
+    },
+    {
+      "kind": "test",
+      "path": "apps/dashboard/src/trpc/server-read-streaming.test.ts",
+      "executed": true,
+      "result": "Seven real transport cases/52 assertions prove one render-owned stream batch/context/authority admission and no duplicate hydration; existing owner/abort/refusal cases retained."
+    },
+    {
+      "kind": "run",
+      "path": "docs/verification/2026-10-30-dashboard-finance-independent-prefetch.md",
+      "executed": true,
+      "result": "DB/API/Dashboard/mounted types, scoped237/1533+QA tooling/Biome,H01/H02 and14 intercepted QA driver cases pass. Frozen matching optimized18-action smoke/current-Book identity probe passes; development restored and other listeners unchanged. Finance3414/2847ms(refresh/warm), single samples including prior guard work, no causal/p95/broad budget/deployment claim."
+    }
+  ]
+}

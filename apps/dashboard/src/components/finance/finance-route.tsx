@@ -19,6 +19,10 @@ import { headers } from "next/headers"
 import { redirect } from "next/navigation"
 import { Suspense } from "react"
 import { FinanceWorkspace } from "./finance-workspace"
+import {
+  prefetchAdmittedFinanceOverview,
+  startFinanceOverviewReads,
+} from "./overview-prefetch"
 
 export async function FinanceRoute({
   view,
@@ -55,6 +59,13 @@ export async function FinanceRoute({
             ? ["finance-bank-statements"]
             : []
   const identity = { userId: session.user.id, tenantId: tenant.tenant.id }
+  const overviewDocument =
+    view === "overview" &&
+    (await headers()).get(DASHBOARD_REQUEST_KIND_HEADER) === "document"
+  const bookRead = queryClient.fetchQuery(trpc.finance.book.queryOptions())
+  const overviewReads = overviewDocument
+    ? startFinanceOverviewReads(tenant.tenant.currencyCode)
+    : null
   const [initialTableSettings, viewEntries, book] = await Promise.all([
     tableId ? getInitialTableSettings(tableId, identity) : undefined,
     Promise.all(
@@ -63,26 +74,15 @@ export async function FinanceRoute({
           [pageId, await getInitialDirectoryView(pageId, identity)] as const,
       ),
     ),
-    queryClient.fetchQuery(trpc.finance.book.queryOptions()),
-  ])
+    bookRead,
+  ]).catch((error: unknown) => {
+    overviewReads?.cancel()
+    throw error
+  })
   const initialViewSettings = Object.fromEntries(viewEntries)
-  if (
-    book &&
-    view === "overview" &&
-    (await headers()).get(DASHBOARD_REQUEST_KIND_HEADER) === "document"
-  ) {
-    // Full-page loads can overlap the visible panels with client-code loading.
-    // Soft navigation keeps the browser's existing freshness/invalidation owner.
-    void queryClient.prefetchQuery(
-      trpc.finance.balances.queryOptions({ bookId: book.id }),
-    )
-    void queryClient.prefetchQuery(
-      trpc.finance.owedSummary.queryOptions({ bookId: book.id }),
-    )
-    void queryClient.prefetchQuery(
-      trpc.finance.bills.queryOptions({ bookId: book.id, limit: 5 }),
-    )
-  }
+  if (overviewReads && book)
+    prefetchAdmittedFinanceOverview(overviewReads, book)
+  else overviewReads?.cancel()
   if (book && view === "bank") {
     const filter = await loadFinanceBankFilterParams((await searchParams) ?? {})
     void queryClient.prefetchInfiniteQuery(
