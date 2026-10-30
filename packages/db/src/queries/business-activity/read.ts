@@ -40,7 +40,20 @@ const position = z
     filterKey: z.string().length(64),
   })
   .strict()
-export type ProjectedBusinessActivityRow = BusinessActivityEvent & {
+export type ProjectedBusinessActivityRow = Pick<
+  BusinessActivityEvent,
+  | "id"
+  | "type"
+  | "schemaVersion"
+  | "actorKind"
+  | "actorUserId"
+  | "occurredAt"
+  | "recordedAt"
+  | "recordingOrigin"
+  | "payload"
+  | "originChannel"
+  | "storeId"
+> & {
   actorName: string | null
   actorDisplayName: string | null
   availableActorId: string | null
@@ -75,9 +88,10 @@ export function decodeBusinessActivityCursor(
   }
 }
 
-export const businessActivityJoins = Prisma.sql`
+const businessActivityActorJoins = Prisma.sql`
  LEFT JOIN "Membership" am ON am.id=e."actorMembershipId" AND am."tenantId"=e."tenantId"
- LEFT JOIN "User" au ON au.id=am."userId"
+ LEFT JOIN "User" au ON au.id=am."userId"`
+export const businessActivityJoins = Prisma.sql`${businessActivityActorJoins}
  LEFT JOIN "Store" s ON s.id=e."storeId" AND s."tenantId"=e."tenantId"
  LEFT JOIN "CommercialOrder" co ON co.id=e.payload->>'orderId' AND co."tenantId"=e."tenantId"
  LEFT JOIN "Membership" sm ON sm.id=e."subjectMembershipId" AND sm."tenantId"=e."tenantId"
@@ -85,7 +99,9 @@ export const businessActivityJoins = Prisma.sql`
  LEFT JOIN "FinanceJournalEntry" fm ON fm.id=e.payload->>'movementId' AND fm."bookId"=e."financeBookId"
  AND fm."reversalOfId" IS NULL
  AND fm."sourceKind" IN ('TRANSFER','OWNER_CONTRIBUTION','OWNER_WITHDRAWAL')`
-export const businessActivityRowSelect = Prisma.sql`e.*, au.name AS "actorName", au."displayName" AS "actorDisplayName",
+export const businessActivityRowSelect = Prisma.sql`e.id,e.type,e."schemaVersion",e."actorKind",e."actorUserId",
+ e."occurredAt",e."recordedAt",e."recordingOrigin",e.payload,e."originChannel",e."storeId",
+ au.name AS "actorName", au."displayName" AS "actorDisplayName",
  am.id AS "availableActorId", s.name AS "storeName", co.status::text AS "currentOrderStatus", co.id AS "currentOrderId",
  sm.id AS "currentSubjectId", ic.id AS "currentInvitationCommandId", fm.id AS "currentMovementId"`
 
@@ -301,6 +317,12 @@ export async function listBusinessActivityInTransaction(
       : Prisma.sql`AND (e."occurredAt",e.id)<(${new Date(after.at)},${after.id})`
     : Prisma.empty
   const order = input.sort === "oldest" ? Prisma.sql`ASC` : Prisma.sql`DESC`
+  // Only person search/unknown-person predicates need actor joins before paging.
+  // All remaining enrichment is one-to-one and belongs after the page bound.
+  const filterJoins =
+    input.q || input.actorKind === "unknown"
+      ? businessActivityActorJoins
+      : Prisma.empty
   const projected = await tracePhase(
     "activityPageSql",
     () => tx.$queryRaw<
@@ -312,10 +334,12 @@ export async function listBusinessActivityInTransaction(
       >
     >`${sources}
     SELECT page.*, totals.total FROM (
-      SELECT count(*)::bigint AS total FROM "activitySources" e ${businessActivityJoins} WHERE ${where}
+      SELECT count(*)::bigint AS total FROM "activitySources" e ${filterJoins} WHERE ${where}
     ) totals LEFT JOIN LATERAL (
-      SELECT ${businessActivityRowSelect} FROM "activitySources" e ${businessActivityJoins}
-      WHERE ${where} ${bound} ORDER BY e."occurredAt" ${order},e.id ${order} LIMIT ${limit + 1}
+      SELECT ${businessActivityRowSelect} FROM (
+        SELECT e.* FROM "activitySources" e ${filterJoins}
+        WHERE ${where} ${bound} ORDER BY e."occurredAt" ${order},e.id ${order} LIMIT ${limit + 1}
+      ) e ${businessActivityJoins} ORDER BY e."occurredAt" ${order},e.id ${order}
     ) page ON true ORDER BY page."occurredAt" ${order},page.id ${order}`,
   )
   const rows = projected.flatMap((row) =>

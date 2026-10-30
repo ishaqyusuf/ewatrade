@@ -1,0 +1,40 @@
+{
+  "version": 1,
+  "id": "2026-10-30-dashboard-activity-bounded-enrichment",
+  "tickets": ["H02"],
+  "summary": "Bound Activity presentation joins after the authorized page and narrow the shared presenter read. Local only.",
+  "noAssistantImpact": "All current Tenant/Store/Finance predicates, Membership SHARE scope, RepeatableRead ownership, snapshots/cursors, exact money, public DTOs and fresh reads remain. Common raw select serves existing list/detail/notification presenter only; no inbox command, eligibility or transaction change. No capability/tool/procedure, schema/index, cache, provider or deployment change.",
+  "capabilities": [],
+  "procedures": [],
+  "docs": [
+    {
+      "topic": "feature",
+      "status": "local_only",
+      "path": ".brain/features/business-activity-notifications.md"
+    },
+    {
+      "topic": "api",
+      "status": "not_applicable",
+      "note": "Public inputs/DTO/presenter and permission semantics unchanged; private raw projection narrows."
+    },
+    {
+      "topic": "schema",
+      "status": "not_applicable",
+      "note": "No application schema/index/migration; isolated synthetic fixture removed."
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "test",
+      "path": "packages/db/src/queries/business-activity/page-projection.test.ts",
+      "executed": true,
+      "result": "With scope/legacy29 tests472 assertions pass. Red enrichment bound and raw metadata overfetch; search, departed actor, exact money, pagination, current/unavailable links, list/detail parity and authority retained."
+    },
+    {
+      "kind": "run",
+      "path": "docs/verification/2026-10-30-dashboard-activity-bounded-enrichment.md",
+      "executed": true,
+      "result": "Native68 exact old/new outputs and existing-QA same-snapshot parity pass. Bound26 enrichment rows; decoded raw bytes24700->16046. Types/scoped237/1533 pass; five unrelated whole-API fixture errors retained. Optimized18 actions/two GETs complete but global smoke invalidated by unrelated changes; later focused canonical development smoke/two GETs pass with frozen code; no optimized smoke, page-speed or budget acceptance claim. Development restored; fixture cleaned."
+    }
+  ]
+}

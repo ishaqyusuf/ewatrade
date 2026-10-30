@@ -15,7 +15,11 @@ import {
   getBusinessActivityFilters,
   getBusinessActivityFiltersInTransaction,
 } from "./filters"
-import { listBusinessActivity, listBusinessActivityInTransaction } from "./read"
+import {
+  getBusinessActivityInTransaction,
+  listBusinessActivity,
+  listBusinessActivityInTransaction,
+} from "./read"
 
 // Synthetic PostgreSQL only. Execute the production predicates, legacy union,
 // scope lock, paging and presenter without connecting to an application profile.
@@ -330,6 +334,51 @@ test("large recorded history retains bounded decoding and source predicate pushd
   expect(JSON.stringify(plan.rows)).not.toContain(
     '"CTE Name":"activitySources"',
   )
+  // Presentation-only Finance lookups must enrich the selected page, not every
+  // matching event. Count still scans its authorized universe independently.
+  const explain = z
+    .object({ "QUERY PLAN": z.array(z.object({ Plan: z.unknown() })) })
+    .parse(plan.rows[0])
+  const tree = explain["QUERY PLAN"][0]?.Plan
+  let enriched = 0
+  function aliases(raw: unknown): string[] {
+    if (!raw || typeof raw !== "object") return []
+    const part = z
+      .object({
+        Alias: z.string().optional(),
+        Plans: z.array(z.unknown()).optional(),
+      })
+      .passthrough()
+      .parse(raw)
+    return [
+      ...(part.Alias ? [part.Alias] : []),
+      ...(part.Plans ?? []).flatMap(aliases),
+    ]
+  }
+  function bounded(raw: unknown) {
+    const part = z
+      .object({
+        "Node Type": z.string(),
+        "Actual Rows": z.number(),
+        Plans: z.array(z.unknown()).optional(),
+      })
+      .passthrough()
+      .parse(raw)
+    if (
+      (part["Node Type"].includes("Join") ||
+        part["Node Type"] === "Nested Loop") &&
+      part.Plans?.some((child) => {
+        const names = aliases(child)
+        return names.length > 0 && names.every((name) => name === "fm")
+      })
+    ) {
+      expect(part["Actual Rows"]).toBeLessThanOrEqual(input.limit + 1)
+      enriched++
+    }
+    for (const child of part.Plans ?? []) bounded(child)
+  }
+  bounded(tree)
+  expect(enriched).toBeGreaterThan(0)
 })
 
 test("filter actors and availability share one bounded projection after current scope", async () => {
@@ -608,4 +657,136 @@ test("tracing preserves access/cursor refusals and never starts a refused projec
     activityAdmission: { count: 1 },
   })
   expect(trace?.phases).not.toHaveProperty("activityFilterSql")
+})
+
+test("person-name and departed-person filters select their authorized page before enrichment", async () => {
+  await record("newer-owner", {
+    at: "2026-01-20",
+    payload: {
+      orderId: "hidden",
+      orderNumber: "NEWER",
+      customerLabel: null,
+      amount: { minor: "100", currencyCode: "NGN" },
+      status: "CONFIRMED",
+    },
+  })
+  const first = await read({ ...input, q: "Cashier", limit: 1 })
+  expect(first.value.total).toBe(3)
+  expect(first.value.items).toHaveLength(1)
+  expect(first.value.items[0]?.actor.name).toBe("Cashier")
+  if (!first.value.nextCursor) throw Error("Missing person-filter cursor")
+  const next = await read({
+    ...input,
+    q: "Cashier",
+    limit: 1,
+    cursor: first.value.nextCursor,
+  })
+  expect(next.value.total).toBe(3)
+  expect(next.value.items[0]?.key).not.toBe(first.value.items[0]?.key)
+  await record("departed", {
+    actor: "removed-membership",
+    at: "2026-01-21",
+    payload: {
+      orderId: "missing-order",
+      orderNumber: "MISSING",
+      customerLabel: null,
+      amount: { minor: "100", currencyCode: "NGN" },
+      status: "CONFIRMED",
+    },
+  })
+  await memory.exec(
+    `UPDATE "BusinessActivityEvent" SET "actorUserId"='departed-user' WHERE id='departed'`,
+  )
+  const unknown = await read({ ...input, actorKind: "unknown", limit: 1 })
+  expect(unknown.value.total).toBe(1)
+  expect(unknown.value.items[0]).toMatchObject({
+    key: "departed",
+    actor: { kind: "unknown", membershipId: null, coverage: "unavailable" },
+    canOpen: false,
+    currentStatus: null,
+  })
+})
+
+test("bounded enrichment preserves staff/invitation/movement targets and unavailable links", async () => {
+  await record("accepted", {
+    type: "staff.invitation_accepted",
+    category: "staff",
+    payload: { membershipId: "member-other", role: "MANAGER" },
+  })
+  await record("invited", {
+    type: "staff.invited",
+    category: "staff",
+    payload: {
+      invitationId: "invitation",
+      commandId: "invite-command",
+      membershipId: "member-other",
+      role: "MANAGER",
+    },
+  })
+  const payload = {
+    movementId: "movement",
+    bookId: "book",
+    movementKind: "TRANSFER",
+    amount: { minor: "12500", currencyCode: "NGN" },
+    fromAccountLabel: "Cash",
+    toAccountLabel: "Bank",
+  }
+  await record("movement", {
+    type: "finance.movement_recorded",
+    category: "finance",
+    payload,
+  })
+  await record("unavailable", {
+    type: "finance.movement_recorded",
+    category: "finance",
+    payload: { ...payload, movementId: "missing" },
+  })
+  await memory.exec(
+    `UPDATE "BusinessActivityEvent" SET "subjectMembershipId"='member-other' WHERE id='accepted'; UPDATE "BusinessActivityEvent" SET "financeBookId"='book' WHERE category='finance'; INSERT INTO "StaffInvitationCommand" VALUES ('invite-command','tenant-a'); INSERT INTO "FinanceJournalEntry" VALUES ('movement','book',NULL,'TRANSFER')`,
+  )
+  const result = (await read({ ...input, limit: 100 })).value
+  for (const key of ["accepted", "invited", "movement"])
+    expect(result.items.find((item) => item.key === key)?.canOpen).toBe(true)
+  expect(
+    result.items.find((item) => item.key === "movement")?.amount?.minor,
+  ).toBe("12500")
+  expect(result.items.find((item) => item.key === "unavailable")?.canOpen).toBe(
+    false,
+  )
+  await memory.exec(
+    `DELETE FROM "Membership" WHERE id='member-other'; DELETE FROM "StaffInvitationCommand"; UPDATE "FinanceJournalEntry" SET "sourceKind"='OTHER' WHERE id='movement'`,
+  )
+  const unavailable = (await read({ ...input, limit: 100 })).value
+  expect(unavailable.total).toBe(result.total)
+  for (const key of ["accepted", "invited", "movement"])
+    expect(unavailable.items.find((item) => item.key === key)?.canOpen).toBe(
+      false,
+    )
+})
+
+test("read projection leaves unused source hashes and command metadata in the database", async () => {
+  await record("snapshot")
+  await memory.exec(
+    `UPDATE "BusinessActivityEvent" SET "payloadHash"='unused-metadata-sentinel',"businessEventKey"='unused-metadata-sentinel',"sourceId"='unused-metadata-sentinel' WHERE id='snapshot'`,
+  )
+  const result = await read({ ...input, limit: 100 })
+  const raw = JSON.stringify(result.results.at(-1), (_key, value) =>
+    typeof value === "bigint" ? value.toString() : value,
+  )
+  expect(raw).not.toContain("unused-metadata-sentinel")
+  expect(
+    result.value.items.find((item) => item.key === "snapshot"),
+  ).toMatchObject({
+    canOpen: true,
+    amount: { minor: "12345", currencyCode: "NGN" },
+  })
+  const detail = await invoke((tx) =>
+    getBusinessActivityInTransaction(tx, viewer, "snapshot"),
+  )
+  const listed = result.value.items.find((item) => item.key === "snapshot")
+  if (!listed) throw Error("Missing recorded event")
+  expect(detail.value.event).toEqual(listed)
+  expect(JSON.stringify(detail.results.at(-1))).not.toContain(
+    "unused-metadata-sentinel",
+  )
 })

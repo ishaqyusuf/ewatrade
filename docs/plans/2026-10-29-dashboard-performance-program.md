@@ -21,37 +21,40 @@ optional code delivery and narrower database projections. Adoption and verificat
 remain uneven. Current local results still miss the proposed refresh/warm budgets;
 this program is not complete.
 
-Latest source slices: shared workspace admission `683b8712d`, Activity page/count
-`c119f31b3`, and the current Activity filter projection. Activity list and filter
-projections each use one SELECT instead of two, under their existing locked
-RepeatableRead scopes. Warm Activity request SQL17→15 agrees with those changes.
-Search, cursor, scope, exact money, API/UI and freshness policies remain.
+Latest source slices combine locked Activity admission/Stores (`709d2269c`) and
+bound page enrichment before presentation joins. The common raw presenter read now
+selects only consumed fields. Access, snapshot/cursor, exact money and API/UI remain.
+Native68 old/new outputs match; existing19-row payload24,700→16,046 bytes. Warm
+server plans are cheap; request/transaction latency and initial loading remain.
 
 The current root optimized Dashboard artifact is **b636ec94a**, Next16.4.3 BUILD_ID
-`9_xXHBCwpx3JFUo5UurJb`; it was reused with the updated separately running hot API.
-It is not a newly compiled full-stack candidate or certified API revision. The
-approved Dashboard-only window passed18 readiness actions; development mode was
-restored, API/Storefront/Marketing unchanged. `runtimeVerified:false` remains.
-[Latest evidence](../verification/2026-10-30-dashboard-activity-filter-projection.md).
+`9_xXHBCwpx3JFUo5UurJb`; it was reused with the separately running updated hot API.
+It is not a newly compiled full-stack candidate or certified API revision.
+Dashboard-only measurement completed all18 readiness actions and two isolated reads;
+owned code/lock/manifests stayed fixed. Unrelated checkout changes invalidated the
+overall smoke receipt, so these are diagnostics, **not passing smoke evidence**.
+Development was restored, other services unchanged; `runtimeVerified:false`.
+[Latest evidence](../verification/2026-10-30-dashboard-activity-bounded-enrichment.md).
+[Prior passing optimized window](../verification/2026-10-30-dashboard-activity-filter-projection.md).
 
-| Family | Latest refresh | Latest warm return |
+| Family | Latest refresh observation | Latest warm-return observation |
 | --- | ---: | ---: |
-| Overview | 2150ms | 1057ms |
-| Catalog | 2207ms | 1820ms |
-| Orders | 4561ms | 1314ms |
-| Customers | 1362ms | 2319ms |
-| Finance | 3707ms | 2832ms |
-| Website requests | 2530ms | 812ms |
-| Activity | 3513ms | 4615ms |
-| General | 1301ms | 1316ms |
-| Reports | 6540ms | 816ms |
+| Overview |2197ms |1075ms |
+| Catalog |1378ms |817ms |
+| Orders |2042ms |816ms |
+| Customers |1032ms |1317ms |
+| Finance |3233ms |2329ms |
+| Website requests |2476ms |813ms |
+| Activity |3654ms |2600ms |
+| General |991ms |1322ms |
+| Reports |1843ms |814ms |
 
-Single samples of representative content readiness, not p95 or whole-family
-acceptance. Activity previously4205/3103ms: refresh is lower, return higher despite
-fewer SQL statements. Its warm context increased631.7→1089.2ms and auth211.9→653.7ms;
-aggregate SQL work also rose. Phases overlap; the numbers are not additive. Reports
-and Orders refresh outliers reinforce the need for attribution, not another blanket
-freshness-window increase. No favorable-only sample selection or speedup claim.
+Single representative content-readiness samples, not p95, accepted budgets or
+whole-family acceptance. Activity's preceding3513/4615ms observations differ in
+both directions. Warm server planning/execution~4/2ms does not explain the isolated
+page query's~219ms or whole list1804ms. Context652.4ms and transaction-control643.1ms
+remain; phases overlap and cannot be summed. Keep investigating the initial loading
+edge and request/control round trips; no blanket freshness-window or index change.
 
 | Phase | Tickets | Accepted | Remaining outcome |
 | --- | --- | --- | --- |
@@ -64,10 +67,10 @@ freshness-window increase. No favorable-only sample selection or speedup claim.
 
 Next execution order, within the same27 tickets:
 
-1. **DP-003/103:** the locked admission now includes Stores, removing one measured
-   round trip (isolated SQL9→8). Context~0.67–0.70s and transaction-control~0.64s
-   remain; inspect the actual list projection (~0.53s) to distinguish server work
-   from transport variation. Retain private diagnostics and bounded runs.
+1. **DP-003/103:** actual list plans and bounded enrichment/payload are inspected.
+   Isolated SQL stays8; list1804ms, page SQL219.3ms, context652.4ms and control643.1ms
+   remain versus warmed server execution~2ms. Attribute request/transaction round
+   trips with bounded private diagnostics; do not infer a server scan bottleneck.
 2. **DP-102/104/407:** inspect Activity's server-to-client initial loading edge and
    filter ownership. Any useful document prefetch must preserve current mount
    admission, exact scope/key consumption, refusal erasure and fresh returns.
@@ -108,6 +111,24 @@ transaction or command behavior changed; acceptance remains3/27 (11.1%).
 Membership lock, role/Store/Finance predicates, signatures, DTOs and existing
 notification transaction/command authority remain. Fixture databases removed and
 cluster stopped; app services unchanged. No cache/schema/deployment.3/27 unchanged.
+
+## Bounded Activity enrichment — DP-003/103/407
+
+- [x] Apply all current predicates/cursor/order and limit+1 before presentation
+  joins; keep required person joins before paging and the exact unbounded count.
+- [x] Narrow shared list/detail/inbox raw projection; existing19-row decoded payload
+  24,700→16,046 bytes, DTO unchanged.29/472 focused and68 native exact outputs pass.
+- [x] Owned DB/API-source/Dashboard types, scoped237/1533+QA/Biome pass; five unrelated
+  full-API fixture diagnostics remain. H01 reused/H02 reviewed. Fixture cleaned.
+- [x]18 optimized readiness actions and two GETs complete with frozen owned code;
+  overall smoke invalidated by unrelated checkout changes. Development restored.
+- [x] After restoration, focused canonical development smoke and two GETs pass with
+  frozen owned source; list1806ms, page SQL237.1ms, SQL8. Runtime unverified.
+- [ ] Initial loading/round-trip attribution and comparable accepted budget samples.
+
+[Evidence and sample limits](../verification/2026-10-30-dashboard-activity-bounded-enrichment.md).
+Largest native server sample is slower despite bounded enrichment; no consistent
+SQL speedup, whole-page or additional ticket acceptance claim.3/27 unchanged.
 
 ## Current implementation evidence
 
