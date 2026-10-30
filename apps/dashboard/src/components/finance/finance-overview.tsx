@@ -1,6 +1,6 @@
 "use client"
 import { Pill } from "@/components/orders/overview/order-overview-parts"
-import { moneyAccountPurposeLabel } from "@/components/tables/finance-accounts/data-table"
+import { moneyAccountPurposeLabel } from "@/components/tables/finance-accounts/purpose-label"
 import { useFinanceParams } from "@/hooks/use-finance-params"
 import { useTRPC } from "@/trpc/client"
 import { Button, Skeleton } from "@ewatrade/ui"

@@ -1,4 +1,8 @@
 import { afterEach, beforeEach, expect, mock, test } from "bun:test"
+import {
+  canvasManifest,
+  defaultComposition,
+} from "@ewatrade/storefront-templates"
 import { minorToMajorInput } from "@ewatrade/utils/currency"
 import { DOMImplementation } from "@xmldom/xmldom"
 import dynamic from "next/dist/shared/lib/app-dynamic"
@@ -149,6 +153,7 @@ mock.module("@ewatrade/ui", () => ({
   DialogDescription: Slot,
   DialogTitle: Slot,
   Sheet,
+  Skeleton: () => null,
 }))
 mock.module("@hugeicons/react", () => ({ HugeiconsIcon: () => null }))
 mock.module("@hugeicons/core-free-icons", () => ({
@@ -414,6 +419,32 @@ mock.module("@/components/finance/setup-form", () => {
   evaluated.push("finance/setup-form")
   return { FinanceSetupForm: lostChunk("setup") }
 })
+// Studio generator: the hook module records eager evaluation. The presentation
+// stand-ins below only let the pre-change owner import for the red check.
+mock.module("@/components/storefront/storefront-content.css", () => ({}))
+mock.module("@/components/storefront/use-storefront-content", () => {
+  evaluated.push("storefront/use-storefront-content")
+  return {
+    useStorefrontContent: () => {
+      throw Error("A closed owner must not run the generator hook.")
+    },
+  }
+})
+mock.module("@/components/storefront/storefront-content-panel", () => {
+  evaluated.push("storefront/storefront-content-panel")
+  return { StorefrontContentPanel: lostChunk("content") }
+})
+mock.module("@/components/forms/form-feedback", () => ({ FormFeedback: Pass }))
+mock.module("@/components/storefront/storefront-content-context", () => ({
+  StorefrontContentContextForm: () => null,
+  StorefrontContentGuidance: () => null,
+}))
+mock.module("@/components/storefront/storefront-content-review", () => ({
+  StorefrontContentReview: () => null,
+}))
+mock.module("@/components/storefront/storefront-content-write", () => ({
+  StorefrontContentWrite: () => null,
+}))
 
 const { createRoot } = await import("react-dom/client")
 const { FinanceSheet } = await import("./finance-sheet")
@@ -432,6 +463,9 @@ const { QuickAssistant } = await import(
 )
 const { FinanceWorkspace } = await import(
   "@/components/finance/finance-workspace"
+)
+const { StorefrontContentSheet } = await import(
+  "@/components/storefront/storefront-content-sheet"
 )
 // Captured before any render: what importing the closed owners evaluated.
 const closedEvaluations = [...evaluated]
@@ -894,5 +928,75 @@ test("Finance setup form code loads only without a Book and recovers inside its 
   expect(text()).toContain("finance-overview")
   expect(text()).not.toContain("Start tracking your business money")
   expect(imports).toEqual(["setup", "setup"])
+  expect(operations).toEqual(["sheet.code.load"])
+})
+
+test("Studio content generator loads on first open, stays mounted through close/reopen and recovers in its own sheet", async () => {
+  const composition = defaultComposition(canvasManifest("catalog-v4"))
+  // A fresh element per render: mocked URL state has no React subscription.
+  const studio = (sectionId: string, revision = 3) => (
+    <StorefrontContentSheet
+      siteId="site-inert"
+      revision={revision}
+      composition={composition}
+      pageKey="home"
+      sectionId={sectionId}
+      blocked={false}
+      onApply={() => {
+        commands.push("apply")
+        return false
+      }}
+    />
+  )
+  failures.set("content", 1)
+  await render(studio("section-a"))
+  expect(text()).toBe("")
+  expect(imports).toEqual([])
+  expect(evaluated).not.toContain("storefront/storefront-content-panel")
+
+  params = new URLSearchParams({ content: "write" })
+  await render(studio("section-b"))
+  expect(frame()).toBe("sheet")
+  expect(text()).toContain("Generate content")
+  expect(text()).toContain("Couldn’t open this panel.")
+  expect(text()).not.toContain("page-error")
+  expect(imports).toEqual(["content"])
+
+  await requestClose()
+  expect(params.has("content")).toBe(false)
+  await render(studio("section-b"))
+  expect(text()).toBe("")
+
+  params = new URLSearchParams({ content: "context" })
+  await render(studio("section-c"))
+  expect(retryCount()).toBe(1)
+  expect(imports).toEqual(["content"])
+  await act(async () => retry())
+  await settle()
+  expect(mounted.get("content")).toMatchObject({
+    siteId: "site-inert",
+    revision: 3,
+    pageKey: "home",
+    sectionId: "section-a",
+    blocked: false,
+  })
+  const opened = instances.get("content")
+
+  // Closing keeps the generator mounted with its state; current props flow.
+  params = new URLSearchParams()
+  await render(studio("section-d", 4))
+  expect(instances.get("content")).toBe(opened)
+  expect(mounted.get("content")).toMatchObject({
+    revision: 4,
+    sectionId: "section-a",
+  })
+  params = new URLSearchParams({ content: "write" })
+  await render(studio("section-e", 4))
+  expect(instances.get("content")).toBe(opened)
+
+  expect(imports).toEqual(["content", "content"])
+  expect(evaluated).toContain("storefront/storefront-content-panel")
+  expect(evaluated).not.toContain("storefront/use-storefront-content")
+  expect(commands).toEqual([])
   expect(operations).toEqual(["sheet.code.load"])
 })

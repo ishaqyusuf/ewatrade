@@ -8,6 +8,8 @@ import { type ReactNode, Suspense, act } from "react"
 // storage loads; the actual middleware adapter case below needs it. The
 // bootstrap is side-effect CJS whose .d.ts is not a module, so require it.
 createRequire(import.meta.url)("next/dist/server/node-environment-baseline")
+// The App loader imports Next request storage too, so load it after that boot.
+const { default: dynamic } = await import("next/dist/shared/lib/app-dynamic")
 
 const doc = new DOMImplementation().createDocument(
   "http://www.w3.org/1999/xhtml",
@@ -93,9 +95,14 @@ mock.module(app("components/tables/core"), () => ({
 mock.module(app("components/orders/overview/order-overview-parts"), () => ({
   Pill: leaf,
 }))
-mock.module(app("components/tables/finance-accounts/data-table"), () => ({
-  moneyAccountPurposeLabel: (purpose: string) => purpose,
-}))
+// The App router's next/dynamic is the installed App loader.
+mock.module("next/dynamic", () => ({ default: dynamic }))
+// Selected-view delivery: each inert view module records its first evaluation.
+const viewEvaluations: string[] = []
+mock.module(app("components/tables/finance-accounts/data-table"), () => {
+  viewEvaluations.push("components/tables/finance-accounts/data-table")
+  return { moneyAccountPurposeLabel: (purpose: string) => purpose }
+})
 // Inert unrelated routes/presentation. Actual FinanceRoute, FinanceWorkspace,
 // FinanceOverview, URL hook, tRPC options and QueryClient/hydration run unchanged.
 for (const [path, name] of [
@@ -108,6 +115,11 @@ for (const [path, name] of [
     "components/tables/finance-suppliers/skeleton",
     "FinanceSupplierTableSkeleton",
   ],
+  ["components/finance/finance-header", "FinanceHeader"],
+  ["components/finance/setup-form", "FinanceSetupForm"],
+] as const)
+  mock.module(app(path), () => ({ [name]: leaf }))
+for (const [path, name] of [
   [
     "components/tables/finance-suppliers/data-table",
     "FinanceSupplierDataTable",
@@ -116,12 +128,20 @@ for (const [path, name] of [
   ["components/finance/bank-statements", "FinanceBankStatements"],
   ["components/finance/cash-count-history", "FinanceCashCountHistory"],
   ["components/finance/finance-accounts", "FinanceAccounts"],
-  ["components/finance/finance-directory-view", "FinanceDirectoryView"],
-  ["components/finance/finance-header", "FinanceHeader"],
   ["components/finance/finance-reports", "FinanceReports"],
-  ["components/finance/setup-form", "FinanceSetupForm"],
 ] as const)
-  mock.module(app(path), () => ({ [name]: leaf, financeRowViewOptions: [] }))
+  mock.module(app(path), () => {
+    viewEvaluations.push(path)
+    return { [name]: leaf }
+  })
+mock.module(app("components/finance/finance-directory-view"), () => ({
+  FinanceDirectoryView: ({
+    children,
+  }: { children: (view: "table", control: null) => ReactNode }) => (
+    <>{children("table", null)}</>
+  ),
+  financeRowViewOptions: [],
+}))
 mock.module("next/dist/client/components/error-boundary", () => ({
   ErrorBoundary: leaf,
 }))
@@ -310,6 +330,12 @@ mock.module(app("trpc/server"), () => ({
 mock.module(app("trpc/client"), () => ({ useTRPC: () => browserOptions }))
 const { FinanceRoute } = await import(
   "../../../../apps/dashboard/src/components/finance/finance-route"
+)
+// Captured before any render: what importing the Finance route evaluated.
+const closedViewEvaluations = [...viewEvaluations]
+// A document load preloads its selected Overview chunk with the page.
+await import(
+  "../../../../apps/dashboard/src/components/finance/finance-overview"
 )
 const roots: ReturnType<typeof createRoot>[] = []
 const hosts: Node[] = []
@@ -516,6 +542,34 @@ for (const view of [
       expect(calls[1]?.input).toMatchObject({ bookId: "book-a", limit: 30 })
   })
 }
+
+test("the Finance route evaluates only the selected view's code", async () => {
+  expect(closedViewEvaluations).toEqual([])
+  const overview = await mount(await FinanceRoute({ view: "overview" }))
+  expect(overview.text()).toContain("Inert cash")
+  expect(overview.text()).toContain("Inert spending")
+  expect(viewEvaluations).toEqual([])
+  for (const [view, modules] of [
+    [
+      "accounts",
+      [
+        "components/finance/finance-accounts",
+        "components/finance/cash-count-history",
+      ],
+    ],
+    ["reports", ["components/finance/finance-reports"]],
+    ["spending", ["components/tables/expenses/data-table"]],
+    ["suppliers", ["components/tables/finance-suppliers/data-table"]],
+    ["bank", ["components/finance/bank-statements"]],
+  ] as const) {
+    const before = viewEvaluations.length
+    await mount(await FinanceRoute({ view, searchParams: Promise.resolve({}) }))
+    expect(viewEvaluations.slice(before).sort()).toEqual([...modules].sort())
+  }
+  expect(viewEvaluations).not.toContain(
+    "components/tables/finance-accounts/data-table",
+  )
+})
 
 test("pending Book-B balances cannot consume a retained Book-A query", async () => {
   resolvedBookId = "book-b"

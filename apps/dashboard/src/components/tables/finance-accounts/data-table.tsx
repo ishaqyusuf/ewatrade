@@ -24,6 +24,9 @@ import {
   useReactTable,
 } from "@tanstack/react-table"
 import { useMemo } from "react"
+import { moneyAccountPurposeLabel } from "./purpose-label"
+
+export { moneyAccountPurposeLabel } from "./purpose-label"
 
 export type MoneyAccountRow = {
   id: string
@@ -80,16 +83,6 @@ function PausedBadge({ account }: { account: MoneyAccountRow }) {
 }
 
 const getAccountId = (account: MoneyAccountRow) => account.id
-
-export function moneyAccountPurposeLabel(purpose: string, mobileMoney = false) {
-  return purpose === "CLEARING"
-    ? "Card and POS money on its way"
-    : purpose === "CASH"
-      ? "Cash"
-      : mobileMoney
-        ? "Mobile money"
-        : "Bank"
-}
 
 function AccountActions({
   account,

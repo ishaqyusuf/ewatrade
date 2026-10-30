@@ -6,7 +6,6 @@ import { SheetBodyLoading } from "@/components/sheets/sheet-frame"
 import { TableToolbarSlotProvider } from "@/components/tables/core"
 import { ExpenseTableSkeleton } from "@/components/tables/expenses/skeleton"
 import { FinanceBankStatementTableSkeleton } from "@/components/tables/finance-bank-statements/skeleton"
-import { FinanceSupplierDataTable } from "@/components/tables/finance-suppliers/data-table"
 import { FinanceSupplierTableSkeleton } from "@/components/tables/finance-suppliers/skeleton"
 import { useFinanceParams } from "@/hooks/use-finance-params"
 import { useTRPC } from "@/trpc/client"
@@ -20,18 +19,75 @@ import { useSuspenseQuery } from "@tanstack/react-query"
 import { ErrorBoundary } from "next/dist/client/components/error-boundary"
 import dynamic from "next/dynamic"
 import { type ReactNode, Suspense } from "react"
-import { ExpenseDataTable } from "../tables/expenses/data-table"
-import { FinanceBankStatements } from "./bank-statements"
-import { FinanceCashCountHistory } from "./cash-count-history"
-import { FinanceAccounts } from "./finance-accounts"
 import {
   FinanceDirectoryView,
   financeRowViewOptions,
 } from "./finance-directory-view"
 import { FinanceHeader, type FinanceView } from "./finance-header"
-import { FinanceOverview } from "./finance-overview"
-import { FinanceReports } from "./finance-reports"
 import type { FinanceBook } from "./types"
+
+// Each view's code loads only when its route selects it; SSR stays on. Page
+// views keep the header during code loading; directory tables suspend into
+// their existing skeleton boundaries.
+const FinanceOverview = dynamic(
+  () =>
+    loadSheetCode(
+      () => import("./finance-overview").then((mod) => mod.FinanceOverview),
+      "body",
+    ),
+  { loading: SheetBodyLoading },
+)
+const FinanceReports = dynamic(
+  () =>
+    loadSheetCode(
+      () => import("./finance-reports").then((mod) => mod.FinanceReports),
+      "body",
+    ),
+  { loading: SheetBodyLoading },
+)
+const FinanceAccounts = dynamic(
+  () =>
+    loadSheetCode(
+      () => import("./finance-accounts").then((mod) => mod.FinanceAccounts),
+      "body",
+    ),
+  { loading: SheetBodyLoading },
+)
+const FinanceCashCountHistory = dynamic(
+  () =>
+    loadSheetCode(
+      () =>
+        import("./cash-count-history").then(
+          (mod) => mod.FinanceCashCountHistory,
+        ),
+      "body",
+    ),
+  { loading: SheetBodyLoading },
+)
+const FinanceBankStatements = dynamic(() =>
+  loadSheetCode(
+    () => import("./bank-statements").then((mod) => mod.FinanceBankStatements),
+    "body",
+  ),
+)
+const FinanceSupplierDataTable = dynamic(() =>
+  loadSheetCode(
+    () =>
+      import("@/components/tables/finance-suppliers/data-table").then(
+        (mod) => mod.FinanceSupplierDataTable,
+      ),
+    "body",
+  ),
+)
+const ExpenseDataTable = dynamic(() =>
+  loadSheetCode(
+    () =>
+      import("../tables/expenses/data-table").then(
+        (mod) => mod.ExpenseDataTable,
+      ),
+    "body",
+  ),
+)
 
 /** Only a business without a Book renders setup; its form code loads with it. */
 const FinanceSetupForm = dynamic(

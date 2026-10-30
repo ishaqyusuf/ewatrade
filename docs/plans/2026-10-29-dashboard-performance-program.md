@@ -15,6 +15,20 @@ That file records earlier runtime/build states; its “current” labels are his
 
 ## Current assessment and phase order
 
+The latest optimized local candidate **lkDj0kGJKT97vq6tJTXym** defers the retained
+Studio generator until first intent and loads only the selected Finance view code.
+Actual seven-path delivery, Studio controlled code failure/retry/draft retention/
+focus/direct URL and Finance Reports header-local recovery pass, zero business
+writes. Finance Overview encoded JS789202→637415 (19.23%); closed Studio643476→
+627383 (2.50%). Other Finance views still carry phone code; no global absence or
+causal latency claim. Real generator/hook and Finance SSR,22 Finance child cases,
+10/145 shared recovery,15 hydration-consumer cases (5/34+10/52), types, scoped237/
+1533, H02, full build and canonical smoke pass. Dev26386 restored, other services/
+known mappings intact. Program6/27 pending exact delivery-ticket review; source
+performance work and all21 criteria remain in scope.
+[Studio/Finance code and runtime proof](../verification/2026-10-30-dashboard-studio-finance-code.md) ·
+[Hydration consumer and fresh-read exceptions](../verification/2026-10-30-dashboard-hydration-consumers.md).
+
 DP-003 is now accepted from the retained pinned aXG/fea718366 normal18-sample
 nine-family baseline and two actual SQL/pool/serialization diagnostics. Its missing
 per-family budget table now explicitly assigns the unchanged100ms feedback/200ms

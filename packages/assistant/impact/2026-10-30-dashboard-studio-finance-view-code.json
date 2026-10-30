@@ -1,0 +1,46 @@
+{
+  "version": 1,
+  "id": "2026-10-30-dashboard-studio-finance-view-code",
+  "tickets": ["H02"],
+  "summary": "Defer the retained Studio generator until first intent and load only selected Finance view code; preserve SSR and original query/command owners. Opus authored; local only.",
+  "noAssistantImpact": "The generator function/hook, Finance workspace branches and view/query/command bodies remain unchanged. Studio keeps its original initial section and retains form/run/review state across close/reopen. Code retry loads definitions only. Pure account-purpose label moved byte-for-byte with compatible reexport. No capability/procedure/permission/TTL/provider or persistence changes.",
+  "capabilities": [],
+  "procedures": [],
+  "docs": [
+    {
+      "topic": "feature",
+      "status": "local_only",
+      "path": ".brain/features/web-navigation-performance.md"
+    },
+    {
+      "topic": "api",
+      "status": "not_applicable",
+      "note": "Existing reads and commands unchanged."
+    },
+    {
+      "topic": "schema",
+      "status": "not_applicable",
+      "note": "No SQL/schema/persistence change."
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "test",
+      "path": "apps/dashboard/src/components/sheets/optional-code-recovery.test.tsx",
+      "executed": true,
+      "result": "Old Studio eager counter/render7pass3fail; final shared installed-loader10/145pass including first activation, original initial section, current props, retained instance and local recovery."
+    },
+    {
+      "kind": "test",
+      "path": "apps/dashboard/src/components/storefront/storefront-content-ssr.mounted.test.ts",
+      "executed": true,
+      "result": "Real generator/hook window-free SSR preserves direct content intent and closed exclusion, old+new; model/picker combined8/50 pass."
+    },
+    {
+      "kind": "test",
+      "path": "packages/assistant/evaluations/fixtures/dashboard-finance-prefetch.fixture.tsx",
+      "executed": true,
+      "result": "After correcting test boot order, oldsource21pass1fail; newsource22 child cases pass through installed App loader, preserving actual route/read/foreign-Book/Next-adapter invariants and selected view evaluation."
+    }
+  ]
+}
