@@ -15,6 +15,7 @@ import {
   assertFinanceManager,
   lockFinanceBook,
 } from "./access"
+import { readFinanceBookWithCurrencyHint } from "./book-read"
 import { FINANCE_RETAINED_EARNINGS_ACCOUNT } from "./retained-earnings"
 import { FinanceError } from "./rules"
 
@@ -197,9 +198,23 @@ export async function createFinanceBookInTransaction(
   return { id: book.id }
 }
 
-export async function getFinanceBook(db: PrismaClient, input: FinanceActor) {
+export async function getFinanceBook(
+  db: PrismaClient,
+  input: FinanceActor,
+  currencyHint?: string,
+) {
   return db.$transaction(
     async (tx) => {
+      if (currencyHint !== undefined) {
+        const book = await readFinanceBookWithCurrencyHint(
+          tx,
+          input,
+          currencyHint,
+        )
+        return book
+          ? { ...book, lastSequence: book.lastSequence.toString() }
+          : null
+      }
       const tenant = await assertFinanceManager(tx, input)
       const book = await tx.financeBook.findUnique({
         where: {

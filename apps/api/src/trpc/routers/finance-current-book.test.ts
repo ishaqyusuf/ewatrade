@@ -10,6 +10,20 @@ const createCaller = createCallerFactory(financeRouter)
 function fixture(role = "OWNER", plan = "starter") {
   const raw: unknown[][] = []
   const books: unknown[] = []
+  const membershipReads: unknown[] = []
+  const uniqueBookReads: unknown[] = []
+  const book = {
+    id: "book-a",
+    tenantId: "tenant-a",
+    currencyCode: "NGN",
+    timezone: "Africa/Lagos",
+    startsAt: new Date("2026-10-01Z"),
+    closedThrough: null,
+    lastSequence: 9007199254740993n,
+    createdById: "actor-a",
+    createdAt: new Date("2026-10-01Z"),
+    accounts: [],
+  }
   const tx = {
     $queryRaw: async (_query: TemplateStringsArray, ...values: unknown[]) => {
       raw.push(values)
@@ -25,16 +39,24 @@ function fixture(role = "OWNER", plan = "starter") {
       ]
     },
     membership: {
-      findFirst: async () => ({
-        tenant: {
-          id: "tenant-a",
-          currencyCode: "NGN",
-          timezone: "UTC",
-          isActive: true,
-        },
-      }),
+      findFirst: async (args: unknown) => {
+        membershipReads.push(args)
+        return {
+          tenant: {
+            id: "tenant-a",
+            currencyCode: "NGN",
+            timezone: "UTC",
+            isActive: true,
+            financeBooks: [book],
+          },
+        }
+      },
     },
     financeBook: {
+      findUnique: async (args: unknown) => {
+        uniqueBookReads.push(args)
+        return book
+      },
       findFirst: async (args: unknown) => {
         books.push(args)
         return null
@@ -57,12 +79,68 @@ function fixture(role = "OWNER", plan = "starter") {
       user: { id: "actor-a" },
     },
     tenantContext: {
-      tenant: { id: "tenant-a", qaPurgeStartedAt: null, retailOpsPlanId: plan },
+      tenant: {
+        id: "tenant-a",
+        currencyCode: "NGN",
+        qaPurgeStartedAt: null,
+        retailOpsPlanId: plan,
+      },
       membership: { id: "member-a", role },
     },
   } as never)
-  return { caller, raw, books, transactions: () => transactions }
+  return {
+    caller,
+    raw,
+    books,
+    book,
+    membershipReads,
+    uniqueBookReads,
+    transactions: () => transactions,
+  }
 }
+
+test("actual Book caller keeps its membership lock and joins post-lock permission/Book reads", async () => {
+  const f = fixture()
+  expect(await f.caller.book()).toEqual({
+    ...f.book,
+    lastSequence: "9007199254740993",
+  })
+  expect(f.raw).toEqual([["tenant-a", "actor-a"]])
+  expect(
+    f.raw.length + f.membershipReads.length + f.uniqueBookReads.length,
+  ).toBe(2)
+  expect(f.uniqueBookReads).toEqual([])
+  expect(f.membershipReads).toEqual([
+    expect.objectContaining({
+      relationLoadStrategy: "join",
+      where: {
+        tenantId: "tenant-a",
+        userId: "actor-a",
+        status: "ACTIVE",
+        role: { in: ["OWNER", "ADMIN"] },
+        tenant: { isActive: true },
+      },
+      select: {
+        tenant: {
+          select: {
+            id: true,
+            currencyCode: true,
+            isActive: true,
+            financeBooks: {
+              where: {
+                currencyCode: "NGN",
+                tenant: { currencyCode: "NGN" },
+              },
+              take: 1,
+              include: { accounts: { orderBy: { code: "asc" } } },
+            },
+          },
+        },
+      },
+    }),
+  ])
+  expect(f.transactions()).toBe(1)
+})
 test("only the three read inputs allow a strict current-currency alternative", () => {
   expect(financeReadBookSchema.parse({ bookId: "book-a" })).toEqual({
     bookId: "book-a",

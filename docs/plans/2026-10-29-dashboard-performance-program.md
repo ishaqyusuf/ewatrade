@@ -72,43 +72,45 @@ unchanged. `runtimeVerified:false`; no release qualification or deployment.
 [Browser streaming](../verification/2026-10-30-dashboard-browser-read-streaming.md) ·
 [Activity enrichment](../verification/2026-10-30-dashboard-activity-bounded-enrichment.md).
 
-The current optimized application candidate is committed `abf8aae83`, Next16.4.3
-BUILD_ID `KRKyPfsdjz-gY_DEgb_mF`, including the later Service/connection/QA/attachment
-source slices. Full build/types,31 inert driver cases, four observer/budget unit
-cases/13 assertions and owned QA smoke47/195 pass. One lifecycle run covers63
-checkpoints across nine fixed base families: all18 controlled hidden/offline
-windows start zero API requests. Counts distinguish RPC operations from batches;
-visible required queues and focus/reconnect continue. A passive regression guard
-now rejects unexpected inactive API starts on these representatives. Recursive
-receipt/Setup/socket contracts are reviewed separately; full DP-204 remains open.
+The latest optimized Dashboard artifact is Next16.4.3 BUILD_ID
+`3igQPtYkK9g1-qAFS_m5o`, built from parent4e6d9ce40 plus the frozen Book read slice.
+Full build/types, actual API14/64, native Book7/141 and reused snapshot controls,
+owned237/1533+QA/Biome,H01/H02 pass. Current source includes creation/Finance/Ledger/
+Order refresh effects. Canonical18 readiness actions across nine families and two isolated
+Finance GETs pass15:09:50.832Z–15:11:05.951Z; Book SQL8→7 agrees with the proven
+post-lock3→2 body reads. Development restored to71421, other services unchanged.
+Runtime API revision remains uncertified; no deployment or accepted budget.
+[Current candidate and evidence](../verification/2026-10-30-dashboard-finance-book-post-lock-read.md).
 
-[Current evidence, emulation corrections and measurement limits](../verification/2026-10-30-dashboard-read-activity.md).
-The lifecycle run's18 entry/return timing rows are excluded because its old final
-cleanup emitted an extra visibility event. A separate normal18-check optimized
-journey, after that correction and without lifecycle emulation, supplies this table.
-Development restored through the root launcher; API/Storefront/Marketing unchanged.
-`runtimeVerified:false`, no release qualification or deployment.
+The earlier abf8aae83/KRKy artifact has a separate63-checkpoint lifecycle run:
+all18 controlled hidden/offline windows start zero API requests. Counts distinguish
+RPC operations from batches; visible queues/focus/reconnect continue. Recursive
+receipt/Setup/socket contracts remain separately reviewed. That run is historical
+lifecycle evidence, not a new full lifecycle run on3ig. Its old18 timing rows were
+excluded after cleanup emitted an extra visibility event; the preceding normal
+baseline remains in its receipt. The table below is the new normal journey.
+[Lifecycle evidence and measurement limits](../verification/2026-10-30-dashboard-read-activity.md).
 
 | Family | Full-family refresh sample | Full-family warm-return sample |
 | --- | ---: | ---: |
-| Overview |932ms |1059ms |
-| Catalog |1412ms |853ms |
-| Orders |2045ms |823ms |
-| Customers |913ms |1327ms |
-| Finance |3297ms |2345ms |
-| Website requests |2277ms |1823ms |
-| Activity |2301ms |2623ms |
-| General |875ms |1322ms |
-| Reports |2348ms |818ms |
+| Overview |964ms |1059ms |
+| Catalog |2799ms |821ms |
+| Orders |1975ms |823ms |
+| Customers |1184ms |1332ms |
+| Finance |3271ms |2343ms |
+| Website requests |2341ms |827ms |
+| Activity |2299ms |2629ms |
+| General |1198ms |1332ms |
+| Reports |2288ms |819ms |
 
-Single representative samples, not p95, accepted budgets or whole-family
-acceptance. Warm Website1823ms exceeds the preceding816ms sample; cause/variability
-remain unresolved. Finance/Activity and other rows still miss provisional warm
-targets. No dashboard-wide speedup ratio.23 browser-classified lifecycle cancellations
-are distinct from uncancelled failures (zero); missing completed stream body/phase
-measurements are not zero bytes/SQL/work. Server-to-server and pre-window work are
-not fully exposed. The earlier isolated Activity attribution remains historical.
-Phases overlap; no blanket freshness-window or index change.
+Single representative samples, not p95, accepted budgets or whole-family acceptance.
+Finance/Activity warm2343/2629ms remain near prior2345/2623ms. Catalog refresh2799ms
+versus1412ms is an unresolved slower observation: first document headers19.3→
+1948.8ms, while request/script/RPC counts and script bytes are essentially unchanged.
+Attribute actual pre-header/server work before another import/cache change. No
+causal dashboard speedup or regression is established. Missing completed stream
+measurements are not zero SQL/bytes/work; server-to-server/pre-window work remains
+partly unseen. Phases overlap. Fresh authority and database topology are unchanged.
 
 A subsequent focused Activity observation improves DP-003 attribution without an
 application change. Numeric Chromium counters capture partial cancelled streams;
@@ -131,8 +133,8 @@ variants stale, preserving unrelated data.14 focused cases/115 assertions, full
 Dashboard/fixture types, scoped237/1533+QA/Biome,H02 and frozen canonical development
 retry pass. First smoke's missing QA entry remains excluded/preserved; no business
 command, upload, service restart or deployment. This advances DP-203/406/501 without
-accepting another whole ticket or claiming latency gains. The optimized timing
-candidate above predates these three client changes.
+accepting another whole ticket or claiming latency gains. The earlier KRKy timing
+candidate predates these three client changes; current3ig includes them.
 [Evidence](../verification/2026-10-30-dashboard-infinite-list-refresh.md).
 
 The follow-up traces native Order/Service intake effects to Customer history,
@@ -206,13 +208,14 @@ Next execution order, within the same27 tickets:
 DP-203 creation, Finance/Customer Ledger completion and Order-change refresh now
 have actual callback/owner proof. Mutable Finance/Ledger prefixes, other command
 and report dependencies still need review; no full invalidation acceptance.
-Return to measured context/control latency. The proposed QA-proof/legal overlap
-is rejected for the local bottleneck: existing diagnostic legal work is0ms, while
-auth/proof/workspace scope each take about210ms. Activity already starts filters
-and list together under fresh per-mount keys; naive intent/route prefetch cannot
-replace that contract. Next inspect remaining transaction/control/projection
-round trips using actual caller/SQL evidence, preserving fresh admission/locks.
-[Source and timing assessment](../verification/2026-10-30-dashboard-admission-scheduling-assessment.md).
+Book's post-lock permission/metadata join now removes one measured statement,
+with current-currency fallback and native lock/refusal proof. Next attribute the
+slower Catalog document headers in the current sample, then remaining Finance/
+Activity context/control/projection round trips using actual caller evidence.
+QA-proof/legal overlap remains rejected for local latency (legal0ms). Activity's
+fresh per-mount identity still prevents naive route/intent prefetch substitution.
+Preserve current authority, locks, lifecycle ownership and database topology.
+[Admission assessment](../verification/2026-10-30-dashboard-admission-scheduling-assessment.md).
 
 1. **DP-405/407:** shared critical-path scheduling DP-103 is accepted from its
    criterion audit; the shared shell projection and cold Stock fix are verified.

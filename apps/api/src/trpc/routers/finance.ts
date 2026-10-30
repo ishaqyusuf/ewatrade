@@ -399,7 +399,11 @@ export const financeRouter = createTRPCRouter({
       listFinanceMoneyAccounts(ctx.db, { ...input, ...ctx.financeActor }),
     ),
   book: financeProcedure.query(({ ctx }) =>
-    getFinanceBook(ctx.db, ctx.financeActor),
+    getFinanceBook(
+      ctx.db,
+      ctx.financeActor,
+      ctx.tenantContext.tenant.currencyCode,
+    ),
   ),
   setup: financeProcedure
     .input(financeSetupSchema)
