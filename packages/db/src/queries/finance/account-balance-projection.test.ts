@@ -152,9 +152,20 @@ function reader(
       ...values: unknown[]
     ) => {
       if (!("text" in query)) {
-        events.push("membership-lock")
+        events.push("snapshot-manager")
         expect(values).toEqual(["tenant-a", "owner"])
-        return []
+        return options.denied
+          ? []
+          : [
+              {
+                id: "tenant-a",
+                role: "OWNER",
+                status: "ACTIVE",
+                isActive: !options.inactive,
+                currencyCode: "NGN",
+                timezone: "UTC",
+              },
+            ]
       }
       events.push("projection")
       queries.push(query)
@@ -164,26 +175,8 @@ function reader(
       return result.rows
     },
     membership: {
-      findFirst: async (args: unknown) => {
-        events.push("authority")
-        expect(args).toMatchObject({
-          where: {
-            tenantId: "tenant-a",
-            userId: "owner",
-            status: "ACTIVE",
-            role: { in: ["OWNER", "ADMIN"] },
-          },
-        })
-        return options.denied
-          ? null
-          : {
-              tenant: {
-                id: "tenant-a",
-                isActive: !options.inactive,
-                currencyCode: "NGN",
-                timezone: "UTC",
-              },
-            }
+      findFirst: async () => {
+        throw Error("Separate snapshot authority read is obsolete")
       },
     },
     financeBook: {
@@ -221,10 +214,10 @@ function reader(
 }
 const actor = { tenantId: "tenant-a", actorUserId: "owner", bookId: "book-a" }
 
-test("actual balance reader uses one projection after unchanged authority/Book gates", async () => {
+test("actual balance reader uses one projection after snapshot authority/Book gates", async () => {
   const { db, events, queries } = reader()
   const result = await getFinanceAccountBalances(db, actor)
-  expect(events).toEqual(["membership-lock", "authority", "book", "projection"])
+  expect(events).toEqual(["snapshot-manager", "book", "projection"])
   expect(queries).toHaveLength(1)
   expect(result).toEqual({
     snapshotSequence: "4",
@@ -360,12 +353,10 @@ test("parameters do not become SQL and consecutive snapshots are not cached", as
   ).toBe(999999n)
   expect(root.queries).toHaveLength(2)
   expect(root.events).toEqual([
-    "membership-lock",
-    "authority",
+    "snapshot-manager",
     "book",
     "projection",
-    "membership-lock",
-    "authority",
+    "snapshot-manager",
     "book",
     "projection",
   ])

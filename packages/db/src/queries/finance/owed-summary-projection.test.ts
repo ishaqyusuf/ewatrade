@@ -250,35 +250,28 @@ function reader(
       ...values: unknown[]
     ) => {
       if (!("text" in q)) {
-        events.push("lock")
+        events.push("snapshot-manager")
         expect(values).toEqual(["tenant-a", "owner"])
-        return []
+        return options.denied
+          ? []
+          : [
+              {
+                id: "tenant-a",
+                role: "OWNER",
+                status: "ACTIVE",
+                isActive: !options.inactive,
+                currencyCode: "NGN",
+                timezone: "UTC",
+              },
+            ]
       }
       events.push("projection")
       if (options.failure) throw options.failure
       return io.tx.$queryRaw(q)
     },
     membership: {
-      findFirst: async (args: unknown) => {
-        events.push("authority")
-        expect(args).toMatchObject({
-          where: {
-            tenantId: "tenant-a",
-            userId: "owner",
-            status: "ACTIVE",
-            role: { in: ["OWNER", "ADMIN"] },
-          },
-        })
-        return options.denied
-          ? null
-          : {
-              tenant: {
-                id: "tenant-a",
-                isActive: !options.inactive,
-                currencyCode: "NGN",
-                timezone: "UTC",
-              },
-            }
+      findFirst: async () => {
+        throw Error("Separate snapshot authority read is obsolete")
       },
     },
     financeBook: {
@@ -322,10 +315,10 @@ function reader(
 }
 const actor = { tenantId: "tenant-a", actorUserId: "owner", bookId: "book-a" }
 
-test("actual owed reader uses one bounded projection after unchanged authority and Book gates", async () => {
+test("actual owed reader uses one bounded projection after snapshot authority and Book gates", async () => {
   const f = reader()
   const result = await getFinanceOwedSummary(f.db, actor)
-  expect(f.events).toEqual(["lock", "authority", "book", "projection"])
+  expect(f.events).toEqual(["snapshot-manager", "book", "projection"])
   expect(f.queries).toHaveLength(1)
   expect(f.rows).toEqual([2])
   expect(result).toEqual({ currencyCode: "NGN", ...(await reference(input)) })
@@ -445,7 +438,7 @@ test("refused Member/Tenant and missing Book never execute a projection; fresh S
   const failure = Error("inert projection failure")
   const f = reader({ failure })
   await expect(getFinanceOwedSummary(f.db, actor)).rejects.toBe(failure)
-  expect(f.events).toEqual(["lock", "authority", "book", "projection"])
+  expect(f.events).toEqual(["snapshot-manager", "book", "projection"])
 })
 
 test("scope values stay bound and a missing projection cannot silently report zero", async () => {

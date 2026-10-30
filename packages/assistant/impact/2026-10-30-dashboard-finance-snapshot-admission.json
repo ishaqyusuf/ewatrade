@@ -1,0 +1,46 @@
+{
+  "version": 1,
+  "id": "2026-10-30-dashboard-finance-snapshot-admission",
+  "tickets": ["H02"],
+  "summary": "Balance/owed snapshot owners use one fresh Membership-locked permission projection. Local only.",
+  "noAssistantImpact": "Only two existing RepeatableRead query owners change. Current Owner/Admin/active business predicates, Membership SHARE lifetime, Book gates, exact money snapshots and read DTOs remain. Canonical Finance guard, Book and all command paths retain their fresh post-lock read; no cross-request authority cache, tool/capability/procedure signature, schema, grant or provider change.",
+  "capabilities": [],
+  "procedures": [],
+  "docs": [
+    {
+      "topic": "feature",
+      "status": "local_only",
+      "path": ".brain/features/merchant-finance.md"
+    },
+    {
+      "topic": "permissions",
+      "status": "local_only",
+      "path": ".brain/api/permissions.md"
+    },
+    {
+      "topic": "schema",
+      "status": "not_applicable",
+      "note": "No schema/index/migration."
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "test",
+      "path": "packages/db/src/queries/finance/manager-snapshot.concurrency.integration.test.ts",
+      "executed": true,
+      "result": "Seven actual-Prisma/disposable PostgreSQL cases,144 assertions.56 role/status/business combinations compare canonical/new guards; two-session waits, revocation, commit/rollback, ReadCommitted control and Activity snapshot parity pass. Fixture databases removed and cluster stopped; no app data used."
+    },
+    {
+      "kind": "test",
+      "path": "packages/db/src/queries/finance/account-balance-projection.test.ts",
+      "executed": true,
+      "result": "Actual balance/owed projection and Activity scope focused19/523 pass; same money/Book/transaction semantics, one snapshot admission operation per target reader."
+    },
+    {
+      "kind": "run",
+      "path": "docs/verification/2026-10-30-dashboard-finance-snapshot-admission.md",
+      "executed": true,
+      "result": "DB/API/Dashboard types, scoped fast237/1533+QA types/Biome, H01 and control/caller/transaction/DTO parity pass. No browser speedup or whole-ticket acceptance claimed."
+    }
+  ]
+}

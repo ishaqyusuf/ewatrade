@@ -1,5 +1,22 @@
 # Dashboard performance program
 
+## Finance snapshot admission — DP-103/405,30October2026
+
+- [x] Reproduce two permission operations in each actual balance/owed reader.
+- [x] Use one joined Membership-locked projection only inside their existing
+  RepeatableRead owners. Book, commands and canonical two-step guard unchanged.
+- [x] Two-session actual-Prisma/PostgreSQL7 cases/144 assertions prove56 role/
+  status/business combinations, lock waits/revocation/commit/rollback and scope
+  snapshots.19 existing projection/Activity cases/523 assertions also pass.
+- [x] DB/API/Dashboard types, scoped237/1533+QA types/Biome, H01/H02 and parity pass.
+
+A blanket Finance guard replacement was rejected: ReadCommitted lock waits can
+expose old joined Tenant facts. The existing Activity RepeatableRead owners retain
+snapshot parity and remain unchanged. One permission round trip is removed from
+each of two readers; no browser speedup or whole-ticket acceptance claimed.
+[Receipt](../verification/2026-10-30-dashboard-finance-snapshot-admission.md).
+Full program3/27 (11.1%); local only, fixture cleaned/stopped, no deployment.
+
 ## Matching optimized baseline and read attribution — DP-003/103/405/502,30October2026
 
 - [x] Build/serve committed Dashboard4d6d; freeze QA scripts and identify four
@@ -295,7 +312,9 @@ Execution order within the existing tickets:
    Attribute their root/list/filter/summary scopes and inspect actual SQL plans.
    The matching4d6d Dashboard run now contains the accumulated frontend source,
    while the hot API remains revision-uncertified. Prioritize the Finance fresh
-   lock/projection and Book-before-panels edge, and attribute Activity procedures.
+   Book-before-panels edge and remaining authority/query work, and attribute
+   Activity procedures. Snapshot guard joins are now applied only to the two
+   existing RepeatableRead panel owners; Book/commands keep their post-lock reads.
    The isolated read probes do not substitute for SSR attribution. Then prioritize Reports/Orders,
    Website Requests/Customers and the remaining family acceptance journeys.
 4. **DP-301–304:** measure unopened sheets/tools/import graphs and main-thread

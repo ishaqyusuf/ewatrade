@@ -1,6 +1,7 @@
 import type { PrismaClient } from "../../../generated/prisma/client"
 import { listCustomerLedgerBalances } from "../customer-ledger/totals-projection"
 import { type FinanceActor, assertFinanceManager } from "./access"
+import { assertFinanceManagerSnapshot } from "./manager-snapshot"
 import { getFinanceOwedSummaryProjection } from "./owed-summary-projection"
 import { FinanceError } from "./rules"
 
@@ -14,7 +15,7 @@ export async function getFinanceOwedSummary(
 ) {
   return db.$transaction(
     async (tx) => {
-      await assertFinanceManager(tx, input)
+      await assertFinanceManagerSnapshot(tx, input)
       const book = await tx.financeBook.findFirst({
         where: { id: input.bookId, tenantId: input.tenantId },
         select: { id: true, currencyCode: true, lastSequence: true },
