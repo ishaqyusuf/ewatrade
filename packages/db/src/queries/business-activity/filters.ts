@@ -9,6 +9,7 @@ import {
 } from "@ewatrade/notifications/business-events"
 import { z } from "zod"
 import { Prisma, type PrismaClient } from "../../../generated/prisma/client"
+import { tracePhase } from "../../performance-tracing"
 import { BusinessActivityError } from "./errors"
 import {
   BUSINESS_ACTIVITY_READ_VERSION,
@@ -63,12 +64,14 @@ export async function getBusinessActivityFiltersInTransaction(
   const knownTypes = Object.keys(implementedBusinessEventHandlers)
   // Keep both outputs bounded, and retain each branch's scope pushdown instead
   // of materializing every payload in the Business's history.
-  const projection = await tx.$queryRaw<
-    Array<{
-      actors: BusinessActivityFilterOptions["actors"]
-      types: Array<{ type: string; recordingOrigin: string }>
-    }>
-  >`${businessActivitySources(scope, undefined, true)} SELECT
+  const projection = await tracePhase(
+    "activityFilterSql",
+    () => tx.$queryRaw<
+      Array<{
+        actors: BusinessActivityFilterOptions["actors"]
+        types: Array<{ type: string; recordingOrigin: string }>
+      }>
+    >`${businessActivitySources(scope, undefined, true)} SELECT
     COALESCE((SELECT jsonb_agg(actor ORDER BY actor."membershipId") FROM (
       SELECT DISTINCT m.id AS "membershipId", LEFT(COALESCE(NULLIF(u."displayName",''),u.name),240) AS name,
       m.role::text AS role, (m.status <> 'ACTIVE') AS "isFormer"
@@ -82,7 +85,8 @@ export async function getBusinessActivityFiltersInTransaction(
     COALESCE((SELECT jsonb_agg(choice ORDER BY choice.type,choice."recordingOrigin") FROM (
       SELECT DISTINCT e.type, CASE WHEN e."recordingOrigin"='legacy_fact' THEN 'legacy_fact' ELSE 'snapshot' END AS "recordingOrigin"
       FROM "activitySources" e WHERE ${businessActivityScopeSql(scope)} AND e.type IN (${Prisma.join(knownTypes)})
-    ) choice),'[]'::jsonb) AS types`
+    ) choice),'[]'::jsonb) AS types`,
+  )
   const rows = projection[0]?.actors ?? []
   const typeRows = projection[0]?.types ?? []
   const availability: Partial<
@@ -128,8 +132,10 @@ export function getBusinessActivityFilters(
   viewer: BusinessActivityViewer,
   input: z.input<typeof businessActivityFiltersInput>,
 ) {
-  return db.$transaction(
-    (tx) => getBusinessActivityFiltersInTransaction(tx, viewer, input),
-    { isolationLevel: "RepeatableRead", maxWait: 10_000, timeout: 30_000 },
+  return tracePhase("activityFilters", () =>
+    db.$transaction(
+      (tx) => getBusinessActivityFiltersInTransaction(tx, viewer, input),
+      { isolationLevel: "RepeatableRead", maxWait: 10_000, timeout: 30_000 },
+    ),
   )
 }

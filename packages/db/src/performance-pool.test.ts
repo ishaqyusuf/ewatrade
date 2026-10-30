@@ -8,13 +8,17 @@ import {
   withPerformanceTrace,
 } from "./performance-tracing"
 
-function fixture() {
+function fixture(query?: (...args: unknown[]) => unknown) {
   const connections: Array<(error?: Error) => void> = []
   // Actual installed Pool owns acquisition, waiting, release and disposal. Only
   // physical socket I/O is inert; no database or timers are needed for the test.
   class InertClient extends pg.Client {
     constructor(options?: pg.ClientConfig) {
       super(options)
+      if (query)
+        this.query = new Proxy(this.query, {
+          apply: (_method, _receiver, args) => query(...args),
+        })
       this.connect = ((callback: (error?: Error) => void) => {
         connections.push(callback)
       }) as typeof this.connect
@@ -149,4 +153,67 @@ test("connection failures and ended-pool rejection retain identity without expor
   await pool.end()
   await expect(pool.connect()).rejects.toThrow("after calling end")
   expect(connections).toHaveLength(1)
+})
+
+test("actual pool attributes transaction-control statements without changing results, callbacks or errors", async () => {
+  const failure = new Error("private-control-error")
+  const { pool, connections } = fixture((...args) => {
+    const first = args[0]
+    const text =
+      typeof first === "string"
+        ? first
+        : first && typeof first === "object" && "text" in first
+          ? first.text
+          : undefined
+    const error = text === "ROLLBACK" ? failure : null
+    const value = { rows: [{ answer: 42 }], rowCount: 1, fields: [] }
+    const callback = args.at(-1)
+    if (typeof callback === "function") {
+      callback(error, value)
+      return
+    }
+    return error ? Promise.reject(error) : Promise.resolve(value)
+  })
+  let trace: PerformanceTrace | undefined
+  try {
+    await withPerformanceTrace(
+      "request",
+      async () => {
+        const pending = pool.connect()
+        connections[0]?.()
+        const client = await pending
+        try {
+          expect((await client.query("BEGIN")).rows).toEqual([{ answer: 42 }])
+          await client.query({
+            text: "SET TRANSACTION ISOLATION LEVEL REPEATABLE READ",
+            values: [],
+          })
+          await new Promise<void>((resolve, reject) =>
+            client.query("COMMIT", (error, value) => {
+              if (error) return reject(error)
+              expect(value.rows).toEqual([{ answer: 42 }])
+              resolve()
+            }),
+          )
+          await client.query("SELECT 'BEGIN;COMMIT;private-control-parameter'")
+          await client.query("SELECT 42")
+          await expect(client.query("ROLLBACK")).rejects.toBe(failure)
+        } finally {
+          client.release()
+        }
+      },
+      (value) => {
+        trace = value
+      },
+    )
+    expect(trace?.phases).toMatchObject({
+      sql: { count: 6, failures: 1 },
+      transactionSql: { count: 4, failures: 1 },
+    })
+    if (!trace) throw Error("Missing transaction trace")
+    expect(formatPerformanceServerTiming(trace)).toContain("ew_transactionSql;")
+    expect(JSON.stringify(trace)).not.toContain("private-control")
+  } finally {
+    await pool.end()
+  }
 })

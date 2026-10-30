@@ -18,6 +18,7 @@ import {
   Prisma,
   type PrismaClient,
 } from "../../../generated/prisma/client"
+import { tracePhase } from "../../performance-tracing"
 import { BusinessActivityError } from "./errors"
 import {
   BUSINESS_ACTIVITY_READ_VERSION,
@@ -300,20 +301,23 @@ export async function listBusinessActivityInTransaction(
       : Prisma.sql`AND (e."occurredAt",e.id)<(${new Date(after.at)},${after.id})`
     : Prisma.empty
   const order = input.sort === "oldest" ? Prisma.sql`ASC` : Prisma.sql`DESC`
-  const projected = await tx.$queryRaw<
-    Array<
-      Omit<ProjectedBusinessActivityRow, "id"> & {
-        id: string | null
-        total: bigint
-      }
-    >
-  >`${sources}
+  const projected = await tracePhase(
+    "activityPageSql",
+    () => tx.$queryRaw<
+      Array<
+        Omit<ProjectedBusinessActivityRow, "id"> & {
+          id: string | null
+          total: bigint
+        }
+      >
+    >`${sources}
     SELECT page.*, totals.total FROM (
       SELECT count(*)::bigint AS total FROM "activitySources" e ${businessActivityJoins} WHERE ${where}
     ) totals LEFT JOIN LATERAL (
       SELECT ${businessActivityRowSelect} FROM "activitySources" e ${businessActivityJoins}
       WHERE ${where} ${bound} ORDER BY e."occurredAt" ${order},e.id ${order} LIMIT ${limit + 1}
-    ) page ON true ORDER BY page."occurredAt" ${order},page.id ${order}`
+    ) page ON true ORDER BY page."occurredAt" ${order},page.id ${order}`,
+  )
   const rows = projected.flatMap((row) =>
     row.id === null ? [] : [{ ...row, id: row.id }],
   )
@@ -349,9 +353,11 @@ export function listBusinessActivity(
   viewer: BusinessActivityViewer,
   input: BusinessActivityListInput,
 ) {
-  return db.$transaction(
-    (tx) => listBusinessActivityInTransaction(tx, viewer, input),
-    { isolationLevel: "RepeatableRead", maxWait: 10_000, timeout: 30_000 },
+  return tracePhase("activityList", () =>
+    db.$transaction(
+      (tx) => listBusinessActivityInTransaction(tx, viewer, input),
+      { isolationLevel: "RepeatableRead", maxWait: 10_000, timeout: 30_000 },
+    ),
   )
 }
 

@@ -2,6 +2,7 @@ import { mkdirSync, readFileSync, writeFileSync } from "node:fs"
 import { resolve } from "node:path"
 import { fileURLToPath } from "node:url"
 import { chromium } from "playwright"
+import { diagnoseActivityReads } from "./qa-activity-read-diagnostics.mjs"
 import { observeWebPerformance } from "./qa-web-performance.mjs"
 import { measureDashboardRouteFamilies } from "./qa-web-route-families.mjs"
 
@@ -17,6 +18,14 @@ export async function webJourney(page, config) {
   const performanceArtifacts = process.env.QA_WEB_NAVIGATION_ARTIFACTS
   const verifyBell = process.env.QA_WEB_NOTIFICATION_COUNTS === "true"
   const verifyFamilies = process.env.QA_WEB_ROUTE_FAMILIES === "true"
+  const verifyActivityReads = process.env.QA_WEB_ACTIVITY_READS === "true"
+  if (
+    verifyActivityReads &&
+    (!performanceArtifacts || origin !== "https://ewatrade-dashboard.localhost")
+  )
+    throw new Error(
+      "Activity read verification requires local navigation artifacts.",
+    )
   if (
     verifyFamilies &&
     (!performanceArtifacts || origin !== "https://ewatrade-dashboard.localhost")
@@ -282,6 +291,23 @@ export async function webJourney(page, config) {
       throw new Error(
         "Unexpected business write blocked during lazy sheet acceptance.",
       )
+    if (verifyActivityReads) {
+      const reads = await diagnoseActivityReads(page, origin)
+      mkdirSync(performanceArtifacts, { recursive: true })
+      writeFileSync(
+        resolve(performanceArtifacts, "activity-reads.json"),
+        JSON.stringify(
+          {
+            version: 1,
+            scope:
+              "Two isolated GETs; fixed seven-day UTC list window; not page timings.",
+            reads,
+          },
+          null,
+          2,
+        ),
+      )
+    }
     if (verifyFamilies && observation) {
       mkdirSync(performanceArtifacts, { recursive: true })
       const familySamples = await measureDashboardRouteFamilies(

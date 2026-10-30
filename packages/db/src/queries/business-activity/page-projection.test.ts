@@ -5,9 +5,17 @@ import {
   implementedBusinessEventHandlers,
 } from "@ewatrade/notifications/business-events"
 import { z } from "zod"
-import { Prisma } from "../../../generated/prisma/client"
-import { getBusinessActivityFiltersInTransaction } from "./filters"
-import { listBusinessActivityInTransaction } from "./read"
+import { Prisma, type PrismaClient } from "../../../generated/prisma/client"
+import {
+  type PerformanceTrace,
+  formatPerformanceServerTiming,
+  withPerformanceTrace,
+} from "../../performance-tracing"
+import {
+  getBusinessActivityFilters,
+  getBusinessActivityFiltersInTransaction,
+} from "./filters"
+import { listBusinessActivity, listBusinessActivityInTransaction } from "./read"
 
 // Synthetic PostgreSQL only. Execute the production predicates, legacy union,
 // scope lock, paging and presenter without connecting to an application profile.
@@ -518,4 +526,88 @@ test("filter projection bounds people and availability despite unknown types and
   expect(JSON.stringify(plan.rows)).not.toContain(
     '"CTE Name":"activitySources"',
   )
+})
+
+test("actual list/filter entrypoints attribute admission, Store and projection work without retaining data", async () => {
+  for (const kind of ["list", "filters"] as const) {
+    let trace: PerformanceTrace | undefined
+    const result = await withPerformanceTrace(
+      "request",
+      () =>
+        invoke(async (tx) => {
+          const db = {
+            $transaction: async (
+              work: (tx: Prisma.TransactionClient) => Promise<unknown>,
+            ) => work(tx),
+          } as unknown as PrismaClient
+          if (kind === "list") await listBusinessActivity(db, viewer, input)
+          else await getBusinessActivityFilters(db, viewer, {})
+        }),
+      (value) => {
+        trace = value
+      },
+    )
+    expect(result.statements).toHaveLength(3)
+    expect(trace?.phases).toMatchObject({
+      activityAdmission: { count: 1, failures: 0 },
+      activityStores: { count: 1, failures: 0 },
+      [kind === "list" ? "activityPageSql" : "activityFilterSql"]: {
+        count: 1,
+        failures: 0,
+      },
+      [kind === "list" ? "activityList" : "activityFilters"]: {
+        count: 1,
+        failures: 0,
+      },
+    })
+    if (!trace) throw Error("Missing Activity trace")
+    const header = formatPerformanceServerTiming(trace)
+    for (const phase of [
+      "activityAdmission",
+      "activityStores",
+      kind === "list" ? "activityPageSql" : "activityFilterSql",
+      kind === "list" ? "activityList" : "activityFilters",
+    ])
+      expect(header).toContain(`ew_${phase};dur=`)
+    expect(JSON.stringify(trace)).not.toContain("tenant-a")
+    expect(JSON.stringify(trace)).not.toContain("OWN-1")
+  }
+})
+
+test("tracing preserves access/cursor refusals and never starts a refused projection", async () => {
+  let trace: PerformanceTrace | undefined
+  await memory.exec(
+    `UPDATE "Membership" SET status='REVOKED' WHERE id='member-owner'`,
+  )
+  await expect(
+    withPerformanceTrace(
+      "request",
+      () => filters(),
+      (value) => {
+        trace = value
+      },
+    ),
+  ).rejects.toMatchObject({ code: "FORBIDDEN" })
+  expect(trace?.phases).toMatchObject({
+    activityAdmission: { count: 1, failures: 0 },
+  })
+  expect(trace?.phases).not.toHaveProperty("activityStores")
+  expect(trace?.phases).not.toHaveProperty("activityFilterSql")
+  await memory.exec(
+    `UPDATE "Membership" SET status='ACTIVE' WHERE id='member-owner'`,
+  )
+  await expect(
+    withPerformanceTrace(
+      "request",
+      () => filters({ actorCursor: "invalid" }),
+      (value) => {
+        trace = value
+      },
+    ),
+  ).rejects.toMatchObject({ code: "BAD_REQUEST" })
+  expect(trace?.phases).toMatchObject({
+    activityAdmission: { count: 1 },
+    activityStores: { count: 1 },
+  })
+  expect(trace?.phases).not.toHaveProperty("activityFilterSql")
 })

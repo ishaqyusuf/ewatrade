@@ -17,6 +17,13 @@ export type PerformancePhase =
   | "poolBusy"
   | "sql"
   | "lockingSql"
+  | "transactionSql"
+  | "activityAdmission"
+  | "activityStores"
+  | "activityPageSql"
+  | "activityFilterSql"
+  | "activityList"
+  | "activityFilters"
   | "serialization"
   | "proposalReview"
   | "proposalExecution"
@@ -49,6 +56,13 @@ const serverTimingPhases: PerformancePhase[] = [
   "poolBusy",
   "sql",
   "lockingSql",
+  "transactionSql",
+  "activityAdmission",
+  "activityStores",
+  "activityPageSql",
+  "activityFilterSql",
+  "activityList",
+  "activityFilters",
   "serialization",
   "proposalReview",
   "proposalExecution",
@@ -272,7 +286,15 @@ export function instrumentDatabasePool(pool: pg.Pool) {
           /\bFOR\s+(?:NO\s+KEY\s+)?UPDATE\b|\bpg_advisory_(?:xact_)?lock\s*\(/i.test(
             text,
           )
-        const measured = instrumentMethod(target, "sql")
+        const transactionControl =
+          typeof text === "string" &&
+          /^\s*(?:BEGIN\b|START\s+TRANSACTION\b|COMMIT\b|ROLLBACK\b|SAVEPOINT\b|RELEASE\s+SAVEPOINT\b|SET\s+TRANSACTION\b)/i.test(
+            text,
+          )
+        const sql = instrumentMethod(target, "sql")
+        const measured = transactionControl
+          ? instrumentMethod(sql, "transactionSql")
+          : sql
         // This is lock-taking statement duration, NOT measured lock wait.
         return Reflect.apply(
           locking ? instrumentMethod(measured, "lockingSql") : measured,

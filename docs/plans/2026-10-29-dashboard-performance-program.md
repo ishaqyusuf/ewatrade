@@ -64,9 +64,10 @@ freshness-window increase. No favorable-only sample selection or speedup claim.
 
 Next execution order, within the same27 tickets:
 
-1. **DP-003/103:** attribute the variable Activity list/filter, auth/QA and database
-   waits with fixed numeric phases. Separate backend work from browser/SSR delay;
-   retain privacy-safe diagnostics and avoid unnecessary connected sweeps.
+1. **DP-003/103:** current fixed phases identify~0.66s transaction-control and~0.44s
+   admission/Store work per isolated read. Combine the latter inside its existing
+   locked snapshot, then inspect actual list plans to distinguish remaining query
+   work from transport/server variation. Retain private diagnostics and bounded runs.
 2. **DP-102/104/407:** inspect Activity's server-to-client initial loading edge and
    filter ownership. Any useful document prefetch must preserve current mount
    admission, exact scope/key consumption, refusal erasure and fresh returns.
@@ -78,6 +79,21 @@ Next execution order, within the same27 tickets:
    and performance acceptance, not repeated speculative rewrites.
 5. **DP-501–503:** repeated comparable optimized samples, Back/tab/draft/error/scope/
    revocation journeys, per-family regression budgets and all27-ticket audit.
+
+## Activity attribution follow-up — DP-003/103/407
+
+- [x] Add fixed numeric domain/transaction-control phases under existing opt-in.
+- [x]42 focused/541 assertions, types, scoped237/1533+QA/Biome,H02; driver17 pass
+  plus one existing timeout's focused pass. Default-off/privacy/authority retained.
+- [x] Focused local smoke and two isolated GETs pass; no service restart or mode
+  switch. Filters2072ms/list2346ms, context~0.67–0.70s, control SQL~0.66s each.
+- [ ] Combine measured fresh admission/Store reads under their existing locked
+  snapshot; inspect the slower page query and initial loading edge afterward.
+
+[Attribution evidence](../verification/2026-10-30-dashboard-activity-read-attribution.md).
+This is development API attribution, not a replacement for the optimized family
+samples above. One pair is not a p95 or network/server wait distinction. No SQL,
+transaction or command behavior changed; acceptance remains3/27 (11.1%).
 
 ## Current implementation evidence
 

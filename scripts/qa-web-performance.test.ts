@@ -18,3 +18,25 @@ describe("private local navigation diagnostics", () => {
     })
   })
 })
+
+test("accepts only fixed Activity and transaction timing facts", () => {
+  const names = [
+    "activityAdmission",
+    "activityStores",
+    "activityPageSql",
+    "activityFilterSql",
+    "activityList",
+    "activityFilters",
+    "transactionSql",
+  ]
+  const header = names
+    .map((name) => `ew_${name};dur=1.5;desc="2 calls"`)
+    .join(",")
+  expect(
+    readPerformancePhases(`${header},ew_businessId;dur=1;desc="private"`),
+  ).toEqual(
+    Object.fromEntries(
+      names.map((name) => [name, { milliseconds: 1.5, count: 2 }]),
+    ),
+  )
+})

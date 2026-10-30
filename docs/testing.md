@@ -123,6 +123,18 @@ Unchanged checks can be linked from multiple feature/task summaries without
 being counted as independent executions. A meaningful scope/dependency/target
 change invalidates that part of the proof; repeat that part only.
 
+### Optional local Activity attribution
+
+With the existing local tracing enabled, add `QA_WEB_ACTIVITY_READS=true` and
+`QA_WEB_NAVIGATION_ARTIFACTS=/tmp/<dated-run>` to the normal local web `qa:smoke`
+command. It adds two isolated existing-data GETs for Activity choices and a fixed
+seven-day UTC list window, outside page timing windows. The private
+`activity-reads.json` contains only fixed procedure labels, status/elapsed/decoded
+byte counts and allowlisted numeric phases. Missing current tracing, refusal or
+malformed responses fail the diagnostic. It requires the canonical local origin
+and artifacts; ordinary smoke and Preview remain unchanged. No service restart,
+business fixture or write is implied. These API timings are not page-load budgets.
+
 ## Idle compute and probes
 
 `/live` and `/api/live` are database-free API liveness. Use them for routine

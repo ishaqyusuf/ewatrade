@@ -1,4 +1,5 @@
 import { Prisma } from "../../../generated/prisma/client"
+import { tracePhase } from "../../performance-tracing"
 import { isOrderSalesRep } from "../order-visibility"
 import {
   RetailOpsSubscriptionError,
@@ -14,7 +15,9 @@ export async function businessActivityScope(
   tx: Prisma.TransactionClient,
   input: BusinessActivityViewer,
 ) {
-  const member = await getActivityScopeMember(tx, input)
+  const member = await tracePhase("activityAdmission", () =>
+    getActivityScopeMember(tx, input),
+  )
   if (
     !member ||
     !["OWNER", "ADMIN", "MANAGER", "CASHIER", "OPERATOR"].includes(member.role)
@@ -24,21 +27,23 @@ export async function businessActivityScope(
       "Current business operations access is required for Activity.",
     )
   const manages = member.role === "OWNER" || member.role === "ADMIN"
-  const stores = await tx.store.findMany({
-    where: {
-      tenantId: input.tenantId,
-      ...(!manages ? { status: "ACTIVE" as const } : {}),
-      ...(!manages && member.staffAccessMode === "SCOPED"
-        ? {
-            id: {
-              in: member.staffStoreAssignments.map((grant) => grant.storeId),
-            },
-          }
-        : {}),
-    },
-    select: { id: true, name: true, salesRepOrderVisibility: true },
-    orderBy: [{ name: "asc" }, { id: "asc" }],
-  })
+  const stores = await tracePhase("activityStores", () =>
+    tx.store.findMany({
+      where: {
+        tenantId: input.tenantId,
+        ...(!manages ? { status: "ACTIVE" as const } : {}),
+        ...(!manages && member.staffAccessMode === "SCOPED"
+          ? {
+              id: {
+                in: member.staffStoreAssignments.map((grant) => grant.storeId),
+              },
+            }
+          : {}),
+      },
+      select: { id: true, name: true, salesRepOrderVisibility: true },
+      orderBy: [{ name: "asc" }, { id: "asc" }],
+    }),
+  )
   if (!manages && !stores.length)
     throw new BusinessActivityError(
       "FORBIDDEN",

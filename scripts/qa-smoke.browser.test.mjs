@@ -422,3 +422,111 @@ test(
     }
   },
 )
+
+for (const scenario of ["valid", "refused", "malformed", "missing-trace"]) {
+  test(
+    `isolated Activity diagnostics preserve GET scope and redact data: ${scenario}`,
+    { timeout: 30000 },
+    async () => {
+      const { diagnoseActivityReads } = await import(
+        "./qa-activity-read-diagnostics.mjs"
+      )
+      const browser = await launchSmokeBrowser()
+      const origin = "https://ewatrade-dashboard.localhost"
+      try {
+        const page = await browser.newPage({ serviceWorkers: "block" })
+        /** @type {Array<{path: string, method: string, input: {json: {limit?: number, from?: string, to?: string}}}>} */
+        const requested = []
+        await page.route("**/*", (route) => {
+          const request = route.request()
+          const url = new URL(request.url())
+          if (url.pathname === "/")
+            return route.fulfill({
+              contentType: "text/html",
+              body: "<main>Inert</main>",
+            })
+          requested.push({
+            path: url.pathname,
+            method: request.method(),
+            input: JSON.parse(url.searchParams.get("input") ?? "null"),
+          })
+          const filters = url.pathname === "/api/trpc/activity.filters"
+          const names = [
+            "activityAdmission",
+            "activityStores",
+            filters ? "activityFilters" : "activityList",
+            filters ? "activityFilterSql" : "activityPageSql",
+          ]
+          const timing = [
+            names.map((name) => `ew_${name};dur=200;desc="1 calls"`).join(","),
+            'ew_transactionSql;dur=600;desc="3 calls",ew_secret;dur=1;desc="private-sentinel"',
+          ].join(",")
+          const data = filters
+            ? {
+                actors: [
+                  {
+                    membershipId: "private-sentinel",
+                    name: "private-sentinel",
+                  },
+                ],
+                types: [],
+              }
+            : { items: [{ private: "private-sentinel" }], total: 1 }
+          return route.fulfill({
+            status: scenario === "refused" ? 403 : 200,
+            contentType: "application/json",
+            headers: {
+              "server-timing": scenario === "missing-trace" ? "" : timing,
+            },
+            body: JSON.stringify({
+              result: { data: { json: scenario === "malformed" ? {} : data } },
+            }),
+          })
+        })
+        await page.goto(origin)
+        if (scenario === "valid") {
+          const result = await diagnoseActivityReads(page, origin)
+          assert.deepEqual(
+            result.map((read) => read.procedure),
+            ["activity.filters", "activity.listPage"],
+          )
+          assert.equal(result[0].serverPhases.transactionSql.count, 3)
+          assert.equal(result[1].serverPhases.activityPageSql.count, 1)
+          assert.ok(!JSON.stringify(result).includes("private-sentinel"))
+          assert.ok(
+            result.every(
+              (read) => read.status === 200 && read.decodedBodyBytes > 0,
+            ),
+          )
+          assert.deepEqual(
+            requested.map((read) => read.method),
+            ["GET", "GET"],
+          )
+          assert.deepEqual(requested[0].input, { json: {} })
+          assert.equal(requested[1].input.json.limit, 25)
+          assert.equal(
+            Date.parse(requested[1].input.json.to ?? "") -
+              Date.parse(requested[1].input.json.from ?? ""),
+            7 * 24 * 60 * 60 * 1000,
+          )
+        } else
+          await assert.rejects(
+            () => diagnoseActivityReads(page, origin),
+            /current tracing is required/,
+          )
+        const count = requested.length
+        await assert.rejects(
+          () =>
+            diagnoseActivityReads(
+              page,
+              "https://preview-dashboard.ewatrade.com",
+            ),
+          /local-only/,
+        )
+        assert.equal(requested.length, count)
+      } finally {
+        await browser.close()
+      }
+    },
+  )
+}

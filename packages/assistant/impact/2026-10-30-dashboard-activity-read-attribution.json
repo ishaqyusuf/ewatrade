@@ -1,0 +1,45 @@
+{
+  "version": 1,
+  "id": "2026-10-30-dashboard-activity-read-attribution",
+  "tickets": ["H02"],
+  "summary": "Add fixed numeric Activity/control timing and an optional local-only two-read QA probe.",
+  "noAssistantImpact": "Observability only under existing default-off PERFORMANCE_TRACE. Transparent wrappers retain existing SQL, scope/locks, RepeatableRead/command policy, results and DTOs. The local QA-only probe reads filters and a bounded list with current admission; retains no bodies/IDs/query text. No tool, capability, procedure, role, schema, dependency, provider or deployment change.",
+  "capabilities": [],
+  "procedures": [],
+  "docs": [
+    {
+      "topic": "feature",
+      "status": "local_only",
+      "path": ".brain/features/business-activity-notifications.md"
+    },
+    {
+      "topic": "api",
+      "status": "local_only",
+      "path": ".brain/api/contracts.md"
+    },
+    {
+      "topic": "permissions",
+      "status": "local_only",
+      "path": ".brain/api/permissions.md"
+    },
+    {
+      "topic": "schema",
+      "status": "not_applicable",
+      "note": "No schema/index/migration; no query/transaction semantics changed."
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "test",
+      "path": "packages/db/src/queries/business-activity/page-projection.test.ts",
+      "executed": true,
+      "result": "Together with tracing/pool/parser/middleware tests:42 cases541 assertions; real entrypoints, scope/cursor refusals, fixed-only/private-free phases, callback/Promise/error/default-off/stream semantics preserved."
+    },
+    {
+      "kind": "run",
+      "path": "docs/verification/2026-10-30-dashboard-activity-read-attribution.md",
+      "executed": true,
+      "result": "Types and scoped237/1533+QA/Biome pass. Driver17 pass plus focused successful retry of one existing timeout, new4 diagnostic cases pass. Frozen canonical local smoke/two GETs pass, no service changes. Filters2072ms/list2346ms with~657ms control SQL each; attribution only, no page-speed/deployment claim."
+    }
+  ]
+}
