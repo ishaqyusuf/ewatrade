@@ -1,0 +1,45 @@
+{
+  "version": 1,
+  "id": "2026-10-30-dashboard-customer-book-scheduling",
+  "tickets": ["H02"],
+  "summary": "Local customer-book projection overlaps two existing independent reads. No deployment.",
+  "noAssistantImpact": "listCustomerBook has one production caller, the Dashboard customer-book loader; only read scheduling changes. Same SQL, saved Customer select/filter/order, normalized matching and row/amount DTO. Current order-scope resolution remains ahead of the book, balance reads remain downstream, and own-sales skips saved Customers. No API/schema/index, authority, TTL, Assistant procedure/capability/tool, command, money calculation or provider change.",
+  "capabilities": [],
+  "procedures": [],
+  "docs": [
+    {
+      "topic": "feature",
+      "status": "local_only",
+      "path": ".brain/features/web-navigation-performance.md"
+    },
+    {
+      "topic": "api",
+      "status": "not_applicable",
+      "note": "Current API contracts/readers/commands unchanged."
+    },
+    {
+      "topic": "permissions",
+      "status": "not_applicable",
+      "note": "Current scope resolution and own-sales exclusion remain."
+    },
+    {
+      "topic": "schema",
+      "status": "not_applicable",
+      "note": "Same SQL/select; no schema/index/migration."
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "test",
+      "path": "packages/db/src/queries/customers.test.ts",
+      "executed": true,
+      "result": "9 cases/26 assertions pass after one red scheduling case. Actual book/order projection with inert DB ports proves independent startup, waits for both, either failure, existing scopes/search/link matching/order/totals and own-sales saved-read exclusion. No DB connection or page-speed claim."
+    },
+    {
+      "kind": "run",
+      "path": "docs/verification/2026-10-30-dashboard-customer-book-scheduling.md",
+      "executed": true,
+      "result": "Owned DB and Dashboard types, scoped fast237/1533+QA types/Biome, H01/H02 and exact Order-projection/saved-query/merge AST plus loader-byte parity pass. Nine focused inert cases/26 assertions pass. No UI change or new UI run; browser/optimized timing remains unproven. Prepared9eb8 manifests unchanged; full program3/27. No live DB fixture, business action, service restart or deployment."
+    }
+  ]
+}

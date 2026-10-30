@@ -484,26 +484,32 @@ export async function listCustomerBook(
     includeSavedCustomers: boolean
   },
 ): Promise<CustomerBookRow[]> {
-  const ordered: CustomerBookRow[] = await listCustomerOrderDirectory(db, input)
-  if (!input.includeSavedCustomers) return ordered
+  const orderRead: Promise<CustomerBookRow[]> = listCustomerOrderDirectory(
+    db,
+    input,
+  )
+  if (!input.includeSavedCustomers) return orderRead
   const query = input.query?.trim()
-  const saved = await db.customer.findMany({
-    where: {
-      tenantId: input.tenantId,
-      ...(query
-        ? {
-            OR: (["name", "email", "phone"] as const).map((field) => ({
-              [field]: {
-                contains: literalContains(query),
-                mode: "insensitive",
-              },
-            })),
-          }
-        : {}),
-    },
-    orderBy: [{ createdAt: "desc" }, { id: "asc" }],
-    select: customerSelect,
-  })
+  const [ordered, saved] = await Promise.all([
+    orderRead,
+    db.customer.findMany({
+      where: {
+        tenantId: input.tenantId,
+        ...(query
+          ? {
+              OR: (["name", "email", "phone"] as const).map((field) => ({
+                [field]: {
+                  contains: literalContains(query),
+                  mode: "insensitive",
+                },
+              })),
+            }
+          : {}),
+      },
+      orderBy: [{ createdAt: "desc" }, { id: "asc" }],
+      select: customerSelect,
+    }),
+  ])
   const byPhone = new Map<string, (typeof saved)[number]>()
   const byEmail = new Map<string, (typeof saved)[number]>()
   for (const customer of saved) {

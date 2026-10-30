@@ -1,5 +1,20 @@
 # Dashboard performance program
 
+## Customer-book independent reads — DP-103/404,30October2026
+
+- [x] Actual reader regression reproduces saved Customers waiting unnecessarily
+  for Order projection; own-sales exclusion is retained.
+- [x] Overlap only these two existing reads; preserve current scope, SQL/select,
+  matching/totals, merge dependency and downstream balance ownership.
+- [x] Nine inert cases/26 assertions pass, including failures and contact precedence.
+
+[Receipt](../verification/2026-10-30-dashboard-customer-book-scheduling.md).
+This removes a serial edge, not a read or payload. The existing unbounded customer
+book remains DP-404 work; no browser or optimized latency acceptance claimed.
+Owned DB/Dashboard types, scoped fast237/1533+QA types/Biome, H01/H02 and
+AST/loader parity pass. Full program remains3/27; no service restart or deployment.
+
+
 ## Submenu speculation budget — DP-103/501,30October2026
 
 - [x] Actual Chromium/Next Link registry reproduces nine Full child tasks when

@@ -183,13 +183,21 @@ describe("Customer book", () => {
     updatedAt: new Date("2026-07-01T10:00:00.000Z"),
     ...row,
   })
-  function bookDb(orders: unknown[], saved: unknown[]) {
+  function bookDb(
+    orders: unknown[],
+    saved: unknown[],
+    gates: { orders?: Promise<void>; saved?: Promise<void> } = {},
+  ) {
     const findManyCalls: unknown[] = []
     const db = {
-      $queryRaw: async () => orders,
+      $queryRaw: async () => {
+        await gates.orders
+        return orders
+      },
       customer: {
         findMany: async (args: unknown) => {
           findManyCalls.push(args)
+          await gates.saved
           return saved
         },
       },
@@ -200,6 +208,120 @@ describe("Customer book", () => {
     }
   }
   const input = { storeId: "store_1", tenantId: "tenant_1" }
+
+  test("starts saved-customer reading while order projection is pending and waits for both", async () => {
+    const orders = Promise.withResolvers<void>()
+    const saved = Promise.withResolvers<void>()
+    const { db, findManyCalls } = bookDb(
+      [ordered({ id: "ada", email: "ADA@EXAMPLE.COM" })],
+      [savedCustomer({ id: "c_ada", email: "ada@example.com" })],
+      { orders: orders.promise, saved: saved.promise },
+    )
+    const read = listCustomerBook(db, {
+      ...input,
+      includeSavedCustomers: true,
+    })
+    let settled = false
+    void read.then(() => {
+      settled = true
+    })
+    try {
+      expect(findManyCalls).toHaveLength(1)
+      saved.resolve()
+      await Promise.resolve()
+      expect(settled).toBe(false)
+    } finally {
+      orders.resolve()
+      saved.resolve()
+    }
+    const rows = await read
+    expect(rows.map((row) => [row.id, row.customerId])).toEqual([
+      ["ada", "c_ada"],
+    ])
+    expect(rows[0]?.totalMinor).toBe("5000")
+  })
+
+  for (const failedRead of ["orders", "saved"] as const) {
+    test(`propagates a ${failedRead} failure without waiting for the other read`, async () => {
+      const orders = Promise.withResolvers<void>()
+      const saved = Promise.withResolvers<void>()
+      const { db } = bookDb([], [], {
+        orders: orders.promise,
+        saved: saved.promise,
+      })
+      const read = listCustomerBook(db, {
+        ...input,
+        includeSavedCustomers: true,
+      })
+      const failure = new Error(`inert ${failedRead} failure`)
+      const failedGate = failedRead === "orders" ? orders : saved
+      try {
+        failedGate.reject(failure)
+        await expect(read).rejects.toBe(failure)
+      } finally {
+        orders.resolve()
+        saved.resolve()
+      }
+    })
+  }
+
+  test("retains exact saved scope, literal search and deterministic contact precedence", async () => {
+    const { db, findManyCalls } = bookDb(
+      [
+        ordered({
+          id: "linked",
+          customerId: "c_linked",
+          phone: "0900",
+          email: "older@example.com",
+        }),
+        ordered({
+          id: "unlinked",
+          phone: "0800 0000",
+          email: "older@example.com",
+        }),
+      ],
+      [
+        savedCustomer({ id: "c_newer", phone: "08000000" }),
+        savedCustomer({
+          id: "c_older",
+          phone: "08000000",
+          email: "older@example.com",
+        }),
+        savedCustomer({ id: "c_linked", phone: "0900" }),
+      ],
+    )
+    const rows = await listCustomerBook(db, {
+      ...input,
+      query: "  a%b_  ",
+      includeSavedCustomers: true,
+    })
+    expect(findManyCalls).toEqual([
+      {
+        where: {
+          tenantId: "tenant_1",
+          OR: ["name", "email", "phone"].map((field) => ({
+            [field]: { contains: "a\\%b\\_", mode: "insensitive" },
+          })),
+        },
+        orderBy: [{ createdAt: "desc" }, { id: "asc" }],
+        select: {
+          createdAt: true,
+          email: true,
+          id: true,
+          name: true,
+          phone: true,
+          updatedAt: true,
+        },
+      },
+    ])
+    expect(rows.map((row) => [row.id, row.customerId])).toEqual([
+      ["linked", "c_linked"],
+      ["unlinked", "c_newer"],
+      ["customer:c_older", "c_older"],
+    ])
+    expect(rows.map((row) => row.totalMinor)).toEqual(["5000", "5000", "0"])
+    expect(rows[2]?.lastOrder).toBeNull()
+  })
 
   test("links order customers by phone and adds saved customers without orders", async () => {
     const { db } = bookDb(
