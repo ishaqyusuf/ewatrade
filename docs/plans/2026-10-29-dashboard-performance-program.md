@@ -1,5 +1,19 @@
 # Dashboard performance program
 
+## Current optimized candidate — DP-003/502,30October2026
+
+- [x] Full optimized build at product source f027263c passes compile/types/75
+  page entries/final optimization; four manifests and source/lock identity pinned.
+- [x] Prior9eb8 runtime archived with matching manifests; dev references and
+  both dev type hashes restored/matching. Current relevant source remains clean.
+- [ ] Serve/timing/restore coordination for this candidate: new request replaces
+  pending9eb8. No Dashboard/API/other service has been switched or restarted.
+
+[Build receipt](../verification/2026-10-30-dashboard-optimized-candidate-f027.md).
+Current root optimized output is f027263c; earlier “prepared9eb8” entries are
+historical milestone evidence. This build includes the accumulated source but
+has not been served/timed. Full program remains3/27 (11.1%); no deployment.
+
 ## Customer-book independent reads — DP-103/404,30October2026
 
 - [x] Actual reader regression reproduces saved Customers waiting unnecessarily
