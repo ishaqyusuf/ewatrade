@@ -12,6 +12,7 @@ import {
   RetailOpsSubscriptionError,
   getActiveTenantForUser,
   getCustomerAccountAgeStatus,
+  isEligibleAccountAgeBand,
   validateQaDerivedSession,
 } from "@ewatrade/db/queries"
 import { toPublicError } from "@ewatrade/errors"
@@ -193,7 +194,12 @@ export const createTRPCContext = async (
                 status: "ACTIVE",
                 tenant: { slug: cookieTenantSlug, isActive: true },
               },
-              select: { id: true },
+              select: {
+                id: true,
+                ...(c.req.method === "GET"
+                  ? { user: { select: { ageBand: true } } }
+                  : {}),
+              },
             }),
           )
         : null
@@ -201,7 +207,21 @@ export const createTRPCContext = async (
       explicitTenantSlug ?? (cookieMembership ? cookieTenantSlug : null) ?? null
 
     return {
-      readContext: session ? createRequestReadContext(c.req.method) : undefined,
+      readContext: session
+        ? createRequestReadContext(
+            c.req.method,
+            cookieMembership && "user" in cookieMembership
+              ? {
+                  db: prisma,
+                  userId: session.user.id,
+                  read: async () =>
+                    assertEligibleAccountAge(
+                      isEligibleAccountAgeBand(cookieMembership.user.ageBand),
+                    ),
+                }
+              : undefined,
+          )
+        : undefined,
       requestHeaders: c.req.raw.headers,
       db: prisma,
       session,
@@ -336,7 +356,11 @@ async function requireEligibleAccountAge(
   const age = await tracePhase("legal", () =>
     getCustomerAccountAgeStatus(db, userId),
   )
-  if (!age.eligible) {
+  assertEligibleAccountAge(age.eligible)
+}
+
+function assertEligibleAccountAge(eligible: boolean) {
+  if (!eligible) {
     throw new TRPCError({
       code: "PRECONDITION_FAILED",
       message: "Choose an eligible age range before opening your workspace.",

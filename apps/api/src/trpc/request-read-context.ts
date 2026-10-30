@@ -8,7 +8,14 @@ type TenantInput = {
 }
 
 /** Lifetime is one HTTP GET, never a shared authorization cache. */
-export function createRequestReadContext(method: string) {
+export function createRequestReadContext(
+  method: string,
+  initialEligibility?: {
+    db: object
+    userId: string
+    read: () => Promise<void>
+  },
+) {
   if (method !== "GET") return undefined
   const eligibility = new WeakMap<object, Map<string, Promise<void>>>()
   const tenants = new WeakMap<
@@ -24,8 +31,15 @@ export function createRequestReadContext(method: string) {
       }
       let value = values.get(userId)
       if (!value) {
-        value = Promise.resolve().then(read)
+        const initial =
+          initialEligibility?.db === db && initialEligibility.userId === userId
+            ? initialEligibility.read
+            : undefined
+        // Evaluate only when a protected query asks. Account recovery/public
+        // calls must not start enforcing an unrelated age gate in context.
+        value = Promise.resolve().then(initial ?? read)
         values.set(userId, value)
+        if (initial) traceSynchronousPhase("legalReuse", () => undefined)
       } else {
         traceSynchronousPhase("legalReuse", () => undefined)
       }

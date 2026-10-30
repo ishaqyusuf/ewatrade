@@ -192,3 +192,38 @@ test("reader copies and database identities stay isolated and QA scope is checke
     createCallerFactory(router)(state.ctx).first(),
   ).rejects.toMatchObject({ code: "FORBIDDEN" })
 })
+
+test("initial current eligibility is lazy and can only satisfy its exact database/actor GET owner", async () => {
+  const db = {}
+  const otherDb = {}
+  let initialReads = 0
+  let fallbackReads = 0
+  const rejection = new Error("inert initial age refusal")
+  const initialEligibility = {
+    db,
+    userId: "actor",
+    read: async () => {
+      initialReads++
+      throw rejection
+    },
+  }
+  const memo = createRequestReadContext("GET", initialEligibility)
+  if (!memo) throw Error("GET owner missing")
+  expect(initialReads).toBe(0)
+  const fallback = async () => {
+    fallbackReads++
+  }
+  await memo.eligibility(otherDb, "actor", fallback)
+  await memo.eligibility(db, "foreign-actor", fallback)
+  expect(initialReads).toBe(0)
+  for (let i = 0; i < 2; i++)
+    await expect(memo.eligibility(db, "actor", fallback)).rejects.toBe(
+      rejection,
+    )
+  expect(initialReads).toBe(1)
+  expect(fallbackReads).toBe(2)
+  expect(createRequestReadContext("POST", initialEligibility)).toBeUndefined()
+  const fresh = createRequestReadContext("GET")
+  await fresh?.eligibility(db, "actor", fallback)
+  expect(fallbackReads).toBe(3)
+})

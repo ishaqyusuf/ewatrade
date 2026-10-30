@@ -10,13 +10,15 @@ import {
 } from "./store-conversations-core"
 import type { DbClient } from "./types"
 
-const isEligibleAge = (band: AccountAgeBand | null | undefined) =>
+export const isEligibleAccountAgeBand = (
+  band: AccountAgeBand | null | undefined,
+) =>
   band === AccountAgeBand.AGE_13_TO_15 ||
   band === AccountAgeBand.AGE_16_TO_17 ||
   band === AccountAgeBand.ADULT
 
 function assertDeclarableAgeBand(band: AccountAgeBand) {
-  if (isEligibleAge(band)) return
+  if (isEligibleAccountAgeBand(band)) return
   throw new StoreConversationError(
     "CONFLICT",
     "Choose an eligible age range before continuing.",
@@ -103,7 +105,7 @@ export async function getCustomerAccountAgeStatus(
   }
   return {
     ageBand: user.ageBand,
-    eligible: isEligibleAge(user.ageBand),
+    eligible: isEligibleAccountAgeBand(user.ageBand),
     freeFormChatEligible: canUseStoreConversationFreeFormChat({
       ageBand: user.ageBand,
       principal: "account",
@@ -132,13 +134,13 @@ export async function getGuestAgeStatusForCredential(
   }
   return {
     ageBand: guest.ageBand,
-    eligible: isEligibleAge(guest.ageBand),
+    eligible: isEligibleAccountAgeBand(guest.ageBand),
     freeFormChatEligible: false,
   }
 }
 
 function assertEligibleAge(band: AccountAgeBand | null | undefined) {
-  if (isEligibleAge(band)) return
+  if (isEligibleAccountAgeBand(band)) return
   throw new StoreConversationError(
     "NOT_READY",
     "Store messages require an eligible age declaration.",

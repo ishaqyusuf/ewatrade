@@ -1,5 +1,22 @@
 # Dashboard performance program
 
+## Remembered-business age projection — DP-103/201,30October2026
+
+- [x] Reproduce a separate User read after actual GET preference admission.
+- [x] Project the canonical age band in that admission query and reuse it lazily
+  only inside the existing exact DB/actor HTTP GET owner.
+- [x] Preserve age-before-protected-Tenant refusal, POST/mutation freshness and
+  all explicit-header/fallback/new-request/foreign-owner paths.
+- [x]16 tests/90 assertions, actual compiled one-statement SQL/PostgreSQL scope
+  proof, API/fixture/Dashboard types and downstream policy parity pass.
+
+[Receipt](../verification/2026-10-30-dashboard-preference-age-projection.md). Scoped
+fast237/1533+QA types/Biome, H01/H02 and frozen local smoke pass (runtime unverified).
+One observed API read emits legalReuse1/SQL5. Dev refresh3239ms/warm1441ms are not
+causal/optimized proof. One later read is removed, not the whole
+session-context sequence. Browser speedup/optimized acceptance remains open; full
+program3/27. No schema, service restart or deployment.
+
 ## Optimized runtime measured and restored — DP-003/103/502,30October2026
 
 - [x] Serve the pinnedf027 optimized Dashboard, run canonical existing-data smoke,

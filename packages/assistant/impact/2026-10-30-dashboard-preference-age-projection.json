@@ -1,0 +1,45 @@
+{
+  "version": 1,
+  "id": "2026-10-30-dashboard-preference-age-projection",
+  "tickets": ["H02"],
+  "summary": "Reuse current actor age projected by remembered-business admission inside the same protected GET owner. Local only.",
+  "noAssistantImpact": "Existing read scheduling/projection only. Canonical age predicate and precondition, session/QA/legal/cookie scope, strict/recovery Tenant/Store, linked identity and command authority unchanged. POST/mutations and nonmatching requests keep fresh canonical reads. No public capability/tool/procedure/DTO, permission grant, schema, provider or rollout change.",
+  "capabilities": [],
+  "procedures": [],
+  "docs": [
+    {
+      "topic": "permissions",
+      "status": "local_only",
+      "path": ".brain/api/permissions.md"
+    },
+    {
+      "topic": "feature",
+      "status": "local_only",
+      "path": ".brain/features/web-navigation-performance.md"
+    },
+    {
+      "topic": "api",
+      "status": "not_applicable",
+      "note": "No public input/output or new tool/procedure."
+    },
+    {
+      "topic": "schema",
+      "status": "not_applicable",
+      "note": "No schema/index/migration."
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "test",
+      "path": "apps/api/src/trpc/preference-age-context.test.ts",
+      "executed": true,
+      "result": "Actual Hono/context/protected path, generated Prisma SQL and disposable PostgreSQL. Combined focused16/90; exact GET lifetime, canonical ages, POST/mutation/new/foreign/fallback/refusal/error paths."
+    },
+    {
+      "kind": "run",
+      "path": "docs/verification/2026-10-30-dashboard-preference-age-projection.md",
+      "executed": true,
+      "result": "API/fixture/Dashboard types and canonical policy/caller parity pass. One redundant age statement removed on matching GET path; no browser/optimized latency claim."
+    }
+  ]
+}
