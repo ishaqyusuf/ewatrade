@@ -7,8 +7,8 @@ Current primary checkout; local implementation, tests and commits only. No push,
 deployment, provider changes, paid resources or business submissions.
 
 This remains the durable scope across goal continuations. Individual source slices
-and passing smoke runs do not replace full ticket acceptance. **3/27 tickets are
-accepted (11.1%)**: DP-001, DP-002 and DP-101. All27 acceptance criteria below are
+and passing smoke runs do not replace full ticket acceptance. **4/27 tickets are
+accepted (14.8%)**: DP-001, DP-002, DP-101 and DP-103. All27 acceptance criteria below are
 preserved verbatim. Historical contracts and evidence remain authoritative in the
 [complete pre-consolidation history](2026-10-30-dashboard-performance-program-history-c119f31b.md).
 That file records earlier runtime/build states; its “current” labels are historical.
@@ -28,14 +28,21 @@ real existing-QA read-only comparison proves SQL2→1 and exact workspace/featur
 parity. General workspace and API/command authority remain unchanged; optional join
 failure still requires fresh mandatory workspace admission before existing fallback.
 
-The root optimized Dashboard artifact uses the workspace/plan candidate (parent
-`8050855c` plus frozen owned source), Next16.4.3 BUILD_ID `Fp2hx3sRkDaie2XJkSXLj`.
-Source types, required optimized build checks and frozen canonical local smoke/all18
-readiness actions pass. Dashboard development mode was restored; API/Storefront/
-Marketing stayed running. `runtimeVerified:false`: no release qualification/deploy.
-[Latest shared-shell evidence](../verification/2026-10-30-dashboard-workspace-plan.md).
+The current root optimized Dashboard artifact adds parallel cold Stock activation
+in Reports (parent `a8625157` plus frozen owned source), Next16.4.3 BUILD_ID
+`zMN4q6wxzuTfj0KPK4a8Y`. Actual caller regression and optimized browser confirm two
+serial Stock requests become one batch: cold content2884→1874ms in single samples.
+Source/fixture/QA types, build, scoped237/1533 and26 driver cases pass; corrected
+canonical focused smoke passes. Development restored; API/Storefront/Marketing
+unchanged. `runtimeVerified:false`; no release qualification or deployment.
+[Reports proof and DP-103 acceptance audit](../verification/2026-10-30-dashboard-report-stock-parallel.md).
+[Shared shell](../verification/2026-10-30-dashboard-workspace-plan.md) ·
 [Browser streaming](../verification/2026-10-30-dashboard-browser-read-streaming.md) ·
 [Activity enrichment](../verification/2026-10-30-dashboard-activity-bounded-enrichment.md).
+
+The latest full-family snapshot below remains the preceding `a8625157` build's
+18 checks. The new build has a focused Reports pass; other families were not
+remeasured for this single-owner scheduling change.
 
 | Family | Full-family refresh sample | Full-family warm-return sample |
 | --- | ---: | ---: |
@@ -60,7 +67,7 @@ Phases overlap; no blanket freshness-window or index change.
 | Phase | Tickets | Accepted | Remaining outcome |
 | --- | --- | --- | --- |
 |0 Evidence |001–003 |2/3 |Comparable costs, variable-wait attribution and calibrated budgets |
-|1 Shared boot |101–104 |1/4 |Hydration consumption, shorter critical path, independent loading |
+|1 Shared boot |101–104 |2/4 |Hydration consumption and independent loading ownership |
 |2 Query lifecycle |201–204 |0/4 |Retention, precise invalidation and bounded background work |
 |3 Delivery/rendering |301–304 |0/4 |Code/import/tools and interaction acceptance |
 |4 Domain rollout |401–409 |0/9 |Each family's read/state/access/freshness budgets |
@@ -85,11 +92,12 @@ The prior source/artifact were restored before this retained change. Code warmin
 
 Next execution order, within the same27 tickets:
 
-1. **DP-103/405/407:** the shared shell projection is implemented and verified.
+1. **DP-405/407:** shared critical-path scheduling DP-103 is accepted from its
+   criterion audit; the shared shell projection and cold Stock fix are verified.
    Next inspect remaining current API context/control round trips behind Activity's
    unchanged~2.61s return and Finance's~2.34s return. Preserve proof, role, snapshot
    and transaction admission; use bounded projection/independent-work evidence.
-2. **DP-003/103/204:** distinguish the observed26 canceled refresh Flight requests
+2. **DP-003/204:** distinguish the observed26 canceled refresh Flight requests
    from navigation/useful prefetch before changing scheduling. Cancellation alone
    is not wasted-work proof; existing submenu intent/automatic-parent evidence
    remains. Keep DB topology unchanged while calibrating local round-trip cost.
@@ -107,6 +115,22 @@ Next execution order, within the same27 tickets:
    is deliberately ordered. Do not repeat those implementations.
 6. **DP-501–503:** comparable optimized samples, Back/tab/draft/error/scope/revocation
    journeys, per-family regression budgets and the complete27-ticket audit.
+
+## Shared critical-path acceptance — DP-103
+
+- [x] Independent settings/summary and Finance scheduling, bounded Activity
+  projection and current shell SQL2→1 have actual caller/SQL proofs.
+- [x] Reports cold activation reproduced in actual Suspense and optimized browser;
+  balances now starts52.2ms with reconciliation, rather than994.2ms after it finishes.
+- [x] Canonical keys, query bounds, current proof/role/Store/plan checks and locked
+  transactions retained. Previous relevant source hashes/authority evidence match.
+- [x] [Criterion audit](../verification/2026-10-30-dashboard-report-stock-parallel.md)
+  accepts DP-103. Program4/27 (14.8%); all other requirement wording is unchanged.
+- [ ] Reports/other family budgets, hydration/loading/lifecycle contracts and final
+  acceptance continue in their existing tickets. One sample is not a p95 budget.
+
+The following slice notes retain their original execution checkpoint. The current
+accepted count above supersedes those historical3/27 labels.
 
 ## Activity attribution follow-up — DP-003/103/407
 
@@ -247,7 +271,7 @@ authorization and locked commands retain their ordering and transaction boundari
 - [ ] **DP-102 Hydration identity.** Match server/client scope, params, pagination
   and keys; remove prefetches that cannot reach their consumer. Acceptance: useful
   prefetch consumed without redundant initial fetch; foreign scope cannot hydrate.
-- [ ] **DP-103 Critical-path scheduling.** Overlap independent settings, summary
+- [x] **DP-103 Critical-path scheduling.** Overlap independent settings, summary
   and repository reads and trim projections. Acceptance: measured removal of
   serial work, retained query bounds and no transaction/authorization shortcuts.
 - [ ] **DP-104 Loading ownership.** Separate primary content, shell, summaries and

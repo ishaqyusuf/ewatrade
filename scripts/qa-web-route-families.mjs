@@ -68,7 +68,7 @@ export const dashboardRouteFamilies = [
  * @param {{origin: string, catalogItem: string}} config
  * @param {ReturnType<import("./qa-web-performance.mjs").observeWebPerformance>} observation
  * @param {(update: {status: string, family: string | null, phase: string | null, samples: FamilySample[], diagnosticReads: Awaited<ReturnType<typeof diagnoseFinanceReads>>}) => void} checkpoint
- * @param {"all" | "activity"} [selection]
+ * @param {"all" | "activity" | "reports"} [selection]
  */
 export async function measureDashboardRouteFamilies(
   page,
@@ -82,7 +82,9 @@ export async function measureDashboardRouteFamilies(
   const targets =
     selection === "activity"
       ? dashboardRouteFamilies.filter((target) => target.family === "DP-407")
-      : dashboardRouteFamilies
+      : selection === "reports"
+        ? dashboardRouteFamilies.filter((target) => target.family === "DP-409")
+        : dashboardRouteFamilies
   /** @type {FamilySample[]} */
   const samples = []
   /** @type {Awaited<ReturnType<typeof diagnoseFinanceReads>>} */
@@ -223,6 +225,57 @@ export async function measureDashboardRouteFamilies(
         })
       } finally {
         await shell.dispose()
+      }
+      if (selection === "reports") {
+        phase = "cold-service-entry"
+        publish("running")
+        const serviceUrl = `${config.origin}/analytics?operationsReportTab=service`
+        await page.goto(serviceUrl, {
+          waitUntil: "domcontentloaded",
+          timeout: 30000,
+        })
+        if (page.url() !== serviceUrl)
+          throw Error("Reports left its fixed Service target.")
+        await ready(target)
+        await page
+          .getByRole("region", { name: "Service jobs", exact: true })
+          .waitFor()
+        const reportShell = await page
+          .locator('aside[aria-label="Dashboard sidebar"]')
+          .elementHandle()
+        if (!reportShell) throw Error("Report shell is absent.")
+        try {
+          await measure(
+            { ...target, readiness: "stock-metrics" },
+            "cold-stock-tab",
+            async () => {
+              await page
+                .getByRole("tab", { name: "Stock", exact: true })
+                .click()
+              await page.waitForURL(`${config.origin}/analytics`)
+              confirmPath("/analytics")
+              await page
+                .getByRole("region", { name: "Stock", exact: true })
+                .waitFor()
+              if (await page.locator('main [role="alert"]:visible').count())
+                throw Error("Stock has a visible error.")
+              if (!(await reportShell.evaluate((node) => node.isConnected)))
+                throw Error("Stock activation replaced the shell.")
+            },
+          )
+          const timeline = samples.at(-1)?.requests.timeline
+          if (
+            timeline?.stockReconciliation?.started !== 1 ||
+            timeline.stockBalances?.started !== 1 ||
+            timeline.stockReportBatch?.started !== 1
+          ) {
+            throw Error(
+              "Cold Stock activation did not share its two reads in one batch.",
+            )
+          }
+        } finally {
+          await reportShell.dispose()
+        }
       }
       if (target.path === "/finance") {
         phase = "isolated-read-diagnostics"

@@ -277,6 +277,16 @@ same content/error/shell checks. It does not run the other family samples or
 Finance diagnostic GETs. If both flags are true, the full nine-family pass wins.
 This focused run does not replace whole-dashboard acceptance.
 
+For focused Reports cold-tab verification, use `QA_WEB_REPORT_TABS=true` with the
+same local artifact command. It measures Reports refresh/return, opens a fresh
+Service jobs document, then clicks Stock and waits for its loaded metrics. Both
+Stock procedures must start once in one existing browser HTTP batch; serial reads,
+missing content, a replaced shell or a visible error fail. This adds no fixtures,
+business writes or latency threshold. Full-family mode wins if combined; otherwise
+Activity mode takes precedence over Reports. Default journeys remain unchanged.
+Stock diagnostics retain only fixed numeric `stockReconciliation`, `stockBalances`
+and `stockReportBatch` labels; overlapping labels are not extra operations.
+
 Navigation request summaries include `observationMilliseconds` and a numeric
 `timeline`: first/last request start, first response headers, last finish and
 start/header/finish counts relative to that observation window. Fixed labels

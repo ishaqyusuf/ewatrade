@@ -97,6 +97,13 @@ export function observeWebPerformance(page, origin) {
           labels.push("activityList")
         if (procedures.includes("activity.filters"))
           labels.push("activityFilters")
+        const reconciliation = procedures.includes(
+          "inventory.reconciliationReport",
+        )
+        const balances = procedures.includes("inventory.balanceReport")
+        if (reconciliation) labels.push("stockReconciliation")
+        if (balances) labels.push("stockBalances")
+        if (reconciliation && balances) labels.push("stockReportBatch")
       }
     }
     /** @type {Entry} */

@@ -103,6 +103,7 @@ const data: Record<string, unknown> = {
 const calls: Array<{ path: string; input: unknown }> = []
 let release: (() => void) | undefined
 let blocked: Promise<void> | undefined
+let blockedPaths: ReadonlySet<string> | undefined
 const rpc = createTRPCClient<AppRouter>({
   links: [
     () =>
@@ -113,7 +114,9 @@ const rpc = createTRPCClient<AppRouter>({
             observer.error(new TRPCClientError("Unexpected inert operation"))
             return
           }
-          void Promise.resolve(blocked).then(() => {
+          const wait =
+            !blockedPaths || blockedPaths.has(op.path) ? blocked : undefined
+          void Promise.resolve(wait).then(() => {
             observer.next({ result: { data: data[op.path] } })
             observer.complete()
           })
@@ -159,6 +162,7 @@ beforeEach(() => {
   calls.length = 0
   signedIn = tenant = hasStore = true
   blocked = undefined
+  blockedPaths = undefined
   release = undefined
   server = makeQueryClient()
   browser = makeQueryClient()
@@ -285,4 +289,50 @@ test("server URL loader exposes the same allowlisted tab as the client hook", as
       tab: tab === "service" ? "service" : "inventory",
     })
   }
+})
+
+test("cold Stock activation starts both independent reads before reconciliation completes", async () => {
+  const serviceParams = { ...dates, operationsReportTab: "service" }
+  const page = await Analytics({ searchParams: Promise.resolve(serviceParams) })
+  await settle()
+  expect(await render(page, serviceParams)).toContain(
+    'aria-label="Service jobs"',
+  )
+  expect(calls).toHaveLength(3)
+  expect(calls.some(({ path }) => path.startsWith("inventory."))).toBe(false)
+  blockedPaths = new Set(["inventory.reconciliationReport"])
+  blocked = new Promise<void>((resolve) => {
+    release = resolve
+  })
+  const rendering = render(
+    <OperationsReports store={store} tenantName="Business" />,
+    dates,
+  )
+  let html = ""
+  try {
+    await settle()
+    await settle()
+    expect(
+      calls
+        .filter(({ path }) => path.startsWith("inventory."))
+        .map(({ path, input }) => ({ path, input })),
+    ).toEqual([
+      { path: "inventory.reconciliationReport", input: { storeId: store.id } },
+      {
+        path: "inventory.balanceReport",
+        input: { storeId: store.id, includeCompatibleTotals: true },
+      },
+    ])
+  } finally {
+    release?.()
+    html = await rendering
+  }
+  expect(html).toContain('aria-label="Stock"')
+  expect(calls).toHaveLength(5)
+  await render(
+    <OperationsReports store={store} tenantName="Business" />,
+    serviceParams,
+  )
+  await render(<OperationsReports store={store} tenantName="Business" />, dates)
+  expect(calls).toHaveLength(5)
 })

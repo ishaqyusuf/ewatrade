@@ -38,7 +38,7 @@ import { useTRPC } from "@/trpc/client"
 import { Tabs, TabsContent, TabsTrigger, cn } from "@ewatrade/ui"
 import { Alert02Icon, Clock01Icon } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
-import { useSuspenseQuery } from "@tanstack/react-query"
+import { useSuspenseQueries, useSuspenseQuery } from "@tanstack/react-query"
 import { ErrorBoundary } from "next/dist/client/components/error-boundary"
 import {
   type ComponentProps,
@@ -224,18 +224,20 @@ function SalesDownloadButton({
 
 function InventoryPanel({ store }: { store: Store }) {
   const trpc = useTRPC()
-  const { data: reconciliation } = useSuspenseQuery(
-    trpc.inventory.reconciliationReport.queryOptions(
-      { storeId: store.id },
-      { retry: false },
-    ),
-  )
-  const { data: balances } = useSuspenseQuery(
-    trpc.inventory.balanceReport.queryOptions(
-      { includeCompatibleTotals: true, storeId: store.id },
-      { retry: false },
-    ),
-  )
+  // A cold activation has no server-prefetched Stock data. Start both independent
+  // reads before suspending instead of waiting for the first hook to resolve.
+  const [{ data: reconciliation }, { data: balances }] = useSuspenseQueries({
+    queries: [
+      trpc.inventory.reconciliationReport.queryOptions(
+        { storeId: store.id },
+        { retry: false },
+      ),
+      trpc.inventory.balanceReport.queryOptions(
+        { includeCompatibleTotals: true, storeId: store.id },
+        { retry: false },
+      ),
+    ],
+  })
   return (
     <ReportTabPanel
       description="Where your stock counts come from, and changes made offline that still need to sync. The dates above don't change this tab."

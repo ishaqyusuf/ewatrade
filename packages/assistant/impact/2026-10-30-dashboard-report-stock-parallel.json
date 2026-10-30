@@ -1,0 +1,46 @@
+{
+  "version": 1,
+  "id": "2026-10-30-dashboard-report-stock-parallel",
+  "tickets": ["H02"],
+  "summary": "Start both independent Stock report reads together on cold tab activation, preserving selected-tab delivery and existing query/permission ownership. Local only.",
+  "noAssistantImpact": "Only the Reports Stock query scheduling changes from sequential Suspense hooks to the installed parallel Suspense hook. Exact Store inputs, query keys/policy, reporting arithmetic/DTOs, protected API and repository checks, command and assistant capabilities remain unchanged. QA adds opt-in fixed numeric cold-tab batch diagnostics using the existing canonical runner, current QA account and write interception. No schema, dependency, provider, business write or deployment.",
+  "capabilities": [],
+  "procedures": [],
+  "docs": [
+    {
+      "topic": "feature",
+      "status": "local_only",
+      "path": ".brain/features/web-navigation-performance.md"
+    },
+    {
+      "topic": "api",
+      "status": "not_applicable",
+      "note": "No API/permission/input/output/assistant change; only starts of two existing independent reads."
+    },
+    {
+      "topic": "schema",
+      "status": "not_applicable",
+      "note": "No persistence, schema, index or migration change."
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "test",
+      "path": "packages/assistant/evaluations/fixtures/dashboard-report-prefetch.fixture.tsx",
+      "executed": true,
+      "result": "Actual route/Reports/tabs/QueryClient/transport fixture: red7 pass1 fail; final8/52 pass. Cold reconciliation hold now starts both exact Store reads; Service entry stays Stock-free and warm returns add no operations."
+    },
+    {
+      "kind": "test",
+      "path": "scripts/qa-smoke.browser.test.mjs",
+      "executed": true,
+      "result": "26 intercepted-driver tests pass; same batch accepted, serial/missing Stock refused, fixed-label privacy and all existing journeys retained."
+    },
+    {
+      "kind": "run",
+      "path": "docs/verification/2026-10-30-dashboard-report-stock-parallel.md",
+      "executed": true,
+      "result": "Optimized baseline reproduces serial Stock reads and expected batch-guard failure. Corrected build/types and frozen canonical focused smoke pass: both reads share one batch at52.2ms; cold content1874ms vs2884ms single baseline. Development restored; siblings unchanged. Scoped237/1533+QA/Biome pass. Local only, no percentile/release claim."
+    }
+  ]
+}

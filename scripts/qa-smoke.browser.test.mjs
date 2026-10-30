@@ -142,8 +142,27 @@ test(
       )
       assert.ok(!JSON.stringify(result).includes("sentinel"))
 
+      observer.begin()
+      await page.goto(
+        "https://ewatrade-dashboard.localhost/api/trpc/inventory.reconciliationReport,inventory.balanceReport?input=private-stock-sentinel",
+        { waitUntil: "load" },
+      )
+      const stock = await observer.end()
+      for (const label of [
+        "stockReconciliation",
+        "stockBalances",
+        "stockReportBatch",
+      ])
+        assert.equal(stock.timeline[label].started, 1)
+      assert.deepEqual(
+        stock.timeline.stockReconciliation,
+        stock.timeline.stockBalances,
+      )
+      assert.ok(!JSON.stringify(stock).includes("sentinel"))
+
       for (const url of [
-        "https://foreign.invalid/api/trpc/activity.listPage?secret=foreign-sentinel",
+        "https://foreign.invalid/api/trpc/activity.listPage,inventory.reconciliationReport,inventory.balanceReport?secret=foreign-sentinel",
+        "https://ewatrade-dashboard.localhost/api/trpc/inventory.reconciliationReportExtra,inventory.balanceReportExtra?secret=lookalike-sentinel",
         "https://ewatrade-dashboard.localhost/api/trpc/activity.listPageExtra?secret=lookalike-sentinel",
         "https://ewatrade-dashboard.localhost/api/trpc/private-procedure-sentinel?procedure=activity.listPage",
       ]) {
@@ -152,6 +171,9 @@ test(
         const unrelated = await observer.end()
         assert.equal(unrelated.timeline.activityList, undefined)
         assert.equal(unrelated.timeline.activityFilters, undefined)
+        assert.equal(unrelated.timeline.stockReconciliation, undefined)
+        assert.equal(unrelated.timeline.stockBalances, undefined)
+        assert.equal(unrelated.timeline.stockReportBatch, undefined)
         assert.ok(!JSON.stringify(unrelated).includes("sentinel"))
       }
       observer.dispose()
@@ -234,6 +256,17 @@ test(
 for (const scenario of [
   { name: "all nine representatives", options: {}, expected: "passed" },
   { name: "focused Activity startup", options: {}, expected: "passed" },
+  { name: "focused Reports cold Stock", options: {}, expected: "passed" },
+  {
+    name: "focused Reports serial Stock",
+    options: { serialStock: true },
+    expected: "DP-409",
+  },
+  {
+    name: "focused Reports missing Stock",
+    options: { omitStock: true },
+    expected: "DP-409",
+  },
   {
     name: "focused Activity missing content",
     options: { omitReady: "/activity" },
@@ -395,23 +428,35 @@ for (const scenario of [
             { origin, catalogItem: "Fixture item" },
             observation,
             (update) => checkpoints.push(update),
-            scenario.name.startsWith("focused Activity") ? "activity" : "all",
+            scenario.name.startsWith("focused Activity")
+              ? "activity"
+              : scenario.name.startsWith("focused Reports")
+                ? "reports"
+                : "all",
           )
         if (scenario.expected === "passed") {
           const samples = await run()
           const activityOnly = scenario.name.startsWith("focused Activity")
-          const selectedFamilies = activityOnly
-            ? dashboardRouteFamilies.filter(
-                (target) => target.family === "DP-407",
-              )
-            : dashboardRouteFamilies
-          assert.equal(samples.length, selectedFamilies.length * 2)
+          const reportsOnly = scenario.name.startsWith("focused Reports")
+          const selectedFamilies =
+            activityOnly || reportsOnly
+              ? dashboardRouteFamilies.filter(
+                  (target) =>
+                    target.family === (reportsOnly ? "DP-409" : "DP-407"),
+                )
+              : dashboardRouteFamilies
+          assert.equal(
+            samples.length,
+            selectedFamilies.length * 2 + (reportsOnly ? 1 : 0),
+          )
           assert.equal(dashboardRouteFamilies.length, 9)
           assert.deepEqual(
             checkpoints.at(-1)?.diagnosticReads.map((read) => read.procedure),
-            activityOnly ? [] : ["finance.book", "finance.owedSummary"],
+            activityOnly || reportsOnly
+              ? []
+              : ["finance.book", "finance.owedSummary"],
           )
-          if (!activityOnly)
+          if (!activityOnly && !reportsOnly)
             assert.equal(
               checkpoints.at(-1)?.diagnosticReads[1]?.serverPhases.sql.count,
               11,
@@ -428,7 +473,9 @@ for (const scenario of [
             const pair = samples.filter((sample) => sample.family === family)
             assert.deepEqual(
               pair.map((sample) => sample.phase),
-              ["full-refresh", "warm-return"],
+              reportsOnly
+                ? ["full-refresh", "warm-return", "cold-stock-tab"]
+                : ["full-refresh", "warm-return"],
             )
             assert.ok(pair.every((sample) => sample.milliseconds >= 0))
             assert.ok(pair[0].requests.started > 0)
@@ -454,7 +501,11 @@ for (const scenario of [
   )
 }
 
-for (const flag of ["QA_WEB_ROUTE_FAMILIES", "QA_WEB_ACTIVITY_STARTUP"])
+for (const flag of [
+  "QA_WEB_ROUTE_FAMILIES",
+  "QA_WEB_ACTIVITY_STARTUP",
+  "QA_WEB_REPORT_TABS",
+])
   test(
     `route-family opt-in requires canonical local artifacts before page activity: ${flag}`,
     { timeout: 30000 },
