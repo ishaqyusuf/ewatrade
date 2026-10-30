@@ -7,6 +7,7 @@ import {
   getTableSort,
   loadSortParams,
 } from "@/hooks/sort-params"
+import { DASHBOARD_REQUEST_KIND_HEADER } from "@/lib/navigation-request"
 import { getServerSession } from "@/lib/session"
 import { getActiveTenant } from "@/lib/tenant"
 import { getQueryClient, trpc } from "@/trpc/server"
@@ -14,6 +15,7 @@ import { getInitialTableSettings } from "@/utils/columns"
 import type { FinanceDirectoryPageId } from "@/utils/directory-view-settings"
 import { getInitialDirectoryView } from "@/utils/directory-views"
 import { HydrationBoundary, dehydrate } from "@tanstack/react-query"
+import { headers } from "next/headers"
 import { redirect } from "next/navigation"
 import { Suspense } from "react"
 import { FinanceWorkspace } from "./finance-workspace"
@@ -64,6 +66,23 @@ export async function FinanceRoute({
     queryClient.fetchQuery(trpc.finance.book.queryOptions()),
   ])
   const initialViewSettings = Object.fromEntries(viewEntries)
+  if (
+    book &&
+    view === "overview" &&
+    (await headers()).get(DASHBOARD_REQUEST_KIND_HEADER) === "document"
+  ) {
+    // Full-page loads can overlap the visible panels with client-code loading.
+    // Soft navigation keeps the browser's existing freshness/invalidation owner.
+    void queryClient.prefetchQuery(
+      trpc.finance.balances.queryOptions({ bookId: book.id }),
+    )
+    void queryClient.prefetchQuery(
+      trpc.finance.owedSummary.queryOptions({ bookId: book.id }),
+    )
+    void queryClient.prefetchQuery(
+      trpc.finance.bills.queryOptions({ bookId: book.id, limit: 5 }),
+    )
+  }
   if (book && view === "bank") {
     const filter = await loadFinanceBankFilterParams((await searchParams) ?? {})
     void queryClient.prefetchInfiniteQuery(

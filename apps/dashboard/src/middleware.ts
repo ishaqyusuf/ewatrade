@@ -1,4 +1,8 @@
 import { isPaymentLoginDestination } from "@/lib/login-navigation"
+import {
+  DASHBOARD_REQUEST_KIND_HEADER,
+  dashboardRequestKind,
+} from "@/lib/navigation-request"
 import { resolveTenantDomain } from "@ewatrade/utils"
 import { isManualPaymentShortCode } from "@ewatrade/utils/manual-payments"
 import { NextResponse } from "next/server"
@@ -163,6 +167,12 @@ export function middleware(request: NextRequest) {
 
   // Pass tenant and path context to route handlers.
   const requestHeaders = new Headers(request.headers)
+  // Next's userland headers() hides Flight headers. Overwrite any inbound hint;
+  // this selects read scheduling only, never authentication or permissions.
+  requestHeaders.set(
+    DASHBOARD_REQUEST_KIND_HEADER,
+    dashboardRequestKind(request),
+  )
 
   // The payment-link host names no tenant.
   if (!isPaymentLinkHost && result.kind === "tenant" && result.tenantSlug) {

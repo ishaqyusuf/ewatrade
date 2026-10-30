@@ -1,0 +1,45 @@
+{
+  "version": 1,
+  "id": "2026-10-30-dashboard-finance-overview-prefetch",
+  "tickets": ["H02"],
+  "summary": "Finance Overview starts its existing visible read queries on full document loads and shares hydration. Local only.",
+  "noAssistantImpact": "Frontend read scheduling only. Existing finance.book/balances/owedSummary/bills contracts, fresh protected Finance authority, exact Book scope, cache/retention/retry and canonical commands remain. Soft navigation and other Finance views retain their previous reads. No capability/tool/procedure/DTO, command, permission, schema or provider change. Middleware adds only an overwritten scheduling marker; existing auth/redirect/privacy/context policies remain identical.",
+  "capabilities": [],
+  "procedures": [],
+  "docs": [
+    {
+      "topic": "feature",
+      "status": "local_only",
+      "path": ".brain/features/merchant-finance.md"
+    },
+    {
+      "topic": "api",
+      "status": "not_applicable",
+      "note": "Existing query contracts and authority unchanged."
+    },
+    {
+      "topic": "permissions",
+      "status": "not_applicable",
+      "note": "Same session/role/Book admission before early reads; canonical financial checks remain."
+    },
+    {
+      "topic": "schema",
+      "status": "not_applicable",
+      "note": "No schema/index/migration."
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "test",
+      "path": "packages/assistant/evaluations/fixtures/dashboard-finance-prefetch.fixture.tsx",
+      "executed": true,
+      "result": "Actual route/Workspace/Overview/tRPC/cache hydration15 mounted cases/76 assertions. Pending/completed queries deduplicate, soft-return/cold-soft visit preserved, refusal/Book/foreign Book/invalidation and other views pass. Sixteen existing middleware cases/144 assertions retain auth and override forged hints."
+    },
+    {
+      "kind": "run",
+      "path": "docs/verification/2026-10-30-dashboard-finance-overview-prefetch.md",
+      "executed": true,
+      "result": "Dashboard/owned types, installed Next header and source/authority/cache/invalidation parity pass. No browser/optimized speedup or full-ticket acceptance claimed."
+    }
+  ]
+}

@@ -1,5 +1,24 @@
 # Dashboard performance program
 
+## Finance Overview document scheduling — DP-102/103/405, 30 October 2026
+
+- [x] Reproduce browser-only panel startup after Book hydration.
+- [x] Start the three visible Overview reads on document loads and hydrate their
+  pending results into the unchanged consumers; do not await the panels.
+- [x] Preserve soft-return cache ownership and cold-soft-visit behavior; all five
+  other Finance views retain their selected reads.
+- [x] Fifteen mounted cases/76 assertions, Dashboard/fixture types, installed
+  Next header and authority/consumer/cache/invalidation parity pass.
+
+[Receipt](../verification/2026-10-30-dashboard-finance-overview-prefetch.md). The canonical invalidation and refused
+panel erasure remain. No cache/API/schema/permission/command/UI-design change.
+Scoped fast237/1533+QA types/Biome, H02 and final frozen local smoke pass; unchanged
+H01 evidence reused. All18 family samples/retained shell/zero writes pass, runtime
+unverified. Finance dev5578ms refresh/2881ms return remains slow. Middleware
+overrides forged scheduling hints and preserves auth/privacy/forwarding.
+This is earlier document-read scheduling, not a measured speedup or whole-ticket
+acceptance. Full program 3/27; prepared f027 excludes this source; local only.
+
 ## Remembered-business age projection — DP-103/201,30October2026
 
 - [x] Reproduce a separate User read after actual GET preference admission.

@@ -291,3 +291,44 @@ test("dedicated payment login keeps return proof private and grants no other hos
     else process.env.PAYMENT_LINK_PUBLIC_ORIGIN = prior
   }
 })
+
+test("read scheduling uses the raw request kind and overwrites caller hints", () => {
+  for (const [method, rsc, expected] of [
+    ["GET", null, "document"],
+    ["GET", "1", "navigation"],
+    ["POST", null, "navigation"],
+    ["HEAD", null, "navigation"],
+  ] as const) {
+    const response = middleware(
+      new NextRequest("https://ewatrade-dashboard.localhost/finance", {
+        method,
+        headers: {
+          host: "ewatrade-dashboard.localhost",
+          cookie: "better-auth.session_token=fixture",
+          "x-ewatrade-request-kind":
+            expected === "document" ? "navigation" : "document",
+          ...(rsc ? { rsc } : {}),
+        },
+      }),
+    )
+    expect(response.headers.get("location")).toBeNull()
+    expect(
+      response.headers.get("x-middleware-request-x-ewatrade-request-kind"),
+    ).toBe(expected)
+    expect(response.headers.get("x-middleware-request-x-pathname")).toBe(
+      "/finance",
+    )
+  }
+  const denied = middleware(
+    new NextRequest("https://ewatrade-dashboard.localhost/finance", {
+      headers: {
+        host: "ewatrade-dashboard.localhost",
+        "x-ewatrade-request-kind": "document",
+      },
+    }),
+  )
+  expect(denied.headers.get("location")).toContain("/login")
+  expect(
+    denied.headers.get("x-middleware-request-x-ewatrade-request-kind"),
+  ).toBeNull()
+})
