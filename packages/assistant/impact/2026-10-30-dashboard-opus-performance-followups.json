@@ -1,0 +1,51 @@
+{
+  "version": 1,
+  "id": "2026-10-30-dashboard-opus-performance-followups",
+  "tickets": ["H02"],
+  "summary": "Correct Next-adapter document scheduling and add bounded optional-content code recovery, authored by owner-requested Opus5.5/high and verified by Codex. Local only.",
+  "noAssistantImpact": "Request kind selects optional prefetch scheduling only. Current session/role/plan/Book admission, query keys/freshness, API/money commands and all existing controller callbacks stay authoritative. Code retry reloads component definitions only; it never retries a business command. No schema, capability, procedure, provider or deployment change.",
+  "capabilities": [],
+  "procedures": [],
+  "docs": [
+    {
+      "topic": "feature",
+      "status": "local_only",
+      "path": ".brain/features/web-navigation-performance.md"
+    },
+    {
+      "topic": "feature",
+      "status": "local_only",
+      "path": ".brain/features/merchant-finance.md"
+    },
+    {
+      "topic": "api",
+      "status": "not_applicable",
+      "note": "Protected Book/read and command contracts are unchanged."
+    },
+    {
+      "topic": "schema",
+      "status": "not_applicable",
+      "note": "No persistence/schema change."
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "test",
+      "path": "apps/dashboard/src/lib/navigation-request.test.ts",
+      "executed": true,
+      "result": "Actual installed Next middleware adapter reproduces RSC-header stripping and wrong classification before fix. Final unit/middleware34/171 and direct real-adapter12/64 pass; actual Finance consumer wrapper passes full-load4 versus soft-return1 read with retained browser data."
+    },
+    {
+      "kind": "test",
+      "path": "apps/dashboard/src/components/sheets/optional-code-recovery.test.tsx",
+      "executed": true,
+      "result": "Four actual optional-loader regressions fail before source correction, then4/48 pass. Finance/Catalog use their existing loading frame, Setup/PDF retry locally. Two mock URL rerender failures were repaired without weakening assertions. Shared recovery6/38, route13/40, global54/113 and Job revocation pass. Inert transport only."
+    },
+    {
+      "kind": "run",
+      "path": "docs/verification/2026-10-30-dashboard-opus-performance-followups.md",
+      "executed": true,
+      "result": "Two explicit Opus5.5/high patch-author sessions and same-session fixture/type repairs; Codex reviewed/applied code and ran tests. Source/build/runtime evidence and remaining program limits recorded in the receipt."
+    }
+  ]
+}

@@ -292,12 +292,24 @@ test("dedicated payment login keeps return proof private and grants no other hos
   }
 })
 
-test("read scheduling uses the raw request kind and overwrites caller hints", () => {
-  for (const [method, rsc, expected] of [
-    ["GET", null, "document"],
-    ["GET", "1", "navigation"],
-    ["POST", null, "navigation"],
-    ["HEAD", null, "navigation"],
+test("read scheduling requires browser document metadata and overwrites caller hints", () => {
+  const documentLoad = {
+    "sec-fetch-dest": "document",
+    "sec-fetch-mode": "navigate",
+  }
+  // Next's adapter strips raw rsc before middleware; absence proves nothing.
+  for (const [method, kindHeaders, expected] of [
+    ["GET", documentLoad, "document"],
+    ["GET", { ...documentLoad, rsc: "1" }, "navigation"],
+    [
+      "GET",
+      { "sec-fetch-dest": "empty", "sec-fetch-mode": "cors" },
+      "navigation",
+    ],
+    ["GET", { ...documentLoad, "sec-purpose": "prefetch" }, "navigation"],
+    ["GET", {}, "navigation"],
+    ["POST", documentLoad, "navigation"],
+    ["HEAD", documentLoad, "navigation"],
   ] as const) {
     const response = middleware(
       new NextRequest("https://ewatrade-dashboard.localhost/finance", {
@@ -307,7 +319,7 @@ test("read scheduling uses the raw request kind and overwrites caller hints", ()
           cookie: "better-auth.session_token=fixture",
           "x-ewatrade-request-kind":
             expected === "document" ? "navigation" : "document",
-          ...(rsc ? { rsc } : {}),
+          ...kindHeaders,
         },
       }),
     )

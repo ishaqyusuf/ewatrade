@@ -1,7 +1,13 @@
 import { afterEach, beforeEach, expect, mock, test } from "bun:test"
+import { createRequire } from "node:module"
 import type { AppRouter } from "@ewatrade/api/trpc/routers/_app"
 import { DOMImplementation } from "@xmldom/xmldom"
 import { type ReactNode, Suspense, act } from "react"
+
+// Installed Next's server boot installs AsyncLocalStorage before its request
+// storage loads; the actual middleware adapter case below needs it. The
+// bootstrap is side-effect CJS whose .d.ts is not a module, so require it.
+createRequire(import.meta.url)("next/dist/server/node-environment-baseline")
 
 const doc = new DOMImplementation().createDocument(
   "http://www.w3.org/1999/xhtml",
@@ -763,4 +769,80 @@ test("a current-currency race retries only the admitted Book identity without ch
       serverOptions.finance.balances.queryKey({ bookId: "book-b" }),
     ),
   ).toBeDefined()
+})
+
+const { adapter } = await import("next/dist/server/web/adapter")
+const { FLIGHT_HEADERS } = await import(
+  "next/dist/client/components/app-router-headers"
+)
+const { middleware } = await import("../../../../apps/dashboard/src/middleware")
+
+/** Actual Next adapter and middleware, then the userland headers() view. */
+async function headersThroughNext(
+  browserHeaders: Record<string, string>,
+  search = "",
+) {
+  const { response } = await adapter({
+    page: "/src/middleware",
+    handler: async (request) => middleware(request),
+    request: {
+      url: `https://ewatrade-dashboard.localhost/finance${search}`,
+      method: "GET",
+      headers: {
+        host: "ewatrade-dashboard.localhost",
+        cookie: "better-auth.session_token=fixture",
+        ...browserHeaders,
+      },
+      nextConfig: {},
+      signal: new AbortController().signal,
+    },
+  })
+  const forwarded = new Headers()
+  for (const name of response.headers
+    .get("x-middleware-override-headers")
+    ?.split(",") ?? []) {
+    const value = response.headers.get(`x-middleware-request-${name}`)
+    if (value !== null && !(FLIGHT_HEADERS as readonly string[]).includes(name))
+      forwarded.set(name, value)
+  }
+  return forwarded
+}
+
+test("through the actual Next adapter, a full load overlaps all four reads and a soft navigation reads only its fresh Book", async () => {
+  requestHeaders = await headersThroughNext({
+    "sec-fetch-dest": "document",
+    "sec-fetch-mode": "navigate",
+    "x-ewatrade-request-kind": "navigation",
+  })
+  expect(requestHeaders.get("x-ewatrade-request-kind")).toBe("document")
+  await mount(await FinanceRoute({ view: "overview" }))
+  expect(calls.map((call) => call.path).sort()).toEqual(
+    ["finance.book", ...panels].sort(),
+  )
+  server.clear()
+  server = makeQueryClient()
+  serverOptions = createTRPCOptionsProxy<AppRouter>({
+    client: rpc,
+    queryClient: server,
+  })
+  requestHeaders = await headersThroughNext(
+    {
+      rsc: "1",
+      "next-router-state-tree": "%5B%22%22%2C%7B%7D%5D",
+      "sec-fetch-dest": "empty",
+      "sec-fetch-mode": "cors",
+      "x-ewatrade-request-kind": "document",
+    },
+    "?_rsc=fixture",
+  )
+  expect(requestHeaders.get("x-ewatrade-request-kind")).toBe("navigation")
+  expect(requestHeaders.get("rsc")).toBeNull()
+  const page = await FinanceRoute({ view: "overview" })
+  expect(calls.slice(4).map((call) => call.path)).toEqual(["finance.book"])
+  const before = [...calls]
+  const view = await mount(page)
+  expect(view.text()).toContain("Inert cash")
+  expect(view.text()).toContain("Inert customer")
+  expect(view.text()).toContain("Inert spending")
+  expect(calls).toEqual(before)
 })

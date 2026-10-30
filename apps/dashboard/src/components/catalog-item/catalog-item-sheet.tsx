@@ -1,5 +1,6 @@
 "use client"
 
+import { loadSheetCode } from "@/components/sheets/load-sheet-code"
 import { SheetFrame } from "@/components/sheets/sheet-frame"
 import { useCatalogItemParams } from "@/hooks/use-catalog-item-params"
 import { useSheetDismissal } from "@/hooks/use-sheet-dismissal"
@@ -8,25 +9,39 @@ import { Sheet, type SheetContent } from "@ewatrade/ui"
 import { minorToMajorInput } from "@ewatrade/utils/currency"
 import { useQuery } from "@tanstack/react-query"
 import dynamic from "next/dynamic"
-import type { ComponentProps } from "react"
+import type { ComponentProps, ReactNode } from "react"
 import { useCatalogThemeClass } from "./catalog-appearance"
 import { CatalogItemSkeleton } from "./catalog-item-skeleton"
 import { CatalogItemFormProvider } from "./form-context"
 
 const CatalogItemContent = dynamic(
-  () => import("./catalog-item-content").then((mod) => mod.CatalogItemContent),
+  () =>
+    loadSheetCode(
+      () =>
+        import("./catalog-item-content").then((mod) => mod.CatalogItemContent),
+      CatalogItemFrame,
+    ),
   { loading: () => <CatalogItemLoading /> },
 )
 
 function CatalogItemLoading() {
-  const themeClass = useCatalogThemeClass()
   const { catalogCreateMode } = useCatalogItemParams()
+  return (
+    <CatalogItemFrame>
+      <CatalogItemSkeleton chat={catalogCreateMode === "chat"} />
+    </CatalogItemFrame>
+  )
+}
+
+/** Code loading and recovery keep the item sheet's frame and Close control. */
+function CatalogItemFrame({ children }: { children: ReactNode }) {
+  const themeClass = useCatalogThemeClass()
   return (
     <SheetFrame
       title="Item"
       popupClassName={`${themeClass} sm:w-[min(900px,95vw)] sm:max-w-[900px]`}
     >
-      <CatalogItemSkeleton chat={catalogCreateMode === "chat"} />
+      {children}
     </SheetFrame>
   )
 }

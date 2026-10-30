@@ -1,5 +1,6 @@
 "use client"
 
+import { loadSheetCode } from "@/components/sheets/load-sheet-code"
 import { SheetFrame } from "@/components/sheets/sheet-frame"
 import { useSetupAssistantParams } from "@/hooks/use-setup-assistant-params"
 import { getDataCacheGeneration, useTRPC } from "@/trpc/client"
@@ -22,7 +23,11 @@ import type { SetupAttachmentName, SetupDraftEntity } from "./setup-format"
 import type { SetupPrerequisiteState } from "./setup-prerequisites"
 
 const SetupChat = dynamic(
-  () => import("./setup-chat").then((mod) => mod.SetupChat),
+  () =>
+    loadSheetCode(
+      () => import("./setup-chat").then((mod) => mod.SetupChat),
+      "body",
+    ),
   {
     loading: () => (
       <output aria-live="polite" className="p-5 text-sm text-muted-foreground">
@@ -33,7 +38,11 @@ const SetupChat = dynamic(
 )
 
 const SetupDraftPanel = dynamic(
-  () => import("./setup-draft-panel").then((mod) => mod.SetupDraftPanel),
+  () =>
+    loadSheetCode(
+      () => import("./setup-draft-panel").then((mod) => mod.SetupDraftPanel),
+      "body",
+    ),
   {
     loading: () => (
       <output aria-live="polite" className="p-4 text-sm text-muted-foreground">

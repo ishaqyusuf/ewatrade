@@ -72,7 +72,23 @@ unchanged. `runtimeVerified:false`; no release qualification or deployment.
 [Browser streaming](../verification/2026-10-30-dashboard-browser-read-streaming.md) ·
 [Activity enrichment](../verification/2026-10-30-dashboard-activity-bounded-enrichment.md).
 
-The latest optimized Dashboard artifact is Next16.4.3 BUILD_ID
+The latest focused artifact is Next16.4.3 **`tBSrVXiC7Tcp2XZnqwaC5`**, parent
+959d75210 plus frozen Opus follow-ups. Owner-authorized Opus5.5/high workers authored
+patches; Codex reviewed/applied and ran acceptance. Actual framework attribution
+found middleware's adapter already strips Flight headers: positive browser Fetch
+Metadata now selects document scheduling. Optimized runtime confirms four reads on
+refresh and only fresh Book on soft return, replacing the erroneous four-read return.
+Five optional code loaders now reuse local retry inside their existing frames/body.
+Actual adapter/consumer and installed-loader red/green tests, scoped237/1533, types,
+H02 and full optimized build pass; unchanged backend/native/H01 evidence reused.
+Focused canonical16:47:43.659Z–16:48:23.609Z passes, readiness2854/2334ms. Prior
+attributed2818/2361ms is one pair, not a causal page-speed claim; warm target remains
+unmet. Development restored88535; API/Storefront/Marketing unchanged. No new ticket
+accepted (4/27), release qualification or deployment. Client byte/chunk, history/
+focus and remaining failure owners stay open.
+[Opus follow-ups and runtime proof](../verification/2026-10-30-dashboard-opus-performance-followups.md).
+
+The preceding focused optimized Dashboard artifact is Next16.4.3 BUILD_ID
 `lk0TyEwhp1z7MyhmRFYem`, parentfea718366 plus frozen Finance snapshot/Book projection.
 Balances/owed/Bills retain their existing RepeatableRead options and now resolve
 fresh snapshot authority plus bounded Book fields in one Membership-locked query.

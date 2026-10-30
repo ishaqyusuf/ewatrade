@@ -2,12 +2,21 @@
 
 import { captureDashboardError } from "@/observability/sentry"
 import { Button } from "@ewatrade/ui"
-import { type ComponentType, useEffect, useRef, useState } from "react"
+import {
+  type ComponentType,
+  type ReactNode,
+  useEffect,
+  useRef,
+  useState,
+} from "react"
 import { useActiveSheet } from "./activated-sheet"
+
+/** Content that owns its whole sheet recovers inside its own loading frame. */
+type SheetCodeFrame = ComponentType<{ children: ReactNode }>
 
 export async function loadSheetCode<Props extends object>(
   loader: () => Promise<ComponentType<Props>>,
-  placement: "overlay" | "body" = "overlay",
+  placement: "overlay" | "body" | SheetCodeFrame = "overlay",
 ): Promise<ComponentType<Props>> {
   try {
     return await loader()
@@ -33,9 +42,12 @@ export async function loadSheetCode<Props extends object>(
     return inFlight
   }
 
+  // Keep feedback inside the frame, with Close, that its loading state opened.
+  const Frame = typeof placement === "function" ? placement : null
+
   return function SheetCodeRecovery(props: Props) {
     const active = useActiveSheet()
-    const visible = placement === "body" || active
+    const visible = placement !== "overlay" || active
     const [Loaded, setLoaded] = useState(() => recovered)
     const [pending, setPending] = useState(false)
     const busy = useRef(false)
@@ -82,7 +94,7 @@ export async function loadSheetCode<Props extends object>(
 
     if (Loaded) return <Loaded {...props} />
     if (!visible) return null
-    return (
+    const feedback = (
       <div
         ref={panel}
         role="alert"
@@ -104,5 +116,6 @@ export async function loadSheetCode<Props extends object>(
         </Button>
       </div>
     )
+    return Frame ? <Frame>{feedback}</Frame> : feedback
   }
 }

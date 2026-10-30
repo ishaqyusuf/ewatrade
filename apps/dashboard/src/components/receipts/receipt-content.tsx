@@ -1,4 +1,5 @@
 "use client"
+import { loadSheetCode } from "@/components/sheets/load-sheet-code"
 import { useReceiptDownload } from "@/hooks/use-receipt-download"
 import { useTRPC } from "@/trpc/client"
 import { Button } from "@ewatrade/ui"
@@ -6,10 +7,17 @@ import { useQuery } from "@tanstack/react-query"
 import dynamic from "next/dynamic"
 import { useEffect, useState } from "react"
 
-const ReceiptPdfPreview = dynamic(() => import("./pdf-preview"), {
-  ssr: false,
-  loading: () => <p className="py-8 text-sm">Loading preview…</p>,
-})
+const ReceiptPdfPreview = dynamic(
+  () =>
+    loadSheetCode(
+      () => import("./pdf-preview").then((mod) => mod.default),
+      "body",
+    ),
+  {
+    ssr: false,
+    loading: () => <p className="py-8 text-sm">Loading preview…</p>,
+  },
+)
 
 export function ReceiptContent({
   storeId,

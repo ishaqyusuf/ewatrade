@@ -3,6 +3,16 @@
 Parent `ecec707c8`. DP-102/103/405 implementation slice; full performance program
 remains 3/27 accepted. Current primary checkout, local only; no deployment.
 
+## Later framework-boundary correction
+
+The scheduling description below records the original implementation. Actual
+installed-adapter attribution subsequently showed Next16.4.3 strips Flight headers
+before middleware too. The old classifier therefore scheduled four server reads on
+warm returns. The [Opus follow-up](2026-10-30-dashboard-opus-performance-followups.md)
+replaces that assumption with positive browser Fetch Metadata, with actual adapter
+red/green proof and optimized document-four/navigation-one confirmation. Original
+measurements and acceptance limits below remain historical.
+
 ## Finding and implementation
 
 The actual Finance route awaited and hydrated the Book. Its three Overview panels
