@@ -738,3 +738,25 @@ canonical local smoke pass. Sandbox Chromium registration failure is preserved;
 retry outside that sandbox passes. Runtime remains unverified; no Assistant AI
 submission/business write or page-speed claim. Prepared9eb8 optimized files remain
 unchanged and do not include this new source. Overall3/27 accepted remains.
+
+## Payments inbox first-page ownership — DP-203/204/405
+
+- [x] Actual inbox/tRPC/query observers reproduce independent duplicate initial,
+  focus, retry and post-review reads. Preserve page-one-only polling and loaded
+  cursor refresh semantics.
+- [x] Infinite first page joins the canonical query; changed-poll results are
+  consumed only by the immediate refresh. Fresh mount/reconnect, private refusal,
+  load-more and post-review cancellation/freshness retain authority.
+- [x] Eleven actual-component tests/67 assertions, full Dashboard and explicit
+  fixture/entry types pass, including obsolete-poll and offline/load-more races.
+- [x] Complete owned smoke/gates and canonical local UI smoke, then commit.
+
+[Receipt](../verification/2026-10-30-dashboard-payments-inbox-reads.md). P15/A4 is
+this owner slice; remaining domain and optimized budgets stay open. Overall3/27.
+
+Executed:11 mounted tests/67 assertions and relevant types pass; owned fast237/1533
+plus QA types/Biome, H01 current/H02 client zero contract rows, frozen canonical
+local smoke pass. Existing driver proof is reused unchanged. No connected inbox
+fixture/report/review submission or money write; exact read counts are inert
+actual-component evidence, not browser latency. Prepared9eb8 remains untouched
+and excludes this source; no shared restart or deployment. Overall3/27 remains.

@@ -7,6 +7,7 @@ import { PageHeader } from "@/components/page-header"
 import { ScrollableContent } from "@/components/scrollable-content"
 import { SecondaryMenu } from "@/components/secondary-menu"
 import { useTRPC, useTRPCClient } from "@/trpc/client"
+import { isRejectedRead, readPollInterval } from "@/trpc/query-read-errors"
 import { Badge, Button, cn } from "@ewatrade/ui"
 import { ArrowLeft01Icon, InboxIcon } from "@hugeicons/core-free-icons"
 import { HugeiconsIcon } from "@hugeicons/react"
@@ -16,7 +17,7 @@ import {
   useQueryClient,
 } from "@tanstack/react-query"
 import { parseAsString, useQueryState } from "nuqs"
-import { useEffect, useRef } from "react"
+import { useEffect, useMemo, useRef } from "react"
 import { errorCode, formatReportTime } from "./business-banking-model"
 import { PaymentReportReview } from "./payment-report-review"
 
@@ -46,17 +47,34 @@ export function PaymentsToCheck({
   const client = useTRPCClient()
   const queryClient = useQueryClient()
   const [reportId, setReportId] = useQueryState("reportId", parseAsString)
-  const listKey = [
-    ...trpc.businessBanking.pendingReports.queryKey(),
-    "payments-to-check",
-  ]
+  const firstPageOptions = trpc.businessBanking.pendingReports.queryOptions(
+    { limit: PAGE_SIZE },
+    { ...FRESH, retry: false, trpc: { abortOnUnmount: true } },
+  )
+  const firstPageToReuse =
+    useRef<
+      Awaited<ReturnType<typeof client.businessBanking.pendingReports.query>>
+    >(undefined)
+  const listKey = useMemo(
+    () => [
+      ...trpc.businessBanking.pendingReports.queryKey(),
+      "payments-to-check",
+    ],
+    [trpc],
+  )
   const list = useInfiniteQuery({
     queryKey: listKey,
-    queryFn: ({ pageParam, signal }) =>
-      client.businessBanking.pendingReports.query(
-        { limit: PAGE_SIZE, ...(pageParam ? { beforeId: pageParam } : {}) },
+    queryFn: ({ pageParam, signal }) => {
+      if (!pageParam) {
+        const polled = firstPageToReuse.current
+        firstPageToReuse.current = undefined
+        return polled ?? queryClient.fetchQuery(firstPageOptions)
+      }
+      return client.businessBanking.pendingReports.query(
+        { limit: PAGE_SIZE, beforeId: pageParam },
         { signal },
-      ),
+      )
+    },
     initialPageParam: null as string | null,
     getNextPageParam: (page) => page.nextCursor ?? undefined,
     retry: false,
@@ -65,11 +83,14 @@ export function PaymentsToCheck({
   // Only the first page is polled (paused while the tab is hidden); loaded
   // "Load more" pages are re-read once, and only when the first page changed.
   const arrivals = useQuery({
-    ...trpc.businessBanking.pendingReports.queryOptions({ limit: PAGE_SIZE }),
-    retry: false,
-    refetchInterval: ARRIVAL_POLL_MS,
-    ...FRESH,
+    ...firstPageOptions,
+    refetchInterval: (query) =>
+      readPollInterval(query.state.error, ARRIVAL_POLL_MS),
+    // The infinite owner's fresh mount reads this same query, even with cached data.
+    refetchOnMount: false,
   })
+  const arrivalVersion =
+    queryClient.getQueryState(firstPageOptions.queryKey)?.dataUpdateCount ?? 0
   const arrivedSignature = arrivals.isSuccess
     ? pageSignature(arrivals.data)
     : null
@@ -82,15 +103,25 @@ export function PaymentsToCheck({
       arrivedSignature !== null &&
       list.isSuccess &&
       !listFetching &&
-      checkedArrival.current !== arrivals.dataUpdatedAt
+      checkedArrival.current !== arrivalVersion
     ) {
-      checkedArrival.current = arrivals.dataUpdatedAt
-      if (arrivedSignature !== listedSignature) void refetchList()
+      checkedArrival.current = arrivalVersion
+      if (arrivedSignature !== listedSignature) {
+        // Reuse only this completed poll during the immediate refresh. A paused
+        // refresh must obtain fresh authority when it later resumes.
+        firstPageToReuse.current = arrivals.data
+        try {
+          void refetchList()
+        } finally {
+          firstPageToReuse.current = undefined
+        }
+      }
     }
   }, [
     arrivedSignature,
     listedSignature,
-    arrivals.dataUpdatedAt,
+    arrivals.data,
+    arrivalVersion,
     list.isSuccess,
     listFetching,
     refetchList,
@@ -98,20 +129,42 @@ export function PaymentsToCheck({
   // A failed current read (e.g. access removed) shows no previous claims.
   const failed = arrivals.isError || list.isError
   const loadError = arrivals.isError ? arrivals.error : list.error
+  useEffect(() => {
+    if (!list.data || !isRejectedRead(arrivals.error)) return
+    const retained = queryClient
+      .getQueryCache()
+      .find<unknown, unknown>({ queryKey: listKey, exact: true })
+    if (!retained?.state.data) return
+    // A refused first page also revokes its retained paginated projection.
+    void retained.cancel({ revert: true })
+    retained.setState({
+      data: undefined,
+      error: arrivals.error,
+      status: "error",
+    })
+  }, [arrivals.error, list.data, listKey, queryClient])
   const items = failed
     ? []
     : (list.data?.pages.flatMap((page) => page.items) ?? [])
   // Only the claim list (and the notification bell) refresh after a review:
   // the open review keeps showing its result.
-  const refreshList = () =>
-    Promise.all([
-      queryClient.invalidateQueries({
-        queryKey: trpc.businessBanking.pendingReports.queryKey(),
-      }),
+  const refreshList = async () => {
+    // Discard pre-command reads, then let both owners join one fresh first page.
+    await queryClient.cancelQueries({
+      queryKey: trpc.businessBanking.pendingReports.queryKey(),
+    })
+    return Promise.all([
+      queryClient.invalidateQueries(
+        {
+          queryKey: trpc.businessBanking.pendingReports.queryKey(),
+        },
+        { cancelRefetch: false },
+      ),
       queryClient.invalidateQueries({
         queryKey: trpc.businessBanking.pendingReportCount.pathKey(),
       }),
     ])
+  }
   const selected = reportId
   return (
     <ScrollableContent>

@@ -1,0 +1,45 @@
+{
+  "version": 1,
+  "id": "2026-10-30-dashboard-payments-inbox-reads",
+  "tickets": ["H02"],
+  "summary": "Local PaymentsToCheck joins one fresh first-page query across list/arrival owners, preserves financial freshness and page-one-only polling. No deployment.",
+  "noAssistantImpact": "Client scheduling only: existing pendingReports transport/input/output, numeric badge, selected review and canonical payment/review/confirmation commands remain. Server-derived Tenant/Store/creator scope, current role/access/receipt privacy and fresh financial writes remain. Cancel obsolete pre-command reads before one fresh shared refresh; no stale TTL, optimistic money, assistant capability/tool/procedure or provider action.",
+  "capabilities": [],
+  "procedures": [],
+  "docs": [
+    {
+      "topic": "feature",
+      "status": "local_only",
+      "path": ".brain/features/manual-payment-confirmation.md"
+    },
+    {
+      "topic": "api",
+      "status": "not_applicable",
+      "note": "Existing pending report and badge contracts unchanged."
+    },
+    {
+      "topic": "permissions",
+      "status": "not_applicable",
+      "note": "No permission grant; current financial scope and canonical command checks remain."
+    },
+    {
+      "topic": "schema",
+      "status": "not_applicable",
+      "note": "No schema or migration."
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "test",
+      "path": "packages/assistant/evaluations/fixtures/dashboard-payments-inbox.fixture.tsx",
+      "executed": true,
+      "result": "Eleven actual PaymentsToCheck/tRPC/options/app QueryClient/observer tests, 67 assertions pass after duplicate-operation and interval-only retained-copy refusal red reproductions. Initial/cached mount, cursor/poll/focus, post-review cancellation/badge/retained review, private erasure plus late cursor cancellation, retry/unmount and offline/load-more races use inert transport, no money command."
+    },
+    {
+      "kind": "run",
+      "path": "docs/verification/2026-10-30-dashboard-payments-inbox-reads.md",
+      "executed": true,
+      "result": "Full Dashboard and explicit fixture/entry types, owned fast237 tests/1533 assertions plus QA tooling types/Biome and H01/H02 pass. Frozen canonical existing-data local web smoke passes QA login/Catalog/draft total/cancel (runtimeVerified:false); exact inbox operations remain inert actual-component proof. No connected report/review/money or AI submission, shared-service restart or deployment. Prepared optimized9eb8 manifests unchanged and exclude this source; no page latency/p95 claim."
+    }
+  ]
+}

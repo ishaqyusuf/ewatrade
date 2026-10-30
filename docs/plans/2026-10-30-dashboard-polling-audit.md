@@ -192,3 +192,14 @@ now includes actual answer cards and the complete panel/content/chat chain. It
 passes eight tests / 64 assertions after reproducing the hidden/refused/cancellation
 gaps. P14's A2 guard is included; other A2 owners and A3–A6 remain outstanding.
 This follow-up does not change the historical snapshot or accept DP-204/407.
+
+## Implementation follow-up: P15 / A4 — 30 October 2026
+
+[Payments inbox first-page ownership](../verification/2026-10-30-dashboard-payments-inbox-reads.md)
+shares one canonical first read across the infinite list and arrivals. Changed
+polls reuse their just-completed first page only for the immediate refresh; focus,
+retry and post-review still obtain current authority. Post-review cancels obsolete
+reads before the new shared read. Zero freshness/retention, loaded cursor behavior,
+refusal erasure/recovery, badge and selected review remain. Eleven mounted
+component/tRPC/query tests/67 assertions and relevant types pass. This does not
+accept DP-203/204/405 or rewrite the historical inventory.
