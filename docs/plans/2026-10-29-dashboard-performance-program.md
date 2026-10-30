@@ -64,10 +64,10 @@ freshness-window increase. No favorable-only sample selection or speedup claim.
 
 Next execution order, within the same27 tickets:
 
-1. **DP-003/103:** current fixed phases identify~0.66s transaction-control and~0.44s
-   admission/Store work per isolated read. Combine the latter inside its existing
-   locked snapshot, then inspect actual list plans to distinguish remaining query
-   work from transport/server variation. Retain private diagnostics and bounded runs.
+1. **DP-003/103:** the locked admission now includes Stores, removing one measured
+   round trip (isolated SQL9→8). Context~0.67–0.70s and transaction-control~0.64s
+   remain; inspect the actual list projection (~0.53s) to distinguish server work
+   from transport variation. Retain private diagnostics and bounded runs.
 2. **DP-102/104/407:** inspect Activity's server-to-client initial loading edge and
    filter ownership. Any useful document prefetch must preserve current mount
    admission, exact scope/key consumption, refusal erasure and fresh returns.
@@ -87,13 +87,27 @@ Next execution order, within the same27 tickets:
   plus one existing timeout's focused pass. Default-off/privacy/authority retained.
 - [x] Focused local smoke and two isolated GETs pass; no service restart or mode
   switch. Filters2072ms/list2346ms, context~0.67–0.70s, control SQL~0.66s each.
-- [ ] Combine measured fresh admission/Store reads under their existing locked
-  snapshot; inspect the slower page query and initial loading edge afterward.
+- [x] Combine measured fresh admission/Store reads under their existing locked
+  snapshot. Native equivalence/concurrency and local8-SQL probe pass; next inspect
+  the slower page query and initial loading edge.
 
 [Attribution evidence](../verification/2026-10-30-dashboard-activity-read-attribution.md).
 This is development API attribution, not a replacement for the optimized family
 samples above. One pair is not a p95 or network/server wait distinction. No SQL,
 transaction or command behavior changed; acceptance remains3/27 (11.1%).
+
+## Snapshot Store projection — DP-103/407
+
+- [x] Eligible Activity scope2→1 reads inside its existing locked RepeatableRead.
+- [x] Raw denied-profile privacy,26/450, native10/243 including91 old/new scope
+  outcomes, types, scoped237/1533+QA/Biome,H02 and4 affected driver cases pass.
+- [x] Focused local smoke passes; isolated SQL9→8. Filters1821ms/list2143ms versus
+  previous2072/2346ms; single observations, not page/p95 or whole-ticket acceptance.
+
+[Projection evidence](../verification/2026-10-30-dashboard-activity-snapshot-stores.md).
+Membership lock, role/Store/Finance predicates, signatures, DTOs and existing
+notification transaction/command authority remain. Fixture databases removed and
+cluster stopped; app services unchanged. No cache/schema/deployment.3/27 unchanged.
 
 ## Current implementation evidence
 

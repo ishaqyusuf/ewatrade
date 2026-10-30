@@ -134,6 +134,8 @@ byte counts and allowlisted numeric phases. Missing current tracing, refusal or
 malformed responses fail the diagnostic. It requires the canonical local origin
 and artifacts; ordinary smoke and Preview remain unchanged. No service restart,
 business fixture or write is implied. These API timings are not page-load budgets.
+Current `activityAdmission` includes the Store projection; separate
+`activityStores` timing remains readable for historical traces and is optional.
 
 ## Idle compute and probes
 

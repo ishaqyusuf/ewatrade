@@ -223,6 +223,7 @@ async function invoke<T>(
 ) {
   const calls: string[] = []
   const statements: Prisma.Sql[] = []
+  const results: unknown[][] = []
   const result = await memory.transaction(async (pg) => {
     await pg.exec("SET TRANSACTION ISOLATION LEVEL REPEATABLE READ")
     const tx = {
@@ -233,7 +234,9 @@ async function invoke<T>(
         calls.push("member")
         const sql = "text" in query ? query : Prisma.sql(query, ...values)
         statements.push(sql)
-        return (await pg.query(sql.text, sql.values)).rows
+        const rows = (await pg.query(sql.text, sql.values)).rows
+        results.push(rows)
+        return rows
       },
       membership: {
         findFirst: async () => {
@@ -249,7 +252,9 @@ async function invoke<T>(
           if (spec.where.id)
             clauses.push(Prisma.sql`id=ANY(${spec.where.id.in}::text[])`)
           const sql = Prisma.sql`SELECT id,name,"salesRepOrderVisibility" FROM "Store" WHERE ${Prisma.join(clauses, " AND ")} ORDER BY name ASC,id ASC`
-          return (await pg.query(sql.text, sql.values)).rows
+          const rows = (await pg.query(sql.text, sql.values)).rows
+          results.push(rows)
+          return rows
         },
       },
     } as unknown as Prisma.TransactionClient
@@ -261,10 +266,10 @@ async function invoke<T>(
     ).rows
     return { value, locks }
   })
-  return { ...result, calls, statements }
+  return { ...result, calls, statements, results }
 }
 
-test("actual scope uses two reads and retains the exact member row share lock until caller commit", async () => {
+test("actual scope uses one read and retains the exact member row share lock until caller commit", async () => {
   await seed()
   const oldLock = await memory.transaction(async (pg) => {
     await pg.query(
@@ -278,7 +283,7 @@ test("actual scope uses two reads and retains the exact member row share lock un
     const lock = await tupleLock(pg)
     return { scope, lock }
   })
-  expect(result.calls).toEqual(["member", "stores"])
+  expect(result.calls).toEqual(["member"])
   expect(result.value.scope.membershipId).toBe("member-a")
   expect(result.value.lock.combined_flags).toEqual(oldLock.combined_flags)
   expect(result.value.lock.raw_flags).toContain("HEAP_XMAX_LOCK_ONLY")
@@ -341,7 +346,7 @@ test("all roles/modes and six paid/free/durable subscription states preserve acc
             ]),
           ]),
         )
-        expect(calls).toEqual(["member", "stores"])
+        expect(calls).toEqual(["member"])
       }
 })
 test("inactive/missing members, inactive Tenant and unassigned scoped staff stay refused", async () => {
@@ -381,6 +386,15 @@ test("selected facts preserve JSON/date/optional subscriptions and filter grants
       },
     },
     staffStoreAssignments: [{ storeId: "a-one", role: grantRole }],
+    stores: [
+      {
+        id: "a-two",
+        name: "Alpha",
+        salesRepOrderVisibility: "ALL_STORE_ORDERS",
+      },
+      { id: "a-closed", name: "Middle", salesRepOrderVisibility: "OWN_SALES" },
+      { id: "a-one", name: "Zulu", salesRepOrderVisibility: "OWN_SALES" },
+    ],
   })
   expect(statements).toHaveLength(1)
   expect(statements[0]?.text).toContain("FOR SHARE OF m")
@@ -445,4 +459,51 @@ test("actor/Tenant inputs remain bound, SQL errors and inconsistent active subsc
   await expect(getActivityScopeMember(inconsistent, viewer)).rejects.toThrow(
     "subscription facts are unavailable",
   )
+})
+
+test("SQL returns no Store profiles before current operational access or across tenants", async () => {
+  for (const spec of [
+    { role: "SUPPORT" as const },
+    { role: "MEMBER" as const },
+    { tenantActive: false },
+    ...Object.values(MembershipStatus)
+      .filter((value) => value !== "ACTIVE")
+      .map((memberStatus) => ({ memberStatus })),
+  ]) {
+    await seed(spec)
+    const result = await invoke((tx) => getActivityScopeMember(tx, viewer))
+    expect(
+      z
+        .object({ stores: z.array(z.unknown()).length(0) })
+        .passthrough()
+        .parse(result.results[0]?.[0]).stores,
+    ).toEqual([])
+  }
+  await seed({ role: "CASHIER", mode: "SCOPED" })
+  const result = await invoke((tx) => getActivityScopeMember(tx, viewer))
+  expect(result.value?.stores).toEqual([
+    { id: "a-one", name: "Zulu", salesRepOrderVisibility: "OWN_SALES" },
+  ])
+  expect(JSON.stringify(result.value?.stores)).not.toContain("Foreign")
+  expect(result.calls).toEqual(["member"])
+})
+
+test("projected Store ordering keeps the name/ID tie-break and observes status changes", async () => {
+  await seed()
+  await memory.exec(
+    `UPDATE "Store" SET name='Same' WHERE "tenantId"='tenant-a'`,
+  )
+  expect(
+    (await invoke((tx) => businessActivityScope(tx, viewer))).value.stores.map(
+      (store) => store.id,
+    ),
+  ).toEqual(["a-closed", "a-one", "a-two"])
+  await memory.exec(
+    `UPDATE "Membership" SET role='CASHIER',"staffAccessMode"='LEGACY' WHERE id='member-a'; UPDATE "Store" SET status='PAUSED' WHERE id='a-two'`,
+  )
+  expect(
+    (await invoke((tx) => businessActivityScope(tx, viewer))).value.stores.map(
+      (store) => store.id,
+    ),
+  ).toEqual(["a-one"])
 })

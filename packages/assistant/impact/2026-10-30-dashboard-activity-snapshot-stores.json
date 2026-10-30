@@ -1,0 +1,51 @@
+{
+  "version": 1,
+  "id": "2026-10-30-dashboard-activity-snapshot-stores",
+  "tickets": ["H02"],
+  "summary": "Project permitted Stores in the existing locked Activity admission snapshot, removing one read. Local only.",
+  "noAssistantImpact": "Same canonical operational/Owner/Admin/scoped assignment/Tenant/Finance rules, current Membership SHARE lock, existing RepeatableRead owners, signature, DTOs and fresh request/command authority. SQL returns no Store profiles before current operational access. List/filter/notification commands and transaction options are unchanged. Only shared test fixture fields expand in Finance. No capability/tool/procedure, grant, schema, dependency, delivery or deployment change.",
+  "capabilities": [],
+  "procedures": [],
+  "docs": [
+    {
+      "topic": "feature",
+      "status": "local_only",
+      "path": ".brain/features/business-activity-notifications.md"
+    },
+    {
+      "topic": "permissions",
+      "status": "local_only",
+      "path": ".brain/api/permissions.md"
+    },
+    {
+      "topic": "api",
+      "status": "local_only",
+      "path": ".brain/api/contracts.md"
+    },
+    {
+      "topic": "schema",
+      "status": "not_applicable",
+      "note": "No app schema/index/migration; only disposable fixture Store fields extended."
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "test",
+      "path": "packages/db/src/queries/business-activity/scope-member.test.ts",
+      "executed": true,
+      "result": "Together with page/filter/legacy26 cases450 assertions. Red scope2->1;84 role/mode/plan combinations, raw denied-profile privacy, exact ordering, freshness, refusal, scope signatures and Member lock retained."
+    },
+    {
+      "kind": "test",
+      "path": "packages/db/src/queries/finance/manager-snapshot.concurrency.integration.test.ts",
+      "executed": true,
+      "result": "Native suites10/243 including91 exact old/new scope outcomes. Actual Prisma two-session Store/grant snapshot and next-read freshness, revocation40001 and existing Finance/lock/negative-control cases pass; fixture DBs removed/cluster stopped."
+    },
+    {
+      "kind": "run",
+      "path": "docs/verification/2026-10-30-dashboard-activity-snapshot-stores.md",
+      "executed": true,
+      "result": "Types, scoped237/1533+QA/Biome,4 affected driver cases and frozen canonical local smoke/two GETs pass. SQL9->8 each; filters2072->1821ms, list2346->2143ms individual samples. App listeners unchanged; no broad budget/page-speed or deployment qualification."
+    }
+  ]
+}

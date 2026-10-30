@@ -72,12 +72,9 @@ export async function diagnoseActivityReads(page, origin) {
         facts.procedure === "activity.filters"
           ? "activityFilterSql"
           : "activityPageSql"
-      for (const phase of [
-        total,
-        projection,
-        "activityAdmission",
-        "activityStores",
-      ])
+      // Separate Store timing remains readable for older traces; current scope
+      // returns its Store projection inside activityAdmission.
+      for (const phase of [total, projection, "activityAdmission"])
         if (serverPhases[phase]?.count !== 1)
           throw Error("Current Activity timing is unavailable.")
       if ((serverPhases.transactionSql?.count ?? 0) < 3)

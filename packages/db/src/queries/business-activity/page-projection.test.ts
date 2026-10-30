@@ -184,7 +184,7 @@ test("list plus exact count uses one projection statement after the unchanged sc
   expect(value.total).toBe(5)
   expect(value.items).toHaveLength(2)
   expect(value.nextCursor).not.toBeNull()
-  expect(statements).toHaveLength(3)
+  expect(statements).toHaveLength(2)
 })
 
 test("both sort directions traverse tied legacy payments without duplicates and retain exact money", async () => {
@@ -320,8 +320,8 @@ test("large recorded history retains bounded decoding and source predicate pushd
   expect(result.value.total).toBe(1004)
   expect(result.value.items).toHaveLength(2)
   expect(result.rowCounts.at(-1)).toBe(3)
-  expect(result.statements).toHaveLength(3)
-  const projection = result.statements[2]
+  expect(result.statements).toHaveLength(2)
+  const projection = result.statements[1]
   if (!projection) throw Error("Missing page projection")
   const plan = await memory.query(
     `EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON) ${projection.text}`,
@@ -346,7 +346,7 @@ test("filter actors and availability share one bounded projection after current 
     result.value.types.find((type) => type.type === "payment.refund_recorded")
       ?.availability,
   ).toBe("legacy")
-  expect(result.statements).toHaveLength(3)
+  expect(result.statements).toHaveLength(2)
   expect(result.rowCounts.at(-1)).toBe(1)
 })
 
@@ -547,10 +547,9 @@ test("actual list/filter entrypoints attribute admission, Store and projection w
         trace = value
       },
     )
-    expect(result.statements).toHaveLength(3)
+    expect(result.statements).toHaveLength(2)
     expect(trace?.phases).toMatchObject({
       activityAdmission: { count: 1, failures: 0 },
-      activityStores: { count: 1, failures: 0 },
       [kind === "list" ? "activityPageSql" : "activityFilterSql"]: {
         count: 1,
         failures: 0,
@@ -564,11 +563,11 @@ test("actual list/filter entrypoints attribute admission, Store and projection w
     const header = formatPerformanceServerTiming(trace)
     for (const phase of [
       "activityAdmission",
-      "activityStores",
       kind === "list" ? "activityPageSql" : "activityFilterSql",
       kind === "list" ? "activityList" : "activityFilters",
     ])
       expect(header).toContain(`ew_${phase};dur=`)
+    expect(trace.phases).not.toHaveProperty("activityStores")
     expect(JSON.stringify(trace)).not.toContain("tenant-a")
     expect(JSON.stringify(trace)).not.toContain("OWN-1")
   }
@@ -607,7 +606,6 @@ test("tracing preserves access/cursor refusals and never starts a refused projec
   ).rejects.toMatchObject({ code: "BAD_REQUEST" })
   expect(trace?.phases).toMatchObject({
     activityAdmission: { count: 1 },
-    activityStores: { count: 1 },
   })
   expect(trace?.phases).not.toHaveProperty("activityFilterSql")
 })

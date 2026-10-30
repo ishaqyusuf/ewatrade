@@ -453,7 +453,6 @@ for (const scenario of ["valid", "refused", "malformed", "missing-trace"]) {
           const filters = url.pathname === "/api/trpc/activity.filters"
           const names = [
             "activityAdmission",
-            "activityStores",
             filters ? "activityFilters" : "activityList",
             filters ? "activityFilterSql" : "activityPageSql",
           ]

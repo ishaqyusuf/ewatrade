@@ -27,23 +27,7 @@ export async function businessActivityScope(
       "Current business operations access is required for Activity.",
     )
   const manages = member.role === "OWNER" || member.role === "ADMIN"
-  const stores = await tracePhase("activityStores", () =>
-    tx.store.findMany({
-      where: {
-        tenantId: input.tenantId,
-        ...(!manages ? { status: "ACTIVE" as const } : {}),
-        ...(!manages && member.staffAccessMode === "SCOPED"
-          ? {
-              id: {
-                in: member.staffStoreAssignments.map((grant) => grant.storeId),
-              },
-            }
-          : {}),
-      },
-      select: { id: true, name: true, salesRepOrderVisibility: true },
-      orderBy: [{ name: "asc" }, { id: "asc" }],
-    }),
-  )
+  const stores = member.stores
   if (!manages && !stores.length)
     throw new BusinessActivityError(
       "FORBIDDEN",

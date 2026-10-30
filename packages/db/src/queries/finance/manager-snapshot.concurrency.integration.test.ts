@@ -48,7 +48,7 @@ beforeAll(async () => {
     CREATE TABLE "Membership" (id text PRIMARY KEY,"tenantId" text REFERENCES "Tenant","userId" text,role "MembershipRole",status "MembershipStatus","staffAccessMode" text,"staffAccessRevision" integer,UNIQUE("tenantId","userId"));
     CREATE TABLE "SubscriptionPlan" (id text PRIMARY KEY,key text);
     CREATE TABLE "TenantSubscription" (id text PRIMARY KEY,"tenantId" text REFERENCES "Tenant","planId" text REFERENCES "SubscriptionPlan",provider text,status text,"billingSubscriptionId" text,"currentPeriodEndsAt" timestamp(3));
-    CREATE TABLE "Store" (id text PRIMARY KEY,"tenantId" text,status text);
+    CREATE TABLE "Store" (id text PRIMARY KEY,"tenantId" text,status text,name text,"salesRepOrderVisibility" text);
     CREATE TABLE "StaffStoreAssignment" (id text PRIMARY KEY,"membershipId" text,"tenantId" text,"storeId" text,status text,role text);
   `)
 })
@@ -332,5 +332,68 @@ check(
       if (!result.ok) expect(result.error).toBe(failure)
       await expect(next()).rejects.toMatchObject({ code: "FORBIDDEN" })
     }
+  },
+)
+
+check(
+  "Activity projected Store grants keep the existing transaction snapshot through a Member lock wait",
+  async () => {
+    await seed()
+    await writer.query(`UPDATE "Membership" SET role='CASHIER',"staffAccessMode"='SCOPED' WHERE id='member-a';
+    INSERT INTO "Store" VALUES ('first','tenant-a','ACTIVE','First','OWN_SALES'),('second','tenant-a','ACTIVE','Second','ALL_STORE_ORDERS'),('foreign','tenant-b','ACTIVE','Foreign','ALL_STORE_ORDERS');
+    INSERT INTO "StaffStoreAssignment" VALUES ('first-grant','member-a','tenant-a','first','ACTIVE','CASHIER'),('second-grant','member-a','tenant-a','second','REVOKED','CASHIER')`)
+    const viewer = { tenantId: actor.tenantId, viewerUserId: actor.actorUserId }
+    const result = await whileWaiting(
+      (tx) => getActivityScopeMember(tx, viewer),
+      `UPDATE "StaffStoreAssignment" SET status='REVOKED' WHERE id='first-grant'; UPDATE "StaffStoreAssignment" SET status='ACTIVE' WHERE id='second-grant'; UPDATE "Store" SET name='Changed',"salesRepOrderVisibility"='ALL_STORE_ORDERS' WHERE id='first'`,
+    )
+    expect(result.ok).toBe(true)
+    if (result.ok)
+      expect(result.value?.stores).toEqual([
+        { id: "first", name: "First", salesRepOrderVisibility: "OWN_SALES" },
+      ])
+    expect(
+      (
+        await db.$transaction(
+          (tx) => getActivityScopeMember(tx, viewer),
+          options,
+        )
+      )?.stores,
+    ).toEqual([
+      {
+        id: "second",
+        name: "Second",
+        salesRepOrderVisibility: "ALL_STORE_ORDERS",
+      },
+    ])
+  },
+)
+
+check(
+  "Activity Member revocation serializes the projected Store read before it can return data",
+  async () => {
+    await seed()
+    await writer.query(
+      `INSERT INTO "Store" VALUES ('first','tenant-a','ACTIVE','Private store','OWN_SALES')`,
+    )
+    const viewer = { tenantId: actor.tenantId, viewerUserId: actor.actorUserId }
+    const result = await whileWaiting(
+      (tx) => getActivityScopeMember(tx, viewer),
+      `UPDATE "Membership" SET status='SUSPENDED' WHERE id='member-a'`,
+    )
+    expect(result.ok).toBe(false)
+    if (!result.ok) {
+      expect(result.error).toBeInstanceOf(Prisma.PrismaClientKnownRequestError)
+      if (result.error instanceof Prisma.PrismaClientKnownRequestError) {
+        expect(result.error.code).toBe("P2010")
+        expect(result.error.message).toContain("40001")
+      }
+    }
+    expect(
+      await db.$transaction(
+        (tx) => getActivityScopeMember(tx, viewer),
+        options,
+      ),
+    ).toBeNull()
   },
 )

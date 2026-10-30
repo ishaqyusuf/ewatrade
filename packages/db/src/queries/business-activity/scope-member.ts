@@ -2,6 +2,7 @@ import {
   type Membership,
   Prisma,
   type StaffStoreAssignment,
+  type Store,
   type SubscriptionPlan,
   type Tenant,
   type TenantSubscription,
@@ -20,6 +21,7 @@ type ScopeMemberRow = Pick<
   timezone: string
   metadata: Tenant["metadata"]
   assignments: Pick<StaffStoreAssignment, "storeId" | "role">[]
+  stores: Pick<Store, "id" | "name" | "salesRepOrderVisibility">[]
   subscriptionId: string | null
   planKey: string | null
   provider: TenantSubscription["provider"] | null
@@ -28,7 +30,7 @@ type ScopeMemberRow = Pick<
   currentPeriodEndsAt: Date | null
 }
 
-/** Uses the caller's existing transaction and retains its Membership row lock. */
+/** Uses the caller's existing repeatable snapshot and retains its Membership row lock. */
 export async function getActivityScopeMember(
   tx: Pick<Prisma.TransactionClient, "$queryRaw">,
   input: { tenantId: string; viewerUserId: string },
@@ -43,6 +45,19 @@ export async function getActivityScopeMember(
         WHERE g."membershipId"=m.id AND g."tenantId"=m."tenantId"
           AND g.status='ACTIVE' AND s.status='ACTIVE'
       ),'[]'::jsonb) AS assignments,
+      COALESCE((
+        SELECT jsonb_agg(jsonb_build_object('id',s.id,'name',s.name,'salesRepOrderVisibility',s."salesRepOrderVisibility") ORDER BY s.name ASC,s.id ASC)
+        FROM "Store" s WHERE s."tenantId"=m."tenantId"
+          AND m.status='ACTIVE' AND t."isActive"
+          AND m.role IN ('OWNER','ADMIN','MANAGER','CASHIER','OPERATOR')
+          AND (m.role IN ('OWNER','ADMIN') OR (
+            s.status='ACTIVE' AND (m."staffAccessMode"<>'SCOPED' OR EXISTS (
+              SELECT 1 FROM "StaffStoreAssignment" g
+              WHERE g."tenantId"=m."tenantId" AND g."membershipId"=m.id
+                AND g."storeId"=s.id AND g.status='ACTIVE'
+            ))
+          ))
+      ),'[]'::jsonb) AS stores,
       sub.id AS "subscriptionId", p.key AS "planKey", sub.provider::text AS provider,
       sub.status::text AS "subscriptionStatus", sub."billingSubscriptionId", sub."currentPeriodEndsAt"
     FROM "Membership" m JOIN "Tenant" t ON t.id=m."tenantId"
@@ -76,5 +91,6 @@ export async function getActivityScopeMember(
     staffAccessRevision: row.staffAccessRevision,
     tenant: { timezone: row.timezone, metadata: row.metadata, subscription },
     staffStoreAssignments: row.assignments,
+    stores: row.stores,
   }
 }
