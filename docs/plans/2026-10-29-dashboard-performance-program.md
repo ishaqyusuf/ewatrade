@@ -780,3 +780,25 @@ router test's synthetic Session shape is repaired; production auth/API unchanged
 Owned fast237/1533+QA tooling/Biome, H01/H02 and frozen canonical local smoke pass,
 runtime unverified. No real conversation/read acknowledgement, restart/deployment
 or page-latency claim. Prepared9eb8 files remain separate and unchanged. Overall3/27.
+
+## Assistant/staff refused-read intervals — DP-201/204/401/403/407
+
+- [x] Actual component/hooks plus installed query/tRPC observers reproduce known
+  refusal interval work for P18/P19/P21/P22/P23/P24/P33.
+- [x] Reuse the current refusal helper at all seven sites. Retain activation,
+ 30s/60s cadence, empty queues, non-review/no-poll mode, focus recovery, transient
+  handling and existing permission/financial/command authority.
+- [x] Both mounted suites pass (21 new owner cases and16 retained Assistant
+  cases), plus shared classifier checks. No live business/AI action.
+- [x] Complete relevant types, owned gates and frozen local smoke; commit.
+
+[Receipt](../verification/2026-10-30-dashboard-assistant-staff-refusal-polls.md).
+A2 applies only to these owners here; remaining polling/lifetime and domain-wide
+optimized budgets stay open. Full program remains3/27 accepted.
+
+Executed:37 mounted cases across two isolated suites plus shared classifier
+checks, Dashboard/owned fixture types, owned fast237/1533+QA tooling/Biome and
+H01/H02 pass. Frozen canonical local smoke passes, runtime unverified; exact error/
+focus proof is inert. No real AI/business/permission/approval action, shared restart,
+deployment or page-speed claim. Prepared optimized9eb8 remains unchanged and
+excludes later source. Other A2 owners remain; full program3/27 accepted.

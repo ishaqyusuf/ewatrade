@@ -153,3 +153,13 @@ source hypotheses. P28 needs bounded error/completion proof; durable uploads/job
 financial/approval/access queues and private proofs have explicit exceptions.
 Other rows link existing evidence or state their source-only gap. No product edit,
 runtime timing or DP-201/203/204 acceptance is claimed; overall3/27 remains.
+
+## Assistant/staff interval conformance —30October2026
+
+P18/P19/P21/P22/P23/P24/P33 now use the existing refusal interval helper. Known
+FORBIDDEN/UNAUTHORIZED/NOT_FOUND stop only repeated interval work; active observers,
+focus/manual/invalidation recovery, success cadence and global retry policy remain.
+Freshness/GC/key/scope and mutation authority are unchanged. Staff non-review
+keeps no interval and always-fresh focus; voice gateway/empty queues retain healthy
+cadence.37 actual mounted cases plus classifier checks pass; broader owner and
+optimized acceptance remain. [Receipt](../verification/2026-10-30-dashboard-assistant-staff-refusal-polls.md).

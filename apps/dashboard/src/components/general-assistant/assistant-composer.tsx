@@ -1,5 +1,6 @@
 "use client"
 import { useTRPC } from "@/trpc/client"
+import { readPollInterval } from "@/trpc/query-read-errors"
 import { Button } from "@ewatrade/ui"
 import {
   ArrowUp02Icon,
@@ -104,7 +105,7 @@ function VoiceComposer({
       retry: false,
       // The local Whisper gateway can come and go; hide the mic when it does.
       staleTime: 30_000,
-      refetchInterval: 60_000,
+      refetchInterval: (query) => readPollInterval(query.state.error, 60_000),
     }),
   )
   const [hint, setHint] = useState(false)

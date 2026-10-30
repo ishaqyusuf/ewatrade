@@ -4,6 +4,7 @@ import {
   SettingsSection,
 } from "@/components/settings/settings-page"
 import { useTRPC } from "@/trpc/client"
+import { readPollInterval } from "@/trpc/query-read-errors"
 import { Button } from "@ewatrade/ui"
 import { useQuery } from "@tanstack/react-query"
 
@@ -12,7 +13,7 @@ export function AssistantAllowance({ compact = false }: { compact?: boolean }) {
   const query = useQuery(
     trpc.productAssistant.capabilities.queryOptions(undefined, {
       staleTime: 0,
-      refetchInterval: 30000,
+      refetchInterval: (query) => readPollInterval(query.state.error, 30_000),
     }),
   )
   if (query.isPending)

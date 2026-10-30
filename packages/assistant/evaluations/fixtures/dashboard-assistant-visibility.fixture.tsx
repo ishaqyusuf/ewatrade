@@ -284,6 +284,7 @@ globalThis.fetch = Object.assign(
   },
 )
 const reads: string[] = []
+const readFailures = new Map<string, string>()
 function endpoint(path: string, get: () => unknown) {
   return {
     queryKey: () => [path],
@@ -292,6 +293,8 @@ function endpoint(path: string, get: () => unknown) {
       queryKey: [path, input],
       queryFn: async () => {
         reads.push(path)
+        const code = readFailures.get(path)
+        if (code) throw { data: { code } }
         return get()
       },
       ...options,
@@ -388,6 +391,7 @@ async function mounted(panel = false) {
   recordGate = undefined
   recordAborts = 0
   reads.length = 0
+  readFailures.clear()
   runReads.length = 0
   stops = 0
   starts = 0
@@ -727,6 +731,60 @@ test("transient record errors retain interval recovery and minimizing aborts an 
     'href="https://example.invalid/sales?catalogDetail=item-a"',
   )
 })
+
+for (const path of ["pending", "voice"]) {
+  for (const code of ["FORBIDDEN", "UNAUTHORIZED", "NOT_FOUND"])
+    test(`${path} stops ${code} intervals and resumes on focus`, async () => {
+      const ui = await mounted()
+      cleanups.push(ui.close)
+      await ui.render(true)
+      readFailures.set(path, code)
+      await act(async () => {
+        await ui.client.invalidateQueries({ queryKey: [path] })
+        await delay(10)
+      })
+      expect(ui.client.getQueryData([path, undefined])).toBeUndefined()
+      const refused = reads.filter((read) => read === path).length
+      await act(async () => {
+        await delay(45)
+      })
+      expect(reads.filter((read) => read === path)).toHaveLength(refused)
+      readFailures.delete(path)
+      await act(async () => {
+        focusManager.setFocused(false)
+        focusManager.setFocused(true)
+        await delay(20)
+      })
+      await act(async () => {
+        await delay(20)
+      })
+      expect(reads.filter((read) => read === path).length).toBeGreaterThan(
+        refused,
+      )
+      const recovered = reads.filter((read) => read === path).length
+      await act(async () => {
+        await delay(40)
+      })
+      expect(reads.filter((read) => read === path).length).toBeGreaterThan(
+        recovered,
+      )
+    })
+  test(`${path} keeps transient interval recovery`, async () => {
+    const ui = await mounted()
+    cleanups.push(ui.close)
+    await ui.render(true)
+    readFailures.set(path, "INTERNAL_SERVER_ERROR")
+    await act(async () => {
+      await ui.client.invalidateQueries({ queryKey: [path] })
+      await delay(5)
+    })
+    const failed = reads.filter((read) => read === path).length
+    await act(async () => {
+      await delay(45)
+    })
+    expect(reads.filter((read) => read === path).length).toBeGreaterThan(failed)
+  })
+}
 
 process.on("exit", () => {
   globalThis.setInterval = realInterval

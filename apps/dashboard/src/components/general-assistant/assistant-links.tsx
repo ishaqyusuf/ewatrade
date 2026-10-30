@@ -2,6 +2,7 @@
 import { useCatalogItemParams } from "@/hooks/use-catalog-item-params"
 import { useSetupAssistantParams } from "@/hooks/use-setup-assistant-params"
 import { useTRPC } from "@/trpc/client"
+import { readPollInterval } from "@/trpc/query-read-errors"
 import { cn } from "@ewatrade/ui"
 import { useQuery } from "@tanstack/react-query"
 import Link from "next/link"
@@ -60,14 +61,14 @@ export function AssistantLinks({
   const products = useQuery(
     trpc.productAssistant.capabilities.queryOptions(undefined, {
       staleTime: 0,
-      refetchInterval: 30_000,
+      refetchInterval: (query) => readPollInterval(query.state.error, 30_000),
     }),
   )
   const setup = useQuery(trpc.setupAssistant.state.queryOptions())
   const allowance = useQuery(
     trpc.assistant.allowance.queryOptions(undefined, {
       retry: false,
-      refetchInterval: 30_000,
+      refetchInterval: (query) => readPollInterval(query.state.error, 30_000),
     }),
   )
   const { setParams } = useCatalogItemParams()

@@ -1,0 +1,51 @@
+{
+  "version": 1,
+  "id": "2026-10-30-dashboard-assistant-staff-refusal-polls",
+  "tickets": ["H02"],
+  "summary": "Local Assistant/staff/approval read owners stop known refused intervals using the existing helper while preserving active recovery and cadence. No deployment.",
+  "noAssistantImpact": "Read scheduling only at seven existing client sites. Same query activation, keys, freshness/GC, DTOs, global retry policy, live queues and server-derived permissions remain. Known refusal erasure already exists; focus/manual/invalidation can recover, transients keep cadence. No assistant capability/tool/procedure, command/approval/confirmation, entitlement grant, model/provider action or deployment.",
+  "capabilities": [],
+  "procedures": [],
+  "docs": [
+    {
+      "topic": "feature",
+      "status": "local_only",
+      "path": ".brain/features/web-navigation-performance.md"
+    },
+    {
+      "topic": "api",
+      "status": "not_applicable",
+      "note": "Existing query/mutation inputs and outputs unchanged."
+    },
+    {
+      "topic": "permissions",
+      "status": "not_applicable",
+      "note": "No grant or scope change; fresh server authority and current writes remain."
+    },
+    {
+      "topic": "schema",
+      "status": "not_applicable",
+      "note": "No schema or migration."
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "test",
+      "path": "packages/assistant/evaluations/fixtures/dashboard-read-refusal-polls.fixture.tsx",
+      "executed": true,
+      "result": "Twenty-one actual component/hook/tRPC/query owner cases pass after 15 known-refusal red cases. Five owners/three known codes stop intervals, erase payload and resume on focus; transients continue; non-review staff interval remains absent. SDK transport/data inert; no mutations allowed."
+    },
+    {
+      "kind": "test",
+      "path": "packages/assistant/evaluations/fixtures/dashboard-assistant-visibility.fixture.tsx",
+      "executed": true,
+      "result": "Sixteen retained actual GeneralChat/composer/record-reader cases pass, including eight new pending/voice refusal/transient cases after six red reproductions. Hidden draft retention and command/run recovery remain inert."
+    },
+    {
+      "kind": "run",
+      "path": "docs/verification/2026-10-30-dashboard-assistant-staff-refusal-polls.md",
+      "executed": true,
+      "result": "Both isolated mounted entries (37 cases) plus shared classifier checks, Dashboard/owned fixture types, owned fast237/1533 plus QA tooling types/Biome and H01/H02 pass. Frozen canonical existing-data local smoke passes QA login/Catalog/draft total/cancel, runtimeVerified:false. Exact error/focus behavior remains inert proof; no real AI/business/permission/approval action, shared restart or deployment. Prepared optimized9eb8 manifests unchanged and exclude later source; no page-speed claim."
+    }
+  ]
+}

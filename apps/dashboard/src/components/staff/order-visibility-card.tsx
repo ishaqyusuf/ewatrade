@@ -1,6 +1,7 @@
 "use client"
 
 import { useTRPC } from "@/trpc/client"
+import { readPollInterval } from "@/trpc/query-read-errors"
 import type { RouterOutputs } from "@ewatrade/api/trpc/routers/_app"
 import { Button, Select, Skeleton } from "@ewatrade/ui"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
@@ -24,7 +25,9 @@ export function useOrderVisibility(storeId: string, review = false) {
       { storeId },
       {
         refetchOnWindowFocus: "always",
-        refetchInterval: review ? 30_000 : false,
+        refetchInterval: review
+          ? (query) => readPollInterval(query.state.error, 30_000)
+          : false,
       },
     ),
   )

@@ -214,3 +214,12 @@ cache-generation guards and an applied cursor stop that work while preserving
 full active catch-up and existing acknowledgement idempotency. Already issued
 mutations may finish. Exact hook/caller SDK proof is inert; this does not claim
 live conversation or whole-DP-204/406 acceptance. Historical ledger stays pinned.
+
+## Implementation follow-up: A2 / Assistant and staff — 30 October 2026
+
+[Seven refused-read interval owners](../verification/2026-10-30-dashboard-assistant-staff-refusal-polls.md)
+apply the existing known-refusal helper at P18/P19/P21/P22/P23/P24/P33. Actual
+component/hooks with query/tRPC observers cover denied payload clearing, interval
+stop, focus recovery/resumption, transients and staff non-review mode. Existing
+activation/cadence, command and required live-read rules remain. This is a subset
+of A2; remaining queue/WhatsApp/attachment/domain owners and full tickets stay open.

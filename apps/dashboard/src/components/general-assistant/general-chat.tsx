@@ -7,6 +7,7 @@ import {
 import { useAssistantReceipt } from "@/hooks/use-assistant-receipt"
 import { useQuickChatParam } from "@/hooks/use-quick-chat-param"
 import { useTRPC } from "@/trpc/client"
+import { readPollInterval } from "@/trpc/query-read-errors"
 import {
   generalTokenBudgetLine as generalBudgetLine,
   generalTokenBudgetUsed as generalBudgetUsed,
@@ -147,7 +148,7 @@ export function useGeneralPendingReviews(
     trpc.assistant.pendingProposals.queryOptions(undefined, {
       enabled,
       retry: false,
-      refetchInterval: 60_000,
+      refetchInterval: (query) => readPollInterval(query.state.error, 60_000),
     }),
   )
   const signature = vm.data?.proposals
