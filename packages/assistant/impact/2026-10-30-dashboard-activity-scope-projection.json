@@ -1,0 +1,45 @@
+{
+  "version": 1,
+  "id": "2026-10-30-dashboard-activity-scope-projection",
+  "tickets": ["H02"],
+  "summary": "Combine fresh Activity scope member facts and its existing row lock into one query. Local only.",
+  "noAssistantImpact": "Existing Activity/notification scope read implementation only. Same actor/Tenant, fresh Membership SHARE lock, role/Store/Finance predicates, subscription policy, cursor/DTO and transaction options. No capability, tool, procedure contract, command, scope grant, cache, schema or provider change.",
+  "capabilities": [],
+  "procedures": [],
+  "docs": [
+    {
+      "topic": "feature",
+      "status": "local_only",
+      "path": ".brain/features/business-activity-notifications.md"
+    },
+    {
+      "topic": "permissions",
+      "status": "local_only",
+      "path": ".brain/api/permissions.md"
+    },
+    {
+      "topic": "api",
+      "status": "not_applicable",
+      "note": "Existing public inputs/outputs and procedure policy unchanged."
+    },
+    {
+      "topic": "schema",
+      "status": "not_applicable",
+      "note": "No schema/index/migration."
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "test",
+      "path": "packages/db/src/queries/business-activity/scope-member.test.ts",
+      "executed": true,
+      "result": "Actual in-process PostgreSQL scope/legacy nine cases,313 assertions;84 role/mode/subscription combinations, fresh refusals and row-share retention/release."
+    },
+    {
+      "kind": "run",
+      "path": "docs/verification/2026-10-30-dashboard-activity-scope-projection.md",
+      "executed": true,
+      "result": "Owned DB/API/Dashboard types and downstream/caller/policy parity pass. Scope operations3 to2; no browser latency or whole-ticket acceptance claim."
+    }
+  ]
+}

@@ -6,6 +6,7 @@ import {
   resolveRetailOpsPlanId,
 } from "../retail-ops-subscriptions"
 import { BusinessActivityError } from "./errors"
+import { getActivityScopeMember } from "./scope-member"
 
 export type BusinessActivityViewer = { tenantId: string; viewerUserId: string }
 
@@ -13,46 +14,7 @@ export async function businessActivityScope(
   tx: Prisma.TransactionClient,
   input: BusinessActivityViewer,
 ) {
-  await tx.$queryRaw`
-    SELECT "id" FROM "Membership" WHERE "tenantId"=${input.tenantId}
-    AND "userId"=${input.viewerUserId} FOR SHARE`
-  const member = await tx.membership.findFirst({
-    where: {
-      tenantId: input.tenantId,
-      userId: input.viewerUserId,
-      status: "ACTIVE",
-      tenant: { isActive: true },
-    },
-    select: {
-      id: true,
-      role: true,
-      staffAccessMode: true,
-      staffAccessRevision: true,
-      tenant: {
-        select: {
-          timezone: true,
-          metadata: true,
-          subscription: {
-            select: {
-              plan: { select: { key: true } },
-              provider: true,
-              status: true,
-              billingSubscriptionId: true,
-              currentPeriodEndsAt: true,
-            },
-          },
-        },
-      },
-      staffStoreAssignments: {
-        where: {
-          tenantId: input.tenantId,
-          status: "ACTIVE",
-          store: { tenantId: input.tenantId, status: "ACTIVE" },
-        },
-        select: { storeId: true, role: true },
-      },
-    },
-  })
+  const member = await getActivityScopeMember(tx, input)
   if (
     !member ||
     !["OWNER", "ADMIN", "MANAGER", "CASHIER", "OPERATOR"].includes(member.role)

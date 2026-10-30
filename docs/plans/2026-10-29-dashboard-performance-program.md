@@ -1,5 +1,18 @@
 # Dashboard performance program
 
+## Activity scope projection — DP-103/407,30October2026
+
+- [x] Combine the existing fresh Membership lock and scope facts into one query;
+  scope resolution uses two operations instead of three.
+- [x] Preserve role/Store/Finance rules, transaction, subscription and cursor facts.
+  Actual PostgreSQL lock retention/release and84 access combinations pass.
+- [x] Nine focused scope/legacy cases,313 assertions; DB/API/Dashboard types and
+  downstream/caller/policy parity pass.
+
+[Receipt](../verification/2026-10-30-dashboard-activity-scope-projection.md). No cache, schema, public API or permission
+change. Preparedf027 excludes this source; browser/optimized Activity acceptance
+remains open. Full program3/27; no service restart or deployment for this slice.
+
 ## Finance account projection — DP-103/405,30October2026
 
 - [x] Actual reader reproduces three projection statements on one transaction
