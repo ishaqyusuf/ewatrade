@@ -295,3 +295,22 @@ Actual hook5/52, regressions9/74, types, scoped237/1533,H02 and local canonical 
 pass. Inert markers establish read wiring, not live financial-command or optimized
 budget acceptance. Overall4/27; DP-203 and broader family requirements remain open.
 [Evidence](../verification/2026-10-30-dashboard-order-change-read-effects.md).
+
+## Current override ledger —30October2026
+
+[Owner ledger](2026-10-30-dashboard-query-override-ledger.md) classifies every current
+direct `staleTime`/`gcTime` override from root's offline AST inventory (209 rows,
+1140 files) under the eight categories above, following shared factories/spreads
+to their real consumers. It records why each value is correct, its activation,
+invalidation and authority, and the explicit exceptions: pinned snapshots (∞),
+command-time reviews (0), durable status (0), private receipts/links (gc 0) and
+public proof on its own client. The earlier 425-site counts above remain historical.
+
+No misclassified owner requiring a production change was found. Customer details
+is explicitly C3: a protected, POS-role-checked, Tenant-bounded private contact
+target retains its existing fresh-on-open rule. No TTL/access behavior changes.
+Three overrides explicitly equal the default. One fixture and the global default
+are identified separately; all209 rows are mechanically reconciled. Directory
+hydration is proven separately under DP-102. This ledger does
+not replace the DP-202 revisit or DP-204 lifecycle evidence, adds no criterion, and
+closes no ticket; the original 27 criteria and 59 routes are unchanged.

@@ -7,13 +7,23 @@ Current primary checkout; local implementation, tests and commits only. No push,
 deployment, provider changes, paid resources or business submissions.
 
 This remains the durable scope across goal continuations. Individual source slices
-and passing smoke runs do not replace full ticket acceptance. **6/27 tickets are
-accepted (22.2%)**: DP-001, DP-002, DP-003, DP-101, DP-103 and DP-302. All27 acceptance criteria below are
+and passing smoke runs do not replace full ticket acceptance. **7/27 tickets are
+accepted (25.9%)**: DP-001, DP-002, DP-003, DP-101, DP-103, DP-201 and DP-302. All27 acceptance criteria below are
 preserved verbatim. Historical contracts and evidence remain authoritative in the
 [complete pre-consolidation history](2026-10-30-dashboard-performance-program-history-c119f31b.md).
 That file records earlier runtime/build states; its “current” labels are historical.
 
 ## Current assessment and phase order
+
+DP-201 is accepted locally after the current override ledger reconciles209/209
+rows (207 production assignments, one default and one fixture exclusion), with
+shared consumers checked and the existing private-contact freshness rationale
+explicitly classified C3 from protected POS-role/Tenant admission. No TTL, cache,
+permission or runtime behavior changed. Default inheritance does not imply every
+read is a C1 directory. Revisit, post-command, lifecycle and aggregate performance
+remain separately owned. Program **7/27**, all59routes/ninefamilies and20 criteria
+retained; no extra connected sweep or deployment.
+[Complete explicit-owner cache policy ledger](2026-10-30-dashboard-query-override-ledger.md).
 
 The latest optimized local candidate **lkDj0kGJKT97vq6tJTXym** defers the retained
 Studio generator until first intent and loads only the selected Finance view code.
@@ -564,7 +574,7 @@ Implement the demonstrated owners first, then prove source-only hypotheses and
 roll out the remaining activation/refusal/budget contracts. Required visible
 financial/access/approval queues and bounded durable recovery retain freshness.
 
-- [ ] **DP-201 Freshness policy.** Inventory reference/directory/live financial/
+- [x] **DP-201 Freshness policy.** Inventory reference/directory/live financial/
   access/proof reads; specify retention, activation, invalidation and exceptions.
   Acceptance: policy is applied at correct owners with explicit sensitive-read rules.
 - [ ] **DP-202 Detail and tab lifetime.** Preserve loaded state inside the current
