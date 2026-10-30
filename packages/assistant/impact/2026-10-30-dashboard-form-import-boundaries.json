@@ -1,0 +1,46 @@
+{
+  "version": 1,
+  "id": "2026-10-30-dashboard-form-import-boundaries",
+  "tickets": ["H02"],
+  "summary": "Defer Catalog form state with its content, defer Finance setup only when needed, and narrow two server layout plan/gate imports. Opus authored, Codex verified; local only.",
+  "noAssistantImpact": "Same command/form owners, permission and plan checks, query bodies, arguments, cache lifetime and server-rendered content. Only module delivery changes; code retry never submits a command. No new capability/procedure/provider or persistence change.",
+  "capabilities": [],
+  "procedures": [],
+  "docs": [
+    {
+      "topic": "feature",
+      "status": "local_only",
+      "path": ".brain/features/web-navigation-performance.md"
+    },
+    {
+      "topic": "api",
+      "status": "not_applicable",
+      "note": "No read, command or authority contract change."
+    },
+    {
+      "topic": "schema",
+      "status": "not_applicable",
+      "note": "No schema, SQL or persistence change."
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "test",
+      "path": "apps/dashboard/src/components/sheets/optional-code-recovery.test.tsx",
+      "executed": true,
+      "result": "Old source6pass/3fail; new9/124 pass. Closed module evaluation, create/edit initial values/reset keys, current props and owner-local code recovery."
+    },
+    {
+      "kind": "test",
+      "path": "apps/dashboard/src/components/finance/finance-setup-ssr.mounted.test.ts",
+      "executed": true,
+      "result": "Window-free actual installed-loader/FinanceSetupForm/React Hook Form SSR passes old and new. Finance prefetch mounted consumer wrapper also passes."
+    },
+    {
+      "kind": "test",
+      "path": "packages/db/src/queries/layout-plan-gate-exports.test.ts",
+      "executed": true,
+      "result": "Actual public resolution and bundled compiler graph exclude unrelated query domains; old-barrel positive control observes them. Output is never executed."
+    }
+  ]
+}

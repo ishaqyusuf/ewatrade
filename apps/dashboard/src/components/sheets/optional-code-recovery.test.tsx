@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, expect, mock, test } from "bun:test"
+import { minorToMajorInput } from "@ewatrade/utils/currency"
 import { DOMImplementation } from "@xmldom/xmldom"
 import dynamic from "next/dist/shared/lib/app-dynamic"
 import * as nuqs from "nuqs"
@@ -9,6 +10,7 @@ import {
   type ReactNode,
   Suspense,
   act,
+  useState,
 } from "react"
 
 // Actual optional-code call sites under the installed Next16 App loader, which
@@ -195,9 +197,13 @@ mock.module("@/components/modals/finance-dialog-frame", () => ({
 mock.module("@/components/finance/form-context", () => ({
   FinanceFormProvider: Pass,
 }))
-mock.module("@/components/catalog-item/form-context", () => ({
-  CatalogItemFormProvider: Pass,
-}))
+// Lazy mock factories run when an owner first evaluates the module, so closed
+// owners can be checked for eager optional form code.
+const evaluated: string[] = []
+mock.module("@/components/catalog-item/form-context", () => {
+  evaluated.push("catalog-item/form-context")
+  return { CatalogItemFormProvider: Pass }
+})
 mock.module("@/components/catalog-item/catalog-appearance", () => ({
   CatalogAppearance: Pass,
   useCatalogThemeClass: () => "catalog-theme",
@@ -205,12 +211,63 @@ mock.module("@/components/catalog-item/catalog-appearance", () => ({
 mock.module("@/components/catalog-item/catalog-item-skeleton", () => ({
   CatalogItemSkeleton: () => <output>item-skeleton</output>,
 }))
+// Other Finance views stay inert; the workspace, no-Book intro and setup loader run.
+mock.module("next/dist/client/components/error-boundary", () => ({
+  ErrorBoundary: Pass,
+}))
+mock.module("@/components/dashboard/workspace-error", () => ({
+  WorkspaceError: () => null,
+}))
+mock.module("@/components/scrollable-content", () => ({
+  ScrollableContent: Pass,
+}))
+mock.module("@/components/tables/core", () => ({
+  TableToolbarSlotProvider: Pass,
+}))
+mock.module("@/components/tables/expenses/skeleton", () => ({
+  ExpenseTableSkeleton: () => null,
+}))
+mock.module("@/components/tables/expenses/data-table", () => ({
+  ExpenseDataTable: () => null,
+}))
+mock.module("@/components/tables/finance-bank-statements/skeleton", () => ({
+  FinanceBankStatementTableSkeleton: () => null,
+}))
+mock.module("@/components/tables/finance-suppliers/data-table", () => ({
+  FinanceSupplierDataTable: () => null,
+}))
+mock.module("@/components/tables/finance-suppliers/skeleton", () => ({
+  FinanceSupplierTableSkeleton: () => null,
+}))
+mock.module("@/components/finance/bank-statements", () => ({
+  FinanceBankStatements: () => null,
+}))
+mock.module("@/components/finance/cash-count-history", () => ({
+  FinanceCashCountHistory: () => null,
+}))
+mock.module("@/components/finance/finance-accounts", () => ({
+  FinanceAccounts: () => null,
+}))
+mock.module("@/components/finance/finance-directory-view", () => ({
+  FinanceDirectoryView: () => null,
+  financeRowViewOptions: [],
+}))
+mock.module("@/components/finance/finance-header", () => ({
+  FinanceHeader: () => <h1>Finance</h1>,
+}))
+mock.module("@/components/finance/finance-overview", () => ({
+  FinanceOverview: () => <output>finance-overview</output>,
+}))
+mock.module("@/components/finance/finance-reports", () => ({
+  FinanceReports: () => null,
+}))
 
 const commands: string[] = []
 mock.module("@/trpc/client", () => ({
   getDataCacheGeneration: () => 0,
   useTRPC: () => ({
     catalog: { getItem: { queryOptions: () => ({ kind: "item" }) } },
+    finance: { book: { queryOptions: () => ({ kind: "book" }) } },
     orders: {
       prepareReceipts: {
         queryOptions: (_input: unknown, options: object) => ({
@@ -265,13 +322,18 @@ const mutationOwners = new Map<
   string,
   { isPending: boolean; mutate: () => void }
 >()
+let savedItem: object | undefined
+let financeBook: object | null = null
 mock.module("@tanstack/react-query", () => ({
   useQuery: (options: { kind?: string }) =>
     options.kind === "setup"
       ? setupState
       : options.kind === "receipt"
         ? receiptState
-        : { data: undefined, isPending: true },
+        : options.kind === "item" && savedItem
+          ? { data: savedItem, isPending: false }
+          : { data: undefined, isPending: true },
+  useSuspenseQuery: () => ({ data: financeBook }),
   useMutation: ({ name }: { name: string }) => {
     const owner = mutationOwners.get(name) ?? {
       isPending: false,
@@ -297,9 +359,14 @@ mock.module("@/hooks/use-receipt-download", () => ({
 const failures = new Map<string, number>()
 const imports: string[] = []
 const mounted = new Map<string, object>()
+// Mount identity shows whether an owner's reset key kept or replaced a body.
+const instances = new Map<string, number>()
+let instance = 0
 function lostChunk(name: string) {
   function Body(props: object) {
+    const [id] = useState(() => ++instance)
     mounted.set(name, props)
+    instances.set(name, id)
     return <output>{name}</output>
   }
   // `.then((module) => module.X)` adopts this thenable inside the literal
@@ -323,6 +390,7 @@ mock.module("@/components/finance/finance-sheet-content", () => ({
 }))
 mock.module("@/components/catalog-item/catalog-item-content", () => ({
   CatalogItemContent: lostChunk("item"),
+  CatalogItemWorkspace: lostChunk("item"),
 }))
 mock.module("@/components/setup-assistant/setup-chat", () => ({
   SetupChat: lostChunk("chat"),
@@ -342,6 +410,10 @@ mock.module("@/components/sheets/inventory-operation-sheet", () => ({
 mock.module("@/components/quick-assistant/quick-assistant-panel", () => ({
   QuickAssistantPanel: lostChunk("quick"),
 }))
+mock.module("@/components/finance/setup-form", () => {
+  evaluated.push("finance/setup-form")
+  return { FinanceSetupForm: lostChunk("setup") }
+})
 
 const { createRoot } = await import("react-dom/client")
 const { FinanceSheet } = await import("./finance-sheet")
@@ -358,6 +430,11 @@ const { OverviewSheets } = await import(
 const { QuickAssistant } = await import(
   "@/components/quick-assistant/quick-assistant"
 )
+const { FinanceWorkspace } = await import(
+  "@/components/finance/finance-workspace"
+)
+// Captured before any render: what importing the closed owners evaluated.
+const closedEvaluations = [...evaluated]
 const container = document.createElement("div")
 document.documentElement.appendChild(container)
 const opener = document.createElement("button")
@@ -458,6 +535,9 @@ beforeEach(() => {
   failures.clear()
   imports.length = 0
   mounted.clear()
+  instances.clear()
+  savedItem = undefined
+  financeBook = null
   operations.length = 0
   commands.length = 0
   chatChanges.length = 0
@@ -543,6 +623,74 @@ test("route-owned Catalog item content recovers inside its own frame without an 
   })
   expect(imports).toEqual(["item", "item"])
   expect(operations).toEqual(["sheet.code.load"])
+})
+
+test("closed Catalog and Finance owners evaluate no optional form module", () => {
+  expect(closedEvaluations).toEqual([])
+})
+
+test("Catalog item workspace receives the exact create/edit initial values and keeps its original reset keys", async () => {
+  // A fresh element per render: mocked URL state has no React subscription.
+  const sheet = (storeId = "store") => (
+    <CatalogItemSheet
+      currencyCode="NGN"
+      storeId={storeId}
+      onCreated={() => undefined}
+    />
+  )
+  params = new URLSearchParams({
+    catalogItem: "create",
+    catalogCreateKind: "product",
+    catalogCreateName: "Inert soap",
+    catalogCreatePrice: "1250",
+  })
+  await render(sheet())
+  expect(mounted.get("item")).toMatchObject({
+    storeId: "store",
+    currencyCode: "NGN",
+    closeError: null,
+    initialKind: "product",
+    initialName: "Inert soap",
+    initialPrice: minorToMajorInput(1250),
+  })
+  const created = instances.get("item")
+  await render(sheet())
+  expect(instances.get("item")).toBe(created)
+  await render(sheet("other-store"))
+  expect(instances.get("item")).not.toBe(created)
+  expect(mounted.get("item")).toMatchObject({ storeId: "other-store" })
+
+  savedItem = {
+    id: "item-inert",
+    kind: "service",
+    name: "Inert repair",
+    updatedAt: "2026-10-30T00:00:00.000Z",
+  }
+  params = new URLSearchParams({
+    catalogItem: "edit",
+    catalogEditItem: "item-inert",
+  })
+  await render(sheet())
+  expect(mounted.get("item")).toMatchObject({
+    storeId: "store",
+    allowKindChange: false,
+    closeError: null,
+    editItem: savedItem,
+    initialKind: "service",
+    initialName: "Inert repair",
+  })
+  expect(mounted.get("item")).not.toHaveProperty("initialPrice")
+  const edited = instances.get("item")
+  await render(sheet())
+  expect(instances.get("item")).toBe(edited)
+  savedItem = { ...savedItem, updatedAt: "2026-10-30T00:01:00.000Z" }
+  await render(sheet())
+  expect(instances.get("item")).not.toBe(edited)
+
+  await requestClose()
+  expect(params.has("catalogItem")).toBe(false)
+  await render(sheet())
+  expect(text()).toBe("")
 })
 
 test("Setup chat and list code failures stay inside the open Setup dialog without repeating commands", async () => {
@@ -710,5 +858,41 @@ test("Quick Assistant panel code failure recovers in its own dialog, minimizes b
   expect(mounted.get("quick")).toMatchObject({ opened: false })
   expect(chatChanges).toEqual([null, null, null])
   expect(imports).toEqual(["quick", "quick"])
+  expect(operations).toEqual(["sheet.code.load"])
+})
+
+test("Finance setup form code loads only without a Book and recovers inside its existing intro", async () => {
+  const workspace = () => (
+    <FinanceWorkspace view="overview" initialViewSettings={{}} />
+  )
+  financeBook = { id: "book-inert" }
+  await render(workspace())
+  expect(text()).toContain("finance-overview")
+  expect(text()).not.toContain("Start tracking your business money")
+  expect(evaluated).toEqual([])
+  expect(imports).toEqual([])
+
+  financeBook = null
+  failures.set("setup", 1)
+  await render(workspace())
+  const intro = () => container.getElementsByTagName("section")[0]
+  expect(intro()?.textContent).toContain("Start tracking your business money")
+  expect(intro()?.textContent).toContain("Couldn’t open this panel.")
+  expect(retryCount()).toBe(1)
+  expect(text()).not.toContain("page-error")
+  expect(evaluated).toEqual(["finance/setup-form"])
+  expect(imports).toEqual(["setup"])
+
+  await act(async () => retry())
+  await settle()
+  expect(intro()?.textContent).toContain("Start tracking your business money")
+  expect(mounted.get("setup")).toEqual({})
+  expect(retryCount()).toBe(0)
+
+  financeBook = { id: "book-inert" }
+  await render(workspace())
+  expect(text()).toContain("finance-overview")
+  expect(text()).not.toContain("Start tracking your business money")
+  expect(imports).toEqual(["setup", "setup"])
   expect(operations).toEqual(["sheet.code.load"])
 })

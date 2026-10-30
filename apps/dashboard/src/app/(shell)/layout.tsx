@@ -17,10 +17,8 @@ import { getServerSession } from "@/lib/session"
 import { getActiveTenant } from "@/lib/tenant"
 import { canManageTenant, normalizeRole } from "@ewatrade/auth/roles"
 import { prisma } from "@ewatrade/db"
-import {
-  getRetailOpsTenantPlanFeatures,
-  isWebsiteDomainsLaunchApproved,
-} from "@ewatrade/db/queries"
+import { getRetailOpsTenantPlanFeatures } from "@ewatrade/db/retail-ops-subscriptions"
+import { isWebsiteDomainsLaunchApproved } from "@ewatrade/db/website-domains-launch-gate"
 import { headers } from "next/headers"
 import { redirect } from "next/navigation"
 import { Suspense } from "react"

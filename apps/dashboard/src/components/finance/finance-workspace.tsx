@@ -1,6 +1,8 @@
 "use client"
 import { WorkspaceError } from "@/components/dashboard/workspace-error"
 import { ScrollableContent } from "@/components/scrollable-content"
+import { loadSheetCode } from "@/components/sheets/load-sheet-code"
+import { SheetBodyLoading } from "@/components/sheets/sheet-frame"
 import { TableToolbarSlotProvider } from "@/components/tables/core"
 import { ExpenseTableSkeleton } from "@/components/tables/expenses/skeleton"
 import { FinanceBankStatementTableSkeleton } from "@/components/tables/finance-bank-statements/skeleton"
@@ -16,6 +18,7 @@ import type {
 import type { TableSettings } from "@/utils/table-settings"
 import { useSuspenseQuery } from "@tanstack/react-query"
 import { ErrorBoundary } from "next/dist/client/components/error-boundary"
+import dynamic from "next/dynamic"
 import { type ReactNode, Suspense } from "react"
 import { ExpenseDataTable } from "../tables/expenses/data-table"
 import { FinanceBankStatements } from "./bank-statements"
@@ -28,8 +31,17 @@ import {
 import { FinanceHeader, type FinanceView } from "./finance-header"
 import { FinanceOverview } from "./finance-overview"
 import { FinanceReports } from "./finance-reports"
-import { FinanceSetupForm } from "./setup-form"
 import type { FinanceBook } from "./types"
+
+/** Only a business without a Book renders setup; its form code loads with it. */
+const FinanceSetupForm = dynamic(
+  () =>
+    loadSheetCode(
+      () => import("./setup-form").then((mod) => mod.FinanceSetupForm),
+      "body",
+    ),
+  { loading: SheetBodyLoading },
+)
 
 const UNSAVED_VIEW: DirectoryViewSettings = { scope: "", view: null }
 

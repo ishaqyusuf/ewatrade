@@ -40,8 +40,8 @@ const prisma = {
 const Sidebar = () => null
 const empty = () => null
 mock.module("@ewatrade/db", () => ({ prisma }))
-mock.module("@ewatrade/db/queries", () => ({
-  ...billing,
+mock.module("@ewatrade/db/retail-ops-subscriptions", () => ({ ...billing }))
+mock.module("@ewatrade/db/website-domains-launch-gate", () => ({
   isWebsiteDomainsLaunchApproved: () => false,
 }))
 mock.module("@/lib/session", () => ({

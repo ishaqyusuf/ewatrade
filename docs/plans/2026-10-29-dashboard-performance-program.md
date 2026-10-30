@@ -7,13 +7,32 @@ Current primary checkout; local implementation, tests and commits only. No push,
 deployment, provider changes, paid resources or business submissions.
 
 This remains the durable scope across goal continuations. Individual source slices
-and passing smoke runs do not replace full ticket acceptance. **4/27 tickets are
-accepted (14.8%)**: DP-001, DP-002, DP-101 and DP-103. All27 acceptance criteria below are
+and passing smoke runs do not replace full ticket acceptance. **5/27 tickets are
+accepted (18.5%)**: DP-001, DP-002, DP-101, DP-103 and DP-302. All27 acceptance criteria below are
 preserved verbatim. Historical contracts and evidence remain authoritative in the
 [complete pre-consolidation history](2026-10-30-dashboard-performance-program-history-c119f31b.md).
 That file records earlier runtime/build states; its “current” labels are historical.
 
 ## Current assessment and phase order
+
+The latest local candidate **pb3F9q4CBf7nbQaETmiFm** defers Catalog form state with
+its existing content and Finance setup until the no-Book intro needs it. Closed
+Catalog/Finance no longer deliver the calibrated form-library chunk; encoded JS
+753196→740390 / 824505→789343. Actual Catalog failure/retry/manual form/edit/Close,
+window-free Finance SSR, mounted read-sharing, strict types, scoped237/1533, H02,
+full build and canonical existing-data smoke pass. Three complete closed captures
+include canonical Services requests and replace the prior partial code observation.
+
+Measured shell/Settings imports now use two narrow DB public subpaths, retaining
+all query/authority bodies. Compiler815→8 inputs; actual Finance synchronous JS
+11629191→10877364 bytes and Settings9775999→9022244. This accepts **DP-302** against
+its unchanged criteria, bringing the program to **5/27**; byte/artifact improvement
+is not a latency/p95 or query-execution claim. DP-301/303 remain open for the Studio
+content owner and remaining measured tools. Opus is authoring the newly calibrated
+bell time-formatter/phone-code boundary while Codex owns testing. Development and
+all known local URL mappings restored after a Portless route-file fault; other
+services were not restarted. No deployment.
+[Form/server import proof, restoration and acceptance limits](../verification/2026-10-30-dashboard-form-import-boundaries.md).
 
 Midday patterns have been applied in request-local context ownership, streamed
 independent reads, retained details, selective loading, polling activation,
@@ -526,7 +545,7 @@ financial/access/approval queues and bounded durable recovery retain freshness.
 - [ ] **DP-301 Sheet feature delivery.** Split optional sheet families by URL,
   permission and intent. Acceptance: unopened features do not load heavy graphs or
   fetch data; deep links/history/focus and command owners stay intact.
-- [ ] **DP-302 Import boundaries.** Measure expensive hot import graphs and narrow
+- [x] **DP-302 Import boundaries.** Measure expensive hot import graphs and narrow
   public subpath exports. Acceptance: comparative compile/byte evidence; no mass
   rewrite based on barrel-import counts alone.
 - [ ] **DP-303 Heavy optional tools.** Bound chart, PDF/export, editor, generator

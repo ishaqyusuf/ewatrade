@@ -9,7 +9,11 @@ import { CatalogItemKindChoices } from "./catalog-item-kind-choices"
 import { CatalogItemSheetHeader } from "./catalog-item-sheet-header"
 import { CatalogItemSkeleton } from "./catalog-item-skeleton"
 import { CatalogItemForm } from "./form"
-import { useCatalogItemForm } from "./form-context"
+import {
+  CatalogItemFormProvider,
+  type SimpleCatalogItemKind,
+  useCatalogItemForm,
+} from "./form-context"
 
 type CatalogItemContentProps = {
   finalFocus?: ComponentProps<typeof SheetFrame>["finalFocus"]
@@ -21,6 +25,31 @@ type CatalogItemContentProps = {
   onCreated: (name: string) => void
   onSaved?: (name: string) => void
   storeId: string
+}
+
+type CatalogItemWorkspaceProps = CatalogItemContentProps & {
+  initialKind?: SimpleCatalogItemKind | null
+  initialName?: string
+  /** Major-unit text, as the price field holds it. */
+  initialPrice?: string
+}
+
+/** The sheet's deferred entry: form state loads with its content, never while closed. */
+export function CatalogItemWorkspace({
+  initialKind,
+  initialName,
+  initialPrice,
+  ...props
+}: CatalogItemWorkspaceProps) {
+  return (
+    <CatalogItemFormProvider
+      initialKind={initialKind}
+      initialName={initialName}
+      initialPrice={initialPrice}
+    >
+      <CatalogItemContent {...props} />
+    </CatalogItemFormProvider>
+  )
 }
 
 export function CatalogItemContent(props: CatalogItemContentProps) {

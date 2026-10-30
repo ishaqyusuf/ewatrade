@@ -3,10 +3,8 @@ import { getDashboardNavigation } from "@/lib/navigation"
 import { getServerSession } from "@/lib/session"
 import { getActiveTenant } from "@/lib/tenant"
 import { prisma } from "@ewatrade/db"
-import {
-  getRetailOpsTenantPlan,
-  isWebsiteDomainsLaunchApproved,
-} from "@ewatrade/db/queries"
+import { getRetailOpsTenantPlan } from "@ewatrade/db/retail-ops-subscriptions"
+import { isWebsiteDomainsLaunchApproved } from "@ewatrade/db/website-domains-launch-gate"
 
 export default async function SettingsLayout({
   children,

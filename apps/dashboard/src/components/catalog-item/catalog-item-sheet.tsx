@@ -12,13 +12,14 @@ import dynamic from "next/dynamic"
 import type { ComponentProps, ReactNode } from "react"
 import { useCatalogThemeClass } from "./catalog-appearance"
 import { CatalogItemSkeleton } from "./catalog-item-skeleton"
-import { CatalogItemFormProvider } from "./form-context"
 
-const CatalogItemContent = dynamic(
+const CatalogItemWorkspace = dynamic(
   () =>
     loadSheetCode(
       () =>
-        import("./catalog-item-content").then((mod) => mod.CatalogItemContent),
+        import("./catalog-item-content").then(
+          (mod) => mod.CatalogItemWorkspace,
+        ),
       CatalogItemFrame,
     ),
   { loading: () => <CatalogItemLoading /> },
@@ -84,14 +85,14 @@ export function CatalogItemSheet(props: CatalogItemSheetProps) {
           closeError={closeError}
         />
       ) : open ? (
-        <CatalogItemFormProvider
+        <CatalogItemWorkspace
           key={props.storeId}
+          {...props}
+          closeError={closeError}
           initialKind={catalogCreateKind}
           initialName={catalogCreateName ?? undefined}
           initialPrice={startingPrice(catalogCreatePrice)}
-        >
-          <CatalogItemContent {...props} closeError={closeError} />
-        </CatalogItemFormProvider>
+        />
       ) : null}
     </Sheet>
   )
@@ -131,17 +132,14 @@ function CatalogItemEdit({
       </SheetFrame>
     )
   return (
-    <CatalogItemFormProvider
+    <CatalogItemWorkspace
       key={`${item.data.id}:${item.data.updatedAt}`}
+      {...props}
+      allowKindChange={false}
+      closeError={closeError}
+      editItem={item.data}
       initialKind={item.data.kind}
       initialName={item.data.name}
-    >
-      <CatalogItemContent
-        {...props}
-        allowKindChange={false}
-        closeError={closeError}
-        editItem={item.data}
-      />
-    </CatalogItemFormProvider>
+    />
   )
 }

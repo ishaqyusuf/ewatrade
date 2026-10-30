@@ -69,6 +69,9 @@ focusManager.setFocused(true)
 const app = (path: string) =>
   new URL(`../../../../apps/dashboard/src/${path}`, import.meta.url).pathname
 const leaf = ({ children }: { children?: ReactNode }) => <div>{children}</div>
+mock.module(app("components/sheets/sheet-frame"), () => ({
+  SheetBodyLoading: () => <output aria-live="polite">Loading…</output>,
+}))
 mock.module("@ewatrade/ui", () => ({
   Button: leaf,
   Skeleton: () => <div data-skeleton="true" />,
