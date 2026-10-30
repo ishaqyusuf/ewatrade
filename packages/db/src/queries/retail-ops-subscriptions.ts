@@ -2239,6 +2239,33 @@ export async function getRetailOpsTenantPlan(
   return { plan, subscription }
 }
 
+/** The same bounded facts are used by standalone and joined navigation reads. */
+export const retailOpsPlanFeaturesSelect = {
+  metadata: true,
+  subscription: {
+    select: {
+      plan: { select: { key: true } },
+      provider: true,
+      status: true,
+      billingSubscriptionId: true,
+      currentPeriodEndsAt: true,
+    },
+  },
+} satisfies Prisma.TenantSelect
+
+export function projectRetailOpsPlanFeatures(
+  tenant: Parameters<typeof resolveRetailOpsPlanId>[0],
+): RetailOpsPlanFeature[] {
+  // The full reader ignores unknown durable plans before time-bound access.
+  const subscription =
+    tenant.subscription && normalizePlanId(tenant.subscription.plan.key)
+      ? tenant.subscription
+      : null
+  return [
+    ...getPlan(resolveRetailOpsPlanId({ ...tenant, subscription })).features,
+  ]
+}
+
 /** Navigation needs current features, not the plan catalogue, labels or limits. */
 export async function getRetailOpsTenantPlanFeatures(
   db: DbClient,
@@ -2247,28 +2274,9 @@ export async function getRetailOpsTenantPlanFeatures(
   try {
     const tenant = await db.tenant.findUniqueOrThrow({
       where: { id: input.tenantId },
-      select: {
-        metadata: true,
-        subscription: {
-          select: {
-            plan: { select: { key: true } },
-            provider: true,
-            status: true,
-            billingSubscriptionId: true,
-            currentPeriodEndsAt: true,
-          },
-        },
-      },
+      select: retailOpsPlanFeaturesSelect,
     })
-    // The full reader ignores unrecognized durable plan rows before metadata
-    // fallback. Preserve that ordering before applying time-bound access.
-    const subscription =
-      tenant.subscription && normalizePlanId(tenant.subscription.plan.key)
-        ? tenant.subscription
-        : null
-    return [
-      ...getPlan(resolveRetailOpsPlanId({ ...tenant, subscription })).features,
-    ]
+    return projectRetailOpsPlanFeatures(tenant)
   } catch (error) {
     // Preserve the existing metadata fallback during billing-table unavailability.
     if (!isDurableBillingTableUnavailable(error)) throw error

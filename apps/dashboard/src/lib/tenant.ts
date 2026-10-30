@@ -4,7 +4,8 @@ import {
   canStaffPerform,
 } from "@ewatrade/auth/store-access"
 import { prisma } from "@ewatrade/db"
-import { listActiveWorkspaceMemberships } from "@ewatrade/db/tenant-context"
+import type { RetailOpsPlanFeature } from "@ewatrade/db/subscription-plans"
+import { listDashboardWorkspaceMemberships } from "@ewatrade/db/tenant-context"
 import {
   type BusinessOnboardingFacts,
   readBusinessOnboardingFactsFromStoreMetadata,
@@ -45,6 +46,7 @@ export type TenantContext = {
     enabledModes: string[]
     currencyCode: string
     timezone: string
+    planFeatures?: RetailOpsPlanFeature[]
   }
   staffAccess?: StaffAccess
   tenants: TenantOption[]
@@ -82,7 +84,7 @@ export const getActiveTenant = cache(
     const requestedSlug = headerSlug ?? cookieSlug
     const activeStoreId = cookieStore.get(ACTIVE_STORE_COOKIE)?.value
 
-    const memberships = await listActiveWorkspaceMemberships(prisma, userId)
+    const memberships = await listDashboardWorkspaceMemberships(prisma, userId)
 
     const membership =
       (requestedSlug
@@ -154,6 +156,7 @@ export const getActiveTenant = cache(
         enabledModes: membership.tenant.enabledModes,
         currencyCode: membership.tenant.currencyCode,
         timezone: membership.tenant.timezone,
+        planFeatures: membership.tenant.planFeatures,
       },
       tenants,
       stores,

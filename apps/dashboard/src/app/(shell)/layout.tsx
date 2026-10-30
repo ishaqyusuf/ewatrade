@@ -64,9 +64,11 @@ async function ResolvedShell({ children }: { children: React.ReactNode }) {
     redirect("/setup")
   }
   // A failed plan read leaves navigation ungated; the API still enforces.
-  const planFeatures = await getRetailOpsTenantPlanFeatures(prisma, {
-    tenantId: ctx.tenant.id,
-  }).catch(() => undefined)
+  const planFeatures =
+    ctx.tenant.planFeatures ??
+    (await getRetailOpsTenantPlanFeatures(prisma, {
+      tenantId: ctx.tenant.id,
+    }).catch(() => undefined))
   const navigationContext = {
     staffAccessMode: ctx.membership.staffAccessMode,
     catalogEditor: ctx.membership.catalogEditor,

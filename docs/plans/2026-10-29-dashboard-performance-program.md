@@ -21,41 +21,41 @@ optional code delivery and narrower database projections. Adoption and verificat
 remain uneven. Current local results still miss the proposed refresh/warm budgets;
 this program is not complete.
 
-Latest source slices bound Activity enrichment/payload (`5518bde5a`) and correct
-an adoption gap in the browser provider: ordinary reads now stream within their
-existing fresh-context batches. Midday already uses this browser pattern; our
-server provider streamed but the browser still waited for whole batches. Actual
-provider/SDK/Hono tests reproduce and remove that barrier, retaining command/body
-transport, fresh authority, refusal clearing and query/cache ownership.
+Retained source slices bound Activity enrichment/payload (`5518bde5a`), stream
+independent browser reads (`b5891de5b`) and now share current navigation-plan facts
+with the Dashboard workspace projection. The latter removes a serial shell read:
+real existing-QA read-only comparison proves SQL2→1 and exact workspace/feature
+parity. General workspace and API/command authority remain unchanged; optional join
+failure still requires fresh mandatory workspace admission before existing fallback.
 
-The root optimized Dashboard artifact now uses the browser-stream source candidate
-(parent `5518bde5a`, client hash pinned in the receipt), Next16.4.3 BUILD_ID
-`o7zCuLrMZYHJOvlfCX3EM`. Full optimized build/types and a frozen-source canonical
-local smoke pass, including18 readiness actions and two isolated Activity GETs.
-Dashboard development mode was restored; API/Storefront/Marketing stayed running.
-`runtimeVerified:false`: no release qualification or deployment.
-[Latest evidence](../verification/2026-10-30-dashboard-browser-read-streaming.md).
-[Activity enrichment evidence](../verification/2026-10-30-dashboard-activity-bounded-enrichment.md).
+The root optimized Dashboard artifact uses the workspace/plan candidate (parent
+`8050855c` plus frozen owned source), Next16.4.3 BUILD_ID `Fp2hx3sRkDaie2XJkSXLj`.
+Source types, required optimized build checks and frozen canonical local smoke/all18
+readiness actions pass. Dashboard development mode was restored; API/Storefront/
+Marketing stayed running. `runtimeVerified:false`: no release qualification/deploy.
+[Latest shared-shell evidence](../verification/2026-10-30-dashboard-workspace-plan.md).
+[Browser streaming](../verification/2026-10-30-dashboard-browser-read-streaming.md) ·
+[Activity enrichment](../verification/2026-10-30-dashboard-activity-bounded-enrichment.md).
 
 | Family | Full-family refresh sample | Full-family warm-return sample |
 | --- | ---: | ---: |
-| Overview |986ms |1077ms |
-| Catalog |1892ms |817ms |
-| Orders |2411ms |820ms |
-| Customers |2796ms |1329ms |
-| Finance |3603ms |2336ms |
-| Website requests |2482ms |822ms |
-| Activity |3593ms |2631ms |
-| General |1053ms |1324ms |
-| Reports |2552ms |825ms |
+| Overview |1021ms |1078ms |
+| Catalog |1547ms |817ms |
+| Orders |2062ms |813ms |
+| Customers |1031ms |1319ms |
+| Finance |3318ms |2338ms |
+| Website requests |2299ms |816ms |
+| Activity |2822ms |2614ms |
+| General |1148ms |1318ms |
+| Reports |3274ms |810ms |
 
 Single representative content-readiness samples, not p95, accepted budgets or
-whole-family acceptance. Activity's prior3654/2600ms is similar; other families vary
-in both directions. The controlled test establishes independent result delivery,
-not a dashboard-wide latency ratio. Streams may remain in flight at readiness;
-missing completed API counts/phases are not zero work. Isolated list1813ms still
-spends638.4ms in context and624.4ms in transaction control versus warmed server
-execution~2ms. Phases overlap; no blanket freshness-window or index change.
+whole-family acceptance. Reports refresh is slower than the preceding2552ms sample;
+other rows vary. No dashboard-wide speedup ratio. Streams may remain in flight at
+readiness; absent completed counts/phases are not zero work. Previous isolated
+Activity list1813ms spent638.4ms in context and624.4ms in transaction control versus
+warmed server execution~2ms. This shell change leaves that API path unchanged.
+Phases overlap; no blanket freshness-window or index change.
 
 | Phase | Tickets | Accepted | Remaining outcome |
 | --- | --- | --- | --- |
@@ -66,41 +66,41 @@ execution~2ms. Phases overlap; no blanket freshness-window or index change.
 |4 Domain rollout |401–409 |0/9 |Each family's read/state/access/freshness budgets |
 |5 Acceptance |501–503 |0/3 |Behavior, regression budgets and requirement-by-requirement audit |
 
-Latest focused attribution on the same artifact records Activity3007/2619ms.
-Its own batch starts945.4/456.1ms into refresh/return, receives headers at1628.6/
-1101.4ms and finishes2773.4/2233.9ms. It shares list/filter requests, while other
-API work starts earlier. Finish-to-readiness includes driver overhead, not a React
-profile. A separate3-literal-plan probe on the verified selected non-loopback DB
-endpoint measures244.8–303.1ms driver-inclusive versus<0.04ms server planning/work.
-This establishes material overhead outside the plan, not pure network RTT.
-[Focused timeline and probe](../verification/2026-10-30-dashboard-startup-timeline.md).
+Prior focused attribution on the browser-stream artifact recorded Activity3007/
+2619ms, batch start945.4/456.1ms. With the shared workspace/plan projection, the
+refresh document finishes479.4ms and Activity starts515.2ms; refresh readiness is
+2822ms. Warm return remains2614ms with start474.9ms. Earlier refresh startup is
+observed, but no causal430ms gain or distribution is established. Finish-to-driver
+readiness is not a React profile. A separate3-literal-plan probe on the verified
+selected non-loopback endpoint measured244.8–303.1ms driver-inclusive versus<0.04ms
+server work: material overhead outside the plan, not pure network RTT.
+[Prior focused timeline and probe](../verification/2026-10-30-dashboard-startup-timeline.md).
 
-Two measured code/context loading candidates did not advance Activity's actual
-request start and were removed. Both passed correctness checks; an isolated Flight
-module test missed the enclosing shell dependency. Product source and the accepted
-artifact were restored, and development mode is running. The code-warming sample's
-3017ms total is not a new performance win.
+Before the current workspace projection, two measured code/context candidates
+did not advance Activity's actual request start and were removed. Both passed
+correctness checks; an isolated Flight test missed the enclosing shell dependency.
+The prior source/artifact were restored before this retained change. Code warming's
+3017ms total is not a performance win.
 [Rejected experiments and restoration](../verification/2026-10-30-dashboard-startup-experiments.md).
 
 Next execution order, within the same27 tickets:
 
-1. **DP-103/401–409:** combine current plan-feature facts with the existing Dashboard
-   workspace projection. The shell presently awaits these in two serial reads.
-   Preserve mandatory workspace admission when optional billing tables are absent,
-   canonical plan/time policy, workspace/Store selection and fresh API authority.
-   Prove healthy-path query reduction and policy/error parity before timing claims.
+1. **DP-103/405/407:** the shared shell projection is implemented and verified.
+   Next inspect remaining current API context/control round trips behind Activity's
+   unchanged~2.61s return and Finance's~2.34s return. Preserve proof, role, snapshot
+   and transaction admission; use bounded projection/independent-work evidence.
 2. **DP-003/103/204:** distinguish the observed26 canceled refresh Flight requests
    from navigation/useful prefetch before changing scheduling. Cancellation alone
    is not wasted-work proof; existing submenu intent/automatic-parent evidence
    remains. Keep DB topology unchanged while calibrating local round-trip cost.
-3. **DP-102/104/407:** resolve the remaining measured945/456ms Activity start edge
+3. **DP-102/104/407:** resolve the remaining measured515/475ms Activity start edge
    using actual enclosing-caller evidence. Promise/code warming has now been tested
    without advancing it; do not repeat those candidates without a new premise.
    Any data prefetch still requires exact key/scope consumption, one-use ownership,
    refusal erasure and fresh returns. Driver polling is not a React profile.
-4. **DP-103/405/407:** inspect remaining fresh context/control round trips. Literal
-   plan cost is tiny; prefer bounded projection/independent-work evidence before
-   indexes, TTLs or infrastructure. No weaker proof, role or transaction admission.
+4. **DP-401–409:** audit the remaining owners across all59 routes against their
+   read/state/access contracts. Attribute outliers such as the slower Reports
+   refresh before changing a shared policy; representative smoke is not acceptance.
 5. **DP-201–204 and301–304:** finish lifecycle/invalidation/polling and code/interaction
    contracts for all owners. Reuse completed source proofs. Current Channels and
    Compliance reads already stream independently; the prescription access dependency

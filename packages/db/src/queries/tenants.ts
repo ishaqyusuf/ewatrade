@@ -1,11 +1,16 @@
 import type {
   MembershipRole,
+  Prisma,
   QaDataClassification,
   StoreStatus,
   TenantMode,
   TenantType,
 } from "../../generated/prisma/client"
 import type { RetailOpsPlanId } from "./retail-ops-subscription-plans"
+import {
+  projectRetailOpsPlanFeatures,
+  retailOpsPlanFeaturesSelect,
+} from "./retail-ops-subscriptions"
 import {
   projectTenantContext,
   tenantContextMembershipSelect,
@@ -81,67 +86,59 @@ export async function getActiveTenantForUser(
   return projectTenantContext(membership, storeId)
 }
 
-/** Current actor-owned business choices and Store access in one joined read. No cross-request cache. */
-export async function listActiveWorkspaceMemberships(
-  db: DbClient,
-  userId: string,
-) {
-  const rows = await db.membership.findMany({
-    where: {
-      userId,
-      status: "ACTIVE",
-      tenant: {
-        isActive: true,
-      },
-    },
-    orderBy: { createdAt: "asc" },
+const workspaceMembershipSelect = {
+  id: true,
+  role: true,
+  status: true,
+  tenantId: true,
+  staffAccessMode: true,
+  catalogEditor: true,
+  retailOpsStaffProfile: { select: { defaultStoreId: true } },
+  staffStoreAssignments: {
+    where: { status: "ACTIVE", store: { status: "ACTIVE" } },
     select: {
-      id: true,
+      storeId: true,
       role: true,
       status: true,
+      revision: true,
       tenantId: true,
-      staffAccessMode: true,
-      catalogEditor: true,
-      retailOpsStaffProfile: { select: { defaultStoreId: true } },
-      staffStoreAssignments: {
-        where: { status: "ACTIVE", store: { status: "ACTIVE" } },
-        select: {
-          storeId: true,
-          role: true,
-          status: true,
-          revision: true,
-          tenantId: true,
-          store: { select: { tenantId: true, status: true } },
-        },
-      },
-      tenant: {
+      store: { select: { tenantId: true, status: true } },
+    },
+  },
+  tenant: {
+    select: {
+      id: true,
+      slug: true,
+      name: true,
+      type: true,
+      enabledModes: true,
+      currencyCode: true,
+      timezone: true,
+      stores: {
+        where: { status: { not: "ARCHIVED" } },
         select: {
           id: true,
           slug: true,
           name: true,
-          type: true,
-          enabledModes: true,
+          status: true,
           currencyCode: true,
-          timezone: true,
-          stores: {
-            where: { status: { not: "ARCHIVED" } },
-            select: {
-              id: true,
-              slug: true,
-              name: true,
-              status: true,
-              currencyCode: true,
-              metadata: true,
-            },
-            orderBy: { createdAt: "asc" },
-          },
+          metadata: true,
         },
+        orderBy: { createdAt: "asc" },
       },
     },
-  })
-  return rows.map((row) => ({
-    ...row,
-    staffStoreAssignments: row.staffStoreAssignments
+  },
+} satisfies Prisma.MembershipSelect
+
+type WorkspaceMembership = Prisma.MembershipGetPayload<{
+  select: typeof workspaceMembershipSelect
+}>
+
+function projectWorkspaceMembership<T extends WorkspaceMembership>(row: T) {
+  const { staffStoreAssignments, ...membership } = row
+  return {
+    ...membership,
+    staffStoreAssignments: staffStoreAssignments
       .filter(
         (assignment) =>
           assignment.tenantId === row.tenantId &&
@@ -155,5 +152,66 @@ export async function listActiveWorkspaceMemberships(
         status,
         revision,
       })),
-  }))
+  }
+}
+
+function activeWorkspaceMembershipQuery(userId: string) {
+  return {
+    where: { userId, status: "ACTIVE" as const, tenant: { isActive: true } },
+    orderBy: { createdAt: "asc" as const },
+  }
+}
+
+/** Current actor-owned business choices and Store access. No cross-request cache. */
+export async function listActiveWorkspaceMemberships(
+  db: DbClient,
+  userId: string,
+) {
+  const rows = await db.membership.findMany({
+    ...activeWorkspaceMembershipQuery(userId),
+    select: workspaceMembershipSelect,
+  })
+  return rows.map(projectWorkspaceMembership)
+}
+
+/** Share navigation-only plan facts with the Dashboard's fresh workspace read. */
+export async function listDashboardWorkspaceMemberships(
+  db: DbClient,
+  userId: string,
+) {
+  try {
+    const rows = await db.membership.findMany({
+      ...activeWorkspaceMembershipQuery(userId),
+      select: {
+        ...workspaceMembershipSelect,
+        tenant: {
+          select: {
+            ...workspaceMembershipSelect.tenant.select,
+            ...retailOpsPlanFeaturesSelect,
+          },
+        },
+      },
+    })
+    return rows.map((row) => {
+      const { metadata, subscription, ...tenant } = row.tenant
+      return projectWorkspaceMembership({
+        ...row,
+        tenant: {
+          ...tenant,
+          planFeatures: projectRetailOpsPlanFeatures({
+            metadata,
+            subscription,
+          }),
+        },
+      })
+    })
+  } catch {
+    // Optional plan joins must not break mandatory workspace admission. A fresh
+    // base read still has to succeed; its failure propagates unchanged. The shell
+    // then uses its existing optional feature reader/fallback for the chosen Tenant.
+    return (await listActiveWorkspaceMemberships(db, userId)).map((row) => ({
+      ...row,
+      tenant: { ...row.tenant, planFeatures: undefined },
+    }))
+  }
 }

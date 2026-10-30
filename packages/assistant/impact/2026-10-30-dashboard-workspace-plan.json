@@ -1,0 +1,46 @@
+{
+  "version": 1,
+  "id": "2026-10-30-dashboard-workspace-plan",
+  "tickets": ["H02"],
+  "summary": "Share current navigation plan facts with Dashboard workspace admission; remove the healthy-path serial plan read. Local only.",
+  "noAssistantImpact": "Only the Dashboard workspace projection and shell consumption change. The general workspace reader retains its query and output contract. Canonical known-plan/time/native/reviewer/metadata feature rules are shared with the existing standalone reader. Optional join failure falls back once to fresh mandatory workspace admission and the existing optional shell plan reader; base admission failures still propagate. No global cache, API procedure/DTO, assistant capability/tool, domain command, mutation/permission/transaction, schema, provider or deployment change.",
+  "capabilities": [],
+  "procedures": [],
+  "docs": [
+    {
+      "topic": "feature",
+      "status": "local_only",
+      "path": ".brain/features/web-navigation-performance.md"
+    },
+    {
+      "topic": "api",
+      "status": "not_applicable",
+      "note": "No API endpoint, permission or public DTO change; only internal Dashboard context gains derived navigation features."
+    },
+    {
+      "topic": "schema",
+      "status": "not_applicable",
+      "note": "Existing relations and scalar facts only. No schema/index/migration or database writes."
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "test",
+      "path": "packages/db/src/queries/retail-ops-plan-features.test.ts",
+      "executed": true,
+      "result": "DB focused/existing suites24/379 pass, including27 joined/full-reader policy cases, independent arrays/current rereads, optional missing billing fallback and mandatory error identity. Workspace assignment parity included."
+    },
+    {
+      "kind": "test",
+      "path": "apps/dashboard/src/lib/tenant.test.ts",
+      "executed": true,
+      "result": "Actual Dashboard context5/25 and isolated actual shell6/13 pass. Chosen features/no raw billing, strict header/stale preference, scoped Store/effective role, absent membership, fallback, zero healthy-path plan rereads and authoritative empty Free feature list."
+    },
+    {
+      "kind": "run",
+      "path": "docs/verification/2026-10-30-dashboard-workspace-plan.md",
+      "executed": true,
+      "result": "Read-only existing QA comparison confirms identical workspace/selected-plan output and SQL2 to1 in one snapshot. DB/Dashboard types, scoped237/1533+QA/Biome and optimized build pass. Frozen-source canonical local smoke/all18 route-family readiness checks pass; runtime unverified. Activity refresh batch starts515.2ms vs prior945.4ms single baseline; warm return remains2614ms. Development restored, sibling services unchanged. No broad speedup or additional ticket acceptance."
+    }
+  ]
+}

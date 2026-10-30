@@ -1,5 +1,8 @@
 import { expect, test } from "bun:test"
-import { listActiveWorkspaceMemberships } from "./tenants"
+import {
+  listActiveWorkspaceMemberships,
+  listDashboardWorkspaceMemberships,
+} from "./tenants"
 import type { DbClient } from "./types"
 
 test("workspace choices and Store assignments use one actor-scoped read and reject foreign/inactive assignment facts", async () => {
@@ -60,7 +63,12 @@ test("workspace choices and Store assignments use one actor-scoped read and reje
             catalogEditor: true,
             staffStoreAssignments: assignments,
             retailOpsStaffProfile: { defaultStoreId: "own" },
-            tenant: { id: "tenant", stores: [] },
+            tenant: {
+              id: "tenant",
+              stores: [],
+              metadata: {},
+              subscription: null,
+            },
           },
         ]
       },
@@ -80,4 +88,15 @@ test("workspace choices and Store assignments use one actor-scoped read and reje
     { storeId: "own", role: "MANAGER", status: "ACTIVE", revision: 2 },
   ])
   expect(result[0]?.retailOpsStaffProfile?.defaultStoreId).toBe("own")
+  const [joined] = await listDashboardWorkspaceMemberships(db, "actor")
+  expect(joined?.staffStoreAssignments).toEqual(
+    result[0]?.staffStoreAssignments,
+  )
+  expect(joined?.retailOpsStaffProfile).toEqual(
+    result[0]?.retailOpsStaffProfile,
+  )
+  expect(joined?.tenant.stores).toEqual(result[0]?.tenant.stores)
+  expect(joined?.tenant).not.toHaveProperty("metadata")
+  expect(joined?.tenant).not.toHaveProperty("subscription")
+  expect(queries).toHaveLength(2)
 })

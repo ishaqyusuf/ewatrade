@@ -7,6 +7,7 @@ let signedIn = true
 let hasTenant = true
 let free = false
 let failPlan = false
+let projectedFeatures: billing.RetailOpsPlanFeature[] | undefined
 const prisma = {
   tenant: {
     findUniqueOrThrow: async () => {
@@ -52,7 +53,11 @@ mock.module("@/lib/tenant", () => ({
     hasTenant
       ? {
           membership: { role: "OWNER", staffAccessMode: "LEGACY" },
-          tenant: { id: "tenant", timezone: "UTC" },
+          tenant: {
+            id: "tenant",
+            timezone: "UTC",
+            planFeatures: projectedFeatures,
+          },
           activeStore: { id: "store", name: "Store", currencyCode: "NGN" },
           stores: [{ id: "store", name: "Store", currencyCode: "NGN" }],
         }
@@ -108,6 +113,7 @@ beforeEach(() => {
   hasTenant = true
   free = false
   failPlan = false
+  projectedFeatures = undefined
 })
 
 test("actual shell reads only current plan features in one repository round trip", async () => {
@@ -141,5 +147,27 @@ test("signed-out and missing-workspace requests never start a plan read", async 
   signedIn = true
   hasTenant = false
   await expect(renderShell()).rejects.toThrow("redirect:/login?error=no_tenant")
+  expect(reads).toEqual([])
+})
+
+test("the actual shell consumes joined workspace features without a second plan read", async () => {
+  projectedFeatures = ["finance"]
+  failPlan = true
+  expect(
+    sidebarProps(await renderShell())?.navItems.some(
+      (item) => item.href === "/finance",
+    ),
+  ).toBe(true)
+  expect(reads).toEqual([])
+})
+
+test("an empty joined feature list remains authoritative Free navigation", async () => {
+  projectedFeatures = []
+  failPlan = true
+  expect(
+    sidebarProps(await renderShell())?.navItems.some(
+      (item) => item.href === "/finance",
+    ),
+  ).toBe(false)
   expect(reads).toEqual([])
 })
