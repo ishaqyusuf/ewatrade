@@ -540,7 +540,11 @@ export async function runSmoke(input: {
         {
           cwd: repo,
           encoding: "utf8",
-          timeout: 120000,
+          timeout:
+            input.target === "local" &&
+            process.env.QA_WEB_READ_ACTIVITY === "true"
+              ? 720000
+              : 120000,
           env: {
             ...process.env,
             PLAYWRIGHT_BROWSERS_PATH:

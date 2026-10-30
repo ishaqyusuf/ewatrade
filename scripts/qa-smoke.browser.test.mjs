@@ -44,6 +44,18 @@ test(
         count: 2,
       })
       assert.ok(!JSON.stringify(result).includes("sentinel"))
+      observer.begin()
+      await page.goto(
+        "https://ewatrade-dashboard.localhost/api/trpc/tenant.current,tenant.current,businessBanking.pendingReportCount?input=private-sentinel",
+        { waitUntil: "load" },
+      )
+      const batched = await observer.end()
+      assert.equal(batched.started, 1)
+      assert.deepEqual(batched.rpcOperations, {
+        workspaceScope: 2,
+        notificationCounts: 1,
+      })
+      assert.ok(!JSON.stringify(batched).includes("sentinel"))
       assert.equal(result.timeline.api.started, 1)
       assert.equal(result.timeline.api.responseHeaders, 1)
       assert.equal(result.timeline.api.finished, 1)
@@ -255,7 +267,27 @@ test(
 // The runner's readiness/checkpoint contract, not product rendering or latency.
 for (const scenario of [
   { name: "all nine representatives", options: {}, expected: "passed" },
+  {
+    name: "all nine read activity",
+    options: { probeLifecycle: true },
+    expected: "passed",
+  },
   { name: "focused Activity startup", options: {}, expected: "passed" },
+  {
+    name: "all nine read activity offline failure",
+    options: { probeLifecycle: true, failOffline: true },
+    expected: "DP-401",
+  },
+  {
+    name: "all nine read activity hidden regression",
+    options: { probeLifecycle: true, hiddenRead: true },
+    expected: "DP-401",
+  },
+  {
+    name: "all nine read activity offline regression",
+    options: { probeLifecycle: true, offlineRead: true },
+    expected: "DP-401",
+  },
   { name: "focused Reports cold Stock", options: {}, expected: "passed" },
   {
     name: "focused Reports serial Stock",
@@ -327,10 +359,28 @@ for (const scenario of [
       const browser = await launchSmokeBrowser()
       try {
         const page = await browser.newPage({ serviceWorkers: "block" })
+        /** @type {number[]} */
+        const waits = []
+        if (scenario.name.startsWith("all nine read activity")) {
+          const wait = page.waitForTimeout.bind(page)
+          page.waitForTimeout = async (milliseconds) => {
+            waits.push(milliseconds)
+            await wait(5)
+          }
+        }
+        if ("failOffline" in scenario.options && scenario.options.failOffline) {
+          const context = page.context()
+          const setOffline = context.setOffline.bind(context)
+          context.setOffline = async (offline) => {
+            await setOffline(offline)
+            if (offline) throw Error("Inert offline phase interruption")
+          }
+        }
         page.setDefaultTimeout(800)
         const origin = "https://ewatrade-dashboard.localhost"
         /** @type {string[]} */
         const unexpected = []
+        let lifecycleRequests = 0
         const html = readFileSync(
           new URL("./fixtures/qa-route-families.html", import.meta.url),
           "utf8",
@@ -417,7 +467,13 @@ for (const scenario of [
             })
           } else if (url.pathname === "/favicon.ico")
             await route.fulfill({ status: 204 })
-          else await route.fulfill({ contentType: "text/html", body: html })
+          else if (
+            url.pathname ===
+            "/api/trpc/businessBanking.pendingReportCount,tenant.current"
+          ) {
+            lifecycleRequests++
+            await route.fulfill({ contentType: "application/json", body: "{}" })
+          } else await route.fulfill({ contentType: "text/html", body: html })
         })
         const observation = observeWebPerformance(page, origin)
         /** @type {Array<{status: string, family: string | null, phase: string | null, samples: object[], diagnosticReads: Awaited<ReturnType<typeof import("./qa-finance-read-diagnostics.mjs").diagnoseFinanceReads>>}>} */
@@ -432,12 +488,15 @@ for (const scenario of [
               ? "activity"
               : scenario.name.startsWith("focused Reports")
                 ? "reports"
-                : "all",
+                : scenario.name.startsWith("all nine read activity")
+                  ? "read-activity"
+                  : "all",
           )
         if (scenario.expected === "passed") {
           const samples = await run()
           const activityOnly = scenario.name.startsWith("focused Activity")
           const reportsOnly = scenario.name.startsWith("focused Reports")
+          const readActivity = scenario.name === "all nine read activity"
           const selectedFamilies =
             activityOnly || reportsOnly
               ? dashboardRouteFamilies.filter(
@@ -447,7 +506,8 @@ for (const scenario of [
               : dashboardRouteFamilies
           assert.equal(
             samples.length,
-            selectedFamilies.length * 2 + (reportsOnly ? 1 : 0),
+            selectedFamilies.length * (readActivity ? 7 : 2) +
+              (reportsOnly ? 1 : 0),
           )
           assert.equal(dashboardRouteFamilies.length, 9)
           assert.deepEqual(
@@ -475,10 +535,45 @@ for (const scenario of [
               pair.map((sample) => sample.phase),
               reportsOnly
                 ? ["full-refresh", "warm-return", "cold-stock-tab"]
-                : ["full-refresh", "warm-return"],
+                : readActivity
+                  ? [
+                      "full-refresh",
+                      "warm-return",
+                      "visible-idle",
+                      "controlled-hidden",
+                      "focus-return",
+                      "offline-idle",
+                      "reconnect",
+                    ]
+                  : ["full-refresh", "warm-return"],
             )
             assert.ok(pair.every((sample) => sample.milliseconds >= 0))
             assert.ok(pair[0].requests.started > 0)
+          }
+          if (readActivity) {
+            await new Promise((resolve) => setTimeout(resolve, 20))
+            assert.equal(lifecycleRequests, 18)
+            for (const sample of samples.filter((sample) =>
+              ["focus-return", "reconnect"].includes(sample.phase),
+            ))
+              assert.deepEqual(sample.requests.rpcOperations, {
+                notificationCounts: 1,
+                workspaceScope: 1,
+              })
+            assert.equal(waits.length, 45)
+            assert.equal(waits.filter((value) => value === 65_000).length, 3)
+            assert.equal(waits.filter((value) => value === 35_000).length, 2)
+            assert.equal(
+              await page.evaluate(() => document.visibilityState),
+              "visible",
+            )
+            assert.equal(
+              await page.evaluate(() =>
+                Object.hasOwn(document, "visibilityState"),
+              ),
+              false,
+            )
+            assert.equal(await page.evaluate(() => navigator.onLine), true)
           }
         } else await assert.rejects(run, new RegExp(scenario.expected))
         assert.equal(
@@ -489,6 +584,20 @@ for (const scenario of [
           assert.equal(checkpoints.at(-1)?.family, scenario.expected)
         if (scenario.name === "shell replaced on return")
           assert.equal(checkpoints.at(-1)?.phase, "warm-return")
+        if (scenario.name === "all nine read activity offline failure") {
+          assert.equal(checkpoints.at(-1)?.phase, "offline-idle")
+          assert.equal(await page.evaluate(() => navigator.onLine), true)
+          assert.equal(
+            await page.evaluate(() =>
+              Object.hasOwn(document, "visibilityState"),
+            ),
+            false,
+          )
+          assert.equal(
+            await page.evaluate(() => Object.hasOwn(document, "hidden")),
+            false,
+          )
+        }
         assert.ok(!JSON.stringify(checkpoints).includes("sentinel"))
         assert.deepEqual(unexpected, [])
         observation.dispose()
@@ -505,6 +614,7 @@ for (const flag of [
   "QA_WEB_ROUTE_FAMILIES",
   "QA_WEB_ACTIVITY_STARTUP",
   "QA_WEB_REPORT_TABS",
+  "QA_WEB_READ_ACTIVITY",
 ])
   test(
     `route-family opt-in requires canonical local artifacts before page activity: ${flag}`,

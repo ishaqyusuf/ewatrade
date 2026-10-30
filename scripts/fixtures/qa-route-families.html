@@ -1,6 +1,13 @@
 <!doctype html><html><head><meta charset="utf-8"><title>Inert route-family driver fixture</title></head>
 <body><aside aria-label="Dashboard sidebar"><nav aria-label="Main navigation"></nav></aside><main></main><script>
 const options = {} // fixture-options
+if(options.probeLifecycle){
+ const recover=()=>fetch("/api/trpc/businessBanking.pendingReportCount,tenant.current?input=private-lifecycle-sentinel")
+ window.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible")recover()})
+ window.addEventListener("online",recover)
+ if(options.hiddenRead)window.addEventListener("visibilitychange",()=>{if(document.hidden)recover()})
+ if(options.offlineRead)window.addEventListener("offline",recover)
+}
 const routes = {"/":"Overview","/catalog":"Catalog","/sales":"Orders","/customers":"Customers","/finance":"Finance","/website-requests":"Website requests","/activity":"Activity","/settings":"General","/analytics":"Reports"}
 const sidebar = document.querySelector("aside")
 sidebar.querySelector("nav").innerHTML = Object.entries(routes).map(([path,label])=>`<a href="${path}">${label}</a>`).join("")

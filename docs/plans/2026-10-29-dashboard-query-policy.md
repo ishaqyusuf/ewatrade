@@ -180,3 +180,15 @@ read cost, not an optional hidden preview or a processing cancellation policy.
 Actual13/117 and composer action, types, scoped checks and canonical development
 retry pass; no live upload/provider, p95 or whole-DP-201/204 acceptance.
 [Receipt](../verification/2026-10-30-dashboard-attachment-status.md).
+
+## Base-route lifecycle checkpoint —30October2026
+
+The existing canonical runner now records fixed-group RPC operations separately
+from batches and can guard zero new API starts in controlled hidden/offline
+windows for nine closed base representatives. Current optimized45 lifecycle
+windows pass that scoped expectation; visible queue/count and focus/reconnect
+recovery remain. This does not change any application freshness/retention/command
+rule or apply the guard to active proof/job flows. Recursive receipt/socket/Setup
+recovery exceptions are recorded in the extended polling audit. Missing stream
+byte/phase measurements remain missing. Full DP-201/204 and per-family acceptance
+stay open. [Evidence](../verification/2026-10-30-dashboard-read-activity.md).

@@ -125,6 +125,20 @@ change invalidates that part of the proof; repeat that part only.
 
 ### Optional local Activity attribution
 
+For one local background-activity audit, use `QA_WEB_READ_ACTIVITY=true` with
+`QA_WEB_NAVIGATION_ARTIFACTS=/tmp/<dated-run>` on the normal web `qa:smoke` command.
+It runs all nine fixed families with idle, controlled DOM visibility, focus,
+Playwright offline and reconnect windows; allow about9min (12min runner limit).
+Catalog65s windows cover shared60s timers, Website35s covers its30s queue, and
+other5s idle windows are samples. This is not native tab/OS suspension evidence.
+Artifacts include fixed-group RPC operation counts separate from HTTP requests;
+no names/inputs/bodies are retained. New API starts in hidden/offline base-route
+windows fail the guard. Active proof/job flows have separate contracts. Full-family
+mode takes precedence if `QA_WEB_ROUTE_FAMILIES=true`; leave it unset for this
+audit. Ordinary, Preview and Android timeouts are unchanged. Reuse the resulting
+receipt; do not repeatedly run the long audit for unrelated changes. See the
+[executed scope and limits](verification/2026-10-30-dashboard-read-activity.md).
+
 With the existing local tracing enabled, add `QA_WEB_ACTIVITY_READS=true` and
 `QA_WEB_NAVIGATION_ARTIFACTS=/tmp/<dated-run>` to the normal local web `qa:smoke`
 command. It adds two isolated existing-data GETs for Activity choices and a fixed

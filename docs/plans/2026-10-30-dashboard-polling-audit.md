@@ -280,3 +280,33 @@ types, owned237/1533+QA/Biome,H02 and frozen canonical retry pass. Initial QA lo
 availability failure retained separately; no restart/provider/deployment.
 P28/A2 implemented. Historical39-site snapshot unchanged; aggregate/focus/reconnect
 costs and full DP-204/407 remain open. Current program4/27 (14.8%).
+
+## Nine-family activity checkpoint and extended source audit —30October2026
+
+[Current optimized observation](../verification/2026-10-30-dashboard-read-activity.md)
+adds45 lifecycle windows across all nine fixed base representatives. All18 hidden/
+offline windows start zero API requests; visible queue/count polling and fresh
+focus/reconnect reads remain.31 driver cases plus a passive regression guard cover
+the emulation protocol/redaction/cleanup and detect new inactive API work. Native
+tab/OS suspension and active proof/job flows are outside this base-route guard.
+Source scan1108 files still has33 intervals/six timers across25 files. Counts of
+started operations differ from HTTP batches; missing stream bytes are not zero.
+No DP-204 acceptance is inferred solely from these representative windows.
+
+The expanded source-only scan also identifies43 one-shot timeout calls and one
+WebSocket, outside the historical interval scan. Additional recurring owners:
+
+| Owner | Required contract / evidence limit |
+| --- | --- |
+| SetupChat waitForRun | Committed reply recovery: at most8 canonical reads with2.5s waits; not an idle optional loop. No live chat submission in this audit |
+| useReportStatus receipt assessment | Current receipt-generation key, visible/online, one read at a time, original bounded window; listeners/timer cleared on disposal. Existing receipt-model tests cover policy |
+| useReportStatus payment/socket recovery | Submitted checking proof only; bounded recovery deadline/backoff,8s socket-auth timeout, fresh status reads after hints; socket/listeners/timers disposed. Reload/reconnect explicitly rearms. Required financial status, not a directory TTL; no live payment/socket acceptance claimed |
+
+Other one-shots are eight object-URL cleanups, seven input-search debounces, two
+preference/onboarding autosaves,21 local UI/expiry/deadline callbacks and one
+Setup-run/four receipt-recovery scheduling sites above. Search owners abort their
+obsolete GETs; autosaves follow explicit draft/settings changes, not periodic
+refresh. The current owner's source was reviewed; this is not an assertion that
+all43 callbacks were independently exercised. Full polling/lifetime acceptance
+remains open with explicit public-proof/durable exceptions. Original27 criteria
+and4/27 acceptance remain unchanged. Development restored; no deployment.

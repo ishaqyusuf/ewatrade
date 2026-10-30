@@ -63,12 +63,24 @@ export const dashboardRouteFamilies = [
 ]
 
 /**
+ * These fixed base routes open no proof/job/optional panel. This is not a policy
+ * for an active committed job or a private payment-status page.
+ * @param {string} phase
+ * @param {{started: number, timeline: Record<string, {started: number}>}} requests
+ */
+export function assertReadActivityBudget(phase, requests) {
+  if (!["controlled-hidden", "offline-idle"].includes(phase)) return
+  if ((requests.timeline.api?.started ?? 0) !== 0)
+    throw Error("An inactive base representative started new API work.")
+}
+
+/**
  * Extend the existing QA journey; no login, writes, new runner or service control.
  * @param {import("playwright").Page} page
  * @param {{origin: string, catalogItem: string}} config
  * @param {ReturnType<import("./qa-web-performance.mjs").observeWebPerformance>} observation
  * @param {(update: {status: string, family: string | null, phase: string | null, samples: FamilySample[], diagnosticReads: Awaited<ReturnType<typeof diagnoseFinanceReads>>}) => void} checkpoint
- * @param {"all" | "activity" | "reports"} [selection]
+ * @param {"all" | "activity" | "reports" | "read-activity"} [selection]
  */
 export async function measureDashboardRouteFamilies(
   page,
@@ -193,6 +205,7 @@ export async function measureDashboardRouteFamilies(
     const requests = await observation.end()
     observing = false
     samples.push({ ...target, phase: action, milliseconds, requests })
+    assertReadActivityBudget(action, requests)
     publish("running")
   }
   try {
@@ -225,6 +238,79 @@ export async function measureDashboardRouteFamilies(
         })
       } finally {
         await shell.dispose()
+      }
+      if (selection === "read-activity") {
+        phase = "read-activity-setup"
+        publish("running")
+        // Headless Chromium keeps background tabs visible. This is controlled DOM
+        // visibility, not evidence of native tab occlusion or OS lifecycle handling.
+        await page.evaluate(() => {
+          if (
+            Object.getOwnPropertyDescriptor(document, "visibilityState") ||
+            Object.getOwnPropertyDescriptor(document, "hidden")
+          )
+            throw Error("The document already owns a visibility override.")
+        })
+        /** @param {boolean} hidden */
+        const visibility = (hidden) =>
+          page.evaluate((value) => {
+            Object.defineProperties(document, {
+              visibilityState: {
+                configurable: true,
+                value: value ? "hidden" : "visible",
+              },
+              hidden: { configurable: true, value },
+            })
+            document.dispatchEvent(
+              new Event("visibilitychange", { bubbles: true }),
+            )
+            if (!value) window.dispatchEvent(new Event("focus"))
+          }, hidden)
+        const idleMs =
+          target.family === "DP-402"
+            ? 65_000
+            : target.family === "DP-406"
+              ? 35_000
+              : 5_000
+        try {
+          await measure(target, "visible-idle", () =>
+            page.waitForTimeout(idleMs),
+          )
+          await measure(target, "controlled-hidden", async () => {
+            await visibility(true)
+            await page.waitForTimeout(idleMs)
+          })
+          await measure(target, "focus-return", async () => {
+            await visibility(false)
+            await page.waitForTimeout(4_000)
+            await ready(target)
+          })
+          await measure(target, "offline-idle", async () => {
+            await page.context().setOffline(true)
+            await page.waitForFunction(() => !navigator.onLine)
+            await page.waitForTimeout(
+              target.family === "DP-402" ? 65_000 : 5_000,
+            )
+          })
+          await measure(target, "reconnect", async () => {
+            await page.context().setOffline(false)
+            await page.waitForFunction(() => navigator.onLine)
+            await page.waitForTimeout(4_000)
+            await ready(target)
+          })
+          confirmPath(target.path)
+        } finally {
+          await page.context().setOffline(false)
+          await page.evaluate(() => {
+            const wasHidden = document.visibilityState !== "visible"
+            Reflect.deleteProperty(document, "visibilityState")
+            Reflect.deleteProperty(document, "hidden")
+            if (wasHidden)
+              document.dispatchEvent(
+                new Event("visibilitychange", { bubbles: true }),
+              )
+          })
+        }
       }
       if (selection === "reports") {
         phase = "cold-service-entry"

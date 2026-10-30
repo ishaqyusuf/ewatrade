@@ -33,8 +33,8 @@ request-link/intake form. Actual mounted4/28, types, scoped237/1533, IAB open/Cl
 and frozen canonical smoke pass. All command/money/draft/invalidation bodies remain
 byte-identical. The direct TSX-hook scan has18 modules/21 owners and no remaining
 multiple sequential direct calls; custom-hook/server dependencies are outside it.
-This later Service slice has no new optimized build or latency claim and does not
-close DP-104/406. [Evidence](../verification/2026-10-30-dashboard-service-form-reads.md).
+This slice has no isolated optimized latency claim and does not close DP-104/406;
+the current full-family build below includes it. [Evidence](../verification/2026-10-30-dashboard-service-form-reads.md).
 
 Current development also stops six WhatsApp/Domain interval owners after known
 refusals. Actual32/170 proves payload clearing, stopped intervals, focus recovery,
@@ -60,7 +60,7 @@ login failure; failed evidence retained. No restart, provider or latency claim.
 P28 implemented; aggregate/focus/reconnect costs and DP-204/407 remain open.
 [Evidence](../verification/2026-10-30-dashboard-attachment-status.md).
 
-The current root optimized Dashboard artifact adds parallel cold Stock activation
+The earlier corrected optimized Dashboard artifact adds parallel cold Stock activation
 in Reports (parent `a8625157` plus frozen owned source), Next16.4.3 BUILD_ID
 `zMN4q6wxzuTfj0KPK4a8Y`. Actual caller regression and optimized browser confirm two
 serial Stock requests become one batch: cold content2884→1874ms in single samples.
@@ -72,28 +72,42 @@ unchanged. `runtimeVerified:false`; no release qualification or deployment.
 [Browser streaming](../verification/2026-10-30-dashboard-browser-read-streaming.md) ·
 [Activity enrichment](../verification/2026-10-30-dashboard-activity-bounded-enrichment.md).
 
-The latest full-family snapshot below remains the preceding `a8625157` build's
-18 checks. The new build has a focused Reports pass; other families were not
-remeasured for this single-owner scheduling change.
+The current optimized application candidate is committed `abf8aae83`, Next16.4.3
+BUILD_ID `KRKyPfsdjz-gY_DEgb_mF`, including the later Service/connection/QA/attachment
+source slices. Full build/types,31 inert driver cases, four observer/budget unit
+cases/13 assertions and owned QA smoke47/195 pass. One lifecycle run covers63
+checkpoints across nine fixed base families: all18 controlled hidden/offline
+windows start zero API requests. Counts distinguish RPC operations from batches;
+visible required queues and focus/reconnect continue. A passive regression guard
+now rejects unexpected inactive API starts on these representatives. Recursive
+receipt/Setup/socket contracts are reviewed separately; full DP-204 remains open.
+
+[Current evidence, emulation corrections and measurement limits](../verification/2026-10-30-dashboard-read-activity.md).
+The lifecycle run's18 entry/return timing rows are excluded because its old final
+cleanup emitted an extra visibility event. A separate normal18-check optimized
+journey, after that correction and without lifecycle emulation, supplies this table.
+Development restored through the root launcher; API/Storefront/Marketing unchanged.
+`runtimeVerified:false`, no release qualification or deployment.
 
 | Family | Full-family refresh sample | Full-family warm-return sample |
 | --- | ---: | ---: |
-| Overview |1021ms |1078ms |
-| Catalog |1547ms |817ms |
-| Orders |2062ms |813ms |
-| Customers |1031ms |1319ms |
-| Finance |3318ms |2338ms |
-| Website requests |2299ms |816ms |
-| Activity |2822ms |2614ms |
-| General |1148ms |1318ms |
-| Reports |3274ms |810ms |
+| Overview |932ms |1059ms |
+| Catalog |1412ms |853ms |
+| Orders |2045ms |823ms |
+| Customers |913ms |1327ms |
+| Finance |3297ms |2345ms |
+| Website requests |2277ms |1823ms |
+| Activity |2301ms |2623ms |
+| General |875ms |1322ms |
+| Reports |2348ms |818ms |
 
-Single representative content-readiness samples, not p95, accepted budgets or
-whole-family acceptance. Reports refresh is slower than the preceding2552ms sample;
-other rows vary. No dashboard-wide speedup ratio. Streams may remain in flight at
-readiness; absent completed counts/phases are not zero work. Previous isolated
-Activity list1813ms spent638.4ms in context and624.4ms in transaction control versus
-warmed server execution~2ms. This shell change leaves that API path unchanged.
+Single representative samples, not p95, accepted budgets or whole-family
+acceptance. Warm Website1823ms exceeds the preceding816ms sample; cause/variability
+remain unresolved. Finance/Activity and other rows still miss provisional warm
+targets. No dashboard-wide speedup ratio.23 browser-classified lifecycle cancellations
+are distinct from uncancelled failures (zero); missing completed stream body/phase
+measurements are not zero bytes/SQL/work. Server-to-server and pre-window work are
+not fully exposed. The earlier isolated Activity attribution remains historical.
 Phases overlap; no blanket freshness-window or index change.
 
 | Phase | Tickets | Accepted | Remaining outcome |

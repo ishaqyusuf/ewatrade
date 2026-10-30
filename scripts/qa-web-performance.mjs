@@ -1,6 +1,6 @@
 // Local QA diagnostics only. Never retain URLs, headers, bodies or identifiers.
 /** @typedef {{milliseconds: number, count: number}} Phase */
-/** @typedef {{kind: string, labels: string[], started: number, phases: Record<string, Phase>, responseHeadersAt?: number, status?: number, finished?: number, failed?: boolean, cancelled?: boolean, responseBodyBytes?: number}} Entry */
+/** @typedef {{kind: string, labels: string[], rpcOperations: Record<string, number>, started: number, phases: Record<string, Phase>, responseHeadersAt?: number, status?: number, finished?: number, failed?: boolean, cancelled?: boolean, responseBodyBytes?: number}} Entry */
 /** @typedef {{completed: number, failed: number, cancelled: number, httpErrors: number, responseBodyBytes: number, byteMeasurements: number, requestWorkMilliseconds: number, serverPhases: Record<string, Phase>}} Group */
 /** @typedef {{started: number, responseHeaders: number, finished: number, firstStartMs: number, lastStartMs: number, firstResponseHeadersMs: number | null, lastFinishMs: number | null}} Timeline */
 const phases = new Set([
@@ -34,6 +34,54 @@ const phases = new Set([
   "fulfillmentReview",
   "fulfillmentEffects",
 ])
+
+const readGroups = new Map(
+  Object.entries({
+    "businessNotifications.unreadCount": "notificationCounts",
+    "businessBanking.pendingReportCount": "notificationCounts",
+    "businessBanking.notificationChangeCount": "notificationCounts",
+    "storefrontRequests.notificationCount": "notificationCounts",
+    "businessBanking.pendingReports": "notificationPreviews",
+    "businessBanking.notificationChanges": "notificationPreviews",
+    "storefrontRequests.notifications": "notificationPreviews",
+    "assistant.availability": "assistantCapability",
+    "assistant.allowance": "assistantCapability",
+    "productAssistant.capabilities": "assistantCapability",
+    "setupAssistant.attachments.voiceCapabilities": "assistantCapability",
+    "assistantChannels.availability": "whatsAppPrivate",
+    "assistantChannels.whatsAppConnections": "whatsAppPrivate",
+    "assistantChannels.whatsAppLink": "whatsAppPrivate",
+    "setupAssistant.attachments.list": "attachmentStatus",
+    "domains.order": "domainStatus",
+    "productAssistant.state": "productState",
+    "tenant.current": "workspaceScope",
+    "storefrontRequests.counts": "visibleQueue",
+    "storefrontRequests.orders": "visibleQueue",
+    "storefrontRequests.services": "visibleQueue",
+    "serviceCommerce.storeConversationQueue": "visibleQueue",
+    "assistant.pendingProposals": "pendingApprovals",
+    "orders.pendingChangeApprovals": "pendingApprovals",
+    "stores.orderVisibility": "accessStatus",
+  }),
+)
+
+/** Fixed numeric groups only; no names/inputs retained. @param {string} pathname */
+export function dashboardReadOperationCounts(pathname) {
+  if (!pathname.startsWith("/api/trpc/")) return {}
+  /** @type {Record<string, number>} */
+  const result = {}
+  let names
+  try {
+    names = decodeURIComponent(pathname.slice("/api/trpc/".length)).split(",")
+  } catch {
+    return { otherRpc: 1 }
+  }
+  for (const name of names) {
+    const group = readGroups.get(name) ?? "otherRpc"
+    result[group] = (result[group] ?? 0) + 1
+  }
+  return result
+}
 
 export function readPerformancePhases(header = "") {
   /** @type {Record<string, Phase>} */
@@ -107,7 +155,16 @@ export function observeWebPerformance(page, origin) {
       }
     }
     /** @type {Entry} */
-    const entry = { kind, labels, started: performance.now(), phases: {} }
+    const entry = {
+      kind,
+      labels,
+      rpcOperations:
+        kind === "api" && request.method() === "GET"
+          ? dashboardReadOperationCounts(url.pathname)
+          : {},
+      started: performance.now(),
+      phases: {},
+    }
     requests.set(request, entry)
     window.entries.push(entry)
   }
@@ -169,6 +226,11 @@ export function observeWebPerformance(page, origin) {
       const completed = current.entries.filter(
         (entry) => entry.finished !== undefined && entry.finished <= ended,
       )
+      /** @type {Record<string, number>} */
+      const rpcOperations = {}
+      for (const entry of current.entries)
+        for (const [group, count] of Object.entries(entry.rpcOperations))
+          rpcOperations[group] = (rpcOperations[group] ?? 0) + count
       /** @type {Record<string, Timeline>} */
       const timeline = {}
       /** @param {number} instant */
@@ -255,6 +317,7 @@ export function observeWebPerformance(page, origin) {
         started: current.entries.length,
         inFlightAtReadiness: current.entries.length - completed.length,
         observationMilliseconds: relative(ended),
+        rpcOperations,
         timeline,
         byKind,
         scope:

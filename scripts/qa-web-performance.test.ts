@@ -1,5 +1,9 @@
 import { describe, expect, test } from "bun:test"
-import { readPerformancePhases } from "./qa-web-performance.mjs"
+import {
+  dashboardReadOperationCounts,
+  readPerformancePhases,
+} from "./qa-web-performance.mjs"
+import { assertReadActivityBudget } from "./qa-web-route-families.mjs"
 
 describe("private local navigation diagnostics", () => {
   test("accepts fixed numeric phases and excludes arbitrary or sensitive header text", () => {
@@ -17,6 +21,27 @@ describe("private local navigation diagnostics", () => {
       poolBusy: { milliseconds: 200, count: 2 },
     })
   })
+})
+
+test("counts RPC operations separately from batches without retaining private labels", () => {
+  const counts = dashboardReadOperationCounts(
+    "/api/trpc/businessBanking.pendingReportCount%2Ctenant.current%2Ctenant.current%2Cprivate-sentinel",
+  )
+  expect(counts).toEqual({
+    notificationCounts: 1,
+    workspaceScope: 2,
+    otherRpc: 1,
+  })
+  expect(JSON.stringify(counts)).not.toContain("private-sentinel")
+  expect(
+    dashboardReadOperationCounts("/api/trpc-lookalike/tenant.current"),
+  ).toEqual({})
+  expect(dashboardReadOperationCounts("/api/trpc/%E0%A4%A")).toEqual({
+    otherRpc: 1,
+  })
+  expect(
+    dashboardReadOperationCounts("/api/assistant/runs/private-sentinel"),
+  ).toEqual({})
 })
 
 test("accepts only fixed Activity and transaction timing facts", () => {
@@ -39,4 +64,18 @@ test("accepts only fixed Activity and transaction timing facts", () => {
       names.map((name) => [name, { milliseconds: 1.5, count: 2 }]),
     ),
   )
+})
+
+test("inactive base-route budgets reject new API work without suppressing visible recovery", () => {
+  const active = { started: 1, timeline: { api: { started: 1 } } }
+  for (const phase of ["controlled-hidden", "offline-idle"]) {
+    expect(() => assertReadActivityBudget(phase, active)).toThrow(
+      "inactive base representative",
+    )
+    expect(() =>
+      assertReadActivityBudget(phase, { started: 0, timeline: {} }),
+    ).not.toThrow()
+  }
+  expect(() => assertReadActivityBudget("focus-return", active)).not.toThrow()
+  expect(() => assertReadActivityBudget("reconnect", active)).not.toThrow()
 })

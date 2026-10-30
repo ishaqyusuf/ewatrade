@@ -20,6 +20,7 @@ export async function webJourney(page, config) {
   const verifyFamilies = process.env.QA_WEB_ROUTE_FAMILIES === "true"
   const verifyActivityStartup = process.env.QA_WEB_ACTIVITY_STARTUP === "true"
   const verifyReportTabs = process.env.QA_WEB_REPORT_TABS === "true"
+  const verifyReadActivity = process.env.QA_WEB_READ_ACTIVITY === "true"
   const verifyActivityReads = process.env.QA_WEB_ACTIVITY_READS === "true"
   if (
     verifyActivityReads &&
@@ -29,7 +30,10 @@ export async function webJourney(page, config) {
       "Activity read verification requires local navigation artifacts.",
     )
   if (
-    (verifyFamilies || verifyActivityStartup || verifyReportTabs) &&
+    (verifyFamilies ||
+      verifyActivityStartup ||
+      verifyReportTabs ||
+      verifyReadActivity) &&
     (!performanceArtifacts || origin !== "https://ewatrade-dashboard.localhost")
   )
     throw new Error(
@@ -311,7 +315,10 @@ export async function webJourney(page, config) {
       )
     }
     if (
-      (verifyFamilies || verifyActivityStartup || verifyReportTabs) &&
+      (verifyFamilies ||
+        verifyActivityStartup ||
+        verifyReportTabs ||
+        verifyReadActivity) &&
       observation
     ) {
       mkdirSync(performanceArtifacts, { recursive: true })
@@ -326,7 +333,9 @@ export async function webJourney(page, config) {
               {
                 version: 1,
                 scope:
-                  "Fixed read-only representatives; full refresh and warm return after navigation away. Existing data only. Shell retention concerns soft navigation; readiness is representative content. No percentile or runtime-source qualification.",
+                  verifyReadActivity && !verifyFamilies
+                    ? "Fixed nine-family refresh/return plus read activity. Controlled DOM visibility, native network offline emulation; not actual tab occlusion. Catalog65s windows cover shared60s cadence; Website35s covers30s queue; remaining5s idle windows are samples, not complete interval coverage. No percentile/runtime-source qualification."
+                    : "Fixed read-only representatives; full refresh and warm return after navigation away. Existing data only. Shell retention concerns soft navigation; readiness is representative content. No percentile or runtime-source qualification.",
                 ...update,
               },
               null,
@@ -334,7 +343,13 @@ export async function webJourney(page, config) {
             ),
           )
         },
-        verifyFamilies ? "all" : verifyActivityStartup ? "activity" : "reports",
+        verifyFamilies
+          ? "all"
+          : verifyReadActivity
+            ? "read-activity"
+            : verifyActivityStartup
+              ? "activity"
+              : "reports",
       )
       samples.push(...familySamples)
       await sidebar
