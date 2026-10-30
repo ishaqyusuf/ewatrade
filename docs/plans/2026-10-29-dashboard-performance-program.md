@@ -1,5 +1,22 @@
 # Dashboard performance program
 
+## Overview numbers projection — DP-103/401,30October2026
+
+- [x] Actual metrics reader reproduces4 acquisitions for a populated Overview.
+- [x] One parameterized current statement preserves all four numeric fields,
+  exact presence/scope/date/status predicates, disabled-section omission and errors.
+- [x] Six disposable PostgreSQL cases/107 assertions pass, including48 presence/
+  creator combinations and fresh consecutive reads. No live business fixtures.
+- [x]300,000-row synthetic plans retain separate indexed date probes after a
+  combined-scan trial increased buffer work. Final all/creator buffer counts match
+  comparable old probes; timings are noisy and do not establish browser budgets.
+
+[Receipt](../verification/2026-10-30-dashboard-overview-summary.md). Source/platform
+verification passes: Dashboard/owned types, owned fast237/1533+QA types/Biome,
+H01/H02 and frozen local smoke (runtime unverified). Exact metrics proof is inert
+SQL, without a browser speed claim. No schema/index/cache/permission/command,
+deployment or service change. Prepared9eb8 remains separate; full program3/27.
+
 ## Reports selected-tab startup — DP-102/409,30October2026
 
 - [x] Reproduce five startup operations on Service entry while actual mounted

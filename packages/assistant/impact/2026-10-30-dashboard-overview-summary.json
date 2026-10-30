@@ -1,0 +1,45 @@
+{
+  "version": 1,
+  "id": "2026-10-30-dashboard-overview-summary",
+  "tickets": ["H02"],
+  "summary": "Local Overview numbers use one parameterized current DB projection instead of four acquisitions. No deployment.",
+  "noAssistantImpact": "The existing internal reader is used only by Dashboard Overview metrics. Same numeric DTO, presence flags, date/Store/Tenant/creator predicates and existing status behavior. No Assistant capability, tool, API procedure, financial command, mutation authority, permission, model/provider, cache window or schema change.",
+  "capabilities": [],
+  "procedures": [],
+  "docs": [
+    {
+      "topic": "feature",
+      "status": "local_only",
+      "path": ".brain/features/web-navigation-performance.md"
+    },
+    {
+      "topic": "api",
+      "status": "not_applicable",
+      "note": "Only an internal Dashboard server reader changes; no procedure or contract change."
+    },
+    {
+      "topic": "permissions",
+      "status": "not_applicable",
+      "note": "Existing fresh admission and creator visibility resolution remain."
+    },
+    {
+      "topic": "schema",
+      "status": "not_applicable",
+      "note": "No schema, index or migration changes."
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "run",
+      "path": "docs/verification/2026-10-30-dashboard-overview-summary.md",
+      "executed": true,
+      "result": "Six actual reader/disposable PostgreSQL cases pass with107 assertions;48 presence/creator combinations and fresh/error behavior. Final300000-row plans retain old indexed date-probe buffer counts, without browser or hosted latency claims. Dashboard/owned types, scoped fast237/1533+QA types/Biome and H01/H02 pass. Frozen local canonical smoke passes login/Catalog/draft-cancel, runtimeVerified:false. Prepared9eb8 remains separate/unchanged; no application restart, business write or deployment."
+    },
+    {
+      "kind": "test",
+      "path": "packages/db/src/queries/dashboard-overview.test.ts",
+      "executed": true,
+      "result": "Actual reader red evidence reproduces four acquisitions. The current parameterized SQL executes in disposable PostgreSQL, covering presence masks, creator/Store/Tenant scope, date predicates, Catalog duplicates/system exclusion, numeric totals and current-error behavior. No live records, commands or provider effects."
+    }
+  ]
+}
