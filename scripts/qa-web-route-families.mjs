@@ -80,7 +80,7 @@ export function assertReadActivityBudget(phase, requests) {
  * @param {{origin: string, catalogItem: string}} config
  * @param {ReturnType<import("./qa-web-performance.mjs").observeWebPerformance>} observation
  * @param {(update: {status: string, family: string | null, phase: string | null, samples: FamilySample[], diagnosticReads: Awaited<ReturnType<typeof diagnoseFinanceReads>>}) => void} checkpoint
- * @param {"all" | "activity" | "reports" | "read-activity"} [selection]
+ * @param {"all" | "activity" | "reports" | "finance" | "read-activity"} [selection]
  */
 export async function measureDashboardRouteFamilies(
   page,
@@ -96,7 +96,11 @@ export async function measureDashboardRouteFamilies(
       ? dashboardRouteFamilies.filter((target) => target.family === "DP-407")
       : selection === "reports"
         ? dashboardRouteFamilies.filter((target) => target.family === "DP-409")
-        : dashboardRouteFamilies
+        : selection === "finance"
+          ? dashboardRouteFamilies.filter(
+              (target) => target.family === "DP-405",
+            )
+          : dashboardRouteFamilies
   /** @type {FamilySample[]} */
   const samples = []
   /** @type {Awaited<ReturnType<typeof diagnoseFinanceReads>>} */

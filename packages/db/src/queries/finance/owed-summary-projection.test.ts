@@ -250,9 +250,17 @@ function reader(
       q: Prisma.Sql | TemplateStringsArray,
       ...values: unknown[]
     ) => {
-      if (!("text" in q)) {
-        events.push("snapshot-manager")
-        expect(values).toEqual(["tenant-a", "owner"])
+      if ("text" in q && q.text.includes("FOR SHARE OF m")) {
+        events.push("snapshot-book")
+        expect(q.values.slice(1)).toEqual(["tenant-a", "owner"])
+        expect(q.text).toContain(
+          options.current ? 'b."currencyCode"=t."currencyCode"' : "b.id=",
+        )
+        const selected = q.values[0]
+        if (!options.current)
+          expect(selected).toBe(options.book?.id ?? "book-a")
+        const missing =
+          options.missingBook || (options.current && selected !== "NGN")
         return options.denied
           ? []
           : [
@@ -263,9 +271,16 @@ function reader(
                 isActive: !options.inactive,
                 currencyCode: "NGN",
                 timezone: "UTC",
+                bookId: missing ? null : (options.book?.id ?? "book-a"),
+                bookCurrencyCode: missing
+                  ? null
+                  : (options.book?.currencyCode ?? "NGN"),
+                bookLastSequence: missing ? null : 99n,
+                bookStartsAt: missing ? null : new Date("2026-01-01Z"),
               },
             ]
       }
+      if (!("text" in q)) throw Error("Unexpected separate authority statement")
       events.push("projection")
       if (options.failure) throw options.failure
       return io.tx.$queryRaw(q)
@@ -276,21 +291,8 @@ function reader(
       },
     },
     financeBook: {
-      findFirst: async (args: unknown) => {
-        events.push("book")
-        expect(args).toEqual({
-          where: options.current
-            ? { tenantId: "tenant-a", currencyCode: "NGN" }
-            : { id: options.book?.id ?? "book-a", tenantId: "tenant-a" },
-          select: { id: true, currencyCode: true, lastSequence: true },
-        })
-        return options.missingBook
-          ? null
-          : {
-              id: options.book?.id ?? "book-a",
-              currencyCode: options.book?.currencyCode ?? "NGN",
-              lastSequence: 99n,
-            }
+      findFirst: async () => {
+        throw Error("Separate snapshot Book read is obsolete")
       },
     },
     financeSupplierAccount: {
@@ -321,7 +323,7 @@ const actor = { tenantId: "tenant-a", actorUserId: "owner", bookId: "book-a" }
 test("actual owed reader uses one bounded projection after snapshot authority and Book gates", async () => {
   const f = reader()
   const result = await getFinanceOwedSummary(f.db, actor)
-  expect(f.events).toEqual(["snapshot-manager", "book", "projection"])
+  expect(f.events).toEqual(["snapshot-book", "projection"])
   expect(f.queries).toHaveLength(1)
   expect(f.rows).toEqual([2])
   expect(result).toEqual({ currencyCode: "NGN", ...(await reference(input)) })
@@ -441,7 +443,7 @@ test("refused Member/Tenant and missing Book never execute a projection; fresh S
   const failure = Error("inert projection failure")
   const f = reader({ failure })
   await expect(getFinanceOwedSummary(f.db, actor)).rejects.toBe(failure)
-  expect(f.events).toEqual(["snapshot-manager", "book", "projection"])
+  expect(f.events).toEqual(["snapshot-book", "projection"])
 })
 
 test("scope values stay bound and a missing projection cannot silently report zero", async () => {
@@ -489,14 +491,14 @@ test("current Book selection matches the legacy read and binds its resolved iden
     currentCurrency: "NGN",
   })
   expect(result).toEqual({ ...expected, resolvedBookId: "book-a" })
-  expect(f.events).toEqual(["snapshot-manager", "book", "projection"])
+  expect(f.events).toEqual(["snapshot-book", "projection"])
 })
-test("stale current currency refuses after admission without a Book or money read", async () => {
+test("stale current currency refuses without a separate Book or money read", async () => {
   const f = reader({ current: true })
   const { bookId: _book, ...identity } = actor
   await expect(
     getFinanceOwedSummary(f.db, { ...identity, currentCurrency: "USD" }),
   ).rejects.toMatchObject({ code: "NOT_FOUND" })
-  expect(f.events).toEqual(["snapshot-manager"])
+  expect(f.events).toEqual(["snapshot-book"])
   expect(f.queries).toEqual([])
 })

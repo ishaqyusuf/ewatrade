@@ -1,0 +1,56 @@
+{
+  "version": 1,
+  "id": "2026-10-30-dashboard-finance-snapshot-book",
+  "tickets": ["H02"],
+  "summary": "Join current Finance snapshot authority and bounded Book selection for balances, owed summary and Bills within their existing RepeatableRead transactions. Local only.",
+  "noAssistantImpact": "No capability, procedure, input/output, money command or assistant authority changes. Three existing read owners select Book facts in the same Membership-locked snapshot. Shared permission predicate, role/plan gates, tenant/currency scope, transaction isolation/options, errors and all command/Book post-lock paths remain. No cache/schema/provider/deployment change.",
+  "capabilities": [],
+  "procedures": [],
+  "docs": [
+    {
+      "topic": "feature",
+      "status": "local_only",
+      "path": ".brain/features/merchant-finance.md"
+    },
+    {
+      "topic": "feature",
+      "status": "local_only",
+      "path": ".brain/features/web-navigation-performance.md"
+    },
+    {
+      "topic": "api",
+      "status": "local_only",
+      "path": ".brain/api/contracts.md"
+    },
+    {
+      "topic": "permissions",
+      "status": "local_only",
+      "path": ".brain/api/permissions.md"
+    },
+    {
+      "topic": "schema",
+      "status": "not_applicable",
+      "note": "No persistence/schema/index change."
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "test",
+      "path": "apps/api/src/trpc/routers/finance-current-book.test.ts",
+      "executed": true,
+      "result": "Actual caller red2/2/3 body statements versus expected1; final API/money/role/plan17/73 pass, including actor/tenant derivation and input gates. Inert DB only."
+    },
+    {
+      "kind": "test",
+      "path": "packages/db/src/queries/finance/manager-snapshot.concurrency.integration.test.ts",
+      "executed": true,
+      "result": "Actual generated Prisma on disposable socket-only PostgreSQL14/319 pass: statement counts, typed dates/large sequence,56 authority combinations, Book scope/errors, currency/sequence snapshot during real lock waits,40001 revocation and Membership-only lock retention through commit/rollback. Actual Bills amounts/counts/pagination/attached receipts pass. Fixture databases removed and owned cluster stopped."
+    },
+    {
+      "kind": "run",
+      "path": "docs/verification/2026-10-30-dashboard-finance-snapshot-book.md",
+      "executed": true,
+      "result": "Existing actual reader/projection parity19/293 passes with unchanged money SQL/arithmetic. Source/platform/build/runtime checks and limitations recorded separately in the receipt."
+    }
+  ]
+}

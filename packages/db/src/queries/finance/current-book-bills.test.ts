@@ -1,15 +1,31 @@
 import { expect, test } from "bun:test"
-import type { PrismaClient } from "../../../generated/prisma/client"
+import type { Prisma, PrismaClient } from "../../../generated/prisma/client"
 import { listFinanceBills } from "./bill-reads"
 
 function reader() {
   const where: unknown[] = []
   const effects: string[] = []
   const tx = {
-    $queryRaw: async (_query: TemplateStringsArray, ...values: unknown[]) => {
-      effects.push("lock")
-      expect(values).toEqual(["tenant-a", "actor-a"])
-      return []
+    $queryRaw: async (query: Prisma.Sql) => {
+      effects.push("snapshot-book")
+      where.push(query.values)
+      const missing =
+        query.text.includes('b."currencyCode"=t."currencyCode"') &&
+        query.values[0] !== "NGN"
+      return [
+        {
+          id: "tenant-a",
+          role: "OWNER",
+          status: "ACTIVE",
+          isActive: true,
+          currencyCode: "NGN",
+          timezone: "UTC",
+          bookId: missing ? null : "book-a",
+          bookCurrencyCode: missing ? null : "NGN",
+          bookLastSequence: missing ? null : 1n,
+          bookStartsAt: missing ? null : new Date("2026-01-01Z"),
+        },
+      ]
     },
     membership: {
       findFirst: async () => {
@@ -75,10 +91,8 @@ test("current spending keeps the canonical exact summary/rows and identifies its
     paidAgainstBillsMinor: "3",
     outstandingMinor: "9007199254740990",
   })
-  expect(a.where).toEqual([{ where: { id: "book-a", tenantId: "tenant-a" } }])
-  expect(b.where).toEqual([
-    { where: { tenantId: "tenant-a", currencyCode: "NGN" } },
-  ])
+  expect(a.where).toEqual([["book-a", "tenant-a", "actor-a"]])
+  expect(b.where).toEqual([["NGN", "tenant-a", "actor-a"]])
   expect(b.effects).toEqual(a.effects)
 })
 test("stale spending currency cannot select another Book or execute the expense query", async () => {
@@ -86,6 +100,6 @@ test("stale spending currency cannot select another Book or execute the expense 
   await expect(
     listFinanceBills(f.db, { ...actor, currentCurrency: "USD", limit: 5 }),
   ).rejects.toMatchObject({ code: "NOT_FOUND" })
-  expect(f.where).toEqual([])
-  expect(f.effects).toEqual(["lock", "admission"])
+  expect(f.where).toEqual([["USD", "tenant-a", "actor-a"]])
+  expect(f.effects).toEqual(["snapshot-book"])
 })

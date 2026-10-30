@@ -291,6 +291,15 @@ same content/error/shell checks. It does not run the other family samples or
 Finance diagnostic GETs. If both flags are true, the full nine-family pass wins.
 This focused run does not replace whole-dashboard acceptance.
 
+For a Finance-only source change, use `QA_WEB_FINANCE_OVERVIEW=true` with that same
+local artifact command. It reuses ordinary QA login/Catalog/draft Cancel, then
+measures Finance refresh/return with all three panels ready and the normal two
+isolated read-only Book/owed-summary probes. Other family evidence is reused when
+its relevant source is unchanged; this mode does not replace all-family acceptance.
+Full-family, read-activity, Activity and Reports modes take precedence when combined.
+Missing Finance content/access or refused/mismatched diagnostic reads fail. The
+canonical local host, existing-data/write guard and runtime-identity limits remain.
+
 For focused Reports cold-tab verification, use `QA_WEB_REPORT_TABS=true` with the
 same local artifact command. It measures Reports refresh/return, opens a fresh
 Service jobs document, then clicks Stock and waits for its loaded metrics. Both

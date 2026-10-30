@@ -20,6 +20,7 @@ export async function webJourney(page, config) {
   const verifyFamilies = process.env.QA_WEB_ROUTE_FAMILIES === "true"
   const verifyActivityStartup = process.env.QA_WEB_ACTIVITY_STARTUP === "true"
   const verifyReportTabs = process.env.QA_WEB_REPORT_TABS === "true"
+  const verifyFinanceOverview = process.env.QA_WEB_FINANCE_OVERVIEW === "true"
   const verifyReadActivity = process.env.QA_WEB_READ_ACTIVITY === "true"
   const verifyActivityReads = process.env.QA_WEB_ACTIVITY_READS === "true"
   if (
@@ -33,6 +34,7 @@ export async function webJourney(page, config) {
     (verifyFamilies ||
       verifyActivityStartup ||
       verifyReportTabs ||
+      verifyFinanceOverview ||
       verifyReadActivity) &&
     (!performanceArtifacts || origin !== "https://ewatrade-dashboard.localhost")
   )
@@ -319,6 +321,7 @@ export async function webJourney(page, config) {
       (verifyFamilies ||
         verifyActivityStartup ||
         verifyReportTabs ||
+        verifyFinanceOverview ||
         verifyReadActivity) &&
       observation
     ) {
@@ -350,7 +353,9 @@ export async function webJourney(page, config) {
             ? "read-activity"
             : verifyActivityStartup
               ? "activity"
-              : "reports",
+              : verifyReportTabs
+                ? "reports"
+                : "finance",
       )
       samples.push(...familySamples)
       await sidebar

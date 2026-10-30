@@ -73,6 +73,27 @@ unchanged. `runtimeVerified:false`; no release qualification or deployment.
 [Activity enrichment](../verification/2026-10-30-dashboard-activity-bounded-enrichment.md).
 
 The latest optimized Dashboard artifact is Next16.4.3 BUILD_ID
+`lk0TyEwhp1z7MyhmRFYem`, parentfea718366 plus frozen Finance snapshot/Book projection.
+Balances/owed/Bills retain their existing RepeatableRead options and now resolve
+fresh snapshot authority plus bounded Book fields in one Membership-locked query.
+Actual caller red2/2/3→1; API17/73, native PostgreSQL14/319, projection19/293, all
+relevant types/build, scoped237/1533+QA/Biome,H01/H02 pass. Money/DTO/cursor/receipt
+bodies, generic guard, Book post-lock path, commands and authority are unchanged.
+
+The existing runner adds a fixed Finance-only option; actual inert driver35 and
+QA-only47/195 pass. Focused optimized canonical smoke16:05:25.279Z–16:06:06.324Z
+passes QA login/Catalog/draft Cancel and Finance refresh/return plus normal isolated
+GETs. Finance refresh2898ms, warm2342ms; prior complete baseline3326/2339ms below.
+Single pairs with different preceding family order, not a causal page gain or p95.
+Owed1740ms/8SQL versus1905/9, same557-byte DTO; Book1560ms/7SQL/9149bytes. Context
+636.2/654.6ms and transaction controls643.6ms/3,448.3ms/2 overlap. Warm window starts
+only7 Flight requests (4 prefetch/3 navigation), no browser API/RPC; next attribute
+actual server-owned route/Book work rather than assuming another panel bottleneck.
+Development restored80851, other listeners unchanged. Runtime unverified, no API
+restart/deployment/budget acceptance. Other-family source evidence is reused; this
+is not a new full-family/lifecycle run on lk0. [Focused Finance proof](../verification/2026-10-30-dashboard-finance-snapshot-book.md).
+
+The preceding complete nine-family artifact is Next16.4.3 BUILD_ID
 `aXGxHvKxspRkA-sdcsSRx`, parent839dfad2 plus frozen optional root QA policy isolation.
 The root no longer awaits optional policy before returning document/provider/page
 composition. Its stable client QA provider remains disabled until current policy
@@ -97,7 +118,8 @@ RPC operations from batches; visible queues/focus/reconnect continue. Recursive
 receipt/Setup/socket contracts remain separately reviewed. That run is historical
 lifecycle evidence, not a new full lifecycle run on aXG. Its old18 timing rows were
 excluded after cleanup emitted an extra visibility event; the preceding normal
-baseline remains in its receipt. The table below is the new normal journey.
+baseline remains in its receipt. The table below is the most recent complete
+nine-family baseline on aXG; the newer focused Finance sample is separate above.
 [Lifecycle evidence and measurement limits](../verification/2026-10-30-dashboard-read-activity.md).
 
 | Family | Full-family refresh sample | Full-family warm-return sample |
@@ -221,8 +243,10 @@ have actual callback/owner proof. Mutable Finance/Ledger prefixes, other command
 and report dependencies still need review; no full invalidation acceptance.
 Book's post-lock permission/metadata join now removes one measured statement,
 with current-currency fallback and native lock/refusal proof. Root optional QA policy
-is now isolated with actual post-header overlap proof. Next inspect remaining Finance/
-Activity context/control/projection round trips using actual caller evidence.
+is now isolated with actual post-header overlap proof. Three Finance snapshot readers
+now join authority/Book, while warm2342ms remains and has no browser API starts. Next
+attribute the actual server Finance route/Book return, then remaining Activity/context/
+control/projection round trips using actual caller evidence.
 QA-proof/legal overlap remains rejected for local latency (legal0ms). Activity's
 fresh per-mount identity still prevents naive route/intent prefetch substitution.
 Preserve current authority, locks, lifecycle ownership and database topology.
@@ -230,8 +254,8 @@ Preserve current authority, locks, lifecycle ownership and database topology.
 
 1. **DP-405/407:** shared critical-path scheduling DP-103 is accepted from its
    criterion audit; the shared shell projection and cold Stock fix are verified.
-   Next inspect remaining current API context/control round trips behind Activity's
-   unchanged~2.61s return and Finance's~2.34s return. Preserve proof, role, snapshot
+   Next attribute the actual server Finance route/Book return (~2.34s, no browser
+   API starts), then current API context/control round trips behind Activity's~2.63s return. Preserve proof, role, snapshot
    and transaction admission; use bounded projection/independent-work evidence.
 2. **DP-003/204:** distinguish the observed26 canceled refresh Flight requests
    from navigation/useful prefetch before changing scheduling. Cancellation alone

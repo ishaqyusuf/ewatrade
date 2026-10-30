@@ -152,9 +152,16 @@ function reader(
       query: Prisma.Sql | TemplateStringsArray,
       ...values: unknown[]
     ) => {
-      if (!("text" in query)) {
-        events.push("snapshot-manager")
-        expect(values).toEqual(["tenant-a", "owner"])
+      if ("text" in query && query.text.includes("FOR SHARE OF m")) {
+        events.push("snapshot-book")
+        expect(query.values.slice(1)).toEqual(["tenant-a", "owner"])
+        expect(query.text).toContain(
+          options.current ? 'b."currencyCode"=t."currencyCode"' : "b.id=",
+        )
+        const selected = query.values[0]
+        if (!options.current) expect(selected).toBe("book-a")
+        const missing =
+          options.missingBook || (options.current && selected !== "NGN")
         return options.denied
           ? []
           : [
@@ -165,9 +172,15 @@ function reader(
                 isActive: !options.inactive,
                 currencyCode: "NGN",
                 timezone: "UTC",
+                bookId: missing ? null : "book-a",
+                bookCurrencyCode: missing ? null : "NGN",
+                bookLastSequence: missing ? null : (options.snapshot ?? 4n),
+                bookStartsAt: missing ? null : at,
               },
             ]
       }
+      if (!("text" in query))
+        throw Error("Unexpected separate authority statement")
       events.push("projection")
       queries.push(query)
       if (options.failure) throw options.failure
@@ -181,21 +194,8 @@ function reader(
       },
     },
     financeBook: {
-      findFirst: async (args: unknown) => {
-        events.push("book")
-        expect(args).toEqual({
-          where: options.current
-            ? { tenantId: "tenant-a", currencyCode: "NGN" }
-            : { id: "book-a", tenantId: "tenant-a" },
-        })
-        return options.missingBook
-          ? null
-          : {
-              id: "book-a",
-              currencyCode: "NGN",
-              startsAt: at,
-              lastSequence: options.snapshot ?? 4n,
-            }
+      findFirst: async () => {
+        throw Error("Separate snapshot Book read is obsolete")
       },
     },
   }
@@ -222,7 +222,7 @@ const actor = { tenantId: "tenant-a", actorUserId: "owner", bookId: "book-a" }
 test("actual balance reader uses one projection after snapshot authority/Book gates", async () => {
   const { db, events, queries } = reader()
   const result = await getFinanceAccountBalances(db, actor)
-  expect(events).toEqual(["snapshot-manager", "book", "projection"])
+  expect(events).toEqual(["snapshot-book", "projection"])
   expect(queries).toHaveLength(1)
   expect(result).toEqual({
     snapshotSequence: "4",
@@ -358,11 +358,9 @@ test("parameters do not become SQL and consecutive snapshots are not cached", as
   ).toBe(999999n)
   expect(root.queries).toHaveLength(2)
   expect(root.events).toEqual([
-    "snapshot-manager",
-    "book",
+    "snapshot-book",
     "projection",
-    "snapshot-manager",
-    "book",
+    "snapshot-book",
     "projection",
   ])
 })
@@ -378,14 +376,14 @@ test("current Book selection matches the legacy read and binds its resolved iden
     currentCurrency: "NGN",
   })
   expect(result).toEqual({ ...expected, resolvedBookId: "book-a" })
-  expect(f.events).toEqual(["snapshot-manager", "book", "projection"])
+  expect(f.events).toEqual(["snapshot-book", "projection"])
 })
-test("stale current currency refuses after admission without a Book or money read", async () => {
+test("stale current currency refuses without a separate Book or money read", async () => {
   const f = reader({ current: true })
   const { bookId: _book, ...identity } = actor
   await expect(
     getFinanceAccountBalances(f.db, { ...identity, currentCurrency: "USD" }),
   ).rejects.toMatchObject({ code: "NOT_FOUND" })
-  expect(f.events).toEqual(["snapshot-manager"])
+  expect(f.events).toEqual(["snapshot-book"])
   expect(f.queries).toEqual([])
 })

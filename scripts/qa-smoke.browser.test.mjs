@@ -386,6 +386,12 @@ for (const scenario of [
     expected: "passed",
   },
   { name: "focused Activity startup", options: {}, expected: "passed" },
+  { name: "focused Finance overview", options: {}, expected: "passed" },
+  {
+    name: "focused Finance missing content",
+    options: { omitReady: "/finance" },
+    expected: "DP-405",
+  },
   {
     name: "all nine read activity offline failure",
     options: { probeLifecycle: true, failOffline: true },
@@ -602,20 +608,28 @@ for (const scenario of [
               ? "activity"
               : scenario.name.startsWith("focused Reports")
                 ? "reports"
-                : scenario.name.startsWith("all nine read activity")
-                  ? "read-activity"
-                  : "all",
+                : scenario.name.startsWith("focused Finance")
+                  ? "finance"
+                  : scenario.name.startsWith("all nine read activity")
+                    ? "read-activity"
+                    : "all",
           )
         if (scenario.expected === "passed") {
           const samples = await run()
           const activityOnly = scenario.name.startsWith("focused Activity")
           const reportsOnly = scenario.name.startsWith("focused Reports")
+          const financeOnly = scenario.name.startsWith("focused Finance")
           const readActivity = scenario.name === "all nine read activity"
           const selectedFamilies =
-            activityOnly || reportsOnly
+            activityOnly || reportsOnly || financeOnly
               ? dashboardRouteFamilies.filter(
                   (target) =>
-                    target.family === (reportsOnly ? "DP-409" : "DP-407"),
+                    target.family ===
+                    (reportsOnly
+                      ? "DP-409"
+                      : financeOnly
+                        ? "DP-405"
+                        : "DP-407"),
                 )
               : dashboardRouteFamilies
           assert.equal(
@@ -728,6 +742,7 @@ for (const flag of [
   "QA_WEB_ROUTE_FAMILIES",
   "QA_WEB_ACTIVITY_STARTUP",
   "QA_WEB_REPORT_TABS",
+  "QA_WEB_FINANCE_OVERVIEW",
   "QA_WEB_READ_ACTIVITY",
 ])
   test(

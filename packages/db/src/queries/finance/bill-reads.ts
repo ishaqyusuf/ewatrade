@@ -5,10 +5,10 @@ import {
   buildScopedListPageWhere,
 } from "../list-sort"
 import { type FinanceActor, assertFinanceManager } from "./access"
+import { getFinanceManagerBookSnapshot } from "./manager-snapshot"
 import {
   type FinanceReadBookScope,
   financeReadBookIdentity,
-  financeReadBookWhere,
 } from "./read-book-scope"
 import { FinanceError } from "./rules"
 
@@ -44,12 +44,7 @@ export async function listFinanceBills(
   }
   return db.$transaction(
     async (tx) => {
-      const tenant = await assertFinanceManager(tx, input)
-      const book = await tx.financeBook.findFirst({
-        where: financeReadBookWhere(input, tenant.currencyCode),
-      })
-      if (!book)
-        throw new FinanceError("NOT_FOUND", "Financial book not found.")
+      const book = await getFinanceManagerBookSnapshot(tx, input)
       const where: Prisma.FinanceBillWhereInput = {
         bookId: book.id,
         kind: "EXPENSE",

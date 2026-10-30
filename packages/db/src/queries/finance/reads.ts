@@ -1,11 +1,10 @@
 import type { PrismaClient } from "../../../generated/prisma/client"
 import { type FinanceActor, assertFinanceManager } from "./access"
 import { getFinanceAccountBalanceProjection } from "./account-balance-projection"
-import { assertFinanceManagerSnapshot } from "./manager-snapshot"
+import { getFinanceManagerBookSnapshot } from "./manager-snapshot"
 import {
   type FinanceReadBookScope,
   financeReadBookIdentity,
-  financeReadBookWhere,
 } from "./read-book-scope"
 import { FinanceError } from "./rules"
 
@@ -15,12 +14,7 @@ export async function getFinanceAccountBalances(
 ) {
   return db.$transaction(
     async (tx) => {
-      const tenant = await assertFinanceManagerSnapshot(tx, input)
-      const book = await tx.financeBook.findFirst({
-        where: financeReadBookWhere(input, tenant.currencyCode),
-      })
-      if (!book)
-        throw new FinanceError("NOT_FOUND", "Financial book not found.")
+      const book = await getFinanceManagerBookSnapshot(tx, input)
       // Finance dates are UTC, so "this month" starts at 00:00 UTC on the 1st.
       const now = new Date()
       const monthStart = new Date(

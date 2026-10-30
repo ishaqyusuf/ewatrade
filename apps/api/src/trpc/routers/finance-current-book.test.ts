@@ -1,4 +1,5 @@
 import { expect, test } from "bun:test"
+import type { Prisma } from "@ewatrade/db"
 import {
   financeBillsReadSchema,
   financeBookSchema,
@@ -25,8 +26,11 @@ function fixture(role = "OWNER", plan = "starter") {
     accounts: [],
   }
   const tx = {
-    $queryRaw: async (_query: TemplateStringsArray, ...values: unknown[]) => {
-      raw.push(values)
+    $queryRaw: async (
+      query: Prisma.Sql | TemplateStringsArray,
+      ...values: unknown[]
+    ) => {
+      raw.push("text" in query ? query.values : values)
       return [
         {
           id: "tenant-a",
@@ -35,6 +39,10 @@ function fixture(role = "OWNER", plan = "starter") {
           isActive: true,
           role: "OWNER",
           status: "ACTIVE",
+          bookId: null,
+          bookCurrencyCode: null,
+          bookLastSequence: null,
+          bookStartsAt: null,
         },
       ]
     },
@@ -181,20 +189,21 @@ for (const method of ["balances", "owedSummary", "bills"] as const) {
       ? caller.bills({ ...input, limit: 5 })
       : caller[method](input)
   const input = { currentCurrency: "NGN" }
+  test(`${method} resolves snapshot authority and Book in one bounded body statement`, async () => {
+    const f = fixture()
+    await expect(invoke(f.caller, input)).rejects.toMatchObject({
+      code: "NOT_FOUND",
+    })
+    expect(f.raw.length + f.membershipReads.length + f.books.length).toBe(1)
+  })
   test(`${method} derives actor/business from protected context and selects only the current currency`, async () => {
     const f = fixture()
     await expect(invoke(f.caller, input)).rejects.toMatchObject({
       code: "NOT_FOUND",
     })
-    expect(f.raw).toEqual([["tenant-a", "actor-a"]])
-    expect(f.books).toEqual([
-      {
-        where: { tenantId: "tenant-a", currencyCode: "NGN" },
-        ...(method === "owedSummary"
-          ? { select: { id: true, currencyCode: true, lastSequence: true } }
-          : {}),
-      },
-    ])
+    expect(f.raw).toEqual([["NGN", "tenant-a", "actor-a"]])
+    expect(f.books).toEqual([])
+    expect(f.membershipReads).toEqual([])
   })
   test(`${method} retains Owner/Admin plan gates and rejects forged scope before DB work`, async () => {
     for (const [role, plan] of [
