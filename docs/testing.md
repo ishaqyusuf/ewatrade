@@ -313,6 +313,19 @@ events cannot change the returned snapshot. Completion includes failed/canceled
 requests; response headers do not mean query data is ready. Readiness timings
 still include driver overhead; a finish-to-readiness gap is not a render profile.
 
+Local artifact observations also initialize an independent Chromium protocol
+session before the journey. `receivedBodies` snapshots numeric decoded-body
+`dataReceived` counters at the window end, including partial/cancelled streams.
+It never reads response content. These are decoded bytes, not encoded transfer,
+headers, full payloads or server SQL. Zero `measurements` means unavailable, not
+proof of zero work. Protocol and Playwright request counts can differ, especially
+for cached/intercepted route work; do not merge their denominators. Existing
+completed-response sizes remain separate. Fixed `routePrefetch`/`routeNavigation`
+labels classify Next prefetch headers; labels overlap with `route`, and bytes
+must not be summed across overlapping labels. A prefetch label does not establish
+unnecessary work. Inert driver coverage includes aborts, end-of-window snapshots
+and redirects. Ordinary runs without artifact observation do not open this session.
+
 The full-family pass records one full refresh and one warm return after navigation
 away for each DP-401–409 representative: Overview, Catalog, Orders, Customers, Finance,
 Website requests, Activity, General settings and Reports. Readiness uses the

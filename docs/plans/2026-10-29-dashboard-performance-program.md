@@ -110,6 +110,19 @@ measurements are not zero bytes/SQL/work. Server-to-server and pre-window work a
 not fully exposed. The earlier isolated Activity attribution remains historical.
 Phases overlap; no blanket freshness-window or index change.
 
+A subsequent focused Activity observation improves DP-003 attribution without an
+application change. Numeric Chromium counters capture partial cancelled streams;
+header-marked prefetch and navigation now have separate fixed labels. Optimized
+Activity refresh3121ms/warm2617ms remain slow single samples. On warm return,
+the Activity API batch starts458.5ms and ends2236.6ms; four header-marked prefetch
+requests finish by34.7ms. This sample does not justify disabling parent prefetch.
+Decoded counters are independent from Playwright counts and do not expose all SQL
+or server work.32 inert driver cases,5 observer/budget cases/18 assertions,
+QA types, owned47/195+Biome, frozen focused canonical smoke and restoration doctor
+pass. Dashboard development restored to listener49718; other services unchanged.
+No ticket newly accepted; full nine-family table above remains the latest complete
+representative pass. [Focused evidence and limits](../verification/2026-10-30-dashboard-received-bytes.md).
+
 | Phase | Tickets | Accepted | Remaining outcome |
 | --- | --- | --- | --- |
 |0 Evidence |001–003 |2/3 |Comparable costs, variable-wait attribution and calibrated budgets |

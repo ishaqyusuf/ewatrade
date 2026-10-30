@@ -1,8 +1,119 @@
 import assert from "node:assert/strict"
 import { readFileSync } from "node:fs"
+import { createServer } from "node:http"
 import test from "node:test"
 import { observeWebPerformance } from "./qa-web-performance.mjs"
 import { launchSmokeBrowser, webJourney } from "./qa-web-smoke.mjs"
+
+test(
+  "received-byte counters survive a cancelled inert stream and freeze at the window boundary",
+  { timeout: 30000 },
+  async () => {
+    /** @type {() => void} */
+    let finishLate = () => {
+      throw Error("Late fixture is not initialized")
+    }
+    const server = createServer((request, response) => {
+      if (request.url === "/favicon.ico") {
+        response.writeHead(204)
+        response.end()
+        return
+      }
+      if (request.url === "/redirect") {
+        response.writeHead(302, { location: "/redirected" })
+        response.end()
+        return
+      }
+      if (request.url === "/redirected") {
+        response.end("ok")
+        return
+      }
+      if (request.url === "/") {
+        response.end('<html><link rel="icon" href="data:,"></html>')
+        return
+      }
+      response.writeHead(200, { "content-type": "application/x-ndjson" })
+      response.write(`${"x".repeat(2048)}\n`)
+      if (request.url === "/late") {
+        finishLate = () => {
+          response.end("y".repeat(2048))
+        }
+        return
+      }
+      const timer = setInterval(() => response.write("z".repeat(2048)), 1000)
+      response.on("close", () => clearInterval(timer))
+    })
+    await new Promise((resolve) =>
+      server.listen(0, "127.0.0.1", () => resolve(undefined)),
+    )
+    const address = server.address()
+    if (!address || typeof address === "string")
+      throw Error("Missing inert listener")
+    const base = `http://127.0.0.1:${address.port}`
+    const browser = await launchSmokeBrowser()
+    try {
+      const page = await browser.newPage({ serviceWorkers: "block" })
+      const observer = observeWebPerformance(
+        page,
+        "https://ewatrade-dashboard.localhost",
+      )
+      await observer.ready()
+      await page.goto(base)
+      observer.begin()
+      const requested = page.waitForRequest(`${base}/stream`)
+      const failed = page.waitForEvent("requestfailed", {
+        predicate: (request) => request.url() === `${base}/stream`,
+      })
+      await page.evaluate(async () => {
+        const controller = new AbortController()
+        const response = await fetch("/stream", { signal: controller.signal })
+        await response.body?.getReader().read()
+        controller.abort()
+      })
+      const request = await requested
+      await failed
+      await page.waitForTimeout(50)
+      const result = await observer.end()
+      assert.equal((await request.sizes()).responseBodySize, 0)
+      assert.equal(result.byKind.other.byteMeasurements, 0)
+      assert.equal(result.receivedBodies.byKind.other.measurements, 1)
+      assert.ok(result.receivedBodies.byKind.other.decodedBytes >= 2049)
+      assert.equal(result.receivedBodies.byKind.other.failed, 1)
+      assert.ok(!JSON.stringify(result).includes(base))
+
+      observer.begin()
+      const started = page.waitForResponse(`${base}/late`)
+      await page.evaluate(() => {
+        void fetch("/late").then((response) => response.text())
+      })
+      await started
+      await page.waitForTimeout(50)
+      const partial = await observer.end()
+      assert.equal(partial.receivedBodies.byKind.other.inFlight, 1)
+      assert.equal(partial.receivedBodies.byKind.other.decodedBytes, 2049)
+      const frozen = structuredClone(partial)
+      const finished = page.waitForEvent("requestfinished", {
+        predicate: (request) => request.url() === `${base}/late`,
+      })
+      finishLate()
+      await finished
+      assert.deepEqual(partial, frozen)
+      observer.begin()
+      await page.goto(`${base}/redirect`)
+      await page.waitForTimeout(50)
+      const redirected = await observer.end()
+      assert.equal(redirected.receivedBodies.byKind.document.requests, 2)
+      assert.equal(redirected.receivedBodies.byKind.document.completed, 2)
+      assert.equal(redirected.receivedBodies.byKind.document.inFlight, 0)
+      assert.equal(redirected.receivedBodies.byKind.document.decodedBytes, 2)
+      observer.dispose()
+    } finally {
+      await browser.close()
+      server.closeAllConnections()
+      await new Promise((resolve) => server.close(resolve))
+    }
+  },
+)
 
 test(
   "request diagnostics observe browser counts/bytes and fixed phases without retaining payloads",
@@ -23,6 +134,7 @@ test(
         page,
         "https://ewatrade-dashboard.localhost",
       )
+      await observer.ready()
       assert.throws(
         () =>
           observeWebPerformance(page, "https://preview-dashboard.ewatrade.com"),
@@ -135,6 +247,7 @@ test(
         page,
         "https://ewatrade-dashboard.localhost",
       )
+      await observer.ready()
       observer.begin()
       await page.goto(
         "https://ewatrade-dashboard.localhost/api/trpc/activity.filters,activity.listPage?input=private-query-sentinel",
@@ -476,6 +589,7 @@ for (const scenario of [
           } else await route.fulfill({ contentType: "text/html", body: html })
         })
         const observation = observeWebPerformance(page, origin)
+        await observation.ready()
         /** @type {Array<{status: string, family: string | null, phase: string | null, samples: object[], diagnosticReads: Awaited<ReturnType<typeof import("./qa-finance-read-diagnostics.mjs").diagnoseFinanceReads>>}>} */
         const checkpoints = []
         const run = () =>

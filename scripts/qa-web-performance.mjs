@@ -3,6 +3,7 @@
 /** @typedef {{kind: string, labels: string[], rpcOperations: Record<string, number>, started: number, phases: Record<string, Phase>, responseHeadersAt?: number, status?: number, finished?: number, failed?: boolean, cancelled?: boolean, responseBodyBytes?: number}} Entry */
 /** @typedef {{completed: number, failed: number, cancelled: number, httpErrors: number, responseBodyBytes: number, byteMeasurements: number, requestWorkMilliseconds: number, serverPhases: Record<string, Phase>}} Group */
 /** @typedef {{started: number, responseHeaders: number, finished: number, firstStartMs: number, lastStartMs: number, firstResponseHeadersMs: number | null, lastFinishMs: number | null}} Timeline */
+/** @typedef {{kind: string, labels: string[], decodedBytes: number, dataEvents: number, finished: boolean, failed: boolean}} ReceivedBody */
 const phases = new Set([
   "request",
   "responseSetup",
@@ -103,6 +104,51 @@ export function readPerformancePhases(header = "") {
   return result
 }
 
+/** @param {{url: string, type: string, headers: Record<string, string>, method: string}} request @param {string} origin */
+export function classifyDashboardRequest(request, origin) {
+  const url = new URL(request.url)
+  const type = request.type.toLowerCase()
+  const headers = request.headers
+  const kind =
+    url.origin === origin && url.pathname.startsWith("/api/")
+      ? "api"
+      : url.origin === origin && headers.rsc === "1"
+        ? "route"
+        : ["document", "script", "stylesheet"].includes(type)
+          ? type
+          : "other"
+  // Classification is fixed; URLs, query input and headers are never retained.
+  const labels = [kind]
+  if (kind === "route")
+    labels.push(
+      headers["next-router-prefetch"] === "1" ||
+        Boolean(headers["next-router-segment-prefetch"])
+        ? "routePrefetch"
+        : "routeNavigation",
+    )
+  if (kind === "api") {
+    if (
+      request.method === "GET" &&
+      headers["trpc-accept"] === "application/jsonl"
+    )
+      labels.push("streamingApi")
+    if (url.pathname.startsWith("/api/trpc/")) {
+      const procedures = url.pathname.slice("/api/trpc/".length).split(",")
+      if (procedures.includes("activity.listPage")) labels.push("activityList")
+      if (procedures.includes("activity.filters"))
+        labels.push("activityFilters")
+      const reconciliation = procedures.includes(
+        "inventory.reconciliationReport",
+      )
+      const balances = procedures.includes("inventory.balanceReport")
+      if (reconciliation) labels.push("stockReconciliation")
+      if (balances) labels.push("stockBalances")
+      if (reconciliation && balances) labels.push("stockReportBatch")
+    }
+  }
+  return { kind, labels }
+}
+
 /**
  * Observes existing journeys; it never sends requests or waits for idle polling.
  * @param {import("playwright").Page} page
@@ -111,8 +157,116 @@ export function readPerformancePhases(header = "") {
 export function observeWebPerformance(page, origin) {
   if (origin !== "https://ewatrade-dashboard.localhost")
     throw new Error("Request performance measurement is local-only.")
-  /** @type {{started: number, entries: Entry[]} | undefined} */
+  /** @type {{started: number, entries: Entry[], received: ReceivedBody[]} | undefined} */
   let window
+  /** @type {Map<string, ReceivedBody>} */
+  const receiving = new Map()
+  /** @type {import("playwright").CDPSession | undefined} */
+  let protocol
+  let initialized = false
+  let disposed = false
+  /** @type {(() => void)[]} */
+  const protocolCleanups = []
+  const removeProtocolListeners = () => {
+    for (const cleanup of protocolCleanups.splice(0)) cleanup()
+  }
+  const ready = page
+    .context()
+    .newCDPSession(page)
+    .then(async (session) => {
+      if (disposed) {
+        await session.detach()
+        return
+      }
+      protocol = session
+      /** @param {{requestId: string, request: {url: string, method: string, headers: Record<string, string>}, type?: string, redirectResponse?: unknown}} event */
+      const onrequestWillBeSent = (event) => {
+        if (event.redirectResponse) {
+          const previous = receiving.get(event.requestId)
+          if (previous) previous.finished = true
+          receiving.delete(event.requestId)
+        }
+        if (!window) return
+        // Copy only the four classification headers; no credentials or payload fields.
+        const headers = Object.fromEntries(
+          Object.entries(event.request.headers)
+            .filter(([name]) =>
+              [
+                "rsc",
+                "next-router-prefetch",
+                "next-router-segment-prefetch",
+                "trpc-accept",
+              ].includes(name.toLowerCase()),
+            )
+            .map(([name, value]) => [name.toLowerCase(), String(value)]),
+        )
+        const { kind, labels } = classifyDashboardRequest(
+          {
+            url: event.request.url,
+            type: event.type ?? "other",
+            method: event.request.method,
+            headers,
+          },
+          origin,
+        )
+        const entry = {
+          kind,
+          labels,
+          decodedBytes: 0,
+          dataEvents: 0,
+          finished: false,
+          failed: false,
+        }
+        receiving.set(event.requestId, entry)
+        window.received.push(entry)
+      }
+      session.on("Network.requestWillBeSent", onrequestWillBeSent)
+      protocolCleanups.push(() =>
+        session.off("Network.requestWillBeSent", onrequestWillBeSent),
+      )
+      /** @param {{requestId: string, dataLength: number}} event */
+      const ondataReceived = (event) => {
+        const entry = receiving.get(event.requestId)
+        if (
+          !entry ||
+          !Number.isSafeInteger(event.dataLength) ||
+          event.dataLength < 0
+        )
+          return
+        entry.decodedBytes += event.dataLength
+        entry.dataEvents++
+      }
+      session.on("Network.dataReceived", ondataReceived)
+      protocolCleanups.push(() =>
+        session.off("Network.dataReceived", ondataReceived),
+      )
+      /** @param {{requestId: string}} event */
+      const onloadingFinished = (event) => {
+        const entry = receiving.get(event.requestId)
+        if (entry) entry.finished = true
+        receiving.delete(event.requestId)
+      }
+      session.on("Network.loadingFinished", onloadingFinished)
+      protocolCleanups.push(() =>
+        session.off("Network.loadingFinished", onloadingFinished),
+      )
+      /** @param {{requestId: string}} event */
+      const onloadingFailed = (event) => {
+        const entry = receiving.get(event.requestId)
+        if (entry) entry.failed = true
+        receiving.delete(event.requestId)
+      }
+      session.on("Network.loadingFailed", onloadingFailed)
+      protocolCleanups.push(() =>
+        session.off("Network.loadingFailed", onloadingFailed),
+      )
+      await session.send("Network.enable")
+      initialized = true
+      if (disposed) {
+        removeProtocolListeners()
+        await session.detach()
+      }
+    })
   /** @type {WeakMap<import("playwright").Request, Entry>} */
   const requests = new WeakMap()
   /** @type {Set<Promise<void>>} */
@@ -121,39 +275,15 @@ export function observeWebPerformance(page, origin) {
   const onRequest = (request) => {
     if (!window) return
     const url = new URL(request.url())
-    const type = request.resourceType()
-    const headers = request.headers()
-    const kind =
-      url.origin === origin && url.pathname.startsWith("/api/")
-        ? "api"
-        : url.origin === origin && headers.rsc === "1"
-          ? "route"
-          : ["document", "script", "stylesheet"].includes(type)
-            ? type
-            : "other"
-    // Classification is fixed; URLs, query input and headers are never retained.
-    const labels = [kind]
-    if (kind === "api") {
-      if (
-        request.method() === "GET" &&
-        headers["trpc-accept"] === "application/jsonl"
-      )
-        labels.push("streamingApi")
-      if (url.pathname.startsWith("/api/trpc/")) {
-        const procedures = url.pathname.slice("/api/trpc/".length).split(",")
-        if (procedures.includes("activity.listPage"))
-          labels.push("activityList")
-        if (procedures.includes("activity.filters"))
-          labels.push("activityFilters")
-        const reconciliation = procedures.includes(
-          "inventory.reconciliationReport",
-        )
-        const balances = procedures.includes("inventory.balanceReport")
-        if (reconciliation) labels.push("stockReconciliation")
-        if (balances) labels.push("stockBalances")
-        if (reconciliation && balances) labels.push("stockReportBatch")
-      }
-    }
+    const { kind, labels } = classifyDashboardRequest(
+      {
+        url: request.url(),
+        type: request.resourceType(),
+        headers: request.headers(),
+        method: request.method(),
+      },
+      origin,
+    )
     /** @type {Entry} */
     const entry = {
       kind,
@@ -213,15 +343,21 @@ export function observeWebPerformance(page, origin) {
   page.on("requestfinished", onFinished)
   page.on("requestfailed", onFailed)
   return {
+    async ready() {
+      await ready
+    },
     begin() {
       if (window) throw new Error("Performance observation is already active.")
-      window = { started: performance.now(), entries: [] }
+      if (!initialized) throw new Error("Performance observation is not ready.")
+      window = { started: performance.now(), entries: [], received: [] }
     },
     async end() {
       if (!window) throw new Error("Performance observation is not active.")
       const current = window
       window = undefined
       const ended = performance.now()
+      // Snapshot immediately: later chunks must not enter an earlier window.
+      const received = current.received.map((entry) => ({ ...entry }))
       await Promise.all([...pendingSizes])
       const completed = current.entries.filter(
         (entry) => entry.finished !== undefined && entry.finished <= ended,
@@ -320,15 +456,53 @@ export function observeWebPerformance(page, origin) {
         rpcOperations,
         timeline,
         byKind,
+        receivedBodies: summarizeReceivedBodies(received),
         scope:
           "Requests started during the action; completed bytes/phases stop at readiness. Includes background work. Server-to-server reads are not visible. Work durations overlap and are not additive wall time.",
       }
     },
     dispose() {
+      disposed = true
       page.off("request", onRequest)
       page.off("response", onResponse)
       page.off("requestfinished", onFinished)
       page.off("requestfailed", onFailed)
+      receiving.clear()
+      removeProtocolListeners()
+      if (protocol) void protocol.detach().catch(() => {})
     },
+  }
+}
+
+/** @param {ReceivedBody[]} entries */
+function summarizeReceivedBodies(entries) {
+  /** @type {Record<string, {requests: number, measurements: number, decodedBytes: number, completed: number, failed: number, inFlight: number}>} */
+  const byKind = {}
+  /** @type {Record<string, number>} */
+  const decodedByLabel = {}
+  for (const entry of entries) {
+    byKind[entry.kind] ??= {
+      requests: 0,
+      measurements: 0,
+      decodedBytes: 0,
+      completed: 0,
+      failed: 0,
+      inFlight: 0,
+    }
+    const group = byKind[entry.kind]
+    group.requests++
+    group.measurements += Number(entry.dataEvents > 0)
+    group.decodedBytes += entry.decodedBytes
+    group.completed += Number(entry.finished)
+    group.failed += Number(entry.failed)
+    group.inFlight += Number(!entry.finished && !entry.failed)
+    for (const label of entry.labels)
+      decodedByLabel[label] = (decodedByLabel[label] ?? 0) + entry.decodedBytes
+  }
+  return {
+    byKind,
+    decodedByLabel,
+    scope:
+      "Independent Chromium dataReceived counters for requests begun in this window; decoded bytes received by window end, including failed/partial streams. Not encoded transfer, headers, complete payload or SQL work. Zero measurements means unavailable; overlapping labels are not additive.",
   }
 }

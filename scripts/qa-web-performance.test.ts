@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test"
 import {
+  classifyDashboardRequest,
   dashboardReadOperationCounts,
   readPerformancePhases,
 } from "./qa-web-performance.mjs"
@@ -78,4 +79,31 @@ test("inactive base-route budgets reject new API work without suppressing visibl
   }
   expect(() => assertReadActivityBudget("focus-return", active)).not.toThrow()
   expect(() => assertReadActivityBudget("reconnect", active)).not.toThrow()
+})
+
+test("RSC classification distinguishes navigation and either Next prefetch header without retaining values", () => {
+  const request = {
+    url: "https://ewatrade-dashboard.localhost/private-sentinel?input=secret",
+    type: "Fetch",
+    method: "GET",
+    headers: { rsc: "1" },
+  }
+  expect(
+    classifyDashboardRequest(request, "https://ewatrade-dashboard.localhost")
+      .labels,
+  ).toEqual(["route", "routeNavigation"])
+  for (const headers of [
+    { ...request.headers, "next-router-prefetch": "1" },
+    {
+      ...request.headers,
+      "next-router-segment-prefetch": "private-segment-sentinel",
+    },
+  ]) {
+    const result = classifyDashboardRequest(
+      { ...request, headers },
+      "https://ewatrade-dashboard.localhost",
+    )
+    expect(result.labels).toEqual(["route", "routePrefetch"])
+    expect(JSON.stringify(result)).not.toContain("sentinel")
+  }
 })

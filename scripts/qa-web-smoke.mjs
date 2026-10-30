@@ -49,6 +49,7 @@ export async function webJourney(page, config) {
   const observation = performanceArtifacts
     ? observeWebPerformance(page, origin)
     : undefined
+  await observation?.ready()
   const samples = []
   const mutations = []
   await page.route("**/api/**", async (route) => {
