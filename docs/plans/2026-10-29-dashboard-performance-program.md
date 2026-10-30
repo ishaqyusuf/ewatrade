@@ -44,6 +44,13 @@ confirmation and provider behavior remain. P28/A3/aggregate budgets and DP-204
 remain open; no additional ticket accepted or optimized timing claimed.
 [Evidence](../verification/2026-10-30-dashboard-connection-refusal-polls.md).
 
+QA login's T03/A3 raw refresh now owns one visible/online abortable GET; concurrent
+triggers dedupe, inactive/obsolete responses cannot update profiles, and visibility/
+reconnect resumes fresh. Expiry, explicit server selection and presentation remain.
+Actual9/77, types, scoped smoke and frozen existing-data QA login/UI smoke pass.
+This is another source slice; P28/aggregate budgets and DP-204/408 remain open.
+[Evidence](../verification/2026-10-30-dashboard-qa-refresh.md).
+
 The current root optimized Dashboard artifact adds parallel cold Stock activation
 in Reports (parent `a8625157` plus frozen owned source), Next16.4.3 BUILD_ID
 `zMN4q6wxzuTfj0KPK4a8Y`. Actual caller regression and optimized browser confirm two

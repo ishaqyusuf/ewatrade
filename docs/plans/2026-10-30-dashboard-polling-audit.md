@@ -251,3 +251,17 @@ link, paid Domain order, conversation case/provider or deployment acceptance.
 Historical39-site inventory is unchanged. Current full program4/27 (14.8%);
 P28 attachment recovery/budget, A3 QA entry visibility and aggregate/optimized
 budgets remain open. This subset does not accept DP-204.
+
+## Implementation follow-up: T03 / A3 —30October2026
+
+[QA login refresh ownership](../verification/2026-10-30-dashboard-qa-refresh.md)
+reproduces six raw GET activity/cancellation/deduplication failures and fixes them
+with one visible/online abortable request owner. Visibility/reconnect resumes fresh;
+explicit authorize/select cancels only obsolete background GETs and suppresses
+automatic reads while pending. Old deliveries/finally cannot affect a newer owner.
+The60s clock, exact access-expiry effect, presentation and server authority remain.
+Actual9/77, isolated entry, source/fixture types, owned237/1533+QA/Biome,H02 and
+frozen canonical existing-data QA login/UI smoke pass. Historical39-site inventory
+unchanged. T03/A3 implemented; P28 attachment recovery/budget and aggregate/focus/
+reconnect cost budgets remain open. Full program4/27; no DP-204/408 acceptance,
+optimized latency claim, service restart or deployment.

@@ -1,0 +1,50 @@
+{
+  "version": 1,
+  "id": "2026-10-30-dashboard-qa-refresh",
+  "tickets": ["H02"],
+  "summary": "Own one visible/online QA login refresh GET and cancel obsolete reads while preserving explicit access/selection authority. Local only.",
+  "noAssistantImpact": "Only the Dashboard QA login read owner changes. No merchant or assistant capability, API, grant, signed reference, Session, profile/Store eligibility, token expiry or provider change. Exact explicit authorize/select bodies remain apart from aborting superseded background GETs. Access-expiry effect and presentation are byte-identical. No deployment or business submission.",
+  "capabilities": [],
+  "procedures": [],
+  "docs": [
+    {
+      "topic": "feature",
+      "status": "local_only",
+      "path": ".brain/features/web-navigation-performance.md"
+    },
+    {
+      "topic": "feature",
+      "status": "local_only",
+      "path": ".brain/features/qa-selector.md"
+    },
+    {
+      "topic": "feature",
+      "status": "local_only",
+      "path": ".brain/features/mobile-dev-preview-qa-accelerator.md"
+    },
+    {
+      "topic": "api",
+      "status": "not_applicable",
+      "note": "No server QA access/selection, eligibility, Session or permission change."
+    },
+    {
+      "topic": "schema",
+      "status": "not_applicable",
+      "note": "No persistence/schema change."
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "test",
+      "path": "apps/dashboard/src/components/qa/qa-refresh.mounted.test.ts",
+      "executed": true,
+      "result": "Actual parent fixture9/77 and isolated wrapper pass after six activity/ownership failures and one obsolete-GET selection failure. Visibility/online, single pending read, late delivery, unmount cleanup, hidden expiry and refusal recovery; inert transport only."
+    },
+    {
+      "kind": "run",
+      "path": "docs/verification/2026-10-30-dashboard-qa-refresh.md",
+      "executed": true,
+      "result": "Dashboard/fixture types, owned237/1533 plus QA types/Biome pass. Render/expiry/operation parity checked. Frozen existing-data local QA login and Dashboard smoke passes, runtime unverified; no restart or optimized timing claim."
+    }
+  ]
+}

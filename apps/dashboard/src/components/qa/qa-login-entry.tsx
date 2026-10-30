@@ -42,14 +42,36 @@ export function QaLoginEntry(props: {
   const [capabilityError, setCapabilityError] = useState<string | null>(null)
   const generation = useRef(0)
   const operationPending = useRef(false)
+  const refreshRequest = useRef<AbortController | null>(null)
+  const cancelRefresh = useCallback(() => {
+    refreshRequest.current?.abort()
+    refreshRequest.current = null
+  }, [])
 
   const refresh = useCallback(async () => {
-    if (operationPending.current) return
+    if (
+      operationPending.current ||
+      refreshRequest.current ||
+      document.visibilityState !== "visible" ||
+      !navigator.onLine
+    )
+      return
+    const controller = new AbortController()
+    refreshRequest.current = controller
     const current = ++generation.current
     try {
-      const response = await fetch("/api/qa-access", { cache: "no-store" })
+      const response = await fetch("/api/qa-access", {
+        cache: "no-store",
+        signal: controller.signal,
+      })
       const body = await response.json()
-      if (current !== generation.current) return
+      if (
+        current !== generation.current ||
+        controller.signal.aborted ||
+        document.visibilityState !== "visible" ||
+        !navigator.onLine
+      )
+        return
       if (!response.ok || !body.available) {
         setAccess(null)
         setChoice("")
@@ -69,23 +91,43 @@ export function QaLoginEntry(props: {
           : "",
       )
     } catch {
-      if (current !== generation.current) return
+      if (
+        current !== generation.current ||
+        controller.signal.aborted ||
+        document.visibilityState !== "visible" ||
+        !navigator.onLine
+      )
+        return
       setAccess(null)
       setChoice("")
       setCapabilityError("Reconnect, then retry loading QA accounts.")
+    } finally {
+      if (refreshRequest.current === controller) refreshRequest.current = null
     }
   }, [])
 
   useEffect(() => {
+    const activityChanged = () => {
+      if (document.visibilityState !== "visible" || !navigator.onLine) {
+        cancelRefresh()
+      } else void refresh()
+    }
     void refresh()
     window.addEventListener("focus", refresh)
+    document.addEventListener("visibilitychange", activityChanged)
+    window.addEventListener("online", activityChanged)
+    window.addEventListener("offline", activityChanged)
     const interval = window.setInterval(() => void refresh(), 60_000)
     return () => {
       generation.current += 1
+      cancelRefresh()
       window.removeEventListener("focus", refresh)
+      document.removeEventListener("visibilitychange", activityChanged)
+      window.removeEventListener("online", activityChanged)
+      window.removeEventListener("offline", activityChanged)
       window.clearInterval(interval)
     }
-  }, [refresh])
+  }, [cancelRefresh, refresh])
 
   useEffect(() => {
     if (!access) return
@@ -103,6 +145,7 @@ export function QaLoginEntry(props: {
   async function load(event: React.FormEvent) {
     event.preventDefault()
     const current = ++generation.current
+    cancelRefresh()
     operationPending.current = true
     setPending(true)
     setAccess(null)
@@ -135,6 +178,7 @@ export function QaLoginEntry(props: {
     if (!selected || !access) throw new Error("Choose a QA profile.")
     operationPending.current = true
     generation.current += 1
+    cancelRefresh()
     setSigningIn(true)
     try {
       const response = await fetch("/api/qa-access", {
