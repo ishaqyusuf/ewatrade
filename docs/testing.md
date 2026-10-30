@@ -269,7 +269,16 @@ commands, generate content, export data or change scope.
 labels, numeric request/timing diagnostics and running/passed/failed state. A
 failure preserves earlier samples with its fixed family/phase, without response
 bodies or private error text. Interrupted runs may remain running and never count
-as passed. The final `performance.json` includes all18 family samples. Soft
+as passed. The final `performance.json` includes all18 family samples. After Finance returns,
+two isolated GETs read its current Book and bounded owed summary outside all page
+timing windows. Their fixed procedure labels, status, elapsed time, decoded JSON
+byte counts and allowlisted numeric Server-Timing phases appear separately under
+`diagnosticReads` in `route-families.json`. A refusal, missing Book or malformed
+summary fails DP-405; no fixtures or financial writes are used. Book/customer IDs,
+names, amounts, raw headers and response bodies are not retained. These isolated
+requests have their own fresh admission; their counts do not describe server-render
+work or prove the running API revision. Decoded JSON bytes are not compressed wire
+bytes. Soft
 navigation checks shell identity on departure and return; full refresh naturally
 creates a new shell. The runner returns to Overview for its existing screenshot.
 

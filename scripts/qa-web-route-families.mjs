@@ -1,3 +1,5 @@
+import { diagnoseFinanceReads } from "./qa-finance-read-diagnostics.mjs"
+
 /** @typedef {ReturnType<import("./qa-web-performance.mjs").observeWebPerformance>} Observation */
 /** @typedef {Awaited<ReturnType<Observation["end"]>>} RequestSummary */
 /** @typedef {{family: string, path: string, heading: string, readiness: string, phase: string, milliseconds: number, requests: RequestSummary}} FamilySample */
@@ -65,7 +67,7 @@ export const dashboardRouteFamilies = [
  * @param {import("playwright").Page} page
  * @param {{origin: string, catalogItem: string}} config
  * @param {ReturnType<import("./qa-web-performance.mjs").observeWebPerformance>} observation
- * @param {(update: {status: string, family: string | null, phase: string | null, samples: FamilySample[]}) => void} checkpoint
+ * @param {(update: {status: string, family: string | null, phase: string | null, samples: FamilySample[], diagnosticReads: Awaited<ReturnType<typeof diagnoseFinanceReads>>}) => void} checkpoint
  */
 export async function measureDashboardRouteFamilies(
   page,
@@ -77,6 +79,8 @@ export async function measureDashboardRouteFamilies(
     throw Error("Route-family measurement is local-only.")
   /** @type {FamilySample[]} */
   const samples = []
+  /** @type {Awaited<ReturnType<typeof diagnoseFinanceReads>>} */
+  const diagnosticReads = []
   let family = dashboardRouteFamilies[0]
   let phase = "full-refresh"
   let observing = false
@@ -87,6 +91,7 @@ export async function measureDashboardRouteFamilies(
       family: family?.family ?? null,
       phase,
       samples: [...samples],
+      diagnosticReads: [...diagnosticReads],
     })
   /** @param {typeof dashboardRouteFamilies[number]} target */
   const ready = async (target) => {
@@ -212,6 +217,14 @@ export async function measureDashboardRouteFamilies(
         })
       } finally {
         await shell.dispose()
+      }
+      if (target.path === "/finance") {
+        phase = "isolated-read-diagnostics"
+        publish("running")
+        diagnosticReads.push(
+          ...(await diagnoseFinanceReads(page, config.origin)),
+        )
+        publish("running")
       }
     }
     publish("passed")

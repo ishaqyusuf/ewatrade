@@ -1,5 +1,23 @@
 # Dashboard performance program
 
+## Matching optimized baseline and read attribution — DP-003/103/405/502,30October2026
+
+- [x] Build/serve committed Dashboard4d6d; freeze QA scripts and identify four
+  manifests/lock. All18 existing-data family samples and two isolated read probes
+  pass; retained shell/zero business writes. Development mode restored.
+- [x] API/Storefront/Marketing retain original listeners. QA tooling13 driver
+  cases, scoped47/195, types/Biome and H02 pass. No deployment/runtime certification.
+- [ ] Reduce measured fresh-read round trips and Finance Book-before-panels
+  dependency with current authority, locks, scope and exact money preserved.
+
+Finance5335/2834ms and Activity3508/3114ms(refresh/return) still miss targets.
+Isolated Book1940ms/9SQL and owed summary2380ms/11SQL have negligible pool waits/
+serialization in these samples. Finance warm return has no completed browser API
+phase; server work remains invisible. This is a matching Dashboard baseline and
+individual read evidence, not a causal speedup or certified API revision.
+[Receipt and phased next steps](../verification/2026-10-30-dashboard-matching-optimized-finance-diagnostics.md).
+Full program3/27 (11.1%); historical f027 evidence retained separately.
+
 ## Bounded Finance owed summary — DP-103/405, 30 October 2026
 
 - [x] Reproduce four projection operations and complete directory/balance decoding
@@ -275,8 +293,10 @@ Execution order within the existing tickets:
    stale-time increase for permission, money, proof or access reads.
 3. **DP-405/407 first:** Finance and Activity remain slow on optimized runtime.
    Attribute their root/list/filter/summary scopes and inspect actual SQL plans.
-   Verify the committed Finance/Activity reductions in a subsequent matching build;
-   the current f027 artifact does not contain them. Then prioritize Reports/Orders,
+   The matching4d6d Dashboard run now contains the accumulated frontend source,
+   while the hot API remains revision-uncertified. Prioritize the Finance fresh
+   lock/projection and Book-before-panels edge, and attribute Activity procedures.
+   The isolated read probes do not substitute for SSR attribution. Then prioritize Reports/Orders,
    Website Requests/Customers and the remaining family acceptance journeys.
 4. **DP-301–304:** measure unopened sheets/tools/import graphs and main-thread
    interactions; split or stabilize demonstrated costs. Record transferred bytes,

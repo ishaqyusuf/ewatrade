@@ -158,6 +158,21 @@ test(
 for (const scenario of [
   { name: "all nine representatives", options: {}, expected: "passed" },
   {
+    name: "isolated Finance refusal",
+    options: { diagnosticRefusal: true },
+    expected: "DP-405",
+  },
+  {
+    name: "malformed Finance summary",
+    options: { diagnosticMalformed: true },
+    expected: "DP-405",
+  },
+  {
+    name: "missing Finance Book",
+    options: { diagnosticNoBook: true },
+    expected: "DP-405",
+  },
+  {
     name: "header without customer data",
     options: { omitReady: "/customers" },
     expected: "DP-404",
@@ -215,12 +230,71 @@ for (const scenario of [
               headers: { "server-timing": "ew_sql;dur=2" },
               body: '{"private":"private-body-sentinel"}',
             })
+          } else if (url.pathname === "/api/trpc/finance.book") {
+            await route.fulfill({
+              contentType: "application/json",
+              headers: {
+                "server-timing": 'ew_sql;dur=2;desc="11 calls",ew_actor;dur=9',
+              },
+              body: JSON.stringify({
+                result: {
+                  data: {
+                    json: {
+                      id:
+                        "diagnosticNoBook" in scenario.options
+                          ? null
+                          : "private-book-sentinel",
+                      accounts: [{ name: "private-name-sentinel" }],
+                    },
+                  },
+                },
+              }),
+            })
+          } else if (url.pathname === "/api/trpc/finance.owedSummary") {
+            if ("diagnosticRefusal" in scenario.options) {
+              await route.fulfill({
+                status: 403,
+                body: "private-refusal-sentinel",
+              })
+              return
+            }
+            assert.equal(
+              JSON.parse(url.searchParams.get("input") ?? "").json.bookId,
+              "private-book-sentinel",
+            )
+            await route.fulfill({
+              contentType: "application/json",
+              headers: { "server-timing": 'ew_sql;dur=3;desc="11 calls"' },
+              body: JSON.stringify({
+                result: {
+                  data: {
+                    json: {
+                      customers: {
+                        count: 1,
+                        owedMinor:
+                          "diagnosticMalformed" in scenario.options
+                            ? 1
+                            : "9007199254740993",
+                        top: [
+                          {
+                            id: "private-customer-sentinel",
+                            name: "private-name-sentinel",
+                            owedMinor: "9007199254740993",
+                          },
+                        ],
+                      },
+                      suppliers: { count: 0, owedMinor: "0", top: [] },
+                    },
+                  },
+                },
+              }),
+            })
           } else if (url.pathname === "/favicon.ico")
             await route.fulfill({ status: 204 })
           else await route.fulfill({ contentType: "text/html", body: html })
         })
         const observation = observeWebPerformance(page, origin)
-        /** @type {Array<{status: string, family: string | null, phase: string | null, samples: object[]}>} */
+        /** @type {Array<{status: string, family: string | null, phase: string | null, samples: object[], diagnosticReads: Awaited<ReturnType<typeof import("./qa-finance-read-diagnostics.mjs").diagnoseFinanceReads>>}>} */
         const checkpoints = []
         const run = () =>
           measureDashboardRouteFamilies(
@@ -233,6 +307,22 @@ for (const scenario of [
           const samples = await run()
           assert.equal(samples.length, 18)
           assert.equal(dashboardRouteFamilies.length, 9)
+          assert.deepEqual(
+            checkpoints.at(-1)?.diagnosticReads.map((read) => read.procedure),
+            ["finance.book", "finance.owedSummary"],
+          )
+          assert.equal(
+            checkpoints.at(-1)?.diagnosticReads[1]?.serverPhases.sql.count,
+            11,
+          )
+          assert.ok(
+            checkpoints
+              .at(-1)
+              ?.diagnosticReads.every(
+                (read) => read.decodedBodyBytes > 0 && read.status === 200,
+              ),
+          )
+
           for (const { family } of dashboardRouteFamilies) {
             const pair = samples.filter((sample) => sample.family === family)
             assert.deepEqual(
@@ -300,6 +390,14 @@ test(
             },
           }),
         /requires local navigation artifacts/,
+      )
+      const { diagnoseFinanceReads } = await import(
+        "./qa-finance-read-diagnostics.mjs"
+      )
+      await assert.rejects(
+        () =>
+          diagnoseFinanceReads(page, "https://preview-dashboard.ewatrade.com"),
+        /local-only/,
       )
       assert.equal(requests, 0)
     } finally {
