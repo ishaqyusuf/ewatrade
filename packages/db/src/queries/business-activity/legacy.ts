@@ -86,6 +86,7 @@ export function presentLegacyBusinessActivity(
 export function businessActivitySources(
   scope: BusinessActivityScope,
   window?: { from: string; to: string; snapshotAt: string },
+  inline = false,
 ) {
   const orderWindow = window
     ? Prisma.sql`AND o."createdAt">=${new Date(window.from)} AND o."createdAt"<${new Date(window.to)} AND o."createdAt"<=${new Date(window.snapshotAt)}`
@@ -96,7 +97,7 @@ export function businessActivitySources(
   const recordedCutoff = window
     ? Prisma.sql`AND recorded."recordedAt"<=${new Date(window.snapshotAt)}`
     : Prisma.empty
-  return Prisma.sql`WITH "activitySources" AS (
+  return Prisma.sql`WITH "activitySources" AS ${inline ? Prisma.sql`NOT MATERIALIZED` : Prisma.empty} (
     SELECT e.* FROM "BusinessActivityEvent" e WHERE e."tenantId"=${scope.tenantId}
     UNION ALL
     SELECT legacy.* FROM "CommercialOrder" o

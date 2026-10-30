@@ -286,11 +286,13 @@ export async function listBusinessActivityInTransaction(
     ? decodeBusinessActivityCursor(cursor, filterKey, new Date())
     : null
   const snapshotAt = after?.snapshotAt ?? new Date().toISOString()
-  const sources = businessActivitySources(scope, {
-    from: input.from,
-    to: input.to,
-    snapshotAt,
-  })
+  // Page/count share transport, while inlining retains each branch's predicate
+  // pushdown instead of materializing every event payload in the Business.
+  const sources = businessActivitySources(
+    scope,
+    { from: input.from, to: input.to, snapshotAt },
+    true,
+  )
   const where = Prisma.sql`${conditions(scope, input)} AND e."recordedAt"<=${new Date(snapshotAt)}`
   const bound = after
     ? input.sort === "oldest"
@@ -298,17 +300,28 @@ export async function listBusinessActivityInTransaction(
       : Prisma.sql`AND (e."occurredAt",e.id)<(${new Date(after.at)},${after.id})`
     : Prisma.empty
   const order = input.sort === "oldest" ? Prisma.sql`ASC` : Prisma.sql`DESC`
-  const rows = await tx.$queryRaw<
-    ProjectedBusinessActivityRow[]
-  >`${sources} SELECT ${businessActivityRowSelect} FROM "activitySources" e ${businessActivityJoins} WHERE ${where} ${bound} ORDER BY e."occurredAt" ${order},e.id ${order} LIMIT ${limit + 1}`
-  const counts = await tx.$queryRaw<
-    Array<{ total: bigint }>
-  >`${sources} SELECT count(*)::bigint AS total FROM "activitySources" e ${businessActivityJoins} WHERE ${where}`
+  const projected = await tx.$queryRaw<
+    Array<
+      Omit<ProjectedBusinessActivityRow, "id"> & {
+        id: string | null
+        total: bigint
+      }
+    >
+  >`${sources}
+    SELECT page.*, totals.total FROM (
+      SELECT count(*)::bigint AS total FROM "activitySources" e ${businessActivityJoins} WHERE ${where}
+    ) totals LEFT JOIN LATERAL (
+      SELECT ${businessActivityRowSelect} FROM "activitySources" e ${businessActivityJoins}
+      WHERE ${where} ${bound} ORDER BY e."occurredAt" ${order},e.id ${order} LIMIT ${limit + 1}
+    ) page ON true ORDER BY page."occurredAt" ${order},page.id ${order}`
+  const rows = projected.flatMap((row) =>
+    row.id === null ? [] : [{ ...row, id: row.id }],
+  )
   const visible = rows.slice(0, limit)
   const last = visible.at(-1)
   return {
     items: visible.map(projectBusinessActivity),
-    total: Number(counts[0]?.total ?? BigInt(0)),
+    total: Number(projected[0]?.total ?? BigInt(0)),
     snapshotAt,
     nextCursor:
       rows.length > limit && last

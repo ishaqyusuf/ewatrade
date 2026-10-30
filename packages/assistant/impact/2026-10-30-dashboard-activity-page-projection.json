@@ -1,0 +1,45 @@
+{
+  "version": 1,
+  "id": "2026-10-30-dashboard-activity-page-projection",
+  "tickets": ["H02"],
+  "summary": "Read Activity page and exact count in one existing RepeatableRead projection statement. Local only.",
+  "noAssistantImpact": "DB read transport/projection only. Current scope lock, Store/role/Finance rules, exact filters, snapshot/cursor and row presentation/DTO remain. Detail/filter/notification producers, commands, source deduplication and mount freshness are unchanged. No assistant tool/procedure/capability, permission grant, schema, dependency or rollout change.",
+  "capabilities": [],
+  "procedures": [],
+  "docs": [
+    {
+      "topic": "feature",
+      "status": "local_only",
+      "path": ".brain/features/business-activity-notifications.md"
+    },
+    {
+      "topic": "permissions",
+      "status": "not_applicable",
+      "note": "Current scope and predicates byte-identical; no authorization change."
+    },
+    {
+      "topic": "api",
+      "status": "not_applicable",
+      "note": "Router/input/output/cursor unchanged; DB projection scheduling only."
+    },
+    {
+      "topic": "schema",
+      "status": "not_applicable",
+      "note": "No schema/index/migration changes. Fixture indexes mirror existing schema only."
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "test",
+      "path": "packages/db/src/queries/business-activity/page-projection.test.ts",
+      "executed": true,
+      "result": "Actual SQL red4->3 reader operations. Six disposable PostgreSQL cases cover native bigint amounts, tied paging both directions, exact empty/exhausted counts, recorded/legacy snapshot dedup, filters/scope/refusal and bounded decoding with predicate pushdown."
+    },
+    {
+      "kind": "run",
+      "path": "docs/verification/2026-10-30-dashboard-activity-page-projection.md",
+      "executed": true,
+      "result": "15 DB scope/page/legacy cases370 assertions, DB/API/Dashboard types, scoped237/1533+QA types/Biome. Old/new native PostgreSQL comparisons match three data scales up to10000 recorded events; buffer hits identical, projections2->1, no spill/materialization. Fixture DB removed and cluster stopped. Unchanged UI evidence reused; no new browser timing/deployment claim."
+    }
+  ]
+}

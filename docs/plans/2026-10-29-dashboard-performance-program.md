@@ -1,5 +1,20 @@
 # Dashboard performance program
 
+## Activity page/count projection — DP-103/407,30October2026
+
+- [x] Actual reader red reproduces separate serial page/count statements.
+- [x] One bounded SELECT retains exact count, empty/exhausted pages and cursor.
+  Existing RepeatableRead lock, authority, legacy union, API and UI unchanged.
+- [x]15 SQL/scope/legacy tests370 assertions, DB/API/Dashboard types,
+  scoped237/1533+QA types/Biome,H02 pass; unchanged H01 evidence reused.
+- [x] Native PostgreSQL small/2k/10k-event outputs and buffer hits match;
+  projection statements2→1, no spill/materialization. Fixture cluster cleaned up.
+
+[Receipt](../verification/2026-10-30-dashboard-activity-page-projection.md).
+No new browser timing or whole-ticket acceptance; unchanged UI evidence reused.
+Count scanning, Activity client startup/filter waves and overall program remain.
+Full program3/27 (11.1%), local only; no schema, service restart or deployment.
+
 ## Shared request workspace projection — DP-102/103,30October2026
 
 - [x] Reproduce duplicate preference/protected scope reads in an actual GET.
