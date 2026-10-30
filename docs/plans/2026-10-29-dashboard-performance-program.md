@@ -88,6 +88,15 @@ accepted (4/27), release qualification or deployment. Client byte/chunk, history
 focus and remaining failure owners stay open.
 [Opus follow-ups and runtime proof](../verification/2026-10-30-dashboard-opus-performance-followups.md).
 
+An additional optimized desktop check on unchanged4a9c/tBSr passes actual Catalog
+chunk rejection/retry in its existing frame, detail Back/Forward and close-to-row
+focus, with zero business writes. Closed Overview36scripts/676115 encoded body
+bytes excludes40/41 resolved global family definitions and inspected heavy bodies;
+the preference controller leaks through the bell's URL-hook import. That bounded
+source correction is delegated to Opus. Initial-vs-open body sizes establish demand
+delivery, not a historical byte reduction. Dashboard development restored90463.
+[Optimized delivery and fault proof](../verification/2026-10-30-dashboard-optimized-sheet-delivery.md).
+
 The preceding focused optimized Dashboard artifact is Next16.4.3 BUILD_ID
 `lk0TyEwhp1z7MyhmRFYem`, parentfea718366 plus frozen Finance snapshot/Book projection.
 Balances/owed/Bills retain their existing RepeatableRead options and now resolve
@@ -270,8 +279,9 @@ Preserve current authority, locks, lifecycle ownership and database topology.
 
 1. **DP-405/407:** shared critical-path scheduling DP-103 is accepted from its
    criterion audit; the shared shell projection and cold Stock fix are verified.
-   Next attribute the actual server Finance route/Book return (~2.34s, no browser
-   API starts), then current API context/control round trips behind Activity's~2.63s return. Preserve proof, role, snapshot
+   Actual Finance attribution now proves the classifier correction (warm server reads4→1);
+   readiness remains2.33s. Next inspect current API context/control round trips behind
+   Activity's~2.63s return, using the existing per-request trace. Preserve proof, role, snapshot
    and transaction admission; use bounded projection/independent-work evidence.
 2. **DP-003/204:** distinguish the observed26 canceled refresh Flight requests
    from navigation/useful prefetch before changing scheduling. Cancellation alone
