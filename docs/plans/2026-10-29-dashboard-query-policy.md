@@ -134,3 +134,22 @@ website acknowledgement reuses its owning callback. No total-count semantic chan
 for the five-claim payment badge or new scoped website access. This is a DP-204/407
 slice, not whole-dashboard lifetime acceptance.
 [Receipt](../verification/2026-10-30-dashboard-notification-counts.md).
+
+## Complete explicit interval audit —30October2026
+
+[Current39-site ledger and A1–A6 subtasks](2026-10-30-dashboard-polling-audit.md)
+supersede the earlier polling-site count, not the historical full query-option
+inventory. AST scope:1,103 production source files,33 query intervals and6 explicit
+timers across25 files;3 timers are UI clocks. Retained CSS-hidden children need
+explicit activation even with TanStack's normal browser-focus gate. Numeric
+intervals continue after errors despite retry:false; known private rejection
+erasure is separate from interval shutdown. Reuse existing refusal classification
+at proven owners with focus/manual recovery rather than adding a global TTL.
+
+Inert mounted diagnostics reproduce P14 hidden/refused work and P15 duplicate
+initial first-page operations. Preserve Finance page-one-only polling and private
+freshness when fixing the latter. T03/T04 background/late-response concerns remain
+source hypotheses. P28 needs bounded error/completion proof; durable uploads/jobs,
+financial/approval/access queues and private proofs have explicit exceptions.
+Other rows link existing evidence or state their source-only gap. No product edit,
+runtime timing or DP-201/203/204 acceptance is claimed; overall3/27 remains.

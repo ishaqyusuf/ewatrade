@@ -89,6 +89,15 @@ authorization and locked commands retain their ordering and transaction boundari
 
 ## Phase2 — Query lifetime and refresh
 
+The [30 October complete interval-site audit](2026-10-30-dashboard-polling-audit.md)
+records33 query intervals and6 explicit timers across25 files. Three inert red
+reproductions expose hidden Assistant record polling, repeated refused reads and
+duplicate Finance first-page operations. Its A1–A6 subtasks belong to DP-201/203/204
+and the affected domain tickets; they do not add to or close the27-ticket scope.
+Implement the demonstrated owners first, then prove source-only hypotheses and
+roll out the remaining activation/refusal/budget contracts. Required visible
+financial/access/approval queues and bounded durable recovery retain freshness.
+
 - [ ] **DP-201 Freshness policy.** Inventory reference/directory/live financial/
   access/proof reads; specify retention, activation, invalidation and exceptions.
   Acceptance: policy is applied at correct owners with explicit sensitive-read rules.
@@ -696,3 +705,15 @@ runtime files archived; dev restored type references/running service retained.
 Coordinate a new Dashboard-only timing/restoration window for this candidate;
 965 approval was already executed. No deployment or manual service restart.
 Overall3/27 unchanged; this does not establish optimized per-family budgets.
+
+## Complete explicit polling inventory — DP-204
+
+[Audit and execution subtasks](2026-10-30-dashboard-polling-audit.md), pinned to
+9eb8a0c8:1,103 production source files,33 query interval properties and6 explicit
+timers, including3 UI clocks. Actual retained-panel/record-reader diagnostics
+reproduce hidden and refused interval work; actual PaymentsToCheck/tRPC/query
+observers reproduce two identical initial first-page operations. Private payload
+erasure succeeds. These are red diagnostic results, not passing acceptance or
+evidence of a data leak. Conversation late-response and raw QA background refresh
+remain source hypotheses requiring inert proof. Product source/prepared optimized
+build unchanged; no runtime restart/deployment. Full program remains3/27 accepted.
