@@ -1,5 +1,23 @@
 # Dashboard performance program
 
+## Reports selected-tab startup — DP-102/409,30October2026
+
+- [x] Reproduce five startup operations on Service entry while actual mounted
+  consumers use three, with matching hydration rather than duplicate keys.
+- [x] Return the shared parsed tab to the route; prefetch Stock reads only for
+  Stock entry. Preserve common sales, warning indicator, scope and date behavior.
+- [x] Seven actual route/URL/tabs/consumer/cache SSR cases pass, including later
+  Stock activation, Service return and pending/admission boundaries.
+
+[Receipt](../verification/2026-10-30-dashboard-report-prefetch.md). This removes two
+startup operations on Service deep links; it does not establish page latency,
+browser Back or full DP-102/409 acceptance. Full program remains3/27 accepted.
+
+Executed: Dashboard/owned fixture types, owned fast237/1533 plus QA types/Biome,
+H01/H02 and frozen canonical local UI smoke pass (runtime unverified). Exact
+Reports behavior is inert SSR proof; no live report/write, restart or deployment.
+Prepared9eb8 optimized files remain unchanged and exclude this source.
+
 Owner authorized execution on29 October2026 by “proceed” after the complete
 six-phase,27-ticket roadmap in this chat. Current primary checkout; local commits,
 implementation and testing only. No push, deployment, provider changes, paid

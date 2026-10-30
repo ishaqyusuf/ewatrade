@@ -1,0 +1,45 @@
+{
+  "version": 1,
+  "id": "2026-10-30-dashboard-report-prefetch",
+  "tickets": ["H02"],
+  "summary": "Local Reports route prefetches Stock-only queries only when Stock is selected, using the shared allowlisted URL state. No deployment.",
+  "noAssistantImpact": "Only server presentation scheduling and returned URL-loader metadata change. Same report inputs, cache windows, API admission, permissions, Assistant tools/commands, confirmation, financial authority and model/provider behavior. Service warning summary remains common; no database or API contract change.",
+  "capabilities": [],
+  "procedures": [],
+  "docs": [
+    {
+      "topic": "feature",
+      "status": "local_only",
+      "path": ".brain/features/web-navigation-performance.md"
+    },
+    {
+      "topic": "api",
+      "status": "not_applicable",
+      "note": "Existing report input/output contracts unchanged."
+    },
+    {
+      "topic": "permissions",
+      "status": "not_applicable",
+      "note": "Existing current server admission and Store scope remain."
+    },
+    {
+      "topic": "schema",
+      "status": "not_applicable",
+      "note": "No schema or migration."
+    }
+  ],
+  "evidence": [
+    {
+      "kind": "run",
+      "path": "docs/verification/2026-10-30-dashboard-report-prefetch.md",
+      "executed": true,
+      "result": "Dashboard/owned fixture types, scoped fast237/1533 with QA types/Biome and H01/H02 pass. Frozen canonical local smoke passes QA login/Catalog/draft total/cancel, runtimeVerified:false; this is not Reports timing proof. Prepared9eb8 manifests unchanged. No real report/business/provider action, service restart, optimized-build switch or deployment. Full program3/27 remains."
+    },
+    {
+      "kind": "test",
+      "path": "packages/assistant/evaluations/fixtures/dashboard-report-prefetch.fixture.tsx",
+      "executed": true,
+      "result": "Seven actual route/consumer/URL/tabs/tRPC/cache SSR cases pass with 45 assertions after three red cases. Service entry 5 to 3 operations; Stock/default/invalid remain 5; matching hydration adds no reads; later Stock adds 2, Service return none. Held reads preserve route return; admission redirects read nothing. Inert ports, no live report or write; no browser-latency claim."
+    }
+  ]
+}

@@ -64,7 +64,12 @@ authority remain unchanged.
   prefetch before rendering its Suspense boundary remains a DP-104 scheduling candidate.
 - Analytics passes the parsed current range and `previousReportRange` to the same
   sales input shape consumed by the client. Reconciliation/balances retain Store
-  and compatible-total inputs. Prefetching all panels is a DP-409 activation question.
+  and compatible-total inputs. The30October follow-up uses the same parsed tab:
+  Service entry skips its two unmounted Stock queries (5→3 operations), while
+  Stock/default/invalid entry keeps5. Service summary remains common for its warning
+  indicator. Actual route/consumer/nuqs/tabs/tRPC/cache SSR proof confirms matching
+  hydration and later activation; browser timing/Back and full DP-102/409 remain.
+  [Receipt](../verification/2026-10-30-dashboard-report-prefetch.md).
 - Service and prescription reports use the current parsed range/Store. Their separate
   previous-period client read is additional work, not a mismatch of the current key.
 - Services originally prefetched manager request forms/requests on Work and the Work

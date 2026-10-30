@@ -31,7 +31,7 @@ export default async function AnalyticsPage({ searchParams }: Props) {
 
   const store = ctx.activeStore ?? ctx.stores[0]
   if (!store) redirect("/setup")
-  const { range } = await loadOperationsReportParams(searchParams)
+  const { range, tab } = await loadOperationsReportParams(searchParams)
   const previous = previousReportRange(range)
   void Promise.allSettled([
     prefetch(
@@ -48,15 +48,21 @@ export default async function AnalyticsPage({ searchParams }: Props) {
         to: previous.to,
       }),
     ),
-    prefetch(
-      trpc.inventory.reconciliationReport.queryOptions({ storeId: store.id }),
-    ),
-    prefetch(
-      trpc.inventory.balanceReport.queryOptions({
-        includeCompatibleTotals: true,
-        storeId: store.id,
-      }),
-    ),
+    ...(tab === "inventory"
+      ? [
+          prefetch(
+            trpc.inventory.reconciliationReport.queryOptions({
+              storeId: store.id,
+            }),
+          ),
+          prefetch(
+            trpc.inventory.balanceReport.queryOptions({
+              includeCompatibleTotals: true,
+              storeId: store.id,
+            }),
+          ),
+        ]
+      : []),
     prefetch(trpc.serviceReporting.summary.queryOptions({ storeId: store.id })),
   ])
   return (

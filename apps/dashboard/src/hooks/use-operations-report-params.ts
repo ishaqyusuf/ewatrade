@@ -47,5 +47,8 @@ export async function loadOperationsReportParams(
   searchParams: Parameters<typeof loadOperationsReportState>[0],
 ) {
   const params = await loadOperationsReportState(searchParams)
-  return { range: resolveReportRange(params) }
+  return {
+    range: resolveReportRange(params),
+    tab: params.operationsReportTab ?? "inventory",
+  }
 }
